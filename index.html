@@ -13,6 +13,7 @@
   --text:#e8eef7; --sub:#9fb0c3;
   --fire:#ff6b4a; --water:#4ac6ff; --grass:#6bdd6b;
   --gold:#ffd34a;
+  --navh:90px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;height:100%;}
@@ -24,6 +25,7 @@ body{
 }
 #app{max-width:520px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 .screen{flex:1;display:flex;flex-direction:column;min-height:0;}
+#mainScreen{padding-bottom:var(--navh);}
 .hidden{display:none !important;}
 button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 
@@ -72,8 +74,20 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .chip .g{position:absolute;top:2px;right:5px;font-size:11px;font-weight:800;}
 .chip .f{position:absolute;bottom:2px;left:5px;font-size:10px;}
 .chip.addchip{font-size:24px;color:var(--sub);justify-content:center;}
+.chip.potempty,.chip.potlocked{justify-content:center;border-style:dashed;color:var(--sub);}
+.chip.potempty{cursor:pointer;}
+.chip.potlocked{opacity:.5;border-style:dashed;}
+.chip .pi{font-size:22px;line-height:1;}
+.chip .potlabel{font-size:8.5px;font-weight:700;margin-top:2px;}
 
 .main-body{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;}
+.bag-fab{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:5;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  width:58px;height:58px;border-radius:16px;font-size:26px;cursor:pointer;
+  background:rgba(13,22,38,.92);border:1.5px solid rgba(92,242,194,.4);color:var(--text);
+  box-shadow:0 6px 18px rgba(0,0,0,.4);transition:transform .1s;}
+.bag-fab:active{transform:translateY(-50%) scale(.93);}
+.bag-fab .bag-fab-label{font-size:9.5px;font-weight:800;color:var(--neon);}
 #centerPlant{text-align:center;cursor:pointer;padding:10px;border-radius:20px;max-width:330px;}
 #centerPlant:active{transform:scale(.98);}
 #centerPlant .pname{font-size:21px;font-weight:800;margin:6px 0 4px;}
@@ -82,6 +96,19 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .stat{background:var(--card);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:4px 9px;font-size:12.5px;}
 .stat b{color:var(--neon);}
 
+/* 토너먼트 현황 배너 [참여 토너먼트 | 경기 현황] */
+#tournamentBar{margin:0 14px 8px;}
+#tournamentBar:empty{display:none;}
+.tbar{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:13px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(92,242,194,.07),rgba(255,255,255,.03));font-size:13px;}
+.tbar .tb-left{flex:1;min-width:0;padding:9px 12px;font-weight:800;color:var(--neon);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tbar .tb-right{flex:0 0 auto;padding:9px 13px;border-left:1px solid var(--line);
+  font-weight:700;color:var(--text);background:rgba(0,0,0,.18);white-space:nowrap;}
+.tbar.idle{background:var(--card);}
+.tbar.idle .tb-left{color:var(--sub);font-weight:700;}
+.tbar.idle .tb-right{color:var(--sub);}
+
 #btnBattle{margin:0 14px 10px;padding:15px;font-size:19px;border-radius:16px;border:none;
   background:linear-gradient(135deg,#b23b2e,#ff6b4a);color:#fff;font-weight:800;
   box-shadow:0 4px 26px rgba(255,107,74,.35);animation:pulse 2.2s ease-in-out infinite;}
@@ -89,9 +116,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #btnBattle:active{transform:scale(.97);}
 
 /* ===== 하단 헤더 (클래시 로얄식 5탭) ===== */
-#bottomNav{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;gap:4px;
+#bottomNav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:60;
+  width:100%;max-width:520px;
+  display:grid;grid-template-columns:repeat(5,1fr);align-items:end;gap:4px;
   padding:7px 8px calc(8px + env(safe-area-inset-bottom,0px));
-  background:linear-gradient(180deg,rgba(9,16,29,.6),rgba(9,16,29,.95));
+  background:linear-gradient(180deg,rgba(9,16,29,.82),rgba(9,16,29,.98));
   border-top:1px solid var(--line);backdrop-filter:blur(10px);}
 .navbtn{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;
   background:transparent;border:none;color:var(--sub);padding:8px 2px 4px;border-radius:14px;
@@ -147,7 +176,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
 
 /* ===== 모달 ===== */
-.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;}
+.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;padding-bottom:calc(var(--navh) + 14px);}
 .modal-card{background:#131b2c;border:1px solid var(--line);border-radius:18px;width:min(94vw,450px);
   max-height:88dvh;overflow-y:auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
 .modal-card h2{margin:0 0 4px;font-size:20px;}
@@ -165,9 +194,58 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shop-section{margin:14px 0 2px;font-weight:800;font-size:14px;color:var(--neon);letter-spacing:1px;}
 .explore-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px;}
 .explore-summary .stat{display:block;text-align:center;padding:7px 6px;}
-#explorationModal{padding:0;}
-#explorationModal .modal-card{width:min(100vw,980px);height:min(100dvh,720px);max-height:100dvh;border-radius:0;padding:0;overflow:hidden;background:#07101d;}
+#explorationModal{padding:0;align-items:stretch;justify-content:stretch;}
+#explorationModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh));max-height:calc(100dvh - var(--navh));border-radius:0;padding:0;overflow:hidden;background:#07101d;}
 #explorationBody{height:100%;min-height:0;}
+/* 상점 — 우주맵/탐사처럼 전체 화면 패널 */
+#shopModal{padding:0;align-items:stretch;justify-content:stretch;}
+#shopModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh));max-height:calc(100dvh - var(--navh));border-radius:0;padding:16px 16px 24px;background:#07101d;display:flex;flex-direction:column;min-height:0;}
+#shopModal h2{flex:0 0 auto;}
+#shopModal .sub{flex:0 0 auto;}
+#shopModal #shopList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
+#shopModal #shopClose{flex:0 0 auto;margin-top:12px;}
+.shop-consum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.consum-card{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);border-radius:10px;padding:11px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+.consum-card:not(:disabled):active{transform:scale(.97);}
+.consum-card:not(:disabled):hover{border-color:var(--neon);background:rgba(92,242,194,.08);}
+.consum-card:disabled{opacity:.45;cursor:not-allowed;}
+.consum-card .consum-icon{font-size:34px;line-height:1;}
+.consum-card .consum-name{font-weight:800;font-size:14px;}
+.consum-card .consum-name small{color:var(--sub);font-weight:700;}
+.consum-card .consum-exp{font-size:11.5px;color:var(--neon);font-weight:700;}
+.consum-card .consum-price{font-size:13px;font-weight:800;color:var(--gold);}
+.shop-wallet{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px;}
+.shop-wallet .stat{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--sub);}
+.shop-block{margin:14px 0 18px;}
+.shop-block-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.shop-block-title{font-weight:900;font-size:17px;color:var(--text);}
+.shop-block-note{font-size:12px;color:var(--sub);text-align:right;line-height:1.35;}
+.shop-lane{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:1px 2px 10px;margin:0 -2px;-webkit-overflow-scrolling:touch;}
+.shop-lane::-webkit-scrollbar{height:7px;}
+.shop-lane::-webkit-scrollbar-thumb{background:rgba(92,242,194,.24);border-radius:999px;}
+.shop-subtitle{font-weight:800;font-size:13px;color:var(--neon);margin:10px 0 7px;}
+.shop-card{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);border-radius:8px;min-width:138px;width:138px;min-height:186px;padding:8px;display:flex;flex-direction:column;gap:7px;text-align:center;scroll-snap-align:start;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+.shop-card:not(:disabled):active{transform:scale(.98);}
+.shop-card:not(:disabled):hover{border-color:var(--neon);background:rgba(92,242,194,.08);}
+.shop-card:disabled{cursor:not-allowed;opacity:.55;}
+.shop-card-art{height:92px;border-radius:7px;background:linear-gradient(160deg,rgba(92,242,194,.12),rgba(255,211,74,.08));border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:44px;line-height:1;}
+.shop-card-name{font-weight:900;font-size:13px;line-height:1.25;min-height:34px;display:flex;align-items:center;justify-content:center;}
+.shop-card-price{margin-top:auto;border-top:1px solid rgba(255,255,255,.08);padding-top:7px;color:var(--gold);font-weight:900;font-size:13px;}
+.shop-card-tag{font-size:11px;color:var(--sub);line-height:1.25;min-height:28px;}
+.shop-empty{border:1px dashed rgba(255,255,255,.16);border-radius:8px;padding:18px 12px;color:var(--sub);font-size:13px;text-align:center;background:rgba(255,255,255,.035);}
+.shop-odds-table{display:flex;flex-direction:column;gap:7px;margin:12px 0;}
+.shop-odds-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:9px 10px;font-size:13px;}
+.shop-odds-row b{color:var(--text);}
+.shop-odds-row span{color:var(--sub);font-size:12px;text-align:right;}
+.shop-modal-actions{display:flex;gap:8px;margin-top:12px;}
+.shop-modal-actions .btn{margin-top:0;}
+.shop-open-modal{align-items:center;text-align:center;}
+.shop-opening-box{width:180px;height:210px;margin:12px auto 8px;border:1px solid rgba(92,242,194,.28);border-radius:10px;background:linear-gradient(160deg,rgba(92,242,194,.16),rgba(255,211,74,.1));display:flex;align-items:center;justify-content:center;font-size:86px;cursor:pointer;box-shadow:0 18px 48px rgba(0,0,0,.34);transition:transform .3s,border-color .3s;}
+.shop-opening-box.opened{transform:translateY(-8px) scale(1.04) rotate(-2deg);border-color:var(--gold);animation:boxPop .55s ease both;}
+@keyframes boxPop{0%{filter:brightness(1)}45%{filter:brightness(1.75)}100%{filter:brightness(1.1)}}
+.shop-result-card{margin:12px 0;background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.22);border-radius:10px;padding:12px;}
+.shop-result-card .reward-icon{font-size:46px;margin-bottom:4px;}
+
 .space-map-screen{height:100%;display:flex;flex-direction:column;min-height:0;}
 .space-map-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(92,242,194,.18);background:rgba(8,15,28,.92);}
 .space-map-head h2{margin:0;font-size:19px;white-space:nowrap;}
@@ -186,19 +264,29 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   background-size:54px 54px,89px 89px,127px 127px;background-position:8px 13px,23px 39px,60px 8px;opacity:.62;}
 .space-map-canvas:after{background:radial-gradient(ellipse at center,transparent 45%,rgba(2,5,12,.72) 100%);}
 .space-orbit{position:absolute;z-index:1;border:1px solid rgba(255,255,255,.055);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;}
-.planet-node{position:absolute;transform:translate(-50%,-50%);border:none;background:transparent;color:var(--text);cursor:pointer;z-index:4;min-width:104px;padding:0;}
+.planet-node{position:absolute;transform:translate(-50%,-50%);border:none;background:transparent;color:var(--text);cursor:pointer;z-index:4;min-width:104px;padding:0;text-align:center;}
 .planet-node.locked{cursor:pointer;}
-.planet-core{width:66px;height:66px;margin:0 auto 8px;border-radius:50%;position:relative;background:var(--planet-color);box-shadow:0 0 22px color-mix(in srgb,var(--planet-color) 55%,transparent), inset -15px -18px 22px rgba(0,0,0,.35), inset 12px 10px 18px rgba(255,255,255,.16);}
-.planet-core:before{content:"";position:absolute;inset:10px 6px 13px 9px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 42%);transform:rotate(-24deg);}
-.planet-core:after{content:"";position:absolute;left:-13px;right:-13px;top:29px;height:8px;border-radius:50%;border:2px solid rgba(255,255,255,.36);transform:rotate(-18deg);opacity:var(--ring-opacity,.15);}
-.planet-node.grade-rare .planet-core{width:76px;height:76px;}
-.planet-node.grade-epic .planet-core{width:86px;height:86px;}
+.planet-core{display:block;width:44px;height:44px;margin:0 auto 6px;border-radius:50%;position:relative;background:var(--planet-color);box-shadow:0 0 16px color-mix(in srgb,var(--planet-color) 55%,transparent), inset -10px -12px 15px rgba(0,0,0,.35), inset 8px 7px 12px rgba(255,255,255,.16);transition:transform .12s;}
+.planet-node:active .planet-core{transform:scale(.9);}
+.planet-core:before{content:"";position:absolute;inset:7px 4px 9px 6px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 42%);transform:rotate(-24deg);}
+.planet-core:after{content:"";position:absolute;left:-9px;right:-9px;top:19px;height:6px;border-radius:50%;border:2px solid rgba(255,255,255,.36);transform:rotate(-18deg);opacity:var(--ring-opacity,.15);}
+.planet-node.grade-rare .planet-core{width:52px;height:52px;}
+.planet-node.grade-epic .planet-core{width:60px;height:60px;}
 .planet-node.locked .planet-core{filter:grayscale(.95) brightness(.42);box-shadow:inset -15px -18px 22px rgba(0,0,0,.48);}
-.planet-lock{position:absolute;left:50%;top:34px;transform:translate(-50%,-50%);font-size:24px;text-shadow:0 2px 10px #000;display:none;}
+.planet-lock{position:absolute;left:50%;top:22px;transform:translate(-50%,-50%);font-size:20px;text-shadow:0 2px 10px #000;display:none;}
 .planet-node.locked .planet-lock{display:block;}
 .planet-label{display:inline-block;max-width:118px;padding:3px 8px;border-radius:999px;background:rgba(5,10,18,.78);border:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:800;white-space:nowrap;}
 .planet-node.selected .planet-core{outline:3px solid var(--neon);outline-offset:5px;box-shadow:0 0 34px rgba(92,242,194,.55), inset -15px -18px 22px rgba(0,0,0,.35);}
 .planet-node.selected .planet-label{border-color:var(--neon);color:var(--neon);}
+/* 내 탐사선 — 우주맵 중앙 고정 */
+.my-ship-node{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;border:none;background:transparent;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.my-ship-node .ship-core{width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;line-height:1;
+  background:radial-gradient(circle at 50% 32%, #2bd49a, #155a4b 78%);
+  box-shadow:0 0 32px rgba(43,212,154,.6), inset 0 3px 10px rgba(255,255,255,.35), inset 0 -9px 16px rgba(0,0,0,.42);
+  border:2px solid rgba(125,255,217,.72);animation:shipFloat 3.4s ease-in-out infinite;}
+.my-ship-node:active .ship-core{animation:none;transform:scale(.93);}
+.my-ship-node .ship-label{padding:3px 10px;border-radius:999px;background:rgba(5,10,18,.82);border:1px solid rgba(92,242,194,.5);font-size:11.5px;font-weight:800;color:var(--neon);white-space:nowrap;}
+@keyframes shipFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .space-lane{position:absolute;left:12%;right:12%;top:52%;z-index:1;height:1px;background:linear-gradient(90deg,transparent,rgba(92,242,194,.34),transparent);transform:rotate(-10deg);pointer-events:none;}
 .space-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.9);opacity:.85;z-index:1;pointer-events:none;}
 .space-star.big{width:3px;height:3px;background:#bfffee;box-shadow:0 0 12px rgba(92,242,194,.95);}
@@ -215,10 +303,16 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .space-map-action .btn{min-width:132px;padding:11px 13px;border-radius:12px;background:rgba(9,16,29,.88);box-shadow:0 10px 26px rgba(0,0,0,.28);}
 .map-zoom-controls{position:absolute;right:14px;top:128px;z-index:8;display:flex;flex-direction:column;gap:6px;}
 .map-zoom-controls button{width:38px;height:38px;padding:0;border-radius:11px;background:rgba(9,16,29,.88);}
-.map-bottom-panel{position:absolute;left:0;right:0;bottom:0;z-index:9;background:rgba(9,16,29,.94);border-top:1px solid rgba(92,242,194,.24);box-shadow:0 -16px 44px rgba(0,0,0,.42);padding:8px 14px 14px;transition:min-height .22s ease, max-height .22s ease;backdrop-filter:blur(8px);}
-.map-bottom-panel.collapsed{min-height:70px;max-height:70px;}
-.map-bottom-panel.expanded{min-height:242px;max-height:46%;}
-.map-bottom-handle{width:76px;height:22px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;cursor:grab;}
+.map-bottom-panel{position:absolute;left:0;right:0;bottom:0;z-index:9;background:rgba(9,16,29,.94);border-top:1px solid rgba(92,242,194,.24);box-shadow:0 -16px 44px rgba(0,0,0,.42);padding:6px 14px 14px;height:36px;transition:height .32s cubic-bezier(.32,.72,0,1);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;will-change:height;}
+.map-bottom-panel.snap-0{height:36px;}
+.map-bottom-panel.snap-1{height:236px;}
+.map-bottom-panel.snap-2{height:min(64dvh,430px);}
+.map-bottom-panel.dragging{transition:none;}
+.map-bottom-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
+.planet-detail-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
+.planet-detail-block .info-desc{margin-bottom:6px;}
+.planet-detail-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.map-bottom-handle{width:76px;height:22px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;cursor:grab;flex:0 0 auto;touch-action:none;}
 .map-bottom-handle:before{content:"";width:56px;height:5px;border-radius:999px;background:rgba(255,255,255,.26);}
 .map-bottom-panel.dragging .map-bottom-handle{cursor:grabbing;}
 .map-bottom-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
@@ -230,8 +324,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .region-summary-card.warn{border-color:rgba(255,211,74,.45);}
 .region-summary-card .region-name{font-size:13px;font-weight:900;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .region-summary-card .region-meta{display:flex;gap:5px;flex-wrap:wrap;font-size:11px;color:var(--sub);}
-.region-brief-popup-backdrop{position:absolute;inset:0;z-index:32;background:rgba(3,7,14,.58);display:flex;align-items:center;justify-content:center;padding:14px;}
-.region-brief-popup{width:min(520px,94vw);max-height:min(82dvh,620px);overflow-y:auto;background:#101827;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:14px;box-shadow:0 18px 60px rgba(0,0,0,.65);}
+.region-brief-popup-backdrop{position:fixed;left:0;right:0;top:0;bottom:var(--navh);z-index:40;background:rgba(3,7,14,.58);display:flex;align-items:center;justify-content:center;padding:14px;}
+.region-brief-popup{width:min(520px,94vw);max-height:calc(100% - 24px);overflow-y:auto;background:#101827;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:14px 14px 18px;box-shadow:0 18px 60px rgba(0,0,0,.65);}
 .region-brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;}
 .region-brief-cell{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:8px;font-size:12px;color:var(--sub);line-height:1.45;}
 .region-brief-cell b{display:block;color:var(--text);font-size:13px;margin-top:2px;}
@@ -276,8 +370,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .ship-stat b{display:block;color:var(--text);font-size:13px;margin-top:2px;}
 .space-panel-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
 .space-map-close{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
-.ship-mod-room{position:absolute;inset:12px;z-index:20;background:rgba(9,16,29,.96);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
-.ship-mod-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+/* 격납고/개조실 팝업 — 맵 세로를 거의 꽉 채우되 하단 헤더(nav)는 가리지 않음 */
+.ship-mod-room,.exploration-shop-room{position:fixed;left:max(8px,calc(50% - 260px));right:max(8px,calc(50% - 260px));top:10px;height:calc(100dvh - var(--navh) - 18px);z-index:55;background:rgba(9,16,29,.97);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
+.ship-mod-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.ship-mod-head .ship-mod-title{flex:1;text-align:center;min-width:0;}
+.ship-mod-head .ship-mod-title h3{margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ship-mod-head h3{margin:0;font-size:19px;}
 .ship-mod-head .sub{margin:3px 0 0;color:var(--sub);font-size:12.5px;line-height:1.45;}
 .ship-mod-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
@@ -295,7 +392,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .ship-upgrade-card .up-compare{color:var(--sub);font-size:12px;margin:6px 0;}
 .ship-upgrade-card .up-compare b{color:var(--neon);}
 .ship-mod-back{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
-.exploration-shop-room{position:absolute;inset:12px;z-index:20;background:rgba(9,16,29,.96);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
+.ship-mod-actions{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;}
 .exploration-shop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
 .exploration-shop-head h3{margin:0;font-size:19px;}
 .exploration-shop-head .sub{margin:3px 0 0;color:var(--sub);font-size:12.5px;line-height:1.45;}
@@ -327,8 +424,6 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   .region-summary-grid{grid-template-columns:1fr 1fr;max-height:182px;}
   .region-brief-grid{grid-template-columns:1fr;}
   .space-side-panel{left:12px;right:12px;top:auto;height:210px;}
-  .ship-mod-room{inset:8px;bottom:228px;}
-  .exploration-shop-room{inset:8px;bottom:228px;}
   .ship-mod-layout,.ship-part-grid,.ship-upgrade-grid,.exploration-shop-layout{grid-template-columns:1fr;}
   .exploration-shop-tabs{display:grid;grid-template-columns:1fr 1fr;}
 }
@@ -339,7 +434,14 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .resultcard{background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.32);border-radius:14px;padding:12px;margin-top:12px;}
 .resultcard .rtitle{font-size:17px;font-weight:900;margin-bottom:6px;}
 .seed-preview{margin-top:10px;font-size:12px;color:var(--sub);line-height:1.7;}
-#seedBagModal .modal-card{width:min(96vw,900px);max-height:92dvh;}
+#seedBagModal .modal-card{width:min(96vw,900px);max-height:calc(100dvh - var(--navh) - 28px);}
+.seed-sort-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.seed-sort-label{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px;}
+.seed-sort-btn{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--sub);}
+.seed-sort-btn.active{border-color:var(--neon);color:var(--neon);background:rgba(92,242,194,.08);}
+.seed-detail-actions{display:flex;gap:8px;margin-top:12px;}
+.seed-detail-actions .btn{flex:1;margin-top:0;}
 .seed-bag-top{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 12px;}
 .seed-bag-top .stat{display:block;text-align:center;padding:8px 6px;}
 .seed-bag-layout{display:grid;grid-template-columns:minmax(250px,340px) 1fr;gap:12px;min-height:420px;}
@@ -418,6 +520,9 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .skill-card .sc-desc{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.4;}
 .skill-card .sc-tag{position:absolute;top:-8px;left:9px;font-size:9.5px;padding:1px 7px;border-radius:999px;background:#16223a;border:1px solid var(--line);color:var(--sub);}
 .skill-card .sc-x{position:absolute;top:6px;right:8px;font-size:11px;color:#ff8a70;}
+.sc-aoe{font-weight:800;}
+.sc-aoe.aoe{color:#7dd3ff;}
+.sc-aoe.single{color:#ffd27d;}
 .skill-slot.empty{border:1.5px dashed rgba(255,255,255,.18);border-radius:12px;padding:16px 9px;text-align:center;color:var(--sub);font-size:12px;display:flex;align-items:center;justify-content:center;min-height:62px;}
 .trait-effect-row{display:flex;gap:9px;align-items:flex-start;background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-bottom:7px;}
 .trait-effect-row .te-icon{font-size:22px;flex:0 0 auto;}
@@ -479,13 +584,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       <div class="res">🧭 Lv <span id="levelView">1</span></div>
       <div class="res">🏆 <span id="rankView">브론즈</span> <span style="opacity:.7;font-weight:600">· <span id="rankPointView">0</span>p</span></div>
       <div class="spacer"></div>
-      <button class="iconbtn" id="btnSeedBag">🎒</button>
       <button class="iconbtn" id="btnSettings">⚙️</button>
     </header>
     <div id="collectionBar"></div>
     <div class="main-body">
       <div id="centerPlant"></div>
+      <button id="btnBagCenter" class="bag-fab" title="종자 가방">🎒<span class="bag-fab-label">가방</span></button>
     </div>
+    <div id="tournamentBar"></div>
     <button id="btnBattle">⚔️ 전투 시작</button>
     <nav id="bottomNav">
       <button class="navbtn" data-nav="shop"><span class="ni">🛒</span><span class="nl">상점</span></button>
@@ -553,11 +659,20 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 
 <div class="modal hidden" id="shopModal">
   <div class="modal-card">
-    <h2>🛒 유전자 상점</h2>
-    <p class="sub">보유 크레딧: <b id="shopCredit" style="color:var(--gold)"></b> 💰</p>
+    <h2>🛒 상점</h2>
+    <div class="shop-wallet">
+      <span class="stat">보유 크레딧 <b id="shopCredit" style="color:var(--gold)"></b> 💰</span>
+    </div>
     <div class="cardlist" id="shopList"></div>
-    <button class="btn modal-close" id="shopClose">닫기</button>
   </div>
+</div>
+
+<div class="modal hidden" id="shopBoxModal">
+  <div class="modal-card" id="shopBoxBody"></div>
+</div>
+
+<div class="modal hidden" id="shopOpenModal">
+  <div class="modal-card shop-open-modal" id="shopOpenBody"></div>
 </div>
 
 <div class="modal hidden" id="explorationModal">
@@ -578,8 +693,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       ④ 심은 식물은 가운데 화면에 나타나며, 식물을 탭하면 강화할 수 있습니다.<br>
       ⑤ 전투는 보유 식물 중 선택된 한 마리만 출전합니다. 식물은 성장·특성에 따라 스킬을 얻고, 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
       ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 | 💧물←풀·빙결·번개 | 🌿풀←불·바람·번개 | ⚡번개←대지·빙결 | 🪨대지←풀·물 | ❄️빙결←불·대지 | 🌪️바람←대지·불.<br>
-      ⑦ 전투는 토너먼트 방식입니다. 예선(3판 2선승)을 통과하면 16강 → 결승까지 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다.<br>
-      ⑧ 상점에서는 식물이나 희귀 종자를 직접 팔지 않습니다. 종자는 탐사로 얻고, 크레딧은 강화와 장비에 사용하세요. 무료 기본 종자는 진행이 막혔을 때 종자 가방에서 한 번만 받을 수 있습니다.
+      ⑦ 전투는 토너먼트 방식입니다. 예선 5경기 중 3승 이상이면 본선(16강 → 결승)에 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다. <b style="color:var(--neon)">경기가 끝날 때마다 홈으로 돌아와</b> 식물을 강화·준비한 뒤 다음 경기를 시작할 수 있습니다.<br>
+      ⑧ 상점에서는 특가·재화·보급상자를 확인할 수 있습니다. 원화 상품은 아직 결제 연동 전이라 선택할 수 없고, 보급상자는 크레딧으로 구매해 소모품이나 특성 부품을 얻습니다.
     </div>
     <button class="btn modal-close danger" id="btnReset">데이터 초기화</button>
     <button class="btn modal-close" id="settingsClose">닫기</button>
@@ -684,7 +799,7 @@ const AlienPlantGameData = (() => {
         grade: 'common',
         environment: { heat: 8, cold: 4, pressure: 6, hydro_pressure: 2, toxic_atmosphere: 5, radiation: 3, gravity: 7 },
         required_ship_stats: { fuel: 1, durability: 35, heat_resistance: 0, cold_resistance: 0, pressure_resistance: 0, hydro_pressure_resistance: 0 },
-        representative_seed_types: ['이끼형', '덩굴형', '정신 연화형'],
+        representative_seed_types: ['풀형', '덩굴형', '꽃형'],
         representative_item_types: ['영양제', '성장 촉매'],
         danger_level: 1,
         regions: ['region_elyndor_lumenwood', 'region_elyndor_spore_marsh'],
@@ -700,7 +815,7 @@ const AlienPlantGameData = (() => {
         grade: 'rare',
         environment: { heat: 42, cold: 6, pressure: 24, hydro_pressure: 0, toxic_atmosphere: 35, radiation: 18, gravity: 14 },
         required_ship_stats: { fuel: 3, durability: 60, heat_resistance: 18, cold_resistance: 0, pressure_resistance: 14, hydro_pressure_resistance: 0 },
-        representative_seed_types: ['금속 갈대형', '중력 선인장형', '포식낭형'],
+        representative_seed_types: ['풀형', '선인장형', '덩굴형'],
         representative_item_types: ['방열 코팅', '철질 접목 키트'],
         danger_level: 4,
         regions: ['region_vathra_iron_dunes', 'region_vathra_sulfur_rift'],
@@ -716,7 +831,7 @@ const AlienPlantGameData = (() => {
         grade: 'epic',
         environment: { heat: 4, cold: 32, pressure: 38, hydro_pressure: 44, toxic_atmosphere: 8, radiation: 22, gravity: 19 },
         required_ship_stats: { fuel: 4, durability: 72, heat_resistance: 0, cold_resistance: 20, pressure_resistance: 24, hydro_pressure_resistance: 28 },
-        representative_seed_types: ['결정화형', '덩굴형', '중력 선인장형'],
+        representative_seed_types: ['꽃형', '덩굴형', '선인장형'],
         representative_item_types: ['수압막', '정신 조율 장비'],
         danger_level: 7,
         regions: ['region_nereion_tideglass_reef', 'region_nereion_orbit_canopy'],
@@ -1251,6 +1366,33 @@ const AlienPlantGameData = (() => {
         price: 480,
       },
       {
+        id: 'item_water',
+        name: '물',
+        item_type: 'nutrient',
+        description: '가장 기본적인 배양수. 식물에게 주면 소량의 성장 경험치를 준다.',
+        target_trait_category: 'growth',
+        effect: { growth_exp: 8 },
+        price: 20,
+      },
+      {
+        id: 'item_fertilizer',
+        name: '비료',
+        item_type: 'nutrient',
+        description: '균형 잡힌 영양 비료. 적당한 성장 경험치를 준다.',
+        target_trait_category: 'growth',
+        effect: { growth_exp: 20 },
+        price: 60,
+      },
+      {
+        id: 'item_nutrient_spray',
+        name: '영양제',
+        item_type: 'nutrient',
+        description: '고농축 영양 스프레이. 많은 성장 경험치를 준다.',
+        target_trait_category: 'growth',
+        effect: { growth_exp: 45 },
+        price: 140,
+      },
+      {
         id: 'item_rookie_ticket',
         name: '루키 컵 참가권',
         item_type: 'ticket',
@@ -1615,7 +1757,7 @@ const ELEMENTS = {
   ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire','earth'],      strong:['water','bolt'],        skill:'절대 영도' },
 };
 const GRADES = { C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
-const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'속도' };
+const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'기동성', acc:'적중' };
 const MOVE_COST = { attack:0, skill:2, guard:0, heal:2, pred:3 };
 const FORMS = {
   normal: { name:'일반형', icon:'🌱', color:'#9fb0c3' },
@@ -1648,11 +1790,105 @@ function moveCost(unit, key){
 }
 function wUpCost(lv){ return Math.round(60 * Math.pow(1.55, lv) / 10) * 10; }
 const GENE_BUDGET = 15;
-const SEED_PRICE = 250, REROLL_PRICE = 150, MAX_PLANTS = 8;
+const SEED_PRICE = 250, REROLL_PRICE = 150;
+/* 화분: 초반 3칸, 플레이어 레벨이 오를수록 최대 12칸까지 순차 개방 */
+const POT_MIN = 3, POT_MAX = 12;
+function potCapacity(){ const lv = (typeof state!=='undefined' && state.player_level) || 1; return clamp(POT_MIN + Math.floor((lv - 1)/3), POT_MIN, POT_MAX); }
+function potUnlockLevel(slotIndex){ return slotIndex < POT_MIN ? 1 : 1 + (slotIndex - POT_MIN + 1)*3; }
 const SAVE_KEY = 'pullosseum_v1';
 const ALIEN_DATA_API = typeof AlienPlantGameData !== 'undefined' ? AlienPlantGameData : null;
 const ALIEN_DATA = ALIEN_DATA_API ? ALIEN_DATA_API.gameData : { planets:[], regions:[], seeds:[], traits:[] };
 const ALIEN_INDEX = ALIEN_DATA_API ? ALIEN_DATA_API.createIndexes(ALIEN_DATA) : { planets:{}, regions:{}, seeds:{}, traits:{}, items:{} };
+const SHOP_SPECIAL_PACKS = [
+  { id:'special_rookie', icon:'🌱', name:'초보 재배사 팩', tag:'성장 재료 + 크레딧', price:1100, oldPrice:2200, currency:'krw', disabled:true },
+  { id:'special_explorer', icon:'🛰️', name:'탐사 지원 팩', tag:'연료 + 탐사 보조', price:3300, oldPrice:5500, currency:'krw', disabled:true },
+  { id:'special_supply', icon:'🎁', name:'희귀 보급 팩', tag:'상자 + 배양 재료', price:5500, oldPrice:9900, currency:'krw', disabled:true },
+  { id:'special_diamond', icon:'💎', name:'다이아 성장 팩', tag:'대량 재화 + 고급 상자', price:11000, oldPrice:22000, currency:'krw', disabled:true },
+];
+const SHOP_CURRENCY_PACKS = [
+  { id:'credits_1', icon:'💰', name:'크레딧 1,000', tag:'소량 충전', price:1100, currency:'krw', disabled:true },
+  { id:'credits_2', icon:'💰', name:'크레딧 2,500', tag:'보너스 10%', price:3300, currency:'krw', disabled:true },
+  { id:'credits_3', icon:'💰', name:'크레딧 5,500', tag:'보너스 20%', price:5500, currency:'krw', disabled:true },
+  { id:'credits_4', icon:'💰', name:'크레딧 12,000', tag:'보너스 35%', price:11000, currency:'krw', disabled:true },
+  { id:'credits_5', icon:'💰', name:'크레딧 28,000', tag:'보너스 50%', price:22000, currency:'krw', disabled:true },
+  { id:'credits_6', icon:'💰', name:'크레딧 65,000', tag:'보너스 80%', price:55000, currency:'krw', disabled:true },
+];
+/* 독초 분화: 식물에 '물약'을 장착하면 공격 스킬에 독성이 추가된다. (기획서 §독초) */
+const POTIONS = {
+  potion_venom:     { id:'potion_venom',     name:'맹독 물약',   icon:'🟣', price:520, dot:{ kind:'poison', pct:0.06, turns:3 }, desc:'공격 시 중독 부여 (3턴 · 강력)' },
+  potion_corrosive: { id:'potion_corrosive', name:'부식독 물약', icon:'🧪', price:640, dot:{ kind:'poison', pct:0.04, turns:3, debuff:{ stat:'def', pct:0.15, turns:2 } }, desc:'공격 시 중독 + 적 방어 15%↓(2턴)' },
+  potion_paralytic: { id:'potion_paralytic', name:'마비독 물약', icon:'☠️', price:600, dot:{ kind:'poison', pct:0.03, turns:2, debuff:{ stat:'spd', pct:0.2, turns:2 } }, desc:'공격 시 중독 + 적 기동성 20%↓(2턴)' },
+};
+const POTION_LIST = Object.values(POTIONS);
+/* 상점 소모품 — 물/영양제/비료. 크레딧으로 10개 단위 구매. 각각 식물 성장 경험치 고정. */
+const SHOP_GROWTH_CONSUMABLES = [
+  { item_id:'item_water',          icon:'💧', name:'물',     exp:8,  unit:10, price:160 },
+  { item_id:'item_fertilizer',     icon:'🌿', name:'비료',   exp:20, unit:10, price:460 },
+  { item_id:'item_nutrient_spray', icon:'💊', name:'영양제', exp:45, unit:10, price:980 },
+];
+const SHOP_SUPPLY_BOXES = [
+  {
+    id:'box_consumable_silver', group:'consumable', icon:'📦', name:'실버 소모품 상자', tag:'기본 배양 소모품', price:180, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_nutrient_gel', min:1, max:2, chance:46 },
+      { type:'item', item_id:'item_lumen_fertilizer', min:1, max:1, chance:24 },
+      { type:'item', item_id:'item_stability_serum', min:1, max:1, chance:18 },
+      { type:'item', item_id:'item_spore_ampoule', min:1, max:1, chance:12 },
+    ],
+  },
+  {
+    id:'box_consumable_gold', group:'consumable', icon:'🎁', name:'골드 소모품 상자', tag:'중급 배양 소모품', price:420, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_lumen_fertilizer', min:1, max:2, chance:28 },
+      { type:'item', item_id:'item_stability_serum', min:1, max:2, chance:24 },
+      { type:'item', item_id:'item_acidic_mutagen', min:1, max:1, chance:18 },
+      { type:'item', item_id:'item_iron_graft', min:1, max:1, chance:16 },
+      { type:'item', item_id:'item_trait_slot_splice', min:1, max:1, chance:14 },
+    ],
+  },
+  {
+    id:'box_consumable_diamond', group:'consumable', icon:'💎', name:'다이아 소모품 상자', tag:'고급 배양 소모품', price:900, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_trait_slot_splice', min:1, max:1, chance:28 },
+      { type:'item', item_id:'item_psionic_tuning_fork', min:1, max:2, chance:22 },
+      { type:'item', item_id:'item_tide_membrane_wrap', min:1, max:2, chance:20 },
+      { type:'item', item_id:'item_iron_graft', min:2, max:2, chance:16 },
+      { type:'item', item_id:'item_acidic_mutagen', min:2, max:2, chance:14 },
+    ],
+  },
+  {
+    id:'box_trait_silver', group:'trait', icon:'🧬', name:'실버 특성 상자', tag:'기본 특성 부품', price:260, currency:'credits',
+    rewards:[
+      { type:'trait', trait_id:'trait_biolume_chlorophyll', min:1, max:1, chance:24 },
+      { type:'trait', trait_id:'trait_resonant_roots', min:1, max:1, chance:22 },
+      { type:'trait', trait_id:'trait_vector_thorns', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_rapid_germination', min:1, max:1, chance:18 },
+      { type:'trait', trait_id:'trait_symbiotic_microbes', min:1, max:1, chance:16 },
+    ],
+  },
+  {
+    id:'box_trait_gold', group:'trait', icon:'🧫', name:'골드 특성 상자', tag:'희귀 특성 부품', price:620, currency:'credits',
+    rewards:[
+      { type:'trait', trait_id:'trait_acid_sap', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_iron_bark', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_phase_pollen', min:1, max:1, chance:18 },
+      { type:'trait', trait_id:'trait_spore_cloud', min:1, max:1, chance:16 },
+      { type:'trait', trait_id:'trait_plasma_stamen', min:1, max:1, chance:14 },
+      { type:'trait', trait_id:'trait_stable_core', min:1, max:1, chance:12 },
+    ],
+  },
+  {
+    id:'box_trait_diamond', group:'trait', icon:'🔮', name:'다이아 특성 상자', tag:'고급 특성 부품', price:1300, currency:'credits',
+    rewards:[
+      { type:'trait', trait_id:'trait_crystal_refraction', min:1, max:1, chance:22 },
+      { type:'trait', trait_id:'trait_quantum_seeds', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_psionic_lattice', min:1, max:1, chance:18 },
+      { type:'trait', trait_id:'trait_metallic_xylem', min:1, max:1, chance:16 },
+      { type:'trait', trait_id:'trait_hunger_maw', min:1, max:1, chance:14 },
+      { type:'trait', trait_id:'trait_solar_burst', min:1, max:1, chance:10 },
+    ],
+  },
+];
 const PLANET_EXPLORATION_REQUIREMENTS = {
   planet_elyndor: { min_equipment_bonus: 0 },
   planet_vathra: { min_equipment_bonus: 0.05 },
@@ -1673,10 +1909,11 @@ const RARITY_META = {
   epic: { name:'특수', group:'특수 종자', css:'rarity-epic', icon:'🔮' },
   legendary: { name:'전설', group:'특수 종자', css:'rarity-legendary', icon:'✦' },
 };
+/* 기획서: 식물 외형 종류 = 풀 / 나무 / 덩굴 / 꽃 / 선인장 (이끼형 폐지) */
 const SPECIES_TYPE_NAMES = {
-  moss:'이끼형', bulb:'구근형', vine:'덩굴형', fungal_tree:'균목형', carnivorous_pod:'포식낭형',
-  metal_reed:'금속 갈대형', psionic_lotus:'정신 연화형', crystal_flower:'결정화형',
-  gravity_cactus:'중력 선인장형', storm_orchid:'폭풍 난초형',
+  moss:'풀형', bulb:'꽃형', vine:'덩굴형', fungal_tree:'나무형', carnivorous_pod:'덩굴형',
+  metal_reed:'풀형', psionic_lotus:'꽃형', crystal_flower:'꽃형',
+  gravity_cactus:'선인장형', storm_orchid:'꽃형',
 };
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -1813,7 +2050,7 @@ const ALIEN_SEED_SPECIES_MAP = {
      counterPct, energyGain, selfBuff:{stat,pct,turns}, enemyDebuff:{stat,pct,turns},
      dot:{kind,pct,turns}, lifesteal, steal:{stat,pct}, cleanse, desc, tag } */
 const UNIVERSAL_SKILLS = {
-  skill_basic_strike: { name:'기본 공격', icon:'👊', cost:0, kind:'attack', power:100, desc:'위력 100 · 무료', tag:'기본' },
+  skill_basic_strike: { name:'기본 공격', icon:'👊', cost:0, kind:'attack', power:100, single:true, desc:'위력 100 · 단일 · 무료', tag:'기본' },
   skill_guard:        { name:'방어 태세', icon:'🛡️', cost:0, kind:'guard', guardMult:0.5, energyGain:1, desc:'받는 피해 50%↓ · ⚡+1', tag:'기본' },
   skill_photosynthesis:{ name:'광합성', icon:'☀️', cost:2, kind:'heal', heal:0.28, desc:'체력 28% 회복 · ⚡2', tag:'기본' },
   skill_focus:        { name:'기력 집중', icon:'🌀', cost:0, kind:'special', energyGain:2, desc:'⚡ 2 충전 · 무료', tag:'성장' },
@@ -1823,31 +2060,31 @@ const ELEMENT_SKILLS = {};
 Object.keys(ELEMENTS).forEach(el => {
   ELEMENT_SKILLS['skill_elem_' + el] = {
     name: ELEMENTS[el].skill, icon: ELEMENTS[el].icon, cost:2, kind:'elemental',
-    power:170, elem:true, element:el, desc:`위력 170 · ${ELEMENTS[el].name}속성기 · ⚡2`, tag:'속성',
+    power:170, elem:true, element:el, aoe:true, desc:`위력 170 · ${ELEMENTS[el].name}속성기 · 광역 · ⚡2`, tag:'속성',
   };
 });
 const elementSkillId = el => 'skill_elem_' + el;
 const TRAIT_SKILLS = {
   skill_biolume:   { name:'광합성 과충전', icon:'🌟', cost:2, kind:'heal', heal:0.22, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'체력 22% 회복 + 공격 15%↑(3턴)', tag:'특성' },
   skill_resonant:  { name:'공명 방벽', icon:'🟢', cost:2, kind:'guard', guardMult:0.45, selfBuff:{stat:'def',pct:0.2,turns:3}, desc:'피해 55%↓ + 방어 20%↑(3턴)', tag:'특성' },
-  skill_acid:      { name:'산성 분사', icon:'🧫', cost:2, kind:'debuff', power:115, enemyDebuff:{stat:'def',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력115 + 방어 20%↓(2턴) + 중독', tag:'특성' },
+  skill_acid:      { name:'산성 분사', icon:'🧫', cost:2, kind:'debuff', power:115, aoe:true, enemyDebuff:{stat:'def',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력115 · 광역 + 방어 20%↓(2턴) + 중독', tag:'특성' },
   skill_ironbark:  { name:'철피 경화', icon:'🪨', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.35,turns:3}, heal:0.1, desc:'방어 35%↑(3턴) + 체력 10% 회복', tag:'특성' },
-  skill_thorns:    { name:'가시 사출', icon:'🌵', cost:2, kind:'dot', power:110, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력110 + 출혈(3턴)', tag:'특성' },
-  skill_phase:     { name:'위상 포자', icon:'💫', cost:2, kind:'buff', power:80, selfBuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력80 + 속도 30%↑(3턴)', tag:'특성' },
-  skill_gravity:   { name:'중력 붕괴', icon:'🪐', cost:3, kind:'debuff', power:130, enemyDebuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력130 + 적 속도 30%↓(3턴)', tag:'특성' },
+  skill_thorns:    { name:'가시 사출', icon:'🌵', cost:2, kind:'dot', power:110, single:true, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력110 · 단일 + 출혈(3턴)', tag:'특성' },
+  skill_phase:     { name:'위상 포자', icon:'💫', cost:2, kind:'buff', power:80, single:true, selfBuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력80 · 단일 + 기동성 30%↑(3턴)', tag:'특성' },
+  skill_gravity:   { name:'중력 붕괴', icon:'🪐', cost:3, kind:'debuff', power:130, aoe:true, enemyDebuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력130 · 광역 + 적 기동성 30%↓(3턴)', tag:'특성' },
   skill_tide:      { name:'수막 보호', icon:'🌊', cost:2, kind:'guard', guardMult:0.5, heal:0.12, desc:'피해 50%↓ + 체력 12% 회복', tag:'특성' },
   skill_spore:     { name:'포자 운무', icon:'🌫️', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3}, desc:'적 공격 20%↓(2턴) + 중독', tag:'특성' },
-  skill_plasma:    { name:'플라즈마 개화', icon:'⚡', cost:3, kind:'attack', power:165, critBonus:0.15, desc:'위력165 + 치명타율 15%', tag:'특성' },
+  skill_plasma:    { name:'플라즈마 개화', icon:'⚡', cost:3, kind:'attack', power:165, aoe:true, critBonus:0.15, desc:'위력165 · 광역 + 치명타율 15%', tag:'특성' },
   skill_adaptive:  { name:'적응 변이', icon:'🧬', cost:2, kind:'buff', cleanse:true, selfBuff:{stat:'atk',pct:0.18,turns:3}, energyGain:1, desc:'디버프 해제 + 공격 18%↑(3턴) + ⚡+1', tag:'특성' },
   skill_stablecore:{ name:'안정 코어', icon:'🔋', cost:1, kind:'buff', selfBuff:{stat:'def',pct:0.15,turns:3}, energyGain:2, desc:'방어 15%↑(3턴) + ⚡2 충전', tag:'특성' },
-  skill_psionic:   { name:'정신 간섭', icon:'🔮', cost:3, kind:'debuff', power:110, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력110 + 적 공격 18%↓(2턴)', tag:'특성' },
-  skill_metallic:  { name:'금속 관다발', icon:'⚙️', cost:2, kind:'attack', power:120, pierce:0.5, desc:'위력120 · 적 방어 50% 무시', tag:'특성' },
-  skill_hunger:    { name:'포식 아귀', icon:'🦷', cost:3, kind:'drain', power:130, lifesteal:0.5, desc:'위력130 · 피해 50% 흡혈', tag:'특성' },
+  skill_psionic:   { name:'정신 간섭', icon:'🔮', cost:3, kind:'debuff', power:110, single:true, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력110 · 단일 + 적 공격 18%↓(2턴)', tag:'특성' },
+  skill_metallic:  { name:'금속 관다발', icon:'⚙️', cost:2, kind:'attack', power:120, single:true, pierce:0.5, desc:'위력120 · 단일 · 적 방어 50% 무시', tag:'특성' },
+  skill_hunger:    { name:'포식 아귀', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.5, desc:'위력130 · 단일 · 피해 50% 흡혈', tag:'특성' },
   skill_rapidgerm: { name:'급속 발아', icon:'🌱', cost:0, kind:'special', energyGain:2, heal:0.08, desc:'⚡2 충전 + 체력 8% 회복 · 무료', tag:'특성' },
   skill_symbiotic: { name:'공생 회복', icon:'🍄', cost:2, kind:'heal', heal:0.3, cleanse:true, desc:'체력 30% 회복 + 디버프 1개 해제', tag:'특성' },
   skill_crystal:   { name:'결정 굴절', icon:'💠', cost:2, kind:'guard', guardMult:0.4, counterPct:0.35, desc:'피해 60%↓ + 굴절 반격', tag:'특성' },
-  skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 + 공격 20%↑(2턴)', tag:'특성' },
-  skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 + 적 무작위 스탯 20%↓(2턴)', tag:'특성' },
+  skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, aoe:true, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 · 광역 + 공격 20%↑(2턴)', tag:'특성' },
+  skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, aoe:true, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 · 광역 + 적 무작위 스탯 20%↓(2턴)', tag:'특성' },
 };
 /* 특성 id → 시그니처 스킬 id */
 const TRAIT_SKILL_MAP = {
@@ -1873,8 +2110,8 @@ const TRAIT_SKILL_MAP = {
   trait_quantum_seeds:'skill_quantum',
 };
 const FORM_SKILLS = {
-  skill_pred_vamp:   { name:'흡혈 포식', icon:'🩸', cost:3, kind:'drain', power:130, lifesteal:0.7, desc:'위력130 · 피해 70% 흡혈', tag:'포식' },
-  skill_pred_absorb: { name:'유전자 흡수', icon:'🧬', cost:3, kind:'drain', power:100, steal:{stat:'both',pct:0.2}, desc:'위력100 · 적 공·방 20% 흡수', tag:'포식' },
+  skill_pred_vamp:   { name:'흡혈 포식', icon:'🩸', cost:3, kind:'drain', power:130, single:true, lifesteal:0.7, desc:'위력130 · 단일 · 피해 70% 흡혈', tag:'포식' },
+  skill_pred_absorb: { name:'유전자 흡수', icon:'🧬', cost:3, kind:'drain', power:100, single:true, steal:{stat:'both',pct:0.2}, desc:'위력100 · 단일 · 적 공·방 20% 흡수', tag:'포식' },
 };
 const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS);
 function skillById(id, unit){
@@ -1884,8 +2121,8 @@ function skillById(id, unit){
     else if(unit && unit.weaponKey && typeof state!=='undefined' && state.weapons && state.weapons[unit.weaponKey] && state.weapons[unit.weaponKey].owned){ wk=unit.weaponKey; lv=state.weapons[unit.weaponKey].lv; }
     if(!wk) return { id, name:'무기 스킬 (미장착)', icon:'🗡️', cost:2, kind:'attack', power:100, desc:'상점에서 무기 구매 후 🧬특성 탭에서 장착하세요', tag:'무기' };
     const W = WEAPONS[wk];
-    if(wk === 'blade') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(140*(1+0.1*lv)), critBonus:0.25, desc:`근거리 · 위력 ${Math.round(140*(1+0.1*lv))} · 치명타 25%`, tag:'무기' };
-    if(wk === 'cannon') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(110*(1+0.1*lv)), pierce:0.6, desc:`원거리 · 위력 ${Math.round(110*(1+0.1*lv))} · 방어 60% 무시`, tag:'무기' };
+    if(wk === 'blade') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(140*(1+0.1*lv)), single:true, critBonus:0.25, desc:`근거리 · 단일 · 위력 ${Math.round(140*(1+0.1*lv))} · 치명타 25%`, tag:'무기' };
+    if(wk === 'cannon') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(110*(1+0.1*lv)), single:true, pierce:0.6, desc:`원거리 · 단일 · 위력 ${Math.round(110*(1+0.1*lv))} · 방어 60% 무시`, tag:'무기' };
     return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'guard', guardMult:0.35, counterPct:0.3+0.05*lv, desc:`방어 · 피해 65%↓ + 가시 반격`, tag:'무기' };
   }
   return ALL_SKILLS[id] || null;
@@ -1943,7 +2180,7 @@ function ensureSkillFields(p){
 /* 특성 패시브 집계 (data battle_effects + stat_modifiers) */
 function plantPassives(traitIds){
   const P = {
-    hpPct:0, atkPct:0, defPct:0, spdPct:0, energyBonus:0,
+    hpPct:0, atkPct:0, defPct:0, spdPct:0, accPct:0, energyBonus:0,
     regenPct:0, reduceDmgPct:0, lifestealPct:0, reflectPct:0, critBonus:0,
     barrierPct:0, enemySpdDownStart:0, energyOnEnemySkill:0, cleanseChance:0,
     nextAtkBonus:0, surviveChance:0, surviveHpAfter:0,
@@ -1957,6 +2194,7 @@ function plantPassives(traitIds){
     P.atkPct += sm.attack_pct || 0;
     P.defPct += sm.defense_pct || 0;
     P.spdPct += sm.speed_pct || 0;
+    P.accPct += sm.accuracy_pct || 0;
     P.energyBonus += sm.energy || 0;
     (t.battle_effects || []).forEach(be => {
       switch(be.effect){
@@ -1990,9 +2228,10 @@ const RANK_TIERS = [
   { key:'master',   name:'마스터',   color:'#d48cff', threshold:2800 },
   { key:'pulloseum',name:'풀로세움', color:'#5cf2c2', threshold:4000 },
 ];
-/* 토너먼트 라운드: 예선(3판2선) → 16강 → 8강 → 4강 → 결승 */
+/* 토너먼트 라운드: 예선(5경기 다승, 3승↑ 통과) → 16강 → 8강 → 4강 → 결승.
+   매 경기 후 홈으로 복귀해 강화·준비할 수 있다. */
 const TOURNAMENT_ROUNDS = [
-  { key:'prelim', name:'예선',   bestOf:3, needWins:2, reward:60,  point:0 },
+  { key:'prelim', name:'예선',   bestOf:5, needWins:3, reward:60,  point:0 },
   { key:'r16',    name:'16강',   bestOf:1, needWins:1, reward:120, point:30 },
   { key:'r8',     name:'8강',    bestOf:1, needWins:1, reward:200, point:50 },
   { key:'r4',     name:'4강',    bestOf:1, needWins:1, reward:340, point:90 },
@@ -2059,6 +2298,8 @@ function defaultState(){
     starter_seed_claimed:false,
     seed_inventory:[],
     item_inventory:[],
+    trait_inventory:[],
+    potion_inventory:[],
     ship_part_inventory:[],
     ship_upgrade_materials:0,
   };
@@ -2101,6 +2342,8 @@ function normalizeState(s){
   if(typeof s.exploration_equipment_bonus !== 'number') s.exploration_equipment_bonus = s.exploration_ship.stats.scanner_bonus || 0;
   if(!Array.isArray(s.seed_inventory)) s.seed_inventory = [];
   if(!Array.isArray(s.item_inventory)) s.item_inventory = [];
+  if(!Array.isArray(s.trait_inventory)) s.trait_inventory = [];
+  if(!Array.isArray(s.potion_inventory)) s.potion_inventory = [];
   if(!s.weapons) s.weapons = newArmory();
   s.plants.forEach(p => {
     if(!p.form){ p.form='normal'; p.predType=null; p.weaponKey=null; }
@@ -2142,8 +2385,42 @@ let explorationPanelMode = 'map';
 let planetPopupOpen = false;
 let selectedSeedInventoryId = null;
 let pendingPlantSeedId = null;
+let seedSortMode = 'rarity';
+const RARITY_ORDER = { common:0, uncommon:1, rare:2, epic:3, legendary:4 };
+const SEED_SELL_PRICE = { common:40, uncommon:90, rare:200, epic:420, legendary:850 };
+function seedSellPrice(seed, entry){
+  const base = SEED_SELL_PRICE[(seed && seed.rarity) || (entry && entry.rarity)] || 40;
+  return entry && entry.mutation_candidate ? Math.round(base * 1.4) : base;
+}
+function sortedSeedInventory(){
+  const inv = (state.seed_inventory || []).slice();
+  inv.sort((a, b) => {
+    const sa = ALIEN_INDEX.seeds[a.seed_id], sb = ALIEN_INDEX.seeds[b.seed_id];
+    if(seedSortMode === 'name') return ((a.name||(sa&&sa.name)||'')).localeCompare((b.name||(sb&&sb.name)||''));
+    if(seedSortMode === 'planet') return ((a.origin_planet||(sa&&sa.origin_planet)||'')).localeCompare((b.origin_planet||(sb&&sb.origin_planet)||''));
+    // rarity: 높은 등급 우선
+    const ra = RARITY_ORDER[(sa&&sa.rarity)||a.rarity] ?? 0, rb = RARITY_ORDER[(sb&&sb.rarity)||b.rarity] ?? 0;
+    return rb - ra;
+  });
+  return inv;
+}
+function sellSeed(inventoryId){
+  const idx = (state.seed_inventory||[]).findIndex(it => it.inventory_id === inventoryId);
+  if(idx < 0){ toast('종자를 찾을 수 없습니다'); return; }
+  const entry = state.seed_inventory[idx];
+  const seed = ALIEN_INDEX.seeds[entry.seed_id];
+  const price = seedSellPrice(seed, entry);
+  if(!confirm(`${entry.name||(seed&&seed.name)||'종자'}을(를) ${fmt(price)}💰에 판매할까요?`)) return;
+  state.seed_inventory.splice(idx, 1);
+  state.credits += price;
+  if(selectedSeedInventoryId === inventoryId) selectedSeedInventoryId = state.seed_inventory[0] ? state.seed_inventory[0].inventory_id : null;
+  saveState(); sfx.heal();
+  renderSeedBag(); renderMain();
+  toast(`+${fmt(price)}💰 (종자 판매)`);
+}
 let explorationShopCategory = 'fuel';
-let regionPanelExpanded = false;
+let regionSheetSnap = 0; // 0 닫힘 · 1 지역버튼 · 2 세부정보까지
+let sheetAnimateUp = false; // 행성 선택 시 아래→위 슬라이드업 모션 1회
 let spaceMapView = { x:0, y:0, scale:1 };
 
 function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
@@ -2599,14 +2876,39 @@ function renderSpaceStars(){
   ];
   return stars.map(([x,y,big]) => `<span class="space-star ${big?'big':''}" style="left:${x}%;top:${y}%"></span>`).join('');
 }
+/* 중앙(탐사선) 기준 극좌표 배치. 반경은 required_level(거리값)에 따라 미묘하게 달라진다. */
+function planetOrbitPosition(planet, index, total){
+  const levels = ALIEN_DATA.planets.map(p => p.required_level || 1);
+  const minL = Math.min(...levels), maxL = Math.max(...levels);
+  const lvl = planet.required_level || 1;
+  const norm = maxL > minL ? (lvl - minL) / (maxL - minL) : 0.5;
+  const radius = 128 + norm * 100; // 거리값 → 128~228px (작아진 행성에 맞춰 더 멀리)
+  const baseAngle = -90 + index * (360 / Math.max(1, total));
+  const jitter = index % 2 === 0 ? -8 : 9;
+  const ang = (baseAngle + jitter) * Math.PI / 180;
+  return { dx: Math.cos(ang) * radius, dy: Math.sin(ang) * radius, radius };
+}
+function renderMyShipNode(ship){
+  return `<button class="my-ship-node" id="myShipNode" title="탐사선 개조실 열기">
+    <span class="ship-core">🛰️</span>
+    <span class="ship-label">${ship && ship.name ? ship.name : '내 탐사선'}</span>
+  </button>`;
+}
+function renderOrbitRings(){
+  const total = ALIEN_DATA.planets.length;
+  return ALIEN_DATA.planets.map((planet, index) => {
+    const d = (planetOrbitPosition(planet, index, total).radius * 2).toFixed(0);
+    return `<span class="space-orbit" style="left:50%;top:50%;width:${d}px;height:${d}px"></span>`;
+  }).join('');
+}
 function renderPlanetNode(planet, index){
   const unlock = planetUnlockState(planet);
-  const pos = planetDisplayPosition(planet, index);
+  const pos = planetOrbitPosition(planet, index, ALIEN_DATA.planets.length);
   const color = planetDisplayColor(planet);
   const grade = planet.grade || 'common';
   const ringOpacity = grade === 'epic' ? .7 : grade === 'rare' ? .42 : .16;
   return `<button class="planet-node grade-${grade} ${planet.id===selectedPlanetId?'selected':''} ${unlock.ok?'':'locked'}"
-    data-planet="${planet.id}" style="left:${pos.x}%;top:${pos.y}%;--planet-color:${color};--ring-opacity:${ringOpacity}">
+    data-planet="${planet.id}" style="left:calc(50% + ${pos.dx.toFixed(0)}px);top:calc(50% + ${pos.dy.toFixed(0)}px);--planet-color:${color};--ring-opacity:${ringOpacity}">
     <span class="planet-core"></span>
     <span class="planet-lock">🔒</span>
     <span class="planet-label">${planet.name}</span>
@@ -2758,11 +3060,9 @@ function renderShipUpgradeCard(ship, upgrade){
 function renderShipModRoom(ship){
   return `<div class="ship-mod-room">
     <div class="ship-mod-head">
-      <div>
-        <h3>🛠️ 탐사선 개조실</h3>
-        <p class="sub">${ship.name}의 부품을 장착하고 기본 스탯을 강화합니다.</p>
-      </div>
-      <button class="btn ship-mod-back" id="btnShipRoomBack">우주맵으로</button>
+      <button class="btn ship-mod-back" id="btnShipRoomShop">🛠️ 개조실</button>
+      <div class="ship-mod-title"><h3>🛰️ 탐사선 격납고</h3></div>
+      <button class="btn ship-mod-back" id="btnShipRoomBack">닫기</button>
     </div>
     <div class="ship-mod-layout">
       <section class="ship-mod-section full">
@@ -2849,10 +3149,10 @@ function renderExplorationShopRoom(){
   return `<div class="exploration-shop-room">
     <div class="exploration-shop-head">
       <div>
-        <h3>🛒 탐사 상점</h3>
-        <p class="sub">식물은 팔지 않습니다. 탐사를 돕는 연료, 부품, 장비, 기본 지원품만 제공합니다.</p>
+        <h3>🛠️ 개조실</h3>
+        <p class="sub">탐사를 돕는 연료, 부품, 장비, 기본 지원품을 갖춥니다.</p>
       </div>
-      <button class="btn exploration-shop-back" id="btnExplorationShopBack">우주맵으로</button>
+      <button class="btn exploration-shop-back" id="btnExplorationShopBack">격납고로</button>
     </div>
     <div class="explore-summary">
       <span class="stat">크레딧 <b>${fmt(state.credits)}</b></span>
@@ -2976,29 +3276,46 @@ function renderRegionSummaryGrid(planet, selectedRegion){
   }).join('');
   return `<div class="region-summary-grid">${cards}</div>`;
 }
+function planetDetailBlock(planet){
+  const seeds = (planet.representative_seed_types || []).join(', ') || '미확인';
+  const items = (planet.representative_item_types || []).join(', ') || '미확인';
+  const danger = Object.entries(planet.environment || {})
+    .filter(([,v]) => v >= 15).map(([k]) => ENV_LABELS[k]).filter(Boolean).join(', ') || '낮음';
+  return `<div class="planet-detail-block">
+    <div class="planet-detail-meta">
+      <span class="info-badge">${gradeName(planet.grade)} 등급</span>
+      <span class="info-badge">권장 Lv.${planet.required_level || 1}</span>
+      <span class="info-badge">위험도 ${planet.danger_level || 1}</span>
+    </div>
+    <div class="info-desc">${planet.description || ''}</div>
+    <div class="detail-list">
+      <span>대표 종자<b>${seeds}</b></span>
+      <span>대표 아이템<b>${items}</b></span>
+      <span>환경 위험<b>${danger}</b></span>
+    </div>
+  </div>`;
+}
 function renderBottomExplorationPanel(planet, selectedRegion){
-  const expanded = !!planet && regionPanelExpanded;
-  if(!expanded){
-    return `<div class="map-bottom-panel collapsed" id="mapBottomPanel">
-      <div class="map-bottom-handle" id="mapBottomHandle" title="지역표 열기"></div>
-      <div class="map-bottom-head">
-        <div>
-          <div class="map-bottom-title">비어있음.</div>
-          <div class="map-bottom-note">행성을 고르면 이 창이 올라오고 지역표가 표시됩니다.</div>
-        </div>
-      </div>
+  if(!planet){
+    return `<div class="map-bottom-panel snap-0" id="mapBottomPanel">
+      <div class="map-bottom-handle" id="mapBottomHandle" title="행성을 먼저 고르세요"></div>
     </div>`;
   }
-  return `<div class="map-bottom-panel expanded" id="mapBottomPanel">
-    <div class="map-bottom-handle" id="mapBottomHandle" title="아래로 내려 접기"></div>
-    <div class="map-bottom-head">
-      <div>
-        <div class="map-bottom-title">${planet.name} 지역표</div>
-        <div class="map-bottom-note">지역을 누르면 중앙에 간단한 정보와 탐사 시작 버튼이 표시됩니다.</div>
+  // 콘텐츠(지역 + 세부정보)는 항상 전체 렌더. 단계는 패널 높이(height)로만 표현한다.
+  const snap = clamp(regionSheetSnap, 0, 2);
+  return `<div class="map-bottom-panel snap-${snap}" id="mapBottomPanel">
+    <div class="map-bottom-handle" id="mapBottomHandle" title="끌어서 펼치기 / 접기"></div>
+    <div class="map-bottom-body">
+      <div class="map-bottom-head">
+        <div>
+          <div class="map-bottom-title">${planet.name} 지역표</div>
+          <div class="map-bottom-note">위로 끌면 행성 정보까지 펼치고, 아래로 끌면 접힙니다.</div>
+        </div>
+        <span class="info-badge">${gradeName(planet.grade)} 등급</span>
       </div>
-      <span class="info-badge">${gradeName(planet.grade)} 등급</span>
+      ${renderRegionSummaryGrid(planet, selectedRegion)}
+      ${planetDetailBlock(planet)}
     </div>
-    ${renderRegionSummaryGrid(planet, selectedRegion)}
   </div>`;
 }
 function renderRegionBriefPopup(planet, region){
@@ -3385,37 +3702,62 @@ function bindSpaceMapInteractions(){
   const handle = $('#mapBottomHandle');
   const panel = $('#mapBottomPanel');
   if(handle && panel){
-    let startY = null;
-    handle.addEventListener('pointerdown', event => {
-      startY = event.clientY;
+    const SNAP_H = [36, 236, Math.min(window.innerHeight * 0.64, 430)]; // 단계별 높이(px)
+    const maxH = SNAP_H[2];
+    const applySnap = snap => {
+      regionSheetSnap = clamp(snap, 0, 2);
+      panel.classList.remove('snap-0', 'snap-1', 'snap-2');
+      panel.classList.add('snap-' + regionSheetSnap);
+    };
+    // 행성 선택 직후: 닫힘(snap-0)에서 시작점을 고정한 뒤 목표 단계로 → 부드러운 슬라이드업
+    if(sheetAnimateUp && selectedPlanetId){
+      sheetAnimateUp = false;
+      const target = clamp(regionSheetSnap, 1, 2);
       panel.classList.add('dragging');
-      try{ handle.setPointerCapture(event.pointerId); }catch(e){}
-    });
-    handle.addEventListener('pointerup', event => {
-      const diff = startY === null ? 0 : event.clientY - startY;
-      startY = null;
-      panel.classList.remove('dragging');
-      try{ handle.releasePointerCapture(event.pointerId); }catch(e){}
-      if(diff > 18 && regionPanelExpanded){
-        regionPanelExpanded = false;
-        planetPopupOpen = false;
+      panel.classList.remove('snap-1', 'snap-2'); panel.classList.add('snap-0');
+      void panel.offsetHeight;             // reflow로 시작 높이(36) 확정
+      panel.classList.remove('dragging');  // transition 켬
+      applySnap(target);                   // 36 → 목표 높이로 transition 발동
+    }
+    if(selectedPlanetId){
+      let startY = null, startH = 0, curH = 0, moved = false;
+      handle.addEventListener('pointerdown', event => {
+        startY = event.clientY; startH = panel.offsetHeight; curH = startH; moved = false;
+        panel.classList.add('dragging'); // 드래그 중엔 transition 끔 → 손가락을 그대로 따라옴
+        try{ handle.setPointerCapture(event.pointerId); }catch(e){}
+      });
+      handle.addEventListener('pointermove', event => {
+        if(startY === null) return;
+        const d = event.clientY - startY; // 위로 끌면 음수
+        if(Math.abs(d) > 3) moved = true;
+        curH = clamp(startH - d, SNAP_H[0], maxH);
+        panel.style.height = curH + 'px';
+      });
+      const finish = event => {
+        if(startY === null) return;
+        startY = null;
+        try{ handle.releasePointerCapture(event.pointerId); }catch(e){}
+        let snap;
+        if(!moved){
+          snap = regionSheetSnap >= 2 ? 1 : regionSheetSnap + 1; // 탭 → 한 단계 토글
+        }else{
+          snap = 0; let best = Infinity; // 놓은 높이에서 가장 가까운 단계로 정착
+          SNAP_H.forEach((h, i) => { const dd = Math.abs(h - curH); if(dd < best){ best = dd; snap = i; } });
+        }
+        panel.style.height = '';               // 인라인 제거 → 클래스 높이로
+        panel.classList.remove('dragging');    // transition 켜고 가까운 단계로 정착
+        applySnap(snap);
         sfx.tap();
-        renderExploration();
-        return;
-      }
-      if((diff < -18 || Math.abs(diff) < 6) && selectedPlanetId){
-        regionPanelExpanded = !regionPanelExpanded;
-        planetPopupOpen = false;
-        sfx.tap();
-        renderExploration();
-      }
-    });
+      };
+      handle.addEventListener('pointerup', finish);
+      handle.addEventListener('pointercancel', finish);
+    }
   }
 }
 openExploration = function(){
   explorationPanelMode = 'map';
   planetPopupOpen = false;
-  regionPanelExpanded = !!selectedPlanetId && regionPanelExpanded;
+  regionSheetSnap = selectedPlanetId ? regionSheetSnap : 0;
   lastExplorationResult = null;
   renderExploration();
   show('#explorationModal');
@@ -3431,7 +3773,7 @@ renderExploration = function(){
     selectedPlanetId = null;
     selectedRegionId = null;
     selectedPlanet = null;
-    regionPanelExpanded = false;
+    regionSheetSnap = 0;
     planetPopupOpen = false;
   }
   let selectedRegion = selectedRegionId ? ALIEN_INDEX.regions[selectedRegionId] : null;
@@ -3443,7 +3785,7 @@ renderExploration = function(){
   if(!selectedPlanet){
     selectedRegionId = null;
     selectedRegion = null;
-    regionPanelExpanded = false;
+    regionSheetSnap = 0;
     planetPopupOpen = false;
   }
 
@@ -3452,28 +3794,19 @@ renderExploration = function(){
   body.innerHTML = `
     <div class="space-map-screen">
       <div class="space-map-head">
-        <h2>우주맵</h2>
-        <p class="sub">마우스로 지도를 끌어 이동하고, 휠이나 +/- 버튼으로 확대와 축소를 할 수 있습니다.</p>
-        <button class="btn modal-close space-map-close" id="explorationClose">닫기</button>
+        <h2>🛰️ 우주맵</h2>
+        <p class="sub">중앙은 내 탐사선입니다. 탐사선을 누르면 개조실, 행성을 누르면 지역표가 아래에서 올라옵니다.</p>
       </div>
       <div class="space-map-grid">
         <div class="space-map-canvas" id="spaceMapCanvas" aria-label="우주맵">
           <div class="space-map-world" id="spaceMapWorld" style="transform:${spaceMapTransform()}">
             ${renderSpaceStars()}
-            <span class="space-lane"></span>
-            <span class="space-orbit" style="left:22%;top:58%;width:190px;height:100px"></span>
-            <span class="space-orbit" style="left:56%;top:36%;width:240px;height:140px"></span>
-            <span class="space-orbit" style="left:78%;top:68%;width:280px;height:160px"></span>
+            ${renderOrbitRings()}
+            ${renderMyShipNode(ship)}
             ${planetNodes}
           </div>
         </div>
         ${renderSpaceTopResources(ship)}
-        <div class="space-map-action left">
-          <button class="btn ${explorationPanelMode==='shop'?'primary':''}" id="btnExplorationShop">탐사 상점</button>
-        </div>
-        <div class="space-map-action right">
-          <button class="btn ${explorationPanelMode==='ship'?'primary':''}" id="btnShipRoom">탐사선 개조실</button>
-        </div>
         <div class="map-zoom-controls">
           <button class="btn" id="mapZoomIn" title="확대">+</button>
           <button class="btn" id="mapZoomOut" title="축소">-</button>
@@ -3492,7 +3825,7 @@ renderExploration = function(){
       selectedRegionId = null;
       lastExplorationResult = null;
       explorationPanelMode = 'map';
-      regionPanelExpanded = true;
+      if(regionSheetSnap < 1){ regionSheetSnap = 1; sheetAnimateUp = true; } // 닫힘이면 슬라이드업
       planetPopupOpen = false;
       sfx.tap();
       renderExploration();
@@ -3503,27 +3836,25 @@ renderExploration = function(){
       selectedRegionId = card.dataset.region;
       lastExplorationResult = null;
       planetPopupOpen = true;
-      regionPanelExpanded = true;
+      regionSheetSnap = Math.max(1, regionSheetSnap);
       sfx.tap();
       renderExploration();
     });
   });
 
-  const closeBtn = $('#explorationClose');
-  if(closeBtn) closeBtn.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
-  const popupClose = $('#regionBriefClose');
-  if(popupClose) popupClose.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
-  const popupCancel = $('#regionBriefCancel');
-  if(popupCancel) popupCancel.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
-  const shipRoom = $('#btnShipRoom');
-  if(shipRoom) shipRoom.addEventListener('click', () => {
+  const myShip = $('#myShipNode');
+  if(myShip) myShip.addEventListener('click', () => {
     explorationPanelMode = 'ship';
     planetPopupOpen = false;
     sfx.tap();
     renderExploration();
   });
-  const shopRoom = $('#btnExplorationShop');
-  if(shopRoom) shopRoom.addEventListener('click', () => {
+  const popupClose = $('#regionBriefClose');
+  if(popupClose) popupClose.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
+  const popupCancel = $('#regionBriefCancel');
+  if(popupCancel) popupCancel.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
+  const shipRoomShop = $('#btnShipRoomShop');
+  if(shipRoomShop) shipRoomShop.addEventListener('click', () => {
     explorationPanelMode = 'shop';
     planetPopupOpen = false;
     explorationShopCategory = explorationShopCategory || 'fuel';
@@ -3533,7 +3864,7 @@ renderExploration = function(){
   const shipBack = $('#btnShipRoomBack');
   if(shipBack) shipBack.addEventListener('click', () => { explorationPanelMode = 'map'; sfx.tap(); renderExploration(); });
   const shopBack = $('#btnExplorationShopBack');
-  if(shopBack) shopBack.addEventListener('click', () => { explorationPanelMode = 'map'; sfx.tap(); renderExploration(); });
+  if(shopBack) shopBack.addEventListener('click', () => { explorationPanelMode = 'ship'; sfx.tap(); renderExploration(); });
   document.querySelectorAll('#explorationBody [data-shop-category]').forEach(btn => {
     btn.addEventListener('click', () => {
       explorationShopCategory = btn.dataset.shopCategory;
@@ -4001,7 +4332,8 @@ function createPlantInstanceFields(entry, seed, plant, customName){
 }
 function ensurePlantInstanceFields(p){
   if(!p) return p;
-  if(!p.up) p.up = { hp:0, atk:0, def:0, spd:0, elem:0 };
+  if(!p.up) p.up = { hp:0, atk:0, def:0, spd:0, acc:0, elem:0 };
+  if(typeof p.up.acc !== 'number') p.up.acc = 0;
   if(!p.mult) p.mult = { hp:1, atk:1, def:1, spd:1 };
   const seed = ALIEN_INDEX.seeds[p.seed_id || p.sourceSeedId] || null;
   p.unique_id = p.unique_id || `plant_${p.id || Date.now()}`;
@@ -4027,7 +4359,7 @@ function ensurePlantInstanceFields(p){
 function seedPlantReadiness(entry, seed){
   if(!entry) return { ok:false, reason:'종자를 선택하세요.' };
   if(!seed) return { ok:false, reason:'종자 데이터가 손상되었습니다.' };
-  if(state.plants.length >= MAX_PLANTS) return { ok:false, reason:`온실이 가득 찼습니다. 최대 ${MAX_PLANTS}개체까지 보유할 수 있습니다.` };
+  if(state.plants.length >= potCapacity()) return { ok:false, reason:`화분이 가득 찼습니다. 현재 ${potCapacity()}칸까지 키울 수 있습니다. (레벨업으로 최대 ${POT_MAX}칸)` };
   const storage = seedStorageStatus(seed);
   if(!storage.ok) return { ok:false, reason:`${storage.requiredName} 환경이 필요합니다.` };
   return { ok:true, reason:'심기 가능' };
@@ -4090,13 +4422,16 @@ function renderSeedDetail(entry){
     </div>
     <div class="shop-section">잠재 특성</div>
     <div class="seed-trait-list">${seedTraitPills(seed)}</div>
-    <button class="btn primary modal-close" id="plantSelectedSeed" data-plant-seed="${entry.inventory_id}" ${readiness.ok ? '' : 'disabled'} style="margin-top:12px;width:100%">심기</button>
+    <div class="seed-detail-actions">
+      <button class="btn primary modal-close" id="plantSelectedSeed" data-plant-seed="${entry.inventory_id}" ${readiness.ok ? '' : 'disabled'}>심기</button>
+      <button class="btn ghost" data-sell-seed="${entry.inventory_id}" style="border-color:rgba(255,211,74,.45);color:var(--gold)">판매 ${fmt(seedSellPrice(seed, entry))}💰</button>
+    </div>
   </div>`;
 }
 function plantSeedFromBag(inventoryId){
   const index = state.seed_inventory.findIndex(item => item.inventory_id === inventoryId);
   if(index < 0){ toast('종자를 찾을 수 없습니다'); return; }
-  if(state.plants.length >= MAX_PLANTS){ toast('온실이 가득 찼습니다 (최대 '+MAX_PLANTS+'마리)'); return; }
+  if(state.plants.length >= potCapacity()){ toast('화분이 가득 찼습니다 (현재 '+potCapacity()+'칸). 식물을 방생하거나 레벨을 올리세요'); return; }
   const entry = state.seed_inventory[index];
   const seed = ALIEN_INDEX.seeds[entry.seed_id];
   if(!seed){ toast('종자 데이터가 손상되었습니다'); return; }
@@ -4211,7 +4546,7 @@ function createPlantedPlantFromSeed(entry, seed, customName){
 function plantSeedFromBag(inventoryId, customName = ''){
   const index = state.seed_inventory.findIndex(item => item.inventory_id === inventoryId);
   if(index < 0){ toast('종자를 찾을 수 없습니다'); return; }
-  if(state.plants.length >= MAX_PLANTS){ toast('온실이 가득 찼습니다 (최대 '+MAX_PLANTS+'개체)'); return; }
+  if(state.plants.length >= potCapacity()){ toast('화분이 가득 찼습니다 (현재 '+potCapacity()+'칸). 식물을 방생하거나 레벨을 올리세요'); return; }
   const entry = state.seed_inventory[index];
   const seed = ALIEN_INDEX.seeds[entry.seed_id];
   if(!seed){ toast('종자 데이터가 손상되었습니다'); return; }
@@ -4251,17 +4586,19 @@ function renderSeedBag(){
       </div>
       <div class="ic-price">무료</div>
     </div>` : '';
-  const seedCards = inv.map(renderSeedBagCard).join('');
+  const seedCards = sortedSeedInventory().map(renderSeedBagCard).join('');
+  const sortBtn = (mode, label) => `<button class="seed-sort-btn ${seedSortMode===mode?'active':''}" data-seed-sort="${mode}">${label}</button>`;
   body.innerHTML = `
     <div class="seed-bag-top">
       <span class="stat">🌱 보유 종자 <b>${inv.length}/${cap || '-'}</b></span>
       <span class="stat">📦 남은 칸 <b>${cap ? free : '-'}</b></span>
       <span class="stat">🧪 보관 등급 <b>${grade}</b></span>
-      <span class="stat">🪴 보유 식물 <b>${state.plants.length}/${MAX_PLANTS}</b></span>
+      <span class="stat">🪴 화분 <b>${state.plants.length}/${potCapacity()}</b> <small style="color:var(--sub)">(최대 ${POT_MAX})</small></span>
     </div>
     <div class="howto" style="margin-bottom:10px">현재 보관 가능 환경: <b style="color:var(--neon)">${supportedStorage}</b></div>
     ${starterHelp}
     ${inv.length ? `
+      <div class="seed-sort-row"><span class="seed-sort-label">정렬</span>${sortBtn('rarity','희귀도순')}${sortBtn('name','이름순')}${sortBtn('planet','행성순')}</div>
       <div class="seed-bag-layout">
         <div class="seed-bag-list">${seedCards}</div>
         ${renderSeedDetail(selectedEntry)}
@@ -4269,6 +4606,12 @@ function renderSeedBag(){
     <button class="btn primary modal-close" id="seedBagExplore">우주맵으로 가기</button>`;
   const starter = $('#claimStarterSeed');
   if(starter) starter.addEventListener('click', claimStarterSeed);
+  document.querySelectorAll('#seedBagBody [data-seed-sort]').forEach(btn => {
+    btn.addEventListener('click', () => { seedSortMode = btn.dataset.seedSort; sfx.tap(); renderSeedBag(); });
+  });
+  document.querySelectorAll('#seedBagBody [data-sell-seed]').forEach(btn => {
+    btn.addEventListener('click', () => sellSeed(btn.dataset.sellSeed));
+  });
   document.querySelectorAll('#seedBagBody [data-select-seed]').forEach(card => {
     card.addEventListener('click', () => {
       selectedSeedInventoryId = card.dataset.selectSeed;
@@ -4392,6 +4735,7 @@ function calcStats(p){
     atk: Math.round(((b.atk + a.atk*2)    * m.atk) * g) + p.up.atk*4,
     def: Math.round(((b.def + a.def*2)    * m.def) * g) + p.up.def*4,
     spd: Math.round(((b.spd + a.spd*1.5)  * m.spd) * g) + p.up.spd*3,
+    acc: clamp(86 + (p.up.acc||0)*2 + Math.round((m.atk-1)*8), 70, 99),
     elemBonus: 1 + p.up.elem*0.1,
   };
 }
@@ -4417,7 +4761,7 @@ function createPlant(species, alloc){
     grade: gradeOf(mult), mult, awakened,
     form: f.form, predType: f.predType, weaponKey: null,
     geneAlloc: { atk:alloc.atk, def:alloc.def, spd:alloc.spd },
-    up: { hp:0, atk:0, def:0, spd:0, elem:0 },
+    up: { hp:0, atk:0, def:0, spd:0, acc:0, elem:0 },
   };
   state.serial++;
   return p;
@@ -4435,16 +4779,52 @@ function renderMain(){
   const rp = $('#rankPointView'); if(rp) rp.textContent = fmt(state.rankPoints||0);
   renderCollection();
   renderCenter();
+  renderTournamentBar();
+}
+function renderTournamentBar(){
+  const bar = $('#tournamentBar'); if(!bar) return;
+  const btn = $('#btnBattle');
+  const p = activePlant();
+  if(!p){ bar.innerHTML=''; if(btn) btn.textContent='⚔️ 전투 시작'; return; }
+  const T = state.tournament;
+  const inProgress = T && T.active && T.plantId===p.id;
+  if(inProgress){
+    const round = TOURNAMENT_ROUNDS[T.roundIndex];
+    let right, label;
+    if(round.key==='prelim'){
+      const played = T.prelimWins + T.prelimLosses;
+      right = `예선 ${T.prelimWins}승 ${T.prelimLosses}패 · ${played}/${round.bestOf}경기`;
+      label = `⚔️ 예선 ${Math.min(played+1, round.bestOf)}경기 시작`;
+    } else {
+      right = `${round.name} 진출`;
+      label = `⚔️ ${round.name} 경기 시작`;
+    }
+    bar.innerHTML = `<div class="tbar"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">${right}</div></div>`;
+    if(btn) btn.textContent = label;
+  } else {
+    bar.innerHTML = `<div class="tbar idle"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">신규 도전 대기</div></div>`;
+    if(btn) btn.textContent = '⚔️ 토너먼트 시작';
+  }
 }
 function renderCollection(){
   const bar = $('#collectionBar');
-  bar.innerHTML = state.plants.map(p =>
-    `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
-      ${svgPlant(p.species,p.element,p.grade,p.awakened,38)}
-      <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
-      ${p.form && p.form!=='normal' ? `<span class="f">${FORMS[p.form].icon}</span>` : ''}
-    </div>`).join('')
-    + `<div class="chip addchip" id="chipAdd">🎒</div>`;
+  const cap = potCapacity();
+  let html = '';
+  for(let i=0;i<POT_MAX;i++){
+    const p = state.plants[i];
+    if(p){
+      html += `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
+        ${svgPlant(p.species,p.element,p.grade,p.awakened,38)}
+        <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
+        ${p.form && p.form!=='normal' ? `<span class="f">${FORMS[p.form].icon}</span>` : ''}
+      </div>`;
+    } else if(i < cap){
+      html += `<div class="chip potempty" data-plant-empty="1"><span class="pi">🪴</span><span class="potlabel">빈 화분</span></div>`;
+    } else {
+      html += `<div class="chip potlocked"><span class="pi">🔒</span><span class="potlabel">Lv.${potUnlockLevel(i)}</span></div>`;
+    }
+  }
+  bar.innerHTML = html;
 }
 function renderCenter(){
   const box = $('#centerPlant');
@@ -4465,6 +4845,7 @@ function renderCenter(){
       <span class="badge" style="color:${GRADES[p.grade]};border:1px solid ${GRADES[p.grade]}">등급 ${p.grade}</span>
       <span class="badge" style="color:${FORMS[p.form].color};border:1px solid ${FORMS[p.form].color}">${FORMS[p.form].icon} ${FORMS[p.form].name}${p.form==='pred' ? '·'+PRED_TYPES[p.predType].name : ''}</span>
       ${p.awakened ? `<span class="badge" style="color:var(--gold);border:1px solid var(--gold)">✦ ${STAT_NAMES[p.awakened]} 각성</span>` : ''}
+      ${p.potion ? `<span class="badge" style="color:#d48cff;border:1px solid #d48cff">${p.potion.icon||'🟣'} 독초</span>` : ''}
       ${p.form==='weapon' ? `<span class="badge" style="color:var(--gold);border:1px solid var(--gold)">${p.weaponKey ? WEAPONS[p.weaponKey].icon+' '+WEAPONS[p.weaponKey].name+' Lv.'+state.weapons[p.weaponKey].lv : '🗡️ 무기 미장착'}</span>` : ''}
     </div>
     <div class="statrow">
@@ -4472,6 +4853,7 @@ function renderCenter(){
       <span class="stat">⚔️ <b>${s.atk}</b></span>
       <span class="stat">🛡️ <b>${s.def}</b></span>
       <span class="stat">💨 <b>${s.spd}</b></span>
+      <span class="stat">🎯 <b>${s.acc}%</b></span>
       <span class="stat">${el.icon} <b>x${s.elemBonus.toFixed(1)}</b></span>
     </div>
     <div class="hint">▲ 식물을 탭하면 강화할 수 있어요</div>`;
@@ -4572,7 +4954,8 @@ const UP_ROWS = [
   { k:'hp',   icon:'❤️', name:'생명력',   gain:'+15' },
   { k:'atk',  icon:'⚔️', name:'공격',     gain:'+4' },
   { k:'def',  icon:'🛡️', name:'방어',     gain:'+4' },
-  { k:'spd',  icon:'💨', name:'속도',     gain:'+3' },
+  { k:'spd',  icon:'💨', name:'기동성',   gain:'+3' },
+  { k:'acc',  icon:'🎯', name:'적중',     gain:'+2%' },
   { k:'elem', icon:'✨', name:'속성 강화', gain:'속성 스킬 위력 +10%' },
 ];
 function upCost(level){ return Math.round(40 * Math.pow(1.5, level) / 10) * 10; }
@@ -4629,12 +5012,9 @@ function renderPlantInstancePanel(p, stats){
       <span>안정성<b>${p.stability}%</b></span>
       <span>변이율<b>${pct(p.mutation_rate || 0)}</b></span>
       <span>속성 · 분화<b>${ELEMENTS[p.element]?ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name:'-'} · ${FORMS[p.form]?FORMS[p.form].name:'일반형'}</b></span>
-      <span>전투 능력치<b>❤️${stats.hp} ⚔️${stats.atk} 🛡️${stats.def} 💨${stats.spd}</b></span>
+      <span>전투 능력치<b>❤️${stats.hp} ⚔️${stats.atk} 🛡️${stats.def} 💨${stats.spd} 🎯${stats.acc}%</b></span>
     </div>
-    <div class="growth-actions">
-      <button class="upbtn" data-grow-action="water" ${isMax ? 'disabled' : ''}>물 주기 +${GROWTH_ACTIONS.water.exp}</button>
-      <button class="upbtn" data-grow-action="fertilizer" ${isMax || state.credits < GROWTH_ACTIONS.fertilizer.cost ? 'disabled' : ''}>비료 주기 +${GROWTH_ACTIONS.fertilizer.exp} (${fmt(GROWTH_ACTIONS.fertilizer.cost)}💰)</button>
-    </div>
+    <div class="howto" style="margin-top:8px">${isMax ? '최종 성장 단계에 도달했습니다.' : '🧪 <b>소모품</b> 탭에서 💧물·🌿비료·💊영양제를 사용하면 성장 경험치를 줄 수 있어요. (상점에서 구매)'}</div>
   </div>`;
 }
 function applyGrowthAction(actionKey){
@@ -4668,6 +5048,20 @@ function openUpgrade(){
   renderUpgrade();
   show('#upgradeModal');
 }
+function releasePlant(plantId){
+  const idx = state.plants.findIndex(x => x.id === plantId);
+  if(idx < 0){ toast('식물을 찾을 수 없습니다'); return; }
+  const p = state.plants[idx];
+  if(!confirm(`${p.custom_name||p.name}을(를) 방생할까요?\n화분이 비워지며 되돌릴 수 없습니다.`)) return;
+  // 진행 중인 토너먼트가 이 식물이면 종료
+  if(state.tournament && state.tournament.plantId === plantId) state.tournament.active = false;
+  state.plants.splice(idx, 1);
+  if(state.activeId === plantId) state.activeId = state.plants[0] ? state.plants[0].id : null;
+  saveState(); sfx.tap();
+  hide('#upgradeModal');
+  renderMain();
+  toast(`${p.custom_name||p.name}을(를) 방생했습니다`);
+}
 let upgradeTab = 'skill';
 function battleEffectText(be){
   switch(be.effect){
@@ -4698,10 +5092,16 @@ function traitPassiveText(t){
   return parts.join(' · ') || '효과 정보 없음';
 }
 const TRAIT_CAT_NAMES = { offense:'공격', defense:'방어', mobility:'기동', growth:'성장', mutation:'변이', utility:'유틸', control:'제어', support:'지원' };
+function skillAoeBadge(sk){
+  if(!sk || !(sk.power>0)) return '';
+  if(sk.aoe) return ' <span class="sc-aoe aoe">광역</span>';
+  if(sk.single) return ' <span class="sc-aoe single">단일</span>';
+  return '';
+}
 function skillCardHtml(id, sk, zone){
   const costLabel = (sk.cost||0)>0 ? `⚡${sk.cost}` : '무료';
   return `<button class="skill-card ${zone==='equipped'?'equipped':''}" data-skill-toggle="${id}" data-zone="${zone}">
-    <span class="sc-tag">${sk.tag||'스킬'}</span>${zone==='equipped'?'<span class="sc-x">✕ 해제</span>':''}
+    <span class="sc-tag">${sk.tag||'스킬'}${skillAoeBadge(sk)}</span>${zone==='equipped'?'<span class="sc-x">✕ 해제</span>':''}
     <div class="sc-name"><span>${sk.icon||''} ${sk.name}</span><span class="sc-cost">${costLabel}</span></div>
     <div class="sc-desc">${sk.desc||''}</div>
   </button>`;
@@ -4726,6 +5126,77 @@ function renderSkillTab(p){
     <div class="skill-section-label">보유 스킬 <small>탭하여 장착</small></div>
     <div class="skill-loadout">${bench}</div>`;
 }
+function potionOwnedCount(id){ return (((state.potion_inventory||[]).find(r=>r.potion_id===id))||{}).count || 0; }
+function traitSlotCap(p){ return clamp(Math.max(p.unlocked_trait_slots||1, (p.traits||[]).length), 1, 5); }
+function equipTrait(traitId){
+  const p = activePlant(); if(!p) return;
+  ensurePlantInstanceFields(p);
+  if((p.traits||[]).includes(traitId)){ toast('이미 장착한 특성입니다'); return; }
+  if((p.traits||[]).length >= traitSlotCap(p)){ toast('특성 슬롯이 가득 찼습니다. 🧪형질 슬롯 절개기로 슬롯을 늘리세요'); return; }
+  const row = (state.trait_inventory||[]).find(r=>r.trait_id===traitId);
+  if(!row || row.count<=0){ toast('특성 부품이 없습니다'); return; }
+  row.count--;
+  if(row.count<=0) state.trait_inventory = state.trait_inventory.filter(r=>r!==row);
+  p.traits.push(traitId);
+  ensureSkillFields(p);
+  saveState(); sfx.heal(); renderUpgrade(); renderMain();
+  toast(`${(ALIEN_INDEX.traits[traitId]&&ALIEN_INDEX.traits[traitId].name)||'특성'} 장착!`);
+}
+function unequipTrait(traitId){
+  const p = activePlant(); if(!p) return;
+  const i = (p.traits||[]).indexOf(traitId); if(i<0) return;
+  p.traits.splice(i,1);
+  if(!Array.isArray(state.trait_inventory)) state.trait_inventory = [];
+  const row = state.trait_inventory.find(r=>r.trait_id===traitId);
+  if(row) row.count++;
+  else { const t=ALIEN_INDEX.traits[traitId]; state.trait_inventory.push({ inventory_id:`trait_${Date.now()}_${Math.floor(Math.random()*9999)}`, trait_id:traitId, name:(t&&t.name)||traitId, category:(t&&t.category)||'trait', count:1, acquired_at:new Date().toISOString(), source:{ unequipped:true } }); }
+  ensureSkillFields(p);
+  saveState(); sfx.tap(); renderUpgrade(); renderMain();
+  toast('특성을 해제했습니다');
+}
+function equipPotion(potionId){
+  const p = activePlant(); if(!p) return;
+  const row = (state.potion_inventory||[]).find(r=>r.potion_id===potionId);
+  if(!row || row.count<=0){ toast('물약이 없습니다'); return; }
+  if(p.potion && p.potion.id){ const back = (state.potion_inventory||[]).find(r=>r.potion_id===p.potion.id); if(back) back.count++; else state.potion_inventory.push({ potion_id:p.potion.id, count:1 }); }
+  row.count--;
+  if(row.count<=0) state.potion_inventory = state.potion_inventory.filter(r=>r!==row);
+  const P = POTIONS[potionId];
+  p.potion = { id:P.id, name:P.name, icon:P.icon, dot:P.dot };
+  saveState(); sfx.heal(); renderUpgrade(); renderMain();
+  toast(`${P.name} 장착! 식물이 🟣독초가 되었습니다`);
+}
+function unequipPotion(){
+  const p = activePlant(); if(!p || !p.potion) return;
+  const id = p.potion.id;
+  if(!Array.isArray(state.potion_inventory)) state.potion_inventory = [];
+  const back = state.potion_inventory.find(r=>r.potion_id===id);
+  if(back) back.count++; else state.potion_inventory.push({ potion_id:id, count:1 });
+  p.potion = null;
+  saveState(); sfx.tap(); renderUpgrade(); renderMain();
+  toast('물약을 해제했습니다');
+}
+function renderPotionSection(p){
+  const owned = (state.potion_inventory||[]).filter(r=>(r.count||0)>0);
+  const equipped = p.potion ? `<div class="trait-effect-row" style="border-color:rgba(212,140,255,.4)">
+      <div class="te-icon">${p.potion.icon||'🧪'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="te-name">${p.potion.name} <span class="te-cat">· 독초</span></div>
+        <div class="te-passive">☠️ 공격 시 ${dotName(p.potion.dot.kind)}(${p.potion.dot.turns}턴) 부여${p.potion.dot.debuff?` + ${debuffLabel(p.potion.dot.debuff)}`:''}</div>
+      </div>
+      <button class="upbtn" data-unequip-potion="1">해제</button>
+    </div>` : `<div class="muted">장착된 물약이 없습니다. 상점 <b>독초 물약</b>에서 구매해 장착하세요.</div>`;
+  const list = owned.map(r => {
+    const P = POTIONS[r.potion_id]; if(!P) return '';
+    const isOn = p.potion && p.potion.id===r.potion_id;
+    return `<div class="uprow">
+      <div class="un">${P.icon} ${P.name}<small>${P.desc}</small></div>
+      <div class="uv">×${r.count}</div>
+      <button class="upbtn" data-equip-potion="${r.potion_id}" ${isOn?'disabled':''}>${isOn?'장착중':'장착'}</button>
+    </div>`;
+  }).join('');
+  return `<div class="skill-section-label">🟣 독초 물약 <small>장착 시 공격에 독성 추가</small></div>${equipped}${list}`;
+}
 function renderTraitTab(p){
   const slots = 5;
   const unlocked = Math.max(p.unlocked_trait_slots||0, (p.traits||[]).length);
@@ -4748,13 +5219,27 @@ function renderTraitTab(p){
         <div class="te-passive">🛡️ 패시브: ${traitPassiveText(t)}</div>
         ${sk?`<div class="te-passive">🎴 시그니처 스킬: <b>${sk.icon} ${sk.name}</b> — ${sk.desc}</div>`:''}
       </div>
+      <button class="upbtn" data-unequip-trait="${tid}" style="align-self:flex-start">해제</button>
     </div>`;
   }).join('') : `<div class="muted">아직 발현된 특성이 없습니다. 희귀한 종자일수록 특성이 더 많이 발현됩니다.</div>`;
+  const traitInventory = (state.trait_inventory || []).filter(row => (row.count || 0) > 0);
+  const slotFull = (p.traits||[]).length >= traitSlotCap(p);
+  const traitInventoryBlock = traitInventory.length ? `<div class="skill-section-label">🧬 보유 특성 부품 <small>탭하여 장착 (슬롯 ${(p.traits||[]).length}/${traitSlotCap(p)})</small></div>` + traitInventory.map(row => {
+    const trait = ALIEN_INDEX.traits[row.trait_id];
+    const already = (p.traits||[]).includes(row.trait_id);
+    return `<div class="uprow">
+      <div class="un">🧬 ${(trait && trait.name) || row.name || row.trait_id}<small>${trait ? (TRAIT_CAT_NAMES[trait.category] || trait.category) + '형 · ' + trait.description : '상점 보급상자 획득'}</small></div>
+      <div class="uv">×${row.count}</div>
+      <button class="upbtn" data-equip-trait="${row.trait_id}" ${already||slotFull?'disabled':''}>${already?'장착됨':(slotFull?'슬롯참':'장착')}</button>
+    </div>`;
+  }).join('') : '';
   const weaponBlock = p.form==='weapon' ? `<div class="skill-section-label">🗡️ 무기 장착 (무기형)</div>${weaponSectionHTML(p)}` : '';
   return `
-    <p class="tab-hint">특성은 식물의 <b>속성·외형</b>과 함께 전투 패시브와 시그니처 스킬을 부여합니다. 특성 슬롯은 최대 5칸입니다.</p>
+    <p class="tab-hint">특성은 식물의 <b>속성·외형</b>과 함께 전투 패시브와 시그니처 스킬을 부여합니다. 보유한 특성 부품을 <b>장착/해제</b>할 수 있고, 슬롯은 최대 5칸입니다.</p>
     <div class="trait-slot-row">${slotRow}</div>
     ${traitRows}
+    ${traitInventoryBlock}
+    ${renderPotionSection(p)}
     ${weaponBlock}`;
 }
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
@@ -4798,7 +5283,7 @@ function renderConsumTab(p, s){
   const rows = UP_ROWS.map(r => {
     const lv = p.up[r.k];
     const cost = upCost(lv);
-    const cur = r.k==='elem' ? 'Lv.'+lv : (r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : s.spd);
+    const cur = r.k==='elem' ? 'Lv.'+lv : (r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : r.k==='acc'?s.acc+'%' : s.spd);
     return `<div class="uprow">
       <div class="un">${r.icon} ${r.name}<small>강화당 ${r.gain} (현재 Lv.${lv})</small></div>
       <div class="uv">${cur}</div>
@@ -4840,8 +5325,10 @@ function renderUpgrade(){
       <button class="plant-tab ${upgradeTab==='skill'?'active':''}" data-tab="skill">🎴 스킬</button>
     </div>
     <div id="plantTabBody">${renderPlantTab(p, s)}</div>
+    <button class="btn ghost" id="releasePlantBtn" style="margin-top:12px;border-color:rgba(255,107,74,.4);color:#ff8a70">🪴 이 식물 방생 (화분 비우기)</button>
     <button class="btn modal-close" id="upgradeClose">닫기</button>`;
   bindUpgradeEvents(p);
+  $('#releasePlantBtn').addEventListener('click', () => releasePlant(p.id));
   $('#upgradeClose').addEventListener('click', () => { hide('#upgradeModal'); sfx.tap(); });
 }
 function bindUpgradeEvents(p){
@@ -4864,6 +5351,18 @@ function bindUpgradeEvents(p){
   });
   document.querySelectorAll('#upgradeBody [data-use-item]').forEach(btn => {
     btn.addEventListener('click', () => useItem(btn.dataset.useItem));
+  });
+  document.querySelectorAll('#upgradeBody [data-equip-trait]').forEach(btn => {
+    btn.addEventListener('click', () => equipTrait(btn.dataset.equipTrait));
+  });
+  document.querySelectorAll('#upgradeBody [data-unequip-trait]').forEach(btn => {
+    btn.addEventListener('click', () => unequipTrait(btn.dataset.unequipTrait));
+  });
+  document.querySelectorAll('#upgradeBody [data-equip-potion]').forEach(btn => {
+    btn.addEventListener('click', () => equipPotion(btn.dataset.equipPotion));
+  });
+  document.querySelectorAll('#upgradeBody [data-unequip-potion]').forEach(btn => {
+    btn.addEventListener('click', () => unequipPotion());
   });
   document.querySelectorAll('#upgradeBody [data-skill-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -4906,87 +5405,246 @@ function bindUpgradeEvents(p){
 }
 
 /* ================= 상점 ================= */
-let rerollArmed = false;
+let pendingShopOpening = null;
 function openShop(){
-  rerollArmed = false;
   renderShop();
   show('#shopModal');
 }
+function shopPriceText(item){
+  if(item.currency === 'krw') return `${fmt(item.price)}원`;
+  if(item.currency === 'free') return '무료';
+  return `${fmt(item.price)}💰`;
+}
+function shopCard(item, attrs = ''){
+  const disabled = item.disabled ? 'disabled' : '';
+  const oldPrice = item.oldPrice ? `<span style="color:var(--sub);text-decoration:line-through;margin-right:4px">${fmt(item.oldPrice)}원</span>` : '';
+  return `<button class="shop-card" ${attrs} ${disabled}>
+    <div class="shop-card-art"><span>${item.icon}</span></div>
+    <div class="shop-card-name">${item.name}</div>
+    <div class="shop-card-tag">${item.tag || ''}</div>
+    <div class="shop-card-price">${oldPrice}${shopPriceText(item)}</div>
+  </button>`;
+}
+function renderShopBlock(title, note, body){
+  return `<section class="shop-block">
+    <div class="shop-block-head">
+      <div class="shop-block-title">${title}</div>
+      ${note ? `<div class="shop-block-note">${note}</div>` : ''}
+    </div>
+    ${body}
+  </section>`;
+}
+function renderShopLane(items, attrFn = () => ''){
+  return `<div class="shop-lane">${items.map(item => shopCard(item, attrFn(item))).join('')}</div>`;
+}
+function supplyBoxesByGroup(group){
+  return SHOP_SUPPLY_BOXES.filter(box => box.group === group);
+}
+function shopRewardData(row){
+  if(row.type === 'item'){
+    const item = ALIEN_INDEX.items[row.item_id];
+    return { icon:ITEM_TYPE_ICONS[(item && item.item_type) || ''] || '📦', name:(item && item.name) || row.item_id, desc:itemEffectText(item) };
+  }
+  const trait = ALIEN_INDEX.traits[row.trait_id];
+  return { icon:'🧬', name:(trait && trait.name) || row.trait_id, desc:(trait && trait.description) || '식물 특성에 장착할 수 있는 특성 부품입니다.' };
+}
+function shopRewardCountText(row){
+  return row.min === row.max ? `×${row.min}` : `×${row.min}~${row.max}`;
+}
+function shopBoxById(boxId){
+  return SHOP_SUPPLY_BOXES.find(box => box.id === boxId);
+}
+function renderShopConsumables(){
+  const cards = SHOP_GROWTH_CONSUMABLES.map(c => {
+    const afford = state.credits >= c.price;
+    return `<button class="consum-card" data-buy-consum="${c.item_id}" ${afford?'':'disabled'}>
+      <div class="consum-icon">${c.icon}</div>
+      <div class="consum-name">${c.name} <small>×${c.unit}</small></div>
+      <div class="consum-exp">성장 +${c.exp}/개</div>
+      <div class="consum-price">${fmt(c.price)}💰</div>
+    </button>`;
+  }).join('');
+  return `<div class="shop-consum-grid">${cards}</div>`;
+}
+function buyConsumable(itemId){
+  const c = SHOP_GROWTH_CONSUMABLES.find(x => x.item_id === itemId);
+  if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
+  if(state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
+  const item = ALIEN_INDEX.items[c.item_id];
+  state.credits -= c.price;
+  addItemReward({
+    inventory_id:`item_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+    item_id:c.item_id, name:(item&&item.name)||c.name, item_type:(item&&item.item_type)||'nutrient',
+    rarity:'shop', count:c.unit, acquired_at:new Date().toISOString(), source:{ shop_consumable:true },
+  });
+  saveState(); sfx.heal(); renderShop(); renderMain();
+  toast(`${c.name} ×${c.unit} 구매! 🧪소모품 탭에서 사용하세요`);
+}
+function renderShopPotions(){
+  const cards = POTION_LIST.map(c => {
+    const owned = potionOwnedCount(c.id);
+    const afford = state.credits >= c.price;
+    return `<button class="consum-card" data-buy-potion="${c.id}" ${afford?'':'disabled'}>
+      <div class="consum-icon">${c.icon}</div>
+      <div class="consum-name">${c.name}${owned?` <small>×${owned}</small>`:''}</div>
+      <div class="consum-exp" style="color:#d48cff">${c.desc}</div>
+      <div class="consum-price">${fmt(c.price)}💰</div>
+    </button>`;
+  }).join('');
+  return `<div class="shop-consum-grid potion-grid">${cards}</div>`;
+}
+function buyPotion(potionId){
+  const c = POTIONS[potionId];
+  if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
+  if(state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
+  state.credits -= c.price;
+  if(!Array.isArray(state.potion_inventory)) state.potion_inventory = [];
+  const row = state.potion_inventory.find(r => r.potion_id === potionId);
+  if(row) row.count += 1; else state.potion_inventory.push({ potion_id:potionId, count:1 });
+  saveState(); sfx.heal(); renderShop(); renderMain();
+  toast(`${c.name} 구매! 🧬특성 탭에서 식물에 장착하세요`);
+}
 function renderShop(){
   $('#shopCredit').textContent = fmt(state.credits);
-  const seedCards = `<div class="itemcard locked">
-      <div style="font-size:30px;width:46px;text-align:center">🛰️</div>
-      <div class="ic-body">
-        <div class="ic-name">종자는 탐사로만 획득</div>
-        <div class="ic-desc">완성된 식물이나 희귀 식물은 상점에서 직접 팔지 않습니다. 우주맵에서 행성과 지역을 골라 종자를 찾아오세요.</div>
-      </div>
-      <div class="ic-price">비활성</div>
-    </div>`;
-  const weaponCards = WEAPON_KEYS.map(k => {
-    const W = WEAPONS[k], o = state.weapons[k];
-    return `<div class="itemcard" data-weapon="${k}" style="${o.owned?'opacity:.55':''}">
-      <div style="font-size:30px;width:46px;text-align:center">${W.icon}</div>
-      <div class="ic-body">
-        <div class="ic-name">${W.name} <span class="badge" style="color:var(--gold);border:1px solid var(--gold)">${W.kind}</span></div>
-        <div class="ic-desc">${W.desc}</div>
-      </div>
-      <div class="ic-price">${o.owned ? 'Lv.'+o.lv+' 보유' : fmt(W.price)+'💰'}</div>
-    </div>`;
-  }).join('');
+  const special = renderShopLane(SHOP_SPECIAL_PACKS);
+  const currency = renderShopLane(SHOP_CURRENCY_PACKS);
+  const consumableBoxes = `<div class="shop-subtitle">소모품 상자</div>` + renderShopLane(supplyBoxesByGroup('consumable'), item => `data-shop-box="${item.id}"`);
+  const traitBoxes = `<div class="shop-subtitle">특성 상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
+  const shipItems = `<div class="shop-empty">탐사선 아이템 상품은 아직 준비 중입니다.</div>`;
   $('#shopList').innerHTML =
-    `<div class="shop-section">🌱 종자 획득</div>` + seedCards +
-    `<div class="shop-section">🗡️ 무기고 — 무기형 식물 전용</div>` + weaponCards +
-    `<div class="shop-section">🧪 유전자 시술</div>` + `
-    <div class="itemcard" data-reroll="1">
-      <div style="font-size:34px;width:46px;text-align:center">🎲</div>
-      <div class="ic-body">
-        <div class="ic-name" id="rerollName">유전자 재조작</div>
-        <div class="ic-desc">현재 선택된 식물의 배율·등급·분화 형질을 모두 다시 굴립니다. (강화 레벨은 유지)</div>
-      </div>
-      <div class="ic-price">${fmt(REROLL_PRICE)}💰</div>
-    </div>`;
-  document.querySelectorAll('#shopList [data-weapon]').forEach(card => {
+    renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
+    renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
+    renderShopBlock('소모품', '💧물·🌿비료·💊영양제 — 10개 단위 · 크레딧 구매', renderShopConsumables()) +
+    renderShopBlock('독초 물약', '식물에 장착하면 공격에 독성이 추가됩니다 · 크레딧 구매', renderShopPotions()) +
+    renderShopBlock('보급상자', '상자를 선택하면 확률표를 확인할 수 있습니다.', consumableBoxes + traitBoxes) +
+    renderShopBlock('탐사선 아이템', '추후 추가 예정', shipItems);
+  document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
     card.addEventListener('click', () => {
-      const k = card.dataset.weapon, W = WEAPONS[k];
-      if(state.weapons[k].owned){ toast('이미 보유 중! 무기형 식물의 강화창에서 장착하세요'); return; }
-      if(state.credits < W.price){ toast('크레딧이 부족합니다'); return; }
-      state.credits -= W.price;
-      state.weapons[k].owned = true;
-      saveState(); sfx.heal();
-      renderShop(); renderMain();
-      toast(`${W.name} 구매 완료! 무기형 식물의 강화창에서 장착하세요`);
+      sfx.tap();
+      openShopBoxInfo(card.dataset.shopBox);
     });
   });
-  $('#shopList [data-reroll]').addEventListener('click', () => {
-    const p = activePlant();
-    if(!p){ toast('식물을 먼저 선택하세요'); return; }
-    if(state.credits < REROLL_PRICE){ toast('크레딧이 부족합니다'); return; }
-    if(!rerollArmed){
-      rerollArmed = true;
-      $('#rerollName').textContent = '⚠️ 정말 재조작할까요? (다시 탭)';
-      setTimeout(()=>{ rerollArmed=false; const n=$('#rerollName'); if(n) n.textContent='유전자 재조작'; }, 2500);
-      return;
-    }
-    state.credits -= REROLL_PRICE;
-    const mult = { hp:rollMult(), atk:rollMult(), def:rollMult(), spd:rollMult() };
-    let awakened = null;
-    if(Math.random() < 0.12){ awakened = pick(['hp','atk','def','spd']); mult[awakened] = +(mult[awakened]+0.3).toFixed(2); }
-    p.mult = mult; p.awakened = awakened; p.grade = gradeOf(mult);
-    const f = rollForm();
-    p.form = f.form; p.predType = f.predType;
-    if(p.form !== 'weapon') p.weaponKey = null;
-    p.equipped_skills = defaultLoadout(p);  // 분화 변경에 맞춰 스킬 로드아웃 재구성
-    saveState(); sfx.roll();
-    renderShop(); renderMain();
-    toast(`재조작 완료! ${p.name} → ${p.grade}등급 · ${FORMS[p.form].name}${awakened ? ' ✦각성!' : ''}`);
+  document.querySelectorAll('#shopList [data-buy-consum]').forEach(card => {
+    card.addEventListener('click', () => buyConsumable(card.dataset.buyConsum));
   });
+  document.querySelectorAll('#shopList [data-buy-potion]').forEach(card => {
+    card.addEventListener('click', () => buyPotion(card.dataset.buyPotion));
+  });
+}
+function renderShopBoxInfo(box){
+  const rows = box.rewards.map(row => {
+    const reward = shopRewardData(row);
+    return `<div class="shop-odds-row">
+      <b>${reward.icon} ${reward.name}</b>
+      <span>${shopRewardCountText(row)} · ${row.chance}%</span>
+    </div>`;
+  }).join('');
+  const affordable = state.credits >= box.price;
+  $('#shopBoxBody').innerHTML = `<h2>${box.icon} ${box.name}</h2>
+    <p class="sub">${box.tag}<br>구매 전 확률표를 확인하세요.</p>
+    <div class="shop-odds-table">${rows}</div>
+    <div class="shop-modal-actions">
+      <button class="btn primary" id="shopBoxBuy" data-buy-box="${box.id}" ${affordable ? '' : 'disabled'}>구매 ${shopPriceText(box)}</button>
+      <button class="btn" id="shopBoxClose">닫기</button>
+    </div>`;
+}
+function openShopBoxInfo(boxId){
+  const box = shopBoxById(boxId);
+  if(!box){ toast('상자 정보를 찾을 수 없습니다'); return; }
+  renderShopBoxInfo(box);
+  show('#shopBoxModal');
+}
+function rollShopBoxReward(box){
+  const total = box.rewards.reduce((sum, row) => sum + row.chance, 0);
+  let r = Math.random() * total;
+  let chosen = box.rewards[box.rewards.length - 1];
+  for(const row of box.rewards){
+    r -= row.chance;
+    if(r <= 0){ chosen = row; break; }
+  }
+  return { ...chosen, count:randInt(chosen.min || 1, chosen.max || 1) };
+}
+function addTraitReward(traitId, count, boxId){
+  if(!Array.isArray(state.trait_inventory)) state.trait_inventory = [];
+  const trait = ALIEN_INDEX.traits[traitId];
+  const existing = state.trait_inventory.find(row => row.trait_id === traitId);
+  if(existing){
+    existing.count += count;
+    return;
+  }
+  state.trait_inventory.push({
+    inventory_id:`trait_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+    trait_id:traitId,
+    name:(trait && trait.name) || traitId,
+    category:(trait && trait.category) || 'trait',
+    count,
+    acquired_at:new Date().toISOString(),
+    source:{ shop_box:boxId },
+  });
+}
+function grantShopBoxReward(box, reward){
+  if(reward.type === 'item'){
+    const item = ALIEN_INDEX.items[reward.item_id];
+    if(!item) return;
+    addItemReward({
+      inventory_id:`item_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+      item_id:item.id,
+      name:item.name,
+      item_type:item.item_type,
+      rarity:'shop',
+      count:reward.count,
+      acquired_at:new Date().toISOString(),
+      source:{ shop_box:box.id },
+    });
+    return;
+  }
+  if(reward.type === 'trait') addTraitReward(reward.trait_id, reward.count, box.id);
+}
+function renderShopOpening(){
+  const data = pendingShopOpening;
+  if(!data) return;
+  const box = data.box;
+  const reward = shopRewardData(data.reward);
+  const result = data.revealed ? `<div class="shop-result-card">
+      <div class="reward-icon">${reward.icon}</div>
+      <div style="font-weight:900">${reward.name} ×${data.reward.count}</div>
+      <div class="sub" style="margin-top:5px">${reward.desc}</div>
+    </div>
+    <button class="btn primary" id="shopOpenClose">확인</button>` : `<p class="sub">상자를 눌러 개봉하세요.</p>`;
+  $('#shopOpenBody').innerHTML = `<h2>${box.name}</h2>
+    <div class="shop-opening-box ${data.revealed ? 'opened' : ''}" id="shopOpeningBox">${data.revealed ? '✨' : box.icon}</div>
+    ${result}`;
+}
+function buyShopBox(boxId){
+  const box = shopBoxById(boxId);
+  if(!box){ toast('상자 정보를 찾을 수 없습니다'); return; }
+  if(state.credits < box.price){ toast('크레딧이 부족합니다'); return; }
+  state.credits -= box.price;
+  pendingShopOpening = { box, reward:rollShopBoxReward(box), revealed:false, granted:false };
+  saveState();
+  hide('#shopBoxModal');
+  hide('#shopModal');
+  renderShopOpening();
+  show('#shopOpenModal');
+  renderMain();
+}
+function revealShopBox(){
+  if(!pendingShopOpening || pendingShopOpening.revealed) return;
+  pendingShopOpening.revealed = true;
+  if(!pendingShopOpening.granted){
+    grantShopBoxReward(pendingShopOpening.box, pendingShopOpening.reward);
+    pendingShopOpening.granted = true;
+    saveState();
+  }
+  sfx.roll();
+  renderShopOpening();
+  renderMain();
 }
 
 /* ================= 전투 (스킬 로드아웃 + 특성효과 + 토너먼트) ================= */
 let B = null;
-let pendingTournamentContinue = false;
 function eff(a, d){ return ELEMENTS[a].strong.includes(d) ? 1.5 : (ELEMENTS[d].strong.includes(a) ? 0.67 : 1); }
-function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'속도':s; }
+function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'기동성':s==='acc'?'적중':s; }
 function dotIcon(k){ return k==='poison'?'🟣':k==='bleed'?'🩸':k==='burn'?'🔥':'☠️'; }
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
@@ -5007,6 +5665,8 @@ function makeCombatant(src){
     atk:Math.max(1,Math.round(bs.atk*(1+(P.atkPct||0)))),
     def:Math.max(1,Math.round(bs.def*(1+(P.defPct||0)))),
     spd:Math.max(1,Math.round(bs.spd*(1+(P.spdPct||0)))),
+    acc:clamp(Math.round((bs.acc||90)*(1+(P.accPct||0))), 50, 100),
+    potion:src.potion||null,
     elemBonus:bs.elemBonus||1,
     energy: clamp(2 + (P.energyBonus||0), 0, 5),
     guard:null, traits:src.traits||[], passives:P,
@@ -5028,6 +5688,7 @@ function buildEnemy(roundIndex, tierIndex, ps){
   const atk = Math.max(8, Math.round(ps.atk*diff*rand(0.95,1.08)));
   const def = Math.max(6, Math.round(ps.def*diff*rand(0.95,1.08)));
   const spd = Math.max(6, Math.round(ps.spd*diff*rand(0.95,1.08)));
+  const acc = clamp(Math.round((ps.acc||88)*rand(0.95,1.04)), 60, 99);
   const grade = tierIndex>=5?'S':tierIndex>=3?'A':tierIndex>=1?'B':'C';
   const loadout=['skill_basic_strike', elementSkillId(el)];
   traits.forEach(t=>{ const sid=TRAIT_SKILL_MAP[t]; if(sid) loadout.push(sid); });
@@ -5036,7 +5697,7 @@ function buildEnemy(roundIndex, tierIndex, ps){
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, species:sp, element:el, grade, awakened:null,
-    form, predType, weapon:null, baseStats:{hp,atk,def,spd,elemBonus:1+tierIndex*0.04}, traits,
+    form, predType, weapon:null, baseStats:{hp,atk,def,spd,acc,elemBonus:1+tierIndex*0.04}, traits,
     loadout:loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,6),
   });
 }
@@ -5059,11 +5720,11 @@ function startMatch(){
     ? { key:p.weaponKey, lv:state.weapons[p.weaponKey].lv } : null;
   const playerC = makeCombatant({
     name:p.custom_name||p.name, species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
-    form:p.form||'normal', predType:p.predType||null, weapon:wpn,
-    baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,elemBonus:s.elemBonus},
+    form:p.form||'normal', predType:p.predType||null, weapon:wpn, potion:p.potion||null,
+    baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elemBonus:s.elemBonus},
     traits:p.traits, loadout:p.equipped_skills.slice(),
   });
-  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd});
+  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc});
   B = { p:playerC, e:enemyC, over:false, busy:false };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
@@ -5168,6 +5829,18 @@ async function applySkill(a, d, s, side){
   if(s.heal){ const h = Math.round(a.max*s.heal); a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); blog(`▶ ☀️ 체력 ${h} 회복`); sfx.heal(); }
   if(s.selfBuff){ a.buffs.push({stat:s.selfBuff.stat,pct:s.selfBuff.pct,turns:s.selfBuff.turns,kind:'buff'}); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(s.selfBuff.pct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.power && s.power>0){
+    // 적중/회피 판정 — 광역은 잘 맞고(명중↑), 단일은 비교적 낮다. 방어자의 기동성이 높을수록 회피.
+    const isAoe = !!s.aoe;
+    const accMod = isAoe ? 10 : (s.single ? -7 : 0);
+    const spdA = effStat(a,'spd'), spdD = effStat(d,'spd');
+    const eva = clamp(Math.round((spdD - spdA) * 0.4), 0, 30);
+    const hitChance = clamp((a.acc||90) + accMod - eva, 35, 99);
+    if(Math.random()*100 >= hitChance){
+      popup(tgtSide,'MISS',false);
+      blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(명중 ${hitChance}%)</span>`);
+      sfx.tap();
+      updateBars(); await sleep(620); return;
+    }
     let power = s.power * (s.elem ? a.elemBonus : 1), crit=false;
     const critChance = (s.critBonus||0) + (a.passives.critBonus||0);
     if(critChance>0 && Math.random()<critChance){ power*=1.6; crit=true; }
@@ -5195,6 +5868,7 @@ async function applySkill(a, d, s, side){
     if(a.passives.defDownOnHit>0) d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'});
     if(s.enemyDebuff){ applyEnemyDebuff(d, s.enemyDebuff); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(a.potion && a.potion.dot){ const pd=a.potion.dot; const ddmg=Math.max(1,Math.round(effStat(a,'atk')*pd.pct)); d.dots.push({kind:pd.kind,dmg:ddmg,turns:pd.turns,icon:dotIcon(pd.kind)}); blog(`▶ ${a.potion.icon||'🧪'} ${a.potion.name} 독성 — ${dotName(pd.kind)}(${pd.turns}턴 · 턴당 ${ddmg})`); if(pd.debuff){ applyEnemyDebuff(d, pd.debuff); blog(`▶ 🔻 ${debuffLabel(pd.debuff)}`); } }
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
@@ -5224,7 +5898,11 @@ async function playerSkill(skillId){
   if(B.p.energy < (s.cost||0)){ toast('⚡에너지가 부족합니다'); return; }
   B.busy = true; updateBars();
   const eId = aiPickSkill(B.e);
-  const order = effStat(B.p,'spd') >= effStat(B.e,'spd') ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
+  // 기동성이 높을수록 선제공격 확률↑ (확정은 아님)
+  const spdP = effStat(B.p,'spd'), spdE = effStat(B.e,'spd');
+  const pFirstChance = clamp(spdP/(spdP+spdE), 0.2, 0.8);
+  const playerFirst = Math.random() < pFirstChance;
+  const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
   for(const [side, k] of order){
     const a = side==='p' ? B.p : B.e;
     const d = side==='p' ? B.e : B.p;
@@ -5278,26 +5956,30 @@ async function endMatch(won){
   let xpAmt = 0;
   if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); state.player_level = (state.player_level||1) + 1; }
 
-  let title='', body='', btnLabel='콜로세움 나가기', outcome='';
+  let title='', body='', btnLabel='홈으로 돌아가기', outcome='';
   if(round.key==='prelim'){
     if(won) T.prelimWins++; else T.prelimLosses++;
-    if(T.prelimWins >= round.needWins){
-      T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
-      title='🏆 예선 통과!'; btnLabel='16강 진출 ▶';
-      body=`예선을 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 경험치 +${xpAmt}`:''}<br>다음은 <b>16강</b> 본선입니다.`;
-    } else if(T.prelimLosses >= (round.bestOf - round.needWins + 1)){
-      outcome='eliminated';
+    const played = T.prelimWins + T.prelimLosses;
+    if(played >= round.bestOf){
+      // 예선 5경기 종료 → 다승 판정 (3승 이상이면 통과)
+      if(T.prelimWins >= round.needWins){
+        T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
+        title='🏆 예선 통과!'; btnLabel='홈으로 — 본선 준비 ▶';
+        body=`예선 ${round.bestOf}경기 종료 — <b>본선 진출!</b><br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>다음은 <b>16강</b> 본선입니다. 홈에서 강화·준비 후 도전하세요.`;
+      } else {
+        outcome='eliminated';
+      }
     } else {
-      outcome='continue'; title = won?'✅ 예선 1승':'❌ 예선 1패'; btnLabel='다음 예선 경기 ▶';
-      body=`예선 현황: <b>${T.prelimWins}승 ${T.prelimLosses}패</b><br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}`;
+      outcome='continue'; title = won?'✅ 예선 승리':'❌ 예선 패배'; btnLabel='홈으로 — 준비하기 ▶';
+      body=`예선 현황: <b>${T.prelimWins}승 ${T.prelimLosses}패</b> (${played}/${round.bestOf}경기)<br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>홈에서 준비 후 다음 예선 경기를 시작하세요.`;
     }
   } else {
     if(won){
       if(round.key==='final'){ outcome='champion'; }
       else {
         T.roundIndex++; outcome='continue'; const next=TOURNAMENT_ROUNDS[T.roundIndex];
-        title=`🏆 ${round.name} 승리!`; btnLabel=`${next.name} 진출 ▶`;
-        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>다음은 <b>${next.name}</b>입니다.`;
+        title=`🏆 ${round.name} 승리!`; btnLabel='홈으로 — 다음 준비 ▶';
+        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>다음은 <b>${next.name}</b>입니다. 홈에서 준비 후 도전하세요.`;
       }
     } else outcome='eliminated';
   }
@@ -5322,13 +6004,12 @@ async function endMatch(won){
   await sleep(600);
   $('#resultTitle').textContent = title;
   $('#resultBody').innerHTML = body;
-  pendingTournamentContinue = (outcome==='continue');
   const btn = $('#resultClose'); if(btn) btn.textContent = btnLabel;
   show('#resultModal');
 }
 function handleResultClose(){
+  // 모든 경기 종료 후 항상 홈으로 복귀(자동 다음 경기 진행 없음 → 경기 사이 준비 가능)
   sfx.tap(); hide('#resultModal');
-  if(pendingTournamentContinue){ pendingTournamentContinue=false; startMatch(); return; }
   hide('#battleScreen'); show('#mainScreen'); B=null; renderMain();
 }
 
@@ -5342,7 +6023,7 @@ $('#btnStart').addEventListener('click', () => {
 $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
-$('#btnSeedBag').addEventListener('click', () => { sfx.tap(); openSeedBag(); });
+$('#btnBagCenter').addEventListener('click', () => { sfx.tap(); openSeedBag(); });
 /* 하단 헤더 네비게이션 (상점 / 탐사 / 식물·전투 / 모드 / 길드) */
 const LOCKED_SECTIONS = {
   mode:  { emoji:'🎮', title:'모드', desc:'생존·레이드·이벤트 등 다양한 특수 대전 모드가 이곳에 열릴 예정입니다.<br>조금만 기다려 주세요!' },
@@ -5362,20 +6043,21 @@ $('#bottomNav').addEventListener('click', (ev) => {
   const btn = ev.target.closest('.navbtn'); if(!btn) return;
   const nav = btn.dataset.nav;
   sfx.tap();
-  if(nav === 'shop'){ setNavActive('shop'); openShop(); }
-  else if(nav === 'explore'){ setNavActive('explore'); openExploration(); }
+  if(nav === 'shop'){ setNavActive('shop'); hide('#explorationModal'); hide('#seedBagModal'); openShop(); }
+  else if(nav === 'explore'){ setNavActive('explore'); hide('#shopModal'); hide('#seedBagModal'); openExploration(); }
   else if(nav === 'home'){ setNavActive('home'); hide('#shopModal'); hide('#explorationModal'); hide('#seedBagModal'); renderMain(); }
   else if(nav === 'mode' || nav === 'guild'){ openLockedSection(nav); }
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
-$('#shopClose').addEventListener('click', () => { hide('#shopModal'); setNavActive('home'); sfx.tap(); });
 $('#centerPlant').addEventListener('click', () => { sfx.tap(); openUpgrade(); });
 $('#collectionBar').addEventListener('click', (ev) => {
   const chip = ev.target.closest('.chip');
   if(!chip) return;
   sfx.tap();
-  if(chip.id === 'chipAdd'){ openSeedBag(); return; }
+  if(chip.classList.contains('potempty')){ openSeedBag(); return; }
+  if(chip.classList.contains('potlocked')){ toast('화분 칸은 플레이어 레벨이 오르면 열립니다'); return; }
+  if(!chip.dataset.id) return;
   state.activeId = +chip.dataset.id;
   saveState(); renderMain();
 });
@@ -5387,6 +6069,21 @@ $('#seedModal').addEventListener('click', (ev) => {
   openGeneModal(card.dataset.species, 0);
 });
 $('#resultClose').addEventListener('click', () => { handleResultClose(); });
+$('#shopBoxModal').addEventListener('click', (ev) => {
+  const buy = ev.target.closest('#shopBoxBuy');
+  if(buy){ sfx.tap(); buyShopBox(buy.dataset.buyBox); return; }
+  if(ev.target.closest('#shopBoxClose')){ hide('#shopBoxModal'); sfx.tap(); }
+});
+$('#shopOpenModal').addEventListener('click', (ev) => {
+  if(ev.target.closest('#shopOpenClose')){
+    hide('#shopOpenModal');
+    pendingShopOpening = null;
+    openShop();
+    sfx.tap();
+    return;
+  }
+  if(ev.target.closest('#shopOpeningBox')) revealShopBox();
+});
 
 /* 설정 */
 let resetArmed = false;
