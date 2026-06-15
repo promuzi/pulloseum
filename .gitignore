@@ -7,11 +7,14 @@ index_*.html.bak
 
 # ===== Godot 잔재 (이 웹게임과 무관 — 추적 안 함) =====
 .godot/
+*.godot
 *.import
 *.tscn
 *.gd
+*.uid
 scenes/
 tests/
+scripts/build-godot-data.js
 data/pluloseum_godot_data.json
 docs/pluloseum_godot_migration_plan.md
 
