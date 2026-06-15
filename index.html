@@ -211,15 +211,16 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   background-size:54px 54px,89px 89px,127px 127px;background-position:8px 13px,23px 39px,60px 8px;opacity:.62;}
 .space-map-canvas:after{background:radial-gradient(ellipse at center,transparent 45%,rgba(2,5,12,.72) 100%);}
 .space-orbit{position:absolute;z-index:1;border:1px solid rgba(255,255,255,.055);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;}
-.planet-node{position:absolute;transform:translate(-50%,-50%);border:none;background:transparent;color:var(--text);cursor:pointer;z-index:4;min-width:104px;padding:0;}
+.planet-node{position:absolute;transform:translate(-50%,-50%);border:none;background:transparent;color:var(--text);cursor:pointer;z-index:4;min-width:104px;padding:0;text-align:center;}
 .planet-node.locked{cursor:pointer;}
-.planet-core{width:66px;height:66px;margin:0 auto 8px;border-radius:50%;position:relative;background:var(--planet-color);box-shadow:0 0 22px color-mix(in srgb,var(--planet-color) 55%,transparent), inset -15px -18px 22px rgba(0,0,0,.35), inset 12px 10px 18px rgba(255,255,255,.16);}
-.planet-core:before{content:"";position:absolute;inset:10px 6px 13px 9px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 42%);transform:rotate(-24deg);}
-.planet-core:after{content:"";position:absolute;left:-13px;right:-13px;top:29px;height:8px;border-radius:50%;border:2px solid rgba(255,255,255,.36);transform:rotate(-18deg);opacity:var(--ring-opacity,.15);}
-.planet-node.grade-rare .planet-core{width:76px;height:76px;}
-.planet-node.grade-epic .planet-core{width:86px;height:86px;}
+.planet-core{display:block;width:44px;height:44px;margin:0 auto 6px;border-radius:50%;position:relative;background:var(--planet-color);box-shadow:0 0 16px color-mix(in srgb,var(--planet-color) 55%,transparent), inset -10px -12px 15px rgba(0,0,0,.35), inset 8px 7px 12px rgba(255,255,255,.16);transition:transform .12s;}
+.planet-node:active .planet-core{transform:scale(.9);}
+.planet-core:before{content:"";position:absolute;inset:7px 4px 9px 6px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent 42%);transform:rotate(-24deg);}
+.planet-core:after{content:"";position:absolute;left:-9px;right:-9px;top:19px;height:6px;border-radius:50%;border:2px solid rgba(255,255,255,.36);transform:rotate(-18deg);opacity:var(--ring-opacity,.15);}
+.planet-node.grade-rare .planet-core{width:52px;height:52px;}
+.planet-node.grade-epic .planet-core{width:60px;height:60px;}
 .planet-node.locked .planet-core{filter:grayscale(.95) brightness(.42);box-shadow:inset -15px -18px 22px rgba(0,0,0,.48);}
-.planet-lock{position:absolute;left:50%;top:34px;transform:translate(-50%,-50%);font-size:24px;text-shadow:0 2px 10px #000;display:none;}
+.planet-lock{position:absolute;left:50%;top:22px;transform:translate(-50%,-50%);font-size:20px;text-shadow:0 2px 10px #000;display:none;}
 .planet-node.locked .planet-lock{display:block;}
 .planet-label{display:inline-block;max-width:118px;padding:3px 8px;border-radius:999px;background:rgba(5,10,18,.78);border:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:800;white-space:nowrap;}
 .planet-node.selected .planet-core{outline:3px solid var(--neon);outline-offset:5px;box-shadow:0 0 34px rgba(92,242,194,.55), inset -15px -18px 22px rgba(0,0,0,.35);}
@@ -249,10 +250,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .space-map-action .btn{min-width:132px;padding:11px 13px;border-radius:12px;background:rgba(9,16,29,.88);box-shadow:0 10px 26px rgba(0,0,0,.28);}
 .map-zoom-controls{position:absolute;right:14px;top:128px;z-index:8;display:flex;flex-direction:column;gap:6px;}
 .map-zoom-controls button{width:38px;height:38px;padding:0;border-radius:11px;background:rgba(9,16,29,.88);}
-.map-bottom-panel{position:absolute;left:0;right:0;bottom:0;z-index:9;background:rgba(9,16,29,.94);border-top:1px solid rgba(92,242,194,.24);box-shadow:0 -16px 44px rgba(0,0,0,.42);padding:6px 14px 14px;transition:min-height .26s cubic-bezier(.4,0,.2,1), max-height .26s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;}
-.map-bottom-panel.snap-0{min-height:34px;max-height:34px;}
-.map-bottom-panel.snap-1{min-height:208px;max-height:44%;}
-.map-bottom-panel.snap-2{min-height:330px;max-height:74%;}
+.map-bottom-panel{position:absolute;left:0;right:0;bottom:0;z-index:9;background:rgba(9,16,29,.94);border-top:1px solid rgba(92,242,194,.24);box-shadow:0 -16px 44px rgba(0,0,0,.42);padding:6px 14px 14px;height:36px;transition:height .32s cubic-bezier(.32,.72,0,1);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;will-change:height;}
+.map-bottom-panel.snap-0{height:36px;}
+.map-bottom-panel.snap-1{height:236px;}
+.map-bottom-panel.snap-2{height:min(64dvh,430px);}
 .map-bottom-panel.dragging{transition:none;}
 .map-bottom-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
 .planet-detail-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
@@ -271,7 +272,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .region-summary-card .region-name{font-size:13px;font-weight:900;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .region-summary-card .region-meta{display:flex;gap:5px;flex-wrap:wrap;font-size:11px;color:var(--sub);}
 .region-brief-popup-backdrop{position:absolute;inset:0;z-index:32;background:rgba(3,7,14,.58);display:flex;align-items:center;justify-content:center;padding:14px;}
-.region-brief-popup{width:min(520px,94vw);max-height:min(82dvh,620px);overflow-y:auto;background:#101827;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:14px;box-shadow:0 18px 60px rgba(0,0,0,.65);}
+.region-brief-popup{width:min(520px,94vw);max-height:calc(100% - 28px);overflow-y:auto;background:#101827;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:14px;box-shadow:0 18px 60px rgba(0,0,0,.65);}
 .region-brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;}
 .region-brief-cell{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:8px;font-size:12px;color:var(--sub);line-height:1.45;}
 .region-brief-cell b{display:block;color:var(--text);font-size:13px;margin-top:2px;}
@@ -316,8 +317,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .ship-stat b{display:block;color:var(--text);font-size:13px;margin-top:2px;}
 .space-panel-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
 .space-map-close{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
-.ship-mod-room{position:absolute;inset:12px;z-index:20;background:rgba(9,16,29,.96);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
-.ship-mod-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+/* 격납고/개조실 팝업 — 맵 세로를 거의 꽉 채우되 하단 헤더(nav)는 가리지 않음 */
+.ship-mod-room,.exploration-shop-room{position:fixed;left:50%;transform:translateX(-50%);top:10px;width:min(calc(100% - 16px),520px);height:calc(100dvh - var(--navh) - 18px);z-index:55;background:rgba(9,16,29,.97);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
+.ship-mod-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.ship-mod-head .ship-mod-title{flex:1;text-align:center;min-width:0;}
+.ship-mod-head .ship-mod-title h3{margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ship-mod-head h3{margin:0;font-size:19px;}
 .ship-mod-head .sub{margin:3px 0 0;color:var(--sub);font-size:12.5px;line-height:1.45;}
 .ship-mod-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
@@ -336,7 +340,6 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .ship-upgrade-card .up-compare b{color:var(--neon);}
 .ship-mod-back{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
 .ship-mod-actions{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;}
-.exploration-shop-room{position:absolute;inset:12px;z-index:20;background:rgba(9,16,29,.96);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
 .exploration-shop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
 .exploration-shop-head h3{margin:0;font-size:19px;}
 .exploration-shop-head .sub{margin:3px 0 0;color:var(--sub);font-size:12.5px;line-height:1.45;}
@@ -598,7 +601,6 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <h2>🛒 유전자 상점</h2>
     <p class="sub">보유 크레딧: <b id="shopCredit" style="color:var(--gold)"></b> 💰</p>
     <div class="cardlist" id="shopList"></div>
-    <button class="btn modal-close" id="shopClose">닫기</button>
   </div>
 </div>
 
@@ -2187,6 +2189,7 @@ let selectedSeedInventoryId = null;
 let pendingPlantSeedId = null;
 let explorationShopCategory = 'fuel';
 let regionSheetSnap = 0; // 0 닫힘 · 1 지역버튼 · 2 세부정보까지
+let sheetAnimateUp = false; // 행성 선택 시 아래→위 슬라이드업 모션 1회
 let spaceMapView = { x:0, y:0, scale:1 };
 
 function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
@@ -2648,7 +2651,7 @@ function planetOrbitPosition(planet, index, total){
   const minL = Math.min(...levels), maxL = Math.max(...levels);
   const lvl = planet.required_level || 1;
   const norm = maxL > minL ? (lvl - minL) / (maxL - minL) : 0.5;
-  const radius = 106 + norm * 94; // 거리값 → 106~200px
+  const radius = 128 + norm * 100; // 거리값 → 128~228px (작아진 행성에 맞춰 더 멀리)
   const baseAngle = -90 + index * (360 / Math.max(1, total));
   const jitter = index % 2 === 0 ? -8 : 9;
   const ang = (baseAngle + jitter) * Math.PI / 180;
@@ -2826,14 +2829,9 @@ function renderShipUpgradeCard(ship, upgrade){
 function renderShipModRoom(ship){
   return `<div class="ship-mod-room">
     <div class="ship-mod-head">
-      <div>
-        <h3>🛠️ 탐사선 개조실</h3>
-        <p class="sub">${ship.name}의 부품을 장착하고 기본 스탯을 강화합니다.</p>
-      </div>
-      <div class="ship-mod-actions">
-        <button class="btn primary ship-mod-back" id="btnShipRoomShop">🛒 탐사 상점</button>
-        <button class="btn ship-mod-back" id="btnShipRoomBack">우주맵으로</button>
-      </div>
+      <button class="btn ship-mod-back" id="btnShipRoomShop">🛠️ 개조실</button>
+      <div class="ship-mod-title"><h3>🛰️ 탐사선 격납고</h3></div>
+      <button class="btn ship-mod-back" id="btnShipRoomBack">닫기</button>
     </div>
     <div class="ship-mod-layout">
       <section class="ship-mod-section full">
@@ -2920,10 +2918,10 @@ function renderExplorationShopRoom(){
   return `<div class="exploration-shop-room">
     <div class="exploration-shop-head">
       <div>
-        <h3>🛒 탐사 상점</h3>
-        <p class="sub">식물은 팔지 않습니다. 탐사를 돕는 연료, 부품, 장비, 기본 지원품만 제공합니다.</p>
+        <h3>🛠️ 개조실</h3>
+        <p class="sub">탐사를 돕는 연료, 부품, 장비, 기본 지원품을 갖춥니다.</p>
       </div>
-      <button class="btn exploration-shop-back" id="btnExplorationShopBack">우주맵으로</button>
+      <button class="btn exploration-shop-back" id="btnExplorationShopBack">격납고로</button>
     </div>
     <div class="explore-summary">
       <span class="stat">크레딧 <b>${fmt(state.credits)}</b></span>
@@ -3067,28 +3065,25 @@ function planetDetailBlock(planet){
   </div>`;
 }
 function renderBottomExplorationPanel(planet, selectedRegion){
-  const snap = planet ? clamp(regionSheetSnap, 0, 2) : 0;
-  if(!planet || snap === 0){
+  if(!planet){
     return `<div class="map-bottom-panel snap-0" id="mapBottomPanel">
-      <div class="map-bottom-handle" id="mapBottomHandle" title="${planet ? '위로 끌어 지역표 열기' : '행성을 먼저 고르세요'}"></div>
+      <div class="map-bottom-handle" id="mapBottomHandle" title="행성을 먼저 고르세요"></div>
     </div>`;
   }
-  const detail = snap >= 2 ? planetDetailBlock(planet) : '';
-  const note = snap >= 2
-    ? '아래로 내려 접거나, 지역을 눌러 탐사를 시작하세요.'
-    : '핸들을 위로 더 끌면 행성 세부 정보가 열립니다.';
+  // 콘텐츠(지역 + 세부정보)는 항상 전체 렌더. 단계는 패널 높이(height)로만 표현한다.
+  const snap = clamp(regionSheetSnap, 0, 2);
   return `<div class="map-bottom-panel snap-${snap}" id="mapBottomPanel">
     <div class="map-bottom-handle" id="mapBottomHandle" title="끌어서 펼치기 / 접기"></div>
     <div class="map-bottom-body">
       <div class="map-bottom-head">
         <div>
           <div class="map-bottom-title">${planet.name} 지역표</div>
-          <div class="map-bottom-note">${note}</div>
+          <div class="map-bottom-note">위로 끌면 행성 정보까지 펼치고, 아래로 끌면 접힙니다.</div>
         </div>
         <span class="info-badge">${gradeName(planet.grade)} 등급</span>
       </div>
       ${renderRegionSummaryGrid(planet, selectedRegion)}
-      ${detail}
+      ${planetDetailBlock(planet)}
     </div>
   </div>`;
 }
@@ -3476,31 +3471,56 @@ function bindSpaceMapInteractions(){
   const handle = $('#mapBottomHandle');
   const panel = $('#mapBottomPanel');
   if(handle && panel){
-    let startY = null;
-    handle.addEventListener('pointerdown', event => {
-      startY = event.clientY;
-      panel.classList.add('dragging');
-      try{ handle.setPointerCapture(event.pointerId); }catch(e){}
-    });
-    const finish = event => {
-      if(startY === null) return;
-      const diff = event.clientY - startY; // +면 아래로(접기), -면 위로(펼치기)
-      startY = null;
-      panel.classList.remove('dragging');
-      try{ handle.releasePointerCapture(event.pointerId); }catch(e){}
-      let snap = selectedPlanetId ? regionSheetSnap : 0;
-      if(diff < -18) snap += 1;                          // 위로 끌기 → 펼침
-      else if(diff > 18) snap -= 1;                      // 아래로 끌기 → 접힘
-      else if(Math.abs(diff) < 6) snap += (snap >= 2 ? -1 : 1); // 탭 → 토글
-      snap = clamp(snap, 0, 2);
-      if(snap === regionSheetSnap) return;
-      regionSheetSnap = snap;
-      planetPopupOpen = false;
-      sfx.tap();
-      renderExploration();
+    const SNAP_H = [36, 236, Math.min(window.innerHeight * 0.64, 430)]; // 단계별 높이(px)
+    const maxH = SNAP_H[2];
+    const applySnap = snap => {
+      regionSheetSnap = clamp(snap, 0, 2);
+      panel.classList.remove('snap-0', 'snap-1', 'snap-2');
+      panel.classList.add('snap-' + regionSheetSnap);
     };
-    handle.addEventListener('pointerup', finish);
-    handle.addEventListener('pointercancel', finish);
+    // 행성 선택 직후: 닫힘(snap-0)에서 시작점을 고정한 뒤 목표 단계로 → 부드러운 슬라이드업
+    if(sheetAnimateUp && selectedPlanetId){
+      sheetAnimateUp = false;
+      const target = clamp(regionSheetSnap, 1, 2);
+      panel.classList.add('dragging');
+      panel.classList.remove('snap-1', 'snap-2'); panel.classList.add('snap-0');
+      void panel.offsetHeight;             // reflow로 시작 높이(36) 확정
+      panel.classList.remove('dragging');  // transition 켬
+      applySnap(target);                   // 36 → 목표 높이로 transition 발동
+    }
+    if(selectedPlanetId){
+      let startY = null, startH = 0, curH = 0, moved = false;
+      handle.addEventListener('pointerdown', event => {
+        startY = event.clientY; startH = panel.offsetHeight; curH = startH; moved = false;
+        panel.classList.add('dragging'); // 드래그 중엔 transition 끔 → 손가락을 그대로 따라옴
+        try{ handle.setPointerCapture(event.pointerId); }catch(e){}
+      });
+      handle.addEventListener('pointermove', event => {
+        if(startY === null) return;
+        const d = event.clientY - startY; // 위로 끌면 음수
+        if(Math.abs(d) > 3) moved = true;
+        curH = clamp(startH - d, SNAP_H[0], maxH);
+        panel.style.height = curH + 'px';
+      });
+      const finish = event => {
+        if(startY === null) return;
+        startY = null;
+        try{ handle.releasePointerCapture(event.pointerId); }catch(e){}
+        let snap;
+        if(!moved){
+          snap = regionSheetSnap >= 2 ? 1 : regionSheetSnap + 1; // 탭 → 한 단계 토글
+        }else{
+          snap = 0; let best = Infinity; // 놓은 높이에서 가장 가까운 단계로 정착
+          SNAP_H.forEach((h, i) => { const dd = Math.abs(h - curH); if(dd < best){ best = dd; snap = i; } });
+        }
+        panel.style.height = '';               // 인라인 제거 → 클래스 높이로
+        panel.classList.remove('dragging');    // transition 켜고 가까운 단계로 정착
+        applySnap(snap);
+        sfx.tap();
+      };
+      handle.addEventListener('pointerup', finish);
+      handle.addEventListener('pointercancel', finish);
+    }
   }
 }
 openExploration = function(){
@@ -3574,7 +3594,7 @@ renderExploration = function(){
       selectedRegionId = null;
       lastExplorationResult = null;
       explorationPanelMode = 'map';
-      regionSheetSnap = Math.max(1, regionSheetSnap); // 행성 선택 → 최소 지역표 단계로 올라옴
+      if(regionSheetSnap < 1){ regionSheetSnap = 1; sheetAnimateUp = true; } // 닫힘이면 슬라이드업
       planetPopupOpen = false;
       sfx.tap();
       renderExploration();
@@ -3613,7 +3633,7 @@ renderExploration = function(){
   const shipBack = $('#btnShipRoomBack');
   if(shipBack) shipBack.addEventListener('click', () => { explorationPanelMode = 'map'; sfx.tap(); renderExploration(); });
   const shopBack = $('#btnExplorationShopBack');
-  if(shopBack) shopBack.addEventListener('click', () => { explorationPanelMode = 'map'; sfx.tap(); renderExploration(); });
+  if(shopBack) shopBack.addEventListener('click', () => { explorationPanelMode = 'ship'; sfx.tap(); renderExploration(); });
   document.querySelectorAll('#explorationBody [data-shop-category]').forEach(btn => {
     btn.addEventListener('click', () => {
       explorationShopCategory = btn.dataset.shopCategory;
@@ -5477,7 +5497,6 @@ $('#bottomNav').addEventListener('click', (ev) => {
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
-$('#shopClose').addEventListener('click', () => { hide('#shopModal'); setNavActive('home'); sfx.tap(); });
 $('#centerPlant').addEventListener('click', () => { sfx.tap(); openUpgrade(); });
 $('#collectionBar').addEventListener('click', (ev) => {
   const chip = ev.target.closest('.chip');
