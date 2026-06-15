@@ -192,6 +192,37 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #shopModal .sub{flex:0 0 auto;}
 #shopModal #shopList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
 #shopModal #shopClose{flex:0 0 auto;margin-top:12px;}
+.shop-wallet{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px;}
+.shop-wallet .stat{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--sub);}
+.shop-block{margin:14px 0 18px;}
+.shop-block-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.shop-block-title{font-weight:900;font-size:17px;color:var(--text);}
+.shop-block-note{font-size:12px;color:var(--sub);text-align:right;line-height:1.35;}
+.shop-lane{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:1px 2px 10px;margin:0 -2px;-webkit-overflow-scrolling:touch;}
+.shop-lane::-webkit-scrollbar{height:7px;}
+.shop-lane::-webkit-scrollbar-thumb{background:rgba(92,242,194,.24);border-radius:999px;}
+.shop-subtitle{font-weight:800;font-size:13px;color:var(--neon);margin:10px 0 7px;}
+.shop-card{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);border-radius:8px;min-width:138px;width:138px;min-height:186px;padding:8px;display:flex;flex-direction:column;gap:7px;text-align:center;scroll-snap-align:start;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+.shop-card:not(:disabled):active{transform:scale(.98);}
+.shop-card:not(:disabled):hover{border-color:var(--neon);background:rgba(92,242,194,.08);}
+.shop-card:disabled{cursor:not-allowed;opacity:.55;}
+.shop-card-art{height:92px;border-radius:7px;background:linear-gradient(160deg,rgba(92,242,194,.12),rgba(255,211,74,.08));border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:44px;line-height:1;}
+.shop-card-name{font-weight:900;font-size:13px;line-height:1.25;min-height:34px;display:flex;align-items:center;justify-content:center;}
+.shop-card-price{margin-top:auto;border-top:1px solid rgba(255,255,255,.08);padding-top:7px;color:var(--gold);font-weight:900;font-size:13px;}
+.shop-card-tag{font-size:11px;color:var(--sub);line-height:1.25;min-height:28px;}
+.shop-empty{border:1px dashed rgba(255,255,255,.16);border-radius:8px;padding:18px 12px;color:var(--sub);font-size:13px;text-align:center;background:rgba(255,255,255,.035);}
+.shop-odds-table{display:flex;flex-direction:column;gap:7px;margin:12px 0;}
+.shop-odds-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:9px 10px;font-size:13px;}
+.shop-odds-row b{color:var(--text);}
+.shop-odds-row span{color:var(--sub);font-size:12px;text-align:right;}
+.shop-modal-actions{display:flex;gap:8px;margin-top:12px;}
+.shop-modal-actions .btn{margin-top:0;}
+.shop-open-modal{align-items:center;text-align:center;}
+.shop-opening-box{width:180px;height:210px;margin:12px auto 8px;border:1px solid rgba(92,242,194,.28);border-radius:10px;background:linear-gradient(160deg,rgba(92,242,194,.16),rgba(255,211,74,.1));display:flex;align-items:center;justify-content:center;font-size:86px;cursor:pointer;box-shadow:0 18px 48px rgba(0,0,0,.34);transition:transform .3s,border-color .3s;}
+.shop-opening-box.opened{transform:translateY(-8px) scale(1.04) rotate(-2deg);border-color:var(--gold);animation:boxPop .55s ease both;}
+@keyframes boxPop{0%{filter:brightness(1)}45%{filter:brightness(1.75)}100%{filter:brightness(1.1)}}
+.shop-result-card{margin:12px 0;background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.22);border-radius:10px;padding:12px;}
+.shop-result-card .reward-icon{font-size:46px;margin-bottom:4px;}
 
 .space-map-screen{height:100%;display:flex;flex-direction:column;min-height:0;}
 .space-map-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(92,242,194,.18);background:rgba(8,15,28,.92);}
@@ -596,10 +627,20 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 
 <div class="modal hidden" id="shopModal">
   <div class="modal-card">
-    <h2>🛒 유전자 상점</h2>
-    <p class="sub">보유 크레딧: <b id="shopCredit" style="color:var(--gold)"></b> 💰</p>
+    <h2>🛒 상점</h2>
+    <div class="shop-wallet">
+      <span class="stat">보유 크레딧 <b id="shopCredit" style="color:var(--gold)"></b> 💰</span>
+    </div>
     <div class="cardlist" id="shopList"></div>
   </div>
+</div>
+
+<div class="modal hidden" id="shopBoxModal">
+  <div class="modal-card" id="shopBoxBody"></div>
+</div>
+
+<div class="modal hidden" id="shopOpenModal">
+  <div class="modal-card shop-open-modal" id="shopOpenBody"></div>
 </div>
 
 <div class="modal hidden" id="explorationModal">
@@ -621,7 +662,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       ⑤ 전투는 보유 식물 중 선택된 한 마리만 출전합니다. 식물은 성장·특성에 따라 스킬을 얻고, 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
       ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 | 💧물←풀·빙결·번개 | 🌿풀←불·바람·번개 | ⚡번개←대지·빙결 | 🪨대지←풀·물 | ❄️빙결←불·대지 | 🌪️바람←대지·불.<br>
       ⑦ 전투는 토너먼트 방식입니다. 예선 5경기 중 3승 이상이면 본선(16강 → 결승)에 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다. <b style="color:var(--neon)">경기가 끝날 때마다 홈으로 돌아와</b> 식물을 강화·준비한 뒤 다음 경기를 시작할 수 있습니다.<br>
-      ⑧ 상점에서는 식물이나 희귀 종자를 직접 팔지 않습니다. 종자는 탐사로 얻고, 크레딧은 강화와 장비에 사용하세요. 무료 기본 종자는 진행이 막혔을 때 종자 가방에서 한 번만 받을 수 있습니다.
+      ⑧ 상점에서는 특가·재화·보급상자를 확인할 수 있습니다. 원화 상품은 아직 결제 연동 전이라 선택할 수 없고, 보급상자는 크레딧으로 구매해 소모품이나 특성 부품을 얻습니다.
     </div>
     <button class="btn modal-close danger" id="btnReset">데이터 초기화</button>
     <button class="btn modal-close" id="settingsClose">닫기</button>
@@ -1695,6 +1736,83 @@ const SAVE_KEY = 'pullosseum_v1';
 const ALIEN_DATA_API = typeof AlienPlantGameData !== 'undefined' ? AlienPlantGameData : null;
 const ALIEN_DATA = ALIEN_DATA_API ? ALIEN_DATA_API.gameData : { planets:[], regions:[], seeds:[], traits:[] };
 const ALIEN_INDEX = ALIEN_DATA_API ? ALIEN_DATA_API.createIndexes(ALIEN_DATA) : { planets:{}, regions:{}, seeds:{}, traits:{}, items:{} };
+const SHOP_SPECIAL_PACKS = [
+  { id:'special_rookie', icon:'🌱', name:'초보 재배사 팩', tag:'성장 재료 + 크레딧', price:1100, oldPrice:2200, currency:'krw', disabled:true },
+  { id:'special_explorer', icon:'🛰️', name:'탐사 지원 팩', tag:'연료 + 탐사 보조', price:3300, oldPrice:5500, currency:'krw', disabled:true },
+  { id:'special_supply', icon:'🎁', name:'희귀 보급 팩', tag:'상자 + 배양 재료', price:5500, oldPrice:9900, currency:'krw', disabled:true },
+  { id:'special_diamond', icon:'💎', name:'다이아 성장 팩', tag:'대량 재화 + 고급 상자', price:11000, oldPrice:22000, currency:'krw', disabled:true },
+];
+const SHOP_CURRENCY_PACKS = [
+  { id:'credits_1', icon:'💰', name:'크레딧 1,000', tag:'소량 충전', price:1100, currency:'krw', disabled:true },
+  { id:'credits_2', icon:'💰', name:'크레딧 2,500', tag:'보너스 10%', price:3300, currency:'krw', disabled:true },
+  { id:'credits_3', icon:'💰', name:'크레딧 5,500', tag:'보너스 20%', price:5500, currency:'krw', disabled:true },
+  { id:'credits_4', icon:'💰', name:'크레딧 12,000', tag:'보너스 35%', price:11000, currency:'krw', disabled:true },
+  { id:'credits_5', icon:'💰', name:'크레딧 28,000', tag:'보너스 50%', price:22000, currency:'krw', disabled:true },
+  { id:'credits_6', icon:'💰', name:'크레딧 65,000', tag:'보너스 80%', price:55000, currency:'krw', disabled:true },
+];
+const SHOP_SUPPLY_BOXES = [
+  {
+    id:'box_consumable_silver', group:'consumable', icon:'📦', name:'실버 소모품 상자', tag:'기본 배양 소모품', price:180, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_nutrient_gel', min:1, max:2, chance:46 },
+      { type:'item', item_id:'item_lumen_fertilizer', min:1, max:1, chance:24 },
+      { type:'item', item_id:'item_stability_serum', min:1, max:1, chance:18 },
+      { type:'item', item_id:'item_spore_ampoule', min:1, max:1, chance:12 },
+    ],
+  },
+  {
+    id:'box_consumable_gold', group:'consumable', icon:'🎁', name:'골드 소모품 상자', tag:'중급 배양 소모품', price:420, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_lumen_fertilizer', min:1, max:2, chance:28 },
+      { type:'item', item_id:'item_stability_serum', min:1, max:2, chance:24 },
+      { type:'item', item_id:'item_acidic_mutagen', min:1, max:1, chance:18 },
+      { type:'item', item_id:'item_iron_graft', min:1, max:1, chance:16 },
+      { type:'item', item_id:'item_trait_slot_splice', min:1, max:1, chance:14 },
+    ],
+  },
+  {
+    id:'box_consumable_diamond', group:'consumable', icon:'💎', name:'다이아 소모품 상자', tag:'고급 배양 소모품', price:900, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_trait_slot_splice', min:1, max:1, chance:28 },
+      { type:'item', item_id:'item_psionic_tuning_fork', min:1, max:2, chance:22 },
+      { type:'item', item_id:'item_tide_membrane_wrap', min:1, max:2, chance:20 },
+      { type:'item', item_id:'item_iron_graft', min:2, max:2, chance:16 },
+      { type:'item', item_id:'item_acidic_mutagen', min:2, max:2, chance:14 },
+    ],
+  },
+  {
+    id:'box_trait_silver', group:'trait', icon:'🧬', name:'실버 특성 상자', tag:'기본 특성 부품', price:260, currency:'credits',
+    rewards:[
+      { type:'trait', trait_id:'trait_biolume_chlorophyll', min:1, max:1, chance:24 },
+      { type:'trait', trait_id:'trait_resonant_roots', min:1, max:1, chance:22 },
+      { type:'trait', trait_id:'trait_vector_thorns', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_rapid_germination', min:1, max:1, chance:18 },
+      { type:'trait', trait_id:'trait_symbiotic_microbes', min:1, max:1, chance:16 },
+    ],
+  },
+  {
+    id:'box_trait_gold', group:'trait', icon:'🧫', name:'골드 특성 상자', tag:'희귀 특성 부품', price:620, currency:'credits',
+    rewards:[
+      { type:'trait', trait_id:'trait_acid_sap', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_iron_bark', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_phase_pollen', min:1, max:1, chance:18 },
+      { type:'trait', trait_id:'trait_spore_cloud', min:1, max:1, chance:16 },
+      { type:'trait', trait_id:'trait_plasma_stamen', min:1, max:1, chance:14 },
+      { type:'trait', trait_id:'trait_stable_core', min:1, max:1, chance:12 },
+    ],
+  },
+  {
+    id:'box_trait_diamond', group:'trait', icon:'🔮', name:'다이아 특성 상자', tag:'고급 특성 부품', price:1300, currency:'credits',
+    rewards:[
+      { type:'trait', trait_id:'trait_crystal_refraction', min:1, max:1, chance:22 },
+      { type:'trait', trait_id:'trait_quantum_seeds', min:1, max:1, chance:20 },
+      { type:'trait', trait_id:'trait_psionic_lattice', min:1, max:1, chance:18 },
+      { type:'trait', trait_id:'trait_metallic_xylem', min:1, max:1, chance:16 },
+      { type:'trait', trait_id:'trait_hunger_maw', min:1, max:1, chance:14 },
+      { type:'trait', trait_id:'trait_solar_burst', min:1, max:1, chance:10 },
+    ],
+  },
+];
 const PLANET_EXPLORATION_REQUIREMENTS = {
   planet_elyndor: { min_equipment_bonus: 0 },
   planet_vathra: { min_equipment_bonus: 0.05 },
@@ -2102,6 +2220,7 @@ function defaultState(){
     starter_seed_claimed:false,
     seed_inventory:[],
     item_inventory:[],
+    trait_inventory:[],
     ship_part_inventory:[],
     ship_upgrade_materials:0,
   };
@@ -2144,6 +2263,7 @@ function normalizeState(s){
   if(typeof s.exploration_equipment_bonus !== 'number') s.exploration_equipment_bonus = s.exploration_ship.stats.scanner_bonus || 0;
   if(!Array.isArray(s.seed_inventory)) s.seed_inventory = [];
   if(!Array.isArray(s.item_inventory)) s.item_inventory = [];
+  if(!Array.isArray(s.trait_inventory)) s.trait_inventory = [];
   if(!s.weapons) s.weapons = newArmory();
   s.plants.forEach(p => {
     if(!p.form){ p.form='normal'; p.predType=null; p.weaponKey=null; }
@@ -4874,11 +4994,21 @@ function renderTraitTab(p){
       </div>
     </div>`;
   }).join('') : `<div class="muted">아직 발현된 특성이 없습니다. 희귀한 종자일수록 특성이 더 많이 발현됩니다.</div>`;
+  const traitInventory = (state.trait_inventory || []).filter(row => (row.count || 0) > 0);
+  const traitInventoryBlock = traitInventory.length ? `<div class="skill-section-label">🧬 보유 특성 부품 <small>장착 기능 준비 중</small></div>` + traitInventory.map(row => {
+    const trait = ALIEN_INDEX.traits[row.trait_id];
+    return `<div class="uprow">
+      <div class="un">🧬 ${(trait && trait.name) || row.name || row.trait_id}<small>${trait ? (TRAIT_CAT_NAMES[trait.category] || trait.category) + '형 · ' + trait.description : '상점 보급상자 획득'}</small></div>
+      <div class="uv">×${row.count}</div>
+      <button class="upbtn" disabled>준비 중</button>
+    </div>`;
+  }).join('') : '';
   const weaponBlock = p.form==='weapon' ? `<div class="skill-section-label">🗡️ 무기 장착 (무기형)</div>${weaponSectionHTML(p)}` : '';
   return `
     <p class="tab-hint">특성은 식물의 <b>속성·외형</b>과 함께 전투 패시브와 시그니처 스킬을 부여합니다. 특성 슬롯은 최대 5칸입니다.</p>
     <div class="trait-slot-row">${slotRow}</div>
     ${traitRows}
+    ${traitInventoryBlock}
     ${weaponBlock}`;
 }
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
@@ -5030,80 +5160,182 @@ function bindUpgradeEvents(p){
 }
 
 /* ================= 상점 ================= */
-let rerollArmed = false;
+let pendingShopOpening = null;
 function openShop(){
-  rerollArmed = false;
   renderShop();
   show('#shopModal');
 }
+function shopPriceText(item){
+  if(item.currency === 'krw') return `${fmt(item.price)}원`;
+  if(item.currency === 'free') return '무료';
+  return `${fmt(item.price)}💰`;
+}
+function shopCard(item, attrs = ''){
+  const disabled = item.disabled ? 'disabled' : '';
+  const oldPrice = item.oldPrice ? `<span style="color:var(--sub);text-decoration:line-through;margin-right:4px">${fmt(item.oldPrice)}원</span>` : '';
+  return `<button class="shop-card" ${attrs} ${disabled}>
+    <div class="shop-card-art"><span>${item.icon}</span></div>
+    <div class="shop-card-name">${item.name}</div>
+    <div class="shop-card-tag">${item.tag || ''}</div>
+    <div class="shop-card-price">${oldPrice}${shopPriceText(item)}</div>
+  </button>`;
+}
+function renderShopBlock(title, note, body){
+  return `<section class="shop-block">
+    <div class="shop-block-head">
+      <div class="shop-block-title">${title}</div>
+      ${note ? `<div class="shop-block-note">${note}</div>` : ''}
+    </div>
+    ${body}
+  </section>`;
+}
+function renderShopLane(items, attrFn = () => ''){
+  return `<div class="shop-lane">${items.map(item => shopCard(item, attrFn(item))).join('')}</div>`;
+}
+function supplyBoxesByGroup(group){
+  return SHOP_SUPPLY_BOXES.filter(box => box.group === group);
+}
+function shopRewardData(row){
+  if(row.type === 'item'){
+    const item = ALIEN_INDEX.items[row.item_id];
+    return { icon:ITEM_TYPE_ICONS[(item && item.item_type) || ''] || '📦', name:(item && item.name) || row.item_id, desc:itemEffectText(item) };
+  }
+  const trait = ALIEN_INDEX.traits[row.trait_id];
+  return { icon:'🧬', name:(trait && trait.name) || row.trait_id, desc:(trait && trait.description) || '식물 특성에 장착할 수 있는 특성 부품입니다.' };
+}
+function shopRewardCountText(row){
+  return row.min === row.max ? `×${row.min}` : `×${row.min}~${row.max}`;
+}
+function shopBoxById(boxId){
+  return SHOP_SUPPLY_BOXES.find(box => box.id === boxId);
+}
 function renderShop(){
   $('#shopCredit').textContent = fmt(state.credits);
-  const seedCards = `<div class="itemcard locked">
-      <div style="font-size:30px;width:46px;text-align:center">🛰️</div>
-      <div class="ic-body">
-        <div class="ic-name">종자는 탐사로만 획득</div>
-        <div class="ic-desc">완성된 식물이나 희귀 식물은 상점에서 직접 팔지 않습니다. 우주맵에서 행성과 지역을 골라 종자를 찾아오세요.</div>
-      </div>
-      <div class="ic-price">비활성</div>
-    </div>`;
-  const weaponCards = WEAPON_KEYS.map(k => {
-    const W = WEAPONS[k], o = state.weapons[k];
-    return `<div class="itemcard" data-weapon="${k}" style="${o.owned?'opacity:.55':''}">
-      <div style="font-size:30px;width:46px;text-align:center">${W.icon}</div>
-      <div class="ic-body">
-        <div class="ic-name">${W.name} <span class="badge" style="color:var(--gold);border:1px solid var(--gold)">${W.kind}</span></div>
-        <div class="ic-desc">${W.desc}</div>
-      </div>
-      <div class="ic-price">${o.owned ? 'Lv.'+o.lv+' 보유' : fmt(W.price)+'💰'}</div>
-    </div>`;
-  }).join('');
+  const special = renderShopLane(SHOP_SPECIAL_PACKS);
+  const currency = renderShopLane(SHOP_CURRENCY_PACKS);
+  const consumableBoxes = `<div class="shop-subtitle">소모품 상자</div>` + renderShopLane(supplyBoxesByGroup('consumable'), item => `data-shop-box="${item.id}"`);
+  const traitBoxes = `<div class="shop-subtitle">특성 상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
+  const shipItems = `<div class="shop-empty">탐사선 아이템 상품은 아직 준비 중입니다.</div>`;
   $('#shopList').innerHTML =
-    `<div class="shop-section">🌱 종자 획득</div>` + seedCards +
-    `<div class="shop-section">🗡️ 무기고 — 무기형 식물 전용</div>` + weaponCards +
-    `<div class="shop-section">🧪 유전자 시술</div>` + `
-    <div class="itemcard" data-reroll="1">
-      <div style="font-size:34px;width:46px;text-align:center">🎲</div>
-      <div class="ic-body">
-        <div class="ic-name" id="rerollName">유전자 재조작</div>
-        <div class="ic-desc">현재 선택된 식물의 배율·등급·분화 형질을 모두 다시 굴립니다. (강화 레벨은 유지)</div>
-      </div>
-      <div class="ic-price">${fmt(REROLL_PRICE)}💰</div>
-    </div>`;
-  document.querySelectorAll('#shopList [data-weapon]').forEach(card => {
+    renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
+    renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
+    renderShopBlock('보급상자', '상자를 선택하면 확률표를 확인할 수 있습니다.', consumableBoxes + traitBoxes) +
+    renderShopBlock('탐사선 아이템', '추후 추가 예정', shipItems);
+  document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
     card.addEventListener('click', () => {
-      const k = card.dataset.weapon, W = WEAPONS[k];
-      if(state.weapons[k].owned){ toast('이미 보유 중! 무기형 식물의 강화창에서 장착하세요'); return; }
-      if(state.credits < W.price){ toast('크레딧이 부족합니다'); return; }
-      state.credits -= W.price;
-      state.weapons[k].owned = true;
-      saveState(); sfx.heal();
-      renderShop(); renderMain();
-      toast(`${W.name} 구매 완료! 무기형 식물의 강화창에서 장착하세요`);
+      sfx.tap();
+      openShopBoxInfo(card.dataset.shopBox);
     });
   });
-  $('#shopList [data-reroll]').addEventListener('click', () => {
-    const p = activePlant();
-    if(!p){ toast('식물을 먼저 선택하세요'); return; }
-    if(state.credits < REROLL_PRICE){ toast('크레딧이 부족합니다'); return; }
-    if(!rerollArmed){
-      rerollArmed = true;
-      $('#rerollName').textContent = '⚠️ 정말 재조작할까요? (다시 탭)';
-      setTimeout(()=>{ rerollArmed=false; const n=$('#rerollName'); if(n) n.textContent='유전자 재조작'; }, 2500);
-      return;
-    }
-    state.credits -= REROLL_PRICE;
-    const mult = { hp:rollMult(), atk:rollMult(), def:rollMult(), spd:rollMult() };
-    let awakened = null;
-    if(Math.random() < 0.12){ awakened = pick(['hp','atk','def','spd']); mult[awakened] = +(mult[awakened]+0.3).toFixed(2); }
-    p.mult = mult; p.awakened = awakened; p.grade = gradeOf(mult);
-    const f = rollForm();
-    p.form = f.form; p.predType = f.predType;
-    if(p.form !== 'weapon') p.weaponKey = null;
-    p.equipped_skills = defaultLoadout(p);  // 분화 변경에 맞춰 스킬 로드아웃 재구성
-    saveState(); sfx.roll();
-    renderShop(); renderMain();
-    toast(`재조작 완료! ${p.name} → ${p.grade}등급 · ${FORMS[p.form].name}${awakened ? ' ✦각성!' : ''}`);
+}
+function renderShopBoxInfo(box){
+  const rows = box.rewards.map(row => {
+    const reward = shopRewardData(row);
+    return `<div class="shop-odds-row">
+      <b>${reward.icon} ${reward.name}</b>
+      <span>${shopRewardCountText(row)} · ${row.chance}%</span>
+    </div>`;
+  }).join('');
+  const affordable = state.credits >= box.price;
+  $('#shopBoxBody').innerHTML = `<h2>${box.icon} ${box.name}</h2>
+    <p class="sub">${box.tag}<br>구매 전 확률표를 확인하세요.</p>
+    <div class="shop-odds-table">${rows}</div>
+    <div class="shop-modal-actions">
+      <button class="btn primary" id="shopBoxBuy" data-buy-box="${box.id}" ${affordable ? '' : 'disabled'}>구매 ${shopPriceText(box)}</button>
+      <button class="btn" id="shopBoxClose">닫기</button>
+    </div>`;
+}
+function openShopBoxInfo(boxId){
+  const box = shopBoxById(boxId);
+  if(!box){ toast('상자 정보를 찾을 수 없습니다'); return; }
+  renderShopBoxInfo(box);
+  show('#shopBoxModal');
+}
+function rollShopBoxReward(box){
+  const total = box.rewards.reduce((sum, row) => sum + row.chance, 0);
+  let r = Math.random() * total;
+  let chosen = box.rewards[box.rewards.length - 1];
+  for(const row of box.rewards){
+    r -= row.chance;
+    if(r <= 0){ chosen = row; break; }
+  }
+  return { ...chosen, count:randInt(chosen.min || 1, chosen.max || 1) };
+}
+function addTraitReward(traitId, count, boxId){
+  if(!Array.isArray(state.trait_inventory)) state.trait_inventory = [];
+  const trait = ALIEN_INDEX.traits[traitId];
+  const existing = state.trait_inventory.find(row => row.trait_id === traitId);
+  if(existing){
+    existing.count += count;
+    return;
+  }
+  state.trait_inventory.push({
+    inventory_id:`trait_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+    trait_id:traitId,
+    name:(trait && trait.name) || traitId,
+    category:(trait && trait.category) || 'trait',
+    count,
+    acquired_at:new Date().toISOString(),
+    source:{ shop_box:boxId },
   });
+}
+function grantShopBoxReward(box, reward){
+  if(reward.type === 'item'){
+    const item = ALIEN_INDEX.items[reward.item_id];
+    if(!item) return;
+    addItemReward({
+      inventory_id:`item_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+      item_id:item.id,
+      name:item.name,
+      item_type:item.item_type,
+      rarity:'shop',
+      count:reward.count,
+      acquired_at:new Date().toISOString(),
+      source:{ shop_box:box.id },
+    });
+    return;
+  }
+  if(reward.type === 'trait') addTraitReward(reward.trait_id, reward.count, box.id);
+}
+function renderShopOpening(){
+  const data = pendingShopOpening;
+  if(!data) return;
+  const box = data.box;
+  const reward = shopRewardData(data.reward);
+  const result = data.revealed ? `<div class="shop-result-card">
+      <div class="reward-icon">${reward.icon}</div>
+      <div style="font-weight:900">${reward.name} ×${data.reward.count}</div>
+      <div class="sub" style="margin-top:5px">${reward.desc}</div>
+    </div>
+    <button class="btn primary" id="shopOpenClose">확인</button>` : `<p class="sub">상자를 눌러 개봉하세요.</p>`;
+  $('#shopOpenBody').innerHTML = `<h2>${box.name}</h2>
+    <div class="shop-opening-box ${data.revealed ? 'opened' : ''}" id="shopOpeningBox">${data.revealed ? '✨' : box.icon}</div>
+    ${result}`;
+}
+function buyShopBox(boxId){
+  const box = shopBoxById(boxId);
+  if(!box){ toast('상자 정보를 찾을 수 없습니다'); return; }
+  if(state.credits < box.price){ toast('크레딧이 부족합니다'); return; }
+  state.credits -= box.price;
+  pendingShopOpening = { box, reward:rollShopBoxReward(box), revealed:false, granted:false };
+  saveState();
+  hide('#shopBoxModal');
+  hide('#shopModal');
+  renderShopOpening();
+  show('#shopOpenModal');
+  renderMain();
+}
+function revealShopBox(){
+  if(!pendingShopOpening || pendingShopOpening.revealed) return;
+  pendingShopOpening.revealed = true;
+  if(!pendingShopOpening.granted){
+    grantShopBoxReward(pendingShopOpening.box, pendingShopOpening.reward);
+    pendingShopOpening.granted = true;
+    saveState();
+  }
+  sfx.roll();
+  renderShopOpening();
+  renderMain();
 }
 
 /* ================= 전투 (스킬 로드아웃 + 특성효과 + 토너먼트) ================= */
@@ -5512,6 +5744,21 @@ $('#seedModal').addEventListener('click', (ev) => {
   openGeneModal(card.dataset.species, 0);
 });
 $('#resultClose').addEventListener('click', () => { handleResultClose(); });
+$('#shopBoxModal').addEventListener('click', (ev) => {
+  const buy = ev.target.closest('#shopBoxBuy');
+  if(buy){ sfx.tap(); buyShopBox(buy.dataset.buyBox); return; }
+  if(ev.target.closest('#shopBoxClose')){ hide('#shopBoxModal'); sfx.tap(); }
+});
+$('#shopOpenModal').addEventListener('click', (ev) => {
+  if(ev.target.closest('#shopOpenClose')){
+    hide('#shopOpenModal');
+    pendingShopOpening = null;
+    openShop();
+    sfx.tap();
+    return;
+  }
+  if(ev.target.closest('#shopOpeningBox')) revealShopBox();
+});
 
 /* 설정 */
 let resetArmed = false;
