@@ -1,0 +1,21 @@
+# ===== 백업 파일 =====
+*.bak
+index_*.html.bak
+
+# ===== Claude Code 로컬 전용 설정 (PC마다 다름) =====
+.claude/settings.local.json
+
+# ===== Godot 잔재 (이 웹게임과 무관 — 추적 안 함) =====
+.godot/
+*.import
+*.tscn
+*.gd
+scenes/
+tests/
+data/pluloseum_godot_data.json
+docs/pluloseum_godot_migration_plan.md
+
+# ===== OS =====
+Thumbs.db
+.DS_Store
+desktop.ini
