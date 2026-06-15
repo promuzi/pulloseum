@@ -224,6 +224,15 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .planet-label{display:inline-block;max-width:118px;padding:3px 8px;border-radius:999px;background:rgba(5,10,18,.78);border:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:800;white-space:nowrap;}
 .planet-node.selected .planet-core{outline:3px solid var(--neon);outline-offset:5px;box-shadow:0 0 34px rgba(92,242,194,.55), inset -15px -18px 22px rgba(0,0,0,.35);}
 .planet-node.selected .planet-label{border-color:var(--neon);color:var(--neon);}
+/* 내 탐사선 — 우주맵 중앙 고정 */
+.my-ship-node{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;border:none;background:transparent;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.my-ship-node .ship-core{width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;line-height:1;
+  background:radial-gradient(circle at 50% 32%, #2bd49a, #155a4b 78%);
+  box-shadow:0 0 32px rgba(43,212,154,.6), inset 0 3px 10px rgba(255,255,255,.35), inset 0 -9px 16px rgba(0,0,0,.42);
+  border:2px solid rgba(125,255,217,.72);animation:shipFloat 3.4s ease-in-out infinite;}
+.my-ship-node:active .ship-core{animation:none;transform:scale(.93);}
+.my-ship-node .ship-label{padding:3px 10px;border-radius:999px;background:rgba(5,10,18,.82);border:1px solid rgba(92,242,194,.5);font-size:11.5px;font-weight:800;color:var(--neon);white-space:nowrap;}
+@keyframes shipFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .space-lane{position:absolute;left:12%;right:12%;top:52%;z-index:1;height:1px;background:linear-gradient(90deg,transparent,rgba(92,242,194,.34),transparent);transform:rotate(-10deg);pointer-events:none;}
 .space-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.9);opacity:.85;z-index:1;pointer-events:none;}
 .space-star.big{width:3px;height:3px;background:#bfffee;box-shadow:0 0 12px rgba(92,242,194,.95);}
@@ -240,10 +249,16 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .space-map-action .btn{min-width:132px;padding:11px 13px;border-radius:12px;background:rgba(9,16,29,.88);box-shadow:0 10px 26px rgba(0,0,0,.28);}
 .map-zoom-controls{position:absolute;right:14px;top:128px;z-index:8;display:flex;flex-direction:column;gap:6px;}
 .map-zoom-controls button{width:38px;height:38px;padding:0;border-radius:11px;background:rgba(9,16,29,.88);}
-.map-bottom-panel{position:absolute;left:0;right:0;bottom:0;z-index:9;background:rgba(9,16,29,.94);border-top:1px solid rgba(92,242,194,.24);box-shadow:0 -16px 44px rgba(0,0,0,.42);padding:8px 14px 14px;transition:min-height .22s ease, max-height .22s ease;backdrop-filter:blur(8px);}
-.map-bottom-panel.collapsed{min-height:70px;max-height:70px;}
-.map-bottom-panel.expanded{min-height:242px;max-height:46%;}
-.map-bottom-handle{width:76px;height:22px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;cursor:grab;}
+.map-bottom-panel{position:absolute;left:0;right:0;bottom:0;z-index:9;background:rgba(9,16,29,.94);border-top:1px solid rgba(92,242,194,.24);box-shadow:0 -16px 44px rgba(0,0,0,.42);padding:6px 14px 14px;transition:min-height .26s cubic-bezier(.4,0,.2,1), max-height .26s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;}
+.map-bottom-panel.snap-0{min-height:34px;max-height:34px;}
+.map-bottom-panel.snap-1{min-height:208px;max-height:44%;}
+.map-bottom-panel.snap-2{min-height:330px;max-height:74%;}
+.map-bottom-panel.dragging{transition:none;}
+.map-bottom-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
+.planet-detail-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
+.planet-detail-block .info-desc{margin-bottom:6px;}
+.planet-detail-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.map-bottom-handle{width:76px;height:22px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;cursor:grab;flex:0 0 auto;touch-action:none;}
 .map-bottom-handle:before{content:"";width:56px;height:5px;border-radius:999px;background:rgba(255,255,255,.26);}
 .map-bottom-panel.dragging .map-bottom-handle{cursor:grabbing;}
 .map-bottom-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
@@ -320,6 +335,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .ship-upgrade-card .up-compare{color:var(--sub);font-size:12px;margin:6px 0;}
 .ship-upgrade-card .up-compare b{color:var(--neon);}
 .ship-mod-back{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
+.ship-mod-actions{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;}
 .exploration-shop-room{position:absolute;inset:12px;z-index:20;background:rgba(9,16,29,.96);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
 .exploration-shop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
 .exploration-shop-head h3{margin:0;font-size:19px;}
@@ -2170,7 +2186,7 @@ let planetPopupOpen = false;
 let selectedSeedInventoryId = null;
 let pendingPlantSeedId = null;
 let explorationShopCategory = 'fuel';
-let regionPanelExpanded = false;
+let regionSheetSnap = 0; // 0 닫힘 · 1 지역버튼 · 2 세부정보까지
 let spaceMapView = { x:0, y:0, scale:1 };
 
 function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
@@ -2626,14 +2642,39 @@ function renderSpaceStars(){
   ];
   return stars.map(([x,y,big]) => `<span class="space-star ${big?'big':''}" style="left:${x}%;top:${y}%"></span>`).join('');
 }
+/* 중앙(탐사선) 기준 극좌표 배치. 반경은 required_level(거리값)에 따라 미묘하게 달라진다. */
+function planetOrbitPosition(planet, index, total){
+  const levels = ALIEN_DATA.planets.map(p => p.required_level || 1);
+  const minL = Math.min(...levels), maxL = Math.max(...levels);
+  const lvl = planet.required_level || 1;
+  const norm = maxL > minL ? (lvl - minL) / (maxL - minL) : 0.5;
+  const radius = 106 + norm * 94; // 거리값 → 106~200px
+  const baseAngle = -90 + index * (360 / Math.max(1, total));
+  const jitter = index % 2 === 0 ? -8 : 9;
+  const ang = (baseAngle + jitter) * Math.PI / 180;
+  return { dx: Math.cos(ang) * radius, dy: Math.sin(ang) * radius, radius };
+}
+function renderMyShipNode(ship){
+  return `<button class="my-ship-node" id="myShipNode" title="탐사선 개조실 열기">
+    <span class="ship-core">🛰️</span>
+    <span class="ship-label">${ship && ship.name ? ship.name : '내 탐사선'}</span>
+  </button>`;
+}
+function renderOrbitRings(){
+  const total = ALIEN_DATA.planets.length;
+  return ALIEN_DATA.planets.map((planet, index) => {
+    const d = (planetOrbitPosition(planet, index, total).radius * 2).toFixed(0);
+    return `<span class="space-orbit" style="left:50%;top:50%;width:${d}px;height:${d}px"></span>`;
+  }).join('');
+}
 function renderPlanetNode(planet, index){
   const unlock = planetUnlockState(planet);
-  const pos = planetDisplayPosition(planet, index);
+  const pos = planetOrbitPosition(planet, index, ALIEN_DATA.planets.length);
   const color = planetDisplayColor(planet);
   const grade = planet.grade || 'common';
   const ringOpacity = grade === 'epic' ? .7 : grade === 'rare' ? .42 : .16;
   return `<button class="planet-node grade-${grade} ${planet.id===selectedPlanetId?'selected':''} ${unlock.ok?'':'locked'}"
-    data-planet="${planet.id}" style="left:${pos.x}%;top:${pos.y}%;--planet-color:${color};--ring-opacity:${ringOpacity}">
+    data-planet="${planet.id}" style="left:calc(50% + ${pos.dx.toFixed(0)}px);top:calc(50% + ${pos.dy.toFixed(0)}px);--planet-color:${color};--ring-opacity:${ringOpacity}">
     <span class="planet-core"></span>
     <span class="planet-lock">🔒</span>
     <span class="planet-label">${planet.name}</span>
@@ -2789,7 +2830,10 @@ function renderShipModRoom(ship){
         <h3>🛠️ 탐사선 개조실</h3>
         <p class="sub">${ship.name}의 부품을 장착하고 기본 스탯을 강화합니다.</p>
       </div>
-      <button class="btn ship-mod-back" id="btnShipRoomBack">우주맵으로</button>
+      <div class="ship-mod-actions">
+        <button class="btn primary ship-mod-back" id="btnShipRoomShop">🛒 탐사 상점</button>
+        <button class="btn ship-mod-back" id="btnShipRoomBack">우주맵으로</button>
+      </div>
     </div>
     <div class="ship-mod-layout">
       <section class="ship-mod-section full">
@@ -3003,29 +3047,49 @@ function renderRegionSummaryGrid(planet, selectedRegion){
   }).join('');
   return `<div class="region-summary-grid">${cards}</div>`;
 }
+function planetDetailBlock(planet){
+  const seeds = (planet.representative_seed_types || []).join(', ') || '미확인';
+  const items = (planet.representative_item_types || []).join(', ') || '미확인';
+  const danger = Object.entries(planet.environment || {})
+    .filter(([,v]) => v >= 15).map(([k]) => ENV_LABELS[k]).filter(Boolean).join(', ') || '낮음';
+  return `<div class="planet-detail-block">
+    <div class="planet-detail-meta">
+      <span class="info-badge">${gradeName(planet.grade)} 등급</span>
+      <span class="info-badge">권장 Lv.${planet.required_level || 1}</span>
+      <span class="info-badge">위험도 ${planet.danger_level || 1}</span>
+    </div>
+    <div class="info-desc">${planet.description || ''}</div>
+    <div class="detail-list">
+      <span>대표 종자<b>${seeds}</b></span>
+      <span>대표 아이템<b>${items}</b></span>
+      <span>환경 위험<b>${danger}</b></span>
+    </div>
+  </div>`;
+}
 function renderBottomExplorationPanel(planet, selectedRegion){
-  const expanded = !!planet && regionPanelExpanded;
-  if(!expanded){
-    return `<div class="map-bottom-panel collapsed" id="mapBottomPanel">
-      <div class="map-bottom-handle" id="mapBottomHandle" title="지역표 열기"></div>
-      <div class="map-bottom-head">
-        <div>
-          <div class="map-bottom-title">비어있음.</div>
-          <div class="map-bottom-note">행성을 고르면 이 창이 올라오고 지역표가 표시됩니다.</div>
-        </div>
-      </div>
+  const snap = planet ? clamp(regionSheetSnap, 0, 2) : 0;
+  if(!planet || snap === 0){
+    return `<div class="map-bottom-panel snap-0" id="mapBottomPanel">
+      <div class="map-bottom-handle" id="mapBottomHandle" title="${planet ? '위로 끌어 지역표 열기' : '행성을 먼저 고르세요'}"></div>
     </div>`;
   }
-  return `<div class="map-bottom-panel expanded" id="mapBottomPanel">
-    <div class="map-bottom-handle" id="mapBottomHandle" title="아래로 내려 접기"></div>
-    <div class="map-bottom-head">
-      <div>
-        <div class="map-bottom-title">${planet.name} 지역표</div>
-        <div class="map-bottom-note">지역을 누르면 중앙에 간단한 정보와 탐사 시작 버튼이 표시됩니다.</div>
+  const detail = snap >= 2 ? planetDetailBlock(planet) : '';
+  const note = snap >= 2
+    ? '아래로 내려 접거나, 지역을 눌러 탐사를 시작하세요.'
+    : '핸들을 위로 더 끌면 행성 세부 정보가 열립니다.';
+  return `<div class="map-bottom-panel snap-${snap}" id="mapBottomPanel">
+    <div class="map-bottom-handle" id="mapBottomHandle" title="끌어서 펼치기 / 접기"></div>
+    <div class="map-bottom-body">
+      <div class="map-bottom-head">
+        <div>
+          <div class="map-bottom-title">${planet.name} 지역표</div>
+          <div class="map-bottom-note">${note}</div>
+        </div>
+        <span class="info-badge">${gradeName(planet.grade)} 등급</span>
       </div>
-      <span class="info-badge">${gradeName(planet.grade)} 등급</span>
+      ${renderRegionSummaryGrid(planet, selectedRegion)}
+      ${detail}
     </div>
-    ${renderRegionSummaryGrid(planet, selectedRegion)}
   </div>`;
 }
 function renderRegionBriefPopup(planet, region){
@@ -3418,31 +3482,31 @@ function bindSpaceMapInteractions(){
       panel.classList.add('dragging');
       try{ handle.setPointerCapture(event.pointerId); }catch(e){}
     });
-    handle.addEventListener('pointerup', event => {
-      const diff = startY === null ? 0 : event.clientY - startY;
+    const finish = event => {
+      if(startY === null) return;
+      const diff = event.clientY - startY; // +면 아래로(접기), -면 위로(펼치기)
       startY = null;
       panel.classList.remove('dragging');
       try{ handle.releasePointerCapture(event.pointerId); }catch(e){}
-      if(diff > 18 && regionPanelExpanded){
-        regionPanelExpanded = false;
-        planetPopupOpen = false;
-        sfx.tap();
-        renderExploration();
-        return;
-      }
-      if((diff < -18 || Math.abs(diff) < 6) && selectedPlanetId){
-        regionPanelExpanded = !regionPanelExpanded;
-        planetPopupOpen = false;
-        sfx.tap();
-        renderExploration();
-      }
-    });
+      let snap = selectedPlanetId ? regionSheetSnap : 0;
+      if(diff < -18) snap += 1;                          // 위로 끌기 → 펼침
+      else if(diff > 18) snap -= 1;                      // 아래로 끌기 → 접힘
+      else if(Math.abs(diff) < 6) snap += (snap >= 2 ? -1 : 1); // 탭 → 토글
+      snap = clamp(snap, 0, 2);
+      if(snap === regionSheetSnap) return;
+      regionSheetSnap = snap;
+      planetPopupOpen = false;
+      sfx.tap();
+      renderExploration();
+    };
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
   }
 }
 openExploration = function(){
   explorationPanelMode = 'map';
   planetPopupOpen = false;
-  regionPanelExpanded = !!selectedPlanetId && regionPanelExpanded;
+  regionSheetSnap = selectedPlanetId ? regionSheetSnap : 0;
   lastExplorationResult = null;
   renderExploration();
   show('#explorationModal');
@@ -3458,7 +3522,7 @@ renderExploration = function(){
     selectedPlanetId = null;
     selectedRegionId = null;
     selectedPlanet = null;
-    regionPanelExpanded = false;
+    regionSheetSnap = 0;
     planetPopupOpen = false;
   }
   let selectedRegion = selectedRegionId ? ALIEN_INDEX.regions[selectedRegionId] : null;
@@ -3470,7 +3534,7 @@ renderExploration = function(){
   if(!selectedPlanet){
     selectedRegionId = null;
     selectedRegion = null;
-    regionPanelExpanded = false;
+    regionSheetSnap = 0;
     planetPopupOpen = false;
   }
 
@@ -3479,28 +3543,19 @@ renderExploration = function(){
   body.innerHTML = `
     <div class="space-map-screen">
       <div class="space-map-head">
-        <h2>우주맵</h2>
-        <p class="sub">마우스로 지도를 끌어 이동하고, 휠이나 +/- 버튼으로 확대와 축소를 할 수 있습니다.</p>
-        <button class="btn modal-close space-map-close" id="explorationClose">닫기</button>
+        <h2>🛰️ 우주맵</h2>
+        <p class="sub">중앙은 내 탐사선입니다. 탐사선을 누르면 개조실, 행성을 누르면 지역표가 아래에서 올라옵니다.</p>
       </div>
       <div class="space-map-grid">
         <div class="space-map-canvas" id="spaceMapCanvas" aria-label="우주맵">
           <div class="space-map-world" id="spaceMapWorld" style="transform:${spaceMapTransform()}">
             ${renderSpaceStars()}
-            <span class="space-lane"></span>
-            <span class="space-orbit" style="left:22%;top:58%;width:190px;height:100px"></span>
-            <span class="space-orbit" style="left:56%;top:36%;width:240px;height:140px"></span>
-            <span class="space-orbit" style="left:78%;top:68%;width:280px;height:160px"></span>
+            ${renderOrbitRings()}
+            ${renderMyShipNode(ship)}
             ${planetNodes}
           </div>
         </div>
         ${renderSpaceTopResources(ship)}
-        <div class="space-map-action left">
-          <button class="btn ${explorationPanelMode==='shop'?'primary':''}" id="btnExplorationShop">탐사 상점</button>
-        </div>
-        <div class="space-map-action right">
-          <button class="btn ${explorationPanelMode==='ship'?'primary':''}" id="btnShipRoom">탐사선 개조실</button>
-        </div>
         <div class="map-zoom-controls">
           <button class="btn" id="mapZoomIn" title="확대">+</button>
           <button class="btn" id="mapZoomOut" title="축소">-</button>
@@ -3519,7 +3574,7 @@ renderExploration = function(){
       selectedRegionId = null;
       lastExplorationResult = null;
       explorationPanelMode = 'map';
-      regionPanelExpanded = true;
+      regionSheetSnap = Math.max(1, regionSheetSnap); // 행성 선택 → 최소 지역표 단계로 올라옴
       planetPopupOpen = false;
       sfx.tap();
       renderExploration();
@@ -3530,27 +3585,25 @@ renderExploration = function(){
       selectedRegionId = card.dataset.region;
       lastExplorationResult = null;
       planetPopupOpen = true;
-      regionPanelExpanded = true;
+      regionSheetSnap = Math.max(1, regionSheetSnap);
       sfx.tap();
       renderExploration();
     });
   });
 
-  const closeBtn = $('#explorationClose');
-  if(closeBtn) closeBtn.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
-  const popupClose = $('#regionBriefClose');
-  if(popupClose) popupClose.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
-  const popupCancel = $('#regionBriefCancel');
-  if(popupCancel) popupCancel.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
-  const shipRoom = $('#btnShipRoom');
-  if(shipRoom) shipRoom.addEventListener('click', () => {
+  const myShip = $('#myShipNode');
+  if(myShip) myShip.addEventListener('click', () => {
     explorationPanelMode = 'ship';
     planetPopupOpen = false;
     sfx.tap();
     renderExploration();
   });
-  const shopRoom = $('#btnExplorationShop');
-  if(shopRoom) shopRoom.addEventListener('click', () => {
+  const popupClose = $('#regionBriefClose');
+  if(popupClose) popupClose.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
+  const popupCancel = $('#regionBriefCancel');
+  if(popupCancel) popupCancel.addEventListener('click', () => { planetPopupOpen = false; sfx.tap(); renderExploration(); });
+  const shipRoomShop = $('#btnShipRoomShop');
+  if(shipRoomShop) shipRoomShop.addEventListener('click', () => {
     explorationPanelMode = 'shop';
     planetPopupOpen = false;
     explorationShopCategory = explorationShopCategory || 'fuel';
