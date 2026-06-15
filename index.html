@@ -84,6 +84,19 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .stat{background:var(--card);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:4px 9px;font-size:12.5px;}
 .stat b{color:var(--neon);}
 
+/* 토너먼트 현황 배너 [참여 토너먼트 | 경기 현황] */
+#tournamentBar{margin:0 14px 8px;}
+#tournamentBar:empty{display:none;}
+.tbar{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:13px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(92,242,194,.07),rgba(255,255,255,.03));font-size:13px;}
+.tbar .tb-left{flex:1;min-width:0;padding:9px 12px;font-weight:800;color:var(--neon);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tbar .tb-right{flex:0 0 auto;padding:9px 13px;border-left:1px solid var(--line);
+  font-weight:700;color:var(--text);background:rgba(0,0,0,.18);white-space:nowrap;}
+.tbar.idle{background:var(--card);}
+.tbar.idle .tb-left{color:var(--sub);font-weight:700;}
+.tbar.idle .tb-right{color:var(--sub);}
+
 #btnBattle{margin:0 14px 10px;padding:15px;font-size:19px;border-radius:16px;border:none;
   background:linear-gradient(135deg,#b23b2e,#ff6b4a);color:#fff;font-weight:800;
   box-shadow:0 4px 26px rgba(255,107,74,.35);animation:pulse 2.2s ease-in-out infinite;}
@@ -498,6 +511,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <div class="main-body">
       <div id="centerPlant"></div>
     </div>
+    <div id="tournamentBar"></div>
     <button id="btnBattle">⚔️ 전투 시작</button>
     <nav id="bottomNav">
       <button class="navbtn" data-nav="shop"><span class="ni">🛒</span><span class="nl">상점</span></button>
@@ -590,7 +604,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       ④ 심은 식물은 가운데 화면에 나타나며, 식물을 탭하면 강화할 수 있습니다.<br>
       ⑤ 전투는 보유 식물 중 선택된 한 마리만 출전합니다. 식물은 성장·특성에 따라 스킬을 얻고, 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
       ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 | 💧물←풀·빙결·번개 | 🌿풀←불·바람·번개 | ⚡번개←대지·빙결 | 🪨대지←풀·물 | ❄️빙결←불·대지 | 🌪️바람←대지·불.<br>
-      ⑦ 전투는 토너먼트 방식입니다. 예선(3판 2선승)을 통과하면 16강 → 결승까지 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다.<br>
+      ⑦ 전투는 토너먼트 방식입니다. 예선 5경기 중 3승 이상이면 본선(16강 → 결승)에 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다. <b style="color:var(--neon)">경기가 끝날 때마다 홈으로 돌아와</b> 식물을 강화·준비한 뒤 다음 경기를 시작할 수 있습니다.<br>
       ⑧ 상점에서는 식물이나 희귀 종자를 직접 팔지 않습니다. 종자는 탐사로 얻고, 크레딧은 강화와 장비에 사용하세요. 무료 기본 종자는 진행이 막혔을 때 종자 가방에서 한 번만 받을 수 있습니다.
     </div>
     <button class="btn modal-close danger" id="btnReset">데이터 초기화</button>
@@ -2002,9 +2016,10 @@ const RANK_TIERS = [
   { key:'master',   name:'마스터',   color:'#d48cff', threshold:2800 },
   { key:'pulloseum',name:'풀로세움', color:'#5cf2c2', threshold:4000 },
 ];
-/* 토너먼트 라운드: 예선(3판2선) → 16강 → 8강 → 4강 → 결승 */
+/* 토너먼트 라운드: 예선(5경기 다승, 3승↑ 통과) → 16강 → 8강 → 4강 → 결승.
+   매 경기 후 홈으로 복귀해 강화·준비할 수 있다. */
 const TOURNAMENT_ROUNDS = [
-  { key:'prelim', name:'예선',   bestOf:3, needWins:2, reward:60,  point:0 },
+  { key:'prelim', name:'예선',   bestOf:5, needWins:3, reward:60,  point:0 },
   { key:'r16',    name:'16강',   bestOf:1, needWins:1, reward:120, point:30 },
   { key:'r8',     name:'8강',    bestOf:1, needWins:1, reward:200, point:50 },
   { key:'r4',     name:'4강',    bestOf:1, needWins:1, reward:340, point:90 },
@@ -4447,6 +4462,32 @@ function renderMain(){
   const rp = $('#rankPointView'); if(rp) rp.textContent = fmt(state.rankPoints||0);
   renderCollection();
   renderCenter();
+  renderTournamentBar();
+}
+function renderTournamentBar(){
+  const bar = $('#tournamentBar'); if(!bar) return;
+  const btn = $('#btnBattle');
+  const p = activePlant();
+  if(!p){ bar.innerHTML=''; if(btn) btn.textContent='⚔️ 전투 시작'; return; }
+  const T = state.tournament;
+  const inProgress = T && T.active && T.plantId===p.id;
+  if(inProgress){
+    const round = TOURNAMENT_ROUNDS[T.roundIndex];
+    let right, label;
+    if(round.key==='prelim'){
+      const played = T.prelimWins + T.prelimLosses;
+      right = `예선 ${T.prelimWins}승 ${T.prelimLosses}패 · ${played}/${round.bestOf}경기`;
+      label = `⚔️ 예선 ${Math.min(played+1, round.bestOf)}경기 시작`;
+    } else {
+      right = `${round.name} 진출`;
+      label = `⚔️ ${round.name} 경기 시작`;
+    }
+    bar.innerHTML = `<div class="tbar"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">${right}</div></div>`;
+    if(btn) btn.textContent = label;
+  } else {
+    bar.innerHTML = `<div class="tbar idle"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">신규 도전 대기</div></div>`;
+    if(btn) btn.textContent = '⚔️ 토너먼트 시작';
+  }
 }
 function renderCollection(){
   const bar = $('#collectionBar');
@@ -4996,7 +5037,6 @@ function renderShop(){
 
 /* ================= 전투 (스킬 로드아웃 + 특성효과 + 토너먼트) ================= */
 let B = null;
-let pendingTournamentContinue = false;
 function eff(a, d){ return ELEMENTS[a].strong.includes(d) ? 1.5 : (ELEMENTS[d].strong.includes(a) ? 0.67 : 1); }
 function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'속도':s; }
 function dotIcon(k){ return k==='poison'?'🟣':k==='bleed'?'🩸':k==='burn'?'🔥':'☠️'; }
@@ -5290,26 +5330,30 @@ async function endMatch(won){
   let xpAmt = 0;
   if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); state.player_level = (state.player_level||1) + 1; }
 
-  let title='', body='', btnLabel='콜로세움 나가기', outcome='';
+  let title='', body='', btnLabel='홈으로 돌아가기', outcome='';
   if(round.key==='prelim'){
     if(won) T.prelimWins++; else T.prelimLosses++;
-    if(T.prelimWins >= round.needWins){
-      T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
-      title='🏆 예선 통과!'; btnLabel='16강 진출 ▶';
-      body=`예선을 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 경험치 +${xpAmt}`:''}<br>다음은 <b>16강</b> 본선입니다.`;
-    } else if(T.prelimLosses >= (round.bestOf - round.needWins + 1)){
-      outcome='eliminated';
+    const played = T.prelimWins + T.prelimLosses;
+    if(played >= round.bestOf){
+      // 예선 5경기 종료 → 다승 판정 (3승 이상이면 통과)
+      if(T.prelimWins >= round.needWins){
+        T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
+        title='🏆 예선 통과!'; btnLabel='홈으로 — 본선 준비 ▶';
+        body=`예선 ${round.bestOf}경기 종료 — <b>본선 진출!</b><br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>다음은 <b>16강</b> 본선입니다. 홈에서 강화·준비 후 도전하세요.`;
+      } else {
+        outcome='eliminated';
+      }
     } else {
-      outcome='continue'; title = won?'✅ 예선 1승':'❌ 예선 1패'; btnLabel='다음 예선 경기 ▶';
-      body=`예선 현황: <b>${T.prelimWins}승 ${T.prelimLosses}패</b><br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}`;
+      outcome='continue'; title = won?'✅ 예선 승리':'❌ 예선 패배'; btnLabel='홈으로 — 준비하기 ▶';
+      body=`예선 현황: <b>${T.prelimWins}승 ${T.prelimLosses}패</b> (${played}/${round.bestOf}경기)<br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>홈에서 준비 후 다음 예선 경기를 시작하세요.`;
     }
   } else {
     if(won){
       if(round.key==='final'){ outcome='champion'; }
       else {
         T.roundIndex++; outcome='continue'; const next=TOURNAMENT_ROUNDS[T.roundIndex];
-        title=`🏆 ${round.name} 승리!`; btnLabel=`${next.name} 진출 ▶`;
-        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>다음은 <b>${next.name}</b>입니다.`;
+        title=`🏆 ${round.name} 승리!`; btnLabel='홈으로 — 다음 준비 ▶';
+        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>다음은 <b>${next.name}</b>입니다. 홈에서 준비 후 도전하세요.`;
       }
     } else outcome='eliminated';
   }
@@ -5334,13 +5378,12 @@ async function endMatch(won){
   await sleep(600);
   $('#resultTitle').textContent = title;
   $('#resultBody').innerHTML = body;
-  pendingTournamentContinue = (outcome==='continue');
   const btn = $('#resultClose'); if(btn) btn.textContent = btnLabel;
   show('#resultModal');
 }
 function handleResultClose(){
+  // 모든 경기 종료 후 항상 홈으로 복귀(자동 다음 경기 진행 없음 → 경기 사이 준비 가능)
   sfx.tap(); hide('#resultModal');
-  if(pendingTournamentContinue){ pendingTournamentContinue=false; startMatch(); return; }
   hide('#battleScreen'); show('#mainScreen'); B=null; renderMain();
 }
 
