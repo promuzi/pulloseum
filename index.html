@@ -1740,6 +1740,7 @@ function moveCost(unit, key){
 function wUpCost(lv){ return Math.round(60 * Math.pow(1.55, lv) / 10) * 10; }
 const GENE_BUDGET = 15;
 const SEED_PRICE = 250, REROLL_PRICE = 150, MAX_PLANTS = 8;
+const TRAIT_CARD_GACHA_PRICE = 300;
 const SAVE_KEY = 'pullosseum_v1';
 const ALIEN_DATA_API = typeof AlienPlantGameData !== 'undefined' ? AlienPlantGameData : null;
 const ALIEN_DATA = ALIEN_DATA_API ? ALIEN_DATA_API.gameData : { planets:[], regions:[], seeds:[], traits:[] };
@@ -2047,7 +2048,7 @@ const FORM_SKILLS = {
 /* ===== 특성 카드 시스템 (형질별 장착 카드) ===== */
 /* 카드가 자동 장착시키는 스킬. pred:true 표시는 포식형 기본 스킬(DNA 카드로 강화됨). */
 const CARD_SKILLS = {
-  skill_card_predation:{ name:'포식', icon:'🦷', cost:3, kind:'attack', power:120, pred:true, lifesteal:0.4, desc:'위력120 · 피해 40% 흡혈(DNA로 강화)', tag:'포식' },
+  skill_card_predation:{ name:'포식', icon:'🦷', cost:3, kind:'attack', power:135, pred:true, desc:'포식형 기본 스킬 · 위력135 (DNA 카드로 흡혈·강탈 강화)', tag:'포식' },
   skill_card_sword:  { name:'검 베기',   icon:'⚔️', cost:2, kind:'attack', power:135, critBonus:0.10, desc:'위력135 + 치명타 10%', tag:'무기' },
   skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:1, kind:'guard',  guardMult:0.4, counterPct:0.25, desc:'피해 60%↓ + 가시 반격', tag:'무기' },
   skill_card_axe:    { name:'내려찍기', icon:'🪓', cost:3, kind:'attack', power:175, pierce:0.4, desc:'위력175 · 방어 40% 무시', tag:'무기' },
@@ -2094,6 +2095,21 @@ function formCardPool(form){
   });
   return ids;
 }
+/* 카드가 이 형질에 장착 가능한 타입인지 */
+function cardFitsForm(cid, form){
+  const c = TRAIT_CARDS[cid]; if(!c) return false;
+  const f = FORMS[form] || FORMS.normal;
+  if(c.type === 'common') return form !== 'dragon';
+  return c.type === f.cardType;
+}
+/* 보유(소유) 카드 — 기본 지급 없음, 오직 뽑기·탐사 보상으로만 획득 */
+function ownedTraitCardIds(){
+  const inv = (typeof state !== 'undefined' && state.trait_cards) || {};
+  return Object.keys(inv).filter(cid => (inv[cid]||0) > 0 && TRAIT_CARDS[cid]);
+}
+function ownedFormCards(form){ return ownedTraitCardIds().filter(cid => cardFitsForm(cid, form)); }
+function grantTraitCard(cid, n){ if(!TRAIT_CARDS[cid]) return; if(!state.trait_cards) state.trait_cards = {}; state.trait_cards[cid] = (state.trait_cards[cid]||0) + (n||1); }
+function grantRandomTraitCard(){ const ids = Object.keys(TRAIT_CARDS); const cid = ids[Math.floor(Math.random()*ids.length)]; grantTraitCard(cid, 1); return TRAIT_CARDS[cid]; }
 /* 장착 카드 → 전투 효과 집계 */
 function cardEffects(cardIds){
   const E = { defPct:0, reflectPct:0, regenPct:0, energyRegen:0, poisonCoef:0,
@@ -2142,7 +2158,7 @@ function plantKnownSkillIds(p){
     if(sid && idx >= 1 + i) known.push(sid);
   });
   // 분화 형질 스킬
-  if(p.form === 'pred' && idx >= 2) known.push(p.predType === 'absorb' ? 'skill_pred_absorb' : 'skill_pred_vamp');
+  if(p.form === 'pred') known.push('skill_card_predation'); // 포식형은 카드 없이도 포식 기본 보유
   if(p.form === 'weapon' && p.weaponKey) known.push('skill_weapon');
   return known.filter((v, i, a) => a.indexOf(v) === i);
 }
@@ -2151,7 +2167,7 @@ function defaultLoadout(p){
   const known = plantKnownSkillIds(p);
   const priority = [];
   if(p.form === 'weapon' && known.includes('skill_weapon')) priority.push('skill_weapon');
-  if(p.form === 'pred'){ const pid = p.predType === 'absorb' ? 'skill_pred_absorb' : 'skill_pred_vamp'; if(known.includes(pid)) priority.push(pid); }
+  if(p.form === 'pred' && known.includes('skill_card_predation')) priority.push('skill_card_predation');
   if(p.element && known.includes(elementSkillId(p.element))) priority.push(elementSkillId(p.element));
   (p.traits || []).forEach(tid => { const sid = TRAIT_SKILL_MAP[tid]; if(sid && known.includes(sid)) priority.push(sid); });
   ['skill_basic_strike', 'skill_photosynthesis', 'skill_guard', 'skill_rally', 'skill_focus'].forEach(id => { if(known.includes(id)) priority.push(id); });
@@ -2162,10 +2178,10 @@ function defaultLoadout(p){
 }
 function ensureSkillFields(p){
   if(!p) return p;
-  // 특성 카드 장착칸(최대 5) — 형질에 맞는 카드만 유지
+  // 특성 카드 장착칸(최대 5) — 보유 중이고 형질에 맞는 카드만 유지
   if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
-  const pool = formCardPool(p.form || 'normal');
-  p.equipped_trait_cards = p.equipped_trait_cards.filter(cid => pool.includes(cid)).slice(0, 5);
+  const owned = ownedFormCards(p.form || 'normal');
+  p.equipped_trait_cards = p.equipped_trait_cards.filter(cid => owned.includes(cid)).slice(0, 5);
   const known = plantKnownSkillIds(p);
   if(!Array.isArray(p.equipped_skills) || !p.equipped_skills.length){
     p.equipped_skills = defaultLoadout(p);
@@ -2298,6 +2314,7 @@ function defaultState(){
     seed_inventory:[],
     item_inventory:[],
     trait_inventory:[],
+    trait_cards:{},
     ship_part_inventory:[],
     ship_upgrade_materials:0,
   };
@@ -2341,6 +2358,7 @@ function normalizeState(s){
   if(!Array.isArray(s.seed_inventory)) s.seed_inventory = [];
   if(!Array.isArray(s.item_inventory)) s.item_inventory = [];
   if(!Array.isArray(s.trait_inventory)) s.trait_inventory = [];
+  if(!s.trait_cards || typeof s.trait_cards !== 'object' || Array.isArray(s.trait_cards)) s.trait_cards = {};
   if(!s.weapons) s.weapons = newArmory();
   s.plants.forEach(p => {
     if(!p.form){ p.form='normal'; p.predType=null; p.weaponKey=null; }
@@ -2738,7 +2756,7 @@ function addItemReward(entry){
 function rollExplorationRewards(planet, region, successMargin, allowPartial){
   const rewardRange = region.expected_reward_count || { min:1, max:1 };
   const rewardCount = allowPartial ? 1 : randInt(rewardRange.min || 1, rewardRange.max || 1);
-  const rewards = { seeds:[], items:[], storageSkipped:0 };
+  const rewards = { seeds:[], items:[], cards:[], storageSkipped:0 };
   for(let i=0;i<rewardCount;i++){
     const loot = weightedPickLoot(region, successMargin);
     if(!loot) continue;
@@ -2764,6 +2782,9 @@ function rollExplorationRewards(planet, region, successMargin, allowPartial){
       rewards.items.push(entry);
     }
   }
+  // 특성 카드 드롭 — 탐사 보상으로만 얻는 획득 경로
+  const cardChance = (allowPartial ? 0.10 : 0.22) + successMargin * 0.25;
+  if(Math.random() < cardChance){ rewards.cards.push(grantRandomTraitCard()); }
   return rewards;
 }
 function applyExplorationDamage(planet, region, success){
@@ -3402,6 +3423,9 @@ function renderExplorationResult(){
     ? rewards.items.map(item => `${item.name} x${item.count}`).join('<br>')
     : '없음';
   const skippedList = rewards.storageSkipped ? `${rewards.storageSkipped}개 - 가방 용량 부족` : '없음';
+  const cardList = (rewards.cards && rewards.cards.length)
+    ? rewards.cards.map(c => `${c.icon} ${c.name} <small>(${TRAIT_CARD_TYPE_NAMES[c.type]})</small>`).join('<br>')
+    : '없음';
   return `<div class="resultcard">
     <div class="rtitle">${titleIcon} ${title}</div>
     <div class="seed-preview">
@@ -3414,6 +3438,7 @@ function renderExplorationResult(){
     <div class="detail-list">
       <span>획득한 종자<b>${seedList}</b></span>
       <span>획득한 아이템<b>${itemList}</b></span>
+      <span>획득한 특성 카드<b>${cardList}</b></span>
       <span>보관 실패<b>${skippedList}</b></span>
     </div>
     <div class="space-panel-actions" style="margin-top:10px">
@@ -5056,14 +5081,15 @@ function renderTraitTab(p){
     if(cid){ const c=TRAIT_CARDS[cid]; slotRow += `<div class="trait-slot filled">${c?c.icon+' '+c.name:cid}</div>`; }
     else slotRow += `<div class="trait-slot">빈 칸</div>`;
   }
-  const pool = formCardPool(p.form||'normal');
-  const cardRows = pool.length ? pool.map(cid=>{
-    const c=TRAIT_CARDS[cid]; const on=equipped.includes(cid);
+  const owned = ownedFormCards(p.form||'normal');
+  const cardRows = owned.length ? owned.map(cid=>{
+    const c=TRAIT_CARDS[cid]; const on=equipped.includes(cid); const cnt=(state.trait_cards||{})[cid]||0;
     return `<div class="uprow">
       <div class="un">${c.icon} ${c.name} <small>${TRAIT_CARD_TYPE_NAMES[c.type]} · ${c.desc}</small></div>
+      <div class="uv">×${cnt}</div>
       <button class="upbtn" data-card-toggle="${cid}" style="${on?'background:rgba(92,242,194,.18);border-color:var(--neon);color:var(--neon)':''}">${on?'해제':'장착'}</button>
     </div>`;
-  }).join('') : '<div class="muted">이 형질이 장착할 수 있는 카드가 아직 없습니다.</div>';
+  }).join('') : '<div class="muted">보유한 특성 카드가 없습니다. 특성은 <b>상점 🎴 특성 카드 뽑기</b>나 <b>탐사 보상</b>으로만 얻을 수 있습니다.</div>';
   const legacy = (p.traits||[]).filter(tid=>ALIEN_INDEX.traits[tid]);
   const legacyBlock = legacy.length ? `<div class="skill-section-label">🧬 발현 특성 패시브 <small>종자 고유 · 전투 자동 적용</small></div>` + legacy.map(tid=>{
     const t=ALIEN_INDEX.traits[tid];
@@ -5291,9 +5317,15 @@ function renderShop(){
   const consumableBoxes = `<div class="shop-subtitle">소모품 상자</div>` + renderShopLane(supplyBoxesByGroup('consumable'), item => `data-shop-box="${item.id}"`);
   const traitBoxes = `<div class="shop-subtitle">특성 상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
   const shipItems = `<div class="shop-empty">탐사선 아이템 상품은 아직 준비 중입니다.</div>`;
+  const ownedCardTotal = ownedTraitCardIds().reduce((sum,cid)=>sum+((state.trait_cards||{})[cid]||0),0);
+  const traitGacha = `<div class="shop-empty" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left">
+    <span>🎴 무작위 특성 카드 1장<br><small style="color:var(--sub)">형질에 맞는 카드만 식물에 장착할 수 있습니다. 보유 ${ownedCardTotal}장</small></span>
+    <button class="btn primary" id="traitGachaBtn" style="width:auto;flex:0 0 auto" ${state.credits<TRAIT_CARD_GACHA_PRICE?'disabled':''}>뽑기 ${fmt(TRAIT_CARD_GACHA_PRICE)}💰</button>
+  </div>`;
   $('#shopList').innerHTML =
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
+    renderShopBlock('특성 카드 뽑기', '특성은 뽑기나 탐사 보상으로만 얻을 수 있습니다.', traitGacha) +
     renderShopBlock('보급상자', '상자를 선택하면 확률표를 확인할 수 있습니다.', consumableBoxes + traitBoxes) +
     renderShopBlock('탐사선 아이템', '추후 추가 예정', shipItems);
   document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
@@ -5301,6 +5333,14 @@ function renderShop(){
       sfx.tap();
       openShopBoxInfo(card.dataset.shopBox);
     });
+  });
+  const gb = $('#traitGachaBtn');
+  if(gb) gb.addEventListener('click', () => {
+    if(state.credits < TRAIT_CARD_GACHA_PRICE){ toast('크레딧이 부족합니다'); return; }
+    state.credits -= TRAIT_CARD_GACHA_PRICE;
+    const c = grantRandomTraitCard();
+    saveState(); sfx.win(); renderShop(); renderMain();
+    toast(`🎴 ${c.icon} ${c.name} 획득! (${TRAIT_CARD_TYPE_NAMES[c.type]} 카드)`);
   });
 }
 function renderShopBoxInfo(box){
@@ -5437,7 +5477,7 @@ function makeCombatant(src){
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식형) 포식 기본 스킬
   let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
-  if((src.form||'normal') === 'pred' && CE.predBoost && (src.cards||[]).length) loadout.push('skill_card_predation');
+  if((src.form||'normal') === 'pred') loadout.push('skill_card_predation'); // 포식형 기본 보유
   CE.grantSkills.forEach(sid => loadout.push(sid));
   loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   return {
