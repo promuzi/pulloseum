@@ -523,6 +523,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .sc-aoe{font-weight:800;}
 .sc-aoe.aoe{color:#7dd3ff;}
 .sc-aoe.single{color:#ffd27d;}
+.stat-tier-row{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px;}
+.st-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--sub);}
+.st-pill b{font-weight:800;margin-left:2px;}
+.st-pill.st-t0{color:#ff7a6b;border-color:rgba(255,122,107,.4);}
+.st-pill.st-t1{color:#ffb14a;border-color:rgba(255,177,74,.4);}
+.st-pill.st-t2{color:#9aa5b1;border-color:rgba(154,165,177,.35);}
+.st-pill.st-t3{color:#6bdd6b;border-color:rgba(107,221,107,.4);}
+.st-pill.st-t4{color:var(--neon);border-color:rgba(92,242,194,.5);background:rgba(92,242,194,.08);}
 .skill-slot.empty{border:1.5px dashed rgba(255,255,255,.18);border-radius:12px;padding:16px 9px;text-align:center;color:var(--sub);font-size:12px;display:flex;align-items:center;justify-content:center;min-height:62px;}
 .trait-effect-row{display:flex;gap:9px;align-items:flex-start;background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-bottom:7px;}
 .trait-effect-row .te-icon{font-size:22px;flex:0 0 auto;}
@@ -1758,6 +1766,15 @@ const ELEMENTS = {
 };
 const GRADES = { C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
 const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'기동성', acc:'적중' };
+/* 모든 스탯을 5단계(매우 낮음~매우 높음)로 구간화. 밸런싱 기준 — 자유롭게 조정. */
+const STAT_TIER_LABELS = ['매우 낮음', '낮음', '보통', '높음', '매우 높음'];
+const STAT_TIER_BANDS = {
+  hp:[100,150,210,280], atk:[18,26,36,48], def:[14,20,28,38], spd:[12,20,28,38],
+  acc:[80,86,91,95], elem:[14,20,28,38], critRate:[8,16,28,45], energy:[3,4,5,6],
+};
+const STAT_TIER_SHORT = { hp:'생명', atk:'공격', def:'방어', spd:'기동', acc:'적중', elem:'속성', critRate:'치명', energy:'에너지' };
+function statTierIndex(key, val){ const b = STAT_TIER_BANDS[key]; if(!b) return 2; let t = 0; for(let i=0;i<b.length;i++){ if(val > b[i]) t = i+1; } return t; }
+function statTierLabel(key, val){ return STAT_TIER_LABELS[statTierIndex(key, val)]; }
 const MOVE_COST = { attack:0, skill:2, guard:0, heal:2, pred:3 };
 const FORMS = {
   normal: { name:'일반형', icon:'🌱', color:'#9fb0c3' },
@@ -4332,8 +4349,10 @@ function createPlantInstanceFields(entry, seed, plant, customName){
 }
 function ensurePlantInstanceFields(p){
   if(!p) return p;
-  if(!p.up) p.up = { hp:0, atk:0, def:0, spd:0, acc:0, elem:0 };
+  if(!p.up) p.up = { hp:0, atk:0, def:0, spd:0, acc:0, elem:0, crit:0, energy:0 };
   if(typeof p.up.acc !== 'number') p.up.acc = 0;
+  if(typeof p.up.crit !== 'number') p.up.crit = 0;
+  if(typeof p.up.energy !== 'number') p.up.energy = 0;
   if(!p.mult) p.mult = { hp:1, atk:1, def:1, spd:1 };
   const seed = ALIEN_INDEX.seeds[p.seed_id || p.sourceSeedId] || null;
   p.unique_id = p.unique_id || `plant_${p.id || Date.now()}`;
@@ -4730,13 +4749,17 @@ function calcStats(p){
   const b = SPECIES[p.species].base, a = p.geneAlloc, m = p.mult;
   const leftover = Math.max(0, GENE_BUDGET - (a.atk + a.def + a.spd));
   const g = growthStatMult(p);
+  const baseEnergy = (p.battle_stats && p.battle_stats.energy) || 3;
   return {
     hp:  Math.round(((b.hp  + leftover*6) * m.hp ) * g) + p.up.hp*15,
     atk: Math.round(((b.atk + a.atk*2)    * m.atk) * g) + p.up.atk*4,
     def: Math.round(((b.def + a.def*2)    * m.def) * g) + p.up.def*4,
     spd: Math.round(((b.spd + a.spd*1.5)  * m.spd) * g) + p.up.spd*3,
     acc: clamp(86 + (p.up.acc||0)*2 + Math.round((m.atk-1)*8), 70, 99),
-    elemBonus: 1 + p.up.elem*0.1,
+    elem: Math.round((14 + (p.up.elem||0)*5) * g),           // 속성 수치(원소 스킬에 가산)
+    critRate: clamp(5 + (p.up.crit||0)*2, 0, 75),            // 치명타률 %
+    critMult: +(1.5).toFixed(2),                            // 치명타계수(배율)
+    energy: clamp(baseEnergy + (p.up.energy||0), 1, 9),      // 최대 에너지
   };
 }
 function activePlant(){ return state.plants.find(p=>p.id===state.activeId) || null; }
@@ -4761,7 +4784,7 @@ function createPlant(species, alloc){
     grade: gradeOf(mult), mult, awakened,
     form: f.form, predType: f.predType, weaponKey: null,
     geneAlloc: { atk:alloc.atk, def:alloc.def, spd:alloc.spd },
-    up: { hp:0, atk:0, def:0, spd:0, acc:0, elem:0 },
+    up: { hp:0, atk:0, def:0, spd:0, acc:0, elem:0, crit:0, energy:0 },
   };
   state.serial++;
   return p;
@@ -4854,7 +4877,9 @@ function renderCenter(){
       <span class="stat">🛡️ <b>${s.def}</b></span>
       <span class="stat">💨 <b>${s.spd}</b></span>
       <span class="stat">🎯 <b>${s.acc}%</b></span>
-      <span class="stat">${el.icon} <b>x${s.elemBonus.toFixed(1)}</b></span>
+      <span class="stat">${el.icon} <b>${s.elem}</b></span>
+      <span class="stat">💥 <b>${s.critRate}%</b></span>
+      <span class="stat">⚡ <b>${s.energy}</b></span>
     </div>
     <div class="hint">▲ 식물을 탭하면 강화할 수 있어요</div>`;
 }
@@ -4956,7 +4981,9 @@ const UP_ROWS = [
   { k:'def',  icon:'🛡️', name:'방어',     gain:'+4' },
   { k:'spd',  icon:'💨', name:'기동성',   gain:'+3' },
   { k:'acc',  icon:'🎯', name:'적중',     gain:'+2%' },
-  { k:'elem', icon:'✨', name:'속성 강화', gain:'속성 스킬 위력 +10%' },
+  { k:'elem', icon:'✨', name:'속성',     gain:'+5' },
+  { k:'crit', icon:'💥', name:'치명타률', gain:'+2%' },
+  { k:'energy', icon:'⚡', name:'에너지', gain:'최대 +1' },
 ];
 function upCost(level){ return Math.round(40 * Math.pow(1.5, level) / 10) * 10; }
 function weaponSectionHTML(p){
@@ -5013,6 +5040,14 @@ function renderPlantInstancePanel(p, stats){
       <span>변이율<b>${pct(p.mutation_rate || 0)}</b></span>
       <span>속성 · 분화<b>${ELEMENTS[p.element]?ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name:'-'} · ${FORMS[p.form]?FORMS[p.form].name:'일반형'}</b></span>
       <span>전투 능력치<b>❤️${stats.hp} ⚔️${stats.atk} 🛡️${stats.def} 💨${stats.spd} 🎯${stats.acc}%</b></span>
+      <span>속성·치명·에너지<b>${ELEMENTS[p.element]?ELEMENTS[p.element].icon:'🔮'}${stats.elem} 💥${stats.critRate}%(×${stats.critMult}) ⚡${stats.energy}</b></span>
+    </div>
+    <div class="stat-tier-row">
+      ${['hp','atk','def','spd','acc','elem','critRate','energy'].map(k=>{
+        const v = k==='critRate' ? stats.critRate : stats[k];
+        const ti = statTierIndex(k, v);
+        return `<span class="st-pill st-t${ti}">${STAT_TIER_SHORT[k]} <b>${STAT_TIER_LABELS[ti]}</b></span>`;
+      }).join('')}
     </div>
     <div class="howto" style="margin-top:8px">${isMax ? '최종 성장 단계에 도달했습니다.' : '🧪 <b>소모품</b> 탭에서 💧물·🌿비료·💊영양제를 사용하면 성장 경험치를 줄 수 있어요. (상점에서 구매)'}</div>
   </div>`;
@@ -5283,7 +5318,7 @@ function renderConsumTab(p, s){
   const rows = UP_ROWS.map(r => {
     const lv = p.up[r.k];
     const cost = upCost(lv);
-    const cur = r.k==='elem' ? 'Lv.'+lv : (r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : r.k==='acc'?s.acc+'%' : s.spd);
+    const cur = r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : r.k==='spd'?s.spd : r.k==='acc'?s.acc+'%' : r.k==='elem'?s.elem : r.k==='crit'?s.critRate+'%' : r.k==='energy'?s.energy : lv;
     return `<div class="uprow">
       <div class="un">${r.icon} ${r.name}<small>강화당 ${r.gain} (현재 Lv.${lv})</small></div>
       <div class="uv">${cur}</div>
@@ -5667,8 +5702,11 @@ function makeCombatant(src){
     spd:Math.max(1,Math.round(bs.spd*(1+(P.spdPct||0)))),
     acc:clamp(Math.round((bs.acc||90)*(1+(P.accPct||0))), 50, 100),
     potion:src.potion||null,
-    elemBonus:bs.elemBonus||1,
-    energy: clamp(2 + (P.energyBonus||0), 0, 5),
+    elem: Math.max(0, Math.round(bs.elem||0)),
+    critRate: clamp((bs.critRate||5), 0, 90),
+    critMult: bs.critMult || 1.5,
+    energyMax: clamp((bs.energy||3) + (P.energyBonus||0), 1, 9),
+    energy: Math.min(clamp((bs.energy||3) + (P.energyBonus||0), 1, 9), 3),
     guard:null, traits:src.traits||[], passives:P,
     loadout:(src.loadout && src.loadout.length ? src.loadout : ['skill_basic_strike']).slice(0,6),
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
@@ -5689,6 +5727,9 @@ function buildEnemy(roundIndex, tierIndex, ps){
   const def = Math.max(6, Math.round(ps.def*diff*rand(0.95,1.08)));
   const spd = Math.max(6, Math.round(ps.spd*diff*rand(0.95,1.08)));
   const acc = clamp(Math.round((ps.acc||88)*rand(0.95,1.04)), 60, 99);
+  const elem = Math.max(0, Math.round((ps.elem||16)*diff*rand(0.95,1.08)));
+  const critRate = clamp(5 + tierIndex*2 + roundIndex, 0, 60);
+  const energyMax = clamp((ps.energy||3) + (tierIndex>3?1:0), 1, 9);
   const grade = tierIndex>=5?'S':tierIndex>=3?'A':tierIndex>=1?'B':'C';
   const loadout=['skill_basic_strike', elementSkillId(el)];
   traits.forEach(t=>{ const sid=TRAIT_SKILL_MAP[t]; if(sid) loadout.push(sid); });
@@ -5697,7 +5738,7 @@ function buildEnemy(roundIndex, tierIndex, ps){
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, species:sp, element:el, grade, awakened:null,
-    form, predType, weapon:null, baseStats:{hp,atk,def,spd,acc,elemBonus:1+tierIndex*0.04}, traits,
+    form, predType, weapon:null, baseStats:{hp,atk,def,spd,acc,elem,critRate,critMult:1.5,energy:energyMax}, traits,
     loadout:loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,6),
   });
 }
@@ -5721,10 +5762,10 @@ function startMatch(){
   const playerC = makeCombatant({
     name:p.custom_name||p.name, species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
     form:p.form||'normal', predType:p.predType||null, weapon:wpn, potion:p.potion||null,
-    baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elemBonus:s.elemBonus},
+    baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
     traits:p.traits, loadout:p.equipped_skills.slice(),
   });
-  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc});
+  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
   B = { p:playerC, e:enemyC, over:false, busy:false };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
@@ -5775,7 +5816,7 @@ function updateBars(){
   $('#eHpText').textContent = `${Math.max(0,B.e.hp)} / ${B.e.max}` + statusTags(B.e);
   $('#pHpText').textContent = `${Math.max(0,B.p.hp)} / ${B.p.max}` + statusTags(B.p);
   let pips = '';
-  for(let i=0;i<5;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
+  for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#pEnergy').innerHTML = pips;
   document.querySelectorAll('#moveButtons [data-skill]').forEach(btn => {
     const id = btn.dataset.skill;
@@ -5816,7 +5857,7 @@ async function applySkill(a, d, s, side){
   const tgtSide = side==='p' ? 'e' : 'p';
   a.guard = null;
   if(s.cost) a.energy = Math.max(0, a.energy - s.cost);
-  if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike') d.energy = Math.min(5, d.energy + d.passives.energyOnEnemySkill);
+  if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike') d.energy = Math.min(d.energyMax, d.energy + d.passives.energyOnEnemySkill);
   blog(`<span class="em">${a.name}</span> ▶ ${s.icon||''} ${s.name}`);
   if(s.guardMult != null){
     const counter = s.counterPct ? Math.round(effStat(a,'atk')*s.counterPct) : 0;
@@ -5824,35 +5865,37 @@ async function applySkill(a, d, s, side){
     blog(`▶ 🛡️ 받는 피해 ${Math.round((1-s.guardMult)*100)}%↓${counter?` · 반격 ${counter} 준비`:''}`);
     sfx.tap();
   }
-  if(s.energyGain){ a.energy = Math.min(5, a.energy + s.energyGain); blog(`▶ ⚡ ${s.energyGain} 충전`); }
+  if(s.energyGain){ a.energy = Math.min(a.energyMax, a.energy + s.energyGain); blog(`▶ ⚡ ${s.energyGain} 충전`); }
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg) blog(`▶ 🧼 디버프 ${neg}개 해제`); }
-  if(s.heal){ const h = Math.round(a.max*s.heal); a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); blog(`▶ ☀️ 체력 ${h} 회복`); sfx.heal(); }
-  if(s.selfBuff){ a.buffs.push({stat:s.selfBuff.stat,pct:s.selfBuff.pct,turns:s.selfBuff.turns,kind:'buff'}); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(s.selfBuff.pct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct); a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
+  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.power && s.power>0){
-    // 적중/회피 판정 — 광역은 잘 맞고(명중↑), 단일은 비교적 낮다. 방어자의 기동성이 높을수록 회피.
+    // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
     const isAoe = !!s.aoe;
     const accMod = isAoe ? 10 : (s.single ? -7 : 0);
-    const spdA = effStat(a,'spd'), spdD = effStat(d,'spd');
-    const eva = clamp(Math.round((spdD - spdA) * 0.4), 0, 30);
-    const hitChance = clamp((a.acc||90) + accMod - eva, 35, 99);
-    if(Math.random()*100 >= hitChance){
+    const effAcc = (a.acc||90) + accMod + (s.accBonus||0);
+    const dodge = clamp(30 + (effStat(d,'spd') - effAcc), 5, 90);
+    if(Math.random()*100 < dodge){
       popup(tgtSide,'MISS',false);
-      blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(명중 ${hitChance}%)</span>`);
+      blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(회피 ${dodge}%)</span>`);
       sfx.tap();
       updateBars(); await sleep(620); return;
     }
-    let power = s.power * (s.elem ? a.elemBonus : 1), crit=false;
-    const critChance = (s.critBonus||0) + (a.passives.critBonus||0);
-    if(critChance>0 && Math.random()<critChance){ power*=1.6; crit=true; }
-    const defFactor = 0.6 * (1 - (s.pierce||0));
-    const elemMult = s.elem ? eff(a.element, d.element) : 1;
-    let dm = effStat(a,'atk')*power/100 - effStat(d,'def')*defFactor;
-    dm = Math.max(2, dm) * elemMult * rand(0.9,1.1);
+    // 데미지 = 공격×위력%(노멀) + 속성수치×타입배율(원소) − 방어(고정)
+    const normal = effStat(a,'atk') * s.power / 100;
+    let elemMult = 1, elementPart = 0;
+    if(s.elem){ elemMult = eff(a.element, d.element); elementPart = (a.elem||0) * elemMult; }
+    const flatDef = effStat(d,'def') * (1 - (s.pierce||0));
+    let dm = Math.max(1, (normal + elementPart) - flatDef);
+    // 치명타: 방어까지 계산된 최종 데미지에 치명타계수를 곱한다
+    const critChance = (a.critRate||0)/100 + (s.critBonus||0) + (a.passives.critBonus||0);
+    let crit = critChance>0 && Math.random()<critChance;
+    if(crit) dm *= (a.critMult||1.5);
     if(a.nextAtk){ dm *= (1+a.nextAtk); a.nextAtk=0; }
     if(d.guard) dm *= d.guard.mult;
     if(d.passives.reduceDmgPct) dm *= (1 - d.passives.reduceDmgPct);
     if(s.elem && d.passives.elementReduce[a.element]) dm *= (1 - d.passives.elementReduce[a.element]);
-    dm = Math.round(dm);
+    dm = Math.max(1, Math.round(dm * rand(0.97,1.03)));
     if(d.barrier>0){ const ab=Math.min(d.barrier,dm); d.barrier-=ab; dm-=ab; if(ab>0) blog(`▶ 🧊 보호막이 ${ab} 흡수`); }
     d.hp = Math.max(0, d.hp - dm);
     if(d.hp<=0 && d.passives.surviveChance>0 && Math.random()<d.passives.surviveChance){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
@@ -5898,10 +5941,9 @@ async function playerSkill(skillId){
   if(B.p.energy < (s.cost||0)){ toast('⚡에너지가 부족합니다'); return; }
   B.busy = true; updateBars();
   const eId = aiPickSkill(B.e);
-  // 기동성이 높을수록 선제공격 확률↑ (확정은 아님)
-  const spdP = effStat(B.p,'spd'), spdE = effStat(B.e,'spd');
-  const pFirstChance = clamp(spdP/(spdP+spdE), 0.2, 0.8);
-  const playerFirst = Math.random() < pFirstChance;
+  // 선제공격 = 50 + (내 기동성 − 상대 기동성) % (5~95 제한)
+  const firstChance = clamp(50 + (effStat(B.p,'spd') - effStat(B.e,'spd')), 5, 95);
+  const playerFirst = Math.random()*100 < firstChance;
   const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
   for(const [side, k] of order){
     const a = side==='p' ? B.p : B.e;
@@ -5913,10 +5955,10 @@ async function playerSkill(skillId){
   }
   await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await endMatch(true); return; } if(B.p.hp<=0){ await endMatch(false); return; }
   await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await endMatch(false); return; } if(B.e.hp<=0){ await endMatch(true); return; }
-  B.p.energy = Math.min(5, B.p.energy+1);
-  B.e.energy = Math.min(5, B.e.energy+1);
-  if(B.p.energy>=5 && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
-  if(B.e.energy>=5 && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
+  B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
+  B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
+  if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
+  if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
   B.busy = false; updateBars();
 }
 async function surrenderMatch(){
