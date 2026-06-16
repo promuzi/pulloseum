@@ -131,15 +131,32 @@
 - [x] 포자형: 매 턴 발동(마비/중독/방해, 중복) — `cardFx.spores`, `tickStatuses`
 - [x] 발광형: 턴당 에너지/체력 회복 — `energyRegen`, `regenPct`
 
-**향후 (종자 관련 — 사용자 추후 지시 예정):**
-- [ ] 종자 종류(풀/덩쿨/꽃/선인장/나무) 축 추가 및 SPECIES 통합
-- [ ] 생장 단계별 스킬·스탯 변화 구체화
+**추가 구현 완료 (2026-06-16 — 외형/이름 생성):**
+- [x] 종자 종류 5종 축(풀/덩굴/꽃/선인장/나무) — `SEED_TYPE_NAMES`, `SEED_TYPE_OF`, `seedTypeOf()`
+- [x] 생장 6단계로 확장(성장체 추가) — `GROWTH_STAGE_ORDER`에 `growing` 삽입
+- [x] **외형 자동 생성**: 종자종류×생장×속성(210조합) — `composePlantSvg()`, `spriteFor()`
+- [x] **이름 자동 생성**: 위 3축 + 장착 특성 카드의 종류·개수 — `composePlantName()`, `plantDisplayName()`
+- [x] **커스텀 오버라이드**: `SPRITE_OVERRIDES`(이미지) / `NAME_OVERRIDES`(이름) — 키 `"<종자>_<생장>_<속성>"`
+
+**향후 (사용자 추후 지시 예정):**
+- [ ] 생장 단계별 스킬 해금 곡선 구체화
 - [ ] 변이율 높은 개체의 추가 특성 획득 로직
-- [ ] 종자/속성/특성/생장단계 네이밍·디자인 일관화
 - [ ] 용족 형질 카드 설계(현재 빈 풀)
 - [ ] 적(AI)에게도 카드 부여(현재 적은 레거시 특성만 사용)
 
 ---
 
-> 이 문서는 방향성 기록용이다. 실제 구현 시 데이터 모델은 기존
-> `FORMS`/`PRED_TYPES`/`WEAPONS`/`TRAIT_SKILL_MAP`/`plantPassives()` 구조를 확장하는 형태로 진행한다.
+## 커스텀 외형 이미지 넣는 법 (`SPRITE_OVERRIDES`)
+키 형식: `"<종자>_<생장>_<속성>"` — 종자=`grass|vine|flower|cactus|tree`,
+생장=`seed|sprout|juvenile|growing|mature|evolved`, 속성=`fire|water|grass|earth|wind|bolt|ice`.
+
+**방식 A — 이미지 파일(추천, 그림 多):** `assets/sprites/`에 `grass_juvenile_fire.png`(PNG 투명배경 또는 SVG,
+정사각 256px 권장) 저장 후 `index.html`의 `SPRITE_OVERRIDES`에
+`"grass_juvenile_fire": "assets/sprites/grass_juvenile_fire.png",` 한 줄 추가.
+(더블클릭 실행 시 로컬 파일 차단될 수 있으니 `.claude/serve.ps1` 로컬 서버 권장.)
+
+**방식 B — data:URI(단일 파일 유지):** 이미지를 base64 `data:` URI로 변환해
+`"grass_juvenile_fire": "data:image/png;base64,iVBOR...",`로 붙여넣기. 외부 파일 없이 동작.
+
+비워두면 자동 생성 외형이 쓰이고, 한 줄 채우면 그 조합만 내 이미지로 교체된다. 이름은 `NAME_OVERRIDES`에
+같은 키로 문자열을 넣으면 교체된다.

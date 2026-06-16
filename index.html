@@ -1847,6 +1847,22 @@ const SPECIES_TYPE_NAMES = {
   metal_reed:'금속 갈대형', psionic_lotus:'정신 연화형', crystal_flower:'결정화형',
   gravity_cactus:'중력 선인장형', storm_orchid:'폭풍 난초형',
 };
+/* 외형/이름 축이 되는 종자 종류 5종 */
+const SEED_TYPE_NAMES = { grass:'풀', vine:'덩굴', flower:'꽃', cactus:'선인장', tree:'나무' };
+const SEED_TYPE_ORDER = ['grass', 'vine', 'flower', 'cactus', 'tree'];
+/* 기존 base_species_type(10종) → 5종 매핑 */
+const SEED_TYPE_OF = {
+  moss:'grass', metal_reed:'grass',
+  vine:'vine',
+  bulb:'flower', crystal_flower:'flower', storm_orchid:'flower', psionic_lotus:'flower', carnivorous_pod:'flower',
+  gravity_cactus:'cactus',
+  fungal_tree:'tree',
+};
+function seedTypeOf(p){
+  if(p && SEED_TYPE_NAMES[p.seed_type]) return p.seed_type;
+  const bt = (p && (p.base_species_type || p.species_type)) || '';
+  return SEED_TYPE_OF[bt] || 'grass';
+}
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
   toxic_atmosphere:'독성 대기', radiation:'방사능', gravity:'중력',
@@ -1861,9 +1877,9 @@ const SCANNER_UPGRADE_STEP = 0.035;
 const MAX_SCANNER_BONUS = 0.2;
 const STARTER_SEED_ID = 'seed_lumen_moss';
 const INITIAL_PLANTED_GROWTH_STAGE = 'sprout';
-const GROWTH_STAGE_ORDER = ['seed', 'sprout', 'juvenile', 'mature', 'evolved'];
-const GROWTH_STAGE_NAMES = { seed:'씨앗', sprout:'새싹', juvenile:'유체', mature:'성체', evolved:'완숙체' };
-const GROWTH_EXP_REQUIREMENTS = { seed:18, sprout:45, juvenile:90, mature:160, evolved:Infinity };
+const GROWTH_STAGE_ORDER = ['seed', 'sprout', 'juvenile', 'growing', 'mature', 'evolved'];
+const GROWTH_STAGE_NAMES = { seed:'씨앗', sprout:'새싹', juvenile:'유체', growing:'성장체', mature:'성체', evolved:'완숙체' };
+const GROWTH_EXP_REQUIREMENTS = { seed:18, sprout:45, juvenile:90, growing:125, mature:160, evolved:Infinity };
 const GROWTH_ACTIONS = {
   water: { name:'물 주기', exp:6, cost:0 },
   fertilizer: { name:'비료 주기', exp:16, cost:25 },
@@ -4289,12 +4305,15 @@ function plantBattleStatsFromCurrent(p, seed){
   return { hp:80, attack:16, defense:14, speed:14, energy:3 };
 }
 function createPlantInstanceFields(entry, seed, plant, customName){
-  const traits = rollExpressedTraits(seed, entry);
+  const traits = []; // 특성은 형질(form) 하나로 단일화 — 레거시 다중 발현 특성 미사용
   const uniqueId = plant.unique_id || `plant_${seed.id}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
   const name = (customName || plant.name || cleanSeedName(seed)).trim();
+  let userNamed = false;
+  try { userNamed = !!(customName && customName.trim() && customName.trim() !== defaultPlantName(seed)); } catch(e) {}
   return {
     unique_id: uniqueId,
     custom_name: name,
+    user_named: userNamed,
     seed_id: seed.id,
     origin_planet: (entry && entry.origin_planet) || seed.origin_planet,
     origin_region: (entry && entry.origin_region) || seed.origin_region,
@@ -4330,6 +4349,7 @@ function ensurePlantInstanceFields(p){
   p.origin_planet = p.origin_planet || p.originPlanet || (seed && seed.origin_planet) || '';
   p.origin_region = p.origin_region || p.originRegion || (seed && seed.origin_region) || '';
   p.species_type = p.species_type || p.alienSpeciesType || (seed && seed.base_species_type) || p.species || '';
+  p.traits = []; // 특성은 형질(form) 하나로 단일화 — 기존 다중 발현 특성 제거
   p.growth_stage = p.growth_stage || INITIAL_PLANTED_GROWTH_STAGE;
   p.growth_exp = typeof p.growth_exp === 'number' ? p.growth_exp : 0;
   p.level = typeof p.level === 'number' ? p.level : 1;
@@ -4633,6 +4653,115 @@ const sfx = {
   lose:  ()=>{ beep(330,0.15,'sawtooth',0.05); setTimeout(()=>beep(220,0.3,'sawtooth',0.05),160); },
 };
 
+/* ================= 식물 외형/이름 생성 (종자종류 × 생장 × 속성) =================
+   외형은 종자종류·생장단계·속성으로 자동 생성된다(특성/형질은 외형 미반영).
+   ▶ 커스텀 이미지/이름을 직접 넣으려면 아래 오버라이드 맵에 한 줄 추가:
+     SPRITE_OVERRIDES["grass_juvenile_fire"] = "assets/sprites/grass_juvenile_fire.png";
+     또는 data:URI 문자열. NAME_OVERRIDES["grass_juvenile_fire"] = "내가 정한 이름";
+   키 형식: "<종자>_<생장>_<속성>"  종자=grass|vine|flower|cactus|tree,
+     생장=seed|sprout|juvenile|growing|mature|evolved, 속성=fire|water|grass|earth|wind|bolt|ice */
+const SPRITE_OVERRIDES = {};
+const NAME_OVERRIDES = {};
+function spriteKey(seedType, growth, element){ return `${seedType}_${growth}_${element}`; }
+function shade(hex, amt){
+  const h = (hex||'#6bdd6b').replace('#','');
+  const n = parseInt(h.length===3 ? h.split('').map(x=>x+x).join('') : h, 16);
+  let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  r=Math.max(0,Math.min(255,Math.round(r+255*amt)));
+  g=Math.max(0,Math.min(255,Math.round(g+255*amt)));
+  b=Math.max(0,Math.min(255,Math.round(b+255*amt)));
+  return `rgb(${r},${g},${b})`;
+}
+const ELEMENT_GLYPH = { fire:'🔥', water:'💧', grass:'🌿', earth:'🪨', wind:'🌪️', bolt:'⚡', ice:'❄️' };
+function composePlantBody(seedType, gi, c){
+  const cx=60, cy=48, cD=shade(c,-0.22), cL=shade(c,0.2);
+  if(gi===0){ // 씨앗: 종류 무관 작은 씨/꼬투리
+    return `<ellipse cx="${cx}" cy="64" rx="13" ry="17" fill="${cD}"/><ellipse cx="56" cy="58" rx="4" ry="6" fill="${cL}" opacity=".6"/><path d="M60 47 q-2 -8 5 -12" stroke="${shade(c,-0.05)}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  }
+  let svg = `<path d="M60 96 C 57 80 63 72 60 ${58-gi*2}" stroke="#3f9b50" stroke-width="${4+gi}" fill="none" stroke-linecap="round"/>`;
+  if(seedType==='grass'){
+    const blades = 3 + gi;
+    for(let i=0;i<blades;i++){ const ang=(i-(blades-1)/2)*16, len=18+gi*4;
+      svg += `<path d="M${cx} ${cy+8} Q ${cx} ${cy-len} ${cx} ${cy-len-6}" stroke="${i%2?cD:c}" stroke-width="${5+gi*0.4}" fill="none" stroke-linecap="round" transform="rotate(${ang} ${cx} ${cy+8})"/>`; }
+  } else if(seedType==='vine'){
+    svg += `<path d="M60 70 C 30 ${60-gi*2} 90 ${44-gi*3} 60 ${28-gi*3} C 40 ${20-gi*2} 78 ${18-gi*2} 64 ${10-gi}" stroke="${c}" stroke-width="${4+gi*0.6}" fill="none" stroke-linecap="round"/>`;
+    const leaves=2+gi; for(let i=0;i<leaves;i++){ const yy=64-i*(8+gi), side=i%2?1:-1;
+      svg += `<ellipse cx="${cx+side*(8+gi)}" cy="${yy}" rx="${5+gi*0.5}" ry="${3+gi*0.4}" fill="${i%2?cL:c}" transform="rotate(${side*30} ${cx+side*(8+gi)} ${yy})"/>`; }
+  } else if(seedType==='flower'){
+    const petals = 5 + (gi>=3?3:0) + (gi>=5?3:0), rx=5+gi*0.7, ry=13+gi*1.6;
+    for(let i=0;i<petals;i++){ svg += `<ellipse cx="${cx}" cy="${cy-13-gi}" rx="${rx}" ry="${ry}" fill="${i%2?c:cL}" transform="rotate(${i*(360/petals)} ${cx} ${cy})"/>`; }
+    svg += `<circle cx="${cx}" cy="${cy}" r="${7+gi*0.8}" fill="${cD}"/><circle cx="${cx}" cy="${cy}" r="${3+gi*0.4}" fill="${cL}"/>`;
+  } else if(seedType==='cactus'){
+    const h=30+gi*8, w=24+gi*3;
+    svg += `<rect x="${cx-w/2}" y="${cy-h/2+6}" width="${w}" height="${h}" rx="${w/2}" fill="${c}"/>`;
+    for(let i=0;i<3;i++){ const xx=cx-w/2+(w/4)*(i+1); svg += `<line x1="${xx}" y1="${cy-h/2+12}" x2="${xx}" y2="${cy+h/2}" stroke="${cD}" stroke-width="2" opacity=".5"/>`; }
+    for(let i=0;i<5+gi;i++){ const yy=cy-h/2+10+i*6; svg += `<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-4}" y2="${yy-2}" stroke="#fff" stroke-width="1.3"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+4}" y2="${yy-2}" stroke="#fff" stroke-width="1.3"/>`; }
+    if(gi>=4) svg += `<circle cx="${cx}" cy="${cy-h/2+4}" r="6" fill="${cL}"/>`;
+  } else { // tree
+    const th=18+gi*4, r=14+gi*3.5;
+    svg += `<rect x="${cx-5}" y="${cy+4}" width="10" height="${th}" rx="3" fill="#7a5230"/>`;
+    svg += `<circle cx="${cx}" cy="${cy-2}" r="${r}" fill="${c}"/><circle cx="${cx-r*0.5}" cy="${cy+2}" r="${r*0.7}" fill="${cD}"/><circle cx="${cx+r*0.5}" cy="${cy}" r="${r*0.7}" fill="${cL}"/>`;
+  }
+  return svg;
+}
+function composePlantSvg(seedType, growth, element, opts){
+  opts = opts||{}; const size = opts.size||120;
+  const el = ELEMENTS[element] ? element : 'grass';
+  const c = ELEMENTS[el].color;
+  const gi = Math.max(0, GROWTH_STAGE_ORDER.indexOf(growth));
+  const glow = (opts.grade==='S'||opts.grade==='A') ? `<circle cx="60" cy="48" r="40" fill="${opts.grade==='S'?'#ffd34a':c}" opacity="${opts.grade==='S'?0.20:0.12}"/>` : '';
+  const spark = opts.awakened ? `<text x="90" y="26" font-size="15" fill="#ffd34a">✦</text><text x="24" y="40" font-size="10" fill="#ffd34a">✦</text>` : '';
+  return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    ${composePlantBody(seedType, gi, c)}
+    <rect x="36" y="96" width="48" height="7" rx="3.5" fill="${c}" opacity="0.9"/>
+    <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
+    <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${c}" opacity="0.45"/>
+    <text x="7" y="17" font-size="12">${ELEMENT_GLYPH[el]||''}</text>
+    ${spark}
+  </svg>`;
+}
+/* 식물/전투원 객체 → 외형 (오버라이드 우선, 없으면 자동 생성) */
+function spriteFor(obj, size){
+  const seedType = seedTypeOf(obj);
+  const growth = (obj && obj.growth_stage) || 'mature';
+  const element = (obj && obj.element) || 'grass';
+  const key = spriteKey(seedType, growth, element);
+  if(SPRITE_OVERRIDES[key]){
+    const h = Math.round(size*140/120);
+    return `<img src="${SPRITE_OVERRIDES[key]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top"/>`;
+  }
+  return composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened });
+}
+/* 이름 생성: 속성 + 특성(종류·개수) + 종자종류. 생장 칭호는 표시처에서 별도. */
+const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
+const SEED_ROOT = { grass:'풀', vine:'덩굴', flower:'꽃', cactus:'선인', tree:'나무' };
+const CARD_TYPE_WORD = { common:'강화', dna:'포식', weapon:'무장', potion:'맹독', spore:'포자', chloro:'발광', dragon:'용' };
+const COUNT_PREFIX = ['', '', '이중', '삼중', '사중', '오중'];
+function composePlantName(p){
+  const seedType = seedTypeOf(p);
+  const el = (p && p.element) || 'grass';
+  const cards = (p && p.equipped_trait_cards) || [];
+  let mod = '';
+  if(cards.length){
+    const counts = {};
+    cards.forEach(cid => { const t = TRAIT_CARDS[cid] && TRAIT_CARDS[cid].type; if(t) counts[t] = (counts[t]||0)+1; });
+    const domType = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+    const word = CARD_TYPE_WORD[domType] || '';
+    const pre = COUNT_PREFIX[Math.min(5, cards.length)] || '';
+    mod = (pre + word);
+    if(mod) mod += ' ';
+  }
+  return `${ELEM_ADJ[el]||''} ${mod}${SEED_ROOT[seedType]||'풀'}`.replace(/\s+/g,' ').trim();
+}
+function plantDisplayName(p){
+  if(!p) return '식물';
+  if(p.user_named && p.custom_name) return p.custom_name; // 사용자가 직접 지은 이름만 우선
+  const key = spriteKey(seedTypeOf(p), (p.growth_stage)||'mature', (p.element)||'grass');
+  if(NAME_OVERRIDES[key]) return NAME_OVERRIDES[key];
+  return composePlantName(p);
+}
+
 /* ================= 식물 SVG 생성 ================= */
 function svgPlant(species, element, grade, awakened, size){
   const c = ELEMENTS[element].color;
@@ -4701,7 +4830,7 @@ function svgPlant(species, element, grade, awakened, size){
 
 /* ================= 스탯 계산 ================= */
 /* 생장 단계가 오를수록 전투 능력치가 강해진다 (씨앗 0.9 → 완숙/진화체 1.5배) */
-const GROWTH_STAT_MULT = { seed:0.9, sprout:1.0, juvenile:1.16, mature:1.32, evolved:1.5 };
+const GROWTH_STAT_MULT = { seed:0.9, sprout:1.0, juvenile:1.16, growing:1.24, mature:1.32, evolved:1.5 };
 function growthStatMult(p){ return GROWTH_STAT_MULT[(p && p.growth_stage) || 'sprout'] || 1; }
 function calcStats(p){
   const b = SPECIES[p.species].base, a = p.geneAlloc, m = p.mult;
@@ -4786,7 +4915,7 @@ function renderCollection(){
   const bar = $('#collectionBar');
   bar.innerHTML = state.plants.map(p =>
     `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
-      ${svgPlant(p.species,p.element,p.grade,p.awakened,38)}
+      ${spriteFor(p,38)}
       <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
       ${p.form && p.form!=='normal' ? `<span class="f">${FORMS[p.form].icon}</span>` : ''}
     </div>`).join('')
@@ -4804,8 +4933,8 @@ function renderCenter(){
   const s = calcStats(p);
   const el = ELEMENTS[p.element];
   box.innerHTML = `
-    ${svgPlant(p.species,p.element,p.grade,p.awakened,170)}
-    <div class="pname">${p.name}</div>
+    ${spriteFor(p,170)}
+    <div class="pname">${plantDisplayName(p)}</div>
     <div>
       <span class="badge b-${p.element}">${el.icon} ${el.name}속성</span>
       <span class="badge" style="color:${GRADES[p.grade]};border:1px solid ${GRADES[p.grade]}">등급 ${p.grade}</span>
@@ -4892,7 +5021,7 @@ async function startIncubation(){
   body.innerHTML = `
     <div class="resultbox">
       <h2 style="margin-bottom:2px">✨ 배양 완료!</h2>
-      ${svgPlant(p.species,p.element,p.grade,p.awakened,140)}
+      ${spriteFor(p,140)}
       <div style="font-size:19px;font-weight:800;margin-top:4px">${p.name}</div>
       <div class="gradechip" style="color:${GRADES[p.grade]};border-color:${GRADES[p.grade]}">등급 ${p.grade}</div>
       <div class="gradechip" style="color:${FORMS[p.form].color};border-color:${FORMS[p.form].color};font-size:15px">${FORMS[p.form].icon} ${FORMS[p.form].name}${p.form==='pred' ? ' · '+PRED_TYPES[p.predType].name : ''} 분화</div>
@@ -4961,13 +5090,13 @@ function renderPlantInstancePanel(p, stats){
   const traitText = (p.traits || []).map(id => (ALIEN_INDEX.traits[id] && ALIEN_INDEX.traits[id].name) || id).join(', ') || '아직 미발현';
   return `<div class="plant-instance-panel">
     <div class="plant-instance-head">
-      <b>${p.custom_name || p.name}</b>
+      <b>${plantDisplayName(p)}</b>
       <span class="info-badge ok">${growthStageName(p.growth_stage)} · Lv.${p.level}</span>
     </div>
     <div class="info-desc">
       기원: ${(planet && planet.name) || p.origin_planet || '미확인'} / ${(region && region.name) || p.origin_region || '미확인'}<br>
       원본 종자: ${(seed && seed.name) || p.seed_id || '미확인'}<br>
-      발현 특성: ${traitText}
+      특성(형질): ${FORMS[p.form] ? FORMS[p.form].icon+' '+FORMS[p.form].name : '🌱 일반형'}
     </div>
     <div class="growthbar"><span style="width:${Math.round(progress * 100)}%"></span></div>
     <div class="detail-list">
@@ -5090,17 +5219,11 @@ function renderTraitTab(p){
       <button class="upbtn" data-card-toggle="${cid}" style="${on?'background:rgba(92,242,194,.18);border-color:var(--neon);color:var(--neon)':''}">${on?'해제':'장착'}</button>
     </div>`;
   }).join('') : '<div class="muted">보유한 특성 카드가 없습니다. 특성은 <b>상점 🎴 특성 카드 뽑기</b>나 <b>탐사 보상</b>으로만 얻을 수 있습니다.</div>';
-  const legacy = (p.traits||[]).filter(tid=>ALIEN_INDEX.traits[tid]);
-  const legacyBlock = legacy.length ? `<div class="skill-section-label">🧬 발현 특성 패시브 <small>종자 고유 · 전투 자동 적용</small></div>` + legacy.map(tid=>{
-    const t=ALIEN_INDEX.traits[tid];
-    return `<div class="uprow"><div class="un">🧬 ${t.name}<small>${t.description||''}</small></div></div>`;
-  }).join('') : '';
   return `
-    <p class="tab-hint"><b>${form.icon} ${form.name}</b> — <b>${form.cardLabel}</b> 카드를 최대 <b>5칸</b> 장착합니다(보유 특성에 맞는 카드만). 무기·물약 카드는 전투 스킬을 자동 장착하고, 포자 카드는 매 턴 발동합니다.</p>
+    <p class="tab-hint">이 식물의 특성(형질)은 <b>${form.icon} ${form.name}</b> 하나입니다. <b>공통</b> 카드와 <b>${form.cardLabel}</b> 카드만 최대 <b>5칸</b> 장착할 수 있습니다. 무기·물약 카드는 전투 스킬을 자동 장착하고, 포자 카드는 매 턴 발동합니다.</p>
     <div class="trait-slot-row">${slotRow}</div>
     <div class="skill-section-label">🎴 장착 가능한 ${form.cardLabel} 카드 <small>${equipped.length}/5</small></div>
-    ${cardRows}
-    ${legacyBlock}`;
+    ${cardRows}`;
 }
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
 function itemUsableOnPlant(item){
@@ -5176,7 +5299,7 @@ function renderUpgrade(){
   ensurePlantInstanceFields(p);
   const s = calcStats(p);
   $('#upgradeBody').innerHTML = `
-    <h2>🌿 ${p.custom_name||p.name} 강화·관리</h2>
+    <h2>🌿 ${plantDisplayName(p)} 강화·관리</h2>
     <p class="sub">보유 크레딧: <b style="color:var(--gold)">${fmt(state.credits)}</b> 💰</p>
     ${renderPlantInstancePanel(p, s)}
     <div class="plant-tabs">
@@ -5482,6 +5605,7 @@ function makeCombatant(src){
   loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   return {
     name:src.name, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
+    seed_type:src.seedType||null, growth_stage:src.growth||null,
     form:src.form||'normal', predType:src.predType||null, weapon:src.weapon||null,
     hp:maxHp, max:maxHp,
     atk:Math.max(1,Math.round(bs.atk*(1+(P.atkPct||0)))),
@@ -5539,8 +5663,9 @@ function startMatch(){
   const wpn = (p.form==='weapon' && p.weaponKey && state.weapons[p.weaponKey] && state.weapons[p.weaponKey].owned)
     ? { key:p.weaponKey, lv:state.weapons[p.weaponKey].lv } : null;
   const playerC = makeCombatant({
-    name:p.custom_name||p.name, species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
+    name:plantDisplayName(p), species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
     form:p.form||'normal', predType:p.predType||null, weapon:wpn,
+    seedType:seedTypeOf(p), growth:p.growth_stage,
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,elemBonus:s.elemBonus},
     traits:p.traits, loadout:p.equipped_skills.slice(), cards:(p.equipped_trait_cards||[]).slice(),
   });
@@ -5551,7 +5676,7 @@ function startMatch(){
   hide('#mainScreen'); hide('#resultModal'); show('#battleScreen');
   renderBattleHeader();
   $('#eSpriteBox').innerHTML = svgPlant(B.e.species, B.e.element, B.e.grade, null, 110);
-  $('#pSpriteBox').innerHTML = svgPlant(B.p.species, B.p.element, B.p.grade, B.p.awakened, 110);
+  $('#pSpriteBox').innerHTML = spriteFor(B.p, 110);
   const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
   $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${B.e.form==='pred' ? ' <span class="badge" style="color:#ff6bd4;border:1px solid #ff6bd4">🦷</span>' : ''}`;
   $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>`;
