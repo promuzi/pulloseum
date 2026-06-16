@@ -1701,9 +1701,13 @@ const GRADES = { C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
 const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'속도' };
 const MOVE_COST = { attack:0, skill:2, guard:0, heal:2, pred:3 };
 const FORMS = {
-  normal: { name:'일반형', icon:'🌱', color:'#9fb0c3' },
-  pred:   { name:'포식형', icon:'🦷', color:'#ff6bd4' },
-  weapon: { name:'무기형', icon:'🗡️', color:'#ffa94d' },
+  normal: { name:'일반형', icon:'🌱', color:'#9fb0c3', cardType:'common', cardLabel:'공통 특성' },
+  pred:   { name:'포식형', icon:'🦷', color:'#ff6bd4', cardType:'dna',    cardLabel:'DNA' },
+  weapon: { name:'무기형', icon:'🗡️', color:'#ffa94d', cardType:'weapon', cardLabel:'무기' },
+  toxic:  { name:'독성형', icon:'☠️', color:'#9be15d', cardType:'potion', cardLabel:'물약' },
+  spore:  { name:'포자형', icon:'🍄', color:'#c792ea', cardType:'spore',  cardLabel:'포자' },
+  lumen:  { name:'발광형', icon:'💡', color:'#ffe14a', cardType:'chloro', cardLabel:'엽록체' },
+  dragon: { name:'용족',   icon:'🐉', color:'#ff7a5a', cardType:'dragon', cardLabel:'용 DNA' },
 };
 const PRED_TYPES = {
   vamp:   { name:'흡혈',       skill:'흡혈 포식',   sub:'위력 130 · 피해의 70% 흡혈 · ⚡3' },
@@ -1721,8 +1725,12 @@ const WEAPON_KEYS = ['blade','cannon','shield'];
 function newArmory(){ return { blade:{owned:false,lv:0}, cannon:{owned:false,lv:0}, shield:{owned:false,lv:0} }; }
 function rollForm(){
   const r = Math.random();
-  if(r < 0.20) return { form:'weapon', predType:null };
-  if(r < 0.45) return { form:'pred', predType: Math.random()<0.5 ? 'vamp' : 'absorb' };
+  if(r < 0.16) return { form:'weapon', predType:null };
+  if(r < 0.32) return { form:'pred', predType: Math.random()<0.5 ? 'vamp' : 'absorb' };
+  if(r < 0.46) return { form:'toxic',  predType:null };
+  if(r < 0.60) return { form:'spore',  predType:null };
+  if(r < 0.74) return { form:'lumen',  predType:null };
+  if(r < 0.78) return { form:'dragon', predType:null }; // 희귀(미정 형질)
   return { form:'normal', predType:null };
 }
 function moveCost(unit, key){
@@ -2036,7 +2044,72 @@ const FORM_SKILLS = {
   skill_pred_vamp:   { name:'흡혈 포식', icon:'🩸', cost:3, kind:'drain', power:130, lifesteal:0.7, desc:'위력130 · 피해 70% 흡혈', tag:'포식' },
   skill_pred_absorb: { name:'유전자 흡수', icon:'🧬', cost:3, kind:'drain', power:100, steal:{stat:'both',pct:0.2}, desc:'위력100 · 적 공·방 20% 흡수', tag:'포식' },
 };
-const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS);
+/* ===== 특성 카드 시스템 (형질별 장착 카드) ===== */
+/* 카드가 자동 장착시키는 스킬. pred:true 표시는 포식형 기본 스킬(DNA 카드로 강화됨). */
+const CARD_SKILLS = {
+  skill_card_predation:{ name:'포식', icon:'🦷', cost:3, kind:'attack', power:120, pred:true, lifesteal:0.4, desc:'위력120 · 피해 40% 흡혈(DNA로 강화)', tag:'포식' },
+  skill_card_sword:  { name:'검 베기',   icon:'⚔️', cost:2, kind:'attack', power:135, critBonus:0.10, desc:'위력135 + 치명타 10%', tag:'무기' },
+  skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:1, kind:'guard',  guardMult:0.4, counterPct:0.25, desc:'피해 60%↓ + 가시 반격', tag:'무기' },
+  skill_card_axe:    { name:'내려찍기', icon:'🪓', cost:3, kind:'attack', power:175, pierce:0.4, desc:'위력175 · 방어 40% 무시', tag:'무기' },
+  skill_card_gun:    { name:'총 쏘기',   icon:'🔫', cost:2, kind:'attack', power:120, pierce:0.6, desc:'위력120 · 방어 60% 무시', tag:'무기' },
+  skill_card_acid:   { name:'강산 뿌리기', icon:'🧪', cost:2, kind:'debuff', power:110, enemyDebuff:{stat:'def',pct:0.25,turns:2}, dot:{kind:'poison',pct:0.06,turns:3}, desc:'위력110 + 방어25%↓ + 중독', tag:'독성' },
+  skill_card_gas:    { name:'가스 유출', icon:'☁️', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.22,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'적 공격22%↓ + 중독', tag:'독성' },
+};
+const TRAIT_CARD_TYPE_NAMES = { common:'공통', dna:'DNA', weapon:'무기', potion:'물약', spore:'포자', chloro:'엽록체', dragon:'용 DNA' };
+/* 특성 카드. type별로 형질이 장착 가능. 효과 키:
+   passive(stat/방어/반사/재생), grantSkill(자동 장착 스킬), predBoost(포식 강화),
+   poisonCoef(모든 공격 독 추가), endTurn(포자 매턴 발동), energyRegen(턴당 에너지) */
+const TRAIT_CARDS = {
+  // 공통 — 모든 형질 장착 가능
+  card_cellwall:   { id:'card_cellwall',   type:'common', name:'튼튼한 세포벽', icon:'🧱', desc:'방어력 20% 증가', passive:{defPct:0.20} },
+  card_thornstem:  { id:'card_thornstem',  type:'common', name:'가시 줄기',     icon:'🌵', desc:'받는 피해의 18% 반사', passive:{reflectPct:0.18} },
+  // DNA — 포식형
+  card_sap:          { id:'card_sap',          type:'dna', name:'진액 흡수',         icon:'🩸', desc:'포식 스킬 흡혈 +30%', predBoost:{lifesteal:0.30} },
+  card_chloroabsorb: { id:'card_chloroabsorb', type:'dna', name:'엽록체 흡수',       icon:'🔋', desc:'포식 시 적 에너지 1 강탈', predBoost:{energySteal:1} },
+  card_mito:         { id:'card_mito',         type:'dna', name:'미토콘드리아 흡수', icon:'🧬', desc:'포식 시 적 공격력 15% 강탈', predBoost:{atkSteal:0.15} },
+  // 무기 — 무기형
+  card_sword:   { id:'card_sword',   type:'weapon', name:'검',   icon:'⚔️', desc:'검 베기 스킬 자동 장착',   grantSkill:'skill_card_sword' },
+  card_shieldw: { id:'card_shieldw', type:'weapon', name:'방패', icon:'🛡️', desc:'방패 방어 스킬 자동 장착', grantSkill:'skill_card_shield' },
+  card_axe:     { id:'card_axe',     type:'weapon', name:'도끼', icon:'🪓', desc:'내려찍기 스킬 자동 장착',   grantSkill:'skill_card_axe' },
+  card_gun:     { id:'card_gun',     type:'weapon', name:'총',   icon:'🔫', desc:'총 쏘기 스킬 자동 장착',   grantSkill:'skill_card_gun' },
+  // 물약 — 독성형
+  card_acid:        { id:'card_acid',        type:'potion', name:'강산',     icon:'🧪', desc:'강산 뿌리기 스킬 자동 장착', grantSkill:'skill_card_acid' },
+  card_gas:         { id:'card_gas',         type:'potion', name:'독성가스', icon:'☁️', desc:'가스 유출 스킬 자동 장착',   grantSkill:'skill_card_gas' },
+  card_poisonthorn: { id:'card_poisonthorn', type:'potion', name:'독가시',   icon:'🌿', desc:'모든 공격에 독속성 추가 피해', poisonCoef:0.05 },
+  // 포자 — 포자형 (매 턴 종료 발동, 중복 가능)
+  card_paralysis:   { id:'card_paralysis',   type:'spore', name:'마비 포자', icon:'💤', desc:'매 턴 25% 확률로 상대 마비(턴 스킵)', endTurn:{kind:'paralyze', chance:0.25} },
+  card_poisonspore: { id:'card_poisonspore', type:'spore', name:'중독 포자', icon:'🟣', desc:'매 턴 35% 확률로 상대에게 중독 피해', endTurn:{kind:'poison', chance:0.35, pct:0.05} },
+  card_disrupt:     { id:'card_disrupt',     type:'spore', name:'방해 포자', icon:'🌀', desc:'매 턴 30% 확률로 다음 턴 방어 20%↑', endTurn:{kind:'defup', chance:0.30, pct:0.20} },
+  // 엽록체 — 발광형
+  card_chloroboost: { id:'card_chloroboost', type:'chloro', name:'엽록체 증가', icon:'🍃', desc:'턴당 에너지 회복 +1', energyRegen:1 },
+  card_solarheal:   { id:'card_solarheal',   type:'chloro', name:'광합성 세포', icon:'🌞', desc:'매 턴 체력 5% 회복', passive:{regenPct:0.05} },
+};
+/* 해당 형질이 장착 가능한 카드 목록(형질 전용 + 공통). 일반형은 공통만. */
+function formCardPool(form){
+  const f = FORMS[form] || FORMS.normal;
+  const ids = Object.keys(TRAIT_CARDS).filter(id => {
+    const t = TRAIT_CARDS[id].type;
+    if(t === 'common') return form !== 'dragon'; // 공통은 모든 형질(용족 제외 임시)
+    return t === f.cardType;
+  });
+  return ids;
+}
+/* 장착 카드 → 전투 효과 집계 */
+function cardEffects(cardIds){
+  const E = { defPct:0, reflectPct:0, regenPct:0, energyRegen:0, poisonCoef:0,
+    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[] };
+  (cardIds || []).forEach(cid => {
+    const c = TRAIT_CARDS[cid]; if(!c) return;
+    if(c.passive){ E.defPct += c.passive.defPct||0; E.reflectPct += c.passive.reflectPct||0; E.regenPct += c.passive.regenPct||0; }
+    if(c.grantSkill) E.grantSkills.push(c.grantSkill);
+    if(c.poisonCoef) E.poisonCoef += c.poisonCoef;
+    if(c.energyRegen) E.energyRegen += c.energyRegen;
+    if(c.predBoost){ E.predBoost.lifesteal += c.predBoost.lifesteal||0; E.predBoost.atkSteal += c.predBoost.atkSteal||0; E.predBoost.energySteal += c.predBoost.energySteal||0; }
+    if(c.endTurn) E.spores.push(c.endTurn);
+  });
+  return E;
+}
+const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS);
 function skillById(id, unit){
   if(id === 'skill_weapon'){
     let wk=null, lv=0;
@@ -2089,6 +2162,10 @@ function defaultLoadout(p){
 }
 function ensureSkillFields(p){
   if(!p) return p;
+  // 특성 카드 장착칸(최대 5) — 형질에 맞는 카드만 유지
+  if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
+  const pool = formCardPool(p.form || 'normal');
+  p.equipped_trait_cards = p.equipped_trait_cards.filter(cid => pool.includes(cid)).slice(0, 5);
   const known = plantKnownSkillIds(p);
   if(!Array.isArray(p.equipped_skills) || !p.equipped_skills.length){
     p.equipped_skills = defaultLoadout(p);
@@ -4971,45 +5048,33 @@ function renderSkillTab(p){
     <div class="skill-loadout">${bench}</div>`;
 }
 function renderTraitTab(p){
-  const slots = 5;
-  const unlocked = Math.max(p.unlocked_trait_slots||0, (p.traits||[]).length);
+  const form = FORMS[p.form||'normal'] || FORMS.normal;
+  const equipped = (p.equipped_trait_cards||[]).slice(0,5);
   let slotRow='';
-  for(let i=0;i<slots;i++){
-    const tid=(p.traits||[])[i];
-    if(tid){ const t=ALIEN_INDEX.traits[tid]; slotRow += `<div class="trait-slot filled">${(t&&t.name)||tid}</div>`; }
-    else if(i<unlocked) slotRow += `<div class="trait-slot">빈 슬롯</div>`;
-    else slotRow += `<div class="trait-slot locked">🔒</div>`;
+  for(let i=0;i<5;i++){
+    const cid = equipped[i];
+    if(cid){ const c=TRAIT_CARDS[cid]; slotRow += `<div class="trait-slot filled">${c?c.icon+' '+c.name:cid}</div>`; }
+    else slotRow += `<div class="trait-slot">빈 칸</div>`;
   }
-  const traitRows = (p.traits||[]).length ? (p.traits||[]).map(tid=>{
-    const t=ALIEN_INDEX.traits[tid];
-    if(!t) return '';
-    const sid=TRAIT_SKILL_MAP[tid]; const sk=sid?ALL_SKILLS[sid]:null;
-    return `<div class="trait-effect-row">
-      <div class="te-icon">${sk?sk.icon:'🧬'}</div>
-      <div style="flex:1;min-width:0">
-        <div class="te-name">${t.name} <span class="te-cat">· ${TRAIT_CAT_NAMES[t.category]||t.category}형</span></div>
-        <div class="te-desc">${t.description||''}</div>
-        <div class="te-passive">🛡️ 패시브: ${traitPassiveText(t)}</div>
-        ${sk?`<div class="te-passive">🎴 시그니처 스킬: <b>${sk.icon} ${sk.name}</b> — ${sk.desc}</div>`:''}
-      </div>
-    </div>`;
-  }).join('') : `<div class="muted">아직 발현된 특성이 없습니다. 희귀한 종자일수록 특성이 더 많이 발현됩니다.</div>`;
-  const traitInventory = (state.trait_inventory || []).filter(row => (row.count || 0) > 0);
-  const traitInventoryBlock = traitInventory.length ? `<div class="skill-section-label">🧬 보유 특성 부품 <small>장착 기능 준비 중</small></div>` + traitInventory.map(row => {
-    const trait = ALIEN_INDEX.traits[row.trait_id];
+  const pool = formCardPool(p.form||'normal');
+  const cardRows = pool.length ? pool.map(cid=>{
+    const c=TRAIT_CARDS[cid]; const on=equipped.includes(cid);
     return `<div class="uprow">
-      <div class="un">🧬 ${(trait && trait.name) || row.name || row.trait_id}<small>${trait ? (TRAIT_CAT_NAMES[trait.category] || trait.category) + '형 · ' + trait.description : '상점 보급상자 획득'}</small></div>
-      <div class="uv">×${row.count}</div>
-      <button class="upbtn" disabled>준비 중</button>
+      <div class="un">${c.icon} ${c.name} <small>${TRAIT_CARD_TYPE_NAMES[c.type]} · ${c.desc}</small></div>
+      <button class="upbtn" data-card-toggle="${cid}" style="${on?'background:rgba(92,242,194,.18);border-color:var(--neon);color:var(--neon)':''}">${on?'해제':'장착'}</button>
     </div>`;
+  }).join('') : '<div class="muted">이 형질이 장착할 수 있는 카드가 아직 없습니다.</div>';
+  const legacy = (p.traits||[]).filter(tid=>ALIEN_INDEX.traits[tid]);
+  const legacyBlock = legacy.length ? `<div class="skill-section-label">🧬 발현 특성 패시브 <small>종자 고유 · 전투 자동 적용</small></div>` + legacy.map(tid=>{
+    const t=ALIEN_INDEX.traits[tid];
+    return `<div class="uprow"><div class="un">🧬 ${t.name}<small>${t.description||''}</small></div></div>`;
   }).join('') : '';
-  const weaponBlock = p.form==='weapon' ? `<div class="skill-section-label">🗡️ 무기 장착 (무기형)</div>${weaponSectionHTML(p)}` : '';
   return `
-    <p class="tab-hint">특성은 식물의 <b>속성·외형</b>과 함께 전투 패시브와 시그니처 스킬을 부여합니다. 특성 슬롯은 최대 5칸입니다.</p>
+    <p class="tab-hint"><b>${form.icon} ${form.name}</b> — <b>${form.cardLabel}</b> 카드를 최대 <b>5칸</b> 장착합니다(보유 특성에 맞는 카드만). 무기·물약 카드는 전투 스킬을 자동 장착하고, 포자 카드는 매 턴 발동합니다.</p>
     <div class="trait-slot-row">${slotRow}</div>
-    ${traitRows}
-    ${traitInventoryBlock}
-    ${weaponBlock}`;
+    <div class="skill-section-label">🎴 장착 가능한 ${form.cardLabel} 카드 <small>${equipped.length}/5</small></div>
+    ${cardRows}
+    ${legacyBlock}`;
 }
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
 function itemUsableOnPlant(item){
@@ -5118,6 +5183,16 @@ function bindUpgradeEvents(p){
   });
   document.querySelectorAll('#upgradeBody [data-use-item]').forEach(btn => {
     btn.addEventListener('click', () => useItem(btn.dataset.useItem));
+  });
+  document.querySelectorAll('#upgradeBody [data-card-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cid = btn.dataset.cardToggle;
+      if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
+      const eq = p.equipped_trait_cards;
+      if(eq.includes(cid)){ p.equipped_trait_cards = eq.filter(x=>x!==cid); sfx.tap(); }
+      else { if(eq.length>=5){ toast('특성 카드는 최대 5칸까지 장착할 수 있습니다'); return; } eq.push(cid); sfx.heal(); }
+      saveState(); renderUpgrade(); renderMain();
+    });
   });
   document.querySelectorAll('#upgradeBody [data-skill-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -5353,8 +5428,18 @@ function effStat(u, stat){
 }
 function makeCombatant(src){
   const P = plantPassives(src.traits || []);
+  const CE = cardEffects(src.cards || []);
+  // 카드 패시브를 기존 패시브에 합산
+  P.defPct = (P.defPct||0) + CE.defPct;
+  P.reflectPct = (P.reflectPct||0) + CE.reflectPct;
+  P.regenPct = (P.regenPct||0) + CE.regenPct;
   const bs = src.baseStats;
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
+  // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식형) 포식 기본 스킬
+  let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
+  if((src.form||'normal') === 'pred' && CE.predBoost && (src.cards||[]).length) loadout.push('skill_card_predation');
+  CE.grantSkills.forEach(sid => loadout.push(sid));
+  loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   return {
     name:src.name, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
     form:src.form||'normal', predType:src.predType||null, weapon:src.weapon||null,
@@ -5365,7 +5450,8 @@ function makeCombatant(src){
     elemBonus:bs.elemBonus||1,
     energy: clamp(2 + (P.energyBonus||0), 0, 5),
     guard:null, traits:src.traits||[], passives:P,
-    loadout:(src.loadout && src.loadout.length ? src.loadout : ['skill_basic_strike']).slice(0,6),
+    cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
+    loadout, skipNext:false,
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
 }
@@ -5416,7 +5502,7 @@ function startMatch(){
     name:p.custom_name||p.name, species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
     form:p.form||'normal', predType:p.predType||null, weapon:wpn,
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,elemBonus:s.elemBonus},
-    traits:p.traits, loadout:p.equipped_skills.slice(),
+    traits:p.traits, loadout:p.equipped_skills.slice(), cards:(p.equipped_trait_cards||[]).slice(),
   });
   const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd});
   B = { p:playerC, e:enemyC, over:false, busy:false };
@@ -5544,9 +5630,15 @@ async function applySkill(a, d, s, side){
     blog(`▶ <b>${dm}</b> 피해${d.guard?' (방어 감소)':''}${crit?' · 💥치명타!':''}`);
     if(s.elem){ if(elemMult>1) blog('▶ 효과가 굉장했다! 🔥'); else if(elemMult<1) blog('▶ 효과가 별로였다…'); }
     sfx.hit();
-    const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0);
+    const predLs = (s.pred && a.cardFx) ? (a.cardFx.predBoost.lifesteal||0) : 0;
+    const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
     if(ls>0 && dm>0){ const h=Math.round(dm*ls); a.hp=Math.min(a.max,a.hp+h); popup(side,'+'+h,true); blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
     if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
+    if(s.pred && a.cardFx){ const pb=a.cardFx.predBoost;
+      if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0) blog(`▶ 🧬 공격력 ${sa} 강탈`); }
+      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(5,a.energy+se); if(se>0) blog(`▶ 🔋 에너지 ${se} 강탈`); }
+    }
+    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
     if(a.passives.defDownOnHit>0) d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'});
     if(s.enemyDebuff){ applyEnemyDebuff(d, s.enemyDebuff); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
@@ -5570,6 +5662,18 @@ async function tickStatuses(u, side){
   }
   if(u.buffs && u.buffs.length){ u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); }
   if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff') && Math.random()<u.passives.cleanseChance){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } }
+  // 포자형: 매 턴 종료 시 포자 발동(중복 가능)
+  if(u.cardFx && u.cardFx.spores && u.cardFx.spores.length && B){
+    const opp = (side==='p') ? B.e : B.p;
+    u.cardFx.spores.forEach(sp=>{
+      if(Math.random() >= sp.chance) return;
+      if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
+      else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); opp.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
+      else if(sp.kind==='defup'){ u.buffs.push({stat:'def',pct:sp.pct,turns:2,kind:'buff'}); blog(`<span class="em">${u.name}</span> 🌀 방해 포자! 방어 ${Math.round(sp.pct*100)}%↑(2턴)`); changed=true; }
+    });
+  }
+  // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
+  if(u.cardFx && u.cardFx.energyRegen>0){ u.energy = Math.min(5, u.energy + u.cardFx.energyRegen); }
   if(changed){ updateBars(); await sleep(480); }
 }
 async function playerSkill(skillId){
@@ -5584,6 +5688,7 @@ async function playerSkill(skillId){
     const a = side==='p' ? B.p : B.e;
     const d = side==='p' ? B.e : B.p;
     if(a.hp<=0) continue;
+    if(a.skipNext){ a.skipNext=false; blog(`<span class="em">${a.name}</span> 💤 마비되어 움직이지 못한다!`); updateBars(); await sleep(560); continue; }
     await applySkill(a, d, skillById(k, a), side);
     if(d.hp<=0){ await endMatch(side==='p'); return; }
     if(a.hp<=0){ await endMatch(side!=='p'); return; }
