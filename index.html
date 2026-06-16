@@ -74,8 +74,20 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .chip .g{position:absolute;top:2px;right:5px;font-size:11px;font-weight:800;}
 .chip .f{position:absolute;bottom:2px;left:5px;font-size:10px;}
 .chip.addchip{font-size:24px;color:var(--sub);justify-content:center;}
+.chip.potempty,.chip.potlocked{justify-content:center;border-style:dashed;color:var(--sub);}
+.chip.potempty{cursor:pointer;}
+.chip.potlocked{opacity:.5;border-style:dashed;}
+.chip .pi{font-size:22px;line-height:1;}
+.chip .potlabel{font-size:8.5px;font-weight:700;margin-top:2px;}
 
 .main-body{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;}
+.bag-fab{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:5;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  width:58px;height:58px;border-radius:16px;font-size:26px;cursor:pointer;
+  background:rgba(13,22,38,.92);border:1.5px solid rgba(92,242,194,.4);color:var(--text);
+  box-shadow:0 6px 18px rgba(0,0,0,.4);transition:transform .1s;}
+.bag-fab:active{transform:translateY(-50%) scale(.93);}
+.bag-fab .bag-fab-label{font-size:9.5px;font-weight:800;color:var(--neon);}
 #centerPlant{text-align:center;cursor:pointer;padding:10px;border-radius:20px;max-width:330px;}
 #centerPlant:active{transform:scale(.98);}
 #centerPlant .pname{font-size:21px;font-weight:800;margin:6px 0 4px;}
@@ -164,7 +176,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
 
 /* ===== 모달 ===== */
-.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;}
+.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;padding-bottom:calc(var(--navh) + 14px);}
 .modal-card{background:#131b2c;border:1px solid var(--line);border-radius:18px;width:min(94vw,450px);
   max-height:88dvh;overflow-y:auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
 .modal-card h2{margin:0 0 4px;font-size:20px;}
@@ -192,6 +204,16 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #shopModal .sub{flex:0 0 auto;}
 #shopModal #shopList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
 #shopModal #shopClose{flex:0 0 auto;margin-top:12px;}
+.shop-consum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.consum-card{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);border-radius:10px;padding:11px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+.consum-card:not(:disabled):active{transform:scale(.97);}
+.consum-card:not(:disabled):hover{border-color:var(--neon);background:rgba(92,242,194,.08);}
+.consum-card:disabled{opacity:.45;cursor:not-allowed;}
+.consum-card .consum-icon{font-size:34px;line-height:1;}
+.consum-card .consum-name{font-weight:800;font-size:14px;}
+.consum-card .consum-name small{color:var(--sub);font-weight:700;}
+.consum-card .consum-exp{font-size:11.5px;color:var(--neon);font-weight:700;}
+.consum-card .consum-price{font-size:13px;font-weight:800;color:var(--gold);}
 .shop-wallet{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px;}
 .shop-wallet .stat{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--sub);}
 .shop-block{margin:14px 0 18px;}
@@ -412,7 +434,14 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .resultcard{background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.32);border-radius:14px;padding:12px;margin-top:12px;}
 .resultcard .rtitle{font-size:17px;font-weight:900;margin-bottom:6px;}
 .seed-preview{margin-top:10px;font-size:12px;color:var(--sub);line-height:1.7;}
-#seedBagModal .modal-card{width:min(96vw,900px);max-height:92dvh;}
+#seedBagModal .modal-card{width:min(96vw,900px);max-height:calc(100dvh - var(--navh) - 28px);}
+.seed-sort-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.seed-sort-label{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px;}
+.seed-sort-btn{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--sub);}
+.seed-sort-btn.active{border-color:var(--neon);color:var(--neon);background:rgba(92,242,194,.08);}
+.seed-detail-actions{display:flex;gap:8px;margin-top:12px;}
+.seed-detail-actions .btn{flex:1;margin-top:0;}
 .seed-bag-top{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 12px;}
 .seed-bag-top .stat{display:block;text-align:center;padding:8px 6px;}
 .seed-bag-layout{display:grid;grid-template-columns:minmax(250px,340px) 1fr;gap:12px;min-height:420px;}
@@ -491,6 +520,17 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .skill-card .sc-desc{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.4;}
 .skill-card .sc-tag{position:absolute;top:-8px;left:9px;font-size:9.5px;padding:1px 7px;border-radius:999px;background:#16223a;border:1px solid var(--line);color:var(--sub);}
 .skill-card .sc-x{position:absolute;top:6px;right:8px;font-size:11px;color:#ff8a70;}
+.sc-aoe{font-weight:800;}
+.sc-aoe.aoe{color:#7dd3ff;}
+.sc-aoe.single{color:#ffd27d;}
+.stat-tier-row{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px;}
+.st-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--sub);}
+.st-pill b{font-weight:800;margin-left:2px;}
+.st-pill.st-t0{color:#ff7a6b;border-color:rgba(255,122,107,.4);}
+.st-pill.st-t1{color:#ffb14a;border-color:rgba(255,177,74,.4);}
+.st-pill.st-t2{color:#9aa5b1;border-color:rgba(154,165,177,.35);}
+.st-pill.st-t3{color:#6bdd6b;border-color:rgba(107,221,107,.4);}
+.st-pill.st-t4{color:var(--neon);border-color:rgba(92,242,194,.5);background:rgba(92,242,194,.08);}
 .skill-slot.empty{border:1.5px dashed rgba(255,255,255,.18);border-radius:12px;padding:16px 9px;text-align:center;color:var(--sub);font-size:12px;display:flex;align-items:center;justify-content:center;min-height:62px;}
 .trait-effect-row{display:flex;gap:9px;align-items:flex-start;background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-bottom:7px;}
 .trait-effect-row .te-icon{font-size:22px;flex:0 0 auto;}
@@ -552,12 +592,12 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       <div class="res">🧭 Lv <span id="levelView">1</span></div>
       <div class="res">🏆 <span id="rankView">브론즈</span> <span style="opacity:.7;font-weight:600">· <span id="rankPointView">0</span>p</span></div>
       <div class="spacer"></div>
-      <button class="iconbtn" id="btnSeedBag">🎒</button>
       <button class="iconbtn" id="btnSettings">⚙️</button>
     </header>
     <div id="collectionBar"></div>
     <div class="main-body">
       <div id="centerPlant"></div>
+      <button id="btnBagCenter" class="bag-fab" title="종자 가방">🎒<span class="bag-fab-label">가방</span></button>
     </div>
     <div id="tournamentBar"></div>
     <button id="btnBattle">⚔️ 전투 시작</button>
@@ -767,7 +807,7 @@ const AlienPlantGameData = (() => {
         grade: 'common',
         environment: { heat: 8, cold: 4, pressure: 6, hydro_pressure: 2, toxic_atmosphere: 5, radiation: 3, gravity: 7 },
         required_ship_stats: { fuel: 1, durability: 35, heat_resistance: 0, cold_resistance: 0, pressure_resistance: 0, hydro_pressure_resistance: 0 },
-        representative_seed_types: ['이끼형', '덩굴형', '정신 연화형'],
+        representative_seed_types: ['풀형', '덩굴형', '꽃형'],
         representative_item_types: ['영양제', '성장 촉매'],
         danger_level: 1,
         regions: ['region_elyndor_lumenwood', 'region_elyndor_spore_marsh'],
@@ -783,7 +823,7 @@ const AlienPlantGameData = (() => {
         grade: 'rare',
         environment: { heat: 42, cold: 6, pressure: 24, hydro_pressure: 0, toxic_atmosphere: 35, radiation: 18, gravity: 14 },
         required_ship_stats: { fuel: 3, durability: 60, heat_resistance: 18, cold_resistance: 0, pressure_resistance: 14, hydro_pressure_resistance: 0 },
-        representative_seed_types: ['금속 갈대형', '중력 선인장형', '포식낭형'],
+        representative_seed_types: ['풀형', '선인장형', '덩굴형'],
         representative_item_types: ['방열 코팅', '철질 접목 키트'],
         danger_level: 4,
         regions: ['region_vathra_iron_dunes', 'region_vathra_sulfur_rift'],
@@ -799,7 +839,7 @@ const AlienPlantGameData = (() => {
         grade: 'epic',
         environment: { heat: 4, cold: 32, pressure: 38, hydro_pressure: 44, toxic_atmosphere: 8, radiation: 22, gravity: 19 },
         required_ship_stats: { fuel: 4, durability: 72, heat_resistance: 0, cold_resistance: 20, pressure_resistance: 24, hydro_pressure_resistance: 28 },
-        representative_seed_types: ['결정화형', '덩굴형', '중력 선인장형'],
+        representative_seed_types: ['꽃형', '덩굴형', '선인장형'],
         representative_item_types: ['수압막', '정신 조율 장비'],
         danger_level: 7,
         regions: ['region_nereion_tideglass_reef', 'region_nereion_orbit_canopy'],
@@ -1334,6 +1374,33 @@ const AlienPlantGameData = (() => {
         price: 480,
       },
       {
+        id: 'item_water',
+        name: '물',
+        item_type: 'nutrient',
+        description: '가장 기본적인 배양수. 식물에게 주면 소량의 성장 경험치를 준다.',
+        target_trait_category: 'growth',
+        effect: { growth_exp: 8 },
+        price: 20,
+      },
+      {
+        id: 'item_fertilizer',
+        name: '비료',
+        item_type: 'nutrient',
+        description: '균형 잡힌 영양 비료. 적당한 성장 경험치를 준다.',
+        target_trait_category: 'growth',
+        effect: { growth_exp: 20 },
+        price: 60,
+      },
+      {
+        id: 'item_nutrient_spray',
+        name: '영양제',
+        item_type: 'nutrient',
+        description: '고농축 영양 스프레이. 많은 성장 경험치를 준다.',
+        target_trait_category: 'growth',
+        effect: { growth_exp: 45 },
+        price: 140,
+      },
+      {
         id: 'item_rookie_ticket',
         name: '루키 컵 참가권',
         item_type: 'ticket',
@@ -1698,7 +1765,16 @@ const ELEMENTS = {
   ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire','earth'],      strong:['water','bolt'],        skill:'절대 영도' },
 };
 const GRADES = { C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
-const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'속도' };
+const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'기동성', acc:'적중' };
+/* 모든 스탯을 5단계(매우 낮음~매우 높음)로 구간화. 밸런싱 기준 — 자유롭게 조정. */
+const STAT_TIER_LABELS = ['매우 낮음', '낮음', '보통', '높음', '매우 높음'];
+const STAT_TIER_BANDS = {
+  hp:[100,150,210,280], atk:[18,26,36,48], def:[14,20,28,38], spd:[12,20,28,38],
+  acc:[80,86,91,95], elem:[14,20,28,38], critRate:[8,16,28,45], energy:[3,4,5,6],
+};
+const STAT_TIER_SHORT = { hp:'생명', atk:'공격', def:'방어', spd:'기동', acc:'적중', elem:'속성', critRate:'치명', energy:'에너지' };
+function statTierIndex(key, val){ const b = STAT_TIER_BANDS[key]; if(!b) return 2; let t = 0; for(let i=0;i<b.length;i++){ if(val > b[i]) t = i+1; } return t; }
+function statTierLabel(key, val){ return STAT_TIER_LABELS[statTierIndex(key, val)]; }
 const MOVE_COST = { attack:0, skill:2, guard:0, heal:2, pred:3 };
 const FORMS = {
   normal: { name:'일반 변이형', icon:'🌱', color:'#9fb0c3', cardType:'common', cardLabel:'공통 변이' },
@@ -1739,8 +1815,12 @@ function moveCost(unit, key){
 }
 function wUpCost(lv){ return Math.round(60 * Math.pow(1.55, lv) / 10) * 10; }
 const GENE_BUDGET = 15;
-const SEED_PRICE = 250, REROLL_PRICE = 150, MAX_PLANTS = 8;
+const SEED_PRICE = 250, REROLL_PRICE = 150;
 const TRAIT_CARD_GACHA_PRICE = 300;
+/* 화분: 초반 3칸, 플레이어 레벨이 오를수록 최대 12칸까지 순차 개방 */
+const POT_MIN = 3, POT_MAX = 12;
+function potCapacity(){ const lv = (typeof state!=='undefined' && state.player_level) || 1; return clamp(POT_MIN + Math.floor((lv - 1)/3), POT_MIN, POT_MAX); }
+function potUnlockLevel(slotIndex){ return slotIndex < POT_MIN ? 1 : 1 + (slotIndex - POT_MIN + 1)*3; }
 const SAVE_KEY = 'pullosseum_v1';
 const ALIEN_DATA_API = typeof AlienPlantGameData !== 'undefined' ? AlienPlantGameData : null;
 const ALIEN_DATA = ALIEN_DATA_API ? ALIEN_DATA_API.gameData : { planets:[], regions:[], seeds:[], traits:[] };
@@ -1758,6 +1838,19 @@ const SHOP_CURRENCY_PACKS = [
   { id:'credits_4', icon:'💰', name:'크레딧 12,000', tag:'보너스 35%', price:11000, currency:'krw', disabled:true },
   { id:'credits_5', icon:'💰', name:'크레딧 28,000', tag:'보너스 50%', price:22000, currency:'krw', disabled:true },
   { id:'credits_6', icon:'💰', name:'크레딧 65,000', tag:'보너스 80%', price:55000, currency:'krw', disabled:true },
+];
+/* 독초 분화: 식물에 '물약'을 장착하면 공격 스킬에 독성이 추가된다. (기획서 §독초) */
+const POTIONS = {
+  potion_venom:     { id:'potion_venom',     name:'맹독 물약',   icon:'🟣', price:520, dot:{ kind:'poison', pct:0.06, turns:3 }, desc:'공격 시 중독 부여 (3턴 · 강력)' },
+  potion_corrosive: { id:'potion_corrosive', name:'부식독 물약', icon:'🧪', price:640, dot:{ kind:'poison', pct:0.04, turns:3, debuff:{ stat:'def', pct:0.15, turns:2 } }, desc:'공격 시 중독 + 적 방어 15%↓(2턴)' },
+  potion_paralytic: { id:'potion_paralytic', name:'마비독 물약', icon:'☠️', price:600, dot:{ kind:'poison', pct:0.03, turns:2, debuff:{ stat:'spd', pct:0.2, turns:2 } }, desc:'공격 시 중독 + 적 기동성 20%↓(2턴)' },
+};
+const POTION_LIST = Object.values(POTIONS);
+/* 상점 소모품 — 물/영양제/비료. 크레딧으로 10개 단위 구매. 각각 식물 성장 경험치 고정. */
+const SHOP_GROWTH_CONSUMABLES = [
+  { item_id:'item_water',          icon:'💧', name:'물',     exp:8,  unit:10, price:160 },
+  { item_id:'item_fertilizer',     icon:'🌿', name:'비료',   exp:20, unit:10, price:460 },
+  { item_id:'item_nutrient_spray', icon:'💊', name:'영양제', exp:45, unit:10, price:980 },
 ];
 const SHOP_SUPPLY_BOXES = [
   {
@@ -1842,10 +1935,11 @@ const RARITY_META = {
   epic: { name:'특수', group:'특수 종자', css:'rarity-epic', icon:'🔮' },
   legendary: { name:'전설', group:'특수 종자', css:'rarity-legendary', icon:'✦' },
 };
+/* 기획서: 식물 외형 종류 = 풀 / 나무 / 덩굴 / 꽃 / 선인장 (이끼형 폐지) */
 const SPECIES_TYPE_NAMES = {
-  moss:'이끼형', bulb:'구근형', vine:'덩굴형', fungal_tree:'균목형', carnivorous_pod:'포식낭형',
-  metal_reed:'금속 갈대형', psionic_lotus:'정신 연화형', crystal_flower:'결정화형',
-  gravity_cactus:'중력 선인장형', storm_orchid:'폭풍 난초형',
+  moss:'풀형', bulb:'꽃형', vine:'덩굴형', fungal_tree:'나무형', carnivorous_pod:'덩굴형',
+  metal_reed:'풀형', psionic_lotus:'꽃형', crystal_flower:'꽃형',
+  gravity_cactus:'선인장형', storm_orchid:'꽃형',
 };
 /* 외형/이름 축이 되는 식물 타입 5종 */
 const SEED_TYPE_NAMES = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형' };
@@ -1998,7 +2092,7 @@ const ALIEN_SEED_SPECIES_MAP = {
      counterPct, energyGain, selfBuff:{stat,pct,turns}, enemyDebuff:{stat,pct,turns},
      dot:{kind,pct,turns}, lifesteal, steal:{stat,pct}, cleanse, desc, tag } */
 const UNIVERSAL_SKILLS = {
-  skill_basic_strike: { name:'기본 공격', icon:'👊', cost:0, kind:'attack', power:100, desc:'위력 100 · 무료', tag:'기본' },
+  skill_basic_strike: { name:'기본 공격', icon:'👊', cost:0, kind:'attack', power:100, single:true, desc:'위력 100 · 단일 · 무료', tag:'기본' },
   skill_guard:        { name:'방어 태세', icon:'🛡️', cost:0, kind:'guard', guardMult:0.5, energyGain:1, desc:'받는 피해 50%↓ · ⚡+1', tag:'기본' },
   skill_photosynthesis:{ name:'광합성', icon:'☀️', cost:2, kind:'heal', heal:0.28, desc:'체력 28% 회복 · ⚡2', tag:'기본' },
   skill_focus:        { name:'기력 집중', icon:'🌀', cost:0, kind:'special', energyGain:2, desc:'⚡ 2 충전 · 무료', tag:'성장' },
@@ -2008,31 +2102,31 @@ const ELEMENT_SKILLS = {};
 Object.keys(ELEMENTS).forEach(el => {
   ELEMENT_SKILLS['skill_elem_' + el] = {
     name: ELEMENTS[el].skill, icon: ELEMENTS[el].icon, cost:2, kind:'elemental',
-    power:170, elem:true, element:el, desc:`위력 170 · ${ELEMENTS[el].name}속성기 · ⚡2`, tag:'속성',
+    power:170, elem:true, element:el, aoe:true, desc:`위력 170 · ${ELEMENTS[el].name}속성기 · 광역 · ⚡2`, tag:'속성',
   };
 });
 const elementSkillId = el => 'skill_elem_' + el;
 const TRAIT_SKILLS = {
   skill_biolume:   { name:'광합성 과충전', icon:'🌟', cost:2, kind:'heal', heal:0.22, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'체력 22% 회복 + 공격 15%↑(3턴)', tag:'잠재특성' },
   skill_resonant:  { name:'공명 방벽', icon:'🟢', cost:2, kind:'guard', guardMult:0.45, selfBuff:{stat:'def',pct:0.2,turns:3}, desc:'피해 55%↓ + 방어 20%↑(3턴)', tag:'잠재특성' },
-  skill_acid:      { name:'산성 분사', icon:'🧫', cost:2, kind:'debuff', power:115, enemyDebuff:{stat:'def',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력115 + 방어 20%↓(2턴) + 중독', tag:'잠재특성' },
+  skill_acid:      { name:'산성 분사', icon:'🧫', cost:2, kind:'debuff', power:115, aoe:true, enemyDebuff:{stat:'def',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력115 · 광역 + 방어 20%↓(2턴) + 중독', tag:'잠재특성' },
   skill_ironbark:  { name:'철피 경화', icon:'🪨', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.35,turns:3}, heal:0.1, desc:'방어 35%↑(3턴) + 체력 10% 회복', tag:'잠재특성' },
-  skill_thorns:    { name:'가시 사출', icon:'🌵', cost:2, kind:'dot', power:110, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력110 + 출혈(3턴)', tag:'잠재특성' },
-  skill_phase:     { name:'위상 포자', icon:'💫', cost:2, kind:'buff', power:80, selfBuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력80 + 속도 30%↑(3턴)', tag:'잠재특성' },
-  skill_gravity:   { name:'중력 붕괴', icon:'🪐', cost:3, kind:'debuff', power:130, enemyDebuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력130 + 적 속도 30%↓(3턴)', tag:'잠재특성' },
+  skill_thorns:    { name:'가시 사출', icon:'🌵', cost:2, kind:'dot', power:110, single:true, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력110 · 단일 + 출혈(3턴)', tag:'잠재특성' },
+  skill_phase:     { name:'위상 포자', icon:'💫', cost:2, kind:'buff', power:80, single:true, selfBuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력80 · 단일 + 기동성 30%↑(3턴)', tag:'잠재특성' },
+  skill_gravity:   { name:'중력 붕괴', icon:'🪐', cost:3, kind:'debuff', power:130, aoe:true, enemyDebuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력130 · 광역 + 적 기동성 30%↓(3턴)', tag:'잠재특성' },
   skill_tide:      { name:'수막 보호', icon:'🌊', cost:2, kind:'guard', guardMult:0.5, heal:0.12, desc:'피해 50%↓ + 체력 12% 회복', tag:'잠재특성' },
   skill_spore:     { name:'포자 운무', icon:'🌫️', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3}, desc:'적 공격 20%↓(2턴) + 중독', tag:'잠재특성' },
-  skill_plasma:    { name:'플라즈마 개화', icon:'⚡', cost:3, kind:'attack', power:165, critBonus:0.15, desc:'위력165 + 치명타율 15%', tag:'잠재특성' },
+  skill_plasma:    { name:'플라즈마 개화', icon:'⚡', cost:3, kind:'attack', power:165, aoe:true, critBonus:0.15, desc:'위력165 · 광역 + 치명타율 15%', tag:'잠재특성' },
   skill_adaptive:  { name:'적응 변이', icon:'🧬', cost:2, kind:'buff', cleanse:true, selfBuff:{stat:'atk',pct:0.18,turns:3}, energyGain:1, desc:'디버프 해제 + 공격 18%↑(3턴) + ⚡+1', tag:'잠재특성' },
   skill_stablecore:{ name:'안정 코어', icon:'🔋', cost:1, kind:'buff', selfBuff:{stat:'def',pct:0.15,turns:3}, energyGain:2, desc:'방어 15%↑(3턴) + ⚡2 충전', tag:'잠재특성' },
-  skill_psionic:   { name:'정신 간섭', icon:'🔮', cost:3, kind:'debuff', power:110, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력110 + 적 공격 18%↓(2턴)', tag:'잠재특성' },
-  skill_metallic:  { name:'금속 관다발', icon:'⚙️', cost:2, kind:'attack', power:120, pierce:0.5, desc:'위력120 · 적 방어 50% 무시', tag:'잠재특성' },
-  skill_hunger:    { name:'포식 아귀', icon:'🦷', cost:3, kind:'drain', power:130, lifesteal:0.5, desc:'위력130 · 피해 50% 흡혈', tag:'잠재특성' },
+  skill_psionic:   { name:'정신 간섭', icon:'🔮', cost:3, kind:'debuff', power:110, single:true, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력110 · 단일 + 적 공격 18%↓(2턴)', tag:'잠재특성' },
+  skill_metallic:  { name:'금속 관다발', icon:'⚙️', cost:2, kind:'attack', power:120, single:true, pierce:0.5, desc:'위력120 · 단일 · 적 방어 50% 무시', tag:'잠재특성' },
+  skill_hunger:    { name:'포식 아귀', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.5, desc:'위력130 · 단일 · 피해 50% 흡혈', tag:'잠재특성' },
   skill_rapidgerm: { name:'급속 발아', icon:'🌱', cost:0, kind:'special', energyGain:2, heal:0.08, desc:'⚡2 충전 + 체력 8% 회복 · 무료', tag:'잠재특성' },
   skill_symbiotic: { name:'공생 회복', icon:'🍄', cost:2, kind:'heal', heal:0.3, cleanse:true, desc:'체력 30% 회복 + 디버프 1개 해제', tag:'잠재특성' },
   skill_crystal:   { name:'결정 굴절', icon:'💠', cost:2, kind:'guard', guardMult:0.4, counterPct:0.35, desc:'피해 60%↓ + 굴절 반격', tag:'잠재특성' },
-  skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 + 공격 20%↑(2턴)', tag:'잠재특성' },
-  skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 + 적 무작위 스탯 20%↓(2턴)', tag:'잠재특성' },
+  skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, aoe:true, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 · 광역 + 공격 20%↑(2턴)', tag:'잠재특성' },
+  skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, aoe:true, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 · 광역 + 적 무작위 스탯 20%↓(2턴)', tag:'잠재특성' },
 };
 /* 잠재특성 id → 참고용 시그니처 스킬 id (현재 전투 미반영) */
 const TRAIT_SKILL_MAP = {
@@ -2058,8 +2152,8 @@ const TRAIT_SKILL_MAP = {
   trait_quantum_seeds:'skill_quantum',
 };
 const FORM_SKILLS = {
-  skill_pred_vamp:   { name:'흡혈 포식', icon:'🩸', cost:3, kind:'drain', power:130, lifesteal:0.7, desc:'위력130 · 피해 70% 흡혈', tag:'포식' },
-  skill_pred_absorb: { name:'유전자 흡수', icon:'🧬', cost:3, kind:'drain', power:100, steal:{stat:'both',pct:0.2}, desc:'위력100 · 적 공·방 20% 흡수', tag:'포식' },
+  skill_pred_vamp:   { name:'흡혈 포식', icon:'🩸', cost:3, kind:'drain', power:130, single:true, lifesteal:0.7, desc:'위력130 · 단일 · 피해 70% 흡혈', tag:'포식' },
+  skill_pred_absorb: { name:'유전자 흡수', icon:'🧬', cost:3, kind:'drain', power:100, single:true, steal:{stat:'both',pct:0.2}, desc:'위력100 · 단일 · 적 공·방 20% 흡수', tag:'포식' },
 };
 /* ===== 변이 카드 시스템 (변이형별 장착 카드) ===== */
 /* 카드가 자동 장착시키는 스킬. pred:true 표시는 포식 변이형 기본 스킬(DNA 카드로 강화됨). */
@@ -2149,8 +2243,8 @@ function skillById(id, unit){
     else if(unit && unit.weaponKey && typeof state!=='undefined' && state.weapons && state.weapons[unit.weaponKey] && state.weapons[unit.weaponKey].owned){ wk=unit.weaponKey; lv=state.weapons[unit.weaponKey].lv; }
     if(!wk) return { id, name:'무기 스킬 (미장착)', icon:'🗡️', cost:2, kind:'attack', power:100, desc:'상점에서 무기 구매 후 🧬변이형 탭에서 장착하세요', tag:'무기' };
     const W = WEAPONS[wk];
-    if(wk === 'blade') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(140*(1+0.1*lv)), critBonus:0.25, desc:`근거리 · 위력 ${Math.round(140*(1+0.1*lv))} · 치명타 25%`, tag:'무기' };
-    if(wk === 'cannon') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(110*(1+0.1*lv)), pierce:0.6, desc:`원거리 · 위력 ${Math.round(110*(1+0.1*lv))} · 방어 60% 무시`, tag:'무기' };
+    if(wk === 'blade') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(140*(1+0.1*lv)), single:true, critBonus:0.25, desc:`근거리 · 단일 · 위력 ${Math.round(140*(1+0.1*lv))} · 치명타 25%`, tag:'무기' };
+    if(wk === 'cannon') return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'attack', power:Math.round(110*(1+0.1*lv)), single:true, pierce:0.6, desc:`원거리 · 단일 · 위력 ${Math.round(110*(1+0.1*lv))} · 방어 60% 무시`, tag:'무기' };
     return { id, name:`${W.icon} ${W.name} Lv.${lv}`, icon:W.icon, cost:W.cost, kind:'guard', guardMult:0.35, counterPct:0.3+0.05*lv, desc:`방어 · 피해 65%↓ + 가시 반격`, tag:'무기' };
   }
   return ALL_SKILLS[id] || null;
@@ -2208,7 +2302,7 @@ function ensureSkillFields(p){
    현재 잠재특성은 생장 단계에서 발현될 패시브 분류로만 보관하며 전투에는 반영하지 않는다. */
 function plantPassives(traitIds){
   const P = {
-    hpPct:0, atkPct:0, defPct:0, spdPct:0, energyBonus:0,
+    hpPct:0, atkPct:0, defPct:0, spdPct:0, accPct:0, energyBonus:0,
     regenPct:0, reduceDmgPct:0, lifestealPct:0, reflectPct:0, critBonus:0,
     barrierPct:0, enemySpdDownStart:0, energyOnEnemySkill:0, cleanseChance:0,
     nextAtkBonus:0, surviveChance:0, surviveHpAfter:0,
@@ -2298,6 +2392,7 @@ function defaultState(){
     seed_inventory:[],
     item_inventory:[],
     trait_inventory:[],
+    potion_inventory:[],
     trait_cards:{},
     ship_part_inventory:[],
     ship_upgrade_materials:0,
@@ -2342,6 +2437,7 @@ function normalizeState(s){
   if(!Array.isArray(s.seed_inventory)) s.seed_inventory = [];
   if(!Array.isArray(s.item_inventory)) s.item_inventory = [];
   if(!Array.isArray(s.trait_inventory)) s.trait_inventory = [];
+  if(!Array.isArray(s.potion_inventory)) s.potion_inventory = [];
   if(!s.trait_cards || typeof s.trait_cards !== 'object' || Array.isArray(s.trait_cards)) s.trait_cards = {};
   if(!s.weapons) s.weapons = newArmory();
   s.plants.forEach(p => {
@@ -2384,6 +2480,39 @@ let explorationPanelMode = 'map';
 let planetPopupOpen = false;
 let selectedSeedInventoryId = null;
 let pendingPlantSeedId = null;
+let seedSortMode = 'rarity';
+const RARITY_ORDER = { common:0, uncommon:1, rare:2, epic:3, legendary:4 };
+const SEED_SELL_PRICE = { common:40, uncommon:90, rare:200, epic:420, legendary:850 };
+function seedSellPrice(seed, entry){
+  const base = SEED_SELL_PRICE[(seed && seed.rarity) || (entry && entry.rarity)] || 40;
+  return entry && entry.mutation_candidate ? Math.round(base * 1.4) : base;
+}
+function sortedSeedInventory(){
+  const inv = (state.seed_inventory || []).slice();
+  inv.sort((a, b) => {
+    const sa = ALIEN_INDEX.seeds[a.seed_id], sb = ALIEN_INDEX.seeds[b.seed_id];
+    if(seedSortMode === 'name') return ((a.name||(sa&&sa.name)||'')).localeCompare((b.name||(sb&&sb.name)||''));
+    if(seedSortMode === 'planet') return ((a.origin_planet||(sa&&sa.origin_planet)||'')).localeCompare((b.origin_planet||(sb&&sb.origin_planet)||''));
+    // rarity: 높은 등급 우선
+    const ra = RARITY_ORDER[(sa&&sa.rarity)||a.rarity] ?? 0, rb = RARITY_ORDER[(sb&&sb.rarity)||b.rarity] ?? 0;
+    return rb - ra;
+  });
+  return inv;
+}
+function sellSeed(inventoryId){
+  const idx = (state.seed_inventory||[]).findIndex(it => it.inventory_id === inventoryId);
+  if(idx < 0){ toast('종자를 찾을 수 없습니다'); return; }
+  const entry = state.seed_inventory[idx];
+  const seed = ALIEN_INDEX.seeds[entry.seed_id];
+  const price = seedSellPrice(seed, entry);
+  if(!confirm(`${entry.name||(seed&&seed.name)||'종자'}을(를) ${fmt(price)}💰에 판매할까요?`)) return;
+  state.seed_inventory.splice(idx, 1);
+  state.credits += price;
+  if(selectedSeedInventoryId === inventoryId) selectedSeedInventoryId = state.seed_inventory[0] ? state.seed_inventory[0].inventory_id : null;
+  saveState(); sfx.heal();
+  renderSeedBag(); renderMain();
+  toast(`+${fmt(price)}💰 (종자 판매)`);
+}
 let explorationShopCategory = 'fuel';
 let regionSheetSnap = 0; // 0 닫힘 · 1 지역버튼 · 2 세부정보까지
 let sheetAnimateUp = false; // 행성 선택 시 아래→위 슬라이드업 모션 1회
@@ -4306,7 +4435,10 @@ function createPlantInstanceFields(entry, seed, plant, customName){
 }
 function ensurePlantInstanceFields(p){
   if(!p) return p;
-  if(!p.up) p.up = { hp:0, atk:0, def:0, spd:0, elem:0 };
+  if(!p.up) p.up = { hp:0, atk:0, def:0, spd:0, acc:0, elem:0, crit:0, energy:0 };
+  if(typeof p.up.acc !== 'number') p.up.acc = 0;
+  if(typeof p.up.crit !== 'number') p.up.crit = 0;
+  if(typeof p.up.energy !== 'number') p.up.energy = 0;
   if(!p.mult) p.mult = { hp:1, atk:1, def:1, spd:1 };
   const seed = ALIEN_INDEX.seeds[p.seed_id || p.sourceSeedId] || null;
   p.unique_id = p.unique_id || `plant_${p.id || Date.now()}`;
@@ -4333,7 +4465,7 @@ function ensurePlantInstanceFields(p){
 function seedPlantReadiness(entry, seed){
   if(!entry) return { ok:false, reason:'종자를 선택하세요.' };
   if(!seed) return { ok:false, reason:'종자 데이터가 손상되었습니다.' };
-  if(state.plants.length >= MAX_PLANTS) return { ok:false, reason:`온실이 가득 찼습니다. 최대 ${MAX_PLANTS}개체까지 보유할 수 있습니다.` };
+  if(state.plants.length >= potCapacity()) return { ok:false, reason:`화분이 가득 찼습니다. 현재 ${potCapacity()}칸까지 키울 수 있습니다. (레벨업으로 최대 ${POT_MAX}칸)` };
   const storage = seedStorageStatus(seed);
   if(!storage.ok) return { ok:false, reason:`${storage.requiredName} 환경이 필요합니다.` };
   return { ok:true, reason:'심기 가능' };
@@ -4396,13 +4528,16 @@ function renderSeedDetail(entry){
     </div>
     <div class="shop-section">잠재특성 후보</div>
     <div class="seed-trait-list">${seedTraitPills(seed)}</div>
-    <button class="btn primary modal-close" id="plantSelectedSeed" data-plant-seed="${entry.inventory_id}" ${readiness.ok ? '' : 'disabled'} style="margin-top:12px;width:100%">심기</button>
+    <div class="seed-detail-actions">
+      <button class="btn primary modal-close" id="plantSelectedSeed" data-plant-seed="${entry.inventory_id}" ${readiness.ok ? '' : 'disabled'}>심기</button>
+      <button class="btn ghost" data-sell-seed="${entry.inventory_id}" style="border-color:rgba(255,211,74,.45);color:var(--gold)">판매 ${fmt(seedSellPrice(seed, entry))}💰</button>
+    </div>
   </div>`;
 }
 function plantSeedFromBag(inventoryId){
   const index = state.seed_inventory.findIndex(item => item.inventory_id === inventoryId);
   if(index < 0){ toast('종자를 찾을 수 없습니다'); return; }
-  if(state.plants.length >= MAX_PLANTS){ toast('온실이 가득 찼습니다 (최대 '+MAX_PLANTS+'마리)'); return; }
+  if(state.plants.length >= potCapacity()){ toast('화분이 가득 찼습니다 (현재 '+potCapacity()+'칸). 식물을 방생하거나 레벨을 올리세요'); return; }
   const entry = state.seed_inventory[index];
   const seed = ALIEN_INDEX.seeds[entry.seed_id];
   if(!seed){ toast('종자 데이터가 손상되었습니다'); return; }
@@ -4517,7 +4652,7 @@ function createPlantedPlantFromSeed(entry, seed, customName){
 function plantSeedFromBag(inventoryId, customName = ''){
   const index = state.seed_inventory.findIndex(item => item.inventory_id === inventoryId);
   if(index < 0){ toast('종자를 찾을 수 없습니다'); return; }
-  if(state.plants.length >= MAX_PLANTS){ toast('온실이 가득 찼습니다 (최대 '+MAX_PLANTS+'개체)'); return; }
+  if(state.plants.length >= potCapacity()){ toast('화분이 가득 찼습니다 (현재 '+potCapacity()+'칸). 식물을 방생하거나 레벨을 올리세요'); return; }
   const entry = state.seed_inventory[index];
   const seed = ALIEN_INDEX.seeds[entry.seed_id];
   if(!seed){ toast('종자 데이터가 손상되었습니다'); return; }
@@ -4557,17 +4692,19 @@ function renderSeedBag(){
       </div>
       <div class="ic-price">무료</div>
     </div>` : '';
-  const seedCards = inv.map(renderSeedBagCard).join('');
+  const seedCards = sortedSeedInventory().map(renderSeedBagCard).join('');
+  const sortBtn = (mode, label) => `<button class="seed-sort-btn ${seedSortMode===mode?'active':''}" data-seed-sort="${mode}">${label}</button>`;
   body.innerHTML = `
     <div class="seed-bag-top">
       <span class="stat">🌱 보유 종자 <b>${inv.length}/${cap || '-'}</b></span>
       <span class="stat">📦 남은 칸 <b>${cap ? free : '-'}</b></span>
       <span class="stat">🧪 보관 등급 <b>${grade}</b></span>
-      <span class="stat">🪴 보유 식물 <b>${state.plants.length}/${MAX_PLANTS}</b></span>
+      <span class="stat">🪴 화분 <b>${state.plants.length}/${potCapacity()}</b> <small style="color:var(--sub)">(최대 ${POT_MAX})</small></span>
     </div>
     <div class="howto" style="margin-bottom:10px">현재 보관 가능 환경: <b style="color:var(--neon)">${supportedStorage}</b></div>
     ${starterHelp}
     ${inv.length ? `
+      <div class="seed-sort-row"><span class="seed-sort-label">정렬</span>${sortBtn('rarity','희귀도순')}${sortBtn('name','이름순')}${sortBtn('planet','행성순')}</div>
       <div class="seed-bag-layout">
         <div class="seed-bag-list">${seedCards}</div>
         ${renderSeedDetail(selectedEntry)}
@@ -4575,6 +4712,12 @@ function renderSeedBag(){
     <button class="btn primary modal-close" id="seedBagExplore">우주맵으로 가기</button>`;
   const starter = $('#claimStarterSeed');
   if(starter) starter.addEventListener('click', claimStarterSeed);
+  document.querySelectorAll('#seedBagBody [data-seed-sort]').forEach(btn => {
+    btn.addEventListener('click', () => { seedSortMode = btn.dataset.seedSort; sfx.tap(); renderSeedBag(); });
+  });
+  document.querySelectorAll('#seedBagBody [data-sell-seed]').forEach(btn => {
+    btn.addEventListener('click', () => sellSeed(btn.dataset.sellSeed));
+  });
   document.querySelectorAll('#seedBagBody [data-select-seed]').forEach(card => {
     card.addEventListener('click', () => {
       selectedSeedInventoryId = card.dataset.selectSeed;
@@ -4802,12 +4945,17 @@ function calcStats(p){
   const b = SPECIES[p.species].base, a = p.geneAlloc, m = p.mult;
   const leftover = Math.max(0, GENE_BUDGET - (a.atk + a.def + a.spd));
   const g = growthStatMult(p);
+  const baseEnergy = (p.battle_stats && p.battle_stats.energy) || 3;
   return {
     hp:  Math.round(((b.hp  + leftover*6) * m.hp ) * g) + p.up.hp*15,
     atk: Math.round(((b.atk + a.atk*2)    * m.atk) * g) + p.up.atk*4,
     def: Math.round(((b.def + a.def*2)    * m.def) * g) + p.up.def*4,
     spd: Math.round(((b.spd + a.spd*1.5)  * m.spd) * g) + p.up.spd*3,
-    elemBonus: 1 + p.up.elem*0.1,
+    acc: clamp(86 + (p.up.acc||0)*2 + Math.round((m.atk-1)*8), 70, 99),
+    elem: Math.round((14 + (p.up.elem||0)*5) * g),           // 속성 수치(원소 스킬에 가산)
+    critRate: clamp(5 + (p.up.crit||0)*2, 0, 75),            // 치명타률 %
+    critMult: +(1.5).toFixed(2),                            // 치명타계수(배율)
+    energy: clamp(baseEnergy + (p.up.energy||0), 1, 9),      // 최대 에너지
   };
 }
 function activePlant(){ return state.plants.find(p=>p.id===state.activeId) || null; }
@@ -4832,7 +4980,7 @@ function createPlant(species, alloc){
     grade: gradeOf(mult), mult, awakened,
     form: f.form, predType: f.predType, weaponKey: null,
     geneAlloc: { atk:alloc.atk, def:alloc.def, spd:alloc.spd },
-    up: { hp:0, atk:0, def:0, spd:0, elem:0 },
+    up: { hp:0, atk:0, def:0, spd:0, acc:0, elem:0, crit:0, energy:0 },
   };
   state.serial++;
   return p;
@@ -4879,13 +5027,23 @@ function renderTournamentBar(){
 }
 function renderCollection(){
   const bar = $('#collectionBar');
-  bar.innerHTML = state.plants.map(p =>
-    `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
-      ${spriteFor(p,38)}
-      <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
-      ${p.form && p.form!=='normal' ? `<span class="f">${FORMS[p.form].icon}</span>` : ''}
-    </div>`).join('')
-    + `<div class="chip addchip" id="chipAdd">🎒</div>`;
+  const cap = potCapacity();
+  let html = '';
+  for(let i=0;i<POT_MAX;i++){
+    const p = state.plants[i];
+    if(p){
+      html += `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
+        ${spriteFor(p,38)}
+        <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
+        ${p.form && p.form!=='normal' ? `<span class="f">${FORMS[p.form].icon}</span>` : ''}
+      </div>`;
+    } else if(i < cap){
+      html += `<div class="chip potempty" data-plant-empty="1"><span class="pi">🪴</span><span class="potlabel">빈 화분</span></div>`;
+    } else {
+      html += `<div class="chip potlocked"><span class="pi">🔒</span><span class="potlabel">Lv.${potUnlockLevel(i)}</span></div>`;
+    }
+  }
+  bar.innerHTML = html;
 }
 function renderCenter(){
   const box = $('#centerPlant');
@@ -4906,6 +5064,7 @@ function renderCenter(){
       <span class="badge" style="color:${GRADES[p.grade]};border:1px solid ${GRADES[p.grade]}">등급 ${p.grade}</span>
       <span class="badge" style="color:${FORMS[p.form].color};border:1px solid ${FORMS[p.form].color}">${FORMS[p.form].icon} ${FORMS[p.form].name}${p.form==='pred' ? '·'+PRED_TYPES[p.predType].name : ''}</span>
       ${p.awakened ? `<span class="badge" style="color:var(--gold);border:1px solid var(--gold)">✦ ${STAT_NAMES[p.awakened]} 각성</span>` : ''}
+      ${p.potion ? `<span class="badge" style="color:#d48cff;border:1px solid #d48cff">${p.potion.icon||'🟣'} 독초</span>` : ''}
       ${p.form==='weapon' ? `<span class="badge" style="color:var(--gold);border:1px solid var(--gold)">${p.weaponKey ? WEAPONS[p.weaponKey].icon+' '+WEAPONS[p.weaponKey].name+' Lv.'+state.weapons[p.weaponKey].lv : '🗡️ 무기 미장착'}</span>` : ''}
     </div>
     <div class="statrow">
@@ -4913,7 +5072,10 @@ function renderCenter(){
       <span class="stat">⚔️ <b>${s.atk}</b></span>
       <span class="stat">🛡️ <b>${s.def}</b></span>
       <span class="stat">💨 <b>${s.spd}</b></span>
-      <span class="stat">${el.icon} <b>x${s.elemBonus.toFixed(1)}</b></span>
+      <span class="stat">🎯 <b>${s.acc}%</b></span>
+      <span class="stat">${el.icon} <b>${s.elem}</b></span>
+      <span class="stat">💥 <b>${s.critRate}%</b></span>
+      <span class="stat">⚡ <b>${s.energy}</b></span>
     </div>
     <div class="hint">▲ 식물을 탭하면 강화할 수 있어요</div>`;
 }
@@ -5013,8 +5175,11 @@ const UP_ROWS = [
   { k:'hp',   icon:'❤️', name:'생명력',   gain:'+15' },
   { k:'atk',  icon:'⚔️', name:'공격',     gain:'+4' },
   { k:'def',  icon:'🛡️', name:'방어',     gain:'+4' },
-  { k:'spd',  icon:'💨', name:'속도',     gain:'+3' },
-  { k:'elem', icon:'✨', name:'속성 강화', gain:'속성 스킬 위력 +10%' },
+  { k:'spd',  icon:'💨', name:'기동성',   gain:'+3' },
+  { k:'acc',  icon:'🎯', name:'적중',     gain:'+2%' },
+  { k:'elem', icon:'✨', name:'속성',     gain:'+5' },
+  { k:'crit', icon:'💥', name:'치명타률', gain:'+2%' },
+  { k:'energy', icon:'⚡', name:'에너지', gain:'최대 +1' },
 ];
 function upCost(level){ return Math.round(40 * Math.pow(1.5, level) / 10) * 10; }
 function weaponSectionHTML(p){
@@ -5069,12 +5234,17 @@ function renderPlantInstancePanel(p, stats){
       <span>안정성<b>${p.stability}%</b></span>
       <span>변이율<b>${pct(p.mutation_rate || 0)}</b></span>
       <span>속성 · 변이형<b>${ELEMENTS[p.element]?ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name:'-'} · ${FORMS[p.form]?FORMS[p.form].name:'일반 변이형'}</b></span>
-      <span>전투 능력치<b>❤️${stats.hp} ⚔️${stats.atk} 🛡️${stats.def} 💨${stats.spd}</b></span>
+      <span>전투 능력치<b>❤️${stats.hp} ⚔️${stats.atk} 🛡️${stats.def} 💨${stats.spd} 🎯${stats.acc}%</b></span>
+      <span>속성·치명·에너지<b>${ELEMENTS[p.element]?ELEMENTS[p.element].icon:'🔮'}${stats.elem} 💥${stats.critRate}%(×${stats.critMult}) ⚡${stats.energy}</b></span>
     </div>
-    <div class="growth-actions">
-      <button class="upbtn" data-grow-action="water" ${isMax ? 'disabled' : ''}>물 주기 +${GROWTH_ACTIONS.water.exp}</button>
-      <button class="upbtn" data-grow-action="fertilizer" ${isMax || state.credits < GROWTH_ACTIONS.fertilizer.cost ? 'disabled' : ''}>비료 주기 +${GROWTH_ACTIONS.fertilizer.exp} (${fmt(GROWTH_ACTIONS.fertilizer.cost)}💰)</button>
+    <div class="stat-tier-row">
+      ${['hp','atk','def','spd','acc','elem','critRate','energy'].map(k=>{
+        const v = k==='critRate' ? stats.critRate : stats[k];
+        const ti = statTierIndex(k, v);
+        return `<span class="st-pill st-t${ti}">${STAT_TIER_SHORT[k]} <b>${STAT_TIER_LABELS[ti]}</b></span>`;
+      }).join('')}
     </div>
+    <div class="howto" style="margin-top:8px">${isMax ? '최종 성장 단계에 도달했습니다.' : '🧪 <b>소모품</b> 탭에서 💧물·🌿비료·💊영양제를 사용하면 성장 경험치를 줄 수 있어요. (상점에서 구매)'}</div>
   </div>`;
 }
 function applyGrowthAction(actionKey){
@@ -5108,6 +5278,20 @@ function openUpgrade(){
   renderUpgrade();
   show('#upgradeModal');
 }
+function releasePlant(plantId){
+  const idx = state.plants.findIndex(x => x.id === plantId);
+  if(idx < 0){ toast('식물을 찾을 수 없습니다'); return; }
+  const p = state.plants[idx];
+  if(!confirm(`${p.custom_name||p.name}을(를) 방생할까요?\n화분이 비워지며 되돌릴 수 없습니다.`)) return;
+  // 진행 중인 토너먼트가 이 식물이면 종료
+  if(state.tournament && state.tournament.plantId === plantId) state.tournament.active = false;
+  state.plants.splice(idx, 1);
+  if(state.activeId === plantId) state.activeId = state.plants[0] ? state.plants[0].id : null;
+  saveState(); sfx.tap();
+  hide('#upgradeModal');
+  renderMain();
+  toast(`${p.custom_name||p.name}을(를) 방생했습니다`);
+}
 let upgradeTab = 'skill';
 function battleEffectText(be){
   switch(be.effect){
@@ -5138,10 +5322,16 @@ function traitPassiveText(t){
   return parts.join(' · ') || '효과 정보 없음';
 }
 const TRAIT_CAT_NAMES = { offense:'공격', defense:'방어', mobility:'기동', growth:'성장', mutation:'변이', utility:'유틸', control:'제어', support:'지원' };
+function skillAoeBadge(sk){
+  if(!sk || !(sk.power>0)) return '';
+  if(sk.aoe) return ' <span class="sc-aoe aoe">광역</span>';
+  if(sk.single) return ' <span class="sc-aoe single">단일</span>';
+  return '';
+}
 function skillCardHtml(id, sk, zone){
   const costLabel = (sk.cost||0)>0 ? `⚡${sk.cost}` : '무료';
   return `<button class="skill-card ${zone==='equipped'?'equipped':''}" data-skill-toggle="${id}" data-zone="${zone}">
-    <span class="sc-tag">${sk.tag||'스킬'}</span>${zone==='equipped'?'<span class="sc-x">✕ 해제</span>':''}
+    <span class="sc-tag">${sk.tag||'스킬'}${skillAoeBadge(sk)}</span>${zone==='equipped'?'<span class="sc-x">✕ 해제</span>':''}
     <div class="sc-name"><span>${sk.icon||''} ${sk.name}</span><span class="sc-cost">${costLabel}</span></div>
     <div class="sc-desc">${sk.desc||''}</div>
   </button>`;
@@ -5166,6 +5356,57 @@ function renderSkillTab(p){
     <div class="skill-section-label">보유 스킬 <small>탭하여 장착</small></div>
     <div class="skill-loadout">${bench}</div>`;
 }
+function potionOwnedCount(id){ return (((state.potion_inventory||[]).find(r=>r.potion_id===id))||{}).count || 0; }
+function traitSlotCap(p){ return clamp(Math.max(p.unlocked_trait_slots||1, (p.traits||[]).length), 1, 5); }
+function equipTrait(traitId){
+  toast('잠재특성은 아직 기획 분류만 제공되며 장착할 수 없습니다');
+}
+function unequipTrait(traitId){
+  toast('잠재특성은 아직 장착 상태가 없습니다');
+}
+function equipPotion(potionId){
+  const p = activePlant(); if(!p) return;
+  const row = (state.potion_inventory||[]).find(r=>r.potion_id===potionId);
+  if(!row || row.count<=0){ toast('물약이 없습니다'); return; }
+  if(p.potion && p.potion.id){ const back = (state.potion_inventory||[]).find(r=>r.potion_id===p.potion.id); if(back) back.count++; else state.potion_inventory.push({ potion_id:p.potion.id, count:1 }); }
+  row.count--;
+  if(row.count<=0) state.potion_inventory = state.potion_inventory.filter(r=>r!==row);
+  const P = POTIONS[potionId];
+  p.potion = { id:P.id, name:P.name, icon:P.icon, dot:P.dot };
+  saveState(); sfx.heal(); renderUpgrade(); renderMain();
+  toast(`${P.name} 장착! 식물이 🟣독초가 되었습니다`);
+}
+function unequipPotion(){
+  const p = activePlant(); if(!p || !p.potion) return;
+  const id = p.potion.id;
+  if(!Array.isArray(state.potion_inventory)) state.potion_inventory = [];
+  const back = state.potion_inventory.find(r=>r.potion_id===id);
+  if(back) back.count++; else state.potion_inventory.push({ potion_id:id, count:1 });
+  p.potion = null;
+  saveState(); sfx.tap(); renderUpgrade(); renderMain();
+  toast('물약을 해제했습니다');
+}
+function renderPotionSection(p){
+  const owned = (state.potion_inventory||[]).filter(r=>(r.count||0)>0);
+  const equipped = p.potion ? `<div class="trait-effect-row" style="border-color:rgba(212,140,255,.4)">
+      <div class="te-icon">${p.potion.icon||'🧪'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="te-name">${p.potion.name} <span class="te-cat">· 독초</span></div>
+        <div class="te-passive">☠️ 공격 시 ${dotName(p.potion.dot.kind)}(${p.potion.dot.turns}턴) 부여${p.potion.dot.debuff?` + ${debuffLabel(p.potion.dot.debuff)}`:''}</div>
+      </div>
+      <button class="upbtn" data-unequip-potion="1">해제</button>
+    </div>` : `<div class="muted">장착된 물약이 없습니다. 상점 <b>독초 물약</b>에서 구매해 장착하세요.</div>`;
+  const list = owned.map(r => {
+    const P = POTIONS[r.potion_id]; if(!P) return '';
+    const isOn = p.potion && p.potion.id===r.potion_id;
+    return `<div class="uprow">
+      <div class="un">${P.icon} ${P.name}<small>${P.desc}</small></div>
+      <div class="uv">×${r.count}</div>
+      <button class="upbtn" data-equip-potion="${r.potion_id}" ${isOn?'disabled':''}>${isOn?'장착중':'장착'}</button>
+    </div>`;
+  }).join('');
+  return `<div class="skill-section-label">🟣 독초 물약 <small>장착 시 공격에 독성 추가</small></div>${equipped}${list}`;
+}
 function renderTraitTab(p){
   const form = FORMS[p.form||'normal'] || FORMS.normal;
   const equipped = (p.equipped_trait_cards||[]).slice(0,5);
@@ -5184,11 +5425,14 @@ function renderTraitTab(p){
       <button class="upbtn" data-card-toggle="${cid}" style="${on?'background:rgba(92,242,194,.18);border-color:var(--neon);color:var(--neon)':''}">${on?'해제':'장착'}</button>
     </div>`;
   }).join('') : '<div class="muted">보유한 변이 카드가 없습니다. 변이 카드는 <b>상점 🎴 변이 카드 뽑기</b>나 <b>탐사 보상</b>으로만 얻을 수 있습니다.</div>';
+  const weaponBlock = p.form==='weapon' ? `<div class="skill-section-label">🗡️ 무기 장착 (무기 변이형)</div>${weaponSectionHTML(p)}` : '';
   return `
     <p class="tab-hint">이 식물의 변이형은 <b>${form.icon} ${form.name}</b>입니다. <b>공통</b> 카드와 <b>${form.cardLabel}</b> 카드만 최대 <b>5칸</b> 장착할 수 있습니다. 무기·물약 카드는 전투 스킬을 자동 장착하고, 포자 카드는 매 턴 발동합니다.</p>
     <div class="trait-slot-row">${slotRow}</div>
     <div class="skill-section-label">🎴 장착 가능한 ${form.cardLabel} 카드 <small>${equipped.length}/5</small></div>
-    ${cardRows}`;
+    ${cardRows}
+    ${renderPotionSection(p)}
+    ${weaponBlock}`;
 }
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
 function itemUsableOnPlant(item){
@@ -5231,7 +5475,7 @@ function renderConsumTab(p, s){
   const rows = UP_ROWS.map(r => {
     const lv = p.up[r.k];
     const cost = upCost(lv);
-    const cur = r.k==='elem' ? 'Lv.'+lv : (r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : s.spd);
+    const cur = r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : r.k==='spd'?s.spd : r.k==='acc'?s.acc+'%' : r.k==='elem'?s.elem : r.k==='crit'?s.critRate+'%' : r.k==='energy'?s.energy : lv;
     return `<div class="uprow">
       <div class="un">${r.icon} ${r.name}<small>강화당 ${r.gain} (현재 Lv.${lv})</small></div>
       <div class="uv">${cur}</div>
@@ -5273,8 +5517,10 @@ function renderUpgrade(){
       <button class="plant-tab ${upgradeTab==='skill'?'active':''}" data-tab="skill">🎴 스킬</button>
     </div>
     <div id="plantTabBody">${renderPlantTab(p, s)}</div>
+    <button class="btn ghost" id="releasePlantBtn" style="margin-top:12px;border-color:rgba(255,107,74,.4);color:#ff8a70">🪴 이 식물 방생 (화분 비우기)</button>
     <button class="btn modal-close" id="upgradeClose">닫기</button>`;
   bindUpgradeEvents(p);
+  $('#releasePlantBtn').addEventListener('click', () => releasePlant(p.id));
   $('#upgradeClose').addEventListener('click', () => { hide('#upgradeModal'); sfx.tap(); });
 }
 function bindUpgradeEvents(p){
@@ -5297,6 +5543,18 @@ function bindUpgradeEvents(p){
   });
   document.querySelectorAll('#upgradeBody [data-use-item]').forEach(btn => {
     btn.addEventListener('click', () => useItem(btn.dataset.useItem));
+  });
+  document.querySelectorAll('#upgradeBody [data-equip-trait]').forEach(btn => {
+    btn.addEventListener('click', () => equipTrait(btn.dataset.equipTrait));
+  });
+  document.querySelectorAll('#upgradeBody [data-unequip-trait]').forEach(btn => {
+    btn.addEventListener('click', () => unequipTrait(btn.dataset.unequipTrait));
+  });
+  document.querySelectorAll('#upgradeBody [data-equip-potion]').forEach(btn => {
+    btn.addEventListener('click', () => equipPotion(btn.dataset.equipPotion));
+  });
+  document.querySelectorAll('#upgradeBody [data-unequip-potion]').forEach(btn => {
+    btn.addEventListener('click', () => unequipPotion());
   });
   document.querySelectorAll('#upgradeBody [data-card-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -5398,6 +5656,56 @@ function shopRewardCountText(row){
 function shopBoxById(boxId){
   return SHOP_SUPPLY_BOXES.find(box => box.id === boxId);
 }
+function renderShopConsumables(){
+  const cards = SHOP_GROWTH_CONSUMABLES.map(c => {
+    const afford = state.credits >= c.price;
+    return `<button class="consum-card" data-buy-consum="${c.item_id}" ${afford?'':'disabled'}>
+      <div class="consum-icon">${c.icon}</div>
+      <div class="consum-name">${c.name} <small>×${c.unit}</small></div>
+      <div class="consum-exp">성장 +${c.exp}/개</div>
+      <div class="consum-price">${fmt(c.price)}💰</div>
+    </button>`;
+  }).join('');
+  return `<div class="shop-consum-grid">${cards}</div>`;
+}
+function buyConsumable(itemId){
+  const c = SHOP_GROWTH_CONSUMABLES.find(x => x.item_id === itemId);
+  if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
+  if(state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
+  const item = ALIEN_INDEX.items[c.item_id];
+  state.credits -= c.price;
+  addItemReward({
+    inventory_id:`item_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+    item_id:c.item_id, name:(item&&item.name)||c.name, item_type:(item&&item.item_type)||'nutrient',
+    rarity:'shop', count:c.unit, acquired_at:new Date().toISOString(), source:{ shop_consumable:true },
+  });
+  saveState(); sfx.heal(); renderShop(); renderMain();
+  toast(`${c.name} ×${c.unit} 구매! 🧪소모품 탭에서 사용하세요`);
+}
+function renderShopPotions(){
+  const cards = POTION_LIST.map(c => {
+    const owned = potionOwnedCount(c.id);
+    const afford = state.credits >= c.price;
+    return `<button class="consum-card" data-buy-potion="${c.id}" ${afford?'':'disabled'}>
+      <div class="consum-icon">${c.icon}</div>
+      <div class="consum-name">${c.name}${owned?` <small>×${owned}</small>`:''}</div>
+      <div class="consum-exp" style="color:#d48cff">${c.desc}</div>
+      <div class="consum-price">${fmt(c.price)}💰</div>
+    </button>`;
+  }).join('');
+  return `<div class="shop-consum-grid potion-grid">${cards}</div>`;
+}
+function buyPotion(potionId){
+  const c = POTIONS[potionId];
+  if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
+  if(state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
+  state.credits -= c.price;
+  if(!Array.isArray(state.potion_inventory)) state.potion_inventory = [];
+  const row = state.potion_inventory.find(r => r.potion_id === potionId);
+  if(row) row.count += 1; else state.potion_inventory.push({ potion_id:potionId, count:1 });
+  saveState(); sfx.heal(); renderShop(); renderMain();
+  toast(`${c.name} 구매! 🧬특성 탭에서 식물에 장착하세요`);
+}
 function renderShop(){
   $('#shopCredit').textContent = fmt(state.credits);
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
@@ -5414,6 +5722,9 @@ function renderShop(){
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
     renderShopBlock('변이 카드 뽑기', '변이 카드는 뽑기나 탐사 보상으로만 얻을 수 있습니다.', traitGacha) +
+    renderShopBlock('소모품', '💧물·🌿비료·💊영양제 — 10개 단위 · 크레딧 구매', renderShopConsumables()) +
+    renderShopBlock('독초 물약', '식물에 장착하면 공격에 독성이 추가됩니다 · 크레딧 구매', renderShopPotions()) +
+    renderShopBlock('변이 카드 뽑기', '변이 카드는 뽑기나 탐사 보상으로만 얻을 수 있습니다.', traitGacha) +
     renderShopBlock('보급상자', '상자를 선택하면 확률표를 확인할 수 있습니다.', consumableBoxes + traitBoxes) +
     renderShopBlock('탐사선 아이템', '추후 추가 예정', shipItems);
   document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
@@ -5421,6 +5732,12 @@ function renderShop(){
       sfx.tap();
       openShopBoxInfo(card.dataset.shopBox);
     });
+  });
+  document.querySelectorAll('#shopList [data-buy-consum]').forEach(card => {
+    card.addEventListener('click', () => buyConsumable(card.dataset.buyConsum));
+  });
+  document.querySelectorAll('#shopList [data-buy-potion]').forEach(card => {
+    card.addEventListener('click', () => buyPotion(card.dataset.buyPotion));
   });
   const gb = $('#traitGachaBtn');
   if(gb) gb.addEventListener('click', () => {
@@ -5544,7 +5861,7 @@ function revealShopBox(){
 /* ================= 전투 (스킬 로드아웃 + 변이 카드 효과 + 토너먼트) ================= */
 let B = null;
 function eff(a, d){ return ELEMENTS[a].strong.includes(d) ? 1.5 : (ELEMENTS[d].strong.includes(a) ? 0.67 : 1); }
-function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'속도':s; }
+function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'기동성':s==='acc'?'적중':s; }
 function dotIcon(k){ return k==='poison'?'🟣':k==='bleed'?'🩸':k==='burn'?'🔥':'☠️'; }
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
@@ -5576,8 +5893,13 @@ function makeCombatant(src){
     atk:Math.max(1,Math.round(bs.atk*(1+(P.atkPct||0)))),
     def:Math.max(1,Math.round(bs.def*(1+(P.defPct||0)))),
     spd:Math.max(1,Math.round(bs.spd*(1+(P.spdPct||0)))),
-    elemBonus:bs.elemBonus||1,
-    energy: clamp(2 + (P.energyBonus||0), 0, 5),
+    acc:clamp(Math.round((bs.acc||90)*(1+(P.accPct||0))), 50, 100),
+    potion:src.potion||null,
+    elem: Math.max(0, Math.round(bs.elem||0)),
+    critRate: clamp((bs.critRate||5), 0, 90),
+    critMult: bs.critMult || 1.5,
+    energyMax: clamp((bs.energy||3) + (P.energyBonus||0), 1, 9),
+    energy: Math.min(clamp((bs.energy||3) + (P.energyBonus||0), 1, 9), 3),
     guard:null, traits:src.traits||[], passives:P,
     cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
     loadout, skipNext:false,
@@ -5596,13 +5918,17 @@ function buildEnemy(roundIndex, tierIndex, ps){
   const atk = Math.max(8, Math.round(ps.atk*diff*rand(0.95,1.08)));
   const def = Math.max(6, Math.round(ps.def*diff*rand(0.95,1.08)));
   const spd = Math.max(6, Math.round(ps.spd*diff*rand(0.95,1.08)));
+  const acc = clamp(Math.round((ps.acc||88)*rand(0.95,1.04)), 60, 99);
+  const elem = Math.max(0, Math.round((ps.elem||16)*diff*rand(0.95,1.08)));
+  const critRate = clamp(5 + tierIndex*2 + roundIndex, 0, 60);
+  const energyMax = clamp((ps.energy||3) + (tierIndex>3?1:0), 1, 9);
   const grade = tierIndex>=5?'S':tierIndex>=3?'A':tierIndex>=1?'B':'C';
   const loadout=['skill_basic_strike', elementSkillId(el)];
   loadout.push('skill_guard','skill_photosynthesis');
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, species:sp, element:el, grade, awakened:null,
-    form, predType, weapon:null, baseStats:{hp,atk,def,spd,elemBonus:1+tierIndex*0.04}, traits,
+    form, predType, weapon:null, baseStats:{hp,atk,def,spd,acc,elem,critRate,critMult:1.5,energy:energyMax}, traits,
     loadout:loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,6),
   });
 }
@@ -5625,12 +5951,12 @@ function startMatch(){
     ? { key:p.weaponKey, lv:state.weapons[p.weaponKey].lv } : null;
   const playerC = makeCombatant({
     name:plantDisplayName(p), species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
-    form:p.form||'normal', predType:p.predType||null, weapon:wpn,
+    form:p.form||'normal', predType:p.predType||null, weapon:wpn, potion:p.potion||null,
     seedType:seedTypeOf(p), growth:p.growth_stage,
-    baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,elemBonus:s.elemBonus},
+    baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
     traits:p.traits, loadout:p.equipped_skills.slice(), cards:(p.equipped_trait_cards||[]).slice(),
   });
-  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd});
+  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
   B = { p:playerC, e:enemyC, over:false, busy:false };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
@@ -5681,7 +6007,7 @@ function updateBars(){
   $('#eHpText').textContent = `${Math.max(0,B.e.hp)} / ${B.e.max}` + statusTags(B.e);
   $('#pHpText').textContent = `${Math.max(0,B.p.hp)} / ${B.p.max}` + statusTags(B.p);
   let pips = '';
-  for(let i=0;i<5;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
+  for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#pEnergy').innerHTML = pips;
   document.querySelectorAll('#moveButtons [data-skill]').forEach(btn => {
     const id = btn.dataset.skill;
@@ -5722,7 +6048,7 @@ async function applySkill(a, d, s, side){
   const tgtSide = side==='p' ? 'e' : 'p';
   a.guard = null;
   if(s.cost) a.energy = Math.max(0, a.energy - s.cost);
-  if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike') d.energy = Math.min(5, d.energy + d.passives.energyOnEnemySkill);
+  if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike') d.energy = Math.min(d.energyMax, d.energy + d.passives.energyOnEnemySkill);
   blog(`<span class="em">${a.name}</span> ▶ ${s.icon||''} ${s.name}`);
   if(s.guardMult != null){
     const counter = s.counterPct ? Math.round(effStat(a,'atk')*s.counterPct) : 0;
@@ -5730,23 +6056,37 @@ async function applySkill(a, d, s, side){
     blog(`▶ 🛡️ 받는 피해 ${Math.round((1-s.guardMult)*100)}%↓${counter?` · 반격 ${counter} 준비`:''}`);
     sfx.tap();
   }
-  if(s.energyGain){ a.energy = Math.min(5, a.energy + s.energyGain); blog(`▶ ⚡ ${s.energyGain} 충전`); }
+  if(s.energyGain){ a.energy = Math.min(a.energyMax, a.energy + s.energyGain); blog(`▶ ⚡ ${s.energyGain} 충전`); }
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg) blog(`▶ 🧼 디버프 ${neg}개 해제`); }
-  if(s.heal){ const h = Math.round(a.max*s.heal); a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); blog(`▶ ☀️ 체력 ${h} 회복`); sfx.heal(); }
-  if(s.selfBuff){ a.buffs.push({stat:s.selfBuff.stat,pct:s.selfBuff.pct,turns:s.selfBuff.turns,kind:'buff'}); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(s.selfBuff.pct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct); a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
+  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.power && s.power>0){
-    let power = s.power * (s.elem ? a.elemBonus : 1), crit=false;
-    const critChance = (s.critBonus||0) + (a.passives.critBonus||0);
-    if(critChance>0 && Math.random()<critChance){ power*=1.6; crit=true; }
-    const defFactor = 0.6 * (1 - (s.pierce||0));
-    const elemMult = s.elem ? eff(a.element, d.element) : 1;
-    let dm = effStat(a,'atk')*power/100 - effStat(d,'def')*defFactor;
-    dm = Math.max(2, dm) * elemMult * rand(0.9,1.1);
+    // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
+    const isAoe = !!s.aoe;
+    const accMod = isAoe ? 10 : (s.single ? -7 : 0);
+    const effAcc = (a.acc||90) + accMod + (s.accBonus||0);
+    const dodge = clamp(30 + (effStat(d,'spd') - effAcc), 5, 90);
+    if(Math.random()*100 < dodge){
+      popup(tgtSide,'MISS',false);
+      blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(회피 ${dodge}%)</span>`);
+      sfx.tap();
+      updateBars(); await sleep(620); return;
+    }
+    // 데미지 = 공격×위력%(노멀) + 속성수치×타입배율(원소) − 방어(고정)
+    const normal = effStat(a,'atk') * s.power / 100;
+    let elemMult = 1, elementPart = 0;
+    if(s.elem){ elemMult = eff(a.element, d.element); elementPart = (a.elem||0) * elemMult; }
+    const flatDef = effStat(d,'def') * (1 - (s.pierce||0));
+    let dm = Math.max(1, (normal + elementPart) - flatDef);
+    // 치명타: 방어까지 계산된 최종 데미지에 치명타계수를 곱한다
+    const critChance = (a.critRate||0)/100 + (s.critBonus||0) + (a.passives.critBonus||0);
+    let crit = critChance>0 && Math.random()<critChance;
+    if(crit) dm *= (a.critMult||1.5);
     if(a.nextAtk){ dm *= (1+a.nextAtk); a.nextAtk=0; }
     if(d.guard) dm *= d.guard.mult;
     if(d.passives.reduceDmgPct) dm *= (1 - d.passives.reduceDmgPct);
     if(s.elem && d.passives.elementReduce[a.element]) dm *= (1 - d.passives.elementReduce[a.element]);
-    dm = Math.round(dm);
+    dm = Math.max(1, Math.round(dm * rand(0.97,1.03)));
     if(d.barrier>0){ const ab=Math.min(d.barrier,dm); d.barrier-=ab; dm-=ab; if(ab>0) blog(`▶ 🧊 보호막이 ${ab} 흡수`); }
     d.hp = Math.max(0, d.hp - dm);
     if(d.hp<=0 && d.passives.surviveChance>0 && Math.random()<d.passives.surviveChance){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
@@ -5768,6 +6108,7 @@ async function applySkill(a, d, s, side){
     if(a.passives.defDownOnHit>0) d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'});
     if(s.enemyDebuff){ applyEnemyDebuff(d, s.enemyDebuff); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(a.potion && a.potion.dot){ const pd=a.potion.dot; const ddmg=Math.max(1,Math.round(effStat(a,'atk')*pd.pct)); d.dots.push({kind:pd.kind,dmg:ddmg,turns:pd.turns,icon:dotIcon(pd.kind)}); blog(`▶ ${a.potion.icon||'🧪'} ${a.potion.name} 독성 — ${dotName(pd.kind)}(${pd.turns}턴 · 턴당 ${ddmg})`); if(pd.debuff){ applyEnemyDebuff(d, pd.debuff); blog(`▶ 🔻 ${debuffLabel(pd.debuff)}`); } }
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
@@ -5809,7 +6150,10 @@ async function playerSkill(skillId){
   if(B.p.energy < (s.cost||0)){ toast('⚡에너지가 부족합니다'); return; }
   B.busy = true; updateBars();
   const eId = aiPickSkill(B.e);
-  const order = effStat(B.p,'spd') >= effStat(B.e,'spd') ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
+  // 선제공격 = 50 + (내 기동성 − 상대 기동성) % (5~95 제한)
+  const firstChance = clamp(50 + (effStat(B.p,'spd') - effStat(B.e,'spd')), 5, 95);
+  const playerFirst = Math.random()*100 < firstChance;
+  const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
   for(const [side, k] of order){
     const a = side==='p' ? B.p : B.e;
     const d = side==='p' ? B.e : B.p;
@@ -5821,10 +6165,10 @@ async function playerSkill(skillId){
   }
   await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await endMatch(true); return; } if(B.p.hp<=0){ await endMatch(false); return; }
   await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await endMatch(false); return; } if(B.e.hp<=0){ await endMatch(true); return; }
-  B.p.energy = Math.min(5, B.p.energy+1);
-  B.e.energy = Math.min(5, B.e.energy+1);
-  if(B.p.energy>=5 && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
-  if(B.e.energy>=5 && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
+  B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
+  B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
+  if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
+  if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
   B.busy = false; updateBars();
 }
 async function surrenderMatch(){
@@ -5931,7 +6275,7 @@ $('#btnStart').addEventListener('click', () => {
 $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
-$('#btnSeedBag').addEventListener('click', () => { sfx.tap(); openSeedBag(); });
+$('#btnBagCenter').addEventListener('click', () => { sfx.tap(); openSeedBag(); });
 /* 하단 헤더 네비게이션 (상점 / 탐사 / 식물·전투 / 모드 / 길드) */
 const LOCKED_SECTIONS = {
   mode:  { emoji:'🎮', title:'모드', desc:'생존·레이드·이벤트 등 다양한 특수 대전 모드가 이곳에 열릴 예정입니다.<br>조금만 기다려 주세요!' },
@@ -5963,7 +6307,9 @@ $('#collectionBar').addEventListener('click', (ev) => {
   const chip = ev.target.closest('.chip');
   if(!chip) return;
   sfx.tap();
-  if(chip.id === 'chipAdd'){ openSeedBag(); return; }
+  if(chip.classList.contains('potempty')){ openSeedBag(); return; }
+  if(chip.classList.contains('potlocked')){ toast('화분 칸은 플레이어 레벨이 오르면 열립니다'); return; }
+  if(!chip.dataset.id) return;
   state.activeId = +chip.dataset.id;
   saveState(); renderMain();
 });
