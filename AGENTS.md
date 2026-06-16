@@ -1,6 +1,6 @@
 # 풀로세움 (Pulloseum) — 프로젝트 안내
 
-> 다른 PC에서 이 폴더를 Claude Code로 열면 이 파일을 먼저 읽고 맥락을 파악하세요.
+> 다른 PC에서 이 폴더를 Codex로 열면 이 파일을 먼저 읽고 맥락을 파악하세요.
 
 ## 한 줄 소개
 미래 우주 배경의 **식물 배틀 콜로세움** 웹게임. 외계 행성을 탐사해 종자를 모으고, 식물을 키워 토너먼트에서 싸운다. (장르: 방치형 + 포켓몬식 턴제 전투 + 수집/육성)
@@ -8,7 +8,7 @@
 ## 실행 방법
 - **가장 간단:** `index.html`을 브라우저로 더블클릭 (외부 의존성 없음 — 데이터가 파일 안에 내장됨)
 - **로컬 서버로 보기:** PowerShell에서
-  `powershell -NoProfile -ExecutionPolicy Bypass -File .claude/serve.ps1 -Port 8765` → `http://localhost:8765`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File .Codex/serve.ps1 -Port 8765` → `http://localhost:8765`
 - 빌드 과정 없음. 순수 HTML/CSS/JS(바닐라).
 
 ## 구조 (중요)
@@ -38,25 +38,10 @@
 - 상점 가챠 박스(특성/소모품 뽑기)
 - 세이브 내보내기/가져오기(기기 간 이동용)
 - 용족·독초 등 추가 분화 형질
-- **특성·종자·생장 시스템 대확장** → 설계/방향 문서: [`docs/trait-growth-roadmap.md`](docs/trait-growth-roadmap.md)
-  (종자 종류·생장단계 구체화는 향후 지시 예정. **특성 카드 시스템은 2026-06-16 구현 완료.**)
 
 ---
 
 ## 변경 이력 (개발 로그)
-
-### 2026-06-16 — 특성 카드 시스템 구현
-형질을 3종 → **7종**(일반/포식/무기/독성/포자/발광/용족)으로 확장하고, **특성 카드 장착칸 5개**를 신설.
-형질별로 장착 가능한 카드 카테고리가 다름(공통/DNA/무기/물약/포자/엽록체). 핵심 코드: `FORMS`,
-`TRAIT_CARDS`, `CARD_SKILLS`, `formCardPool()`, `cardEffects()`, `makeCombatant`(카드 효과 합산),
-`renderTraitTab()`(장착 UI), `rollForm()`(새 형질 분화).
-- 무기/물약 카드 → 전투 스킬 자동 장착(검/방패/도끼/총/강산/가스)
-- 포식형 DNA → 포식 스킬 흡혈·공격력·에너지 강탈 강화
-- 독성형 독가시 → 모든 공격에 독속성 추가 피해(`poisonCoef`)
-- 포자형 → 매 턴 마비/중독/방해 발동(`tickStatuses`)
-- 발광형 → 턴당 에너지·체력 회복
-- 기존 세이브 무회귀: `equipped_trait_cards`가 비면 전투가 종전과 100% 동일.
-- 상세 설계·잔여 항목: [`docs/trait-growth-roadmap.md`](docs/trait-growth-roadmap.md)
 
 ### 2026-06-15 — 기획서 기반 대규모 업그레이드
 원본은 `바탕 화면/풀로세움 기획서.pdf`(= `_analysis/pdf_pages/page_01~09`). 이 기획서를 기준으로 비어 있던 부분을 채웠다.
