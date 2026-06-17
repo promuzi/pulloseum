@@ -589,6 +589,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   <section id="mainScreen" class="screen hidden">
     <header class="topbar">
       <div class="res">💰 <span id="creditView">0</span></div>
+      <div class="res">💠 <span id="mineralView">0</span></div>
       <div class="res">🧭 Lv <span id="levelView">1</span></div>
       <div class="res">🏆 <span id="rankView">브론즈</span> <span style="opacity:.7;font-weight:600">· <span id="rankPointView">0</span>p</span></div>
       <div class="spacer"></div>
@@ -670,6 +671,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <h2>🛒 상점</h2>
     <div class="shop-wallet">
       <span class="stat">보유 크레딧 <b id="shopCredit" style="color:var(--gold)"></b> 💰</span>
+      <span class="stat">미네랄 <b id="shopMineral" style="color:var(--neon)"></b> 💠</span>
     </div>
     <div class="cardlist" id="shopList"></div>
   </div>
@@ -2382,7 +2384,7 @@ function newExplorerShip(){
 function defaultState(){
   const starterShip = newExplorerShip();
   return {
-    credits:80, money:80, player_level:1, rank:1, serial:1,
+    credits:80, money:80, minerals:0, player_level:1, rank:1, serial:1,
     rankTier:0, rankPoints:0, tournament:null,
     plants:[], activeId:null, sound:true, weapons:newArmory(),
     exploration_ship:starterShip,
@@ -2402,6 +2404,7 @@ function normalizeState(s){
   if(typeof s.credits !== 'number' && typeof s.money === 'number') s.credits = s.money;
   if(typeof s.credits !== 'number') s.credits = 80;
   if(typeof s.money !== 'number') s.money = s.credits;
+  if(typeof s.minerals !== 'number') s.minerals = 0;
   if(typeof s.player_level !== 'number') s.player_level = Math.max(1, s.rank || 1);
   if(typeof s.rankPoints !== 'number') s.rankPoints = 0;
   if(typeof s.rankTier !== 'number') s.rankTier = rankTierIndexFromPoints(s.rankPoints);
@@ -2448,6 +2451,18 @@ function normalizeState(s){
 }
 let state = loadState();
 function syncPlayerMoney(){ state.money = state.credits; }
+
+/* ===== 재화(財貨) 입출 통합 창구 =====
+   크레딧/미네랄 증감은 반드시 이 함수들만 거치게 한다.
+   (향후 서버 검증·결제·부정행위 방어를 여기 한 곳에서 처리하기 위함)
+   - 크레딧: 게임 내에서 버는 기본 재화
+   - 미네랄: 현질(인앱결제) 전용 재화. 현재는 보유/표시만, 구매 사용처는 아직 없음 */
+function addCredits(amount){ state.credits = Math.max(0, (state.credits || 0) + amount); state.money = state.credits; return state.credits; }
+function spendCredits(amount){ if((state.credits || 0) < amount) return false; addCredits(-amount); return true; }
+function canAffordCredits(amount){ return (state.credits || 0) >= amount; }
+function addMinerals(amount){ state.minerals = Math.max(0, (state.minerals || 0) + amount); return state.minerals; }
+function spendMinerals(amount){ if((state.minerals || 0) < amount) return false; addMinerals(-amount); return true; }
+function canAffordMinerals(amount){ return (state.minerals || 0) >= amount; }
 function saveState(){ try{ syncPlayerMoney(); localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){} }
 function loadState(){
   try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY));
@@ -2507,7 +2522,7 @@ function sellSeed(inventoryId){
   const price = seedSellPrice(seed, entry);
   if(!confirm(`${entry.name||(seed&&seed.name)||'종자'}을(를) ${fmt(price)}💰에 판매할까요?`)) return;
   state.seed_inventory.splice(idx, 1);
-  state.credits += price;
+  addCredits(price);
   if(selectedSeedInventoryId === inventoryId) selectedSeedInventoryId = state.seed_inventory[0] ? state.seed_inventory[0].inventory_id : null;
   saveState(); sfx.heal();
   renderSeedBag(); renderMain();
@@ -4077,7 +4092,7 @@ function upgradeShipStat(upgradeId){
   const usesMaterial = (state.ship_upgrade_materials || 0) > 0;
   const cost = shipUpgradeFinalCost(upgrade);
   if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
-  state.credits -= cost;
+  spendCredits(cost);
   if(usesMaterial) state.ship_upgrade_materials = Math.max(0, (state.ship_upgrade_materials || 0) - 1);
   ship.upgrade_levels = ship.upgrade_levels || {};
   ship.upgrade_levels[upgrade.id] = (ship.upgrade_levels[upgrade.id] || 0) + 1;
@@ -4105,7 +4120,7 @@ function buyExplorationShopItem(itemId){
   if(!item){ toast('상품 데이터를 찾을 수 없습니다'); return; }
   const buyState = explorationShopBuyState(item);
   if(!buyState.ok){ toast(buyState.reasons[0] || '구매할 수 없습니다'); return; }
-  if(item.price > 0) state.credits -= item.price;
+  if(item.price > 0) spendCredits(item.price);
   const ship = state.exploration_ship || newExplorerShip();
   if(item.type === 'fuel'){
     ship.stats.fuel = Math.min(shipStat(ship, 'max_fuel'), (ship.stats.fuel || 0) + item.amount);
@@ -4133,7 +4148,7 @@ function buyExplorationShopItem(itemId){
     return;
   }
   if(item.type === 'starter_seed'){
-    state.credits += item.price;
+    addCredits(item.price);
     claimStarterSeed();
     renderExploration();
     return;
@@ -4144,7 +4159,7 @@ function upgradeScanner(){
   if(bonus >= MAX_SCANNER_BONUS){ toast('스캐너가 이미 최대 강화입니다'); return; }
   const cost = scannerUpgradeCost();
   if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
-  state.credits -= cost;
+  spendCredits(cost);
   state.exploration_equipment_bonus = +(Math.min(MAX_SCANNER_BONUS, bonus + SCANNER_UPGRADE_STEP).toFixed(3));
   state.exploration_ship.stats.scanner_bonus = state.exploration_equipment_bonus;
   state.exploration_ship.stats.rare_seed_bonus = state.exploration_equipment_bonus;
@@ -4158,7 +4173,7 @@ function upgradeSeedStorageCapacity(){
   const cost = storageCapacityUpgradeCost();
   if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
   const ship = state.exploration_ship || newExplorerShip();
-  state.credits -= cost;
+  spendCredits(cost);
   const nextCap = Math.min(MAX_SEED_STORAGE_CAPACITY, cap + STORAGE_CAPACITY_UPGRADE_STEP);
   ship.stats.seed_storage_capacity = nextCap;
   ship.stats.cargo_slots = Math.max(ship.stats.cargo_slots || 0, nextCap);
@@ -4174,7 +4189,7 @@ function upgradeSeedStorageEnvironment(){
   const cost = storageEnvironmentUpgradeCost();
   if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
   const ship = state.exploration_ship || newExplorerShip();
-  state.credits -= cost;
+  spendCredits(cost);
   ship.stats.seed_storage_environment_grade = nextGradeValue;
   ship.stats.seed_storage_environment = nextGradeValue;
   state.exploration_ship = ship;
@@ -4220,7 +4235,7 @@ function executeExploration(planet, region){
   const partialReward = !success && Math.random() < 0.18;
 
   ship.stats.fuel = Math.max(0, (ship.stats.fuel || 0) - fuelCost);
-  state.credits -= planetCost(planet);
+  spendCredits(planetCost(planet));
 
   const rewards = success || partialReward
     ? rollExplorationRewards(planet, region, successMargin, partialReward)
@@ -4990,6 +5005,7 @@ function createPlant(species, alloc){
 function renderMain(){
   syncPlayerMoney();
   $('#creditView').textContent = fmt(state.credits);
+  { const mv = $('#mineralView'); if(mv) mv.textContent = fmt(state.minerals || 0); }
   $('#levelView').textContent = state.player_level;
   const tier = currentRankTier();
   const rv = $('#rankView');
@@ -5128,7 +5144,7 @@ function renderGeneForm(){
 async function startIncubation(){
   if(genePending.cost > 0){
     if(state.credits < genePending.cost){ toast('크레딧이 부족합니다'); return; }
-    state.credits -= genePending.cost;
+    spendCredits(genePending.cost);
     renderMain();
   }
   const sp = SPECIES[genePending.species];
@@ -5254,7 +5270,7 @@ function applyGrowthAction(actionKey){
   ensurePlantInstanceFields(p);
   if(p.growth_stage === 'evolved'){ toast('이미 최종 성장 단계입니다'); return; }
   if(state.credits < action.cost){ toast('크레딧이 부족합니다'); return; }
-  state.credits -= action.cost;
+  spendCredits(action.cost);
   p.growth_exp += action.exp;
   p.growth_history.push({ event:actionKey, amount:action.exp, growth_stage:p.growth_stage, level:p.level, at:new Date().toISOString() });
   let evolved = false;
@@ -5535,7 +5551,7 @@ function bindUpgradeEvents(p){
       const k = btn.dataset.up;
       const cost = upCost(p.up[k]);
       if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
-      state.credits -= cost;
+      spendCredits(cost);
       p.up[k]++;
       saveState(); sfx.heal();
       renderUpgrade(); renderMain();
@@ -5598,7 +5614,7 @@ function bindUpgradeEvents(p){
       const k = btn.dataset.wup;
       const cost = wUpCost(state.weapons[k].lv);
       if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
-      state.credits -= cost;
+      spendCredits(cost);
       state.weapons[k].lv++;
       saveState(); sfx.heal();
       renderUpgrade(); renderMain();
@@ -5673,7 +5689,7 @@ function buyConsumable(itemId){
   if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
   if(state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
   const item = ALIEN_INDEX.items[c.item_id];
-  state.credits -= c.price;
+  spendCredits(c.price);
   addItemReward({
     inventory_id:`item_${Date.now()}_${Math.floor(Math.random()*10000)}`,
     item_id:c.item_id, name:(item&&item.name)||c.name, item_type:(item&&item.item_type)||'nutrient',
@@ -5699,7 +5715,7 @@ function buyPotion(potionId){
   const c = POTIONS[potionId];
   if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
   if(state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
-  state.credits -= c.price;
+  spendCredits(c.price);
   if(!Array.isArray(state.potion_inventory)) state.potion_inventory = [];
   const row = state.potion_inventory.find(r => r.potion_id === potionId);
   if(row) row.count += 1; else state.potion_inventory.push({ potion_id:potionId, count:1 });
@@ -5708,6 +5724,7 @@ function buyPotion(potionId){
 }
 function renderShop(){
   $('#shopCredit').textContent = fmt(state.credits);
+  { const sm = $('#shopMineral'); if(sm) sm.textContent = fmt(state.minerals || 0); }
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
   const currency = renderShopLane(SHOP_CURRENCY_PACKS);
   const consumableBoxes = `<div class="shop-subtitle">소모품 상자</div>` + renderShopLane(supplyBoxesByGroup('consumable'), item => `data-shop-box="${item.id}"`);
@@ -5742,7 +5759,7 @@ function renderShop(){
   const gb = $('#traitGachaBtn');
   if(gb) gb.addEventListener('click', () => {
     if(state.credits < TRAIT_CARD_GACHA_PRICE){ toast('크레딧이 부족합니다'); return; }
-    state.credits -= TRAIT_CARD_GACHA_PRICE;
+    spendCredits(TRAIT_CARD_GACHA_PRICE);
     const c = grantRandomTraitCard();
     saveState(); sfx.win(); renderShop(); renderMain();
     toast(`🎴 ${c.icon} ${c.name} 획득! (${TRAIT_CARD_TYPE_NAMES[c.type]} 카드)`);
@@ -5836,7 +5853,7 @@ function buyShopBox(boxId){
   const box = shopBoxById(boxId);
   if(!box){ toast('상자 정보를 찾을 수 없습니다'); return; }
   if(state.credits < box.price){ toast('크레딧이 부족합니다'); return; }
-  state.credits -= box.price;
+  spendCredits(box.price);
   pendingShopOpening = { box, reward:rollShopBoxReward(box), revealed:false, granted:false };
   saveState();
   hide('#shopBoxModal');
@@ -6204,7 +6221,7 @@ async function endMatch(won){
   const p = state.plants.find(x=>x.id===T.plantId);
   if(won){ blog(`<span class="em">${B.e.name}</span> 쓰러졌다!`); sfx.win(); } else { blog(`<span class="em">${B.p.name}</span> 쓰러졌다…`); sfx.lose(); }
   const gain = won ? round.reward + (state.rankTier||0)*30 : Math.round(round.reward*0.25)+10;
-  state.credits += gain;
+  addCredits(gain);
   let xpAmt = 0;
   if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); state.player_level = (state.player_level||1) + 1; }
 
@@ -6239,7 +6256,7 @@ async function endMatch(won){
   if(outcome==='champion'){
     const pts = TOURNAMENT_ROUNDS.reduce((a,r)=>a+r.point,0);
     const champBonus = 200 + (state.rankTier||0)*120;
-    state.rankPoints += pts + champBonus; state.credits += champBonus;
+    state.rankPoints += pts + champBonus; addCredits(champBonus);
     const promoted = checkPromotion();
     title='👑 우승! 콜로세움 제패!';
     body=`전 경기를 석권했습니다!<br>우승 보너스 <b>+${fmt(champBonus)}💰</b><br>랭크 포인트 <b>+${pts+champBonus}</b> (누적 ${fmt(state.rankPoints)})${promoted?`<br>🎉 <b style="color:var(--neon)">${currentRankTier().name} 승급!</b>`:''}`;
