@@ -45,6 +45,23 @@
 
 ## 변경 이력 (개발 로그)
 
+### 2026-06-17 — 상단 인터페이스 재설계 + 식물별 티어 시스템
+메인 상단을 기획 이미지(클래시 로얄/스쿼드버스터즈식)대로 재구성.
+1. **재화 헤더 신설(`#topHeader`)** — 화면 최상단 `position:fixed; z-index:70`으로 고정.
+   상점/탐사/모드 등 **하단 헤더로 이동(모달 오버레이)해도 항상 위에 떠 있음**(모달들은 `padding-top`으로 헤더 아래에서 시작, 전체화면 패널 shop/exploration은 `height` 차감). 전투·타이틀 화면에선 부모(`#mainScreen`)가 `display:none`이라 자연히 숨겨짐.
+   - 좌: 플레이어 레벨 + 경험치 바(`player_exp` / `playerExpNeeded()`, `gainPlayerExp()`). 전투 승리 시 레벨 직접 +1 → **경험치 누적 방식으로 변경**.
+   - 중앙: 💰크레딧 | 💠미네랄. 우: ⚙️설정.
+2. **프로필 배너(`#profileRow` 좌측 1/3, `#profileBanner`)** — 터치 시 **프로필 팝업(`#profileModal`, `openProfile()`)**.
+   이름(수정 `editProfileName()`)·프로필 이미지(식물 도트 3종)·배너 이미지(풍경 도트 3종) 변경, 하단 2×2 통계(승리/패배, 최고 티어/최고 진출). 도트 아트는 `pixelSvg()` + `PROFILE_ART`/`BANNER_ART`.
+3. **식물 목록을 배너 우측 2/3로 이동** — `#collectionBar`를 2행 가로 스크롤 그리드로.
+4. **티어(등급)를 전역 → 식물 개체별로 이관** — `p.rankTier`/`p.rankPoints`/`p.bestRoundIdx`/`p.champion`. `plantRankTier(p)`, `nextRankThreshold(p)`, `topTierPlant()`, `bestRoundLabel(p)`. 상대 난이도(`buildEnemy`)·토너먼트명·점수 적립(`endMatch`)·승급(`checkPromotion(p)`)이 **선택된 식물의 티어 기준**. 본선 라운드 승리마다 `round.point` 적립.
+   - 상단의 랭크 표시 제거. 대신 전투 버튼 위 토너먼트 바 **맨 우측에 티어 + (현재 점수 / 다음 티어 임계값)** 셀(`.tb-tier`) 추가.
+   - `state.wins/losses`, `profile_name/profile_image/banner_image` 신설. **기존 세이브 자동 마이그레이션**(`normalizeState`): 구 전역 `rankTier`를 보유 식물 각각의 시작 티어로 이관.
+5. **전투 매칭(VS) 인트로** — 전투 시작 시 바로 싸우지 않고 매칭 연출(`#vsIntro`, `playVsIntro()`, `startMatch` 끝에서 호출). 가운데 토너먼트명 → 슬래시+VS 팝 → 상대 배너(위·좌에서)·내 배너(아래·우에서) 슬라이드 인 → 화면이 위아래로 쪼개지며 전투 공개. 순수 CSS 키프레임(`vsInL/R`,`vsName`,`vsSlash`,`vsPop`,`vsHalfUp/Down`) + JS 타이머로 약 2.5초. `prefers-reduced-motion` 대응.
+7. **스킬 위력 표기를 "공격 배수"로 통일** — 스킬 desc의 `위력 N`은 실제 피해가 아니라 계수(공격×N%)라 혼동을 줬음. 상대 방어까지 계산한 실제 피해는 정보 과다라, 대신 **공격 배수**만 표기: `×1.35(공격력)`, 원소기는 `×1.7(공격력) / ×1.0(속성)`. 핵심: `coefStr()`·`skillCoefLabel()`·`skillCoefDesc()`(스킬 객체용)·`coefifyText()`(임의 문자열용). 적용처: 전투 무브 버튼·강화창 스킬 탭(`skillCardHtml`)·특성 카드 desc. (PRED_TYPES.sub·WEAPONS.desc·트레잇/패시브 desc엔 `위력` 미표기라 무관)
+
+6. **데미지 밸런스 — 기본 공격 약화 문제 보정** — 고정 방어 차감(`raw − def`) 방식이 저위력 공격(기본공격 위력100)을 1까지 무력화해(특히 방어형 종은 1타 1뎀) 기본공격이 무의미하던 문제. 기본공격 위력 100→**135**·단일 명중 페널티 제거, 데미지 공식에 **원 피해의 25% 하한선**(`applySkill`, `dm=max(raw*0.25, raw−def)`) 추가. 원소·잠재 스킬은 위력이 높아 하한선이 거의 안 걸려 기존 균형 유지(기본공격만 실효 데미지 약 2배↑).
+
 ### 2026-06-16 — 특성 카드 시스템 구현
 형질을 3종 → **7종**(일반/포식/무기/독성/포자/발광/용족)으로 확장하고, **특성 카드 장착칸 5개**를 신설.
 형질별로 장착 가능한 카드 카테고리가 다름(공통/DNA/무기/물약/포자/엽록체). 핵심 코드: `FORMS`,

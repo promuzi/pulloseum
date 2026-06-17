@@ -14,6 +14,7 @@
   --fire:#ff6b4a; --water:#4ac6ff; --grass:#6bdd6b;
   --gold:#ffd34a;
   --navh:90px;
+  --headh:54px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;height:100%;}
@@ -25,7 +26,7 @@ body{
 }
 #app{max-width:520px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 .screen{flex:1;display:flex;flex-direction:column;min-height:0;}
-#mainScreen{padding-bottom:var(--navh);}
+#mainScreen{padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));padding-bottom:var(--navh);}
 .hidden{display:none !important;}
 button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 
@@ -61,24 +62,62 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #btnTitleSettings{width:230px;color:var(--sub);}
 
 /* ===== 메인 ===== */
-.topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;}
-.res{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:14px;font-weight:700;}
-.topbar .spacer{flex:1;}
-.iconbtn{background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:16px;padding:6px 11px;}
+/* 상단 재화 헤더 — 화면 최상단 고정(상점·탐사·모드 등 모달 위에도 떠 있음) */
+#topHeader{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;
+  width:100%;max-width:520px;height:calc(var(--headh) + env(safe-area-inset-top,0px));
+  padding:env(safe-area-inset-top,0px) 12px 0;
+  display:flex;align-items:center;gap:9px;
+  background:linear-gradient(180deg,rgba(14,22,38,.98),rgba(14,22,38,.92));
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px);}
+#topHeader.hidden{display:none !important;}
+.th-level{display:flex;align-items:center;gap:7px;flex:0 0 auto;}
+.thl-badge{background:linear-gradient(135deg,#3a2a66,#5a3fa6);border:1px solid rgba(168,140,255,.55);
+  border-radius:999px;padding:4px 10px;font-size:13px;font-weight:800;color:#e9ddff;white-space:nowrap;}
+.thl-badge b{color:#fff;}
+.thl-bar{position:relative;width:78px;height:15px;border-radius:999px;overflow:hidden;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);}
+.thl-bar>i{position:absolute;left:0;top:0;bottom:0;display:block;border-radius:999px;
+  background:linear-gradient(90deg,#7dffd9,#2bd49a);transition:width .4s;}
+.thl-exptext{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);}
+.th-cur{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;}
+.th-coin,.th-min{display:flex;align-items:center;gap:3px;font-size:13.5px;font-weight:800;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 11px;white-space:nowrap;}
+.th-coin b{color:var(--gold);}
+.th-min b{color:var(--neon);}
+.iconbtn{background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:16px;padding:7px 10px;flex:0 0 auto;}
 
-#collectionBar{display:flex;gap:8px;overflow-x:auto;padding:6px 14px 10px;scrollbar-width:none;}
+/* 프로필 배너 + 식물 그리드 한 줄 */
+#profileRow{display:flex;gap:8px;align-items:stretch;padding:8px 12px 8px;}
+#profileBanner{flex:0 0 33%;position:relative;height:88px;border-radius:14px;overflow:hidden;
+  border:1.5px solid var(--line);background:#0e1626;padding:0;cursor:pointer;text-align:left;}
+#profileBanner:active{transform:scale(.98);}
+#profileBanner .pb-bg{position:absolute;inset:0;}
+#profileBanner .pb-bg svg{width:100%;height:100%;display:block;}
+#profileBanner .pb-fg{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+  padding:6px;background:linear-gradient(180deg,rgba(6,10,20,.05),rgba(6,10,20,.55));}
+#profileBanner .pb-pfp{width:38px;height:38px;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,.7);
+  background:#0b1322;box-shadow:0 2px 6px rgba(0,0,0,.4);}
+#profileBanner .pb-pfp svg{width:100%;height:100%;display:block;}
+#profileBanner .pb-name{font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+#collectionBar{flex:1;min-width:0;display:grid;grid-auto-flow:column;grid-template-rows:1fr 1fr;gap:7px;
+  overflow-x:auto;overflow-y:hidden;padding:1px 2px 4px;scrollbar-width:none;}
 #collectionBar::-webkit-scrollbar{display:none;}
-.chip{flex:0 0 auto;width:58px;height:70px;border-radius:13px;background:var(--card);border:1.5px solid rgba(255,255,255,.1);
+.chip{flex:0 0 auto;width:52px;height:40px;border-radius:11px;background:var(--card);border:1.5px solid rgba(255,255,255,.1);
   display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer;}
-.chip.active{border-color:var(--neon);box-shadow:0 0 14px rgba(92,242,194,.35);}
-.chip .g{position:absolute;top:2px;right:5px;font-size:11px;font-weight:800;}
-.chip .f{position:absolute;bottom:2px;left:5px;font-size:10px;}
-.chip.addchip{font-size:24px;color:var(--sub);justify-content:center;}
+.chip.active{border-color:var(--neon);box-shadow:0 0 12px rgba(92,242,194,.4);}
+.chip .g{position:absolute;top:1px;right:4px;font-size:9px;font-weight:800;}
+.chip .f{position:absolute;bottom:1px;left:4px;font-size:8.5px;}
+.chip .t{position:absolute;bottom:1px;right:4px;font-size:8px;font-weight:800;}
+.chip svg{display:block;}
+.chip.addchip{font-size:20px;color:var(--sub);justify-content:center;}
 .chip.potempty,.chip.potlocked{justify-content:center;border-style:dashed;color:var(--sub);}
 .chip.potempty{cursor:pointer;}
 .chip.potlocked{opacity:.5;border-style:dashed;}
-.chip .pi{font-size:22px;line-height:1;}
-.chip .potlabel{font-size:8.5px;font-weight:700;margin-top:2px;}
+.chip .pi{font-size:15px;line-height:1;}
+.chip .potlabel{font-size:7px;font-weight:700;margin-top:1px;}
 
 .main-body{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;}
 .bag-fab{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:5;
@@ -108,6 +147,31 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .tbar.idle{background:var(--card);}
 .tbar.idle .tb-left{color:var(--sub);font-weight:700;}
 .tbar.idle .tb-right{color:var(--sub);}
+.tbar .tb-tier{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1px;padding:5px 11px;border-left:2px solid var(--line);background:rgba(0,0,0,.28);}
+.tbar .tb-tier .tbt-name{font-size:13px;font-weight:900;line-height:1.1;white-space:nowrap;}
+.tbar .tb-tier .tbt-pts{font-size:10px;font-weight:700;color:var(--sub);white-space:nowrap;}
+
+/* ===== 프로필 팝업 ===== */
+.prof-banner{position:relative;width:100%;height:96px;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin-bottom:-30px;}
+.prof-banner svg{width:100%;height:100%;display:block;}
+.prof-pfp{position:relative;width:74px;height:74px;margin:0 auto;border-radius:16px;overflow:hidden;
+  border:3px solid #131b2c;box-shadow:0 4px 14px rgba(0,0,0,.5);background:#0b1322;z-index:1;}
+.prof-pfp svg{width:100%;height:100%;display:block;}
+.prof-namerow{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0 2px;}
+.prof-namerow #profNameText{font-size:20px;font-weight:800;}
+.prof-edit{background:var(--card);border:1px solid var(--line);border-radius:9px;color:var(--text);font-size:14px;padding:4px 9px;}
+.prof-section-title{font-size:12.5px;font-weight:800;color:var(--sub);margin:14px 0 7px;letter-spacing:.3px;}
+.prof-picker{display:flex;gap:9px;justify-content:center;}
+.prof-picker .pick{border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#0b1322;padding:0;cursor:pointer;line-height:0;}
+.prof-picker .pick.sel{border-color:var(--neon);box-shadow:0 0 12px rgba(92,242,194,.45);}
+.prof-picker.pfp .pick{width:60px;height:60px;}
+.prof-picker.banner .pick{flex:1;height:50px;}
+.prof-picker svg{width:100%;height:100%;display:block;}
+.prof-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;}
+.prof-stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 11px;}
+.prof-stat .ps-label{font-size:11px;color:var(--sub);font-weight:700;}
+.prof-stat .ps-value{font-size:17px;font-weight:800;margin-top:2px;}
 
 #btnBattle{margin:0 14px 10px;padding:15px;font-size:19px;border-radius:16px;border:none;
   background:linear-gradient(135deg,#b23b2e,#ff6b4a);color:#fff;font-weight:800;
@@ -167,6 +231,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .movebtn:disabled{opacity:.35;}
 .movebtn .mn{font-weight:800;font-size:14.5px;}
 .movebtn .ms{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.cf{color:#ffb877;font-weight:800;white-space:nowrap;}
+.cf .cf-of{color:var(--sub);font-weight:600;font-size:.88em;}
 .movebtn.wide{grid-column:1 / -1;}
 .dmgpop{position:absolute;left:50%;top:24%;transform:translateX(-50%);font-size:21px;font-weight:900;
   color:#ff8a70;text-shadow:0 2px 8px rgba(0,0,0,.7);pointer-events:none;animation:rise .95s ease-out forwards;z-index:5;}
@@ -175,10 +241,68 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shake{animation:shake .4s;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
 
+/* ===== 전투 매칭(VS) 인트로 ===== */
+#vsIntro{position:fixed;inset:0;z-index:85;overflow:hidden;background:#04070e;}
+#vsIntro.hidden{display:none !important;}
+.vs-half{position:absolute;left:0;width:100%;height:50%;overflow:hidden;will-change:transform;}
+.vs-top{top:0;background:linear-gradient(180deg,#1a0e16,#0a0a14);border-bottom:2px solid rgba(255,107,74,.55);}
+.vs-bot{bottom:0;background:linear-gradient(180deg,#0a0a14,#06141a);border-top:2px solid rgba(92,242,194,.55);}
+.vs-strip{position:absolute;left:0;right:0;top:50%;height:104px;display:flex;align-items:center;gap:14px;
+  padding:0 20px;overflow:hidden;will-change:transform;}
+.vs-enemy{justify-content:flex-start;transform:translateY(-50%) translateX(-118%);}
+.vs-me{justify-content:flex-end;transform:translateY(-50%) translateX(118%);}
+.vs-strip .vs-bg{position:absolute;inset:0;opacity:.45;z-index:0;}
+.vs-strip .vs-bg svg{width:100%;height:100%;}
+.vs-enemy::before,.vs-me::before{content:'';position:absolute;inset:0;z-index:1;}
+.vs-enemy::before{background:linear-gradient(90deg,rgba(120,20,20,.78),rgba(20,10,16,.35));}
+.vs-me::before{background:linear-gradient(270deg,rgba(10,70,60,.78),rgba(6,20,26,.35));}
+.vs-strip-pfp{position:relative;z-index:2;width:84px;height:84px;flex:0 0 auto;border-radius:16px;overflow:hidden;
+  background:#0b1322;border:2px solid rgba(255,255,255,.5);box-shadow:0 4px 16px rgba(0,0,0,.5);}
+.vs-strip-pfp svg{width:100%;height:100%;display:block;}
+.vs-strip-info{position:relative;z-index:2;min-width:0;}
+.vs-me .vs-strip-info{text-align:right;}
+.vs-strip-tag{font-size:13px;font-weight:900;letter-spacing:3px;}
+.vs-strip-name{font-size:24px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.7);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px;}
+.vs-me .vs-strip-name{justify-content:flex-end;}
+.vs-center{position:absolute;inset:0;pointer-events:none;}
+.vs-tname{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%) scale(.6);text-align:center;
+  font-size:27px;font-weight:900;color:#fff;padding:0 24px;opacity:0;
+  text-shadow:0 0 22px rgba(92,242,194,.7),0 2px 10px rgba(0,0,0,.85);}
+.vs-slash{position:absolute;left:0;right:0;top:50%;height:7px;transform:translateY(-50%) scaleX(0);opacity:0;
+  background:linear-gradient(90deg,transparent,#fff 45%,#fff 55%,transparent);box-shadow:0 0 26px 6px rgba(255,255,255,.85);}
+.vs-vs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0) rotate(-20deg);opacity:0;
+  font-size:92px;font-weight:900;font-style:italic;color:#fff;letter-spacing:-2px;
+  text-shadow:0 0 30px rgba(255,107,74,.9),0 6px 18px rgba(0,0,0,.7);
+  -webkit-text-stroke:2px rgba(255,107,74,.6);}
+
+#vsIntro.play .vs-enemy{animation:vsInL .55s .9s cubic-bezier(.18,.85,.25,1) forwards;}
+#vsIntro.play .vs-me{animation:vsInR .55s .9s cubic-bezier(.18,.85,.25,1) forwards;}
+@keyframes vsInL{0%{transform:translateY(-50%) translateX(-118%)}62%{transform:translateY(-50%) translateX(4%)}100%{transform:translateY(-50%) translateX(0)}}
+@keyframes vsInR{0%{transform:translateY(-50%) translateX(118%)}62%{transform:translateY(-50%) translateX(-4%)}100%{transform:translateY(-50%) translateX(0)}}
+#vsIntro.play .vs-tname{animation:vsName 1.35s .12s ease forwards;}
+@keyframes vsName{0%{opacity:0;transform:translateY(-50%) scale(.6)}14%{opacity:1;transform:translateY(-50%) scale(1.04)}26%{transform:translateY(-50%) scale(1)}48%{opacity:1}66%{opacity:0;transform:translateY(-50%) scale(1.12)}100%{opacity:0}}
+#vsIntro.play .vs-slash{animation:vsSlash .5s .62s ease-out forwards;}
+@keyframes vsSlash{0%{transform:translateY(-50%) scaleX(0);opacity:0}25%{opacity:1}55%{transform:translateY(-50%) scaleX(1);opacity:1}100%{transform:translateY(-50%) scaleX(1);opacity:0}}
+#vsIntro.play .vs-vs{animation:vsPop .6s .74s cubic-bezier(.2,1.5,.3,1) forwards;}
+@keyframes vsPop{0%{opacity:0;transform:translate(-50%,-50%) scale(0) rotate(-22deg)}60%{opacity:1;transform:translate(-50%,-50%) scale(1.18) rotate(7deg)}100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(-8deg)}}
+
+/* 종료: 위/아래로 쪼개지며 전투 화면 공개 */
+#vsIntro.exit .vs-top{animation:vsHalfUp .5s cubic-bezier(.5,0,.85,.3) forwards;}
+#vsIntro.exit .vs-bot{animation:vsHalfDown .5s cubic-bezier(.5,0,.85,.3) .06s forwards;}
+#vsIntro.exit .vs-center{animation:vsFade .28s ease forwards;}
+@keyframes vsHalfUp{to{transform:translateY(-100%)}}
+@keyframes vsHalfDown{to{transform:translateY(100%)}}
+@keyframes vsFade{to{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  #vsIntro .vs-enemy,#vsIntro .vs-me{transform:translateY(-50%)!important;animation:none!important;}
+  #vsIntro.play .vs-tname,#vsIntro.play .vs-vs{opacity:1!important;animation:none!important;}
+}
+
 /* ===== 모달 ===== */
-.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;padding-bottom:calc(var(--navh) + 14px);}
+.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:14px;padding-top:calc(var(--headh) + 18px);padding-bottom:calc(var(--navh) + 14px);}
 .modal-card{background:#131b2c;border:1px solid var(--line);border-radius:18px;width:min(94vw,450px);
-  max-height:88dvh;overflow-y:auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
+  margin:auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
 .modal-card h2{margin:0 0 4px;font-size:20px;}
 .modal-card .sub{color:var(--sub);font-size:13px;margin:0 0 14px;}
 .cardlist{display:flex;flex-direction:column;gap:10px;}
@@ -194,12 +318,12 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shop-section{margin:14px 0 2px;font-weight:800;font-size:14px;color:var(--neon);letter-spacing:1px;}
 .explore-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px;}
 .explore-summary .stat{display:block;text-align:center;padding:7px 6px;}
-#explorationModal{padding:0;align-items:stretch;justify-content:stretch;}
-#explorationModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh));max-height:calc(100dvh - var(--navh));border-radius:0;padding:0;overflow:hidden;background:#07101d;}
+#explorationModal{padding:0;padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));align-items:stretch;justify-content:stretch;}
+#explorationModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh) - var(--headh));max-height:calc(100dvh - var(--navh) - var(--headh));border-radius:0;padding:0;overflow:hidden;background:#07101d;}
 #explorationBody{height:100%;min-height:0;}
-/* 상점 — 우주맵/탐사처럼 전체 화면 패널 */
-#shopModal{padding:0;align-items:stretch;justify-content:stretch;}
-#shopModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh));max-height:calc(100dvh - var(--navh));border-radius:0;padding:16px 16px 24px;background:#07101d;display:flex;flex-direction:column;min-height:0;}
+/* 상점 — 우주맵/탐사처럼 전체 화면 패널 (상단 재화 헤더 아래에서 시작) */
+#shopModal{padding:0;padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));align-items:stretch;justify-content:stretch;}
+#shopModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh) - var(--headh));max-height:calc(100dvh - var(--navh) - var(--headh));border-radius:0;padding:16px 16px 24px;background:#07101d;display:flex;flex-direction:column;min-height:0;}
 #shopModal h2{flex:0 0 auto;}
 #shopModal .sub{flex:0 0 auto;}
 #shopModal #shopList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
@@ -410,7 +534,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .exploration-shop-meta .seed-mini-stat{background:rgba(0,0,0,.12);}
 .exploration-shop-back{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
 @media (max-width:620px){
-  #explorationModal .modal-card{height:100dvh;width:100vw;}
+  #explorationModal .modal-card{height:calc(100dvh - var(--navh) - var(--headh));width:100vw;}
   .space-map-grid{min-height:calc(100dvh - 74px);}
   .space-map-canvas{min-height:calc(100dvh - 74px);}
   .space-map-top-resources{left:10px;right:10px;top:10px;gap:6px;flex-wrap:wrap;}
@@ -587,15 +711,27 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 
   <!-- ===== 메인 화면 ===== -->
   <section id="mainScreen" class="screen hidden">
-    <header class="topbar">
-      <div class="res">💰 <span id="creditView">0</span></div>
-      <div class="res">💠 <span id="mineralView">0</span></div>
-      <div class="res">🧭 Lv <span id="levelView">1</span></div>
-      <div class="res">🏆 <span id="rankView">브론즈</span> <span style="opacity:.7;font-weight:600">· <span id="rankPointView">0</span>p</span></div>
-      <div class="spacer"></div>
+    <header id="topHeader">
+      <div class="th-level">
+        <span class="thl-badge">Lv <b id="levelView">1</b></span>
+        <div class="thl-bar"><i id="expFill"></i><span class="thl-exptext" id="expText">0/60</span></div>
+      </div>
+      <div class="th-cur">
+        <span class="th-coin">💰<b id="creditView">0</b></span>
+        <span class="th-min">💠<b id="mineralView">0</b></span>
+      </div>
       <button class="iconbtn" id="btnSettings">⚙️</button>
     </header>
-    <div id="collectionBar"></div>
+    <div id="profileRow">
+      <button id="profileBanner" type="button" title="프로필">
+        <div class="pb-bg" id="pbBg"></div>
+        <div class="pb-fg">
+          <div class="pb-pfp" id="pbPfp"></div>
+          <div class="pb-name" id="pbName">재배사</div>
+        </div>
+      </button>
+      <div id="collectionBar"></div>
+    </div>
     <div class="main-body">
       <div id="centerPlant"></div>
       <button id="btnBagCenter" class="bag-fab" title="종자 가방">🎒<span class="bag-fab-label">가방</span></button>
@@ -711,6 +847,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   </div>
 </div>
 
+<div class="modal hidden" id="profileModal">
+  <div class="modal-card" id="profileBody"></div>
+</div>
+
 <div class="modal hidden" id="resultModal">
   <div class="modal-card">
     <div id="resultTitle"></div>
@@ -730,6 +870,17 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 </div>
 
 <div id="toast"></div>
+
+<!-- ===== 전투 매칭(VS) 인트로 ===== -->
+<div id="vsIntro" class="hidden" aria-hidden="true">
+  <div class="vs-half vs-top"><div class="vs-strip vs-enemy" id="vsEnemy"></div></div>
+  <div class="vs-half vs-bot"><div class="vs-strip vs-me" id="vsMe"></div></div>
+  <div class="vs-center">
+    <div class="vs-tname" id="vsTname"></div>
+    <div class="vs-slash"></div>
+    <div class="vs-vs">VS</div>
+  </div>
+</div>
 
 <!-- 게임 데이터 (외부 파일 인라인 내장: file:// 더블클릭으로 열어도 동작) -->
 <script>
@@ -2094,7 +2245,7 @@ const ALIEN_SEED_SPECIES_MAP = {
      counterPct, energyGain, selfBuff:{stat,pct,turns}, enemyDebuff:{stat,pct,turns},
      dot:{kind,pct,turns}, lifesteal, steal:{stat,pct}, cleanse, desc, tag } */
 const UNIVERSAL_SKILLS = {
-  skill_basic_strike: { name:'기본 공격', icon:'👊', cost:0, kind:'attack', power:100, single:true, desc:'위력 100 · 단일 · 무료', tag:'기본' },
+  skill_basic_strike: { name:'기본 공격', icon:'👊', cost:0, kind:'attack', power:135, desc:'위력 135 · 단일 · 무료', tag:'기본' },
   skill_guard:        { name:'방어 태세', icon:'🛡️', cost:0, kind:'guard', guardMult:0.5, energyGain:1, desc:'받는 피해 50%↓ · ⚡+1', tag:'기본' },
   skill_photosynthesis:{ name:'광합성', icon:'☀️', cost:2, kind:'heal', heal:0.28, desc:'체력 28% 회복 · ⚡2', tag:'기본' },
   skill_focus:        { name:'기력 집중', icon:'🌀', cost:0, kind:'special', energyGain:2, desc:'⚡ 2 충전 · 무료', tag:'성장' },
@@ -2337,11 +2488,49 @@ function rankTierIndexFromPoints(points){
   for(let i = 0; i < RANK_TIERS.length; i++) if(points >= RANK_TIERS[i].threshold) idx = i;
   return idx;
 }
-function currentRankTier(){ return RANK_TIERS[clamp(state.rankTier || 0, 0, RANK_TIERS.length - 1)]; }
+/* 티어는 식물 개체별로 부여된다. p.rankTier(인덱스) / p.rankPoints(누적 점수). */
+function plantRankTierIdx(p){ return p ? clamp(p.rankTier || 0, 0, RANK_TIERS.length - 1) : 0; }
+function plantRankTier(p){ return RANK_TIERS[plantRankTierIdx(p)]; }
+function nextRankThreshold(p){
+  const idx = plantRankTierIdx(p);
+  return idx < RANK_TIERS.length - 1 ? RANK_TIERS[idx + 1].threshold : null;
+}
+/* 활성 식물 기준 티어(상단 표시 등 하위 호환용) */
+function currentRankTier(){ return plantRankTier(activePlant()); }
+/* 보유 식물 중 가장 높은 티어의 식물 */
+function topTierPlant(){
+  let best = null;
+  (state.plants || []).forEach(p => {
+    if(!best) { best = p; return; }
+    const a = plantRankTierIdx(p), b = plantRankTierIdx(best);
+    if(a > b || (a === b && (p.rankPoints||0) > (best.rankPoints||0))) best = p;
+  });
+  return best;
+}
+function bestRoundLabel(p){
+  if(!p) return '기록 없음';
+  if(p.champion) return '🏆 우승';
+  const idx = (typeof p.bestRoundIdx === 'number') ? p.bestRoundIdx : -1;
+  if(idx < 0) return '기록 없음';
+  return `${TOURNAMENT_ROUNDS[idx].name} 진출`;
+}
 function tournamentTitle(p){
-  const tier = currentRankTier();
+  const tier = plantRankTier(p);
   const stage = p ? growthStageName(p.growth_stage) : '새싹';
   return `${stage} ${tier.name} 토너먼트`;
+}
+
+/* ===== 플레이어 레벨/경험치 ===== */
+function playerExpNeeded(lv){ return 60 + ((lv||1) - 1) * 40; }
+function gainPlayerExp(amount){
+  state.player_exp = (state.player_exp || 0) + amount;
+  let leveled = false;
+  while(state.player_exp >= playerExpNeeded(state.player_level || 1)){
+    state.player_exp -= playerExpNeeded(state.player_level || 1);
+    state.player_level = (state.player_level || 1) + 1;
+    leveled = true;
+  }
+  return leveled;
 }
 
 function newExplorerShip(){
@@ -2384,8 +2573,10 @@ function newExplorerShip(){
 function defaultState(){
   const starterShip = newExplorerShip();
   return {
-    credits:80, money:80, minerals:0, player_level:1, rank:1, serial:1,
+    credits:80, money:80, minerals:0, player_level:1, player_exp:0, rank:1, serial:1,
     rankTier:0, rankPoints:0, tournament:null,
+    wins:0, losses:0,
+    profile_name:'재배사', profile_image:0, banner_image:0,
     plants:[], activeId:null, sound:true, weapons:newArmory(),
     exploration_ship:starterShip,
     exploration_equipment_bonus:starterShip.stats.scanner_bonus,
@@ -2406,8 +2597,21 @@ function normalizeState(s){
   if(typeof s.money !== 'number') s.money = s.credits;
   if(typeof s.minerals !== 'number') s.minerals = 0;
   if(typeof s.player_level !== 'number') s.player_level = Math.max(1, s.rank || 1);
+  if(typeof s.player_exp !== 'number') s.player_exp = 0;
+  if(typeof s.wins !== 'number') s.wins = 0;
+  if(typeof s.losses !== 'number') s.losses = 0;
+  if(typeof s.profile_name !== 'string' || !s.profile_name) s.profile_name = '재배사';
+  if(typeof s.profile_image !== 'number') s.profile_image = 0;
+  if(typeof s.banner_image !== 'number') s.banner_image = 0;
   if(typeof s.rankPoints !== 'number') s.rankPoints = 0;
   if(typeof s.rankTier !== 'number') s.rankTier = rankTierIndexFromPoints(s.rankPoints);
+  // 기존 세이브: 전역 티어를 보유 식물 각각의 시작 티어로 이관
+  (s.plants || []).forEach(p => {
+    if(typeof p.rankTier !== 'number') p.rankTier = s.rankTier || 0;
+    if(typeof p.rankPoints !== 'number') p.rankPoints = (p.rankTier ? RANK_TIERS[clamp(p.rankTier,0,RANK_TIERS.length-1)].threshold : 0);
+    if(typeof p.bestRoundIdx !== 'number') p.bestRoundIdx = -1;
+    if(typeof p.champion !== 'boolean') p.champion = false;
+  });
   if(s.tournament === undefined) s.tournament = null;
   if(!s.exploration_ship) s.exploration_ship = newExplorerShip();
   s.exploration_ship.stats = { ...newExplorerShip().stats, ...(s.exploration_ship.stats || {}) };
@@ -4996,6 +5200,7 @@ function createPlant(species, alloc){
     form: f.form, predType: f.predType, weaponKey: null,
     geneAlloc: { atk:alloc.atk, def:alloc.def, spd:alloc.spd },
     up: { hp:0, atk:0, def:0, spd:0, acc:0, elem:0, crit:0, energy:0 },
+    rankTier:0, rankPoints:0, bestRoundIdx:-1, champion:false,
   };
   state.serial++;
   return p;
@@ -5007,14 +5212,113 @@ function renderMain(){
   $('#creditView').textContent = fmt(state.credits);
   { const mv = $('#mineralView'); if(mv) mv.textContent = fmt(state.minerals || 0); }
   $('#levelView').textContent = state.player_level;
-  const tier = currentRankTier();
-  const rv = $('#rankView');
-  rv.textContent = tier.name;
-  rv.style.color = tier.color;
-  const rp = $('#rankPointView'); if(rp) rp.textContent = fmt(state.rankPoints||0);
+  renderPlayerExp();
+  renderProfileBanner();
   renderCollection();
   renderCenter();
   renderTournamentBar();
+}
+function renderPlayerExp(){
+  const lv = state.player_level || 1, need = playerExpNeeded(lv);
+  const cur = clamp(state.player_exp || 0, 0, need);
+  const fill = $('#expFill'); if(fill) fill.style.width = Math.round(cur / need * 100) + '%';
+  const t = $('#expText'); if(t) t.textContent = `${fmt(cur)}/${fmt(need)}`;
+}
+function renderProfileBanner(){
+  const name = $('#pbName'); if(name) name.textContent = state.profile_name || '재배사';
+  const bg = $('#pbBg'); if(bg) bg.innerHTML = bannerArt(state.banner_image || 0);
+  const pfp = $('#pbPfp'); if(pfp) pfp.innerHTML = profileArt(state.profile_image || 0);
+}
+
+/* ===== 프로필/배너 도트 아트 (임의 3종씩) ===== */
+function pixelSvg(rows, palette, slice){
+  let rects = '';
+  for(let y=0;y<rows.length;y++){
+    for(let x=0;x<rows[y].length;x++){
+      const c = rows[y][x];
+      if(c==='.' || !palette[c]) continue;
+      rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${palette[c]}"/>`;
+    }
+  }
+  const w = rows[0].length, h = rows.length;
+  return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" preserveAspectRatio="${slice?'xMidYMid slice':'xMidYMid meet'}">${rects}</svg>`;
+}
+const BANNER_ART = [
+  // 0) 외계 노을 사막
+  { pal:{a:'#2a1b4d',b:'#7d3b8f',c:'#ff9a5c',s:'#ffd36b',d:'#b5673a',e:'#8a4a2c'}, rows:[
+    'aaaaaaaaaaaaaaaa','aaaaaaaaaaaaaaaa','bbbbbbbbbbbbbbbb','bbbbbssbbbbbbbbb',
+    'bbbbssssbbbbbbbb','ccccsssscccccccc','cccccccccccccccc','dddddddddddddddd',
+    'deddeddeddeddedd','eeeeeeeeeeeeeeee'] },
+  // 1) 설원 빙하
+  { pal:{k:'#bfe6ff',l:'#9fd0f5',m:'#eaf6ff',n:'#cfe6f7',o:'#7fb8e6'}, rows:[
+    'kkkkkkkkkkkkkkkk','kkkkkkkkkkkkkkkk','llllllllllllllll','lllllllooollllll',
+    'lllllooooollllll','mmmmmmmmmmmmmmmm','mmmmmmmmmmmmmmmm','mmmnnmmmmmnnmmmm',
+    'mmmmmmmmmmmmmmmm','nnnnnnnnnnnnnnnn'] },
+  // 2) 네온 숲 오로라
+  { pal:{g:'#14243f',h:'#1f6f8f',j:'#2bd49a',p:'#1f8f6f',w:'#eaffff'}, rows:[
+    'gggggggggggggggg','gggwgggggggwgggg','hhhhhhhhhhhhhhhh','ghghghghghghghgh',
+    'gggggggggggggggg','gggggwgggggggggg','jjjjjjjjjjjjjjjj','jpjjjpjjjpjjjpjj',
+    'pppppppppppppppp','pppppppppppppppp'] },
+];
+const PROFILE_ART = [
+  // 0) 새싹
+  { pal:{f:'#6bdd6b',g:'#2bd49a',t:'#8a5a32',u:'#b07a44'}, rows:[
+    '................','................','.......g........','....f..g..f.....',
+    '...ff.gg.ff.....','...ffggggff.....','....fggggf......','.....gggg.......',
+    '......gg........','......gg........','......gg........','....uuuuuu......',
+    '....tttttt......','....tttttt......','.....tttt.......','................'] },
+  // 1) 붉은 꽃
+  { pal:{p:'#ff5e7a',q:'#ffd34a',g:'#2bd49a',f:'#6bdd6b'}, rows:[
+    '................','................','.....ppp........','....ppppp.......',
+    '....ppqpp.......','....ppppp.......','.....ppp........','......g.........',
+    '......g.........','....f.g.........','...ff.g.........','......g.ff......',
+    '......g.........','......g.........','................','................'] },
+  // 2) 푸른 버섯
+  { pal:{m:'#5ea8ff',w:'#eaf6ff',s:'#dfe7f0',k:'#b9c4d2'}, rows:[
+    '................','................','.....mmmmm......','...mmmmmmmmm....',
+    '..mmwmmmmwmm....','..mmmmmmmmmmm...','...mmmmmmmmm....','......ssss......',
+    '......sssk......','......sssk......','......sssk......','......sssk......',
+    '.....sssssk.....','................','................','................'] },
+];
+function bannerArt(i){ const a = BANNER_ART[((i%BANNER_ART.length)+BANNER_ART.length)%BANNER_ART.length]; return pixelSvg(a.rows, a.pal, true); }
+function profileArt(i){ const a = PROFILE_ART[((i%PROFILE_ART.length)+PROFILE_ART.length)%PROFILE_ART.length]; return pixelSvg(a.rows, a.pal, false); }
+
+/* ===== 프로필 팝업 ===== */
+function openProfile(){
+  renderProfileModal();
+  show('#profileModal');
+}
+function renderProfileModal(){
+  const topP = topTierPlant();
+  const topTier = topP ? plantRankTier(topP) : RANK_TIERS[0];
+  const bestLabel = topP ? bestRoundLabel(topP) : '기록 없음';
+  const name = state.profile_name || '재배사';
+  $('#profileBody').innerHTML = `
+    <div class="prof-banner">${bannerArt(state.banner_image||0)}</div>
+    <div class="prof-pfp">${profileArt(state.profile_image||0)}</div>
+    <div class="prof-namerow"><span id="profNameText">${name}</span><button class="prof-edit" id="profEditName">✏️ 수정</button></div>
+    <div class="prof-section-title">🌱 프로필 이미지</div>
+    <div class="prof-picker pfp">${[0,1,2].map(i=>`<button class="pick ${i===(state.profile_image||0)?'sel':''}" data-pfp="${i}">${profileArt(i)}</button>`).join('')}</div>
+    <div class="prof-section-title">🏞️ 배너 이미지</div>
+    <div class="prof-picker banner">${[0,1,2].map(i=>`<button class="pick ${i===(state.banner_image||0)?'sel':''}" data-banner="${i}">${bannerArt(i)}</button>`).join('')}</div>
+    <div class="prof-stats">
+      <div class="prof-stat"><div class="ps-label">🏅 승리</div><div class="ps-value" style="color:var(--neon)">${fmt(state.wins||0)}</div></div>
+      <div class="prof-stat"><div class="ps-label">💀 패배</div><div class="ps-value" style="color:var(--fire)">${fmt(state.losses||0)}</div></div>
+      <div class="prof-stat"><div class="ps-label">👑 최고 티어</div><div class="ps-value" style="color:${topTier.color}">${topTier.name}</div></div>
+      <div class="prof-stat"><div class="ps-label">🎖️ 최고 진출</div><div class="ps-value">${bestLabel}</div></div>
+    </div>
+    <button class="btn modal-close" id="profClose">닫기</button>`;
+}
+function editProfileName(){
+  const cur = state.profile_name || '재배사';
+  let v = window.prompt('재배사 이름을 입력하세요 (최대 12자)', cur);
+  if(v == null) return;
+  v = v.trim().slice(0, 12);
+  if(!v){ toast('이름은 비울 수 없습니다'); return; }
+  state.profile_name = v;
+  saveState();
+  renderProfileModal();
+  renderProfileBanner();
 }
 function renderTournamentBar(){
   const bar = $('#tournamentBar'); if(!bar) return;
@@ -5023,6 +5327,13 @@ function renderTournamentBar(){
   if(!p){ bar.innerHTML=''; if(btn) btn.textContent='⚔️ 전투 시작'; return; }
   const T = state.tournament;
   const inProgress = T && T.active && T.plantId===p.id;
+  const tier = plantRankTier(p);
+  const nt = nextRankThreshold(p);
+  const ptsLabel = nt != null ? `${fmt(p.rankPoints||0)} / ${fmt(nt)}` : `${fmt(p.rankPoints||0)} · MAX`;
+  const tierCell = `<div class="tb-tier" style="border-color:${tier.color}66">
+      <span class="tbt-name" style="color:${tier.color}">${tier.name}</span>
+      <span class="tbt-pts">${ptsLabel}</span>
+    </div>`;
   if(inProgress){
     const round = TOURNAMENT_ROUNDS[T.roundIndex];
     let right, label;
@@ -5034,10 +5345,10 @@ function renderTournamentBar(){
       right = `${round.name} 진출`;
       label = `⚔️ ${round.name} 경기 시작`;
     }
-    bar.innerHTML = `<div class="tbar"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">${right}</div></div>`;
+    bar.innerHTML = `<div class="tbar"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">${right}</div>${tierCell}</div>`;
     if(btn) btn.textContent = label;
   } else {
-    bar.innerHTML = `<div class="tbar idle"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">신규 도전 대기</div></div>`;
+    bar.innerHTML = `<div class="tbar idle"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">신규 도전 대기</div>${tierCell}</div>`;
     if(btn) btn.textContent = '⚔️ 토너먼트 시작';
   }
 }
@@ -5048,10 +5359,11 @@ function renderCollection(){
   for(let i=0;i<POT_MAX;i++){
     const p = state.plants[i];
     if(p){
+      const tier = plantRankTier(p);
       html += `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
-        ${spriteFor(p,38)}
+        ${spriteFor(p,28)}
         <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
-        ${p.form && p.form!=='normal' ? `<span class="f">${FORMS[p.form].icon}</span>` : ''}
+        <span class="t" style="color:${tier.color}" title="${tier.name} 티어">${tier.name[0]}</span>
       </div>`;
     } else if(i < cap){
       html += `<div class="chip potempty" data-plant-empty="1"><span class="pi">🪴</span><span class="potlabel">빈 화분</span></div>`;
@@ -5349,7 +5661,7 @@ function skillCardHtml(id, sk, zone){
   return `<button class="skill-card ${zone==='equipped'?'equipped':''}" data-skill-toggle="${id}" data-zone="${zone}">
     <span class="sc-tag">${sk.tag||'스킬'}${skillAoeBadge(sk)}</span>${zone==='equipped'?'<span class="sc-x">✕ 해제</span>':''}
     <div class="sc-name"><span>${sk.icon||''} ${sk.name}</span><span class="sc-cost">${costLabel}</span></div>
-    <div class="sc-desc">${sk.desc||''}</div>
+    <div class="sc-desc">${skillCoefDesc(sk)}</div>
   </button>`;
 }
 function renderSkillTab(p){
@@ -5436,7 +5748,7 @@ function renderTraitTab(p){
   const cardRows = owned.length ? owned.map(cid=>{
     const c=TRAIT_CARDS[cid]; const on=equipped.includes(cid); const cnt=(state.trait_cards||{})[cid]||0;
     return `<div class="uprow">
-      <div class="un">${c.icon} ${c.name} <small>${TRAIT_CARD_TYPE_NAMES[c.type]} · ${c.desc}</small></div>
+      <div class="un">${c.icon} ${c.name} <small>${TRAIT_CARD_TYPE_NAMES[c.type]} · ${coefifyText(c.desc)}</small></div>
       <div class="uv">×${cnt}</div>
       <button class="upbtn" data-card-toggle="${cid}" style="${on?'background:rgba(92,242,194,.18);border-color:var(--neon);color:var(--neon)':''}">${on?'해제':'장착'}</button>
     </div>`;
@@ -5973,7 +6285,7 @@ function startMatch(){
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
     traits:p.traits, loadout:p.equipped_skills.slice(), cards:(p.equipped_trait_cards||[]).slice(),
   });
-  const enemyC = buildEnemy(T.roundIndex, state.rankTier||0, {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
+  const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p), {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
   B = { p:playerC, e:enemyC, over:false, busy:false };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
@@ -5987,6 +6299,36 @@ function startMatch(){
   $('#battleLog').innerHTML = `<span class="em">${round.name}</span> 경기 시작! <span class="em">${B.e.name}</span> 등장!<br>`;
   renderMoveButtons();
   updateBars();
+  playVsIntro(p);
+}
+/* 전투 매칭 인트로: 토너먼트명 → 슬래시 + VS → 상대(위·좌)·나(아래·우) 배너 슬라이드 인 → 위아래로 쪼개지며 전투 공개 */
+function playVsIntro(p){
+  const ov = $('#vsIntro'); if(!ov || !B) return;
+  const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
+  const myBanner = bannerArt(state.banner_image||0);
+  const enemyBanner = bannerArt((state.banner_image||0)+1); // 상대는 다른 풍경
+  $('#vsEnemy').innerHTML = `
+    <div class="vs-bg">${enemyBanner}</div>
+    <div class="vs-strip-pfp">${svgPlant(B.e.species, B.e.element, B.e.grade, null, 84)}</div>
+    <div class="vs-strip-info">
+      <div class="vs-strip-tag" style="color:#ff8a70">상대</div>
+      <div class="vs-strip-name">${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span></div>
+    </div>`;
+  $('#vsMe').innerHTML = `
+    <div class="vs-bg">${myBanner}</div>
+    <div class="vs-strip-info">
+      <div class="vs-strip-tag" style="color:var(--neon)">${state.profile_name||'재배사'}</div>
+      <div class="vs-strip-name">${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span></div>
+    </div>
+    <div class="vs-strip-pfp">${spriteFor(B.p, 84)}</div>`;
+  $('#vsTname').textContent = tournamentTitle(p) + '!';
+  clearTimeout(ov._t1); clearTimeout(ov._t2);
+  ov.classList.remove('exit', 'play', 'hidden');
+  void ov.offsetWidth; // 리플로우로 애니메이션 재시작 보장
+  ov.classList.add('play');
+  try { sfx.tap(); } catch(e) {}
+  ov._t1 = setTimeout(() => { ov.classList.add('exit'); }, 1950);
+  ov._t2 = setTimeout(() => { ov.classList.add('hidden'); ov.classList.remove('play', 'exit'); }, 2520);
 }
 function renderBattleHeader(){
   const p = activePlant(), T = state.tournament; if(!T) return;
@@ -5995,11 +6337,34 @@ function renderBattleHeader(){
   if(round.key==='prelim'){ let dots=''; for(let i=0;i<round.bestOf;i++){ dots += (i<T.prelimWins?'🟢':(i<T.prelimWins+T.prelimLosses?'🔴':'⚪')); } prog=` · ${dots}`; }
   $('#battleHeader').innerHTML = `${tournamentTitle(p)} · <b style="color:var(--neon)">${round.name}</b>${prog}`;
 }
+/* 스킬 위력을 "공격 배수"로 표기 — 예: ×1.7(공격력) / ×1.0(속성).
+   상대 방어를 계산한 실제 피해 대신 스킬의 공격 계수만 보여준다(정보 과다 방지). */
+function coefStr(power){
+  const c = (power||0) / 100;
+  return Number.isInteger(c) ? c.toFixed(1) : String(Math.round(c * 100) / 100);
+}
+function skillCoefLabel(s){
+  if(!s || !(s.power > 0)) return '';
+  let label = `×${coefStr(s.power)}<span class="cf-of">(공격력)</span>`;
+  if(s.elem) label += ` / ×1.0<span class="cf-of">(속성)</span>`;
+  return label;
+}
+/* 스킬 객체 desc의 "위력 N"을 공격 배수 표기로 치환 */
+function skillCoefDesc(s){
+  let ms = (s && s.desc) || '';
+  if(!s || !(s.power > 0)) return ms;
+  const label = `<span class="cf">${skillCoefLabel(s)}</span>`;
+  return /위력\s*\d+/.test(ms) ? ms.replace(/위력\s*\d+/, label) : (label + (ms ? ' · ' + ms : ''));
+}
+/* 임의 문자열의 "위력 N"을 공격 배수 표기로 치환(스킬 객체가 없을 때) */
+function coefifyText(text){
+  return (text || '').replace(/위력\s*(\d+)/g, (_, n) => `<span class="cf">×${coefStr(+n)}<span class="cf-of">(공격력)</span></span>`);
+}
 function renderMoveButtons(){
   let html = B.p.loadout.map(id => {
     const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0, desc:'' };
     const costLabel = (s.cost||0)>0 ? `⚡${s.cost}` : '무료';
-    return `<button class="movebtn" data-skill="${id}"><div class="mn">${s.icon||''} ${s.name} <span style="float:right;color:var(--neon);font-size:12px">${costLabel}</span></div><div class="ms">${s.desc||''}</div></button>`;
+    return `<button class="movebtn" data-skill="${id}"><div class="mn">${s.icon||''} ${s.name} <span style="float:right;color:var(--neon);font-size:12px">${costLabel}</span></div><div class="ms">${skillCoefDesc(s)}</div></button>`;
   }).join('');
   html += `<button class="movebtn wide" data-skill="__surrender" style="border-color:rgba(255,107,74,.45)"><div class="mn">🏳️ 항복</div><div class="ms">이번 경기를 포기합니다 (패배 처리)</div></button>`;
   $('#moveButtons').innerHTML = html;
@@ -6094,7 +6459,10 @@ async function applySkill(a, d, s, side){
     let elemMult = 1, elementPart = 0;
     if(s.elem){ elemMult = eff(a.element, d.element); elementPart = (a.elem||0) * elemMult; }
     const flatDef = effStat(d,'def') * (1 - (s.pierce||0));
-    let dm = Math.max(1, (normal + elementPart) - flatDef);
+    // 방어는 고정 차감하되, 원 피해의 25% 아래로는 깎이지 않게 하한선 적용
+    // (저위력 공격이 방어에 의해 1까지 무력화되던 문제 보정)
+    const raw = normal + elementPart;
+    let dm = Math.max(1, Math.max(raw * 0.25, raw - flatDef));
     // 치명타: 방어까지 계산된 최종 데미지에 치명타계수를 곱한다
     const critChance = (a.critRate||0)/100 + (s.critBonus||0) + (a.passives.critBonus||0);
     let crit = critChance>0 && Math.random()<critChance;
@@ -6209,9 +6577,10 @@ function gainGrowthExp(p, amount){
   ensureSkillFields(p);
   return { evolved };
 }
-function checkPromotion(){
-  const newTier = rankTierIndexFromPoints(state.rankPoints);
-  if(newTier > (state.rankTier||0)){ state.rankTier = newTier; return true; }
+function checkPromotion(p){
+  if(!p) return false;
+  const newTier = rankTierIndexFromPoints(p.rankPoints || 0);
+  if(newTier > (p.rankTier||0)){ p.rankTier = newTier; return true; }
   return false;
 }
 async function endMatch(won){
@@ -6219,11 +6588,15 @@ async function endMatch(won){
   await sleep(450);
   const T = state.tournament, round = TOURNAMENT_ROUNDS[T.roundIndex];
   const p = state.plants.find(x=>x.id===T.plantId);
+  const tIdx = plantRankTierIdx(p);
   if(won){ blog(`<span class="em">${B.e.name}</span> 쓰러졌다!`); sfx.win(); } else { blog(`<span class="em">${B.p.name}</span> 쓰러졌다…`); sfx.lose(); }
-  const gain = won ? round.reward + (state.rankTier||0)*30 : Math.round(round.reward*0.25)+10;
+  // 전적 집계
+  if(won) state.wins = (state.wins||0)+1; else state.losses = (state.losses||0)+1;
+  const gain = won ? round.reward + tIdx*30 : Math.round(round.reward*0.25)+10;
   addCredits(gain);
   let xpAmt = 0;
-  if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); state.player_level = (state.player_level||1) + 1; }
+  if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); gainPlayerExp(45 + T.roundIndex*20); }
+  if(p) p.bestRoundIdx = Math.max((typeof p.bestRoundIdx==='number'?p.bestRoundIdx:-1), T.roundIndex);
 
   let title='', body='', btnLabel='홈으로 돌아가기', outcome='';
   if(round.key==='prelim'){
@@ -6233,6 +6606,7 @@ async function endMatch(won){
       // 예선 5경기 종료 → 다승 판정 (3승 이상이면 통과)
       if(T.prelimWins >= round.needWins){
         T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
+        if(p) p.bestRoundIdx = Math.max(p.bestRoundIdx, 1);
         title='🏆 예선 통과!'; btnLabel='홈으로 — 본선 준비 ▶';
         body=`예선 ${round.bestOf}경기 종료 — <b>본선 진출!</b><br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>다음은 <b>16강</b> 본선입니다. 홈에서 강화·준비 후 도전하세요.`;
       } else {
@@ -6244,29 +6618,34 @@ async function endMatch(won){
     }
   } else {
     if(won){
+      // 본선 라운드 승리 → 해당 식물 티어 점수 적립
+      if(p){ p.rankPoints = (p.rankPoints||0) + round.point; }
       if(round.key==='final'){ outcome='champion'; }
       else {
         T.roundIndex++; outcome='continue'; const next=TOURNAMENT_ROUNDS[T.roundIndex];
+        if(p) p.bestRoundIdx = Math.max(p.bestRoundIdx, T.roundIndex);
+        const promotedMid = checkPromotion(p);
         title=`🏆 ${round.name} 승리!`; btnLabel='홈으로 — 다음 준비 ▶';
-        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>다음은 <b>${next.name}</b>입니다. 홈에서 준비 후 도전하세요.`;
+        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>티어 점수 <b>+${round.point}</b> (누적 ${fmt(p?p.rankPoints:0)})${promotedMid?`<br>🎉 <b style="color:var(--neon)">${plantRankTier(p).name} 승급!</b>`:''}<br>다음은 <b>${next.name}</b>입니다. 홈에서 준비 후 도전하세요.`;
       }
     } else outcome='eliminated';
   }
 
   if(outcome==='champion'){
-    const pts = TOURNAMENT_ROUNDS.reduce((a,r)=>a+r.point,0);
-    const champBonus = 200 + (state.rankTier||0)*120;
-    state.rankPoints += pts + champBonus; addCredits(champBonus);
-    const promoted = checkPromotion();
+    const champBonus = 200 + tIdx*120;
+    if(p) p.rankPoints = (p.rankPoints||0) + champBonus;
+    if(p) p.champion = true;
+    addCredits(champBonus);
+    const promoted = checkPromotion(p);
     title='👑 우승! 콜로세움 제패!';
-    body=`전 경기를 석권했습니다!<br>우승 보너스 <b>+${fmt(champBonus)}💰</b><br>랭크 포인트 <b>+${pts+champBonus}</b> (누적 ${fmt(state.rankPoints)})${promoted?`<br>🎉 <b style="color:var(--neon)">${currentRankTier().name} 승급!</b>`:''}`;
+    body=`<b>${p?plantDisplayName(p):'식물'}</b>이(가) 전 경기를 석권했습니다!<br>우승 보너스 <b>+${fmt(champBonus)}💰</b><br>티어 점수 <b>+${round.point+champBonus}</b> (누적 ${fmt(p?p.rankPoints:0)})${promoted?`<br>🎉 <b style="color:var(--neon)">${plantRankTier(p).name} 승급!</b>`:''}`;
     btnLabel='콜로세움 나가기'; state.tournament.active=false; sfx.win();
   } else if(outcome==='eliminated'){
     const lose = round.key==='prelim' ? 20 : 0;
-    state.rankPoints = Math.max(currentRankTier().threshold, state.rankPoints - lose);
+    if(p) p.rankPoints = Math.max(plantRankTier(p).threshold, (p.rankPoints||0) - lose);
     state.tournament.active=false;
     title='💀 탈락…';
-    body=`<b>${round.name}</b>에서 탈락했습니다.<br>위로금 <b>+${fmt(gain)}💰</b>${lose?`<br>랭크 포인트 -${lose}`:''}<br>식물을 강화·성장시키거나 새 종자를 키워 다시 도전하세요!`;
+    body=`<b>${round.name}</b>에서 탈락했습니다.<br>위로금 <b>+${fmt(gain)}💰</b>${lose?`<br>티어 점수 -${lose}`:''}<br>식물을 강화·성장시키거나 새 종자를 키워 다시 도전하세요!`;
     btnLabel='콜로세움 나가기'; sfx.lose();
   }
   saveState();
@@ -6320,6 +6699,15 @@ $('#bottomNav').addEventListener('click', (ev) => {
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
 $('#centerPlant').addEventListener('click', () => { sfx.tap(); openUpgrade(); });
+$('#profileBanner').addEventListener('click', () => { sfx.tap(); openProfile(); });
+$('#profileModal').addEventListener('click', (ev) => {
+  if(ev.target.closest('#profEditName')){ sfx.tap(); editProfileName(); return; }
+  if(ev.target.closest('#profClose')){ sfx.tap(); hide('#profileModal'); return; }
+  const pf = ev.target.closest('[data-pfp]');
+  if(pf){ sfx.tap(); state.profile_image = +pf.dataset.pfp; saveState(); renderProfileModal(); renderProfileBanner(); return; }
+  const bn = ev.target.closest('[data-banner]');
+  if(bn){ sfx.tap(); state.banner_image = +bn.dataset.banner; saveState(); renderProfileModal(); renderProfileBanner(); return; }
+});
 $('#collectionBar').addEventListener('click', (ev) => {
   const chip = ev.target.closest('.chip');
   if(!chip) return;
