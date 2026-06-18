@@ -715,6 +715,76 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .et-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2bd49a,#7dffd9);width:0;animation:etbar 1.45s ease-out forwards;}
 @keyframes etbar{from{width:4%}to{width:100%}}
 
+/* ===== 탐사 우주맵 (재설계) ===== */
+#explorationBody{position:relative;background:radial-gradient(120% 90% at 50% 28%, #122036 0%, #060b15 70%);}
+.exmap{position:relative;width:100%;height:100%;overflow:hidden;}
+.exmap-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.5;pointer-events:none;}
+.exmap-star.big{width:3px;height:3px;opacity:.85;box-shadow:0 0 6px #fff;}
+.exmap-orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.075);border-radius:50%;pointer-events:none;}
+.exmap-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;line-height:1;filter:drop-shadow(0 0 10px rgba(92,242,194,.6));pointer-events:none;z-index:2;}
+.exmap-title{position:absolute;left:0;right:0;top:8px;text-align:center;z-index:3;pointer-events:none;padding:0 44px;}
+.exmap-title h2{margin:0;font-size:17px;}
+.exmap-title p{margin:2px 0 0;font-size:11.5px;color:var(--sub);}
+.exmap-close{position:absolute;right:10px;top:10px;z-index:12;width:34px;height:34px;border-radius:50%;padding:0;font-size:16px;}
+.explanet{position:absolute;transform:translate(-50%,-50%);background:transparent;border:none;padding:0;z-index:4;cursor:pointer;display:flex;flex-direction:column;align-items:center;}
+.explanet-core{display:block;width:46px;height:46px;border-radius:50%;background:var(--pc);position:relative;
+  box-shadow:0 0 18px color-mix(in srgb,var(--pc) 55%,transparent), inset -10px -12px 15px rgba(0,0,0,.4), inset 8px 7px 12px rgba(255,255,255,.18);transition:transform .12s;}
+.explanet.sz-rare .explanet-core{width:54px;height:54px;}
+.explanet.sz-epic .explanet-core{width:62px;height:62px;}
+.explanet:active .explanet-core{transform:scale(.9);}
+.explanet-core:before{content:"";position:absolute;inset:6px 5px 9px 7px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
+.explanet.ring .explanet-core:after{content:"";position:absolute;left:-10px;right:-10px;top:46%;height:7px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
+.explanet-label{margin-top:6px;font-size:11.5px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.72);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:2px 9px;}
+.explanet.sel .explanet-core{outline:3px solid var(--neon);outline-offset:4px;}
+.explanet.sel .explanet-label{border-color:var(--neon);color:var(--neon);}
+/* 행성 정보 작은 팝업 (그림2) */
+.expop-backdrop{position:absolute;inset:0;z-index:10;}
+.expop{position:absolute;z-index:11;width:min(238px,80vw);background:rgba(13,22,38,.98);border:1px solid rgba(92,242,194,.42);border-radius:14px;box-shadow:0 14px 42px rgba(0,0,0,.6);padding:8px 0 0;transform:translate(-50%,calc(-100% - 26px));}
+.expop.below{transform:translate(-50%,26px);}
+.expop:after{content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);width:0;height:0;border:9px solid transparent;border-top-color:rgba(92,242,194,.42);border-bottom:0;}
+.expop.below:after{bottom:auto;top:-9px;border-top:0;border-bottom:9px solid rgba(92,242,194,.42);}
+.expop-x{position:absolute;right:7px;top:7px;width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:var(--text);font-size:13px;line-height:1;padding:0;z-index:2;}
+.expop-tbl{width:100%;border-collapse:collapse;margin-bottom:8px;}
+.expop-tbl tr{border-bottom:1px solid rgba(255,255,255,.08);}
+.expop-tbl tr:last-child{border-bottom:none;}
+.expop-tbl td{padding:7px 10px;font-size:12.5px;}
+.expop-tbl td:first-child{color:var(--sub);font-weight:700;width:42%;text-align:center;border-right:1px solid rgba(255,255,255,.08);}
+.expop-tbl td:last-child{font-weight:800;text-align:center;letter-spacing:.5px;}
+.expop-name{display:block;width:calc(100% - 20px);margin:0 10px 10px;padding:9px;border-radius:10px;font-size:15px;font-weight:900;}
+.exicon{font-size:15px;margin:0 1px;}
+/* 행성 상세 — 지역 지도 (그림3) */
+.exdet-backdrop{position:absolute;inset:0;z-index:20;background:rgba(3,7,14,.72);display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;}
+.exdet-card{width:min(460px,97%);background:#0d1525;border:1px solid rgba(92,242,194,.3);border-radius:16px;padding:12px;box-shadow:0 18px 60px rgba(0,0,0,.65);position:relative;margin:auto;}
+.exdet-x{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:var(--text);font-size:15px;padding:0;z-index:3;}
+.exdet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.3);border-radius:12px;padding:10px 42px 10px 12px;}
+.exdet-head .hn{font-size:17px;font-weight:900;}
+.exdet-head .hd{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.exdet-head .hr{font-size:11.5px;color:var(--neon);text-align:right;white-space:nowrap;font-weight:800;line-height:1.5;}
+.exdet-map{position:relative;height:188px;margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(92,242,194,.2);
+  background:
+    radial-gradient(circle at 28% 32%, #2f7d7a 0 15%, transparent 16%),
+    radial-gradient(circle at 72% 56%, #2f7d6b 0 19%, transparent 20%),
+    radial-gradient(ellipse 30% 26% at 48% 84%, #2b6a72 0 60%, transparent 62%),
+    linear-gradient(160deg,#163b4d,#0f2638);}
+.exreg{position:absolute;transform:translate(-50%,-50%);background:rgba(7,16,26,.72);border:1px solid rgba(255,255,255,.22);color:var(--text);font-size:12px;font-weight:800;border-radius:8px;padding:4px 9px;z-index:2;}
+.exreg.sel{border-color:var(--neon);color:var(--neon);box-shadow:0 0 14px rgba(92,242,194,.4);background:rgba(92,242,194,.12);}
+.exreg .pin{position:absolute;left:50%;top:-17px;transform:translateX(-50%);font-size:16px;display:none;filter:drop-shadow(0 1px 2px #000);}
+.exreg.sel .pin{display:block;}
+.exdet-desc{font-size:12px;color:var(--sub);line-height:1.55;margin:2px 2px 9px;}
+.exdet-regbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:10px;text-align:center;font-weight:900;font-size:14px;padding:9px;margin-bottom:8px;}
+.exdet-tbl{width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;}
+.exdet-tbl tr{border-bottom:1px solid rgba(255,255,255,.08);}
+.exdet-tbl tr:last-child{border-bottom:none;}
+.exdet-tbl td{padding:11px;font-size:13px;}
+.exdet-tbl td:first-child{color:var(--sub);font-weight:700;width:34%;text-align:center;background:rgba(255,255,255,.03);border-right:1px solid rgba(255,255,255,.08);}
+.exdet-tbl td:last-child{text-align:center;font-weight:800;}
+.exdet-empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 10px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;}
+.exdet-foot{margin-top:12px;}
+.exdet-foot .btn{width:100%;}
+/* 탐사 결과 (재설계) */
+.exres-backdrop{position:absolute;inset:0;z-index:30;background:rgba(3,7,14,.8);display:flex;align-items:center;justify-content:center;padding:16px;}
+.exres-card{width:min(380px,95%);background:#0d1525;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:16px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.7);}
+
 /* ===== 잠금(준비 중) 모달 ===== */
 #lockedModal .modal-card{text-align:center;}
 .locked-emoji{font-size:64px;margin:6px 0 2px;filter:grayscale(.2);}
@@ -4406,6 +4476,331 @@ renderExploration = function(){
       const close = $('#explorationClose');
       if(close) close.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
     }
+  }
+};
+
+/* =====================================================================
+   탐사 인터페이스 재설계 — 궤도 우주맵 / 행성 정보 팝업 / 행성 상세(지역 지도)
+   (그림1·2·3 기준. 아래 정의가 위의 구버전 openExploration/renderExploration을 덮어쓴다)
+   ===================================================================== */
+const EX_TYPE_ICON = { '초본형':'🌿', '목본형':'🌳', '화초형':'🌸', '다육형':'🌵', '덩굴형':'🍃' };
+const EX_EL_ORDER = ['fire','water','grass','earth','wind','bolt','ice'];
+const EX_TYPE_ORDER = ['초본형','목본형','화초형','다육형','덩굴형'];
+const EX_GRADE_ORDER = ['D','C','B','A','S'];
+const EX_ORBIT_R = { 1:78, 2:142, 3:204 };
+/* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다. */
+const EXPLORE_VIEW = [
+  { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
+    intro:'식물이 지배하는 온화한 땅', regions:[
+      { name:'아르키아', el:['grass'], types:['초본형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
+        desc:'완만한 초원이 끝없이 펼쳐진 지역. 기본형 종자가 가장 흔하게 발견된다.', link:'region_elyndor_spore_marsh' },
+      { name:'토르시단', el:['water','bolt'], types:['화초형'], diff:2, grade:'C', cost:150, map:{x:74,y:36},
+        desc:'폭풍 구름이 머무는 고지대 호수. 번개를 머금은 화초형 변이가 보고된다.', link:'region_elyndor_lumenwood' },
+      { name:'루미안', el:['water','grass'], types:['초본형','덩굴형'], diff:1, grade:'D', cost:100, map:{x:48,y:66},
+        desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood' },
+    ]},
+  { id:'ex_calisto', name:'칼리스토', orbit:1, angle:332, color:'#ffd17a',
+    intro:'붉은 모래가 흐르는 건조 행성', regions:[
+      { name:'세이라 분지', el:['earth','fire'], types:['다육형'], diff:3, grade:'C', cost:200, map:{x:32,y:38},
+        desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes' },
+      { name:'붉은 사구', el:['fire'], types:['다육형','초본형'], diff:2, grade:'D', cost:160, map:{x:68,y:62},
+        desc:'한낮의 열기가 강한 모래언덕. 내열성 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
+    ]},
+  { id:'ex_veloc', name:'벨로크', orbit:2, angle:48, color:'#ff8a4a', size:'rare',
+    intro:'화산 활동이 활발한 용암 행성', regions:[
+      { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
+        desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
+      { name:'흑요암 능선', el:['fire'], types:['다육형','목본형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
+        desc:'굳은 용암이 만든 검은 능선. 강한 방어형 종자가 발견된다.', link:'region_vathra_iron_dunes' },
+      { name:'잿빛 평원', el:['earth','fire'], types:['초본형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
+        desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
+    ]},
+  { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
+    intro:'포자 안개가 가득한 균사 행성', regions:[
+      { name:'포자 늪', el:['grass','wind'], types:['화초형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
+        desc:'공생 포자가 안개처럼 떠다니는 늪. 제어형 변이가 자주 나온다.', link:'region_elyndor_spore_marsh' },
+      { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
+        desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh' },
+    ]},
+  { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
+    intro:'생체발광 정글로 뒤덮인 위성', regions:[
+      { name:'발광 수림', el:['grass','bolt'], types:['목본형'], diff:3, grade:'B', cost:300, map:{x:28,y:36},
+        desc:'스스로 빛나는 거목 군락. 광합성 계열 변이 재료가 풍부하다.', link:'region_elyndor_lumenwood' },
+      { name:'덩굴 협곡', el:['grass'], types:['덩굴형','화초형'], diff:4, grade:'A', cost:360, map:{x:66,y:58},
+        desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh' },
+    ]},
+  { id:'ex_nereidon', name:'네레이돈', orbit:3, angle:112, color:'#4ac6ff', size:'epic', ring:true,
+    intro:'조석권에 갇힌 거대 해양 위성', regions:[
+      { name:'조석유리 산호초', el:['water','ice'], types:['화초형'], diff:6, grade:'A', cost:480, map:{x:30,y:34},
+        desc:'유리질 산호가 조석 에너지에 맞춰 자란다. 방어막 특성이 잘 붙는다.', link:'region_nereion_tideglass_reef' },
+      { name:'심해 균열', el:['water'], types:['덩굴형'], diff:7, grade:'S', cost:600, map:{x:72,y:46},
+        desc:'빛이 닿지 않는 심해의 균열. 극한 수압을 견딘 변이체가 산란한다.', link:'region_nereion_tideglass_reef' },
+      { name:'궤도 캐노피', el:['water','wind'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:520, map:{x:50,y:74},
+        desc:'위성 상층 대기에 떠 있는 부유 수림. 희귀 변이 종자가 모인다.', link:'region_nereion_orbit_canopy' },
+    ]},
+  { id:'ex_aztel', name:'아즈텔', orbit:3, angle:236, color:'#ff6bd4', size:'rare',
+    intro:'방사선 폭풍이 휘몰아치는 폐허', regions:[
+      { name:'방사 폐허', el:['bolt','fire'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:32,y:38},
+        desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift' },
+      { name:'전자기 늪', el:['bolt','water'], types:['화초형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
+        desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
+    ]},
+  { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
+    intro:'영하의 빙하로 덮인 동토 행성', regions:[
+      { name:'빙정 평원', el:['ice','water'], types:['초본형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
+        desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
+      { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
+        desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
+    ]},
+];
+let exPopPlanetId = null;   // 그림2 팝업이 열린 행성
+let exDetPlanetId = null;   // 그림3 상세가 열린 행성
+let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
+let lastExResult = null;    // 직전 탐사 결과
+function exById(id){ return EXPLORE_VIEW.find(p => p.id === id) || null; }
+function exPlanetXY(p){
+  const R = EX_ORBIT_R[p.orbit] || 142;
+  const a = (p.angle || 0) * Math.PI / 180;
+  return { x: Math.cos(a) * R, y: Math.sin(a) * R };
+}
+function exDiff(n){
+  if(n <= 1) return { t:'쉬움', c:'#6bdd6b' };
+  if(n <= 2) return { t:'보통', c:'#ffd34a' };
+  if(n <= 4) return { t:'어려움', c:'#ff8a4a' };
+  return { t:'위험', c:'#ff5a5a' };
+}
+function exElIcons(els){
+  return (els || []).map(e => `<span class="exicon" title="${(ELEMENTS[e]||{}).name||e}">${(ELEMENTS[e]||{}).icon||'❔'}</span>`).join('') || '—';
+}
+function exTypeIcons(types){
+  return (types || []).map(t => `<span class="exicon" title="${t}">${EX_TYPE_ICON[t]||'❔'}</span>`).join('') || '—';
+}
+function exPlanetEls(p){
+  const set = new Set(); p.regions.forEach(r => (r.el||[]).forEach(e => set.add(e)));
+  return EX_EL_ORDER.filter(e => set.has(e));
+}
+function exPlanetTypes(p){
+  const set = new Set(); p.regions.forEach(r => (r.types||[]).forEach(t => set.add(t)));
+  return EX_TYPE_ORDER.filter(t => set.has(t));
+}
+function exGradeRange(p){
+  const idx = p.regions.map(r => EX_GRADE_ORDER.indexOf(r.grade)).filter(i => i >= 0);
+  if(!idx.length) return '—';
+  const lo = Math.min(...idx), hi = Math.max(...idx);
+  return lo === hi ? EX_GRADE_ORDER[lo] : `${EX_GRADE_ORDER[lo]}~${EX_GRADE_ORDER[hi]}`;
+}
+function exDiffRange(p){
+  const ds = p.regions.map(r => r.diff || 1);
+  const lo = Math.min(...ds), hi = Math.max(...ds);
+  const a = exDiff(lo).t, b = exDiff(hi).t;
+  return { text: a === b ? a : `${a}~${b}`, color: exDiff(hi).c };
+}
+function exRegionCost(r){ return r.cost || (80 + (r.diff || 1) * 40); }
+function exSizeClass(p){ return p.size === 'epic' ? 'sz-epic' : p.size === 'rare' ? 'sz-rare' : ''; }
+
+openExploration = function(){
+  exPopPlanetId = null; exDetPlanetId = null; exDetRegionIdx = -1; lastExResult = null;
+  renderExploration();
+  show('#explorationModal');
+};
+
+function exStars(){
+  const stars = [
+    [8,16,1],[14,72,0],[21,31,0],[31,12,1],[39,82,0],[47,23,0],[52,58,1],[63,15,0],
+    [69,46,0],[74,84,1],[83,25,0],[91,64,0],[17,48,1],[34,55,0],[58,75,0],[88,9,1],
+    [44,46,0],[12,40,0],[80,52,1],[60,90,0],
+  ];
+  return stars.map(([x,y,big]) => `<span class="exmap-star ${big?'big':''}" style="left:${x}%;top:${y}%"></span>`).join('');
+}
+function exOrbitRings(){
+  return [1,2,3].map(o => { const d = EX_ORBIT_R[o] * 2; return `<span class="exmap-orbit" style="width:${d}px;height:${d}px"></span>`; }).join('');
+}
+function exPlanetNode(p){
+  const xy = exPlanetXY(p);
+  return `<button class="explanet ${exSizeClass(p)} ${p.ring?'ring':''} ${p.id===exPopPlanetId?'sel':''}"
+    data-explanet="${p.id}" style="left:calc(50% + ${xy.x}px);top:calc(50% + ${xy.y}px);--pc:${p.color}">
+    <span class="explanet-core"></span>
+    <span class="explanet-label">${p.name}</span>
+  </button>`;
+}
+function exPopupHtml(p){
+  if(!p) return '';
+  const xy = exPlanetXY(p);
+  const ax = clamp(xy.x, -132, 132);
+  const below = xy.y < -10;
+  const dr = exDiffRange(p);
+  return `<div class="expop-backdrop" id="exPopBackdrop"></div>
+    <div class="expop ${below?'below':''}" style="left:calc(50% + ${ax}px);top:calc(50% + ${xy.y}px)">
+      <button class="expop-x" id="exPopX" title="닫기">✕</button>
+      <table class="expop-tbl">
+        <tr><td>궤도</td><td>${p.orbit}</td></tr>
+        <tr><td>등급</td><td>${exGradeRange(p)}</td></tr>
+        <tr><td>난이도</td><td style="color:${dr.color}">${dr.text}</td></tr>
+        <tr><td>속성</td><td>${exElIcons(exPlanetEls(p))}</td></tr>
+        <tr><td>타입</td><td>${exTypeIcons(exPlanetTypes(p))}</td></tr>
+      </table>
+      <button class="btn primary expop-name" id="exPopOpen">${p.name}</button>
+    </div>`;
+}
+function exDetailHtml(p){
+  if(!p) return '';
+  const r = exDetRegionIdx >= 0 ? p.regions[exDetRegionIdx] : null;
+  const regionNodes = p.regions.map((rg, i) =>
+    `<button class="exreg ${i===exDetRegionIdx?'sel':''}" data-exreg="${i}" style="left:${rg.map.x}%;top:${rg.map.y}%"><span class="pin">📍</span>${rg.name}</button>`
+  ).join('');
+  const bodyBelow = r ? `
+    <div class="exdet-desc">${r.desc || ''}</div>
+    <div class="exdet-regbox">${r.name}</div>
+    <table class="exdet-tbl">
+      <tr><td>속성</td><td>${exElIcons(r.el)}</td></tr>
+      <tr><td>타입</td><td>${exTypeIcons(r.types)}</td></tr>
+      <tr><td>난이도</td><td style="color:${exDiff(r.diff).c}">${exDiff(r.diff).t}</td></tr>
+    </table>`
+    : `<div class="exdet-empty">지도에서 지역을 선택하면<br>속성 · 타입 · 난이도가 표시됩니다.</div>`;
+  const cost = r ? exRegionCost(r) : 0;
+  return `<div class="exdet-backdrop" id="exDetBackdrop">
+    <div class="exdet-card">
+      <button class="exdet-x" id="exDetX" title="닫기">✕</button>
+      <div class="exdet-head">
+        <div><div class="hn">${p.name}</div><div class="hd">${p.intro}</div></div>
+        <div class="hr">궤도 ${p.orbit}<br>등급 ${exGradeRange(p)}</div>
+      </div>
+      <div class="exdet-map">${regionNodes}</div>
+      ${bodyBelow}
+      <div class="exdet-foot">
+        <button class="btn primary" id="exRun" ${r?'':'disabled'}>탐사${r?` (크레딧 ${fmt(cost)})`:''}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function exResultHtml(){
+  if(!lastExResult) return '';
+  const { region, rewards } = lastExResult;
+  const seeds = rewards.seeds.length
+    ? rewards.seeds.map(s => { const m = rarityMeta(s.rarity); return `<span class="${m.css}">${s.name}${s.mutation_candidate?' · 변이 가능':''}</span>`; }).join('<br>')
+    : '없음';
+  const items = rewards.items.length ? rewards.items.map(i => `${i.name} x${i.count}`).join('<br>') : '없음';
+  const cards = (rewards.cards && rewards.cards.length)
+    ? rewards.cards.map(c => `${c.grade?gradeBadgeHtml(c.grade):''} ${c.icon} ${c.name}`).join('<br>') : '없음';
+  const skipped = rewards.storageSkipped ? `${rewards.storageSkipped}개 · 가방 용량 부족` : '';
+  return `<div class="exres-backdrop" id="exResBackdrop"><div class="exres-card">
+    <div style="font-size:34px">🌱</div>
+    <div style="font-size:17px;font-weight:900;margin:4px 0 12px">탐사 완료 — ${region.name}</div>
+    <div class="detail-list" style="text-align:left">
+      <span>획득한 종자<b>${seeds}</b></span>
+      <span>획득한 아이템<b>${items}</b></span>
+      <span>획득한 변이 카드<b>${cards}</b></span>
+      ${skipped?`<span>보관 실패<b>${skipped}</b></span>`:''}
+    </div>
+    <div class="space-panel-actions" style="margin-top:14px">
+      <button class="btn primary" id="exResBag">종자 가방으로</button>
+      <button class="btn" id="exResClose">계속 탐사</button>
+    </div>
+  </div></div>`;
+}
+function exTravelOverlay(p, done){
+  const host = $('#explorationModal');
+  if(!host){ done(); return; }
+  const ov = document.createElement('div');
+  ov.className = 'explore-travel';
+  ov.innerHTML = `
+    <div class="et-scene">
+      <div class="et-trail"></div>
+      <div class="et-probe">🛰️</div>
+      <div class="et-planet" style="--pc:${p.color}"></div>
+    </div>
+    <div class="et-text">${p.name} 궤도로 탐사선 이동 중…</div>
+    <div class="et-bar"><span></span></div>`;
+  host.appendChild(ov);
+  if(sfx && sfx.roll) sfx.roll();
+  setTimeout(() => { if(ov.parentNode) ov.remove(); done(); }, 1450);
+}
+function exploreViewRun(){
+  if(explorationBusy) return;
+  const p = exById(exDetPlanetId); if(!p) return;
+  const r = exDetRegionIdx >= 0 ? p.regions[exDetRegionIdx] : null;
+  if(!r){ toast('지역을 선택하세요'); return; }
+  const cost = exRegionCost(r);
+  if((state.credits || 0) < cost){ toast('크레딧이 부족합니다'); return; }
+  const realRegion = ALIEN_INDEX.regions[r.link];
+  const realPlanet = realRegion ? ALIEN_INDEX.planets[realRegion.planet_id] : null;
+  explorationBusy = true;
+  exTravelOverlay(p, () => {
+    explorationBusy = false;
+    spendCredits(cost);
+    let rewards = { seeds:[], items:[], cards:[], storageSkipped:0 };
+    if(realRegion && realPlanet){
+      try{ rewards = rollExplorationRewards(realPlanet, realRegion, 0.25, false); }
+      catch(e){ console.error(e); }
+    }
+    lastExResult = { planet:p, region:r, rewards };
+    saveState(); sfx.win();
+    renderMain(); renderExploration();
+  });
+}
+renderExploration = function(){
+  const body = $('#explorationBody');
+  if(!body) return;
+  try{
+    const popPlanet = exById(exPopPlanetId);
+    const detPlanet = exById(exDetPlanetId);
+    body.innerHTML = `
+      <div class="exmap">
+        ${exStars()}
+        ${exOrbitRings()}
+        <div class="exmap-center">🛰️</div>
+        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>행성을 누르면 정보 창이 열립니다</p></div>
+        <button class="btn modal-close exmap-close" id="exClose" title="닫기">✕</button>
+        ${EXPLORE_VIEW.map(exPlanetNode).join('')}
+        ${exPopupHtml(popPlanet)}
+        ${exDetailHtml(detPlanet)}
+        ${exResultHtml()}
+      </div>`;
+
+    // 행성 선택 → 정보 팝업(그림2)
+    body.querySelectorAll('[data-explanet]').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      exPopPlanetId = btn.dataset.explanet;
+      sfx.tap(); renderExploration();
+    }));
+    // 팝업 닫기 (빈 공간 / X)
+    const popBack = $('#exPopBackdrop');
+    if(popBack) popBack.addEventListener('click', () => { exPopPlanetId = null; sfx.tap(); renderExploration(); });
+    const popX = $('#exPopX');
+    if(popX) popX.addEventListener('click', e => { e.stopPropagation(); exPopPlanetId = null; sfx.tap(); renderExploration(); });
+    // 팝업의 행성 이름 버튼 → 상세(그림3)
+    const popOpen = $('#exPopOpen');
+    if(popOpen) popOpen.addEventListener('click', e => {
+      e.stopPropagation();
+      exDetPlanetId = exPopPlanetId; exDetRegionIdx = -1; exPopPlanetId = null;
+      sfx.tap(); renderExploration();
+    });
+    // 상세 닫기 (빈 공간 / X)
+    const detBack = $('#exDetBackdrop');
+    if(detBack) detBack.addEventListener('click', e => { if(e.target === detBack){ exDetPlanetId = null; exDetRegionIdx = -1; sfx.tap(); renderExploration(); } });
+    const detX = $('#exDetX');
+    if(detX) detX.addEventListener('click', () => { exDetPlanetId = null; exDetRegionIdx = -1; sfx.tap(); renderExploration(); });
+    // 지역 선택
+    body.querySelectorAll('[data-exreg]').forEach(btn => btn.addEventListener('click', () => {
+      exDetRegionIdx = parseInt(btn.dataset.exreg, 10);
+      sfx.tap(); renderExploration();
+    }));
+    // 탐사 실행
+    const runBtn = $('#exRun');
+    if(runBtn) runBtn.addEventListener('click', exploreViewRun);
+    // 결과
+    const resBag = $('#exResBag');
+    if(resBag) resBag.addEventListener('click', () => { lastExResult = null; hide('#explorationModal'); openSeedBag(); sfx.tap(); });
+    const resClose = $('#exResClose');
+    if(resClose) resClose.addEventListener('click', () => { lastExResult = null; sfx.tap(); renderExploration(); });
+    const resBack = $('#exResBackdrop');
+    if(resBack) resBack.addEventListener('click', e => { if(e.target === resBack){ lastExResult = null; sfx.tap(); renderExploration(); } });
+    // 우주맵 닫기
+    const exClose = $('#exClose');
+    if(exClose) exClose.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
+  }catch(error){
+    console.error(error);
+    body.innerHTML = `<div class="howto" style="margin:16px">우주맵 표시 오류: ${error && error.message ? error.message : error}</div>`;
   }
 };
 function setShipBaseStat(ship, key, value){
