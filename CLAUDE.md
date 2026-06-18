@@ -50,6 +50,18 @@
 
 ## 변경 이력 (개발 로그)
 
+### 2026-06-18 — 탐사 시스템 대개편(탐사선 4스탯 작동 + 궤도 게이팅 + 종자/스킬 등급 + 소모품 폐지)
+이전 재설계로 `EXPLORE_VIEW`(8행성/3궤도)가 라이브 화면이 됐지만 **탐사선 스탯이 아무 효과 없고 탐사는 무조건 성공**하던 사장 상태를, 실제 메커니즘으로 채움. 죽은 시스템(연료 소모·각종 저항·보관함·소모품)은 제거.
+1. **탐사선 4스탯** — `newExplorerShip`/`SHIP_UPGRADES`를 `fuel_tank`(궤도 해금 레벨1~3)·`durability`(내구성)·`harvester`(채집기)·`scanner`(탐사장치)로 축소. 강화는 **크레딧 전용**(`shipUpgradeCost` 4트랙). 구 세이브는 `normalizeState`에서 4스탯으로 보정(내구성 보존). 저항·보관·연료 스탯·부품 시스템은 사장(정의는 남되 라이브 미사용). 내구도→**내구성** 명칭 통일.
+2. **격납고 UI** — 궤도맵 중앙 🛰️(`#exHangarOpenBtn`) 클릭 → `exHangarHtml` 오버레이(스탯 + 4트랙 강화, `data-ship-upgrade`→`upgradeShipStat`). 구 `renderShipModRoom`/탐사상점 대체.
+3. **궤도 게이팅** — `exOrbitLocked`: `행성.orbit > fuel_tank`면 잠금. `exPlanetNode`/`exOrbitRings`에 `.locked`(그림자) 처리, 연료탱크 강화 시 밝아짐.
+4. **6단계 난이도** — `exDiffVsShip(region,planet)`: 지역 적정치(`exRegionNeed`=diff기반) vs 내구성·채집기 비율 → 매우쉬움~불가능. 궤도 잠금/스펙 대폭 미달=불가능. `exDetailHtml`에 난이도+예상 성공률 표기.
+5. **성공/실패·보상** — `exploreViewRun` 재작성: `exSuccessChance`(내구성 위주), 실패=보상 0개. 성공 시 `exRewardCount`(채집기 위주). **아이템 보상 폐지**(종자+변이카드만). 보상 등급(D~S)은 `exRollRewardGrade`(지역 grade 중심·`scanner`가 상위 가중·행성 등급범위 클램프).
+6. **행성 테마=카드 카테고리** — `EXPLORE_VIEW` 행성에 `cardTypes`(예 멸망폐허 아즈텔=무기·DNA / 우림 에르미아스=엽록체·DNA·포자 / 균사 카이렌=포자·물약). `grantThemedTraitCard`로 테마 카드만 지급.
+7. **종자 등급=잠재력** — 발견 시 `createExplorationSeedEntry`에 `grade` 부여(=잠재력). 보관함/스펙감소 폐지(가방 무제한, 종자 스펙 종류별 고정·`mult=1`). 심을 때 `createPlantedPlantFromSeed`가 종자 등급을 **식물 잠재력**으로 사용(`p.potential`, 심기 후 등급결정 로직 제거). 등급 무관 심기 가능. `GRADES`에 D 추가.
+8. **스킬 등급(1차)** — `ensureSkillFields`가 잠재력 기반으로 해금 스킬에 등급 부여(`rollSkillGrade`/`POTENTIAL_GRADE_BOOST`, `p.skillGrades`). `skillById`→`gradeGrowthSkill`로 위력 스케일 + 상위 등급(A/S) 부가효과 추가. 스킬명에 등급 표기.
+9. **소모품→강화** — 소모품 아이템·상점 소모품 레인/상자·물약 판매 제거. 식물관리 `🧪 소모품` 탭 → **`🔧 강화`**(크레딧 전용 영구 스탯강화만). 검증: preview 콘솔 에러 0, 마이그레이션·궤도잠금·난이도·등급분포·강화탭 동작 확인.
+
 ### 2026-06-18 — 탐사 인터페이스 재설계(궤도 우주맵 + 행성 정보 팝업 + 지역 지도 상세)
 기획 이미지(그림1·2·3) 기준으로 탐사 화면을 전면 재구성. 구버전 `openExploration`/`renderExploration`(우주맵 + 하단 시트 + 탐사선 개조실/상점)을 **새 정의로 덮어씀**(구 함수·헬퍼는 더 이상 호출되지 않는 사장 코드로 남김).
 1. **궤도 우주맵(그림1)** — 중앙(🛰️) 기준 동심원 궤도 3개. 각 궤도에 **여러 행성 배치 가능**(궤도1:2 / 궤도2:3 / 궤도3:3, 총 8행성). 행성은 극좌표(`exPlanetXY`: 궤도 반경 `EX_ORBIT_R` × 각도)로 배치. 표시 전용 데이터 `EXPLORE_VIEW`(행성: 궤도·각도·색·소개·지역[], 지역: 속성`el`·타입`types`·난이도`diff`·등급`grade`·크레딧·지도좌표·설명·`link`).

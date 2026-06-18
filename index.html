@@ -735,6 +735,27 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .explanet-core:before{content:"";position:absolute;inset:6px 5px 9px 7px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
 .explanet.ring .explanet-core:after{content:"";position:absolute;left:-10px;right:-10px;top:46%;height:7px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
 .explanet-label{margin-top:6px;font-size:11.5px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.72);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:2px 9px;}
+/* 연료탱크 미충족 궤도 — 어둡게 그림자 처리 */
+.exmap-orbit.locked{border-style:dashed;border-color:rgba(255,255,255,.04);}
+.explanet.locked{filter:grayscale(.85) brightness(.4);opacity:.6;}
+.explanet.locked .explanet-core{box-shadow:inset -10px -12px 15px rgba(0,0,0,.6);}
+.explanet.locked .explanet-label{color:#8a93a3;}
+.exmap-center.clickable{pointer-events:auto;cursor:pointer;background:none;border:none;}
+.exmap-center.clickable:active{transform:translate(-50%,-50%) scale(.9);}
+/* 탐사선 격납고 오버레이 */
+.exhangar-backdrop{position:absolute;inset:0;z-index:20;background:rgba(3,7,14,.78);display:flex;align-items:center;justify-content:center;padding:18px;}
+.exhangar-card{width:min(520px,94%);max-height:86%;overflow:auto;background:linear-gradient(160deg,#142338,#0a1322);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px;position:relative;}
+.exhangar-card h3{margin:0 0 2px;font-size:18px;}
+.exhangar-card .sub{margin:0 0 12px;color:var(--sub);font-size:12.5px;}
+.exhangar-x{position:absolute;right:10px;top:10px;width:32px;height:32px;border-radius:50%;padding:0;}
+.exhangar-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.exhangar-stat{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;}
+.exhangar-stat b{font-size:15px;}
+.exhangar-up{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:10px;margin-bottom:9px;}
+.exhangar-up .u-top{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px;}
+.exhangar-up .u-desc{color:var(--sub);font-size:12px;margin:5px 0 7px;}
+.exhangar-up .u-cmp{font-size:12.5px;margin-bottom:8px;}
+.exhangar-up .u-cmp b{color:var(--neon);}
 .explanet.sel .explanet-core{outline:3px solid var(--neon);outline-offset:4px;}
 .explanet.sel .explanet-label{border-color:var(--neon);color:var(--neon);}
 /* 행성 정보 작은 팝업 (그림2) */
@@ -2016,7 +2037,10 @@ const ELEMENTS = {
   bolt:  { name:'번개', icon:'⚡', color:'#ffe14a', weak:['earth','ice'],       strong:['water','grass'],       skill:'천둥 직격' },
   ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire','earth'],      strong:['water','bolt'],        skill:'절대 영도' },
 };
-const GRADES = { C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
+const GRADES = { D:'#9fb0c3', C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
+/* 잠재력(종자 발견 등급) — D < C < B < A < S. 등급이 높을수록 생장 시 더 좋은 스킬을 얻는다. */
+const POTENTIAL_ORDER = ['D','C','B','A','S'];
+function potentialIndex(g){ const i = POTENTIAL_ORDER.indexOf(g); return i < 0 ? 1 : i; }
 const STAT_NAMES = { hp:'생명력', atk:'공격', def:'방어', spd:'기동성', acc:'적중' };
 /* 모든 스탯을 5단계(매우 낮음~매우 높음)로 구간화. 밸런싱 기준 — 자유롭게 조정. */
 const STAT_TIER_LABELS = ['매우 낮음', '낮음', '보통', '높음', '매우 높음'];
@@ -2299,18 +2323,13 @@ const SHIP_PARTS = [
   { id:'part_resource_scanner_basic', slot:'item_scanner', icon:'📡', name:'자원 스캐너', desc:'아이템 보상 발견 확률을 높입니다.', stat_modifiers:{ item_find_bonus:0.05, item_detection_bonus:0.05 } },
 ];
 const SHIP_PART_INDEX = Object.fromEntries(SHIP_PARTS.map(part => [part.id, part]));
+/* 탐사선 강화 = 크레딧 전용 4트랙 */
+const SHIP_ORBIT_MAX = 3;
 const SHIP_UPGRADES = [
-  { id:'durability', label:'내구성 강화', stat:'durability', step:10, max:180, icon:'🛡️' },
-  { id:'max_fuel', label:'최대 연료 증가', stat:'max_fuel', step:1, max:14, icon:'⛽' },
-  { id:'heat_resistance', label:'열 저항 강화', stat:'heat_resistance', step:4, max:60, icon:'🔥' },
-  { id:'cold_resistance', label:'냉기 저항 강화', stat:'cold_resistance', step:4, max:60, icon:'❄️' },
-  { id:'pressure_resistance', label:'압력 저항 강화', stat:'pressure_resistance', step:4, max:64, icon:'🧭' },
-  { id:'water_pressure_resistance', label:'수압 저항 강화', stat:'water_pressure_resistance', step:4, max:68, icon:'🌊' },
-  { id:'weapon_power', label:'무기 성능 강화', stat:'weapon_power', step:2, max:36, icon:'🎯' },
-  { id:'seed_storage_capacity', label:'종자 보관함 용량 증가', stat:'seed_storage_capacity', step:2, max:MAX_SEED_STORAGE_CAPACITY, icon:'📦' },
-  { id:'seed_storage_environment', label:'종자 보관 환경 개선', stat:'seed_storage_environment', step:1, max:'S', icon:'🧪' },
-  { id:'rare_seed_bonus', label:'희귀 종자 탐지 성능 강화', stat:'rare_seed_bonus', step:0.025, max:0.28, icon:'🔭' },
-  { id:'item_find_bonus', label:'아이템 탐지 성능 강화', stat:'item_find_bonus', step:0.03, max:0.3, icon:'📡' },
+  { id:'fuel_tank',  label:'연료 탱크',  stat:'fuel_tank',  step:1,  max:SHIP_ORBIT_MAX, icon:'⛽', desc:'탐사 가능한 궤도가 넓어집니다.' },
+  { id:'durability', label:'내구성',     stat:'durability', step:12, max:200, icon:'🛡️', desc:'탐사 성공률이 크게 오르고 보상도 안정적입니다.' },
+  { id:'harvester',  label:'채집기',     stat:'harvester',  step:8,  max:140, icon:'🧺', desc:'성공 시 가져오는 보상 개수가 늘어납니다.' },
+  { id:'scanner',    label:'탐사 장치',  stat:'scanner',    step:8,  max:140, icon:'🔭', desc:'높은 등급의 보상을 발견할 확률이 오릅니다.' },
 ];
 const SHIP_UPGRADE_INDEX = Object.fromEntries(SHIP_UPGRADES.map(upgrade => [upgrade.id, upgrade]));
 const EXPLORATION_SHOP_CATEGORIES = [
@@ -2612,6 +2631,27 @@ function gradeCardSkill(id, base, grade){
   s.name = base.name + ' ' + g.name;
   return s;
 }
+/* 잠재력 → 스킬 등급 분포(가중치 부스트). 등급이 높을수록 상위 등급 스킬이 잘 붙는다. */
+const POTENTIAL_GRADE_BOOST = { D:0.4, C:0.8, B:1.3, A:1.9, S:2.8 };
+function rollSkillGrade(potential){ return rollCardGrade(POTENTIAL_GRADE_BOOST[potential] || 1); }
+/* 성장 스킬 등급화 — 위력 스케일(완만) + 상위 등급은 부가효과 추가(피해+버프 등) */
+const GROWTH_GRADE_MULT = { D:0.85, C:1.0, B:1.12, A:1.25, S:1.42 };
+function gradeGrowthSkill(id, base, grade){
+  if(!base || !grade || grade === 'C') return base ? Object.assign({ id, grade:'C' }, base) : base;
+  const m = GROWTH_GRADE_MULT[grade] || 1;
+  const s = Object.assign({ id }, base);
+  if(base.power) s.power = Math.round(base.power * m);
+  if(base.heal)  s.heal  = round2(base.heal * Math.min(1.3, m));
+  if(grade === 'A' || grade === 'S'){
+    s.critBonus = round2((s.critBonus || 0) + (grade === 'S' ? 0.12 : 0.07));
+    if(grade === 'S' && !s.selfBuff && (s.kind === 'attack' || s.kind === 'elemental' || s.kind === 'dot')){
+      s.selfBuff = { stat:'atk', pct:0.12, turns:2 };
+    }
+  }
+  s.name = base.name + ' ' + grade;
+  s.grade = grade;
+  return s;
+}
 function skillById(id, unit){
   if(id === 'skill_weapon'){
     let wk=null, lv=0;
@@ -2625,6 +2665,7 @@ function skillById(id, unit){
   }
   const base = ALL_SKILLS[id] || null;
   if(base && unit && unit.cardSkills && unit.cardSkills[id]) return gradeCardSkill(id, base, unit.cardSkills[id]);
+  if(base && unit && unit.skillGrades && unit.skillGrades[id]) return gradeGrowthSkill(id, base, unit.skillGrades[id]);
   return base;
 }
 function skillDisplay(id, unit){
@@ -2679,6 +2720,13 @@ function ensureSkillFields(p){
   const owned = ownedFormCards(p.form || 'normal');
   p.equipped_trait_cards = p.equipped_trait_cards.filter(cid => owned.includes(cid)).slice(0, 5);
   const known = plantKnownSkillIds(p);
+  // 스킬 등급 — 잠재력(등급)에 따라 해금된 비기본 스킬에 1회 결정·저장
+  if(!p.skillGrades || typeof p.skillGrades !== 'object') p.skillGrades = {};
+  const pot = p.potential || p.grade || 'C';
+  known.forEach(id => {
+    if(id === 'skill_basic_strike' || id === 'skill_weapon') return; // 기본기·무기(카드 등급)는 제외
+    if(!p.skillGrades[id]) p.skillGrades[id] = rollSkillGrade(pot);
+  });
   if(!Array.isArray(p.equipped_skills) || !p.equipped_skills.length){
     p.equipped_skills = defaultLoadout(p);
   } else {
@@ -2771,33 +2819,21 @@ function gainPlayerExp(amount){
   return leveled;
 }
 
+/* 탐사선 — 4스탯 체계 (연료탱크=궤도 해금 / 내구성 / 채집기 / 탐사장치)
+   · fuel_tank : 탐사 가능한 궤도 레벨(1~3). 이 레벨 이하 궤도의 행성만 탐사 가능.
+   · durability: 내구성 — 탐사 성공/실패에 큰 영향 + 보상 개수에 약간 영향.
+   · harvester : 채집기 — 성공 시 보상 개수에 큰 영향 + 성공/실패에 약간 영향(실패=0개).
+   · scanner   : 탐사 장치 — 높은 등급 보상을 발견할 확률을 올림. */
 function newExplorerShip(){
   return {
     id:'ship_basic_scout',
     name:'기본 탐사선',
     tier:1,
     stats:{
-      fuel:6,
-      max_fuel:6,
-      durability:90,
-      heat_resistance:12,
-      cold_resistance:8,
-      pressure_resistance:10,
-      hydro_pressure_resistance:6,
-      water_pressure_resistance:6,
-      weapon_performance:4,
-      weapon_power:4,
-      seed_storage_capacity:6,
-      seed_storage_environment_grade:'C',
-      seed_storage_environment:'C',
-      scanner_bonus:0,
-      rare_seed_bonus:0,
-      item_detection_bonus:0,
-      item_find_bonus:0,
-      engine_range:1,
-      stability:82,
-      fuel_efficiency:1,
-      cargo_slots:6,
+      fuel_tank:1,
+      durability:60,
+      harvester:10,
+      scanner:10,
     },
     equipped_parts:{},
     owned_parts:[],
@@ -2817,7 +2853,7 @@ function defaultState(){
     profile_name:'재배사', profile_image:0, banner_image:0,
     plants:[], activeId:null, sound:true, weapons:newArmory(),
     exploration_ship:starterShip,
-    exploration_equipment_bonus:starterShip.stats.scanner_bonus,
+    exploration_equipment_bonus:0,
     unlocked_planets:starterShip.unlocked_planets.slice(),
     starter_seed_claimed:false,
     seed_inventory:[],
@@ -2853,16 +2889,14 @@ function normalizeState(s){
   if(s.tournament === undefined) s.tournament = null;
   if(!s.exploration_ship) s.exploration_ship = newExplorerShip();
   s.exploration_ship.stats = { ...newExplorerShip().stats, ...(s.exploration_ship.stats || {}) };
-  s.exploration_ship.stats.water_pressure_resistance = s.exploration_ship.stats.water_pressure_resistance ?? s.exploration_ship.stats.hydro_pressure_resistance;
-  s.exploration_ship.stats.hydro_pressure_resistance = s.exploration_ship.stats.hydro_pressure_resistance ?? s.exploration_ship.stats.water_pressure_resistance;
-  s.exploration_ship.stats.weapon_power = s.exploration_ship.stats.weapon_power ?? s.exploration_ship.stats.weapon_performance;
-  s.exploration_ship.stats.weapon_performance = s.exploration_ship.stats.weapon_performance ?? s.exploration_ship.stats.weapon_power;
-  s.exploration_ship.stats.seed_storage_environment = s.exploration_ship.stats.seed_storage_environment ?? s.exploration_ship.stats.seed_storage_environment_grade;
-  s.exploration_ship.stats.seed_storage_environment_grade = s.exploration_ship.stats.seed_storage_environment_grade ?? s.exploration_ship.stats.seed_storage_environment;
-  s.exploration_ship.stats.rare_seed_bonus = s.exploration_ship.stats.rare_seed_bonus ?? s.exploration_ship.stats.scanner_bonus;
-  s.exploration_ship.stats.scanner_bonus = s.exploration_ship.stats.scanner_bonus ?? s.exploration_ship.stats.rare_seed_bonus;
-  s.exploration_ship.stats.item_find_bonus = s.exploration_ship.stats.item_find_bonus ?? s.exploration_ship.stats.item_detection_bonus;
-  s.exploration_ship.stats.item_detection_bonus = s.exploration_ship.stats.item_detection_bonus ?? s.exploration_ship.stats.item_find_bonus;
+  // 4스탯 체계로 정리 — 구 세이브의 저항/보관/연료 스탯은 폐기, 핵심 4스탯만 보존/보정
+  {
+    const _st = s.exploration_ship.stats;
+    _st.fuel_tank  = clamp(Math.round(_st.fuel_tank  || 1), 1, SHIP_ORBIT_MAX);
+    _st.durability = Math.max(30, Math.round(_st.durability || 60));
+    _st.harvester  = Math.max(4,  Math.round(_st.harvester  || 10));
+    _st.scanner    = Math.max(0,  Math.round(_st.scanner    || 10));
+  }
   if(!s.exploration_ship.equipped_parts || Array.isArray(s.exploration_ship.equipped_parts)) s.exploration_ship.equipped_parts = {};
   if(!Array.isArray(s.ship_part_inventory)) s.ship_part_inventory = [];
   Object.values(s.exploration_ship.equipped_parts).forEach(partId => {
@@ -3289,12 +3323,13 @@ function weightedPickLoot(region, successMargin){
   }
   return table[table.length - 1];
 }
-function createExplorationSeedEntry(seed, planet, region, mutationCandidate){
+function createExplorationSeedEntry(seed, planet, region, mutationCandidate, grade){
   return {
     inventory_id: `seed_${Date.now()}_${Math.floor(Math.random()*10000)}`,
     seed_id: seed.id,
     name: seed.name,
     rarity: seed.rarity,
+    grade: grade || 'C',
     origin_planet: seed.origin_planet,
     origin_region: seed.origin_region,
     base_species_type: seed.base_species_type,
@@ -3304,7 +3339,7 @@ function createExplorationSeedEntry(seed, planet, region, mutationCandidate){
     discovery_group: seedGroup(seed, mutationCandidate),
     mutation_candidate: mutationCandidate,
     acquired_at: new Date().toISOString(),
-    source: { planet_id: planet.id, region_id: region.id },
+    source: { planet_id: planet ? planet.id : null, region_id: region ? region.id : null },
     exploration_equipment_bonus: playerEquipmentBonus(),
   };
 }
@@ -3494,18 +3529,10 @@ function renderShipSummary(ship){
 }
 function shipSummaryStats(ship){
   return [
-    ['연료', `${shipStat(ship, 'fuel')}/${shipStat(ship, 'max_fuel')}`],
-    ['최대 연료', shipStat(ship, 'max_fuel')],
-    ['내구성', shipStat(ship, 'durability')],
-    ['열 저항', shipStat(ship, 'heat_resistance')],
-    ['냉기 저항', shipStat(ship, 'cold_resistance')],
-    ['압력 저항', shipStat(ship, 'pressure_resistance')],
-    ['수압 저항', shipStat(ship, 'water_pressure_resistance')],
-    ['무기 성능', shipStat(ship, 'weapon_power')],
-    ['종자 보관함 용량', seedBagCapacity()],
-    ['보관 환경 등급', shipStorageGrade(ship)],
-    ['희귀 종자 탐지', '+' + pct(shipStat(ship, 'rare_seed_bonus') || playerEquipmentBonus())],
-    ['아이템 탐지', '+' + pct(shipStat(ship, 'item_find_bonus'))],
+    ['⛽ 연료 탱크', `궤도 ${shipStat(ship, 'fuel_tank')}`],
+    ['🛡️ 내구성', shipStat(ship, 'durability')],
+    ['🧺 채집기', shipStat(ship, 'harvester')],
+    ['🔭 탐사 장치', shipStat(ship, 'scanner')],
   ];
 }
 function shipStatLabel(key){
@@ -3521,6 +3548,7 @@ function shipStatLabel(key){
   })[key] || key;
 }
 function shipValueText(key, value){
+  if(key === 'fuel_tank') return '궤도 ' + value;
   if(key === 'seed_storage_environment') return value;
   if(key === 'rare_seed_bonus' || key === 'item_find_bonus' || key === 'scanner_bonus' || key === 'item_detection_bonus') return '+' + pct(value || 0);
   return value;
@@ -3534,12 +3562,9 @@ function partModifierText(part){
 function shipUpgradeCost(upgrade){
   const ship = state.exploration_ship || newExplorerShip();
   const level = (ship.upgrade_levels && ship.upgrade_levels[upgrade.id]) || 0;
-  const baseCosts = {
-    durability:120, max_fuel:150, heat_resistance:130, cold_resistance:130,
-    pressure_resistance:150, water_pressure_resistance:170, weapon_power:180,
-    seed_storage_capacity:220, seed_storage_environment:420, rare_seed_bonus:240, item_find_bonus:220,
-  };
-  return Math.round(((baseCosts[upgrade.id] || 160) + level * 85) / 10) * 10;
+  const baseCosts = { fuel_tank:900, durability:140, harvester:160, scanner:160 };
+  const stepCosts = { fuel_tank:1400, durability:90, harvester:110, scanner:110 };
+  return Math.round(((baseCosts[upgrade.id] || 160) + level * (stepCosts[upgrade.id] || 90)) / 10) * 10;
 }
 function shipUpgradeFinalCost(upgrade){
   const base = shipUpgradeCost(upgrade);
@@ -4491,6 +4516,7 @@ const EX_ORBIT_R = { 1:78, 2:142, 3:204 };
 /* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다. */
 const EXPLORE_VIEW = [
   { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
+    cardTypes:['chloro','dna','spore'], themeNote:'생명이 풍부한 우림 — 무기는 발견되지 않고 DNA·포자·엽록체 카드가 나온다.',
     intro:'식물이 지배하는 온화한 땅', regions:[
       { name:'아르키아', el:['grass'], types:['초본형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
         desc:'완만한 초원이 끝없이 펼쳐진 지역. 기본형 종자가 가장 흔하게 발견된다.', link:'region_elyndor_spore_marsh' },
@@ -4500,6 +4526,7 @@ const EXPLORE_VIEW = [
         desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood' },
     ]},
   { id:'ex_calisto', name:'칼리스토', orbit:1, angle:332, color:'#ffd17a',
+    cardTypes:['weapon','common'], themeNote:'버려진 채굴 잔해가 흩어진 건조 지대 — 무기 카드가 발견된다.',
     intro:'붉은 모래가 흐르는 건조 행성', regions:[
       { name:'세이라 분지', el:['earth','fire'], types:['다육형'], diff:3, grade:'C', cost:200, map:{x:32,y:38},
         desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes' },
@@ -4507,6 +4534,7 @@ const EXPLORE_VIEW = [
         desc:'한낮의 열기가 강한 모래언덕. 내열성 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_veloc', name:'벨로크', orbit:2, angle:48, color:'#ff8a4a', size:'rare',
+    cardTypes:['weapon','dna'], themeNote:'고대 전장의 잔해가 묻힌 용암 행성 — 무기·DNA 카드가 발견된다.',
     intro:'화산 활동이 활발한 용암 행성', regions:[
       { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
         desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
@@ -4516,6 +4544,7 @@ const EXPLORE_VIEW = [
         desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
     ]},
   { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
+    cardTypes:['spore','potion'], themeNote:'독성 포자가 가득한 균사 행성 — 포자·물약 카드가 발견된다.',
     intro:'포자 안개가 가득한 균사 행성', regions:[
       { name:'포자 늪', el:['grass','wind'], types:['화초형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
         desc:'공생 포자가 안개처럼 떠다니는 늪. 제어형 변이가 자주 나온다.', link:'region_elyndor_spore_marsh' },
@@ -4523,6 +4552,7 @@ const EXPLORE_VIEW = [
         desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh' },
     ]},
   { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
+    cardTypes:['chloro','dna','spore'], themeNote:'생체발광 정글 위성 — 무기는 없고 엽록체·DNA·포자 카드가 나온다.',
     intro:'생체발광 정글로 뒤덮인 위성', regions:[
       { name:'발광 수림', el:['grass','bolt'], types:['목본형'], diff:3, grade:'B', cost:300, map:{x:28,y:36},
         desc:'스스로 빛나는 거목 군락. 광합성 계열 변이 재료가 풍부하다.', link:'region_elyndor_lumenwood' },
@@ -4530,6 +4560,7 @@ const EXPLORE_VIEW = [
         desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh' },
     ]},
   { id:'ex_nereidon', name:'네레이돈', orbit:3, angle:112, color:'#4ac6ff', size:'epic', ring:true,
+    cardTypes:['potion','spore','chloro'], themeNote:'심해 해양 위성 — 물약·포자·엽록체 카드가 발견된다.',
     intro:'조석권에 갇힌 거대 해양 위성', regions:[
       { name:'조석유리 산호초', el:['water','ice'], types:['화초형'], diff:6, grade:'A', cost:480, map:{x:30,y:34},
         desc:'유리질 산호가 조석 에너지에 맞춰 자란다. 방어막 특성이 잘 붙는다.', link:'region_nereion_tideglass_reef' },
@@ -4539,6 +4570,7 @@ const EXPLORE_VIEW = [
         desc:'위성 상층 대기에 떠 있는 부유 수림. 희귀 변이 종자가 모인다.', link:'region_nereion_orbit_canopy' },
     ]},
   { id:'ex_aztel', name:'아즈텔', orbit:3, angle:236, color:'#ff6bd4', size:'rare',
+    cardTypes:['weapon','dna'], themeNote:'멸망한 문명의 폐허 — 강력한 무기·DNA 카드가 발견된다.',
     intro:'방사선 폭풍이 휘몰아치는 폐허', regions:[
       { name:'방사 폐허', el:['bolt','fire'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:32,y:38},
         desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift' },
@@ -4546,6 +4578,7 @@ const EXPLORE_VIEW = [
         desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
+    cardTypes:['common','chloro'], themeNote:'영구 동토 행성 — 공통·엽록체 카드가 발견된다.',
     intro:'영하의 빙하로 덮인 동토 행성', regions:[
       { name:'빙정 평원', el:['ice','water'], types:['초본형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
         desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
@@ -4557,6 +4590,7 @@ let exPopPlanetId = null;   // 그림2 팝업이 열린 행성
 let exDetPlanetId = null;   // 그림3 상세가 열린 행성
 let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
 let lastExResult = null;    // 직전 탐사 결과
+let exHangarOpen = false;   // 탐사선 격납고 오버레이 열림 여부
 function exById(id){ return EXPLORE_VIEW.find(p => p.id === id) || null; }
 function exPlanetXY(p){
   const R = EX_ORBIT_R[p.orbit] || 142;
@@ -4598,6 +4632,74 @@ function exDiffRange(p){
 function exRegionCost(r){ return r.cost || (80 + (r.diff || 1) * 40); }
 function exSizeClass(p){ return p.size === 'epic' ? 'sz-epic' : p.size === 'rare' ? 'sz-rare' : ''; }
 
+/* ===== 탐사선 스펙 ↔ 탐사 난이도/보상 연동 ===== */
+function exShip(){ return state.exploration_ship || newExplorerShip(); }
+function exFuelTank(){ return Math.max(1, Math.round(shipStat(exShip(), 'fuel_tank') || 1)); }
+function exOrbitLocked(p){ return !!(p && (p.orbit || 1) > exFuelTank()); }
+function exRegionNeed(r){ const d = (r && r.diff) || 1; return { dur: 24 + d*14, harv: 4 + d*5 }; }
+const EX_DIFF_TIERS = [
+  { t:'매우 쉬움',   c:'#6bdd6b' },
+  { t:'쉬움',       c:'#9be15d' },
+  { t:'보통',       c:'#ffd34a' },
+  { t:'어려움',      c:'#ff8a4a' },
+  { t:'매우 어려움',  c:'#ff5a5a' },
+  { t:'불가능',      c:'#8a93a3' },
+];
+/* 지역 난이도 = 내 탐사선(내구성·채집기) vs 지역 적정치 비교 → 6단계 */
+function exDiffVsShip(r, planet){
+  const orbit = (planet && planet.orbit) || (r && r.orbit) || 1;
+  if(orbit > exFuelTank()) return Object.assign({ idx:5, locked:true, ratio:0 }, EX_DIFF_TIERS[5]);
+  const need = exRegionNeed(r), ship = exShip();
+  const dur = shipStat(ship,'durability') || 0, harv = shipStat(ship,'harvester') || 0;
+  const ratio = (dur/need.dur)*0.7 + (harv/need.harv)*0.3;
+  let idx;
+  if(ratio >= 1.5) idx = 0;
+  else if(ratio >= 1.15) idx = 1;
+  else if(ratio >= 0.85) idx = 2;
+  else if(ratio >= 0.6) idx = 3;
+  else if(ratio >= 0.4) idx = 4;
+  else idx = 5; // 스펙이 크게 미달 → 불가능
+  return Object.assign({ idx, ratio, need, locked:false }, EX_DIFF_TIERS[idx]);
+}
+function exSuccessChance(ratio){ return clamp(0.22 + (ratio - 0.5) * 0.72, 0.06, 0.96); }
+function exRewardCount(ratio){
+  const ship = exShip();
+  const harv = shipStat(ship,'harvester') || 0, dur = shipStat(ship,'durability') || 0;
+  let n = 1 + Math.floor(harv / 30);                  // 채집기 30마다 +1 (큰 영향)
+  if(Math.random() < clamp(dur/400, 0, 0.6)) n += 1;  // 내구성 약간 영향
+  return clamp(n, 1, 5);
+}
+/* 보상 등급(D~S) — 지역 grade 중심, 탐사장치(scanner)가 상위로 가중, 행성 등급 범위로 클램프 */
+function exPlanetGradeRange(planet){
+  const idxs = (planet.regions||[]).map(r => EX_GRADE_ORDER.indexOf(r.grade)).filter(i => i >= 0);
+  if(!idxs.length) return { lo:1, hi:1 };
+  return { lo: Math.max(0, Math.min(...idxs)), hi: Math.min(EX_GRADE_ORDER.length-1, Math.max(...idxs)) };
+}
+function exRollRewardGrade(region, planet){
+  const { lo, hi } = exPlanetGradeRange(planet);
+  const center = clamp(EX_GRADE_ORDER.indexOf(region.grade), lo, hi);
+  const up = (shipStat(exShip(),'scanner') || 0) / 100; // 0 ~ 1.4
+  const entries = [];
+  for(let i=lo;i<=hi;i++){
+    let w = 1/(1+Math.abs(i-center));
+    if(i>center) w *= (1 + up*1.3);
+    else if(i<center) w *= (1 - Math.min(0.6, up*0.4));
+    entries.push({ i, w: Math.max(0.02, w) });
+  }
+  const tot = entries.reduce((s,e)=>s+e.w,0);
+  let roll = Math.random()*tot;
+  for(const e of entries){ roll -= e.w; if(roll<=0) return EX_GRADE_ORDER[e.i]; }
+  return EX_GRADE_ORDER[center];
+}
+/* 행성 테마(cardTypes)에 맞는 변이 카드 1장 지급 */
+function grantThemedTraitCard(cardTypes, grade){
+  const pool = Object.values(TRAIT_CARDS).filter(c => !cardTypes || !cardTypes.length || cardTypes.includes(c.type));
+  const def = pool.length ? pool[Math.floor(Math.random()*pool.length)] : Object.values(TRAIT_CARDS)[0];
+  const g = grade || rollCardGrade(1);
+  grantTraitCard(def.id, g, 1);
+  return { id:def.id, grade:g, key:cardKeyOf(def.id,g), icon:def.icon, name:def.name, type:def.type };
+}
+
 openExploration = function(){
   exPopPlanetId = null; exDetPlanetId = null; exDetRegionIdx = -1; lastExResult = null;
   renderExploration();
@@ -4613,14 +4715,16 @@ function exStars(){
   return stars.map(([x,y,big]) => `<span class="exmap-star ${big?'big':''}" style="left:${x}%;top:${y}%"></span>`).join('');
 }
 function exOrbitRings(){
-  return [1,2,3].map(o => { const d = EX_ORBIT_R[o] * 2; return `<span class="exmap-orbit" style="width:${d}px;height:${d}px"></span>`; }).join('');
+  const ft = exFuelTank();
+  return [1,2,3].map(o => { const d = EX_ORBIT_R[o] * 2; const lk = o > ft ? ' locked' : ''; return `<span class="exmap-orbit${lk}" style="width:${d}px;height:${d}px"></span>`; }).join('');
 }
 function exPlanetNode(p){
   const xy = exPlanetXY(p);
-  return `<button class="explanet ${exSizeClass(p)} ${p.ring?'ring':''} ${p.id===exPopPlanetId?'sel':''}"
+  const locked = exOrbitLocked(p);
+  return `<button class="explanet ${exSizeClass(p)} ${p.ring?'ring':''} ${locked?'locked':''} ${p.id===exPopPlanetId?'sel':''}"
     data-explanet="${p.id}" style="left:calc(50% + ${xy.x}px);top:calc(50% + ${xy.y}px);--pc:${p.color}">
     <span class="explanet-core"></span>
-    <span class="explanet-label">${p.name}</span>
+    <span class="explanet-label">${p.name}${locked?' 🔒':''}</span>
   </button>`;
 }
 function exPopupHtml(p){
@@ -4648,16 +4752,23 @@ function exDetailHtml(p){
   const regionNodes = p.regions.map((rg, i) =>
     `<button class="exreg ${i===exDetRegionIdx?'sel':''}" data-exreg="${i}" style="left:${rg.map.x}%;top:${rg.map.y}%"><span class="pin">📍</span>${rg.name}</button>`
   ).join('');
+  const locked = exOrbitLocked(p);
+  const diff = r ? exDiffVsShip(r, p) : null;
+  const successPct = (r && diff && !locked && diff.idx < 5) ? Math.round(exSuccessChance(diff.ratio)*100) : 0;
   const bodyBelow = r ? `
     <div class="exdet-desc">${r.desc || ''}</div>
-    <div class="exdet-regbox">${r.name}</div>
+    <div class="exdet-regbox">${r.name} <span class="grade-badge" style="color:#9fb0c3;border-color:#9fb0c3">등급 ${r.grade}</span></div>
     <table class="exdet-tbl">
       <tr><td>속성</td><td>${exElIcons(r.el)}</td></tr>
       <tr><td>타입</td><td>${exTypeIcons(r.types)}</td></tr>
-      <tr><td>난이도</td><td style="color:${exDiff(r.diff).c}">${exDiff(r.diff).t}</td></tr>
-    </table>`
+      <tr><td>난이도</td><td style="color:${diff.c}">${diff.t}</td></tr>
+      ${(!locked && diff.idx < 5) ? `<tr><td>예상 성공률</td><td><b>${successPct}%</b></td></tr>` : ''}
+    </table>
+    ${p.themeNote ? `<div class="howto" style="margin:8px 0 0">🃏 ${p.themeNote}</div>` : ''}
+    ${locked ? `<div class="howto" style="margin:8px 0 0;color:#ff8a4a">🔒 연료 탱크 부족 — 궤도 ${p.orbit}에 도달할 수 없습니다. (격납고에서 연료 탱크 강화)</div>` : ''}`
     : `<div class="exdet-empty">지도에서 지역을 선택하면<br>속성 · 타입 · 난이도가 표시됩니다.</div>`;
   const cost = r ? exRegionCost(r) : 0;
+  const canRun = !!r && !locked && diff && diff.idx < 5;
   return `<div class="exdet-backdrop" id="exDetBackdrop">
     <div class="exdet-card">
       <button class="exdet-x" id="exDetX" title="닫기">✕</button>
@@ -4668,7 +4779,7 @@ function exDetailHtml(p){
       <div class="exdet-map">${regionNodes}</div>
       ${bodyBelow}
       <div class="exdet-foot">
-        <button class="btn primary" id="exRun" ${r?'':'disabled'}>탐사${r?` (크레딧 ${fmt(cost)})`:''}</button>
+        <button class="btn primary" id="exRun" ${canRun?'':'disabled'}>${locked ? '🔒 궤도 잠김' : (r && diff && diff.idx>=5) ? '탐사 불가능' : `탐사${r?` (크레딧 ${fmt(cost)})`:''}`}</button>
       </div>
     </div>
   </div>`;
@@ -4676,26 +4787,56 @@ function exDetailHtml(p){
 function exResultHtml(){
   if(!lastExResult) return '';
   const { region, rewards } = lastExResult;
+  const success = rewards.success !== false;
+  if(!success){
+    return `<div class="exres-backdrop" id="exResBackdrop"><div class="exres-card">
+      <div style="font-size:34px">💨</div>
+      <div style="font-size:17px;font-weight:900;margin:4px 0 6px">탐사 실패 — ${region.name}</div>
+      <div class="howto" style="margin:0 0 12px">아무것도 회수하지 못했습니다. 내구성·채집기를 강화하면 성공률이 오릅니다.</div>
+      <div class="space-panel-actions" style="margin-top:6px">
+        <button class="btn primary" id="exResClose">다시 탐사</button>
+      </div>
+    </div></div>`;
+  }
   const seeds = rewards.seeds.length
-    ? rewards.seeds.map(s => { const m = rarityMeta(s.rarity); return `<span class="${m.css}">${s.name}${s.mutation_candidate?' · 변이 가능':''}</span>`; }).join('<br>')
+    ? rewards.seeds.map(s => { const m = rarityMeta(s.rarity); return `${gradeBadgeHtml(s.grade||'C')} <span class="${m.css}">${s.name}</span>${s.mutation_candidate?' · 변이 가능':''}`; }).join('<br>')
     : '없음';
-  const items = rewards.items.length ? rewards.items.map(i => `${i.name} x${i.count}`).join('<br>') : '없음';
   const cards = (rewards.cards && rewards.cards.length)
     ? rewards.cards.map(c => `${c.grade?gradeBadgeHtml(c.grade):''} ${c.icon} ${c.name}`).join('<br>') : '없음';
-  const skipped = rewards.storageSkipped ? `${rewards.storageSkipped}개 · 가방 용량 부족` : '';
   return `<div class="exres-backdrop" id="exResBackdrop"><div class="exres-card">
     <div style="font-size:34px">🌱</div>
-    <div style="font-size:17px;font-weight:900;margin:4px 0 12px">탐사 완료 — ${region.name}</div>
+    <div style="font-size:17px;font-weight:900;margin:4px 0 12px">탐사 성공 — ${region.name}</div>
     <div class="detail-list" style="text-align:left">
       <span>획득한 종자<b>${seeds}</b></span>
-      <span>획득한 아이템<b>${items}</b></span>
       <span>획득한 변이 카드<b>${cards}</b></span>
-      ${skipped?`<span>보관 실패<b>${skipped}</b></span>`:''}
     </div>
     <div class="space-panel-actions" style="margin-top:14px">
       <button class="btn primary" id="exResBag">종자 가방으로</button>
       <button class="btn" id="exResClose">계속 탐사</button>
     </div>
+  </div></div>`;
+}
+function exHangarHtml(){
+  if(!exHangarOpen) return '';
+  const ship = exShip();
+  const statRows = shipSummaryStats(ship).map(([l,v]) => `<div class="exhangar-stat">${l}<b>${v}</b></div>`).join('');
+  const upRows = SHIP_UPGRADES.map(u => {
+    const cost = shipUpgradeFinalCost(u);
+    const atMax = shipUpgradeAtMax(ship, u);
+    const canBuy = !atMax && (state.credits || 0) >= cost;
+    return `<div class="exhangar-up">
+      <div class="u-top"><span>${u.icon} ${u.label}</span><span>${atMax?'최대':fmt(cost)+'💰'}</span></div>
+      <div class="u-desc">${u.desc||''}</div>
+      <div class="u-cmp">현재 <b>${shipUpgradeCurrentText(ship,u)}</b> → 강화 후 <b>${atMax?shipUpgradeCurrentText(ship,u):shipUpgradeNextText(ship,u)}</b></div>
+      <button class="btn ${canBuy?'primary':''}" data-ship-upgrade="${u.id}" ${canBuy?'':'disabled'}>${atMax?'최대 강화 완료':'강화'}</button>
+    </div>`;
+  }).join('');
+  return `<div class="exhangar-backdrop" id="exHangarBackdrop"><div class="exhangar-card">
+    <button class="btn exhangar-x" id="exHangarX">✕</button>
+    <h3>🛰️ 탐사선 격납고</h3>
+    <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료 탱크를 올리면 더 먼 궤도의 행성이 열립니다.</p>
+    <div class="exhangar-stats">${statRows}</div>
+    ${upRows}
   </div></div>`;
 }
 function exTravelOverlay(p, done){
@@ -4720,21 +4861,39 @@ function exploreViewRun(){
   const p = exById(exDetPlanetId); if(!p) return;
   const r = exDetRegionIdx >= 0 ? p.regions[exDetRegionIdx] : null;
   if(!r){ toast('지역을 선택하세요'); return; }
+  if(exOrbitLocked(p)){ toast(`연료 탱크를 강화해야 궤도 ${p.orbit} 행성을 탐사할 수 있습니다`); return; }
+  const diff = exDiffVsShip(r, p);
+  if(diff.idx >= 5){ toast('탐사 불가능 — 탐사선 내구성·채집기가 부족합니다'); return; }
   const cost = exRegionCost(r);
   if((state.credits || 0) < cost){ toast('크레딧이 부족합니다'); return; }
-  const realRegion = ALIEN_INDEX.regions[r.link];
-  const realPlanet = realRegion ? ALIEN_INDEX.planets[realRegion.planet_id] : null;
+  const realRegion = ALIEN_INDEX.regions[r.link] || null;
   explorationBusy = true;
   exTravelOverlay(p, () => {
     explorationBusy = false;
     spendCredits(cost);
-    let rewards = { seeds:[], items:[], cards:[], storageSkipped:0 };
-    if(realRegion && realPlanet){
-      try{ rewards = rollExplorationRewards(realPlanet, realRegion, 0.25, false); }
-      catch(e){ console.error(e); }
+    const success = Math.random() < exSuccessChance(diff.ratio);
+    const rewards = { seeds:[], items:[], cards:[], success };
+    if(success){
+      const count = exRewardCount(diff.ratio);
+      const pool = (realRegion && realRegion.seed_drop_table) ? realRegion.seed_drop_table : [];
+      const totalW = pool.reduce((s,d)=>s+(d.weight||0),0);
+      const realPlanet = realRegion ? ALIEN_INDEX.planets[realRegion.planet_id] : null;
+      for(let i=0;i<count;i++){
+        let seed = null;
+        if(totalW > 0){ let roll = Math.random()*totalW; for(const d of pool){ roll -= (d.weight||0); if(roll<=0){ seed = ALIEN_INDEX.seeds[d.seed_id]; break; } } }
+        if(!seed) continue;
+        const grade = exRollRewardGrade(r, p);
+        const mut = Math.random() < seedMutationChance(seed, realRegion || { trait_probability_modifiers:{} });
+        const entry = createExplorationSeedEntry(seed, realPlanet, realRegion, mut, grade);
+        state.seed_inventory.push(entry);
+        rewards.seeds.push(entry);
+      }
+      // 변이 카드 — 행성 테마(cardTypes)에서, 등급은 보상 등급 분포
+      const cardChance = 0.18 + diff.ratio*0.12;
+      if(Math.random() < cardChance){ rewards.cards.push(grantThemedTraitCard(p.cardTypes, exRollRewardGrade(r, p))); }
     }
-    lastExResult = { planet:p, region:r, rewards };
-    saveState(); sfx.win();
+    lastExResult = { planet:p, region:r, rewards, success, diff };
+    saveState(); success ? sfx.win() : sfx.lose();
     renderMain(); renderExploration();
   });
 }
@@ -4748,13 +4907,14 @@ renderExploration = function(){
       <div class="exmap">
         ${exStars()}
         ${exOrbitRings()}
-        <div class="exmap-center">🛰️</div>
-        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>행성을 누르면 정보 창이 열립니다</p></div>
+        <button class="exmap-center clickable" id="exHangarOpenBtn" title="탐사선 격납고">🛰️</button>
+        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>행성을 누르면 정보 · 가운데 🛰️는 격납고</p></div>
         <button class="btn modal-close exmap-close" id="exClose" title="닫기">✕</button>
         ${EXPLORE_VIEW.map(exPlanetNode).join('')}
         ${exPopupHtml(popPlanet)}
         ${exDetailHtml(detPlanet)}
         ${exResultHtml()}
+        ${exHangarHtml()}
       </div>`;
 
     // 행성 선택 → 정보 팝업(그림2)
@@ -4795,6 +4955,15 @@ renderExploration = function(){
     if(resClose) resClose.addEventListener('click', () => { lastExResult = null; sfx.tap(); renderExploration(); });
     const resBack = $('#exResBackdrop');
     if(resBack) resBack.addEventListener('click', e => { if(e.target === resBack){ lastExResult = null; sfx.tap(); renderExploration(); } });
+    // 격납고 열기/닫기
+    const hangarOpenBtn = $('#exHangarOpenBtn');
+    if(hangarOpenBtn) hangarOpenBtn.addEventListener('click', e => { e.stopPropagation(); exHangarOpen = true; exPopPlanetId = null; exDetPlanetId = null; sfx.tap(); renderExploration(); });
+    const hangarX = $('#exHangarX');
+    if(hangarX) hangarX.addEventListener('click', () => { exHangarOpen = false; sfx.tap(); renderExploration(); });
+    const hangarBack = $('#exHangarBackdrop');
+    if(hangarBack) hangarBack.addEventListener('click', e => { if(e.target === hangarBack){ exHangarOpen = false; sfx.tap(); renderExploration(); } });
+    // 탐사선 강화
+    body.querySelectorAll('[data-ship-upgrade]').forEach(btn => btn.addEventListener('click', () => upgradeShipStat(btn.dataset.shipUpgrade)));
     // 우주맵 닫기
     const exClose = $('#exClose');
     if(exClose) exClose.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
@@ -5252,8 +5421,6 @@ function seedPlantReadiness(entry, seed){
   if(!entry) return { ok:false, reason:'종자를 선택하세요.' };
   if(!seed) return { ok:false, reason:'종자 데이터가 손상되었습니다.' };
   if(state.plants.length >= potCapacity()) return { ok:false, reason:`화분이 가득 찼습니다. 현재 ${potCapacity()}칸까지 키울 수 있습니다. (레벨업으로 최대 ${POT_MAX}칸)` };
-  const storage = seedStorageStatus(seed);
-  if(!storage.ok) return { ok:false, reason:`${storage.requiredName} 환경이 필요합니다.` };
   return { ok:true, reason:'심기 가능' };
 }
 function renderSeedBagCard(item){
@@ -5261,18 +5428,18 @@ function renderSeedBagCard(item){
   const planet = seedOriginPlanet(item, seed);
   const region = seedOriginRegion(item, seed);
   const meta = rarityMeta((seed && seed.rarity) || item.rarity);
-  const storage = seedStorageStatus(seed);
+  const grade = item.grade || 'C';
   const selected = item.inventory_id === selectedSeedInventoryId;
   return `<div class="itemcard seed-bag-card ${selected ? 'selected' : ''}" data-select-seed="${item.inventory_id}">
     <div style="font-size:30px;width:42px;text-align:center">${meta.icon}</div>
     <div class="ic-body">
-      <div class="ic-name">${item.name || (seed && seed.name) || '알 수 없는 종자'} <span class="${meta.css}">${meta.name}</span></div>
+      <div class="ic-name">${item.name || (seed && seed.name) || '알 수 없는 종자'} ${gradeBadgeHtml(grade)}</div>
       <div class="ic-desc">
         기원: ${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}<br>
         식물 타입: ${SEED_TYPE_NAMES[seedTypeOf({ base_species_type:(seed && seed.base_species_type) || item.base_species_type })] || '미확인'}
       </div>
       <div class="seed-card-meta">
-        <span class="seed-mini-stat ${storage.ok ? 'ok' : 'warn'}">${storage.message}</span>
+        <span class="seed-mini-stat ok">잠재력 ${grade}</span>
         ${item.mutation_candidate ? '<span class="seed-mini-stat warn">변이 가능</span>' : ''}
       </div>
     </div>
@@ -5305,11 +5472,9 @@ function renderSeedDetail(entry){
       <div class="seed-detail-cell">식물 타입<b>${SEED_TYPE_NAMES[seedTypeOf({ base_species_type:speciesType })] || speciesType || '미확인'}</b></div>
       <div class="seed-detail-cell">속성 계열<b>${growthType}</b></div>
       <div class="seed-detail-cell">기본 능력치 예상값<b>${seedBaseStatsText(seed)}</b></div>
-      <div class="seed-detail-cell">안정성 예상치<b>${seedStabilityEstimate(seed)}</b></div>
       <div class="seed-detail-cell">변이율 예상치<b>${seedMutationEstimate(seed, entry)}</b></div>
-      <div class="seed-detail-cell">보관 필요 환경<b>${storage.requiredName}</b></div>
-      <div class="seed-detail-cell">현재 보관 상태<b>${storage.currentName} · ${storage.message}</b></div>
-      <div class="seed-detail-cell">보관 환경 설명<b>${requiredEnv.desc}</b></div>
+      <div class="seed-detail-cell">잠재력 등급<b style="color:${GRADES[entry.grade||'C']||'#fff'}">${entry.grade || 'C'}</b></div>
+      <div class="seed-detail-cell">잠재력 효과<b>등급↑ = 생장 시 더 좋은 등급의 스킬 획득</b></div>
       <div class="seed-detail-cell">심기 가능 여부<b>${readiness.reason}</b></div>
     </div>
     <div class="shop-section">잠재특성 후보</div>
@@ -5378,7 +5543,7 @@ function renderPlantConfirm(){
   const meta = rarityMeta(seed.rarity);
   const planet = seedOriginPlanet(entry, seed);
   const region = seedOriginRegion(entry, seed);
-  const storage = seedStorageStatus(seed);
+  const grade = entry.grade || 'C';
   const readiness = seedPlantReadiness(entry, seed);
   body.innerHTML = `
     <h2>🌱 이 종자를 심을까요?</h2>
@@ -5386,11 +5551,11 @@ function renderPlantConfirm(){
     <div class="plant-confirm-summary">
       <div style="font-size:44px;text-align:center">${meta.icon}</div>
       <div>
-        <div class="ic-name">${seed.name} <span class="${meta.css}">${meta.name}</span></div>
+        <div class="ic-name">${seed.name} ${gradeBadgeHtml(grade)}</div>
         <div class="ic-desc">
           기원: ${(planet && planet.name) || seed.origin_planet} / ${(region && region.name) || seed.origin_region}<br>
           식물 타입: ${SEED_TYPE_NAMES[seedTypeOf({ base_species_type:seed.base_species_type })] || seed.base_species_type}<br>
-          보관 상태: ${storage.message}
+          잠재력 등급: <b style="color:${GRADES[grade]||'#fff'}">${grade}</b> — 높을수록 생장 시 좋은 스킬을 얻습니다
         </div>
       </div>
     </div>
@@ -5398,8 +5563,7 @@ function renderPlantConfirm(){
     <input class="plant-name-input" id="plantCustomName" maxlength="18" value="${defaultPlantName(seed)}">
     <div class="detail-list">
       <span>초기 성장 단계<b>${GROWTH_STAGE_NAMES[INITIAL_PLANTED_GROWTH_STAGE] || INITIAL_PLANTED_GROWTH_STAGE}</b></span>
-      <span>예상 안정성<b>${seedStabilityEstimate(seed)}</b></span>
-      <span>예상 변이율<b>${seedMutationEstimate(seed, entry)}</b></span>
+      <span>잠재력 등급<b style="color:${GRADES[grade]||'#fff'}">${grade}</b></span>
       <span>심기 가능 여부<b>${readiness.reason}</b></span>
     </div>
     <div class="plant-confirm-actions">
@@ -5426,12 +5590,11 @@ function createPlantedPlantFromSeed(entry, seed, customName){
   p.alienSpeciesType = instanceFields.species_type;
   p.alienTraits = instanceFields.traits.slice();
   p.mutationCandidate = !!entry.mutation_candidate;
-  const specialChance = 0.12 + rarityFactor(seed) * 0.055 + (entry.mutation_candidate ? 0.18 : 0);
-  if(Math.random() < specialChance && !p.awakened){
-    p.awakened = pick(['hp','atk','def','spd']);
-    p.mult[p.awakened] = +(p.mult[p.awakened] + 0.18 + rarityFactor(seed) * 0.03).toFixed(2);
-    p.grade = gradeOf(p.mult);
-  }
+  // 스탯은 종자 종류별 고정(랜덤 배율 제거), 등급 = 발견 시 정해진 잠재력으로 고정
+  p.mult = { hp:1, atk:1, def:1, spd:1 };
+  p.awakened = null;
+  p.grade = entry.grade || 'C';
+  p.potential = entry.grade || 'C';
   ensurePlantInstanceFields(p);
   return p;
 }
@@ -5466,9 +5629,6 @@ function renderSeedBag(){
   if(!selectedSeedInventoryId && inv.length) selectedSeedInventoryId = inv[0].inventory_id;
   const selectedEntry = inv.find(item => item.inventory_id === selectedSeedInventoryId) || null;
   const cap = seedBagCapacity();
-  const free = seedBagFreeSlots();
-  const grade = shipStorageGrade();
-  const supportedStorage = (STORAGE_GRADE_SUPPORT[grade] || STORAGE_GRADE_SUPPORT.C).map(storageEnvironmentName).join(', ');
   const starterHelp = canClaimStarterSeed() ? `
     <div class="itemcard" id="claimStarterSeed">
       <div style="font-size:30px;width:42px;text-align:center">🌱</div>
@@ -5482,12 +5642,10 @@ function renderSeedBag(){
   const sortBtn = (mode, label) => `<button class="seed-sort-btn ${seedSortMode===mode?'active':''}" data-seed-sort="${mode}">${label}</button>`;
   body.innerHTML = `
     <div class="seed-bag-top">
-      <span class="stat">🌱 보유 종자 <b>${inv.length}/${cap || '-'}</b></span>
-      <span class="stat">📦 남은 칸 <b>${cap ? free : '-'}</b></span>
-      <span class="stat">🧪 보관 등급 <b>${grade}</b></span>
+      <span class="stat">🌱 보유 종자 <b>${inv.length}</b></span>
       <span class="stat">🪴 화분 <b>${state.plants.length}/${potCapacity()}</b> <small style="color:var(--sub)">(최대 ${POT_MAX})</small></span>
     </div>
-    <div class="howto" style="margin-bottom:10px">현재 보관 가능 환경: <b style="color:var(--neon)">${supportedStorage}</b></div>
+    <div class="howto" style="margin-bottom:10px">종자는 발견 시 <b style="color:var(--neon)">잠재력 등급(D~S)</b>이 정해집니다. 등급이 높을수록 생장 시 더 좋은 스킬을 얻습니다.</div>
     ${starterHelp}
     ${inv.length ? `
       <div class="seed-sort-row"><span class="seed-sort-label">정렬</span>${sortBtn('rarity','희귀도순')}${sortBtn('name','이름순')}${sortBtn('planet','행성순')}</div>
@@ -6432,21 +6590,7 @@ function renderConsumTab(p, s){
       <button class="upbtn" data-up="${r.k}" ${state.credits<cost?'disabled':''}>+ ${fmt(cost)}💰</button>
     </div>`;
   }).join('');
-  const inv = (state.item_inventory||[]).filter(it => (it.count||0) > 0);
-  let itemSection = '';
-  if(inv.length){
-    const itemRows = inv.map(it => {
-      const item = ALIEN_INDEX.items[it.item_id]; if(!item) return '';
-      const usable = itemUsableOnPlant(item);
-      return `<div class="uprow">
-        <div class="un">${ITEM_TYPE_ICONS[item.item_type]||'📦'} ${item.name} <small>${itemEffectText(item)}</small></div>
-        <div class="uv">×${it.count}</div>
-        <button class="upbtn" data-use-item="${it.item_id}" ${usable?'':'disabled'}>${usable?'사용':'자동'}</button>
-      </div>`;
-    }).join('');
-    itemSection = `<div class="skill-section-label">🎒 탐사 획득 소모품 <small>식물에 사용</small></div>${itemRows}`;
-  }
-  return `<p class="tab-hint">소모품(비료·영양제·스프레이)으로 식물의 기본 스탯을 <b>영구적으로</b> 올립니다. 탐사에서 얻은 배양제는 아래에서 사용하세요.</p>${rows}${itemSection}`;
+  return `<p class="tab-hint"><b>크레딧</b>으로 식물의 기본 스탯을 <b>영구적으로</b> 강화합니다.</p>${rows}`;
 }
 function renderPlantTab(p, s){
   if(upgradeTab==='trait') return renderTraitTab(p);
@@ -6462,7 +6606,7 @@ function renderUpgrade(){
     <p class="sub">보유 크레딧: <b style="color:var(--gold)">${fmt(state.credits)}</b> 💰</p>
     ${renderPlantInstancePanel(p, s)}
     <div class="plant-tabs">
-      <button class="plant-tab ${upgradeTab==='consum'?'active':''}" data-tab="consum">🧪 소모품</button>
+      <button class="plant-tab ${upgradeTab==='consum'?'active':''}" data-tab="consum">🔧 강화</button>
       <button class="plant-tab ${upgradeTab==='trait'?'active':''}" data-tab="trait">🧬 변이형</button>
       <button class="plant-tab ${upgradeTab==='skill'?'active':''}" data-tab="skill">🎴 스킬</button>
     </div>
@@ -6668,23 +6812,16 @@ function renderShop(){
   { const sm = $('#shopMineral'); if(sm) sm.textContent = fmt(state.minerals || 0); }
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
   const currency = renderShopLane(SHOP_CURRENCY_PACKS);
-  const consumableBoxes = `<div class="shop-subtitle">소모품 상자</div>` + renderShopLane(supplyBoxesByGroup('consumable'), item => `data-shop-box="${item.id}"`);
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
-  const shipItems = `<div class="shop-empty">탐사선 아이템 상품은 아직 준비 중입니다.</div>`;
   $('#shopList').innerHTML =
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
-    renderShopBlock('소모품', '💧물·🌿비료·💊영양제 — 10개 단위 · 크레딧 구매', renderShopConsumables()) +
-    renderShopBlock('보급상자', '변이 카드는 변이형별 보급상자나 탐사 보상으로만 얻습니다. 등급(S~D)은 개봉 시 무작위.', consumableBoxes + traitBoxes) +
-    renderShopBlock('탐사선 아이템', '추후 추가 예정', shipItems);
+    renderShopBlock('보급상자', '변이 카드는 변이형별 보급상자나 탐사 보상으로만 얻습니다. 등급(S~D)은 개봉 시 무작위.', traitBoxes);
   document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
     card.addEventListener('click', () => {
       sfx.tap();
       openShopBoxInfo(card.dataset.shopBox);
     });
-  });
-  document.querySelectorAll('#shopList [data-buy-consum]').forEach(card => {
-    card.addEventListener('click', () => buyConsumable(card.dataset.buyConsum));
   });
 }
 function renderShopBoxInfo(box){
@@ -6860,7 +6997,7 @@ function makeCombatant(src){
     energy: Math.min(clamp((bs.energy||3) + (P.energyBonus||0), 1, 9), 3),
     guard:null, traits:src.traits||[], passives:P,
     cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
-    cardSkills:CE.skillGrades||{}, uses:{},
+    cardSkills:CE.skillGrades||{}, skillGrades:src.skillGrades||{}, uses:{},
     loadout, skipNext:false,
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
@@ -6920,6 +7057,7 @@ function startMatch(){
     seedType:seedTypeOf(p), growth:p.growth_stage,
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
     traits:p.traits, loadout:p.equipped_skills.slice(), cards:(p.equipped_trait_cards||[]).slice(),
+    skillGrades:p.skillGrades||{},
   });
   const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p), {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
   B = { p:playerC, e:enemyC, over:false, busy:false };
