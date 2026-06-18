@@ -22,3 +22,13 @@ docs/pluloseum_godot_migration_plan.md
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# ===== Capacitor / Node =====
+node_modules/
+npm-debug.log*
+
+# ===== Android build outputs =====
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties

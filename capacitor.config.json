@@ -1,0 +1,9 @@
+{
+  "appId": "com.promuzi.pulloseum",
+  "appName": "풀로세움",
+  "webDir": "www",
+  "server": {
+    "url": "https://promuzi.github.io/pulloseum/",
+    "cleartext": false
+  }
+}
