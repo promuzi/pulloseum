@@ -343,7 +343,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 /* ===== 모달 ===== */
 .modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:14px;padding-top:calc(var(--headh) + 18px);padding-bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));}
 .modal-card{background:#131b2c;border:1px solid var(--line);border-radius:18px;width:min(94vw,450px);
-  margin:auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
+  margin:0 auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
 .modal:not(#explorationModal):not(#shopModal) .modal-card{max-height:calc(100dvh - var(--headh) - var(--navh) - 36px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;}
 .modal-card h2{margin:0 0 4px;font-size:20px;}
 .modal-card .sub{color:var(--sub);font-size:13px;margin:0 0 14px;}
@@ -365,7 +365,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #explorationBody{height:100%;min-height:0;}
 /* 상점 — 우주맵/탐사처럼 전체 화면 패널 (상단 재화 헤더 아래에서 시작) */
 #shopModal{padding:0;padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));align-items:stretch;justify-content:stretch;}
-#shopModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh) - var(--headh));max-height:calc(100dvh - var(--navh) - var(--headh));border-radius:0;padding:16px 16px 24px;background:#07101d;display:flex;flex-direction:column;min-height:0;}
+#shopModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh) - var(--headh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - var(--navh) - var(--headh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-radius:0;padding:16px 16px calc(24px + env(safe-area-inset-bottom,0px));background:#07101d;display:flex;flex-direction:column;min-height:0;}
 #shopModal h2{flex:0 0 auto;}
 #shopModal .sub{flex:0 0 auto;}
 #shopModal #shopList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
@@ -795,12 +795,12 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .explanet:active .explanet-core{transform:scale(.9);}
 .explanet-core:before{content:"";position:absolute;inset:4px 4px 6px 5px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
 .explanet.ring .explanet-core:after{content:"";position:absolute;left:-8px;right:-8px;top:46%;height:5px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
-.explanet-label{display:block;margin-top:5px;max-width:124px;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 8px;text-shadow:0 1px 3px rgba(0,0,0,.8);}
+.explanet-label{display:block;margin-top:6px;max-width:124px;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;font-weight:800;color:#fff;white-space:nowrap;background:rgba(6,11,20,.92);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:2px 9px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
 /* 연료탱크 미충족 궤도 — 어둡게 그림자 처리 */
 .exmap-orbit.locked{border-style:dashed;border-color:rgba(255,255,255,.04);}
 .explanet.locked{filter:grayscale(.85) brightness(.4);opacity:.6;}
 .explanet.locked .explanet-core{box-shadow:inset -10px -12px 15px rgba(0,0,0,.6);}
-.explanet.locked .explanet-label{color:#8a93a3;}
+.explanet.locked .explanet-label{color:#b9c2cf;}
 .exmap-center.clickable{pointer-events:auto;cursor:pointer;background:none;border:none;}
 .exmap-center.clickable:active{transform:translate(-50%,-50%) scale(.9);}
 /* 탐사선 격납고 오버레이 */
@@ -842,15 +842,18 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-head .hd{font-size:11.5px;color:var(--sub);margin-top:2px;}
 .exdet-head .hr{font-size:11.5px;color:var(--neon);text-align:right;white-space:nowrap;font-weight:800;line-height:1.5;}
 .exdet-map{position:relative;height:176px;margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(92,242,194,.2);
-  background:
-    radial-gradient(circle at 28% 32%, #2f7d7a 0 15%, transparent 16%),
-    radial-gradient(circle at 72% 56%, #2f7d6b 0 19%, transparent 20%),
-    radial-gradient(ellipse 30% 26% at 48% 84%, #2b6a72 0 60%, transparent 62%),
-    linear-gradient(160deg,#163b4d,#0f2638);}
-.exreg{position:absolute;transform:translate(-50%,-50%);background:rgba(7,16,26,.72);border:1px solid rgba(255,255,255,.22);color:var(--text);font-size:12px;font-weight:800;border-radius:8px;padding:4px 9px;z-index:2;}
-.exreg.sel{border-color:var(--neon);color:var(--neon);box-shadow:0 0 14px rgba(92,242,194,.4);background:rgba(92,242,194,.12);}
-.exreg .pin{position:absolute;left:50%;top:-17px;transform:translateX(-50%);font-size:16px;display:none;filter:drop-shadow(0 1px 2px #000);}
-.exreg.sel .pin{display:block;}
+  background:linear-gradient(160deg,#163b4d,#0f2638);}
+.exreg{position:absolute;transform:translate(-50%,-50%);width:44%;height:50%;min-width:104px;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;
+  background:radial-gradient(ellipse at 40% 34%, rgba(86,184,160,.52), rgba(43,122,118,.42) 60%, rgba(28,82,98,.3));
+  border:1px solid rgba(255,255,255,.16);border-radius:50%;
+  color:#eafff7;font-size:12.5px;font-weight:800;line-height:1.25;text-shadow:0 1px 4px rgba(0,0,0,.85);
+  cursor:pointer;z-index:2;transition:box-shadow .15s,border-color .15s,transform .1s;}
+.exreg:active{transform:translate(-50%,-50%) scale(.97);}
+.exreg.sel{border-color:var(--neon);color:#fff;z-index:3;
+  box-shadow:0 0 0 2px rgba(92,242,194,.5),0 0 22px rgba(92,242,194,.45);
+  background:radial-gradient(ellipse at 40% 34%, rgba(92,242,194,.48), rgba(46,150,140,.4) 60%, rgba(30,92,104,.3));}
+.exreg .pin{display:none;}
 .exdet-desc{font-size:12px;color:var(--sub);line-height:1.55;margin:2px 2px 9px;}
 .exdet-regbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:10px;text-align:center;font-weight:900;font-size:14px;padding:9px;margin-bottom:8px;}
 .exdet-tbl{width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;}
@@ -860,7 +863,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-tbl td:first-child{color:var(--sub);font-weight:700;width:34%;text-align:center;background:rgba(255,255,255,.03);border-right:1px solid rgba(255,255,255,.08);}
 .exdet-tbl td:last-child{text-align:center;font-weight:800;}
 .exdet-empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 10px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;}
-.exdet-foot{position:sticky;bottom:0;margin-top:10px;padding-top:10px;background:linear-gradient(180deg,rgba(13,21,37,0),#0d1525 34%);}
+.exdet-foot{margin-top:12px;padding-top:4px;}
 .exdet-foot .btn{width:100%;}
 /* 탐사 결과 (재설계) */
 .exres-backdrop{position:absolute;inset:0;z-index:30;background:rgba(3,7,14,.8);display:flex;align-items:center;justify-content:center;padding:16px 16px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;}
@@ -4635,7 +4638,7 @@ const EX_TYPE_ICON = { '초본형':'🌿', '목본형':'🌳', '화초형':'🌸
 const EX_EL_ORDER = ['fire','water','grass','earth','wind','bolt','ice'];
 const EX_TYPE_ORDER = ['초본형','목본형','화초형','다육형','덩굴형'];
 const EX_GRADE_ORDER = ['D','C','B','A','S'];
-const EX_ORBIT_R = { 1:78, 2:142, 3:204 };
+const EX_ORBIT_R = { 1:56, 2:100, 3:132 };
 /* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다. */
 const EXPLORE_VIEW = [
   { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
@@ -4714,7 +4717,7 @@ let exDetPlanetId = null;   // 그림3 상세가 열린 행성
 let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
 let lastExResult = null;    // 직전 탐사 결과
 let exHangarOpen = false;   // 탐사선 격납고 오버레이 열림 여부
-const EX_DEFAULT_SCALE = 1.3; // 기본 확대: 안쪽 2개 궤도가 보이게
+const EX_DEFAULT_SCALE = 1.0; // 기본 확대: 8개 행성과 이름이 모두 보이게
 let exView = { x:0, y:0, scale:EX_DEFAULT_SCALE }; // 우주맵 이동/확대 상태
 function exById(id){ return EXPLORE_VIEW.find(p => p.id === id) || null; }
 function exPlanetXY(p){
@@ -6596,6 +6599,10 @@ function openUpgrade(){
   upgradeTab = 'consum'; // 식물을 누르면 항상 소모품 탭으로 시작
   renderUpgrade();
   show('#upgradeModal');
+  // 항상 상단부터 보이도록 스크롤 리셋(아래로 드래그해 내용 확인)
+  const um = $('#upgradeModal'), uc = $('#upgradeBody');
+  if(um) um.scrollTop = 0;
+  if(uc) uc.scrollTop = 0;
 }
 function releasePlant(plantId){
   const idx = state.plants.findIndex(x => x.id === plantId);
