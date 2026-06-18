@@ -2027,13 +2027,14 @@ if (typeof module !== 'undefined' && module.exports) {
    속성은 상성·색·전투 성향을, 타입은 몸체(실루엣)·체격 성향을 담당한다.
    바람은 강점이 적어 기동성에 큰 보정을 둠. (5타입 × 7속성 = 35종) */
 const ELEMENT_STATS = {
-  fire:  { hp:44, atk:15, def:6,  spd:7  }, // 호전적·고공격
-  water: { hp:62, atk:6,  def:14, spd:5  }, // 견고·방어
-  grass: { hp:52, atk:10, def:9,  spd:11 }, // 균형
+  // 강점>약점 속성(불·빙결)은 하향, 약점이 더 많은 속성(물·풀)은 상향.
+  fire:  { hp:40, atk:14, def:6,  spd:7  }, // 강점2·약점1 → 하향
+  water: { hp:66, atk:7,  def:16, spd:5  }, // 약점3 → 상향(방어)
+  grass: { hp:56, atk:11, def:10, spd:12 }, // 약점3 → 상향(균형)
   earth: { hp:58, atk:9,  def:16, spd:2  }, // 중장갑·둔중
-  wind:  { hp:40, atk:10, def:5,  spd:22 }, // 초고속(기동 대폭 보정)
+  wind:  { hp:40, atk:11, def:5,  spd:16 }, // 기동에 강점(가장 빠름) — 보정 정상화
   bolt:  { hp:38, atk:17, def:4,  spd:14 }, // 유리대포
-  ice:   { hp:56, atk:12, def:9,  spd:4  }, // 지구력
+  ice:   { hp:52, atk:11, def:8,  spd:4  }, // 강점2·약점1 → 하향
 };
 const TYPE_STATS = {
   grass:  { hp:48, atk:11, def:7,  spd:12 }, // 초본형 — 속도·균형
@@ -2090,11 +2091,11 @@ const SPECIES = (function(){
    weak = 이 속성이 1.5배 피해를 받는 상대(약점), strong = 이 속성이 강하게 때리는 상대(약점의 역).
    불:물·대지 / 물:풀·빙결·번개 / 풀:불·바람·번개 / 번개:대지·빙결 / 대지:풀·물 / 빙결:불·대지 / 바람:대지·불 */
 const ELEMENTS = {
-  fire:  { name:'불',   icon:'🔥', color:'#ff6b4a', weak:['water','wind'],       strong:['grass','ice'],         skill:'화염 분사' },
+  fire:  { name:'불',   icon:'🔥', color:'#ff6b4a', weak:['water'],              strong:['grass','ice'],         skill:'화염 분사' },
   water: { name:'물',   icon:'💧', color:'#4ac6ff', weak:['grass','bolt','ice'], strong:['fire','earth'],        skill:'고압 물대포' },
   grass: { name:'풀',   icon:'🌿', color:'#6bdd6b', weak:['fire','wind','ice'],  strong:['water','earth'],       skill:'가시 폭풍' },
   earth: { name:'대지', icon:'🪨', color:'#c9a26b', weak:['grass','water'],      strong:['bolt','wind'],         skill:'암석 붕괴' },
-  wind:  { name:'바람', icon:'🌪️', color:'#9adbe8', weak:['earth'],             strong:['grass','fire'],        skill:'진공 칼날' },
+  wind:  { name:'바람', icon:'🌪️', color:'#9adbe8', weak:['earth'],             strong:['grass'],               skill:'진공 칼날' },
   bolt:  { name:'번개', icon:'⚡', color:'#ffe14a', weak:['earth'],             strong:['water'],               skill:'천둥 직격' },
   ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire'],              strong:['water','grass'],       skill:'절대 영도' },
 };
@@ -2309,6 +2310,20 @@ function seedTypeOf(p){
   if(p && SEED_TYPE_NAMES[p.seed_type]) return p.seed_type;
   const bt = (p && (p.base_species_type || p.species_type)) || '';
   return SEED_TYPE_OF[bt] || 'grass';
+}
+/* ── 타입×속성 → 종(35종) 역참조 (탐사 종자 → 종 결정에 사용) ── */
+const SEED_TYPE_BY_KO = (function(){ const m={}; Object.keys(SEED_TYPE_NAMES).forEach(k=>{ m[SEED_TYPE_NAMES[k]]=k; }); return m; })();
+const SPECIES_BY_TYPE_EL = (function(){ const m={}; SPECIES_GRID.forEach(r=>{ m[r[2]+'_'+r[3]]=r[0]; }); return m; })();
+function speciesForTypeEl(type, el){ return SPECIES_BY_TYPE_EL[type+'_'+el] || 'thorn'; }
+function randomSpeciesKey(){ const ks=Object.keys(SPECIES); return ks[Math.floor(Math.random()*ks.length)]; }
+/* EXPLORE_VIEW 지역(el[]·types[]) 테마에 맞춰 종을 뽑는다. 지역 정보가 없으면 완전 무작위. */
+function rollSpeciesFromView(viewRegion){
+  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : Object.keys(ELEMENT_STATS);
+  const el = els[Math.floor(Math.random()*els.length)];
+  const typesKo = (viewRegion && viewRegion.types && viewRegion.types.length) ? viewRegion.types : null;
+  let type = typesKo ? SEED_TYPE_BY_KO[typesKo[Math.floor(Math.random()*typesKo.length)]] : null;
+  if(!type){ const ts=Object.keys(TYPE_STATS); type = ts[Math.floor(Math.random()*ts.length)]; }
+  return speciesForTypeEl(type, el);
 }
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -3387,13 +3402,17 @@ function weightedPickLoot(region, successMargin){
   }
   return table[table.length - 1];
 }
-function createExplorationSeedEntry(seed, planet, region, mutationCandidate, grade){
+function createExplorationSeedEntry(seed, planet, region, mutationCandidate, grade, speciesKey){
+  const sp = (speciesKey && SPECIES[speciesKey]) ? SPECIES[speciesKey] : null;
   return {
     inventory_id: `seed_${Date.now()}_${Math.floor(Math.random()*10000)}`,
     seed_id: seed.id,
-    name: seed.name,
+    name: sp ? (sp.name + ' 종자') : seed.name,
     rarity: seed.rarity,
     grade: grade || 'C',
+    species: speciesKey || null,
+    element: sp ? sp.element : null,
+    seed_type: sp ? sp.seedType : null,
     origin_planet: seed.origin_planet,
     origin_region: seed.origin_region,
     base_species_type: seed.base_species_type,
@@ -3441,7 +3460,7 @@ function rollExplorationRewards(planet, region, successMargin, allowPartial){
           continue;
         }
         const mutationCandidate = Math.random() < seedMutationChance(seed, region);
-        const entry = createExplorationSeedEntry(seed, planet, region, mutationCandidate);
+        const entry = createExplorationSeedEntry(seed, planet, region, mutationCandidate, null, randomSpeciesKey());
         state.seed_inventory.push(entry);
         rewards.seeds.push(entry);
       }
@@ -5002,7 +5021,8 @@ function exploreViewRun(){
         if(!seed) continue;
         const grade = exRollRewardGrade(r, p);
         const mut = Math.random() < seedMutationChance(seed, realRegion || { trait_probability_modifiers:{} });
-        const entry = createExplorationSeedEntry(seed, realPlanet, realRegion, mut, grade);
+        const speciesKey = rollSpeciesFromView(r);
+        const entry = createExplorationSeedEntry(seed, realPlanet, realRegion, mut, grade, speciesKey);
         state.seed_inventory.push(entry);
         rewards.seeds.push(entry);
       }
@@ -5357,15 +5377,28 @@ function createSeedInventoryEntry(seedId, sourceLabel){
 function canClaimStarterSeed(){
   return !state.starter_seed_claimed && state.plants.length === 0 && state.seed_inventory.length === 0;
 }
-function claimStarterSeed(){
-  if(!canClaimStarterSeed()){ toast('무료 기본 종자는 지금 받을 수 없습니다'); return; }
-  const entry = createSeedInventoryEntry(STARTER_SEED_ID, 'starter_support');
-  if(!entry){ toast('기본 종자 데이터를 찾을 수 없습니다'); return; }
+/* 무지개 종자 — 등급·타입·속성·변이형이 모두 무작위인 시작용 종자 */
+function makeRainbowStarterSeed(){
+  const seed = ALIEN_INDEX.seeds[STARTER_SEED_ID];
+  if(!seed) return null;
+  const species = randomSpeciesKey();
+  const grade = POTENTIAL_ORDER[Math.floor(Math.random()*POTENTIAL_ORDER.length)];
+  const mut = Math.random() < 0.5;
+  const entry = createExplorationSeedEntry(seed, null, null, mut, grade, species);
+  entry.rainbow = true;
+  entry.name = '무지개 종자';
+  entry.source = { type:'starter_rainbow' };
+  return entry;
+}
+function claimStarterSeed(silent){
+  if(!canClaimStarterSeed()){ if(!silent) toast('무료 기본 종자는 지금 받을 수 없습니다'); return; }
+  const entry = makeRainbowStarterSeed();
+  if(!entry){ if(!silent) toast('기본 종자 데이터를 찾을 수 없습니다'); return; }
   state.seed_inventory.push(entry);
   state.starter_seed_claimed = true;
   saveState(); sfx.heal();
   renderMain(); renderSeedBag();
-  toast('무료 기본 종자가 종자 가방에 들어왔습니다');
+  if(!silent) toast('🌈 무지개 종자가 종자 가방에 들어왔습니다 (등급·타입·속성·변이형 무작위)');
 }
 function speciesKeyForSeed(seed){
   return ALIEN_SEED_SPECIES_MAP[seed.id] || ALIEN_SEED_SPECIES_MAP[seed.base_species_type] || 'thorn';
@@ -5564,13 +5597,15 @@ function renderSeedBagCard(item){
   const meta = rarityMeta((seed && seed.rarity) || item.rarity);
   const grade = item.grade || 'C';
   const selected = item.inventory_id === selectedSeedInventoryId;
+  const icon = item.rainbow ? '🌈' : meta.icon;
+  const typeLabel = item.rainbow ? '??? (무작위)' : (SEED_TYPE_NAMES[seedTypeOf(item)] || '미확인');
   return `<div class="itemcard seed-bag-card ${selected ? 'selected' : ''}" data-select-seed="${item.inventory_id}">
-    <div style="font-size:30px;width:42px;text-align:center">${meta.icon}</div>
+    <div style="font-size:30px;width:42px;text-align:center">${icon}</div>
     <div class="ic-body">
-      <div class="ic-name">${item.name || (seed && seed.name) || '알 수 없는 종자'} ${gradeBadgeHtml(grade)}</div>
+      <div class="ic-name"${item.rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'} ${gradeBadgeHtml(grade)}</div>
       <div class="ic-desc">
-        기원: ${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}<br>
-        식물 타입: ${SEED_TYPE_NAMES[seedTypeOf({ base_species_type:(seed && seed.base_species_type) || item.base_species_type })] || '미확인'}
+        기원: ${item.rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`}<br>
+        식물 타입: ${typeLabel}
       </div>
       <div class="seed-card-meta">
         <span class="seed-mini-stat ok">잠재력 ${grade}</span>
@@ -5585,26 +5620,28 @@ function renderSeedDetail(entry){
   const meta = rarityMeta((seed && seed.rarity) || entry.rarity);
   const planet = seedOriginPlanet(entry, seed);
   const region = seedOriginRegion(entry, seed);
-  const speciesType = (seed && seed.base_species_type) || entry.base_species_type;
-  const speciesKey = seed ? speciesKeyForSeed(seed) : null;
-  const growthType = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey].name : '미확인';
+  const rainbow = !!entry.rainbow;
+  const speciesKey = (entry.species && SPECIES[entry.species]) ? entry.species : (seed ? speciesKeyForSeed(seed) : null);
+  const spDef = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey] : null;
+  const typeLabel = rainbow ? '??? (무작위)' : (SEED_TYPE_NAMES[seedTypeOf(entry)] || (spDef ? SEED_TYPE_NAMES[spDef.seedType] : '미확인'));
+  const elLabel = rainbow ? '??? (무작위)' : (spDef ? `${ELEMENTS[spDef.element].icon} ${spDef.name}` : '미확인');
   const storage = seedStorageStatus(seed);
   const readiness = seedPlantReadiness(entry, seed);
   const requiredEnv = STORAGE_ENVIRONMENTS[storage.requiredKey] || STORAGE_ENVIRONMENTS.general;
   return `<div class="seed-detail-panel">
     <div class="seed-detail-title">
       <div>
-        <h3>${(seed && seed.name) || entry.name || '알 수 없는 종자'}</h3>
-        <div class="info-desc">${seedDescription(seed)}</div>
+        <h3>${entry.name || (seed && seed.name) || '알 수 없는 종자'}</h3>
+        <div class="info-desc">${rainbow ? '🌈 등급·타입·속성·변이형이 모두 무작위인 미지의 종자. 심으면 정체가 드러납니다.' : seedDescription(seed)}</div>
       </div>
       <span class="info-badge ${meta.css}">${meta.name}</span>
     </div>
     <div class="seed-detail-grid">
       <div class="seed-detail-cell">희귀도<b>${meta.name}</b></div>
-      <div class="seed-detail-cell">기원 행성<b>${(planet && planet.name) || entry.origin_planet || '미확인'}</b></div>
-      <div class="seed-detail-cell">기원 지역<b>${(region && region.name) || entry.origin_region || '미확인'}</b></div>
-      <div class="seed-detail-cell">식물 타입<b>${SEED_TYPE_NAMES[seedTypeOf({ base_species_type:speciesType })] || speciesType || '미확인'}</b></div>
-      <div class="seed-detail-cell">속성 계열<b>${growthType}</b></div>
+      <div class="seed-detail-cell">기원 행성<b>${rainbow ? '미지' : ((planet && planet.name) || entry.origin_planet || '미확인')}</b></div>
+      <div class="seed-detail-cell">기원 지역<b>${rainbow ? '미지' : ((region && region.name) || entry.origin_region || '미확인')}</b></div>
+      <div class="seed-detail-cell">식물 타입<b>${typeLabel}</b></div>
+      <div class="seed-detail-cell">종<b>${elLabel}</b></div>
       <div class="seed-detail-cell">기본 능력치 예상값<b>${seedBaseStatsText(seed)}</b></div>
       <div class="seed-detail-cell">변이율 예상치<b>${seedMutationEstimate(seed, entry)}</b></div>
       <div class="seed-detail-cell">잠재력 등급<b style="color:${GRADES[entry.grade||'C']||'#fff'}">${entry.grade || 'C'}</b></div>
@@ -5711,12 +5748,17 @@ function renderPlantConfirm(){
   });
 }
 function createPlantedPlantFromSeed(entry, seed, customName){
-  const speciesKey = speciesKeyForSeed(seed);
+  // 탐사로 정해진 종(35종)을 우선 사용. 없으면 기존 종자→종 매핑.
+  const speciesKey = (entry && entry.species && SPECIES[entry.species]) ? entry.species : speciesKeyForSeed(seed);
   const p = createPlant(speciesKey, seedGeneAlloc(seed));
-  const instanceFields = createPlantInstanceFields(entry, seed, p, customName || defaultPlantName(seed));
+  const defName = (entry && entry.species && SPECIES[speciesKey]) ? (SPECIES[speciesKey].name + '-' + (state.serial - 1)) : defaultPlantName(seed);
+  const instanceFields = createPlantInstanceFields(entry, seed, p, customName || defName);
   Object.assign(p, instanceFields);
   p.id = p.id || Date.now() + Math.floor(Math.random()*1000);
   p.name = instanceFields.custom_name;
+  // 종에 맞춰 외형 타입·속성 고정(탐사 종 반영)
+  p.seed_type = (entry && entry.seed_type) || SPECIES[speciesKey].seedType;
+  p.element = SPECIES[speciesKey].element;
   p.sourceSeedId = seed.id;
   p.sourceSeedInventoryId = entry.inventory_id;
   p.originPlanet = instanceFields.origin_planet;
@@ -7706,6 +7748,7 @@ $('#btnReset').addEventListener('click', () => {
   }
   state = defaultState();
   saveState();
+  claimStarterSeed(true); // 초기화 직후에도 무지개 종자 지급
   hide('#settingsModal');
   renderMain();
   toast('데이터가 초기화되었습니다');
@@ -7713,6 +7756,7 @@ $('#btnReset').addEventListener('click', () => {
 
 /* 타이틀 아트 + 초기화 */
 $('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
+if(canClaimStarterSeed()) claimStarterSeed(true); // 첫 시작 시 무지개 종자 자동 지급
 renderMain();
 </script>
 </body>
