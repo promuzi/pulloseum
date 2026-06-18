@@ -2006,40 +2006,81 @@ if (typeof module !== 'undefined' && module.exports) {
 <script>
 'use strict';
 /* ================= 데이터 ================= */
-const SPECIES = {
-  flame: { key:'flame', name:'플레임모스', element:'fire',
-    desc:'공격 특화. 포자가 마찰열로 발화하는 호전적인 이끼.',
-    base:{hp:90, atk:26, def:14, spd:18} },
-  aqua:  { key:'aqua', name:'아쿠아벌브', element:'water',
-    desc:'방어 특화. 고압 수낭을 지닌 단단한 구근.',
-    base:{hp:120, atk:18, def:22, spd:14} },
-  thorn: { key:'thorn', name:'쏜위드', element:'grass',
-    desc:'속도 특화. 강철 가시를 흩뿌리는 날렵한 덩굴.',
-    base:{hp:100, atk:22, def:16, spd:24} },
-  gaia:  { key:'gaia', name:'가이아록', element:'earth',
-    desc:'중장갑 특화. 살아있는 암석 갑피를 두른 요새 식물.',
-    base:{hp:115, atk:20, def:24, spd:10} },
-  windy: { key:'windy', name:'윈드리프', element:'wind',
-    desc:'초고속 특화. 공기를 가르며 활공하는 칼날 잎사귀.',
-    base:{hp:85, atk:21, def:13, spd:30} },
-  spark: { key:'spark', name:'스파크번', element:'bolt',
-    desc:'화력 특화. 정전기 꽃가루를 터뜨리는 유리대포.',
-    base:{hp:80, atk:28, def:12, spd:26} },
-  frost: { key:'frost', name:'프로스트베리', element:'ice',
-    desc:'지구력 특화. 냉기를 응축한 열매를 맺는 설원 관목.',
-    base:{hp:110, atk:24, def:18, spd:11} },
+/* ── 식물 종 = 속성 수치 + 타입 수치 ──────────────────────────────
+   각 식물의 기본 스탯 = ELEMENT_STATS[속성] + TYPE_STATS[타입].
+   속성은 상성·색·전투 성향을, 타입은 몸체(실루엣)·체격 성향을 담당한다.
+   바람은 강점이 적어 기동성에 큰 보정을 둠. (5타입 × 7속성 = 35종) */
+const ELEMENT_STATS = {
+  fire:  { hp:44, atk:15, def:6,  spd:7  }, // 호전적·고공격
+  water: { hp:62, atk:6,  def:14, spd:5  }, // 견고·방어
+  grass: { hp:52, atk:10, def:9,  spd:11 }, // 균형
+  earth: { hp:58, atk:9,  def:16, spd:2  }, // 중장갑·둔중
+  wind:  { hp:40, atk:10, def:5,  spd:22 }, // 초고속(기동 대폭 보정)
+  bolt:  { hp:38, atk:17, def:4,  spd:14 }, // 유리대포
+  ice:   { hp:56, atk:12, def:9,  spd:4  }, // 지구력
 };
+const TYPE_STATS = {
+  grass:  { hp:48, atk:11, def:7,  spd:12 }, // 초본형 — 속도·균형
+  tree:   { hp:62, atk:9,  def:13, spd:4  }, // 목본형 — 체력·방어 탱커
+  flower: { hp:44, atk:14, def:6,  spd:9  }, // 화초형 — 공격·화력
+  cactus: { hp:58, atk:9,  def:14, spd:4  }, // 다육형 — 방어·지구력
+  vine:   { hp:46, atk:11, def:7,  spd:12 }, // 덩굴형 — 기동·흡혈
+};
+const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈' };
+/* [종key, 이름, 타입, 속성] — 5타입 × 7속성. 기존 7종 key는 세이브 호환 위해 유지. */
+const SPECIES_GRID = [
+  // 🌿 초본형 grass
+  ['flame','플레임모스','grass','fire'], ['grass_water','미스트모스','grass','water'],
+  ['grass_grass','그린모스','grass','grass'], ['grass_earth','클레이모스','grass','earth'],
+  ['windy','윈드리프','grass','wind'], ['grass_bolt','볼트모스','grass','bolt'],
+  ['grass_ice','프로스트모스','grass','ice'],
+  // 🌳 목본형 tree
+  ['tree_fire','엠버오크','tree','fire'], ['tree_water','타이드우드','tree','water'],
+  ['tree_grass','엘더우드','tree','grass'], ['tree_earth','스톤오크','tree','earth'],
+  ['tree_wind','게일우드','tree','wind'], ['tree_bolt','썬더오크','tree','bolt'],
+  ['frost','프로스트베리','tree','ice'],
+  // 🌸 화초형 flower
+  ['flower_fire','블레이즈블룸','flower','fire'], ['aqua','아쿠아벌브','flower','water'],
+  ['flower_grass','페탈로즈','flower','grass'], ['flower_earth','클레이블룸','flower','earth'],
+  ['flower_wind','윈드페탈','flower','wind'], ['spark','스파크번','flower','bolt'],
+  ['flower_ice','프로스트블룸','flower','ice'],
+  // 🌵 다육형 cactus
+  ['cactus_fire','엠버캑터','cactus','fire'], ['cactus_water','듀캑터','cactus','water'],
+  ['cactus_grass','비리캑터','cactus','grass'], ['gaia','가이아록','cactus','earth'],
+  ['cactus_wind','게일캑터','cactus','wind'], ['cactus_bolt','볼트캑터','cactus','bolt'],
+  ['cactus_ice','프로스트캑터','cactus','ice'],
+  // 🍃 덩굴형 vine
+  ['vine_fire','플레임바인','vine','fire'], ['vine_water','타이드바인','vine','water'],
+  ['thorn','쏜위드','vine','grass'], ['vine_earth','루트바인','vine','earth'],
+  ['vine_wind','게일바인','vine','wind'], ['vine_bolt','볼트바인','vine','bolt'],
+  ['vine_ice','프로스트바인','vine','ice'],
+];
+const SPECIES = (function(){
+  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형' };
+  const EL_KO = { fire:'불', water:'물', grass:'풀', earth:'대지', wind:'바람', bolt:'번개', ice:'빙결' };
+  const out = {};
+  SPECIES_GRID.forEach(function(row){
+    const key=row[0], name=row[1], type=row[2], el=row[3];
+    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
+    out[key] = {
+      key, name, element:el, seedType:type,
+      base:{ hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd },
+      desc:`${EL_KO[el]}속성 ${TYPE_KO[type]} — ${TYPE_CONCEPT[type]} 성향.`,
+    };
+  });
+  return out;
+})();
 /* 속성 상성: 기획서의 약점 테이블 기준.
    weak = 이 속성이 1.5배 피해를 받는 상대(약점), strong = 이 속성이 강하게 때리는 상대(약점의 역).
    불:물·대지 / 물:풀·빙결·번개 / 풀:불·바람·번개 / 번개:대지·빙결 / 대지:풀·물 / 빙결:불·대지 / 바람:대지·불 */
 const ELEMENTS = {
-  fire:  { name:'불',   icon:'🔥', color:'#ff6b4a', weak:['water','earth'],     strong:['grass','ice','wind'],  skill:'화염 분사' },
-  water: { name:'물',   icon:'💧', color:'#4ac6ff', weak:['grass','ice','bolt'],strong:['fire','earth'],        skill:'고압 물대포' },
-  grass: { name:'풀',   icon:'🌿', color:'#6bdd6b', weak:['fire','wind','bolt'],strong:['water','earth'],       skill:'가시 폭풍' },
-  earth: { name:'대지', icon:'🪨', color:'#c9a26b', weak:['grass','water'],     strong:['fire','bolt','ice','wind'], skill:'암석 붕괴' },
-  wind:  { name:'바람', icon:'🌪️', color:'#9adbe8', weak:['earth','fire'],      strong:['grass'],               skill:'진공 칼날' },
-  bolt:  { name:'번개', icon:'⚡', color:'#ffe14a', weak:['earth','ice'],       strong:['water','grass'],       skill:'천둥 직격' },
-  ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire','earth'],      strong:['water','bolt'],        skill:'절대 영도' },
+  fire:  { name:'불',   icon:'🔥', color:'#ff6b4a', weak:['water','wind'],       strong:['grass','ice'],         skill:'화염 분사' },
+  water: { name:'물',   icon:'💧', color:'#4ac6ff', weak:['grass','bolt','ice'], strong:['fire','earth'],        skill:'고압 물대포' },
+  grass: { name:'풀',   icon:'🌿', color:'#6bdd6b', weak:['fire','wind','ice'],  strong:['water','earth'],       skill:'가시 폭풍' },
+  earth: { name:'대지', icon:'🪨', color:'#c9a26b', weak:['grass','water'],      strong:['bolt','wind'],         skill:'암석 붕괴' },
+  wind:  { name:'바람', icon:'🌪️', color:'#9adbe8', weak:['earth'],             strong:['grass','fire'],        skill:'진공 칼날' },
+  bolt:  { name:'번개', icon:'⚡', color:'#ffe14a', weak:['earth'],             strong:['water'],               skill:'천둥 직격' },
+  ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire'],              strong:['water','grass'],       skill:'절대 영도' },
 };
 const GRADES = { D:'#9fb0c3', C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
 /* 잠재력(종자 발견 등급) — D < C < B < A < S. 등급이 높을수록 생장 시 더 좋은 스킬을 얻는다. */
@@ -5949,7 +5990,7 @@ function plantDisplayName(p){
 
 /* ================= 식물 SVG 생성 ================= */
 /* SPECIES(종) → 식물 외형 타입. 종마다 속성이 1:1 고정이므로 종=속성=외형이 일치한다. */
-const SPECIES_SEEDTYPE = { flame:'grass', aqua:'flower', thorn:'vine', gaia:'cactus', windy:'grass', spark:'flower', frost:'tree' };
+const SPECIES_SEEDTYPE = (function(){ const m={}; Object.keys(SPECIES).forEach(k=>{ m[k]=SPECIES[k].seedType; }); return m; })();
 /* 씨앗/타이틀 등 종(species) 기준 호출 → 통합 속성·생장 외형 생성기로 위임.
    element 누락 시 종의 고정 속성을 사용해 항상 속성과 외형을 일치시킨다. */
 function svgPlant(species, element, grade, awakened, size, growth){
