@@ -5967,11 +5967,13 @@ function calcStats(p){
   const leftover = Math.max(0, GENE_BUDGET - (a.atk + a.def + a.spd));
   const g = growthStatMult(p);
   const baseEnergy = (p.battle_stats && p.battle_stats.energy) || 3;
+  // 크레딧 강화는 생장·개체배율과 같은 축에서 곱연산(레벨당 +5%) — 성장해도 강화 가치가 희석되지 않음
+  const UP_PCT = 0.05;
   return {
-    hp:  Math.round(((b.hp  + leftover*6) * m.hp ) * g) + p.up.hp*15,
-    atk: Math.round(((b.atk + a.atk*2)    * m.atk) * g) + p.up.atk*4,
-    def: Math.round(((b.def + a.def*2)    * m.def) * g) + p.up.def*4,
-    spd: Math.round(((b.spd + a.spd*1.5)  * m.spd) * g) + p.up.spd*3,
+    hp:  Math.round((b.hp  + leftover*6) * m.hp  * g * (1 + p.up.hp *UP_PCT)),
+    atk: Math.round((b.atk + a.atk*2)    * m.atk * g * (1 + p.up.atk*UP_PCT)),
+    def: Math.round((b.def + a.def*2)    * m.def * g * (1 + p.up.def*UP_PCT)),
+    spd: Math.round((b.spd + a.spd*1.5)  * m.spd * g * (1 + p.up.spd*UP_PCT)),
     acc: clamp(86 + (p.up.acc||0)*2 + Math.round((m.atk-1)*8), 70, 99),
     elem: Math.round((14 + (p.up.elem||0)*5) * g),           // 속성 수치(원소 스킬에 가산)
     critRate: clamp(5 + (p.up.crit||0)*2, 0, 75),            // 치명타률 %
@@ -6302,10 +6304,10 @@ async function startIncubation(){
 
 /* ================= 강화 ================= */
 const UP_ROWS = [
-  { k:'hp',   icon:'❤️', name:'생명력',   gain:'+15' },
-  { k:'atk',  icon:'⚔️', name:'공격',     gain:'+4' },
-  { k:'def',  icon:'🛡️', name:'방어',     gain:'+4' },
-  { k:'spd',  icon:'💨', name:'기동성',   gain:'+3' },
+  { k:'hp',   icon:'❤️', name:'생명력',   gain:'+5%' },
+  { k:'atk',  icon:'⚔️', name:'공격',     gain:'+5%' },
+  { k:'def',  icon:'🛡️', name:'방어',     gain:'+5%' },
+  { k:'spd',  icon:'💨', name:'기동성',   gain:'+5%' },
   { k:'acc',  icon:'🎯', name:'적중',     gain:'+2%' },
   { k:'elem', icon:'✨', name:'속성',     gain:'+5' },
   { k:'crit', icon:'💥', name:'치명타률', gain:'+2%' },
