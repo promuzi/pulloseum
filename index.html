@@ -104,8 +104,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .iconbtn{background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:16px;padding:7px 10px;flex:0 0 auto;}
 
 /* 프로필 배너 + 식물 그리드 한 줄 */
-#profileRow{display:flex;gap:8px;align-items:stretch;padding:8px 12px 8px;}
-#profileBanner{flex:0 0 33%;position:relative;height:88px;border-radius:14px;overflow:hidden;
+#profileRow{display:flex;gap:8px;align-items:stretch;padding:6px 12px 5px;flex:0 0 auto;}
+#profileBanner{flex:0 0 33%;position:relative;height:78px;border-radius:14px;overflow:hidden;
   border:1.5px solid var(--line);background:#0e1626;padding:0;cursor:pointer;text-align:left;}
 #profileBanner:active{transform:scale(.98);}
 #profileBanner .pb-bg{position:absolute;inset:0;}
@@ -135,7 +135,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .chip .pi{font-size:15px;line-height:1;}
 .chip .potlabel{font-size:7px;font-weight:700;margin-top:1px;}
 
-.main-body{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;}
+.main-body{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden;}
 .bag-fab{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:5;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
   width:58px;height:58px;border-radius:16px;font-size:26px;cursor:pointer;
@@ -143,9 +143,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   box-shadow:0 6px 18px rgba(0,0,0,.4);transition:transform .1s;}
 .bag-fab:active{transform:translateY(-50%) scale(.93);}
 .bag-fab .bag-fab-label{font-size:9.5px;font-weight:800;color:var(--neon);}
-#centerPlant{text-align:center;cursor:pointer;padding:10px;border-radius:20px;max-width:330px;}
+#centerPlant{text-align:center;cursor:pointer;padding:4px 8px;border-radius:20px;max-width:330px;max-height:100%;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 #centerPlant:active{transform:scale(.98);}
-#centerPlant .pname{font-size:21px;font-weight:800;margin:6px 0 4px;}
+#centerPlant svg,#centerPlant img{max-width:min(46vw,150px);height:auto;}
+#centerPlant .pname{font-size:19px;font-weight:800;margin:4px 0 3px;}
 #centerPlant .hint{color:var(--sub);font-size:12.5px;margin-top:8px;}
 .statrow{display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap;}
 .stat{background:var(--card);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:4px 9px;font-size:12.5px;}
@@ -189,7 +190,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .prof-stat .ps-label{font-size:11px;color:var(--sub);font-weight:700;}
 .prof-stat .ps-value{font-size:17px;font-weight:800;margin-top:2px;}
 
-#btnBattle{margin:0 14px 10px;padding:15px;font-size:19px;border-radius:16px;border:none;
+#btnBattle{flex:0 0 auto;margin:0 14px calc(10px + env(safe-area-inset-bottom,0px));padding:14px;font-size:18px;border-radius:16px;border:none;
   background:linear-gradient(135deg,#b23b2e,#ff6b4a);color:#fff;font-weight:800;
   box-shadow:0 4px 26px rgba(255,107,74,.35);animation:pulse 2.2s ease-in-out infinite;}
 @keyframes pulse{0%,100%{box-shadow:0 4px 22px rgba(255,107,74,.3)}50%{box-shadow:0 4px 34px rgba(255,107,74,.55)}}
@@ -223,7 +224,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .navbtn .navlock{position:absolute;top:3px;right:calc(50% - 22px);font-size:11px;opacity:.85;}
 
 /* ===== 전투 ===== */
-#battleScreen{padding:10px 12px;gap:6px;}
+#battleScreen{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));gap:6px;overflow:hidden;}
 #battleHeader{text-align:center;color:var(--sub);font-size:13px;letter-spacing:2px;padding:2px;}
 .fighter{display:flex;align-items:center;gap:10px;}
 .fighter.enemy{flex-direction:row;}
@@ -340,9 +341,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .evo-skill{background:rgba(125,255,217,.1);border:1px solid rgba(125,255,217,.4);border-radius:9px;padding:6px 10px;font-size:13px;font-weight:700;opacity:0;animation:evoRow .4s ease forwards;}
 
 /* ===== 모달 ===== */
-.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:14px;padding-top:calc(var(--headh) + 18px);padding-bottom:calc(var(--navh) + 14px);}
+.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:14px;padding-top:calc(var(--headh) + 18px);padding-bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));}
 .modal-card{background:#131b2c;border:1px solid var(--line);border-radius:18px;width:min(94vw,450px);
   margin:auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
+.modal:not(#explorationModal):not(#shopModal) .modal-card{max-height:calc(100dvh - var(--headh) - var(--navh) - 36px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;}
 .modal-card h2{margin:0 0 4px;font-size:20px;}
 .modal-card .sub{color:var(--sub);font-size:13px;margin:0 0 14px;}
 .cardlist{display:flex;flex-direction:column;gap:10px;}
@@ -359,7 +361,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .explore-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px;}
 .explore-summary .stat{display:block;text-align:center;padding:7px 6px;}
 #explorationModal{padding:0;padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));align-items:stretch;justify-content:stretch;}
-#explorationModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh) - var(--headh));max-height:calc(100dvh - var(--navh) - var(--headh));border-radius:0;padding:0;overflow:hidden;background:#07101d;}
+#explorationModal .modal-card{width:100%;max-width:520px;margin:0 auto;height:calc(100dvh - var(--navh) - var(--headh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - var(--navh) - var(--headh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-radius:0;padding:0;overflow:hidden;background:#07101d;}
 #explorationBody{height:100%;min-height:0;}
 /* 상점 — 우주맵/탐사처럼 전체 화면 패널 (상단 재화 헤더 아래에서 시작) */
 #shopModal{padding:0;padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));align-items:stretch;justify-content:stretch;}
@@ -574,7 +576,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .exploration-shop-meta .seed-mini-stat{background:rgba(0,0,0,.12);}
 .exploration-shop-back{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
 @media (max-width:620px){
-  #explorationModal .modal-card{height:calc(100dvh - var(--navh) - var(--headh));width:100vw;}
+  #explorationModal .modal-card{height:calc(100dvh - var(--navh) - var(--headh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));width:100vw;}
   .space-map-grid{min-height:calc(100dvh - 74px);}
   .space-map-canvas{min-height:calc(100dvh - 74px);}
   .space-map-top-resources{left:10px;right:10px;top:10px;gap:6px;flex-wrap:wrap;}
@@ -591,6 +593,46 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   .ship-mod-layout,.ship-part-grid,.ship-upgrade-grid,.exploration-shop-layout{grid-template-columns:1fr;}
   .exploration-shop-tabs{display:grid;grid-template-columns:1fr 1fr;}
 }
+@media (max-height:760px){
+  #profileRow{padding:5px 10px 3px;gap:6px;}
+  #profileBanner{height:68px;border-radius:12px;}
+  #profileBanner .pb-fg{padding:5px;}
+  #profileBanner .pb-pfp{width:32px;height:32px;border-radius:9px;}
+  #profileBanner .pb-name{font-size:11px;}
+  #collectionBar{gap:5px;padding-bottom:2px;}
+  .chip{width:48px;height:35px;border-radius:10px;}
+  #centerPlant{padding:2px 6px;}
+  #centerPlant svg,#centerPlant img{max-width:min(42vw,126px);}
+  #centerPlant .pname{font-size:17px;margin:3px 0 2px;}
+  #centerPlant .hint{display:none;}
+  .badge{font-size:11.5px;padding:2px 7px;}
+  .statrow{gap:4px;margin-top:5px;}
+  .stat{font-size:11.5px;padding:3px 6px;}
+  #tournamentBar{margin:0 12px 6px;}
+  .tbar{font-size:12px;}
+  .tbar .tb-left{padding:7px 9px;}
+  .tbar .tb-right{padding:7px 9px;}
+  .tbar .tb-tier{padding:4px 8px;}
+  #btnBattle{margin:0 12px calc(8px + env(safe-area-inset-bottom,0px));padding:12px;font-size:17px;border-radius:14px;}
+  .fighter .fsprite svg,.fighter .fsprite img{max-width:92px;height:auto;}
+  #battleLog{min-height:48px;font-size:12.5px;line-height:1.5;padding:8px 10px;}
+  .movebtn{padding:8px 7px;}
+  .movebtn .mn{font-size:13px;}
+  .movebtn .ms{font-size:11px;}
+}
+@media (max-height:650px){
+  #profileBanner{height:60px;}
+  .chip{width:44px;height:32px;}
+  #centerPlant svg,#centerPlant img{max-width:min(40vw,108px);}
+  #centerPlant .pname{font-size:16px;}
+  .statrow .stat:nth-child(n+5){display:none;}
+  .exdet-map{height:148px;}
+  .exdet-head{padding:8px 10px;}
+  .exdet-head .hr{display:none;}
+  .exdet-desc{line-height:1.45;margin-bottom:7px;}
+  .exdet-tbl td{padding:8px;}
+  .exres-card{padding-top:14px;}
+}
 .probrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-top:5px;}
 .probbar{flex:1;height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;}
 .probbar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2bd49a,#4ac6ff);}
@@ -598,7 +640,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .resultcard{background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.32);border-radius:14px;padding:12px;margin-top:12px;}
 .resultcard .rtitle{font-size:17px;font-weight:900;margin-bottom:6px;}
 .seed-preview{margin-top:10px;font-size:12px;color:var(--sub);line-height:1.7;}
-#seedBagModal .modal-card{width:min(96vw,900px);max-height:calc(100dvh - var(--navh) - 28px);}
+#seedBagModal .modal-card{width:min(96vw,900px);max-height:calc(100dvh - var(--navh) - 28px - env(safe-area-inset-bottom,0px));overflow-y:auto;}
 .seed-sort-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
 .seed-sort-label{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px;}
 .seed-sort-btn{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
@@ -743,8 +785,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exmap-title{position:absolute;left:0;right:0;top:8px;text-align:center;z-index:3;pointer-events:none;padding:0 44px;}
 .exmap-title h2{margin:0;font-size:17px;}
 .exmap-title p{margin:2px 0 0;font-size:11.5px;color:var(--sub);}
-.exmap-close{position:absolute;right:10px;top:10px;z-index:12;width:34px;height:34px;border-radius:50%;padding:0;font-size:16px;}
-.exmap-zoom{position:absolute;right:10px;bottom:16px;z-index:12;display:flex;flex-direction:column;gap:6px;}
+.exmap-zoom{position:absolute;right:10px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;flex-direction:column;gap:6px;}
 .exmap-zoom .btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:flex;align-items:center;justify-content:center;}
 .explanet{position:absolute;transform:translate(-50%,-50%);background:transparent;border:none;padding:0;z-index:4;cursor:pointer;display:flex;flex-direction:column;align-items:center;}
 .explanet-core{display:block;width:30px;height:30px;border-radius:50%;background:var(--pc);position:relative;
@@ -754,7 +795,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .explanet:active .explanet-core{transform:scale(.9);}
 .explanet-core:before{content:"";position:absolute;inset:4px 4px 6px 5px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
 .explanet.ring .explanet-core:after{content:"";position:absolute;left:-8px;right:-8px;top:46%;height:5px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
-.explanet-label{margin-top:5px;font-size:11px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.8);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 8px;}
+.explanet-label{display:block;margin-top:5px;max-width:124px;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 8px;text-shadow:0 1px 3px rgba(0,0,0,.8);}
 /* 연료탱크 미충족 궤도 — 어둡게 그림자 처리 */
 .exmap-orbit.locked{border-style:dashed;border-color:rgba(255,255,255,.04);}
 .explanet.locked{filter:grayscale(.85) brightness(.4);opacity:.6;}
@@ -780,28 +821,27 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .explanet.sel .explanet-label{border-color:var(--neon);color:var(--neon);}
 /* 행성 정보 작은 팝업 (그림2) */
 .expop-backdrop{position:absolute;inset:0;z-index:10;}
-.expop{position:absolute;z-index:11;width:min(238px,80vw);background:rgba(13,22,38,.98);border:1px solid rgba(92,242,194,.42);border-radius:14px;box-shadow:0 14px 42px rgba(0,0,0,.6);padding:8px 0 0;transform:translate(-50%,-100%);}
+.expop{position:absolute;z-index:11;width:min(238px,80vw);background:rgba(13,22,38,.98);border:1px solid rgba(92,242,194,.42);border-radius:14px;box-shadow:0 14px 42px rgba(0,0,0,.6);padding:8px 0 10px;transform:translate(-50%,-100%);}
 .expop.below{transform:translate(-50%,0);}
 .expop:after{content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);width:0;height:0;border:9px solid transparent;border-top-color:rgba(92,242,194,.42);border-bottom:0;}
 .expop.below:after{bottom:auto;top:-9px;border-top:0;border-bottom:9px solid rgba(92,242,194,.42);}
-.expop-x{position:absolute;right:7px;top:7px;width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:var(--text);font-size:13px;line-height:1;padding:0;z-index:2;}
 .expop-tbl{width:100%;border-collapse:collapse;margin-bottom:8px;}
 .expop-tbl tr{border-bottom:1px solid rgba(255,255,255,.08);}
 .expop-tbl tr:last-child{border-bottom:none;}
 .expop-tbl td{padding:7px 10px;font-size:12.5px;}
 .expop-tbl td:first-child{color:var(--sub);font-weight:700;width:42%;text-align:center;border-right:1px solid rgba(255,255,255,.08);}
 .expop-tbl td:last-child{font-weight:800;text-align:center;letter-spacing:.5px;}
-.expop-name{display:block;width:calc(100% - 20px);margin:0 10px 10px;padding:9px;border-radius:10px;font-size:15px;font-weight:900;}
+.expop-name{display:block;width:calc(100% - 20px);margin:0 10px;padding:9px;border-radius:10px;font-size:15px;font-weight:900;}
 .exicon{font-size:15px;margin:0 1px;}
 /* 행성 상세 — 지역 지도 (그림3) */
-.exdet-backdrop{position:absolute;inset:0;z-index:20;background:rgba(3,7,14,.72);display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;}
-.exdet-card{width:min(460px,97%);background:#0d1525;border:1px solid rgba(92,242,194,.3);border-radius:16px;padding:12px;box-shadow:0 18px 60px rgba(0,0,0,.65);position:relative;margin:auto;}
+.exdet-backdrop{position:absolute;inset:0;z-index:20;background:rgba(3,7,14,.72);display:flex;align-items:flex-start;justify-content:center;padding:12px 12px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;}
+.exdet-card{width:min(460px,97%);max-height:calc(100% - 4px);overflow-y:auto;background:#0d1525;border:1px solid rgba(92,242,194,.3);border-radius:16px;padding:12px 12px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 18px 60px rgba(0,0,0,.65);position:relative;margin:0 auto;}
 .exdet-x{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:var(--text);font-size:15px;padding:0;z-index:3;}
 .exdet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.3);border-radius:12px;padding:10px 42px 10px 12px;}
 .exdet-head .hn{font-size:17px;font-weight:900;}
 .exdet-head .hd{font-size:11.5px;color:var(--sub);margin-top:2px;}
 .exdet-head .hr{font-size:11.5px;color:var(--neon);text-align:right;white-space:nowrap;font-weight:800;line-height:1.5;}
-.exdet-map{position:relative;height:188px;margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(92,242,194,.2);
+.exdet-map{position:relative;height:176px;margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(92,242,194,.2);
   background:
     radial-gradient(circle at 28% 32%, #2f7d7a 0 15%, transparent 16%),
     radial-gradient(circle at 72% 56%, #2f7d6b 0 19%, transparent 20%),
@@ -816,15 +856,15 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-tbl{width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;}
 .exdet-tbl tr{border-bottom:1px solid rgba(255,255,255,.08);}
 .exdet-tbl tr:last-child{border-bottom:none;}
-.exdet-tbl td{padding:11px;font-size:13px;}
+.exdet-tbl td{padding:9px;font-size:13px;}
 .exdet-tbl td:first-child{color:var(--sub);font-weight:700;width:34%;text-align:center;background:rgba(255,255,255,.03);border-right:1px solid rgba(255,255,255,.08);}
 .exdet-tbl td:last-child{text-align:center;font-weight:800;}
 .exdet-empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 10px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;}
-.exdet-foot{margin-top:12px;}
+.exdet-foot{position:sticky;bottom:0;margin-top:10px;padding-top:10px;background:linear-gradient(180deg,rgba(13,21,37,0),#0d1525 34%);}
 .exdet-foot .btn{width:100%;}
 /* 탐사 결과 (재설계) */
-.exres-backdrop{position:absolute;inset:0;z-index:30;background:rgba(3,7,14,.8);display:flex;align-items:center;justify-content:center;padding:16px;}
-.exres-card{width:min(380px,95%);background:#0d1525;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:16px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.7);}
+.exres-backdrop{position:absolute;inset:0;z-index:30;background:rgba(3,7,14,.8);display:flex;align-items:center;justify-content:center;padding:16px 16px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;}
+.exres-card{width:min(380px,95%);max-height:calc(100% - 6px);overflow-y:auto;background:#0d1525;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.7);}
 
 /* ===== 잠금(준비 중) 모달 ===== */
 #lockedModal .modal-card{text-align:center;}
@@ -4811,10 +4851,18 @@ function exPositionPopup(){
   const cx = cr.left - wr.left + cr.width / 2;
   const coreTop = cr.top - wr.top, coreBottom = cr.bottom - wr.top;
   const popH = pop.offsetHeight || 210;
-  const below = (coreTop - popH - 14) < 6;
+  const pad = 10;
+  const canAbove = coreTop >= popH + pad + 12;
+  const canBelow = (wr.height - coreBottom) >= popH + pad + 12;
+  const below = !canAbove && canBelow;
+  const popW = pop.offsetWidth || 238;
+  let top = below ? coreBottom + 10 : coreTop - 10;
+  top = below
+    ? clamp(top, pad, Math.max(pad, wr.height - popH - pad))
+    : clamp(top, popH + pad, wr.height - pad);
   pop.classList.toggle('below', below);
-  pop.style.left = clamp(cx, 122, wr.width - 122) + 'px';
-  pop.style.top = (below ? coreBottom + 10 : coreTop - 10) + 'px';
+  pop.style.left = clamp(cx, popW / 2 + pad, wr.width - popW / 2 - pad) + 'px';
+  pop.style.top = top + 'px';
 }
 function exPDist(m){ const a = [...m.values()]; return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
 function bindExMap(){
@@ -4872,7 +4920,6 @@ function exPopupHtml(p){
   // 위치는 exPositionPopup()이 행성 실제 화면 좌표 기준으로 잡는다(확대/이동 반영).
   return `<div class="expop-backdrop" id="exPopBackdrop"></div>
     <div class="expop" id="exPop" style="left:-9999px;top:-9999px">
-      <button class="expop-x" id="exPopX" title="닫기">✕</button>
       <table class="expop-tbl">
         <tr><td>궤도</td><td>${p.orbit}</td></tr>
         <tr><td>등급</td><td>${exGradeRange(p)}</td></tr>
@@ -5050,7 +5097,6 @@ renderExploration = function(){
           ${EXPLORE_VIEW.map(exPlanetNode).join('')}
         </div>
         <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>드래그로 이동 · 휠/핀치로 확대 · 가운데 🛰️는 격납고</p></div>
-        <button class="btn modal-close exmap-close" id="exClose" title="닫기">✕</button>
         <div class="exmap-zoom">
           <button class="btn" id="exZoomIn" title="확대">＋</button>
           <button class="btn" id="exZoomOut" title="축소">－</button>
@@ -5070,11 +5116,9 @@ renderExploration = function(){
       exPopPlanetId = btn.dataset.explanet;
       sfx.tap(); renderExploration();
     }));
-    // 팝업 닫기 (빈 공간 / X)
+    // 팝업 닫기 (빈 공간)
     const popBack = $('#exPopBackdrop');
     if(popBack) popBack.addEventListener('click', () => { exPopPlanetId = null; sfx.tap(); renderExploration(); });
-    const popX = $('#exPopX');
-    if(popX) popX.addEventListener('click', e => { e.stopPropagation(); exPopPlanetId = null; sfx.tap(); renderExploration(); });
     // 팝업의 행성 이름 버튼 → 상세(그림3)
     const popOpen = $('#exPopOpen');
     if(popOpen) popOpen.addEventListener('click', e => {
@@ -5118,9 +5162,6 @@ renderExploration = function(){
     if(zout) zout.addEventListener('click', () => { exView.scale /= 1.18; applyExTransform(); sfx.tap(); });
     const zreset = $('#exZoomReset');
     if(zreset) zreset.addEventListener('click', () => { exView = { x:0, y:0, scale:EX_DEFAULT_SCALE }; applyExTransform(); sfx.tap(); });
-    // 우주맵 닫기
-    const exClose = $('#exClose');
-    if(exClose) exClose.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
   }catch(error){
     console.error(error);
     body.innerHTML = `<div class="howto" style="margin:16px">우주맵 표시 오류: ${error && error.message ? error.message : error}</div>`;
@@ -6001,7 +6042,6 @@ function composePlantSvg(seedType, growth, element, opts){
     <rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
     <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
     <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>
-    <text x="7" y="17" font-size="12">${ELEMENT_GLYPH[el]||''}</text>
     ${spark}
   </svg>`;
 }
