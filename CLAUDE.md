@@ -50,6 +50,14 @@
 
 ## 변경 이력 (개발 로그)
 
+### 2026-06-18 — 우주맵 이동/확대 복원 + 행성 축소 + 초기 크레딧 1000
+탐사 우주맵 사용성 보정.
+1. **이동/확대(마우스·터치)** — 궤도맵 콘텐츠(별·궤도·중앙 탐사선·행성)를 `.exmap-world`(`#exWorld`)로 감싸 `transform`(`exView`={x,y,scale})로 이동/확대. `applyExTransform`(스케일 0.55~2.6·이동 클램프), `bindExMap`(드래그=1포인터 pan / 핀치=2포인터 zoom / 휠 zoom), 우하단 `＋/－/⟳` 버튼(`#exZoomIn/Out/Reset`). **기본 확대 `EX_DEFAULT_SCALE=1.3`** → 안쪽 2궤도가 보이는 상태로 시작, 바깥 궤도는 드래그로 이동해 확인.
+2. **행성 정보 팝업 위치** — 확대/이동에 맞춰 `exPopupHtml`을 인라인 좌표 대신 `exPositionPopup()`이 **선택 행성의 실제 화면 좌표**(getBoundingClientRect) 기준으로 앵커(위 공간 부족 시 `.below`로 뒤집기). `applyExTransform`가 매 변환마다 재배치.
+3. **행성 크기 축소** — `.explanet-core` 46→30px(rare 34 / epic 38)로 탐사선 크기에 맞춤.
+4. **중앙 탐사선 클릭** — 기존 격납고(`#exHangarOpenBtn`) 유지(전 작업분). pan 핸들러는 `.explanet`·`.exmap-center` 클릭을 제외해 버튼 동작 보존.
+5. **초기 크레딧 1000** — `defaultState` 80→1000. 기존 세이브는 `normalizeState`에서 1회 보정(`starter_credit_1000` 플래그, 1000 미만이면 1000으로).
+
 ### 2026-06-18 — 탐사 시스템 대개편(탐사선 4스탯 작동 + 궤도 게이팅 + 종자/스킬 등급 + 소모품 폐지)
 이전 재설계로 `EXPLORE_VIEW`(8행성/3궤도)가 라이브 화면이 됐지만 **탐사선 스탯이 아무 효과 없고 탐사는 무조건 성공**하던 사장 상태를, 실제 메커니즘으로 채움. 죽은 시스템(연료 소모·각종 저항·보관함·소모품)은 제거.
 1. **탐사선 4스탯** — `newExplorerShip`/`SHIP_UPGRADES`를 `fuel_tank`(궤도 해금 레벨1~3)·`durability`(내구성)·`harvester`(채집기)·`scanner`(탐사장치)로 축소. 강화는 **크레딧 전용**(`shipUpgradeCost` 4트랙). 구 세이브는 `normalizeState`에서 4스탯으로 보정(내구성 보존). 저항·보관·연료 스탯·부품 시스템은 사장(정의는 남되 라이브 미사용). 내구도→**내구성** 명칭 통일.

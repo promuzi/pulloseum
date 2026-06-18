@@ -718,6 +718,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 /* ===== 탐사 우주맵 (재설계) ===== */
 #explorationBody{position:relative;background:radial-gradient(120% 90% at 50% 28%, #122036 0%, #060b15 70%);}
 .exmap{position:relative;width:100%;height:100%;overflow:hidden;}
+.exmap-world{position:absolute;inset:0;transform-origin:center center;touch-action:none;will-change:transform;cursor:grab;}
+.exmap-world.dragging{cursor:grabbing;}
 .exmap-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.5;pointer-events:none;}
 .exmap-star.big{width:3px;height:3px;opacity:.85;box-shadow:0 0 6px #fff;}
 .exmap-orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.075);border-radius:50%;pointer-events:none;}
@@ -726,15 +728,17 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exmap-title h2{margin:0;font-size:17px;}
 .exmap-title p{margin:2px 0 0;font-size:11.5px;color:var(--sub);}
 .exmap-close{position:absolute;right:10px;top:10px;z-index:12;width:34px;height:34px;border-radius:50%;padding:0;font-size:16px;}
+.exmap-zoom{position:absolute;right:10px;bottom:16px;z-index:12;display:flex;flex-direction:column;gap:6px;}
+.exmap-zoom .btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:flex;align-items:center;justify-content:center;}
 .explanet{position:absolute;transform:translate(-50%,-50%);background:transparent;border:none;padding:0;z-index:4;cursor:pointer;display:flex;flex-direction:column;align-items:center;}
-.explanet-core{display:block;width:46px;height:46px;border-radius:50%;background:var(--pc);position:relative;
-  box-shadow:0 0 18px color-mix(in srgb,var(--pc) 55%,transparent), inset -10px -12px 15px rgba(0,0,0,.4), inset 8px 7px 12px rgba(255,255,255,.18);transition:transform .12s;}
-.explanet.sz-rare .explanet-core{width:54px;height:54px;}
-.explanet.sz-epic .explanet-core{width:62px;height:62px;}
+.explanet-core{display:block;width:30px;height:30px;border-radius:50%;background:var(--pc);position:relative;
+  box-shadow:0 0 14px color-mix(in srgb,var(--pc) 55%,transparent), inset -7px -8px 11px rgba(0,0,0,.4), inset 5px 5px 9px rgba(255,255,255,.18);transition:transform .12s;}
+.explanet.sz-rare .explanet-core{width:34px;height:34px;}
+.explanet.sz-epic .explanet-core{width:38px;height:38px;}
 .explanet:active .explanet-core{transform:scale(.9);}
-.explanet-core:before{content:"";position:absolute;inset:6px 5px 9px 7px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
-.explanet.ring .explanet-core:after{content:"";position:absolute;left:-10px;right:-10px;top:46%;height:7px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
-.explanet-label{margin-top:6px;font-size:11.5px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.72);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:2px 9px;}
+.explanet-core:before{content:"";position:absolute;inset:4px 4px 6px 5px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
+.explanet.ring .explanet-core:after{content:"";position:absolute;left:-8px;right:-8px;top:46%;height:5px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
+.explanet-label{margin-top:5px;font-size:11px;font-weight:800;white-space:nowrap;background:rgba(5,10,18,.8);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 8px;}
 /* 연료탱크 미충족 궤도 — 어둡게 그림자 처리 */
 .exmap-orbit.locked{border-style:dashed;border-color:rgba(255,255,255,.04);}
 .explanet.locked{filter:grayscale(.85) brightness(.4);opacity:.6;}
@@ -760,8 +764,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .explanet.sel .explanet-label{border-color:var(--neon);color:var(--neon);}
 /* 행성 정보 작은 팝업 (그림2) */
 .expop-backdrop{position:absolute;inset:0;z-index:10;}
-.expop{position:absolute;z-index:11;width:min(238px,80vw);background:rgba(13,22,38,.98);border:1px solid rgba(92,242,194,.42);border-radius:14px;box-shadow:0 14px 42px rgba(0,0,0,.6);padding:8px 0 0;transform:translate(-50%,calc(-100% - 26px));}
-.expop.below{transform:translate(-50%,26px);}
+.expop{position:absolute;z-index:11;width:min(238px,80vw);background:rgba(13,22,38,.98);border:1px solid rgba(92,242,194,.42);border-radius:14px;box-shadow:0 14px 42px rgba(0,0,0,.6);padding:8px 0 0;transform:translate(-50%,-100%);}
+.expop.below{transform:translate(-50%,0);}
 .expop:after{content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);width:0;height:0;border:9px solid transparent;border-top-color:rgba(92,242,194,.42);border-bottom:0;}
 .expop.below:after{bottom:auto;top:-9px;border-top:0;border-bottom:9px solid rgba(92,242,194,.42);}
 .expop-x{position:absolute;right:7px;top:7px;width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:var(--text);font-size:13px;line-height:1;padding:0;z-index:2;}
@@ -2267,8 +2271,9 @@ const GROWTH_STAGE_ORDER = ['seed', 'sprout', 'juvenile', 'growing', 'mature', '
 const GROWTH_STAGE_NAMES = { seed:'씨앗', sprout:'새싹', juvenile:'유체', growing:'성장체', mature:'성체', evolved:'완숙체' };
 const GROWTH_EXP_REQUIREMENTS = { seed:18, sprout:45, juvenile:90, growing:125, mature:160, evolved:Infinity };
 const GROWTH_ACTIONS = {
-  water: { name:'물 주기', exp:6, cost:0 },
-  fertilizer: { name:'비료 주기', exp:16, cost:25 },
+  // ⚠️ 테스트용: 비료 주기 비용을 0으로 둠(원래 25). 정식 밸런스 시 fertilizer.cost 복구.
+  water: { name:'물 주기', exp:6, cost:0, icon:'💧' },
+  fertilizer: { name:'비료 주기', exp:16, cost:0, icon:'🌿' },
 };
 const MAX_SEED_STORAGE_CAPACITY = 18;
 const STORAGE_CAPACITY_UPGRADE_STEP = 2;
@@ -2847,7 +2852,7 @@ function newExplorerShip(){
 function defaultState(){
   const starterShip = newExplorerShip();
   return {
-    credits:80, money:80, minerals:0, player_level:1, player_exp:0, rank:1, serial:1,
+    credits:1000, money:1000, minerals:0, player_level:1, player_exp:0, rank:1, serial:1,
     rankTier:0, rankPoints:0, tournament:null,
     wins:0, losses:0,
     profile_name:'재배사', profile_image:0, banner_image:0,
@@ -2867,7 +2872,9 @@ function defaultState(){
 }
 function normalizeState(s){
   if(typeof s.credits !== 'number' && typeof s.money === 'number') s.credits = s.money;
-  if(typeof s.credits !== 'number') s.credits = 80;
+  if(typeof s.credits !== 'number') s.credits = 1000;
+  // 초기 자본 보정(1회): 기존 세이브가 1000 미만이면 한 번만 1000으로 끌어올림
+  if(!s.starter_credit_1000){ if((s.credits || 0) < 1000) s.credits = 1000; s.starter_credit_1000 = true; }
   if(typeof s.money !== 'number') s.money = s.credits;
   if(typeof s.minerals !== 'number') s.minerals = 0;
   if(typeof s.player_level !== 'number') s.player_level = Math.max(1, s.rank || 1);
@@ -4591,6 +4598,8 @@ let exDetPlanetId = null;   // 그림3 상세가 열린 행성
 let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
 let lastExResult = null;    // 직전 탐사 결과
 let exHangarOpen = false;   // 탐사선 격납고 오버레이 열림 여부
+const EX_DEFAULT_SCALE = 1.3; // 기본 확대: 안쪽 2개 궤도가 보이게
+let exView = { x:0, y:0, scale:EX_DEFAULT_SCALE }; // 우주맵 이동/확대 상태
 function exById(id){ return EXPLORE_VIEW.find(p => p.id === id) || null; }
 function exPlanetXY(p){
   const R = EX_ORBIT_R[p.orbit] || 142;
@@ -4701,10 +4710,64 @@ function grantThemedTraitCard(cardTypes, grade){
 }
 
 openExploration = function(){
-  exPopPlanetId = null; exDetPlanetId = null; exDetRegionIdx = -1; lastExResult = null;
+  exPopPlanetId = null; exDetPlanetId = null; exDetRegionIdx = -1; lastExResult = null; exHangarOpen = false;
+  exView = { x:0, y:0, scale:EX_DEFAULT_SCALE };
   renderExploration();
   show('#explorationModal');
 };
+/* ===== 우주맵 이동/확대 (마우스 드래그·휠 / 터치 드래그·핀치) ===== */
+function applyExTransform(){
+  const world = document.getElementById('exWorld'); if(!world) return;
+  exView.scale = clamp(exView.scale, 0.55, 2.6);
+  const lim = 180 + exView.scale * 220;
+  exView.x = clamp(exView.x, -lim, lim);
+  exView.y = clamp(exView.y, -lim, lim);
+  world.style.transform = `translate(${exView.x}px,${exView.y}px) scale(${exView.scale})`;
+  exPositionPopup();
+}
+function exPositionPopup(){
+  const pop = document.getElementById('exPop'); if(!pop) return;
+  const node = document.querySelector('.explanet.sel');
+  const wrap = document.getElementById('exmap');
+  if(!node || !wrap){ return; }
+  const core = node.querySelector('.explanet-core') || node;
+  const cr = core.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  const cx = cr.left - wr.left + cr.width / 2;
+  const coreTop = cr.top - wr.top, coreBottom = cr.bottom - wr.top;
+  const popH = pop.offsetHeight || 210;
+  const below = (coreTop - popH - 14) < 6;
+  pop.classList.toggle('below', below);
+  pop.style.left = clamp(cx, 122, wr.width - 122) + 'px';
+  pop.style.top = (below ? coreBottom + 10 : coreTop - 10) + 'px';
+}
+function exPDist(m){ const a = [...m.values()]; return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
+function bindExMap(){
+  const wrap = document.getElementById('exmap'); const world = document.getElementById('exWorld');
+  if(!wrap || !world) return;
+  const pointers = new Map(); let dragging = false, sx = 0, sy = 0, bx = 0, by = 0, lastDist = 0;
+  world.addEventListener('pointerdown', e => {
+    if(e.target.closest('.explanet') || e.target.closest('.exmap-center')) return; // 버튼은 그대로 클릭
+    pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(pointers.size === 1){ dragging = true; sx = e.clientX; sy = e.clientY; bx = exView.x; by = exView.y; world.classList.add('dragging'); }
+    else { dragging = false; lastDist = exPDist(pointers); }
+    try{ world.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  world.addEventListener('pointermove', e => {
+    if(!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(pointers.size >= 2){
+      const d = exPDist(pointers);
+      if(lastDist > 0){ exView.scale *= d / lastDist; applyExTransform(); }
+      lastDist = d;
+    } else if(dragging){
+      exView.x = bx + (e.clientX - sx); exView.y = by + (e.clientY - sy); applyExTransform();
+    }
+  });
+  const end = e => { pointers.delete(e.pointerId); if(pointers.size < 2) lastDist = 0; if(pointers.size === 0){ dragging = false; world.classList.remove('dragging'); } };
+  world.addEventListener('pointerup', end);
+  world.addEventListener('pointercancel', end);
+  wrap.addEventListener('wheel', e => { e.preventDefault(); exView.scale *= (e.deltaY < 0 ? 1.12 : 0.89); applyExTransform(); }, { passive:false });
+}
 
 function exStars(){
   const stars = [
@@ -4729,12 +4792,10 @@ function exPlanetNode(p){
 }
 function exPopupHtml(p){
   if(!p) return '';
-  const xy = exPlanetXY(p);
-  const ax = clamp(xy.x, -132, 132);
-  const below = xy.y < -10;
   const dr = exDiffRange(p);
+  // 위치는 exPositionPopup()이 행성 실제 화면 좌표 기준으로 잡는다(확대/이동 반영).
   return `<div class="expop-backdrop" id="exPopBackdrop"></div>
-    <div class="expop ${below?'below':''}" style="left:calc(50% + ${ax}px);top:calc(50% + ${xy.y}px)">
+    <div class="expop" id="exPop" style="left:-9999px;top:-9999px">
       <button class="expop-x" id="exPopX" title="닫기">✕</button>
       <table class="expop-tbl">
         <tr><td>궤도</td><td>${p.orbit}</td></tr>
@@ -4904,18 +4965,27 @@ renderExploration = function(){
     const popPlanet = exById(exPopPlanetId);
     const detPlanet = exById(exDetPlanetId);
     body.innerHTML = `
-      <div class="exmap">
-        ${exStars()}
-        ${exOrbitRings()}
-        <button class="exmap-center clickable" id="exHangarOpenBtn" title="탐사선 격납고">🛰️</button>
-        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>행성을 누르면 정보 · 가운데 🛰️는 격납고</p></div>
+      <div class="exmap" id="exmap">
+        <div class="exmap-world" id="exWorld">
+          ${exStars()}
+          ${exOrbitRings()}
+          <button class="exmap-center clickable" id="exHangarOpenBtn" title="탐사선 격납고">🛰️</button>
+          ${EXPLORE_VIEW.map(exPlanetNode).join('')}
+        </div>
+        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>드래그로 이동 · 휠/핀치로 확대 · 가운데 🛰️는 격납고</p></div>
         <button class="btn modal-close exmap-close" id="exClose" title="닫기">✕</button>
-        ${EXPLORE_VIEW.map(exPlanetNode).join('')}
+        <div class="exmap-zoom">
+          <button class="btn" id="exZoomIn" title="확대">＋</button>
+          <button class="btn" id="exZoomOut" title="축소">－</button>
+          <button class="btn" id="exZoomReset" title="기본 보기">⟳</button>
+        </div>
         ${exPopupHtml(popPlanet)}
         ${exDetailHtml(detPlanet)}
         ${exResultHtml()}
         ${exHangarHtml()}
       </div>`;
+    applyExTransform();
+    bindExMap();
 
     // 행성 선택 → 정보 팝업(그림2)
     body.querySelectorAll('[data-explanet]').forEach(btn => btn.addEventListener('click', e => {
@@ -4964,6 +5034,13 @@ renderExploration = function(){
     if(hangarBack) hangarBack.addEventListener('click', e => { if(e.target === hangarBack){ exHangarOpen = false; sfx.tap(); renderExploration(); } });
     // 탐사선 강화
     body.querySelectorAll('[data-ship-upgrade]').forEach(btn => btn.addEventListener('click', () => upgradeShipStat(btn.dataset.shipUpgrade)));
+    // 확대/축소 버튼
+    const zin = $('#exZoomIn');
+    if(zin) zin.addEventListener('click', () => { exView.scale *= 1.18; applyExTransform(); sfx.tap(); });
+    const zout = $('#exZoomOut');
+    if(zout) zout.addEventListener('click', () => { exView.scale /= 1.18; applyExTransform(); sfx.tap(); });
+    const zreset = $('#exZoomReset');
+    if(zreset) zreset.addEventListener('click', () => { exView = { x:0, y:0, scale:EX_DEFAULT_SCALE }; applyExTransform(); sfx.tap(); });
     // 우주맵 닫기
     const exClose = $('#exClose');
     if(exClose) exClose.addEventListener('click', () => { hide('#explorationModal'); setNavActive('home'); sfx.tap(); });
@@ -6590,7 +6667,24 @@ function renderConsumTab(p, s){
       <button class="upbtn" data-up="${r.k}" ${state.credits<cost?'disabled':''}>+ ${fmt(cost)}💰</button>
     </div>`;
   }).join('');
-  return `<p class="tab-hint"><b>크레딧</b>으로 식물의 기본 스탯을 <b>영구적으로</b> 강화합니다.</p>${rows}`;
+  const isMax = p.growth_stage === 'evolved';
+  const needed = growthExpNeeded(p);
+  const progress = isMax ? 1 : clamp((p.growth_exp||0)/needed, 0, 1);
+  const growBlock = `
+    <div class="skill-section-label">🌱 성장 <small>${isMax ? '최종 단계' : `${GROWTH_STAGE_NAMES[p.growth_stage]||''} · ${Math.round(p.growth_exp||0)}/${needed} EXP`}</small></div>
+    <div class="grow-bar" style="height:8px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin:2px 0 8px"><div style="height:100%;width:${Math.round(progress*100)}%;background:var(--neon)"></div></div>
+    <div class="uprow">
+      <div class="un">${GROWTH_ACTIONS.water.icon} ${GROWTH_ACTIONS.water.name}<small>성장 경험치 +${GROWTH_ACTIONS.water.exp} (무료)</small></div>
+      <div class="uv">EXP</div>
+      <button class="upbtn" data-grow-action="water" ${isMax?'disabled':''}>+${GROWTH_ACTIONS.water.exp}</button>
+    </div>
+    <div class="uprow">
+      <div class="un">${GROWTH_ACTIONS.fertilizer.icon} ${GROWTH_ACTIONS.fertilizer.name}<small>성장 경험치 +${GROWTH_ACTIONS.fertilizer.exp} (테스트 무료)</small></div>
+      <div class="uv">EXP</div>
+      <button class="upbtn" data-grow-action="fertilizer" ${isMax?'disabled':''}>+${GROWTH_ACTIONS.fertilizer.exp}</button>
+    </div>`;
+  return `<p class="tab-hint"><b>크레딧</b>으로 식물의 기본 스탯을 <b>영구적으로</b> 강화합니다.</p>${growBlock}
+    <div class="skill-section-label">🔧 스탯 강화 <small>크레딧 소비</small></div>${rows}`;
 }
 function renderPlantTab(p, s){
   if(upgradeTab==='trait') return renderTraitTab(p);
