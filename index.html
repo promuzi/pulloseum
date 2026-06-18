@@ -380,8 +380,6 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .consum-card .consum-name small{color:var(--sub);font-weight:700;}
 .consum-card .consum-exp{font-size:11.5px;color:var(--neon);font-weight:700;}
 .consum-card .consum-price{font-size:13px;font-weight:800;color:var(--gold);}
-.shop-wallet{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px;}
-.shop-wallet .stat{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--sub);}
 .shop-block{margin:14px 0 18px;}
 .shop-block-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px;}
 .shop-block-title{font-weight:900;font-size:17px;color:var(--text);}
@@ -841,7 +839,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-head .hn{font-size:17px;font-weight:900;}
 .exdet-head .hd{font-size:11.5px;color:var(--sub);margin-top:2px;}
 .exdet-head .hr{font-size:11.5px;color:var(--neon);text-align:right;white-space:nowrap;font-weight:800;line-height:1.5;}
-.exdet-map{position:relative;height:176px;margin:10px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(92,242,194,.2);
+.exdet-map{position:relative;height:140px;margin:9px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(92,242,194,.2);
   background:linear-gradient(160deg,#163b4d,#0f2638);}
 .exreg{position:absolute;transform:translate(-50%,-50%);width:44%;height:50%;min-width:104px;
   display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;
@@ -854,7 +852,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   box-shadow:0 0 0 2px rgba(92,242,194,.5),0 0 22px rgba(92,242,194,.45);
   background:radial-gradient(ellipse at 40% 34%, rgba(92,242,194,.48), rgba(46,150,140,.4) 60%, rgba(30,92,104,.3));}
 .exreg .pin{display:none;}
-.exdet-desc{font-size:12px;color:var(--sub);line-height:1.55;margin:2px 2px 9px;}
+.exdet-desc{font-size:12px;color:var(--sub);line-height:1.5;margin:2px 2px 7px;}
 .exdet-regbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:10px;text-align:center;font-weight:900;font-size:14px;padding:9px;margin-bottom:8px;}
 .exdet-tbl{width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;}
 .exdet-tbl tr{border-bottom:1px solid rgba(255,255,255,.08);}
@@ -863,7 +861,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-tbl td:first-child{color:var(--sub);font-weight:700;width:34%;text-align:center;background:rgba(255,255,255,.03);border-right:1px solid rgba(255,255,255,.08);}
 .exdet-tbl td:last-child{text-align:center;font-weight:800;}
 .exdet-empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 10px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;}
-.exdet-foot{margin-top:12px;padding-top:4px;}
+.exdet-foot{margin-top:10px;padding-top:2px;}
 .exdet-foot .btn{width:100%;}
 /* 탐사 결과 (재설계) */
 .exres-backdrop{position:absolute;inset:0;z-index:30;background:rgba(3,7,14,.8);display:flex;align-items:center;justify-content:center;padding:16px 16px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;}
@@ -984,10 +982,6 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 <div class="modal hidden" id="shopModal">
   <div class="modal-card">
     <h2>🛒 상점</h2>
-    <div class="shop-wallet">
-      <span class="stat">보유 크레딧 <b id="shopCredit" style="color:var(--gold)"></b> 💰</span>
-      <span class="stat">미네랄 <b id="shopMineral" style="color:var(--neon)"></b> 💠</span>
-    </div>
     <div class="cardlist" id="shopList"></div>
   </div>
 </div>
@@ -4951,7 +4945,6 @@ function exDetailHtml(p){
       <tr><td>난이도</td><td style="color:${diff.c}">${diff.t}</td></tr>
       ${(!locked && diff.idx < 5) ? `<tr><td>예상 성공률</td><td><b>${successPct}%</b></td></tr>` : ''}
     </table>
-    ${p.themeNote ? `<div class="howto" style="margin:8px 0 0">🃏 ${p.themeNote}</div>` : ''}
     ${locked ? `<div class="howto" style="margin:8px 0 0;color:#ff8a4a">🔒 연료 탱크 부족 — 궤도 ${p.orbit}에 도달할 수 없습니다. (격납고에서 연료 탱크 강화)</div>` : ''}`
     : `<div class="exdet-empty">지도에서 지역을 선택하면<br>속성 · 타입 · 난이도가 표시됩니다.</div>`;
   const cost = r ? exRegionCost(r) : 0;
@@ -7050,8 +7043,6 @@ function buyPotion(potionId){
   toast(`${c.name} 구매! 🧬특성 탭에서 식물에 장착하세요`);
 }
 function renderShop(){
-  $('#shopCredit').textContent = fmt(state.credits);
-  { const sm = $('#shopMineral'); if(sm) sm.textContent = fmt(state.minerals || 0); }
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
   const currency = renderShopLane(SHOP_CURRENCY_PACKS);
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
