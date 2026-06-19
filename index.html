@@ -1015,8 +1015,25 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       ⑦ 전투는 토너먼트 방식입니다. 예선 5경기 중 3승 이상이면 본선(16강 → 결승)에 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다. <b style="color:var(--neon)">경기가 끝날 때마다 홈으로 돌아와</b> 식물을 강화·준비한 뒤 다음 경기를 시작할 수 있습니다.<br>
       ⑧ 상점에서는 특가·재화·보급상자를 확인할 수 있습니다. 원화 상품은 아직 결제 연동 전이라 선택할 수 없고, 보급상자는 크레딧으로 구매해 소모품이나 변이 카드를 얻습니다.
     </div>
+    <div class="howto" style="border-color:rgba(0,229,160,.35)">
+      <b style="color:var(--neon)">💾 진행도 백업/복원</b><br>
+      모바일 앱은 진행도가 사라질 수 있습니다. <b>내보내기</b>로 코드를 받아 메모앱·메일 등 안전한 곳에 보관하고, 기기 변경·재설치·초기화 시 <b>가져오기</b>로 붙여넣어 복원하세요.
+    </div>
+    <button class="btn" id="btnExport">💾 진행도 내보내기(백업)</button>
+    <button class="btn" id="btnImport">📥 진행도 가져오기(복원)</button>
     <button class="btn modal-close danger" id="btnReset">데이터 초기화</button>
     <button class="btn modal-close" id="settingsClose">닫기</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="saveModal">
+  <div class="modal-card">
+    <h2 id="saveModalTitle">💾 진행도 백업</h2>
+    <div class="howto" id="saveModalDesc" style="margin-bottom:10px"></div>
+    <textarea id="saveCodeBox" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" style="width:100%;min-height:120px;box-sizing:border-box;resize:vertical;font-size:12px;font-family:monospace;word-break:break-all;background:rgba(0,0,0,.35);color:var(--text);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px"></textarea>
+    <button class="btn" id="saveCopyBtn">📋 복사</button>
+    <button class="btn" id="saveApplyBtn">↩️ 복원하기</button>
+    <button class="btn modal-close" id="saveModalClose">닫기</button>
   </div>
 </div>
 
@@ -3059,14 +3076,51 @@ function canAffordCredits(amount){ return (state.credits || 0) >= amount; }
 function addMinerals(amount){ state.minerals = Math.max(0, (state.minerals || 0) + amount); return state.minerals; }
 function spendMinerals(amount){ if((state.minerals || 0) < amount) return false; addMinerals(-amount); return true; }
 function canAffordMinerals(amount){ return (state.minerals || 0) >= amount; }
-function saveState(){ try{ syncPlayerMoney(); localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){} }
+/* 네이티브 영구저장(Capacitor Preferences) 다리.
+   앱(Capacitor WebView) 안에서만 존재하고, 일반 브라우저에선 null → 기존 localStorage만 사용.
+   WebView localStorage는 캐시 삭제·OS eviction으로 날아갈 수 있어, 네이티브 저장소에 한 부 더 보관한다. */
+function nativePrefs(){
+  try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences) || null; }catch(e){ return null; }
+}
+let loadedFromLocal = false; // 시작 시 localStorage에 실제 진행도가 있었는지
+function saveState(){
+  try{
+    syncPlayerMoney();
+    const json = JSON.stringify(state);
+    localStorage.setItem(SAVE_KEY, json);
+    const p = nativePrefs();
+    if(p) p.set({ key: SAVE_KEY, value: json }).catch(()=>{}); // 비동기 미러 저장(실패 무시)
+  }catch(e){}
+}
 function loadState(){
   try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if(s && Array.isArray(s.plants)){
+      loadedFromLocal = true;
       return normalizeState(s);
     }
   }catch(e){}
   return defaultState();
+}
+/* 시작 시 네이티브 저장소와 대조: localStorage가 비었는데(=날아감) 네이티브에 진행도가 남아 있으면 복구.
+   둘 다 없거나 localStorage가 정상이면 네이티브에 현재값을 한 번 심어 동기화. */
+async function reconcileNativeSave(){
+  const p = nativePrefs();
+  if(!p) return;
+  try{
+    const res = await p.get({ key: SAVE_KEY });
+    const native = res && res.value;
+    if(!loadedFromLocal && native){
+      const obj = JSON.parse(native);
+      if(obj && Array.isArray(obj.plants)){
+        state = normalizeState(obj);
+        saveState();
+        renderMain();
+        toast('진행도를 복구했습니다');
+        return;
+      }
+    }
+    saveState(); // 네이티브 저장소를 현재 상태로 채워 둠
+  }catch(e){}
 }
 
 /* ================= 유틸 ================= */
@@ -7710,7 +7764,7 @@ function openLockedSection(key){
   show('#lockedModal');
 }
 function closeAllModals(){
-  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#profileModal','#resultModal','#lockedModal','#evolveModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
+  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
 }
 $('#bottomNav').addEventListener('click', (ev) => {
   const btn = ev.target.closest('.navbtn'); if(!btn) return;
@@ -7777,6 +7831,52 @@ function openSettings(){
 }
 $('#soundToggle').addEventListener('change', (ev) => { state.sound = ev.target.checked; saveState(); sfx.tap(); });
 $('#settingsClose').addEventListener('click', () => { hide('#settingsModal'); sfx.tap(); });
+
+/* 진행도 백업/복원 (세이브 내보내기·가져오기) — 한글 포함 안전 인코딩 */
+function encodeSaveCode(){ return btoa(unescape(encodeURIComponent(JSON.stringify(state)))); }
+function decodeSaveCode(raw){
+  const txt = String(raw||'').trim();
+  if(!txt) return null;
+  // base64 우선, 실패 시 평문 JSON 허용
+  try{ return JSON.parse(decodeURIComponent(escape(atob(txt)))); }catch(e){}
+  try{ return JSON.parse(txt); }catch(e){}
+  return null;
+}
+function openExport(){
+  $('#saveModalTitle').textContent = '💾 진행도 내보내기';
+  $('#saveModalDesc').innerHTML = '아래 코드를 <b>복사</b>해 메모앱·메일 등 안전한 곳에 보관하세요. 다른 기기나 재설치 후 <b>가져오기</b>로 붙여넣으면 그대로 복원됩니다.';
+  const box = $('#saveCodeBox'); box.value = encodeSaveCode(); box.readOnly = true;
+  $('#saveCopyBtn').style.display = ''; $('#saveApplyBtn').style.display = 'none';
+  show('#saveModal'); box.focus(); box.select();
+}
+function openImport(){
+  $('#saveModalTitle').textContent = '📥 진행도 가져오기';
+  $('#saveModalDesc').innerHTML = '백업해 둔 코드를 붙여넣고 <b>복원하기</b>를 누르세요. <b style="color:var(--danger,#ff6b6b)">현재 진행도는 덮어써집니다.</b>';
+  const box = $('#saveCodeBox'); box.value = ''; box.readOnly = false;
+  $('#saveCopyBtn').style.display = 'none'; $('#saveApplyBtn').style.display = '';
+  show('#saveModal'); box.focus();
+}
+$('#btnExport').addEventListener('click', () => { sfx.tap(); openExport(); });
+$('#btnImport').addEventListener('click', () => { sfx.tap(); openImport(); });
+$('#saveModalClose').addEventListener('click', () => { hide('#saveModal'); sfx.tap(); });
+$('#saveCopyBtn').addEventListener('click', async () => {
+  const box = $('#saveCodeBox'); box.readOnly = false; box.focus(); box.select();
+  let ok = false;
+  try{ await navigator.clipboard.writeText(box.value); ok = true; }
+  catch(e){ try{ ok = document.execCommand('copy'); }catch(_){} }
+  box.readOnly = true;
+  toast(ok ? '복사되었습니다 — 안전한 곳에 보관하세요' : '복사 실패 — 코드를 길게 눌러 직접 복사하세요'); sfx.tap();
+});
+$('#saveApplyBtn').addEventListener('click', () => {
+  const obj = decodeSaveCode($('#saveCodeBox').value);
+  if(!obj || !Array.isArray(obj.plants)){ toast('올바른 세이브 코드가 아닙니다'); sfx.lose && sfx.lose(); return; }
+  if(!confirm('현재 진행도를 덮어쓰고 복원할까요?')) return;
+  state = normalizeState(obj);
+  saveState();
+  hide('#saveModal'); hide('#settingsModal');
+  renderMain();
+  toast('진행도가 복원되었습니다'); sfx.heal();
+});
 $('#btnReset').addEventListener('click', () => {
   if(!resetArmed){
     resetArmed = true;
@@ -7796,6 +7896,7 @@ $('#btnReset').addEventListener('click', () => {
 $('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
 if(canClaimStarterSeed()) claimStarterSeed(true); // 첫 시작 시 무지개 종자 자동 지급
 renderMain();
+reconcileNativeSave(); // 앱(Capacitor) 안에서 네이티브 저장소와 대조·복구 (브라우저에선 no-op)
 </script>
 </body>
 </html>

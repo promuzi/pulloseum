@@ -41,7 +41,7 @@
 ## 앞으로 할 만한 것 (백로그)
 - 모드·길드 실제 콘텐츠
 - 상점 가챠 박스(특성/소모품 뽑기)
-- 세이브 내보내기/가져오기(기기 간 이동용)
+- ~~세이브 내보내기/가져오기(기기 간 이동용)~~ ✅ 2026-06-19 구현(설정 화면 백업/복원)
 - 용족·독초 등 추가 분화 형질
 - **특성·종자·생장 시스템 대확장** → 설계/방향 문서: [`docs/trait-growth-roadmap.md`](docs/trait-growth-roadmap.md)
   (종자 종류·생장단계 구체화는 향후 지시 예정. **특성 카드 시스템은 2026-06-16 구현 완료.**)
@@ -49,6 +49,12 @@
 ---
 
 ## 변경 이력 (개발 로그)
+
+### 2026-06-19 — 모바일 진행도 유실 대책(세이브 백업/복원 + 네이티브 영구저장)
+모바일 앱에서 진행도가 사라지던 문제(앱이 원격 GitHub Pages를 WebView로 띄우는데, 진행도가 WebView localStorage 한 곳에만 있어 캐시 삭제·OS eviction·재설치로 날아감)를 2단계로 대비.
+1. **세이브 내보내기/가져오기(웹, 즉시 적용)** — 설정에 `#btnExport`/`#btnImport` + `#saveModal`. `encodeSaveCode`(JSON→`btoa(unescape(encodeURIComponent()))` 한글 안전 base64)·`decodeSaveCode`(base64 우선, 평문 JSON도 허용, 불량/빈값 거부). 복원은 `normalizeState` 거쳐 `saveState` 후 `renderMain`. APK 재빌드 없이 `git push`→Pages 배포만으로 앱 반영. (백로그의 "세이브 내보내기/가져오기" 항목 완료.)
+2. **네이티브 영구저장(`@capacitor/preferences`)** — `saveState`가 `window.Capacitor.Plugins.Preferences` 있으면 미러 저장, 시작 시 `reconcileNativeSave`가 localStorage 비었으면 네이티브에서 자동 복구. `nativePrefs()` 가드로 일반 브라우저에선 기존 localStorage 동작 그대로(무회귀). `package.json`에 의존성 선언. **실제 적용은 빌드 머신에서 `npm install`→`npx cap sync android`→APK 재빌드 필요**(절차: [docs/android-capacitor-wrapper.md](docs/android-capacitor-wrapper.md) 8장).
+- 검증: preview 콘솔 에러 0, 한글 포함 인코딩 라운드트립·복원 반영·UI 모달 전환 확인. (이 PC엔 node 미설치라 cap sync는 빌드 머신 몫.)
 
 ### 2026-06-18 — 모바일 UI 클리핑/터치 보정 5종
 사용자 피드백 기반 화면 정리.

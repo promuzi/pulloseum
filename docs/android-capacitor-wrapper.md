@@ -255,3 +255,35 @@ GitHub Pages 배포가 끝나면 앱을 다시 열었을 때 최신 웹게임이
 - GitHub Pages의 웹 파일이 바뀌어도 같은 URL이면 보통 세이브는 유지된다.
 - 앱을 삭제하면 앱 WebView localStorage도 같이 지워질 수 있다.
 - 인터넷이 안 되거나 GitHub Pages가 내려가면 게임을 불러오지 못한다.
+
+## 8. 진행도(세이브) 유실 대책 — 2단계 보호
+
+모바일 앱에서 진행도가 사라지는 문제(캐시 삭제·OS 저장공간 정리·앱 재설치)를 막기 위해 두 겹으로 대비한다.
+
+### ① 세이브 내보내기/가져오기 (웹만, 즉시 적용)
+
+`index.html` 설정 화면에 **💾 진행도 내보내기 / 📥 진행도 가져오기** 버튼이 있다.
+
+- 내보내기: 현재 진행도를 base64 코드(한글 안전 인코딩)로 만들어 복사 → 메모앱·메일 등에 보관.
+- 가져오기: 그 코드를 붙여넣어 복원(기기 변경·재설치 후에도 사용).
+- 순수 웹 기능이라 **APK 재빌드 없이** `git push` → GitHub Pages 배포만으로 앱에 반영된다(7장 참고).
+
+### ② 네이티브 영구저장 (`@capacitor/preferences`) — APK 재빌드 필요
+
+WebView localStorage가 날아가도 살아남도록, 저장할 때 안드로이드 네이티브 저장소(`Preferences`)에 한 부 더 복사한다. 앱 시작 시 localStorage가 비어 있으면 네이티브 저장소에서 자동 복구한다.
+
+- 웹 코드(`index.html`)는 이미 적용됨: `saveState()`가 `window.Capacitor.Plugins.Preferences`가 있으면 미러 저장하고, 시작 시 `reconcileNativeSave()`가 대조·복구한다. 플러그인이 없으면(일반 브라우저) 기존 localStorage 동작 그대로라 안전하다.
+- `package.json`에 `@capacitor/preferences` 의존성도 선언됨.
+
+**실제로 켜려면 빌드 머신에서** 다음을 실행하고 APK를 다시 만들어야 한다(플러그인 추가이므로 7장의 "재빌드 필요" 항목에 해당).
+
+```powershell
+& "C:\Program Files\nodejs\npm.cmd" install
+& "C:\Program Files\nodejs\npx.cmd" cap sync android
+# 이후 Android Studio에서 다시 빌드하거나
+& "C:\Program Files\nodejs\npx.cmd" cap open android
+```
+
+`cap sync` 후 새 APK를 기기에 설치하면, 그때부터 캐시 삭제·eviction에도 진행도가 네이티브 저장소에 남아 자동 복구된다.
+
+> 검증 팁: 기기에서 진행 → 안드로이드 설정 > 앱 > 풀로세움 > 저장공간 > **캐시 지우기** 후 앱 재실행 → 진행도가 복구되면 ② 동작.
