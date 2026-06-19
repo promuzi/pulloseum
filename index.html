@@ -332,9 +332,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   background:linear-gradient(100deg,rgba(60,18,46,.96),rgba(20,12,26,.96));}
 .skillcard.pred .sc-name{flex:1;}
 .sc-top{display:flex;align-items:center;gap:5px;}
-.sc-name{font-weight:800;font-size:13.5px;line-height:1.15;flex:1;min-width:0;}
-.sc-grade{flex:0 0 auto;font-size:10px;font-weight:900;color:#0a0f17;background:var(--gc,#5fe06b);
-  border-radius:5px;padding:1px 5px;}
+.sc-name{font-weight:800;font-size:clamp(11px,3.2vw,13.5px);line-height:1.2;flex:1;min-width:0;color:var(--gc,var(--text));
+  word-break:keep-all;overflow-wrap:normal;line-break:strict;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sc-cost{flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--neon);}
 .sc-cost.use{color:#ffd34a;}
 .sc-desc{font-size:10.5px;color:var(--sub);line-height:1.3;margin-top:auto;}
@@ -351,13 +350,13 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .jw-card{border:1px solid var(--gc,var(--line));border-radius:12px;padding:10px 9px;min-width:0;
   background:linear-gradient(160deg,rgba(22,32,48,.97),rgba(12,18,30,.97));
   box-shadow:0 9px 25px rgba(0,0,0,.5);transform-origin:center;}
-.jw-card.foe{border-color:rgba(255,120,90,.5);}
+.jw-card.foe{border-color:var(--gc,var(--line));}
 .jw-card .jc-tag{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--sub);}
 .jw-card.foe .jc-tag{color:#ff8a70;}
 .jw-card.mine .jc-tag{color:var(--neon);text-align:right;}
 .jw-card.mine{text-align:right;}
 .jw-card .jc-name{font-size:13px;font-weight:800;margin-top:2px;line-height:1.15;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gc,var(--text));word-break:keep-all;}
 .jw-order{min-width:74px;text-align:center;color:#ffd966;font-size:12px;font-weight:900;line-height:1.35;
   text-shadow:0 0 12px rgba(255,211,74,.5);}
 .jw-order:empty{min-width:22px;}
@@ -430,7 +429,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .bsd-card{width:min(86%,320px);border:1px solid var(--gc,var(--line));border-radius:16px;padding:16px;
   background:linear-gradient(170deg,rgba(20,30,48,.99),rgba(10,16,28,.99));box-shadow:0 18px 50px rgba(0,0,0,.6);}
 .bsd-card::before{content:'';display:block;height:4px;border-radius:4px;margin:-4px 0 12px;background:var(--gc,var(--neon));}
-.bsd-name{font-size:18px;font-weight:900;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.bsd-name{font-size:18px;font-weight:900;display:flex;align-items:center;gap:7px;flex-wrap:wrap;word-break:keep-all;overflow-wrap:normal;}
 .bsd-meta{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 11px;}
 .bsd-pill{font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#cfe1f5;}
 .bsd-desc{font-size:13px;line-height:1.65;color:#d3deec;}
@@ -1188,7 +1187,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .slot .slot-ico{font-size:26px;line-height:1;}
 .slot.skill{flex-direction:column;gap:2px;padding:4px;aspect-ratio:auto;min-height:62px;}
 .slot.skill .sk-n{font-size:11px;font-weight:900;line-height:1.15;text-align:center;color:var(--text);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:normal;}
+.slot.skill.filled .sk-n{color:var(--gc,var(--text));}
 .slot.skill .sk-v{font-size:10px;font-weight:800;color:var(--gc,#5fe06b);}
 .slot .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
   display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc,#5fe06b);
@@ -1208,7 +1208,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .dcard.skill{width:80px;height:70px;}
 .dcard .dc-ico{font-size:24px;line-height:1;}
 .dcard .dc-n{font-size:10px;font-weight:900;line-height:1.15;text-align:center;margin-top:3px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:normal;}
+.dcard.skill .dc-n{color:var(--gc,var(--text));}
 .dcard .dc-v{font-size:9.5px;font-weight:800;color:var(--gc);margin-top:2px;}
 .dcard .dc-cnt{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:900;color:var(--sub);}
 .dcard .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
@@ -1224,10 +1225,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 .swap-cancel{display:block;margin:6px auto 0;border:1px solid var(--line);background:#0e1828;color:var(--sub);border-radius:9px;font-size:11.5px;font-weight:800;padding:5px 14px;}
 /* 카드/스킬 상세 팝업 */
-#cardDetailModal .modal-card{width:min(86vw,340px);text-align:center;background:#142033;}
+#cardDetailModal .modal-card{width:min(86vw,340px);text-align:center;background:#142033;border-color:var(--gc,var(--line));}
 .cd-head{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px;}
 .cd-ico{font-size:34px;}
-.cd-name{font-size:18px;font-weight:900;}
+.cd-name{font-size:18px;font-weight:900;word-break:keep-all;overflow-wrap:normal;}
 .cd-grade{display:inline-block;min-width:22px;padding:1px 8px;border:2px solid var(--gc);border-radius:8px;color:var(--gc);
   font-weight:900;font-size:14px;text-shadow:0 0 8px var(--gc);margin:2px 0 8px;}
 .cd-type{font-size:12px;color:var(--sub);font-weight:800;margin-bottom:8px;}
@@ -3233,7 +3234,7 @@ function cardEffectLabels(key){
   const ie = cardInstanceEffects(key); if(!ie) return [];
   const def = cardDefOf(key); const { grade } = parseCardKey(key);
   const L = [];
-  if(def && def.grantSkill){ const sk = gradeCardSkill(def.grantSkill, ALL_SKILLS[def.grantSkill], grade); if(sk) L.push(`${sk.icon||''} ${sk.name} 스킬 장착`); }
+  if(def && def.grantSkill){ const sk = gradeCardSkill(def.grantSkill, ALL_SKILLS[def.grantSkill], grade); if(sk) L.push(`${sk.icon||''} ${displaySkillName(sk.name)} 스킬 장착`); }
   const pc = v => Math.round(v*100)+'%';
   if(ie.predBoost.lifesteal) L.push(`포식 흡혈 +${pc(ie.predBoost.lifesteal)}`);
   if(ie.predBoost.atkSteal)  L.push(`포식 공격강탈 +${pc(ie.predBoost.atkSteal)}`);
@@ -7151,7 +7152,7 @@ function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
   const beforeSprite = composePlantSvg(st, fromStage, el, { size:120 });
   const afterSprite = composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened });
   const skillsHtml = (newSkillIds && newSkillIds.length)
-    ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${s.name}</span>`; }).join('')
+    ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
   $('#evolveBody').innerHTML = `
     <div class="evo-title">✨ 진화! <span style="color:var(--sub)">${growthStageName(fromStage)}</span> ▶ <span style="color:var(--neon)">${growthStageName(toStage)}</span></div>
@@ -7314,6 +7315,7 @@ function upTabHtml(p, s){
 
 /* ── 카드/스킬 표시 보조 ── */
 function stripGrade(name){ return String(name||'').replace(/\s+[SABCD]$/, ''); }
+function displaySkillName(name){ return stripGrade(name).replace(/\s*Lv\.\d+$/, '').trim(); }
 function skillSlotVal(sk){
   if(sk && sk.power > 0) return `×${coefStr(sk.power)}`;
   if(sk && sk.heal) return `회복 ${Math.round(sk.heal*100)}%`;
@@ -7376,7 +7378,7 @@ function skillSlotHtml(p, idx){
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     const picking = swapPending && swapPending.kind === 'skill';
     return `<div class="slot skill filled ${picking?'pick':''}" data-eq-slot="${idx}" data-kind="skill" style="--gc:${col}">
-      <span class="sk-n">${sk.icon||''} ${stripGrade(sk.name)}</span><span class="sk-v">${skillSlotVal(sk)}</span><span class="gtag">${g}</span></div>`;
+      <span class="sk-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="sk-v">${skillSlotVal(sk)}</span></div>`;
   }
   return `<div class="slot skill empty" data-empty-slot="skill">＋</div>`;
 }
@@ -7401,7 +7403,7 @@ function skillDrawerHtml(p){
   const cards = bench.length ? bench.map(id=>{
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     return `<div class="dcard skill" data-skill="${id}" style="--gc:${col}">
-      <span class="dc-n">${sk.icon||''} ${stripGrade(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span><span class="gtag">${g}</span></div>`;
+      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span></div>`;
   }).join('') : `<div class="drawer-empty">해금된 추가 스킬이 없습니다. 식물을 더 성장시키면 단계별로 새 스킬을 얻습니다.</div>`;
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
@@ -7420,7 +7422,7 @@ function swapFloatHtml(p){
     label = '교체할 장착 변이를 선택하세요';
   } else {
     const sk = skillById(swapPending.key,p) || { name:swapPending.key, icon:'❔' }, g = skillGradeOf(p,swapPending.key), col = gradeColor(g);
-    inner = `<div class="dcard skill sf-card" style="--gc:${col}"><span class="dc-n">${sk.icon||''} ${stripGrade(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span><span class="gtag">${g}</span></div>`;
+    inner = `<div class="dcard skill sf-card" style="--gc:${col}"><span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span></div>`;
     label = '교체할 장착 스킬을 선택하세요';
   }
   return `<div class="swap-hint">↑ ${label}</div><div class="swap-float">${inner}</div><button class="swap-cancel" id="swapCancel">취소</button>`;
@@ -7439,20 +7441,22 @@ function openCardDetail(kind, key, equipped){
     if(!equipped && !cardFitsForm(key, p.form||'normal')){ canEquip = false; note = '이 변이형에는 장착할 수 없는 카드입니다.'; }
   } else {
     const sk = skillById(key,p) || { name:key, icon:'❔' };
-    grade = skillGradeOf(p,key); icon = sk.icon||'✨'; name = stripGrade(sk.name);
+    grade = skillGradeOf(p,key); icon = sk.icon||'✨'; name = displaySkillName(sk.name);
     typeLabel = (sk.tag||'스킬') + ' 스킬';
     fxHtml = `<li>${skillCoefDesc(sk) || '전투 스킬'}</li>` + (sk.cost ? `<li>소모 ⚡${sk.cost}</li>` : '') + (sk.noEnergy ? `<li>에너지 무소모 · 🔁${sk.uses||0}회/경기</li>` : '');
     if(sk.critBonus) fxHtml += `<li>치명타율 +${Math.round(sk.critBonus*100)}%</li>`;
     if(sk.selfBuff) fxHtml += `<li>사용 시 ${STAT_NAMES[sk.selfBuff.stat]||sk.selfBuff.stat} +${Math.round((sk.selfBuff.pct||0)*100)}% (${sk.selfBuff.turns}턴)</li>`;
-    fxHtml += `<li style="color:var(--sub);border-color:transparent">등급 <b style="color:${gradeColor(grade)}">${grade}</b> — 위력·부가효과가 등급에 따라 강화됩니다</li>`;
   }
   const col = gradeColor(grade);
   const acts = equipped
     ? `<button class="btn unequip" data-detail-unequip="1">해제</button>`
     : (canEquip ? `<button class="btn equip" data-detail-equip="1">장착</button>` : '');
+  const detailCard = $('#cardDetailBody').closest('.modal-card'); if(detailCard) detailCard.style.setProperty('--gc', col);
+  const skillNameColor = kind==='skill' ? ` style="color:${col}"` : '';
+  const gradeHtml = kind==='mut' ? `<div><span class="cd-grade" style="--gc:${col};border-color:${col};color:${col}">${grade}</span></div>` : '';
   $('#cardDetailBody').innerHTML = `
-    <div class="cd-head"><span class="cd-ico">${icon}</span><span class="cd-name">${name}</span></div>
-    <div><span class="cd-grade" style="--gc:${col};border-color:${col};color:${col}">${grade}</span></div>
+    <div class="cd-head"><span class="cd-ico">${icon}</span><span class="cd-name"${skillNameColor}>${name}</span></div>
+    ${gradeHtml}
     <div class="cd-type">${typeLabel}</div>
     <ul class="cd-fx">${fxHtml}</ul>
     ${note ? `<p class="sub" style="color:#ff8a70;margin:8px 0 0">${note}</p>` : ''}
@@ -8171,7 +8175,7 @@ function skillUnusable(unit, id){
   return unit.energy < (s.cost||0);
 }
 function isPriorityDefenseSkill(s){ return !!(s && s.guardMult != null); }
-/* 카드 1장 HTML — 최소 정보(이름·코스트·등급·짧은 설명) */
+/* 카드 1장 HTML — 등급은 텍스트 대신 카드 색으로만 표시한다. */
 function skillCardHtml(id, pred){
   const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0, desc:'' };
   const g = battleSkillGrade(B.p, id), col = gradeColor(g);
@@ -8179,7 +8183,7 @@ function skillCardHtml(id, pred){
                           : `<span class="sc-cost">${(s.cost||0)>0?'⚡'+s.cost:'무료'}</span>`;
   const dis = skillUnusable(B.p, id) ? ' disabled' : '';
   return `<button class="skillcard${pred?' pred':''}${dis?' '+dis.trim():''}" style="--gc:${col}" data-skill="${id}"${dis}>
-    <div class="sc-top"><span class="sc-name">${s.icon||''} ${s.name.replace(/\s*Lv\.\d+/,'')}</span><span class="sc-grade">${g}</span>${cost}</div>
+    <div class="sc-top"><span class="sc-name">${s.icon||''} ${displaySkillName(s.name)}</span>${cost}</div>
     <div class="sc-desc">${skillCoefLabel(s) || (s.desc||'').slice(0,26)}</div>
   </button>`;
 }
@@ -8261,7 +8265,7 @@ function showSkillDetail(id){
   const tag = s.tag ? `<span class="bsd-pill">${s.tag}</span>` : '';
   $('#battleSkillDetailCard').style.setProperty('--gc', col);
   $('#battleSkillDetailCard').innerHTML = `
-    <div class="bsd-name">${s.icon||''} ${s.name.replace(/\s*Lv\.\d+/,'')} <span class="sc-grade" style="--gc:${col}">${g}</span></div>
+    <div class="bsd-name" style="color:${col}">${s.icon||''} ${displaySkillName(s.name)}</div>
     <div class="bsd-meta"><span class="bsd-pill">${cost}</span>${tag}</div>
     <div class="bsd-desc">${skillCoefDesc(s)}</div>
     <div class="bsd-hint">아무 곳이나 탭하면 닫힙니다</div>`;
@@ -8534,7 +8538,7 @@ async function openJudge(playerId, enemyId){
   const es = skillById(enemyId, B.e) || {name:'?',icon:''};
   const pg = gradeColor(battleSkillGrade(B.p, playerId));
   const eg = gradeColor(battleSkillGrade(B.e, enemyId));
-  const clean = n => (n||'').replace(/\s*Lv\.\d+/,'');
+  const clean = n => displaySkillName(n);
   $('#judgeCards').innerHTML = `
     <div class="jw-card foe" id="judgeEnemyCard" style="--gc:${eg}"><div class="jc-tag">상대</div><div class="jc-name">${es.icon||''} ${clean(es.name)}</div></div>
     <div class="jw-order" id="judgeOrder"></div>
