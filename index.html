@@ -228,22 +228,37 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   background:radial-gradient(125% 80% at 50% 0%, #17273f 0%, #0a1020 55%, #06090f 100%);}
 #battleHeader{position:absolute;top:0;left:0;right:0;z-index:8;text-align:center;color:#cfe8df;
   font-size:12.5px;letter-spacing:1px;font-weight:700;
-  padding:calc(8px + env(safe-area-inset-top,0px)) 10px 9px;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 112px 9px 76px;
   background:linear-gradient(180deg,rgba(4,8,15,.9),rgba(4,8,15,0));pointer-events:none;}
-/* 스탠딩 무대: 적(위) · 나(아래), 가운데는 판정 창 공간 */
+.battle-hud{position:absolute;left:9px;right:9px;top:calc(6px + env(safe-area-inset-top,0px));z-index:9;
+  display:flex;align-items:center;justify-content:space-between;pointer-events:none;}
+.battle-turn{min-width:54px;border:1px solid rgba(120,255,225,.32);border-radius:999px;padding:5px 9px;
+  background:rgba(7,13,23,.82);color:var(--neon);font-size:12px;font-weight:900;text-align:center;
+  box-shadow:0 3px 12px rgba(0,0,0,.35);}
+.battle-view-btn{pointer-events:auto;border:1px solid rgba(143,217,255,.36);border-radius:999px;padding:6px 10px;
+  background:rgba(7,13,23,.88);color:#cdeaff;font-size:11.5px;font-weight:800;
+  box-shadow:0 3px 12px rgba(0,0,0,.35);}
+.battle-view-btn:active{transform:scale(.96)}
+.battle-view-btn:disabled{opacity:.42;cursor:default;}
+/* 스탠딩 무대: 적(위) · 나(아래), 가운데는 카드/판정 창 공간 */
 #battleArena{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
-  padding:calc(46px + env(safe-area-inset-top,0px)) 16px calc(18px + env(safe-area-inset-bottom,0px));z-index:2;}
-#battleArena::after{content:'';position:absolute;left:8%;right:8%;bottom:13%;height:46px;border-radius:50%;
-  background:radial-gradient(60% 100% at 50% 50%, rgba(43,212,154,.16), transparent 72%);filter:blur(2px);pointer-events:none;}
-.arena-fighter{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
-  transition:transform .55s cubic-bezier(.2,.85,.3,1);z-index:2;width:100%;}
-.arena-fighter .finfo{width:min(86%,300px);}
-.arena-fighter.enemy{transform:translateY(0);}
-.arena-fighter.player{transform:translateY(0);}
-/* 카드/판정 단계: 두 식물 사이 거리 벌어짐 */
-#battleArena.spread .arena-fighter.enemy{transform:translateY(-7px);}
-#battleArena.spread .arena-fighter.player{transform:translateY(7px);}
-.fsprite{position:relative;flex:0 0 auto;display:flex;justify-content:center;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5));}
+  padding:calc(54px + env(safe-area-inset-top,0px)) 16px calc(22px + env(safe-area-inset-bottom,0px));z-index:2;}
+/* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게 */
+#battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;height:42%;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(43,212,154,.05) 40%,rgba(43,212,154,.1));
+  border-top:1px solid rgba(120,255,225,.12);}
+.arena-fighter{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;
+  transition:transform .5s cubic-bezier(.2,.85,.3,1);z-index:2;width:100%;}
+.arena-fighter .finfo{width:min(84%,290px);background:rgba(7,12,20,.55);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:8px 12px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+/* 카드/판정 단계: 두 식물이 서로 멀어지고 살짝 물러남(가운데를 카드에 양보) */
+#battleArena.spread .arena-fighter.enemy{transform:translateY(-22px) scale(.9);}
+#battleArena.spread .arena-fighter.player{transform:translateY(22px) scale(.9);}
+.fsprite{position:relative;flex:0 0 auto;display:flex;justify-content:center;
+  filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));}
+/* 발밑 그림자(접지감) */
+.fsprite::after{content:'';position:absolute;left:50%;bottom:-6px;width:70%;height:16px;transform:translateX(-50%);
+  background:radial-gradient(closest-side,rgba(0,0,0,.5),transparent);z-index:-1;}
 .fsprite.enter{animation:fighterIn .6s cubic-bezier(.2,1.3,.4,1) both;}
 .arena-fighter.enemy .fsprite.enter{animation-name:fighterInTop;}
 @keyframes fighterIn{0%{opacity:0;transform:translateY(34px) scale(.7)}100%{opacity:1;transform:translateY(0) scale(1)}}
@@ -268,19 +283,23 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shake{animation:shake .4s;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
 
-/* ===== 스킬 카드 페이즈 (허공에 뜬 카드) ===== */
-#cardPhase{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:flex-end;
-  gap:9px;padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));
-  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);background:rgba(5,9,16,.32);}
+/* ===== 스킬 카드 페이즈 (허공에 뜬 카드 — 화면 가운데) ===== */
+#cardPhase{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
+  padding:calc(58px + env(safe-area-inset-top,0px)) 14px calc(62px + env(safe-area-inset-bottom,0px));
+  background:transparent;pointer-events:none;}
 #cardPhase.hidden{display:none !important;}
-#cardPhase.dealing{animation:cardPhaseIn .32s ease both;}
-@keyframes cardPhaseIn{from{opacity:0}to{opacity:1}}
-#cardPhase.closing{animation:cardPhaseOut .26s ease forwards;}
-@keyframes cardPhaseOut{to{opacity:0;transform:translateY(24px)}}
-.cp-energy{display:flex;align-items:center;justify-content:center;gap:3px;font-size:21px;letter-spacing:1px;
-  text-shadow:0 0 10px rgba(255,225,74,.7);filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));}
-.cp-energy .off{opacity:.18;filter:grayscale(1);}
-.cp-energy .ce-label{font-size:12px;color:var(--sub);font-weight:700;letter-spacing:1px;margin-right:4px;text-shadow:none;}
+#cardPhase.dealing{animation:cardPhaseIn .34s cubic-bezier(.2,1.05,.4,1) both;}
+@keyframes cardPhaseIn{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+#cardPhase.closing{animation:cardPhaseOut .24s ease forwards;}
+@keyframes cardPhaseOut{to{opacity:0;transform:translateY(20px)}}
+.cp-stack{width:100%;max-width:500px;max-height:68vh;display:flex;flex-direction:column;gap:11px;
+  overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;padding:4px 1px;}
+.cp-energy{display:flex;align-items:center;justify-content:center;gap:4px;font-size:22px;
+  align-self:center;padding:5px 16px;border-radius:999px;
+  background:rgba(8,14,24,.6);border:1px solid rgba(255,225,74,.28);
+  box-shadow:0 4px 16px rgba(0,0,0,.5);text-shadow:0 0 10px rgba(255,225,74,.8);}
+.cp-energy .off{opacity:.16;filter:grayscale(1);text-shadow:none;}
+.cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
 .cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .cp-pred{display:grid;grid-template-columns:1fr;}
 .skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:13px;text-align:left;
@@ -307,9 +326,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .sc-cost{flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--neon);}
 .sc-cost.use{color:#ffd34a;}
 .sc-desc{font-size:10.5px;color:var(--sub);line-height:1.3;margin-top:auto;}
-.cp-surrender{margin-top:2px;align-self:center;border:1px solid rgba(255,107,74,.5);border-radius:11px;
-  background:rgba(255,107,74,.1);color:#ff9a82;font-size:12.5px;font-weight:700;padding:8px 22px;}
-.cp-surrender:active{transform:scale(.96);}
+.cp-surrender{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  border:1px solid rgba(255,107,74,.5);border-radius:11px;background:rgba(22,12,14,.72);
+  color:#ff9a82;font-size:12.5px;font-weight:700;padding:8px 24px;
+  box-shadow:0 4px 14px rgba(0,0,0,.45);pointer-events:auto;}
+.cp-surrender:active{transform:translateX(-50%) scale(.96);}
 
 /* ===== 판정 창 (좌→우 번개) ===== */
 #judgeWindow{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);z-index:6;}
@@ -317,19 +338,20 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .jw-bolt{position:absolute;left:0;right:0;top:50%;height:4px;transform:translateY(-50%);border-radius:4px;
   background:linear-gradient(90deg,transparent,#bdfff0 40%,#fff 50%,#bdfff0 60%,transparent);
   box-shadow:0 0 22px 5px rgba(120,255,225,.8);opacity:0;}
-#judgeWindow.sweep .jw-bolt{animation:jwBolt .42s ease-out forwards;}
+#judgeWindow.sweep .jw-bolt{animation:jwBolt .72s ease-out forwards;}
 @keyframes jwBolt{0%{opacity:0;transform:translateY(-50%) scaleX(.1) translateX(-360%)}
-  18%{opacity:1}55%{opacity:1;transform:translateY(-50%) scaleX(1) translateX(0)}100%{opacity:0;transform:translateY(-50%) scaleX(1) translateX(360%)}}
+  18%{opacity:1}62%{opacity:1;transform:translateY(-50%) scaleX(1) translateX(0)}100%{opacity:0;transform:translateY(-50%) scaleX(1) translateX(360%)}}
 .jw-inner{position:relative;border:1px solid rgba(120,255,225,.32);border-radius:14px;overflow:hidden;
-  background:linear-gradient(180deg,rgba(9,16,26,.97),rgba(6,11,20,.97));
-  box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 0 1px rgba(120,255,225,.08) inset;
-  opacity:0;transform:scaleY(.12);transform-origin:50% 50%;}
-#judgeWindow.open .jw-inner{animation:jwOpen .34s .26s cubic-bezier(.2,.9,.3,1) forwards;}
-@keyframes jwOpen{0%{opacity:0;transform:scaleY(.12)}60%{opacity:1;transform:scaleY(1.04)}100%{opacity:1;transform:scaleY(1)}}
-#judgeWindow.close .jw-inner{animation:jwClose .24s ease forwards;}
-@keyframes jwClose{to{opacity:0;transform:scaleY(.1)}}
+  background:linear-gradient(180deg,rgba(9,16,26,.98),rgba(6,11,20,.98));
+  box-shadow:0 14px 44px rgba(0,0,0,.65),0 0 22px rgba(120,255,225,.12),0 0 0 1px rgba(120,255,225,.1) inset;
+  transform:scaleX(0);transform-origin:left center;opacity:0;}
+/* 번개가 지나간 자리로 창이 좌→우로 펼쳐짐 */
+#judgeWindow.open .jw-inner{animation:jwWipe .68s .3s cubic-bezier(.2,.85,.3,1) forwards;}
+@keyframes jwWipe{0%{transform:scaleX(0);opacity:0}12%{opacity:1}100%{transform:scaleX(1);opacity:1}}
+#judgeWindow.close .jw-inner{animation:jwClose .34s ease forwards;}
+@keyframes jwClose{to{opacity:0;transform:scaleX(1) translateY(8px)}}
 #judgeCards{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
-  padding:10px 12px 6px;border-bottom:1px solid rgba(255,255,255,.07);}
+  padding:12px;}
 .jw-card{border:1px solid var(--gc,var(--line));border-radius:10px;padding:7px 8px;min-width:0;
   background:linear-gradient(160deg,rgba(22,32,48,.9),rgba(12,18,30,.9));}
 .jw-card.foe{border-color:rgba(255,120,90,.5);}
@@ -340,7 +362,16 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .jw-card .jc-name{font-size:13px;font-weight:800;margin-top:2px;line-height:1.15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .jw-vs{font-size:15px;font-weight:900;font-style:italic;color:#fff;opacity:.7;}
-#battleLog{max-height:34vh;overflow-y:auto;padding:9px 13px 11px;font-size:12.5px;line-height:1.62;color:#cdd9e8;}
+#battleHistory{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);z-index:5;
+  max-height:40vh;min-height:148px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  padding:12px 14px;border:1px solid rgba(120,255,225,.24);border-radius:14px;
+  background:linear-gradient(180deg,rgba(9,16,26,.95),rgba(6,11,20,.95));
+  box-shadow:0 12px 36px rgba(0,0,0,.55);font-size:12.5px;line-height:1.62;color:#cdd9e8;}
+#battleHistory.hidden{display:none !important;}
+#battleLog .bl-empty{height:122px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--sub);}
+#battleLog .bl-turn{display:flex;align-items:center;gap:8px;margin:7px 0 5px;color:var(--neon);font-weight:900;}
+#battleLog .bl-turn::before,#battleLog .bl-turn::after{content:'';height:1px;flex:1;background:rgba(120,255,225,.2);}
+#battleLog .bl-match{margin-bottom:5px;color:#dcecff;font-weight:700;}
 #battleLog .em{color:var(--neon);font-weight:700;}
 #battleLog .jl-roll{color:#ffd34a;font-weight:700;}
 #battleLog .jl-calc{color:#9fd8ff;font-weight:600;}
@@ -446,17 +477,6 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   text-shadow:0 0 30px rgba(255,107,74,.9),0 6px 18px rgba(0,0,0,.7);
   -webkit-text-stroke:2px rgba(255,107,74,.6);}
 
-/* 손가락 가리키기 — 양쪽에서 들어와 서로를 가리키고 빠짐 */
-.vs-hand{position:absolute;top:50%;font-size:44px;opacity:0;z-index:3;
-  filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));pointer-events:none;}
-.vs-hand-l{left:50%;transform:translate(-150%,-50%);}
-.vs-hand-r{right:50%;transform:translate(150%,-50%);}
-#vsIntro.play .vs-hand-l{animation:vsHandL 1.05s 1.05s cubic-bezier(.2,1.4,.3,1) forwards;}
-#vsIntro.play .vs-hand-r{animation:vsHandR 1.05s 1.05s cubic-bezier(.2,1.4,.3,1) forwards;}
-@keyframes vsHandL{0%{opacity:0;transform:translate(-150%,-50%)}30%{opacity:1;transform:translate(-118%,-50%)}
-  46%{transform:translate(-138%,-50%)}62%{transform:translate(-118%,-50%)}82%{opacity:1;transform:translate(-118%,-50%)}100%{opacity:0;transform:translate(-150%,-50%)}}
-@keyframes vsHandR{0%{opacity:0;transform:translate(150%,-50%)}30%{opacity:1;transform:translate(18%,-50%)}
-  46%{transform:translate(38%,-50%)}62%{transform:translate(18%,-50%)}82%{opacity:1;transform:translate(18%,-50%)}100%{opacity:0;transform:translate(150%,-50%)}}
 #vsIntro.play .vs-enemy{animation:vsInL .55s .9s cubic-bezier(.18,.85,.25,1) forwards;}
 #vsIntro.play .vs-me{animation:vsInR .55s .9s cubic-bezier(.18,.85,.25,1) forwards;}
 @keyframes vsInL{0%{transform:translateY(-50%) translateX(-118%)}62%{transform:translateY(-50%) translateX(4%)}100%{transform:translateY(-50%) translateX(0)}}
@@ -776,8 +796,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   .tbar .tb-right{padding:7px 9px;}
   .tbar .tb-tier{padding:4px 8px;}
   #btnBattle{margin:0 12px calc(8px + env(safe-area-inset-bottom,0px));padding:12px;font-size:17px;border-radius:14px;}
-  .fsprite svg,.fsprite img{max-width:96px;height:auto;}
-  #battleLog{max-height:30vh;font-size:12px;line-height:1.5;padding:8px 11px;}
+  .fsprite svg,.fsprite img{max-width:118px;height:auto;}
+  #battleHistory{max-height:38vh;font-size:12px;line-height:1.5;padding:10px 12px;}
   .skillcard{min-height:66px;padding:8px;}
   .sc-name{font-size:12.5px;}
   .sc-desc{font-size:10px;}
@@ -1294,6 +1314,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   <!-- ===== 전투 화면 ===== -->
   <section id="battleScreen" class="screen hidden">
     <div id="battleHeader"></div>
+    <div class="battle-hud">
+      <div class="battle-turn" id="battleTurn">1턴</div>
+      <button class="battle-view-btn" id="battleViewBtn" type="button">카드 숨기기</button>
+    </div>
     <div id="battleArena">
       <div class="arena-fighter enemy" id="enemyFighter">
         <div class="finfo">
@@ -1318,15 +1342,18 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
         <div class="jw-bolt"></div>
         <div class="jw-inner">
           <div id="judgeCards"></div>
-          <div id="battleLog"></div>
         </div>
       </div>
     </div>
+    <!-- 판정과 별개로 누적되는 전투 기록 -->
+    <div id="battleHistory" class="hidden"><div id="battleLog"></div></div>
     <!-- 스킬 카드 페이즈 -->
     <div id="cardPhase" class="hidden">
-      <div class="cp-energy" id="cardEnergy"></div>
-      <div class="cp-hand" id="cardHand"></div>
-      <div class="cp-pred" id="cardPred"></div>
+      <div class="cp-stack">
+        <div class="cp-energy" id="cardEnergy"></div>
+        <div class="cp-hand" id="cardHand"></div>
+        <div class="cp-pred" id="cardPred"></div>
+      </div>
       <button class="cp-surrender" id="surrenderBtn">🏳️ 항복</button>
     </div>
     <!-- 결과 (금속판 닫힘 + 보상 카드) -->
@@ -1504,8 +1531,6 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <div class="vs-tname" id="vsTname"></div>
     <div class="vs-slash"></div>
     <div class="vs-vs">VS</div>
-    <div class="vs-hand vs-hand-l">👉</div>
-    <div class="vs-hand vs-hand-r">👈</div>
   </div>
 </div>
 
@@ -2950,11 +2975,34 @@ const UNIVERSAL_SKILLS = {
   skill_rally:        { name:'생장 가속', icon:'📈', cost:2, kind:'buff', selfBuff:{stat:'spd',pct:0.25,turns:3}, desc:'속도 25%↑(3턴) · ⚡2', tag:'성장' },
 };
 const ELEMENT_SKILLS = {};
+/* 속성기 차별화 — 속성마다 위력·형태(광역/단일)·부가효과가 다르다.
+   불=화상 / 물=자힐 / 풀=흡혈 / 대지=방어무시 / 바람=단일+자가속 / 번개=치명타 / 빙결=적 둔화. (밸런싱용 조정 가능) */
+const ELEMENT_SKILL_FX = {
+  fire:  { power:160, dot:{kind:'burn',pct:0.06,turns:3},                  rider:'화상(3턴)' },
+  water: { power:150, heal:0.15,                                           rider:'체력 15% 회복' },
+  grass: { power:155, lifesteal:0.35,                                      rider:'피해 35% 흡혈' },
+  earth: { power:170, pierce:0.4,                                          rider:'방어 40% 무시' },
+  wind:  { power:150, single:true, selfBuff:{stat:'spd',pct:0.25,turns:3}, rider:'단일 · 기동성 25%↑(3턴)' },
+  bolt:  { power:175, critBonus:0.25,                                      rider:'치명타율 +25%' },
+  ice:   { power:150, enemyDebuff:{stat:'spd',pct:0.3,turns:2},            rider:'적 기동성 30%↓(2턴)' },
+};
 Object.keys(ELEMENTS).forEach(el => {
-  ELEMENT_SKILLS['skill_elem_' + el] = {
+  const fx = ELEMENT_SKILL_FX[el] || { power:170, rider:'' };
+  const isAoe = !fx.single;
+  const sk = {
     name: ELEMENTS[el].skill, icon: ELEMENTS[el].icon, cost:2, kind:'elemental',
-    power:170, elem:true, element:el, aoe:true, desc:`위력 170 · ${ELEMENTS[el].name}속성기 · 광역 · ⚡2`, tag:'속성',
+    power:fx.power, elem:true, element:el, tag:'속성',
+    desc:`위력 ${fx.power} · ${ELEMENTS[el].name}속성기 · ${isAoe?'광역':'단일'} · ⚡2${fx.rider?(' · '+fx.rider):''}`,
   };
+  if(isAoe) sk.aoe = true; else sk.single = true;
+  if(fx.dot) sk.dot = fx.dot;
+  if(fx.heal) sk.heal = fx.heal;
+  if(fx.lifesteal) sk.lifesteal = fx.lifesteal;
+  if(fx.pierce) sk.pierce = fx.pierce;
+  if(fx.selfBuff) sk.selfBuff = fx.selfBuff;
+  if(fx.critBonus) sk.critBonus = fx.critBonus;
+  if(fx.enemyDebuff) sk.enemyDebuff = fx.enemyDebuff;
+  ELEMENT_SKILLS['skill_elem_' + el] = sk;
 });
 const elementSkillId = el => 'skill_elem_' + el;
 const TRAIT_SKILLS = {
@@ -7882,7 +7930,7 @@ function makeCombatant(src){
     def:Math.max(1,Math.round(bs.def*(1+(P.defPct||0)))),
     spd:Math.max(1,Math.round(bs.spd*(1+(P.spdPct||0)))),
     acc:clamp(Math.round((bs.acc||90)*(1+(P.accPct||0))), 50, 100),
-    potion:src.potion||null,
+    // (potion 필드 제거 — 독초 물약 시스템 폐지)
     elem: Math.max(0, Math.round(bs.elem||0)),
     critRate: clamp((bs.critRate||5), 0, 90),
     critMult: bs.critMult || 1.5,
@@ -7900,31 +7948,61 @@ function makeCombatant(src){
 }
 const ENEMY_NAME_TIERS = ['신참','투사','베테랑','정예','챔피언','전설의'];
 const ENEMY_STAGE_BY_ROUND = ['juvenile','growing','growing','mature','evolved'];
-function buildEnemy(roundIndex, tierIndex, ps){
-  const diff = 0.82 + roundIndex*0.075 + tierIndex*0.05 + rand(-0.04,0.06);
-  const traits=[]; // 잠재특성은 현재 전투 미반영
+/* 봇 기준 스탯 — 플레이어 스탯과 무관. 토너먼트(티어+라운드+생장단계)로만 절대값을 만든다.
+   같은 티어에선 상대 강함이 고정 → 성장하면 압도 → 승급해 더 강한 티어를 만나는 구조.
+   숫자는 밸런싱용으로 자유 조정. (평균 종 스탯 ≈ hp100/atk21/def18/spd17) */
+const ENEMY_REF_BASE = { hp:100, atk:21, def:17, spd:16, acc:86, elem:16 };
+const ENEMY_TIER_GRADE = ['C','C','B','B','A','A','S']; // 브론즈…풀로세움 → 봇 스킬/카드 등급 기대치
+function enemyTierGrade(tierIndex){ return ENEMY_TIER_GRADE[clamp(tierIndex,0,ENEMY_TIER_GRADE.length-1)]; }
+function buildEnemy(roundIndex, tierIndex){
+  const traits=[];
+  // 변이형: 상위 라운드/티어일수록 변이형 봇 등장↑ (식물과 같은 변이 시스템을 봇도 사용)
   let form='normal', predType=null;
-  if(roundIndex>=2 && Math.random()<0.3){ form='pred'; predType=pick(['vamp','absorb']); }
+  if(Math.random() < (0.15 + roundIndex*0.06 + tierIndex*0.04)){
+    form = pick(['pred','toxic','spore','lumen','weapon']);
+    if(form==='pred') predType = pick(['vamp','absorb']);
+  }
   const sp = pick(Object.keys(SPECIES));
-  const el = SPECIES[sp].element;            // 종의 고정 속성 사용 → 이름·속성·외형 일치
+  const el = SPECIES[sp].element;            // 종의 고정 속성 → 이름·속성·외형 일치
   const seedType = SPECIES_SEEDTYPE[sp] || 'grass';
   const growth = ENEMY_STAGE_BY_ROUND[clamp(roundIndex, 0, ENEMY_STAGE_BY_ROUND.length-1)];
-  const hp = Math.max(40, Math.round(ps.hp*diff*rand(0.95,1.08)));
-  const atk = Math.max(8, Math.round(ps.atk*diff*rand(0.95,1.08)));
-  const def = Math.max(6, Math.round(ps.def*diff*rand(0.95,1.08)));
-  const spd = Math.max(6, Math.round(ps.spd*diff*rand(0.95,1.08)));
-  const acc = clamp(Math.round((ps.acc||88)*rand(0.95,1.04)), 60, 99);
-  const elem = Math.max(0, Math.round((ps.elem||16)*diff*rand(0.95,1.08)));
-  const critRate = clamp(5 + tierIndex*2 + roundIndex, 0, 60);
-  const energyMax = clamp((ps.energy||3) + (tierIndex>3?1:0), 1, 9);
-  const grade = tierIndex>=5?'S':tierIndex>=3?'A':tierIndex>=1?'B':'C';
-  const loadout=['skill_basic_strike', elementSkillId(el)];
-  loadout.push('skill_guard','skill_photosynthesis');
+  // 절대 스케일 = 생장단계 × 티어 × 라운드 (플레이어 스탯과 완전 분리)
+  const sc = (GROWTH_STAT_MULT[growth]||1) * (1 + tierIndex*0.15) * (1 + roundIndex*0.06);
+  const R = ENEMY_REF_BASE, rv = ()=>rand(0.95,1.08);
+  const hp   = Math.max(40, Math.round(R.hp  * sc * rv()));
+  const atk  = Math.max(8,  Math.round(R.atk * sc * rv()));
+  const def  = Math.max(6,  Math.round(R.def * sc * rv()));
+  const spd  = Math.max(6,  Math.round(R.spd * sc * rv()));
+  const acc  = clamp(Math.round(R.acc + tierIndex*1.5 + roundIndex), 60, 99);
+  const elem = Math.max(0,  Math.round(R.elem * sc * rv()));
+  const critRate = clamp(5 + tierIndex*3 + roundIndex*2, 0, 60);
+  const energyMax = clamp(3 + (tierIndex>=4?1:0), 1, 9);
+  const grade = enemyTierGrade(tierIndex);
+  // 스킬: 생장단계에 맞는 속성 성장스킬까지(플레이어와 같은 풀)
+  const egs = ELEMENT_GROWTH_SKILLS[el] || ELEMENT_GROWTH_SKILLS.grass;
+  let loadout = ['skill_basic_strike', elementSkillId(el), 'skill_guard', 'skill_photosynthesis'];
+  if(roundIndex>=2) loadout.push(egs[0]);
+  if(roundIndex>=3 || tierIndex>=2) loadout.push(egs[1]);
+  if(tierIndex>=4) loadout.push(egs[2]);
+  loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,6);
+  // 스킬 등급 — 티어 기대등급으로 부여(위력·부가효과에 실제 반영)
+  const skillGrades = {};
+  loadout.forEach(id => { if(id!=='skill_basic_strike') skillGrades[id] = rollSkillGrade(grade); });
+  // 변이 카드 — 변이형/티어에 맞는 카드(효과가 실제 전투에 반영)
+  const cardGrade = rollCardGrade(POTENTIAL_GRADE_BOOST[grade] || 1);
+  const cards = [];
+  if(tierIndex>=1)    cards.push(cardKeyOf(pick(['card_cellwall','card_thornstem']), cardGrade));
+  if(form==='pred')   cards.push(cardKeyOf(pick(['card_sap','card_mito','card_chloroabsorb']), cardGrade));
+  if(form==='toxic')  cards.push(cardKeyOf(pick(['card_acid','card_gas','card_poisonthorn']), cardGrade));
+  if(form==='spore')  cards.push(cardKeyOf(pick(['card_paralysis','card_poisonspore','card_disrupt']), cardGrade));
+  if(form==='lumen')  cards.push(cardKeyOf(pick(['card_chloroboost','card_solarheal']), cardGrade));
+  if(form==='weapon') cards.push(cardKeyOf(pick(['card_sword','card_axe','card_gun','card_shieldw']), cardGrade));
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, species:sp, element:el, grade, awakened:null,
-    seedType, growth, form, predType, weapon:null, baseStats:{hp,atk,def,spd,acc,elem,critRate,critMult:1.5,energy:energyMax}, traits,
-    loadout:loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,6),
+    seedType, growth, form, predType, weapon:null,
+    baseStats:{hp,atk,def,spd,acc,elem,critRate,critMult:1.5,energy:energyMax},
+    traits, loadout, skillGrades, cards,
   });
 }
 /* ===== 토너먼트 진행 ===== */
@@ -7946,33 +8024,39 @@ function startMatch(){
     ? { key:p.weaponKey, lv:state.weapons[p.weaponKey].lv } : null;
   const playerC = makeCombatant({
     name:plantDisplayName(p), species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
-    form:p.form||'normal', predType:p.predType||null, weapon:wpn, potion:p.potion||null,
+    form:p.form||'normal', predType:p.predType||null, weapon:wpn,
     seedType:seedTypeOf(p), growth:p.growth_stage,
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
     traits:p.traits, loadout:plantBattleLoadout(p), cards:(p.equipped_trait_cards||[]).slice(),
     skillGrades:p.skillGrades||{},
   });
-  const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p), {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
-  B = { p:playerC, e:enemyC, over:false, busy:false };
+  const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p));
+  B = { p:playerC, e:enemyC, over:false, busy:false, turn:1, view:'cards' };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   hide('#mainScreen'); hide('#resultModal'); show('#battleScreen');
   // 전투 화면 초기 상태: 카드/판정/결과/오버레이 모두 닫고 무대만
-  ['#cardPhase','#judgeWindow','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
+  ['#cardPhase','#judgeWindow','#battleHistory','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
   $('#battleResult').classList.remove('shut','reveal');
   $('#battleArena').classList.remove('spread');
   renderBattleHeader();
-  $('#eSpriteBox').innerHTML = spriteFor(B.e, 108);
-  $('#pSpriteBox').innerHTML = spriteFor(B.p, 108);
+  $('#eSpriteBox').innerHTML = spriteFor(B.e, 124);
+  $('#pSpriteBox').innerHTML = spriteFor(B.p, 124);
   $('#eSpriteBox').classList.remove('enter','collapse');
   $('#pSpriteBox').classList.remove('enter','collapse');
   const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
-  $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${B.e.form==='pred' ? ' <span class="badge" style="color:#ff6bd4;border:1px solid #ff6bd4">🦷</span>' : ''}`;
-  $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>`;
-  $('#battleLog').innerHTML = '';
-  updateBars();
+  const formBadge = unit => {
+    const form = FORMS[unit.form||'normal'] || FORMS.normal;
+    return unit.form && unit.form !== 'normal'
+      ? ` <span class="badge" style="color:${form.color};border:1px solid ${form.color}" title="${form.name}">${form.icon}</span>`
+      : '';
+  };
+  $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${formBadge(B.e)}`;
+  $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>${formBadge(B.p)}`;
+  $('#battleLog').innerHTML = '<div class="bl-empty">카드를 숨기면<br>누적된 전투 기록을 볼 수 있습니다</div>';
+  updateBars(); updateBattleHud();
   playVsIntro(p);
-  // 인트로(재배사 등장→손가락질→퇴장) 후 식물 등장 → 첫 카드 페이즈
+  // VS 인트로 후 식물 등장 → 첫 카드 페이즈
   clearTimeout(B._stageT);
   B._stageT = setTimeout(() => enterBattleStage(), 2540);
 }
@@ -7982,7 +8066,7 @@ function enterBattleStage(){
   $('#eSpriteBox').classList.add('enter');
   $('#pSpriteBox').classList.add('enter');
   clearTimeout(B._cardT);
-  B._cardT = setTimeout(() => { if(B && !B.over && !B.busy) showCardPhase(); }, 640);
+  B._cardT = setTimeout(() => { if(B && !B.over && !B.busy) renderBattleIdleView(); }, 640);
 }
 /* 전투 매칭 인트로: 토너먼트명 → 슬래시 + VS → 상대(위·좌)·나(아래·우) 배너 슬라이드 인 → 위아래로 쪼개지며 전투 공개 */
 function playVsIntro(p){
@@ -8076,6 +8160,7 @@ function skillCardHtml(id, pred){
 function showCardPhase(){
   if(!B || B.over) return;
   hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','sweep','close');
+  hide('#battleHistory');
   $('#battleArena').classList.add('spread');
   const predId = B.p.loadout.find(id => id === 'skill_card_predation');
   const normals = B.p.loadout.filter(id => id !== 'skill_card_predation');
@@ -8086,13 +8171,40 @@ function showCardPhase(){
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#cardEnergy').innerHTML = pips;
   bindSkillCards();
-  const cp = $('#cardPhase'); cp.classList.remove('closing'); show('#cardPhase');
+  const cp = $('#cardPhase'); clearTimeout(cp._hideT); cp.classList.remove('closing'); show('#cardPhase');
   cp.classList.remove('dealing'); void cp.offsetWidth; cp.classList.add('dealing');
 }
-function hideCardPhase(){
+function hideCardPhase(immediate){
   const cp = $('#cardPhase'); if(!cp || cp.classList.contains('hidden')) return;
+  clearTimeout(cp._hideT);
+  if(immediate){ cp.classList.add('hidden'); cp.classList.remove('closing','dealing'); return; }
   cp.classList.add('closing');
-  setTimeout(() => { cp.classList.add('hidden'); cp.classList.remove('closing','dealing'); }, 240);
+  cp._hideT = setTimeout(() => { cp.classList.add('hidden'); cp.classList.remove('closing','dealing'); }, 240);
+}
+function updateBattleHud(){
+  if(!B) return;
+  $('#battleTurn').textContent = `${B.turn||1}턴`;
+  const btn = $('#battleViewBtn');
+  btn.textContent = B.view === 'log' ? '카드 보기' : '카드 숨기기';
+  btn.disabled = !!(B.busy || B.over);
+}
+function showBattleHistory(){
+  if(!B || B.over) return;
+  hideCardPhase(true);
+  $('#battleArena').classList.add('spread');
+  const history = $('#battleHistory'); show('#battleHistory');
+  history.scrollTop = history.scrollHeight;
+}
+function renderBattleIdleView(){
+  if(!B || B.over || B.busy) return;
+  updateBattleHud();
+  if(B.view === 'log') showBattleHistory(); else showCardPhase();
+}
+function toggleBattleView(){
+  if(!B || B.over || B.busy) return;
+  B.view = B.view === 'log' ? 'cards' : 'log';
+  updateBattleHud(); renderBattleIdleView();
+  try{ sfx.tap(); }catch(e){}
 }
 /* 카드 탭=선택 / 꾹 누르기=상세 */
 let _cardPressTimer = null, _cardLongFired = false;
@@ -8154,8 +8266,9 @@ function updateBars(){
 }
 function blog(html){
   const l = $('#battleLog');
+  const empty = l.querySelector('.bl-empty'); if(empty) empty.remove();
   l.innerHTML += html + '<br>';
-  l.scrollTop = l.scrollHeight;
+  const history = $('#battleHistory'); history.scrollTop = history.scrollHeight;
 }
 function popup(side, text, isHeal){
   const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
@@ -8245,13 +8358,13 @@ async function applySkill(a, d, s, side){
     if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
     if(s.pred && a.cardFx){ const pb=a.cardFx.predBoost;
       if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0) blog(`▶ 🧬 공격력 ${sa} 강탈`); }
-      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(5,a.energy+se); if(se>0) blog(`▶ 🔋 에너지 ${se} 강탈`); }
+      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0) blog(`▶ 🔋 에너지 ${se} 강탈`); }
     }
     if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
     if(a.passives.defDownOnHit>0) d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'});
     if(s.enemyDebuff){ applyEnemyDebuff(d, s.enemyDebuff); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
-    if(a.potion && a.potion.dot){ const pd=a.potion.dot; const ddmg=Math.max(1,Math.round(effStat(a,'atk')*pd.pct)); d.dots.push({kind:pd.kind,dmg:ddmg,turns:pd.turns,icon:dotIcon(pd.kind)}); blog(`▶ ${a.potion.icon||'🧪'} ${a.potion.name} 독성 — ${dotName(pd.kind)}(${pd.turns}턴 · 턴당 ${ddmg})`); if(pd.debuff){ applyEnemyDebuff(d, pd.debuff); blog(`▶ 🔻 ${debuffLabel(pd.debuff)}`); } }
+    // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
@@ -8283,7 +8396,7 @@ async function tickStatuses(u, side){
     });
   }
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
-  if(u.cardFx && u.cardFx.energyRegen>0){ u.energy = Math.min(5, u.energy + u.cardFx.energyRegen); }
+  if(u.cardFx && u.cardFx.energyRegen>0){ u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); }
   if(changed){ updateBars(); await sleep(480); }
 }
 /* 판정 창 열기 — 좌→우 번개 스윕 + 양쪽 카드 표시 */
@@ -8298,20 +8411,20 @@ async function openJudge(playerId, enemyId){
     <div class="jw-card foe" style="--gc:${eg}"><div class="jc-tag">상대</div><div class="jc-name">${es.icon||''} ${clean(es.name)}</div></div>
     <div class="jw-vs">VS</div>
     <div class="jw-card mine" style="--gc:${pg}"><div class="jc-tag">나</div><div class="jc-name">${ps.icon||''} ${clean(ps.name)}</div></div>`;
-  $('#battleLog').innerHTML = '';
+  blog(`<div class="bl-match">${es.icon||''} ${clean(es.name)} <span style="color:var(--sub)">VS</span> ${ps.icon||''} ${clean(ps.name)}</div>`);
   jw.classList.remove('close','open','sweep'); show('#judgeWindow'); void jw.offsetWidth;
   jw.classList.add('sweep','open');
   try{ sfx.roll(); }catch(e){}
-  await sleep(660);
+  await sleep(1080);
 }
 function closeJudge(){
   const jw = $('#judgeWindow'); if(!jw || jw.classList.contains('hidden')) return;
   jw.classList.add('close');
-  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','sweep','close'); }, 240);
+  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','sweep','close'); }, 360);
 }
 async function finishMatch(won){
   closeJudge();
-  await sleep(260);
+  await sleep(380);
   await endMatch(won);
 }
 async function playerSkill(skillId){
@@ -8323,11 +8436,14 @@ async function playerSkill(skillId){
     if(rem <= 0){ toast('이 스킬은 더 쓸 수 없습니다 (횟수 소진)'); return; }
   } else if(B.p.energy < (s.cost||0)){ toast('⚡에너지가 부족합니다'); return; }
   B.busy = true;
+  updateBattleHud();
   hide('#battleSkillDetail');
   hideCardPhase();
+  hide('#battleHistory');
   try{ sfx.tap(); }catch(e){}
   await sleep(280);
   const eId = aiPickSkill(B.e);
+  blog(`<div class="bl-turn"><span>${B.turn}턴</span></div>`);
   // 판정 창 등장(좌→우 번개) + 양쪽 카드 공개
   await openJudge(skillId, eId);
   // 선공 판정 — 기동성 차이 → 확률(공격 순서에만 영향, 방어/버프는 순서 무관)
@@ -8335,7 +8451,7 @@ async function playerSkill(skillId){
   const firstChance = clamp(50 + (myS - enS), 5, 95);
   const playerFirst = Math.random()*100 < firstChance;
   blog(`<span class="jl-roll">⚔️ 선공 판정 ▸ 기동성 나 ${Math.round(myS)} vs 상대 ${Math.round(enS)} → 선공 확률 ${firstChance}% → <b>${playerFirst?'내':'상대'} 식물 선공!</b></span>`);
-  await sleep(760);
+  await sleep(980);
   const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
   for(const [side, k] of order){
     const a = side==='p' ? B.p : B.e;
@@ -8354,8 +8470,9 @@ async function playerSkill(skillId){
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
   await sleep(620);
   closeJudge();
-  B.busy = false; updateBars();
-  if(!B.over){ await sleep(300); showCardPhase(); }
+  B.turn += 1;
+  B.busy = false; updateBars(); updateBattleHud();
+  if(!B.over){ await sleep(380); renderBattleIdleView(); }
 }
 /* 항복: 재확인 후 진행 */
 function confirmSurrender(){ if(!B || B.over || B.busy) return; show('#surrenderConfirm'); try{ sfx.tap(); }catch(e){} }
@@ -8363,6 +8480,7 @@ async function doSurrender(){
   hide('#surrenderConfirm');
   if(!B || B.over) return;
   B.busy = true; B.over = true;
+  updateBattleHud();
   hideCardPhase();
   B.p.hp = 0; updateBars();
   await sleep(200);
@@ -8389,7 +8507,7 @@ function checkPromotion(p){
   return false;
 }
 async function endMatch(won){
-  B.over = true; updateBars();
+  B.over = true; updateBars(); updateBattleHud();
   closeJudge();
   // 진 식물이 쓰러지는 연출
   const loserBox = won ? $('#eSpriteBox') : $('#pSpriteBox');
@@ -8500,6 +8618,7 @@ $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
 // 전투: 항복(재확인) · 스킬 상세 닫기
+$('#battleViewBtn').addEventListener('click', () => toggleBattleView());
 $('#surrenderBtn').addEventListener('click', () => confirmSurrender());
 $('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderConfirm'); });
 $('#surrenderYes').addEventListener('click', () => { sfx.tap(); doSurrender(); });
