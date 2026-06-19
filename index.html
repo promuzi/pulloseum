@@ -267,6 +267,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes collapse{0%{transform:rotate(0) translateY(0);opacity:1;filter:grayscale(0)}
   35%{transform:rotate(-6deg) translateY(0)}100%{transform:rotate(-82deg) translateY(26px);opacity:.15;filter:grayscale(1) brightness(.5)}}
 .finfo{min-width:0;}
+.fighter-profile{font-size:10.5px;color:#9fd8ff;font-weight:800;text-align:center;letter-spacing:.4px;margin-bottom:2px;}
 .fname{font-weight:800;font-size:14.5px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;text-align:center;}
 .hpbar{height:13px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.14);}
 .hpbar>div{height:100%;border-radius:999px;background:linear-gradient(90deg,#2bd49a,#7dffd9);transition:width .45s;}
@@ -367,6 +368,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .jcalc-empty{padding:28px 8px;text-align:center;color:var(--sub);font-size:12px;}
 .jcalc-step{display:grid;grid-template-columns:25px 1fr;gap:7px;padding:7px 5px;
   border-bottom:1px solid rgba(255,255,255,.06);animation:jcalcIn .24s ease both;}
+.jcalc-step.major{margin:2px 0 5px;border:1px solid rgba(255,217,102,.32);border-radius:10px;
+  background:rgba(255,217,102,.07);}
+.jcalc-step.major .jcalc-no{border-color:rgba(255,217,102,.55);color:#ffd966;background:rgba(255,217,102,.12);}
 .jcalc-step:last-child{border-bottom:0;}
 .jcalc-no{width:23px;height:23px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:rgba(92,242,194,.1);border:1px solid rgba(92,242,194,.3);color:var(--neon);font-size:10px;font-weight:900;}
@@ -375,8 +379,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .jcalc-result{margin-top:3px;color:#dcecff;font-size:11px;font-weight:800;}
 .jcalc-result.good{color:#78f5c5}.jcalc-result.bad{color:#ff9078}.jcalc-result.roll{color:#ffd966}
 @keyframes jcalcIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-#battleHistory{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);z-index:5;
-  max-height:40vh;min-height:148px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+#battleHistory{position:absolute;left:10px;right:10px;top:43%;z-index:5;
+  max-height:24vh;min-height:132px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
   padding:12px 14px;border:1px solid rgba(120,255,225,.24);border-radius:14px;
   background:linear-gradient(180deg,rgba(9,16,26,.95),rgba(6,11,20,.95));
   box-shadow:0 12px 36px rgba(0,0,0,.55);font-size:12.5px;line-height:1.62;color:#cdd9e8;}
@@ -810,7 +814,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   .tbar .tb-tier{padding:4px 8px;}
   #btnBattle{margin:0 12px calc(8px + env(safe-area-inset-bottom,0px));padding:12px;font-size:17px;border-radius:14px;}
   .fsprite svg,.fsprite img{max-width:118px;height:auto;}
-  #battleHistory{max-height:38vh;font-size:12px;line-height:1.5;padding:10px 12px;}
+  #battleHistory{top:42%;max-height:26vh;min-height:116px;font-size:12px;line-height:1.5;padding:10px 12px;}
   .jw-inner{max-height:58vh;}
   #judgeCalc{min-height:100px;padding:6px 8px 9px;}
   .skillcard{min-height:66px;padding:8px;}
@@ -1336,6 +1340,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <div id="battleArena">
       <div class="arena-fighter enemy" id="enemyFighter">
         <div class="finfo">
+          <div class="fighter-profile" id="eProfile"></div>
           <div class="fname" id="eName"></div>
           <div class="hpbar"><div id="eHpBar"></div></div>
           <div class="hptext" id="eHpText"></div>
@@ -1346,6 +1351,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       <div class="arena-fighter player" id="playerFighter">
         <div class="fsprite" id="pSpriteBox"></div>
         <div class="finfo">
+          <div class="fighter-profile" id="pProfile"></div>
           <div class="fname" id="pName"></div>
           <div class="hpbar"><div id="pHpBar"></div></div>
           <div class="hptext" id="pHpText"></div>
@@ -7938,7 +7944,7 @@ function makeCombatant(src){
   CE.grantSkills.forEach(sid => loadout.push(sid));
   loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   const unit = {
-    name:src.name, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
+    name:src.name, trainerName:src.trainerName||null, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
     seed_type:src.seedType||null, growth_stage:src.growth||null,
     form:src.form||'normal', predType:src.predType||null, weapon:src.weapon||null,
     hp:maxHp, max:maxHp,
@@ -7963,6 +7969,7 @@ function makeCombatant(src){
   return unit;
 }
 const ENEMY_NAME_TIERS = ['신참','투사','베테랑','정예','챔피언','전설의'];
+const ENEMY_TRAINER_NAMES = ['네뷸라7','루트제로','오로라팜','코스모싹','테라노바','문라이트','스타가든','그린펄스'];
 const ENEMY_STAGE_BY_ROUND = ['juvenile','growing','growing','mature','evolved'];
 /* 봇 기준 스탯 — 플레이어 스탯과 무관. 토너먼트(티어+라운드+생장단계)로만 절대값을 만든다.
    같은 티어에선 상대 강함이 고정 → 성장하면 압도 → 승급해 더 강한 티어를 만나는 구조.
@@ -8015,7 +8022,7 @@ function buildEnemy(roundIndex, tierIndex){
   if(form==='weapon') cards.push(cardKeyOf(pick(['card_sword','card_axe','card_gun','card_shieldw']), cardGrade));
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
-    name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, species:sp, element:el, grade, awakened:null,
+    name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, trainerName:pick(ENEMY_TRAINER_NAMES), species:sp, element:el, grade, awakened:null,
     seedType, growth, form, predType, weapon:null,
     baseStats:{hp,atk,def,spd,acc,elem,critRate,critMult:1.5,energy:energyMax},
     traits, loadout, skillGrades, cards,
@@ -8039,7 +8046,7 @@ function startMatch(){
   const wpn = (p.form==='weapon' && p.weaponKey && state.weapons[p.weaponKey] && state.weapons[p.weaponKey].owned)
     ? { key:p.weaponKey, lv:state.weapons[p.weaponKey].lv } : null;
   const playerC = makeCombatant({
-    name:plantDisplayName(p), species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
+    name:plantDisplayName(p), trainerName:state.profile_name||'재배사', species:p.species, element:p.element, grade:p.grade, awakened:p.awakened,
     form:p.form||'normal', predType:p.predType||null, weapon:wpn,
     seedType:seedTypeOf(p), growth:p.growth_stage,
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
@@ -8069,6 +8076,8 @@ function startMatch(){
   };
   $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${formBadge(B.e)}`;
   $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>${formBadge(B.p)}`;
+  $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}`;
+  $('#pProfile').textContent = `👤 ${B.p.trainerName||state.profile_name||'재배사'}`;
   $('#battleLog').innerHTML = '<div class="bl-empty">카드를 숨기면<br>누적된 전투 기록을 볼 수 있습니다</div>';
   updateBars(); updateBattleHud();
   playVsIntro(p);
@@ -8094,7 +8103,7 @@ function playVsIntro(p){
     <div class="vs-bg">${enemyBanner}</div>
     <div class="vs-strip-pfp">${spriteFor(B.e, 84)}</div>
     <div class="vs-strip-info">
-      <div class="vs-strip-tag" style="color:#ff8a70">상대</div>
+      <div class="vs-strip-tag" style="color:#ff8a70">${B.e.trainerName||'상대 재배사'}</div>
       <div class="vs-strip-name">${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span></div>
     </div>`;
   $('#vsMe').innerHTML = `
@@ -8160,6 +8169,7 @@ function skillUnusable(unit, id){
   if(s.noEnergy){ const rem = (unit.uses && unit.uses[id]!=null) ? unit.uses[id] : (s.uses||0); return rem <= 0; }
   return unit.energy < (s.cost||0);
 }
+function isPriorityDefenseSkill(s){ return !!(s && s.guardMult != null); }
 /* 카드 1장 HTML — 최소 정보(이름·코스트·등급·짧은 설명) */
 function skillCardHtml(id, pred){
   const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0, desc:'' };
@@ -8290,11 +8300,13 @@ function judgePlain(html){
   return String(html||'').replace(/<br\s*\/?>/gi,' · ').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
 }
 /* 판정창과 누적 기록에 실제 계산 단계를 동시에 남긴다. */
-function judgeStep(title, formula, result, tone){
-  if(!B) return;
+function judgeStep(title, formula, result, tone, showStep){
+  if(!B || !showStep) return;
+  const major = showStep === 'major';
   const no = B.judgeStepNo = (B.judgeStepNo||0) + 1;
   const calc = $('#judgeCalc');
-  calc.insertAdjacentHTML('beforeend', `<div class="jcalc-step">
+  const empty=calc.querySelector('.jcalc-empty'); if(empty) empty.remove();
+  calc.insertAdjacentHTML('beforeend', `<div class="jcalc-step${major?' major':''}">
     <div class="jcalc-no">${no}</div><div>
       <div class="jcalc-title">${title}</div>
       <div class="jcalc-formula">${formula}</div>
@@ -8329,37 +8341,37 @@ async function applySkill(a, d, s, side){
   if(!s) return;
   const tgtSide = side==='p' ? 'e' : 'p';
   const actorLabel = side==='p' ? '나' : '상대';
-  const hadGuard = !!a.guard;
+  const orderLabel = side===B.firstSide ? '선공' : '후공';
+  const effectNotes=[];
+  const flushJudgeEffects=()=>{
+    if(!effectNotes.length) return;
+    judgeStep(`${actorLabel} 회복·상태효과`, effectNotes.join('<br>'), '적용 완료', side==='p'?'good':'bad', true);
+    effectNotes.length=0;
+  };
   a.guard = null;
   // 무기 변이형 스킬: 에너지 무소모 · 경기당 횟수 차감. 그 외: 에너지 차감
   if(s.noEnergy){
     const before = (s.id && a.uses && a.uses[s.id]!=null) ? a.uses[s.id] : (s.uses||0);
     if(s.id && a.uses && a.uses[s.id]!=null) a.uses[s.id] = Math.max(0, before-1);
-    judgeStep(`${actorLabel} 행동 · ${s.icon||''} ${s.name}`, `횟수형 스킬 ${before}회 - 1회${hadGuard?' · 기존 방어 태세 해제':''}`,
-      `남은 횟수 ${Math.max(0,before-1)}회`, 'roll');
   } else {
-    const before = a.energy, cost = s.cost||0;
-    a.energy = Math.max(0, a.energy-cost);
-    judgeStep(`${actorLabel} 행동 · ${s.icon||''} ${s.name}`, `에너지 ${before} - 비용 ${cost}${hadGuard?' · 기존 방어 태세 해제':''}`,
-      `에너지 ${a.energy}/${a.energyMax}`, 'roll');
+    a.energy = Math.max(0, a.energy-(s.cost||0));
   }
   if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike'){
-    const before=d.energy; d.energy = Math.min(d.energyMax, d.energy + d.passives.energyOnEnemySkill);
-    judgeStep('방어자 패시브', `에너지 ${before} + ${d.passives.energyOnEnemySkill} (최대 ${d.energyMax})`, `에너지 ${d.energy}`, 'good');
+    d.energy = Math.min(d.energyMax, d.energy + d.passives.energyOnEnemySkill);
   }
   blog(`<span class="em">${a.name}</span> ▶ ${s.icon||''} ${s.name}`);
   if(s.guardMult != null){
     const counter = s.counterPct ? Math.round(effStat(a,'atk')*s.counterPct) : 0;
     a.guard = { mult:s.guardMult, counter };
-    judgeStep('방어 태세 적용', `받는 피해 × ${s.guardMult.toFixed(2)}${s.counterPct?`<br>반격 = 공격 ${effStat(a,'atk')} × ${s.counterPct}`:''}`,
-      `피해 ${Math.round((1-s.guardMult)*100)}% 감소${counter?` · 반격 ${counter}`:''}`, 'good');
+    judgeStep(`${actorLabel} 방어 우선 적용`, `공격 순서와 무관하게 먼저 적용 · 받는 피해 × ${s.guardMult.toFixed(2)}${s.counterPct?`<br>반격 = 공격 ${effStat(a,'atk')} × ${s.counterPct}`:''}`,
+      `피해 ${Math.round((1-s.guardMult)*100)}% 감소${counter?` · 반격 ${counter}`:''}`, 'good', true);
     blog(`▶ 🛡️ 받는 피해 ${Math.round((1-s.guardMult)*100)}%↓${counter?` · 반격 ${counter} 준비`:''}`);
     sfx.tap();
   }
-  if(s.energyGain){ const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + s.energyGain); judgeStep('에너지 충전', `${before} + ${s.energyGain} (최대 ${a.energyMax})`, `${a.energy} 에너지`, 'good'); blog(`▶ ⚡ ${s.energyGain} 충전`); }
-  if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; judgeStep('정화 적용', `디버프·지속피해 ${neg}개 확인`, `${neg}개 해제`, neg?'good':''); if(neg) blog(`▶ 🧼 디버프 ${neg}개 해제`); }
-  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); judgeStep('회복 적용', `최대 체력 ${a.max} × ${(healPct*100).toFixed(1)}% = ${h}`, `HP ${before} → ${a.hp}`, 'good'); blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
-  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); judgeStep('자기 강화 적용', `${statName(s.selfBuff.stat)} × ${(bpct*100).toFixed(1)}%`, `${s.selfBuff.turns}턴 동안 적용`, 'good'); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.energyGain){ const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + s.energyGain); effectNotes.push(`⚡ 에너지 ${before} → ${a.energy}`); blog(`▶ ⚡ ${s.energyGain} 충전`); }
+  if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push(`🧼 디버프·지속피해 ${neg}개 해제`); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
+  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); effectNotes.push(`☀️ 회복 ${h} · HP ${before} → ${a.hp}`); blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
+  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ · ${s.selfBuff.turns}턴`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
     const isAoe = !!s.aoe;
@@ -8370,9 +8382,10 @@ async function applySkill(a, d, s, side){
     const dodge = clamp(dodgeRaw, 5, 90);
     const dodgeRoll = Math.random()*100;
     const missed = dodgeRoll < dodge;
-    judgeStep('명중·회피 판정', `유효 적중 = ${a.acc||90}${accMod>=0?' + ':' - '}${Math.abs(accMod)}${s.accBonus?` + ${s.accBonus}`:''} = ${effAcc}<br>회피율 = 30 + (방어자 기동 ${defenderSpd} - 유효 적중 ${effAcc}) = ${dodgeRaw}% → ${dodge}%`,
-      `난수 ${dodgeRoll.toFixed(1)} · ${missed?'회피 성공(MISS)':'공격 명중'}`, missed?(side==='p'?'bad':'good'):(side==='p'?'good':'bad'));
     if(missed){
+      judgeStep(`${actorLabel} ${orderLabel} 피해 판정`, `최종 공격 ${effStat(a,'atk')} / 최종 방어 ${effStat(d,'def')}<br>회피율 ${dodge}% · 난수 ${dodgeRoll.toFixed(1)}`,
+        `회피 성공 · 피해 0`, side==='p'?'bad':'good', true);
+      flushJudgeEffects();
       popup(tgtSide,'MISS',false);
       blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(회피 ${dodge}%)</span>`);
       sfx.tap();
@@ -8384,8 +8397,6 @@ async function applySkill(a, d, s, side){
     let elemMult = 1, elementPart = 0;
     if(s.elem){ elemMult = eff(a.element, d.element); elementPart = (a.elem||0) * elemMult; }
     const raw = normal + elementPart;
-    judgeStep('기본 피해 계산', `공격 ${attackStat} × 위력 ${s.power}% = ${normal.toFixed(1)}${s.elem?`<br>속성 ${a.elem||0} × 상성 ${elemMult.toFixed(2)} = ${elementPart.toFixed(1)}`:''}`,
-      `합산 원 피해 ${raw.toFixed(1)}`, side==='p'?'good':'bad');
     const defenderDef = effStat(d,'def');
     const pierce = s.pierce||0;
     const flatDef = defenderDef * (1 - pierce);
@@ -8394,38 +8405,33 @@ async function applySkill(a, d, s, side){
     const minDamage = raw * 0.25;
     const afterDefense = raw - flatDef;
     let dm = Math.max(1, Math.max(minDamage, afterDefense));
-    judgeStep('방어 적용', `유효 방어 = ${defenderDef} × (1 - 방어무시 ${(pierce*100).toFixed(0)}%) = ${flatDef.toFixed(1)}<br>일반식 ${raw.toFixed(1)} - ${flatDef.toFixed(1)} = ${afterDefense.toFixed(1)} / 하한 ${raw.toFixed(1)} × 25% = ${minDamage.toFixed(1)}`,
-      `큰 값 선택 → ${dm.toFixed(1)}`, side==='p'?'good':'bad');
     // 치명타: 방어까지 계산된 최종 데미지에 치명타계수를 곱한다
     const critChance = (a.critRate||0)/100 + (s.critBonus||0) + (a.passives.critBonus||0);
     const critRoll = Math.random();
     let crit = critChance>0 && critRoll<critChance;
-    const beforeCrit = dm;
     if(crit) dm *= (a.critMult||1.5);
-    judgeStep('치명타 판정', `치명률 ${(a.critRate||0)}% + 스킬 ${Math.round((s.critBonus||0)*100)}% + 패시브 ${Math.round((a.passives.critBonus||0)*100)}% = ${(critChance*100).toFixed(1)}%<br>난수 ${(critRoll*100).toFixed(1)}`,
-      crit?`${beforeCrit.toFixed(1)} × ${a.critMult||1.5} = ${dm.toFixed(1)} (치명타)`:`${dm.toFixed(1)} 유지`, crit?'good':'');
     const modLines=[];
     if(a.nextAtk){ const bonus=a.nextAtk; dm *= (1+bonus); modLines.push(`다음 공격 +${Math.round(bonus*100)}% → ×${(1+bonus).toFixed(2)}`); a.nextAtk=0; }
     if(d.guard){ dm *= d.guard.mult; modLines.push(`방어 태세 → ×${d.guard.mult.toFixed(2)}`); }
     if(d.passives.reduceDmgPct){ const m=1-d.passives.reduceDmgPct; dm *= m; modLines.push(`피해 감소 ${Math.round(d.passives.reduceDmgPct*100)}% → ×${m.toFixed(2)}`); }
     if(s.elem && d.passives.elementReduce[a.element]){ const m=1-d.passives.elementReduce[a.element]; dm *= m; modLines.push(`${ELEMENTS[a.element].name} 저항 ${Math.round(d.passives.elementReduce[a.element]*100)}% → ×${m.toFixed(2)}`); }
-    judgeStep('추가 피해 보정', modLines.length?modLines.join('<br>'):'적용되는 추가 배율 없음', `보정 후 ${dm.toFixed(1)}`, modLines.length?'roll':'');
     const variance = rand(0.97,1.03);
-    const beforeRound = dm;
     dm = Math.max(1, Math.round(dm * variance));
-    judgeStep('난수·정수 보정', `${beforeRound.toFixed(1)} × 난수 ${variance.toFixed(3)} = ${(beforeRound*variance).toFixed(1)}<br>반올림 후 최소 피해 1 적용`, `확정 피해 ${dm}`, 'roll');
-    const beforeBarrier=dm, barrierBefore=d.barrier, absorbed=Math.min(d.barrier,dm);
+    const absorbed=Math.min(d.barrier,dm);
     if(d.barrier>0){ d.barrier-=absorbed; dm-=absorbed; if(absorbed>0) blog(`▶ 🧊 보호막이 ${absorbed} 흡수`); }
     const hpBefore=d.hp;
     d.hp = Math.max(0, d.hp - dm);
-    judgeStep('보호막·HP 적용', `확정 피해 ${beforeBarrier} - 보호막 흡수 ${absorbed}${barrierBefore?` (보호막 ${barrierBefore} → ${d.barrier})`:''}<br>HP ${hpBefore} - 실제 피해 ${dm}`,
-      `HP ${hpBefore} → ${d.hp}`, side==='p'?'good':'bad');
     if(d.hp<=0 && d.passives.surviveChance>0){
       const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
       if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
-      judgeStep('치명상 생존 판정', `생존 확률 ${(d.passives.surviveChance*100).toFixed(1)}% / 난수 ${(surviveRoll*100).toFixed(1)}`,
-        survived?`생존 성공 · HP ${d.hp}`:'생존 실패', survived?'good':'bad');
     }
+    const summaryMods=[];
+    if(crit) summaryMods.push(`치명타 ×${a.critMult||1.5}`);
+    modLines.forEach(x=>summaryMods.push(x));
+    summaryMods.push(`난수 ×${variance.toFixed(3)}`);
+    if(absorbed) summaryMods.push(`보호막 -${absorbed}`);
+    judgeStep(`${actorLabel} ${orderLabel} 최종 피해 판정`, `공격 보정: ${attackStat} × ${(s.power/100).toFixed(2)}${s.elem?` + 속성 ${a.elem||0} × ${elemMult.toFixed(2)}`:''} = ${raw.toFixed(1)}<br>방어 보정: ${defenderDef} × ${(1-pierce).toFixed(2)} = ${flatDef.toFixed(1)}${summaryMods.length?`<br>${summaryMods.join(' · ')}`:''}`,
+      `최종 ${dm} 피해 · ${d.name} HP ${hpBefore} → ${d.hp}`, side==='p'?'good':'bad', true);
     const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
     tgtBox.classList.add('shake'); setTimeout(()=>tgtBox.classList.remove('shake'),420);
     popup(tgtSide,'-'+dm,false);
@@ -8434,52 +8440,57 @@ async function applySkill(a, d, s, side){
     sfx.hit();
     const predLs = (s.pred && a.cardFx) ? (a.cardFx.predBoost.lifesteal||0) : 0;
     const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
-    if(ls>0 && dm>0){ const h=Math.round(dm*ls), before=a.hp; a.hp=Math.min(a.max,a.hp+h); popup(side,'+'+h,true); judgeStep('흡혈 적용', `실제 피해 ${dm} × 흡혈 ${Math.round(ls*100)}% = ${h}`, `HP ${before} → ${a.hp}`, 'good'); blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
-    if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } judgeStep('능력치 흡수', `대상 공격·방어 × ${Math.round(s.steal.pct*100)}%`, `공격 ${sa} 강탈${s.steal.stat==='both'?` · 방어 ${sd} 강탈`:''}`, 'good'); blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
+    if(ls>0 && dm>0){ const h=Math.round(dm*ls), before=a.hp; a.hp=Math.min(a.max,a.hp+h); popup(side,'+'+h,true); effectNotes.push(`🩸 흡혈 ${h} · HP ${before} → ${a.hp}`); blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
+    if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } effectNotes.push(`🧬 공격 ${sa}${s.steal.stat==='both'?` · 방어 ${sd}`:''} 강탈`); blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
     if(s.pred && a.cardFx){ const pb=a.cardFx.predBoost;
-      if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ judgeStep('포식 공격 강탈', `대상 공격 × ${Math.round(pb.atkSteal*100)}%`, `${sa} 강탈`, 'good'); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
-      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ judgeStep('포식 에너지 강탈', `min(대상 에너지, 강탈량 ${pb.energySteal})`, `${se} 강탈`, 'good'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
+      if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push(`🧬 공격 ${sa} 강탈`); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
+      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push(`🔋 에너지 ${se} 강탈`); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
     }
-    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); judgeStep('독가시 적용', `공격 ${effStat(a,'atk')} × 독 계수 ${a.cardFx.poisonCoef}`, `2턴 동안 턴당 ${pd}`, side==='p'?'good':'bad'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
-    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); judgeStep('공격 시 방어 약화', `방어 감소 ${Math.round(a.passives.defDownOnHit*100)}%`, `2턴 적용`, side==='p'?'good':'bad'); }
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); judgeStep('스킬 약화 효과', `${statName(appliedStat)} ${Math.round(s.enemyDebuff.pct*100)}% 감소`, `${s.enemyDebuff.turns}턴 적용`, side==='p'?'good':'bad'); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); judgeStep(`${dotName(s.dot.kind)} 적용`, `공격 ${effStat(a,'atk')} × 계수 ${s.dot.pct}`, `${s.dot.turns}턴 동안 턴당 ${ddmg}`, side==='p'?'good':'bad'); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push(`🟣 중독 2턴 · 턴당 ${pd}`); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
+    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push(`🔻 방어 ${Math.round(a.passives.defDownOnHit*100)}%↓ · 2턴`); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`🔻 ${statName(appliedStat)} ${Math.round(s.enemyDebuff.pct*100)}%↓ · ${s.enemyDebuff.turns}턴`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(`${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} ${s.dot.turns}턴 · 턴당 ${ddmg}`); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
-    if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl), before=a.hp; a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); judgeStep('피해 반사', `실제 피해 ${dm} × 반사 ${Math.round(refl*100)}% = ${r}`, `공격자 HP ${before} → ${a.hp}`, side==='p'?'bad':'good'); blog(`↩️ 굴절 반사! ${r} 피해`); }
-    if(d.guard && d.guard.counter>0 && d.hp>0){ const before=a.hp; a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); judgeStep('방어 태세 반격', `준비된 반격 피해 ${d.guard.counter}`, `공격자 HP ${before} → ${a.hp}`, side==='p'?'bad':'good'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
+    if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl), before=a.hp; a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push(`↩️ 반사 ${r} · 공격자 HP ${before} → ${a.hp}`); blog(`↩️ 굴절 반사! ${r} 피해`); }
+    if(d.guard && d.guard.counter>0 && d.hp>0){ const before=a.hp; a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push(`↩️ 반격 ${d.guard.counter} · 공격자 HP ${before} → ${a.hp}`); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); judgeStep('스킬 약화 효과', `${statName(appliedStat)} ${Math.round(s.enemyDebuff.pct*100)}% 감소`, `${s.enemyDebuff.turns}턴 적용`, side==='p'?'good':'bad'); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); judgeStep(`${dotName(s.dot.kind)} 적용`, `공격 ${effStat(a,'atk')} × 계수 ${s.dot.pct}`, `${s.dot.turns}턴 동안 턴당 ${ddmg}`, side==='p'?'good':'bad'); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`🔻 ${statName(appliedStat)} ${Math.round(s.enemyDebuff.pct*100)}%↓ · ${s.enemyDebuff.turns}턴`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(`${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} ${s.dot.turns}턴 · 턴당 ${ddmg}`); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
+  flushJudgeEffects();
   updateBars();
   await sleep(760);
 }
 async function tickStatuses(u, side){
   let changed=false;
   const owner = side==='p' ? '나' : '상대';
-  if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct), before=u.hp; u.hp=Math.min(u.max,u.hp+h); popup(side,'+'+h,true); judgeStep(`${owner} 턴 종료 · 재생`, `최대 HP ${u.max} × ${Math.round(u.passives.regenPct*100)}% = ${h}`, `HP ${before} → ${u.hp}`, side==='p'?'good':'bad'); blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
+  const statusNotes=[];
+  if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct), before=u.hp; u.hp=Math.min(u.max,u.hp+h); popup(side,'+'+h,true); statusNotes.push(`💚 재생 ${h} · HP ${before} → ${u.hp}`); blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
   if(u.dots && u.dots.length){
     let total=0; u.dots.forEach(dot=>{ total+=dot.dmg; });
-    if(total>0){ const before=u.hp, detail=u.dots.map(x=>`${x.icon}${x.dmg}`).join(' + '); u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.icon))].join(''); judgeStep(`${owner} 턴 종료 · 지속피해`, `${detail} = ${total}`, `HP ${before} → ${u.hp}`, side==='p'?'bad':'good'); blog(`<span class="em">${u.name}</span> ${kinds} 지속피해 ${total}`); changed=true; }
+    if(total>0){ const before=u.hp; u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.icon))].join(''); statusNotes.push(`${kinds} 지속피해 ${total} · HP ${before} → ${u.hp}`); blog(`<span class="em">${u.name}</span> ${kinds} 지속피해 ${total}`); changed=true; }
     u.dots.forEach(dot=>dot.turns--); u.dots = u.dots.filter(dot=>dot.turns>0);
   }
-  if(u.buffs && u.buffs.length){ const expired=u.buffs.filter(b=>b.turns<=1).length; u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); if(expired) judgeStep(`${owner} 효과 지속시간`, `버프·디버프 턴 수 -1`, `${expired}개 효과 종료`, ''); }
-  if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=Math.random(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } judgeStep(`${owner} 자연 정화 판정`, `정화 확률 ${Math.round(u.passives.cleanseChance*100)}% / 난수 ${(roll*100).toFixed(1)}`, success?'디버프 1개 해제':'발동하지 않음', success?'good':''); }
+  if(u.buffs && u.buffs.length){ u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); }
+  if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=Math.random(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('🧼 디버프 1개 자연 해제'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
   // 포자형: 매 턴 종료 시 포자 발동(중복 가능)
   if(u.cardFx && u.cardFx.spores && u.cardFx.spores.length && B){
     const opp = (side==='p') ? B.e : B.p;
     u.cardFx.spores.forEach(sp=>{
       const roll=Math.random(), success=roll<sp.chance;
-      judgeStep(`${owner} 포자 판정`, `발동 확률 ${Math.round(sp.chance*100)}% / 난수 ${(roll*100).toFixed(1)}`, success?'발동':'발동하지 않음', success?(side==='p'?'good':'bad'):'');
       if(!success) return;
       if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
       else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); opp.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
       else if(sp.kind==='defup'){ u.buffs.push({stat:'def',pct:sp.pct,turns:2,kind:'buff'}); blog(`<span class="em">${u.name}</span> 🌀 방해 포자! 방어 ${Math.round(sp.pct*100)}%↑(2턴)`); changed=true; }
+      if(sp.kind==='paralyze') statusNotes.push('💤 마비 포자 · 다음 행동 취소');
+      else if(sp.kind==='poison') statusNotes.push(`🟣 중독 포자 · 2턴, 턴당 ${Math.max(1,Math.round(u.max*sp.pct))}`);
+      else if(sp.kind==='defup') statusNotes.push(`🌀 방어 ${Math.round(sp.pct*100)}%↑ · 2턴`);
     });
   }
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
-  if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); judgeStep(`${owner} 발광 회복`, `에너지 ${before} + ${u.cardFx.energyRegen} (최대 ${u.energyMax})`, `에너지 ${u.energy}`, side==='p'?'good':'bad'); }
+  if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); statusNotes.push(`⚡ 에너지 ${before} → ${u.energy}`); }
+  if(statusNotes.length) judgeStep(`${owner} 턴 종료 효과`, statusNotes.join('<br>'), '적용 완료', side==='p'?'good':'bad', true);
   if(changed){ updateBars(); await sleep(480); }
 }
 /* 판정 창 열기 — 좌→우 번개 스윕 + 양쪽 카드 표시 */
@@ -8495,9 +8506,7 @@ async function openJudge(playerId, enemyId){
     <div class="jw-vs">VS</div>
     <div class="jw-card mine" style="--gc:${pg}"><div class="jc-tag">나</div><div class="jc-name">${ps.icon||''} ${clean(ps.name)}</div></div>`;
   B.judgeStepNo = 0;
-  $('#judgeCalc').innerHTML = '';
-  judgeStep('스킬 공개', `상대 ${es.icon||''} ${clean(es.name)} / 나 ${ps.icon||''} ${clean(ps.name)}`,
-    `양쪽 스킬 확정 · 비용은 행동 시 차감`, 'roll');
+  $('#judgeCalc').innerHTML = '<div class="jcalc-empty">기동성 판정 준비…</div>';
   jw.classList.remove('close','open','sweep'); show('#judgeWindow'); void jw.offsetWidth;
   jw.classList.add('sweep','open');
   try{ sfx.roll(); }catch(e){}
@@ -8537,26 +8546,30 @@ async function playerSkill(skillId){
   const firstChance = clamp(50 + (myS - enS), 5, 95);
   const firstRoll = Math.random()*100;
   const playerFirst = firstRoll < firstChance;
+  B.firstSide = playerFirst ? 'p' : 'e';
   judgeStep('선공 판정', `50 + (나 기동 ${Math.round(myS)} - 상대 기동 ${Math.round(enS)}) = ${50+myS-enS}%<br>5~95% 제한 → 내 선공 확률 ${firstChance}%`,
-    `난수 ${firstRoll.toFixed(1)} · ${playerFirst?'내':'상대'} 식물 선공`, 'roll');
+    `난수 ${firstRoll.toFixed(1)} · ${playerFirst?'내':'상대'} 식물 선공`, 'roll', 'major');
   await sleep(980);
+  // 방어 스킬은 기동성 순서와 무관하게 양쪽 공격보다 먼저 적용한다.
+  const pChosen=skillById(skillId,B.p), eChosen=skillById(eId,B.e);
+  if(isPriorityDefenseSkill(pChosen)) await applySkill(B.p,B.e,pChosen,'p');
+  if(isPriorityDefenseSkill(eChosen)) await applySkill(B.e,B.p,eChosen,'e');
   const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
   for(const [side, k] of order){
     const a = side==='p' ? B.p : B.e;
     const d = side==='p' ? B.e : B.p;
+    const chosen=skillById(k,a);
+    if(isPriorityDefenseSkill(chosen)) continue;
     if(a.hp<=0) continue;
-    if(a.skipNext){ a.skipNext=false; judgeStep(`${side==='p'?'나':'상대'} 행동 판정`, `마비 상태 확인`, `행동 취소 · 마비 해제`, side==='p'?'bad':'good'); blog(`<span class="em">${a.name}</span> 💤 마비되어 움직이지 못한다!`); updateBars(); await sleep(560); continue; }
-    await applySkill(a, d, skillById(k, a), side);
+    if(a.skipNext){ a.skipNext=false; blog(`<span class="em">${a.name}</span> 💤 마비되어 움직이지 못한다!`); updateBars(); await sleep(560); continue; }
+    await applySkill(a, d, chosen, side);
     if(d.hp<=0){ await finishMatch(side==='p'); return; }
     if(a.hp<=0){ await finishMatch(side!=='p'); return; }
   }
   await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await finishMatch(true); return; } if(B.p.hp<=0){ await finishMatch(false); return; }
   await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await finishMatch(false); return; } if(B.e.hp<=0){ await finishMatch(true); return; }
-  const pEnergyBefore=B.p.energy, eEnergyBefore=B.e.energy;
   B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
   B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
-  judgeStep('턴 종료 에너지 회복', `나 ${pEnergyBefore} + 1 (최대 ${B.p.energyMax})<br>상대 ${eEnergyBefore} + 1 (최대 ${B.e.energyMax})`,
-    `나 ${B.p.energy} / 상대 ${B.e.energy}`, 'good');
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
   await sleep(1000);
