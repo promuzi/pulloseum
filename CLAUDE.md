@@ -50,6 +50,32 @@
 
 ## 변경 이력 (개발 로그)
 
+### 2026-06-19 — 함선 내부 워킹(포켓몬식 도트) — "모드" 탭 → "🚀 함선"
+하단 헤더의 잠겨 있던 **🎮 모드** 탭을 **🚀 함선**으로 열고, 탐사선 내부를 캐릭터(탐사복 도트)가 **타일 그리드 위를 걸어다니는** 포켓몬식 화면으로 구현. 콘솔 앞에서 Ⓐ로 상호작용해 기존 시스템으로 진입.
+- **새 전체화면 `#shipScreen`** (battleScreen처럼 `mainScreen`을 가림 → 상단 헤더·하단 네비 자동 숨김, 몰입형). 자체 `✕ 나가기` 버튼으로 메인 복귀.
+- **캔버스 엔진**(외부 의존성 0, vanilla): `SHIP_MAP`(13×9 ASCII 맵, `#`=벽 `.`=바닥 `@`=스폰) + `SHIP_FEATURES`(콘솔·장식 좌표 배열). `startShipEngine`/`stopShipEngine`(rAF 루프), `updateShip`(그리드 이동·바라보는 칸 콘솔 감지), `drawShip`(바닥/벽 타일·콘솔 박스+이모지·플레이어), `drawAvatar`(방향별 바이저·걷기 보브). 픽셀아트(`image-rendering:pixelated`).
+- **조작**: 화면 D-패드(터치 `pointerdown/up`) + Ⓐ버튼, 데스크톱은 방향키/WASD·Space/Enter·Esc. 그리드 단위 트윈 이동, 콘솔·장식은 통행 불가(앞에서 조작).
+- **콘솔 → 기존 시스템 연결**: ⚔️토너먼트→`startBattle()`, 🛰️탐사→`openExploration()`, 🛒상점→`openShop()`, 🌿재배 베이→`openUpgrade()`. 🤖정비 드로이드=NPC 대사(친구 초대 예고). 진입 시 `exitShip()`이 엔진 정지 후 해당 화면/모달 오픈.
+- **확장 포인트(향후)**: `SHIP_FEATURES`를 `state.ship.furniture`로 옮기면 **가구 배치·꾸미기**; 맵을 여러 개 두고 워프 콘솔을 추가하면 **다른 행성·길드 정거장 방문**; NPC 타일로 **친구 초대/동행**. 데이터 주도라 콘텐츠 추가는 좌표·action만 늘리면 됨.
+- 무회귀: 기존 세이브·시스템 변화 없음(`mode` 네비 라우팅만 `openLockedSection`→`openShip`으로 교체, 길드는 잠금 유지).
+- 검증: preview에서 함선 진입·캔버스 렌더(픽셀 채움률 1.0)·통행 판정(벽/바닥/장식/맵밖)·드로이드 프롬프트+대사·탐사 콘솔 상호작용→탐사 모달 전환·재진입 시 엔진 재시작 확인, 콘솔 에러 0. (※ preview 스크린샷 도구는 이 환경에서 타임아웃 → eval/DOM으로 검증.)
+
+### 2026-06-19 — 전투/식물 페이지 + 식물 관리창(강화/변이/스킬) 인터페이스 재설계
+사용자 손그림(그림4·5·6·7) 기준으로 메인 화면과 식물 클릭 시 뜨는 관리창을 전면 재구성.
+1. **메인 전투/식물 페이지(그림4)** — `.main-body`를 `#mainStage`(좌 `#statPanel` / 중앙 `#centerPlant` / 우 `#sidePanel`) 3분할로. 좌측: **둥근 박스 4개**(타입/속성/변이/잠재력 — `plantInfoPills`) + **사각 스탯 박스 8개**(`mainStatBoxes`: 체력/공격/방어/기동/적중/속성/치명/에너지). 우측: 🎒가방(`bagFabHtml`, 공지·랭크 버튼은 보류). `renderCenter` 재작성. 토너먼트 바는 **티어/토너먼트명/경기 현황 3분할 셀**(`.tcells`)로 바꾸고, 어느 셀이든 누르면 **참가 가능 경기 목록 모달**(`#matchesModal`, `openMatches`/`renderMatches` — 향후 확장) 표시.
+2. **식물 관리창 공통 프레임(그림5/6/7)** — `#upgradeModal`을 새 프레임으로: 상단 **강화/변이/스킬 탭**(`.pm-tabs`), 우상단 **✕**(`#pmClose`), 항상 중앙에 식물, 식물 위 **이름+✏️ 수정**(`editPlantName`), 그 아래 **주요 정보 알약 5종**(타입/속성/변이/잠재력/등급). `renderUpgrade`/`bindUpgradeEvents` 재작성, 탭키 `up`/`mut`/`skill`. 식물 클릭 시 항상 **강화 탭**으로 시작.
+3. **강화 탭(그림5)** — 식물 좌측 명중력/치명타률/속성/에너지, 우측 체력/공격력/방어력/기동력(`upStatCard`, `data-up`→크레딧 강화). 하단 **생장 게이지 + 💧물/🌿비료**(현재단계·경험치 표기).
+4. **변이 탭(그림6)** — 식물 좌3·우3 슬롯 = **카드 5칸 + 자아 1칸(🔒 잠금, 색 구분)**. 하단 **보유 변이 카드 서랍**(가로 스크롤 + 정렬 버튼). 변이형 불일치 카드는 **어둡게(off)**. 카드 탭 → **상세 팝업**(`openCardDetail`): 미장착=장착 / 장착=해제 버튼. 빈 칸 있으면 **자동 장착**, 가득 차면 **스왑 모드**(장착 슬롯 테두리 붉어짐 `.pick` + 하단에 장착 예정 카드 떠있음 `.swap-float`, 슬롯 선택 시 교체). 등급 색: **흰D·초록C·하늘B·보라A·주황S**(`GRADE_PALETTE`/`gradeColor`, 카드·스킬 공통).
+5. **스킬 탭(그림7)** — 식물 좌3·우3 = **장착 스킬 6칸**(스킬명+수치+등급색). 하단 보유 스킬 서랍. **변이 유래 스킬(포식·무기·카드)은 스킬 탭에 노출하지 않고 전투 시 자동 합류**(`isAutoFormSkill`/`plantSkillPool`/`plantBattleLoadout`, `startMatch`이 `plantBattleLoadout` 사용 / `makeCombatant`이 카드·포식 스킬 자동 주입). 장착/해제/스왑 동일, 최소 1개 유지.
+6. 무회귀: `ensureSkillFields`가 기존 세이브의 `equipped_skills`에서 변이 유래 스킬을 제거(전투엔 자동 합류하므로 동일). 옛 탭 함수(`renderConsumTab`/`renderTraitTab`/`renderSkillTab`/`renderPlantTab`/`skillCardHtml`) 제거. 검증: preview 콘솔 에러 0, 3분할 레이아웃·강화/변이/스킬 탭·자동장착·스왑·해제·경기목록·전투 로드아웃(무기카드 스킬 자동 합류) DOM·실클릭 확인. (※ preview 스크린샷 도구는 이 환경에서 타임아웃 → DOM/스냅샷으로 검증.)
+
+#### 2026-06-19 (후속) — 누락 로직/등급 가시성 점검 보완
+새 관리창 도입 시 누락된 것 보완. (등급별 성능 차등은 로직상 정상: 카드 `cardInstanceEffects`가 주효과 등급 계수 스케일 + 서브특성 수(`subs`) 차등 / 스킬 `gradeGrowthSkill`이 위력 스케일 + A·S에 치명·자버프 부가. 카드 상세는 `cardEffectLabels`로 이미 노출.)
+1. **방생 버튼 복구** — 새 `#upgradeModal`에 `releasePlant` 진입점이 없어 화분을 비울 방법이 사라졌던 회귀. `pm-body` 하단에 `#pmRelease` 추가·바인딩.
+2. **스킬 등급 부가효과 가시화** — `openCardDetail` 스킬 분기에 `critBonus`/`selfBuff`(A·S 부가) + "등급 N — 위력·부가효과 강화" 줄 추가(카드처럼 등급 특징이 상세에 보이도록).
+3. **각성(`awakened`) 알약** — `plantInfoPills`에 각성 시 ✦스탯 알약 추가(메인 좌측 패널·관리창 공통). 스탯 부스트는 기존대로 `p.mult`에 반영, 스프라이트 ✦도 유지.
+- 미반영이지만 무방: 식물 `stability`/`mutation_rate`/`unlocked_trait_slots`는 현재 활성 전투·탐사 로직에 안 쓰이는 표시용 잔재라 생략해도 손실 없음. 옛 「무기고」(blade/cannon/shield)는 무기 변이 카드(검/도끼/총/방패)로 대체됨.
+
 ### 2026-06-19 — 모바일 진행도 유실 대책(세이브 백업/복원 + 네이티브 영구저장)
 모바일 앱에서 진행도가 사라지던 문제(앱이 원격 GitHub Pages를 WebView로 띄우는데, 진행도가 WebView localStorage 한 곳에만 있어 캐시 삭제·OS eviction·재설치로 날아감)를 2단계로 대비.
 1. **세이브 내보내기/가져오기(웹, 즉시 적용)** — 설정에 `#btnExport`/`#btnImport` + `#saveModal`. `encodeSaveCode`(JSON→`btoa(unescape(encodeURIComponent()))` 한글 안전 base64)·`decodeSaveCode`(base64 우선, 평문 JSON도 허용, 불량/빈값 거부). 복원은 `normalizeState` 거쳐 `saveState` 후 `renderMain`. APK 재빌드 없이 `git push`→Pages 배포만으로 앱 반영. (백로그의 "세이브 내보내기/가져오기" 항목 완료.)

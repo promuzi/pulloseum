@@ -932,19 +932,21 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .pm-tab{border:none;background:#0e1828;color:var(--sub);font-weight:900;font-size:16px;padding:14px 6px 12px;
   border-bottom:2px solid transparent;letter-spacing:1px;}
 .pm-tab.active{color:var(--neon);background:linear-gradient(180deg,rgba(92,242,194,.16),rgba(92,242,194,.02));border-bottom-color:var(--neon);}
-.pm-close{position:absolute;top:54px;right:12px;z-index:6;width:34px;height:34px;border-radius:50%;
-  border:none;background:rgba(0,0,0,.3);color:#9fd9ff;font-size:20px;font-weight:900;line-height:1;cursor:pointer;
+.pm-close{flex:0 0 auto;width:30px;height:30px;border-radius:50%;
+  border:none;background:rgba(0,0,0,.3);color:#9fd9ff;font-size:17px;font-weight:900;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px rgba(120,200,255,.5);}
 .pm-close:active{transform:scale(.9);}
 .pm-body{flex:1 1 auto;overflow-y:auto;padding:12px 14px calc(16px + env(safe-area-inset-bottom,0px));position:relative;min-height:0;}
-/* 이름 + 수정 */
+/* 이름 + 수정 + 닫기 */
 .pm-namerow{display:flex;align-items:center;gap:6px;background:#0e1828;border:1px solid var(--line);border-radius:11px;
-  padding:7px 12px;margin:2px 40px 8px 2px;}
+  padding:6px 8px 6px 12px;margin:2px 0 8px;}
 .pm-namerow .pm-pencil{font-size:15px;flex:0 0 auto;cursor:pointer;}
 .pm-namerow .pm-name{flex:1;min-width:0;font-size:16px;font-weight:900;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-/* 주요 정보 알약 행 */
-.pm-info{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:8px;}
-.pm-info .ipill{font-size:10.5px;padding:3px 9px;}
+/* 주요 정보 알약 행 — 항상 한 줄(넘치면 가로 스크롤) */
+.pm-info{display:flex;flex-wrap:nowrap;gap:3px;justify-content:safe center;margin-bottom:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+.pm-info::-webkit-scrollbar{display:none;}
+.pm-info .ipill{font-size:9px;padding:2.5px 6px;flex:0 0 auto;}
+.pm-info .ipill .ip-k{font-size:8px;}
 /* 좌-식물-우 스테이지 */
 .pm-stage{display:grid;grid-template-columns:1fr minmax(96px,auto) 1fr;gap:8px;align-items:center;}
 .pm-col{display:flex;flex-direction:column;gap:8px;justify-content:center;}
@@ -1046,6 +1048,29 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   .pm-plant svg,.pm-plant img{max-width:96px;}
   .slot{min-height:48px;}
 }
+
+/* ===== 함선 내부 (포켓몬식 탐사) ===== */
+/* 상·하단 헤더는 항상 유지 → 함선은 그 사이만 덮는 오버레이(modal과 동일한 z-index 50) */
+#shipScreen{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
+  top:calc(var(--headh) + env(safe-area-inset-top,0px));bottom:var(--navh);
+  z-index:50;background:#070b16;overflow:hidden;display:flex;flex-direction:column;padding:0;}
+#shipTopbar{position:absolute;top:0;left:0;right:0;z-index:6;display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:linear-gradient(180deg,rgba(6,10,22,.95),rgba(6,10,22,0));}
+.ship-exit{background:rgba(0,0,0,.45);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;}
+#shipTitle{font-weight:800;color:#dfe7f5;font-size:15px;letter-spacing:.3px;}
+#shipHint{margin-left:auto;font-size:10.5px;color:#8ea0bd;text-align:right;line-height:1.2;}
+#shipStage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;position:relative;}
+#shipCanvas{image-rendering:pixelated;max-width:100%;max-height:100%;touch-action:none;background:#0a0f1d;}
+#shipPrompt{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);max-width:86%;text-align:center;background:rgba(8,14,28,.96);border:2px solid var(--neon);border-radius:12px;padding:9px 16px;color:#eaf2ff;font-size:13.5px;font-weight:700;box-shadow:0 0 18px rgba(0,229,160,.4);}
+#shipControls{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;justify-content:space-between;align-items:center;padding:0 20px;pointer-events:none;}
+#dpad{position:relative;width:150px;height:150px;pointer-events:auto;opacity:.92;}
+.dbtn{position:absolute;width:50px;height:50px;background:rgba(20,28,46,.82);border:1px solid rgba(255,255,255,.22);color:#cfe0ff;font-size:15px;border-radius:12px;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;touch-action:none;}
+.dbtn:active,.dbtn.on{background:var(--neon);color:#04140e;}
+.dbtn.up{left:50px;top:0;}
+.dbtn.down{left:50px;bottom:0;}
+.dbtn.left{left:0;top:50px;}
+.dbtn.right{right:0;top:50px;}
+#actBtn{pointer-events:auto;width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#00ffbf,#00a884);border:2px solid #04140e;color:#04140e;font-size:24px;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:none;}
+#actBtn:active{transform:scale(.92);}
 </style>
 </head>
 <body>
@@ -1096,7 +1121,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       <button class="navbtn" data-nav="shop"><span class="ni">🛒</span><span class="nl">상점</span></button>
       <button class="navbtn" data-nav="explore"><span class="ni">🛰️</span><span class="nl">탐사</span></button>
       <button class="navbtn center active" data-nav="home"><span class="ni">🌿</span><span class="nl">식물·전투</span></button>
-      <button class="navbtn locked" data-nav="mode"><span class="ni">🎮</span><span class="nl">모드</span><span class="navlock">🔒</span></button>
+      <button class="navbtn" data-nav="mode"><span class="ni">🚀</span><span class="nl">함선</span></button>
       <button class="navbtn locked" data-nav="guild"><span class="ni">🏰</span><span class="nl">길드</span><span class="navlock">🔒</span></button>
     </nav>
   </section>
@@ -1123,6 +1148,27 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       </div>
     </div>
     <div class="moves" id="moveButtons"></div>
+  </section>
+
+  <!-- ===== 함선 내부 (포켓몬식 워킹) ===== -->
+  <section id="shipScreen" class="screen hidden">
+    <div id="shipTopbar">
+      <div id="shipTitle">🚀 나의 탐사선</div>
+      <div id="shipHint">방향키/D-패드 이동 · Ⓐ 조작</div>
+    </div>
+    <div id="shipStage">
+      <canvas id="shipCanvas"></canvas>
+      <div id="shipPrompt" class="hidden"></div>
+    </div>
+    <div id="shipControls">
+      <div id="dpad">
+        <button class="dbtn up" data-dir="up">▲</button>
+        <button class="dbtn left" data-dir="left">◀</button>
+        <button class="dbtn right" data-dir="right">▶</button>
+        <button class="dbtn down" data-dir="down">▼</button>
+      </div>
+      <button id="actBtn">A</button>
+    </div>
   </section>
 </div>
 
@@ -6946,6 +6992,7 @@ function plantInfoPills(p, withGrade){
     `<span class="ipill" style="border-color:${gradeColor(pot)}88;color:${gradeColor(pot)}"><span class="ip-k">잠재력</span> ${pot}</span>`,
   ];
   if(withGrade) pills.push(`<span class="ipill" style="border-color:${gradeColor(p.grade)}88;color:${gradeColor(p.grade)}"><span class="ip-k">등급</span> ${p.grade}</span>`);
+  if(p.awakened) pills.push(`<span class="ipill" style="border-color:var(--gold);color:var(--gold)"><span class="ip-k" style="color:var(--gold)">각성</span> ✦${STAT_NAMES[p.awakened]||''}</span>`);
   return pills.join('');
 }
 /* 메인 화면 좌측 스탯 사각 박스(8종) */
@@ -7123,6 +7170,9 @@ function openCardDetail(kind, key, equipped){
     grade = skillGradeOf(p,key); icon = sk.icon||'✨'; name = stripGrade(sk.name);
     typeLabel = (sk.tag||'스킬') + ' 스킬';
     fxHtml = `<li>${skillCoefDesc(sk) || '전투 스킬'}</li>` + (sk.cost ? `<li>소모 ⚡${sk.cost}</li>` : '') + (sk.noEnergy ? `<li>에너지 무소모 · 🔁${sk.uses||0}회/경기</li>` : '');
+    if(sk.critBonus) fxHtml += `<li>치명타율 +${Math.round(sk.critBonus*100)}%</li>`;
+    if(sk.selfBuff) fxHtml += `<li>사용 시 ${STAT_NAMES[sk.selfBuff.stat]||sk.selfBuff.stat} +${Math.round((sk.selfBuff.pct||0)*100)}% (${sk.selfBuff.turns}턴)</li>`;
+    fxHtml += `<li style="color:var(--sub);border-color:transparent">등급 <b style="color:${gradeColor(grade)}">${grade}</b> — 위력·부가효과가 등급에 따라 강화됩니다</li>`;
   }
   const col = gradeColor(grade);
   const acts = equipped
@@ -7291,14 +7341,15 @@ function renderUpgrade(){
       <button class="pm-tab ${tab==='mut'?'active':''}" data-ptab="mut">변이</button>
       <button class="pm-tab ${tab==='skill'?'active':''}" data-ptab="skill">스킬</button>
     </div>
-    <button class="pm-close" id="pmClose">✕</button>
     <div class="pm-body">
       <div class="pm-namerow">
         <span class="pm-pencil" id="pmEditName">✏️</span>
         <span class="pm-name">${plantDisplayName(p)}</span>
+        <button class="pm-close" id="pmClose">✕</button>
       </div>
       <div class="pm-info">${plantInfoPills(p, true)}</div>
       ${stage}
+      <button class="btn ghost pm-release" id="pmRelease" style="margin-top:14px;border-color:rgba(255,107,74,.4);color:#ff8a70;font-size:13px;padding:9px">🪴 이 식물 방생 (화분 비우기)</button>
     </div>`;
   bindUpgradeEvents(p);
 }
@@ -7306,6 +7357,7 @@ function bindUpgradeEvents(p){
   const body = $('#upgradeBody');
   const cl = $('#pmClose'); if(cl) cl.addEventListener('click', () => { swapPending = null; hide('#upgradeModal'); sfx.tap(); });
   const en = $('#pmEditName'); if(en) en.addEventListener('click', () => editPlantName(p));
+  const rel = $('#pmRelease'); if(rel) rel.addEventListener('click', () => { swapPending = null; releasePlant(p.id); });
   body.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { upgradeTab = b.dataset.ptab; swapPending = null; sfx.tap(); renderUpgrade(); }));
   // 강화
   body.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
@@ -8126,14 +8178,221 @@ function openLockedSection(key){
 function closeAllModals(){
   ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
 }
+/* ===================================================================
+   함선 내부 — 포켓몬식 도트 워킹 (모드 탭)
+   - 타일 그리드 위를 캐릭터가 걸어다니며, 콘솔 앞에서 Ⓐ로 상호작용
+   - 콘솔: 토너먼트(전투)/탐사/상점/재배 베이로 이동
+   - 향후 확장: state.ship.furniture 배열로 가구 배치·꾸미기, NPC(친구) 추가,
+     맵을 여러 개 두어 다른 행성·길드 정거장으로 워프
+   =================================================================== */
+const SHIP_MAP = [
+  "#############",
+  "#....###....#",
+  "#...........#",
+  "#...........#",
+  "#...........#",
+  "#...........#",
+  "#...........#",
+  "#.....@.....#",
+  "#############",
+];
+// 상호작용/장식 타일. action 있으면 콘솔(Ⓐ로 발동), 없으면 장식(통과 불가).
+const SHIP_FEATURES = [
+  { x:2, y:2, icon:'⚔️', label:'토너먼트 콘솔', color:'#ff5d6c',
+    action:()=>{ closeShip(); setNavActive('home'); startBattle(); } },
+  { x:10, y:2, icon:'🛰️', label:'탐사 콘솔', color:'#4db5ff',
+    action:()=>exitShip(()=>{ setNavActive('explore'); openExploration(); }) },
+  { x:2, y:6, icon:'🛒', label:'보급 상점', color:'#ffcf5d',
+    action:()=>exitShip(()=>{ setNavActive('shop'); openShop(); }) },
+  { x:10, y:6, icon:'🌿', label:'재배 베이', color:'#5dffa6',
+    action:()=>exitShip(()=>{ openUpgrade(); }) },
+  { x:6, y:5, icon:'🤖', label:'정비 드로이드', color:'#9aa7c4',
+    action:()=>shipSay('아직 동료가 없네요. 곧 친구를 초대해 함께 항해할 수 있게 될 거예요!') },
+  // 장식 (조종석 / 창문)
+  { x:5, y:1, icon:'🖥️', color:'#39507a' },
+  { x:6, y:1, icon:'🪟', color:'#2b6db0' },
+  { x:7, y:1, icon:'🖥️', color:'#39507a' },
+];
+const SHIP_DIRV = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+let shipEngine = null, shipSayTimer = null;
+
+function featAt(x,y){ return SHIP_FEATURES.find(f=>f.x===x&&f.y===y); }
+function shipWalkable(x,y){
+  if(x<0||y<0||y>=SHIP_MAP.length||x>=SHIP_MAP[0].length) return false;
+  if(SHIP_MAP[y][x]==='#') return false;
+  if(featAt(x,y)) return false;            // 콘솔·장식은 밟지 못함(앞에서 조작)
+  return true;
+}
+function openShip(){
+  setNavActive('mode');
+  closeAllModals();            // mainScreen은 그대로 둬서 상·하단 헤더 유지
+  show('#shipScreen');
+  startShipEngine();
+}
+function closeShip(){          // 함선 오버레이만 닫기(헤더·네비는 유지)
+  stopShipEngine();
+  hide('#shipScreen');
+}
+function exitShip(then){       // 콘솔에서 다른 화면으로 진입할 때
+  closeShip();
+  setNavActive('home');
+  renderMain();
+  if(typeof then === 'function') then();
+}
+function startShipEngine(){
+  if(shipEngine) stopShipEngine();   // 중복 루프 방지
+  const canvas = $('#shipCanvas');
+  const T = 28, COLS = SHIP_MAP[0].length, ROWS = SHIP_MAP.length;
+  canvas.width = COLS*T; canvas.height = ROWS*T;
+  let sx=1, sy=1;
+  SHIP_MAP.forEach((row,y)=>{ const i=row.indexOf('@'); if(i>=0){ sx=i; sy=y; } });
+  shipEngine = {
+    ctx:canvas.getContext('2d'), T, COLS, ROWS, raf:0, running:true,
+    px:sx, py:sy, dir:'down', held:[],
+    moving:false, t:0, fromX:sx, fromY:sy, toX:sx, toY:sy,
+    prompt:null,
+  };
+  const loop = ()=>{ if(!shipEngine||!shipEngine.running) return; updateShip(); drawShip(); shipEngine.raf = requestAnimationFrame(loop); };
+  shipEngine.raf = requestAnimationFrame(loop);
+}
+function stopShipEngine(){
+  if(shipEngine){ shipEngine.running=false; cancelAnimationFrame(shipEngine.raf); shipEngine=null; }
+  clearTimeout(shipSayTimer); shipSayTimer=null;
+  const pr=$('#shipPrompt'); if(pr) pr.classList.add('hidden');
+  document.querySelectorAll('#dpad .dbtn.on').forEach(b=>b.classList.remove('on'));
+}
+function shipSay(msg){
+  const pr=$('#shipPrompt'); if(!pr) return;
+  pr.textContent = msg; pr.classList.remove('hidden');
+  if(shipEngine) shipEngine.sayLock = true;
+  clearTimeout(shipSayTimer);
+  shipSayTimer = setTimeout(()=>{ if(shipEngine) shipEngine.sayLock=false; pr.classList.add('hidden'); }, 2600);
+}
+function updateShip(){
+  const E = shipEngine;
+  if(E.moving){
+    E.t += 0.18;
+    if(E.t>=1){ E.t=0; E.moving=false; E.px=E.toX; E.py=E.toY; }
+  }
+  if(!E.moving && E.held.length){
+    const d = E.held[E.held.length-1], dv = SHIP_DIRV[d];
+    E.dir = d;
+    const nx=E.px+dv[0], ny=E.py+dv[1];
+    if(shipWalkable(nx,ny)){ E.fromX=E.px; E.fromY=E.py; E.toX=nx; E.toY=ny; E.moving=true; E.t=0; }
+  }
+  // 바라보는 칸의 콘솔 감지 → 프롬프트
+  const fv = SHIP_DIRV[E.dir];
+  const feat = featAt(E.px+fv[0], E.py+fv[1]);
+  E.prompt = (feat && feat.action) ? feat : null;
+  if(!E.sayLock){
+    const pr=$('#shipPrompt');
+    if(E.prompt){ pr.innerHTML = `${E.prompt.icon} ${E.prompt.label} <span style="opacity:.7">— Ⓐ</span>`; pr.classList.remove('hidden'); }
+    else pr.classList.add('hidden');
+  }
+}
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawShip(){
+  const E=shipEngine, ctx=E.ctx, T=E.T;
+  ctx.clearRect(0,0,E.COLS*T,E.ROWS*T);
+  for(let y=0;y<E.ROWS;y++) for(let x=0;x<E.COLS;x++){
+    const c = SHIP_MAP[y][x];
+    if(c==='#'){
+      ctx.fillStyle='#243250'; ctx.fillRect(x*T,y*T,T,T);
+      ctx.fillStyle='#33476f'; ctx.fillRect(x*T,y*T,T,3);
+      ctx.fillStyle='#1a2640'; ctx.fillRect(x*T,y*T+T-3,T,3);
+    } else {
+      ctx.fillStyle = ((x+y)&1) ? '#121a30' : '#15203a';
+      ctx.fillRect(x*T,y*T,T,T);
+      ctx.strokeStyle='rgba(120,150,200,.07)'; ctx.lineWidth=1;
+      ctx.strokeRect(x*T+.5,y*T+.5,T-1,T-1);
+    }
+  }
+  // 장식·콘솔
+  SHIP_FEATURES.forEach(f=>{
+    const bx=f.x*T, by=f.y*T;
+    ctx.fillStyle='rgba(0,0,0,.28)'; roundRect(ctx,bx+3,by+T-6,T-6,5,2); ctx.fill();
+    ctx.fillStyle=f.color; roundRect(ctx,bx+3,by+4,T-6,T-9,5); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.22)'; roundRect(ctx,bx+5,by+6,T-10,5,3); ctx.fill();
+    if(f.action){ ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1; roundRect(ctx,bx+3,by+4,T-6,T-9,5); ctx.stroke(); }
+    ctx.font=`${Math.floor(T*0.62)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(f.icon, bx+T/2, by+T/2+1);
+  });
+  // 플레이어
+  const ix = E.moving ? E.fromX+(E.toX-E.fromX)*E.t : E.px;
+  const iy = E.moving ? E.fromY+(E.toY-E.fromY)*E.t : E.py;
+  drawAvatar(ctx, ix*T, iy*T, T, E.dir, E.moving ? E.t : 0);
+}
+function drawAvatar(ctx, x, y, T, dir, walkT){
+  const cx=x+T/2, bob = walkT? (Math.sin(walkT*Math.PI*2)*1.2) : 0;
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(cx,y+T-5,T*0.28,3.2,0,0,7); ctx.fill();
+  const top=y+5+bob;
+  // 몸 (탐사복)
+  ctx.fillStyle='#1fd0a8'; roundRect(ctx,cx-T*0.22,top+T*0.34,T*0.44,T*0.34,3); ctx.fill();
+  ctx.fillStyle='#15a587'; roundRect(ctx,cx-T*0.22,top+T*0.56,T*0.44,T*0.12,3); ctx.fill();
+  // 헬멧
+  ctx.fillStyle='#eaf2ff'; ctx.beginPath(); ctx.arc(cx,top+T*0.26,T*0.22,0,7); ctx.fill();
+  // 바이저 (바라보는 방향)
+  ctx.fillStyle='#0a3a5a';
+  const vw=T*0.22, vh=T*0.13, vy=top+T*0.22;
+  if(dir==='down'){ roundRect(ctx,cx-vw/2,vy,vw,vh,2); ctx.fill(); }
+  else if(dir==='up'){ ctx.fillStyle='#cfe0ff'; roundRect(ctx,cx-vw/2,vy-1,vw,vh,2); ctx.fill(); }
+  else if(dir==='left'){ roundRect(ctx,cx-vw*0.7,vy,vw*0.7,vh,2); ctx.fill(); }
+  else { roundRect(ctx,cx,vy,vw*0.7,vh,2); ctx.fill(); }
+}
+function shipInteract(){
+  if(!shipEngine||!shipEngine.running) return;
+  if(shipEngine.sayLock){ clearTimeout(shipSayTimer); shipEngine.sayLock=false; $('#shipPrompt').classList.add('hidden'); return; }
+  const f = shipEngine.prompt;
+  if(f && f.action){ sfx.tap(); f.action(); }
+}
+// 입력 — D-패드(터치/마우스) + 키보드
+function shipPress(dir,on){
+  if(!shipEngine) return;
+  const arr=shipEngine.held, i=arr.indexOf(dir);
+  if(on){ if(i<0) arr.push(dir); } else if(i>=0){ arr.splice(i,1); }
+  const btn=document.querySelector(`#dpad .dbtn[data-dir="${dir}"]`); if(btn) btn.classList.toggle('on',on);
+}
+(function bindShipControls(){
+  const dpad=$('#dpad');
+  if(dpad){
+    dpad.querySelectorAll('.dbtn').forEach(b=>{
+      const dir=b.dataset.dir;
+      const dn=e=>{ e.preventDefault(); shipPress(dir,true); };
+      const up=e=>{ e.preventDefault(); shipPress(dir,false); };
+      b.addEventListener('pointerdown',dn); b.addEventListener('pointerup',up);
+      b.addEventListener('pointerleave',up); b.addEventListener('pointercancel',up);
+    });
+  }
+  const act=$('#actBtn');
+  if(act) act.addEventListener('pointerdown',e=>{ e.preventDefault(); shipInteract(); });
+  document.addEventListener('keydown',e=>{
+    if(!shipEngine||!shipEngine.running) return;
+    const k=e.key;
+    if(k==='ArrowUp'||k==='w'||k==='W'){ shipPress('up',true); e.preventDefault(); }
+    else if(k==='ArrowDown'||k==='s'||k==='S'){ shipPress('down',true); e.preventDefault(); }
+    else if(k==='ArrowLeft'||k==='a'||k==='A'){ shipPress('left',true); e.preventDefault(); }
+    else if(k==='ArrowRight'||k==='d'||k==='D'){ shipPress('right',true); e.preventDefault(); }
+    else if(k===' '||k==='Enter'){ shipInteract(); e.preventDefault(); }
+    else if(k==='Escape'){ exitShip(); }
+  });
+  document.addEventListener('keyup',e=>{
+    if(!shipEngine) return;
+    const k=e.key, m={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
+    if(m[k]) shipPress(m[k],false);
+  });
+})();
+
 $('#bottomNav').addEventListener('click', (ev) => {
   const btn = ev.target.closest('.navbtn'); if(!btn) return;
   const nav = btn.dataset.nav;
   sfx.tap();
+  if(nav !== 'mode') closeShip();   // 다른 탭으로 가면 함선 닫기
   if(nav === 'shop'){ setNavActive('shop'); hide('#explorationModal'); hide('#seedBagModal'); openShop(); }
   else if(nav === 'explore'){ setNavActive('explore'); hide('#shopModal'); hide('#seedBagModal'); openExploration(); }
   else if(nav === 'home'){ setNavActive('home'); closeAllModals(); pendingShopOpening = null; renderMain(); }
-  else if(nav === 'mode' || nav === 'guild'){ openLockedSection(nav); }
+  else if(nav === 'mode'){ openShip(); }
+  else if(nav === 'guild'){ openLockedSection(nav); }
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
