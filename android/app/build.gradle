@@ -16,8 +16,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 프로젝트 고정 서명키 — 어느 PC/빌드에서든 같은 키로 서명해야
+    // '삭제 없이 덮어쓰기 설치(install -r)'가 되어 진행도(네이티브 저장소)가 유지된다.
+    signingConfigs {
+        common {
+            storeFile file('pulloseum.keystore')
+            storePassword 'pulloseum0619'
+            keyAlias 'pulloseum'
+            keyPassword 'pulloseum0619'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.common
+        }
         release {
+            signingConfig signingConfigs.common
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
