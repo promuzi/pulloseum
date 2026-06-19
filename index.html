@@ -583,6 +583,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shop-card-art{height:92px;border-radius:7px;background:linear-gradient(160deg,rgba(92,242,194,.12),rgba(255,211,74,.08));border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:44px;line-height:1;}
 .shop-card.box-card{padding:0;overflow:hidden;}
 .shop-card.box-card .shop-card-art{width:100%;height:102px;flex:0 0 102px;border:0;border-bottom:1px solid rgba(255,255,255,.12);border-radius:7px 7px 0 0;font-size:58px;}
+.shop-card.box-card .shop-card-art>span{width:100%;height:100%;display:grid;place-items:center;line-height:1;font-size:94px;transform:scale(1.14);transform-origin:center;overflow:hidden;}
 .shop-card.box-card .shop-card-name,.shop-card.box-card .shop-card-tag{padding-left:8px;padding-right:8px;}
 .shop-card.box-card .shop-card-price{width:calc(100% - 16px);margin-left:8px;margin-right:8px;padding-bottom:8px;}
 .shop-card-name{font-weight:900;font-size:13px;line-height:1.25;min-height:34px;display:flex;align-items:center;justify-content:center;}
@@ -596,9 +597,12 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shop-modal-actions{display:flex;gap:8px;margin-top:12px;}
 .shop-modal-actions .btn{margin-top:0;}
 .shop-open-modal{align-items:center;text-align:center;}
-.shop-opening-box{width:168px;height:168px;margin:12px auto 8px;border:1px solid rgba(92,242,194,.28);border-radius:10px;background:linear-gradient(160deg,rgba(92,242,194,.16),rgba(255,211,74,.1));display:flex;align-items:center;justify-content:center;font-size:132px;line-height:1;overflow:hidden;cursor:pointer;box-shadow:0 18px 48px rgba(0,0,0,.34);transition:transform .3s,border-color .3s;}
+.shop-opening-box{width:min(48vw,168px);aspect-ratio:1;margin:12px auto 8px;border:1px solid rgba(92,242,194,.28);border-radius:10px;background:linear-gradient(160deg,rgba(92,242,194,.16),rgba(255,211,74,.1));display:grid;place-items:center;overflow:hidden;cursor:pointer;box-shadow:0 18px 48px rgba(0,0,0,.34);transition:transform .3s,border-color .3s;}
+.shop-opening-art{width:100%;height:100%;display:grid;place-items:center;font-size:min(40vw,154px);line-height:1;transform:scale(1.12);transform-origin:center;overflow:hidden;}
+.shop-opening-box.opened .shop-opening-art{animation:boxArtPop .55s cubic-bezier(.2,1.25,.4,1) both;}
 .shop-opening-box.opened{transform:translateY(-8px) scale(1.04) rotate(-2deg);border-color:var(--gold);animation:boxPop .55s ease both;}
 @keyframes boxPop{0%{filter:brightness(1)}45%{filter:brightness(1.75)}100%{filter:brightness(1.1)}}
+@keyframes boxArtPop{0%{transform:scale(1.12);opacity:.65}55%{transform:scale(1.26);opacity:1}100%{transform:scale(1.12);opacity:1}}
 .shop-result-card{margin:12px 0;background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.22);border-radius:10px;padding:12px;}
 .shop-result-card .reward-icon{font-size:46px;margin-bottom:4px;}
 
@@ -1075,7 +1079,9 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   align-items:center;gap:8px;width:100%;max-width:520px;margin:0 auto;padding:2px 10px;min-height:0;}
 #statPanel{width:100%;display:flex;flex-direction:column;gap:6px;justify-content:center;min-height:0;}
 #sidePanel{width:58px;justify-self:end;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:flex-start;align-self:stretch;padding-top:4px;}
-#centerPlant{width:100%;min-width:0;justify-self:center;}
+#centerPlant{width:100%;min-width:0;justify-self:center;position:relative;z-index:1;overflow:hidden;transform:translateX(-5px);}
+#centerPlant:active{transform:translateX(-5px) scale(.98);}
+#statPanel{position:relative;z-index:2;}
 /* 좌측 정보 알약(둥근 박스) — 타입/속성/변이/잠재력 */
 .info-pills{display:flex;flex-direction:column;gap:5px;}
 .ipill{display:flex;align-items:center;gap:5px;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;
@@ -1236,6 +1242,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 @media (max-width:380px){
   #mainStage{--main-rail:92px;}
   #statPanel{width:100%;}
+  #centerPlant{transform:translateX(-4px);}
+  #centerPlant:active{transform:translateX(-4px) scale(.98);}
   #sidePanel{width:50px;}
   .side-fab{width:48px;height:48px;font-size:21px;}
   .ipill{font-size:10px;padding:3px 7px;}
@@ -7873,7 +7881,7 @@ function renderShopOpening(){
     </div>
     <button class="btn primary" id="shopOpenClose">확인</button>` : `<p class="sub">상자를 눌러 개봉하세요.</p>`;
   $('#shopOpenBody').innerHTML = `<h2>${box.name}</h2>
-    <div class="shop-opening-box ${data.revealed ? 'opened' : ''}" id="shopOpeningBox">${data.revealed ? '✨' : box.icon}</div>
+    <div class="shop-opening-box ${data.revealed ? 'opened' : ''}" id="shopOpeningBox"><span class="shop-opening-art">${data.revealed ? '✨' : box.icon}</span></div>
     ${result}`;
 }
 function buyShopBox(boxId){
