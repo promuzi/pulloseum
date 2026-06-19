@@ -872,6 +872,180 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .locked-emoji{font-size:64px;margin:6px 0 2px;filter:grayscale(.2);}
 .locked-tag{display:inline-block;font-size:12px;font-weight:800;color:var(--gold);border:1px solid rgba(255,211,74,.5);background:rgba(255,211,74,.08);border-radius:999px;padding:3px 12px;margin:6px 0 10px;}
 .locked-desc{color:var(--sub);font-size:14px;line-height:1.75;margin-bottom:6px;}
+
+/* ============================================================
+   메인 전투/식물 페이지(그림4) — 좌:스탯 / 중앙:식물 / 우:가방
+   ============================================================ */
+#mainStage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;max-width:520px;margin:0 auto;padding:2px 10px;min-height:0;}
+#statPanel{flex:0 0 auto;width:104px;display:flex;flex-direction:column;gap:6px;justify-content:center;min-height:0;}
+#sidePanel{flex:0 0 auto;width:58px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:flex-start;align-self:stretch;padding-top:4px;}
+#centerPlant{flex:1 1 auto;}
+/* 좌측 정보 알약(둥근 박스) — 타입/속성/변이/잠재력 */
+.info-pills{display:flex;flex-direction:column;gap:5px;}
+.ipill{display:flex;align-items:center;gap:5px;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;
+  background:var(--card);border:1.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.ipill .ip-k{color:var(--sub);font-weight:700;font-size:9.5px;}
+/* 좌측 스탯 사각 박스 — 2열 그리드 */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.stat-box{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:9px;
+  padding:5px 4px 4px;text-align:center;line-height:1.1;}
+.stat-box .sb-k{font-size:8.5px;color:var(--sub);font-weight:700;}
+.stat-box .sb-v{font-size:13px;font-weight:900;color:var(--neon);margin-top:1px;}
+/* 우측 패널 버튼(가방 등) */
+.side-fab{width:54px;height:54px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  font-size:24px;background:rgba(13,22,38,.92);border:1.5px solid rgba(92,242,194,.4);color:var(--text);
+  box-shadow:0 6px 18px rgba(0,0,0,.4);transition:transform .1s;cursor:pointer;}
+.side-fab:active{transform:scale(.93);}
+.side-fab .side-fab-label{font-size:9px;font-weight:800;color:var(--neon);}
+
+/* 토너먼트 3분할 셀: 티어 / 토너먼트명 / 경기 현황 */
+#tournamentBar{margin:0 14px 8px;}
+.tcells{display:grid;grid-template-columns:0.9fr 1.3fr 1fr;gap:7px;}
+.tcell{border:1.5px solid var(--line);background:var(--card);border-radius:13px;padding:8px 6px;text-align:center;
+  cursor:pointer;transition:transform .08s, border-color .15s;min-width:0;}
+.tcell:active{transform:scale(.97);}
+.tcell .tc-k{font-size:9.5px;color:var(--sub);font-weight:800;letter-spacing:.3px;}
+.tcell .tc-v{font-size:12.5px;font-weight:900;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tcell .tc-s{font-size:9px;color:var(--sub);font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tcell.tier{border-color:var(--clr,#cd7f32);}
+
+/* 참가 가능 경기 목록 모달 */
+.match-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:8px;background:var(--card);}
+.match-row.cur{border-color:var(--neon);background:rgba(92,242,194,.08);}
+.match-row.done{opacity:.55;}
+.match-row.lock{opacity:.5;border-style:dashed;}
+.match-row .mr-ico{font-size:22px;flex:0 0 auto;}
+.match-row .mr-main{flex:1;min-width:0;}
+.match-row .mr-name{font-weight:900;font-size:14.5px;}
+.match-row .mr-sub{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.match-row .mr-btn{flex:0 0 auto;border:none;border-radius:10px;padding:9px 14px;font-weight:900;font-size:13px;
+  background:linear-gradient(135deg,#b23b2e,#ff6b4a);color:#fff;}
+.match-row .mr-btn:disabled{background:rgba(255,255,255,.1);color:var(--sub);}
+.match-row .mr-stat{flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--sub);}
+
+/* ============================================================
+   식물 관리 창(그림5/6/7) — 강화 / 변이 / 스킬
+   ============================================================ */
+#upgradeModal .modal-card{padding:0;width:min(96vw,470px);overflow:hidden;display:flex;flex-direction:column;background:#142033;}
+.pm-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;flex:0 0 auto;}
+.pm-tab{border:none;background:#0e1828;color:var(--sub);font-weight:900;font-size:16px;padding:14px 6px 12px;
+  border-bottom:2px solid transparent;letter-spacing:1px;}
+.pm-tab.active{color:var(--neon);background:linear-gradient(180deg,rgba(92,242,194,.16),rgba(92,242,194,.02));border-bottom-color:var(--neon);}
+.pm-close{position:absolute;top:54px;right:12px;z-index:6;width:34px;height:34px;border-radius:50%;
+  border:none;background:rgba(0,0,0,.3);color:#9fd9ff;font-size:20px;font-weight:900;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px rgba(120,200,255,.5);}
+.pm-close:active{transform:scale(.9);}
+.pm-body{flex:1 1 auto;overflow-y:auto;padding:12px 14px calc(16px + env(safe-area-inset-bottom,0px));position:relative;min-height:0;}
+/* 이름 + 수정 */
+.pm-namerow{display:flex;align-items:center;gap:6px;background:#0e1828;border:1px solid var(--line);border-radius:11px;
+  padding:7px 12px;margin:2px 40px 8px 2px;}
+.pm-namerow .pm-pencil{font-size:15px;flex:0 0 auto;cursor:pointer;}
+.pm-namerow .pm-name{flex:1;min-width:0;font-size:16px;font-weight:900;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 주요 정보 알약 행 */
+.pm-info{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:8px;}
+.pm-info .ipill{font-size:10.5px;padding:3px 9px;}
+/* 좌-식물-우 스테이지 */
+.pm-stage{display:grid;grid-template-columns:1fr minmax(96px,auto) 1fr;gap:8px;align-items:center;}
+.pm-col{display:flex;flex-direction:column;gap:8px;justify-content:center;}
+.pm-plant{text-align:center;align-self:stretch;display:flex;align-items:center;justify-content:center;position:relative;}
+.pm-plant svg,.pm-plant img{max-width:118px;height:auto;}
+/* 강화 — 스탯 컨트롤 */
+.up-stat{background:#0e1828;border:1px solid var(--line);border-radius:12px;padding:7px 6px 6px;text-align:center;
+  display:block;width:100%;color:var(--text);}
+.up-stat .ust-name{font-size:12px;font-weight:900;}
+.up-stat .ust-mid{display:flex;gap:4px;margin-top:5px;}
+.up-stat .ust-val{flex:1;background:#0a1320;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 2px;
+  font-size:13px;font-weight:900;color:var(--neon);min-width:0;}
+.up-stat .ust-buy{flex:1;border:none;border-radius:8px;padding:4px 2px;font-size:11.5px;font-weight:900;
+  background:linear-gradient(135deg,#caa23a,#ffd34a);color:#3a2c05;white-space:nowrap;}
+.up-stat .ust-buy:disabled{background:rgba(255,255,255,.1);color:var(--sub);}
+.up-stat .ust-buy small{font-size:9px;display:block;font-weight:800;opacity:.85;}
+/* 강화 — 생장 게이지 */
+.pm-grow{margin-top:12px;}
+.pm-grow .pg-head{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:800;margin-bottom:4px;}
+.pm-grow .pg-stage{color:var(--neon);}
+.pm-grow .pg-exp{color:var(--sub);}
+.pm-grow .pg-bar{height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.12);}
+.pm-grow .pg-bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2bd49a,#7dffd9);}
+.pm-grow .pg-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px;}
+.pm-grow .pg-btn{border:none;border-radius:12px;padding:11px;font-size:14.5px;font-weight:900;
+  background:linear-gradient(135deg,#1f8f6f,#2bd49a);color:#06231a;}
+.pm-grow .pg-btn:disabled{background:rgba(255,255,255,.1);color:var(--sub);}
+/* 변이/스킬 — 슬롯(식물 좌우) */
+.slot{position:relative;border:2px solid rgba(255,255,255,.16);border-radius:13px;aspect-ratio:1/1;
+  display:flex;align-items:center;justify-content:center;background:#0c1626;cursor:pointer;transition:transform .08s;
+  min-height:54px;}
+.slot:active{transform:scale(.95);}
+.slot.empty{border-style:dashed;color:var(--sub);font-size:22px;font-weight:300;}
+.slot.ego{border-style:dashed;border-color:rgba(212,140,255,.5);color:#d48cff;flex-direction:column;gap:1px;cursor:default;}
+.slot.ego .se-l{font-size:9px;font-weight:800;}
+.slot.ego .se-i{font-size:18px;}
+.slot.filled{border-color:var(--gc,#5fe06b);box-shadow:0 0 10px -1px var(--gc,#5fe06b);background:#0e1c2e;}
+.slot .slot-ico{font-size:26px;line-height:1;}
+.slot.skill{flex-direction:column;gap:2px;padding:4px;aspect-ratio:auto;min-height:62px;}
+.slot.skill .sk-n{font-size:11px;font-weight:900;line-height:1.15;text-align:center;color:var(--text);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.slot.skill .sk-v{font-size:10px;font-weight:800;color:var(--gc,#5fe06b);}
+.slot .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc,#5fe06b);
+  border:1.5px solid var(--gc,#5fe06b);text-shadow:0 0 6px var(--gc);}
+.slot.pick{border-color:#ff6b4a;box-shadow:0 0 12px rgba(255,107,74,.6);animation:slotpick .9s ease-in-out infinite;}
+@keyframes slotpick{0%,100%{box-shadow:0 0 10px rgba(255,107,74,.5)}50%{box-shadow:0 0 18px rgba(255,107,74,.9)}}
+/* 보유 카드/스킬 서랍 */
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin:14px 2px 6px;}
+.drawer-head .dh-t{font-size:12.5px;font-weight:900;color:var(--sub);}
+.drawer-sort{border:1px solid var(--line);background:#0e1828;color:var(--text);border-radius:9px;font-size:11px;font-weight:800;padding:4px 9px;}
+.drawer{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 8px;scrollbar-width:none;}
+.drawer::-webkit-scrollbar{display:none;}
+.dcard{flex:0 0 auto;width:62px;border:2px solid var(--gc,#5fe06b);border-radius:12px;background:#0e1c2e;position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;
+  box-shadow:0 0 8px -2px var(--gc);transition:transform .08s;}
+.dcard:active{transform:scale(.94);}
+.dcard.skill{width:80px;height:70px;}
+.dcard .dc-ico{font-size:24px;line-height:1;}
+.dcard .dc-n{font-size:10px;font-weight:900;line-height:1.15;text-align:center;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.dcard .dc-v{font-size:9.5px;font-weight:800;color:var(--gc);margin-top:2px;}
+.dcard .dc-cnt{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:900;color:var(--sub);}
+.dcard .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc);
+  border:1.5px solid var(--gc);text-shadow:0 0 6px var(--gc);}
+.dcard.off{filter:grayscale(1) brightness(.5);border-color:rgba(255,255,255,.18);box-shadow:none;cursor:not-allowed;}
+.dcard.on{outline:2px solid var(--neon);outline-offset:1px;}
+.drawer-empty{color:var(--sub);font-size:12px;padding:14px 4px;text-align:center;width:100%;}
+/* 장착 진행(스왑) 중 — 하단에 떠있는 카드 */
+.swap-hint{text-align:center;font-size:12px;font-weight:800;color:#ff8a70;margin:8px 2px 2px;}
+.swap-float{position:sticky;bottom:0;display:flex;justify-content:center;padding:10px 0 4px;}
+.swap-float .sf-card{animation:floaty 1.1s ease-in-out infinite;}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.swap-cancel{display:block;margin:6px auto 0;border:1px solid var(--line);background:#0e1828;color:var(--sub);border-radius:9px;font-size:11.5px;font-weight:800;padding:5px 14px;}
+/* 카드/스킬 상세 팝업 */
+#cardDetailModal .modal-card{width:min(86vw,340px);text-align:center;background:#142033;}
+.cd-head{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px;}
+.cd-ico{font-size:34px;}
+.cd-name{font-size:18px;font-weight:900;}
+.cd-grade{display:inline-block;min-width:22px;padding:1px 8px;border:2px solid var(--gc);border-radius:8px;color:var(--gc);
+  font-weight:900;font-size:14px;text-shadow:0 0 8px var(--gc);margin:2px 0 8px;}
+.cd-type{font-size:12px;color:var(--sub);font-weight:800;margin-bottom:8px;}
+.cd-fx{text-align:left;background:#0e1828;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:13px;line-height:1.7;}
+.cd-fx li{margin:0;list-style:none;}
+.cd-fx li::before{content:'▹ ';color:var(--neon);}
+.cd-acts{display:flex;gap:8px;margin-top:12px;}
+.cd-acts .btn{flex:1;margin:0;}
+.btn.equip{background:linear-gradient(135deg,#1f8f6f,#2bd49a);color:#06231a;border:none;font-weight:900;}
+.btn.unequip{background:rgba(255,107,74,.16);border:1px solid rgba(255,107,74,.5);color:#ff8a70;font-weight:900;}
+
+@media (max-width:380px){
+  #statPanel{width:92px;}
+  #sidePanel{width:50px;}
+  .side-fab{width:48px;height:48px;font-size:21px;}
+  .ipill{font-size:10px;padding:3px 7px;}
+  .stat-box .sb-v{font-size:12px;}
+  .tcell .tc-v{font-size:11.5px;}
+  .pm-plant svg,.pm-plant img{max-width:96px;}
+  .slot{min-height:48px;}
+}
 </style>
 </head>
 <body>
@@ -910,8 +1084,11 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       <div id="collectionBar"></div>
     </div>
     <div class="main-body">
-      <div id="centerPlant"></div>
-      <button id="btnBagCenter" class="bag-fab" title="종자 가방">🎒<span class="bag-fab-label">가방</span></button>
+      <div id="mainStage">
+        <div id="statPanel"></div>
+        <div id="centerPlant"></div>
+        <div id="sidePanel"></div>
+      </div>
     </div>
     <div id="tournamentBar"></div>
     <button id="btnBattle">⚔️ 전투 시작</button>
@@ -977,6 +1154,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 
 <div class="modal hidden" id="upgradeModal">
   <div class="modal-card" id="upgradeBody"></div>
+</div>
+
+<div class="modal hidden" id="matchesModal">
+  <div class="modal-card" id="matchesBody"></div>
+</div>
+
+<div class="modal hidden" id="cardDetailModal">
+  <div class="modal-card" id="cardDetailBody"></div>
 </div>
 
 <div class="modal hidden" id="shopModal">
@@ -2751,6 +2936,9 @@ function cardEffectLabels(key){
   return L;
 }
 function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span class="grade-badge" style="color:${g.color};border-color:${g.color}">${g.name}</span>`; }
+/* 등급 색상(변이 카드·스킬 공통) — 흰D · 초록C · 하늘B · 보라A · 주황S */
+const GRADE_PALETTE = { D:'#e8edf3', C:'#5fe06b', B:'#4ac6ff', A:'#b06bff', S:'#ff9a3c' };
+function gradeColor(g){ return GRADE_PALETTE[g] || GRADE_PALETTE.C; }
 const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS);
 /* 무기/물약 카드가 부여하는 스킬을 등급 계수로 스케일. 무기 스킬은 횟수(uses)도 등급에 따라 증가 */
 function gradeCardSkill(id, base, grade){
@@ -2832,13 +3020,26 @@ function plantKnownSkillIds(p){
   return known.filter((v, i, a) => a.indexOf(v) === i && skillById(v, p));
 }
 const MAX_LOADOUT = 6;
+/* 변이형(포식·무기·카드) 유래 스킬은 스킬 탭에 노출하지 않고 전투 시 자동 합류한다. */
+function isAutoFormSkill(id){ return id === 'skill_weapon' || id === 'skill_card_predation' || /^skill_card_/.test(id); }
+function plantSkillPool(p){ return plantKnownSkillIds(p).filter(id => !isAutoFormSkill(id)); }
+function plantAutoSkills(p){ return plantKnownSkillIds(p).filter(isAutoFormSkill); }
+/* 실제 전투 로드아웃 = 장착한 일반 스킬 + 변이형 자동 스킬 */
+function plantBattleLoadout(p){
+  const eq = (p.equipped_skills || []).filter(id => !isAutoFormSkill(id)).slice(0, MAX_LOADOUT);
+  return eq.concat(plantAutoSkills(p)).filter((v, i, a) => a.indexOf(v) === i);
+}
+function skillGradeOf(p, id){
+  if(id === 'skill_basic_strike') return 'C';
+  if(p && p.skillGrades && p.skillGrades[id]) return p.skillGrades[id];
+  const s = skillById(id, p || null); return (s && s.grade) || 'C';
+}
 function defaultLoadout(p){
-  const known = plantKnownSkillIds(p);
+  const known = plantSkillPool(p);
   const priority = [];
-  if(p.form === 'weapon' && known.includes('skill_weapon')) priority.push('skill_weapon');
-  if(p.form === 'pred' && known.includes('skill_card_predation')) priority.push('skill_card_predation');
   if(p.element && known.includes(elementSkillId(p.element))) priority.push(elementSkillId(p.element));
   ['skill_basic_strike', 'skill_photosynthesis', 'skill_guard', 'skill_rally', 'skill_focus'].forEach(id => { if(known.includes(id)) priority.push(id); });
+  known.forEach(id => { if(!priority.includes(id)) priority.push(id); });
   const seen = {}, out = [];
   priority.forEach(id => { if(!seen[id] && out.length < MAX_LOADOUT){ seen[id] = true; out.push(id); } });
   if(!out.includes('skill_basic_strike')) out.unshift('skill_basic_strike');
@@ -2858,10 +3059,11 @@ function ensureSkillFields(p){
     if(id === 'skill_basic_strike' || id === 'skill_weapon') return; // 기본기·무기(카드 등급)는 제외
     if(!p.skillGrades[id]) p.skillGrades[id] = rollSkillGrade(pot);
   });
+  const pool = plantSkillPool(p); // 변이형 자동 스킬(포식·무기·카드)은 장착칸에서 제외
   if(!Array.isArray(p.equipped_skills) || !p.equipped_skills.length){
     p.equipped_skills = defaultLoadout(p);
   } else {
-    p.equipped_skills = p.equipped_skills.filter(id => known.includes(id)).slice(0, MAX_LOADOUT);
+    p.equipped_skills = p.equipped_skills.filter(id => pool.includes(id)).slice(0, MAX_LOADOUT);
     if(!p.equipped_skills.length) p.equipped_skills = defaultLoadout(p);
     if(!p.equipped_skills.includes('skill_basic_strike')) p.equipped_skills.unshift('skill_basic_strike');
     p.equipped_skills = p.equipped_skills.slice(0, MAX_LOADOUT);
@@ -3082,14 +3284,17 @@ function canAffordMinerals(amount){ return (state.minerals || 0) >= amount; }
 function nativePrefs(){
   try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences) || null; }catch(e){ return null; }
 }
-let loadedFromLocal = false; // 시작 시 localStorage에 실제 진행도가 있었는지
+let loadedFromLocal = false;  // 시작 시 localStorage에 실제 진행도가 있었는지
+let nativeReconciled = false; // 네이티브 백업을 아직 못 읽었으면 false → 그 전엔 네이티브에 절대 쓰지 않음
 function saveState(){
   try{
     syncPlayerMoney();
     const json = JSON.stringify(state);
     localStorage.setItem(SAVE_KEY, json);
     const p = nativePrefs();
-    if(p) p.set({ key: SAVE_KEY, value: json }).catch(()=>{}); // 비동기 미러 저장(실패 무시)
+    // ⚠️ 복구(bootWithSave)가 네이티브를 읽기 전에 쓰면 백업이 기본값으로 덮어써진다.
+    //    그래서 nativeReconciled가 true가 된 뒤에만 미러 저장한다.
+    if(p && nativeReconciled) p.set({ key: SAVE_KEY, value: json }).catch(()=>{});
   }catch(e){}
 }
 function loadState(){
@@ -3101,26 +3306,29 @@ function loadState(){
   }catch(e){}
   return defaultState();
 }
-/* 시작 시 네이티브 저장소와 대조: localStorage가 비었는데(=날아감) 네이티브에 진행도가 남아 있으면 복구.
-   둘 다 없거나 localStorage가 정상이면 네이티브에 현재값을 한 번 심어 동기화. */
-async function reconcileNativeSave(){
+/* 앱 시작 부팅: localStorage가 비었으면(=WebView 저장소가 날아감) 네이티브 백업을 "먼저" 읽어 복구한 뒤
+   시작종자 지급/최초 저장을 한다. 이렇게 해야 시작종자 saveState가 네이티브 백업을 덮어쓰지 않는다.
+   브라우저(네이티브 없음)에선 기존 동작과 동일하게 시작종자→저장→렌더만 수행. */
+async function bootWithSave(){
   const p = nativePrefs();
-  if(!p) return;
-  try{
-    const res = await p.get({ key: SAVE_KEY });
-    const native = res && res.value;
-    if(!loadedFromLocal && native){
-      const obj = JSON.parse(native);
-      if(obj && Array.isArray(obj.plants)){
-        state = normalizeState(obj);
-        saveState();
-        renderMain();
-        toast('진행도를 복구했습니다');
-        return;
+  if(!loadedFromLocal && p){
+    try{
+      const res = await p.get({ key: SAVE_KEY });
+      const native = res && res.value;
+      if(native){
+        const obj = JSON.parse(native);
+        if(obj && Array.isArray(obj.plants)){
+          state = normalizeState(obj);
+          loadedFromLocal = true; // 복구됨 → 아래 시작종자 지급 건너뜀
+          toast('진행도를 복구했습니다');
+        }
       }
-    }
-    saveState(); // 네이티브 저장소를 현재 상태로 채워 둠
-  }catch(e){}
+    }catch(e){}
+  }
+  nativeReconciled = true;                       // 이제부터 네이티브 미러 허용
+  if(canClaimStarterSeed()) claimStarterSeed(true); // 진짜 새 게임일 때만 시작종자
+  saveState();                                   // localStorage + 네이티브 동기화
+  renderMain();
 }
 
 /* ================= 유틸 ================= */
@@ -6322,28 +6530,61 @@ function renderTournamentBar(){
   const inProgress = T && T.active && T.plantId===p.id;
   const tier = plantRankTier(p);
   const nt = nextRankThreshold(p);
-  const ptsLabel = nt != null ? `${fmt(p.rankPoints||0)} / ${fmt(nt)}` : `${fmt(p.rankPoints||0)} · MAX`;
-  const tierCell = `<div class="tb-tier" style="border-color:${tier.color}66">
-      <span class="tbt-name" style="color:${tier.color}">${tier.name}</span>
-      <span class="tbt-pts">${ptsLabel}</span>
-    </div>`;
+  const ptsLabel = nt != null ? `${fmt(p.rankPoints||0)}/${fmt(nt)}` : 'MAX';
+  let statusV, statusS, label;
   if(inProgress){
     const round = TOURNAMENT_ROUNDS[T.roundIndex];
-    let right, label;
     if(round.key==='prelim'){
       const played = T.prelimWins + T.prelimLosses;
-      right = `예선 ${T.prelimWins}승 ${T.prelimLosses}패 · ${played}/${round.bestOf}경기`;
+      statusV = '예선'; statusS = `${T.prelimWins}승 ${T.prelimLosses}패`;
       label = `⚔️ 예선 ${Math.min(played+1, round.bestOf)}경기 시작`;
-    } else {
-      right = `${round.name} 진출`;
-      label = `⚔️ ${round.name} 경기 시작`;
-    }
-    bar.innerHTML = `<div class="tbar"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">${right}</div>${tierCell}</div>`;
-    if(btn) btn.textContent = label;
-  } else {
-    bar.innerHTML = `<div class="tbar idle"><div class="tb-left">🏟️ ${tournamentTitle(p)}</div><div class="tb-right">신규 도전 대기</div>${tierCell}</div>`;
-    if(btn) btn.textContent = '⚔️ 토너먼트 시작';
-  }
+    } else { statusV = round.name; statusS = '진행 중'; label = `⚔️ ${round.name} 경기 시작`; }
+  } else { statusV = '대기'; statusS = '신규 도전'; label = '⚔️ 토너먼트 시작'; }
+  bar.innerHTML = `<div class="tcells">
+    <div class="tcell tier" data-matches="1" style="--clr:${tier.color}">
+      <div class="tc-k">티어</div><div class="tc-v" style="color:${tier.color}">${tier.name}</div><div class="tc-s">${ptsLabel}</div></div>
+    <div class="tcell" data-matches="1">
+      <div class="tc-k">토너먼트명</div><div class="tc-v" style="color:var(--neon)">${tournamentTitle(p).replace(' 토너먼트','')}</div><div class="tc-s">토너먼트</div></div>
+    <div class="tcell" data-matches="1">
+      <div class="tc-k">경기 현황</div><div class="tc-v">${statusV}</div><div class="tc-s">${statusS}</div></div>
+  </div>`;
+  if(btn) btn.textContent = label;
+}
+/* 참가 가능한 경기 목록(향후 다듬을 예정) */
+function openMatches(){ renderMatches(); show('#matchesModal'); }
+function renderMatches(){
+  const body = $('#matchesBody');
+  const p = activePlant();
+  if(!p){ body.innerHTML = `<h2>🏟️ 경기 목록</h2><p class="sub">먼저 식물을 심고 선택하세요.</p><button class="btn modal-close" id="matchesClose">닫기</button>`; bindMatches(); return; }
+  const T = state.tournament;
+  const inProgress = T && T.active && T.plantId===p.id;
+  const curIdx = inProgress ? T.roundIndex : 0;
+  const tier = plantRankTier(p);
+  const rows = TOURNAMENT_ROUNDS.map((r,i)=>{
+    let cls, statusHtml;
+    if(inProgress && i<curIdx){ cls='done'; statusHtml = `<span class="mr-stat">✓ 통과</span>`; }
+    else if(i===curIdx){ cls='cur'; statusHtml = `<button class="mr-btn" data-start-match="1">${inProgress?'계속':'참가'}</button>`; }
+    else { cls='lock'; statusHtml = `<span class="mr-stat">🔒 잠김</span>`; }
+    const rw = r.key==='prelim'
+      ? `${r.bestOf}전 ${r.needWins}선승 · 보상 💰${r.reward}`
+      : `단판 · 보상 💰${r.reward}${r.point?` · 랭크 +${r.point}`:''}`;
+    return `<div class="match-row ${cls}">
+      <div class="mr-ico">${i===0?'🥊':i===TOURNAMENT_ROUNDS.length-1?'🏆':'⚔️'}</div>
+      <div class="mr-main"><div class="mr-name">${r.name}</div><div class="mr-sub">${rw}</div></div>
+      ${statusHtml}</div>`;
+  }).join('');
+  body.innerHTML = `
+    <h2>🏟️ 참가 가능한 경기</h2>
+    <p class="sub">${tournamentTitle(p)} · 티어 <b style="color:${tier.color}">${tier.name}</b></p>
+    ${rows}
+    <p class="sub" style="margin-top:8px;font-size:11.5px">※ 더 많은 토너먼트·특수 경기는 추후 추가될 예정입니다.</p>
+    <button class="btn modal-close" id="matchesClose">닫기</button>`;
+  bindMatches();
+}
+function bindMatches(){
+  const c = $('#matchesClose'); if(c) c.addEventListener('click', () => { hide('#matchesModal'); sfx.tap(); });
+  const s = $('#matchesBody').querySelector('[data-start-match]');
+  if(s) s.addEventListener('click', () => { hide('#matchesModal'); sfx.tap(); startBattle(); });
 }
 function renderCollection(){
   const bar = $('#collectionBar');
@@ -6367,38 +6608,25 @@ function renderCollection(){
   bar.innerHTML = html;
 }
 function renderCenter(){
-  const box = $('#centerPlant');
+  const box = $('#centerPlant'), sp = $('#statPanel'), side = $('#sidePanel');
   const p = activePlant();
   if(!p){
+    if(sp) sp.innerHTML = '';
+    if(side) side.innerHTML = bagFabHtml();
     box.innerHTML = `<div style="font-size:60px">🌱</div>
       <div class="pname">아직 심은 식물이 없습니다</div>
       <div class="hint">탐사로 종자를 얻고, 종자 가방에서 심으세요</div>`;
     return;
   }
   const s = calcStats(p);
-  const el = ELEMENTS[p.element];
+  if(sp) sp.innerHTML = `
+    <div class="info-pills">${plantInfoPills(p, false)}</div>
+    <div class="stat-grid">${mainStatBoxes(p, s)}</div>`;
+  if(side) side.innerHTML = bagFabHtml();
   box.innerHTML = `
-    ${spriteFor(p,170)}
+    ${spriteFor(p,150)}
     <div class="pname">${plantDisplayName(p)}</div>
-    <div>
-      <span class="badge b-${p.element}">${el.icon} ${el.name}속성</span>
-      <span class="badge" style="color:${GRADES[p.grade]};border:1px solid ${GRADES[p.grade]}">등급 ${p.grade}</span>
-      <span class="badge" style="color:${FORMS[p.form].color};border:1px solid ${FORMS[p.form].color}">${FORMS[p.form].icon} ${FORMS[p.form].name}${p.form==='pred' ? '·'+PRED_TYPES[p.predType].name : ''}</span>
-      ${p.awakened ? `<span class="badge" style="color:var(--gold);border:1px solid var(--gold)">✦ ${STAT_NAMES[p.awakened]} 각성</span>` : ''}
-      ${p.potion ? `<span class="badge" style="color:#d48cff;border:1px solid #d48cff">${p.potion.icon||'🟣'} 독초</span>` : ''}
-      ${p.form==='weapon' ? `<span class="badge" style="color:var(--gold);border:1px solid var(--gold)">${p.weaponKey ? WEAPONS[p.weaponKey].icon+' '+WEAPONS[p.weaponKey].name+' Lv.'+state.weapons[p.weaponKey].lv : '🗡️ 무기 미장착'}</span>` : ''}
-    </div>
-    <div class="statrow">
-      <span class="stat">❤️ <b>${s.hp}</b></span>
-      <span class="stat">⚔️ <b>${s.atk}</b></span>
-      <span class="stat">🛡️ <b>${s.def}</b></span>
-      <span class="stat">💨 <b>${s.spd}</b></span>
-      <span class="stat">🎯 <b>${s.acc}%</b></span>
-      <span class="stat">${el.icon} <b>${s.elem}</b></span>
-      <span class="stat">💥 <b>${s.critRate}%</b></span>
-      <span class="stat">⚡ <b>${s.energy}</b></span>
-    </div>
-    <div class="hint">▲ 식물을 탭하면 강화할 수 있어요</div>`;
+    <div class="hint">▲ 식물을 탭하면 관리할 수 있어요</div>`;
 }
 
 /* ================= 종자 선택 / 유전자 배양 ================= */
@@ -6643,13 +6871,12 @@ function applyGrowthAction(actionKey){
 function openUpgrade(){
   const p = activePlant();
   if(!p){ openSeedBag(); return; }
-  upgradeTab = 'consum'; // 식물을 누르면 항상 소모품 탭으로 시작
+  upgradeTab = 'up';      // 식물을 누르면 항상 강화 탭으로 시작
+  swapPending = null;
   renderUpgrade();
   show('#upgradeModal');
-  // 항상 상단부터 보이도록 스크롤 리셋(아래로 드래그해 내용 확인)
-  const um = $('#upgradeModal'), uc = $('#upgradeBody');
-  if(um) um.scrollTop = 0;
-  if(uc) uc.scrollTop = 0;
+  // 항상 상단부터 보이도록 스크롤 리셋
+  const pb = $('#upgradeBody .pm-body'); if(pb) pb.scrollTop = 0;
 }
 function releasePlant(plantId){
   const idx = state.plants.findIndex(x => x.id === plantId);
@@ -6665,7 +6892,7 @@ function releasePlant(plantId){
   renderMain();
   toast(`${p.custom_name||p.name}을(를) 방생했습니다`);
 }
-let upgradeTab = 'skill';
+let upgradeTab = 'up';
 function battleEffectText(be){
   switch(be.effect){
     case 'regen_hp_pct': return `매턴 체력 ${Math.round(be.value*100)}% 재생`;
@@ -6701,33 +6928,267 @@ function skillAoeBadge(sk){
   if(sk.single) return ' <span class="sc-aoe single">단일</span>';
   return '';
 }
-function skillCardHtml(id, sk, zone){
-  const costLabel = sk.noEnergy ? `🔁${sk.uses||0}회/경기` : ((sk.cost||0)>0 ? `⚡${sk.cost}` : '무료');
-  return `<button class="skill-card ${zone==='equipped'?'equipped':''}" data-skill-toggle="${id}" data-zone="${zone}">
-    <span class="sc-tag">${sk.tag||'스킬'}${skillAoeBadge(sk)}</span>${zone==='equipped'?'<span class="sc-x">✕ 해제</span>':''}
-    <div class="sc-name"><span>${sk.icon||''} ${sk.name}</span><span class="sc-cost">${costLabel}</span></div>
-    <div class="sc-desc">${skillCoefDesc(sk)}</div>
-  </button>`;
+/* ===== 식물 관리 창(강화/변이/스킬) — 그림5/6/7 ===== */
+let swapPending = null;   // { kind:'mut'|'skill', key } — 빈 칸이 없을 때 교체 대상 선택 모드
+let cardDetailCtx = null; // { kind, key, equipped }
+let mutSort = 'grade', skillSort = 'grade';
+
+/* 좌측: 타입/속성/변이/잠재력(+등급) 둥근 박스 */
+function plantInfoPills(p, withGrade){
+  const el = ELEMENTS[p.element] || ELEMENTS.grass;
+  const form = FORMS[p.form] || FORMS.normal;
+  const pot = p.potential || p.grade || 'C';
+  const formName = form.name.replace(' 변이형','') + (p.form==='pred' && PRED_TYPES[p.predType] ? '·'+PRED_TYPES[p.predType].name : '');
+  const pills = [
+    `<span class="ipill"><span class="ip-k">타입</span> ${(SEED_TYPE_NAMES[seedTypeOf(p)]||'풀').replace('형','')}</span>`,
+    `<span class="ipill" style="border-color:${el.color}88"><span class="ip-k">속성</span> ${el.icon} ${el.name}</span>`,
+    `<span class="ipill" style="border-color:${form.color}88"><span class="ip-k">변이</span> ${form.icon} ${formName}</span>`,
+    `<span class="ipill" style="border-color:${gradeColor(pot)}88;color:${gradeColor(pot)}"><span class="ip-k">잠재력</span> ${pot}</span>`,
+  ];
+  if(withGrade) pills.push(`<span class="ipill" style="border-color:${gradeColor(p.grade)}88;color:${gradeColor(p.grade)}"><span class="ip-k">등급</span> ${p.grade}</span>`);
+  return pills.join('');
 }
-function renderSkillTab(p){
-  const known = plantKnownSkillIds(p);
-  const equipped = p.equipped_skills;
-  const benchIds = known.filter(id=>!equipped.includes(id));
-  let eq='';
-  for(let i=0;i<MAX_LOADOUT;i++){
-    const id=equipped[i];
-    if(id){ const sk=skillById(id,p); eq += skillCardHtml(id, sk||{name:id,icon:'❔',cost:0,desc:''}, 'equipped'); }
-    else eq += `<div class="skill-slot empty">빈 칸</div>`;
-  }
-  const bench = benchIds.length
-    ? benchIds.map(id=>skillCardHtml(id, skillById(id,p)||{name:id,icon:'❔',cost:0,desc:''}, 'bench')).join('')
-    : `<div class="muted">해금된 추가 스킬이 없습니다. 식물을 더 <b>성장</b>시키면 단계별로 새 스킬을 얻습니다.</div>`;
+/* 메인 화면 좌측 스탯 사각 박스(8종) */
+const MAIN_STAT_DEFS = [
+  { k:'hp', icon:'❤️', name:'체력' },   { k:'atk', icon:'⚔️', name:'공격' },
+  { k:'def', icon:'🛡️', name:'방어' },  { k:'spd', icon:'💨', name:'기동' },
+  { k:'acc', icon:'🎯', name:'적중', suf:'%' }, { k:'elem', icon:'✨', name:'속성' },
+  { k:'critRate', icon:'💥', name:'치명', suf:'%' }, { k:'energy', icon:'⚡', name:'에너지' },
+];
+function mainStatBoxes(p, s){
+  return MAIN_STAT_DEFS.map(d => `<div class="stat-box"><div class="sb-k">${d.icon} ${d.name}</div><div class="sb-v">${s[d.k]}${d.suf||''}</div></div>`).join('');
+}
+function bagFabHtml(){ return `<button class="side-fab" data-act="bag" title="종자 가방">🎒<span class="side-fab-label">가방</span></button>`; }
+
+/* ── 강화 탭(그림5) ── */
+const UP_LEFT  = [ { k:'acc', name:'명중력' }, { k:'crit', name:'치명타률' }, { k:'elem', name:'속성' }, { k:'energy', name:'에너지' } ];
+const UP_RIGHT = [ { k:'hp', name:'체력' }, { k:'atk', name:'공격력' }, { k:'def', name:'방어력' }, { k:'spd', name:'기동력' } ];
+function upStatVal(s, k){ return k==='acc' ? s.acc+'%' : k==='crit' ? s.critRate+'%' : k==='elem' ? s.elem : s[k]; }
+function upStatCard(p, s, d){
+  const lv = p.up[d.k] || 0, cost = upCost(lv), dis = state.credits < cost;
+  return `<button class="up-stat" data-up="${d.k}" ${dis?'disabled':''}>
+    <div class="ust-name">${d.name}</div>
+    <div class="ust-mid">
+      <span class="ust-val">${upStatVal(s, d.k)}</span>
+      <span class="ust-buy">💰${fmt(cost)}<small>강화</small></span>
+    </div></button>`;
+}
+function upTabHtml(p, s){
+  const isMax = p.growth_stage === 'evolved';
+  const needed = growthExpNeeded(p);
+  const progress = isMax ? 1 : clamp((p.growth_exp||0)/needed, 0, 1);
   return `
-    <p class="tab-hint">전투에 쓸 스킬을 최대 <b>${MAX_LOADOUT}개</b> 장착하세요. 장착한 스킬을 누르면 해제됩니다. (클래시 로얄 방식)</p>
-    <div class="skill-section-label">장착 스킬 <small>${equipped.length}/${MAX_LOADOUT}</small></div>
-    <div class="skill-loadout">${eq}</div>
-    <div class="skill-section-label">보유 스킬 <small>탭하여 장착</small></div>
-    <div class="skill-loadout">${bench}</div>`;
+    <div class="pm-stage">
+      <div class="pm-col">${UP_LEFT.map(d=>upStatCard(p,s,d)).join('')}</div>
+      <div class="pm-plant">${spriteFor(p,118)}</div>
+      <div class="pm-col">${UP_RIGHT.map(d=>upStatCard(p,s,d)).join('')}</div>
+    </div>
+    <div class="pm-grow">
+      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage)}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
+      <div class="pg-bar"><i style="width:${Math.round(progress*100)}%"></i></div>
+      <div class="pg-btns">
+        <button class="pg-btn" data-grow-action="water" ${isMax?'disabled':''}>💧 물</button>
+        <button class="pg-btn" data-grow-action="fertilizer" ${isMax?'disabled':''}>🌿 비료</button>
+      </div>
+    </div>`;
+}
+
+/* ── 카드/스킬 표시 보조 ── */
+function stripGrade(name){ return String(name||'').replace(/\s+[SABCD]$/, ''); }
+function skillSlotVal(sk){
+  if(sk && sk.power > 0) return `×${coefStr(sk.power)}`;
+  if(sk && sk.heal) return `회복 ${Math.round(sk.heal*100)}%`;
+  if(sk && sk.kind === 'guard') return '🛡️ 방어';
+  if(sk && (sk.kind === 'buff' || sk.selfBuff)) return '✦ 버프';
+  return sk && sk.cost ? `⚡${sk.cost}` : '효과';
+}
+
+/* ── 변이 탭(그림6) ── */
+function mutSlotHtml(p, idx){
+  const key = (p.equipped_trait_cards||[])[idx];
+  if(key){
+    const c = cardDefOf(key), { grade } = parseCardKey(key), col = gradeColor(grade);
+    const picking = swapPending && swapPending.kind === 'mut';
+    return `<div class="slot filled ${picking?'pick':''}" data-eq-slot="${idx}" data-kind="mut" style="--gc:${col}">
+      <span class="slot-ico">${c?c.icon:'❔'}</span><span class="gtag">${grade}</span></div>`;
+  }
+  return `<div class="slot empty" data-empty-slot="mut">＋</div>`;
+}
+function egoSlotHtml(){
+  return `<div class="slot ego" title="자아 카드(준비 중)"><span class="se-i">🔒</span><span class="se-l">자아</span></div>`;
+}
+function mutTabHtml(p){
+  const left = [mutSlotHtml(p,0), mutSlotHtml(p,1), mutSlotHtml(p,2)];
+  const right = [mutSlotHtml(p,3), mutSlotHtml(p,4), egoSlotHtml()];
+  return `
+    <div class="pm-stage">
+      <div class="pm-col">${left.join('')}</div>
+      <div class="pm-plant">${spriteFor(p,108)}</div>
+      <div class="pm-col">${right.join('')}</div>
+    </div>
+    ${mutDrawerHtml(p)}
+    ${swapFloatHtml(p)}`;
+}
+function mutDrawerHtml(p){
+  const form = p.form || 'normal', eq = p.equipped_trait_cards || [];
+  let owned = ownedTraitCardIds().slice().sort((a,b)=>{
+    if(mutSort === 'grade'){ const ga=CARD_GRADES.indexOf(parseCardKey(a).grade), gb=CARD_GRADES.indexOf(parseCardKey(b).grade); if(ga!==gb) return ga-gb; }
+    const ta=cardDefOf(a), tb=cardDefOf(b);
+    return (ta?ta.type:'').localeCompare(tb?tb.type:'') || a.localeCompare(b);
+  });
+  const cards = owned.length ? owned.map(key=>{
+    const c = cardDefOf(key); if(!c) return '';
+    const { grade } = parseCardKey(key), col = gradeColor(grade);
+    const fits = cardFitsForm(key, form), on = eq.includes(key), cnt = (state.trait_cards||{})[key]||0;
+    return `<div class="dcard ${fits?'':'off'} ${on?'on':''}" data-card="${key}" style="--gc:${col}">
+      <span class="dc-ico">${c.icon}</span><span class="gtag">${grade}</span>
+      <span class="dc-n">${c.name}</span>${cnt>1?`<span class="dc-cnt">×${cnt}</span>`:''}</div>`;
+  }).join('') : `<div class="drawer-empty">보유한 변이 카드가 없습니다. 상점 보급상자나 탐사 보상으로 획득하세요.</div>`;
+  return `
+    <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span>
+      <button class="drawer-sort" data-sort="mut">정렬: ${mutSort==='grade'?'등급순':'종류순'} ▼</button></div>
+    <div class="drawer">${cards}</div>`;
+}
+
+/* ── 스킬 탭(그림7) ── */
+function skillSlotHtml(p, idx){
+  const id = (p.equipped_skills||[])[idx];
+  if(id){
+    const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
+    const picking = swapPending && swapPending.kind === 'skill';
+    return `<div class="slot skill filled ${picking?'pick':''}" data-eq-slot="${idx}" data-kind="skill" style="--gc:${col}">
+      <span class="sk-n">${sk.icon||''} ${stripGrade(sk.name)}</span><span class="sk-v">${skillSlotVal(sk)}</span><span class="gtag">${g}</span></div>`;
+  }
+  return `<div class="slot skill empty" data-empty-slot="skill">＋</div>`;
+}
+function skillTabHtml(p){
+  const left = [skillSlotHtml(p,0), skillSlotHtml(p,1), skillSlotHtml(p,2)];
+  const right = [skillSlotHtml(p,3), skillSlotHtml(p,4), skillSlotHtml(p,5)];
+  return `
+    <div class="pm-stage">
+      <div class="pm-col">${left.join('')}</div>
+      <div class="pm-plant">${spriteFor(p,108)}</div>
+      <div class="pm-col">${right.join('')}</div>
+    </div>
+    ${skillDrawerHtml(p)}
+    ${swapFloatHtml(p)}`;
+}
+function skillDrawerHtml(p){
+  const eq = p.equipped_skills || [];
+  let bench = plantSkillPool(p).filter(id=>!eq.includes(id)).sort((a,b)=>{
+    if(skillSort === 'grade'){ const ga=CARD_GRADES.indexOf(skillGradeOf(p,a)), gb=CARD_GRADES.indexOf(skillGradeOf(p,b)); if(ga!==gb) return ga-gb; }
+    return a.localeCompare(b);
+  });
+  const cards = bench.length ? bench.map(id=>{
+    const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
+    return `<div class="dcard skill" data-skill="${id}" style="--gc:${col}">
+      <span class="dc-n">${sk.icon||''} ${stripGrade(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span><span class="gtag">${g}</span></div>`;
+  }).join('') : `<div class="drawer-empty">해금된 추가 스킬이 없습니다. 식물을 더 성장시키면 단계별로 새 스킬을 얻습니다.</div>`;
+  return `
+    <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
+      <button class="drawer-sort" data-sort="skill">정렬: ${skillSort==='grade'?'등급순':'이름순'} ▼</button></div>
+    <div class="drawer">${cards}</div>
+    <p class="sub" style="font-size:11px;margin:6px 2px 0">※ 포식·무기 등 변이 유래 스킬은 전투 시 자동으로 합류합니다.</p>`;
+}
+
+/* ── 장착 진행(스왑) 중 하단 떠있는 카드 ── */
+function swapFloatHtml(p){
+  if(!swapPending) return '';
+  let inner, label;
+  if(swapPending.kind === 'mut'){
+    const c = cardDefOf(swapPending.key), { grade } = parseCardKey(swapPending.key), col = gradeColor(grade);
+    inner = `<div class="dcard sf-card" style="--gc:${col}"><span class="dc-ico">${c?c.icon:'❔'}</span><span class="gtag">${grade}</span><span class="dc-n">${c?c.name:''}</span></div>`;
+    label = '교체할 장착 변이를 선택하세요';
+  } else {
+    const sk = skillById(swapPending.key,p) || { name:swapPending.key, icon:'❔' }, g = skillGradeOf(p,swapPending.key), col = gradeColor(g);
+    inner = `<div class="dcard skill sf-card" style="--gc:${col}"><span class="dc-n">${sk.icon||''} ${stripGrade(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span><span class="gtag">${g}</span></div>`;
+    label = '교체할 장착 스킬을 선택하세요';
+  }
+  return `<div class="swap-hint">↑ ${label}</div><div class="swap-float">${inner}</div><button class="swap-cancel" id="swapCancel">취소</button>`;
+}
+
+/* ── 카드/스킬 상세 팝업 ── */
+function openCardDetail(kind, key, equipped){
+  const p = activePlant(); if(!p) return;
+  let icon, name, grade, typeLabel, fxHtml, canEquip = true, note = '';
+  if(kind === 'mut'){
+    const c = cardDefOf(key), pk = parseCardKey(key);
+    grade = pk.grade; icon = c?c.icon:'❔'; name = c?c.name:key;
+    typeLabel = (c?TRAIT_CARD_TYPE_NAMES[c.type]:'') + ' 변이 카드';
+    const fx = cardEffectLabels(key);
+    fxHtml = fx.length ? fx.map(t=>`<li>${coefifyText(t)}</li>`).join('') : '<li>특수 효과 없음</li>';
+    if(!equipped && !cardFitsForm(key, p.form||'normal')){ canEquip = false; note = '이 변이형에는 장착할 수 없는 카드입니다.'; }
+  } else {
+    const sk = skillById(key,p) || { name:key, icon:'❔' };
+    grade = skillGradeOf(p,key); icon = sk.icon||'✨'; name = stripGrade(sk.name);
+    typeLabel = (sk.tag||'스킬') + ' 스킬';
+    fxHtml = `<li>${skillCoefDesc(sk) || '전투 스킬'}</li>` + (sk.cost ? `<li>소모 ⚡${sk.cost}</li>` : '') + (sk.noEnergy ? `<li>에너지 무소모 · 🔁${sk.uses||0}회/경기</li>` : '');
+  }
+  const col = gradeColor(grade);
+  const acts = equipped
+    ? `<button class="btn unequip" data-detail-unequip="1">해제</button>`
+    : (canEquip ? `<button class="btn equip" data-detail-equip="1">장착</button>` : '');
+  $('#cardDetailBody').innerHTML = `
+    <div class="cd-head"><span class="cd-ico">${icon}</span><span class="cd-name">${name}</span></div>
+    <div><span class="cd-grade" style="--gc:${col};border-color:${col};color:${col}">${grade}</span></div>
+    <div class="cd-type">${typeLabel}</div>
+    <ul class="cd-fx">${fxHtml}</ul>
+    ${note ? `<p class="sub" style="color:#ff8a70;margin:8px 0 0">${note}</p>` : ''}
+    <div class="cd-acts">${acts}<button class="btn ghost" data-detail-close="1">닫기</button></div>`;
+  cardDetailCtx = { kind, key, equipped };
+  show('#cardDetailModal');
+}
+function detailEquip(){
+  const p = activePlant(); if(!p || !cardDetailCtx) return;
+  const { kind, key } = cardDetailCtx;
+  hide('#cardDetailModal');
+  if(kind === 'mut'){
+    if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
+    const eq = p.equipped_trait_cards;
+    if(eq.includes(key)) return;
+    if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
+    else { swapPending = { kind:'mut', key }; sfx.tap(); renderUpgrade(); }
+  } else {
+    if(!Array.isArray(p.equipped_skills)) p.equipped_skills = [];
+    const eq = p.equipped_skills;
+    if(eq.includes(key)) return;
+    if(eq.length < MAX_LOADOUT){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); }
+    else { swapPending = { kind:'skill', key }; sfx.tap(); renderUpgrade(); }
+  }
+}
+function detailUnequip(){
+  const p = activePlant(); if(!p || !cardDetailCtx) return;
+  const { kind, key } = cardDetailCtx;
+  if(kind === 'mut'){
+    p.equipped_trait_cards = (p.equipped_trait_cards||[]).filter(x=>x!==key);
+    hide('#cardDetailModal'); sfx.tap(); saveState(); renderUpgrade(); renderMain();
+  } else {
+    if((p.equipped_skills||[]).length <= 1){ toast('최소 1개의 스킬은 장착해야 합니다'); return; }
+    p.equipped_skills = (p.equipped_skills||[]).filter(x=>x!==key);
+    hide('#cardDetailModal'); sfx.tap(); saveState(); renderUpgrade();
+  }
+}
+function swapInto(idx){
+  const p = activePlant(); if(!p || !swapPending) return;
+  if(swapPending.kind === 'mut'){
+    const eq = (p.equipped_trait_cards||[]).slice(); eq[idx] = swapPending.key;
+    p.equipped_trait_cards = eq.filter(Boolean);
+    swapPending = null; sfx.heal(); saveState(); renderUpgrade(); renderMain();
+  } else {
+    const eq = (p.equipped_skills||[]).slice(); eq[idx] = swapPending.key;
+    p.equipped_skills = eq.filter(Boolean);
+    swapPending = null; sfx.heal(); saveState(); renderUpgrade();
+  }
+}
+function editPlantName(p){
+  if(!p) return;
+  const cur = p.user_named && p.custom_name ? p.custom_name : plantDisplayName(p);
+  let v = window.prompt('식물 이름을 입력하세요 (최대 14자)', cur);
+  if(v == null) return;
+  v = v.trim().slice(0, 14);
+  if(!v){ toast('이름은 비울 수 없습니다'); return; }
+  p.custom_name = v; p.user_named = true;
+  saveState(); sfx.tap(); renderUpgrade(); renderMain();
 }
 function potionOwnedCount(id){ return (((state.potion_inventory||[]).find(r=>r.potion_id===id))||{}).count || 0; }
 function traitSlotCap(p){ return clamp(Math.max(p.unlocked_trait_slots||1, (p.traits||[]).length), 1, 5); }
@@ -6780,40 +7241,6 @@ function renderPotionSection(p){
   }).join('');
   return `<div class="skill-section-label">🟣 독초 물약 <small>장착 시 공격에 독성 추가</small></div>${equipped}${list}`;
 }
-function renderTraitTab(p){
-  const form = FORMS[p.form||'normal'] || FORMS.normal;
-  const equipped = (p.equipped_trait_cards||[]).slice(0,5);
-  let slotRow='';
-  for(let i=0;i<5;i++){
-    const key = equipped[i];
-    if(key){ const c=cardDefOf(key); const {grade}=parseCardKey(key); slotRow += `<div class="trait-slot filled">${gradeBadgeHtml(grade)} ${c?c.icon:''}<br>${c?c.name:key}</div>`; }
-    else slotRow += `<div class="trait-slot">빈 칸</div>`;
-  }
-  const owned = ownedFormCards(p.form||'normal').slice().sort((a,b)=>{
-    const ga=CARD_GRADES.indexOf(parseCardKey(a).grade), gb=CARD_GRADES.indexOf(parseCardKey(b).grade);
-    if(ga!==gb) return ga-gb; return a.localeCompare(b);
-  });
-  const cardRows = owned.length ? owned.map(key=>{
-    const c=cardDefOf(key); if(!c) return '';
-    const {grade}=parseCardKey(key); const on=equipped.includes(key); const cnt=(state.trait_cards||{})[key]||0;
-    const eff = cardEffectLabels(key).join(' · ');
-    return `<div class="uprow">
-      <div class="un">${gradeBadgeHtml(grade)} ${c.icon} ${c.name} <small>${TRAIT_CARD_TYPE_NAMES[c.type]} · ${eff}</small></div>
-      <div class="uv">×${cnt}</div>
-      <button class="upbtn" data-card-toggle="${key}" style="${on?'background:rgba(92,242,194,.18);border-color:var(--neon);color:var(--neon)':''}">${on?'해제':'장착'}</button>
-    </div>`;
-  }).join('') : '<div class="muted">보유한 변이 카드가 없습니다. 변이 카드는 <b>상점 변이형별 보급상자</b>나 <b>탐사 보상</b>으로만 얻을 수 있습니다.</div>';
-  const weaponBlock = p.form==='weapon' ? `<div class="skill-section-label">🗡️ 무기 장착 (무기 변이형)</div>${weaponSectionHTML(p)}` : '';
-  const formNote = (p.form||'normal')==='normal'
-    ? `일반 변이형이라 <b>공통</b> 카드만 장착할 수 있습니다.`
-    : `<b>공통</b> 카드와 이 변이형 전용 <b>${form.cardLabel}</b> 카드만 장착할 수 있습니다.`;
-  return `
-    <p class="tab-hint">이 식물의 변이형은 <b>${form.icon} ${form.name}</b>입니다. ${formNote} 최대 <b>5칸</b>. 카드는 <b>등급(S~D)</b>이 높을수록 강하고 서브 특성이 많습니다. 무기 카드 스킬은 <b>에너지 무소모</b>이지만 경기당 횟수가 정해져 있습니다.</p>
-    <div class="trait-slot-row">${slotRow}</div>
-    <div class="skill-section-label">🎴 보유 ${form.cardLabel} 카드 <small>장착 ${equipped.length}/5</small></div>
-    ${cardRows}
-    ${weaponBlock}`;
-}
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
 function itemUsableOnPlant(item){
   const e = (item && item.effect) || {};
@@ -6851,142 +7278,67 @@ function useItem(itemId){
   saveState(); sfx.heal(); renderUpgrade(); renderMain();
   toast(`${item.name} 사용! ${msg.join(' · ')}`);
 }
-function renderConsumTab(p, s){
-  const rows = UP_ROWS.map(r => {
-    const lv = p.up[r.k];
-    const cost = upCost(lv);
-    const cur = r.k==='hp'?s.hp : r.k==='atk'?s.atk : r.k==='def'?s.def : r.k==='spd'?s.spd : r.k==='acc'?s.acc+'%' : r.k==='elem'?s.elem : r.k==='crit'?s.critRate+'%' : r.k==='energy'?s.energy : lv;
-    return `<div class="uprow">
-      <div class="un">${r.icon} ${r.name}<small>강화당 ${r.gain} (현재 Lv.${lv})</small></div>
-      <div class="uv">${cur}</div>
-      <button class="upbtn" data-up="${r.k}" ${state.credits<cost?'disabled':''}>+ ${fmt(cost)}💰</button>
-    </div>`;
-  }).join('');
-  const isMax = p.growth_stage === 'evolved';
-  const needed = growthExpNeeded(p);
-  const progress = isMax ? 1 : clamp((p.growth_exp||0)/needed, 0, 1);
-  const growBlock = `
-    <div class="skill-section-label">🌱 성장 <small>${isMax ? '최종 단계' : `${GROWTH_STAGE_NAMES[p.growth_stage]||''} · ${Math.round(p.growth_exp||0)}/${needed} EXP`}</small></div>
-    <div class="grow-bar" style="height:8px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin:2px 0 8px"><div style="height:100%;width:${Math.round(progress*100)}%;background:var(--neon)"></div></div>
-    <div class="uprow">
-      <div class="un">${GROWTH_ACTIONS.water.icon} ${GROWTH_ACTIONS.water.name}<small>성장 경험치 +${GROWTH_ACTIONS.water.exp} (무료)</small></div>
-      <div class="uv">EXP</div>
-      <button class="upbtn" data-grow-action="water" ${isMax?'disabled':''}>+${GROWTH_ACTIONS.water.exp}</button>
-    </div>
-    <div class="uprow">
-      <div class="un">${GROWTH_ACTIONS.fertilizer.icon} ${GROWTH_ACTIONS.fertilizer.name}<small>성장 경험치 +${GROWTH_ACTIONS.fertilizer.exp} (테스트 무료)</small></div>
-      <div class="uv">EXP</div>
-      <button class="upbtn" data-grow-action="fertilizer" ${isMax?'disabled':''}>+${GROWTH_ACTIONS.fertilizer.exp}</button>
-    </div>`;
-  return `<p class="tab-hint"><b>크레딧</b>으로 식물의 기본 스탯을 <b>영구적으로</b> 강화합니다.</p>${growBlock}
-    <div class="skill-section-label">🔧 스탯 강화 <small>크레딧 소비</small></div>${rows}`;
-}
-function renderPlantTab(p, s){
-  if(upgradeTab==='trait') return renderTraitTab(p);
-  if(upgradeTab==='consum') return renderConsumTab(p, s);
-  return renderSkillTab(p);
-}
 function renderUpgrade(){
   const p = activePlant(); if(!p) return;
   ensurePlantInstanceFields(p);
+  ensureSkillFields(p);
   const s = calcStats(p);
+  const tab = upgradeTab;
+  const stage = tab==='up' ? upTabHtml(p, s) : tab==='mut' ? mutTabHtml(p) : skillTabHtml(p);
   $('#upgradeBody').innerHTML = `
-    <h2>🌿 ${plantDisplayName(p)} 강화·관리</h2>
-    <p class="sub">보유 크레딧: <b style="color:var(--gold)">${fmt(state.credits)}</b> 💰</p>
-    ${renderPlantInstancePanel(p, s)}
-    <div class="plant-tabs">
-      <button class="plant-tab ${upgradeTab==='consum'?'active':''}" data-tab="consum">🔧 강화</button>
-      <button class="plant-tab ${upgradeTab==='trait'?'active':''}" data-tab="trait">🧬 변이형</button>
-      <button class="plant-tab ${upgradeTab==='skill'?'active':''}" data-tab="skill">🎴 스킬</button>
+    <div class="pm-tabs">
+      <button class="pm-tab ${tab==='up'?'active':''}" data-ptab="up">강화</button>
+      <button class="pm-tab ${tab==='mut'?'active':''}" data-ptab="mut">변이</button>
+      <button class="pm-tab ${tab==='skill'?'active':''}" data-ptab="skill">스킬</button>
     </div>
-    <div id="plantTabBody">${renderPlantTab(p, s)}</div>
-    <button class="btn ghost" id="releasePlantBtn" style="margin-top:12px;border-color:rgba(255,107,74,.4);color:#ff8a70">🪴 이 식물 방생 (화분 비우기)</button>
-    <button class="btn modal-close" id="upgradeClose">닫기</button>`;
+    <button class="pm-close" id="pmClose">✕</button>
+    <div class="pm-body">
+      <div class="pm-namerow">
+        <span class="pm-pencil" id="pmEditName">✏️</span>
+        <span class="pm-name">${plantDisplayName(p)}</span>
+      </div>
+      <div class="pm-info">${plantInfoPills(p, true)}</div>
+      ${stage}
+    </div>`;
   bindUpgradeEvents(p);
-  $('#releasePlantBtn').addEventListener('click', () => releasePlant(p.id));
-  $('#upgradeClose').addEventListener('click', () => { hide('#upgradeModal'); sfx.tap(); });
 }
 function bindUpgradeEvents(p){
-  document.querySelectorAll('#upgradeBody [data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => { upgradeTab = btn.dataset.tab; sfx.tap(); renderUpgrade(); });
-  });
-  document.querySelectorAll('#upgradeBody [data-grow-action]').forEach(btn => {
-    btn.addEventListener('click', () => applyGrowthAction(btn.dataset.growAction));
-  });
-  document.querySelectorAll('#upgradeBody [data-up]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const k = btn.dataset.up;
-      const cost = upCost(p.up[k]);
-      if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
-      spendCredits(cost);
-      p.up[k]++;
-      saveState(); sfx.heal();
-      renderUpgrade(); renderMain();
-    });
-  });
-  document.querySelectorAll('#upgradeBody [data-use-item]').forEach(btn => {
-    btn.addEventListener('click', () => useItem(btn.dataset.useItem));
-  });
-  document.querySelectorAll('#upgradeBody [data-equip-trait]').forEach(btn => {
-    btn.addEventListener('click', () => equipTrait(btn.dataset.equipTrait));
-  });
-  document.querySelectorAll('#upgradeBody [data-unequip-trait]').forEach(btn => {
-    btn.addEventListener('click', () => unequipTrait(btn.dataset.unequipTrait));
-  });
-  document.querySelectorAll('#upgradeBody [data-equip-potion]').forEach(btn => {
-    btn.addEventListener('click', () => equipPotion(btn.dataset.equipPotion));
-  });
-  document.querySelectorAll('#upgradeBody [data-unequip-potion]').forEach(btn => {
-    btn.addEventListener('click', () => unequipPotion());
-  });
-  document.querySelectorAll('#upgradeBody [data-card-toggle]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cid = btn.dataset.cardToggle;
-      if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
-      const eq = p.equipped_trait_cards;
-      if(eq.includes(cid)){ p.equipped_trait_cards = eq.filter(x=>x!==cid); sfx.tap(); }
-      else { if(eq.length>=5){ toast('변이 카드는 최대 5칸까지 장착할 수 있습니다'); return; } eq.push(cid); sfx.heal(); }
-      saveState(); renderUpgrade(); renderMain();
-    });
-  });
-  document.querySelectorAll('#upgradeBody [data-skill-toggle]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.skillToggle;
-      const eq = p.equipped_skills;
-      if(eq.includes(id)){
-        if(eq.length<=1){ toast('최소 1개의 스킬은 장착해야 합니다'); return; }
-        p.equipped_skills = eq.filter(x=>x!==id);
-        sfx.tap();
-      } else {
-        if(eq.length>=MAX_LOADOUT){ toast(`스킬은 최대 ${MAX_LOADOUT}개까지 장착할 수 있습니다`); return; }
-        p.equipped_skills.push(id);
-        sfx.heal();
-      }
-      saveState();
-      renderUpgrade();
-    });
-  });
-  document.querySelectorAll('#upgradeBody [data-equip]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      p.weaponKey = btn.dataset.equip;
-      ensureSkillFields(p);
-      if(!p.equipped_skills.includes('skill_weapon') && p.equipped_skills.length<MAX_LOADOUT) p.equipped_skills.push('skill_weapon');
-      saveState(); sfx.tap();
-      renderUpgrade(); renderMain();
-      toast(WEAPONS[p.weaponKey].name + ' 장착! 🎴스킬 탭에서 무기 스킬을 확인하세요');
-    });
-  });
-  document.querySelectorAll('#upgradeBody [data-wup]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const k = btn.dataset.wup;
-      const cost = wUpCost(state.weapons[k].lv);
-      if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
-      spendCredits(cost);
-      state.weapons[k].lv++;
-      saveState(); sfx.heal();
-      renderUpgrade(); renderMain();
-    });
-  });
+  const body = $('#upgradeBody');
+  const cl = $('#pmClose'); if(cl) cl.addEventListener('click', () => { swapPending = null; hide('#upgradeModal'); sfx.tap(); });
+  const en = $('#pmEditName'); if(en) en.addEventListener('click', () => editPlantName(p));
+  body.querySelectorAll('[data-ptab]').forEach(b => b.addEventListener('click', () => { upgradeTab = b.dataset.ptab; swapPending = null; sfx.tap(); renderUpgrade(); }));
+  // 강화
+  body.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.up, cost = upCost(p.up[k]);
+    if(state.credits < cost){ toast('크레딧이 부족합니다'); return; }
+    spendCredits(cost); p.up[k]++; saveState(); sfx.heal(); renderUpgrade(); renderMain();
+  }));
+  body.querySelectorAll('[data-grow-action]').forEach(b => b.addEventListener('click', () => applyGrowthAction(b.dataset.growAction)));
+  // 변이/스킬 — 장착된 슬롯
+  body.querySelectorAll('[data-eq-slot]').forEach(b => b.addEventListener('click', () => {
+    const idx = +b.dataset.eqSlot, kind = b.dataset.kind;
+    if(swapPending && swapPending.kind === kind){ swapInto(idx); return; }
+    const key = kind==='mut' ? (p.equipped_trait_cards||[])[idx] : (p.equipped_skills||[])[idx];
+    if(key != null){ sfx.tap(); openCardDetail(kind, key, true); }
+  }));
+  body.querySelectorAll('[data-empty-slot]').forEach(b => b.addEventListener('click', () => {
+    toast(b.dataset.emptySlot === 'mut' ? '아래 보유 변이 카드를 눌러 장착하세요' : '아래 보유 스킬을 눌러 장착하세요');
+  }));
+  // 서랍
+  body.querySelectorAll('[data-card]').forEach(b => b.addEventListener('click', () => {
+    const on = (p.equipped_trait_cards||[]).includes(b.dataset.card);
+    sfx.tap(); openCardDetail('mut', b.dataset.card, on);
+  }));
+  body.querySelectorAll('[data-skill]').forEach(b => b.addEventListener('click', () => {
+    const on = (p.equipped_skills||[]).includes(b.dataset.skill);
+    sfx.tap(); openCardDetail('skill', b.dataset.skill, on);
+  }));
+  body.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => {
+    if(b.dataset.sort === 'mut') mutSort = mutSort==='grade' ? 'type' : 'grade';
+    else skillSort = skillSort==='grade' ? 'name' : 'grade';
+    sfx.tap(); renderUpgrade();
+  }));
+  const sc = $('#swapCancel'); if(sc) sc.addEventListener('click', () => { swapPending = null; sfx.tap(); renderUpgrade(); });
 }
 
 /* ================= 상점 ================= */
@@ -7343,7 +7695,7 @@ function startMatch(){
     form:p.form||'normal', predType:p.predType||null, weapon:wpn, potion:p.potion||null,
     seedType:seedTypeOf(p), growth:p.growth_stage,
     baseStats:{hp:s.hp,atk:s.atk,def:s.def,spd:s.spd,acc:s.acc,elem:s.elem,critRate:s.critRate,critMult:s.critMult,energy:s.energy},
-    traits:p.traits, loadout:p.equipped_skills.slice(), cards:(p.equipped_trait_cards||[]).slice(),
+    traits:p.traits, loadout:plantBattleLoadout(p), cards:(p.equipped_trait_cards||[]).slice(),
     skillGrades:p.skillGrades||{},
   });
   const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p), {hp:playerC.max,atk:playerC.atk,def:playerC.def,spd:playerC.spd,acc:playerC.acc,elem:playerC.elem,energy:playerC.energyMax});
@@ -7747,7 +8099,15 @@ $('#btnStart').addEventListener('click', () => {
 $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
-$('#btnBagCenter').addEventListener('click', () => { sfx.tap(); openSeedBag(); });
+$('#sidePanel').addEventListener('click', (ev) => { if(ev.target.closest('[data-act="bag"]')){ sfx.tap(); openSeedBag(); } });
+$('#tournamentBar').addEventListener('click', (ev) => { if(ev.target.closest('.tcell')){ sfx.tap(); openMatches(); } });
+$('#matchesModal').addEventListener('click', (ev) => { if(ev.target === $('#matchesModal')){ hide('#matchesModal'); } });
+$('#cardDetailModal').addEventListener('click', (ev) => {
+  if(ev.target.closest('[data-detail-equip]')){ sfx.tap(); detailEquip(); return; }
+  if(ev.target.closest('[data-detail-unequip]')){ sfx.tap(); detailUnequip(); return; }
+  if(ev.target.closest('[data-detail-close]')){ sfx.tap(); hide('#cardDetailModal'); return; }
+  if(ev.target === $('#cardDetailModal')){ hide('#cardDetailModal'); }
+});
 /* 하단 헤더 네비게이션 (상점 / 탐사 / 식물·전투 / 모드 / 길드) */
 const LOCKED_SECTIONS = {
   mode:  { emoji:'🎮', title:'모드', desc:'생존·레이드·이벤트 등 다양한 특수 대전 모드가 이곳에 열릴 예정입니다.<br>조금만 기다려 주세요!' },
@@ -7764,7 +8124,7 @@ function openLockedSection(key){
   show('#lockedModal');
 }
 function closeAllModals(){
-  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
+  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
 }
 $('#bottomNav').addEventListener('click', (ev) => {
   const btn = ev.target.closest('.navbtn'); if(!btn) return;
@@ -7892,11 +8252,10 @@ $('#btnReset').addEventListener('click', () => {
   toast('데이터가 초기화되었습니다');
 });
 
-/* 타이틀 아트 + 초기화 */
+/* 타이틀 아트 + 부팅 */
 $('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
-if(canClaimStarterSeed()) claimStarterSeed(true); // 첫 시작 시 무지개 종자 자동 지급
-renderMain();
-reconcileNativeSave(); // 앱(Capacitor) 안에서 네이티브 저장소와 대조·복구 (브라우저에선 no-op)
+// 시작종자 지급·최초 저장은 네이티브 백업 복구 이후에 해야 백업이 덮어써지지 않음 → bootWithSave가 일괄 처리.
+bootWithSave();
 </script>
 </body>
 </html>

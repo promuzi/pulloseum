@@ -54,7 +54,15 @@
 모바일 앱에서 진행도가 사라지던 문제(앱이 원격 GitHub Pages를 WebView로 띄우는데, 진행도가 WebView localStorage 한 곳에만 있어 캐시 삭제·OS eviction·재설치로 날아감)를 2단계로 대비.
 1. **세이브 내보내기/가져오기(웹, 즉시 적용)** — 설정에 `#btnExport`/`#btnImport` + `#saveModal`. `encodeSaveCode`(JSON→`btoa(unescape(encodeURIComponent()))` 한글 안전 base64)·`decodeSaveCode`(base64 우선, 평문 JSON도 허용, 불량/빈값 거부). 복원은 `normalizeState` 거쳐 `saveState` 후 `renderMain`. APK 재빌드 없이 `git push`→Pages 배포만으로 앱 반영. (백로그의 "세이브 내보내기/가져오기" 항목 완료.)
 2. **네이티브 영구저장(`@capacitor/preferences`)** — `saveState`가 `window.Capacitor.Plugins.Preferences` 있으면 미러 저장, 시작 시 `reconcileNativeSave`가 localStorage 비었으면 네이티브에서 자동 복구. `nativePrefs()` 가드로 일반 브라우저에선 기존 localStorage 동작 그대로(무회귀). `package.json`에 의존성 선언. **실제 적용은 빌드 머신에서 `npm install`→`npx cap sync android`→APK 재빌드 필요**(절차: [docs/android-capacitor-wrapper.md](docs/android-capacitor-wrapper.md) 8장).
-- 검증: preview 콘솔 에러 0, 한글 포함 인코딩 라운드트립·복원 반영·UI 모달 전환 확인. (이 PC엔 node 미설치라 cap sync는 빌드 머신 몫.)
+- 검증: preview 콘솔 에러 0, 한글 포함 인코딩 라운드트립·복원 반영·UI 모달 전환 확인.
+- **빌드:** 이 PC에 Node.js/Android Studio 설치 후 `npm install`(@capacitor/preferences@7.0.4)→`npx cap sync android`→`gradlew assembleDebug`로 디버그 APK 빌드 성공.
+
+#### 2026-06-19 (후속) — 재부팅 시 초기화 버그 수정(클로버 방지)
+재빌드한 APK에서도 **앱 나갔다 켜면 초기화**되던 문제. 원인: 부팅 시 ① `loadState`가 빈 localStorage→기본값 → ② `claimStarterSeed`가 `saveState` 호출 → **네이티브 백업을 기본값으로 덮어씀(클로버)** → ③ 그 뒤에야 `reconcileNativeSave`가 읽어 이미 망가진 백업으로 복구. 즉 백업을 읽기 전에 써버린 게 문제.
+- 수정: `reconcileNativeSave` → **`bootWithSave`로 재구성** — 네이티브 백업을 **먼저** 읽어 복구한 뒤에 시작종자 지급/최초 저장. `nativeReconciled` 플래그로 **복구 완료 전엔 `saveState`가 네이티브에 절대 쓰지 않게** 가드. 초기화 코드(`bootWithSave()` 단일 호출)로 교체.
+- **APK 재빌드 불필요**: index.html(JS)만 수정 → 앱은 원격 페이지를 띄우므로 `git push`→Pages 배포→앱 재실행이면 반영. 네이티브 플러그인은 이미 설치된 APK에 포함됨.
+- 검증: preview에서 가짜 Capacitor.Preferences 주입 후 e2e — localStorage 유실+네이티브 백업 존재 시 복구(크레딧·한글 이름 복원, 백업 비덮어쓰기 확인), 진짜 새 게임 시 시작종자 지급+네이티브 최초 저장. 콘솔 에러 0.
+- ⚠️ 미확인: 원격 페이지(GitHub Pages)에서 Capacitor 네이티브 브리지(`window.Capacitor.Plugins.Preferences`)가 실제 주입되는지는 실기기 확인 필요. 이 수정 후에도 재실행 초기화가 계속되면 브리지 미주입이므로, 게임을 APK에 **로컬 번들**(server.url 제거)하는 방향으로 전환해야 함.
 
 ### 2026-06-18 — 모바일 UI 클리핑/터치 보정 5종
 사용자 피드백 기반 화면 정리.
