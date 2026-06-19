@@ -235,14 +235,20 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .battle-turn{min-width:54px;border:1px solid rgba(120,255,225,.32);border-radius:999px;padding:5px 9px;
   background:rgba(7,13,23,.82);color:var(--neon);font-size:12px;font-weight:900;text-align:center;
   box-shadow:0 3px 12px rgba(0,0,0,.35);}
-.battle-view-btn{pointer-events:auto;border:1px solid rgba(143,217,255,.36);border-radius:999px;padding:6px 10px;
+.battle-view-btn{position:absolute;right:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9;
+  pointer-events:auto;border:1px solid rgba(143,217,255,.36);border-radius:999px;padding:7px 11px;
   background:rgba(7,13,23,.88);color:#cdeaff;font-size:11.5px;font-weight:800;
   box-shadow:0 3px 12px rgba(0,0,0,.35);}
 .battle-view-btn:active{transform:scale(.96)}
 .battle-view-btn:disabled{opacity:.42;cursor:default;}
+.battle-surrender{pointer-events:auto;border:1px solid rgba(255,107,74,.5);border-radius:999px;
+  background:rgba(22,12,14,.82);color:#ff9a82;font-size:11.5px;font-weight:800;padding:6px 11px;
+  box-shadow:0 3px 12px rgba(0,0,0,.35);}
+.battle-surrender:active{transform:scale(.96)}
+.battle-surrender:disabled{opacity:.42;cursor:default;}
 /* 스탠딩 무대: 적(위) · 나(아래), 가운데는 카드/판정 창 공간 */
 #battleArena{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
-  padding:calc(54px + env(safe-area-inset-top,0px)) 16px calc(22px + env(safe-area-inset-bottom,0px));z-index:2;}
+  padding:calc(54px + env(safe-area-inset-top,0px)) 16px calc(58px + env(safe-area-inset-bottom,0px));z-index:2;}
 /* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게 */
 #battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;height:42%;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(43,212,154,.05) 40%,rgba(43,212,154,.1));
@@ -283,6 +289,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes rise{0%{opacity:0;transform:translate(-50%,8px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-40px)}}
 .shake{animation:shake .4s;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
+.arena-fighter.player.skill-use .fsprite{animation:playerSkillUse .42s ease both;}
+.arena-fighter.enemy.skill-use .fsprite{animation:enemySkillUse .42s ease both;}
+@keyframes playerSkillUse{0%,100%{transform:translateY(0)}45%{transform:translateY(-20px) scale(1.06)}}
+@keyframes enemySkillUse{0%,100%{transform:translateY(0)}45%{transform:translateY(20px) scale(1.06)}}
+#battleScreen.cards-hidden #pSpriteBox{cursor:pointer;filter:drop-shadow(0 0 12px rgba(92,242,194,.28));}
 
 /* ===== 스킬 카드 페이즈 (허공에 뜬 카드 — 화면 가운데) ===== */
 #cardPhase{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
@@ -327,34 +338,19 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .sc-cost{flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--neon);}
 .sc-cost.use{color:#ffd34a;}
 .sc-desc{font-size:10.5px;color:var(--sub);line-height:1.3;margin-top:auto;}
-.cp-surrender{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-  border:1px solid rgba(255,107,74,.5);border-radius:11px;background:rgba(22,12,14,.72);
-  color:#ff9a82;font-size:12.5px;font-weight:700;padding:8px 24px;
-  box-shadow:0 4px 14px rgba(0,0,0,.45);pointer-events:auto;}
-.cp-surrender:active{transform:translateX(-50%) scale(.96);}
-
-/* ===== 판정 창 (좌→우 번개) ===== */
-#judgeWindow{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);z-index:6;}
+/* ===== 간결한 행동 판정: 양쪽 카드 · 행동 순서 · 결과 한 줄 ===== */
+#judgeWindow{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);z-index:6;pointer-events:none;}
 #judgeWindow.hidden{display:none !important;}
-.jw-bolt{position:absolute;left:0;right:0;top:50%;height:4px;transform:translateY(-50%);border-radius:4px;
-  background:linear-gradient(90deg,transparent,#bdfff0 40%,#fff 50%,#bdfff0 60%,transparent);
-  box-shadow:0 0 22px 5px rgba(120,255,225,.8);opacity:0;}
-#judgeWindow.sweep .jw-bolt{animation:jwBolt .72s ease-out forwards;}
-@keyframes jwBolt{0%{opacity:0;transform:translateY(-50%) scaleX(.1) translateX(-360%)}
-  18%{opacity:1}62%{opacity:1;transform:translateY(-50%) scaleX(1) translateX(0)}100%{opacity:0;transform:translateY(-50%) scaleX(1) translateX(360%)}}
-.jw-inner{position:relative;border:1px solid rgba(120,255,225,.32);border-radius:14px;overflow:hidden;
-  background:linear-gradient(180deg,rgba(9,16,26,.98),rgba(6,11,20,.98));
-  box-shadow:0 14px 44px rgba(0,0,0,.65),0 0 22px rgba(120,255,225,.12),0 0 0 1px rgba(120,255,225,.1) inset;
-  transform:scaleX(0);transform-origin:left center;opacity:0;max-height:62vh;display:flex;flex-direction:column;}
-/* 번개가 지나간 자리로 창이 좌→우로 펼쳐짐 */
-#judgeWindow.open .jw-inner{animation:jwWipe .68s .3s cubic-bezier(.2,.85,.3,1) forwards;}
-@keyframes jwWipe{0%{transform:scaleX(0);opacity:0}12%{opacity:1}100%{transform:scaleX(1);opacity:1}}
-#judgeWindow.close .jw-inner{animation:jwClose .34s ease forwards;}
-@keyframes jwClose{to{opacity:0;transform:scaleX(1) translateY(8px)}}
+.jw-inner{position:relative;display:flex;flex-direction:column;gap:10px;opacity:0;}
+#judgeWindow.open .jw-inner{animation:jwReveal .32s ease forwards;}
+#judgeWindow.close .jw-inner{animation:jwClose .28s ease forwards;}
+@keyframes jwReveal{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes jwClose{to{opacity:0;transform:translateY(8px) scale(.97)}}
 #judgeCards{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
-  padding:12px;}
-.jw-card{border:1px solid var(--gc,var(--line));border-radius:10px;padding:7px 8px;min-width:0;
-  background:linear-gradient(160deg,rgba(22,32,48,.9),rgba(12,18,30,.9));}
+  padding:4px 2px;}
+.jw-card{border:1px solid var(--gc,var(--line));border-radius:12px;padding:10px 9px;min-width:0;
+  background:linear-gradient(160deg,rgba(22,32,48,.97),rgba(12,18,30,.97));
+  box-shadow:0 9px 25px rgba(0,0,0,.5);transform-origin:center;}
 .jw-card.foe{border-color:rgba(255,120,90,.5);}
 .jw-card .jc-tag{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--sub);}
 .jw-card.foe .jc-tag{color:#ff8a70;}
@@ -362,36 +358,23 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .jw-card.mine{text-align:right;}
 .jw-card .jc-name{font-size:13px;font-weight:800;margin-top:2px;line-height:1.15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.jw-vs{font-size:15px;font-weight:900;font-style:italic;color:#fff;opacity:.7;}
-#judgeCalc{min-height:116px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
-  border-top:1px solid rgba(255,255,255,.08);padding:8px 10px 11px;scroll-behavior:smooth;}
-.jcalc-empty{padding:28px 8px;text-align:center;color:var(--sub);font-size:12px;}
-.jcalc-step{display:grid;grid-template-columns:25px 1fr;gap:7px;padding:7px 5px;
-  border-bottom:1px solid rgba(255,255,255,.06);animation:jcalcIn .24s ease both;}
-.jcalc-step.major{margin:2px 0 5px;border:1px solid rgba(255,217,102,.32);border-radius:10px;
-  background:rgba(255,217,102,.07);}
-.jcalc-step.major .jcalc-no{border-color:rgba(255,217,102,.55);color:#ffd966;background:rgba(255,217,102,.12);}
-.jcalc-step:last-child{border-bottom:0;}
-.jcalc-no{width:23px;height:23px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:rgba(92,242,194,.1);border:1px solid rgba(92,242,194,.3);color:var(--neon);font-size:10px;font-weight:900;}
-.jcalc-title{font-size:12px;font-weight:900;color:#e8f4ff;}
-.jcalc-formula{margin-top:2px;color:#9fb5ca;font-size:10.5px;line-height:1.42;word-break:keep-all;}
-.jcalc-result{margin-top:3px;color:#dcecff;font-size:11px;font-weight:800;}
-.jcalc-result.good{color:#78f5c5}.jcalc-result.bad{color:#ff9078}.jcalc-result.roll{color:#ffd966}
-@keyframes jcalcIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-#battleHistory{position:absolute;left:10px;right:10px;top:43%;z-index:5;
-  max-height:24vh;min-height:132px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
-  padding:12px 14px;border:1px solid rgba(120,255,225,.24);border-radius:14px;
-  background:linear-gradient(180deg,rgba(9,16,26,.95),rgba(6,11,20,.95));
-  box-shadow:0 12px 36px rgba(0,0,0,.55);font-size:12.5px;line-height:1.62;color:#cdd9e8;}
-#battleHistory.hidden{display:none !important;}
-#battleLog .bl-empty{height:122px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--sub);}
-#battleLog .bl-turn{display:flex;align-items:center;gap:8px;margin:7px 0 5px;color:var(--neon);font-weight:900;}
-#battleLog .bl-turn::before,#battleLog .bl-turn::after{content:'';height:1px;flex:1;background:rgba(120,255,225,.2);}
-#battleLog .bl-match{margin-bottom:5px;color:#dcecff;font-weight:700;}
-#battleLog .em{color:var(--neon);font-weight:700;}
-#battleLog .jl-roll{color:#ffd34a;font-weight:700;}
-#battleLog .jl-calc{color:#9fd8ff;font-weight:600;}
+.jw-order{min-width:74px;text-align:center;color:#ffd966;font-size:12px;font-weight:900;line-height:1.35;
+  text-shadow:0 0 12px rgba(255,211,74,.5);}
+.jw-order:empty{min-width:22px;}
+.jw-card.use-left{animation:judgeUseLeft .46s ease forwards;}
+.jw-card.use-right{animation:judgeUseRight .46s ease forwards;}
+.jw-card.use-self{animation:judgeUseSelf .46s ease forwards;}
+@keyframes judgeUseLeft{0%{opacity:1;transform:translateX(0) scale(1)}55%{opacity:1;transform:translateX(38px) scale(1.05)}100%{opacity:0;transform:translateX(54px) scale(.82)}}
+@keyframes judgeUseRight{0%{opacity:1;transform:translateX(0) scale(1)}55%{opacity:1;transform:translateX(-38px) scale(1.05)}100%{opacity:0;transform:translateX(-54px) scale(.82)}}
+@keyframes judgeUseSelf{0%{opacity:1;transform:translateY(0) scale(1)}55%{opacity:1;transform:translateY(-9px) scale(1.05)}100%{opacity:0;transform:translateY(-15px) scale(.82)}}
+#judgeMessage{min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;border-radius:13px;padding:8px 12px;background:rgba(7,13,23,.9);border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 8px 24px rgba(0,0,0,.48);opacity:0;}
+#judgeMessage.show{animation:judgeMessageIn .24s ease both;}
+@keyframes judgeMessageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.jm-critical{color:#ffd34a;font-size:13px;font-weight:900;margin-bottom:2px;text-shadow:0 0 12px rgba(255,211,74,.45);}
+.jm-main{color:#f2f7ff;font-size:16px;font-weight:900;letter-spacing:.2px;}
+.jm-main.good{color:#7dffd9}.jm-main.weak{color:#b8c4d4}.jm-main.miss{color:#ff9a82}.jm-main.effect{color:#cda6ff}
 
 /* ===== 전투 결과 (금속판 + 보상 카드) ===== */
 #battleResult{position:absolute;inset:0;z-index:11;overflow:hidden;}
@@ -452,6 +435,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .bsd-pill{font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#cfe1f5;}
 .bsd-desc{font-size:13px;line-height:1.65;color:#d3deec;}
 .bsd-hint{margin-top:12px;text-align:center;font-size:11px;color:var(--sub);}
+.bsd-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:10px;}
+.bsd-stat{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.1);
+  border-radius:9px;padding:8px 9px;background:rgba(255,255,255,.045);font-size:12px;color:var(--sub);}
+.bsd-stat b{color:#eef8ff;font-size:13px;}
 .sconf-card{width:min(84%,300px);border:1px solid rgba(255,107,74,.4);border-radius:16px;padding:20px;text-align:center;
   background:linear-gradient(170deg,rgba(28,18,22,.99),rgba(14,10,16,.99));box-shadow:0 18px 50px rgba(0,0,0,.6);}
 .sconf-card h3{margin:0 0 6px;font-size:18px;}
@@ -818,9 +805,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   .tbar .tb-tier{padding:4px 8px;}
   #btnBattle{margin:0 12px calc(8px + env(safe-area-inset-bottom,0px));padding:12px;font-size:17px;border-radius:14px;}
   .fsprite svg,.fsprite img{max-width:118px;height:auto;}
-  #battleHistory{top:42%;max-height:26vh;min-height:116px;font-size:12px;line-height:1.5;padding:10px 12px;}
-  .jw-inner{max-height:58vh;}
-  #judgeCalc{min-height:100px;padding:6px 8px 9px;}
+  .jw-card{padding:8px 7px;}
+  .jw-card .jc-name{font-size:12px;}
+  .jw-order{min-width:64px;font-size:11px;}
   .skillcard{min-height:66px;padding:8px;}
   .sc-name{font-size:12.5px;}
   .sc-desc{font-size:10px;}
@@ -1343,8 +1330,9 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <div id="battleHeader"></div>
     <div class="battle-hud">
       <div class="battle-turn" id="battleTurn">1턴</div>
-      <button class="battle-view-btn" id="battleViewBtn" type="button">카드 숨기기</button>
+      <button class="battle-surrender" id="surrenderBtn" type="button">🏳️ 항복</button>
     </div>
+    <button class="battle-view-btn" id="battleViewBtn" type="button">스킬 숨기기</button>
     <div id="battleArena">
       <div class="arena-fighter enemy" id="enemyFighter">
         <div class="finfo">
@@ -1366,17 +1354,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
           <div class="energy" id="pEnergy"></div>
         </div>
       </div>
-      <!-- 판정 창 (좌→우 번개로 등장) -->
+      <!-- 양쪽이 사용한 스킬과 간결한 행동 결과 -->
       <div id="judgeWindow" class="hidden">
-        <div class="jw-bolt"></div>
         <div class="jw-inner">
           <div id="judgeCards"></div>
-          <div id="judgeCalc" aria-live="polite"></div>
+          <div id="judgeMessage" aria-live="polite"></div>
         </div>
       </div>
     </div>
-    <!-- 판정과 별개로 누적되는 전투 기록 -->
-    <div id="battleHistory" class="hidden"><div id="battleLog"></div></div>
     <!-- 스킬 카드 페이즈 -->
     <div id="cardPhase" class="hidden">
       <div class="cp-stack">
@@ -1384,7 +1369,6 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
         <div class="cp-hand" id="cardHand"></div>
         <div class="cp-pred" id="cardPred"></div>
       </div>
-      <button class="cp-surrender" id="surrenderBtn">🏳️ 항복</button>
     </div>
     <!-- 결과 (금속판 닫힘 + 보상 카드) -->
     <div id="battleResult" class="hidden">
@@ -8068,8 +8052,9 @@ function startMatch(){
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   hide('#mainScreen'); hide('#resultModal'); show('#battleScreen');
   // 전투 화면 초기 상태: 카드/판정/결과/오버레이 모두 닫고 무대만
-  ['#cardPhase','#judgeWindow','#battleHistory','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
+  ['#cardPhase','#judgeWindow','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
   $('#battleResult').classList.remove('shut','reveal');
+  $('#battleScreen').classList.remove('cards-hidden');
   $('#battleArena').classList.remove('spread');
   renderBattleHeader();
   $('#eSpriteBox').innerHTML = spriteFor(B.e, 124);
@@ -8087,7 +8072,6 @@ function startMatch(){
   $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>${formBadge(B.p)}`;
   $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}`;
   $('#pProfile').textContent = `👤 ${B.p.trainerName||state.profile_name||'재배사'}`;
-  $('#battleLog').innerHTML = '<div class="bl-empty">카드를 숨기면<br>누적된 전투 기록을 볼 수 있습니다</div>';
   updateBars(); updateBattleHud();
   playVsIntro(p);
   // VS 인트로 후 식물 등장 → 첫 카드 페이즈
@@ -8194,8 +8178,8 @@ function skillCardHtml(id, pred){
 /* 스킬 카드 페이즈 표시 — 두 식물 거리 벌어지고, 가운데에 카드가 떠오름 */
 function showCardPhase(){
   if(!B || B.over) return;
-  hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','sweep','close');
-  hide('#battleHistory');
+  hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','close');
+  $('#battleScreen').classList.remove('cards-hidden');
   $('#battleArena').classList.add('spread');
   const predId = B.p.loadout.find(id => id === 'skill_card_predation');
   const normals = B.p.loadout.filter(id => id !== 'skill_card_predation');
@@ -8220,24 +8204,24 @@ function updateBattleHud(){
   if(!B) return;
   $('#battleTurn').textContent = `${B.turn||1}턴`;
   const btn = $('#battleViewBtn');
-  btn.textContent = B.view === 'log' ? '카드 보기' : '카드 숨기기';
+  btn.textContent = B.view === 'hidden' ? '스킬 보이기' : '스킬 숨기기';
   btn.disabled = !!(B.busy || B.over);
+  $('#surrenderBtn').disabled = !!(B.busy || B.over);
 }
-function showBattleHistory(){
+function showBattleField(){
   if(!B || B.over) return;
   hideCardPhase(true);
-  $('#battleArena').classList.add('spread');
-  const history = $('#battleHistory'); show('#battleHistory');
-  history.scrollTop = history.scrollHeight;
+  $('#battleArena').classList.remove('spread');
+  $('#battleScreen').classList.add('cards-hidden');
 }
 function renderBattleIdleView(){
   if(!B || B.over || B.busy) return;
   updateBattleHud();
-  if(B.view === 'log') showBattleHistory(); else showCardPhase();
+  if(B.view === 'hidden') showBattleField(); else showCardPhase();
 }
 function toggleBattleView(){
   if(!B || B.over || B.busy) return;
-  B.view = B.view === 'log' ? 'cards' : 'log';
+  B.view = B.view === 'hidden' ? 'cards' : 'hidden';
   updateBattleHud(); renderBattleIdleView();
   try{ sfx.tap(); }catch(e){}
 }
@@ -8276,6 +8260,37 @@ function showSkillDetail(id){
   show('#battleSkillDetail');
   try { sfx.tap(); } catch(e){}
 }
+function showBattlePlantDetail(){
+  if(!B || B.over || B.busy || B.view!=='hidden') return;
+  const u=B.p, element=ELEMENTS[u.element] || {name:u.element||'-',icon:'',color:'var(--neon)'};
+  const form=FORMS[u.form||'normal'] || FORMS.normal;
+  const activeStates=[];
+  if(u.guard) activeStates.push('방어 태세');
+  if(u.barrier>0) activeStates.push('보호막');
+  if((u.dots||[]).length) activeStates.push(...[...new Set(u.dots.map(dot=>dotName(dot.kind)))]);
+  if((u.buffs||[]).some(buff=>buff.kind==='buff')) activeStates.push('능력치 강화');
+  if((u.buffs||[]).some(buff=>buff.kind==='debuff')) activeStates.push('능력치 약화');
+  $('#battleSkillDetailCard').style.setProperty('--gc', element.color);
+  $('#battleSkillDetailCard').innerHTML = `
+    <div class="bsd-name">${element.icon} ${u.name}</div>
+    <div class="bsd-meta"><span class="bsd-pill">${element.name} 속성</span><span class="bsd-pill">${form.icon} ${form.name}</span></div>
+    <div class="bsd-stat-grid">
+      <div class="bsd-stat"><span>체력</span><b>${Math.max(0,u.hp)} / ${u.max}</b></div>
+      <div class="bsd-stat"><span>공격력</span><b>${Math.round(effStat(u,'atk'))}</b></div>
+      <div class="bsd-stat"><span>방어력</span><b>${Math.round(effStat(u,'def'))}</b></div>
+      <div class="bsd-stat"><span>기동성</span><b>${Math.round(effStat(u,'spd'))}</b></div>
+      <div class="bsd-stat"><span>적중력</span><b>${Math.round(u.acc||0)}</b></div>
+      <div class="bsd-stat"><span>속성력</span><b>${Math.round(u.elem||0)}</b></div>
+      <div class="bsd-stat"><span>치명타율</span><b>${Math.round(u.critRate||0)}%</b></div>
+      <div class="bsd-stat"><span>치명타 피해</span><b>×${u.critMult||1.5}</b></div>
+      <div class="bsd-stat"><span>에너지</span><b>${u.energy} / ${u.energyMax}</b></div>
+      <div class="bsd-stat"><span>보호막</span><b>${Math.max(0,u.barrier||0)}</b></div>
+    </div>
+    <div class="bsd-desc" style="margin-top:10px">${activeStates.length ? `현재 상태 · ${activeStates.join(' · ')}` : '현재 적용 중인 상태 효과가 없습니다.'}</div>
+    <div class="bsd-hint">아무 곳이나 탭하면 닫힙니다</div>`;
+  show('#battleSkillDetail');
+  try { sfx.tap(); } catch(e){}
+}
 function statusTags(u){
   const tags=[];
   if(u.barrier>0) tags.push('🧊'+u.barrier);
@@ -8299,30 +8314,38 @@ function updateBars(){
   for(let i=0;i<B.e.energyMax;i++) epips += `<span class="${i<B.e.energy?'':'off'}">⚡</span>`;
   if($('#eEnergy')) $('#eEnergy').innerHTML = epips;
 }
-function blog(html){
-  const l = $('#battleLog');
-  const empty = l.querySelector('.bl-empty'); if(empty) empty.remove();
-  l.innerHTML += html + '<br>';
-  const history = $('#battleHistory'); history.scrollTop = history.scrollHeight;
+/* 누적 로그는 표시하지 않는다. 기존 전투 호출부와의 호환만 유지한다. */
+function blog(){ }
+function setJudgeOrder(side, label){
+  const order = $('#judgeOrder'); if(!order) return;
+  order.textContent = !side ? '' : (side==='p' ? `${label} →` : `← ${label}`);
 }
-function judgePlain(html){
-  return String(html||'').replace(/<br\s*\/?>/gi,' · ').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+function clearJudgeMessage(){
+  const box=$('#judgeMessage'); if(!box) return;
+  box.classList.remove('show'); box.innerHTML='';
 }
-/* 판정창과 누적 기록에 실제 계산 단계를 동시에 남긴다. */
-function judgeStep(title, formula, result, tone, showStep){
-  if(!B || !showStep) return;
-  const major = showStep === 'major';
-  const no = B.judgeStepNo = (B.judgeStepNo||0) + 1;
-  const calc = $('#judgeCalc');
-  const empty=calc.querySelector('.jcalc-empty'); if(empty) empty.remove();
-  calc.insertAdjacentHTML('beforeend', `<div class="jcalc-step${major?' major':''}">
-    <div class="jcalc-no">${no}</div><div>
-      <div class="jcalc-title">${title}</div>
-      <div class="jcalc-formula">${formula}</div>
-      <div class="jcalc-result ${tone||''}">→ ${result}</div>
-    </div></div>`);
-  calc.scrollTop = calc.scrollHeight;
-  blog(`<span class="jl-calc">[${no}] <b>${title}</b> · ${judgePlain(formula)} → ${judgePlain(result)}</span>`);
+async function showJudgeMessage(message, tone='effect', critical=false, duration=700){
+  const box=$('#judgeMessage'); if(!box || !message) return;
+  box.classList.remove('show');
+  box.innerHTML = `${critical?'<div class="jm-critical">치명타!</div>':''}<div class="jm-main ${tone}">${message}</div>`;
+  void box.offsetWidth; box.classList.add('show');
+  await sleep(duration);
+}
+function battleStatLabel(stat){
+  return stat==='atk'?'공격력':stat==='def'?'방어력':stat==='spd'?'기동성':stat==='acc'?'적중력':stat==='elem'?'속성력':'능력치';
+}
+function dotAppliedMessage(kind){
+  return kind==='poison'?'독에 중독되었다!':kind==='bleed'?'출혈이 발생했다!':kind==='burn'?'화상에 걸렸다!':'지속 피해에 걸렸다!';
+}
+async function showEffectMessages(messages){
+  for(const message of messages){ await showJudgeMessage(message,'effect',false,620); }
+}
+async function animateJudgeCardUse(side, isAttack){
+  const card = $(side==='p' ? '#judgePlayerCard' : '#judgeEnemyCard');
+  if(card){ card.classList.add(isAttack?(side==='p'?'use-right':'use-left'):'use-self'); }
+  const fighter = $(side==='p' ? '#playerFighter' : '#enemyFighter');
+  if(isAttack && fighter){ fighter.classList.add('skill-use'); setTimeout(()=>fighter.classList.remove('skill-use'),440); }
+  await sleep(460);
 }
 function popup(side, text, isHeal){
   const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
@@ -8346,17 +8369,17 @@ function aiPickSkill(e){
   if(guardId && Math.random()<0.18) return guardId;
   return ids[Math.floor(Math.random()*ids.length)];
 }
-async function applySkill(a, d, s, side){
+async function applySkill(a, d, s, side, options={}){
   if(!s) return;
   const tgtSide = side==='p' ? 'e' : 'p';
-  const actorLabel = side==='p' ? '나' : '상대';
-  const orderLabel = side===B.firstSide ? '선공' : '후공';
   const effectNotes=[];
-  const flushJudgeEffects=()=>{
+  const flushJudgeEffects=async()=>{
     if(!effectNotes.length) return;
-    judgeStep(`${actorLabel} 회복·상태효과`, effectNotes.join('<br>'), '적용 완료', side==='p'?'good':'bad', true);
-    effectNotes.length=0;
+    const messages=effectNotes.splice(0);
+    if(options.suppressMessages) return;
+    await showEffectMessages(messages);
   };
+  if(!options.skipAnimation){ setJudgeOrder(null,''); await animateJudgeCardUse(side,!!(s.power>0)); }
   a.guard = null;
   // 무기 변이형 스킬: 에너지 무소모 · 경기당 횟수 차감. 그 외: 에너지 차감
   if(s.noEnergy){
@@ -8366,21 +8389,22 @@ async function applySkill(a, d, s, side){
     a.energy = Math.max(0, a.energy-(s.cost||0));
   }
   if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike'){
+    const before=d.energy;
     d.energy = Math.min(d.energyMax, d.energy + d.passives.energyOnEnemySkill);
+    if(d.energy>before) effectNotes.push(side==='p'?'상대의 에너지가 회복되었다!':'에너지가 회복되었다!');
   }
   blog(`<span class="em">${a.name}</span> ▶ ${s.icon||''} ${s.name}`);
   if(s.guardMult != null){
     const counter = s.counterPct ? Math.round(effStat(a,'atk')*s.counterPct) : 0;
     a.guard = { mult:s.guardMult, counter };
-    judgeStep(`${actorLabel} 방어 우선 적용`, `공격 순서와 무관하게 먼저 적용 · 받는 피해 × ${s.guardMult.toFixed(2)}${s.counterPct?`<br>반격 = 공격 ${effStat(a,'atk')} × ${s.counterPct}`:''}`,
-      `피해 ${Math.round((1-s.guardMult)*100)}% 감소${counter?` · 반격 ${counter}`:''}`, 'good', true);
     blog(`▶ 🛡️ 받는 피해 ${Math.round((1-s.guardMult)*100)}%↓${counter?` · 반격 ${counter} 준비`:''}`);
     sfx.tap();
   }
-  if(s.energyGain){ const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + s.energyGain); effectNotes.push(`⚡ 에너지 ${before} → ${a.energy}`); blog(`▶ ⚡ ${s.energyGain} 충전`); }
-  if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push(`🧼 디버프·지속피해 ${neg}개 해제`); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
-  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); popup(side,'+'+h,true); effectNotes.push(`☀️ 회복 ${h} · HP ${before} → ${a.hp}`); blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
-  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ · ${s.selfBuff.turns}턴`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.energyGain){ const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + s.energyGain); if(a.energy>before) effectNotes.push('에너지가 회복되었다!'); blog(`▶ ⚡ ${s.energyGain} 충전`); }
+  if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
+  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
+  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
     const isAoe = !!s.aoe;
@@ -8392,13 +8416,11 @@ async function applySkill(a, d, s, side){
     const dodgeRoll = Math.random()*100;
     const missed = dodgeRoll < dodge;
     if(missed){
-      judgeStep(`${actorLabel} ${orderLabel} 피해 판정`, `최종 공격 ${effStat(a,'atk')} / 최종 방어 ${effStat(d,'def')}<br>회피율 ${dodge}% · 난수 ${dodgeRoll.toFixed(1)}`,
-        `회피 성공 · 피해 0`, side==='p'?'bad':'good', true);
-      flushJudgeEffects();
       popup(tgtSide,'MISS',false);
       blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(회피 ${dodge}%)</span>`);
       sfx.tap();
-      updateBars(); await sleep(620); return;
+      await showJudgeMessage('빗나갔다!','miss',false,760);
+      updateBars(); return;
     }
     // 데미지 = 공격×위력%(노멀) + 속성수치×타입배율(원소) − 방어(고정)
     const attackStat = effStat(a,'atk');
@@ -8428,61 +8450,56 @@ async function applySkill(a, d, s, side){
     dm = Math.max(1, Math.round(dm * variance));
     const absorbed=Math.min(d.barrier,dm);
     if(d.barrier>0){ d.barrier-=absorbed; dm-=absorbed; if(absorbed>0) blog(`▶ 🧊 보호막이 ${absorbed} 흡수`); }
-    const hpBefore=d.hp;
     d.hp = Math.max(0, d.hp - dm);
     if(d.hp<=0 && d.passives.surviveChance>0){
       const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
-      if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
+      if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
     }
-    const summaryMods=[];
-    if(crit) summaryMods.push(`치명타 ×${a.critMult||1.5}`);
-    modLines.forEach(x=>summaryMods.push(x));
-    summaryMods.push(`난수 ×${variance.toFixed(3)}`);
-    if(absorbed) summaryMods.push(`보호막 -${absorbed}`);
-    judgeStep(`${actorLabel} ${orderLabel} 최종 피해 판정`, `공격 보정: ${attackStat} × ${(s.power/100).toFixed(2)}${s.elem?` + 속성 ${a.elem||0} × ${elemMult.toFixed(2)}`:''} = ${raw.toFixed(1)}<br>방어 보정: ${defenderDef} × ${(1-pierce).toFixed(2)} = ${flatDef.toFixed(1)}${summaryMods.length?`<br>${summaryMods.join(' · ')}`:''}`,
-      `최종 ${dm} 피해 · ${d.name} HP ${hpBefore} → ${d.hp}`, side==='p'?'good':'bad', true);
+    if(absorbed>0) effectNotes.push('보호막이 공격을 막았다!');
     const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
     tgtBox.classList.add('shake'); setTimeout(()=>tgtBox.classList.remove('shake'),420);
     popup(tgtSide,'-'+dm,false);
     blog(`▶ <b>${dm}</b> 피해${d.guard?' (방어 감소)':''}${crit?' · 💥치명타!':''}`);
     if(s.elem){ if(elemMult>1) blog('▶ 효과가 굉장했다! 🔥'); else if(elemMult<1) blog('▶ 효과가 별로였다…'); }
     sfx.hit();
+    const hitMessage = elemMult>1 ? '줄기가 꺾이겠어!' : (elemMult<1 ? '잎만 겨우 흔들렸다!' : '정확히 들어갔다!');
+    const hitTone = elemMult>1 ? 'good' : (elemMult<1 ? 'weak' : '');
+    await showJudgeMessage(hitMessage,hitTone,crit,760);
     const predLs = (s.pred && a.cardFx) ? (a.cardFx.predBoost.lifesteal||0) : 0;
     const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
-    if(ls>0 && dm>0){ const h=Math.round(dm*ls), before=a.hp; a.hp=Math.min(a.max,a.hp+h); popup(side,'+'+h,true); effectNotes.push(`🩸 흡혈 ${h} · HP ${before} → ${a.hp}`); blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
-    if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } effectNotes.push(`🧬 공격 ${sa}${s.steal.stat==='both'?` · 방어 ${sd}`:''} 강탈`); blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
+    if(ls>0 && dm>0){ const h=Math.round(dm*ls), before=a.hp; a.hp=Math.min(a.max,a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
+    if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } effectNotes.push('상대의 능력치를 흡수하였다!'); blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
     if(s.pred && a.cardFx){ const pb=a.cardFx.predBoost;
-      if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push(`🧬 공격 ${sa} 강탈`); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
-      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push(`🔋 에너지 ${se} 강탈`); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
+      if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push('상대의 공격력을 흡수하였다!'); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
+      if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push('상대의 에너지를 빼앗았다!'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
     }
-    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push(`🟣 중독 2턴 · 턴당 ${pd}`); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
-    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push(`🔻 방어 ${Math.round(a.passives.defDownOnHit*100)}%↓ · 2턴`); }
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`🔻 ${statName(appliedStat)} ${Math.round(s.enemyDebuff.pct*100)}%↓ · ${s.enemyDebuff.turns}턴`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(`${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} ${s.dot.turns}턴 · 턴당 ${ddmg}`); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
+    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push('방어력이 감소하였다!'); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
-    if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl), before=a.hp; a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push(`↩️ 반사 ${r} · 공격자 HP ${before} → ${a.hp}`); blog(`↩️ 굴절 반사! ${r} 피해`); }
-    if(d.guard && d.guard.counter>0 && d.hp>0){ const before=a.hp; a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push(`↩️ 반격 ${d.guard.counter} · 공격자 HP ${before} → ${a.hp}`); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
+    if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
+    if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`🔻 ${statName(appliedStat)} ${Math.round(s.enemyDebuff.pct*100)}%↓ · ${s.enemyDebuff.turns}턴`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(`${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} ${s.dot.turns}턴 · 턴당 ${ddmg}`); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
-  flushJudgeEffects();
+  await flushJudgeEffects();
   updateBars();
-  await sleep(760);
+  await sleep(180);
 }
 async function tickStatuses(u, side){
   let changed=false;
-  const owner = side==='p' ? '나' : '상대';
   const statusNotes=[];
-  if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct), before=u.hp; u.hp=Math.min(u.max,u.hp+h); popup(side,'+'+h,true); statusNotes.push(`💚 재생 ${h} · HP ${before} → ${u.hp}`); blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
+  if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct), before=u.hp; u.hp=Math.min(u.max,u.hp+h); if(u.hp>before){ popup(side,'회복',true); statusNotes.push('체력이 회복되었다!'); } blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
   if(u.dots && u.dots.length){
     let total=0; u.dots.forEach(dot=>{ total+=dot.dmg; });
-    if(total>0){ const before=u.hp; u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.icon))].join(''); statusNotes.push(`${kinds} 지속피해 ${total} · HP ${before} → ${u.hp}`); blog(`<span class="em">${u.name}</span> ${kinds} 지속피해 ${total}`); changed=true; }
+    if(total>0){ u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.kind))]; statusNotes.push(kinds.includes('poison')?'중독 피해를 입었다!':kinds.includes('burn')?'화상 피해를 입었다!':kinds.includes('bleed')?'출혈 피해를 입었다!':'지속 피해를 입었다!'); blog(`<span class="em">${u.name}</span> 지속피해 ${total}`); changed=true; }
     u.dots.forEach(dot=>dot.turns--); u.dots = u.dots.filter(dot=>dot.turns>0);
   }
   if(u.buffs && u.buffs.length){ u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); }
-  if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=Math.random(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('🧼 디버프 1개 자연 해제'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
+  if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=Math.random(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('해로운 효과가 해제되었다!'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
   // 포자형: 매 턴 종료 시 포자 발동(중복 가능)
   if(u.cardFx && u.cardFx.spores && u.cardFx.spores.length && B){
     const opp = (side==='p') ? B.e : B.p;
@@ -8492,17 +8509,17 @@ async function tickStatuses(u, side){
       if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
       else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); opp.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
       else if(sp.kind==='defup'){ u.buffs.push({stat:'def',pct:sp.pct,turns:2,kind:'buff'}); blog(`<span class="em">${u.name}</span> 🌀 방해 포자! 방어 ${Math.round(sp.pct*100)}%↑(2턴)`); changed=true; }
-      if(sp.kind==='paralyze') statusNotes.push('💤 마비 포자 · 다음 행동 취소');
-      else if(sp.kind==='poison') statusNotes.push(`🟣 중독 포자 · 2턴, 턴당 ${Math.max(1,Math.round(u.max*sp.pct))}`);
-      else if(sp.kind==='defup') statusNotes.push(`🌀 방어 ${Math.round(sp.pct*100)}%↑ · 2턴`);
+      if(sp.kind==='paralyze') statusNotes.push('마비 상태가 되었다!');
+      else if(sp.kind==='poison') statusNotes.push('독에 중독되었다!');
+      else if(sp.kind==='defup') statusNotes.push('방어력이 증가하였다!');
     });
   }
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
-  if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); statusNotes.push(`⚡ 에너지 ${before} → ${u.energy}`); }
-  if(statusNotes.length) judgeStep(`${owner} 턴 종료 효과`, statusNotes.join('<br>'), '적용 완료', side==='p'?'good':'bad', true);
+  if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); if(u.energy>before){ statusNotes.push('에너지가 회복되었다!'); changed=true; } }
+  if(statusNotes.length) await showEffectMessages(statusNotes);
   if(changed){ updateBars(); await sleep(480); }
 }
-/* 판정 창 열기 — 좌→우 번개 스윕 + 양쪽 카드 표시 */
+/* 판정 창 열기 — 양쪽이 선택한 카드만 먼저 공개한다. */
 async function openJudge(playerId, enemyId){
   const jw = $('#judgeWindow');
   const ps = skillById(playerId, B.p) || {name:'?',icon:''};
@@ -8511,20 +8528,19 @@ async function openJudge(playerId, enemyId){
   const eg = gradeColor(battleSkillGrade(B.e, enemyId));
   const clean = n => (n||'').replace(/\s*Lv\.\d+/,'');
   $('#judgeCards').innerHTML = `
-    <div class="jw-card foe" style="--gc:${eg}"><div class="jc-tag">상대</div><div class="jc-name">${es.icon||''} ${clean(es.name)}</div></div>
-    <div class="jw-vs">VS</div>
-    <div class="jw-card mine" style="--gc:${pg}"><div class="jc-tag">나</div><div class="jc-name">${ps.icon||''} ${clean(ps.name)}</div></div>`;
-  B.judgeStepNo = 0;
-  $('#judgeCalc').innerHTML = '<div class="jcalc-empty">기동성 판정 준비…</div>';
-  jw.classList.remove('close','open','sweep'); show('#judgeWindow'); void jw.offsetWidth;
-  jw.classList.add('sweep','open');
+    <div class="jw-card foe" id="judgeEnemyCard" style="--gc:${eg}"><div class="jc-tag">상대</div><div class="jc-name">${es.icon||''} ${clean(es.name)}</div></div>
+    <div class="jw-order" id="judgeOrder"></div>
+    <div class="jw-card mine" id="judgePlayerCard" style="--gc:${pg}"><div class="jc-tag">나</div><div class="jc-name">${ps.icon||''} ${clean(ps.name)}</div></div>`;
+  clearJudgeMessage();
+  jw.classList.remove('close','open'); show('#judgeWindow'); void jw.offsetWidth;
+  jw.classList.add('open');
   try{ sfx.roll(); }catch(e){}
-  await sleep(1080);
+  await sleep(620);
 }
 function closeJudge(){
   const jw = $('#judgeWindow'); if(!jw || jw.classList.contains('hidden')) return;
   jw.classList.add('close');
-  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','sweep','close'); }, 360);
+  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','close'); }, 300);
 }
 async function finishMatch(won){
   closeJudge();
@@ -8543,34 +8559,51 @@ async function playerSkill(skillId){
   updateBattleHud();
   hide('#battleSkillDetail');
   hideCardPhase();
-  hide('#battleHistory');
   try{ sfx.tap(); }catch(e){}
   await sleep(280);
   const eId = aiPickSkill(B.e);
-  blog(`<div class="bl-turn"><span>${B.turn}턴</span></div>`);
-  // 판정 창 등장(좌→우 번개) + 양쪽 카드 공개
+  // 양쪽 카드 공개 후, 순서가 의미 있을 때만 선공/방어 우선을 표시한다.
   await openJudge(skillId, eId);
-  // 선공 판정 — 기동성 차이 → 확률(공격 순서에만 영향, 방어/버프는 순서 무관)
-  const myS = effStat(B.p,'spd'), enS = effStat(B.e,'spd');
-  const firstChance = clamp(50 + (myS - enS), 5, 95);
-  const firstRoll = Math.random()*100;
-  const playerFirst = firstRoll < firstChance;
-  B.firstSide = playerFirst ? 'p' : 'e';
-  judgeStep('선공 판정', `50 + (나 기동 ${Math.round(myS)} - 상대 기동 ${Math.round(enS)}) = ${50+myS-enS}%<br>5~95% 제한 → 내 선공 확률 ${firstChance}%`,
-    `난수 ${firstRoll.toFixed(1)} · ${playerFirst?'내':'상대'} 식물 선공`, 'roll', 'major');
-  await sleep(980);
-  // 방어 스킬은 기동성 순서와 무관하게 양쪽 공격보다 먼저 적용한다.
   const pChosen=skillById(skillId,B.p), eChosen=skillById(eId,B.e);
-  if(isPriorityDefenseSkill(pChosen)) await applySkill(B.p,B.e,pChosen,'p');
-  if(isPriorityDefenseSkill(eChosen)) await applySkill(B.e,B.p,eChosen,'e');
-  const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
-  for(const [side, k] of order){
+  const pAttack=!!(pChosen && pChosen.power>0), eAttack=!!(eChosen && eChosen.power>0);
+  const pDefense=isPriorityDefenseSkill(pChosen), eDefense=isPriorityDefenseSkill(eChosen);
+  const bothDefense=pDefense && eDefense;
+  const needsOrder=pAttack || eAttack;
+  const prioritySide = needsOrder && pDefense!==eDefense ? (pDefense?'p':'e') : null;
+  let playerFirst=true;
+  if(needsOrder && !prioritySide){
+    const myS = effStat(B.p,'spd'), enS = effStat(B.e,'spd');
+    const firstChance = clamp(50 + (myS - enS), 5, 95);
+    playerFirst = Math.random()*100 < firstChance;
+    B.firstSide = playerFirst ? 'p' : 'e';
+  } else {
+    B.firstSide = prioritySide;
+  }
+  if(!needsOrder){
+    setJudgeOrder(null,'');
+    await sleep(480);
+    await Promise.all([animateJudgeCardUse('p',false),animateJudgeCardUse('e',false)]);
+    if(pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true,suppressMessages:bothDefense});
+    if(eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true,suppressMessages:bothDefense});
+    if(!pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true});
+    if(!eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true});
+  } else {
+    setJudgeOrder(prioritySide || B.firstSide, prioritySide ? '방어 우선' : '선공');
+    await sleep(760);
+    // 방어 스킬은 기동성 순서와 무관하게 공격보다 먼저 적용한다.
+    if(pDefense) await applySkill(B.p,B.e,pChosen,'p');
+    if(eDefense) await applySkill(B.e,B.p,eChosen,'e');
+  }
+  const order = prioritySide
+    ? (prioritySide==='p' ? [['e',eId],['p',skillId]] : [['p',skillId],['e',eId]])
+    : (playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]]);
+  for(const [side, k] of needsOrder ? order : []){
     const a = side==='p' ? B.p : B.e;
     const d = side==='p' ? B.e : B.p;
     const chosen=skillById(k,a);
     if(isPriorityDefenseSkill(chosen)) continue;
     if(a.hp<=0) continue;
-    if(a.skipNext){ a.skipNext=false; blog(`<span class="em">${a.name}</span> 💤 마비되어 움직이지 못한다!`); updateBars(); await sleep(560); continue; }
+    if(a.skipNext){ a.skipNext=false; await animateJudgeCardUse(side,false); await showJudgeMessage('마비되어 움직일 수 없다!','effect',false,680); updateBars(); continue; }
     await applySkill(a, d, chosen, side);
     if(d.hp<=0){ await finishMatch(side==='p'); return; }
     if(a.hp<=0){ await finishMatch(side!=='p'); return; }
@@ -8581,7 +8614,7 @@ async function playerSkill(skillId){
   B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
-  await sleep(1000);
+  await sleep(620);
   closeJudge();
   B.turn += 1;
   B.busy = false; updateBars(); updateBattleHud();
@@ -8733,6 +8766,7 @@ $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
 // 전투: 항복(재확인) · 스킬 상세 닫기
 $('#battleViewBtn').addEventListener('click', () => toggleBattleView());
 $('#surrenderBtn').addEventListener('click', () => confirmSurrender());
+$('#pSpriteBox').addEventListener('click', () => showBattlePlantDetail());
 $('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderConfirm'); });
 $('#surrenderYes').addEventListener('click', () => { sfx.tap(); doSurrender(); });
 $('#battleSkillDetail').addEventListener('click', () => { hide('#battleSkillDetail'); });
