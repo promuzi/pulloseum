@@ -446,6 +446,17 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   text-shadow:0 0 30px rgba(255,107,74,.9),0 6px 18px rgba(0,0,0,.7);
   -webkit-text-stroke:2px rgba(255,107,74,.6);}
 
+/* 손가락 가리키기 — 양쪽에서 들어와 서로를 가리키고 빠짐 */
+.vs-hand{position:absolute;top:50%;font-size:44px;opacity:0;z-index:3;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));pointer-events:none;}
+.vs-hand-l{left:50%;transform:translate(-150%,-50%);}
+.vs-hand-r{right:50%;transform:translate(150%,-50%);}
+#vsIntro.play .vs-hand-l{animation:vsHandL 1.05s 1.05s cubic-bezier(.2,1.4,.3,1) forwards;}
+#vsIntro.play .vs-hand-r{animation:vsHandR 1.05s 1.05s cubic-bezier(.2,1.4,.3,1) forwards;}
+@keyframes vsHandL{0%{opacity:0;transform:translate(-150%,-50%)}30%{opacity:1;transform:translate(-118%,-50%)}
+  46%{transform:translate(-138%,-50%)}62%{transform:translate(-118%,-50%)}82%{opacity:1;transform:translate(-118%,-50%)}100%{opacity:0;transform:translate(-150%,-50%)}}
+@keyframes vsHandR{0%{opacity:0;transform:translate(150%,-50%)}30%{opacity:1;transform:translate(18%,-50%)}
+  46%{transform:translate(38%,-50%)}62%{transform:translate(18%,-50%)}82%{opacity:1;transform:translate(18%,-50%)}100%{opacity:0;transform:translate(150%,-50%)}}
 #vsIntro.play .vs-enemy{animation:vsInL .55s .9s cubic-bezier(.18,.85,.25,1) forwards;}
 #vsIntro.play .vs-me{animation:vsInR .55s .9s cubic-bezier(.18,.85,.25,1) forwards;}
 @keyframes vsInL{0%{transform:translateY(-50%) translateX(-118%)}62%{transform:translateY(-50%) translateX(4%)}100%{transform:translateY(-50%) translateX(0)}}
@@ -1283,26 +1294,60 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   <!-- ===== 전투 화면 ===== -->
   <section id="battleScreen" class="screen hidden">
     <div id="battleHeader"></div>
-    <div class="fighter enemy">
-      <div class="fsprite" id="eSpriteBox"></div>
-      <div class="finfo">
-        <div class="fname" id="eName"></div>
-        <div class="hpbar"><div id="eHpBar"></div></div>
-        <div class="hptext" id="eHpText"></div>
-        <div class="energy" id="eEnergy"></div>
+    <div id="battleArena">
+      <div class="arena-fighter enemy" id="enemyFighter">
+        <div class="finfo">
+          <div class="fname" id="eName"></div>
+          <div class="hpbar"><div id="eHpBar"></div></div>
+          <div class="hptext" id="eHpText"></div>
+          <div class="energy" id="eEnergy"></div>
+        </div>
+        <div class="fsprite" id="eSpriteBox"></div>
+      </div>
+      <div class="arena-fighter player" id="playerFighter">
+        <div class="fsprite" id="pSpriteBox"></div>
+        <div class="finfo">
+          <div class="fname" id="pName"></div>
+          <div class="hpbar"><div id="pHpBar"></div></div>
+          <div class="hptext" id="pHpText"></div>
+          <div class="energy" id="pEnergy"></div>
+        </div>
+      </div>
+      <!-- 판정 창 (좌→우 번개로 등장) -->
+      <div id="judgeWindow" class="hidden">
+        <div class="jw-bolt"></div>
+        <div class="jw-inner">
+          <div id="judgeCards"></div>
+          <div id="battleLog"></div>
+        </div>
       </div>
     </div>
-    <div id="battleLog"></div>
-    <div class="fighter player">
-      <div class="fsprite" id="pSpriteBox"></div>
-      <div class="finfo">
-        <div class="fname" id="pName"></div>
-        <div class="hpbar"><div id="pHpBar"></div></div>
-        <div class="hptext" id="pHpText"></div>
-        <div class="energy" id="pEnergy"></div>
+    <!-- 스킬 카드 페이즈 -->
+    <div id="cardPhase" class="hidden">
+      <div class="cp-energy" id="cardEnergy"></div>
+      <div class="cp-hand" id="cardHand"></div>
+      <div class="cp-pred" id="cardPred"></div>
+      <button class="cp-surrender" id="surrenderBtn">🏳️ 항복</button>
+    </div>
+    <!-- 결과 (금속판 닫힘 + 보상 카드) -->
+    <div id="battleResult" class="hidden">
+      <div class="mr-plate top"></div>
+      <div class="mr-plate bot"></div>
+      <div class="mr-center" id="battleResultCenter"></div>
+    </div>
+    <!-- 스킬 상세(꾹 누르기) -->
+    <div id="battleSkillDetail" class="hidden"><div class="bsd-card" id="battleSkillDetailCard"></div></div>
+    <!-- 항복 재확인 -->
+    <div id="surrenderConfirm" class="hidden">
+      <div class="sconf-card">
+        <h3>🏳️ 항복하시겠습니까?</h3>
+        <p>이번 경기를 포기하면 <b style="color:#ff8a70">패배</b>로 처리됩니다.</p>
+        <div class="sconf-row">
+          <button class="btn ghost" id="surrenderNo">계속 싸우기</button>
+          <button class="btn" id="surrenderYes" style="border-color:rgba(255,107,74,.5);color:#ff9a82">항복</button>
+        </div>
       </div>
     </div>
-    <div class="moves" id="moveButtons"></div>
   </section>
 
   <!-- ===== 함선 내부 (포켓몬식 워킹) ===== -->
@@ -1459,6 +1504,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <div class="vs-tname" id="vsTname"></div>
     <div class="vs-slash"></div>
     <div class="vs-vs">VS</div>
+    <div class="vs-hand vs-hand-l">👉</div>
+    <div class="vs-hand vs-hand-r">👈</div>
   </div>
 </div>
 
@@ -7910,16 +7957,32 @@ function startMatch(){
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   hide('#mainScreen'); hide('#resultModal'); show('#battleScreen');
+  // 전투 화면 초기 상태: 카드/판정/결과/오버레이 모두 닫고 무대만
+  ['#cardPhase','#judgeWindow','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
+  $('#battleResult').classList.remove('shut','reveal');
+  $('#battleArena').classList.remove('spread');
   renderBattleHeader();
-  $('#eSpriteBox').innerHTML = spriteFor(B.e, 110);
-  $('#pSpriteBox').innerHTML = spriteFor(B.p, 110);
+  $('#eSpriteBox').innerHTML = spriteFor(B.e, 108);
+  $('#pSpriteBox').innerHTML = spriteFor(B.p, 108);
+  $('#eSpriteBox').classList.remove('enter','collapse');
+  $('#pSpriteBox').classList.remove('enter','collapse');
   const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
   $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${B.e.form==='pred' ? ' <span class="badge" style="color:#ff6bd4;border:1px solid #ff6bd4">🦷</span>' : ''}`;
   $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>`;
-  $('#battleLog').innerHTML = `<span class="em">${round.name}</span> 경기 시작! <span class="em">${B.e.name}</span> 등장!<br>`;
-  renderMoveButtons();
+  $('#battleLog').innerHTML = '';
   updateBars();
   playVsIntro(p);
+  // 인트로(재배사 등장→손가락질→퇴장) 후 식물 등장 → 첫 카드 페이즈
+  clearTimeout(B._stageT);
+  B._stageT = setTimeout(() => enterBattleStage(), 2540);
+}
+/* 인트로 종료 후: 두 식물이 무대에 등장하고, 잠시 뒤 첫 카드 페이즈 */
+function enterBattleStage(){
+  if(!B || B.over) return;
+  $('#eSpriteBox').classList.add('enter');
+  $('#pSpriteBox').classList.add('enter');
+  clearTimeout(B._cardT);
+  B._cardT = setTimeout(() => { if(B && !B.over && !B.busy) showCardPhase(); }, 640);
 }
 /* 전투 매칭 인트로: 토너먼트명 → 슬래시 + VS → 상대(위·좌)·나(아래·우) 배너 슬라이드 인 → 위아래로 쪼개지며 전투 공개 */
 function playVsIntro(p){
@@ -7985,17 +8048,86 @@ function moveCostLabel(s, unit){
   if(s.noEnergy){ const rem = (unit && unit.uses && unit.uses[s.id]!=null) ? unit.uses[s.id] : (s.uses||0); return `🔁${rem}회`; }
   return (s.cost||0)>0 ? `⚡${s.cost}` : '무료';
 }
-function renderMoveButtons(){
-  let html = B.p.loadout.map(id => {
-    const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0, desc:'' };
-    const costLabel = moveCostLabel(s, B.p);
-    return `<button class="movebtn" data-skill="${id}"><div class="mn">${s.icon||''} ${s.name} <span style="float:right;color:var(--neon);font-size:12px">${costLabel}</span></div><div class="ms">${skillCoefDesc(s)}</div></button>`;
-  }).join('');
-  html += `<button class="movebtn wide" data-skill="__surrender" style="border-color:rgba(255,107,74,.45)"><div class="mn">🏳️ 항복</div><div class="ms">이번 경기를 포기합니다 (패배 처리)</div></button>`;
-  $('#moveButtons').innerHTML = html;
-  document.querySelectorAll('#moveButtons [data-skill]').forEach(btn => btn.addEventListener('click', () => {
-    if(btn.dataset.skill === '__surrender') surrenderMatch(); else playerSkill(btn.dataset.skill);
-  }));
+/* 전투 중 스킬 등급(카드/성장 등급 → 카드 테두리 색) */
+function battleSkillGrade(unit, id){
+  if(id === 'skill_basic_strike') return 'C';
+  if(unit && unit.cardSkills && unit.cardSkills[id]) return unit.cardSkills[id];
+  if(unit && unit.skillGrades && unit.skillGrades[id]) return unit.skillGrades[id];
+  const s = skillById(id, unit); return (s && s.grade) || 'C';
+}
+function skillUnusable(unit, id){
+  const s = skillById(id, unit); if(!s) return true;
+  if(s.noEnergy){ const rem = (unit.uses && unit.uses[id]!=null) ? unit.uses[id] : (s.uses||0); return rem <= 0; }
+  return unit.energy < (s.cost||0);
+}
+/* 카드 1장 HTML — 최소 정보(이름·코스트·등급·짧은 설명) */
+function skillCardHtml(id, pred){
+  const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0, desc:'' };
+  const g = battleSkillGrade(B.p, id), col = gradeColor(g);
+  const cost = s.noEnergy ? `<span class="sc-cost use">🔁${(B.p.uses && B.p.uses[id]!=null)?B.p.uses[id]:(s.uses||0)}</span>`
+                          : `<span class="sc-cost">${(s.cost||0)>0?'⚡'+s.cost:'무료'}</span>`;
+  const dis = skillUnusable(B.p, id) ? ' disabled' : '';
+  return `<button class="skillcard${pred?' pred':''}${dis?' '+dis.trim():''}" style="--gc:${col}" data-skill="${id}"${dis}>
+    <div class="sc-top"><span class="sc-name">${s.icon||''} ${s.name.replace(/\s*Lv\.\d+/,'')}</span><span class="sc-grade">${g}</span>${cost}</div>
+    <div class="sc-desc">${skillCoefLabel(s) || (s.desc||'').slice(0,26)}</div>
+  </button>`;
+}
+/* 스킬 카드 페이즈 표시 — 두 식물 거리 벌어지고, 가운데에 카드가 떠오름 */
+function showCardPhase(){
+  if(!B || B.over) return;
+  hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','sweep','close');
+  $('#battleArena').classList.add('spread');
+  const predId = B.p.loadout.find(id => id === 'skill_card_predation');
+  const normals = B.p.loadout.filter(id => id !== 'skill_card_predation');
+  $('#cardHand').innerHTML = normals.map(id => skillCardHtml(id, false)).join('');
+  $('#cardPred').innerHTML = predId ? skillCardHtml(predId, true) : '';
+  // 상단 에너지(번개)
+  let pips = `<span class="ce-label">⚡ 에너지</span>`;
+  for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
+  $('#cardEnergy').innerHTML = pips;
+  bindSkillCards();
+  const cp = $('#cardPhase'); cp.classList.remove('closing'); show('#cardPhase');
+  cp.classList.remove('dealing'); void cp.offsetWidth; cp.classList.add('dealing');
+}
+function hideCardPhase(){
+  const cp = $('#cardPhase'); if(!cp || cp.classList.contains('hidden')) return;
+  cp.classList.add('closing');
+  setTimeout(() => { cp.classList.add('hidden'); cp.classList.remove('closing','dealing'); }, 240);
+}
+/* 카드 탭=선택 / 꾹 누르기=상세 */
+let _cardPressTimer = null, _cardLongFired = false;
+function bindSkillCards(){
+  document.querySelectorAll('#cardPhase .skillcard').forEach(btn => {
+    const id = btn.dataset.skill;
+    btn.addEventListener('pointerdown', () => {
+      _cardLongFired = false; clearTimeout(_cardPressTimer);
+      _cardPressTimer = setTimeout(() => { _cardLongFired = true; showSkillDetail(id); }, 480);
+    });
+    const cancel = () => clearTimeout(_cardPressTimer);
+    btn.addEventListener('pointerup', cancel);
+    btn.addEventListener('pointerleave', cancel);
+    btn.addEventListener('pointercancel', cancel);
+    btn.addEventListener('click', () => {
+      clearTimeout(_cardPressTimer);
+      if(_cardLongFired){ _cardLongFired = false; return; }
+      if(btn.disabled) return;
+      playerSkill(id);
+    });
+  });
+}
+function showSkillDetail(id){
+  const s = skillById(id, B.p); if(!s) return;
+  const g = battleSkillGrade(B.p, id), col = gradeColor(g);
+  const cost = s.noEnergy ? `🔁 ${(B.p.uses && B.p.uses[id]!=null)?B.p.uses[id]:(s.uses||0)}회 (에너지 무소모)` : ((s.cost||0)>0?`⚡ ${s.cost} 소모`:'무료');
+  const tag = s.tag ? `<span class="bsd-pill">${s.tag}</span>` : '';
+  $('#battleSkillDetailCard').style.setProperty('--gc', col);
+  $('#battleSkillDetailCard').innerHTML = `
+    <div class="bsd-name">${s.icon||''} ${s.name.replace(/\s*Lv\.\d+/,'')} <span class="sc-grade" style="--gc:${col}">${g}</span></div>
+    <div class="bsd-meta"><span class="bsd-pill">${cost}</span>${tag}</div>
+    <div class="bsd-desc">${skillCoefDesc(s)}</div>
+    <div class="bsd-hint">아무 곳이나 탭하면 닫힙니다</div>`;
+  show('#battleSkillDetail');
+  try { sfx.tap(); } catch(e){}
 }
 function statusTags(u){
   const tags=[];
@@ -8019,17 +8151,6 @@ function updateBars(){
   let epips = '';
   for(let i=0;i<B.e.energyMax;i++) epips += `<span class="${i<B.e.energy?'':'off'}">⚡</span>`;
   if($('#eEnergy')) $('#eEnergy').innerHTML = epips;
-  document.querySelectorAll('#moveButtons [data-skill]').forEach(btn => {
-    const id = btn.dataset.skill;
-    if(id === '__surrender'){ btn.disabled = B.busy || B.over; return; }
-    const s = skillById(id, B.p);
-    let unusable = false;
-    if(s){
-      if(s.noEnergy){ const rem = (B.p.uses && B.p.uses[id]!=null) ? B.p.uses[id] : (s.uses||0); unusable = rem <= 0; }
-      else unusable = B.p.energy < (s.cost||0);
-    }
-    btn.disabled = B.busy || B.over || unusable;
-  });
 }
 function blog(html){
   const l = $('#battleLog');
@@ -8098,6 +8219,8 @@ async function applySkill(a, d, s, side){
     // (저위력 공격이 방어에 의해 1까지 무력화되던 문제 보정)
     const raw = normal + elementPart;
     let dm = Math.max(1, Math.max(raw * 0.25, raw - flatDef));
+    // 판정 창에 보정 계산식 노출 (공격×위력% + 속성 − 방어)
+    blog(`<span class="jl-calc">계산 ▸ 공격 ${Math.round(effStat(a,'atk'))}×${s.power}%${s.elem?` + 속성 ${Math.round(elementPart)}(×${elemMult.toFixed(1)})`:''} − 방어 ${Math.round(flatDef)}</span>`);
     // 치명타: 방어까지 계산된 최종 데미지에 치명타계수를 곱한다
     const critChance = (a.critRate||0)/100 + (s.critBonus||0) + (a.passives.critBonus||0);
     let crit = critChance>0 && Math.random()<critChance;
@@ -8163,6 +8286,34 @@ async function tickStatuses(u, side){
   if(u.cardFx && u.cardFx.energyRegen>0){ u.energy = Math.min(5, u.energy + u.cardFx.energyRegen); }
   if(changed){ updateBars(); await sleep(480); }
 }
+/* 판정 창 열기 — 좌→우 번개 스윕 + 양쪽 카드 표시 */
+async function openJudge(playerId, enemyId){
+  const jw = $('#judgeWindow');
+  const ps = skillById(playerId, B.p) || {name:'?',icon:''};
+  const es = skillById(enemyId, B.e) || {name:'?',icon:''};
+  const pg = gradeColor(battleSkillGrade(B.p, playerId));
+  const eg = gradeColor(battleSkillGrade(B.e, enemyId));
+  const clean = n => (n||'').replace(/\s*Lv\.\d+/,'');
+  $('#judgeCards').innerHTML = `
+    <div class="jw-card foe" style="--gc:${eg}"><div class="jc-tag">상대</div><div class="jc-name">${es.icon||''} ${clean(es.name)}</div></div>
+    <div class="jw-vs">VS</div>
+    <div class="jw-card mine" style="--gc:${pg}"><div class="jc-tag">나</div><div class="jc-name">${ps.icon||''} ${clean(ps.name)}</div></div>`;
+  $('#battleLog').innerHTML = '';
+  jw.classList.remove('close','open','sweep'); show('#judgeWindow'); void jw.offsetWidth;
+  jw.classList.add('sweep','open');
+  try{ sfx.roll(); }catch(e){}
+  await sleep(660);
+}
+function closeJudge(){
+  const jw = $('#judgeWindow'); if(!jw || jw.classList.contains('hidden')) return;
+  jw.classList.add('close');
+  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','sweep','close'); }, 240);
+}
+async function finishMatch(won){
+  closeJudge();
+  await sleep(260);
+  await endMatch(won);
+}
 async function playerSkill(skillId){
   if(!B || B.busy || B.over) return;
   const s = skillById(skillId, B.p);
@@ -8171,11 +8322,20 @@ async function playerSkill(skillId){
     const rem = (B.p.uses && B.p.uses[skillId]!=null) ? B.p.uses[skillId] : (s.uses||0);
     if(rem <= 0){ toast('이 스킬은 더 쓸 수 없습니다 (횟수 소진)'); return; }
   } else if(B.p.energy < (s.cost||0)){ toast('⚡에너지가 부족합니다'); return; }
-  B.busy = true; updateBars();
+  B.busy = true;
+  hide('#battleSkillDetail');
+  hideCardPhase();
+  try{ sfx.tap(); }catch(e){}
+  await sleep(280);
   const eId = aiPickSkill(B.e);
-  // 선제공격 = 50 + (내 기동성 − 상대 기동성) % (5~95 제한)
-  const firstChance = clamp(50 + (effStat(B.p,'spd') - effStat(B.e,'spd')), 5, 95);
+  // 판정 창 등장(좌→우 번개) + 양쪽 카드 공개
+  await openJudge(skillId, eId);
+  // 선공 판정 — 기동성 차이 → 확률(공격 순서에만 영향, 방어/버프는 순서 무관)
+  const myS = effStat(B.p,'spd'), enS = effStat(B.e,'spd');
+  const firstChance = clamp(50 + (myS - enS), 5, 95);
   const playerFirst = Math.random()*100 < firstChance;
+  blog(`<span class="jl-roll">⚔️ 선공 판정 ▸ 기동성 나 ${Math.round(myS)} vs 상대 ${Math.round(enS)} → 선공 확률 ${firstChance}% → <b>${playerFirst?'내':'상대'} 식물 선공!</b></span>`);
+  await sleep(760);
   const order = playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]];
   for(const [side, k] of order){
     const a = side==='p' ? B.p : B.e;
@@ -8183,22 +8343,29 @@ async function playerSkill(skillId){
     if(a.hp<=0) continue;
     if(a.skipNext){ a.skipNext=false; blog(`<span class="em">${a.name}</span> 💤 마비되어 움직이지 못한다!`); updateBars(); await sleep(560); continue; }
     await applySkill(a, d, skillById(k, a), side);
-    if(d.hp<=0){ await endMatch(side==='p'); return; }
-    if(a.hp<=0){ await endMatch(side!=='p'); return; }
+    if(d.hp<=0){ await finishMatch(side==='p'); return; }
+    if(a.hp<=0){ await finishMatch(side!=='p'); return; }
   }
-  await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await endMatch(true); return; } if(B.p.hp<=0){ await endMatch(false); return; }
-  await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await endMatch(false); return; } if(B.e.hp<=0){ await endMatch(true); return; }
+  await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await finishMatch(true); return; } if(B.p.hp<=0){ await finishMatch(false); return; }
+  await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await finishMatch(false); return; } if(B.e.hp<=0){ await finishMatch(true); return; }
   B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
   B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
-  B.busy = false; renderMoveButtons(); updateBars();
+  await sleep(620);
+  closeJudge();
+  B.busy = false; updateBars();
+  if(!B.over){ await sleep(300); showCardPhase(); }
 }
-async function surrenderMatch(){
+/* 항복: 재확인 후 진행 */
+function confirmSurrender(){ if(!B || B.over || B.busy) return; show('#surrenderConfirm'); try{ sfx.tap(); }catch(e){} }
+async function doSurrender(){
+  hide('#surrenderConfirm');
   if(!B || B.over) return;
-  B.over = true; B.p.hp = 0; updateBars();
-  blog('🏳️ 항복했습니다.');
-  await sleep(300);
+  B.busy = true; B.over = true;
+  hideCardPhase();
+  B.p.hp = 0; updateBars();
+  await sleep(200);
   await endMatch(false);
 }
 function gainGrowthExp(p, amount){
@@ -8223,11 +8390,16 @@ function checkPromotion(p){
 }
 async function endMatch(won){
   B.over = true; updateBars();
-  await sleep(450);
+  closeJudge();
+  // 진 식물이 쓰러지는 연출
+  const loserBox = won ? $('#eSpriteBox') : $('#pSpriteBox');
+  if(loserBox){ loserBox.classList.remove('enter'); loserBox.classList.add('collapse'); }
+  if(won){ blog(`<span class="em">${B.e.name}</span> 쓰러졌다!`); } else { blog(`<span class="em">${B.p.name}</span> 쓰러졌다…`); }
+  try{ won ? sfx.win() : sfx.lose(); }catch(e){}
+  await sleep(950);
   const T = state.tournament, round = TOURNAMENT_ROUNDS[T.roundIndex];
   const p = state.plants.find(x=>x.id===T.plantId);
   const tIdx = plantRankTierIdx(p);
-  if(won){ blog(`<span class="em">${B.e.name}</span> 쓰러졌다!`); sfx.win(); } else { blog(`<span class="em">${B.p.name}</span> 쓰러졌다…`); sfx.lose(); }
   // 전적 집계
   if(won) state.wins = (state.wins||0)+1; else state.losses = (state.losses||0)+1;
   const gain = won ? round.reward + tIdx*30 : Math.round(round.reward*0.25)+10;
@@ -8236,23 +8408,24 @@ async function endMatch(won){
   if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); gainPlayerExp(45 + T.roundIndex*20); }
   if(p) p.bestRoundIdx = Math.max((typeof p.bestRoundIdx==='number'?p.bestRoundIdx:-1), T.roundIndex);
 
-  let title='', body='', btnLabel='홈으로 돌아가기', outcome='';
+  // 결과 표기: 진출 단계/예선 승수 + 승패 + 보상
+  let progressLabel = round.name, outcomeKind = won?'win':'lose', outcomeText = won?'승리':'패배';
+  let note='', btnLabel='홈으로 돌아가기', outcome='', champBonus=0;
   if(round.key==='prelim'){
     if(won) T.prelimWins++; else T.prelimLosses++;
     const played = T.prelimWins + T.prelimLosses;
     if(played >= round.bestOf){
-      // 예선 5경기 종료 → 다승 판정 (3승 이상이면 통과)
+      // 예선 종료 → 다승 판정 (3승 이상이면 통과)
       if(T.prelimWins >= round.needWins){
         T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
         if(p) p.bestRoundIdx = Math.max(p.bestRoundIdx, 1);
-        title='🏆 예선 통과!'; btnLabel='홈으로 — 본선 준비 ▶';
-        body=`예선 ${round.bestOf}경기 종료 — <b>본선 진출!</b><br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>다음은 <b>16강</b> 본선입니다. 홈에서 강화·준비 후 도전하세요.`;
-      } else {
-        outcome='eliminated';
-      }
+        progressLabel='🏆 16강 본선 진출!'; outcomeKind='win'; outcomeText='예선 통과'; btnLabel='홈으로 — 본선 준비 ▶';
+        note=`예선 ${round.bestOf}경기 종료 — <b>16강 본선 진출!</b> 홈에서 강화·준비 후 도전하세요.`;
+      } else { outcome='eliminated'; }
     } else {
-      outcome='continue'; title = won?'✅ 예선 승리':'❌ 예선 패배'; btnLabel='홈으로 — 준비하기 ▶';
-      body=`예선 현황: <b>${T.prelimWins}승 ${T.prelimLosses}패</b> (${played}/${round.bestOf}경기)<br>보상 <b>+${fmt(gain)}💰</b>${won&&p?` · 성장 +${xpAmt}`:''}<br>홈에서 준비 후 다음 예선 경기를 시작하세요.`;
+      outcome='continue'; btnLabel='홈으로 — 준비하기 ▶';
+      progressLabel = won ? `예선 ${T.prelimWins}승째` : `예선 ${T.prelimWins}승 ${T.prelimLosses}패`;
+      note=`예선 현황 <b>${T.prelimWins}승 ${T.prelimLosses}패</b> (${played}/${round.bestOf}경기) · 홈에서 준비 후 다음 경기로.`;
     }
   } else {
     if(won){
@@ -8263,38 +8436,55 @@ async function endMatch(won){
         T.roundIndex++; outcome='continue'; const next=TOURNAMENT_ROUNDS[T.roundIndex];
         if(p) p.bestRoundIdx = Math.max(p.bestRoundIdx, T.roundIndex);
         const promotedMid = checkPromotion(p);
-        title=`🏆 ${round.name} 승리!`; btnLabel='홈으로 — 다음 준비 ▶';
-        body=`${round.name}을(를) 통과했습니다!<br>보상 <b>+${fmt(gain)}💰</b> · 성장 +${xpAmt}<br>티어 점수 <b>+${round.point}</b> (누적 ${fmt(p?p.rankPoints:0)})${promotedMid?`<br>🎉 <b style="color:var(--neon)">${plantRankTier(p).name} 승급!</b>`:''}<br>다음은 <b>${next.name}</b>입니다. 홈에서 준비 후 도전하세요.`;
+        progressLabel=`${next.name} 진출!`; btnLabel='홈으로 — 다음 준비 ▶';
+        note=`${round.name} 통과 · 티어 점수 +${round.point}(누적 ${fmt(p?p.rankPoints:0)})${promotedMid?` · 🎉<b>${plantRankTier(p).name} 승급!</b>`:''}`;
       }
     } else outcome='eliminated';
   }
 
   if(outcome==='champion'){
-    const champBonus = 200 + tIdx*120;
+    champBonus = 200 + tIdx*120;
     if(p) p.rankPoints = (p.rankPoints||0) + champBonus;
     if(p) p.champion = true;
     addCredits(champBonus);
     const promoted = checkPromotion(p);
-    title='👑 우승! 콜로세움 제패!';
-    body=`<b>${p?plantDisplayName(p):'식물'}</b>이(가) 전 경기를 석권했습니다!<br>우승 보너스 <b>+${fmt(champBonus)}💰</b><br>티어 점수 <b>+${round.point+champBonus}</b> (누적 ${fmt(p?p.rankPoints:0)})${promoted?`<br>🎉 <b style="color:var(--neon)">${plantRankTier(p).name} 승급!</b>`:''}`;
-    btnLabel='콜로세움 나가기'; state.tournament.active=false; sfx.win();
+    progressLabel='👑 콜로세움 제패'; outcomeKind='champ'; outcomeText='우승';
+    note=`<b>${p?plantDisplayName(p):'식물'}</b> 전 경기 석권! 티어 점수 +${round.point+champBonus}(누적 ${fmt(p?p.rankPoints:0)})${promoted?` · 🎉<b>${plantRankTier(p).name} 승급!</b>`:''}`;
+    btnLabel='콜로세움 나가기'; state.tournament.active=false;
   } else if(outcome==='eliminated'){
     const lose = round.key==='prelim' ? 20 : 0;
     if(p) p.rankPoints = Math.max(plantRankTier(p).threshold, (p.rankPoints||0) - lose);
     state.tournament.active=false;
-    title='💀 탈락…';
-    body=`<b>${round.name}</b>에서 탈락했습니다.<br>위로금 <b>+${fmt(gain)}💰</b>${lose?`<br>티어 점수 -${lose}`:''}<br>식물을 강화·성장시키거나 새 종자를 키워 다시 도전하세요!`;
-    btnLabel='콜로세움 나가기'; sfx.lose();
+    progressLabel = round.key==='prelim' ? '예선 탈락' : `${round.name} 탈락`;
+    outcomeKind='lose'; outcomeText='탈락';
+    note=`<b>${round.name}</b>에서 탈락… ${lose?`티어 점수 -${lose} · `:''}강화·성장 후 다시 도전하세요!`;
+    btnLabel='콜로세움 나가기';
   }
   saveState();
-  await sleep(600);
-  $('#resultTitle').textContent = title;
-  $('#resultBody').innerHTML = body;
-  const btn = $('#resultClose'); if(btn) btn.textContent = btnLabel;
-  show('#resultModal');
+
+  // 금속판이 위·아래에서 닫히고 → 결과·보상 카드 공개
+  const rewards = [`<div class="mr-card gold"><div class="mc-ic">💰</div><div class="mc-v">+${fmt(gain)}</div><div class="mc-l">크레딧</div></div>`];
+  if(won && xpAmt) rewards.push(`<div class="mr-card exp"><div class="mc-ic">⭐</div><div class="mc-v">+${xpAmt}</div><div class="mc-l">성장 경험치</div></div>`);
+  if(champBonus) rewards.push(`<div class="mr-card bonus"><div class="mc-ic">👑</div><div class="mc-v">+${fmt(champBonus)}</div><div class="mc-l">우승 보너스</div></div>`);
+  $('#battleResultCenter').innerHTML = `
+    <div class="mr-progress">${progressLabel}</div>
+    <div class="mr-outcome ${outcomeKind}">${outcomeText}</div>
+    <div class="mr-rewards">${rewards.join('')}</div>
+    <div class="mr-note">${note}</div>
+    <button class="btn primary" id="battleResultBtn">${btnLabel}</button>`;
+  const br = $('#battleResult');
+  br.classList.remove('shut','reveal'); show('#battleResult'); void br.offsetWidth;
+  br.classList.add('shut');
+  setTimeout(() => br.classList.add('reveal'), 430);
+  $('#battleResultBtn').addEventListener('click', closeBattleResult, { once:true });
+}
+function closeBattleResult(){
+  try{ sfx.tap(); }catch(e){}
+  const br = $('#battleResult'); if(br){ br.classList.add('hidden'); br.classList.remove('shut','reveal'); }
+  hide('#battleScreen'); show('#mainScreen'); B=null; renderMain();
 }
 function handleResultClose(){
-  // 모든 경기 종료 후 항상 홈으로 복귀(자동 다음 경기 진행 없음 → 경기 사이 준비 가능)
+  // 구 결과 모달용(잔존) — 홈으로 복귀
   sfx.tap(); hide('#resultModal');
   hide('#battleScreen'); show('#mainScreen'); B=null; renderMain();
 }
@@ -8309,6 +8499,11 @@ $('#btnStart').addEventListener('click', () => {
 $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
+// 전투: 항복(재확인) · 스킬 상세 닫기
+$('#surrenderBtn').addEventListener('click', () => confirmSurrender());
+$('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderConfirm'); });
+$('#surrenderYes').addEventListener('click', () => { sfx.tap(); doSurrender(); });
+$('#battleSkillDetail').addEventListener('click', () => { hide('#battleSkillDetail'); });
 $('#sidePanel').addEventListener('click', (ev) => { if(ev.target.closest('[data-act="bag"]')){ sfx.tap(); openSeedBag(); } });
 $('#tournamentBar').addEventListener('click', (ev) => { if(ev.target.closest('.tcell')){ sfx.tap(); openMatches(); } });
 $('#matchesModal').addEventListener('click', (ev) => { if(ev.target === $('#matchesModal')){ hide('#matchesModal'); } });

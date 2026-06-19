@@ -50,6 +50,16 @@
 
 ## 변경 이력 (개발 로그)
 
+### 2026-06-19 — 전투 인터페이스 전면 재설계(카드 선택 + 판정 창 + 결과 연출)
+사용자 지시(전투 플레이 방식)대로 전투를 **상시 스킬 버튼 → 턴마다 뜨는 스킬 카드 + 판정 창 연출**로 전면 개편. 전투 데미지/보상 계산 로직은 그대로 두고 **표현 계층만 교체**(무회귀).
+1. **스탠딩 무대(`#battleArena`)** — 하단 상시 스킬 버튼(`.moves`/`#moveButtons`) 제거. 적(위)·나(아래)가 **체력바·에너지(⚡)만 달고 서 있는** 화면. `#battleScreen`을 `position:relative` 풀스크린 무대로 재구성, 기존 `.fighter` 가로 레이아웃 → 세로 무대(`.arena-fighter`).
+2. **인트로** — `playVsIntro`에 **손가락질**(👉👈 `vs-hand` 키프레임) 추가: 재배사 배너가 들어와 서로 가리키고 빠짐 → `enterBattleStage`가 식물 등장 애니(`fighterIn`/`fighterInTop`) 후 첫 카드 페이즈.
+3. **스킬 카드 페이즈(`#cardPhase`)** — 매 턴 카드가 **허공에 뜸**(`cardFloat` 부유 애니, 배경 `backdrop-filter:blur` 흐림). 두 식물 거리 벌어짐(`#battleArena.spread`). 상단에 **사용 가능 에너지 번개**(`cp-energy`), **6칸 3×2 그리드**(`#cardHand`) + **포식은 아래 가로 한 줄**(`#cardPred .skillcard.pred`), 최하단 **항복**. 무기·독성형은 (차후 수정 전까지) 일반처럼 그리드에 배치. 카드엔 최소 정보(이름·등급색·코스트·계수), **꾹 누르면 상세**(`showSkillDetail`→`#battleSkillDetail`). 등급색은 `gradeColor`/`battleSkillGrade` 공통.
+4. **판정 창(`#judgeWindow`)** — 카드 선택 시 카드가 내려가고(`hideCardPhase`), 두 식물 사이에 **좌→우 번개**(`jw-bolt` 스윕) 후 창이 열림(`openJudge`). 안에 **양쪽 사용 카드**(상대/나) → **선공 판정**(기동성 차 → 확률 → 선/후, `jl-roll`) → **공격 보정 계산식**(공격×위력%+속성−방어, `applySkill`에 `jl-calc` 로그) → 데미지 모션(`shake`/`dmgpop`)·체력·버프/디버프 적용 → 후순위 반복 → 창 닫히며(`closeJudge`) 카드 재등장. 기존 `#battleLog`을 판정 창 내부로 이동(턴마다 초기화).
+5. **결과 연출(`#battleResult`)** — 승패 시 진 식물 **쓰러짐**(`collapse`) → 위·아래 **금속판이 닫힘**(`mr-plate`/`shut`) → 가운데 **진출 단계/예선 승수**(`mr-progress`) + **승리/패배/우승** 문구(`mr-outcome`) + **보상 카드**(💰크레딧·⭐성장·👑우승보너스, `mr-card`). 버튼으로 홈 복귀(`closeBattleResult`). 보상/티어/토너먼트 진행 계산은 종전 `endMatch` 로직 보존.
+6. **항복** — 카드 페이즈 최하단 버튼 → **재확인 창**(`#surrenderConfirm`) → 확정 시 패배 처리(`confirmSurrender`/`doSurrender`).
+- 무회귀: 전투 진입(`startMatch`)·데미지(`applySkill`)·AI(`aiPickSkill`)·보상(`endMatch`)·세이브 변화 없음. 구 `renderMoveButtons`/`surrenderMatch`/`.moves` 제거, `#resultModal`은 잔존(미사용). 검증: preview에서 인트로→식물등장→카드 페이즈(6칸+포식+에너지+항복)→꾹눌러 상세→카드 선택→판정 창(양쪽카드·선공판정·계산식)→체력 변동→카드 재등장→KO 시 쓰러짐+금속판+보상카드(승리/패배)→홈 복귀, 항복 재확인(계속/항복) 전 경로 DOM·실클릭 확인, 콘솔 에러 0. (※ preview 스크린샷은 이 환경에서 타임아웃 → eval/DOM으로 검증.)
+
 ### 2026-06-19 — 함선 내부 워킹(포켓몬식 도트) — "모드" 탭 → "🚀 함선"
 하단 헤더의 잠겨 있던 **🎮 모드** 탭을 **🚀 함선**으로 열고, 탐사선 내부를 캐릭터(탐사복 도트)가 **타일 그리드 위를 걸어다니는** 포켓몬식 화면으로 구현. 콘솔 앞에서 Ⓐ로 상호작용해 기존 시스템으로 진입.
 - **새 전체화면 `#shipScreen`** (battleScreen처럼 `mainScreen`을 가림 → 상단 헤더·하단 네비 자동 숨김, 몰입형). 자체 `✕ 나가기` 버튼으로 메인 복귀.
