@@ -7,6 +7,8 @@
 > ⚠️ **갱신 의무(가장 중요):** 코드/데이터/기획이 바뀌면 **그 변경을 이 문서(또는 해당 하위 문서)에 즉시 반영하고 함께 푸시**한다. 놓치는 것 없이, 항상 실시간으로. 규칙은 §6 참고.
 
 - **최종 갱신:** 2026-06-21
+- **별칭:** 이 문서를 **"마스터 로드맵" = "로드맵" = "마스터 문서"** 무엇으로 부르든 전부 이 파일(`docs/master-roadmap.md`)을 가리킨다.
+- **📱 모바일에서 보기:** GitHub에서 열면 마크다운이 예쁘게 렌더링된다(푸시만 돼 있으면 항상 최신) → <https://github.com/promuzi/pulloseum/blob/main/docs/master-roadmap.md> (브라우저 즐겨찾기 또는 GitHub 앱에서 파일 열기).
 - **게임 실행:** [index.html](../index.html) (브라우저 더블클릭, 빌드 없음 — 전부 단일 파일에 인라인)
 - **상위 안내:** [CLAUDE.md](../CLAUDE.md) / [AGENTS.md](../AGENTS.md) / [.github/copilot-instructions.md](../.github/copilot-instructions.md) — 셋 다 이 문서를 첫 줄에서 가리킨다.
 
@@ -155,6 +157,7 @@
 
 > **핵심 원칙: 모든 개발·기획 변경은 그 즉시 이 허브(또는 해당 하위 문서)에 반영되고 함께 푸시된다. 놓치는 것 없이.**
 
+0. **작업 시작 시 `git pull`** 로 최신본부터 받는다(다른 기기/대화창의 변경이 먼저 반영됐을 수 있음). 끝나면 `git push`.
 1. **작업 시작 전** 이 문서를 읽는다. CLAUDE.md/AGENTS.md/copilot-instructions가 여기로 안내한다.
 2. **코드·데이터를 바꿨으면** 같은 작업 안에서:
    - 해당 방향의 **상태/체크박스**(§1 표, §4)를 갱신하고,
@@ -165,5 +168,6 @@
 5. **새 하위 문서**를 만들면 §2 문서 지도에 한 줄 등록(미등록 문서 금지 — 떠도는 문서를 만들지 않는다).
 6. **상대 날짜 금지** — "오늘/이번 주" 대신 절대 날짜.
 7. **커밋 시** 코드 변경과 문서 변경을 **같이** 올린다(문서만 뒤처지지 않게).
+8. **강제 장치(pre-push 훅):** `.githooks/pre-push`가 "index.html은 바뀌었는데 문서가 안 바뀐" 푸시를 막는다. 새 기기에서 클론하면 **한 번** `git config core.hooksPath .githooks` 실행(설정은 기기별 로컬이라 자동 전파 안 됨). 의도적으로 건너뛸 땐 `git push --no-verify`.
 
 > **여러 AI 호환:** Claude Code=`CLAUDE.md`, Codex·Cursor 등=`AGENTS.md`, GitHub Copilot=`.github/copilot-instructions.md` — 셋 다 이 문서를 첫 줄에서 가리키므로, 어떤 기기/AI로 열어도 별도 지시 없이 이 허브로 수렴한다.

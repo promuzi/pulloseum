@@ -1,0 +1,48 @@
+#!/bin/sh
+# 풀로세움 pre-push 훅 — "코드 바뀌면 문서도 갱신" 강제 장치
+#
+# index.html(게임)이 바뀐 커밋을 푸시하는데, 문서(docs/·CLAUDE.md·AGENTS.md·
+# copilot-instructions)가 하나도 안 바뀌었으면 푸시를 막는다.
+# → 마스터 로드맵/하위 문서에 변경을 반영하고 함께 커밋하면 통과.
+# → 의도적으로 건너뛰려면:  git push --no-verify
+#
+# 설치(각 기기에서 클론 후 1회):  git config core.hooksPath .githooks
+
+z40=0000000000000000000000000000000000000000
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # 브랜치 삭제 푸시는 통과
+  [ "$local_sha" = "$z40" ] && continue
+
+  if [ "$remote_sha" = "$z40" ]; then
+    # 새 브랜치 푸시: origin/main 기준으로 비교(없으면 검사 생략)
+    base=$(git merge-base "$local_sha" origin/main 2>/dev/null)
+    if [ -n "$base" ]; then range="$base..$local_sha"; else continue; fi
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  files=$(git diff --name-only "$range" 2>/dev/null)
+  [ -z "$files" ] && continue
+
+  # 게임 코드(index.html) 변경이 없으면 통과
+  echo "$files" | grep -q '^index\.html$' || continue
+
+  # 문서가 함께 바뀌었으면 통과
+  if echo "$files" | grep -Eq '^(docs/|CLAUDE\.md|AGENTS\.md|\.github/copilot-instructions\.md)'; then
+    continue
+  fi
+
+  echo "────────────────────────────────────────────────────────────"
+  echo "⚠️  index.html(게임 코드)이 바뀌었는데 문서가 갱신되지 않았습니다."
+  echo ""
+  echo "   변경을 마스터 로드맵/하위 문서에 반영하고 함께 커밋하세요:"
+  echo "     • docs/master-roadmap.md  (현황·체크박스·결정 로그)"
+  echo "     • 수치 변경이면 docs/balance-sheet.md 등 해당 하위 문서"
+  echo ""
+  echo "   의도적으로 건너뛰려면:  git push --no-verify"
+  echo "────────────────────────────────────────────────────────────"
+  exit 1
+done
+
+exit 0

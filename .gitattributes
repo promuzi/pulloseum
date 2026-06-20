@@ -1,0 +1,2 @@
+# git 훅은 셸 스크립트라 어느 OS에서도 LF로 유지해야 실행됨(Windows CRLF 방지)
+.githooks/** text eol=lf
