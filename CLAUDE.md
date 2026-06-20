@@ -3,7 +3,8 @@
 > 다른 PC에서 이 폴더를 Claude Code로 열면 이 파일을 먼저 읽고 맥락을 파악하세요.
 
 ## ★ 개발 방향은 여기부터 (Claude에게: 작업 시작 전 반드시 먼저 읽을 것)
-- **마스터 개발 로드맵 → [docs/master-roadmap.md](docs/master-roadmap.md)** — 앞으로의 방향·우선순위·확정된 결정이 모두 여기 모여 있다(단일 진실 문서). 어떤 기기/AI로 작업하든 이 파일을 먼저 읽고 현황을 파악하고, **진행하며 적극적으로 수정·추가·삭제**한다. 결정이 확정되면 그 안의 "결정 로그"에 남긴다.
+- **마스터 개발 로드맵 → [docs/master-roadmap.md](docs/master-roadmap.md)** — 현재 구현 현황·앞으로의 방향·확정 결정·**모든 하위 문서로 가는 지도**가 한곳에 모인 **유일 허브(SSOT)**. 어떤 기기/AI로 작업하든 이 파일을 먼저 읽고 현황을 파악한다. 세부 수치/설계는 그 안의 "문서 지도"를 타고 하위 문서로 들어간다.
+- ⚠️ **실시간 갱신 의무:** 코드·데이터·기획을 바꾸면 **같은 작업 안에서** 로드맵(또는 해당 하위 문서)의 상태/체크박스/수치를 갱신하고, 결정이 생기면 "결정 로그"에 남기고, **코드와 문서를 함께 커밋·푸시**한다. 놓치는 것 없이 항상 실시간으로. (상세 규약: 로드맵 §6)
 
 ## ▶ 게임 바로 열기 (Claude에게: 매 대화 시작 시 이 링크를 항상 먼저 보여줄 것)
 - **게임 실행:** [index.html](index.html) (클릭하면 브라우저로 열림 — 현재 게임 현황 바로 확인)
@@ -42,14 +43,10 @@
 - 코드 수정 후 검증은 미리보기(preview) 도구 또는 위 로컬 서버로.
 
 ## 앞으로 할 만한 것 (백로그)
-- 모드·길드 실제 콘텐츠
-- 상점 가챠 박스(특성/소모품 뽑기)
-- ~~세이브 내보내기/가져오기(기기 간 이동용)~~ ✅ 2026-06-19 구현(설정 화면 백업/복원)
-- 용족·독초 등 추가 분화 형질
-- **특성·종자·생장 시스템 대확장** → 설계/방향 문서: [`docs/trait-growth-roadmap.md`](docs/trait-growth-roadmap.md)
-  (종자 종류·생장단계 구체화는 향후 지시 예정. **특성 카드 시스템은 2026-06-16 구현 완료.**)
-- **UI 도트(픽셀아트)화** → 인계 문서: [`docs/pixel-art-ui-roadmap.md`](docs/pixel-art-ui-roadmap.md)
-  (식물·아이콘·UI를 외부 PNG 도트로 교체하는 방향/규격/AI도구/모션 계획. **도트 작업 시작 전 이 문서 먼저 읽을 것.** `spriteFor`의 `SPRITE_OVERRIDES` 교체 장치 활용. 2026-06-20 방향 정리.)
+> ⚠️ **앞으로의 방향·우선순위는 이제 [`docs/master-roadmap.md`](docs/master-roadmap.md)(유일 허브)에서 관리한다.** 아래는 요약일 뿐, 갱신은 로드맵에서 한다.
+- 식물 종류 확장 / **양육·열매 시스템**(생장=경험치, 화분) / 도트 UI / 함선·길드·방꾸 / 애니메이션 / 사운드 / 탐사 재설계 / PvP·서버 / 구글 플레이 출시 → 전부 로드맵 §4에 구체화됨.
+- 세부 설계 문서: 밸런스 [`balance-sheet.md`](docs/balance-sheet.md) · 전투엔진 [`battle-mechanics-deep-dive.md`](docs/battle-mechanics-deep-dive.md) · 종 [`species-system-guide.md`](docs/species-system-guide.md) · 변이/특성 [`trait-growth-roadmap.md`](docs/trait-growth-roadmap.md) · 도트 [`pixel-art-ui-roadmap.md`](docs/pixel-art-ui-roadmap.md) · 안드로이드 [`android-capacitor-wrapper.md`](docs/android-capacitor-wrapper.md)
+- ~~세이브 내보내기/가져오기~~ ✅ 2026-06-19 · ~~특성 카드 시스템~~ ✅ 2026-06-16
 
 ---
 
