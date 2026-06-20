@@ -45,6 +45,8 @@
 - 용족·독초 등 추가 분화 형질
 - **특성·종자·생장 시스템 대확장** → 설계/방향 문서: [`docs/trait-growth-roadmap.md`](docs/trait-growth-roadmap.md)
   (종자 종류·생장단계 구체화는 향후 지시 예정. **특성 카드 시스템은 2026-06-16 구현 완료.**)
+- **UI 도트(픽셀아트)화** → 인계 문서: [`docs/pixel-art-ui-roadmap.md`](docs/pixel-art-ui-roadmap.md)
+  (식물·아이콘·UI를 외부 PNG 도트로 교체하는 방향/규격/AI도구/모션 계획. **도트 작업 시작 전 이 문서 먼저 읽을 것.** `spriteFor`의 `SPRITE_OVERRIDES` 교체 장치 활용. 2026-06-20 방향 정리.)
 
 ---
 
