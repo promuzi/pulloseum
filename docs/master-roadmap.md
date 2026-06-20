@@ -100,6 +100,7 @@
 - [ ] 도트 생성 AI 선정·시범(PixelLab/Retro Diffusion 후보)
 - [ ] 적용 순서: 식물 → 아이콘 → 모달 창틀(9-slice) → 애니메이션
 - [ ] 미확정: 식물 격자 해상도 / 공통 캔버스 크기 (사용자 결정 대기)
+- 📌 **UI 미세수정을 사용자가 전달하는 법**(번호라벨·스크린샷 마킹·게임 내 디자인 모드·DevTools·목업 툴): [pixel-art-ui-roadmap.md §8~10](pixel-art-ui-roadmap.md)
 
 ### 4. 함선 / 길드 / 방꾸 시스템
 **상태:** 함선 타일 워킹 기초 구현됨(`#shipScreen`/`SHIP_MAP`/`SHIP_FEATURES`).
