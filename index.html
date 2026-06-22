@@ -2904,6 +2904,17 @@ const SHOP_SUPPLY_BOXES = [
       { type:'card', card_id:'card_solarheal',   min:1, max:1, chance:50 },
     ],
   },
+  // 성장 보급상자 — 생장 경험치 아이템을 무작위로 준다(상점 구매 + 탐사 보상).
+  {
+    id:'box_growth_supply', group:'item', icon:'📦', name:'성장 보급상자', tag:'생장 경험치 아이템 무작위', price:200, currency:'credits',
+    rewards:[
+      { type:'item', item_id:'item_fertilizer',     min:1, max:2, chance:34 },
+      { type:'item', item_id:'item_nutrient_spray',  min:1, max:1, chance:28 },
+      { type:'item', item_id:'levelup_potion',       min:1, max:1, chance:20 },
+      { type:'item', item_id:'item_water',           min:2, max:3, chance:13 },
+      { type:'item', item_id:'growth_blocker',       min:1, max:1, chance:5 },
+    ],
+  },
 ];
 const PLANET_EXPLORATION_REQUIREMENTS = {
   planet_elyndor: { min_equipment_bonus: 0 },
@@ -3113,7 +3124,7 @@ Object.keys(ELEMENTS).forEach(el => {
   const isAoe = !fx.single;
   const sk = {
     name: ELEMENTS[el].skill, icon: ELEMENTS[el].icon, cost:2, kind:'elemental',
-    power:fx.power, elem:true, element:el, tag:'속성',
+    power:fx.power, elem:true, element:el, tag:'속성', grade:'B',
     desc:`위력 ${fx.power} · ${ELEMENTS[el].name}속성기 · ${isAoe?'광역':'단일'} · ⚡2${fx.rider?(' · '+fx.rider):''}`,
   };
   if(isAoe) sk.aoe = true; else sk.single = true;
@@ -3127,27 +3138,29 @@ Object.keys(ELEMENTS).forEach(el => {
   ELEMENT_SKILLS['skill_elem_' + el] = sk;
 });
 const elementSkillId = el => 'skill_elem_' + el;
+/* 잠재특성/속성 스킬은 등급이 '고정'이다(계수 스케일 폐기). 등급이 곧 성능 티어이자
+   서로 다른 스킬을 가르는 축이다. D<C<B<A<S. 열매로 얻을 때 잠재력이 높을수록 상위 등급 스킬이 잘 나온다. */
 const TRAIT_SKILLS = {
-  skill_biolume:   { name:'광합성 과충전', icon:'🌟', cost:2, kind:'heal', heal:0.22, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'체력 22% 회복 + 공격 15%↑(3턴)', tag:'잠재특성' },
-  skill_resonant:  { name:'공명 방벽', icon:'🟢', cost:2, kind:'guard', guardMult:0.45, selfBuff:{stat:'def',pct:0.2,turns:3}, desc:'피해 55%↓ + 방어 20%↑(3턴)', tag:'잠재특성' },
-  skill_acid:      { name:'산성 분사', icon:'🧫', cost:2, kind:'debuff', power:115, aoe:true, enemyDebuff:{stat:'def',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력115 · 광역 + 방어 20%↓(2턴) + 중독', tag:'잠재특성' },
-  skill_ironbark:  { name:'철피 경화', icon:'🪨', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.35,turns:3}, heal:0.1, desc:'방어 35%↑(3턴) + 체력 10% 회복', tag:'잠재특성' },
-  skill_thorns:    { name:'가시 사출', icon:'🌵', cost:2, kind:'dot', power:110, single:true, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력110 · 단일 + 출혈(3턴)', tag:'잠재특성' },
-  skill_phase:     { name:'위상 포자', icon:'💫', cost:2, kind:'buff', power:80, single:true, selfBuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력80 · 단일 + 기동성 30%↑(3턴)', tag:'잠재특성' },
-  skill_gravity:   { name:'중력 붕괴', icon:'🪐', cost:3, kind:'debuff', power:130, aoe:true, enemyDebuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력130 · 광역 + 적 기동성 30%↓(3턴)', tag:'잠재특성' },
-  skill_tide:      { name:'수막 보호', icon:'🌊', cost:2, kind:'guard', guardMult:0.5, heal:0.12, desc:'피해 50%↓ + 체력 12% 회복', tag:'잠재특성' },
-  skill_spore:     { name:'포자 운무', icon:'🌫️', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3}, desc:'적 공격 20%↓(2턴) + 중독', tag:'잠재특성' },
-  skill_plasma:    { name:'플라즈마 개화', icon:'⚡', cost:3, kind:'attack', power:165, aoe:true, critBonus:0.15, desc:'위력165 · 광역 + 치명타율 15%', tag:'잠재특성' },
-  skill_adaptive:  { name:'적응 변이', icon:'🧬', cost:2, kind:'buff', cleanse:true, selfBuff:{stat:'atk',pct:0.18,turns:3}, energyGain:1, desc:'디버프 해제 + 공격 18%↑(3턴) + ⚡+1', tag:'잠재특성' },
-  skill_stablecore:{ name:'안정 코어', icon:'🔋', cost:1, kind:'buff', selfBuff:{stat:'def',pct:0.15,turns:3}, energyGain:2, desc:'방어 15%↑(3턴) + ⚡2 충전', tag:'잠재특성' },
-  skill_psionic:   { name:'정신 간섭', icon:'🔮', cost:3, kind:'debuff', power:110, single:true, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력110 · 단일 + 적 공격 18%↓(2턴)', tag:'잠재특성' },
-  skill_metallic:  { name:'금속 관다발', icon:'⚙️', cost:2, kind:'attack', power:120, single:true, pierce:0.5, desc:'위력120 · 단일 · 적 방어 50% 무시', tag:'잠재특성' },
-  skill_hunger:    { name:'포식 아귀', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.5, desc:'위력130 · 단일 · 피해 50% 흡혈', tag:'잠재특성' },
-  skill_rapidgerm: { name:'급속 발아', icon:'🌱', cost:0, kind:'special', energyGain:2, heal:0.08, desc:'⚡2 충전 + 체력 8% 회복 · 무료', tag:'잠재특성' },
-  skill_symbiotic: { name:'공생 회복', icon:'🍄', cost:2, kind:'heal', heal:0.3, cleanse:true, desc:'체력 30% 회복 + 디버프 1개 해제', tag:'잠재특성' },
-  skill_crystal:   { name:'결정 굴절', icon:'💠', cost:2, kind:'guard', guardMult:0.4, counterPct:0.35, desc:'피해 60%↓ + 굴절 반격', tag:'잠재특성' },
-  skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, aoe:true, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 · 광역 + 공격 20%↑(2턴)', tag:'잠재특성' },
-  skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, aoe:true, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 · 광역 + 적 무작위 스탯 20%↓(2턴)', tag:'잠재특성' },
+  skill_biolume:   { name:'광합성 과충전', icon:'🌟', cost:2, kind:'heal', heal:0.22, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'체력 22% 회복 + 공격 15%↑(3턴)', tag:'잠재특성', grade:'B' },
+  skill_resonant:  { name:'공명 방벽', icon:'🟢', cost:2, kind:'guard', guardMult:0.45, selfBuff:{stat:'def',pct:0.2,turns:3}, desc:'피해 55%↓ + 방어 20%↑(3턴)', tag:'잠재특성', grade:'B' },
+  skill_acid:      { name:'산성 분사', icon:'🧫', cost:2, kind:'debuff', power:115, aoe:true, enemyDebuff:{stat:'def',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력115 · 광역 + 방어 20%↓(2턴) + 중독', tag:'잠재특성', grade:'B' },
+  skill_ironbark:  { name:'철피 경화', icon:'🪨', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.35,turns:3}, heal:0.1, desc:'방어 35%↑(3턴) + 체력 10% 회복', tag:'잠재특성', grade:'B' },
+  skill_thorns:    { name:'가시 사출', icon:'🌵', cost:2, kind:'dot', power:110, single:true, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력110 · 단일 + 출혈(3턴)', tag:'잠재특성', grade:'C' },
+  skill_phase:     { name:'위상 포자', icon:'💫', cost:2, kind:'buff', power:80, single:true, selfBuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력80 · 단일 + 기동성 30%↑(3턴)', tag:'잠재특성', grade:'C' },
+  skill_gravity:   { name:'중력 붕괴', icon:'🪐', cost:3, kind:'debuff', power:130, aoe:true, enemyDebuff:{stat:'spd',pct:0.3,turns:3}, desc:'위력130 · 광역 + 적 기동성 30%↓(3턴)', tag:'잠재특성', grade:'A' },
+  skill_tide:      { name:'수막 보호', icon:'🌊', cost:2, kind:'guard', guardMult:0.5, heal:0.12, desc:'피해 50%↓ + 체력 12% 회복', tag:'잠재특성', grade:'B' },
+  skill_spore:     { name:'포자 운무', icon:'🌫️', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3}, desc:'적 공격 20%↓(2턴) + 중독', tag:'잠재특성', grade:'B' },
+  skill_plasma:    { name:'플라즈마 개화', icon:'⚡', cost:3, kind:'attack', power:165, aoe:true, critBonus:0.15, desc:'위력165 · 광역 + 치명타율 15%', tag:'잠재특성', grade:'S' },
+  skill_adaptive:  { name:'적응 변이', icon:'🧬', cost:2, kind:'buff', cleanse:true, selfBuff:{stat:'atk',pct:0.18,turns:3}, energyGain:1, desc:'디버프 해제 + 공격 18%↑(3턴) + ⚡+1', tag:'잠재특성', grade:'A' },
+  skill_stablecore:{ name:'안정 코어', icon:'🔋', cost:1, kind:'buff', selfBuff:{stat:'def',pct:0.15,turns:3}, energyGain:2, desc:'방어 15%↑(3턴) + ⚡2 충전', tag:'잠재특성', grade:'C' },
+  skill_psionic:   { name:'정신 간섭', icon:'🔮', cost:3, kind:'debuff', power:110, single:true, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력110 · 단일 + 적 공격 18%↓(2턴)', tag:'잠재특성', grade:'B' },
+  skill_metallic:  { name:'금속 관다발', icon:'⚙️', cost:2, kind:'attack', power:120, single:true, pierce:0.5, desc:'위력120 · 단일 · 적 방어 50% 무시', tag:'잠재특성', grade:'B' },
+  skill_hunger:    { name:'포식 아귀', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.5, desc:'위력130 · 단일 · 피해 50% 흡혈', tag:'잠재특성', grade:'A' },
+  skill_rapidgerm: { name:'급속 발아', icon:'🌱', cost:0, kind:'special', energyGain:2, heal:0.08, desc:'⚡2 충전 + 체력 8% 회복 · 무료', tag:'잠재특성', grade:'C' },
+  skill_symbiotic: { name:'공생 회복', icon:'🍄', cost:2, kind:'heal', heal:0.3, cleanse:true, desc:'체력 30% 회복 + 디버프 1개 해제', tag:'잠재특성', grade:'A' },
+  skill_crystal:   { name:'결정 굴절', icon:'💠', cost:2, kind:'guard', guardMult:0.4, counterPct:0.35, desc:'피해 60%↓ + 굴절 반격', tag:'잠재특성', grade:'B' },
+  skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, aoe:true, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 · 광역 + 공격 20%↑(2턴)', tag:'잠재특성', grade:'A' },
+  skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, aoe:true, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 · 광역 + 적 무작위 스탯 20%↓(2턴)', tag:'잠재특성', grade:'A' },
 };
 /* 잠재특성 id → 참고용 시그니처 스킬 id (현재 전투 미반영) */
 const TRAIT_SKILL_MAP = {
@@ -3412,12 +3425,22 @@ const GRADE_SKILL_VARIANTS = {
     S: { kind:'buff', selfBuff:{stat:'atk',pct:0.25,turns:3}, name:'총력 결집', desc:'공격력 25%↑(3턴)' },
   },
 };
+/* 스킬의 '고정 등급'. 정의돼 있으면 등급은 잠재력으로 굴리지 않고 이 값으로 못박힌다.
+   (GRADE_SKILL_VARIANTS에 있는 코어 5종은 잠재력으로 등급별 '다른 스킬'이 되므로 제외) */
+function intrinsicSkillGrade(id){
+  if(GRADE_SKILL_VARIANTS[id]) return null;
+  const b = ALL_SKILLS[id];
+  return (b && b.grade) || null;
+}
 function gradeGrowthSkill(id, base, grade){
-  // 등급별 변종이 정의돼 있으면 그 스킬을 사용(계수 방식 대체)
+  // 1) 코어 5종: 등급별로 '아예 다른 스킬'(변종 표). 잠재력으로 결정된 등급을 사용.
   if(GRADE_SKILL_VARIANTS[id]){
     const v = GRADE_SKILL_VARIANTS[id][grade] || GRADE_SKILL_VARIANTS[id].C;
     if(v) return Object.assign({ id }, ALL_SKILLS[id] || base || {}, v, { grade: grade || 'C' });
   }
+  // 2) 속성기·잠재특성 스킬: 등급이 고정. 계수 스케일 없이 정의 그대로 사용한다.
+  if(base && base.grade){ return Object.assign({ id }, base, { grade: base.grade }); }
+  // 3) 그 외(등급 정보 없는 레거시 스킬) — 안전망: 종전 계수 방식 유지.
   if(!base || !grade || grade === 'C') return base ? Object.assign({ id, grade:'C' }, base) : base;
   const m = GROWTH_GRADE_MULT[grade] || 1;
   const s = Object.assign({ id }, base);
@@ -3456,14 +3479,15 @@ function skillDisplay(id, unit){
 }
 /* 성장 단계 인덱스로 해금되는 스킬 풀 계산 */
 /* 생장 단계마다 속성에 맞는 스킬을 추가로 해금(다양성↑). 약→강 순으로 단계별 1개씩. */
+/* 단계별 해금 스킬(약→강, 곧 등급 오름차순). 유체→완숙체로 갈수록 상위 등급 스킬을 얻는다. */
 const ELEMENT_GROWTH_SKILLS = {
-  fire:  ['skill_thorns','skill_hunger','skill_solar','skill_plasma'],
-  water: ['skill_tide','skill_symbiotic','skill_crystal','skill_quantum'],
-  grass: ['skill_biolume','skill_thorns','skill_acid','skill_solar'],
-  earth: ['skill_ironbark','skill_metallic','skill_gravity','skill_stablecore'],
-  wind:  ['skill_phase','skill_quantum','skill_metallic','skill_plasma'],
-  bolt:  ['skill_plasma','skill_psionic','skill_metallic','skill_solar'],
-  ice:   ['skill_crystal','skill_tide','skill_quantum','skill_gravity'],
+  fire:  ['skill_thorns','skill_hunger','skill_solar','skill_plasma'],   // C·A·A·S
+  water: ['skill_tide','skill_crystal','skill_quantum','skill_symbiotic'],// B·B·A·A
+  grass: ['skill_thorns','skill_biolume','skill_acid','skill_solar'],     // C·B·B·A
+  earth: ['skill_stablecore','skill_ironbark','skill_metallic','skill_gravity'], // C·B·B·A
+  wind:  ['skill_phase','skill_metallic','skill_quantum','skill_plasma'], // C·B·A·S
+  bolt:  ['skill_psionic','skill_metallic','skill_solar','skill_plasma'], // B·B·A·S
+  ice:   ['skill_crystal','skill_tide','skill_quantum','skill_gravity'],  // B·B·A·A
 };
 function plantKnownSkillIds(p){
   if(!p) return ['skill_basic_strike'];
@@ -3495,6 +3519,8 @@ function plantBattleLoadout(p){
 }
 function skillGradeOf(p, id){
   if(id === 'skill_basic_strike') return 'C';
+  const intr = intrinsicSkillGrade(id);
+  if(intr) return intr;                                  // 속성기·잠재특성: 고정 등급
   if(p && p.skillGrades && p.skillGrades[id]) return p.skillGrades[id];
   const s = skillById(id, p || null); return (s && s.grade) || 'C';
 }
@@ -3522,7 +3548,9 @@ function ensureSkillFields(p){
   const pot = p.potential || p.grade || 'C';
   known.forEach(id => {
     if(id === 'skill_basic_strike' || id === 'skill_weapon') return; // 기본기·무기(카드 등급)는 제외
-    if(!p.skillGrades[id]) p.skillGrades[id] = rollSkillGrade(pot);
+    const intr = intrinsicSkillGrade(id);
+    if(intr){ p.skillGrades[id] = intr; return; }                    // 고정 등급 스킬은 못박는다
+    if(!p.skillGrades[id]) p.skillGrades[id] = rollSkillGrade(pot);  // 코어 5종만 잠재력으로 굴림
   });
   const pool = plantSkillPool(p); // 변이형 자동 스킬(포식·무기·카드)은 장착칸에서 제외
   if(!Array.isArray(p.equipped_skills) || !p.equipped_skills.length){
@@ -4407,6 +4435,16 @@ function rollExplorationRewards(planet, region, successMargin, allowPartial){
   if(Math.random() < 0.10){
     const lp = ALIEN_INDEX.items['levelup_potion'];
     if(lp){ const entry = createItemInventoryEntry(lp, 1, planet, region); addItemReward(entry); rewards.items.push(entry); }
+  }
+  // 성장 보급상자(랜덤 아이템 박스) 드롭 — 즉시 개봉되어 무작위 생장 아이템 1종 지급
+  const supplyChance = (allowPartial ? 0.08 : 0.16) + successMargin * 0.18;
+  if(Math.random() < supplyChance){
+    const box = shopBoxById('box_growth_supply');
+    if(box){
+      const r = rollShopBoxReward(box);
+      const item = ALIEN_INDEX.items[r.item_id];
+      if(item){ const entry = createItemInventoryEntry(item, r.count || 1, planet, region); addItemReward(entry); rewards.items.push(entry); }
+    }
   }
   return rewards;
 }
@@ -8162,11 +8200,13 @@ function renderShop(){
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
   const currency = renderShopLane(SHOP_CURRENCY_PACKS);
   const growthItems = renderShopGrowthItems();
+  const itemBoxes = renderShopLane(supplyBoxesByGroup('item'), item => `data-shop-box="${item.id}"`);
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
   $('#shopList').innerHTML =
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
     renderShopBlock('소모품 · 아이템', '식물 생장 경험치 아이템. 레벨업 물약은 무료로 무한 구매할 수 있습니다.', growthItems) +
+    renderShopBlock('성장 보급상자', '생장 경험치 아이템이 무작위로 들어 있습니다. 탐사 보상으로도 얻을 수 있습니다.', itemBoxes) +
     renderShopBlock('보급상자', '변이 카드는 변이형별 보급상자나 탐사 보상으로만 얻습니다. 등급(S~D)은 개봉 시 무작위.', traitBoxes);
   document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
     card.addEventListener('click', () => {
@@ -9393,14 +9433,28 @@ function openFruit(idx){
   showFruitReveal(f, skill, fruits);
 }
 
+/* 열매(스킬 박스) 보상: 식물의 생장단계에서 쓸 수 있는 스킬 풀에서 1개.
+   잠재력이 높을수록 상위 등급(고정) 스킬이 잘 나오도록 가중 추첨한다. */
+const SKILL_GRADE_RANK = { D:0, C:1, B:2, A:3, S:4 };
+const POTENTIAL_BIAS = { D:0.4, C:0.8, B:1.3, A:1.9, S:2.8 };
 function nurserySkillReward(f){
-  const fake={element:f.element, form:f.form, growth_stage:f.growth_stage, potential:f.potential||'C'};
-  const pool = plantKnownSkillIds(fake).filter(id=>id!=='skill_basic_strike'&&id!=='skill_guard');
-  if(!pool.length) pool.push('skill_basic_strike');
-  const skillId = pool[Math.floor(Math.random()*pool.length)];
-  const grade = rollSkillGrade(f.potential||'C');
+  const pot = f.potential||'C';
+  const fake={element:f.element, form:f.form, growth_stage:f.growth_stage, potential:pot};
+  const pool = plantKnownSkillIds(fake).filter(id=>id!=='skill_basic_strike'&&id!=='skill_guard'&&!isAutoFormSkill(id));
+  if(!pool.length) pool.push('skill_photosynthesis');
+  // 등급별 가중치: 잠재력이 높을수록 상위 등급 비중↑
+  const bias = POTENTIAL_BIAS[pot] || 1;
+  const weighted = pool.map(id=>{
+    const g = intrinsicSkillGrade(id) || rollSkillGrade(pot);
+    const rank = SKILL_GRADE_RANK[g] || 1;
+    return { id, w: Math.pow(bias, rank) };
+  });
+  const total = weighted.reduce((s,e)=>s+e.w, 0);
+  let r = Math.random()*total, skillId = weighted[weighted.length-1].id;
+  for(const e of weighted){ r -= e.w; if(r<=0){ skillId = e.id; break; } }
   const base = ALL_SKILLS[skillId]||null;
   if(!base) return null;
+  const grade = intrinsicSkillGrade(skillId) || rollSkillGrade(pot);
   const sk = gradeGrowthSkill(skillId, base, grade);
   return sk ? {...sk, id:skillId, grade} : null;
 }
