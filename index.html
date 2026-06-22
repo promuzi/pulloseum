@@ -528,10 +528,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .evo-skill{background:rgba(125,255,217,.1);border:1px solid rgba(125,255,217,.4);border-radius:9px;padding:6px 10px;font-size:13px;font-weight:700;opacity:0;animation:evoRow .4s ease forwards;}
 
 /* ===== 모달 ===== */
-.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:14px;padding-top:calc(var(--headh) + 18px);padding-bottom:calc(var(--navh) + 20px + env(safe-area-inset-bottom,0px));}
+.modal{position:fixed;inset:0;background:rgba(4,8,16,.72);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;
+  padding:calc(var(--headh) + env(safe-area-inset-top,0px) + 14px) 14px calc(var(--navh) + env(safe-area-inset-bottom,0px) + 14px);}
 .modal-card{background:#131b2c;border:1px solid var(--line);border-radius:18px;width:min(94vw,450px);
   margin:0 auto;padding:18px;box-shadow:0 10px 50px rgba(0,0,0,.6);}
-.modal:not(#explorationModal):not(#shopModal) .modal-card{max-height:calc(100dvh - var(--headh) - var(--navh) - 36px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;}
+.modal:not(#explorationModal):not(#shopModal) .modal-card{max-height:calc(100dvh - var(--headh) - var(--navh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 28px);overflow-y:auto;}
 .modal-card h2{margin:0 0 4px;font-size:20px;}
 .modal-card .sub{color:var(--sub);font-size:13px;margin:0 0 14px;}
 .cardlist{display:flex;flex-direction:column;gap:10px;}
@@ -683,7 +684,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .region-summary-card.warn{border-color:rgba(255,211,74,.45);}
 .region-summary-card .region-name{font-size:13px;font-weight:900;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .region-summary-card .region-meta{display:flex;gap:5px;flex-wrap:wrap;font-size:11px;color:var(--sub);}
-.region-brief-popup-backdrop{position:fixed;left:0;right:0;top:0;bottom:var(--navh);z-index:40;background:rgba(3,7,14,.58);display:flex;align-items:center;justify-content:center;padding:14px;}
+.region-brief-popup-backdrop{position:fixed;left:0;right:0;top:calc(var(--headh) + env(safe-area-inset-top,0px));bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));z-index:40;background:rgba(3,7,14,.58);display:flex;align-items:center;justify-content:center;padding:14px;}
 .region-brief-popup{width:min(520px,94vw);max-height:calc(100% - 24px);overflow-y:auto;background:#101827;border:1px solid rgba(92,242,194,.34);border-radius:16px;padding:14px 14px 18px;box-shadow:0 18px 60px rgba(0,0,0,.65);}
 .region-brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;}
 .region-brief-cell{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:8px;font-size:12px;color:var(--sub);line-height:1.45;}
@@ -730,7 +731,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .space-panel-block{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);}
 .space-map-close{width:auto;margin:0;padding:8px 12px;border-radius:10px;}
 /* 격납고/개조실 팝업 — 맵 세로를 거의 꽉 채우되 하단 헤더(nav)는 가리지 않음 */
-.ship-mod-room,.exploration-shop-room{position:fixed;left:max(8px,calc(50% - 260px));right:max(8px,calc(50% - 260px));top:10px;height:calc(100dvh - var(--navh) - 18px);z-index:55;background:rgba(9,16,29,.97);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
+.ship-mod-room,.exploration-shop-room{position:fixed;left:max(8px,calc(50% - 260px));right:max(8px,calc(50% - 260px));top:calc(var(--headh) + env(safe-area-inset-top,0px) + 10px);height:calc(100dvh - var(--headh) - var(--navh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 18px);z-index:55;background:rgba(9,16,29,.97);border:1px solid rgba(92,242,194,.28);border-radius:14px;padding:14px;overflow-y:auto;box-shadow:0 18px 54px rgba(0,0,0,.55);backdrop-filter:blur(8px);}
 .ship-mod-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
 .ship-mod-head .ship-mod-title{flex:1;text-align:center;min-width:0;}
 .ship-mod-head .ship-mod-title h3{margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -836,7 +837,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .resultcard{background:rgba(92,242,194,.08);border:1px solid rgba(92,242,194,.32);border-radius:14px;padding:12px;margin-top:12px;}
 .resultcard .rtitle{font-size:17px;font-weight:900;margin-bottom:6px;}
 .seed-preview{margin-top:10px;font-size:12px;color:var(--sub);line-height:1.7;}
-#seedBagModal .modal-card{width:min(96vw,900px);max-height:calc(100dvh - var(--navh) - 28px - env(safe-area-inset-bottom,0px));overflow-y:auto;}
+#seedBagModal .modal-card{width:min(96vw,900px);}
 .seed-sort-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
 .seed-sort-label{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px;}
 .seed-sort-btn{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
@@ -9496,7 +9497,7 @@ function openLockedSection(key){
   show('#lockedModal');
 }
 function closeAllModals(){
-  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
+  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal','#nurseryPopModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
 }
 /* ===================================================================
    함선 내부 — 포켓몬식 도트 워킹 (모드 탭)
@@ -9707,13 +9708,14 @@ $('#bottomNav').addEventListener('click', (ev) => {
   const btn = ev.target.closest('.navbtn'); if(!btn) return;
   const nav = btn.dataset.nav;
   sfx.tap();
+  closeAllModals();
   if(nav !== 'mode') closeShip();   // 다른 탭으로 가면 함선 닫기
-  if(nav !== 'nursery') hide('#nurseryScreen');   // 다른 탭으로 가면 식물원 닫기
-  if(nav === 'shop'){ setNavActive('shop'); hide('#explorationModal'); hide('#seedBagModal'); openShop(); }
-  else if(nav === 'explore'){ setNavActive('explore'); hide('#shopModal'); hide('#seedBagModal'); openExploration(); }
-  else if(nav === 'home'){ setNavActive('home'); closeAllModals(); pendingShopOpening = null; renderMain(); }
+  if(nav !== 'nursery'){ closeNurseryDetail(); hide('#nurseryScreen'); }   // 다른 탭으로 가면 식물원과 내부 팝업 닫기
+  if(nav === 'shop'){ setNavActive('shop'); openShop(); }
+  else if(nav === 'explore'){ setNavActive('explore'); openExploration(); }
+  else if(nav === 'home'){ setNavActive('home'); pendingShopOpening = null; renderMain(); }
   else if(nav === 'mode'){ openShip(); }
-  else if(nav === 'nursery'){ setNavActive('nursery'); hide('#shopModal'); hide('#explorationModal'); hide('#seedBagModal'); openNursery(); }
+  else if(nav === 'nursery'){ setNavActive('nursery'); openNursery(); }
   else if(nav === 'guild'){ openLockedSection(nav); }
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
