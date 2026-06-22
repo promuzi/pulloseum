@@ -501,6 +501,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @media (prefers-reduced-motion:reduce){
   #vsIntro .vs-enemy,#vsIntro .vs-me{transform:translateY(-50%)!important;animation:none!important;}
   #vsIntro.play .vs-tname,#vsIntro.play .vs-vs{opacity:1!important;animation:none!important;}
+  .pot-sprite{animation:none!important;}
 }
 
 /* ===== 진화 연출 모달 ===== */
@@ -1200,13 +1201,15 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .drawer-head{display:flex;align-items:center;justify-content:space-between;margin:14px 2px 6px;}
 .drawer-head .dh-t{font-size:12.5px;font-weight:900;color:var(--sub);}
 .drawer-sort{border:1px solid var(--line);background:#0e1828;color:var(--text);border-radius:9px;font-size:11px;font-weight:800;padding:4px 9px;}
-.drawer{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 8px;scrollbar-width:none;}
-.drawer::-webkit-scrollbar{display:none;}
-.dcard{flex:0 0 auto;width:62px;border:2px solid var(--gc,#5fe06b);border-radius:12px;background:#0e1c2e;position:relative;
+/* 가로 스크롤 → 그리드(변이 4열 · 스킬 3열) */
+.drawer{display:grid;gap:8px;padding:6px 2px 8px;}
+.drawer-mut{grid-template-columns:repeat(4,1fr);}
+.drawer-skill{grid-template-columns:repeat(3,1fr);}
+.dcard{width:auto;border:2px solid var(--gc,#5fe06b);border-radius:12px;background:#0e1c2e;position:relative;
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;
   box-shadow:0 0 8px -2px var(--gc);transition:transform .08s;}
 .dcard:active{transform:scale(.94);}
-.dcard.skill{width:80px;height:70px;}
+.dcard.skill{width:auto;min-height:70px;}
 .dcard .dc-ico{font-size:24px;line-height:1;}
 .dcard .dc-n{font-size:10px;font-weight:900;line-height:1.15;text-align:center;margin-top:3px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:normal;}
@@ -1296,28 +1299,29 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .nursery-title{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;color:#d6ffe6;letter-spacing:-.3px;}
 .nursery-res{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#bfe9cf;}
 .nursery-res span{background:rgba(7,24,14,.55);border:1px solid rgba(120,230,170,.28);border-radius:999px;padding:4px 11px;}
-.nursery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 14px 22px;}
-.pot-slot{position:relative;aspect-ratio:3/4;border-radius:14px;cursor:pointer;
-  background:linear-gradient(180deg, rgba(20,55,32,.55), rgba(10,32,19,.65));
-  border:1.5px solid rgba(120,230,170,.22);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  padding:6px 4px 8px;overflow:hidden;transition:transform .12s, box-shadow .15s, border-color .15s;}
-.pot-slot:active{transform:scale(.95);}
-.pot-slot.empty{border-style:dashed;opacity:.82;}
-.pot-slot.empty .pot-emoji{font-size:30px;filter:grayscale(.3) opacity(.85);}
-.pot-slot.filled{border-color:rgba(120,230,170,.45);box-shadow:inset 0 0 18px rgba(20,80,45,.4);}
-.pot-slot.fruiting{border-color:#ffe08a;box-shadow:0 0 16px rgba(255,210,90,.5), inset 0 0 16px rgba(120,90,20,.35);
-  animation:potShimmer 1.6s ease-in-out infinite;}
-@keyframes potShimmer{0%,100%{box-shadow:0 0 14px rgba(255,210,90,.4), inset 0 0 16px rgba(120,90,20,.3);}
-  50%{box-shadow:0 0 26px rgba(255,235,150,.85), inset 0 0 16px rgba(120,90,20,.3);}}
-.pot-sprite{flex:1;display:flex;align-items:flex-end;justify-content:center;min-height:0;pointer-events:none;}
-.pot-emoji{font-size:34px;line-height:1;}
-.pot-name{font-size:10.5px;font-weight:700;color:#dff6e7;text-align:center;line-height:1.1;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;}
-.pot-stage{font-size:9px;color:#9fd9b6;font-weight:700;}
-.pot-fruit{position:absolute;top:5px;right:6px;font-size:20px;
+/* 3열 × 4행 — 화분에 심긴 식물을 카드틀 없이 '누끼'로 크게 배치, 양옆으로 흔들림 */
+.nursery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 4px;padding:10px 12px 26px;}
+.pot-slot{position:relative;min-height:128px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding:6px 2px 8px;transition:transform .12s;}
+.pot-slot.filled:active{transform:scale(.93);}
+.pot-slot.empty,.pot-slot.locked{cursor:default;}
+.pot-slot.locked{opacity:.5;cursor:not-allowed;}
+.pot-sprite{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;
+  transform-origin:50% 92%;animation:potSway 3.4s ease-in-out infinite;
+  filter:drop-shadow(0 5px 4px rgba(0,0,0,.4));}
+.pot-sprite svg,.pot-sprite img{display:block;}
+@keyframes potSway{0%,100%{transform:translateX(-2.5px) rotate(-2deg);}50%{transform:translateX(2.5px) rotate(2deg);}}
+.pot-slot.fruiting .pot-sprite{filter:drop-shadow(0 0 11px rgba(255,225,130,.95)) drop-shadow(0 5px 4px rgba(0,0,0,.4));}
+.pot-emoji{font-size:46px;line-height:1;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35));}
+.pot-slot.empty .pot-emoji{filter:grayscale(.35) opacity(.78);}
+.pot-name{position:relative;z-index:1;font-size:11px;font-weight:800;color:#eafff2;text-align:center;line-height:1.1;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.75);}
+.pot-stage{position:relative;z-index:1;font-size:9px;color:#b6f0cb;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.75);}
+.pot-fruit{position:absolute;top:2px;right:14px;font-size:22px;z-index:3;
   animation:fruitBob 1.4s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,220,120,.9));}
 @keyframes fruitBob{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-3px) rotate(4deg);}}
-.pot-sparkle{position:absolute;top:4px;left:6px;font-size:13px;animation:fruitBob 1.8s ease-in-out infinite;}
+.pot-sparkle{position:absolute;top:0;left:14px;font-size:14px;z-index:3;animation:fruitBob 1.8s ease-in-out infinite;}
 .nursery-empty-msg{padding:18px 16px;color:#9fd9b6;font-size:13px;text-align:center;line-height:1.5;}
 /* 양육 팝업 */
 .nursery-pop-card{background:#0d2b18;border:1.5px solid rgba(120,230,170,.4);}
@@ -7724,7 +7728,7 @@ function mutDrawerHtml(p){
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span>
       <button class="drawer-sort" data-sort="mut">정렬: ${mutSort==='grade'?'등급순':'종류순'} ▼</button></div>
-    <div class="drawer">${cards}</div>`;
+    <div class="drawer drawer-mut">${cards}</div>`;
 }
 
 /* ── 스킬 탭(그림7) ── */
@@ -7764,7 +7768,7 @@ function skillDrawerHtml(p){
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
       <button class="drawer-sort" data-sort="skill">정렬: ${skillSort==='grade'?'등급순':'이름순'} ▼</button></div>
-    <div class="drawer">${cards}</div>
+    <div class="drawer drawer-skill">${cards}</div>
     <p class="sub" style="font-size:11px;margin:6px 2px 0">※ 포식·무기 등 변이 유래 스킬은 전투 시 자동으로 합류합니다.</p>`;
 }
 
@@ -9243,9 +9247,10 @@ function renderNurseryGrid(){
   const plants = state.plants || [];
   let html = '';
   for(let i = 0; i < NURSERY_POTS; i++){
+    const delay = ((i % 6) * 0.4).toFixed(2);   // 흔들림 타이밍 분산 → 더 생동감
     if(i >= cap){
       const lvNeed = potUnlockLevel(i);
-      html += `<div class="pot-slot empty potlocked"><div class="pot-emoji">🔒</div><div class="pot-name" style="font-size:9px">Lv.${lvNeed}</div><div class="pot-stage">해금 필요</div></div>`;
+      html += `<div class="pot-slot locked"><div class="pot-emoji">🔒</div><div class="pot-name" style="font-size:9px">Lv.${lvNeed}</div><div class="pot-stage">해금 필요</div></div>`;
     } else {
       const p = plants[i];
       if(!p){
@@ -9255,12 +9260,12 @@ function renderNurseryGrid(){
         const n = p.nursery;
         const fruiting = n.stage === 'fruiting' || n.fruitReady;
         const st = seedTypeOf(p), el = p.element || 'grass';
-        const sprite = composePlantSvg(st, p.growth_stage || 'seed', el, {size:38});
+        const sprite = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened});
         const wPct = Math.round(Math.min(1, n.water / NURSERY_WATER_NEED)*100);
         const fPct = Math.round(Math.min(1, n.fert / NURSERY_FERT_NEED)*100);
-        html += `<div class="pot-slot ${fruiting?'fruiting':'filled'}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
+        html += `<div class="pot-slot filled ${fruiting?'fruiting':''}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
           ${fruiting?'<div class="pot-fruit" title="열매 수확 가능!">🍎</div><div class="pot-sparkle">✨</div>':''}
-          <div class="pot-sprite">${sprite}</div>
+          <div class="pot-sprite" style="animation-delay:${delay}s">${sprite}</div>
           <div class="pot-name">${plantDisplayName(p)}</div>
           <div class="pot-stage">${growthStageName(p.growth_stage||'seed')} 💧${wPct}% 🌿${fPct}%</div>
         </div>`;
