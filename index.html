@@ -1567,6 +1567,11 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       <b style="color:var(--neon)">💾 진행도 백업/복원</b><br>
       모바일 앱은 진행도가 사라질 수 있습니다. <b>내보내기</b>로 코드를 받아 메모앱·메일 등 안전한 곳에 보관하고, 기기 변경·재설치·초기화 시 <b>가져오기</b>로 붙여넣어 복원하세요.
     </div>
+    <div class="howto" style="border-color:rgba(90,160,255,.45)">
+      <b style="color:#7db8ff">☁️ 클라우드 세이브 (계정 동기화)</b><br>
+      로그인하면 기기가 바뀌어도 진행도가 자동으로 따라옵니다. 저장은 자동이며, 다른 기기에서 같은 계정으로 로그인하면 복원됩니다.
+      <div id="cloudBox" style="margin-top:8px"></div>
+    </div>
     <button class="btn" id="btnExport">💾 진행도 내보내기(백업)</button>
     <button class="btn" id="btnImport">📥 진행도 가져오기(복원)</button>
     <button class="btn modal-close danger" id="btnReset">데이터 초기화</button>
@@ -1627,6 +1632,9 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <div class="vs-vs">VS</div>
   </div>
 </div>
+
+<!-- Supabase (클라우드 세이브). 오프라인/파일 실행 시 로드 안 돼도 게임은 그대로 동작(아래 코드가 전부 가드함). -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- 게임 데이터 (외부 파일 인라인 내장: file:// 더블클릭으로 열어도 동작) -->
 <script>
@@ -3799,6 +3807,7 @@ function saveState(){
     // ⚠️ 복구(bootWithSave)가 네이티브를 읽기 전에 쓰면 백업이 기본값으로 덮어써진다.
     //    그래서 nativeReconciled가 true가 된 뒤에만 미러 저장한다.
     if(p && nativeReconciled) p.set({ key: SAVE_KEY, value: json }).catch(()=>{});
+    if(typeof Cloud !== 'undefined' && Cloud.user) Cloud.pushDebounced();
   }catch(e){}
 }
 function loadState(){
@@ -3833,6 +3842,122 @@ async function bootWithSave(){
   if(canClaimStarterSeed()) claimStarterSeed(true); // 진짜 새 게임일 때만 시작종자
   saveState();                                   // localStorage + 네이티브 동기화
   renderMain();
+}
+
+/* ================= 클라우드 세이브 (Supabase) =================
+   - 로그인하면 saveState 마다 클라우드에 자동 업로드(디바운스).
+   - 다른 기기에서 같은 계정 로그인 시 최신 진행도로 복원.
+   - supabase 라이브러리가 없거나(오프라인/file://) 미로그인 시엔 전부 무동작 → 기존 로컬 동작 그대로. */
+const SUPABASE_URL = 'https://hzhnrpwtigdffcciabto.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_S0dekyZWLkW9tpth3cXJ7Q_HeChA4Yg';
+const Cloud = {
+  client: null, user: null, pushTimer: null,
+  init(){
+    try{
+      if(!(window.supabase && window.supabase.createClient)) return;
+      this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth:{ persistSession:true, autoRefreshToken:true, storageKey:'pulloseum_sb_auth' }
+      });
+      this.client.auth.onAuthStateChange((_e, session)=>{
+        this.user = session ? session.user : null;
+        renderCloudUI();
+      });
+    }catch(e){ this.client = null; }
+  },
+  async refreshUser(){
+    if(!this.client) return null;
+    try{ const { data } = await this.client.auth.getUser(); this.user = data ? data.user : null; }
+    catch(e){ this.user = null; }
+    return this.user;
+  },
+  async signUp(email, pw){ const { data, error } = await this.client.auth.signUp({ email, password: pw }); if(error) throw error; return data; },
+  async signIn(email, pw){ const { data, error } = await this.client.auth.signInWithPassword({ email, password: pw }); if(error) throw error; this.user = data.user; return data; },
+  async signOut(){ try{ await this.client.auth.signOut(); }catch(e){} this.user = null; renderCloudUI(); },
+  async pull(){
+    if(!this.user) return null;
+    const { data, error } = await this.client.from('saves').select('data,updated_at').eq('user_id', this.user.id).maybeSingle();
+    if(error) throw error; return data;
+  },
+  async push(){
+    if(!this.user) return;
+    state.cloudSavedAt = Date.now();
+    const row = { user_id: this.user.id, data: state, updated_at: new Date().toISOString() };
+    const { error } = await this.client.from('saves').upsert(row, { onConflict:'user_id' });
+    if(error) throw error;
+  },
+  pushDebounced(){
+    if(!this.user) return;
+    clearTimeout(this.pushTimer);
+    this.pushTimer = setTimeout(()=>{ this.push().catch(()=>{}); }, 1500);
+  }
+};
+
+/* 로그인 직후: 클라우드 vs 로컬 중 더 최신 것으로 자동 정렬 */
+async function reconcileAfterLogin(){
+  let row = null;
+  try{ row = await Cloud.pull(); }catch(e){ toast('클라우드 확인 실패: '+(e.message||e)); return; }
+  const localTs = Number(state.cloudSavedAt||0);
+  if(row && row.data && Array.isArray(row.data.plants)){
+    const cloudTs = Number(row.data.cloudSavedAt || (row.updated_at ? Date.parse(row.updated_at) : 0));
+    if(cloudTs >= localTs){
+      state = normalizeState(row.data); saveState(); renderMain();
+      toast('☁️ 클라우드 진행도를 불러왔습니다');
+    }else{
+      try{ await Cloud.push(); toast('☁️ 이 기기 진행도를 클라우드에 올렸습니다'); }catch(e){}
+    }
+  }else{
+    try{ await Cloud.push(); toast('☁️ 클라우드 세이브를 시작했습니다'); }catch(e){}
+  }
+}
+
+const CLOUD_INPUT_STYLE = 'width:100%;box-sizing:border-box;margin:4px 0;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:var(--text);font-size:13px';
+function renderCloudUI(){
+  const box = document.getElementById('cloudBox'); if(!box) return;
+  if(!(typeof Cloud !== 'undefined' && Cloud.client)){
+    box.innerHTML = '<div style="opacity:.7;font-size:12px">현재 오프라인이거나 클라우드 모듈을 불러오지 못했습니다. 인터넷에 연결된 상태로 열면 사용할 수 있어요.</div>';
+    return;
+  }
+  if(Cloud.user){
+    box.innerHTML =
+      '<div style="font-size:13px;margin-bottom:6px">✅ <b>'+(Cloud.user.email||'로그인됨')+'</b> 으로 자동 동기화 중</div>'+
+      '<button class="btn" id="cloudUploadBtn">⬆️ 지금 클라우드에 저장</button>'+
+      '<button class="btn" id="cloudDownloadBtn">⬇️ 클라우드에서 불러오기</button>'+
+      '<button class="btn" id="cloudLogoutBtn">로그아웃</button>';
+    document.getElementById('cloudUploadBtn').onclick = async ()=>{ try{ await Cloud.push(); toast('☁️ 클라우드에 저장했습니다'); }catch(e){ toast('저장 실패: '+(e.message||e)); } };
+    document.getElementById('cloudDownloadBtn').onclick = cloudForceDownload;
+    document.getElementById('cloudLogoutBtn').onclick = ()=>{ Cloud.signOut(); };
+  }else{
+    box.innerHTML =
+      '<input id="cloudEmail" type="email" autocomplete="email" placeholder="이메일" style="'+CLOUD_INPUT_STYLE+'">'+
+      '<input id="cloudPw" type="password" autocomplete="current-password" placeholder="비밀번호 (6자 이상)" style="'+CLOUD_INPUT_STYLE+'">'+
+      '<button class="btn primary" id="cloudLoginBtn">로그인</button>'+
+      '<button class="btn" id="cloudSignupBtn">새 계정 만들기</button>';
+    document.getElementById('cloudLoginBtn').onclick = ()=>cloudDoLogin('login');
+    document.getElementById('cloudSignupBtn').onclick = ()=>cloudDoLogin('signup');
+  }
+}
+async function cloudDoLogin(mode){
+  const email = (document.getElementById('cloudEmail').value||'').trim();
+  const pw = document.getElementById('cloudPw').value||'';
+  if(!email || pw.length < 6){ toast('이메일과 6자 이상 비밀번호를 입력하세요'); return; }
+  try{
+    if(mode === 'signup'){
+      const data = await Cloud.signUp(email, pw);
+      if(!data.session){ toast('가입됨 — 이메일 인증이 켜져 있으면 메일 확인이 필요합니다'); }
+    }
+    await Cloud.signIn(email, pw);
+    renderCloudUI();
+    await reconcileAfterLogin();
+  }catch(e){ toast('실패: '+(e.message||e)); }
+}
+async function cloudForceDownload(){
+  try{
+    const row = await Cloud.pull();
+    if(!row || !row.data || !Array.isArray(row.data.plants)){ toast('클라우드에 저장된 진행도가 없습니다'); return; }
+    if(!confirm('현재 진행도를 클라우드 데이터로 덮어쓸까요?')) return;
+    state = normalizeState(row.data); saveState(); renderMain();
+    toast('☁️ 클라우드에서 불러왔습니다');
+  }catch(e){ toast('불러오기 실패: '+(e.message||e)); }
 }
 
 /* ================= 유틸 ================= */
@@ -9589,6 +9714,7 @@ function openSettings(){
   $('#soundToggle').checked = state.sound;
   resetArmed = false;
   $('#btnReset').textContent = '데이터 초기화';
+  renderCloudUI();
   show('#settingsModal');
 }
 $('#soundToggle').addEventListener('change', (ev) => { state.sound = ev.target.checked; saveState(); sfx.tap(); });
@@ -9657,7 +9783,12 @@ $('#btnReset').addEventListener('click', () => {
 /* 타이틀 아트 + 부팅 */
 $('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
 // 시작종자 지급·최초 저장은 네이티브 백업 복구 이후에 해야 백업이 덮어써지지 않음 → bootWithSave가 일괄 처리.
-bootWithSave();
+bootWithSave().finally(()=>{
+  Cloud.init();
+  (async()=>{
+    try{ await Cloud.refreshUser(); renderCloudUI(); if(Cloud.user) await reconcileAfterLogin(); }catch(e){}
+  })();
+});
 </script>
 </body>
 </html>
