@@ -44,6 +44,7 @@
 | **[trait-growth-roadmap.md](trait-growth-roadmap.md)** | 용어 체계(타입/속성/생장/변이형/잠재특성), 변이형↔카드 매핑, 잠재특성 향후 설계 | 변이형/특성/타입 설계 |
 | **[pixel-art-ui-roadmap.md](pixel-art-ui-roadmap.md)** | 도트화 인계: 채택 방식(PNG 교체), 규격, AI 도트 도구, 모션, 미확정 결정 | #3·#5 작업 시작 전 필독 |
 | **[android-capacitor-wrapper.md](android-capacitor-wrapper.md)** | Capacitor 안드로이드 포장·APK 빌드 절차, 네이티브 세이브 | #9 빌드·출시 |
+| **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
