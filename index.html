@@ -1279,6 +1279,61 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .dbtn.right{right:0;top:50px;}
 #actBtn{pointer-events:auto;width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#00ffbf,#00a884);border:2px solid #04140e;color:#04140e;font-size:24px;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none;touch-action:none;}
 #actBtn:active{transform:scale(.92);}
+
+/* ===== 식물원 (양육 탭) ===== */
+#nurseryScreen{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
+  top:calc(var(--headh) + env(safe-area-inset-top,0px));bottom:var(--navh);z-index:50;
+  overflow-y:auto;display:flex;flex-direction:column;padding:0;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 38px, rgba(255,255,255,.025) 38px 76px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 38px, rgba(255,255,255,.025) 38px 76px),
+    linear-gradient(180deg,#0c2417 0%, #123b22 45%, #0e2c1a 100%);
+  image-rendering:pixelated;}
+.nursery-top{position:sticky;top:0;z-index:4;display:flex;flex-direction:column;gap:6px;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;
+  background:linear-gradient(180deg,rgba(8,28,16,.96),rgba(8,28,16,.78) 70%,rgba(8,28,16,0));}
+.nursery-title{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;color:#d6ffe6;letter-spacing:-.3px;}
+.nursery-res{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#bfe9cf;}
+.nursery-res span{background:rgba(7,24,14,.55);border:1px solid rgba(120,230,170,.28);border-radius:999px;padding:4px 11px;}
+.nursery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 14px 22px;}
+.pot-slot{position:relative;aspect-ratio:3/4;border-radius:14px;cursor:pointer;
+  background:linear-gradient(180deg, rgba(20,55,32,.55), rgba(10,32,19,.65));
+  border:1.5px solid rgba(120,230,170,.22);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding:6px 4px 8px;overflow:hidden;transition:transform .12s, box-shadow .15s, border-color .15s;}
+.pot-slot:active{transform:scale(.95);}
+.pot-slot.empty{border-style:dashed;opacity:.82;}
+.pot-slot.empty .pot-emoji{font-size:30px;filter:grayscale(.3) opacity(.85);}
+.pot-slot.filled{border-color:rgba(120,230,170,.45);box-shadow:inset 0 0 18px rgba(20,80,45,.4);}
+.pot-slot.fruiting{border-color:#ffe08a;box-shadow:0 0 16px rgba(255,210,90,.5), inset 0 0 16px rgba(120,90,20,.35);
+  animation:potShimmer 1.6s ease-in-out infinite;}
+@keyframes potShimmer{0%,100%{box-shadow:0 0 14px rgba(255,210,90,.4), inset 0 0 16px rgba(120,90,20,.3);}
+  50%{box-shadow:0 0 26px rgba(255,235,150,.85), inset 0 0 16px rgba(120,90,20,.3);}}
+.pot-sprite{flex:1;display:flex;align-items:flex-end;justify-content:center;min-height:0;pointer-events:none;}
+.pot-emoji{font-size:34px;line-height:1;}
+.pot-name{font-size:10.5px;font-weight:700;color:#dff6e7;text-align:center;line-height:1.1;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;}
+.pot-stage{font-size:9px;color:#9fd9b6;font-weight:700;}
+.pot-fruit{position:absolute;top:5px;right:6px;font-size:20px;
+  animation:fruitBob 1.4s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,220,120,.9));}
+@keyframes fruitBob{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-3px) rotate(4deg);}}
+.pot-sparkle{position:absolute;top:4px;left:6px;font-size:13px;animation:fruitBob 1.8s ease-in-out infinite;}
+.nursery-empty-msg{padding:18px 16px;color:#9fd9b6;font-size:13px;text-align:center;line-height:1.5;}
+/* 양육 팝업 */
+.nursery-pop-card{background:#0d2b18;border:1.5px solid rgba(120,230,170,.4);}
+.np-plant{display:flex;align-items:center;gap:12px;margin:8px 0 12px;}
+.np-plant .np-sprite{width:74px;height:88px;display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(8,24,14,.5);border-radius:12px;border:1px solid rgba(120,230,170,.25);}
+.np-info{flex:1;min-width:0;}
+.np-info b{color:#dff6e7;font-size:15px;}
+.np-info .np-sub{font-size:11.5px;color:#9fd9b6;margin-top:2px;}
+.np-actions{display:flex;gap:10px;margin:8px 0;}
+.np-btn{flex:1;border:1px solid rgba(120,230,170,.4);background:rgba(20,60,35,.55);color:#dff6e7;
+  border-radius:12px;padding:11px 6px;font-size:13px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;gap:3px;align-items:center;}
+.np-btn:disabled{opacity:.45;}
+.np-btn small{font-size:10px;font-weight:600;color:#9fd9b6;}
+.np-btn.harvest{border-color:#ffe08a;background:linear-gradient(180deg,#caa23a,#9a7a1f);color:#1a1405;}
+.np-note{font-size:11.5px;color:#9fd9b6;background:rgba(8,24,14,.5);border-radius:10px;padding:9px 11px;margin-top:6px;line-height:1.4;}
+.np-fruit-timer{font-size:12px;color:#bfe9cf;text-align:center;margin:4px 0;font-weight:700;}
 </style>
 </head>
 <body>
@@ -1327,10 +1382,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
     <button id="btnBattle">⚔️ 전투 시작</button>
     <nav id="bottomNav">
       <button class="navbtn" data-nav="shop"><span class="ni">🛒</span><span class="nl">상점</span></button>
-      <button class="navbtn" data-nav="explore"><span class="ni">🛰️</span><span class="nl">탐사</span></button>
-      <button class="navbtn center active" data-nav="home"><span class="ni">🌿</span><span class="nl">식물·전투</span></button>
       <button class="navbtn" data-nav="mode"><span class="ni">🚀</span><span class="nl">함선</span></button>
-      <button class="navbtn locked" data-nav="guild"><span class="ni">🏰</span><span class="nl">길드</span><span class="navlock">🔒</span></button>
+      <button class="navbtn center active" data-nav="home"><span class="ni">🌿</span><span class="nl">식물·전투</span></button>
+      <button class="navbtn" data-nav="nursery"><span class="ni">🪴</span><span class="nl">식물양육</span></button>
+      <button class="navbtn" data-nav="explore"><span class="ni">🛰️</span><span class="nl">탐사</span></button>
     </nav>
   </section>
 
@@ -1419,6 +1474,18 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
       </div>
       <button id="actBtn">A</button>
     </div>
+  </section>
+
+  <!-- ===== 식물원 (양육 탭) ===== -->
+  <section id="nurseryScreen" class="screen hidden">
+    <div class="nursery-top">
+      <div class="nursery-title">🌱 식물원 <button class="np-bag-btn" onclick="openFruitBag()">🍎 수확 목록</button></div>
+      <div class="nursery-res" id="nurseryRes"></div>
+    </div>
+    <div class="nursery-grid" id="nurseryGrid"></div>
+    <!-- 화분 상세 팝업 -->
+    <div id="nurseryDetailBack" class="hidden" style="position:absolute;inset:0;z-index:20;background:rgba(3,14,8,.82);" onclick="closeNurseryDetail()"></div>
+    <div id="nurseryDetailCard" class="modal-card nursery-pop-card hidden" style="position:absolute;bottom:0;left:0;right:0;z-index:21;border-radius:20px 20px 0 0;padding:20px 16px 28px;max-height:70%;overflow-y:auto;"></div>
   </section>
 </div>
 
@@ -1542,6 +1609,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 
 <div class="modal hidden" id="evolveModal">
   <div class="modal-card" id="evolveBody"></div>
+</div>
+
+<div class="modal hidden" id="nurseryPopModal">
+  <div class="modal-card nursery-pop-card" id="nurseryPopBody"></div>
 </div>
 
 <div id="toast"></div>
@@ -2237,6 +2308,28 @@ const AlienPlantGameData = (() => {
         effect: { pays_entry_fee_for: ['tournament_rookie_pod_cup'] },
         price: 70,
       },
+      {
+        id: 'growth_blocker',
+        name: '생장판 닫기 물약',
+        item_type: 'nutrient',
+        description: '이 식물의 생장단계 경험치 획득을 영구 차단합니다.',
+        target_trait_category: 'growth',
+        effect: { growth_blocker: true },
+        type: 'growth_blocker',
+        price: 300,
+      },
+      {
+        id: 'levelup_potion',
+        name: '레벨업 물약',
+        item_type: 'nutrient',
+        description: '식물의 생장 경험치를 대량 획득합니다. (테스트용: 무한 사용)',
+        target_trait_category: 'growth',
+        effect: { levelup_exp: 500 },
+        type: 'levelup_potion',
+        free: true,
+        exp: 500,
+        price: 0,
+      },
     ],
 
     tournaments: [
@@ -2877,11 +2970,9 @@ const INITIAL_PLANTED_GROWTH_STAGE = 'sprout';
 const GROWTH_STAGE_ORDER = ['seed', 'sprout', 'juvenile', 'growing', 'mature', 'evolved'];
 const GROWTH_STAGE_NAMES = { seed:'씨앗', sprout:'새싹', juvenile:'유체', growing:'성장체', mature:'성체', evolved:'완숙체' };
 const GROWTH_EXP_REQUIREMENTS = { seed:18, sprout:45, juvenile:90, growing:125, mature:160, evolved:Infinity };
-const GROWTH_ACTIONS = {
-  // ⚠️ 테스트용: 비료 주기 비용을 0으로 둠(원래 25). 정식 밸런스 시 fertilizer.cost 복구.
-  water: { name:'물 주기', exp:6, cost:0, icon:'💧' },
-  fertilizer: { name:'비료 주기', exp:16, cost:0, icon:'🌿' },
-};
+/* 생장(생장단계) 경험치는 이제 전투 승리 + 경험치 아이템(레벨업 물약)으로만 오른다.
+   물·비료는 식물원(양육 탭)에서 '열매' 성장 전용으로 이동했다. (구 물/비료→경험치 경로 폐기) */
+const GROWTH_ACTIONS = {};
 const MAX_SEED_STORAGE_CAPACITY = 18;
 const STORAGE_CAPACITY_UPGRADE_STEP = 2;
 const STORAGE_GRADE_SEQUENCE = ['C', 'B', 'A', 'S'];
@@ -3274,7 +3365,51 @@ const POTENTIAL_GRADE_BOOST = { D:0.4, C:0.8, B:1.3, A:1.9, S:2.8 };
 function rollSkillGrade(potential){ return rollCardGrade(POTENTIAL_GRADE_BOOST[potential] || 1); }
 /* 성장 스킬 등급화 — 위력 스케일(완만) + 상위 등급은 부가효과 추가(피해+버프 등) */
 const GROWTH_GRADE_MULT = { D:0.85, C:1.0, B:1.12, A:1.25, S:1.42 };
+/* 등급별 완전히 다른 변종 스킬 — 정의된 스킬은 계수 스케일 대신 이 표를 사용한다.
+   (정의되지 않은 스킬은 기존 GROWTH_GRADE_MULT 계수 방식으로 하위 호환) */
+const GRADE_SKILL_VARIANTS = {
+  skill_basic_strike: {
+    D: { power:120, name:'기본 공격 D' },
+    C: { power:135, name:'기본 공격' },
+    B: { power:90, hits:2, name:'연속 타격', desc:'위력 90 · 2회 연속 공격' },
+    A: { power:170, critBonus:0.2, name:'날카로운 타격', desc:'위력 170 · 치명타 확률 +20%' },
+    S: { power:200, critBonus:0.3, selfBuff:{stat:'atk',pct:0.15,turns:2}, name:'파멸의 일격', desc:'위력 200 · 치명타 +30% · 공격력 15%↑(2턴)' },
+  },
+  skill_guard: {
+    D: { kind:'guard', guardMult:0.3, name:'방어 D' },
+    C: { kind:'guard', guardMult:0.5, name:'방어 태세' },
+    B: { kind:'guard', guardMult:0.55, counterPct:0.15, name:'방패막기', desc:'받는 피해 55%↓ · 반격 15%' },
+    A: { kind:'guard', guardMult:0.6, counterPct:0.25, heal:0.05, name:'완벽 방어', desc:'피해 60%↓ · 반격 25% · 회복 5%' },
+    S: { kind:'guard', guardMult:0.7, counterPct:0.35, heal:0.08, selfBuff:{stat:'def',pct:0.2,turns:3}, name:'절대 방패', desc:'피해 70%↓ · 반격 35% · 회복 8% · 방어 20%↑(3턴)' },
+  },
+  skill_photosynthesis: {
+    D: { kind:'heal', heal:0.10, name:'광합성 D' },
+    C: { kind:'heal', heal:0.20, name:'광합성' },
+    B: { kind:'heal', heal:0.24, selfBuff:{stat:'atk',pct:0.08,turns:2}, name:'영양 광합성', desc:'회복 24% · 공격력 8%↑(2턴)' },
+    A: { kind:'heal', heal:0.30, selfBuff:{stat:'atk',pct:0.12,turns:2}, name:'고도 광합성', desc:'회복 30% · 공격력 12%↑(2턴)' },
+    S: { kind:'heal', heal:0.38, selfBuff:{stat:'atk',pct:0.18,turns:3}, name:'완전 광합성', desc:'회복 38% · 공격력 18%↑(3턴)' },
+  },
+  skill_focus: {
+    D: { kind:'special', energyGain:1, name:'기력 집중 D' },
+    C: { kind:'special', energyGain:2, name:'기력 집중' },
+    B: { kind:'special', energyGain:3, name:'기력 폭발', desc:'⚡ 3 충전 · 무료' },
+    A: { kind:'special', energyGain:3, selfBuff:{stat:'spd',pct:0.15,turns:2}, name:'각성 집중', desc:'⚡ 3 충전 · 속도 15%↑(2턴)' },
+    S: { kind:'special', energyGain:4, selfBuff:{stat:'atk',pct:0.15,turns:2}, name:'초월 집중', desc:'⚡ 4 충전 · 공격력 15%↑(2턴)' },
+  },
+  skill_rally: {
+    D: { kind:'buff', selfBuff:{stat:'spd',pct:0.15,turns:3}, name:'생장 가속 D' },
+    C: { kind:'buff', selfBuff:{stat:'spd',pct:0.25,turns:3}, name:'생장 가속' },
+    B: { kind:'buff', selfBuff:{stat:'spd',pct:0.32,turns:3}, name:'고속 생장', desc:'속도 32%↑(3턴)' },
+    A: { kind:'buff', selfBuff:{stat:'atk',pct:0.18,turns:3}, name:'전열 정비', desc:'공격력 18%↑(3턴)' },
+    S: { kind:'buff', selfBuff:{stat:'atk',pct:0.25,turns:3}, name:'총력 결집', desc:'공격력 25%↑(3턴)' },
+  },
+};
 function gradeGrowthSkill(id, base, grade){
+  // 등급별 변종이 정의돼 있으면 그 스킬을 사용(계수 방식 대체)
+  if(GRADE_SKILL_VARIANTS[id]){
+    const v = GRADE_SKILL_VARIANTS[id][grade] || GRADE_SKILL_VARIANTS[id].C;
+    if(v) return Object.assign({ id }, ALL_SKILLS[id] || base || {}, v, { grade: grade || 'C' });
+  }
   if(!base || !grade || grade === 'C') return base ? Object.assign({ id, grade:'C' }, base) : base;
   const m = GROWTH_GRADE_MULT[grade] || 1;
   const s = Object.assign({ id }, base);
@@ -3336,6 +3471,8 @@ function plantKnownSkillIds(p){
   // 변이형 스킬
   if(p.form === 'pred') known.push('skill_card_predation'); // 포식 변이형은 카드 없이도 포식 기본 보유
   if(p.form === 'weapon' && p.weaponKey) known.push('skill_weapon');
+  // 식물원 열매(스킬 박스) 개봉으로 추가 습득한 스킬
+  if(Array.isArray(p.bonus_skills)) p.bonus_skills.forEach(id => { if(ALL_SKILLS[id]) known.push(id); });
   return known.filter((v, i, a) => a.indexOf(v) === i && skillById(v, p));
 }
 const MAX_LOADOUT = 6;
@@ -3366,6 +3503,7 @@ function defaultLoadout(p){
 }
 function ensureSkillFields(p){
   if(!p) return p;
+  if(!Array.isArray(p.bonus_skills)) p.bonus_skills = [];   // 식물원 열매로 습득한 추가 스킬
   // 변이 카드 장착칸(최대 5) — 보유 중이고 변이형에 맞는 카드만 유지
   if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
   const owned = ownedFormCards(p.form || 'normal');
@@ -3509,6 +3647,8 @@ function defaultState(){
     unlocked_planets:starterShip.unlocked_planets.slice(),
     starter_seed_claimed:false,
     seed_inventory:[],
+    nursery_fruits:[],
+    nursery_daily:{ day:'', water:0, fert:0 },
     item_inventory:[],
     trait_inventory:[],
     potion_inventory:[],
@@ -3568,6 +3708,8 @@ function normalizeState(s){
   if(typeof s.starter_seed_claimed !== 'boolean') s.starter_seed_claimed = false;
   if(typeof s.exploration_equipment_bonus !== 'number') s.exploration_equipment_bonus = s.exploration_ship.stats.scanner_bonus || 0;
   if(!Array.isArray(s.seed_inventory)) s.seed_inventory = [];
+  if(!Array.isArray(s.nursery_fruits)) s.nursery_fruits = [];   // 식물원 수확 열매(스킬 박스)
+  if(!s.nursery_daily || typeof s.nursery_daily !== 'object') s.nursery_daily = { day:'', water:0, fert:0 };  // 오늘 쓴 물/비료 총량
   if(!Array.isArray(s.item_inventory)) s.item_inventory = [];
   if(!Array.isArray(s.trait_inventory)) s.trait_inventory = [];
   if(!Array.isArray(s.potion_inventory)) s.potion_inventory = [];
@@ -3580,9 +3722,52 @@ function normalizeState(s){
     if(Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = p.equipped_trait_cards.map(c => (typeof c==='string' && c.indexOf('@')<0) ? c+'@C' : c);
     p.potion = null; // 독초 물약 시스템 폐지 — 독성은 독성 변이형 카드로만
     ensurePlantInstanceFields(p);
+    ensureNurseryFields(p);
   });
   return s;
 }
+/* 식물원(양육) 필드 정규화 — 화분당 물/비료 일일 사용량과 마지막 급수 시각, 열매 상태 */
+function ensureNurseryFields(p){
+  if(!p) return p;
+  if(typeof p.growthLocked !== 'boolean') p.growthLocked = false;
+  if(!p.nursery || typeof p.nursery !== 'object'){
+    p.nursery = { waterDay:'', waterCount:0, fertDay:'', fertCount:0, lastCareAt:0, fruitReady:false };
+  }
+  const n = p.nursery;
+  if(typeof n.waterDay !== 'string') n.waterDay = '';
+  if(typeof n.waterCount !== 'number') n.waterCount = 0;
+  if(typeof n.fertDay !== 'string') n.fertDay = '';
+  if(typeof n.fertCount !== 'number') n.fertCount = 0;
+  if(typeof n.lastCareAt !== 'number') n.lastCareAt = 0;
+  if(typeof n.fruitReady !== 'boolean') n.fruitReady = false;
+  // 현재 열매 사이클 누적 물/비료 + 단계(growing|fruiting) + 맺은 열매 수
+  if(typeof n.water !== 'number') n.water = 0;
+  if(typeof n.fert !== 'number') n.fert = 0;
+  if(typeof n.stage !== 'string') n.stage = 'growing';
+  if(typeof n.fruitCount !== 'number') n.fruitCount = 0;
+  return p;
+}
+
+/* ===================================================================
+   식물원(양육) — 화분에서 식물에 물/비료를 줘 '열매(스킬 박스)'를 키운다.
+   - 일일 제한: 물 20회 / 비료 10회 (모든 화분 합산, 자정 리셋)
+   - 열매 성숙: 물 10회 + 비료 5회 누적 → 열매 1~3개
+   - 수확: state.nursery_fruits 로 이동(식물 속성/변이형/생장단계 보존) → 가방에서 개봉
+   =================================================================== */
+const NURSERY_POTS = 12;            // 화분 그리드 칸 수(3×4)
+const NURSERY_DAILY_WATER = 20;     // 하루 총 물 사용 한도
+const NURSERY_DAILY_FERT = 10;      // 하루 총 비료 사용 한도
+const NURSERY_WATER_NEED = 10;      // 열매 성숙에 필요한 물
+const NURSERY_FERT_NEED = 5;        // 열매 성숙에 필요한 비료
+function nurseryToday(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function nurseryDaily(){
+  if(!state.nursery_daily || typeof state.nursery_daily !== 'object') state.nursery_daily = { day:'', water:0, fert:0 };
+  const today = nurseryToday();
+  if(state.nursery_daily.day !== today){ state.nursery_daily = { day:today, water:0, fert:0 }; }
+  return state.nursery_daily;
+}
+function nurseryWaterLeft(){ return Math.max(0, NURSERY_DAILY_WATER - nurseryDaily().water); }
+function nurseryFertLeft(){ return Math.max(0, NURSERY_DAILY_FERT - nurseryDaily().fert); }
 let state = loadState();
 function syncPlayerMoney(){ state.money = state.credits; }
 
@@ -4093,6 +4278,11 @@ function rollExplorationRewards(planet, region, successMargin, allowPartial){
   // 변이 카드 드롭 — 탐사 보상으로만 얻는 획득 경로
   const cardChance = (allowPartial ? 0.10 : 0.22) + successMargin * 0.25;
   if(Math.random() < cardChance){ rewards.cards.push(grantRandomTraitCard()); }
+  // 경험치 아이템(레벨업 물약) 드롭 — 10% 확률
+  if(Math.random() < 0.10){
+    const lp = ALIEN_INDEX.items['levelup_potion'];
+    if(lp){ const entry = createItemInventoryEntry(lp, 1, planet, region); addItemReward(entry); rewards.items.push(entry); }
+  }
   return rewards;
 }
 function applyExplorationDamage(planet, region, success){
@@ -6200,6 +6390,7 @@ function ensurePlantInstanceFields(p){
   p.mutation_rate = typeof p.mutation_rate === 'number' ? p.mutation_rate : 0.05;
   if(!Array.isArray(p.growth_history)) p.growth_history = [{ event:'legacy_instance_normalized', growth_stage:p.growth_stage, level:p.level, at:new Date().toISOString() }];
   ensureSkillFields(p);
+  if(typeof ensureNurseryFields === 'function') ensureNurseryFields(p);
   return p;
 }
 function seedPlantReadiness(entry, seed){
@@ -7304,14 +7495,15 @@ function upTabHtml(p, s){
       <div class="pm-col">${UP_RIGHT.map(d=>upStatCard(p,s,d)).join('')}</div>
     </div>
     <div class="pm-grow">
-      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage)}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
+      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage)}${p.growthLocked?' · 🛑 생장 차단':''}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
       <div class="pg-bar"><i style="width:${Math.round(progress*100)}%"></i></div>
       <div class="pg-btns">
-        <button class="pg-btn" data-grow-action="water" ${isMax?'disabled':''}>💧 물</button>
-        <button class="pg-btn" data-grow-action="fertilizer" ${isMax?'disabled':''}>🌿 비료</button>
+        <button class="pg-btn" data-use-growth-item="levelup_potion" ${(isMax||p.growthLocked)?'disabled':''}>⬆️ 레벨업 물약 사용 (보유 ${itemOwnedCount('levelup_potion')})</button>
       </div>
+      <div class="howto" style="margin-top:6px">생장단계는 ⚔️전투 승리와 ⬆️경험치 아이템으로만 오릅니다. 💧물·🌿비료는 🌱식물원에서 열매를 키우는 데 씁니다.</div>
     </div>`;
 }
+function itemOwnedCount(itemId){ return (((state.item_inventory||[]).find(it=>it.item_id===itemId))||{}).count || 0; }
 
 /* ── 카드/스킬 표시 보조 ── */
 function stripGrade(name){ return String(name||'').replace(/\s+[SABCD]$/, ''); }
@@ -7570,10 +7762,12 @@ function renderPotionSection(p){
 const ITEM_TYPE_ICONS = { nutrient:'🧪', mutagen:'🧫', stabilizer:'💉', graft:'🪡', equipment:'🛡️', ticket:'🎟️' };
 function itemUsableOnPlant(item){
   const e = (item && item.effect) || {};
-  return ('growth_exp' in e) || ('stability_delta' in e) || ('mutation_rate_delta' in e) || ('unlock_trait_slots' in e);
+  return ('growth_exp' in e) || ('levelup_exp' in e) || ('growth_blocker' in e) || ('stability_delta' in e) || ('mutation_rate_delta' in e) || ('unlock_trait_slots' in e);
 }
 function itemEffectText(item){
   const e = (item && item.effect) || {}; const parts=[];
+  if(e.levelup_exp) parts.push(`생장 경험치 +${e.levelup_exp}`);
+  if(e.growth_blocker) parts.push('생장단계 경험치 영구 차단');
   if(e.growth_exp) parts.push(`성장 경험치 +${e.growth_exp}`);
   if(e.stability_delta) parts.push(`안정도 ${e.stability_delta>0?'+':''}${e.stability_delta}`);
   if(e.mutation_rate_delta) parts.push(`변이율 ${e.mutation_rate_delta>0?'+':''}${Math.round(e.mutation_rate_delta*100)}%`);
@@ -7594,6 +7788,31 @@ function useItem(itemId){
   if(!itemUsableOnPlant(item)){ toast('이 아이템은 탐사·전투에서 자동 적용됩니다'); return; }
   if(e.unlock_trait_slots && e.minimum_stability && (p.stability||0) < e.minimum_stability){ toast(`안정도 ${e.minimum_stability} 이상에서만 사용할 수 있습니다`); return; }
   if(e.unlock_trait_slots && (p.unlocked_trait_slots||0) >= 5){ toast('변이 카드 슬롯이 이미 가득 찼습니다'); return; }
+  // 생장판 닫기 물약 — 생장단계 경험치 영구 차단
+  if(e.growth_blocker){
+    if(p.growthLocked){ toast('이미 생장판이 닫혀 있습니다'); return; }
+    p.growthLocked = true;
+    inv.count = (inv.count||1) - 1;
+    if(inv.count <= 0) state.item_inventory = state.item_inventory.filter(it => it !== inv);
+    saveState(); sfx.tap(); renderUpgrade(); renderMain();
+    toast(`${item.name} 사용! 🛑 이 식물의 생장단계 경험치가 영구 차단되었습니다`);
+    return;
+  }
+  // 레벨업 물약 — 생장 경험치 대량 획득
+  if(e.levelup_exp){
+    if(p.growthLocked){ toast('이 식물은 생장판이 닫혀 있어 경험치를 얻을 수 없습니다'); return; }
+    if(p.growth_stage === 'evolved'){ toast('이미 최종 성장 단계입니다'); return; }
+    feedGrowth(p, e.levelup_exp);
+    const cur = calcStats(p);
+    p.battle_stats = { ...(p.battle_stats || {}), hp:cur.hp, attack:cur.atk, defense:cur.def, speed:cur.spd, energy:(p.battle_stats && p.battle_stats.energy) || 3 };
+    if(!item.free){
+      inv.count = (inv.count||1) - 1;
+      if(inv.count <= 0) state.item_inventory = state.item_inventory.filter(it => it !== inv);
+    }
+    saveState(); sfx.heal(); renderUpgrade(); renderMain();
+    toast(`${item.name} 사용! ⬆️ 생장 경험치 +${e.levelup_exp}`);
+    return;
+  }
   const msg=[];
   if(e.growth_exp){ feedGrowth(p, e.growth_exp); msg.push(`성장 +${e.growth_exp}`); }
   if(typeof e.stability_delta === 'number'){ p.stability = clamp((p.stability||0)+e.stability_delta, 0, 100); msg.push(`안정도 ${e.stability_delta>0?'+':''}${e.stability_delta}`); }
@@ -7642,6 +7861,11 @@ function bindUpgradeEvents(p){
     spendCredits(cost); p.up[k]++; saveState(); sfx.heal(); renderUpgrade(); renderMain();
   }));
   body.querySelectorAll('[data-grow-action]').forEach(b => b.addEventListener('click', () => applyGrowthAction(b.dataset.growAction)));
+  body.querySelectorAll('[data-use-growth-item]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.useGrowthItem;
+    if(itemOwnedCount(id) <= 0){ toast('보유한 경험치 아이템이 없습니다. 상점에서 무료로 받을 수 있어요'); return; }
+    useItem(id);
+  }));
   // 변이/스킬 — 장착된 슬롯
   body.querySelectorAll('[data-eq-slot]').forEach(b => b.addEventListener('click', () => {
     const idx = +b.dataset.eqSlot, kind = b.dataset.kind;
@@ -7777,19 +8001,56 @@ function buyPotion(potionId){
   saveState(); sfx.heal(); renderShop(); renderMain();
   toast(`${c.name} 구매! 🧬특성 탭에서 식물에 장착하세요`);
 }
+/* 상점 소모품/아이템 — 식물 생장 경험치 아이템 2종 */
+const SHOP_GROWTH_ITEMS = [
+  { item_id:'levelup_potion', icon:'⬆️', name:'레벨업 물약', desc:'생장 경험치 +500 · 무료/무한 구매 (테스트용)', price:0, free:true },
+  { item_id:'growth_blocker', icon:'🛑', name:'생장판 닫기 물약', desc:'이 식물의 생장단계 경험치 획득을 영구 차단', price:300 },
+];
+function renderShopGrowthItems(){
+  const cards = SHOP_GROWTH_ITEMS.map(c => {
+    const owned = itemOwnedCount(c.item_id);
+    const afford = c.free || state.credits >= c.price;
+    return `<button class="consum-card" data-buy-item="${c.item_id}" ${afford?'':'disabled'}>
+      <div class="consum-icon">${c.icon}</div>
+      <div class="consum-name">${c.name}${owned?` <small>×${owned}</small>`:''}</div>
+      <div class="consum-exp">${c.desc}</div>
+      <div class="consum-price">${c.free?'무료':fmt(c.price)+'💰'}</div>
+    </button>`;
+  }).join('');
+  return `<div class="shop-consum-grid">${cards}</div>`;
+}
+function buyGrowthItem(itemId){
+  const c = SHOP_GROWTH_ITEMS.find(x => x.item_id === itemId);
+  if(!c){ toast('상품 정보를 찾을 수 없습니다'); return; }
+  if(!c.free && state.credits < c.price){ toast('크레딧이 부족합니다'); return; }
+  const item = ALIEN_INDEX.items[c.item_id];
+  if(!c.free) spendCredits(c.price);
+  addItemReward({
+    inventory_id:`item_${Date.now()}_${Math.floor(Math.random()*10000)}`,
+    item_id:c.item_id, name:(item&&item.name)||c.name, item_type:(item&&item.item_type)||'nutrient',
+    rarity:'shop', count:1, acquired_at:new Date().toISOString(), source:{ shop_item:true },
+  });
+  saveState(); sfx.heal(); renderShop(); renderMain();
+  toast(`${c.name} 구매! 🧪강화 탭에서 식물에게 사용하세요`);
+}
 function renderShop(){
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
   const currency = renderShopLane(SHOP_CURRENCY_PACKS);
+  const growthItems = renderShopGrowthItems();
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
   $('#shopList').innerHTML =
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
+    renderShopBlock('소모품 · 아이템', '식물 생장 경험치 아이템. 레벨업 물약은 무료로 무한 구매할 수 있습니다.', growthItems) +
     renderShopBlock('보급상자', '변이 카드는 변이형별 보급상자나 탐사 보상으로만 얻습니다. 등급(S~D)은 개봉 시 무작위.', traitBoxes);
   document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
     card.addEventListener('click', () => {
       sfx.tap();
       openShopBoxInfo(card.dataset.shopBox);
     });
+  });
+  document.querySelectorAll('#shopList [data-buy-item]').forEach(card => {
+    card.addEventListener('click', () => { sfx.tap(); buyGrowthItem(card.dataset.buyItem); });
   });
 }
 function renderShopBoxInfo(box){
@@ -8646,6 +8907,7 @@ async function doSurrender(){
 }
 function gainGrowthExp(p, amount){
   ensurePlantInstanceFields(p);
+  if(p.growthLocked){ return { evolved:false, blocked:true }; }
   if(p.growth_stage==='evolved') return { evolved:false };
   p.growth_exp += amount;
   let evolved=false;
@@ -8791,6 +9053,254 @@ $('#cardDetailModal').addEventListener('click', (ev) => {
   if(ev.target.closest('[data-detail-close]')){ sfx.tap(); hide('#cardDetailModal'); return; }
   if(ev.target === $('#cardDetailModal')){ hide('#cardDetailModal'); }
 });
+/* ===================================================================
+   식물원(양육) UI 함수들
+   =================================================================== */
+function openNursery(){
+  (state.plants||[]).forEach(p => ensureNurseryFields(p));
+  renderNurseryGrid();
+  renderNurseryRes();
+  show('#nurseryScreen');
+}
+
+function renderNurseryRes(){
+  const el = document.querySelector('#nurseryRes');
+  if(!el) return;
+  const wl = nurseryWaterLeft(), fl = nurseryFertLeft();
+  el.innerHTML = `<span>💧 물 ${NURSERY_DAILY_WATER - nurseryDaily().water}/${NURSERY_DAILY_WATER}</span><span>🌿 비료 ${NURSERY_DAILY_FERT - nurseryDaily().fert}/${NURSERY_DAILY_FERT}</span>`;
+}
+
+function renderNurseryGrid(){
+  const grid = document.querySelector('#nurseryGrid');
+  if(!grid) return;
+  const cap = potCapacity();
+  const plants = state.plants || [];
+  let html = '';
+  for(let i = 0; i < NURSERY_POTS; i++){
+    if(i >= cap){
+      const lvNeed = potUnlockLevel(i);
+      html += `<div class="pot-slot empty potlocked"><div class="pot-emoji">🔒</div><div class="pot-name" style="font-size:9px">Lv.${lvNeed}</div><div class="pot-stage">해금 필요</div></div>`;
+    } else {
+      const p = plants[i];
+      if(!p){
+        html += `<div class="pot-slot empty"><div class="pot-emoji">🪴</div><div class="pot-name">빈 화분</div><div class="pot-stage">식물 없음</div></div>`;
+      } else {
+        ensureNurseryFields(p);
+        const n = p.nursery;
+        const fruiting = n.stage === 'fruiting' || n.fruitReady;
+        const st = seedTypeOf(p), el = p.element || 'grass';
+        const sprite = composePlantSvg(st, p.growth_stage || 'seed', el, {size:38});
+        const wPct = Math.round(Math.min(1, n.water / NURSERY_WATER_NEED)*100);
+        const fPct = Math.round(Math.min(1, n.fert / NURSERY_FERT_NEED)*100);
+        html += `<div class="pot-slot ${fruiting?'fruiting':'filled'}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
+          ${fruiting?'<div class="pot-fruit" title="열매 수확 가능!">🍎</div><div class="pot-sparkle">✨</div>':''}
+          <div class="pot-sprite">${sprite}</div>
+          <div class="pot-name">${plantDisplayName(p)}</div>
+          <div class="pot-stage">${growthStageName(p.growth_stage||'seed')} 💧${wPct}% 🌿${fPct}%</div>
+        </div>`;
+      }
+    }
+  }
+  grid.innerHTML = html;
+}
+
+function openNurseryDetail(idx){
+  const p = (state.plants||[])[idx];
+  if(!p){ toast('화분에 식물이 없습니다'); return; }
+  ensureNurseryFields(p);
+  const n = p.nursery;
+  const fruiting = n.stage === 'fruiting' || n.fruitReady;
+  const wl = nurseryWaterLeft(), fl = nurseryFertLeft();
+  const st = seedTypeOf(p), el = p.element || 'grass';
+  const sprite = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened});
+  const wPct = Math.min(100, Math.round((n.water / NURSERY_WATER_NEED)*100));
+  const fPct = Math.min(100, Math.round((n.fert / NURSERY_FERT_NEED)*100));
+  const elIcon = ELEMENTS[p.element] ? ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name : '';
+  const formName = FORMS[p.form] ? FORMS[p.form].name : '일반 변이형';
+  const card = document.querySelector('#nurseryDetailCard');
+  card.innerHTML = `
+    <div style="text-align:center;margin-bottom:10px">${sprite}</div>
+    <div style="font-size:16px;font-weight:900;text-align:center;color:#d6ffe6;margin-bottom:4px">${plantDisplayName(p)}</div>
+    <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed')} · ${elIcon} · ${formName}</div>
+    ${fruiting ? `
+      <div style="background:rgba(255,210,90,.15);border:1.5px solid rgba(255,210,90,.5);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px">
+        <div style="font-size:28px;margin-bottom:6px">🍎</div>
+        <div style="font-weight:900;color:#ffe08a;margin-bottom:8px">열매가 익었어요!</div>
+        <button class="btn primary" onclick="doHarvestPot(${idx})" style="width:100%;background:#d4930a;border-color:#d4930a;color:#fff">🧺 수확하기 (${n.fruitCount||1}개)</button>
+      </div>
+    ` : `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span>💧 물 (${n.water}/${NURSERY_WATER_NEED})</span><span>${wPct}%</span></div>
+        <div style="background:rgba(74,198,255,.15);border-radius:99px;height:7px;overflow:hidden;margin-bottom:8px"><div style="background:#4ac6ff;height:100%;width:${wPct}%;transition:width .3s"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span>🌿 비료 (${n.fert}/${NURSERY_FERT_NEED})</span><span>${fPct}%</span></div>
+        <div style="background:rgba(107,221,107,.15);border-radius:99px;height:7px;overflow:hidden;margin-bottom:10px"><div style="background:#6bdd6b;height:100%;width:${fPct}%;transition:width .3s"></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn" onclick="doWaterPot(${idx})" ${wl<=0?'disabled':''} style="padding:11px 6px;font-size:12.5px">💧 물 주기<br><small style="color:var(--sub)">${wl}회 남음</small></button>
+          <button class="btn" onclick="doFertPot(${idx})" ${fl<=0?'disabled':''} style="padding:11px 6px;font-size:12.5px">🌿 비료<br><small style="color:var(--sub)">${fl}회 남음</small></button>
+        </div>
+      </div>
+    `}
+    <div class="howto" style="font-size:11px;margin-top:8px">💧물 ${NURSERY_WATER_NEED}회 + 🌿비료 ${NURSERY_FERT_NEED}회 → 🍎열매 맺힘<br>하루 제한: 물 ${NURSERY_DAILY_WATER}회 / 비료 ${NURSERY_DAILY_FERT}회 (자정 리셋)</div>
+  `;
+  show('#nurseryDetailCard');
+  show('#nurseryDetailBack');
+}
+
+function closeNurseryDetail(){
+  hide('#nurseryDetailCard');
+  hide('#nurseryDetailBack');
+}
+
+function doWaterPot(idx){
+  const p = (state.plants||[])[idx];
+  if(!p) return;
+  ensureNurseryFields(p);
+  const daily = nurseryDaily();
+  if(daily.water >= NURSERY_DAILY_WATER){ toast('오늘 물 한도 소진. 자정 리셋 후 다시!'); return; }
+  daily.water++; p.nursery.water++;
+  checkNurseryFruitReady(p);
+  saveState(); sfx.heal();
+  openNurseryDetail(idx);
+  renderNurseryGrid(); renderNurseryRes();
+  toast('💧 물을 주었습니다');
+}
+
+function doFertPot(idx){
+  const p = (state.plants||[])[idx];
+  if(!p) return;
+  ensureNurseryFields(p);
+  const daily = nurseryDaily();
+  if(daily.fert >= NURSERY_DAILY_FERT){ toast('오늘 비료 한도 소진. 자정 리셋 후 다시!'); return; }
+  daily.fert++; p.nursery.fert++;
+  checkNurseryFruitReady(p);
+  saveState(); sfx.heal();
+  openNurseryDetail(idx);
+  renderNurseryGrid(); renderNurseryRes();
+  toast('🌿 비료를 주었습니다');
+}
+
+function checkNurseryFruitReady(p){
+  if(!p || !p.nursery) return;
+  const n = p.nursery;
+  if(n.stage !== 'fruiting' && n.water >= NURSERY_WATER_NEED && n.fert >= NURSERY_FERT_NEED){
+    n.stage = 'fruiting'; n.fruitReady = true;
+    n.fruitCount = 1 + Math.floor(Math.random() * 3);
+    toast(`🍎 ${plantDisplayName(p)}에 열매가 맺혔습니다! 수확하세요!`);
+  }
+}
+
+function doHarvestPot(idx){
+  const p = (state.plants||[])[idx];
+  if(!p || !p.nursery || !p.nursery.fruitReady){ toast('수확할 열매가 없습니다'); return; }
+  const n = p.nursery;
+  const count = n.fruitCount || 1;
+  if(!Array.isArray(state.nursery_fruits)) state.nursery_fruits = [];
+  for(let i=0; i<count; i++){
+    state.nursery_fruits.push({
+      id: Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2),
+      plantId: p.id, plantName: plantDisplayName(p),
+      element: p.element, form: p.form, growth_stage: p.growth_stage, potential: p.potential||p.grade||'C',
+      acquired_at: new Date().toISOString(), opened: false,
+    });
+  }
+  n.water=0; n.fert=0; n.stage='growing'; n.fruitReady=false; n.fruitCount=0;
+  saveState(); sfx.win();
+  closeNurseryDetail();
+  renderNurseryGrid();
+  toast(`🧺 열매 ${count}개 수확 완료! 🍎 수확 목록에서 개봉하세요`);
+}
+
+function openFruitBag(){
+  if(!Array.isArray(state.nursery_fruits)) state.nursery_fruits = [];
+  const fruits = state.nursery_fruits;
+  const unopened = fruits.filter(f=>!f.opened);
+  const opened = fruits.filter(f=>f.opened);
+  const body = document.querySelector('#nurseryPopBody');
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:900;color:#d6ffe6">🍎 수확 목록</div>
+      <button onclick="closeNurseryPop()" style="background:none;border:none;color:#9fd9b6;font-size:20px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    ${fruits.length===0?'<div style="color:#9fd9b6;text-align:center;padding:28px;font-size:13px">아직 수확한 열매가 없습니다.<br><small>🌱 식물원에서 식물에 물과 비료를 주세요!</small></div>':''}
+    ${unopened.length?`<div style="font-size:12px;color:#ffe08a;font-weight:700;margin-bottom:8px">🍎 미개봉 (${unopened.length}개)</div>`:''}
+    ${unopened.map(f=>{
+      const gi=fruits.indexOf(f);
+      const elIcon=ELEMENTS[f.element]?ELEMENTS[f.element].icon:'🔮';
+      return `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,210,90,.1);border:1px solid rgba(255,210,90,.35);border-radius:12px;padding:10px 14px;margin-bottom:8px">
+        <div style="font-size:28px">🍎</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#d6ffe6">${f.plantName||'식물'}</div>
+        <div style="font-size:11px;color:#9fd9b6">${elIcon} ${growthStageName(f.growth_stage)} · ${FORMS[f.form]?FORMS[f.form].name:'일반'}</div></div>
+        <button class="btn primary" onclick="openFruit(${gi})" style="font-size:12px;padding:8px 14px;min-width:54px">개봉</button>
+      </div>`;
+    }).join('')}
+    ${opened.length?`<div style="font-size:12px;color:#9fb0c3;font-weight:700;margin:12px 0 8px">개봉 완료 (${opened.length}개)</div>
+    ${opened.map(f=>{const elIcon=ELEMENTS[f.element]?ELEMENTS[f.element].icon:'🔮';return `<div style="display:flex;align-items:center;gap:8px;opacity:.55;border:1px dashed rgba(120,230,170,.2);border-radius:10px;padding:8px 12px;margin-bottom:5px"><span style="font-size:22px">🫙</span><div><div style="font-size:12px;color:#d6ffe6">${f.plantName||'식물'} ${elIcon}</div><div style="font-size:10px;color:#9fd9b6">${f.reward?f.reward.icon+' '+f.reward.name:'개봉 완료'}</div></div></div>`;}).join('')}
+    <button class="btn ghost" onclick="clearOpenedFruits()" style="width:100%;margin-top:8px;font-size:12px;padding:8px">개봉된 열매 목록 비우기</button>`:''}
+  `;
+  show('#nurseryPopModal');
+}
+
+function closeNurseryPop(){ hide('#nurseryPopModal'); }
+
+function clearOpenedFruits(){
+  state.nursery_fruits=(state.nursery_fruits||[]).filter(f=>!f.opened);
+  saveState(); openFruitBag();
+}
+
+function openFruit(idx){
+  const fruits = state.nursery_fruits||[];
+  const f = fruits[idx];
+  if(!f||f.opened){ toast('이미 개봉했습니다'); return; }
+  const skill = nurserySkillReward(f);
+  f.opened = true;
+  f.reward = skill ? {id:skill.id, name:skill.name||skill.id, icon:skill.icon||'✨', grade:skill.grade||'C'} : {name:'소모품', icon:'🧪'};
+  if(skill){
+    const target = (state.plants||[]).find(p=>p.id===f.plantId) || activePlant();
+    if(target){
+      ensureSkillFields(target);
+      if(!Array.isArray(target.bonus_skills)) target.bonus_skills=[];
+      if(!target.bonus_skills.includes(skill.id)) target.bonus_skills.push(skill.id);
+      if(!target.skillGrades) target.skillGrades={};
+      target.skillGrades[skill.id] = skill.grade||'C';
+    }
+  }
+  saveState();
+  showFruitReveal(f, skill, fruits);
+}
+
+function nurserySkillReward(f){
+  const fake={element:f.element, form:f.form, growth_stage:f.growth_stage, potential:f.potential||'C'};
+  const pool = plantKnownSkillIds(fake).filter(id=>id!=='skill_basic_strike'&&id!=='skill_guard');
+  if(!pool.length) pool.push('skill_basic_strike');
+  const skillId = pool[Math.floor(Math.random()*pool.length)];
+  const grade = rollSkillGrade(f.potential||'C');
+  const base = ALL_SKILLS[skillId]||null;
+  if(!base) return null;
+  const sk = gradeGrowthSkill(skillId, base, grade);
+  return sk ? {...sk, id:skillId, grade} : null;
+}
+
+function showFruitReveal(f, skill, fruits){
+  const elIcon = ELEMENTS[f.element]?ELEMENTS[f.element].icon:'🔮';
+  const gradeCol = skill ? gradeColor(skill.grade||'C') : '#9fb0c3';
+  const body = document.querySelector('#nurseryPopBody');
+  body.innerHTML = `
+    <div style="text-align:center;padding:16px 10px 20px">
+      <div style="font-size:44px;margin-bottom:6px;animation:fruitBob 1s ease-in-out">🍎</div>
+      <div style="font-size:12px;color:#9fd9b6;margin-bottom:14px">${f.plantName||'식물'} ${elIcon}의 열매 개봉!</div>
+      ${skill ? `
+        <div style="background:rgba(20,30,20,.6);border:2px solid ${gradeCol};border-radius:16px;padding:20px;margin-bottom:14px">
+          <div style="font-size:36px;margin-bottom:8px">${skill.icon||'✨'}</div>
+          <div style="font-size:17px;font-weight:900;color:${gradeCol};margin-bottom:4px">${displaySkillName(skill.name||'')} <span style="font-size:13px">[${skill.grade||'C'}]</span></div>
+          <div style="font-size:12px;color:#9fb0c3;margin-top:4px">${skill.desc||''}</div>
+        </div>
+        <div style="font-size:12px;color:#9fd9b6;margin-bottom:14px">💬 식물에 스킬이 추가됐습니다!<br>강화창 🎴 스킬 탭에서 확인·장착하세요.</div>
+      ` : `<div style="background:rgba(20,30,20,.6);border:1px solid rgba(120,170,120,.3);border-radius:14px;padding:18px;margin-bottom:14px"><div style="font-size:32px">🧪</div><div style="color:#9fd9b6;margin-top:6px">소모품 아이템</div></div>`}
+      <button class="btn primary" onclick="openFruitBag()" style="width:100%">수확 목록으로 돌아가기</button>
+    </div>
+  `;
+}
+
 /* 하단 헤더 네비게이션 (상점 / 탐사 / 식물·전투 / 모드 / 길드) */
 const LOCKED_SECTIONS = {
   mode:  { emoji:'🎮', title:'모드', desc:'생존·레이드·이벤트 등 다양한 특수 대전 모드가 이곳에 열릴 예정입니다.<br>조금만 기다려 주세요!' },
@@ -9019,10 +9529,12 @@ $('#bottomNav').addEventListener('click', (ev) => {
   const nav = btn.dataset.nav;
   sfx.tap();
   if(nav !== 'mode') closeShip();   // 다른 탭으로 가면 함선 닫기
+  if(nav !== 'nursery') hide('#nurseryScreen');   // 다른 탭으로 가면 식물원 닫기
   if(nav === 'shop'){ setNavActive('shop'); hide('#explorationModal'); hide('#seedBagModal'); openShop(); }
   else if(nav === 'explore'){ setNavActive('explore'); hide('#shopModal'); hide('#seedBagModal'); openExploration(); }
   else if(nav === 'home'){ setNavActive('home'); closeAllModals(); pendingShopOpening = null; renderMain(); }
   else if(nav === 'mode'){ openShip(); }
+  else if(nav === 'nursery'){ setNavActive('nursery'); hide('#shopModal'); hide('#explorationModal'); hide('#seedBagModal'); openNursery(); }
   else if(nav === 'guild'){ openLockedSection(nav); }
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
