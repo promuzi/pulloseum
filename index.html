@@ -3997,13 +3997,26 @@ function plantKnownSkillIds(p){
   if(!p) return ['skill_basic_strike'];
   const idx = Math.max(0, GROWTH_STAGE_ORDER.indexOf(p.growth_stage || INITIAL_PLANTED_GROWTH_STAGE));
   const known = ['skill_basic_strike'];
-  const eg = ELEMENT_GROWTH_SKILLS[p.element] || ELEMENT_GROWTH_SKILLS.grass;
-  // 단계별 해금: 씨앗(0)→새싹(1)→유체(2)→성장체(3)→성체(4)→완숙체(5)
+  const sp = SPECIES[p.species];
+  // 공통 단계기(모든 종 공통): 새싹부터 가드/속성기, 유체부터 광합성/집중, 성장체부터 결집
   if(idx >= 1){ known.push('skill_guard'); if(p.element && ELEMENTS[p.element]) known.push(elementSkillId(p.element)); }
-  if(idx >= 2){ known.push('skill_photosynthesis', 'skill_focus', eg[0]); }
-  if(idx >= 3){ known.push('skill_rally', eg[1]); }
-  if(idx >= 4){ known.push(eg[2]); }
-  if(idx >= 5){ known.push(eg[3]); }
+  if(idx >= 2){ known.push('skill_photosynthesis', 'skill_focus'); }
+  if(idx >= 3){ known.push('skill_rally'); }
+  if(sp && sp.stageSkills){
+    // 카탈로그 개체: 단계별 고유 스킬을 누적 해금(해당 단계 idx까지)
+    GROWTH_STAGE_ORDER.forEach((stage, si) => {
+      if(si <= idx && Array.isArray(sp.stageSkills[stage])) sp.stageSkills[stage].forEach(id => known.push(id));
+    });
+    // 시그니처: 개체 고유 스킬(해당 변이/개체 보유분)
+    if(Array.isArray(sp.signatures)) sp.signatures.forEach(id => known.push(id));
+  } else {
+    // 레거시: 속성×단계 풀
+    const eg = ELEMENT_GROWTH_SKILLS[p.element] || ELEMENT_GROWTH_SKILLS.grass;
+    if(idx >= 2) known.push(eg[0]);
+    if(idx >= 3) known.push(eg[1]);
+    if(idx >= 4) known.push(eg[2]);
+    if(idx >= 5) known.push(eg[3]);
+  }
   // 변이형 스킬
   if(p.form === 'pred') known.push('skill_card_predation'); // 포식 변이형은 카드 없이도 포식 기본 보유
   if(p.form === 'weapon' && p.weaponKey) known.push('skill_weapon');
@@ -10399,6 +10412,18 @@ window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
   __ok(ALL_SKILLS['sig.spore_cloud'], 'sig.spore_cloud missing');
   __ok(skillById('mushroom.spore_burst'), 'skillById cannot resolve mushroom skill');
+});
+window.__test('skills: catalog stageSkills unlock for catalog species', function(){
+  const p = { species:'spore_cap', element:'grass', growth_stage:'growing', form:'normal' };
+  const ids = plantKnownSkillIds(p);
+  __ok(ids.indexOf('mushroom.spore_burst') >= 0, 'spore_burst should unlock by sprout/juvenile');
+  __ok(ids.indexOf('sig.spore_cloud') >= 0, 'spore_cloud should unlock by growing');
+});
+window.__test('skills: legacy species still use element growth pool', function(){
+  const p = { species:'aqua', element:'water', growth_stage:'evolved', form:'normal' };
+  const ids = plantKnownSkillIds(p);
+  __ok(ids.indexOf('skill_elem_water') >= 0, 'legacy element skill missing');
+  __ok(ids.indexOf('skill_symbiotic') >= 0, 'legacy water growth top skill missing');
 });
 </script>
 </body>
