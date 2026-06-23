@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟡 35종 기반 有 | 새 종/스킬 매핑 추가(속성 일관성 유지) | [species](species-system-guide.md) · [trait](trait-growth-roadmap.md) |
+| 1 | 식물 종류 확장 | 🟡 개체 카탈로그 구조 완료 | 개체/스킬 내용 채우기(`SPECIES_CATALOG`/`SKILL_LIB`) + 변이 슬롯 UI | [species](species-system-guide.md) · [trait](trait-growth-roadmap.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md) |
 | 2 | 양육/열매 시스템 ⭐ | 🟡 설계 중 | 생장=경험치 단일화 + 열매 데이터 모델 | [balance §3](balance-sheet.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 | 🟡 함선 기초 有 | 가구 배치·기능 연결, 길드 콘텐츠 | — |
@@ -47,6 +47,8 @@
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
 | **[feature-designs.md](feature-designs.md)** | 위 8대 항목의 **구현 직전 상세 설계**(선택지별 동작·UI·데이터모델·구현방식·난이도) | 항목 확정 후 구현 직전 참조 |
 | **[handoff-next.md](handoff-next.md)** | **🔖 인계 문서** — 기기 바꿔 이어갈 때 가장 먼저 읽기(현황·선택 대기 8항목·재개 절차) | 새 세션/다른 기기 시작 시 |
+| **[superpowers/specs/2026-06-24-plant-individual-catalog-design.md](superpowers/specs/2026-06-24-plant-individual-catalog-design.md)** | 개체 카탈로그(A+C) 설계서 — 데이터 구조·타입 개편·마이그레이션 | #1 종 확장 설계 |
+| **[superpowers/plans/2026-06-24-plant-individual-catalog.md](superpowers/plans/2026-06-24-plant-individual-catalog.md)** | 개체 카탈로그 전환 구현 계획(Task 0~7, 완료) | #1 구현 참조 |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -56,7 +58,7 @@
 
 > 세부는 §2 하위 문서로. 여기선 "무엇이 작동하는가"만 요약.
 
-- **종/식물:** 5타입 × 7속성 = **35종**. 외형은 그림 파일이 아니라 **절차적 SVG**(타입×속성×생장단계 → 210조합 자동). 새 게임 시 **무지개 시작 종자** 1개 지급. → [species](species-system-guide.md)
+- **종/식물:** **개체 카탈로그(`SPECIES_CATALOG`)** 기반 — 레거시 격자 35종 위에 개체별 확장(rarity·변이슬롯·고유스킬)을 머지. 타입 5종 = 버섯/목본/화초/다육/덩굴(**초본형은 레거시 보존**). 외형은 **절차적 SVG**(타입×속성×생장단계 자동). 새 게임 시 **무지개 시작 종자** 1개 지급. → [species](species-system-guide.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md)
 - **생장:** 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 단계 상승 시 스탯 배율↑ + 스킬 해금 + 진화 연출. **현재 경험치원이 전투 승리 + 물/비료로 이원화** → #2에서 경험치 단일화 예정. → [balance §3](balance-sheet.md)
 - **전투:** 로드아웃 **6칸**, 카드 선택 페이즈 + 판정 창 연출. 속성 상성(1.5/0.67), 상태이상 엔진(중독/출혈/화상·버프/디버프), **데미지 25% 하한선**. 봇은 플레이어 비례가 아닌 **티어+라운드+생장 절대 스탯**. → [battle-mechanics](battle-mechanics-deep-dive.md)
 - **변이형/카드:** **7변이형**(일반/포식/무기/독성/포자/발광/용족). **변이 카드 S~D 등급제**(주효과 계수+서브특성), 변이형별 보급상자로 획득. **잠재특성 20종은 스킬 해금 분류로만 쓰고 패시브는 의도적 미반영(예약)**. → [balance §6](balance-sheet.md) · [trait](trait-growth-roadmap.md)
@@ -159,6 +161,8 @@
 - **2026-06-23** — **(룩 보강 #11) 흰색은 "선체 구조(프레임·바·타일 테두리·시스템창 헤더)"에만, 방 내부 배경은 어둡고 무게감 있게.** 방은 밝기가 아니라 **어두운 색조(틴트)+포인트 색**으로 구분. 양육도 "밝은 온실"❌ → **밤의 식물원**(어두운 배경+초록 재배등 글로우). 패널 fill은 어둡게 유지(밝은 글자 가독성·안전). 화면 전체를 흰색으로 칠하지 말 것.
 - **2026-06-23** — **(#11 재정의 — 최종) UI = "함선 내부 한 장면 + 떠있는 도트 UI".** 헤더↔배경 경계 제거(흰 슬랩 헤더 폐기), 배경은 **밝은 미래 타일 함선 내부 + 완만한 깊이(넓고 열린 방) + 가장자리 음영**, UI는 장면 위 **부유 픽셀칩**(하드 도트 그림자), 중앙 식물은 **보관 포드**. 미니멀+인디 도트 톡 튀게. 1·2단계의 흰 슬랩 헤더는 부유 칩으로 전환. **한 방씩 수직 완성(메인→탐사→양육→상점→함선→전투→모달).** 설계서 = [`superpowers/specs/2026-06-23-ui-floating-interior-design.md`](superpowers/specs/2026-06-23-ui-floating-interior-design.md).
 - **2026-06-23** — **다운로드본 UI 오버레이 반영:** 전체 버튼·패널·모달을 픽셀/홀로그램 시스템창 톤으로 덮는 CSS 레이어를 적용하고, 상점/탐사/양육/함선 방별 틴트, 팝업 중앙 정렬, 메인방 우주선 내부 SVG 디테일을 보강. 저장소에 없는 `assets/fonts/*.woff2` 참조는 제거하고 기존 폰트 fallback으로 유지.
+- **2026-06-24** — **종 시스템 = 수작업 개체 카탈로그(A+C)로 전환.** `SPECIES_CATALOG`(개체별 rarity·변이슬롯·baseVariants·stageSkills·signatures) + `SKILL_LIB`(스킬 정의 분리). 기존 `SPECIES_GRID`는 레거시 자동생성으로 머지 기반 유지. 설계서 = [`superpowers/specs/2026-06-24-plant-individual-catalog-design.md`](superpowers/specs/2026-06-24-plant-individual-catalog-design.md). (#1)
+- **2026-06-24** — **타입 개편: 초본형(grass) 제거 → 버섯형(mushroom) 추가.** 버섯=저스탯+포자 기본(`baseVariants:['spore']`)+희귀. 포자는 하드코딩 아닌 `baseVariants` 데이터로만 결정(확장 여지). 초본형은 신규 획득 제외하되 보유분·외형 보존(레거시). (#1)
 
 ---
 

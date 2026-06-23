@@ -4,7 +4,10 @@
 > 속성(7종)은 상성·색·전투 성향을, 타입(5종)은 몸체(실루엣)·체격 성향을 담당한다.
 > **5타입 × 7속성 = 총 35종.** 생장단계별 외형은 절차적으로 자동 생성된다.
 >
-> 기준일: 2026-06-18(개정) · 출처: `index.html` (`ELEMENT_STATS` / `TYPE_STATS` / `SPECIES_GRID` / `SPECIES`)
+> ⚠️ **개체 카탈로그 전환(2026-06-24):** 종 시스템이 자동 격자에서 **수작업 개체 카탈로그(`SPECIES_CATALOG`) + 스킬 정의 분리(`SKILL_LIB`)** 로 전환됐다. 같은 타입·속성·단계여도 스킬·변이 슬롯이 다른 별개 개체를 추가할 수 있고, 종별 **희귀도(`rarity`)** 로 등장/드롭률을 차등한다. 설계서·계획서: [`superpowers/specs/2026-06-24-plant-individual-catalog-design.md`](superpowers/specs/2026-06-24-plant-individual-catalog-design.md) · [`superpowers/plans/2026-06-24-plant-individual-catalog.md`](superpowers/plans/2026-06-24-plant-individual-catalog.md)
+> **타입 개편:** 5타입 = **버섯 / 목본 / 화초 / 다육 / 덩굴** (초본형은 화초형과 겹쳐 **레거시 보존**: 신규 획득 제외, 보유분만 유지). 버섯형은 저스탯+포자 기본+희귀.
+>
+> 기준일: 2026-06-24(개편) · 출처: `index.html` (`ELEMENT_STATS` / `TYPE_STATS` / `SPECIES_GRID` / `SPECIES_CATALOG` / `SPECIES` / `SKILL_LIB`)
 
 ---
 
@@ -28,11 +31,12 @@
 ### 1-2. 타입 수치 `TYPE_STATS`
 | 타입 | HP | 공격 | 방어 | 기동 | 성향 |
 |---|---:|---:|---:|---:|---|
-| 🌿 초본형 grass | 48 | 11 | 7 | 12 | 속도·균형 |
+| 🌿 초본형 grass | 48 | 11 | 7 | 12 | 속도·균형 — **레거시(신규 획득 제외)** |
 | 🌳 목본형 tree | 62 | 9 | 13 | 4 | 체력·방어 탱커 |
 | 🌸 화초형 flower | 44 | 14 | 6 | 9 | 공격·화력 |
 | 🌵 다육형 cactus | 58 | 9 | 14 | 4 | 방어·지구력 |
 | 🍃 덩굴형 vine | 46 | 11 | 7 | 12 | 기동·흡혈 |
+| 🍄 버섯형 mushroom | 38 | 9 | 5 | 8 | **저스탯 + 포자 기본**(신규) |
 
 〈밸런스 메모〉 바람은 기동 16으로 모든 속성 중 가장 빠르지만 더 이상 극단적으로 높진 않다. 최속 조합은 바람×(초본/덩굴)=기동 28.
 
@@ -170,7 +174,11 @@
 |---|---|
 | 속성별 스탯 기여 | `ELEMENT_STATS` |
 | 타입별 스탯 기여 | `TYPE_STATS` |
-| 종 목록(이름·타입·속성) | `SPECIES_GRID` (→ `SPECIES` 자동 생성) |
+| 종 목록(이름·타입·속성) | `SPECIES_GRID`(레거시 35종) + `SPECIES_CATALOG`(개체 확장) → `SPECIES` 자동 머지 |
+| 개체별 rarity/변이슬롯/태생변이/단계스킬/시그니처 | `SPECIES_CATALOG[key]` |
+| 신규/버섯/시그니처 스킬 정의(분리) | `SKILL_LIB` (→ `ALL_SKILLS`에 합산) |
+| 희귀도 가중 획득(legacy 제외) | `RARITY_WEIGHT` / `pickAcquirableSpecies(filterFn?)` |
+| 변이 슬롯·태생 변이 식물 적용 | `applyCatalogVariantFields(p)` (심기·세이브 마이그레이션 공용) |
 | 속성 상성 배율 | `ELEMENTS[].strong` / `eff()` |
 | 종→외형 타입 매핑 | `SPECIES_SEEDTYPE`(SPECIES에서 자동 파생) |
 | 타입×속성 → 종 역참조 | `SPECIES_BY_TYPE_EL` / `speciesForTypeEl()` |

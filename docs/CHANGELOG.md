@@ -2,6 +2,17 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — 종 시스템: 수작업 개체 카탈로그(A+C) 전환 + 버섯형 추가
+> 설계서: [`superpowers/specs/2026-06-24-plant-individual-catalog-design.md`](superpowers/specs/2026-06-24-plant-individual-catalog-design.md) · 계획서: [`superpowers/plans/2026-06-24-plant-individual-catalog.md`](superpowers/plans/2026-06-24-plant-individual-catalog.md)
+- **개체 카탈로그(`SPECIES_CATALOG`)**: 자동 격자(`SPECIES_GRID`) 위에 개체별 확장 데이터(rarity·variantSlots·baseVariants·stageSkills·signatures·stats override)를 머지해 후방호환 `SPECIES`를 생성. 같은 타입·속성·단계여도 별개 개체 추가 가능.
+- **스킬 정의 분리(`SKILL_LIB`)**: 신규/버섯/시그니처 스킬을 한 곳에 정의하고 개체는 키로만 참조(`ALL_SKILLS`에 합산). 네임스페이스 `common.*/sig.*/mushroom.*`. 향후 스킬 수정은 여기와 카탈로그만.
+- **타입 개편**: 초본형(grass)이 화초형과 겹쳐 **레거시 보존**(신규 획득 제외, 보유분·외형 유지) → **버섯형(mushroom)** 추가. 버섯=저스탯(38/9/5/8)+포자 기본(`baseVariants:['spore']`)+희귀. 포자는 데이터로만 결정해 다른 종 확장 여지 유지.
+- **희귀도 가중 획득**: `RARITY_WEIGHT`/`pickAcquirableSpecies()`로 탐사·적 종 분포를 가중 추출하고 레거시 초본형은 제외. 시범 버섯 개체 **스포어캡(spore_cap)** 추가(rare).
+- **스킬 해금**: `plantKnownSkillIds`가 카탈로그 `stageSkills`/`signatures`를 인식(레거시는 기존 `ELEMENT_GROWTH_SKILLS` 풀 유지).
+- **변이 슬롯/마이그레이션**: `applyCatalogVariantFields(p)` 공용 헬퍼로 심기·`normalizeState` 양쪽에서 `variant_slots`/`base_variants` 기록·backfill(구 세이브 무회귀). 버섯은 태생 포자로 form 초기화.
+- **검증**: 콘솔 셀프테스트 하니스(`window.__catalogSelfTest()`, 11케이스 전부 PASS) + 브라우저 스모크(buildEnemy·외형·마이그레이션).
+- **향후**: 전체 개체 목록·세부 스킬 효과·변이 슬롯 편집 UI·도트 PNG는 다음 작업.
+
 ### 2026-06-23 — 다운로드본 UI 반영: 픽셀/홀로그램 오버레이
 - `C:\Users\soosa\Downloads\index.html`의 UI 변경을 프로젝트 `index.html`에 반영.
 - 전체 버튼·패널·모달에 픽셀/홀로그램 시스템창 스타일 오버레이를 추가하고, 상점/탐사/양육/함선 방별 틴트와 전환 애니메이션을 보강.
