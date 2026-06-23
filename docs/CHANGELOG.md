@@ -2,6 +2,16 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — 다운로드본 UI 반영: Galmuri 픽셀폰트 + 인라인 픽셀 아이콘 + 미니멀 정리 (3-way 머지)
+> 다운로드본(`C:\Users\soosa\Downloads\index (1).html`)은 **`b353183`(홀로그램 픽셀 오버레이) 기반**에 UI 개편만 얹은 것이라, 그 사이에 들어온 개체 카탈로그/버섯형/희귀도 가중/변이 슬롯/셀프테스트 코드가 빠져 있었음. 통째 덮어쓰면 회귀 → **3-way 머지**(base=`b353183`, ours=현 HEAD, theirs=다운로드본)로 충돌 0건 병합해 **신규 UI + 기존 종 시스템 둘 다 보존**.
+- **Galmuri 픽셀 폰트**: CSS가 참조만 하던 Galmuri7/9/11/14를 jsDelivr CDN으로 실제 로드(SIL OFL, 상업적 무료). 2026-06-23에 제거했던 누락 woff2 문제 해소. 픽셀 폰트 가독성용 본문 자간(`letter-spacing`) 보정.
+- **인라인 픽셀 아이콘 시스템 `window.pxIcon(name,size)`**: 이모지(🌱🪴🎒·스탯 아이콘 등)를 11×11 `crispEdges` SVG 도트 아이콘으로 교체. 하단 네비·스탯 박스·종자가방 바·가방 FAB에 적용(`window.pxIcon` 가드로 미정의 시 이모지 폴백). → 도트 UI 로드맵의 "아이콘 도트화" 첫 착수.
+- **설정 창 섹션화(v3)**: 텍스트 벽 → 카드 섹션(`.set-sec`/`.set-actions` 2열/`.set-help` details 접기).
+- **메인 화면 가독성(v4)**: 좌측 스탯 라벨 대비↑·컴팩트(`info-pills`/`stat-box`), 가운데 식물 히어로 확대(`#centerPlant` ~182px), 우측 가방 FAB 확대.
+- **프로필 배너·화분 칩·종자가방 바(v5)**: 프로필을 깔끔한 홀로 ID 카드로, 화분 칩 확대 + 상태(보유/빈칸/잠금) 구분 명확, 종자가방을 카운트+정렬 한 줄 바(`.seedbag-bar`)로 통합(설명 벽 제거).
+- **격납고 배경 SVG 리디자인**: 밝은 타일 챔버 → 다크 스페이스 격납고(천장 빔·측벽 패널 라인·관측창 우주 그라데이션·글로우, `shape-rendering=geometricPrecision`).
+- **검증**: 브라우저 로드 후 `window.__catalogSelfTest()` **0 FAIL**, `pxIcon` SVG 렌더·Galmuri 폰트 로드·다크 격납고/프로필/종자바/가방 FAB 렌더 확인. 종 시스템 식별자(`spore_cap`·`RARITY_WEIGHT`·`applyCatalogVariantFields`·`mushroom`·셀프테스트) 전부 보존.
+
 ### 2026-06-24 — 종 시스템: 수작업 개체 카탈로그(A+C) 전환 + 버섯형 추가
 > 설계서: [`superpowers/specs/2026-06-24-plant-individual-catalog-design.md`](superpowers/specs/2026-06-24-plant-individual-catalog-design.md) · 계획서: [`superpowers/plans/2026-06-24-plant-individual-catalog.md`](superpowers/plans/2026-06-24-plant-individual-catalog.md)
 - **개체 카탈로그(`SPECIES_CATALOG`)**: 자동 격자(`SPECIES_GRID`) 위에 개체별 확장 데이터(rarity·variantSlots·baseVariants·stageSkills·signatures·stats override)를 머지해 후방호환 `SPECIES`를 생성. 같은 타입·속성·단계여도 별개 개체 추가 가능.

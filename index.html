@@ -20,6 +20,9 @@
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <title>풀로세움 - 식물 전투 콜로세움</title>
+<!-- 도트(픽셀) 폰트 — Galmuri (SIL OFL, 상업적 무료). CSS가 참조하던 Galmuri7/9/11/14 전부 제공 -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
 <style>
 :root{
   --bg1:#0b0f1a; --bg2:#111a2c;
@@ -1736,6 +1739,125 @@ body{
 @media (prefers-reduced-motion:reduce){
   #nurseryScreen,#shipScreen,.modal .modal-card{animation:none !important;}
 }
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ v3 — 설정 창 미니멀 섹션화 + 픽셀 폰트 가독성 보정
+   ════════════════════════════════════════════════════════════ */
+/* 픽셀 폰트는 가짜 볼드(font-weight)가 약함 → 본문 자간을 살짝 줘 또렷하게 */
+body{letter-spacing:.2px;}
+.modal-card h2,.set-sec-title,.nav .nl{letter-spacing:.5px;}
+
+/* ── 설정 창: 텍스트 벽 → 깔끔한 카드 섹션 ── */
+#settingsModal .set-card{display:flex;flex-direction:column;gap:10px;}
+#settingsModal .set-sec{
+  background:rgba(8,26,36,.5);border:1px solid var(--holo-line);border-radius:3px;padding:10px 12px;
+  box-shadow:inset 0 0 14px rgba(45,212,191,.06);
+}
+#settingsModal .set-sec .setrow{border-bottom:none;padding:3px 2px;}
+#settingsModal .set-sec-title{
+  font-size:12px;font-weight:800;color:#aef7ec;margin-bottom:9px;
+  text-shadow:0 0 6px rgba(125,240,226,.4);
+}
+#settingsModal .set-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+#settingsModal .set-actions .btn{margin:0;width:100%;padding:11px 6px;}
+#settingsModal #cloudBox:not(:empty){margin-top:10px;}
+#settingsModal .set-note{font-size:11px;line-height:1.65;color:#9fb6c4;margin:9px 0 0;}
+#settingsModal .set-note b{color:#aef7ec;}
+#settingsModal .set-help{
+  background:rgba(8,26,36,.5);border:1px solid var(--holo-line);border-radius:3px;overflow:hidden;
+}
+#settingsModal .set-help>summary{
+  list-style:none;cursor:pointer;padding:11px 12px;font-size:13px;font-weight:800;color:#dffff9;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+#settingsModal .set-help>summary::-webkit-details-marker{display:none;}
+#settingsModal .set-help>summary::after{content:'▾';color:#7df0e2;transition:transform .2s;}
+#settingsModal .set-help[open]>summary::after{transform:rotate(180deg);}
+#settingsModal .set-help-body{padding:2px 12px 12px;font-size:11.5px;line-height:1.95;color:#9fb6c4;}
+#settingsModal .set-help-body b{color:#aef7ec;}
+#settingsModal #btnReset{margin-top:4px;}
+#settingsModal #settingsClose{margin-top:0;}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ v4 — 메인 화면: 스탯 가독성 · 식물 히어로 · 가방 강화
+   ════════════════════════════════════════════════════════════ */
+/* 좌측 스탯 라벨이 배경에 묻히던 문제 → 대비 ↑ + 컴팩트 정리 */
+#statPanel{gap:5px;justify-content:center;}
+.info-pills{gap:4px;}
+.ipill{
+  font-size:10.5px !important;padding:3px 8px !important;color:#d6efea !important;
+  background:rgba(10,30,42,.72) !important;border:1px solid rgba(125,240,226,.34) !important;
+}
+.ipill .ip-k{font-size:9px !important;color:#83cabf !important;font-weight:700;}
+.stat-grid{gap:4px;}
+.stat-box{
+  padding:4px 3px 3px !important;background:rgba(10,30,42,.72) !important;
+  border:1px solid rgba(125,240,226,.30) !important;box-shadow:inset 0 0 8px rgba(45,212,191,.08) !important;
+}
+.stat-box .sb-k{font-size:9px !important;color:#9fe2d8 !important;font-weight:700 !important;}
+.stat-box .sb-v{font-size:13px !important;color:#b6f7ed !important;text-shadow:0 0 6px rgba(125,240,226,.5);}
+
+/* 가운데 식물 — 히어로 크게, 받침 위에 안착 */
+#centerPlant{transform:translateX(-2px) !important;}
+#centerPlant:active{transform:translateX(-2px) scale(.98) !important;}
+#centerPlant svg,#centerPlant img{width:min(52vw,182px) !important;}
+#centerPlant .pname{font-size:18px;letter-spacing:.5px;}
+
+/* 우측 가방 버튼 — 크고 명확하게 */
+#sidePanel{width:66px !important;}
+.side-fab{
+  width:64px !important;height:66px !important;font-size:27px !important;gap:2px;border-radius:4px !important;
+  background:linear-gradient(180deg, rgba(45,212,191,.22), rgba(12,34,46,.85)) !important;
+  border:1px solid var(--holo-line) !important;box-shadow:0 0 16px rgba(45,212,191,.28), 0 3px 0 rgba(2,8,14,.5) !important;
+}
+.side-fab .side-fab-label{font-size:10px !important;color:#aef7ec !important;}
+
+/* ── 도트 아이콘 정렬/표시 ── */
+.navbtn .ni{display:flex;align-items:center;justify-content:center;}
+.navbtn .ni .pxi{filter:none;}
+.th-coin .hicon,.th-min .hicon{display:inline-flex;align-items:center;margin-right:1px;vertical-align:middle;}
+.iconbtn .pxi{vertical-align:middle;}
+.stat-box .sb-k .pxi{margin-right:1px;}
+.side-fab .pxi{filter:drop-shadow(0 0 5px rgba(125,240,226,.4));}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ v5 — 프로필 배너 · 화분 칩 · 종자가방 바 정리
+   ════════════════════════════════════════════════════════════ */
+/* 프로필 배너: 거친 풍경 도트를 죽이고 깔끔한 홀로 ID 카드로 */
+#profileBanner{
+  height:84px !important;border-radius:4px !important;border:1px solid var(--holo-line) !important;
+  box-shadow:0 0 14px rgba(45,212,191,.18), inset 0 0 0 1px rgba(45,212,191,.08) !important;
+}
+#profileBanner .pb-bg{opacity:.42;}
+#profileBanner .pb-fg{
+  background:linear-gradient(180deg, rgba(5,12,20,.10), rgba(5,12,20,.82)) !important;padding:7px !important;
+}
+#profileBanner .pb-pfp{
+  width:48px !important;height:48px !important;border-radius:4px !important;
+  border:2px solid var(--holo-line) !important;box-shadow:0 0 10px rgba(45,212,191,.3) !important;
+}
+#profileBanner .pb-name{font-size:13px !important;color:#eafffb !important;text-shadow:0 1px 3px rgba(0,0,0,.9);}
+
+/* 화분 칩: 더 크고 상태 구분 명확 (보유 식물이 도드라지게) */
+#collectionBar{gap:7px;}
+.chip{
+  width:55px !important;height:43px !important;border-radius:4px !important;
+  background:rgba(10,30,42,.62) !important;border:1px solid rgba(125,240,226,.24) !important;
+}
+.chip.active{border-color:#aef7ec !important;box-shadow:0 0 13px rgba(45,212,191,.6) !important;background:rgba(45,212,191,.12) !important;}
+.chip.potempty{border-style:dashed !important;color:#6f8a96 !important;opacity:.8;}
+.chip.potlocked{border-style:dashed !important;opacity:.38 !important;}
+.chip .g{font-size:9px;}
+.chip .t{font-size:8.5px;}
+
+/* 종자 가방: 카운트 + 정렬을 한 줄 바로 통합(설명 벽 제거됨) */
+.seedbag-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:4px 0 12px;}
+.seedbag-count{
+  display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#d6efea;
+  background:rgba(10,30,42,.66);border:1px solid var(--holo-line);border-radius:3px;padding:5px 10px;
+}
+.seedbag-count b{color:#aef7ec;}
+.seedbag-spacer{flex:1;min-width:6px;}
 </style>
 </head>
 <body>
@@ -1753,50 +1875,70 @@ body{
   <!-- ===== 메인 화면 ===== -->
   <section id="mainScreen" class="screen hidden">
     <div id="mainScene" aria-hidden="true">
-      <svg viewBox="0 0 300 480" preserveAspectRatio="xMidYMid slice">
+      <svg viewBox="0 0 300 480" preserveAspectRatio="xMidYMid slice" shape-rendering="geometricPrecision">
         <defs>
-          <pattern id="tileWall" width="30" height="30" patternUnits="userSpaceOnUse">
-            <rect width="30" height="30" fill="#eef3f6"/>
-            <path d="M0 0H30M0 0V30" stroke="#ccd9e0" stroke-width="1"/>
-          </pattern>
-          <pattern id="tileFloor" width="34" height="22" patternUnits="userSpaceOnUse">
-            <rect width="34" height="22" fill="#d3dde4"/>
-            <path d="M0 0H34M0 0V22" stroke="#b3c2cb" stroke-width="1"/>
-          </pattern>
-          <radialGradient id="chamberGlow" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.18"/>
-            <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+          <linearGradient id="bayWall" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0e1c30"/><stop offset="1" stop-color="#0a1422"/>
+          </linearGradient>
+          <linearGradient id="baySideL" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#060d18"/><stop offset="1" stop-color="#0c1a2c"/>
+          </linearGradient>
+          <linearGradient id="baySideR" x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stop-color="#060d18"/><stop offset="1" stop-color="#0c1a2c"/>
+          </linearGradient>
+          <linearGradient id="bayFloor" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0b1828"/><stop offset="1" stop-color="#05080f"/>
+          </linearGradient>
+          <radialGradient id="viewSpace" cx="50%" cy="40%" r="72%">
+            <stop offset="0" stop-color="#193457"/><stop offset="58%" stop-color="#0a1830"/><stop offset="100%" stop-color="#05091a"/>
           </radialGradient>
-          <radialGradient id="mainVig" cx="50%" cy="42%" r="68%">
-            <stop offset="55%" stop-color="#000" stop-opacity="0"/>
-            <stop offset="100%" stop-color="#04101a" stop-opacity="0.42"/>
+          <radialGradient id="bayGlow" cx="50%" cy="38%" r="60%">
+            <stop offset="0" stop-color="#2dd4bf" stop-opacity="0.16"/><stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="mainVig" cx="50%" cy="44%" r="72%">
+            <stop offset="50%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#02060e" stop-opacity="0.66"/>
           </radialGradient>
         </defs>
-        <polygon points="0,0 300,0 245,120 55,120" fill="#f3f7f9"/>
-        <polygon points="0,0 55,120 55,300 0,480" fill="#dde6ec"/>
-        <polygon points="300,0 245,120 245,300 300,480" fill="#cdd8df"/>
-        <rect x="55" y="120" width="190" height="180" fill="url(#tileWall)"/>
-        <polygon points="0,480 300,480 245,300 55,300" fill="url(#tileFloor)"/>
-        <g stroke="#c2cfd7" stroke-width="1" opacity="0.55">
-          <line x1="103" y1="0" x2="103" y2="120"/><line x1="150" y1="0" x2="150" y2="120"/><line x1="197" y1="0" x2="197" y2="120"/>
-          <line x1="42" y1="40" x2="258" y2="40"/><line x1="50" y1="80" x2="250" y2="80"/>
+        <!-- 격납고 셸: 천장 / 양 측벽 / 후벽 / 바닥 (전부 다크) -->
+        <polygon points="0,0 300,0 245,120 55,120" fill="#0a1322"/>
+        <polygon points="0,0 55,120 55,300 0,480" fill="url(#baySideL)"/>
+        <polygon points="300,0 245,120 245,300 300,480" fill="url(#baySideR)"/>
+        <rect x="55" y="120" width="190" height="180" fill="url(#bayWall)"/>
+        <polygon points="0,480 300,480 245,300 55,300" fill="url(#bayFloor)"/>
+        <!-- 천장 빔 -->
+        <g stroke="#1a2c46" stroke-width="1" opacity="0.85">
+          <line x1="104" y1="0" x2="116" y2="120"/><line x1="150" y1="0" x2="150" y2="120"/><line x1="196" y1="0" x2="184" y2="120"/>
+          <line x1="40" y1="46" x2="260" y2="46"/><line x1="48" y1="86" x2="252" y2="86"/>
         </g>
-        <rect x="92" y="142" width="116" height="96" rx="2" fill="#081320"/>
-        <circle cx="150" cy="178" r="14" fill="#e9b96b"/>
-        <circle cx="120" cy="210" r="2" fill="#bfe9e2"/><circle cx="186" cy="160" r="1.6" fill="#fff"/><circle cx="176" cy="220" r="1.5" fill="#bfe9e2"/><circle cx="110" cy="165" r="1.4" fill="#fff"/>
-        <rect x="92" y="142" width="116" height="96" rx="2" fill="none" stroke="#2dd4bf" stroke-width="1.6" opacity="0.9"/>
-        <g stroke="#2dd4bf" stroke-width="1.4" opacity="0.7" fill="none">
-          <line x1="55" y1="120" x2="245" y2="120"/>
-          <line x1="55" y1="300" x2="245" y2="300"/>
+        <!-- 측벽 패널 라인 -->
+        <g stroke="#13243b" stroke-width="1" opacity="0.8">
+          <line x1="22" y1="60" x2="55" y2="150"/><line x1="20" y1="180" x2="55" y2="220"/>
+          <line x1="278" y1="60" x2="245" y2="150"/><line x1="280" y1="180" x2="245" y2="220"/>
         </g>
-        <g stroke="#a8b8c1" stroke-width="1" opacity="0.5">
+        <!-- 후벽 뷰포트(우주 창) -->
+        <rect x="84" y="136" width="132" height="108" rx="3" fill="url(#viewSpace)"/>
+        <circle cx="150" cy="180" r="17" fill="#1f6f8f"/>
+        <path d="M134 176 a17 17 0 0 1 32 -4 q-16 9 -32 4Z" fill="#3fb6f0" opacity="0.55"/>
+        <ellipse cx="150" cy="186" rx="24" ry="4.5" fill="none" stroke="#7df0e2" stroke-width="1" opacity="0.5"/>
+        <g fill="#bfe9e2"><rect x="106" y="156" width="2" height="2"/><rect x="194" y="150" width="2" height="2"/><rect x="118" y="222" width="2" height="2"/><rect x="184" y="214" width="2" height="2"/><rect x="202" y="192" width="1.6" height="1.6"/><rect x="98" y="198" width="1.6" height="1.6"/><rect x="150" y="148" width="1.4" height="1.4"/></g>
+        <rect x="84" y="136" width="132" height="108" rx="3" fill="none" stroke="#2dd4bf" stroke-width="1.6" opacity="0.72"/>
+        <line x1="84" y1="190" x2="84" y2="190"/>
+        <!-- 후벽 이음새 + 청록 림라이트 -->
+        <g stroke="#15273f" stroke-width="1" opacity="0.7"><line x1="55" y1="120" x2="245" y2="120"/><line x1="55" y1="300" x2="245" y2="300"/><line x1="70" y1="262" x2="230" y2="262"/></g>
+        <rect x="55" y="297" width="190" height="3" fill="#2dd4bf" opacity="0.24"/>
+        <!-- 바닥 원근 그리드 -->
+        <g stroke="#16324c" stroke-width="1" opacity="0.6">
           <line x1="55" y1="300" x2="0" y2="480"/><line x1="245" y1="300" x2="300" y2="480"/>
-          <line x1="103" y1="300" x2="70" y2="480"/><line x1="197" y1="300" x2="230" y2="480"/>
+          <line x1="116" y1="300" x2="76" y2="480"/><line x1="184" y1="300" x2="224" y2="480"/>
           <line x1="150" y1="300" x2="150" y2="480"/>
-          <line x1="78" y1="372" x2="222" y2="372"/><line x1="48" y1="430" x2="252" y2="430"/>
+          <line x1="74" y1="372" x2="226" y2="372"/><line x1="44" y1="432" x2="256" y2="432"/>
         </g>
-        <rect x="55" y="295" width="190" height="5" fill="#2dd4bf" opacity="0.16"/>
-        <rect x="0" y="0" width="300" height="320" fill="url(#chamberGlow)"/>
+        <!-- 중앙 받침대 패드 -->
+        <ellipse cx="150" cy="398" rx="66" ry="16" fill="#0c1d2e"/>
+        <ellipse cx="150" cy="398" rx="66" ry="16" fill="none" stroke="#2dd4bf" stroke-width="1.4" opacity="0.5"/>
+        <ellipse cx="150" cy="396" rx="42" ry="9" fill="#2dd4bf" opacity="0.10"/>
+        <!-- 글로우 + 비네트 -->
+        <rect x="0" y="0" width="300" height="360" fill="url(#bayGlow)"/>
         <rect x="0" y="0" width="300" height="480" fill="url(#mainVig)"/>
       </svg>
     </div>
@@ -1806,10 +1948,10 @@ body{
         <div class="thl-bar"><i id="expFill"></i><span class="thl-exptext" id="expText">0/60</span></div>
       </div>
       <div class="th-cur">
-        <span class="th-coin">💰<b id="creditView">0</b></span>
-        <span class="th-min">💠<b id="mineralView">0</b></span>
+        <span class="th-coin"><span class="hicon" data-pic="coin" data-size="15px" style="color:#ffd98a"></span><b id="creditView">0</b></span>
+        <span class="th-min"><span class="hicon" data-pic="gem" data-size="15px" style="color:#7df0e2"></span><b id="mineralView">0</b></span>
       </div>
-      <button class="iconbtn" id="btnSettings">⚙️</button>
+      <button class="iconbtn" id="btnSettings"><span data-pic="gear" data-size="17px"></span></button>
     </header>
     <div id="profileRow">
       <button id="profileBanner" type="button" title="프로필">
@@ -1831,11 +1973,11 @@ body{
     <div id="tournamentBar"></div>
     <button id="btnBattle">⚔️ 전투 시작</button>
     <nav id="bottomNav">
-      <button class="navbtn" data-nav="shop"><span class="ni">🛒</span><span class="nl">상점</span></button>
-      <button class="navbtn" data-nav="explore"><span class="ni">🛰️</span><span class="nl">탐사</span></button>
-      <button class="navbtn center active" data-nav="home"><span class="ni">🌿</span><span class="nl">식물·전투</span></button>
-      <button class="navbtn" data-nav="nursery"><span class="ni">🪴</span><span class="nl">식물양육</span></button>
-      <button class="navbtn" data-nav="mode"><span class="ni">🚀</span><span class="nl">함선</span></button>
+      <button class="navbtn" data-nav="shop"><span class="ni" data-pic="cart"></span><span class="nl">상점</span></button>
+      <button class="navbtn" data-nav="explore"><span class="ni" data-pic="sat"></span><span class="nl">탐사</span></button>
+      <button class="navbtn center active" data-nav="home"><span class="ni" data-pic="leaf"></span><span class="nl">식물·전투</span></button>
+      <button class="navbtn" data-nav="nursery"><span class="ni" data-pic="pot"></span><span class="nl">식물양육</span></button>
+      <button class="navbtn" data-nav="mode"><span class="ni" data-pic="rocket"></span><span class="nl">함선</span></button>
     </nav>
   </section>
 
@@ -1999,32 +2141,38 @@ body{
 </div>
 
 <div class="modal hidden" id="settingsModal">
-  <div class="modal-card">
+  <div class="modal-card set-card">
     <h2>⚙️ 설정</h2>
-    <div class="setrow"><span>🔊 효과음</span><input type="checkbox" id="soundToggle" style="width:22px;height:22px;accent-color:var(--neon)"></div>
-    <div class="howto">
-      <b style="color:var(--text)">📖 게임 방법</b><br>
-      ① 새 게임은 기본 탐사선과 소량의 크레딧으로 시작합니다. 먼저 <b style="color:var(--neon)">탐사</b> 버튼으로 우주맵에 가세요.<br>
-      ② 행성을 고르고, 행성 안의 지역을 고른 뒤 탐사를 출발합니다.<br>
-      ③ 탐사 결과로 얻은 종자는 🎒종자 가방에 들어갑니다. 종자 가방에서 <b style="color:var(--neon)">심기</b>를 누르면 식물 개체가 됩니다.<br>
-      ④ 심은 식물은 가운데 화면에 나타나며, 식물을 탭하면 강화할 수 있습니다.<br>
-      ⑤ 전투는 보유 식물 중 선택된 한 마리만 출전합니다. 식물은 생장 단계·속성·변이형에 따라 스킬을 얻고, 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
-      ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 | 💧물←풀·빙결·번개 | 🌿풀←불·바람·번개 | ⚡번개←대지·빙결 | 🪨대지←풀·물 | ❄️빙결←불·대지 | 🌪️바람←대지·불.<br>
-      ⑦ 전투는 토너먼트 방식입니다. 예선 5경기 중 3승 이상이면 본선(16강 → 결승)에 진출하고, 우승하면 랭크 포인트가 올라 브론즈→…→풀로세움으로 승급합니다. <b style="color:var(--neon)">경기가 끝날 때마다 홈으로 돌아와</b> 식물을 강화·준비한 뒤 다음 경기를 시작할 수 있습니다.<br>
-      ⑧ 상점에서는 특가·재화·보급상자를 확인할 수 있습니다. 원화 상품은 아직 결제 연동 전이라 선택할 수 없고, 보급상자는 크레딧으로 구매해 소모품이나 변이 카드를 얻습니다.
+
+    <div class="set-sec">
+      <div class="setrow"><span>🔊 효과음</span><input type="checkbox" id="soundToggle" style="width:22px;height:22px;accent-color:var(--neon)"></div>
     </div>
-    <div class="howto" style="border-color:rgba(0,210,188,.35)">
-      <b style="color:var(--neon)">💾 진행도 백업/복원</b><br>
-      모바일 앱은 진행도가 사라질 수 있습니다. <b>내보내기</b>로 코드를 받아 메모앱·메일 등 안전한 곳에 보관하고, 기기 변경·재설치·초기화 시 <b>가져오기</b>로 붙여넣어 복원하세요.
+
+    <div class="set-sec">
+      <div class="set-sec-title">💾 저장 · 백업</div>
+      <div class="set-actions">
+        <button class="btn" id="btnExport">📤 내보내기</button>
+        <button class="btn" id="btnImport">📥 가져오기</button>
+      </div>
+      <div id="cloudBox"></div>
+      <p class="set-note">기기 변경·재설치 전 <b>내보내기</b>로 코드를 안전한 곳에 보관하세요. 로그인하면 진행도가 기기 간 자동 동기화됩니다.</p>
     </div>
-    <div class="howto" style="border-color:rgba(90,160,255,.45)">
-      <b style="color:#7db8ff">☁️ 클라우드 세이브 (계정 동기화)</b><br>
-      로그인하면 기기가 바뀌어도 진행도가 자동으로 따라옵니다. 저장은 자동이며, 다른 기기에서 같은 계정으로 로그인하면 복원됩니다.
-      <div id="cloudBox" style="margin-top:8px"></div>
-    </div>
-    <button class="btn" id="btnExport">💾 진행도 내보내기(백업)</button>
-    <button class="btn" id="btnImport">📥 진행도 가져오기(복원)</button>
-    <button class="btn modal-close danger" id="btnReset">데이터 초기화</button>
+
+    <details class="set-help">
+      <summary>📖 게임 방법</summary>
+      <div class="set-help-body">
+        ① 새 게임은 기본 탐사선과 소량의 크레딧으로 시작합니다. 먼저 <b>탐사</b> 버튼으로 우주맵에 가세요.<br>
+        ② 행성을 고르고, 행성 안의 지역을 고른 뒤 탐사를 출발합니다.<br>
+        ③ 탐사로 얻은 종자는 🎒종자 가방에 들어가며, <b>심기</b>를 누르면 식물 개체가 됩니다.<br>
+        ④ 심은 식물은 가운데 화면에 나타나고, 탭하면 강화할 수 있습니다.<br>
+        ⑤ 전투는 선택한 한 마리만 출전합니다. 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
+        ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 · 💧물←풀·빙결·번개 · 🌿풀←불·바람·번개 · ⚡번개←대지·빙결 · 🪨대지←풀·물 · ❄️빙결←불·대지 · 🌪️바람←대지·불<br>
+        ⑦ 토너먼트 예선 5경기 중 3승 이상이면 본선(16강→결승)에 진출, 우승 시 랭크가 브론즈→…→풀로세움으로 승급합니다.<br>
+        ⑧ 상점에서 재화·보급상자를 구매해 소모품·변이 카드를 얻습니다.
+      </div>
+    </details>
+
+    <button class="btn modal-close danger" id="btnReset">🗑️ 데이터 초기화</button>
     <button class="btn modal-close" id="settingsClose">닫기</button>
   </div>
 </div>
@@ -2085,6 +2233,46 @@ body{
 
 <!-- Supabase (클라우드 세이브). 오프라인/파일 실행 시 로드 안 돼도 게임은 그대로 동작(아래 코드가 전부 가드함). -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ▓▓ 도트(픽셀) 아이콘 시스템 — 이모지 대체. 단색 currentColor 비트맵 → 텍스트색/크기 상속 -->
+<script>
+'use strict';
+window.PIX_ICONS = {
+  cart:["11000000000","00100000000","00111111110","00111111110","00111111110","00011111100","00000000000","00110001100","00110001100","00000000000","00000000000"],
+  sat:["00000000000","00001110000","00011111000","00111111100","11111111111","00111111100","00011111000","00001110000","00000000000","00000000000","00000000000"],
+  leaf:["00000000010","00000000110","00000011100","00000111000","00011111000","00111110000","01111100000","01111000000","00110000000","00000000000","00000000000"],
+  pot:["00010001000","00101010100","00010101000","00001110000","00001110000","00111111100","00111111100","00011111000","00011111000","00001110000","00000000000"],
+  rocket:["00000100000","00001110000","00011111000","00011111000","00011111000","00111111100","01101110110","00001110000","00000100000","00000100000","00000000000"],
+  coin:["00011111000","00100000100","01000000010","10000100001","10001110001","10001110001","10000100001","01000000010","00100000100","00011111000","00000000000"],
+  gem:["00011111000","00111111100","01111111110","11111111111","01111111110","00111111100","00011111000","00001110000","00000100000","00000000000","00000000000"],
+  gear:["00011011000","01011011010","01111111110","11111111111","11110011111","11100001111","11110011111","11111111111","01111111110","01011011010","00011011000"],
+  bag:["00011111000","00100000100","01111111110","01111111110","01100000110","01100000110","01111111110","01111111110","01111111110","00000000000","00000000000"],
+  hp:["00000000000","01100001100","11110011110","11111111111","11111111111","01111111110","00111111100","00011111000","00001110000","00000100000","00000000000"],
+  atk:["00000000110","00000001110","00000011100","00000111000","00001110000","00011100000","00111000000","01110000000","11110000000","11000000000","00000000000"],
+  def:["01111111110","01111111110","01111111110","01111111110","00111111100","00111111100","00011111000","00011111000","00001110000","00000100000","00000000000"],
+  spd:["00000000000","01100011000","00110001100","00011000110","00001100011","00011000110","00110001100","01100011000","00000000000","00000000000","00000000000"],
+  acc:["00011111000","00100000100","01000000010","01000000010","10000100001","10001110001","10000100001","01000000010","01000000010","00100000100","00011111000"],
+  elem:["00000100000","00000100000","00001110000","00011111000","11111111111","00011111000","00001110000","00000100000","00000100000","00000000000","00000000000"],
+  crit:["00000100000","01001010010","00101110100","00011111000","11111111111","00011111000","00101110100","01001010010","00000100000","00000000000","00000000000"],
+  energy:["00000111000","00001110000","00011100000","00111000000","00111111000","00000111000","00001110000","00011100000","00111000000","01100000000","00000000000"]
+};
+window.pxIcon = function(name, size){
+  const rows = window.PIX_ICONS[name];
+  size = size || '1em';
+  if(!rows) return '<span style="display:inline-block;width:'+size+';height:'+size+'"></span>';
+  let r='';
+  for(let y=0;y<rows.length;y++){ const row=rows[y]; let x=0;
+    while(x<row.length){ if(row[x]==='1'){ let w=1; while(x+w<row.length&&row[x+w]==='1')w++; r+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="1"/>'; x+=w; } else x++; } }
+  return '<svg class="pxi" viewBox="0 0 11 11" fill="currentColor" shape-rendering="crispEdges" preserveAspectRatio="xMidYMid meet" style="width:'+size+';height:'+size+';display:inline-block;vertical-align:-0.14em">'+r+'</svg>';
+};
+window.hydratePixIcons = function(root){
+  (root||document).querySelectorAll('[data-pic]').forEach(function(el){
+    el.innerHTML = window.pxIcon(el.getAttribute('data-pic'), el.getAttribute('data-size')||'1em');
+  });
+};
+try{ window.hydratePixIcons(document); }catch(e){}
+document.addEventListener('DOMContentLoaded', function(){ try{ window.hydratePixIcons(document); }catch(e){} });
+</script>
 
 <!-- 게임 데이터 (외부 파일 인라인 내장: file:// 더블클릭으로 열어도 동작) -->
 <script>
@@ -7334,18 +7522,17 @@ function renderSeedBag(){
   const seedCards = sortedSeedInventory().map(renderSeedBagCard).join('');
   const sortBtn = (mode, label) => `<button class="seed-sort-btn ${seedSortMode===mode?'active':''}" data-seed-sort="${mode}">${label}</button>`;
   body.innerHTML = `
-    <div class="seed-bag-top">
-      <span class="stat">🌱 보유 종자 <b>${inv.length}</b></span>
-      <span class="stat">🪴 화분 <b>${state.plants.length}/${potCapacity()}</b> <small style="color:var(--sub)">(최대 ${POT_MAX})</small></span>
+    <div class="seedbag-bar">
+      <span class="seedbag-count">${window.pxIcon?pxIcon('leaf','13px'):'🌱'} 종자 <b>${inv.length}</b></span>
+      <span class="seedbag-count">${window.pxIcon?pxIcon('pot','13px'):'🪴'} 화분 <b>${state.plants.length}/${potCapacity()}</b></span>
+      ${inv.length ? `<span class="seedbag-spacer"></span>${sortBtn('rarity','희귀도')}${sortBtn('name','이름')}${sortBtn('planet','행성')}` : ''}
     </div>
-    <div class="howto" style="margin-bottom:10px">종자는 발견 시 <b style="color:var(--neon)">잠재력 등급(D~S)</b>이 정해집니다. 등급이 높을수록 생장 시 더 좋은 스킬을 얻습니다.</div>
     ${starterHelp}
     ${inv.length ? `
-      <div class="seed-sort-row"><span class="seed-sort-label">정렬</span>${sortBtn('rarity','희귀도순')}${sortBtn('name','이름순')}${sortBtn('planet','행성순')}</div>
       <div class="seed-bag-layout">
         <div class="seed-bag-list">${seedCards}</div>
         ${renderSeedDetail(selectedEntry)}
-      </div>` : '<div class="howto seed-bag-empty">종자 가방이 비어 있습니다. 메인 화면의 탐사 버튼으로 우주맵에서 행성을 탐사해 종자를 얻어보세요.</div>'}
+      </div>` : '<div class="howto seed-bag-empty">종자 가방이 비어 있습니다. 탐사로 행성을 탐험해 종자를 얻어보세요.</div>'}
     <button class="btn primary modal-close" id="seedBagExplore">우주맵으로 가기</button>`;
   const starter = $('#claimStarterSeed');
   if(starter) starter.addEventListener('click', claimStarterSeed);
@@ -8181,9 +8368,10 @@ const MAIN_STAT_DEFS = [
   { k:'critRate', icon:'💥', name:'치명', suf:'%' }, { k:'energy', icon:'⚡', name:'에너지' },
 ];
 function mainStatBoxes(p, s){
-  return MAIN_STAT_DEFS.map(d => `<div class="stat-box"><div class="sb-k">${d.icon} ${d.name}</div><div class="sb-v">${s[d.k]}${d.suf||''}</div></div>`).join('');
+  const IC={hp:'hp',atk:'atk',def:'def',spd:'spd',acc:'acc',elem:'elem',critRate:'crit',energy:'energy'};
+  return MAIN_STAT_DEFS.map(d => `<div class="stat-box"><div class="sb-k">${window.pxIcon?pxIcon(IC[d.k]||'','12px'):d.icon} ${d.name}</div><div class="sb-v">${s[d.k]}${d.suf||''}</div></div>`).join('');
 }
-function bagFabHtml(){ return `<button class="side-fab" data-act="bag" title="종자 가방">🎒<span class="side-fab-label">가방</span></button>`; }
+function bagFabHtml(){ return `<button class="side-fab" data-act="bag" title="종자 가방">${window.pxIcon?pxIcon('bag','26px'):'🎒'}<span class="side-fab-label">가방</span></button>`; }
 
 /* ── 강화 탭(그림5) ── */
 const UP_LEFT  = [ { k:'acc', name:'명중력' }, { k:'crit', name:'치명타률' }, { k:'elem', name:'속성' }, { k:'energy', name:'에너지' } ];
