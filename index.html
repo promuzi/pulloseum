@@ -3159,18 +3159,60 @@ const SPECIES_GRID = [
   ['vine_wind','게일바인','vine','wind'], ['vine_bolt','볼트바인','vine','bolt'],
   ['vine_ice','프로스트바인','vine','ice'],
 ];
+/* ── 개체 카탈로그 (A+C) ──
+   key → 개체별 확장 데이터. grid에 있는 key는 보강만, 없는 key(예: 버섯)는 신규 종으로 등록.
+   필드 전부 선택사항: 없으면 빌더가 안전한 기본값을 채운다. 향후 개체/스킬은 여기와 SKILL_LIB만 수정.
+   필드: { name?, type?, element?, rarity?, stats?, baseVariants?[], variantSlots?{}, signatures?[], stageSkills?{stage:[skillId]}, legacy? } */
+const SPECIES_CATALOG = {
+  // 레거시 초본형(신규 획득 풀에서 제외, 보유분은 유지)
+  flame:  { legacy:true }, windy:  { legacy:true },
+  grass_water:{legacy:true}, grass_grass:{legacy:true}, grass_earth:{legacy:true},
+  grass_bolt:{legacy:true}, grass_ice:{legacy:true},
+  // 시범 신규 개체: 버섯 1종 (저스탯·포자 기본·희귀)
+  spore_cap: {
+    name:'스포어캡', type:'mushroom', element:'grass', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_cloud'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_cloud'] },
+  },
+};
 const SPECIES = (function(){
   const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
   const EL_KO = { fire:'불', water:'물', grass:'풀', earth:'대지', wind:'바람', bolt:'번개', ice:'빙결' };
   const out = {};
+  function buildBase(type, el, statsOverride){
+    if(statsOverride) return Object.assign({ hp:0,atk:0,def:0,spd:0 }, statsOverride);
+    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
+    return { hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd };
+  }
+  // 1) 레거시 grid 35종
   SPECIES_GRID.forEach(function(row){
     const key=row[0], name=row[1], type=row[2], el=row[3];
-    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
     out[key] = {
-      key, name, element:el, seedType:type,
-      base:{ hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd },
+      key, name, element:el, seedType:type, base:buildBase(type, el),
       desc:`${EL_KO[el]}속성 ${TYPE_KO[type]} — ${TYPE_CONCEPT[type]} 성향.`,
     };
+  });
+  // 2) 카탈로그 머지(보강) + 신규 종 등록
+  Object.keys(SPECIES_CATALOG).forEach(function(key){
+    const c = SPECIES_CATALOG[key];
+    if(!out[key]){ // grid에 없던 신규 종
+      const type=c.type, el=c.element;
+      out[key] = { key, name:c.name||key, element:el, seedType:type,
+        base:buildBase(type, el, c.stats),
+        desc:`${EL_KO[el]||el}속성 ${TYPE_KO[type]||type} — ${TYPE_CONCEPT[type]||''} 성향.` };
+    } else if(c.stats){ out[key].base = buildBase(out[key].seedType, out[key].element, c.stats); }
+    if(c.name) out[key].name = c.name;
+  });
+  // 3) 모든 종에 리치 필드 기본값 보강
+  Object.keys(out).forEach(function(key){
+    const s = out[key], c = SPECIES_CATALOG[key] || {};
+    s.rarity = c.rarity || 'common';
+    s.legacy = !!c.legacy;
+    s.baseVariants = Array.isArray(c.baseVariants) ? c.baseVariants.slice() : [];
+    s.signatures = Array.isArray(c.signatures) ? c.signatures.slice() : [];
+    s.stageSkills = c.stageSkills || null;
+    s.variantSlots = c.variantSlots || { normal:6 };
   });
   return out;
 })();
@@ -10329,6 +10371,18 @@ window.__test('type: mushroom registered, grass legacy kept', function(){
   __ok(TYPE_STATS.grass, 'TYPE_STATS.grass (legacy) must be kept');
   __eq(SEED_TYPE_NAMES.mushroom, '버섯형', 'mushroom KO name');
   __ok(SEED_TYPE_ORDER.indexOf('mushroom') >= 0, 'mushroom in order');
+});
+window.__test('catalog: every species has default rich fields', function(){
+  Object.keys(SPECIES).forEach(k => {
+    const s = SPECIES[k];
+    __ok(typeof s.rarity === 'string', k+' missing rarity');
+    __ok(s.variantSlots && typeof s.variantSlots === 'object', k+' missing variantSlots');
+    __ok(Array.isArray(s.baseVariants), k+' missing baseVariants');
+    __ok(Array.isArray(s.signatures), k+' missing signatures');
+    __ok('stageSkills' in s, k+' missing stageSkills key');
+  });
+  __ok(SPECIES.flame.legacy === true, 'flame should be legacy');
+  __ok(SPECIES.spore_cap && SPECIES.spore_cap.seedType === 'mushroom', 'spore_cap mushroom species should exist');
 });
 </script>
 </body>
