@@ -45,6 +45,7 @@
 | **[pixel-art-ui-roadmap.md](pixel-art-ui-roadmap.md)** | 도트화 인계: 채택 방식(PNG 교체), 규격, AI 도트 도구, 모션, 미확정 결정 | #3·#5 작업 시작 전 필독 |
 | **[android-capacitor-wrapper.md](android-capacitor-wrapper.md)** | Capacitor 안드로이드 포장·APK 빌드 절차, 네이티브 세이브 | #9 빌드·출시 |
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
+| **[feature-designs.md](feature-designs.md)** | 위 8대 항목의 **구현 직전 상세 설계**(선택지별 동작·UI·데이터모델·구현방식·난이도) | 항목 확정 후 구현 직전 참조 |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
