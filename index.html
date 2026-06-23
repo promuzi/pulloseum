@@ -10295,6 +10295,28 @@ bootWithSave().finally(()=>{
     try{ await Cloud.refreshUser(); renderCloudUI(); if(Cloud.user) await reconcileAfterLogin(); }catch(e){}
   })();
 });
+
+/* ===== 개발용 셀프테스트 (게임 로직 무관, 콘솔에서 __catalogSelfTest() 호출) =====
+   테스트 러너가 없으므로 콘솔 누적 assertion으로 회귀를 검증한다.
+   __test(name, fn)으로 케이스 등록, __catalogSelfTest()로 일괄 실행. */
+window.__selfTestCases = window.__selfTestCases || [];
+window.__test = function(name, fn){ window.__selfTestCases.push({ name, fn }); };
+window.__catalogSelfTest = function(){
+  let pass=0; const fails=[];
+  window.__selfTestCases.forEach(c => {
+    try { c.fn(); pass++; }
+    catch(e){ fails.push(c.name + ' → ' + e.message); }
+  });
+  console.log('%c셀프테스트 PASS '+pass+' / FAIL '+fails.length, fails.length?'color:#ff6b4a':'color:#5fe06b');
+  fails.forEach(f => console.error('  ✗ '+f));
+  return fails;
+};
+function __eq(a,b,msg){ if(a!==b) throw new Error((msg||'')+' expected '+JSON.stringify(b)+' got '+JSON.stringify(a)); }
+function __ok(c,msg){ if(!c) throw new Error(msg||'assertion failed'); }
+
+window.__test('baseline: SPECIES has legacy keys', function(){
+  ['flame','aqua','thorn','gaia','windy','spark','frost'].forEach(k => __ok(SPECIES[k], 'missing legacy species '+k));
+});
 </script>
 </body>
 </html>
