@@ -50,7 +50,8 @@ body{
 /* 함선 내부 장면 — 배경 레이어(나중에 도트 이미지로 교체할 슬롯). 콘텐츠는 위로 띄움 */
 #mainScene{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 #mainScene svg{width:100%;height:100%;display:block;}
-#mainScreen>*:not(#mainScene){position:relative;z-index:1;}
+/* 장면 위로 콘텐츠만 띄움 — 단, 고정 헤더(#topHeader/#bottomNav)는 fixed 유지(제외) */
+#mainScreen>*:not(#mainScene):not(#topHeader):not(#bottomNav){position:relative;z-index:1;}
 .hidden{display:none !important;}
 button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 
