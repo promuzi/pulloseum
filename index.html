@@ -46,7 +46,11 @@ body{
 }
 #app{max-width:520px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 .screen{flex:1;display:flex;flex-direction:column;min-height:0;}
-#mainScreen{padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));padding-bottom:var(--navh);}
+#mainScreen{padding-top:calc(var(--headh) + env(safe-area-inset-top,0px));padding-bottom:var(--navh);position:relative;}
+/* 함선 내부 장면 — 배경 레이어(나중에 도트 이미지로 교체할 슬롯). 콘텐츠는 위로 띄움 */
+#mainScene{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+#mainScene svg{width:100%;height:100%;display:block;}
+#mainScreen>*:not(#mainScene){position:relative;z-index:1;}
 .hidden{display:none !important;}
 button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 
@@ -83,30 +87,35 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 
 /* ===== 메인 ===== */
 /* 상단 재화 헤더 — 화면 최상단 고정(상점·탐사·모드 등 모달 위에도 떠 있음) */
+/* 떠있는 HUD — 슬랩 없음. 장면 위에 칩이 부유(좌상 레벨 / 우상 재화) */
 #topHeader{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;
   width:100%;max-width:520px;height:calc(var(--headh) + env(safe-area-inset-top,0px));
-  padding:env(safe-area-inset-top,0px) 12px 0;
+  padding:calc(env(safe-area-inset-top,0px) + 6px) 12px 0;
   display:flex;align-items:center;gap:9px;
-  background:linear-gradient(180deg,#f4f8fa,var(--hull));
-  border-bottom:2px solid var(--neon-ink);
-  box-shadow:0 2px 0 rgba(31,217,196,.25),0 6px 18px rgba(6,12,20,.45);}
+  background:transparent;border-bottom:none;box-shadow:none;pointer-events:none;}
+#topHeader>*{pointer-events:auto;}
 #topHeader.hidden{display:none !important;}
-.th-level{display:flex;align-items:center;gap:7px;flex:0 0 auto;}
-.thl-badge{background:var(--neon-ink);border:1px solid #0c9485;
-  border-radius:999px;padding:4px 10px;font-size:13px;font-weight:800;color:#eafffb;white-space:nowrap;}
-.thl-badge b{color:#fff;}
-.thl-bar{position:relative;width:78px;height:15px;border-radius:999px;overflow:hidden;
-  background:#d3e1e6;border:1px solid var(--hull-line);}
-.thl-bar>i{position:absolute;left:0;top:0;bottom:0;display:block;border-radius:999px;
-  background:linear-gradient(90deg,#19c8b0,#0a8478);transition:width .4s;}
+.th-level{display:flex;align-items:center;gap:6px;flex:0 0 auto;
+  background:rgba(10,18,28,.62);border:2px solid #2dd4bf;border-radius:5px;padding:4px 8px;
+  box-shadow:3px 3px 0 rgba(0,0,0,.4);}
+.thl-badge{background:transparent;border:none;
+  padding:0;font-size:13px;font-weight:800;color:#7df0e2;white-space:nowrap;}
+.thl-badge b{color:#eafffb;}
+.thl-bar{position:relative;width:62px;height:11px;border-radius:3px;overflow:hidden;
+  background:#0f2336;border:1px solid #1d3a55;}
+.thl-bar>i{position:absolute;left:0;top:0;bottom:0;display:block;border-radius:2px;
+  background:#2dd4bf;transition:width .4s;}
 .thl-exptext{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:9.5px;font-weight:800;color:#0b3b35;text-shadow:0 1px 1px rgba(255,255,255,.4);}
-.th-cur{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;}
-.th-coin,.th-min{display:flex;align-items:center;gap:3px;font-size:13.5px;font-weight:800;color:var(--ink);
-  background:#ffffff;border:1px solid var(--hull-line);border-radius:999px;padding:5px 11px;white-space:nowrap;}
-.th-coin b{color:#b3860c;}
-.th-min b{color:var(--neon-ink);}
-.iconbtn{background:#ffffff;border:1px solid var(--hull-line);border-radius:10px;color:var(--ink);font-size:16px;padding:7px 10px;flex:0 0 auto;}
+  font-size:9px;font-weight:800;color:#eafffb;text-shadow:0 1px 1px rgba(0,0,0,.5);}
+.th-cur{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;}
+.th-coin,.th-min{display:flex;align-items:center;gap:3px;font-size:13px;font-weight:800;color:#dfe9f0;
+  background:rgba(10,18,28,.62);border:2px solid #c9962f;border-radius:5px;padding:4px 9px;white-space:nowrap;
+  box-shadow:3px 3px 0 rgba(0,0,0,.4);}
+.th-min{border-color:#2dd4bf;}
+.th-coin b{color:#ffd98a;}
+.th-min b{color:#7df0e2;}
+.iconbtn{background:rgba(10,18,28,.62);border:2px solid #3a5570;border-radius:5px;color:#cfdae3;font-size:16px;padding:6px 9px;flex:0 0 auto;
+  box-shadow:3px 3px 0 rgba(0,0,0,.4);}
 
 /* 프로필 배너 + 식물 그리드 한 줄 */
 #profileRow{display:flex;gap:8px;align-items:stretch;padding:6px 12px 5px;flex:0 0 auto;}
@@ -196,35 +205,33 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .prof-stat .ps-value{font-size:17px;font-weight:800;margin-top:2px;}
 
 #btnBattle{flex:0 0 auto;margin:0 14px calc(10px + env(safe-area-inset-bottom,0px));padding:14px;font-size:18px;border-radius:16px;border:none;
-  background:linear-gradient(135deg,#0a8478,#25d6bd);color:#04241f;font-weight:800;letter-spacing:1px;
-  box-shadow:0 4px 26px rgba(20,184,166,.4);animation:pulse 2.2s ease-in-out infinite;}
-@keyframes pulse{0%,100%{box-shadow:0 4px 22px rgba(20,184,166,.32)}50%{box-shadow:0 4px 34px rgba(20,184,166,.6)}}
+  background:#2dd4bf;color:#04241f;font-weight:800;letter-spacing:1px;border:3px solid #0a3d36;border-radius:7px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.45);animation:pulse 2.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:4px 4px 0 rgba(0,0,0,.45),0 0 0 rgba(45,212,191,0)}50%{box-shadow:4px 4px 0 rgba(0,0,0,.45),0 0 16px rgba(45,212,191,.6)}}
 #btnBattle:active{transform:scale(.97);}
 
 /* ===== 하단 헤더 (클래시 로얄식 5탭) ===== */
 #bottomNav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:60;
   width:100%;max-width:520px;
   display:grid;grid-template-columns:repeat(5,1fr);align-items:end;gap:4px;
-  padding:7px 8px calc(8px + env(safe-area-inset-bottom,0px));
-  background:linear-gradient(180deg,var(--hull),#e6edf1);
-  border-top:2px solid var(--neon-ink);
-  box-shadow:0 -2px 0 rgba(31,217,196,.22),0 -6px 18px rgba(6,12,20,.4);}
-.navbtn{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;
-  background:transparent;border:none;color:var(--ink-sub);padding:8px 2px 4px;border-radius:14px;
-  position:relative;transition:transform .08s, color .15s;}
-.navbtn .ni{font-size:23px;line-height:1;filter:grayscale(.35);transition:filter .15s, transform .12s;}
-.navbtn .nl{font-size:11px;font-weight:800;letter-spacing:-.3px;}
+  padding:7px 10px calc(10px + env(safe-area-inset-bottom,0px));
+  background:transparent;border-top:none;box-shadow:none;pointer-events:none;}
+#bottomNav .navbtn{pointer-events:auto;}
+.navbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:rgba(10,18,28,.62);border:2px solid #3a5570;color:#cfdae3;padding:6px 2px 5px;border-radius:6px;
+  box-shadow:2px 2px 0 rgba(0,0,0,.42);
+  position:relative;transition:transform .08s, color .15s, border-color .15s;}
+.navbtn .ni{font-size:21px;line-height:1;filter:grayscale(.4) brightness(.95);transition:filter .15s, transform .12s;}
+.navbtn .nl{font-size:10px;font-weight:800;letter-spacing:-.3px;}
 .navbtn:active{transform:scale(.92);}
-.navbtn.active{color:var(--neon-ink);}
+.navbtn.active{color:#7df0e2;border-color:#2dd4bf;box-shadow:2px 2px 0 rgba(0,0,0,.42),0 0 10px rgba(45,212,191,.35);}
 .navbtn.active .ni{filter:none;transform:translateY(-1px);}
-.navbtn.center{margin-top:-18px;}
-.navbtn.center .ni{width:60px;height:60px;display:flex;align-items:center;justify-content:center;
-  font-size:30px;border-radius:50%;filter:none;
-  background:radial-gradient(circle at 50% 35%, #25d6bd, #0a8478);
-  box-shadow:0 6px 22px rgba(20,184,166,.5), inset 0 2px 6px rgba(255,255,255,.4);
-  border:3px solid #ffffff;}
-.navbtn.center .nl{color:var(--neon-ink);margin-top:2px;}
-.navbtn.center.active .ni{transform:none;box-shadow:0 6px 28px rgba(20,184,166,.7), inset 0 2px 6px rgba(255,255,255,.45);}
+.navbtn.center{margin-top:-16px;background:#2dd4bf;border:3px solid #0a3d36;border-radius:7px;
+  box-shadow:3px 3px 0 rgba(0,0,0,.45);padding:7px 2px 6px;}
+.navbtn.center .ni{font-size:28px;filter:none;}
+.navbtn.center .nl{color:#04241f;margin-top:1px;}
+.navbtn.center.active{box-shadow:3px 3px 0 rgba(0,0,0,.45),0 0 14px rgba(45,212,191,.55);}
+.navbtn.center.active .ni{transform:none;}
 .navbtn.locked{opacity:.55;}
 .navbtn.locked .ni{filter:grayscale(1) brightness(.85);}
 .navbtn .navlock{position:absolute;top:3px;right:calc(50% - 22px);font-size:11px;opacity:.85;}
@@ -1090,8 +1097,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   align-items:center;gap:8px;width:100%;max-width:520px;margin:0 auto;padding:2px 10px;min-height:0;}
 #statPanel{width:100%;display:flex;flex-direction:column;gap:6px;justify-content:center;min-height:0;}
 #sidePanel{width:58px;justify-self:end;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:flex-start;align-self:stretch;padding-top:4px;}
-#centerPlant{width:100%;min-width:0;justify-self:center;position:relative;z-index:1;overflow:hidden;transform:translateX(-5px);}
+#centerPlant{width:100%;min-width:0;justify-self:center;position:relative;z-index:1;overflow:visible;transform:translateX(-5px);}
 #centerPlant:active{transform:translateX(-5px) scale(.98);}
+/* 보관 포드 받침대 + 발광 — 식물이 함선 안에 놓여 관리받는 느낌 */
+#centerPlant::before{content:'';position:absolute;left:50%;bottom:4px;transform:translateX(-50%);
+  width:74%;max-width:150px;height:26px;border-radius:50%;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 35%,rgba(45,212,191,.32),rgba(45,212,191,0) 72%),
+            radial-gradient(ellipse at 50% 62%,#d3dde4,#9aa9b4 82%);
+  box-shadow:0 0 22px rgba(45,212,191,.28);}
 #statPanel{position:relative;z-index:2;}
 /* 좌측 정보 알약(둥근 박스) — 타입/속성/변이/잠재력 */
 .info-pills{display:flex;flex-direction:column;gap:5px;}
@@ -1367,6 +1380,30 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 
   <!-- ===== 메인 화면 ===== -->
   <section id="mainScreen" class="screen hidden">
+    <div id="mainScene" aria-hidden="true">
+      <svg viewBox="0 0 300 480" preserveAspectRatio="xMidYMid slice">
+        <polygon points="0,0 300,0 245,120 55,120" fill="#eaf0f4"/>
+        <polygon points="0,0 55,120 55,300 0,480" fill="#d6dfe6"/>
+        <polygon points="300,0 245,120 245,300 300,480" fill="#cad4dc"/>
+        <rect x="55" y="120" width="190" height="180" fill="#dfe7ed"/>
+        <polygon points="0,480 300,480 245,300 55,300" fill="#bcc8d0"/>
+        <rect x="92" y="142" width="116" height="96" rx="3" fill="#0a1726"/>
+        <circle cx="150" cy="178" r="14" fill="#e9b96b"/>
+        <circle cx="120" cy="210" r="2" fill="#bfe9e2"/><circle cx="186" cy="160" r="1.6" fill="#fff"/><circle cx="176" cy="220" r="1.5" fill="#bfe9e2"/><circle cx="110" cy="165" r="1.4" fill="#fff"/>
+        <g stroke="#2dd4bf" stroke-width="1.4" opacity="0.85" fill="none">
+          <rect x="92" y="142" width="116" height="96" rx="3"/>
+          <line x1="55" y1="120" x2="245" y2="120"/>
+        </g>
+        <g stroke="#9fb2bf" stroke-width="1" opacity="0.5">
+          <line x1="55" y1="300" x2="0" y2="480"/><line x1="245" y1="300" x2="300" y2="480"/>
+          <line x1="103" y1="300" x2="70" y2="480"/><line x1="197" y1="300" x2="230" y2="480"/>
+          <line x1="150" y1="300" x2="150" y2="480"/>
+          <line x1="78" y1="372" x2="222" y2="372"/><line x1="48" y1="430" x2="252" y2="430"/>
+        </g>
+        <radialGradient id="mainVig" cx="50%" cy="44%" r="66%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.34"/></radialGradient>
+        <rect x="0" y="0" width="300" height="480" fill="url(#mainVig)"/>
+      </svg>
+    </div>
     <header id="topHeader">
       <div class="th-level">
         <span class="thl-badge">Lv <b id="levelView">1</b></span>
