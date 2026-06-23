@@ -4243,6 +4243,7 @@ function normalizeState(s){
     if(typeof p.rankPoints !== 'number') p.rankPoints = (p.rankTier ? RANK_TIERS[clamp(p.rankTier,0,RANK_TIERS.length-1)].threshold : 0);
     if(typeof p.bestRoundIdx !== 'number') p.bestRoundIdx = -1;
     if(typeof p.champion !== 'boolean') p.champion = false;
+    applyCatalogVariantFields(p); // 변이 슬롯/태생 변이 backfill(구 세이브 무회귀)
   });
   if(s.tournament === undefined) s.tournament = null;
   if(!s.exploration_ship) s.exploration_ship = newExplorerShip();
@@ -7247,6 +7248,21 @@ function renderPlantConfirm(){
     plantSeedFromBag(pendingPlantSeedId, name);
   });
 }
+/* 개체 카탈로그의 변이 슬롯/태생 변이를 식물 인스턴스에 적용(심기·세이브 마이그레이션 공용).
+   변이 슬롯 UI는 향후 작업 — 여기선 데이터만 식물에 기록한다. */
+function applyCatalogVariantFields(p){
+  if(!p) return p;
+  const sp = SPECIES[p.species];
+  if(!p.variant_slots || typeof p.variant_slots !== 'object'){
+    p.variant_slots = sp ? Object.assign({}, sp.variantSlots) : { normal:6 };
+  }
+  if(!Array.isArray(p.base_variants)){
+    p.base_variants = sp ? (sp.baseVariants||[]).slice() : [];
+  }
+  // 태생 변이가 있고 변이형이 미설정/일반이면 첫 태생 변이로 초기화(예: 버섯=포자)
+  if((!p.form || p.form==='normal') && p.base_variants.length) p.form = p.base_variants[0];
+  return p;
+}
 function createPlantedPlantFromSeed(entry, seed, customName){
   // 탐사로 정해진 종(35종)을 우선 사용. 없으면 기존 종자→종 매핑.
   const speciesKey = (entry && entry.species && SPECIES[entry.species]) ? entry.species : speciesKeyForSeed(seed);
@@ -7272,6 +7288,7 @@ function createPlantedPlantFromSeed(entry, seed, customName){
   p.grade = entry.grade || 'C';
   p.potential = entry.grade || 'C';
   ensurePlantInstanceFields(p);
+  applyCatalogVariantFields(p); // 변이 슬롯/태생 변이 기록(버섯=포자)
   return p;
 }
 function plantSeedFromBag(inventoryId, customName = ''){
@@ -10443,6 +10460,27 @@ window.__test('acquire: legacy grass excluded from acquirable pool', function(){
 window.__test('acquire: RARITY_WEIGHT defined for all rarities', function(){
   ['common','uncommon','rare','epic','legendary'].forEach(r => __ok(typeof RARITY_WEIGHT[r]==='number', 'weight missing '+r));
   __ok(RARITY_WEIGHT.common > RARITY_WEIGHT.rare, 'common must be more frequent than rare');
+});
+window.__test('plant: applyCatalogVariantFields records slots + base variants', function(){
+  const p = applyCatalogVariantFields({ species:'spore_cap', element:'grass', form:'normal' });
+  __ok(p.variant_slots && p.variant_slots.spore === 2, 'variant_slots.spore should be 2');
+  __ok(p.base_variants.indexOf('spore') >= 0, 'base_variants should include spore');
+  __eq(p.form, 'spore', 'mushroom base variant should set form spore when empty');
+});
+window.__test('plant: legacy species default slots, form untouched', function(){
+  const p = applyCatalogVariantFields({ species:'flame', element:'fire', form:'normal' });
+  __ok(p.variant_slots && typeof p.variant_slots==='object', 'variant_slots backfilled');
+  __ok(Array.isArray(p.base_variants) && p.base_variants.length===0, 'flame has no base variants');
+  __eq(p.form, 'normal', 'flame form unchanged');
+});
+window.__test('migrate: normalizeState backfills variant fields', function(){
+  const pl = createPlant('flame', { atk:5, def:5, spd:5 }); // 구 세이브 식물 시뮬레이션
+  delete pl.variant_slots; delete pl.base_variants;
+  const base = defaultState(); base.plants = [pl];
+  const n = normalizeState(base);
+  const p = n.plants[0];
+  __ok(p.variant_slots && typeof p.variant_slots==='object', 'variant_slots backfilled');
+  __ok(Array.isArray(p.base_variants), 'base_variants backfilled');
 });
 </script>
 </body>
