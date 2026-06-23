@@ -46,6 +46,7 @@
 | **[android-capacitor-wrapper.md](android-capacitor-wrapper.md)** | Capacitor 안드로이드 포장·APK 빌드 절차, 네이티브 세이브 | #9 빌드·출시 |
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
 | **[feature-designs.md](feature-designs.md)** | 위 8대 항목의 **구현 직전 상세 설계**(선택지별 동작·UI·데이터모델·구현방식·난이도) | 항목 확정 후 구현 직전 참조 |
+| **[handoff-next.md](handoff-next.md)** | **🔖 인계 문서** — 기기 바꿔 이어갈 때 가장 먼저 읽기(현황·선택 대기 8항목·재개 절차) | 새 세션/다른 기기 시작 시 |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -153,6 +154,7 @@
 - **2026-06-20** — 행성마다 모든 종이 나오지 않게 **종 분포 제한**. (#7)
 - **2026-06-20** — 종은 **고정 속성**, 변이형은 카드로 후천 부여(종에 못박지 않음). (#1)
 - **2026-06-21** — 문서 체계 정리: `master-roadmap.md`를 **유일 허브(SSOT)**로, 밸런스는 `balance-sheet.md`로 단일화(`battle-growth-guide.md` 폐기).
+- **2026-06-23** — 양육/변이/스킬 UI 개편 적용(양육 3×4·식물 누끼+흔들림·변이4열/스킬3열). 향후 8대 기능 기획 완료(`benchmark-proposals.md`/`feature-designs.md`) → **사용자 선택 대기**. 재개 진입점 = `handoff-next.md`.
 
 ---
 
