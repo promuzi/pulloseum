@@ -3456,14 +3456,25 @@ const SEED_TYPE_BY_KO = (function(){ const m={}; Object.keys(SEED_TYPE_NAMES).fo
 const SPECIES_BY_TYPE_EL = (function(){ const m={}; SPECIES_GRID.forEach(r=>{ m[r[2]+'_'+r[3]]=r[0]; }); return m; })();
 function speciesForTypeEl(type, el){ return SPECIES_BY_TYPE_EL[type+'_'+el] || 'thorn'; }
 function randomSpeciesKey(){ const ks=Object.keys(SPECIES); return ks[Math.floor(Math.random()*ks.length)]; }
+/* 희귀도 가중치 — 등장/드롭률만 좌우(스탯은 거의 동일). 값이 클수록 자주 나온다. */
+const RARITY_WEIGHT = { common:100, uncommon:55, rare:22, epic:8, legendary:3 };
+/* 신규 획득 가능 종 = legacy 아님. filterFn으로 타입/속성 추가 제한 가능. */
+function pickAcquirableSpecies(filterFn){
+  const pool = Object.keys(SPECIES).filter(k => !SPECIES[k].legacy && (!filterFn || filterFn(SPECIES[k])));
+  if(!pool.length) return 'thorn';
+  let total = 0; const w = pool.map(k => { const x = RARITY_WEIGHT[SPECIES[k].rarity]||50; total += x; return x; });
+  let r = Math.random()*total;
+  for(let i=0;i<pool.length;i++){ r -= w[i]; if(r <= 0) return pool[i]; }
+  return pool[pool.length-1];
+}
 /* EXPLORE_VIEW 지역(el[]·types[]) 테마에 맞춰 종을 뽑는다. 지역 정보가 없으면 완전 무작위. */
 function rollSpeciesFromView(viewRegion){
-  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : Object.keys(ELEMENT_STATS);
-  const el = els[Math.floor(Math.random()*els.length)];
+  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : null;
   const typesKo = (viewRegion && viewRegion.types && viewRegion.types.length) ? viewRegion.types : null;
-  let type = typesKo ? SEED_TYPE_BY_KO[typesKo[Math.floor(Math.random()*typesKo.length)]] : null;
-  if(!type){ const ts=Object.keys(TYPE_STATS); type = ts[Math.floor(Math.random()*ts.length)]; }
-  return speciesForTypeEl(type, el);
+  const okType = typesKo ? typesKo.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
+  // 지역 테마(속성/타입)에 맞는 비-legacy 종을 희귀도 가중으로 추출
+  return pickAcquirableSpecies(s =>
+    (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0));
 }
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -8939,7 +8950,7 @@ function buildEnemy(roundIndex, tierIndex){
     form = pick(['pred','toxic','spore','lumen','weapon']);
     if(form==='pred') predType = pick(['vamp','absorb']);
   }
-  const sp = pick(Object.keys(SPECIES));
+  const sp = pickAcquirableSpecies();        // 적도 신규 획득 풀 기준(레거시 초본형 제외)
   const el = SPECIES[sp].element;            // 종의 고정 속성 → 이름·속성·외형 일치
   const seedType = SPECIES_SEEDTYPE[sp] || 'grass';
   const growth = ENEMY_STAGE_BY_ROUND[clamp(roundIndex, 0, ENEMY_STAGE_BY_ROUND.length-1)];
@@ -10424,6 +10435,14 @@ window.__test('skills: legacy species still use element growth pool', function()
   const ids = plantKnownSkillIds(p);
   __ok(ids.indexOf('skill_elem_water') >= 0, 'legacy element skill missing');
   __ok(ids.indexOf('skill_symbiotic') >= 0, 'legacy water growth top skill missing');
+});
+window.__test('acquire: legacy grass excluded from acquirable pool', function(){
+  __ok(typeof pickAcquirableSpecies === 'function', 'pickAcquirableSpecies missing');
+  for(let i=0;i<300;i++){ const k=pickAcquirableSpecies(); __ok(!SPECIES[k].legacy, 'legacy species '+k+' should not be acquirable'); }
+});
+window.__test('acquire: RARITY_WEIGHT defined for all rarities', function(){
+  ['common','uncommon','rare','epic','legendary'].forEach(r => __ok(typeof RARITY_WEIGHT[r]==='number', 'weight missing '+r));
+  __ok(RARITY_WEIGHT.common > RARITY_WEIGHT.rare, 'common must be more frequent than rare');
 });
 </script>
 </body>
