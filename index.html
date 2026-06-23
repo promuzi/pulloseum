@@ -3655,6 +3655,17 @@ const TRAIT_SKILLS = {
   skill_solar:     { name:'태양 폭발', icon:'🌞', cost:3, kind:'attack', power:150, aoe:true, selfBuff:{stat:'atk',pct:0.2,turns:2}, desc:'위력150 · 광역 + 공격 20%↑(2턴)', tag:'잠재특성', grade:'A' },
   skill_quantum:   { name:'양자 산포', icon:'✨', cost:3, kind:'debuff', power:100, aoe:true, enemyDebuff:{stat:'rand',pct:0.2,turns:2}, desc:'위력100 · 광역 + 적 무작위 스탯 20%↓(2턴)', tag:'잠재특성', grade:'A' },
 };
+/* ── 신규 개체/시그니처/버섯 전용 스킬 정의(분리) ──
+   개체는 SPECIES_CATALOG의 stageSkills/signatures에서 이 키만 참조한다.
+   기존 스킬 스키마와 동일(name/icon/cost/kind/power/desc/grade…). 향후 스킬은 여기만 수정. */
+const SKILL_LIB = {
+  'mushroom.spore_burst': { name:'포자 분출', icon:'🍄', cost:2, kind:'debuff', aoe:true, power:90,
+    dot:{kind:'poison',pct:0.05,turns:3}, enemyDebuff:{stat:'acc',pct:0.15,turns:2},
+    desc:'위력90 · 광역 + 중독(3턴) + 적 적중 15%↓(2턴)', tag:'버섯', grade:'B' },
+  'sig.spore_cloud': { name:'포자 운무막', icon:'🌫️', cost:3, kind:'debuff', aoe:true,
+    enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3},
+    desc:'적 공격 20%↓(2턴) + 중독(3턴)', tag:'시그니처', grade:'A' },
+};
 /* 잠재특성 id → 참고용 시그니처 스킬 id (현재 전투 미반영) */
 const TRAIT_SKILL_MAP = {
   trait_biolume_chlorophyll:'skill_biolume',
@@ -3863,7 +3874,7 @@ function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span cl
 /* 등급 색상(변이 카드·스킬 공통) — 흰D · 초록C · 하늘B · 보라A · 주황S */
 const GRADE_PALETTE = { D:'#e8edf3', C:'#5fe06b', B:'#4ac6ff', A:'#b06bff', S:'#ff9a3c' };
 function gradeColor(g){ return GRADE_PALETTE[g] || GRADE_PALETTE.C; }
-const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS);
+const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB);
 /* 무기/물약 카드가 부여하는 스킬을 등급 계수로 스케일. 무기 스킬은 횟수(uses)도 등급에 따라 증가 */
 function gradeCardSkill(id, base, grade){
   if(!base) return null;
@@ -10383,6 +10394,11 @@ window.__test('catalog: every species has default rich fields', function(){
   });
   __ok(SPECIES.flame.legacy === true, 'flame should be legacy');
   __ok(SPECIES.spore_cap && SPECIES.spore_cap.seedType === 'mushroom', 'spore_cap mushroom species should exist');
+});
+window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
+  __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
+  __ok(ALL_SKILLS['sig.spore_cloud'], 'sig.spore_cloud missing');
+  __ok(skillById('mushroom.spore_burst'), 'skillById cannot resolve mushroom skill');
 });
 </script>
 </body>
