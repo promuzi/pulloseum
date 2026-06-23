@@ -3128,8 +3128,9 @@ const TYPE_STATS = {
   flower: { hp:44, atk:14, def:6,  spd:9  }, // 화초형 — 공격·화력
   cactus: { hp:58, atk:9,  def:14, spd:4  }, // 다육형 — 방어·지구력
   vine:   { hp:46, atk:11, def:7,  spd:12 }, // 덩굴형 — 기동·흡혈
+  mushroom: { hp:38, atk:9,  def:5,  spd:8  }, // 버섯형 — 저스탯(포자 메커니즘으로 보완)
 };
-const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈' };
+const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈', mushroom:'포자·교란' };
 /* [종key, 이름, 타입, 속성] — 5타입 × 7속성. 기존 7종 key는 세이브 호환 위해 유지. */
 const SPECIES_GRID = [
   // 🌿 초본형 grass
@@ -3159,7 +3160,7 @@ const SPECIES_GRID = [
   ['vine_ice','프로스트바인','vine','ice'],
 ];
 const SPECIES = (function(){
-  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형' };
+  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
   const EL_KO = { fire:'불', water:'물', grass:'풀', earth:'대지', wind:'바람', bolt:'번개', ice:'빙결' };
   const out = {};
   SPECIES_GRID.forEach(function(row){
@@ -3393,8 +3394,8 @@ const SPECIES_TYPE_NAMES = {
   gravity_cactus:'선인장형', storm_orchid:'꽃형',
 };
 /* 외형/이름 축이 되는 식물 타입 5종 */
-const SEED_TYPE_NAMES = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형' };
-const SEED_TYPE_ORDER = ['grass', 'tree', 'flower', 'cactus', 'vine'];
+const SEED_TYPE_NAMES = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
+const SEED_TYPE_ORDER = ['grass', 'tree', 'flower', 'cactus', 'vine', 'mushroom'];
 /* 기존 base_species_type(10종) → 5종 매핑 */
 const SEED_TYPE_OF = {
   moss:'grass', metal_reed:'grass',
@@ -7399,6 +7400,12 @@ function composePlantBody(seedType, gi, P, el){
     if(gi>=3){ svg+=`<rect x="${cx-w/2-9}" y="${cy-4}" width="9" height="${10+gi}" rx="4.5" fill="${P.dark}"/><rect x="${cx+w/2}" y="${cy-8}" width="9" height="${12+gi}" rx="4.5" fill="${P.dark}"/>`; }
     for(let i=0;i<4+gi;i++){ const yy=cy-h/2+10+i*6; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
     if(gi>=5) svg+=`<circle cx="${cx}" cy="${cy-h/2+3}" r="6" fill="${P.accent}"/>`;
+  } else if(seedType==='mushroom'){
+    const capW=16+gi*4, capH=10+gi*2.4, stalkH=12+gi*4;
+    svg+=`<rect x="${cx-3-gi*0.3}" y="${cy}" width="${6+gi*0.6}" height="${stalkH}" rx="3" fill="${P.light}"/>`;
+    svg+=`<path d="M${cx-capW/2} ${cy} Q ${cx} ${cy-capH*1.8} ${cx+capW/2} ${cy} Z" fill="${P.main}"/>`;
+    for(let i=0;i<2+gi;i++){ const px=cx-capW/2+ (i+0.5)*(capW/(2+gi)); svg+=`<circle cx="${px}" cy="${cy-capH*0.5}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".85"/>`; }
+    if(gi>=4){ svg+=`<circle cx="${cx-capW*0.18}" cy="${cy+stalkH*0.4}" r="2.2" fill="${P.accent}"/>`; }
   } else { // tree
     const r=12+gi*3.2, th=16+gi*3;
     svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
@@ -7440,7 +7447,7 @@ function spriteFor(obj, size){
 }
 /* 이름 생성: 속성 + 장착 변이 카드(종류·개수) + 식물 타입. 생장 단계 칭호는 표시처에서 별도. */
 const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
-const SEED_ROOT = { grass:'초본', tree:'목본', flower:'화초', cactus:'다육', vine:'덩굴' };
+const SEED_ROOT = { grass:'초본', tree:'목본', flower:'화초', cactus:'다육', vine:'덩굴', mushroom:'균사' };
 const CARD_TYPE_WORD = { common:'강화', dna:'포식', weapon:'무장', potion:'맹독', spore:'포자', chloro:'발광', dragon:'용' };
 const COUNT_PREFIX = ['', '', '이중', '삼중', '사중', '오중'];
 function composePlantName(p){
@@ -10316,6 +10323,12 @@ function __ok(c,msg){ if(!c) throw new Error(msg||'assertion failed'); }
 
 window.__test('baseline: SPECIES has legacy keys', function(){
   ['flame','aqua','thorn','gaia','windy','spark','frost'].forEach(k => __ok(SPECIES[k], 'missing legacy species '+k));
+});
+window.__test('type: mushroom registered, grass legacy kept', function(){
+  __ok(TYPE_STATS.mushroom, 'TYPE_STATS.mushroom missing');
+  __ok(TYPE_STATS.grass, 'TYPE_STATS.grass (legacy) must be kept');
+  __eq(SEED_TYPE_NAMES.mushroom, '버섯형', 'mushroom KO name');
+  __ok(SEED_TYPE_ORDER.indexOf('mushroom') >= 0, 'mushroom in order');
 });
 </script>
 </body>
