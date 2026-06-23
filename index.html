@@ -1365,6 +1365,377 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .np-btn.harvest{border-color:#ffe08a;background:linear-gradient(180deg,#caa23a,#9a7a1f);color:#1a1405;}
 .np-note{font-size:11.5px;color:#9fd9b6;background:rgba(8,24,14,.5);border-radius:10px;padding:9px 11px;margin-top:6px;line-height:1.4;}
 .np-fruit-timer{font-size:12px;color:#bfe9cf;text-align:center;margin:4px 0;font-weight:700;}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓ 픽셀 테마 오버레이 (도트 우주선 내부 — 미니멀 / 다크 스페이스)
+   기존 규칙 위에 덧씌워 전체 룩을 통일. 원형 요소는 건드리지 않음.
+   ════════════════════════════════════════════════════════════ */
+:root{
+  --neon:#2dd4bf; --neon-deep:#0c453d; --gold:#ffcf4a;
+  --px-wall:#e9eef1; --px-wall2:#dbe4e8; --px-wall-line:#b7c6cd;
+  --px-panel:#0d1a2b; --px-panel2:#0a1422; --px-edge:#22506b;
+  --px-edge-on:#2dd4bf;
+  --px-sh:rgba(3,8,14,.6);
+}
+/* ── 픽셀 폰트 전역 ── */
+body{
+  font-family:'Galmuri11','DungGeunMo','Malgun Gothic',sans-serif !important;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.016) 0 2px, transparent 2px 4px),
+    radial-gradient(140% 90% at 50% -16%, #14233c 0%, #070b16 52%, #04060e 100%) fixed,
+    #04060e !important;
+  -webkit-font-smoothing:none; font-smooth:never;
+}
+button,input,select,textarea{font-family:inherit;}
+#app img,#centerPlant img,.pot-sprite img,.fsprite img{image-rendering:pixelated;}
+/* 픽셀 폰트는 굵기 표현이 약해 큰 가중치를 살짝 눌러 균일하게 */
+.modal-card h2,.space-map-head h2,.mr-outcome,#resultTitle{letter-spacing:0;}
+
+/* ── 타이틀 로고: 그라데이션 → 플랫 청록 + 하드 섀도우 ── */
+.logo{
+  font-family:'Galmuri14','Galmuri11',sans-serif;
+  background:none !important; -webkit-text-fill-color:#7df0e2; color:#7df0e2;
+  -webkit-text-stroke:0; letter-spacing:8px;
+  text-shadow:0 3px 0 #0a4d44, 0 0 22px rgba(45,212,191,.45);
+}
+.tagline{font-family:'Galmuri9','Galmuri11',sans-serif;}
+
+/* ── 공용 버튼: 각진 블록 + 하드 오프셋 섀도우 + 픽셀 프레스 ── */
+.btn{
+  border-radius:3px !important;
+  border:2px solid #2a5f74; background:#11233a; color:#dCEAF2;
+  box-shadow:3px 3px 0 var(--px-sh); font-weight:700;
+  transition:transform .05s, box-shadow .05s, filter .12s;
+}
+.btn:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--px-sh);}
+.btn.primary{
+  background:var(--neon) !important; border:2px solid #08362f; color:#042621 !important;
+  box-shadow:3px 3px 0 var(--px-sh); font-weight:800;
+}
+.btn.primary:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--px-sh);}
+.btn.ghost{background:transparent;}
+.btn.danger,.danger{background:#d0314a !important;border:2px solid #5a1020 !important;box-shadow:3px 3px 0 var(--px-sh);}
+/* 그라데이션 액션 버튼들 → 플랫 청록 블록 */
+.upbtn,.pg-btn,.np-btn.harvest,.mr-btn,.btn.equip,.match-row .mr-btn{
+  background:var(--neon) !important; color:#042621 !important;
+  border:2px solid #08362f !important; border-radius:3px !important;
+  box-shadow:3px 3px 0 var(--px-sh); font-weight:800;
+}
+.ust-buy{background:var(--gold) !important;color:#3a2c05 !important;border:2px solid #6b5212 !important;border-radius:3px !important;box-shadow:2px 2px 0 var(--px-sh);}
+.upbtn:disabled,.pg-btn:disabled,.ust-buy:disabled,.match-row .mr-btn:disabled{
+  background:#1a2b3e !important;color:#5f7282 !important;border-color:#26384c !important;box-shadow:none;
+}
+
+/* ── HUD / 상단·하단 헤더: 각진 강철 칩 통일 ── */
+.th-level,.th-coin,.th-min,.iconbtn{border-radius:3px !important;box-shadow:3px 3px 0 var(--px-sh) !important;}
+.navbtn{border-radius:3px !important;}
+.navbtn.center{border-radius:3px !important;}
+.thl-bar{border-radius:0 !important;}
+.thl-bar>i{border-radius:0 !important;}
+#btnBattle{border-radius:3px !important;}
+
+/* ── 창(모달/팝업/룸): 각진 + 2px 청록 테두리 + 굵은 하드 섀도우, 블러 제거 ── */
+.modal-card,.bsd-card,.sconf-card,.planet-popup,.region-brief-popup,
+.exhangar-card,.exdet-card,.exres-card,.expop,.nursery-pop-card,
+.ship-mod-room,.exploration-shop-room,.space-side-panel,#cardDetailModal .modal-card{
+  border-radius:4px !important;
+  border:2px solid var(--neon) !important;
+  background:#0b1626 !important;
+  box-shadow:6px 6px 0 rgba(3,8,14,.6) !important;
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+}
+.modal{ -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+/* 창 제목줄 — 밝은 hull 바(우주선 내부 패널 느낌). 전체화면 모달(상점/탐사)은 자체 헤더 사용 → 제외 */
+.modal:not(#shopModal):not(#explorationModal) .modal-card>h2{
+  font-family:'Galmuri14','Galmuri11',sans-serif;
+  margin:-18px -18px 12px !important; padding:11px 14px !important;
+  background:linear-gradient(180deg,#f4f8fa,var(--px-wall)) !important;
+  color:#10333a !important; border-bottom:2px solid var(--neon-deep) !important;
+  border-radius:2px 2px 0 0 !important; letter-spacing:0;
+}
+.planet-popup-head h3,.exhangar-card h3,.exres-card .rtitle{font-family:'Galmuri14','Galmuri11',sans-serif;}
+/* 룸 헤더 hull 바들 각지게 */
+#shopModal h2,.space-map-head,.nursery-top,#shipTopbar{border-radius:0 !important;}
+
+/* ── 카드 / 칩 / 패널 / 알약: 각진 블록 통일 ── */
+.chip,.itemcard,.skillcard,.shop-card,.consum-card,.seed-bag-card,.seed-detail-panel,
+.region-summary-card,.region-node,.stat,.stat-box,.skill-card,.trait-effect-row,
+.exploration-shop-card,.exploration-shop-tab,.ship-part-card,.ship-mod-section,
+.ship-upgrade-card,.exhangar-up,.exhangar-stat,.match-row,.tcell,.tbar,.resultcard,
+.plant-confirm-summary,.plant-instance-panel,.seed-detail-cell,.env-pill,.ship-stat,
+.howto,.generemain,.up-stat,.dcard,.pm-namerow,.region-brief-cell,.bsd-stat{
+  border-radius:3px !important;
+}
+/* 알약(둥근 정보칩) → 각진 태그 */
+.badge,.ipill,.bsd-pill,.info-badge,.seed-mini-stat,.st-pill,.seed-trait-pill,
+.plant-tab,.pm-tab,.seed-sort-btn,.nursery-res span,.resource-pill,
+.space-map-top-resources .resource-pill,.locked-tag,.mr-progress,.cd-grade{
+  border-radius:3px !important;
+}
+.plant-tabs .plant-tab,.skill-card,.skill-slot.empty{border-radius:3px !important;}
+.slot{border-radius:3px !important;}
+.drawer-mut,.drawer-skill{gap:8px;}
+.dcard{border-radius:3px !important;}
+
+/* ── 체력/경험치/생장 바: 각진 픽셀 게이지 + 플랫 채색 ── */
+.hpbar,.hpbar>div,.growthbar,.growthbar>span,.pg-bar,.pg-bar>i,
+.probbar,.probbar>span,.et-bar,.et-bar>span,.thl-bar,.thl-bar>i{
+  border-radius:0 !important;
+}
+.hpbar>div{background:#2dd4bf !important;}
+.hpbar>div.low{background:#ff6b4a !important;}
+.growthbar>span,.pg-bar>i,.probbar>span,.et-bar>span{filter:none;}
+
+/* ── 토스트 / 입력 / 슬롯: 각지게 ── */
+#toast{border-radius:3px !important;border:2px solid var(--neon) !important;box-shadow:4px 4px 0 var(--px-sh) !important;font-family:'Galmuri11',sans-serif;}
+.plant-name-input,.drawer-sort{border-radius:3px !important;}
+input[type=range]{accent-color:var(--neon);}
+
+/* 함선 내부 — 안내 박스/조작 버튼 각지게(원형 액션/디패드는 유지) */
+#shipPrompt{border-radius:3px !important;}
+.dbtn{border-radius:4px !important;}
+.ship-exit{border-radius:3px !important;}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ v2 — 홀로그램 시스템창 · 방별 분위기 · 전환 효과
+   ════════════════════════════════════════════════════════════ */
+:root{
+  --holo:#7df0e2;
+  --holo-line:rgba(125,240,226,.55);
+  --holo-fill:linear-gradient(180deg, rgba(45,212,191,.20), rgba(45,212,191,.06));
+  --holo-glow:0 0 14px rgba(45,212,191,.30);
+  --holo-scan:repeating-linear-gradient(0deg, rgba(125,240,226,.06) 0 1px, transparent 1px 3px);
+}
+
+/* ── 배경 전면 개선: 깊은 우주 + 픽셀 별 + 네뷸라 ── */
+body{
+  background:
+    radial-gradient(1.5px 1.5px at 30px 40px,  rgba(255,255,255,.95) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 110px 90px, rgba(180,240,255,.85) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 170px 30px, rgba(125,240,226,.85) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 70px 150px, rgba(255,255,255,.8)  50%, transparent 51%),
+    radial-gradient(900px 620px at 80% 4%,  rgba(64,46,128,.30), transparent 62%),
+    radial-gradient(820px 640px at 8% 96%,  rgba(18,92,108,.32), transparent 60%),
+    linear-gradient(180deg,#080d1c 0%,#05070f 58%,#03040a 100%) !important;
+  background-size:200px 200px,200px 200px,200px 200px,200px 200px,100% 100%,100% 100%,100% 100% !important;
+  background-attachment:fixed !important;
+}
+
+/* ── 홀로그램 버튼: 시스템창 느낌(반투명 청록 글래스 + 글로우 + 코너 브래킷) ── */
+.btn{
+  position:relative !important;
+  border-radius:2px !important;
+  border:1px solid var(--holo-line) !important;
+  background:var(--holo-fill) !important;
+  color:#cdfdf4 !important;
+  box-shadow:inset 0 0 0 1px rgba(45,212,191,.12), inset 0 0 16px rgba(45,212,191,.10), 0 0 14px rgba(45,212,191,.20), 0 2px 0 rgba(2,8,14,.5) !important;
+  text-shadow:0 0 6px rgba(125,240,226,.45);
+  letter-spacing:.5px;
+}
+.btn.primary{
+  border:1px solid #aef7ec !important;
+  background:linear-gradient(180deg, rgba(70,235,212,.40), rgba(45,212,191,.18)) !important;
+  color:#eafffb !important;
+  box-shadow:inset 0 0 0 1px rgba(180,255,246,.5), inset 0 0 18px rgba(125,240,226,.28), 0 0 22px rgba(45,212,191,.45), 0 2px 0 rgba(2,8,14,.5) !important;
+  text-shadow:0 0 8px rgba(180,255,246,.8);
+}
+.btn.danger,.danger{
+  border:1px solid rgba(255,150,150,.6) !important;
+  background:linear-gradient(180deg, rgba(255,90,110,.30), rgba(200,40,60,.16)) !important;
+  color:#ffd9de !important;
+  box-shadow:inset 0 0 14px rgba(255,90,110,.18), 0 0 16px rgba(255,80,100,.32), 0 2px 0 rgba(2,8,14,.5) !important;
+}
+/* 코너 브래킷 — 시스템창 시그니처 */
+.btn::before{
+  content:''; position:absolute; inset:3px; pointer-events:none; opacity:.85;
+  background:
+    linear-gradient(var(--holo),var(--holo)) left top/8px 1.5px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) left top/1.5px 8px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right top/8px 1.5px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right top/1.5px 8px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) left bottom/8px 1.5px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) left bottom/1.5px 8px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right bottom/8px 1.5px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right bottom/1.5px 8px no-repeat;
+}
+.btn:active{transform:translateY(1px) !important; box-shadow:inset 0 0 18px rgba(45,212,191,.2), 0 0 10px rgba(45,212,191,.2) !important;}
+/* 액션 버튼들도 홀로그램으로 통일 */
+.upbtn,.pg-btn,.np-btn.harvest,.mr-btn,.btn.equip,.match-row .mr-btn,#btnBattle{
+  border:1px solid #aef7ec !important;
+  background:linear-gradient(180deg, rgba(70,235,212,.42), rgba(45,212,191,.18)) !important;
+  color:#eafffb !important;
+  box-shadow:inset 0 0 0 1px rgba(180,255,246,.45), inset 0 0 16px rgba(125,240,226,.24), 0 0 20px rgba(45,212,191,.40) !important;
+  text-shadow:0 0 8px rgba(180,255,246,.7);
+}
+.ust-buy{
+  border:1px solid #ffe49a !important;
+  background:linear-gradient(180deg, rgba(255,210,90,.42), rgba(220,160,30,.2)) !important;
+  color:#fff6dd !important; text-shadow:0 0 7px rgba(255,225,140,.7);
+  box-shadow:inset 0 0 14px rgba(255,210,90,.24), 0 0 16px rgba(255,200,80,.36) !important;
+}
+
+/* ── 홀로그램 창(다이얼로그) — 반투명 청록 글래스 + 스캔라인 + 더블 프레임 ── */
+.modal-card,.bsd-card,.sconf-card,.planet-popup,.region-brief-popup,
+.exhangar-card,.exdet-card,.exres-card,.expop,.nursery-pop-card,
+.ship-mod-room,.exploration-shop-room,.space-side-panel,#cardDetailModal .modal-card,
+.region-summary-card.selected{
+  position:relative !important;
+  border:1px solid var(--holo-line) !important;
+  background:
+    var(--holo-scan),
+    linear-gradient(180deg, rgba(11,32,44,.97), rgba(7,18,28,.97)) !important;
+  box-shadow:inset 0 0 0 1px rgba(45,212,191,.16), inset 0 0 30px rgba(45,212,191,.07), 0 0 28px rgba(45,212,191,.22), 8px 8px 0 rgba(2,8,14,.55) !important;
+}
+/* 다이얼로그 제목줄 — 흰 hull 바 → 홀로그램 청록 바 */
+.modal:not(#shopModal):not(#explorationModal) .modal-card>h2{
+  background:linear-gradient(180deg, rgba(45,212,191,.26), rgba(45,212,191,.07)) !important;
+  color:#dffff9 !important; border-bottom:1px solid var(--holo-line) !important;
+  text-shadow:0 0 8px rgba(125,240,226,.6); position:relative;
+}
+
+/* ── 팝업 세로 중앙 정렬 (위/아래 쏠림 해결) — 전체화면 모달 제외 ── */
+.modal:not(#shopModal):not(#explorationModal){align-items:center !important;}
+.modal:not(#shopModal):not(#explorationModal) .modal-card{margin:auto !important;}
+/* 양육 식물 팝업 등 절대배치 백드롭형 팝업도 중앙으로 */
+.nursery-pop-card{margin:auto !important;}
+
+/* ── 식물 정보창(가운데) = 홀로그램 격리 챔버 ── */
+.main-body{position:relative;}
+.main-body::before{
+  content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(90%,360px); height:min(82%,360px); z-index:0; pointer-events:none; border-radius:3px;
+  background:
+    var(--holo-scan),
+    radial-gradient(120% 100% at 50% 0%, rgba(40,120,130,.30), rgba(8,26,36,.16) 70%, rgba(8,26,36,.05));
+  border:1px solid rgba(125,240,226,.45);
+  box-shadow:0 0 30px rgba(45,212,191,.24), inset 0 0 36px rgba(45,212,191,.10);
+}
+/* 챔버 코너 브래킷 */
+.main-body::after{
+  content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(90%,360px); height:min(82%,360px); z-index:0; pointer-events:none;
+  background:
+    linear-gradient(var(--holo),var(--holo)) left top/16px 2px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) left top/2px 16px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right top/16px 2px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right top/2px 16px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) left bottom/16px 2px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) left bottom/2px 16px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right bottom/16px 2px no-repeat,
+    linear-gradient(var(--holo),var(--holo)) right bottom/2px 16px no-repeat;
+  filter:drop-shadow(0 0 4px rgba(125,240,226,.7));
+}
+#mainStage{position:relative; z-index:1;}
+/* 좌측 스탯/정보칩 → 홀로그램 글래스 */
+.stat-box,.info-pills .ipill,.statrow .stat{
+  background:var(--holo-fill) !important;
+  border:1px solid var(--holo-line) !important;
+  box-shadow:var(--holo-glow), inset 0 0 10px rgba(45,212,191,.10) !important;
+  color:#dffff9 !important;
+}
+.stat-box .sb-v,.stat b{color:#aef7ec !important; text-shadow:0 0 6px rgba(125,240,226,.5);}
+#centerPlant .pname{color:#eafffb !important; text-shadow:0 0 10px rgba(125,240,226,.6);}
+.side-fab,.bag-fab{
+  background:var(--holo-fill) !important; border:1px solid var(--holo-line) !important;
+  box-shadow:var(--holo-glow) !important; color:#dffff9 !important; border-radius:3px !important;
+}
+
+/* ── 식물 관리 창(강화/변이/스킬) = 홀로그램 ── */
+#upgradeModal .modal-card{
+  background:
+    var(--holo-scan),
+    linear-gradient(180deg, rgba(11,34,46,.98), rgba(7,20,30,.98)) !important;
+}
+.pm-tab{background:rgba(8,24,32,.7) !important;}
+.pm-tab.active{background:linear-gradient(180deg, rgba(45,212,191,.22), rgba(45,212,191,.04)) !important; color:#aef7ec !important;}
+.up-stat,.pm-namerow,.slot,.dcard{
+  background:rgba(8,26,36,.6) !important; border:1px solid var(--holo-line) !important;
+}
+
+/* ── 떠있는 누끼 HUD/네비: 홀로그램 칩 ── */
+.th-level,.th-coin,.th-min,.iconbtn{
+  background:linear-gradient(180deg, rgba(12,34,46,.78), rgba(8,20,30,.72)) !important;
+  border:1px solid var(--holo-line) !important;
+  box-shadow:0 0 12px rgba(45,212,191,.22), 0 2px 0 rgba(2,8,14,.5) !important;
+}
+.th-coin{border-color:rgba(255,210,120,.6) !important; box-shadow:0 0 12px rgba(255,200,90,.22), 0 2px 0 rgba(2,8,14,.5) !important;}
+.navbtn{
+  background:linear-gradient(180deg, rgba(12,34,46,.82), rgba(8,20,30,.78)) !important;
+  border:1px solid var(--holo-line) !important;
+  box-shadow:0 0 12px rgba(45,212,191,.18), 0 3px 0 rgba(2,8,14,.5) !important;
+  color:#bfeee7 !important;
+}
+.navbtn.active{box-shadow:0 0 18px rgba(45,212,191,.5), 0 3px 0 rgba(2,8,14,.5) !important; border-color:#aef7ec !important; color:#eafffb !important;}
+.navbtn.center{
+  background:linear-gradient(180deg, rgba(70,235,212,.40), rgba(45,212,191,.16)) !important;
+  border:1px solid #aef7ec !important; box-shadow:0 0 22px rgba(45,212,191,.5), 0 3px 0 rgba(2,8,14,.5) !important;
+}
+.navbtn.center .nl{color:#eafffb !important;}
+
+/* ── 방(룸)별 배경색 · 분위기 ── */
+/* 상점 = 화물/시장 베이 (앰버 웜) */
+#shopModal .modal-card{
+  background:
+    repeating-linear-gradient(0deg, rgba(255,200,120,.04) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 90% at 50% 0%, #2c1d0c 0%, #1a1107 60%, #120c05 100%) !important;
+  border:none !important; box-shadow:none !important;
+}
+#shopModal h2{
+  background:linear-gradient(180deg, rgba(150,98,34,.96), rgba(86,54,18,.96)) !important;
+  color:#ffe6b0 !important; border-bottom:1px solid rgba(255,200,120,.55) !important;
+  text-shadow:0 0 8px rgba(255,200,120,.45) !important;
+}
+.shop-section,.shop-block-title,.shop-subtitle{color:#ffd089 !important;}
+/* 탐사 = 항법/함교 (인디고 딥스페이스) */
+.space-map-head{
+  background:linear-gradient(180deg, rgba(54,44,116,.94), rgba(30,24,70,.94)) !important;
+  border-bottom:1px solid rgba(150,140,255,.5) !important;
+}
+.space-map-head h2{color:#ece8ff !important; text-shadow:0 0 8px rgba(150,140,255,.5) !important;}
+.space-map-head .sub{color:#bdb6e8 !important;}
+/* 양육 = 온실/바이오돔 (그린) */
+.nursery-top{
+  background:linear-gradient(180deg, rgba(36,116,68,.95), rgba(18,68,40,.95)) !important;
+  border-bottom:1px solid rgba(120,240,170,.55) !important;
+  box-shadow:0 0 18px rgba(60,200,120,.22) !important;
+}
+.nursery-title{color:#dcffe8 !important; text-shadow:0 0 8px rgba(120,240,170,.5);}
+.nursery-res span{
+  background:rgba(16,52,32,.8) !important; border:1px solid rgba(120,240,170,.45) !important; color:#cdf3da !important;
+}
+/* 함선 = 기관실/통로 (스틸 블루) */
+#shipScreen{
+  background:
+    repeating-linear-gradient(0deg, rgba(150,190,230,.035) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(150,190,230,.03) 0 1px, transparent 1px 28px),
+    linear-gradient(180deg,#0a1322,#070d18) !important;
+}
+#shipTopbar{
+  background:linear-gradient(180deg, rgba(42,62,94,.96), rgba(22,34,56,.96)) !important;
+  border-bottom:1px solid rgba(150,190,230,.5) !important;
+}
+#shipTitle{color:#e2ecf6 !important; text-shadow:0 0 8px rgba(150,190,230,.4);}
+
+/* ── 방 전환 효과 ── */
+@keyframes roomEnter{
+  0%{opacity:0; transform:translateY(12px) scale(.99); filter:brightness(1.5) saturate(.5);}
+  55%{opacity:1;}
+  100%{opacity:1; transform:none; filter:none;}
+}
+@keyframes holoBoot{
+  0%{opacity:0;} 8%{opacity:.5;} 14%{opacity:.15;} 22%{opacity:.85;} 32%{opacity:.4;} 100%{opacity:1;}
+}
+#nurseryScreen:not(.hidden),#shipScreen:not(.hidden){animation:roomEnterFixed .42s cubic-bezier(.2,.8,.3,1) both;}
+@keyframes roomEnterFixed{
+  0%{opacity:0; transform:translateX(-50%) translateY(12px); filter:brightness(1.5) saturate(.5);}
+  55%{opacity:1;}
+  100%{opacity:1; transform:translateX(-50%); filter:none;}
+}
+#shopModal:not(.hidden) .modal-card,#explorationModal:not(.hidden) .modal-card{animation:roomEnter .42s cubic-bezier(.2,.8,.3,1) both;}
+.modal:not(#shopModal):not(#explorationModal):not(.hidden) .modal-card{animation:holoBoot .4s steps(12,end) both;}
+@media (prefers-reduced-motion:reduce){
+  #nurseryScreen,#shipScreen,.modal .modal-card{animation:none !important;}
+}
 </style>
 </head>
 <body>
@@ -1383,25 +1754,49 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   <section id="mainScreen" class="screen hidden">
     <div id="mainScene" aria-hidden="true">
       <svg viewBox="0 0 300 480" preserveAspectRatio="xMidYMid slice">
-        <polygon points="0,0 300,0 245,120 55,120" fill="#eaf0f4"/>
-        <polygon points="0,0 55,120 55,300 0,480" fill="#d6dfe6"/>
-        <polygon points="300,0 245,120 245,300 300,480" fill="#cad4dc"/>
-        <rect x="55" y="120" width="190" height="180" fill="#dfe7ed"/>
-        <polygon points="0,480 300,480 245,300 55,300" fill="#bcc8d0"/>
-        <rect x="92" y="142" width="116" height="96" rx="3" fill="#0a1726"/>
+        <defs>
+          <pattern id="tileWall" width="30" height="30" patternUnits="userSpaceOnUse">
+            <rect width="30" height="30" fill="#eef3f6"/>
+            <path d="M0 0H30M0 0V30" stroke="#ccd9e0" stroke-width="1"/>
+          </pattern>
+          <pattern id="tileFloor" width="34" height="22" patternUnits="userSpaceOnUse">
+            <rect width="34" height="22" fill="#d3dde4"/>
+            <path d="M0 0H34M0 0V22" stroke="#b3c2cb" stroke-width="1"/>
+          </pattern>
+          <radialGradient id="chamberGlow" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="mainVig" cx="50%" cy="42%" r="68%">
+            <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#04101a" stop-opacity="0.42"/>
+          </radialGradient>
+        </defs>
+        <polygon points="0,0 300,0 245,120 55,120" fill="#f3f7f9"/>
+        <polygon points="0,0 55,120 55,300 0,480" fill="#dde6ec"/>
+        <polygon points="300,0 245,120 245,300 300,480" fill="#cdd8df"/>
+        <rect x="55" y="120" width="190" height="180" fill="url(#tileWall)"/>
+        <polygon points="0,480 300,480 245,300 55,300" fill="url(#tileFloor)"/>
+        <g stroke="#c2cfd7" stroke-width="1" opacity="0.55">
+          <line x1="103" y1="0" x2="103" y2="120"/><line x1="150" y1="0" x2="150" y2="120"/><line x1="197" y1="0" x2="197" y2="120"/>
+          <line x1="42" y1="40" x2="258" y2="40"/><line x1="50" y1="80" x2="250" y2="80"/>
+        </g>
+        <rect x="92" y="142" width="116" height="96" rx="2" fill="#081320"/>
         <circle cx="150" cy="178" r="14" fill="#e9b96b"/>
         <circle cx="120" cy="210" r="2" fill="#bfe9e2"/><circle cx="186" cy="160" r="1.6" fill="#fff"/><circle cx="176" cy="220" r="1.5" fill="#bfe9e2"/><circle cx="110" cy="165" r="1.4" fill="#fff"/>
-        <g stroke="#2dd4bf" stroke-width="1.4" opacity="0.85" fill="none">
-          <rect x="92" y="142" width="116" height="96" rx="3"/>
+        <rect x="92" y="142" width="116" height="96" rx="2" fill="none" stroke="#2dd4bf" stroke-width="1.6" opacity="0.9"/>
+        <g stroke="#2dd4bf" stroke-width="1.4" opacity="0.7" fill="none">
           <line x1="55" y1="120" x2="245" y2="120"/>
+          <line x1="55" y1="300" x2="245" y2="300"/>
         </g>
-        <g stroke="#9fb2bf" stroke-width="1" opacity="0.5">
+        <g stroke="#a8b8c1" stroke-width="1" opacity="0.5">
           <line x1="55" y1="300" x2="0" y2="480"/><line x1="245" y1="300" x2="300" y2="480"/>
           <line x1="103" y1="300" x2="70" y2="480"/><line x1="197" y1="300" x2="230" y2="480"/>
           <line x1="150" y1="300" x2="150" y2="480"/>
           <line x1="78" y1="372" x2="222" y2="372"/><line x1="48" y1="430" x2="252" y2="430"/>
         </g>
-        <radialGradient id="mainVig" cx="50%" cy="44%" r="66%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.34"/></radialGradient>
+        <rect x="55" y="295" width="190" height="5" fill="#2dd4bf" opacity="0.16"/>
+        <rect x="0" y="0" width="300" height="320" fill="url(#chamberGlow)"/>
         <rect x="0" y="0" width="300" height="480" fill="url(#mainVig)"/>
       </svg>
     </div>
