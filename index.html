@@ -4030,7 +4030,7 @@ const FORM_SKILLS = {
 /* ===== 변이 카드 시스템 (변이형별 장착 카드) ===== */
 /* 카드가 자동 장착시키는 스킬. pred:true 표시는 포식 변이형 기본 스킬(DNA 카드로 강화됨). */
 const CARD_SKILLS = {
-  skill_card_predation:{ name:'포식', icon:'🦷', cost:3, kind:'attack', power:150, pred:true, desc:'포식형 기본 스킬 · 위력150 (DNA 카드로 흡혈·강탈 강화)', tag:'포식' },
+  skill_card_predation:{ name:'포식', icon:'🦷', cost:2, kind:'attack', cats:['attack'], power:90, pred:true, desc:'포식형 기본 스킬 · 위력90 · 무속성 (DNA 카드로 흡혈·강탈 강화)', tag:'포식' },
   // 무기 변이형 스킬: 에너지를 소모하지 않고, 한 경기당 사용 횟수(uses)가 정해진다. 등급이 높을수록 위력·횟수↑
   skill_card_sword:  { name:'검 베기',   icon:'⚔️', cost:0, noEnergy:true, uses:4, kind:'attack', power:160, critBonus:0.15, desc:'위력160 + 치명타 15% · 에너지 무소모', tag:'무기' },
   skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:0, noEnergy:true, uses:4, kind:'guard',  guardMult:0.32, counterPct:0.35, desc:'피해 68%↓ + 가시 반격 · 에너지 무소모', tag:'무기' },
@@ -7729,17 +7729,17 @@ function renderSeedDetail(entry){
         <h3>${entry.name || (seed && seed.name) || '알 수 없는 종자'}</h3>
         <div class="info-desc">${rainbow ? '🌈 등급·타입·속성·변이형이 모두 무작위인 미지의 종자. 심으면 정체가 드러납니다.' : seedDescription(seed)}</div>
       </div>
-      <span class="info-badge ${meta.css}">${meta.name}</span>
+      <span class="info-badge ${meta.css}">${rainbow ? '???' : meta.name}</span>
     </div>
     <div class="seed-detail-grid">
-      <div class="seed-detail-cell">희귀도<b>${meta.name}</b></div>
+      <div class="seed-detail-cell">희귀도<b>${rainbow ? '???' : meta.name}</b></div>
       <div class="seed-detail-cell">기원 행성<b>${rainbow ? '미지' : ((planet && planet.name) || entry.origin_planet || '미확인')}</b></div>
       <div class="seed-detail-cell">기원 지역<b>${rainbow ? '미지' : ((region && region.name) || entry.origin_region || '미확인')}</b></div>
       <div class="seed-detail-cell">식물 타입<b>${typeLabel}</b></div>
       <div class="seed-detail-cell">종<b>${elLabel}</b></div>
-      <div class="seed-detail-cell">기본 능력치 예상값<b>${seedBaseStatsText(seed)}</b></div>
-      <div class="seed-detail-cell">변이율 예상치<b>${seedMutationEstimate(seed, entry)}</b></div>
-      <div class="seed-detail-cell">잠재력 등급<b style="color:${GRADES[entry.grade||'C']||'#fff'}">${entry.grade || 'C'}</b></div>
+      <div class="seed-detail-cell">기본 능력치 예상값<b>${rainbow ? '???' : seedBaseStatsText(seed)}</b></div>
+      <div class="seed-detail-cell">변이율 예상치<b>${rainbow ? '???' : seedMutationEstimate(seed, entry)}</b></div>
+      <div class="seed-detail-cell">잠재력 등급<b style="color:${rainbow ? '#fff' : (GRADES[entry.grade||'C']||'#fff')}">${rainbow ? '???' : (entry.grade || 'C')}</b></div>
       <div class="seed-detail-cell">잠재력 효과<b>등급↑ = 생장 시 더 좋은 등급의 스킬 획득</b></div>
       <div class="seed-detail-cell">심기 가능 여부<b>${readiness.reason}</b></div>
     </div>
