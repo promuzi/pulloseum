@@ -1271,6 +1271,9 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:normal;}
 .dcard.skill .dc-n{color:var(--gc,var(--text));}
 .dcard .dc-v{font-size:9.5px;font-weight:800;color:var(--gc);margin-top:2px;}
+.dc-cats{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px;}
+.cat-chip{font-size:9px;line-height:1;padding:1px 3px;border-radius:4px;border:1px solid var(--cc,#888);
+  background:color-mix(in srgb, var(--cc,#888) 18%, transparent);}
 .dcard .dc-cnt{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:900;color:var(--sub);}
 .dcard .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
   display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc);
@@ -8885,6 +8888,14 @@ function skillTabHtml(p){
     ${skillDrawerHtml(p)}
     ${swapFloatHtml(p)}`;
 }
+/* 스킬 분류 색칩 — skillCats(플랜1)를 화면에 노출 */
+function skillCatChipsHtml(sk){
+  const cats = skillCats(sk); if(!cats.length) return '';
+  return `<span class="dc-cats">` + cats.map(c=>{
+    const m = CAT_META[c]; if(!m) return '';
+    return `<span class="cat-chip" style="--cc:${m.color}" title="${m.name}">${m.icon}</span>`;
+  }).join('') + `</span>`;
+}
 function skillDrawerHtml(p){
   const eq = p.equipped_skills || [];
   let bench = plantSkillPool(p).filter(id=>!eq.includes(id)).sort((a,b)=>{
@@ -8894,7 +8905,7 @@ function skillDrawerHtml(p){
   const cards = bench.length ? bench.map(id=>{
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     return `<div class="dcard skill" data-skill="${id}" style="--gc:${col}">
-      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span></div>`;
+      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span>${skillCatChipsHtml(sk)}</div>`;
   }).join('') : `<div class="drawer-empty">해금된 추가 스킬이 없습니다. 식물을 더 성장시키면 단계별로 새 스킬을 얻습니다.</div>`;
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
@@ -11374,6 +11385,12 @@ window.__test('card: common stat cores defined + typed common', function(){
   });
   __ok(cardInstanceEffects('card_muscle@C').atkPct > 0.22-0.001, 'muscle atk');
   __ok(cardInstanceEffects('card_target@C').critBonus > 0.15, 'target crit');
+});
+window.__test('cats UI: skillCatChipsHtml renders chips in-scope', function(){
+  const html = skillCatChipsHtml({kind:'attack', power:100});
+  __ok(html.indexOf('cat-chip')>=0, 'has chip element');
+  __ok(html.indexOf('🗡️')>=0, 'attack icon present');
+  __eq(skillCatChipsHtml({}), '', 'no cats → empty');
 });
 </script>
 </body>
