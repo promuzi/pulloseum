@@ -128,6 +128,32 @@ a{color:inherit;}
 .sk.isnew{background:linear-gradient(90deg, color-mix(in srgb,var(--new) 9%, transparent), transparent 60%); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:3px;}
 .sk.isnew .nm::after{content:'NEW'; font-family:var(--pix); font-size:7.5px; color:var(--void); background:var(--new); padding:1px 4px; border-radius:2px; letter-spacing:.5px;}
 .gC{color:#5fe06b;} .gB{color:#4ac6ff;} .gA{color:#b06bff;} .gS{color:#ff9a3c;} .gD{color:#e8edf3;} .gbasic{color:var(--faint);}
+.sk{cursor:pointer; border-radius:3px; margin:0 -6px; padding-left:6px; padding-right:6px;}
+.sk:hover{background:rgba(146,186,196,.06);}
+.scope{font-family:var(--pix); font-size:7.5px; letter-spacing:.3px; padding:1px 4px; border-radius:2px; border:1px solid currentColor;}
+.scope.s-type{color:#9adbe8;} .scope.s-elem{color:#ffd34a;} .scope.s-all{color:#8aa3aa;} .scope.s-unique{color:#ff8af0;}
+.sk .tap{font-family:var(--pix); font-size:8px; color:var(--faint); margin-top:3px;}
+.sk .tap em{color:var(--sub); font-style:normal;}
+.modal{position:fixed; inset:0; z-index:100; background:rgba(5,9,12,.8); backdrop-filter:blur(5px); display:none; align-items:center; justify-content:center; padding:20px;}
+.modal.open{display:flex;}
+.mbox{position:relative; background:linear-gradient(180deg,var(--panel),var(--void2)); border:1px solid var(--line2); border-radius:8px; max-width:520px; width:100%; max-height:84vh; overflow:auto; padding:22px 22px 18px; --ac:#6bdd6b;}
+.mbox::before{content:''; position:absolute; inset:0 0 auto 0; height:3px; border-radius:8px 8px 0 0; background:linear-gradient(90deg,var(--ac),transparent 75%);}
+.mclose{position:absolute; top:12px; right:14px; cursor:pointer; color:var(--faint); font-size:20px; line-height:1; background:none; border:0;}
+.mclose:hover{color:var(--ink);}
+.mhead{display:flex; gap:12px; align-items:center; padding-right:24px;}
+.mhead .mic{font-size:30px;} .mhead .mname{font-family:var(--disp); font-size:22px;}
+.mhead .mgr{font-family:var(--pix); font-size:9px; padding:1px 5px; border-radius:2px; border:1px solid currentColor; margin-left:6px;}
+.meff{font-size:13px; color:var(--sub); margin:10px 0 0;}
+.mscope{display:flex; align-items:center; gap:8px; margin:14px 0 6px; padding:10px 12px; background:var(--void2); border:1px solid var(--line); border-radius:5px; font-size:12.5px; color:var(--ink);}
+.mscope .scope{font-size:9px;}
+.mlist-h{font-family:var(--pix); font-size:9px; letter-spacing:1.5px; color:var(--faint); margin:16px 0 8px; display:flex; justify-content:space-between;}
+.orow{display:flex; align-items:center; gap:9px; padding:7px 0; border-bottom:1px solid rgba(146,186,196,.08); font-size:13px;}
+.orow:last-child{border-bottom:0;}
+.odot{width:8px; height:8px; border-radius:50%; flex:0 0 8px;}
+.oname{flex:1; font-weight:600;}
+.oleg{font-family:var(--pix); font-size:8px; color:var(--faint); border:1px solid var(--line2); padding:1px 4px; border-radius:2px;}
+.ometa{font-size:12px; color:var(--sub);}
+.ostage{font-family:var(--pix); font-size:9px; color:var(--ac); border:1px solid color-mix(in srgb,var(--ac) 40%, transparent); padding:2px 6px; border-radius:2px; white-space:nowrap;}
 
 .vars{margin-top:13px; border-top:1px solid var(--line); padding-top:11px;}
 .vars .vh{font-family:var(--pix); font-size:9px; letter-spacing:1.5px; color:var(--faint); margin-bottom:7px;}
@@ -183,6 +209,9 @@ footer b{color:var(--sub); font-family:var(--pix); font-size:10px;}
   <b>PULLOSEUM CODEX · LIVE</b> · 스탯·스킬·종 목록을 게임(index.html)에서 직접 읽어 렌더 → 게임을 업데이트하면 도감도 자동으로 같이 바뀝니다.<br>
   생장 배율 — 씨앗 0.9 · 새싹 1.0 · 유체 1.16 · 성장체 1.24 · 성체 1.32 · 완숙체 1.5. · 표시 스탯은 종 기준선(개체 유전·강화 제외).
 </footer>
+
+<!-- 스킬 상세 모달(공유 범위 + 보유 가능한 식물 목록) -->
+<div class="modal" id="skModal"><div class="mbox" id="skBox"></div></div>
 
 <!-- 게임을 데이터 전용 모드로 숨겨 로드 → window.__DEX_API에서 실제 데이터를 읽는다 -->
 <iframe id="game" src="../../index.html?dex=1" style="position:absolute;width:0;height:0;border:0;left:-9999px;" title="game-data" aria-hidden="true"></iframe>
@@ -242,7 +271,7 @@ const STAT_KEYS=['hp','atk','def','spd'];
 const STAT_LABEL={hp:'HP',atk:'공격',def:'방어',spd:'기동'};
 const CAP={hp:200,atk:55,def:50,spd:46};
 
-let API=null, GSO=null;
+let API=null, GSO=null, SKILL_OWNERS={};
 
 /* ===== 게임 데이터 → 도감 헬퍼 ===== */
 function elMeta(el){ const e=API.ELEMENTS[el]||{}; return {n:e.name||el, i:e.icon||'·', c:e.color||'#6bdd6b'}; }
@@ -263,16 +292,26 @@ function statRow(sp,key,g){
   const pct=Math.min(100, Math.round(val/CAP[key]*100));
   return `<span class="k">${STAT_LABEL[key]}</span><div class="bar"><i style="width:${pct}%"></i></div><span class="v">${val}</span>`;
 }
+function scopeInfo(id){
+  const sc = (API.dexSkillScope && API.dexSkillScope(id)) || {scope:'unique'};
+  if(sc.scope==='type') return {txt:(API.SEED_TYPE_NAMES[sc.axis]||sc.axis)+' 공유', cls:'s-type', kind:'type'};
+  if(sc.scope==='element'){ const els=sc.els||[]; return els.length===1
+    ? {txt:elMeta(els[0]).n+'속성 공유', cls:'s-elem', kind:'element', els}
+    : {txt:'여러 속성 공유', cls:'s-elem', kind:'element', els}; }
+  if(sc.scope==='universal') return {txt:'전체 공유', cls:'s-all', kind:'universal'};
+  return {txt:'개체 고유', cls:'s-unique', kind:'unique'};
+}
 function skillRow(sp,idx,id,isNew){
   const m=skillMeta(sp,idx,id);
   const cls = m.basic?'gbasic':('g'+m.grade);
   const label = m.basic?'기본':m.grade;
-  return `<div class="sk ${isNew?'isnew':''}">
+  const sc = scopeInfo(id);
+  return `<div class="sk ${isNew?'isnew':''}" data-skill="${id}">
     <div class="ic">${m.i}</div>
     <div class="body">
-      <div class="nm">${m.n} <span class="gr ${cls}">${label}</span></div>
+      <div class="nm">${m.n} <span class="gr ${cls}">${label}</span> <span class="scope ${sc.cls}">${sc.txt}</span></div>
       <div class="ef">${m.e}</div>
-      <div class="motion">▶ 모션 예정</div>
+      <div class="tap">▶ 모션 예정 · <em>탭하면 보유 가능한 식물 보기</em></div>
     </div></div>`;
 }
 function codeOf(sp){ const pfx = sp.legacy?'L':(TYPE_PREFIX[sp.seedType]||'X'); return pfx+'-'+String(EL_ORDER.indexOf(sp.element)+1).padStart(2,'0'); }
@@ -334,6 +373,13 @@ function paintCard(el, sp, idx){
 function build(){
   GSO = API.GROWTH_STAGE_ORDER;
   const all = Object.keys(API.SPECIES).map(k=>Object.assign({key:k}, API.SPECIES[k]));
+  // 스킬 → 보유 가능한 (종, 최초 해금 단계) 역색인
+  SKILL_OWNERS = {};
+  all.forEach(sp=>{
+    const first={};
+    GSO.forEach((st,idx)=>{ knownAt(sp,idx).forEach(id=>{ if(first[id]==null) first[id]=idx; }); });
+    Object.keys(first).forEach(id=>{ (SKILL_OWNERS[id]=SKILL_OWNERS[id]||[]).push({sp:sp, idx:first[id]}); });
+  });
   const codex=document.getElementById('codex'); codex.innerHTML='';
   function section(type, list, glyph, num, name, desc, tend){
     const sec=document.createElement('section');
@@ -365,8 +411,45 @@ function build(){
       st.classList.add('on'); paintCard(el, sp, +st.dataset.i);
     }));
   });
+  // 스킬 행 클릭 → 상세 모달(보유 가능한 식물 목록)
+  codex.addEventListener('click', (e)=>{ const row=e.target.closest('.sk'); if(row && row.dataset.skill) openSkillModal(row.dataset.skill); });
   buildFilters();
 }
+
+/* ===== 스킬 상세 모달 ===== */
+function openSkillModal(id){
+  const m = API.ALL_SKILLS[id]||{};
+  const sc = scopeInfo(id);
+  const basic = m.tag==='기본' || m.tag==='성장';
+  const gradeRaw = basic ? '기본' : (m.grade||'C');
+  const gradeCls = basic ? 'gbasic' : ('g'+(m.grade||'C'));
+  const scopeMsg = sc.kind==='unique' ? '이 스킬은 <b>이 개체만</b> 가집니다(고유).'
+    : sc.kind==='type' ? '같은 <b>타입</b>의 식물이 공유합니다.'
+    : sc.kind==='element' ? '같은 <b>속성</b>의 식물이 공유합니다.'
+    : '<b>모든 식물</b>이 공유합니다.';
+  const owners = (SKILL_OWNERS[id]||[]).slice().sort((a,b)=>
+    a.idx-b.idx || TYPE_ORDER.indexOf(a.sp.seedType)-TYPE_ORDER.indexOf(b.sp.seedType) || EL_ORDER.indexOf(a.sp.element)-EL_ORDER.indexOf(b.sp.element));
+  const list = owners.map(o=>{
+    const ac=elMeta(o.sp.element).c;
+    return `<div class="orow"><span class="odot" style="background:${ac}"></span>
+      <span class="oname">${o.sp.name}${o.sp.legacy?' <span class="oleg">레거시</span>':''}</span>
+      <span class="ometa">${TYPE_GLYPH[o.sp.seedType]||''} ${elMeta(o.sp.element).i}</span>
+      <span class="ostage" style="--ac:${ac}">${API.GROWTH_STAGE_NAMES[GSO[o.idx]]}부터</span></div>`;
+  }).join('') || '<div style="color:var(--faint);font-size:13px">표시할 식물이 없습니다.</div>';
+  const box=document.getElementById('skBox');
+  box.style.setProperty('--ac', sc.kind==='unique' ? '#ff8af0' : '#6bdd6b');
+  box.innerHTML = `<button class="mclose" aria-label="닫기">×</button>
+    <div class="mhead"><span class="mic">${m.icon||'·'}</span>
+      <div><span class="mname">${m.name||id}</span><span class="mgr ${gradeCls}">${gradeRaw}</span></div></div>
+    <div class="meff">${m.desc||''}</div>
+    <div class="mscope"><span class="scope ${sc.cls}">${sc.txt}</span><span>${scopeMsg}</span></div>
+    <div class="mlist-h"><span>보유 가능한 식물</span><span>${owners.length}종</span></div>
+    ${list}`;
+  document.getElementById('skModal').classList.add('open');
+}
+function closeSkillModal(){ document.getElementById('skModal').classList.remove('open'); }
+document.getElementById('skModal').addEventListener('click', (e)=>{ if(e.target.id==='skModal' || e.target.classList.contains('mclose')) closeSkillModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeSkillModal(); });
 
 /* ===== 필터 ===== */
 let curType='all', curEl='all';
