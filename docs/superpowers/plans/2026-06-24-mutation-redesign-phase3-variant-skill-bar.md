@@ -17,7 +17,7 @@
 ## 남은 슬라이스 (순서)
 - ~~**3-2 하단 바 UI(관리창):**~~ ✅ `44ac142` — 스킬 탭에 `variantSkillBarHtml`로 별개 줄 표시(읽기 전용·cats 칩). (로드아웃 중복 dedup은 3-4에서.)
 - ~~**3-3 하단 바 UI(전투):**~~ ✅ — `showCardPhase`의 hardcoded pred 분기 → `variantSkillsOf(B.p)` 일반화. `.cp-pred` auto-fit 그리드(1~2칸 자동).
-- ~~**3-4 무기형 전환:**~~ ✅ — `variantSkillsOf` `p.cards` 폴백 추가(전투 유닛 지원). `makeCombatant`에서 weapon grantSkill을 loadout 제외(variant bar로). `detailEquip`에 무기 카드 최대 2장 초과 시 토스트 차단.
+- ~~**3-4 무기형 전환:**~~ ✅ `4eff627` — `variantSkillsOf` `p.cards` 폴백 추가(전투 유닛 지원). `makeCombatant`에서 weapon grantSkill을 loadout 제외(variant bar로). `detailEquip`에 무기 카드 최대 2장 초과 시 토스트 차단.
 - **3-5 독성형 콘텐츠:** `독 묻히기`(N턴 인퓨전 버프 — 엔진: 공격 적중 시 addDot)·`독 뿌리기`(즉발 addDot ×2). 묻히기 인퓨전 플래그 엔진 추가.
 - **3-6 용족형 콘텐츠:** `비늘 강화`(guard+selfBuff·비늘 스택)·`브레스`(자기 속성 발현 공격+rider). 대부분 기존 엔진 재사용.
 - **3-7 포식 콘텐츠 조정:** 기본 포식기 위력 150→90·무속성 확정(스펙). DNA 강화 카드(predBoost 등) 매핑.
