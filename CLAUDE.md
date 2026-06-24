@@ -39,7 +39,8 @@
 - **탐사:** 아틀라스 궤도 우주맵(**11행성/3궤도**, 행성=다른 은하 공유 좌표·연료=폴드 에너지), 탐사선 개조(연료·내구·채집기·탐사장치), **행성 서식 풀(`species`)+지역 시그니처(`signature`)+테마 필터** 종 분포(`rollSpeciesFromView`), 탐사 시 시공간 폴드(차원이동) 연출 → 결과 팝업. → [exploration spec](docs/superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
 - **종자/보관:** 희귀도·보관환경, 종자 가방(최대치), 변이.
 - **식물 육성:** 생장 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 성장 경험치 → 단계별 새 스킬 해금.
-- **스킬/특성:** 식물은 속성+특성+생장단계로 스킬을 얻고, **최대 6개 로드아웃**을 장착해 전투(클래시 로얄식). 특성(20종)은 전투 패시브(재생/흡혈/반사/방깎 등) + 시그니처 스킬을 부여. 상태이상(버프/디버프/중독·출혈·화상) 엔진.
+- **스킬/특성:** 식물은 속성+특성+생장단계로 스킬을 얻고, **최대 6개 로드아웃**을 장착해 전투(클래시 로얄식). 특성(20종)은 전투 패시브(재생/흡혈/반사/방깎 등) + 시그니처 스킬을 부여. 상태이상(버프/디버프/중독·출혈·화상) 엔진. DoT 스택 상한 `DOT_STACK_CAP=4`(`addDot()`으로 추가, 초과 시 오래된 것 제거).
+- **변이 카드 시스템(2026-06-25~):** 변이형 6종(무기/포식/독성/포자/용족/일반). ⚠️ **발광(lumen) 폐지**(`rollForm` 제거, 기존분 legacy 보존). **포자형=버섯 전용**. 변이형=패시브 없음·"해당 변이 카드 장착 가능" 슬롯 게이트만. `variantSkillsOf(p)` = 하단 변이 스킬 바 단일 진실 함수. 스킬 분류(`cats`) 6종: attack/guard/buff/debuff/heal_hp/heal_energy. `TRAIT_CARDS` `fixed:true` = 등급 고정(mult=1). 같은 card_id 장착 시 등급 무관 자동 교체(중복 불가). → 설계: [mutation-forms-cards-redesign-design.md](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)
 - **전투/토너먼트:** 예선(5판3선) → 16강 → 8강 → 4강 → 결승. 우승 시 랭크 포인트로 **브론즈→실버→…→풀로세움** 승급. 토너먼트명은 생장단계+랭크로 자동 생성(예: "새싹 브론즈 토너먼트").
 - **속성 상성:** 기획서의 약점표 기준(불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불).
 - **하단 헤더(5탭):** 상점 / 탐사 / 식물·전투(중앙) / 식물양육 / 함선.
@@ -50,7 +51,7 @@
 - **세이브는 브라우저 localStorage에 저장** → PC/브라우저마다 따로. 기기 간 진행도 자동 동기화 안 됨.
 - 코드 수정 후 검증은 미리보기(preview) 도구 또는 위 로컬 서버로.
 - **테스트 러너 없음** → 회귀 검증은 콘솔 셀프테스트 `window.__catalogSelfTest()` (케이스 추가: `index.html` 끝 `window.__test('name', fn)`). 판정은 **반환값(fails 배열)**으로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남는다.
-- preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증.
+- preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증. `location.reload()`로 안 풀리면(특히 다른 세션 git 조작 후) → **`preview_stop` + `preview_start`로 서버 재시작**(새 인스턴스가 디스크 재독). SW 클리어·캐시버스트 URL로는 안 풀릴 수 있음.
 - **`preview_screenshot`는 배경 무한 애니메이션(`floaty` 등) 때문에 자주 타임아웃** → 시각 검증은 `preview_eval`로 DOM(`querySelector`·computed style)·함수 반환값을 확인하는 방식으로 대체(렌더러는 살아있음).
 
 ## 앞으로 할 만한 것 (백로그)
