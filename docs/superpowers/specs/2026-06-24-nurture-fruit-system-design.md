@@ -129,11 +129,28 @@
 
 ---
 
-## 8. 참고 (현재 코드 위치)
-- 종자 가방 렌더: `renderSeedBag()` [index.html:7563]
-- 스프라이트: `spriteFor()` [index.html:7777], `SPRITE_OVERRIDES` [index.html:7655]
-- 화분 슬롯 CSS: `.pot-slot`/`.pot-sprite`/`.pot-emoji` [index.html:1331~]
-- 기존 아이템: `levelup_potion` [index.html:2968]
-- 생장 배율: `GROWTH_STAT_MULT` [index.html:7830]
-- 세이브 마이그레이션: `normalizeState`
-- 셀프테스트: `window.__catalogSelfTest()` / `window.__test('name', fn)`
+## 8. 기존 구현과의 관계 (⚠️ 신규 구축 아님 — 개편)
+
+이미 양육(식물원) 시스템이 **부분 구현**돼 있다. 본 설계는 이를 **개편**한다.
+
+**현재(개편 전):**
+- 물/비료 = **일일 카운터**(물 20회/비료 10회, 자정 리셋 — `state.nursery_daily`).
+- 열매 = **누적 게이트**(물 10 + 비료 5 누적 → 열매 1~3개), `p.nursery.{water,fert,stage,fruitCount,fruitReady}`.
+- 열매 보상 = **스킬 박스 only**(`nurserySkillReward` — 생장단계 스킬 풀에서 1개). 수확 → `state.nursery_fruits` → 가방에서 개봉.
+
+**개편 후(본 설계):**
+- 물/비료 = **인벤토리 자원**(탐사·전투·상자 보상) + **감쇠형 활성 버프**(일일 카운터 폐기).
+- 열매 = **시간 게이지 + `maxFruits`** (누적 게이트 폐기). 맺힐 때 **희귀도 색 롤**.
+- 보상 = **5색 희귀도 → 소모품/변이카드/본인스킬**(스킬 only 폐기). **수확 후 게이지 보존.**
+- 개봉 = **공통 RewardReveal**(가방 개별 개봉 → 공통 연출로 통일).
+
+**현재 코드 위치 (개편 대상):**
+- 정규화: `ensureNurseryFields(p)` [index.html:4493], `normalizeState`/`defaultState`(`nursery_fruits` [4412/4473])
+- 상수/일일제한: `NURSERY_*` [index.html:4520~4533] (대부분 교체)
+- 양육 탭: `openNursery` [9956], `renderNurseryGrid` [9970], `openNurseryDetail` [10007]
+- 열매 로직: `checkNurseryFruitReady` [10082], `doHarvestPot` [10094]
+- 수확 가방/개봉: `openFruitBag` [10114], `clearOpenedFruits` [10146], `nurserySkillReward` [10175]
+- 스프라이트/화분: `spriteFor()` [7706], `SPRITE_OVERRIDES` [7590], `.pot-slot`/CSS [1310~1384]
+- 상자/탐사 보상(공통 연출로 흡수): 보급상자 [3504~], 탐사 보상 롤 [6726~6735]
+- 생장 배율: `GROWTH_STAT_MULT` [7759]
+- 셀프테스트: `window.__catalogSelfTest()` / `window.__test('name', fn)` [10605~]

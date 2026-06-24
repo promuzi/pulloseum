@@ -50,7 +50,8 @@
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
 | **[feature-designs.md](feature-designs.md)** | 위 8대 항목의 **구현 직전 상세 설계**(선택지별 동작·UI·데이터모델·구현방식·난이도) | 항목 확정 후 구현 직전 참조 |
 | **[handoff-next.md](handoff-next.md)** | **🔖 인계 문서** — 기기 바꿔 이어갈 때 가장 먼저 읽기(현황·선택 대기 8항목·재개 절차) | 새 세션/다른 기기 시작 시 |
-| **[superpowers/specs/2026-06-24-nurture-fruit-system-design.md](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)** | 양육/열매 시스템 설계(진행 중) — 생장·열매 2축, 환경 레버, 수확 보상 희소도, 열린 질문 | **#2 양육 — 재개 시 먼저** |
+| **[superpowers/specs/2026-06-24-nurture-fruit-system-design.md](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)** | 양육/열매 시스템 설계(✅확정) — 2축·게이지 모델·5색 희귀도·공통 RewardReveal·기존 개편 관계 | **#2 양육 설계 근거** |
+| **[superpowers/plans/2026-06-24-nurture-fruit-system.md](superpowers/plans/2026-06-24-nurture-fruit-system.md)** | 양육/열매 구현 계획(Task 1~8) — 데이터모델·게이지/보상 로직·UI·RewardReveal·연결 | **#2 양육 구현 중** |
 | **[superpowers/specs/2026-06-24-plant-individual-catalog-design.md](superpowers/specs/2026-06-24-plant-individual-catalog-design.md)** | 개체 카탈로그(A+C) 설계서 — 데이터 구조·타입 개편·마이그레이션 | #1 종 확장 설계 |
 | **[superpowers/plans/2026-06-24-plant-individual-catalog.md](superpowers/plans/2026-06-24-plant-individual-catalog.md)** | 개체 카탈로그 전환 구현 계획(Task 0~7, 완료) | #1 구현 참조 |
 
