@@ -1381,6 +1381,28 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 @keyframes fruitBob{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-3px) rotate(4deg);}}
 .pot-sparkle{position:absolute;top:14px;left:24%;font-size:14px;z-index:5;animation:fruitBob 1.8s ease-in-out infinite;}
 .nursery-empty-msg{padding:18px 16px;color:#9fd9b6;font-size:13px;text-align:center;line-height:1.5;}
+/* 열매 게이지 + 색별 열매 dot (양육 v2) */
+.pot-gauge{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin:3px 6px 1px;}
+.pot-gauge-fill{height:100%;border-radius:99px;transition:width .4s ease;}
+.pot-fruits{position:absolute;top:6px;right:6px;display:flex;gap:3px;flex-wrap:wrap;max-width:46px;justify-content:flex-end;z-index:5;}
+.pot-fruit-dot{width:11px;height:11px;border-radius:50%;background:var(--fc);border:1.5px solid #fff;box-shadow:0 0 6px var(--fc),0 0 2px var(--fc);}
+.rr-fruit-chip{width:14px;height:14px;border-radius:50%;background:var(--fc);border:2px solid #fff;box-shadow:0 0 7px var(--fc);display:inline-block;}
+/* 공통 RewardReveal 개봉 연출 */
+#rewardRevealModal .rr-stage{background:radial-gradient(120% 100% at 50% 0%,rgba(40,60,80,.6),rgba(10,16,24,.94));border:1.5px solid rgba(120,200,255,.28);border-radius:18px;padding:22px 16px;max-width:340px;width:90%;text-align:center;}
+.rr-title{font-size:15px;font-weight:900;color:#d6ffe6;margin-bottom:16px;}
+.rr-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;min-height:96px;align-items:center;}
+.rr-item{width:76px;cursor:pointer;user-select:none;}
+.rr-box{width:64px;height:64px;margin:0 auto;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:34px;animation:rrShake 1.4s ease-in-out infinite;}
+.rr-item.opened{cursor:default;}
+.rr-item.opened .rr-box{animation:rrPop .4s cubic-bezier(.2,1.5,.4,1) forwards;}
+.rr-box.fruit{border:2.5px solid var(--rc);box-shadow:0 0 12px var(--rc),inset 0 0 8px rgba(255,255,255,.2);}
+.rr-box.supply{background:linear-gradient(160deg,#caa15a,#8a6a32);border:2px solid #e8c878;}
+.rr-box.expedition{background:linear-gradient(160deg,#5a8bca,#324f8a);border:2px solid #78a8e8;}
+.rr-label{font-size:10.5px;color:#cfe9ff;margin-top:6px;min-height:26px;opacity:0;transition:opacity .3s;line-height:1.25;}
+.rr-item.opened .rr-label{opacity:1;}
+.rr-hint{font-size:11px;color:#9fd9b6;margin-top:14px;}
+@keyframes rrShake{0%,100%{transform:rotate(-4deg);}50%{transform:rotate(4deg);}}
+@keyframes rrPop{0%{transform:scale(1);}40%{transform:scale(1.35);}100%{transform:scale(1.08);}}
 /* 양육 팝업 */
 .nursery-pop-card{background:#0d2b18;border:1.5px solid rgba(120,230,170,.4);}
 .np-plant{display:flex;align-items:center;gap:12px;margin:8px 0 12px;}
@@ -2205,6 +2227,16 @@ body{letter-spacing:.2px;}
 
 <div class="modal hidden" id="nurseryPopModal">
   <div class="modal-card nursery-pop-card" id="nurseryPopBody"></div>
+</div>
+
+<!-- ===== 공통 보상 개봉 연출 (열매/보급/탐사 공용) ===== -->
+<div class="modal hidden" id="rewardRevealModal">
+  <div class="modal-card rr-stage">
+    <div class="rr-title" id="rrTitle"></div>
+    <div class="rr-row" id="rrRow"></div>
+    <div class="rr-hint" id="rrHint">상자를 눌러 여세요</div>
+    <button class="btn primary" id="rrDone" style="display:none;width:100%;margin-top:12px" onclick="closeRewardReveal()">완료</button>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -4683,6 +4715,19 @@ function harvestPot(p){
   n.lastTick = Date.now();
   return ripe.map(fr => rollFruitReward(p, fr.rarity));
 }
+
+/* 물/비료 인벤토리에서 1 소모 → 해당 식물 버프 +CARE_BUFF_PER_USE(상한 1). 투입 전 시간 반영. */
+function applyCare(p, res){
+  if(!state.care) state.care = { water:0, fert:0 };
+  if((state.care[res]||0) <= 0) return false;
+  ensureNurseryFields(p);
+  nurseryTick(p, Date.now());                 // 투입 전 경과 반영
+  state.care[res] -= 1;
+  const key = res==='water' ? 'waterBuff' : 'fertBuff';
+  p.nursery[key] = Math.min(1, p.nursery[key] + CARE_BUFF_PER_USE);
+  return true;
+}
+function grantCareReward(res, count){ if(!state.care) state.care = { water:0, fert:0 }; state.care[res] = (state.care[res]||0) + count; }
 let state = loadState();
 function syncPlayerMoney(){ state.money = state.credits; }
 
@@ -10128,7 +10173,8 @@ $('#cardDetailModal').addEventListener('click', (ev) => {
    식물원(양육) UI 함수들
    =================================================================== */
 function openNursery(){
-  (state.plants||[]).forEach(p => ensureNurseryFields(p));
+  (state.plants||[]).forEach(p => { ensureNurseryFields(p); nurseryTick(p, Date.now()); });
+  saveState();
   renderNurseryGrid();
   renderNurseryRes();
   show('#nurseryScreen');
@@ -10137,8 +10183,14 @@ function openNursery(){
 function renderNurseryRes(){
   const el = document.querySelector('#nurseryRes');
   if(!el) return;
-  const wl = nurseryWaterLeft(), fl = nurseryFertLeft();
-  el.innerHTML = `<span>💧 물 ${NURSERY_DAILY_WATER - nurseryDaily().water}/${NURSERY_DAILY_WATER}</span><span>🌿 비료 ${NURSERY_DAILY_FERT - nurseryDaily().fert}/${NURSERY_DAILY_FERT}</span>`;
+  const c = state.care || { water:0, fert:0 };
+  el.innerHTML = `<span>💧 물 ${c.water}</span><span>🌿 비료 ${c.fert}</span>`;
+}
+/* 게이지 색: 버프(물·비료 평균)↑ = 진한 청록, 꽉 참 = 붉음 */
+function nurseryGaugeColor(n, full){
+  if(full) return '#ff5a4a';
+  const buff = Math.min(1, ((n.waterBuff||0)+(n.fertBuff||0))/2);
+  return `hsl(${158 - buff*44}, ${52+buff*32}%, ${48+buff*10}%)`;
 }
 
 function renderNurseryGrid(){
@@ -10157,19 +10209,22 @@ function renderNurseryGrid(){
       if(!p){
         html += `<div class="pot-slot empty"><div class="pot-vessel"></div><div class="pot-name">빈 화분</div><div class="pot-stage">식물 없음</div></div>`;
       } else {
-        ensureNurseryFields(p);
+        ensureNurseryFields(p); nurseryTick(p, Date.now());
         const n = p.nursery;
-        const fruiting = n.stage === 'fruiting' || n.fruitReady;
         const st = seedTypeOf(p), el = p.element || 'grass';
         const sprite = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened});
-        const wPct = Math.round(Math.min(1, n.water / NURSERY_WATER_NEED)*100);
-        const fPct = Math.round(Math.min(1, n.fert / NURSERY_FERT_NEED)*100);
-        html += `<div class="pot-slot filled ${fruiting?'fruiting':''}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
+        const canFruit = nurseryMaxFruits(p) > 0;
+        const full = canFruit && n.ripe.length >= n.maxFruits;
+        const gaugePct = Math.round((full?1:n.gauge)*100);
+        const fruitDots = n.ripe.map(fr=>`<span class="pot-fruit-dot" style="--fc:${FRUIT_RARITY_COLOR[fr.rarity]||'#e6edf2'}"></span>`).join('');
+        html += `<div class="pot-slot filled ${n.ripe.length?'fruiting':''}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
           <div class="pot-vessel"></div>
-          ${fruiting?'<div class="pot-fruit" title="열매 수확 가능!">🍎</div><div class="pot-sparkle">✨</div>':''}
+          ${n.ripe.length?`<div class="pot-fruits">${fruitDots}</div>`:''}
           <div class="pot-sprite" style="animation-delay:${delay}s">${sprite}</div>
           <div class="pot-name">${plantDisplayName(p)}</div>
-          <div class="pot-stage">${growthStageName(p.growth_stage||'seed')} 💧${wPct}% 🌿${fPct}%</div>
+          ${canFruit?`<div class="pot-gauge"><div class="pot-gauge-fill" style="width:${gaugePct}%;background:${nurseryGaugeColor(n,full)}"></div></div>
+          <div class="pot-stage">${full?'🍎 꽉 참 — 수확!':(n.ripe.length?`🍎 ${n.ripe.length}/${n.maxFruits}`:`충전 ${gaugePct}%`)}</div>`
+          :`<div class="pot-stage">${growthStageName(p.growth_stage||'seed')} · 성장체부터 열매</div>`}
         </div>`;
       }
     }
@@ -10178,43 +10233,43 @@ function renderNurseryGrid(){
   if(window.hydratePixIcons) hydratePixIcons(grid);
 }
 
+const FRUIT_INSTANT_MINERAL = 5;   // 게이지 1칸 즉시 가속 비용(미네랄, 시드값)
 function openNurseryDetail(idx){
   const p = (state.plants||[])[idx];
   if(!p){ toast('화분에 식물이 없습니다'); return; }
-  ensureNurseryFields(p);
+  ensureNurseryFields(p); nurseryTick(p, Date.now());
   const n = p.nursery;
-  const fruiting = n.stage === 'fruiting' || n.fruitReady;
-  const wl = nurseryWaterLeft(), fl = nurseryFertLeft();
   const st = seedTypeOf(p), el = p.element || 'grass';
   const sprite = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened});
-  const wPct = Math.min(100, Math.round((n.water / NURSERY_WATER_NEED)*100));
-  const fPct = Math.min(100, Math.round((n.fert / NURSERY_FERT_NEED)*100));
   const elIcon = ELEMENTS[p.element] ? ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name : '';
   const formName = FORMS[p.form] ? FORMS[p.form].name : '일반 변이형';
+  const c = state.care || { water:0, fert:0 };
+  const canFruit = nurseryMaxFruits(p) > 0;
+  const full = canFruit && n.ripe.length >= n.maxFruits;
+  const gaugePct = Math.round((full?1:n.gauge)*100);
+  const fruitDots = n.ripe.map(fr=>`<span class="rr-fruit-chip" style="--fc:${FRUIT_RARITY_COLOR[fr.rarity]||'#e6edf2'}" title="${FRUIT_RARITY_NAME[fr.rarity]||''}"></span>`).join('');
   const card = document.querySelector('#nurseryDetailCard');
   card.innerHTML = `
     <div style="text-align:center;margin-bottom:10px"><span class="pot-sprite" style="display:inline-flex">${sprite}</span></div>
     <div style="font-size:16px;font-weight:900;text-align:center;color:#d6ffe6;margin-bottom:4px">${plantDisplayName(p)}</div>
     <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed')} · ${elIcon} · ${formName}</div>
-    ${fruiting ? `
-      <div style="background:rgba(255,210,90,.15);border:1.5px solid rgba(255,210,90,.5);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px">
-        <div style="font-size:28px;margin-bottom:6px">🍎</div>
-        <div style="font-weight:900;color:#ffe08a;margin-bottom:8px">열매가 익었어요!</div>
-        <button class="btn primary" onclick="doHarvestPot(${idx})" style="width:100%;background:#d4930a;border-color:#d4930a;color:#fff">🧺 수확하기 (${n.fruitCount||1}개)</button>
+    ${!canFruit ? `
+      <div style="background:rgba(120,170,120,.1);border:1px dashed rgba(120,170,120,.35);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;color:#9fd9b6;font-size:12.5px">
+        🌱 <b>성장체</b>부터 열매를 맺습니다.<br>전투·경험치로 더 키워주세요.
+      </div>` : `
+      <div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span>${full?'🍎 열매가 꽉 찼습니다':'🍎 다음 열매까지'}</span><span>${full?`${n.ripe.length}/${n.maxFruits}`:gaugePct+'%'}</span></div>
+        <div class="pot-gauge" style="height:9px"><div class="pot-gauge-fill" style="width:${gaugePct}%;background:${nurseryGaugeColor(n,full)}"></div></div>
+        ${n.ripe.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 2px">${fruitDots}</div>`:''}
       </div>
-    ` : `
-      <div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span>💧 물 (${n.water}/${NURSERY_WATER_NEED})</span><span>${wPct}%</span></div>
-        <div style="background:rgba(74,198,255,.15);border-radius:99px;height:7px;overflow:hidden;margin-bottom:8px"><div style="background:#4ac6ff;height:100%;width:${wPct}%;transition:width .3s"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span>🌿 비료 (${n.fert}/${NURSERY_FERT_NEED})</span><span>${fPct}%</span></div>
-        <div style="background:rgba(107,221,107,.15);border-radius:99px;height:7px;overflow:hidden;margin-bottom:10px"><div style="background:#6bdd6b;height:100%;width:${fPct}%;transition:width .3s"></div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <button class="btn" onclick="doWaterPot(${idx})" ${wl<=0?'disabled':''} style="padding:11px 6px;font-size:12.5px">💧 물 주기<br><small style="color:var(--sub)">${wl}회 남음</small></button>
-          <button class="btn" onclick="doFertPot(${idx})" ${fl<=0?'disabled':''} style="padding:11px 6px;font-size:12.5px">🌿 비료<br><small style="color:var(--sub)">${fl}회 남음</small></button>
-        </div>
+      ${n.ripe.length ? `<button class="btn primary" onclick="doHarvestPot(${idx})" style="width:100%;background:#d4930a;border-color:#d4930a;color:#fff;margin:8px 0">🧺 수확하기 (${n.ripe.length}개)</button>` : ''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+        <button class="btn" onclick="doWaterPot(${idx})" ${c.water<=0?'disabled':''} style="padding:11px 6px;font-size:12.5px">💧 물 주기<br><small style="color:var(--sub)">보유 ${c.water} · 속도↑</small></button>
+        <button class="btn" onclick="doFertPot(${idx})" ${c.fert<=0?'disabled':''} style="padding:11px 6px;font-size:12.5px">🌿 비료 주기<br><small style="color:var(--sub)">보유 ${c.fert} · 등급↑</small></button>
       </div>
+      ${full?'':`<button class="btn ghost" onclick="doInstantFruit(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">💎 즉시 가속 (미네랄 ${FRUIT_INSTANT_MINERAL})</button>`}
     `}
-    <div class="howto" style="font-size:11px;margin-top:8px">💧물 ${NURSERY_WATER_NEED}회 + 🌿비료 ${NURSERY_FERT_NEED}회 → 🍎열매 맺힘<br>하루 제한: 물 ${NURSERY_DAILY_WATER}회 / 비료 ${NURSERY_DAILY_FERT}회 (자정 리셋)</div>
+    <div class="howto" style="font-size:11px;margin-top:10px">💧물 = 충전 속도↑ · 🌿비료 = 등급 확률↑ (시간 지나면 효과 감소)<br>물·비료는 ⚔️전투·🛰️탐사·📦상자 보상으로 모읍니다.</div>
   `;
   show('#nurseryDetailCard');
   show('#nurseryDetailBack');
@@ -10225,63 +10280,79 @@ function closeNurseryDetail(){
   hide('#nurseryDetailBack');
 }
 
+/* ===== 공통 RewardReveal — 상자/열매를 터치해서 여는 개봉 연출 (열매·보급·탐사 공용) =====
+   items = [{ label, icon, color?, kind? }]. kind는 컨테이너 모양 결정용(fruit는 color로 테두리). */
+let _rrState = null;
+function rrContainerHtml(kind, item){
+  if(kind==='fruit'){ const c=(item&&item.color)||'#e6edf2'; return `<div class="rr-box fruit" style="--rc:${c}">🍎</div>`; }
+  if(kind==='supply') return `<div class="rr-box supply">🎁</div>`;
+  return `<div class="rr-box expedition">📦</div>`;
+}
+function openRewardReveal(opts){
+  const items = (opts && opts.items) || [];
+  if(!items.length){ if(opts && opts.onDone) opts.onDone(); return; }
+  _rrState = { kind:(opts.kind||'fruit'), items, opened:0, onDone:opts.onDone||null };
+  const titleMap = { fruit:'🍎 열매 개봉', supply:'🎁 보급 개봉', expedition:'🛰️ 탐사 결과' };
+  const t=document.querySelector('#rrTitle'); if(t) t.textContent = titleMap[_rrState.kind] || '보상 개봉';
+  const row=document.querySelector('#rrRow');
+  if(row) row.innerHTML = items.map((it,i)=>`<div class="rr-item" data-rr="${i}" onclick="rrOpenOne(${i})">${rrContainerHtml(_rrState.kind,it)}<div class="rr-label"></div></div>`).join('');
+  const hint=document.querySelector('#rrHint'); if(hint) hint.style.display='';
+  const done=document.querySelector('#rrDone'); if(done) done.style.display='none';
+  show('#rewardRevealModal');
+}
+function rrOpenOne(i){
+  if(!_rrState) return;
+  const it=_rrState.items[i];
+  const node=document.querySelector(`#rrRow .rr-item[data-rr="${i}"]`);
+  if(!it || !node || node.classList.contains('opened')) return;
+  node.classList.add('opened');
+  const box=node.querySelector('.rr-box'); if(box){ box.innerHTML = it.icon||'✨'; if(it.color) box.style.setProperty('--rc', it.color); }
+  const lab=node.querySelector('.rr-label'); if(lab) lab.textContent = it.label||'';
+  if(typeof sfx!=='undefined' && sfx.win) sfx.win();
+  _rrState.opened++;
+  if(_rrState.opened >= _rrState.items.length){
+    const hint=document.querySelector('#rrHint'); if(hint) hint.style.display='none';
+    const done=document.querySelector('#rrDone'); if(done) done.style.display='';
+  }
+}
+function closeRewardReveal(){ hide('#rewardRevealModal'); const cb=_rrState&&_rrState.onDone; _rrState=null; if(cb) cb(); }
+
 function doWaterPot(idx){
-  const p = (state.plants||[])[idx];
-  if(!p) return;
-  ensureNurseryFields(p);
-  const daily = nurseryDaily();
-  if(daily.water >= NURSERY_DAILY_WATER){ toast('오늘 물 한도 소진. 자정 리셋 후 다시!'); return; }
-  daily.water++; p.nursery.water++;
-  checkNurseryFruitReady(p);
-  saveState(); sfx.heal();
-  openNurseryDetail(idx);
-  renderNurseryGrid(); renderNurseryRes();
-  toast('💧 물을 주었습니다');
+  const p=(state.plants||[])[idx]; if(!p) return;
+  if(!applyCare(p,'water')){ toast('💧 물이 없습니다. 전투·탐사·상자로 모으세요'); return; }
+  saveState(); sfx.heal(); openNurseryDetail(idx); renderNurseryGrid(); renderNurseryRes();
+  toast('💧 물을 주었습니다 (충전 속도↑)');
 }
 
 function doFertPot(idx){
-  const p = (state.plants||[])[idx];
-  if(!p) return;
-  ensureNurseryFields(p);
-  const daily = nurseryDaily();
-  if(daily.fert >= NURSERY_DAILY_FERT){ toast('오늘 비료 한도 소진. 자정 리셋 후 다시!'); return; }
-  daily.fert++; p.nursery.fert++;
-  checkNurseryFruitReady(p);
-  saveState(); sfx.heal();
-  openNurseryDetail(idx);
-  renderNurseryGrid(); renderNurseryRes();
-  toast('🌿 비료를 주었습니다');
+  const p=(state.plants||[])[idx]; if(!p) return;
+  if(!applyCare(p,'fert')){ toast('🌿 비료가 없습니다. 전투·탐사·상자로 모으세요'); return; }
+  saveState(); sfx.heal(); openNurseryDetail(idx); renderNurseryGrid(); renderNurseryRes();
+  toast('🌿 비료를 주었습니다 (등급 확률↑)');
 }
 
-function checkNurseryFruitReady(p){
-  if(!p || !p.nursery) return;
-  const n = p.nursery;
-  if(n.stage !== 'fruiting' && n.water >= NURSERY_WATER_NEED && n.fert >= NURSERY_FERT_NEED){
-    n.stage = 'fruiting'; n.fruitReady = true;
-    n.fruitCount = 1 + Math.floor(Math.random() * 3);
-    toast(`🍎 ${plantDisplayName(p)}에 열매가 맺혔습니다! 수확하세요!`);
-  }
+function doInstantFruit(idx){
+  const p=(state.plants||[])[idx]; if(!p) return;
+  ensureNurseryFields(p); nurseryTick(p, Date.now());
+  const n=p.nursery;
+  if(nurseryMaxFruits(p)<=0){ toast('성장체부터 열매를 맺습니다'); return; }
+  if(n.ripe.length>=n.maxFruits){ toast('열매가 이미 꽉 찼습니다'); return; }
+  if(!spendMinerals(FRUIT_INSTANT_MINERAL)){ toast(`💎 미네랄이 부족합니다 (${FRUIT_INSTANT_MINERAL} 필요)`); return; }
+  n.gauge=0; n.ripe.push({ rarity: rollFruitRarity(p) });
+  if(n.ripe.length>=n.maxFruits) n.gauge=1;
+  saveState(); sfx.win(); openNurseryDetail(idx); renderNurseryGrid();
+  toast('💎 즉시 열매를 맺었습니다!');
 }
 
 function doHarvestPot(idx){
-  const p = (state.plants||[])[idx];
-  if(!p || !p.nursery || !p.nursery.fruitReady){ toast('수확할 열매가 없습니다'); return; }
-  const n = p.nursery;
-  const count = n.fruitCount || 1;
-  if(!Array.isArray(state.nursery_fruits)) state.nursery_fruits = [];
-  for(let i=0; i<count; i++){
-    state.nursery_fruits.push({
-      id: Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2),
-      plantId: p.id, plantName: plantDisplayName(p),
-      element: p.element, form: p.form, growth_stage: p.growth_stage, potential: p.potential||p.grade||'C',
-      acquired_at: new Date().toISOString(), opened: false,
-    });
-  }
-  n.water=0; n.fert=0; n.stage='growing'; n.fruitReady=false; n.fruitCount=0;
-  saveState(); sfx.win();
-  closeNurseryDetail();
-  renderNurseryGrid();
-  toast(`🧺 열매 ${count}개 수확 완료! 🍎 수확 목록에서 개봉하세요`);
+  const p=(state.plants||[])[idx];
+  if(!p) return; ensureNurseryFields(p);
+  if(!p.nursery.ripe.length){ toast('수확할 열매가 없습니다'); return; }
+  const count=p.nursery.ripe.length;
+  const rewards=harvestPot(p);
+  saveState(); sfx.win(); closeNurseryDetail(); renderNurseryGrid(); renderNurseryRes();
+  openRewardReveal({ kind:'fruit', items:rewards });
+  toast(`🧺 열매 ${count}개 수확!`);
 }
 
 function openFruitBag(){
