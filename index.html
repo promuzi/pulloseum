@@ -4123,7 +4123,7 @@ function variantSkillsOf(p){
   const out = [];
   if(form === 'pred'){ out.push('skill_card_predation'); }
   else if(form === 'weapon'){
-    (p.equipped_trait_cards||[]).forEach(key => {
+    (p.equipped_trait_cards || p.cards || []).forEach(key => {
       const def = cardDefOf(key);
       if(def && def.type === 'weapon' && def.grantSkill && out.length < 2 && !out.includes(def.grantSkill)){
         out.push(def.grantSkill);
@@ -9010,11 +9010,18 @@ function detailEquip(){
     const eq = p.equipped_trait_cards;
     if(eq.includes(key)) return;
     const id = parseCardKey(key).id;
+    const def = cardDefOf(key);
     const sameIdIdx = eq.findIndex(k => parseCardKey(k).id === id);
     if(sameIdIdx >= 0){ // 같은 카드 다른 등급 → 그 자리 교체(슬롯 증가 없음)
       eq[sameIdIdx] = key; sfx.heal(); saveState(); renderUpgrade(); renderMain();
-    } else if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
-    else { swapPending = { kind:'mut', key }; sfx.tap(); renderUpgrade(); }
+    } else {
+      if(def && def.type === 'weapon'){
+        const wCount = eq.filter(k => { const d=cardDefOf(k); return d && d.type==='weapon'; }).length;
+        if(wCount >= 2){ toast('무기 카드는 최대 2장까지만 장착할 수 있습니다'); return; }
+      }
+      if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
+      else { swapPending = { kind:'mut', key }; sfx.tap(); renderUpgrade(); }
+    }
   } else {
     if(!Array.isArray(p.equipped_skills)) p.equipped_skills = [];
     const eq = p.equipped_skills;
@@ -9571,7 +9578,12 @@ function makeCombatant(src){
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식 변이형) 포식 기본 스킬
   let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
   if((src.form||'normal') === 'pred') loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
-  CE.grantSkills.forEach(sid => loadout.push(sid));
+  const isWeaponForm = (src.form||'normal') === 'weapon';
+  CE.grantSkills.forEach(sid => {
+    // 무기형 변이에서 weapon card의 grantSkill은 하단 variant bar로 → loadout 제외
+    if(isWeaponForm && Object.values(TRAIT_CARDS).some(d => d.type==='weapon' && d.grantSkill===sid)) return;
+    loadout.push(sid);
+  });
   loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   const unit = {
     name:src.name, trainerName:src.trainerName||null, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
@@ -11438,6 +11450,13 @@ window.__test('variant: weapon form returns equipped weapon skills, max 2', func
 });
 window.__test('variant: non-bottom-bar form returns empty', function(){
   __eq(variantSkillsOf({form:'normal'}).length, 0, 'normal empty');
+});
+window.__test('variant: weapon form p.cards fallback (combat unit)', function(){
+  const p = { form:'weapon', cards:['card_sword@C','card_axe@B'] };
+  const v = variantSkillsOf(p);
+  __ok(v.includes('skill_card_sword'), 'sword from cards');
+  __ok(v.includes('skill_card_axe'), 'axe from cards');
+  __eq(v.length, 2, 'exactly 2');
 });
 window.__test('variant UI: variantSkillBarHtml renders for pred, empty for normal', function(){
   const html = variantSkillBarHtml({form:'pred'});
