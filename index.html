@@ -4091,10 +4091,13 @@ const TRAIT_CARDS = {
   // 공통 버프/디버프 — 전투 개시·상시 효과(등급 스케일)
   card_pheromone:{ id:'card_pheromone',type:'common', name:'위조 페로몬', icon:'🥀', base:{startEnemyDebuff:[{stat:'atk',pct:0.12,turns:3},{stat:'def',pct:0.12,turns:3}]}, subPool:['enemydef','spd','def','hp'] },
   card_enzyme:   { id:'card_enzyme',   type:'common', name:'약화 효소',   icon:'💢', base:{startEnemyDebuff:[{stat:'def',pct:0.12,turns:2}]}, subPool:['enemydef','atk','crit','spd'] },
+  card_phototropism:{ id:'card_phototropism', type:'common', name:'굴광 성장', icon:'✨', base:{rampStat:{stat:'atk',pct:0.05,cap:0.30}}, subPool:['atk','crit','spd','hp'] },
+  card_adrenaline:  { id:'card_adrenaline',   type:'common', name:'아드레날린', icon:'🔥', base:{thresholdBuff:{hpBelow:0.40,stat:'atk',pct:0.25}}, subPool:['atk','crit','life','spd'] },
   // 공통 무등급(fixed) — 고정 효과(등급 롤 없음)
   card_homeo:    { id:'card_homeo',    type:'common', name:'항상성',     icon:'☯️', fixed:true, base:{allStatPct:0.08}, subPool:[] },
   card_lastleaf: { id:'card_lastleaf', type:'common', name:'마지막 잎새', icon:'💗', fixed:true, base:{surviveOnce:{hpAfter:0.01}}, subPool:[] },
   card_unstable: { id:'card_unstable', type:'common', name:'불안정 변이', icon:'🎲', fixed:true, base:{startSelfRandom:0.40}, subPool:[] },
+  card_bloom:    { id:'card_bloom',    type:'common', name:'만개',       icon:'⏳', fixed:true, base:{bloom:{fromTurn:5,allPct:0.20}}, subPool:[] },
   // DNA — 포식형
   card_sap:          { id:'card_sap',          type:'dna', name:'진액 흡수',         icon:'🩸', base:{predBoost:{lifesteal:0.40}}, subPool:['life','atk','crit','hp'] },
   card_chloroabsorb: { id:'card_chloroabsorb', type:'dna', name:'엽록체 흡수',       icon:'🔋', base:{predBoost:{energySteal:1}}, subPool:['energy','atk','spd','crit'] },
@@ -4190,11 +4193,15 @@ function cardInstanceEffects(key){
   const out = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
     predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[],
-    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0 };
+    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0,
+    rampStat:null, thresholdBuff:null, bloom:null };
   if(base.allStatPct){ const v=round2(base.allStatPct*m); out.atkPct+=v; out.defPct+=v; out.spdPct+=v; } // 항상성: 공·방·속 동시
   if(base.startEnemyDebuff){ base.startEnemyDebuff.forEach(eb => out.startEnemyDebuff.push({stat:eb.stat, pct:round2(eb.pct*m), turns:eb.turns})); } // 위조페로몬·약화효소
   if(base.startSelfRandom){ out.startSelfRandom += round2(base.startSelfRandom*m); } // 불안정변이
   if(base.surviveOnce){ out.surviveChance = 1; out.surviveHpAfter = base.surviveOnce.hpAfter || 0.01; } // 마지막잎새
+  if(base.rampStat){ out.rampStat = {stat:base.rampStat.stat, pct:round2(base.rampStat.pct*m), cap:round2(base.rampStat.cap*m)}; } // 굴광성장(매턴 누적)
+  if(base.thresholdBuff){ out.thresholdBuff = {hpBelow:base.thresholdBuff.hpBelow, stat:base.thresholdBuff.stat, pct:round2(base.thresholdBuff.pct*m)}; } // 아드레날린(체력 임계)
+  if(base.bloom){ out.bloom = {fromTurn:base.bloom.fromTurn, allPct:round2(base.bloom.allPct*m)}; } // 만개(N턴째부터)
   if(base.atkPct)     out.atkPct     += round2(base.atkPct*m);
   if(base.hpPct)      out.hpPct      += round2(base.hpPct*m);
   if(base.spdPct)     out.spdPct     += round2(base.spdPct*m);
@@ -4223,7 +4230,8 @@ function cardEffects(cardKeys){
   const E = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
     predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[], skillGrades:{},
-    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0 };
+    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0,
+    rampStat:null, thresholdBuff:null, bloom:null };
   (cardKeys || []).forEach(key => {
     const ie = cardInstanceEffects(key); if(!ie) return;
     E.hpPct+=ie.hpPct; E.atkPct+=ie.atkPct; E.defPct+=ie.defPct; E.spdPct+=ie.spdPct;
@@ -4237,6 +4245,9 @@ function cardEffects(cardKeys){
     E.startSelfRandom += ie.startSelfRandom||0;
     E.surviveChance = Math.max(E.surviveChance, ie.surviveChance||0);
     E.surviveHpAfter = Math.max(E.surviveHpAfter, ie.surviveHpAfter||0);
+    if(ie.rampStat) E.rampStat = ie.rampStat;
+    if(ie.thresholdBuff) E.thresholdBuff = ie.thresholdBuff;
+    if(ie.bloom) E.bloom = ie.bloom;
   });
   return E;
 }
@@ -4266,6 +4277,9 @@ function cardEffectLabels(key){
   (ie.startEnemyDebuff||[]).forEach(eb => L.push(`전투 시작: 적 ${statName(eb.stat)} ${pc(eb.pct)}↓(${eb.turns}턴)`));
   if(ie.startSelfRandom) L.push(`전투 시작: 랜덤 스탯 +${pc(ie.startSelfRandom)}`);
   if(ie.surviveChance)   L.push(`치명상 1회 생존(체력 1)`);
+  if(ie.rampStat)        L.push(`매 턴 ${statName(ie.rampStat.stat)} +${pc(ie.rampStat.pct)} 누적(최대 +${pc(ie.rampStat.cap)})`);
+  if(ie.thresholdBuff)   L.push(`체력 ${pc(ie.thresholdBuff.hpBelow)} 이하 시 ${statName(ie.thresholdBuff.stat)} +${pc(ie.thresholdBuff.pct)}`);
+  if(ie.bloom)           L.push(`${ie.bloom.fromTurn}턴째부터 전 스탯 +${pc(ie.bloom.allPct)}`);
   return L;
 }
 function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span class="grade-badge" style="color:${g.color};border-color:${g.color}">${g.name}</span>`; }
@@ -9590,6 +9604,15 @@ function applyCardStartHooks(self, foe){
   (h.enemyDebuffs||[]).forEach(eb => foe.buffs.push({stat:eb.stat, pct:eb.pct, turns:eb.turns, kind:'debuff'}));
   if((h.selfRandom||0) > 0){ const stat=pick(['atk','def','spd']); self.buffs.push({stat, pct:h.selfRandom, turns:99, kind:'buff'}); }
 }
+/* 공통 카드 매턴 훅 — 굴광성장(누적)·아드레날린(체력 임계)·만개(N턴째부터). ramp/adren/bloom 버프를 매턴 재계산해 effStat에 반영. */
+function applyCardTurnHooks(u, turn){
+  const h = u.turnHooks; if(!h || (!h.ramp && !h.threshold && !h.bloom)) return;
+  if(h.ramp) u.rampStack = Math.min(h.ramp.cap, round2((u.rampStack||0) + h.ramp.pct)); // 매턴 누적
+  u.buffs = u.buffs.filter(b => b.kind!=='ramp' && b.kind!=='adren' && b.kind!=='bloom'); // 재계산 전 제거
+  if(h.ramp && u.rampStack>0) u.buffs.push({kind:'ramp', stat:h.ramp.stat, pct:u.rampStack, turns:99});
+  if(h.threshold && u.hp>0 && u.hp <= u.max*h.threshold.hpBelow) u.buffs.push({kind:'adren', stat:h.threshold.stat, pct:h.threshold.pct, turns:99});
+  if(h.bloom && turn >= h.bloom.fromTurn) ['atk','def','spd'].forEach(st => u.buffs.push({kind:'bloom', stat:st, pct:h.bloom.allPct, turns:99}));
+}
 function effStat(u, stat){
   let pct=0; (u.buffs||[]).forEach(b=>{ if(b.stat===stat) pct += (b.kind==='debuff'?-b.pct:b.pct); });
   const base = stat==='atk'?u.atk : stat==='def'?u.def : u.spd;
@@ -9645,7 +9668,8 @@ function makeCombatant(src){
     cardSkills:CE.skillGrades||{}, skillGrades:src.skillGrades||{}, uses:{},
     cards:(src.cards||[]).slice(),   // 변이 스킬 바(variantSkillsOf — 무기형 등) 원본 카드 보존
     startHooks:{ enemyDebuffs:(CE.startEnemyDebuff||[]), selfRandom:(CE.startSelfRandom||0) }, // 공통 카드 battle-start 훅(위조페로몬·약화효소·불안정변이)
-    loadout, skipNext:false, scaleStack:0,
+    turnHooks:{ ramp:(CE.rampStat||null), threshold:(CE.thresholdBuff||null), bloom:(CE.bloom||null) }, // 매턴 훅(굴광성장·아드레날린·만개)
+    loadout, skipNext:false, scaleStack:0, rampStack:0,
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
   // 경기당 사용 횟수(uses) 초기화 — 로드아웃 + 하단 변이 스킬 바(무기 등 로드아웃 밖) 모두
@@ -10213,6 +10237,7 @@ async function tickStatuses(u, side){
   }
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
   if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); if(u.energy>before){ statusNotes.push('에너지가 회복되었다!'); changed=true; } }
+  applyCardTurnHooks(u, (B && B.turn) || 1); // 공통 카드 매턴 훅(굴광성장·아드레날린·만개)
   if(statusNotes.length) await showEffectMessages(statusNotes);
   if(changed){ updateBars(); await sleep(480); }
 }
@@ -11542,6 +11567,32 @@ window.__test('combat: battle-start hooks apply enemy debuff + self random', fun
   const last = mk(['card_lastleaf@C']);
   __eq(last.passives.surviveChance, 1, 'survive passive set');
   __ok(last.passives.surviveOnce===true, 'survive once flag');
+});
+window.__test('card: common turn-hook cards defined + effects', function(){
+  ['card_phototropism','card_adrenaline','card_bloom'].forEach(id=> __ok(TRAIT_CARDS[id], 'missing '+id));
+  __ok(cardInstanceEffects('card_phototropism@C').rampStat, '굴광 rampStat');
+  __ok(cardInstanceEffects('card_adrenaline@C').thresholdBuff, '아드레날린 threshold');
+  __eq(cardInstanceEffects('card_bloom@S').bloom.fromTurn, 5, '만개 fromTurn(fixed)');
+});
+window.__test('combat: turn hooks — ramp accumulates, adrenaline at low hp, bloom from turn', function(){
+  const mk = cards => makeCombatant({name:'t',species:'thorn',element:'grass',grade:'C',form:'normal',
+    baseStats:{hp:100,atk:100,def:100,spd:100,acc:90,elem:0,critRate:5,critMult:1.5,energy:3},
+    loadout:['skill_basic_strike'],cards:cards});
+  // 굴광성장: 3턴 누적 → atk buff 증가, cap 적용
+  const ramp = mk(['card_phototropism@C']);
+  applyCardTurnHooks(ramp,1); applyCardTurnHooks(ramp,2); applyCardTurnHooks(ramp,3);
+  const rb = ramp.buffs.find(b=>b.kind==='ramp');
+  __ok(rb && rb.pct>0.14 && rb.pct<0.16, 'ramp 3턴 누적 ~0.15: '+(rb&&rb.pct));
+  for(let i=0;i<10;i++) applyCardTurnHooks(ramp,i); // cap
+  __ok(ramp.rampStack <= 0.30001, 'ramp cap 0.30: '+ramp.rampStack);
+  // 아드레날린: 체력 임계 이상이면 미발동, 이하면 발동
+  const adr = mk(['card_adrenaline@C']);
+  applyCardTurnHooks(adr,1); __ok(!adr.buffs.some(b=>b.kind==='adren'), 'full hp → no adren');
+  adr.hp = 30; applyCardTurnHooks(adr,2); __ok(adr.buffs.some(b=>b.kind==='adren'), 'low hp → adren');
+  // 만개: 5턴 전 미발동, 5턴부터 전스탯
+  const bl = mk(['card_bloom@C']);
+  applyCardTurnHooks(bl,4); __ok(!bl.buffs.some(b=>b.kind==='bloom'), 'turn4 → no bloom');
+  applyCardTurnHooks(bl,5); __eq(bl.buffs.filter(b=>b.kind==='bloom').length, 3, 'turn5 → 전스탯 3개');
 });
 window.__test('variant: dragon form returns scale + breath', function(){
   const v = variantSkillsOf({form:'dragon'});
