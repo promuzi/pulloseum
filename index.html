@@ -519,6 +519,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   #vsIntro .vs-enemy,#vsIntro .vs-me{transform:translateY(-50%)!important;animation:none!important;}
   #vsIntro.play .vs-tname,#vsIntro.play .vs-vs{opacity:1!important;animation:none!important;}
   .pot-sprite{animation:none!important;}
+  .explore-travel:before,.et-grid,.et-rift,.et-probe,.et-flash{animation:none!important;}
+  .explore-travel .et-rift{transform:translate(-50%,-50%) scale(1,1);opacity:.85;}
+  .explore-travel .et-grid{opacity:.2;}
 }
 
 /* ===== 진화 연출 모달 ===== */
@@ -978,22 +981,42 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   radial-gradient(circle,rgba(125,255,217,.8) 0 1px,transparent 1.8px);
   background-size:46px 46px,89px 89px;background-position:8px 13px,40px 30px;opacity:.5;animation:etstars 1.5s linear;}
 @keyframes etstars{from{background-position:120px 13px,160px 30px}to{background-position:-40px 13px,-30px 30px}}
-.et-scene{position:relative;width:min(86%,420px);height:120px;}
-.et-planet{position:absolute;right:6%;top:50%;transform:translateY(-50%);width:64px;height:64px;border-radius:50%;
-  background:var(--pc,#1fd9c4);box-shadow:0 0 26px color-mix(in srgb,var(--pc,#1fd9c4) 60%,transparent), inset -12px -14px 18px rgba(0,0,0,.4);}
-.et-probe{position:absolute;left:2%;top:50%;font-size:34px;transform:translateY(-50%);
-  animation:etfly 1.4s cubic-bezier(.5,0,.5,1) forwards;filter:drop-shadow(0 0 8px rgba(31,217,196,.7));}
-@keyframes etfly{0%{left:0%}88%{left:72%}100%{left:70%}}
-.et-trail{position:absolute;left:4%;top:50%;height:2px;width:0;transform:translateY(-50%);
-  background:linear-gradient(90deg,transparent,rgba(31,217,196,.7));animation:ettrail 1.4s ease-out forwards;}
-@keyframes ettrail{0%{width:0}90%{width:66%}100%{width:66%}}
+/* 시공간 폴드(차원 이동) 연출 — 격자 왜곡 → 균열(rift) 개방 → 탐사선 흡입 → 섬광 */
+.et-scene{position:relative;width:min(86%,420px);height:150px;perspective:520px;}
+.et-grid{position:absolute;inset:-30% -10%;background-image:
+  linear-gradient(rgba(125,240,226,.5) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(125,240,226,.5) 1px,transparent 1px);
+  background-size:30px 30px;transform-origin:50% 60%;opacity:.3;
+  animation:etwarp 1.4s cubic-bezier(.55,0,.6,1) forwards;}
+@keyframes etwarp{0%{transform:rotateX(62deg) translateY(0) scale(1);opacity:.18}
+  55%{opacity:.55}100%{transform:rotateX(62deg) translateY(-46%) scale(2.6);opacity:0}}
+.et-rift{position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle, #fff 0 8%, var(--pc,#1fd9c4) 16% 42%, transparent 66%);
+  box-shadow:0 0 40px color-mix(in srgb,var(--pc,#1fd9c4) 70%,transparent);
+  transform:translate(-50%,-50%) scale(.02,1);animation:etrift 1.42s ease-in-out forwards;}
+@keyframes etrift{0%{transform:translate(-50%,-50%) scale(.02,1);opacity:0}
+  22%{opacity:1}28%{transform:translate(-50%,-50%) scale(.06,1.05)}
+  70%{transform:translate(-50%,-50%) scale(1,1);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1.7,1.7);opacity:0}}
+.et-probe{position:absolute;left:14%;top:50%;font-size:34px;transform:translate(-50%,-50%);z-index:2;
+  animation:etfold 1.4s cubic-bezier(.5,0,.7,1) forwards;filter:drop-shadow(0 0 8px rgba(31,217,196,.7));}
+@keyframes etfold{0%{left:14%;transform:translate(-50%,-50%) scale(1) rotate(0)}
+  70%{left:50%;transform:translate(-50%,-50%) scale(.32) rotate(200deg);opacity:.95}
+  100%{left:50%;transform:translate(-50%,-50%) scale(0) rotate(380deg);opacity:0}}
+.et-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#fff 0%,transparent 55%);
+  opacity:0;pointer-events:none;animation:etflash 1.42s ease-out forwards;}
+@keyframes etflash{0%,72%{opacity:0}84%{opacity:.85}100%{opacity:0}}
 .et-text{font-size:15px;font-weight:800;color:var(--text);text-align:center;padding:0 16px;z-index:1;}
 .et-bar{width:min(70%,300px);height:7px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;z-index:1;}
 .et-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#19c8b0,#7df0e2);width:0;animation:etbar 1.45s ease-out forwards;}
 @keyframes etbar{from{width:4%}to{width:100%}}
 
 /* ===== 탐사 우주맵 (재설계) ===== */
-#explorationBody{position:relative;background:radial-gradient(120% 90% at 50% 28%, #122036 0%, #060b15 70%);}
+#explorationBody{position:relative;background:
+  radial-gradient(42% 30% at 22% 24%, rgba(125,120,255,.16), transparent 70%),
+  radial-gradient(38% 28% at 80% 70%, rgba(74,198,255,.13), transparent 72%),
+  radial-gradient(30% 24% at 64% 18%, rgba(255,107,212,.10), transparent 70%),
+  radial-gradient(120% 90% at 50% 28%, #122036 0%, #060b15 70%);}
 .exmap{position:relative;width:100%;height:100%;overflow:hidden;}
 .exmap-world{position:absolute;inset:0;transform-origin:center center;touch-action:none;will-change:transform;cursor:grab;}
 .exmap-world.dragging{cursor:grabbing;}
@@ -1081,6 +1104,17 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-tbl td{padding:9px;font-size:13px;}
 .exdet-tbl td:first-child{color:var(--sub);font-weight:700;width:34%;text-align:center;background:rgba(255,255,255,.03);border-right:1px solid rgba(255,255,255,.08);}
 .exdet-tbl td:last-child{text-align:center;font-weight:800;}
+/* 탐사 종 분포 미리보기(주요 서식종 / 지역 서식 종) */
+.exsp-block{margin:8px 0 2px;}
+.expop .exsp-block{padding:0 10px;}
+.exsp-cap{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--sub);text-transform:uppercase;margin:0 2px 4px;}
+.exsp-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+.exsp-chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:48px;}
+.exsp-ic{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);overflow:hidden;}
+.exsp-ic svg{width:30px;height:35px;}
+.exsp-chip.rare .exsp-ic{border-color:#ffd34a;box-shadow:0 0 8px rgba(255,211,74,.45);background:rgba(255,211,74,.08);}
+.exsp-nm{font-size:9px;line-height:1.15;margin-top:2px;text-align:center;color:var(--sub);max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.exsp-chip.rare .exsp-nm{color:#ffd34a;font-weight:800;}
 .exdet-empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 10px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;}
 .exdet-foot{margin-top:10px;padding-top:2px;}
 .exdet-foot .btn{width:100%;}
@@ -2168,13 +2202,13 @@ body{letter-spacing:.2px;}
     <details class="set-help">
       <summary>📖 게임 방법</summary>
       <div class="set-help-body">
-        ① 새 게임은 기본 탐사선과 소량의 크레딧으로 시작합니다. 먼저 <b>탐사</b> 버튼으로 우주맵에 가세요.<br>
-        ② 행성을 고르고, 행성 안의 지역을 고른 뒤 탐사를 출발합니다.<br>
+        ① 새 게임은 기본 탐사선과 소량의 크레딧으로 시작합니다. 먼저 <b>탐사</b> 버튼으로 우주맵(아틀라스)에 가세요. 행성은 여러 외계 문명이 다른 은하에서 발견해 공유한 <b>좌표</b>이고, 탐사선은 <b>시공간을 접어(폴드)</b> 이동합니다(연료=폴드 에너지).<br>
+        ② 행성을 고르고, 행성 안의 지역을 고른 뒤 탐사를 출발합니다. 행성마다 <b>서식 종</b>이 다르고, 지역에 따라 <b>희귀 시그니처 종</b>이 나오기도 합니다.<br>
         ③ 탐사로 얻은 종자는 🎒종자 가방에 들어가며, <b>심기</b>를 누르면 식물 개체가 됩니다.<br>
         ④ 심은 식물은 가운데 화면에 나타나고, 탭하면 강화할 수 있습니다.<br>
         ⑤ 전투는 선택한 한 마리만 출전합니다. 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
         ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 · 💧물←풀·빙결·번개 · 🌿풀←불·바람·번개 · ⚡번개←대지·빙결 · 🪨대지←풀·물 · ❄️빙결←불·대지 · 🌪️바람←대지·불<br>
-        ⑦ 토너먼트 예선 5경기 중 3승 이상이면 본선(16강→결승)에 진출, 우승 시 랭크가 브론즈→…→풀로세움으로 승급합니다.<br>
+        ⑦ 풀로세움은 모든 문명이 항구적으로 열어둔 <b>상시 개방 게이트</b>라 연료 없이 입장합니다. 토너먼트 예선 5경기 중 3승 이상이면 본선(16강→결승)에 진출, 우승 시 랭크가 브론즈→…→풀로세움으로 승급합니다.<br>
         ⑧ 상점에서 재화·보급상자를 구매해 소모품·변이 카드를 얻습니다.
       </div>
     </details>
@@ -3674,14 +3708,31 @@ function pickAcquirableSpecies(filterFn){
   for(let i=0;i<pool.length;i++){ r -= w[i]; if(r <= 0) return pool[i]; }
   return pool[pool.length-1];
 }
-/* EXPLORE_VIEW 지역(el[]·types[]) 테마에 맞춰 종을 뽑는다. 지역 정보가 없으면 완전 무작위. */
-function rollSpeciesFromView(viewRegion){
+/* 지역 전용 희귀 시그니처 종의 등장 확률(아틀라스 종 분포 — 옵션 C). */
+const SIGNATURE_CHANCE = 0.10;
+/* 종 분포(옵션 C): 행성 서식 풀(planet.species) + 지역 시그니처(region.signature)
+   + 지역 테마(el[]·types[]) 필터. 신규 필드가 없으면 기존 동작으로 안전 폴백.
+   폴백 사다리로 어떤 데이터 상태에서도 항상 1종을 반환한다(무회귀). */
+function rollSpeciesFromView(viewRegion, planet){
   const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : null;
   const typesKo = (viewRegion && viewRegion.types && viewRegion.types.length) ? viewRegion.types : null;
   const okType = typesKo ? typesKo.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
-  // 지역 테마(속성/타입)에 맞는 비-legacy 종을 희귀도 가중으로 추출
-  return pickAcquirableSpecies(s =>
-    (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0));
+  const matchTheme = s => (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0);
+  // 1) 지역 전용 시그니처 종 — 낮은 확률, 일반 풀과 섞이지 않는 별도 경로(비-legacy만)
+  const sig = ((viewRegion && viewRegion.signature) || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  if(sig.length && Math.random() < SIGNATURE_CHANCE){ return sig[Math.floor(Math.random()*sig.length)]; }
+  // 2) 행성 서식 풀(있으면) 내에서 추출
+  const planetSet = (planet && planet.species && planet.species.length)
+    ? new Set(planet.species.filter(k => SPECIES[k] && !SPECIES[k].legacy)) : null;
+  if(planetSet && planetSet.size){
+    // (a) 행성 풀 ∩ 지역 테마 필터 — 교집합이 있으면 그 안에서
+    if(Object.keys(SPECIES).some(k => planetSet.has(k) && matchTheme(SPECIES[k])))
+      return pickAcquirableSpecies(s => planetSet.has(s.key) && matchTheme(s));
+    // (b) 교집합이 비면 행성 풀 전체
+    return pickAcquirableSpecies(s => planetSet.has(s.key));
+  }
+  // (c) 풀 미지정 → 기존 동작(지역 테마 전역)
+  return pickAcquirableSpecies(matchTheme);
 }
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -6495,31 +6546,38 @@ const EX_EL_ORDER = ['fire','water','grass','earth','wind','bolt','ice'];
 const EX_TYPE_ORDER = ['목본형','화초형','다육형','덩굴형','버섯형'];
 const EX_GRADE_ORDER = ['D','C','B','A','S'];
 const EX_ORBIT_R = { 1:56, 2:100, 3:132 };
-/* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다. */
+/* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다.
+   ── 아틀라스 종 분포(옵션 C) ──
+   planet.species = 그 좌표(행성)의 서식 종 풀(key 목록·비-legacy). 지역은 el/types로 이 풀을 좁힌다.
+   region.signature = 그 지역에서만 낮은 확률로 나오는 희귀 전용종(풀에서 일부러 제외). 없으면 생략.
+   세계관: 각 행성은 여러 외계 문명이 다른 은하에서 발견해 공유한 좌표 — 폴드 점프로 이동한다. */
 const EXPLORE_VIEW = [
   { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
     cardTypes:['chloro','dna','spore'], themeNote:'생명이 풍부한 우림 — 무기는 발견되지 않고 DNA·포자·엽록체 카드가 나온다.',
-    intro:'식물이 지배하는 온화한 땅', regions:[
+    intro:'여러 문명이 시료를 공유한 우림 좌표 · 폴드 심도 1',
+    species:['flower_grass','thorn','aqua','flower_wind','spark','vine_water'], regions:[
       { name:'아르키아', el:['grass'], types:['화초형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
         desc:'완만한 초원이 끝없이 펼쳐진 지역. 기본형 종자가 가장 흔하게 발견된다.', link:'region_elyndor_spore_marsh' },
       { name:'토르시단', el:['water','bolt'], types:['화초형'], diff:2, grade:'C', cost:150, map:{x:74,y:36},
         desc:'폭풍 구름이 머무는 고지대 호수. 번개를 머금은 화초형 변이가 보고된다.', link:'region_elyndor_lumenwood' },
       { name:'루미안', el:['water','grass'], types:['화초형','덩굴형'], diff:1, grade:'D', cost:100, map:{x:48,y:66},
-        desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood' },
+        desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood', signature:['spore_cap'] },
     ]},
   { id:'ex_calisto', name:'칼리스토', orbit:1, angle:332, color:'#ffd17a',
     cardTypes:['weapon','common'], themeNote:'버려진 채굴 잔해가 흩어진 건조 지대 — 무기 카드가 발견된다.',
-    intro:'붉은 모래가 흐르는 건조 행성', regions:[
+    intro:'폐채굴 문명이 남긴 건조 좌표 · 폴드 심도 1',
+    species:['cactus_fire','gaia','flower_fire','cactus_wind'], regions:[
       { name:'세이라 분지', el:['earth','fire'], types:['다육형'], diff:3, grade:'C', cost:200, map:{x:32,y:38},
-        desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes' },
+        desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes', signature:['cactus_bolt'] },
       { name:'붉은 사구', el:['fire'], types:['다육형','화초형'], diff:2, grade:'D', cost:160, map:{x:68,y:62},
         desc:'한낮의 열기가 강한 모래언덕. 내열성 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_veloc', name:'벨로크', orbit:2, angle:48, color:'#ff8a4a', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'고대 전장의 잔해가 묻힌 용암 행성 — 무기·DNA 카드가 발견된다.',
-    intro:'화산 활동이 활발한 용암 행성', regions:[
+    intro:'고대 전장이 묻힌 용암 좌표 · 폴드 심도 2',
+    species:['tree_fire','cactus_fire','flower_fire','tree_earth','gaia'], regions:[
       { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
-        desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
+        desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift', signature:['vine_fire'] },
       { name:'흑요암 능선', el:['fire'], types:['다육형','목본형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
         desc:'굳은 용암이 만든 검은 능선. 강한 방어형 종자가 발견된다.', link:'region_vathra_iron_dunes' },
       { name:'잿빛 평원', el:['earth','fire'], types:['화초형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
@@ -6527,45 +6585,50 @@ const EXPLORE_VIEW = [
     ]},
   { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
     cardTypes:['spore','potion'], themeNote:'독성 포자가 가득한 균사 행성 — 포자·물약 카드가 발견된다.',
-    intro:'포자 안개가 가득한 균사 행성', regions:[
+    intro:'외계 생태가 공유된 균사 좌표 · 폴드 심도 2',
+    species:['flower_grass','tree_grass','thorn','flower_wind','vine_wind'], regions:[
       { name:'포자 늪', el:['grass','wind'], types:['화초형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
         desc:'공생 포자가 안개처럼 떠다니는 늪. 제어형 변이가 자주 나온다.', link:'region_elyndor_spore_marsh' },
       { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
-        desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh' },
+        desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh', signature:['spore_cap'] },
     ]},
   { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
     cardTypes:['chloro','dna','spore'], themeNote:'생체발광 정글 위성 — 무기는 없고 엽록체·DNA·포자 카드가 나온다.',
-    intro:'생체발광 정글로 뒤덮인 위성', regions:[
+    intro:'생체발광 정글 좌표 · 공유 아틀라스의 위성',
+    species:['tree_grass','tree_bolt','thorn','flower_grass','flower_wind'], regions:[
       { name:'발광 수림', el:['grass','bolt'], types:['목본형'], diff:3, grade:'B', cost:300, map:{x:28,y:36},
         desc:'스스로 빛나는 거목 군락. 광합성 계열 변이 재료가 풍부하다.', link:'region_elyndor_lumenwood' },
       { name:'덩굴 협곡', el:['grass'], types:['덩굴형','화초형'], diff:4, grade:'A', cost:360, map:{x:66,y:58},
-        desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh' },
+        desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh', signature:['vine_bolt'] },
     ]},
   { id:'ex_nereidon', name:'네레이돈', orbit:3, angle:112, color:'#4ac6ff', size:'epic', ring:true,
     cardTypes:['potion','spore','chloro'], themeNote:'심해 해양 위성 — 물약·포자·엽록체 카드가 발견된다.',
-    intro:'조석권에 갇힌 거대 해양 위성', regions:[
+    intro:'조석에 갇힌 해양 좌표 · 폴드 심도 3',
+    species:['aqua','flower_ice','flower_wind','vine_ice','cactus_water'], regions:[
       { name:'조석유리 산호초', el:['water','ice'], types:['화초형'], diff:6, grade:'A', cost:480, map:{x:30,y:34},
         desc:'유리질 산호가 조석 에너지에 맞춰 자란다. 방어막 특성이 잘 붙는다.', link:'region_nereion_tideglass_reef' },
       { name:'심해 균열', el:['water'], types:['덩굴형'], diff:7, grade:'S', cost:600, map:{x:72,y:46},
-        desc:'빛이 닿지 않는 심해의 균열. 극한 수압을 견딘 변이체가 산란한다.', link:'region_nereion_tideglass_reef' },
+        desc:'빛이 닿지 않는 심해의 균열. 극한 수압을 견딘 변이체가 산란한다.', link:'region_nereion_tideglass_reef', signature:['vine_water'] },
       { name:'궤도 캐노피', el:['water','wind'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:520, map:{x:50,y:74},
         desc:'위성 상층 대기에 떠 있는 부유 수림. 희귀 변이 종자가 모인다.', link:'region_nereion_orbit_canopy' },
     ]},
   { id:'ex_aztel', name:'아즈텔', orbit:3, angle:236, color:'#ff6bd4', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'멸망한 문명의 폐허 — 강력한 무기·DNA 카드가 발견된다.',
-    intro:'방사선 폭풍이 휘몰아치는 폐허', regions:[
+    intro:'멸망 문명의 폐허 좌표 · 방사선 폭풍',
+    species:['cactus_bolt','flower_fire','cactus_fire','flower_wind'], regions:[
       { name:'방사 폐허', el:['bolt','fire'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:32,y:38},
-        desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift' },
+        desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift', signature:['spark'] },
       { name:'전자기 늪', el:['bolt','water'], types:['화초형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
         desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
     cardTypes:['common','chloro'], themeNote:'영구 동토 행성 — 공통·엽록체 카드가 발견된다.',
-    intro:'영하의 빙하로 덮인 동토 행성', regions:[
+    intro:'은하 변경의 영구 동토 좌표 · 폴드 심도 3',
+    species:['flower_ice','cactus_ice','aqua','vine_ice'], regions:[
       { name:'빙정 평원', el:['ice','water'], types:['화초형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
         desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
       { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
-        desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
+        desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy', signature:['frost'] },
     ]},
 ];
 let exPopPlanetId = null;   // 그림2 팝업이 열린 행성
@@ -6773,6 +6836,34 @@ function exPlanetNode(p){
     <span class="explanet-label">${p.name}${locked?' 🔒':''}</span>
   </button>`;
 }
+/* 종 key → 작은 외형 칩(아이콘+이름). rare=true면 시그니처(✦희귀) 강조. */
+function exSpeciesChip(k, rare){
+  const s = SPECIES[k]; if(!s) return '';
+  const svg = composePlantSvg(s.seedType, 'juvenile', s.element, { size:26 });
+  return `<span class="exsp-chip${rare?' rare':''}" title="${s.name}${rare?' · 희귀 시그니처':''}">`
+    + `<span class="exsp-ic">${svg}</span><span class="exsp-nm">${s.name}${rare?' ✦':''}</span></span>`;
+}
+/* 행성 주요 서식종 미리보기(앞 N개). 풀 없으면 빈 문자열. */
+function exPlanetSpeciesPreview(p, n){
+  const pool = ((p && p.species) || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  if(!pool.length) return '';
+  return `<div class="exsp-block"><div class="exsp-cap">주요 서식종</div>`
+    + `<div class="exsp-row">${pool.slice(0, n||4).map(k => exSpeciesChip(k,false)).join('')}</div></div>`;
+}
+/* 지역에서 만날 수 있는 종(행성풀 ∩ 지역 el/types) + 시그니처(✦). 교집합 비면 행성 풀 전체로 표시. */
+function exRegionSpecies(p, r){
+  if(!p || !r) return '';
+  const pool = ((p.species) || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  if(!pool.length && !(r.signature||[]).length) return '';
+  const els = (r.el && r.el.length) ? r.el : null;
+  const okType = (r.types && r.types.length) ? r.types.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
+  let list = pool.filter(k => { const s = SPECIES[k]; return (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0); });
+  if(!list.length) list = pool;
+  const sig = (r.signature || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  const chips = list.slice(0, 6).map(k => exSpeciesChip(k,false)).join('') + sig.map(k => exSpeciesChip(k,true)).join('');
+  if(!chips) return '';
+  return `<div class="exsp-block"><div class="exsp-cap">서식 종${sig.length?' · ✦희귀':''}</div><div class="exsp-row">${chips}</div></div>`;
+}
 function exPopupHtml(p){
   if(!p) return '';
   const dr = exDiffRange(p);
@@ -6786,6 +6877,7 @@ function exPopupHtml(p){
         <tr><td>속성</td><td>${exElIcons(exPlanetEls(p))}</td></tr>
         <tr><td>타입</td><td>${exTypeIcons(exPlanetTypes(p))}</td></tr>
       </table>
+      ${exPlanetSpeciesPreview(p, 4)}
       <button class="btn primary expop-name" id="exPopOpen">${p.name}</button>
     </div>`;
 }
@@ -6807,6 +6899,7 @@ function exDetailHtml(p){
       <tr><td>난이도</td><td style="color:${diff.c}">${diff.t}</td></tr>
       ${(!locked && diff.idx < 5) ? `<tr><td>예상 성공률</td><td><b>${successPct}%</b></td></tr>` : ''}
     </table>
+    ${exRegionSpecies(p, r)}
     ${locked ? `<div class="howto" style="margin:8px 0 0;color:#ff8a4a">🔒 연료 탱크 부족 — 궤도 ${p.orbit}에 도달할 수 없습니다. (격납고에서 연료 탱크 강화)</div>` : ''}`
     : `<div class="exdet-empty">지도에서 지역을 선택하면<br>속성 · 타입 · 난이도가 표시됩니다.</div>`;
   const cost = r ? exRegionCost(r) : 0;
@@ -6860,7 +6953,7 @@ function exHangarHtml(){
   return `<div class="exhangar-backdrop" id="exHangarBackdrop"><div class="exhangar-card">
     <button class="btn exhangar-x" id="exHangarX">✕</button>
     <h3>🛰️ 탐사선 격납고</h3>
-    <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료 탱크를 올리면 더 먼 궤도의 행성이 열립니다.</p>
+    <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료(폴드 에너지) 탱크를 올리면 <b>더 깊은 폴드 심도</b>의 좌표가 열립니다.</p>
     <div class="exhangar-stats">${statRows}</div>
     ${upRows}
   </div></div>`;
@@ -6868,19 +6961,21 @@ function exHangarHtml(){
 function exTravelOverlay(p, done){
   const host = $('#explorationModal');
   if(!host){ done(); return; }
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
   const ov = document.createElement('div');
-  ov.className = 'explore-travel';
+  ov.className = 'explore-travel fold' + (reduce ? ' reduce' : '');
   ov.innerHTML = `
     <div class="et-scene">
-      <div class="et-trail"></div>
+      <div class="et-grid"></div>
+      <div class="et-rift" style="--pc:${p.color}"></div>
       <div class="et-probe">🛰️</div>
-      <div class="et-planet" style="--pc:${p.color}"></div>
+      <div class="et-flash"></div>
     </div>
-    <div class="et-text">${p.name} 궤도로 탐사선 이동 중…</div>
+    <div class="et-text">${p.name} 좌표로 시공간을 접는 중…</div>
     <div class="et-bar"><span></span></div>`;
   host.appendChild(ov);
   if(sfx && sfx.roll) sfx.roll();
-  setTimeout(() => { if(ov.parentNode) ov.remove(); done(); }, 1450);
+  setTimeout(() => { if(ov.parentNode) ov.remove(); done(); }, reduce ? 480 : 1450);
 }
 function exploreViewRun(){
   if(explorationBusy) return;
@@ -6910,7 +7005,7 @@ function exploreViewRun(){
         if(!seed) continue;
         const grade = exRollRewardGrade(r, p);
         const mut = Math.random() < seedMutationChance(seed, realRegion || { trait_probability_modifiers:{} });
-        const speciesKey = rollSpeciesFromView(r);
+        const speciesKey = rollSpeciesFromView(r, p);
         const entry = createExplorationSeedEntry(seed, realPlanet, realRegion, mut, grade, speciesKey);
         state.seed_inventory.push(entry);
         rewards.seeds.push(entry);
@@ -6949,7 +7044,7 @@ renderExploration = function(){
           <button class="exmap-center clickable" id="exHangarOpenBtn" title="탐사선 격납고">🛰️</button>
           ${EXPLORE_VIEW.map(exPlanetNode).join('')}
         </div>
-        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>드래그로 이동 · 휠/핀치로 확대 · 가운데 🛰️는 격납고</p></div>
+        <div class="exmap-title"><h2>🛰️ 아틀라스 — 폴드 좌표망</h2><p>다른 은하의 공유 좌표 · 드래그 이동 · 휠/핀치 확대 · 가운데 🛰️는 격납고</p></div>
         <div class="exmap-zoom">
           <button class="btn" id="exZoomIn" title="확대">＋</button>
           <button class="btn" id="exZoomOut" title="축소">－</button>
@@ -10519,7 +10614,7 @@ const SHIP_MAP = [
 ];
 // 상호작용/장식 타일. action 있으면 콘솔(Ⓐ로 발동), 없으면 장식(통과 불가).
 const SHIP_FEATURES = [
-  { x:2, y:2, icon:'⚔️', label:'토너먼트 콘솔', color:'#ff5d6c',
+  { x:2, y:2, icon:'⚔️', label:'풀로세움 게이트 (상시 개방)', color:'#ff5d6c',
     action:()=>{ closeShip(); setNavActive('home'); startBattle(); } },
   { x:10, y:2, icon:'🛰️', label:'탐사 콘솔', color:'#4db5ff',
     action:()=>exitShip(()=>{ setNavActive('explore'); openExploration(); }) },
@@ -11082,6 +11177,61 @@ window.__test('appearance: mushroom body distinct + skips cotyledon', function()
   const m1 = composePlantBody('mushroom', 1, P, 'grass');
   if(m1.indexOf('rotate(-28 49 84)') >= 0) fails.push('mushroom young stage should skip cotyledon ellipses');
   if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('explore: SIGNATURE_CHANCE is a sane probability', function(){
+  __ok(typeof SIGNATURE_CHANCE === 'number' && SIGNATURE_CHANCE > 0 && SIGNATURE_CHANCE < 1, 'SIGNATURE_CHANCE must be in (0,1)');
+});
+window.__test('explore: roll stays within planet pool ∩ region theme', function(){
+  const planet = { species:['cactus_fire','gaia','flower_fire'] };
+  const region = { el:['fire'], types:['다육형'] }; // → only cactus_fire matches both
+  for(let i=0;i<400;i++){
+    const k = rollSpeciesFromView(region, planet);
+    __ok(planet.species.indexOf(k) >= 0, 'result '+k+' must be in planet pool');
+    __ok(SPECIES[k].element==='fire' && SPECIES[k].seedType==='cactus', 'result '+k+' must match region theme');
+  }
+});
+window.__test('explore: signature is a separate low-chance path, never in normal pool', function(){
+  // frost(tree/ice)는 풀에도 없고 테마(fire/다육)와도 안 맞음 → 오직 시그니처 경로로만 등장
+  const planet = { species:['cactus_fire'] };
+  const region = { el:['fire'], types:['다육형'], signature:['frost'] };
+  let sig=0, other=0;
+  for(let i=0;i<1000;i++){
+    const k = rollSpeciesFromView(region, planet);
+    if(k==='frost') sig++;
+    else { __eq(k,'cactus_fire','non-signature result must come from pool'); other++; }
+  }
+  __ok(sig>0, 'signature species should appear sometimes');
+  __ok(other>0 && sig<1000, 'signature must NOT replace the whole pool');
+});
+window.__test('explore: empty pool∩theme falls back to planet pool (no throw)', function(){
+  const planet = { species:['cactus_fire'] };
+  const region = { el:['water'], types:['덩굴형'] }; // 교집합 없음
+  for(let i=0;i<50;i++){
+    const k = rollSpeciesFromView(region, planet);
+    __eq(k,'cactus_fire','fallback should return from planet pool');
+  }
+});
+window.__test('explore: no planet pool → legacy theme behavior', function(){
+  for(let i=0;i<100;i++){
+    const k = rollSpeciesFromView({ el:['fire'] }, null);
+    __ok(SPECIES[k] && !SPECIES[k].legacy, 'must be acquirable');
+    __eq(SPECIES[k].element,'fire','theme filter still applies without planet');
+  }
+});
+window.__test('explore: EXPLORE_VIEW species/signature keys valid + non-legacy', function(){
+  const fails=[];
+  EXPLORE_VIEW.forEach(p => {
+    (p.species||[]).forEach(k => { if(!SPECIES[k]) fails.push(p.id+' species '+k+' missing'); else if(SPECIES[k].legacy) fails.push(p.id+' species '+k+' is legacy'); });
+    (p.regions||[]).forEach(r => (r.signature||[]).forEach(k => { if(!SPECIES[k]) fails.push(p.id+'/'+r.name+' signature '+k+' missing'); else if(SPECIES[k].legacy) fails.push(p.id+'/'+r.name+' signature '+k+' is legacy'); }));
+  });
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('explore: species preview renders for a planet with a pool', function(){
+  const p = EXPLORE_VIEW.find(x => (x.species||[]).length);
+  __ok(p, 'expected at least one planet with a species pool');
+  const html = exPlanetSpeciesPreview(p, 4);
+  __ok(html && html.indexOf('exsp-chip') >= 0, 'preview should render species chips');
+  __eq(exPlanetSpeciesPreview({ species:[] }, 4), '', 'empty pool → empty preview');
 });
 </script>
 </body>
