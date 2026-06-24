@@ -2,6 +2,17 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — #2 양육/열매 시스템 구현 (게이지·5색 희귀도·공통 RewardReveal) + #1 카탈로그 복구
+> 설계 확정([spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)) → 구현([plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) Task 1~6). 셀프테스트(`__catalogSelfTest`) 전부 통과 + preview 구동 검증.
+- **#1 긴급 복구**: OneDrive 사고로 커밋 `ee6be39`에 섞여 유실됐던 개체 카탈로그 코어(`RARITY_WEIGHT`·`pickAcquirableSpecies`·`applyCatalogVariantFields`·버섯형 `TYPE_STATS`·종 rarity·`SPECIES` 카탈로그 머지/rich필드 backfill·버섯 스프라이트·`rollSpeciesFromView` 희귀도가중·`SEED_ROOT` 균사)를 `ffb44da`에서 골라 재이식. 셀프테스트 8개 실패→0.
+- **데이터 모델 v2**: `p.nursery = { gauge, maxFruits, ripe[{rarity}], lastTick, waterBuff, fertBuff, potQuality }` + `state.care{water,fert}`. 구 일일카운터/누적게이트 → `ensureNurseryFields` v2 1회 마이그레이션(무회귀).
+- **게이지 모델**: `nurseryTick`(버프 감쇠→게이지 충전→열매 맺힘 상한·게이지 보존). 성장체부터, 단계 점증(maxFruits 2/3/5·충전속도). 맺힐 때 `rollFruitRarity`로 **5색 희귀도**(흰<초록<파랑<보라<주황, 버프/단계 가중) 롤·식물에 색별 표시. 꽉 차면 게이지 붉음·정지.
+- **보상**: `rollFruitReward`(색=등급) — 흰/초록=소모품(물·비료·물약 묶음), 파랑/보라=변이카드, 주황=본인스킬(중복→크레딧)/고등급카드. `harvestPot`=맺힌 것 전부 보상화 + 게이지 보존(꽉 참은 0부터).
+- **물/비료 = 감쇠형 버프**: `applyCare`(인벤토리 1 소모→버프↑). 일일 무료 카운터 폐기. **공급원=탐사 성공 보상**(물 55%·비료 32%) — 양육 루프 자원 순환 성립.
+- **양육 UI**: 게이지 바(버프색 그라데이션/꽉참 붉음)+색별 열매 dot+보유 물/비료 버튼+💎미네랄 즉시가속(`doInstantFruit`). 수확→공통 개봉 연출.
+- **공통 RewardReveal**: `openRewardReveal({kind,items})` — 배경 위 컨테이너 터치→순차 개봉(fruit=희귀도색/supply=보급박스/expedition=탐사상자). 현재 **열매 수확에 적용**. (보급박스·탐사결과 시각 통일=후속 — 보급박스는 이미 자체 터치개봉 보유.)
+- **코드리뷰 반영**: 꽉 찬 화분 수확 후 게이지를 0.999→0으로(즉시-리필 악용 차단). `createItemInventoryEntry` planet/region null 방어.
+
 ### 2026-06-24 — 도감 스킬: 공유/고유 표시 + 클릭 시 보유 가능한 식물·해금 단계 모달
 > HANDOFF.md 미반영 기능 ① 재적용(OneDrive 사고로 되돌려졌던 코드).
 - **공유 범위 칩**: 각 스킬 행에 `타입 공유`/`속성 공유`/`전체 공유`/`개체 고유` 칩 표시. 판별은 게임의 `dexSkillScope(id)`(타입 기본공/방·타입특기 → 타입축, 속성발현·속성기·성장기 → 속성축, rally/광합성/집중/기본타격/방어 → 전체, 그 외 → 고유). `__DEX_API`에 `dexSkillScope` 노출(version `2026-06-24d`).
