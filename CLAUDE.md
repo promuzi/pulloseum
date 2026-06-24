@@ -10,7 +10,7 @@
 - 🧩 **사용자가 "수정한 index.html"을 주면 통째로 덮어쓰지 말 것.** 먼저 ① 어느 커밋 기반인지(`git log -S '<특징문자열>' -- index.html` 또는 최근 커밋들과 diff) ② 그 변경이 이미 main에 반영됐는지 확인. 구버전 기반이면 덮어쓰기=최근 비-UI 작업(종 시스템 등) 리버트. UI만 합치려면 진짜 공통조상을 base로 `git merge`(3-way)로 처리. (2026-06-24: 받은 파일 UI가 이미 main에 적용돼 있어 적용할 게 없던 사례)
 - ⚠️ **OneDrive 주의(해결됨, 2026-06-24 — 저장소 OneDrive 밖으로 이전):** 과거 OneDrive가 `.git`까지 동기화해 작업 트리 파일·HEAD가 세션 중 흔들리고 미커밋 편집이 유실되는 사고가 있었다. 다시 OneDrive 안에서 작업하게 되면, 커밋·푸시·머지 직전 `git rev-parse HEAD`·`git fetch`로 현재 상태를 재확인하고 시작 시점 스냅샷을 신뢰하지 말 것.
 - ⚠️ **여러 대화창(세션) 동시 작업 주의(2026-06-24):** 다른 Claude 세션이 같은 저장소에서 동시에 `index.html`·공용 문서(로드맵·CHANGELOG)를 편집·커밋하며 **브랜치가 세션 중 바뀔 수 있다**(예: main→feat/*). 커밋·푸시 전 `git status`·`git rev-parse --abbrev-ref HEAD`로 재확인하고 **내가 만진 파일만 선택 스테이징**(`git add <경로>`)한다. `git add -A`·전체 스테이징 금지(남의 미커밋 작업이 딸려감). 푸시 거부되면 fetch+rebase.
-- **병렬 세션 격리 → git worktree 활용:** `git worktree add 풀로세움-2 -b work-2`로 별도 폴더+브랜치 생성 → 각 세션이 독립 파일 트리에서 작업 → 머지(FF 또는 3-way)로 합침. 현재 워크트리: `C:\Users\soosa\Documents\풀로세움`(main/feat 브랜치용), `C:\Users\soosa\Documents\풀로세움-2`(병렬 작업용, work-2 브랜치). preview 서버: 풀로세움=8765, 풀로세움-2=8770.
+- **병렬 세션 격리 → git worktree 활용:** `git worktree add ../풀로세움-iso -b feat/iso`로 별도 폴더+브랜치 생성 → 각 세션이 독립 파일 트리에서 작업 → 머지(FF 또는 3-way)로 합침. 병합은 대상 브랜치 체크아웃 폴더에서 `git merge` 실행. 현재 워크트리: `C:\Users\soosa\Documents\풀로세움`(feat/* 브랜치용), `C:\Users\soosa\Documents\풀로세움-2`(main 브랜치). 워크트리 정리: `git worktree remove <경로>` → `git worktree prune` → `git branch -d <브랜치>`.
 
 ## ▶ 게임 바로 열기 (Claude에게: 매 대화 시작 시 이 링크를 항상 먼저 보여줄 것)
 - **게임 실행:** [index.html](index.html) (클릭하면 브라우저로 열림 — 현재 게임 현황 바로 확인)
@@ -53,9 +53,12 @@
 - ⚠️ **`grass`는 타입·속성 양쪽 문자열:** 타입 `grass`(=구 초본형, 폐지→화초형 흡수, 내부 폴백만 잔존)와 속성 `grass`(=풀)가 동일 문자열. 종/타입 코드에서 `'grass'` 일괄치환 금지(풀속성 깨짐). 현행 타입 5종 = 목본/화초/다육/덩굴/버섯.
 - **세이브는 브라우저 localStorage에 저장** → PC/브라우저마다 따로. 기기 간 진행도 자동 동기화 안 됨.
 - 코드 수정 후 검증은 미리보기(preview) 도구 또는 위 로컬 서버로.
-- **테스트 러너 없음** → 회귀 검증은 콘솔 셀프테스트 `window.__catalogSelfTest()` (케이스 추가: `index.html` 끝 `window.__test('name', fn)`). 판정은 **반환값(fails 배열)**으로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남는다.
+- **테스트 러너 없음** → 회귀 검증은 콘솔 셀프테스트 `window.__catalogSelfTest()` (케이스 추가: `index.html` 끝 `window.__test('name', fn)`). 판정은 `__catalogSelfTest()` **반환값(fails 배열)**으로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남는다. ⚠️ `fn` 내부에서 `return fails` 금지 — 반드시 `if(fails.length) throw new Error(fails.join(' | '))` 패턴으로 throw해야 집계됨.
 - preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증. `location.reload()`로 안 풀리면(특히 다른 세션 git 조작 후) → **`preview_stop` + `preview_start`로 서버 재시작**(새 인스턴스가 디스크 재독). SW 클리어·캐시버스트 URL로는 안 풀릴 수 있음.
 - **`preview_screenshot`는 배경 무한 애니메이션(`floaty` 등) 때문에 자주 타임아웃** → 시각 검증은 `preview_eval`로 DOM(`querySelector`·computed style)·함수 반환값을 확인하는 방식으로 대체(렌더러는 살아있음).
+- **포트 충돌 대응:** 포트 8765가 ESTABLISHED TCP 연결로 점유될 수 있음. `netstat -ano | Select-String ":포트번호 .*LISTEN"`으로 리스닝 여부 확인. 9876 등 일부는 Windows 예약 포트(preview_start에서 "reserved by OS" 에러) — 8766·8768 등 인접 포트 시도.
+- **`serve.ps1` 워크트리 루트:** `$PSScriptRoot`(스크립트 위치의 상위)를 서빙 루트로 씀. 워크트리 내용을 테스트할 때는 해당 워크트리의 `.claude/serve.ps1`을 실행해야 함(예: `풀로세움-2\.claude\serve.ps1` → 풀로세움-2 기준 서빙).
+- **PowerShell git 커밋 메시지:** bash `<<'EOF'` heredoc 사용 불가 — `@'...'@` here-string 사용: `git commit -m @'\n메시지\n'@`. 닫는 `'@`는 반드시 열 0에서 시작(들여쓰기 금지, 파서 에러 유발).
 
 ## 앞으로 할 만한 것 (백로그)
 > ⚠️ **앞으로의 방향·우선순위는 이제 [`docs/master-roadmap.md`](docs/master-roadmap.md)(유일 허브)에서 관리한다.** 아래는 요약일 뿐, 갱신은 로드맵에서 한다.
