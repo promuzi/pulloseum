@@ -28,7 +28,7 @@
 - **`index.html`** — 게임 전체가 이 한 파일에 들어 있음. CSS·JS·**게임 데이터 전부 인라인**.
   - ⚠️ 행성/지역/아이템/토너먼트 데이터는 `index.html`의 `const AlienPlantGameData = ...` 블록에 내장. (`data/alien-plant-pvp-data.js`는 참고용, 게임은 안 읽음)
   - ⚠️ **종·스킬은 별개 위치(2026-06-24~):** 종 = `SPECIES_CATALOG`(레거시 격자 `SPECIES_GRID` 위에 머지), 스킬 = `SKILL_LIB`. 종/스킬 확장은 이 둘만 수정(개체 템플릿: `spore_cap`). → [species-system-guide](docs/species-system-guide.md)
-- **`docs/dex/plant-codex.html`** — 식물 도감(카드뉴스형). 데이터 복제 없이 숨은 `<iframe src="../../index.html?dex=1">`로 게임을 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 종/스킬/스탯은 index.html만 고치면 자동 반영. `?dex=1`은 부팅·세이브·SW 생략(데이터 전용). ⚠️ `sw.js`(PWA)가 게임을 캐시하니 preview 테스트 시 옛 게임이 읽히면 서비스워커·캐시 비우기. 잔여작업: [docs/dex/HANDOFF.md](docs/dex/HANDOFF.md)
+- **`docs/dex/plant-codex.html`** — 식물 도감(카드뉴스형). 데이터 복제 없이 숨은 `<iframe src="../../index.html?dex=1">`로 게임을 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 종/스킬/스탯/**외형(절차적 SVG, `composePlantSvg`)** 은 index.html만 고치면 자동 반영(외형은 단계 리본 클릭 시 같이 자람). `?dex=1`은 부팅·세이브·SW 생략(데이터 전용). ⚠️ `sw.js`(PWA)가 게임을 캐시하니 preview 테스트 시 옛 게임이 읽히면 서비스워커·캐시 비우기. 잔여작업: [docs/dex/HANDOFF.md](docs/dex/HANDOFF.md)
 - **`data/alien-plant-pvp-data.js`** — 데이터 원본(참고용). `scripts/validate-alien-plant-data.js`로 검증 가능.
 - **`_analysis/pdf_pages/`** — 기획서 PDF를 페이지별 PNG로 변환한 것 (기획 참고용, page_01~09에 내용 있음).
 - **`바탕 화면/풀로세움 기획서.pdf`** — 원본 기획서(이 폴더 밖, 데스크탑).

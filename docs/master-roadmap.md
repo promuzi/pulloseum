@@ -186,6 +186,7 @@
 - **2026-06-24** — **OneDrive 동기화 사고:** 저장소가 OneDrive 폴더 안이라, 작업 중 OneDrive가 다른 기기 사본을 작업 트리에 덮어써 미커밋 편집(양육 스펙·로드맵 갱신)이 유실·혼합됨. 복구 후 재커밋. **재발 방지: 작업 중 OneDrive 일시정지, 근본은 저장소를 OneDrive 바깥으로 이전.** CLAUDE.md에 주의 추가.
 - **2026-06-24** — **9대 항목 재확인 + 신규 방향 추가:** 사용자 기준 작업 목록 반영 → #10 전투 화면 UI 수정, #11 시작화면 수정, #12 종자 가방 창 + 식물/화분 분리 신설. #4 함선은 **오픈월드화** 방향 추가. **식물 스킬/변이/스탯/디자인 콘텐츠는 사용자가 별도 구상 후 진행**(브레인스토밍/구현은 시스템·UI 구조부터). (#1·#4·#10·#11·#12)
 - **2026-06-24** — **새싹·유체 스킬을 타입 축/속성 축 공유 체계로 재설계(`STAGE_SKILLS`).** 개체 고유 없이 타입(기본공격·기본방어·타입특기)+속성(속성발현) 공유, 유체 속성심화는 기존 속성기 재사용. 성장체 이상은 후속 재설계 보류. 설계서 = [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md). (#1)
+- **2026-06-24** — **도감 카드에 실제 식물 외형 표시.** `__DEX_API`에 `composePlantSvg` 노출(version `2026-06-24c`) → 도감이 글리프 플레이스홀더 대신 게임의 절차적 SVG(타입×속성×생장단계, 화분 포함)를 렌더. 단계 리본 클릭 시 외형도 같이 자람(`paintSprite`). 게임 외형을 고치면 도감 자동 반영.
 - **2026-06-24** — **도감 라이브 연동 + PWA.** `docs/dex/plant-codex.html`이 게임을 숨은 iframe(`index.html?dex=1`)으로 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 게임 업데이트 자동 반영(수동 갱신 폐기). `?dex=1` 데이터 전용 모드(부팅·세이브 생략)로 세이브 무손상. `sw.js`(PWA) 추가. 호스팅(GitHub Pages)은 사용자가 Settings→Pages 1회 토글. 설계서 = [`superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md`](superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md).
 
 ---

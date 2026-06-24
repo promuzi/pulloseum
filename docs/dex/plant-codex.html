@@ -81,8 +81,9 @@ a{color:inherit;}
 
 .chead{display:flex; gap:14px; align-items:flex-start;}
 .sprite{flex:0 0 84px; width:84px; height:84px; border:1px solid var(--line2); border-radius:4px;
-  display:flex; align-items:center; justify-content:center; position:relative;
+  display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
   background:radial-gradient(circle at 50% 38%, color-mix(in srgb,var(--ac) 26%, transparent), transparent 70%), var(--void);}
+.sprite svg{display:block;}
 .sprite .sil{font-size:40px; filter:drop-shadow(0 0 10px color-mix(in srgb,var(--ac) 60%, transparent));}
 .sprite .ph{position:absolute; bottom:3px; left:0; right:0; text-align:center;
   font-family:var(--pix); font-size:7.5px; color:var(--faint); letter-spacing:.5px;}
@@ -167,7 +168,7 @@ footer b{color:var(--sub); font-family:var(--pix); font-size:10px;}
     </div>
     <div class="note">
       <span class="tag">예정</span>
-      <span>도트 스프라이트와 스킬별 모션 애니메이션은 추후 적용됩니다. 외형 칸과 스킬의 <b style="color:var(--faint)">「▶ 모션 예정」</b>은 자리만 잡아둔 플레이스홀더입니다. · <b style="color:var(--faint)">스탯·스킬·종 목록은 게임에서 실시간으로 읽어옵니다.</b></span>
+      <span>외형 칸은 게임의 실제 외형(절차적 SVG)을 단계별로 보여줍니다 — <b style="color:var(--faint)">단계 리본을 누르면 외형도 같이 자랍니다.</b> 도트 스프라이트 교체와 스킬별 모션(<b style="color:var(--faint)">「▶ 모션 예정」</b>)은 추후 적용됩니다. · <b style="color:var(--faint)">외형·스탯·스킬·종 목록은 모두 게임에서 실시간으로 읽어옵니다.</b></span>
     </div>
   </div>
 </section>
@@ -282,7 +283,7 @@ function card(sp){
   return `<article class="card ${sp.legacy?'legacy':''}" data-key="${sp.key}" data-type="${sp.seedType}" data-el="${sp.element}" style="--ac:${ac}">
     <span class="brk tl"></span><span class="brk tr"></span><span class="brk bl"></span><span class="brk br"></span>
     <div class="chead">
-      <div class="sprite"><span class="sil">${TYPE_GLYPH[sp.seedType]||'🌱'}</span><span class="ph">도트 예정</span></div>
+      <div class="sprite" data-sprite><span class="sil">${TYPE_GLYPH[sp.seedType]||'🌱'}</span></div>
       <div class="cmeta">
         <div class="code">${codeOf(sp)}</div>
         <div class="cname">${sp.name}</div>
@@ -302,8 +303,16 @@ function card(sp){
   </article>`;
 }
 
+function paintSprite(el, sp, idx){
+  const box=el.querySelector('[data-sprite]'); if(!box) return;
+  if(API.composePlantSvg){
+    try{ box.innerHTML = API.composePlantSvg(sp.seedType, GSO[idx], sp.element, {size:68}); return; }catch(e){}
+  }
+  box.innerHTML = `<span class="sil">${TYPE_GLYPH[sp.seedType]||'🌱'}</span>`;
+}
 function paintCard(el, sp, idx){
   const g=API.GROWTH_STAT_MULT[GSO[idx]]||1;
+  paintSprite(el, sp, idx);
   el.querySelector('[data-stats]').innerHTML = STAT_KEYS.map(k=>statRow(sp,k,g)).join('');
   const sk=el.querySelector('[data-skills]');
   if(idx===0){
