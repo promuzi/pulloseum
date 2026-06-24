@@ -38,12 +38,14 @@
 
 ## 구현된 시스템 (기획서 기반)
 - **탐사:** 아틀라스 궤도 우주맵(**11행성/3궤도**, 행성=다른 은하 공유 좌표·연료=폴드 에너지), 탐사선 개조(연료·내구·채집기·탐사장치), **행성 서식 풀(`species`)+지역 시그니처(`signature`)+테마 필터** 종 분포(`rollSpeciesFromView`), 탐사 시 시공간 폴드(차원이동) 연출 → 결과 팝업. → [exploration spec](docs/superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
-- **종자/보관:** 희귀도·보관환경, 종자 가방(최대치), 변이.
+- **종자/보관:** 희귀도·보관환경, 종자 가방(최대치), 변이. 가방 UI는 **단순화(2026-06-25)** — 상세 패널 폐기, 카드 한 줄에 속성·희귀도·타입·잠재력 칩 + 미니 심기/판매 버튼(`renderSeedBagCard`). 무지개 종자는 심기 전 정보 전부 `???`.
 - **식물 육성:** 생장 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 성장 경험치 → 단계별 새 스킬 해금.
 - **양육/열매 시스템(2026-06-24~):** 양육 탭에서 시간 게이지(방치형) 방식으로 열매 맺기. 성장체 이상 단계부터 활성화, 게이지 가득 차면 1개씩 최대치까지 맺힘. 5색 희귀도(흰<초록<파랑<보라<주황). 물/비료 버프로 속도 가속. 낙엽 상태(시듦)면 물 트리클 생성. 전투 승리 시 물/비료 공급. `harvestAllPots()` 전체 수확. 공통 개봉 연출 `openRewardReveal`. 양육 뱃지(`nurseryNavDot`)로 수확 가능 알림.
-- **수집 화분(2026-06-24~):** 5종(`pot_terra`흰→`pot_ceramic`초록→`pot_glass`파랑→`pot_crystal`보라→`pot_gold`주황). 각각 충전속도·최대열매Δ·등급확률 보너스 부여. 영구 해금 모델(`state.pot_inventory = {potId:true}`). 양육 칸 = 식물 레이어(`composePlantSvg({noPot:true})`) + 화분 레이어(`potVisual(potId)`) 합성(#12·#3 진입점). 상점 구매·탐사 성공·열매 보상으로 획득. `POT_SPRITE_OVERRIDES` = 도트화 훅(비어있음).
+- **수집 화분(2026-06-24~):** 5종(`pot_terra`테라코타→`pot_ceramic`도자기→`pot_glass`유리→`pot_crystal`크리스탈→`pot_gold`황금). `POT_CATALOG`·`potOf(p)`. 각각 충전속도·최대열매Δ·등급확률 보너스. 영구 해금(`state.pot_inventory={potId:true}`, 테라코타 기본). 획득=상점 크레딧/탐사 드롭, 중복→크레딧150 환급. **식물/화분 시각 분리 구현됨:** `composePlantSvg(...,{noPot:true})`(화분 3요소 스킵) + `potVisual(potId)`(화분별 절차적 SVG) 합성, 흔들림은 식물만. `POT_SPRITE_OVERRIDES` = 도트화 PNG 훅. 장착 `openPotPicker`/`equipPot`. ⚠️ 이 기능은 main(work-2)에 있고 `feat/mushroom-type-completion`엔 없었음 — 가방/종자 작업 시 feat 브랜치만 보면 "미구현"으로 오인하니 주의.
 - **스킬/특성:** 식물은 속성+특성+생장단계로 스킬을 얻고, **최대 6개 로드아웃**을 장착해 전투(클래시 로얄식). 특성(20종)은 전투 패시브(재생/흡혈/반사/방깎 등) + 시그니처 스킬을 부여. 상태이상(버프/디버프/중독·출혈·화상) 엔진. DoT 스택 상한 `DOT_STACK_CAP=4`(`addDot()`으로 추가, 초과 시 오래된 것 제거).
 - **변이 카드 시스템(2026-06-25~):** 변이형 6종(무기/포식/독성/포자/용족/일반). ⚠️ **발광(lumen) 폐지**(`rollForm` 제거, 기존분 legacy 보존). **포자형=버섯 전용**. 변이형=패시브 없음·"해당 변이 카드 장착 가능" 슬롯 게이트만. `variantSkillsOf(p)` = 하단 변이 스킬 바 단일 진실 함수. 스킬 분류(`cats`) 6종: attack/guard/buff/debuff/heal_hp/heal_energy. `TRAIT_CARDS` `fixed:true` = 등급 고정(mult=1). 같은 card_id 장착 시 등급 무관 자동 교체(중복 불가). → 설계: [mutation-forms-cards-redesign-design.md](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)
+  - ⚠️ **전투 유닛(`makeCombatant` 산출) ≠ plant 객체:** plant=`equipped_trait_cards`, 전투 유닛=`cards`(`variantSkillsOf`는 둘 다 폴백). 변이형 기본 스킬은 `makeCombatant`가 loadout에 push(포식/독성/용족)하되 무기형만 제외(하단 바 전용)·`uses`는 `loadout.concat(variantSkillsOf(unit))`로 초기화. 적 봇은 `aiPickSkill`이 `variantSkillsOf(e)`를 후보에 넣어야 변이 스킬 사용. 공통 카드 8종(battle-start: 위조페로몬·약화효소·불안정변이·항상성·마지막잎새 / 매턴: 굴광성장·아드레날린·만개).
+  - ⚠️ **새 카드 효과는 3곳 동시 수정:** `cardInstanceEffects`(개별 base→out)→`cardEffects`(합산 E)→`makeCombatant`(unit/passives 머지). 전투개시=`applyCardStartHooks`(startMatch), 매턴=`applyCardTurnHooks`(tickStatuses).
 - **전투/토너먼트:** 예선(5판3선) → 16강 → 8강 → 4강 → 결승. 우승 시 랭크 포인트로 **브론즈→실버→…→풀로세움** 승급. 토너먼트명은 생장단계+랭크로 자동 생성(예: "새싹 브론즈 토너먼트").
 - **속성 상성:** 기획서의 약점표 기준(불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불).
 - **하단 헤더(5탭):** 상점 / 탐사 / 식물·전투(중앙) / 식물양육 / 함선.
@@ -52,9 +54,10 @@
 ## 주의사항
 - ⚠️ **`grass`는 타입·속성 양쪽 문자열:** 타입 `grass`(=구 초본형, 폐지→화초형 흡수, 내부 폴백만 잔존)와 속성 `grass`(=풀)가 동일 문자열. 종/타입 코드에서 `'grass'` 일괄치환 금지(풀속성 깨짐). 현행 타입 5종 = 목본/화초/다육/덩굴/버섯.
 - **세이브는 브라우저 localStorage에 저장** → PC/브라우저마다 따로. 기기 간 진행도 자동 동기화 안 됨.
+- ⚠️ **변이 카드는 정의(`TRAIT_CARDS`)만으론 획득 불가** — 보급상자 드롭 풀(`box_card_*` rewards, `index.html` ~3600)에 `card_id` 등록해야 플레이어가 얻는다. 새 카드 = 효과 엔진 + 드롭 풀 둘 다 수정.
 - 코드 수정 후 검증은 미리보기(preview) 도구 또는 위 로컬 서버로.
 - **테스트 러너 없음** → 회귀 검증은 콘솔 셀프테스트 `window.__catalogSelfTest()` (케이스 추가: `index.html` 끝 `window.__test('name', fn)`). 판정은 `__catalogSelfTest()` **반환값(fails 배열)**으로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남는다. ⚠️ `fn` 내부에서 `return fails` 금지 — 반드시 `if(fails.length) throw new Error(fails.join(' | '))` 패턴으로 throw해야 집계됨.
-- preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증. `location.reload()`로 안 풀리면(특히 다른 세션 git 조작 후) → **`preview_stop` + `preview_start`로 서버 재시작**(새 인스턴스가 디스크 재독). SW 클리어·캐시버스트 URL로는 안 풀릴 수 있음.
+- preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증. `location.reload()`로 안 풀리면(특히 다른 세션 git 조작 후) → **`preview_stop` + `preview_start`로 서버 재시작**(새 인스턴스가 디스크 재독). SW 클리어·캐시버스트 URL로는 안 풀릴 수 있음. `preview_start`가 포트 점유(`HttpListenerException`)로 실패 = 이전 세션 서버가 8765 점유 → `Get-NetTCPConnection -LocalPort 8765`로 PID 찾아 `Stop-Process -Force` 후 재시작.
 - **`preview_screenshot`는 배경 무한 애니메이션(`floaty` 등) 때문에 자주 타임아웃** → 시각 검증은 `preview_eval`로 DOM(`querySelector`·computed style)·함수 반환값을 확인하는 방식으로 대체(렌더러는 살아있음).
 - **포트 충돌 대응:** 포트 8765가 ESTABLISHED TCP 연결로 점유될 수 있음. `netstat -ano | Select-String ":포트번호 .*LISTEN"`으로 리스닝 여부 확인. 9876 등 일부는 Windows 예약 포트(preview_start에서 "reserved by OS" 에러) — 8766·8768 등 인접 포트 시도.
 - **`serve.ps1` 워크트리 루트:** `$PSScriptRoot`(스크립트 위치의 상위)를 서빙 루트로 씀. 워크트리 내용을 테스트할 때는 해당 워크트리의 `.claude/serve.ps1`을 실행해야 함(예: `풀로세움-2\.claude\serve.ps1` → 풀로세움-2 기준 서빙).
@@ -78,4 +81,4 @@
 - 토큰 절약 워크플로: [.claude/prompts/reset-handoff.md](.claude/prompts/reset-handoff.md), [docs/session-chaining-guide.md](docs/session-chaining-guide.md)
 - 브레인스토밍/설계 박제: `docs/superpowers/specs/YYYY-MM-DD-<주제>-design.md` (미완 설계는 여기 박제 + 로드맵 §2 문서지도에 등록 → 다음 세션 진입점).
 - ✅ **#2 양육/열매+화분 설계(완료):** [nurture-fruit-system-design](docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [collectible-pots-design](docs/superpowers/specs/2026-06-24-collectible-pots-design.md)
-- **#1 종/스킬 개체 고유화**(타입/속성 공통 컨셉·35종 ×고유스킬3[성장체/성체/완숙체]·변이 재편[발광폐지·포자=버섯전용·일반5]·식물/화분 분리·외형 접근) = [docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md](docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md) — **설계 확정·코드 미반영(소유권 대기)**. 변이 개체 1차 어울림 28종(V1~V28) 완성, 남은 설계 = 각 종 2차 어울림 변이 + 외형 액센트 명세. 변이 시스템 권위 = [mutation 재설계](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md).
+- **#1 종/스킬 개체 고유화**(타입/속성 공통 컨셉·개체별 고유스킬3[성장체/성체/완숙체]·외형 액센트 시스템[변이형→모듈 자동]) = [docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md](docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md) — **설계 완료(175종: 비버섯 풀매트릭스 168=28칸×무변이+5변이 + 버섯 base7)·코드 미반영**. 다음=구현(`SPECIES_CATALOG`+`SKILL_LIB`+신규 `ACCENT_MODULES`); 양 큼(엔트리175+스킬~525)이라 워크트리에서 배치로(한 세션에 다 못 넣음). 잔여 설계=버섯 비포자 변이35. (식물/화분 분리는 #12 미착수—외형 액센트는 그와 독립.) 변이 권위=[mutation 재설계](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md).

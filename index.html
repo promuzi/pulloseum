@@ -330,7 +330,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .cp-energy .off{opacity:.16;filter:grayscale(1);text-shadow:none;}
 .cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
 .cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.cp-pred{display:grid;grid-template-columns:1fr;}
+.cp-pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
 .skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:13px;text-align:left;
   background:linear-gradient(160deg,rgba(22,32,48,.96),rgba(12,18,30,.96));color:var(--text);
   padding:9px 9px 8px;min-height:74px;display:flex;flex-direction:column;gap:3px;
@@ -519,6 +519,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   #vsIntro .vs-enemy,#vsIntro .vs-me{transform:translateY(-50%)!important;animation:none!important;}
   #vsIntro.play .vs-tname,#vsIntro.play .vs-vs{opacity:1!important;animation:none!important;}
   .pot-sprite{animation:none!important;}
+  .explore-travel:before,.et-grid,.et-rift,.et-probe,.et-flash{animation:none!important;}
+  .explore-travel .et-rift{transform:translate(-50%,-50%) scale(1,1);opacity:.85;}
+  .explore-travel .et-grid{opacity:.2;}
 }
 
 /* ===== 진화 연출 모달 ===== */
@@ -872,7 +875,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .seed-bag-layout{display:grid;grid-template-columns:minmax(250px,340px) 1fr;gap:12px;min-height:420px;}
 .seed-bag-list{display:flex;flex-direction:column;gap:8px;max-height:58dvh;overflow-y:auto;padding-right:2px;}
 .seed-bag-card{align-items:flex-start;border-radius:12px;padding:10px;min-height:96px;}
+.seed-bag-card{justify-content:space-between;}
+.seed-bag-card .ic-body{flex:1;min-width:0;}
 .seed-bag-card .seed-card-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.seed-card-actions{display:flex;flex-direction:column;gap:6px;justify-content:center;flex-shrink:0;}
+.seed-mini-btn{padding:5px 12px;font-size:12px;white-space:nowrap;}
 .seed-mini-stat{font-size:11px;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:2px 7px;color:var(--sub);}
 .seed-mini-stat.ok{color:var(--neon);border-color:rgba(31,217,196,.45);background:rgba(31,217,196,.07);}
 .seed-mini-stat.warn{color:#ffb199;border-color:rgba(255,107,74,.45);background:rgba(255,107,74,.07);}
@@ -978,22 +985,42 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   radial-gradient(circle,rgba(125,255,217,.8) 0 1px,transparent 1.8px);
   background-size:46px 46px,89px 89px;background-position:8px 13px,40px 30px;opacity:.5;animation:etstars 1.5s linear;}
 @keyframes etstars{from{background-position:120px 13px,160px 30px}to{background-position:-40px 13px,-30px 30px}}
-.et-scene{position:relative;width:min(86%,420px);height:120px;}
-.et-planet{position:absolute;right:6%;top:50%;transform:translateY(-50%);width:64px;height:64px;border-radius:50%;
-  background:var(--pc,#1fd9c4);box-shadow:0 0 26px color-mix(in srgb,var(--pc,#1fd9c4) 60%,transparent), inset -12px -14px 18px rgba(0,0,0,.4);}
-.et-probe{position:absolute;left:2%;top:50%;font-size:34px;transform:translateY(-50%);
-  animation:etfly 1.4s cubic-bezier(.5,0,.5,1) forwards;filter:drop-shadow(0 0 8px rgba(31,217,196,.7));}
-@keyframes etfly{0%{left:0%}88%{left:72%}100%{left:70%}}
-.et-trail{position:absolute;left:4%;top:50%;height:2px;width:0;transform:translateY(-50%);
-  background:linear-gradient(90deg,transparent,rgba(31,217,196,.7));animation:ettrail 1.4s ease-out forwards;}
-@keyframes ettrail{0%{width:0}90%{width:66%}100%{width:66%}}
+/* 시공간 폴드(차원 이동) 연출 — 격자 왜곡 → 균열(rift) 개방 → 탐사선 흡입 → 섬광 */
+.et-scene{position:relative;width:min(86%,420px);height:150px;perspective:520px;}
+.et-grid{position:absolute;inset:-30% -10%;background-image:
+  linear-gradient(rgba(125,240,226,.5) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(125,240,226,.5) 1px,transparent 1px);
+  background-size:30px 30px;transform-origin:50% 60%;opacity:.3;
+  animation:etwarp 1.4s cubic-bezier(.55,0,.6,1) forwards;}
+@keyframes etwarp{0%{transform:rotateX(62deg) translateY(0) scale(1);opacity:.18}
+  55%{opacity:.55}100%{transform:rotateX(62deg) translateY(-46%) scale(2.6);opacity:0}}
+.et-rift{position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle, #fff 0 8%, var(--pc,#1fd9c4) 16% 42%, transparent 66%);
+  box-shadow:0 0 40px color-mix(in srgb,var(--pc,#1fd9c4) 70%,transparent);
+  transform:translate(-50%,-50%) scale(.02,1);animation:etrift 1.42s ease-in-out forwards;}
+@keyframes etrift{0%{transform:translate(-50%,-50%) scale(.02,1);opacity:0}
+  22%{opacity:1}28%{transform:translate(-50%,-50%) scale(.06,1.05)}
+  70%{transform:translate(-50%,-50%) scale(1,1);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1.7,1.7);opacity:0}}
+.et-probe{position:absolute;left:14%;top:50%;font-size:34px;transform:translate(-50%,-50%);z-index:2;
+  animation:etfold 1.4s cubic-bezier(.5,0,.7,1) forwards;filter:drop-shadow(0 0 8px rgba(31,217,196,.7));}
+@keyframes etfold{0%{left:14%;transform:translate(-50%,-50%) scale(1) rotate(0)}
+  70%{left:50%;transform:translate(-50%,-50%) scale(.32) rotate(200deg);opacity:.95}
+  100%{left:50%;transform:translate(-50%,-50%) scale(0) rotate(380deg);opacity:0}}
+.et-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#fff 0%,transparent 55%);
+  opacity:0;pointer-events:none;animation:etflash 1.42s ease-out forwards;}
+@keyframes etflash{0%,72%{opacity:0}84%{opacity:.85}100%{opacity:0}}
 .et-text{font-size:15px;font-weight:800;color:var(--text);text-align:center;padding:0 16px;z-index:1;}
 .et-bar{width:min(70%,300px);height:7px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;z-index:1;}
 .et-bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#19c8b0,#7df0e2);width:0;animation:etbar 1.45s ease-out forwards;}
 @keyframes etbar{from{width:4%}to{width:100%}}
 
 /* ===== 탐사 우주맵 (재설계) ===== */
-#explorationBody{position:relative;background:radial-gradient(120% 90% at 50% 28%, #122036 0%, #060b15 70%);}
+#explorationBody{position:relative;background:
+  radial-gradient(42% 30% at 22% 24%, rgba(125,120,255,.16), transparent 70%),
+  radial-gradient(38% 28% at 80% 70%, rgba(74,198,255,.13), transparent 72%),
+  radial-gradient(30% 24% at 64% 18%, rgba(255,107,212,.10), transparent 70%),
+  radial-gradient(120% 90% at 50% 28%, #122036 0%, #060b15 70%);}
 .exmap{position:relative;width:100%;height:100%;overflow:hidden;}
 .exmap-world{position:absolute;inset:0;transform-origin:center center;touch-action:none;will-change:transform;cursor:grab;}
 .exmap-world.dragging{cursor:grabbing;}
@@ -1081,6 +1108,17 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exdet-tbl td{padding:9px;font-size:13px;}
 .exdet-tbl td:first-child{color:var(--sub);font-weight:700;width:34%;text-align:center;background:rgba(255,255,255,.03);border-right:1px solid rgba(255,255,255,.08);}
 .exdet-tbl td:last-child{text-align:center;font-weight:800;}
+/* 탐사 종 분포 미리보기(주요 서식종 / 지역 서식 종) */
+.exsp-block{margin:8px 0 2px;}
+.expop .exsp-block{padding:0 10px;}
+.exsp-cap{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--sub);text-transform:uppercase;margin:0 2px 4px;}
+.exsp-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+.exsp-chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:48px;}
+.exsp-ic{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);overflow:hidden;}
+.exsp-ic svg{width:30px;height:35px;}
+.exsp-chip.rare .exsp-ic{border-color:#ffd34a;box-shadow:0 0 8px rgba(255,211,74,.45);background:rgba(255,211,74,.08);}
+.exsp-nm{font-size:9px;line-height:1.15;margin-top:2px;text-align:center;color:var(--sub);max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.exsp-chip.rare .exsp-nm{color:#ffd34a;font-weight:800;}
 .exdet-empty{text-align:center;color:var(--sub);font-size:13px;padding:22px 10px;border:1px dashed rgba(255,255,255,.16);border-radius:10px;}
 .exdet-foot{margin-top:10px;padding-top:2px;}
 .exdet-foot .btn{width:100%;}
@@ -1237,6 +1275,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:normal;}
 .dcard.skill .dc-n{color:var(--gc,var(--text));}
 .dcard .dc-v{font-size:9.5px;font-weight:800;color:var(--gc);margin-top:2px;}
+.dc-cats{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px;}
+.cat-chip{font-size:9px;line-height:1;padding:1px 3px;border-radius:4px;border:1px solid var(--cc,#888);
+  background:color-mix(in srgb, var(--cc,#888) 18%, transparent);}
+.vskill-bar{margin:6px 0 2px;padding:6px 8px;border:1px dashed rgba(127,246,160,.4);border-radius:8px;background:rgba(10,28,46,.5);}
+.vskill-lab{font-size:9.5px;font-weight:900;color:var(--sub);margin-bottom:4px;letter-spacing:.04em;}
+.vskill-row{display:flex;gap:6px;flex-wrap:wrap;}
+.vskill{flex:1;min-width:0;border:2px solid var(--gc,#5fe06b);border-radius:8px;background:#0e1c2e;padding:5px 7px;text-align:center;}
+.vskill .vsk-n{display:block;font-size:10px;font-weight:900;color:var(--gc);line-height:1.15;}
 .dcard .dc-cnt{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:900;color:var(--sub);}
 .dcard .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
   display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc);
@@ -2178,13 +2224,13 @@ body{letter-spacing:.2px;}
     <details class="set-help">
       <summary>📖 게임 방법</summary>
       <div class="set-help-body">
-        ① 새 게임은 기본 탐사선과 소량의 크레딧으로 시작합니다. 먼저 <b>탐사</b> 버튼으로 우주맵에 가세요.<br>
-        ② 행성을 고르고, 행성 안의 지역을 고른 뒤 탐사를 출발합니다.<br>
+        ① 새 게임은 기본 탐사선과 소량의 크레딧으로 시작합니다. 먼저 <b>탐사</b> 버튼으로 우주맵(아틀라스)에 가세요. 행성은 여러 외계 문명이 다른 은하에서 발견해 공유한 <b>좌표</b>이고, 탐사선은 <b>시공간을 접어(폴드)</b> 이동합니다(연료=폴드 에너지).<br>
+        ② 행성을 고르고, 행성 안의 지역을 고른 뒤 탐사를 출발합니다. 행성마다 <b>서식 종</b>이 다르고, 지역에 따라 <b>희귀 시그니처 종</b>이 나오기도 합니다.<br>
         ③ 탐사로 얻은 종자는 🎒종자 가방에 들어가며, <b>심기</b>를 누르면 식물 개체가 됩니다.<br>
         ④ 심은 식물은 가운데 화면에 나타나고, 탭하면 강화할 수 있습니다.<br>
         ⑤ 전투는 선택한 한 마리만 출전합니다. 강화창 🎴스킬 탭에서 최대 6개를 장착해 싸웁니다.<br>
         ⑥ 속성 약점(받는 피해 1.5배): 🔥불←물·대지 · 💧물←풀·빙결·번개 · 🌿풀←불·바람·번개 · ⚡번개←대지·빙결 · 🪨대지←풀·물 · ❄️빙결←불·대지 · 🌪️바람←대지·불<br>
-        ⑦ 토너먼트 예선 5경기 중 3승 이상이면 본선(16강→결승)에 진출, 우승 시 랭크가 브론즈→…→풀로세움으로 승급합니다.<br>
+        ⑦ 풀로세움은 모든 문명이 항구적으로 열어둔 <b>상시 개방 게이트</b>라 연료 없이 입장합니다. 토너먼트 예선 5경기 중 3승 이상이면 본선(16강→결승)에 진출, 우승 시 랭크가 브론즈→…→풀로세움으로 승급합니다.<br>
         ⑧ 상점에서 재화·보급상자를 구매해 소모품·변이 카드를 얻습니다.
       </div>
     </details>
@@ -3524,9 +3570,8 @@ function rollForm(){
   if(r < 0.32) return { form:'pred', predType: Math.random()<0.5 ? 'vamp' : 'absorb' };
   if(r < 0.46) return { form:'toxic',  predType:null };
   if(r < 0.60) return { form:'spore',  predType:null };
-  if(r < 0.74) return { form:'lumen',  predType:null };
-  if(r < 0.78) return { form:'dragon', predType:null }; // 희귀(미정 변이형)
-  return { form:'normal', predType:null };
+  if(r < 0.64) return { form:'dragon', predType:null }; // 희귀 4% (lumen 0.60~0.74 제거 — 발광형 폐지)
+  return { form:'normal', predType:null };               // 0.64~1.0 = 일반(발광 몫 흡수)
 }
 function moveCost(unit, key){
   if(key === 'weapon') return (unit && unit.weapon) ? WEAPONS[unit.weapon.key].cost : 99;
@@ -3720,14 +3765,31 @@ function pickAcquirableSpecies(filterFn){
   for(let i=0;i<pool.length;i++){ r -= w[i]; if(r <= 0) return pool[i]; }
   return pool[pool.length-1];
 }
-/* EXPLORE_VIEW 지역(el[]·types[]) 테마에 맞춰 종을 뽑는다. 지역 정보가 없으면 완전 무작위. */
-function rollSpeciesFromView(viewRegion){
+/* 지역 전용 희귀 시그니처 종의 등장 확률(아틀라스 종 분포 — 옵션 C). */
+const SIGNATURE_CHANCE = 0.10;
+/* 종 분포(옵션 C): 행성 서식 풀(planet.species) + 지역 시그니처(region.signature)
+   + 지역 테마(el[]·types[]) 필터. 신규 필드가 없으면 기존 동작으로 안전 폴백.
+   폴백 사다리로 어떤 데이터 상태에서도 항상 1종을 반환한다(무회귀). */
+function rollSpeciesFromView(viewRegion, planet){
   const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : null;
   const typesKo = (viewRegion && viewRegion.types && viewRegion.types.length) ? viewRegion.types : null;
   const okType = typesKo ? typesKo.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
-  // 지역 테마(속성/타입)에 맞는 비-legacy 종을 희귀도 가중으로 추출
-  return pickAcquirableSpecies(s =>
-    (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0));
+  const matchTheme = s => (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0);
+  // 1) 지역 전용 시그니처 종 — 낮은 확률, 일반 풀과 섞이지 않는 별도 경로(비-legacy만)
+  const sig = ((viewRegion && viewRegion.signature) || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  if(sig.length && Math.random() < SIGNATURE_CHANCE){ return sig[Math.floor(Math.random()*sig.length)]; }
+  // 2) 행성 서식 풀(있으면) 내에서 추출
+  const planetSet = (planet && planet.species && planet.species.length)
+    ? new Set(planet.species.filter(k => SPECIES[k] && !SPECIES[k].legacy)) : null;
+  if(planetSet && planetSet.size){
+    // (a) 행성 풀 ∩ 지역 테마 필터 — 교집합이 있으면 그 안에서
+    if(Object.keys(SPECIES).some(k => planetSet.has(k) && matchTheme(SPECIES[k])))
+      return pickAcquirableSpecies(s => planetSet.has(s.key) && matchTheme(s));
+    // (b) 교집합이 비면 행성 풀 전체
+    return pickAcquirableSpecies(s => planetSet.has(s.key));
+  }
+  // (c) 풀 미지정 → 기존 동작(지역 테마 전역)
+  return pickAcquirableSpecies(matchTheme);
 }
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -4036,12 +4098,16 @@ const FORM_SKILLS = {
 /* ===== 변이 카드 시스템 (변이형별 장착 카드) ===== */
 /* 카드가 자동 장착시키는 스킬. pred:true 표시는 포식 변이형 기본 스킬(DNA 카드로 강화됨). */
 const CARD_SKILLS = {
-  skill_card_predation:{ name:'포식', icon:'🦷', cost:3, kind:'attack', power:150, pred:true, desc:'포식형 기본 스킬 · 위력150 (DNA 카드로 흡혈·강탈 강화)', tag:'포식' },
+  skill_card_predation:{ name:'포식', icon:'🦷', cost:2, kind:'attack', cats:['attack'], power:90, pred:true, desc:'포식형 기본 스킬 · 위력90 · 무속성 (DNA 카드로 흡혈·강탈 강화)', tag:'포식' },
   // 무기 변이형 스킬: 에너지를 소모하지 않고, 한 경기당 사용 횟수(uses)가 정해진다. 등급이 높을수록 위력·횟수↑
   skill_card_sword:  { name:'검 베기',   icon:'⚔️', cost:0, noEnergy:true, uses:4, kind:'attack', power:160, critBonus:0.15, desc:'위력160 + 치명타 15% · 에너지 무소모', tag:'무기' },
   skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:0, noEnergy:true, uses:4, kind:'guard',  guardMult:0.32, counterPct:0.35, desc:'피해 68%↓ + 가시 반격 · 에너지 무소모', tag:'무기' },
   skill_card_axe:    { name:'내려찍기', icon:'🪓', cost:0, noEnergy:true, uses:3, kind:'attack', power:215, pierce:0.5, desc:'위력215 · 방어 50% 무시 · 에너지 무소모', tag:'무기' },
   skill_card_gun:    { name:'총 쏘기',   icon:'🔫', cost:0, noEnergy:true, uses:4, kind:'attack', power:150, pierce:0.6, desc:'위력150 · 방어 60% 무시 · 에너지 무소모', tag:'무기' },
+  skill_card_infuse: { name:'독 묻히기', icon:'☠️', cost:1, kind:'buff', cats:['buff','debuff'], infuse:{kind:'poison', pct:0.07, turns:3}, desc:'3턴간 공격마다 독을 묻힌다', tag:'독성' },
+  skill_card_spray:  { name:'독 뿌리기', icon:'🌿', cost:3, kind:'debuff', cats:['debuff'], dot:{kind:'poison', pct:0.09, turns:3}, dotTimes:2, desc:'중독 2겹 즉발', tag:'독성' },
+  skill_card_scale:  { name:'비늘 강화', icon:'🛡️', cost:1, kind:'guard', cats:['guard','buff'], guardMult:0.5, scaleStack:{defPct:0.12, cap:5}, desc:'피해 50%↓ + 비늘 누적(방어 영구 12%↑·최대 5겹)', tag:'용족' },
+  skill_card_breath: { name:'원소 브레스', icon:'🐉', cost:2, kind:'elemental', cats:['attack'], power:120, elem:true, single:true, desc:'자기 속성 발현 · 위력120 · 단일', tag:'용족' },
   skill_card_acid:   { name:'강산 뿌리기', icon:'🧪', cost:2, kind:'debuff', power:135, enemyDebuff:{stat:'def',pct:0.30,turns:2}, dot:{kind:'poison',pct:0.07,turns:3}, desc:'위력135 + 방어30%↓ + 중독', tag:'독성' },
   skill_card_gas:    { name:'가스 유출', icon:'☁️', cost:2, kind:'debuff', power:60, enemyDebuff:{stat:'atk',pct:0.28,turns:2}, dot:{kind:'poison',pct:0.06,turns:3}, desc:'위력60 + 적 공격28%↓ + 중독', tag:'독성' },
 };
@@ -4085,6 +4151,21 @@ const TRAIT_CARDS = {
   // 공통 — 모든 변이형 장착 가능
   card_cellwall:   { id:'card_cellwall',   type:'common', name:'튼튼한 세포벽', icon:'🧱', base:{defPct:0.25}, subPool:['hp','def','regen','refl'] },
   card_thornstem:  { id:'card_thornstem',  type:'common', name:'가시 줄기',     icon:'🌵', base:{reflectPct:0.25}, subPool:['refl','def','enemydef','hp'] },
+  // 공통 스탯 코어 — 각 핵심 스탯 하나를 크게(빌드 토대)
+  card_muscle:   { id:'card_muscle',   type:'common', name:'근섬유 다발', icon:'💪', base:{atkPct:0.22},  subPool:['atk','crit','enemydef','hp'] },
+  card_vacuole:  { id:'card_vacuole',  type:'common', name:'거대 액포',   icon:'🫀', base:{hpPct:0.28},   subPool:['hp','def','regen','spd'] },
+  card_tropism:  { id:'card_tropism',  type:'common', name:'향성 운동',   icon:'🌀', base:{spdPct:0.30},  subPool:['spd','crit','atk','enemydef'] },
+  card_target:   { id:'card_target',   type:'common', name:'표적 분비물', icon:'🎯', base:{critBonus:0.16}, subPool:['crit','atk','spd','life'] },
+  // 공통 버프/디버프 — 전투 개시·상시 효과(등급 스케일)
+  card_pheromone:{ id:'card_pheromone',type:'common', name:'위조 페로몬', icon:'🥀', base:{startEnemyDebuff:[{stat:'atk',pct:0.12,turns:3},{stat:'def',pct:0.12,turns:3}]}, subPool:['enemydef','spd','def','hp'] },
+  card_enzyme:   { id:'card_enzyme',   type:'common', name:'약화 효소',   icon:'💢', base:{startEnemyDebuff:[{stat:'def',pct:0.12,turns:2}]}, subPool:['enemydef','atk','crit','spd'] },
+  card_phototropism:{ id:'card_phototropism', type:'common', name:'굴광 성장', icon:'✨', base:{rampStat:{stat:'atk',pct:0.05,cap:0.30}}, subPool:['atk','crit','spd','hp'] },
+  card_adrenaline:  { id:'card_adrenaline',   type:'common', name:'아드레날린', icon:'🔥', base:{thresholdBuff:{hpBelow:0.40,stat:'atk',pct:0.25}}, subPool:['atk','crit','life','spd'] },
+  // 공통 무등급(fixed) — 고정 효과(등급 롤 없음)
+  card_homeo:    { id:'card_homeo',    type:'common', name:'항상성',     icon:'☯️', fixed:true, base:{allStatPct:0.08}, subPool:[] },
+  card_lastleaf: { id:'card_lastleaf', type:'common', name:'마지막 잎새', icon:'💗', fixed:true, base:{surviveOnce:{hpAfter:0.01}}, subPool:[] },
+  card_unstable: { id:'card_unstable', type:'common', name:'불안정 변이', icon:'🎲', fixed:true, base:{startSelfRandom:0.40}, subPool:[] },
+  card_bloom:    { id:'card_bloom',    type:'common', name:'만개',       icon:'⏳', fixed:true, base:{bloom:{fromTurn:5,allPct:0.20}}, subPool:[] },
   // DNA — 포식형
   card_sap:          { id:'card_sap',          type:'dna', name:'진액 흡수',         icon:'🩸', base:{predBoost:{lifesteal:0.40}}, subPool:['life','atk','crit','hp'] },
   card_chloroabsorb: { id:'card_chloroabsorb', type:'dna', name:'엽록체 흡수',       icon:'🔋', base:{predBoost:{energySteal:1}}, subPool:['energy','atk','spd','crit'] },
@@ -4110,6 +4191,35 @@ const TRAIT_CARDS = {
 function cardKeyOf(id, grade){ return id + '@' + (grade || 'C'); }
 function parseCardKey(key){ const k=String(key||''); const i=k.indexOf('@'); return i<0 ? { id:k, grade:'C' } : { id:k.slice(0,i), grade:k.slice(i+1) }; }
 function cardDefOf(key){ return TRAIT_CARDS[parseCardKey(key).id] || null; }
+/* 같은 card_id는 등급 무관 1장만 — 새로 장착 시 기존 동일 id 제거 후 추가(자동 교체) */
+function cardsAfterEquip(cards, newKey){
+  const id = parseCardKey(newKey).id;
+  const kept = (cards||[]).filter(k => parseCardKey(k).id !== id);
+  kept.push(newKey);
+  return kept;
+}
+/* 변이 스킬(하단 바) — 변이형이 부여하는 별도 스킬 ID 목록(상단 6칸 로드아웃과 별개).
+   포식=기본 포식기 · 무기=장착 무기 종류 카드 스킬(최대2) · 독성/용족=전용(후속 콘텐츠 슬라이스). */
+function variantSkillsOf(p){
+  const form = (p && p.form) || 'normal';
+  const out = [];
+  if(form === 'pred'){ out.push('skill_card_predation'); }
+  else if(form === 'weapon'){
+    (p.equipped_trait_cards || p.cards || []).forEach(key => {
+      const def = cardDefOf(key);
+      if(def && def.type === 'weapon' && def.grantSkill && out.length < 2 && !out.includes(def.grantSkill)){
+        out.push(def.grantSkill);
+      }
+    });
+  }
+  else if(form === 'toxic'){
+    out.push('skill_card_infuse', 'skill_card_spray');
+  }
+  else if(form === 'dragon'){
+    out.push('skill_card_scale', 'skill_card_breath');
+  }
+  return out;
+}
 function cardTypeOf(key){ const d=cardDefOf(key); return d ? d.type : null; }
 /* 카드가 이 변이형에 장착 가능한 타입인지 */
 function cardFitsForm(key, form){
@@ -4145,10 +4255,25 @@ function grantRandomTraitCard(){
 function cardInstanceEffects(key){
   const { id, grade } = parseCardKey(key);
   const def = TRAIT_CARDS[id]; if(!def) return null;
-  const g = cardGradeMeta(grade), m = g.mult, base = def.base || {};
+  const fixed = !!def.fixed; // 무등급 카드: 등급 롤 무시(계수 1·서브 0)
+  const g = fixed ? { mult:1, subs:0 } : cardGradeMeta(grade);
+  const m = g.mult, base = def.base || {};
   const out = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
-    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[] };
+    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[],
+    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0,
+    rampStat:null, thresholdBuff:null, bloom:null };
+  if(base.allStatPct){ const v=round2(base.allStatPct*m); out.atkPct+=v; out.defPct+=v; out.spdPct+=v; } // 항상성: 공·방·속 동시
+  if(base.startEnemyDebuff){ base.startEnemyDebuff.forEach(eb => out.startEnemyDebuff.push({stat:eb.stat, pct:round2(eb.pct*m), turns:eb.turns})); } // 위조페로몬·약화효소
+  if(base.startSelfRandom){ out.startSelfRandom += round2(base.startSelfRandom*m); } // 불안정변이
+  if(base.surviveOnce){ out.surviveChance = 1; out.surviveHpAfter = base.surviveOnce.hpAfter || 0.01; } // 마지막잎새
+  if(base.rampStat){ out.rampStat = {stat:base.rampStat.stat, pct:round2(base.rampStat.pct*m), cap:round2(base.rampStat.cap*m)}; } // 굴광성장(매턴 누적)
+  if(base.thresholdBuff){ out.thresholdBuff = {hpBelow:base.thresholdBuff.hpBelow, stat:base.thresholdBuff.stat, pct:round2(base.thresholdBuff.pct*m)}; } // 아드레날린(체력 임계)
+  if(base.bloom){ out.bloom = {fromTurn:base.bloom.fromTurn, allPct:round2(base.bloom.allPct*m)}; } // 만개(N턴째부터)
+  if(base.atkPct)     out.atkPct     += round2(base.atkPct*m);
+  if(base.hpPct)      out.hpPct      += round2(base.hpPct*m);
+  if(base.spdPct)     out.spdPct     += round2(base.spdPct*m);
+  if(base.critBonus)  out.critBonus  += round2(base.critBonus*m);
   if(base.defPct)     out.defPct     += round2(base.defPct*m);
   if(base.reflectPct) out.reflectPct += round2(base.reflectPct*m);
   if(base.regenPct)   out.regenPct   += round2(base.regenPct*m);
@@ -4172,7 +4297,9 @@ function cardInstanceEffects(key){
 function cardEffects(cardKeys){
   const E = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
-    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[], skillGrades:{} };
+    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[], skillGrades:{},
+    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0,
+    rampStat:null, thresholdBuff:null, bloom:null };
   (cardKeys || []).forEach(key => {
     const ie = cardInstanceEffects(key); if(!ie) return;
     E.hpPct+=ie.hpPct; E.atkPct+=ie.atkPct; E.defPct+=ie.defPct; E.spdPct+=ie.spdPct;
@@ -4182,6 +4309,13 @@ function cardEffects(cardKeys){
     E.predBoost.lifesteal+=ie.predBoost.lifesteal; E.predBoost.atkSteal+=ie.predBoost.atkSteal; E.predBoost.energySteal+=ie.predBoost.energySteal;
     ie.grantSkills.forEach(gs => { E.grantSkills.push(gs.id); E.skillGrades[gs.id] = gs.grade; });
     ie.spores.forEach(sp => E.spores.push(sp));
+    E.startEnemyDebuff = E.startEnemyDebuff.concat(ie.startEnemyDebuff||[]);
+    E.startSelfRandom += ie.startSelfRandom||0;
+    E.surviveChance = Math.max(E.surviveChance, ie.surviveChance||0);
+    E.surviveHpAfter = Math.max(E.surviveHpAfter, ie.surviveHpAfter||0);
+    if(ie.rampStat) E.rampStat = ie.rampStat;
+    if(ie.thresholdBuff) E.thresholdBuff = ie.thresholdBuff;
+    if(ie.bloom) E.bloom = ie.bloom;
   });
   return E;
 }
@@ -4208,6 +4342,12 @@ function cardEffectLabels(key){
   if(ie.lifestealPct)  L.push(`흡혈 +${pc(ie.lifestealPct)}`);
   if(ie.defDownOnHit)  L.push(`공격 시 적 방어 ${pc(ie.defDownOnHit)}↓`);
   if(ie.energyBonus)   L.push(`에너지 +${ie.energyBonus}`);
+  (ie.startEnemyDebuff||[]).forEach(eb => L.push(`전투 시작: 적 ${statName(eb.stat)} ${pc(eb.pct)}↓(${eb.turns}턴)`));
+  if(ie.startSelfRandom) L.push(`전투 시작: 랜덤 스탯 +${pc(ie.startSelfRandom)}`);
+  if(ie.surviveChance)   L.push(`치명상 1회 생존(체력 1)`);
+  if(ie.rampStat)        L.push(`매 턴 ${statName(ie.rampStat.stat)} +${pc(ie.rampStat.pct)} 누적(최대 +${pc(ie.rampStat.cap)})`);
+  if(ie.thresholdBuff)   L.push(`체력 ${pc(ie.thresholdBuff.hpBelow)} 이하 시 ${statName(ie.thresholdBuff.stat)} +${pc(ie.thresholdBuff.pct)}`);
+  if(ie.bloom)           L.push(`${ie.bloom.fromTurn}턴째부터 전 스탯 +${pc(ie.bloom.allPct)}`);
   return L;
 }
 function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span class="grade-badge" style="color:${g.color};border-color:${g.color}">${g.name}</span>`; }
@@ -4215,6 +4355,32 @@ function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span cl
 const GRADE_PALETTE = { D:'#e8edf3', C:'#5fe06b', B:'#4ac6ff', A:'#b06bff', S:'#ff9a3c' };
 function gradeColor(g){ return GRADE_PALETTE[g] || GRADE_PALETTE.C; }
 const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB, STAGE_SKILLS);
+/* ===== 스킬 분류 복수 태그(cats) — kind + 라이더로 도출. UI 칩 + 향후 특성 시너지 키 ===== */
+const CAT_META = {
+  attack:      { icon:'🗡️', name:'공격',     color:'#ff7a5a' },
+  guard:       { icon:'🛡️', name:'방어',     color:'#4ac6ff' },
+  buff:        { icon:'✨', name:'버프',     color:'#b06bff' },
+  debuff:      { icon:'🥀', name:'디버프',   color:'#9be15d' },
+  heal_hp:     { icon:'❤️', name:'체력회복', color:'#ff6bd4' },
+  heal_energy: { icon:'⚡', name:'에너지회복', color:'#ffe14a' },
+};
+function skillCats(sk){
+  if(!sk) return [];
+  const out = new Set();
+  if(Array.isArray(sk.cats)) sk.cats.forEach(c => out.add(c)); // 명시 태그 우선(향후 카드)
+  const k = sk.kind;
+  if(k==='attack' || k==='elemental' || k==='dot') out.add('attack');
+  if(k==='guard') out.add('guard');
+  if(k==='buff')  out.add('buff');
+  if(k==='debuff') out.add('debuff');
+  // 라이더 기반 보조 태그(하이브리드 표현)
+  if((sk.power||0) > 0) out.add('attack');
+  if(sk.dot || sk.enemyDebuff) out.add('debuff');
+  if(sk.selfBuff) out.add('buff');
+  if(sk.heal || sk.lifesteal) out.add('heal_hp');
+  if(sk.energyGain || sk.energyRegen) out.add('heal_energy');
+  return Array.from(out);
+}
 /* 무기/물약 카드가 부여하는 스킬을 등급 계수로 스케일. 무기 스킬은 횟수(uses)도 등급에 따라 증가 */
 function gradeCardSkill(id, base, grade){
   if(!base) return null;
@@ -6610,77 +6776,117 @@ const EX_EL_ORDER = ['fire','water','grass','earth','wind','bolt','ice'];
 const EX_TYPE_ORDER = ['목본형','화초형','다육형','덩굴형','버섯형'];
 const EX_GRADE_ORDER = ['D','C','B','A','S'];
 const EX_ORBIT_R = { 1:56, 2:100, 3:132 };
-/* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다. */
+/* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다.
+   ── 아틀라스 종 분포(옵션 C) ──
+   planet.species = 그 좌표(행성)의 서식 종 풀(key 목록·비-legacy). 지역은 el/types로 이 풀을 좁힌다.
+   region.signature = 그 지역에서만 낮은 확률로 나오는 희귀 전용종(풀에서 일부러 제외). 없으면 생략.
+   세계관: 각 행성은 여러 외계 문명이 다른 은하에서 발견해 공유한 좌표 — 폴드 점프로 이동한다. */
 const EXPLORE_VIEW = [
   { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
     cardTypes:['chloro','dna','spore'], themeNote:'생명이 풍부한 우림 — 무기는 발견되지 않고 DNA·포자·엽록체 카드가 나온다.',
-    intro:'식물이 지배하는 온화한 땅', regions:[
-      { name:'아르키아', el:['grass'], types:['화초형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
+    intro:'여러 문명이 시료를 공유한 우림 좌표 · 폴드 심도 1',
+    species:['flower_grass','thorn','aqua','flower_wind','spark','vine_water'], regions:[
+      { name:'아르키아', el:['grass'], types:['화초형','덩굴형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
         desc:'완만한 초원이 끝없이 펼쳐진 지역. 기본형 종자가 가장 흔하게 발견된다.', link:'region_elyndor_spore_marsh' },
       { name:'토르시단', el:['water','bolt'], types:['화초형'], diff:2, grade:'C', cost:150, map:{x:74,y:36},
         desc:'폭풍 구름이 머무는 고지대 호수. 번개를 머금은 화초형 변이가 보고된다.', link:'region_elyndor_lumenwood' },
       { name:'루미안', el:['water','grass'], types:['화초형','덩굴형'], diff:1, grade:'D', cost:100, map:{x:48,y:66},
-        desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood' },
+        desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood', signature:['spore_cap'] },
     ]},
   { id:'ex_calisto', name:'칼리스토', orbit:1, angle:332, color:'#ffd17a',
     cardTypes:['weapon','common'], themeNote:'버려진 채굴 잔해가 흩어진 건조 지대 — 무기 카드가 발견된다.',
-    intro:'붉은 모래가 흐르는 건조 행성', regions:[
+    intro:'폐채굴 문명이 남긴 건조 좌표 · 폴드 심도 1',
+    species:['cactus_fire','gaia','flower_fire','cactus_wind'], regions:[
       { name:'세이라 분지', el:['earth','fire'], types:['다육형'], diff:3, grade:'C', cost:200, map:{x:32,y:38},
-        desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes' },
+        desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes', signature:['cactus_bolt'] },
       { name:'붉은 사구', el:['fire'], types:['다육형','화초형'], diff:2, grade:'D', cost:160, map:{x:68,y:62},
         desc:'한낮의 열기가 강한 모래언덕. 내열성 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_veloc', name:'벨로크', orbit:2, angle:48, color:'#ff8a4a', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'고대 전장의 잔해가 묻힌 용암 행성 — 무기·DNA 카드가 발견된다.',
-    intro:'화산 활동이 활발한 용암 행성', regions:[
+    intro:'고대 전장이 묻힌 용암 좌표 · 폴드 심도 2',
+    species:['tree_fire','cactus_fire','flower_fire','tree_earth','gaia'], regions:[
       { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
-        desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
+        desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift', signature:['vine_fire'] },
       { name:'흑요암 능선', el:['fire'], types:['다육형','목본형','버섯형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
         desc:'굳은 용암이 만든 검은 능선. 강한 방어형 종자가 발견된다.', link:'region_vathra_iron_dunes' },
-      { name:'잿빛 평원', el:['earth','fire'], types:['화초형','버섯형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
+      { name:'잿빛 평원', el:['earth','fire'], types:['화초형','다육형','버섯형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
         desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
     ]},
   { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
     cardTypes:['spore','potion'], themeNote:'독성 포자가 가득한 균사 행성 — 포자·물약 카드가 발견된다.',
-    intro:'포자 안개가 가득한 균사 행성', regions:[
+    intro:'외계 생태가 공유된 균사 좌표 · 폴드 심도 2',
+    species:['flower_grass','tree_grass','thorn','flower_wind','vine_wind'], regions:[
       { name:'포자 늪', el:['grass','wind'], types:['화초형','버섯형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
         desc:'공생 포자가 안개처럼 떠다니는 늪. 제어형 변이가 자주 나온다.', link:'region_elyndor_spore_marsh' },
       { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형','버섯형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
-        desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh' },
+        desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh', signature:['spore_cap'] },
     ]},
   { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
     cardTypes:['chloro','dna','spore'], themeNote:'생체발광 정글 위성 — 무기는 없고 엽록체·DNA·포자 카드가 나온다.',
-    intro:'생체발광 정글로 뒤덮인 위성', regions:[
+    intro:'생체발광 정글 좌표 · 공유 아틀라스의 위성',
+    species:['tree_grass','tree_bolt','thorn','flower_grass','flower_wind'], regions:[
       { name:'발광 수림', el:['grass','bolt'], types:['목본형'], diff:3, grade:'B', cost:300, map:{x:28,y:36},
         desc:'스스로 빛나는 거목 군락. 광합성 계열 변이 재료가 풍부하다.', link:'region_elyndor_lumenwood' },
       { name:'덩굴 협곡', el:['grass'], types:['덩굴형','화초형'], diff:4, grade:'A', cost:360, map:{x:66,y:58},
-        desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh' },
+        desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh', signature:['vine_bolt'] },
     ]},
   { id:'ex_nereidon', name:'네레이돈', orbit:3, angle:112, color:'#4ac6ff', size:'epic', ring:true,
     cardTypes:['potion','spore','chloro'], themeNote:'심해 해양 위성 — 물약·포자·엽록체 카드가 발견된다.',
-    intro:'조석권에 갇힌 거대 해양 위성', regions:[
+    intro:'조석에 갇힌 해양 좌표 · 폴드 심도 3',
+    species:['aqua','flower_ice','flower_wind','vine_ice','cactus_water'], regions:[
       { name:'조석유리 산호초', el:['water','ice'], types:['화초형'], diff:6, grade:'A', cost:480, map:{x:30,y:34},
         desc:'유리질 산호가 조석 에너지에 맞춰 자란다. 방어막 특성이 잘 붙는다.', link:'region_nereion_tideglass_reef' },
-      { name:'심해 균열', el:['water'], types:['덩굴형'], diff:7, grade:'S', cost:600, map:{x:72,y:46},
-        desc:'빛이 닿지 않는 심해의 균열. 극한 수압을 견딘 변이체가 산란한다.', link:'region_nereion_tideglass_reef' },
+      { name:'심해 균열', el:['water'], types:['덩굴형','화초형'], diff:7, grade:'S', cost:600, map:{x:72,y:46},
+        desc:'빛이 닿지 않는 심해의 균열. 극한 수압을 견딘 변이체가 산란한다.', link:'region_nereion_tideglass_reef', signature:['vine_water'] },
       { name:'궤도 캐노피', el:['water','wind'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:520, map:{x:50,y:74},
         desc:'위성 상층 대기에 떠 있는 부유 수림. 희귀 변이 종자가 모인다.', link:'region_nereion_orbit_canopy' },
     ]},
   { id:'ex_aztel', name:'아즈텔', orbit:3, angle:236, color:'#ff6bd4', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'멸망한 문명의 폐허 — 강력한 무기·DNA 카드가 발견된다.',
-    intro:'방사선 폭풍이 휘몰아치는 폐허', regions:[
+    intro:'멸망 문명의 폐허 좌표 · 방사선 폭풍',
+    species:['cactus_bolt','flower_fire','cactus_fire','flower_wind','spark','aqua'], regions:[
       { name:'방사 폐허', el:['bolt','fire'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:32,y:38},
-        desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift' },
+        desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift', signature:['tree_bolt'] },
       { name:'전자기 늪', el:['bolt','water'], types:['화초형','버섯형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
         desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
     cardTypes:['common','chloro'], themeNote:'영구 동토 행성 — 공통·엽록체 카드가 발견된다.',
-    intro:'영하의 빙하로 덮인 동토 행성', regions:[
+    intro:'은하 변경의 영구 동토 좌표 · 폴드 심도 3',
+    species:['flower_ice','cactus_ice','aqua','vine_ice'], regions:[
       { name:'빙정 평원', el:['ice','water'], types:['화초형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
         desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
       { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형','버섯형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
-        desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
+        desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy', signature:['frost'] },
+    ]},
+  // ── 신규 좌표 (행성 확장) — 새 개체가 나오면 아래 species 풀/지역 signature에 key만 추가하면 된다 ──
+  { id:'ex_seraphin', name:'세라핀', orbit:1, angle:240, color:'#bfe9ff',
+    cardTypes:['chloro','common'], themeNote:'상승기류가 흐르는 부유 고원 — 공통·엽록체 카드가 나온다.',
+    intro:'바람이 흐르는 부유 고원 좌표 · 폴드 심도 1',
+    species:['flower_wind','vine_wind','flower_grass','thorn','spark'], regions:[
+      { name:'윈드테라스', el:['wind'], types:['화초형','덩굴형'], diff:2, grade:'C', cost:150, map:{x:30,y:34},
+        desc:'끝없는 상승기류가 부는 계단식 고원. 바람 속성 종자가 흔하다.', link:'region_elyndor_lumenwood', signature:['tree_wind'] },
+      { name:'초록 능선', el:['wind','grass'], types:['덩굴형','화초형'], diff:2, grade:'C', cost:140, map:{x:66,y:62},
+        desc:'덩굴이 바위 능선을 타고 오르는 지대. 가벼운 종자가 바람에 실려 모인다.', link:'region_elyndor_spore_marsh' },
+    ]},
+  { id:'ex_volkar', name:'볼카르', orbit:2, angle:110, color:'#ffe066', size:'rare',
+    cardTypes:['weapon','dna'], themeNote:'영구 뇌우가 치는 번개 행성 — 무기·DNA 카드가 발견된다.',
+    intro:'영구 뇌우가 치는 번개 좌표 · 폴드 심도 2',
+    species:['spark','cactus_bolt','vine_bolt','flower_fire'], regions:[
+      { name:'방전 평원', el:['bolt'], types:['화초형','덩굴형'], diff:4, grade:'B', cost:320, map:{x:32,y:36},
+        desc:'쉴 새 없이 번개가 떨어지는 평원. 전기를 머금은 종자가 자란다.', link:'region_vathra_sulfur_rift', signature:['tree_bolt'] },
+      { name:'자철 협곡', el:['bolt','fire'], types:['다육형','덩굴형'], diff:4, grade:'C', cost:280, map:{x:68,y:60},
+        desc:'자성을 띤 광물이 솟은 협곡. 내열·전기 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
+    ]},
+  { id:'ex_tiamen', name:'티아멘', orbit:3, angle:320, color:'#9fdcff',
+    cardTypes:['potion','common'], themeNote:'얼어붙은 대양 행성 — 물약·공통 카드가 발견된다.',
+    intro:'얼어붙은 대양 좌표 · 폴드 심도 3',
+    species:['flower_ice','cactus_ice','vine_ice','aqua'], regions:[
+      { name:'결빙 군도', el:['ice','water'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:30,y:36},
+        desc:'얼음 섬이 점점이 떠 있는 군도. 빙결 종자가 자생한다.', link:'region_nereion_tideglass_reef', signature:['frost'] },
+      { name:'빙저 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:500, map:{x:68,y:60},
+        desc:'대양 바닥에 뚫린 얼음 동굴. 극저온 적응체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
     ]},
 ];
 let exPopPlanetId = null;   // 그림2 팝업이 열린 행성
@@ -6888,6 +7094,34 @@ function exPlanetNode(p){
     <span class="explanet-label">${p.name}${locked?' 🔒':''}</span>
   </button>`;
 }
+/* 종 key → 작은 외형 칩(아이콘+이름). rare=true면 시그니처(✦희귀) 강조. */
+function exSpeciesChip(k, rare){
+  const s = SPECIES[k]; if(!s) return '';
+  const svg = composePlantSvg(s.seedType, 'juvenile', s.element, { size:26 });
+  return `<span class="exsp-chip${rare?' rare':''}" title="${s.name}${rare?' · 희귀 시그니처':''}">`
+    + `<span class="exsp-ic">${svg}</span><span class="exsp-nm">${s.name}${rare?' ✦':''}</span></span>`;
+}
+/* 행성 주요 서식종 미리보기(앞 N개). 풀 없으면 빈 문자열. */
+function exPlanetSpeciesPreview(p, n){
+  const pool = ((p && p.species) || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  if(!pool.length) return '';
+  return `<div class="exsp-block"><div class="exsp-cap">주요 서식종</div>`
+    + `<div class="exsp-row">${pool.slice(0, n||4).map(k => exSpeciesChip(k,false)).join('')}</div></div>`;
+}
+/* 지역에서 만날 수 있는 종(행성풀 ∩ 지역 el/types) + 시그니처(✦). 교집합 비면 행성 풀 전체로 표시. */
+function exRegionSpecies(p, r){
+  if(!p || !r) return '';
+  const pool = ((p.species) || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  if(!pool.length && !(r.signature||[]).length) return '';
+  const els = (r.el && r.el.length) ? r.el : null;
+  const okType = (r.types && r.types.length) ? r.types.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
+  let list = pool.filter(k => { const s = SPECIES[k]; return (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0); });
+  if(!list.length) list = pool;
+  const sig = (r.signature || []).filter(k => SPECIES[k] && !SPECIES[k].legacy);
+  const chips = list.slice(0, 6).map(k => exSpeciesChip(k,false)).join('') + sig.map(k => exSpeciesChip(k,true)).join('');
+  if(!chips) return '';
+  return `<div class="exsp-block"><div class="exsp-cap">서식 종${sig.length?' · ✦희귀':''}</div><div class="exsp-row">${chips}</div></div>`;
+}
 function exPopupHtml(p){
   if(!p) return '';
   const dr = exDiffRange(p);
@@ -6901,6 +7135,7 @@ function exPopupHtml(p){
         <tr><td>속성</td><td>${exElIcons(exPlanetEls(p))}</td></tr>
         <tr><td>타입</td><td>${exTypeIcons(exPlanetTypes(p))}</td></tr>
       </table>
+      ${exPlanetSpeciesPreview(p, 4)}
       <button class="btn primary expop-name" id="exPopOpen">${p.name}</button>
     </div>`;
 }
@@ -6922,6 +7157,7 @@ function exDetailHtml(p){
       <tr><td>난이도</td><td style="color:${diff.c}">${diff.t}</td></tr>
       ${(!locked && diff.idx < 5) ? `<tr><td>예상 성공률</td><td><b>${successPct}%</b></td></tr>` : ''}
     </table>
+    ${exRegionSpecies(p, r)}
     ${locked ? `<div class="howto" style="margin:8px 0 0;color:#ff8a4a">🔒 연료 탱크 부족 — 궤도 ${p.orbit}에 도달할 수 없습니다. (격납고에서 연료 탱크 강화)</div>` : ''}`
     : `<div class="exdet-empty">지도에서 지역을 선택하면<br>속성 · 타입 · 난이도가 표시됩니다.</div>`;
   const cost = r ? exRegionCost(r) : 0;
@@ -6975,7 +7211,7 @@ function exHangarHtml(){
   return `<div class="exhangar-backdrop" id="exHangarBackdrop"><div class="exhangar-card">
     <button class="btn exhangar-x" id="exHangarX">✕</button>
     <h3>🛰️ 탐사선 격납고</h3>
-    <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료 탱크를 올리면 더 먼 궤도의 행성이 열립니다.</p>
+    <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료(폴드 에너지) 탱크를 올리면 <b>더 깊은 폴드 심도</b>의 좌표가 열립니다.</p>
     <div class="exhangar-stats">${statRows}</div>
     ${upRows}
   </div></div>`;
@@ -6983,19 +7219,21 @@ function exHangarHtml(){
 function exTravelOverlay(p, done){
   const host = $('#explorationModal');
   if(!host){ done(); return; }
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
   const ov = document.createElement('div');
-  ov.className = 'explore-travel';
+  ov.className = 'explore-travel fold' + (reduce ? ' reduce' : '');
   ov.innerHTML = `
     <div class="et-scene">
-      <div class="et-trail"></div>
+      <div class="et-grid"></div>
+      <div class="et-rift" style="--pc:${p.color}"></div>
       <div class="et-probe">🛰️</div>
-      <div class="et-planet" style="--pc:${p.color}"></div>
+      <div class="et-flash"></div>
     </div>
-    <div class="et-text">${p.name} 궤도로 탐사선 이동 중…</div>
+    <div class="et-text">${p.name} 좌표로 시공간을 접는 중…</div>
     <div class="et-bar"><span></span></div>`;
   host.appendChild(ov);
   if(sfx && sfx.roll) sfx.roll();
-  setTimeout(() => { if(ov.parentNode) ov.remove(); done(); }, 1450);
+  setTimeout(() => { if(ov.parentNode) ov.remove(); done(); }, reduce ? 480 : 1450);
 }
 function exploreViewRun(){
   if(explorationBusy) return;
@@ -7025,7 +7263,7 @@ function exploreViewRun(){
         if(!seed) continue;
         const grade = exRollRewardGrade(r, p);
         const mut = Math.random() < seedMutationChance(seed, realRegion || { trait_probability_modifiers:{} });
-        const speciesKey = rollSpeciesFromView(r);
+        const speciesKey = rollSpeciesFromView(r, p);
         const entry = createExplorationSeedEntry(seed, realPlanet, realRegion, mut, grade, speciesKey);
         state.seed_inventory.push(entry);
         rewards.seeds.push(entry);
@@ -7066,7 +7304,7 @@ renderExploration = function(){
           <button class="exmap-center clickable" id="exHangarOpenBtn" title="탐사선 격납고">🛰️</button>
           ${EXPLORE_VIEW.map(exPlanetNode).join('')}
         </div>
-        <div class="exmap-title"><h2>🛰️ 우주맵</h2><p>드래그로 이동 · 휠/핀치로 확대 · 가운데 🛰️는 격납고</p></div>
+        <div class="exmap-title"><h2>🛰️ 아틀라스 — 폴드 좌표망</h2><p>다른 은하의 공유 좌표 · 드래그 이동 · 휠/핀치 확대 · 가운데 🛰️는 격납고</p></div>
         <div class="exmap-zoom">
           <button class="btn" id="exZoomIn" title="확대">＋</button>
           <button class="btn" id="exZoomOut" title="축소">－</button>
@@ -7608,63 +7846,29 @@ function renderSeedBagCard(item){
   const region = seedOriginRegion(item, seed);
   const meta = rarityMeta((seed && seed.rarity) || item.rarity);
   const grade = item.grade || 'C';
-  const selected = item.inventory_id === selectedSeedInventoryId;
-  const icon = item.rainbow ? '🌈' : meta.icon;
-  const typeLabel = item.rainbow ? '??? (무작위)' : (SEED_TYPE_NAMES[seedTypeOf(item)] || '미확인');
-  return `<div class="itemcard seed-bag-card ${selected ? 'selected' : ''}" data-select-seed="${item.inventory_id}">
+  const rainbow = !!item.rainbow;
+  const speciesKey = (item.species && SPECIES[item.species]) ? item.species : (seed ? speciesKeyForSeed(seed) : null);
+  const spDef = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey] : null;
+  const elDef = spDef && ELEMENTS[spDef.element] ? ELEMENTS[spDef.element] : null;
+  const icon = rainbow ? '🌈' : meta.icon;
+  const typeLabel = rainbow ? '???' : (SEED_TYPE_NAMES[seedTypeOf(item)] || (spDef ? SEED_TYPE_NAMES[spDef.seedType] : '미확인'));
+  const elChip = rainbow
+    ? '<span class="seed-mini-stat">속성 ???</span>'
+    : (elDef ? `<span class="seed-mini-stat" style="border-color:${elDef.color}66;color:${elDef.color}">${elDef.icon} ${elDef.name}</span>` : '');
+  const rarChip = `<span class="seed-mini-stat ${rainbow ? '' : meta.css}">${rainbow ? '희귀도 ???' : meta.name}</span>`;
+  const typeChip = `<span class="seed-mini-stat">${rainbow ? '타입 ???' : typeLabel}</span>`;
+  const gradeChip = `<span class="seed-mini-stat" style="color:${rainbow ? '#fff' : (GRADES[grade] || '#fff')}">잠재력 ${rainbow ? '???' : grade}</span>`;
+  const origin = rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`;
+  return `<div class="itemcard seed-bag-card" data-seed-card="${item.inventory_id}">
     <div style="font-size:30px;width:42px;text-align:center">${icon}</div>
     <div class="ic-body">
-      <div class="ic-name"${item.rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'} ${gradeBadgeHtml(grade)}</div>
-      <div class="ic-desc">
-        기원: ${item.rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`}<br>
-        식물 타입: ${typeLabel}
-      </div>
-      <div class="seed-card-meta">
-        <span class="seed-mini-stat ok">잠재력 ${grade}</span>
-        ${item.mutation_candidate ? '<span class="seed-mini-stat warn">변이 가능</span>' : ''}
-      </div>
+      <div class="ic-name"${rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'}</div>
+      <div class="ic-desc">🪐 ${origin}</div>
+      <div class="seed-card-meta">${elChip}${rarChip}${typeChip}${gradeChip}</div>
     </div>
-  </div>`;
-}
-function renderSeedDetail(entry){
-  if(!entry) return `<div class="seed-detail-panel seed-bag-empty"><div class="howto">왼쪽 목록에서 종자를 선택하면 상세 스펙을 볼 수 있습니다.</div></div>`;
-  const seed = ALIEN_INDEX.seeds[entry.seed_id];
-  const meta = rarityMeta((seed && seed.rarity) || entry.rarity);
-  const planet = seedOriginPlanet(entry, seed);
-  const region = seedOriginRegion(entry, seed);
-  const rainbow = !!entry.rainbow;
-  const speciesKey = (entry.species && SPECIES[entry.species]) ? entry.species : (seed ? speciesKeyForSeed(seed) : null);
-  const spDef = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey] : null;
-  const typeLabel = rainbow ? '??? (무작위)' : (SEED_TYPE_NAMES[seedTypeOf(entry)] || (spDef ? SEED_TYPE_NAMES[spDef.seedType] : '미확인'));
-  const elLabel = rainbow ? '??? (무작위)' : (spDef ? `${ELEMENTS[spDef.element].icon} ${spDef.name}` : '미확인');
-  const storage = seedStorageStatus(seed);
-  const readiness = seedPlantReadiness(entry, seed);
-  const requiredEnv = STORAGE_ENVIRONMENTS[storage.requiredKey] || STORAGE_ENVIRONMENTS.general;
-  return `<div class="seed-detail-panel">
-    <div class="seed-detail-title">
-      <div>
-        <h3>${entry.name || (seed && seed.name) || '알 수 없는 종자'}</h3>
-        <div class="info-desc">${rainbow ? '🌈 등급·타입·속성·변이형이 모두 무작위인 미지의 종자. 심으면 정체가 드러납니다.' : seedDescription(seed)}</div>
-      </div>
-      <span class="info-badge ${meta.css}">${meta.name}</span>
-    </div>
-    <div class="seed-detail-grid">
-      <div class="seed-detail-cell">희귀도<b>${meta.name}</b></div>
-      <div class="seed-detail-cell">기원 행성<b>${rainbow ? '미지' : ((planet && planet.name) || entry.origin_planet || '미확인')}</b></div>
-      <div class="seed-detail-cell">기원 지역<b>${rainbow ? '미지' : ((region && region.name) || entry.origin_region || '미확인')}</b></div>
-      <div class="seed-detail-cell">식물 타입<b>${typeLabel}</b></div>
-      <div class="seed-detail-cell">종<b>${elLabel}</b></div>
-      <div class="seed-detail-cell">기본 능력치 예상값<b>${seedBaseStatsText(seed)}</b></div>
-      <div class="seed-detail-cell">변이율 예상치<b>${seedMutationEstimate(seed, entry)}</b></div>
-      <div class="seed-detail-cell">잠재력 등급<b style="color:${GRADES[entry.grade||'C']||'#fff'}">${entry.grade || 'C'}</b></div>
-      <div class="seed-detail-cell">잠재력 효과<b>등급↑ = 생장 시 더 좋은 등급의 스킬 획득</b></div>
-      <div class="seed-detail-cell">심기 가능 여부<b>${readiness.reason}</b></div>
-    </div>
-    <div class="shop-section">잠재특성 후보</div>
-    <div class="seed-trait-list">${seedTraitPills(seed)}</div>
-    <div class="seed-detail-actions">
-      <button class="btn primary modal-close" id="plantSelectedSeed" data-plant-seed="${entry.inventory_id}" ${readiness.ok ? '' : 'disabled'}>심기</button>
-      <button class="btn ghost" data-sell-seed="${entry.inventory_id}" style="border-color:rgba(255,211,74,.45);color:var(--gold)">판매 ${fmt(seedSellPrice(seed, entry))}💰</button>
+    <div class="seed-card-actions">
+      <button class="btn primary seed-mini-btn" data-plant-seed="${item.inventory_id}">심기</button>
+      <button class="btn ghost seed-mini-btn" data-sell-seed="${item.inventory_id}">판매 ${fmt(seedSellPrice(seed, item))}💰</button>
     </div>
   </div>`;
 }
@@ -7827,11 +8031,6 @@ function plantSeedFromBag(inventoryId, customName = ''){
 function renderSeedBag(){
   const body = $('#seedBagBody');
   const inv = state.seed_inventory || [];
-  if(selectedSeedInventoryId && !inv.some(item => item.inventory_id === selectedSeedInventoryId)){
-    selectedSeedInventoryId = inv[0] ? inv[0].inventory_id : null;
-  }
-  if(!selectedSeedInventoryId && inv.length) selectedSeedInventoryId = inv[0].inventory_id;
-  const selectedEntry = inv.find(item => item.inventory_id === selectedSeedInventoryId) || null;
   const cap = seedBagCapacity();
   const starterHelp = canClaimStarterSeed() ? `
     <div class="itemcard" id="claimStarterSeed">
@@ -7851,11 +8050,7 @@ function renderSeedBag(){
       ${inv.length ? `<span class="seedbag-spacer"></span>${sortBtn('rarity','희귀도')}${sortBtn('name','이름')}${sortBtn('planet','행성')}` : ''}
     </div>
     ${starterHelp}
-    ${inv.length ? `
-      <div class="seed-bag-layout">
-        <div class="seed-bag-list">${seedCards}</div>
-        ${renderSeedDetail(selectedEntry)}
-      </div>` : '<div class="howto seed-bag-empty">종자 가방이 비어 있습니다. 탐사로 행성을 탐험해 종자를 얻어보세요.</div>'}
+    ${inv.length ? `<div class="seed-bag-list">${seedCards}</div>` : '<div class="howto seed-bag-empty">종자 가방이 비어 있습니다. 탐사로 행성을 탐험해 종자를 얻어보세요.</div>'}
     <button class="btn primary modal-close" id="seedBagExplore">우주맵으로 가기</button>`;
   const starter = $('#claimStarterSeed');
   if(starter) starter.addEventListener('click', claimStarterSeed);
@@ -7863,17 +8058,11 @@ function renderSeedBag(){
     btn.addEventListener('click', () => { seedSortMode = btn.dataset.seedSort; sfx.tap(); renderSeedBag(); });
   });
   document.querySelectorAll('#seedBagBody [data-sell-seed]').forEach(btn => {
-    btn.addEventListener('click', () => sellSeed(btn.dataset.sellSeed));
+    btn.addEventListener('click', e => { e.stopPropagation(); sellSeed(btn.dataset.sellSeed); });
   });
-  document.querySelectorAll('#seedBagBody [data-select-seed]').forEach(card => {
-    card.addEventListener('click', () => {
-      selectedSeedInventoryId = card.dataset.selectSeed;
-      sfx.tap();
-      renderSeedBag();
-    });
+  document.querySelectorAll('#seedBagBody [data-plant-seed]').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); sfx.tap(); openPlantConfirm(btn.dataset.plantSeed); });
   });
-  const plantBtn = $('#plantSelectedSeed');
-  if(plantBtn) plantBtn.addEventListener('click', () => openPlantConfirm(plantBtn.dataset.plantSeed));
   $('#seedBagExplore').addEventListener('click', () => {
     hide('#seedBagModal');
     openExploration();
@@ -8854,8 +9043,30 @@ function skillTabHtml(p){
       <div class="pm-plant">${spriteFor(p,108)}</div>
       <div class="pm-col">${right.join('')}</div>
     </div>
+    ${variantSkillBarHtml(p)}
     ${skillDrawerHtml(p)}
     ${swapFloatHtml(p)}`;
+}
+/* 하단 변이 스킬 바(관리창) — variantSkillsOf 결과를 상단 6칸과 별개로 표시(읽기 전용) */
+function variantSkillBarHtml(p){
+  const ids = variantSkillsOf(p);
+  if(!ids.length) return '';
+  const form = FORMS[(p&&p.form)||'normal'] || FORMS.normal;
+  const cells = ids.map(id=>{
+    const sk = skillById(id, p) || { name:id, icon:'❔' };
+    const col = gradeColor(skillGradeOf(p, id));
+    return `<div class="vskill" style="--gc:${col}">
+      <span class="vsk-n">${sk.icon||''} ${displaySkillName(sk.name)}</span>${skillCatChipsHtml(sk)}</div>`;
+  }).join('');
+  return `<div class="vskill-bar"><div class="vskill-lab">${form.icon} 변이 스킬 (전투 시 별도 사용)</div><div class="vskill-row">${cells}</div></div>`;
+}
+/* 스킬 분류 색칩 — skillCats(플랜1)를 화면에 노출 */
+function skillCatChipsHtml(sk){
+  const cats = skillCats(sk); if(!cats.length) return '';
+  return `<span class="dc-cats">` + cats.map(c=>{
+    const m = CAT_META[c]; if(!m) return '';
+    return `<span class="cat-chip" style="--cc:${m.color}" title="${m.name}">${m.icon}</span>`;
+  }).join('') + `</span>`;
 }
 function skillDrawerHtml(p){
   const eq = p.equipped_skills || [];
@@ -8866,7 +9077,7 @@ function skillDrawerHtml(p){
   const cards = bench.length ? bench.map(id=>{
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     return `<div class="dcard skill" data-skill="${id}" style="--gc:${col}">
-      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span></div>`;
+      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span>${skillCatChipsHtml(sk)}</div>`;
   }).join('') : `<div class="drawer-empty">해금된 추가 스킬이 없습니다. 식물을 더 성장시키면 단계별로 새 스킬을 얻습니다.</div>`;
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
@@ -8935,8 +9146,19 @@ function detailEquip(){
     if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
     const eq = p.equipped_trait_cards;
     if(eq.includes(key)) return;
-    if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
-    else { swapPending = { kind:'mut', key }; sfx.tap(); renderUpgrade(); }
+    const id = parseCardKey(key).id;
+    const def = cardDefOf(key);
+    const sameIdIdx = eq.findIndex(k => parseCardKey(k).id === id);
+    if(sameIdIdx >= 0){ // 같은 카드 다른 등급 → 그 자리 교체(슬롯 증가 없음)
+      eq[sameIdIdx] = key; sfx.heal(); saveState(); renderUpgrade(); renderMain();
+    } else {
+      if(def && def.type === 'weapon'){
+        const wCount = eq.filter(k => { const d=cardDefOf(k); return d && d.type==='weapon'; }).length;
+        if(wCount >= 2){ toast('무기 카드는 최대 2장까지만 장착할 수 있습니다'); return; }
+      }
+      if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
+      else { swapPending = { kind:'mut', key }; sfx.tap(); renderUpgrade(); }
+    }
   } else {
     if(!Array.isArray(p.equipped_skills)) p.equipped_skills = [];
     const eq = p.equipped_skills;
@@ -9475,9 +9697,35 @@ let B = null;
 function eff(a, d){ return ELEMENTS[a].strong.includes(d) ? 1.5 : (ELEMENTS[d].strong.includes(a) ? 0.67 : 1); }
 function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'기동성':s==='acc'?'적중':s; }
 function dotIcon(k){ return k==='poison'?'🟣':k==='bleed'?'🩸':k==='burn'?'🔥':'☠️'; }
+/* 독/출혈/화상 스택 상한 — 같은 종류가 상한 초과면 가장 오래된 스택 1개 제거(방무시 무한증식 방지) */
+const DOT_STACK_CAP = 4;
+function addDot(unit, dot){
+  if(!unit.dots) unit.dots = [];
+  unit.dots.push(dot);
+  while(unit.dots.filter(d => d.kind === dot.kind).length > DOT_STACK_CAP){
+    const i = unit.dots.findIndex(d => d.kind === dot.kind);
+    if(i < 0) break;
+    unit.dots.splice(i, 1);
+  }
+}
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
 function applyEnemyDebuff(d, eb){ let stat=eb.stat; if(stat==='rand') stat=pick(['atk','def','spd']); d.buffs.push({stat,pct:eb.pct,turns:eb.turns,kind:'debuff'}); return stat; }
+/* 공통 카드 battle-start 훅 — self가 보유한 시작 효과를 전투 개시 시 1회 적용(위조페로몬·약화효소→적 디버프, 불안정변이→자기 랜덤 스탯↑) */
+function applyCardStartHooks(self, foe){
+  const h = self.startHooks; if(!h) return;
+  (h.enemyDebuffs||[]).forEach(eb => foe.buffs.push({stat:eb.stat, pct:eb.pct, turns:eb.turns, kind:'debuff'}));
+  if((h.selfRandom||0) > 0){ const stat=pick(['atk','def','spd']); self.buffs.push({stat, pct:h.selfRandom, turns:99, kind:'buff'}); }
+}
+/* 공통 카드 매턴 훅 — 굴광성장(누적)·아드레날린(체력 임계)·만개(N턴째부터). ramp/adren/bloom 버프를 매턴 재계산해 effStat에 반영. */
+function applyCardTurnHooks(u, turn){
+  const h = u.turnHooks; if(!h || (!h.ramp && !h.threshold && !h.bloom)) return;
+  if(h.ramp) u.rampStack = Math.min(h.ramp.cap, round2((u.rampStack||0) + h.ramp.pct)); // 매턴 누적
+  u.buffs = u.buffs.filter(b => b.kind!=='ramp' && b.kind!=='adren' && b.kind!=='bloom'); // 재계산 전 제거
+  if(h.ramp && u.rampStack>0) u.buffs.push({kind:'ramp', stat:h.ramp.stat, pct:u.rampStack, turns:99});
+  if(h.threshold && u.hp>0 && u.hp <= u.max*h.threshold.hpBelow) u.buffs.push({kind:'adren', stat:h.threshold.stat, pct:h.threshold.pct, turns:99});
+  if(h.bloom && turn >= h.bloom.fromTurn) ['atk','def','spd'].forEach(st => u.buffs.push({kind:'bloom', stat:st, pct:h.bloom.allPct, turns:99}));
+}
 function effStat(u, stat){
   let pct=0; (u.buffs||[]).forEach(b=>{ if(b.stat===stat) pct += (b.kind==='debuff'?-b.pct:b.pct); });
   const base = stat==='atk'?u.atk : stat==='def'?u.def : u.spd;
@@ -9497,12 +9745,21 @@ function makeCombatant(src){
   P.lifestealPct = (P.lifestealPct||0) + CE.lifestealPct;
   P.defDownOnHit = (P.defDownOnHit||0) + CE.defDownOnHit;
   P.energyBonus = (P.energyBonus||0) + CE.energyBonus;
+  // 마지막잎새(survive once) — 카드가 부여, 1회 소진
+  if((CE.surviveChance||0) > (P.surviveChance||0)){ P.surviveChance = CE.surviveChance; P.surviveHpAfter = CE.surviveHpAfter; P.surviveOnce = true; }
   const bs = src.baseStats;
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식 변이형) 포식 기본 스킬
   let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
-  if((src.form||'normal') === 'pred') loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
-  CE.grantSkills.forEach(sid => loadout.push(sid));
+  if((src.form||'normal') === 'pred')   loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
+  if((src.form||'normal') === 'toxic')  loadout.push('skill_card_infuse', 'skill_card_spray'); // 독성 변이형 기본 보유
+  if((src.form||'normal') === 'dragon') loadout.push('skill_card_scale', 'skill_card_breath'); // 용족 변이형 기본 보유
+  const isWeaponForm = (src.form||'normal') === 'weapon';
+  CE.grantSkills.forEach(sid => {
+    // 무기형 변이에서 weapon card의 grantSkill은 하단 variant bar로 → loadout 제외
+    if(isWeaponForm && Object.values(TRAIT_CARDS).some(d => d.type==='weapon' && d.grantSkill===sid)) return;
+    loadout.push(sid);
+  });
   loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   const unit = {
     name:src.name, trainerName:src.trainerName||null, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
@@ -9518,15 +9775,18 @@ function makeCombatant(src){
     critRate: clamp((bs.critRate||5), 0, 90),
     critMult: bs.critMult || 1.5,
     energyMax: clamp((bs.energy||3) + (P.energyBonus||0), 1, 9),
-    energy: Math.min(clamp((bs.energy||3) + (P.energyBonus||0), 1, 9), 3),
+    energy: clamp((bs.energy||3) + (P.energyBonus||0), 1, 9),   // 시작 = 최대(항상 가득)
     guard:null, traits:src.traits||[], passives:P,
     cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
     cardSkills:CE.skillGrades||{}, skillGrades:src.skillGrades||{}, uses:{},
-    loadout, skipNext:false,
+    cards:(src.cards||[]).slice(),   // 변이 스킬 바(variantSkillsOf — 무기형 등) 원본 카드 보존
+    startHooks:{ enemyDebuffs:(CE.startEnemyDebuff||[]), selfRandom:(CE.startSelfRandom||0) }, // 공통 카드 battle-start 훅(위조페로몬·약화효소·불안정변이)
+    turnHooks:{ ramp:(CE.rampStat||null), threshold:(CE.thresholdBuff||null), bloom:(CE.bloom||null) }, // 매턴 훅(굴광성장·아드레날린·만개)
+    loadout, skipNext:false, scaleStack:0, rampStack:0,
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
-  // 무기 변이형 스킬: 경기당 사용 횟수(uses) 초기화
-  loadout.forEach(id => { const sk = skillById(id, unit); if(sk && sk.uses) unit.uses[id] = sk.uses; });
+  // 경기당 사용 횟수(uses) 초기화 — 로드아웃 + 하단 변이 스킬 바(무기 등 로드아웃 밖) 모두
+  loadout.concat(variantSkillsOf(unit)).forEach(id => { const sk = skillById(id, unit); if(sk && sk.uses && unit.uses[id]==null) unit.uses[id] = sk.uses; });
   return unit;
 }
 const ENEMY_NAME_TIERS = ['신참','투사','베테랑','정예','챔피언','전설의'];
@@ -9543,7 +9803,7 @@ function buildEnemy(roundIndex, tierIndex){
   // 변이형: 상위 라운드/티어일수록 변이형 봇 등장↑ (식물과 같은 변이 시스템을 봇도 사용)
   let form='normal', predType=null;
   if(Math.random() < (0.15 + roundIndex*0.06 + tierIndex*0.04)){
-    form = pick(['pred','toxic','spore','lumen','weapon']);
+    form = pick(['pred','toxic','spore','weapon','dragon']); // 발광(lumen) 폐지 — 적 변이형 풀에서도 제거, 용족(dragon) 추가
     if(form==='pred') predType = pick(['vamp','absorb']);
   }
   const sp = pickAcquirableSpecies();        // 적도 신규 획득 풀 기준(레거시 초본형 제외)
@@ -9579,8 +9839,8 @@ function buildEnemy(roundIndex, tierIndex){
   if(form==='pred')   cards.push(cardKeyOf(pick(['card_sap','card_mito','card_chloroabsorb']), cardGrade));
   if(form==='toxic')  cards.push(cardKeyOf(pick(['card_acid','card_gas','card_poisonthorn']), cardGrade));
   if(form==='spore')  cards.push(cardKeyOf(pick(['card_paralysis','card_poisonspore','card_disrupt']), cardGrade));
-  if(form==='lumen')  cards.push(cardKeyOf(pick(['card_chloroboost','card_solarheal']), cardGrade));
   if(form==='weapon') cards.push(cardKeyOf(pick(['card_sword','card_axe','card_gun','card_shieldw']), cardGrade));
+  // 독성/용족 봇은 변이형 기본 스킬(묻히기·뿌리기 / 비늘·브레스)을 makeCombatant가 자동 부여 — 별도 카드 불필요
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, trainerName:pick(ENEMY_TRAINER_NAMES), species:sp, element:el, grade, awakened:null,
@@ -9618,6 +9878,7 @@ function startMatch(){
   B = { p:playerC, e:enemyC, over:false, busy:false, turn:1, view:'cards' };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
+  applyCardStartHooks(B.p, B.e); applyCardStartHooks(B.e, B.p);
   hide('#mainScreen'); hide('#resultModal'); show('#battleScreen');
   // 전투 화면 초기 상태: 카드/판정/결과/오버레이 모두 닫고 무대만
   ['#cardPhase','#judgeWindow','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
@@ -9749,10 +10010,10 @@ function showCardPhase(){
   hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','close');
   $('#battleScreen').classList.remove('cards-hidden');
   $('#battleArena').classList.add('spread');
-  const predId = B.p.loadout.find(id => id === 'skill_card_predation');
-  const normals = B.p.loadout.filter(id => id !== 'skill_card_predation');
+  const variantIds = variantSkillsOf(B.p);
+  const normals = B.p.loadout.filter(id => !variantIds.includes(id));
   $('#cardHand').innerHTML = normals.map(id => skillCardHtml(id, false)).join('');
-  $('#cardPred').innerHTML = predId ? skillCardHtml(predId, true) : '';
+  $('#cardPred').innerHTML = variantIds.map(id => skillCardHtml(id, true)).join('');
   // 상단 에너지(번개)
   let pips = `<span class="ce-label">⚡ 에너지</span>`;
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
@@ -9924,7 +10185,8 @@ function popup(side, text, isHeal){
   setTimeout(()=>sp.remove(), 950);
 }
 function aiPickSkill(e){
-  const ids = e.loadout.filter(id => { const s = skillById(id,e); if(!s) return false; if(s.noEnergy){ const rem=(e.uses&&e.uses[id]!=null)?e.uses[id]:(s.uses||0); return rem>0; } return (s.cost||0) <= e.energy; });
+  const cand = e.loadout.concat(variantSkillsOf(e)).filter((v,i,a)=>a.indexOf(v)===i); // 하단 변이 스킬 바(무기/독성/용족)도 봇 후보에 포함
+  const ids = cand.filter(id => { const s = skillById(id,e); if(!s) return false; if(s.noEnergy){ const rem=(e.uses&&e.uses[id]!=null)?e.uses[id]:(s.uses||0); return rem>0; } return (s.cost||0) <= e.energy; });
   if(!ids.length) return 'skill_basic_strike';
   const get = id => skillById(id,e);
   const healId = ids.find(id => { const s=get(id); return s.heal && s.heal>=0.2; });
@@ -9972,6 +10234,8 @@ async function applySkill(a, d, s, side, options={}){
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
   if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.infuse){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:s.infuse.pct, turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
+  if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
@@ -10021,7 +10285,7 @@ async function applySkill(a, d, s, side, options={}){
     d.hp = Math.max(0, d.hp - dm);
     if(d.hp<=0 && d.passives.surviveChance>0){
       const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
-      if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
+      if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); if(d.passives.surviveOnce) d.passives.surviveChance = 0; }
     }
     if(absorbed>0) effectNotes.push('보호막이 공격을 막았다!');
     const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
@@ -10041,17 +10305,19 @@ async function applySkill(a, d, s, side, options={}){
       if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push('상대의 공격력을 흡수하였다!'); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
       if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push('상대의 에너지를 빼앗았다!'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
     }
-    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
+    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); addDot(d, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
     if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push('방어력이 감소하였다!'); }
     if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
+    if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
     // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
     if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
   updateBars();
@@ -10075,7 +10341,7 @@ async function tickStatuses(u, side){
       const roll=Math.random(), success=roll<sp.chance;
       if(!success) return;
       if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
-      else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); opp.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
+      else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); addDot(opp, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
       else if(sp.kind==='defup'){ u.buffs.push({stat:'def',pct:sp.pct,turns:2,kind:'buff'}); blog(`<span class="em">${u.name}</span> 🌀 방해 포자! 방어 ${Math.round(sp.pct*100)}%↑(2턴)`); changed=true; }
       if(sp.kind==='paralyze') statusNotes.push('마비 상태가 되었다!');
       else if(sp.kind==='poison') statusNotes.push('독에 중독되었다!');
@@ -10084,6 +10350,7 @@ async function tickStatuses(u, side){
   }
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
   if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); if(u.energy>before){ statusNotes.push('에너지가 회복되었다!'); changed=true; } }
+  applyCardTurnHooks(u, (B && B.turn) || 1); // 공통 카드 매턴 훅(굴광성장·아드레날린·만개)
   if(statusNotes.length) await showEffectMessages(statusNotes);
   if(changed){ updateBars(); await sleep(480); }
 }
@@ -10711,7 +10978,7 @@ const SHIP_MAP = [
 ];
 // 상호작용/장식 타일. action 있으면 콘솔(Ⓐ로 발동), 없으면 장식(통과 불가).
 const SHIP_FEATURES = [
-  { x:2, y:2, icon:'⚔️', label:'토너먼트 콘솔', color:'#ff5d6c',
+  { x:2, y:2, icon:'⚔️', label:'풀로세움 게이트 (상시 개방)', color:'#ff5d6c',
     action:()=>{ closeShip(); setNavActive('home'); startBattle(); } },
   { x:10, y:2, icon:'🛰️', label:'탐사 콘솔', color:'#4db5ff',
     action:()=>exitShip(()=>{ setNavActive('explore'); openExploration(); }) },
@@ -11332,6 +11599,231 @@ window.__test('exploration: every mushroom element reachable via 버섯형 regio
     if(!ok) fails.push('no 버섯형 region covers element '+el);
   });
   if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('explore: SIGNATURE_CHANCE is a sane probability', function(){
+  __ok(typeof SIGNATURE_CHANCE === 'number' && SIGNATURE_CHANCE > 0 && SIGNATURE_CHANCE < 1, 'SIGNATURE_CHANCE must be in (0,1)');
+});
+window.__test('explore: roll stays within planet pool ∩ region theme', function(){
+  const planet = { species:['cactus_fire','gaia','flower_fire'] };
+  const region = { el:['fire'], types:['다육형'] }; // → only cactus_fire matches both
+  for(let i=0;i<400;i++){
+    const k = rollSpeciesFromView(region, planet);
+    __ok(planet.species.indexOf(k) >= 0, 'result '+k+' must be in planet pool');
+    __ok(SPECIES[k].element==='fire' && SPECIES[k].seedType==='cactus', 'result '+k+' must match region theme');
+  }
+});
+window.__test('explore: signature is a separate low-chance path, never in normal pool', function(){
+  // frost(tree/ice)는 풀에도 없고 테마(fire/다육)와도 안 맞음 → 오직 시그니처 경로로만 등장
+  const planet = { species:['cactus_fire'] };
+  const region = { el:['fire'], types:['다육형'], signature:['frost'] };
+  let sig=0, other=0;
+  for(let i=0;i<1000;i++){
+    const k = rollSpeciesFromView(region, planet);
+    if(k==='frost') sig++;
+    else { __eq(k,'cactus_fire','non-signature result must come from pool'); other++; }
+  }
+  __ok(sig>0, 'signature species should appear sometimes');
+  __ok(other>0 && sig<1000, 'signature must NOT replace the whole pool');
+});
+window.__test('explore: empty pool∩theme falls back to planet pool (no throw)', function(){
+  const planet = { species:['cactus_fire'] };
+  const region = { el:['water'], types:['덩굴형'] }; // 교집합 없음
+  for(let i=0;i<50;i++){
+    const k = rollSpeciesFromView(region, planet);
+    __eq(k,'cactus_fire','fallback should return from planet pool');
+  }
+});
+window.__test('explore: no planet pool → legacy theme behavior', function(){
+  for(let i=0;i<100;i++){
+    const k = rollSpeciesFromView({ el:['fire'] }, null);
+    __ok(SPECIES[k] && !SPECIES[k].legacy, 'must be acquirable');
+    __eq(SPECIES[k].element,'fire','theme filter still applies without planet');
+  }
+});
+window.__test('explore: EXPLORE_VIEW species/signature keys valid + non-legacy', function(){
+  const fails=[];
+  EXPLORE_VIEW.forEach(p => {
+    (p.species||[]).forEach(k => { if(!SPECIES[k]) fails.push(p.id+' species '+k+' missing'); else if(SPECIES[k].legacy) fails.push(p.id+' species '+k+' is legacy'); });
+    (p.regions||[]).forEach(r => (r.signature||[]).forEach(k => { if(!SPECIES[k]) fails.push(p.id+'/'+r.name+' signature '+k+' missing'); else if(SPECIES[k].legacy) fails.push(p.id+'/'+r.name+' signature '+k+' is legacy'); }));
+  });
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('explore: species preview renders for a planet with a pool', function(){
+  const p = EXPLORE_VIEW.find(x => (x.species||[]).length);
+  __ok(p, 'expected at least one planet with a species pool');
+  const html = exPlanetSpeciesPreview(p, 4);
+  __ok(html && html.indexOf('exsp-chip') >= 0, 'preview should render species chips');
+  __eq(exPlanetSpeciesPreview({ species:[] }, 4), '', 'empty pool → empty preview');
+});
+window.__test('cats: attack skill tagged attack', function(){
+  __ok(skillCats({kind:'attack',power:100}).includes('attack'), 'attack');
+});
+window.__test('cats: acid hybrid = attack + debuff', function(){
+  const c = skillCats({kind:'debuff', power:135, enemyDebuff:{stat:'def',pct:0.3}});
+  __ok(c.includes('attack') && c.includes('debuff'), 'acid hybrid '+JSON.stringify(c));
+});
+window.__test('cats: heal splits hp vs energy', function(){
+  __ok(skillCats({kind:'heal', heal:0.2}).includes('heal_hp'), 'heal_hp');
+  __ok(skillCats({kind:'special', energyGain:2}).includes('heal_energy'), 'heal_energy');
+});
+window.__test('equip: same card_id auto-replaces (등급 무관)', function(){
+  const after = cardsAfterEquip(['card_cellwall@C','card_sap@B'], 'card_cellwall@S');
+  __eq(after.filter(k=>k.indexOf('card_cellwall')===0).length, 1, 'one cellwall');
+  __ok(after.includes('card_cellwall@S') && !after.includes('card_cellwall@C'), 'replaced to S');
+  __ok(after.includes('card_sap@B'), 'other kept');
+});
+window.__test('dot: same kind capped at DOT_STACK_CAP', function(){
+  const u = { dots:[] };
+  for(let i=0;i<7;i++) addDot(u, {kind:'poison',dmg:5,turns:3,icon:'🟣'});
+  __eq(u.dots.filter(d=>d.kind==='poison').length, DOT_STACK_CAP, 'poison capped');
+});
+window.__test('dot: different kinds stack independently', function(){
+  const u = { dots:[] };
+  for(let i=0;i<6;i++) addDot(u, {kind:'poison',dmg:5,turns:3});
+  for(let i=0;i<6;i++) addDot(u, {kind:'burn',dmg:3,turns:3});
+  __eq(u.dots.length, DOT_STACK_CAP*2, 'two kinds capped each');
+});
+window.__test('form: rollForm never returns lumen (발광 폐지)', function(){
+  for(let i=0;i<500;i++){ __ok(rollForm().form !== 'lumen', 'rolled lumen'); }
+});
+window.__test('form: FORMS.lumen kept for legacy plants', function(){
+  __ok(FORMS.lumen, 'lumen def kept for legacy');
+});
+window.__test('card: stat-core base atkPct scales by grade', function(){
+  TRAIT_CARDS.__tmp_core = { id:'__tmp_core', type:'common', name:'tmp', icon:'x', base:{atkPct:0.20}, subPool:[] };
+  const c = cardInstanceEffects('__tmp_core@C').atkPct;
+  const s = cardInstanceEffects('__tmp_core@S').atkPct;
+  __ok(Math.abs(c-0.20)<0.001, 'C atk '+c);
+  __ok(s > c, 'S scales up '+s);
+  delete TRAIT_CARDS.__tmp_core;
+});
+window.__test('card: fixed card ignores grade (mult=1, no subs)', function(){
+  TRAIT_CARDS.__tmp_fix = { id:'__tmp_fix', type:'common', name:'tmp', icon:'x', fixed:true, base:{atkPct:0.30}, subPool:['atk','def','hp','crit'] };
+  const a = cardInstanceEffects('__tmp_fix@S');
+  __ok(Math.abs(a.atkPct-0.30)<0.001, 'fixed atk '+a.atkPct);
+  delete TRAIT_CARDS.__tmp_fix;
+});
+window.__test('card: common stat cores defined + typed common', function(){
+  ['card_muscle','card_vacuole','card_tropism','card_target'].forEach(id=>{
+    __ok(TRAIT_CARDS[id], 'missing '+id);
+    __eq(TRAIT_CARDS[id].type, 'common', id+' type');
+  });
+  __ok(cardInstanceEffects('card_muscle@C').atkPct > 0.22-0.001, 'muscle atk');
+  __ok(cardInstanceEffects('card_target@C').critBonus > 0.15, 'target crit');
+});
+window.__test('cats UI: skillCatChipsHtml renders chips in-scope', function(){
+  const html = skillCatChipsHtml({kind:'attack', power:100});
+  __ok(html.indexOf('cat-chip')>=0, 'has chip element');
+  __ok(html.indexOf('🗡️')>=0, 'attack icon present');
+  __eq(skillCatChipsHtml({}), '', 'no cats → empty');
+});
+window.__test('variant: pred form grants base predation skill', function(){
+  __eq(JSON.stringify(variantSkillsOf({form:'pred'})), JSON.stringify(['skill_card_predation']), 'pred');
+});
+window.__test('variant: weapon form returns equipped weapon skills, max 2', function(){
+  const p = { form:'weapon', equipped_trait_cards:['card_sword@C','card_axe@B','card_gun@A'] };
+  const v = variantSkillsOf(p);
+  __ok(v.length<=2, 'max 2 got '+v.length);
+  __ok(v.includes('skill_card_sword'), 'has sword skill');
+});
+window.__test('variant: non-bottom-bar form returns empty', function(){
+  __eq(variantSkillsOf({form:'normal'}).length, 0, 'normal empty');
+});
+window.__test('variant: weapon form p.cards fallback (combat unit)', function(){
+  const p = { form:'weapon', cards:['card_sword@C','card_axe@B'] };
+  const v = variantSkillsOf(p);
+  __ok(v.includes('skill_card_sword'), 'sword from cards');
+  __ok(v.includes('skill_card_axe'), 'axe from cards');
+  __eq(v.length, 2, 'exactly 2');
+});
+window.__test('variant: toxic form returns infuse + spray', function(){
+  const v = variantSkillsOf({form:'toxic'});
+  __eq(v.length, 2, 'exactly 2');
+  __ok(v.includes('skill_card_infuse'), 'has infuse');
+  __ok(v.includes('skill_card_spray'), 'has spray');
+});
+window.__test('skills: toxic infuse + spray defined in SKILL_LIB', function(){
+  __ok(ALL_SKILLS['skill_card_infuse'], 'infuse defined');
+  __ok(ALL_SKILLS['skill_card_spray'], 'spray defined');
+  __ok(ALL_SKILLS['skill_card_infuse'].infuse, 'infuse.infuse field');
+  __eq(ALL_SKILLS['skill_card_spray'].dotTimes, 2, 'spray dotTimes=2');
+});
+window.__test('card: common buff/debuff + fixed defined', function(){
+  ['card_pheromone','card_enzyme','card_homeo','card_lastleaf','card_unstable'].forEach(id=>{
+    __ok(TRAIT_CARDS[id], 'missing '+id); __eq(TRAIT_CARDS[id].type, 'common', id+' common');
+  });
+  const homeo = cardInstanceEffects('card_homeo@S'); // fixed → 등급 무관 0.08
+  __ok(Math.abs(homeo.atkPct-0.08)<0.001 && Math.abs(homeo.defPct-0.08)<0.001 && Math.abs(homeo.spdPct-0.08)<0.001, '항상성 전스탯 '+homeo.atkPct);
+  __eq(cardInstanceEffects('card_pheromone@C').startEnemyDebuff.length, 2, '위조페로몬 2디버프');
+  __ok(cardInstanceEffects('card_unstable@C').startSelfRandom > 0.39, '불안정변이 random');
+  __eq(cardInstanceEffects('card_lastleaf@C').surviveChance, 1, '마지막잎새 survive');
+});
+window.__test('combat: battle-start hooks apply enemy debuff + self random', function(){
+  const mk = cards => makeCombatant({name:'t',species:'thorn',element:'grass',grade:'C',form:'normal',
+    baseStats:{hp:100,atk:30,def:20,spd:20,acc:90,elem:0,critRate:5,critMult:1.5,energy:3},
+    loadout:['skill_basic_strike'],cards:cards});
+  const atkr = mk(['card_pheromone@C','card_unstable@C']);
+  const foe  = mk([]);
+  __eq(atkr.startHooks.enemyDebuffs.length, 2, 'hooks carried');
+  applyCardStartHooks(atkr, foe);
+  __eq(foe.buffs.filter(b=>b.kind==='debuff').length, 2, '적 디버프 2개 적용');
+  __ok(atkr.buffs.some(b=>b.kind==='buff' && b.pct>0.39), '자기 랜덤 버프 적용');
+  // 마지막잎새 → passives survive once
+  const last = mk(['card_lastleaf@C']);
+  __eq(last.passives.surviveChance, 1, 'survive passive set');
+  __ok(last.passives.surviveOnce===true, 'survive once flag');
+});
+window.__test('card: common turn-hook cards defined + effects', function(){
+  ['card_phototropism','card_adrenaline','card_bloom'].forEach(id=> __ok(TRAIT_CARDS[id], 'missing '+id));
+  __ok(cardInstanceEffects('card_phototropism@C').rampStat, '굴광 rampStat');
+  __ok(cardInstanceEffects('card_adrenaline@C').thresholdBuff, '아드레날린 threshold');
+  __eq(cardInstanceEffects('card_bloom@S').bloom.fromTurn, 5, '만개 fromTurn(fixed)');
+});
+window.__test('combat: turn hooks — ramp accumulates, adrenaline at low hp, bloom from turn', function(){
+  const mk = cards => makeCombatant({name:'t',species:'thorn',element:'grass',grade:'C',form:'normal',
+    baseStats:{hp:100,atk:100,def:100,spd:100,acc:90,elem:0,critRate:5,critMult:1.5,energy:3},
+    loadout:['skill_basic_strike'],cards:cards});
+  // 굴광성장: 3턴 누적 → atk buff 증가, cap 적용
+  const ramp = mk(['card_phototropism@C']);
+  applyCardTurnHooks(ramp,1); applyCardTurnHooks(ramp,2); applyCardTurnHooks(ramp,3);
+  const rb = ramp.buffs.find(b=>b.kind==='ramp');
+  __ok(rb && rb.pct>0.14 && rb.pct<0.16, 'ramp 3턴 누적 ~0.15: '+(rb&&rb.pct));
+  for(let i=0;i<10;i++) applyCardTurnHooks(ramp,i); // cap
+  __ok(ramp.rampStack <= 0.30001, 'ramp cap 0.30: '+ramp.rampStack);
+  // 아드레날린: 체력 임계 이상이면 미발동, 이하면 발동
+  const adr = mk(['card_adrenaline@C']);
+  applyCardTurnHooks(adr,1); __ok(!adr.buffs.some(b=>b.kind==='adren'), 'full hp → no adren');
+  adr.hp = 30; applyCardTurnHooks(adr,2); __ok(adr.buffs.some(b=>b.kind==='adren'), 'low hp → adren');
+  // 만개: 5턴 전 미발동, 5턴부터 전스탯
+  const bl = mk(['card_bloom@C']);
+  applyCardTurnHooks(bl,4); __ok(!bl.buffs.some(b=>b.kind==='bloom'), 'turn4 → no bloom');
+  applyCardTurnHooks(bl,5); __eq(bl.buffs.filter(b=>b.kind==='bloom').length, 3, 'turn5 → 전스탯 3개');
+});
+window.__test('variant: dragon form returns scale + breath', function(){
+  const v = variantSkillsOf({form:'dragon'});
+  __eq(v.length, 2, 'exactly 2');
+  __ok(v.includes('skill_card_scale'), 'has scale');
+  __ok(v.includes('skill_card_breath'), 'has breath');
+});
+window.__test('skills: dragon scale + breath defined', function(){
+  __ok(ALL_SKILLS['skill_card_scale'] && ALL_SKILLS['skill_card_scale'].scaleStack, 'scale has scaleStack');
+  __ok(ALL_SKILLS['skill_card_breath'] && ALL_SKILLS['skill_card_breath'].elem, 'breath elemental');
+});
+// 회귀: 무기형 유닛이 전투에서 무기 스킬을 하단 변이 바로 노출 + uses 초기화(3-4 도입 버그 수정 박제)
+window.__test('combat: weapon form unit exposes weapon skill via variant bar + uses init', function(){
+  const unit = makeCombatant({ name:'t', species:'thorn', element:'grass', grade:'C', form:'weapon',
+    baseStats:{hp:100,atk:30,def:20,spd:20,acc:90,elem:0,critRate:5,critMult:1.5,energy:3},
+    loadout:['skill_basic_strike'], cards:['card_sword@C'] });
+  const v = variantSkillsOf(unit);
+  __ok(v.includes('skill_card_sword'), 'weapon skill in variant bar');
+  __ok(!unit.loadout.includes('skill_card_sword'), 'weapon skill NOT in loadout');
+  __ok((unit.uses['skill_card_sword']||0) > 0, 'weapon uses initialized: '+unit.uses['skill_card_sword']);
+});
+window.__test('variant UI: variantSkillBarHtml renders for pred, empty for normal', function(){
+  const html = variantSkillBarHtml({form:'pred'});
+  __ok(html.indexOf('vskill')>=0, 'pred has bar');
+  __ok(html.indexOf('포식')>=0 || html.indexOf('🦷')>=0, 'shows predation');
+  __eq(variantSkillBarHtml({form:'normal'}), '', 'normal → empty');
 });
 </script>
 </body>

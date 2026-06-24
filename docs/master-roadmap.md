@@ -25,9 +25,9 @@
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
 | 10 | 전투 화면 UI 수정 | 🔲 미착수 | 카드/판정창 레이아웃·연출 개편 | — |
 | 11 | 시작화면 수정 | 🔲 미착수 | 타이틀→게임 전환 연출(5번 연동) | — |
-| 12 | 종자 가방 창 + 식물/화분 분리 | 🔲 미착수 | 가방 UI 재설계 + 식물·화분 레이어 분리 | [pixel-art §-](pixel-art-ui-roadmap.md) |
+| 12 | 종자 가방 창 + 식물/화분 분리 | 🟢 가방 단순화+화분/식물 SVG 분리 완료 | PNG 도트 교체(#3)·가방 정렬/필터 | [pixel-art §-](pixel-art-ui-roadmap.md) |
 | 6 | 음악/효과음 | 🔲 미착수 | 라이선스·재생 방식 조사 | — |
-| 7 | 탐사 시스템 재설계 | 🟡 설계 확정(아틀라스+종분포) | 구현 계획 작성 → 행성 풀/시그니처·아틀라스 리스킨·폴드 모션 | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
+| 7 | 탐사 시스템 재설계 | 🟢 **구현 완료**(아틀라스+종분포+폴드+행성11) | 새 개체를 행성 `species`/지역 `signature`에 배치 · 분포 밸런스 튜닝 | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 
@@ -58,6 +58,7 @@
 | **[superpowers/specs/2026-06-24-species-individual-concepts-design.md](superpowers/specs/2026-06-24-species-individual-concepts-design.md)** | 개체 고유화 설계(진행 중) — 타입/속성 공통 컨셉 한 줄·개체 템플릿·개체당 고유 스킬 3개(성장체/성체/완숙체)·개체 로스터 누적 | **#1 개체 컨셉·스킬 — 작업 중** |
 | **[superpowers/specs/2026-06-24-mushroom-type-design.md](superpowers/specs/2026-06-24-mushroom-type-design.md)** | 버섯 타입 설계(✅완료) — 7속성 종·클래식 독버섯 외형(bodyStyle 훅)·시그니처 6·타입별 단계명·탐사 드롭 연동 | **#1 버섯형 설계** |
 | **[superpowers/plans/2026-06-24-mushroom-type-implementation.md](superpowers/plans/2026-06-24-mushroom-type-implementation.md)** | 버섯 타입 구현 계획(Task 1~5, 완료) — 단계명·외형·종7·시그니처·탐사·문서 | **#1 버섯형 구현** |
+| **[superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)** | 변이형·변이 카드 재설계(🟢설계완료) — 6변이형 컨셉·카드 로스터, 무등급(`fixed`) 카드, `cats` 스킬 라벨, 독 스택 상한, 발광 폐지·자동교체 룰. **수치 placeholder** | **#1 변이 — 구현 계획(writing-plans)** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -71,9 +72,9 @@
 - **스킬(새싹·유체):** 타입 축(기본공격·기본방어·타입특기 ×5) + 속성 축(속성발현 ×7) **공유 스킬**(`STAGE_SKILLS`, 개체 고유 없음). 새싹=타입기본공/방+속성발현, 유체=+타입특기+속성기. 성장체 이상은 기존 `ELEMENT_GROWTH_SKILLS`(후속 재설계). → [species §2-5](species-system-guide.md)
 - **생장:** 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 단계 상승 시 스탯 배율↑ + 스킬 해금 + 진화 연출. **현재 경험치원이 전투 승리 + 물/비료로 이원화** → #2에서 경험치 단일화 예정. → [balance §3](balance-sheet.md)
 - **전투:** 로드아웃 **6칸**, 카드 선택 페이즈 + 판정 창 연출. 속성 상성(1.5/0.67), 상태이상 엔진(중독/출혈/화상·버프/디버프), **데미지 25% 하한선**. 봇은 플레이어 비례가 아닌 **티어+라운드+생장 절대 스탯**. → [battle-mechanics](battle-mechanics-deep-dive.md)
-- **변이형/카드:** **7변이형**(일반/포식/무기/독성/포자/발광/용족). **변이 카드 S~D 등급제**(주효과 계수+서브특성), 변이형별 보급상자로 획득. **잠재특성 20종은 스킬 해금 분류로만 쓰고 패시브는 의도적 미반영(예약)**. → [balance §6](balance-sheet.md) · [trait](trait-growth-roadmap.md)
+- **변이형/카드:** **6변이형**(일반/포식/무기/독성/포자/용족, **발광 폐지**). 변이형=패시브 없음·카드 슬롯 게이트. 공통 스탯 코어 4종 포함 **변이 카드 S~D 등급제**(주효과 계수+서브특성+`fixed` 무등급 클래스), 변이형별 보급상자로 획득. 무기 카드 최대 2장, 전투 중 variant bar(하단 별도 슬롯)에서 사용. 스킬 `cats` 6종 태그(공격/방어/버프/디버프/체력회복/에너지회복). **잠재특성 20종은 스킬 해금 분류로만 쓰고 패시브는 의도적 미반영(예약)**. → [balance §6](balance-sheet.md) · [trait](trait-growth-roadmap.md) · [변이 재설계](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)
 - **토너먼트/티어:** 예선(5판3선)→16강→8강→4강→결승. 티어·점수는 **식물 개체별**(브론즈→…→풀로세움 4000). → [balance §7](balance-sheet.md)
-- **탐사:** 궤도 우주맵(8행성/3궤도), 탐사선 4스탯(연료탱크=궤도해금·내구성·채집기·탐사장치), 궤도 게이팅, 6단계 난이도, 지역 테마(속성·타입)에 맞는 **종 분포**. 보상=종자+변이카드(아이템 폐지).
+- **탐사:** **아틀라스 궤도 우주맵(11행성/3궤도)** — 행성=다른 은하의 공유 좌표, **연료=폴드 에너지**(=궤도/폴드심도 해금), 탐사 실행 시 **시공간 폴드(차원이동) 연출**. 종 분포 = **행성 서식 풀(`species`) + 지역 시그니처(`signature`) + 지역 테마(속성·타입) 필터**(`rollSpeciesFromView`). 탐사선 4스탯·궤도 게이팅·6단계 난이도. 보상=종자+변이카드(아이템 폐지). 풀로세움=상시 개방 게이트(무료 입장).
 - **함선:** "🚀 함선" 탭 = 포켓몬식 **타일 워킹**(`#shipScreen`), 콘솔 앞 Ⓐ로 토너먼트/탐사/상점/재배 진입. 가구·NPC는 데이터 주도(확장 여지).
 - **상점:** 변이형별 보급상자 + 크레딧 영구 강화. (소모품·가챠 폐지)
 - **메인 UI:** 상단 재화 헤더(레벨/크레딧/미네랄/설정), 프로필 배너, 식물 목록, 식물 관리창 3탭(강화/변이/스킬). 하단 탭은 **상점 / 탐사 / 식물·전투(중앙) / 식물양육 / 함선** 순서. 다운로드본 반영으로 픽셀/홀로그램 CSS 오버레이, 방별 틴트, 팝업 중앙 정렬, 메인방 우주선 내부 SVG 보강이 적용됐다. 공용 팝업은 상·하단 헤더와 안전영역 사이에 스크롤 배치되며 탭 전환 시 닫힌다.
@@ -136,12 +137,14 @@
 - [ ] 설정에 on/off·볼륨 UI, 오디오는 `assets/` 외부 파일
 
 ### 7. 탐사 시스템 재설계
-**상태:** 설계 확정(아틀라스 세계관 + 종 분포). 구현 계획 작성 단계. → 📄 [`specs/2026-06-24-exploration-atlas-upgrade-design.md`](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
-- [ ] **행성마다 모든 종이 나오지 않게** — **행성 서식 풀(`species`) + 지역 시그니처(`signature`)** 모델(옵션 C). 지역은 기존 `el`/`types`로 풀을 좁힘. `rollSpeciesFromView`에 planet 인자+시그니처/폴백 추가
-- [ ] **아틀라스 세계관 리스킨** — 행성=다른 은하의 공유 좌표, **연료=폴드 에너지**, 궤도=폴드 심도(구조 무변경, 명칭/문구만). 은하 배경 앰비언스
-- [ ] **탐사 모션 = 차원 이동(폴드) 연출** (`prefers-reduced-motion` 축약)
+**상태:** 🟢 **구현 완료** (아틀라스 세계관 + 종 분포 + 폴드 모션 + 행성 11개). → 📄 [`specs/2026-06-24-exploration-atlas-upgrade-design.md`](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
+- [x] **행성마다 모든 종이 나오지 않게** — **행성 서식 풀(`species`) + 지역 시그니처(`signature`)** 모델(옵션 C). 지역은 기존 `el`/`types`로 풀을 좁힘. `rollSpeciesFromView(region, planet)` + `SIGNATURE_CHANCE`(0.10) + 폴백 사다리
+- [x] **아틀라스 세계관 리스킨** — 행성=다른 은하의 공유 좌표, **연료=폴드 에너지**, 궤도=폴드 심도(구조 무변경, 명칭/문구만). 은하 성운 앰비언스
+- [x] **탐사 모션 = 차원 이동(폴드) 연출** (격자 왜곡→rift→흡입→섬광, `prefers-reduced-motion` 축약)
 - [x] **풀로세움 참가 비용 = 없음(무료 입장)으로 확정** — "항상 열린 게이트" 로어로 비대칭 해소. 연료/참가권 안 둠
-- [ ] 행성 종류 확장(새 행성/지역+종 풀) — **후속**(구조 깔린 뒤)
+- [x] **행성 종류 확장** — 8→11(세라핀 궤도1·볼카르 궤도2·티아멘 궤도3). UI 종 미리보기(`exPlanetSpeciesPreview`/`exRegionSpecies`)
+- [ ] (후속) **새 개체를 행성 `species`/지역 `signature`에 배치** + 분포 밸런스 튜닝
+- [x] **분포 버그/얇은 지역 수정 완료(2026-06-25)** — 심해 균열·전자기 늪 0종 버그 해결 + 얇은 지역 6→1(심해 균열만 S랭크 의도적 희박). 상세 = [exploration spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
 
 ### 8. PvP / 서버 운용
 - [ ] **비동기(고스트) PvP** vs 실시간 — 비동기(상대 로드아웃 스냅샷 재생)가 현실적, 1순위 권장
@@ -165,9 +168,10 @@
 - [ ] 타이틀 화면 디자인(로고·메뉴·세이브 진입) + 게임 전환 연출(#5와 연동)
 
 ### 12. 종자 가방 창 + 식물/화분 분리
-**상태:** 미착수. 사용자 1순위 인터페이스 항목.
-- [ ] **종자 가방 창 재설계** — 종자 목록·정렬·필터·상세, 보관 한도 표시
-- [ ] **식물/화분 이미지 분리** — 식물 PNG + 화분 PNG 레이어(화분 입구 앵커, idle sway는 식물만). #2 양육·#3 도트의 전제 ([pixel-art §- 식물/화분 분리](pixel-art-ui-roadmap.md))
+**상태:** 🟢 가방 단순화 + 식물/화분 SVG 레이어 분리 완료. 잔여 = PNG 도트 교체(#3) · 가방 정렬/필터 QoL. 사용자 1순위 인터페이스 항목.
+- [x] **종자 가방 창 단순화(2026-06-25)** — 상세 패널 폐기(2단 레이아웃 제거), 카드 한 줄에 **속성·희귀도·타입·잠재력 칩 + 기원 + 미니 심기/판매 버튼**만. 수치 예측(능력치 예상값·변이율·잠재특성 후보) 제거. (잠재력 등급은 일단 유지, 후속 제거 예정)
+- [x] **식물/화분 SVG 레이어 분리(main, 2026-06-24)** — `composePlantSvg(...,{noPot:true})`(화분 스킵) + `potVisual(potId)` 합성, idle sway는 식물만. 수집 화분 5종(`POT_CATALOG`)과 함께 구현됨.
+- [ ] **PNG 도트 교체** — 식물 PNG + 화분 PNG(`SPRITE_OVERRIDES`/`POT_SPRITE_OVERRIDES`). #3 도트 작업으로 이관 ([pixel-art §- 식물/화분 분리](pixel-art-ui-roadmap.md))
 
 ---
 
@@ -175,6 +179,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-25** — **(#12 종자 가방 단순화)** 복잡성↓ 목표로 상세 패널(`renderSeedDetail`)·2단 레이아웃·선택상태(`selectedSeedInventoryId` UI) 폐기. 종자 카드 한 줄에 **속성·희귀도·타입·잠재력 칩 + 기원 + 미니 심기/판매 버튼**만. 수치 예측(능력치 예상값·변이율·잠재특성 후보) 노출 제거. 심기=카드 미니버튼→기존 `openPlantConfirm`, 판매=카드 미니버튼→`sellSeed`(둘 다 `stopPropagation`). **잠재력 등급은 일단 유지(후속 제거 예정).** self-test 0 fail·preview 검증. (#12)
 - **2026-06-20** — 생장은 **경험치로만**(물/비료 폐지). 생장 정지 아이템 추가. (#2)
 - **2026-06-20** — 화분은 **양육 전용**(전투 스탯 무영향). (#2)
 - **2026-06-20** — 페이지 순서: 양육=4번째, **탐사선=5번째**. (#2)
@@ -198,10 +203,23 @@
 - **2026-06-24** — **9대 항목 재확인 + 신규 방향 추가:** 사용자 기준 작업 목록 반영 → #10 전투 화면 UI 수정, #11 시작화면 수정, #12 종자 가방 창 + 식물/화분 분리 신설. #4 함선은 **오픈월드화** 방향 추가. **식물 스킬/변이/스탯/디자인 콘텐츠는 사용자가 별도 구상 후 진행**(브레인스토밍/구현은 시스템·UI 구조부터). (#1·#4·#10·#11·#12)
 - **2026-06-24** — **새싹·유체 스킬을 타입 축/속성 축 공유 체계로 재설계(`STAGE_SKILLS`).** 개체 고유 없이 타입(기본공격·기본방어·타입특기)+속성(속성발현) 공유, 유체 속성심화는 기존 속성기 재사용. 성장체 이상은 후속 재설계 보류. 설계서 = [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md). (#1)
 - **2026-06-24** — **(#7 탐사 재설계) 설계 확정 — 아틀라스 세계관 + 종 분포.** ① 종 분포 = **행성 서식 풀 + 지역 시그니처(옵션 C)**: 행성에 `species` 풀, 지역은 기존 `el`/`types`로 좁힘 + `signature`(지역 전용 희귀종, `SIGNATURE_CHANCE` 0.10). ② 세계관 = **아틀라스**: 행성 = 여러 외계 문명이 다른 은하에서 탐사해 공유한 좌표, **시공간 폴드 점프**로 이동 → "왜 다 생명?" 자연 해소. ③ 지도 = **로어 재해석(구조 무변경)** + 은하 앰비언스 + **차원이동(폴드) 모션**. ④ **연료 = 폴드 에너지**(궤도 해금 = 폴드 심도 해금, 명칭만 리스킨). ⑤ **경기장 = 항상 열린 게이트 → 무료 입장**(연료/참가권 없음, 로어로 비대칭 해소). **속성 상성표·타입 5종 무변경.** UI는 "행성 누를 때 복잡X"(주요 서식종 3~4 아이콘 미리보기, 지역 선택 시에만 종 아이콘 줄). 행성 종류 확장은 후속. 설계서 = [`specs/2026-06-24-exploration-atlas-upgrade-design.md`](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md). (#7)
+- **2026-06-24** — **(#7 탐사 재설계) 구현 완료.** `rollSpeciesFromView(region, planet)` = 행성 `species` 풀 ∩ 지역 `el`/`types` + `region.signature` 별도 저확률(`SIGNATURE_CHANCE=0.10`) + 폴백 사다리(무회귀). `EXPLORE_VIEW` **8→11행성**(세라핀 궤도1·볼카르 궤도2·티아멘 궤도3)에 종 풀+지역 시그니처+아틀라스 `intro`. UI: 행성 팝업 `exPlanetSpeciesPreview`(주요 서식종 4칩)·지역 상세 `exRegionSpecies`(서식 종+✦희귀). 모션: `exTravelOverlay`를 시공간 폴드 연출(격자 왜곡→rift→흡입→섬광·reduced-motion 축약)로 교체. 로어: 연료=폴드 에너지, 우주맵=아틀라스, 풀로세움=상시 개방 게이트(무료입장), 은하 성운 앰비언스. 셀프테스트 7종 추가·전부 통과(0 fail)+preview 검증. **속성표·타입 무변경. 새 개체 배치는 후속.** (#7)
+- **2026-06-25** — **(#7 탐사) 분포 점검 후속 수정.** 점검에서 나온 0-종 버그 2건 해결: 심해 균열(types에 화초형 추가→aqua 등장, vine_water는 희귀 시그니처 유지), 전자기 늪(행성 풀에 spark·aqua 추가; 충돌하던 방사 폐허 signature는 spark→tree_bolt 교체). 얇은 지역 6곳은 지역 `types`에 어울리는 2번째 타입 추가로 2~3종 보강(심해 균열만 S랭크 의도적 1+시그니처). 검증 = Node로 `EXPLORE_VIEW` 추출·eval해 분포 재계산(preview HttpListener 환경 이슈로 정적 검증). 상세 = [exploration spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md). (#7)
 - **2026-06-24** — **도감 스킬 공유/고유 표시 + 보유 식물 모달.** `__DEX_API`에 `dexSkillScope` 노출(version `2026-06-24d`) → 도감이 각 스킬에 타입/속성/전체 공유·개체 고유 칩을 달고, 클릭 시 그 스킬을 얻을 수 있는 식물·생장단계를 모달로 보여줌. HANDOFF ① 재적용. (시그니처 풀 예약 상태라 현재 "개체 고유" 실표시 종은 없음.)
 - **2026-06-24** — **도감 카드에 실제 식물 외형 표시.** `__DEX_API`에 `composePlantSvg` 노출(version `2026-06-24c`) → 도감이 글리프 플레이스홀더 대신 게임의 절차적 SVG(타입×속성×생장단계, 화분 포함)를 렌더. 단계 리본 클릭 시 외형도 같이 자람(`paintSprite`). 게임 외형을 고치면 도감 자동 반영.
 - **2026-06-24** — **도감 라이브 연동 + PWA.** `docs/dex/plant-codex.html`이 게임을 숨은 iframe(`index.html?dex=1`)으로 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 게임 업데이트 자동 반영(수동 갱신 폐기). `?dex=1` 데이터 전용 모드(부팅·세이브 생략)로 세이브 무손상. `sw.js`(PWA) 추가. 호스팅(GitHub Pages)은 사용자가 Settings→Pages 1회 토글. 설계서 = [`superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md`](superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md).
 - **2026-06-24** — **버섯 타입 완성:** 7속성 종(스포어캡·이그니캡·미스트캡·트러플캡·윈드퍼프·볼트캡·프로스트캡)·전용 외형(클래식 독버섯+bodyStyle 훅, 떡잎 생략)·시그니처 6종(`SKILL_LIB`)·타입별 생장 단계명(`STAGE_NAMES_BY_TYPE`, 5타입 전체)·탐사 지역 6곳에 버섯형 추가. B(군락=추가타)·C(발광) 외형은 기록만(후속). 설계서 = [`specs/2026-06-24-mushroom-type-design.md`](superpowers/specs/2026-06-24-mushroom-type-design.md), 구현 = [`plans/2026-06-24-mushroom-type-implementation.md`](superpowers/plans/2026-06-24-mushroom-type-implementation.md).
+- **2026-06-24** — **(#1 변이형·변이 카드 재설계 — 브레인스토밍 진행 중)** 변이형 = **패시브 없는 카드 슬롯 게이트**(식물당 1변이, 다중 슬롯 폐기, 포식 무료 기본기 제거). **무등급(`fixed`) 카드 클래스 신설**, 같은 `card_id` **자동 교체**, **스킬 `cats` 복수 태그 라벨**(공격/방어/버프/디버프/체력회복/에너지회복 → 향후 특성 시너지 키), **독 스택 상한제**(상태이상 = DoT 확정·강제어만 확률), **발광형 폐지**(6변이형). 공통/포식/무기/독성/포자(버섯 전용·디버프 전용)/**용족(방어 비늘 + 속성 브레스 투트랙)** 6변이형 카드 로스터 **설계 완료**. 수치 placeholder(밸런스 패스 대기) → 다음 writing-plans. 설계 박제 = [`superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md`](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md). (#1)
+- **2026-06-24** — **(#1 변이 재설계 — 플랜1 시스템 토대 ✅ 구현)** 코드 반영(브랜치 `feat/mushroom-type-completion`): `skillCats`+`CAT_META`(스킬 cats 복수태그 도출) · `cardsAfterEquip`(같은 card_id 등급무관 자동교체) · `DOT_STACK_CAP(4)`+`addDot`(독/출혈/화상 스택 상한, DoT 적용 4곳 교체) · `rollForm` 발광 제거(기존분 legacy 보존). 셀프테스트 `__catalogSelfTest()` 0 fail. 콘텐츠(플랜2: `TRAIT_CARDS` 재작성·`fixed` 카드)·전투/UI(플랜3: 하단 변이 스킬 바·브레스·비늘/독 스택·cats 칩)는 후속. 계획 = [`superpowers/plans/2026-06-24-mutation-redesign-phase1-foundation.md`](superpowers/plans/2026-06-24-mutation-redesign-phase1-foundation.md). (#1)
+- **2026-06-24** — **(#1 변이 재설계 — 플랜2 카드 콘텐츠 슬라이스 2-A ✅)** `cardInstanceEffects`에 무등급(`fixed`) 처리(등급 무시 계수1·서브0) + 스탯 코어 base(atkPct/hpPct/spdPct/critBonus) 스케일 추가. 공통 스탯 코어 카드 4종(💪근섬유·🫀거대액포·🌀향성운동·🎯표적분비물) 추가 → 공통 스탯 6축 완성. 셀프테스트 0 fail. 공통 버프/디버프·무등급·변이형별(포식/무기/독성/용족) 카드는 전투엔진·하단 변이 스킬 바 필요 → 플랜3 연동(후속). 계획 = [`superpowers/plans/2026-06-24-mutation-redesign-phase2-cards.md`](superpowers/plans/2026-06-24-mutation-redesign-phase2-cards.md). (#1)
+- **2026-06-24** — **(#1 변이 재설계 — 플랜3 첫 슬라이스: cats 칩 UI ✅)** 플랜1의 `skillCats`/`CAT_META`를 화면에 노출 — 스킬 서랍 카드에 공격/방어/버프/디버프/체력·에너지회복 색칩(`skillCatChipsHtml` + `.cat-chip` CSS). 셀프테스트 0 fail. (#1)
+- **2026-06-25** — **(정정) 수집 화분·식물/화분 분리는 main(work-2)에 실제 구현됨.** `feat/mushroom-type-completion` 브랜치엔 그 기능이 머지되지 않아 한때 "미구현"으로 오인했으나, main 머지 결과 `POT_CATALOG`·`potOf`·`potVisual`·`composePlantSvg({noPot:true})`·`state.pot_inventory`(24곳) 전부 존재 확인. CLAUDE.md "수집 화분" 단락·#12 상태를 구현됨으로 환원. 교훈: feat 브랜치만 보고 main 기능을 "미구현" 판정 금지. (#12)
+- **2026-06-25** — **(시작종자 UX) 무지개 종자 = 심기 전 정보 전면 비공개.** `renderSeedBagCard`/`renderSeedDetail`에서 `rainbow`일 때 등급 배지·잠재력·변이 가능 여부·희귀도·기본 능력치 예상값·변이율 예상치를 전부 `???`로 가림(실제 grade/species 누출 없음, preview 검증). 의도: "심으면 정체가 드러나는" 미지의 종자 컨셉과 일치. 0 fail.
+- **2026-06-25** — **(#1 변이 재설계 — 플랜3 슬라이스 3-7+3-8 ✅ → 플랜3 전체 완료)** 3-7: 포식 기본기 위력 150→90·cost 3→2·무속성. 3-8a(battle-start 훅): `cardInstanceEffects`/`cardEffects`에 `allStatPct`·`startEnemyDebuff`·`startSelfRandom`·`surviveOnce`, `applyCardStartHooks`(전투 개시 적 디버프+자기 랜덤 버프) + survive once 소진 → 카드 5종(위조페로몬·약화효소·항상성·마지막잎새·불안정변이). 3-8b(턴 훅): `rampStat`·`thresholdBuff`·`bloom` + `applyCardTurnHooks`(tickStatuses 매턴 재계산) → 카드 3종(굴광성장·아드레날린·만개). `cardEffectLabels` 라벨 추가. 0 fail. **이로써 변이 플랜3(3-1~3-8) 전부 완료 — 6변이형 하단 변이 스킬 바 + 공통 카드 8종 전 구현.** ⚠️ **단, 신규/스탯코어 공통 카드 12종이 보급상자 드롭 풀에 미연결 → 플레이어 획득 불가(효과 엔진만 완성).** 다음 세션 최우선 = **플랜4: 카드 획득 경로 연결**(공통 보급상자 확장·발광 상자 정리·용족 상자/카드·밸런스). 진입점·코드 위치 = [플랜3 문서 상단](superpowers/plans/2026-06-24-mutation-redesign-phase3-variant-skill-bar.md). (#1)
+- **2026-06-25** — **(#1 변이 재설계 — 플랜3 슬라이스 3-6 용족형 + 3-3~3-5 회귀 수정 ✅)** 용족: `skill_card_scale`(비늘 강화 · guard+`scaleStack` 영구 방어 누적 cap5) + `skill_card_breath`(원소 브레스 · `elem:true` 자기 속성 발현), `variantSkillsOf`/`makeCombatant`/`applySkill` scaleStack 엔진. **검토 회귀 수정:** 3-4 도입 버그(전투 유닛에 `cards` 미저장 → 무기형이 전투에서 무기 스킬 소실) → `unit.cards` 저장 + `uses` 초기화 `variantSkillsOf` 포함 확장. `aiPickSkill`에 variant 후보 추가(적 봇 변이 스킬 사용). `buildEnemy` 폐지 lumen 제거+dragon 추가. 0 fail. (#1)
+- **2026-06-25** — **(#1 변이 재설계 — 플랜3 슬라이스 3-5 ✅)** `skill_card_infuse`(독 묻히기 · `infuse` 버프 → 공격 적중 시 `addDot`) + `skill_card_spray`(독 뿌리기 · `dotTimes:2` 즉발). `variantSkillsOf` toxic 케이스 추가, `makeCombatant` toxic loadout 자동 포함, `applySkill` infuse/dotTimes 엔진. 0 fail. (#1)
+- **2026-06-25** — **(#1 변이 재설계 — 플랜3 슬라이스 3-2~3-4 ✅)** 3-2: 관리창 스킬 탭에 `variantSkillBarHtml` 하단 읽기 전용 변이 스킬 바 표시. 3-3: 전투 `showCardPhase`의 하드코딩 pred 분기 → `variantSkillsOf(B.p)` 일반화·`.cp-pred` auto-fit 그리드(1~2칸). 3-4: `variantSkillsOf`에 `p.cards` 폴백(전투 유닛 지원), `makeCombatant`에서 weapon grantSkill → loadout 제외(variant bar 전용), `detailEquip`에 무기 카드 최대 2장 초과 시 토스트 차단. 셀프테스트 0 fail. (#1)
+- **2026-06-24** — **(#1 변이 재설계 — 플랜3 키스톤 `variantSkillsOf` ✅)** 하단 변이 스킬 바의 단일 진실 함수(포식=기본 포식기·무기=장착 무기 종류 카드 스킬 최대2·독성/용족 후속). 하단바 UI·전투가 이걸 소비 예정. 셀프테스트 0 fail. 플랜3 계획서 박제 = [`superpowers/plans/2026-06-24-mutation-redesign-phase3-variant-skill-bar.md`](superpowers/plans/2026-06-24-mutation-redesign-phase3-variant-skill-bar.md). **남은 슬라이스(미착수):** 하단 바 UI(관리/전투)·무기 로드아웃→하단바 이동+2장룰·독성 묻히기/뿌리기(인퓨전 엔진)·용족 비늘/브레스·포식 위력 조정·공통 버프/디버프 battle-start 훅. ⚠️ **개발 gotcha:** preview 정적 서버가 옛 index.html 캐시 → 반영 안 되면 `preview_stop`+`preview_start` 재시작(SW클리어로 안 풀림). (#1)
 
 ---
 

@@ -29,6 +29,22 @@
 - **데이터:** `state.pot_inventory{id:true}`·`p.nursery.potId`, 무회귀 마이그레이션(구 세이브→테라코타).
 - ⚠️ 로드맵 §2/§5 등록은 main 머지 시 추가(병렬 세션과 충돌 회피).
 
+### 2026-06-25 — #7 탐사 분포 점검 후속: 0-종 버그 2건 해결 + 얇은 지역 6→1
+> 직전 점검([spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md))에서 나온 분포 품질 이슈 수정. EXPLORE_VIEW 데이터만 변경(로직 무변경).
+- **0-종 버그(테마 매칭 0종→조용히 행성 풀 전역 폴백) 해결**: ① 네레이돈/심해 균열 `types`에 `화초형` 추가 → 풀의 `aqua`가 일반 등장(`vine_water`는 희귀 시그니처 유지). ② 아즈텔 행성 풀에 `spark`·`aqua` 추가 → 전자기 늪 2종; 풀로 올라와 충돌하던 방사 폐허 `signature`는 `spark`→`tree_bolt`(풀 밖 전용)로 교체.
+- **얇은 지역(1종) 6→1**: 아르키아·잿빛 평원·윈드테라스·방전 평원·자철 협곡·빙저 동굴의 `types`에 어울리는 2번째 타입 추가 → 각 2~3종. 심해 균열만 S랭크 의도적 희박(흔함 1+희귀 시그니처).
+- **검증**: preview HttpListener 환경 이슈로 라이브 셀프테스트 불가 → Node로 `index.html`에서 `EXPLORE_VIEW`·`SPECIES_GRID` 추출·eval해 분포 재계산(정적). 0-종 0건·thin 1건(의도적)·EXPLORE_VIEW eval 성공(문법 무결). 속성표·타입 무변경.
+
+### 2026-06-24 — #7 탐사 업그레이드: 아틀라스 세계관 + 종 분포 + 폴드 모션 + 행성 11개
+> 브레인스토밍 → 설계([spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)) → 구현. 셀프테스트 7종 추가·전부 통과(0 fail) + preview 검증.
+- **종 분포(옵션 C)**: `rollSpeciesFromView(region, planet)` = 행성 `species` 풀 ∩ 지역 `el`/`types` + `region.signature` 별도 저확률 경로(`SIGNATURE_CHANCE=0.10`) + 폴백 사다리(교집합 비면 행성 풀→테마 전역, 무회귀). 행성마다 "사는 종"이 정해지고, 특정 지역엔 풀에서 제외한 **희귀 시그니처 종**(✦)이 가끔 등장.
+- **데이터**: `EXPLORE_VIEW` **8→11행성** — 세라핀(궤도1·바람 고원)·볼카르(궤도2·번개)·티아멘(궤도3·빙해) 추가. 모든 행성에 `species` 풀 + 일부 지역에 `signature` + 아틀라스 `intro`.
+- **UI(복잡도 억제)**: 행성 팝업 `exPlanetSpeciesPreview`(주요 서식종 4칩 미리보기), 지역 선택 시 `exRegionSpecies`(서식 종 + ✦희귀 시그니처 칩, 가로 스크롤). 종 칩은 절차적 SVG(`composePlantSvg`) 재사용.
+- **세계관 리스킨**: 행성=여러 외계 문명이 다른 은하에서 공유한 좌표, **연료=폴드 에너지**(궤도 해금=폴드 심도), 우주맵="아틀라스 — 폴드 좌표망", 은하 성운 앰비언스(#explorationBody). 구조 무변경, 명칭/문구만.
+- **탐사 모션**: `exTravelOverlay`를 "시공간 폴드(차원이동)" 연출로 교체 — 격자 왜곡(`etwarp`)→균열 개방(`etrift`)→탐사선 흡입(`etfold`)→섬광(`etflash`). `prefers-reduced-motion`이면 ~480ms 축약(애니메이션 정지).
+- **경기장**: 풀로세움=모든 문명의 **상시 개방 게이트** → 무료 입장(연료/참가권 없음). 게임방법 ①⑦ 문구·콘솔 라벨 보강.
+- **회귀 안전**: 신규 필드(`species`/`signature`) 전부 옵셔널 — 없으면 기존 동작. 셀프테스트: 풀∩테마 한정·시그니처 분리 경로·빈 교집합 폴백·풀 미지정 레거시 동작·`EXPLORE_VIEW` 키 무결성·프리뷰 렌더. **속성 상성표·타입 5종 무변경.**
+
 ### 2026-06-24 — UI: 모달 열림 깜빡임 제거 (holoBoot → roomEnter 통일)
 - 일반 모달이 열릴 때 쓰던 `holoBoot`(투명도를 `steps(12)`로 끊어 점멸시키는 "홀로그램 부팅" 효과)가 깜빡거려서 제거. 상점/탐사 모달이 이미 쓰던 부드러운 `roomEnter`(살짝 떠오르는 페이드+업)로 전 모달 통일 → `.modal:not(.hidden) .modal-card` 한 규칙으로 합치고 미사용 `@keyframes holoBoot` 삭제. 검증: 모달 `.modal-card` computed `animation-name=roomEnter`, holoBoot 키프레임 부재 확인.
 
