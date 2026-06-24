@@ -4111,6 +4111,22 @@ function cardsAfterEquip(cards, newKey){
   kept.push(newKey);
   return kept;
 }
+/* 변이 스킬(하단 바) — 변이형이 부여하는 별도 스킬 ID 목록(상단 6칸 로드아웃과 별개).
+   포식=기본 포식기 · 무기=장착 무기 종류 카드 스킬(최대2) · 독성/용족=전용(후속 콘텐츠 슬라이스). */
+function variantSkillsOf(p){
+  const form = (p && p.form) || 'normal';
+  const out = [];
+  if(form === 'pred'){ out.push('skill_card_predation'); }
+  else if(form === 'weapon'){
+    (p.equipped_trait_cards||[]).forEach(key => {
+      const def = cardDefOf(key);
+      if(def && def.type === 'weapon' && def.grantSkill && out.length < 2 && !out.includes(def.grantSkill)){
+        out.push(def.grantSkill);
+      }
+    });
+  }
+  return out;
+}
 function cardTypeOf(key){ const d=cardDefOf(key); return d ? d.type : null; }
 /* 카드가 이 변이형에 장착 가능한 타입인지 */
 function cardFitsForm(key, form){
@@ -11391,6 +11407,18 @@ window.__test('cats UI: skillCatChipsHtml renders chips in-scope', function(){
   __ok(html.indexOf('cat-chip')>=0, 'has chip element');
   __ok(html.indexOf('🗡️')>=0, 'attack icon present');
   __eq(skillCatChipsHtml({}), '', 'no cats → empty');
+});
+window.__test('variant: pred form grants base predation skill', function(){
+  __eq(JSON.stringify(variantSkillsOf({form:'pred'})), JSON.stringify(['skill_card_predation']), 'pred');
+});
+window.__test('variant: weapon form returns equipped weapon skills, max 2', function(){
+  const p = { form:'weapon', equipped_trait_cards:['card_sword@C','card_axe@B','card_gun@A'] };
+  const v = variantSkillsOf(p);
+  __ok(v.length<=2, 'max 2 got '+v.length);
+  __ok(v.includes('skill_card_sword'), 'has sword skill');
+});
+window.__test('variant: non-bottom-bar form returns empty', function(){
+  __eq(variantSkillsOf({form:'normal'}).length, 0, 'normal empty');
 });
 </script>
 </body>
