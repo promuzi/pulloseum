@@ -1,7 +1,20 @@
 # 변이 재설계 — 플랜 3: 하단 변이 스킬 바 + 변이형 전투 메커니즘
 
-> ✅ **완료.** 슬라이스 3-1~3-8 전부 구현. 6변이형 하단 변이 스킬 바 + 공통 카드 8종 전부 동작(`__catalogSelfTest()` 0 fail).
-> **후속:** 변이 카드 밸런스 튜닝(수치 패스) · 적 봇에 공통 버프/디버프 카드 분배 여부 검토 · 변이형별 보급상자 드롭에 새 카드 반영.
+> ✅ **엔진/콘텐츠 완료.** 슬라이스 3-1~3-8 전부 구현. 6변이형 하단 변이 스킬 바 + 공통 카드 효과 8종 전부 동작(`__catalogSelfTest()` 0 fail).
+
+## 🔖 다음 세션 재개 진입점 (다른 기기에서 이어가기) — 플랜 4: 카드 획득 경로 연결
+> ⚠️ **현재 신규 카드들은 코드 정의만 있고 플레이어가 못 얻는다.** 효과 엔진은 완성됐으나 **보급상자 드롭 풀에 미연결**. 아래가 최우선 후속.
+
+1. **(최우선·간단) 공통 보급상자 드롭 풀 확장** — `index.html` `box_card_common` rewards(현재 `~3602`)에 **cellwall/thornstem 2종만** 들어있음. 누락된 **공통 카드 12종**을 추가하고 `chance` 재배분:
+   - 스탯 코어 4종: `card_muscle`·`card_vacuole`·`card_tropism`·`card_target` (플랜2-A에서 정의됐으나 드롭 누락)
+   - 버프/디버프 4종: `card_pheromone`·`card_enzyme`·`card_phototropism`·`card_adrenaline`
+   - 무등급 4종: `card_homeo`·`card_lastleaf`·`card_unstable`·`card_bloom`
+2. **발광 보급상자(`box_card_chloro`, `~3641`) 정리** — 발광형 폐지됐는데 상자는 잔존(stale). 제거하거나 "엽록체=legacy 공통"으로 흡수 결정.
+3. **용족 보급상자 신설 + dragon 카드(플랜2-C)** — `dragon` cardType 상자 없음. 용족은 변이형 기본 스킬(비늘/브레스)로 카드 없이도 동작하나, 강화 카드(predBoost류) 로스터는 미구현. `FORMS.dragon.cardType:'dragon'` 기준 상자 추가.
+4. **밸런스 튜닝** — 카드 수치는 스펙 placeholder. → [balance-sheet.md](../../balance-sheet.md)
+5. **적 봇 공통 카드 분배 검토** — `buildEnemy`(`~9710`)는 변이형 전용 카드만 적에게 줌. 공통 버프/디버프 카드를 봇도 받게 할지.
+
+**관련 코드 단일 진실 함수:** 카드 효과=`cardInstanceEffects`/`cardEffects`, 변이 스킬 바=`variantSkillsOf`, battle-start=`applyCardStartHooks`, 매턴=`applyCardTurnHooks`.
 
 설계 근거 = [`../specs/2026-06-24-mutation-forms-cards-redesign-design.md`](../specs/2026-06-24-mutation-forms-cards-redesign-design.md).
 
