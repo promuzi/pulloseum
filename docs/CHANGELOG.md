@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — 초본형 폐지(화초형 흡수) + 새싹·유체 스킬 타입/속성 축 재설계
+> 설계서: [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md)
+- **초본형 완전 폐지 → 화초형 흡수**: "풀은 결국 꽃을 피운다"는 이유로 타입을 **5종(목본/화초/다육/덩굴/버섯)** 확정. (구)초본 7종(플레임모스 등)의 타입을 `grass`→`flower`로 전환(스탯·외형·스킬 모두 화초형, legacy 유지). `SEED_TYPE_NAMES`/`ORDER`·`EX_TYPE_*`·탐사 지역 `types`에서 초본형 제거, `SEED_TYPE_OF`/`seedTypeOf` 폴백 flower로. 세이브 `seed_type:'grass'`→`'flower'` 마이그레이션. ⚠️ `grass`는 **풀 '속성'으로만** 존속(`ELEMENTS`/`ELEMENT_STATS` 불변), `TYPE_STATS.grass`는 안전망 폴백으로만 잔존.
+- **새싹·유체 스킬 재설계(`STAGE_SKILLS` 22종 신설)**: 개체 고유 없이 **타입 축(기본공격·기본방어·타입특기 ×5) + 속성 축(속성발현 ×7)** 으로 공유. 새싹=타입 기본공/방+속성발현, 유체=+타입특기+속성기(기존 `skill_elem_*` 재사용). `plantKnownSkillIds`를 `battleType(p)`(종 우선·grass→flower 안전망) 기준으로 재배선. 성장체 이상은 기존 `ELEMENT_GROWTH_SKILLS` 유지(후속 재설계).
+- **`skill_basic_strike` 하드코딩 일반화**: `isBasicSkill`/`isBasicAttackSkill`/`plantBasicAttackId` 헬퍼 도입 → defaultLoadout·ensureSkillFields·skillGradeOf·energyOnEnemySkill·nurserySkillReward 치환(레거시 기본기 후방호환 유지).
+- **검증**: 신규 셀프테스트 7건 포함 `window.__catalogSelfTest()` **17/17 PASS·0 FAIL**, 콘솔 에러 0. 새싹→완숙체 단계별 스킬 누적·전투 로드아웃·22종 표시 포맷터 무오류 확인. 부가효과는 전투 엔진 지원 필드만 사용(확률 라이더 없음).
+
 ### 2026-06-24 — 다운로드본 UI 반영: Galmuri 픽셀폰트 + 인라인 픽셀 아이콘 + 미니멀 정리 (3-way 머지)
 > 다운로드본(`C:\Users\soosa\Downloads\index (1).html`)은 **`b353183`(홀로그램 픽셀 오버레이) 기반**에 UI 개편만 얹은 것이라, 그 사이에 들어온 개체 카탈로그/버섯형/희귀도 가중/변이 슬롯/셀프테스트 코드가 빠져 있었음. 통째 덮어쓰면 회귀 → **3-way 머지**(base=`b353183`, ours=현 HEAD, theirs=다운로드본)로 충돌 0건 병합해 **신규 UI + 기존 종 시스템 둘 다 보존**.
 - **Galmuri 픽셀 폰트**: CSS가 참조만 하던 Galmuri7/9/11/14를 jsDelivr CDN으로 실제 로드(SIL OFL, 상업적 무료). 2026-06-23에 제거했던 누락 woff2 문제 해소. 픽셀 폰트 가독성용 본문 자간(`letter-spacing`) 보정.

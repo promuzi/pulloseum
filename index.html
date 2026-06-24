@@ -3321,11 +3321,12 @@ const TYPE_STATS = {
 const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈', mushroom:'포자·교란' };
 /* [종key, 이름, 타입, 속성] — 5타입 × 7속성. 기존 7종 key는 세이브 호환 위해 유지. */
 const SPECIES_GRID = [
-  // 🌿 초본형 grass
-  ['flame','플레임모스','grass','fire'], ['grass_water','미스트모스','grass','water'],
-  ['grass_grass','그린모스','grass','grass'], ['grass_earth','클레이모스','grass','earth'],
-  ['windy','윈드리프','grass','wind'], ['grass_bolt','볼트모스','grass','bolt'],
-  ['grass_ice','프로스트모스','grass','ice'],
+  // 🌸 (구)초본형 → 화초형 흡수: 레거시 7종. 타입을 flower로 전환(초본형 폐지).
+  //    'grass'는 풀 '속성'으로만 남는다. 이 종들의 4번째 필드(속성)는 그대로.
+  ['flame','플레임모스','flower','fire'], ['grass_water','미스트모스','flower','water'],
+  ['grass_grass','그린모스','flower','grass'], ['grass_earth','클레이모스','flower','earth'],
+  ['windy','윈드리프','flower','wind'], ['grass_bolt','볼트모스','flower','bolt'],
+  ['grass_ice','프로스트모스','flower','ice'],
   // 🌳 목본형 tree
   ['tree_fire','엠버오크','tree','fire'], ['tree_water','타이드우드','tree','water'],
   ['tree_grass','엘더우드','tree','grass'], ['tree_earth','스톤오크','tree','earth'],
@@ -3352,7 +3353,7 @@ const SPECIES_GRID = [
    필드 전부 선택사항: 없으면 빌더가 안전한 기본값을 채운다. 향후 개체/스킬은 여기와 SKILL_LIB만 수정.
    필드: { name?, type?, element?, rarity?, stats?, baseVariants?[], variantSlots?{}, signatures?[], stageSkills?{stage:[skillId]}, legacy? } */
 const SPECIES_CATALOG = {
-  // 레거시 초본형(신규 획득 풀에서 제외, 보유분은 유지)
+  // 레거시 (구)초본형 7종 — 화초형으로 흡수(타입 flower), 신규 획득 풀에서 제외·보유분 유지
   flame:  { legacy:true }, windy:  { legacy:true },
   grass_water:{legacy:true}, grass_grass:{legacy:true}, grass_earth:{legacy:true},
   grass_bolt:{legacy:true}, grass_ice:{legacy:true},
@@ -3624,20 +3625,21 @@ const SPECIES_TYPE_NAMES = {
   gravity_cactus:'선인장형', storm_orchid:'꽃형',
 };
 /* 외형/이름 축이 되는 식물 타입 5종 */
-const SEED_TYPE_NAMES = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
-const SEED_TYPE_ORDER = ['grass', 'tree', 'flower', 'cactus', 'vine', 'mushroom'];
-/* 기존 base_species_type(10종) → 5종 매핑 */
+/* 타입 5종: 초본형 폐지 → 화초형 흡수. (grass는 풀 '속성'으로만 존재) */
+const SEED_TYPE_NAMES = { tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
+const SEED_TYPE_ORDER = ['tree', 'flower', 'cactus', 'vine', 'mushroom'];
+/* 기존 base_species_type(10종) → 5종 매핑 (구 초본형 moss/metal_reed는 화초형으로) */
 const SEED_TYPE_OF = {
-  moss:'grass', metal_reed:'grass',
+  moss:'flower', metal_reed:'flower',
   vine:'vine',
   bulb:'flower', crystal_flower:'flower', storm_orchid:'flower', psionic_lotus:'flower', carnivorous_pod:'flower',
   gravity_cactus:'cactus',
   fungal_tree:'tree',
 };
 function seedTypeOf(p){
-  if(p && SEED_TYPE_NAMES[p.seed_type]) return p.seed_type;
-  const bt = (p && (p.base_species_type || p.species_type)) || '';
-  return SEED_TYPE_OF[bt] || 'grass';
+  let t = (p && SEED_TYPE_NAMES[p.seed_type]) ? p.seed_type : null;
+  if(!t){ const bt = (p && (p.base_species_type || p.species_type)) || ''; t = SEED_TYPE_OF[bt] || 'flower'; }
+  return t === 'grass' ? 'flower' : t; // 레거시 초본형 안전망
 }
 /* ── 타입×속성 → 종(35종) 역참조 (탐사 종자 → 종 결정에 사용) ── */
 const SEED_TYPE_BY_KO = (function(){ const m={}; Object.keys(SEED_TYPE_NAMES).forEach(k=>{ m[SEED_TYPE_NAMES[k]]=k; }); return m; })();
@@ -3865,6 +3867,56 @@ const SKILL_LIB = {
     enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3},
     desc:'적 공격 20%↓(2턴) + 중독(3턴)', tag:'시그니처', grade:'A' },
 };
+/* ── 새싹·유체 단계 스킬 (타입 축 / 속성 축 공유, 개체 고유 없음) ──
+   타입 5종(목본/화초/다육/덩굴/버섯) × {기본공격·기본방어·타입특기} + 속성 7종 × {속성발현}.
+   유체의 '속성 심화'는 기존 속성기(skill_elem_*) 재사용. 전부 전투 엔진 지원 필드만 사용. */
+const STAGE_SKILLS = {
+  // 타입 기본 공격 (새싹~ · 무료 · 매 턴) — 타입 정체성 반영
+  skill_basic_tree:     { name:'새순 들이받기', icon:'🌳', cost:0, kind:'attack', power:100, single:true, desc:'위력100 · 단일 · 무료', tag:'기본', grade:'C' },
+  skill_basic_flower:   { name:'꽃대 찌르기',   icon:'🌸', cost:0, kind:'attack', power:125, single:true, desc:'위력125 · 단일 · 무료', tag:'기본', grade:'C' },
+  skill_basic_cactus:   { name:'가시 콕찌르기', icon:'🌵', cost:0, kind:'attack', power:105, single:true, desc:'위력105 · 단일 · 무료', tag:'기본', grade:'C' },
+  skill_basic_vine:     { name:'덩굴손 후리기', icon:'🍃', cost:0, kind:'attack', power:110, single:true, lifesteal:0.12, desc:'위력110 · 단일 · 피해 12% 흡혈 · 무료', tag:'기본', grade:'C' },
+  skill_basic_mushroom: { name:'포자 날리기',   icon:'🍄', cost:0, kind:'attack', power:95,  single:true, dot:{kind:'poison',pct:0.03,turns:2}, desc:'위력95 · 단일 + 약한 중독(2턴) · 무료', tag:'기본', grade:'C' },
+  // 타입 기본 방어 (새싹~ · 무료)
+  skill_def_tree:     { name:'어린 껍질 굳히기', icon:'🛡️', cost:0, kind:'guard', guardMult:0.4,  energyGain:1, desc:'받는 피해 60%↓ · ⚡+1', tag:'기본', grade:'C' },
+  skill_def_flower:   { name:'꽃받침 오므리기', icon:'🛡️', cost:0, kind:'guard', guardMult:0.55, selfBuff:{stat:'atk',pct:0.12,turns:2}, desc:'받는 피해 45%↓ + 공격 12%↑(2턴)', tag:'기본', grade:'C' },
+  skill_def_cactus:   { name:'가시 곤두세우기', icon:'🛡️', cost:0, kind:'guard', guardMult:0.5,  counterPct:0.25, desc:'받는 피해 50%↓ + 가시 반격', tag:'기본', grade:'C' },
+  skill_def_vine:     { name:'덩굴 사리기',     icon:'🛡️', cost:0, kind:'guard', guardMult:0.5,  heal:0.06, desc:'받는 피해 50%↓ + 체력 6% 회복', tag:'기본', grade:'C' },
+  skill_def_mushroom: { name:'균사 보호막',     icon:'🛡️', cost:0, kind:'guard', guardMult:0.5,  energyGain:1, desc:'받는 피해 50%↓ · ⚡+1', tag:'기본', grade:'C' },
+  // 타입 특기 (유체~) — 타입 정체성 본격 발휘
+  skill_trait_tree:     { name:'수피 재생',   icon:'🪵', cost:2, kind:'heal',   heal:0.22, desc:'체력 22% 회복 · ⚡2', tag:'타입특기', grade:'B' },
+  skill_trait_flower:   { name:'개화 준비',   icon:'🌷', cost:2, kind:'buff',   selfBuff:{stat:'atk',pct:0.2,turns:3}, desc:'공격 20%↑(3턴) · ⚡2', tag:'타입특기', grade:'B' },
+  skill_trait_cactus:   { name:'수분 저장',   icon:'💧', cost:2, kind:'buff',   selfBuff:{stat:'def',pct:0.25,turns:3}, heal:0.1, desc:'방어 25%↑(3턴) + 체력 10% 회복 · ⚡2', tag:'타입특기', grade:'B' },
+  skill_trait_vine:     { name:'흡수 뿌리',   icon:'🩸', cost:2, kind:'drain',  power:120, single:true, lifesteal:0.4, desc:'위력120 · 단일 · 피해 40% 흡혈 · ⚡2', tag:'타입특기', grade:'B' },
+  skill_trait_mushroom: { name:'포자 살포',   icon:'🍄', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.18,turns:2}, dot:{kind:'poison',pct:0.05,turns:2}, desc:'적 공격 18%↓(2턴) + 중독(2턴) · ⚡2', tag:'타입특기', grade:'B' },
+  // 속성 발현 (새싹~) — 속성마다 회복/공격/버프/디버프 하나
+  skill_sprout_fire:  { name:'불씨 틔우기',   icon:'🔥', cost:2, kind:'attack', power:120, single:true, dot:{kind:'burn',pct:0.06,turns:2}, desc:'위력120 · 단일 + 화상(2턴) · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_water: { name:'물방울 머금기', icon:'💧', cost:2, kind:'heal',   heal:0.18, desc:'체력 18% 회복 · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_grass: { name:'새순 감기',     icon:'🌿', cost:2, kind:'buff',   selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'공격 15%↑(3턴) · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_earth: { name:'흙 다지기',     icon:'🪨', cost:2, kind:'buff',   selfBuff:{stat:'def',pct:0.2,turns:3}, desc:'방어 20%↑(3턴) · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_wind:  { name:'산들바람',     icon:'🌪️', cost:1, kind:'buff',   selfBuff:{stat:'spd',pct:0.25,turns:3}, desc:'기동성 25%↑(3턴) · ⚡1', tag:'속성발현', grade:'C' },
+  skill_sprout_bolt:  { name:'정전기 방출',   icon:'⚡', cost:2, kind:'attack', power:110, single:true, critBonus:0.2, desc:'위력110 · 단일 + 치명타율 +20% · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_ice:   { name:'성에 끼우기',   icon:'❄️', cost:2, kind:'debuff', enemyDebuff:{stat:'spd',pct:0.25,turns:2}, desc:'적 기동성 25%↓(2턴) · ⚡2', tag:'속성발현', grade:'C' },
+};
+/* 타입 → 단계 스킬 id 매핑 (5타입) */
+const TYPE_BASIC_ATK = { tree:'skill_basic_tree', flower:'skill_basic_flower', cactus:'skill_basic_cactus', vine:'skill_basic_vine', mushroom:'skill_basic_mushroom' };
+const TYPE_BASIC_DEF = { tree:'skill_def_tree', flower:'skill_def_flower', cactus:'skill_def_cactus', vine:'skill_def_vine', mushroom:'skill_def_mushroom' };
+const TYPE_TRAIT_SKILL = { tree:'skill_trait_tree', flower:'skill_trait_flower', cactus:'skill_trait_cactus', vine:'skill_trait_vine', mushroom:'skill_trait_mushroom' };
+/* 속성 → 새싹 발현 스킬 id 매핑 (7속성) */
+const ELEMENT_SPROUT_SKILL = { fire:'skill_sprout_fire', water:'skill_sprout_water', grass:'skill_sprout_grass', earth:'skill_sprout_earth', wind:'skill_sprout_wind', bolt:'skill_sprout_bolt', ice:'skill_sprout_ice' };
+/* 기본기 판별 + 식물별 기본공격 id (skill_basic_strike 하드코딩 일반화용) */
+const BASIC_ATTACK_ID_SET = new Set(Object.values(TYPE_BASIC_ATK).concat('skill_basic_strike'));
+const BASIC_DEF_ID_SET = new Set(Object.values(TYPE_BASIC_DEF).concat('skill_guard'));
+function isBasicSkill(id){ return BASIC_ATTACK_ID_SET.has(id) || BASIC_DEF_ID_SET.has(id) || id === 'skill_weapon'; }
+function isBasicAttackSkill(id){ return BASIC_ATTACK_ID_SET.has(id); }
+/* 5타입으로 정규화 — 종(SPECIES.seedType) 우선, 없으면 seedTypeOf, 최후 flower. grass는 flower로. */
+function battleType(p){
+  let t = (p && p.species && SPECIES[p.species]) ? SPECIES[p.species].seedType : null;
+  if(!t) t = seedTypeOf(p);
+  if(t === 'grass') t = 'flower';
+  return TYPE_BASIC_ATK[t] ? t : 'flower';
+}
+function plantBasicAttackId(p){ return TYPE_BASIC_ATK[battleType(p)] || 'skill_basic_strike'; }
 /* 잠재특성 id → 참고용 시그니처 스킬 id (현재 전투 미반영) */
 const TRAIT_SKILL_MAP = {
   trait_biolume_chlorophyll:'skill_biolume',
@@ -4073,7 +4125,7 @@ function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span cl
 /* 등급 색상(변이 카드·스킬 공통) — 흰D · 초록C · 하늘B · 보라A · 주황S */
 const GRADE_PALETTE = { D:'#e8edf3', C:'#5fe06b', B:'#4ac6ff', A:'#b06bff', S:'#ff9a3c' };
 function gradeColor(g){ return GRADE_PALETTE[g] || GRADE_PALETTE.C; }
-const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB);
+const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB, STAGE_SKILLS);
 /* 무기/물약 카드가 부여하는 스킬을 등급 계수로 스케일. 무기 스킬은 횟수(uses)도 등급에 따라 증가 */
 function gradeCardSkill(id, base, grade){
   if(!base) return null;
@@ -4195,24 +4247,25 @@ const ELEMENT_GROWTH_SKILLS = {
 function plantKnownSkillIds(p){
   if(!p) return ['skill_basic_strike'];
   const idx = Math.max(0, GROWTH_STAGE_ORDER.indexOf(p.growth_stage || INITIAL_PLANTED_GROWTH_STAGE));
-  const known = ['skill_basic_strike'];
   const sp = SPECIES[p.species];
-  // 공통 단계기(모든 종 공통): 새싹부터 가드/속성기, 유체부터 광합성/집중, 성장체부터 결집
-  if(idx >= 1){ known.push('skill_guard'); if(p.element && ELEMENTS[p.element]) known.push(elementSkillId(p.element)); }
-  if(idx >= 2){ known.push('skill_photosynthesis', 'skill_focus'); }
-  if(idx >= 3){ known.push('skill_rally'); }
+  const type = battleType(p);   // 5타입(grass→flower 안전망)
+  const el = p.element;
+  // 씨앗(idx0): 타입 기본공격만(무료). 씨앗은 전투에 못 나가지만 기준 기본기로 보유.
+  const known = [ TYPE_BASIC_ATK[type] || 'skill_basic_strike' ];
+  // 새싹(idx1): 타입 기본방어 + 속성 발현
+  if(idx >= 1){ known.push(TYPE_BASIC_DEF[type]); if(el && ELEMENT_SPROUT_SKILL[el]) known.push(ELEMENT_SPROUT_SKILL[el]); }
+  // 유체(idx2): 타입 특기 + 속성 심화(속성기 재사용)
+  if(idx >= 2){ known.push(TYPE_TRAIT_SKILL[type]); if(el && ELEMENTS[el]) known.push(elementSkillId(el)); }
   if(sp && sp.stageSkills){
-    // 카탈로그 개체: 단계별 고유 스킬을 누적 해금(해당 단계 idx까지)
+    // 카탈로그 개체: 단계별 고유 스킬을 누적 해금(해당 단계 idx까지) + 시그니처
     GROWTH_STAGE_ORDER.forEach((stage, si) => {
       if(si <= idx && Array.isArray(sp.stageSkills[stage])) sp.stageSkills[stage].forEach(id => known.push(id));
     });
-    // 시그니처: 개체 고유 스킬(해당 변이/개체 보유분)
     if(Array.isArray(sp.signatures)) sp.signatures.forEach(id => known.push(id));
   } else {
-    // 레거시: 속성×단계 풀
-    const eg = ELEMENT_GROWTH_SKILLS[p.element] || ELEMENT_GROWTH_SKILLS.grass;
-    if(idx >= 2) known.push(eg[0]);
-    if(idx >= 3) known.push(eg[1]);
+    // 성장체 이상: 기존 속성×단계 성장 스킬 유지(타입×속성 재설계는 후속 작업)
+    const eg = ELEMENT_GROWTH_SKILLS[el] || ELEMENT_GROWTH_SKILLS.grass;
+    if(idx >= 3){ known.push('skill_rally'); known.push(eg[1]); }
     if(idx >= 4) known.push(eg[2]);
     if(idx >= 5) known.push(eg[3]);
   }
@@ -4221,7 +4274,7 @@ function plantKnownSkillIds(p){
   if(p.form === 'weapon' && p.weaponKey) known.push('skill_weapon');
   // 식물원 열매(스킬 박스) 개봉으로 추가 습득한 스킬
   if(Array.isArray(p.bonus_skills)) p.bonus_skills.forEach(id => { if(ALL_SKILLS[id]) known.push(id); });
-  return known.filter((v, i, a) => a.indexOf(v) === i && skillById(v, p));
+  return known.filter((v, i, a) => v && a.indexOf(v) === i && skillById(v, p));
 }
 const MAX_LOADOUT = 6;
 /* 변이형(포식·무기·카드) 유래 스킬은 스킬 탭에 노출하지 않고 전투 시 자동 합류한다. */
@@ -4234,7 +4287,7 @@ function plantBattleLoadout(p){
   return eq.concat(plantAutoSkills(p)).filter((v, i, a) => a.indexOf(v) === i);
 }
 function skillGradeOf(p, id){
-  if(id === 'skill_basic_strike') return 'C';
+  if(isBasicSkill(id)) return 'C';   // 타입 기본공격·기본방어(+레거시 기본기): 고정 C
   const intr = intrinsicSkillGrade(id);
   if(intr) return intr;                                  // 속성기·잠재특성: 고정 등급
   if(p && p.skillGrades && p.skillGrades[id]) return p.skillGrades[id];
@@ -4242,13 +4295,17 @@ function skillGradeOf(p, id){
 }
 function defaultLoadout(p){
   const known = plantSkillPool(p);
+  const type = battleType(p);
+  const basicAtk = plantBasicAttackId(p);
   const priority = [];
+  if(known.includes(basicAtk)) priority.push(basicAtk);
   if(p.element && known.includes(elementSkillId(p.element))) priority.push(elementSkillId(p.element));
-  ['skill_basic_strike', 'skill_photosynthesis', 'skill_guard', 'skill_rally', 'skill_focus'].forEach(id => { if(known.includes(id)) priority.push(id); });
+  [ TYPE_BASIC_DEF[type], TYPE_TRAIT_SKILL[type], (p.element && ELEMENT_SPROUT_SKILL[p.element]), 'skill_rally' ]
+    .forEach(id => { if(id && known.includes(id)) priority.push(id); });
   known.forEach(id => { if(!priority.includes(id)) priority.push(id); });
   const seen = {}, out = [];
   priority.forEach(id => { if(!seen[id] && out.length < MAX_LOADOUT){ seen[id] = true; out.push(id); } });
-  if(!out.includes('skill_basic_strike')) out.unshift('skill_basic_strike');
+  if(!out.includes(basicAtk)) out.unshift(basicAtk);
   return out.slice(0, MAX_LOADOUT);
 }
 function ensureSkillFields(p){
@@ -4263,7 +4320,7 @@ function ensureSkillFields(p){
   if(!p.skillGrades || typeof p.skillGrades !== 'object') p.skillGrades = {};
   const pot = p.potential || p.grade || 'C';
   known.forEach(id => {
-    if(id === 'skill_basic_strike' || id === 'skill_weapon') return; // 기본기·무기(카드 등급)는 제외
+    if(isBasicSkill(id)) return; // 기본공격·기본방어·무기(카드 등급)는 제외
     const intr = intrinsicSkillGrade(id);
     if(intr){ p.skillGrades[id] = intr; return; }                    // 고정 등급 스킬은 못박는다
     if(!p.skillGrades[id]) p.skillGrades[id] = rollSkillGrade(pot);  // 코어 5종만 잠재력으로 굴림
@@ -4274,7 +4331,8 @@ function ensureSkillFields(p){
   } else {
     p.equipped_skills = p.equipped_skills.filter(id => pool.includes(id)).slice(0, MAX_LOADOUT);
     if(!p.equipped_skills.length) p.equipped_skills = defaultLoadout(p);
-    if(!p.equipped_skills.includes('skill_basic_strike')) p.equipped_skills.unshift('skill_basic_strike');
+    const basicAtk = plantBasicAttackId(p);
+    if(!p.equipped_skills.some(isBasicAttackSkill)) p.equipped_skills.unshift(basicAtk);
     p.equipped_skills = p.equipped_skills.slice(0, MAX_LOADOUT);
   }
   return p;
@@ -4472,6 +4530,7 @@ function normalizeState(s){
   if(!s.weapons) s.weapons = newArmory();
   s.plants.forEach(p => {
     if(!p.form){ p.form='normal'; p.predType=null; p.weaponKey=null; }
+    if(p.seed_type === 'grass') p.seed_type = 'flower'; // 초본형 폐지 → 화초형 흡수 마이그레이션
     if(Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = p.equipped_trait_cards.map(c => (typeof c==='string' && c.indexOf('@')<0) ? c+'@C' : c);
     p.potion = null; // 독초 물약 시스템 폐지 — 독성은 독성 변이형 카드로만
     ensurePlantInstanceFields(p);
@@ -6279,9 +6338,9 @@ renderExploration = function(){
    탐사 인터페이스 재설계 — 궤도 우주맵 / 행성 정보 팝업 / 행성 상세(지역 지도)
    (그림1·2·3 기준. 아래 정의가 위의 구버전 openExploration/renderExploration을 덮어쓴다)
    ===================================================================== */
-const EX_TYPE_ICON = { '초본형':'🌿', '목본형':'🌳', '화초형':'🌸', '다육형':'🌵', '덩굴형':'🍃' };
+const EX_TYPE_ICON = { '목본형':'🌳', '화초형':'🌸', '다육형':'🌵', '덩굴형':'🍃', '버섯형':'🍄' };
 const EX_EL_ORDER = ['fire','water','grass','earth','wind','bolt','ice'];
-const EX_TYPE_ORDER = ['초본형','목본형','화초형','다육형','덩굴형'];
+const EX_TYPE_ORDER = ['목본형','화초형','다육형','덩굴형','버섯형'];
 const EX_GRADE_ORDER = ['D','C','B','A','S'];
 const EX_ORBIT_R = { 1:56, 2:100, 3:132 };
 /* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다. */
@@ -6289,11 +6348,11 @@ const EXPLORE_VIEW = [
   { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
     cardTypes:['chloro','dna','spore'], themeNote:'생명이 풍부한 우림 — 무기는 발견되지 않고 DNA·포자·엽록체 카드가 나온다.',
     intro:'식물이 지배하는 온화한 땅', regions:[
-      { name:'아르키아', el:['grass'], types:['초본형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
+      { name:'아르키아', el:['grass'], types:['화초형'], diff:2, grade:'C', cost:140, map:{x:26,y:30},
         desc:'완만한 초원이 끝없이 펼쳐진 지역. 기본형 종자가 가장 흔하게 발견된다.', link:'region_elyndor_spore_marsh' },
       { name:'토르시단', el:['water','bolt'], types:['화초형'], diff:2, grade:'C', cost:150, map:{x:74,y:36},
         desc:'폭풍 구름이 머무는 고지대 호수. 번개를 머금은 화초형 변이가 보고된다.', link:'region_elyndor_lumenwood' },
-      { name:'루미안', el:['water','grass'], types:['초본형','덩굴형'], diff:1, grade:'D', cost:100, map:{x:48,y:66},
+      { name:'루미안', el:['water','grass'], types:['화초형','덩굴형'], diff:1, grade:'D', cost:100, map:{x:48,y:66},
         desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood' },
     ]},
   { id:'ex_calisto', name:'칼리스토', orbit:1, angle:332, color:'#ffd17a',
@@ -6301,7 +6360,7 @@ const EXPLORE_VIEW = [
     intro:'붉은 모래가 흐르는 건조 행성', regions:[
       { name:'세이라 분지', el:['earth','fire'], types:['다육형'], diff:3, grade:'C', cost:200, map:{x:32,y:38},
         desc:'바람에 깎인 협곡. 수분을 머금은 다육형 종자가 자란다.', link:'region_vathra_iron_dunes' },
-      { name:'붉은 사구', el:['fire'], types:['다육형','초본형'], diff:2, grade:'D', cost:160, map:{x:68,y:62},
+      { name:'붉은 사구', el:['fire'], types:['다육형','화초형'], diff:2, grade:'D', cost:160, map:{x:68,y:62},
         desc:'한낮의 열기가 강한 모래언덕. 내열성 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_veloc', name:'벨로크', orbit:2, angle:48, color:'#ff8a4a', size:'rare',
@@ -6311,7 +6370,7 @@ const EXPLORE_VIEW = [
         desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
       { name:'흑요암 능선', el:['fire'], types:['다육형','목본형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
         desc:'굳은 용암이 만든 검은 능선. 강한 방어형 종자가 발견된다.', link:'region_vathra_iron_dunes' },
-      { name:'잿빛 평원', el:['earth','fire'], types:['초본형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
+      { name:'잿빛 평원', el:['earth','fire'], types:['화초형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
         desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
     ]},
   { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
@@ -6351,7 +6410,7 @@ const EXPLORE_VIEW = [
   { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
     cardTypes:['common','chloro'], themeNote:'영구 동토 행성 — 공통·엽록체 카드가 발견된다.',
     intro:'영하의 빙하로 덮인 동토 행성', regions:[
-      { name:'빙정 평원', el:['ice','water'], types:['초본형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
+      { name:'빙정 평원', el:['ice','water'], types:['화초형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
         desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
       { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
         desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
@@ -9565,7 +9624,7 @@ async function applySkill(a, d, s, side, options={}){
   } else {
     a.energy = Math.max(0, a.energy-(s.cost||0));
   }
-  if(d.passives.energyOnEnemySkill>0 && s.id!=='skill_basic_strike'){
+  if(d.passives.energyOnEnemySkill>0 && !isBasicAttackSkill(s.id)){
     const before=d.energy;
     d.energy = Math.min(d.energyMax, d.energy + d.passives.energyOnEnemySkill);
     if(d.energy>before) effectNotes.push(side==='p'?'상대의 에너지가 회복되었다!':'에너지가 회복되었다!');
@@ -10180,7 +10239,7 @@ const POTENTIAL_BIAS = { D:0.4, C:0.8, B:1.3, A:1.9, S:2.8 };
 function nurserySkillReward(f){
   const pot = f.potential||'C';
   const fake={element:f.element, form:f.form, growth_stage:f.growth_stage, potential:pot};
-  const pool = plantKnownSkillIds(fake).filter(id=>id!=='skill_basic_strike'&&id!=='skill_guard'&&!isAutoFormSkill(id));
+  const pool = plantKnownSkillIds(fake).filter(id=>!isBasicSkill(id)&&!isAutoFormSkill(id));
   if(!pool.length) pool.push('skill_photosynthesis');
   // 등급별 가중치: 잠재력이 높을수록 상위 등급 비중↑
   const bias = POTENTIAL_BIAS[pot] || 1;
@@ -10640,6 +10699,49 @@ window.__test('skills: legacy species still use element growth pool', function()
   const ids = plantKnownSkillIds(p);
   __ok(ids.indexOf('skill_elem_water') >= 0, 'legacy element skill missing');
   __ok(ids.indexOf('skill_symbiotic') >= 0, 'legacy water growth top skill missing');
+});
+window.__test('types: 5-type system, grass type removed (element kept)', function(){
+  ['tree','flower','cactus','vine','mushroom'].forEach(t => __ok(SEED_TYPE_NAMES[t], 'type name missing '+t));
+  __ok(!SEED_TYPE_NAMES.grass, 'grass type name must be removed');
+  __ok(SEED_TYPE_ORDER.indexOf('grass') < 0, 'grass must not be in SEED_TYPE_ORDER');
+  __ok(ELEMENTS.grass && ELEMENT_STATS.grass, 'grass ELEMENT must still exist');
+  Object.keys(SPECIES).forEach(k => __ok(SPECIES[k].seedType !== 'grass', k+' must not be grass type'));
+});
+window.__test('types: legacy grass species converted to flower', function(){
+  ['flame','windy','grass_water','grass_grass','grass_earth','grass_bolt','grass_ice'].forEach(k => {
+    __ok(SPECIES[k], 'missing legacy species '+k);
+    __eq(SPECIES[k].seedType, 'flower', k+' should be flower type now');
+  });
+  __eq(seedTypeOf({ seed_type:'grass' }), 'flower', 'seedTypeOf grass→flower safety net');
+  __eq(battleType({ seed_type:'grass' }), 'flower', 'battleType grass→flower');
+});
+window.__test('skills: stage skills defined for all types/elements', function(){
+  ['tree','flower','cactus','vine','mushroom'].forEach(t => {
+    __ok(ALL_SKILLS[TYPE_BASIC_ATK[t]], 'basic atk missing '+t);
+    __ok(ALL_SKILLS[TYPE_BASIC_DEF[t]], 'basic def missing '+t);
+    __ok(ALL_SKILLS[TYPE_TRAIT_SKILL[t]], 'trait skill missing '+t);
+  });
+  ['fire','water','grass','earth','wind','bolt','ice'].forEach(e => __ok(ALL_SKILLS[ELEMENT_SPROUT_SKILL[e]], 'sprout skill missing '+e));
+});
+window.__test('skills: sprout grants type basics + element sprout (no 속성기 yet)', function(){
+  const p = { species:'flame', element:'fire', growth_stage:'sprout', form:'normal' };
+  const ids = plantKnownSkillIds(p);
+  __ok(ids.indexOf('skill_basic_flower') >= 0, 'flower basic atk at sprout');
+  __ok(ids.indexOf('skill_def_flower') >= 0, 'flower basic def at sprout');
+  __ok(ids.indexOf('skill_sprout_fire') >= 0, 'fire sprout skill at sprout');
+  __ok(ids.indexOf('skill_elem_fire') < 0, '속성기 should NOT be at sprout (juvenile only)');
+});
+window.__test('skills: juvenile adds type trait + 속성기', function(){
+  const p = { species:'flame', element:'fire', growth_stage:'juvenile', form:'normal' };
+  const ids = plantKnownSkillIds(p);
+  __ok(ids.indexOf('skill_trait_flower') >= 0, 'flower trait at juvenile');
+  __ok(ids.indexOf('skill_elem_fire') >= 0, 'fire 속성기 at juvenile');
+});
+window.__test('loadout: equipped always includes a basic attack', function(){
+  const p = createPlant('thorn', { atk:5, def:5, spd:5 });
+  p.growth_stage = 'mature'; ensureSkillFields(p);
+  __ok(p.equipped_skills.some(isBasicAttackSkill), 'loadout must contain a basic attack');
+  __ok(p.equipped_skills.indexOf('skill_basic_vine') >= 0, 'vine plant should have vine basic attack');
 });
 window.__test('acquire: legacy grass excluded from acquirable pool', function(){
   __ok(typeof pickAcquirableSpecies === 'function', 'pickAcquirableSpecies missing');

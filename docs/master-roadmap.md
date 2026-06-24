@@ -58,7 +58,8 @@
 
 > 세부는 §2 하위 문서로. 여기선 "무엇이 작동하는가"만 요약.
 
-- **종/식물:** **개체 카탈로그(`SPECIES_CATALOG`)** 기반 — 레거시 격자 35종 위에 개체별 확장(rarity·변이슬롯·고유스킬)을 머지. 타입 5종 = 버섯/목본/화초/다육/덩굴(**초본형은 레거시 보존**). 외형은 **절차적 SVG**(타입×속성×생장단계 자동). 새 게임 시 **무지개 시작 종자** 1개 지급. → [species](species-system-guide.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md)
+- **종/식물:** **개체 카탈로그(`SPECIES_CATALOG`)** 기반 — 레거시 격자 35종 위에 개체별 확장(rarity·변이슬롯·고유스킬)을 머지. 타입 5종 = 버섯/목본/화초/다육/덩굴(**초본형 폐지 → 화초형 흡수**, 구 초본 7종은 flower로 전환·legacy). 외형은 **절차적 SVG**(타입×속성×생장단계 자동). 새 게임 시 **무지개 시작 종자** 1개 지급. → [species](species-system-guide.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md)
+- **스킬(새싹·유체):** 타입 축(기본공격·기본방어·타입특기 ×5) + 속성 축(속성발현 ×7) **공유 스킬**(`STAGE_SKILLS`, 개체 고유 없음). 새싹=타입기본공/방+속성발현, 유체=+타입특기+속성기. 성장체 이상은 기존 `ELEMENT_GROWTH_SKILLS`(후속 재설계). → [species §2-5](species-system-guide.md)
 - **생장:** 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 단계 상승 시 스탯 배율↑ + 스킬 해금 + 진화 연출. **현재 경험치원이 전투 승리 + 물/비료로 이원화** → #2에서 경험치 단일화 예정. → [balance §3](balance-sheet.md)
 - **전투:** 로드아웃 **6칸**, 카드 선택 페이즈 + 판정 창 연출. 속성 상성(1.5/0.67), 상태이상 엔진(중독/출혈/화상·버프/디버프), **데미지 25% 하한선**. 봇은 플레이어 비례가 아닌 **티어+라운드+생장 절대 스탯**. → [battle-mechanics](battle-mechanics-deep-dive.md)
 - **변이형/카드:** **7변이형**(일반/포식/무기/독성/포자/발광/용족). **변이 카드 S~D 등급제**(주효과 계수+서브특성), 변이형별 보급상자로 획득. **잠재특성 20종은 스킬 해금 분류로만 쓰고 패시브는 의도적 미반영(예약)**. → [balance §6](balance-sheet.md) · [trait](trait-growth-roadmap.md)
@@ -163,6 +164,8 @@
 - **2026-06-23** — **다운로드본 UI 오버레이 반영:** 전체 버튼·패널·모달을 픽셀/홀로그램 시스템창 톤으로 덮는 CSS 레이어를 적용하고, 상점/탐사/양육/함선 방별 틴트, 팝업 중앙 정렬, 메인방 우주선 내부 SVG 디테일을 보강. 저장소에 없는 `assets/fonts/*.woff2` 참조는 제거하고 기존 폰트 fallback으로 유지.
 - **2026-06-24** — **종 시스템 = 수작업 개체 카탈로그(A+C)로 전환.** `SPECIES_CATALOG`(개체별 rarity·변이슬롯·baseVariants·stageSkills·signatures) + `SKILL_LIB`(스킬 정의 분리). 기존 `SPECIES_GRID`는 레거시 자동생성으로 머지 기반 유지. 설계서 = [`superpowers/specs/2026-06-24-plant-individual-catalog-design.md`](superpowers/specs/2026-06-24-plant-individual-catalog-design.md). (#1)
 - **2026-06-24** — **타입 개편: 초본형(grass) 제거 → 버섯형(mushroom) 추가.** 버섯=저스탯+포자 기본(`baseVariants:['spore']`)+희귀. 포자는 하드코딩 아닌 `baseVariants` 데이터로만 결정(확장 여지). 초본형은 신규 획득 제외하되 보유분·외형 보존(레거시). (#1)
+- **2026-06-24** — **초본형 완전 폐지 → 화초형 흡수(타입 5종 확정).** "풀은 결국 꽃을 피운다"는 사용자 결정. 구 초본 7종 타입 `grass`→`flower` 전환(스탯·외형·스킬 화초형, legacy), 세이브 마이그레이션. `grass`는 풀 **속성**으로만 존속. (#1)
+- **2026-06-24** — **새싹·유체 스킬을 타입 축/속성 축 공유 체계로 재설계(`STAGE_SKILLS`).** 개체 고유 없이 타입(기본공격·기본방어·타입특기)+속성(속성발현) 공유, 유체 속성심화는 기존 속성기 재사용. 성장체 이상은 후속 재설계 보류. 설계서 = [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md). (#1)
 
 ---
 
