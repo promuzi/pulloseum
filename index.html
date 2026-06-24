@@ -4202,6 +4202,32 @@ function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span cl
 const GRADE_PALETTE = { D:'#e8edf3', C:'#5fe06b', B:'#4ac6ff', A:'#b06bff', S:'#ff9a3c' };
 function gradeColor(g){ return GRADE_PALETTE[g] || GRADE_PALETTE.C; }
 const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB, STAGE_SKILLS);
+/* ===== 스킬 분류 복수 태그(cats) — kind + 라이더로 도출. UI 칩 + 향후 특성 시너지 키 ===== */
+const CAT_META = {
+  attack:      { icon:'🗡️', name:'공격',     color:'#ff7a5a' },
+  guard:       { icon:'🛡️', name:'방어',     color:'#4ac6ff' },
+  buff:        { icon:'✨', name:'버프',     color:'#b06bff' },
+  debuff:      { icon:'🥀', name:'디버프',   color:'#9be15d' },
+  heal_hp:     { icon:'❤️', name:'체력회복', color:'#ff6bd4' },
+  heal_energy: { icon:'⚡', name:'에너지회복', color:'#ffe14a' },
+};
+function skillCats(sk){
+  if(!sk) return [];
+  const out = new Set();
+  if(Array.isArray(sk.cats)) sk.cats.forEach(c => out.add(c)); // 명시 태그 우선(향후 카드)
+  const k = sk.kind;
+  if(k==='attack' || k==='elemental' || k==='dot') out.add('attack');
+  if(k==='guard') out.add('guard');
+  if(k==='buff')  out.add('buff');
+  if(k==='debuff') out.add('debuff');
+  // 라이더 기반 보조 태그(하이브리드 표현)
+  if((sk.power||0) > 0) out.add('attack');
+  if(sk.dot || sk.enemyDebuff) out.add('debuff');
+  if(sk.selfBuff) out.add('buff');
+  if(sk.heal || sk.lifesteal) out.add('heal_hp');
+  if(sk.energyGain || sk.energyRegen) out.add('heal_energy');
+  return Array.from(out);
+}
 /* 무기/물약 카드가 부여하는 스킬을 등급 계수로 스케일. 무기 스킬은 횟수(uses)도 등급에 따라 증가 */
 function gradeCardSkill(id, base, grade){
   if(!base) return null;
@@ -11260,6 +11286,17 @@ window.__test('explore: species preview renders for a planet with a pool', funct
   const html = exPlanetSpeciesPreview(p, 4);
   __ok(html && html.indexOf('exsp-chip') >= 0, 'preview should render species chips');
   __eq(exPlanetSpeciesPreview({ species:[] }, 4), '', 'empty pool → empty preview');
+});
+window.__test('cats: attack skill tagged attack', function(){
+  __ok(skillCats({kind:'attack',power:100}).includes('attack'), 'attack');
+});
+window.__test('cats: acid hybrid = attack + debuff', function(){
+  const c = skillCats({kind:'debuff', power:135, enemyDebuff:{stat:'def',pct:0.3}});
+  __ok(c.includes('attack') && c.includes('debuff'), 'acid hybrid '+JSON.stringify(c));
+});
+window.__test('cats: heal splits hp vs energy', function(){
+  __ok(skillCats({kind:'heal', heal:0.2}).includes('heal_hp'), 'heal_hp');
+  __ok(skillCats({kind:'special', energyGain:2}).includes('heal_energy'), 'heal_energy');
 });
 </script>
 </body>
