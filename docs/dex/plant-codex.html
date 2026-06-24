@@ -36,7 +36,7 @@ a{color:inherit;}
 .top{position:sticky; top:0; z-index:50; background:#0a1217;
   border-bottom:1px solid var(--line2);
   box-shadow:0 6px 18px -4px rgba(0,0,0,.7);}
-.top .wrap{display:flex; align-items:center; gap:16px; height:60px; flex-wrap:wrap;}
+.top .wrap{display:flex; align-items:center; gap:12px 16px; min-height:60px; padding-top:9px; padding-bottom:9px; flex-wrap:wrap;}
 .brand{font-family:var(--disp); font-size:20px; letter-spacing:.5px; white-space:nowrap;}
 .brand small{font-family:var(--pix); font-size:9px; color:var(--faint); display:block; letter-spacing:2px; margin-top:-3px;}
 .filters{display:flex; gap:6px; flex-wrap:wrap; margin-left:auto;}
@@ -145,6 +145,9 @@ footer b{color:var(--sub); font-family:var(--pix); font-size:10px;}
 @media(max-width:560px){
   .thead{flex-wrap:wrap;} .thead .ttend{margin-left:0; text-align:left; width:100%;}
   .grid{grid-template-columns:1fr;}
+  /* 모바일: 필터 칩을 브랜드 아래 전용 줄로 내려 헤더가 내용만큼 늘어나게(삐져나옴 방지) */
+  .filters{margin-left:0; width:100%; gap:5px;}
+  .top .wrap{gap:8px 12px;}
 }
 </style>
 </head>
