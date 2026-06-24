@@ -33,8 +33,10 @@ body{
 a{color:inherit;}
 .wrap{max-width:1180px; margin:0 auto; padding:0 20px;}
 
-.top{position:sticky; top:0; z-index:50; background:rgba(9,16,21,.82);
-  backdrop-filter:blur(10px); border-bottom:1px solid var(--line);}
+.top{position:sticky; top:0; z-index:50; background:rgba(9,16,21,.97);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--line2);
+  box-shadow:0 6px 18px -4px rgba(0,0,0,.6);}
+@supports not (backdrop-filter:blur(2px)){ .top{background:#091015;} }
 .top .wrap{display:flex; align-items:center; gap:16px; height:60px; flex-wrap:wrap;}
 .brand{font-family:var(--disp); font-size:20px; letter-spacing:.5px; white-space:nowrap;}
 .brand small{font-family:var(--pix); font-size:9px; color:var(--faint); display:block; letter-spacing:2px; margin-top:-3px;}
