@@ -1393,6 +1393,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .pot-stack .plant-layer{position:absolute;left:0;bottom:0;z-index:2;line-height:0;transform-origin:50% 88%;animation:potSway 3.4s ease-in-out infinite;}
 @keyframes potSway{0%,100%{transform:rotate(-2.5deg);}50%{transform:rotate(2.5deg);}}
 @media (prefers-reduced-motion: reduce){ .pot-stack .plant-layer{animation:none;} }
+.navbtn{position:relative;}
+.nav-dot{position:absolute;top:5px;right:calc(50% - 18px);width:9px;height:9px;border-radius:50%;background:#ff5a4a;box-shadow:0 0 7px #ff5a4a;animation:navDotPulse 1.4s ease-in-out infinite;}
+.nav-dot[hidden]{display:none;}
+@keyframes navDotPulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.35);opacity:.7;}}
 /* 공통 RewardReveal 개봉 연출 */
 #rewardRevealModal .rr-stage{background:radial-gradient(120% 100% at 50% 0%,rgba(40,60,80,.6),rgba(10,16,24,.94));border:1.5px solid rgba(120,200,255,.28);border-radius:18px;padding:22px 16px;max-width:340px;width:90%;text-align:center;}
 .rr-title{font-size:15px;font-weight:900;color:#d6ffe6;margin-bottom:16px;}
@@ -1989,7 +1993,7 @@ body{letter-spacing:.2px;}
       <button class="navbtn" data-nav="shop"><span class="ni" data-pic="cart"></span><span class="nl">상점</span></button>
       <button class="navbtn" data-nav="explore"><span class="ni" data-pic="sat"></span><span class="nl">탐사</span></button>
       <button class="navbtn center active" data-nav="home"><span class="ni" data-pic="leaf"></span><span class="nl">식물·전투</span></button>
-      <button class="navbtn" data-nav="nursery"><span class="ni" data-pic="pot"></span><span class="nl">식물양육</span></button>
+      <button class="navbtn" data-nav="nursery"><span class="ni" data-pic="pot"></span><span class="nl">식물양육</span><span class="nav-dot" id="nurseryNavDot" hidden></span></button>
       <button class="navbtn" data-nav="mode"><span class="ni" data-pic="rocket"></span><span class="nl">함선</span></button>
     </nav>
   </section>
@@ -2084,7 +2088,7 @@ body{letter-spacing:.2px;}
   <!-- ===== 식물원 (양육 탭) ===== -->
   <section id="nurseryScreen" class="screen hidden">
     <div class="nursery-top">
-      <div class="nursery-title"><span data-pic="leaf" data-size="18px"></span> 식물원 <button class="np-bag-btn" onclick="openFruitBag()"><span data-pic="gem" data-size="13px"></span> 수확 목록</button></div>
+      <div class="nursery-title"><span data-pic="leaf" data-size="18px"></span> 식물원 <button class="np-bag-btn" onclick="harvestAllPots()">🧺 전체 수확</button></div>
       <div class="nursery-res" id="nurseryRes"></div>
     </div>
     <div class="nursery-grid" id="nurseryGrid"></div>
@@ -4593,6 +4597,7 @@ function ensureNurseryFields(p){
   // --- 신모델 필드 방어 ---
   if(!Array.isArray(n.ripe)) n.ripe = [];
   if(typeof n.gauge !== 'number' || n.gauge<0) n.gauge = 0;
+  if(typeof n.leafGauge !== 'number' || n.leafGauge<0) n.leafGauge = 0;
   if(typeof n.waterBuff !== 'number') n.waterBuff = 0;
   if(typeof n.fertBuff  !== 'number') n.fertBuff = 0;
   if(typeof n.potId !== 'string' || !POT_CATALOG[n.potId]) n.potId = 'pot_terra';
@@ -4673,7 +4678,13 @@ function nurseryTick(p, now){
   const endBuff = Math.min(1, (n.waterBuff + n.fertBuff)/2);
   const avgBuff = (startBuff + endBuff)/2;
   const stageSpeed = FRUIT_STAGE_SPEED[p.growth_stage] || 0;
-  if(stageSpeed <= 0) return { newFruits:0 };            // 성장체 미만은 열매 없음
+  if(stageSpeed <= 0){
+    // 성장체 이전: 낙엽 → 양분(물). 열매 절반 속도의 느린 트리클(빈 시간 제거)
+    n.leafGauge = (n.leafGauge||0) + (0.5/(FRUIT_BASE_CYCLE_MS/3600000)) * dtH;
+    let leaves = 0; while(n.leafGauge >= 1){ n.leafGauge -= 1; leaves++; }
+    if(leaves>0){ if(!state.care) state.care={water:0,fert:0}; state.care.water += leaves; }
+    return { newFruits:0, leaves:leaves };
+  }
   const rate = (1 + potOf(p).speed) * stageSpeed * (1 + avgBuff*CARE_SPEED_BONUS) / (FRUIT_BASE_CYCLE_MS/3600000);
   let newFruits = 0;
   const cap = n.maxFruits = nurseryMaxFruits(p);
@@ -4739,6 +4750,27 @@ function harvestPot(p){
   if(n.gauge >= 1) n.gauge = 0;     // 꽉 참(핀=1) 수확 → 0부터 새로(중간 게이지는 건드리지 않아 보존)
   n.lastTick = Date.now();
   return ripe.map(fr => rollFruitReward(p, fr.rarity));
+}
+
+/* 전체 수확 — 익은 화분 전부를 묶어 한 번에 공통 개봉 연출로 */
+function harvestAllPots(){
+  const all = [];
+  (state.plants||[]).forEach(p => { ensureNurseryFields(p); nurseryTick(p, Date.now()); if(p.nursery.ripe.length){ harvestPot(p).forEach(r=>all.push(r)); } });
+  if(!all.length){ toast('수확할 열매가 없습니다'); return; }
+  saveState(); if(typeof sfx!=='undefined'&&sfx.win) sfx.win();
+  if(typeof renderNurseryGrid==='function') renderNurseryGrid();
+  if(typeof renderNurseryRes==='function') renderNurseryRes();
+  openRewardReveal({ kind:'fruit', items:all });
+  toast(`🧺 전체 수확 ${all.length}개!`);
+}
+
+/* 양육 탭 뱃지 — 익은 열매 있는 화분이 하나라도 있으면 빨간 점. 시간 경과 반영 위해 틱. */
+function nurseryHasReady(){
+  return (state.plants||[]).some(p => { ensureNurseryFields(p); nurseryTick(p, Date.now()); return p.nursery.ripe.length > 0; });
+}
+function updateNurseryBadge(){
+  const dot = document.getElementById('nurseryNavDot'); if(!dot) return;
+  dot.hidden = !nurseryHasReady();
 }
 
 /* 물/비료 인벤토리에서 1 소모 → 해당 식물 버프 +CARE_BUFF_PER_USE(상한 1). 투입 전 시간 반영. */
@@ -8078,6 +8110,7 @@ function renderMain(){
   renderCollection();
   renderCenter();
   renderTournamentBar();
+  if(typeof updateNurseryBadge==='function') updateNurseryBadge();
 }
 function renderPlayerExp(){
   const lv = state.player_level || 1, need = playerExpNeeded(lv);
@@ -10125,6 +10158,9 @@ async function endMatch(won){
   let xpAmt = 0;
   if(won && p){ xpAmt = 12 + T.roundIndex*8; gainGrowthExp(p, xpAmt); gainPlayerExp(45 + T.roundIndex*20); }
   if(p) p.bestRoundIdx = Math.max((typeof p.bestRoundIdx==='number'?p.bestRoundIdx:-1), T.roundIndex);
+  // 양육 자원(물/비료) — 전투 승리 보상(양육 루프 공급원)
+  let careGain = null;
+  if(won){ const w=1+Math.floor(Math.random()*2); grantCareReward('water', w); careGain={water:w, fert:0}; if(Math.random()<0.5){ grantCareReward('fert',1); careGain.fert=1; } }
 
   // 결과 표기: 진출 단계/예선 승수 + 승패 + 보상
   let progressLabel = round.name, outcomeKind = won?'win':'lose', outcomeText = won?'승리':'패배';
@@ -10183,6 +10219,7 @@ async function endMatch(won){
   // 금속판이 위·아래에서 닫히고 → 결과·보상 카드 공개
   const rewards = [`<div class="mr-card gold"><div class="mc-ic">💰</div><div class="mc-v">+${fmt(gain)}</div><div class="mc-l">크레딧</div></div>`];
   if(won && xpAmt) rewards.push(`<div class="mr-card exp"><div class="mc-ic">⭐</div><div class="mc-v">+${xpAmt}</div><div class="mc-l">성장 경험치</div></div>`);
+  if(careGain){ rewards.push(`<div class="mr-card"><div class="mc-ic">💧</div><div class="mc-v">+${careGain.water}${careGain.fert?' 🌿'+careGain.fert:''}</div><div class="mc-l">양육 자원</div></div>`); }
   if(champBonus) rewards.push(`<div class="mr-card bonus"><div class="mc-ic">👑</div><div class="mc-v">+${fmt(champBonus)}</div><div class="mc-l">우승 보너스</div></div>`);
   $('#battleResultCenter').innerHTML = `
     <div class="mr-progress">${progressLabel}</div>
