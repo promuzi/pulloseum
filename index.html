@@ -4088,6 +4088,13 @@ const TRAIT_CARDS = {
   card_vacuole:  { id:'card_vacuole',  type:'common', name:'거대 액포',   icon:'🫀', base:{hpPct:0.28},   subPool:['hp','def','regen','spd'] },
   card_tropism:  { id:'card_tropism',  type:'common', name:'향성 운동',   icon:'🌀', base:{spdPct:0.30},  subPool:['spd','crit','atk','enemydef'] },
   card_target:   { id:'card_target',   type:'common', name:'표적 분비물', icon:'🎯', base:{critBonus:0.16}, subPool:['crit','atk','spd','life'] },
+  // 공통 버프/디버프 — 전투 개시·상시 효과(등급 스케일)
+  card_pheromone:{ id:'card_pheromone',type:'common', name:'위조 페로몬', icon:'🥀', base:{startEnemyDebuff:[{stat:'atk',pct:0.12,turns:3},{stat:'def',pct:0.12,turns:3}]}, subPool:['enemydef','spd','def','hp'] },
+  card_enzyme:   { id:'card_enzyme',   type:'common', name:'약화 효소',   icon:'💢', base:{startEnemyDebuff:[{stat:'def',pct:0.12,turns:2}]}, subPool:['enemydef','atk','crit','spd'] },
+  // 공통 무등급(fixed) — 고정 효과(등급 롤 없음)
+  card_homeo:    { id:'card_homeo',    type:'common', name:'항상성',     icon:'☯️', fixed:true, base:{allStatPct:0.08}, subPool:[] },
+  card_lastleaf: { id:'card_lastleaf', type:'common', name:'마지막 잎새', icon:'💗', fixed:true, base:{surviveOnce:{hpAfter:0.01}}, subPool:[] },
+  card_unstable: { id:'card_unstable', type:'common', name:'불안정 변이', icon:'🎲', fixed:true, base:{startSelfRandom:0.40}, subPool:[] },
   // DNA — 포식형
   card_sap:          { id:'card_sap',          type:'dna', name:'진액 흡수',         icon:'🩸', base:{predBoost:{lifesteal:0.40}}, subPool:['life','atk','crit','hp'] },
   card_chloroabsorb: { id:'card_chloroabsorb', type:'dna', name:'엽록체 흡수',       icon:'🔋', base:{predBoost:{energySteal:1}}, subPool:['energy','atk','spd','crit'] },
@@ -4215,7 +4222,8 @@ function cardInstanceEffects(key){
 function cardEffects(cardKeys){
   const E = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
-    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[], skillGrades:{} };
+    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[], skillGrades:{},
+    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0 };
   (cardKeys || []).forEach(key => {
     const ie = cardInstanceEffects(key); if(!ie) return;
     E.hpPct+=ie.hpPct; E.atkPct+=ie.atkPct; E.defPct+=ie.defPct; E.spdPct+=ie.spdPct;
@@ -4225,6 +4233,10 @@ function cardEffects(cardKeys){
     E.predBoost.lifesteal+=ie.predBoost.lifesteal; E.predBoost.atkSteal+=ie.predBoost.atkSteal; E.predBoost.energySteal+=ie.predBoost.energySteal;
     ie.grantSkills.forEach(gs => { E.grantSkills.push(gs.id); E.skillGrades[gs.id] = gs.grade; });
     ie.spores.forEach(sp => E.spores.push(sp));
+    E.startEnemyDebuff = E.startEnemyDebuff.concat(ie.startEnemyDebuff||[]);
+    E.startSelfRandom += ie.startSelfRandom||0;
+    E.surviveChance = Math.max(E.surviveChance, ie.surviveChance||0);
+    E.surviveHpAfter = Math.max(E.surviveHpAfter, ie.surviveHpAfter||0);
   });
   return E;
 }
@@ -4251,6 +4263,9 @@ function cardEffectLabels(key){
   if(ie.lifestealPct)  L.push(`흡혈 +${pc(ie.lifestealPct)}`);
   if(ie.defDownOnHit)  L.push(`공격 시 적 방어 ${pc(ie.defDownOnHit)}↓`);
   if(ie.energyBonus)   L.push(`에너지 +${ie.energyBonus}`);
+  (ie.startEnemyDebuff||[]).forEach(eb => L.push(`전투 시작: 적 ${statName(eb.stat)} ${pc(eb.pct)}↓(${eb.turns}턴)`));
+  if(ie.startSelfRandom) L.push(`전투 시작: 랜덤 스탯 +${pc(ie.startSelfRandom)}`);
+  if(ie.surviveChance)   L.push(`치명상 1회 생존(체력 1)`);
   return L;
 }
 function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span class="grade-badge" style="color:${g.color};border-color:${g.color}">${g.name}</span>`; }
@@ -9569,6 +9584,12 @@ function addDot(unit, dot){
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
 function applyEnemyDebuff(d, eb){ let stat=eb.stat; if(stat==='rand') stat=pick(['atk','def','spd']); d.buffs.push({stat,pct:eb.pct,turns:eb.turns,kind:'debuff'}); return stat; }
+/* 공통 카드 battle-start 훅 — self가 보유한 시작 효과를 전투 개시 시 1회 적용(위조페로몬·약화효소→적 디버프, 불안정변이→자기 랜덤 스탯↑) */
+function applyCardStartHooks(self, foe){
+  const h = self.startHooks; if(!h) return;
+  (h.enemyDebuffs||[]).forEach(eb => foe.buffs.push({stat:eb.stat, pct:eb.pct, turns:eb.turns, kind:'debuff'}));
+  if((h.selfRandom||0) > 0){ const stat=pick(['atk','def','spd']); self.buffs.push({stat, pct:h.selfRandom, turns:99, kind:'buff'}); }
+}
 function effStat(u, stat){
   let pct=0; (u.buffs||[]).forEach(b=>{ if(b.stat===stat) pct += (b.kind==='debuff'?-b.pct:b.pct); });
   const base = stat==='atk'?u.atk : stat==='def'?u.def : u.spd;
@@ -9588,6 +9609,8 @@ function makeCombatant(src){
   P.lifestealPct = (P.lifestealPct||0) + CE.lifestealPct;
   P.defDownOnHit = (P.defDownOnHit||0) + CE.defDownOnHit;
   P.energyBonus = (P.energyBonus||0) + CE.energyBonus;
+  // 마지막잎새(survive once) — 카드가 부여, 1회 소진
+  if((CE.surviveChance||0) > (P.surviveChance||0)){ P.surviveChance = CE.surviveChance; P.surviveHpAfter = CE.surviveHpAfter; P.surviveOnce = true; }
   const bs = src.baseStats;
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식 변이형) 포식 기본 스킬
@@ -9621,6 +9644,7 @@ function makeCombatant(src){
     cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
     cardSkills:CE.skillGrades||{}, skillGrades:src.skillGrades||{}, uses:{},
     cards:(src.cards||[]).slice(),   // 변이 스킬 바(variantSkillsOf — 무기형 등) 원본 카드 보존
+    startHooks:{ enemyDebuffs:(CE.startEnemyDebuff||[]), selfRandom:(CE.startSelfRandom||0) }, // 공통 카드 battle-start 훅(위조페로몬·약화효소·불안정변이)
     loadout, skipNext:false, scaleStack:0,
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
@@ -9717,6 +9741,7 @@ function startMatch(){
   B = { p:playerC, e:enemyC, over:false, busy:false, turn:1, view:'cards' };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
+  applyCardStartHooks(B.p, B.e); applyCardStartHooks(B.e, B.p);
   hide('#mainScreen'); hide('#resultModal'); show('#battleScreen');
   // 전투 화면 초기 상태: 카드/판정/결과/오버레이 모두 닫고 무대만
   ['#cardPhase','#judgeWindow','#battleResult','#battleSkillDetail','#surrenderConfirm'].forEach(id=>hide(id));
@@ -10123,7 +10148,7 @@ async function applySkill(a, d, s, side, options={}){
     d.hp = Math.max(0, d.hp - dm);
     if(d.hp<=0 && d.passives.surviveChance>0){
       const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
-      if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); }
+      if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); if(d.passives.surviveOnce) d.passives.surviveChance = 0; }
     }
     if(absorbed>0) effectNotes.push('보호막이 공격을 막았다!');
     const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
@@ -11492,6 +11517,31 @@ window.__test('skills: toxic infuse + spray defined in SKILL_LIB', function(){
   __ok(ALL_SKILLS['skill_card_spray'], 'spray defined');
   __ok(ALL_SKILLS['skill_card_infuse'].infuse, 'infuse.infuse field');
   __eq(ALL_SKILLS['skill_card_spray'].dotTimes, 2, 'spray dotTimes=2');
+});
+window.__test('card: common buff/debuff + fixed defined', function(){
+  ['card_pheromone','card_enzyme','card_homeo','card_lastleaf','card_unstable'].forEach(id=>{
+    __ok(TRAIT_CARDS[id], 'missing '+id); __eq(TRAIT_CARDS[id].type, 'common', id+' common');
+  });
+  const homeo = cardInstanceEffects('card_homeo@S'); // fixed → 등급 무관 0.08
+  __ok(Math.abs(homeo.atkPct-0.08)<0.001 && Math.abs(homeo.defPct-0.08)<0.001 && Math.abs(homeo.spdPct-0.08)<0.001, '항상성 전스탯 '+homeo.atkPct);
+  __eq(cardInstanceEffects('card_pheromone@C').startEnemyDebuff.length, 2, '위조페로몬 2디버프');
+  __ok(cardInstanceEffects('card_unstable@C').startSelfRandom > 0.39, '불안정변이 random');
+  __eq(cardInstanceEffects('card_lastleaf@C').surviveChance, 1, '마지막잎새 survive');
+});
+window.__test('combat: battle-start hooks apply enemy debuff + self random', function(){
+  const mk = cards => makeCombatant({name:'t',species:'thorn',element:'grass',grade:'C',form:'normal',
+    baseStats:{hp:100,atk:30,def:20,spd:20,acc:90,elem:0,critRate:5,critMult:1.5,energy:3},
+    loadout:['skill_basic_strike'],cards:cards});
+  const atkr = mk(['card_pheromone@C','card_unstable@C']);
+  const foe  = mk([]);
+  __eq(atkr.startHooks.enemyDebuffs.length, 2, 'hooks carried');
+  applyCardStartHooks(atkr, foe);
+  __eq(foe.buffs.filter(b=>b.kind==='debuff').length, 2, '적 디버프 2개 적용');
+  __ok(atkr.buffs.some(b=>b.kind==='buff' && b.pct>0.39), '자기 랜덤 버프 적용');
+  // 마지막잎새 → passives survive once
+  const last = mk(['card_lastleaf@C']);
+  __eq(last.passives.surviveChance, 1, 'survive passive set');
+  __ok(last.passives.surviveOnce===true, 'survive once flag');
 });
 window.__test('variant: dragon form returns scale + breath', function(){
   const v = variantSkillsOf({form:'dragon'});
