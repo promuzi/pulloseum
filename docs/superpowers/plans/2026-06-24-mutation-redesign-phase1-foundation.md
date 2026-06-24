@@ -1,5 +1,7 @@
 # 변이 재설계 — 플랜 1: 시스템 토대 Implementation Plan
 
+> ✅ **구현 완료 (2026-06-24):** Task 1~4 전부 커밋(`2fbd2b7`/`255dd66`/`9c69e89`/`b39f16b`), `__catalogSelfTest()` 0 fail. 다음 = 플랜 2(카드 콘텐츠).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 변이 카드 콘텐츠 재작성(플랜 2)과 전투/UI(플랜 3) 이전에 필요한 **시스템 토대** 4가지를 깔고 회귀 검증한다 — `cats` 스킬 라벨 도출, 독 스택 상한, 같은 카드 자동교체, 발광형 폐지.
