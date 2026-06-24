@@ -4629,6 +4629,14 @@ const POT_CATALOG = {
 const POT_ORDER = ['pot_terra','pot_ceramic','pot_glass','pot_crystal','pot_gold'];
 const POT_SPRITE_OVERRIDES = {};   // #3 도트화 훅: POT_SPRITE_OVERRIDES['pot_gold']='assets/...png'
 function potOf(p){ const id=(p&&p.nursery&&p.nursery.potId)||'pot_terra'; return POT_CATALOG[id]||POT_CATALOG.pot_terra; }
+/* 화분 획득 — 보유 시 크레딧 환급(150), 아니면 영구 해금. RewardReveal 표시 객체 반환. */
+function grantPot(potId){
+  const pot = POT_CATALOG[potId]; if(!pot) return null;
+  if(!state.pot_inventory) state.pot_inventory = { pot_terra:true };
+  if(state.pot_inventory[potId]){ addCredits(150); return { kind:'credit', label:`${pot.name}(보유) → 크레딧 +150`, icon:'🪙', color:pot.color, payload:{credits:150} }; }
+  state.pot_inventory[potId] = true;
+  return { kind:'pot', label:`${pot.name} 획득!`, icon:pot.icon, color:pot.color, payload:{potId} };
+}
 function nurseryMaxFruits(p){ const base = FRUIT_MAX_BY_STAGE[(p && p.growth_stage)] || 0; return base>0 ? base + potOf(p).maxFruitDelta : 0; }  // 성장체 미만=0
 
 // 버프(물·비료 평균)·생장단계가 높을수록 상위 희귀도 확률↑. 보수적(주황은 항상 희소).
@@ -6944,6 +6952,8 @@ function exploreViewRun(){
       rewards.seeds.forEach(s => items.push({ label:`${s.name}${s.mutation_candidate?' · 변이가능':''}`, icon:'🌱' }));
       (rewards.cards||[]).forEach(c => items.push({ label:`${c.name} [${c.grade||'C'}]`, icon:c.icon||'🧬' }));
       (rewards.care||[]).forEach(x => items.push({ label:`${x.name} ×${x.count}`, icon:x.icon }));
+      // 희귀 화분 드롭(5%) — grantPot이 보유 갱신/중복 환급, items엔 표시만
+      if(Math.random() < 0.05){ const pr = grantPot(Math.random()<0.3?'pot_gold':'pot_crystal'); if(pr) items.push(pr); }
       if(items.length) openRewardReveal({ kind:'expedition', items, onDone:()=>{ lastExResult=null; renderExploration(); } });
     }
   });
@@ -9179,16 +9189,33 @@ function buyGrowthItem(itemId){
   saveState(); sfx.heal(); renderShop(); renderMain();
   toast(`${c.name} 구매! 🧪강화 탭에서 식물에게 사용하세요`);
 }
+/* 양육 화분 상점(크레딧). 크리스탈·황금은 보급상자·탐사 보상으로만. */
+const POT_SHOP = [
+  { id:'pot_ceramic', icon:'🏺', name:'도자기 화분', tag:'충전 속도 +15%', price:400, currency:'credits' },
+  { id:'pot_glass',   icon:'🫙', name:'유리 화분',   tag:'최대 열매 +1',   price:900, currency:'credits' },
+];
+function buyPot(potId){
+  const row = POT_SHOP.find(x=>x.id===potId); if(!row) return;
+  if(state.pot_inventory && state.pot_inventory[potId]){ toast('이미 보유한 화분입니다'); return; }
+  if((state.credits||0) < row.price){ toast('크레딧이 부족합니다'); return; }
+  spendCredits(row.price);
+  const reward = grantPot(potId);
+  saveState();
+  openRewardReveal({ kind:'pot', items:[reward], onDone:()=>renderMain() });
+  renderMain();
+}
 function renderShop(){
   const special = renderShopLane(SHOP_SPECIAL_PACKS);
   const currency = renderShopLane(SHOP_CURRENCY_PACKS);
   const growthItems = renderShopGrowthItems();
   const itemBoxes = renderShopLane(supplyBoxesByGroup('item'), item => `data-shop-box="${item.id}"`);
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
+  const potLane = renderShopLane(POT_SHOP.map(x=>({ ...x, disabled: !!(state.pot_inventory&&state.pot_inventory[x.id]) })), item => `data-buy-pot="${item.id}"`);
   $('#shopList').innerHTML =
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
     renderShopBlock('소모품 · 아이템', '식물 생장 경험치 아이템. 레벨업 물약은 무료로 무한 구매할 수 있습니다.', growthItems) +
+    renderShopBlock('🪴 양육 화분', '식물원 열매 충전 속도·최대 개수를 올립니다. 상급 화분은 보급상자·탐사 보상으로.', potLane) +
     renderShopBlock('성장 보급상자', '생장 경험치 아이템이 무작위로 들어 있습니다. 탐사 보상으로도 얻을 수 있습니다.', itemBoxes) +
     renderShopBlock('보급상자', '변이 카드는 변이형별 보급상자나 탐사 보상으로만 얻습니다. 등급(S~D)은 개봉 시 무작위.', traitBoxes);
   document.querySelectorAll('#shopList [data-shop-box]').forEach(card => {
@@ -9199,6 +9226,9 @@ function renderShop(){
   });
   document.querySelectorAll('#shopList [data-buy-item]').forEach(card => {
     card.addEventListener('click', () => { sfx.tap(); buyGrowthItem(card.dataset.buyItem); });
+  });
+  document.querySelectorAll('#shopList [data-buy-pot]').forEach(card => {
+    card.addEventListener('click', () => { sfx.tap(); buyPot(card.dataset.buyPot); });
   });
 }
 function renderShopBoxInfo(box){
@@ -10348,6 +10378,7 @@ function equipPot(idx, potId){
 let _rrState = null;
 function rrContainerHtml(kind, item){
   if(kind==='fruit'){ const c=(item&&item.color)||'#e6edf2'; return `<div class="rr-box fruit" style="--rc:${c}">🍎</div>`; }
+  if(kind==='pot'){ const c=(item&&item.color)||'#e6edf2'; return `<div class="rr-box fruit" style="--rc:${c}">🪴</div>`; }
   if(kind==='supply') return `<div class="rr-box supply">🎁</div>`;
   return `<div class="rr-box expedition">📦</div>`;
 }
@@ -10355,7 +10386,7 @@ function openRewardReveal(opts){
   const items = (opts && opts.items) || [];
   if(!items.length){ if(opts && opts.onDone) opts.onDone(); return; }
   _rrState = { kind:(opts.kind||'fruit'), items, opened:0, onDone:opts.onDone||null };
-  const titleMap = { fruit:'🍎 열매 개봉', supply:'🎁 보급 개봉', expedition:'🛰️ 탐사 결과' };
+  const titleMap = { fruit:'🍎 열매 개봉', pot:'🪴 화분 개봉', supply:'🎁 보급 개봉', expedition:'🛰️ 탐사 결과' };
   const t=document.querySelector('#rrTitle'); if(t) t.textContent = titleMap[_rrState.kind] || '보상 개봉';
   const row=document.querySelector('#rrRow');
   if(row) row.innerHTML = items.map((it,i)=>`<div class="rr-item" data-rr="${i}" onclick="rrOpenOne(${i})">${rrContainerHtml(_rrState.kind,it)}<div class="rr-label"></div></div>`).join('');
