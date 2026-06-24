@@ -875,7 +875,11 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .seed-bag-layout{display:grid;grid-template-columns:minmax(250px,340px) 1fr;gap:12px;min-height:420px;}
 .seed-bag-list{display:flex;flex-direction:column;gap:8px;max-height:58dvh;overflow-y:auto;padding-right:2px;}
 .seed-bag-card{align-items:flex-start;border-radius:12px;padding:10px;min-height:96px;}
+.seed-bag-card{justify-content:space-between;}
+.seed-bag-card .ic-body{flex:1;min-width:0;}
 .seed-bag-card .seed-card-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.seed-card-actions{display:flex;flex-direction:column;gap:6px;justify-content:center;flex-shrink:0;}
+.seed-mini-btn{padding:5px 12px;font-size:12px;white-space:nowrap;}
 .seed-mini-stat{font-size:11px;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:2px 7px;color:var(--sub);}
 .seed-mini-stat.ok{color:var(--neon);border-color:rgba(31,217,196,.45);background:rgba(31,217,196,.07);}
 .seed-mini-stat.warn{color:#ffb199;border-color:rgba(255,107,74,.45);background:rgba(255,107,74,.07);}
@@ -7725,63 +7729,29 @@ function renderSeedBagCard(item){
   const region = seedOriginRegion(item, seed);
   const meta = rarityMeta((seed && seed.rarity) || item.rarity);
   const grade = item.grade || 'C';
-  const selected = item.inventory_id === selectedSeedInventoryId;
-  const icon = item.rainbow ? '🌈' : meta.icon;
-  const typeLabel = item.rainbow ? '??? (무작위)' : (SEED_TYPE_NAMES[seedTypeOf(item)] || '미확인');
-  return `<div class="itemcard seed-bag-card ${selected ? 'selected' : ''}" data-select-seed="${item.inventory_id}">
+  const rainbow = !!item.rainbow;
+  const speciesKey = (item.species && SPECIES[item.species]) ? item.species : (seed ? speciesKeyForSeed(seed) : null);
+  const spDef = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey] : null;
+  const elDef = spDef && ELEMENTS[spDef.element] ? ELEMENTS[spDef.element] : null;
+  const icon = rainbow ? '🌈' : meta.icon;
+  const typeLabel = rainbow ? '???' : (SEED_TYPE_NAMES[seedTypeOf(item)] || (spDef ? SEED_TYPE_NAMES[spDef.seedType] : '미확인'));
+  const elChip = rainbow
+    ? '<span class="seed-mini-stat">속성 ???</span>'
+    : (elDef ? `<span class="seed-mini-stat" style="border-color:${elDef.color}66;color:${elDef.color}">${elDef.icon} ${elDef.name}</span>` : '');
+  const rarChip = `<span class="seed-mini-stat ${rainbow ? '' : meta.css}">${rainbow ? '희귀도 ???' : meta.name}</span>`;
+  const typeChip = `<span class="seed-mini-stat">${rainbow ? '타입 ???' : typeLabel}</span>`;
+  const gradeChip = `<span class="seed-mini-stat" style="color:${rainbow ? '#fff' : (GRADES[grade] || '#fff')}">잠재력 ${rainbow ? '???' : grade}</span>`;
+  const origin = rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`;
+  return `<div class="itemcard seed-bag-card" data-seed-card="${item.inventory_id}">
     <div style="font-size:30px;width:42px;text-align:center">${icon}</div>
     <div class="ic-body">
-      <div class="ic-name"${item.rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'} ${item.rainbow ? '' : gradeBadgeHtml(grade)}</div>
-      <div class="ic-desc">
-        기원: ${item.rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`}<br>
-        식물 타입: ${typeLabel}
-      </div>
-      <div class="seed-card-meta">
-        <span class="seed-mini-stat ok">잠재력 ${item.rainbow ? '???' : grade}</span>
-        ${(!item.rainbow && item.mutation_candidate) ? '<span class="seed-mini-stat warn">변이 가능</span>' : ''}
-      </div>
+      <div class="ic-name"${rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'}</div>
+      <div class="ic-desc">🪐 ${origin}</div>
+      <div class="seed-card-meta">${elChip}${rarChip}${typeChip}${gradeChip}</div>
     </div>
-  </div>`;
-}
-function renderSeedDetail(entry){
-  if(!entry) return `<div class="seed-detail-panel seed-bag-empty"><div class="howto">왼쪽 목록에서 종자를 선택하면 상세 스펙을 볼 수 있습니다.</div></div>`;
-  const seed = ALIEN_INDEX.seeds[entry.seed_id];
-  const meta = rarityMeta((seed && seed.rarity) || entry.rarity);
-  const planet = seedOriginPlanet(entry, seed);
-  const region = seedOriginRegion(entry, seed);
-  const rainbow = !!entry.rainbow;
-  const speciesKey = (entry.species && SPECIES[entry.species]) ? entry.species : (seed ? speciesKeyForSeed(seed) : null);
-  const spDef = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey] : null;
-  const typeLabel = rainbow ? '??? (무작위)' : (SEED_TYPE_NAMES[seedTypeOf(entry)] || (spDef ? SEED_TYPE_NAMES[spDef.seedType] : '미확인'));
-  const elLabel = rainbow ? '??? (무작위)' : (spDef ? `${ELEMENTS[spDef.element].icon} ${spDef.name}` : '미확인');
-  const storage = seedStorageStatus(seed);
-  const readiness = seedPlantReadiness(entry, seed);
-  const requiredEnv = STORAGE_ENVIRONMENTS[storage.requiredKey] || STORAGE_ENVIRONMENTS.general;
-  return `<div class="seed-detail-panel">
-    <div class="seed-detail-title">
-      <div>
-        <h3>${entry.name || (seed && seed.name) || '알 수 없는 종자'}</h3>
-        <div class="info-desc">${rainbow ? '🌈 등급·타입·속성·변이형이 모두 무작위인 미지의 종자. 심으면 정체가 드러납니다.' : seedDescription(seed)}</div>
-      </div>
-      <span class="info-badge ${meta.css}">${rainbow ? '???' : meta.name}</span>
-    </div>
-    <div class="seed-detail-grid">
-      <div class="seed-detail-cell">희귀도<b>${rainbow ? '???' : meta.name}</b></div>
-      <div class="seed-detail-cell">기원 행성<b>${rainbow ? '미지' : ((planet && planet.name) || entry.origin_planet || '미확인')}</b></div>
-      <div class="seed-detail-cell">기원 지역<b>${rainbow ? '미지' : ((region && region.name) || entry.origin_region || '미확인')}</b></div>
-      <div class="seed-detail-cell">식물 타입<b>${typeLabel}</b></div>
-      <div class="seed-detail-cell">종<b>${elLabel}</b></div>
-      <div class="seed-detail-cell">기본 능력치 예상값<b>${rainbow ? '???' : seedBaseStatsText(seed)}</b></div>
-      <div class="seed-detail-cell">변이율 예상치<b>${rainbow ? '???' : seedMutationEstimate(seed, entry)}</b></div>
-      <div class="seed-detail-cell">잠재력 등급<b style="color:${rainbow ? '#fff' : (GRADES[entry.grade||'C']||'#fff')}">${rainbow ? '???' : (entry.grade || 'C')}</b></div>
-      <div class="seed-detail-cell">잠재력 효과<b>등급↑ = 생장 시 더 좋은 등급의 스킬 획득</b></div>
-      <div class="seed-detail-cell">심기 가능 여부<b>${readiness.reason}</b></div>
-    </div>
-    <div class="shop-section">잠재특성 후보</div>
-    <div class="seed-trait-list">${seedTraitPills(seed)}</div>
-    <div class="seed-detail-actions">
-      <button class="btn primary modal-close" id="plantSelectedSeed" data-plant-seed="${entry.inventory_id}" ${readiness.ok ? '' : 'disabled'}>심기</button>
-      <button class="btn ghost" data-sell-seed="${entry.inventory_id}" style="border-color:rgba(255,211,74,.45);color:var(--gold)">판매 ${fmt(seedSellPrice(seed, entry))}💰</button>
+    <div class="seed-card-actions">
+      <button class="btn primary seed-mini-btn" data-plant-seed="${item.inventory_id}">심기</button>
+      <button class="btn ghost seed-mini-btn" data-sell-seed="${item.inventory_id}">판매 ${fmt(seedSellPrice(seed, item))}💰</button>
     </div>
   </div>`;
 }
@@ -7944,11 +7914,6 @@ function plantSeedFromBag(inventoryId, customName = ''){
 function renderSeedBag(){
   const body = $('#seedBagBody');
   const inv = state.seed_inventory || [];
-  if(selectedSeedInventoryId && !inv.some(item => item.inventory_id === selectedSeedInventoryId)){
-    selectedSeedInventoryId = inv[0] ? inv[0].inventory_id : null;
-  }
-  if(!selectedSeedInventoryId && inv.length) selectedSeedInventoryId = inv[0].inventory_id;
-  const selectedEntry = inv.find(item => item.inventory_id === selectedSeedInventoryId) || null;
   const cap = seedBagCapacity();
   const starterHelp = canClaimStarterSeed() ? `
     <div class="itemcard" id="claimStarterSeed">
@@ -7968,11 +7933,7 @@ function renderSeedBag(){
       ${inv.length ? `<span class="seedbag-spacer"></span>${sortBtn('rarity','희귀도')}${sortBtn('name','이름')}${sortBtn('planet','행성')}` : ''}
     </div>
     ${starterHelp}
-    ${inv.length ? `
-      <div class="seed-bag-layout">
-        <div class="seed-bag-list">${seedCards}</div>
-        ${renderSeedDetail(selectedEntry)}
-      </div>` : '<div class="howto seed-bag-empty">종자 가방이 비어 있습니다. 탐사로 행성을 탐험해 종자를 얻어보세요.</div>'}
+    ${inv.length ? `<div class="seed-bag-list">${seedCards}</div>` : '<div class="howto seed-bag-empty">종자 가방이 비어 있습니다. 탐사로 행성을 탐험해 종자를 얻어보세요.</div>'}
     <button class="btn primary modal-close" id="seedBagExplore">우주맵으로 가기</button>`;
   const starter = $('#claimStarterSeed');
   if(starter) starter.addEventListener('click', claimStarterSeed);
@@ -7980,17 +7941,11 @@ function renderSeedBag(){
     btn.addEventListener('click', () => { seedSortMode = btn.dataset.seedSort; sfx.tap(); renderSeedBag(); });
   });
   document.querySelectorAll('#seedBagBody [data-sell-seed]').forEach(btn => {
-    btn.addEventListener('click', () => sellSeed(btn.dataset.sellSeed));
+    btn.addEventListener('click', e => { e.stopPropagation(); sellSeed(btn.dataset.sellSeed); });
   });
-  document.querySelectorAll('#seedBagBody [data-select-seed]').forEach(card => {
-    card.addEventListener('click', () => {
-      selectedSeedInventoryId = card.dataset.selectSeed;
-      sfx.tap();
-      renderSeedBag();
-    });
+  document.querySelectorAll('#seedBagBody [data-plant-seed]').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); sfx.tap(); openPlantConfirm(btn.dataset.plantSeed); });
   });
-  const plantBtn = $('#plantSelectedSeed');
-  if(plantBtn) plantBtn.addEventListener('click', () => openPlantConfirm(plantBtn.dataset.plantSeed));
   $('#seedBagExplore').addEventListener('click', () => {
     hide('#seedBagModal');
     openExploration();
