@@ -4182,7 +4182,12 @@ function cardInstanceEffects(key){
   const m = g.mult, base = def.base || {};
   const out = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
-    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[] };
+    predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[],
+    startEnemyDebuff:[], startSelfRandom:0, surviveChance:0, surviveHpAfter:0 };
+  if(base.allStatPct){ const v=round2(base.allStatPct*m); out.atkPct+=v; out.defPct+=v; out.spdPct+=v; } // 항상성: 공·방·속 동시
+  if(base.startEnemyDebuff){ base.startEnemyDebuff.forEach(eb => out.startEnemyDebuff.push({stat:eb.stat, pct:round2(eb.pct*m), turns:eb.turns})); } // 위조페로몬·약화효소
+  if(base.startSelfRandom){ out.startSelfRandom += round2(base.startSelfRandom*m); } // 불안정변이
+  if(base.surviveOnce){ out.surviveChance = 1; out.surviveHpAfter = base.surviveOnce.hpAfter || 0.01; } // 마지막잎새
   if(base.atkPct)     out.atkPct     += round2(base.atkPct*m);
   if(base.hpPct)      out.hpPct      += round2(base.hpPct*m);
   if(base.spdPct)     out.spdPct     += round2(base.spdPct*m);
@@ -9611,7 +9616,7 @@ function makeCombatant(src){
     critRate: clamp((bs.critRate||5), 0, 90),
     critMult: bs.critMult || 1.5,
     energyMax: clamp((bs.energy||3) + (P.energyBonus||0), 1, 9),
-    energy: Math.min(clamp((bs.energy||3) + (P.energyBonus||0), 1, 9), 3),
+    energy: clamp((bs.energy||3) + (P.energyBonus||0), 1, 9),   // 시작 = 최대(항상 가득)
     guard:null, traits:src.traits||[], passives:P,
     cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
     cardSkills:CE.skillGrades||{}, skillGrades:src.skillGrades||{}, uses:{},
