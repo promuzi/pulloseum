@@ -6841,12 +6841,15 @@ function exResultHtml(){
     : '없음';
   const cards = (rewards.cards && rewards.cards.length)
     ? rewards.cards.map(c => `${c.grade?gradeBadgeHtml(c.grade):''} ${c.icon} ${c.name}`).join('<br>') : '없음';
+  const care = (rewards.care && rewards.care.length)
+    ? rewards.care.map(x => `${x.icon} ${x.name} ×${x.count}`).join(' · ') : '없음';
   return `<div class="exres-backdrop" id="exResBackdrop"><div class="exres-card">
     <div style="font-size:34px">🌱</div>
     <div style="font-size:17px;font-weight:900;margin:4px 0 12px">탐사 성공 — ${region.name}</div>
     <div class="detail-list" style="text-align:left">
       <span>획득한 종자<b>${seeds}</b></span>
       <span>획득한 변이 카드<b>${cards}</b></span>
+      <span>양육 재료<b>${care}</b></span>
     </div>
     <div class="space-panel-actions" style="margin-top:14px">
       <button class="btn primary" id="exResBag">종자 가방으로</button>
@@ -6910,7 +6913,7 @@ function exploreViewRun(){
     explorationBusy = false;
     spendCredits(cost);
     const success = Math.random() < exSuccessChance(diff.ratio);
-    const rewards = { seeds:[], items:[], cards:[], success };
+    const rewards = { seeds:[], items:[], cards:[], care:[], success };
     if(success){
       const count = exRewardCount(diff.ratio);
       const pool = (realRegion && realRegion.seed_drop_table) ? realRegion.seed_drop_table : [];
@@ -6930,6 +6933,9 @@ function exploreViewRun(){
       // 변이 카드 — 행성 테마(cardTypes)에서, 등급은 보상 등급 분포
       const cardChance = 0.18 + diff.ratio*0.12;
       if(Math.random() < cardChance){ rewards.cards.push(grantThemedTraitCard(p.cardTypes, exRollRewardGrade(r, p))); }
+      // 양육 재료(물/비료) — 성공 보상(양육 루프 자원 공급원)
+      if(Math.random() < 0.55){ const c=2+Math.floor(Math.random()*3); grantCareReward('water', c); rewards.care.push({ res:'water', count:c, name:'물', icon:'💧' }); }
+      if(Math.random() < 0.32){ const c=1+Math.floor(Math.random()*2); grantCareReward('fert',  c); rewards.care.push({ res:'fert',  count:c, name:'비료', icon:'🌿' }); }
     }
     lastExResult = { planet:p, region:r, rewards, success, diff };
     saveState(); success ? sfx.win() : sfx.lose();
