@@ -4138,10 +4138,16 @@ function grantRandomTraitCard(){
 function cardInstanceEffects(key){
   const { id, grade } = parseCardKey(key);
   const def = TRAIT_CARDS[id]; if(!def) return null;
-  const g = cardGradeMeta(grade), m = g.mult, base = def.base || {};
+  const fixed = !!def.fixed; // 무등급 카드: 등급 롤 무시(계수 1·서브 0)
+  const g = fixed ? { mult:1, subs:0 } : cardGradeMeta(grade);
+  const m = g.mult, base = def.base || {};
   const out = { hpPct:0, atkPct:0, defPct:0, spdPct:0, regenPct:0, reflectPct:0,
     critBonus:0, lifestealPct:0, defDownOnHit:0, energyBonus:0, poisonCoef:0, energyRegen:0,
     predBoost:{lifesteal:0, atkSteal:0, energySteal:0}, grantSkills:[], spores:[] };
+  if(base.atkPct)     out.atkPct     += round2(base.atkPct*m);
+  if(base.hpPct)      out.hpPct      += round2(base.hpPct*m);
+  if(base.spdPct)     out.spdPct     += round2(base.spdPct*m);
+  if(base.critBonus)  out.critBonus  += round2(base.critBonus*m);
   if(base.defPct)     out.defPct     += round2(base.defPct*m);
   if(base.reflectPct) out.reflectPct += round2(base.reflectPct*m);
   if(base.regenPct)   out.regenPct   += round2(base.regenPct*m);
@@ -11341,6 +11347,20 @@ window.__test('form: rollForm never returns lumen (발광 폐지)', function(){
 });
 window.__test('form: FORMS.lumen kept for legacy plants', function(){
   __ok(FORMS.lumen, 'lumen def kept for legacy');
+});
+window.__test('card: stat-core base atkPct scales by grade', function(){
+  TRAIT_CARDS.__tmp_core = { id:'__tmp_core', type:'common', name:'tmp', icon:'x', base:{atkPct:0.20}, subPool:[] };
+  const c = cardInstanceEffects('__tmp_core@C').atkPct;
+  const s = cardInstanceEffects('__tmp_core@S').atkPct;
+  __ok(Math.abs(c-0.20)<0.001, 'C atk '+c);
+  __ok(s > c, 'S scales up '+s);
+  delete TRAIT_CARDS.__tmp_core;
+});
+window.__test('card: fixed card ignores grade (mult=1, no subs)', function(){
+  TRAIT_CARDS.__tmp_fix = { id:'__tmp_fix', type:'common', name:'tmp', icon:'x', fixed:true, base:{atkPct:0.30}, subPool:['atk','def','hp','crit'] };
+  const a = cardInstanceEffects('__tmp_fix@S');
+  __ok(Math.abs(a.atkPct-0.30)<0.001, 'fixed atk '+a.atkPct);
+  delete TRAIT_CARDS.__tmp_fix;
 });
 </script>
 </body>
