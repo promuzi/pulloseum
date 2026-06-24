@@ -2,6 +2,16 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — #7 탐사 업그레이드: 아틀라스 세계관 + 종 분포 + 폴드 모션 + 행성 11개
+> 브레인스토밍 → 설계([spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)) → 구현. 셀프테스트 7종 추가·전부 통과(0 fail) + preview 검증.
+- **종 분포(옵션 C)**: `rollSpeciesFromView(region, planet)` = 행성 `species` 풀 ∩ 지역 `el`/`types` + `region.signature` 별도 저확률 경로(`SIGNATURE_CHANCE=0.10`) + 폴백 사다리(교집합 비면 행성 풀→테마 전역, 무회귀). 행성마다 "사는 종"이 정해지고, 특정 지역엔 풀에서 제외한 **희귀 시그니처 종**(✦)이 가끔 등장.
+- **데이터**: `EXPLORE_VIEW` **8→11행성** — 세라핀(궤도1·바람 고원)·볼카르(궤도2·번개)·티아멘(궤도3·빙해) 추가. 모든 행성에 `species` 풀 + 일부 지역에 `signature` + 아틀라스 `intro`.
+- **UI(복잡도 억제)**: 행성 팝업 `exPlanetSpeciesPreview`(주요 서식종 4칩 미리보기), 지역 선택 시 `exRegionSpecies`(서식 종 + ✦희귀 시그니처 칩, 가로 스크롤). 종 칩은 절차적 SVG(`composePlantSvg`) 재사용.
+- **세계관 리스킨**: 행성=여러 외계 문명이 다른 은하에서 공유한 좌표, **연료=폴드 에너지**(궤도 해금=폴드 심도), 우주맵="아틀라스 — 폴드 좌표망", 은하 성운 앰비언스(#explorationBody). 구조 무변경, 명칭/문구만.
+- **탐사 모션**: `exTravelOverlay`를 "시공간 폴드(차원이동)" 연출로 교체 — 격자 왜곡(`etwarp`)→균열 개방(`etrift`)→탐사선 흡입(`etfold`)→섬광(`etflash`). `prefers-reduced-motion`이면 ~480ms 축약(애니메이션 정지).
+- **경기장**: 풀로세움=모든 문명의 **상시 개방 게이트** → 무료 입장(연료/참가권 없음). 게임방법 ①⑦ 문구·콘솔 라벨 보강.
+- **회귀 안전**: 신규 필드(`species`/`signature`) 전부 옵셔널 — 없으면 기존 동작. 셀프테스트: 풀∩테마 한정·시그니처 분리 경로·빈 교집합 폴백·풀 미지정 레거시 동작·`EXPLORE_VIEW` 키 무결성·프리뷰 렌더. **속성 상성표·타입 5종 무변경.**
+
 ### 2026-06-24 — UI: 모달 열림 깜빡임 제거 (holoBoot → roomEnter 통일)
 - 일반 모달이 열릴 때 쓰던 `holoBoot`(투명도를 `steps(12)`로 끊어 점멸시키는 "홀로그램 부팅" 효과)가 깜빡거려서 제거. 상점/탐사 모달이 이미 쓰던 부드러운 `roomEnter`(살짝 떠오르는 페이드+업)로 전 모달 통일 → `.modal:not(.hidden) .modal-card` 한 규칙으로 합치고 미사용 `@keyframes holoBoot` 삭제. 검증: 모달 `.modal-card` computed `animation-name=roomEnter`, holoBoot 키프레임 부재 확인.
 

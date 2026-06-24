@@ -6630,6 +6630,34 @@ const EXPLORE_VIEW = [
       { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
         desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy', signature:['frost'] },
     ]},
+  // ── 신규 좌표 (행성 확장) — 새 개체가 나오면 아래 species 풀/지역 signature에 key만 추가하면 된다 ──
+  { id:'ex_seraphin', name:'세라핀', orbit:1, angle:240, color:'#bfe9ff',
+    cardTypes:['chloro','common'], themeNote:'상승기류가 흐르는 부유 고원 — 공통·엽록체 카드가 나온다.',
+    intro:'바람이 흐르는 부유 고원 좌표 · 폴드 심도 1',
+    species:['flower_wind','vine_wind','flower_grass','thorn','spark'], regions:[
+      { name:'윈드테라스', el:['wind'], types:['화초형'], diff:2, grade:'C', cost:150, map:{x:30,y:34},
+        desc:'끝없는 상승기류가 부는 계단식 고원. 바람 속성 종자가 흔하다.', link:'region_elyndor_lumenwood', signature:['tree_wind'] },
+      { name:'초록 능선', el:['wind','grass'], types:['덩굴형','화초형'], diff:2, grade:'C', cost:140, map:{x:66,y:62},
+        desc:'덩굴이 바위 능선을 타고 오르는 지대. 가벼운 종자가 바람에 실려 모인다.', link:'region_elyndor_spore_marsh' },
+    ]},
+  { id:'ex_volkar', name:'볼카르', orbit:2, angle:110, color:'#ffe066', size:'rare',
+    cardTypes:['weapon','dna'], themeNote:'영구 뇌우가 치는 번개 행성 — 무기·DNA 카드가 발견된다.',
+    intro:'영구 뇌우가 치는 번개 좌표 · 폴드 심도 2',
+    species:['spark','cactus_bolt','vine_bolt','flower_fire'], regions:[
+      { name:'방전 평원', el:['bolt'], types:['화초형'], diff:4, grade:'B', cost:320, map:{x:32,y:36},
+        desc:'쉴 새 없이 번개가 떨어지는 평원. 전기를 머금은 종자가 자란다.', link:'region_vathra_sulfur_rift', signature:['tree_bolt'] },
+      { name:'자철 협곡', el:['bolt','fire'], types:['다육형'], diff:4, grade:'C', cost:280, map:{x:68,y:60},
+        desc:'자성을 띤 광물이 솟은 협곡. 내열·전기 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
+    ]},
+  { id:'ex_tiamen', name:'티아멘', orbit:3, angle:320, color:'#9fdcff',
+    cardTypes:['potion','common'], themeNote:'얼어붙은 대양 행성 — 물약·공통 카드가 발견된다.',
+    intro:'얼어붙은 대양 좌표 · 폴드 심도 3',
+    species:['flower_ice','cactus_ice','vine_ice','aqua'], regions:[
+      { name:'결빙 군도', el:['ice','water'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:30,y:36},
+        desc:'얼음 섬이 점점이 떠 있는 군도. 빙결 종자가 자생한다.', link:'region_nereion_tideglass_reef', signature:['frost'] },
+      { name:'빙저 동굴', el:['ice'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:68,y:60},
+        desc:'대양 바닥에 뚫린 얼음 동굴. 극저온 적응체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
+    ]},
 ];
 let exPopPlanetId = null;   // 그림2 팝업이 열린 행성
 let exDetPlanetId = null;   // 그림3 상세가 열린 행성
