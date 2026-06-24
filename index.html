@@ -4411,6 +4411,7 @@ function defaultState(){
     seed_inventory:[],
     nursery_fruits:[],
     nursery_daily:{ day:'', water:0, fert:0 },
+    care:{ water:0, fert:0 },
     item_inventory:[],
     trait_inventory:[],
     potion_inventory:[],
@@ -4470,8 +4471,11 @@ function normalizeState(s){
   if(typeof s.starter_seed_claimed !== 'boolean') s.starter_seed_claimed = false;
   if(typeof s.exploration_equipment_bonus !== 'number') s.exploration_equipment_bonus = s.exploration_ship.stats.scanner_bonus || 0;
   if(!Array.isArray(s.seed_inventory)) s.seed_inventory = [];
-  if(!Array.isArray(s.nursery_fruits)) s.nursery_fruits = [];   // 식물원 수확 열매(스킬 박스)
-  if(!s.nursery_daily || typeof s.nursery_daily !== 'object') s.nursery_daily = { day:'', water:0, fert:0 };  // 오늘 쓴 물/비료 총량
+  if(!Array.isArray(s.nursery_fruits)) s.nursery_fruits = [];   // (레거시) 식물원 수확 열매 — RewardReveal 전환 후 잔존분만
+  if(!s.nursery_daily || typeof s.nursery_daily !== 'object') s.nursery_daily = { day:'', water:0, fert:0 };  // (레거시) Task4에서 폐기
+  if(!s.care || typeof s.care !== 'object') s.care = { water:0, fert:0 };   // 양육 물/비료 인벤토리
+  if(typeof s.care.water !== 'number') s.care.water = 0;
+  if(typeof s.care.fert  !== 'number') s.care.fert  = 0;
   if(!Array.isArray(s.item_inventory)) s.item_inventory = [];
   if(!Array.isArray(s.trait_inventory)) s.trait_inventory = [];
   if(!Array.isArray(s.potion_inventory)) s.potion_inventory = [];
@@ -4489,25 +4493,36 @@ function normalizeState(s){
   });
   return s;
 }
-/* 식물원(양육) 필드 정규화 — 화분당 물/비료 일일 사용량과 마지막 급수 시각, 열매 상태 */
+/* 식물원(양육) 필드 정규화 — 시간 게이지 + 5색 희귀도 모델(v2). 구 일일카운터/누적게이트는 1회 마이그레이션 */
 function ensureNurseryFields(p){
   if(!p) return p;
   if(typeof p.growthLocked !== 'boolean') p.growthLocked = false;
-  if(!p.nursery || typeof p.nursery !== 'object'){
-    p.nursery = { waterDay:'', waterCount:0, fertDay:'', fertCount:0, lastCareAt:0, fruitReady:false };
-  }
+  if(!p.nursery || typeof p.nursery !== 'object') p.nursery = {};
   const n = p.nursery;
-  if(typeof n.waterDay !== 'string') n.waterDay = '';
-  if(typeof n.waterCount !== 'number') n.waterCount = 0;
-  if(typeof n.fertDay !== 'string') n.fertDay = '';
-  if(typeof n.fertCount !== 'number') n.fertCount = 0;
-  if(typeof n.lastCareAt !== 'number') n.lastCareAt = 0;
-  if(typeof n.fruitReady !== 'boolean') n.fruitReady = false;
-  // 현재 열매 사이클 누적 물/비료 + 단계(growing|fruiting) + 맺은 열매 수
-  if(typeof n.water !== 'number') n.water = 0;
-  if(typeof n.fert !== 'number') n.fert = 0;
-  if(typeof n.stage !== 'string') n.stage = 'growing';
-  if(typeof n.fruitCount !== 'number') n.fruitCount = 0;
+  // --- 레거시(구 일일카운터/누적게이트) → 신모델 1회 변환 ---
+  if(n._v !== 2){
+    const wasFruiting = (n.stage === 'fruiting') || n.fruitReady;
+    const legacyCount = wasFruiting ? Math.max(1, n.fruitCount||1) : 0;
+    n.ripe = Array.isArray(n.ripe) ? n.ripe : [];
+    for(let i=0;i<legacyCount;i++) n.ripe.push({ rarity: rollFruitRarity(p) });
+    n.gauge = 0;
+    n.waterBuff = 0; n.fertBuff = 0;
+    n.potQuality = (typeof n.potQuality==='number') ? n.potQuality : 1;
+    n.lastTick = Date.now();
+    n.maxFruits = nurseryMaxFruits(p);
+    delete n.water; delete n.fert; delete n.stage; delete n.fruitCount;
+    delete n.fruitReady; delete n.waterDay; delete n.waterCount;
+    delete n.fertDay; delete n.fertCount; delete n.lastCareAt;
+    n._v = 2;
+  }
+  // --- 신모델 필드 방어 ---
+  if(!Array.isArray(n.ripe)) n.ripe = [];
+  if(typeof n.gauge !== 'number' || n.gauge<0) n.gauge = 0;
+  if(typeof n.waterBuff !== 'number') n.waterBuff = 0;
+  if(typeof n.fertBuff  !== 'number') n.fertBuff = 0;
+  if(typeof n.potQuality!== 'number') n.potQuality = 1;
+  if(typeof n.lastTick  !== 'number') n.lastTick = Date.now();
+  n.maxFruits = nurseryMaxFruits(p);   // 단계 바뀌면 갱신
   return p;
 }
 
@@ -4517,20 +4532,67 @@ function ensureNurseryFields(p){
    - 열매 성숙: 물 10회 + 비료 5회 누적 → 열매 1~3개
    - 수확: state.nursery_fruits 로 이동(식물 속성/변이형/생장단계 보존) → 가방에서 개봉
    =================================================================== */
-const NURSERY_POTS = 12;            // 화분 그리드 칸 수(3×4)
-const NURSERY_DAILY_WATER = 20;     // 하루 총 물 사용 한도
-const NURSERY_DAILY_FERT = 10;      // 하루 총 비료 사용 한도
-const NURSERY_WATER_NEED = 10;      // 열매 성숙에 필요한 물
-const NURSERY_FERT_NEED = 5;        // 열매 성숙에 필요한 비료
-function nurseryToday(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-function nurseryDaily(){
-  if(!state.nursery_daily || typeof state.nursery_daily !== 'object') state.nursery_daily = { day:'', water:0, fert:0 };
-  const today = nurseryToday();
-  if(state.nursery_daily.day !== today){ state.nursery_daily = { day:today, water:0, fert:0 }; }
-  return state.nursery_daily;
+const NURSERY_POTS = 12;                        // 화분 그리드 칸 수(3×4)
+const FRUIT_BASE_CYCLE_MS = 4*60*60*1000;       // 성장체 기본 4시간/열매(시드값)
+const FRUIT_STAGE_SPEED = { growing:1, mature:1.3, evolved:1.7 };   // 단계↑ = 충전 빠름
+const FRUIT_MAX_BY_STAGE = { growing:2, mature:3, evolved:5 };      // 단계↑ = 더 많이
+const CARE_BUFF_PER_USE  = 0.34;                // 물/비료 1회 투입당 버프 +0.34(≈3회 만충)
+const CARE_BUFF_DECAY_HR = 0.25;                // 버프 시간당 감쇠(시드값)
+const CARE_SPEED_BONUS   = 0.5;                 // 버프 평균 만충 시 충전속도 +50%
+const FRUIT_RARITIES     = ['white','green','blue','purple','orange'];
+const FRUIT_RARITY_COLOR = { white:'#e6edf2', green:'#5fd56a', blue:'#4ac6ff', purple:'#b98cff', orange:'#ff9a3c' };
+const FRUIT_RARITY_NAME  = { white:'흔함', green:'고급', blue:'희귀', purple:'영웅', orange:'전설' };
+function nurseryMaxFruits(p){ return FRUIT_MAX_BY_STAGE[(p && p.growth_stage)] || 0; }  // 성장체 미만=0
+
+// 버프(물·비료 평균)·생장단계가 높을수록 상위 희귀도 확률↑. 보수적(주황은 항상 희소).
+function rollFruitRarity(p){
+  const n = (p && p.nursery) || {};
+  const buff = Math.min(1, ((n.waterBuff||0)+(n.fertBuff||0))/2);
+  const stageBonus = { growing:0, mature:0.10, evolved:0.22 }[(p&&p.growth_stage)] || 0;
+  const lift = buff*0.5 + stageBonus;                 // 0..0.72
+  const base = { white:0.50, green:0.27, blue:0.14, purple:0.07, orange:0.02 };
+  const w = {
+    white:  base.white  * (1 - lift*0.9),
+    green:  base.green  * (1 + lift*0.2),
+    blue:   base.blue   * (1 + lift*0.8),
+    purple: base.purple * (1 + lift*1.4),
+    orange: base.orange * (1 + lift*2.0),
+  };
+  const total = FRUIT_RARITIES.reduce((s,k)=>s+w[k],0);
+  let r = Math.random()*total;
+  for(const k of FRUIT_RARITIES){ r -= w[k]; if(r<=0) return k; }
+  return 'white';
 }
-function nurseryWaterLeft(){ return Math.max(0, NURSERY_DAILY_WATER - nurseryDaily().water); }
-function nurseryFertLeft(){ return Math.max(0, NURSERY_DAILY_FERT - nurseryDaily().fert); }
+
+// 마지막 틱 이후 경과 반영: 버프 감쇠 → 게이지 충전 → 게이지 1 도달 시 열매 1개(상한까지). 게이지 나머지 보존.
+function nurseryTick(p, now){
+  ensureNurseryFields(p);
+  const n = p.nursery;
+  now = now || Date.now();
+  let dtH = Math.max(0, (now - n.lastTick) / 3600000);   // 시간
+  n.lastTick = now;
+  if(dtH <= 0) return { newFruits:0 };
+  const startBuff = Math.min(1, (n.waterBuff + n.fertBuff)/2);
+  n.waterBuff = Math.max(0, n.waterBuff - CARE_BUFF_DECAY_HR*dtH);
+  n.fertBuff  = Math.max(0, n.fertBuff  - CARE_BUFF_DECAY_HR*dtH);
+  const endBuff = Math.min(1, (n.waterBuff + n.fertBuff)/2);
+  const avgBuff = (startBuff + endBuff)/2;
+  const stageSpeed = FRUIT_STAGE_SPEED[p.growth_stage] || 0;
+  if(stageSpeed <= 0) return { newFruits:0 };            // 성장체 미만은 열매 없음
+  const rate = (n.potQuality||1) * stageSpeed * (1 + avgBuff*CARE_SPEED_BONUS) / (FRUIT_BASE_CYCLE_MS/3600000);
+  let newFruits = 0;
+  const cap = n.maxFruits = nurseryMaxFruits(p);
+  if(n.ripe.length >= cap){ n.gauge = 1; return { newFruits:0 }; }  // 꽉 참 → 게이지 붉음(=1) 정지
+  n.gauge += rate * dtH;
+  while(n.gauge >= 1 && n.ripe.length < cap){
+    n.gauge -= 1;
+    n.ripe.push({ rarity: rollFruitRarity(p) });
+    newFruits++;
+  }
+  if(n.ripe.length >= cap) n.gauge = 1;                  // 정지 표시
+  else n.gauge = Math.min(0.999, n.gauge);
+  return { newFruits };
+}
 let state = loadState();
 function syncPlayerMoney(){ state.money = state.credits; }
 
@@ -10573,13 +10635,22 @@ $('#btnReset').addEventListener('click', () => {
 /* ===== 도감(외부 뷰)용 데이터 노출 =====
    plant-codex.html이 숨은 iframe(index.html?dex=1)으로 이 게임을 불러와
    아래 __DEX_API에서 "게임의 실제 데이터·함수"를 직접 읽어 렌더한다(자동 동기화). */
+/* 스킬 공유 범위 판별(도감용): 같은 타입/속성이 공유하는지·전체 공유인지·개체 고유인지 */
+function dexSkillScope(id){
+  for(const t in TYPE_BASIC_ATK){ if(TYPE_BASIC_ATK[t]===id || TYPE_BASIC_DEF[t]===id || TYPE_TRAIT_SKILL[t]===id) return { scope:'type', axis:t }; }
+  for(const e in ELEMENT_SPROUT_SKILL){ if(ELEMENT_SPROUT_SKILL[e]===id) return { scope:'element', els:[e] }; }
+  for(const e in ELEMENTS){ if(elementSkillId(e)===id) return { scope:'element', els:[e] }; }
+  { const els=[]; for(const e in ELEMENT_GROWTH_SKILLS){ if(ELEMENT_GROWTH_SKILLS[e].indexOf(id)>=0) els.push(e); } if(els.length) return { scope:'element', els:els }; }
+  if(id==='skill_rally' || id==='skill_photosynthesis' || id==='skill_focus' || id==='skill_basic_strike' || id==='skill_guard') return { scope:'universal' };
+  return { scope:'unique' };
+}
 window.__DEX_API = {
   SPECIES, ALL_SKILLS, ELEMENTS, ELEMENT_STATS, TYPE_STATS,
   SEED_TYPE_NAMES, SEED_TYPE_ORDER, TYPE_CONCEPT, RARITY_META, FORMS,
   GROWTH_STAT_MULT, GROWTH_STAGE_NAMES, GROWTH_STAGE_ORDER,
   plantKnownSkillIds, skillGradeOf, skillById, displaySkillName, battleType,
-  composePlantSvg,
-  version: '2026-06-24c',
+  composePlantSvg, dexSkillScope,
+  version: '2026-06-24d',
 };
 /* 데이터 전용 모드(?dex=1): 도감이 데이터만 읽으면 되므로 부팅·세이브·렌더·클라우드를 모두 생략
    → 도감이 게임을 불러와도 사용자 세이브를 건드리지 않는다. */
@@ -10640,6 +10711,29 @@ window.__test('catalog: every species has default rich fields', function(){
   });
   __ok(SPECIES.flame.legacy === true, 'flame should be legacy');
   __ok(SPECIES.spore_cap && SPECIES.spore_cap.seedType === 'mushroom', 'spore_cap mushroom species should exist');
+});
+window.__test('nursery: migrate legacy v2', function(){
+  const p={ growth_stage:'mature', nursery:{ stage:'fruiting', fruitReady:true, fruitCount:3, water:10, fert:5 } };
+  ensureNurseryFields(p);
+  const n=p.nursery;
+  __eq(n._v, 2, 'migrate _v');
+  __eq(n.ripe.length, 3, 'migrate ripe count');
+  __ok(!('water' in n) && !('stage' in n), 'legacy fields removed');
+  __eq(n.maxFruits, 3, 'mature maxFruits');
+  const seed={ growth_stage:'seed', nursery:{} }; ensureNurseryFields(seed);
+  __eq(seed.nursery.maxFruits, 0, 'seed stage no fruit');
+});
+window.__test('nursery: tick caps + gauge preserved + decay', function(){
+  const p={ growth_stage:'mature', nursery:{} }; ensureNurseryFields(p);
+  const n=p.nursery; n.gauge=0; n.waterBuff=0; n.fertBuff=0; n.lastTick=0;
+  nurseryTick(p, 100*3600000);
+  __eq(n.ripe.length, 3, 'tick caps at maxFruits');
+  __eq(n.gauge, 1, 'gauge stopped(=1) when full');
+  const q={ growth_stage:'growing', nursery:{} }; ensureNurseryFields(q);
+  q.nursery.waterBuff=1; q.nursery.lastTick=0;
+  nurseryTick(q, 5*3600000);
+  __eq(q.nursery.waterBuff, 0, 'buff decays to 0');
+  for(let i=0;i<50;i++) __ok(FRUIT_RARITIES.indexOf(rollFruitRarity(p))>=0, 'rarity valid');
 });
 window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
