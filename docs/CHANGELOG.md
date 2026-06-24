@@ -2,6 +2,16 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — #2 양육 보완: 수집 화분 시스템 + 식물/화분 시각 분리(#12 진입점)
+> 설계 [spec](superpowers/specs/2026-06-24-collectible-pots-design.md) · 계획 [plan](superpowers/plans/2026-06-24-collectible-pots.md). work-2 브랜치(병렬 버섯 세션과 충돌 격리)에서 구현, self-test 0·preview 검증.
+- **죽어있던 `potQuality` 부활** → **수집 화분 5종**(테라코타·도자기·유리·크리스탈·황금, 등급색 흰<초록<파랑<보라<주황). `POT_CATALOG`·`potOf(p)`.
+- **효과:** 화분이 충전속도(+0~40%)·최대 열매(+0~2)·등급확률에 반영. `nurseryMaxFruits`/`nurseryTick`/`rollFruitRarity` 연동.
+- **획득:** 도자기·유리=상점 크레딧, 크리스탈·황금=탐사 5% 드롭(+보급 후속). **전부 공통 RewardReveal 'pot' 개봉**(🪴). 영구 해금·자유 장착, 중복→크레딧150 환급.
+- **장착:** 화분 상세창 `🪴 화분 바꾸기`(`openPotPicker`/`equipPot`), 미보유 잠금 표시.
+- **⭐ 식물/화분 시각 분리(#12·#3 진입점):** `composePlantSvg(...,{noPot})`(화분 3요소 스킵, `composePlantBody` 미변경) + `potVisual(potId)`(화분 종류별 절차적 SVG, 크리스탈 facet/황금 crown, `POT_SPRITE_OVERRIDES` PNG 훅). 양육 칸 = 화분 레이어+식물 레이어 합성, 흔들림은 식물만.
+- **데이터:** `state.pot_inventory{id:true}`·`p.nursery.potId`, 무회귀 마이그레이션(구 세이브→테라코타).
+- ⚠️ 로드맵 §2/§5 등록은 main 머지 시 추가(병렬 세션과 충돌 회피).
+
 ### 2026-06-24 — UI: 모달 열림 깜빡임 제거 (holoBoot → roomEnter 통일)
 - 일반 모달이 열릴 때 쓰던 `holoBoot`(투명도를 `steps(12)`로 끊어 점멸시키는 "홀로그램 부팅" 효과)가 깜빡거려서 제거. 상점/탐사 모달이 이미 쓰던 부드러운 `roomEnter`(살짝 떠오르는 페이드+업)로 전 모달 통일 → `.modal:not(.hidden) .modal-card` 한 규칙으로 합치고 미사용 `@keyframes holoBoot` 삭제. 검증: 모달 `.modal-card` computed `animation-name=roomEnter`, holoBoot 키프레임 부재 확인.
 
