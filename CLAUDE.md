@@ -10,6 +10,7 @@
 - 🧩 **사용자가 "수정한 index.html"을 주면 통째로 덮어쓰지 말 것.** 먼저 ① 어느 커밋 기반인지(`git log -S '<특징문자열>' -- index.html` 또는 최근 커밋들과 diff) ② 그 변경이 이미 main에 반영됐는지 확인. 구버전 기반이면 덮어쓰기=최근 비-UI 작업(종 시스템 등) 리버트. UI만 합치려면 진짜 공통조상을 base로 `git merge`(3-way)로 처리. (2026-06-24: 받은 파일 UI가 이미 main에 적용돼 있어 적용할 게 없던 사례)
 - ⚠️ **OneDrive 주의(해결됨, 2026-06-24 — 저장소 OneDrive 밖으로 이전):** 과거 OneDrive가 `.git`까지 동기화해 작업 트리 파일·HEAD가 세션 중 흔들리고 미커밋 편집이 유실되는 사고가 있었다. 다시 OneDrive 안에서 작업하게 되면, 커밋·푸시·머지 직전 `git rev-parse HEAD`·`git fetch`로 현재 상태를 재확인하고 시작 시점 스냅샷을 신뢰하지 말 것.
 - ⚠️ **여러 대화창(세션) 동시 작업 주의(2026-06-24):** 다른 Claude 세션이 같은 저장소에서 동시에 `index.html`·공용 문서(로드맵·CHANGELOG)를 편집·커밋하며 **브랜치가 세션 중 바뀔 수 있다**(예: main→feat/*). 커밋·푸시 전 `git status`·`git rev-parse --abbrev-ref HEAD`로 재확인하고 **내가 만진 파일만 선택 스테이징**(`git add <경로>`)한다. `git add -A`·전체 스테이징 금지(남의 미커밋 작업이 딸려감). 푸시 거부되면 fetch+rebase.
+- **병렬 세션 격리 → git worktree 활용:** `git worktree add 풀로세움-2 -b work-2`로 별도 폴더+브랜치 생성 → 각 세션이 독립 파일 트리에서 작업 → 머지(FF 또는 3-way)로 합침. 현재 워크트리: `C:\Users\soosa\Documents\풀로세움`(main/feat 브랜치용), `C:\Users\soosa\Documents\풀로세움-2`(병렬 작업용, work-2 브랜치). preview 서버: 풀로세움=8765, 풀로세움-2=8770.
 
 ## ▶ 게임 바로 열기 (Claude에게: 매 대화 시작 시 이 링크를 항상 먼저 보여줄 것)
 - **게임 실행:** [index.html](index.html) (클릭하면 브라우저로 열림 — 현재 게임 현황 바로 확인)
@@ -39,6 +40,8 @@
 - **탐사:** 아틀라스 궤도 우주맵(**11행성/3궤도**, 행성=다른 은하 공유 좌표·연료=폴드 에너지), 탐사선 개조(연료·내구·채집기·탐사장치), **행성 서식 풀(`species`)+지역 시그니처(`signature`)+테마 필터** 종 분포(`rollSpeciesFromView`), 탐사 시 시공간 폴드(차원이동) 연출 → 결과 팝업. → [exploration spec](docs/superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
 - **종자/보관:** 희귀도·보관환경, 종자 가방(최대치), 변이.
 - **식물 육성:** 생장 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 성장 경험치 → 단계별 새 스킬 해금.
+- **양육/열매 시스템(2026-06-24~):** 양육 탭에서 시간 게이지(방치형) 방식으로 열매 맺기. 성장체 이상 단계부터 활성화, 게이지 가득 차면 1개씩 최대치까지 맺힘. 5색 희귀도(흰<초록<파랑<보라<주황). 물/비료 버프로 속도 가속. 낙엽 상태(시듦)면 물 트리클 생성. 전투 승리 시 물/비료 공급. `harvestAllPots()` 전체 수확. 공통 개봉 연출 `openRewardReveal`. 양육 뱃지(`nurseryNavDot`)로 수확 가능 알림.
+- **수집 화분(2026-06-24~):** 5종(`pot_terra`흰→`pot_ceramic`초록→`pot_glass`파랑→`pot_crystal`보라→`pot_gold`주황). 각각 충전속도·최대열매Δ·등급확률 보너스 부여. 영구 해금 모델(`state.pot_inventory = {potId:true}`). 양육 칸 = 식물 레이어(`composePlantSvg({noPot:true})`) + 화분 레이어(`potVisual(potId)`) 합성(#12·#3 진입점). 상점 구매·탐사 성공·열매 보상으로 획득. `POT_SPRITE_OVERRIDES` = 도트화 훅(비어있음).
 - **스킬/특성:** 식물은 속성+특성+생장단계로 스킬을 얻고, **최대 6개 로드아웃**을 장착해 전투(클래시 로얄식). 특성(20종)은 전투 패시브(재생/흡혈/반사/방깎 등) + 시그니처 스킬을 부여. 상태이상(버프/디버프/중독·출혈·화상) 엔진. DoT 스택 상한 `DOT_STACK_CAP=4`(`addDot()`으로 추가, 초과 시 오래된 것 제거).
 - **변이 카드 시스템(2026-06-25~):** 변이형 6종(무기/포식/독성/포자/용족/일반). ⚠️ **발광(lumen) 폐지**(`rollForm` 제거, 기존분 legacy 보존). **포자형=버섯 전용**. 변이형=패시브 없음·"해당 변이 카드 장착 가능" 슬롯 게이트만. `variantSkillsOf(p)` = 하단 변이 스킬 바 단일 진실 함수. 스킬 분류(`cats`) 6종: attack/guard/buff/debuff/heal_hp/heal_energy. `TRAIT_CARDS` `fixed:true` = 등급 고정(mult=1). 같은 card_id 장착 시 등급 무관 자동 교체(중복 불가). → 설계: [mutation-forms-cards-redesign-design.md](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)
 - **전투/토너먼트:** 예선(5판3선) → 16강 → 8강 → 4강 → 결승. 우승 시 랭크 포인트로 **브론즈→실버→…→풀로세움** 승급. 토너먼트명은 생장단계+랭크로 자동 생성(예: "새싹 브론즈 토너먼트").
@@ -56,8 +59,8 @@
 
 ## 앞으로 할 만한 것 (백로그)
 > ⚠️ **앞으로의 방향·우선순위는 이제 [`docs/master-roadmap.md`](docs/master-roadmap.md)(유일 허브)에서 관리한다.** 아래는 요약일 뿐, 갱신은 로드맵에서 한다.
-- 식물 종류 확장 / **양육·열매 시스템**(생장=경험치, 화분) / 도트 UI / 함선·길드·방꾸 / 애니메이션 / 사운드 / 탐사 재설계 / PvP·서버 / 구글 플레이 출시 → 전부 로드맵 §4에 구체화됨.
-- ~~세이브 내보내기/가져오기~~ ✅ 2026-06-19 · ~~특성 카드 시스템~~ ✅ 2026-06-16
+- 식물 종류 확장 / 도트 UI / 함선·길드·방꾸 / 애니메이션 / 사운드 / PvP·서버 / 구글 플레이 출시 → 전부 로드맵 §4에 구체화됨.
+- ~~세이브 내보내기/가져오기~~ ✅ 2026-06-19 · ~~특성 카드 시스템~~ ✅ 2026-06-16 · ~~양육·열매 시스템(화분 포함)~~ ✅ 2026-06-24
 
 ## 변경 이력 (개발 로그)
 - 전체 개발 로그는 **[docs/CHANGELOG.md](docs/CHANGELOG.md)** 로 분리됨. 과거 작업 맥락이 필요할 때만 열어보세요.
@@ -70,5 +73,6 @@
 - 특성/생장 로드맵: [docs/trait-growth-roadmap.md](docs/trait-growth-roadmap.md)
 - 안드로이드 빌드: [docs/android-capacitor-wrapper.md](docs/android-capacitor-wrapper.md)
 - 토큰 절약 워크플로: [.claude/prompts/reset-handoff.md](.claude/prompts/reset-handoff.md), [docs/session-chaining-guide.md](docs/session-chaining-guide.md)
-- 브레인스토밍/설계 박제: `docs/superpowers/specs/YYYY-MM-DD-<주제>-design.md` (미완 설계는 여기 박제 + 로드맵 §2 문서지도에 등록 → 다음 세션 진입점). 진행 중 #2 양육/열매 = [docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md](docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md)
+- 브레인스토밍/설계 박제: `docs/superpowers/specs/YYYY-MM-DD-<주제>-design.md` (미완 설계는 여기 박제 + 로드맵 §2 문서지도에 등록 → 다음 세션 진입점).
+- ✅ **#2 양육/열매+화분 설계(완료):** [nurture-fruit-system-design](docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [collectible-pots-design](docs/superpowers/specs/2026-06-24-collectible-pots-design.md)
 - **#1 종/스킬 개체 고유화**(타입/속성 공통 컨셉·35종 ×고유스킬3[성장체/성체/완숙체]·변이 재편[발광폐지·포자=버섯전용·일반5]·식물/화분 분리·외형 접근) = [docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md](docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md) — **설계 확정·코드 미반영(소유권 대기)**. 변이 개체 1차 어울림 28종(V1~V28) 완성, 남은 설계 = 각 종 2차 어울림 변이 + 외형 액센트 명세. 변이 시스템 권위 = [mutation 재설계](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md).
