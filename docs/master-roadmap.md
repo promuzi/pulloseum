@@ -56,6 +56,7 @@
 | **[superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)** | 탐사 업그레이드 설계(✅확정) — 행성 풀+지역 시그니처 종 분포·아틀라스 세계관·폴드(차원이동) 모션·경기장 무료입장 | **#7 탐사 재설계 근거** |
 | **[superpowers/plans/2026-06-24-plant-individual-catalog.md](superpowers/plans/2026-06-24-plant-individual-catalog.md)** | 개체 카탈로그 전환 구현 계획(Task 0~7, 완료) | #1 구현 참조 |
 | **[superpowers/specs/2026-06-24-species-individual-concepts-design.md](superpowers/specs/2026-06-24-species-individual-concepts-design.md)** | 개체 고유화 설계(진행 중) — 타입/속성 공통 컨셉 한 줄·개체 템플릿·개체당 고유 스킬 3개(성장체/성체/완숙체)·개체 로스터 누적 | **#1 개체 컨셉·스킬 — 작업 중** |
+| **[superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)** | 변이형·변이 카드 재설계(🟢설계완료) — 6변이형 컨셉·카드 로스터, 무등급(`fixed`) 카드, `cats` 스킬 라벨, 독 스택 상한, 발광 폐지·자동교체 룰. **수치 placeholder** | **#1 변이 — 구현 계획(writing-plans)** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -199,6 +200,7 @@
 - **2026-06-24** — **도감 스킬 공유/고유 표시 + 보유 식물 모달.** `__DEX_API`에 `dexSkillScope` 노출(version `2026-06-24d`) → 도감이 각 스킬에 타입/속성/전체 공유·개체 고유 칩을 달고, 클릭 시 그 스킬을 얻을 수 있는 식물·생장단계를 모달로 보여줌. HANDOFF ① 재적용. (시그니처 풀 예약 상태라 현재 "개체 고유" 실표시 종은 없음.)
 - **2026-06-24** — **도감 카드에 실제 식물 외형 표시.** `__DEX_API`에 `composePlantSvg` 노출(version `2026-06-24c`) → 도감이 글리프 플레이스홀더 대신 게임의 절차적 SVG(타입×속성×생장단계, 화분 포함)를 렌더. 단계 리본 클릭 시 외형도 같이 자람(`paintSprite`). 게임 외형을 고치면 도감 자동 반영.
 - **2026-06-24** — **도감 라이브 연동 + PWA.** `docs/dex/plant-codex.html`이 게임을 숨은 iframe(`index.html?dex=1`)으로 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 게임 업데이트 자동 반영(수동 갱신 폐기). `?dex=1` 데이터 전용 모드(부팅·세이브 생략)로 세이브 무손상. `sw.js`(PWA) 추가. 호스팅(GitHub Pages)은 사용자가 Settings→Pages 1회 토글. 설계서 = [`superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md`](superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md).
+- **2026-06-24** — **(#1 변이형·변이 카드 재설계 — 브레인스토밍 진행 중)** 변이형 = **패시브 없는 카드 슬롯 게이트**(식물당 1변이, 다중 슬롯 폐기, 포식 무료 기본기 제거). **무등급(`fixed`) 카드 클래스 신설**, 같은 `card_id` **자동 교체**, **스킬 `cats` 복수 태그 라벨**(공격/방어/버프/디버프/체력회복/에너지회복 → 향후 특성 시너지 키), **독 스택 상한제**(상태이상 = DoT 확정·강제어만 확률), **발광형 폐지**(6변이형). 공통/포식/무기/독성/포자(버섯 전용·디버프 전용)/**용족(방어 비늘 + 속성 브레스 투트랙)** 6변이형 카드 로스터 **설계 완료**. 수치 placeholder(밸런스 패스 대기) → 다음 writing-plans. 설계 박제 = [`superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md`](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md). (#1)
 
 ---
 
