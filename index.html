@@ -1274,6 +1274,11 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .dc-cats{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px;}
 .cat-chip{font-size:9px;line-height:1;padding:1px 3px;border-radius:4px;border:1px solid var(--cc,#888);
   background:color-mix(in srgb, var(--cc,#888) 18%, transparent);}
+.vskill-bar{margin:6px 0 2px;padding:6px 8px;border:1px dashed rgba(127,246,160,.4);border-radius:8px;background:rgba(10,28,46,.5);}
+.vskill-lab{font-size:9.5px;font-weight:900;color:var(--sub);margin-bottom:4px;letter-spacing:.04em;}
+.vskill-row{display:flex;gap:6px;flex-wrap:wrap;}
+.vskill{flex:1;min-width:0;border:2px solid var(--gc,#5fe06b);border-radius:8px;background:#0e1c2e;padding:5px 7px;text-align:center;}
+.vskill .vsk-n{display:block;font-size:10px;font-weight:900;color:var(--gc);line-height:1.15;}
 .dcard .dc-cnt{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:900;color:var(--sub);}
 .dcard .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
   display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc);
@@ -8901,8 +8906,22 @@ function skillTabHtml(p){
       <div class="pm-plant">${spriteFor(p,108)}</div>
       <div class="pm-col">${right.join('')}</div>
     </div>
+    ${variantSkillBarHtml(p)}
     ${skillDrawerHtml(p)}
     ${swapFloatHtml(p)}`;
+}
+/* 하단 변이 스킬 바(관리창) — variantSkillsOf 결과를 상단 6칸과 별개로 표시(읽기 전용) */
+function variantSkillBarHtml(p){
+  const ids = variantSkillsOf(p);
+  if(!ids.length) return '';
+  const form = FORMS[(p&&p.form)||'normal'] || FORMS.normal;
+  const cells = ids.map(id=>{
+    const sk = skillById(id, p) || { name:id, icon:'❔' };
+    const col = gradeColor(skillGradeOf(p, id));
+    return `<div class="vskill" style="--gc:${col}">
+      <span class="vsk-n">${sk.icon||''} ${displaySkillName(sk.name)}</span>${skillCatChipsHtml(sk)}</div>`;
+  }).join('');
+  return `<div class="vskill-bar"><div class="vskill-lab">${form.icon} 변이 스킬 (전투 시 별도 사용)</div><div class="vskill-row">${cells}</div></div>`;
 }
 /* 스킬 분류 색칩 — skillCats(플랜1)를 화면에 노출 */
 function skillCatChipsHtml(sk){
@@ -11419,6 +11438,12 @@ window.__test('variant: weapon form returns equipped weapon skills, max 2', func
 });
 window.__test('variant: non-bottom-bar form returns empty', function(){
   __eq(variantSkillsOf({form:'normal'}).length, 0, 'normal empty');
+});
+window.__test('variant UI: variantSkillBarHtml renders for pred, empty for normal', function(){
+  const html = variantSkillBarHtml({form:'pred'});
+  __ok(html.indexOf('vskill')>=0, 'pred has bar');
+  __ok(html.indexOf('포식')>=0 || html.indexOf('🦷')>=0, 'shows predation');
+  __eq(variantSkillBarHtml({form:'normal'}), '', 'normal → empty');
 });
 </script>
 </body>
