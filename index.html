@@ -6832,26 +6832,7 @@ function exResultHtml(){
       </div>
     </div></div>`;
   }
-  const seeds = rewards.seeds.length
-    ? rewards.seeds.map(s => { const m = rarityMeta(s.rarity); return `${gradeBadgeHtml(s.grade||'C')} <span class="${m.css}">${s.name}</span>${s.mutation_candidate?' · 변이 가능':''}`; }).join('<br>')
-    : '없음';
-  const cards = (rewards.cards && rewards.cards.length)
-    ? rewards.cards.map(c => `${c.grade?gradeBadgeHtml(c.grade):''} ${c.icon} ${c.name}`).join('<br>') : '없음';
-  const care = (rewards.care && rewards.care.length)
-    ? rewards.care.map(x => `${x.icon} ${x.name} ×${x.count}`).join(' · ') : '없음';
-  return `<div class="exres-backdrop" id="exResBackdrop"><div class="exres-card">
-    <div style="font-size:34px">🌱</div>
-    <div style="font-size:17px;font-weight:900;margin:4px 0 12px">탐사 성공 — ${region.name}</div>
-    <div class="detail-list" style="text-align:left">
-      <span>획득한 종자<b>${seeds}</b></span>
-      <span>획득한 변이 카드<b>${cards}</b></span>
-      <span>양육 재료<b>${care}</b></span>
-    </div>
-    <div class="space-panel-actions" style="margin-top:14px">
-      <button class="btn primary" id="exResBag">종자 가방으로</button>
-      <button class="btn" id="exResClose">계속 탐사</button>
-    </div>
-  </div></div>`;
+  return ''; // 성공 결과는 공통 RewardReveal(탐사 상자 개봉)로 표시
 }
 function exHangarHtml(){
   if(!exHangarOpen) return '';
@@ -9284,11 +9265,10 @@ function buyShopBox(boxId){
   grantShopBoxReward(box, reward);
   saveState();
   hide('#shopBoxModal'); hide('#shopModal');
-  // 공통 RewardReveal — 보급 박스를 눌러 개봉
+  // 공통 RewardReveal — 보급 박스를 눌러 개봉 (rd.name에 등급·종류 라벨 포함)
   const rd = shopRewardData(reward);
-  const gradeTxt = (reward.type==='card' && reward.grade) ? ` [${reward.grade}]` : '';
   const cnt = (reward.count && reward.count>1) ? ` ×${reward.count}` : '';
-  openRewardReveal({ kind:'supply', items:[{ label:`${rd.name}${gradeTxt}${cnt}`, icon:rd.icon }], onDone:()=>renderMain() });
+  openRewardReveal({ kind:'supply', items:[{ label:`${rd.name}${cnt}`, icon:rd.icon }], onDone:()=>renderMain() });
   renderMain();
 }
 function revealShopBox(){
