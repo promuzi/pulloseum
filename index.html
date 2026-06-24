@@ -3699,6 +3699,14 @@ const STARTER_SEED_ID = 'seed_lumen_moss';
 const INITIAL_PLANTED_GROWTH_STAGE = 'sprout';
 const GROWTH_STAGE_ORDER = ['seed', 'sprout', 'juvenile', 'growing', 'mature', 'evolved'];
 const GROWTH_STAGE_NAMES = { seed:'씨앗', sprout:'새싹', juvenile:'유체', growing:'성장체', mature:'성체', evolved:'완숙체' };
+/* 타입별 생장 단계 표시명. 흐름(6단계)은 동일, 이름만 타입색. 미매핑이면 GROWTH_STAGE_NAMES 폴백. */
+const STAGE_NAMES_BY_TYPE = {
+  tree:     { seed:'씨앗', sprout:'떡잎', juvenile:'묘목',    growing:'어린나무', mature:'성목',        evolved:'거목' },
+  flower:   { seed:'씨앗', sprout:'새싹', juvenile:'새잎',    growing:'꽃봉오리', mature:'개화',        evolved:'만개' },
+  cactus:   { seed:'씨앗', sprout:'움',   juvenile:'어린기둥', growing:'가시몸',   mature:'성체선인장', evolved:'꽃선인장' },
+  vine:     { seed:'씨앗', sprout:'새순', juvenile:'어린덩굴', growing:'덩굴손',   mature:'성체덩굴',    evolved:'만연덩굴' },
+  mushroom: { seed:'포자', sprout:'균사', juvenile:'버섯눈',  growing:'어린갓',   mature:'성숙버섯',    evolved:'포자갓' },
+};
 const GROWTH_EXP_REQUIREMENTS = { seed:18, sprout:45, juvenile:90, growing:125, mature:160, evolved:Infinity };
 /* 생장(생장단계) 경험치는 이제 전투 승리 + 경험치 아이템(레벨업 물약)으로만 오른다.
    물·비료는 식물원(양육 탭)에서 '열매' 성장 전용으로 이동했다. (구 물/비료→경험치 경로 폐기) */
@@ -4419,7 +4427,7 @@ function bestRoundLabel(p){
 }
 function tournamentTitle(p){
   const tier = plantRankTier(p);
-  const stage = p ? growthStageName(p.growth_stage) : '새싹';
+  const stage = p ? growthStageName(p.growth_stage, p.seed_type) : '새싹';
   return `${stage} ${tier.name} 토너먼트`;
 }
 
@@ -8359,7 +8367,9 @@ function weaponSectionHTML(p){
   }
   return `<div class="shop-section">🗡️ 무기 (무기형 전용)</div>` + inner;
 }
-function growthStageName(stage){
+function growthStageName(stage, seedType){
+  const byType = seedType && STAGE_NAMES_BY_TYPE[seedType];
+  if(byType && byType[stage]) return byType[stage];
   return GROWTH_STAGE_NAMES[stage] || stage || '새싹';
 }
 function nextGrowthStage(stage){
@@ -8384,7 +8394,7 @@ function renderPlantInstancePanel(p, stats){
   return `<div class="plant-instance-panel">
     <div class="plant-instance-head">
       <b>${plantDisplayName(p)}</b>
-      <span class="info-badge ok">${growthStageName(p.growth_stage)} · Lv.${p.level}</span>
+      <span class="info-badge ok">${growthStageName(p.growth_stage, p.seed_type)} · Lv.${p.level}</span>
     </div>
     <div class="info-desc">
       기원: ${(planet && planet.name) || p.origin_planet || '미확인'} / ${(region && region.name) || p.origin_region || '미확인'}<br>
@@ -8450,7 +8460,7 @@ function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
     ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
   $('#evolveBody').innerHTML = `
-    <div class="evo-title">✨ 진화! <span style="color:var(--sub)">${growthStageName(fromStage)}</span> ▶ <span style="color:var(--neon)">${growthStageName(toStage)}</span></div>
+    <div class="evo-title">✨ 진화! <span style="color:var(--sub)">${growthStageName(fromStage, p.seed_type)}</span> ▶ <span style="color:var(--neon)">${growthStageName(toStage, p.seed_type)}</span></div>
     <div class="evo-sub">${plantDisplayName(p)} 이(가) 한 단계 성장했습니다</div>
     <div class="evo-stage">
       <div class="evo-glow"></div>
@@ -8600,7 +8610,7 @@ function upTabHtml(p, s){
       <div class="pm-col">${UP_RIGHT.map(d=>upStatCard(p,s,d)).join('')}</div>
     </div>
     <div class="pm-grow">
-      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage)}${p.growthLocked?' · 🛑 생장 차단':''}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
+      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage, p.seed_type)}${p.growthLocked?' · 🛑 생장 차단':''}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
       <div class="pg-bar"><i style="width:${Math.round(progress*100)}%"></i></div>
       <div class="pg-btns">
         <button class="pg-btn" data-use-growth-item="levelup_potion" ${(isMax||p.growthLocked)?'disabled':''}>⬆️ 레벨업 물약 사용 (보유 ${itemOwnedCount('levelup_potion')})</button>
@@ -8915,7 +8925,7 @@ function useItem(itemId){
       if(inv.count <= 0) state.item_inventory = state.item_inventory.filter(it => it !== inv);
     }
     saveState(); sfx.heal(); renderUpgrade(); renderMain();
-    toast(`${item.name} 사용! ⬆️ ${growthStageName(p.growth_stage)} 단계로 생장`);
+    toast(`${item.name} 사용! ⬆️ ${growthStageName(p.growth_stage, p.seed_type)} 단계로 생장`);
     return;
   }
   const msg=[];
@@ -10217,7 +10227,7 @@ function renderNurseryGrid(){
           <div class="pot-name">${plantDisplayName(p)}</div>
           ${canFruit?`<div class="pot-gauge"><div class="pot-gauge-fill" style="width:${gaugePct}%;background:${nurseryGaugeColor(n,full)}"></div></div>
           <div class="pot-stage">${full?'🍎 꽉 참 — 수확!':(n.ripe.length?`🍎 ${n.ripe.length}/${n.maxFruits}`:`충전 ${gaugePct}%`)}</div>`
-          :`<div class="pot-stage">${growthStageName(p.growth_stage||'seed')} · 성장체부터 열매</div>`}
+          :`<div class="pot-stage">${growthStageName(p.growth_stage||'seed', p.seed_type)} · 성장체부터 열매</div>`}
         </div>`;
       }
     }
@@ -10245,7 +10255,7 @@ function openNurseryDetail(idx){
   card.innerHTML = `
     <div style="text-align:center;margin-bottom:10px"><span class="pot-sprite" style="display:inline-flex">${sprite}</span></div>
     <div style="font-size:16px;font-weight:900;text-align:center;color:#d6ffe6;margin-bottom:4px">${plantDisplayName(p)}</div>
-    <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed')} · ${elIcon} · ${formName}</div>
+    <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed', p.seed_type)} · ${elIcon} · ${formName}</div>
     ${!canFruit ? `
       <div style="background:rgba(120,170,120,.1);border:1px dashed rgba(120,170,120,.35);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;color:#9fd9b6;font-size:12.5px">
         🌱 <b>성장체</b>부터 열매를 맺습니다.<br>전투·경험치로 더 키워주세요.
@@ -10367,7 +10377,7 @@ function openFruitBag(){
       return `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,210,90,.1);border:1px solid rgba(255,210,90,.35);border-radius:12px;padding:10px 14px;margin-bottom:8px">
         <div style="font-size:28px">🍎</div>
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#d6ffe6">${f.plantName||'식물'}</div>
-        <div style="font-size:11px;color:#9fd9b6">${elIcon} ${growthStageName(f.growth_stage)} · ${FORMS[f.form]?FORMS[f.form].name:'일반'}</div></div>
+        <div style="font-size:11px;color:#9fd9b6">${elIcon} ${growthStageName(f.growth_stage, f.seed_type)} · ${FORMS[f.form]?FORMS[f.form].name:'일반'}</div></div>
         <button class="btn primary" onclick="openFruit(${gi})" style="font-size:12px;padding:8px 14px;min-width:54px">개봉</button>
       </div>`;
     }).join('')}
@@ -11033,6 +11043,17 @@ window.__test('item: 레벨업 물약은 한 번에 한 단계만 생장(완숙�
   let guard = 0;
   while(p.growth_stage !== 'evolved' && guard++ < 10) gainGrowthExp(p, levelupPotionExp(p));
   __eq(p.growth_stage, 'evolved', '단계별로 최종까지 도달');
+});
+window.__test('stage names: per-type override + safe fallback', function(){
+  const fails = [];
+  if(growthStageName('growing','mushroom') !== '어린갓') fails.push('mushroom growing should be 어린갓');
+  if(growthStageName('evolved','mushroom') !== '포자갓') fails.push('mushroom evolved should be 포자갓');
+  if(growthStageName('seed','mushroom') !== '포자') fails.push('mushroom seed should be 포자');
+  if(growthStageName('juvenile','cactus') !== '어린기둥') fails.push('cactus juvenile should be 어린기둥');
+  if(growthStageName('sprout','tree') !== '떡잎') fails.push('tree sprout should be 떡잎');
+  if(growthStageName('growing') !== '성장체') fails.push('no-type fallback should be 성장체');
+  if(growthStageName('growing','nonsense') !== '성장체') fails.push('unknown type should fall back');
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 </script>
 </body>
