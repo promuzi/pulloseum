@@ -4631,6 +4631,58 @@ function nurseryTick(p, now){
   else n.gauge = Math.min(0.999, n.gauge);
   return { newFruits };
 }
+
+/* 열매 보상 롤 — 색=등급. 흰/초록=소모품(묶음 가능), 파랑/보라=변이카드, 주황=본인스킬(중복=크레딧)/고등급카드.
+   반환 { kind, label, icon, color, payload } — 공통 RewardReveal 표시용. */
+function rollFruitReward(p, rarity){
+  if(!state.care) state.care = { water:0, fert:0 };
+  const color = FRUIT_RARITY_COLOR[rarity] || '#e6edf2';
+  // 소모품: 물/비료(state.care)도 후보. 묶음 수량.
+  if(rarity==='white' || rarity==='green'){
+    const stack = rarity==='green' ? (2+Math.floor(Math.random()*3)) : (1+Math.floor(Math.random()*3));
+    const pick = Math.random();
+    if(pick < 0.45){ state.care.water += stack; return { kind:'care', label:`물 ×${stack}`, icon:'💧', color, payload:{res:'water',count:stack} }; }
+    if(pick < 0.80){ state.care.fert  += stack; return { kind:'care', label:`비료 ×${stack}`, icon:'🌿', color, payload:{res:'fert',count:stack} }; }
+    const item = ALIEN_INDEX.items['levelup_potion'];
+    if(item){ addItemReward(createItemInventoryEntry(item, stack, null, null)); return { kind:'item', label:`${item.name} ×${stack}`, icon:item.icon||'⬆️', color, payload:{item_id:'levelup_potion',count:stack} }; }
+    state.care.water += stack; return { kind:'care', label:`물 ×${stack}`, icon:'💧', color, payload:{res:'water',count:stack} };
+  }
+  // 변이 카드: 파랑(C/B) / 보라(A/S)
+  if(rarity==='blue' || rarity==='purple'){
+    const grade = rarity==='purple' ? (Math.random()<0.5?'A':'S') : (Math.random()<0.5?'C':'B');
+    const card = grantThemedTraitCard(p.cardTypes || null, grade);
+    return { kind:'card', label:`변이카드 ${card.name} [${grade}]`, icon:card.icon||'🧬', color, payload:card };
+  }
+  // 주황: 본인 전용 스킬(중복=크레딧). 풀 비면 고등급 카드 폴백.
+  const fake = { element:p.element, form:p.form, growth_stage:p.growth_stage, potential:p.potential||p.grade||'B' };
+  const sk = (typeof nurserySkillReward==='function') ? nurserySkillReward(fake) : null;
+  if(sk){
+    ensureSkillFields(p);
+    if(!Array.isArray(p.bonus_skills)) p.bonus_skills = [];
+    if(p.bonus_skills.includes(sk.id)){
+      const refund = 200;
+      addCredits(refund);
+      return { kind:'credit', label:`중복 스킬 → 크레딧 +${refund}`, icon:'🪙', color, payload:{credits:refund} };
+    }
+    p.bonus_skills.push(sk.id);
+    if(!p.skillGrades) p.skillGrades = {};
+    p.skillGrades[sk.id] = sk.grade||'C';
+    return { kind:'skill', label:`${displaySkillName(sk.name||'')} [${sk.grade||'C'}]`, icon:sk.icon||'✨', color, payload:{id:sk.id,grade:sk.grade} };
+  }
+  const card = grantThemedTraitCard(p.cardTypes || null, 'S');
+  return { kind:'card', label:`변이카드 ${card.name} [S]`, icon:card.icon||'🧬', color, payload:card };
+}
+
+/* 맺힌 열매 전부를 보상으로 변환해 반환. 게이지(n.gauge)는 초기화하지 않는다(이어서 충전). */
+function harvestPot(p){
+  ensureNurseryFields(p);
+  const n = p.nursery;
+  const ripe = n.ripe.slice();
+  n.ripe = [];                      // 열매만 비움
+  if(n.gauge >= 1) n.gauge = 0.999; // 정지(붉음) 해제 → 다시 충전, 진행도 보존
+  n.lastTick = Date.now();
+  return ripe.map(fr => rollFruitReward(p, fr.rarity));
+}
 let state = loadState();
 function syncPlayerMoney(){ state.money = state.credits; }
 
@@ -5218,7 +5270,7 @@ function createItemInventoryEntry(item, count, planet, region){
     rarity:'common',
     count,
     acquired_at:new Date().toISOString(),
-    source:{ planet_id:planet.id, region_id:region.id },
+    source:{ planet_id:planet?planet.id:null, region_id:region?region.id:null },
   };
 }
 function addItemReward(entry){
@@ -10794,6 +10846,22 @@ window.__test('nursery: tick caps + gauge preserved + decay', function(){
   nurseryTick(q, 5*3600000);
   __eq(q.nursery.waterBuff, 0, 'buff decays to 0');
   for(let i=0;i<50;i++) __ok(FRUIT_RARITIES.indexOf(rollFruitRarity(p))>=0, 'rarity valid');
+});
+window.__test('nursery: harvest preserves gauge + rewards', function(){
+  if(!state.care) state.care = { water:0, fert:0 };
+  const p={ element:'fire', growth_stage:'mature', nursery:{} };
+  ensureNurseryFields(p);
+  p.nursery.ripe=[{rarity:'white'},{rarity:'white'}]; p.nursery.gauge=0.5;
+  const rewards = harvestPot(p);
+  __eq(rewards.length, 2, 'harvest reward count');
+  __eq(p.nursery.ripe.length, 0, 'ripe cleared');
+  __ok(Math.abs(p.nursery.gauge-0.5)<1e-9, 'gauge preserved');
+  rewards.forEach(r => __ok(['care','item','card','skill','credit'].indexOf(r.kind)>=0, 'reward kind valid: '+r.kind));
+  // 주황(본인스킬/카드) kind 유효성
+  const q={ element:'fire', growth_stage:'mature', potential:'S', bonus_skills:[], skillGrades:{}, nursery:{} };
+  ensureNurseryFields(q);
+  const r1 = rollFruitReward(q,'orange');
+  __ok(['skill','credit','card'].indexOf(r1.kind)>=0, 'orange kind valid: '+r1.kind);
 });
 window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
