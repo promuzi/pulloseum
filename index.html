@@ -10246,15 +10246,15 @@ function renderNurseryGrid(){
         ensureNurseryFields(p); nurseryTick(p, Date.now());
         const n = p.nursery;
         const st = seedTypeOf(p), el = p.element || 'grass';
-        const sprite = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened});
+        const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true});
+        const potLayer = potVisual(p.nursery.potId, 78);
         const canFruit = nurseryMaxFruits(p) > 0;
         const full = canFruit && n.ripe.length >= n.maxFruits;
         const gaugePct = Math.round((full?1:n.gauge)*100);
         const fruitDots = n.ripe.map(fr=>`<span class="pot-fruit-dot" style="--fc:${FRUIT_RARITY_COLOR[fr.rarity]||'#e6edf2'}"></span>`).join('');
         html += `<div class="pot-slot filled ${n.ripe.length?'fruiting':''}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
-          <div class="pot-vessel"></div>
           ${n.ripe.length?`<div class="pot-fruits">${fruitDots}</div>`:''}
-          <div class="pot-sprite" style="animation-delay:${delay}s">${sprite}</div>
+          <div class="pot-stack"><span class="pot-layer">${potLayer}</span><span class="plant-layer" style="animation-delay:${delay}s">${plantLayer}</span></div>
           <div class="pot-name">${plantDisplayName(p)}</div>
           ${canFruit?`<div class="pot-gauge"><div class="pot-gauge-fill" style="width:${gaugePct}%;background:${nurseryGaugeColor(n,full)}"></div></div>
           <div class="pot-stage">${full?'🍎 꽉 참 — 수확!':(n.ripe.length?`🍎 ${n.ripe.length}/${n.maxFruits}`:`충전 ${gaugePct}%`)}</div>`
@@ -10274,7 +10274,8 @@ function openNurseryDetail(idx){
   ensureNurseryFields(p); nurseryTick(p, Date.now());
   const n = p.nursery;
   const st = seedTypeOf(p), el = p.element || 'grass';
-  const sprite = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened});
+  const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true});
+  const dPot = potVisual(p.nursery.potId, 72);
   const elIcon = ELEMENTS[p.element] ? ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name : '';
   const formName = FORMS[p.form] ? FORMS[p.form].name : '일반 변이형';
   const c = state.care || { water:0, fert:0 };
@@ -10284,7 +10285,7 @@ function openNurseryDetail(idx){
   const fruitDots = n.ripe.map(fr=>`<span class="rr-fruit-chip" style="--fc:${FRUIT_RARITY_COLOR[fr.rarity]||'#e6edf2'}" title="${FRUIT_RARITY_NAME[fr.rarity]||''}"></span>`).join('');
   const card = document.querySelector('#nurseryDetailCard');
   card.innerHTML = `
-    <div style="text-align:center;margin-bottom:10px"><span class="pot-sprite" style="display:inline-flex">${sprite}</span></div>
+    <div style="text-align:center;margin-bottom:10px"><span style="position:relative;display:inline-block;width:72px;height:84px"><span style="position:absolute;left:0;bottom:0;z-index:1">${dPot}</span><span style="position:absolute;left:0;bottom:0;z-index:2">${dPlant}</span></span></div>
     <div style="font-size:16px;font-weight:900;text-align:center;color:#d6ffe6;margin-bottom:4px">${plantDisplayName(p)}</div>
     <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed')} · ${elIcon} · ${formName}</div>
     ${!canFruit ? `
@@ -10303,6 +10304,7 @@ function openNurseryDetail(idx){
       </div>
       ${full?'':`<button class="btn ghost" onclick="doInstantFruit(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">💎 즉시 가속 (미네랄 ${FRUIT_INSTANT_MINERAL})</button>`}
     `}
+    <button class="btn ghost" onclick="openPotPicker(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">🪴 화분 바꾸기 (${potOf(p).icon} ${potOf(p).name})</button>
     <div class="howto" style="font-size:11px;margin-top:10px">💧물 = 충전 속도↑ · 🌿비료 = 등급 확률↑ (시간 지나면 효과 감소)<br>물·비료는 ⚔️전투·🛰️탐사·📦상자 보상으로 모읍니다.</div>
   `;
   show('#nurseryDetailCard');
@@ -10312,6 +10314,33 @@ function openNurseryDetail(idx){
 function closeNurseryDetail(){
   hide('#nurseryDetailCard');
   hide('#nurseryDetailBack');
+}
+
+/* 화분 선택 시트 — 보유 화분 중 골라 장착(영구 해금·자유 교체) */
+function openPotPicker(idx){
+  const p=(state.plants||[])[idx]; if(!p) return;
+  ensureNurseryFields(p);
+  const cur = p.nursery.potId;
+  const rows = POT_ORDER.map(id=>{
+    const pot=POT_CATALOG[id], owned=!!(state.pot_inventory&&state.pot_inventory[id]);
+    const fx=`속도+${Math.round(pot.speed*100)}% · 열매+${pot.maxFruitDelta}${pot.gradeLift?' · 등급↑':''}`;
+    return `<div class="rr-item" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;border-radius:12px;border:1.5px solid ${owned?pot.color:'rgba(255,255,255,.12)'};background:rgba(20,30,40,.5);${owned?'cursor:pointer':'opacity:.5'}" ${owned?`onclick="equipPot(${idx},'${id}')"`:''}>
+      <div style="font-size:24px">${pot.icon}</div>
+      <div style="flex:1;text-align:left"><div style="font-weight:800;color:${pot.color}">${pot.name}${id===cur?' ✓':''}</div><div style="font-size:10.5px;color:#9fd9b6">${owned?fx:'🔒 미보유'}</div></div>
+    </div>`;
+  }).join('');
+  const body=document.querySelector('#nurseryPopBody');
+  body.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:15px;font-weight:900;color:#d6ffe6">🪴 화분 선택</div><button onclick="closeNurseryPop()" style="background:none;border:none;color:#9fd9b6;font-size:20px;cursor:pointer">✕</button></div>${rows}`;
+  show('#nurseryPopModal');
+}
+function equipPot(idx, potId){
+  const p=(state.plants||[])[idx]; if(!p||!POT_CATALOG[potId]) return;
+  if(!(state.pot_inventory&&state.pot_inventory[potId])){ toast('아직 보유하지 않은 화분입니다'); return; }
+  ensureNurseryFields(p); nurseryTick(p, Date.now());
+  p.nursery.potId = potId;
+  saveState(); if(typeof sfx!=='undefined'&&sfx.tap) sfx.tap();
+  closeNurseryPop(); openNurseryDetail(idx); renderNurseryGrid();
+  toast(`🪴 ${POT_CATALOG[potId].name} 장착!`);
 }
 
 /* ===== 공통 RewardReveal — 상자/열매를 터치해서 여는 개봉 연출 (열매·보급·탐사 공용) =====
