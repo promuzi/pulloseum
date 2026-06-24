@@ -4679,7 +4679,7 @@ function harvestPot(p){
   const n = p.nursery;
   const ripe = n.ripe.slice();
   n.ripe = [];                      // 열매만 비움
-  if(n.gauge >= 1) n.gauge = 0.999; // 정지(붉음) 해제 → 다시 충전, 진행도 보존
+  if(n.gauge >= 1) n.gauge = 0;     // 꽉 참(핀=1) 수확 → 0부터 새로(중간 게이지는 건드리지 않아 보존)
   n.lastTick = Date.now();
   return ripe.map(fr => rollFruitReward(p, fr.rarity));
 }
@@ -10862,6 +10862,11 @@ window.__test('nursery: harvest preserves gauge + rewards', function(){
   ensureNurseryFields(q);
   const r1 = rollFruitReward(q,'orange');
   __ok(['skill','credit','card'].indexOf(r1.kind)>=0, 'orange kind valid: '+r1.kind);
+  // 꽉 참(게이지 핀=1) 수확 → 0부터 새로 (즉시-리필 악용 방지)
+  const f={ element:'fire', growth_stage:'growing', nursery:{} }; ensureNurseryFields(f);
+  f.nursery.ripe=[{rarity:'white'},{rarity:'white'}]; f.nursery.gauge=1;
+  harvestPot(f);
+  __eq(f.nursery.gauge, 0, 'full-harvest resets gauge to 0');
 });
 window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
