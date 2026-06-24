@@ -63,7 +63,7 @@
 - 작업 완료 후 새 항목은 CHANGELOG.md **맨 위**에 날짜순으로 추가.
 
 ## 참고 문서 (라우팅 — 필요할 때만 읽기)
-- 전투/성장 메커니즘: [docs/battle-mechanics-deep-dive.md](docs/battle-mechanics-deep-dive.md), [docs/battle-growth-guide.md](docs/battle-growth-guide.md)
+- 전투/성장 메커니즘: [docs/battle-mechanics-deep-dive.md](docs/battle-mechanics-deep-dive.md) (성장·밸런스는 [balance-sheet.md](docs/balance-sheet.md)로 통합)
 - 종 시스템: [docs/species-system-guide.md](docs/species-system-guide.md)
 - 밸런스 시트: [docs/balance-sheet.md](docs/balance-sheet.md)
 - 특성/생장 로드맵: [docs/trait-growth-roadmap.md](docs/trait-growth-roadmap.md)
