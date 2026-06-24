@@ -4036,6 +4036,8 @@ const CARD_SKILLS = {
   skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:0, noEnergy:true, uses:4, kind:'guard',  guardMult:0.32, counterPct:0.35, desc:'피해 68%↓ + 가시 반격 · 에너지 무소모', tag:'무기' },
   skill_card_axe:    { name:'내려찍기', icon:'🪓', cost:0, noEnergy:true, uses:3, kind:'attack', power:215, pierce:0.5, desc:'위력215 · 방어 50% 무시 · 에너지 무소모', tag:'무기' },
   skill_card_gun:    { name:'총 쏘기',   icon:'🔫', cost:0, noEnergy:true, uses:4, kind:'attack', power:150, pierce:0.6, desc:'위력150 · 방어 60% 무시 · 에너지 무소모', tag:'무기' },
+  skill_card_infuse: { name:'독 묻히기', icon:'☠️', cost:1, kind:'buff', cats:['buff','debuff'], infuse:{kind:'poison', pct:0.07, turns:3}, desc:'3턴간 공격마다 독을 묻힌다', tag:'독성' },
+  skill_card_spray:  { name:'독 뿌리기', icon:'🌿', cost:3, kind:'debuff', cats:['debuff'], dot:{kind:'poison', pct:0.09, turns:3}, dotTimes:2, desc:'중독 2겹 즉발', tag:'독성' },
   skill_card_acid:   { name:'강산 뿌리기', icon:'🧪', cost:2, kind:'debuff', power:135, enemyDebuff:{stat:'def',pct:0.30,turns:2}, dot:{kind:'poison',pct:0.07,turns:3}, desc:'위력135 + 방어30%↓ + 중독', tag:'독성' },
   skill_card_gas:    { name:'가스 유출', icon:'☁️', cost:2, kind:'debuff', power:60, enemyDebuff:{stat:'atk',pct:0.28,turns:2}, dot:{kind:'poison',pct:0.06,turns:3}, desc:'위력60 + 적 공격28%↓ + 중독', tag:'독성' },
 };
@@ -4129,6 +4131,9 @@ function variantSkillsOf(p){
         out.push(def.grantSkill);
       }
     });
+  }
+  else if(form === 'toxic'){
+    out.push('skill_card_infuse', 'skill_card_spray');
   }
   return out;
 }
@@ -9577,7 +9582,8 @@ function makeCombatant(src){
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식 변이형) 포식 기본 스킬
   let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
-  if((src.form||'normal') === 'pred') loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
+  if((src.form||'normal') === 'pred')  loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
+  if((src.form||'normal') === 'toxic') loadout.push('skill_card_infuse', 'skill_card_spray'); // 독성 변이형 기본 보유
   const isWeaponForm = (src.form||'normal') === 'weapon';
   CE.grantSkills.forEach(sid => {
     // 무기형 변이에서 weapon card의 grantSkill은 하단 variant bar로 → loadout 제외
@@ -10053,6 +10059,7 @@ async function applySkill(a, d, s, side, options={}){
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
   if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.infuse){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:s.infuse.pct, turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
@@ -10126,13 +10133,15 @@ async function applySkill(a, d, s, side, options={}){
     if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push('방어력이 감소하였다!'); }
     if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
+    if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
     // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
     if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
   updateBars();
@@ -11457,6 +11466,18 @@ window.__test('variant: weapon form p.cards fallback (combat unit)', function(){
   __ok(v.includes('skill_card_sword'), 'sword from cards');
   __ok(v.includes('skill_card_axe'), 'axe from cards');
   __eq(v.length, 2, 'exactly 2');
+});
+window.__test('variant: toxic form returns infuse + spray', function(){
+  const v = variantSkillsOf({form:'toxic'});
+  __eq(v.length, 2, 'exactly 2');
+  __ok(v.includes('skill_card_infuse'), 'has infuse');
+  __ok(v.includes('skill_card_spray'), 'has spray');
+});
+window.__test('skills: toxic infuse + spray defined in SKILL_LIB', function(){
+  __ok(ALL_SKILLS['skill_card_infuse'], 'infuse defined');
+  __ok(ALL_SKILLS['skill_card_spray'], 'spray defined');
+  __ok(ALL_SKILLS['skill_card_infuse'].infuse, 'infuse.infuse field');
+  __eq(ALL_SKILLS['skill_card_spray'].dotTimes, 2, 'spray dotTimes=2');
 });
 window.__test('variant UI: variantSkillBarHtml renders for pred, empty for normal', function(){
   const html = variantSkillBarHtml({form:'pred'});
