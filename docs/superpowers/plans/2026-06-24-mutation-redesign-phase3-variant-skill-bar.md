@@ -19,7 +19,8 @@
 - ~~**3-3 하단 바 UI(전투):**~~ ✅ — `showCardPhase`의 hardcoded pred 분기 → `variantSkillsOf(B.p)` 일반화. `.cp-pred` auto-fit 그리드(1~2칸 자동).
 - ~~**3-4 무기형 전환:**~~ ✅ `4eff627` — `variantSkillsOf` `p.cards` 폴백 추가(전투 유닛 지원). `makeCombatant`에서 weapon grantSkill을 loadout 제외(variant bar로). `detailEquip`에 무기 카드 최대 2장 초과 시 토스트 차단.
 - ~~**3-5 독성형 콘텐츠:**~~ ✅ — `skill_card_infuse`(독 묻히기 · `infuse` 버프 → 공격 적중 시 `addDot`) + `skill_card_spray`(독 뿌리기 · `dotTimes:2` 즉발). `variantSkillsOf` toxic 케이스 추가. `makeCombatant`에 toxic loadout 자동 추가. 0 fail.
-- **3-6 용족형 콘텐츠:** `비늘 강화`(guard+selfBuff·비늘 스택)·`브레스`(자기 속성 발현 공격+rider). 대부분 기존 엔진 재사용.
+- ~~**3-6 용족형 콘텐츠:**~~ ✅ — `skill_card_scale`(비늘 강화 · guard+`scaleStack` 영구 방어 누적 cap5) + `skill_card_breath`(원소 브레스 · `elem:true` 자기 속성 발현). `variantSkillsOf` dragon 케이스, `makeCombatant` dragon loadout, `applySkill` scaleStack 엔진.
+  - **(동시 회귀 수정)** 3-4 버그: `makeCombatant`가 전투 유닛에 `cards`를 저장 안 해 무기형이 전투에서 무기 스킬을 영영 못 쓰던 문제 → `unit.cards` 저장 + `uses` 초기화를 `variantSkillsOf` 포함으로 확장. `aiPickSkill`에 variant 스킬 후보 추가(적 봇도 사용). `buildEnemy` 폐지된 lumen 제거 + dragon 추가.
 - **3-7 포식 콘텐츠 조정:** 기본 포식기 위력 150→90·무속성 확정(스펙). DNA 강화 카드(predBoost 등) 매핑.
 - **3-8 공통 버프/디버프·무등급:** battle-start 훅(전투 시작 시 buffs/debuffs push) + 무등급 특수 훅(만개/마지막잎새 등).
 
