@@ -3512,9 +3512,8 @@ function rollForm(){
   if(r < 0.32) return { form:'pred', predType: Math.random()<0.5 ? 'vamp' : 'absorb' };
   if(r < 0.46) return { form:'toxic',  predType:null };
   if(r < 0.60) return { form:'spore',  predType:null };
-  if(r < 0.74) return { form:'lumen',  predType:null };
-  if(r < 0.78) return { form:'dragon', predType:null }; // 희귀(미정 변이형)
-  return { form:'normal', predType:null };
+  if(r < 0.64) return { form:'dragon', predType:null }; // 희귀 4% (lumen 0.60~0.74 제거 — 발광형 폐지)
+  return { form:'normal', predType:null };               // 0.64~1.0 = 일반(발광 몫 흡수)
 }
 function moveCost(unit, key){
   if(key === 'weapon') return (unit && unit.weapon) ? WEAPONS[unit.weapon.key].cost : 99;
@@ -11336,6 +11335,12 @@ window.__test('dot: different kinds stack independently', function(){
   for(let i=0;i<6;i++) addDot(u, {kind:'poison',dmg:5,turns:3});
   for(let i=0;i<6;i++) addDot(u, {kind:'burn',dmg:3,turns:3});
   __eq(u.dots.length, DOT_STACK_CAP*2, 'two kinds capped each');
+});
+window.__test('form: rollForm never returns lumen (발광 폐지)', function(){
+  for(let i=0;i<500;i++){ __ok(rollForm().form !== 'lumen', 'rolled lumen'); }
+});
+window.__test('form: FORMS.lumen kept for legacy plants', function(){
+  __ok(FORMS.lumen, 'lumen def kept for legacy');
 });
 </script>
 </body>
