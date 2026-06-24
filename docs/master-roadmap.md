@@ -19,7 +19,7 @@
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
 | 1 | 식물 종류 확장 | 🟡 개체 카탈로그 구조 완료 | 개체/스킬 내용 채우기(`SPECIES_CATALOG`/`SKILL_LIB`) + 변이 슬롯 UI | [species](species-system-guide.md) · [trait](trait-growth-roadmap.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md) |
-| 2 | 양육/열매 시스템 ⭐ | 🟡 설계 중 | 생장=경험치 단일화 + 열매 데이터 모델 | [balance §3](balance-sheet.md) |
+| 2 | 양육/열매 시스템 ⭐ | 🟡 설계 중(골격 확정) | 소모품 종류·순환루프 결정 → 수치 → 구현 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
@@ -50,6 +50,7 @@
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
 | **[feature-designs.md](feature-designs.md)** | 위 8대 항목의 **구현 직전 상세 설계**(선택지별 동작·UI·데이터모델·구현방식·난이도) | 항목 확정 후 구현 직전 참조 |
 | **[handoff-next.md](handoff-next.md)** | **🔖 인계 문서** — 기기 바꿔 이어갈 때 가장 먼저 읽기(현황·선택 대기 8항목·재개 절차) | 새 세션/다른 기기 시작 시 |
+| **[superpowers/specs/2026-06-24-nurture-fruit-system-design.md](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)** | 양육/열매 시스템 설계(진행 중) — 생장·열매 2축, 환경 레버, 수확 보상 희소도, 열린 질문 | **#2 양육 — 재개 시 먼저** |
 | **[superpowers/specs/2026-06-24-plant-individual-catalog-design.md](superpowers/specs/2026-06-24-plant-individual-catalog-design.md)** | 개체 카탈로그(A+C) 설계서 — 데이터 구조·타입 개편·마이그레이션 | #1 종 확장 설계 |
 | **[superpowers/plans/2026-06-24-plant-individual-catalog.md](superpowers/plans/2026-06-24-plant-individual-catalog.md)** | 개체 카탈로그 전환 구현 계획(Task 0~7, 완료) | #1 구현 참조 |
 
@@ -88,20 +89,18 @@
 - **열린 질문:** 속성당 목표 종 수? 종 고유 패시브(잠재특성 연결) 줄지?
 
 ### 2. 식물 양육 / 열매 시스템 ⭐ 핵심
-**비전:** 전투와 분리된 **양육 루프**. 식물을 키워 **열매**를 맺고 보상(스킬/변이 카드/크레딧 등)을 얻는 방치형 감성의 축.
-**확정 결정(§5 로그):**
-- 생장은 **경험치로만**(물/비료 폐지 또는 보조재로 재정의). 현재 이원화(`applyGrowthAction`+`gainGrowthExp`) → 단일화.
-- **생장 정지 아이템**: 특정 단계에서 경험치 획득을 막아 머물게.
-- **화분 = 양육 전용**(전투 스탯 무영향, 성장속도·열매 등급 등에만).
-- 페이지 재배치: **양육 = 4번째, 탐사선 = 5번째**.
-**열매 — 설계 필요:**
-- [ ] 맺힘 메커니즘(생장 단계/시간/경험치/화분 조합 중 무엇?)
-- [ ] 열매 등급(D~S?) 결정 요인(잠재력/화분/단계)
-- [ ] 보상 풀·확률(스킬/변이 카드/크레딧/미네랄/종자)
-- [ ] 수확 주기·방치 보상화
-- [ ] 화분 종류별 효과·획득 경로
-**UI:** 양육 페이지(화분+식물+열매+경험치 게이지+수확), 화분 교체, 수확 연출(#5).
-**구현 메모:** `fruit` 필드 신설 + `normalizeState` 마이그레이션(무회귀). 진화 연출 `#evolveModal` 재활용.
+**비전:** 전투와 분리된 **양육 루프**. 식물을 키워 **열매**를 맺고 보상(소모품·스킬·변이 카드)을 얻는 방치형 감성의 축.
+> 📄 **설계 박제: [superpowers/specs/2026-06-24-nurture-fruit-system-design.md](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)** — 브레인스토밍 진행 중. **재개 시 이 문서부터.**
+
+**확정 골격(2026-06-24 브레인스토밍):**
+- **생장과 열매는 분리된 2축.** 생장(진화)=경험치/레벨업, **열매=시간 경과+환경(물·비료·화분)**. 경험치는 열매와 무관.
+- **열매는 성장체부터.** 그 이전(씨앗·새싹·유체)은 **낙엽=하위 소모품**만.
+- **환경 레버:** 물/비료(양)→열매 **질 확률↑(상한·보수적, 다 줘도 전부 S 아님)**, 화분(품질)→**주기 단축**. 즉시수확=**미네랄**. 비료종류·환경=보류.
+- **수확 보상 희소도:** 흔함=**소모품**, 희귀=**변이 카드(본인 변이형, 타 식물에도 장착 가능=전파)** / **본인 스킬(자기 전용 풀 확장, 전파 X)**.
+- **화분 = 양육 전용**(전투 스탯 무영향). 페이지: 양육=4번째, 탐사선=5번째.
+
+**열린 질문(스펙 §3):** 소모품 종류 + **물/비료 자급 순환 루프** 살릴지 / 단계 점증 영향 / 수확 단위 / 수치 / 본인 스킬 상한.
+**구현 메모:** 식물에 `fruit` 상태 필드 신설 + `normalizeState` 마이그레이션(무회귀). 수확 연출 `#evolveModal` 재활용. 식물/화분 2레이어 분리(#12·#3 전제).
 
 ### 3. 도트(픽셀아트) UI 적용
 **상태/규격:** [pixel-art-ui-roadmap.md](pixel-art-ui-roadmap.md) — **작업 전 필독**. 방식은 캔버스 재작성이 아니라 **PNG를 DOM에 교체**(`spriteFor`의 `SPRITE_OVERRIDES`).
@@ -183,6 +182,8 @@
 - **2026-06-24** — **종 시스템 = 수작업 개체 카탈로그(A+C)로 전환.** `SPECIES_CATALOG`(개체별 rarity·변이슬롯·baseVariants·stageSkills·signatures) + `SKILL_LIB`(스킬 정의 분리). 기존 `SPECIES_GRID`는 레거시 자동생성으로 머지 기반 유지. 설계서 = [`superpowers/specs/2026-06-24-plant-individual-catalog-design.md`](superpowers/specs/2026-06-24-plant-individual-catalog-design.md). (#1)
 - **2026-06-24** — **타입 개편: 초본형(grass) 제거 → 버섯형(mushroom) 추가.** 버섯=저스탯+포자 기본(`baseVariants:['spore']`)+희귀. 포자는 하드코딩 아닌 `baseVariants` 데이터로만 결정(확장 여지). 초본형은 신규 획득 제외하되 보유분·외형 보존(레거시). (#1)
 - **2026-06-24** — **초본형 완전 폐지 → 화초형 흡수(타입 5종 확정).** "풀은 결국 꽃을 피운다"는 사용자 결정. 구 초본 7종 타입 `grass`→`flower` 전환(스탯·외형·스킬 화초형, legacy), 세이브 마이그레이션. `grass`는 풀 **속성**으로만 존속. (#1)
+- **2026-06-24** — **(#2 양육/열매) 생장과 열매를 분리된 2축으로 확정.** 생장(진화)=경험치, 열매=시간+환경(물·비료·화분). **기존 "생장은 경험치로만, 물/비료 폐지" 결정을 일부 수정** — 물/비료는 폐지가 아니라 **열매 쪽으로 부활**(생장엔 여전히 무영향). 열매=성장체부터, 그 전엔 낙엽=하위소모품. 물/비료(양)→질확률↑(상한·보수적), 화분→주기단축, 즉시수확=미네랄. 보상 희소도: 흔함=소모품 / 희귀=변이카드(전파O)·본인스킬(전파X). 설계 박제 = [`specs/2026-06-24-nurture-fruit-system-design.md`](superpowers/specs/2026-06-24-nurture-fruit-system-design.md). 브레인스토밍 진행 중(열린 질문 5개). (#2)
+- **2026-06-24** — **OneDrive 동기화 사고:** 저장소가 OneDrive 폴더 안이라, 작업 중 OneDrive가 다른 기기 사본을 작업 트리에 덮어써 미커밋 편집(양육 스펙·로드맵 갱신)이 유실·혼합됨. 복구 후 재커밋. **재발 방지: 작업 중 OneDrive 일시정지, 근본은 저장소를 OneDrive 바깥으로 이전.** CLAUDE.md에 주의 추가.
 - **2026-06-24** — **9대 항목 재확인 + 신규 방향 추가:** 사용자 기준 작업 목록 반영 → #10 전투 화면 UI 수정, #11 시작화면 수정, #12 종자 가방 창 + 식물/화분 분리 신설. #4 함선은 **오픈월드화** 방향 추가. **식물 스킬/변이/스탯/디자인 콘텐츠는 사용자가 별도 구상 후 진행**(브레인스토밍/구현은 시스템·UI 구조부터). (#1·#4·#10·#11·#12)
 - **2026-06-24** — **새싹·유체 스킬을 타입 축/속성 축 공유 체계로 재설계(`STAGE_SKILLS`).** 개체 고유 없이 타입(기본공격·기본방어·타입특기)+속성(속성발현) 공유, 유체 속성심화는 기존 속성기 재사용. 성장체 이상은 후속 재설계 보류. 설계서 = [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md). (#1)
 - **2026-06-24** — **도감 라이브 연동 + PWA.** `docs/dex/plant-codex.html`이 게임을 숨은 iframe(`index.html?dex=1`)으로 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 게임 업데이트 자동 반영(수동 갱신 폐기). `?dex=1` 데이터 전용 모드(부팅·세이브 생략)로 세이브 무손상. `sw.js`(PWA) 추가. 호스팅(GitHub Pages)은 사용자가 Settings→Pages 1회 토글. 설계서 = [`superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md`](superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md).
