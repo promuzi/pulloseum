@@ -1103,12 +1103,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 #sidePanel{width:58px;justify-self:end;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:flex-start;align-self:stretch;padding-top:4px;}
 #centerPlant{width:100%;min-width:0;justify-self:center;position:relative;z-index:1;overflow:visible;transform:translateX(-5px);}
 #centerPlant:active{transform:translateX(-5px) scale(.98);}
-/* 보관 포드 받침대 + 발광 — 식물이 함선 안에 놓여 관리받는 느낌 */
-#centerPlant::before{content:'';position:absolute;left:50%;bottom:4px;transform:translateX(-50%);
-  width:74%;max-width:150px;height:26px;border-radius:50%;z-index:-1;pointer-events:none;
-  background:radial-gradient(ellipse at 50% 35%,rgba(45,212,191,.32),rgba(45,212,191,0) 72%),
-            radial-gradient(ellipse at 50% 62%,#d3dde4,#9aa9b4 82%);
-  box-shadow:0 0 22px rgba(45,212,191,.28);}
+/* (포드 받침대 제거 — 식물은 나무 의자 위에 놓임) */
 #statPanel{position:relative;z-index:2;}
 /* 좌측 정보 알약(둥근 박스) — 타입/속성/변이/잠재력 */
 .info-pills{display:flex;flex-direction:column;gap:5px;}
@@ -1317,40 +1312,74 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   top:calc(var(--headh) + env(safe-area-inset-top,0px));bottom:var(--navh);z-index:50;
   overflow-y:auto;display:flex;flex-direction:column;padding:0;
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 38px, rgba(255,255,255,.025) 38px 76px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 38px, rgba(255,255,255,.025) 38px 76px),
-    linear-gradient(180deg,#0c2417 0%, #123b22 45%, #0e2c1a 100%);
+    radial-gradient(120% 60% at 50% -8%, rgba(120,240,210,.16), rgba(120,240,210,0) 60%),
+    repeating-linear-gradient(90deg, rgba(125,240,226,.05) 0 1px, transparent 1px 84px),
+    repeating-linear-gradient(0deg, rgba(125,240,226,.05) 0 1px, transparent 1px 132px),
+    linear-gradient(180deg,#08161f 0%, #0a2230 48%, #06121a 100%);
   image-rendering:pixelated;}
 .nursery-top{position:sticky;top:0;z-index:4;display:flex;flex-direction:column;gap:6px;
   padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;
   background:linear-gradient(180deg,#f3f8f4,#e7efe9);border-bottom:2px solid #1f8f5a;
   box-shadow:0 2px 0 rgba(34,197,113,.22);}
 .nursery-title{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;color:#143d27;letter-spacing:-.3px;}
+.np-bag-btn{margin-left:auto;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  font-family:inherit;font-size:11.5px;font-weight:800;letter-spacing:.3px;
+  color:#cdf3da;padding:7px 12px;border-radius:3px;
+  background:rgba(16,52,32,.85);border:1px solid rgba(120,240,170,.55);
+  box-shadow:0 0 10px rgba(60,200,120,.22), inset 0 0 8px rgba(120,240,170,.08);
+  transition:transform .1s, box-shadow .15s;}
+.np-bag-btn:hover{box-shadow:0 0 14px rgba(60,200,120,.4), inset 0 0 8px rgba(120,240,170,.14);}
+.np-bag-btn:active{transform:scale(.94);}
+.np-bag-btn .pxi{vertical-align:middle;}
 .nursery-res{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#2f5d43;}
 .nursery-res span{background:#ffffff;border:1px solid #bfe0cb;border-radius:999px;padding:4px 11px;}
 /* 3열 × 4행 — 화분에 심긴 식물을 카드틀 없이 '누끼'로 크게 배치, 양옆으로 흔들림 */
 .nursery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 4px;padding:10px 12px 26px;}
-.pot-slot{position:relative;min-height:128px;cursor:pointer;
+/* 3열 × 4행 — 인공 유리 정원: 각 칸마다 유리 선반 위에 실제 화분이 놓임 */
+.nursery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 6px;padding:22px 12px 30px;}
+.pot-slot{position:relative;min-height:150px;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  padding:6px 2px 8px;transition:transform .12s;}
+  padding:6px 2px 0;transition:transform .12s;}
+/* 유리 선반 받침 — 각 화분이 '실제로 놓인' 면 */
+.pot-slot::after{content:'';position:absolute;left:50%;bottom:30px;transform:translateX(-50%);
+  width:90%;height:13px;border-radius:2px;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg, rgba(170,247,236,.28), rgba(60,120,130,.10) 55%, rgba(8,26,36,.16));
+  border:1px solid rgba(125,240,226,.4);
+  box-shadow:0 6px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3);}
+/* 선반 위 화분 그림자 */
+.pot-slot::before{content:'';position:absolute;left:50%;bottom:34px;transform:translateX(-50%);
+  width:52px;height:9px;border-radius:50%;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse,rgba(0,0,0,.5),transparent 72%);}
 .pot-slot.filled:active{transform:scale(.93);}
 .pot-slot.empty,.pot-slot.locked{cursor:default;}
-.pot-slot.locked{opacity:.5;cursor:not-allowed;}
-.pot-sprite{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;
-  transform-origin:50% 92%;animation:potSway 3.4s ease-in-out infinite;
-  filter:drop-shadow(0 5px 4px rgba(0,0,0,.4));}
+.pot-slot.locked{cursor:not-allowed;}
+/* 픽셀 화분 (식물이 꽂힌 칸 + 빈 칸 공통) */
+.pot-vessel{position:relative;z-index:2;width:62px;height:50px;margin-bottom:30px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 20' shape-rendering='crispEdges'%3E%3Cg fill='%23b5673a'%3E%3Crect x='4' y='4' width='16' height='1'/%3E%3Crect x='5' y='5' width='14' height='10'/%3E%3C/g%3E%3Cg fill='%23c87b48'%3E%3Crect x='3' y='2' width='18' height='2'/%3E%3Crect x='5' y='5' width='3' height='10'/%3E%3C/g%3E%3Cg fill='%23934e29'%3E%3Crect x='16' y='5' width='3' height='10'/%3E%3Crect x='6' y='14' width='12' height='1'/%3E%3C/g%3E%3Cg fill='%237d3f20'%3E%3Crect x='7' y='15' width='10' height='1'/%3E%3Crect x='8' y='16' width='8' height='1'/%3E%3C/g%3E%3Cg fill='%233f2a18'%3E%3Crect x='5' y='2' width='14' height='2'/%3E%3C/g%3E%3Cg fill='%23583a22'%3E%3Crect x='6' y='2' width='12' height='1'/%3E%3C/g%3E%3C/svg%3E") center bottom/contain no-repeat;
+  display:flex;align-items:flex-start;justify-content:center;}
+.pot-slot.locked .pot-vessel{filter:grayscale(.85) brightness(.4);opacity:.6;}
+.pot-slot.locked::after{opacity:.4;}
+/* 식물 스프라이트 — 화분 입구에서 솟아오름 */
+.pot-sprite{position:absolute;z-index:3;bottom:46px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:flex-end;justify-content:center;pointer-events:none;
+  transform-origin:50% 100%;animation:potSway 3.4s ease-in-out infinite;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.45));}
 .pot-sprite svg,.pot-sprite img{display:block;}
-@keyframes potSway{0%,100%{transform:translateX(-2.5px) rotate(-2deg);}50%{transform:translateX(2.5px) rotate(2deg);}}
-.pot-slot.fruiting .pot-sprite{filter:drop-shadow(0 0 11px rgba(255,225,130,.95)) drop-shadow(0 5px 4px rgba(0,0,0,.4));}
+@keyframes potSway{0%,100%{transform:translateX(calc(-50% - 2.5px)) rotate(-2deg);}50%{transform:translateX(calc(-50% + 2.5px)) rotate(2deg);}}
+.pot-slot.fruiting .pot-sprite{filter:drop-shadow(0 0 11px rgba(255,225,130,.95)) drop-shadow(0 4px 4px rgba(0,0,0,.45));}
 .pot-emoji{font-size:46px;line-height:1;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35));}
 .pot-slot.empty .pot-emoji{filter:grayscale(.35) opacity(.78);}
-.pot-name{position:relative;z-index:1;font-size:11px;font-weight:800;color:#eafff2;text-align:center;line-height:1.1;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.75);}
-.pot-stage{position:relative;z-index:1;font-size:9px;color:#b6f0cb;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.75);}
-.pot-fruit{position:absolute;top:2px;right:14px;font-size:22px;z-index:3;
+.lock-badge{position:absolute;z-index:4;top:50%;left:50%;transform:translate(-50%,-90%);
+  display:flex;flex-direction:column;align-items:center;gap:2px;}
+.lock-badge .lb-ic{color:#7da0b0;filter:drop-shadow(0 0 5px rgba(0,0,0,.6));}
+.pot-name{position:absolute;z-index:4;bottom:11px;left:0;right:0;font-size:11px;font-weight:800;color:#eafff2;text-align:center;line-height:1.1;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
+.pot-stage{position:absolute;z-index:4;bottom:-3px;left:0;right:0;font-size:8.5px;color:#aef7ec;font-weight:700;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.85);}
+.pot-slot.empty .pot-name,.pot-slot.locked .pot-name{color:#9fb6c4;}
+.pot-fruit{position:absolute;top:18px;right:24%;font-size:22px;z-index:5;
   animation:fruitBob 1.4s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,220,120,.9));}
 @keyframes fruitBob{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-3px) rotate(4deg);}}
-.pot-sparkle{position:absolute;top:0;left:14px;font-size:14px;z-index:3;animation:fruitBob 1.8s ease-in-out infinite;}
+.pot-sparkle{position:absolute;top:14px;left:24%;font-size:14px;z-index:5;animation:fruitBob 1.8s ease-in-out infinite;}
 .nursery-empty-msg{padding:18px 16px;color:#9fd9b6;font-size:13px;text-align:center;line-height:1.5;}
 /* 양육 팝업 */
 .nursery-pop-card{background:#0d2b18;border:1.5px solid rgba(120,230,170,.4);}
@@ -1604,30 +1633,7 @@ body{
 
 /* ── 식물 정보창(가운데) = 홀로그램 격리 챔버 ── */
 .main-body{position:relative;}
-.main-body::before{
-  content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:min(90%,360px); height:min(82%,360px); z-index:0; pointer-events:none; border-radius:3px;
-  background:
-    var(--holo-scan),
-    radial-gradient(120% 100% at 50% 0%, rgba(40,120,130,.30), rgba(8,26,36,.16) 70%, rgba(8,26,36,.05));
-  border:1px solid rgba(125,240,226,.45);
-  box-shadow:0 0 30px rgba(45,212,191,.24), inset 0 0 36px rgba(45,212,191,.10);
-}
-/* 챔버 코너 브래킷 */
-.main-body::after{
-  content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:min(90%,360px); height:min(82%,360px); z-index:0; pointer-events:none;
-  background:
-    linear-gradient(var(--holo),var(--holo)) left top/16px 2px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) left top/2px 16px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) right top/16px 2px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) right top/2px 16px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) left bottom/16px 2px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) left bottom/2px 16px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) right bottom/16px 2px no-repeat,
-    linear-gradient(var(--holo),var(--holo)) right bottom/2px 16px no-repeat;
-  filter:drop-shadow(0 0 4px rgba(125,240,226,.7));
-}
+/* (홀로그램 격리 챔버 네모 + 코너 브래킷 제거 — 식물 주변 박스 없음) */
 #mainStage{position:relative; z-index:1;}
 /* 좌측 스탯/정보칩 → 홀로그램 글래스 */
 .stat-box,.info-pills .ipill,.statrow .stat{
@@ -1858,6 +1864,24 @@ body{letter-spacing:.2px;}
 }
 .seedbag-count b{color:#aef7ec;}
 .seedbag-spacer{flex:1;min-width:6px;}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ v6 — 나무 원형 의자(픽셀) 위에 식물 안착
+   ════════════════════════════════════════════════════════════ */
+.plant-stage{position:relative;display:flex;flex-direction:column;align-items:center;}
+.plant-stage:has(.empty-pot){width:162px;}
+.plant-stage>svg,.plant-stage>img{position:relative;z-index:2;}
+.wood-stool{
+  display:block;position:relative;z-index:1;
+  width:82%;max-width:158px;aspect-ratio:40/22;margin-top:-34px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 22' shape-rendering='crispEdges'%3E%3Cg fill='%234d3019'%3E%3Crect x='13' y='8' width='3' height='9'/%3E%3Crect x='24' y='8' width='3' height='9'/%3E%3C/g%3E%3Cg fill='%236e4827'%3E%3Crect x='9' y='8' width='3' height='12'/%3E%3Crect x='28' y='8' width='3' height='12'/%3E%3C/g%3E%3Cg fill='%234a2d18'%3E%3Crect x='11' y='8' width='1' height='12'/%3E%3Crect x='30' y='8' width='1' height='12'/%3E%3C/g%3E%3Cg fill='%233c2414'%3E%3Crect x='9' y='20' width='3' height='1'/%3E%3Crect x='28' y='20' width='3' height='1'/%3E%3C/g%3E%3Cg fill='%235e3d20'%3E%3Crect x='11' y='14' width='19' height='1'/%3E%3Crect x='4' y='6' width='32' height='1'/%3E%3Crect x='6' y='7' width='28' height='1'/%3E%3Crect x='9' y='8' width='22' height='1'/%3E%3C/g%3E%3Cg fill='%238a5a30'%3E%3Crect x='13' y='2' width='14' height='1'/%3E%3Crect x='9' y='3' width='22' height='1'/%3E%3Crect x='6' y='4' width='28' height='1'/%3E%3Crect x='4' y='5' width='32' height='1'/%3E%3C/g%3E%3Cg fill='%23a9763f'%3E%3Crect x='12' y='3' width='7' height='1'/%3E%3Crect x='9' y='4' width='7' height='1'/%3E%3C/g%3E%3C/svg%3E") center top/contain no-repeat;
+  filter:drop-shadow(0 5px 5px rgba(0,0,0,.4));
+}
+/* 빈 화분(픽셀 테라코타) — 식물 없을 때 의자 위 기본 */
+.empty-pot{
+  display:block;width:46%;max-width:90px;aspect-ratio:24/26;margin:0 auto;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26' shape-rendering='crispEdges'%3E%3Cg fill='%23b5673a'%3E%3Crect x='4' y='8' width='16' height='1'/%3E%3Crect x='5' y='9' width='14' height='12'/%3E%3C/g%3E%3Cg fill='%23c87b48'%3E%3Crect x='3' y='6' width='18' height='2'/%3E%3Crect x='5' y='9' width='3' height='12'/%3E%3C/g%3E%3Cg fill='%23934e29'%3E%3Crect x='16' y='9' width='3' height='12'/%3E%3Crect x='6' y='20' width='12' height='1'/%3E%3C/g%3E%3Cg fill='%237d3f20'%3E%3Crect x='7' y='21' width='10' height='1'/%3E%3Crect x='8' y='22' width='8' height='1'/%3E%3C/g%3E%3Cg fill='%233f2a18'%3E%3Crect x='5' y='6' width='14' height='2'/%3E%3C/g%3E%3Cg fill='%23583a22'%3E%3Crect x='6' y='6' width='12' height='1'/%3E%3Crect x='9' y='5' width='2' height='1'/%3E%3Crect x='14' y='5' width='2' height='1'/%3E%3C/g%3E%3C/svg%3E") center bottom/contain no-repeat;
+}
 </style>
 </head>
 <body>
@@ -1875,71 +1899,36 @@ body{letter-spacing:.2px;}
   <!-- ===== 메인 화면 ===== -->
   <section id="mainScreen" class="screen hidden">
     <div id="mainScene" aria-hidden="true">
-      <svg viewBox="0 0 300 480" preserveAspectRatio="xMidYMid slice" shape-rendering="geometricPrecision">
+      <svg viewBox="0 0 300 480" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges">
         <defs>
-          <linearGradient id="bayWall" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#0e1c30"/><stop offset="1" stop-color="#0a1422"/>
+          <!-- 흰색 타일 + 도트(픽셀) 텍스처 -->
+          <pattern id="dotTile" width="30" height="30" patternUnits="userSpaceOnUse">
+            <rect width="30" height="30" fill="#c4ccd2"/>
+            <path d="M0 0H30M0 0V30" stroke="#a6afb6" stroke-width="1"/>
+            <rect x="0" y="0" width="2" height="2" fill="#959ea5"/>
+            <rect x="14" y="14" width="2" height="2" fill="#b4bcc2"/>
+          </pattern>
+          <!-- 위쪽 조명 풀(약하게 밝음) → 아래로 갈수록 어두움 -->
+          <linearGradient id="dimLight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#11161c" stop-opacity="0.05"/>
+            <stop offset="0.4" stop-color="#0c1116" stop-opacity="0.22"/>
+            <stop offset="1" stop-color="#070a0e" stop-opacity="0.5"/>
           </linearGradient>
-          <linearGradient id="baySideL" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#060d18"/><stop offset="1" stop-color="#0c1a2c"/>
-          </linearGradient>
-          <linearGradient id="baySideR" x1="1" y1="0" x2="0" y2="0">
-            <stop offset="0" stop-color="#060d18"/><stop offset="1" stop-color="#0c1a2c"/>
-          </linearGradient>
-          <linearGradient id="bayFloor" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#0b1828"/><stop offset="1" stop-color="#05080f"/>
-          </linearGradient>
-          <radialGradient id="viewSpace" cx="50%" cy="40%" r="72%">
-            <stop offset="0" stop-color="#193457"/><stop offset="58%" stop-color="#0a1830"/><stop offset="100%" stop-color="#05091a"/>
+          <radialGradient id="lamp" cx="50%" cy="6%" r="58%">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
           </radialGradient>
-          <radialGradient id="bayGlow" cx="50%" cy="38%" r="60%">
-            <stop offset="0" stop-color="#2dd4bf" stop-opacity="0.16"/><stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
-          </radialGradient>
-          <radialGradient id="mainVig" cx="50%" cy="44%" r="72%">
-            <stop offset="50%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#02060e" stop-opacity="0.66"/>
+          <radialGradient id="vig" cx="50%" cy="46%" r="75%">
+            <stop offset="48%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#04070b" stop-opacity="0.55"/>
           </radialGradient>
         </defs>
-        <!-- 격납고 셸: 천장 / 양 측벽 / 후벽 / 바닥 (전부 다크) -->
-        <polygon points="0,0 300,0 245,120 55,120" fill="#0a1322"/>
-        <polygon points="0,0 55,120 55,300 0,480" fill="url(#baySideL)"/>
-        <polygon points="300,0 245,120 245,300 300,480" fill="url(#baySideR)"/>
-        <rect x="55" y="120" width="190" height="180" fill="url(#bayWall)"/>
-        <polygon points="0,480 300,480 245,300 55,300" fill="url(#bayFloor)"/>
-        <!-- 천장 빔 -->
-        <g stroke="#1a2c46" stroke-width="1" opacity="0.85">
-          <line x1="104" y1="0" x2="116" y2="120"/><line x1="150" y1="0" x2="150" y2="120"/><line x1="196" y1="0" x2="184" y2="120"/>
-          <line x1="40" y1="46" x2="260" y2="46"/><line x1="48" y1="86" x2="252" y2="86"/>
-        </g>
-        <!-- 측벽 패널 라인 -->
-        <g stroke="#13243b" stroke-width="1" opacity="0.8">
-          <line x1="22" y1="60" x2="55" y2="150"/><line x1="20" y1="180" x2="55" y2="220"/>
-          <line x1="278" y1="60" x2="245" y2="150"/><line x1="280" y1="180" x2="245" y2="220"/>
-        </g>
-        <!-- 후벽 뷰포트(우주 창) -->
-        <rect x="84" y="136" width="132" height="108" rx="3" fill="url(#viewSpace)"/>
-        <circle cx="150" cy="180" r="17" fill="#1f6f8f"/>
-        <path d="M134 176 a17 17 0 0 1 32 -4 q-16 9 -32 4Z" fill="#3fb6f0" opacity="0.55"/>
-        <ellipse cx="150" cy="186" rx="24" ry="4.5" fill="none" stroke="#7df0e2" stroke-width="1" opacity="0.5"/>
-        <g fill="#bfe9e2"><rect x="106" y="156" width="2" height="2"/><rect x="194" y="150" width="2" height="2"/><rect x="118" y="222" width="2" height="2"/><rect x="184" y="214" width="2" height="2"/><rect x="202" y="192" width="1.6" height="1.6"/><rect x="98" y="198" width="1.6" height="1.6"/><rect x="150" y="148" width="1.4" height="1.4"/></g>
-        <rect x="84" y="136" width="132" height="108" rx="3" fill="none" stroke="#2dd4bf" stroke-width="1.6" opacity="0.72"/>
-        <line x1="84" y1="190" x2="84" y2="190"/>
-        <!-- 후벽 이음새 + 청록 림라이트 -->
-        <g stroke="#15273f" stroke-width="1" opacity="0.7"><line x1="55" y1="120" x2="245" y2="120"/><line x1="55" y1="300" x2="245" y2="300"/><line x1="70" y1="262" x2="230" y2="262"/></g>
-        <rect x="55" y="297" width="190" height="3" fill="#2dd4bf" opacity="0.24"/>
-        <!-- 바닥 원근 그리드 -->
-        <g stroke="#16324c" stroke-width="1" opacity="0.6">
-          <line x1="55" y1="300" x2="0" y2="480"/><line x1="245" y1="300" x2="300" y2="480"/>
-          <line x1="116" y1="300" x2="76" y2="480"/><line x1="184" y1="300" x2="224" y2="480"/>
-          <line x1="150" y1="300" x2="150" y2="480"/>
-          <line x1="74" y1="372" x2="226" y2="372"/><line x1="44" y1="432" x2="256" y2="432"/>
-        </g>
-        <!-- 중앙 받침대 패드 -->
-        <ellipse cx="150" cy="398" rx="66" ry="16" fill="#0c1d2e"/>
-        <ellipse cx="150" cy="398" rx="66" ry="16" fill="none" stroke="#2dd4bf" stroke-width="1.4" opacity="0.5"/>
-        <ellipse cx="150" cy="396" rx="42" ry="9" fill="#2dd4bf" opacity="0.10"/>
-        <!-- 글로우 + 비네트 -->
-        <rect x="0" y="0" width="300" height="360" fill="url(#bayGlow)"/>
-        <rect x="0" y="0" width="300" height="480" fill="url(#mainVig)"/>
+        <!-- 전체 흰색 타일 바닥/벽 -->
+        <rect x="0" y="0" width="300" height="480" fill="url(#dotTile)"/>
+        <!-- 어두운 조명 보정 (조금 어둡게) -->
+        <rect x="0" y="0" width="300" height="480" fill="url(#dimLight)"/>
+        <rect x="0" y="0" width="300" height="480" fill="url(#lamp)"/>
+        <rect x="0" y="0" width="300" height="480" fill="url(#vig)"/>
       </svg>
     </div>
     <header id="topHeader">
@@ -2071,7 +2060,7 @@ body{letter-spacing:.2px;}
   <!-- ===== 식물원 (양육 탭) ===== -->
   <section id="nurseryScreen" class="screen hidden">
     <div class="nursery-top">
-      <div class="nursery-title">🌱 식물원 <button class="np-bag-btn" onclick="openFruitBag()">🍎 수확 목록</button></div>
+      <div class="nursery-title"><span data-pic="leaf" data-size="18px"></span> 식물원 <button class="np-bag-btn" onclick="openFruitBag()"><span data-pic="gem" data-size="13px"></span> 수확 목록</button></div>
       <div class="nursery-res" id="nurseryRes"></div>
     </div>
     <div class="nursery-grid" id="nurseryGrid"></div>
@@ -3316,9 +3305,8 @@ const TYPE_STATS = {
   flower: { hp:44, atk:14, def:6,  spd:9  }, // 화초형 — 공격·화력
   cactus: { hp:58, atk:9,  def:14, spd:4  }, // 다육형 — 방어·지구력
   vine:   { hp:46, atk:11, def:7,  spd:12 }, // 덩굴형 — 기동·흡혈
-  mushroom: { hp:38, atk:9,  def:5,  spd:8  }, // 버섯형 — 저스탯(포자 메커니즘으로 보완)
 };
-const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈', mushroom:'포자·교란' };
+const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈' };
 /* [종key, 이름, 타입, 속성] — 5타입 × 7속성. 기존 7종 key는 세이브 호환 위해 유지. */
 const SPECIES_GRID = [
   // 🌸 (구)초본형 → 화초형 흡수: 레거시 7종. 타입을 flower로 전환(초본형 폐지).
@@ -3366,42 +3354,17 @@ const SPECIES_CATALOG = {
   },
 };
 const SPECIES = (function(){
-  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
+  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형' };
   const EL_KO = { fire:'불', water:'물', grass:'풀', earth:'대지', wind:'바람', bolt:'번개', ice:'빙결' };
   const out = {};
-  function buildBase(type, el, statsOverride){
-    if(statsOverride) return Object.assign({ hp:0,atk:0,def:0,spd:0 }, statsOverride);
-    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
-    return { hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd };
-  }
-  // 1) 레거시 grid 35종
   SPECIES_GRID.forEach(function(row){
     const key=row[0], name=row[1], type=row[2], el=row[3];
+    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
     out[key] = {
-      key, name, element:el, seedType:type, base:buildBase(type, el),
+      key, name, element:el, seedType:type,
+      base:{ hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd },
       desc:`${EL_KO[el]}속성 ${TYPE_KO[type]} — ${TYPE_CONCEPT[type]} 성향.`,
     };
-  });
-  // 2) 카탈로그 머지(보강) + 신규 종 등록
-  Object.keys(SPECIES_CATALOG).forEach(function(key){
-    const c = SPECIES_CATALOG[key];
-    if(!out[key]){ // grid에 없던 신규 종
-      const type=c.type, el=c.element;
-      out[key] = { key, name:c.name||key, element:el, seedType:type,
-        base:buildBase(type, el, c.stats),
-        desc:`${EL_KO[el]||el}속성 ${TYPE_KO[type]||type} — ${TYPE_CONCEPT[type]||''} 성향.` };
-    } else if(c.stats){ out[key].base = buildBase(out[key].seedType, out[key].element, c.stats); }
-    if(c.name) out[key].name = c.name;
-  });
-  // 3) 모든 종에 리치 필드 기본값 보강
-  Object.keys(out).forEach(function(key){
-    const s = out[key], c = SPECIES_CATALOG[key] || {};
-    s.rarity = c.rarity || 'common';
-    s.legacy = !!c.legacy;
-    s.baseVariants = Array.isArray(c.baseVariants) ? c.baseVariants.slice() : [];
-    s.signatures = Array.isArray(c.signatures) ? c.signatures.slice() : [];
-    s.stageSkills = c.stageSkills || null;
-    s.variantSlots = c.variantSlots || { normal:6 };
   });
   return out;
 })();
@@ -3646,25 +3609,14 @@ const SEED_TYPE_BY_KO = (function(){ const m={}; Object.keys(SEED_TYPE_NAMES).fo
 const SPECIES_BY_TYPE_EL = (function(){ const m={}; SPECIES_GRID.forEach(r=>{ m[r[2]+'_'+r[3]]=r[0]; }); return m; })();
 function speciesForTypeEl(type, el){ return SPECIES_BY_TYPE_EL[type+'_'+el] || 'thorn'; }
 function randomSpeciesKey(){ const ks=Object.keys(SPECIES); return ks[Math.floor(Math.random()*ks.length)]; }
-/* 희귀도 가중치 — 등장/드롭률만 좌우(스탯은 거의 동일). 값이 클수록 자주 나온다. */
-const RARITY_WEIGHT = { common:100, uncommon:55, rare:22, epic:8, legendary:3 };
-/* 신규 획득 가능 종 = legacy 아님. filterFn으로 타입/속성 추가 제한 가능. */
-function pickAcquirableSpecies(filterFn){
-  const pool = Object.keys(SPECIES).filter(k => !SPECIES[k].legacy && (!filterFn || filterFn(SPECIES[k])));
-  if(!pool.length) return 'thorn';
-  let total = 0; const w = pool.map(k => { const x = RARITY_WEIGHT[SPECIES[k].rarity]||50; total += x; return x; });
-  let r = Math.random()*total;
-  for(let i=0;i<pool.length;i++){ r -= w[i]; if(r <= 0) return pool[i]; }
-  return pool[pool.length-1];
-}
 /* EXPLORE_VIEW 지역(el[]·types[]) 테마에 맞춰 종을 뽑는다. 지역 정보가 없으면 완전 무작위. */
 function rollSpeciesFromView(viewRegion){
-  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : null;
+  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : Object.keys(ELEMENT_STATS);
+  const el = els[Math.floor(Math.random()*els.length)];
   const typesKo = (viewRegion && viewRegion.types && viewRegion.types.length) ? viewRegion.types : null;
-  const okType = typesKo ? typesKo.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
-  // 지역 테마(속성/타입)에 맞는 비-legacy 종을 희귀도 가중으로 추출
-  return pickAcquirableSpecies(s =>
-    (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0));
+  let type = typesKo ? SEED_TYPE_BY_KO[typesKo[Math.floor(Math.random()*typesKo.length)]] : null;
+  if(!type){ const ts=Object.keys(TYPE_STATS); type = ts[Math.floor(Math.random()*ts.length)]; }
+  return speciesForTypeEl(type, el);
 }
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -4489,7 +4441,6 @@ function normalizeState(s){
     if(typeof p.rankPoints !== 'number') p.rankPoints = (p.rankTier ? RANK_TIERS[clamp(p.rankTier,0,RANK_TIERS.length-1)].threshold : 0);
     if(typeof p.bestRoundIdx !== 'number') p.bestRoundIdx = -1;
     if(typeof p.champion !== 'boolean') p.champion = false;
-    applyCatalogVariantFields(p); // 변이 슬롯/태생 변이 backfill(구 세이브 무회귀)
   });
   if(s.tournament === undefined) s.tournament = null;
   if(!s.exploration_ship) s.exploration_ship = newExplorerShip();
@@ -7495,21 +7446,6 @@ function renderPlantConfirm(){
     plantSeedFromBag(pendingPlantSeedId, name);
   });
 }
-/* 개체 카탈로그의 변이 슬롯/태생 변이를 식물 인스턴스에 적용(심기·세이브 마이그레이션 공용).
-   변이 슬롯 UI는 향후 작업 — 여기선 데이터만 식물에 기록한다. */
-function applyCatalogVariantFields(p){
-  if(!p) return p;
-  const sp = SPECIES[p.species];
-  if(!p.variant_slots || typeof p.variant_slots !== 'object'){
-    p.variant_slots = sp ? Object.assign({}, sp.variantSlots) : { normal:6 };
-  }
-  if(!Array.isArray(p.base_variants)){
-    p.base_variants = sp ? (sp.baseVariants||[]).slice() : [];
-  }
-  // 태생 변이가 있고 변이형이 미설정/일반이면 첫 태생 변이로 초기화(예: 버섯=포자)
-  if((!p.form || p.form==='normal') && p.base_variants.length) p.form = p.base_variants[0];
-  return p;
-}
 function createPlantedPlantFromSeed(entry, seed, customName){
   // 탐사로 정해진 종(35종)을 우선 사용. 없으면 기존 종자→종 매핑.
   const speciesKey = (entry && entry.species && SPECIES[entry.species]) ? entry.species : speciesKeyForSeed(seed);
@@ -7535,7 +7471,6 @@ function createPlantedPlantFromSeed(entry, seed, customName){
   p.grade = entry.grade || 'C';
   p.potential = entry.grade || 'C';
   ensurePlantInstanceFields(p);
-  applyCatalogVariantFields(p); // 변이 슬롯/태생 변이 기록(버섯=포자)
   return p;
 }
 function plantSeedFromBag(inventoryId, customName = ''){
@@ -7740,12 +7675,6 @@ function composePlantBody(seedType, gi, P, el){
     if(gi>=3){ svg+=`<rect x="${cx-w/2-9}" y="${cy-4}" width="9" height="${10+gi}" rx="4.5" fill="${P.dark}"/><rect x="${cx+w/2}" y="${cy-8}" width="9" height="${12+gi}" rx="4.5" fill="${P.dark}"/>`; }
     for(let i=0;i<4+gi;i++){ const yy=cy-h/2+10+i*6; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
     if(gi>=5) svg+=`<circle cx="${cx}" cy="${cy-h/2+3}" r="6" fill="${P.accent}"/>`;
-  } else if(seedType==='mushroom'){
-    const capW=16+gi*4, capH=10+gi*2.4, stalkH=12+gi*4;
-    svg+=`<rect x="${cx-3-gi*0.3}" y="${cy}" width="${6+gi*0.6}" height="${stalkH}" rx="3" fill="${P.light}"/>`;
-    svg+=`<path d="M${cx-capW/2} ${cy} Q ${cx} ${cy-capH*1.8} ${cx+capW/2} ${cy} Z" fill="${P.main}"/>`;
-    for(let i=0;i<2+gi;i++){ const px=cx-capW/2+ (i+0.5)*(capW/(2+gi)); svg+=`<circle cx="${px}" cy="${cy-capH*0.5}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".85"/>`; }
-    if(gi>=4){ svg+=`<circle cx="${cx-capW*0.18}" cy="${cy+stalkH*0.4}" r="2.2" fill="${P.accent}"/>`; }
   } else { // tree
     const r=12+gi*3.2, th=16+gi*3;
     svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
@@ -7787,7 +7716,7 @@ function spriteFor(obj, size){
 }
 /* 이름 생성: 속성 + 장착 변이 카드(종류·개수) + 식물 타입. 생장 단계 칭호는 표시처에서 별도. */
 const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
-const SEED_ROOT = { grass:'초본', tree:'목본', flower:'화초', cactus:'다육', vine:'덩굴', mushroom:'균사' };
+const SEED_ROOT = { grass:'초본', tree:'목본', flower:'화초', cactus:'다육', vine:'덩굴' };
 const CARD_TYPE_WORD = { common:'강화', dna:'포식', weapon:'무장', potion:'맹독', spore:'포자', chloro:'발광', dragon:'용' };
 const COUNT_PREFIX = ['', '', '이중', '삼중', '사중', '오중'];
 function composePlantName(p){
@@ -8083,9 +8012,10 @@ function renderCenter(){
   if(!p){
     if(sp) sp.innerHTML = '';
     if(side) side.innerHTML = bagFabHtml();
-    box.innerHTML = `<div style="font-size:60px">🌱</div>
-      <div class="pname">아직 심은 식물이 없습니다</div>
-      <div class="hint">탐사로 종자를 얻고, 종자 가방에서 심으세요</div>`;
+    box.innerHTML = `
+      <div class="plant-stage"><span class="empty-pot"></span><span class="wood-stool"></span></div>
+      <div class="pname">빈 화분</div>
+      <div class="hint">▲ 화분을 탭해 종자를 심어보세요</div>`;
     return;
   }
   const s = calcStats(p);
@@ -8094,7 +8024,7 @@ function renderCenter(){
     <div class="stat-grid">${mainStatBoxes(p, s)}</div>`;
   if(side) side.innerHTML = bagFabHtml();
   box.innerHTML = `
-    ${spriteFor(p,150)}
+    <div class="plant-stage">${spriteFor(p,150)}<span class="wood-stool"></span></div>
     <div class="pname">${plantDisplayName(p)}</div>
     <div class="hint">▲ 식물을 탭하면 관리할 수 있어요</div>`;
 }
@@ -9218,7 +9148,7 @@ function buildEnemy(roundIndex, tierIndex){
     form = pick(['pred','toxic','spore','lumen','weapon']);
     if(form==='pred') predType = pick(['vamp','absorb']);
   }
-  const sp = pickAcquirableSpecies();        // 적도 신규 획득 풀 기준(레거시 초본형 제외)
+  const sp = pick(Object.keys(SPECIES));
   const el = SPECIES[sp].element;            // 종의 고정 속성 → 이름·속성·외형 일치
   const seedType = SPECIES_SEEDTYPE[sp] || 'grass';
   const growth = ENEMY_STAGE_BY_ROUND[clamp(roundIndex, 0, ENEMY_STAGE_BY_ROUND.length-1)];
@@ -10047,11 +9977,11 @@ function renderNurseryGrid(){
     const delay = ((i % 6) * 0.4).toFixed(2);   // 흔들림 타이밍 분산 → 더 생동감
     if(i >= cap){
       const lvNeed = potUnlockLevel(i);
-      html += `<div class="pot-slot locked"><div class="pot-emoji">🔒</div><div class="pot-name" style="font-size:9px">Lv.${lvNeed}</div><div class="pot-stage">해금 필요</div></div>`;
+      html += `<div class="pot-slot locked"><div class="pot-vessel"></div><div class="lock-badge"><span class="lb-ic" data-pic="gear" data-size="18px"></span></div><div class="pot-name">잠긴 화분</div><div class="pot-stage">Lv.${lvNeed} 해금</div></div>`;
     } else {
       const p = plants[i];
       if(!p){
-        html += `<div class="pot-slot empty"><div class="pot-emoji">🪴</div><div class="pot-name">빈 화분</div><div class="pot-stage">식물 없음</div></div>`;
+        html += `<div class="pot-slot empty"><div class="pot-vessel"></div><div class="pot-name">빈 화분</div><div class="pot-stage">식물 없음</div></div>`;
       } else {
         ensureNurseryFields(p);
         const n = p.nursery;
@@ -10061,6 +9991,7 @@ function renderNurseryGrid(){
         const wPct = Math.round(Math.min(1, n.water / NURSERY_WATER_NEED)*100);
         const fPct = Math.round(Math.min(1, n.fert / NURSERY_FERT_NEED)*100);
         html += `<div class="pot-slot filled ${fruiting?'fruiting':''}" data-nursery-idx="${i}" onclick="openNurseryDetail(${i})">
+          <div class="pot-vessel"></div>
           ${fruiting?'<div class="pot-fruit" title="열매 수확 가능!">🍎</div><div class="pot-sparkle">✨</div>':''}
           <div class="pot-sprite" style="animation-delay:${delay}s">${sprite}</div>
           <div class="pot-name">${plantDisplayName(p)}</div>
@@ -10070,6 +10001,7 @@ function renderNurseryGrid(){
     }
   }
   grid.innerHTML = html;
+  if(window.hydratePixIcons) hydratePixIcons(grid);
 }
 
 function openNurseryDetail(idx){
@@ -10522,7 +10454,7 @@ $('#bottomNav').addEventListener('click', (ev) => {
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
-$('#centerPlant').addEventListener('click', () => { sfx.tap(); openUpgrade(); });
+$('#centerPlant').addEventListener('click', () => { sfx.tap(); if(activePlant()){ openUpgrade(); } else { openSeedBag(); } });
 $('#profileBanner').addEventListener('click', () => { sfx.tap(); openProfile(); });
 $('#profileModal').addEventListener('click', (ev) => {
   if(ev.target.closest('#profEditName')){ sfx.tap(); editProfileName(); return; }
@@ -10638,15 +10570,36 @@ $('#btnReset').addEventListener('click', () => {
   toast('데이터가 초기화되었습니다');
 });
 
-/* 타이틀 아트 + 부팅 */
-$('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
-// 시작종자 지급·최초 저장은 네이티브 백업 복구 이후에 해야 백업이 덮어써지지 않음 → bootWithSave가 일괄 처리.
-bootWithSave().finally(()=>{
-  Cloud.init();
-  (async()=>{
-    try{ await Cloud.refreshUser(); renderCloudUI(); if(Cloud.user) await reconcileAfterLogin(); }catch(e){}
-  })();
-});
+/* ===== 도감(외부 뷰)용 데이터 노출 =====
+   plant-codex.html이 숨은 iframe(index.html?dex=1)으로 이 게임을 불러와
+   아래 __DEX_API에서 "게임의 실제 데이터·함수"를 직접 읽어 렌더한다(자동 동기화). */
+window.__DEX_API = {
+  SPECIES, ALL_SKILLS, ELEMENTS, ELEMENT_STATS, TYPE_STATS,
+  SEED_TYPE_NAMES, SEED_TYPE_ORDER, TYPE_CONCEPT, RARITY_META, FORMS,
+  GROWTH_STAT_MULT, GROWTH_STAGE_NAMES, GROWTH_STAGE_ORDER,
+  plantKnownSkillIds, skillGradeOf, skillById, displaySkillName, battleType,
+  version: '2026-06-24',
+};
+/* 데이터 전용 모드(?dex=1): 도감이 데이터만 읽으면 되므로 부팅·세이브·렌더·클라우드를 모두 생략
+   → 도감이 게임을 불러와도 사용자 세이브를 건드리지 않는다. */
+const __DEX_MODE = /[?&]dex=1(?:&|$)/.test(location.search);
+if(__DEX_MODE){
+  try{ document.documentElement.classList.add('dex-data-mode'); }catch(e){}
+} else {
+  /* 타이틀 아트 + 부팅 */
+  $('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
+  // 시작종자 지급·최초 저장은 네이티브 백업 복구 이후에 해야 백업이 덮어써지지 않음 → bootWithSave가 일괄 처리.
+  bootWithSave().finally(()=>{
+    Cloud.init();
+    (async()=>{
+      try{ await Cloud.refreshUser(); renderCloudUI(); if(Cloud.user) await reconcileAfterLogin(); }catch(e){}
+    })();
+  });
+  /* PWA: 서비스워커 등록(있을 때만) — 홈 화면 추가/오프라인 셸 */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  }
+}
 
 /* ===== 개발용 셀프테스트 (게임 로직 무관, 콘솔에서 __catalogSelfTest() 호출) =====
    테스트 러너가 없으므로 콘솔 누적 assertion으로 회귀를 검증한다.

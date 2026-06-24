@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#091015">
 <title>풀로세움 — 외계 식물 표본 도감</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap');
@@ -13,8 +14,6 @@
   --void:#091015; --void2:#0c161c; --panel:#0f1c23; --panel2:#13242c;
   --ink:#e9f2f3; --sub:#8aa3aa; --faint:#5d7178; --line:rgba(146,186,196,.14);
   --line2:rgba(146,186,196,.28);
-  --fire:#ff6b4a; --water:#4ac6ff; --grass:#6bdd6b; --earth:#c9a26b;
-  --wind:#9adbe8; --bolt:#ffe14a; --ice:#a8d8ff;
   --gold:#ffd34a; --new:#7CF6A0;
   --disp:'Do Hyeon', 'Pretendard', sans-serif;
   --body:'Pretendard', system-ui, sans-serif;
@@ -34,7 +33,6 @@ body{
 a{color:inherit;}
 .wrap{max-width:1180px; margin:0 auto; padding:0 20px;}
 
-/* ===== top bar ===== */
 .top{position:sticky; top:0; z-index:50; background:rgba(9,16,21,.82);
   backdrop-filter:blur(10px); border-bottom:1px solid var(--line);}
 .top .wrap{display:flex; align-items:center; gap:16px; height:60px; flex-wrap:wrap;}
@@ -47,11 +45,10 @@ a{color:inherit;}
 .chip:hover{color:var(--ink); border-color:var(--sub);}
 .chip.on{color:var(--void); background:var(--ink); border-color:var(--ink); font-weight:bold;}
 
-/* ===== hero ===== */
 .hero{padding:64px 0 30px; border-bottom:1px solid var(--line); position:relative;}
-.eyebrow{font-family:var(--pix); font-size:10px; letter-spacing:4px; color:var(--water); margin-bottom:18px;}
+.eyebrow{font-family:var(--pix); font-size:10px; letter-spacing:4px; color:#4ac6ff; margin-bottom:18px;}
 .hero h1{font-family:var(--disp); font-size:clamp(34px,6vw,64px); line-height:1.02; margin:0 0 16px; letter-spacing:-.5px;}
-.hero h1 .glow{color:var(--grass); text-shadow:0 0 24px rgba(107,221,107,.45);}
+.hero h1 .glow{color:#6bdd6b; text-shadow:0 0 24px rgba(107,221,107,.45);}
 .lede{max-width:640px; color:var(--sub); font-size:15px;}
 .legend{display:flex; gap:22px; flex-wrap:wrap; margin-top:28px; padding-top:22px; border-top:1px dashed var(--line2);}
 .legend div{font-size:12.5px; color:var(--sub);}
@@ -59,7 +56,6 @@ a{color:inherit;}
 .note{margin-top:18px; font-size:12px; color:var(--faint); display:flex; gap:8px; align-items:flex-start;}
 .note .tag{font-family:var(--pix); font-size:9px; color:var(--gold); border:1px solid rgba(255,211,74,.4); padding:2px 6px; border-radius:2px; white-space:nowrap;}
 
-/* ===== type section ===== */
 .tsec{padding:54px 0 8px; scroll-margin-top:72px;}
 .thead{display:flex; align-items:flex-end; gap:18px; margin-bottom:6px; border-bottom:1px solid var(--line2); padding-bottom:16px;}
 .tglyph{font-size:46px; line-height:1; filter:drop-shadow(0 4px 14px rgba(0,0,0,.5));}
@@ -69,17 +65,14 @@ a{color:inherit;}
 .thead .ttend{margin-left:auto; text-align:right; font-family:var(--pix); font-size:10px; color:var(--sub); letter-spacing:.5px; line-height:1.7;}
 .thead .ttend b{color:var(--ink);}
 
-/* ===== grid ===== */
 .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:18px; padding:26px 0 8px;}
 
-/* ===== specimen card ===== */
 .card{position:relative; background:linear-gradient(180deg,var(--panel),var(--void2));
   border:1px solid var(--line); border-radius:6px; padding:18px 18px 16px; overflow:hidden;
-  --ac:var(--grass);}
+  --ac:#6bdd6b;}
 .card::before{content:''; position:absolute; inset:0 0 auto 0; height:3px;
   background:linear-gradient(90deg,var(--ac),transparent 75%); opacity:.9;}
 .card.legacy{opacity:.92; border-style:dashed;}
-/* corner registration brackets */
 .card .brk{position:absolute; width:11px; height:11px; border:2px solid var(--ac); opacity:.55;}
 .card .brk.tl{top:8px; left:8px; border-right:0; border-bottom:0;}
 .card .brk.tr{top:8px; right:8px; border-left:0; border-bottom:0;}
@@ -103,7 +96,6 @@ a{color:inherit;}
 .b.leg{color:var(--faint);}
 .concept{font-size:12.5px; color:var(--sub); margin:13px 0 4px; min-height:34px;}
 
-/* growth ribbon */
 .ribbon{display:flex; gap:3px; margin:12px 0 14px;}
 .stage{flex:1; text-align:center; cursor:pointer; border:1px solid var(--line); border-radius:3px;
   padding:6px 2px 5px; background:var(--void2); transition:.14s;}
@@ -114,14 +106,12 @@ a{color:inherit;}
 .stage.on .sl{color:var(--ac);} .stage.on .sm{color:var(--ink);}
 .stage.seed.on .sm{color:var(--faint);}
 
-/* stats */
 .stats{display:grid; grid-template-columns:auto 1fr auto; gap:7px 9px; align-items:center; margin:2px 0 14px;}
 .stats .k{font-family:var(--pix); font-size:9px; color:var(--sub); letter-spacing:.5px;}
 .bar{height:7px; background:var(--void); border-radius:4px; overflow:hidden; border:1px solid var(--line);}
 .bar i{display:block; height:100%; border-radius:4px; background:var(--ac); transition:width .35s cubic-bezier(.2,.7,.2,1);}
 .stats .v{font-family:var(--pix); font-size:11px; color:var(--ink); text-align:right; min-width:34px;}
 
-/* skills */
 .skhead{font-family:var(--pix); font-size:9px; letter-spacing:1.5px; color:var(--faint);
   border-top:1px solid var(--line); padding-top:11px; margin-bottom:9px; display:flex; justify-content:space-between;}
 .seedlock{font-size:12px; color:var(--faint); padding:6px 0 2px; font-style:italic;}
@@ -135,14 +125,17 @@ a{color:inherit;}
 .sk .motion{font-family:var(--pix); font-size:8px; color:var(--faint); margin-top:3px; opacity:.85;}
 .sk.isnew{background:linear-gradient(90deg, color-mix(in srgb,var(--new) 9%, transparent), transparent 60%); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:3px;}
 .sk.isnew .nm::after{content:'NEW'; font-family:var(--pix); font-size:7.5px; color:var(--void); background:var(--new); padding:1px 4px; border-radius:2px; letter-spacing:.5px;}
-.gC{color:#5fe06b;} .gB{color:#4ac6ff;} .gA{color:#b06bff;} .gS{color:#ff9a3c;} .gbasic{color:var(--faint);}
+.gC{color:#5fe06b;} .gB{color:#4ac6ff;} .gA{color:#b06bff;} .gS{color:#ff9a3c;} .gD{color:#e8edf3;} .gbasic{color:var(--faint);}
 
-/* variants */
 .vars{margin-top:13px; border-top:1px solid var(--line); padding-top:11px;}
 .vars .vh{font-family:var(--pix); font-size:9px; letter-spacing:1.5px; color:var(--faint); margin-bottom:7px;}
 .vchips{display:flex; gap:5px; flex-wrap:wrap;}
 .vchip{font-size:10.5px; color:var(--sub); border:1px solid var(--line2); border-radius:2px; padding:3px 7px; display:flex; gap:4px; align-items:center;}
 .vchip.born{color:var(--ac); border-color:color-mix(in srgb,var(--ac) 50%, transparent); background:color-mix(in srgb,var(--ac) 10%, transparent);}
+
+.statusbox{padding:80px 20px; text-align:center; color:var(--sub);}
+.statusbox .big{font-family:var(--disp); font-size:22px; color:var(--ink); margin-bottom:10px;}
+.statusbox code{font-family:var(--pix); font-size:12px; color:var(--gold); background:var(--void2); padding:3px 8px; border-radius:3px; border:1px solid var(--line2);}
 
 footer{padding:50px 0 70px; color:var(--faint); font-size:12px; border-top:1px solid var(--line); margin-top:40px;}
 footer b{color:var(--sub); font-family:var(--pix); font-size:10px;}
@@ -157,15 +150,15 @@ footer b{color:var(--sub); font-family:var(--pix); font-size:10px;}
 
 <header class="top">
   <div class="wrap">
-    <div class="brand">풀로세움 식물 도감<small>XENO-BOTANICAL CODEX</small></div>
+    <div class="brand">풀로세움 식물 도감<small>XENO-BOTANICAL CODEX · LIVE</small></div>
     <div class="filters" id="filters"></div>
   </div>
 </header>
 
 <section class="hero">
   <div class="wrap">
-    <div class="eyebrow">ALIEN SPECIMEN ARCHIVE · v0.1</div>
-    <h1>외계에서 채집한<br><span class="glow">35+1종</span>의 식물 표본</h1>
+    <div class="eyebrow">ALIEN SPECIMEN ARCHIVE · 게임 데이터 자동 연동</div>
+    <h1>외계에서 채집한<br><span class="glow">식물 표본</span> 도감</h1>
     <p class="lede">속성 7 × 타입 5로 갈라지는 식물들. 각 표본은 <b>씨앗부터 완숙체까지</b> 자라며 단계마다 스탯이 오르고 새 스킬이 깨어난다. 단계 리본을 눌러 성장을 따라가 보라.</p>
     <div class="legend">
       <div><b>STAT</b> 기본 스탯 = 속성 수치 + 타입 수치 (단계 배율 적용)</div>
@@ -174,292 +167,201 @@ footer b{color:var(--sub); font-family:var(--pix); font-size:10px;}
     </div>
     <div class="note">
       <span class="tag">예정</span>
-      <span>도트 스프라이트와 스킬별 모션 애니메이션은 추후 적용됩니다. 현재 카드의 외형 칸과 스킬의 <b style="color:var(--faint)">「▶ 모션 예정」</b> 표시는 자리만 잡아둔 플레이스홀더입니다.</span>
+      <span>도트 스프라이트와 스킬별 모션 애니메이션은 추후 적용됩니다. 외형 칸과 스킬의 <b style="color:var(--faint)">「▶ 모션 예정」</b>은 자리만 잡아둔 플레이스홀더입니다. · <b style="color:var(--faint)">스탯·스킬·종 목록은 게임에서 실시간으로 읽어옵니다.</b></span>
     </div>
   </div>
 </section>
 
-<main class="wrap" id="codex"></main>
+<main class="wrap" id="codex"><div class="statusbox"><div class="big">도감 불러오는 중…</div><div>게임 데이터를 읽고 있습니다.</div></div></main>
 
 <footer class="wrap">
-  <b>PULLOSEUM CODEX</b> · 데이터는 게임 공식 그대로 계산됨(스탯=속성+타입×생장배율, 스킬=plantKnownSkillIds 규칙).<br>
+  <b>PULLOSEUM CODEX · LIVE</b> · 스탯·스킬·종 목록을 게임(index.html)에서 직접 읽어 렌더 → 게임을 업데이트하면 도감도 자동으로 같이 바뀝니다.<br>
   생장 배율 — 씨앗 0.9 · 새싹 1.0 · 유체 1.16 · 성장체 1.24 · 성체 1.32 · 완숙체 1.5. · 표시 스탯은 종 기준선(개체 유전·강화 제외).
 </footer>
 
+<!-- 게임을 데이터 전용 모드로 숨겨 로드 → window.__DEX_API에서 실제 데이터를 읽는다 -->
+<iframe id="game" src="../../index.html?dex=1" style="position:absolute;width:0;height:0;border:0;left:-9999px;" title="game-data" aria-hidden="true"></iframe>
+
 <script>
-/* ===== 게임과 동일한 데이터 ===== */
-const EL = {
-  fire:{n:'불',i:'🔥',v:'--fire'}, water:{n:'물',i:'💧',v:'--water'}, grass:{n:'풀',i:'🌿',v:'--grass'},
-  earth:{n:'대지',i:'🪨',v:'--earth'}, wind:{n:'바람',i:'🌪️',v:'--wind'}, bolt:{n:'번개',i:'⚡',v:'--bolt'}, ice:{n:'빙결',i:'❄️',v:'--ice'}
+/* ===== 도감 전용 서술(컨셉/외형) — 게임 데이터 아님. 신규 종은 게임 desc로 폴백 ===== */
+const CONCEPTS = {
+  tree_fire:'옹이마다 불씨가 타오르는 잉걸나무. 잎 대신 불티가 흩날린다.',
+  tree_water:'수액이 바닷물처럼 차오르는 맹그로브. 뿌리에서 물안개를 뿜는다.',
+  tree_grass:'이끼와 새순으로 뒤덮인 태고의 거목. 가지마다 새 생명이 돋는다.',
+  tree_earth:'껍질이 암석처럼 굳은 바위참나무. 좀처럼 쓰러지지 않는다.',
+  tree_wind:'가지가 바람개비처럼 휘는 바람나무. 잎새가 칼날처럼 운다.',
+  tree_bolt:'벼락을 맞고도 살아남아 전기를 머금은 뇌격수.',
+  frost:'서리 열매가 주렁주렁 열린 한대수. 가지에 고드름이 맺힌다.',
+  flower_fire:'꽃잎 끝이 불꽃처럼 일렁이는 화염화.',
+  aqua:'물방울을 머금은 구근에서 피어나는 수련.',
+  flower_grass:'겹겹의 잎꽃잎을 두른 들장미.',
+  flower_earth:'진흙 속에서 단단히 피는 토양화.',
+  flower_wind:'꽃잎이 깃털처럼 흩날리는 풍접초.',
+  spark:'수술 끝에 정전기가 튀는 번개꽃.',
+  flower_ice:'얼음 결정으로 꽃잎을 세운 설화(雪花).',
+  cactus_fire:'가시 끝에서 열기가 피어오르는 화염선인장.',
+  cactus_water:'몸통 가득 수분을 저장한 이슬선인장.',
+  cactus_grass:'잎과 가시가 공존하는 초록선인장.',
+  gaia:'바위처럼 단단한 대지선인장.',
+  cactus_wind:'구멍으로 바람 소리를 내는 바람선인장.',
+  cactus_bolt:'가시가 피뢰침처럼 전기를 모으는 전하선인장.',
+  cactus_ice:'서리에 뒤덮인 한지선인장.',
+  vine_fire:'불타며 뻗어가는 화염덩굴.',
+  vine_water:'물길을 따라 자라는 해조덩굴.',
+  thorn:'가시투성이 덩굴이 얽힌 가시잡초.',
+  vine_earth:'땅속 깊이 뿌리내리는 뿌리덩굴.',
+  vine_wind:'바람을 타고 빠르게 감기는 질풍덩굴.',
+  vine_bolt:'전류가 흐르는 전선덩굴.',
+  vine_ice:'서리를 퍼뜨리며 감아오르는 빙결덩굴.',
+  spore_cap:'포자 안개를 끊임없이 뿜는 갓버섯. 태생부터 포자 변이를 지녔다.',
+  flame:'한때 초본형이던 불이끼. 지금은 화초형으로 분류되는 레거시 종.',
+  grass_water:'물안개를 머금은 이끼. 화초형으로 흡수된 레거시 종.',
+  grass_grass:'가장 흔하던 초록 이끼. 레거시 보존 종.',
+  grass_earth:'진흙에 붙어 자라던 흙이끼. 레거시 종.',
+  windy:'바람에 잎을 떠는 풍엽. 레거시 종.',
+  grass_bolt:'정전기를 띤 번개이끼. 레거시 종.',
+  grass_ice:'서리 낀 한대 이끼. 레거시 종.',
 };
-const TYPES = {
-  tree:  {n:'목본형', i:'🌳', sil:'🌳', tend:'체력·방어 (탱커)', desc:'굵은 줄기와 우거진 수관, 단단한 목질. 느리지만 잘 쓰러지지 않는다.'},
-  flower:{n:'화초형', i:'🌸', sil:'🌸', tend:'공격·화력', desc:'화려한 꽃송이와 가는 줄기. 한 방의 화력이 높은 공격형. (구 초본형 흡수)'},
-  cactus:{n:'다육형', i:'🌵', sil:'🌵', tend:'방어·지구력', desc:'수분을 머금은 통통한 다육질 몸통과 가시. 버티는 싸움에 강하다.'},
-  vine:  {n:'덩굴형', i:'🍃', sil:'🍃', tend:'기동·흡혈', desc:'길게 뻗는 덩굴과 덩굴손. 빠르고 흡혈로 끈질기게 물고 늘어진다.'},
-  mushroom:{n:'버섯형', i:'🍄', sil:'🍄', tend:'포자·교란 (저스탯)', desc:'갓과 균사, 포자. 스탯은 낮지만 중독·교란 포자로 판을 흔든다.'}
+const TYPE_GLYPH={tree:'🌳',flower:'🌸',cactus:'🌵',vine:'🍃',mushroom:'🍄'};
+const TYPE_DESC={
+  tree:'굵은 줄기와 우거진 수관, 단단한 목질. 느리지만 잘 쓰러지지 않는다.',
+  flower:'화려한 꽃송이와 가는 줄기. 한 방의 화력이 높은 공격형. (구 초본형 흡수)',
+  cactus:'수분을 머금은 통통한 다육질 몸통과 가시. 버티는 싸움에 강하다.',
+  vine:'길게 뻗는 덩굴과 덩굴손. 빠르고 흡혈로 끈질기게 물고 늘어진다.',
+  mushroom:'갓과 균사, 포자. 스탯은 낮지만 중독·교란 포자로 판을 흔든다.',
 };
-const ESTAT={fire:[40,14,6,7],water:[66,7,16,5],grass:[56,11,10,12],earth:[58,9,16,2],wind:[40,11,5,16],bolt:[38,17,4,14],ice:[52,11,8,4]};
-const TSTAT={tree:[62,9,13,4],flower:[44,14,6,9],cactus:[58,9,14,4],vine:[46,11,7,12],mushroom:[38,9,5,8]};
-const GMULT=[0.9,1.0,1.16,1.24,1.32,1.5];
-const STAGES=['씨앗','새싹','유체','성장체','성체','완숙체'];
+const TYPE_PREFIX={tree:'T',flower:'F',cactus:'C',vine:'V',mushroom:'M'};
+const TYPE_ORDER=['tree','flower','cactus','vine','mushroom'];
+const EL_ORDER=['fire','water','grass','earth','wind','bolt','ice'];
+const STAT_KEYS=['hp','atk','def','spd'];
+const STAT_LABEL={hp:'HP',atk:'공격',def:'방어',spd:'기동'};
 const CAP={hp:200,atk:55,def:50,spd:46};
 
-/* 스킬 사전 (게임 정의 그대로 요약) */
-const SK={
-  // 타입 기본공격
-  skill_basic_tree:{n:'새순 들이받기',i:'🌳',e:'위력100 · 단일 · 무료',g:'basic'},
-  skill_basic_flower:{n:'꽃대 찌르기',i:'🌸',e:'위력125 · 단일 · 무료',g:'basic'},
-  skill_basic_cactus:{n:'가시 콕찌르기',i:'🌵',e:'위력105 · 단일 · 무료',g:'basic'},
-  skill_basic_vine:{n:'덩굴손 후리기',i:'🍃',e:'위력110 · 단일 · 피해 12% 흡혈',g:'basic'},
-  skill_basic_mushroom:{n:'포자 날리기',i:'🍄',e:'위력95 · 단일 + 약한 중독(2턴)',g:'basic'},
-  // 타입 기본방어
-  skill_def_tree:{n:'어린 껍질 굳히기',i:'🛡️',e:'받는 피해 60%↓ · ⚡+1',g:'basic'},
-  skill_def_flower:{n:'꽃받침 오므리기',i:'🛡️',e:'피해 45%↓ + 공격 12%↑(2턴)',g:'basic'},
-  skill_def_cactus:{n:'가시 곤두세우기',i:'🛡️',e:'피해 50%↓ + 가시 반격',g:'basic'},
-  skill_def_vine:{n:'덩굴 사리기',i:'🛡️',e:'피해 50%↓ + 체력 6% 회복',g:'basic'},
-  skill_def_mushroom:{n:'균사 보호막',i:'🛡️',e:'피해 50%↓ · ⚡+1',g:'basic'},
-  // 타입 특기 (유체)
-  skill_trait_tree:{n:'수피 재생',i:'🪵',e:'체력 22% 회복',g:'B'},
-  skill_trait_flower:{n:'개화 준비',i:'🌷',e:'공격 20%↑(3턴)',g:'B'},
-  skill_trait_cactus:{n:'수분 저장',i:'💧',e:'방어 25%↑(3턴) + 체력 10% 회복',g:'B'},
-  skill_trait_vine:{n:'흡수 뿌리',i:'🩸',e:'위력120 · 단일 · 흡혈 40%',g:'B'},
-  skill_trait_mushroom:{n:'포자 살포',i:'🍄',e:'적 공격 18%↓(2턴) + 중독(2턴)',g:'B'},
-  // 속성 발현 (새싹)
-  skill_sprout_fire:{n:'불씨 틔우기',i:'🔥',e:'위력120 · 단일 + 화상(2턴)',g:'C'},
-  skill_sprout_water:{n:'물방울 머금기',i:'💧',e:'체력 18% 회복',g:'C'},
-  skill_sprout_grass:{n:'새순 감기',i:'🌿',e:'공격 15%↑(3턴)',g:'C'},
-  skill_sprout_earth:{n:'흙 다지기',i:'🪨',e:'방어 20%↑(3턴)',g:'C'},
-  skill_sprout_wind:{n:'산들바람',i:'🌪️',e:'기동성 25%↑(3턴)',g:'C'},
-  skill_sprout_bolt:{n:'정전기 방출',i:'⚡',e:'위력110 · 단일 + 치명 +20%',g:'C'},
-  skill_sprout_ice:{n:'성에 끼우기',i:'❄️',e:'적 기동성 25%↓(2턴)',g:'C'},
-  // 속성기 (유체 · 속성 심화)
-  skill_elem_fire:{n:'화염 분사',i:'🔥',e:'위력160 · 광역 + 화상(3턴)',g:'B'},
-  skill_elem_water:{n:'고압 물대포',i:'💧',e:'위력150 · 광역 + 체력 15% 회복',g:'B'},
-  skill_elem_grass:{n:'가시 폭풍',i:'🌿',e:'위력155 · 광역 + 흡혈 35%',g:'B'},
-  skill_elem_earth:{n:'암석 붕괴',i:'🪨',e:'위력170 · 광역 + 방어 40% 무시',g:'B'},
-  skill_elem_wind:{n:'진공 칼날',i:'🌪️',e:'위력150 · 단일 + 기동 25%↑',g:'B'},
-  skill_elem_bolt:{n:'천둥 직격',i:'⚡',e:'위력175 · 광역 + 치명 +25%',g:'B'},
-  skill_elem_ice:{n:'절대 영도',i:'❄️',e:'위력150 · 광역 + 적 기동 30%↓',g:'B'},
-  // 성장 (성장체↑)
-  skill_rally:{n:'생장 가속',i:'📈',e:'속도 25%↑(3턴)',g:'basic'},
-  skill_hunger:{n:'포식 아귀',i:'🦷',e:'위력130 · 단일 · 흡혈 50%',g:'A'},
-  skill_solar:{n:'태양 폭발',i:'🌞',e:'위력150 · 광역 + 공격 20%↑(2턴)',g:'A'},
-  skill_plasma:{n:'플라즈마 개화',i:'⚡',e:'위력165 · 광역 + 치명 +15%',g:'S'},
-  skill_crystal:{n:'결정 굴절',i:'💠',e:'피해 60%↓ + 굴절 반격',g:'B'},
-  skill_quantum:{n:'양자 산포',i:'✨',e:'위력100 · 광역 + 적 무작위 스탯 20%↓',g:'A'},
-  skill_symbiotic:{n:'공생 회복',i:'🍄',e:'체력 30% 회복 + 디버프 해제',g:'A'},
-  skill_biolume:{n:'광합성 과충전',i:'🌟',e:'체력 22% 회복 + 공격 15%↑',g:'B'},
-  skill_acid:{n:'산성 분사',i:'🧫',e:'위력115 · 광역 + 방어 20%↓ + 중독',g:'B'},
-  skill_ironbark:{n:'철피 경화',i:'🪨',e:'방어 35%↑ + 체력 10% 회복',g:'B'},
-  skill_metallic:{n:'금속 관다발',i:'⚙️',e:'위력120 · 단일 · 방어 50% 무시',g:'B'},
-  skill_gravity:{n:'중력 붕괴',i:'🪐',e:'위력130 · 광역 + 적 기동 30%↓',g:'A'},
-  skill_tide:{n:'수막 보호',i:'🌊',e:'피해 50%↓ + 체력 12% 회복',g:'B'},
-  // 버섯 전용 (스포어캡)
-  'mushroom.spore_burst':{n:'포자 분출',i:'🍄',e:'위력90 · 광역 + 중독(3턴) + 적 적중 15%↓',g:'B'},
-  'sig.spore_cloud':{n:'포자 운무막',i:'🌫️',e:'적 공격 20%↓(2턴) + 중독(3턴) · 시그니처',g:'A'},
-};
-const TYPE_ATK={tree:'skill_basic_tree',flower:'skill_basic_flower',cactus:'skill_basic_cactus',vine:'skill_basic_vine',mushroom:'skill_basic_mushroom'};
-const TYPE_DEF={tree:'skill_def_tree',flower:'skill_def_flower',cactus:'skill_def_cactus',vine:'skill_def_vine',mushroom:'skill_def_mushroom'};
-const TYPE_TRAIT={tree:'skill_trait_tree',flower:'skill_trait_flower',cactus:'skill_trait_cactus',vine:'skill_trait_vine',mushroom:'skill_trait_mushroom'};
-const EL_SPROUT={fire:'skill_sprout_fire',water:'skill_sprout_water',grass:'skill_sprout_grass',earth:'skill_sprout_earth',wind:'skill_sprout_wind',bolt:'skill_sprout_bolt',ice:'skill_sprout_ice'};
-const EL_SKILL={fire:'skill_elem_fire',water:'skill_elem_water',grass:'skill_elem_grass',earth:'skill_elem_earth',wind:'skill_elem_wind',bolt:'skill_elem_bolt',ice:'skill_elem_ice'};
-/* ELEMENT_GROWTH_SKILLS[el] — eg[1]=성장체, eg[2]=성체, eg[3]=완숙체 (eg[0] 미사용) */
-const EG={
-  fire:['skill_thorns','skill_hunger','skill_solar','skill_plasma'],
-  water:['skill_tide','skill_crystal','skill_quantum','skill_symbiotic'],
-  grass:['skill_thorns','skill_biolume','skill_acid','skill_solar'],
-  earth:['skill_stablecore','skill_ironbark','skill_metallic','skill_gravity'],
-  wind:['skill_phase','skill_metallic','skill_quantum','skill_plasma'],
-  bolt:['skill_psionic','skill_metallic','skill_solar','skill_plasma'],
-  ice:['skill_crystal','skill_tide','skill_quantum','skill_gravity'],
-};
+let API=null, GSO=null;
 
-/* 단계(idx)별 새로 깨어나는 스킬 목록 — plantKnownSkillIds 규칙 미러 */
-function newAt(sp, idx){
-  const t=sp.type, e=sp.el, out=[];
-  if(idx===0) out.push(TYPE_ATK[t]);                       // 씨앗: 기본공격 보유(전투 불가)
-  if(idx===1){ out.push(TYPE_DEF[t], EL_SPROUT[e]); }      // 새싹
-  if(idx===2){ out.push(TYPE_TRAIT[t], EL_SKILL[e]); }     // 유체
-  if(idx===3){ out.push('skill_rally', EG[e][1]); }        // 성장체
-  if(idx===4){ out.push(EG[e][2]); }                       // 성체
-  if(idx===5){ out.push(EG[e][3]); }                       // 완숙체
-  // 카탈로그 개체(스포어캡 등) 고유/시그니처
-  if(sp.extra && sp.extra[idx]) sp.extra[idx].forEach(id=>out.push(id));
-  if(idx===2 && sp.signature) out.push(sp.signature);      // 시그니처는 유체쯤 표기
-  return out.filter(id=>SK[id]);
+/* ===== 게임 데이터 → 도감 헬퍼 ===== */
+function elMeta(el){ const e=API.ELEMENTS[el]||{}; return {n:e.name||el, i:e.icon||'·', c:e.color||'#6bdd6b'}; }
+function rarityOf(sp){ return sp.rarity && sp.rarity!=='common' ? (API.RARITY_META[sp.rarity]||null) : null; }
+function knownAt(sp, idx){
+  return API.plantKnownSkillIds({species:sp.key, element:sp.element, growth_stage:GSO[idx], form:'normal'}) || [];
 }
-function knownUpTo(sp, idx){ const s=[]; for(let i=0;i<=idx;i++) newAt(sp,i).forEach(id=>{if(s.indexOf(id)<0)s.push(id);}); return s; }
-
-/* ===== 종 데이터 (35 + 1) ===== */
-const SPECIES=[
-  // 목본형
-  {code:'T-01',name:'엠버오크',type:'tree',el:'fire',concept:'옹이마다 불씨가 타오르는 잉걸나무. 잎 대신 불티가 흩날린다.'},
-  {code:'T-02',name:'타이드우드',type:'tree',el:'water',concept:'수액이 바닷물처럼 차오르는 맹그로브. 뿌리에서 물안개를 뿜는다.'},
-  {code:'T-03',name:'엘더우드',type:'tree',el:'grass',concept:'이끼와 새순으로 뒤덮인 태고의 거목. 가지마다 새 생명이 돋는다.'},
-  {code:'T-04',name:'스톤오크',type:'tree',el:'earth',concept:'껍질이 암석처럼 굳은 바위참나무. 좀처럼 쓰러지지 않는다.'},
-  {code:'T-05',name:'게일우드',type:'tree',el:'wind',concept:'가지가 바람개비처럼 휘는 바람나무. 잎새가 칼날처럼 운다.'},
-  {code:'T-06',name:'썬더오크',type:'tree',el:'bolt',concept:'벼락을 맞고도 살아남아 전기를 머금은 뇌격수.'},
-  {code:'T-07',name:'프로스트베리',type:'tree',el:'ice',concept:'서리 열매가 주렁주렁 열린 한대수. 가지에 고드름이 맺힌다.'},
-  // 화초형
-  {code:'F-01',name:'블레이즈블룸',type:'flower',el:'fire',concept:'꽃잎 끝이 불꽃처럼 일렁이는 화염화.'},
-  {code:'F-02',name:'아쿠아벌브',type:'flower',el:'water',concept:'물방울을 머금은 구근에서 피어나는 수련.'},
-  {code:'F-03',name:'페탈로즈',type:'flower',el:'grass',concept:'겹겹의 잎꽃잎을 두른 들장미.'},
-  {code:'F-04',name:'클레이블룸',type:'flower',el:'earth',concept:'진흙 속에서 단단히 피는 토양화.'},
-  {code:'F-05',name:'윈드페탈',type:'flower',el:'wind',concept:'꽃잎이 깃털처럼 흩날리는 풍접초.'},
-  {code:'F-06',name:'스파크번',type:'flower',el:'bolt',concept:'수술 끝에 정전기가 튀는 번개꽃.'},
-  {code:'F-07',name:'프로스트블룸',type:'flower',el:'ice',concept:'얼음 결정으로 꽃잎을 세운 설화(雪花).'},
-  // 다육형
-  {code:'C-01',name:'엠버캑터',type:'cactus',el:'fire',concept:'가시 끝에서 열기가 피어오르는 화염선인장.'},
-  {code:'C-02',name:'듀캑터',type:'cactus',el:'water',concept:'몸통 가득 수분을 저장한 이슬선인장.'},
-  {code:'C-03',name:'비리캑터',type:'cactus',el:'grass',concept:'잎과 가시가 공존하는 초록선인장.'},
-  {code:'C-04',name:'가이아록',type:'cactus',el:'earth',concept:'바위처럼 단단한 대지선인장.'},
-  {code:'C-05',name:'게일캑터',type:'cactus',el:'wind',concept:'구멍으로 바람 소리를 내는 바람선인장.'},
-  {code:'C-06',name:'볼트캑터',type:'cactus',el:'bolt',concept:'가시가 피뢰침처럼 전기를 모으는 전하선인장.'},
-  {code:'C-07',name:'프로스트캑터',type:'cactus',el:'ice',concept:'서리에 뒤덮인 한지선인장.'},
-  // 덩굴형
-  {code:'V-01',name:'플레임바인',type:'vine',el:'fire',concept:'불타며 뻗어가는 화염덩굴.'},
-  {code:'V-02',name:'타이드바인',type:'vine',el:'water',concept:'물길을 따라 자라는 해조덩굴.'},
-  {code:'V-03',name:'쏜위드',type:'vine',el:'grass',concept:'가시투성이 덩굴이 얽힌 가시잡초.'},
-  {code:'V-04',name:'루트바인',type:'vine',el:'earth',concept:'땅속 깊이 뿌리내리는 뿌리덩굴.'},
-  {code:'V-05',name:'게일바인',type:'vine',el:'wind',concept:'바람을 타고 빠르게 감기는 질풍덩굴.'},
-  {code:'V-06',name:'볼트바인',type:'vine',el:'bolt',concept:'전류가 흐르는 전선덩굴.'},
-  {code:'V-07',name:'프로스트바인',type:'vine',el:'ice',concept:'서리를 퍼뜨리며 감아오르는 빙결덩굴.'},
-  // 버섯형 (신규·희귀)
-  {code:'M-01',name:'스포어캡',type:'mushroom',el:'grass',rarity:'rare',born:'spore',
-    concept:'포자 안개를 끊임없이 뿜는 갓버섯. 태생부터 포자 변이를 지녔다.',
-    extra:{1:['mushroom.spore_burst'],2:['mushroom.spore_burst']}, signature:'sig.spore_cloud'},
-  // 레거시 (구 초본형 → 화초형 흡수)
-  {code:'L-01',name:'플레임모스',type:'flower',el:'fire',legacy:true,concept:'한때 초본형이던 불이끼. 지금은 화초형으로 분류되는 레거시 종.'},
-  {code:'L-02',name:'미스트모스',type:'flower',el:'water',legacy:true,concept:'물안개를 머금은 이끼. 화초형으로 흡수된 레거시 종.'},
-  {code:'L-03',name:'그린모스',type:'flower',el:'grass',legacy:true,concept:'가장 흔하던 초록 이끼. 레거시 보존 종.'},
-  {code:'L-04',name:'클레이모스',type:'flower',el:'earth',legacy:true,concept:'진흙에 붙어 자라던 흙이끼. 레거시 종.'},
-  {code:'L-05',name:'윈드리프',type:'flower',el:'wind',legacy:true,concept:'바람에 잎을 떠는 풍엽. 레거시 종.'},
-  {code:'L-06',name:'볼트모스',type:'flower',el:'bolt',legacy:true,concept:'정전기를 띤 번개이끼. 레거시 종.'},
-  {code:'L-07',name:'프로스트모스',type:'flower',el:'ice',legacy:true,concept:'서리 낀 한대 이끼. 레거시 종.'},
-];
-
-/* 가능한 변이형 (rollForm) */
-const FORMS=[
-  {k:'normal',i:'🌱',n:'일반'},{k:'pred',i:'🦷',n:'포식'},{k:'weapon',i:'🗡️',n:'무기'},
-  {k:'toxic',i:'☠️',n:'독성'},{k:'spore',i:'🍄',n:'포자'},{k:'lumen',i:'💡',n:'발광'},{k:'dragon',i:'🐉',n:'용족'}
-];
+function skillMeta(sp, idx, id){
+  const s=API.ALL_SKILLS[id]||{};
+  let g; try{ g=API.skillGradeOf({species:sp.key, element:sp.element, growth_stage:GSO[idx], form:'normal'}, id); }catch(e){ g=s.grade||'C'; }
+  const basic = s.tag==='기본' || s.tag==='성장';
+  return { n:s.name||id, i:s.icon||'·', e:s.desc||'', basic, grade:g };
+}
 
 /* ===== 렌더 ===== */
-const cv = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
-function statRow(label,key,val){
-  const pct = Math.min(100, Math.round(val/CAP[key]*100));
-  return `<span class="k">${label}</span><div class="bar"><i style="width:${pct}%"></i></div><span class="v">${val}</span>`;
+function statRow(sp,key,g){
+  const val=Math.round((sp.base[key]||0)*g);
+  const pct=Math.min(100, Math.round(val/CAP[key]*100));
+  return `<span class="k">${STAT_LABEL[key]}</span><div class="bar"><i style="width:${pct}%"></i></div><span class="v">${val}</span>`;
 }
-function skillRow(id,isNew){
-  const s=SK[id]; if(!s) return '';
-  const gradeCls = s.g==='basic'?'gbasic':('g'+s.g);
-  const grade = s.g==='basic'?'기본':s.g;
+function skillRow(sp,idx,id,isNew){
+  const m=skillMeta(sp,idx,id);
+  const cls = m.basic?'gbasic':('g'+m.grade);
+  const label = m.basic?'기본':m.grade;
   return `<div class="sk ${isNew?'isnew':''}">
-    <div class="ic">${s.i}</div>
+    <div class="ic">${m.i}</div>
     <div class="body">
-      <div class="nm">${s.n} <span class="gr ${gradeCls}">${grade}</span></div>
-      <div class="ef">${s.e}</div>
+      <div class="nm">${m.n} <span class="gr ${cls}">${label}</span></div>
+      <div class="ef">${m.e}</div>
       <div class="motion">▶ 모션 예정</div>
     </div></div>`;
 }
-function baseStat(sp,i,g){ return Math.round((ESTAT[sp.el][i]+TSTAT[sp.type][i])*g); }
+function codeOf(sp){ const pfx = sp.legacy?'L':(TYPE_PREFIX[sp.seedType]||'X'); return pfx+'-'+String(EL_ORDER.indexOf(sp.element)+1).padStart(2,'0'); }
 
 function card(sp){
-  const acVar = EL[sp.el].v;
-  const startIdx=1; // 기본 표시: 새싹
-  const variants = sp.born
-    ? `<div class="vchip born">${FORMS.find(f=>f.k===sp.born).i} ${FORMS.find(f=>f.k===sp.born).n} (태생)</div>`+FORMS.filter(f=>f.k!=='normal'&&f.k!==sp.born).map(f=>`<div class="vchip">${f.i} ${f.n}</div>`).join('')
-    : FORMS.map(f=>`<div class="vchip">${f.i} ${f.n}</div>`).join('');
-  return `<article class="card ${sp.legacy?'legacy':''}" data-key="${sp.code}" data-type="${sp.type}" data-el="${sp.el}" style="--ac:var(${acVar})">
+  const ac=elMeta(sp.element).c, rm=rarityOf(sp);
+  const born = (sp.baseVariants&&sp.baseVariants[0])||null;
+  const forms=API.FORMS;
+  const formChip=k=>`<div class="vchip ${k===born?'born':''}">${(forms[k]&&forms[k].icon)||'·'} ${(forms[k]&&forms[k].name)||k}${k===born?' (태생)':''}</div>`;
+  const order = born ? [born].concat(Object.keys(forms).filter(k=>k!=='normal'&&k!==born)) : Object.keys(forms).filter(k=>k!=='normal');
+  const concept = CONCEPTS[sp.key] || sp.desc || '';
+  return `<article class="card ${sp.legacy?'legacy':''}" data-key="${sp.key}" data-type="${sp.seedType}" data-el="${sp.element}" style="--ac:${ac}">
     <span class="brk tl"></span><span class="brk tr"></span><span class="brk bl"></span><span class="brk br"></span>
     <div class="chead">
-      <div class="sprite"><span class="sil">${TYPES[sp.type].sil}</span><span class="ph">도트 예정</span></div>
+      <div class="sprite"><span class="sil">${TYPE_GLYPH[sp.seedType]||'🌱'}</span><span class="ph">도트 예정</span></div>
       <div class="cmeta">
-        <div class="code">${sp.code}</div>
+        <div class="code">${codeOf(sp)}</div>
         <div class="cname">${sp.name}</div>
         <div class="badges">
-          <span class="b">${TYPES[sp.type].i} ${TYPES[sp.type].n}</span>
-          <span class="b el">${EL[sp.el].i} ${EL[sp.el].n}</span>
-          ${sp.rarity==='rare'?'<span class="b rare">★ 희귀</span>':''}
+          <span class="b">${TYPE_GLYPH[sp.seedType]||''} ${API.SEED_TYPE_NAMES[sp.seedType]||sp.seedType}</span>
+          <span class="b el">${elMeta(sp.element).i} ${elMeta(sp.element).n}</span>
+          ${rm?`<span class="b rare">★ ${rm.name}</span>`:''}
           ${sp.legacy?'<span class="b leg">레거시</span>':''}
         </div>
       </div>
     </div>
-    <div class="concept">${sp.concept}</div>
-    <div class="ribbon">${STAGES.map((s,i)=>`<div class="stage ${i===0?'seed':''} ${i===startIdx?'on':''}" data-i="${i}"><span class="sl">${String(i).padStart(2,'0')}</span><span class="sm">${s}</span></div>`).join('')}</div>
+    <div class="concept">${concept}</div>
+    <div class="ribbon">${GSO.map((sk,i)=>`<div class="stage ${i===0?'seed':''} ${i===1?'on':''}" data-i="${i}"><span class="sl">${String(i).padStart(2,'0')}</span><span class="sm">${API.GROWTH_STAGE_NAMES[sk]||sk}</span></div>`).join('')}</div>
     <div class="stats" data-stats></div>
     <div class="skills" data-skills></div>
-    <div class="vars"><div class="vh">가능한 변이형</div><div class="vchips">${variants}</div></div>
+    <div class="vars"><div class="vh">가능한 변이형</div><div class="vchips">${order.map(formChip).join('')}</div></div>
   </article>`;
 }
 
 function paintCard(el, sp, idx){
-  const g=GMULT[idx];
-  el.querySelector('[data-stats]').innerHTML =
-    statRow('HP','hp',baseStat(sp,0,g))+statRow('공격','atk',baseStat(sp,1,g))+
-    statRow('방어','def',baseStat(sp,2,g))+statRow('기동','spd',baseStat(sp,3,g));
+  const g=API.GROWTH_STAT_MULT[GSO[idx]]||1;
+  el.querySelector('[data-stats]').innerHTML = STAT_KEYS.map(k=>statRow(sp,k,g)).join('');
   const sk=el.querySelector('[data-skills]');
   if(idx===0){
+    const ids=knownAt(sp,0);
     sk.innerHTML=`<div class="skhead"><span>보유 스킬 · 씨앗</span><span>전투 불가</span></div>
       <div class="seedlock">🌱 씨앗 단계는 토너먼트에 출전할 수 없다. 새싹부터 전투 개시.</div>`
-      + skillRow(TYPE_ATK[sp.type], false);
+      + ids.map(id=>skillRow(sp,0,id,false)).join('');
     return;
   }
-  const known=knownUpTo(sp,idx), nw=newAt(sp,idx);
-  sk.innerHTML=`<div class="skhead"><span>해금 스킬 · ${STAGES[idx]}</span><span>${known.length}종</span></div>`
-    + known.map(id=>skillRow(id, nw.indexOf(id)>=0)).join('');
+  const known=knownAt(sp,idx), prev=knownAt(sp,idx-1);
+  sk.innerHTML=`<div class="skhead"><span>해금 스킬 · ${API.GROWTH_STAGE_NAMES[GSO[idx]]}</span><span>${known.length}종</span></div>`
+    + known.map(id=>skillRow(sp,idx,id, prev.indexOf(id)<0)).join('');
 }
 
-const codex=document.getElementById('codex');
-['tree','flower','cactus','vine','mushroom'].forEach((t,ti)=>{
-  const list=SPECIES.filter(s=>s.type===t && !s.legacy);
-  const T=TYPES[t];
-  const sec=document.createElement('section');
-  sec.className='tsec'; sec.dataset.type=t;
-  sec.innerHTML=`<div class="thead">
-      <div class="tglyph">${T.i}</div>
-      <div><div class="tnum">TYPE ${String(ti+1).padStart(2,'0')} / 05</div><h2>${T.n}</h2><div class="tdesc">${T.desc}</div></div>
-      <div class="ttend">성향<br><b>${T.tend}</b></div>
-    </div><div class="grid">${list.map(card).join('')}</div>`;
-  codex.appendChild(sec);
-});
-// 레거시 섹션
-const leg=SPECIES.filter(s=>s.legacy);
-if(leg.length){
-  const sec=document.createElement('section');
-  sec.className='tsec'; sec.dataset.type='legacy';
-  sec.innerHTML=`<div class="thead">
-      <div class="tglyph">🗄️</div>
-      <div><div class="tnum">LEGACY / 보존</div><h2>레거시 (구 초본형)</h2><div class="tdesc">초본형 폐지로 화초형에 흡수된 7종. 신규 획득 풀에서는 제외되고 보유분만 유지된다.</div></div>
-      <div class="ttend">분류<br><b>→ 화초형</b></div>
-    </div><div class="grid">${leg.map(card).join('')}</div>`;
-  codex.appendChild(sec);
-}
-
-// 초기 페인트 + 단계 클릭
-document.querySelectorAll('.card').forEach(el=>{
-  const sp=SPECIES.find(s=>s.code===el.dataset.key);
-  paintCard(el, sp, 1);
-  el.querySelectorAll('.stage').forEach(st=>{
-    st.addEventListener('click',()=>{
-      el.querySelectorAll('.stage').forEach(x=>x.classList.remove('on'));
-      st.classList.add('on');
-      paintCard(el, sp, +st.dataset.i);
-    });
+function build(){
+  GSO = API.GROWTH_STAGE_ORDER;
+  const all = Object.keys(API.SPECIES).map(k=>Object.assign({key:k}, API.SPECIES[k]));
+  const codex=document.getElementById('codex'); codex.innerHTML='';
+  function section(type, list, glyph, num, name, desc, tend){
+    const sec=document.createElement('section');
+    sec.className='tsec'; sec.dataset.type=type;
+    sec.innerHTML=`<div class="thead">
+        <div class="tglyph">${glyph}</div>
+        <div><div class="tnum">${num}</div><h2>${name}</h2><div class="tdesc">${desc}</div></div>
+        <div class="ttend">${tend?('성향<br><b>'+tend+'</b>'):''}</div>
+      </div><div class="grid">${list.map(card).join('')}</div>`;
+    codex.appendChild(sec);
+  }
+  TYPE_ORDER.forEach((t,ti)=>{
+    const list=all.filter(s=>s.seedType===t && !s.legacy)
+      .sort((a,b)=>EL_ORDER.indexOf(a.element)-EL_ORDER.indexOf(b.element));
+    if(!list.length) return;
+    section(t, list, TYPE_GLYPH[t], `TYPE ${String(ti+1).padStart(2,'0')} / ${String(TYPE_ORDER.length).padStart(2,'0')}`,
+      API.SEED_TYPE_NAMES[t]||t, TYPE_DESC[t]||'', API.TYPE_CONCEPT[t]||'');
   });
-});
+  const leg=all.filter(s=>s.legacy).sort((a,b)=>EL_ORDER.indexOf(a.element)-EL_ORDER.indexOf(b.element));
+  if(leg.length) section('legacy', leg, '🗄️', 'LEGACY / 보존', '레거시 (구 초본형)',
+    '초본형 폐지로 화초형에 흡수된 종. 신규 획득 풀에서는 제외되고 보유분만 유지된다.', '→ 화초형');
+
+  // 페인트 + 단계 클릭
+  document.querySelectorAll('.card').forEach(el=>{
+    const sp=all.find(s=>s.key===el.dataset.key);
+    paintCard(el, sp, 1);
+    el.querySelectorAll('.stage').forEach(st=>st.addEventListener('click',()=>{
+      el.querySelectorAll('.stage').forEach(x=>x.classList.remove('on'));
+      st.classList.add('on'); paintCard(el, sp, +st.dataset.i);
+    }));
+  });
+  buildFilters();
+}
 
 /* ===== 필터 ===== */
-const fbar=document.getElementById('filters');
-const typeFilters=[['all','전체'],['tree','목본'],['flower','화초'],['cactus','다육'],['vine','덩굴'],['mushroom','버섯'],['legacy','레거시']];
 let curType='all', curEl='all';
-function mkChip(label,on,cb){ const b=document.createElement('button'); b.className='chip'+(on?' on':''); b.textContent=label; b.onclick=cb; return b; }
 function applyFilter(){
   document.querySelectorAll('.card').forEach(el=>{
-    const sp=SPECIES.find(s=>s.code===el.dataset.key);
-    const tOk = curType==='all' || (curType==='legacy'? !!sp.legacy : (sp.type===curType && !sp.legacy));
-    const eOk = curEl==='all' || sp.el===curEl;
+    const type=el.dataset.type, isLeg=el.closest('.tsec').dataset.type==='legacy';
+    const tOk = curType==='all' || (curType==='legacy'? isLeg : (type===curType && !isLeg));
+    const eOk = curEl==='all' || el.dataset.el===curEl;
     el.classList.toggle('hide', !(tOk&&eOk));
   });
   document.querySelectorAll('.tsec').forEach(sec=>{
@@ -467,14 +369,32 @@ function applyFilter(){
     sec.classList.toggle('hide', !vis);
   });
 }
-function rebuildChips(){
-  fbar.innerHTML='';
-  typeFilters.forEach(([k,l])=>fbar.appendChild(mkChip(l, curType===k, ()=>{curType=k; rebuildChips(); applyFilter();})));
+function mkChip(label,on,cb){ const b=document.createElement('button'); b.className='chip'+(on?' on':''); b.textContent=label; b.onclick=cb; return b; }
+function buildFilters(){
+  const fbar=document.getElementById('filters'); fbar.innerHTML='';
+  [['all','전체'],['tree','목본'],['flower','화초'],['cactus','다육'],['vine','덩굴'],['mushroom','버섯'],['legacy','레거시']]
+    .forEach(([k,l])=>fbar.appendChild(mkChip(l, curType===k, ()=>{curType=k; buildFilters(); applyFilter();})));
   const sep=document.createElement('span'); sep.style.cssText='width:1px;background:var(--line2);margin:0 3px;'; fbar.appendChild(sep);
-  fbar.appendChild(mkChip('속성·전체', curEl==='all', ()=>{curEl='all'; rebuildChips(); applyFilter();}));
-  Object.keys(EL).forEach(e=>fbar.appendChild(mkChip(EL[e].i, curEl===e, ()=>{curEl=e; rebuildChips(); applyFilter();})));
+  fbar.appendChild(mkChip('속성·전체', curEl==='all', ()=>{curEl='all'; buildFilters(); applyFilter();}));
+  EL_ORDER.forEach(e=>fbar.appendChild(mkChip(elMeta(e).i, curEl===e, ()=>{curEl=e; buildFilters(); applyFilter();})));
 }
-rebuildChips();
+
+function fail(msg){
+  document.getElementById('codex').innerHTML =
+    `<div class="statusbox"><div class="big">도감을 불러올 수 없습니다</div>
+     <div>${msg}</div><div style="margin-top:14px">로컬 서버나 호스팅 링크에서 열어주세요 — 예: <code>http://localhost:8765/docs/dex/plant-codex.html</code></div></div>`;
+}
+
+const frame=document.getElementById('game');
+frame.addEventListener('load', ()=>{
+  try{
+    API = frame.contentWindow.__DEX_API;
+    if(!API || !API.SPECIES){ fail('게임 데이터(__DEX_API)를 찾지 못했습니다.'); return; }
+    build();
+  }catch(err){ fail('게임 데이터 접근이 차단되었습니다(같은 출처 필요). '+err.message); }
+});
+frame.addEventListener('error', ()=>fail('게임(index.html)을 불러오지 못했습니다.'));
+setTimeout(()=>{ if(!API) fail('게임 로딩이 지연됩니다. 새로고침하거나 로컬 서버/링크에서 열어주세요.'); }, 12000);
 </script>
 </body>
 </html>

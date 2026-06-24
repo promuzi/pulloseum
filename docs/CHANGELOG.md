@@ -2,6 +2,14 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — 도감 라이브 연동(자동 동기화) + PWA 서비스워커
+> 설계서: [`superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md`](superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md)
+- **도감 자동 동기화**: `docs/dex/plant-codex.html`이 데이터를 자체 복제하던 것을 폐기 → 숨은 `<iframe src="../../index.html?dex=1">`로 게임을 불러와 **`window.__DEX_API`에서 실제 데이터·함수를 읽어** 렌더. 스탯=`SPECIES[].base×GROWTH_STAT_MULT`, 스킬=`plantKnownSkillIds` 게임 함수 그대로 → 게임 업데이트 시 도감 자동 반영. 도감 전용 서술(`CONCEPTS`/타입 글리프·설명)만 도감에 보존.
+- **데이터 전용 모드(`?dex=1`)**: index.html이 이 플래그면 `bootWithSave`/렌더/Cloud/SW 등록을 모두 생략 → 도감이 게임을 불러와도 사용자 세이브 무손상. 끝부분에 `__DEX_API` 노출 블록 추가.
+- **PWA**: 기존 `site.webmanifest`(아이콘 192/512 보유)에 더해 `sw.js` 추가(HTML network-first=항상 최신, 정적 cache-first, 구 캐시 정리). 비-dex 모드에서만 SW 등록. 홈 화면 추가로 앱처럼 사용.
+- **호스팅(예정)**: GitHub Pages 켜면 `promuzi.github.io/pulloseum/`(게임)·`/docs/dex/plant-codex.html`(도감)을 어느 기기서나 링크로 열람(푸시 시 자동 배포). 활성화는 저장소 Settings→Pages 1회 토글(이 PC에 gh 없음).
+- **검증**: 도감 36종 라이브 렌더·단계 전환·필터 OK, dex-mode 시 게임 부팅 안 됨(세이브 안전), 게임 본체 정상 부팅 + 셀프테스트 18/18 PASS, 콘솔 에러 0.
+
 ### 2026-06-24 — 버그픽스: 레벨업 물약이 한 클릭에 완숙체까지 점프하던 문제
 - **증상**: 레벨업 물약을 쓰면 "1번 생장" 후 버튼이 비활성화돼 더 못 누름.
 - **근본 원인**: 물약이 한 번에 500 EXP를 주는데 `gainGrowthExp`의 `while` 루프가 이를 전부 소모 → 새싹에서 곧장 완숙체(evolved)까지 4단계를 한 클릭에 점프. evolved가 되면 버튼 `disabled`(=`isMax`) 조건이 켜져 더 못 누르게 됨(코드상 정상이지만 의도와 불일치).
