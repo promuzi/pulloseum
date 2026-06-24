@@ -7851,7 +7851,7 @@ function elementMotif(el, gi, cx, topY){
   return s;
 }
 /* 생장단계(gi 0~5) × 식물타입 × 속성 팔레트로 실루엣 생성. 씨앗→완숙체로 점점 자란다. */
-function composePlantBody(seedType, gi, P, el){
+function composePlantBody(seedType, gi, P, el, bodyStyle){
   const cx=60;
   if(gi===0){ // 씨앗
     return `<ellipse cx="60" cy="74" rx="11" ry="14" fill="${P.dark}"/>
@@ -7860,8 +7860,8 @@ function composePlantBody(seedType, gi, P, el){
       ${elementMotif(el, gi, cx, 56)}`;
   }
   const stemTop = 76 - gi*7, stemW = 3 + gi*0.7, cy = stemTop;
-  let svg = `<path d="M60 96 C 57 86 63 ${stemTop+12} 60 ${stemTop}" stroke="${P.stem}" stroke-width="${stemW}" fill="none" stroke-linecap="round"/>`;
-  if(gi<=2){ // 어린 단계: 떡잎
+  let svg = (seedType==='mushroom') ? '' : `<path d="M60 96 C 57 86 63 ${stemTop+12} 60 ${stemTop}" stroke="${P.stem}" stroke-width="${stemW}" fill="none" stroke-linecap="round"/>`;
+  if(gi<=2 && seedType!=='mushroom'){ // 어린 단계: 떡잎 (버섯은 떡잎 없음)
     svg += `<ellipse cx="49" cy="84" rx="${7+gi}" ry="${3.5+gi*0.4}" fill="${P.dark}" transform="rotate(-28 49 84)"/>
             <ellipse cx="71" cy="80" rx="${7+gi}" ry="${3.5+gi*0.4}" fill="${P.main}" transform="rotate(28 71 80)"/>`;
   }
@@ -7888,11 +7888,29 @@ function composePlantBody(seedType, gi, P, el){
     for(let i=0;i<4+gi;i++){ const yy=cy-h/2+10+i*6; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
     if(gi>=5) svg+=`<circle cx="${cx}" cy="${cy-h/2+3}" r="6" fill="${P.accent}"/>`;
   } else if(seedType==='mushroom'){
-    const capW=16+gi*4, capH=10+gi*2.4, stalkH=12+gi*4;
-    svg+=`<rect x="${cx-3-gi*0.3}" y="${cy}" width="${6+gi*0.6}" height="${stalkH}" rx="3" fill="${P.light}"/>`;
-    svg+=`<path d="M${cx-capW/2} ${cy} Q ${cx} ${cy-capH*1.8} ${cx+capW/2} ${cy} Z" fill="${P.main}"/>`;
-    for(let i=0;i<2+gi;i++){ const px=cx-capW/2+ (i+0.5)*(capW/(2+gi)); svg+=`<circle cx="${px}" cy="${cy-capH*0.5}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".85"/>`; }
-    if(gi>=4){ svg+=`<circle cx="${cx-capW*0.18}" cy="${cy+stalkH*0.4}" r="2.2" fill="${P.accent}"/>`; }
+    const style = bodyStyle || 'classic';   // 향후 'cluster'(B)·'glow'(C) 분기 자리
+    // A 클래식 독버섯: 통통한 자루 + 점박이 갓 + 고리. gi가 클수록 갓이 펴지고 점·고리 생김.
+    const capW = 14 + gi*5, capLift = 22 + gi*3;
+    const stipeW = 4 + gi*0.8, topY = cy, baseY = cy + 16;
+    // 자루
+    svg += `<path d="M${cx-stipeW} ${baseY} Q${cx-stipeW-1} ${topY+9} ${cx-stipeW+1} ${topY} L${cx+stipeW-1} ${topY} Q${cx+stipeW+1} ${topY+9} ${cx+stipeW} ${baseY} Z" fill="${P.light}"/>`;
+    svg += `<path d="M${cx-stipeW} ${baseY} Q${cx-stipeW-1} ${topY+9} ${cx-stipeW+1} ${topY} L${cx-stipeW+3} ${topY} Q${cx-1} ${topY+10} ${cx-2} ${baseY} Z" fill="${P.dark}" opacity=".4"/>`;
+    // 고리(annulus) — 성장체(gi>=3)부터
+    if(gi>=3) svg += `<path d="M${cx-stipeW-2} ${topY+11} Q${cx} ${topY+17} ${cx+stipeW+2} ${topY+11} l0 3 Q${cx} ${topY+20} ${cx-stipeW-2} ${topY+14} Z" fill="${P.dark}"/>`;
+    // 갓 돔
+    svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY} Q${cx} ${topY+7} ${cx-capW} ${topY} Z" fill="${P.main}"/>`;
+    svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY}" fill="none" stroke="${P.dark}" stroke-width="1.4"/>`;
+    // 점박이 — 성장체부터
+    if(gi>=3){
+      svg += `<circle cx="${cx-capW*0.45}" cy="${topY-capLift*0.45}" r="${2+gi*0.3}" fill="${P.light}" opacity=".9"/>`;
+      svg += `<circle cx="${cx+capW*0.4}" cy="${topY-capLift*0.5}" r="${1.8+gi*0.25}" fill="${P.light}" opacity=".9"/>`;
+      svg += `<circle cx="${cx}" cy="${topY-capLift*0.28}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".9"/>`;
+    }
+    // 완숙체(gi>=5): 떠오르는 포자
+    if(gi>=5){
+      svg += `<circle cx="${cx-12}" cy="${topY-capLift-6}" r="2" fill="${P.accent}" opacity=".8"/>`;
+      svg += `<circle cx="${cx+10}" cy="${topY-capLift-10}" r="1.6" fill="${P.accent}" opacity=".7"/>`;
+    }
   } else { // tree
     const r=12+gi*3.2, th=16+gi*3;
     svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
@@ -7913,7 +7931,7 @@ function composePlantSvg(seedType, growth, element, opts){
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
   return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
-    ${composePlantBody(seedType, gi, P, el)}
+    ${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}
     <rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
     <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
     <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>
@@ -11053,6 +11071,16 @@ window.__test('stage names: per-type override + safe fallback', function(){
   if(growthStageName('sprout','tree') !== '떡잎') fails.push('tree sprout should be 떡잎');
   if(growthStageName('growing') !== '성장체') fails.push('no-type fallback should be 성장체');
   if(growthStageName('growing','nonsense') !== '성장체') fails.push('unknown type should fall back');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('appearance: mushroom body distinct + skips cotyledon', function(){
+  const fails = [];
+  const P = elementPalette('grass');
+  const m = composePlantBody('mushroom', 4, P, 'grass');
+  const t = composePlantBody('tree', 4, P, 'grass');
+  if(m === t) fails.push('mushroom must not render identical to tree (no branch)');
+  const m1 = composePlantBody('mushroom', 1, P, 'grass');
+  if(m1.indexOf('rotate(-28 49 84)') >= 0) fails.push('mushroom young stage should skip cotyledon ellipses');
   if(fails.length) throw new Error(fails.join(' | '));
 });
 </script>
