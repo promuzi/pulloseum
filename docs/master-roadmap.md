@@ -142,6 +142,7 @@
 - [x] **풀로세움 참가 비용 = 없음(무료 입장)으로 확정** — "항상 열린 게이트" 로어로 비대칭 해소. 연료/참가권 안 둠
 - [x] **행성 종류 확장** — 8→11(세라핀 궤도1·볼카르 궤도2·티아멘 궤도3). UI 종 미리보기(`exPlanetSpeciesPreview`/`exRegionSpecies`)
 - [ ] (후속) **새 개체를 행성 `species`/지역 `signature`에 배치** + 분포 밸런스 튜닝
+- [ ] (후속·점검됨) **분포 버그/얇은 지역 손보기** — 심해 균열·전자기 늪(테마 매칭 0종→폴백) + 1종뿐 지역 6곳 보강. 상세 = [exploration spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
 
 ### 8. PvP / 서버 운용
 - [ ] **비동기(고스트) PvP** vs 실시간 — 비동기(상대 로드아웃 스냅샷 재생)가 현실적, 1순위 권장
@@ -205,6 +206,7 @@
 - **2026-06-24** — **(#1 변이형·변이 카드 재설계 — 브레인스토밍 진행 중)** 변이형 = **패시브 없는 카드 슬롯 게이트**(식물당 1변이, 다중 슬롯 폐기, 포식 무료 기본기 제거). **무등급(`fixed`) 카드 클래스 신설**, 같은 `card_id` **자동 교체**, **스킬 `cats` 복수 태그 라벨**(공격/방어/버프/디버프/체력회복/에너지회복 → 향후 특성 시너지 키), **독 스택 상한제**(상태이상 = DoT 확정·강제어만 확률), **발광형 폐지**(6변이형). 공통/포식/무기/독성/포자(버섯 전용·디버프 전용)/**용족(방어 비늘 + 속성 브레스 투트랙)** 6변이형 카드 로스터 **설계 완료**. 수치 placeholder(밸런스 패스 대기) → 다음 writing-plans. 설계 박제 = [`superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md`](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md). (#1)
 - **2026-06-24** — **(#1 변이 재설계 — 플랜1 시스템 토대 ✅ 구현)** 코드 반영(브랜치 `feat/mushroom-type-completion`): `skillCats`+`CAT_META`(스킬 cats 복수태그 도출) · `cardsAfterEquip`(같은 card_id 등급무관 자동교체) · `DOT_STACK_CAP(4)`+`addDot`(독/출혈/화상 스택 상한, DoT 적용 4곳 교체) · `rollForm` 발광 제거(기존분 legacy 보존). 셀프테스트 `__catalogSelfTest()` 0 fail. 콘텐츠(플랜2: `TRAIT_CARDS` 재작성·`fixed` 카드)·전투/UI(플랜3: 하단 변이 스킬 바·브레스·비늘/독 스택·cats 칩)는 후속. 계획 = [`superpowers/plans/2026-06-24-mutation-redesign-phase1-foundation.md`](superpowers/plans/2026-06-24-mutation-redesign-phase1-foundation.md). (#1)
 - **2026-06-24** — **(#1 변이 재설계 — 플랜2 카드 콘텐츠 슬라이스 2-A ✅)** `cardInstanceEffects`에 무등급(`fixed`) 처리(등급 무시 계수1·서브0) + 스탯 코어 base(atkPct/hpPct/spdPct/critBonus) 스케일 추가. 공통 스탯 코어 카드 4종(💪근섬유·🫀거대액포·🌀향성운동·🎯표적분비물) 추가 → 공통 스탯 6축 완성. 셀프테스트 0 fail. 공통 버프/디버프·무등급·변이형별(포식/무기/독성/용족) 카드는 전투엔진·하단 변이 스킬 바 필요 → 플랜3 연동(후속). 계획 = [`superpowers/plans/2026-06-24-mutation-redesign-phase2-cards.md`](superpowers/plans/2026-06-24-mutation-redesign-phase2-cards.md). (#1)
+- **2026-06-24** — **(#1 변이 재설계 — 플랜3 첫 슬라이스: cats 칩 UI ✅)** 플랜1의 `skillCats`/`CAT_META`를 화면에 노출 — 스킬 서랍 카드에 공격/방어/버프/디버프/체력·에너지회복 색칩(`skillCatChipsHtml` + `.cat-chip` CSS). 셀프테스트 0 fail. **남은 플랜3(큰 덩어리, 미착수):** 하단 변이 스킬 바(포식1/무기2/독성2/용족2)·브레스 속성 발현·비늘/독 스택 스킬·무기 2장 룰·공통 버프/디버프 battle-start 훅. (#1)
 
 ---
 
