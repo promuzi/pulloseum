@@ -4097,6 +4097,13 @@ const TRAIT_CARDS = {
 function cardKeyOf(id, grade){ return id + '@' + (grade || 'C'); }
 function parseCardKey(key){ const k=String(key||''); const i=k.indexOf('@'); return i<0 ? { id:k, grade:'C' } : { id:k.slice(0,i), grade:k.slice(i+1) }; }
 function cardDefOf(key){ return TRAIT_CARDS[parseCardKey(key).id] || null; }
+/* 같은 card_id는 등급 무관 1장만 — 새로 장착 시 기존 동일 id 제거 후 추가(자동 교체) */
+function cardsAfterEquip(cards, newKey){
+  const id = parseCardKey(newKey).id;
+  const kept = (cards||[]).filter(k => parseCardKey(k).id !== id);
+  kept.push(newKey);
+  return kept;
+}
 function cardTypeOf(key){ const d=cardDefOf(key); return d ? d.type : null; }
 /* 카드가 이 변이형에 장착 가능한 타입인지 */
 function cardFitsForm(key, form){
@@ -8946,7 +8953,11 @@ function detailEquip(){
     if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
     const eq = p.equipped_trait_cards;
     if(eq.includes(key)) return;
-    if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
+    const id = parseCardKey(key).id;
+    const sameIdIdx = eq.findIndex(k => parseCardKey(k).id === id);
+    if(sameIdIdx >= 0){ // 같은 카드 다른 등급 → 그 자리 교체(슬롯 증가 없음)
+      eq[sameIdIdx] = key; sfx.heal(); saveState(); renderUpgrade(); renderMain();
+    } else if(eq.length < 5){ eq.push(key); sfx.heal(); saveState(); renderUpgrade(); renderMain(); }
     else { swapPending = { kind:'mut', key }; sfx.tap(); renderUpgrade(); }
   } else {
     if(!Array.isArray(p.equipped_skills)) p.equipped_skills = [];
@@ -11297,6 +11308,12 @@ window.__test('cats: acid hybrid = attack + debuff', function(){
 window.__test('cats: heal splits hp vs energy', function(){
   __ok(skillCats({kind:'heal', heal:0.2}).includes('heal_hp'), 'heal_hp');
   __ok(skillCats({kind:'special', energyGain:2}).includes('heal_energy'), 'heal_energy');
+});
+window.__test('equip: same card_id auto-replaces (등급 무관)', function(){
+  const after = cardsAfterEquip(['card_cellwall@C','card_sap@B'], 'card_cellwall@S');
+  __eq(after.filter(k=>k.indexOf('card_cellwall')===0).length, 1, 'one cellwall');
+  __ok(after.includes('card_cellwall@S') && !after.includes('card_cellwall@C'), 'replaced to S');
+  __ok(after.includes('card_sap@B'), 'other kept');
 });
 </script>
 </body>
