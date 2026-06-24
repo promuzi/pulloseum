@@ -2,6 +2,9 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — UI: 모달 열림 깜빡임 제거 (holoBoot → roomEnter 통일)
+- 일반 모달이 열릴 때 쓰던 `holoBoot`(투명도를 `steps(12)`로 끊어 점멸시키는 "홀로그램 부팅" 효과)가 깜빡거려서 제거. 상점/탐사 모달이 이미 쓰던 부드러운 `roomEnter`(살짝 떠오르는 페이드+업)로 전 모달 통일 → `.modal:not(.hidden) .modal-card` 한 규칙으로 합치고 미사용 `@keyframes holoBoot` 삭제. 검증: 모달 `.modal-card` computed `animation-name=roomEnter`, holoBoot 키프레임 부재 확인.
+
 ### 2026-06-24 — #2 양육/열매 시스템 구현 (게이지·5색 희귀도·공통 RewardReveal) + #1 카탈로그 복구
 > 설계 확정([spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)) → 구현([plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) Task 1~6). 셀프테스트(`__catalogSelfTest`) 전부 통과 + preview 구동 검증.
 - **#1 긴급 복구**: OneDrive 사고로 커밋 `ee6be39`에 섞여 유실됐던 개체 카탈로그 코어(`RARITY_WEIGHT`·`pickAcquirableSpecies`·`applyCatalogVariantFields`·버섯형 `TYPE_STATS`·종 rarity·`SPECIES` 카탈로그 머지/rich필드 backfill·버섯 스프라이트·`rollSpeciesFromView` 희귀도가중·`SEED_ROOT` 균사)를 `ffb44da`에서 골라 재이식. 셀프테스트 8개 실패→0.

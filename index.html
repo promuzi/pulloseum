@@ -1753,17 +1753,13 @@ body{
   55%{opacity:1;}
   100%{opacity:1; transform:none; filter:none;}
 }
-@keyframes holoBoot{
-  0%{opacity:0;} 8%{opacity:.5;} 14%{opacity:.15;} 22%{opacity:.85;} 32%{opacity:.4;} 100%{opacity:1;}
-}
 #nurseryScreen:not(.hidden),#shipScreen:not(.hidden){animation:roomEnterFixed .42s cubic-bezier(.2,.8,.3,1) both;}
 @keyframes roomEnterFixed{
   0%{opacity:0; transform:translateX(-50%) translateY(12px); filter:brightness(1.5) saturate(.5);}
   55%{opacity:1;}
   100%{opacity:1; transform:translateX(-50%); filter:none;}
 }
-#shopModal:not(.hidden) .modal-card,#explorationModal:not(.hidden) .modal-card{animation:roomEnter .42s cubic-bezier(.2,.8,.3,1) both;}
-.modal:not(#shopModal):not(#explorationModal):not(.hidden) .modal-card{animation:holoBoot .4s steps(12,end) both;}
+.modal:not(.hidden) .modal-card{animation:roomEnter .42s cubic-bezier(.2,.8,.3,1) both;}
 @media (prefers-reduced-motion:reduce){
   #nurseryScreen,#shipScreen,.modal .modal-card{animation:none !important;}
 }
@@ -6940,6 +6936,14 @@ function exploreViewRun(){
     lastExResult = { planet:p, region:r, rewards, success, diff };
     saveState(); success ? sfx.win() : sfx.lose();
     renderMain(); renderExploration();
+    // 성공 시: 공통 RewardReveal — 탐사 상자를 눌러 개봉(실패는 기존 결과 카드 유지)
+    if(success){
+      const items = [];
+      rewards.seeds.forEach(s => items.push({ label:`${s.name}${s.mutation_candidate?' · 변이가능':''}`, icon:'🌱' }));
+      (rewards.cards||[]).forEach(c => items.push({ label:`${c.name} [${c.grade||'C'}]`, icon:c.icon||'🧬' }));
+      (rewards.care||[]).forEach(x => items.push({ label:`${x.name} ×${x.count}`, icon:x.icon }));
+      if(items.length) openRewardReveal({ kind:'expedition', items, onDone:()=>{ lastExResult=null; renderExploration(); } });
+    }
   });
 }
 renderExploration = function(){
@@ -9276,12 +9280,15 @@ function buyShopBox(boxId){
   if(!box){ toast('상자 정보를 찾을 수 없습니다'); return; }
   if(state.credits < box.price){ toast('크레딧이 부족합니다'); return; }
   spendCredits(box.price);
-  pendingShopOpening = { box, reward:rollShopBoxReward(box), revealed:false, granted:false };
+  const reward = rollShopBoxReward(box);
+  grantShopBoxReward(box, reward);
   saveState();
-  hide('#shopBoxModal');
-  hide('#shopModal');
-  renderShopOpening();
-  show('#shopOpenModal');
+  hide('#shopBoxModal'); hide('#shopModal');
+  // 공통 RewardReveal — 보급 박스를 눌러 개봉
+  const rd = shopRewardData(reward);
+  const gradeTxt = (reward.type==='card' && reward.grade) ? ` [${reward.grade}]` : '';
+  const cnt = (reward.count && reward.count>1) ? ` ×${reward.count}` : '';
+  openRewardReveal({ kind:'supply', items:[{ label:`${rd.name}${gradeTxt}${cnt}`, icon:rd.icon }], onDone:()=>renderMain() });
   renderMain();
 }
 function revealShopBox(){
