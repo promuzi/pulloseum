@@ -3305,8 +3305,9 @@ const TYPE_STATS = {
   flower: { hp:44, atk:14, def:6,  spd:9  }, // 화초형 — 공격·화력
   cactus: { hp:58, atk:9,  def:14, spd:4  }, // 다육형 — 방어·지구력
   vine:   { hp:46, atk:11, def:7,  spd:12 }, // 덩굴형 — 기동·흡혈
+  mushroom: { hp:38, atk:9,  def:5,  spd:8  }, // 버섯형 — 저스탯(포자 메커니즘으로 보완)
 };
-const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈' };
+const TYPE_CONCEPT = { grass:'속도·균형', tree:'체력·방어', flower:'공격·화력', cactus:'방어·지구력', vine:'기동·흡혈', mushroom:'포자·교란' };
 /* [종key, 이름, 타입, 속성] — 5타입 × 7속성. 기존 7종 key는 세이브 호환 위해 유지. */
 const SPECIES_GRID = [
   // 🌸 (구)초본형 → 화초형 흡수: 레거시 7종. 타입을 flower로 전환(초본형 폐지).
@@ -3354,17 +3355,42 @@ const SPECIES_CATALOG = {
   },
 };
 const SPECIES = (function(){
-  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형' };
+  const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
   const EL_KO = { fire:'불', water:'물', grass:'풀', earth:'대지', wind:'바람', bolt:'번개', ice:'빙결' };
   const out = {};
+  function buildBase(type, el, statsOverride){
+    if(statsOverride) return Object.assign({ hp:0,atk:0,def:0,spd:0 }, statsOverride);
+    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
+    return { hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd };
+  }
+  // 1) 레거시 grid 35종
   SPECIES_GRID.forEach(function(row){
     const key=row[0], name=row[1], type=row[2], el=row[3];
-    const e=ELEMENT_STATS[el], t=TYPE_STATS[type];
     out[key] = {
-      key, name, element:el, seedType:type,
-      base:{ hp:e.hp+t.hp, atk:e.atk+t.atk, def:e.def+t.def, spd:e.spd+t.spd },
+      key, name, element:el, seedType:type, base:buildBase(type, el),
       desc:`${EL_KO[el]}속성 ${TYPE_KO[type]} — ${TYPE_CONCEPT[type]} 성향.`,
     };
+  });
+  // 2) 카탈로그 머지(보강) + 신규 종 등록
+  Object.keys(SPECIES_CATALOG).forEach(function(key){
+    const c = SPECIES_CATALOG[key];
+    if(!out[key]){ // grid에 없던 신규 종
+      const type=c.type, el=c.element;
+      out[key] = { key, name:c.name||key, element:el, seedType:type,
+        base:buildBase(type, el, c.stats),
+        desc:`${EL_KO[el]||el}속성 ${TYPE_KO[type]||type} — ${TYPE_CONCEPT[type]||''} 성향.` };
+    } else if(c.stats){ out[key].base = buildBase(out[key].seedType, out[key].element, c.stats); }
+    if(c.name) out[key].name = c.name;
+  });
+  // 3) 모든 종에 리치 필드 기본값 보강
+  Object.keys(out).forEach(function(key){
+    const s = out[key], c = SPECIES_CATALOG[key] || {};
+    s.rarity = c.rarity || 'common';
+    s.legacy = !!c.legacy;
+    s.baseVariants = Array.isArray(c.baseVariants) ? c.baseVariants.slice() : [];
+    s.signatures = Array.isArray(c.signatures) ? c.signatures.slice() : [];
+    s.stageSkills = c.stageSkills || null;
+    s.variantSlots = c.variantSlots || { normal:6 };
   });
   return out;
 })();
@@ -3609,14 +3635,25 @@ const SEED_TYPE_BY_KO = (function(){ const m={}; Object.keys(SEED_TYPE_NAMES).fo
 const SPECIES_BY_TYPE_EL = (function(){ const m={}; SPECIES_GRID.forEach(r=>{ m[r[2]+'_'+r[3]]=r[0]; }); return m; })();
 function speciesForTypeEl(type, el){ return SPECIES_BY_TYPE_EL[type+'_'+el] || 'thorn'; }
 function randomSpeciesKey(){ const ks=Object.keys(SPECIES); return ks[Math.floor(Math.random()*ks.length)]; }
+/* 희귀도 가중치 — 등장/드롭률만 좌우(스탯은 거의 동일). 값이 클수록 자주 나온다. */
+const RARITY_WEIGHT = { common:100, uncommon:55, rare:22, epic:8, legendary:3 };
+/* 신규 획득 가능 종 = legacy 아님. filterFn으로 타입/속성 추가 제한 가능. */
+function pickAcquirableSpecies(filterFn){
+  const pool = Object.keys(SPECIES).filter(k => !SPECIES[k].legacy && (!filterFn || filterFn(SPECIES[k])));
+  if(!pool.length) return 'thorn';
+  let total = 0; const w = pool.map(k => { const x = RARITY_WEIGHT[SPECIES[k].rarity]||50; total += x; return x; });
+  let r = Math.random()*total;
+  for(let i=0;i<pool.length;i++){ r -= w[i]; if(r <= 0) return pool[i]; }
+  return pool[pool.length-1];
+}
 /* EXPLORE_VIEW 지역(el[]·types[]) 테마에 맞춰 종을 뽑는다. 지역 정보가 없으면 완전 무작위. */
 function rollSpeciesFromView(viewRegion){
-  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : Object.keys(ELEMENT_STATS);
-  const el = els[Math.floor(Math.random()*els.length)];
+  const els = (viewRegion && viewRegion.el && viewRegion.el.length) ? viewRegion.el : null;
   const typesKo = (viewRegion && viewRegion.types && viewRegion.types.length) ? viewRegion.types : null;
-  let type = typesKo ? SEED_TYPE_BY_KO[typesKo[Math.floor(Math.random()*typesKo.length)]] : null;
-  if(!type){ const ts=Object.keys(TYPE_STATS); type = ts[Math.floor(Math.random()*ts.length)]; }
-  return speciesForTypeEl(type, el);
+  const okType = typesKo ? typesKo.map(t => SEED_TYPE_BY_KO[t]).filter(Boolean) : null;
+  // 지역 테마(속성/타입)에 맞는 비-legacy 종을 희귀도 가중으로 추출
+  return pickAcquirableSpecies(s =>
+    (!els || els.indexOf(s.element) >= 0) && (!okType || okType.indexOf(s.seedType) >= 0));
 }
 const ENV_LABELS = {
   heat:'열', cold:'냉기', pressure:'압력', hydro_pressure:'수압',
@@ -4442,6 +4479,7 @@ function normalizeState(s){
     if(typeof p.rankPoints !== 'number') p.rankPoints = (p.rankTier ? RANK_TIERS[clamp(p.rankTier,0,RANK_TIERS.length-1)].threshold : 0);
     if(typeof p.bestRoundIdx !== 'number') p.bestRoundIdx = -1;
     if(typeof p.champion !== 'boolean') p.champion = false;
+    applyCatalogVariantFields(p); // 변이 슬롯/태생 변이 backfill(구 세이브 무회귀)
   });
   if(s.tournament === undefined) s.tournament = null;
   if(!s.exploration_ship) s.exploration_ship = newExplorerShip();
@@ -7508,6 +7546,21 @@ function renderPlantConfirm(){
     plantSeedFromBag(pendingPlantSeedId, name);
   });
 }
+/* 개체 카탈로그의 변이 슬롯/태생 변이를 식물 인스턴스에 적용(심기·세이브 마이그레이션 공용).
+   변이 슬롯 UI는 향후 작업 — 여기선 데이터만 식물에 기록한다. */
+function applyCatalogVariantFields(p){
+  if(!p) return p;
+  const sp = SPECIES[p.species];
+  if(!p.variant_slots || typeof p.variant_slots !== 'object'){
+    p.variant_slots = sp ? Object.assign({}, sp.variantSlots) : { normal:6 };
+  }
+  if(!Array.isArray(p.base_variants)){
+    p.base_variants = sp ? (sp.baseVariants||[]).slice() : [];
+  }
+  // 태생 변이가 있고 변이형이 미설정/일반이면 첫 태생 변이로 초기화(예: 버섯=포자)
+  if((!p.form || p.form==='normal') && p.base_variants.length) p.form = p.base_variants[0];
+  return p;
+}
 function createPlantedPlantFromSeed(entry, seed, customName){
   // 탐사로 정해진 종(35종)을 우선 사용. 없으면 기존 종자→종 매핑.
   const speciesKey = (entry && entry.species && SPECIES[entry.species]) ? entry.species : speciesKeyForSeed(seed);
@@ -7533,6 +7586,7 @@ function createPlantedPlantFromSeed(entry, seed, customName){
   p.grade = entry.grade || 'C';
   p.potential = entry.grade || 'C';
   ensurePlantInstanceFields(p);
+  applyCatalogVariantFields(p); // 변이 슬롯/태생 변이 기록(버섯=포자)
   return p;
 }
 function plantSeedFromBag(inventoryId, customName = ''){
@@ -7737,6 +7791,12 @@ function composePlantBody(seedType, gi, P, el){
     if(gi>=3){ svg+=`<rect x="${cx-w/2-9}" y="${cy-4}" width="9" height="${10+gi}" rx="4.5" fill="${P.dark}"/><rect x="${cx+w/2}" y="${cy-8}" width="9" height="${12+gi}" rx="4.5" fill="${P.dark}"/>`; }
     for(let i=0;i<4+gi;i++){ const yy=cy-h/2+10+i*6; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
     if(gi>=5) svg+=`<circle cx="${cx}" cy="${cy-h/2+3}" r="6" fill="${P.accent}"/>`;
+  } else if(seedType==='mushroom'){
+    const capW=16+gi*4, capH=10+gi*2.4, stalkH=12+gi*4;
+    svg+=`<rect x="${cx-3-gi*0.3}" y="${cy}" width="${6+gi*0.6}" height="${stalkH}" rx="3" fill="${P.light}"/>`;
+    svg+=`<path d="M${cx-capW/2} ${cy} Q ${cx} ${cy-capH*1.8} ${cx+capW/2} ${cy} Z" fill="${P.main}"/>`;
+    for(let i=0;i<2+gi;i++){ const px=cx-capW/2+ (i+0.5)*(capW/(2+gi)); svg+=`<circle cx="${px}" cy="${cy-capH*0.5}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".85"/>`; }
+    if(gi>=4){ svg+=`<circle cx="${cx-capW*0.18}" cy="${cy+stalkH*0.4}" r="2.2" fill="${P.accent}"/>`; }
   } else { // tree
     const r=12+gi*3.2, th=16+gi*3;
     svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
@@ -7778,7 +7838,7 @@ function spriteFor(obj, size){
 }
 /* 이름 생성: 속성 + 장착 변이 카드(종류·개수) + 식물 타입. 생장 단계 칭호는 표시처에서 별도. */
 const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
-const SEED_ROOT = { grass:'초본', tree:'목본', flower:'화초', cactus:'다육', vine:'덩굴' };
+const SEED_ROOT = { grass:'초본', tree:'목본', flower:'화초', cactus:'다육', vine:'덩굴', mushroom:'균사' };
 const CARD_TYPE_WORD = { common:'강화', dna:'포식', weapon:'무장', potion:'맹독', spore:'포자', chloro:'발광', dragon:'용' };
 const COUNT_PREFIX = ['', '', '이중', '삼중', '사중', '오중'];
 function composePlantName(p){
@@ -9210,7 +9270,7 @@ function buildEnemy(roundIndex, tierIndex){
     form = pick(['pred','toxic','spore','lumen','weapon']);
     if(form==='pred') predType = pick(['vamp','absorb']);
   }
-  const sp = pick(Object.keys(SPECIES));
+  const sp = pickAcquirableSpecies();        // 적도 신규 획득 풀 기준(레거시 초본형 제외)
   const el = SPECIES[sp].element;            // 종의 고정 속성 → 이름·속성·외형 일치
   const seedType = SPECIES_SEEDTYPE[sp] || 'grass';
   const growth = ENEMY_STAGE_BY_ROUND[clamp(roundIndex, 0, ENEMY_STAGE_BY_ROUND.length-1)];
