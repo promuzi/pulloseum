@@ -7,6 +7,7 @@
 - ⚠️ **실시간 갱신 의무:** 코드·데이터·기획을 바꾸면 **같은 작업 안에서** 로드맵(또는 해당 하위 문서)의 상태/체크박스/수치를 갱신하고, 결정이 생기면 "결정 로그"에 남기고, **코드와 문서를 함께 커밋·푸시**한다. 놓치는 것 없이 항상 실시간으로. (상세 규약: 로드맵 §6)
 - **별칭:** 사용자가 "마스터 로드맵 / 로드맵 / 마스터 문서" 무엇으로 부르든 전부 `docs/master-roadmap.md`를 뜻한다.
 - **작업 시작 시 `git pull`**(다른 기기/대화창 변경 선반영), 끝나면 `git push`. 새 기기에서 클론했으면 한 번 `git config core.hooksPath .githooks` 실행(코드만 바뀌고 문서 안 바뀐 푸시를 막는 pre-push 훅 활성화).
+- ⚠️ **OneDrive 주의:** 이 저장소가 OneDrive 폴더 안에 있어, OneDrive가 다른 기기의 사본을 작업 트리에 덮어써 git과 충돌·미커밋 편집 유실이 발생할 수 있다(2026-06-24 사고). 작업 중 파일이 흔들리면 OneDrive 동기화를 일시정지하고, `git status`로 HEAD와 일치(clean)를 확인한 뒤 진행. 근본 해결은 저장소를 OneDrive 바깥으로 이전.
 
 ## ▶ 게임 바로 열기 (Claude에게: 매 대화 시작 시 이 링크를 항상 먼저 보여줄 것)
 - **게임 실행:** [index.html](index.html) (클릭하면 브라우저로 열림 — 현재 게임 현황 바로 확인)
@@ -26,6 +27,7 @@
 - **`index.html`** — 게임 전체가 이 한 파일에 들어 있음. CSS·JS·**게임 데이터 전부 인라인**.
   - ⚠️ 행성/지역/아이템/토너먼트 데이터는 `index.html`의 `const AlienPlantGameData = ...` 블록에 내장. (`data/alien-plant-pvp-data.js`는 참고용, 게임은 안 읽음)
   - ⚠️ **종·스킬은 별개 위치(2026-06-24~):** 종 = `SPECIES_CATALOG`(레거시 격자 `SPECIES_GRID` 위에 머지), 스킬 = `SKILL_LIB`. 종/스킬 확장은 이 둘만 수정(개체 템플릿: `spore_cap`). → [species-system-guide](docs/species-system-guide.md)
+- **`docs/dex/plant-codex.html`** — 식물 도감(카드뉴스형). 데이터 복제 없이 숨은 `<iframe src="../../index.html?dex=1">`로 게임을 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 종/스킬/스탯은 index.html만 고치면 자동 반영. `?dex=1`은 부팅·세이브·SW 생략(데이터 전용). ⚠️ `sw.js`(PWA)가 게임을 캐시하니 preview 테스트 시 옛 게임이 읽히면 서비스워커·캐시 비우기. 잔여작업: [docs/dex/HANDOFF.md](docs/dex/HANDOFF.md)
 - **`data/alien-plant-pvp-data.js`** — 데이터 원본(참고용). `scripts/validate-alien-plant-data.js`로 검증 가능.
 - **`_analysis/pdf_pages/`** — 기획서 PDF를 페이지별 PNG로 변환한 것 (기획 참고용, page_01~09에 내용 있음).
 - **`바탕 화면/풀로세움 기획서.pdf`** — 원본 기획서(이 폴더 밖, 데스크탑).
@@ -50,7 +52,6 @@
 ## 앞으로 할 만한 것 (백로그)
 > ⚠️ **앞으로의 방향·우선순위는 이제 [`docs/master-roadmap.md`](docs/master-roadmap.md)(유일 허브)에서 관리한다.** 아래는 요약일 뿐, 갱신은 로드맵에서 한다.
 - 식물 종류 확장 / **양육·열매 시스템**(생장=경험치, 화분) / 도트 UI / 함선·길드·방꾸 / 애니메이션 / 사운드 / 탐사 재설계 / PvP·서버 / 구글 플레이 출시 → 전부 로드맵 §4에 구체화됨.
-- 세부 설계 문서: 밸런스 [`balance-sheet.md`](docs/balance-sheet.md) · 전투엔진 [`battle-mechanics-deep-dive.md`](docs/battle-mechanics-deep-dive.md) · 종 [`species-system-guide.md`](docs/species-system-guide.md) · 변이/특성 [`trait-growth-roadmap.md`](docs/trait-growth-roadmap.md) · 도트 [`pixel-art-ui-roadmap.md`](docs/pixel-art-ui-roadmap.md) · 안드로이드 [`android-capacitor-wrapper.md`](docs/android-capacitor-wrapper.md)
 - ~~세이브 내보내기/가져오기~~ ✅ 2026-06-19 · ~~특성 카드 시스템~~ ✅ 2026-06-16
 
 ## 변경 이력 (개발 로그)
@@ -64,3 +65,4 @@
 - 특성/생장 로드맵: [docs/trait-growth-roadmap.md](docs/trait-growth-roadmap.md)
 - 안드로이드 빌드: [docs/android-capacitor-wrapper.md](docs/android-capacitor-wrapper.md)
 - 토큰 절약 워크플로: [.claude/prompts/reset-handoff.md](.claude/prompts/reset-handoff.md), [docs/session-chaining-guide.md](docs/session-chaining-guide.md)
+- 브레인스토밍/설계 박제: `docs/superpowers/specs/YYYY-MM-DD-<주제>-design.md` (미완 설계는 여기 박제 + 로드맵 §2 문서지도에 등록 → 다음 세션 진입점). 진행 중 #2 양육/열매 = [docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md](docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md)
