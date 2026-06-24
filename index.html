@@ -1387,6 +1387,12 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .pot-fruits{position:absolute;top:6px;right:6px;display:flex;gap:3px;flex-wrap:wrap;max-width:46px;justify-content:flex-end;z-index:5;}
 .pot-fruit-dot{width:11px;height:11px;border-radius:50%;background:var(--fc);border:1.5px solid #fff;box-shadow:0 0 6px var(--fc),0 0 2px var(--fc);}
 .rr-fruit-chip{width:14px;height:14px;border-radius:50%;background:var(--fc);border:2px solid #fff;box-shadow:0 0 7px var(--fc);display:inline-block;}
+/* 식물/화분 2레이어(#12 진입점) — 화분 레이어 위에 식물 레이어, 흔들림은 식물만 */
+.pot-stack{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:3;width:78px;height:91px;}
+.pot-stack .pot-layer{position:absolute;left:0;bottom:0;z-index:1;line-height:0;}
+.pot-stack .plant-layer{position:absolute;left:0;bottom:0;z-index:2;line-height:0;transform-origin:50% 88%;animation:potSway 3.4s ease-in-out infinite;}
+@keyframes potSway{0%,100%{transform:rotate(-2.5deg);}50%{transform:rotate(2.5deg);}}
+@media (prefers-reduced-motion: reduce){ .pot-stack .plant-layer{animation:none;} }
 /* 공통 RewardReveal 개봉 연출 */
 #rewardRevealModal .rr-stage{background:radial-gradient(120% 100% at 50% 0%,rgba(40,60,80,.6),rgba(10,16,24,.94));border:1.5px solid rgba(120,200,255,.28);border-radius:18px;padding:22px 16px;max-width:340px;width:90%;text-align:center;}
 .rr-title{font-size:15px;font-weight:900;color:#d6ffe6;margin-bottom:16px;}
@@ -7921,10 +7927,30 @@ function composePlantSvg(seedType, growth, element, opts){
   return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
     ${composePlantBody(seedType, gi, P, el)}
-    <rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
+    ${opts.noPot ? '' : `<rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
     <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
-    <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>
+    <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>`}
     ${spark}
+  </svg>`;
+}
+/* 화분 종류별 레이어(절차적 SVG, 식물과 동일 120x140 viewBox로 정렬). PNG 교체 훅=POT_SPRITE_OVERRIDES. */
+function potVisual(potId, size){
+  size = size || 78;
+  const h = Math.round(size*140/120);
+  if(POT_SPRITE_OVERRIDES[potId]){
+    return `<img src="${POT_SPRITE_OVERRIDES[potId]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:block"/>`;
+  }
+  const pot = POT_CATALOG[potId] || POT_CATALOG.pot_terra;
+  const c = pot.color, dark = '#232b3d';
+  const glow  = (potId==='pot_crystal'||potId==='pot_gold') ? `<rect x="36" y="96" width="48" height="40" rx="6" fill="${c}" opacity="0.12"/>` : '';
+  const facet = potId==='pot_crystal' ? `<path d="M48 108 l12 -6 l12 6 -12 22 Z" fill="${c}" opacity="0.25"/>` : '';
+  const crown = potId==='pot_gold' ? `<path d="M44 96 l4 -7 4 5 4 -7 4 7 4 -5 4 7 Z" fill="${c}"/>` : '';
+  return `<svg width="${size}" height="${h}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <rect x="36" y="96" width="48" height="7" rx="3.5" fill="${c}" opacity="0.95"/>
+    <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="${dark}" stroke="${c}" stroke-width="1.4"/>
+    <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${c}" opacity="0.6"/>
+    ${facet}${crown}
   </svg>`;
 }
 /* 식물/전투원 객체 → 외형 (오버라이드 우선, 없으면 자동 생성) */
@@ -10966,6 +10992,13 @@ window.__test('pots: effects (maxFruits/speed/lift)', function(){
   const g={growth_stage:'growing',nursery:{potId:'pot_gold'}};  ensureNurseryFields(g); g.nursery.gauge=0; g.nursery.lastTick=0;
   nurseryTick(t, 2*3600000); nurseryTick(g, 2*3600000);
   __ok((g.nursery.ripe.length + g.nursery.gauge) > (t.nursery.ripe.length + t.nursery.gauge), 'gold가 더 빨리 충전');
+});
+window.__test('pots: visual separation (noPot + potVisual)', function(){
+  const full = composePlantSvg('flower','mature','fire',{});
+  const noPot = composePlantSvg('flower','mature','fire',{noPot:true});
+  __ok(full.indexOf('M40 103')>=0, '기본은 화분 path 포함');
+  __ok(noPot.indexOf('M40 103')<0, 'noPot은 화분 path 없음');
+  POT_ORDER.forEach(id => { const v=potVisual(id,40); __ok(v.indexOf('<svg')>=0 || v.indexOf('<img')>=0, 'potVisual '+id); });
 });
 window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
