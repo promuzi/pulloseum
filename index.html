@@ -6574,17 +6574,17 @@ const EXPLORE_VIEW = [
     intro:'화산 활동이 활발한 용암 행성', regions:[
       { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
         desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
-      { name:'흑요암 능선', el:['fire'], types:['다육형','목본형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
+      { name:'흑요암 능선', el:['fire'], types:['다육형','목본형','버섯형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
         desc:'굳은 용암이 만든 검은 능선. 강한 방어형 종자가 발견된다.', link:'region_vathra_iron_dunes' },
-      { name:'잿빛 평원', el:['earth','fire'], types:['화초형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
+      { name:'잿빛 평원', el:['earth','fire'], types:['화초형','버섯형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
         desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
     ]},
   { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
     cardTypes:['spore','potion'], themeNote:'독성 포자가 가득한 균사 행성 — 포자·물약 카드가 발견된다.',
     intro:'포자 안개가 가득한 균사 행성', regions:[
-      { name:'포자 늪', el:['grass','wind'], types:['화초형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
+      { name:'포자 늪', el:['grass','wind'], types:['화초형','버섯형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
         desc:'공생 포자가 안개처럼 떠다니는 늪. 제어형 변이가 자주 나온다.', link:'region_elyndor_spore_marsh' },
-      { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
+      { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형','버섯형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
         desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh' },
     ]},
   { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
@@ -6610,7 +6610,7 @@ const EXPLORE_VIEW = [
     intro:'방사선 폭풍이 휘몰아치는 폐허', regions:[
       { name:'방사 폐허', el:['bolt','fire'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:32,y:38},
         desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift' },
-      { name:'전자기 늪', el:['bolt','water'], types:['화초형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
+      { name:'전자기 늪', el:['bolt','water'], types:['화초형','버섯형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
         desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
@@ -6618,7 +6618,7 @@ const EXPLORE_VIEW = [
     intro:'영하의 빙하로 덮인 동토 행성', regions:[
       { name:'빙정 평원', el:['ice','water'], types:['화초형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
         desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
-      { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
+      { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형','버섯형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
         desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
     ]},
 ];
@@ -11154,6 +11154,18 @@ window.__test('mushroom: 7-element grid + signatures resolve', function(){
   });
   ['sig.spore_ignite','sig.spore_mist','sig.myco_net','sig.spore_gust','sig.spore_charge','sig.frost_spore']
     .forEach(function(id){ if(!skillById(id)) fails.push('skill missing: '+id); });
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('exploration: every mushroom element reachable via 버섯형 region', function(){
+  const fails = [];
+  ['grass','fire','water','earth','wind','bolt','ice'].forEach(function(el){
+    const ok = EXPLORE_VIEW.some(function(planet){
+      return (planet.regions||[]).some(function(r){
+        return (r.el||[]).indexOf(el) >= 0 && (r.types||[]).indexOf('버섯형') >= 0;
+      });
+    });
+    if(!ok) fails.push('no 버섯형 region covers element '+el);
+  });
   if(fails.length) throw new Error(fails.join(' | '));
 });
 </script>
