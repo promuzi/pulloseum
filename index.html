@@ -9477,6 +9477,17 @@ let B = null;
 function eff(a, d){ return ELEMENTS[a].strong.includes(d) ? 1.5 : (ELEMENTS[d].strong.includes(a) ? 0.67 : 1); }
 function statName(s){ return s==='atk'?'공격':s==='def'?'방어':s==='spd'?'기동성':s==='acc'?'적중':s; }
 function dotIcon(k){ return k==='poison'?'🟣':k==='bleed'?'🩸':k==='burn'?'🔥':'☠️'; }
+/* 독/출혈/화상 스택 상한 — 같은 종류가 상한 초과면 가장 오래된 스택 1개 제거(방무시 무한증식 방지) */
+const DOT_STACK_CAP = 4;
+function addDot(unit, dot){
+  if(!unit.dots) unit.dots = [];
+  unit.dots.push(dot);
+  while(unit.dots.filter(d => d.kind === dot.kind).length > DOT_STACK_CAP){
+    const i = unit.dots.findIndex(d => d.kind === dot.kind);
+    if(i < 0) break;
+    unit.dots.splice(i, 1);
+  }
+}
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
 function applyEnemyDebuff(d, eb){ let stat=eb.stat; if(stat==='rand') stat=pick(['atk','def','spd']); d.buffs.push({stat,pct:eb.pct,turns:eb.turns,kind:'debuff'}); return stat; }
@@ -10043,17 +10054,17 @@ async function applySkill(a, d, s, side, options={}){
       if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push('상대의 공격력을 흡수하였다!'); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
       if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push('상대의 에너지를 빼앗았다!'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
     }
-    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); d.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
+    if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); addDot(d, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
     if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push('방어력이 감소하였다!'); }
     if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
     if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); d.dots.push({kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
   updateBars();
@@ -10077,7 +10088,7 @@ async function tickStatuses(u, side){
       const roll=Math.random(), success=roll<sp.chance;
       if(!success) return;
       if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
-      else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); opp.dots.push({kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
+      else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); addDot(opp, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
       else if(sp.kind==='defup'){ u.buffs.push({stat:'def',pct:sp.pct,turns:2,kind:'buff'}); blog(`<span class="em">${u.name}</span> 🌀 방해 포자! 방어 ${Math.round(sp.pct*100)}%↑(2턴)`); changed=true; }
       if(sp.kind==='paralyze') statusNotes.push('마비 상태가 되었다!');
       else if(sp.kind==='poison') statusNotes.push('독에 중독되었다!');
@@ -11314,6 +11325,17 @@ window.__test('equip: same card_id auto-replaces (등급 무관)', function(){
   __eq(after.filter(k=>k.indexOf('card_cellwall')===0).length, 1, 'one cellwall');
   __ok(after.includes('card_cellwall@S') && !after.includes('card_cellwall@C'), 'replaced to S');
   __ok(after.includes('card_sap@B'), 'other kept');
+});
+window.__test('dot: same kind capped at DOT_STACK_CAP', function(){
+  const u = { dots:[] };
+  for(let i=0;i<7;i++) addDot(u, {kind:'poison',dmg:5,turns:3,icon:'🟣'});
+  __eq(u.dots.filter(d=>d.kind==='poison').length, DOT_STACK_CAP, 'poison capped');
+});
+window.__test('dot: different kinds stack independently', function(){
+  const u = { dots:[] };
+  for(let i=0;i<6;i++) addDot(u, {kind:'poison',dmg:5,turns:3});
+  for(let i=0;i<6;i++) addDot(u, {kind:'burn',dmg:3,turns:3});
+  __eq(u.dots.length, DOT_STACK_CAP*2, 'two kinds capped each');
 });
 </script>
 </body>
