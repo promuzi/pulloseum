@@ -3381,6 +3381,42 @@ const SPECIES_CATALOG = {
     signatures:['sig.spore_cloud'],
     stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_cloud'] },
   },
+  spore_fire: {
+    name:'이그니캡', type:'mushroom', element:'fire', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_ignite'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_ignite'] },
+  },
+  spore_water: {
+    name:'미스트캡', type:'mushroom', element:'water', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_mist'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_mist'] },
+  },
+  spore_earth: {
+    name:'트러플캡', type:'mushroom', element:'earth', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.myco_net'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.myco_net'] },
+  },
+  spore_wind: {
+    name:'윈드퍼프', type:'mushroom', element:'wind', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_gust'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_gust'] },
+  },
+  spore_bolt: {
+    name:'볼트캡', type:'mushroom', element:'bolt', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_charge'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_charge'] },
+  },
+  spore_ice: {
+    name:'프로스트캡', type:'mushroom', element:'ice', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.frost_spore'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.frost_spore'] },
+  },
 };
 const SPECIES = (function(){
   const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
@@ -3891,6 +3927,24 @@ const SKILL_LIB = {
   'sig.spore_cloud': { name:'포자 운무막', icon:'🌫️', cost:3, kind:'debuff', aoe:true,
     enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3},
     desc:'적 공격 20%↓(2턴) + 중독(3턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_ignite': { name:'포자 발화', icon:'🔥', cost:3, kind:'attack', aoe:true, power:100,
+    dot:{kind:'burn',pct:0.06,turns:3},
+    desc:'위력100 · 광역 + 화상(3턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_mist': { name:'포자 안개', icon:'💧', cost:3, kind:'heal', heal:0.15,
+    enemyDebuff:{stat:'acc',pct:0.2,turns:2},
+    desc:'체력 15% 회복 + 적 적중 20%↓(2턴)', tag:'시그니처', grade:'A' },
+  'sig.myco_net': { name:'균사 그물', icon:'🕸️', cost:3, kind:'debuff',
+    enemyDebuff:{stat:'spd',pct:0.3,turns:2}, selfBuff:{stat:'def',pct:0.2,turns:3}, dot:{kind:'poison',pct:0.04,turns:2},
+    desc:'적 기동 30%↓(2턴) + 자기 방어 20%↑(3턴) + 중독(2턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_gust': { name:'포자 질풍', icon:'🌪️', cost:3, kind:'attack', aoe:true, power:90,
+    dot:{kind:'poison',pct:0.05,turns:3}, selfBuff:{stat:'spd',pct:0.2,turns:2},
+    desc:'위력90 · 광역 + 중독(3턴) + 자기 기동 20%↑(2턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_charge': { name:'전도 포자', icon:'⚡', cost:3, kind:'attack', aoe:true, power:110,
+    critBonus:0.2, dot:{kind:'poison',pct:0.04,turns:2},
+    desc:'위력110 · 광역 + 치명타율 +20% + 중독(2턴)', tag:'시그니처', grade:'A' },
+  'sig.frost_spore': { name:'빙결 포자', icon:'❄️', cost:3, kind:'attack', aoe:true, power:90,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, dot:{kind:'poison',pct:0.04,turns:2},
+    desc:'위력90 · 광역 + 적 기동 25%↓(2턴) + 중독(2턴)', tag:'시그니처', grade:'A' },
 };
 /* ── 새싹·유체 단계 스킬 (타입 축 / 속성 축 공유, 개체 고유 없음) ──
    타입 5종(목본/화초/다육/덩굴/버섯) × {기본공격·기본방어·타입특기} + 속성 7종 × {속성발현}.
@@ -11081,6 +11135,25 @@ window.__test('appearance: mushroom body distinct + skips cotyledon', function()
   if(m === t) fails.push('mushroom must not render identical to tree (no branch)');
   const m1 = composePlantBody('mushroom', 1, P, 'grass');
   if(m1.indexOf('rotate(-28 49 84)') >= 0) fails.push('mushroom young stage should skip cotyledon ellipses');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('mushroom: 7-element grid + signatures resolve', function(){
+  const fails = [];
+  const elByKey = { spore_fire:'fire', spore_water:'water', spore_earth:'earth',
+                    spore_wind:'wind', spore_bolt:'bolt', spore_ice:'ice' };
+  Object.keys(elByKey).forEach(function(k){
+    const s = SPECIES[k];
+    if(!s){ fails.push('missing species '+k); return; }
+    if(s.seedType !== 'mushroom') fails.push(k+' seedType should be mushroom');
+    if(s.rarity !== 'rare') fails.push(k+' rarity should be rare');
+    const e = ELEMENT_STATS[elByKey[k]], t = TYPE_STATS.mushroom;
+    if(s.base.hp!==e.hp+t.hp || s.base.atk!==e.atk+t.atk || s.base.def!==e.def+t.def || s.base.spd!==e.spd+t.spd)
+      fails.push(k+' base stat != ELEMENT_STATS+TYPE_STATS.mushroom');
+    (s.signatures||[]).forEach(function(sig){ if(!skillById(sig)) fails.push(k+' signature unresolved: '+sig); });
+    if(!s.baseVariants || s.baseVariants[0] !== 'spore') fails.push(k+' should be born spore variant');
+  });
+  ['sig.spore_ignite','sig.spore_mist','sig.myco_net','sig.spore_gust','sig.spore_charge','sig.frost_spore']
+    .forEach(function(id){ if(!skillById(id)) fails.push('skill missing: '+id); });
   if(fails.length) throw new Error(fails.join(' | '));
 });
 </script>
