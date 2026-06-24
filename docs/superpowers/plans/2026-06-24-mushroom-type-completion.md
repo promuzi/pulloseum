@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - 전부 `index.html` 한 파일. 빌드 과정 없음.
-- **테스트 = 셀프테스트.** `window.__test('name', fn)`로 케이스 등록, `fn`은 **실패 사유 문자열의 배열(fails)** 을 반환. 판정은 반환값으로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남으므로 신뢰 금지.
+- **테스트 = 셀프테스트.** `window.__test('name', fn)`로 케이스 등록. **하니스(`__catalogSelfTest`)는 `fn`이 throw할 때만 실패로 집계**한다(반환값 무시) → 케이스는 `__ok`/`__eq`로 던지거나, fails 배열을 모은 뒤 `if(fails.length) throw new Error(fails.join(' | '));`로 끝내야 한다. 판정은 `__catalogSelfTest()`의 **반환 배열(실패 케이스명 목록)이 비었는지**로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남으므로 신뢰 금지.
 - **검증 절차(매 태스크):** preview에서 `index.html` 로드 → 콘솔에서 `window.__catalogSelfTest()` 실행 → 반환 객체의 `fails`(또는 실패 케이스 목록)가 비어 있는지 확인. 코드 수정 후 반드시 `location.reload()`. 옛 게임이 읽히면 서비스워커/캐시 비우기(`sw.js`가 캐시함).
 - **`'grass'` 일괄치환 금지** — 타입 grass(레거시 폴백)와 속성 grass(풀)가 동일 문자열.
 - **`spore_cap` key 유지**(세이브 호환). 신규 종 key = `spore_<element>` 규칙.
@@ -44,7 +44,7 @@ window.__test('stage names: per-type override + safe fallback', function(){
   if(growthStageName('sprout','tree') !== '떡잎') fails.push('tree sprout should be 떡잎');
   if(growthStageName('growing') !== '성장체') fails.push('no-type fallback should be 성장체');
   if(growthStageName('growing','nonsense') !== '성장체') fails.push('unknown type should fall back');
-  return fails;
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 ```
 
@@ -132,7 +132,7 @@ window.__test('appearance: mushroom body distinct + skips cotyledon', function()
   if(m === t) fails.push('mushroom must not render identical to tree (no branch)');
   const m1 = composePlantBody('mushroom', 1, P, 'grass');
   if(m1.indexOf('rotate(-28 49 84)') >= 0) fails.push('mushroom young stage should skip cotyledon ellipses');
-  return fails;
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 ```
 
@@ -265,7 +265,7 @@ window.__test('mushroom: 7-element grid + signatures resolve', function(){
   });
   ['sig.spore_ignite','sig.spore_mist','sig.myco_net','sig.spore_gust','sig.spore_charge','sig.frost_spore']
     .forEach(function(id){ if(!skillById(id)) fails.push('skill missing: '+id); });
-  return fails;
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 ```
 
@@ -379,7 +379,7 @@ window.__test('exploration: every mushroom element reachable via 버섯형 regio
     });
     if(!ok) fails.push('no 버섯형 region covers element '+el);
   });
-  return fails;
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 ```
 

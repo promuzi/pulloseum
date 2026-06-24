@@ -27,7 +27,7 @@
 | 11 | 시작화면 수정 | 🔲 미착수 | 타이틀→게임 전환 연출(5번 연동) | — |
 | 12 | 종자 가방 창 + 식물/화분 분리 | 🔲 미착수 | 가방 UI 재설계 + 식물·화분 레이어 분리 | [pixel-art §-](pixel-art-ui-roadmap.md) |
 | 6 | 음악/효과음 | 🔲 미착수 | 라이선스·재생 방식 조사 | — |
-| 7 | 탐사 시스템 재설계 | 🟡 궤도맵 有 | 행성별 종 분포 제한 + 연료/크레딧 게이팅 | [species §4](species-system-guide.md) |
+| 7 | 탐사 시스템 재설계 | 🟡 설계 확정(아틀라스+종분포) | 구현 계획 작성 → 행성 풀/시그니처·아틀라스 리스킨·폴드 모션 | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 
@@ -53,7 +53,11 @@
 | **[superpowers/specs/2026-06-24-nurture-fruit-system-design.md](superpowers/specs/2026-06-24-nurture-fruit-system-design.md)** | 양육/열매 시스템 설계(✅확정) — 2축·게이지 모델·5색 희귀도·공통 RewardReveal·기존 개편 관계 | **#2 양육 설계 근거** |
 | **[superpowers/plans/2026-06-24-nurture-fruit-system.md](superpowers/plans/2026-06-24-nurture-fruit-system.md)** | 양육/열매 구현 계획(Task 1~8) — 데이터모델·게이지/보상 로직·UI·RewardReveal·연결 | **#2 양육 구현 중** |
 | **[superpowers/specs/2026-06-24-plant-individual-catalog-design.md](superpowers/specs/2026-06-24-plant-individual-catalog-design.md)** | 개체 카탈로그(A+C) 설계서 — 데이터 구조·타입 개편·마이그레이션 | #1 종 확장 설계 |
+| **[superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)** | 탐사 업그레이드 설계(✅확정) — 행성 풀+지역 시그니처 종 분포·아틀라스 세계관·폴드(차원이동) 모션·경기장 무료입장 | **#7 탐사 재설계 근거** |
 | **[superpowers/plans/2026-06-24-plant-individual-catalog.md](superpowers/plans/2026-06-24-plant-individual-catalog.md)** | 개체 카탈로그 전환 구현 계획(Task 0~7, 완료) | #1 구현 참조 |
+| **[superpowers/specs/2026-06-24-species-individual-concepts-design.md](superpowers/specs/2026-06-24-species-individual-concepts-design.md)** | 개체 고유화 설계(진행 중) — 타입/속성 공통 컨셉 한 줄·개체 템플릿·개체당 고유 스킬 3개(성장체/성체/완숙체)·개체 로스터 누적 | **#1 개체 컨셉·스킬 — 작업 중** |
+| **[superpowers/specs/2026-06-24-mushroom-type-design.md](superpowers/specs/2026-06-24-mushroom-type-design.md)** | 버섯 타입 설계(✅완료) — 7속성 종·클래식 독버섯 외형(bodyStyle 훅)·시그니처 6·타입별 단계명·탐사 드롭 연동 | **#1 버섯형 설계** |
+| **[superpowers/plans/2026-06-24-mushroom-type-implementation.md](superpowers/plans/2026-06-24-mushroom-type-implementation.md)** | 버섯 타입 구현 계획(Task 1~5, 완료) — 단계명·외형·종7·시그니처·탐사·문서 | **#1 버섯형 구현** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -63,7 +67,7 @@
 
 > 세부는 §2 하위 문서로. 여기선 "무엇이 작동하는가"만 요약.
 
-- **종/식물:** **개체 카탈로그(`SPECIES_CATALOG`)** 기반 — 레거시 격자 35종 위에 개체별 확장(rarity·변이슬롯·고유스킬)을 머지. 타입 5종 = 버섯/목본/화초/다육/덩굴(**초본형 폐지 → 화초형 흡수**, 구 초본 7종은 flower로 전환·legacy). 외형은 **절차적 SVG**(타입×속성×생장단계 자동). 새 게임 시 **무지개 시작 종자** 1개 지급. → [species](species-system-guide.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md)
+- **종/식물:** **개체 카탈로그(`SPECIES_CATALOG`)** 기반 — 레거시 격자 35종 위에 개체별 확장(rarity·변이슬롯·고유스킬)을 머지. 타입 5종 = 버섯/목본/화초/다육/덩굴(**초본형 폐지 → 화초형 흡수**, 구 초본 7종은 flower로 전환·legacy). **버섯형 7속성 종 완성**(이그니캡·미스트캡·스포어캡·트러플캡·윈드퍼프·볼트캡·프로스트캡). 외형은 **절차적 SVG**(타입×속성×생장단계 자동, 버섯=클래식 독버섯 실루엣). 새 게임 시 **무지개 시작 종자** 1개 지급. → [species](species-system-guide.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md)
 - **스킬(새싹·유체):** 타입 축(기본공격·기본방어·타입특기 ×5) + 속성 축(속성발현 ×7) **공유 스킬**(`STAGE_SKILLS`, 개체 고유 없음). 새싹=타입기본공/방+속성발현, 유체=+타입특기+속성기. 성장체 이상은 기존 `ELEMENT_GROWTH_SKILLS`(후속 재설계). → [species §2-5](species-system-guide.md)
 - **생장:** 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 단계 상승 시 스탯 배율↑ + 스킬 해금 + 진화 연출. **현재 경험치원이 전투 승리 + 물/비료로 이원화** → #2에서 경험치 단일화 예정. → [balance §3](balance-sheet.md)
 - **전투:** 로드아웃 **6칸**, 카드 선택 페이즈 + 판정 창 연출. 속성 상성(1.5/0.67), 상태이상 엔진(중독/출혈/화상·버프/디버프), **데미지 25% 하한선**. 봇은 플레이어 비례가 아닌 **티어+라운드+생장 절대 스탯**. → [battle-mechanics](battle-mechanics-deep-dive.md)
@@ -132,10 +136,12 @@
 - [ ] 설정에 on/off·볼륨 UI, 오디오는 `assets/` 외부 파일
 
 ### 7. 탐사 시스템 재설계
-**상태:** 궤도 우주맵 + 탐사선 4스탯 + 궤도 게이팅 구현됨.
-- [ ] **행성마다 모든 종이 나오지 않게** — 행성·지역 테마에 맞춰 **종(species) 분포 제한**(이미 카드 카테고리는 `cardTypes`로 제한 중, 종도 동일하게). `rollSpeciesFromView` 활용
-- [ ] 탐사 거리/은하 확장(해금형) + 연료탱크 레벨 연동
-- [ ] **풀로세움 참가에 연료/크레딧 비용**을 둘지 — 경제 루프 핵심(#2 양육 보상과 함께 설계). 연료를 소모 자원으로 되살릴지 결정
+**상태:** 설계 확정(아틀라스 세계관 + 종 분포). 구현 계획 작성 단계. → 📄 [`specs/2026-06-24-exploration-atlas-upgrade-design.md`](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
+- [ ] **행성마다 모든 종이 나오지 않게** — **행성 서식 풀(`species`) + 지역 시그니처(`signature`)** 모델(옵션 C). 지역은 기존 `el`/`types`로 풀을 좁힘. `rollSpeciesFromView`에 planet 인자+시그니처/폴백 추가
+- [ ] **아틀라스 세계관 리스킨** — 행성=다른 은하의 공유 좌표, **연료=폴드 에너지**, 궤도=폴드 심도(구조 무변경, 명칭/문구만). 은하 배경 앰비언스
+- [ ] **탐사 모션 = 차원 이동(폴드) 연출** (`prefers-reduced-motion` 축약)
+- [x] **풀로세움 참가 비용 = 없음(무료 입장)으로 확정** — "항상 열린 게이트" 로어로 비대칭 해소. 연료/참가권 안 둠
+- [ ] 행성 종류 확장(새 행성/지역+종 풀) — **후속**(구조 깔린 뒤)
 
 ### 8. PvP / 서버 운용
 - [ ] **비동기(고스트) PvP** vs 실시간 — 비동기(상대 로드아웃 스냅샷 재생)가 현실적, 1순위 권장
@@ -191,9 +197,11 @@
 - **2026-06-24** — **(#2 코어 구현 완료) 양육/열매 루프 작동.** 데이터모델 v2(`p.nursery.{gauge,maxFruits,ripe,lastTick,waterBuff,fertBuff,potQuality}`+`state.care`)·`nurseryTick`(게이지/감쇠/상한·보존)·`rollFruitRarity`(5색)·`rollFruitReward`(색=등급)·`harvestPot`·`applyCare`·양육 UI(게이지/색별 열매/인벤토리 버튼/💎즉시가속)·**공통 `openRewardReveal`**(열매 수확에 적용)·**탐사 성공 물/비료 드롭**(공급원). 셀프테스트 전부 통과+preview 구동 검증. 코드리뷰 반영(꽉참 수확 게이지 0·`createItemInventoryEntry` null방어). **잔여(Task 7): 보급박스·탐사결과 창을 공통 RewardReveal 시각으로 통일**(보급박스는 이미 자체 터치개봉 보유 → 시각 통일만). 전투 승리/랜덤상자 물·비료 드롭은 추가 공급원으로 후속. (#2)
 - **2026-06-24** — **9대 항목 재확인 + 신규 방향 추가:** 사용자 기준 작업 목록 반영 → #10 전투 화면 UI 수정, #11 시작화면 수정, #12 종자 가방 창 + 식물/화분 분리 신설. #4 함선은 **오픈월드화** 방향 추가. **식물 스킬/변이/스탯/디자인 콘텐츠는 사용자가 별도 구상 후 진행**(브레인스토밍/구현은 시스템·UI 구조부터). (#1·#4·#10·#11·#12)
 - **2026-06-24** — **새싹·유체 스킬을 타입 축/속성 축 공유 체계로 재설계(`STAGE_SKILLS`).** 개체 고유 없이 타입(기본공격·기본방어·타입특기)+속성(속성발현) 공유, 유체 속성심화는 기존 속성기 재사용. 성장체 이상은 후속 재설계 보류. 설계서 = [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md). (#1)
+- **2026-06-24** — **(#7 탐사 재설계) 설계 확정 — 아틀라스 세계관 + 종 분포.** ① 종 분포 = **행성 서식 풀 + 지역 시그니처(옵션 C)**: 행성에 `species` 풀, 지역은 기존 `el`/`types`로 좁힘 + `signature`(지역 전용 희귀종, `SIGNATURE_CHANCE` 0.10). ② 세계관 = **아틀라스**: 행성 = 여러 외계 문명이 다른 은하에서 탐사해 공유한 좌표, **시공간 폴드 점프**로 이동 → "왜 다 생명?" 자연 해소. ③ 지도 = **로어 재해석(구조 무변경)** + 은하 앰비언스 + **차원이동(폴드) 모션**. ④ **연료 = 폴드 에너지**(궤도 해금 = 폴드 심도 해금, 명칭만 리스킨). ⑤ **경기장 = 항상 열린 게이트 → 무료 입장**(연료/참가권 없음, 로어로 비대칭 해소). **속성 상성표·타입 5종 무변경.** UI는 "행성 누를 때 복잡X"(주요 서식종 3~4 아이콘 미리보기, 지역 선택 시에만 종 아이콘 줄). 행성 종류 확장은 후속. 설계서 = [`specs/2026-06-24-exploration-atlas-upgrade-design.md`](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md). (#7)
 - **2026-06-24** — **도감 스킬 공유/고유 표시 + 보유 식물 모달.** `__DEX_API`에 `dexSkillScope` 노출(version `2026-06-24d`) → 도감이 각 스킬에 타입/속성/전체 공유·개체 고유 칩을 달고, 클릭 시 그 스킬을 얻을 수 있는 식물·생장단계를 모달로 보여줌. HANDOFF ① 재적용. (시그니처 풀 예약 상태라 현재 "개체 고유" 실표시 종은 없음.)
 - **2026-06-24** — **도감 카드에 실제 식물 외형 표시.** `__DEX_API`에 `composePlantSvg` 노출(version `2026-06-24c`) → 도감이 글리프 플레이스홀더 대신 게임의 절차적 SVG(타입×속성×생장단계, 화분 포함)를 렌더. 단계 리본 클릭 시 외형도 같이 자람(`paintSprite`). 게임 외형을 고치면 도감 자동 반영.
 - **2026-06-24** — **도감 라이브 연동 + PWA.** `docs/dex/plant-codex.html`이 게임을 숨은 iframe(`index.html?dex=1`)으로 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 게임 업데이트 자동 반영(수동 갱신 폐기). `?dex=1` 데이터 전용 모드(부팅·세이브 생략)로 세이브 무손상. `sw.js`(PWA) 추가. 호스팅(GitHub Pages)은 사용자가 Settings→Pages 1회 토글. 설계서 = [`superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md`](superpowers/specs/2026-06-24-live-codex-hosting-pwa-design.md).
+- **2026-06-24** — **버섯 타입 완성:** 7속성 종(스포어캡·이그니캡·미스트캡·트러플캡·윈드퍼프·볼트캡·프로스트캡)·전용 외형(클래식 독버섯+bodyStyle 훅, 떡잎 생략)·시그니처 6종(`SKILL_LIB`)·타입별 생장 단계명(`STAGE_NAMES_BY_TYPE`, 5타입 전체)·탐사 지역 6곳에 버섯형 추가. B(군락=추가타)·C(발광) 외형은 기록만(후속). 설계서 = [`specs/2026-06-24-mushroom-type-design.md`](superpowers/specs/2026-06-24-mushroom-type-design.md), 구현 = [`plans/2026-06-24-mushroom-type-implementation.md`](superpowers/plans/2026-06-24-mushroom-type-implementation.md).
 
 ---
 

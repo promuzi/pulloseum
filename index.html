@@ -3391,6 +3391,42 @@ const SPECIES_CATALOG = {
     signatures:['sig.spore_cloud'],
     stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_cloud'] },
   },
+  spore_fire: {
+    name:'이그니캡', type:'mushroom', element:'fire', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_ignite'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_ignite'] },
+  },
+  spore_water: {
+    name:'미스트캡', type:'mushroom', element:'water', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_mist'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_mist'] },
+  },
+  spore_earth: {
+    name:'트러플캡', type:'mushroom', element:'earth', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.myco_net'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.myco_net'] },
+  },
+  spore_wind: {
+    name:'윈드퍼프', type:'mushroom', element:'wind', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_gust'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_gust'] },
+  },
+  spore_bolt: {
+    name:'볼트캡', type:'mushroom', element:'bolt', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.spore_charge'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.spore_charge'] },
+  },
+  spore_ice: {
+    name:'프로스트캡', type:'mushroom', element:'ice', rarity:'rare',
+    baseVariants:['spore'], variantSlots:{ spore:2, normal:4 },
+    signatures:['sig.frost_spore'],
+    stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.frost_spore'] },
+  },
 };
 const SPECIES = (function(){
   const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
@@ -3709,6 +3745,14 @@ const STARTER_SEED_ID = 'seed_lumen_moss';
 const INITIAL_PLANTED_GROWTH_STAGE = 'sprout';
 const GROWTH_STAGE_ORDER = ['seed', 'sprout', 'juvenile', 'growing', 'mature', 'evolved'];
 const GROWTH_STAGE_NAMES = { seed:'씨앗', sprout:'새싹', juvenile:'유체', growing:'성장체', mature:'성체', evolved:'완숙체' };
+/* 타입별 생장 단계 표시명. 흐름(6단계)은 동일, 이름만 타입색. 미매핑이면 GROWTH_STAGE_NAMES 폴백. */
+const STAGE_NAMES_BY_TYPE = {
+  tree:     { seed:'씨앗', sprout:'떡잎', juvenile:'묘목',    growing:'어린나무', mature:'성목',        evolved:'거목' },
+  flower:   { seed:'씨앗', sprout:'새싹', juvenile:'새잎',    growing:'꽃봉오리', mature:'개화',        evolved:'만개' },
+  cactus:   { seed:'씨앗', sprout:'움',   juvenile:'어린기둥', growing:'가시몸',   mature:'성체선인장', evolved:'꽃선인장' },
+  vine:     { seed:'씨앗', sprout:'새순', juvenile:'어린덩굴', growing:'덩굴손',   mature:'성체덩굴',    evolved:'만연덩굴' },
+  mushroom: { seed:'포자', sprout:'균사', juvenile:'버섯눈',  growing:'어린갓',   mature:'성숙버섯',    evolved:'포자갓' },
+};
 const GROWTH_EXP_REQUIREMENTS = { seed:18, sprout:45, juvenile:90, growing:125, mature:160, evolved:Infinity };
 /* 생장(생장단계) 경험치는 이제 전투 승리 + 경험치 아이템(레벨업 물약)으로만 오른다.
    물·비료는 식물원(양육 탭)에서 '열매' 성장 전용으로 이동했다. (구 물/비료→경험치 경로 폐기) */
@@ -3893,6 +3937,24 @@ const SKILL_LIB = {
   'sig.spore_cloud': { name:'포자 운무막', icon:'🌫️', cost:3, kind:'debuff', aoe:true,
     enemyDebuff:{stat:'atk',pct:0.2,turns:2}, dot:{kind:'poison',pct:0.04,turns:3},
     desc:'적 공격 20%↓(2턴) + 중독(3턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_ignite': { name:'포자 발화', icon:'🔥', cost:3, kind:'attack', aoe:true, power:100,
+    dot:{kind:'burn',pct:0.06,turns:3},
+    desc:'위력100 · 광역 + 화상(3턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_mist': { name:'포자 안개', icon:'💧', cost:3, kind:'heal', heal:0.15,
+    enemyDebuff:{stat:'acc',pct:0.2,turns:2},
+    desc:'체력 15% 회복 + 적 적중 20%↓(2턴)', tag:'시그니처', grade:'A' },
+  'sig.myco_net': { name:'균사 그물', icon:'🕸️', cost:3, kind:'debuff',
+    enemyDebuff:{stat:'spd',pct:0.3,turns:2}, selfBuff:{stat:'def',pct:0.2,turns:3}, dot:{kind:'poison',pct:0.04,turns:2},
+    desc:'적 기동 30%↓(2턴) + 자기 방어 20%↑(3턴) + 중독(2턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_gust': { name:'포자 질풍', icon:'🌪️', cost:3, kind:'attack', aoe:true, power:90,
+    dot:{kind:'poison',pct:0.05,turns:3}, selfBuff:{stat:'spd',pct:0.2,turns:2},
+    desc:'위력90 · 광역 + 중독(3턴) + 자기 기동 20%↑(2턴)', tag:'시그니처', grade:'A' },
+  'sig.spore_charge': { name:'전도 포자', icon:'⚡', cost:3, kind:'attack', aoe:true, power:110,
+    critBonus:0.2, dot:{kind:'poison',pct:0.04,turns:2},
+    desc:'위력110 · 광역 + 치명타율 +20% + 중독(2턴)', tag:'시그니처', grade:'A' },
+  'sig.frost_spore': { name:'빙결 포자', icon:'❄️', cost:3, kind:'attack', aoe:true, power:90,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, dot:{kind:'poison',pct:0.04,turns:2},
+    desc:'위력90 · 광역 + 적 기동 25%↓(2턴) + 중독(2턴)', tag:'시그니처', grade:'A' },
 };
 /* ── 새싹·유체 단계 스킬 (타입 축 / 속성 축 공유, 개체 고유 없음) ──
    타입 5종(목본/화초/다육/덩굴/버섯) × {기본공격·기본방어·타입특기} + 속성 7종 × {속성발현}.
@@ -4429,7 +4491,7 @@ function bestRoundLabel(p){
 }
 function tournamentTitle(p){
   const tier = plantRankTier(p);
-  const stage = p ? growthStageName(p.growth_stage) : '새싹';
+  const stage = p ? growthStageName(p.growth_stage, p.seed_type) : '새싹';
   return `${stage} ${tier.name} 토너먼트`;
 }
 
@@ -6573,17 +6635,17 @@ const EXPLORE_VIEW = [
     intro:'화산 활동이 활발한 용암 행성', regions:[
       { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
         desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift' },
-      { name:'흑요암 능선', el:['fire'], types:['다육형','목본형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
+      { name:'흑요암 능선', el:['fire'], types:['다육형','목본형','버섯형'], diff:4, grade:'C', cost:260, map:{x:72,y:42},
         desc:'굳은 용암이 만든 검은 능선. 강한 방어형 종자가 발견된다.', link:'region_vathra_iron_dunes' },
-      { name:'잿빛 평원', el:['earth','fire'], types:['화초형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
+      { name:'잿빛 평원', el:['earth','fire'], types:['화초형','버섯형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
         desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
     ]},
   { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
     cardTypes:['spore','potion'], themeNote:'독성 포자가 가득한 균사 행성 — 포자·물약 카드가 발견된다.',
     intro:'포자 안개가 가득한 균사 행성', regions:[
-      { name:'포자 늪', el:['grass','wind'], types:['화초형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
+      { name:'포자 늪', el:['grass','wind'], types:['화초형','버섯형'], diff:3, grade:'B', cost:300, map:{x:34,y:40},
         desc:'공생 포자가 안개처럼 떠다니는 늪. 제어형 변이가 자주 나온다.', link:'region_elyndor_spore_marsh' },
-      { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
+      { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형','버섯형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
         desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh' },
     ]},
   { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
@@ -6609,7 +6671,7 @@ const EXPLORE_VIEW = [
     intro:'방사선 폭풍이 휘몰아치는 폐허', regions:[
       { name:'방사 폐허', el:['bolt','fire'], types:['다육형'], diff:6, grade:'A', cost:500, map:{x:32,y:38},
         desc:'붕괴한 고대 도시. 방사선에 적응한 포식형 변이가 출몰한다.', link:'region_vathra_sulfur_rift' },
-      { name:'전자기 늪', el:['bolt','water'], types:['화초형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
+      { name:'전자기 늪', el:['bolt','water'], types:['화초형','버섯형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
         desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
   { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
@@ -6617,7 +6679,7 @@ const EXPLORE_VIEW = [
     intro:'영하의 빙하로 덮인 동토 행성', regions:[
       { name:'빙정 평원', el:['ice','water'], types:['화초형'], diff:5, grade:'B', cost:440, map:{x:30,y:36},
         desc:'끝없이 펼쳐진 얼음 평원. 빙결 속성 종자가 자생한다.', link:'region_nereion_tideglass_reef' },
-      { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
+      { name:'서리 동굴', el:['ice'], types:['다육형','덩굴형','버섯형'], diff:6, grade:'A', cost:480, map:{x:68,y:62},
         desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
     ]},
 ];
@@ -7906,7 +7968,7 @@ function elementMotif(el, gi, cx, topY){
   return s;
 }
 /* 생장단계(gi 0~5) × 식물타입 × 속성 팔레트로 실루엣 생성. 씨앗→완숙체로 점점 자란다. */
-function composePlantBody(seedType, gi, P, el){
+function composePlantBody(seedType, gi, P, el, bodyStyle){
   const cx=60;
   if(gi===0){ // 씨앗
     return `<ellipse cx="60" cy="74" rx="11" ry="14" fill="${P.dark}"/>
@@ -7915,8 +7977,8 @@ function composePlantBody(seedType, gi, P, el){
       ${elementMotif(el, gi, cx, 56)}`;
   }
   const stemTop = 76 - gi*7, stemW = 3 + gi*0.7, cy = stemTop;
-  let svg = `<path d="M60 96 C 57 86 63 ${stemTop+12} 60 ${stemTop}" stroke="${P.stem}" stroke-width="${stemW}" fill="none" stroke-linecap="round"/>`;
-  if(gi<=2){ // 어린 단계: 떡잎
+  let svg = (seedType==='mushroom') ? '' : `<path d="M60 96 C 57 86 63 ${stemTop+12} 60 ${stemTop}" stroke="${P.stem}" stroke-width="${stemW}" fill="none" stroke-linecap="round"/>`;
+  if(gi<=2 && seedType!=='mushroom'){ // 어린 단계: 떡잎 (버섯은 떡잎 없음)
     svg += `<ellipse cx="49" cy="84" rx="${7+gi}" ry="${3.5+gi*0.4}" fill="${P.dark}" transform="rotate(-28 49 84)"/>
             <ellipse cx="71" cy="80" rx="${7+gi}" ry="${3.5+gi*0.4}" fill="${P.main}" transform="rotate(28 71 80)"/>`;
   }
@@ -7943,11 +8005,29 @@ function composePlantBody(seedType, gi, P, el){
     for(let i=0;i<4+gi;i++){ const yy=cy-h/2+10+i*6; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
     if(gi>=5) svg+=`<circle cx="${cx}" cy="${cy-h/2+3}" r="6" fill="${P.accent}"/>`;
   } else if(seedType==='mushroom'){
-    const capW=16+gi*4, capH=10+gi*2.4, stalkH=12+gi*4;
-    svg+=`<rect x="${cx-3-gi*0.3}" y="${cy}" width="${6+gi*0.6}" height="${stalkH}" rx="3" fill="${P.light}"/>`;
-    svg+=`<path d="M${cx-capW/2} ${cy} Q ${cx} ${cy-capH*1.8} ${cx+capW/2} ${cy} Z" fill="${P.main}"/>`;
-    for(let i=0;i<2+gi;i++){ const px=cx-capW/2+ (i+0.5)*(capW/(2+gi)); svg+=`<circle cx="${px}" cy="${cy-capH*0.5}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".85"/>`; }
-    if(gi>=4){ svg+=`<circle cx="${cx-capW*0.18}" cy="${cy+stalkH*0.4}" r="2.2" fill="${P.accent}"/>`; }
+    const style = bodyStyle || 'classic';   // 향후 'cluster'(B)·'glow'(C) 분기 자리
+    // A 클래식 독버섯: 통통한 자루 + 점박이 갓 + 고리. gi가 클수록 갓이 펴지고 점·고리 생김.
+    const capW = 14 + gi*5, capLift = 22 + gi*3;
+    const stipeW = 4 + gi*0.8, topY = cy, baseY = cy + 16;
+    // 자루
+    svg += `<path d="M${cx-stipeW} ${baseY} Q${cx-stipeW-1} ${topY+9} ${cx-stipeW+1} ${topY} L${cx+stipeW-1} ${topY} Q${cx+stipeW+1} ${topY+9} ${cx+stipeW} ${baseY} Z" fill="${P.light}"/>`;
+    svg += `<path d="M${cx-stipeW} ${baseY} Q${cx-stipeW-1} ${topY+9} ${cx-stipeW+1} ${topY} L${cx-stipeW+3} ${topY} Q${cx-1} ${topY+10} ${cx-2} ${baseY} Z" fill="${P.dark}" opacity=".4"/>`;
+    // 고리(annulus) — 성장체(gi>=3)부터
+    if(gi>=3) svg += `<path d="M${cx-stipeW-2} ${topY+11} Q${cx} ${topY+17} ${cx+stipeW+2} ${topY+11} l0 3 Q${cx} ${topY+20} ${cx-stipeW-2} ${topY+14} Z" fill="${P.dark}"/>`;
+    // 갓 돔
+    svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY} Q${cx} ${topY+7} ${cx-capW} ${topY} Z" fill="${P.main}"/>`;
+    svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY}" fill="none" stroke="${P.dark}" stroke-width="1.4"/>`;
+    // 점박이 — 성장체부터
+    if(gi>=3){
+      svg += `<circle cx="${cx-capW*0.45}" cy="${topY-capLift*0.45}" r="${2+gi*0.3}" fill="${P.light}" opacity=".9"/>`;
+      svg += `<circle cx="${cx+capW*0.4}" cy="${topY-capLift*0.5}" r="${1.8+gi*0.25}" fill="${P.light}" opacity=".9"/>`;
+      svg += `<circle cx="${cx}" cy="${topY-capLift*0.28}" r="${1.6+gi*0.2}" fill="${P.light}" opacity=".9"/>`;
+    }
+    // 완숙체(gi>=5): 떠오르는 포자
+    if(gi>=5){
+      svg += `<circle cx="${cx-12}" cy="${topY-capLift-6}" r="2" fill="${P.accent}" opacity=".8"/>`;
+      svg += `<circle cx="${cx+10}" cy="${topY-capLift-10}" r="1.6" fill="${P.accent}" opacity=".7"/>`;
+    }
   } else { // tree
     const r=12+gi*3.2, th=16+gi*3;
     svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
@@ -7968,7 +8048,7 @@ function composePlantSvg(seedType, growth, element, opts){
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
   return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
-    ${composePlantBody(seedType, gi, P, el)}
+    ${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}
     ${opts.noPot ? '' : `<rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
     <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
     <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>`}
@@ -8443,7 +8523,9 @@ function weaponSectionHTML(p){
   }
   return `<div class="shop-section">🗡️ 무기 (무기형 전용)</div>` + inner;
 }
-function growthStageName(stage){
+function growthStageName(stage, seedType){
+  const byType = seedType && STAGE_NAMES_BY_TYPE[seedType];
+  if(byType && byType[stage]) return byType[stage];
   return GROWTH_STAGE_NAMES[stage] || stage || '새싹';
 }
 function nextGrowthStage(stage){
@@ -8468,7 +8550,7 @@ function renderPlantInstancePanel(p, stats){
   return `<div class="plant-instance-panel">
     <div class="plant-instance-head">
       <b>${plantDisplayName(p)}</b>
-      <span class="info-badge ok">${growthStageName(p.growth_stage)} · Lv.${p.level}</span>
+      <span class="info-badge ok">${growthStageName(p.growth_stage, p.seed_type)} · Lv.${p.level}</span>
     </div>
     <div class="info-desc">
       기원: ${(planet && planet.name) || p.origin_planet || '미확인'} / ${(region && region.name) || p.origin_region || '미확인'}<br>
@@ -8534,7 +8616,7 @@ function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
     ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
   $('#evolveBody').innerHTML = `
-    <div class="evo-title">✨ 진화! <span style="color:var(--sub)">${growthStageName(fromStage)}</span> ▶ <span style="color:var(--neon)">${growthStageName(toStage)}</span></div>
+    <div class="evo-title">✨ 진화! <span style="color:var(--sub)">${growthStageName(fromStage, p.seed_type)}</span> ▶ <span style="color:var(--neon)">${growthStageName(toStage, p.seed_type)}</span></div>
     <div class="evo-sub">${plantDisplayName(p)} 이(가) 한 단계 성장했습니다</div>
     <div class="evo-stage">
       <div class="evo-glow"></div>
@@ -8684,7 +8766,7 @@ function upTabHtml(p, s){
       <div class="pm-col">${UP_RIGHT.map(d=>upStatCard(p,s,d)).join('')}</div>
     </div>
     <div class="pm-grow">
-      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage)}${p.growthLocked?' · 🛑 생장 차단':''}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
+      <div class="pg-head"><span class="pg-stage">🌱 ${growthStageName(p.growth_stage, p.seed_type)}${p.growthLocked?' · 🛑 생장 차단':''}</span><span class="pg-exp">${isMax?'최종 단계':`${Math.round(p.growth_exp||0)} / ${needed} EXP`}</span></div>
       <div class="pg-bar"><i style="width:${Math.round(progress*100)}%"></i></div>
       <div class="pg-btns">
         <button class="pg-btn" data-use-growth-item="levelup_potion" ${(isMax||p.growthLocked)?'disabled':''}>⬆️ 레벨업 물약 사용 (보유 ${itemOwnedCount('levelup_potion')})</button>
@@ -8999,7 +9081,7 @@ function useItem(itemId){
       if(inv.count <= 0) state.item_inventory = state.item_inventory.filter(it => it !== inv);
     }
     saveState(); sfx.heal(); renderUpgrade(); renderMain();
-    toast(`${item.name} 사용! ⬆️ ${growthStageName(p.growth_stage)} 단계로 생장`);
+    toast(`${item.name} 사용! ⬆️ ${growthStageName(p.growth_stage, p.seed_type)} 단계로 생장`);
     return;
   }
   const msg=[];
@@ -10325,7 +10407,7 @@ function renderNurseryGrid(){
           <div class="pot-name">${plantDisplayName(p)}</div>
           ${canFruit?`<div class="pot-gauge"><div class="pot-gauge-fill" style="width:${gaugePct}%;background:${nurseryGaugeColor(n,full)}"></div></div>
           <div class="pot-stage">${full?'🍎 꽉 참 — 수확!':(n.ripe.length?`🍎 ${n.ripe.length}/${n.maxFruits}`:`충전 ${gaugePct}%`)}</div>`
-          :`<div class="pot-stage">${growthStageName(p.growth_stage||'seed')} · 성장체부터 열매</div>`}
+          :`<div class="pot-stage">${growthStageName(p.growth_stage||'seed', p.seed_type)} · 성장체부터 열매</div>`}
         </div>`;
       }
     }
@@ -10354,7 +10436,7 @@ function openNurseryDetail(idx){
   card.innerHTML = `
     <div style="text-align:center;margin-bottom:10px"><span style="position:relative;display:inline-block;width:72px;height:84px"><span style="position:absolute;left:0;bottom:0;z-index:1">${dPot}</span><span style="position:absolute;left:0;bottom:0;z-index:2">${dPlant}</span></span></div>
     <div style="font-size:16px;font-weight:900;text-align:center;color:#d6ffe6;margin-bottom:4px">${plantDisplayName(p)}</div>
-    <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed')} · ${elIcon} · ${formName}</div>
+    <div style="font-size:11.5px;color:#9fd9b6;text-align:center;margin-bottom:12px">${growthStageName(p.growth_stage||'seed', p.seed_type)} · ${elIcon} · ${formName}</div>
     ${!canFruit ? `
       <div style="background:rgba(120,170,120,.1);border:1px dashed rgba(120,170,120,.35);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;color:#9fd9b6;font-size:12.5px">
         🌱 <b>성장체</b>부터 열매를 맺습니다.<br>전투·경험치로 더 키워주세요.
@@ -10505,7 +10587,7 @@ function openFruitBag(){
       return `<div style="display:flex;align-items:center;gap:10px;background:rgba(255,210,90,.1);border:1px solid rgba(255,210,90,.35);border-radius:12px;padding:10px 14px;margin-bottom:8px">
         <div style="font-size:28px">🍎</div>
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#d6ffe6">${f.plantName||'식물'}</div>
-        <div style="font-size:11px;color:#9fd9b6">${elIcon} ${growthStageName(f.growth_stage)} · ${FORMS[f.form]?FORMS[f.form].name:'일반'}</div></div>
+        <div style="font-size:11px;color:#9fd9b6">${elIcon} ${growthStageName(f.growth_stage, f.seed_type)} · ${FORMS[f.form]?FORMS[f.form].name:'일반'}</div></div>
         <button class="btn primary" onclick="openFruit(${gi})" style="font-size:12px;padding:8px 14px;min-width:54px">개봉</button>
       </div>`;
     }).join('')}
@@ -11198,6 +11280,58 @@ window.__test('item: 레벨업 물약은 한 번에 한 단계만 생장(완숙�
   let guard = 0;
   while(p.growth_stage !== 'evolved' && guard++ < 10) gainGrowthExp(p, levelupPotionExp(p));
   __eq(p.growth_stage, 'evolved', '단계별로 최종까지 도달');
+});
+window.__test('stage names: per-type override + safe fallback', function(){
+  const fails = [];
+  if(growthStageName('growing','mushroom') !== '어린갓') fails.push('mushroom growing should be 어린갓');
+  if(growthStageName('evolved','mushroom') !== '포자갓') fails.push('mushroom evolved should be 포자갓');
+  if(growthStageName('seed','mushroom') !== '포자') fails.push('mushroom seed should be 포자');
+  if(growthStageName('juvenile','cactus') !== '어린기둥') fails.push('cactus juvenile should be 어린기둥');
+  if(growthStageName('sprout','tree') !== '떡잎') fails.push('tree sprout should be 떡잎');
+  if(growthStageName('growing') !== '성장체') fails.push('no-type fallback should be 성장체');
+  if(growthStageName('growing','nonsense') !== '성장체') fails.push('unknown type should fall back');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('appearance: mushroom body distinct + skips cotyledon', function(){
+  const fails = [];
+  const P = elementPalette('grass');
+  const m = composePlantBody('mushroom', 4, P, 'grass');
+  const t = composePlantBody('tree', 4, P, 'grass');
+  if(m === t) fails.push('mushroom must not render identical to tree (no branch)');
+  const m1 = composePlantBody('mushroom', 1, P, 'grass');
+  if(m1.indexOf('rotate(-28 49 84)') >= 0) fails.push('mushroom young stage should skip cotyledon ellipses');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('mushroom: 7-element grid + signatures resolve', function(){
+  const fails = [];
+  const elByKey = { spore_fire:'fire', spore_water:'water', spore_earth:'earth',
+                    spore_wind:'wind', spore_bolt:'bolt', spore_ice:'ice' };
+  Object.keys(elByKey).forEach(function(k){
+    const s = SPECIES[k];
+    if(!s){ fails.push('missing species '+k); return; }
+    if(s.seedType !== 'mushroom') fails.push(k+' seedType should be mushroom');
+    if(s.rarity !== 'rare') fails.push(k+' rarity should be rare');
+    const e = ELEMENT_STATS[elByKey[k]], t = TYPE_STATS.mushroom;
+    if(s.base.hp!==e.hp+t.hp || s.base.atk!==e.atk+t.atk || s.base.def!==e.def+t.def || s.base.spd!==e.spd+t.spd)
+      fails.push(k+' base stat != ELEMENT_STATS+TYPE_STATS.mushroom');
+    (s.signatures||[]).forEach(function(sig){ if(!skillById(sig)) fails.push(k+' signature unresolved: '+sig); });
+    if(!s.baseVariants || s.baseVariants[0] !== 'spore') fails.push(k+' should be born spore variant');
+  });
+  ['sig.spore_ignite','sig.spore_mist','sig.myco_net','sig.spore_gust','sig.spore_charge','sig.frost_spore']
+    .forEach(function(id){ if(!skillById(id)) fails.push('skill missing: '+id); });
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('exploration: every mushroom element reachable via 버섯형 region', function(){
+  const fails = [];
+  ['grass','fire','water','earth','wind','bolt','ice'].forEach(function(el){
+    const ok = EXPLORE_VIEW.some(function(planet){
+      return (planet.regions||[]).some(function(r){
+        return (r.el||[]).indexOf(el) >= 0 && (r.types||[]).indexOf('버섯형') >= 0;
+      });
+    });
+    if(!ok) fails.push('no 버섯형 region covers element '+el);
+  });
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 </script>
 </body>
