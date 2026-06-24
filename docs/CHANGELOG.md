@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-24 — 버그픽스: 레벨업 물약이 한 클릭에 완숙체까지 점프하던 문제
+- **증상**: 레벨업 물약을 쓰면 "1번 생장" 후 버튼이 비활성화돼 더 못 누름.
+- **근본 원인**: 물약이 한 번에 500 EXP를 주는데 `gainGrowthExp`의 `while` 루프가 이를 전부 소모 → 새싹에서 곧장 완숙체(evolved)까지 4단계를 한 클릭에 점프. evolved가 되면 버튼 `disabled`(=`isMax`) 조건이 켜져 더 못 누르게 됨(코드상 정상이지만 의도와 불일치).
+- **수정**: `levelupPotionExp(p)` 헬퍼 신설(현재 EXP에서 다음 단계까지 필요한 만큼만 부여) → `useItem`의 레벨업 분기에서 사용. 이제 **한 클릭당 정확히 한 단계씩** 생장, evolved 도달 시에만 비활성화. 토스트도 "○○ 단계로 생장"으로 변경.
+- **검증**: 신규 셀프테스트 1건 추가, `window.__catalogSelfTest()` 전건 PASS·0 FAIL, 콘솔 에러 0.
+
 ### 2026-06-24 — 초본형 폐지(화초형 흡수) + 새싹·유체 스킬 타입/속성 축 재설계
 > 설계서: [`superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md`](superpowers/specs/2026-06-24-sprout-juvenile-skills-design.md)
 - **초본형 완전 폐지 → 화초형 흡수**: "풀은 결국 꽃을 피운다"는 이유로 타입을 **5종(목본/화초/다육/덩굴/버섯)** 확정. (구)초본 7종(플레임모스 등)의 타입을 `grass`→`flower`로 전환(스탯·외형·스킬 모두 화초형, legacy 유지). `SEED_TYPE_NAMES`/`ORDER`·`EX_TYPE_*`·탐사 지역 `types`에서 초본형 제거, `SEED_TYPE_OF`/`seedTypeOf` 폴백 flower로. 세이브 `seed_type:'grass'`→`'flower'` 마이그레이션. ⚠️ `grass`는 **풀 '속성'으로만** 존속(`ELEMENTS`/`ELEMENT_STATS` 불변), `TYPE_STATS.grass`는 안전망 폴백으로만 잔존.

@@ -8229,6 +8229,10 @@ function nextGrowthStage(stage){
 function growthExpNeeded(p){
   return GROWTH_EXP_REQUIREMENTS[p.growth_stage] || GROWTH_EXP_REQUIREMENTS.sprout;
 }
+// 레벨업 물약: 한 번 사용 = 딱 한 단계만 생장(현재 EXP에서 다음 단계까지 필요한 만큼만 부여)
+function levelupPotionExp(p){
+  return Math.max(1, growthExpNeeded(p) - (p.growth_exp || 0));
+}
 function renderPlantInstancePanel(p, stats){
   ensurePlantInstanceFields(p);
   const needed = growthExpNeeded(p);
@@ -8763,7 +8767,7 @@ function useItem(itemId){
   if(e.levelup_exp){
     if(p.growthLocked){ toast('이 식물은 생장판이 닫혀 있어 경험치를 얻을 수 없습니다'); return; }
     if(p.growth_stage === 'evolved'){ toast('이미 최종 성장 단계입니다'); return; }
-    feedGrowth(p, e.levelup_exp);
+    feedGrowth(p, levelupPotionExp(p)); // 한 번에 한 단계만 생장
     const cur = calcStats(p);
     p.battle_stats = { ...(p.battle_stats || {}), hp:cur.hp, attack:cur.atk, defense:cur.def, speed:cur.spd, energy:(p.battle_stats && p.battle_stats.energy) || 3 };
     if(!item.free){
@@ -8771,7 +8775,7 @@ function useItem(itemId){
       if(inv.count <= 0) state.item_inventory = state.item_inventory.filter(it => it !== inv);
     }
     saveState(); sfx.heal(); renderUpgrade(); renderMain();
-    toast(`${item.name} 사용! ⬆️ 생장 경험치 +${e.levelup_exp}`);
+    toast(`${item.name} 사용! ⬆️ ${growthStageName(p.growth_stage)} 단계로 생장`);
     return;
   }
   const msg=[];
@@ -10771,6 +10775,19 @@ window.__test('migrate: normalizeState backfills variant fields', function(){
   const p = n.plants[0];
   __ok(p.variant_slots && typeof p.variant_slots==='object', 'variant_slots backfilled');
   __ok(Array.isArray(p.base_variants), 'base_variants backfilled');
+});
+window.__test('item: 레벨업 물약은 한 번에 한 단계만 생장(완숙체까지 점프 금지)', function(){
+  const p = createPlant('flame', { atk:5, def:5, spd:5 });
+  ensurePlantInstanceFields(p);
+  p.growth_stage = 'sprout'; p.growth_exp = 0; p.growthLocked = false;
+  gainGrowthExp(p, levelupPotionExp(p));
+  __eq(p.growth_stage, 'juvenile', '새싹→유체 한 단계만');
+  gainGrowthExp(p, levelupPotionExp(p));
+  __eq(p.growth_stage, 'growing', '유체→성장체 한 단계만');
+  // 단계별로 끝까지 올려도 evolved 도달 후 멈춤 (버튼 비활성화는 evolved일 때만)
+  let guard = 0;
+  while(p.growth_stage !== 'evolved' && guard++ < 10) gainGrowthExp(p, levelupPotionExp(p));
+  __eq(p.growth_stage, 'evolved', '단계별로 최종까지 도달');
 });
 </script>
 </body>
