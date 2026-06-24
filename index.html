@@ -4038,6 +4038,8 @@ const CARD_SKILLS = {
   skill_card_gun:    { name:'총 쏘기',   icon:'🔫', cost:0, noEnergy:true, uses:4, kind:'attack', power:150, pierce:0.6, desc:'위력150 · 방어 60% 무시 · 에너지 무소모', tag:'무기' },
   skill_card_infuse: { name:'독 묻히기', icon:'☠️', cost:1, kind:'buff', cats:['buff','debuff'], infuse:{kind:'poison', pct:0.07, turns:3}, desc:'3턴간 공격마다 독을 묻힌다', tag:'독성' },
   skill_card_spray:  { name:'독 뿌리기', icon:'🌿', cost:3, kind:'debuff', cats:['debuff'], dot:{kind:'poison', pct:0.09, turns:3}, dotTimes:2, desc:'중독 2겹 즉발', tag:'독성' },
+  skill_card_scale:  { name:'비늘 강화', icon:'🛡️', cost:1, kind:'guard', cats:['guard','buff'], guardMult:0.5, scaleStack:{defPct:0.12, cap:5}, desc:'피해 50%↓ + 비늘 누적(방어 영구 12%↑·최대 5겹)', tag:'용족' },
+  skill_card_breath: { name:'원소 브레스', icon:'🐉', cost:2, kind:'elemental', cats:['attack'], power:120, elem:true, single:true, desc:'자기 속성 발현 · 위력120 · 단일', tag:'용족' },
   skill_card_acid:   { name:'강산 뿌리기', icon:'🧪', cost:2, kind:'debuff', power:135, enemyDebuff:{stat:'def',pct:0.30,turns:2}, dot:{kind:'poison',pct:0.07,turns:3}, desc:'위력135 + 방어30%↓ + 중독', tag:'독성' },
   skill_card_gas:    { name:'가스 유출', icon:'☁️', cost:2, kind:'debuff', power:60, enemyDebuff:{stat:'atk',pct:0.28,turns:2}, dot:{kind:'poison',pct:0.06,turns:3}, desc:'위력60 + 적 공격28%↓ + 중독', tag:'독성' },
 };
@@ -4134,6 +4136,9 @@ function variantSkillsOf(p){
   }
   else if(form === 'toxic'){
     out.push('skill_card_infuse', 'skill_card_spray');
+  }
+  else if(form === 'dragon'){
+    out.push('skill_card_scale', 'skill_card_breath');
   }
   return out;
 }
@@ -7692,14 +7697,14 @@ function renderSeedBagCard(item){
   return `<div class="itemcard seed-bag-card ${selected ? 'selected' : ''}" data-select-seed="${item.inventory_id}">
     <div style="font-size:30px;width:42px;text-align:center">${icon}</div>
     <div class="ic-body">
-      <div class="ic-name"${item.rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'} ${gradeBadgeHtml(grade)}</div>
+      <div class="ic-name"${item.rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'} ${item.rainbow ? '' : gradeBadgeHtml(grade)}</div>
       <div class="ic-desc">
         기원: ${item.rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`}<br>
         식물 타입: ${typeLabel}
       </div>
       <div class="seed-card-meta">
-        <span class="seed-mini-stat ok">잠재력 ${grade}</span>
-        ${item.mutation_candidate ? '<span class="seed-mini-stat warn">변이 가능</span>' : ''}
+        <span class="seed-mini-stat ok">잠재력 ${item.rainbow ? '???' : grade}</span>
+        ${(!item.rainbow && item.mutation_candidate) ? '<span class="seed-mini-stat warn">변이 가능</span>' : ''}
       </div>
     </div>
   </div>`;
@@ -9582,8 +9587,9 @@ function makeCombatant(src){
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식 변이형) 포식 기본 스킬
   let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
-  if((src.form||'normal') === 'pred')  loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
-  if((src.form||'normal') === 'toxic') loadout.push('skill_card_infuse', 'skill_card_spray'); // 독성 변이형 기본 보유
+  if((src.form||'normal') === 'pred')   loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
+  if((src.form||'normal') === 'toxic')  loadout.push('skill_card_infuse', 'skill_card_spray'); // 독성 변이형 기본 보유
+  if((src.form||'normal') === 'dragon') loadout.push('skill_card_scale', 'skill_card_breath'); // 용족 변이형 기본 보유
   const isWeaponForm = (src.form||'normal') === 'weapon';
   CE.grantSkills.forEach(sid => {
     // 무기형 변이에서 weapon card의 grantSkill은 하단 variant bar로 → loadout 제외
@@ -9609,11 +9615,12 @@ function makeCombatant(src){
     guard:null, traits:src.traits||[], passives:P,
     cardFx:{ poisonCoef:CE.poisonCoef, energyRegen:CE.energyRegen, predBoost:CE.predBoost, spores:CE.spores },
     cardSkills:CE.skillGrades||{}, skillGrades:src.skillGrades||{}, uses:{},
-    loadout, skipNext:false,
+    cards:(src.cards||[]).slice(),   // 변이 스킬 바(variantSkillsOf — 무기형 등) 원본 카드 보존
+    loadout, skipNext:false, scaleStack:0,
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
-  // 무기 변이형 스킬: 경기당 사용 횟수(uses) 초기화
-  loadout.forEach(id => { const sk = skillById(id, unit); if(sk && sk.uses) unit.uses[id] = sk.uses; });
+  // 경기당 사용 횟수(uses) 초기화 — 로드아웃 + 하단 변이 스킬 바(무기 등 로드아웃 밖) 모두
+  loadout.concat(variantSkillsOf(unit)).forEach(id => { const sk = skillById(id, unit); if(sk && sk.uses && unit.uses[id]==null) unit.uses[id] = sk.uses; });
   return unit;
 }
 const ENEMY_NAME_TIERS = ['신참','투사','베테랑','정예','챔피언','전설의'];
@@ -9630,7 +9637,7 @@ function buildEnemy(roundIndex, tierIndex){
   // 변이형: 상위 라운드/티어일수록 변이형 봇 등장↑ (식물과 같은 변이 시스템을 봇도 사용)
   let form='normal', predType=null;
   if(Math.random() < (0.15 + roundIndex*0.06 + tierIndex*0.04)){
-    form = pick(['pred','toxic','spore','lumen','weapon']);
+    form = pick(['pred','toxic','spore','weapon','dragon']); // 발광(lumen) 폐지 — 적 변이형 풀에서도 제거, 용족(dragon) 추가
     if(form==='pred') predType = pick(['vamp','absorb']);
   }
   const sp = pickAcquirableSpecies();        // 적도 신규 획득 풀 기준(레거시 초본형 제외)
@@ -9666,8 +9673,8 @@ function buildEnemy(roundIndex, tierIndex){
   if(form==='pred')   cards.push(cardKeyOf(pick(['card_sap','card_mito','card_chloroabsorb']), cardGrade));
   if(form==='toxic')  cards.push(cardKeyOf(pick(['card_acid','card_gas','card_poisonthorn']), cardGrade));
   if(form==='spore')  cards.push(cardKeyOf(pick(['card_paralysis','card_poisonspore','card_disrupt']), cardGrade));
-  if(form==='lumen')  cards.push(cardKeyOf(pick(['card_chloroboost','card_solarheal']), cardGrade));
   if(form==='weapon') cards.push(cardKeyOf(pick(['card_sword','card_axe','card_gun','card_shieldw']), cardGrade));
+  // 독성/용족 봇은 변이형 기본 스킬(묻히기·뿌리기 / 비늘·브레스)을 makeCombatant가 자동 부여 — 별도 카드 불필요
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
   return makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, trainerName:pick(ENEMY_TRAINER_NAMES), species:sp, element:el, grade, awakened:null,
@@ -10011,7 +10018,8 @@ function popup(side, text, isHeal){
   setTimeout(()=>sp.remove(), 950);
 }
 function aiPickSkill(e){
-  const ids = e.loadout.filter(id => { const s = skillById(id,e); if(!s) return false; if(s.noEnergy){ const rem=(e.uses&&e.uses[id]!=null)?e.uses[id]:(s.uses||0); return rem>0; } return (s.cost||0) <= e.energy; });
+  const cand = e.loadout.concat(variantSkillsOf(e)).filter((v,i,a)=>a.indexOf(v)===i); // 하단 변이 스킬 바(무기/독성/용족)도 봇 후보에 포함
+  const ids = cand.filter(id => { const s = skillById(id,e); if(!s) return false; if(s.noEnergy){ const rem=(e.uses&&e.uses[id]!=null)?e.uses[id]:(s.uses||0); return rem>0; } return (s.cost||0) <= e.energy; });
   if(!ids.length) return 'skill_basic_strike';
   const get = id => skillById(id,e);
   const healId = ids.find(id => { const s=get(id); return s.heal && s.heal>=0.2; });
@@ -10060,6 +10068,7 @@ async function applySkill(a, d, s, side, options={}){
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
   if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.infuse){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:s.infuse.pct, turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
+  if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
@@ -11478,6 +11487,26 @@ window.__test('skills: toxic infuse + spray defined in SKILL_LIB', function(){
   __ok(ALL_SKILLS['skill_card_spray'], 'spray defined');
   __ok(ALL_SKILLS['skill_card_infuse'].infuse, 'infuse.infuse field');
   __eq(ALL_SKILLS['skill_card_spray'].dotTimes, 2, 'spray dotTimes=2');
+});
+window.__test('variant: dragon form returns scale + breath', function(){
+  const v = variantSkillsOf({form:'dragon'});
+  __eq(v.length, 2, 'exactly 2');
+  __ok(v.includes('skill_card_scale'), 'has scale');
+  __ok(v.includes('skill_card_breath'), 'has breath');
+});
+window.__test('skills: dragon scale + breath defined', function(){
+  __ok(ALL_SKILLS['skill_card_scale'] && ALL_SKILLS['skill_card_scale'].scaleStack, 'scale has scaleStack');
+  __ok(ALL_SKILLS['skill_card_breath'] && ALL_SKILLS['skill_card_breath'].elem, 'breath elemental');
+});
+// 회귀: 무기형 유닛이 전투에서 무기 스킬을 하단 변이 바로 노출 + uses 초기화(3-4 도입 버그 수정 박제)
+window.__test('combat: weapon form unit exposes weapon skill via variant bar + uses init', function(){
+  const unit = makeCombatant({ name:'t', species:'thorn', element:'grass', grade:'C', form:'weapon',
+    baseStats:{hp:100,atk:30,def:20,spd:20,acc:90,elem:0,critRate:5,critMult:1.5,energy:3},
+    loadout:['skill_basic_strike'], cards:['card_sword@C'] });
+  const v = variantSkillsOf(unit);
+  __ok(v.includes('skill_card_sword'), 'weapon skill in variant bar');
+  __ok(!unit.loadout.includes('skill_card_sword'), 'weapon skill NOT in loadout');
+  __ok((unit.uses['skill_card_sword']||0) > 0, 'weapon uses initialized: '+unit.uses['skill_card_sword']);
 });
 window.__test('variant UI: variantSkillBarHtml renders for pred, empty for normal', function(){
   const html = variantSkillBarHtml({form:'pred'});
