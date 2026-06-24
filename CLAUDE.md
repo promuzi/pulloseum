@@ -44,6 +44,8 @@
 - **화분 / 식물·화분 분리(미구현 — 로드맵 #12):** ⚠️ **"수집 화분 5종" 시스템은 코드에 없다.** `potVisual`·`composePlantSvg({noPot:true})`·`POT_SPRITE_OVERRIDES`·`state.pot_inventory`·`pot_terra~pot_gold` **모두 미존재**(과거 설명이 구현보다 앞서거나 OneDrive 사고로 유실된 잔재). 실제로는 화분이 `composePlantSvg` 안에 **하드코딩**되어 식물과 한 SVG로 나오고(`index.html` ~8130–8132줄), 양육 속도용 숫자 `potQuality`(기본 1) 하나만 존재(`p.nursery.potQuality`). **식물/화분 레이어 분리는 로드맵 #12 미착수** — 착수 시 여기부터 만든다.
 - **스킬/특성:** 식물은 속성+특성+생장단계로 스킬을 얻고, **최대 6개 로드아웃**을 장착해 전투(클래시 로얄식). 특성(20종)은 전투 패시브(재생/흡혈/반사/방깎 등) + 시그니처 스킬을 부여. 상태이상(버프/디버프/중독·출혈·화상) 엔진. DoT 스택 상한 `DOT_STACK_CAP=4`(`addDot()`으로 추가, 초과 시 오래된 것 제거).
 - **변이 카드 시스템(2026-06-25~):** 변이형 6종(무기/포식/독성/포자/용족/일반). ⚠️ **발광(lumen) 폐지**(`rollForm` 제거, 기존분 legacy 보존). **포자형=버섯 전용**. 변이형=패시브 없음·"해당 변이 카드 장착 가능" 슬롯 게이트만. `variantSkillsOf(p)` = 하단 변이 스킬 바 단일 진실 함수. 스킬 분류(`cats`) 6종: attack/guard/buff/debuff/heal_hp/heal_energy. `TRAIT_CARDS` `fixed:true` = 등급 고정(mult=1). 같은 card_id 장착 시 등급 무관 자동 교체(중복 불가). → 설계: [mutation-forms-cards-redesign-design.md](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)
+  - ⚠️ **전투 유닛(`makeCombatant` 산출) ≠ plant 객체:** plant=`equipped_trait_cards`, 전투 유닛=`cards`(`variantSkillsOf`는 둘 다 폴백). 변이형 기본 스킬은 `makeCombatant`가 loadout에 push(포식/독성/용족)하되 무기형만 제외(하단 바 전용)·`uses`는 `loadout.concat(variantSkillsOf(unit))`로 초기화. 적 봇은 `aiPickSkill`이 `variantSkillsOf(e)`를 후보에 넣어야 변이 스킬 사용. 공통 카드 8종(battle-start: 위조페로몬·약화효소·불안정변이·항상성·마지막잎새 / 매턴: 굴광성장·아드레날린·만개).
+  - ⚠️ **새 카드 효과는 3곳 동시 수정:** `cardInstanceEffects`(개별 base→out)→`cardEffects`(합산 E)→`makeCombatant`(unit/passives 머지). 전투개시=`applyCardStartHooks`(startMatch), 매턴=`applyCardTurnHooks`(tickStatuses).
 - **전투/토너먼트:** 예선(5판3선) → 16강 → 8강 → 4강 → 결승. 우승 시 랭크 포인트로 **브론즈→실버→…→풀로세움** 승급. 토너먼트명은 생장단계+랭크로 자동 생성(예: "새싹 브론즈 토너먼트").
 - **속성 상성:** 기획서의 약점표 기준(불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불).
 - **하단 헤더(5탭):** 상점 / 탐사 / 식물·전투(중앙) / 식물양육 / 함선.
@@ -52,9 +54,10 @@
 ## 주의사항
 - ⚠️ **`grass`는 타입·속성 양쪽 문자열:** 타입 `grass`(=구 초본형, 폐지→화초형 흡수, 내부 폴백만 잔존)와 속성 `grass`(=풀)가 동일 문자열. 종/타입 코드에서 `'grass'` 일괄치환 금지(풀속성 깨짐). 현행 타입 5종 = 목본/화초/다육/덩굴/버섯.
 - **세이브는 브라우저 localStorage에 저장** → PC/브라우저마다 따로. 기기 간 진행도 자동 동기화 안 됨.
+- ⚠️ **변이 카드는 정의(`TRAIT_CARDS`)만으론 획득 불가** — 보급상자 드롭 풀(`box_card_*` rewards, `index.html` ~3600)에 `card_id` 등록해야 플레이어가 얻는다. 새 카드 = 효과 엔진 + 드롭 풀 둘 다 수정.
 - 코드 수정 후 검증은 미리보기(preview) 도구 또는 위 로컬 서버로.
 - **테스트 러너 없음** → 회귀 검증은 콘솔 셀프테스트 `window.__catalogSelfTest()` (케이스 추가: `index.html` 끝 `window.__test('name', fn)`). 판정은 `__catalogSelfTest()` **반환값(fails 배열)**으로 — preview 콘솔 버퍼는 리로드해도 옛 에러가 남는다. ⚠️ `fn` 내부에서 `return fails` 금지 — 반드시 `if(fails.length) throw new Error(fails.join(' | '))` 패턴으로 throw해야 집계됨.
-- preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증. `location.reload()`로 안 풀리면(특히 다른 세션 git 조작 후) → **`preview_stop` + `preview_start`로 서버 재시작**(새 인스턴스가 디스크 재독). SW 클리어·캐시버스트 URL로는 안 풀릴 수 있음.
+- preview 서버명은 `.claude/launch.json`의 `pullosseum`. **정적 서버라 HMR 없음** → 코드 수정 후 `location.reload()` 하고 다시 검증. `location.reload()`로 안 풀리면(특히 다른 세션 git 조작 후) → **`preview_stop` + `preview_start`로 서버 재시작**(새 인스턴스가 디스크 재독). SW 클리어·캐시버스트 URL로는 안 풀릴 수 있음. `preview_start`가 포트 점유(`HttpListenerException`)로 실패 = 이전 세션 서버가 8765 점유 → `Get-NetTCPConnection -LocalPort 8765`로 PID 찾아 `Stop-Process -Force` 후 재시작.
 - **`preview_screenshot`는 배경 무한 애니메이션(`floaty` 등) 때문에 자주 타임아웃** → 시각 검증은 `preview_eval`로 DOM(`querySelector`·computed style)·함수 반환값을 확인하는 방식으로 대체(렌더러는 살아있음).
 - **포트 충돌 대응:** 포트 8765가 ESTABLISHED TCP 연결로 점유될 수 있음. `netstat -ano | Select-String ":포트번호 .*LISTEN"`으로 리스닝 여부 확인. 9876 등 일부는 Windows 예약 포트(preview_start에서 "reserved by OS" 에러) — 8766·8768 등 인접 포트 시도.
 - **`serve.ps1` 워크트리 루트:** `$PSScriptRoot`(스크립트 위치의 상위)를 서빙 루트로 씀. 워크트리 내용을 테스트할 때는 해당 워크트리의 `.claude/serve.ps1`을 실행해야 함(예: `풀로세움-2\.claude\serve.ps1` → 풀로세움-2 기준 서빙).
