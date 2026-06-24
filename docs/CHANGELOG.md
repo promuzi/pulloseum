@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #7 탐사 분포 점검 후속: 0-종 버그 2건 해결 + 얇은 지역 6→1
+> 직전 점검([spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md))에서 나온 분포 품질 이슈 수정. EXPLORE_VIEW 데이터만 변경(로직 무변경).
+- **0-종 버그(테마 매칭 0종→조용히 행성 풀 전역 폴백) 해결**: ① 네레이돈/심해 균열 `types`에 `화초형` 추가 → 풀의 `aqua`가 일반 등장(`vine_water`는 희귀 시그니처 유지). ② 아즈텔 행성 풀에 `spark`·`aqua` 추가 → 전자기 늪 2종; 풀로 올라와 충돌하던 방사 폐허 `signature`는 `spark`→`tree_bolt`(풀 밖 전용)로 교체.
+- **얇은 지역(1종) 6→1**: 아르키아·잿빛 평원·윈드테라스·방전 평원·자철 협곡·빙저 동굴의 `types`에 어울리는 2번째 타입 추가 → 각 2~3종. 심해 균열만 S랭크 의도적 희박(흔함 1+희귀 시그니처).
+- **검증**: preview HttpListener 환경 이슈로 라이브 셀프테스트 불가 → Node로 `index.html`에서 `EXPLORE_VIEW`·`SPECIES_GRID` 추출·eval해 분포 재계산(정적). 0-종 0건·thin 1건(의도적)·EXPLORE_VIEW eval 성공(문법 무결). 속성표·타입 무변경.
+
 ### 2026-06-24 — #7 탐사 업그레이드: 아틀라스 세계관 + 종 분포 + 폴드 모션 + 행성 11개
 > 브레인스토밍 → 설계([spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)) → 구현. 셀프테스트 7종 추가·전부 통과(0 fail) + preview 검증.
 - **종 분포(옵션 C)**: `rollSpeciesFromView(region, planet)` = 행성 `species` 풀 ∩ 지역 `el`/`types` + `region.signature` 별도 저확률 경로(`SIGNATURE_CHANCE=0.10`) + 폴백 사다리(교집합 비면 행성 풀→테마 전역, 무회귀). 행성마다 "사는 종"이 정해지고, 특정 지역엔 풀에서 제외한 **희귀 시그니처 종**(✦)이 가끔 등장.

@@ -330,7 +330,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .cp-energy .off{opacity:.16;filter:grayscale(1);text-shadow:none;}
 .cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
 .cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.cp-pred{display:grid;grid-template-columns:1fr;}
+.cp-pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
 .skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:13px;text-align:left;
   background:linear-gradient(160deg,rgba(22,32,48,.96),rgba(12,18,30,.96));color:var(--text);
   padding:9px 9px 8px;min-height:74px;display:flex;flex-direction:column;gap:3px;
@@ -9818,10 +9818,10 @@ function showCardPhase(){
   hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','close');
   $('#battleScreen').classList.remove('cards-hidden');
   $('#battleArena').classList.add('spread');
-  const predId = B.p.loadout.find(id => id === 'skill_card_predation');
-  const normals = B.p.loadout.filter(id => id !== 'skill_card_predation');
+  const variantIds = variantSkillsOf(B.p);
+  const normals = B.p.loadout.filter(id => !variantIds.includes(id));
   $('#cardHand').innerHTML = normals.map(id => skillCardHtml(id, false)).join('');
-  $('#cardPred').innerHTML = predId ? skillCardHtml(predId, true) : '';
+  $('#cardPred').innerHTML = variantIds.map(id => skillCardHtml(id, true)).join('');
   // 상단 에너지(번개)
   let pips = `<span class="ce-label">⚡ 에너지</span>`;
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
