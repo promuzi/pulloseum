@@ -4071,6 +4071,11 @@ const TRAIT_CARDS = {
   // 공통 — 모든 변이형 장착 가능
   card_cellwall:   { id:'card_cellwall',   type:'common', name:'튼튼한 세포벽', icon:'🧱', base:{defPct:0.25}, subPool:['hp','def','regen','refl'] },
   card_thornstem:  { id:'card_thornstem',  type:'common', name:'가시 줄기',     icon:'🌵', base:{reflectPct:0.25}, subPool:['refl','def','enemydef','hp'] },
+  // 공통 스탯 코어 — 각 핵심 스탯 하나를 크게(빌드 토대)
+  card_muscle:   { id:'card_muscle',   type:'common', name:'근섬유 다발', icon:'💪', base:{atkPct:0.22},  subPool:['atk','crit','enemydef','hp'] },
+  card_vacuole:  { id:'card_vacuole',  type:'common', name:'거대 액포',   icon:'🫀', base:{hpPct:0.28},   subPool:['hp','def','regen','spd'] },
+  card_tropism:  { id:'card_tropism',  type:'common', name:'향성 운동',   icon:'🌀', base:{spdPct:0.30},  subPool:['spd','crit','atk','enemydef'] },
+  card_target:   { id:'card_target',   type:'common', name:'표적 분비물', icon:'🎯', base:{critBonus:0.16}, subPool:['crit','atk','spd','life'] },
   // DNA — 포식형
   card_sap:          { id:'card_sap',          type:'dna', name:'진액 흡수',         icon:'🩸', base:{predBoost:{lifesteal:0.40}}, subPool:['life','atk','crit','hp'] },
   card_chloroabsorb: { id:'card_chloroabsorb', type:'dna', name:'엽록체 흡수',       icon:'🔋', base:{predBoost:{energySteal:1}}, subPool:['energy','atk','spd','crit'] },
@@ -11361,6 +11366,14 @@ window.__test('card: fixed card ignores grade (mult=1, no subs)', function(){
   const a = cardInstanceEffects('__tmp_fix@S');
   __ok(Math.abs(a.atkPct-0.30)<0.001, 'fixed atk '+a.atkPct);
   delete TRAIT_CARDS.__tmp_fix;
+});
+window.__test('card: common stat cores defined + typed common', function(){
+  ['card_muscle','card_vacuole','card_tropism','card_target'].forEach(id=>{
+    __ok(TRAIT_CARDS[id], 'missing '+id);
+    __eq(TRAIT_CARDS[id].type, 'common', id+' type');
+  });
+  __ok(cardInstanceEffects('card_muscle@C').atkPct > 0.22-0.001, 'muscle atk');
+  __ok(cardInstanceEffects('card_target@C').critBonus > 0.15, 'target crit');
 });
 </script>
 </body>
