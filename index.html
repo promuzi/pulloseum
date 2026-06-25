@@ -1062,10 +1062,11 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exmap-star.big{width:3px;height:3px;opacity:.85;box-shadow:0 0 6px #fff;}
 .exmap-orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1.5px solid rgba(126,214,194,.30);border-radius:50%;pointer-events:none;box-shadow:0 0 12px -4px rgba(126,214,194,.25) inset;}
 /* 궤도별 연료 표식 — 거리(궤도)에 따른 필요 연료 탱크 레벨 */
+/* 연료 태그 = 박스 없이 흐린 글자만(피드백: 링 유지·글자만 흐리게) */
 .exmap-orbit-tag{position:absolute;transform:translate(-50%,-50%);z-index:5;pointer-events:none;
-  font-size:10px;font-weight:800;color:#bfe9ff;background:rgba(6,11,20,.86);border:1px solid rgba(31,217,196,.4);
-  border-radius:999px;padding:1px 6px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.85);}
-.exmap-orbit-tag.locked{color:#9aa6b4;border-color:rgba(255,255,255,.16);background:rgba(6,11,20,.8);}
+  font-size:9.5px;font-weight:700;color:rgba(191,233,255,.42);background:none;border:none;
+  padding:0;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.7);}
+.exmap-orbit-tag.locked{color:rgba(154,166,180,.42);}
 .exmap-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;line-height:1;filter:drop-shadow(0 0 10px rgba(31,217,196,.6));pointer-events:none;z-index:2;}
 .exmap-title{position:absolute;left:0;right:0;top:8px;text-align:center;z-index:3;pointer-events:none;padding:0 44px;}
 .exmap-title h2{margin:0;font-size:17px;}

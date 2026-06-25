@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 탐사 궤도 연료 태그 톤다운 (#6)
+- **피드백:** "탐사의 궤도 표시가 너무 눈에 띔, 불투명도해서 글자로만." → 링은 유지, 연료 태그(⛽N/🔒N)만 흐리게.
+- **수정:** `.exmap-orbit-tag`에서 배경(`rgba(6,11,20,.86)`)·테두리·pill 패딩 제거 → 박스 없이 흐린 글자만(`color` alpha .42, 약한 text-shadow만 유지). 궤도 링(`.exmap-orbit`)은 변경 없음.
+- **검증:** preview 탐사맵 열어 computed style — 태그 `background:transparent·border:0·color:rgba(191,233,255,.42)`, 링 `border 1.5px·boxShadow` 그대로.
+- 설계: [2026-06-26-ui-battle-polish-batch-design.md](superpowers/specs/2026-06-26-ui-battle-polish-batch-design.md) §6.
+
 ### 2026-06-26 — 브라우저 세이브 소실 + 변이카드/스킬 장착 해제 버그 수정 (#3) ⚠️중대
 - **피드백:** "변이카드 및 스킬 장착 고정이 안 됨, 나갔다오면 다 해제됨."
 - **근본 원인 3중 구조(systematic-debugging으로 추적):**
