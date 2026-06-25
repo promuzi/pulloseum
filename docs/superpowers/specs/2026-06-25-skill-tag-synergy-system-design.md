@@ -1,6 +1,6 @@
 # 스킬 태그 & 태그 시너지 시스템 설계 (2026-06-25)
 
-> 상태: **설계 완료 · 구현 대기(최우선)**. 다른 기기에서 이 문서를 진입점으로 구현 시작.
+> 상태: **1단계(토대) 구현 완료(2026-06-25, 브랜치 `feat/skill-tag-synergy`)** · 2·3단계 대기. 다른 기기에서 이 문서를 진입점으로 이어서 구현.
 > 브레인스토밍 합의(2026-06-25). 접근 = **A: 전체 아키텍처를 한 번에 설계 + 구현은 3단계로 분할**(단일 `index.html`·테스트러너 없는 환경의 회귀 위험 분산).
 > ⚠️ 이 문서는 **구현 시 단일 진실(SSOT)**. 코드와 어긋나면 코드를 고치거나 이 문서를 갱신해 항상 일치시킬 것. 함수명·필드명·통합 라인은 실제 코드(2026-06-25 기준 `index.html`)에서 검증됨.
 
@@ -147,7 +147,8 @@ function effectiveCost(unit, s){
 
 ## 6. 단계별 구현 계획
 
-### 🪨 1단계 — 토대(전체의 ~60%)
+### 🪨 1단계 — 토대(전체의 ~60%) ✅ **완료(2026-06-25)**
+> 구현 메모: 비용 보정 `value`도 등급 m로 스케일(설계대로). 예시 비용할인 카드 `card_overclock`은 `fixed:true`로 평탄 −1 적용. `card_firecore`는 등급 스케일 power 카드. 변이 5종에 `variant` 추가(무기 grantSkill 4종은 var:weapon 미부착 — 겨냥 카드 없을 때까지 보류). `applySkill` power 보정은 원소저항 직후·variance 직전에 삽입. `showSkillDetail`에 변이형·대상 pill 추가. 셀프테스트 10종(설계 §7) 등록.
 - `skillTags(skill, unit)` + `TAG_META`(표시 최소) + `tagModSum` + `effectiveCost`.
 - 효과 **2종(`power`, `cost`)** + 출처 **둘 다**(카드 `base.tagMods`, 스킬 `s.tagBuff`).
 - 통합: `cardInstanceEffects`/`cardEffects`/`makeCombatant`(tagMods 주입), `applySkill`(power·cost), `skillUnusable`/`moveCostLabel`(cost).

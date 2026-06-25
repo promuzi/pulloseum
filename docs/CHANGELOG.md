@@ -2,6 +2,15 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #13 스킬 태그 & 태그 시너지 1단계(토대) ✅
+- **목표:** 스킬에 5축 태그(분류·속성·변이형·대상·상태이상)를 붙이고, 그 태그를 겨냥한 보정을 카드·스킬로 푸는 시스템의 토대. 설계 SSOT = [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md).
+- **신규 엔진:** `skillTags(s,unit)`(태그는 (스킬,유닛) 쌍에서 도출 — 속성은 유닛 속성 기준) · `tagModSum(unit,s,type)`(지속 `unit.tagMods` + 임시 `kind:'tagmod'` 버프를 같은 풀로 합산) · `effectiveCost(unit,s)`(cost 할인·0 하한·`noEnergy` 제외) · `TAG_META`.
+- **통합:** `cardInstanceEffects`/`cardEffects`(`base.tagMods`→등급 m 스케일→`E.tagMods`) · `makeCombatant`(`unit.tagMods`·`comboPrimed`) · `applySkill`(power 배율=원소저항 직후·variance 직전 / `effectiveCost` 차감 / `s.tagBuff`·`tagBuffs` 임시 보정) · `skillUnusable`·`moveCostLabel`·`showSkillDetail`(할인 반영 + 변이형/대상 pill).
+- **데이터:** 변이 5종(`skill_card_predation`=pred·`infuse`/`spray`=toxic·`scale`/`breath`=dragon)에 `variant` 추가. 예시 콘텐츠 — 카드 `card_firecore`(불 위력 +20%, 등급 스케일)·`card_overclock`(공격 비용 −1, `fixed`) + 스킬 `tag.flame_exalt`(불 위력 +30%·3턴) + 공통 보급상자 드롭 등록(획득 가능).
+- **엔진 안전성:** `kind:'tagmod'` 버프는 `effStat`(공/방/속) 무시·`tickStatuses` 자동 만료 → 기존 스탯 계산 회귀 0.
+- **검증:** 셀프테스트 10종 추가 → `__catalogSelfTest()` **0 fail / 79**. preview에서 비용 할인 라벨(⚡2→⚡1)·사용 판정(1에너지로 할인 스킬 사용 가능) 실함수 확인.
+- **다음:** 2단계(effect 배율·combo 점화·compose 구성보너스) → 3단계(축별 콘텐츠·드롭풀·태그 pill UI·밸런스).
+
 ### 2026-06-25 — 전투 시작 에너지 = 최대 에너지(항상 가득)
 - **버그**: 에너지 스탯을 업글해 `energyMax`가 늘어도 시작 에너지는 `Math.min(..., 3)`으로 3 고정 → 남는 칸이 비어 시작.
 - **수정**: `makeCombatant`(`index.html` ~9614)의 시작 `energy`를 `energyMax`와 동일하게(`Math.min(...,3)` 캡 제거). 플레이어·적 공용 함수라 양쪽 동시 적용.
