@@ -8,13 +8,13 @@
 - **별칭:** 사용자가 "마스터 로드맵 / 로드맵 / 마스터 문서" 무엇으로 부르든 전부 `docs/master-roadmap.md`를 뜻한다.
 - **작업 시작 시 `git pull`**(다른 기기/대화창 변경 선반영), 끝나면 `git push`. 새 기기에서 클론했으면 한 번 `git config core.hooksPath .githooks` 실행(코드만 바뀌고 문서 안 바뀐 푸시를 막는 pre-push 훅 활성화).
 - 🧩 **사용자가 "수정한 index.html"을 주면 통째로 덮어쓰지 말 것.** 먼저 ① 어느 커밋 기반인지(`git log -S '<특징문자열>' -- index.html` 또는 최근 커밋들과 diff) ② 그 변경이 이미 main에 반영됐는지 확인. 구버전 기반이면 덮어쓰기=최근 비-UI 작업(종 시스템 등) 리버트. UI만 합치려면 진짜 공통조상을 base로 `git merge`(3-way)로 처리. (2026-06-24: 받은 파일 UI가 이미 main에 적용돼 있어 적용할 게 없던 사례)
-- ⚠️ **OneDrive 주의(해결됨, 2026-06-24 — 저장소 OneDrive 밖으로 이전):** 과거 OneDrive가 `.git`까지 동기화해 작업 트리 파일·HEAD가 세션 중 흔들리고 미커밋 편집이 유실되는 사고가 있었다. 다시 OneDrive 안에서 작업하게 되면, 커밋·푸시·머지 직전 `git rev-parse HEAD`·`git fetch`로 현재 상태를 재확인하고 시작 시점 스냅샷을 신뢰하지 말 것.
+- ⚠️ **OneDrive `.git` 동기화 사고(진짜 해결: 2026-06-25 → `C:\dev\pulloseum`):** OneDrive가 `.git`까지 동기화하면 세션 중 HEAD·작업파일이 멋대로 바뀌고(2026-06-25 실측: HEAD가 b4494c0→…→15e1831로 자동 변동·Edit 도구가 "modified since read"로 반복 실패) 미커밋 편집이 유실된다. ⚠️ **`C:\Users\soosa\Documents`는 OneDrive로 리디렉션됨**(레지스트리 `Personal`=`OneDrive\Documents`) → "Documents로 이전"은 OneDrive를 못 벗어난다(과거 "해결됨" 표기는 오류였다). **이 기기의 정식 작업본 = `C:\dev\pulloseum`(OneDrive 밖, 검증됨).** 기기 간 동기화는 OneDrive가 아니라 `git push`/`pull`로. OneDrive 폴더에서 작업하게 되면 커밋·푸시 직전 `git rev-parse HEAD`·`git fetch`로 재확인하고, Edit이 mtime 충돌나면 PowerShell `[IO.File]::ReadAllText/WriteAllText`(UTF8 no-BOM)+`IndexOf` 삽입으로 우회.
 - ⚠️ **여러 대화창(세션) 동시 작업 주의(2026-06-24):** 다른 Claude 세션이 같은 저장소에서 동시에 `index.html`·공용 문서(로드맵·CHANGELOG)를 편집·커밋하며 **브랜치가 세션 중 바뀔 수 있다**(예: main→feat/*). 커밋·푸시 전 `git status`·`git rev-parse --abbrev-ref HEAD`로 재확인하고 **내가 만진 파일만 선택 스테이징**(`git add <경로>`)한다. `git add -A`·전체 스테이징 금지(남의 미커밋 작업이 딸려감). 푸시 거부되면 fetch+rebase.
-- **병렬 세션 격리 → git worktree 활용:** `git worktree add ../풀로세움-iso -b feat/iso`로 별도 폴더+브랜치 생성 → 각 세션이 독립 파일 트리에서 작업 → 머지(FF 또는 3-way)로 합침. 병합은 대상 브랜치 체크아웃 폴더에서 `git merge` 실행. 현재 워크트리: `C:\Users\soosa\Documents\풀로세움`(feat/* 브랜치용), `C:\Users\soosa\Documents\풀로세움-2`(main 브랜치). 워크트리 정리: `git worktree remove <경로>` → `git worktree prune` → `git branch -d <브랜치>`.
+- **병렬 세션 격리 → git worktree 활용:** `git worktree add ../pulloseum-iso -b feat/iso`로 별도 폴더+브랜치 생성 → 독립 트리에서 작업 → 머지(FF 또는 3-way). ⚠️ **워크트리도 반드시 OneDrive 밖(`C:\dev\…`)에 생성** — `Documents` 하위는 OneDrive 리디렉션이라 격리가 안 된다. 정리: `git worktree remove <경로>` → `git worktree prune` → `git branch -d <브랜치>`.
 
 ## ▶ 게임 바로 열기 (Claude에게: 매 대화 시작 시 이 링크를 항상 먼저 보여줄 것)
 - **게임 실행:** [index.html](index.html) (클릭하면 브라우저로 열림 — 현재 게임 현황 바로 확인)
-- 파일 직접 경로: `file:///C:/Users/soosa/Documents/풀로세움/index.html` (저장소 OneDrive 밖 이전 반영)
+- 파일 직접 경로: `file:///C:/dev/pulloseum/index.html` (OneDrive 밖 정식 작업본)
 - 세이브는 브라우저 localStorage에 저장되므로, 같은 브라우저로 열면 진행 상황이 그대로 보입니다.
 
 ## 한 줄 소개
@@ -81,4 +81,4 @@
 - 토큰 절약 워크플로: [.claude/prompts/reset-handoff.md](.claude/prompts/reset-handoff.md), [docs/session-chaining-guide.md](docs/session-chaining-guide.md)
 - 브레인스토밍/설계 박제: `docs/superpowers/specs/YYYY-MM-DD-<주제>-design.md` (미완 설계는 여기 박제 + 로드맵 §2 문서지도에 등록 → 다음 세션 진입점).
 - ✅ **#2 양육/열매+화분 설계(완료):** [nurture-fruit-system-design](docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [collectible-pots-design](docs/superpowers/specs/2026-06-24-collectible-pots-design.md)
-- **#1 종/스킬 개체 고유화**(타입/속성 공통 컨셉·개체별 고유스킬3[성장체/성체/완숙체]·외형 액센트 시스템[변이형→모듈 자동]) = [docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md](docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md) — **설계 완료(175종: 비버섯 풀매트릭스 168=28칸×무변이+5변이 + 버섯 base7)·코드 미반영**. 다음=구현(`SPECIES_CATALOG`+`SKILL_LIB`+신규 `ACCENT_MODULES`); 양 큼(엔트리175+스킬~525)이라 워크트리에서 배치로(한 세션에 다 못 넣음). 잔여 설계=버섯 비포자 변이35. (식물/화분 분리는 #12 미착수—외형 액센트는 그와 독립.) 변이 권위=[mutation 재설계](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md).
+- **#1 종/스킬 개체 고유화**(타입/속성 공통 컨셉·개체별 고유스킬3[성장체/성체/완숙체]·외형 액센트 시스템[변이형→모듈 자동]) = [docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md](docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md) — 설계 완료(175종). **구현 진행(2026-06-25): 비버섯 28종 개체 고유스킬 3개씩(`ind.<key>.g/.m/.e`)+카탈로그 반영 완료**(grid 종은 `SPECIES_CATALOG`에 `{rarity,stageSkills:{growing,mature,evolved}}`만; 새싹·유체는 공유 `STAGE_SKILLS` 자동, 설계의 표시이름≠실키라 (타입×속성) grid 키로 매핑). **잔여=버섯 성체/완숙(14)·변이 개체(140)·버섯 비포자 변이(35)**, 양 커서 워크트리 배치로. 엔진 제약: 스킬당 `selfBuff`/`enemyDebuff` 각 1개·관통 `pierce:0.5`·화상/출혈 0.06·중독 0.05. (식물/화분 분리는 #12 미착수—외형 액센트는 그와 독립.) 변이 권위=[mutation 재설계](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md).
