@@ -271,7 +271,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   background:linear-gradient(180deg,transparent,rgba(20,184,166,.05) 40%,rgba(20,184,166,.1));
   border-top:1px solid rgba(60,230,210,.12);}
 .arena-fighter{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;
-  transition:transform .5s cubic-bezier(.2,.85,.3,1);z-index:2;width:100%;}
+  transition:transform .5s cubic-bezier(.2,.85,.3,1),filter .22s ease;z-index:2;width:100%;}
+/* 판정 중 상단(식물 무대)만 흐림 — 그 위 #judgeWindow 카드는 또렷하게 유지 */
+#battleArena.blurred .arena-fighter{filter:blur(3.5px) brightness(.66);}
 .arena-fighter .finfo{width:min(52%,250px);flex:0 0 auto;background:rgba(7,12,20,.55);border:1px solid rgba(255,255,255,.08);
   border-radius:12px;padding:8px 12px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
 /* 카드/판정 단계: 두 식물이 서로 멀어지고 살짝 물러남(가운데를 카드에 양보) */
@@ -400,9 +402,14 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes judgeUseLeft{0%{opacity:1;transform:translateX(0) scale(1)}55%{opacity:1;transform:translateX(38px) scale(1.05)}100%{opacity:0;transform:translateX(54px) scale(.82)}}
 @keyframes judgeUseRight{0%{opacity:1;transform:translateX(0) scale(1)}55%{opacity:1;transform:translateX(-38px) scale(1.05)}100%{opacity:0;transform:translateX(-54px) scale(.82)}}
 @keyframes judgeUseSelf{0%{opacity:1;transform:translateY(0) scale(1)}55%{opacity:1;transform:translateY(-9px) scale(1.05)}100%{opacity:0;transform:translateY(-15px) scale(.82)}}
-#judgeMessage{min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;border-radius:13px;padding:8px 12px;background:rgba(7,13,23,.9);border:1px solid rgba(255,255,255,.1);
-  box-shadow:0 8px 24px rgba(0,0,0,.48);opacity:0;}
+#judgeMessage{min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;border-radius:13px;padding:7px 13px;background:rgba(7,13,23,.9);border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 8px 24px rgba(0,0,0,.48);opacity:0;align-self:center;max-width:88%;}
+/* 판정 한 줄을 행동 카드 안쪽(중앙쪽)으로 치우침 — 좌측(적) 행동=왼쪽 치우침, 우측(나) 행동=오른쪽 치우침 */
+#judgeMessage.toward-e{align-self:flex-start;}
+#judgeMessage.toward-p{align-self:flex-end;}
+.jw-card.acting{animation:judgeActing .5s ease;box-shadow:0 0 20px var(--gc,var(--neon)),0 9px 25px rgba(0,0,0,.5);}
+@keyframes judgeActing{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
 #judgeMessage.show{animation:judgeMessageIn .24s ease both;}
 @keyframes judgeMessageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .jm-critical{color:#ffd34a;font-size:13px;font-weight:900;margin-bottom:2px;text-shadow:0 0 12px rgba(255,211,74,.45);}
@@ -10480,6 +10487,10 @@ function setJudgeOrder(side, label){
   const order = $('#judgeOrder'); if(!order) return;
   order.textContent = !side ? '' : (side==='p' ? `${label} →` : `← ${label}`);
 }
+/* 판정 중 상단(식물 무대) 흐림 토글 — 데미지 적용 시 해제 */
+function setBlur(on){ const ar=$('#battleArena'); if(ar) ar.classList.toggle('blurred', !!on); }
+/* 판정 한 줄을 행동 카드 안쪽으로 치우치게 */
+function setVerdictSide(side){ const box=$('#judgeMessage'); if(!box) return; box.classList.remove('toward-p','toward-e'); if(side) box.classList.add(side==='p'?'toward-p':'toward-e'); }
 function clearJudgeMessage(){
   const box=$('#judgeMessage'); if(!box) return;
   box.classList.remove('show'); box.innerHTML='';
@@ -10502,7 +10513,7 @@ async function showEffectMessages(messages){
 }
 async function animateJudgeCardUse(side, isAttack){
   const card = $(side==='p' ? '#judgePlayerCard' : '#judgeEnemyCard');
-  if(card){ card.classList.add(isAttack?(side==='p'?'use-right':'use-left'):'use-self'); }
+  if(card){ card.classList.remove('acting'); void card.offsetWidth; card.classList.add('acting'); setTimeout(()=>card.classList.remove('acting'),520); }
   const fighter = $(side==='p' ? '#playerFighter' : '#enemyFighter');
   if(isAttack && fighter){ fighter.classList.add('skill-use'); setTimeout(()=>fighter.classList.remove('skill-use'),440); }
   await sleep(460);
@@ -10683,8 +10694,8 @@ async function tickStatuses(u, side){
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
   if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); if(u.energy>before){ statusNotes.push('에너지가 회복되었다!'); changed=true; } }
   applyCardTurnHooks(u, (B && B.turn) || 1); // 공통 카드 매턴 훅(굴광성장·아드레날린·만개)
-  if(statusNotes.length) await showEffectMessages(statusNotes);
-  if(changed){ updateBars(); await sleep(480); }
+  // 순차 메시지 폐지 — 지속피해/상태는 데미지 숫자 + 상태 VFX + statusTags 아이콘으로 동시에 전달
+  if(changed){ updateBars(); await sleep(420); }
 }
 /* 판정 창 열기 — 양쪽이 선택한 카드만 먼저 공개한다. */
 async function openJudge(playerId, enemyId){
@@ -10701,10 +10712,12 @@ async function openJudge(playerId, enemyId){
   clearJudgeMessage();
   jw.classList.remove('close','open'); show('#judgeWindow'); void jw.offsetWidth;
   jw.classList.add('open');
+  setBlur(true); // 카드 공개 동안 상단 흐림
   try{ sfx.roll(); }catch(e){}
   await sleep(620);
 }
 function closeJudge(){
+  setBlur(false);
   const jw = $('#judgeWindow'); if(!jw || jw.classList.contains('hidden')) return;
   jw.classList.add('close');
   setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','close'); }, 300);
@@ -10749,17 +10762,19 @@ async function playerSkill(skillId){
   if(!needsOrder){
     setJudgeOrder(null,'');
     await sleep(480);
+    setBlur(false); // 효과 적용 시 흐림 해제
     await Promise.all([animateJudgeCardUse('p',false),animateJudgeCardUse('e',false)]);
-    if(pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true,suppressMessages:bothDefense});
-    if(eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true,suppressMessages:bothDefense});
-    if(!pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true});
-    if(!eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true});
+    if(pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true,suppressMessages:true});
+    if(eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true,suppressMessages:true});
+    if(!pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true,suppressMessages:true});
+    if(!eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true,suppressMessages:true});
   } else {
     setJudgeOrder(prioritySide || B.firstSide, prioritySide ? '방어 우선' : '선공');
     await sleep(760);
+    setBlur(false); // 선공 판정 후, 데미지 적용 단계부터 흐림 해제
     // 방어 스킬은 기동성 순서와 무관하게 공격보다 먼저 적용한다.
-    if(pDefense) await applySkill(B.p,B.e,pChosen,'p');
-    if(eDefense) await applySkill(B.e,B.p,eChosen,'e');
+    if(pDefense){ setVerdictSide('p'); await applySkill(B.p,B.e,pChosen,'p',{suppressMessages:true}); }
+    if(eDefense){ setVerdictSide('e'); await applySkill(B.e,B.p,eChosen,'e',{suppressMessages:true}); }
   }
   const order = prioritySide
     ? (prioritySide==='p' ? [['e',eId],['p',skillId]] : [['p',skillId],['e',eId]])
@@ -10770,8 +10785,9 @@ async function playerSkill(skillId){
     const chosen=skillById(k,a);
     if(isPriorityDefenseSkill(chosen)) continue;
     if(a.hp<=0) continue;
+    setVerdictSide(side);
     if(a.skipNext){ a.skipNext=false; await animateJudgeCardUse(side,false); await showJudgeMessage('마비되어 움직일 수 없다!','effect',false,680); updateBars(); continue; }
-    await applySkill(a, d, chosen, side);
+    await applySkill(a, d, chosen, side, {suppressMessages:true});
     if(d.hp<=0){ await finishMatch(side==='p'); return; }
     if(a.hp<=0){ await finishMatch(side!=='p'); return; }
   }
