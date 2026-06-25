@@ -1,6 +1,6 @@
 # 전투 UI 개편 설계 (2026-06-25)
 
-> 상태: **설계 완료 · 코드 미반영**. 다음 단계 = 구현 플랜(writing-plans).
+> 상태: **구현 완료(2026-06-25, `feat/battle-ui-redesign`)**. 플랜: [../plans/2026-06-25-battle-ui-redesign.md](../plans/2026-06-25-battle-ui-redesign.md).
 > 접근: **A — 기존 요소 용도변경**(새 DOM 골격 X). 단일 `index.html` + 테스트 러너 없는 환경의 회귀 위험 최소화.
 
 ## 1. 배경 / 문제

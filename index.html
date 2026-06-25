@@ -252,12 +252,6 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .battle-turn{min-width:54px;border:1px solid rgba(60,230,210,.32);border-radius:999px;padding:5px 9px;
   background:rgba(7,13,23,.82);color:var(--neon);font-size:12px;font-weight:900;text-align:center;
   box-shadow:0 3px 12px rgba(0,0,0,.35);}
-.battle-view-btn{position:absolute;right:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9;
-  pointer-events:auto;border:1px solid rgba(143,217,255,.36);border-radius:999px;padding:7px 11px;
-  background:rgba(7,13,23,.88);color:#cdeaff;font-size:11.5px;font-weight:800;
-  box-shadow:0 3px 12px rgba(0,0,0,.35);}
-.battle-view-btn:active{transform:scale(.96)}
-.battle-view-btn:disabled{opacity:.42;cursor:default;}
 .battle-surrender{pointer-events:auto;border:1px solid rgba(255,107,74,.5);border-radius:999px;
   background:rgba(22,12,14,.82);color:#ff9a82;font-size:11.5px;font-weight:800;padding:6px 11px;
   box-shadow:0 3px 12px rgba(0,0,0,.35);}
@@ -10924,6 +10918,7 @@ async function endMatch(won){
     <div class="mr-rewards">${rewards.join('')}</div>
     <div class="mr-note">${note}</div>
     <button class="btn primary" id="battleResultBtn">${btnLabel}</button>`;
+  hideCardPhase(); setBlur(false); // 결과 화면 진입 시 스킬바 숨김 + 흐림 해제
   const br = $('#battleResult');
   br.classList.remove('shut','reveal'); show('#battleResult'); void br.offsetWidth;
   br.classList.add('shut');
