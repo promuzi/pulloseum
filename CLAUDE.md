@@ -47,6 +47,7 @@
   - ⚠️ **전투 유닛(`makeCombatant` 산출) ≠ plant 객체:** plant=`equipped_trait_cards`, 전투 유닛=`cards`(`variantSkillsOf`는 둘 다 폴백). 변이형 기본 스킬은 `makeCombatant`가 loadout에 push(포식/독성/용족)하되 무기형만 제외(하단 바 전용)·`uses`는 `loadout.concat(variantSkillsOf(unit))`로 초기화. 적 봇은 `aiPickSkill`이 `variantSkillsOf(e)`를 후보에 넣어야 변이 스킬 사용. 공통 카드 8종(battle-start: 위조페로몬·약화효소·불안정변이·항상성·마지막잎새 / 매턴: 굴광성장·아드레날린·만개).
   - ⚠️ **새 카드 효과는 3곳 동시 수정:** `cardInstanceEffects`(개별 base→out)→`cardEffects`(합산 E)→`makeCombatant`(unit/passives 머지). 전투개시=`applyCardStartHooks`(startMatch), 매턴=`applyCardTurnHooks`(tickStatuses).
 - **전투/토너먼트:** 예선(5판3선) → 16강 → 8강 → 4강 → 결승. 우승 시 랭크 포인트로 **브론즈→실버→…→풀로세움** 승급. 토너먼트명은 생장단계+랭크로 자동 생성(예: "새싹 브론즈 토너먼트").
+- **전투 UI(2026-06-25 개편):** 포켓몬식 — 상단 식물 무대(적 상태바좌/식물우, 나 식물좌/상태바우 대각) + **하단 영구 고정 스킬바**(`#cardPhase`→풋바, `refreshSkillBar` 상주 렌더·불 켜짐/`lockSkillBar` 잠금). 카드 앞면 3단(이름/아이콘/분류칩+비용, `skillCardHtml`+`battleCardFootChips`), 꾹→뒤집기 상세(`cardFlipIn`). 판정=양쪽 카드 좌우 제자리+**상단만 흐림(`setBlur`)**, 데미지 시 해제, 상성 한 줄(`setVerdictSide`)만 남기고 순차 메시지 폐지. 순간형 상태 VFX `spriteFx(side,kind)`(독/화상/출혈/방어막·깨짐/버프·디버프, `addDot` 내부 트리거). ⚠️ `B.view`·`battleViewBtn`·`toggleBattleView`·`showCardPhase` **폐지됨**(잔존 참조 금지). 설계/플랜=[specs](docs/superpowers/specs/2026-06-25-battle-ui-redesign-design.md)·[plans](docs/superpowers/plans/2026-06-25-battle-ui-redesign.md).
 - **속성 상성:** 기획서의 약점표 기준(불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불).
 - **하단 헤더(5탭):** 상점 / 탐사 / 식물·전투(중앙) / 식물양육 / 함선.
 - **식물 관리 3탭:** 소모품(스탯 강화+탐사 아이템 사용) / 특성 / 스킬(로드아웃 편집).

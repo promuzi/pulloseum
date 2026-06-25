@@ -2,6 +2,15 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — 전투 UI 개편: 하단 고정 스킬바 + 포켓몬식 레이아웃 + 간결 판정 연출
+- **설계/플랜:** [specs/2026-06-25-battle-ui-redesign-design.md](superpowers/specs/2026-06-25-battle-ui-redesign-design.md) · [plans/2026-06-25-battle-ui-redesign.md](superpowers/plans/2026-06-25-battle-ui-redesign.md). 워크트리 `feat/battle-ui-redesign`에서 7태스크 → main FF 머지.
+- **스킬바 상시 고정:** 매 턴 떠올랐다 사라지던 `#cardPhase` 오버레이를 **하단 영구 고정 풋바**로(상단 54% 무대 / 하단 46% 스킬바). `showCardPhase`→`refreshSkillBar`(상주 렌더+불 켜짐/꺼짐)·`lockSkillBar`(판정 중 잠금). **`battleViewBtn`(숨기기/보이기 토글)·`toggleBattleView`·`B.view` 폐지.**
+- **포켓몬식 대각 배치:** 적=상태바 좌/식물 우, 나=식물 좌/상태바 우(`.arena-fighter` row 정렬, DOM 순서 그대로 활용).
+- **카드 앞면 3단:** 이름(상)/대표 아이콘(중)/분류칩+비용(하). `battleCardFootChips`(cats+속성+독계열). 설명·계수는 앞면 제거 → **꾹 누르면 카드가 뒤집혀(`cardFlipIn`) 뒷면에 계수 상세**.
+- **판정 연출 재배선:** 양쪽 카드 적 좌·나 우 제자리 등장 + **상단(식물)만 흐림(`setBlur`)** → 데미지 적용 시 흐림 해제. 상성 한 줄을 행동 카드 안쪽으로(`setVerdictSide`). `applySkill` 전부 `suppressMessages:true`로 **순차 effectNotes 폐지**(상성 한 줄만), `tickStatuses` 순차 메시지도 폐지.
+- **순간형 상태 VFX:** `spriteFx(side,kind)` — 스프라이트 위 1회 번쩍(독=보라/화상=불/출혈=붉은방울/방어막=금속코팅·소진 시 깨짐/버프·디버프). `addDot` 내부 트리거로 모든 독·화상·출혈 자동 커버. 지속 표시는 기존 `statusTags` 아이콘 유지.
+- **검증:** `window.__catalogSelfTest()` 0 fail. preview에서 다턴 진행·매치 종료·판정 흐름 수동 검증. **밸런스/데미지 공식 불변(연출·표시만 개편).**
+
 ### 2026-06-25 — #1 개체 고유화: 외형 액센트 시스템 + 변이종 form/획득 게이트 + 목본 base 7 고유 스킬
 - **외형 액센트 시스템(신규):** `composePlantBody`/`composePlantSvg`에 `bodyAccent` 배선 + `ACCENT_MODULES` 레지스트리 6키(none/maw·포식/arms·무기/toxin·독성/draco·용족/enhance·일반). **변이형→액센트 자동 매핑**(`accentFromForm`)이라 같은 타입·속성이라도 변이마다 외형이 달라진다(절차적 SVG 오버레이, 손그림 0). `spriteFor`·`svgPlant`·진화모달·양육 레이어가 `form`을 전달하도록 연결. 씨앗 단계엔 액센트 없음. preview에서 6변이형 외형 전부 구별·화분 합성 무손상 검증.
 - **변이종 form 고정 + 비획득 게이트(신규):** `applyCatalogVariantFields`가 `baseVariants[0]`로 form을 **무조건 고정**(변이종은 rollForm 무시·태생 변이 확정, 포식형 predType 기본 보강). `SPECIES[].released` 필드 추가 + `pickAcquirableSpecies`가 `released` 종만 풀에 포함 → 향후 변이 개체 140종을 정의해도 획득/적봇 풀이 범람하지 않음(분포 배치는 #7 후속).
