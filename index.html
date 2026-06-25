@@ -5944,7 +5944,14 @@ function applyCare(p, res){
   return true;
 }
 function grantCareReward(res, count){ if(!state.care) state.care = { water:0, fert:0 }; state.care[res] = (state.care[res]||0) + count; }
-let state = loadState();
+let loadedFromLocal = false;  // 시작 시 localStorage에 실제 진행도가 있었는지
+let nativeReconciled = false; // 네이티브 백업을 아직 못 읽었으면 false → 그 전엔 네이티브에 절대 쓰지 않음
+/* ⚠️ 실제 세이브 로딩은 bootWithSave로 미룬다(아래). 여기서 loadState()를 부르면,
+   loadState→normalizeState→ensureSkillFields→ownedTraitCardIds가 `typeof state`로 state를 만지는데
+   이 시점 state는 자기 자신을 초기화 중(let TDZ)이라 `typeof state`마저 ReferenceError를 던진다
+   → loadState catch가 삼켜 defaultState 반환 → 식물 있는 브라우저 세이브가 매 리로드마다 소실되던 버그.
+   defaultState로 안전 초기화하고, 모든 심볼이 정의된 부팅 시점에 loadState로 덮어쓴다. */
+let state = defaultState();
 function syncPlayerMoney(){ state.money = state.credits; }
 
 /* ===== 재화(財貨) 입출 통합 창구 =====
@@ -5964,8 +5971,7 @@ function canAffordMinerals(amount){ return (state.minerals || 0) >= amount; }
 function nativePrefs(){
   try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences) || null; }catch(e){ return null; }
 }
-let loadedFromLocal = false;  // 시작 시 localStorage에 실제 진행도가 있었는지
-let nativeReconciled = false; // 네이티브 백업을 아직 못 읽었으면 false → 그 전엔 네이티브에 절대 쓰지 않음
+/* loadedFromLocal·nativeReconciled 선언은 위(loadState 호출 전)로 이동됨 — TDZ 방지 */
 function saveState(){
   try{
     syncPlayerMoney();
@@ -5982,6 +5988,11 @@ function loadState(){
   try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if(s && Array.isArray(s.plants)){
       loadedFromLocal = true;
+      // ★ normalizeState 전에 글로벌 state를 로드 대상으로 대입한다.
+      //   normalizeState→ensureSkillFields→ownedTraitCardIds가 글로벌 state.trait_cards를 읽는데,
+      //   대입하지 않으면 default(빈 인벤토리)를 봐서 장착 변이카드가 전부 필터로 날아간다
+      //   (= "나갔다오면 변이카드 장착 해제" 버그). normalizeState는 s를 제자리 변형 후 그대로 반환.
+      state = s;
       return normalizeState(s);
     }
   }catch(e){}
@@ -5991,6 +6002,9 @@ function loadState(){
    시작종자 지급/최초 저장을 한다. 이렇게 해야 시작종자 saveState가 네이티브 백업을 덮어쓰지 않는다.
    브라우저(네이티브 없음)에선 기존 동작과 동일하게 시작종자→저장→렌더만 수행. */
 async function bootWithSave(){
+  // 브라우저 로컬 세이브 로딩 — 모든 const/함수가 정의된 이 시점에 수행해야 TDZ 없이 정상 로드된다.
+  // (let state 초기화 시점에 부르면 ownedTraitCardIds의 `typeof state`가 TDZ로 던져 세이브가 유실됨)
+  if(!loadedFromLocal){ const loaded = loadState(); if(loadedFromLocal) state = loaded; }
   const p = nativePrefs();
   if(!loadedFromLocal && p){
     try{

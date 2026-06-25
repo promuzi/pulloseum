@@ -65,11 +65,10 @@ tickStatuses(p) → tickStatuses(e) → sleep(620) → closeJudge() → busy=fal
 
 **현상:** 변이 카드·스킬을 장착해도 화면을 나갔다 오면 전부 해제된다.
 
-**원인 가설:** `ensureSkillFields`([index.html:5516~](../../../index.html))가 재진입마다
-```
-p.equipped_trait_cards = p.equipped_trait_cards.filter(cid => owned.includes(cid)).slice(0,5);
-```
-로 필터링한다. 장착분은 `@C` 등급 접미사가 붙은 키(`card_x@C`)인데([:5745](../../../index.html)) `ownedFormCards`/`ownedTraitCardIds`가 반환하는 키와 등급 표기가 어긋나면 `includes` 불일치 → 전량 탈락.
+**실제 원인(systematic-debugging으로 확정 — 가설이던 @grade 불일치는 오답):** 3중 TDZ/순서 버그.
+1. `let loadedFromLocal`가 `let state = loadState()`보다 뒤 선언 → TDZ.
+2. `let state = loadState()`가 state 자기 TDZ 중 실행 → loadState→normalizeState→ensureSkillFields→`ownedTraitCardIds`의 `typeof state`가 TDZ ReferenceError → catch가 삼켜 `defaultState()` 반환 → **2026-06-19 이후 브라우저 세이브가 매 리로드마다 전량 소실**.
+3. load 중 `ownedTraitCardIds`가 글로벌 `state.trait_cards`(아직 default=빈)를 읽어 장착 변이카드 필터 탈락.
 
 **수정 방향:**
 1. 실제 원인 확정: `ownedTraitCardIds()` 반환 키 형식(등급 포함 여부) vs `equipped_trait_cards` 키 형식을 대조(systematic-debugging — 가설 검증 후 수정).

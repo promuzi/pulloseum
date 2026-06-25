@@ -2,6 +2,16 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 브라우저 세이브 소실 + 변이카드/스킬 장착 해제 버그 수정 (#3) ⚠️중대
+- **피드백:** "변이카드 및 스킬 장착 고정이 안 됨, 나갔다오면 다 해제됨."
+- **근본 원인 3중 구조(systematic-debugging으로 추적):**
+  1. `let loadedFromLocal = false`가 `let state = loadState()`보다 **뒤에** 선언(2026-06-19 백업 커밋) → loadState가 `loadedFromLocal=true` 대입 시 TDZ.
+  2. **핵심:** `let state = loadState()`가 **state 자기 초기화(TDZ) 중** 실행 → loadState→normalizeState→ensureSkillFields→`ownedTraitCardIds`의 `typeof state`가 TDZ에서 ReferenceError → loadState catch가 삼켜 `defaultState()` 반환 → **2026-06-19 이후 식물 있는 브라우저 세이브가 매 리로드마다 빈 상태로 덮어써짐**.
+  3. load 중 `ownedTraitCardIds`가 글로벌 `state.trait_cards`(아직 default=빈 인벤토리)를 읽어 → 장착 변이카드가 소유 필터에서 전부 탈락("장착 해제" 증상).
+- **수정:** `loadedFromLocal`·`nativeReconciled` 선언을 loadState 호출 전으로 이동 / `let state = defaultState()`로 안전 초기화 후 **실제 로딩을 `bootWithSave`(모든 심볼 정의 후)로 이동** / `loadState`에서 `normalizeState(s)` 전에 글로벌 `state = s` 대입(로드 인벤토리 인식).
+- **검증:** SW/캐시 클리어 리로드 라운드트립 — credits·식물·장착 변이카드·장착 스킬 **전부 유지**(이전 전량 소실). `__catalogSelfTest()` 0 fail.
+- 설계: [2026-06-26-ui-battle-polish-batch-design.md](superpowers/specs/2026-06-26-ui-battle-polish-batch-design.md) §3.
+
 ### 2026-06-26 — 도감: 변이형(form) 필터 추가 + 로딩 타임아웃 견고화
 - **배경(피드백):** "변이형에 따라 개체가 다르고(예: 화초+불+포식 ≠ 화초+불+무기) 생장 단계마다 스킬이 다른 듯" → 검증 + 도감 분류 요청.
 - **검증 결과:** 같은 타입+속성이라도 변이형이 다르면 `SPECIES_CATALOG`의 **별개 종**(예: `flame_trap`/`blaze_lance`/`ash_bloom` = 화초+불 의 포식/무기/독성). **기본 스탯은 동일**(`buildBase()`가 타입+속성만으로 산출, 변이형은 `stats` 미지정) — 차이는 **3개 고유 스킬(성장체/성체/완숙체, 변이형 테마)** + 변이형(장착 가능 카드)뿐. 도감은 이미 182장으로 개체별 별개 카드 + 타입/속성 필터 + 버섯 7종을 렌더 중이었음.
