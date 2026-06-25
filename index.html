@@ -1060,7 +1060,12 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exmap-world.dragging{cursor:grabbing;}
 .exmap-star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.5;pointer-events:none;}
 .exmap-star.big{width:3px;height:3px;opacity:.85;box-shadow:0 0 6px #fff;}
-.exmap-orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.075);border-radius:50%;pointer-events:none;}
+.exmap-orbit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1.5px solid rgba(126,214,194,.30);border-radius:50%;pointer-events:none;box-shadow:0 0 12px -4px rgba(126,214,194,.25) inset;}
+/* 궤도별 연료 표식 — 거리(궤도)에 따른 필요 연료 탱크 레벨 */
+.exmap-orbit-tag{position:absolute;transform:translate(-50%,-50%);z-index:5;pointer-events:none;
+  font-size:10px;font-weight:800;color:#bfe9ff;background:rgba(6,11,20,.86);border:1px solid rgba(31,217,196,.4);
+  border-radius:999px;padding:1px 6px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.85);}
+.exmap-orbit-tag.locked{color:#9aa6b4;border-color:rgba(255,255,255,.16);background:rgba(6,11,20,.8);}
 .exmap-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;line-height:1;filter:drop-shadow(0 0 10px rgba(31,217,196,.6));pointer-events:none;z-index:2;}
 .exmap-title{position:absolute;left:0;right:0;top:8px;text-align:center;z-index:3;pointer-events:none;padding:0 44px;}
 .exmap-title h2{margin:0;font-size:17px;}
@@ -1077,7 +1082,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .explanet.ring .explanet-core:after{content:"";position:absolute;left:-8px;right:-8px;top:46%;height:5px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
 .explanet-label{display:block;margin-top:6px;max-width:124px;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;font-weight:800;color:#fff;white-space:nowrap;background:rgba(6,11,20,.92);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:2px 9px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
 /* 연료탱크 미충족 궤도 — 어둡게 그림자 처리 */
-.exmap-orbit.locked{border-style:dashed;border-color:rgba(255,255,255,.04);}
+.exmap-orbit.locked{border-style:dashed;border-color:rgba(255,255,255,.13);box-shadow:none;}
 .explanet.locked{filter:grayscale(.85) brightness(.4);opacity:.6;}
 .explanet.locked .explanet-core{box-shadow:inset -10px -12px 15px rgba(0,0,0,.6);}
 .explanet.locked .explanet-label{color:#b9c2cf;}
@@ -7873,7 +7878,7 @@ let exDetPlanetId = null;   // 그림3 상세가 열린 행성
 let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
 let lastExResult = null;    // 직전 탐사 결과
 let exHangarOpen = false;   // 탐사선 격납고 오버레이 열림 여부
-const EX_DEFAULT_SCALE = 1.0; // 기본 확대: 11행성·4궤도와 이름이 모두 보이게
+const EX_DEFAULT_SCALE = 0.9; // 기본 확대: 11행성·4궤도 + 궤도 연료표식이 잘림 없이 모두 보이게
 let exView = { x:0, y:0, scale:EX_DEFAULT_SCALE }; // 우주맵 이동/확대 상태
 function exById(id){ return EXPLORE_VIEW.find(p => p.id === id) || null; }
 function exPlanetXY(p){
@@ -8062,7 +8067,12 @@ function exStars(){
 }
 function exOrbitRings(){
   const ft = exFuelTank();
-  return [1,2,3,4].map(o => { const d = EX_ORBIT_R[o] * 2; const lk = o > ft ? ' locked' : ''; return `<span class="exmap-orbit${lk}" style="width:${d}px;height:${d}px"></span>`; }).join('');
+  // 궤도 링 + 각 궤도의 필요 연료(=궤도 번호) 표식. 표식은 어떤 행성도 없는 정좌측(180°)에 배치 → 거리 눈금처럼 읽힘.
+  return [1,2,3,4].map(o => {
+    const R = EX_ORBIT_R[o], d = R * 2, lk = o > ft ? ' locked' : '';
+    const tag = `<span class="exmap-orbit-tag${lk}" style="left:calc(50% - ${R}px);top:50%">${o>ft?'🔒':'⛽'}${o}</span>`;
+    return `<span class="exmap-orbit${lk}" style="width:${d}px;height:${d}px"></span>${tag}`;
+  }).join('');
 }
 function exPlanetNode(p){
   const xy = exPlanetXY(p);
