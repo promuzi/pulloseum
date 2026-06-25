@@ -2,6 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — 전투 시작 에너지 = 최대 에너지(항상 가득)
+- **버그**: 에너지 스탯을 업글해 `energyMax`가 늘어도 시작 에너지는 `Math.min(..., 3)`으로 3 고정 → 남는 칸이 비어 시작.
+- **수정**: `makeCombatant`(`index.html` ~9614)의 시작 `energy`를 `energyMax`와 동일하게(`Math.min(...,3)` 캡 제거). 플레이어·적 공용 함수라 양쪽 동시 적용.
+- **검증**: preview에서 `energy(8)===energyMax(8)` 확인, `__catalogSelfTest()` fails 0.
+
 ### 2026-06-25 — #7 탐사 분포 점검 후속: 0-종 버그 2건 해결 + 얇은 지역 6→1
 > 직전 점검([spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md))에서 나온 분포 품질 이슈 수정. EXPLORE_VIEW 데이터만 변경(로직 무변경).
 - **0-종 버그(테마 매칭 0종→조용히 행성 풀 전역 폴백) 해결**: ① 네레이돈/심해 균열 `types`에 `화초형` 추가 → 풀의 `aqua`가 일반 등장(`vine_water`는 희귀 시그니처 유지). ② 아즈텔 행성 풀에 `spark`·`aqua` 추가 → 전자기 늪 2종; 풀로 올라와 충돌하던 방사 폐허 `signature`는 `spark`→`tree_bolt`(풀 밖 전용)로 교체.
