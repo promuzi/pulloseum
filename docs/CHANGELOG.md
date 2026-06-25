@@ -6,6 +6,14 @@
 - **결정:** 버섯형은 **비포자 변이형(일반/포식/무기/독성/용족)을 갖지 않는다 — 전부 포자(태생) 고정**(`baseVariants:['spore']`). 따라서 이전 로드맵의 "버섯 비포자 변이 35종" 항목은 **폐지**(변이 개체는 비버섯 28종만). 설계서(species-individual-concepts-design) 해당 항목 정리.
 - **포자 외형 액센트(신규):** `ACCENT_MODULES.spore` 추가 + `FORM_ACCENT.spore='spore'` 매핑 → 버섯 포자형이 고유 외형을 갖는다(갓에서 피어오르는 포자 안개 타원 + 떠다니는 포자 입자 5개, 속성색·단계 gi 스케일). 씨앗 단계 제외(성장체부터). 기존 6액센트(none/maw/arms/toxin/draco/enhance)와 동급 모듈.
 - **검증:** 실제 렌더 파이프라인(`composePlantSvg`→`bodyAccentSvg`)에 주입해 — spore 버섯에 액센트 적용(none 대비 +404자)·씨앗 제외·성장체부터 입자 노출·**비버섯 변이형(pred 등) 외형 불변** 확인. 격리 워크트리 `feat/spore-accent`에서 작업(다른 세션이 index.html 동시 편집 중이라 충돌 회피).
+### 2026-06-25 — 전투 판정 오버레이 재개편: 흐림 폐지 + 식물 사이 빈 중앙 한 장씩 판정 + 카드 단순화
+- **설계:** [specs/2026-06-25-battle-judge-overlay-rework-design.md](superpowers/specs/2026-06-25-battle-judge-overlay-rework-design.md). 이전 판("양쪽 카드 상시 + 상단 흐림")이 사용자 의도와 어긋나(식물·상태바가 가려짐/흐려짐) 재개편. 브레인스토밍(비주얼 컴패니언)으로 시퀀스 합의.
+- **흐림 폐지·식물 안 가림:** `setBlur`→no-op(`.blurred` 미사용). 판정 시 `#battleArena.spread`로 두 식물을 위·아래(±42px·scale .88)로 벌리고, 그 **실제 빈 중앙**에 판정창을 `positionJudgeInGap()`으로 동적 정렬(스프라이트가 무대 박스를 넘쳐 `getBoundingClientRect().height`가 부정확 → offsetParent+스프라이트 gap으로 계산). 스프라이트 124→108px. 검증: 위·아래 24px 여유·식물/상태바 0 겹침.
+- **한 장씩 판정 시퀀스:** `#judgeMessage` 제거, `#judgeCards`=3칸 슬롯 `[#judgeSlotLeft 내 카드 | #judgeOrder 화살표 | #judgeSlotRight 상대]`. ① 선공 판정=양쪽 카드+`setJudgeOrder`(➜선공·나/⬅선공·상대/방어 우선). ② 행동측만 홈 슬롯에 남기고(`setJudgeAction`) 반대 빈 슬롯에 상성 한 줄(`setVerdict`). ③ 후공 카드 홈 슬롯 재등장+반대 슬롯 판정. 신규 `judgeCardMarkup`/`setJudgeAction`/`setVerdict`. `playerSkill` **단일 순차 루프**(기존 needsOrder=false 동시적용 분기 폐지).
+- **데미지·치명타·버프·디버프 = 식물 위 팝업:** 판정 칸엔 상성 한 줄만(효과가 굉장하다!/별로다…/정확히 들어갔다!/빗나갔다!). 데미지=`popup`, 치명타=`fxPopup(tgt,'치명타!','crit')`, 버프=`fxPopup(side,'🔺…','buf')`, 디버프=`fxPopup(tgt,'🔻…','deb')`. `applySkill` 내부 `showJudgeMessage`(hit/miss)→`setVerdict`로 교체.
+- **카드 단순화:** 앞면 `skillCardHtml`=아이콘/이름/비용만(`battleCardFootChips` 제거). 하단 스킬바 46%→**38%**·`.skillcard` min-height 58→50. 뒷장(`showSkillDetail`)에 등급·분류·속성·독계열 pill 추가(꾹→`cardFlipIn` 유지).
+- **검증:** `window.__catalogSelfTest()` **0 fail**. preview 실전 1턴: `➜선공·나`→내 카드+오른쪽 `정확히 들어갔다!`→상대 카드 재등장+왼쪽 `효과가 별로다…`(weak 경로), 식물 위 `E=-15`/`P=-21` 팝업·HP 정상 변동·턴 종료 후 spread 복귀·스킬바 재점등.
+- **폐지/잔존:** `setVerdictSide`/`clearJudgeMessage` no-op, `showJudgeMessage` sleep만, `battleCardFootChips` 미사용(정의만 잔존).
 
 ### 2026-06-25 — #1 개체 고유화: 버섯 base 성체/완숙 + 변이 개체 140종 고유 스킬 (생성기 일괄 반영)
 - **범위:** 설계서([species-individual-concepts-design](superpowers/specs/2026-06-24-species-individual-concepts-design.md))의 **풀 매트릭스 잔여분 전부** — 버섯 base 7 성체/완숙 14스킬 + 비버섯 변이 140종(28칸 × 5변이형). `SPECIES_CATALOG`(140 신규 엔트리)·`SKILL_LIB`(434 신규 스킬)만 수정(빌더/머지/도감 라이브가 자동 흡수).

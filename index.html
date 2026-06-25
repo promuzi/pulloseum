@@ -258,7 +258,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .battle-surrender:active{transform:scale(.96)}
 .battle-surrender:disabled{opacity:.42;cursor:default;}
 /* 스탠딩 무대: 적(위) · 나(아래), 가운데는 카드/판정 창 공간 */
-#battleArena{position:absolute;left:0;right:0;top:0;bottom:46%;display:flex;flex-direction:column;justify-content:space-between;
+#battleArena{position:absolute;left:0;right:0;top:0;bottom:38%;display:flex;flex-direction:column;justify-content:space-between;
   padding:calc(50px + env(safe-area-inset-top,0px)) 12px 6px;z-index:2;}
 /* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게 */
 #battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;height:42%;z-index:0;pointer-events:none;
@@ -270,9 +270,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #battleArena.blurred .arena-fighter{filter:blur(3.5px) brightness(.66);}
 .arena-fighter .finfo{width:min(52%,250px);flex:0 0 auto;background:rgba(7,12,20,.55);border:1px solid rgba(255,255,255,.08);
   border-radius:12px;padding:8px 12px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
-/* 카드/판정 단계: 두 식물이 서로 멀어지고 살짝 물러남(가운데를 카드에 양보) */
-#battleArena.spread .arena-fighter.enemy{transform:translateY(-22px) scale(.9);}
-#battleArena.spread .arena-fighter.player{transform:translateY(22px) scale(.9);}
+/* 판정 단계: 두 식물이 위·아래로 벌어져 중앙에 카드+판정 공간을 연다(식물은 계속 보임) */
+#battleArena.spread .arena-fighter.enemy{transform:translateY(-42px) scale(.88);}
+#battleArena.spread .arena-fighter.player{transform:translateY(42px) scale(.88);}
 .fsprite{position:relative;flex:0 0 auto;display:flex;justify-content:center;
   filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 /* 발밑 그림자(접지감) */
@@ -299,7 +299,14 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .dmgpop{position:absolute;left:50%;top:18%;transform:translateX(-50%);font-size:22px;font-weight:900;
   color:#ff8a70;text-shadow:0 2px 8px rgba(0,0,0,.8);pointer-events:none;animation:rise .95s ease-out forwards;z-index:5;}
 .dmgpop.heal{color:#7df0e2;}
+/* 식물 위 순간 효과 텍스트 — 치명타/버프/디버프(데미지 숫자와 살짝 어긋나게) */
+.dmgpop.crit{top:2%;font-size:15px;color:#fff;background:#e0452f;padding:2px 8px;border-radius:7px;
+  box-shadow:0 3px 10px rgba(0,0,0,.5);letter-spacing:.5px;}
+.dmgpop.buf{top:auto;bottom:14%;font-size:14px;color:#7df0a8;}
+.dmgpop.deb{top:auto;bottom:14%;font-size:14px;color:#c89cff;}
+.dmgpop.buf,.dmgpop.deb{animation:riseLow .95s ease-out forwards;}
 @keyframes rise{0%{opacity:0;transform:translate(-50%,8px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-40px)}}
+@keyframes riseLow{0%{opacity:0;transform:translate(-50%,10px)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-22px)}}
 .shake{animation:shake .4s;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
 /* ===== 상태 VFX (순간형, 스프라이트 위 1회 번쩍) ===== */
@@ -325,7 +332,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #battleScreen.cards-hidden #pSpriteBox{cursor:pointer;filter:drop-shadow(0 0 12px rgba(31,217,196,.28));}
 
 /* ===== 스킬 카드 페이즈 (허공에 뜬 카드 — 화면 가운데) ===== */
-#cardPhase{position:absolute;left:0;right:0;bottom:0;top:auto;height:46%;z-index:5;display:flex;align-items:flex-end;justify-content:center;
+#cardPhase{position:absolute;left:0;right:0;bottom:0;top:auto;height:38%;z-index:5;display:flex;align-items:flex-end;justify-content:center;
   padding:6px 10px calc(8px + env(safe-area-inset-bottom,0px));
   background:linear-gradient(180deg,transparent,rgba(4,11,9,.5) 26%,rgba(4,11,9,.72));
   border-top:1px solid rgba(60,230,210,.14);pointer-events:none;}
@@ -347,7 +354,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .cp-pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
 .skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:12px;text-align:center;
   background:linear-gradient(160deg,rgba(22,32,48,.96),rgba(12,18,30,.96));color:var(--text);
-  padding:6px 6px 5px;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;
+  padding:6px 6px 5px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;
   box-shadow:0 6px 18px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset;transition:transform .12s;}
 .skillcard::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;border-radius:13px 13px 0 0;background:var(--gc,var(--neon));opacity:.9;}
 .cp-hand .skillcard:nth-child(2){animation-delay:.4s}
@@ -363,9 +370,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .sc-name{font-weight:800;font-size:clamp(9.5px,2.7vw,12px);line-height:1.1;width:100%;color:var(--gc,var(--text));
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
 .sc-icon{font-size:clamp(18px,5vw,24px);line-height:1;flex:1 1 auto;display:flex;align-items:center;justify-content:center;}
-.sc-foot{display:flex;align-items:center;justify-content:space-between;gap:4px;width:100%;}
+.sc-foot{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;}
 .sc-chips{display:flex;flex-wrap:wrap;gap:2px;align-items:center;min-width:0;overflow:hidden;}
-.sc-cost{flex:0 0 auto;font-size:10.5px;font-weight:800;color:var(--neon);white-space:nowrap;}
+.sc-cost{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--neon);white-space:nowrap;}
 .sc-cost.use{color:#ffd34a;}
 /* ===== 간결한 행동 판정: 양쪽 카드 · 행동 순서 · 결과 한 줄 ===== */
 #judgeWindow{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);z-index:6;pointer-events:none;}
@@ -377,38 +384,39 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes jwClose{to{opacity:0;transform:translateY(8px) scale(.97)}}
 #judgeCards{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
   padding:4px 2px;}
-.jw-card{border:1px solid var(--gc,var(--line));border-radius:12px;padding:10px 9px;min-width:0;
-  background:linear-gradient(160deg,rgba(22,32,48,.97),rgba(12,18,30,.97));
+.jw-slot{display:flex;align-items:center;justify-content:center;min-height:72px;min-width:0;}
+.jw-card{border:1px solid var(--gc,var(--line));border-radius:12px;padding:9px 8px;min-width:0;width:100%;max-width:128px;
+  text-align:center;background:linear-gradient(160deg,rgba(22,32,48,.97),rgba(12,18,30,.97));
   box-shadow:0 9px 25px rgba(0,0,0,.5);transform-origin:center;}
 .jw-card.foe{border-color:var(--gc,var(--line));}
-.jw-card .jc-tag{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--sub);}
+.jw-card .jc-icon{font-size:30px;line-height:1;margin-bottom:3px;}
+.jw-card .jc-tag{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--neon);}
 .jw-card.foe .jc-tag{color:#ff8a70;}
-.jw-card.mine .jc-tag{color:var(--neon);text-align:right;}
-.jw-card.mine{text-align:right;}
-.jw-card .jc-name{font-size:13px;font-weight:800;margin-top:2px;line-height:1.15;
+.jw-card .jc-name{font-size:12.5px;font-weight:800;margin-top:2px;line-height:1.15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gc,var(--text));word-break:keep-all;}
-.jw-order{min-width:74px;text-align:center;color:#ffd966;font-size:12px;font-weight:900;line-height:1.35;
-  text-shadow:0 0 12px rgba(255,211,74,.5);}
-.jw-order:empty{min-width:22px;}
+.jw-card.appear{animation:jwCardPop .26s cubic-bezier(.2,1.2,.4,1) both;}
+@keyframes jwCardPop{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+/* 비운 슬롯에 뜨는 상성 한 줄 판정 */
+.jw-verdict{font-size:18px;font-weight:900;line-height:1.18;letter-spacing:.3px;text-align:center;
+  background:linear-gradient(180deg,#ffe89a,#ffce4a);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));animation:jwCardPop .24s ease both;}
+.jw-verdict.good{background:linear-gradient(180deg,#a9ffe0,#5fe6c0);-webkit-background-clip:text;background-clip:text;}
+.jw-verdict.weak{background:linear-gradient(180deg,#cfe3ff,#9fb8e0);-webkit-background-clip:text;background-clip:text;}
+.jw-verdict.miss{background:linear-gradient(180deg,#ffd0c4,#ff9a82);-webkit-background-clip:text;background-clip:text;}
+.jw-verdict.effect{background:linear-gradient(180deg,#e6d4ff,#c8a6ff);-webkit-background-clip:text;background-clip:text;}
+.jw-order{min-width:64px;text-align:center;line-height:1.1;}
+.jw-order:empty{min-width:18px;}
+.jo-arrow{font-size:26px;color:#ffd34a;filter:drop-shadow(0 0 7px rgba(255,211,74,.55));line-height:1;}
+.jo-lab{font-size:9.5px;color:#ffd34a;font-weight:800;margin-top:3px;white-space:nowrap;
+  border:1px solid rgba(255,211,74,.45);border-radius:999px;padding:1px 7px;background:rgba(255,211,74,.08);}
 .jw-card.use-left{animation:judgeUseLeft .46s ease forwards;}
 .jw-card.use-right{animation:judgeUseRight .46s ease forwards;}
 .jw-card.use-self{animation:judgeUseSelf .46s ease forwards;}
 @keyframes judgeUseLeft{0%{opacity:1;transform:translateX(0) scale(1)}55%{opacity:1;transform:translateX(38px) scale(1.05)}100%{opacity:0;transform:translateX(54px) scale(.82)}}
 @keyframes judgeUseRight{0%{opacity:1;transform:translateX(0) scale(1)}55%{opacity:1;transform:translateX(-38px) scale(1.05)}100%{opacity:0;transform:translateX(-54px) scale(.82)}}
 @keyframes judgeUseSelf{0%{opacity:1;transform:translateY(0) scale(1)}55%{opacity:1;transform:translateY(-9px) scale(1.05)}100%{opacity:0;transform:translateY(-15px) scale(.82)}}
-#judgeMessage{min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;border-radius:13px;padding:7px 13px;background:rgba(7,13,23,.9);border:1px solid rgba(255,255,255,.1);
-  box-shadow:0 8px 24px rgba(0,0,0,.48);opacity:0;align-self:center;max-width:88%;}
-/* 판정 한 줄을 행동 카드 안쪽(중앙쪽)으로 치우침 — 좌측(적) 행동=왼쪽 치우침, 우측(나) 행동=오른쪽 치우침 */
-#judgeMessage.toward-e{align-self:flex-start;}
-#judgeMessage.toward-p{align-self:flex-end;}
 .jw-card.acting{animation:judgeActing .5s ease;box-shadow:0 0 20px var(--gc,var(--neon)),0 9px 25px rgba(0,0,0,.5);}
 @keyframes judgeActing{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
-#judgeMessage.show{animation:judgeMessageIn .24s ease both;}
-@keyframes judgeMessageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.jm-critical{color:#ffd34a;font-size:13px;font-weight:900;margin-bottom:2px;text-shadow:0 0 12px rgba(255,211,74,.45);}
-.jm-main{color:#f2f7ff;font-size:16px;font-weight:900;letter-spacing:.2px;}
-.jm-main.good{color:#7df0e2}.jm-main.weak{color:#b8c4d4}.jm-main.miss{color:#ff9a82}.jm-main.effect{color:#cda6ff}
 
 /* ===== 전투 결과 (금속판 + 보상 카드) ===== */
 #battleResult{position:absolute;inset:0;z-index:11;overflow:hidden;}
@@ -2093,11 +2101,10 @@ body{letter-spacing:.2px;}
           <div class="energy" id="pEnergy"></div>
         </div>
       </div>
-      <!-- 양쪽이 사용한 스킬과 간결한 행동 결과 -->
+      <!-- 양쪽이 사용한 스킬과 간결한 행동 결과 (두 식물 사이 빈 중앙 띠) -->
       <div id="judgeWindow" class="hidden">
         <div class="jw-inner">
-          <div id="judgeCards"></div>
-          <div id="judgeMessage" aria-live="polite"></div>
+          <div id="judgeCards" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -10815,8 +10822,8 @@ function startMatch(){
   $('#battleScreen').classList.remove('cards-hidden');
   $('#battleArena').classList.remove('spread');
   renderBattleHeader();
-  $('#eSpriteBox').innerHTML = spriteFor(B.e, 124);
-  $('#pSpriteBox').innerHTML = spriteFor(B.p, 124);
+  $('#eSpriteBox').innerHTML = spriteFor(B.e, 108);
+  $('#pSpriteBox').innerHTML = spriteFor(B.p, 108);
   $('#eSpriteBox').classList.remove('enter','collapse');
   $('#pSpriteBox').classList.remove('enter','collapse');
   const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
@@ -10939,7 +10946,7 @@ function skillCardHtml(id, pred){
   return `<button class="skillcard${pred?' pred':''}${dis}" style="--gc:${col}" data-skill="${id}"${dis}>
     <div class="sc-name">${displaySkillName(s.name)}</div>
     <div class="sc-icon">${s.icon||'❔'}</div>
-    <div class="sc-foot">${battleCardFootChips(s)}<span class="sc-cost${s.noEnergy?' use':''}">${moveCostLabel(s, B.p)}</span></div>
+    <div class="sc-foot"><span class="sc-cost${s.noEnergy?' use':''}">${moveCostLabel(s, B.p)}</span></div>
   </button>`;
 }
 /* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
@@ -11000,10 +11007,17 @@ function showSkillDetail(id){
   const g = battleSkillGrade(B.p, id), col = gradeColor(g);
   const cost = s.noEnergy ? `🔁 ${(B.p.uses && B.p.uses[id]!=null)?B.p.uses[id]:(s.uses||0)}회 (에너지 무소모)` : ((s.cost||0)>0?`⚡ ${s.cost} 소모`:'무료');
   const tag = s.tag ? `<span class="bsd-pill">${s.tag}</span>` : '';
+  const gradePill = `<span class="bsd-pill" style="border-color:${col}66;color:${col}">${g}등급</span>`;
+  const catPills = (skillCats(s)||[]).map(c=>CAT_META[c]).filter(Boolean)
+    .map(m=>`<span class="bsd-pill" style="border-color:${m.color}66;color:${m.color}">${m.icon} ${m.name}</span>`).join('');
+  let elemPill = '';
+  if(s.elem && B.p){ const el=ELEMENTS[B.p.element]; if(el) elemPill = `<span class="bsd-pill" style="border-color:${el.color}66;color:${el.color}">${el.icon} ${el.name} 속성</span>`; }
+  const dk = (s.dot&&s.dot.kind)||(s.infuse&&s.infuse.kind);
+  const dotPill = dk ? `<span class="bsd-pill" style="border-color:#b06bff66;color:#c89cff">${dotIcon(dk)} ${dotName(dk)}</span>` : '';
   $('#battleSkillDetailCard').style.setProperty('--gc', col);
   $('#battleSkillDetailCard').innerHTML = `
     <div class="bsd-name" style="color:${col}">${s.icon||''} ${displaySkillName(s.name)}</div>
-    <div class="bsd-meta"><span class="bsd-pill">${cost}</span>${tag}</div>
+    <div class="bsd-meta"><span class="bsd-pill">${cost}</span>${gradePill}${catPills}${elemPill}${dotPill}${tag}</div>
     <div class="bsd-desc">${skillCoefDesc(s)}</div>
     <div class="bsd-hint">아무 곳이나 탭하면 닫힙니다</div>`;
   show('#battleSkillDetail');
@@ -11065,25 +11079,18 @@ function updateBars(){
 }
 /* 누적 로그는 표시하지 않는다. 기존 전투 호출부와의 호환만 유지한다. */
 function blog(){ }
+/* 선공 화살표 — 내 카드=왼·상대=오른. 내가 선공이면 오른쪽(상대)으로 ➜, 상대 선공이면 ⬅. */
 function setJudgeOrder(side, label){
   const order = $('#judgeOrder'); if(!order) return;
-  order.textContent = !side ? '' : (side==='p' ? `${label} →` : `← ${label}`);
+  if(!side){ order.innerHTML=''; return; }
+  const arrow = side==='p' ? '➜' : '⬅';
+  order.innerHTML = `<div class="jo-arrow">${arrow}</div><div class="jo-lab">${label}</div>`;
 }
-/* 판정 중 상단(식물 무대) 흐림 토글 — 데미지 적용 시 해제 */
-function setBlur(on){ const ar=$('#battleArena'); if(ar) ar.classList.toggle('blurred', !!on); }
-/* 판정 한 줄을 행동 카드 안쪽으로 치우치게 */
-function setVerdictSide(side){ const box=$('#judgeMessage'); if(!box) return; box.classList.remove('toward-p','toward-e'); if(side) box.classList.add(side==='p'?'toward-p':'toward-e'); }
-function clearJudgeMessage(){
-  const box=$('#judgeMessage'); if(!box) return;
-  box.classList.remove('show'); box.innerHTML='';
-}
-async function showJudgeMessage(message, tone='effect', critical=false, duration=700){
-  const box=$('#judgeMessage'); if(!box || !message) return;
-  box.classList.remove('show');
-  box.innerHTML = `${critical?'<div class="jm-critical">치명타!</div>':''}<div class="jm-main ${tone}">${message}</div>`;
-  void box.offsetWidth; box.classList.add('show');
-  await sleep(duration);
-}
+/* 흐림 폐지 — 식물·상태바는 판정 전 과정 또렷이 보인다(잔존 호출 안전용 no-op). */
+function setBlur(){}
+function setVerdictSide(){}
+function clearJudgeMessage(){}
+async function showJudgeMessage(message, tone, critical, duration){ if(duration) await sleep(duration); }
 function battleStatLabel(stat){
   return stat==='atk'?'공격력':stat==='def'?'방어력':stat==='spd'?'기동성':stat==='acc'?'적중력':stat==='elem'?'속성력':'능력치';
 }
@@ -11104,6 +11111,16 @@ function popup(side, text, isHeal){
   const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
   const sp = document.createElement('span');
   sp.className = 'dmgpop' + (isHeal ? ' heal' : '');
+  sp.textContent = text;
+  box.appendChild(sp);
+  setTimeout(()=>sp.remove(), 950);
+}
+/* 식물 위 순간 효과 텍스트 — 치명타(crit)/버프(buf)/디버프(deb) */
+function fxPopup(side, text, cls){
+  const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
+  if(!box) return;
+  const sp = document.createElement('span');
+  sp.className = 'dmgpop ' + (cls||'');
   sp.textContent = text;
   box.appendChild(sp);
   setTimeout(()=>sp.remove(), 950);
@@ -11135,6 +11152,17 @@ async function applySkill(a, d, s, side, options={}){
   };
   if(!options.skipAnimation){ setJudgeOrder(null,''); await animateJudgeCardUse(side,!!(s.power>0)); }
   a.guard = null;
+  // 비공격 스킬: 상성 대신 행동 한 줄 판정(반대 슬롯). 공격 스킬은 명중/상성 시 별도로 채워짐.
+  if(!(s.power>0)){
+    let vt='', vtone='effect';
+    if(s.guardMult!=null) vt='방어 태세!';
+    else if(s.heal){ vt='기운을 차렸다!'; vtone='good'; }
+    else if(s.selfBuff||s.scaleStack){ vt='힘이 솟는다!'; vtone='good'; }
+    else if(s.energyGain){ vt='에너지를 모았다!'; }
+    else if(s.cleanse){ vt='몸을 정화했다!'; vtone='good'; }
+    else if(s.enemyDebuff||s.dot||s.infuse){ vt='상대를 약화시켰다!'; vtone='weak'; }
+    if(vt) setVerdict(side, vt, vtone);
+  }
   // 무기 변이형 스킬: 에너지 무소모 · 경기당 횟수 차감. 그 외: 에너지 차감
   if(s.noEnergy){
     const before = (s.id && a.uses && a.uses[s.id]!=null) ? a.uses[s.id] : (s.uses||0);
@@ -11158,9 +11186,9 @@ async function applySkill(a, d, s, side, options={}){
   if(s.energyGain){ const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + s.energyGain); if(a.energy>before) effectNotes.push('에너지가 회복되었다!'); blog(`▶ ⚡ ${s.energyGain} 충전`); }
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
-  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); spriteFx(side,'buff'); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); spriteFx(side,'buff'); fxPopup(side,'🔺 '+battleStatLabel(s.selfBuff.stat),'buf'); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.infuse){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:s.infuse.pct, turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
-  if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); spriteFx(side,'buff'); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
+  if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); spriteFx(side,'buff'); fxPopup(side,'🔺 방어','buf'); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
@@ -11176,7 +11204,8 @@ async function applySkill(a, d, s, side, options={}){
       popup(tgtSide,'MISS',false);
       blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(회피 ${dodge}%)</span>`);
       sfx.tap();
-      await showJudgeMessage('빗나갔다!','miss',false,760);
+      setVerdict(side,'빗나갔다!','miss');
+      await sleep(560);
       updateBars(); return;
     }
     // 데미지 = 공격×위력%(노멀) + 속성수치×타입배율(원소) − 방어(고정)
@@ -11216,12 +11245,14 @@ async function applySkill(a, d, s, side, options={}){
     const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
     tgtBox.classList.add('shake'); setTimeout(()=>tgtBox.classList.remove('shake'),420);
     popup(tgtSide,'-'+dm,false);
+    if(crit) fxPopup(tgtSide,'치명타!','crit');
     blog(`▶ <b>${dm}</b> 피해${d.guard?' (방어 감소)':''}${crit?' · 💥치명타!':''}`);
     if(s.elem){ if(elemMult>1) blog('▶ 효과가 굉장했다! 🔥'); else if(elemMult<1) blog('▶ 효과가 별로였다…'); }
     sfx.hit();
-    const hitMessage = elemMult>1 ? '줄기가 꺾이겠어!' : (elemMult<1 ? '잎만 겨우 흔들렸다!' : '정확히 들어갔다!');
+    const hitMessage = elemMult>1 ? '효과가 굉장하다!' : (elemMult<1 ? '효과가 별로다…' : '정확히 들어갔다!');
     const hitTone = elemMult>1 ? 'good' : (elemMult<1 ? 'weak' : '');
-    await showJudgeMessage(hitMessage,hitTone,crit,760);
+    setVerdict(side, hitMessage, hitTone);
+    await sleep(560);
     const predLs = (s.pred && a.cardFx) ? (a.cardFx.predBoost.lifesteal||0) : 0;
     const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
     if(ls>0 && dm>0){ const h=Math.round(dm*ls), before=a.hp; a.hp=Math.min(a.max,a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
@@ -11231,8 +11262,8 @@ async function applySkill(a, d, s, side, options={}){
       if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push('상대의 에너지를 빼앗았다!'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
     }
     if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); addDot(d, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
-    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); spriteFx(tgtSide,'debuff'); effectNotes.push('방어력이 감소하였다!'); }
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); spriteFx(tgtSide,'debuff'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 방어','deb'); effectNotes.push('방어력이 감소하였다!'); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 '+battleStatLabel(appliedStat),'deb'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
     if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
@@ -11241,7 +11272,7 @@ async function applySkill(a, d, s, side, options={}){
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); spriteFx(tgtSide,'debuff'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 '+battleStatLabel(appliedStat),'deb'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
@@ -11279,30 +11310,63 @@ async function tickStatuses(u, side){
   // 순차 메시지 폐지 — 지속피해/상태는 데미지 숫자 + 상태 VFX + statusTags 아이콘으로 동시에 전달
   if(changed){ updateBars(); await sleep(420); }
 }
-/* 판정 창 열기 — 양쪽이 선택한 카드만 먼저 공개한다. */
+/* 슬롯용 카드 1장 — id(judgePlayerCard/judgeEnemyCard)는 animateJudgeCardUse 호환 유지. */
+function judgeCardMarkup(side, id){
+  const u = side==='p' ? B.p : B.e;
+  const s = skillById(id, u) || {name:'?',icon:'❔'};
+  const col = gradeColor(battleSkillGrade(u, id));
+  const cardId = side==='p' ? 'judgePlayerCard' : 'judgeEnemyCard';
+  return `<div class="jw-card ${side==='p'?'mine':'foe'} appear" id="${cardId}" style="--gc:${col}">
+    <div class="jc-icon">${s.icon||'❔'}</div>
+    <div class="jc-tag">${side==='p'?'나':'상대'}</div>
+    <div class="jc-name">${displaySkillName(s.name)}</div></div>`;
+}
+/* 행동 차례: 행동 카드만 자기 홈 슬롯에(내=왼/상대=오른), 반대 슬롯 비움(판정 자리), 중앙 화살표 제거. */
+function setJudgeAction(side, id){
+  const order=$('#judgeOrder'); if(order) order.innerHTML='';
+  const left=$('#judgeSlotLeft'), right=$('#judgeSlotRight');
+  if(!left||!right) return;
+  if(side==='p'){ left.innerHTML=judgeCardMarkup('p',id); right.innerHTML=''; }
+  else { right.innerHTML=judgeCardMarkup('e',id); left.innerHTML=''; }
+}
+/* 상성 한 줄 — 행동측 반대(빈) 슬롯에. */
+function setVerdict(actingSide, text, tone){
+  const slot = actingSide==='p' ? $('#judgeSlotRight') : $('#judgeSlotLeft');
+  if(!slot || !text) return;
+  slot.innerHTML = `<div class="jw-verdict ${tone||''}">${text}</div>`;
+}
+/* 판정 창을 두 식물 사이 실제 빈 중앙에 정렬(식물 위로 안 겹치게). */
+function positionJudgeInGap(){
+  const jw=$('#judgeWindow'), eb=$('#eSpriteBox'), pb=$('#pSpriteBox');
+  if(!jw||!eb||!pb) return;
+  const par=jw.offsetParent || $('#battleArena'); if(!par) return;
+  // 두 식물 사이 빈 중앙(뷰포트 좌표) → offsetParent 기준 top. 무대 박스는 스프라이트가 넘쳐 height가 부정확하므로 쓰지 않는다.
+  const parTop=par.getBoundingClientRect().top;
+  const gapCenter=(eb.getBoundingClientRect().bottom + pb.getBoundingClientRect().top)/2;
+  const h=jw.offsetHeight||90;
+  const top=Math.max(6, (gapCenter - parTop) - h/2);
+  jw.style.top=top+'px'; jw.style.transform='none';
+}
+/* 판정 창 열기 — 식물을 벌려 중앙을 비우고, 양쪽 카드 공개(내=왼·상대=오른). 흐림 없음. */
 async function openJudge(playerId, enemyId){
   const jw = $('#judgeWindow');
-  const ps = skillById(playerId, B.p) || {name:'?',icon:''};
-  const es = skillById(enemyId, B.e) || {name:'?',icon:''};
-  const pg = gradeColor(battleSkillGrade(B.p, playerId));
-  const eg = gradeColor(battleSkillGrade(B.e, enemyId));
-  const clean = n => displaySkillName(n);
+  $('#battleArena').classList.add('spread'); // 식물 위·아래로 벌림
+  await sleep(540); // spread 트랜지션(.5s) 완료 후 측정해야 정확
   $('#judgeCards').innerHTML = `
-    <div class="jw-card foe" id="judgeEnemyCard" style="--gc:${eg}"><div class="jc-tag">상대</div><div class="jc-name">${es.icon||''} ${clean(es.name)}</div></div>
+    <div class="jw-slot left" id="judgeSlotLeft">${judgeCardMarkup('p',playerId)}</div>
     <div class="jw-order" id="judgeOrder"></div>
-    <div class="jw-card mine" id="judgePlayerCard" style="--gc:${pg}"><div class="jc-tag">나</div><div class="jc-name">${ps.icon||''} ${clean(ps.name)}</div></div>`;
-  clearJudgeMessage();
-  jw.classList.remove('close','open'); show('#judgeWindow'); void jw.offsetWidth;
-  jw.classList.add('open');
-  setBlur(true); // 카드 공개 동안 상단 흐림
+    <div class="jw-slot right" id="judgeSlotRight">${judgeCardMarkup('e',enemyId)}</div>`;
+  jw.classList.remove('close','open'); show('#judgeWindow');
+  positionJudgeInGap();
+  void jw.offsetWidth; jw.classList.add('open');
   try{ sfx.roll(); }catch(e){}
-  await sleep(620);
+  await sleep(360);
 }
 function closeJudge(){
-  setBlur(false);
+  const arena=$('#battleArena'); if(arena) arena.classList.remove('spread'); // 식물 원위치
   const jw = $('#judgeWindow'); if(!jw || jw.classList.contains('hidden')) return;
   jw.classList.add('close');
-  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','close'); }, 300);
+  setTimeout(() => { jw.classList.add('hidden'); jw.classList.remove('open','close'); jw.style.top=''; jw.style.transform=''; }, 300);
 }
 async function finishMatch(won){
   closeJudge();
@@ -11324,12 +11388,11 @@ async function playerSkill(skillId){
   try{ sfx.tap(); }catch(e){}
   await sleep(280);
   const eId = aiPickSkill(B.e);
-  // 양쪽 카드 공개 후, 순서가 의미 있을 때만 선공/방어 우선을 표시한다.
+  // 양쪽 카드 공개(내=왼·상대=오른) → 선공 판정
   await openJudge(skillId, eId);
   const pChosen=skillById(skillId,B.p), eChosen=skillById(eId,B.e);
   const pAttack=!!(pChosen && pChosen.power>0), eAttack=!!(eChosen && eChosen.power>0);
   const pDefense=isPriorityDefenseSkill(pChosen), eDefense=isPriorityDefenseSkill(eChosen);
-  const bothDefense=pDefense && eDefense;
   const needsOrder=pAttack || eAttack;
   const prioritySide = needsOrder && pDefense!==eDefense ? (pDefense?'p':'e') : null;
   let playerFirst=true;
@@ -11341,37 +11404,31 @@ async function playerSkill(skillId){
   } else {
     B.firstSide = prioritySide;
   }
-  if(!needsOrder){
-    setJudgeOrder(null,'');
-    await sleep(480);
-    setBlur(false); // 효과 적용 시 흐림 해제
-    await Promise.all([animateJudgeCardUse('p',false),animateJudgeCardUse('e',false)]);
-    if(pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true,suppressMessages:true});
-    if(eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true,suppressMessages:true});
-    if(!pDefense) await applySkill(B.p,B.e,pChosen,'p',{skipAnimation:true,suppressMessages:true});
-    if(!eDefense) await applySkill(B.e,B.p,eChosen,'e',{skipAnimation:true,suppressMessages:true});
+  // 선공 화살표는 공격이 관여할 때만(둘 다 비공격이면 순서 의미 없음)
+  if(needsOrder){
+    const arrowSide = prioritySide || B.firstSide;
+    setJudgeOrder(arrowSide, prioritySide ? '방어 우선' : (arrowSide==='p'?'선공 · 나':'선공 · 상대'));
+    await sleep(860);
   } else {
-    setJudgeOrder(prioritySide || B.firstSide, prioritySide ? '방어 우선' : '선공');
-    await sleep(760);
-    setBlur(false); // 선공 판정 후, 데미지 적용 단계부터 흐림 해제
-    // 방어 스킬은 기동성 순서와 무관하게 공격보다 먼저 적용한다.
-    if(pDefense){ setVerdictSide('p'); await applySkill(B.p,B.e,pChosen,'p',{suppressMessages:true}); }
-    if(eDefense){ setVerdictSide('e'); await applySkill(B.e,B.p,eChosen,'e',{suppressMessages:true}); }
+    await sleep(300);
   }
-  const order = prioritySide
-    ? (prioritySide==='p' ? [['e',eId],['p',skillId]] : [['p',skillId],['e',eId]])
-    : (playerFirst ? [['p',skillId],['e',eId]] : [['e',eId],['p',skillId]]);
-  for(const [side, k] of needsOrder ? order : []){
+  // 실행 순서: 방어 우선 → 선공(기동성) → (둘 다 비공격이면 나부터). 한 명씩 순차 처리.
+  const seq = prioritySide
+    ? (prioritySide==='p' ? ['p','e'] : ['e','p'])
+    : (needsOrder ? (playerFirst ? ['p','e'] : ['e','p']) : ['p','e']);
+  const idOf = side => side==='p' ? skillId : eId;
+  for(const side of seq){
     const a = side==='p' ? B.p : B.e;
     const d = side==='p' ? B.e : B.p;
-    const chosen=skillById(k,a);
-    if(isPriorityDefenseSkill(chosen)) continue;
+    const chosen = skillById(idOf(side), a);
     if(a.hp<=0) continue;
-    setVerdictSide(side);
-    if(a.skipNext){ a.skipNext=false; await animateJudgeCardUse(side,false); await showJudgeMessage('마비되어 움직일 수 없다!','effect',false,680); updateBars(); continue; }
+    setJudgeAction(side, idOf(side)); // 행동 카드만 홈 슬롯에, 반대 슬롯 비움(판정 자리)
+    await sleep(150);
+    if(a.skipNext){ a.skipNext=false; await animateJudgeCardUse(side,false); setVerdict(side,'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
     await applySkill(a, d, chosen, side, {suppressMessages:true});
     if(d.hp<=0){ await finishMatch(side==='p'); return; }
     if(a.hp<=0){ await finishMatch(side!=='p'); return; }
+    await sleep(240);
   }
   await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await finishMatch(true); return; } if(B.p.hp<=0){ await finishMatch(false); return; }
   await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await finishMatch(false); return; } if(B.e.hp<=0){ await finishMatch(true); return; }
