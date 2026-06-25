@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — 식물·화분 도트 분리 + 등급별 픽셀 화분 통일
+- **화분 = 항상 별개 레이어:** 메인화면(`renderCenter`)이 식물 SVG에 속성색 화분을 박아 그리던 것을 폐기 → 식물(`composePlantSvg(...,{noPot:true})`) + 장착 화분(`potVisual(p.nursery.potId)`)을 2레이어(`.pp-stack`)로 겹쳐 표시. 화분 업그레이드가 메인화면에 즉시 반영.
+- **`potVisual` 픽셀 재작성:** 색만 다른 매끈한 SVG → ASCII 그리드 빌더(`pixelArt`)로 등급별 **완전히 다른 도트 화분 5종**(테라코타·도자기·유리·크리스탈·황금). 동일 `120×140` viewBox·중심 x60·y94~139로 식물 레이어와 정렬. PNG 훅(`POT_SPRITE_OVERRIDES`) 유지.
+- **빈/잠긴 화분 통일:** 양육 그리드 빈·잠긴 슬롯의 `.pot-vessel`(별도 CSS 픽셀팟) → `potVisual('pot_terra')`로 교체(잠금 회색 필터는 `.pot-slot.locked .pot-stack`로 이전). 채움/빈/잠금 슬롯이 같은 도트 자산 사용.
+- **양육 흔들림 변경:** `.pot-stack .plant-layer` 회전(`potSway`) → 좌우 이동(`@keyframes plantSwaySide`, translateX ±3px). 화분 레이어는 고정. 메인화면 식물 레이어는 정적(흔들림 없음).
+- **검증:** `__catalogSelfTest()` 0 fail(신규 `potVisual` 주입 기준). 인라인 스크립트 3블록 node 구문검사 0 에러. potVisual 5종 렌더·중심정렬, 메인 2레이어 동일 bottom·z순서, 빈/잠긴 슬롯 렌더·잠금필터, 양육 plant=`plantSwaySide`·pot=`none` DOM 확인.
+
 ### 2026-06-25 — 탐사 우주맵: 4궤도 확장 + 행성 겹침 해소
 - **문제:** 행성이 커서 인접 궤도(특히 궤도 2↔3 간격 32px < 행성 34~38px)에서 겹쳐 보임.
 - **궤도 4개로 확장:** `EX_ORBIT_R = {1:54,2:96,3:138,4:180}`(균등 42px 간격) + `SHIP_ORBIT_MAX 3→4`(연료탱크 4단계까지 강화 → 궤도 4 해금). `exOrbitRings` `[1,2,3,4]`.

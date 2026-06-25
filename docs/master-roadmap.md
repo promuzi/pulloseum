@@ -25,7 +25,7 @@
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
 | 10 | 전투 화면 UI 수정 | 🔲 미착수 | 카드/판정창 레이아웃·연출 개편 | — |
 | 11 | 시작화면 수정 | 🔲 미착수 | 타이틀→게임 전환 연출(5번 연동) | — |
-| 12 | 종자 가방 창 + 식물/화분 분리 | 🟢 가방 단순화+화분/식물 SVG 분리 완료 | PNG 도트 교체(#3)·가방 정렬/필터 | [pixel-art §-](pixel-art-ui-roadmap.md) |
+| 12 | 종자 가방 창 + 식물/화분 분리 | 🟢 가방 단순화 + 메인/양육 화분·식물 분리 + 등급별 픽셀 화분 통일 완료 | PNG 도트 교체(#3)·가방 정렬/필터 | [pixel-art §-](pixel-art-ui-roadmap.md) |
 | 6 | 음악/효과음 | 🔲 미착수 | 라이선스·재생 방식 조사 | — |
 | 7 | 탐사 시스템 재설계 | 🟢 **구현 완료**(아틀라스+종분포+폴드+행성11+**변이 140 분포**) | 분포 밸런스 튜닝(희귀도/지역 다양성) | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
@@ -175,7 +175,8 @@
 - [x] **종자 가방 창 단순화(2026-06-25)** — 상세 패널 폐기(2단 레이아웃 제거), 카드 한 줄에 **속성·희귀도·타입 칩 + 기원 + 미니 심기/판매 버튼**만. 수치 예측(능력치 예상값·변이율·잠재특성 후보) 제거.
 - [x] **잠재력 개념 완전 폐기(2026-06-25)** — ① **표시 제거:** 종자 카드 칩·심기 확인 창·식물 상세 좌측 알약에서 "잠재력" 노출 전부 제거. 심기 확인 창의 무지개 종자 정보 누출도 차단(타입 `???`·기원 "미지의 종자"). ② **메커니즘 제거:** `p.potential` 필드·`POTENTIAL_ORDER`·`POTENTIAL_GRADE_BOOST`·`POTENTIAL_BIAS`·`SKILL_GRADE_RANK`·죽은 `potentialIndex` 삭제. `ensureSkillFields`의 잠재력 등급 추첨 제거(각 스킬 = 고정 등급 1개), 양육 열매 스킬 보상(`nurserySkillReward`)을 잠재력 무관 **균등 추첨**으로 전환. 봇 등급 스케일용 헬퍼는 `GRADE_ROLL_BOOST`/`GRADE_ORDER`로 개명해 보존(플레이어 잠재력과 무관). **개체 등급 `p.grade`(별개 개념)는 유지.** 검증: `__catalogSelfTest()` 0 fail·열매 보상 200회 무오류·종자→식물 경로에 `potential` 필드 부재 확인.
 - [x] **식물/화분 SVG 레이어 분리(main, 2026-06-24)** — `composePlantSvg(...,{noPot:true})`(화분 스킵) + `potVisual(potId)` 합성, idle sway는 식물만. 수집 화분 5종(`POT_CATALOG`)과 함께 구현됨.
-- [ ] **PNG 도트 교체** — 식물 PNG + 화분 PNG(`SPRITE_OVERRIDES`/`POT_SPRITE_OVERRIDES`). #3 도트 작업으로 이관 ([pixel-art §- 식물/화분 분리](pixel-art-ui-roadmap.md))
+- [x] **메인화면 분리 + 등급별 픽셀 화분 통일(2026-06-25)** — ① **메인화면(`renderCenter`)도 분리:** 식물 SVG에 박혀 있던 화분 제거 → 식물(`noPot:true`) + `potVisual(장착팟)` 2레이어(`.pp-stack`, 정적·흔들림 없음). 화분 교체가 메인화면에 즉시 반영. ② **`potVisual` 픽셀 재작성:** ASCII 그리드 빌더 `pixelArt`로 등급별 **완전히 다른 도트 화분 5종**(테라코타·도자기·유리·크리스탈·황금), 동일 120×140 viewBox 정렬. ③ **빈/잠긴 화분 통일:** `.pot-vessel` → `potVisual('pot_terra')`. ④ **양육 흔들림:** 식물만 좌우(`plantSwaySide`), 화분 고정. 설계=[design](superpowers/specs/2026-06-25-plant-pot-separation-pixel-design.md)·계획=[plan](superpowers/plans/2026-06-25-plant-pot-separation-pixel.md).
+- [ ] **PNG 도트 교체** — 절차적 픽셀 화분/식물을 손그림 PNG로 교체(`SPRITE_OVERRIDES`/`POT_SPRITE_OVERRIDES` 훅 상존). #3 도트 작업으로 이관 ([pixel-art §- 식물/화분 분리](pixel-art-ui-roadmap.md))
 
 ---
 
