@@ -2014,6 +2014,12 @@ body{letter-spacing:.2px;}
 .pp-stack .pp-pot{z-index:1;}
 .pp-stack .pp-plant{z-index:2;}
 .pp-stack .pp-spacer{visibility:hidden;}
+/* 범용 식물/화분 2레이어 스택(spriteFor·svgPlant 공통) — 관리창·전투·VS·진화·썸네일·타이틀 등 */
+.sprite-stack{position:relative;display:inline-block;line-height:0;vertical-align:bottom;}
+.sprite-stack .ss-pot,.sprite-stack .ss-plant{position:absolute;left:0;bottom:0;line-height:0;}
+.sprite-stack .ss-pot{z-index:1;}
+.sprite-stack .ss-plant{z-index:2;}
+.sprite-stack .ss-spacer{visibility:hidden;}
 </style>
 </head>
 <body>
@@ -8096,7 +8102,7 @@ function exPlanetNode(p){
 /* 종 key → 작은 외형 칩(아이콘+이름). rare=true면 시그니처(✦희귀) 강조. */
 function exSpeciesChip(k, rare){
   const s = SPECIES[k]; if(!s) return '';
-  const svg = composePlantSvg(s.seedType, 'juvenile', s.element, { size:26 });
+  const svg = svgPlant(k, s.element, null, null, 26, 'juvenile');
   return `<span class="exsp-chip${rare?' rare':''}" title="${s.name}${rare?' · 희귀 시그니처':''}">`
     + `<span class="exsp-ic">${svg}</span><span class="exsp-nm">${s.name}${rare?' ✦':''}</span></span>`;
 }
@@ -9283,15 +9289,8 @@ function composePlantBody(seedType, gi, P, el, bodyStyle){
   svg += elementMotif(el, gi, cx, cy-18);
   return svg;
 }
-/* 종/단계별 식물 바닥 y(접지 crop 기준). composePlantBody의 줄기·자루 좌표와 일치. */
-function plantBaseY(seedType, gi){
-  if(gi <= 0) return 88;                         // 씨앗: 타원 바닥
-  if(seedType === 'mushroom') return 92 - gi*7;  // 버섯: 자루 바닥(cy+16)
-  return 96;                                     // 줄기 뿌리(M60 96)
-}
-/* 식물 외형. 내장 화분 없음(분리됨).
-   - opts.noPot: 전체 140 높이(메인/양육 등 외부 픽셀 화분을 따로 얹는 곳, base y96)
-   - 미지정    : 종별 바닥까지 viewBox crop → 단독 표시(전투·모달 등) 접지(발밑 그림자와 연결) */
+/* 식물 외형 = 식물만(내장 화분 없음·항상 분리). 화분은 별도 potVisual 레이어로 같은 120x140
+   좌표에 깔린다(식물 base y96이 화분 입구에 정렬). opts.noPot은 호환용(항상 식물만이라 무영향). */
 function composePlantSvg(seedType, growth, element, opts){
   opts = opts||{}; const size = opts.size||120;
   const el = ELEMENTS[element] ? element : 'grass';
@@ -9301,8 +9300,7 @@ function composePlantSvg(seedType, growth, element, opts){
   const aura = (opts.grade==='S'||opts.grade==='A'||evolved)
     ? `<circle cx="60" cy="52" r="${38+(evolved?6:0)}" fill="${opts.grade==='S'?'#ffd34a':P.main}" opacity="${evolved?0.22:(opts.grade==='S'?0.2:0.12)}"/>` : '';
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
-  const vbH = opts.noPot ? 140 : clamp(plantBaseY(seedType, gi) + 8, 60, 140);
-  return `<svg width="${size}" height="${Math.round(size*vbH/120)}" viewBox="0 0 120 ${vbH}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
     ${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}
     ${bodyAccentSvg(opts, el, gi, P)}
@@ -9410,17 +9408,29 @@ function potVisual(potId, size){
   const body = pixelArt(art.rows, art.pal, 5, 25, 94);
   return `<svg width="${size}" height="${h}" viewBox="0 0 120 140" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }
-/* 식물/전투원 객체 → 외형 (오버라이드 우선, 없으면 자동 생성) */
+/* 화분 레이어(뒤) + 식물 레이어(앞) 2레이어 스택. 둘 다 같은 120x140 좌표 → 식물이 화분에 앉음.
+   spacer(숨김)가 스택 크기를 잡아 컨테이너의 svg{max-width} 규칙과 호환. 화분/식물은 끝까지 분리. */
+function spriteStack(potHtml, plantHtml){
+  return `<span class="sprite-stack"><span class="ss-spacer">${potHtml}</span>`
+    + `<span class="ss-pot">${potHtml}</span><span class="ss-plant">${plantHtml}</span></span>`;
+}
+function spritePotId(obj){
+  return (obj && obj.nursery && obj.nursery.potId) || (obj && obj.potId) || 'pot_terra';
+}
+/* 식물/전투원 객체 → 외형 (화분 레이어 + 식물 레이어 2레이어). 오버라이드 PNG는 식물 레이어로. */
 function spriteFor(obj, size){
   const seedType = seedTypeOf(obj);
   const growth = (obj && obj.growth_stage) || 'mature';
   const element = (obj && obj.element) || 'grass';
   const key = spriteKey(seedType, growth, element);
+  let plantHtml;
   if(SPRITE_OVERRIDES[key]){
     const h = Math.round(size*140/120);
-    return `<img src="${SPRITE_OVERRIDES[key]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top"/>`;
+    plantHtml = `<img src="${SPRITE_OVERRIDES[key]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top"/>`;
+  } else {
+    plantHtml = composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, noPot:true, form:obj&&obj.form });
   }
-  return composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, form:obj&&obj.form });
+  return spriteStack(potVisual(spritePotId(obj), size), plantHtml);
 }
 /* 이름 생성: 속성 + 장착 변이 카드(종류·개수) + 식물 타입. 생장 단계 칭호는 표시처에서 별도. */
 const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
@@ -9461,7 +9471,8 @@ function svgPlant(species, element, grade, awakened, size, growth){
   const el = ELEMENTS[element] ? element : (SPECIES[species] ? SPECIES[species].element : 'grass');
   const bv = SPECIES[species] && SPECIES[species].baseVariants;
   const form = (bv && bv.length) ? bv[0] : null;   // 변이종(태생 변이)은 종 외형에 액센트 반영
-  return composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, form });
+  const plant = composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, noPot:true, form });
+  return spriteStack(potVisual('pot_terra', size), plant);   // 종 기준(식물 객체 없음) → 기본 화분
 }
 
 /* ================= 스탯 계산 ================= */
@@ -9952,8 +9963,9 @@ function statDiffRowsHtml(before, after){
 }
 function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
   const st = seedTypeOf(p), el = p.element || 'grass';
-  const beforeSprite = composePlantSvg(st, fromStage, el, { size:120, form:p.form });
-  const afterSprite = composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened, form:p.form });
+  const potId = (p.nursery && p.nursery.potId) || 'pot_terra';
+  const beforeSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, fromStage, el, { size:120, noPot:true, form:p.form }));
+  const afterSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form }));
   const skillsHtml = (newSkillIds && newSkillIds.length)
     ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
@@ -10731,7 +10743,7 @@ function renderShop(){
   const growthItems = renderShopGrowthItems();
   const itemBoxes = renderShopLane(supplyBoxesByGroup('item'), item => `data-shop-box="${item.id}"`);
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
-  const potLane = renderShopLane(POT_SHOP.map(x=>({ ...x, disabled: !!(state.pot_inventory&&state.pot_inventory[x.id]) })), item => `data-buy-pot="${item.id}"`);
+  const potLane = renderShopLane(POT_SHOP.map(x=>({ ...x, icon: potVisual(x.id, 40), disabled: !!(state.pot_inventory&&state.pot_inventory[x.id]) })), item => `data-buy-pot="${item.id}"`);
   $('#shopList').innerHTML =
     renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
     renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
@@ -10958,7 +10970,7 @@ function makeCombatant(src){
   loadout = loadout.filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
   const unit = {
     name:src.name, trainerName:src.trainerName||null, species:src.species, element:src.element, grade:src.grade, awakened:src.awakened||null,
-    seed_type:src.seedType||null, growth_stage:src.growth||null,
+    seed_type:src.seedType||null, growth_stage:src.growth||null, potId:(src.nursery&&src.nursery.potId)||'pot_terra',
     form:src.form||'normal', predType:src.predType||null, weapon:src.weapon||null,
     hp:maxHp, max:maxHp,
     atk:Math.max(1,Math.round(bs.atk*(1+(P.atkPct||0)))),
@@ -12034,7 +12046,7 @@ function openNurseryDetail(idx){
       </div>
       ${full?'':`<button class="btn ghost" onclick="doInstantFruit(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">💎 즉시 가속 (미네랄 ${FRUIT_INSTANT_MINERAL})</button>`}
     `}
-    <button class="btn ghost" onclick="openPotPicker(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">🪴 화분 바꾸기 (${potOf(p).icon} ${potOf(p).name})</button>
+    <button class="btn ghost" onclick="openPotPicker(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">🪴 화분 바꾸기 (<span style="display:inline-block;width:16px;height:19px;vertical-align:middle">${potVisual(potOf(p).id,16)}</span> ${potOf(p).name})</button>
     <div class="howto" style="font-size:11px;margin-top:10px">💧물 = 충전 속도↑ · 🌿비료 = 등급 확률↑ (시간 지나면 효과 감소)<br>물·비료는 ⚔️전투·🛰️탐사·📦상자 보상으로 모읍니다.</div>
   `;
   show('#nurseryDetailModal');
@@ -12053,7 +12065,7 @@ function openPotPicker(idx){
     const pot=POT_CATALOG[id], owned=!!(state.pot_inventory&&state.pot_inventory[id]);
     const fx=`속도+${Math.round(pot.speed*100)}% · 열매+${pot.maxFruitDelta}${pot.gradeLift?' · 등급↑':''}`;
     return `<div class="rr-item" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;border-radius:12px;border:1.5px solid ${owned?pot.color:'rgba(255,255,255,.12)'};background:rgba(20,30,40,.5);${owned?'cursor:pointer':'opacity:.5'}" ${owned?`onclick="equipPot(${idx},'${id}')"`:''}>
-      <div style="font-size:24px">${pot.icon}</div>
+      <div style="width:40px;height:47px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:center">${potVisual(id,40)}</div>
       <div style="flex:1;text-align:left"><div style="font-weight:800;color:${pot.color}">${pot.name}${id===cur?' ✓':''}</div><div style="font-size:10.5px;color:#9fd9b6">${owned?fx:'🔒 미보유'}</div></div>
     </div>`;
   }).join('');
@@ -12756,14 +12768,22 @@ window.__test('pots: effects (maxFruits/speed/lift)', function(){
   nurseryTick(t, 2*3600000); nurseryTick(g, 2*3600000);
   __ok((g.nursery.ripe.length + g.nursery.gauge) > (t.nursery.ripe.length + t.nursery.gauge), 'gold가 더 빨리 충전');
 });
-window.__test('pots: visual separation (식물=화분없음, 접지 crop)', function(){
-  const ground = composePlantSvg('flower','mature','fire',{});
-  const noPot = composePlantSvg('flower','mature','fire',{noPot:true});
-  __ok(ground.indexOf('M40 103')<0, '기본(접지)은 내장 화분 없음');
-  __ok(noPot.indexOf('M40 103')<0, 'noPot도 내장 화분 없음');
-  __ok(noPot.indexOf('viewBox="0 0 120 140"')>=0, 'noPot은 전체 140 높이');
-  __ok(ground.indexOf('viewBox="0 0 120 140"')<0, '접지는 140보다 낮게 crop');
+window.__test('pots: 식물 SVG=화분 없음·항상 140 (분리)', function(){
+  const a = composePlantSvg('flower','mature','fire',{});
+  __ok(a.indexOf('M40 103')<0, '식물 SVG에 내장 화분 없음');
+  __ok(a.indexOf('viewBox="0 0 120 140"')>=0, '항상 140 viewBox(화분 레이어와 정렬)');
   POT_ORDER.forEach(id => { const v=potVisual(id,40); __ok(v.indexOf('<svg')>=0 || v.indexOf('<img')>=0, 'potVisual '+id); });
+});
+window.__test('sprite: spriteFor/spriteStack=화분+식물 2레이어', function(){
+  const st = spriteStack('<svg>POT</svg>','<svg>PLANT</svg>');
+  __ok(st.indexOf('ss-pot')>=0 && st.indexOf('ss-plant')>=0, 'spriteStack 2레이어 클래스');
+  const p = { seed_type:'flower', growth_stage:'mature', element:'fire', nursery:{potId:'pot_gold'} };
+  const html = spriteFor(p, 80);
+  __ok(html.indexOf('ss-pot')>=0 && html.indexOf('ss-plant')>=0, 'spriteFor 2레이어');
+  __ok(html.indexOf('<svg')>=0, 'spriteFor에 svg 포함');
+  __eq(spritePotId(p), 'pot_gold', 'spritePotId=장착 화분');
+  __eq(spritePotId({potId:'pot_glass'}), 'pot_glass', 'spritePotId=전투유닛 potId');
+  __eq(spritePotId({}), 'pot_terra', 'spritePotId 기본=테라코타');
 });
 window.__test('accent: form→accent 매핑', function(){
   __eq(accentFromForm('pred'),'maw'); __eq(accentFromForm('weapon'),'arms');

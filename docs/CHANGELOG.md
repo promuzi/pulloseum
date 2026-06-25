@@ -36,6 +36,13 @@
 - **검증:** SW/캐시 클리어 리로드 라운드트립 — credits·식물·장착 변이카드·장착 스킬 **전부 유지**(이전 전량 소실). `__catalogSelfTest()` 0 fail.
 - 설계: [2026-06-26-ui-battle-polish-batch-design.md](superpowers/specs/2026-06-26-ui-battle-polish-batch-design.md) §3.
 
+### 2026-06-26 — 화분 표시 전역 통일 (식물/화분 분리 유지)
+- **모든 식물 = 화분 레이어 + 식물 레이어 2레이어로 통일.** 직전 "접지" 변경으로 관리/강화창·전투·VS·진화·썸네일이 맨 식물(화분 없음)로 보이던 것을 수정 → `spriteFor`/`svgPlant`가 `spriteStack(potVisual + composePlantSvg(noPot))` 반환. 화분은 끝까지 **독립 교체 레이어**(baking 안 함). 화분 = 식물 장착 `potId`(전투 유닛은 `makeCombatant`에 `potId` 추가, 봇은 `pot_terra`).
+- **`composePlantSvg` = 항상 식물만·140 viewBox**(접지 crop·`plantBaseY` 폐기) → 화분 레이어와 같은 좌표로 정렬(식물 base y96이 화분 입구에 앉음).
+- **이모지 화분 → 픽셀 화분.** 화분 픽커(`openPotPicker`)·"화분 바꾸기" 버튼·화분 상점(`POT_SHOP` 레인)의 `pot.icon` 이모지(🪵🏺🫙💎👑)를 `potVisual(id)` 미니 렌더로 교체 → 실제 화분 외형이 보임.
+- **빈 화분/나무 받침**: 현행 유지(받침은 메인만). 메인(`pp-stack`)·양육(`pot-stack`)은 기존 2레이어라 영향 없음.
+- **검증:** 워크트리 실파일 복사본을 preview로 서빙해 `__catalogSelfTest()` **0 fail** + 인라인 스크립트 node 구문검사 0 에러. `spriteFor`가 `ss-pot`+`ss-plant` 2레이어·장착 화분(테라/도자기/유리/크리스탈/황금) 색 반영·식물 SVG는 화분 없음(140) 구조 확인. 설계=[design](superpowers/specs/2026-06-26-pot-display-unify-design.md).
+
 ### 2026-06-26 — 도감: 변이형(form) 필터 추가 + 로딩 타임아웃 견고화
 - **배경(피드백):** "변이형에 따라 개체가 다르고(예: 화초+불+포식 ≠ 화초+불+무기) 생장 단계마다 스킬이 다른 듯" → 검증 + 도감 분류 요청.
 - **검증 결과:** 같은 타입+속성이라도 변이형이 다르면 `SPECIES_CATALOG`의 **별개 종**(예: `flame_trap`/`blaze_lance`/`ash_bloom` = 화초+불 의 포식/무기/독성). **기본 스탯은 동일**(`buildBase()`가 타입+속성만으로 산출, 변이형은 `stats` 미지정) — 차이는 **3개 고유 스킬(성장체/성체/완숙체, 변이형 테마)** + 변이형(장착 가능 카드)뿐. 도감은 이미 182장으로 개체별 별개 카드 + 타입/속성 필터 + 버섯 7종을 렌더 중이었음.
