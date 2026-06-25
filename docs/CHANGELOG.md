@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 상점 세로그리드 · 진화 버튼 중앙 · 컬렉션 드래그 재배열
+- **상점 세로 그리드:** `.shop-lane` 가로 스크롤(`flex+overflow-x`) → `display:grid; repeat(auto-fill,minmax(132px,1fr))`로 변경, `.shop-card` 고정폭 제거(`width:auto`) → 모든 상점 블록이 여러 열로 **아래로 줄바꿈(세로 스크롤)**.
+- **진화 확인 버튼 중앙:** `#evolveClose` 좌측 치우침 → `margin:14px auto 0; display:block; width:fit-content`로 중앙 정렬.
+- **메인 컬렉션 바 드래그&드롭 재배열 + 양육 연동:** `#profileRow`에 편집 토글(`#collEditBtn` ✏️/완료) 추가. 편집 모드에서 식물 칩을 포인터 이벤트(터치/마우스) 드래그&드롭으로 재배열 → `movePlantOrder(src,dst)`가 `state.plants` 순서 변경. **컬렉션 바·양육 그리드 둘 다 `state.plants` 인덱스라 자동 동기화**(양육 진행도는 식물 객체에 붙어 함께 이동). 칩에 `data-idx`, 편집 중 탭은 활성식물 변경 차단. 범위=순서 재배열(빈 칸은 뒤, dense).
+- **검증:** `__catalogSelfTest()` 0 fail · node 구문검사 0 에러. preview: `.shop-lane` computed `display:grid`·다열, 진화 함수에 중앙 스타일, `movePlantOrder` 3케이스(중간이동·앞이동·끝클램프) 정확, 편집 토글 body class·`data-idx` 12칩 확인. 설계=[design](superpowers/specs/2026-06-26-shop-evolve-collection-ui-design.md).
+
 ### 2026-06-26 — 스킬 장착/보관함 표시 통일 + 수치 노출 (#5)
 - **피드백:** "스킬 장착도 보관함과 장착 시가 통일됐으면 — 수치가 있는 방향으로."
 - **수정:** 공용 `skillMetaHtml(p,id,sk)` 신설 — **비용(⚡)·위력·등급(S~D 칩)·분류칩**을 한 줄로. 장착 슬롯(`skillSlotHtml`)·보관함 카드(`skillDrawerHtml`)가 동일 컴포넌트 사용 → 표시 통일. `skillCostLabel`(무소모/N회 포함)·`skillPowerLabel`(위력/회복/방어/버프/디버프) 분리. CSS `.sk-meta/.skm-cost/.skm-pow/.skm-grade` 추가. (전투 인게임 하단 카드는 현 정책 유지 — 관리화면만 변경.)

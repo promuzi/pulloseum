@@ -139,6 +139,15 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #collectionBar{flex:1;min-width:0;display:grid;grid-auto-flow:column;grid-template-rows:1fr 1fr;gap:7px;
   overflow-x:auto;overflow-y:hidden;padding:1px 2px 4px;scrollbar-width:none;}
 #collectionBar::-webkit-scrollbar{display:none;}
+/* 식물 배치 편집 토글 + 드래그 재배열 */
+.coll-edit{flex:0 0 auto;align-self:stretch;width:34px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);font-size:15px;cursor:pointer;padding:0;line-height:1;}
+.coll-edit.on{background:var(--neon);color:#04241f;font-weight:800;border-color:var(--neon);font-size:11px;}
+body.coll-editing #collectionBar .chip[data-id]{cursor:grab;animation:chipWiggle .5s ease-in-out infinite;touch-action:none;}
+body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
+@keyframes chipWiggle{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+#collectionBar .chip.coll-drag-over{border-color:var(--neon)!important;box-shadow:0 0 0 2px var(--neon);}
+#collectionBar .chip.coll-drag-src{opacity:.32;}
+.coll-drag-clone{border-radius:11px;box-shadow:0 6px 18px rgba(0,0,0,.55);}
 .chip{flex:0 0 auto;width:52px;height:40px;border-radius:11px;background:var(--card);border:1.5px solid rgba(255,255,255,.1);
   display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer;}
 .chip.active{border-color:var(--neon);box-shadow:0 0 12px rgba(31,217,196,.5);}
@@ -630,11 +639,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .shop-block-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px;}
 .shop-block-title{font-weight:900;font-size:17px;color:var(--text);}
 .shop-block-note{font-size:12px;color:var(--sub);text-align:right;line-height:1.35;}
-.shop-lane{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:1px 2px 10px;margin:0 -2px;-webkit-overflow-scrolling:touch;}
-.shop-lane::-webkit-scrollbar{height:7px;}
-.shop-lane::-webkit-scrollbar-thumb{background:rgba(31,217,196,.24);border-radius:999px;}
+.shop-lane{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px;padding:1px 2px 10px;margin:0 -2px;}
 .shop-subtitle{font-weight:800;font-size:13px;color:var(--neon);margin:10px 0 7px;}
-.shop-card{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);border-radius:8px;min-width:138px;width:138px;min-height:186px;padding:8px;display:flex;flex-direction:column;gap:7px;text-align:center;scroll-snap-align:start;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+.shop-card{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);border-radius:8px;min-width:0;width:auto;min-height:186px;padding:8px;display:flex;flex-direction:column;gap:7px;text-align:center;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
 .shop-card:not(:disabled):active{transform:scale(.98);}
 .shop-card:not(:disabled):hover{border-color:var(--neon);background:rgba(31,217,196,.08);}
 .shop-card:disabled{cursor:not-allowed;opacity:.55;}
@@ -2089,6 +2096,7 @@ body{letter-spacing:.2px;}
         </div>
       </button>
       <div id="collectionBar"></div>
+      <button id="collEditBtn" class="coll-edit" type="button" title="식물 배치 편집">✏️</button>
     </div>
     <div class="main-body">
       <div id="mainStage">
@@ -9715,18 +9723,33 @@ function renderCollection(){
     const p = state.plants[i];
     if(p){
       const tier = plantRankTier(p);
-      html += `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}">
+      html += `<div class="chip ${p.id===state.activeId?'active':''}" data-id="${p.id}" data-idx="${i}">
         ${spriteFor(p,28)}
         <span class="g" style="color:${GRADES[p.grade]}">${p.grade}</span>
         <span class="t" style="color:${tier.color}" title="${tier.name} 티어">${tier.name[0]}</span>
       </div>`;
     } else if(i < cap){
-      html += `<div class="chip potempty" data-plant-empty="1"><span class="pi">🪴</span><span class="potlabel">빈 화분</span></div>`;
+      html += `<div class="chip potempty" data-plant-empty="1" data-idx="${i}"><span class="pi">🪴</span><span class="potlabel">빈 화분</span></div>`;
     } else {
-      html += `<div class="chip potlocked"><span class="pi">🔒</span><span class="potlabel">Lv.${potUnlockLevel(i)}</span></div>`;
+      html += `<div class="chip potlocked" data-idx="${i}"><span class="pi">🔒</span><span class="potlabel">Lv.${potUnlockLevel(i)}</span></div>`;
     }
   }
   bar.innerHTML = html;
+}
+/* 식물 배치 편집(드래그&드롭 재배열). 컬렉션 바·양육 그리드 둘 다 state.plants 인덱스라 자동 연동. */
+var collectionEditMode = false;
+function movePlantOrder(src, dst){
+  const plants = state.plants || [];
+  const n = plants.length;
+  if(src < 0 || src >= n) return;
+  let d = dst; if(d >= n) d = n - 1; if(d < 0) d = 0;
+  if(d === src) return;
+  const [moved] = plants.splice(src, 1);
+  plants.splice(d, 0, moved);
+  saveState();
+  renderCollection();
+  if(typeof renderNurseryGrid === 'function') renderNurseryGrid();
+  try{ sfx.tap(); }catch(e){}
 }
 function renderCenter(){
   const box = $('#centerPlant'), sp = $('#statPanel'), side = $('#sidePanel');
@@ -9981,7 +10004,7 @@ function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
     <div class="evo-diff">${statDiffRowsHtml(before, after)}</div>
     <div class="evo-section">획득 스킬</div>
     <div class="evo-skills">${skillsHtml}</div>
-    <button class="btn primary" id="evolveClose" style="margin-top:14px">확인</button>`;
+    <button class="btn primary" id="evolveClose" style="margin:14px auto 0;display:block;width:fit-content;min-width:140px">확인</button>`;
   show('#evolveModal');
   try { sfx.win(); } catch(e) {}
   $('#evolveClose').addEventListener('click', () => { hide('#evolveModal'); sfx.tap(); });
@@ -12519,6 +12542,7 @@ $('#profileModal').addEventListener('click', (ev) => {
   if(bn){ sfx.tap(); state.banner_image = +bn.dataset.banner; saveState(); renderProfileModal(); renderProfileBanner(); return; }
 });
 $('#collectionBar').addEventListener('click', (ev) => {
+  if(collectionEditMode) return;           // 편집 모드: 탭으로 활성식물 변경 안 함(드래그 전용)
   const chip = ev.target.closest('.chip');
   if(!chip) return;
   sfx.tap();
@@ -12528,6 +12552,65 @@ $('#collectionBar').addEventListener('click', (ev) => {
   state.activeId = +chip.dataset.id;
   saveState(); renderMain();
 });
+/* 식물 배치 편집 토글 */
+(function(){
+  const btn = document.getElementById('collEditBtn');
+  if(btn) btn.addEventListener('click', () => {
+    collectionEditMode = !collectionEditMode;
+    document.body.classList.toggle('coll-editing', collectionEditMode);
+    btn.classList.toggle('on', collectionEditMode);
+    btn.textContent = collectionEditMode ? '완료' : '✏️';
+    try{ sfx.tap(); }catch(e){}
+    renderCollection();
+  });
+})();
+/* 컬렉션 바 드래그&드롭 재배열(포인터 이벤트 — 터치/마우스 공통) */
+(function(){
+  const bar = document.getElementById('collectionBar');
+  if(!bar) return;
+  let drag = null;
+  bar.addEventListener('pointerdown', (e) => {
+    if(!collectionEditMode) return;
+    const chip = e.target.closest('.chip[data-id]');
+    if(!chip) return;
+    drag = { srcIdx:+chip.dataset.idx, chip, clone:null, startX:e.clientX, startY:e.clientY, moved:false, offX:0, offY:0 };
+    try{ bar.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  bar.addEventListener('pointermove', (e) => {
+    if(!drag) return;
+    if(!drag.moved){
+      if(Math.hypot(e.clientX-drag.startX, e.clientY-drag.startY) < 6) return;
+      drag.moved = true;
+      const r = drag.chip.getBoundingClientRect();
+      const clone = drag.chip.cloneNode(true);
+      clone.classList.add('coll-drag-clone');
+      clone.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;z-index:9999;pointer-events:none;opacity:.92;transform:scale(1.12);`;
+      document.body.appendChild(clone);
+      drag.clone = clone; drag.offX = drag.startX - r.left; drag.offY = drag.startY - r.top;
+      drag.chip.classList.add('coll-drag-src');
+    }
+    drag.clone.style.left = (e.clientX - drag.offX) + 'px';
+    drag.clone.style.top  = (e.clientY - drag.offY) + 'px';
+    bar.querySelectorAll('.coll-drag-over').forEach(c => c.classList.remove('coll-drag-over'));
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const t = under && under.closest && under.closest('#collectionBar .chip');
+    if(t && t !== drag.chip) t.classList.add('coll-drag-over');
+  });
+  function endDrag(e){
+    if(!drag) return;
+    const d = drag; drag = null;
+    bar.querySelectorAll('.coll-drag-over').forEach(c => c.classList.remove('coll-drag-over'));
+    const src = bar.querySelector('.coll-drag-src'); if(src) src.classList.remove('coll-drag-src');
+    if(d.clone){
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const t = under && under.closest && under.closest('#collectionBar .chip');
+      d.clone.remove();
+      if(t && t.dataset.idx != null) movePlantOrder(d.srcIdx, +t.dataset.idx);
+    }
+  }
+  bar.addEventListener('pointerup', endDrag);
+  bar.addEventListener('pointercancel', endDrag);
+})();
 $('#seedModal').addEventListener('click', (ev) => {
   const card = ev.target.closest('.seed-card');
   if(!card) return;
