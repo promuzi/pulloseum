@@ -1305,6 +1305,13 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .drawer{display:grid;gap:8px;padding:6px 2px 8px;}
 .drawer-mut{grid-template-columns:repeat(4,1fr);}
 .drawer-skill{grid-template-columns:repeat(3,1fr);}
+/* 변이카드 가독성(#4): 공통/변이 섹션 + 등급별 같은 가로줄 */
+.drawer-sec{margin-bottom:2px;}
+.drawer-sec-h{font-size:11px;font-weight:900;color:var(--sub);margin:9px 2px 4px;letter-spacing:.02em;}
+.dgrade-row{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:0 0 5px;}
+.dgrade-lab{align-self:center;flex:0 0 auto;font-size:11px;font-weight:900;color:var(--gc,#fff);
+  border:1.5px solid var(--gc,#fff);border-radius:6px;padding:2px 0;width:19px;text-align:center;}
+.dgrade-row .dcard{flex:0 0 70px;width:70px;}
 .dcard{width:auto;border:2px solid var(--gc,#5fe06b);border-radius:12px;background:#0e1c2e;position:relative;
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;
   box-shadow:0 0 8px -2px var(--gc);transition:transform .08s;}
@@ -10141,25 +10148,41 @@ function mutTabHtml(p){
     ${mutDrawerHtml(p)}
     ${swapFloatHtml(p)}`;
 }
+/* 변이카드 한 장 카드 HTML */
+function mutCardHtml(p, key){
+  const c = cardDefOf(key); if(!c) return '';
+  const { grade } = parseCardKey(key);
+  const fits = cardFitsForm(key, p.form || 'normal'), on = (p.equipped_trait_cards||[]).includes(key), cnt = (state.trait_cards||{})[key]||0;
+  return `<div class="dcard ${fits?'':'off'} ${on?'on':''}" data-card="${key}" style="--gc:${gradeColor(grade)}">
+    <span class="dc-ico">${c.icon}</span><span class="gtag">${grade}</span>
+    <span class="dc-n">${c.name}</span>${cnt>1?`<span class="dc-cnt">×${cnt}</span>`:''}</div>`;
+}
+/* 카드 묶음을 등급별(S→D) 같은 가로줄로 — 같은 등급이 한 행에 모인다(#4) */
+function mutGradeRowsHtml(p, keys){
+  const byGrade = {};
+  keys.forEach(key => { const g = parseCardKey(key).grade; (byGrade[g] = byGrade[g] || []).push(key); });
+  const rows = CARD_GRADES.map(g => {
+    const list = byGrade[g]; if(!list || !list.length) return '';
+    list.sort((a,b)=>{ const ta=cardDefOf(a), tb=cardDefOf(b); return (ta?ta.type:'').localeCompare(tb?tb.type:'') || a.localeCompare(b); });
+    return `<div class="dgrade-row"><span class="dgrade-lab" style="--gc:${gradeColor(g)}">${g}</span>${list.map(k=>mutCardHtml(p,k)).join('')}</div>`;
+  }).join('');
+  return rows || `<div class="drawer-empty">없음</div>`;
+}
 function mutDrawerHtml(p){
-  const form = p.form || 'normal', eq = p.equipped_trait_cards || [];
-  let owned = ownedTraitCardIds().slice().sort((a,b)=>{
-    if(mutSort === 'grade'){ const ga=CARD_GRADES.indexOf(parseCardKey(a).grade), gb=CARD_GRADES.indexOf(parseCardKey(b).grade); if(ga!==gb) return ga-gb; }
-    const ta=cardDefOf(a), tb=cardDefOf(b);
-    return (ta?ta.type:'').localeCompare(tb?tb.type:'') || a.localeCompare(b);
-  });
-  const cards = owned.length ? owned.map(key=>{
-    const c = cardDefOf(key); if(!c) return '';
-    const { grade } = parseCardKey(key), col = gradeColor(grade);
-    const fits = cardFitsForm(key, form), on = eq.includes(key), cnt = (state.trait_cards||{})[key]||0;
-    return `<div class="dcard ${fits?'':'off'} ${on?'on':''}" data-card="${key}" style="--gc:${col}">
-      <span class="dc-ico">${c.icon}</span><span class="gtag">${grade}</span>
-      <span class="dc-n">${c.name}</span>${cnt>1?`<span class="dc-cnt">×${cnt}</span>`:''}</div>`;
-  }).join('') : `<div class="drawer-empty">보유한 변이 카드가 없습니다. 상점 보급상자나 탐사 보상으로 획득하세요.</div>`;
+  const eq = p.equipped_trait_cards || [];
+  const owned = ownedTraitCardIds();
+  const common = [], variant = [];
+  owned.forEach(key => { const c = cardDefOf(key); if(!c) return; (c.type==='common' ? common : variant).push(key); });
+  if(!owned.length){
+    return `<div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span></div>
+      <div class="drawer-empty">보유한 변이 카드가 없습니다. 상점 보급상자나 탐사 보상으로 획득하세요.</div>`;
+  }
   return `
-    <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span>
-      <button class="drawer-sort" data-sort="mut">정렬: ${mutSort==='grade'?'등급순':'종류순'} ▼</button></div>
-    <div class="drawer drawer-mut">${cards}</div>`;
+    <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span></div>
+    <div class="drawer-sec"><div class="drawer-sec-h">🌐 공통 카드 (모든 변이형 장착)</div>
+      ${ common.length ? mutGradeRowsHtml(p, common) : '<div class="drawer-empty">공통 카드 없음</div>' }</div>
+    <div class="drawer-sec"><div class="drawer-sec-h">🧬 변이형 전용 카드</div>
+      ${ variant.length ? mutGradeRowsHtml(p, variant) : '<div class="drawer-empty">변이형 전용 카드 없음</div>' }</div>`;
 }
 
 /* ── 스킬 탭(그림7) ── */

@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 변이카드 보관함 가독성: 공통/변이 분류 + 등급별 가로줄 (#4)
+- **피드백:** "변이카드 가독성 증대 — 공통/변이 분류, 등급별로 같은 가로줄 배치."
+- **수정:** `mutDrawerHtml` 재작성 — ① **🌐 공통 / 🧬 변이형 전용** 두 섹션 분리(`c.type==='common'` 기준), ② 각 섹션을 **등급(S→A→B→C→D) 가로줄**로 묶어 같은 등급이 한 행에(`mutGradeRowsHtml`, 행 앞 등급 칩). 카드 단건 렌더는 `mutCardHtml`로 분리. 기존 정렬 토글 버튼 제거(상시 등급 그룹). CSS `.drawer-sec/.dgrade-row/.dgrade-lab` 추가.
+- **검증:** preview에서 공통·변이 카드 다등급 지급 → 2섹션·등급행(S/A/B…) 그룹·같은 등급 동일 행 확인. `__catalogSelfTest()` 0 fail.
+- 설계: [2026-06-26-ui-battle-polish-batch-design.md](superpowers/specs/2026-06-26-ui-battle-polish-batch-design.md) §4.
+
 ### 2026-06-26 — 보상 개봉 "전부 개봉" 버튼 (#7)
 - **피드백:** "양육 열매는 한 번에 전부 열기 기능이 있으면 좋겠음. 여러개 나오면 일일이 터치 귀찮음."
 - **수정:** 공통 개봉 연출(`openRewardReveal`)에 **⚡전부 개봉** 버튼 추가 — 2개 이상일 때만 노출, 누르면 남은 상자를 한 번에 전부 개봉(소리 1회) 후 버튼 숨기고 완료 노출. 단건 개봉(`rrOpenOne`)·전부 개봉(`rrOpenAll`)이 공용 `rrRevealNode`/`rrSyncDone` 사용. 열매뿐 아니라 탐사·보급·화분 보상에도 공통 적용.
