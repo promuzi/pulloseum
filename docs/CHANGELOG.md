@@ -13,6 +13,11 @@
 - **매칭:** 지역 `el`⊇속성 & `types`⊇타입(전부 충족) + 변이형↔행성 `cardType` 선호(포식→dna·무기→weapon·독성→물약·용족→dragon) + 부하 균형. 25지역에 지역당 4~9종, 빈 지역 0. 타입까지 맞는 지역이 없는 35건은 속성만 매칭(같은 속성 지역).
 - **출현율:** 시그니처 `SIGNATURE_CHANCE` 10% × 지역 변이 비율 → 홈 지역 탐사당 변이 ~8.5%, 개별 변이 ~1%(희귀 사냥).
 - **검증:** 실제 런타임에 분포 주입 — `rollSpeciesFromView` 2000롤에서 변이 8.5% 출현·무효 롤 0·대상 지역 변이 전종 출현. 격리 워크트리 `feat/variant-dist`(다른 세션 동시 편집 회피). 남은 것 = 분포 밸런스 튜닝.
+### 2026-06-25 — #12 잠재력 표시 제거 + 무지개 종자 정보 누출 차단
+- **잠재력 표시 제거:** 종자 카드 칩(`renderSeedBagCard`), 심기 확인 창(`renderPlantConfirm`), 식물 상세 좌측 알약(`plantInfoPills`)에서 "잠재력" 노출을 전부 삭제(미사용 `grade`/`pot` 변수 정리).
+- **무지개 종자 누출 차단:** 심기 확인 창이 무지개 종자(`entry.rainbow`)의 타입·기원·등급을 그대로 노출하던 버그 수정 → 카드와 일관되게 타입 `???`·기원 "미지의 종자"로 마스킹, 아이콘 🌈, "심어야 정체가 드러납니다" 안내.
+- ⚠️ **표시만 제거 — 메커니즘은 유지:** 잠재력(D~S)은 내부적으로 여전히 `rollSkillGrade`/`POTENTIAL_GRADE_BOOST` → `GRADE_SKILL_VARIANTS`로 **5대 핵심 스킬(기본공격·방어·광합성·기력집중·생장가속)의 등급 변종을 결정**한다. 사용자는 "적용 안 됨"으로 인식했으나 실제로는 작동 중 → 메커니즘 완전 제거는 스킬 밸런스 변동을 동반하므로 **후속(사용자 확인 대기)**.
+- **검증:** `window.__catalogSelfTest()` 0 fail. preview에서 무지개 종자 심기 창 마스킹(타입 `???`·기원 "미지의 종자")·종자 카드/식물 알약 잠재력 미노출 확인.
 
 ### 2026-06-25 — #1 버섯 = 전부 포자 고정(비포자 변이 폐지) + 포자 외형 액센트
 - **결정:** 버섯형은 **비포자 변이형(일반/포식/무기/독성/용족)을 갖지 않는다 — 전부 포자(태생) 고정**(`baseVariants:['spore']`). 따라서 이전 로드맵의 "버섯 비포자 변이 35종" 항목은 **폐지**(변이 개체는 비버섯 28종만). 설계서(species-individual-concepts-design) 해당 항목 정리.
@@ -26,7 +31,8 @@
 - **카드 단순화:** 앞면 `skillCardHtml`=아이콘/이름/비용만(`battleCardFootChips` 제거). 하단 스킬바 46%→**38%**·`.skillcard` min-height 58→50. 뒷장(`showSkillDetail`)에 등급·분류·속성·독계열 pill 추가(꾹→`cardFlipIn` 유지).
 - **검증:** `window.__catalogSelfTest()` **0 fail**. preview 실전 1턴: `➜선공·나`→내 카드+오른쪽 `정확히 들어갔다!`→상대 카드 재등장+왼쪽 `효과가 별로다…`(weak 경로), 식물 위 `E=-15`/`P=-21` 팝업·HP 정상 변동·턴 종료 후 spread 복귀·스킬바 재점등.
 - **폐지/잔존:** `setVerdictSide`/`clearJudgeMessage` no-op, `showJudgeMessage` sleep만, `battleCardFootChips` 미사용(정의만 잔존).
-- **후속 수정:** ① 선공 화살표를 **선공한 쪽을 가리키도록**(`setJudgeOrder`: 내 선공=⬅·상대 선공=➜ — 라벨과 모순되던 방향 교정). ② 무대 바닥(`#battleArena::before`)을 `height:42%`→`bottom:0`으로 늘려 **스킬바 상단(62%)과 바닥 경계를 하나로 일치**(이전엔 바닥이 57%에서 끊겨 빈 띠가 생겨 상/하단 구분선이 어긋나 보였음).
+- **후속 수정:** ① 선공 화살표를 **선공한 쪽을 가리키도록**(`setJudgeOrder`: 내 선공=⬅·상대 선공=➜ — 라벨과 모순되던 방향 교정). ② 무대 바닥(`#battleArena::before`)을 `height:42%`→`bottom:0`으로 늘려 **스킬바 상단과 바닥 경계를 하나로 일치**(이전엔 바닥이 끊겨 빈 띠가 생겨 상/하단 구분선이 어긋나 보였음).
+- **후속 수정 2:** ③ 판정 시 `spread`를 `translateY(±42)`(식물이 무대 밖·스킬바로 튀어나감)에서 **바깥 모서리 기준 축소**(`scale(.8)`+`transform-origin` 위/아래)로 교체 → 식물이 제자리에서 줄며 가운데만 열림(무대 안에 머묾, 검증: 0 이탈·위·아래 160px 여유). ④ **하단 스킬바 높이를 스킬 수에 맞춰 자동**(`#cardPhase` `height:auto`·`max-height:52%`, `syncStageToSkillBar()`가 무대 `bottom`을 바 높이에 맞춤) → 스킬 3개면 18%(144px@812)로 딱 맞고 무대가 나머지 차지(휑함 해소·식물 공간↑). `hideCardPhase`에서 무대 bottom 복귀.
 
 ### 2026-06-25 — #1 개체 고유화: 버섯 base 성체/완숙 + 변이 개체 140종 고유 스킬 (생성기 일괄 반영)
 - **범위:** 설계서([species-individual-concepts-design](superpowers/specs/2026-06-24-species-individual-concepts-design.md))의 **풀 매트릭스 잔여분 전부** — 버섯 base 7 성체/완숙 14스킬 + 비버섯 변이 140종(28칸 × 5변이형). `SPECIES_CATALOG`(140 신규 엔트리)·`SKILL_LIB`(434 신규 스킬)만 수정(빌더/머지/도감 라이브가 자동 흡수).

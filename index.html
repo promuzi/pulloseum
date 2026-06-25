@@ -270,9 +270,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #battleArena.blurred .arena-fighter{filter:blur(3.5px) brightness(.66);}
 .arena-fighter .finfo{width:min(52%,250px);flex:0 0 auto;background:rgba(7,12,20,.55);border:1px solid rgba(255,255,255,.08);
   border-radius:12px;padding:8px 12px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
-/* 판정 단계: 두 식물이 위·아래로 벌어져 중앙에 카드+판정 공간을 연다(식물은 계속 보임) */
-#battleArena.spread .arena-fighter.enemy{transform:translateY(-42px) scale(.88);}
-#battleArena.spread .arena-fighter.player{transform:translateY(42px) scale(.88);}
+/* 판정 단계: 각 식물을 바깥 모서리 기준으로 축소 → 가운데만 열리고 식물은 제자리(무대 밖으로 안 튐). */
+#battleArena.spread .arena-fighter.enemy{transform:scale(.8);transform-origin:50% 0;}
+#battleArena.spread .arena-fighter.player{transform:scale(.8);transform-origin:50% 100%;}
 .fsprite{position:relative;flex:0 0 auto;display:flex;justify-content:center;
   filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 /* 발밑 그림자(접지감) */
@@ -332,9 +332,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #battleScreen.cards-hidden #pSpriteBox{cursor:pointer;filter:drop-shadow(0 0 12px rgba(31,217,196,.28));}
 
 /* ===== 스킬 카드 페이즈 (허공에 뜬 카드 — 화면 가운데) ===== */
-#cardPhase{position:absolute;left:0;right:0;bottom:0;top:auto;height:38%;z-index:5;display:flex;align-items:flex-end;justify-content:center;
-  padding:6px 10px calc(8px + env(safe-area-inset-bottom,0px));
-  background:linear-gradient(180deg,transparent,rgba(4,11,9,.5) 26%,rgba(4,11,9,.72));
+/* 하단 스킬바 — 높이는 스킬 수에 맞춰 자동(refreshSkillBar가 무대 bottom을 맞춤). 휑함 방지. */
+#cardPhase{position:absolute;left:0;right:0;bottom:0;top:auto;height:auto;max-height:52%;z-index:5;display:flex;align-items:flex-end;justify-content:center;
+  padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg,transparent,rgba(4,11,9,.5) 22%,rgba(4,11,9,.74));
   border-top:1px solid rgba(60,230,210,.14);pointer-events:none;}
 #cardPhase.hidden{display:none !important;}
 #cardPhase.locked .cp-stack{opacity:.45;filter:grayscale(.5);pointer-events:none;}
@@ -342,8 +343,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes cardPhaseIn{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 #cardPhase.closing{animation:cardPhaseOut .24s ease forwards;}
 @keyframes cardPhaseOut{to{opacity:0;transform:translateY(20px)}}
-.cp-stack{width:100%;max-width:520px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:7px;
-  overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;padding:4px 1px;}
+.cp-stack{width:100%;max-width:520px;height:auto;max-height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:7px;
+  overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;padding:2px 1px;}
 .cp-energy{display:flex;align-items:center;justify-content:center;gap:4px;font-size:22px;
   align-self:center;padding:5px 16px;border-radius:999px;
   background:rgba(8,14,24,.6);border:1px solid rgba(255,225,74,.28);
@@ -1172,7 +1173,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 #centerPlant:active{transform:translateX(-5px) scale(.98);}
 /* (포드 받침대 제거 — 식물은 나무 의자 위에 놓임) */
 #statPanel{position:relative;z-index:2;}
-/* 좌측 정보 알약(둥근 박스) — 타입/속성/변이/잠재력 */
+/* 좌측 정보 알약(둥근 박스) — 타입/속성/변이 */
 .info-pills{display:flex;flex-direction:column;gap:5px;}
 .ipill{display:flex;align-items:center;gap:5px;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;
   background:var(--card);border:1.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
@@ -8740,7 +8741,6 @@ function renderSeedBagCard(item){
   const planet = seedOriginPlanet(item, seed);
   const region = seedOriginRegion(item, seed);
   const meta = rarityMeta((seed && seed.rarity) || item.rarity);
-  const grade = item.grade || 'C';
   const rainbow = !!item.rainbow;
   const speciesKey = (item.species && SPECIES[item.species]) ? item.species : (seed ? speciesKeyForSeed(seed) : null);
   const spDef = speciesKey && SPECIES[speciesKey] ? SPECIES[speciesKey] : null;
@@ -8752,14 +8752,13 @@ function renderSeedBagCard(item){
     : (elDef ? `<span class="seed-mini-stat" style="border-color:${elDef.color}66;color:${elDef.color}">${elDef.icon} ${elDef.name}</span>` : '');
   const rarChip = `<span class="seed-mini-stat ${rainbow ? '' : meta.css}">${rainbow ? '희귀도 ???' : meta.name}</span>`;
   const typeChip = `<span class="seed-mini-stat">${rainbow ? '타입 ???' : typeLabel}</span>`;
-  const gradeChip = `<span class="seed-mini-stat" style="color:${rainbow ? '#fff' : (GRADES[grade] || '#fff')}">잠재력 ${rainbow ? '???' : grade}</span>`;
   const origin = rainbow ? '미지의 종자' : `${(planet && planet.name) || item.origin_planet || '미확인'} / ${(region && region.name) || item.origin_region || '미확인'}`;
   return `<div class="itemcard seed-bag-card" data-seed-card="${item.inventory_id}">
     <div style="font-size:30px;width:42px;text-align:center">${icon}</div>
     <div class="ic-body">
       <div class="ic-name"${rainbow?' style="background:linear-gradient(90deg,#ff5a5a,#ffd34a,#6bdd6b,#4ac6ff,#c792ea);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900"':''}>${item.name || (seed && seed.name) || '알 수 없는 종자'}</div>
       <div class="ic-desc">🪐 ${origin}</div>
-      <div class="seed-card-meta">${elChip}${rarChip}${typeChip}${gradeChip}</div>
+      <div class="seed-card-meta">${elChip}${rarChip}${typeChip}</div>
     </div>
     <div class="seed-card-actions">
       <button class="btn primary seed-mini-btn" data-plant-seed="${item.inventory_id}">심기</button>
@@ -8822,22 +8821,22 @@ function renderPlantConfirm(){
     $('#plantConfirmClose').addEventListener('click', () => { hide('#plantConfirmModal'); pendingPlantSeedId = null; sfx.tap(); });
     return;
   }
+  const rainbow = !!entry.rainbow;
   const meta = rarityMeta(seed.rarity);
   const planet = seedOriginPlanet(entry, seed);
   const region = seedOriginRegion(entry, seed);
-  const grade = entry.grade || 'C';
   const readiness = seedPlantReadiness(entry, seed);
+  const typeText = rainbow ? '???' : (SEED_TYPE_NAMES[seedTypeOf({ base_species_type:seed.base_species_type })] || seed.base_species_type);
   body.innerHTML = `
     <h2>🌱 이 종자를 심을까요?</h2>
-    <p class="sub">확정하면 종자는 가방에서 사라지고 새 식물 개체가 생성됩니다.</p>
+    <p class="sub">확정하면 종자는 가방에서 사라지고 새 식물 개체가 생성됩니다.${rainbow ? ' 무지개 종자는 심어야 정체가 드러납니다.' : ''}</p>
     <div class="plant-confirm-summary">
-      <div style="font-size:44px;text-align:center">${meta.icon}</div>
+      <div style="font-size:44px;text-align:center">${rainbow ? '🌈' : meta.icon}</div>
       <div>
-        <div class="ic-name">${seed.name} ${gradeBadgeHtml(grade)}</div>
+        <div class="ic-name">${seed.name}</div>
         <div class="ic-desc">
-          기원: ${(planet && planet.name) || seed.origin_planet} / ${(region && region.name) || seed.origin_region}<br>
-          식물 타입: ${SEED_TYPE_NAMES[seedTypeOf({ base_species_type:seed.base_species_type })] || seed.base_species_type}<br>
-          잠재력 등급: <b style="color:${GRADES[grade]||'#fff'}">${grade}</b> — 높을수록 생장 시 좋은 스킬을 얻습니다
+          기원: ${rainbow ? '미지의 종자' : `${(planet && planet.name) || seed.origin_planet} / ${(region && region.name) || seed.origin_region}`}<br>
+          식물 타입: ${typeText}
         </div>
       </div>
     </div>
@@ -8845,7 +8844,6 @@ function renderPlantConfirm(){
     <input class="plant-name-input" id="plantCustomName" maxlength="18" value="${defaultPlantName(seed)}">
     <div class="detail-list">
       <span>초기 성장 단계<b>${GROWTH_STAGE_NAMES[INITIAL_PLANTED_GROWTH_STAGE] || INITIAL_PLANTED_GROWTH_STAGE}</b></span>
-      <span>잠재력 등급<b style="color:${GRADES[grade]||'#fff'}">${grade}</b></span>
       <span>심기 가능 여부<b>${readiness.reason}</b></span>
     </div>
     <div class="plant-confirm-actions">
@@ -9862,17 +9860,15 @@ let swapPending = null;   // { kind:'mut'|'skill', key } — 빈 칸이 없을 �
 let cardDetailCtx = null; // { kind, key, equipped }
 let mutSort = 'grade', skillSort = 'grade';
 
-/* 좌측: 타입/속성/변이/잠재력(+등급) 둥근 박스 */
+/* 좌측: 타입/속성/변이(+등급) 둥근 박스 */
 function plantInfoPills(p, withGrade){
   const el = ELEMENTS[p.element] || ELEMENTS.grass;
   const form = FORMS[p.form] || FORMS.normal;
-  const pot = p.potential || p.grade || 'C';
   const formName = form.name.replace(' 변이형','') + (p.form==='pred' && PRED_TYPES[p.predType] ? '·'+PRED_TYPES[p.predType].name : '');
   const pills = [
     `<span class="ipill"><span class="ip-k">타입</span> ${(SEED_TYPE_NAMES[seedTypeOf(p)]||'풀').replace('형','')}</span>`,
     `<span class="ipill" style="border-color:${el.color}88"><span class="ip-k">속성</span> ${el.icon} ${el.name}</span>`,
     `<span class="ipill" style="border-color:${form.color}88"><span class="ip-k">변이</span> ${form.icon} ${formName}</span>`,
-    `<span class="ipill" style="border-color:${gradeColor(pot)}88;color:${gradeColor(pot)}"><span class="ip-k">잠재력</span> ${pot}</span>`,
   ];
   if(withGrade) pills.push(`<span class="ipill" style="border-color:${gradeColor(p.grade)}88;color:${gradeColor(p.grade)}"><span class="ip-k">등급</span> ${p.grade}</span>`);
   if(p.awakened) pills.push(`<span class="ipill" style="border-color:var(--gold);color:var(--gold)"><span class="ip-k" style="color:var(--gold)">각성</span> ✦${STAT_NAMES[p.awakened]||''}</span>`);
@@ -10998,6 +10994,13 @@ function refreshSkillBar(){
   const cp = $('#cardPhase');
   cp.classList.remove('hidden');
   cp.classList.toggle('locked', !!(B.busy || B.over)); // 판정 중·종료 시 전체 불 꺼짐(클릭 차단)
+  syncStageToSkillBar(); // 스킬 수에 맞춘 하단바 높이 → 무대가 나머지 차지
+}
+/* 하단 스킬바 실제 높이만큼 무대(#battleArena) 바닥을 맞춘다 — 스킬 적어도 휑하지 않게. */
+function syncStageToSkillBar(){
+  const cp=$('#cardPhase'), ar=$('#battleArena'); if(!cp||!ar) return;
+  if(cp.classList.contains('hidden')){ ar.style.bottom=''; return; }
+  ar.style.bottom = Math.round(cp.offsetHeight) + 'px';
 }
 /* 판정 중 스킬바 잠금(불 끔) — 카드는 보이되 클릭 차단. */
 function lockSkillBar(){ const cp=$('#cardPhase'); if(cp) cp.classList.add('locked'); }
@@ -11005,6 +11008,7 @@ function lockSkillBar(){ const cp=$('#cardPhase'); if(cp) cp.classList.add('lock
 function hideCardPhase(immediate){
   const cp = $('#cardPhase'); if(!cp) return;
   cp.classList.add('hidden'); cp.classList.remove('locked');
+  const ar=$('#battleArena'); if(ar) ar.style.bottom=''; // 무대 바닥 기본값 복귀
 }
 function updateBattleHud(){
   if(!B) return;
