@@ -8,6 +8,7 @@
 - **빈/잠긴 화분 통일:** 양육 그리드 빈·잠긴 슬롯의 `.pot-vessel`(별도 CSS 픽셀팟) → `potVisual('pot_terra')`로 교체(잠금 회색 필터는 `.pot-slot.locked .pot-stack`로 이전). 채움/빈/잠금 슬롯이 같은 도트 자산 사용.
 - **양육 흔들림 변경:** `.pot-stack .plant-layer` 회전(`potSway`) → 좌우 이동(`@keyframes plantSwaySide`, translateX ±3px). 화분 레이어는 고정. 메인화면 식물 레이어는 정적(흔들림 없음).
 - **검증:** `__catalogSelfTest()` 0 fail(신규 `potVisual` 주입 기준). 인라인 스크립트 3블록 node 구문검사 0 에러. potVisual 5종 렌더·중심정렬, 메인 2레이어 동일 bottom·z순서, 빈/잠긴 슬롯 렌더·잠금필터, 양육 plant=`plantSwaySide`·pot=`none` DOM 확인.
+- **후속 다듬기:** 크리스탈 화분 도트가 아래로 수렴하는 뾰족 보석형이라 식물이 점 위에 얹힌 듯 보이던 문제 → 상단 결정 돌기 + 좌광/우암 면 분할 + 평평한 입구·바닥의 면 분할 픽셀 팟으로 재구성(식물이 화분에서 솟도록).
 
 ### 2026-06-25 — 탐사 우주맵: 4궤도 확장 + 행성 겹침 해소
 - **문제:** 행성이 커서 인접 궤도(특히 궤도 2↔3 간격 32px < 행성 34~38px)에서 겹쳐 보임.
