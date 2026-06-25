@@ -306,6 +306,22 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 @keyframes rise{0%{opacity:0;transform:translate(-50%,8px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-40px)}}
 .shake{animation:shake .4s;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
+/* ===== 상태 VFX (순간형, 스프라이트 위 1회 번쩍) ===== */
+.sprite-fx{position:absolute;inset:-8% -6%;pointer-events:none;z-index:6;border-radius:16px;}
+.fx-poison{background:radial-gradient(circle,rgba(176,107,255,.62),transparent 68%);animation:fxPulse .62s ease-out forwards;}
+.fx-burn{background:radial-gradient(ellipse at 50% 100%,rgba(255,150,46,.88),rgba(255,80,30,.34) 50%,transparent 74%);animation:fxBurn .62s ease-out forwards;}
+.fx-bleed{background:radial-gradient(circle at 50% 42%,rgba(255,44,64,.56),transparent 60%);animation:fxBleed .62s ease-out forwards;}
+.fx-buff{background:radial-gradient(circle at 50% 92%,rgba(120,232,180,.5),transparent 66%);box-shadow:0 0 22px rgba(120,232,180,.45) inset;animation:fxBuff .62s ease-out forwards;}
+.fx-debuff{background:radial-gradient(circle at 50% 18%,rgba(60,30,90,.62),transparent 66%);animation:fxDebuff .62s ease-out forwards;}
+.fx-shield{border:2px solid rgba(184,212,232,.92);background:linear-gradient(140deg,rgba(190,212,232,.26),rgba(120,150,180,.1));box-shadow:0 0 18px rgba(184,212,232,.6),0 0 12px rgba(184,212,232,.5) inset;animation:fxShield .78s ease-out forwards;}
+.fx-shieldBreak{border:2px solid rgba(222,236,255,.95);box-shadow:0 0 16px rgba(222,236,255,.7);animation:fxBreak .6s ease-out forwards;}
+@keyframes fxPulse{0%{opacity:0;transform:scale(.82)}28%{opacity:1}100%{opacity:0;transform:scale(1.16)}}
+@keyframes fxBurn{0%{opacity:0;transform:translateY(8px) scale(.9)}26%{opacity:1}100%{opacity:0;transform:translateY(-7px) scale(1.13)}}
+@keyframes fxBleed{0%{opacity:0}22%{opacity:1}100%{opacity:0;transform:translateY(7px)}}
+@keyframes fxBuff{0%{opacity:0;transform:translateY(10px)}30%{opacity:1}100%{opacity:0;transform:translateY(-11px)}}
+@keyframes fxDebuff{0%{opacity:0;transform:translateY(-10px)}30%{opacity:1}100%{opacity:0;transform:translateY(11px)}}
+@keyframes fxShield{0%{opacity:0;transform:scale(1.12)}30%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+@keyframes fxBreak{0%{opacity:1;transform:scale(1) rotate(0)}40%{opacity:1;transform:scale(1.08) rotate(-2deg)}100%{opacity:0;transform:scale(1.22) rotate(3deg);filter:blur(2px)}}
 .arena-fighter.player.skill-use .fsprite{animation:playerSkillUse .42s ease both;}
 .arena-fighter.enemy.skill-use .fsprite{animation:enemySkillUse .42s ease both;}
 @keyframes playerSkillUse{0%,100%{transform:translateY(0)}45%{transform:translateY(-20px) scale(1.06)}}
@@ -10020,6 +10036,17 @@ function addDot(unit, dot){
     if(i < 0) break;
     unit.dots.splice(i, 1);
   }
+  // 상태 VFX(순간형): 독/화상/출혈이 걸리는 순간 해당 식물에 1회 번쩍
+  if(typeof B!=='undefined' && B){ const sd = unit===B.p?'p':(unit===B.e?'e':null); if(sd) spriteFx(sd, dot.kind); }
+}
+/* 상태 VFX — 스프라이트 위에 kind별 이펙트를 1회 띄웠다 제거(순간형). 지속표시는 statusTags 아이콘. */
+function spriteFx(side, kind){
+  const box = side==='p' ? $('#pSpriteBox') : (side==='e' ? $('#eSpriteBox') : null);
+  if(!box) return;
+  const fx = document.createElement('span');
+  fx.className = 'sprite-fx fx-'+kind;
+  box.appendChild(fx);
+  setTimeout(()=>{ try{ fx.remove(); }catch(e){} }, kind==='shield'?780:660);
 }
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
@@ -10531,15 +10558,16 @@ async function applySkill(a, d, s, side, options={}){
   if(s.guardMult != null){
     const counter = s.counterPct ? Math.round(effStat(a,'atk')*s.counterPct) : 0;
     a.guard = { mult:s.guardMult, counter };
+    spriteFx(side,'shield');
     blog(`▶ 🛡️ 받는 피해 ${Math.round((1-s.guardMult)*100)}%↓${counter?` · 반격 ${counter} 준비`:''}`);
     sfx.tap();
   }
   if(s.energyGain){ const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + s.energyGain); if(a.energy>before) effectNotes.push('에너지가 회복되었다!'); blog(`▶ ⚡ ${s.energyGain} 충전`); }
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
-  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1); a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); spriteFx(side,'buff'); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.infuse){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:s.infuse.pct, turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
-  if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
+  if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); spriteFx(side,'buff'); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
@@ -10585,7 +10613,7 @@ async function applySkill(a, d, s, side, options={}){
     const variance = rand(0.97,1.03);
     dm = Math.max(1, Math.round(dm * variance));
     const absorbed=Math.min(d.barrier,dm);
-    if(d.barrier>0){ d.barrier-=absorbed; dm-=absorbed; if(absorbed>0) blog(`▶ 🧊 보호막이 ${absorbed} 흡수`); }
+    if(d.barrier>0){ d.barrier-=absorbed; dm-=absorbed; if(absorbed>0){ blog(`▶ 🧊 보호막이 ${absorbed} 흡수`); spriteFx(tgtSide, d.barrier<=0?'shieldBreak':'shield'); } }
     d.hp = Math.max(0, d.hp - dm);
     if(d.hp<=0 && d.passives.surviveChance>0){
       const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
@@ -10610,8 +10638,8 @@ async function applySkill(a, d, s, side, options={}){
       if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push('상대의 에너지를 빼앗았다!'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
     }
     if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); addDot(d, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
-    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); effectNotes.push('방어력이 감소하였다!'); }
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); spriteFx(tgtSide,'debuff'); effectNotes.push('방어력이 감소하였다!'); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); spriteFx(tgtSide,'debuff'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
     if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
@@ -10620,7 +10648,7 @@ async function applySkill(a, d, s, side, options={}){
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
-    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
+    if(s.enemyDebuff){ const appliedStat=applyEnemyDebuff(d, s.enemyDebuff); spriteFx(tgtSide,'debuff'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(s.enemyDebuff)}`); }
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
@@ -10633,7 +10661,7 @@ async function tickStatuses(u, side){
   if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct), before=u.hp; u.hp=Math.min(u.max,u.hp+h); if(u.hp>before){ popup(side,'회복',true); statusNotes.push('체력이 회복되었다!'); } blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
   if(u.dots && u.dots.length){
     let total=0; u.dots.forEach(dot=>{ total+=dot.dmg; });
-    if(total>0){ u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.kind))]; statusNotes.push(kinds.includes('poison')?'중독 피해를 입었다!':kinds.includes('burn')?'화상 피해를 입었다!':kinds.includes('bleed')?'출혈 피해를 입었다!':'지속 피해를 입었다!'); blog(`<span class="em">${u.name}</span> 지속피해 ${total}`); changed=true; }
+    if(total>0){ u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.kind))]; spriteFx(side, kinds.includes('burn')?'burn':kinds.includes('bleed')?'bleed':'poison'); statusNotes.push(kinds.includes('poison')?'중독 피해를 입었다!':kinds.includes('burn')?'화상 피해를 입었다!':kinds.includes('bleed')?'출혈 피해를 입었다!':'지속 피해를 입었다!'); blog(`<span class="em">${u.name}</span> 지속피해 ${total}`); changed=true; }
     u.dots.forEach(dot=>dot.turns--); u.dots = u.dots.filter(dot=>dot.turns>0);
   }
   if(u.buffs && u.buffs.length){ u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); }
