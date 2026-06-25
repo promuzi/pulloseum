@@ -1,6 +1,6 @@
 # 스킬 태그 & 태그 시너지 시스템 설계 (2026-06-25)
 
-> 상태: **1단계(토대) 구현 완료(2026-06-25, 브랜치 `feat/skill-tag-synergy`)** · 2·3단계 대기. 다른 기기에서 이 문서를 진입점으로 이어서 구현.
+> 상태: **1·2단계 구현 완료(2026-06-25, 브랜치 `feat/skill-tag-synergy`)** · 3단계(콘텐츠·드롭풀·태그 pill UI·밸런스) 대기. 다른 기기에서 이 문서를 진입점으로 이어서 구현.
 > 브레인스토밍 합의(2026-06-25). 접근 = **A: 전체 아키텍처를 한 번에 설계 + 구현은 3단계로 분할**(단일 `index.html`·테스트러너 없는 환경의 회귀 위험 분산).
 > ⚠️ 이 문서는 **구현 시 단일 진실(SSOT)**. 코드와 어긋나면 코드를 고치거나 이 문서를 갱신해 항상 일치시킬 것. 함수명·필드명·통합 라인은 실제 코드(2026-06-25 기준 `index.html`)에서 검증됨.
 
@@ -156,9 +156,10 @@ function effectiveCost(unit, s){
 - **예시 콘텐츠 최소**: 카드 1(예 화염핵: `tagMods:[{tag:'elem:fire',type:'power',value:0.2}]`) + 스킬 1(예 불꽃 고양: `tagBuff:{tag:'elem:fire',type:'power',value:0.3,turns:3}`) + 비용할인 카드 1.
 - **셀프테스트**(§7).
 
-### 🧱 2단계 — 효과 4종 완성(엔진 공유, 얇음)
-- `effect`(부가효과 배율) · `combo`(점화/소비) · `compose`(구성보너스, 전투시작).
-- `aiPickSkill`이 할인/강화된 스킬을 선호하도록(선택) 가치 평가 보강.
+### 🧱 2단계 — 효과 4종 완성(엔진 공유, 얇음) ✅ **완료(2026-06-25)**
+- ✅ `effect`(부가효과 배율 `effMul=1+tagModSum('effect')+comboEff` → heal·selfBuff·dot·enemyDebuff·infuse·energyGain 수치에 곱) · ✅ `combo`(`applySkill` 상단에서 점화/소비: 직전 점화가 이번 스킬 toTag 겨냥 시 `comboPow`/`comboEff`로 적용 후 재점화, 1회성 · 카드 `base.combo`/스킬 `s.combo` 출처 · `unit.comboRules`) · ✅ `compose`(`makeCombatant` 말미에서 로드아웃 태그 집계 후 `ifTag/count` 충족 시 `unit.tagMods`에 grant 합류).
+- ✅ `aiPickSkill` 사용가능 필터를 `effectiveCost`로 교체(할인 스킬 사용 판정 일치).
+- 구현 메모: `cardInstanceEffects`/`cardEffects`에 `compose[]`·`combo[]` 수집(grant.value·combo.value 등급 m 스케일). 콤보 점화/소비는 `applySkill` 상단(코스트 차감 직후)에서 처리해 early-return(miss)에도 안전. 예시 카드 `card_toxinsyn`(compose: debuff 2개↑→중독 효과 +50%)·`card_counterflow`(combo: 방어→다음 공격 +30%, fixed). 셀프테스트 5종 추가, **0 fail/84**. preview 실전투에서 점화·소비·데미지 부스트 확인.
 
 ### 🎴 3단계 — 콘텐츠 & 폴리시(열린 작업)
 - 태그 축별 실제 카드/스킬(불 강화·무기 강화·무속성 강화·중독 특화 등) + **보급상자 드롭 풀(`box_card_*`) 등록**(⚠️ 정의만으론 획득 불가 — CLAUDE.md 규약).

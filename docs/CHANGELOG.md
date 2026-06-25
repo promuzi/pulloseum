@@ -2,6 +2,15 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #13 스킬 태그 & 태그 시너지 2단계(효과 완성) ✅
+- **effect (부가효과 배율):** `applySkill` 상단에서 `effMul = 1 + tagModSum(a,s,'effect') + comboEff` 산출 → `heal`·`selfBuff`·`dot`·`enemyDebuff`(scaled copy)·`infuse`·`energyGain` 수치에 곱. 보정 없으면 `effMul=1`(불변).
+- **combo (점화/소비):** `applySkill` 상단(코스트 차감 직후)에서 처리 — 직전 점화(`a.comboPrimed`)가 이번 스킬 `toTag`를 겨냥하면 `comboPow`/`comboEff`로 이번 행동에 적용 후 1회 소비, 이어서 이번 스킬이 규칙 `fromTag`를 충족하면 다음 행동용 재점화. 규칙 출처 = 카드 `base.combo` + 스킬 `s.combo`(`unit.comboRules`). early-return(miss) 앞에 배치해 안전.
+- **compose (구성보너스):** `makeCombatant` 말미에서 로드아웃 스킬 태그를 집계 → 카드 `base.compose`의 `ifTag/count` 충족 시 `grant` 보정을 `unit.tagMods`에 합류(전투시작 1회).
+- **수집/정합:** `cardInstanceEffects`/`cardEffects`에 `compose[]`·`combo[]` 수집(`grant.value`·`combo.value` 등급 m 스케일). `aiPickSkill` 사용가능 필터를 `effectiveCost`로 교체(할인 스킬 사용 판정 일치).
+- **예시 콘텐츠:** `card_toxinsyn`(compose — 디버프 태그 스킬 2개↑ → 중독 효과 +50%)·`card_counterflow`(combo — 방어 후 다음 공격 위력 +30%, `fixed`) + 공통 보급상자 드롭 등록.
+- **검증:** 셀프테스트 5종 추가 → `__catalogSelfTest()` **0 fail / 84**. preview 실전투(부팅 후)에서 화염핵 `tagMods`·역류 반격 `comboRules` 라이브 주입 확인, 방어→공격 콤보가 실제로 점화(`comboPrimed` 세팅)·소비(공격 후 `null`)되고 데미지 부스트(~15→19) 확인.
+- **다음:** 3단계 — 태그 축별 실제 카드/스킬 콘텐츠 + 드롭풀 + 뒷장 태그 pill·활성 보정 표시 UI + 밸런스 튜닝.
+
 ### 2026-06-25 — #13 스킬 태그 & 태그 시너지 1단계(토대) ✅
 - **목표:** 스킬에 5축 태그(분류·속성·변이형·대상·상태이상)를 붙이고, 그 태그를 겨냥한 보정을 카드·스킬로 푸는 시스템의 토대. 설계 SSOT = [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md).
 - **신규 엔진:** `skillTags(s,unit)`(태그는 (스킬,유닛) 쌍에서 도출 — 속성은 유닛 속성 기준) · `tagModSum(unit,s,type)`(지속 `unit.tagMods` + 임시 `kind:'tagmod'` 버프를 같은 풀로 합산) · `effectiveCost(unit,s)`(cost 할인·0 하한·`noEnergy` 제외) · `TAG_META`.
