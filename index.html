@@ -9263,6 +9263,15 @@ function composePlantBody(seedType, gi, P, el, bodyStyle){
   svg += elementMotif(el, gi, cx, cy-18);
   return svg;
 }
+/* 종/단계별 식물 바닥 y(접지 crop 기준). composePlantBody의 줄기·자루 좌표와 일치. */
+function plantBaseY(seedType, gi){
+  if(gi <= 0) return 88;                         // 씨앗: 타원 바닥
+  if(seedType === 'mushroom') return 92 - gi*7;  // 버섯: 자루 바닥(cy+16)
+  return 96;                                     // 줄기 뿌리(M60 96)
+}
+/* 식물 외형. 내장 화분 없음(분리됨).
+   - opts.noPot: 전체 140 높이(메인/양육 등 외부 픽셀 화분을 따로 얹는 곳, base y96)
+   - 미지정    : 종별 바닥까지 viewBox crop → 단독 표시(전투·모달 등) 접지(발밑 그림자와 연결) */
 function composePlantSvg(seedType, growth, element, opts){
   opts = opts||{}; const size = opts.size||120;
   const el = ELEMENTS[element] ? element : 'grass';
@@ -9272,13 +9281,11 @@ function composePlantSvg(seedType, growth, element, opts){
   const aura = (opts.grade==='S'||opts.grade==='A'||evolved)
     ? `<circle cx="60" cy="52" r="${38+(evolved?6:0)}" fill="${opts.grade==='S'?'#ffd34a':P.main}" opacity="${evolved?0.22:(opts.grade==='S'?0.2:0.12)}"/>` : '';
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
-  return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+  const vbH = opts.noPot ? 140 : clamp(plantBaseY(seedType, gi) + 8, 60, 140);
+  return `<svg width="${size}" height="${Math.round(size*vbH/120)}" viewBox="0 0 120 ${vbH}" xmlns="http://www.w3.org/2000/svg">
     ${aura}
     ${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}
     ${bodyAccentSvg(opts, el, gi, P)}
-    ${opts.noPot ? '' : `<rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
-    <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
-    <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>`}
     ${spark}
   </svg>`;
 }
@@ -12679,11 +12686,13 @@ window.__test('pots: effects (maxFruits/speed/lift)', function(){
   nurseryTick(t, 2*3600000); nurseryTick(g, 2*3600000);
   __ok((g.nursery.ripe.length + g.nursery.gauge) > (t.nursery.ripe.length + t.nursery.gauge), 'gold가 더 빨리 충전');
 });
-window.__test('pots: visual separation (noPot + potVisual)', function(){
-  const full = composePlantSvg('flower','mature','fire',{});
+window.__test('pots: visual separation (식물=화분없음, 접지 crop)', function(){
+  const ground = composePlantSvg('flower','mature','fire',{});
   const noPot = composePlantSvg('flower','mature','fire',{noPot:true});
-  __ok(full.indexOf('M40 103')>=0, '기본은 화분 path 포함');
-  __ok(noPot.indexOf('M40 103')<0, 'noPot은 화분 path 없음');
+  __ok(ground.indexOf('M40 103')<0, '기본(접지)은 내장 화분 없음');
+  __ok(noPot.indexOf('M40 103')<0, 'noPot도 내장 화분 없음');
+  __ok(noPot.indexOf('viewBox="0 0 120 140"')>=0, 'noPot은 전체 140 높이');
+  __ok(ground.indexOf('viewBox="0 0 120 140"')<0, '접지는 140보다 낮게 crop');
   POT_ORDER.forEach(id => { const v=potVisual(id,40); __ok(v.indexOf('<svg')>=0 || v.indexOf('<img')>=0, 'potVisual '+id); });
 });
 window.__test('accent: form→accent 매핑', function(){
@@ -12697,7 +12706,7 @@ window.__test('accent: composePlantSvg가 변이형별로 다른 외형', functi
   const weap = composePlantSvg('tree','mature','fire',{form:'weapon'});
   __ok(pred !== weap, '포식≠무기 외형');
   __ok(pred !== base, '포식≠무변이 외형');
-  __ok(base.indexOf('M40 103')>=0, '액센트가 화분/본체 합성을 깨지 않음');
+  __ok(base.indexOf('<svg')>=0 && base.indexOf('</svg>')>=0, '액센트가 본체 합성을 깨지 않음');
 });
 window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
