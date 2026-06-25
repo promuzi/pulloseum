@@ -260,9 +260,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 /* 스탠딩 무대: 적(위) · 나(아래), 가운데는 카드/판정 창 공간 */
 #battleArena{position:absolute;left:0;right:0;top:0;bottom:38%;display:flex;flex-direction:column;justify-content:space-between;
   padding:calc(50px + env(safe-area-inset-top,0px)) 12px 6px;z-index:2;}
-/* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게 */
-#battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;height:42%;z-index:0;pointer-events:none;
-  background:linear-gradient(180deg,transparent,rgba(20,184,166,.05) 40%,rgba(20,184,166,.1));
+/* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게. 바닥을 무대 끝(=스킬바 상단)까지 채워 경계를 하나로. */
+#battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;bottom:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(20,184,166,.05) 30%,rgba(20,184,166,.12));
   border-top:1px solid rgba(60,230,210,.12);}
 .arena-fighter{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;
   transition:transform .5s cubic-bezier(.2,.85,.3,1),filter .22s ease;z-index:2;width:100%;}
@@ -11079,11 +11079,11 @@ function updateBars(){
 }
 /* 누적 로그는 표시하지 않는다. 기존 전투 호출부와의 호환만 유지한다. */
 function blog(){ }
-/* 선공 화살표 — 내 카드=왼·상대=오른. 내가 선공이면 오른쪽(상대)으로 ➜, 상대 선공이면 ⬅. */
+/* 선공 화살표 — 화살표는 선공한 쪽을 가리킨다(내 카드=왼이면 ⬅, 상대=오른이면 ➜). */
 function setJudgeOrder(side, label){
   const order = $('#judgeOrder'); if(!order) return;
   if(!side){ order.innerHTML=''; return; }
-  const arrow = side==='p' ? '➜' : '⬅';
+  const arrow = side==='p' ? '⬅' : '➜';
   order.innerHTML = `<div class="jo-arrow">${arrow}</div><div class="jo-lab">${label}</div>`;
 }
 /* 흐림 폐지 — 식물·상태바는 판정 전 과정 또렷이 보인다(잔존 호출 안전용 no-op). */

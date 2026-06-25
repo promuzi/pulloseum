@@ -14,6 +14,7 @@
 - **카드 단순화:** 앞면 `skillCardHtml`=아이콘/이름/비용만(`battleCardFootChips` 제거). 하단 스킬바 46%→**38%**·`.skillcard` min-height 58→50. 뒷장(`showSkillDetail`)에 등급·분류·속성·독계열 pill 추가(꾹→`cardFlipIn` 유지).
 - **검증:** `window.__catalogSelfTest()` **0 fail**. preview 실전 1턴: `➜선공·나`→내 카드+오른쪽 `정확히 들어갔다!`→상대 카드 재등장+왼쪽 `효과가 별로다…`(weak 경로), 식물 위 `E=-15`/`P=-21` 팝업·HP 정상 변동·턴 종료 후 spread 복귀·스킬바 재점등.
 - **폐지/잔존:** `setVerdictSide`/`clearJudgeMessage` no-op, `showJudgeMessage` sleep만, `battleCardFootChips` 미사용(정의만 잔존).
+- **후속 수정:** ① 선공 화살표를 **선공한 쪽을 가리키도록**(`setJudgeOrder`: 내 선공=⬅·상대 선공=➜ — 라벨과 모순되던 방향 교정). ② 무대 바닥(`#battleArena::before`)을 `height:42%`→`bottom:0`으로 늘려 **스킬바 상단(62%)과 바닥 경계를 하나로 일치**(이전엔 바닥이 57%에서 끊겨 빈 띠가 생겨 상/하단 구분선이 어긋나 보였음).
 
 ### 2026-06-25 — #1 개체 고유화: 버섯 base 성체/완숙 + 변이 개체 140종 고유 스킬 (생성기 일괄 반영)
 - **범위:** 설계서([species-individual-concepts-design](superpowers/specs/2026-06-24-species-individual-concepts-design.md))의 **풀 매트릭스 잔여분 전부** — 버섯 base 7 성체/완숙 14스킬 + 비버섯 변이 140종(28칸 × 5변이형). `SPECIES_CATALOG`(140 신규 엔트리)·`SKILL_LIB`(434 신규 스킬)만 수정(빌더/머지/도감 라이브가 자동 흡수).
