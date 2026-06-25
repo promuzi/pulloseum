@@ -1068,10 +1068,10 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exmap-zoom{position:absolute;right:10px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;display:flex;flex-direction:column;gap:6px;}
 .exmap-zoom .btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:flex;align-items:center;justify-content:center;}
 .explanet{position:absolute;transform:translate(-50%,-50%);background:transparent;border:none;padding:0;z-index:4;cursor:pointer;display:flex;flex-direction:column;align-items:center;}
-.explanet-core{display:block;width:30px;height:30px;border-radius:50%;background:var(--pc);position:relative;
-  box-shadow:0 0 14px color-mix(in srgb,var(--pc) 55%,transparent), inset -7px -8px 11px rgba(0,0,0,.4), inset 5px 5px 9px rgba(255,255,255,.18);transition:transform .12s;}
-.explanet.sz-rare .explanet-core{width:34px;height:34px;}
-.explanet.sz-epic .explanet-core{width:38px;height:38px;}
+.explanet-core{display:block;width:24px;height:24px;border-radius:50%;background:var(--pc);position:relative;
+  box-shadow:0 0 12px color-mix(in srgb,var(--pc) 55%,transparent), inset -6px -7px 10px rgba(0,0,0,.4), inset 4px 4px 8px rgba(255,255,255,.18);transition:transform .12s;}
+.explanet.sz-rare .explanet-core{width:28px;height:28px;}
+.explanet.sz-epic .explanet-core{width:31px;height:31px;}
 .explanet:active .explanet-core{transform:scale(.9);}
 .explanet-core:before{content:"";position:absolute;inset:4px 4px 6px 5px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.28),transparent 46%);transform:rotate(-22deg);}
 .explanet.ring .explanet-core:after{content:"";position:absolute;left:-8px;right:-8px;top:46%;height:5px;border-radius:50%;border:2px solid color-mix(in srgb,var(--pc) 65%,#fff);opacity:.5;transform:rotate(-16deg);}
@@ -4100,7 +4100,7 @@ const SHIP_PARTS = [
 ];
 const SHIP_PART_INDEX = Object.fromEntries(SHIP_PARTS.map(part => [part.id, part]));
 /* 탐사선 강화 = 크레딧 전용 4트랙 */
-const SHIP_ORBIT_MAX = 3;
+const SHIP_ORBIT_MAX = 4;
 const SHIP_UPGRADES = [
   { id:'fuel_tank',  label:'연료 탱크',  stat:'fuel_tank',  step:1,  max:SHIP_ORBIT_MAX, icon:'⛽', desc:'탐사 가능한 궤도가 넓어집니다.' },
   { id:'durability', label:'내구성',     stat:'durability', step:12, max:200, icon:'🛡️', desc:'탐사 성공률이 크게 오르고 보상도 안정적입니다.' },
@@ -7713,14 +7713,14 @@ const EX_TYPE_ICON = { '목본형':'🌳', '화초형':'🌸', '다육형':'🌵
 const EX_EL_ORDER = ['fire','water','grass','earth','wind','bolt','ice'];
 const EX_TYPE_ORDER = ['목본형','화초형','다육형','덩굴형','버섯형'];
 const EX_GRADE_ORDER = ['D','C','B','A','S'];
-const EX_ORBIT_R = { 1:56, 2:100, 3:132 };
+const EX_ORBIT_R = { 1:54, 2:96, 3:138, 4:180 }; // 4궤도·균등 간격(42px) — 인접 궤도 행성 겹침 방지
 /* 표시 전용 탐사 데이터. 실제 보상은 region.link(기존 지역 id)로 굴린다.
    ── 아틀라스 종 분포(옵션 C) ──
    planet.species = 그 좌표(행성)의 서식 종 풀(key 목록·비-legacy). 지역은 el/types로 이 풀을 좁힌다.
    region.signature = 그 지역에서만 낮은 확률로 나오는 희귀 전용종(풀에서 일부러 제외). 없으면 생략.
    세계관: 각 행성은 여러 외계 문명이 다른 은하에서 발견해 공유한 좌표 — 폴드 점프로 이동한다. */
 const EXPLORE_VIEW = [
-  { id:'ex_ermias', name:'에르미아스', orbit:1, angle:152, color:'#7fd6c2',
+  { id:'ex_ermias', name:'에르미아스', orbit:1, angle:30, color:'#7fd6c2',
     cardTypes:['chloro','dna','spore'], themeNote:'생명이 풍부한 우림 — 무기는 발견되지 않고 DNA·포자·엽록체 카드가 나온다.',
     intro:'여러 문명이 시료를 공유한 우림 좌표 · 폴드 심도 1',
     species:['flower_grass','thorn','aqua','flower_wind','spark','vine_water'], regions:[
@@ -7731,7 +7731,7 @@ const EXPLORE_VIEW = [
       { name:'루미안', el:['water','grass'], types:['화초형','덩굴형'], diff:1, grade:'D', cost:100, map:{x:48,y:66},
         desc:'온화한 기후의 습지 평원. 초심자가 탐사하기 좋은 가장 안전한 지역이다.', link:'region_elyndor_lumenwood', signature:['spore_cap'] },
     ]},
-  { id:'ex_calisto', name:'칼리스토', orbit:1, angle:332, color:'#ffd17a',
+  { id:'ex_calisto', name:'칼리스토', orbit:1, angle:270, color:'#ffd17a',
     cardTypes:['weapon','common'], themeNote:'버려진 채굴 잔해가 흩어진 건조 지대 — 무기 카드가 발견된다.',
     intro:'폐채굴 문명이 남긴 건조 좌표 · 폴드 심도 1',
     species:['cactus_fire','gaia','flower_fire','cactus_wind'], regions:[
@@ -7740,9 +7740,9 @@ const EXPLORE_VIEW = [
       { name:'붉은 사구', el:['fire'], types:['다육형','화초형'], diff:2, grade:'D', cost:160, map:{x:68,y:62},
         desc:'한낮의 열기가 강한 모래언덕. 내열성 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
-  { id:'ex_veloc', name:'벨로크', orbit:2, angle:48, color:'#ff8a4a', size:'rare',
+  { id:'ex_veloc', name:'벨로크', orbit:3, angle:30, color:'#ff8a4a', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'고대 전장의 잔해가 묻힌 용암 행성 — 무기·DNA 카드가 발견된다.',
-    intro:'고대 전장이 묻힌 용암 좌표 · 폴드 심도 2',
+    intro:'고대 전장이 묻힌 용암 좌표 · 폴드 심도 3',
     species:['tree_fire','cactus_fire','flower_fire','tree_earth','gaia'], regions:[
       { name:'마그마 균열', el:['fire','earth'], types:['목본형'], diff:5, grade:'B', cost:320, map:{x:30,y:34},
         desc:'맨틀의 열기가 새어 나오는 균열. 플라즈마 변이가 흔하다.', link:'region_vathra_sulfur_rift', signature:['vine_fire'] },
@@ -7751,7 +7751,7 @@ const EXPLORE_VIEW = [
       { name:'잿빛 평원', el:['earth','fire'], types:['화초형','다육형','버섯형'], diff:4, grade:'C', cost:280, map:{x:50,y:72},
         desc:'화산재가 쌓인 비옥한 평원. 성장형 잠재특성이 잘 붙는다.', link:'region_vathra_sulfur_rift' },
     ]},
-  { id:'ex_kairen', name:'카이렌', orbit:2, angle:176, color:'#b98cff',
+  { id:'ex_kairen', name:'카이렌', orbit:2, angle:210, color:'#b98cff',
     cardTypes:['spore','potion'], themeNote:'독성 포자가 가득한 균사 행성 — 포자·물약 카드가 발견된다.',
     intro:'외계 생태가 공유된 균사 좌표 · 폴드 심도 2',
     species:['flower_grass','tree_grass','thorn','flower_wind','vine_wind'], regions:[
@@ -7760,7 +7760,7 @@ const EXPLORE_VIEW = [
       { name:'균사 회랑', el:['grass'], types:['목본형','덩굴형','버섯형'], diff:4, grade:'B', cost:330, map:{x:70,y:60},
         desc:'거대한 균사가 회랑을 이룬 지대. 돌연변이형 배양에 유리하다.', link:'region_elyndor_spore_marsh', signature:['spore_cap'] },
     ]},
-  { id:'ex_mirdin', name:'미르딘', orbit:2, angle:286, color:'#6bdd6b',
+  { id:'ex_mirdin', name:'미르딘', orbit:2, angle:330, color:'#6bdd6b',
     cardTypes:['chloro','dna','spore'], themeNote:'생체발광 정글 위성 — 무기는 없고 엽록체·DNA·포자 카드가 나온다.',
     intro:'생체발광 정글 좌표 · 공유 아틀라스의 위성',
     species:['tree_grass','tree_bolt','thorn','flower_grass','flower_wind'], regions:[
@@ -7769,9 +7769,9 @@ const EXPLORE_VIEW = [
       { name:'덩굴 협곡', el:['grass'], types:['덩굴형','화초형'], diff:4, grade:'A', cost:360, map:{x:66,y:58},
         desc:'수직으로 자란 덩굴이 가득한 협곡. 희귀 덩굴형이 산다.', link:'region_elyndor_spore_marsh', signature:['vine_bolt'] },
     ]},
-  { id:'ex_nereidon', name:'네레이돈', orbit:3, angle:112, color:'#4ac6ff', size:'epic', ring:true,
+  { id:'ex_nereidon', name:'네레이돈', orbit:4, angle:90, color:'#4ac6ff', size:'epic', ring:true,
     cardTypes:['potion','spore','chloro'], themeNote:'심해 해양 위성 — 물약·포자·엽록체 카드가 발견된다.',
-    intro:'조석에 갇힌 해양 좌표 · 폴드 심도 3',
+    intro:'조석에 갇힌 해양 좌표 · 폴드 심도 4',
     species:['aqua','flower_ice','flower_wind','vine_ice','cactus_water'], regions:[
       { name:'조석유리 산호초', el:['water','ice'], types:['화초형'], diff:6, grade:'A', cost:480, map:{x:30,y:34},
         desc:'유리질 산호가 조석 에너지에 맞춰 자란다. 방어막 특성이 잘 붙는다.', link:'region_nereion_tideglass_reef' },
@@ -7780,7 +7780,7 @@ const EXPLORE_VIEW = [
       { name:'궤도 캐노피', el:['water','wind'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:520, map:{x:50,y:74},
         desc:'위성 상층 대기에 떠 있는 부유 수림. 희귀 변이 종자가 모인다.', link:'region_nereion_orbit_canopy' },
     ]},
-  { id:'ex_aztel', name:'아즈텔', orbit:3, angle:236, color:'#ff6bd4', size:'rare',
+  { id:'ex_aztel', name:'아즈텔', orbit:3, angle:150, color:'#ff6bd4', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'멸망한 문명의 폐허 — 강력한 무기·DNA 카드가 발견된다.',
     intro:'멸망 문명의 폐허 좌표 · 방사선 폭풍',
     species:['cactus_bolt','flower_fire','cactus_fire','flower_wind','spark','aqua'], regions:[
@@ -7789,7 +7789,7 @@ const EXPLORE_VIEW = [
       { name:'전자기 늪', el:['bolt','water'], types:['화초형','버섯형'], diff:5, grade:'B', cost:420, map:{x:68,y:60},
         desc:'자기장이 일렁이는 늪지. 전기를 띤 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
-  { id:'ex_octavis', name:'옥타비스', orbit:3, angle:14, color:'#a8d8ff',
+  { id:'ex_octavis', name:'옥타비스', orbit:3, angle:270, color:'#a8d8ff',
     cardTypes:['common','chloro'], themeNote:'영구 동토 행성 — 공통·엽록체 카드가 발견된다.',
     intro:'은하 변경의 영구 동토 좌표 · 폴드 심도 3',
     species:['flower_ice','cactus_ice','aqua','vine_ice'], regions:[
@@ -7799,7 +7799,7 @@ const EXPLORE_VIEW = [
         desc:'영구 동결된 지하 동굴. 극지 적응 변이체가 잠들어 있다.', link:'region_nereion_orbit_canopy', signature:['frost'] },
     ]},
   // ── 신규 좌표 (행성 확장) — 새 개체가 나오면 아래 species 풀/지역 signature에 key만 추가하면 된다 ──
-  { id:'ex_seraphin', name:'세라핀', orbit:1, angle:240, color:'#bfe9ff',
+  { id:'ex_seraphin', name:'세라핀', orbit:1, angle:150, color:'#bfe9ff',
     cardTypes:['chloro','common'], themeNote:'상승기류가 흐르는 부유 고원 — 공통·엽록체 카드가 나온다.',
     intro:'바람이 흐르는 부유 고원 좌표 · 폴드 심도 1',
     species:['flower_wind','vine_wind','flower_grass','thorn','spark'], regions:[
@@ -7808,7 +7808,7 @@ const EXPLORE_VIEW = [
       { name:'초록 능선', el:['wind','grass'], types:['덩굴형','화초형'], diff:2, grade:'C', cost:140, map:{x:66,y:62},
         desc:'덩굴이 바위 능선을 타고 오르는 지대. 가벼운 종자가 바람에 실려 모인다.', link:'region_elyndor_spore_marsh' },
     ]},
-  { id:'ex_volkar', name:'볼카르', orbit:2, angle:110, color:'#ffe066', size:'rare',
+  { id:'ex_volkar', name:'볼카르', orbit:2, angle:90, color:'#ffe066', size:'rare',
     cardTypes:['weapon','dna'], themeNote:'영구 뇌우가 치는 번개 행성 — 무기·DNA 카드가 발견된다.',
     intro:'영구 뇌우가 치는 번개 좌표 · 폴드 심도 2',
     species:['spark','cactus_bolt','vine_bolt','flower_fire'], regions:[
@@ -7817,9 +7817,9 @@ const EXPLORE_VIEW = [
       { name:'자철 협곡', el:['bolt','fire'], types:['다육형','덩굴형'], diff:4, grade:'C', cost:280, map:{x:68,y:60},
         desc:'자성을 띤 광물이 솟은 협곡. 내열·전기 종자가 묻혀 있다.', link:'region_vathra_iron_dunes' },
     ]},
-  { id:'ex_tiamen', name:'티아멘', orbit:3, angle:320, color:'#9fdcff',
+  { id:'ex_tiamen', name:'티아멘', orbit:4, angle:300, color:'#9fdcff',
     cardTypes:['potion','common'], themeNote:'얼어붙은 대양 행성 — 물약·공통 카드가 발견된다.',
-    intro:'얼어붙은 대양 좌표 · 폴드 심도 3',
+    intro:'얼어붙은 대양 좌표 · 폴드 심도 4',
     species:['flower_ice','cactus_ice','vine_ice','aqua'], regions:[
       { name:'결빙 군도', el:['ice','water'], types:['화초형','덩굴형'], diff:6, grade:'A', cost:480, map:{x:30,y:36},
         desc:'얼음 섬이 점점이 떠 있는 군도. 빙결 종자가 자생한다.', link:'region_nereion_tideglass_reef', signature:['frost'] },
@@ -7867,7 +7867,7 @@ let exDetPlanetId = null;   // 그림3 상세가 열린 행성
 let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
 let lastExResult = null;    // 직전 탐사 결과
 let exHangarOpen = false;   // 탐사선 격납고 오버레이 열림 여부
-const EX_DEFAULT_SCALE = 1.0; // 기본 확대: 8개 행성과 이름이 모두 보이게
+const EX_DEFAULT_SCALE = 1.0; // 기본 확대: 11행성·4궤도와 이름이 모두 보이게
 let exView = { x:0, y:0, scale:EX_DEFAULT_SCALE }; // 우주맵 이동/확대 상태
 function exById(id){ return EXPLORE_VIEW.find(p => p.id === id) || null; }
 function exPlanetXY(p){
@@ -8056,7 +8056,7 @@ function exStars(){
 }
 function exOrbitRings(){
   const ft = exFuelTank();
-  return [1,2,3].map(o => { const d = EX_ORBIT_R[o] * 2; const lk = o > ft ? ' locked' : ''; return `<span class="exmap-orbit${lk}" style="width:${d}px;height:${d}px"></span>`; }).join('');
+  return [1,2,3,4].map(o => { const d = EX_ORBIT_R[o] * 2; const lk = o > ft ? ' locked' : ''; return `<span class="exmap-orbit${lk}" style="width:${d}px;height:${d}px"></span>`; }).join('');
 }
 function exPlanetNode(p){
   const xy = exPlanetXY(p);
