@@ -33,6 +33,7 @@
 - **폐지/잔존:** `setVerdictSide`/`clearJudgeMessage` no-op, `showJudgeMessage` sleep만, `battleCardFootChips` 미사용(정의만 잔존).
 - **후속 수정:** ① 선공 화살표를 **선공한 쪽을 가리키도록**(`setJudgeOrder`: 내 선공=⬅·상대 선공=➜ — 라벨과 모순되던 방향 교정). ② 무대 바닥(`#battleArena::before`)을 `height:42%`→`bottom:0`으로 늘려 **스킬바 상단과 바닥 경계를 하나로 일치**(이전엔 바닥이 끊겨 빈 띠가 생겨 상/하단 구분선이 어긋나 보였음).
 - **후속 수정 2:** ③ 판정 시 `spread`를 `translateY(±42)`(식물이 무대 밖·스킬바로 튀어나감)에서 **바깥 모서리 기준 축소**(`scale(.8)`+`transform-origin` 위/아래)로 교체 → 식물이 제자리에서 줄며 가운데만 열림(무대 안에 머묾, 검증: 0 이탈·위·아래 160px 여유). ④ **하단 스킬바 높이를 스킬 수에 맞춰 자동**(`#cardPhase` `height:auto`·`max-height:52%`, `syncStageToSkillBar()`가 무대 `bottom`을 바 높이에 맞춤) → 스킬 3개면 18%(144px@812)로 딱 맞고 무대가 나머지 차지(휑함 해소·식물 공간↑). `hideCardPhase`에서 무대 bottom 복귀.
+- **후속 수정 3:** ⑤ 전투 카드 앞면 하단에 **분류 칩(`skillCats`→`CAT_META`) 복원** — 공격🗡️/방어🛡️/버프✨/디버프🥀/체력회복❤️/에너지회복⚡(하이브리드는 복수 표시). `skillCardHtml` 풋에 `sc-chips`(좌)+`sc-cost`(우, `space-between`). 사용자가 스킬 성질을 한눈에 보고 변이 카드 적용을 판단하기 위함(분류 기준 = `skillCats`: 명시 `cats` 우선 + `kind`(attack/elemental/dot→공격·guard→방어·buff→버프·debuff→디버프) + 라이더(`power>0`→공격·`dot`/`enemyDebuff`→디버프·`selfBuff`→버프·`heal`/`lifesteal`→체력회복·`energyGain`/`energyRegen`→에너지회복)).
 
 ### 2026-06-25 — #1 개체 고유화: 버섯 base 성체/완숙 + 변이 개체 140종 고유 스킬 (생성기 일괄 반영)
 - **범위:** 설계서([species-individual-concepts-design](superpowers/specs/2026-06-24-species-individual-concepts-design.md))의 **풀 매트릭스 잔여분 전부** — 버섯 base 7 성체/완숙 14스킬 + 비버섯 변이 140종(28칸 × 5변이형). `SPECIES_CATALOG`(140 신규 엔트리)·`SKILL_LIB`(434 신규 스킬)만 수정(빌더/머지/도감 라이브가 자동 흡수).

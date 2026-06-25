@@ -371,7 +371,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .sc-name{font-weight:800;font-size:clamp(9.5px,2.7vw,12px);line-height:1.1;width:100%;color:var(--gc,var(--text));
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
 .sc-icon{font-size:clamp(18px,5vw,24px);line-height:1;flex:1 1 auto;display:flex;align-items:center;justify-content:center;}
-.sc-foot{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;}
+.sc-foot{display:flex;align-items:center;justify-content:space-between;gap:4px;width:100%;}
 .sc-chips{display:flex;flex-wrap:wrap;gap:2px;align-items:center;min-width:0;overflow:hidden;}
 .sc-cost{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--neon);white-space:nowrap;}
 .sc-cost.use{color:#ffd34a;}
@@ -10974,10 +10974,11 @@ function skillCardHtml(id, pred){
   const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0 };
   const col = gradeColor(battleSkillGrade(B.p, id));
   const dis = skillUnusable(B.p, id) ? ' disabled' : '';
+  const catChips = (skillCats(s)||[]).map(c=>{ const m=CAT_META[c]; return m?`<span class="cat-chip" style="--cc:${m.color}" title="${m.name}">${m.icon}</span>`:''; }).join('');
   return `<button class="skillcard${pred?' pred':''}${dis}" style="--gc:${col}" data-skill="${id}"${dis}>
     <div class="sc-name">${displaySkillName(s.name)}</div>
     <div class="sc-icon">${s.icon||'❔'}</div>
-    <div class="sc-foot"><span class="sc-cost${s.noEnergy?' use':''}">${moveCostLabel(s, B.p)}</span></div>
+    <div class="sc-foot"><span class="sc-chips">${catChips}</span><span class="sc-cost${s.noEnergy?' use':''}">${moveCostLabel(s, B.p)}</span></div>
   </button>`;
 }
 /* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
