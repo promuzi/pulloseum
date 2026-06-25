@@ -2,6 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #1 버섯 = 전부 포자 고정(비포자 변이 폐지) + 포자 외형 액센트
+- **결정:** 버섯형은 **비포자 변이형(일반/포식/무기/독성/용족)을 갖지 않는다 — 전부 포자(태생) 고정**(`baseVariants:['spore']`). 따라서 이전 로드맵의 "버섯 비포자 변이 35종" 항목은 **폐지**(변이 개체는 비버섯 28종만). 설계서(species-individual-concepts-design) 해당 항목 정리.
+- **포자 외형 액센트(신규):** `ACCENT_MODULES.spore` 추가 + `FORM_ACCENT.spore='spore'` 매핑 → 버섯 포자형이 고유 외형을 갖는다(갓에서 피어오르는 포자 안개 타원 + 떠다니는 포자 입자 5개, 속성색·단계 gi 스케일). 씨앗 단계 제외(성장체부터). 기존 6액센트(none/maw/arms/toxin/draco/enhance)와 동급 모듈.
+- **검증:** 실제 렌더 파이프라인(`composePlantSvg`→`bodyAccentSvg`)에 주입해 — spore 버섯에 액센트 적용(none 대비 +404자)·씨앗 제외·성장체부터 입자 노출·**비버섯 변이형(pred 등) 외형 불변** 확인. 격리 워크트리 `feat/spore-accent`에서 작업(다른 세션이 index.html 동시 편집 중이라 충돌 회피).
+
 ### 2026-06-25 — #1 개체 고유화: 버섯 base 성체/완숙 + 변이 개체 140종 고유 스킬 (생성기 일괄 반영)
 - **범위:** 설계서([species-individual-concepts-design](superpowers/specs/2026-06-24-species-individual-concepts-design.md))의 **풀 매트릭스 잔여분 전부** — 버섯 base 7 성체/완숙 14스킬 + 비버섯 변이 140종(28칸 × 5변이형). `SPECIES_CATALOG`(140 신규 엔트리)·`SKILL_LIB`(434 신규 스킬)만 수정(빌더/머지/도감 라이브가 자동 흡수).
 - **버섯 base 7:** 성장체 시그니처(`sig.spore_*`)는 유지하고 성체(`ind.spore_*.m`)·완숙체(`ind.spore_*.e`)만 추가 → base 35 전 종이 성장체/성체/완숙체 3스킬 깊이로 통일.

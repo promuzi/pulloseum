@@ -9052,8 +9052,19 @@ const ACCENT_MODULES = {
     return `<g><circle cx="60" cy="${y}" r="${22+gi*2}" fill="none" stroke="${P.light}" stroke-width="1.4" opacity="0.4"/>`
       + `<circle cx="60" cy="${y}" r="${26+gi*2}" fill="none" stroke="${P.accent}" stroke-width="0.8" opacity="0.25"/></g>`;
   },
+  // 포자(버섯 태생 변이): 갓에서 피어오르는 포자 안개 + 떠다니는 포자 입자
+  spore: function(el, gi, P){
+    const y = 60 - gi*5;
+    return `<g opacity="0.9">`
+      + `<ellipse cx="60" cy="${y}" rx="${18+gi*2}" ry="7" fill="${P.light}" opacity="0.12"/>`
+      + `<circle cx="${48-gi}" cy="${y-6}"  r="1.6" fill="${P.light}"  opacity="0.85"/>`
+      + `<circle cx="60"       cy="${y-12}" r="1.3" fill="${P.accent}" opacity="0.8"/>`
+      + `<circle cx="${72+gi}" cy="${y-4}"  r="1.5" fill="${P.light}"  opacity="0.8"/>`
+      + `<circle cx="54"       cy="${y-16}" r="1.1" fill="${P.accent}" opacity="0.7"/>`
+      + `<circle cx="66"       cy="${y-9}"  r="1.2" fill="${P.light}"  opacity="0.75"/></g>`;
+  },
 };
-const FORM_ACCENT = { pred:'maw', weapon:'arms', toxic:'toxin', dragon:'draco', normal:'enhance' };
+const FORM_ACCENT = { pred:'maw', weapon:'arms', toxic:'toxin', dragon:'draco', normal:'enhance', spore:'spore' };
 function accentFromForm(form){ return FORM_ACCENT[form] || 'none'; }
 function bodyAccentSvg(opts, el, gi, P){
   if(gi <= 0) return '';                 // 씨앗 단계엔 액센트 없음
