@@ -2,6 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #1 개체 스킬 밸런스 1차: 약해진 버프 스킬 17종 보강
+- **감사:** `scripts/audit-skills.js`로 ind 스킬 518종 이상치 점검 — **논리 오류 0**. 통계적 이상치(완숙 위력 180~190 용족/글래스캐논 = 의도된 프리미엄, 버섯·독성 완숙 110~120 = 의도된 광역 컨트롤)는 전부 설계 의도라 유지.
+- **수정:** 설계상 **자기버프 2개**였으나 엔진 제약(스킬당 자기버프 1개)으로 1개만 남아 단계 대비 빈약했던 **버프 전용 스킬 17종**(`flower_grass.m`·`thorn.m`·`vine_bolt.m`·`draca_vine.m`·`volt_leech.m` 등)에 `energyGain:1` 부여 → 버프 턴이 에너지 중립이 되어 헛돌지 않음(검증된 `spark.m` 패턴). 설계상 단일버프였던 3종(`granite_oak.g`·`bright_bloom.g`·`terra_cactus.g`)은 새싹 버프와 동급이라 보존.
+- **방식:** `scripts/patch-buff-skills.js`(단일·2줄 포맷 모두 처리, 블록 구문 검증). degenerate 버프 20→3. 위력/데미지 공식 불변(에너지 경제만 보강).
+
 ### 2026-06-25 — #1·#7 변이 140종 탐사 분포 배치 (획득 가능화)
 - **목표:** `released:false`로 정의·도감·외형만 있고 **획득 불가**였던 변이 140종을 탐사로 얻을 수 있게 분포 배치.
 - **방식 = 지역 시그니처:** `MUTANT_SIGNATURES` 테이블(생성기 [scripts/gen-variant-distribution.js](../scripts/gen-variant-distribution.js)) + EXPLORE_VIEW 병합 루프(원본 미수정·멱등·중복제거). 시그니처 경로(`rollSpeciesFromView`)는 `released`를 우회 → **`released:false`를 유지한 채** 변이가 "지역 희귀 발견"으로 등장. 따라서 **적 봇·일반 종 풀은 불변**(변이 홍수 없음).
