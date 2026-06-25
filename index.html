@@ -1292,6 +1292,11 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:normal;}
 .slot.skill.filled .sk-n{color:var(--gc,var(--text));}
 .slot.skill .sk-v{font-size:10px;font-weight:800;color:var(--gc,#5fe06b);}
+/* #5 통일 스킬 메트릭 줄(보관함/장착 동일): 비용·위력·등급·분류칩 */
+.sk-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 5px;margin-top:2px;}
+.skm-cost{font-size:9.5px;font-weight:800;color:#bfe9ff;}
+.skm-pow{font-size:9.5px;font-weight:800;color:var(--sub);}
+.skm-grade{font-size:8.5px;font-weight:900;color:var(--gc,#5fe06b);border:1px solid var(--gc,#5fe06b);border-radius:4px;padding:0 3px;line-height:1.35;}
 .slot .gtag{position:absolute;top:-7px;right:-5px;min-width:15px;height:15px;border-radius:5px;font-size:9.5px;font-weight:900;
   display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc,#5fe06b);
   border:1.5px solid var(--gc,#5fe06b);text-shadow:0 0 6px var(--gc);}
@@ -10121,6 +10126,23 @@ function skillSlotVal(sk){
   if(sk && (sk.kind === 'buff' || sk.selfBuff)) return '✦ 버프';
   return sk && sk.cost ? `⚡${sk.cost}` : '효과';
 }
+/* #5 통일 스킬 메트릭 — 비용 · 위력 · 등급 · 분류칩(보관함/장착 동일 표시) */
+function skillCostLabel(sk){
+  if(sk && sk.noEnergy) return (sk.uses!=null) ? `${sk.uses}회` : '무소모';
+  return `⚡${(sk && sk.cost!=null) ? sk.cost : 0}`;
+}
+function skillPowerLabel(sk){
+  if(sk && sk.power > 0) return `위력 ${sk.power}`;
+  if(sk && sk.heal) return `회복 ${Math.round(sk.heal*100)}%`;
+  if(sk && sk.kind === 'guard') return '🛡️방어';
+  if(sk && (sk.kind === 'buff' || sk.selfBuff)) return '✦버프';
+  if(sk && (sk.kind === 'debuff' || sk.enemyDebuff || sk.dot)) return '디버프';
+  return '효과';
+}
+function skillMetaHtml(p, id, sk){
+  const g = skillGradeOf(p, id);
+  return `<span class="sk-meta"><span class="skm-cost">${skillCostLabel(sk)}</span><span class="skm-pow">${skillPowerLabel(sk)}</span><span class="skm-grade" style="--gc:${gradeColor(g)}">${g}</span>${skillCatChipsHtml(sk)}</span>`;
+}
 
 /* ── 변이 탭(그림6) ── */
 function mutSlotHtml(p, idx){
@@ -10192,7 +10214,7 @@ function skillSlotHtml(p, idx){
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     const picking = swapPending && swapPending.kind === 'skill';
     return `<div class="slot skill filled ${picking?'pick':''}" data-eq-slot="${idx}" data-kind="skill" style="--gc:${col}">
-      <span class="sk-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="sk-v">${skillSlotVal(sk)}</span></div>`;
+      <span class="sk-n">${sk.icon||''} ${displaySkillName(sk.name)}</span>${skillMetaHtml(p,id,sk)}</div>`;
   }
   return `<div class="slot skill empty" data-empty-slot="skill">＋</div>`;
 }
@@ -10239,7 +10261,7 @@ function skillDrawerHtml(p){
   const cards = bench.length ? bench.map(id=>{
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     return `<div class="dcard skill" data-skill="${id}" style="--gc:${col}">
-      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-v">${skillSlotVal(sk)}</span>${skillCatChipsHtml(sk)}</div>`;
+      <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span>${skillMetaHtml(p,id,sk)}</div>`;
   }).join('') : `<div class="drawer-empty">해금된 추가 스킬이 없습니다. 식물을 더 성장시키면 단계별로 새 스킬을 얻습니다.</div>`;
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>

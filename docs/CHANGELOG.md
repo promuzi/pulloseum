@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 스킬 장착/보관함 표시 통일 + 수치 노출 (#5)
+- **피드백:** "스킬 장착도 보관함과 장착 시가 통일됐으면 — 수치가 있는 방향으로."
+- **수정:** 공용 `skillMetaHtml(p,id,sk)` 신설 — **비용(⚡)·위력·등급(S~D 칩)·분류칩**을 한 줄로. 장착 슬롯(`skillSlotHtml`)·보관함 카드(`skillDrawerHtml`)가 동일 컴포넌트 사용 → 표시 통일. `skillCostLabel`(무소모/N회 포함)·`skillPowerLabel`(위력/회복/방어/버프/디버프) 분리. CSS `.sk-meta/.skm-cost/.skm-pow/.skm-grade` 추가. (전투 인게임 하단 카드는 현 정책 유지 — 관리화면만 변경.)
+- **검증:** preview 스킬탭 — 장착 슬롯·보관함 카드 양쪽 모두 `비용·위력·등급·분류칩` 노출 동일 확인. `__catalogSelfTest()` 0 fail.
+- 설계: [2026-06-26-ui-battle-polish-batch-design.md](superpowers/specs/2026-06-26-ui-battle-polish-batch-design.md) §5. **→ 피드백 7항목(#1~#7) 전부 완료.**
+
 ### 2026-06-26 — 변이카드 보관함 가독성: 공통/변이 분류 + 등급별 가로줄 (#4)
 - **피드백:** "변이카드 가독성 증대 — 공통/변이 분류, 등급별로 같은 가로줄 배치."
 - **수정:** `mutDrawerHtml` 재작성 — ① **🌐 공통 / 🧬 변이형 전용** 두 섹션 분리(`c.type==='common'` 기준), ② 각 섹션을 **등급(S→A→B→C→D) 가로줄**로 묶어 같은 등급이 한 행에(`mutGradeRowsHtml`, 행 앞 등급 칩). 카드 단건 렌더는 `mutCardHtml`로 분리. 기존 정렬 토글 버튼 제거(상시 등급 그룹). CSS `.drawer-sec/.dgrade-row/.dgrade-lab` 추가.
