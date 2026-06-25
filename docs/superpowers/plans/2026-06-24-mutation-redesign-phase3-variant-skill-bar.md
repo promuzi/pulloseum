@@ -3,14 +3,11 @@
 > ✅ **엔진/콘텐츠 완료.** 슬라이스 3-1~3-8 전부 구현. 6변이형 하단 변이 스킬 바 + 공통 카드 효과 8종 전부 동작(`__catalogSelfTest()` 0 fail).
 
 ## 🔖 다음 세션 재개 진입점 (다른 기기에서 이어가기) — 플랜 4: 카드 획득 경로 연결
-> ⚠️ **현재 신규 카드들은 코드 정의만 있고 플레이어가 못 얻는다.** 효과 엔진은 완성됐으나 **보급상자 드롭 풀에 미연결**. 아래가 최우선 후속.
+> 🟢 **1·2 완료(2026-06-25).** 공통 카드 14종 보급상자 연결 + 발광 상자 폐지. **남은 것 = 3·4·5.**
 
-1. **(최우선·간단) 공통 보급상자 드롭 풀 확장** — `index.html` `box_card_common` rewards(현재 `~3602`)에 **cellwall/thornstem 2종만** 들어있음. 누락된 **공통 카드 12종**을 추가하고 `chance` 재배분:
-   - 스탯 코어 4종: `card_muscle`·`card_vacuole`·`card_tropism`·`card_target` (플랜2-A에서 정의됐으나 드롭 누락)
-   - 버프/디버프 4종: `card_pheromone`·`card_enzyme`·`card_phototropism`·`card_adrenaline`
-   - 무등급 4종: `card_homeo`·`card_lastleaf`·`card_unstable`·`card_bloom`
-2. **발광 보급상자(`box_card_chloro`, `~3641`) 정리** — 발광형 폐지됐는데 상자는 잔존(stale). 제거하거나 "엽록체=legacy 공통"으로 흡수 결정.
-3. **용족 보급상자 신설 + dragon 카드(플랜2-C)** — `dragon` cardType 상자 없음. 용족은 변이형 기본 스킬(비늘/브레스)로 카드 없이도 동작하나, 강화 카드(predBoost류) 로스터는 미구현. `FORMS.dragon.cardType:'dragon'` 기준 상자 추가.
+1. ~~**(최우선·간단) 공통 보급상자 드롭 풀 확장**~~ ✅ 2026-06-25 — `box_card_common` rewards를 **공통 카드 14종 전부**로 확장(스탯코어 4·버프디버프 4·무등급 4 추가, `chance` 가중치 재배분: 토대 9~10·버프 7·무등급 4~5). 셀프테스트 "공통 카드 고아 0" 회귀 가드 추가.
+2. ~~**발광 보급상자(`box_card_chloro`) 정리**~~ ✅ 2026-06-25 — **상자 제거(legacy 유지 방식)**. 엽록체 카드 2종+탐사 'chloro' 테마(5지역)는 legacy 발광 식물용으로 존속. (흡수 방식은 탐사 5지역 `cardTypes`/themeNote 연쇄수정이라 채택 안 함 → 최소변경.)
+3. **용족 보급상자 신설 + dragon 카드(플랜2-C)** — `dragon` cardType 상자 없음. 용족은 변이형 기본 스킬(비늘/브레스)로 카드 없이도 동작하나, 강화 카드(predBoost류) 로스터는 미구현. `FORMS.dragon.cardType:'dragon'` 기준 상자 추가. **신규 콘텐츠+밸런스 수치 필요.**
 4. **밸런스 튜닝** — 카드 수치는 스펙 placeholder. → [balance-sheet.md](../../balance-sheet.md)
 5. **적 봇 공통 카드 분배 검토** — `buildEnemy`(`~9710`)는 변이형 전용 카드만 적에게 줌. 공통 버프/디버프 카드를 봇도 받게 할지.
 

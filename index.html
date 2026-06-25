@@ -2138,9 +2138,6 @@ body{letter-spacing:.2px;}
       <div class="nursery-res" id="nurseryRes"></div>
     </div>
     <div class="nursery-grid" id="nurseryGrid"></div>
-    <!-- 화분 상세 팝업 -->
-    <div id="nurseryDetailBack" class="hidden" style="position:absolute;inset:0;z-index:20;background:rgba(3,14,8,.82);" onclick="closeNurseryDetail()"></div>
-    <div id="nurseryDetailCard" class="modal-card nursery-pop-card hidden" style="position:absolute;bottom:0;left:0;right:0;z-index:21;border-radius:20px 20px 0 0;padding:20px 16px 28px;max-height:70%;overflow-y:auto;"></div>
   </section>
 </div>
 
@@ -2279,6 +2276,11 @@ body{letter-spacing:.2px;}
 
 <div class="modal hidden" id="nurseryPopModal">
   <div class="modal-card nursery-pop-card" id="nurseryPopBody"></div>
+</div>
+
+<!-- 화분 상세 팝업 (.modal 오버레이로 통일 — 1692 holo 규칙이 .nursery-pop-card를 position:relative로 덮어써 인라인 absolute가 무효화되던 버그 수정) -->
+<div class="modal hidden" id="nurseryDetailModal" onclick="if(event.target===this)closeNurseryDetail()">
+  <div class="modal-card nursery-pop-card" id="nurseryDetailCard" style="padding:20px 16px 24px;"></div>
 </div>
 
 <!-- ===== 공통 보상 개봉 연출 (열매/보급/탐사 공용) ===== -->
@@ -3473,6 +3475,170 @@ const SPECIES_CATALOG = {
     signatures:['sig.frost_spore'],
     stageSkills:{ sprout:['mushroom.spore_burst'], juvenile:['mushroom.spore_burst'], growing:['sig.frost_spore'] },
   },
+  // ── 🌳 목본(tree) 7종 — 기존 grid 종에 개체 고유 스킬(성장체/성체/완숙체) 부여 ──
+  tree_fire:  { rarity:'common', stageSkills:{ growing:['ind.tree_fire.g'],  mature:['ind.tree_fire.m'],  evolved:['ind.tree_fire.e']  } },
+  tree_water: { rarity:'common', stageSkills:{ growing:['ind.tree_water.g'], mature:['ind.tree_water.m'], evolved:['ind.tree_water.e'] } },
+  tree_grass: { rarity:'common', stageSkills:{ growing:['ind.tree_grass.g'], mature:['ind.tree_grass.m'], evolved:['ind.tree_grass.e'] } },
+  tree_earth: { rarity:'common', stageSkills:{ growing:['ind.tree_earth.g'], mature:['ind.tree_earth.m'], evolved:['ind.tree_earth.e'] } },
+  tree_wind:  { rarity:'common', stageSkills:{ growing:['ind.tree_wind.g'],  mature:['ind.tree_wind.m'],  evolved:['ind.tree_wind.e']  } },
+  tree_bolt:  { rarity:'rare',   stageSkills:{ growing:['ind.tree_bolt.g'],  mature:['ind.tree_bolt.m'],  evolved:['ind.tree_bolt.e']  } },
+  frost:      { rarity:'common', stageSkills:{ growing:['ind.frost.g'],      mature:['ind.frost.m'],      evolved:['ind.frost.e']      } },
+  // ── 🌸 화초(flower) — 개화(공격 버프 누적 → 폭발) ──
+  'ind.flower_fire.g': { name:'개화 점화', icon:'🔥', cost:2, kind:'attack', power:90, single:true,
+    dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.2,turns:3},
+    desc:'위력90 · 단일 + 화상(3턴) + 자신 공격 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_fire.m': { name:'화염 만개', icon:'🌺', cost:2, kind:'attack', power:130, single:true,
+    dot:{kind:'burn',pct:0.06,turns:3}, critBonus:0.2, desc:'위력130 · 단일 + 화상(3턴) + 치명타율 +20%', tag:'개체', grade:'B' },
+  'ind.flower_fire.e': { name:'초신성 개화', icon:'💥', cost:3, kind:'attack', power:170, single:true, pierce:0.5,
+    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력170 · 단일 + 방어 관통 + 화상(3턴)', tag:'개체', grade:'S' },
+
+  'ind.aqua.g': { name:'이슬 개화', icon:'💧', cost:2, kind:'heal', heal:0.20, selfBuff:{stat:'atk',pct:0.12,turns:3},
+    desc:'체력 20% 회복 + 자신 공격 12%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.aqua.m': { name:'수련 정화', icon:'🪷', cost:2, kind:'heal', heal:0.22, cleanse:true, energyGain:1,
+    desc:'체력 22% 회복 + 디버프 해제 + ⚡+1', tag:'개체', grade:'B' },
+  'ind.aqua.e': { name:'범람 만개', icon:'🌊', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.40,
+    desc:'위력140 · 광역 · 피해 40% 흡혈', tag:'개체', grade:'A' },
+
+  'ind.flower_grass.g': { name:'가시 개화', icon:'🌹', cost:2, kind:'attack', power:90, single:true,
+    dot:{kind:'bleed',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3},
+    desc:'위력90 · 단일 + 출혈(3턴) + 자신 공격 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_grass.m': { name:'만개 가속', icon:'🌸', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.2,turns:3},
+    desc:'자신 공격 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_grass.e': { name:'장미 폭풍', icon:'🌪️', cost:3, kind:'attack', power:150, aoe:true,
+    dot:{kind:'bleed',pct:0.06,turns:3}, critBonus:0.2, desc:'위력150 · 광역 + 출혈(3턴) + 치명타율 +20%', tag:'개체', grade:'A' },
+
+  'ind.flower_earth.g': { name:'진흙 갑주', icon:'🪨', cost:2, kind:'attack', power:90, single:true, selfBuff:{stat:'def',pct:0.2,turns:3},
+    desc:'위력90 · 단일 + 자신 방어 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_earth.m': { name:'토석 개화', icon:'⛰️', cost:2, kind:'attack', power:120, single:true, pierce:0.5, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력120 · 단일 + 방어 관통 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_earth.e': { name:'대지 만개', icon:'🌍', cost:3, kind:'attack', power:150, aoe:true, enemyDebuff:{stat:'def',pct:0.2,turns:2},
+    desc:'위력150 · 광역 + 적 방어 20%↓(2턴)', tag:'개체', grade:'A' },
+
+  'ind.flower_wind.g': { name:'질풍 개화', icon:'🌬️', cost:2, kind:'attack', power:90, single:true, selfBuff:{stat:'spd',pct:0.25,turns:3},
+    desc:'위력90 · 단일 + 자신 기동 25%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_wind.m': { name:'꽃잎 난무', icon:'🍃', cost:2, kind:'attack', power:110, aoe:true, critBonus:0.2,
+    desc:'위력110 · 광역 + 치명타율 +20%', tag:'개체', grade:'B' },
+  'ind.flower_wind.e': { name:'선풍 만개', icon:'🌪️', cost:3, kind:'attack', power:150, single:true, critBonus:0.25, selfBuff:{stat:'spd',pct:0.15,turns:3},
+    desc:'위력150 · 단일 + 치명타율 +25% + 자신 기동 15%↑(3턴)', tag:'개체', grade:'A' },
+
+  'ind.spark.g': { name:'방전 개화', icon:'⚡', cost:2, kind:'attack', power:100, single:true, critBonus:0.25, selfBuff:{stat:'atk',pct:0.15,turns:3},
+    desc:'위력100 · 단일 + 치명타율 +25% + 자신 공격 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.spark.m': { name:'전하 충전', icon:'🔋', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.25,turns:3}, energyGain:1,
+    desc:'자신 공격 25%↑(3턴) + ⚡+1', tag:'개체', grade:'B' },
+  'ind.spark.e': { name:'뇌격 만개', icon:'🌩️', cost:3, kind:'attack', power:180, single:true, critBonus:0.35, pierce:0.5,
+    desc:'위력180 · 단일 + 치명타율 +35% + 방어 관통', tag:'개체', grade:'S' },
+
+  'ind.flower_ice.g': { name:'서리 개화', icon:'❄️', cost:2, kind:'attack', power:90, single:true,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, selfBuff:{stat:'atk',pct:0.12,turns:3},
+    desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 공격 12%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.flower_ice.m': { name:'빙정 집속', icon:'🧊', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.2,turns:3}, heal:0.10,
+    desc:'자신 공격 20%↑(3턴) + 체력 10% 회복', tag:'개체', grade:'B' },
+  'ind.flower_ice.e': { name:'설화 폭산', icon:'🌨️', cost:3, kind:'attack', power:150, aoe:true,
+    enemyDebuff:{stat:'spd',pct:0.2,turns:2}, critBonus:0.2, desc:'위력150 · 광역 + 적 기동 20%↓(2턴) + 치명타율 +20%', tag:'개체', grade:'A' },
+
+  // ── 🌵 다육(cactus) — 반격 & 저장 ──
+  'ind.cactus_fire.g': { name:'작열 반격', icon:'🔥', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, energyGain:1,
+    desc:'받는 피해 50%↓ + 작열 반격 + ⚡+1', tag:'개체', grade:'B' },
+  'ind.cactus_fire.m': { name:'가시 분사', icon:'🌵', cost:2, kind:'attack', power:110, single:true, pierce:0.5,
+    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력110 · 단일 + 화상(3턴) + 방어 관통', tag:'개체', grade:'B' },
+  'ind.cactus_fire.e': { name:'화염 가시폭풍', icon:'🌋', cost:3, kind:'attack', power:150, aoe:true,
+    dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력150 · 광역 + 화상(3턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
+
+  'ind.cactus_water.g': { name:'수분 비축', icon:'💧', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.25,turns:3}, heal:0.12,
+    desc:'자신 방어 25%↑(3턴) + 체력 12% 회복', tag:'개체', grade:'B' },
+  'ind.cactus_water.m': { name:'이슬 방벽', icon:'🛡️', cost:2, kind:'guard', guardMult:0.4, counterPct:0.25, cleanse:true,
+    desc:'받는 피해 60%↓ + 가시 반격 + 디버프 해제', tag:'개체', grade:'B' },
+  'ind.cactus_water.e': { name:'범람 가시', icon:'🌊', cost:3, kind:'drain', power:130, aoe:true, lifesteal:0.40, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력130 · 광역 · 피해 40% 흡혈 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
+
+  'ind.cactus_grass.g': { name:'광합성 가시', icon:'🌿', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, heal:0.12,
+    desc:'자신 공격 15%↑(3턴) + 체력 12% 회복', tag:'개체', grade:'B' },
+  'ind.cactus_grass.m': { name:'가시 결속', icon:'🪢', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25,
+    desc:'받는 피해 50%↓ + 가시 반격', tag:'개체', grade:'B' },
+  'ind.cactus_grass.e': { name:'가시덤불 분출', icon:'🌵', cost:3, kind:'attack', power:140, aoe:true,
+    dot:{kind:'bleed',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력140 · 광역 + 출혈(3턴) + 자신 공격 15%↑(3턴)', tag:'개체', grade:'A' },
+
+  'ind.gaia.g': { name:'바위 갑주', icon:'🪨', cost:2, kind:'guard', guardMult:0.35, selfBuff:{stat:'def',pct:0.25,turns:3},
+    desc:'받는 피해 65%↓ + 자신 방어 25%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.gaia.m': { name:'대지 고정', icon:'⛰️', cost:2, kind:'heal', heal:0.20, cleanse:true, energyGain:1,
+    desc:'체력 20% 회복 + 디버프 해제 + ⚡+1', tag:'개체', grade:'B' },
+  'ind.gaia.e': { name:'지각 융기', icon:'🏔️', cost:3, kind:'attack', power:150, single:true, pierce:0.5, enemyDebuff:{stat:'spd',pct:0.25,turns:2},
+    desc:'위력150 · 단일 + 방어 관통 + 적 기동 25%↓(2턴)', tag:'개체', grade:'A' },
+
+  'ind.cactus_wind.g': { name:'질풍 가시', icon:'🌬️', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, selfBuff:{stat:'spd',pct:0.15,turns:3},
+    desc:'받는 피해 50%↓ + 가시 반격 + 자신 기동 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.cactus_wind.m': { name:'바늘 회오리', icon:'🌀', cost:2, kind:'attack', power:110, aoe:true, critBonus:0.2,
+    desc:'위력110 · 광역 + 치명타율 +20%', tag:'개체', grade:'B' },
+  'ind.cactus_wind.e': { name:'선인장 선풍', icon:'🌪️', cost:3, kind:'attack', power:140, aoe:true, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, selfBuff:{stat:'spd',pct:0.15,turns:3},
+    desc:'위력140 · 광역 + 적 기동 20%↓(2턴) + 자신 기동 15%↑(3턴)', tag:'개체', grade:'A' },
+
+  'ind.cactus_bolt.g': { name:'대전 가시', icon:'⚡', cost:2, kind:'guard', guardMult:0.5, counterPct:0.35,
+    desc:'받는 피해 50%↓ + 강한 전격 반격', tag:'개체', grade:'B' },
+  'ind.cactus_bolt.m': { name:'방전 침', icon:'🔋', cost:2, kind:'attack', power:110, single:true, critBonus:0.25, pierce:0.5,
+    desc:'위력110 · 단일 + 치명타율 +25% + 방어 관통', tag:'개체', grade:'B' },
+  'ind.cactus_bolt.e': { name:'뇌격 가시폭풍', icon:'🌩️', cost:3, kind:'attack', power:150, aoe:true, critBonus:0.25, energyGain:1,
+    desc:'위력150 · 광역 + 치명타율 +25% + ⚡+1', tag:'개체', grade:'A' },
+
+  'ind.cactus_ice.g': { name:'서리 가시', icon:'❄️', cost:2, kind:'attack', power:90, single:true,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.cactus_ice.m': { name:'동토 방벽', icon:'🧊', cost:2, kind:'guard', guardMult:0.45, counterPct:0.25, cleanse:true,
+    desc:'받는 피해 55%↓ + 가시 반격 + 디버프 해제', tag:'개체', grade:'B' },
+  'ind.cactus_ice.e': { name:'빙벽 붕괴', icon:'🌨️', cost:3, kind:'attack', power:140, aoe:true, enemyDebuff:{stat:'spd',pct:0.25,turns:2}, pierce:0.5,
+    desc:'위력140 · 광역 + 적 기동 25%↓(2턴) + 방어 관통', tag:'개체', grade:'A' },
+
+  // ── 🍃 덩굴(vine) — 흡혈 & 속도 ──
+  'ind.vine_fire.g': { name:'작열 휘감기', icon:'🔥', cost:2, kind:'drain', power:100, single:true, lifesteal:0.30,
+    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력100 · 단일 · 피해 30% 흡혈 + 화상(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_fire.m': { name:'불꽃 흡수', icon:'🩸', cost:2, kind:'drain', power:110, single:true, lifesteal:0.40, selfBuff:{stat:'spd',pct:0.15,turns:3},
+    desc:'위력110 · 단일 · 피해 40% 흡혈 + 자신 기동 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_fire.e': { name:'화염 포식', icon:'🌋', cost:3, kind:'drain', power:150, aoe:true, lifesteal:0.35,
+    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력150 · 광역 · 피해 35% 흡혈 + 화상(3턴)', tag:'개체', grade:'A' },
+
+  'ind.vine_water.g': { name:'물줄기 휘감기', icon:'💧', cost:2, kind:'drain', power:90, single:true, lifesteal:0.40,
+    desc:'위력90 · 단일 · 피해 40% 흡혈', tag:'개체', grade:'B' },
+  'ind.vine_water.m': { name:'해조 재생', icon:'🌿', cost:2, kind:'heal', heal:0.20, cleanse:true, selfBuff:{stat:'spd',pct:0.15,turns:3},
+    desc:'체력 20% 회복 + 디버프 해제 + 자신 기동 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_water.e': { name:'소용돌이 포식', icon:'🌊', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.45,
+    desc:'위력140 · 광역 · 피해 45% 흡혈', tag:'개체', grade:'A' },
+
+  'ind.thorn.g': { name:'가시 옭매기', icon:'🌿', cost:2, kind:'attack', power:90, single:true,
+    dot:{kind:'bleed',pct:0.06,turns:3}, enemyDebuff:{stat:'spd',pct:0.2,turns:2},
+    desc:'위력90 · 단일 + 출혈(3턴) + 적 기동 20%↓(2턴)', tag:'개체', grade:'B' },
+  'ind.thorn.m': { name:'덩굴 가속', icon:'🍃', cost:2, kind:'buff', selfBuff:{stat:'spd',pct:0.2,turns:3},
+    desc:'자신 기동 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.thorn.e': { name:'가시덤불 포식', icon:'🌵', cost:3, kind:'drain', power:150, aoe:true, lifesteal:0.30,
+    dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력150 · 광역 · 피해 30% 흡혈 + 출혈(3턴)', tag:'개체', grade:'A' },
+
+  'ind.vine_earth.g': { name:'뿌리 결박', icon:'🪨', cost:2, kind:'attack', power:90, single:true,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_earth.m': { name:'대지 흡수', icon:'🩸', cost:2, kind:'drain', power:100, single:true, lifesteal:0.40, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력100 · 단일 · 피해 40% 흡혈 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_earth.e': { name:'대지 포박', icon:'🌍', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.30, enemyDebuff:{stat:'spd',pct:0.2,turns:2},
+    desc:'위력140 · 광역 · 피해 30% 흡혈 + 적 기동 20%↓(2턴)', tag:'개체', grade:'A' },
+
+  'ind.vine_wind.g': { name:'질풍 덩굴손', icon:'🌬️', cost:2, kind:'drain', power:90, single:true, lifesteal:0.30, selfBuff:{stat:'spd',pct:0.25,turns:3},
+    desc:'위력90 · 단일 · 피해 30% 흡혈 + 자신 기동 25%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_wind.m': { name:'선풍 난타', icon:'🌀', cost:2, kind:'attack', power:110, aoe:true, critBonus:0.2,
+    desc:'위력110 · 광역 + 치명타율 +20%', tag:'개체', grade:'B' },
+  'ind.vine_wind.e': { name:'폭풍 포식', icon:'🌪️', cost:3, kind:'drain', power:150, single:true, lifesteal:0.40, critBonus:0.2,
+    desc:'위력150 · 단일 · 피해 40% 흡혈 + 치명타율 +20%', tag:'개체', grade:'A' },
+
+  'ind.vine_bolt.g': { name:'전격 휘감기', icon:'⚡', cost:2, kind:'drain', power:100, single:true, lifesteal:0.25, critBonus:0.2,
+    desc:'위력100 · 단일 · 피해 25% 흡혈 + 치명타율 +20%', tag:'개체', grade:'B' },
+  'ind.vine_bolt.m': { name:'방전 가속', icon:'🔋', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.2,turns:3},
+    desc:'자신 공격 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_bolt.e': { name:'감전 포식', icon:'🌩️', cost:3, kind:'drain', power:160, single:true, lifesteal:0.35, critBonus:0.25,
+    desc:'위력160 · 단일 · 피해 35% 흡혈 + 치명타율 +25%', tag:'개체', grade:'A' },
+
+  'ind.vine_ice.g': { name:'서리 결박', icon:'❄️', cost:2, kind:'drain', power:90, single:true, lifesteal:0.30, enemyDebuff:{stat:'spd',pct:0.25,turns:2},
+    desc:'위력90 · 단일 · 피해 30% 흡혈 + 적 기동 25%↓(2턴)', tag:'개체', grade:'B' },
+  'ind.vine_ice.m': { name:'한기 흡수', icon:'🧊', cost:2, kind:'drain', power:100, single:true, lifesteal:0.40, enemyDebuff:{stat:'spd',pct:0.15,turns:2},
+    desc:'위력100 · 단일 · 피해 40% 흡혈 + 적 기동 15%↓(2턴)', tag:'개체', grade:'B' },
+  'ind.vine_ice.e': { name:'빙하 포식', icon:'🌨️', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.35, enemyDebuff:{stat:'spd',pct:0.25,turns:2},
+    desc:'위력140 · 광역 · 피해 35% 흡혈 + 적 기동 25%↓(2턴)', tag:'개체', grade:'A' },
+
 };
 const SPECIES = (function(){
   const TYPE_KO = { grass:'초본형', tree:'목본형', flower:'화초형', cactus:'다육형', vine:'덩굴형', mushroom:'버섯형' };
@@ -3507,6 +3673,7 @@ const SPECIES = (function(){
     const s = out[key], c = SPECIES_CATALOG[key] || {};
     s.rarity = c.rarity || 'common';
     s.legacy = !!c.legacy;
+    s.released = c.released !== false;   // false면 비획득(정의·도감·외형만, 분포는 후속 #7)
     s.baseVariants = Array.isArray(c.baseVariants) ? c.baseVariants.slice() : [];
     s.signatures = Array.isArray(c.signatures) ? c.signatures.slice() : [];
     s.stageSkills = c.stageSkills || null;
@@ -3649,9 +3816,22 @@ const SHOP_SUPPLY_BOXES = [
   // 변이형별 보급상자 — 해당 변이형이 장착 가능한 카드만 나온다. 등급(S~D)은 개봉 시 무작위.
   {
     id:'box_card_common', group:'trait', icon:'🧬', name:'공통 변이 보급상자', tag:'공통 카드 · 모든 변이형', price:300, currency:'credits', cardType:'common', gradeBoost:1,
+    // 공통 카드 14종 전부 드롭(스탯/방어 토대 高 · 버프/디버프 中 · 무등급 강카드 低). chance는 상대 가중치.
     rewards:[
-      { type:'card', card_id:'card_cellwall',  min:1, max:1, chance:50 },
-      { type:'card', card_id:'card_thornstem', min:1, max:1, chance:50 },
+      { type:'card', card_id:'card_cellwall',     min:1, max:1, chance:10 },
+      { type:'card', card_id:'card_thornstem',    min:1, max:1, chance:9 },
+      { type:'card', card_id:'card_muscle',       min:1, max:1, chance:10 },
+      { type:'card', card_id:'card_vacuole',      min:1, max:1, chance:9 },
+      { type:'card', card_id:'card_tropism',      min:1, max:1, chance:9 },
+      { type:'card', card_id:'card_target',       min:1, max:1, chance:8 },
+      { type:'card', card_id:'card_pheromone',    min:1, max:1, chance:7 },
+      { type:'card', card_id:'card_enzyme',       min:1, max:1, chance:7 },
+      { type:'card', card_id:'card_phototropism', min:1, max:1, chance:7 },
+      { type:'card', card_id:'card_adrenaline',   min:1, max:1, chance:7 },
+      { type:'card', card_id:'card_homeo',        min:1, max:1, chance:5 },
+      { type:'card', card_id:'card_lastleaf',     min:1, max:1, chance:4 },
+      { type:'card', card_id:'card_unstable',     min:1, max:1, chance:4 },
+      { type:'card', card_id:'card_bloom',        min:1, max:1, chance:4 },
     ],
   },
   {
@@ -3687,13 +3867,8 @@ const SHOP_SUPPLY_BOXES = [
       { type:'card', card_id:'card_disrupt',     min:1, max:1, chance:30 },
     ],
   },
-  {
-    id:'box_card_chloro', group:'trait', icon:'💡', name:'엽록체 보급상자', tag:'발광형 전용 변이', price:560, currency:'credits', cardType:'chloro', gradeBoost:1.1,
-    rewards:[
-      { type:'card', card_id:'card_chloroboost', min:1, max:1, chance:50 },
-      { type:'card', card_id:'card_solarheal',   min:1, max:1, chance:50 },
-    ],
-  },
+  // (폐지) box_card_chloro 발광 보급상자 — 발광형 신규 폐지에 맞춰 전용 구매처 제거.
+  //   엽록체 카드 2종(card_chloroboost·card_solarheal)과 탐사 'chloro' 테마는 legacy 발광 식물용으로 존속(탐사로만 획득).
   // 성장 보급상자 — 생장 경험치 아이템을 무작위로 준다(상점 구매 + 탐사 보상).
   {
     id:'box_growth_supply', group:'item', icon:'📦', name:'성장 보급상자', tag:'생장 경험치 아이템 무작위', price:200, currency:'credits',
@@ -3756,9 +3931,9 @@ function speciesForTypeEl(type, el){ return SPECIES_BY_TYPE_EL[type+'_'+el] || '
 function randomSpeciesKey(){ const ks=Object.keys(SPECIES); return ks[Math.floor(Math.random()*ks.length)]; }
 /* 희귀도 가중치 — 등장/드롭률만 좌우(스탯은 거의 동일). 값이 클수록 자주 나온다. */
 const RARITY_WEIGHT = { common:100, uncommon:55, rare:22, epic:8, legendary:3 };
-/* 신규 획득 가능 종 = legacy 아님. filterFn으로 타입/속성 추가 제한 가능. */
+/* 신규 획득 가능 종 = legacy 아님 + released. filterFn으로 타입/속성 추가 제한 가능. */
 function pickAcquirableSpecies(filterFn){
-  const pool = Object.keys(SPECIES).filter(k => !SPECIES[k].legacy && (!filterFn || filterFn(SPECIES[k])));
+  const pool = Object.keys(SPECIES).filter(k => !SPECIES[k].legacy && SPECIES[k].released && (!filterFn || filterFn(SPECIES[k])));
   if(!pool.length) return 'thorn';
   let total = 0; const w = pool.map(k => { const x = RARITY_WEIGHT[SPECIES[k].rarity]||50; total += x; return x; });
   let r = Math.random()*total;
@@ -4017,6 +4192,63 @@ const SKILL_LIB = {
   'sig.frost_spore': { name:'빙결 포자', icon:'❄️', cost:3, kind:'attack', aoe:true, power:90,
     enemyDebuff:{stat:'spd',pct:0.25,turns:2}, dot:{kind:'poison',pct:0.04,turns:2},
     desc:'위력90 · 광역 + 적 기동 25%↓(2턴) + 중독(2턴)', tag:'시그니처', grade:'A' },
+
+  /* ════ 개체 고유 스킬 (성장체/성체/완숙체) — 개체 카탈로그 stageSkills에서 참조 ════
+     설계: superpowers/specs/2026-06-24-species-individual-concepts-design.md
+     엔진 제약(§52): selfBuff/enemyDebuff는 각 1개. 화상/출혈 pct 0.06·중독 0.05·관통 pierce 0.5. */
+  // ── 🌳 목본(tree) — 버팀 & 재생 ──
+  'ind.tree_fire.g': { name:'화로 점화', icon:'🔥', cost:2, kind:'attack', power:110, single:true,
+    dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'def',pct:0.2,turns:3},
+    desc:'위력110 · 단일 + 화상(3턴) + 자신 방어 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.tree_fire.m': { name:'속불 재생', icon:'♨️', cost:2, kind:'heal', heal:0.20, cleanse:true, energyGain:1,
+    desc:'체력 20% 회복 + 디버프 해제 + ⚡+1', tag:'개체', grade:'B' },
+  'ind.tree_fire.e': { name:'대화로 분출', icon:'🌋', cost:3, kind:'attack', power:150, aoe:true, pierce:0.5,
+    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력150 · 광역 + 화상(3턴) + 방어 관통', tag:'개체', grade:'A' },
+
+  'ind.tree_water.g': { name:'물안개 장막', icon:'🌫️', cost:2, kind:'attack', power:90, single:true,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.tree_water.m': { name:'맹그로브 회복', icon:'💧', cost:2, kind:'heal', heal:0.22, cleanse:true,
+    desc:'체력 22% 회복 + 디버프 해제', tag:'개체', grade:'B' },
+  'ind.tree_water.e': { name:'해일 삼키기', icon:'🌊', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.35,
+    desc:'위력140 · 광역 · 피해 35% 흡혈', tag:'개체', grade:'A' },
+
+  'ind.tree_grass.g': { name:'만엽 생장', icon:'🌱', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, heal:0.10,
+    desc:'자신 공격 15%↑(3턴) + 체력 10% 회복', tag:'개체', grade:'B' },
+  'ind.tree_grass.m': { name:'뿌리 결속', icon:'🪢', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, energyGain:1,
+    desc:'받는 피해 50%↓ + 가시 반격 + ⚡+1', tag:'개체', grade:'B' },
+  'ind.tree_grass.e': { name:'세계수의 포효', icon:'🌳', cost:3, kind:'attack', power:150, aoe:true, selfBuff:{stat:'atk',pct:0.2,turns:3},
+    desc:'위력150 · 광역 + 자신 공격 20%↑(3턴)', tag:'개체', grade:'A' },
+
+  'ind.tree_earth.g': { name:'암피 굳히기', icon:'🪨', cost:2, kind:'guard', guardMult:0.4, selfBuff:{stat:'def',pct:0.25,turns:3},
+    desc:'받는 피해 60%↓ + 자신 방어 25%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.tree_earth.m': { name:'대지 정착', icon:'⛰️', cost:2, kind:'heal', heal:0.18, selfBuff:{stat:'def',pct:0.2,turns:3},
+    desc:'체력 18% 회복 + 자신 방어 20%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.tree_earth.e': { name:'산사태 강타', icon:'🏔️', cost:3, kind:'attack', power:150, single:true, pierce:0.5, enemyDebuff:{stat:'spd',pct:0.2,turns:2},
+    desc:'위력150 · 단일 + 방어 관통 + 적 기동 20%↓(2턴)', tag:'개체', grade:'A' },
+
+  'ind.tree_wind.g': { name:'질풍 가지', icon:'🌬️', cost:2, kind:'attack', power:80, single:true, selfBuff:{stat:'spd',pct:0.25,turns:3},
+    desc:'위력80 · 단일 + 자신 기동 25%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.tree_wind.m': { name:'잎날 폭풍', icon:'🍃', cost:2, kind:'attack', power:110, aoe:true, enemyDebuff:{stat:'spd',pct:0.2,turns:2},
+    desc:'위력110 · 광역 + 적 기동 20%↓(2턴)', tag:'개체', grade:'B' },
+  'ind.tree_wind.e': { name:'대풍 휘몰이', icon:'🌪️', cost:3, kind:'attack', power:140, aoe:true, selfBuff:{stat:'spd',pct:0.2,turns:3}, energyGain:1,
+    desc:'위력140 · 광역 + 자신 기동 20%↑(3턴) + ⚡+1', tag:'개체', grade:'A' },
+
+  'ind.tree_bolt.g': { name:'대전 껍질', icon:'🛡️', cost:2, kind:'guard', guardMult:0.5, counterPct:0.35,
+    desc:'받는 피해 50%↓ + 강한 전격 반격', tag:'개체', grade:'B' },
+  'ind.tree_bolt.m': { name:'방전 집중', icon:'⚡', cost:2, kind:'attack', power:100, single:true, critBonus:0.25, energyGain:1,
+    desc:'위력100 · 단일 + 치명타율 +25% + ⚡+1', tag:'개체', grade:'B' },
+  'ind.tree_bolt.e': { name:'낙뢰 강림', icon:'🌩️', cost:3, kind:'attack', power:160, single:true, critBonus:0.3, pierce:0.5,
+    desc:'위력160 · 단일 + 치명타율 +30% + 방어 관통', tag:'개체', grade:'A' },
+
+  'ind.frost.g': { name:'서리 가지', icon:'❄️', cost:2, kind:'attack', power:90, single:true,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, selfBuff:{stat:'def',pct:0.15,turns:3},
+    desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.frost.m': { name:'동면 수복', icon:'🧊', cost:2, kind:'heal', heal:0.22, cleanse:true,
+    desc:'체력 22% 회복 + 디버프 해제', tag:'개체', grade:'B' },
+  'ind.frost.e': { name:'빙결 낙과', icon:'🌨️', cost:3, kind:'attack', power:140, aoe:true,
+    enemyDebuff:{stat:'spd',pct:0.25,turns:2}, critBonus:0.2,
+    desc:'위력140 · 광역 + 적 기동 25%↓(2턴) + 치명타율 +20%', tag:'개체', grade:'A' },
 };
 /* ── 새싹·유체 단계 스킬 (타입 축 / 속성 축 공유, 개체 고유 없음) ──
    타입 5종(목본/화초/다육/덩굴/버섯) × {기본공격·기본방어·타입특기} + 속성 7종 × {속성발현}.
@@ -7974,8 +8206,9 @@ function applyCatalogVariantFields(p){
   if(!Array.isArray(p.base_variants)){
     p.base_variants = sp ? (sp.baseVariants||[]).slice() : [];
   }
-  // 태생 변이가 있고 변이형이 미설정/일반이면 첫 태생 변이로 초기화(예: 버섯=포자)
-  if((!p.form || p.form==='normal') && p.base_variants.length) p.form = p.base_variants[0];
+  // 태생 변이가 있으면 그 변이형으로 고정(변이종은 rollForm 결과 무시·태생 변이 고정. 예: 버섯=포자, 카르노오크=포식)
+  if(p.base_variants.length) p.form = p.base_variants[0];
+  if(p.form === 'pred' && !p.predType) p.predType = 'vamp';   // 포식형 predType 기본 보강
   return p;
 }
 function createPlantedPlantFromSeed(entry, seed, customName){
@@ -8156,6 +8389,56 @@ function elementMotif(el, gi, cx, topY){
   }
   return s;
 }
+/* ── 변이형 외형 액센트 모듈 (절차적 SVG 오버레이, viewBox 120x140·cx60·본체 중심 기준) ──
+   변이형 → 액센트 자동 매핑(accentFromForm). 같은 타입·속성이라도 변이마다 시각적으로 달라진다.
+   각 모듈 (el, gi, P) → svg 문자열. body 위·화분 아래에 합성된다(idle 흔들림은 식물과 함께). */
+const ACCENT_MODULES = {
+  none: function(el, gi, P){ return ''; },
+  // 포식: 아가리 + 삼각 이빨 + 빨려드는 입자
+  maw: function(el, gi, P){
+    const y = 68 - gi*5, w = 7 + gi*1.5;
+    return `<g opacity="0.92">`
+      + `<ellipse cx="60" cy="${y}" rx="${w}" ry="${4+gi*0.7}" fill="#1c0f16"/>`
+      + `<path d="M${60-w} ${y-1} l3 4 l2.5 -4 M59 ${y-1} l3 4 l2.5 -4" stroke="#fff" stroke-width="1.1" fill="none" stroke-linejoin="round"/>`
+      + `<circle cx="${60-w-6}" cy="${y-3}" r="1.4" fill="${P.light}" opacity="0.8"/>`
+      + `<circle cx="${60+w+5}" cy="${y+2}" r="1.2" fill="${P.light}" opacity="0.7"/></g>`;
+  },
+  // 무기: 금속 칼날 + 갑주판
+  arms: function(el, gi, P){
+    const y = 66 - gi*5;
+    return `<g stroke="#8a929c" stroke-width="1.4" stroke-linejoin="round">`
+      + `<path d="M${72+gi} ${y} l16 -12 l3 4 l-15 12 z" fill="#c4cbd3"/>`
+      + `<rect x="50" y="${y+4}" width="20" height="4" rx="2" fill="#aab2bb" opacity="0.9"/></g>`;
+  },
+  // 독성: 떨어지는 독방울 + 독안개 + 어두운 독 틴트
+  toxin: function(el, gi, P){
+    return `<g><ellipse cx="60" cy="86" rx="18" ry="6" fill="#7fd84a" opacity="0.13"/>`
+      + `<circle cx="50" cy="84" r="2.3" fill="#7fd84a"/><circle cx="60" cy="88" r="2" fill="#9be15d"/>`
+      + `<circle cx="69" cy="83" r="1.8" fill="#7fd84a"/><circle cx="54" cy="90" r="1.3" fill="#6bbf3a" opacity="0.8"/></g>`;
+  },
+  // 용족: 뿔 2개 + 겹비늘 호 + 오라
+  draco: function(el, gi, P){
+    const y = 64 - gi*5;
+    return `<g opacity="0.92">`
+      + `<circle cx="60" cy="${y}" r="${24+gi*2}" fill="none" stroke="${P.main}" stroke-width="1" opacity="0.25"/>`
+      + `<path d="M50 ${y-14} l3 -9 l3 7 M67 ${y-14} l3 -9 l-3 7" stroke="${P.dark}" stroke-width="2.4" fill="${P.dark}" stroke-linejoin="round"/>`
+      + `<path d="M52 ${y+4} q4 -4 8 0 q4 -4 8 0" stroke="${P.light}" stroke-width="1.3" fill="none" opacity="0.7"/>`
+      + `<path d="M52 ${y+9} q4 -4 8 0 q4 -4 8 0" stroke="${P.light}" stroke-width="1.3" fill="none" opacity="0.55"/></g>`;
+  },
+  // 일반(강화): 은은한 글로우 링
+  enhance: function(el, gi, P){
+    const y = 66 - gi*5;
+    return `<g><circle cx="60" cy="${y}" r="${22+gi*2}" fill="none" stroke="${P.light}" stroke-width="1.4" opacity="0.4"/>`
+      + `<circle cx="60" cy="${y}" r="${26+gi*2}" fill="none" stroke="${P.accent}" stroke-width="0.8" opacity="0.25"/></g>`;
+  },
+};
+const FORM_ACCENT = { pred:'maw', weapon:'arms', toxic:'toxin', dragon:'draco', normal:'enhance' };
+function accentFromForm(form){ return FORM_ACCENT[form] || 'none'; }
+function bodyAccentSvg(opts, el, gi, P){
+  if(gi <= 0) return '';                 // 씨앗 단계엔 액센트 없음
+  const key = opts.bodyAccent || accentFromForm(opts.form);
+  return (ACCENT_MODULES[key] || ACCENT_MODULES.none)(el, gi, P);
+}
 /* 생장단계(gi 0~5) × 식물타입 × 속성 팔레트로 실루엣 생성. 씨앗→완숙체로 점점 자란다. */
 function composePlantBody(seedType, gi, P, el, bodyStyle){
   const cx=60;
@@ -8238,6 +8521,7 @@ function composePlantSvg(seedType, growth, element, opts){
   return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
     ${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}
+    ${bodyAccentSvg(opts, el, gi, P)}
     ${opts.noPot ? '' : `<rect x="36" y="96" width="48" height="7" rx="3.5" fill="${P.main}" opacity="0.9"/>
     <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="#232b3d" stroke="rgba(255,255,255,0.15)"/>
     <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${P.main}" opacity="0.45"/>`}
@@ -8274,7 +8558,7 @@ function spriteFor(obj, size){
     const h = Math.round(size*140/120);
     return `<img src="${SPRITE_OVERRIDES[key]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top"/>`;
   }
-  return composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened });
+  return composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, form:obj&&obj.form });
 }
 /* 이름 생성: 속성 + 장착 변이 카드(종류·개수) + 식물 타입. 생장 단계 칭호는 표시처에서 별도. */
 const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
@@ -8313,7 +8597,9 @@ const SPECIES_SEEDTYPE = (function(){ const m={}; Object.keys(SPECIES).forEach(k
 function svgPlant(species, element, grade, awakened, size, growth){
   const seedType = SPECIES_SEEDTYPE[species] || 'grass';
   const el = ELEMENTS[element] ? element : (SPECIES[species] ? SPECIES[species].element : 'grass');
-  return composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened });
+  const bv = SPECIES[species] && SPECIES[species].baseVariants;
+  const form = (bv && bv.length) ? bv[0] : null;   // 변이종(태생 변이)은 종 외형에 액센트 반영
+  return composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, form });
 }
 
 /* ================= 스탯 계산 ================= */
@@ -8799,8 +9085,8 @@ function statDiffRowsHtml(before, after){
 }
 function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
   const st = seedTypeOf(p), el = p.element || 'grass';
-  const beforeSprite = composePlantSvg(st, fromStage, el, { size:120 });
-  const afterSprite = composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened });
+  const beforeSprite = composePlantSvg(st, fromStage, el, { size:120, form:p.form });
+  const afterSprite = composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened, form:p.form });
   const skillsHtml = (newSkillIds && newSkillIds.length)
     ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
@@ -10662,7 +10948,7 @@ function renderNurseryGrid(){
         ensureNurseryFields(p); nurseryTick(p, Date.now());
         const n = p.nursery;
         const st = seedTypeOf(p), el = p.element || 'grass';
-        const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true});
+        const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form});
         const potLayer = potVisual(p.nursery.potId, 78);
         const canFruit = nurseryMaxFruits(p) > 0;
         const full = canFruit && n.ripe.length >= n.maxFruits;
@@ -10690,7 +10976,7 @@ function openNurseryDetail(idx){
   ensureNurseryFields(p); nurseryTick(p, Date.now());
   const n = p.nursery;
   const st = seedTypeOf(p), el = p.element || 'grass';
-  const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true});
+  const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form});
   const dPot = potVisual(p.nursery.potId, 72);
   const elIcon = ELEMENTS[p.element] ? ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name : '';
   const formName = FORMS[p.form] ? FORMS[p.form].name : '일반 변이형';
@@ -10723,13 +11009,11 @@ function openNurseryDetail(idx){
     <button class="btn ghost" onclick="openPotPicker(${idx})" style="width:100%;margin-top:8px;font-size:12px;padding:9px">🪴 화분 바꾸기 (${potOf(p).icon} ${potOf(p).name})</button>
     <div class="howto" style="font-size:11px;margin-top:10px">💧물 = 충전 속도↑ · 🌿비료 = 등급 확률↑ (시간 지나면 효과 감소)<br>물·비료는 ⚔️전투·🛰️탐사·📦상자 보상으로 모읍니다.</div>
   `;
-  show('#nurseryDetailCard');
-  show('#nurseryDetailBack');
+  show('#nurseryDetailModal');
 }
 
 function closeNurseryDetail(){
-  hide('#nurseryDetailCard');
-  hide('#nurseryDetailBack');
+  hide('#nurseryDetailModal');
 }
 
 /* 화분 선택 시트 — 보유 화분 중 골라 장착(영구 해금·자유 교체) */
@@ -10956,7 +11240,7 @@ function openLockedSection(key){
   show('#lockedModal');
 }
 function closeAllModals(){
-  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal','#nurseryPopModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
+  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal','#nurseryPopModal','#nurseryDetailModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
 }
 /* ===================================================================
    함선 내부 — 포켓몬식 도트 워킹 (모드 탭)
@@ -11446,6 +11730,19 @@ window.__test('pots: visual separation (noPot + potVisual)', function(){
   __ok(noPot.indexOf('M40 103')<0, 'noPot은 화분 path 없음');
   POT_ORDER.forEach(id => { const v=potVisual(id,40); __ok(v.indexOf('<svg')>=0 || v.indexOf('<img')>=0, 'potVisual '+id); });
 });
+window.__test('accent: form→accent 매핑', function(){
+  __eq(accentFromForm('pred'),'maw'); __eq(accentFromForm('weapon'),'arms');
+  __eq(accentFromForm('toxic'),'toxin'); __eq(accentFromForm('dragon'),'draco');
+  __eq(accentFromForm('normal'),'enhance'); __eq(accentFromForm(undefined),'none');
+});
+window.__test('accent: composePlantSvg가 변이형별로 다른 외형', function(){
+  const base = composePlantSvg('tree','mature','fire',{});
+  const pred = composePlantSvg('tree','mature','fire',{form:'pred'});
+  const weap = composePlantSvg('tree','mature','fire',{form:'weapon'});
+  __ok(pred !== weap, '포식≠무기 외형');
+  __ok(pred !== base, '포식≠무변이 외형');
+  __ok(base.indexOf('M40 103')>=0, '액센트가 화분/본체 합성을 깨지 않음');
+});
 window.__test('skilllib: namespaced skills resolve via ALL_SKILLS', function(){
   __ok(ALL_SKILLS['mushroom.spore_burst'], 'mushroom.spore_burst missing');
   __ok(ALL_SKILLS['sig.spore_cloud'], 'sig.spore_cloud missing');
@@ -11509,6 +11806,19 @@ window.__test('loadout: equipped always includes a basic attack', function(){
 window.__test('acquire: legacy grass excluded from acquirable pool', function(){
   __ok(typeof pickAcquirableSpecies === 'function', 'pickAcquirableSpecies missing');
   for(let i=0;i<300;i++){ const k=pickAcquirableSpecies(); __ok(!SPECIES[k].legacy, 'legacy species '+k+' should not be acquirable'); }
+});
+window.__test('gate: released=false 종은 획득/적 풀에서 제외', function(){
+  __ok(SPECIES.tree_fire.released, 'base 종은 released=true');
+  __ok(SPECIES.spore_cap.released, '버섯 종도 released=true');
+  // released=false 종이 등록되면(변이 개체) 풀에서 빠지는지
+  const blocked = Object.keys(SPECIES).filter(k=>SPECIES[k].released===false);
+  for(let i=0;i<400;i++){ const k=pickAcquirableSpecies(); __ok(SPECIES[k].released, '비획득 종 등장 '+k); }
+  blocked.forEach(k=>__ok(SPECIES[k], 'sanity '+k));
+});
+window.__test('gate: 변이종 form 태생 변이로 고정', function(){
+  // 포자 버섯은 base_variants=['spore'] → form spore 고정(rollForm 무시)
+  const p = applyCatalogVariantFields({ species:'spore_cap', form:'weapon' });
+  __eq(p.form, 'spore', '태생 변이가 rollForm을 덮어써야 함');
 });
 window.__test('acquire: RARITY_WEIGHT defined for all rarities', function(){
   ['common','uncommon','rare','epic','legendary'].forEach(r => __ok(typeof RARITY_WEIGHT[r]==='number', 'weight missing '+r));
@@ -11824,6 +12134,30 @@ window.__test('variant UI: variantSkillBarHtml renders for pred, empty for norma
   __ok(html.indexOf('vskill')>=0, 'pred has bar');
   __ok(html.indexOf('포식')>=0 || html.indexOf('🦷')>=0, 'shows predation');
   __eq(variantSkillBarHtml({form:'normal'}), '', 'normal → empty');
+});
+// 플랜4: 카드 획득 경로 — 보급상자 드롭 풀 무결성
+window.__test('shop: every box card reward exists in TRAIT_CARDS', function(){
+  SHOP_SUPPLY_BOXES.forEach(box => (box.rewards||[]).forEach(r => {
+    if(r.type==='card') __ok(TRAIT_CARDS[r.card_id], box.id+' → 미정의 카드 '+r.card_id);
+  }));
+});
+window.__test('shop: common box drops every common-type card (공통 카드 전부 획득가능)', function(){
+  const box = shopBoxById('box_card_common');
+  __ok(box, 'box_card_common 존재');
+  const dropped = (box.rewards||[]).filter(r=>r.type==='card').map(r=>r.card_id);
+  Object.values(TRAIT_CARDS).filter(c=>c.type==='common').forEach(c=>{
+    __ok(dropped.includes(c.id), '공통 카드가 공통 상자에 없음: '+c.id);
+  });
+});
+window.__test('shop: card boxes only drop cards matching box cardType', function(){
+  SHOP_SUPPLY_BOXES.filter(b=>b.cardType).forEach(box => {
+    (box.rewards||[]).filter(r=>r.type==='card').forEach(r=>{
+      __eq(TRAIT_CARDS[r.card_id].type, box.cardType, box.id+' 타입 불일치 '+r.card_id);
+    });
+  });
+});
+window.__test('shop: legacy 발광 box removed (box_card_chloro)', function(){
+  __ok(!shopBoxById('box_card_chloro'), 'box_card_chloro 폐지됨');
 });
 </script>
 </body>

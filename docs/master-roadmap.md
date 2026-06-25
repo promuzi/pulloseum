@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟡 개체 카탈로그 구조 완료 | 개체/스킬 내용 채우기(`SPECIES_CATALOG`/`SKILL_LIB`) + 변이 슬롯 UI | [species](species-system-guide.md) · [trait](trait-growth-roadmap.md) · [plan](superpowers/plans/2026-06-24-plant-individual-catalog.md) |
+| 1 | 식물 종류 확장 | 🟡 외형 액센트 시스템+목본 base7 완료, 콘텐츠 진행 중 | 화초/다육/덩굴 base 21 + 버섯 성체/완숙 + 변이 140 채우기(`ind.<key>.g/.m/.e`) | [species](species-system-guide.md) · [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
@@ -179,6 +179,8 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-25** — **(#1 개체 고유화 — 외형 시스템+토대+목본 base7 ✅)** 구현 착수: ① **외형 액센트 시스템** — `ACCENT_MODULES` 6키(변이형→액센트 자동, `accentFromForm`) + `composePlantBody/Svg` `bodyAccent` 배선, 손그림 0·변이형마다 외형 분기. ② **변이종 form 고정**(`baseVariants[0]` 무조건) + **`released` 비획득 게이트**(`pickAcquirableSpecies`) → 변이 140종 정의해도 풀 무범람(분포는 #7). ③ **목본 base 7 고유 스킬 21종**(`ind.<key>.g/.m/.e`, 설계 #1~#7). 스킬 효과→엔진필드 **매핑 규칙** 박제. `__catalogSelfTest()` 0 fail·preview 검증. **이 커밋은 이전 세션 미커밋(양육 팝업 픽스·변이 플랜4)까지 보존한 consolidation.** 계획서 = [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md). **다음: 화초/다육/덩굴 base 21 → 버섯 성체/완숙 → 변이 140.** (#1)
+- **2026-06-25** — **(#1 변이 재설계 — 플랜4 카드 획득 경로 연결 ✅ 첫 슬라이스)** 효과 엔진만 완성돼 있던 **공통 카드 12종을 보급상자 드롭 풀에 연결** → `box_card_common`이 공통 카드 14종 전부 드롭(가중치: 스탯/방어 토대 9~10·버프디버프 7·무등급 4~5). **발광 전용 상자(`box_card_chloro`) 폐지**(발광형 신규 폐지 정합) — 엽록체 카드 2종+탐사 'chloro' 테마는 legacy로 존속(흡수 시 탐사 5지역 연쇄수정 → 최소변경 우선). **용족 강화카드+전용상자는 후속**(용족=기본 비늘/브레스로 동작). 셀프테스트 4종(상자 카드 실재·공통 카드 고아0·box cardType 일치·발광상자 폐지) 추가, `__catalogSelfTest()` 0 fail(65). preview 공통상자 5000롤로 14종 출현·무오류 검증. **남은 플랜4: 용족 카드/상자·밸런스 튜닝·적 봇 공통카드 분배.** (#1)
 - **2026-06-25** — **(#12 종자 가방 단순화)** 복잡성↓ 목표로 상세 패널(`renderSeedDetail`)·2단 레이아웃·선택상태(`selectedSeedInventoryId` UI) 폐기. 종자 카드 한 줄에 **속성·희귀도·타입·잠재력 칩 + 기원 + 미니 심기/판매 버튼**만. 수치 예측(능력치 예상값·변이율·잠재특성 후보) 노출 제거. 심기=카드 미니버튼→기존 `openPlantConfirm`, 판매=카드 미니버튼→`sellSeed`(둘 다 `stopPropagation`). **잠재력 등급은 일단 유지(후속 제거 예정).** self-test 0 fail·preview 검증. (#12)
 - **2026-06-20** — 생장은 **경험치로만**(물/비료 폐지). 생장 정지 아이템 추가. (#2)
 - **2026-06-20** — 화분은 **양육 전용**(전투 스탯 무영향). (#2)

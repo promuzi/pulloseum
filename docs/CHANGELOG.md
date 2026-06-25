@@ -2,6 +2,27 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #1 개체 고유화: 외형 액센트 시스템 + 변이종 form/획득 게이트 + 목본 base 7 고유 스킬
+- **외형 액센트 시스템(신규):** `composePlantBody`/`composePlantSvg`에 `bodyAccent` 배선 + `ACCENT_MODULES` 레지스트리 6키(none/maw·포식/arms·무기/toxin·독성/draco·용족/enhance·일반). **변이형→액센트 자동 매핑**(`accentFromForm`)이라 같은 타입·속성이라도 변이마다 외형이 달라진다(절차적 SVG 오버레이, 손그림 0). `spriteFor`·`svgPlant`·진화모달·양육 레이어가 `form`을 전달하도록 연결. 씨앗 단계엔 액센트 없음. preview에서 6변이형 외형 전부 구별·화분 합성 무손상 검증.
+- **변이종 form 고정 + 비획득 게이트(신규):** `applyCatalogVariantFields`가 `baseVariants[0]`로 form을 **무조건 고정**(변이종은 rollForm 무시·태생 변이 확정, 포식형 predType 기본 보강). `SPECIES[].released` 필드 추가 + `pickAcquirableSpecies`가 `released` 종만 풀에 포함 → 향후 변이 개체 140종을 정의해도 획득/적봇 풀이 범람하지 않음(분포 배치는 #7 후속).
+- **목본 base 7 고유 스킬:** tree_fire/water/grass/earth/wind/bolt·frost에 성장체/성체/완숙체 고유 스킬 3개씩(`ind.<key>.g/.m/.e`, 21종) + 카탈로그 `stageSkills` 연결. (설계 #1~#7. 화초/다육/덩굴/버섯/변이는 후속 배치.)
+- **계획서:** [docs/superpowers/plans/2026-06-25-species-individual-concepts-implementation.md](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) — 12 Task 배치 계획 + 스킬 효과→엔진 필드 매핑 규칙.
+- **셀프테스트:** accent 매핑·변이형별 외형 차이·released 게이트·form 고정 케이스 추가. `window.__catalogSelfTest()` **0 fail**.
+- ⚠️ **보존 커밋(consolidation):** 이 커밋은 이전 세션의 미커밋 작업(위 양육 팝업 버그픽스·#1 변이 플랜4)까지 한 파일(`index.html`)에 엉켜 있어 **통째로 보존**한 것이다(OneDrive 미커밋 유실 방지). 이후 #1 콘텐츠는 타입별 개별 커밋.
+
+### 2026-06-25 — 버그픽스: 양육 화분 상세 팝업이 화면 아래로 벗어나던 문제
+- **증상**: 식물양육 탭에서 화분(식물)을 누르면 상세 팝업이 화면을 넘어 아래로 떠 보이지 않음.
+- **루트 원인**: `#nurseryDetailCard`는 인라인 `position:absolute;bottom:0`로 바텀시트를 의도했으나, 홀로그램 테마 규칙(`index.html` ~1692 `.nursery-pop-card{position:relative !important}`)이 이를 덮어써 카드가 일반 흐름으로 `#nurseryGrid` **아래**에 배치됨 → 그리드가 길면 스크롤 영역 하단(화면 밖)으로 밀림. (같은 클래스 `#nurseryPopBody`는 `.modal` 오버레이 안이라 flex 중앙정렬로 정상이던 게 단서.)
+- **수정**: 상세 팝업을 기존에 정상 동작하는 `.modal` 오버레이 패턴(`#nurseryDetailModal`)으로 통일 — `#nurseryScreen` 내부의 절대배치 카드+백드롭 제거, 최상위 `.modal`로 이전(백드롭 클릭 시 닫힘). `openNurseryDetail/closeNurseryDetail`는 모달 show/hide로 변경, `closeAllModals` 목록에 `#nurseryDetailModal` 추가.
+- **검증**: preview(375×812)에서 카드 세로 완전 가시(top 278/bottom 522<812)·가로 중앙정렬·닫기/백드롭 정상. `window.__catalogSelfTest()` 0 fail.
+
+### 2026-06-25 — #1 변이 재설계 플랜4: 카드 획득 경로 연결 (공통 카드 14종 + 발광 상자 폐지)
+- **공통 보급상자(`box_card_common`)에 공통 카드 14종 전부 연결** — 그동안 `card_cellwall`·`card_thornstem` 2종만 드롭됐고, 플랜2~3에서 효과 엔진은 완성됐으나 **나머지 12종(스탯코어 4·버프디버프 4·무등급 4)이 보급상자 드롭 풀에 미연결 → 플레이어 획득 불가** 상태였음. 14종 전부 드롭하도록 확장하고 `chance` 가중치 재배분(스탯/방어 토대 高 9~10 · 버프/디버프 中 7 · 무등급 강카드 低 4~5).
+- **발광 전용 상자(`box_card_chloro`) 폐지** — 발광형(`lumen`) 신규 폐지에 맞춰 전용 구매처 제거. **엽록체 카드 2종(`card_chloroboost`·`card_solarheal`)과 탐사 'chloro' 테마(5개 지역)는 legacy 발광 식물용으로 존속**(탐사로만 획득). 카드 type을 common으로 흡수하지 않은 이유 = 흡수 시 탐사 5개 지역 `cardTypes`/themeNote까지 연쇄 수정 필요(blast radius↑) → 최소 변경·무회귀 우선.
+- **용족 강화 카드 + 전용 상자는 다음 작업으로 보류** — 용족은 기본 스킬(비늘/브레스)로 이미 동작하므로 미연결이 곧 버그는 아님.
+- **셀프테스트 4종 추가**: 모든 상자 카드 reward의 `card_id` 실재 검증 / 공통 상자가 공통 타입 카드 전부 드롭(고아 공통 카드 0) / 카드 상자는 box `cardType`과 일치하는 카드만 드롭 / 발광 상자 폐지 확인. `window.__catalogSelfTest()` **0 fail(65케이스)**. preview에서 공통 상자 5000회 롤 → 14종 전부 출현·등급 부여·런타임 오류 0 검증.
+- **문서 동기화**: `master-roadmap.md`(결정 로그·#1 상태), 플랜3 문서(플랜4 진입점 체크), `CHANGELOG.md`(이 항목).
+
 ### 2026-06-24 — 버섯 타입 완성: 7속성 종·전용 외형·시그니처·타입별 단계명·탐사 드롭
 - **7속성 종 추가**: 스포어캡(풀)·이그니캡(불)·미스트캡(물)·트러플캡(대지)·윈드퍼프(바람)·볼트캡(번개)·프로스트캡(빙결). 스탯 = `TYPE_STATS.mushroom`(38/9/5/8, 저스탯) + `ELEMENT_STATS`. 희귀도 rare(레거시 common 대비 획득확률↓). 태생 변이 `baseVariants:['spore']`(포자변이 기본 장착).
 - **전용 외형**: `composePlantBody`에 mushroom 분기 신설 → **클래식 독버섯 실루엣**(통통한 자루+점박이 갓+고리, 완숙체엔 떠오르는 포자 입자). 떡잎 단계(`drawCotyledons`) 생략. 후속 bodyStyle 훅(B·C 외형, 현재 기록만).
