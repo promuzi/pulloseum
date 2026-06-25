@@ -5,10 +5,10 @@
 ### 2026-06-25 — #1 개체 고유화: 외형 액센트 시스템 + 변이종 form/획득 게이트 + 목본 base 7 고유 스킬
 - **외형 액센트 시스템(신규):** `composePlantBody`/`composePlantSvg`에 `bodyAccent` 배선 + `ACCENT_MODULES` 레지스트리 6키(none/maw·포식/arms·무기/toxin·독성/draco·용족/enhance·일반). **변이형→액센트 자동 매핑**(`accentFromForm`)이라 같은 타입·속성이라도 변이마다 외형이 달라진다(절차적 SVG 오버레이, 손그림 0). `spriteFor`·`svgPlant`·진화모달·양육 레이어가 `form`을 전달하도록 연결. 씨앗 단계엔 액센트 없음. preview에서 6변이형 외형 전부 구별·화분 합성 무손상 검증.
 - **변이종 form 고정 + 비획득 게이트(신규):** `applyCatalogVariantFields`가 `baseVariants[0]`로 form을 **무조건 고정**(변이종은 rollForm 무시·태생 변이 확정, 포식형 predType 기본 보강). `SPECIES[].released` 필드 추가 + `pickAcquirableSpecies`가 `released` 종만 풀에 포함 → 향후 변이 개체 140종을 정의해도 획득/적봇 풀이 범람하지 않음(분포 배치는 #7 후속).
-- **목본 base 7 고유 스킬:** tree_fire/water/grass/earth/wind/bolt·frost에 성장체/성체/완숙체 고유 스킬 3개씩(`ind.<key>.g/.m/.e`, 21종) + 카탈로그 `stageSkills` 연결. (설계 #1~#7. 화초/다육/덩굴/버섯/변이는 후속 배치.)
+- **base 35 고유 스킬 완성:** 목본/화초/다육/덩굴 각 7종(28) 성장체/성체/완숙체 고유 스킬 3개씩(`ind.<key>.g/.m/.e`, 84종) + 버섯 7종(성장체 sig). 모든 base 종 카탈로그 `stageSkills` 연결(설계 #1~#28). **버섯 성체/완숙체·변이 개체 140은 후속 배치.**
 - **계획서:** [docs/superpowers/plans/2026-06-25-species-individual-concepts-implementation.md](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) — 12 Task 배치 계획 + 스킬 효과→엔진 필드 매핑 규칙.
-- **셀프테스트:** accent 매핑·변이형별 외형 차이·released 게이트·form 고정 케이스 추가. `window.__catalogSelfTest()` **0 fail**.
-- ⚠️ **보존 커밋(consolidation):** 이 커밋은 이전 세션의 미커밋 작업(위 양육 팝업 버그픽스·#1 변이 플랜4)까지 한 파일(`index.html`)에 엉켜 있어 **통째로 보존**한 것이다(OneDrive 미커밋 유실 방지). 이후 #1 콘텐츠는 타입별 개별 커밋.
+- ⚠️ **깨진 커밋 복구:** 직전 consolidation 커밋(619fc25)은 **동시 편집(OneDrive 동기화)이 화초/다육/덩굴 스킬 정의 63개를 `SPECIES_CATALOG` 안(잘못된 위치)에 넣어 게임이 로드 시 크래시**하는 상태로 박혀 있었다(커밋 전 재검증 누락). 스킬 정의를 `SKILL_LIB`로 이전 + `aqua`→카탈로그 종 승격으로 stale해진 레거시 폴백 테스트를 `grass_water`로 교체. `window.__catalogSelfTest()` **0 fail**·게임 정상 로드·외형 액센트 적용 검증.
+- ⚠️ **OneDrive 다중 세션 경고:** 저장소 경로가 OneDrive 안(`C:\Users\soosa\OneDrive\...`)이라 동기화가 작업 중 파일을 덮어쓴다. 또한 동시에 별도 세션이 #10 전투 UI(`battle-ui-redesign-design.md`)를 작업 중. **작업 시 OneDrive 일시정지·세션 간 index.html 동시 편집 금지 권장.**
 
 ### 2026-06-25 — 버그픽스: 양육 화분 상세 팝업이 화면 아래로 벗어나던 문제
 - **증상**: 식물양육 탭에서 화분(식물)을 누르면 상세 팝업이 화면을 넘어 아래로 떠 보이지 않음.
