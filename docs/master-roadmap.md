@@ -30,8 +30,11 @@
 | 7 | 탐사 시스템 재설계 | 🟢 **구현 완료**(아틀라스+종분포+폴드+행성11+**변이 140 분포**) | 분포 밸런스 튜닝(희귀도/지역 다양성) | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
+| **13** | **스킬 태그 & 태그 시너지** ⭐최우선 | 🔵 **설계 완료·구현 대기** | **1단계(토대): `skillTags`+`tagModSum`+`effectiveCost`, power·cost 효과, 카드+스킬 출처** | [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md) |
 
-상태 기호: 🔲 미착수 · 🟡 진행/설계 중 · ✅ 완료 · ❄️ 보류
+상태 기호: 🔲 미착수 · 🟡 진행/설계 중 · 🔵 설계 완료·구현 대기 · ✅ 완료 · ❄️ 보류
+
+> ⭐ **다음 최우선 작업 = #13 스킬 태그 & 태그 시너지.** 스킬에 5축 태그(분류·속성·변이형·대상·상태이상)를 붙이고 태그 겨냥 시너지(강화/할인/콤보/구성보너스)를 카드·스킬·특성으로 푼다. **진입점·전체 설계·단계 계획·통합 라인 전부** → [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md). 구현은 1→2→3단계, 각 단계 `__catalogSelfTest()` 0 fail로 끊어간다.
 
 ---
 
@@ -180,6 +183,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-25** — **(#13 스킬 태그 & 태그 시너지 — 설계 확정·구현 대기, ⭐최우선)** 스킬에 **5축 태그**(분류=기존 `skillCats` / 속성+무속성 / 변이형 / 단일·광역 / 상태이상) 부착 → 태그 겨냥 **시너지 보정**(power 강화·cost 할인·effect 배율·combo·compose 구성보너스)을 **카드(지속, `base.tagMods`)와 스킬(발동, `s.tagBuff`)** 양쪽에서 같은 풀에 합산. 핵심 통찰: 기존 2층(전투시작 고정 + 임시 버프)은 "전체 스탯"만 바꿈 → **"특정 태그만" 바꾸는 층이 신규**. 엔진 안전성 검증됨(`effStat`는 `b.stat`만 봐 `kind:'tagmod'` 버프 무시, `tickStatuses`가 자동 만료). 접근 = **전체 설계 1회 + 구현 3단계**(1 토대 power/cost+양 출처 → 2 effect/combo/compose → 3 콘텐츠/드롭풀/밸런스). 진입점·통합 라인 전부 = [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md). (#13)
 - **2026-06-25** — **(#1 개체 스킬 밸런스 1차)** ind 스킬 518종 감사([scripts/audit-skills.js](../scripts/audit-skills.js)) — 논리 오류 0, 위력 이상치는 전부 설계 의도(용족/글래스캐논 프리미엄 180~190·버섯 컨트롤 110~120). 유일 보강: 엔진 제약(자기버프 1개)으로 설계의 2버프가 1개로 깎여 빈약했던 **버프 스킬 17종에 `energyGain:1`** 추가(검증된 `spark.m` 패턴, degenerate 20→3). 위력/데미지 공식 불변. 설계상 단일버프 3종은 보존. (#1)
 - **2026-06-25** — **(#1·#7 변이 140종 탐사 분포 배치 ✅ → 획득 가능)** `released:false`로 정의만 돼 있던 변이 140종을 **지역 시그니처에 배치**해 탐사로 획득 가능하게 함. 방식 = `MUTANT_SIGNATURES`(생성기 [scripts/gen-variant-distribution.js](../scripts/gen-variant-distribution.js)) 테이블 + EXPLORE_VIEW 병합 루프(원본 미수정·멱등·중복제거). 매칭 = 지역 `el`⊇속성 & `types`⊇타입(전부 충족, 폴백 35건은 속성만), 변이형↔행성 `cardType` 선호, 부하 균형(25지역·지역당 4~9). **`released:false` 유지** — 시그니처 경로(`rollSpeciesFromView`)가 released를 우회하므로 변이는 "지역 희귀 발견"(탐사당 ~8.5%/홈 지역, 개별 ~1%)으로만 나오고 **적 봇·일반 종 풀은 불변**(변이 홍수 없음). 검증: 실제 런타임 주입 — rollSpeciesFromView 2000롤 변이 8.5%·무효 0·전 변이 출현. 워크트리 `feat/variant-dist`. (#1·#7)
 - **2026-06-25** — **(#1 버섯 = 전부 포자 고정 · 비포자 변이 폐지 + 포자 외형 액센트 ✅)** **버섯형은 비포자 변이형(일반/포식/무기/독성/용족)을 갖지 않는다 — 전부 포자(태생) 고정**(`baseVariants:['spore']`). 이전 "버섯 비포자 변이 35종" 설계 항목 **폐지**(비버섯 28종만 변이 개체 보유). 대신 **포자 외형 액센트 추가** — `ACCENT_MODULES.spore`(갓에서 피어오르는 포자 안개+떠다니는 포자 입자 5, 속성색) + `FORM_ACCENT.spore='spore'` → 버섯 포자형이 고유 외형을 가짐(씨앗 제외·성장체부터). 비버섯 변이형 외형 불변. 워크트리 `feat/spore-accent`에서 구현, 실제 렌더 파이프라인 주입 검증(spore 적용·none과 다름·비버섯 영향 0). (#1)
