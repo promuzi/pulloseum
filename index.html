@@ -9276,25 +9276,106 @@ function composePlantSvg(seedType, growth, element, opts){
     ${spark}
   </svg>`;
 }
-/* 화분 종류별 레이어(절차적 SVG, 식물과 동일 120x140 viewBox로 정렬). PNG 교체 훅=POT_SPRITE_OVERRIDES. */
+/* ASCII 그리드 → 픽셀 rect. 공백/'.'/미정의문자=투명, 그 외 문자는 pal 색으로 가로런 병합 rect 출력. */
+function pixelArt(rows, pal, cell, ox, oy){
+  let out = '';
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r];
+    let c = 0;
+    while(c < row.length){
+      const ch = row[c];
+      if(ch===' ' || ch==='.' || !pal[ch]){ c++; continue; }
+      let run = 1;
+      while(c+run < row.length && row[c+run]===ch) run++;
+      out += `<rect x="${ox+c*cell}" y="${oy+r*cell}" width="${run*cell}" height="${cell}" fill="${pal[ch]}"/>`;
+      c += run;
+    }
+  }
+  return out;
+}
+/* 등급별 픽셀 화분(나무 도트 톤). 14열×9행, cell=5, ox=25, oy=94 → 입구≈y96·바닥≈y139·중심 x=60. */
+const POT_PIXELS = {
+  pot_terra: { // 테라코타(기본) — 메인화면 빈 화분 기준
+    pal:{ T:'#c87b48', t:'#b5673a', d:'#934e29', D:'#7d3f20', r:'#cd8350' },
+    rows:[
+      "  TTTTTTTTTT  ",
+      " rrrrrrrrrrrr ",
+      "  tttttttttt  ",
+      "  Ttttttttd   ",
+      "  Ttttttttd   ",
+      "  Ttttttttd   ",
+      "   Tttttdd    ",
+      "   DDDDDDDD   ",
+      "    DDDDDD    ",
+    ],
+  },
+  pot_ceramic: { // 도자기 — 초록 유약
+    pal:{ G:'#8fe89a', g:'#5fd56a', d:'#37a347', D:'#2c7d39', r:'#aff0b6' },
+    rows:[
+      "  GGGGGGGGGG  ",
+      " rrrrrrrrrrrr ",
+      "  gggggggggg  ",
+      "  Gggggggggd  ",
+      "  Gggggggggd  ",
+      "  Gggggggggd  ",
+      "   Gggggddd   ",
+      "   DDDDDDDD   ",
+      "    DDDDDD    ",
+    ],
+  },
+  pot_glass: { // 유리 — 반투명 하늘색 + 안쪽 흙·수면
+    pal:{ L:'#bdecff', l:'#7fd4f5', w:'#4ac6ff', s:'#6b4a30', d:'#2f8fc0', D:'#1f6f99' },
+    rows:[
+      "  LLLLLLLLLL  ",
+      " LllllllllllL ",
+      "  Llllllllld  ",
+      "  Lwwwwwwwwd  ",
+      "  Lwwwwwwwwd  ",
+      "  Lssssssssd  ",
+      "   Lssssddd   ",
+      "   DDDDDDDD   ",
+      "    DDDDDD    ",
+    ],
+  },
+  pot_crystal: { // 크리스탈 — 각진 보라 결정 + 광택
+    pal:{ P:'#e0c8ff', p:'#b98cff', v:'#9b6bff', d:'#7a4ad0', D:'#5a32a0' },
+    rows:[
+      "  P P P P P   ",
+      " ppppppppppp  ",
+      "  Ppppppppvd  ",
+      "  PppppppvvD  ",
+      "  Ppppppvvvd  ",
+      "   Pppvvvvd   ",
+      "   ppvvvvD    ",
+      "    DvvvD     ",
+      "     DDD      ",
+    ],
+  },
+  pot_gold: { // 황금 — 금빛 + 왕관 테두리
+    pal:{ Y:'#ffe7a0', y:'#ffc24a', o:'#ff9a3c', d:'#d4730a', D:'#9c5208', k:'#ffd24a' },
+    rows:[
+      " k k kk k k k ",
+      " kkkkkkkkkkkk ",
+      "  YYYYYYYYYY  ",
+      "  Yyyyyyyyod  ",
+      "  Yyyyyyyyod  ",
+      "  Yyyyyyyyod  ",
+      "   Yyyyoodd   ",
+      "   DDDDDDDD   ",
+      "    DDDDDD    ",
+    ],
+  },
+};
+/* 화분 종류별 픽셀 레이어(식물과 동일 120x140 viewBox 정렬). PNG 교체 훅=POT_SPRITE_OVERRIDES. */
 function potVisual(potId, size){
   size = size || 78;
   const h = Math.round(size*140/120);
   if(POT_SPRITE_OVERRIDES[potId]){
     return `<img src="${POT_SPRITE_OVERRIDES[potId]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:block"/>`;
   }
-  const pot = POT_CATALOG[potId] || POT_CATALOG.pot_terra;
-  const c = pot.color, dark = '#232b3d';
-  const glow  = (potId==='pot_crystal'||potId==='pot_gold') ? `<rect x="36" y="96" width="48" height="40" rx="6" fill="${c}" opacity="0.12"/>` : '';
-  const facet = potId==='pot_crystal' ? `<path d="M48 108 l12 -6 l12 6 -12 22 Z" fill="${c}" opacity="0.25"/>` : '';
-  const crown = potId==='pot_gold' ? `<path d="M44 96 l4 -7 4 5 4 -7 4 7 4 -5 4 7 Z" fill="${c}"/>` : '';
-  return `<svg width="${size}" height="${h}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
-    ${glow}
-    <rect x="36" y="96" width="48" height="7" rx="3.5" fill="${c}" opacity="0.95"/>
-    <path d="M40 103 h40 l-4.5 24 a8 8 0 0 1 -8 6.5 h-15 a8 8 0 0 1 -8 -6.5 Z" fill="${dark}" stroke="${c}" stroke-width="1.4"/>
-    <rect x="46" y="110" width="28" height="3.5" rx="1.75" fill="${c}" opacity="0.6"/>
-    ${facet}${crown}
-  </svg>`;
+  const art = POT_PIXELS[potId] || POT_PIXELS.pot_terra;
+  const body = pixelArt(art.rows, art.pal, 5, 25, 94);
+  return `<svg width="${size}" height="${h}" viewBox="0 0 120 140" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }
 /* 식물/전투원 객체 → 외형 (오버라이드 우선, 없으면 자동 생성) */
 function spriteFor(obj, size){
