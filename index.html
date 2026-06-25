@@ -264,15 +264,15 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .battle-surrender:active{transform:scale(.96)}
 .battle-surrender:disabled{opacity:.42;cursor:default;}
 /* 스탠딩 무대: 적(위) · 나(아래), 가운데는 카드/판정 창 공간 */
-#battleArena{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
-  padding:calc(54px + env(safe-area-inset-top,0px)) 16px calc(58px + env(safe-area-inset-bottom,0px));z-index:2;}
+#battleArena{position:absolute;left:0;right:0;top:0;bottom:46%;display:flex;flex-direction:column;justify-content:space-between;
+  padding:calc(50px + env(safe-area-inset-top,0px)) 12px 6px;z-index:2;}
 /* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게 */
 #battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;height:42%;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(20,184,166,.05) 40%,rgba(20,184,166,.1));
   border-top:1px solid rgba(60,230,210,.12);}
-.arena-fighter{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;
+.arena-fighter{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;
   transition:transform .5s cubic-bezier(.2,.85,.3,1);z-index:2;width:100%;}
-.arena-fighter .finfo{width:min(84%,290px);background:rgba(7,12,20,.55);border:1px solid rgba(255,255,255,.08);
+.arena-fighter .finfo{width:min(52%,250px);flex:0 0 auto;background:rgba(7,12,20,.55);border:1px solid rgba(255,255,255,.08);
   border-radius:12px;padding:8px 12px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
 /* 카드/판정 단계: 두 식물이 서로 멀어지고 살짝 물러남(가운데를 카드에 양보) */
 #battleArena.spread .arena-fighter.enemy{transform:translateY(-22px) scale(.9);}
@@ -313,16 +313,17 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #battleScreen.cards-hidden #pSpriteBox{cursor:pointer;filter:drop-shadow(0 0 12px rgba(31,217,196,.28));}
 
 /* ===== 스킬 카드 페이즈 (허공에 뜬 카드 — 화면 가운데) ===== */
-#cardPhase{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
-  padding:calc(58px + env(safe-area-inset-top,0px)) 14px calc(62px + env(safe-area-inset-bottom,0px));
-  background:transparent;pointer-events:none;}
+#cardPhase{position:absolute;left:0;right:0;bottom:0;top:auto;height:46%;z-index:5;display:flex;align-items:flex-end;justify-content:center;
+  padding:6px 10px calc(8px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg,transparent,rgba(4,11,9,.5) 26%,rgba(4,11,9,.72));
+  border-top:1px solid rgba(60,230,210,.14);pointer-events:none;}
 #cardPhase.hidden{display:none !important;}
 #cardPhase.locked .cp-stack{opacity:.45;filter:grayscale(.5);pointer-events:none;}
 #cardPhase.dealing{animation:cardPhaseIn .34s cubic-bezier(.2,1.05,.4,1) both;}
 @keyframes cardPhaseIn{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 #cardPhase.closing{animation:cardPhaseOut .24s ease forwards;}
 @keyframes cardPhaseOut{to{opacity:0;transform:translateY(20px)}}
-.cp-stack{width:100%;max-width:500px;max-height:68vh;display:flex;flex-direction:column;gap:11px;
+.cp-stack{width:100%;max-width:520px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:7px;
   overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;padding:4px 1px;}
 .cp-energy{display:flex;align-items:center;justify-content:center;gap:4px;font-size:22px;
   align-self:center;padding:5px 16px;border-radius:999px;
@@ -345,7 +346,8 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .cp-hand .skillcard:nth-child(6){animation-delay:1s}
 @keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 .skillcard:active{transform:scale(.95);animation:none;}
-.skillcard:disabled{opacity:.4;filter:grayscale(.6);animation:none;}
+.skillcard:not(:disabled){box-shadow:0 5px 14px rgba(0,0,0,.5),0 0 10px -3px var(--gc,var(--neon)),0 0 0 1px rgba(255,255,255,.04) inset;}
+.skillcard:disabled{opacity:.4;filter:grayscale(.6);animation:none;box-shadow:0 3px 10px rgba(0,0,0,.4);}
 .skillcard.pred{min-height:54px;flex-direction:row;align-items:center;gap:10px;
   background:linear-gradient(100deg,rgba(60,18,46,.96),rgba(20,12,26,.96));}
 .skillcard.pred .sc-name{flex:1;}
