@@ -2,6 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #13 태그 시너지 버그픽스 2건 (코드리뷰 후속)
+- **비용 할인 미적용 버그:** `playerSkill`의 에너지 게이트가 할인가가 아닌 원가(`s.cost`)로 판정 → 과부하 대사(공격 비용 −1) 등 장착 시 카드는 사용 가능(`skillUnusable`/표시 비용은 `effectiveCost` 기준)으로 보이는데 탭하면 "에너지 부족"으로 튕기던 모순. 게이트를 `effectiveCost(B.p, s)`로 교체([index.html](../index.html) `playerSkill`).
+- **순수 독 스킬 효과 배율 누락:** 위력 0인 dot 스킬(else 분기, 예: 독 뿌리기)의 지속피해가 `effMul`을 곱하지 않아 맹독 코팅(+40%)·독소 시너지 등 중독 효과 강화가 미반영. 같은 분기 `enemyDebuff`·위력 분기 dot과 일관되게 `s.dot.pct*effMul`로 수정.
+- **검증:** `__catalogSelfTest()` **0 fail**. preview에서 두 케이스 직접 시뮬 — 할인가 게이트 통과(원가 게이트는 차단)·중독 효과 보정 0.4 반영 확인.
+
 ### 2026-06-25 — #13 스킬 태그 & 태그 시너지 3단계(콘텐츠·폴리시) ✅ = 전 단계 완료
 - **태그 카드 12종(common, 전부 `box_card_common` 드롭 등록):**
   - 속성: `card_firecore`(불 위력+20%)·`card_aquacore`(물 위력+20%)·`card_purecore`(무속성 위력+18%, `elem:none` 겨냥 → 기본·포식·무기)

@@ -11448,7 +11448,7 @@ async function applySkill(a, d, s, side, options={}){
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
     if(s.enemyDebuff){ const eb = effMul!==1 ? Object.assign({}, s.enemyDebuff, {pct:round2(s.enemyDebuff.pct*effMul)}) : s.enemyDebuff; const appliedStat=applyEnemyDebuff(d, eb); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 '+battleStatLabel(appliedStat),'deb'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(eb)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
   updateBars();
@@ -11555,7 +11555,7 @@ async function playerSkill(skillId){
   if(s.noEnergy){
     const rem = (B.p.uses && B.p.uses[skillId]!=null) ? B.p.uses[skillId] : (s.uses||0);
     if(rem <= 0){ toast('이 스킬은 더 쓸 수 없습니다 (횟수 소진)'); return; }
-  } else if(B.p.energy < (s.cost||0)){ toast('⚡에너지가 부족합니다'); return; }
+  } else if(B.p.energy < effectiveCost(B.p, s)){ toast('⚡에너지가 부족합니다'); return; } // 태그 비용 할인 반영
   B.busy = true;
   updateBattleHud();
   hide('#battleSkillDetail');
