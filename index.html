@@ -11702,11 +11702,11 @@ async function playerSkill(skillId){
   B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
-  await sleep(620);
+  await sleep(300);
   closeJudge();
   B.turn += 1;
   B.busy = false; updateBars(); updateBattleHud();
-  if(!B.over){ await sleep(380); renderBattleIdleView(); }
+  if(!B.over){ renderBattleIdleView(); } // 스킬바 즉시 재활성(턴 종료 대기 제거)
 }
 /* 항복: 재확인 후 진행 */
 function confirmSurrender(){ if(!B || B.over || B.busy) return; show('#surrenderConfirm'); try{ sfx.tap(); }catch(e){} }
