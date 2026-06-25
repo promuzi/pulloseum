@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟢 **base 35 + 변이 140 고유스킬 + 외형 액센트 + 탐사 분포 완성** | 밸런스 튜닝 (버섯 비포자 변이는 폐지=전부 포자) | [species](species-system-guide.md) · [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) |
+| 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟡 **변이 개체 정체성(아키타입 14종) 1차 — 컨셉·스탯·고유스킬 차별화 완료** | **외형(도트 PNG 후속)·고유스킬 효과 다양화·아키타입 큐레이션** (§4-1-A) | [species](species-system-guide.md) · [identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
@@ -63,6 +63,7 @@
 | **[superpowers/specs/2026-06-24-mushroom-type-design.md](superpowers/specs/2026-06-24-mushroom-type-design.md)** | 버섯 타입 설계(✅완료) — 7속성 종·클래식 독버섯 외형(bodyStyle 훅)·시그니처 6·타입별 단계명·탐사 드롭 연동 | **#1 버섯형 설계** |
 | **[superpowers/plans/2026-06-24-mushroom-type-implementation.md](superpowers/plans/2026-06-24-mushroom-type-implementation.md)** | 버섯 타입 구현 계획(Task 1~5, 완료) — 단계명·외형·종7·시그니처·탐사·문서 | **#1 버섯형 구현** |
 | **[superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)** | 변이형·변이 카드 재설계(🟢설계완료) — 6변이형 컨셉·카드 로스터, 무등급(`fixed`) 카드, `cats` 스킬 라벨, 독 스택 상한, 발광 폐지·자동교체 룰. **수치 placeholder** | **#1 변이 — 구현 계획(writing-plans)** |
+| **[superpowers/specs/2026-06-26-variant-individual-identity-design.md](superpowers/specs/2026-06-26-variant-individual-identity-design.md)** | 변이 개체 정체성(아키타입 축) 설계 — `타입×속성×form×아키타입`, ARCHETYPES 14종+OVERRIDES 편집표면, 스탯·컨셉·고유스킬 적용 3곳 | **#1-A 개체 정체성 — 1차 구현됨** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -97,6 +98,28 @@
 - [ ] 종별 스킬이 속성 스킬 풀(`ELEMENT_SKILLS`/`ELEMENT_GROWTH_SKILLS`)과 어긋나지 않는지 검토
 - [ ] 도트화(#3) 시 종별 PNG는 `SPRITE_OVERRIDES`로 교체
 - **열린 질문:** 속성당 목표 종 수? 종 고유 패시브(잠재특성 연결) 줄지?
+
+#### 1-A. 변이 개체 정체성 (아키타입 축) — 🟡 1차 구현 완료, 외형·스킬효과는 후속
+> 같은 타입+속성이라도 변이형마다 별개 개체 → **컨셉·스탯·고유스킬이 달라야 함**. form은 큰 틀(주요 스킬=변이카드)만, 진짜 차별화는 **개체 정체성**. (form 하나로 획일화 금지)
+> **모델:** `개체 = 타입 × 속성 × 변이형(form) × 아키타입(personality)`. 아키타입은 form과 독립 → 같은 무기형이라도 광폭/도사 공존.
+> **설계:** [variant-individual-identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md) · **편집 표면 2곳:** `index.html`의 `ARCHETYPES`(14종) + `ARCHETYPE_OVERRIDES`(개체별 고정·나중에 큐레이션).
+
+**✅ 구현됨 (2026-06-26):**
+- [x] **변이형(form) 필터** — 도감 상단 헤더에 🦷포식/🗡️무기/☠️독성/🐉용족/🌱일반/🍄포자/🌿기본 축, 타입·속성과 AND 조합 (`plant-codex.html`). + 도감 로딩 타임아웃 견고화.
+- [x] **아키타입 14종** (광폭·도사·교활·우직·수호·광신·냉혹·야성·책략·은둔·폭군·탐식·망령·맹장) — 각 `sm`(스탯배율)·`dot`·`nouns`(스킬명).
+- [x] **140 변이 전부 아키타입 배정** (`ARCHETYPE_OVERRIDES` 비면 `archetypeOf` 해시 분산, 14종 전부 사용).
+- [x] **스탯 차별화** — `base(타입+속성) × form배율 × 아키타입배율` (멱등 패스). base 35·legacy·버섯 제외.
+- [x] **컨셉문 차별화** — `SPECIES.desc` 주입 → 도감 자동 노출.
+- [x] **고유스킬 정체성** — `ind.<key>.g/m/e` 이름(원소어+아키타입 noun) + DoT 종류 강제(예: 광폭→출혈). **위력·구조는 기존 밸런스 유지.**
+- [x] 검증: `__catalogSelfTest()` 0 fail(신규 정체성 테스트 포함) · 도감 실측.
+
+**🔜 아직 구현 전 (다음 단계):**
+- [ ] **외형 변경** — 현재는 form 액센트 오버레이만(base 실루엣은 타입+속성 공유). 개체/변이형별 실루엣 구분은 **사용자가 도트 PNG 직접 제공 예정** → `SPRITE_OVERRIDES` 훅 연결(#3 연동).
+- [ ] **고유스킬 효과 다양화** — 현재는 이름+DoT종류만 정체성 반영, **위력/구조/부가효과는 기존 그대로**. 아키타입별 효과(예: 도사=치명 집중, 책략=디버프 포진)까지 손보는 건 후속.
+- [ ] **새 스킬 추가** — 미착수(스킬트리 새싹/유체 확장은 범위 제외 확정).
+- [ ] **버섯 정체성** — 저스탯 전용 밸런스라 스탯 보정 제외(컨셉/스킬은 기존 유지). 필요 시 별도 검토.
+- [ ] **아키타입 개체별 큐레이션** — 현재 해시 자동 분산 → 포켓몬식으로 개체마다 `ARCHETYPE_OVERRIDES`에 손맛 입히기(사용자 반복 작업).
+- [ ] 밸런스 1차→반복 튜닝(form+아키타입 배율 과/소 보정).
 
 ### 2. 식물 양육 / 열매 시스템 ⭐ 핵심
 **비전:** 전투와 분리된 **양육 루프**. 식물을 키워 **열매**를 맺고 보상(소모품·스킬·변이 카드)을 얻는 방치형 감성의 축.
@@ -239,6 +262,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-26** — **(#1-A 변이 개체 정체성 — 아키타입 축 신설 + 1차 구현)** 같은 타입+속성이라도 변이형마다 별개 개체이므로 컨셉·스탯·고유스킬을 다르게. **모델 확정:** `개체 = 타입 × 속성 × 변이형(form) × 아키타입`. form은 메커니즘 레인(주요 스킬=변이카드), **아키타입(성격, form과 독립)** 이 컨셉문·스탯보정·고유스킬 이름/DoT를 결정 → 같은 무기형이라도 광폭/도사 공존(획일화 금지). **구현:** `ARCHETYPES` 14종 + `ARCHETYPE_OVERRIDES`(편집 표면), `ALL_SKILLS` 직후 멱등 패스로 스탯(`base×form배율×아키타입배율`)·`SPECIES.desc`·`ind.*` 스킬명/DoT 리테마. 140 변이 전부 배정·`__catalogSelfTest()` 0 fail·도감 자동 반영. 더불어 **도감 변이형(form) 필터 + 로딩 타임아웃 견고화.** **범위 제외/후속:** 외형(form/개체별 실루엣=사용자 도트 PNG 후속, 현재 form 액센트만)·고유스킬 효과 다양화(현재 이름+DoT종류만)·새 스킬 추가·버섯 정체성·아키타입 개체별 큐레이션·밸런스 튜닝. 설계=[variant-individual-identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md). (#1-A)
 - **2026-06-26** — **(정리·튜닝 백로그 박제)** 코드·밸런스시트 점검에서 추린 "나중에 손볼" 자율 처리 후보(밸런스 튜닝 5·죽은 코드 청소·가방 정렬필터·문서 위생)를 **§4.5**에 박제. 신규 기능 아님, 우선순위 낮음. 착수 시 해당 항목 체크박스 갱신.
 - **2026-06-26** — **(#14 속성별 고유 성질 — 방향 신설, 개념·표 박제)** 속성이 지금은 상성 배율(1.5×/0.67×)만 다른 걸 넘어, **속성마다 시그니처 상태이상**(불=화상·물=침식(방어↓)·풀=가시/흡수·번개=감전(스턴)·대지=둔화(spd↓)·빙결=동결(spd+acc↓/스턴)·바람=교란(acc↓))을 부여해 **속성=정체성**으로 만든다. 중독은 독성 변이형 영역으로 분리. 대부분 기존 엔진(`addDot`/`enemyDebuff`/`DOT_STACK_CAP`) 재활용 가능, **신규 엔진 작업은 "스턴(1턴 행동 스킵)" 하나**. §1 표 #14·§4-14에 제안 표+열린 질문(부여 방식·스턴 확률/지속·수치·저항·UI) 박제. 확정 전 단계(코드 미변경). (#14)
 
