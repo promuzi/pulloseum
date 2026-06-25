@@ -2333,6 +2333,7 @@ body{letter-spacing:.2px;}
     <div class="rr-title" id="rrTitle"></div>
     <div class="rr-row" id="rrRow"></div>
     <div class="rr-hint" id="rrHint">상자를 눌러 여세요</div>
+    <button class="btn ghost" id="rrOpenAll" style="display:none;width:100%;margin-top:10px" onclick="rrOpenAll()">⚡ 전부 개봉</button>
     <button class="btn primary" id="rrDone" style="display:none;width:100%;margin-top:12px" onclick="closeRewardReveal()">완료</button>
   </div>
 </div>
@@ -12043,23 +12044,40 @@ function openRewardReveal(opts){
   const row=document.querySelector('#rrRow');
   if(row) row.innerHTML = items.map((it,i)=>`<div class="rr-item" data-rr="${i}" onclick="rrOpenOne(${i})">${rrContainerHtml(_rrState.kind,it)}<div class="rr-label"></div></div>`).join('');
   const hint=document.querySelector('#rrHint'); if(hint) hint.style.display='';
+  const oa=document.querySelector('#rrOpenAll'); if(oa) oa.style.display = items.length>1 ? '' : 'none'; // 2개 이상일 때만 전부 개봉 노출
   const done=document.querySelector('#rrDone'); if(done) done.style.display='none';
   show('#rewardRevealModal');
 }
-function rrOpenOne(i){
-  if(!_rrState) return;
+/* 단일 아이템을 연출 없이 즉시 개봉 처리(소리 제외) */
+function rrRevealNode(i){
   const it=_rrState.items[i];
   const node=document.querySelector(`#rrRow .rr-item[data-rr="${i}"]`);
-  if(!it || !node || node.classList.contains('opened')) return;
+  if(!it || !node || node.classList.contains('opened')) return false;
   node.classList.add('opened');
   const box=node.querySelector('.rr-box'); if(box){ box.innerHTML = it.icon||'✨'; if(it.color) box.style.setProperty('--rc', it.color); }
   const lab=node.querySelector('.rr-label'); if(lab) lab.textContent = it.label||'';
-  if(typeof sfx!=='undefined' && sfx.win) sfx.win();
   _rrState.opened++;
+  return true;
+}
+function rrSyncDone(){
   if(_rrState.opened >= _rrState.items.length){
     const hint=document.querySelector('#rrHint'); if(hint) hint.style.display='none';
+    const oa=document.querySelector('#rrOpenAll'); if(oa) oa.style.display='none';
     const done=document.querySelector('#rrDone'); if(done) done.style.display='';
   }
+}
+function rrOpenOne(i){
+  if(!_rrState) return;
+  if(rrRevealNode(i) && typeof sfx!=='undefined' && sfx.win) sfx.win();
+  rrSyncDone();
+}
+/* 전부 개봉 — 남은 상자를 한 번에 모두 개봉(피드백: 여러 개 일일이 터치 번거로움) */
+function rrOpenAll(){
+  if(!_rrState) return;
+  let any=false;
+  _rrState.items.forEach((it,i)=>{ if(rrRevealNode(i)) any=true; });
+  if(any && typeof sfx!=='undefined' && sfx.win) sfx.win();
+  rrSyncDone();
 }
 function closeRewardReveal(){ hide('#rewardRevealModal'); const cb=_rrState&&_rrState.onDone; _rrState=null; if(cb) cb(); }
 

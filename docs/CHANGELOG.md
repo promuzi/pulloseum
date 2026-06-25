@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 보상 개봉 "전부 개봉" 버튼 (#7)
+- **피드백:** "양육 열매는 한 번에 전부 열기 기능이 있으면 좋겠음. 여러개 나오면 일일이 터치 귀찮음."
+- **수정:** 공통 개봉 연출(`openRewardReveal`)에 **⚡전부 개봉** 버튼 추가 — 2개 이상일 때만 노출, 누르면 남은 상자를 한 번에 전부 개봉(소리 1회) 후 버튼 숨기고 완료 노출. 단건 개봉(`rrOpenOne`)·전부 개봉(`rrOpenAll`)이 공용 `rrRevealNode`/`rrSyncDone` 사용. 열매뿐 아니라 탐사·보급·화분 보상에도 공통 적용.
+- **검증:** preview에서 3개 reveal → 전부 개봉 노출 확인 → 클릭 시 3개 전부 opened·완료 표시·버튼 숨김. `__catalogSelfTest()` 0 fail.
+- 설계: [2026-06-26-ui-battle-polish-batch-design.md](superpowers/specs/2026-06-26-ui-battle-polish-batch-design.md) §7.
+
 ### 2026-06-26 — 탐사 궤도 연료 태그 톤다운 (#6)
 - **피드백:** "탐사의 궤도 표시가 너무 눈에 띔, 불투명도해서 글자로만." → 링은 유지, 연료 태그(⛽N/🔒N)만 흐리게.
 - **수정:** `.exmap-orbit-tag`에서 배경(`rgba(6,11,20,.86)`)·테두리·pill 패딩 제거 → 박스 없이 흐린 글자만(`color` alpha .42, 약한 text-shadow만 유지). 궤도 링(`.exmap-orbit`)은 변경 없음.
