@@ -444,6 +444,9 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 #battleSkillDetail,#surrenderConfirm{position:absolute;inset:0;z-index:14;display:flex;align-items:center;
   justify-content:center;padding:26px;background:rgba(4,8,15,.7);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
 #battleSkillDetail.hidden,#surrenderConfirm.hidden{display:none !important;}
+/* 꾹 누른 카드가 앞으로 나오며 뒤집혀 뒷면(상세)이 보이는 연출 */
+#battleSkillDetail:not(.hidden) .bsd-card{animation:cardFlipIn .34s cubic-bezier(.2,.72,.28,1) both;transform-origin:center;}
+@keyframes cardFlipIn{from{transform:perspective(820px) rotateY(84deg) scale(.74);opacity:0;}60%{opacity:1;}to{transform:perspective(820px) rotateY(0deg) scale(1);opacity:1;}}
 .bsd-card{width:min(86%,320px);border:1px solid var(--gc,var(--line));border-radius:16px;padding:16px;
   background:linear-gradient(170deg,rgba(20,30,48,.99),rgba(10,16,28,.99));box-shadow:0 18px 50px rgba(0,0,0,.6);}
 .bsd-card::before{content:'';display:block;height:4px;border-radius:4px;margin:-4px 0 12px;background:var(--gc,var(--neon));}
