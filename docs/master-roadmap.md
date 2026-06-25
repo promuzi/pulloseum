@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟡 외형 시스템 + **base 35 고유스킬 완료**, 변이 진행 중 | 버섯 성체/완숙 14 + 변이 개체 140 채우기(`ind.<key>.g/.m/.e`) | [species](species-system-guide.md) · [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) |
+| 1 | 식물 종류 확장 | 🟢 **base 35 + 변이 140 고유스킬 완성**(외형 시스템 포함) | 버섯 비포자 변이 35 · 변이 분포 배치(#7)·밸런스 튜닝 | [species](species-system-guide.md) · [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
@@ -179,6 +179,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-25** — **(#1 개체 고유화 — 버섯 성체/완숙 + 변이 140종 완성 ✅)** 설계서 풀 매트릭스를 코드 반영: ① **버섯 base 7** 성체/완숙 고유 스킬 14개(`ind.spore_*.m/.e`, 성장체 `sig.*`는 유지) → base 35 전 종이 3스킬 깊이 통일. ② **변이 140종**(비버섯 28칸 × 5변이형) 신규 카탈로그 + 고유 스킬 420개(`ind.<key>.g/.m/.e`) — 태생 변이 `baseVariants` 고정·`released:false`(획득 풀 제외, 분포는 #7 후속)·`variantSlots`. **구현 방식 = 스펙 파서 생성기**([scripts/gen-individuals.js](../scripts/gen-individuals.js))로 설계서 한국어 서술을 엔진 필드로 기계 변환(매핑 규칙 = impl plan + base 28 코드 관례: 흡혈→`drain`, 이중 selfBuff→첫개만, grade g/m/e=B/B/A·S, heal/buff는 선두 토큰 판정). 검증: `__catalogSelfTest()` 0 fail·신규 ind 스킬 518개 전부 엔진 지원 필드만(0 bad)·획득 풀 누출 0·단계별 해금 정상·form 고정·도감 라이브 자동 반영. **남은 설계 = 버섯 비포자 변이 35** + 변이 분포 배치(#7)·밸런스 튜닝. (#1)
 - **2026-06-25** — **(#10 전투 화면 UI 개편 ✅)** 포켓몬식 레이아웃 — **하단 영구 고정 스킬바**(매 턴 등장/퇴장 폐지, `refreshSkillBar`/`lockSkillBar`) + 상단 식물 대각(적 상태바좌/식물우, 나 식물좌/상태바우). 카드 앞면 3단(이름/아이콘/분류칩+비용), 꾹→뒤집기 상세. 판정=양쪽 카드 좌우 제자리+**상단만 흐림**(데미지 시 해제), 상성 한 줄만 남기고 순차 메시지 폐지. 순간형 상태 VFX `spriteFx`(독/화상/출혈/방어막·깨짐/버프·디버프). **`B.view`/`battleViewBtn`/`toggleBattleView` 폐지.** 밸런스 불변(연출만). 워크트리 `feat/battle-ui-redesign`→main FF 머지, `__catalogSelfTest()` 0 fail. 설계=[battle-ui-redesign-design](superpowers/specs/2026-06-25-battle-ui-redesign-design.md). (#10)
 - **2026-06-25** — **(#1 개체 고유화 — base 35 고유스킬 완성 + 깨진 커밋 복구 ✅)** 화초/다육/덩굴 base 21 고유 스킬(`ind.*`) 추가로 **base 35 전 종이 성장체/성체/완숙체 고유 스킬 보유**(버섯은 성장체 sig만, 성체/완숙·변이140은 후속). ⚠️ **복구:** consolidation 커밋(619fc25)이 동시편집(OneDrive)으로 스킬 63개가 `SPECIES_CATALOG`에 잘못 들어가 게임 크래시 상태였던 것 → 스킬을 `SKILL_LIB`로 이전·stale 테스트 교체로 0 fail 복구. **OneDrive 다중세션(동시에 #10 전투UI 세션) 경고 박제.** (#1)
 - **2026-06-25** — **(#1 개체 고유화 — 외형 시스템+토대+목본 base7 ✅)** 구현 착수: ① **외형 액센트 시스템** — `ACCENT_MODULES` 6키(변이형→액센트 자동, `accentFromForm`) + `composePlantBody/Svg` `bodyAccent` 배선, 손그림 0·변이형마다 외형 분기. ② **변이종 form 고정**(`baseVariants[0]` 무조건) + **`released` 비획득 게이트**(`pickAcquirableSpecies`) → 변이 140종 정의해도 풀 무범람(분포는 #7). ③ **목본 base 7 고유 스킬 21종**(`ind.<key>.g/.m/.e`, 설계 #1~#7). 스킬 효과→엔진필드 **매핑 규칙** 박제. `__catalogSelfTest()` 0 fail·preview 검증. **이 커밋은 이전 세션 미커밋(양육 팝업 픽스·변이 플랜4)까지 보존한 consolidation.** 계획서 = [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md). **다음: 화초/다육/덩굴 base 21 → 버섯 성체/완숙 → 변이 140.** (#1)

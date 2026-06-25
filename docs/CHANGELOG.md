@@ -2,6 +2,14 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #1 개체 고유화: 버섯 base 성체/완숙 + 변이 개체 140종 고유 스킬 (생성기 일괄 반영)
+- **범위:** 설계서([species-individual-concepts-design](superpowers/specs/2026-06-24-species-individual-concepts-design.md))의 **풀 매트릭스 잔여분 전부** — 버섯 base 7 성체/완숙 14스킬 + 비버섯 변이 140종(28칸 × 5변이형). `SPECIES_CATALOG`(140 신규 엔트리)·`SKILL_LIB`(434 신규 스킬)만 수정(빌더/머지/도감 라이브가 자동 흡수).
+- **버섯 base 7:** 성장체 시그니처(`sig.spore_*`)는 유지하고 성체(`ind.spore_*.m`)·완숙체(`ind.spore_*.e`)만 추가 → base 35 전 종이 성장체/성체/완숙체 3스킬 깊이로 통일.
+- **변이 140종:** (타입×속성×변이형) = 별개 카탈로그 개체. 태생 변이 고정(`baseVariants:['pred'|'weapon'|'toxic'|'dragon'|'normal']` → form 고정·외형 액센트 자동)·`released:false`(획득 풀 제외, 분포 배치는 #7 후속)·`variantSlots`(변이형 2 + normal 4, 일반형은 normal 6). 각 개체 고유 스킬 3개(`ind.<key>.g/.m/.e`).
+- **구현 방식 = 스펙 파서 생성기** [scripts/gen-individuals.js](../scripts/gen-individuals.js): 설계서 한국어 서술("위력110+흡혈35%+화상(3T)" 등)을 엔진 필드로 기계 변환. 매핑 = impl plan + **기존 base 28 코드 관례**: 흡혈 동반 공격→`kind:'drain'`, 엔진 1개 제약상 **이중 selfBuff는 첫 번째만**, grade g/m/e=B/B/A(완숙 위력170↑=S), heal·buff 공존 시 **선두 토큰**으로 주효과 판정. 충돌·앵커·구문 자동 검사.
+- **검증:** `window.__catalogSelfTest()` **0 fail**. preview: 신규 종 빌드(182종)·form 고정(`carno_oak`→pred)·`released:false` 140·단계별 고유 스킬 해금(growing→g, mature→+m, evolved→+e)·획득 풀 누출 0·**신규 ind 스킬 518개 전부 엔진 지원 필드만(0 bad)**. 도감 라이브 자동 반영.
+- **남은 설계:** 버섯 비포자 변이 35종 + 변이 분포 배치(#7)·밸런스 튜닝.
+
 ### 2026-06-25 — 전투 UI 개편: 하단 고정 스킬바 + 포켓몬식 레이아웃 + 간결 판정 연출
 - **설계/플랜:** [specs/2026-06-25-battle-ui-redesign-design.md](superpowers/specs/2026-06-25-battle-ui-redesign-design.md) · [plans/2026-06-25-battle-ui-redesign.md](superpowers/plans/2026-06-25-battle-ui-redesign.md). 워크트리 `feat/battle-ui-redesign`에서 7태스크 → main FF 머지.
 - **스킬바 상시 고정:** 매 턴 떠올랐다 사라지던 `#cardPhase` 오버레이를 **하단 영구 고정 풋바**로(상단 54% 무대 / 하단 46% 스킬바). `showCardPhase`→`refreshSkillBar`(상주 렌더+불 켜짐/꺼짐)·`lockSkillBar`(판정 중 잠금). **`battleViewBtn`(숨기기/보이기 토글)·`toggleBattleView`·`B.view` 폐지.**

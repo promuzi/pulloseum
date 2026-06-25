@@ -73,7 +73,7 @@ tree_fire: { rarity:'common', stageSkills:{
   growing:['ind.tree_fire.g'], mature:['ind.tree_fire.m'], evolved:['ind.tree_fire.e'] } },
 ```
 
-> **⚠️ 구현 현황(2026-06-25):** **Task 1(외형)·Task 2(form/게이트)·Task 3(목본 base 7) = 완료.** 변이종 스킬 ID도 `ind.<key>.g/.m/.e`로 통일. 남은 시작점 = **Task 4(화초 base 7, 설계 #8~#14)**.
+> **⚠️ 구현 현황(2026-06-25):** **Task 1~12 전부 완료.** Task 1(외형)·2(form/게이트)·3~6(비버섯 base 28)·7(버섯 성체/완숙 14)·8~11(변이 140종)·12(마감). Task 7~12는 스펙 파서 생성기([scripts/gen-individuals.js](../../../scripts/gen-individuals.js))로 일괄 반영 — 설계서 한국어 서술을 매핑 규칙(아래)으로 기계 변환, `__catalogSelfTest()` 0 fail·신규 ind 스킬 518개 0 bad 검증. 스킬 ID = `ind.<key>.g/.m/.e`. **남은 설계 = 버섯 비포자 변이 35**(설계 미완) + 변이 분포 배치(#7). 재반영 필요 시 `node scripts/gen-individuals.js`.
 
 ---
 
