@@ -333,11 +333,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
 .cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .cp-pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
-.skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:13px;text-align:left;
+.skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:12px;text-align:center;
   background:linear-gradient(160deg,rgba(22,32,48,.96),rgba(12,18,30,.96));color:var(--text);
-  padding:9px 9px 8px;min-height:74px;display:flex;flex-direction:column;gap:3px;
-  box-shadow:0 6px 18px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset;
-  animation:cardFloat 3.4s ease-in-out infinite;transition:transform .12s;}
+  padding:6px 6px 5px;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;
+  box-shadow:0 6px 18px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset;transition:transform .12s;}
 .skillcard::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;border-radius:13px 13px 0 0;background:var(--gc,var(--neon));opacity:.9;}
 .cp-hand .skillcard:nth-child(2){animation-delay:.4s}
 .cp-hand .skillcard:nth-child(3){animation-delay:.8s}
@@ -348,15 +347,14 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .skillcard:active{transform:scale(.95);animation:none;}
 .skillcard:not(:disabled){box-shadow:0 5px 14px rgba(0,0,0,.5),0 0 10px -3px var(--gc,var(--neon)),0 0 0 1px rgba(255,255,255,.04) inset;}
 .skillcard:disabled{opacity:.4;filter:grayscale(.6);animation:none;box-shadow:0 3px 10px rgba(0,0,0,.4);}
-.skillcard.pred{min-height:54px;flex-direction:row;align-items:center;gap:10px;
-  background:linear-gradient(100deg,rgba(60,18,46,.96),rgba(20,12,26,.96));}
-.skillcard.pred .sc-name{flex:1;}
-.sc-top{display:flex;align-items:center;gap:5px;}
-.sc-name{font-weight:800;font-size:clamp(11px,3.2vw,13.5px);line-height:1.2;flex:1;min-width:0;color:var(--gc,var(--text));
-  word-break:keep-all;overflow-wrap:normal;line-break:strict;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.sc-cost{flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--neon);}
+.skillcard.pred{background:linear-gradient(160deg,rgba(60,18,46,.96),rgba(20,12,26,.96));}
+.sc-name{font-weight:800;font-size:clamp(9.5px,2.7vw,12px);line-height:1.1;width:100%;color:var(--gc,var(--text));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
+.sc-icon{font-size:clamp(18px,5vw,24px);line-height:1;flex:1 1 auto;display:flex;align-items:center;justify-content:center;}
+.sc-foot{display:flex;align-items:center;justify-content:space-between;gap:4px;width:100%;}
+.sc-chips{display:flex;flex-wrap:wrap;gap:2px;align-items:center;min-width:0;overflow:hidden;}
+.sc-cost{flex:0 0 auto;font-size:10.5px;font-weight:800;color:var(--neon);white-space:nowrap;}
 .sc-cost.use{color:#ffd34a;}
-.sc-desc{font-size:10.5px;color:var(--sub);line-height:1.3;margin-top:auto;}
 /* ===== 간결한 행동 판정: 양쪽 카드 · 행동 순서 · 결과 한 줄 ===== */
 #judgeWindow{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);z-index:6;pointer-events:none;}
 #judgeWindow.hidden{display:none !important;}
@@ -10304,16 +10302,25 @@ function skillUnusable(unit, id){
   return unit.energy < (s.cost||0);
 }
 function isPriorityDefenseSkill(s){ return !!(s && s.guardMult != null); }
-/* 카드 1장 HTML — 등급은 텍스트 대신 카드 색으로만 표시한다. */
+/* 카드 하단 분류 칩 — cats(공격/방어/버프/디버프/회복) + 속성(elem) + 독계열(dot/infuse). 그림(아이콘)으로만. */
+function battleCardFootChips(s){
+  if(!s) return '';
+  let chips = '';
+  (skillCats(s)||[]).forEach(c=>{ const m=CAT_META[c]; if(m) chips += `<span class="cat-chip" style="--cc:${m.color}" title="${m.name}">${m.icon}</span>`; });
+  if(s.elem){ const el = ELEMENTS[(B && B.p && B.p.element)]; if(el) chips += `<span class="cat-chip" style="--cc:${el.color}" title="${el.name} 속성">${el.icon}</span>`; }
+  const dk = (s.dot && s.dot.kind) || (s.infuse && s.infuse.kind);
+  if(dk){ chips += `<span class="cat-chip" style="--cc:#b06bff" title="${dotName(dk)}">${dotIcon(dk)}</span>`; }
+  return `<span class="sc-chips">${chips}</span>`;
+}
+/* 카드 1장 HTML — 3단: 이름(상)/아이콘(중)/분류칩+비용(하). 상세 계수는 꾹→뒤집기. */
 function skillCardHtml(id, pred){
-  const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0, desc:'' };
-  const g = battleSkillGrade(B.p, id), col = gradeColor(g);
-  const cost = s.noEnergy ? `<span class="sc-cost use">🔁${(B.p.uses && B.p.uses[id]!=null)?B.p.uses[id]:(s.uses||0)}</span>`
-                          : `<span class="sc-cost">${(s.cost||0)>0?'⚡'+s.cost:'무료'}</span>`;
+  const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0 };
+  const col = gradeColor(battleSkillGrade(B.p, id));
   const dis = skillUnusable(B.p, id) ? ' disabled' : '';
-  return `<button class="skillcard${pred?' pred':''}${dis?' '+dis.trim():''}" style="--gc:${col}" data-skill="${id}"${dis}>
-    <div class="sc-top"><span class="sc-name">${s.icon||''} ${displaySkillName(s.name)}</span>${cost}</div>
-    <div class="sc-desc">${skillCoefLabel(s) || (s.desc||'').slice(0,26)}</div>
+  return `<button class="skillcard${pred?' pred':''}${dis}" style="--gc:${col}" data-skill="${id}"${dis}>
+    <div class="sc-name">${displaySkillName(s.name)}</div>
+    <div class="sc-icon">${s.icon||'❔'}</div>
+    <div class="sc-foot">${battleCardFootChips(s)}<span class="sc-cost${s.noEnergy?' use':''}">${moveCostLabel(s, B.p)}</span></div>
   </button>`;
 }
 /* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
