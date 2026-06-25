@@ -368,6 +368,10 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
 .skillcard:not(:disabled){box-shadow:0 5px 14px rgba(0,0,0,.5),0 0 10px -3px var(--gc,var(--neon)),0 0 0 1px rgba(255,255,255,.04) inset;}
 .skillcard:disabled{opacity:.4;filter:grayscale(.6);animation:none;box-shadow:0 3px 10px rgba(0,0,0,.4);}
 .skillcard.pred{background:linear-gradient(160deg,rgba(60,18,46,.96),rgba(20,12,26,.96));}
+.skillcard.boosted{box-shadow:0 5px 14px rgba(0,0,0,.5),0 0 16px -2px #ffd34a,0 0 0 1px rgba(255,211,74,.55) inset;}
+.skillcard.boosted::before{background:linear-gradient(90deg,#ffd34a,var(--gc,var(--neon)));opacity:1;}
+.sc-boost{position:absolute;top:-7px;right:-5px;font-size:12px;line-height:1;z-index:3;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));animation:boostPulse 1.4s ease-in-out infinite;}
+@keyframes boostPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 .sc-name{font-weight:800;font-size:clamp(9.5px,2.7vw,12px);line-height:1.1;width:100%;color:var(--gc,var(--text));
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
 .sc-icon{font-size:clamp(18px,5vw,24px);line-height:1;flex:1 1 auto;display:flex;align-items:center;justify-content:center;}
@@ -3872,6 +3876,14 @@ const SHOP_SUPPLY_BOXES = [
       { type:'card', card_id:'card_overclock',    min:1, max:1, chance:6 },
       { type:'card', card_id:'card_toxinsyn',     min:1, max:1, chance:6 },
       { type:'card', card_id:'card_counterflow',  min:1, max:1, chance:6 },
+      { type:'card', card_id:'card_aquacore',     min:1, max:1, chance:7 },
+      { type:'card', card_id:'card_purecore',     min:1, max:1, chance:7 },
+      { type:'card', card_id:'card_weaponmod',    min:1, max:1, chance:6 },
+      { type:'card', card_id:'card_venomcoat',    min:1, max:1, chance:6 },
+      { type:'card', card_id:'card_blastwave',    min:1, max:1, chance:6 },
+      { type:'card', card_id:'card_focuslens',    min:1, max:1, chance:6 },
+      { type:'card', card_id:'card_warhost',      min:1, max:1, chance:5 },
+      { type:'card', card_id:'card_emberchain',   min:1, max:1, chance:5 },
     ],
   },
   {
@@ -4968,10 +4980,10 @@ const FORM_SKILLS = {
 const CARD_SKILLS = {
   skill_card_predation:{ name:'포식', icon:'🦷', cost:2, kind:'attack', cats:['attack'], power:90, pred:true, variant:'pred', desc:'포식형 기본 스킬 · 위력90 · 무속성 (DNA 카드로 흡혈·강탈 강화)', tag:'포식' },
   // 무기 변이형 스킬: 에너지를 소모하지 않고, 한 경기당 사용 횟수(uses)가 정해진다. 등급이 높을수록 위력·횟수↑
-  skill_card_sword:  { name:'검 베기',   icon:'⚔️', cost:0, noEnergy:true, uses:4, kind:'attack', power:160, critBonus:0.15, desc:'위력160 + 치명타 15% · 에너지 무소모', tag:'무기' },
-  skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:0, noEnergy:true, uses:4, kind:'guard',  guardMult:0.32, counterPct:0.35, desc:'피해 68%↓ + 가시 반격 · 에너지 무소모', tag:'무기' },
-  skill_card_axe:    { name:'내려찍기', icon:'🪓', cost:0, noEnergy:true, uses:3, kind:'attack', power:215, pierce:0.5, desc:'위력215 · 방어 50% 무시 · 에너지 무소모', tag:'무기' },
-  skill_card_gun:    { name:'총 쏘기',   icon:'🔫', cost:0, noEnergy:true, uses:4, kind:'attack', power:150, pierce:0.6, desc:'위력150 · 방어 60% 무시 · 에너지 무소모', tag:'무기' },
+  skill_card_sword:  { name:'검 베기',   icon:'⚔️', cost:0, noEnergy:true, uses:4, kind:'attack', variant:'weapon', power:160, critBonus:0.15, desc:'위력160 + 치명타 15% · 에너지 무소모', tag:'무기' },
+  skill_card_shield: { name:'방패 방어', icon:'🛡️', cost:0, noEnergy:true, uses:4, kind:'guard',  variant:'weapon', guardMult:0.32, counterPct:0.35, desc:'피해 68%↓ + 가시 반격 · 에너지 무소모', tag:'무기' },
+  skill_card_axe:    { name:'내려찍기', icon:'🪓', cost:0, noEnergy:true, uses:3, kind:'attack', variant:'weapon', power:215, pierce:0.5, desc:'위력215 · 방어 50% 무시 · 에너지 무소모', tag:'무기' },
+  skill_card_gun:    { name:'총 쏘기',   icon:'🔫', cost:0, noEnergy:true, uses:4, kind:'attack', variant:'weapon', power:150, pierce:0.6, desc:'위력150 · 방어 60% 무시 · 에너지 무소모', tag:'무기' },
   skill_card_infuse: { name:'독 묻히기', icon:'☠️', cost:1, kind:'buff', cats:['buff','debuff'], variant:'toxic', infuse:{kind:'poison', pct:0.07, turns:3}, desc:'3턴간 공격마다 독을 묻힌다', tag:'독성' },
   skill_card_spray:  { name:'독 뿌리기', icon:'🌿', cost:3, kind:'debuff', cats:['debuff'], variant:'toxic', dot:{kind:'poison', pct:0.09, turns:3}, dotTimes:2, desc:'중독 2겹 즉발', tag:'독성' },
   skill_card_scale:  { name:'비늘 강화', icon:'🛡️', cost:1, kind:'guard', cats:['guard','buff'], variant:'dragon', guardMult:0.5, scaleStack:{defPct:0.12, cap:5}, desc:'피해 50%↓ + 비늘 누적(방어 영구 12%↑·최대 5겹)', tag:'용족' },
@@ -5039,6 +5051,14 @@ const TRAIT_CARDS = {
   card_overclock:{ id:'card_overclock',type:'common', name:'과부하 대사', icon:'⚙️', fixed:true, base:{tagMods:[{tag:'cat:attack',type:'cost',value:-1}]}, subPool:[] },
   card_toxinsyn: { id:'card_toxinsyn', type:'common', name:'독소 시너지', icon:'🧫', base:{compose:[{ifTag:'cat:debuff',count:2,grant:{tag:'dot:poison',type:'effect',value:0.50}}]}, subPool:['enemydef','atk','crit','hp'] }, // 디버프 스킬 2개↑ → 중독 효과 +50%
   card_counterflow:{ id:'card_counterflow',type:'common', name:'역류 반격', icon:'🔁', fixed:true, base:{combo:{fromTag:'cat:guard',toTag:'cat:attack',type:'power',value:0.30}}, subPool:[] }, // 방어 후 다음 공격 위력 +30%
+  card_aquacore: { id:'card_aquacore', type:'common', name:'심층 수핵',   icon:'💧', base:{tagMods:[{tag:'elem:water',type:'power',value:0.20}]}, subPool:['atk','crit','life','hp'] }, // 물 속성 위력↑
+  card_purecore: { id:'card_purecore', type:'common', name:'무형 핵',     icon:'🌫️', base:{tagMods:[{tag:'elem:none',type:'power',value:0.18}]}, subPool:['atk','crit','enemydef','hp'] }, // 무속성 스킬(기본·포식·무기 등)↑
+  card_weaponmod:{ id:'card_weaponmod',type:'common', name:'무장 강화',   icon:'🗜️', base:{tagMods:[{tag:'var:weapon',type:'power',value:0.22}]}, subPool:['atk','crit','enemydef','spd'] }, // 무기 변이 스킬↑
+  card_venomcoat:{ id:'card_venomcoat',type:'common', name:'맹독 코팅',   icon:'🧪', base:{tagMods:[{tag:'dot:poison',type:'effect',value:0.40}]}, subPool:['enemydef','atk','crit','hp'] }, // 중독 피해↑
+  card_blastwave:{ id:'card_blastwave',type:'common', name:'폭심 확산',   icon:'💥', base:{tagMods:[{tag:'tgt:aoe',type:'power',value:0.25}]}, subPool:['atk','crit','hp','enemydef'] }, // 광역 스킬↑
+  card_focuslens:{ id:'card_focuslens',type:'common', name:'집속 렌즈',   icon:'🔬', base:{tagMods:[{tag:'tgt:single',type:'power',value:0.20}]}, subPool:['crit','atk','spd','enemydef'] }, // 단일 스킬↑
+  card_warhost:  { id:'card_warhost',  type:'common', name:'전투 편성',   icon:'⚔️', base:{compose:[{ifTag:'cat:attack',count:3,grant:{tag:'cat:attack',type:'power',value:0.15}}]}, subPool:['atk','crit','spd','hp'] }, // 공격 스킬 3개↑ 편성 시 모든 공격↑
+  card_emberchain:{ id:'card_emberchain',type:'common', name:'불씨 연쇄', icon:'🎇', fixed:true, base:{combo:{fromTag:'elem:fire',toTag:'elem:fire',type:'power',value:0.35}}, subPool:[] }, // 불 스킬 후 다음 불 스킬↑
   // DNA — 포식형
   card_sap:          { id:'card_sap',          type:'dna', name:'진액 흡수',         icon:'🩸', base:{predBoost:{lifesteal:0.40}}, subPool:['life','atk','crit','hp'] },
   card_chloroabsorb: { id:'card_chloroabsorb', type:'dna', name:'엽록체 흡수',       icon:'🔋', base:{predBoost:{energySteal:1}}, subPool:['energy','atk','spd','crit'] },
@@ -11034,12 +11054,35 @@ function battleCardFootChips(s){
   return `<span class="sc-chips">${chips}</span>`;
 }
 /* 카드 1장 HTML — 3단: 이름(상)/아이콘(중)/분류칩+비용(하). 상세 계수는 꾹→뒤집기. */
+/* 태그 시너지 활성 보정 — 이 스킬에 지금 켜진 보정(위력/효과/할인/콤보)이 있으면 배지 상태 반환 */
+function skillTagBoostState(unit, s){
+  if(!unit || !s) return null;
+  const pow = tagModSum(unit, s, 'power');
+  const eff = tagModSum(unit, s, 'effect');
+  const disc = !s.noEnergy && effectiveCost(unit, s) < (s.cost||0);
+  const tags = skillTags(s, unit);
+  const combo = !!(unit.comboPrimed && unit.comboPrimed.toTag && tags.has(unit.comboPrimed.toTag));
+  if(!(pow>0 || eff>0 || disc || combo)) return null;
+  let icon='🔺', cls='pow';
+  if(combo){ icon='🔗'; cls='combo'; }
+  else if(disc && !(pow>0||eff>0)){ icon='⚡'; cls='disc'; }
+  const parts=[];
+  if(pow>0) parts.push('위력 +'+Math.round(pow*100)+'%');
+  if(eff>0) parts.push('효과 +'+Math.round(eff*100)+'%');
+  if(disc) parts.push('비용 할인');
+  if(combo) parts.push('콤보 점화'+(unit.comboPrimed.type==='power'?' 위력↑':' 효과↑'));
+  return { icon, cls, title:parts.join(' · ') };
+}
 function skillCardHtml(id, pred){
   const s = skillById(id, B.p) || { name:id, icon:'❔', cost:0 };
   const col = gradeColor(battleSkillGrade(B.p, id));
   const dis = skillUnusable(B.p, id) ? ' disabled' : '';
   const catChips = (skillCats(s)||[]).map(c=>{ const m=CAT_META[c]; return m?`<span class="cat-chip" style="--cc:${m.color}" title="${m.name}">${m.icon}</span>`:''; }).join('');
-  return `<button class="skillcard${pred?' pred':''}${dis}" style="--gc:${col}" data-skill="${id}"${dis}>
+  const boost = skillTagBoostState(B.p, s);
+  const boostCls = boost ? ' boosted' : '';
+  const boostBadge = boost ? `<span class="sc-boost ${boost.cls}" title="${boost.title}">${boost.icon}</span>` : '';
+  return `<button class="skillcard${pred?' pred':''}${boostCls}${dis}" style="--gc:${col}" data-skill="${id}"${dis}>
+    ${boostBadge}
     <div class="sc-name">${displaySkillName(s.name)}</div>
     <div class="sc-icon">${s.icon||'❔'}</div>
     <div class="sc-foot"><span class="sc-chips">${catChips}</span><span class="sc-cost${s.noEnergy?' use':''}">${moveCostLabel(s, B.p)}</span></div>
@@ -13087,6 +13130,62 @@ window.__test('tag2: combo prime→consume yields power boost (로직 시뮬)', 
   const boost = consume(u, skillById('skill_basic_strike',u)); // 공격 → 소비
   __eq(boost, 0.30, '다음 공격 위력 +30% 적용');
   __ok(!u.comboPrimed, '소비 후 점화 해제');
+});
+/* ===== 태그 시너지 3단계 셀프테스트 (콘텐츠 · 무기 태그 · 활성 보정 UI) ===== */
+window.__test('tag3: weapon skills carry var:weapon', function(){
+  ['skill_card_sword','skill_card_shield','skill_card_axe','skill_card_gun'].forEach(id=>{
+    __eq(ALL_SKILLS[id].variant, 'weapon', id+' variant');
+  });
+});
+window.__test('tag3: 무장 강화 boosts weapon skills only', function(){
+  const u = makeCombatant({ name:'t', element:'fire', form:'weapon',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5},
+    cards:[cardKeyOf('card_sword','C'), cardKeyOf('card_weaponmod','C')], loadout:['skill_basic_strike'] });
+  __ok(tagModSum(u, ALL_SKILLS['skill_card_sword'], 'power') > 0, '검 베기(var:weapon) 위력 보정');
+  __eq(tagModSum(u, ALL_SKILLS['skill_basic_strike'], 'power'), 0, '비무기 스킬 불변');
+});
+window.__test('tag3: 무형 핵 targets elem:none (basic), not elemental', function(){
+  const u = makeCombatant({ name:'t', element:'fire', form:'normal',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5},
+    cards:[cardKeyOf('card_purecore','C')], loadout:['skill_basic_strike','skill_card_breath'] });
+  __ok(tagModSum(u, ALL_SKILLS['skill_basic_strike'], 'power') > 0, '무속성 기본공격 보정');
+  __eq(tagModSum(u, ALL_SKILLS['skill_card_breath'], 'power'), 0, '불 브레스(elem:fire)는 불변');
+});
+window.__test('tag3: 맹독 코팅 boosts poison effect directly', function(){
+  const u = makeCombatant({ name:'t', element:'grass', form:'normal',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5},
+    cards:[cardKeyOf('card_venomcoat','C')], loadout:['skill_card_spray'] });
+  __ok(tagModSum(u, ALL_SKILLS['skill_card_spray'], 'effect') > 0, '독 스킬 effect 보정');
+});
+window.__test('tag3: 폭심 확산/집속 렌즈 target aoe vs single', function(){
+  const aoe = makeCombatant({ name:'t', element:'grass', form:'normal',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5},
+    cards:[cardKeyOf('card_blastwave','C')], loadout:['mushroom.spore_burst','skill_card_breath'] });
+  __ok(tagModSum(aoe, ALL_SKILLS['mushroom.spore_burst'], 'power') > 0, '광역 스킬 보정');
+  __eq(tagModSum(aoe, ALL_SKILLS['skill_card_breath'], 'power'), 0, '단일 스킬 불변(폭심)');
+});
+window.__test('tag3: 전투 편성(compose) grants when 3+ attack skills', function(){
+  const hit = makeCombatant({ name:'t', element:'fire', form:'normal',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5}, cards:[cardKeyOf('card_warhost','C')],
+    loadout:['skill_basic_strike','skill_card_breath','skill_card_acid'] }); // 모두 cat:attack
+  __ok((hit.tagMods||[]).some(m=>m.tag==='cat:attack'&&m.type==='power'), '공격 3개 → 편성 보너스');
+  const miss = makeCombatant({ name:'t', element:'fire', form:'normal',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5}, cards:[cardKeyOf('card_warhost','C')],
+    loadout:['skill_basic_strike','skill_guard'] }); // 공격 1개
+  __eq((miss.tagMods||[]).filter(m=>m.tag==='cat:attack').length, 0, '공격 2개 미만 → 미부여');
+});
+window.__test('tag3: 불씨 연쇄 combo chains fire→fire', function(){
+  const E = cardEffects([cardKeyOf('card_emberchain','C')]);
+  __eq(E.combo.length, 1, 'emberchain combo 수집');
+  __eq(E.combo[0].fromTag, 'elem:fire', 'fromTag elem:fire');
+  __eq(E.combo[0].toTag, 'elem:fire', 'toTag elem:fire');
+});
+window.__test('tag3: skillTagBoostState flags active boost', function(){
+  const u = makeCombatant({ name:'t', element:'fire', form:'normal',
+    baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,energy:5},
+    cards:[cardKeyOf('card_firecore','C')], loadout:['skill_card_breath','skill_basic_strike'] });
+  __ok(skillTagBoostState(u, ALL_SKILLS['skill_card_breath']), '불 브레스 → 보정 활성(배지)');
+  __ok(!skillTagBoostState(u, ALL_SKILLS['skill_basic_strike']), '비속성 기본 → 보정 없음');
 });
 </script>
 </body>

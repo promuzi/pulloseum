@@ -2,6 +2,18 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-25 — #13 스킬 태그 & 태그 시너지 3단계(콘텐츠·폴리시) ✅ = 전 단계 완료
+- **태그 카드 12종(common, 전부 `box_card_common` 드롭 등록):**
+  - 속성: `card_firecore`(불 위력+20%)·`card_aquacore`(물 위력+20%)·`card_purecore`(무속성 위력+18%, `elem:none` 겨냥 → 기본·포식·무기)
+  - 변이형: `card_weaponmod`(무기 스킬 위력+22%, `var:weapon`) — 무기 스킬 4종(`skill_card_sword/shield/axe/gun`)에 `variant:'weapon'` 부여
+  - 상태이상: `card_venomcoat`(중독 효과+40%, `dot:poison`)·`card_toxinsyn`(compose: 디버프 2개↑→중독+50%)
+  - 대상: `card_blastwave`(광역 위력+25%)·`card_focuslens`(단일 위력+20%)
+  - 분류/콤보: `card_overclock`(공격 비용−1)·`card_warhost`(compose: 공격 3개↑→모든 공격+15%)·`card_counterflow`(combo: 방어→다음 공격+30%)·`card_emberchain`(combo: 불→다음 불+35%)
+  - 발동 스킬: `tag.flame_exalt`(불꽃 고양 — 3턴 불 위력+30%)
+- **활성 보정 표시 UI:** `skillTagBoostState(unit,s)` → 하단 스킬 카드에 `.boosted` 글로우 + `.sc-boost` 배지(🔺 위력/효과 · ⚡ 비용 할인 · 🔗 콤보 점화, title에 수치). `skillCardHtml`에서 매 렌더 평가.
+- **밸런스 1차:** power +18~25% · effect +40~50% · cost −1 · compose 조건부 +15%. 등급 m 스케일(`fixed` 카드는 평탄). 봇은 시너지 카드 미부여(플레이어 중심, 추후 선택).
+- **검증:** 셀프테스트 8종 추가 → `__catalogSelfTest()` **0 fail / 92**(기존 "공통 상자가 모든 공통 카드 드롭" 테스트가 12종 드롭 등록 자동 확인). preview 실전투: 화염핵+폭심 확산 장착 → `skill_card_breath`(불) 🔺위력+20%·`spore_burst`(광역) 🔺위력+25% 배지 렌더, 기본 스킬 무배지 확인.
+
 ### 2026-06-25 — #13 스킬 태그 & 태그 시너지 2단계(효과 완성) ✅
 - **effect (부가효과 배율):** `applySkill` 상단에서 `effMul = 1 + tagModSum(a,s,'effect') + comboEff` 산출 → `heal`·`selfBuff`·`dot`·`enemyDebuff`(scaled copy)·`infuse`·`energyGain` 수치에 곱. 보정 없으면 `effMul=1`(불변).
 - **combo (점화/소비):** `applySkill` 상단(코스트 차감 직후)에서 처리 — 직전 점화(`a.comboPrimed`)가 이번 스킬 `toTag`를 겨냥하면 `comboPow`/`comboEff`로 이번 행동에 적용 후 1회 소비, 이어서 이번 스킬이 규칙 `fromTag`를 충족하면 다음 행동용 재점화. 규칙 출처 = 카드 `base.combo` + 스킬 `s.combo`(`unit.comboRules`). early-return(miss) 앞에 배치해 안전.

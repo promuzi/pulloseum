@@ -1,6 +1,6 @@
 # 스킬 태그 & 태그 시너지 시스템 설계 (2026-06-25)
 
-> 상태: **1·2단계 구현 완료(2026-06-25, 브랜치 `feat/skill-tag-synergy`)** · 3단계(콘텐츠·드롭풀·태그 pill UI·밸런스) 대기. 다른 기기에서 이 문서를 진입점으로 이어서 구현.
+> 상태: **전 단계(1·2·3) 구현 완료(2026-06-25, 브랜치 `feat/skill-tag-synergy`).** `__catalogSelfTest()` 0 fail/92 + preview 실전투 검증. 향후 = 봇 시너지 부여(선택)·태그 도감 필터 등 §8 YAGNI 항목.
 > 브레인스토밍 합의(2026-06-25). 접근 = **A: 전체 아키텍처를 한 번에 설계 + 구현은 3단계로 분할**(단일 `index.html`·테스트러너 없는 환경의 회귀 위험 분산).
 > ⚠️ 이 문서는 **구현 시 단일 진실(SSOT)**. 코드와 어긋나면 코드를 고치거나 이 문서를 갱신해 항상 일치시킬 것. 함수명·필드명·통합 라인은 실제 코드(2026-06-25 기준 `index.html`)에서 검증됨.
 
@@ -161,10 +161,11 @@ function effectiveCost(unit, s){
 - ✅ `aiPickSkill` 사용가능 필터를 `effectiveCost`로 교체(할인 스킬 사용 판정 일치).
 - 구현 메모: `cardInstanceEffects`/`cardEffects`에 `compose[]`·`combo[]` 수집(grant.value·combo.value 등급 m 스케일). 콤보 점화/소비는 `applySkill` 상단(코스트 차감 직후)에서 처리해 early-return(miss)에도 안전. 예시 카드 `card_toxinsyn`(compose: debuff 2개↑→중독 효과 +50%)·`card_counterflow`(combo: 방어→다음 공격 +30%, fixed). 셀프테스트 5종 추가, **0 fail/84**. preview 실전투에서 점화·소비·데미지 부스트 확인.
 
-### 🎴 3단계 — 콘텐츠 & 폴리시(열린 작업)
-- 태그 축별 실제 카드/스킬(불 강화·무기 강화·무속성 강화·중독 특화 등) + **보급상자 드롭 풀(`box_card_*`) 등록**(⚠️ 정의만으론 획득 불가 — CLAUDE.md 규약).
-- 뒷장 태그 pill·활성 보정 표시 UI.
-- 밸런스 튜닝.
+### 🎴 3단계 — 콘텐츠 & 폴리시 ✅ **완료(2026-06-25)**
+- ✅ 태그 축별 카드 12종(common, 전부 `box_card_common` 드롭 등록): elem(화염핵·심층 수핵·무형 핵=elem:none)·var(무장 강화=var:weapon, 무기 스킬 4종에 `variant:'weapon'` 추가)·dot(맹독 코팅=dot:poison effect·독소 시너지=compose)·tgt(폭심 확산=aoe·집속 렌즈=single)·cat(과부하 대사=attack cost·전투 편성=compose attack×3·역류 반격=guard→attack combo·불씨 연쇄=fire→fire combo) + 발동 스킬 1(불꽃 고양).
+- ✅ 활성 보정 표시 UI: `skillTagBoostState(unit,s)` → 하단 스킬 카드에 `.boosted` 글로우 + `.sc-boost` 배지(🔺 위력/효과·⚡ 할인·🔗 콤보, title에 수치). 뒷장 태그 pill(변이형·대상)은 1단계에서 완료.
+- ✅ 밸런스 1차: power +18~25%·effect +40~50%·cost −1·compose 조건부 +15%. 등급 m 스케일(fixed는 평탄). 봇 시너지는 미부여(플레이어 중심, 추후 선택).
+- 셀프테스트 8종 추가(총 92, 0 fail) · preview 실전투에서 tagMods 주입·보정 배지 렌더 확인.
 
 각 단계 종료 시 `__catalogSelfTest()` **0 fail** + preview 검증. 단계 경계에서 멈춰도 게임은 안 깨짐.
 
