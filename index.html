@@ -5270,6 +5270,79 @@ function gradeBadgeHtml(grade){ const g = cardGradeMeta(grade); return `<span cl
 const GRADE_PALETTE = { D:'#e8edf3', C:'#5fe06b', B:'#4ac6ff', A:'#b06bff', S:'#ff9a3c' };
 function gradeColor(g){ return GRADE_PALETTE[g] || GRADE_PALETTE.C; }
 const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB, STAGE_SKILLS);
+/* ===== 변이 개체 정체성(아키타입 축) — 설계: docs/.../2026-06-26-variant-individual-identity-design.md =====
+   개체 = 타입 × 속성 × 변이형(form) × 아키타입(personality).
+   form은 메커니즘 레인(주요 스킬=변이카드), 아키타입은 성격 → 컨셉문·스탯 보정·고유스킬 이름/DoT 결정.
+   ★ 개성은 ARCHETYPES + ARCHETYPE_OVERRIDES 두 데이터에 모임 → 여기만 고치면 됨(나중에 큐레이션). */
+const ARCHETYPES = {
+  // sm = 스탯 배율(누락=1.0), dot = 고유스킬 DoT 강제(있으면), nouns = 고유스킬 이름(성장체/성체/완숙체)
+  berserk:     { name:'광폭', tone:'닥치는 대로 물어뜯는 광포한 본성',     sm:{atk:1.16,def:0.86,spd:1.04}, dot:'bleed',  nouns:{g:'물어뜯기',  m:'난폭한 송곳니',  e:'피의 광란'} },
+  sage:        { name:'도사', tone:'기를 모아 단숨에 베는 달관한 무인',     sm:{atk:1.06,def:1.02,spd:1.06},               nouns:{g:'집중',      m:'일점 타격',     e:'무심의 일격'} },
+  trickster:   { name:'교활', tone:'허를 찌르고 교란하는 교활한 책사',       sm:{atk:1.02,def:0.94,spd:1.16},               nouns:{g:'기습',      m:'교란술',        e:'그림자 농락'} },
+  stalwart:    { name:'우직', tone:'우직하게 버티는 묵직한 거구',           sm:{hp:1.14,def:1.08,spd:0.90},                nouns:{g:'버티기',    m:'대지 짓누르기', e:'불굴의 일격'} },
+  guardian:    { name:'수호', tone:'전열을 지키는 굳건한 방패',             sm:{hp:1.05,atk:0.90,def:1.18},                nouns:{g:'방패 올리기',m:'수호 결계',     e:'철벽 반격'} },
+  zealot:      { name:'광신', tone:'몸을 사르며 돌격하는 광신의 화신',       sm:{hp:0.90,atk:1.18,spd:1.04}, dot:'burn',   nouns:{g:'광신의 돌격',m:'순교의 불꽃',   e:'분신 쇄도'} },
+  executioner: { name:'냉혹', tone:'약점을 노려 처형하는 냉혹한 사형리',     sm:{atk:1.12,def:0.96,spd:1.06}, dot:'bleed',  nouns:{g:'급소 찌르기',m:'사형 선고',     e:'단두의 일격'} },
+  feral:       { name:'야성', tone:'본능에 충실한 사나운 야수',             sm:{atk:1.10,def:0.90,spd:1.12}, dot:'bleed',  nouns:{g:'할퀴기',    m:'야성의 도약',   e:'포식 광주'} },
+  strategist:  { name:'책략', tone:'판을 짜고 적을 옭아매는 책략가',         sm:{atk:0.98,def:1.06,spd:1.06}, dot:'poison', nouns:{g:'덫 놓기',   m:'독계 포진',     e:'필살 함정'} },
+  hermit:      { name:'은둔', tone:'홀로 수행하며 인내하는 은둔자',         sm:{hp:1.16,atk:0.90,def:1.06},                nouns:{g:'기 순환',   m:'인내의 자세',   e:'대오의 경지'} },
+  tyrant:      { name:'폭군', tone:'압도적 위세로 군림하는 폭군',           sm:{hp:1.10,atk:1.10,spd:0.94},                nouns:{g:'위압',      m:'폭군의 손아귀', e:'군림의 일격'} },
+  glutton:     { name:'탐식', tone:'무엇이든 집어삼키는 탐식가',           sm:{hp:1.16,atk:1.04,spd:0.90}, dot:'poison', nouns:{g:'집어삼키기',m:'대식의 아가리', e:'폭식 포식'} },
+  phantom:     { name:'망령', tone:'종잡을 수 없이 스미는 망령',           sm:{hp:0.90,def:0.98,spd:1.18},                nouns:{g:'스며들기',  m:'환영 보법',     e:'망령의 잠식'} },
+  warlord:     { name:'맹장', tone:'선두에서 돌파하는 백전의 맹장',         sm:{atk:1.12,def:1.02,spd:1.00},               nouns:{g:'돌파',      m:'맹장의 진격',   e:'천하 분쇄'} },
+};
+const ARCHETYPE_IDS = Object.keys(ARCHETYPES);
+/* 사용자 큐레이션 표면 — 특정 개체에 아키타입 고정. 비우면 deterministicArchetype 사용.
+   (사용자 예시 박제: 포식 화초불=광폭→물어뜯기 출혈 / 무기 화초불=도사→집중) */
+const ARCHETYPE_OVERRIDES = {
+  flame_trap: 'berserk',
+  blaze_lance: 'sage',
+};
+function __hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0); }
+function archetypeOf(key){ return ARCHETYPE_OVERRIDES[key] || ARCHETYPE_IDS[__hashStr(key) % ARCHETYPE_IDS.length]; }
+const FORM_STAT_MOD = {
+  pred:   {atk:1.10, def:0.96, spd:1.05},
+  weapon: {atk:1.12, def:1.00, spd:0.98},
+  toxic:  {hp:1.10, atk:0.96, def:1.04},
+  dragon: {hp:1.06, atk:1.06, def:1.06, spd:1.04},
+  normal: {},
+  spore:  {spd:1.06},
+};
+const __EL_WORD2 = { fire:'불꽃', water:'물살', grass:'덩굴', earth:'바위', wind:'질풍', bolt:'번개', ice:'서리' };
+const __DOT_WORD = { burn:'화상', bleed:'출혈', poison:'중독' };
+/* 변이 개체(태생 form 보유·!legacy)에 아키타입 적용: 스탯 재계산 + 컨셉문 + 고유스킬 이름/DoT 리테마. 멱등. */
+(function applyVariantIdentity(){
+  const STAGE_KEYS = { g:'g', m:'m', e:'e' };
+  Object.keys(SPECIES).forEach(function(key){
+    const s = SPECIES[key];
+    const form = s.baseVariants && s.baseVariants[0];
+    if(!form || s.legacy) return;            // base 35·legacy는 제외(순수 타입+속성 유지)
+    if(form==='spore' || s.seedType==='mushroom') return; // 버섯=저스탯 by design(전용 밸런스·테스트) → 정체성 보정 제외
+    const type = s.seedType, el = s.element;
+    const E = ELEMENT_STATS[el], T = TYPE_STATS[type];
+    if(!E || !T) return;
+    const a = archetypeOf(key), A = ARCHETYPES[a]; if(!A) return;
+    s.archetype = a;
+    // 1) 스탯 = base(타입+속성) × form배율 × 아키타입배율 (재계산 → 재실행 안전)
+    const base = { hp:E.hp+T.hp, atk:E.atk+T.atk, def:E.def+T.def, spd:E.spd+T.spd };
+    [FORM_STAT_MOD[form], A.sm].forEach(function(m){ if(m) ['hp','atk','def','spd'].forEach(function(k){ if(m[k]) base[k] = base[k]*m[k]; }); });
+    ['hp','atk','def','spd'].forEach(function(k){ base[k] = Math.max(1, Math.round(base[k])); });
+    s.base = base;
+    // 2) 컨셉문 — 도감 CONCEPTS 폴백(sp.desc)로 자동 노출
+    const typeName = (SEED_TYPE_NAMES[type]||type), elName = (ELEMENTS[el]&&ELEMENTS[el].name)||el, formName = (FORMS[form]&&FORMS[form].name)||form;
+    s.desc = A.tone + '. ' + elName + '속성 ' + typeName + '이며 ' + formName + '으로 태어났다.';
+    // 3) 고유 스킬 이름/DoT 리테마(각 ind.<key>.x는 이 개체 전용 id라 안전)
+    Object.keys(STAGE_KEYS).forEach(function(st){
+      const sk = ALL_SKILLS['ind.'+key+'.'+st]; if(!sk) return;
+      sk.name = (__EL_WORD2[el]||'') + ' ' + A.nouns[st];
+      if(A.dot && sk.dot && sk.dot.kind && sk.dot.kind!==A.dot){
+        const oldW = __DOT_WORD[sk.dot.kind], newW = __DOT_WORD[A.dot];
+        sk.dot.kind = A.dot;
+        if(oldW && newW && typeof sk.desc==='string') sk.desc = sk.desc.split(oldW).join(newW);
+      }
+    });
+  });
+})();
 /* ===== 스킬 분류 복수 태그(cats) — kind + 라이더로 도출. UI 칩 + 향후 특성 시너지 키 ===== */
 const CAT_META = {
   attack:      { icon:'🗡️', name:'공격',     color:'#ff7a5a' },
@@ -12703,6 +12776,30 @@ window.__test('catalog: every species has default rich fields', function(){
   });
   __ok(SPECIES.flame.legacy === true, 'flame should be legacy');
   __ok(SPECIES.spore_cap && SPECIES.spore_cap.seedType === 'mushroom', 'spore_cap mushroom species should exist');
+});
+window.__test('identity: same type+el, different form → distinct stats/concept/skill', function(){
+  const ft = SPECIES.flame_trap, bl = SPECIES.blaze_lance; // 둘 다 화초+불 (포식 vs 무기)
+  const fails = [];
+  if(!ft || !bl) throw new Error('flame_trap/blaze_lance missing');
+  if(ft.seedType!==bl.seedType || ft.element!==bl.element) fails.push('precondition: both should be flower+fire');
+  // 아키타입 override 적용
+  if(ft.archetype!=='berserk') fails.push('flame_trap archetype expected berserk got '+ft.archetype);
+  if(bl.archetype!=='sage') fails.push('blaze_lance archetype expected sage got '+bl.archetype);
+  // 스탯이 달라야 함(같은 타입+속성이라도 form+아키타입 보정)
+  if(JSON.stringify(ft.base)===JSON.stringify(bl.base)) fails.push('base stats should differ: '+JSON.stringify(ft.base));
+  // 컨셉(desc)이 달라야 함
+  if(ft.desc===bl.desc) fails.push('desc(concept) should differ');
+  if(!/포식 변이형/.test(ft.desc)) fails.push('flame_trap desc should mention 포식 변이형: '+ft.desc);
+  // 고유스킬 이름이 아키타입 noun 반영
+  const ftg = ALL_SKILLS['ind.flame_trap.g'], blg = ALL_SKILLS['ind.blaze_lance.g'];
+  if(!ftg || !/물어뜯기/.test(ftg.name)) fails.push('flame_trap.g name should contain 물어뜯기: '+(ftg&&ftg.name));
+  if(!blg || !/집중/.test(blg.name)) fails.push('blaze_lance.g name should contain 집중: '+(blg&&blg.name));
+  // berserk → DoT를 출혈로 강제
+  if(ftg && ftg.dot && ftg.dot.kind!=='bleed') fails.push('flame_trap.g dot should be bleed got '+ftg.dot.kind);
+  if(ftg && ftg.dot && /화상/.test(ftg.desc)) fails.push('flame_trap.g desc should not keep 화상 after bleed retheme');
+  // 기본 종(base 35)은 아키타입 미적용
+  if(SPECIES.tree_fire && SPECIES.tree_fire.archetype) fails.push('base species tree_fire should not get archetype');
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('nursery: migrate legacy v2', function(){
   const p={ growth_stage:'mature', nursery:{ stage:'fruiting', fruitReady:true, fruitCount:3, water:10, fert:5 } };
