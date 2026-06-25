@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 화분 표시 전역 통일 (식물/화분 분리 유지)
+- **모든 식물 = 화분 레이어 + 식물 레이어 2레이어로 통일.** 직전 "접지" 변경으로 관리/강화창·전투·VS·진화·썸네일이 맨 식물(화분 없음)로 보이던 것을 수정 → `spriteFor`/`svgPlant`가 `spriteStack(potVisual + composePlantSvg(noPot))` 반환. 화분은 끝까지 **독립 교체 레이어**(baking 안 함). 화분 = 식물 장착 `potId`(전투 유닛은 `makeCombatant`에 `potId` 추가, 봇은 `pot_terra`).
+- **`composePlantSvg` = 항상 식물만·140 viewBox**(접지 crop·`plantBaseY` 폐기) → 화분 레이어와 같은 좌표로 정렬(식물 base y96이 화분 입구에 앉음).
+- **이모지 화분 → 픽셀 화분.** 화분 픽커(`openPotPicker`)·"화분 바꾸기" 버튼·화분 상점(`POT_SHOP` 레인)의 `pot.icon` 이모지(🪵🏺🫙💎👑)를 `potVisual(id)` 미니 렌더로 교체 → 실제 화분 외형이 보임.
+- **빈 화분/나무 받침**: 현행 유지(받침은 메인만). 메인(`pp-stack`)·양육(`pot-stack`)은 기존 2레이어라 영향 없음.
+- **검증:** 워크트리 실파일 복사본을 preview로 서빙해 `__catalogSelfTest()` **0 fail** + 인라인 스크립트 node 구문검사 0 에러. `spriteFor`가 `ss-pot`+`ss-plant` 2레이어·장착 화분(테라/도자기/유리/크리스탈/황금) 색 반영·식물 SVG는 화분 없음(140) 구조 확인. 설계=[design](superpowers/specs/2026-06-26-pot-display-unify-design.md).
+
 ### 2026-06-25 — 탐사 궤도 링 가시성 복원 + 궤도별 연료 표식
 - **문제:** 연료탱크가 낮으면 잠긴 궤도 링이 `rgba(255,255,255,.04)`(4% 불투명)로 사실상 안 보임 → "궤도 원이 사라진" 것처럼 보임(4궤도 확장 후 더 부각). 궤도 링은 거리(=필요 연료)를 가늠하는 기준이라 보여야 함.
 - **링 가시성 강화:** 해금 링 `.075`→teal `rgba(126,214,194,.30)` solid(+은은한 inner glow), 잠금 링 `.04`→white `.13` dashed.
