@@ -1470,8 +1470,8 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 /* 식물/화분 2레이어(#12 진입점) — 화분 레이어 위에 식물 레이어, 흔들림은 식물만 */
 .pot-stack{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:3;width:78px;height:91px;}
 .pot-stack .pot-layer{position:absolute;left:0;bottom:0;z-index:1;line-height:0;}
-.pot-stack .plant-layer{position:absolute;left:0;bottom:0;z-index:2;line-height:0;transform-origin:50% 88%;animation:potSway 3.4s ease-in-out infinite;}
-@keyframes potSway{0%,100%{transform:rotate(-2.5deg);}50%{transform:rotate(2.5deg);}}
+.pot-stack .plant-layer{position:absolute;left:0;bottom:0;z-index:2;line-height:0;transform-origin:50% 88%;animation:plantSwaySide 3.4s ease-in-out infinite;}
+@keyframes plantSwaySide{0%,100%{transform:translateX(-3px);}50%{transform:translateX(3px);}}
 @media (prefers-reduced-motion: reduce){ .pot-stack .plant-layer{animation:none;} }
 .navbtn{position:relative;}
 .nav-dot{position:absolute;top:5px;right:calc(50% - 18px);width:9px;height:9px;border-radius:50%;background:#ff5a4a;box-shadow:0 0 7px #ff5a4a;animation:navDotPulse 1.4s ease-in-out infinite;}
