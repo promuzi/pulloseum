@@ -323,7 +323,7 @@ function card(sp){
   const formChip=k=>`<div class="vchip ${k===born?'born':''}">${(forms[k]&&forms[k].icon)||'·'} ${(forms[k]&&forms[k].name)||k}${k===born?' (태생)':''}</div>`;
   const order = born ? [born].concat(Object.keys(forms).filter(k=>k!=='normal'&&k!==born)) : Object.keys(forms).filter(k=>k!=='normal');
   const concept = CONCEPTS[sp.key] || sp.desc || '';
-  return `<article class="card ${sp.legacy?'legacy':''}" data-key="${sp.key}" data-type="${sp.seedType}" data-el="${sp.element}" style="--ac:${ac}">
+  return `<article class="card ${sp.legacy?'legacy':''}" data-key="${sp.key}" data-type="${sp.seedType}" data-el="${sp.element}" data-form="${born||'base'}" style="--ac:${ac}">
     <span class="brk tl"></span><span class="brk tr"></span><span class="brk bl"></span><span class="brk br"></span>
     <div class="chead">
       <div class="sprite" data-sprite><span class="sil">${TYPE_GLYPH[sp.seedType]||'🌱'}</span></div>
@@ -452,13 +452,14 @@ document.getElementById('skModal').addEventListener('click', (e)=>{ if(e.target.
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeSkillModal(); });
 
 /* ===== 필터 ===== */
-let curType='all', curEl='all';
+let curType='all', curEl='all', curForm='all';
 function applyFilter(){
   document.querySelectorAll('.card').forEach(el=>{
     const type=el.dataset.type, isLeg=el.closest('.tsec').dataset.type==='legacy';
     const tOk = curType==='all' || (curType==='legacy'? isLeg : (type===curType && !isLeg));
     const eOk = curEl==='all' || el.dataset.el===curEl;
-    el.classList.toggle('hide', !(tOk&&eOk));
+    const fOk = curForm==='all' || el.dataset.form===curForm;
+    el.classList.toggle('hide', !(tOk&&eOk&&fOk));
   });
   document.querySelectorAll('.tsec').forEach(sec=>{
     const vis=[...sec.querySelectorAll('.card')].some(c=>!c.classList.contains('hide'));
@@ -468,9 +469,18 @@ function applyFilter(){
 function mkChip(label,on,cb){ const b=document.createElement('button'); b.className='chip'+(on?' on':''); b.textContent=label; b.onclick=cb; return b; }
 function buildFilters(){
   const fbar=document.getElementById('filters'); fbar.innerHTML='';
+  const sepEl=()=>{ const s=document.createElement('span'); s.style.cssText='width:1px;background:var(--line2);margin:0 3px;'; return s; };
   [['all','전체'],['tree','목본'],['flower','화초'],['cactus','다육'],['vine','덩굴'],['mushroom','버섯'],['legacy','레거시']]
     .forEach(([k,l])=>fbar.appendChild(mkChip(l, curType===k, ()=>{curType=k; buildFilters(); applyFilter();})));
-  const sep=document.createElement('span'); sep.style.cssText='width:1px;background:var(--line2);margin:0 3px;'; fbar.appendChild(sep);
+  fbar.appendChild(sepEl());
+  // 변이형(form) 필터 — 같은 타입+속성이라도 변이형마다 고유 스킬을 가진 별개 개체. 태생 변이형 기준으로 분류.
+  const F=API.FORMS||{};
+  [['all','전체','🧬'],['base','기본','🌿'],['normal','일반',(F.normal&&F.normal.icon)||'🌱'],
+   ['pred','포식',(F.pred&&F.pred.icon)||'🦷'],['weapon','무기',(F.weapon&&F.weapon.icon)||'🗡️'],
+   ['toxic','독성',(F.toxic&&F.toxic.icon)||'☠️'],['dragon','용족',(F.dragon&&F.dragon.icon)||'🐉'],
+   ['spore','포자',(F.spore&&F.spore.icon)||'🍄']]
+    .forEach(([k,l,ic])=>fbar.appendChild(mkChip(ic+' '+l, curForm===k, ()=>{curForm=k; buildFilters(); applyFilter();})));
+  fbar.appendChild(sepEl());
   fbar.appendChild(mkChip('속성·전체', curEl==='all', ()=>{curEl='all'; buildFilters(); applyFilter();}));
   EL_ORDER.forEach(e=>fbar.appendChild(mkChip(elMeta(e).i, curEl===e, ()=>{curEl=e; buildFilters(); applyFilter();})));
 }
@@ -482,15 +492,24 @@ function fail(msg){
 }
 
 const frame=document.getElementById('game');
-frame.addEventListener('load', ()=>{
+/* 게임(index.html?dex=1) 부팅이 느릴 때 load 이벤트와 __DEX_API 노출 시점이 어긋나
+   "불러올 수 없습니다"가 뜨던 문제 → load 이벤트에 의존하지 않고 폴링으로 견고하게 대기(최대 ~30s). */
+let __built=false, __pollN=0;
+function tryBuild(){
+  if(__built) return true;
   try{
-    API = frame.contentWindow.__DEX_API;
-    if(!API || !API.SPECIES){ fail('게임 데이터(__DEX_API)를 찾지 못했습니다.'); return; }
-    build();
-  }catch(err){ fail('게임 데이터 접근이 차단되었습니다(같은 출처 필요). '+err.message); }
-});
-frame.addEventListener('error', ()=>fail('게임(index.html)을 불러오지 못했습니다.'));
-setTimeout(()=>{ if(!API) fail('게임 로딩이 지연됩니다. 새로고침하거나 로컬 서버/링크에서 열어주세요.'); }, 12000);
+    const w = frame.contentWindow;
+    if(w && w.__DEX_API && w.__DEX_API.SPECIES){ API = w.__DEX_API; build(); __built=true; return true; }
+  }catch(err){ /* 같은 출처 준비 전 — 다음 폴에서 재시도 */ }
+  return false;
+}
+const __pollTimer=setInterval(()=>{
+  if(tryBuild()){ clearInterval(__pollTimer); return; }
+  if(++__pollN > 60){ clearInterval(__pollTimer); if(!__built) fail('게임 로딩이 지연됩니다. 새로고침하거나 로컬 서버/링크에서 열어주세요.'); }
+}, 500);
+frame.addEventListener('load', tryBuild);
+frame.addEventListener('error', ()=>{ if(!__built) fail('게임(index.html)을 불러오지 못했습니다.'); });
+tryBuild();
 </script>
 </body>
 </html>

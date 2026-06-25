@@ -4283,8 +4283,7 @@ const SKILL_LIB = {
     desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
   'ind.tree_water.m': { name:'맹그로브 회복', icon:'💧', cost:2, kind:'heal', heal:0.22, cleanse:true,
     desc:'체력 22% 회복 + 디버프 해제', tag:'개체', grade:'B' },
-  'ind.tree_water.e': { name:'해일 삼키기', icon:'🌊', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.35,
-    desc:'위력140 · 광역 · 피해 35% 흡혈', tag:'개체', grade:'A' },
+  'ind.tree_water.e': { name:'해일 붕괴', icon:'🌊', cost:3, kind:'attack', power:140, aoe:true, enemyDebuff:{stat:'def',pct:0.15,turns:2}, desc:'위력140 · 광역 + 적 방어 15%↓(2턴)', tag:'개체', grade:'A' },
 
   'ind.tree_grass.g': { name:'만엽 생장', icon:'🌱', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, heal:0.10,
     desc:'자신 공격 15%↑(3턴) + 체력 10% 회복', tag:'개체', grade:'B' },
@@ -4335,8 +4334,7 @@ const SKILL_LIB = {
     desc:'체력 20% 회복 + 자신 공격 12%↑(3턴)', tag:'개체', grade:'B' },
   'ind.aqua.m': { name:'수련 정화', icon:'🪷', cost:2, kind:'heal', heal:0.22, cleanse:true, energyGain:1,
     desc:'체력 22% 회복 + 디버프 해제 + ⚡+1', tag:'개체', grade:'B' },
-  'ind.aqua.e': { name:'범람 만개', icon:'🌊', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.40,
-    desc:'위력140 · 광역 · 피해 40% 흡혈', tag:'개체', grade:'A' },
+  'ind.aqua.e': { name:'범람 만개', icon:'🌊', cost:3, kind:'attack', power:140, aoe:true, heal:0.1, desc:'위력140 · 광역 + 체력 10% 회복', tag:'개체', grade:'A' },
 
   'ind.flower_grass.g': { name:'가시 개화', icon:'🌹', cost:2, kind:'attack', power:90, single:true,
     dot:{kind:'bleed',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3},
@@ -4387,8 +4385,7 @@ const SKILL_LIB = {
     desc:'자신 방어 25%↑(3턴) + 체력 12% 회복', tag:'개체', grade:'B' },
   'ind.cactus_water.m': { name:'이슬 방벽', icon:'🛡️', cost:2, kind:'guard', guardMult:0.4, counterPct:0.25, cleanse:true,
     desc:'받는 피해 60%↓ + 가시 반격 + 디버프 해제', tag:'개체', grade:'B' },
-  'ind.cactus_water.e': { name:'범람 가시', icon:'🌊', cost:3, kind:'drain', power:130, aoe:true, lifesteal:0.40, selfBuff:{stat:'def',pct:0.15,turns:3},
-    desc:'위력130 · 광역 · 피해 40% 흡혈 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
+  'ind.cactus_water.e': { name:'범람 가시', icon:'🌊', cost:3, kind:'attack', power:130, aoe:true, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력130 · 광역 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
 
   'ind.cactus_grass.g': { name:'광합성 가시', icon:'🌿', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, heal:0.12,
     desc:'자신 공격 15%↑(3턴) + 체력 12% 회복', tag:'개체', grade:'B' },
@@ -4427,56 +4424,41 @@ const SKILL_LIB = {
     desc:'위력140 · 광역 + 적 기동 25%↓(2턴) + 방어 관통', tag:'개체', grade:'A' },
 
   // ── 🍃 덩굴(vine) — 흡혈 & 속도 ──
-  'ind.vine_fire.g': { name:'작열 휘감기', icon:'🔥', cost:2, kind:'drain', power:100, single:true, lifesteal:0.30,
-    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력100 · 단일 · 피해 30% 흡혈 + 화상(3턴)', tag:'개체', grade:'B' },
-  'ind.vine_fire.m': { name:'불꽃 흡수', icon:'🩸', cost:2, kind:'drain', power:110, single:true, lifesteal:0.40, selfBuff:{stat:'spd',pct:0.15,turns:3},
-    desc:'위력110 · 단일 · 피해 40% 흡혈 + 자신 기동 15%↑(3턴)', tag:'개체', grade:'B' },
-  'ind.vine_fire.e': { name:'화염 포식', icon:'🌋', cost:3, kind:'drain', power:150, aoe:true, lifesteal:0.35,
-    dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력150 · 광역 · 피해 35% 흡혈 + 화상(3턴)', tag:'개체', grade:'A' },
+  'ind.vine_fire.g': { name:'작열 휘감기', icon:'🔥', cost:2, kind:'attack', power:100, single:true, dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력100 · 단일 + 화상(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_fire.m': { name:'불꽃 응축', icon:'🔥', cost:2, kind:'attack', power:110, single:true, selfBuff:{stat:'spd',pct:0.15,turns:3}, desc:'위력110 · 단일 + 자신 기동 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_fire.e': { name:'화염 폭발', icon:'🌋', cost:3, kind:'attack', power:150, aoe:true, dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력150 · 광역 + 화상(3턴)', tag:'개체', grade:'A' },
 
-  'ind.vine_water.g': { name:'물줄기 휘감기', icon:'💧', cost:2, kind:'drain', power:90, single:true, lifesteal:0.40,
-    desc:'위력90 · 단일 · 피해 40% 흡혈', tag:'개체', grade:'B' },
+  'ind.vine_water.g': { name:'물줄기 휘감기', icon:'💧', cost:2, kind:'attack', power:90, single:true, enemyDebuff:{stat:'spd',pct:0.15,turns:2}, desc:'위력90 · 단일 + 적 기동 15%↓(2턴)', tag:'개체', grade:'B' },
   'ind.vine_water.m': { name:'해조 재생', icon:'🌿', cost:2, kind:'heal', heal:0.20, cleanse:true, selfBuff:{stat:'spd',pct:0.15,turns:3},
     desc:'체력 20% 회복 + 디버프 해제 + 자신 기동 15%↑(3턴)', tag:'개체', grade:'B' },
-  'ind.vine_water.e': { name:'소용돌이 포식', icon:'🌊', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.45,
-    desc:'위력140 · 광역 · 피해 45% 흡혈', tag:'개체', grade:'A' },
+  'ind.vine_water.e': { name:'소용돌이 폭발', icon:'🌊', cost:3, kind:'attack', power:140, aoe:true, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력140 · 광역 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
 
   'ind.thorn.g': { name:'가시 옭매기', icon:'🌿', cost:2, kind:'attack', power:90, single:true,
     dot:{kind:'bleed',pct:0.06,turns:3}, enemyDebuff:{stat:'spd',pct:0.2,turns:2},
     desc:'위력90 · 단일 + 출혈(3턴) + 적 기동 20%↓(2턴)', tag:'개체', grade:'B' },
   'ind.thorn.m': { name:'덩굴 가속', icon:'🍃', cost:2, kind:'buff', selfBuff:{stat:'spd',pct:0.2,turns:3},
     energyGain:1, desc:'자신 기동 20%↑(3턴) + ⚡+1', tag:'개체', grade:'B' },
-  'ind.thorn.e': { name:'가시덤불 포식', icon:'🌵', cost:3, kind:'drain', power:150, aoe:true, lifesteal:0.30,
-    dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력150 · 광역 · 피해 30% 흡혈 + 출혈(3턴)', tag:'개체', grade:'A' },
+  'ind.thorn.e': { name:'가시덤불 폭발', icon:'🌵', cost:3, kind:'attack', power:150, aoe:true, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력150 · 광역 + 출혈(3턴)', tag:'개체', grade:'A' },
 
   'ind.vine_earth.g': { name:'뿌리 결박', icon:'🪨', cost:2, kind:'attack', power:90, single:true,
     enemyDebuff:{stat:'spd',pct:0.25,turns:2}, selfBuff:{stat:'def',pct:0.15,turns:3},
     desc:'위력90 · 단일 + 적 기동 25%↓(2턴) + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
-  'ind.vine_earth.m': { name:'대지 흡수', icon:'🩸', cost:2, kind:'drain', power:100, single:true, lifesteal:0.40, selfBuff:{stat:'def',pct:0.15,turns:3},
-    desc:'위력100 · 단일 · 피해 40% 흡혈 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
-  'ind.vine_earth.e': { name:'대지 포박', icon:'🌍', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.30, enemyDebuff:{stat:'spd',pct:0.2,turns:2},
-    desc:'위력140 · 광역 · 피해 30% 흡혈 + 적 기동 20%↓(2턴)', tag:'개체', grade:'A' },
+  'ind.vine_earth.m': { name:'대지 응축', icon:'🪨', cost:2, kind:'attack', power:100, single:true, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력100 · 단일 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_earth.e': { name:'대지 포박', icon:'🌍', cost:3, kind:'attack', power:140, aoe:true, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, desc:'위력140 · 광역 + 적 기동 20%↓(2턴)', tag:'개체', grade:'A' },
 
-  'ind.vine_wind.g': { name:'질풍 덩굴손', icon:'🌬️', cost:2, kind:'drain', power:90, single:true, lifesteal:0.30, selfBuff:{stat:'spd',pct:0.25,turns:3},
-    desc:'위력90 · 단일 · 피해 30% 흡혈 + 자신 기동 25%↑(3턴)', tag:'개체', grade:'B' },
+  'ind.vine_wind.g': { name:'질풍 덩굴손', icon:'🌬️', cost:2, kind:'attack', power:90, single:true, selfBuff:{stat:'spd',pct:0.25,turns:3}, desc:'위력90 · 단일 + 자신 기동 25%↑(3턴)', tag:'개체', grade:'B' },
   'ind.vine_wind.m': { name:'선풍 난타', icon:'🌀', cost:2, kind:'attack', power:110, aoe:true, critBonus:0.2,
     desc:'위력110 · 광역 + 치명타율 +20%', tag:'개체', grade:'B' },
-  'ind.vine_wind.e': { name:'폭풍 포식', icon:'🌪️', cost:3, kind:'drain', power:150, single:true, lifesteal:0.40, critBonus:0.2,
-    desc:'위력150 · 단일 · 피해 40% 흡혈 + 치명타율 +20%', tag:'개체', grade:'A' },
+  'ind.vine_wind.e': { name:'폭풍 폭발', icon:'🌪️', cost:3, kind:'attack', power:150, single:true, critBonus:0.2, desc:'위력150 · 단일 + 치명타율 +20%', tag:'개체', grade:'A' },
 
-  'ind.vine_bolt.g': { name:'전격 휘감기', icon:'⚡', cost:2, kind:'drain', power:100, single:true, lifesteal:0.25, critBonus:0.2,
-    desc:'위력100 · 단일 · 피해 25% 흡혈 + 치명타율 +20%', tag:'개체', grade:'B' },
+  'ind.vine_bolt.g': { name:'전격 휘감기', icon:'⚡', cost:2, kind:'attack', power:100, single:true, critBonus:0.2, desc:'위력100 · 단일 + 치명타율 +20%', tag:'개체', grade:'B' },
   'ind.vine_bolt.m': { name:'방전 가속', icon:'🔋', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.2,turns:3},
     energyGain:1, desc:'자신 공격 20%↑(3턴) + ⚡+1', tag:'개체', grade:'B' },
-  'ind.vine_bolt.e': { name:'감전 포식', icon:'🌩️', cost:3, kind:'drain', power:160, single:true, lifesteal:0.35, critBonus:0.25,
-    desc:'위력160 · 단일 · 피해 35% 흡혈 + 치명타율 +25%', tag:'개체', grade:'A' },
+  'ind.vine_bolt.e': { name:'감전 폭발', icon:'🌩️', cost:3, kind:'attack', power:160, single:true, critBonus:0.25, desc:'위력160 · 단일 + 치명타율 +25%', tag:'개체', grade:'A' },
 
-  'ind.vine_ice.g': { name:'서리 결박', icon:'❄️', cost:2, kind:'drain', power:90, single:true, lifesteal:0.30, enemyDebuff:{stat:'spd',pct:0.25,turns:2},
-    desc:'위력90 · 단일 · 피해 30% 흡혈 + 적 기동 25%↓(2턴)', tag:'개체', grade:'B' },
-  'ind.vine_ice.m': { name:'한기 흡수', icon:'🧊', cost:2, kind:'drain', power:100, single:true, lifesteal:0.40, enemyDebuff:{stat:'spd',pct:0.15,turns:2},
-    desc:'위력100 · 단일 · 피해 40% 흡혈 + 적 기동 15%↓(2턴)', tag:'개체', grade:'B' },
-  'ind.vine_ice.e': { name:'빙하 포식', icon:'🌨️', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.35, enemyDebuff:{stat:'spd',pct:0.25,turns:2},
-    desc:'위력140 · 광역 · 피해 35% 흡혈 + 적 기동 25%↓(2턴)', tag:'개체', grade:'A' },
+  'ind.vine_ice.g': { name:'서리 결박', icon:'❄️', cost:2, kind:'attack', power:90, single:true, enemyDebuff:{stat:'spd',pct:0.25,turns:2}, desc:'위력90 · 단일 + 적 기동 25%↓(2턴)', tag:'개체', grade:'B' },
+  'ind.vine_ice.m': { name:'한기 응축', icon:'🧊', cost:2, kind:'attack', power:100, single:true, enemyDebuff:{stat:'spd',pct:0.15,turns:2}, desc:'위력100 · 단일 + 적 기동 15%↓(2턴)', tag:'개체', grade:'B' },
+  'ind.vine_ice.e': { name:'빙하 폭발', icon:'🌨️', cost:3, kind:'attack', power:140, aoe:true, enemyDebuff:{stat:'spd',pct:0.25,turns:2}, desc:'위력140 · 광역 + 적 기동 25%↓(2턴)', tag:'개체', grade:'A' },
 
   /* ── 개체 고유: 버섯 성체/완숙 + 변이 140종 (생성: scripts/gen-individuals.js) ── */
   'ind.spore_cap.m': { name:'중독 포자', icon:'🌿', cost:2, kind:'attack', power:90, single:true, dot:{kind:'poison',pct:0.05,turns:3}, enemyDebuff:{stat:'atk',pct:0.15,turns:2}, desc:'위력90 · 단일 + 중독(3턴) + 적 공격 15%↓(2턴)', tag:'개체', grade:'B' },
@@ -4522,7 +4504,7 @@ const SKILL_LIB = {
   'ind.draca_bloom.e': { name:'용염 폭발', icon:'🔥', cost:3, kind:'attack', power:180, single:true, pierce:0.5, dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력180 · 단일 + 화상(3턴) + 방어 관통', tag:'개체', grade:'S' },
   'ind.cure_bulb.g': { name:'치유 개화', icon:'💚', cost:2, kind:'heal', selfBuff:{stat:'def',pct:0.15,turns:3}, heal:0.22, desc:'체력 22% 회복 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'B' },
   'ind.cure_bulb.m': { name:'정화 수련', icon:'💚', cost:2, kind:'heal', heal:0.18, cleanse:true, energyGain:1, desc:'체력 18% 회복 + 디버프 해제 + ⚡+1', tag:'개체', grade:'B' },
-  'ind.cure_bulb.e': { name:'생명 범람', icon:'💧', cost:3, kind:'drain', power:130, aoe:true, lifesteal:0.4, heal:0.1, desc:'위력130 · 광역 · 피해 40% 흡혈 + 체력 10% 회복', tag:'개체', grade:'A' },
+  'ind.cure_bulb.e': { name:'생명 범람', icon:'💧', cost:3, kind:'attack', power:130, aoe:true, heal:0.1, desc:'위력130 · 광역 + 체력 10% 회복', tag:'개체', grade:'A' },
   'ind.poison_rose.g': { name:'독가시 개화', icon:'🌿', cost:2, kind:'attack', power:90, single:true, dot:{kind:'poison',pct:0.05,turns:3}, enemyDebuff:{stat:'def',pct:0.15,turns:2}, desc:'위력90 · 단일 + 중독(3턴) + 적 방어 15%↓(2턴)', tag:'개체', grade:'B' },
   'ind.poison_rose.m': { name:'독향 만개', icon:'🌿', cost:2, kind:'attack', power:80, single:true, enemyDebuff:{stat:'atk',pct:0.2,turns:2}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력80 · 단일 + 적 공격 20%↓(2턴) + 자신 공격 15%↑(3턴)', tag:'개체', grade:'B' },
   'ind.poison_rose.e': { name:'맹독 폭산', icon:'🌿', cost:3, kind:'attack', power:150, aoe:true, critBonus:0.15, dot:{kind:'poison',pct:0.05,turns:3}, desc:'위력150 · 광역 + 중독(3턴) + 치명타율 +15%', tag:'개체', grade:'A' },
@@ -4543,7 +4525,7 @@ const SKILL_LIB = {
   'ind.spike_cactus.e': { name:'가시 폭풍', icon:'🔥', cost:3, kind:'attack', power:150, aoe:true, pierce:0.5, dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력150 · 광역 + 화상(3턴) + 방어 관통', tag:'개체', grade:'A' },
   'ind.hydra_cactus.g': { name:'대용량 저장', icon:'💧', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.25,turns:3}, heal:0.12, desc:'체력 12% 회복 + 자신 방어 25%↑(3턴)', tag:'개체', grade:'B' },
   'ind.hydra_cactus.m': { name:'수분 방벽', icon:'🛡️', cost:2, kind:'guard', guardMult:0.4, counterPct:0.25, cleanse:true, desc:'받는 피해 60%↓ + 가시 반격 + 디버프 해제', tag:'개체', grade:'B' },
-  'ind.hydra_cactus.e': { name:'범람 가시', icon:'💧', cost:3, kind:'drain', power:130, aoe:true, lifesteal:0.4, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력130 · 광역 · 피해 40% 흡혈 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
+  'ind.hydra_cactus.e': { name:'범람 가시', icon:'💧', cost:3, kind:'attack', power:130, aoe:true, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력130 · 광역 + 자신 방어 15%↑(3턴)', tag:'개체', grade:'A' },
   'ind.tox_cactus.g': { name:'독가시 곤두', icon:'🛡️', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'받는 피해 50%↓ + 자신 방어 15%↑(3턴) + 가시 반격', tag:'개체', grade:'B' },
   'ind.tox_cactus.m': { name:'부패 포자', icon:'🌿', cost:2, kind:'attack', power:90, single:true, dot:{kind:'poison',pct:0.05,turns:3}, enemyDebuff:{stat:'def',pct:0.2,turns:2}, desc:'위력90 · 단일 + 중독(3턴) + 적 방어 20%↓(2턴)', tag:'개체', grade:'B' },
   'ind.tox_cactus.e': { name:'독가시 분출', icon:'🌿', cost:3, kind:'attack', power:140, aoe:true, dot:{kind:'poison',pct:0.05,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력140 · 광역 + 중독(3턴) + 자신 공격 15%↑(3턴)', tag:'개체', grade:'A' },
@@ -4894,10 +4876,10 @@ const SKILL_LIB = {
   'ind.draca_glace.e': { name:'빙룡 포식', icon:'❄️', cost:3, kind:'drain', power:160, aoe:true, lifesteal:0.35, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, desc:'위력160 · 광역 · 피해 35% 흡혈 + 적 기동 20%↓(2턴)', tag:'개체', grade:'A' },
   'ind.glow_vine.g': { name:'작열 강화', icon:'🔥', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡+1', tag:'개체', grade:'B' },
   'ind.glow_vine.m': { name:'덩굴 재생', icon:'💚', cost:2, kind:'heal', heal:0.15, energyGain:1, desc:'체력 15% 회복 + ⚡+1', tag:'개체', grade:'B' },
-  'ind.glow_vine.e': { name:'화염 휘감기', icon:'🔥', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.25, dot:{kind:'burn',pct:0.06,turns:2}, desc:'위력140 · 광역 · 피해 25% 흡혈 + 화상(2턴)', tag:'개체', grade:'A' },
+  'ind.glow_vine.e': { name:'화염 휘감기', icon:'🔥', cost:3, kind:'attack', power:140, aoe:true, dot:{kind:'burn',pct:0.06,turns:2}, desc:'위력140 · 광역 + 화상(2턴)', tag:'개체', grade:'A' },
   'ind.kelp_vine.g': { name:'수류 강화', icon:'💧', cost:2, kind:'buff', selfBuff:{stat:'def',pct:0.15,turns:3}, energyGain:1, desc:'자신 방어 15%↑(3턴) + ⚡+1', tag:'개체', grade:'B' },
   'ind.kelp_vine.m': { name:'해조 재생', icon:'💚', cost:2, kind:'heal', heal:0.2, energyGain:1, desc:'체력 20% 회복 + ⚡+1', tag:'개체', grade:'B' },
-  'ind.kelp_vine.e': { name:'소용돌이 휘감기', icon:'💧', cost:3, kind:'drain', power:140, aoe:true, lifesteal:0.35, desc:'위력140 · 광역 · 피해 35% 흡혈', tag:'개체', grade:'A' },
+  'ind.kelp_vine.e': { name:'소용돌이 휘감기', icon:'💧', cost:3, kind:'attack', power:140, aoe:true, enemyDebuff:{stat:'atk',pct:0.15,turns:2}, desc:'위력140 · 광역 + 적 공격 15%↓(2턴)', tag:'개체', grade:'A' },
   'ind.green_vine.g': { name:'만엽 강화', icon:'🌿', cost:2, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡+1', tag:'개체', grade:'B' },
   'ind.green_vine.m': { name:'덩굴 결속', icon:'🛡️', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, desc:'받는 피해 50%↓ + 가시 반격', tag:'개체', grade:'B' },
   'ind.green_vine.e': { name:'가시 난무', icon:'🌿', cost:3, kind:'attack', power:140, aoe:true, dot:{kind:'bleed',pct:0.06,turns:2}, desc:'위력140 · 광역 + 출혈(2턴)', tag:'개체', grade:'A' },
@@ -11732,11 +11714,11 @@ async function playerSkill(skillId){
   B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
-  await sleep(620);
+  await sleep(300);
   closeJudge();
   B.turn += 1;
   B.busy = false; updateBars(); updateBattleHud();
-  if(!B.over){ await sleep(380); renderBattleIdleView(); }
+  if(!B.over){ renderBattleIdleView(); } // 스킬바 즉시 재활성(턴 종료 대기 제거)
 }
 /* 항복: 재확인 후 진행 */
 function confirmSurrender(){ if(!B || B.over || B.busy) return; show('#surrenderConfirm'); try{ sfx.tap(); }catch(e){} }
