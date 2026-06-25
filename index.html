@@ -317,6 +317,7 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer;}
   padding:calc(58px + env(safe-area-inset-top,0px)) 14px calc(62px + env(safe-area-inset-bottom,0px));
   background:transparent;pointer-events:none;}
 #cardPhase.hidden{display:none !important;}
+#cardPhase.locked .cp-stack{opacity:.45;filter:grayscale(.5);pointer-events:none;}
 #cardPhase.dealing{animation:cardPhaseIn .34s cubic-bezier(.2,1.05,.4,1) both;}
 @keyframes cardPhaseIn{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 #cardPhase.closing{animation:cardPhaseOut .24s ease forwards;}
@@ -2051,7 +2052,6 @@ body{letter-spacing:.2px;}
       <div class="battle-turn" id="battleTurn">1턴</div>
       <button class="battle-surrender" id="surrenderBtn" type="button">🏳️ 항복</button>
     </div>
-    <button class="battle-view-btn" id="battleViewBtn" type="button">스킬 숨기기</button>
     <div id="battleArena">
       <div class="arena-fighter enemy" id="enemyFighter">
         <div class="finfo">
@@ -10185,7 +10185,7 @@ function startMatch(){
     skillGrades:p.skillGrades||{},
   });
   const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p));
-  B = { p:playerC, e:enemyC, over:false, busy:false, turn:1, view:'cards' };
+  B = { p:playerC, e:enemyC, over:false, busy:false, turn:1 };
   if(B.p.passives.enemySpdDownStart>0) B.e.buffs.push({stat:'spd',pct:B.p.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   if(B.e.passives.enemySpdDownStart>0) B.p.buffs.push({stat:'spd',pct:B.e.passives.enemySpdDownStart,turns:3,kind:'debuff'});
   applyCardStartHooks(B.p, B.e); applyCardStartHooks(B.e, B.p);
@@ -10314,55 +10314,37 @@ function skillCardHtml(id, pred){
     <div class="sc-desc">${skillCoefLabel(s) || (s.desc||'').slice(0,26)}</div>
   </button>`;
 }
-/* 스킬 카드 페이즈 표시 — 두 식물 거리 벌어지고, 가운데에 카드가 떠오름 */
-function showCardPhase(){
-  if(!B || B.over) return;
-  hide('#judgeWindow'); $('#judgeWindow').classList.remove('open','close');
-  $('#battleScreen').classList.remove('cards-hidden');
-  $('#battleArena').classList.add('spread');
+/* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
+function refreshSkillBar(){
+  if(!B) return;
   const variantIds = variantSkillsOf(B.p);
   const normals = B.p.loadout.filter(id => !variantIds.includes(id));
   $('#cardHand').innerHTML = normals.map(id => skillCardHtml(id, false)).join('');
   $('#cardPred').innerHTML = variantIds.map(id => skillCardHtml(id, true)).join('');
-  // 상단 에너지(번개)
   let pips = `<span class="ce-label">⚡ 에너지</span>`;
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#cardEnergy').innerHTML = pips;
   bindSkillCards();
-  const cp = $('#cardPhase'); clearTimeout(cp._hideT); cp.classList.remove('closing'); show('#cardPhase');
-  cp.classList.remove('dealing'); void cp.offsetWidth; cp.classList.add('dealing');
+  const cp = $('#cardPhase');
+  cp.classList.remove('hidden');
+  cp.classList.toggle('locked', !!(B.busy || B.over)); // 판정 중·종료 시 전체 불 꺼짐(클릭 차단)
 }
+/* 판정 중 스킬바 잠금(불 끔) — 카드는 보이되 클릭 차단. */
+function lockSkillBar(){ const cp=$('#cardPhase'); if(cp) cp.classList.add('locked'); }
+/* 전투 종료/결과 시에만 스킬바 자체를 숨긴다. */
 function hideCardPhase(immediate){
-  const cp = $('#cardPhase'); if(!cp || cp.classList.contains('hidden')) return;
-  clearTimeout(cp._hideT);
-  if(immediate){ cp.classList.add('hidden'); cp.classList.remove('closing','dealing'); return; }
-  cp.classList.add('closing');
-  cp._hideT = setTimeout(() => { cp.classList.add('hidden'); cp.classList.remove('closing','dealing'); }, 240);
+  const cp = $('#cardPhase'); if(!cp) return;
+  cp.classList.add('hidden'); cp.classList.remove('locked');
 }
 function updateBattleHud(){
   if(!B) return;
   $('#battleTurn').textContent = `${B.turn||1}턴`;
-  const btn = $('#battleViewBtn');
-  btn.textContent = B.view === 'hidden' ? '스킬 보이기' : '스킬 숨기기';
-  btn.disabled = !!(B.busy || B.over);
   $('#surrenderBtn').disabled = !!(B.busy || B.over);
-}
-function showBattleField(){
-  if(!B || B.over) return;
-  hideCardPhase(true);
-  $('#battleArena').classList.remove('spread');
-  $('#battleScreen').classList.add('cards-hidden');
 }
 function renderBattleIdleView(){
   if(!B || B.over || B.busy) return;
   updateBattleHud();
-  if(B.view === 'hidden') showBattleField(); else showCardPhase();
-}
-function toggleBattleView(){
-  if(!B || B.over || B.busy) return;
-  B.view = B.view === 'hidden' ? 'cards' : 'hidden';
-  updateBattleHud(); renderBattleIdleView();
-  try{ sfx.tap(); }catch(e){}
+  refreshSkillBar();
 }
 /* 카드 탭=선택 / 꾹 누르기=상세 */
 let _cardPressTimer = null, _cardLongFired = false;
@@ -10400,7 +10382,7 @@ function showSkillDetail(id){
   try { sfx.tap(); } catch(e){}
 }
 function showBattlePlantDetail(){
-  if(!B || B.over || B.busy || B.view!=='hidden') return;
+  if(!B || B.over || B.busy) return;
   const u=B.p, element=ELEMENTS[u.element] || {name:u.element||'-',icon:'',color:'var(--neon)'};
   const form=FORMS[u.form||'normal'] || FORMS.normal;
   const activeStates=[];
@@ -10703,7 +10685,7 @@ async function playerSkill(skillId){
   B.busy = true;
   updateBattleHud();
   hide('#battleSkillDetail');
-  hideCardPhase();
+  lockSkillBar();
   try{ sfx.tap(); }catch(e){}
   await sleep(280);
   const eId = aiPickSkill(B.e);
@@ -10914,7 +10896,6 @@ $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
 // 전투: 항복(재확인) · 스킬 상세 닫기
-$('#battleViewBtn').addEventListener('click', () => toggleBattleView());
 $('#surrenderBtn').addEventListener('click', () => confirmSurrender());
 $('#pSpriteBox').addEventListener('click', () => showBattlePlantDetail());
 $('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderConfirm'); });
