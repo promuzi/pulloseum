@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟢 **base 35 + 변이 140 고유스킬 + 외형 액센트(포자 포함) 완성** | 변이 분포 배치(#7)·밸런스 튜닝 (버섯 비포자 변이는 폐지=전부 포자) | [species](species-system-guide.md) · [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) |
+| 1 | 식물 종류 확장 | 🟢 **base 35 + 변이 140 고유스킬 + 외형 액센트 + 탐사 분포 완성** | 밸런스 튜닝 (버섯 비포자 변이는 폐지=전부 포자) | [species](species-system-guide.md) · [impl plan](superpowers/plans/2026-06-25-species-individual-concepts-implementation.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
@@ -27,7 +27,7 @@
 | 11 | 시작화면 수정 | 🔲 미착수 | 타이틀→게임 전환 연출(5번 연동) | — |
 | 12 | 종자 가방 창 + 식물/화분 분리 | 🟢 가방 단순화+화분/식물 SVG 분리 완료 | PNG 도트 교체(#3)·가방 정렬/필터 | [pixel-art §-](pixel-art-ui-roadmap.md) |
 | 6 | 음악/효과음 | 🔲 미착수 | 라이선스·재생 방식 조사 | — |
-| 7 | 탐사 시스템 재설계 | 🟢 **구현 완료**(아틀라스+종분포+폴드+행성11) | 새 개체를 행성 `species`/지역 `signature`에 배치 · 분포 밸런스 튜닝 | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
+| 7 | 탐사 시스템 재설계 | 🟢 **구현 완료**(아틀라스+종분포+폴드+행성11+**변이 140 분포**) | 분포 밸런스 튜닝(희귀도/지역 다양성) | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 
@@ -143,7 +143,7 @@
 - [x] **탐사 모션 = 차원 이동(폴드) 연출** (격자 왜곡→rift→흡입→섬광, `prefers-reduced-motion` 축약)
 - [x] **풀로세움 참가 비용 = 없음(무료 입장)으로 확정** — "항상 열린 게이트" 로어로 비대칭 해소. 연료/참가권 안 둠
 - [x] **행성 종류 확장** — 8→11(세라핀 궤도1·볼카르 궤도2·티아멘 궤도3). UI 종 미리보기(`exPlanetSpeciesPreview`/`exRegionSpecies`)
-- [ ] (후속) **새 개체를 행성 `species`/지역 `signature`에 배치** + 분포 밸런스 튜닝
+- [x] **변이 140종을 지역 `signature`에 배치(2026-06-25)** — `MUTANT_SIGNATURES`(생성기) + EXPLORE_VIEW 병합 루프. 속성·타입 매칭+변이형↔카드테마 선호·부하 균형(25지역, 지역당 4~9). 시그니처 경로가 `released` 우회 → 변이는 희귀 발견(탐사당 ~8.5%/지역, 개별 ~1%)으로 획득 가능·봇/일반풀 불변. (남은: 분포 밸런스 튜닝)
 - [x] **분포 버그/얇은 지역 수정 완료(2026-06-25)** — 심해 균열·전자기 늪 0종 버그 해결 + 얇은 지역 6→1(심해 균열만 S랭크 의도적 희박). 상세 = [exploration spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
 
 ### 8. PvP / 서버 운용
@@ -179,6 +179,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-25** — **(#1·#7 변이 140종 탐사 분포 배치 ✅ → 획득 가능)** `released:false`로 정의만 돼 있던 변이 140종을 **지역 시그니처에 배치**해 탐사로 획득 가능하게 함. 방식 = `MUTANT_SIGNATURES`(생성기 [scripts/gen-variant-distribution.js](../scripts/gen-variant-distribution.js)) 테이블 + EXPLORE_VIEW 병합 루프(원본 미수정·멱등·중복제거). 매칭 = 지역 `el`⊇속성 & `types`⊇타입(전부 충족, 폴백 35건은 속성만), 변이형↔행성 `cardType` 선호, 부하 균형(25지역·지역당 4~9). **`released:false` 유지** — 시그니처 경로(`rollSpeciesFromView`)가 released를 우회하므로 변이는 "지역 희귀 발견"(탐사당 ~8.5%/홈 지역, 개별 ~1%)으로만 나오고 **적 봇·일반 종 풀은 불변**(변이 홍수 없음). 검증: 실제 런타임 주입 — rollSpeciesFromView 2000롤 변이 8.5%·무효 0·전 변이 출현. 워크트리 `feat/variant-dist`. (#1·#7)
 - **2026-06-25** — **(#1 버섯 = 전부 포자 고정 · 비포자 변이 폐지 + 포자 외형 액센트 ✅)** **버섯형은 비포자 변이형(일반/포식/무기/독성/용족)을 갖지 않는다 — 전부 포자(태생) 고정**(`baseVariants:['spore']`). 이전 "버섯 비포자 변이 35종" 설계 항목 **폐지**(비버섯 28종만 변이 개체 보유). 대신 **포자 외형 액센트 추가** — `ACCENT_MODULES.spore`(갓에서 피어오르는 포자 안개+떠다니는 포자 입자 5, 속성색) + `FORM_ACCENT.spore='spore'` → 버섯 포자형이 고유 외형을 가짐(씨앗 제외·성장체부터). 비버섯 변이형 외형 불변. 워크트리 `feat/spore-accent`에서 구현, 실제 렌더 파이프라인 주입 검증(spore 적용·none과 다름·비버섯 영향 0). (#1)
 - **2026-06-25** — **(#10 전투 판정 오버레이 재개편 ✅ — 아래 원판 흐림 방식 대체)** 사용자 의도 재확인: 판정 중 **식물·상태바 절대 안 가림·흐림 폐지**. `setBlur`→no-op. 판정 시 `#battleArena.spread`로 두 식물을 위·아래(±42·scale.88)로 벌리고 그 **빈 중앙**에 판정창을 `positionJudgeInGap()`로 동적 정렬(스프라이트 108px, 위·아래 24px 여유 검증). 시퀀스 = **한 장씩**: 3칸 슬롯[내 카드=왼·화살표·상대=오른] → ①선공 판정(양쪽+`setJudgeOrder` ➜선공·나/⬅선공·상대/방어 우선) → ②행동 카드만 남고 반대 빈칸에 **상성 한 줄**(`setVerdict`) → ③후공 카드 재등장+반대칸 판정. **데미지·치명타·버프·디버프=식물 위 팝업**(`popup`/`fxPopup`). 카드 앞면 단순화(아이콘/이름/비용, 하단바 46%→38%), 뒷장 상세 pill 추가. `playerSkill` 단일 순차 루프. 폐지: `#judgeMessage`·`setVerdictSide`·`battleCardFootChips`·`showJudgeMessage`(sleep만). `__catalogSelfTest()` 0 fail·preview 실전 검증. 설계=[judge-overlay-rework](superpowers/specs/2026-06-25-battle-judge-overlay-rework-design.md). (#10)
 - **2026-06-25** — **(#1 개체 고유화 — 버섯 성체/완숙 + 변이 140종 완성 ✅)** 설계서 풀 매트릭스를 코드 반영: ① **버섯 base 7** 성체/완숙 고유 스킬 14개(`ind.spore_*.m/.e`, 성장체 `sig.*`는 유지) → base 35 전 종이 3스킬 깊이 통일. ② **변이 140종**(비버섯 28칸 × 5변이형) 신규 카탈로그 + 고유 스킬 420개(`ind.<key>.g/.m/.e`) — 태생 변이 `baseVariants` 고정·`released:false`(획득 풀 제외, 분포는 #7 후속)·`variantSlots`. **구현 방식 = 스펙 파서 생성기**([scripts/gen-individuals.js](../scripts/gen-individuals.js))로 설계서 한국어 서술을 엔진 필드로 기계 변환(매핑 규칙 = impl plan + base 28 코드 관례: 흡혈→`drain`, 이중 selfBuff→첫개만, grade g/m/e=B/B/A·S, heal/buff는 선두 토큰 판정). 검증: `__catalogSelfTest()` 0 fail·신규 ind 스킬 518개 전부 엔진 지원 필드만(0 bad)·획득 풀 누출 0·단계별 해금 정상·form 고정·도감 라이브 자동 반영. **남은 설계 = 버섯 비포자 변이 35** + 변이 분포 배치(#7)·밸런스 튜닝. (#1)

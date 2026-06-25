@@ -7749,6 +7749,41 @@ const EXPLORE_VIEW = [
         desc:'대양 바닥에 뚫린 얼음 동굴. 극저온 적응체가 잠들어 있다.', link:'region_nereion_orbit_canopy' },
     ]},
 ];
+/* ── 변이종 탐사 분포(생성: scripts/gen-variant-distribution.js) ──
+   140 태생 변이를 지역 시그니처에 추가 → 희귀 발견으로 획득 가능(시그니처 경로는 released 우회 → 봇/일반풀 불변).
+   키 = '<planetId>|<지역명>'. EXPLORE_VIEW 원본은 미수정, 아래 루프로 병합(멱등·중복제거). */
+const MUTANT_SIGNATURES = {
+  'ex_aztel|방사 폐허': ['draca_volt','sand_reaper','lance_cactus','draca_ember'],
+  'ex_aztel|전자기 늪': ['maneater_wood','tide_shield','coral_bulb','coral_cactus'],
+  'ex_calisto|붉은 사구': ['draca_bloom','blaze_lance','ash_bloom','bright_bloom','sunfire_cactus'],
+  'ex_calisto|세이라 분지': ['spike_cactus','rock_fortress','acid_cactus','tox_gaia','draca_gaia','terra_cactus','root_club','draca_root','terra_vine'],
+  'ex_ermias|루미안': ['leech_vine','drosera_bulb','aqua_drake','leech_cactus','kelp_whip'],
+  'ex_ermias|아르키아': ['blood_rose','draca_rose','spear_cactus','blood_weed','draca_thorn'],
+  'ex_ermias|토르시단': ['draca_spark','hy_drake','tox_spark','dynamo_bloom'],
+  'ex_kairen|균사 회랑': ['venom_weed','world_tree','elder_glaive','poison_elder','elder_drake'],
+  'ex_kairen|포자 늪': ['blade_wood','poison_rose','tox_cactus','spore_wing','poison_gale'],
+  'ex_mirdin|덩굴 협곡': ['rose_blade','parasite_cactus','draca_viri','thorn_whip'],
+  'ex_mirdin|발광 수림': ['draco_oak','devour_tree','volt_eater','thunder_lance','tox_volt','dynamo_oak'],
+  'ex_nereidon|궤도 캐노피': ['petal_blade','leaf_eater','spore_gale','dust_reaper','draca_gale','wind_whip','spore_vine'],
+  'ex_nereidon|심해 균열': ['tox_mangro','tox_lotus','poison_dew','draca_dew','tox_kelp'],
+  'ex_nereidon|조석유리 산호초': ['tox_berry','tox_frost','frost_trap','draca_frost'],
+  'ex_octavis|빙정 평원': ['grand_mangro','hydra_cactus','ever_frost','ever_bloom'],
+  'ex_octavis|서리 동굴': ['frost_maw','frost_mace','frost_reaper','frost_wyvern','frost_whip','ever_vine'],
+  'ex_seraphin|윈드테라스': ['needle_cactus','wind_drake','glide_trap','aero_petal','breeze_cactus','draca_wind','aero_vine'],
+  'ex_seraphin|초록 능선': ['wind_ripper','breeze_wood','draca_petal','garden_rose','green_cactus','green_vine'],
+  'ex_tiamen|결빙 군도': ['cure_bulb','tox_vine','frost_edge','frost_leech','draca_tide','kelp_vine'],
+  'ex_tiamen|빙저 동굴': ['venom_frost','frost_drake','spike_frost','ever_cactus','draca_glace'],
+  'ex_veloc|마그마 균열': ['carno_oak','armor_oak','grave_rock','tox_rock','drake_rock','granite_oak','swamp_vine'],
+  'ex_veloc|잿빛 평원': ['clay_guard','root_eater','flame_trap','mimic_bloom','swamp_bloom','draca_clay','terra_bloom','gluttony_rock'],
+  'ex_veloc|흑요암 능선': ['ember_halberd','blight_oak','igni_drake','ember_heart'],
+  'ex_volkar|방전 평원': ['draca_vine','shock_trap','spark_edge','volt_leech','volt_whip','acid_vine','dynamo_vine'],
+  'ex_volkar|자철 협곡': ['carni_vine','volt_reaper','acid_volt','dynamo_cactus','whip_vine','blight_vine','draca_flame','glow_vine'],
+};
+EXPLORE_VIEW.forEach(function(p){ (p.regions||[]).forEach(function(r){
+  var add = MUTANT_SIGNATURES[p.id + '|' + r.name];
+  if(add){ var cur = r.signature || (r.signature = []); add.forEach(function(k){ if(cur.indexOf(k) < 0) cur.push(k); }); }
+}); });
+
 let exPopPlanetId = null;   // 그림2 팝업이 열린 행성
 let exDetPlanetId = null;   // 그림3 상세가 열린 행성
 let exDetRegionIdx = -1;    // 상세에서 선택된 지역 인덱스
