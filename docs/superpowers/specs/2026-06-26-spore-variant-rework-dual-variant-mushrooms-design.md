@@ -1,6 +1,6 @@
-# 포자 변이 재정의 + 이중 변이 버섯 — 설계 (브레인스토밍 중, 재개 예정)
+# 포자 변이 재정의 + 이중 변이 버섯 — 설계 (✅ 구현 완료 2026-06-26)
 
-> 작성 2026-06-26. **미완 설계 — 방향만 합의, 나중에 다시 고민·구상·구현.** 재개 시 이 문서부터.
+> 작성 2026-06-26. **✅ 구현 완료** — 계획 [plans/2026-06-26-dual-variant-mushrooms.md](../plans/2026-06-26-dual-variant-mushrooms.md), 28종 추가·엔진 2함수 확장·분포·외형 1차. 셀프테스트 0 fail.
 > 관련: [변이형·카드 재설계](2026-06-24-mutation-forms-cards-redesign-design.md) · [변이 개체 정체성](2026-06-26-variant-individual-identity-design.md) · [버섯 타입 설계](2026-06-24-mushroom-type-design.md)
 
 ## 목표

@@ -2,6 +2,15 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 이중 변이 버섯 28종 (포자 + 두 번째 변이) + 다변이 엔진
+- **배경:** 버섯은 전부 포자 단일 변이였음. 처음으로 **변이 2개**를 가진 종(포자 + toxic/pred/weapon/dragon)을 도입해 버섯 도감을 7→35종으로 확장. 설계=[spec](superpowers/specs/2026-06-26-spore-variant-rework-dual-variant-mushrooms-design.md) · 계획=[plan](superpowers/plans/2026-06-26-dual-variant-mushrooms.md).
+- **다변이 엔진(공존, 융합 메커니즘 없음):** 포자가 6변이형 중 유일하게 전용 스킬을 안 주는(매턴 발산 패시브) 변이라, 두 번째 변이를 그대로 얹어도 스킬 칸이 안 터짐 → **`cardFitsForm`·`variantSkillsOf`를 `p.form`(단수) → `base_variants` 전체로 확장**(헬퍼 `formsOf`). 다변이 종은 포자 카드 + 두 번째 변이 카드를 둘 다 장착 가능하고, 두 번째 변이 전용 스킬(포식기/주입·분사/비늘·브레스)이 하단 변이 바에 노출. 문자열 form 호출 하위호환 유지.
+- **28종:** `baseVariants:['spore',X]`, 버섯 저스탯 유지(type=mushroom→`applyVariantIdentity` 제외). 단계 스킬 g/m/e(독=중독·방깎 / 균사=흡혈 / 갓=관통 / 룡=브레스 충전 j+방출 m/e) 91개를 멱등 생성기 `scripts/gen-dual-mushrooms.js`로 마커 블록에 주입.
+- **포자 발산:** 매 턴 끝 발산을 **항상 표시**(효과 미적중 턴도 "포자를 흩뿌렸다" 로그), 효과별 적중 확률은 유지 → 밸런스 무변경.
+- **외형 1차:** varKey 기반 `plantVariant`가 28종 자동 차별 + 두 번째 변이별 포자색 글로우 액센트(독록/핏빛/강철/주홍, 가산 오버레이). 순수 버섯·기존 렌더 무변경.
+- **분포:** `released:false` + `MUTANT_SIGNATURES` 속성별 지역 7곳에 변이 4종씩(지역 발견으로만 획득).
+- **검증:** `__catalogSelfTest()` 0 fail(카드 게이트·변이 스킬·분포 누락0·외형 액센트 셀프테스트 추가). preview 실제 plant(`spore_pred_water`) 통합: form=spore·base_variants=['spore','pred']·포식기 노출·포자+포식 카드 적격·무기 카드 거부 확인.
+
 ### 2026-06-26 — 죽은 코드 정리 1차: 구버전 renderExploration 3종 + bindSpaceMapInteractions 제거 (438줄)
 - **배경:** 위 격납고 UI 작업 중 `renderExploration`이 **4번 재정의**(마지막 9233/현 ~8869만 활성)됨을 발견 — 계획서가 이 죽은 코드에 속았다. 사용자 요청으로 정리 착수("지금 바로 조심스럽게").
 - **제거:** 구버전 `renderExploration` 3종(함수 선언 #1 + space-map-world 재정의 #2 + try/catch 래퍼 #3)과 그들만 쓰던 `bindSpaceMapInteractions`·`renderExplorationUnsafe`를 삭제(438줄). **참조 그래프 검증:** 이 블록은 서로(+자신)만 참조하고 라이브 `ex*` 경로(`exHangarHtml`/`exploreViewRun`)는 전혀 안 씀(닫힌 죽은 클러스터). `openExploration`(라이브 진입점)은 보존.
