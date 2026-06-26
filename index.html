@@ -7135,7 +7135,8 @@ function rollFruitReward(p, rarity){
     return { kind:'card', label:`변이카드 ${card.name} [${grade}]`, icon:card.icon||'🧬', color, payload:card };
   }
   // 주황: 본인 전용 스킬(중복=크레딧). 풀 비면 고등급 카드 폴백.
-  const fake = { element:p.element, form:p.form, growth_stage:p.growth_stage };
+  // species/base_variants를 넘겨야 plantKnownSkillIds가 종 고유 스킬(ind.*)을 집어 진짜 "본인 스킬"이 나온다.
+  const fake = { element:p.element, form:p.form, growth_stage:p.growth_stage, species:p.species, base_variants:p.base_variants };
   const sk = (typeof nurserySkillReward==='function') ? nurserySkillReward(fake) : null;
   if(sk){
     ensureSkillFields(p);
@@ -13012,7 +13013,7 @@ function openFruit(idx){
 /* 열매(스킬 박스) 보상: 식물의 생장단계에서 쓸 수 있는 스킬 풀에서 1개 균등 추첨.
    (잠재력 폐지: 식물 등급에 따른 가중 없음. 각 스킬의 등급은 고정값을 그대로 사용.) */
 function nurserySkillReward(f){
-  const fake={element:f.element, form:f.form, growth_stage:f.growth_stage};
+  const fake={element:f.element, form:f.form, growth_stage:f.growth_stage, species:f.species, base_variants:f.base_variants};
   const pool = plantKnownSkillIds(fake).filter(id=>!isBasicSkill(id)&&!isAutoFormSkill(id));
   if(!pool.length) pool.push('skill_photosynthesis');
   const skillId = pool[Math.floor(Math.random()*pool.length)];
@@ -13601,6 +13602,13 @@ window.__test('dual-variant skills (variantSkillsOf base_variants)', function(){
   if(!(st.indexOf('skill_card_infuse')>=0 && st.indexOf('skill_card_spray')>=0)) fails.push('포자+독성이 독성기 미부여');
   if(variantSkillsOf({ form:'spore', base_variants:['spore'], equipped_trait_cards:[] }).length!==0) fails.push('순수 포자가 전용 스킬 보유(회귀)');
   if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('fruit reward surfaces species-unique skills (species passed through)', function(){
+  // 카탈로그 개체의 열매 "본인 스킬" 보상이 종 고유 스킬을 집을 수 있어야 함(species 누락 회귀 방지)
+  var f={ element:'water', form:'spore', base_variants:['spore','pred'], species:'spore_pred_water', growth_stage:'evolved' };
+  var hit=false;
+  for(var i=0;i<200 && !hit;i++){ var sk=nurserySkillReward(f); if(sk && /^ind\.spore_pred_water/.test(sk.id)) hit=true; }
+  if(!hit) throw new Error('열매 본인스킬 보상이 종 고유 스킬을 못 집음(species 누락?)');
 });
 window.__test('dual mushroom distribution (MUTANT_SIGNATURES)', function(){
   const all=new Set(); Object.values(MUTANT_SIGNATURES).forEach(a=>a.forEach(k=>all.add(k)));

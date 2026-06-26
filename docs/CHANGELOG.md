@@ -11,6 +11,7 @@
 - **분포:** `released:false` + `MUTANT_SIGNATURES` 속성별 지역 7곳에 변이 4종씩(지역 발견으로만 획득).
 - **검증:** `__catalogSelfTest()` 0 fail(카드 게이트·변이 스킬·분포 누락0·외형 액센트 셀프테스트 추가). preview 실제 plant(`spore_pred_water`) 통합: form=spore·base_variants=['spore','pred']·포식기 노출·포자+포식 카드 적격·무기 카드 거부 확인.
 - **후속(같은 날):** 새싹·유체가 공용 `spore_burst` 플레이스홀더였던 것을 변이×속성 **고유 `.s`(새싹)·`.j`(유체)** 스킬로 교체 → 28종 전 단계(s/j/g/m/e)가 개체별로 갈림(다른 개체와 동일 구조). 스킬 91→140개. 생성기 `gen-dual-mushrooms.js` 갱신·재실행, 전 단계 resolve·0 fail.
+- **보급상자·열매 획득 경로 점검(같은 날):** 이중 버섯이 두 보상계에 온전히 들어가는지 검증. ① **보급상자** — 두 번째 변이 카드(spore/potion/dna/weapon)는 전부 기존 `box_card_*` 드롭 풀에 이미 등록(누락 0). dragon 카드는 애초에 0종(용족=스킬형, 박스 불필요). ② **씨앗** — 28종 `released:false` + `MUTANT_SIGNATURES`로 탐사 지역 시그니처에서 획득(`rollSpeciesFromView` 2000회 시뮬로 균사 회랑서 4변이 전부 등장 실측). ③ **열매 본인스킬 보상 갭 발견·수정** — `rollFruitReward`/`nurserySkillReward`가 `fake`에 **`species`를 빼고** `plantKnownSkillIds`를 호출해 **개체 고유 스킬(`ind.*`)이 열매로 절대 안 나오던** 버그(이중 버섯뿐 아니라 기존 175개체 전부). `species`/`base_variants`를 통과시켜 수정 → dual 버섯 고유 스킬이 열매로 나옴(species 있을 때 249/400, 없을 때 0/400 실측). 회귀 셀프테스트 추가.
 
 ### 2026-06-26 — 죽은 코드 정리 1차: 구버전 renderExploration 3종 + bindSpaceMapInteractions 제거 (438줄)
 - **배경:** 위 격납고 UI 작업 중 `renderExploration`이 **4번 재정의**(마지막 9233/현 ~8869만 활성)됨을 발견 — 계획서가 이 죽은 코드에 속았다. 사용자 요청으로 정리 착수("지금 바로 조심스럽게").
