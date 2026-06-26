@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟡 **변이 개체 정체성(아키타입 14종) 1차 — 컨셉·스탯·고유스킬 차별화 완료** | **외형(도트 PNG 후속)·고유스킬 효과 다양화·아키타입 큐레이션** (§4-1-A) | [species](species-system-guide.md) · [identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md) |
+| 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟡 **변이 개체 정체성(아키타입 14종) 1차 완료** → 🟡 **컨셉+단계별 스킬 대규모 확장 설계 박제(구현 대기)** | **컨셉 레이어+단계별 스킬 생성기 구현(P0 엔진→P1 콘텐츠)** (§4-1-A) | [species](species-system-guide.md) · [identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
@@ -64,6 +64,7 @@
 | **[superpowers/plans/2026-06-24-mushroom-type-implementation.md](superpowers/plans/2026-06-24-mushroom-type-implementation.md)** | 버섯 타입 구현 계획(Task 1~5, 완료) — 단계명·외형·종7·시그니처·탐사·문서 | **#1 버섯형 구현** |
 | **[superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)** | 변이형·변이 카드 재설계(🟢설계완료) — 6변이형 컨셉·카드 로스터, 무등급(`fixed`) 카드, `cats` 스킬 라벨, 독 스택 상한, 발광 폐지·자동교체 룰. **수치 placeholder** | **#1 변이 — 구현 계획(writing-plans)** |
 | **[superpowers/specs/2026-06-26-variant-individual-identity-design.md](superpowers/specs/2026-06-26-variant-individual-identity-design.md)** | 변이 개체 정체성(아키타입 축) 설계 — `타입×속성×form×아키타입`, ARCHETYPES 14종+OVERRIDES 편집표면, 스탯·컨셉·고유스킬 적용 3곳 | **#1-A 개체 정체성 — 1차 구현됨** |
+| **[superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md)** | 컨셉+단계별 스킬 대규모 확장(🟡설계 박제·구현 대기) — 2축 블렌드 컨셉+스토리, 단계별 스킬 예산(새싹~완숙체), 14아키타입 효과 경향, 엔진 2종(출혈 회복감소·에너지 흡수), 생성기·단계별 진행 | **#1-A 후속 — 구현 진입점** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
