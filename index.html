@@ -906,7 +906,7 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
 #seedBagModal .modal-card{width:min(96vw,900px);}
 #dexModal .modal-card{width:min(98vw,1000px);height:92vh;display:flex;flex-direction:column;padding:10px;}
 #dexModal .dex-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex:0 0 auto;}
-#dexModal #dexFrame{flex:1 1 auto;width:100%;border:0;border-radius:10px;background:#0d1117;}
+#dexModal #dexHost{flex:1 1 auto;width:100%;border:0;border-radius:10px;background:#0d1117;overflow:auto;}
 .seed-sort-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
 .seed-sort-label{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px;}
 .seed-sort-btn{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
@@ -2282,7 +2282,7 @@ body{letter-spacing:.2px;}
       <h2 style="margin:0;white-space:nowrap">📖 식물 도감</h2>
       <button class="pm-close" id="dexClose" aria-label="닫기" title="닫기">✕</button>
     </div>
-    <iframe id="dexFrame" title="식물 도감"></iframe>
+    <div id="dexHost" title="식물 도감"></div>
   </div>
 </div>
 
@@ -13840,7 +13840,20 @@ $('#bottomNav').addEventListener('click', (ev) => {
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
-function openDex(){ const f=$('#dexFrame'); if(f && !f.getAttribute('src')) f.setAttribute('src','docs/dex/plant-codex.html'); show('#dexModal'); } // 도감 모달(첫 열림 시 iframe lazy-load)
+function openDex(){ // 도감 모달 — 같은 창의 __DEX_API를 Shadow DOM에 직접 렌더(중첩 iframe 없음 → file://에서도 작동)
+  const host=$('#dexHost');
+  if(host){
+    if(host.__sr===undefined){ try{ host.__sr = host.attachShadow({mode:'open'}); }catch(e){ host.__sr=null; } }
+    const root = host.__sr || host;
+    if(!host.__mounted){
+      if(window.PlantCodex && window.__DEX_API){
+        try{ window.PlantCodex.mount(window.__DEX_API, root); host.__mounted=true; }
+        catch(e){ try{ window.PlantCodex.fail(root, e.message); }catch(_){ } }
+      } else if(window.PlantCodex){ window.PlantCodex.fail(root, '도감 모듈/데이터를 불러오지 못했습니다.'); }
+    }
+  }
+  show('#dexModal');
+}
 const __dexClose=$('#dexClose'); if(__dexClose) __dexClose.addEventListener('click', () => { hide('#dexModal'); sfx.tap(); });
 $('#centerPlant').addEventListener('click', () => { sfx.tap(); if(activePlant()){ openUpgrade(); } else { openSeedBag(); } });
 $('#profileBanner').addEventListener('click', () => { sfx.tap(); openProfile(); });
@@ -14909,5 +14922,7 @@ window.__test('sig: 옛 라이더 제거 — 속성기에 heal/pierce/critBonus 
   __ok(!ELEMENT_SKILLS['skill_elem_bolt'].critBonus, '번개 속성기 치명타 라이더 제거');
 });
 </script>
+<!-- 식물 도감 공유 렌더 모듈 — 게임 내 도감 모달이 같은 창의 __DEX_API를 Shadow DOM에 직접 렌더 -->
+<script src="docs/dex/codex-render.js"></script>
 </body>
 </html>
