@@ -246,13 +246,13 @@
 - [ ] **변이 140종 탐사 분포 밸런스** — 희귀도/지역 다양성 튜닝. (§1 #1, §4 #7)
 
 **B. 죽은 코드·일관성 정리** (회귀 위험 낮음, 셀프테스트로 검증)
-- [ ] **폐지 식별자 잔존 참조 청소** — `B.view`·`battleViewBtn`·`toggleBattleView`·`#judgeMessage`·`setVerdictSide`·`battleCardFootChips`·`showJudgeMessage`·폐지된 발광 `rollForm`·폐지 grass 7종 잔재 등이 코드에 남았는지 grep 후 제거.
+- [x] **폐지 식별자 잔존 참조 청소(2026-06-26)** — grep 결과: `B.view`·`battleViewBtn`·`toggleBattleView`·`#judgeMessage`는 이미 0건. **제거함:** `battleCardFootChips`(호출 0)·`setVerdictSide`·`clearJudgeMessage`(no-op 스텁 호출 0)·`setBlur`(no-op + 유일 호출 1곳). **보존(죽지 않음):** `rollForm`(=`createPlant`에서 form 생성에 실사용, 폐지된 건 lumen만)·`showJudgeMessage`(=`showEffectMessages`로 전투 이펙트 페이싱에 실사용)·grass 7종(=의도적 legacy 보존, CLAUDE.md 경고). `__catalogSelfTest()` 0 fail 검증.
 
 **C. QoL·UI** (§1 #12 "잔여"로 명시)
 - [ ] **종자 가방 정렬/필터** — 속성/희귀도/타입별 정렬·필터 버튼. (취향 반영 필요)
 
 **D. 문서/검증 위생** (위험 없음)
-- [ ] **balance-sheet 현행화** — 푸터 최종갱신일 `2026-06-20` 보정 + §8 이슈 목록 outdated 정리(예: §8-1 "잠재특성 패시브"는 의도적 미반영으로 결론남).
+- [x] **balance-sheet 현행화(2026-06-26)** — 푸터 최종갱신일 `2026-06-20`→`2026-06-26` 보정 + §8-1 "잠재특성 패시브"를 **의도적 미반영(이슈 아님)으로 결론** 정리(취소선+결론 명시).
 - [ ] **셀프테스트 케이스 보강** — 태그 시너지·변이 분포 등 최근 시스템 회귀 케이스 점검·보강.
 
 ---

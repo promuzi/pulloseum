@@ -11376,16 +11376,6 @@ function skillUnusable(unit, id){
   return unit.energy < effectiveCost(unit, s);
 }
 function isPriorityDefenseSkill(s){ return !!(s && s.guardMult != null); }
-/* 카드 하단 분류 칩 — cats(공격/방어/버프/디버프/회복) + 속성(elem) + 독계열(dot/infuse). 그림(아이콘)으로만. */
-function battleCardFootChips(s){
-  if(!s) return '';
-  let chips = '';
-  (skillCats(s)||[]).forEach(c=>{ const m=CAT_META[c]; if(m) chips += `<span class="cat-chip" style="--cc:${m.color}" title="${m.name}">${m.icon}</span>`; });
-  if(s.elem){ const el = ELEMENTS[(B && B.p && B.p.element)]; if(el) chips += `<span class="cat-chip" style="--cc:${el.color}" title="${el.name} 속성">${el.icon}</span>`; }
-  const dk = (s.dot && s.dot.kind) || (s.infuse && s.infuse.kind);
-  if(dk){ chips += `<span class="cat-chip" style="--cc:#b06bff" title="${dotName(dk)}">${dotIcon(dk)}</span>`; }
-  return `<span class="sc-chips">${chips}</span>`;
-}
 /* 카드 1장 HTML — 3단: 이름(상)/아이콘(중)/분류칩+비용(하). 상세 계수는 꾹→뒤집기. */
 /* 태그 시너지 활성 보정 — 이 스킬에 지금 켜진 보정(위력/효과/할인/콤보)이 있으면 배지 상태 반환 */
 function skillTagBoostState(unit, s){
@@ -11577,10 +11567,6 @@ function setJudgeOrder(side, label){
   const arrow = side==='p' ? '⬅' : '➜';
   order.innerHTML = `<div class="jo-arrow">${arrow}</div><div class="jo-lab">${label}</div>`;
 }
-/* 흐림 폐지 — 식물·상태바는 판정 전 과정 또렷이 보인다(잔존 호출 안전용 no-op). */
-function setBlur(){}
-function setVerdictSide(){}
-function clearJudgeMessage(){}
 async function showJudgeMessage(message, tone, critical, duration){ if(duration) await sleep(duration); }
 function battleStatLabel(stat){
   return stat==='atk'?'공격력':stat==='def'?'방어력':stat==='spd'?'기동성':stat==='acc'?'적중력':stat==='elem'?'속성력':'능력치';
@@ -12090,7 +12076,7 @@ async function endMatch(won){
     <div class="mr-rewards">${rewards.join('')}</div>
     <div class="mr-note">${note}</div>
     <button class="btn primary" id="battleResultBtn">${btnLabel}</button>`;
-  hideCardPhase(); setBlur(false); // 결과 화면 진입 시 스킬바 숨김 + 흐림 해제
+  hideCardPhase(); // 결과 화면 진입 시 스킬바 숨김
   const br = $('#battleResult');
   br.classList.remove('shut','reveal'); show('#battleResult'); void br.offsetWidth;
   br.classList.add('shut');
