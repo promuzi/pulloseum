@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 메인 화면 도감 빈 화면 버그 수정 (폰트 @import 스크립트 차단)
+- **증상:** 메인 화면 📖 도감 버튼을 눌러도 모달이 **빈 화면("도감 불러오는 중…")에 멈춤**. 도감(`docs/dex/plant-codex.html`)을 브라우저로 **직접** 열면 정상 → 게임 모달의 iframe으로 **중첩**해서 열 때만 재현.
+- **원인:** plant-codex.html의 `<style>` 첫머리 외부 폰트 `@import`(googleapis/jsdelivr 3개)가 로딩되는 동안 브라우저가 **그 뒤 인라인 `<script>`(도감 빌드 코드) 실행을 보류**(보류 스타일시트 → 후속 스크립트 차단 규칙). 폰트 요청이 느리거나 막히면 파서가 `readyState:'loading'`에 갇혀 `build()`가 영영 실행 안 됨 → `__DEX_API`는 멀쩡히 떠 있어도 도감이 못 그림. 중첩 iframe(게임+도감+게임?dex=1 3단)에서 폰트 요청 경합으로 더 잘 터짐.
+- **수정:** 폰트 3개를 `<style>@import` → `<head>`의 **비차단 `<link rel="stylesheet" media="print" onload="this.media='all'">`** 로 이동(+`preconnect`). 폰트는 폴백 스택(Do Hyeon→Pretendard→sans-serif)으로 자연 대체되므로 장식용일 뿐, 스크립트를 막아선 안 됨. 이제 폰트가 느리거나 실패해도 도감이 즉시 빌드됨.
+- **검증:** 헤드리스(Chromium)로 **버그 재현 그대로**(CDN 실패 샌드박스) 중첩 경로 재검 — 수정 전 0카드·`loading` 고착 → 수정 후 6섹션·182카드 정상 렌더, "불러오는 중" 사라짐. 직접 열기 경로도 정상 유지.
+
 ### 2026-06-26 — 게임 내 도감 모달 (메인 화면 가방 아래 → 도감)
 - 메인 화면 우측 `#sidePanel`의 **가방 버튼 아래에 📖 도감 버튼**(`bagFabHtml`에 `data-act="dex"` side-fab 추가) → 클릭 시 게임 내 모달(`#dexModal`)로 웹 도감(`docs/dex/plant-codex.html`)을 **iframe 그대로 삽입**해 띄움(`openDex()`, 첫 열림 lazy-load·재열기 즉시). 닫기 시 iframe src 유지. 탭 전환 시 `closeAllModals`로 닫힘. (종자 가방 팝업 안이 아니라 메인 화면.)
 - 도감은 기존대로 `index.html?dex=1`을 읽어 실제 데이터/외형(개체 차별화 포함) 렌더 → 게임 떠나지 않고 앱 안에서 확인. preview 검증: 모달 표시·iframe 도감 렌더(title·콘텐츠)·닫기 정상. self-test 0 fail.

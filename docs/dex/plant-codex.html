@@ -5,11 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#091015">
 <title>풀로세움 — 외계 식물 표본 도감</title>
+<!-- 폰트는 비차단(non-blocking)으로 로드 — @import로 <style>에 두면 폰트 요청이 느리거나
+     막힐 때(특히 도감이 게임 모달의 중첩 iframe으로 열릴 때) 브라우저가 뒤의 인라인 <script>
+     실행을 보류해 도감이 영영 빈 화면("불러오는 중…")에 멈춘다. media 스왑으로 렌더·스크립트
+     차단을 피하고, 폰트는 폴백 스택(Do Hyeon→Pretendard→sans-serif)으로 자연 대체된다. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css" media="print" onload="this.media='all'">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap');
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import url('https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css');
-
 :root{
   --void:#091015; --void2:#0c161c; --panel:#0f1c23; --panel2:#13242c;
   --ink:#e9f2f3; --sub:#8aa3aa; --faint:#5d7178; --line:rgba(146,186,196,.14);
