@@ -92,6 +92,7 @@
 ## 참고 문서 (라우팅 — 필요할 때만 읽기)
 - 전투/성장 메커니즘: [docs/battle-mechanics-deep-dive.md](docs/battle-mechanics-deep-dive.md) (성장·밸런스는 [balance-sheet.md](docs/balance-sheet.md)로 통합)
 - 종 시스템: [docs/species-system-guide.md](docs/species-system-guide.md)
+- 🎨 **식물 그림/모션 직접 넣기(사용자 손그림→AI→픽셀화→삽입):** [docs/sprite-art-motion-guide.md](docs/sprite-art-motion-guide.md) — 사용자가 "그림/모션 어떻게 넣어?"라고 물으면 **이 문서 그대로** 안내(분홍 화분 트릭·120×140 base y96·`SPRITE_OVERRIDES`·필요 모션 목록).
 - 밸런스 시트: [docs/balance-sheet.md](docs/balance-sheet.md)
 - 특성/생장 로드맵: [docs/trait-growth-roadmap.md](docs/trait-growth-roadmap.md)
 - 안드로이드 빌드: [docs/android-capacitor-wrapper.md](docs/android-capacitor-wrapper.md)
