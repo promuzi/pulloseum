@@ -8386,6 +8386,18 @@ const MUTANT_SIGNATURES = {
   'ex_volkar|방전 평원': ['draca_vine','shock_trap','spark_edge','volt_leech','volt_whip','acid_vine','dynamo_vine'],
   'ex_volkar|자철 협곡': ['carni_vine','volt_reaper','acid_volt','dynamo_cactus','whip_vine','blight_vine','draca_flame','glow_vine'],
 };
+/* 이중 변이 버섯 28종 — 속성별 지역에 분포(released:false → 지역 발견으로만 획득). 멱등(merge가 dedup). */
+(function(){
+  var REG = { fire:'ex_veloc|흑요암 능선', water:'ex_ermias|루미안', grass:'ex_kairen|균사 회랑',
+    earth:'ex_veloc|잿빛 평원', wind:'ex_nereidon|궤도 캐노피', bolt:'ex_volkar|방전 평원', ice:'ex_octavis|서리 동굴' };
+  ['tox','pred','wpn','drg'].forEach(function(v){
+    Object.keys(REG).forEach(function(el){
+      var key = 'spore_'+v+'_'+el, reg = REG[el];
+      var arr = (MUTANT_SIGNATURES[reg] = MUTANT_SIGNATURES[reg] || []);
+      if(arr.indexOf(key) < 0) arr.push(key);
+    });
+  });
+})();
 EXPLORE_VIEW.forEach(function(p){ (p.regions||[]).forEach(function(r){
   var add = MUTANT_SIGNATURES[p.id + '|' + r.name];
   if(add){ var cur = r.signature || (r.signature = []); add.forEach(function(k){ if(cur.indexOf(k) < 0) cur.push(k); }); }
@@ -13540,6 +13552,12 @@ window.__test('dual-variant skills (variantSkillsOf base_variants)', function(){
   if(!(st.indexOf('skill_card_infuse')>=0 && st.indexOf('skill_card_spray')>=0)) fails.push('포자+독성이 독성기 미부여');
   if(variantSkillsOf({ form:'spore', base_variants:['spore'], equipped_trait_cards:[] }).length!==0) fails.push('순수 포자가 전용 스킬 보유(회귀)');
   if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('dual mushroom distribution (MUTANT_SIGNATURES)', function(){
+  const all=new Set(); Object.values(MUTANT_SIGNATURES).forEach(a=>a.forEach(k=>all.add(k)));
+  const dual=Object.keys(SPECIES).filter(k=>/^spore_(tox|pred|wpn|drg)_/.test(k));
+  const missing=dual.filter(k=>!all.has(k));
+  if(missing.length) throw new Error('분포 누락: '+missing.join(','));
 });
 window.__test('baseline: SPECIES has legacy keys', function(){
   ['flame','aqua','thorn','gaia','windy','spark','frost'].forEach(k => __ok(SPECIES[k], 'missing legacy species '+k));
