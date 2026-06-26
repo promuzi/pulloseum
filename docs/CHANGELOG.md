@@ -9,6 +9,11 @@
 - **검증:** `__catalogSelfTest()` 0 fail · preview 라이브 탐사 정상(`.exmap` 렌더)·격납고 콜아웃4·연결선4. 내 변경만(1 insertion/437 deletions).
 - **남은 후속:** 이제 고아가 된 헬퍼들 → **아래 정리 2차에서 제거.**
 
+### 2026-06-26 — 탐사 모달 닫기 ✕ 버튼 강화창과 통일
+- 격납고(`.exhangar-x`)는 `btn` 클래스가 붙어 일반 버튼 룩, 지역 상세(`.exdet-x`)는 흐린 반투명 원으로 **제각각**이라 이질적이었음.
+- 둘 다 **강화창 `pm-close`와 동일 룩**으로 통합(원형 30×30·어두운 배경 `rgba(0,0,0,.3)`·하늘색 ✕ `#9fd9ff`·파란 링 `box-shadow 0 0 0 1.5px`, 우상단 절대배치). 격납고 버튼에서 `btn` 클래스 제거. `.exdet-x` 옛 규칙은 통합 규칙으로 일원화.
+- 검증: preview 실측 — 격납고 ✕ bg `rgba(0,0,0,.3)`·color `#9fd9ff`·box-shadow 파란 링·원형 30×30·우상단(우11·상11)로 pm-close와 일치.
+
 ### 2026-06-26 — 죽은 코드 정리 2차: 고아 탐사 헬퍼 제거 (265줄)
 - 정리 1차로 호출자가 사라진 고아 함수들을 제거: `renderRegionBriefPopup`·`renderRegionDetail`·`renderPlanetPopup`·`renderInventoryPreview`·`renderExplorationResult`(Region B 144줄) + `upgradeScanner`·`upgradeSeedStorageCapacity`·`upgradeSeedStorageEnvironment`·`showExploreTravelOverlay`·`runExploration`·`executeExploration`(Region C) + 죽은 `shipSummaryStats` 중복(7766, 7787 라이브에 덮임).
 - **라이브 보존(중요):** Region C 한가운데의 `let explorationBusy = false;`는 **라이브 `exploreViewRun`이 쓰는 변수**라 보존(블라인드 삭제 방지). `createSeedInventoryEntry`(스타터 종자)·`openExploration`(진입점)도 보존. 콘텐츠 앵커 splice(7개 앵커 전부 유일성 확인 후).

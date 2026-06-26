@@ -1104,7 +1104,11 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exhangar-card{width:min(520px,94%);max-height:86%;overflow:auto;background:linear-gradient(160deg,#142338,#0a1322);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px;position:relative;}
 .exhangar-card h3{margin:0 0 2px;font-size:18px;}
 .exhangar-card .sub{margin:0 0 12px;color:var(--sub);font-size:12.5px;}
-.exhangar-x{position:absolute;right:10px;top:10px;width:32px;height:32px;border-radius:50%;padding:0;}
+/* 탐사 모달 닫기 ✕ — 강화창 pm-close와 동일 룩으로 통일(원형·어두운 배경·하늘색·파란 링) */
+.exhangar-x,.exdet-x{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;padding:0;
+  border:none;background:rgba(0,0,0,.3);color:#9fd9ff;font-size:17px;font-weight:900;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px rgba(120,200,255,.5);z-index:3;}
+.exhangar-x:active,.exdet-x:active{transform:scale(.9);}
 .exhangar-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .exhangar-stat{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;}
 .exhangar-stat b{font-size:15px;}
@@ -1149,7 +1153,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 /* 행성 상세 — 지역 지도 (그림3) */
 .exdet-backdrop{position:absolute;inset:0;z-index:20;background:rgba(3,7,14,.72);display:flex;align-items:flex-start;justify-content:center;padding:12px 12px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;}
 .exdet-card{width:min(460px,97%);max-height:calc(100% - 4px);overflow-y:auto;background:#0d1525;border:1px solid rgba(31,217,196,.3);border-radius:16px;padding:12px 12px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 18px 60px rgba(0,0,0,.65);position:relative;margin:0 auto;}
-.exdet-x{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:var(--text);font-size:15px;padding:0;z-index:3;}
+/* .exdet-x 룩은 위 .exhangar-x,.exdet-x 통합 규칙으로 일원화(강화창 pm-close와 동일) */
 .exdet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(31,217,196,.08);border:1px solid rgba(31,217,196,.3);border-radius:12px;padding:10px 42px 10px 12px;}
 .exdet-head .hn{font-size:17px;font-weight:900;}
 .exdet-head .hd{font-size:11.5px;color:var(--sub);margin-top:2px;}
@@ -8618,7 +8622,7 @@ function exHangarHtml(){
   const ship = exShip();
   const byId = id => SHIP_UPGRADE_INDEX[id];
   return `<div class="exhangar-backdrop" id="exHangarBackdrop"><div class="exhangar-card">
-    <button class="btn exhangar-x" id="exHangarX">✕</button>
+    <button class="exhangar-x" id="exHangarX">✕</button>
     <h3>🛰️ 탐사선 격납고</h3>
     <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료(폴드 에너지) 탱크를 올리면 <b>더 깊은 폴드 심도</b>의 좌표가 열립니다.</p>
     <div class="exh-stage" id="exhStage">
