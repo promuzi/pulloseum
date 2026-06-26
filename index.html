@@ -4193,31 +4193,7 @@ const SEED_STORAGE_REQUIREMENTS = {
   seed_tideglass_kelp:'high_pressure',
   seed_orbit_bloom:'bio_stable',
 };
-const SHIP_PART_SLOTS = {
-  fuel:'연료 계통',
-  heat:'열 차폐',
-  cold:'냉기 보호',
-  pressure:'압력 안정',
-  water_pressure:'수압 탐사',
-  weapon:'방어 무장',
-  seed_storage:'종자 보관',
-  storage_environment:'특수 보관',
-  rare_detector:'희귀 탐지',
-  item_scanner:'자원 탐지',
-};
-const SHIP_PARTS = [
-  { id:'part_fuel_tank_basic', slot:'fuel', icon:'⛽', name:'연료 탱크', desc:'장거리 탐사용 예비 연료 탱크입니다.', stat_modifiers:{ max_fuel:2 } },
-  { id:'part_heat_plate_basic', slot:'heat', icon:'🔥', name:'열 차폐판', desc:'고온 행성과 용암 지대 탐사 안정성을 높입니다.', stat_modifiers:{ heat_resistance:8 } },
-  { id:'part_cold_shield_basic', slot:'cold', icon:'❄️', name:'냉기 보호막', desc:'저온 행성과 빙결 지역에서 장비 동결을 늦춥니다.', stat_modifiers:{ cold_resistance:8 } },
-  { id:'part_pressure_stabilizer_basic', slot:'pressure', icon:'🧭', name:'압력 안정 장치', desc:'고압 지형에서 선체 뒤틀림을 줄입니다.', stat_modifiers:{ pressure_resistance:8 } },
-  { id:'part_hydro_module_basic', slot:'water_pressure', icon:'🌊', name:'수압 탐사 모듈', desc:'심해와 조석 지대 탐사에 필요한 수압 대응 장치입니다.', stat_modifiers:{ water_pressure_resistance:10, hydro_pressure_resistance:10 } },
-  { id:'part_defense_turret_basic', slot:'weapon', icon:'🎯', name:'방어 포탑', desc:'위험 생물과 잔해 충돌에 대응합니다.', stat_modifiers:{ weapon_power:4, weapon_performance:4, durability:8 } },
-  { id:'part_seed_crate_basic', slot:'seed_storage', icon:'📦', name:'종자 보관함', desc:'탐사 후 가져올 수 있는 종자 보관 칸을 늘립니다.', stat_modifiers:{ seed_storage_capacity:3, cargo_slots:3 } },
-  { id:'part_bio_vault_basic', slot:'storage_environment', icon:'🧪', name:'특수 환경 보관함', desc:'더 까다로운 종자 보관 환경 등급을 한 단계 보조합니다.', stat_modifiers:{ seed_storage_environment_bonus:1 } },
-  { id:'part_rare_detector_basic', slot:'rare_detector', icon:'🔭', name:'희귀 생체 신호 탐지기', desc:'희귀 종자 발견 가중치와 탐사 장비 판정을 높입니다.', stat_modifiers:{ rare_seed_bonus:0.04, scanner_bonus:0.04 } },
-  { id:'part_resource_scanner_basic', slot:'item_scanner', icon:'📡', name:'자원 스캐너', desc:'아이템 보상 발견 확률을 높입니다.', stat_modifiers:{ item_find_bonus:0.05, item_detection_bonus:0.05 } },
-];
-const SHIP_PART_INDEX = Object.fromEntries(SHIP_PARTS.map(part => [part.id, part]));
+/* 부품 시스템 폐지(2026-06-26) — 라이브 탐사(EXPLORE_VIEW)가 저항 게이트를 쓰지 않아 죽은 시스템이었음. 강화 4트랙만 유지. */
 /* 탐사선 강화 = 크레딧 전용 4트랙 */
 const SHIP_ORBIT_MAX = 4;
 const SHIP_UPGRADES = [
@@ -4229,24 +4205,9 @@ const SHIP_UPGRADES = [
 const SHIP_UPGRADE_INDEX = Object.fromEntries(SHIP_UPGRADES.map(upgrade => [upgrade.id, upgrade]));
 const EXPLORATION_SHOP_CATEGORIES = [
   { id:'fuel', name:'연료' },
-  { id:'ship_parts', name:'탐사선 부품' },
-  { id:'storage', name:'보관함' },
-  { id:'environment', name:'환경 모듈' },
   { id:'equipment', name:'탐사 장비' },
   { id:'support', name:'기본 지원품' },
 ];
-const SHIP_PART_SHOP_INFO = {
-  part_fuel_tank_basic: { price:180, category:'ship_parts', required_level:1 },
-  part_heat_plate_basic: { price:220, category:'ship_parts', required_level:1 },
-  part_cold_shield_basic: { price:220, category:'ship_parts', required_level:1 },
-  part_pressure_stabilizer_basic: { price:260, category:'ship_parts', required_level:2 },
-  part_hydro_module_basic: { price:320, category:'ship_parts', required_level:3 },
-  part_defense_turret_basic: { price:360, category:'ship_parts', required_level:3 },
-  part_seed_crate_basic: { price:260, category:'storage', required_level:1 },
-  part_bio_vault_basic: { price:460, category:'environment', required_level:2 },
-  part_rare_detector_basic: { price:380, category:'equipment', required_level:2 },
-  part_resource_scanner_basic: { price:340, category:'equipment', required_level:2 },
-};
 const EXPLORATION_SHOP_ITEMS = [
   { id:'fuel_cell_small', category:'fuel', type:'fuel', icon:'⛽', name:'소형 연료 셀', desc:'탐사선 연료를 1 회복합니다.', price:35, amount:1 },
   { id:'fuel_cell_bundle', category:'fuel', type:'fuel', icon:'🛢️', name:'연료 셀 묶음', desc:'탐사선 연료를 3 회복합니다. 최대 연료를 넘을 수 없습니다.', price:90, amount:3 },
@@ -6706,8 +6667,6 @@ function newExplorerShip(){
       harvester:10,
       scanner:10,
     },
-    equipped_parts:{},
-    owned_parts:[],
     upgrade_levels:{},
     unlocked_planets:['planet_elyndor'],
     stable_regions:['region_elyndor_lumenwood'],
@@ -6736,7 +6695,6 @@ function defaultState(){
     trait_inventory:[],
     potion_inventory:[],
     trait_cards:{},
-    ship_part_inventory:[],
     ship_upgrade_materials:0,
   };
 }
@@ -6775,16 +6733,14 @@ function normalizeState(s){
     _st.harvester  = Math.max(4,  Math.round(_st.harvester  || 10));
     _st.scanner    = Math.max(0,  Math.round(_st.scanner    || 10));
   }
-  if(!s.exploration_ship.equipped_parts || Array.isArray(s.exploration_ship.equipped_parts)) s.exploration_ship.equipped_parts = {};
-  if(!Array.isArray(s.ship_part_inventory)) s.ship_part_inventory = [];
-  Object.values(s.exploration_ship.equipped_parts).forEach(partId => {
-    if(SHIP_PART_INDEX[partId] && !s.ship_part_inventory.includes(partId)) s.ship_part_inventory.push(partId);
-  });
-  s.exploration_ship.owned_parts = s.ship_part_inventory.slice();
-  Object.keys(s.exploration_ship.equipped_parts).forEach(slot => {
-    const part = SHIP_PART_INDEX[s.exploration_ship.equipped_parts[slot]];
-    if(!part || part.slot !== slot || !s.ship_part_inventory.includes(part.id)) delete s.exploration_ship.equipped_parts[slot];
-  });
+  // 부품 시스템 폐지(2026-06-26) — 잔존 필드/저항·보관·탐지 스탯 제거(멱등)
+  delete s.exploration_ship.equipped_parts;
+  delete s.exploration_ship.owned_parts;
+  delete s.ship_part_inventory;
+  {
+    const _st = s.exploration_ship.stats;
+    ['heat_resistance','cold_resistance','pressure_resistance','water_pressure_resistance','hydro_pressure_resistance','weapon_power','weapon_performance','seed_storage_environment','seed_storage_environment_grade','seed_storage_environment_bonus','rare_seed_bonus','scanner_bonus','item_find_bonus','item_detection_bonus'].forEach(k => delete _st[k]);
+  }
   if(!s.exploration_ship.upgrade_levels) s.exploration_ship.upgrade_levels = {};
   if(typeof s.ship_upgrade_materials !== 'number') s.ship_upgrade_materials = 0;
   if(!Array.isArray(s.unlocked_planets)) s.unlocked_planets = s.exploration_ship.unlocked_planets.slice();
@@ -7303,26 +7259,6 @@ function shipStatAliases(key){
   };
   return aliases[key] || [key];
 }
-function shipPartInventory(){
-  if(!Array.isArray(state.ship_part_inventory)) state.ship_part_inventory = [];
-  const ship = state.exploration_ship || newExplorerShip();
-  ship.owned_parts = state.ship_part_inventory.slice();
-  return state.ship_part_inventory;
-}
-function hasShipPart(partId){
-  return shipPartInventory().includes(partId);
-}
-function shipPartModifiers(ship = state.exploration_ship || newExplorerShip()){
-  const equipped = (ship && ship.equipped_parts) || {};
-  return Object.values(equipped).reduce((mods, partId) => {
-    const part = SHIP_PART_INDEX[partId];
-    if(!part) return mods;
-    Object.entries(part.stat_modifiers || {}).forEach(([key, value]) => {
-      mods[key] = (mods[key] || 0) + value;
-    });
-    return mods;
-  }, {});
-}
 function shipBaseStat(ship, key){
   const s = (ship && ship.stats) || {};
   const keys = shipStatAliases(key);
@@ -7332,11 +7268,8 @@ function shipBaseStat(ship, key){
   return 0;
 }
 function shipStat(ship, key){
-  const base = shipBaseStat(ship, key);
-  if(typeof base !== 'number') return base;
-  const mods = shipPartModifiers(ship);
-  const bonus = shipStatAliases(key).reduce((sum, aliasKey) => sum + (mods[aliasKey] || 0), 0);
-  return +(base + bonus).toFixed(3);
+  // 부품 폐지 → base 스탯만(가산 모디파이어 없음)
+  return shipBaseStat(ship, key);
 }
 function playerEquipmentBonus(){
   const ship = state.exploration_ship || newExplorerShip();
@@ -7353,8 +7286,7 @@ function shipStorageGrade(ship = state.exploration_ship || newExplorerShip()){
   const s = ship.stats || {};
   const grade = String(s.seed_storage_environment_grade || s.seed_storage_environment || 'C').toUpperCase();
   const index = STORAGE_GRADE_SEQUENCE.includes(grade) ? STORAGE_GRADE_SEQUENCE.indexOf(grade) : 0;
-  const bonus = Math.max(0, Math.floor(shipPartModifiers(ship).seed_storage_environment_bonus || 0));
-  return STORAGE_GRADE_SEQUENCE[Math.min(STORAGE_GRADE_SEQUENCE.length - 1, index + bonus)] || 'C';
+  return STORAGE_GRADE_SEQUENCE[Math.min(STORAGE_GRADE_SEQUENCE.length - 1, index)] || 'C';
 }
 function normalizeStorageKey(key){
   return STORAGE_ENVIRONMENTS[key] ? key : 'general';
@@ -7483,10 +7415,6 @@ function requirementFailures(requirements = {}, ship = state.exploration_ship ||
   const checks = [
     ['fuel', '연료가 부족합니다.'],
     ['durability', '탐사선 내구성이 부족합니다.'],
-    ['heat_resistance', '열 저항이 부족합니다.'],
-    ['cold_resistance', '냉기 저항이 부족합니다.'],
-    ['pressure_resistance', '압력 저항이 부족합니다.'],
-    ['hydro_pressure_resistance', '수압 저항이 부족합니다.'],
   ];
   return checks
     .filter(([key]) => typeof requirements[key] === 'number' && shipStat(ship, key) < requirements[key])
@@ -7846,12 +7774,6 @@ function shipValueText(key, value){
   if(key === 'rare_seed_bonus' || key === 'item_find_bonus' || key === 'scanner_bonus' || key === 'item_detection_bonus') return '+' + pct(value || 0);
   return value;
 }
-function partModifierText(part){
-  return Object.entries(part.stat_modifiers || {}).map(([key, value]) => {
-    if(key === 'seed_storage_environment_bonus') return `${shipStatLabel(key)} +${value}`;
-    return `${shipStatLabel(key)} +${String(shipValueText(key, value)).replace('+','')}`;
-  }).join(' / ');
-}
 function shipUpgradeCost(upgrade){
   const ship = state.exploration_ship || newExplorerShip();
   const level = (ship.upgrade_levels && ship.upgrade_levels[upgrade.id]) || 0;
@@ -7873,8 +7795,7 @@ function shipUpgradeNextText(ship, upgrade){
     const baseGrade = String((ship.stats || {}).seed_storage_environment_grade || (ship.stats || {}).seed_storage_environment || 'C').toUpperCase();
     const index = STORAGE_GRADE_SEQUENCE.indexOf(baseGrade);
     const nextBase = STORAGE_GRADE_SEQUENCE[Math.min(STORAGE_GRADE_SEQUENCE.length - 1, Math.max(0, index) + 1)] || 'S';
-    const bonus = Math.max(0, Math.floor(shipPartModifiers(ship).seed_storage_environment_bonus || 0));
-    return STORAGE_GRADE_SEQUENCE[Math.min(STORAGE_GRADE_SEQUENCE.length - 1, STORAGE_GRADE_SEQUENCE.indexOf(nextBase) + bonus)] || nextBase;
+    return nextBase;
   }
   const current = shipStat(ship, upgrade.stat);
   const base = shipBaseStat(ship, upgrade.stat);
@@ -7888,38 +7809,6 @@ function shipUpgradeAtMax(ship, upgrade){
     return baseGrade === 'S';
   }
   return shipBaseStat(ship, upgrade.stat) >= upgrade.max;
-}
-function renderEquippedParts(ship){
-  const equipped = ship.equipped_parts || {};
-  return `<div class="ship-part-grid">${Object.entries(SHIP_PART_SLOTS).map(([slot, label]) => {
-    const part = SHIP_PART_INDEX[equipped[slot]];
-    return `<div class="ship-part-card ${part ? 'equipped' : ''}">
-      <div class="ship-part-icon">${part ? part.icon : '▫️'}</div>
-      <div>
-        <div class="ship-part-name">${label}</div>
-        <div class="ship-part-desc">${part ? `${part.name}<br>${partModifierText(part)}` : '비어 있음'}</div>
-      </div>
-      ${part ? `<button class="upbtn" data-unequip-part="${slot}">해제</button>` : ''}
-    </div>`;
-  }).join('')}</div>`;
-}
-function renderOwnedParts(ship){
-  const owned = shipPartInventory();
-  const equipped = ship.equipped_parts || {};
-  return `<div class="ship-part-grid">${owned.map(partId => {
-    const part = SHIP_PART_INDEX[partId];
-    if(!part) return '';
-    const isEquipped = equipped[part.slot] === part.id;
-    const hasSlotPart = !!equipped[part.slot] && !isEquipped;
-    return `<div class="ship-part-card ${isEquipped ? 'equipped' : ''}">
-      <div class="ship-part-icon">${part.icon}</div>
-      <div>
-        <div class="ship-part-name">${part.name}</div>
-        <div class="ship-part-desc">${SHIP_PART_SLOTS[part.slot]}<br>${partModifierText(part)}</div>
-      </div>
-      <button class="upbtn" data-equip-part="${part.id}" ${isEquipped ? 'disabled' : ''}>${isEquipped ? '장착중' : hasSlotPart ? '교체' : '장착'}</button>
-    </div>`;
-  }).join('')}</div>`;
 }
 function renderShipUpgradeCard(ship, upgrade){
   const cost = shipUpgradeFinalCost(upgrade);
@@ -7944,14 +7833,6 @@ function renderShipModRoom(ship){
         <div class="shop-section">현재 탐사선 스탯</div>
         ${renderShipSummary(ship)}
       </section>
-      <section class="ship-mod-section">
-        <div class="shop-section">장착 중인 부품</div>
-        ${renderEquippedParts(ship)}
-      </section>
-      <section class="ship-mod-section">
-        <div class="shop-section">보유한 부품</div>
-        ${renderOwnedParts(ship)}
-      </section>
       <section class="ship-mod-section full">
         <div class="shop-section">스탯 강화</div>
         <div class="ship-upgrade-grid">${SHIP_UPGRADES.map(upgrade => renderShipUpgradeCard(ship, upgrade)).join('')}</div>
@@ -7960,21 +7841,7 @@ function renderShipModRoom(ship){
   </div>`;
 }
 function explorationShopItems(){
-  const partItems = SHIP_PARTS.map(part => {
-    const info = SHIP_PART_SHOP_INFO[part.id] || { price:300, category:'ship_parts', required_level:1 };
-    return {
-      id:`buy_${part.id}`,
-      category:info.category,
-      type:'part',
-      icon:part.icon,
-      name:part.name,
-      desc:`${part.desc}<br>${partModifierText(part)}`,
-      price:info.price,
-      required_level:info.required_level,
-      part_id:part.id,
-    };
-  });
-  return [...EXPLORATION_SHOP_ITEMS, ...partItems];
+  return [...EXPLORATION_SHOP_ITEMS];
 }
 function explorationShopVisibleItems(){
   return explorationShopItems().filter(item => item.category === explorationShopCategory);
@@ -7982,7 +7849,6 @@ function explorationShopVisibleItems(){
 function explorationShopOwnedCount(item){
   const ship = state.exploration_ship || newExplorerShip();
   if(item.type === 'fuel') return `${ship.stats.fuel || 0}/${shipStat(ship, 'max_fuel')}`;
-  if(item.type === 'part') return hasShipPart(item.part_id) ? '1/1' : '0/1';
   if(item.type === 'material') return `${state.ship_upgrade_materials || 0}`;
   if(item.type === 'starter_seed') return state.starter_seed_claimed ? '수령 완료' : '0/1';
   return '0';
@@ -7992,7 +7858,6 @@ function explorationShopBuyState(item){
   const reasons = [];
   if(typeof item.required_level === 'number' && state.player_level < item.required_level) reasons.push(`Lv.${item.required_level} 필요`);
   if(item.type === 'fuel' && (ship.stats.fuel || 0) >= shipStat(ship, 'max_fuel')) reasons.push('연료가 가득 찼습니다');
-  if(item.type === 'part' && hasShipPart(item.part_id)) reasons.push('이미 보유 중');
   if(item.type === 'starter_seed'){
     if(state.starter_seed_claimed) reasons.push('이미 받았습니다');
     else if(!canClaimStarterSeed()) reasons.push('지금은 받을 수 없습니다');
@@ -8032,7 +7897,6 @@ function renderExplorationShopRoom(){
     <div class="explore-summary">
       <span class="stat">크레딧 <b>${fmt(state.credits)}</b></span>
       <span class="stat">연료 <b>${(state.exploration_ship.stats || {}).fuel}/${shipStat(state.exploration_ship, 'max_fuel')}</b></span>
-      <span class="stat">부품 <b>${shipPartInventory().length}</b></span>
       <span class="stat">강화 키트 <b>${state.ship_upgrade_materials || 0}</b></span>
     </div>
     <div class="exploration-shop-layout">
@@ -8496,12 +8360,6 @@ function renderExploration(){
   document.querySelectorAll('#explorationBody [data-exploration-shop-buy]').forEach(btn => {
     btn.addEventListener('click', () => buyExplorationShopItem(btn.dataset.explorationShopBuy));
   });
-  document.querySelectorAll('#explorationBody [data-equip-part]').forEach(btn => {
-    btn.addEventListener('click', () => equipShipPart(btn.dataset.equipPart));
-  });
-  document.querySelectorAll('#explorationBody [data-unequip-part]').forEach(btn => {
-    btn.addEventListener('click', () => unequipShipPart(btn.dataset.unequipPart));
-  });
   document.querySelectorAll('#explorationBody [data-ship-upgrade]').forEach(btn => {
     btn.addEventListener('click', () => upgradeShipStat(btn.dataset.shipUpgrade));
   });
@@ -8753,12 +8611,6 @@ renderExploration = function(){
   });
   document.querySelectorAll('#explorationBody [data-exploration-shop-buy]').forEach(btn => {
     btn.addEventListener('click', () => buyExplorationShopItem(btn.dataset.explorationShopBuy));
-  });
-  document.querySelectorAll('#explorationBody [data-equip-part]').forEach(btn => {
-    btn.addEventListener('click', () => equipShipPart(btn.dataset.equipPart));
-  });
-  document.querySelectorAll('#explorationBody [data-unequip-part]').forEach(btn => {
-    btn.addEventListener('click', () => unequipShipPart(btn.dataset.unequipPart));
   });
   document.querySelectorAll('#explorationBody [data-ship-upgrade]').forEach(btn => {
     btn.addEventListener('click', () => upgradeShipStat(btn.dataset.shipUpgrade));
@@ -9475,28 +9327,6 @@ function setShipBaseStat(ship, key, value){
   }
   s[key] = value;
 }
-function equipShipPart(partId){
-  const ship = state.exploration_ship || newExplorerShip();
-  const part = SHIP_PART_INDEX[partId];
-  if(!part){ toast('부품 데이터를 찾을 수 없습니다'); return; }
-  if(!hasShipPart(part.id)){ toast('보유하지 않은 부품입니다'); return; }
-  ship.equipped_parts = ship.equipped_parts || {};
-  ship.equipped_parts[part.slot] = part.id;
-  state.exploration_ship = ship;
-  saveState(); sfx.heal();
-  renderExploration();
-  toast(`${part.name} 장착 완료`);
-}
-function unequipShipPart(slot){
-  const ship = state.exploration_ship || newExplorerShip();
-  const part = SHIP_PART_INDEX[(ship.equipped_parts || {})[slot]];
-  if(!part){ toast('해제할 부품이 없습니다'); return; }
-  delete ship.equipped_parts[slot];
-  state.exploration_ship = ship;
-  saveState(); sfx.tap();
-  renderExploration();
-  toast(`${part.name} 해제 완료`);
-}
 function upgradeShipStat(upgradeId){
   const ship = state.exploration_ship || newExplorerShip();
   const upgrade = SHIP_UPGRADE_INDEX[upgradeId];
@@ -9537,16 +9367,6 @@ function buyExplorationShopItem(itemId){
   const ship = state.exploration_ship || newExplorerShip();
   if(item.type === 'fuel'){
     ship.stats.fuel = Math.min(shipStat(ship, 'max_fuel'), (ship.stats.fuel || 0) + item.amount);
-    state.exploration_ship = ship;
-    saveState(); sfx.heal();
-    renderMain(); renderExploration();
-    toast(`${item.name} 구매 완료`);
-    return;
-  }
-  if(item.type === 'part'){
-    if(!Array.isArray(state.ship_part_inventory)) state.ship_part_inventory = [];
-    state.ship_part_inventory.push(item.part_id);
-    ship.owned_parts = state.ship_part_inventory.slice();
     state.exploration_ship = ship;
     saveState(); sfx.heal();
     renderMain(); renderExploration();
@@ -14920,6 +14740,22 @@ window.__test('sig: 옛 라이더 제거 — 속성기에 heal/pierce/critBonus 
   __ok(!ELEMENT_SKILLS['skill_elem_water'].heal, '물 속성기 자힐 라이더 제거');
   __ok(!ELEMENT_SKILLS['skill_elem_earth'].pierce, '대지 속성기 고정 pierce 라이더 제거(시그니처로 처리)');
   __ok(!ELEMENT_SKILLS['skill_elem_bolt'].critBonus, '번개 속성기 치명타 라이더 제거');
+});
+window.__test('ship: 부품 시스템 제거됨 + 마이그레이션', function(){
+  const fails=[];
+  if(typeof SHIP_PARTS !== 'undefined') fails.push('SHIP_PARTS 잔존');
+  if(typeof SHIP_PART_INDEX !== 'undefined') fails.push('SHIP_PART_INDEX 잔존');
+  if(typeof SHIP_PART_SLOTS !== 'undefined') fails.push('SHIP_PART_SLOTS 잔존');
+  if(!Array.isArray(SHIP_UPGRADES) || SHIP_UPGRADES.length !== 4) fails.push('강화 4트랙 깨짐');
+  const s = { credits:1, plants:[], exploration_ship:{ stats:{ fuel_tank:2, durability:80, harvester:20, scanner:15, heat_resistance:8, rare_seed_bonus:0.04 }, equipped_parts:{ heat:'x' }, owned_parts:['x'], unlocked_planets:['planet_elyndor'] }, ship_part_inventory:['x'] };
+  normalizeState(s);
+  const st = s.exploration_ship.stats;
+  if('equipped_parts' in s.exploration_ship) fails.push('equipped_parts 미정리');
+  if('owned_parts' in s.exploration_ship) fails.push('owned_parts 미정리');
+  if('ship_part_inventory' in s) fails.push('ship_part_inventory 미정리');
+  if('heat_resistance' in st || 'rare_seed_bonus' in st) fails.push('저항/탐지 스탯 미정리');
+  if(st.durability !== 80 || st.scanner !== 15) fails.push('핵심 스탯 손상');
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 </script>
 <!-- 식물 도감 공유 렌더 모듈 — 게임 내 도감 모달이 같은 창의 __DEX_API를 Shadow DOM에 직접 렌더 -->
