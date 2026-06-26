@@ -31,7 +31,7 @@
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 | **13** | **스킬 태그 & 태그 시너지** ⭐최우선 | ✅ **완료(1·2·3단계)** | **토대(`skillTags`/`tagModSum`/`effectiveCost`/`TAG_META`)+효과 4종(power·cost·effect·combo·compose)+콘텐츠(태그 카드 12종 드롭 등록·무기 5종 `variant`·활성 보정 배지 UI). `__catalogSelfTest()` 0 fail/92 · preview 실전투 검증. 향후=봇 시너지·도감 필터(YAGNI §8)** | [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md) |
-| **14** | **속성별 고유 성질(상태이상) — 속성 개성화** ⭐ | 🟢 **1차 구현 완료(2026-06-26)** | 수치 밸런스 패스(확률·디버프·관통·추가타·자기저항 경감률) · 속성발현 비공격 3종·성장체 속성기 적용 검토 | [signature spec](superpowers/specs/2026-06-26-element-signature-effects-design.md) · 본문 [§4-14](#14-속성별-고유-성질상태이상--속성-개성화) |
+| **14** | **속성별 고유 성질(상태이상) — 속성 개성화** ⭐ | 🟢 **1차 구현 완료(2026-06-26)** | 수치 밸런스 패스(확률·디버프·관통·추가타·자기저항 경감률)만 · 성장체 속성기 적용은 후속 검토 | [signature spec](superpowers/specs/2026-06-26-element-signature-effects-design.md) · 본문 [§4-14](#14-속성별-고유-성질상태이상--속성-개성화) |
 
 상태 기호: 🔲 미착수 · 🟡 진행/설계 중 · 🔵 설계 완료·구현 대기 · ✅ 완료 · ❄️ 보류
 
@@ -228,7 +228,9 @@
 
 **구현 위치:** `ELEMENTS[el].signature` + `ELEMENT_SIGNATURE`/`SIG`(상수) → `applyElementSignature()`(적중 직후 분기)·`applyWindFlurry()` · `effStat`(빙결 spd)·`freezeAccPenalty`(적중)·턴 루프 에너지 회복 차단(`_noRegen`)·`tickStatuses`(빙결 만료)·`statusTags`(❄️/💤)·`showSkillDetail`(성질 pill)·도감(desc 자동).
 
-**남은 것(밸런스 패스 — 수치만):** 스턴 확률(0.30)·젖음 디버프(spd .25/def .20)·재생(.07)·관통(.35/+.30)·빙결(per-stack .10/4·3스택)·추가타(spd/16·×.16)·자기저항 경감(.50) 튜닝. **+ 속성발현 비공격 3종**(물 자힐·풀/대지/바람 버프·빙결 디버프)은 적중 hit가 없어 성질 미부여 — 적용 방식 후속 검토. **+ 성장체 이상 `ELEMENT_GROWTH_SKILLS`** 적용 여부(현재 미적용, 후속).
+**남은 것(밸런스 패스 — 수치만):** 스턴 확률(0.30)·젖음 디버프(spd .25/def .20)·재생(.07)·관통(.35/+.30)·빙결(per-stack .10/4·3스택)·추가타(spd/16·×.16)·자기저항 경감(.50) 튜닝.
+
+**확정 결정(2026-06-26):** 속성발현 중 **자기에게 거는 스킬**(물 자힐·풀/대지/바람 버프)은 성질을 붙이지 않고 **"속성에 의한 추가 스탯"으로 해석**한다(의도된 설계, 갭 아님). 빙결 새싹은 이미 적 기동성↓ = 미니 빙결이라 그대로 둔다. 불·번개 새싹(공격형)만 성질 적용. **성장체 이상 `ELEMENT_GROWTH_SKILLS`** 적용 여부만 후속 검토 대상.
 
 ---
 
