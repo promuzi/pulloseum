@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 죽은 코드 정리 1차: 구버전 renderExploration 3종 + bindSpaceMapInteractions 제거 (438줄)
+- **배경:** 위 격납고 UI 작업 중 `renderExploration`이 **4번 재정의**(마지막 9233/현 ~8869만 활성)됨을 발견 — 계획서가 이 죽은 코드에 속았다. 사용자 요청으로 정리 착수("지금 바로 조심스럽게").
+- **제거:** 구버전 `renderExploration` 3종(함수 선언 #1 + space-map-world 재정의 #2 + try/catch 래퍼 #3)과 그들만 쓰던 `bindSpaceMapInteractions`·`renderExplorationUnsafe`를 삭제(438줄). **참조 그래프 검증:** 이 블록은 서로(+자신)만 참조하고 라이브 `ex*` 경로(`exHangarHtml`/`exploreViewRun`)는 전혀 안 씀(닫힌 죽은 클러스터). `openExploration`(라이브 진입점)은 보존.
+- **strict 안전:** `'use strict'` 하에서 선언 없는 `renderExploration = function(){}`(라이브 override) 할당이 깨지지 않도록 **선언 보존용 1줄 스텁** `function renderExploration(){}`만 남김(현재 "선언+override" 패턴과 동일).
+- **검증:** `__catalogSelfTest()` 0 fail · preview 라이브 탐사 정상(`.exmap` 렌더)·격납고 콜아웃4·연결선4. 내 변경만(1 insertion/437 deletions).
+- **남은 후속:** 이제 고아가 된 헬퍼들(`renderShipModRoom`·`renderRegionBriefPopup`·`renderRegionDetail`·`renderPlanetPopup`·`renderExplorationResult`·`renderInventoryPreview`·`renderShipSummary`·`renderShipUpgradeCard`·`executeExploration`·`runExploration`·`explorationFuelCost`·`showExploreTravelOverlay`·`upgradeScanner`/`upgradeSeedStorageCapacity`/`upgradeSeedStorageEnvironment`·죽은 `shipSummaryStats` 중복) 제거 — 무해(정의만·미호출)하나 후속 정리 대상.
+
 ### 2026-06-26 — 탐사선 격납고 개조실 UI 재설계 (중앙 탐사선 SVG + 사방 4콜아웃 연결선 + 강화 레벨 Lv 표시)
 - **계획 vs 현실 — 죽은 코드 발견:** [탐사선 개조실 UI 재설계 계획](superpowers/plans/2026-06-26-explorer-ship-upgrade-ui-redesign.md) Task 2~4가 지목한 함수(`executeExploration`·`explorationFuelCost`·`renderRegionBriefPopup`·`renderExplorationResult`·`renderShipModRoom`)가 **전부 죽은 코드**였다. `renderExploration`이 4번 재정의되고 **마지막(9233)만 활성** — 라이브 경로는 `ex*` 아틀라스 재작성본(`exHangarHtml`·`exploreViewRun`·`exResultHtml`·`exDetailHtml`). **라이브 러너 `exploreViewRun`은 이미 크레딧만 차감·연료 차감 없음**(궤도=연료탱크로만 게이팅) → **Task 2(연료 제거)는 라이브에서 이미 충족**. 사용자 결정(Option A)으로 죽은 코드는 그대로 두고, Task 3·4를 **라이브 `exHangarHtml`로 재지정**해 구현.
 - **Task 3 — 격납고 다이어그램:** `exHangarHtml`을 "중앙 탐사선 SVG(`shipDiagramSvg`) + 사방 4콜아웃(상=탐사장치·하=연료탱크·좌=내구성·우=채집기)"으로 교체. 콜아웃→부품 위치로 **점선 연결선**(`drawShipConnectors`가 `getBoundingClientRect` 실측 → SVG `<line>`+앵커 dot, `SHIP_ANCHORS` viewBox 100×100 기준). 라이브 `renderExploration`에서 `exHangarOpen`일 때 `requestAnimationFrame(drawShipConnectors)` + 리사이즈 1회 바인딩. 강화 버튼은 기존 `data-ship-upgrade`→`upgradeShipStat` 단일 경로 재사용. `exh-` 프리픽스 CSS.
