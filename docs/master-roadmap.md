@@ -64,7 +64,8 @@
 | **[superpowers/plans/2026-06-24-mushroom-type-implementation.md](superpowers/plans/2026-06-24-mushroom-type-implementation.md)** | 버섯 타입 구현 계획(Task 1~5, 완료) — 단계명·외형·종7·시그니처·탐사·문서 | **#1 버섯형 구현** |
 | **[superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md](superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md)** | 변이형·변이 카드 재설계(🟢설계완료) — 6변이형 컨셉·카드 로스터, 무등급(`fixed`) 카드, `cats` 스킬 라벨, 독 스택 상한, 발광 폐지·자동교체 룰. **수치 placeholder** | **#1 변이 — 구현 계획(writing-plans)** |
 | **[superpowers/specs/2026-06-26-variant-individual-identity-design.md](superpowers/specs/2026-06-26-variant-individual-identity-design.md)** | 변이 개체 정체성(아키타입 축) 설계 — `타입×속성×form×아키타입`, ARCHETYPES 14종+OVERRIDES 편집표면, 스탯·컨셉·고유스킬 적용 3곳 | **#1-A 개체 정체성 — 1차 구현됨** |
-| **[superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md)** | 컨셉+단계별 스킬 대규모 확장(🟡설계 박제·구현 대기) — 2축 블렌드 컨셉+스토리, 단계별 스킬 예산(새싹~완숙체), 14아키타입 효과 경향, 엔진 2종(출혈 회복감소·에너지 흡수), 생성기·단계별 진행 | **#1-A 후속 — 구현 진입점** |
+| **[superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md)** | 컨셉+단계별 스킬 대규모 확장(🟡설계 박제·구현 대기) — 2축 블렌드 컨셉+스토리, 단계별 스킬 예산(새싹~완숙체), 14아키타입 효과 경향, 엔진 5종(출혈 회복감소·에너지 흡수·무기 속성부여·독 증폭·용족 브레스), form 시그니처, 생성기·단계별 진행 | **#1-A 후속 — 설계** |
+| **[superpowers/plans/2026-06-26-individual-concept-skill-expansion.md](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md)** | 위 설계의 구현 계획 — P0 엔진 5종(T1~5, 순수 헬퍼+`__test`)·컨셉 인프라(T6)·콘텐츠 배치 형틀(T7)+배치 반복. 검증=`__catalogSelfTest()` | **#1-A 후속 — 구현 진입점** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
