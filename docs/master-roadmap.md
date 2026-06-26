@@ -28,7 +28,7 @@
 | 12 | 종자 가방 창 + 식물/화분 분리 | 🟢 가방 단순화 + 메인/양육 화분·식물 분리 + 등급별 픽셀 화분 통일 완료 | PNG 도트 교체(#3)·가방 정렬/필터 | [pixel-art §-](pixel-art-ui-roadmap.md) |
 | 6 | 음악/효과음 | 🔲 미착수 | 라이선스·재생 방식 조사 | — |
 | 7 | 탐사 시스템 재설계 | 🟢 **구현 완료**(아틀라스+종분포+폴드+행성11+**변이 140 분포**) | 분포 밸런스 튜닝(희귀도/지역 다양성) | [exploration spec](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md) · [species §4](species-system-guide.md) |
-| 8 | PvP/서버 | 🔵 **아키텍처 확정(2026-06-26): 풀 서버 권위 + 치트방지** | 결정론 규율 지금부터 준수 → 서버 작업 직전 상세 스펙 | [server-authority spec](superpowers/specs/2026-06-26-server-authority-anticheat-design.md) |
+| 8 | PvP/서버 | 🔵 **아키텍처 확정 + 결정론 씨앗 1 착수(2026-06-26)** | ✅ 전투 `rng()` 시드화 + `gameNow()` 단일화 완료 → 다음=시뮬/렌더 분리·보상 서버이전(서버 착수 시) | [server-authority spec](superpowers/specs/2026-06-26-server-authority-anticheat-design.md) · [seams plan](superpowers/plans/2026-06-26-battle-determinism-seams.md) |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 | **13** | **스킬 태그 & 태그 시너지** ⭐최우선 | ✅ **완료(1·2·3단계)** | **토대(`skillTags`/`tagModSum`/`effectiveCost`/`TAG_META`)+효과 4종(power·cost·effect·combo·compose)+콘텐츠(태그 카드 12종 드롭 등록·무기 5종 `variant`·활성 보정 배지 UI). `__catalogSelfTest()` 0 fail/92 · preview 실전투 검증. 향후=봇 시너지·도감 필터(YAGNI §8)** | [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md) |
 | **14** | **속성별 고유 성질(상태이상) — 속성 개성화** ⭐ | 🟢 **1차 구현 완료(2026-06-26)** | 수치 밸런스 패스(확률·디버프·관통·추가타·자기저항 경감률)만 · 성장체 속성기 적용은 후속 검토 | [signature spec](superpowers/specs/2026-06-26-element-signature-effects-design.md) · 본문 [§4-14](#14-속성별-고유-성질상태이상--속성-개성화) |
@@ -182,6 +182,9 @@
 - [x] **분포 버그/얇은 지역 수정 완료(2026-06-25)** — 심해 균열·전자기 늪 0종 버그 해결 + 얇은 지역 6→1(심해 균열만 S랭크 의도적 희박). 상세 = [exploration spec §10](superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
 
 ### 8. PvP / 서버 운용
+**아키텍처 확정(2026-06-26):** 풀 서버 권위 + 치트 방지 → [server-authority spec](superpowers/specs/2026-06-26-server-authority-anticheat-design.md).
+- [x] **서버 준비 씨앗 1 — 결정론 전투 시드(2026-06-26 완료):** 전투 시뮬 난수를 단일 시드 함수 `rng()`(mulberry32)로 깔때기화 + `startMatch` 시드 주입, 방치형 진행 시간 출처 `gameNow()` 단일화. 미래 "전투 엔진 서버 재검증(기둥2)" 추출 비용 선결제. 동작·밸런스 불변. → [plan](superpowers/plans/2026-06-26-battle-determinism-seams.md) (✅완료, 커밋 f0f6d58·aac704d·3d61dfb)
+- [ ] **다음 결정론 작업(서버 착수 시):** 시뮬/렌더 분리(순수 resolve), 보상 발급 서버 이전, 세이브 분리 — 본 씨앗 작업의 명시적 범위 밖이었음.
 - [ ] **비동기(고스트) PvP** vs 실시간 — 비동기(상대 로드아웃 스냅샷 재생)가 현실적, 1순위 권장
 - [ ] 백엔드(Firebase/Supabase/자체) — 클라우드 세이브 동기화도 함께 해결
 - [ ] 랭킹/매칭, 치트 방지. 길드(#4)·클라우드 세이브와 묶어 한 번에 검토

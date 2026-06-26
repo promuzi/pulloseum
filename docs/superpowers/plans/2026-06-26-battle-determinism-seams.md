@@ -1,6 +1,8 @@
 # 전투 결정론 시드 + 시간 시드 도입 (서버 준비 씨앗) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ✅ **구현 완료(2026-06-26).** Task 1~3 전부 적용·커밋. 검증 = `__catalogSelfTest()` 0 fail(rng 재현성·시뮬 Math.random 0 가드·gameNow 단일지점 가드 포함) + 실전투 스모크(적/내 HP가 rng 데미지로 변동, 콘솔 에러 0) + 양육 `nurseryTick(p, gameNow())` 동작 확인. 커밋: `f0f6d58`(T1 인프라+시드+gameNow) · `aac704d`(T2 시뮬 난수 14개 rng 치환) · `3d61dfb`(T3 nurseryTick 8콜러 gameNow). **남은 큰 작업(sim/render 분리·보상 서버이전·세이브 분리)은 의도적 범위 밖 — 서버 착수 시.**
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 미래의 "전투 엔진 서버 재검증"을 싸게 만들기 위해, 지금 전투 난수를 시드 단일 함수 `rng()`로, 방치형 시간 읽기를 단일 함수 `gameNow()`로 깔때기(funnel)화한다. 동작/밸런스는 그대로.
 
@@ -48,7 +50,7 @@
   - `clearBattleRng() → void` — 활성 생성기를 `Math.random`으로 복귀
   - `gameNow() → number` — 진행시간 출처(현재 `Date.now()`, 나중 서버시간으로 교체할 단일 지점)
 
-- [ ] **Step 1: 실패하는 셀프테스트 추가**
+- [x] **Step 1: 실패하는 셀프테스트 추가**
 
 `index.html`에서 마지막 `window.__test('sig: ...', ...)` 케이스 블록을 grep으로 찾는다:
 Run: `grep -n "옛 라이더 제거 — 속성기에 heal/pierce/critBonus 없음" index.html`
@@ -69,13 +71,13 @@ window.__test('rng: 기본은 Math.random 폴백(비전투 무영향)', function
 });
 ```
 
-- [ ] **Step 2: 테스트가 실패하는지 확인**
+- [x] **Step 2: 테스트가 실패하는지 확인**
 
 preview에서 `index.html` 로드 후 콘솔/eval:
 Run (preview_eval): `window.__catalogSelfTest()`
 Expected: 반환된 fails 배열에 `rng: 시드 동일 ...` 항목 포함(예: `seedBattleRng is not defined`).
 
-- [ ] **Step 3: PRNG 4함수 + `gameNow()` 구현**
+- [x] **Step 3: PRNG 4함수 + `gameNow()` 구현**
 
 grep으로 `clamp` 정의를 찾는다:
 Run: `grep -n "function clamp(n, min, max)" index.html`
@@ -102,7 +104,7 @@ function clearBattleRng(){ __battleRng = Math.random; }
 function gameNow(){ return Date.now(); }
 ```
 
-- [ ] **Step 4: 전투 시작 시 시드 주입**
+- [x] **Step 4: 전투 시작 시 시드 주입**
 
 grep으로 `startMatch` 본문 시작을 찾는다:
 Run: `grep -n "function startMatch()" index.html`
@@ -116,17 +118,17 @@ Run: `grep -n "function startMatch()" index.html`
 
 (참고: `startMatch`의 `ensureSkillFields(p);`는 `makeCombatant`(12391 부근)·`buildEnemy`(12399 부근) **이전**이라, 그들 내부 난수가 시드를 따른다.)
 
-- [ ] **Step 5: 셀프테스트 통과 확인**
+- [x] **Step 5: 셀프테스트 통과 확인**
 
 preview `location.reload()` 후:
 Run (preview_eval): `window.__catalogSelfTest()`
 Expected: 반환 fails 배열에 `rng:` 항목 **없음**(0개여야 통과). 기존 케이스도 전부 통과(fails 변동 없음).
 
-- [ ] **Step 6: 전투 스모크(회귀 없음 확인)**
+- [x] **Step 6: 전투 스모크(회귀 없음 확인)**
 
 preview에서 실제 전투 1회 진입(새 상태면): `claimStarterSeed(true)` → `plantSeedFromBag(state.seed_inventory[0].inventory_id,'시드테스트')` → `state.activeId=p.id` → `startBattle()`. 콘솔 에러 없이 카드 페이즈가 뜨고 `playerSkill(<로드아웃 첫 스킬 id>)`가 정상 진행되면 OK(이 시점엔 아직 전투 난수가 `rng()`로 안 바뀌었지만 시드 주입이 깨지지 않았는지 확인).
 
-- [ ] **Step 7: 커밋**
+- [x] **Step 7: 커밋**
 
 ```bash
 git add index.html docs/superpowers/plans/2026-06-26-battle-determinism-seams.md
@@ -173,7 +175,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 > **명시적 제외(이번 범위 아님 — 서버 보상발급 작업에서 처리):** `const w=1+Math.floor(Math.random()*2); grantCareReward('water', w);`(전투 승리 물/비료 보상)와 `const skillId = pool[Math.floor(Math.random()*pool.length)];`(스킬 풀 선택, 보상/연출 계열)은 **그대로 둔다**. 보상 지급은 결정론 시드가 아니라 추후 서버 발급 대상.
 
-- [ ] **Step 1: 가드 셀프테스트 추가(전투 시뮬 경로에 Math.random 없음)**
+- [x] **Step 1: 가드 셀프테스트 추가(전투 시뮬 경로에 Math.random 없음)**
 
 Task 1에서 추가한 `rng:` 테스트 블록 **직후**에 추가. 이 테스트는 전투 시뮬 핵심 함수들의 소스 문자열에 `Math.random`이 없음을 검사한다(`Function.prototype.toString` 사용):
 
@@ -184,32 +186,32 @@ window.__test('rng: 전투 시뮬 경로에 Math.random 직접호출 없음', fu
 });
 ```
 
-- [ ] **Step 2: 테스트 실패 확인**
+- [x] **Step 2: 테스트 실패 확인**
 
 Run (preview_eval, reload 후): `window.__catalogSelfTest()`
 Expected: fails에 `rng: 전투 시뮬 경로에 Math.random 직접호출 없음` 포함(아직 미치환).
 
-- [ ] **Step 3: 위 표 14개 치환 적용**
+- [x] **Step 3: 위 표 14개 치환 적용**
 
 각 앵커를 grep으로 찾아 `Math.random`만 `rng`으로 바꾼다. 예:
 Run: `grep -n "const dodgeRoll = Math.random()\*100;" index.html`
 → `const dodgeRoll = rng()*100;` 로 수정. 14개 전부 동일 방식. 표의 "제외" 2개는 건드리지 않는다.
 
-- [ ] **Step 4: 잔존 확인(시뮬 함수 한정)**
+- [x] **Step 4: 잔존 확인(시뮬 함수 한정)**
 
 Run: `grep -n "Math.random" index.html`
 Expected: 출력에 회피/치명/AI/선공/감전/저항/생존/정화/상태이상 라인이 **더는 없음**. 남는 건 탐사·양육 보상·ID 생성·`rollForm` 등 비-시뮬 호출뿐.
 
-- [ ] **Step 5: 셀프테스트 통과 확인**
+- [x] **Step 5: 셀프테스트 통과 확인**
 
 Run (preview_eval, reload 후): `window.__catalogSelfTest()`
 Expected: 반환 fails **0개**(전부 통과). 특히 `rng: 전투 시뮬 경로에 Math.random 직접호출 없음` 통과.
 
-- [ ] **Step 6: 전투 스모크(밸런스/동작 회귀 없음)**
+- [x] **Step 6: 전투 스모크(밸런스/동작 회귀 없음)**
 
 preview에서 전투 1~2회: `startBattle()` → `playerSkill(id)` 반복으로 승/패까지 진행. 회피 MISS·치명 CRIT·상태이상(감전/화상 등) 팝업이 정상 등장하고 콘솔 에러 없음 확인. (확률 분포는 동일하므로 체감 변화 없어야 정상.)
 
-- [ ] **Step 7: 커밋**
+- [x] **Step 7: 커밋**
 
 ```bash
 git add index.html
@@ -237,7 +239,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 > **범위 한정:** `nurseryTick(p, gameNow())`로 바꾸는 건 **프로덕션 콜러만**. 셀프테스트 안의 `nurseryTick(p, 100*3600000)` 등 **고정 시간 인자 호출은 그대로 둔다**(이미 결정론적). ID 생성용 `Date.now()`(`inventory_id`, `plant_${...}_${Date.now()}` 등)도 진행시간이 아니므로 **건드리지 않는다**.
 
-- [ ] **Step 1: 가드 셀프테스트 추가**
+- [x] **Step 1: 가드 셀프테스트 추가**
 
 Task 2의 가드 테스트 직후에 추가:
 
@@ -250,32 +252,32 @@ window.__test('time: gameNow가 진행시간 출처 단일 지점', function(){
 });
 ```
 
-- [ ] **Step 2: 테스트 실패 확인**
+- [x] **Step 2: 테스트 실패 확인**
 
 Run (preview_eval, reload 후): `window.__catalogSelfTest()`
 Expected: fails에 `time: gameNow가 진행시간 출처 단일 지점` 포함(아직 미치환).
 
-- [ ] **Step 3: 프로덕션 콜러 8곳 치환**
+- [x] **Step 3: 프로덕션 콜러 8곳 치환**
 
 `nurseryTick(p, Date.now())`(및 `nurseryTick(q, Date.now())`/변수명 차이) 형태를 grep으로 찾아 `Date.now()`→`gameNow()`:
 Run: `grep -n "nurseryTick(.*Date.now())" index.html`
 출력 중 **셀프테스트 라인(고정 숫자 인자, 예 `nurseryTick(p, 100*3600000)`)을 제외한** 8곳을 모두 `gameNow()`로 변경한다. (대상 함수: `harvestAllPots`, 양육 수확가능 검사, 물/비료 투입, 양육 탭 렌더 계열 등 — 전부 `Date.now()` 인자만 교체.)
 
-- [ ] **Step 4: 잔존 확인**
+- [x] **Step 4: 잔존 확인**
 
 Run: `grep -n "nurseryTick(.*Date.now())" index.html`
 Expected: 프로덕션 콜러 출력 0(셀프테스트의 고정 인자 호출만 남고, 그건 `Date.now()` 아님).
 
-- [ ] **Step 5: 셀프테스트 통과 확인**
+- [x] **Step 5: 셀프테스트 통과 확인**
 
 Run (preview_eval, reload 후): `window.__catalogSelfTest()`
 Expected: 반환 fails **0개**. 특히 `time: gameNow ...` + 기존 `nursery: ...` 케이스 전부 통과.
 
-- [ ] **Step 6: 양육 스모크**
+- [x] **Step 6: 양육 스모크**
 
 preview에서 양육 탭 진입(`#nav-nursery` 등) → 열매 게이지/수확 UI가 정상 렌더되고 콘솔 에러 없음. (동작 불변이므로 변화 없어야 정상.)
 
-- [ ] **Step 7: 커밋**
+- [x] **Step 7: 커밋**
 
 ```bash
 git add index.html
