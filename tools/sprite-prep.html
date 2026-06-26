@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>식물 스프라이트 준비기 — 분홍 화분 제거 · 120×140 정렬</title>
+<style>
+  :root{ --bg:#0f1419; --panel:#1a2129; --panel2:#222c36; --line:#2c3a47; --tx:#e2e8f0; --mut:#8aa0b0; --acc:#2dd4bf; --acc2:#22d3ee; --warn:#fbbf24; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--tx); font-family:"Segoe UI",system-ui,sans-serif; font-size:14px; }
+  header{ padding:14px 18px; border-bottom:1px solid var(--line); }
+  header h1{ margin:0; font-size:17px; }
+  header p{ margin:4px 0 0; color:var(--mut); font-size:12.5px; }
+  .wrap{ display:grid; grid-template-columns:300px 1fr; gap:0; min-height:calc(100vh - 60px); }
+  .side{ border-right:1px solid var(--line); padding:16px; overflow:auto; }
+  .main{ padding:16px; overflow:auto; }
+  .drop{ border:2px dashed var(--line); border-radius:12px; padding:26px 14px; text-align:center; color:var(--mut); cursor:pointer; transition:.15s; background:var(--panel); }
+  .drop.hot{ border-color:var(--acc); color:var(--acc); background:#16242a; }
+  .drop b{ color:var(--tx); }
+  .grp{ margin-top:18px; }
+  .grp h3{ margin:0 0 8px; font-size:12px; letter-spacing:.04em; color:var(--mut); text-transform:uppercase; }
+  .row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
+  .row label{ flex:0 0 92px; color:var(--mut); font-size:12.5px; }
+  input[type=range]{ flex:1; accent-color:var(--acc); }
+  input[type=color]{ width:34px; height:28px; border:1px solid var(--line); border-radius:6px; background:none; padding:2px; cursor:pointer; }
+  input[type=text]{ width:84px; background:var(--panel2); border:1px solid var(--line); color:var(--tx); border-radius:6px; padding:5px 7px; font-family:ui-monospace,monospace; }
+  .val{ flex:0 0 38px; text-align:right; font-variant-numeric:tabular-nums; color:var(--acc); font-size:12.5px; }
+  .chk{ display:flex; align-items:center; gap:8px; margin:8px 0; cursor:pointer; }
+  .chk input{ accent-color:var(--acc); width:16px; height:16px; }
+  .seg{ display:flex; gap:6px; }
+  .seg button{ flex:1; padding:8px; border:1px solid var(--line); background:var(--panel2); color:var(--mut); border-radius:8px; cursor:pointer; font-size:12.5px; }
+  .seg button.on{ border-color:var(--acc); color:var(--bg); background:var(--acc); font-weight:600; }
+  .btn{ display:block; width:100%; padding:11px; margin-top:10px; border:none; border-radius:9px; background:var(--acc); color:#04201c; font-weight:700; cursor:pointer; font-size:13.5px; }
+  .btn.ghost{ background:var(--panel2); color:var(--tx); border:1px solid var(--line); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .hint{ color:var(--mut); font-size:11.5px; line-height:1.5; margin-top:10px; }
+  .hint code{ color:var(--acc2); }
+  .empty{ color:var(--mut); text-align:center; padding:60px 20px; }
+  .grid{ display:flex; flex-wrap:wrap; gap:14px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; width:148px; }
+  .pad{ width:120px; height:140px; border-radius:6px; position:relative;
+    background-image:conic-gradient(#2a3742 90deg,#222c36 0 180deg,#2a3742 0 270deg,#222c36 0);
+    background-size:14px 14px; margin:0 auto; }
+  .pad canvas{ position:absolute; inset:0; image-rendering:pixelated; }
+  .pad .guide{ position:absolute; left:0; right:0; top:96px; height:1px; background:rgba(45,212,191,.55); }
+  .pad .guide::after{ content:"base y96"; position:absolute; right:2px; top:-12px; font-size:9px; color:var(--acc); }
+  .card .nm{ font-size:11px; color:var(--mut); margin-top:8px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .dl{ margin-top:6px; width:100%; padding:5px; font-size:11px; border:1px solid var(--line); background:var(--panel2); color:var(--tx); border-radius:6px; cursor:pointer; }
+  .bar{ display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .bar .count{ color:var(--mut); font-size:12.5px; }
+  .topbtns{ display:flex; gap:8px; }
+  .topbtns .btn{ width:auto; margin:0; padding:8px 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌱 식물 스프라이트 준비기</h1>
+  <p>분홍 화분(#FF00FF)·배경 제거 → 120×140, base y96 정렬 → 게임용 투명 PNG. 설치·인터넷 불필요(이 파일만 브라우저로 열면 됨).</p>
+</header>
+
+<div class="wrap">
+  <div class="side">
+    <div class="drop" id="drop">
+      <b>그림을 여기로 끌어다 놓기</b><br>또는 클릭해서 선택<br>
+      <span style="font-size:11.5px">PNG 여러 장(모션 프레임) 동시 OK</span>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </div>
+
+    <div class="grp">
+      <h3>지울 색 (임시 화분)</h3>
+      <div class="row">
+        <label>화분 색</label>
+        <input type="color" id="keyColor" value="#ff00ff">
+        <input type="text" id="keyHex" value="#FF00FF">
+      </div>
+      <div class="row">
+        <label>허용 범위</label>
+        <input type="range" id="tol" min="0" max="200" value="90">
+        <span class="val" id="tolV">90</span>
+      </div>
+      <label class="chk"><input type="checkbox" id="rmBg" checked> 배경도 제거 (모서리 색 자동 샘플)</label>
+      <label class="chk"><input type="checkbox" id="despill" checked> 분홍 잔여(테두리 번짐) 줄이기</label>
+    </div>
+
+    <div class="grp">
+      <h3>정렬 모드</h3>
+      <div class="seg">
+        <button id="mStatic" class="on">정지 · 개별</button>
+        <button id="mMotion">모션 · 공통</button>
+      </div>
+      <p class="hint" id="modeHint">정지: 그림마다 각자 가운데 정렬. 단계별 그림(씨앗~완숙)처럼 서로 무관한 그림에 사용.</p>
+    </div>
+
+    <div class="grp">
+      <h3>정렬 조절</h3>
+      <div class="row"><label>밑동 Y</label><input type="range" id="base" min="60" max="139" value="96"><span class="val" id="baseV">96</span></div>
+      <div class="row"><label>크기 %</label><input type="range" id="scale" min="20" max="100" value="100"><span class="val" id="scaleV">100</span></div>
+      <div class="row"><label>좌우 ↔</label><input type="range" id="nx" min="-40" max="40" value="0"><span class="val" id="nxV">0</span></div>
+      <div class="row"><label>상하 ↕</label><input type="range" id="ny" min="-40" max="40" value="0"><span class="val" id="nyV">0</span></div>
+      <p class="hint">크기 %는 자동 맞춤(폭112·높이92) 기준의 배율. 초록 가이드선(y96)이 화분 입구 — 식물 밑동을 여기 맞춰라.</p>
+    </div>
+
+    <button class="btn ghost" id="clear">전부 비우기</button>
+  </div>
+
+  <div class="main">
+    <div class="bar">
+      <span class="count" id="count">불러온 그림 없음</span>
+      <div class="topbtns" style="margin-left:auto">
+        <button class="btn" id="dlAll" disabled>전체 PNG 저장</button>
+        <button class="btn ghost" id="dlSheet" disabled>스프라이트 시트로 내보내기</button>
+      </div>
+    </div>
+    <div id="out"><div class="empty">왼쪽에 그림을 끌어다 놓으면<br>여기에 화분이 지워진 결과가 미리 보입니다.</div></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let items = [];           // {name, base, w, h, keyed: ImageData, bbox}
+let mode = 'static';
+
+const els = {
+  keyColor:$('keyColor'), keyHex:$('keyHex'), tol:$('tol'), rmBg:$('rmBg'), despill:$('despill'),
+  base:$('base'), scale:$('scale'), nx:$('nx'), ny:$('ny')
+};
+
+// ---- file loading ----
+const drop = $('drop'), file = $('file');
+drop.onclick = () => file.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('hot'); };
+drop.ondragleave = () => drop.classList.remove('hot');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('hot'); loadFiles(e.dataTransfer.files); };
+file.onchange = () => loadFiles(file.files);
+
+function loadFiles(list){
+  const files = [...list].filter(f => f.type.startsWith('image/'))
+    .sort((a,b)=> a.name.localeCompare(b.name, undefined, {numeric:true}));
+  let pending = files.length;
+  if(!pending) return;
+  files.forEach(f => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width=img.width; c.height=img.height;
+      const cx = c.getContext('2d'); cx.drawImage(img,0,0);
+      let src;
+      try { src = cx.getImageData(0,0,img.width,img.height); }
+      catch(err){ alert('이미지를 읽지 못했습니다(보안 제한). 로컬 파일을 직접 끌어다 놓아 주세요.'); pending--; return; }
+      items.push({ name:f.name, base:f.name.replace(/\.[^.]+$/,''), w:img.width, h:img.height, src });
+      if(--pending===0) processAndRender();
+    };
+    img.onerror = () => { if(--pending===0) processAndRender(); };
+    img.src = URL.createObjectURL(f);
+  });
+}
+
+// ---- chroma key ----
+function hexToRgb(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function dist2(r,g,b,R,G,B){ const dr=r-R,dg=g-G,db=b-B; return dr*dr+dg*dg+db*db; }
+
+function keyOut(item){
+  const {w,h,src} = item;
+  const out = new ImageData(w,h);
+  const sd = src.data, od = out.data;
+  const [kr,kg,kb] = hexToRgb(els.keyHex.value);
+  const tol = +els.tol.value, t2 = tol*tol;
+  const rmBg = els.rmBg.checked, despill = els.despill.checked;
+  // 배경색 = 네 모서리 픽셀의 다수결(가장 흔한 모서리 색)
+  let bg = null;
+  if(rmBg){
+    const corners = [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].map(([x,y])=>{ const i=(y*w+x)*4; return [sd[i],sd[i+1],sd[i+2]]; });
+    bg = corners[0]; // 좌상단 기준(단색 배경 가정)
+  }
+  let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+    const i=(y*w+x)*4;
+    let r=sd[i],g=sd[i+1],b=sd[i+2],a=sd[i+3];
+    let drop = (a<8) || dist2(r,g,b,kr,kg,kb)<t2 || (bg && dist2(r,g,b,bg[0],bg[1],bg[2])<Math.max(t2,1600));
+    if(drop){ od[i+3]=0; continue; }
+    if(despill && r>g && b>g){ // 마젠타 잔여: 초록이 빠진 픽셀 → R,B를 끌어내림
+      const avg=(r+b)/2; if(g<avg){ const d=avg-g; r=Math.max(g,r-d); b=Math.max(g,b-d); }
+    }
+    od[i]=r; od[i+1]=g; od[i+2]=b; od[i+3]=a;
+    if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+  }
+  item.keyed = out;
+  item.bbox = (maxX<0) ? null : {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+
+// ---- alignment + render ----
+function computeTransform(ref){
+  const base=+els.base.value, userScale=+els.scale.value/100;
+  const maxW=112, maxH=Math.max(8, base-4);
+  const fit=Math.min(maxW/ref.w, maxH/ref.h);
+  const s=fit*userScale;
+  const dw=ref.w*s, dh=ref.h*s;
+  const dstX=(120-dw)/2 + (+els.nx.value);
+  const dstY=base - dh + (+els.ny.value);
+  return {s,dstX,dstY};
+}
+
+function renderOne(item, ref){
+  const cv=document.createElement('canvas'); cv.width=120; cv.height=140;
+  const cx=cv.getContext('2d'); cx.imageSmoothingEnabled=false;
+  if(item.bbox && ref){
+    const {s,dstX,dstY}=computeTransform(ref);
+    const tmp=document.createElement('canvas'); tmp.width=item.w; tmp.height=item.h;
+    tmp.getContext('2d').putImageData(item.keyed,0,0);
+    cx.drawImage(tmp, ref.x, ref.y, ref.w, ref.h, dstX, dstY, ref.w*s, ref.h*s);
+  }
+  return cv;
+}
+
+function unionBbox(){
+  let x=999,y=999,X=-1,Y=-1;
+  items.forEach(it=>{ if(!it.bbox)return; x=Math.min(x,it.bbox.x); y=Math.min(y,it.bbox.y); X=Math.max(X,it.bbox.x+it.bbox.w); Y=Math.max(Y,it.bbox.y+it.bbox.h); });
+  return X<0?null:{x,y,w:X-x,h:Y-y};
+}
+
+function processAndRender(){
+  items.forEach(keyOut);
+  render();
+}
+
+function render(){
+  const out=$('out');
+  if(!items.length){ out.innerHTML='<div class="empty">왼쪽에 그림을 끌어다 놓으면<br>여기에 화분이 지워진 결과가 미리 보입니다.</div>';
+    $('count').textContent='불러온 그림 없음'; $('dlAll').disabled=$('dlSheet').disabled=true; return; }
+  const uni = mode==='motion' ? unionBbox() : null;
+  out.innerHTML='';
+  const grid=document.createElement('div'); grid.className='grid';
+  items.forEach((it,idx)=>{
+    const ref = mode==='motion' ? uni : it.bbox;
+    it.outCanvas = renderOne(it, ref);
+    const card=document.createElement('div'); card.className='card';
+    const pad=document.createElement('div'); pad.className='pad';
+    pad.appendChild(it.outCanvas);
+    const guide=document.createElement('div'); guide.className='guide'; pad.appendChild(guide);
+    card.appendChild(pad);
+    const nm=document.createElement('div'); nm.className='nm'; nm.textContent=it.base+'.png'; card.appendChild(nm);
+    const dl=document.createElement('button'); dl.className='dl'; dl.textContent='이 PNG 저장';
+    dl.onclick=()=>saveCanvas(it.outCanvas, it.base+'.png'); card.appendChild(dl);
+    grid.appendChild(card);
+  });
+  out.appendChild(grid);
+  $('count').textContent=`${items.length}장 · ${mode==='motion'?'모션 공통 정렬':'정지 개별 정렬'}`;
+  $('dlAll').disabled=false; $('dlSheet').disabled = items.length<2;
+}
+
+// ---- saving ----
+function saveCanvas(cv,name){ cv.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); }); }
+$('dlAll').onclick=()=>{ items.forEach((it,i)=> setTimeout(()=>saveCanvas(it.outCanvas, it.base+'.png'), i*250)); };
+$('dlSheet').onclick=()=>{
+  const n=items.length, cv=document.createElement('canvas'); cv.width=120*n; cv.height=140;
+  const cx=cv.getContext('2d'); cx.imageSmoothingEnabled=false;
+  items.forEach((it,i)=> cx.drawImage(it.outCanvas, i*120, 0));
+  saveCanvas(cv, (items[0].base.replace(/[_-]?\d+$/,'')||'sprite')+`_sheet_${n}f.png`);
+};
+
+// ---- controls ----
+function sync(){ ['tol','base','scale','nx','ny'].forEach(k=> $(k+'V').textContent=$(k).value); }
+['tol','base','scale','nx','ny'].forEach(k=> $(k).oninput=()=>{ sync(); render(); });
+els.keyColor.oninput=()=>{ els.keyHex.value=els.keyColor.value.toUpperCase(); reprocess(); };
+els.keyHex.oninput=()=>{ if(/^#?[0-9a-fA-F]{6}$/.test(els.keyHex.value)){ const v=els.keyHex.value.startsWith('#')?els.keyHex.value:'#'+els.keyHex.value; els.keyColor.value=v; reprocess(); } };
+els.rmBg.onchange=els.despill.onchange=reprocess;
+function reprocess(){ items.forEach(keyOut); render(); }
+$('mStatic').onclick=()=>setMode('static');
+$('mMotion').onclick=()=>setMode('motion');
+function setMode(m){ mode=m; $('mStatic').classList.toggle('on',m==='static'); $('mMotion').classList.toggle('on',m==='motion');
+  $('modeHint').textContent = m==='static'
+    ? '정지: 그림마다 각자 가운데 정렬. 단계별 그림(씨앗~완숙)처럼 서로 무관한 그림에 사용.'
+    : '모션: 모든 프레임에 같은 정렬을 적용해 애니메이션이 흔들리지 않게 함. 흔들/공격 같은 연속 프레임에 사용.';
+  render(); }
+$('clear').onclick=()=>{ items=[]; file.value=''; render(); };
+sync();
+</script>
+</body>
+</html>
