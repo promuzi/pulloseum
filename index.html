@@ -904,6 +904,9 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
 .resultcard .rtitle{font-size:17px;font-weight:900;margin-bottom:6px;}
 .seed-preview{margin-top:10px;font-size:12px;color:var(--sub);line-height:1.7;}
 #seedBagModal .modal-card{width:min(96vw,900px);}
+#dexModal .modal-card{width:min(98vw,1000px);height:92vh;display:flex;flex-direction:column;padding:10px;}
+#dexModal .dex-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex:0 0 auto;}
+#dexModal #dexFrame{flex:1 1 auto;width:100%;border:0;border-radius:10px;background:#0d1117;}
 .seed-sort-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
 .seed-sort-label{font-size:12px;color:var(--sub);font-weight:700;margin-right:2px;}
 .seed-sort-btn{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
@@ -2229,7 +2232,17 @@ body{letter-spacing:.2px;}
     <h2>🎒 종자 가방</h2>
     <p class="sub">탐사에서 획득한 종자를 확인하고 심을 수 있습니다.</p>
     <div id="seedBagBody"></div>
+    <button class="btn" id="seedBagDex" style="margin-bottom:8px">📖 식물 도감 열기</button>
     <button class="btn modal-close" id="seedBagClose">닫기</button>
+  </div>
+</div>
+<div class="modal hidden" id="dexModal">
+  <div class="modal-card" id="dexCard">
+    <div class="dex-head">
+      <h2 style="margin:0">📖 식물 도감</h2>
+      <button class="btn modal-close" id="dexClose">닫기</button>
+    </div>
+    <iframe id="dexFrame" title="식물 도감"></iframe>
   </div>
 </div>
 
@@ -13504,7 +13517,7 @@ function openLockedSection(key){
   show('#lockedModal');
 }
 function closeAllModals(){
-  ['#seedModal','#geneModal','#seedBagModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal','#nurseryPopModal','#nurseryDetailModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
+  ['#seedModal','#geneModal','#seedBagModal','#dexModal','#plantConfirmModal','#upgradeModal','#matchesModal','#cardDetailModal','#shopModal','#shopBoxModal','#shopOpenModal','#explorationModal','#settingsModal','#saveModal','#profileModal','#resultModal','#lockedModal','#evolveModal','#nurseryPopModal','#nurseryDetailModal'].forEach(id => { const el = $(id); if(el) el.classList.add('hidden'); });
 }
 /* ===================================================================
    함선 내부 — 포켓몬식 도트 워킹 (모드 탭)
@@ -13727,6 +13740,9 @@ $('#bottomNav').addEventListener('click', (ev) => {
 });
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
+function openDex(){ const f=$('#dexFrame'); if(f && !f.getAttribute('src')) f.setAttribute('src','docs/dex/plant-codex.html'); show('#dexModal'); } // 도감 모달(첫 열림 시 iframe lazy-load)
+const __seedBagDex=$('#seedBagDex'); if(__seedBagDex) __seedBagDex.addEventListener('click', () => { sfx.tap(); openDex(); });
+const __dexClose=$('#dexClose'); if(__dexClose) __dexClose.addEventListener('click', () => { hide('#dexModal'); sfx.tap(); });
 $('#centerPlant').addEventListener('click', () => { sfx.tap(); if(activePlant()){ openUpgrade(); } else { openSeedBag(); } });
 $('#profileBanner').addEventListener('click', () => { sfx.tap(); openProfile(); });
 $('#profileModal').addEventListener('click', (ev) => {

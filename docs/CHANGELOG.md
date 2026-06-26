@@ -2,6 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 게임 내 도감 모달 (종자 가방 → 도감)
+- 종자 가방 모달(`#seedBagModal`)에 **"📖 식물 도감 열기"** 버튼(`#seedBagDex`) 추가 → 게임 내 모달(`#dexModal`)로 도감(`docs/dex/plant-codex.html`)을 **iframe**으로 띄움(`openDex()`, 첫 열림 시 lazy-load·재열기 즉시). 닫기 시 iframe src 유지. 탭 전환 시 `closeAllModals`로 닫힘.
+- 도감은 기존대로 `index.html?dex=1`을 읽어 실제 데이터/외형(개체 차별화 포함) 렌더 → 게임 떠나지 않고 앱 안에서 확인. preview 검증: 모달 표시·iframe 도감 렌더(title·콘텐츠)·닫기 정상. self-test 0 fail.
+- ⚠️ **안드로이드(Capacitor) 빌드 시** `docs/dex/`도 앱에 번들해야 모달이 뜸(웹/로컬은 무관).
+
 ### 2026-06-26 — 개체별 외형 절차적 차별화 1차 (#1-A·#3 연동)
 - **문제:** 외형이 `composePlantSvg(타입,단계,속성)` 3개로만 결정 → 같은 타입+속성이면 개체가 다 똑같이 생김(도감/수집).
 - **해결:** `plantVariant(key)` — 개체 키 해시로 **색감(hue ±16°·채도·명도) + 형태(크기/비율 0.88~1.10) + 무늬(아키타입 테마: 공격형=가시·정밀형=문양·방어형=판·제어형=점·기본=잎맥)** 를 결정. `composePlantSvg`에 `opts.varKey` 추가 → 변형 레이어(필터+transform+`markingSvg`) 적용. 호출부에 `varKey`(plant.species / sp.key) 연결(spriteFor·svgPlant·관리/전투/진화/도감).
