@@ -18,7 +18,7 @@
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
-| 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟡 **변이 개체 정체성(아키타입 14종) 1차 완료** → 🟡 **컨셉+단계별 스킬 대규모 확장 설계 박제(구현 대기)** | **컨셉 레이어+단계별 스킬 생성기 구현(P0 엔진→P1 콘텐츠)** (§4-1-A) | [species](species-system-guide.md) · [identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) |
+| 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟡 아키타입 14종 1차 → 🟢 **컨셉+스킬확장 P0(엔진 5종+컨셉 인프라) 완료** → 🟡 **P1 콘텐츠 배치 대기** | **콘텐츠 배치(T7+): 개체별 컨셉→단계별 스킬, 배치마다 검증·큐레이션** (§4-1-A) | [species](species-system-guide.md) · [identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · [plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
 | 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |

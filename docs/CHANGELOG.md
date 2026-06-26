@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 개체 컨셉+단계별 스킬 확장 P0(엔진+컨셉 인프라) 구현 (#1-A)
+- **목표:** 개체마다 컨셉(2축 블렌드+스토리)을 정하고 단계별 스킬을 대규모로 추가하는 작업의 **토대(P0)**. 설계=[2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · 계획=[plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md). 콘텐츠 배치(T7+)는 후속.
+- **엔진 5종(전부 순수 헬퍼+`__test`):** ① **출혈=회복감소 전역**(`healMult` ×0.5 — 회복·흡혈·재생에 적용) ② **에너지 흡수**(`energyDrain`/`drainEnergy` — 탐식) ③ **무기형 속성 부여**(`infuse` kind 일반화→`element_infuse` 버프 + `elemInfuseBonus` 온히트 추가피해) ④ **독성 자기 독 증폭**(`poisonAmp`→`poison_amp` 버프가 독 DoT 배수, `poisonAmpMult`) ⑤ **용족 브레스 충전**(`breathCharge`/`breathScale`/`breathStack`/`breathPowerMult` — ⚠️ #14 `rampStack` 점유 회피로 별도 `kind:'breath'`).
+- **컨셉 인프라:** `CONCEPT_OVERRIDES`(큐레이션)+`autoConcept`(자동 2축 시드)+`conceptOf` → 속성/타입/변이형/성격 중 둘을 묶은 정체성+스토리를 `SPECIES.desc`에 주입(도감 자동 노출). `applyVariantIdentity`에 합류·멱등.
+- **#14 통합:** 속성 시그니처(#14)와 직교(form/성격/컨셉 축). 속성 축 콘텐츠 스킬은 후속 배치에서 `signature:` 필드로 #14에 합류.
+- **검증:** `__catalogSelfTest()` **0 fail / 110**(#14 카드 ramp·toxic infuse 등 기존 테스트 유지). preview(alt 8771) 리로드 검증. 커밋 6건(T1~T6).
+
 ### 2026-06-26 — 속성별 시그니처 성질(상태이상) 1차 구현 (#14)
 - **의도:** 지금 속성은 상성 배율만 차이 → 속성마다 고유 "성질"을 얹어 같은 위력이라도 전투 맛이 달라지게. **속성 = 정체성.** 브레인스토밍으로 7속성 하나씩 확정 후 구현. 설계: [2026-06-26-element-signature-effects-design.md](superpowers/specs/2026-06-26-element-signature-effects-design.md).
 - **7성질(속성기+속성발현 공격 자동 부여):** 🔥불=화상 DoT / 💧물=젖음(기동↓+방어↓) / 🌿풀=재생(적중 시 고정 자가회복·피해 무관) / ⚡번개=감전(확률 스턴+에너지 회복 차단) / 🪨대지=관통(방어 일부 무시·방어 태세 상대엔 강화) / ❄️빙결=스택(2턴·비례 spd↓·acc↓·3스택 확정 스턴→리셋) / 🌪️바람=연속타(기동성 비례 추가타).
