@@ -11684,7 +11684,10 @@ async function applySkill(a, d, s, side, options={}){
     tbs.forEach(tb => { if(tb) a.buffs.push({kind:'tagmod', tag:tb.tag, type:tb.type, value:tb.value, turns:tb.turns}); });
     spriteFx(side,'buff'); fxPopup(side,'🔺 강화','buf'); effectNotes.push('스킬이 강화되었다!'); blog(`▶ 🔺 태그 강화 발동`);
   }
-  if(s.infuse){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:round2(s.infuse.pct*effMul), turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
+  if(s.infuse){
+    if(s.infuse.kind==='element'){ a.buffs = a.buffs.filter(b=>b.kind!=='element_infuse'); a.buffs.push({kind:'element_infuse', pct:round2(s.infuse.pct*effMul), turns:s.infuse.turns}); spriteFx(side,'buff'); effectNotes.push('무기에 속성이 깃들었다!'); blog(`▶ ✨ 속성 부여!(${s.infuse.turns}턴)`); }
+    else { a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:round2(s.infuse.pct*effMul), turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
+  }
   if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); spriteFx(side,'buff'); fxPopup(side,'🔺 방어','buf'); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
@@ -11773,6 +11776,8 @@ async function applySkill(a, d, s, side, options={}){
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
     if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
+    const elemBonus = elemInfuseBonus(a);
+    if(elemBonus>0 && dm>0){ d.hp=Math.max(0,d.hp-elemBonus); popup(tgtSide,'-'+elemBonus,false); effectNotes.push('속성 일격!'); blog(`▶ ✨ 속성 부여 추가피해 ${elemBonus}`); }
     // 속성 시그니처 성질(화상/젖음/재생/감전/빙결) — 적중 성공 시 자동 부여
     applyElementSignature(a, d, s, side, tgtSide, dm);
     // 바람 연속타 — 주 타격 후 기동성 비례 추가타
@@ -11793,6 +11798,7 @@ async function applySkill(a, d, s, side, options={}){
 const BLEED_HEAL_MULT = 0.5; // 출혈 = 지속피해 + 회복 감소(전역 정체성)
 function healMult(u){ return (u && u.dots && u.dots.some(d=>d.kind==='bleed')) ? BLEED_HEAL_MULT : 1; }
 function drainEnergy(a, d, amount){ const se=Math.min(d.energy||0, amount); d.energy=Math.max(0,(d.energy||0)-se); a.energy=Math.min(a.energyMax,(a.energy||0)+se); return se; } // 탐식: 적 에너지 흡수
+function elemInfuseBonus(a){ const b=(a&&a.buffs||[]).find(x=>x.kind==='element_infuse'); return b ? Math.round((a.elem||0)*b.pct) : 0; } // 무기형: 속성 부여 추가피해
 async function tickStatuses(u, side){
   let changed=false;
   const statusNotes=[];
@@ -12930,6 +12936,10 @@ window.__test('engine: drainEnergy moves energy capped', function(){
   const a={energy:1,energyMax:5}, d={energy:3};
   __eq(drainEnergy(a,d,4), 3, 'limited by d.energy'); __eq(a.energy,4,'a +3'); __eq(d.energy,0,'d drained');
   const a2={energy:4,energyMax:5}, d2={energy:3}; drainEnergy(a2,d2,4); __eq(a2.energy,5,'a capped');
+});
+window.__test('engine: element_infuse bonus from buff', function(){
+  __eq(elemInfuseBonus({buffs:[], elem:20}), 0, 'no buff → 0');
+  __eq(elemInfuseBonus({buffs:[{kind:'element_infuse', pct:0.5, turns:3}], elem:20}), 10, 'elem 20 × 0.5 = 10');
 });
 
 window.__test('baseline: SPECIES has legacy keys', function(){
