@@ -11762,6 +11762,7 @@ async function applySkill(a, d, s, side, options={}){
     const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
     if(ls>0 && dm>0){ const h=Math.round(dm*ls*healMult(a)), before=a.hp; a.hp=Math.min(a.max,a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
     if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } effectNotes.push('상대의 능력치를 흡수하였다!'); blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
+    if(s.energyDrain){ const se=drainEnergy(a,d,s.energyDrain); if(se>0){ effectNotes.push('상대의 에너지를 흡수하였다!'); blog(`▶ 🔋 에너지 ${se} 흡수`); } }
     if(s.pred && a.cardFx){ const pb=a.cardFx.predBoost;
       if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push('상대의 공격력을 흡수하였다!'); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
       if(pb.energySteal>0){ const se=Math.min(d.energy, pb.energySteal); d.energy=Math.max(0,d.energy-se); a.energy=Math.min(a.energyMax,a.energy+se); if(se>0){ effectNotes.push('상대의 에너지를 빼앗았다!'); blog(`▶ 🔋 에너지 ${se} 강탈`); } }
@@ -11791,6 +11792,7 @@ async function applySkill(a, d, s, side, options={}){
 }
 const BLEED_HEAL_MULT = 0.5; // 출혈 = 지속피해 + 회복 감소(전역 정체성)
 function healMult(u){ return (u && u.dots && u.dots.some(d=>d.kind==='bleed')) ? BLEED_HEAL_MULT : 1; }
+function drainEnergy(a, d, amount){ const se=Math.min(d.energy||0, amount); d.energy=Math.max(0,(d.energy||0)-se); a.energy=Math.min(a.energyMax,(a.energy||0)+se); return se; } // 탐식: 적 에너지 흡수
 async function tickStatuses(u, side){
   let changed=false;
   const statusNotes=[];
@@ -12923,6 +12925,11 @@ function __ok(c,msg){ if(!c) throw new Error(msg||'assertion failed'); }
 window.__test('engine: bleed halves healing (healMult)', function(){
   __eq(healMult({ dots:[] }), 1, 'no bleed → 1');
   __eq(healMult({ dots:[{kind:'bleed',dmg:5,turns:2}] }), 0.5, 'bleed → 0.5');
+});
+window.__test('engine: drainEnergy moves energy capped', function(){
+  const a={energy:1,energyMax:5}, d={energy:3};
+  __eq(drainEnergy(a,d,4), 3, 'limited by d.energy'); __eq(a.energy,4,'a +3'); __eq(d.energy,0,'d drained');
+  const a2={energy:4,energyMax:5}, d2={energy:3}; drainEnergy(a2,d2,4); __eq(a2.energy,5,'a capped');
 });
 
 window.__test('baseline: SPECIES has legacy keys', function(){
