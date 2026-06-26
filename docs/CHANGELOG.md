@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 게임 내 도감 file:// 빈 화면 수정 (중첩 iframe 제거 → Shadow DOM 직접 렌더)
+- **근본 원인:** 게임 내 도감(`#dexModal`)이 `plant-codex.html`을 iframe으로 띄우고, 그 도감이 다시 `index.html?dex=1`을 **중첩 iframe**으로 불러 `contentWindow.__DEX_API`를 직접 읽었다. `file://`(더블클릭 실행)에서는 브라우저 동일출처 정책이 **프레임 간 스크립트 접근을 차단** → 도감이 데이터를 영영 못 읽어 빈 화면. (http 서버에선 같은 출처라 통과 → 서버로 열면 정상이라 그동안 안 잡힘.)
+- **수정:** 도감 렌더를 **공유 모듈 `docs/dex/codex-render.js`**(`window.PlantCodex.mount(api, root)`)로 추출. 게임 내 모달은 iframe(`#dexFrame`) → **Shadow DOM 호스트(`#dexHost`)**로 바꾸고, **같은 창의 `window.__DEX_API`를 직접** 넘겨 렌더(`openDex` 재작성). 중첩 iframe·크로스프레임 접근이 **0** → file://·서버·앱 전부 작동. CSS는 Shadow DOM(`.cdx-host` 스코프)으로 격리.
+- **검증(http preview):** 모달에 종 182개 렌더 · 단계 리본/스킬 상세 모달/타입·변이형·속성 필터 작동 · 콘솔 에러 0 · `__catalogSelfTest()` 0 fail. 크로스프레임 호출을 전부 제거했으므로 file:// 작동은 구조상 보장(차이나던 동작 자체가 사라짐).
+- **독립 `plant-codex.html`**(웹/깃허브용)은 자체 inline 렌더 유지 — http에서 정상이라 미변경. (※ 렌더 로직이 잠시 모듈과 중복되나 데이터 단일소스 `__DEX_API`는 양쪽 공유. 추후 독립 페이지도 모듈로 전환하면 중복 해소.)
+
 ### 2026-06-26 — 식물 도감 모달 닫기 버튼 통일 + 제목 한 줄 고정
 - 도감(`#dexModal`) 닫기를 텍스트 "닫기"(`btn modal-close`) → **강화창과 동일한 원형 ✕**(`pm-close`)로 통일(상단 우측 유지). `#dexClose` 핸들러 그대로라 동작 동일.
 - 제목 "📖 식물 도감"에 `white-space:nowrap` → **줄바꿈 없이 한 줄**. 검증: 닫기 정상·제목 1줄(높이 28px).
