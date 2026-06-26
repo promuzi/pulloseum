@@ -11158,7 +11158,7 @@ function makeCombatant(src){
     cards:(src.cards||[]).slice(),   // 변이 스킬 바(variantSkillsOf — 무기형 등) 원본 카드 보존
     startHooks:{ enemyDebuffs:(CE.startEnemyDebuff||[]), selfRandom:(CE.startSelfRandom||0) }, // 공통 카드 battle-start 훅(위조페로몬·약화효소·불안정변이)
     turnHooks:{ ramp:(CE.rampStat||null), threshold:(CE.thresholdBuff||null), bloom:(CE.bloom||null) }, // 매턴 훅(굴광성장·아드레날린·만개)
-    loadout, skipNext:false, scaleStack:0, rampStack:0, freezeStacks:0, freezeTurns:0, zapNoRegen:false,
+    loadout, skipNext:false, scaleStack:0, rampStack:0, breathStack:0, freezeStacks:0, freezeTurns:0, zapNoRegen:false,
     tagMods:(CE.tagMods||[]).slice(), comboPrimed:null, comboRules:(CE.combo||[]).slice(), // 태그 시너지: 지속 보정 풀 + 콤보 점화/규칙(2단계)
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
@@ -11690,6 +11690,7 @@ async function applySkill(a, d, s, side, options={}){
     else { a.buffs = a.buffs.filter(b=>b.kind!=='poison_infuse'); a.buffs.push({kind:'poison_infuse', pct:round2(s.infuse.pct*effMul), turns:s.infuse.turns}); effectNotes.push('독이 묻어나기 시작했다!'); blog(`▶ ☠️ 독 묻히기!(${s.infuse.turns}턴)`); }
   }
   if(s.scaleStack){ const cap=s.scaleStack.cap||5; a.scaleStack=Math.min(cap,(a.scaleStack||0)+1); const dp=round2(s.scaleStack.defPct*a.scaleStack); a.buffs=a.buffs.filter(b=>b.kind!=='scale'); a.buffs.push({kind:'scale', stat:'def', pct:dp, turns:99}); spriteFx(side,'buff'); fxPopup(side,'🔺 방어','buf'); effectNotes.push('비늘이 단단해졌다!'); blog(`▶ 🐉 비늘 ${a.scaleStack}겹! 방어 ${Math.round(dp*100)}%↑`); }
+  if(s.breathCharge){ const cap=s.breathCharge.cap||4; a.breathStack=Math.min(cap,(a.breathStack||0)+1); const ap=round2(s.breathCharge.atkPct*a.breathStack); a.buffs=a.buffs.filter(b=>b.kind!=='breath'); a.buffs.push({kind:'breath', stat:'atk', pct:ap, turns:99}); spriteFx(side,'buff'); fxPopup(side,'🔺 충전','buf'); effectNotes.push('브레스를 모은다!'); blog(`▶ 🐉 브레스 충전 ${a.breathStack}겹! 공격 ${Math.round(ap*100)}%↑`); }
   await flushJudgeEffects();
   if(s.power && s.power>0){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
@@ -11711,7 +11712,8 @@ async function applySkill(a, d, s, side, options={}){
     }
     // 데미지 = 공격×위력%(노멀) + 속성수치×타입배율(원소) − 방어(고정)
     const attackStat = effStat(a,'atk');
-    const normal = attackStat * s.power / 100;
+    const breathMul = s.breathScale ? breathPowerMult(a) : 1;
+    const normal = attackStat * (s.power * breathMul) / 100;
     let elemMult = 1, elementPart = 0;
     if(s.elem){ elemMult = eff(a.element, d.element); elementPart = (a.elem||0) * elemMult; }
     const raw = normal + elementPart;
@@ -11746,6 +11748,7 @@ async function applySkill(a, d, s, side, options={}){
     const absorbed=Math.min(d.barrier,dm);
     if(d.barrier>0){ d.barrier-=absorbed; dm-=absorbed; if(absorbed>0){ blog(`▶ 🧊 보호막이 ${absorbed} 흡수`); spriteFx(tgtSide, d.barrier<=0?'shieldBreak':'shield'); } }
     d.hp = Math.max(0, d.hp - dm);
+    if(s.breathScale && (a.breathStack||0)>0){ a.breathStack=0; a.buffs=a.buffs.filter(b=>b.kind!=='breath'); blog(`▶ 🐉 충전 방출!`); }
     if(d.hp<=0 && d.passives.surviveChance>0){
       const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
       if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); if(d.passives.surviveOnce) d.passives.surviveChance = 0; }
@@ -11801,6 +11804,8 @@ function healMult(u){ return (u && u.dots && u.dots.some(d=>d.kind==='bleed')) ?
 function drainEnergy(a, d, amount){ const se=Math.min(d.energy||0, amount); d.energy=Math.max(0,(d.energy||0)-se); a.energy=Math.min(a.energyMax,(a.energy||0)+se); return se; } // 탐식: 적 에너지 흡수
 function elemInfuseBonus(a){ const b=(a&&a.buffs||[]).find(x=>x.kind==='element_infuse'); return b ? Math.round((a.elem||0)*b.pct) : 0; } // 무기형: 속성 부여 추가피해
 function poisonAmpMult(a){ const b=(a&&a.buffs||[]).find(x=>x.kind==='poison_amp'); return b ? b.mult : 1; } // 독성형: 자기 독 증폭
+const BREATH_PER_STACK = 0.2; // 용족: 브레스 충전 1겹당 위력 +20%
+function breathPowerMult(u){ return 1 + BREATH_PER_STACK*(u.breathStack||0); } // ⚠️ rampStack(#14 카드훅 점유)과 별개 breathStack
 async function tickStatuses(u, side){
   let changed=false;
   const statusNotes=[];
@@ -12946,6 +12951,10 @@ window.__test('engine: element_infuse bonus from buff', function(){
 window.__test('engine: poison_amp multiplies poison', function(){
   __eq(poisonAmpMult({buffs:[]}), 1, 'none → 1');
   __eq(poisonAmpMult({buffs:[{kind:'poison_amp', mult:1.5, turns:2}]}), 1.5, 'amp → 1.5');
+});
+window.__test('engine: breathPowerMult scales with breathStack', function(){
+  __eq(breathPowerMult({breathStack:0}), 1, '0 stacks → 1');
+  __eq(breathPowerMult({breathStack:3}), 1.6, '3 stacks → 1.6');
 });
 
 window.__test('baseline: SPECIES has legacy keys', function(){
