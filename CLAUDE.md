@@ -32,6 +32,7 @@
 
 ## 구조 (중요)
 - ⚠️ **문서 속 `~NNNN` 줄번호는 근사치이며 자주 어긋난다**(index.html이 빠르게 커짐 — 현재 ~14,700줄). 위치는 줄번호가 아니라 **심볼명 grep**으로 찾을 것(예: `grep -n "applyVariantIdentity" index.html`).
+- ⚠️ **같은 함수가 여러 번 재정의되기도 한다 — 마지막 정의가 활성(나머지는 죽은 코드).** 함수 수정 전 `grep -n "function 이름\|이름 = function"`로 **라이브 정의(맨 마지막)** 확인. 구버전을 고치면 화면에 안 보인다(2026-06-26 탐사 계획이 죽은 `renderShipModRoom`/`executeExploration`을 겨냥해 헛수고한 사례). 죽은 함수 삭제 시 **`'use strict'`라 `function foo(){}` 선언을 지우면 이후 `foo = function(){}` 재할당이 깨진다** → 선언 보존용 빈 스텁을 남길 것. (참조 그래프로 "닫힌 죽은 클러스터" 증명 후 콘텐츠-앵커 splice로 삭제)
 - **`index.html`** — 게임 전체가 이 한 파일에 들어 있음. CSS·JS·**게임 데이터 전부 인라인**.
   - ⚠️ 행성/지역/아이템/토너먼트 데이터는 `index.html`의 `const AlienPlantGameData = ...` 블록에 내장. (`data/alien-plant-pvp-data.js`는 참고용, 게임은 안 읽음)
   - ⚠️ **종·스킬은 별개 위치(2026-06-24~):** 종 = `SPECIES_CATALOG`(레거시 격자 `SPECIES_GRID` 위에 머지), 스킬 = `SKILL_LIB`. 종/스킬 확장은 이 둘만 수정(개체 템플릿: `spore_cap`). → [species-system-guide](docs/species-system-guide.md)
@@ -48,6 +49,7 @@
 
 ## 구현된 시스템 (기획서 기반)
 - **탐사:** 아틀라스 궤도 우주맵(**11행성/4궤도**, 행성=다른 은하 공유 좌표·연료=폴드 에너지), 탐사선 개조(연료·내구·채집기·탐사장치), **행성 서식 풀(`species`)+지역 시그니처(`signature`)+테마 필터** 종 분포(`rollSpeciesFromView`), 탐사 시 시공간 폴드(차원이동) 연출 → 결과 팝업. → [exploration spec](docs/superpowers/specs/2026-06-24-exploration-atlas-upgrade-design.md)
+  - ⚠️ **라이브 탐사 함수 = `ex*` 네임스페이스(2026-06-26 정리 완료):** `renderExploration`(최종 정의) / `exHangarHtml`=**탐사선 격납고=강화 UI**(중앙 탐사선 SVG `shipDiagramSvg`+사방 4콜아웃 `renderShipCallout`+연결선 `drawShipConnectors`/`SHIP_ANCHORS`+강화 레벨 `upgradeLevelText`) / `exploreViewRun`=탐사 실행(**크레딧 전용·연료 소모 없음**, 게이팅=궤도(`fuel_tank`)+레벨+크레딧) / `exPopupHtml`·`exDetailHtml`·`exResultHtml`. 강화=`SHIP_UPGRADES`/`upgradeShipStat`. **구버전 `renderShipModRoom`·`executeExploration`·`renderRegionBriefPopup` 등은 죽은 코드라 제거됨** — 탐사 작업은 `ex*`만 건드릴 것. 모달 닫기 ✕ = `pm-close`(강화창)와 통일된 `.exhangar-x`/`.exdet-x`.
 - **종자/보관:** 희귀도·보관환경, 종자 가방(최대치), 변이. 가방 UI는 **단순화(2026-06-25)** — 상세 패널 폐기, 카드 한 줄에 속성·희귀도·타입 칩 + 미니 심기/판매 버튼(`renderSeedBagCard`). 무지개 종자는 심기 전 정보 전부 `???`(심기 확인창 `renderPlantConfirm`도 타입·기원 마스킹).
 - **식물 육성:** 생장 6단계(씨앗→새싹→유체→성장체→성체→완숙체). 성장 경험치 → 단계별 새 스킬 해금.
 - **양육/열매 시스템(2026-06-24~):** 양육 탭에서 시간 게이지(방치형) 방식으로 열매 맺기. 성장체 이상 단계부터 활성화, 게이지 가득 차면 1개씩 최대치까지 맺힘. 5색 희귀도(흰<초록<파랑<보라<주황). 물/비료 버프로 속도 가속. 낙엽 상태(시듦)면 물 트리클 생성. 전투 승리 시 물/비료 공급. `harvestAllPots()` 전체 수확. 공통 개봉 연출 `openRewardReveal`. 양육 뱃지(`nurseryNavDot`)로 수확 가능 알림.
