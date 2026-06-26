@@ -31,7 +31,7 @@
 | 8 | PvP/서버 | 🔲 미착수 | 비동기(고스트) PvP vs 실시간 결정 | — |
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 | **13** | **스킬 태그 & 태그 시너지** ⭐최우선 | ✅ **완료(1·2·3단계)** | **토대(`skillTags`/`tagModSum`/`effectiveCost`/`TAG_META`)+효과 4종(power·cost·effect·combo·compose)+콘텐츠(태그 카드 12종 드롭 등록·무기 5종 `variant`·활성 보정 배지 UI). `__catalogSelfTest()` 0 fail/92 · preview 실전투 검증. 향후=봇 시너지·도감 필터(YAGNI §8)** | [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md) |
-| **14** | **속성별 고유 성질(상태이상) — 속성 개성화** ⭐ | 🟡 **개념·표 박제(설계 중)** | 7속성 시그니처 상태이상 확정 → 부여 방식·수치·엔진(스턴 신규) | 본문 [§4-14](#14-속성별-고유-성질상태이상--속성-개성화) |
+| **14** | **속성별 고유 성질(상태이상) — 속성 개성화** ⭐ | 🟢 **1차 구현 완료(2026-06-26)** | 수치 밸런스 패스(확률·디버프·관통·추가타·자기저항 경감률) · 속성발현 비공격 3종·성장체 속성기 적용 검토 | [signature spec](superpowers/specs/2026-06-26-element-signature-effects-design.md) · 본문 [§4-14](#14-속성별-고유-성질상태이상--속성-개성화) |
 
 상태 기호: 🔲 미착수 · 🟡 진행/설계 중 · 🔵 설계 완료·구현 대기 · ✅ 완료 · ❄️ 보류
 
@@ -66,6 +66,7 @@
 | **[superpowers/specs/2026-06-26-variant-individual-identity-design.md](superpowers/specs/2026-06-26-variant-individual-identity-design.md)** | 변이 개체 정체성(아키타입 축) 설계 — `타입×속성×form×아키타입`, ARCHETYPES 14종+OVERRIDES 편집표면, 스탯·컨셉·고유스킬 적용 3곳 | **#1-A 개체 정체성 — 1차 구현됨** |
 | **[superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md)** | 컨셉+단계별 스킬 대규모 확장(🟡설계 박제·구현 대기) — 2축 블렌드 컨셉+스토리, 단계별 스킬 예산(새싹~완숙체), 14아키타입 효과 경향, 엔진 5종(출혈 회복감소·에너지 흡수·무기 속성부여·독 증폭·용족 브레스), form 시그니처, 생성기·단계별 진행 | **#1-A 후속 — 설계** |
 | **[superpowers/plans/2026-06-26-individual-concept-skill-expansion.md](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md)** | 위 설계의 구현 계획 — P0 엔진 5종(T1~5, 순수 헬퍼+`__test`)·컨셉 인프라(T6)·콘텐츠 배치 형틀(T7)+배치 반복. 검증=`__catalogSelfTest()` | **#1-A 후속 — 구현 진입점** |
+| **[superpowers/specs/2026-06-26-element-signature-effects-design.md](superpowers/specs/2026-06-26-element-signature-effects-design.md)** | 속성별 시그니처 성질(🟢1차 구현완료) — 7속성 성질(화상/젖음/재생/감전/관통/빙결/연속타), 속성기+속성발현 자동 부여, 자기속성 경감·스턴은 `skipNext` 재사용·빙결 스택·바람 추가타 | **#14 속성 개성화** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -209,31 +210,25 @@
 ### 14. 속성별 고유 성질(상태이상) — 속성 개성화
 **목표:** 지금 속성은 **상성 배율(약점 1.5×/저항 0.67×)만** 차이가 난다(`ELEMENTS` `weak`/`strong`, [index.html](../index.html) ~3759). 여기에 **속성마다 고유한 "성질"(시그니처 상태이상)** 을 얹어, 같은 위력이라도 속성에 따라 전투 맛이 달라지게 한다. 불=화상 지속피해, 빙결=동결(기동·적중↓ 또는 스턴), 번개=감전(스턴) 처럼 **속성 = 정체성**.
 
-> 🟡 **개념·표만 박제(설계 중).** 아래는 **제안**이며 부여 방식·수치·면역 규칙은 밸런스 패스에서 확정한다. 기존 상태이상 엔진(`addDot` DoT·`enemyDebuff` 디버프·`DOT_STACK_CAP=4`)을 최대한 재활용하고, **새로 필요한 건 "스턴(행동 1턴 스킵)" 메커니즘 하나뿐**이다.
+> 🟢 **1차 구현 완료(2026-06-26).** 설계 확정·박제 → [signature spec](superpowers/specs/2026-06-26-element-signature-effects-design.md). 부여 범위·7성질·공통 규칙·UI 전부 확정 후 구현. `__catalogSelfTest()` 0 fail/103 + preview 실전투 7속성 검증. **남은 것 = 수치 밸런스 패스**(아래 메모).
 
-**제안: 7속성 시그니처 성질**
+**확정·구현된 7속성 시그니처 성질** (부여 = 속성기 `ELEMENT_SKILLS` + 속성발현 공격 자동)
 
-| 속성 | 시그니처 성질 | 효과(제안) | 엔진 |
-|---|---|---|---|
-| 🔥 불 | **화상** | 매 턴 지속 피해(DoT) | ✅ 기존 (`addDot` burn) |
-| 💧 물 | **침식** | 방어 감소(젖어 무름) + 대상의 화상 해제 | ✅ 기존 (`enemyDebuff` def) |
-| 🌿 풀 | **가시·흡수** | 출혈 DoT 또는 피해의 일부 흡혈 자가회복 | ✅ 기존 (출혈/`drain`) |
-| ⚡ 번개 | **감전** | 일정 확률로 스턴(행동 불가) + 에너지 손실 | ⚠️ **스턴 = 신규** |
-| 🪨 대지 | **둔화** | 기동성 감소(발 묶기) → 후공 유도·콤보 방해 | ✅ 기존 (`enemyDebuff` spd) |
-| ❄️ 빙결 | **동결** | 기동성·적중 동시 감소, 강하면 스턴 | ⚠️ 다중 디버프 / 스턴 |
-| 🌪️ 바람 | **교란** | 적중률 감소(돌풍이 조준을 흩뜨림) | ✅ 기존 (`enemyDebuff` acc) |
+| 속성 | 성질 | 효과 | 대상 | 엔진 |
+|---|---|---|---|---|
+| 🔥 불 | **화상** | 매 턴 DoT | 적 | `addDot('burn')` |
+| 💧 물 | **젖음** | 기동성↓ + 방어력↓ | 적 | 이중 debuff |
+| 🌿 풀 | **재생** | 적중 시 고정 자가회복(피해 무관·흡혈보다 낮게) | 자기 | on-hit heal |
+| ⚡ 번개 | **감전** | 확률 즉시 스턴 + 스턴 턴 에너지 회복 차단 | 적 | `skipNext`+`zapNoRegen` |
+| 🪨 대지 | **관통** | 방어 일부 무시(방어 태세·버프 상대엔 강화) | 적 | pierce 가중 |
+| ❄️ 빙결 | **빙결** | 스택(2턴)·스택비례 spd↓+acc↓·3스택 확정 스턴→리셋 | 적 | `freezeStacks` |
+| 🌪️ 바람 | **연속타** | 기동성 비례 추가타 | 자기 | flurry 루프 |
 
-- **중독**은 속성 성질이 아니라 **독성 변이형**(`toxic`)·풀 속성 영역으로 남긴다(중복 방지). 위 표는 **속성** 7종 전용.
-- **상성과의 관계(제안):** 시그니처 성질은 상성 배율과 **별개로 항상** 시도하되, 상대가 그 속성의 **약점**이면 성질 강도/확률을 가산(약점일 때 동결·감전 더 잘 걸림) 정도로 연동 검토.
+**확정 공통 규칙:** ① 상성 연동 없음(약점이어도 동일) ② 자기 속성 성질만 경감(`SIG.selfResist`, **면역 아님**) ③ 스턴 연속 면역 없음(`skipNext` 재사용) ④ 중독은 독성 변이형/풀 영역으로 분리 유지. **신규 엔진 = 스턴은 기존 `skipNext` 재사용**(스턴 메커니즘 신설 불필요였음), 빙결 스택 카운터·바람 추가타 루프만 추가.
 
-**열린 질문(확정 필요):**
-- **부여 방식:** 속성기(`ELEMENT_SKILLS`)·속성발현에 **자동 부여**할지, 아니면 스킬별 옵션 플래그로 둘지? (자동이면 "속성=성질"이 직관적, 옵션이면 설계 자유도↑)
-- **스턴 메커니즘:** 행동 1턴 스킵을 엔진에 신설(전투 루프에서 `skipTurn` 플래그). 발동 **확률·지속 턴**·연속 스턴 면역(직후 1턴 무적) 규칙.
-- **수치:** 디버프 % / DoT 계수(기존 화상·출혈 0.06·중독 0.05 관례) / 스턴 확률. 스택 상한은 `DOT_STACK_CAP=4` 재사용.
-- **저항/면역:** 자기 속성 성질엔 저항? (불 식물은 화상 반감 등) — 정체성 강화 vs 복잡도.
-- **UI 노출:** 시그니처 성질을 스킬 카드 상세·도감에 어떻게 표기(속성 칩 옆 성질 아이콘).
+**구현 위치:** `ELEMENTS[el].signature` + `ELEMENT_SIGNATURE`/`SIG`(상수) → `applyElementSignature()`(적중 직후 분기)·`applyWindFlurry()` · `effStat`(빙결 spd)·`freezeAccPenalty`(적중)·턴 루프 에너지 회복 차단(`_noRegen`)·`tickStatuses`(빙결 만료)·`statusTags`(❄️/💤)·`showSkillDetail`(성질 pill)·도감(desc 자동).
 
-**구현 메모:** 상성표(`ELEMENTS`)에 성질 키 1개 추가하는 데이터 주도 설계가 무난(예: `ELEMENTS.fire.signature='burn'`). 부여는 `applySkill`의 속성 분기에서, 스턴만 전투 루프(`tickStatuses`/턴 진행)에 신규 분기. 확정 시 설계 박제 → `docs/superpowers/specs/`에 spec 작성 후 §2 문서 지도 등록.
+**남은 것(밸런스 패스 — 수치만):** 스턴 확률(0.30)·젖음 디버프(spd .25/def .20)·재생(.07)·관통(.35/+.30)·빙결(per-stack .10/4·3스택)·추가타(spd/16·×.16)·자기저항 경감(.50) 튜닝. **+ 속성발현 비공격 3종**(물 자힐·풀/대지/바람 버프·빙결 디버프)은 적중 hit가 없어 성질 미부여 — 적용 방식 후속 검토. **+ 성장체 이상 `ELEMENT_GROWTH_SKILLS`** 적용 여부(현재 미적용, 후속).
 
 ---
 

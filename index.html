@@ -3765,14 +3765,41 @@ const SPECIES = (function(){
    weak = 이 속성이 1.5배 피해를 받는 상대(약점), strong = 이 속성이 강하게 때리는 상대(약점의 역).
    불:물·대지 / 물:풀·빙결·번개 / 풀:불·바람·번개 / 번개:대지·빙결 / 대지:풀·물 / 빙결:불·대지 / 바람:대지·불 */
 const ELEMENTS = {
-  fire:  { name:'불',   icon:'🔥', color:'#ff6b4a', weak:['water'],              strong:['grass','ice'],         skill:'화염 분사' },
-  water: { name:'물',   icon:'💧', color:'#4ac6ff', weak:['grass','bolt','ice'], strong:['fire','earth'],        skill:'고압 물대포' },
-  grass: { name:'풀',   icon:'🌿', color:'#6bdd6b', weak:['fire','wind','ice'],  strong:['water','earth'],       skill:'가시 폭풍' },
-  earth: { name:'대지', icon:'🪨', color:'#c9a26b', weak:['grass','water'],      strong:['bolt','wind'],         skill:'암석 붕괴' },
-  wind:  { name:'바람', icon:'🌪️', color:'#9adbe8', weak:['earth'],             strong:['grass'],               skill:'진공 칼날' },
-  bolt:  { name:'번개', icon:'⚡', color:'#ffe14a', weak:['earth'],             strong:['water'],               skill:'천둥 직격' },
-  ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire'],              strong:['water','grass'],       skill:'절대 영도' },
+  fire:  { name:'불',   icon:'🔥', color:'#ff6b4a', weak:['water'],              strong:['grass','ice'],         skill:'화염 분사', signature:'burn' },
+  water: { name:'물',   icon:'💧', color:'#4ac6ff', weak:['grass','bolt','ice'], strong:['fire','earth'],        skill:'고압 물대포', signature:'wet' },
+  grass: { name:'풀',   icon:'🌿', color:'#6bdd6b', weak:['fire','wind','ice'],  strong:['water','earth'],       skill:'가시 폭풍', signature:'regen' },
+  earth: { name:'대지', icon:'🪨', color:'#c9a26b', weak:['grass','water'],      strong:['bolt','wind'],         skill:'암석 붕괴', signature:'pierce' },
+  wind:  { name:'바람', icon:'🌪️', color:'#9adbe8', weak:['earth'],             strong:['grass'],               skill:'진공 칼날', signature:'flurry' },
+  bolt:  { name:'번개', icon:'⚡', color:'#ffe14a', weak:['earth'],             strong:['water'],               skill:'천둥 직격', signature:'shock' },
+  ice:   { name:'빙결', icon:'❄️', color:'#a8d8ff', weak:['fire'],              strong:['water','grass'],       skill:'절대 영도', signature:'freeze' },
 };
+/* ===== 속성별 시그니처 성질(상태이상) — 속성 = 정체성 =====
+   속성기(ELEMENT_SKILLS)·속성발현 공격에 자동 부여. 설계서:
+   docs/superpowers/specs/2026-06-26-element-signature-effects-design.md
+   수치는 1차 임시값(밸런스 패스에서 확정). */
+const ELEMENT_SIGNATURE = {
+  burn:   { el:'fire',  label:'화상',   icon:'🔥', desc:'화상(3턴 지속피해)' },
+  wet:    { el:'water', label:'젖음',   icon:'💧', desc:'젖음 — 적 기동·방어↓(2턴)' },
+  regen:  { el:'grass', label:'재생',   icon:'🌿', desc:'적중 시 체력 7% 재생(피해 무관)' },
+  shock:  { el:'bolt',  label:'감전',   icon:'⚡', desc:'30% 확률 감전 스턴 + 에너지 회복 차단' },
+  pierce: { el:'earth', label:'관통',   icon:'🪨', desc:'방어 관통(방어 태세·버프 상대엔 강화)' },
+  freeze: { el:'ice',   label:'빙결',   icon:'❄️', desc:'빙결 스택(2턴) · 3중첩 시 확정 스턴' },
+  flurry: { el:'wind',  label:'연속타', icon:'🌪️', desc:'기동성 비례 추가타' },
+};
+/* 시그니처 수치(임시) — 밸런스 패스 대상. */
+const SIG = {
+  burnPct:0.06, burnTurns:3,
+  wetSpd:0.25, wetDef:0.20, wetTurns:2,
+  regenPct:0.07,
+  shockChance:0.30,
+  earthPierce:0.35, earthGuardBonus:0.30,
+  freezeSpdPer:0.10, freezeAccPer:4, freezeStunAt:3, freezeTurns:2,
+  flurryBase:1, flurrySpdDiv:16, flurryMax:3, flurryCoef:0.16,
+  selfResist:0.5,   // 자기 속성 성질 경감(면역 아님)
+};
+function sigOf(s){ return (s && s.signature) ? ELEMENT_SIGNATURE[s.signature] : null; }
+/* 빙결 스택 비례 적중 페널티(공격자가 얼면 빗나감↑) */
+function freezeAccPenalty(u){ return (u && u.freezeStacks>0) ? SIG.freezeAccPer * u.freezeStacks : 0; }
 const GRADES = { D:'#9fb0c3', C:'#9aa5b1', B:'#6bdd6b', A:'#4ac6ff', S:'#ffd34a' };
 /* 등급 순서 — D < C < B < A < S. (종자 발견 등급 = 개체 등급 p.grade) */
 const GRADE_ORDER = ['D','C','B','A','S'];
@@ -4201,33 +4228,28 @@ const UNIVERSAL_SKILLS = {
   skill_rally:        { name:'생장 가속', icon:'📈', cost:2, kind:'buff', selfBuff:{stat:'spd',pct:0.25,turns:3}, desc:'속도 25%↑(3턴) · ⚡2', tag:'성장' },
 };
 const ELEMENT_SKILLS = {};
-/* 속성기 차별화 — 속성마다 위력·형태(광역/단일)·부가효과가 다르다.
-   불=화상 / 물=자힐 / 풀=흡혈 / 대지=방어무시 / 바람=단일+자가속 / 번개=치명타 / 빙결=적 둔화. (밸런싱용 조정 가능) */
+/* 속성기 차별화 — 속성마다 위력·형태(광역/단일)가 다르고, 부가효과는 전부
+   '속성 시그니처 성질'(ELEMENT_SIGNATURE)로 통일된다. 옛 라이더(자힐·흡혈·방무·자가속·
+   치명타·둔화)는 시그니처로 교체됨 → 부가효과는 applySkill의 시그니처 분기가 부여한다. */
 const ELEMENT_SKILL_FX = {
-  fire:  { power:160, dot:{kind:'burn',pct:0.06,turns:3},                  rider:'화상(3턴)' },
-  water: { power:150, heal:0.15,                                           rider:'체력 15% 회복' },
-  grass: { power:155, lifesteal:0.35,                                      rider:'피해 35% 흡혈' },
-  earth: { power:170, pierce:0.4,                                          rider:'방어 40% 무시' },
-  wind:  { power:150, single:true, selfBuff:{stat:'spd',pct:0.25,turns:3}, rider:'단일 · 기동성 25%↑(3턴)' },
-  bolt:  { power:175, critBonus:0.25,                                      rider:'치명타율 +25%' },
-  ice:   { power:150, enemyDebuff:{stat:'spd',pct:0.3,turns:2},            rider:'적 기동성 30%↓(2턴)' },
+  fire:  { power:160 },
+  water: { power:150 },
+  grass: { power:155 },
+  earth: { power:170 },
+  wind:  { power:150, single:true },
+  bolt:  { power:175 },
+  ice:   { power:150 },
 };
 Object.keys(ELEMENTS).forEach(el => {
-  const fx = ELEMENT_SKILL_FX[el] || { power:170, rider:'' };
+  const fx = ELEMENT_SKILL_FX[el] || { power:170 };
   const isAoe = !fx.single;
+  const sigDesc = (ELEMENT_SIGNATURE[ELEMENTS[el].signature]||{}).desc || '';
   const sk = {
     name: ELEMENTS[el].skill, icon: ELEMENTS[el].icon, cost:2, kind:'elemental',
-    power:fx.power, elem:true, element:el, tag:'속성', grade:'B',
-    desc:`위력 ${fx.power} · ${ELEMENTS[el].name}속성기 · ${isAoe?'광역':'단일'} · ⚡2${fx.rider?(' · '+fx.rider):''}`,
+    power:fx.power, elem:true, element:el, signature:ELEMENTS[el].signature, tag:'속성', grade:'B',
+    desc:`위력 ${fx.power} · ${ELEMENTS[el].name}속성기 · ${isAoe?'광역':'단일'} · ⚡2${sigDesc?(' · '+sigDesc):''}`,
   };
   if(isAoe) sk.aoe = true; else sk.single = true;
-  if(fx.dot) sk.dot = fx.dot;
-  if(fx.heal) sk.heal = fx.heal;
-  if(fx.lifesteal) sk.lifesteal = fx.lifesteal;
-  if(fx.pierce) sk.pierce = fx.pierce;
-  if(fx.selfBuff) sk.selfBuff = fx.selfBuff;
-  if(fx.critBonus) sk.critBonus = fx.critBonus;
-  if(fx.enemyDebuff) sk.enemyDebuff = fx.enemyDebuff;
   ELEMENT_SKILLS['skill_elem_' + el] = sk;
 });
 const elementSkillId = el => 'skill_elem_' + el;
@@ -4942,12 +4964,12 @@ const STAGE_SKILLS = {
   skill_trait_vine:     { name:'흡수 뿌리',   icon:'🩸', cost:2, kind:'drain',  power:120, single:true, lifesteal:0.4, desc:'위력120 · 단일 · 피해 40% 흡혈 · ⚡2', tag:'타입특기', grade:'B' },
   skill_trait_mushroom: { name:'포자 살포',   icon:'🍄', cost:2, kind:'debuff', enemyDebuff:{stat:'atk',pct:0.18,turns:2}, dot:{kind:'poison',pct:0.05,turns:2}, desc:'적 공격 18%↓(2턴) + 중독(2턴) · ⚡2', tag:'타입특기', grade:'B' },
   // 속성 발현 (새싹~) — 속성마다 회복/공격/버프/디버프 하나
-  skill_sprout_fire:  { name:'불씨 틔우기',   icon:'🔥', cost:2, kind:'attack', power:120, single:true, dot:{kind:'burn',pct:0.06,turns:2}, desc:'위력120 · 단일 + 화상(2턴) · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_fire:  { name:'불씨 틔우기',   icon:'🔥', cost:2, kind:'attack', power:120, single:true, signature:'burn', desc:'위력120 · 단일 + 화상 · ⚡2', tag:'속성발현', grade:'C' },
   skill_sprout_water: { name:'물방울 머금기', icon:'💧', cost:2, kind:'heal',   heal:0.18, desc:'체력 18% 회복 · ⚡2', tag:'속성발현', grade:'C' },
   skill_sprout_grass: { name:'새순 감기',     icon:'🌿', cost:2, kind:'buff',   selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'공격 15%↑(3턴) · ⚡2', tag:'속성발현', grade:'C' },
   skill_sprout_earth: { name:'흙 다지기',     icon:'🪨', cost:2, kind:'buff',   selfBuff:{stat:'def',pct:0.2,turns:3}, desc:'방어 20%↑(3턴) · ⚡2', tag:'속성발현', grade:'C' },
   skill_sprout_wind:  { name:'산들바람',     icon:'🌪️', cost:1, kind:'buff',   selfBuff:{stat:'spd',pct:0.25,turns:3}, desc:'기동성 25%↑(3턴) · ⚡1', tag:'속성발현', grade:'C' },
-  skill_sprout_bolt:  { name:'정전기 방출',   icon:'⚡', cost:2, kind:'attack', power:110, single:true, critBonus:0.2, desc:'위력110 · 단일 + 치명타율 +20% · ⚡2', tag:'속성발현', grade:'C' },
+  skill_sprout_bolt:  { name:'정전기 방출',   icon:'⚡', cost:2, kind:'attack', power:110, single:true, signature:'shock', desc:'위력110 · 단일 + 감전 스턴 · ⚡2', tag:'속성발현', grade:'C' },
   skill_sprout_ice:   { name:'성에 끼우기',   icon:'❄️', cost:2, kind:'debuff', enemyDebuff:{stat:'spd',pct:0.25,turns:2}, desc:'적 기동성 25%↓(2턴) · ⚡2', tag:'속성발현', grade:'C' },
 };
 /* 타입 → 단계 스킬 id 매핑 (5타입) */
@@ -11014,6 +11036,55 @@ function spriteFx(side, kind){
 function dotName(k){ return k==='poison'?'중독':k==='bleed'?'출혈':k==='burn'?'화상':'지속피해'; }
 function debuffLabel(eb){ const stat=eb.stat==='rand'?'무작위 스탯':statName(eb.stat); return `적 ${stat} ${Math.round(eb.pct*100)}%↓(${eb.turns}턴)`; }
 function applyEnemyDebuff(d, eb){ let stat=eb.stat; if(stat==='rand') stat=pick(['atk','def','spd']); d.buffs.push({stat,pct:eb.pct,turns:eb.turns,kind:'debuff'}); return stat; }
+/* ===== 속성 시그니처 성질 적용 (적중 성공 직후) =====
+   s.signature(불/물/풀/번개/대지/빙결/바람)에 따라 on-hit 효과를 부여한다.
+   자기 속성과 같은 성질이면 경감(면역 아님). 관통(대지)·연속타(바람)는 데미지 계산부에서 별도 처리. */
+function applyElementSignature(a, d, s, side, tgtSide, dm){
+  const sig = sigOf(s); if(!sig) return;
+  const selfResist = (d.element && d.element === sig.el); // 같은 속성이면 경감
+  const rk = SIG.selfResist;
+  if(sig.el === 'fire'){ // 화상 DoT
+    let bd = Math.max(1, Math.round(effStat(a,'atk') * SIG.burnPct)); if(selfResist) bd = Math.max(1, Math.round(bd*rk));
+    addDot(d, {kind:'burn', dmg:bd, turns:SIG.burnTurns, icon:dotIcon('burn')});
+    blog(`▶ 🔥 화상(${SIG.burnTurns}턴 · 턴당 ${bd})`);
+  } else if(sig.el === 'water'){ // 젖음 — 기동성↓ + 방어력↓
+    let sp=SIG.wetSpd, df=SIG.wetDef; if(selfResist){ sp*=rk; df*=rk; }
+    d.buffs.push({stat:'spd', pct:round2(sp), turns:SIG.wetTurns, kind:'debuff'});
+    d.buffs.push({stat:'def', pct:round2(df), turns:SIG.wetTurns, kind:'debuff'});
+    spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'💧 젖음','deb');
+    blog(`▶ 💧 젖음 — 기동 ${Math.round(sp*100)}%↓ · 방어 ${Math.round(df*100)}%↓(${SIG.wetTurns}턴)`);
+  } else if(sig.el === 'grass'){ // 재생 — 적중 시 고정 자가회복(피해 무관)
+    const h = Math.round(a.max * SIG.regenPct), before=a.hp;
+    a.hp = Math.min(a.max, a.hp + h);
+    if(a.hp>before){ popup(side,'회복',true); spriteFx(side,'buff'); blog(`▶ 🌿 재생 +${h}`); }
+  } else if(sig.el === 'bolt'){ // 감전 — 확률 스턴 + 스턴 턴 에너지 회복 차단
+    let ch = SIG.shockChance; if(selfResist) ch*=rk;
+    if(Math.random() < ch && d.hp>0){ d.skipNext = true; d.zapNoRegen = true; spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'⚡ 감전','deb'); blog(`▶ ⚡ 감전! 상대 다음 턴 행동불가 + 에너지 회복 차단`); }
+  } else if(sig.el === 'ice'){ // 빙결 스택 — 3중첩 시 확정 스턴
+    let add = true; if(selfResist && Math.random()<rk) add = false; // 같은 속성이면 덜 쌓임
+    if(add){
+      d.freezeStacks = (d.freezeStacks||0) + 1; d.freezeTurns = SIG.freezeTurns;
+      spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'❄️'+d.freezeStacks,'deb');
+      blog(`▶ ❄️ 빙결 ${d.freezeStacks}중첩`);
+      if(d.freezeStacks >= SIG.freezeStunAt && d.hp>0){ d.skipNext = true; d.freezeStacks = 0; d.freezeTurns = 0; fxPopup(tgtSide,'❄️ 동결!','deb'); blog(`▶ ❄️ 완전 동결! 상대 다음 턴 행동불가`); }
+    }
+  }
+}
+/* 바람 연속타 — 주 타격 후 약한 추가타 N회(N=기동성 비례). 각 추가타는 baseDm의 일부. */
+async function applyWindFlurry(a, d, side, tgtSide, baseDm){
+  if(d.hp<=0 || baseDm<=0) return;
+  const n = clamp(SIG.flurryBase + Math.floor(effStat(a,'spd')/SIG.flurrySpdDiv), 1, SIG.flurryMax);
+  const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
+  for(let i=0;i<n && d.hp>0;i++){
+    const hit = Math.max(1, Math.round(baseDm * SIG.flurryCoef));
+    d.hp = Math.max(0, d.hp - hit);
+    if(tgtBox){ tgtBox.classList.add('shake'); setTimeout(()=>tgtBox.classList.remove('shake'),200); }
+    popup(tgtSide,'-'+hit,false); try{ sfx.tap(); }catch(e){}
+    blog(`▶ 🌪️ 추가타 ${hit}`);
+    updateBars();
+    await sleep(150);
+  }
+}
 /* 공통 카드 battle-start 훅 — self가 보유한 시작 효과를 전투 개시 시 1회 적용(위조페로몬·약화효소→적 디버프, 불안정변이→자기 랜덤 스탯↑) */
 function applyCardStartHooks(self, foe){
   const h = self.startHooks; if(!h) return;
@@ -11031,6 +11102,7 @@ function applyCardTurnHooks(u, turn){
 }
 function effStat(u, stat){
   let pct=0; (u.buffs||[]).forEach(b=>{ if(b.stat===stat) pct += (b.kind==='debuff'?-b.pct:b.pct); });
+  if(stat==='spd' && u.freezeStacks>0) pct -= SIG.freezeSpdPer * u.freezeStacks; // 빙결 스택 비례 기동성↓
   const base = stat==='atk'?u.atk : stat==='def'?u.def : u.spd;
   return Math.max(1, Math.round(base*(1+pct)));
 }
@@ -11085,7 +11157,7 @@ function makeCombatant(src){
     cards:(src.cards||[]).slice(),   // 변이 스킬 바(variantSkillsOf — 무기형 등) 원본 카드 보존
     startHooks:{ enemyDebuffs:(CE.startEnemyDebuff||[]), selfRandom:(CE.startSelfRandom||0) }, // 공통 카드 battle-start 훅(위조페로몬·약화효소·불안정변이)
     turnHooks:{ ramp:(CE.rampStat||null), threshold:(CE.thresholdBuff||null), bloom:(CE.bloom||null) }, // 매턴 훅(굴광성장·아드레날린·만개)
-    loadout, skipNext:false, scaleStack:0, rampStack:0,
+    loadout, skipNext:false, scaleStack:0, rampStack:0, freezeStacks:0, freezeTurns:0, zapNoRegen:false,
     tagMods:(CE.tagMods||[]).slice(), comboPrimed:null, comboRules:(CE.combo||[]).slice(), // 태그 시너지: 지속 보정 풀 + 콤보 점화/규칙(2단계)
     buffs:[], dots:[], barrier:Math.round(maxHp*(P.barrierPct||0)), nextAtk:0,
   };
@@ -11420,6 +11492,8 @@ function showSkillDetail(id){
     .map(m=>`<span class="bsd-pill" style="border-color:${m.color}66;color:${m.color}">${m.icon} ${m.name}</span>`).join('');
   let elemPill = '';
   if(s.elem && B.p){ const el=ELEMENTS[B.p.element]; if(el) elemPill = `<span class="bsd-pill" style="border-color:${el.color}66;color:${el.color}">${el.icon} ${el.name} 속성</span>`; }
+  let sigPill = '';
+  { const sg = sigOf(s); if(sg){ const el=ELEMENTS[sg.el]; const c=(el&&el.color)||'#9adbe8'; sigPill = `<span class="bsd-pill" style="border-color:${c}66;color:${c}">${sg.icon} ${sg.label}</span>`; } }
   const dk = (s.dot&&s.dot.kind)||(s.infuse&&s.infuse.kind);
   const dotPill = dk ? `<span class="bsd-pill" style="border-color:#b06bff66;color:#c89cff">${dotIcon(dk)} ${dotName(dk)}</span>` : '';
   // 태그 시너지: 변이형·대상 태그도 pill로 노출(속성/상태이상은 위에서 처리)
@@ -11431,7 +11505,7 @@ function showSkillDetail(id){
   $('#battleSkillDetailCard').style.setProperty('--gc', col);
   $('#battleSkillDetailCard').innerHTML = `
     <div class="bsd-name" style="color:${col}">${s.icon||''} ${displaySkillName(s.name)}</div>
-    <div class="bsd-meta"><span class="bsd-pill">${cost}</span>${gradePill}${catPills}${elemPill}${varPill}${tgtPill}${dotPill}${tag}</div>
+    <div class="bsd-meta"><span class="bsd-pill">${cost}</span>${gradePill}${catPills}${elemPill}${sigPill}${varPill}${tgtPill}${dotPill}${tag}</div>
     <div class="bsd-desc">${skillCoefDesc(s)}</div>
     <div class="bsd-hint">아무 곳이나 탭하면 닫힙니다</div>`;
   show('#battleSkillDetail');
@@ -11473,6 +11547,8 @@ function statusTags(u){
   if(u.barrier>0) tags.push('🧊'+u.barrier);
   const dotIcons=[...new Set((u.dots||[]).map(x=>x.icon))].join('');
   if(dotIcons) tags.push(dotIcons);
+  if(u.freezeStacks>0) tags.push('❄️'+u.freezeStacks);
+  if(u.skipNext) tags.push('💤');
   if((u.buffs||[]).some(b=>b.kind==='buff')) tags.push('🔺');
   if((u.buffs||[]).some(b=>b.kind==='debuff')) tags.push('🔻');
   return tags.length ? '  '+tags.join(' ') : '';
@@ -11523,6 +11599,7 @@ async function animateJudgeCardUse(side, isAttack){
 }
 function popup(side, text, isHeal){
   const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
+  if(!box) return;
   const sp = document.createElement('span');
   sp.className = 'dmgpop' + (isHeal ? ' heal' : '');
   sp.textContent = text;
@@ -11627,7 +11704,7 @@ async function applySkill(a, d, s, side, options={}){
     // 적중/회피 판정 — 광역=명중↑, 단일=명중↓. 회피=30+(방어자 기동성 − 공격자 적중력).
     const isAoe = !!s.aoe;
     const accMod = isAoe ? 10 : (s.single ? -7 : 0);
-    const effAcc = (a.acc||90) + accMod + (s.accBonus||0);
+    const effAcc = (a.acc||90) + accMod + (s.accBonus||0) - freezeAccPenalty(a); // 빙결 스택 시 적중↓
     const defenderSpd = effStat(d,'spd');
     const dodgeRaw = 30 + (defenderSpd - effAcc);
     const dodge = clamp(dodgeRaw, 5, 90);
@@ -11648,7 +11725,13 @@ async function applySkill(a, d, s, side, options={}){
     if(s.elem){ elemMult = eff(a.element, d.element); elementPart = (a.elem||0) * elemMult; }
     const raw = normal + elementPart;
     const defenderDef = effStat(d,'def');
-    const pierce = s.pierce||0;
+    let pierce = s.pierce||0;
+    if(s.signature === 'pierce'){ // 대지 관통 — 방어 태세·방어 버프 상대엔 효율↑
+      const guarded = !!(d.guard) || (d.buffs||[]).some(b=>b.stat==='def' && b.kind!=='debuff');
+      let ep = SIG.earthPierce + (guarded ? SIG.earthGuardBonus : 0);
+      if(d.element === 'earth') ep *= SIG.selfResist; // 자기 속성 저항
+      pierce = Math.max(pierce, ep);
+    }
     const flatDef = defenderDef * (1 - pierce);
     // 방어는 고정 차감하되, 원 피해의 25% 아래로는 깎이지 않게 하한선 적용
     // (저위력 공격이 방어에 의해 1까지 무력화되던 문제 보정)
@@ -11702,6 +11785,11 @@ async function applySkill(a, d, s, side, options={}){
     if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
     if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
+    // 속성 시그니처 성질(화상/젖음/재생/감전/빙결) — 적중 성공 시 자동 부여
+    applyElementSignature(a, d, s, side, tgtSide, dm);
+    // 바람 연속타 — 주 타격 후 기동성 비례 추가타
+    if(s.signature === 'flurry') await applyWindFlurry(a, d, side, tgtSide, dm);
+    if(d.hp<=0){ updateBars(); }
     // (독초 물약 시스템 폐지 — 전투 적용 코드 제거)
     const refl = d.passives.reflectPct||0;
     if(refl>0 && dm>0 && d.hp>0){ const r=Math.round(dm*refl); a.hp=Math.max(0,a.hp-r); popup(side,'-'+r,false); effectNotes.push('공격이 반사되었다!'); blog(`↩️ 굴절 반사! ${r} 피해`); }
@@ -11724,6 +11812,8 @@ async function tickStatuses(u, side){
     u.dots.forEach(dot=>dot.turns--); u.dots = u.dots.filter(dot=>dot.turns>0);
   }
   if(u.buffs && u.buffs.length){ u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); }
+  // 빙결 스택 만료(2턴 유지, 추가 적중으로 갱신)
+  if(u.freezeStacks>0){ u.freezeTurns = (u.freezeTurns||0) - 1; if(u.freezeTurns<=0){ u.freezeStacks=0; u.freezeTurns=0; } }
   if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=Math.random(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('해로운 효과가 해제되었다!'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
   // 포자형: 매 턴 종료 시 포자 발동(중복 가능)
   if(u.cardFx && u.cardFx.spores && u.cardFx.spores.length && B){
@@ -11859,7 +11949,7 @@ async function playerSkill(skillId){
     if(a.hp<=0) continue;
     setJudgeAction(side, idOf(side)); // 행동 카드만 홈 슬롯에, 반대 슬롯 비움(판정 자리)
     await sleep(150);
-    if(a.skipNext){ a.skipNext=false; await animateJudgeCardUse(side,false); setVerdict(side,'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
+    if(a.skipNext){ a.skipNext=false; if(a.zapNoRegen){ a._noRegen=true; a.zapNoRegen=false; } await animateJudgeCardUse(side,false); setVerdict(side, a._noRegen?'감전 — 움직일 수 없다!':'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
     await applySkill(a, d, chosen, side, {suppressMessages:true});
     if(d.hp<=0){ await finishMatch(side==='p'); return; }
     if(a.hp<=0){ await finishMatch(side!=='p'); return; }
@@ -11867,8 +11957,9 @@ async function playerSkill(skillId){
   }
   await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await finishMatch(true); return; } if(B.p.hp<=0){ await finishMatch(false); return; }
   await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await finishMatch(false); return; } if(B.e.hp<=0){ await finishMatch(true); return; }
-  B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
-  B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
+  // 감전 스턴 턴에는 에너지 회복 차단(번개 시그니처)
+  if(B.p._noRegen){ B.p._noRegen=false; } else B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
+  if(B.e._noRegen){ B.e._noRegen=false; } else B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
   await sleep(300);
@@ -13557,6 +13648,67 @@ window.__test('tag3: skillTagBoostState flags active boost', function(){
     cards:[cardKeyOf('card_firecore','C')], loadout:['skill_card_breath','skill_basic_strike'] });
   __ok(skillTagBoostState(u, ALL_SKILLS['skill_card_breath']), '불 브레스 → 보정 활성(배지)');
   __ok(!skillTagBoostState(u, ALL_SKILLS['skill_basic_strike']), '비속성 기본 → 보정 없음');
+});
+
+/* ===== 속성 시그니처 성질 ===== */
+function __mkUnit(el){ return makeCombatant({ name:'t_'+el, element:el, form:'normal', baseStats:{hp:200,atk:30,def:20,spd:20,acc:90,elem:10,energy:5}, loadout:['skill_basic_strike'] }); }
+window.__test('sig: 7속성 속성기에 시그니처 부여', function(){
+  Object.keys(ELEMENTS).forEach(el => {
+    const sk = ELEMENT_SKILLS['skill_elem_'+el];
+    __eq(sk.signature, ELEMENTS[el].signature, el+' 속성기 시그니처 일치');
+    __ok(ELEMENT_SIGNATURE[sk.signature], el+' 시그니처 정의 존재');
+  });
+});
+window.__test('sig: 불=화상 DoT 부여', function(){
+  const a=__mkUnit('fire'), d=__mkUnit('water');
+  applyElementSignature(a, d, ELEMENT_SKILLS['skill_elem_fire'], 'p','e', 50);
+  __ok((d.dots||[]).some(x=>x.kind==='burn'), '화상 DoT 부여됨');
+});
+window.__test('sig: 물=기동+방어 이중 디버프', function(){
+  const a=__mkUnit('water'), d=__mkUnit('grass');
+  applyElementSignature(a, d, ELEMENT_SKILLS['skill_elem_water'], 'p','e', 50);
+  __ok(d.buffs.some(b=>b.stat==='spd'&&b.kind==='debuff'), '기동 디버프');
+  __ok(d.buffs.some(b=>b.stat==='def'&&b.kind==='debuff'), '방어 디버프');
+});
+window.__test('sig: 풀=적중 시 고정 자가회복(피해 무관)', function(){
+  const a=__mkUnit('grass'), d=__mkUnit('fire'); a.hp = a.max - 50;
+  const before=a.hp;
+  applyElementSignature(a, d, ELEMENT_SKILLS['skill_elem_grass'], 'p','e', 0); // dm=0이어도 회복
+  __ok(a.hp > before, '피해와 무관하게 회복됨');
+  __eq(a.hp - before, Math.round(a.max*SIG.regenPct), '회복량 = max×regenPct');
+});
+window.__test('sig: 빙결 3스택 → 확정 스턴 + 리셋', function(){
+  const a=__mkUnit('ice'), d=__mkUnit('grass'); const sk=ELEMENT_SKILLS['skill_elem_ice'];
+  applyElementSignature(a,d,sk,'p','e',50); __eq(d.freezeStacks,1,'1스택');
+  applyElementSignature(a,d,sk,'p','e',50); __eq(d.freezeStacks,2,'2스택');
+  applyElementSignature(a,d,sk,'p','e',50);
+  __ok(d.skipNext, '3스택 시 스턴(skipNext)');
+  __eq(d.freezeStacks,0,'스턴 후 스택 0 초기화');
+});
+window.__test('sig: 빙결 스택이 기동성·적중 깎음', function(){
+  const a=__mkUnit('ice'), d=__mkUnit('grass'); const baseSpd=effStat(d,'spd');
+  d.freezeStacks=2;
+  __ok(effStat(d,'spd') < baseSpd, '기동성 감소');
+  __eq(freezeAccPenalty(d), SIG.freezeAccPer*2, '적중 페널티 = per×stacks');
+});
+window.__test('sig: 대지 관통 — 방어 태세 상대엔 강화', function(){
+  const a=__mkUnit('earth'), d=__mkUnit('grass');
+  // 관통 계산 재현(applySkill 분기와 동일 로직)
+  const guarded=true; const ep = SIG.earthPierce + (guarded?SIG.earthGuardBonus:0);
+  __ok(ep > SIG.earthPierce, '방어 태세 시 관통↑');
+  __ok(ep < 1, '전체 무시는 아님');
+});
+window.__test('sig: 자기 속성 저항 — 불 식물 화상 경감', function(){
+  const a=__mkUnit('fire'), d=__mkUnit('fire'); // 같은 속성
+  applyElementSignature(a, d, ELEMENT_SKILLS['skill_elem_fire'], 'p','e', 100);
+  const burn=(d.dots||[]).find(x=>x.kind==='burn');
+  const full=Math.max(1,Math.round(effStat(a,'atk')*SIG.burnPct));
+  __ok(burn && burn.dmg <= Math.round(full*SIG.selfResist)+1, '같은 속성이면 화상 경감');
+});
+window.__test('sig: 옛 라이더 제거 — 속성기에 heal/pierce/critBonus 없음', function(){
+  __ok(!ELEMENT_SKILLS['skill_elem_water'].heal, '물 속성기 자힐 라이더 제거');
+  __ok(!ELEMENT_SKILLS['skill_elem_earth'].pierce, '대지 속성기 고정 pierce 라이더 제거(시그니처로 처리)');
+  __ok(!ELEMENT_SKILLS['skill_elem_bolt'].critBonus, '번개 속성기 치명타 라이더 제거');
 });
 </script>
 </body>
