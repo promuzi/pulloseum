@@ -9831,6 +9831,20 @@ const SHAPE_FAMILY = {
   glutton:'wild', hermit:'wild', strategist:'wild'
 };
 function shapeFamily(key){ const sp=(typeof SPECIES!=='undefined'&&SPECIES[key])||null; if(!sp||sp.legacy) return 'classic'; return SHAPE_FAMILY[sp.archetype]||'classic'; }
+/* 이중 변이 버섯(2변이 보유)의 두 번째 변이 액센트 색(1차 간단 차별화) */
+const DUAL_MUSHROOM_ACCENT = { toxic:'#9be15d', pred:'#ff5d7a', weapon:'#cfd8e3', dragon:'#ff7a3a' };
+function dualMushroomAccent(varKey){
+  const s = (typeof SPECIES!=='undefined') && SPECIES[varKey];
+  if(!s || s.seedType!=='mushroom' || !s.baseVariants || s.baseVariants.length<2) return null;
+  return DUAL_MUSHROOM_ACCENT[s.baseVariants[1]] || null;
+}
+/* 갓 위에 변이색 포자 글로우 + 입자 몇 개(가산 오버레이 — 기존 렌더 무변경) */
+function dualMushroomAccentSvg(varKey){
+  const c = dualMushroomAccent(varKey); if(!c) return '';
+  return `<g opacity="0.6"><circle cx="60" cy="44" r="9" fill="${c}" opacity="0.35"/>`
+    + `<circle cx="46" cy="34" r="2.2" fill="${c}"/><circle cx="74" cy="36" r="2" fill="${c}"/>`
+    + `<circle cx="60" cy="28" r="1.8" fill="${c}"/></g>`;
+}
 function composePlantSvg(seedType, growth, element, opts){
   opts = opts||{}; const size = opts.size||120;
   const el = ELEMENTS[element] ? element : 'grass';
@@ -9849,6 +9863,7 @@ function composePlantSvg(seedType, growth, element, opts){
   return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
     ${bodyHtml}
+    ${opts.varKey ? dualMushroomAccentSvg(opts.varKey) : ''}
     ${spark}
   </svg>`;
 }
