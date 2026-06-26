@@ -71,7 +71,7 @@ function genIndividual(key, type, el, form, arche){
   const S = {};
   // s 새싹: 저비용. 방어형은 가드, 그 외 싼 견제.
   S.s = A.guard ? { name:w+' 비늘 세우기', icon:'🛡️', cost:1, kind:'guard', guardMult:0.6, desc:'받는 피해 40%↓ · 저비용 방어', tag:'개체' }
-                : { name:w+' '+A.atk+' 잔타', icon:E.i, cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' };
+                : { name:w+' 움트기', icon:E.i, cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' };
   // j 유체: 성격 라이더 단일 공격
   S.j = atkSkill(w+' '+A.atk, E.i, 2, 85, A, 'mid');
   // g2 성장체: 성격 셋업

@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> ✅ **실행 현황(2026-06-26):** P0 엔진 5종 + 컨셉 인프라 완료. 콘텐츠 = 전 175 개체 컨셉 스킬 보유(40 손작업 + 660 생성기 `scripts/gen-concept-skills.js`). preview 실전투로 신규 엔진 5종 전수 동작 확인(에너지 흡수·출혈 회복감소·무기 속성부여·독 증폭·브레스 충전/발동). 큐레이션 1차=생성기 네이밍 정리(단계별 이름 distinct). `__catalogSelfTest()` 0 fail. 잔여=깊은 개체별 큐레이션(`ARCHETYPE_OVERRIDES`/`CONCEPT_OVERRIDES`)·버섯/광신 자해화상 등 선택 후속.
+
 **Goal:** 개체마다 컨셉(2축 블렌드+스토리)을 정하고, 그 컨셉에 맞는 스킬을 단계별로 대규모로 추가해 식물 다양성을 키운다.
 
 **Architecture:** ① 엔진에 작은 메커니즘 5종 추가(출혈 회복감소·에너지 흡수·무기 속성부여·독 증폭·용족 브레스 충전) — 전부 **테스트 가능한 순수 헬퍼**로 만든 뒤 전투 코드에 배선. ② 컨셉 인프라(`CONCEPT_OVERRIDES`/`autoConcept`/`conceptOf`)를 추가하고 `SPECIES.desc`에 컨셉문+스토리 주입. ③ 콘텐츠는 **배치 단위**(개체 4~8개씩)로 컨셉→스토리→단계별 스킬을 정의해 `SKILL_LIB`/`SPECIES_CATALOG.stageSkills`에 멱등 주입. P0(엔진+인프라) 완성 후 콘텐츠 배치를 반복한다.
