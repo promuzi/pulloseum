@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 시작 인트로(암실) 애니메이션 추가
+- **컨셉:** 부팅 시 기존 타이틀 화면을 건너뛰고 **검은 암실**로 시작 — 가운데 나무 의자 위 화분+식물(활성 식물 로딩, 없으면 빈 화분), 위에서 줄 달린 펜던트 전등이 **낙하→바운스→좌우 진자 스윙**하며 주황 불빛으로 식물을 비춤. **화면 터치 시** 주변(검은 배경+전등)이 **CRT 지지직 글리치로 켜지며** 스포트라이트가 화면 전체로 확장→메인 화면이 밝아지며(디스플레이 점등) 이어짐. 의도="식물이 놓인 곳은 암실, 주변은 디스플레이 → 누르면 켜지며 메인으로".
+- **구조(오버레이 방식):** 인트로는 **메인 화면 위에 덮인 `#introOverlay`**. 식물은 메인의 `#centerPlant`(나무 의자+화분+식물)를 그대로 비추므로 한 번도 안 움직임 → 전환이 매끄럽고 중복 없음. `#introMask`(식물 중심 투명 구멍 radial→나머지 검정, 파워온 시 `scale(8)`로 구멍 확장=배경이 넓어지며 메인과 이어짐) + `#introGlow`(주황 스포트라이트) + 펜던트 전등 SVG(코드+삼각뿔 갓+발광 전구+빔).
+- **전등 상시 효과(요청):** 정착 후에도 **위아래 bob + 좌우 swing 무한 지속** + **지지직 깜박임**(`__introFlickLoop`: 처음 ~3.5s는 자주 110~470ms 간격, 이후 간헐 1.6~5.8s 간격으로 전구/글로우 dim + 화이트노이즈/스캔라인). 전구 발광은 `feGaussianBlur` 글로우.
+- **흐름:** `bootWithSave().finally → startIntro()`(메인 렌더→`#centerPlant` rect로 전등·스포트라이트 좌표 계산→오버레이 노출→플리커 시작→탭 리스너). 탭=`powerOnIntro()`(글리치 애니+`body.intro-active` 해제로 `#mainScene` 밝아짐+720ms 후 오버레이 제거). 타이틀 화면(`#titleScreen`)은 진입 흐름에서 폐지(설정은 메인 헤더 톱니로만). `prefers-reduced-motion` 시 낙하·플리커 생략·즉시 점등.
+- **검증:** file:// 헤드리스 캡처로 암실+전등+빛+화분 정상 렌더 확인, `#poweron` 임시 훅으로 파워온→메인 전체 노출(헤더·전투버튼·네비 밝게) 확인 후 훅 제거. `__catalogSelfTest()` **0 fail/111** 회귀 없음.
+
 ### 2026-06-26 — 개체 컨셉+단계별 스킬 확장 P0(엔진+컨셉 인프라) 구현 (#1-A)
 - **목표:** 개체마다 컨셉(2축 블렌드+스토리)을 정하고 단계별 스킬을 대규모로 추가하는 작업의 **토대(P0)**. 설계=[2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · 계획=[plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md). 콘텐츠 배치(T7+)는 후속.
 - **엔진 5종(전부 순수 헬퍼+`__test`):** ① **출혈=회복감소 전역**(`healMult` ×0.5 — 회복·흡혈·재생에 적용) ② **에너지 흡수**(`energyDrain`/`drainEnergy` — 탐식) ③ **무기형 속성 부여**(`infuse` kind 일반화→`element_infuse` 버프 + `elemInfuseBonus` 온히트 추가피해) ④ **독성 자기 독 증폭**(`poisonAmp`→`poison_amp` 버프가 독 DoT 배수, `poisonAmpMult`) ⑤ **용족 브레스 충전**(`breathCharge`/`breathScale`/`breathStack`/`breathPowerMult` — ⚠️ #14 `rampStack` 점유 회피로 별도 `kind:'breath'`).

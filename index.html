@@ -2127,23 +2127,25 @@ body{letter-spacing:.2px;}
     background:radial-gradient(circle,
       rgba(6,7,13,0) 0, rgba(6,7,13,0) 4.1%, rgba(6,7,13,.74) 7.4%, #06070d 11%, #06070d 100%);
     transition:transform .68s cubic-bezier(.66,0,.3,1);}
-  #introGlow{position:absolute;left:var(--px);top:var(--py);width:56vmax;height:56vmax;
-    transform:translate(-50%,-54%);pointer-events:none;mix-blend-mode:screen;
-    background:radial-gradient(circle, rgba(255,178,96,.5) 0, rgba(255,150,68,.2) 24%, rgba(255,140,60,0) 56%);
-    animation:introGlowBreath 3.6s ease-in-out infinite;transition:opacity .25s;}
-  @keyframes introGlowBreath{0%,100%{opacity:.85}50%{opacity:1}}
+  #introGlow{position:absolute;left:var(--px);top:var(--py);width:66vmax;height:66vmax;
+    pointer-events:none;mix-blend-mode:screen;will-change:transform,opacity;
+    background:radial-gradient(circle, rgba(255,224,164,.98) 0, rgba(255,188,104,.7) 12%, rgba(255,152,68,.3) 30%, rgba(255,140,60,0) 58%);
+    animation:introGlowBreath 3.4s ease-in-out infinite, introGlowSway 4.4s ease-in-out infinite;transition:opacity .25s;}
+  @keyframes introGlowBreath{0%,100%{opacity:.9}50%{opacity:1}}
+  @keyframes introGlowSway{0%,100%{transform:translate(calc(-50% - 26px),-52%)}50%{transform:translate(calc(-50% + 26px),-52%)}}
   #introStatic{position:absolute;inset:0;pointer-events:none;opacity:0;mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23n)' opacity='0.75'/%3E%3C/svg%3E"),
       repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px);
     transition:opacity .1s;}
   #introLampSwing{position:absolute;top:-6px;left:var(--lampx);height:var(--lampH);
-    transform-origin:top center;animation:introSwing 3.7s ease-in-out infinite;will-change:transform;}
-  #introLampDrop{height:100%;animation:introDrop 1.15s cubic-bezier(.3,1.3,.5,1) both;}
-  #introLampBob{height:100%;animation:introBob 3.1s ease-in-out .6s infinite;}
+    transform-origin:top center;animation:introSwingBig 5s cubic-bezier(.33,.05,.32,1) both, introSwing 5s ease-in-out 5s infinite;will-change:transform;}
+  #introLampDrop{height:100%;animation:introDrop 1.2s cubic-bezier(.32,1.25,.5,1) both;}
+  #introLampBob{height:100%;animation:introBob 3.6s ease-in-out .7s infinite;}
   #introLampBob svg{height:100%;width:auto;display:block;}
-  @keyframes introSwing{0%,100%{transform:translateX(-50%) rotate(-3deg)}50%{transform:translateX(-50%) rotate(3deg)}}
-  @keyframes introDrop{0%{transform:translateY(-126%)}54%{transform:translateY(2.5%)}70%{transform:translateY(-5%)}83%{transform:translateY(1.5%)}92%{transform:translateY(-1.5%)}100%{transform:translateY(0)}}
-  @keyframes introBob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+  @keyframes introSwing{0%,100%{transform:translateX(-50%) rotate(-5deg)}50%{transform:translateX(-50%) rotate(5deg)}}
+  @keyframes introSwingBig{0%{transform:translateX(-50%) rotate(2deg)}9%{transform:translateX(-50%) rotate(-24deg)}23%{transform:translateX(-50%) rotate(19deg)}37%{transform:translateX(-50%) rotate(-15deg)}51%{transform:translateX(-50%) rotate(11deg)}65%{transform:translateX(-50%) rotate(-8deg)}79%{transform:translateX(-50%) rotate(6deg)}90%{transform:translateX(-50%) rotate(-5.4deg)}100%{transform:translateX(-50%) rotate(5deg)}}
+  @keyframes introDrop{0%{transform:translateY(-128%)}54%{transform:translateY(3%)}70%{transform:translateY(-6%)}83%{transform:translateY(2%)}92%{transform:translateY(-2%)}100%{transform:translateY(0)}}
+  @keyframes introBob{0%,100%{transform:translateY(0)}50%{transform:translateY(15px)}}
   #introHint{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);color:rgba(255,205,155,.6);
     font-size:13px;letter-spacing:4px;font-weight:600;pointer-events:none;opacity:0;
     animation:introHintPulse 1.9s ease-in-out 1.5s infinite;}
@@ -2154,19 +2156,26 @@ body{letter-spacing:.2px;}
   #introOverlay.flick .bulbCore{fill:#ffcaa0;}
   #introOverlay.flick #introStatic{opacity:.15;transform:translateX(1px);}
   #introOverlay.flick #introMask{filter:brightness(.9);}
-  /* 파워온(디스플레이 켜짐) */
-  #introOverlay.powering{animation:introCrt .7s ease-out both;}
+  /* 파워온(디스플레이가 지지직 켜짐) */
+  #introOverlay.powering{animation:introCrt .75s ease-out both;}
   #introOverlay.powering #introMask{transform:translate(-50%,-50%) scale(8);}
   #introOverlay.powering #introGlow{opacity:0;}
-  #introOverlay.powering #introStatic{opacity:.5;}
+  #introOverlay.powering #introStatic{animation:introStaticBurst .75s steps(2) both;}
   #introOverlay.powering #introHint{opacity:0;}
-  #introOverlay.powering #introLampSwing{transform:translateX(-50%) translateY(-132%);transition:transform .55s ease-in;}
-  @keyframes introCrt{0%{filter:none;transform:translateX(0)}10%{filter:brightness(1.7) contrast(1.3);transform:translateX(2px)}20%{transform:translateX(-3px)}30%{filter:brightness(.5);transform:translateX(2px)}46%{filter:brightness(1.25)}100%{filter:brightness(1);transform:none;opacity:0}}
-  /* 인트로 중 메인 게이팅 */
+  #introOverlay.powering #introLampSwing{transform:translateX(-50%) translateY(-134%);transition:transform .5s ease-in;}
+  @keyframes introCrt{0%{filter:none;transform:translateX(0)}8%{filter:brightness(1.9) contrast(1.45);transform:translateX(3px)}16%{transform:translateX(-5px)}26%{filter:brightness(.4);transform:translateX(4px)}38%{filter:brightness(1.6);transform:translateX(-2px)}52%{filter:brightness(.85);transform:translateX(1px)}100%{filter:brightness(1);transform:none;opacity:0}}
+  @keyframes introStaticBurst{0%{opacity:.72}18%{opacity:.3}34%{opacity:.82}52%{opacity:.26}70%{opacity:.58}100%{opacity:0}}
+  /* 메인(디스플레이) CRT 점등 */
+  body.main-crton #mainScreen{animation:mainCrtOn .58s ease-out both;transform-origin:center center;will-change:transform,filter;}
+  @keyframes mainCrtOn{0%{filter:brightness(2.6) contrast(1.5);transform:scaleY(.74)}10%{transform:scaleY(1.06)}20%{transform:scaleY(.98)}33%{filter:brightness(.8)}58%{filter:brightness(1.18)}100%{filter:none;transform:none}}
+  /* 인트로 중 메인 게이팅 — 주변 UI(좌측 스탯표 포함) 숨김 */
   #mainScene{transition:filter .6s ease;}
-  body.intro-active #mainScene{filter:brightness(.12) saturate(.7);}
-  body.intro-active #centerPlant{filter:brightness(1.1) saturate(1.08) drop-shadow(0 0 13px rgba(255,150,70,.45));}
+  body.intro-active #mainScene{filter:brightness(.1) saturate(.65);}
+  body.intro-active #centerPlant{filter:brightness(1.16) saturate(1.12) drop-shadow(0 0 16px rgba(255,150,70,.5));}
   body.intro-active #centerPlant .hint{opacity:0;}
+  body.intro-active #topHeader, body.intro-active #profileRow, body.intro-active #statPanel,
+  body.intro-active #sidePanel, body.intro-active #tournamentBar, body.intro-active #btnBattle,
+  body.intro-active #bottomNav{opacity:0;pointer-events:none;}
   @media (prefers-reduced-motion: reduce){
     #introLampDrop,#introLampBob,#introLampSwing,#introGlow{animation:none!important;}
     #introMask{transition:none;}
@@ -2190,15 +2199,16 @@ body{letter-spacing:.2px;}
           </radialGradient>
           <filter id="iGlowF" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
         </defs>
-        <polygon class="lampGlow" points="60,360 22,460 98,460" fill="url(#iBeam)"/>
-        <line x1="60" y1="0" x2="60" y2="318" stroke="#23262b" stroke-width="3.4"/>
-        <line x1="60" y1="0" x2="60" y2="318" stroke="#4a4f57" stroke-width="1" opacity=".55"/>
-        <rect x="50" y="-2" width="20" height="6" rx="2" fill="#1a1d22"/>
-        <path d="M60 300 L88 352 Q60 366 32 352 Z" fill="url(#iShade)"/>
-        <ellipse cx="60" cy="352" rx="28" ry="7" fill="#0e1014"/>
-        <circle class="lampGlow" cx="60" cy="360" r="26" fill="#ffb15c" filter="url(#iGlowF)" opacity=".85"/>
-        <circle class="bulbCore" cx="60" cy="360" r="11" fill="url(#iBulb)"/>
-        <circle cx="60" cy="360" r="11" fill="none" stroke="#ffe6b0" stroke-width="1" opacity=".5"/>
+        <polygon class="lampGlow" points="60,372 4,460 116,460" fill="url(#iBeam)"/>
+        <line x1="60" y1="0" x2="60" y2="284" stroke="#23262b" stroke-width="3.6"/>
+        <line x1="60" y1="0" x2="60" y2="284" stroke="#4a4f57" stroke-width="1.1" opacity=".55"/>
+        <rect x="49" y="-2" width="22" height="6" rx="2" fill="#1a1d22"/>
+        <path d="M60 276 L108 360 Q60 384 12 360 Z" fill="url(#iShade)"/>
+        <path d="M60 276 L84 360 Q60 372 36 360 Z" fill="#474d57" opacity=".5"/>
+        <ellipse cx="60" cy="360" rx="48" ry="10" fill="#0e1014"/>
+        <circle class="lampGlow" cx="60" cy="372" r="42" fill="#ffc274" filter="url(#iGlowF)" opacity=".98"/>
+        <circle class="bulbCore" cx="60" cy="372" r="15" fill="url(#iBulb)"/>
+        <circle cx="60" cy="372" r="15" fill="none" stroke="#ffe6b0" stroke-width="1.3" opacity=".55"/>
       </svg>
     </div></div></div>
     <div id="introHint">터치하여 시작</div>
@@ -5404,7 +5414,7 @@ const CONCEPT_BATCH1_SKILLS = {
   'ind.ash_bloom.s':  { name:'독포자 흩기', icon:'☠️', cost:1, kind:'debuff', dot:{kind:'poison',pct:0.05,turns:3}, desc:'중독(3턴) · 저비용 견제', tag:'개체' },
   'ind.ash_bloom.j':  { name:'잿불 가시',   icon:'🔥', cost:2, kind:'attack', power:80,  single:true, dot:{kind:'burn',pct:0.06,turns:2}, desc:'위력80 · 단일 + 화상(2턴)', tag:'개체' },
   'ind.ash_bloom.g2': { name:'맹독 발현',   icon:'🧪', cost:2, kind:'buff', poisonAmp:{mult:1.6,turns:3}, energyGain:1, desc:'3턴간 자기 독 위력 60%↑ + ⚡1 · 독 증폭 셋업', tag:'개체' },
-  'ind.ash_bloom.m2': { name:'순교의 돌격', icon:'💥', cost:3, kind:'attack', power:150, single:true, dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력150 · 단일 + 화상(3턴) + 자신 공격 15%↑(3턴)', tag:'개체' },
+  'ind.ash_bloom.m2': { name:'순교의 돌격', icon:'💥', cost:3, kind:'attack', power:150, single:true, dot:{kind:'burn',pct:0.06,turns:3}, selfDot:{kind:'burn',pct:0.04,turns:2}, selfBuffs:[{stat:'atk',pct:0.18,turns:3},{stat:'def',pct:0.15,turns:3}], desc:'위력150 · 단일 + 화상(3턴) + 자해 화상(2턴) + 자신 공격 18%·방어 15%↑(3턴) · 광신', tag:'개체' },
   // ── draca_bloom 드라카블룸 (용족·수호): 브레스 충전 + 방어·반격 ──
   'ind.draca_bloom.s':  { name:'비늘 세우기',     icon:'🛡️', cost:1, kind:'guard', guardMult:0.6, desc:'받는 피해 40%↓ · 저비용 방어', tag:'개체' },
   'ind.draca_bloom.j':  { name:'숨 고르기',       icon:'🐉', cost:1, kind:'buff', breathCharge:{atkPct:0.12,cap:4}, energyGain:1, desc:'브레스 충전(공격 누적↑) + ⚡1 · 저비용', tag:'개체' },
@@ -5573,7 +5583,7 @@ const CONCEPT_GEN_SKILLS = {
   'ind.volt_eater.m2': { name:'번개 포식', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.4, tag:'개체', desc:'위력130 · 단일 · 피해 40% 흡혈' },
   'ind.frost_maw.s': { name:'서리 움트기', icon:'❄️', cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' },
   'ind.frost_maw.j': { name:'서리 돌격', icon:'❄️', cost:2, kind:'attack', power:85, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력85 · 단일 + 화상(3턴)' },
-  'ind.frost_maw.g2': { name:'서리 광신', icon:'😤', cost:1, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡1 · 셋업', tag:'개체' },
+  'ind.frost_maw.g2': { name:'서리 광신', icon:'🔥', cost:2, kind:'buff', selfDot:{kind:'burn',pct:0.05,turns:3}, selfBuffs:[{stat:'atk',pct:0.2,turns:3},{stat:'def',pct:0.18,turns:3}], desc:'자해 화상(3턴) + 자신 공격 20%·방어 18%↑(3턴) · 몸을 사르는 광신', tag:'개체' },
   'ind.frost_maw.m2': { name:'서리 포식', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.4, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력130 · 단일 · 피해 40% 흡혈 + 화상(3턴)' },
   'ind.ember_halberd.s': { name:'불꽃 벼리기', icon:'✨', cost:1, kind:'buff', infuse:{kind:'element',pct:0.4,turns:3}, desc:'3턴간 공격에 불꽃 속성 추가피해(무기 부여) · 셋업', tag:'개체' },
   'ind.ember_halberd.j': { name:'불꽃 탐식', icon:'🔥', cost:2, kind:'attack', power:85, single:true, tag:'개체', energyDrain:2, desc:'위력85 · 단일 + 적 에너지 2 흡수' },
@@ -5729,7 +5739,7 @@ const CONCEPT_GEN_SKILLS = {
   'ind.garden_rose.m2': { name:'덩굴 교란 비기', icon:'🌿', cost:3, kind:'attack', power:140, single:true, tag:'개체', critBonus:0.15, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, desc:'위력140 · 단일 + 치명타율 +15% + 적 기동 20%↓(2턴)' },
   'ind.terra_bloom.s': { name:'바위 움트기', icon:'🪨', cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' },
   'ind.terra_bloom.j': { name:'바위 돌격', icon:'🪨', cost:2, kind:'attack', power:85, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력85 · 단일 + 화상(3턴)' },
-  'ind.terra_bloom.g2': { name:'바위 광신', icon:'😤', cost:1, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡1 · 셋업', tag:'개체' },
+  'ind.terra_bloom.g2': { name:'바위 광신', icon:'🔥', cost:2, kind:'buff', selfDot:{kind:'burn',pct:0.05,turns:3}, selfBuffs:[{stat:'atk',pct:0.2,turns:3},{stat:'def',pct:0.18,turns:3}], desc:'자해 화상(3턴) + 자신 공격 20%·방어 18%↑(3턴) · 몸을 사르는 광신', tag:'개체' },
   'ind.terra_bloom.m2': { name:'바위 돌격 비기', icon:'🪨', cost:3, kind:'attack', power:140, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력140 · 단일 + 화상(3턴) + 자신 공격 15%↑(3턴)' },
   'ind.aero_petal.s': { name:'질풍 움트기', icon:'🌪️', cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' },
   'ind.aero_petal.j': { name:'질풍 점혈', icon:'🌪️', cost:2, kind:'attack', power:85, single:true, tag:'개체', desc:'위력85 · 단일' },
@@ -5761,7 +5771,7 @@ const CONCEPT_GEN_SKILLS = {
   'ind.gluttony_rock.m2': { name:'바위 포식', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.4, tag:'개체', desc:'위력130 · 단일 · 피해 40% 흡혈' },
   'ind.dust_reaper.s': { name:'질풍 움트기', icon:'🌪️', cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' },
   'ind.dust_reaper.j': { name:'질풍 돌격', icon:'🌪️', cost:2, kind:'attack', power:85, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력85 · 단일 + 화상(3턴)' },
-  'ind.dust_reaper.g2': { name:'질풍 광신', icon:'😤', cost:1, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡1 · 셋업', tag:'개체' },
+  'ind.dust_reaper.g2': { name:'질풍 광신', icon:'🔥', cost:2, kind:'buff', selfDot:{kind:'burn',pct:0.05,turns:3}, selfBuffs:[{stat:'atk',pct:0.2,turns:3},{stat:'def',pct:0.18,turns:3}], desc:'자해 화상(3턴) + 자신 공격 20%·방어 18%↑(3턴) · 몸을 사르는 광신', tag:'개체' },
   'ind.dust_reaper.m2': { name:'질풍 포식', icon:'🦷', cost:3, kind:'drain', power:130, single:true, lifesteal:0.4, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력130 · 단일 · 피해 40% 흡혈 + 화상(3턴)' },
   'ind.volt_reaper.s': { name:'번개 움트기', icon:'⚡', cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' },
   'ind.volt_reaper.j': { name:'번개 교란', icon:'⚡', cost:2, kind:'attack', power:85, single:true, tag:'개체', critBonus:0.15, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, desc:'위력85 · 단일 + 치명타율 +15% + 적 기동 20%↓(2턴)' },
@@ -5853,7 +5863,7 @@ const CONCEPT_GEN_SKILLS = {
   'ind.dynamo_cactus.m2': { name:'번개 내려치기 비기', icon:'⚡', cost:3, kind:'attack', power:140, single:true, tag:'개체', selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력140 · 단일 + 자신 방어 15%↑(3턴)' },
   'ind.ever_cactus.s': { name:'서리 움트기', icon:'❄️', cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' },
   'ind.ever_cactus.j': { name:'서리 돌격', icon:'❄️', cost:2, kind:'attack', power:85, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력85 · 단일 + 화상(3턴)' },
-  'ind.ever_cactus.g2': { name:'서리 광신', icon:'😤', cost:1, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡1 · 셋업', tag:'개체' },
+  'ind.ever_cactus.g2': { name:'서리 광신', icon:'🔥', cost:2, kind:'buff', selfDot:{kind:'burn',pct:0.05,turns:3}, selfBuffs:[{stat:'atk',pct:0.2,turns:3},{stat:'def',pct:0.18,turns:3}], desc:'자해 화상(3턴) + 자신 공격 20%·방어 18%↑(3턴) · 몸을 사르는 광신', tag:'개체' },
   'ind.ever_cactus.m2': { name:'서리 돌격 비기', icon:'❄️', cost:3, kind:'attack', power:140, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력140 · 단일 + 화상(3턴) + 자신 공격 15%↑(3턴)' },
   'ind.blood_weed.s': { name:'덩굴 비늘 세우기', icon:'🛡️', cost:1, kind:'guard', guardMult:0.6, desc:'받는 피해 40%↓ · 저비용 방어', tag:'개체' },
   'ind.blood_weed.j': { name:'덩굴 내려치기', icon:'🌿', cost:2, kind:'attack', power:85, single:true, tag:'개체', desc:'위력85 · 단일' },
@@ -5889,7 +5899,7 @@ const CONCEPT_GEN_SKILLS = {
   'ind.wind_whip.m2': { name:'질풍 난타 비기', icon:'🌪️', cost:3, kind:'attack', power:140, single:true, tag:'개체', dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력140 · 단일 + 출혈(3턴) + 속성 부여(2턴)', infuse:{kind:'element',pct:0.5,turns:2} },
   'ind.volt_whip.s': { name:'번개 벼리기', icon:'✨', cost:1, kind:'buff', infuse:{kind:'element',pct:0.4,turns:3}, desc:'3턴간 공격에 번개 속성 추가피해(무기 부여) · 셋업', tag:'개체' },
   'ind.volt_whip.j': { name:'번개 돌격', icon:'⚡', cost:2, kind:'attack', power:85, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력85 · 단일 + 화상(3턴)' },
-  'ind.volt_whip.g2': { name:'번개 광신', icon:'😤', cost:1, kind:'buff', selfBuff:{stat:'atk',pct:0.15,turns:3}, energyGain:1, desc:'자신 공격 15%↑(3턴) + ⚡1 · 셋업', tag:'개체' },
+  'ind.volt_whip.g2': { name:'번개 광신', icon:'🔥', cost:2, kind:'buff', selfDot:{kind:'burn',pct:0.05,turns:3}, selfBuffs:[{stat:'atk',pct:0.2,turns:3},{stat:'def',pct:0.18,turns:3}], desc:'자해 화상(3턴) + 자신 공격 20%·방어 18%↑(3턴) · 몸을 사르는 광신', tag:'개체' },
   'ind.volt_whip.m2': { name:'번개 돌격 비기', icon:'⚡', cost:3, kind:'attack', power:140, single:true, tag:'개체', dot:{kind:'burn',pct:0.06,turns:3}, selfBuff:{stat:'atk',pct:0.15,turns:3}, desc:'위력140 · 단일 + 화상(3턴) + 자신 공격 15%↑(3턴) + 속성 부여(2턴)', infuse:{kind:'element',pct:0.5,turns:2} },
   'ind.frost_whip.s': { name:'서리 벼리기', icon:'✨', cost:1, kind:'buff', infuse:{kind:'element',pct:0.4,turns:3}, desc:'3턴간 공격에 서리 속성 추가피해(무기 부여) · 셋업', tag:'개체' },
   'ind.frost_whip.j': { name:'서리 함정', icon:'❄️', cost:2, kind:'attack', power:85, single:true, tag:'개체', enemyDebuff:{stat:'def',pct:0.2,turns:2}, desc:'위력85 · 단일 + 적 방어 20%↓(2턴)' },
@@ -12670,6 +12680,8 @@ async function applySkill(a, d, s, side, options={}){
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul * healMult(a); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
   if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul; a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); spriteFx(side,'buff'); fxPopup(side,'🔺 '+battleStatLabel(s.selfBuff.stat),'buf'); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.poisonAmp){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_amp'); a.buffs.push({kind:'poison_amp', mult:s.poisonAmp.mult, turns:s.poisonAmp.turns}); spriteFx(side,'buff'); fxPopup(side,'🔺 독','buf'); effectNotes.push('독이 짙어졌다!'); blog(`▶ ☠️ 독 위력 ${Math.round((s.poisonAmp.mult-1)*100)}%↑(${s.poisonAmp.turns}턴)`); }
+  if(s.selfBuffs){ s.selfBuffs.forEach(b=>{ const bpct=b.pct*effMul; a.buffs.push({stat:b.stat,pct:bpct,turns:b.turns,kind:'buff'}); }); spriteFx(side,'buff'); fxPopup(side,'🔺 광신','buf'); effectNotes.push('광신의 힘이 솟구친다!'); blog(`▶ 🔺 ${s.selfBuffs.map(b=>statName(b.stat)+' '+Math.round(b.pct*100)+'%↑').join(' · ')}`); } // 복수 자기버프(광신 등)
+  if(s.selfDot){ const sd=Math.max(1,Math.round(effStat(a,'atk')*s.selfDot.pct)); addDot(a,{kind:s.selfDot.kind,dmg:sd,turns:s.selfDot.turns,icon:dotIcon(s.selfDot.kind)}); effectNotes.push('스스로를 불사른다!'); blog(`▶ 🔥 자해 ${dotName(s.selfDot.kind)}(${s.selfDot.turns}턴 · 턴당 ${sd})`); } // 광신 자해화상
   if(s.tagBuff||s.tagBuffs){ // 태그 시너지 발동형: 특정 태그 스킬만 N턴간 강화/할인(임시 보정 풀)
     const tbs = s.tagBuffs || [s.tagBuff];
     tbs.forEach(tb => { if(tb) a.buffs.push({kind:'tagmod', tag:tb.tag, type:tb.type, value:tb.value, turns:tb.turns}); });
@@ -13911,7 +13923,7 @@ function startIntro(){
     ov.style.setProperty('--px', px.toFixed(1)+'px');
     ov.style.setProperty('--py', py.toFixed(1)+'px');
     ov.style.setProperty('--lampx', px.toFixed(1)+'px');
-    ov.style.setProperty('--lampH', (bulbY/0.783).toFixed(1)+'px'); // 전구 위치 frac = 360/460
+    ov.style.setProperty('--lampH', (bulbY/0.808).toFixed(1)+'px'); // 전구 위치 frac = 372/460
     ov.classList.remove('hidden');
     __introActive = true;
     if(!__introReduced) __introFlickLoop(performance.now());
@@ -13927,10 +13939,12 @@ function powerOnIntro(){
   ov.classList.remove('flick');
   ov.classList.add('powering');
   document.body.classList.remove('intro-active'); // 메인 씬이 밝아짐(디스플레이 켜짐)
+  document.body.classList.add('main-crton');      // 메인 화면 CRT 점등(지지직)
+  setTimeout(()=>{ document.body.classList.remove('main-crton'); }, 640);
   setTimeout(()=>{
     ov.classList.add('hidden'); ov.classList.remove('powering');
     try{ if(state.plants.length === 0 && state.seed_inventory.length === 0) toast('탐사 버튼으로 우주맵에 가서 첫 종자를 찾아보세요'); }catch(e){}
-  }, 720);
+  }, 760);
 }
 
 /* 데이터 전용 모드(?dex=1): 도감이 데이터만 읽으면 되므로 부팅·세이브·렌더·클라우드를 모두 생략

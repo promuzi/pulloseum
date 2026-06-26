@@ -57,6 +57,7 @@ function atkSkill(name, icon, cost, power, A, role){
 
 // 성격별 g2 셋업 스킬
 function setupSkill(w, E, A){
+  if(A.dot==='burn') return { name:w+' 광신', icon:'🔥', cost:2, kind:'buff', selfDot:{kind:'burn',pct:0.05,turns:3}, selfBuffs:[{stat:'atk',pct:0.2,turns:3},{stat:'def',pct:0.18,turns:3}], desc:'자해 화상(3턴) + 자신 공격 20%·방어 18%↑(3턴) · 몸을 사르는 광신', tag:'개체' }; // zealot
   if(A.guard) return { name:w+' '+A.set, icon:'🛡️', cost:2, kind:'guard', guardMult:0.5, counterPct:A.counter||0.3, desc:'받는 피해 50%↓ + 가시 반격', tag:'개체' };
   if(A.heal)  return { name:w+' '+A.set, icon:'💚', cost:2, kind:'heal', heal:A.heal, selfBuff:{stat:'spd',pct:0.15,turns:3}, desc:'체력 '+Math.round(A.heal*100)+'% 회복 + 자신 기동 15%↑(3턴) · 지구전', tag:'개체' };
   if(A.energyDrain) return { name:w+' '+A.set, icon:'🌀', cost:2, kind:'attack', power:95, single:true, energyDrain:A.energyDrain, desc:'위력95 · 단일 + 적 에너지 '+A.energyDrain+' 흡수', tag:'개체' };
@@ -138,17 +139,15 @@ function genMush(key, el){
   };
 }
 
-// ── 직렬화 ──
-function ser(o){
-  const parts = [];
-  for(const k in o){ const v = o[k];
-    if(v === undefined) continue;
-    if(typeof v === 'string') parts.push(k+":'"+v.replace(/'/g,"\\'")+"'");
-    else if(typeof v === 'number' || typeof v === 'boolean') parts.push(k+':'+v);
-    else if(typeof v === 'object'){ const sub=[]; for(const kk in v){ sub.push(kk+':'+(typeof v[kk]==='string'?"'"+v[kk]+"'":v[kk])); } parts.push(k+':{'+sub.join(',')+'}'); }
-  }
-  return '{ '+parts.join(', ')+' }';
+// ── 직렬화 (재귀: 배열·중첩객체 지원) ──
+function serVal(v){
+  if(typeof v === 'string') return "'"+v.replace(/'/g,"\\'")+"'";
+  if(typeof v === 'number' || typeof v === 'boolean') return ''+v;
+  if(Array.isArray(v)) return '['+v.map(serVal).join(',')+']';
+  if(v && typeof v === 'object'){ const sub=[]; for(const kk in v){ if(v[kk]!==undefined) sub.push(kk+':'+serVal(v[kk])); } return '{'+sub.join(',')+'}'; }
+  return 'null';
 }
+function ser(o){ const parts=[]; for(const k in o){ if(o[k]!==undefined) parts.push(k+':'+serVal(o[k])); } return '{ '+parts.join(', ')+' }'; }
 
 const skillLines = [], stageLines = [];
 let nSkills = 0;
