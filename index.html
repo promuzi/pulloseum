@@ -11047,10 +11047,11 @@ function applyElementSignature(a, d, s, side, tgtSide, dm){
     let bd = Math.max(1, Math.round(effStat(a,'atk') * SIG.burnPct)); if(selfResist) bd = Math.max(1, Math.round(bd*rk));
     addDot(d, {kind:'burn', dmg:bd, turns:SIG.burnTurns, icon:dotIcon('burn')});
     blog(`▶ 🔥 화상(${SIG.burnTurns}턴 · 턴당 ${bd})`);
-  } else if(sig.el === 'water'){ // 젖음 — 기동성↓ + 방어력↓
+  } else if(sig.el === 'water'){ // 젖음 — 기동성↓ + 방어력↓ (매 적중 자동 부여라 누적 대신 갱신)
     let sp=SIG.wetSpd, df=SIG.wetDef; if(selfResist){ sp*=rk; df*=rk; }
-    d.buffs.push({stat:'spd', pct:round2(sp), turns:SIG.wetTurns, kind:'debuff'});
-    d.buffs.push({stat:'def', pct:round2(df), turns:SIG.wetTurns, kind:'debuff'});
+    d.buffs = d.buffs.filter(b => b.sig!=='wet'); // 기존 젖음 제거 후 재부여(런어웨이 방지)
+    d.buffs.push({stat:'spd', pct:round2(sp), turns:SIG.wetTurns, kind:'debuff', sig:'wet'});
+    d.buffs.push({stat:'def', pct:round2(df), turns:SIG.wetTurns, kind:'debuff', sig:'wet'});
     spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'💧 젖음','deb');
     blog(`▶ 💧 젖음 — 기동 ${Math.round(sp*100)}%↓ · 방어 ${Math.round(df*100)}%↓(${SIG.wetTurns}턴)`);
   } else if(sig.el === 'grass'){ // 재생 — 적중 시 고정 자가회복(피해 무관)
@@ -13669,6 +13670,11 @@ window.__test('sig: 물=기동+방어 이중 디버프', function(){
   applyElementSignature(a, d, ELEMENT_SKILLS['skill_elem_water'], 'p','e', 50);
   __ok(d.buffs.some(b=>b.stat==='spd'&&b.kind==='debuff'), '기동 디버프');
   __ok(d.buffs.some(b=>b.stat==='def'&&b.kind==='debuff'), '방어 디버프');
+});
+window.__test('sig: 물 젖음은 누적 대신 갱신(런어웨이 방지)', function(){
+  const a=__mkUnit('water'), d=__mkUnit('grass');
+  for(let i=0;i<6;i++) applyElementSignature(a, d, ELEMENT_SKILLS['skill_elem_water'], 'p','e', 50);
+  __eq(d.buffs.filter(b=>b.sig==='wet').length, 2, '6회 적중해도 젖음 디버프는 2개(spd/def)만 유지');
 });
 window.__test('sig: 풀=적중 시 고정 자가회복(피해 무관)', function(){
   const a=__mkUnit('grass'), d=__mkUnit('fire'); a.hp = a.max - 50;
