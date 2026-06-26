@@ -5330,6 +5330,17 @@ const ARCHETYPE_OVERRIDES = {
 };
 function __hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0); }
 function archetypeOf(key){ return ARCHETYPE_OVERRIDES[key] || ARCHETYPE_IDS[__hashStr(key) % ARCHETYPE_IDS.length]; }
+/* ===== 개체 컨셉(2축 블렌드) — 속성/타입/변이형/성격 중 둘을 묶어 정체성. 큐레이션 표 + 자동 시드. ===== */
+const CONCEPT_OVERRIDES = {}; // 사용자 큐레이션 표면 — { key:{primary,secondary,theme,story} }
+function conceptAxes(key){ const s=SPECIES[key]||{}; const ax=['element','type']; if(s.baseVariants && s.baseVariants[0] && s.baseVariants[0]!=='normal') ax.push('form'); ax.push('archetype'); return ax; }
+function autoConcept(key){ const ax=conceptAxes(key); const h=__hashStr(key); const i=h%ax.length; let j=(Math.floor(h/ax.length)+1)%ax.length; if(j===i) j=(j+1)%ax.length; return { primary:ax[i], secondary:ax[j] }; }
+function conceptAxisLabel(key, axis){ const s=SPECIES[key]||{};
+  if(axis==='element') return (ELEMENTS[s.element]&&ELEMENTS[s.element].name)||s.element||'';
+  if(axis==='type') return (SEED_TYPE_NAMES[s.seedType]||s.seedType||'');
+  if(axis==='form'){ const f=s.baseVariants&&s.baseVariants[0]; return (FORMS[f]&&FORMS[f].name)||f||''; }
+  if(axis==='archetype'){ const A=ARCHETYPES[archetypeOf(key)]; return A?A.name:''; } return ''; }
+function buildConceptStory(key, c){ const p=conceptAxisLabel(key,c.primary), s2=conceptAxisLabel(key,c.secondary); return p+'을(를) 중심으로 '+s2+'의 기질이 어우러진 개체.'; }
+function conceptOf(key){ const o=CONCEPT_OVERRIDES[key]; if(o) return o; const a=autoConcept(key); const theme=conceptAxisLabel(key,a.primary)+'·'+conceptAxisLabel(key,a.secondary); return { primary:a.primary, secondary:a.secondary, theme, story:buildConceptStory(key,a) }; }
 const FORM_STAT_MOD = {
   pred:   {atk:1.10, def:0.96, spd:1.05},
   weapon: {atk:1.12, def:1.00, spd:0.98},
@@ -5360,7 +5371,8 @@ const __DOT_WORD = { burn:'화상', bleed:'출혈', poison:'중독' };
     s.base = base;
     // 2) 컨셉문 — 도감 CONCEPTS 폴백(sp.desc)로 자동 노출
     const typeName = (SEED_TYPE_NAMES[type]||type), elName = (ELEMENTS[el]&&ELEMENTS[el].name)||el, formName = (FORMS[form]&&FORMS[form].name)||form;
-    s.desc = A.tone + '. ' + elName + '속성 ' + typeName + '이며 ' + formName + '으로 태어났다.';
+    const cc = conceptOf(key); s.concept = cc;
+    s.desc = A.tone + '. ' + elName + '속성 ' + typeName + '이며 ' + formName + '으로 태어났다. ' + cc.story;
     // 3) 고유 스킬 이름/DoT 리테마(각 ind.<key>.x는 이 개체 전용 id라 안전)
     Object.keys(STAGE_KEYS).forEach(function(st){
       const sk = ALL_SKILLS['ind.'+key+'.'+st]; if(!sk) return;
@@ -12955,6 +12967,16 @@ window.__test('engine: poison_amp multiplies poison', function(){
 window.__test('engine: breathPowerMult scales with breathStack', function(){
   __eq(breathPowerMult({breathStack:0}), 1, '0 stacks → 1');
   __eq(breathPowerMult({breathStack:3}), 1.6, '3 stacks → 1.6');
+});
+window.__test('concept: conceptOf blends two distinct axes + override wins', function(){
+  const variantKeys = Object.keys(SPECIES).filter(k=>{ const s=SPECIES[k]; return s.baseVariants && s.baseVariants[0] && !s.legacy && s.seedType!=='mushroom'; });
+  __ok(variantKeys.length>0, 'have variant keys');
+  const c = conceptOf(variantKeys[0]);
+  __ok(c.primary && c.secondary, 'has two axes');
+  __ok(c.primary!==c.secondary, 'axes distinct');
+  __ok(typeof c.story==='string' && c.story.length>0, 'has story');
+  CONCEPT_OVERRIDES.__t = { primary:'element', secondary:'form', theme:'t', story:'s' };
+  __eq(conceptOf('__t').primary, 'element', 'override wins'); delete CONCEPT_OVERRIDES.__t;
 });
 
 window.__test('baseline: SPECIES has legacy keys', function(){
