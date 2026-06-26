@@ -32,6 +32,7 @@
 | 9 | 구글 플레이 출시 | 🟡 APK 기반 有 | 로컬 번들 결정 → 릴리스 서명·등록 | [android](android-capacitor-wrapper.md) |
 | **13** | **스킬 태그 & 태그 시너지** ⭐최우선 | ✅ **완료(1·2·3단계)** | **토대(`skillTags`/`tagModSum`/`effectiveCost`/`TAG_META`)+효과 4종(power·cost·effect·combo·compose)+콘텐츠(태그 카드 12종 드롭 등록·무기 5종 `variant`·활성 보정 배지 UI). `__catalogSelfTest()` 0 fail/92 · preview 실전투 검증. 향후=봇 시너지·도감 필터(YAGNI §8)** | [tag-synergy spec](superpowers/specs/2026-06-25-skill-tag-synergy-system-design.md) |
 | **14** | **속성별 고유 성질(상태이상) — 속성 개성화** ⭐ | 🟢 **1차 구현 완료(2026-06-26)** | 수치 밸런스 패스(확률·디버프·관통·추가타·자기저항 경감률)만 · 성장체 속성기 적용은 후속 검토 | [signature spec](superpowers/specs/2026-06-26-element-signature-effects-design.md) · 본문 [§4-14](#14-속성별-고유-성질상태이상--속성-개성화) |
+| **15** | **전투-미션/스토리 모드** ⭐신규 | 🔵 **설계 완료·구현 대기(2026-06-26)** | writing-plans로 구현 계획 → 데이터레이어(`CAMPAIGNS`/`mission_progress`)부터 | [mission spec](superpowers/specs/2026-06-26-mission-story-mode-design.md) · 본문 [§4-15](#15-전투-미션스토리-모드-신규) |
 
 상태 기호: 🔲 미착수 · 🟡 진행/설계 중 · 🔵 설계 완료·구현 대기 · ✅ 완료 · ❄️ 보류
 
@@ -67,6 +68,7 @@
 | **[superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md)** | 컨셉+단계별 스킬 대규모 확장(🟡설계 박제·구현 대기) — 2축 블렌드 컨셉+스토리, 단계별 스킬 예산(새싹~완숙체), 14아키타입 효과 경향, 엔진 5종(출혈 회복감소·에너지 흡수·무기 속성부여·독 증폭·용족 브레스), form 시그니처, 생성기·단계별 진행 | **#1-A 후속 — 설계** |
 | **[superpowers/plans/2026-06-26-individual-concept-skill-expansion.md](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md)** | 위 설계의 구현 계획 — P0 엔진 5종(T1~5, 순수 헬퍼+`__test`)·컨셉 인프라(T6)·콘텐츠 배치 형틀(T7)+배치 반복. 검증=`__catalogSelfTest()` | **#1-A 후속 — 구현 진입점** |
 | **[superpowers/specs/2026-06-26-element-signature-effects-design.md](superpowers/specs/2026-06-26-element-signature-effects-design.md)** | 속성별 시그니처 성질(🟢1차 구현완료) — 7속성 성질(화상/젖음/재생/감전/관통/빙결/연속타), 속성기+속성발현 자동 부여, 자기속성 경감·스턴은 `skipNext` 재사용·빙결 스택·바람 추가타 | **#14 속성 개성화** |
+| **[superpowers/specs/2026-06-26-mission-story-mode-design.md](superpowers/specs/2026-06-26-mission-story-mode-design.md)** | 전투-미션/스토리 모드(🔵설계완료·구현대기) — 캠페인 선택형+내부 선형 고정 적, 단판 전투, 보스 기믹 4~5종, 보상 3층(미션 전용 변이종=`released:false` 140 재활용), `CAMPAIGNS`/`mission_progress` 데이터모델, 구현 단위 7 | **#15 미션 모드 — 구현 진입점** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
@@ -232,6 +234,25 @@
 
 **확정 결정(2026-06-26):** 속성발현 중 **자기에게 거는 스킬**(물 자힐·풀/대지/바람 버프)은 성질을 붙이지 않고 **"속성에 의한 추가 스탯"으로 해석**한다(의도된 설계, 갭 아님). 빙결 새싹은 이미 적 기동성↓ = 미니 빙결이라 그대로 둔다. 불·번개 새싹(공격형)만 성질 적용. **성장체 이상 `ELEMENT_GROWTH_SKILLS`** 적용 여부만 후속 검토 대상.
 
+### 15. 전투-미션/스토리 모드 (신규)
+**가치:** 봇 토너먼트 무한 반복엔 *목표도 서사도 없다*. 미션 모드 = **끝이 있는 도전 + 아틀라스 세계관 몰입 + 고유 보상**. 방치형 양육·무한 토너먼트 사이의 "콘텐츠 소비" 축. PvP/서버(#8) 독립 → 오프라인 완결. → 📄 [mission spec](superpowers/specs/2026-06-26-mission-story-mode-design.md)
+
+> 🔵 **설계 완료·구현 대기(2026-06-26).** 가치·구조·보상·데이터모델·구현 단위 7개까지 확정 박제. **재개 시 스펙부터 → writing-plans.**
+
+**확정 골격:**
+- **진입:** 토너먼트 화면 세그먼트 탭 `[토너먼트][미션]` → 캠페인 목록.
+- **구조:** **캠페인 선택형(★1~5 난이도 라벨·권장 티어/생장)** → 캠페인 내부는 **선형 고정 적 단계**, 전부 깨면 클리어. 마지막 = **보스(단판 + 스탯부스트 + 기믹 1개)**.
+- **해금:** 기본 자유 개방 + **고난도/스토리 후반 일부만 선행 클리어 게이트**.
+- **적:** 저작된 **고정 로드아웃**(종·생장·스킬·카드·등급) — 스케일 봇 아님. 보스 기믹 라이브러리 4~5종(`burn_aura`·`shield_start`·`enrage_below_half`·`thorn_reflect`·`regen_aura`, 기존 엔진 재활용).
+- **난이도:** ★ = 소프트 권장(막지 않음, 자유 도전).
+- **전투:** 전부 **단판**.
+- **보상 3층:** ① 스테이지 첫클리어=크레딧/미네랄(★비례) ② 캠페인 완료=**미션 전용 변이종(`released:false` 140 중 테마 매칭) 1회성** + 칭호/배지 ③ ★비례 스케일. 전용 화폐 없음.
+- **보상종 조달:** 신규 종 미제작 — **변이 140종 재활용**, 탐사 시그니처가 쓰는 `released` 우회 패턴으로 미션 보상에서 확정 지급(탐사 분포와 별개 경로).
+- **스토리:** 텍스트 박스(초상 optional) — 캠페인 인트로/아웃트로 + 스테이지 적 등장 멘트. 함선 NPC 해금 트리거는 #4 후속 링크.
+- **데이터:** `CAMPAIGNS[]`(캠페인→스테이지[적·대사·보상]·보스·clearReward) + `state.mission_progress` + `normalizeState` 마이그레이션.
+- **초기 콘텐츠:** 캠페인 3~4개(볼카르 불·네레이돈 물빙결·인물 전챔피언), 데이터 추가만으로 확장.
+- **범위 밖(후속):** 보스 시그니처 카드 드롭·함선 NPC 스토리 해금·초상/도트 에셋(#3)·도전과제 별점·전용 화폐(미도입 확정).
+
 ---
 
 ## 4.5 정리·튜닝 백로그 (나중에 손볼 것 — 설계 결정 불필요/소량)
@@ -261,6 +282,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-26** — **(#15 전투-미션/스토리 모드 — 설계 확정·박제)** 봇 토너먼트 무한 반복에 목표·서사가 없어 **캠페인형 미션 모드** 신설. **확정:** 토너먼트 화면 `[토너먼트][미션]` 탭 → **캠페인 선택형(★1~5)**, 내부는 **선형 고정 적 단계**(저작된 고정 로드아웃, 스케일 봇 아님), 마지막 = **보스 단판 + 스탯부스트 + 기믹 1개**(기믹 라이브러리 4~5종, 기존 엔진 재활용). **해금 = 기본 자유 + 고난도 일부 선행게이트**, **난이도 = 소프트 권장(막지 않음)**, **전투 = 전부 단판**. **보상 3층:** 스테이지 첫클리어=크레딧/미네랄(★비례)·캠페인 완료=**미션 전용 변이종(`released:false` 140 재활용, 탐사와 별개 확정 지급 경로)** 1회성+칭호·★비례 스케일, **전용 화폐 미도입**. 데이터 = `CAMPAIGNS[]`+`state.mission_progress`+`normalizeState` 마이그레이션. 스토리 = 텍스트 박스(초상 optional). 초기 캠페인 3~4개. **범위 밖:** 보스 카드 드롭·함선 NPC 해금(#4)·초상/도트(#3)·도전과제 별점. 설계=[mission spec](superpowers/specs/2026-06-26-mission-story-mode-design.md). 다음 = writing-plans. (#15)
 - **2026-06-26** — **(#1-A 변이 개체 정체성 — 아키타입 축 신설 + 1차 구현)** 같은 타입+속성이라도 변이형마다 별개 개체이므로 컨셉·스탯·고유스킬을 다르게. **모델 확정:** `개체 = 타입 × 속성 × 변이형(form) × 아키타입`. form은 메커니즘 레인(주요 스킬=변이카드), **아키타입(성격, form과 독립)** 이 컨셉문·스탯보정·고유스킬 이름/DoT를 결정 → 같은 무기형이라도 광폭/도사 공존(획일화 금지). **구현:** `ARCHETYPES` 14종 + `ARCHETYPE_OVERRIDES`(편집 표면), `ALL_SKILLS` 직후 멱등 패스로 스탯(`base×form배율×아키타입배율`)·`SPECIES.desc`·`ind.*` 스킬명/DoT 리테마. 140 변이 전부 배정·`__catalogSelfTest()` 0 fail·도감 자동 반영. 더불어 **도감 변이형(form) 필터 + 로딩 타임아웃 견고화.** **범위 제외/후속:** 외형(form/개체별 실루엣=사용자 도트 PNG 후속, 현재 form 액센트만)·고유스킬 효과 다양화(현재 이름+DoT종류만)·새 스킬 추가·버섯 정체성·아키타입 개체별 큐레이션·밸런스 튜닝. 설계=[variant-individual-identity](superpowers/specs/2026-06-26-variant-individual-identity-design.md). (#1-A)
 - **2026-06-26** — **(UI) 상점 세로그리드·진화 버튼 중앙·컬렉션 드래그 재배열.** 상점 `.shop-lane` 가로 스크롤→세로 그리드(auto-fill). 진화 `#evolveClose` 중앙. 메인 컬렉션 바 편집 토글(`#collEditBtn`)+드래그&드롭 재배열(`movePlantOrder`, 포인터 이벤트) — `state.plants` 순서 변경이 컬렉션 바·양육 그리드 자동 연동(슬롯 아닌 식물에 양육상태). 범위=순서 재배열(빈칸 뒤). self-test 0 fail. 설계=[design](superpowers/specs/2026-06-26-shop-evolve-collection-ui-design.md). (#10·#12)
 - **2026-06-26** — **(정리·튜닝 백로그 박제)** 코드·밸런스시트 점검에서 추린 "나중에 손볼" 자율 처리 후보(밸런스 튜닝 5·죽은 코드 청소·가방 정렬필터·문서 위생)를 **§4.5**에 박제. 신규 기능 아님, 우선순위 낮음. 착수 시 해당 항목 체크박스 갱신.
