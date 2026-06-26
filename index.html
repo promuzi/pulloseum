@@ -12037,9 +12037,9 @@ function applyElementSignature(a, d, s, side, tgtSide, dm){
     if(a.hp>before){ popup(side,'회복',true); spriteFx(side,'buff'); blog(`▶ 🌿 재생 +${h}`); }
   } else if(sig.el === 'bolt'){ // 감전 — 확률 스턴 + 스턴 턴 에너지 회복 차단
     let ch = SIG.shockChance; if(selfResist) ch*=rk;
-    if(Math.random() < ch && d.hp>0){ d.skipNext = true; d.zapNoRegen = true; spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'⚡ 감전','deb'); blog(`▶ ⚡ 감전! 상대 다음 턴 행동불가 + 에너지 회복 차단`); }
+    if(rng() < ch && d.hp>0){ d.skipNext = true; d.zapNoRegen = true; spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'⚡ 감전','deb'); blog(`▶ ⚡ 감전! 상대 다음 턴 행동불가 + 에너지 회복 차단`); }
   } else if(sig.el === 'ice'){ // 빙결 스택 — 3중첩 시 확정 스턴
-    let add = true; if(selfResist && Math.random()<rk) add = false; // 같은 속성이면 덜 쌓임
+    let add = true; if(selfResist && rng()<rk) add = false; // 같은 속성이면 덜 쌓임
     if(add){
       d.freezeStacks = (d.freezeStacks||0) + 1; d.freezeTurns = SIG.freezeTurns;
       spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'❄️'+d.freezeStacks,'deb');
@@ -12162,7 +12162,7 @@ function buildEnemy(roundIndex, tierIndex){
   const traits=[];
   // 변이형: 상위 라운드/티어일수록 변이형 봇 등장↑ (식물과 같은 변이 시스템을 봇도 사용)
   let form='normal', predType=null;
-  if(Math.random() < (0.15 + roundIndex*0.06 + tierIndex*0.04)){
+  if(rng() < (0.15 + roundIndex*0.06 + tierIndex*0.04)){
     form = pick(['pred','toxic','spore','weapon','dragon']); // 발광(lumen) 폐지 — 적 변이형 풀에서도 제거, 용족(dragon) 추가
     if(form==='pred') predType = pick(['vamp','absorb']);
   }
@@ -12589,14 +12589,14 @@ function aiPickSkill(e){
   if(!ids.length) return 'skill_basic_strike';
   const get = id => skillById(id,e);
   const healId = ids.find(id => { const s=get(id); return s.heal && s.heal>=0.2; });
-  if(e.hp < e.max*0.32 && healId && Math.random()<0.6) return healId;
+  if(e.hp < e.max*0.32 && healId && rng()<0.6) return healId;
   const drainId = ids.find(id => get(id).kind==='drain');
-  if(drainId && Math.random()<0.5) return drainId;
+  if(drainId && rng()<0.5) return drainId;
   const dmgIds = ids.filter(id => { const s=get(id); return s.power && s.power>0; }).sort((a,b)=>(get(b).power||0)-(get(a).power||0));
-  if(dmgIds.length && Math.random()<0.72) return dmgIds[0];
+  if(dmgIds.length && rng()<0.72) return dmgIds[0];
   const guardId = ids.find(id => get(id).guardMult!=null);
-  if(guardId && Math.random()<0.18) return guardId;
-  return ids[Math.floor(Math.random()*ids.length)];
+  if(guardId && rng()<0.18) return guardId;
+  return ids[Math.floor(rng()*ids.length)];
 }
 async function applySkill(a, d, s, side, options={}){
   if(!s) return;
@@ -12682,7 +12682,7 @@ async function applySkill(a, d, s, side, options={}){
     const defenderSpd = effStat(d,'spd');
     const dodgeRaw = 30 + (defenderSpd - effAcc);
     const dodge = clamp(dodgeRaw, 5, 90);
-    const dodgeRoll = Math.random()*100;
+    const dodgeRoll = rng()*100;
     const missed = dodgeRoll < dodge;
     if(missed){
       popup(tgtSide,'MISS',false);
@@ -12715,7 +12715,7 @@ async function applySkill(a, d, s, side, options={}){
     let dm = Math.max(1, Math.max(minDamage, afterDefense));
     // 치명타: 방어까지 계산된 최종 데미지에 치명타계수를 곱한다
     const critChance = (a.critRate||0)/100 + (s.critBonus||0) + (a.passives.critBonus||0);
-    const critRoll = Math.random();
+    const critRoll = rng();
     let crit = critChance>0 && critRoll<critChance;
     if(crit) dm *= (a.critMult||1.5);
     const modLines=[];
@@ -12732,7 +12732,7 @@ async function applySkill(a, d, s, side, options={}){
     d.hp = Math.max(0, d.hp - dm);
     if(s.breathScale && (a.breathStack||0)>0){ a.breathStack=0; a.buffs=a.buffs.filter(b=>b.kind!=='breath'); blog(`▶ 🐉 충전 방출!`); }
     if(d.hp<=0 && d.passives.surviveChance>0){
-      const surviveRoll=Math.random(), survived=surviveRoll<d.passives.surviveChance;
+      const surviveRoll=rng(), survived=surviveRoll<d.passives.surviveChance;
       if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); if(d.passives.surviveOnce) d.passives.surviveChance = 0; }
     }
     if(absorbed>0) effectNotes.push('보호막이 공격을 막았다!');
@@ -12800,12 +12800,12 @@ async function tickStatuses(u, side){
   if(u.buffs && u.buffs.length){ u.buffs.forEach(b=>b.turns--); u.buffs = u.buffs.filter(b=>b.turns>0); }
   // 빙결 스택 만료(2턴 유지, 추가 적중으로 갱신)
   if(u.freezeStacks>0){ u.freezeTurns = (u.freezeTurns||0) - 1; if(u.freezeTurns<=0){ u.freezeStacks=0; u.freezeTurns=0; } }
-  if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=Math.random(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('해로운 효과가 해제되었다!'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
+  if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=rng(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('해로운 효과가 해제되었다!'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
   // 포자형: 매 턴 종료 시 포자 발동(중복 가능)
   if(u.cardFx && u.cardFx.spores && u.cardFx.spores.length && B){
     const opp = (side==='p') ? B.e : B.p;
     u.cardFx.spores.forEach(sp=>{
-      const roll=Math.random(), success=roll<sp.chance;
+      const roll=rng(), success=roll<sp.chance;
       if(!success) return;
       if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
       else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); addDot(opp, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
@@ -12910,7 +12910,7 @@ async function playerSkill(skillId){
   if(needsOrder && !prioritySide){
     const myS = effStat(B.p,'spd'), enS = effStat(B.e,'spd');
     const firstChance = clamp(50 + (myS - enS), 5, 95);
-    playerFirst = Math.random()*100 < firstChance;
+    playerFirst = rng()*100 < firstChance;
     B.firstSide = playerFirst ? 'p' : 'e';
   } else {
     B.firstSide = prioritySide;
@@ -14773,6 +14773,10 @@ window.__test('rng: 시드 동일 → 수열 동일(재현)', function(){
 window.__test('rng: 기본은 Math.random 폴백(비전투 무영향)', function(){
   clearBattleRng();
   const x=rng(); __ok(x>=0 && x<1, '폴백 rng가 [0,1) 밖');
+});
+window.__test('rng: 전투 시뮬 경로에 Math.random 직접호출 없음', function(){
+  const srcs = [applySkill, tickStatuses, aiPickSkill].map(f => f.toString()).join('\n');
+  __ok(!/Math\.random/.test(srcs), '전투 시뮬 함수에 Math.random 잔존(rng()로 교체 필요)');
 });
 window.__test('ship: 부품 시스템 제거됨 + 마이그레이션', function(){
   const fails=[];
