@@ -71,6 +71,7 @@
 | **[superpowers/plans/2026-06-26-individual-concept-skill-expansion.md](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md)** | 위 설계의 구현 계획 — P0 엔진 5종(T1~5, 순수 헬퍼+`__test`)·컨셉 인프라(T6)·콘텐츠 배치 형틀(T7)+배치 반복. 검증=`__catalogSelfTest()` | **#1-A 후속 — 구현 진입점** |
 | **[superpowers/specs/2026-06-26-element-signature-effects-design.md](superpowers/specs/2026-06-26-element-signature-effects-design.md)** | 속성별 시그니처 성질(🟢1차 구현완료) — 7속성 성질(화상/젖음/재생/감전/관통/빙결/연속타), 속성기+속성발현 자동 부여, 자기속성 경감·스턴은 `skipNext` 재사용·빙결 스택·바람 추가타 | **#14 속성 개성화** |
 | **[superpowers/specs/2026-06-26-mission-story-mode-design.md](superpowers/specs/2026-06-26-mission-story-mode-design.md)** | 전투-미션/스토리 모드(🔵설계완료·구현대기) — 캠페인 선택형+내부 선형 고정 적, 단판 전투, 보스 기믹 4~5종, 보상 3층(미션 전용 변이종=`released:false` 140 재활용), `CAMPAIGNS`/`mission_progress` 데이터모델, 구현 단위 7 | **#15 미션 모드 — 구현 진입점** |
+| **[superpowers/specs/2026-06-26-pixel-art-unification-design.md](superpowers/specs/2026-06-26-pixel-art-unification-design.md)** | 도트(픽셀) 통일 + 사운드(🔵설계확정·구현대기) — 미세 픽셀(~96) 톤, 전역 픽셀 단위 `--px` 규정, `pixelize()` 런타임 필터(AI그림+절차SVG 공용→커버리지 공짜), 스프라이트 애니메이터, UI 토큰화, 칩튠SFX 기본+AI오디오 오버라이드, `assets/`+sw.js 규약, 6단계 로드맵 | **#16 도트 통일 — 구현 진입점** |
 
 **정리된(폐기) 문서:** `battle-growth-guide.md`(→ balance-sheet.md로 통합, 삭제), `pluloseum_godot_migration_plan.md`(Godot 이식 잔재 — 무관, gitignore).
 
