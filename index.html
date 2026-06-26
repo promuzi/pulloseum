@@ -1372,6 +1372,22 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   display:flex;align-items:center;justify-content:center;padding:0 3px;background:#0a1320;color:var(--gc);
   border:1.5px solid var(--gc);text-shadow:0 0 6px var(--gc);}
 .dcard.off{filter:grayscale(1) brightness(.5);border-color:rgba(255,255,255,.18);box-shadow:none;cursor:not-allowed;}
+/* 미보유/미해금(도감) — 어두운 실루엣. 보유한 건 위(밝게), 잠금은 아래(어둡게). */
+.lock-sub{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.12);}
+.lock-sub-h{display:block;font-size:10.5px;font-weight:800;color:var(--sub);margin:0 2px 7px;letter-spacing:.02em;}
+.dcard-locked-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.dcard-locked-grid .dcard{flex:0 0 70px;width:70px;}
+.dcard-locked-grid.skills{display:grid;grid-template-columns:repeat(3,1fr);}
+.dcard-locked-grid.skills .dcard{flex:none;width:auto;min-height:62px;}
+.dcard.locked{filter:grayscale(.9) brightness(.6);border-color:rgba(255,255,255,.14);box-shadow:none;
+  background:#0b1622;cursor:pointer;opacity:.96;}
+.dcard.locked:active{transform:scale(.94);}
+.dcard.locked .dc-ico{opacity:.6;}
+.dcard.locked .dc-n{color:#8ea2b8;}
+.dcard.locked .dc-lock{position:absolute;top:-7px;right:-5px;font-size:10px;line-height:1;
+  background:#0a1320;border:1px solid rgba(255,255,255,.28);border-radius:6px;padding:1px 3px;text-shadow:none;}
+.dcard.locked .dc-lock-lab{font-size:8.5px;font-weight:800;color:var(--sub);margin-top:3px;
+  border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:0 4px;}
 .dcard.on{outline:2px solid var(--neon);outline-offset:1px;}
 .drawer-empty{color:var(--sub);font-size:12px;padding:14px 4px;text-align:center;width:100%;}
 /* 장착 진행(스왑) 중 — 하단에 떠있는 카드 */
@@ -6527,6 +6543,13 @@ const MAX_LOADOUT = 6;
 function isAutoFormSkill(id){ return id === 'skill_weapon' || id === 'skill_card_predation' || /^skill_card_/.test(id); }
 function plantSkillPool(p){ return plantKnownSkillIds(p).filter(id => !isAutoFormSkill(id)); }
 function plantAutoSkills(p){ return plantKnownSkillIds(p).filter(isAutoFormSkill); }
+/* 도감용: 이 식물이 단계별로 해금하는 일반 스킬 전체 + 각 스킬의 최초 해금 단계 */
+function plantStageSkillPool(p, stage){ return plantKnownSkillIds(Object.assign({}, p, { growth_stage: stage })).filter(id => !isAutoFormSkill(id)); }
+function plantSkillUnlockMap(p){
+  const unlock = {};
+  GROWTH_STAGE_ORDER.forEach(stage => { plantStageSkillPool(p, stage).forEach(id => { if(!(id in unlock)) unlock[id] = stage; }); });
+  return unlock;
+}
 /* 실제 전투 로드아웃 = 장착한 일반 스킬 + 변이형 자동 스킬 */
 function plantBattleLoadout(p){
   const eq = (p.equipped_skills || []).filter(id => !isAutoFormSkill(id)).slice(0, MAX_LOADOUT);
@@ -11388,23 +11411,41 @@ function mutCardRowsHtml(p, keys){
   }).join('');
   return rows || `<div class="drawer-empty">없음</div>`;
 }
+/* 미보유(잠금) 변이 카드 한 장 — 어두운 실루엣, 눌러서 효과만 열람(도감) */
+function lockedMutCardHtml(id){
+  const c = TRAIT_CARDS[id]; if(!c) return '';
+  return `<div class="dcard locked" data-card-info="${id}">
+    <span class="dc-ico">${c.icon}</span><span class="dc-lock">🔒</span>
+    <span class="dc-n">${c.name}</span></div>`;
+}
 function mutDrawerHtml(p){
   const eq = p.equipped_trait_cards || [];
   const owned = ownedTraitCardIds();
+  const ownedIds = {}; owned.forEach(k => { ownedIds[parseCardKey(k).id] = true; });
   const common = [], variant = [];
   owned.forEach(key => { const c = cardDefOf(key); if(!c) return; (c.type==='common' ? common : variant).push(key); });
-  if(!owned.length){
-    return `<div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span></div>
-      <div class="drawer-empty">보유한 변이 카드가 없습니다. 상점 보급상자나 탐사 보상으로 획득하세요.</div>`;
-  }
+  // 미보유 전체(도감) — 공통/변이로 분류, 이름순
+  const lockCommon = [], lockVariant = [];
+  Object.keys(TRAIT_CARDS).forEach(id => {
+    if(ownedIds[id]) return;
+    (TRAIT_CARDS[id].type==='common' ? lockCommon : lockVariant).push(id);
+  });
+  const byName = (a,b) => (TRAIT_CARDS[a].name||a).localeCompare(TRAIT_CARDS[b].name||b);
+  lockCommon.sort(byName); lockVariant.sort(byName);
+  const section = (cls, ico, title, sub, ownKeys, lockIds) => {
+    const got = Object.keys(ownKeys.reduce((m,k)=>{ m[parseCardKey(k).id]=1; return m; }, {})).length;
+    const lockHtml = lockIds.length
+      ? `<div class="lock-sub"><span class="lock-sub-h">🔒 미보유 ${lockIds.length}</span>
+           <div class="dcard-locked-grid">${lockIds.map(lockedMutCardHtml).join('')}</div></div>` : '';
+    return `<div class="drawer-sec ${cls}">
+      <div class="drawer-sec-h"><span class="dsh-ico">${ico}</span><span class="dsh-t">${title}</span><span class="dsh-sub">${sub}</span><span class="dsh-cnt">${got}/${got+lockIds.length}</span></div>
+      ${ ownKeys.length ? mutCardRowsHtml(p, ownKeys) : '<div class="drawer-empty">보유 카드 없음</div>' }
+      ${ lockHtml }</div>`;
+  };
   return `
-    <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span></div>
-    <div class="drawer-sec sec-common">
-      <div class="drawer-sec-h"><span class="dsh-ico">🌐</span><span class="dsh-t">공통 카드</span><span class="dsh-sub">모든 변이형 장착</span><span class="dsh-cnt">${common.length}</span></div>
-      ${ common.length ? mutCardRowsHtml(p, common) : '<div class="drawer-empty">공통 카드 없음</div>' }</div>
-    <div class="drawer-sec sec-variant">
-      <div class="drawer-sec-h"><span class="dsh-ico">🧬</span><span class="dsh-t">변이형 전용 카드</span><span class="dsh-sub">해당 변이형만 장착</span><span class="dsh-cnt">${variant.length}</span></div>
-      ${ variant.length ? mutCardRowsHtml(p, variant) : '<div class="drawer-empty">변이형 전용 카드 없음</div>' }</div>`;
+    <div class="drawer-head"><span class="dh-t">🎴 변이 카드 도감 · 장착 ${eq.length}/5</span></div>
+    ${section('sec-common','🌐','공통 카드','모든 변이형 장착', common, lockCommon)}
+    ${section('sec-variant','🧬','변이형 전용 카드','해당 변이형만', variant, lockVariant)}`;
 }
 
 /* ── 스킬 탭(그림7) ── */
@@ -11454,7 +11495,9 @@ function skillCatChipsHtml(sk){
 }
 function skillDrawerHtml(p){
   const eq = p.equipped_skills || [];
-  let bench = plantSkillPool(p).filter(id=>!eq.includes(id)).sort((a,b)=>{
+  const current = plantSkillPool(p);
+  const unlock = plantSkillUnlockMap(p);
+  let bench = current.filter(id=>!eq.includes(id)).sort((a,b)=>{
     if(skillSort === 'grade'){ const ga=CARD_GRADES.indexOf(skillGradeOf(p,a)), gb=CARD_GRADES.indexOf(skillGradeOf(p,b)); if(ga!==gb) return ga-gb; }
     return a.localeCompare(b);
   });
@@ -11462,11 +11505,22 @@ function skillDrawerHtml(p){
     const sk = skillById(id,p) || { name:id, icon:'❔' }, g = skillGradeOf(p,id), col = gradeColor(g);
     return `<div class="dcard skill" data-skill="${id}" style="--gc:${col}">
       <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span>${skillMetaHtml(p,id,sk)}</div>`;
-  }).join('') : `<div class="drawer-empty">해금된 추가 스킬이 없습니다. 식물을 더 성장시키면 단계별로 새 스킬을 얻습니다.</div>`;
+  }).join('') : `<div class="drawer-empty">지금 장착할 수 있는 스킬이 없습니다.</div>`;
+  // 미해금(잠금) — 더 성장하면 얻는 스킬을 어두운 형태로(도감)
+  const locked = Object.keys(unlock).filter(id=>!current.includes(id))
+    .sort((a,b)=> (GROWTH_STAGE_ORDER.indexOf(unlock[a]) - GROWTH_STAGE_ORDER.indexOf(unlock[b])) || a.localeCompare(b));
+  const lockHtml = locked.length ? `<div class="lock-sub"><span class="lock-sub-h">🔒 미해금 ${locked.length} · 성장 시 획득</span>
+    <div class="dcard-locked-grid skills">${locked.map(id=>{
+      const sk = skillById(id,p) || { name:id, icon:'❔' };
+      const stg = GROWTH_STAGE_NAMES[unlock[id]] || unlock[id];
+      return `<div class="dcard skill locked" data-skill-info="${id}">
+        <span class="dc-n">${sk.icon||''} ${displaySkillName(sk.name)}</span><span class="dc-lock-lab">🔒 ${stg}</span></div>`;
+    }).join('')}</div></div>` : '';
   return `
-    <div class="drawer-head"><span class="dh-t">🎴 보유 스킬 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
+    <div class="drawer-head"><span class="dh-t">🎴 스킬 도감 · 장착 ${eq.length}/${MAX_LOADOUT}</span>
       <button class="drawer-sort" data-sort="skill">정렬: ${skillSort==='grade'?'등급순':'이름순'} ▼</button></div>
     <div class="drawer drawer-skill">${cards}</div>
+    ${lockHtml}
     <p class="sub" style="font-size:11px;margin:6px 2px 0">※ 포식·무기 등 변이 유래 스킬은 전투 시 자동으로 합류합니다.</p>`;
 }
 
@@ -11487,7 +11541,8 @@ function swapFloatHtml(p){
 }
 
 /* ── 카드/스킬 상세 팝업 ── */
-function openCardDetail(kind, key, equipped){
+function openCardDetail(kind, key, equipped, opts){
+  opts = opts || {};
   const p = activePlant(); if(!p) return;
   let icon, name, grade, typeLabel, fxHtml, canEquip = true, note = '';
   if(kind === 'mut'){
@@ -11505,13 +11560,14 @@ function openCardDetail(kind, key, equipped){
     if(sk.critBonus) fxHtml += `<li>치명타율 +${Math.round(sk.critBonus*100)}%</li>`;
     if(sk.selfBuff) fxHtml += `<li>사용 시 ${STAT_NAMES[sk.selfBuff.stat]||sk.selfBuff.stat} +${Math.round((sk.selfBuff.pct||0)*100)}% (${sk.selfBuff.turns}턴)</li>`;
   }
+  if(opts.locked){ canEquip = false; if(opts.note) note = opts.note; }
   const col = gradeColor(grade);
-  const acts = equipped
+  const acts = (!opts.locked && equipped)
     ? `<button class="btn unequip" data-detail-unequip="1">해제</button>`
-    : (canEquip ? `<button class="btn equip" data-detail-equip="1">장착</button>` : '');
+    : ((!opts.locked && canEquip) ? `<button class="btn equip" data-detail-equip="1">장착</button>` : '');
   const detailCard = $('#cardDetailBody').closest('.modal-card'); if(detailCard) detailCard.style.setProperty('--gc', col);
   const skillNameColor = kind==='skill' ? ` style="color:${col}"` : '';
-  const gradeHtml = kind==='mut' ? `<div><span class="cd-grade" style="--gc:${col};border-color:${col};color:${col}">${grade}</span></div>` : '';
+  const gradeHtml = (kind==='mut' && !opts.locked) ? `<div><span class="cd-grade" style="--gc:${col};border-color:${col};color:${col}">${grade}</span></div>` : '';
   $('#cardDetailBody').innerHTML = `
     <div class="cd-head"><span class="cd-ico">${icon}</span><span class="cd-name"${skillNameColor}>${name}</span></div>
     ${gradeHtml}
@@ -11761,6 +11817,13 @@ function bindUpgradeEvents(p){
   body.querySelectorAll('[data-skill]').forEach(b => b.addEventListener('click', () => {
     const on = (p.equipped_skills||[]).includes(b.dataset.skill);
     sfx.tap(); openCardDetail('skill', b.dataset.skill, on);
+  }));
+  // 잠금(미보유/미해금) 타일 — 효과만 열람(장착 불가)
+  body.querySelectorAll('[data-card-info]').forEach(b => b.addEventListener('click', () => {
+    sfx.tap(); openCardDetail('mut', b.dataset.cardInfo, false, { locked:true, note:'🔒 미보유 — 상점 보급상자·탐사 보상으로 획득' });
+  }));
+  body.querySelectorAll('[data-skill-info]').forEach(b => b.addEventListener('click', () => {
+    sfx.tap(); openCardDetail('skill', b.dataset.skillInfo, false, { locked:true, note:'🔒 미해금 — 식물을 더 성장시키면 해금' });
   }));
   body.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => {
     if(b.dataset.sort === 'mut') mutSort = mutSort==='grade' ? 'type' : 'grade';
