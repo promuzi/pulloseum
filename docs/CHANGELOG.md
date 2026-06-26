@@ -8,6 +8,7 @@
 - **컨셉 인프라:** `CONCEPT_OVERRIDES`(큐레이션)+`autoConcept`(자동 2축 시드)+`conceptOf` → 속성/타입/변이형/성격 중 둘을 묶은 정체성+스토리를 `SPECIES.desc`에 주입(도감 자동 노출). `applyVariantIdentity`에 합류·멱등.
 - **#14 통합:** 속성 시그니처(#14)와 직교(form/성격/컨셉 축). 속성 축 콘텐츠 스킬은 후속 배치에서 `signature:` 필드로 #14에 합류.
 - **검증:** `__catalogSelfTest()` **0 fail / 110**(#14 카드 ramp·toxic infuse 등 기존 테스트 유지). preview(alt 8771) 리로드 검증. 커밋 6건(T1~T6).
+- **콘텐츠 데모 배치1(T7, 톤 합의용):** 불 화초 4개체에 단계별 컨셉 스킬 16종 추가(`CONCEPT_BATCH1_SKILLS`, 개체당 새싹~성체 +4·역할/비용 차별화) — flame_trap(포식·광폭: 출혈/흡혈)·blaze_lance(무기·도사: 속성부여/치명)·ash_bloom(독성·광신: 독증폭/화상)·draca_bloom(용족·수호: 브레스충전/방어). `stageSkills` 누적(공유 새싹/유체 + 개체). self-test 111 0 fail. ⚠️ 광신 자해화상은 엔진 미구현이라 근사(공버프+화상). 톤 승인 후 나머지 배치 진행.
 
 ### 2026-06-26 — 속성별 시그니처 성질(상태이상) 1차 구현 (#14)
 - **의도:** 지금 속성은 상성 배율만 차이 → 속성마다 고유 "성질"을 얹어 같은 위력이라도 전투 맛이 달라지게. **속성 = 정체성.** 브레인스토밍으로 7속성 하나씩 확정 후 구현. 설계: [2026-06-26-element-signature-effects-design.md](superpowers/specs/2026-06-26-element-signature-effects-design.md).
