@@ -7,7 +7,9 @@
 - **해결:** `plantVariant(key)` — 개체 키 해시로 **색감(hue ±16°·채도·명도) + 형태(크기/비율 0.88~1.10) + 무늬(아키타입 테마: 공격형=가시·정밀형=문양·방어형=판·제어형=점·기본=잎맥)** 를 결정. `composePlantSvg`에 `opts.varKey` 추가 → 변형 레이어(필터+transform+`markingSvg`) 적용. 호출부에 `varKey`(plant.species / sp.key) 연결(spriteFor·svgPlant·관리/전투/진화/도감).
 - **결과:** 전 175 개체 **전부 고유 외형**(175/175 distinct SVG)·scale 0.88~1.10 정상·self-test 0 fail. legacy 종은 변형 제외(원형 유지).
 - **성격:** PNG 교체 전 **임시·영감용 절차적 1차**. 도트 PNG는 `SPRITE_OVERRIDES`로 개별 교체(#3). 무늬가 아키타입과 연동돼 컨셉 구체화 시 시각 힌트.
-- **실루엣(형태) 분기 — 진행 중:** 색·무늬를 넘어 **타입별 몸통 실루엣 자체를 성격 패밀리로 분기**(`SHAPE_FAMILY`/`shapeFamily`, `composePlantBody`에 `bodyStyle=패밀리` 전달). 패밀리 5종: jagged(공격형=뾰족 침엽)·bulky(방어형=넓고 육중)·slender(정밀형=가늘고 높음)·wild(야성형=비대칭)·classic(기본). **목본(tree) 먼저 구현·검증**(같은 목본도 성격 따라 구조 상이, self-test 0 fail). 화초/다육/덩굴/버섯은 후속 확장 예정.
+- **실루엣(형태) 분기:** 색·무늬를 넘어 **타입별 몸통 실루엣을 성격 패밀리로 분기**(`SHAPE_FAMILY`/`shapeFamily`). 5종: jagged(뾰족)·bulky(육중)·slender(가늘고 높음)·wild(비대칭)·classic. **목본(tree) 구현**(같은 목본도 성격 따라 구조 상이).
+- **조합형 고유 특징("포켓몬식 변화량"):** 5갈래 규칙만으론 획일적이라, **개체마다 특징 모듈을 고유 조합**으로 얹음 — `FEATURE_MODULES`(눈·뿔·날개·결정·꼬투리·덩굴·주름·더듬이·가시·꼬리) + `individualFeatures(key)`(키 해시, ~80% 눈 보유로 생물감). 전 175개체 **고유 SVG**(175/175 distinct). 색+크기+무늬+실루엣+특징조합이 곱해져 다 제각각.
+- **PNG 파이프라인(개체별 손그림 교체):** `SPRITE_OVERRIDES` 조회를 **개체 단위로 확장**. 우선순위 = `'<species>.<stage>'`(예 `carno_oak.evolved`) → `'<species>'`(전 단계) → `'<type>_<stage>_<element>'`(기존). 규격=120×140 비율·투명 배경·**식물만**(화분은 별도 `potVisual` 레이어)·바닥 정렬(base y96=화분 입구). `SPRITE_OVERRIDES['carno_oak']='url'`이면 절차적 외형 대신 그 PNG 사용. → 진짜 포켓몬식 고유 디자인은 이 훅으로 개체별 그림 투입(#3). self-test 0 fail.
 
 ### 2026-06-26 — 개체 컨셉 스킬: 전 개체 커버리지 + 광신 자해화상 (#1-A)
 - **전 175 개체 커버리지:** 벌크 생성에 **base 28(폼·성격 없음=속성 시그니처#14+타입 성향)** + **버섯 7(포자/중독)** 추가 → 40 손작업 + 660 생성기 = 전 개체 단계별 컨셉 스킬 보유([scripts/gen-concept-skills.js](../scripts/gen-concept-skills.js), 멱등).
