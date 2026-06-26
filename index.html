@@ -10244,36 +10244,71 @@ function composePlantBody(seedType, gi, P, el, bodyStyle){
     for(let i=0;i<blades;i++){ const ang=(i-(blades-1)/2)*15;
       svg+=`<path d="M${cx} ${cy+10} Q ${cx} ${cy-len} ${cx} ${cy-len-6}" stroke="${i%2?P.dark:P.main}" stroke-width="${5+gi*0.4}" fill="none" stroke-linecap="round" transform="rotate(${ang} ${cx} ${cy+10})"/>`; }
   } else if(seedType==='vine'){
-    svg+=`<path d="M60 ${cy+18} C 34 ${cy+6} 86 ${cy-8} 60 ${cy-18} C 42 ${cy-26} 76 ${cy-26} 64 ${cy-34}" stroke="${P.main}" stroke-width="${4+gi*0.6}" fill="none" stroke-linecap="round"/>`;
-    const leaves=1+gi; for(let i=0;i<leaves;i++){ const yy=cy+12-i*(7+gi), side=i%2?1:-1;
-      svg+=`<ellipse cx="${cx+side*(8+gi)}" cy="${yy}" rx="${5+gi*0.5}" ry="${3+gi*0.4}" fill="${i%2?P.light:P.main}" transform="rotate(${side*30} ${cx+side*(8+gi)} ${yy})"/>`; }
+    const vfam=(gi>=2?bodyStyle:'classic'), sw=4+gi*0.6;
+    if(vfam==='jagged'){ // 가시 지그재그 덩굴
+      svg+=`<path d="M60 ${cy+18} L48 ${cy+6} L72 ${cy-6} L50 ${cy-18} L70 ${cy-30}" stroke="${P.main}" stroke-width="${sw}" fill="none" stroke-linejoin="miter" stroke-linecap="round"/>`;
+      for(let i=0;i<3+gi;i++){ const yy=cy+12-i*7, sd=i%2?1:-1; svg+=`<path d="M${cx+sd*6} ${yy} l${sd*7} -3 l${-sd*3} 5 Z" fill="${P.dark}"/>`; }
+    } else if(vfam==='wild'){ // 엉킨 다중 덩굴
+      svg+=`<path d="M60 ${cy+18} C 36 ${cy+4} 84 ${cy-10} 58 ${cy-24}" stroke="${P.main}" stroke-width="${sw*0.8}" fill="none" stroke-linecap="round"/>`;
+      svg+=`<path d="M60 ${cy+18} C 84 ${cy+2} 36 ${cy-12} 64 ${cy-26}" stroke="${P.dark}" stroke-width="${sw*0.8}" fill="none" stroke-linecap="round"/>`;
+      for(let i=0;i<2+gi;i++){ const yy=cy+8-i*8, sd=i%2?1:-1; svg+=`<ellipse cx="${cx+sd*(9+gi)}" cy="${yy}" rx="${5+gi*0.5}" ry="${3+gi*0.4}" fill="${i%2?P.light:P.main}" transform="rotate(${sd*30} ${cx+sd*(9+gi)} ${yy})"/>`; }
+    } else { // classic/bulky(굵게)/slender(가늘고 길게)
+      const w=vfam==='bulky'?sw*1.5:(vfam==='slender'?sw*0.6:sw), topY=vfam==='slender'?cy-42:cy-34, lrx=(5+gi*0.5)*(vfam==='bulky'?1.3:1), leaves=(vfam==='bulky'?2:1)+gi;
+      svg+=`<path d="M60 ${cy+18} C 34 ${cy+6} 86 ${cy-8} 60 ${cy-18} C 42 ${cy-26} 76 ${cy-26} 64 ${topY}" stroke="${P.main}" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+      for(let i=0;i<leaves;i++){ const yy=cy+12-i*(7+gi), side=i%2?1:-1; svg+=`<ellipse cx="${cx+side*(8+gi)}" cy="${yy}" rx="${lrx}" ry="${3+gi*0.4}" fill="${i%2?P.light:P.main}" transform="rotate(${side*30} ${cx+side*(8+gi)} ${yy})"/>`; }
+    }
   } else if(seedType==='flower'){
     if(gi<=2){ // 봉오리
       svg+=`<path d="M${cx} ${cy+6} q -7 -12 0 -20 q 7 8 0 20 Z" fill="${P.main}"/><ellipse cx="${cx-5}" cy="${cy-2}" rx="4" ry="8" fill="${P.dark}" transform="rotate(-20 ${cx-5} ${cy-2})"/>`;
-    } else { // 개화
-      const petals=5+(gi>=5?3:0), rx=5+gi*0.7, ry=12+gi*1.5;
-      for(let i=0;i<petals;i++){ svg+=`<ellipse cx="${cx}" cy="${cy-13}" rx="${rx}" ry="${ry}" fill="${i%2?P.main:P.light}" transform="rotate(${i*(360/petals)} ${cx} ${cy})"/>`; }
+    } else { // 개화 — 형태 갈래로 꽃잎 실루엣 분기
+      const ffam=bodyStyle||'classic';
+      if(ffam==='jagged'){ // 뾰족 별꽃
+        const tip=22+gi*2; for(let i=0;i<6;i++){ svg+=`<path d="M${cx} ${cy} L${cx-5} ${cy-14} L${cx} ${cy-tip} L${cx+5} ${cy-14} Z" fill="${i%2?P.main:P.light}" transform="rotate(${i*60} ${cx} ${cy})"/>`; }
+      } else if(ffam==='bulky'){ // 겹꽃(많은 둥근 꽃잎)
+        const rx=5+gi*0.6, ry=11+gi*1.3; for(let i=0;i<9;i++){ svg+=`<ellipse cx="${cx}" cy="${cy-12}" rx="${rx}" ry="${ry}" fill="${i%2?P.main:P.light}" transform="rotate(${i*40} ${cx} ${cy})"/>`; }
+      } else if(ffam==='slender'){ // 백합형(긴 꽃잎 4장)
+        const rx=4+gi*0.4, ry=16+gi*1.8; for(let i=0;i<4;i++){ svg+=`<ellipse cx="${cx}" cy="${cy-16}" rx="${rx}" ry="${ry}" fill="${i%2?P.main:P.light}" transform="rotate(${i*90} ${cx} ${cy})"/>`; }
+      } else if(ffam==='wild'){ // 흐트러진 비대칭 꽃잎
+        const rx=5+gi*0.7, ry=12+gi*1.5; for(let i=0;i<6;i++){ const j=((i*37)%9)-4; svg+=`<ellipse cx="${cx}" cy="${cy-13}" rx="${rx}" ry="${ry}" fill="${i%2?P.main:P.light}" transform="rotate(${i*60+j*4} ${cx} ${cy})"/>`; }
+      } else { // classic
+        const petals=5+(gi>=5?3:0), rx=5+gi*0.7, ry=12+gi*1.5; for(let i=0;i<petals;i++){ svg+=`<ellipse cx="${cx}" cy="${cy-13}" rx="${rx}" ry="${ry}" fill="${i%2?P.main:P.light}" transform="rotate(${i*(360/petals)} ${cx} ${cy})"/>`; }
+      }
       svg+=`<circle cx="${cx}" cy="${cy}" r="${6+gi*0.7}" fill="${P.dark}"/><circle cx="${cx}" cy="${cy}" r="3" fill="${P.accent}"/>`;
     }
   } else if(seedType==='cactus'){
-    const h=22+gi*8, w=18+gi*3;
+    const cfam=(gi>=2?bodyStyle:'classic');
+    let h=22+gi*8, w=18+gi*3;
+    if(cfam==='bulky'){ w=Math.round(w*1.35); h=Math.round(h*0.82); } else if(cfam==='slender'){ w=Math.round(w*0.62); h=Math.round(h*1.2); }
     svg+=`<rect x="${cx-w/2}" y="${cy-h/2+6}" width="${w}" height="${h}" rx="${w/2}" fill="${P.main}"/>`;
-    if(gi>=3){ svg+=`<rect x="${cx-w/2-9}" y="${cy-4}" width="9" height="${10+gi}" rx="4.5" fill="${P.dark}"/><rect x="${cx+w/2}" y="${cy-8}" width="9" height="${12+gi}" rx="4.5" fill="${P.dark}"/>`; }
-    for(let i=0;i<4+gi;i++){ const yy=cy-h/2+10+i*6; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+3}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
+    if(cfam==='wild' && gi>=3){ // 비대칭 분기 가지
+      svg+=`<rect x="${cx-w/2-11}" y="${cy-2}" width="11" height="${14+gi}" rx="5.5" fill="${P.main}"/><rect x="${cx+w/2}" y="${cy+5}" width="10" height="${10+gi}" rx="5" fill="${P.dark}"/>`;
+    } else if(gi>=3){ svg+=`<rect x="${cx-w/2-9}" y="${cy-4}" width="9" height="${10+gi}" rx="4.5" fill="${P.dark}"/><rect x="${cx+w/2}" y="${cy-8}" width="9" height="${12+gi}" rx="4.5" fill="${P.dark}"/>`; }
+    const spines=(cfam==='jagged'?7:4)+gi, slen=cfam==='jagged'?5:3, step=h/(spines+1);
+    for(let i=0;i<spines;i++){ const yy=cy-h/2+10+i*step; svg+=`<line x1="${cx-w/2}" y1="${yy}" x2="${cx-w/2-slen}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/><line x1="${cx+w/2}" y1="${yy}" x2="${cx+w/2+slen}" y2="${yy-2}" stroke="${P.light}" stroke-width="1.2"/>`; }
     if(gi>=5) svg+=`<circle cx="${cx}" cy="${cy-h/2+3}" r="6" fill="${P.accent}"/>`;
   } else if(seedType==='mushroom'){
-    const style = bodyStyle || 'classic';   // 향후 'cluster'(B)·'glow'(C) 분기 자리
-    // A 클래식 독버섯: 통통한 자루 + 점박이 갓 + 고리. gi가 클수록 갓이 펴지고 점·고리 생김.
-    const capW = 14 + gi*5, capLift = 22 + gi*3;
+    const mfam = (gi>=2 ? (bodyStyle||'classic') : 'classic');   // 형태 갈래
+    // 클래식 독버섯 + 갈래(bulky 넓적/slender 길쭉/jagged 마녀모자/wild 군집)
+    let capW = 14 + gi*5, capLift = 22 + gi*3;
+    if(mfam==='bulky'){ capW=Math.round(capW*1.3); capLift=Math.round(capLift*0.85); }
+    else if(mfam==='slender'){ capW=Math.round(capW*0.72); capLift=Math.round(capLift*1.32); }
     const stipeW = 4 + gi*0.8, topY = cy, baseY = cy + 16;
     // 자루
     svg += `<path d="M${cx-stipeW} ${baseY} Q${cx-stipeW-1} ${topY+9} ${cx-stipeW+1} ${topY} L${cx+stipeW-1} ${topY} Q${cx+stipeW+1} ${topY+9} ${cx+stipeW} ${baseY} Z" fill="${P.light}"/>`;
     svg += `<path d="M${cx-stipeW} ${baseY} Q${cx-stipeW-1} ${topY+9} ${cx-stipeW+1} ${topY} L${cx-stipeW+3} ${topY} Q${cx-1} ${topY+10} ${cx-2} ${baseY} Z" fill="${P.dark}" opacity=".4"/>`;
     // 고리(annulus) — 성장체(gi>=3)부터
     if(gi>=3) svg += `<path d="M${cx-stipeW-2} ${topY+11} Q${cx} ${topY+17} ${cx+stipeW+2} ${topY+11} l0 3 Q${cx} ${topY+20} ${cx-stipeW-2} ${topY+14} Z" fill="${P.dark}"/>`;
-    // 갓 돔
-    svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY} Q${cx} ${topY+7} ${cx-capW} ${topY} Z" fill="${P.main}"/>`;
-    svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY}" fill="none" stroke="${P.dark}" stroke-width="1.4"/>`;
+    // 갓 — 형태 갈래
+    if(mfam==='jagged'){ // 뾰족 마녀모자
+      svg += `<path d="M${cx-capW} ${topY+4} L${cx} ${topY-capLift-6} L${cx+capW} ${topY+4} Q${cx} ${topY+9} ${cx-capW} ${topY+4} Z" fill="${P.main}"/>`;
+      svg += `<path d="M${cx-capW} ${topY+4} L${cx} ${topY-capLift-6} L${cx+capW} ${topY+4}" fill="none" stroke="${P.dark}" stroke-width="1.4"/>`;
+    } else {
+      svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY} Q${cx} ${topY+7} ${cx-capW} ${topY} Z" fill="${P.main}"/>`;
+      svg += `<path d="M${cx-capW} ${topY} Q${cx} ${topY-capLift} ${cx+capW} ${topY}" fill="none" stroke="${P.dark}" stroke-width="1.4"/>`;
+      if(mfam==='wild'){ // 군집(작은 갓 하나 더)
+        svg += `<path d="M${cx+capW-5} ${topY+2} Q${cx+capW+3} ${topY-capLift*0.55} ${cx+capW+12} ${topY+2} Q${cx+capW+3} ${topY+6} ${cx+capW-5} ${topY+2} Z" fill="${P.dark}"/>`;
+      }
+    }
     // 점박이 — 성장체부터
     if(gi>=3){
       svg += `<circle cx="${cx-capW*0.45}" cy="${topY-capLift*0.45}" r="${2+gi*0.3}" fill="${P.light}" opacity=".9"/>`;
