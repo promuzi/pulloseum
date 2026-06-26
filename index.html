@@ -11679,6 +11679,7 @@ async function applySkill(a, d, s, side, options={}){
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
   if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul * healMult(a); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
   if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul; a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); spriteFx(side,'buff'); fxPopup(side,'🔺 '+battleStatLabel(s.selfBuff.stat),'buf'); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
+  if(s.poisonAmp){ a.buffs = a.buffs.filter(b=>b.kind!=='poison_amp'); a.buffs.push({kind:'poison_amp', mult:s.poisonAmp.mult, turns:s.poisonAmp.turns}); spriteFx(side,'buff'); fxPopup(side,'🔺 독','buf'); effectNotes.push('독이 짙어졌다!'); blog(`▶ ☠️ 독 위력 ${Math.round((s.poisonAmp.mult-1)*100)}%↑(${s.poisonAmp.turns}턴)`); }
   if(s.tagBuff||s.tagBuffs){ // 태그 시너지 발동형: 특정 태그 스킬만 N턴간 강화/할인(임시 보정 풀)
     const tbs = s.tagBuffs || [s.tagBuff];
     tbs.forEach(tb => { if(tb) a.buffs.push({kind:'tagmod', tag:tb.tag, type:tb.type, value:tb.value, turns:tb.turns}); });
@@ -11773,9 +11774,9 @@ async function applySkill(a, d, s, side, options={}){
     if(a.cardFx && a.cardFx.poisonCoef>0 && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*a.cardFx.poisonCoef)); addDot(d, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); effectNotes.push('독에 중독되었다!'); blog(`▶ 🟣 독가시 중독(2턴 · 턴당 ${pd})`); }
     if(a.passives.defDownOnHit>0){ d.buffs.push({stat:'def',pct:a.passives.defDownOnHit,turns:2,kind:'debuff'}); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 방어','deb'); effectNotes.push('방어력이 감소하였다!'); }
     if(s.enemyDebuff){ const eb = effMul!==1 ? Object.assign({}, s.enemyDebuff, {pct:round2(s.enemyDebuff.pct*effMul)}) : s.enemyDebuff; const appliedStat=applyEnemyDebuff(d, eb); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 '+battleStatLabel(appliedStat),'deb'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(eb)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul)); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul*((s.dot.kind==='poison')?poisonAmpMult(a):1))); addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
     const infuseBuff = (a.buffs||[]).find(b=>b.kind==='poison_infuse');
-    if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct)); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
+    if(infuseBuff && dm>0){ const pd=Math.max(1,Math.round(effStat(a,'atk')*infuseBuff.pct*poisonAmpMult(a))); addDot(d, {kind:'poison',dmg:pd,turns:3,icon:dotIcon('poison')}); effectNotes.push('독이 묻었다!'); blog(`▶ ☠️ 독 묻히기 발동! 중독(3턴 · 턴당 ${pd})`); }
     const elemBonus = elemInfuseBonus(a);
     if(elemBonus>0 && dm>0){ d.hp=Math.max(0,d.hp-elemBonus); popup(tgtSide,'-'+elemBonus,false); effectNotes.push('속성 일격!'); blog(`▶ ✨ 속성 부여 추가피해 ${elemBonus}`); }
     // 속성 시그니처 성질(화상/젖음/재생/감전/빙결) — 적중 성공 시 자동 부여
@@ -11789,7 +11790,7 @@ async function applySkill(a, d, s, side, options={}){
     if(d.guard && d.guard.counter>0 && d.hp>0){ a.hp=Math.max(0,a.hp-d.guard.counter); popup(side,'-'+d.guard.counter,false); effectNotes.push('반격을 받았다!'); blog(`↩️ <span class="em">${d.name}</span> 반격! ${d.guard.counter} 피해`); }
   } else {
     if(s.enemyDebuff){ const eb = effMul!==1 ? Object.assign({}, s.enemyDebuff, {pct:round2(s.enemyDebuff.pct*effMul)}) : s.enemyDebuff; const appliedStat=applyEnemyDebuff(d, eb); spriteFx(tgtSide,'debuff'); fxPopup(tgtSide,'🔻 '+battleStatLabel(appliedStat),'deb'); effectNotes.push(`${battleStatLabel(appliedStat)}이 감소하였다!`); blog(`▶ 🔻 ${debuffLabel(eb)}`); }
-    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul)); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
+    if(s.dot){ const ddmg=Math.max(1,Math.round(effStat(a,'atk')*s.dot.pct*effMul*((s.dot.kind==='poison')?poisonAmpMult(a):1))); const times=s.dotTimes||1; for(let i=0;i<times;i++) addDot(d, {kind:s.dot.kind,dmg:ddmg,turns:s.dot.turns,icon:dotIcon(s.dot.kind)}); effectNotes.push(dotAppliedMessage(s.dot.kind)); blog(`▶ ${dotIcon(s.dot.kind)} ${dotName(s.dot.kind)}${times>1?' ×'+times:''} (${s.dot.turns}턴 · 턴당 ${ddmg})`); }
   }
   await flushJudgeEffects();
   updateBars();
@@ -11799,6 +11800,7 @@ const BLEED_HEAL_MULT = 0.5; // 출혈 = 지속피해 + 회복 감소(전역 정
 function healMult(u){ return (u && u.dots && u.dots.some(d=>d.kind==='bleed')) ? BLEED_HEAL_MULT : 1; }
 function drainEnergy(a, d, amount){ const se=Math.min(d.energy||0, amount); d.energy=Math.max(0,(d.energy||0)-se); a.energy=Math.min(a.energyMax,(a.energy||0)+se); return se; } // 탐식: 적 에너지 흡수
 function elemInfuseBonus(a){ const b=(a&&a.buffs||[]).find(x=>x.kind==='element_infuse'); return b ? Math.round((a.elem||0)*b.pct) : 0; } // 무기형: 속성 부여 추가피해
+function poisonAmpMult(a){ const b=(a&&a.buffs||[]).find(x=>x.kind==='poison_amp'); return b ? b.mult : 1; } // 독성형: 자기 독 증폭
 async function tickStatuses(u, side){
   let changed=false;
   const statusNotes=[];
@@ -12940,6 +12942,10 @@ window.__test('engine: drainEnergy moves energy capped', function(){
 window.__test('engine: element_infuse bonus from buff', function(){
   __eq(elemInfuseBonus({buffs:[], elem:20}), 0, 'no buff → 0');
   __eq(elemInfuseBonus({buffs:[{kind:'element_infuse', pct:0.5, turns:3}], elem:20}), 10, 'elem 20 × 0.5 = 10');
+});
+window.__test('engine: poison_amp multiplies poison', function(){
+  __eq(poisonAmpMult({buffs:[]}), 1, 'none → 1');
+  __eq(poisonAmpMult({buffs:[{kind:'poison_amp', mult:1.5, turns:2}]}), 1.5, 'amp → 1.5');
 });
 
 window.__test('baseline: SPECIES has legacy keys', function(){
