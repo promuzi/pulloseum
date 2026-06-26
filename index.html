@@ -6955,7 +6955,7 @@ function harvestPot(p){
 /* 전체 수확 — 익은 화분 전부를 묶어 한 번에 공통 개봉 연출로 */
 function harvestAllPots(){
   const all = [];
-  (state.plants||[]).forEach(p => { ensureNurseryFields(p); nurseryTick(p, Date.now()); if(p.nursery.ripe.length){ harvestPot(p).forEach(r=>all.push(r)); } });
+  (state.plants||[]).forEach(p => { ensureNurseryFields(p); nurseryTick(p, gameNow()); if(p.nursery.ripe.length){ harvestPot(p).forEach(r=>all.push(r)); } });
   if(!all.length){ toast('수확할 열매가 없습니다'); return; }
   saveState(); if(typeof sfx!=='undefined'&&sfx.win) sfx.win();
   if(typeof renderNurseryGrid==='function') renderNurseryGrid();
@@ -6966,7 +6966,7 @@ function harvestAllPots(){
 
 /* 양육 탭 뱃지 — 익은 열매 있는 화분이 하나라도 있으면 빨간 점. 시간 경과 반영 위해 틱. */
 function nurseryHasReady(){
-  return (state.plants||[]).some(p => { ensureNurseryFields(p); nurseryTick(p, Date.now()); return p.nursery.ripe.length > 0; });
+  return (state.plants||[]).some(p => { ensureNurseryFields(p); nurseryTick(p, gameNow()); return p.nursery.ripe.length > 0; });
 }
 function updateNurseryBadge(){
   const dot = document.getElementById('nurseryNavDot'); if(!dot) return;
@@ -6978,7 +6978,7 @@ function applyCare(p, res){
   if(!state.care) state.care = { water:0, fert:0 };
   if((state.care[res]||0) <= 0) return false;
   ensureNurseryFields(p);
-  nurseryTick(p, Date.now());                 // 투입 전 경과 반영
+  nurseryTick(p, gameNow());                 // 투입 전 경과 반영
   state.care[res] -= 1;
   const key = res==='water' ? 'waterBuff' : 'fertBuff';
   p.nursery[key] = Math.min(1, p.nursery[key] + CARE_BUFF_PER_USE);
@@ -13122,7 +13122,7 @@ $('#cardDetailModal').addEventListener('click', (ev) => {
    식물원(양육) UI 함수들
    =================================================================== */
 function openNursery(){
-  (state.plants||[]).forEach(p => { ensureNurseryFields(p); nurseryTick(p, Date.now()); });
+  (state.plants||[]).forEach(p => { ensureNurseryFields(p); nurseryTick(p, gameNow()); });
   saveState();
   renderNurseryGrid();
   renderNurseryRes();
@@ -13158,7 +13158,7 @@ function renderNurseryGrid(){
       if(!p){
         html += `<div class="pot-slot empty"><div class="pot-stack"><span class="pot-layer">${potVisual('pot_terra',78)}</span></div><div class="pot-name">빈 화분</div><div class="pot-stage">식물 없음</div></div>`;
       } else {
-        ensureNurseryFields(p); nurseryTick(p, Date.now());
+        ensureNurseryFields(p); nurseryTick(p, gameNow());
         const n = p.nursery;
         const st = seedTypeOf(p), el = p.element || 'grass';
         const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species});
@@ -13186,7 +13186,7 @@ const FRUIT_INSTANT_MINERAL = 5;   // 게이지 1칸 즉시 가속 비용(미네
 function openNurseryDetail(idx){
   const p = (state.plants||[])[idx];
   if(!p){ toast('화분에 식물이 없습니다'); return; }
-  ensureNurseryFields(p); nurseryTick(p, Date.now());
+  ensureNurseryFields(p); nurseryTick(p, gameNow());
   const n = p.nursery;
   const st = seedTypeOf(p), el = p.element || 'grass';
   const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species});
@@ -13249,7 +13249,7 @@ function openPotPicker(idx){
 function equipPot(idx, potId){
   const p=(state.plants||[])[idx]; if(!p||!POT_CATALOG[potId]) return;
   if(!(state.pot_inventory&&state.pot_inventory[potId])){ toast('아직 보유하지 않은 화분입니다'); return; }
-  ensureNurseryFields(p); nurseryTick(p, Date.now());
+  ensureNurseryFields(p); nurseryTick(p, gameNow());
   p.nursery.potId = potId;
   saveState(); if(typeof sfx!=='undefined'&&sfx.tap) sfx.tap();
   closeNurseryPop(); openNurseryDetail(idx); renderNurseryGrid();
@@ -13327,7 +13327,7 @@ function doFertPot(idx){
 
 function doInstantFruit(idx){
   const p=(state.plants||[])[idx]; if(!p) return;
-  ensureNurseryFields(p); nurseryTick(p, Date.now());
+  ensureNurseryFields(p); nurseryTick(p, gameNow());
   const n=p.nursery;
   if(nurseryMaxFruits(p)<=0){ toast('성장체부터 열매를 맺습니다'); return; }
   if(n.ripe.length>=n.maxFruits){ toast('열매가 이미 꽉 찼습니다'); return; }
@@ -14777,6 +14777,11 @@ window.__test('rng: 기본은 Math.random 폴백(비전투 무영향)', function
 window.__test('rng: 전투 시뮬 경로에 Math.random 직접호출 없음', function(){
   const srcs = [applySkill, tickStatuses, aiPickSkill].map(f => f.toString()).join('\n');
   __ok(!/Math\.random/.test(srcs), '전투 시뮬 함수에 Math.random 잔존(rng()로 교체 필요)');
+});
+window.__test('time: gameNow가 진행시간 출처 단일 지점', function(){
+  __ok(typeof gameNow==='function', 'gameNow 미정의');
+  __ok(typeof gameNow()==='number' && gameNow()>0, 'gameNow가 시각을 반환하지 않음');
+  __ok(/nurseryTick\([^,]+,\s*gameNow\(\)\)/.test(harvestAllPots.toString()), 'harvestAllPots가 아직 Date.now() 사용');
 });
 window.__test('ship: 부품 시스템 제거됨 + 마이그레이션', function(){
   const fails=[];
