@@ -73,7 +73,7 @@
 - **전투를 preview로 테스트:** 새 상태면 `claimStarterSeed(true)`→`plantSeedFromBag(state.seed_inventory[0].inventory_id,'이름')`→`state.activeId=p.id`→`startBattle()`로 부팅(UI 네비 없이). ⚠️ 이렇게 부르면 `titleScreen` 등 다른 `.screen`이 안 숨겨져 `#battleScreen`이 화면 일부만 차지→레이아웃 측정 왜곡. 측정 전 `document.querySelectorAll('.screen').forEach(s=>{if(s.id!=='battleScreen')s.classList.add('hidden')})`. 판정 시퀀스는 `playerSkill(id)`가 비동기(sleep 다수)라 200ms 폴링으로 `#judgeCards` 슬롯·`.dmgpop` 캡처.
 - **포트 충돌 대응:** 포트 8765가 ESTABLISHED TCP 연결로 점유될 수 있음. `netstat -ano | Select-String ":포트번호 .*LISTEN"`으로 리스닝 여부 확인. 9876 등 일부는 Windows 예약 포트(preview_start에서 "reserved by OS" 에러) — 8766·8768 등 인접 포트 시도.
 - **`serve.ps1` 워크트리 루트:** `$PSScriptRoot`(스크립트 위치의 상위)를 서빙 루트로 씀. 워크트리 내용을 테스트할 때는 해당 워크트리의 `.claude/serve.ps1`을 실행해야 함(예: `풀로세움-2\.claude\serve.ps1` → 풀로세움-2 기준 서빙).
-- **PowerShell git 커밋 메시지:** bash `<<'EOF'` heredoc 사용 불가 — `@'...'@` here-string 사용: `git commit -m @'\n메시지\n'@`. 닫는 `'@`는 반드시 열 0에서 시작(들여쓰기 금지, 파서 에러 유발).
+- **git 커밋 메시지 — 쓰는 도구에 맞는 문법:** **PowerShell 도구**는 `@'...'@` here-string(`git commit -m @'\n메시지\n'@`, 닫는 `'@`는 열 0에서 시작·들여쓰기 금지). **Bash 도구**는 heredoc `git commit -F - <<'EOF' … EOF`. ⚠️ **Bash 도구에 `@'...'@`를 쓰면 안 됨** — bash엔 here-string이 아니라 리터럴 `@`가 커밋 제목에 박힌다(2026-06-26 실측, amend로 정정).
 
 ## 앞으로 할 만한 것 (백로그)
 > ⚠️ **앞으로의 방향·우선순위는 이제 [`docs/master-roadmap.md`](docs/master-roadmap.md)(유일 허브)에서 관리한다.** 아래는 요약일 뿐, 갱신은 로드맵에서 한다.
