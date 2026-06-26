@@ -5193,12 +5193,22 @@ function variantSkillsOf(p){
   return out;
 }
 function cardTypeOf(key){ const d=cardDefOf(key); return d ? d.type : null; }
-/* 카드가 이 변이형에 장착 가능한 타입인지 */
-function cardFitsForm(key, form){
+/* 카드가 이 변이형(또는 다변이 종)에 장착 가능한지.
+   form 인자 = 문자열(단일 form) 또는 plant/unit 객체(base_variants 전체 고려). */
+function cardFitsForm(key, formOrPlant){
   const c = cardDefOf(key); if(!c) return false;
-  const f = FORMS[form] || FORMS.normal;
-  if(c.type === 'common') return form !== 'dragon';
-  return c.type === f.cardType;
+  let forms;
+  if(formOrPlant && typeof formOrPlant === 'object'){
+    forms = (formOrPlant.base_variants && formOrPlant.base_variants.length)
+      ? formOrPlant.base_variants.slice()
+      : [formOrPlant.form || 'normal'];
+  } else {
+    forms = [formOrPlant || 'normal'];
+  }
+  // 공통 카드: 변이 중 하나라도 dragon이 아니면 OK (spore가 늘 common 허용 → 이중버섯 공통 항상 가능)
+  if(c.type === 'common') return forms.some(f => f !== 'dragon');
+  // 변이 카드: 변이 중 하나라도 그 form의 cardType과 일치하면 OK
+  return forms.some(f => { const fd = FORMS[f] || FORMS.normal; return c.type === fd.cardType; });
 }
 /* 보유(소유) 변이 카드 키 — 기본 지급 없음, 오직 보급상자·탐사 보상으로만 획득 */
 function ownedTraitCardIds(){
@@ -6568,7 +6578,7 @@ function ensureSkillFields(p){
   if(!Array.isArray(p.bonus_skills)) p.bonus_skills = [];   // 식물원 열매로 습득한 추가 스킬
   // 변이 카드 장착칸(최대 5) — 보유 중이고 변이형에 맞는 카드만 유지
   if(!Array.isArray(p.equipped_trait_cards)) p.equipped_trait_cards = [];
-  const owned = ownedFormCards(p.form || 'normal');
+  const owned = ownedFormCards(p);
   p.equipped_trait_cards = p.equipped_trait_cards.filter(cid => owned.includes(cid)).slice(0, 5);
   const known = plantKnownSkillIds(p);
   // 스킬 등급 — 각 스킬은 고정 등급 1개. (잠재력 폐지: 등급 추첨 없음)
@@ -10608,7 +10618,7 @@ function mutTabHtml(p){
 function mutCardHtml(p, key){
   const c = cardDefOf(key); if(!c) return '';
   const { grade } = parseCardKey(key);
-  const fits = cardFitsForm(key, p.form || 'normal'), on = (p.equipped_trait_cards||[]).includes(key), cnt = (state.trait_cards||{})[key]||0;
+  const fits = cardFitsForm(key, p), on = (p.equipped_trait_cards||[]).includes(key), cnt = (state.trait_cards||{})[key]||0;
   return `<div class="dcard ${fits?'':'off'} ${on?'on':''}" data-card="${key}" style="--gc:${gradeColor(grade)}">
     <span class="dc-ico">${c.icon}</span><span class="gtag">${grade}</span>
     <span class="dc-n">${c.name}</span>${cnt>1?`<span class="dc-cnt">×${cnt}</span>`:''}</div>`;
@@ -10772,7 +10782,7 @@ function openCardDetail(kind, key, equipped, opts){
     typeLabel = (c?TRAIT_CARD_TYPE_NAMES[c.type]:'') + ' 변이 카드';
     const fx = cardEffectLabels(key);
     fxHtml = fx.length ? fx.map(t=>`<li>${coefifyText(t)}</li>`).join('') : '<li>특수 효과 없음</li>';
-    if(!equipped && !cardFitsForm(key, p.form||'normal')){ canEquip = false; note = '이 변이형에는 장착할 수 없는 카드입니다.'; }
+    if(!equipped && !cardFitsForm(key, p)){ canEquip = false; note = '이 변이형에는 장착할 수 없는 카드입니다.'; }
   } else {
     const sk = skillById(key,p) || { name:key, icon:'❔' };
     grade = skillGradeOf(p,key); icon = sk.icon||'✨'; name = displaySkillName(sk.name);
@@ -13357,6 +13367,18 @@ window.__test('content batch1: stageSkills expanded + resolve + diverse', functi
   if(fails.length) throw new Error(fails.join(' | '));
 });
 
+window.__test('dual-variant card gate', function(){
+  const fails=[];
+  const anyType=t=>Object.keys(TRAIT_CARDS).find(k=>TRAIT_CARDS[k].type===t);
+  const p={ form:'spore', base_variants:['spore','toxic'] };
+  if(!cardFitsForm('card_poisonspore', p)) fails.push('spore 카드 미적격');
+  if(!cardFitsForm(anyType('potion'), p)) fails.push('독성(potion) 카드 미적격');
+  const cm=anyType('common'); if(cm && !cardFitsForm(cm, p)) fails.push('공통 카드 미적격');
+  if(cardFitsForm('card_sword', p)) fails.push('무기 카드가 (spore+toxic)에 잘못 적격');
+  const ps={ form:'spore', base_variants:['spore'] };
+  if(cardFitsForm(anyType('potion'), ps)) fails.push('순수 포자가 독성 카드 적격(회귀)');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
 window.__test('baseline: SPECIES has legacy keys', function(){
   ['flame','aqua','thorn','gaia','windy','spark','frost'].forEach(k => __ok(SPECIES[k], 'missing legacy species '+k));
 });
