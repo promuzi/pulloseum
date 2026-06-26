@@ -1336,15 +1336,19 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .drawer-sec-h .dsh-cnt{margin-left:auto;min-width:18px;text-align:center;font-size:11px;font-weight:900;
   color:var(--sec-ac);background:color-mix(in srgb, var(--sec-ac,#fff) 18%, transparent);
   border:1px solid color-mix(in srgb, var(--sec-ac,#fff) 45%, transparent);border-radius:8px;padding:1px 7px;}
-.dgrade-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin:0;
+/* 같은 카드 = 한 줄. 단일 등급은 보통 행, 같은 카드의 등급 변종 2개↑는 강조 묶음(.multi). */
+.dcard-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:0;
   padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.08);}
-.dgrade-row:first-of-type{padding-top:1px;}
-.dgrade-row:last-child{border-bottom:none;padding-bottom:1px;}
-.dgrade-lab{align-self:stretch;flex:0 0 auto;font-size:12px;font-weight:900;color:var(--gc,#fff);
-  border:1.5px solid var(--gc,#fff);border-radius:7px;width:22px;
-  display:flex;align-items:center;justify-content:center;text-shadow:0 0 6px var(--gc);
-  background:color-mix(in srgb, var(--gc,#fff) 13%, transparent);}
-.dgrade-row .dcard{flex:0 0 70px;width:70px;}
+.dcard-row:first-of-type{padding-top:1px;}
+.dcard-row:last-child{border-bottom:none;padding-bottom:1px;}
+.dcard-row .dcr-cards{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 auto;}
+.dcard-row .dcard{flex:0 0 70px;width:70px;}
+.dcard-row.multi{flex-direction:column;align-items:stretch;gap:6px;margin:6px 0;padding:7px 8px;
+  border:1px dashed color-mix(in srgb, var(--sec-ac,#fff) 45%, transparent);border-radius:11px;
+  background:color-mix(in srgb, var(--sec-ac,#fff) 8%, transparent);}
+.dcr-lab{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:var(--sec-ac,var(--text));}
+.dcr-lab .dcr-tag{font-size:9.5px;font-weight:800;color:var(--sub);
+  border:1px solid color-mix(in srgb, var(--sec-ac,#fff) 35%, transparent);border-radius:6px;padding:0 5px;}
 .dcard{width:auto;border:2px solid var(--gc,#5fe06b);border-radius:12px;background:#0e1c2e;position:relative;
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;
   box-shadow:0 0 8px -2px var(--gc);transition:transform .08s;}
@@ -11365,14 +11369,22 @@ function mutCardHtml(p, key){
     <span class="dc-ico">${c.icon}</span><span class="gtag">${grade}</span>
     <span class="dc-n">${c.name}</span>${cnt>1?`<span class="dc-cnt">×${cnt}</span>`:''}</div>`;
 }
-/* 카드 묶음을 등급별(S→D) 같은 가로줄로 — 같은 등급이 한 행에 모인다(#4) */
-function mutGradeRowsHtml(p, keys){
-  const byGrade = {};
-  keys.forEach(key => { const g = parseCardKey(key).grade; (byGrade[g] = byGrade[g] || []).push(key); });
-  const rows = CARD_GRADES.map(g => {
-    const list = byGrade[g]; if(!list || !list.length) return '';
-    list.sort((a,b)=>{ const ta=cardDefOf(a), tb=cardDefOf(b); return (ta?ta.type:'').localeCompare(tb?tb.type:'') || a.localeCompare(b); });
-    return `<div class="dgrade-row"><span class="dgrade-lab" style="--gc:${gradeColor(g)}">${g}</span>${list.map(k=>mutCardHtml(p,k)).join('')}</div>`;
+/* 카드 묶음을 "같은 카드 = 같은 가로줄"로 — 한 카드의 등급 변종(스펙만 다름)을 한 줄에 등급순(S→D)으로 모은다(#4) */
+function mutCardRowsHtml(p, keys){
+  const byCard = {};
+  keys.forEach(key => { const id = parseCardKey(key).id; (byCard[id] = byCard[id] || []).push(key); });
+  const ids = Object.keys(byCard).sort((a,b)=>{
+    const ca = TRAIT_CARDS[a], cb = TRAIT_CARDS[b];
+    return (ca?ca.type:'').localeCompare(cb?cb.type:'') || (ca?ca.name:a).localeCompare(cb?cb.name:b);
+  });
+  const rows = ids.map(id => {
+    const list = byCard[id];
+    list.sort((a,b)=> CARD_GRADES.indexOf(parseCardKey(a).grade) - CARD_GRADES.indexOf(parseCardKey(b).grade));
+    const c = TRAIT_CARDS[id];
+    const multi = list.length > 1 ? ' multi' : '';
+    const lab = list.length > 1
+      ? `<span class="dcr-lab">${c?c.icon:'🎴'} ${c?c.name:id}<span class="dcr-tag">등급 ${list.length}종</span></span>` : '';
+    return `<div class="dcard-row${multi}">${lab}<div class="dcr-cards">${list.map(k=>mutCardHtml(p,k)).join('')}</div></div>`;
   }).join('');
   return rows || `<div class="drawer-empty">없음</div>`;
 }
@@ -11389,10 +11401,10 @@ function mutDrawerHtml(p){
     <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span></div>
     <div class="drawer-sec sec-common">
       <div class="drawer-sec-h"><span class="dsh-ico">🌐</span><span class="dsh-t">공통 카드</span><span class="dsh-sub">모든 변이형 장착</span><span class="dsh-cnt">${common.length}</span></div>
-      ${ common.length ? mutGradeRowsHtml(p, common) : '<div class="drawer-empty">공통 카드 없음</div>' }</div>
+      ${ common.length ? mutCardRowsHtml(p, common) : '<div class="drawer-empty">공통 카드 없음</div>' }</div>
     <div class="drawer-sec sec-variant">
       <div class="drawer-sec-h"><span class="dsh-ico">🧬</span><span class="dsh-t">변이형 전용 카드</span><span class="dsh-sub">해당 변이형만 장착</span><span class="dsh-cnt">${variant.length}</span></div>
-      ${ variant.length ? mutGradeRowsHtml(p, variant) : '<div class="drawer-empty">변이형 전용 카드 없음</div>' }</div>`;
+      ${ variant.length ? mutCardRowsHtml(p, variant) : '<div class="drawer-empty">변이형 전용 카드 없음</div>' }</div>`;
 }
 
 /* ── 스킬 탭(그림7) ── */
