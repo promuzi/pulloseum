@@ -22,7 +22,13 @@
 
 **참조 설계:** [docs/superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md](../specs/2026-06-26-individual-concept-skill-expansion-design.md)
 
-**주요 코드 위치(현행):** `ARCHETYPES`/`applyVariantIdentity` 5285–5353 · `FORM_SKILLS` 4995–5011 · `SKILL_LIB` ind 스킬 ~4290+ · `SPECIES_CATALOG` stageSkills 3500+ · `applySkill` 11557–11716(회복 11616·흡혈 11693·steal 11694·energySteal 11697·infuse 11623/11703·scaleStack 11624·enemyDebuff 11701·dot 11702) · `tickStatuses` 11717(재생 11720·dot 11721) · `makeCombatant` rampStack 초기화 ~11088 · 셀프테스트 12824+.
+**⚠️ #14 베이스라인(2026-06-26 갱신):** 다른 세션이 **속성 시그니처 성질 시스템(#14)**을 먼저 구현·푸시함(HEAD 77a3517). 변경점:
+- `ELEMENTS[el].signature`(불=burn·물=wet·풀=regen·대지=pierce·바람=flurry·번개=shock(감전 스턴)·빙결=freeze(스택→스턴)) + `ELEMENT_SIGNATURE`(3780) + `SIG`(3790) + `sigOf(s)`(3800). 속성기/속성발현 스킬은 `signature:` 필드를 가짐.
+- **스턴 = `skipNext`**(이미 구현). 유닛 신규 필드 `freezeStacks`/`freezeTurns`/`zapNoRegen`(makeCombatant ~11161).
+- ⚠️ **`rampStack` + `kind:'ramp'` 버프는 이미 점유됨**(공통 카드 매턴 훅 `applyCardTurnHooks` 11096 = 굴광성장, 매턴 재계산·필터). → **T5 용족 브레스는 `rampStack` 재사용 금지, 별도 `breathStack`/`kind:'breath'` 사용.**
+- **통합점:** 속성 축 콘텐츠 스킬(T6/T7)은 element signature와 싸우지 말고 `signature:` 필드를 세팅해 #14에 합류. 내 P0(출혈healcut·energyDrain·무기infuse·독amp·용족breath)는 속성 시그니처와 직교(form/성격/컨셉 축).
+
+**주요 코드 위치(현행 77a3517):** `ARCHETYPES`/`applyVariantIdentity` ~5350 부근 · `FORM_SKILLS` ~4960 · `SKILL_LIB` ind 스킬 ~4290+ · `SPECIES_CATALOG` stageSkills 3500+ · `applySkill` 회복 11680·infuse 11687·scaleStack 11688·흡혈 11763·steal 11764 · `tickStatuses` 11792(재생 11795) · `makeCombatant` 초기화 11161(rampStack 옆에 breathStack 추가) · 공통 매턴 훅 11096 · 셀프테스트 블록(`window.__test`) ~12900+. **편집 전 매번 Grep/Read로 현행 라인 재확인**(파일이 세션 중 이동).
 
 ---
 
@@ -237,14 +243,14 @@ git commit -m "feat(#1-A): 독성 자기 독 증폭(poisonAmp) — 독 데미지
 - Test: 셀프테스트 블록
 
 **Interfaces:**
-- Produces: 스킬 필드 `ramp:{atkPct, cap}`(충전: rampStack++ & atk 버프) + `breathScale:true`(power가 rampStack에 비례, 발동 시 소비). `breathPowerMult(u)` → `number`.
+- Produces: 신규 유닛 필드 `breathStack`. 스킬 필드 `breathCharge:{atkPct, cap}`(충전: breathStack++ & `kind:'breath'` atk 버프) + `breathScale:true`(power가 breathStack에 비례, 발동 시 소비). `breathPowerMult(u)` → `number`. (⚠️ `rampStack`/`kind:'ramp'`는 #14 점유 — 재사용 금지)
 
 - [ ] **Step 1: 실패 테스트 작성**
 
 ```js
-window.__test('engine: breathPowerMult scales with rampStack', function(){
-  __eq(breathPowerMult({rampStack:0}), 1, '0 stacks → 1');
-  __eq(breathPowerMult({rampStack:3}), 1.6, '3 stacks → 1+0.2*3');
+window.__test('engine: breathPowerMult scales with breathStack', function(){
+  __eq(breathPowerMult({breathStack:0}), 1, '0 stacks → 1');
+  __eq(breathPowerMult({breathStack:3}), 1.6, '3 stacks → 1+0.2*3');
 });
 ```
 
@@ -254,35 +260,38 @@ window.__test('engine: breathPowerMult scales with rampStack', function(){
 
 ```js
 const BREATH_PER_STACK = 0.2;
-function breathPowerMult(u){ return 1 + BREATH_PER_STACK*(u.rampStack||0); }
+function breathPowerMult(u){ return 1 + BREATH_PER_STACK*(u.breathStack||0); }
 ```
+> ⚠️ `rampStack`/`kind:'ramp'`는 #14 카드 매턴 훅이 점유 → **`breathStack`/`kind:'breath'` 신설**(별개 필드).
 
-- [ ] **Step 4: ramp 충전 스킬 처리** — scaleStack 처리부(11624) 다음에 추가:
+- [ ] **Step 4a: breathStack 초기화** — `makeCombatant`의 유닛 초기화(11161 `...scaleStack:0, rampStack:0, freezeStacks:0...`)에 `breathStack:0,` 추가.
+
+- [ ] **Step 4b: breathCharge 충전 스킬 처리** — scaleStack 처리부(`if(s.scaleStack)` ~11688) 다음에 추가:
 
 ```js
-  if(s.ramp){ const cap=s.ramp.cap||4; a.rampStack=Math.min(cap,(a.rampStack||0)+1); const ap=round2(s.ramp.atkPct*a.rampStack); a.buffs=a.buffs.filter(b=>b.kind!=='ramp'); a.buffs.push({kind:'ramp', stat:'atk', pct:ap, turns:99}); spriteFx(side,'buff'); fxPopup(side,'🔺 충전','buf'); effectNotes.push('브레스를 모은다!'); blog(`▶ 🐉 브레스 충전 ${a.rampStack}겹! 공격 ${Math.round(ap*100)}%↑`); }
+  if(s.breathCharge){ const cap=s.breathCharge.cap||4; a.breathStack=Math.min(cap,(a.breathStack||0)+1); const ap=round2(s.breathCharge.atkPct*a.breathStack); a.buffs=a.buffs.filter(b=>b.kind!=='breath'); a.buffs.push({kind:'breath', stat:'atk', pct:ap, turns:99}); spriteFx(side,'buff'); fxPopup(side,'🔺 충전','buf'); effectNotes.push('브레스를 모은다!'); blog(`▶ 🐉 브레스 충전 ${a.breathStack}겹! 공격 ${Math.round(ap*100)}%↑`); }
 ```
 
-- [ ] **Step 5: breathScale power 스케일 + 소비** — power 계산부(11646 `const normal = attackStat * s.power / 100;`) 직전에 유효 power 산출:
+- [ ] **Step 5: breathScale power 스케일 + 소비** — Grep으로 power 계산부(`const normal = attackStat * s.power / 100;`)를 찾아 유효 power로 교체:
 
 ```js
     const breathMul = s.breathScale ? breathPowerMult(a) : 1;
     const normal = attackStat * (s.power * breathMul) / 100;
 ```
-  그리고 데미지 적용 완료 후(11674 `d.hp = ...` 다음 줄)에 소비:
+  그리고 데미지 적용(`d.hp = Math.max(0, d.hp - dm);`) 다음 줄에 소비:
 ```js
-    if(s.breathScale && (a.rampStack||0)>0){ a.rampStack=0; a.buffs=a.buffs.filter(b=>b.kind!=='ramp'); blog(`▶ 🐉 충전 방출!`); }
+    if(s.breathScale && (a.breathStack||0)>0){ a.breathStack=0; a.buffs=a.buffs.filter(b=>b.kind!=='breath'); blog(`▶ 🐉 충전 방출!`); }
 ```
 
-- [ ] **Step 6: 통과 확인** — 반환 길이 0. `ramp`/`breathScale` 필드가 `effStat` 등 기존 경로와 충돌 없는지(buff kind 'ramp'는 `effStat`의 `b.stat` 합산에 포함 → 의도된 atk↑).
+- [ ] **Step 6: 통과 확인** — 반환 길이 0. `kind:'breath'` 버프가 `effStat`의 `b.stat` 합산에 포함되는지(ramp/scale와 동일 패턴 → atk↑), `applyCardTurnHooks`가 breath를 필터 안 함(충전 유지) 확인.
 
-- [ ] **Step 7: preview 확인** — ramp 2회 후 breathScale 스킬 위력이 1.4배로 들어가고 rampStack 0으로 소비되는지 blog 확인.
+- [ ] **Step 7: preview 확인** — breathCharge 2회 후 breathScale 스킬 위력이 1.4배로 들어가고 breathStack 0으로 소비되는지 blog 확인.
 
 - [ ] **Step 8: 커밋**
 
 ```bash
 git add index.html
-git commit -m "feat(#1-A): 용족 브레스 충전(ramp/breathScale) + breathPowerMult"
+git commit -m "feat(#1-A): 용족 브레스 충전(breathCharge/breathScale/breathStack)"
 ```
 
 ---
