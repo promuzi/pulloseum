@@ -2,6 +2,12 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 개체별 외형 절차적 차별화 1차 (#1-A·#3 연동)
+- **문제:** 외형이 `composePlantSvg(타입,단계,속성)` 3개로만 결정 → 같은 타입+속성이면 개체가 다 똑같이 생김(도감/수집).
+- **해결:** `plantVariant(key)` — 개체 키 해시로 **색감(hue ±16°·채도·명도) + 형태(크기/비율 0.88~1.10) + 무늬(아키타입 테마: 공격형=가시·정밀형=문양·방어형=판·제어형=점·기본=잎맥)** 를 결정. `composePlantSvg`에 `opts.varKey` 추가 → 변형 레이어(필터+transform+`markingSvg`) 적용. 호출부에 `varKey`(plant.species / sp.key) 연결(spriteFor·svgPlant·관리/전투/진화/도감).
+- **결과:** 전 175 개체 **전부 고유 외형**(175/175 distinct SVG)·scale 0.88~1.10 정상·self-test 0 fail. legacy 종은 변형 제외(원형 유지).
+- **성격:** PNG 교체 전 **임시·영감용 절차적 1차**. 도트 PNG는 `SPRITE_OVERRIDES`로 개별 교체(#3). 무늬가 아키타입과 연동돼 컨셉 구체화 시 시각 힌트.
+
 ### 2026-06-26 — 개체 컨셉 스킬: 전 개체 커버리지 + 광신 자해화상 (#1-A)
 - **전 175 개체 커버리지:** 벌크 생성에 **base 28(폼·성격 없음=속성 시그니처#14+타입 성향)** + **버섯 7(포자/중독)** 추가 → 40 손작업 + 660 생성기 = 전 개체 단계별 컨셉 스킬 보유([scripts/gen-concept-skills.js](../scripts/gen-concept-skills.js), 멱등).
 - **광신(zealot) 자해화상 엔진:** 신규 `selfDot`(자해 DoT)+`selfBuffs`(복수 자기버프) → 광신 개체 = 자신에게 화상 + 공격·방어 동시↑. zealot 개체 g2 시그니처 + ash_bloom 반영. (생성기 ser() 배열 직렬화 버그 수정 — selfBuffs 배열이 `[object Object]`로 깨지던 것.)

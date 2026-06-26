@@ -349,7 +349,7 @@ function card(sp){
 function paintSprite(el, sp, idx){
   const box=el.querySelector('[data-sprite]'); if(!box) return;
   if(API.composePlantSvg){
-    try{ box.innerHTML = API.composePlantSvg(sp.seedType, GSO[idx], sp.element, {size:68}); return; }catch(e){}
+    try{ box.innerHTML = API.composePlantSvg(sp.seedType, GSO[idx], sp.element, {size:68, varKey:sp.key, form:(sp.baseVariants&&sp.baseVariants[0])}); return; }catch(e){}
   }
   box.innerHTML = `<span class="sil">${TYPE_GLYPH[sp.seedType]||'🌱'}</span>`;
 }

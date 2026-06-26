@@ -10296,6 +10296,39 @@ function composePlantBody(seedType, gi, P, el, bodyStyle){
 }
 /* 식물 외형 = 식물만(내장 화분 없음·항상 분리). 화분은 별도 potVisual 레이어로 같은 120x140
    좌표에 깔린다(식물 base y96이 화분 입구에 정렬). opts.noPot은 호환용(항상 식물만이라 무영향). */
+/* ===== 개체별 외형 변형(절차적 1차 — 키 해시로 색감·무늬·형태 차별, PNG 교체 전 임시) =====
+   같은 타입+속성이라도 개체마다 다르게 보이게. 무늬는 아키타입(성격)에 테마 연동. */
+const MARKING_BY_ARCHE = {
+  berserk:'spike', feral:'spike', executioner:'spike', zealot:'spike', warlord:'spike', tyrant:'spike',
+  sage:'sigil', trickster:'sigil', phantom:'sigil',
+  guardian:'plate', stalwart:'plate', hermit:'plate',
+  strategist:'spot', glutton:'spot'
+};
+function plantVariant(key){
+  if(!key) return null;
+  const sp = (typeof SPECIES!=='undefined' && SPECIES[key]) || null;
+  if(sp && sp.legacy) return null;            // legacy 종은 변형 제외(원형 유지)
+  const h = __hashStr(key);
+  const arche = (sp && sp.archetype) || '';
+  return {
+    hue: (h % 33) - 16,                          // -16..+16°
+    sat: (0.86 + ((h>>>5)%28)/100).toFixed(2),   // 0.86..1.13
+    bri: (0.91 + ((h>>>9)%19)/100).toFixed(2),   // 0.91..1.09
+    sx:  (0.88 + ((h>>>13)%23)/100).toFixed(2),  // 0.88..1.10
+    sy:  (0.88 + ((h>>>17)%23)/100).toFixed(2),
+    marking: MARKING_BY_ARCHE[arche] || 'vein',
+    seed: (h>>>21),
+    accent: 'hsl('+((h>>>3)%360)+',75%,62%)'
+  };
+}
+function markingSvg(V){
+  const a = V.accent, s = V.seed, jx=(s%7)-3, jy=((s>>3)%7)-3;
+  if(V.marking==='spike'){ let o=''; for(let i=0;i<3;i++){ const x=46+i*14+jx; o+='<path d="M'+x+' '+(66+jy)+' l4 -10 l4 10 Z" fill="'+a+'" opacity=".8"/>'; } return o; }
+  if(V.marking==='sigil'){ return '<path d="M60 '+(70+jy)+' v14 M53 '+(77+jy)+' h14" stroke="'+a+'" stroke-width="1.6" fill="none" opacity=".75"/><circle cx="60" cy="'+(77+jy)+'" r="2.6" fill="none" stroke="'+a+'" stroke-width="1.2" opacity=".7"/>'; }
+  if(V.marking==='plate'){ let o=''; for(let i=0;i<3;i++){ o+='<rect x="'+(50+jx)+'" y="'+(66+i*9+jy)+'" width="20" height="5" rx="2.5" fill="'+a+'" opacity=".5"/>'; } return o; }
+  if(V.marking==='spot'){ let o=''; const xs=[50,66,57,70,52], ys=[70,74,84,86,90]; for(let i=0;i<5;i++){ o+='<circle cx="'+(xs[i]+jx)+'" cy="'+(ys[i]+jy)+'" r="'+(2+(s>>i)%2)+'" fill="'+a+'" opacity=".55"/>'; } return o; }
+  return '<path d="M60 64 q '+(8+jx)+' 14 2 28 M60 64 q '+(-8+jx)+' 14 -2 28" stroke="'+a+'" stroke-width="1.3" fill="none" opacity=".6"/>'; // vein
+}
 function composePlantSvg(seedType, growth, element, opts){
   opts = opts||{}; const size = opts.size||120;
   const el = ELEMENTS[element] ? element : 'grass';
@@ -10305,10 +10338,14 @@ function composePlantSvg(seedType, growth, element, opts){
   const aura = (opts.grade==='S'||opts.grade==='A'||evolved)
     ? `<circle cx="60" cy="52" r="${38+(evolved?6:0)}" fill="${opts.grade==='S'?'#ffd34a':P.main}" opacity="${evolved?0.22:(opts.grade==='S'?0.2:0.12)}"/>` : '';
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
+  const inner = `${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}${bodyAccentSvg(opts, el, gi, P)}`;
+  const V = opts.varKey ? plantVariant(opts.varKey) : null;
+  const bodyHtml = V
+    ? `<g transform="translate(60,76) scale(${V.sx},${V.sy}) translate(-60,-76)"><g style="filter:hue-rotate(${V.hue}deg) saturate(${V.sat}) brightness(${V.bri})">${inner}</g>${markingSvg(V)}</g>`
+    : inner;
   return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
-    ${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}
-    ${bodyAccentSvg(opts, el, gi, P)}
+    ${bodyHtml}
     ${spark}
   </svg>`;
 }
@@ -10433,7 +10470,7 @@ function spriteFor(obj, size){
     const h = Math.round(size*140/120);
     plantHtml = `<img src="${SPRITE_OVERRIDES[key]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top"/>`;
   } else {
-    plantHtml = composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, noPot:true, form:obj&&obj.form });
+    plantHtml = composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, noPot:true, form:obj&&obj.form, varKey:obj&&(obj.species||obj.base_species_type) });
   }
   return spriteStack(potVisual(spritePotId(obj), size), plantHtml);
 }
@@ -10476,7 +10513,7 @@ function svgPlant(species, element, grade, awakened, size, growth){
   const el = ELEMENTS[element] ? element : (SPECIES[species] ? SPECIES[species].element : 'grass');
   const bv = SPECIES[species] && SPECIES[species].baseVariants;
   const form = (bv && bv.length) ? bv[0] : null;   // 변이종(태생 변이)은 종 외형에 액센트 반영
-  const plant = composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, noPot:true, form });
+  const plant = composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, noPot:true, form, varKey:species });
   return spriteStack(potVisual('pot_terra', size), plant);   // 종 기준(식물 객체 없음) → 기본 화분
 }
 
@@ -10769,7 +10806,7 @@ function renderCenter(){
   const ppSize = 150;
   const ppPot = potVisual(p.nursery.potId, ppSize);
   const ppPlant = composePlantSvg(seedTypeOf(p), p.growth_stage||'mature', p.element||'grass',
-    { size:ppSize, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form });
+    { size:ppSize, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species });
   box.innerHTML = `
     <div class="plant-stage"><span class="pp-stack"><span class="pp-spacer">${ppPot}</span><span class="pp-pot">${ppPot}</span><span class="pp-plant">${ppPlant}</span></span><span class="wood-stool"></span></div>
     <div class="pname">${plantDisplayName(p)}</div>
@@ -10984,8 +11021,8 @@ function statDiffRowsHtml(before, after){
 function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
   const st = seedTypeOf(p), el = p.element || 'grass';
   const potId = (p.nursery && p.nursery.potId) || 'pot_terra';
-  const beforeSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, fromStage, el, { size:120, noPot:true, form:p.form }));
-  const afterSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form }));
+  const beforeSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, fromStage, el, { size:120, noPot:true, form:p.form, varKey:p.species }));
+  const afterSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species }));
   const skillsHtml = (newSkillIds && newSkillIds.length)
     ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
@@ -13083,7 +13120,7 @@ function renderNurseryGrid(){
         ensureNurseryFields(p); nurseryTick(p, Date.now());
         const n = p.nursery;
         const st = seedTypeOf(p), el = p.element || 'grass';
-        const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form});
+        const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species});
         const potLayer = potVisual(p.nursery.potId, 78);
         const canFruit = nurseryMaxFruits(p) > 0;
         const full = canFruit && n.ripe.length >= n.maxFruits;
@@ -13111,7 +13148,7 @@ function openNurseryDetail(idx){
   ensureNurseryFields(p); nurseryTick(p, Date.now());
   const n = p.nursery;
   const st = seedTypeOf(p), el = p.element || 'grass';
-  const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form});
+  const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species});
   const dPot = potVisual(p.nursery.potId, 72);
   const elIcon = ELEMENTS[p.element] ? ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name : '';
   const formName = FORMS[p.form] ? FORMS[p.form].name : '일반 변이형';
