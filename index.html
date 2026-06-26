@@ -1240,11 +1240,14 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
    식물 관리 창(그림5/6/7) — 강화 / 변이 / 스킬
    ============================================================ */
 #upgradeModal .modal-card{padding:0;width:min(96vw,470px);overflow:hidden;display:flex;flex-direction:column;background:#142033;}
-.pm-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;flex:0 0 auto;}
+/* 상단 탭 바 + 닫기(✕) — 닫기를 이름 옆이 아닌 상단 우측으로 분리 */
+.pm-top{display:flex;align-items:center;flex:0 0 auto;background:#0e1828;}
+.pm-top .pm-tabs{flex:1 1 auto;}
+.pm-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;}
 .pm-tab{border:none;background:#0e1828;color:var(--sub);font-weight:900;font-size:16px;padding:14px 6px 12px;
   border-bottom:2px solid transparent;letter-spacing:1px;}
 .pm-tab.active{color:var(--neon);background:linear-gradient(180deg,rgba(31,217,196,.16),rgba(31,217,196,.02));border-bottom-color:var(--neon);}
-.pm-close{flex:0 0 auto;width:30px;height:30px;border-radius:50%;
+.pm-close{flex:0 0 auto;width:30px;height:30px;border-radius:50%;margin:0 9px;
   border:none;background:rgba(0,0,0,.3);color:#9fd9ff;font-size:17px;font-weight:900;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px rgba(120,200,255,.5);}
 .pm-close:active{transform:scale(.9);}
@@ -11764,16 +11767,19 @@ function renderUpgrade(){
   const tab = upgradeTab;
   const stage = tab==='up' ? upTabHtml(p, s) : tab==='mut' ? mutTabHtml(p) : skillTabHtml(p);
   $('#upgradeBody').innerHTML = `
-    <div class="pm-tabs">
-      <button class="pm-tab ${tab==='up'?'active':''}" data-ptab="up">강화</button>
-      <button class="pm-tab ${tab==='mut'?'active':''}" data-ptab="mut">변이</button>
-      <button class="pm-tab ${tab==='skill'?'active':''}" data-ptab="skill">스킬</button>
+    <div class="pm-top">
+      <div class="pm-tabs">
+        <button class="pm-tab ${tab==='up'?'active':''}" data-ptab="up">강화</button>
+        <button class="pm-tab ${tab==='mut'?'active':''}" data-ptab="mut">변이</button>
+        <button class="pm-tab ${tab==='skill'?'active':''}" data-ptab="skill">스킬</button>
+      </div>
+      <button class="pm-close" id="pmClose" aria-label="닫기" title="닫기">✕</button>
     </div>
     <div class="pm-body">
       <div class="pm-namerow">
         <span class="pm-pencil" id="pmEditName">✏️</span>
         <span class="pm-name">${plantDisplayName(p)}</span>
-        <button class="pm-close" id="pmClose">✕</button>
+        <span class="pm-pencil" aria-hidden="true" style="visibility:hidden">✏️</span>
       </div>
       <div class="pm-info">${plantInfoPills(p, true)}</div>
       ${stage}
