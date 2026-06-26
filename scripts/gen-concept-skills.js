@@ -98,6 +98,46 @@ function genIndividual(key, type, el, form, arche){
   return S;
 }
 
+/* ===== base 28(폼·성격 없음) + 버섯 7(포자) — 속성+타입 중심 템플릿 ===== */
+const ELSIG = { fire:'burn', water:'wet', grass:'regen', earth:'pierce', wind:'flurry', bolt:'shock', ice:'freeze' };
+const SIGW  = { burn:'화상', wet:'젖음', regen:'재생', pierce:'관통', flurry:'연속타', shock:'감전', freeze:'빙결' };
+// 타입 성향(목본=탱킹/화초=지원/다육=반격/덩굴=견제)
+const TYPE_TEND = { tree:'결계', flower:'개화', cactus:'가시', vine:'옭아매기' };
+const BASE_LIST = [
+["tree_fire","tree","fire"],["tree_water","tree","water"],["tree_grass","tree","grass"],["tree_earth","tree","earth"],["tree_wind","tree","wind"],["tree_bolt","tree","bolt"],["frost","tree","ice"],
+["flower_fire","flower","fire"],["aqua","flower","water"],["flower_grass","flower","grass"],["flower_earth","flower","earth"],["flower_wind","flower","wind"],["spark","flower","bolt"],["flower_ice","flower","ice"],
+["cactus_fire","cactus","fire"],["cactus_water","cactus","water"],["cactus_grass","cactus","grass"],["gaia","cactus","earth"],["cactus_wind","cactus","wind"],["cactus_bolt","cactus","bolt"],["cactus_ice","cactus","ice"],
+["vine_fire","vine","fire"],["vine_water","vine","water"],["thorn","vine","grass"],["vine_earth","vine","earth"],["vine_wind","vine","wind"],["vine_bolt","vine","bolt"],["vine_ice","vine","ice"]
+];
+const MUSH_LIST = [["spore_cap","grass"],["spore_fire","fire"],["spore_water","water"],["spore_earth","earth"],["spore_wind","wind"],["spore_bolt","bolt"],["spore_ice","ice"]];
+
+function genBase(key, type, el){
+  const E = EL[el], w = E.w, sig = ELSIG[el], set = TYPE_TEND[type];
+  const S = {};
+  S.s = { name:w+' 새순', icon:E.i, cost:1, kind:'attack', power:55, single:true, desc:'위력55 · 단일 · 저비용 견제', tag:'개체' };
+  S.j = { name:w+' 일격', icon:E.i, cost:2, kind:'attack', power:90, single:true, signature:sig, desc:'위력90 · 단일 + '+SIGW[sig]+'(속성 성질)', tag:'개체' };
+  if(type==='flower')      S.g2 = { name:w+' '+set, icon:'💚', cost:2, kind:'heal', heal:0.2, selfBuff:{stat:'atk',pct:0.12,turns:3}, desc:'체력 20% 회복 + 자신 공격 12%↑(3턴)', tag:'개체' };
+  else if(type==='vine')   S.g2 = { name:w+' '+set, icon:'🥀', cost:2, kind:'debuff', power:80, single:true, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, desc:'위력80 · 단일 + 적 기동 20%↓(2턴)', tag:'개체' };
+  else                     S.g2 = { name:w+' '+set, icon:'🛡️', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, desc:'받는 피해 50%↓ + 가시 반격', tag:'개체' }; // tree/cactus
+  const m = { name:w+' 비기', icon:E.i, cost:3, kind:'attack', power:140, single:true, tag:'개체' };
+  const p = ['위력140 · 단일'];
+  if(type==='tree'||type==='cactus'){ m.selfBuff={stat:'def',pct:0.15,turns:3}; p.push('자신 방어 15%↑(3턴)'); }
+  else if(type==='flower'){ m.heal=0.1; p.push('체력 10% 회복'); }
+  else { m.enemyDebuff={stat:'spd',pct:0.2,turns:2}; p.push('적 기동 20%↓(2턴)'); }
+  m.desc = descOf(p); S.m2 = m;
+  return S;
+}
+
+function genMush(key, el){
+  const E = EL[el], w = E.w, sig = ELSIG[el];
+  return {
+    s:  { name:'포자 살포',   icon:'☠️', cost:1, kind:'debuff', dot:dotObj('poison',3), desc:'중독(3턴) · 저비용 견제', tag:'개체' },
+    j:  { name:w+' 홀씨 일격', icon:E.i, cost:2, kind:'attack', power:75, single:true, signature:sig, desc:'위력75 · 단일 + '+SIGW[sig]+'(속성 성질)', tag:'개체' },
+    g2: { name:'포자 증폭',   icon:'🧪', cost:2, kind:'buff', poisonAmp:{mult:1.4,turns:3}, energyGain:1, desc:'3턴간 자기 독 위력 40%↑ + ⚡1 · 포자 증폭', tag:'개체' },
+    m2: { name:'포자 폭발',   icon:'💥', cost:3, kind:'attack', power:110, aoe:true, dot:dotObj('poison',3), desc:'위력110 · 광역 + 중독(3턴)', tag:'개체' }
+  };
+}
+
 // ── 직렬화 ──
 function ser(o){
   const parts = [];
@@ -117,6 +157,16 @@ LIST.forEach(([key,type,el,form,arche]) => {
   ['s','j','g2','m2'].forEach(st => { skillLines.push("  'ind."+key+"."+st+"': "+ser(S[st])+","); nSkills++; });
   stageLines.push("  "+key+":{sprout:['ind."+key+".s'],juvenile:['ind."+key+".j'],growing:['ind."+key+".g2'],mature:['ind."+key+".m2']},");
 });
+BASE_LIST.forEach(([key,type,el]) => {
+  const S = genBase(key, type, el);
+  ['s','j','g2','m2'].forEach(st => { skillLines.push("  'ind."+key+"."+st+"': "+ser(S[st])+","); nSkills++; });
+  stageLines.push("  "+key+":{sprout:['ind."+key+".s'],juvenile:['ind."+key+".j'],growing:['ind."+key+".g2'],mature:['ind."+key+".m2']},");
+});
+MUSH_LIST.forEach(([key,el]) => {
+  const S = genMush(key, el);
+  ['s','j','g2','m2'].forEach(st => { skillLines.push("  'ind."+key+"."+st+"': "+ser(S[st])+","); nSkills++; });
+  stageLines.push("  "+key+":{sprout:['ind."+key+".s'],juvenile:['ind."+key+".j'],growing:['ind."+key+".g2'],mature:['ind."+key+".m2']},");
+});
 
 const block =
 "/*__CONCEPT_GEN_START__ (auto: scripts/gen-concept-skills.js — 손수정 금지·재생성으로 갱신) */\n" +
@@ -126,7 +176,7 @@ const block =
 "Object.keys(CONCEPT_GEN_STAGES).forEach(function(k){ var c=SPECIES_CATALOG[k]; if(!c||!c.stageSkills) return; var add=CONCEPT_GEN_STAGES[k]; Object.keys(add).forEach(function(st){ var cur=c.stageSkills[st]||[]; add[st].forEach(function(id){ if(cur.indexOf(id)<0) cur.push(id); }); c.stageSkills[st]=cur; }); });\n" +
 "/*__CONCEPT_GEN_END__*/";
 
-console.log('개체 '+LIST.length+' · 스킬 '+nSkills);
+console.log('개체 '+(LIST.length+BASE_LIST.length+MUSH_LIST.length)+'(변이 '+LIST.length+'+base '+BASE_LIST.length+'+버섯 '+MUSH_LIST.length+') · 스킬 '+nSkills);
 if(DRY){ console.log('--dry: 주입 생략'); process.exit(0); }
 
 let html = fs.readFileSync(HTML, 'utf8');
