@@ -7,7 +7,13 @@
 - **제거:** 구버전 `renderExploration` 3종(함수 선언 #1 + space-map-world 재정의 #2 + try/catch 래퍼 #3)과 그들만 쓰던 `bindSpaceMapInteractions`·`renderExplorationUnsafe`를 삭제(438줄). **참조 그래프 검증:** 이 블록은 서로(+자신)만 참조하고 라이브 `ex*` 경로(`exHangarHtml`/`exploreViewRun`)는 전혀 안 씀(닫힌 죽은 클러스터). `openExploration`(라이브 진입점)은 보존.
 - **strict 안전:** `'use strict'` 하에서 선언 없는 `renderExploration = function(){}`(라이브 override) 할당이 깨지지 않도록 **선언 보존용 1줄 스텁** `function renderExploration(){}`만 남김(현재 "선언+override" 패턴과 동일).
 - **검증:** `__catalogSelfTest()` 0 fail · preview 라이브 탐사 정상(`.exmap` 렌더)·격납고 콜아웃4·연결선4. 내 변경만(1 insertion/437 deletions).
-- **남은 후속:** 이제 고아가 된 헬퍼들(`renderShipModRoom`·`renderRegionBriefPopup`·`renderRegionDetail`·`renderPlanetPopup`·`renderExplorationResult`·`renderInventoryPreview`·`renderShipSummary`·`renderShipUpgradeCard`·`executeExploration`·`runExploration`·`explorationFuelCost`·`showExploreTravelOverlay`·`upgradeScanner`/`upgradeSeedStorageCapacity`/`upgradeSeedStorageEnvironment`·죽은 `shipSummaryStats` 중복) 제거 — 무해(정의만·미호출)하나 후속 정리 대상.
+- **남은 후속:** 이제 고아가 된 헬퍼들 → **아래 정리 2차에서 제거.**
+
+### 2026-06-26 — 죽은 코드 정리 2차: 고아 탐사 헬퍼 제거 (265줄)
+- 정리 1차로 호출자가 사라진 고아 함수들을 제거: `renderRegionBriefPopup`·`renderRegionDetail`·`renderPlanetPopup`·`renderInventoryPreview`·`renderExplorationResult`(Region B 144줄) + `upgradeScanner`·`upgradeSeedStorageCapacity`·`upgradeSeedStorageEnvironment`·`showExploreTravelOverlay`·`runExploration`·`executeExploration`(Region C) + 죽은 `shipSummaryStats` 중복(7766, 7787 라이브에 덮임).
+- **라이브 보존(중요):** Region C 한가운데의 `let explorationBusy = false;`는 **라이브 `exploreViewRun`이 쓰는 변수**라 보존(블라인드 삭제 방지). `createSeedInventoryEntry`(스타터 종자)·`openExploration`(진입점)도 보존. 콘텐츠 앵커 splice(7개 앵커 전부 유일성 확인 후).
+- **검증:** `__catalogSelfTest()` 0 fail · `explorationBusy`(boolean)·`createSeedInventoryEntry`(function)·`exploreViewRun`(function) 보존 확인 · 삭제분(`runExploration`/`executeExploration`/`upgradeScanner`/`renderRegionBriefPopup`) 전부 `undefined` · 라이브 탐사(`.exmap`)·격납고(콜아웃4·연결선4) 정상.
+- **1·2차 합산:** 죽은 탐사 코드 ~703줄 제거. **남은 소량 고아**(`renderShipModRoom`·`renderShipSummary`·`renderShipUpgradeCard`·`explorationFuelCost`)는 라이브 ship 헬퍼와 인접해 위험 대비 이득 낮아 보류(무해·미호출).
 
 ### 2026-06-26 — 탐사선 격납고 개조실 UI 재설계 (중앙 탐사선 SVG + 사방 4콜아웃 연결선 + 강화 레벨 Lv 표시)
 - **계획 vs 현실 — 죽은 코드 발견:** [탐사선 개조실 UI 재설계 계획](superpowers/plans/2026-06-26-explorer-ship-upgrade-ui-redesign.md) Task 2~4가 지목한 함수(`executeExploration`·`explorationFuelCost`·`renderRegionBriefPopup`·`renderExplorationResult`·`renderShipModRoom`)가 **전부 죽은 코드**였다. `renderExploration`이 4번 재정의되고 **마지막(9233)만 활성** — 라이브 경로는 `ex*` 아틀라스 재작성본(`exHangarHtml`·`exploreViewRun`·`exResultHtml`·`exDetailHtml`). **라이브 러너 `exploreViewRun`은 이미 크레딧만 차감·연료 차감 없음**(궤도=연료탱크로만 게이팅) → **Task 2(연료 제거)는 라이브에서 이미 충족**. 사용자 결정(Option A)으로 죽은 코드는 그대로 두고, Task 3·4를 **라이브 `exHangarHtml`로 재지정**해 구현.
