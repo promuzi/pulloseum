@@ -36,6 +36,18 @@
 
 ---
 
+## 📤 내가 직접 할 일 — 어디에 어떻게 올리나
+
+1. **도구로 변환:** [tools/sprite-prep.html](tools/sprite-prep.html)에 그림을 끌어다 놓고 저장 → 화분 없는 120×140 투명 PNG가 나온다.
+2. **파일을 `assets/sprites/` 폴더에 둔다.** (저장소 안의 그 폴더가 드롭 위치. 안내: [assets/sprites/README.md](../assets/sprites/README.md))
+3. **파일 이름 = 등록 키.** 예: `carno_oak_mature.png`(개체+단계) / `carno_oak.png`(개체 공용) / `tree_mature_fire.png`(타입+단계+속성).
+4. **등록:** `index.html`의 `SPRITE_OVERRIDES`에 한 줄 추가(§3). 직접 못 하면 Claude에게 **"이 파일들 SPRITE_OVERRIDES에 등록해줘"** 라고 하면 됨.
+5. 끝. 게임을 열면 그 식물 자리에 내 그림이 뜨고, 화분은 게임이 자동으로 받쳐준다.
+
+> 게임은 `index.html` 기준 **상대경로**로 그림을 읽으므로 `assets/sprites/...`에 두면 `file://`로 더블클릭하든 로컬 서버로 보든 똑같이 보인다. 기기 간 공유는 `git push`/`pull`(브라우저 세이브와 별개).
+
+---
+
 ## 3. 게임에 넣는 법 (코드 한 줄)
 
 `index.html`의 `SPRITE_OVERRIDES` (~10013)에 **파일 경로 한 줄**만 등록하면, 절차적 SVG 대신 사용자 그림이 뜬다. 화분은 게임이 자동으로 밑에 깐다.
