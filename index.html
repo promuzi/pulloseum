@@ -3588,7 +3588,7 @@ const SPECIES_CATALOG = {
   blade_wood: { name:'블레이드우드', type:'tree', element:'wind', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.blade_wood.g'], mature:['ind.blade_wood.m'], evolved:['ind.blade_wood.e'] } },
   tox_berry: { name:'톡스베리', type:'tree', element:'ice', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ growing:['ind.tox_berry.g'], mature:['ind.tox_berry.m'], evolved:['ind.tox_berry.e'] } },
   draca_bloom: { name:'드라카블룸', type:'flower', element:'fire', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ sprout:['ind.draca_bloom.s'], juvenile:['ind.draca_bloom.j'], growing:['ind.draca_bloom.g','ind.draca_bloom.g2'], mature:['ind.draca_bloom.m','ind.draca_bloom.m2'], evolved:['ind.draca_bloom.e'] } },
-  cure_bulb: { name:'큐어벌브', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.cure_bulb.g'], mature:['ind.cure_bulb.m'], evolved:['ind.cure_bulb.e'] } },
+  cure_bulb: { name:'큐어벌브', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ sprout:['ind.cure_bulb.s'], juvenile:['ind.cure_bulb.j'], growing:['ind.cure_bulb.g','ind.cure_bulb.g2'], mature:['ind.cure_bulb.m','ind.cure_bulb.m2'], evolved:['ind.cure_bulb.e'] } },
   poison_rose: { name:'포이즌로즈', type:'flower', element:'grass', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ growing:['ind.poison_rose.g'], mature:['ind.poison_rose.m'], evolved:['ind.poison_rose.e'] } },
   clay_guard: { name:'클레이가드', type:'flower', element:'earth', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.clay_guard.g'], mature:['ind.clay_guard.m'], evolved:['ind.clay_guard.e'] } },
   petal_blade: { name:'페탈블레이드', type:'flower', element:'wind', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.petal_blade.g'], mature:['ind.petal_blade.m'], evolved:['ind.petal_blade.e'] } },
@@ -3636,28 +3636,28 @@ const SPECIES_CATALOG = {
   dynamo_oak: { name:'다이나오크', type:'tree', element:'bolt', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.dynamo_oak.g'], mature:['ind.dynamo_oak.m'], evolved:['ind.dynamo_oak.e'] } },
   ever_frost: { name:'에버프로스트', type:'tree', element:'ice', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.ever_frost.g'], mature:['ind.ever_frost.m'], evolved:['ind.ever_frost.e'] } },
   flame_trap: { name:'플레임트랩', type:'flower', element:'fire', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ sprout:['ind.flame_trap.s'], juvenile:['ind.flame_trap.j'], growing:['ind.flame_trap.g','ind.flame_trap.g2'], mature:['ind.flame_trap.m','ind.flame_trap.m2'], evolved:['ind.flame_trap.e'] } },
-  drosera_bulb: { name:'드로세라벌브', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ growing:['ind.drosera_bulb.g'], mature:['ind.drosera_bulb.m'], evolved:['ind.drosera_bulb.e'] } },
+  drosera_bulb: { name:'드로세라벌브', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ sprout:['ind.drosera_bulb.s'], juvenile:['ind.drosera_bulb.j'], growing:['ind.drosera_bulb.g','ind.drosera_bulb.g2'], mature:['ind.drosera_bulb.m','ind.drosera_bulb.m2'], evolved:['ind.drosera_bulb.e'] } },
   blood_rose: { name:'블러드로즈', type:'flower', element:'grass', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ growing:['ind.blood_rose.g'], mature:['ind.blood_rose.m'], evolved:['ind.blood_rose.e'] } },
   mimic_bloom: { name:'미믹블룸', type:'flower', element:'earth', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ growing:['ind.mimic_bloom.g'], mature:['ind.mimic_bloom.m'], evolved:['ind.mimic_bloom.e'] } },
   glide_trap: { name:'글라이드트랩', type:'flower', element:'wind', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ growing:['ind.glide_trap.g'], mature:['ind.glide_trap.m'], evolved:['ind.glide_trap.e'] } },
   shock_trap: { name:'쇼크트랩', type:'flower', element:'bolt', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ growing:['ind.shock_trap.g'], mature:['ind.shock_trap.m'], evolved:['ind.shock_trap.e'] } },
   frost_trap: { name:'프로스트트랩', type:'flower', element:'ice', rarity:'common', released:false, baseVariants:['pred'], variantSlots:{ pred:2, normal:4 }, stageSkills:{ growing:['ind.frost_trap.g'], mature:['ind.frost_trap.m'], evolved:['ind.frost_trap.e'] } },
   blaze_lance: { name:'블레이즈랜스', type:'flower', element:'fire', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ sprout:['ind.blaze_lance.s'], juvenile:['ind.blaze_lance.j'], growing:['ind.blaze_lance.g','ind.blaze_lance.g2'], mature:['ind.blaze_lance.m','ind.blaze_lance.m2'], evolved:['ind.blaze_lance.e'] } },
-  coral_bulb: { name:'코랄벌브', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.coral_bulb.g'], mature:['ind.coral_bulb.m'], evolved:['ind.coral_bulb.e'] } },
+  coral_bulb: { name:'코랄벌브', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ sprout:['ind.coral_bulb.s'], juvenile:['ind.coral_bulb.j'], growing:['ind.coral_bulb.g','ind.coral_bulb.g2'], mature:['ind.coral_bulb.m','ind.coral_bulb.m2'], evolved:['ind.coral_bulb.e'] } },
   rose_blade: { name:'로즈블레이드', type:'flower', element:'grass', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.rose_blade.g'], mature:['ind.rose_blade.m'], evolved:['ind.rose_blade.e'] } },
   spark_edge: { name:'스파크엣지', type:'flower', element:'bolt', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.spark_edge.g'], mature:['ind.spark_edge.m'], evolved:['ind.spark_edge.e'] } },
   frost_edge: { name:'프로스트엣지', type:'flower', element:'ice', rarity:'common', released:false, baseVariants:['weapon'], variantSlots:{ weapon:2, normal:4 }, stageSkills:{ growing:['ind.frost_edge.g'], mature:['ind.frost_edge.m'], evolved:['ind.frost_edge.e'] } },
   ash_bloom: { name:'애시블룸', type:'flower', element:'fire', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ sprout:['ind.ash_bloom.s'], juvenile:['ind.ash_bloom.j'], growing:['ind.ash_bloom.g','ind.ash_bloom.g2'], mature:['ind.ash_bloom.m','ind.ash_bloom.m2'], evolved:['ind.ash_bloom.e'] } },
-  tox_lotus: { name:'톡스로터스', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ growing:['ind.tox_lotus.g'], mature:['ind.tox_lotus.m'], evolved:['ind.tox_lotus.e'] } },
+  tox_lotus: { name:'톡스로터스', type:'flower', element:'water', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ sprout:['ind.tox_lotus.s'], juvenile:['ind.tox_lotus.j'], growing:['ind.tox_lotus.g','ind.tox_lotus.g2'], mature:['ind.tox_lotus.m','ind.tox_lotus.m2'], evolved:['ind.tox_lotus.e'] } },
   swamp_bloom: { name:'스웜프블룸', type:'flower', element:'earth', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ growing:['ind.swamp_bloom.g'], mature:['ind.swamp_bloom.m'], evolved:['ind.swamp_bloom.e'] } },
   spore_wing: { name:'스포어윙', type:'flower', element:'wind', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ growing:['ind.spore_wing.g'], mature:['ind.spore_wing.m'], evolved:['ind.spore_wing.e'] } },
   tox_spark: { name:'톡스스파크', type:'flower', element:'bolt', rarity:'common', released:false, baseVariants:['toxic'], variantSlots:{ toxic:2, normal:4 }, stageSkills:{ growing:['ind.tox_spark.g'], mature:['ind.tox_spark.m'], evolved:['ind.tox_spark.e'] } },
-  aqua_drake: { name:'아쿠아드레이크', type:'flower', element:'water', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ growing:['ind.aqua_drake.g'], mature:['ind.aqua_drake.m'], evolved:['ind.aqua_drake.e'] } },
+  aqua_drake: { name:'아쿠아드레이크', type:'flower', element:'water', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ sprout:['ind.aqua_drake.s'], juvenile:['ind.aqua_drake.j'], growing:['ind.aqua_drake.g','ind.aqua_drake.g2'], mature:['ind.aqua_drake.m','ind.aqua_drake.m2'], evolved:['ind.aqua_drake.e'] } },
   draca_rose: { name:'드라카로즈', type:'flower', element:'grass', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ growing:['ind.draca_rose.g'], mature:['ind.draca_rose.m'], evolved:['ind.draca_rose.e'] } },
   draca_clay: { name:'드라카클레이', type:'flower', element:'earth', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ growing:['ind.draca_clay.g'], mature:['ind.draca_clay.m'], evolved:['ind.draca_clay.e'] } },
   draca_petal: { name:'드라카페탈', type:'flower', element:'wind', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ growing:['ind.draca_petal.g'], mature:['ind.draca_petal.m'], evolved:['ind.draca_petal.e'] } },
   draca_frost: { name:'드라카프로스트', type:'flower', element:'ice', rarity:'rare', released:false, baseVariants:['dragon'], variantSlots:{ dragon:2, normal:4 }, stageSkills:{ growing:['ind.draca_frost.g'], mature:['ind.draca_frost.m'], evolved:['ind.draca_frost.e'] } },
-  bright_bloom: { name:'브라이트블룸', type:'flower', element:'fire', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.bright_bloom.g'], mature:['ind.bright_bloom.m'], evolved:['ind.bright_bloom.e'] } },
+  bright_bloom: { name:'브라이트블룸', type:'flower', element:'fire', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ sprout:['ind.bright_bloom.s'], juvenile:['ind.bright_bloom.j'], growing:['ind.bright_bloom.g','ind.bright_bloom.g2'], mature:['ind.bright_bloom.m','ind.bright_bloom.m2'], evolved:['ind.bright_bloom.e'] } },
   garden_rose: { name:'가든로즈', type:'flower', element:'grass', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.garden_rose.g'], mature:['ind.garden_rose.m'], evolved:['ind.garden_rose.e'] } },
   terra_bloom: { name:'테라블룸', type:'flower', element:'earth', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.terra_bloom.g'], mature:['ind.terra_bloom.m'], evolved:['ind.terra_bloom.e'] } },
   aero_petal: { name:'에어로페탈', type:'flower', element:'wind', rarity:'common', released:false, baseVariants:['normal'], variantSlots:{ normal:6 }, stageSkills:{ growing:['ind.aero_petal.g'], mature:['ind.aero_petal.m'], evolved:['ind.aero_petal.e'] } },
@@ -5323,7 +5323,40 @@ const CONCEPT_BATCH1_SKILLS = {
   'ind.draca_bloom.g2': { name:'용의 숨결 모으기', icon:'🐲', cost:2, kind:'buff', breathCharge:{atkPct:0.18,cap:4}, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'브레스 충전 + 자신 방어 15%↑(3턴)', tag:'개체' },
   'ind.draca_bloom.m2': { name:'원소 브레스',     icon:'🔥', cost:3, kind:'attack', power:120, single:true, breathScale:true, dot:{kind:'burn',pct:0.06,turns:3}, desc:'위력120(브레스 충전 비례↑·발동 시 소비) · 단일 + 화상(3턴)', tag:'개체' },
 };
-const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB, CONCEPT_BATCH1_SKILLS, STAGE_SKILLS);
+/* ===== 컨셉 스킬 — 배치2: 물 화초 5변이 + bright_bloom(불 우직). 물=#14 signature:'wet' 통합. ===== */
+const CONCEPT_BATCH2_SKILLS = {
+  // ── cure_bulb 큐어벌브 (일반·냉혹): 단일 큰 피해 + 출혈 처형 / 물=젖음 ──
+  'ind.cure_bulb.s':  { name:'물수제비',     icon:'💧', cost:1, kind:'attack', power:55,  single:true, signature:'wet', desc:'위력55 · 단일 + 젖음(기동·방어↓) · 저비용 견제', tag:'개체' },
+  'ind.cure_bulb.j':  { name:'급소 가르기', icon:'🩸', cost:2, kind:'attack', power:85,  single:true, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력85 · 단일 + 출혈(3턴·회복↓)', tag:'개체' },
+  'ind.cure_bulb.g2': { name:'수압 처형',   icon:'🌊', cost:2, kind:'attack', power:100, single:true, critBonus:0.22, dot:{kind:'bleed',pct:0.06,turns:2}, desc:'위력100 · 단일 + 치명타율 +22% + 출혈(2턴)', tag:'개체' },
+  'ind.cure_bulb.m2': { name:'단두의 격류', icon:'⚔️', cost:3, kind:'attack', power:140, single:true, critBonus:0.15, dot:{kind:'bleed',pct:0.06,turns:3}, desc:'위력140 · 단일 + 치명타율 +15% + 출혈(3턴)', tag:'개체' },
+  // ── drosera_bulb 드로세라벌브 (포식·은둔): 회피(기동↑) 지구전 + 포식 흡혈 ──
+  'ind.drosera_bulb.s':  { name:'안개 두르기', icon:'🌫️', cost:1, kind:'buff', selfBuff:{stat:'spd',pct:0.2,turns:3}, desc:'자신 기동 20%↑(3턴·회피↑) · 저비용 셋업', tag:'개체' },
+  'ind.drosera_bulb.j':  { name:'점착 포식',   icon:'💧', cost:2, kind:'drain', power:80,  single:true, lifesteal:0.25, desc:'위력80 · 단일 · 피해 25% 흡혈', tag:'개체' },
+  'ind.drosera_bulb.g2': { name:'기 순환',     icon:'🍃', cost:2, kind:'heal', heal:0.18, selfBuff:{stat:'spd',pct:0.15,turns:3}, desc:'체력 18% 회복 + 자신 기동 15%↑(3턴) · 지구전', tag:'개체' },
+  'ind.drosera_bulb.m2': { name:'포식 흡정',   icon:'🦷', cost:3, kind:'drain', power:120, single:true, lifesteal:0.4, desc:'위력120 · 단일 · 피해 40% 흡혈', tag:'개체' },
+  // ── coral_bulb 코랄벌브 (무기·폭군): 위압(적 공격↓)+위력 / 무기 속성 부여 ──
+  'ind.coral_bulb.s':  { name:'산호 벼리기', icon:'✨', cost:1, kind:'buff', infuse:{kind:'element',pct:0.4,turns:3}, desc:'3턴간 공격에 물 속성 추가피해(무기 부여) · 저비용 셋업', tag:'개체' },
+  'ind.coral_bulb.j':  { name:'위압의 일격', icon:'😡', cost:2, kind:'attack', power:90,  single:true, enemyDebuff:{stat:'atk',pct:0.18,turns:2}, desc:'위력90 · 단일 + 적 공격 18%↓(2턴)', tag:'개체' },
+  'ind.coral_bulb.g2': { name:'군림 강타',   icon:'🌊', cost:2, kind:'attack', power:108, single:true, signature:'wet', desc:'위력108 · 단일 + 젖음(기동·방어↓)', tag:'개체' },
+  'ind.coral_bulb.m2': { name:'폭군의 손아귀', icon:'✊', cost:3, kind:'attack', power:145, single:true, enemyDebuff:{stat:'atk',pct:0.2,turns:2}, infuse:{kind:'element',pct:0.5,turns:2}, desc:'위력145 · 단일 + 적 공격 20%↓(2턴) + 물 속성 부여(2턴)', tag:'개체' },
+  // ── tox_lotus 톡스로터스 (독성·교활): 적 기동↓+치명 / 독 증폭 ──
+  'ind.tox_lotus.s':  { name:'독안개',     icon:'☠️', cost:1, kind:'debuff', dot:{kind:'poison',pct:0.05,turns:3}, desc:'중독(3턴) · 저비용 견제', tag:'개체' },
+  'ind.tox_lotus.j':  { name:'교란 가시', icon:'🌀', cost:2, kind:'attack', power:80, single:true, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, desc:'위력80 · 단일 + 적 기동 20%↓(2턴)', tag:'개체' },
+  'ind.tox_lotus.g2': { name:'맹독 코팅', icon:'🧪', cost:2, kind:'buff', poisonAmp:{mult:1.5,turns:3}, energyGain:1, desc:'3턴간 자기 독 위력 50%↑ + ⚡1 · 독 증폭 셋업', tag:'개체' },
+  'ind.tox_lotus.m2': { name:'그림자 농락', icon:'🎭', cost:3, kind:'attack', power:120, single:true, enemyDebuff:{stat:'spd',pct:0.2,turns:2}, critBonus:0.2, desc:'위력120 · 단일 + 적 기동 20%↓(2턴) + 치명타율 +20%', tag:'개체' },
+  // ── aqua_drake 아쿠아드레이크 (용족·탐식): 에너지 흡수 + 브레스 충전 ──
+  'ind.aqua_drake.s':  { name:'게걸 물어뜯기', icon:'💧', cost:1, kind:'attack', power:55, single:true, energyDrain:1, desc:'위력55 · 단일 + 적 에너지 1 흡수 · 저비용', tag:'개체' },
+  'ind.aqua_drake.j':  { name:'숨 고르기',     icon:'🐉', cost:1, kind:'buff', breathCharge:{atkPct:0.12,cap:4}, energyGain:1, desc:'브레스 충전 + ⚡1 · 저비용', tag:'개체' },
+  'ind.aqua_drake.g2': { name:'걸신 강타', icon:'🌀', cost:2, kind:'attack', power:95, single:true, energyDrain:2, desc:'위력95 · 단일 + 적 에너지 2 흡수', tag:'개체' },
+  'ind.aqua_drake.m2': { name:'폭식 브레스',   icon:'🌊', cost:3, kind:'attack', power:115, single:true, breathScale:true, energyDrain:2, desc:'위력115(브레스 충전 비례↑·소비) · 단일 + 적 에너지 2 흡수', tag:'개체' },
+  // ── bright_bloom 브라이트블룸 (일반·우직): 반격 + 자기 방어↑ / 불 ──
+  'ind.bright_bloom.s':  { name:'불씨 버티기', icon:'🛡️', cost:1, kind:'guard', guardMult:0.6, desc:'받는 피해 40%↓ · 저비용 방어', tag:'개체' },
+  'ind.bright_bloom.j':  { name:'가시 반격',   icon:'🌵', cost:2, kind:'guard', guardMult:0.5, counterPct:0.25, desc:'받는 피해 50%↓ + 가시 반격', tag:'개체' },
+  'ind.bright_bloom.g2': { name:'대지 짓누르기', icon:'⛰️', cost:2, kind:'attack', power:95, single:true, dot:{kind:'burn',pct:0.06,turns:2}, selfBuff:{stat:'def',pct:0.15,turns:3}, desc:'위력95 · 단일 + 화상(2턴) + 자신 방어 15%↑(3턴)', tag:'개체' },
+  'ind.bright_bloom.m2': { name:'불굴의 반격', icon:'🔥', cost:3, kind:'guard', guardMult:0.45, counterPct:0.35, heal:0.1, desc:'받는 피해 55%↓ + 강한 반격 + 체력 10% 회복', tag:'개체' },
+};
+const ALL_SKILLS = Object.assign({}, UNIVERSAL_SKILLS, ELEMENT_SKILLS, TRAIT_SKILLS, FORM_SKILLS, CARD_SKILLS, SKILL_LIB, CONCEPT_BATCH1_SKILLS, CONCEPT_BATCH2_SKILLS, STAGE_SKILLS);
 /* ===== 변이 개체 정체성(아키타입 축) — 설계: docs/.../2026-06-26-variant-individual-identity-design.md =====
    개체 = 타입 × 속성 × 변이형(form) × 아키타입(personality).
    form은 메커니즘 레인(주요 스킬=변이카드), 아키타입은 성격 → 컨셉문·스탯 보정·고유스킬 이름/DoT 결정.
@@ -13003,7 +13036,7 @@ window.__test('concept: conceptOf blends two distinct axes + override wins', fun
   __eq(conceptOf('__t').primary, 'element', 'override wins'); delete CONCEPT_OVERRIDES.__t;
 });
 window.__test('content batch1: stageSkills expanded + resolve + diverse', function(){
-  const batch = ['flame_trap','blaze_lance','ash_bloom','draca_bloom'];
+  const batch = ['flame_trap','blaze_lance','ash_bloom','draca_bloom','cure_bulb','drosera_bulb','coral_bulb','tox_lotus','aqua_drake','bright_bloom'];
   const fails=[];
   batch.forEach(k=>{
     const ss=(SPECIES_CATALOG[k]||{}).stageSkills||{};
