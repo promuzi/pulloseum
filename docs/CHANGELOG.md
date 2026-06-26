@@ -7,6 +7,7 @@
 - **해결:** `plantVariant(key)` — 개체 키 해시로 **색감(hue ±16°·채도·명도) + 형태(크기/비율 0.88~1.10) + 무늬(아키타입 테마: 공격형=가시·정밀형=문양·방어형=판·제어형=점·기본=잎맥)** 를 결정. `composePlantSvg`에 `opts.varKey` 추가 → 변형 레이어(필터+transform+`markingSvg`) 적용. 호출부에 `varKey`(plant.species / sp.key) 연결(spriteFor·svgPlant·관리/전투/진화/도감).
 - **결과:** 전 175 개체 **전부 고유 외형**(175/175 distinct SVG)·scale 0.88~1.10 정상·self-test 0 fail. legacy 종은 변형 제외(원형 유지).
 - **성격:** PNG 교체 전 **임시·영감용 절차적 1차**. 도트 PNG는 `SPRITE_OVERRIDES`로 개별 교체(#3). 무늬가 아키타입과 연동돼 컨셉 구체화 시 시각 힌트.
+- **실루엣(형태) 분기 — 진행 중:** 색·무늬를 넘어 **타입별 몸통 실루엣 자체를 성격 패밀리로 분기**(`SHAPE_FAMILY`/`shapeFamily`, `composePlantBody`에 `bodyStyle=패밀리` 전달). 패밀리 5종: jagged(공격형=뾰족 침엽)·bulky(방어형=넓고 육중)·slender(정밀형=가늘고 높음)·wild(야성형=비대칭)·classic(기본). **목본(tree) 먼저 구현·검증**(같은 목본도 성격 따라 구조 상이, self-test 0 fail). 화초/다육/덩굴/버섯은 후속 확장 예정.
 
 ### 2026-06-26 — 개체 컨셉 스킬: 전 개체 커버리지 + 광신 자해화상 (#1-A)
 - **전 175 개체 커버리지:** 벌크 생성에 **base 28(폼·성격 없음=속성 시그니처#14+타입 성향)** + **버섯 7(포자/중독)** 추가 → 40 손작업 + 660 생성기 = 전 개체 단계별 컨셉 스킬 보유([scripts/gen-concept-skills.js](../scripts/gen-concept-skills.js), 멱등).

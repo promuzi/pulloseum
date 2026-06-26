@@ -10285,10 +10285,25 @@ function composePlantBody(seedType, gi, P, el, bodyStyle){
       svg += `<circle cx="${cx-12}" cy="${topY-capLift-6}" r="2" fill="${P.accent}" opacity=".8"/>`;
       svg += `<circle cx="${cx+10}" cy="${topY-capLift-10}" r="1.6" fill="${P.accent}" opacity=".7"/>`;
     }
-  } else { // tree
-    const r=12+gi*3.2, th=16+gi*3;
-    svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
-    svg+=`<circle cx="${cx}" cy="${cy-2}" r="${r}" fill="${P.main}"/><circle cx="${cx-r*0.5}" cy="${cy+3}" r="${r*0.7}" fill="${P.dark}"/><circle cx="${cx+r*0.55}" cy="${cy-1}" r="${r*0.66}" fill="${P.light}"/>`;
+  } else { // tree — 형태 갈래(bodyStyle=성격 패밀리)로 수관 실루엣 분기
+    const r=12+gi*3.2, th=16+gi*3, fam=(gi>=2?bodyStyle:'classic');
+    if(fam==='slender'){ // 정밀형: 가늘고 높은 수관 + 긴 줄기
+      svg+=`<rect x="${cx-3}" y="${cy}" width="6" height="${th+6}" rx="3" fill="${P.stem}"/>`;
+      svg+=`<ellipse cx="${cx}" cy="${cy-r*0.5}" rx="${r*0.66}" ry="${r*1.55}" fill="${P.main}"/><ellipse cx="${cx-r*0.28}" cy="${cy}" rx="${r*0.38}" ry="${r*1.1}" fill="${P.dark}"/><ellipse cx="${cx+r*0.3}" cy="${cy-r*0.7}" rx="${r*0.34}" ry="${r*0.95}" fill="${P.light}"/>`;
+    } else if(fam==='bulky'){ // 방어형: 넓고 육중한 수관
+      const R=r*1.18; svg+=`<rect x="${cx-5}" y="${cy}" width="10" height="${th}" rx="3" fill="${P.stem}"/>`;
+      svg+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${P.main}"/><circle cx="${cx-R*0.7}" cy="${cy+2}" r="${R*0.8}" fill="${P.dark}"/><circle cx="${cx+R*0.7}" cy="${cy+2}" r="${R*0.78}" fill="${P.light}"/><circle cx="${cx-R*0.32}" cy="${cy-R*0.6}" r="${R*0.7}" fill="${P.main}"/><circle cx="${cx+R*0.38}" cy="${cy-R*0.55}" r="${R*0.62}" fill="${P.light}"/>`;
+    } else if(fam==='jagged'){ // 공격형: 뾰족한 삼각 수관(가시 침엽)
+      svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
+      for(let i=-1;i<=1;i++){ const bx=cx+i*(r*0.62); svg+=`<path d="M${bx-r*0.62} ${cy+4} L${bx} ${cy-r*1.25} L${bx+r*0.62} ${cy+4} Z" fill="${i===0?P.main:(i<0?P.dark:P.light)}"/>`; }
+      svg+=`<path d="M${cx-r*0.42} ${cy-r*0.5} L${cx} ${cy-r*1.72} L${cx+r*0.42} ${cy-r*0.5} Z" fill="${P.main}"/>`;
+    } else if(fam==='wild'){ // 야성형: 비대칭 덩어리 수관
+      svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}" transform="rotate(-6 ${cx} ${cy})"/>`;
+      svg+=`<circle cx="${cx-r*0.5}" cy="${cy+3}" r="${r*0.92}" fill="${P.main}"/><circle cx="${cx+r*0.62}" cy="${cy-r*0.35}" r="${r*0.78}" fill="${P.dark}"/><circle cx="${cx+r*0.08}" cy="${cy-r*0.9}" r="${r*0.6}" fill="${P.light}"/><circle cx="${cx-r*0.82}" cy="${cy-r*0.28}" r="${r*0.5}" fill="${P.main}"/>`;
+    } else { // classic
+      svg+=`<rect x="${cx-4}" y="${cy}" width="8" height="${th}" rx="3" fill="${P.stem}"/>`;
+      svg+=`<circle cx="${cx}" cy="${cy-2}" r="${r}" fill="${P.main}"/><circle cx="${cx-r*0.5}" cy="${cy+3}" r="${r*0.7}" fill="${P.dark}"/><circle cx="${cx+r*0.55}" cy="${cy-1}" r="${r*0.66}" fill="${P.light}"/>`;
+    }
     if(gi>=4){ svg+=`<circle cx="${cx-6}" cy="${cy-4}" r="2.6" fill="${P.accent}"/><circle cx="${cx+7}" cy="${cy+2}" r="2.6" fill="${P.accent}"/>`; }
   }
   svg += elementMotif(el, gi, cx, cy-18);
@@ -10329,6 +10344,14 @@ function markingSvg(V){
   if(V.marking==='spot'){ let o=''; const xs=[50,66,57,70,52], ys=[70,74,84,86,90]; for(let i=0;i<5;i++){ o+='<circle cx="'+(xs[i]+jx)+'" cy="'+(ys[i]+jy)+'" r="'+(2+(s>>i)%2)+'" fill="'+a+'" opacity=".55"/>'; } return o; }
   return '<path d="M60 64 q '+(8+jx)+' 14 2 28 M60 64 q '+(-8+jx)+' 14 -2 28" stroke="'+a+'" stroke-width="1.3" fill="none" opacity=".6"/>'; // vein
 }
+/* 개체 형태 갈래 — 아키타입(성격) → 실루엣 패밀리. 타입별 몸통 그리기를 분기시킨다. */
+const SHAPE_FAMILY = {
+  berserk:'jagged', feral:'jagged', executioner:'jagged', zealot:'jagged', warlord:'jagged',
+  guardian:'bulky', stalwart:'bulky', tyrant:'bulky',
+  sage:'slender', trickster:'slender', phantom:'slender',
+  glutton:'wild', hermit:'wild', strategist:'wild'
+};
+function shapeFamily(key){ const sp=(typeof SPECIES!=='undefined'&&SPECIES[key])||null; if(!sp||sp.legacy) return 'classic'; return SHAPE_FAMILY[sp.archetype]||'classic'; }
 function composePlantSvg(seedType, growth, element, opts){
   opts = opts||{}; const size = opts.size||120;
   const el = ELEMENTS[element] ? element : 'grass';
@@ -10338,7 +10361,8 @@ function composePlantSvg(seedType, growth, element, opts){
   const aura = (opts.grade==='S'||opts.grade==='A'||evolved)
     ? `<circle cx="60" cy="52" r="${38+(evolved?6:0)}" fill="${opts.grade==='S'?'#ffd34a':P.main}" opacity="${evolved?0.22:(opts.grade==='S'?0.2:0.12)}"/>` : '';
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
-  const inner = `${composePlantBody(seedType, gi, P, el, opts.bodyStyle || 'classic')}${bodyAccentSvg(opts, el, gi, P)}`;
+  const shape = opts.varKey ? shapeFamily(opts.varKey) : (opts.bodyStyle || 'classic');
+  const inner = `${composePlantBody(seedType, gi, P, el, shape)}${bodyAccentSvg(opts, el, gi, P)}`;
   const V = opts.varKey ? plantVariant(opts.varKey) : null;
   const bodyHtml = V
     ? `<g transform="translate(60,76) scale(${V.sx},${V.sy}) translate(-60,-76)"><g style="filter:hue-rotate(${V.hue}deg) saturate(${V.sat}) brightness(${V.bri})">${inner}</g>${markingSvg(V)}</g>`
