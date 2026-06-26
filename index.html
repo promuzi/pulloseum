@@ -5170,12 +5170,19 @@ function cardsAfterEquip(cards, newKey){
   kept.push(newKey);
   return kept;
 }
-/* 변이 스킬(하단 바) — 변이형이 부여하는 별도 스킬 ID 목록(상단 6칸 로드아웃과 별개).
-   포식=기본 포식기 · 무기=장착 무기 종류 카드 스킬(최대2) · 독성/용족=전용(후속 콘텐츠 슬라이스). */
+/* 종의 변이 목록(다변이 종 = base_variants 전체, 없으면 단일 form). */
+function formsOf(p){
+  if(p && p.base_variants && p.base_variants.length) return p.base_variants;
+  return [(p && p.form) || 'normal'];
+}
+/* 변이 스킬(하단 바) — 종의 변이 목록 전체에서 각 변이형이 부여하는 별도 스킬 ID 합집합(상단 6칸 로드아웃과 별개).
+   포자=0(패시브 아우라) · 포식=기본 포식기 · 무기=장착 무기 카드(최대2) · 독성/용족=전용. */
 function variantSkillsOf(p){
-  const form = (p && p.form) || 'normal';
+  const forms = formsOf(p);
   const out = [];
-  if(form === 'pred'){ out.push('skill_card_predation'); }
+  const add = id => { if(id && !out.includes(id)) out.push(id); };
+  forms.forEach(function(form){
+  if(form === 'pred'){ add('skill_card_predation'); }
   else if(form === 'weapon'){
     (p.equipped_trait_cards || p.cards || []).forEach(key => {
       const def = cardDefOf(key);
@@ -5185,11 +5192,13 @@ function variantSkillsOf(p){
     });
   }
   else if(form === 'toxic'){
-    out.push('skill_card_infuse', 'skill_card_spray');
+    add('skill_card_infuse'); add('skill_card_spray');
   }
   else if(form === 'dragon'){
-    out.push('skill_card_scale', 'skill_card_breath');
+    add('skill_card_scale'); add('skill_card_breath');
   }
+  // spore·normal = 전용 스킬 없음
+  });
   return out;
 }
 function cardTypeOf(key){ const d=cardDefOf(key); return d ? d.type : null; }
@@ -11494,7 +11503,7 @@ function makeCombatant(src){
   const maxHp = Math.max(1, Math.round(bs.hp * (1 + (P.hpPct||0))));
   // 전투 로드아웃 = 수동 스킬 + 카드 자동 장착 스킬 + (포식 변이형) 포식 기본 스킬
   let loadout = (src.loadout && src.loadout.length ? src.loadout.slice() : ['skill_basic_strike']);
-  if((src.form||'normal') === 'pred')   loadout.push('skill_card_predation'); // 포식 변이형 기본 보유
+  if(formsOf(src).indexOf('pred') >= 0)   loadout.push('skill_card_predation'); // 포식 변이형(다변이 포함) 기본 보유
   if((src.form||'normal') === 'toxic')  loadout.push('skill_card_infuse', 'skill_card_spray'); // 독성 변이형 기본 보유
   if((src.form||'normal') === 'dragon') loadout.push('skill_card_scale', 'skill_card_breath'); // 용족 변이형 기본 보유
   const isWeaponForm = (src.form||'normal') === 'weapon';
@@ -13377,6 +13386,17 @@ window.__test('dual-variant card gate', function(){
   if(cardFitsForm('card_sword', p)) fails.push('무기 카드가 (spore+toxic)에 잘못 적격');
   const ps={ form:'spore', base_variants:['spore'] };
   if(cardFitsForm(anyType('potion'), ps)) fails.push('순수 포자가 독성 카드 적격(회귀)');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('dual-variant skills (variantSkillsOf base_variants)', function(){
+  const fails=[];
+  const sp=variantSkillsOf({ form:'spore', base_variants:['spore','pred'], equipped_trait_cards:[] });
+  if(sp.indexOf('skill_card_predation')<0) fails.push('포자+포식이 포식기 미부여');
+  const sd=variantSkillsOf({ form:'spore', base_variants:['spore','dragon'], equipped_trait_cards:[] });
+  if(!(sd.indexOf('skill_card_scale')>=0 && sd.indexOf('skill_card_breath')>=0)) fails.push('포자+용족이 브레스 미부여');
+  const st=variantSkillsOf({ form:'spore', base_variants:['spore','toxic'], equipped_trait_cards:[] });
+  if(!(st.indexOf('skill_card_infuse')>=0 && st.indexOf('skill_card_spray')>=0)) fails.push('포자+독성이 독성기 미부여');
+  if(variantSkillsOf({ form:'spore', base_variants:['spore'], equipped_trait_cards:[] }).length!==0) fails.push('순수 포자가 전용 스킬 보유(회귀)');
   if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('baseline: SPECIES has legacy keys', function(){
