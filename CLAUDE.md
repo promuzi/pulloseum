@@ -28,6 +28,7 @@
 - 빌드 과정 없음. 순수 HTML/CSS/JS(바닐라).
 
 ## 구조 (중요)
+- ⚠️ **문서 속 `~NNNN` 줄번호는 근사치이며 자주 어긋난다**(index.html이 빠르게 커짐 — 현재 ~14,700줄). 위치는 줄번호가 아니라 **심볼명 grep**으로 찾을 것(예: `grep -n "applyVariantIdentity" index.html`).
 - **`index.html`** — 게임 전체가 이 한 파일에 들어 있음. CSS·JS·**게임 데이터 전부 인라인**.
   - ⚠️ 행성/지역/아이템/토너먼트 데이터는 `index.html`의 `const AlienPlantGameData = ...` 블록에 내장. (`data/alien-plant-pvp-data.js`는 참고용, 게임은 안 읽음)
   - ⚠️ **종·스킬은 별개 위치(2026-06-24~):** 종 = `SPECIES_CATALOG`(레거시 격자 `SPECIES_GRID` 위에 머지), 스킬 = `SKILL_LIB`. 종/스킬 확장은 이 둘만 수정(개체 템플릿: `spore_cap`). → [species-system-guide](docs/species-system-guide.md)
