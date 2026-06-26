@@ -12200,12 +12200,14 @@ async function tickStatuses(u, side){
   // 빙결 스택 만료(2턴 유지, 추가 적중으로 갱신)
   if(u.freezeStacks>0){ u.freezeTurns = (u.freezeTurns||0) - 1; if(u.freezeTurns<=0){ u.freezeStacks=0; u.freezeTurns=0; } }
   if(u.passives.cleanseChance>0 && u.buffs.some(b=>b.kind==='debuff')){ const roll=rng(), success=roll<u.passives.cleanseChance; if(success){ const i=u.buffs.findIndex(b=>b.kind==='debuff'); if(i>=0){ u.buffs.splice(i,1); statusNotes.push('해로운 효과가 해제되었다!'); blog(`<span class="em">${u.name}</span> 디버프 1개 자연 회복`); } } }
-  // 포자형: 매 턴 종료 시 포자 발동(중복 가능)
+  // 포자형: 매 턴 종료 시 포자 발산(발산은 항상 · 효과 적중은 효과별 확률)
   if(u.cardFx && u.cardFx.spores && u.cardFx.spores.length && B){
     const opp = (side==='p') ? B.e : B.p;
+    let sporeHit = false;
     u.cardFx.spores.forEach(sp=>{
       const roll=rng(), success=roll<sp.chance;
       if(!success) return;
+      sporeHit = true;
       if(sp.kind==='paralyze'){ opp.skipNext = true; blog(`<span class="em">${u.name}</span> 💤 마비 포자! 상대가 다음 턴 마비`); changed=true; }
       else if(sp.kind==='poison'){ const pd=Math.max(1,Math.round(u.max*sp.pct)); addDot(opp, {kind:'poison',dmg:pd,turns:2,icon:dotIcon('poison')}); blog(`<span class="em">${u.name}</span> 🟣 중독 포자! 상대 중독(2턴 · 턴당 ${pd})`); changed=true; }
       else if(sp.kind==='defup'){ u.buffs.push({stat:'def',pct:sp.pct,turns:2,kind:'buff'}); blog(`<span class="em">${u.name}</span> 🌀 방해 포자! 방어 ${Math.round(sp.pct*100)}%↑(2턴)`); changed=true; }
@@ -12213,6 +12215,8 @@ async function tickStatuses(u, side){
       else if(sp.kind==='poison') statusNotes.push('독에 중독되었다!');
       else if(sp.kind==='defup') statusNotes.push('방어력이 증가하였다!');
     });
+    // 발산은 항상 표시 — 어떤 효과도 적중 못 했으면 무해한 발산 로그 1줄(밸런스 무변경)
+    if(!sporeHit){ blog(`<span class="em">${u.name}</span> 🍄 포자를 흩뿌렸다…`); }
   }
   // 발광형: 엽록체 카드의 턴당 에너지 추가 회복
   if(u.cardFx && u.cardFx.energyRegen>0){ const before=u.energy; u.energy = Math.min(u.energyMax, u.energy + u.cardFx.energyRegen); if(u.energy>before){ statusNotes.push('에너지가 회복되었다!'); changed=true; } }
