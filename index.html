@@ -2116,104 +2116,6 @@ body{letter-spacing:.2px;}
     </nav>
   </section>
 
-  <!-- ===== 시작 인트로(암실) ===== -->
-  <style>
-  #introOverlay{position:fixed;inset:0;z-index:12000;overflow:hidden;cursor:pointer;
-    -webkit-tap-highlight-color:transparent;background:transparent;
-    --px:50vw;--py:45vh;--lampx:50vw;--lampH:320px;}
-  #introOverlay.hidden{display:none;}
-  #introMask{position:absolute;left:var(--px);top:var(--py);width:260vmax;height:260vmax;
-    transform:translate(-50%,-50%) scale(1);will-change:transform;
-    background:radial-gradient(circle,
-      rgba(6,7,13,0) 0, rgba(6,7,13,0) 4.1%, rgba(6,7,13,.74) 7.4%, #06070d 11%, #06070d 100%);
-    transition:transform .68s cubic-bezier(.66,0,.3,1);}
-  #introGlow{position:absolute;left:var(--px);top:var(--py);width:66vmax;height:66vmax;
-    pointer-events:none;mix-blend-mode:screen;will-change:transform,opacity;
-    background:radial-gradient(circle, rgba(255,224,164,.98) 0, rgba(255,188,104,.7) 12%, rgba(255,152,68,.3) 30%, rgba(255,140,60,0) 58%);
-    animation:introGlowBreath 3.4s ease-in-out infinite, introGlowSway 4.4s ease-in-out infinite;transition:opacity .25s;}
-  @keyframes introGlowBreath{0%,100%{opacity:.9}50%{opacity:1}}
-  @keyframes introGlowSway{0%,100%{transform:translate(calc(-50% - 26px),-52%)}50%{transform:translate(calc(-50% + 26px),-52%)}}
-  #introStatic{position:absolute;inset:0;pointer-events:none;opacity:0;mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23n)' opacity='0.75'/%3E%3C/svg%3E"),
-      repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px);
-    transition:opacity .1s;}
-  #introLampSwing{position:absolute;top:-6px;left:var(--lampx);height:var(--lampH);
-    transform-origin:top center;animation:introSwingBig 5s cubic-bezier(.33,.05,.32,1) both, introSwing 5s ease-in-out 5s infinite;will-change:transform;}
-  #introLampDrop{height:100%;animation:introDrop 1.2s cubic-bezier(.32,1.25,.5,1) both;}
-  #introLampBob{height:100%;animation:introBob 3.6s ease-in-out .7s infinite;}
-  #introLampBob svg{height:100%;width:auto;display:block;}
-  @keyframes introSwing{0%,100%{transform:translateX(-50%) rotate(-5deg)}50%{transform:translateX(-50%) rotate(5deg)}}
-  @keyframes introSwingBig{0%{transform:translateX(-50%) rotate(2deg)}9%{transform:translateX(-50%) rotate(-24deg)}23%{transform:translateX(-50%) rotate(19deg)}37%{transform:translateX(-50%) rotate(-15deg)}51%{transform:translateX(-50%) rotate(11deg)}65%{transform:translateX(-50%) rotate(-8deg)}79%{transform:translateX(-50%) rotate(6deg)}90%{transform:translateX(-50%) rotate(-5.4deg)}100%{transform:translateX(-50%) rotate(5deg)}}
-  @keyframes introDrop{0%{transform:translateY(-128%)}54%{transform:translateY(3%)}70%{transform:translateY(-6%)}83%{transform:translateY(2%)}92%{transform:translateY(-2%)}100%{transform:translateY(0)}}
-  @keyframes introBob{0%,100%{transform:translateY(0)}50%{transform:translateY(15px)}}
-  #introHint{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);color:rgba(255,205,155,.6);
-    font-size:13px;letter-spacing:4px;font-weight:600;pointer-events:none;opacity:0;
-    animation:introHintPulse 1.9s ease-in-out 1.5s infinite;}
-  @keyframes introHintPulse{0%,100%{opacity:.18}50%{opacity:.66}}
-  /* 지지직 깜박임 */
-  #introOverlay.flick #introGlow{opacity:.26!important;}
-  #introOverlay.flick .lampGlow{opacity:.2;}
-  #introOverlay.flick .bulbCore{fill:#ffcaa0;}
-  #introOverlay.flick #introStatic{opacity:.15;transform:translateX(1px);}
-  #introOverlay.flick #introMask{filter:brightness(.9);}
-  /* 파워온(디스플레이가 지지직 켜짐) */
-  #introOverlay.powering{animation:introCrt .75s ease-out both;}
-  #introOverlay.powering #introMask{transform:translate(-50%,-50%) scale(8);}
-  #introOverlay.powering #introGlow{opacity:0;}
-  #introOverlay.powering #introStatic{animation:introStaticBurst .75s steps(2) both;}
-  #introOverlay.powering #introHint{opacity:0;}
-  #introOverlay.powering #introLampSwing{transform:translateX(-50%) translateY(-134%);transition:transform .5s ease-in;}
-  @keyframes introCrt{0%{filter:none;transform:translateX(0)}8%{filter:brightness(1.9) contrast(1.45);transform:translateX(3px)}16%{transform:translateX(-5px)}26%{filter:brightness(.4);transform:translateX(4px)}38%{filter:brightness(1.6);transform:translateX(-2px)}52%{filter:brightness(.85);transform:translateX(1px)}100%{filter:brightness(1);transform:none;opacity:0}}
-  @keyframes introStaticBurst{0%{opacity:.72}18%{opacity:.3}34%{opacity:.82}52%{opacity:.26}70%{opacity:.58}100%{opacity:0}}
-  /* 메인(디스플레이) CRT 점등 */
-  body.main-crton #mainScreen{animation:mainCrtOn .58s ease-out both;transform-origin:center center;will-change:transform,filter;}
-  @keyframes mainCrtOn{0%{filter:brightness(2.6) contrast(1.5);transform:scaleY(.74)}10%{transform:scaleY(1.06)}20%{transform:scaleY(.98)}33%{filter:brightness(.8)}58%{filter:brightness(1.18)}100%{filter:none;transform:none}}
-  /* 인트로 중 메인 게이팅 — 주변 UI(좌측 스탯표 포함) 숨김 */
-  #mainScene{transition:filter .6s ease;}
-  body.intro-active #mainScene{filter:brightness(.1) saturate(.65);}
-  body.intro-active #centerPlant{filter:brightness(1.16) saturate(1.12) drop-shadow(0 0 16px rgba(255,150,70,.5));}
-  body.intro-active #centerPlant .hint{opacity:0;}
-  body.intro-active #topHeader, body.intro-active #profileRow, body.intro-active #statPanel,
-  body.intro-active #sidePanel, body.intro-active #tournamentBar, body.intro-active #btnBattle,
-  body.intro-active #bottomNav{opacity:0;pointer-events:none;}
-  @media (prefers-reduced-motion: reduce){
-    #introLampDrop,#introLampBob,#introLampSwing,#introGlow{animation:none!important;}
-    #introMask{transition:none;}
-  }
-  </style>
-  <div id="introOverlay" class="hidden" aria-hidden="true">
-    <div id="introMask"></div>
-    <div id="introGlow"></div>
-    <div id="introStatic"></div>
-    <div id="introLampSwing"><div id="introLampDrop"><div id="introLampBob">
-      <svg viewBox="0 0 120 460" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="iBulb" cx="50%" cy="42%" r="60%">
-            <stop offset="0" stop-color="#fff3d8"/><stop offset="45%" stop-color="#ffc06a"/><stop offset="100%" stop-color="#e07a2a"/>
-          </radialGradient>
-          <linearGradient id="iShade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#3a3f47"/><stop offset="60%" stop-color="#23272d"/><stop offset="100%" stop-color="#15181d"/>
-          </linearGradient>
-          <radialGradient id="iBeam" cx="50%" cy="0%" r="100%">
-            <stop offset="0" stop-color="rgba(255,170,80,.5)"/><stop offset="100%" stop-color="rgba(255,150,60,0)"/>
-          </radialGradient>
-          <filter id="iGlowF" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
-        </defs>
-        <polygon class="lampGlow" points="60,372 4,460 116,460" fill="url(#iBeam)"/>
-        <line x1="60" y1="0" x2="60" y2="284" stroke="#23262b" stroke-width="3.6"/>
-        <line x1="60" y1="0" x2="60" y2="284" stroke="#4a4f57" stroke-width="1.1" opacity=".55"/>
-        <rect x="49" y="-2" width="22" height="6" rx="2" fill="#1a1d22"/>
-        <path d="M60 276 L108 360 Q60 384 12 360 Z" fill="url(#iShade)"/>
-        <path d="M60 276 L84 360 Q60 372 36 360 Z" fill="#474d57" opacity=".5"/>
-        <ellipse cx="60" cy="360" rx="48" ry="10" fill="#0e1014"/>
-        <circle class="lampGlow" cx="60" cy="372" r="42" fill="#ffc274" filter="url(#iGlowF)" opacity=".98"/>
-        <circle class="bulbCore" cx="60" cy="372" r="15" fill="url(#iBulb)"/>
-        <circle cx="60" cy="372" r="15" fill="none" stroke="#ffe6b0" stroke-width="1.3" opacity=".55"/>
-      </svg>
-    </div></div></div>
-    <div id="introHint">터치하여 시작</div>
-  </div>
-
   <!-- ===== 전투 화면 ===== -->
   <section id="battleScreen" class="screen hidden">
     <div id="battleHeader"></div>
@@ -13897,56 +13799,6 @@ window.__DEX_API = {
   composePlantSvg, dexSkillScope,
   version: '2026-06-24d',
 };
-/* ===== 시작 인트로(암실) — 메인 위 오버레이로 전등+스포트라이트, 탭하면 디스플레이가 켜지듯 메인으로 ===== */
-let __introActive = false, __introFlickTimer = null;
-const __introReduced = (()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } })();
-function __introFlickLoop(start){
-  if(!__introActive) return;
-  const ov = $('#introOverlay'); if(!ov) return;
-  ov.classList.add('flick');
-  setTimeout(()=>{ ov.classList.remove('flick'); }, 45 + Math.random()*70);
-  if(Math.random() < 0.45) setTimeout(()=>{ if(!__introActive) return; ov.classList.add('flick'); setTimeout(()=>ov.classList.remove('flick'), 38); }, 100 + Math.random()*60);
-  const elapsed = performance.now() - start;
-  // 처음엔 자주, 이후 간헐적으로
-  const next = elapsed < 3500 ? (110 + Math.random()*360) : (1600 + Math.random()*4200);
-  __introFlickTimer = setTimeout(()=>__introFlickLoop(start), next);
-}
-function startIntro(){
-  const ov = $('#introOverlay'); if(!ov) return;
-  try{ renderMain(); }catch(e){}
-  document.body.classList.add('intro-active');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    let px = innerWidth/2, py = innerHeight*0.45, top = innerHeight*0.18;
-    const stage = document.querySelector('#centerPlant .plant-stage') || document.querySelector('#centerPlant');
-    if(stage){ const r = stage.getBoundingClientRect(); if(r.width > 4 && r.height > 4){ px = r.left + r.width/2; py = r.top + r.height*0.5; top = r.top; } }
-    const bulbY = Math.max(46, top - 6);            // 전구가 식물 바로 위에 머무름
-    ov.style.setProperty('--px', px.toFixed(1)+'px');
-    ov.style.setProperty('--py', py.toFixed(1)+'px');
-    ov.style.setProperty('--lampx', px.toFixed(1)+'px');
-    ov.style.setProperty('--lampH', (bulbY/0.808).toFixed(1)+'px'); // 전구 위치 frac = 372/460
-    ov.classList.remove('hidden');
-    __introActive = true;
-    if(!__introReduced) __introFlickLoop(performance.now());
-    ov.addEventListener('click', powerOnIntro, { once:true });
-    ov.addEventListener('touchstart', powerOnIntro, { once:true, passive:true });
-  }));
-}
-function powerOnIntro(){
-  if(!__introActive) return; __introActive = false;
-  clearTimeout(__introFlickTimer);
-  const ov = $('#introOverlay'); if(!ov) return;
-  try{ if(window.sfx && sfx.tap) sfx.tap(); }catch(e){}
-  ov.classList.remove('flick');
-  ov.classList.add('powering');
-  document.body.classList.remove('intro-active'); // 메인 씬이 밝아짐(디스플레이 켜짐)
-  document.body.classList.add('main-crton');      // 메인 화면 CRT 점등(지지직)
-  setTimeout(()=>{ document.body.classList.remove('main-crton'); }, 640);
-  setTimeout(()=>{
-    ov.classList.add('hidden'); ov.classList.remove('powering');
-    try{ if(state.plants.length === 0 && state.seed_inventory.length === 0) toast('탐사 버튼으로 우주맵에 가서 첫 종자를 찾아보세요'); }catch(e){}
-  }, 760);
-}
-
 /* 데이터 전용 모드(?dex=1): 도감이 데이터만 읽으면 되므로 부팅·세이브·렌더·클라우드를 모두 생략
    → 도감이 게임을 불러와도 사용자 세이브를 건드리지 않는다. */
 const __DEX_MODE = /[?&]dex=1(?:&|$)/.test(location.search);
@@ -13955,17 +13807,12 @@ if(__DEX_MODE){
 } else {
   /* 타이틀 아트 + 부팅 */
   $('#titleArt').innerHTML = svgPlant('flame','fire','S',null,130);
-  // 부팅 전 타이틀을 건너뛰고 즉시 암실(인트로) 검은 화면으로 — 타이틀 깜빡임 방지
-  hide('#titleScreen'); show('#mainScreen');
-  document.body.classList.add('intro-active');
-  $('#introOverlay').classList.remove('hidden');
   // 시작종자 지급·최초 저장은 네이티브 백업 복구 이후에 해야 백업이 덮어써지지 않음 → bootWithSave가 일괄 처리.
   bootWithSave().finally(()=>{
     Cloud.init();
     (async()=>{
       try{ await Cloud.refreshUser(); renderCloudUI(); if(Cloud.user) await reconcileAfterLogin(); }catch(e){}
     })();
-    startIntro();
   });
   /* PWA: 서비스워커 등록(있을 때만) — 홈 화면 추가/오프라인 셸 */
   if('serviceWorker' in navigator){

@@ -2,12 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
-### 2026-06-26 — 시작 인트로(암실) 애니메이션 추가
-- **컨셉:** 부팅 시 기존 타이틀 화면을 건너뛰고 **검은 암실**로 시작 — 가운데 나무 의자 위 화분+식물(활성 식물 로딩, 없으면 빈 화분), 위에서 줄 달린 펜던트 전등이 **낙하→바운스→좌우 진자 스윙**하며 주황 불빛으로 식물을 비춤. **화면 터치 시** 주변(검은 배경+전등)이 **CRT 지지직 글리치로 켜지며** 스포트라이트가 화면 전체로 확장→메인 화면이 밝아지며(디스플레이 점등) 이어짐. 의도="식물이 놓인 곳은 암실, 주변은 디스플레이 → 누르면 켜지며 메인으로".
-- **구조(오버레이 방식):** 인트로는 **메인 화면 위에 덮인 `#introOverlay`**. 식물은 메인의 `#centerPlant`(나무 의자+화분+식물)를 그대로 비추므로 한 번도 안 움직임 → 전환이 매끄럽고 중복 없음. `#introMask`(식물 중심 투명 구멍 radial→나머지 검정, 파워온 시 `scale(8)`로 구멍 확장=배경이 넓어지며 메인과 이어짐) + `#introGlow`(주황 스포트라이트) + 펜던트 전등 SVG(코드+삼각뿔 갓+발광 전구+빔).
-- **전등 상시 효과(요청):** 정착 후에도 **위아래 bob + 좌우 swing 무한 지속** + **지지직 깜박임**(`__introFlickLoop`: 처음 ~3.5s는 자주 110~470ms 간격, 이후 간헐 1.6~5.8s 간격으로 전구/글로우 dim + 화이트노이즈/스캔라인). 전구 발광은 `feGaussianBlur` 글로우.
-- **흐름:** `bootWithSave().finally → startIntro()`(메인 렌더→`#centerPlant` rect로 전등·스포트라이트 좌표 계산→오버레이 노출→플리커 시작→탭 리스너). 탭=`powerOnIntro()`(글리치 애니+`body.intro-active` 해제로 `#mainScene` 밝아짐+720ms 후 오버레이 제거). 타이틀 화면(`#titleScreen`)은 진입 흐름에서 폐지(설정은 메인 헤더 톱니로만). `prefers-reduced-motion` 시 낙하·플리커 생략·즉시 점등.
-- **검증:** file:// 헤드리스 캡처로 암실+전등+빛+화분 정상 렌더 확인, `#poweron` 임시 훅으로 파워온→메인 전체 노출(헤더·전투버튼·네비 밝게) 확인 후 훅 제거. `__catalogSelfTest()` **0 fail/111** 회귀 없음.
+### 2026-06-26 — 개체 컨셉 스킬: 전 개체 커버리지 + 광신 자해화상 (#1-A)
+- **전 175 개체 커버리지:** 벌크 생성에 **base 28(폼·성격 없음=속성 시그니처#14+타입 성향)** + **버섯 7(포자/중독)** 추가 → 40 손작업 + 660 생성기 = 전 개체 단계별 컨셉 스킬 보유([scripts/gen-concept-skills.js](../scripts/gen-concept-skills.js), 멱등).
+- **광신(zealot) 자해화상 엔진:** 신규 `selfDot`(자해 DoT)+`selfBuffs`(복수 자기버프) → 광신 개체 = 자신에게 화상 + 공격·방어 동시↑. zealot 개체 g2 시그니처 + ash_bloom 반영. (생성기 ser() 배열 직렬화 버그 수정 — selfBuffs 배열이 `[object Object]`로 깨지던 것.)
+- **큐레이션 1차:** 생성기 네이밍 정리(중첩 제거, 단계별 distinct).
+- **검증:** `__catalogSelfTest()` 0 fail · preview 실전투로 엔진 6종(출혈 회복감소·에너지 흡수·무기 속성부여·독 증폭·브레스 충전/발동·광신 자해화상) 전수 동작 확인 · 165개체 660스킬 전수 검증(미지원 필드 0). 잔여=깊은 개체별 큐레이션(`ARCHETYPE_OVERRIDES`/`CONCEPT_OVERRIDES`)·밸런스 점검.
 
 ### 2026-06-26 — 개체 컨셉+단계별 스킬 확장 P0(엔진+컨셉 인프라) 구현 (#1-A)
 - **목표:** 개체마다 컨셉(2축 블렌드+스토리)을 정하고 단계별 스킬을 대규모로 추가하는 작업의 **토대(P0)**. 설계=[2026-06-26-individual-concept-skill-expansion-design.md](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · 계획=[plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md). 콘텐츠 배치(T7+)는 후속.
@@ -15,7 +14,7 @@
 - **컨셉 인프라:** `CONCEPT_OVERRIDES`(큐레이션)+`autoConcept`(자동 2축 시드)+`conceptOf` → 속성/타입/변이형/성격 중 둘을 묶은 정체성+스토리를 `SPECIES.desc`에 주입(도감 자동 노출). `applyVariantIdentity`에 합류·멱등.
 - **#14 통합:** 속성 시그니처(#14)와 직교(form/성격/컨셉 축). 속성 축 콘텐츠 스킬은 후속 배치에서 `signature:` 필드로 #14에 합류.
 - **검증:** `__catalogSelfTest()` **0 fail / 110**(#14 카드 ramp·toxic infuse 등 기존 테스트 유지). preview(alt 8771) 리로드 검증. 커밋 6건(T1~T6).
-- **콘텐츠 벌크 생성(생성기) — 전 개체 커버리지 완료:** [scripts/gen-concept-skills.js](../scripts/gen-concept-skills.js)로 **165개체 × 4단계 = 660 컨셉 스킬** 일괄 생성(멱등 마커 블록 `__CONCEPT_GEN__`). ① 변이 130 = 폼 메커니즘(포식 흡혈·무기 속성부여·독성 독증폭·용족 브레스충전) × 14성격 효과경향 × 단계별 역할. ② base 28(폼·성격 없음) = 속성 시그니처(#14) + 타입 성향(목본 가드·화초 회복·다육 반격·덩굴 견제). ③ 버섯 7 = 포자/중독 + 속성. `stageSkills` 런타임 누적. **이로써 전 175 개체(40 손작업 + 660 생성) 컨셉 스킬 보유.** self-test 111 0 fail · 165개체 stageSkills/660스킬 전수 검증(미지원 필드 0). 남은 것=실전투 검증·큐레이션(어색 이름/획일 개체).
+- **콘텐츠 벌크 생성(생성기):** 나머지 130 비버섯 변이 개체에 단계별 컨셉 스킬 **520종**을 [scripts/gen-concept-skills.js](../scripts/gen-concept-skills.js)로 일괄 생성(멱등 마커 블록 `__CONCEPT_GEN__`). 패턴=폼 메커니즘(포식 흡혈·무기 속성부여·독성 독증폭·용족 브레스충전) × 14성격 효과경향 × 단계별 역할(견제/셋업/대박). `stageSkills` 런타임 누적. **이로써 140 비버섯 변이 전부 컨셉 스킬 보유**(10 손작업 + 130 생성). self-test 111 0 fail · 130개체 stageSkills/520스킬 전수 검증(미지원 필드 0). 남은 것=버섯 7·base 28·큐레이션(어색한 이름/획일 개체 손보기).
 - **콘텐츠 배치2:** 물 화초 5변이(cure_bulb 냉혹·drosera_bulb 은둔·coral_bulb 폭군·tox_lotus 교활·aqua_drake 탐식) + bright_bloom(불 우직) — 24 스킬(`CONCEPT_BATCH2_SKILLS`). 신규 아키타입 6종 검증 + 물=`signature:'wet'`(#14 통합) + 에너지 흡수(탐식) 실사용. self-test 111 0 fail.
 - **콘텐츠 데모 배치1(T7, 톤 합의용):** 불 화초 4개체에 단계별 컨셉 스킬 16종 추가(`CONCEPT_BATCH1_SKILLS`, 개체당 새싹~성체 +4·역할/비용 차별화) — flame_trap(포식·광폭: 출혈/흡혈)·blaze_lance(무기·도사: 속성부여/치명)·ash_bloom(독성·광신: 독증폭/화상)·draca_bloom(용족·수호: 브레스충전/방어). `stageSkills` 누적(공유 새싹/유체 + 개체). self-test 111 0 fail. ⚠️ 광신 자해화상은 엔진 미구현이라 근사(공버프+화상). 톤 승인 후 나머지 배치 진행.
 
