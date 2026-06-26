@@ -1,5 +1,7 @@
 # 탐사선 개조실 UI 재설계 — 구현 계획
 
+> **진행 상황(2026-06-26):** ✅ Task 1(부품 시스템 제거) 완료·검증(self-test 112/0)·커밋 `3587676`. ⬜ Task 2~5 대기. 작업 브랜치 `feat/ship-ui-redesign`(워크트리 `C:\dev\pulloseum-ship`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 탐사선 개조실을 식물 강화창처럼 "중앙 탐사선 SVG + 사방 4트랙 콜아웃(부품 위치로 연결선)"으로 바꾸고, 라이브 탐사에서 죽은 부품 시스템·연료 소모재를 제거(크레딧 전용)하며, 두 강화창(식물·탐사선)에 강화 레벨(Lv.1~)을 표시한다.
