@@ -2232,7 +2232,6 @@ body{letter-spacing:.2px;}
     <h2>🎒 종자 가방</h2>
     <p class="sub">탐사에서 획득한 종자를 확인하고 심을 수 있습니다.</p>
     <div id="seedBagBody"></div>
-    <button class="btn" id="seedBagDex" style="margin-bottom:8px">📖 식물 도감 열기</button>
     <button class="btn modal-close" id="seedBagClose">닫기</button>
   </div>
 </div>
@@ -11249,7 +11248,7 @@ function mainStatBoxes(p, s){
   const IC={hp:'hp',atk:'atk',def:'def',spd:'spd',acc:'acc',elem:'elem',critRate:'crit',energy:'energy'};
   return MAIN_STAT_DEFS.map(d => `<div class="stat-box"><div class="sb-k">${window.pxIcon?pxIcon(IC[d.k]||'','12px'):d.icon} ${d.name}</div><div class="sb-v">${s[d.k]}${d.suf||''}</div></div>`).join('');
 }
-function bagFabHtml(){ return `<button class="side-fab" data-act="bag" title="종자 가방">${window.pxIcon?pxIcon('bag','26px'):'🎒'}<span class="side-fab-label">가방</span></button>`; }
+function bagFabHtml(){ return `<button class="side-fab" data-act="bag" title="종자 가방">${window.pxIcon?pxIcon('bag','26px'):'🎒'}<span class="side-fab-label">가방</span></button><button class="side-fab" data-act="dex" title="식물 도감">📖<span class="side-fab-label">도감</span></button>`; }
 
 /* ── 강화 탭(그림5) ── */
 const UP_LEFT  = [ { k:'acc', name:'명중력' }, { k:'crit', name:'치명타률' }, { k:'elem', name:'속성' }, { k:'energy', name:'에너지' } ];
@@ -13168,7 +13167,7 @@ $('#pSpriteBox').addEventListener('click', () => showBattlePlantDetail());
 $('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderConfirm'); });
 $('#surrenderYes').addEventListener('click', () => { sfx.tap(); doSurrender(); });
 $('#battleSkillDetail').addEventListener('click', () => { hide('#battleSkillDetail'); });
-$('#sidePanel').addEventListener('click', (ev) => { if(ev.target.closest('[data-act="bag"]')){ sfx.tap(); openSeedBag(); } });
+$('#sidePanel').addEventListener('click', (ev) => { if(ev.target.closest('[data-act="bag"]')){ sfx.tap(); openSeedBag(); } else if(ev.target.closest('[data-act="dex"]')){ sfx.tap(); openDex(); } });
 $('#tournamentBar').addEventListener('click', (ev) => { if(ev.target.closest('.tcell')){ sfx.tap(); openMatches(); } });
 $('#matchesModal').addEventListener('click', (ev) => { if(ev.target === $('#matchesModal')){ hide('#matchesModal'); } });
 $('#cardDetailModal').addEventListener('click', (ev) => {
@@ -13741,7 +13740,6 @@ $('#bottomNav').addEventListener('click', (ev) => {
 $('#lockedClose').addEventListener('click', () => { hide('#lockedModal'); sfx.tap(); });
 $('#seedBagClose').addEventListener('click', () => { hide('#seedBagModal'); sfx.tap(); });
 function openDex(){ const f=$('#dexFrame'); if(f && !f.getAttribute('src')) f.setAttribute('src','docs/dex/plant-codex.html'); show('#dexModal'); } // 도감 모달(첫 열림 시 iframe lazy-load)
-const __seedBagDex=$('#seedBagDex'); if(__seedBagDex) __seedBagDex.addEventListener('click', () => { sfx.tap(); openDex(); });
 const __dexClose=$('#dexClose'); if(__dexClose) __dexClose.addEventListener('click', () => { hide('#dexModal'); sfx.tap(); });
 $('#centerPlant').addEventListener('click', () => { sfx.tap(); if(activePlant()){ openUpgrade(); } else { openSeedBag(); } });
 $('#profileBanner').addEventListener('click', () => { sfx.tap(); openProfile(); });

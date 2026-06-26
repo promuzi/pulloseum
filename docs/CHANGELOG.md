@@ -2,8 +2,8 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
-### 2026-06-26 — 게임 내 도감 모달 (종자 가방 → 도감)
-- 종자 가방 모달(`#seedBagModal`)에 **"📖 식물 도감 열기"** 버튼(`#seedBagDex`) 추가 → 게임 내 모달(`#dexModal`)로 도감(`docs/dex/plant-codex.html`)을 **iframe**으로 띄움(`openDex()`, 첫 열림 시 lazy-load·재열기 즉시). 닫기 시 iframe src 유지. 탭 전환 시 `closeAllModals`로 닫힘.
+### 2026-06-26 — 게임 내 도감 모달 (메인 화면 가방 아래 → 도감)
+- 메인 화면 우측 `#sidePanel`의 **가방 버튼 아래에 📖 도감 버튼**(`bagFabHtml`에 `data-act="dex"` side-fab 추가) → 클릭 시 게임 내 모달(`#dexModal`)로 웹 도감(`docs/dex/plant-codex.html`)을 **iframe 그대로 삽입**해 띄움(`openDex()`, 첫 열림 lazy-load·재열기 즉시). 닫기 시 iframe src 유지. 탭 전환 시 `closeAllModals`로 닫힘. (종자 가방 팝업 안이 아니라 메인 화면.)
 - 도감은 기존대로 `index.html?dex=1`을 읽어 실제 데이터/외형(개체 차별화 포함) 렌더 → 게임 떠나지 않고 앱 안에서 확인. preview 검증: 모달 표시·iframe 도감 렌더(title·콘텐츠)·닫기 정상. self-test 0 fail.
 - ⚠️ **안드로이드(Capacitor) 빌드 시** `docs/dex/`도 앱에 번들해야 모달이 뜸(웹/로컬은 무관).
 
