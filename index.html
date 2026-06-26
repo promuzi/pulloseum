@@ -1320,12 +1320,30 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .drawer{display:grid;gap:8px;padding:6px 2px 8px;}
 .drawer-mut{grid-template-columns:repeat(4,1fr);}
 .drawer-skill{grid-template-columns:repeat(3,1fr);}
-/* 변이카드 가독성(#4): 공통/변이 섹션 + 등급별 같은 가로줄 */
-.drawer-sec{margin-bottom:2px;}
-.drawer-sec-h{font-size:11px;font-weight:900;color:var(--sub);margin:9px 2px 4px;letter-spacing:.02em;}
-.dgrade-row{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:0 0 5px;}
-.dgrade-lab{align-self:center;flex:0 0 auto;font-size:11px;font-weight:900;color:var(--gc,#fff);
-  border:1.5px solid var(--gc,#fff);border-radius:6px;padding:2px 0;width:19px;text-align:center;}
+/* 변이카드 가독성(#4): 공통/변이를 색 패널로 확실히 구분 + 등급별 같은 가로줄 */
+.drawer-sec{margin:11px 0 4px;padding:9px 9px 7px;border-radius:14px;
+  border:1px solid color-mix(in srgb, var(--sec-ac,#7ff6a0) 35%, transparent);
+  border-left:4px solid var(--sec-ac,#7ff6a0);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--sec-ac,#7ff6a0) 10%, transparent), rgba(8,18,30,.18));}
+.drawer-sec.sec-common{--sec-ac:#46b6ff;}
+.drawer-sec.sec-variant{--sec-ac:#c07bff;}
+.drawer-sec-h{display:flex;align-items:center;gap:7px;margin:0 0 9px;padding-bottom:7px;letter-spacing:.02em;
+  color:var(--sec-ac,var(--text));font-weight:900;
+  border-bottom:1px solid color-mix(in srgb, var(--sec-ac,#fff) 30%, transparent);}
+.drawer-sec-h .dsh-ico{font-size:16px;line-height:1;}
+.drawer-sec-h .dsh-t{font-size:13px;}
+.drawer-sec-h .dsh-sub{font-size:10px;font-weight:700;color:var(--sub);letter-spacing:0;}
+.drawer-sec-h .dsh-cnt{margin-left:auto;min-width:18px;text-align:center;font-size:11px;font-weight:900;
+  color:var(--sec-ac);background:color-mix(in srgb, var(--sec-ac,#fff) 18%, transparent);
+  border:1px solid color-mix(in srgb, var(--sec-ac,#fff) 45%, transparent);border-radius:8px;padding:1px 7px;}
+.dgrade-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin:0;
+  padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.08);}
+.dgrade-row:first-of-type{padding-top:1px;}
+.dgrade-row:last-child{border-bottom:none;padding-bottom:1px;}
+.dgrade-lab{align-self:stretch;flex:0 0 auto;font-size:12px;font-weight:900;color:var(--gc,#fff);
+  border:1.5px solid var(--gc,#fff);border-radius:7px;width:22px;
+  display:flex;align-items:center;justify-content:center;text-shadow:0 0 6px var(--gc);
+  background:color-mix(in srgb, var(--gc,#fff) 13%, transparent);}
 .dgrade-row .dcard{flex:0 0 70px;width:70px;}
 .dcard{width:auto;border:2px solid var(--gc,#5fe06b);border-radius:12px;background:#0e1c2e;position:relative;
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;
@@ -11369,9 +11387,11 @@ function mutDrawerHtml(p){
   }
   return `
     <div class="drawer-head"><span class="dh-t">🎴 보유 변이 카드 · 장착 ${eq.length}/5</span></div>
-    <div class="drawer-sec"><div class="drawer-sec-h">🌐 공통 카드 (모든 변이형 장착)</div>
+    <div class="drawer-sec sec-common">
+      <div class="drawer-sec-h"><span class="dsh-ico">🌐</span><span class="dsh-t">공통 카드</span><span class="dsh-sub">모든 변이형 장착</span><span class="dsh-cnt">${common.length}</span></div>
       ${ common.length ? mutGradeRowsHtml(p, common) : '<div class="drawer-empty">공통 카드 없음</div>' }</div>
-    <div class="drawer-sec"><div class="drawer-sec-h">🧬 변이형 전용 카드</div>
+    <div class="drawer-sec sec-variant">
+      <div class="drawer-sec-h"><span class="dsh-ico">🧬</span><span class="dsh-t">변이형 전용 카드</span><span class="dsh-sub">해당 변이형만 장착</span><span class="dsh-cnt">${variant.length}</span></div>
       ${ variant.length ? mutGradeRowsHtml(p, variant) : '<div class="drawer-empty">변이형 전용 카드 없음</div>' }</div>`;
 }
 
