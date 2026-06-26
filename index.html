@@ -11677,7 +11677,7 @@ async function applySkill(a, d, s, side, options={}){
   }
   if(s.energyGain){ const eg=Math.max(0,Math.round(s.energyGain*effMul)); const before=a.energy; a.energy = Math.min(a.energyMax, a.energy + eg); if(a.energy>before) effectNotes.push('에너지가 회복되었다!'); blog(`▶ ⚡ ${eg} 충전`); }
   if(s.cleanse){ const neg = a.buffs.filter(b=>b.kind==='debuff').length + a.dots.length; a.buffs = a.buffs.filter(b=>b.kind!=='debuff'); a.dots = []; if(neg){ effectNotes.push('해로운 효과가 해제되었다!'); blog(`▶ 🧼 디버프 ${neg}개 해제`); } }
-  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul; const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
+  if(s.heal){ const healPct = s.heal * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul * healMult(a); const h = Math.round(a.max*healPct), before=a.hp; a.hp = Math.min(a.max, a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ ☀️ 체력 ${h} 회복${s.elem?` <span style="color:var(--sub)">(속성 보정)</span>`:''}`); sfx.heal(); }
   if(s.selfBuff){ const bpct = s.selfBuff.pct * (s.elem ? (1 + (a.elem||0)/100) : 1) * effMul; a.buffs.push({stat:s.selfBuff.stat,pct:bpct,turns:s.selfBuff.turns,kind:'buff'}); spriteFx(side,'buff'); fxPopup(side,'🔺 '+battleStatLabel(s.selfBuff.stat),'buf'); effectNotes.push(`${battleStatLabel(s.selfBuff.stat)}이 증가하였다!`); blog(`▶ 🔺 ${statName(s.selfBuff.stat)} ${Math.round(bpct*100)}%↑ (${s.selfBuff.turns}턴)`); }
   if(s.tagBuff||s.tagBuffs){ // 태그 시너지 발동형: 특정 태그 스킬만 N턴간 강화/할인(임시 보정 풀)
     const tbs = s.tagBuffs || [s.tagBuff];
@@ -11760,7 +11760,7 @@ async function applySkill(a, d, s, side, options={}){
     await sleep(560);
     const predLs = (s.pred && a.cardFx) ? (a.cardFx.predBoost.lifesteal||0) : 0;
     const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
-    if(ls>0 && dm>0){ const h=Math.round(dm*ls), before=a.hp; a.hp=Math.min(a.max,a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
+    if(ls>0 && dm>0){ const h=Math.round(dm*ls*healMult(a)), before=a.hp; a.hp=Math.min(a.max,a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
     if(s.steal){ const sa=Math.round(d.atk*s.steal.pct), sd=Math.round(d.def*s.steal.pct); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(s.steal.stat==='both'){ d.def=Math.max(1,d.def-sd); a.def+=sd; } effectNotes.push('상대의 능력치를 흡수하였다!'); blog(`▶ 🧬 능력치 흡수! 공격 +${sa}${s.steal.stat==='both'?` · 방어 +${sd}`:''}`); }
     if(s.pred && a.cardFx){ const pb=a.cardFx.predBoost;
       if(pb.atkSteal>0){ const sa=Math.round(d.atk*pb.atkSteal); d.atk=Math.max(1,d.atk-sa); a.atk+=sa; if(sa>0){ effectNotes.push('상대의 공격력을 흡수하였다!'); blog(`▶ 🧬 공격력 ${sa} 강탈`); } }
@@ -11789,10 +11789,12 @@ async function applySkill(a, d, s, side, options={}){
   updateBars();
   await sleep(180);
 }
+const BLEED_HEAL_MULT = 0.5; // 출혈 = 지속피해 + 회복 감소(전역 정체성)
+function healMult(u){ return (u && u.dots && u.dots.some(d=>d.kind==='bleed')) ? BLEED_HEAL_MULT : 1; }
 async function tickStatuses(u, side){
   let changed=false;
   const statusNotes=[];
-  if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct), before=u.hp; u.hp=Math.min(u.max,u.hp+h); if(u.hp>before){ popup(side,'회복',true); statusNotes.push('체력이 회복되었다!'); } blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
+  if(u.passives.regenPct>0 && u.hp>0 && u.hp<u.max){ const h=Math.round(u.max*u.passives.regenPct*healMult(u)), before=u.hp; u.hp=Math.min(u.max,u.hp+h); if(u.hp>before){ popup(side,'회복',true); statusNotes.push('체력이 회복되었다!'); } blog(`<span class="em">${u.name}</span> 재생 +${h}`); changed=true; }
   if(u.dots && u.dots.length){
     let total=0; u.dots.forEach(dot=>{ total+=dot.dmg; });
     if(total>0){ u.hp=Math.max(0,u.hp-total); popup(side,'-'+total,false); const kinds=[...new Set(u.dots.map(x=>x.kind))]; spriteFx(side, kinds.includes('burn')?'burn':kinds.includes('bleed')?'bleed':'poison'); statusNotes.push(kinds.includes('poison')?'중독 피해를 입었다!':kinds.includes('burn')?'화상 피해를 입었다!':kinds.includes('bleed')?'출혈 피해를 입었다!':'지속 피해를 입었다!'); blog(`<span class="em">${u.name}</span> 지속피해 ${total}`); changed=true; }
@@ -12916,6 +12918,12 @@ window.__catalogSelfTest = function(){
 };
 function __eq(a,b,msg){ if(a!==b) throw new Error((msg||'')+' expected '+JSON.stringify(b)+' got '+JSON.stringify(a)); }
 function __ok(c,msg){ if(!c) throw new Error(msg||'assertion failed'); }
+
+/* ── #1-A 컨셉/스킬 확장 엔진 헬퍼 테스트 ── */
+window.__test('engine: bleed halves healing (healMult)', function(){
+  __eq(healMult({ dots:[] }), 1, 'no bleed → 1');
+  __eq(healMult({ dots:[{kind:'bleed',dmg:5,turns:2}] }), 0.5, 'bleed → 0.5');
+});
 
 window.__test('baseline: SPECIES has legacy keys', function(){
   ['flame','aqua','thorn','gaia','windy','spark','frost'].forEach(k => __ok(SPECIES[k], 'missing legacy species '+k));
