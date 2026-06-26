@@ -1113,6 +1113,23 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .exhangar-up .u-desc{color:var(--sub);font-size:12px;margin:5px 0 7px;}
 .exhangar-up .u-cmp{font-size:12.5px;margin-bottom:8px;}
 .exhangar-up .u-cmp b{color:var(--neon);}
+/* 격납고 다이어그램 — 중앙 탐사선 SVG + 사방 4콜아웃(부품 위치로 연결선) */
+.exh-stage{position:relative;padding:6px 4px 10px;}
+.exh-connectors{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+.exh-conn-line{stroke:rgba(63,224,196,.5);stroke-width:1.5;stroke-dasharray:3 3;}
+.exh-conn-dot{fill:#3fe0c4;}
+.exh-stage-mid{display:flex;align-items:center;justify-content:center;gap:8px;position:relative;z-index:2;}
+.exh-craft{flex:0 0 116px;width:116px;}
+.exh-diagram{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 18px rgba(0,0,0,.5));}
+.exh-callout{position:relative;z-index:2;background:rgba(9,16,29,.92);border:1px solid rgba(63,224,196,.3);border-radius:10px;padding:8px 10px;min-width:122px;max-width:150px;}
+.exh-callout-top{margin:0 auto 8px;}
+.exh-callout-bottom{margin:8px auto 0;}
+.exh-head{font-size:12.5px;font-weight:800;color:#cfeee6;white-space:nowrap;}
+.exh-cmp{font-size:11px;color:var(--sub);margin:3px 0 7px;}
+.exh-cmp b{color:#fff;}
+.exh-lv{font-size:10px;font-weight:700;color:#3fe0c4;background:rgba(63,224,196,.12);border:1px solid rgba(63,224,196,.3);border-radius:6px;padding:0 5px;margin-left:4px;}
+.exh-btn{width:100%;font-size:11.5px;padding:6px 6px;}
+@media(max-width:560px){ .exh-callout{min-width:98px;max-width:124px;padding:6px 7px;} .exh-craft{flex-basis:88px;width:88px;} }
 .explanet.sel .explanet-core{outline:3px solid var(--neon);outline-offset:4px;}
 .explanet.sel .explanet-label{border-color:var(--neon);color:var(--neon);}
 /* 행성 정보 작은 팝업 (그림2) */
@@ -1271,6 +1288,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
 .up-stat{background:#0e1828;border:1px solid var(--line);border-radius:12px;padding:7px 6px 6px;text-align:center;
   display:block;width:100%;color:var(--text);}
 .up-stat .ust-name{font-size:12px;font-weight:900;}
+.up-stat .ust-lv{font-size:10px;font-weight:700;color:#3fe0c4;background:rgba(63,224,196,.12);border:1px solid rgba(63,224,196,.3);border-radius:6px;padding:0 5px;margin-left:3px;}
 .up-stat .ust-mid{display:flex;gap:4px;margin-top:5px;}
 .up-stat .ust-val{flex:1;background:#0a1320;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 2px;
   font-size:13px;font-weight:900;color:var(--neon);min-width:0;}
@@ -9133,27 +9151,83 @@ function exResultHtml(){
   }
   return ''; // 성공 결과는 공통 RewardReveal(탐사 상자 개봉)로 표시
 }
+/* 강화 표시 레벨 = 강화 횟수 + 1(시작 Lv.1). 탐사선 콜아웃·식물 강화 카드 공용. */
+function upgradeLevelText(count){ return 'Lv.' + ((count||0) + 1); }
+/* 격납고 다이어그램 — 부품 앵커(viewBox 100×100 기준). 콜아웃 연결선이 가리킬 지점. */
+const SHIP_ANCHORS = {
+  scanner:    { x:50, y:20 },  // 전방 센서(상)
+  fuel_tank:  { x:50, y:88 },  // 후미 추진(하)
+  durability: { x:40, y:54 },  // 선체(좌측 콜아웃)
+  harvester:  { x:72, y:60 },  // 측면 채집 암(우측 콜아웃)
+};
+function shipDiagramSvg(){
+  return `<svg class="exh-diagram" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs><linearGradient id="exhHull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a4a57"/><stop offset="1" stop-color="#14242c"/></linearGradient></defs>
+    <ellipse cx="50" cy="58" rx="10" ry="27" fill="url(#exhHull)" stroke="#3fe0c4" stroke-width="1.1"/>
+    <circle cx="50" cy="20" r="7.5" fill="#0d1b22" stroke="#7fd6f0" stroke-width="1.4"/>
+    <circle cx="50" cy="20" r="3" fill="#7fd6f0" opacity=".85"/>
+    <path d="M44 80 L40 93 L50 87 L60 93 L56 80 Z" fill="#ff8a4a" stroke="#3fe0c4" stroke-width=".8"/>
+    <path d="M40 52 L18 56 L18 64 L42 62 Z" fill="#1b3540" stroke="#3fe0c4" stroke-width=".8"/>
+    <path d="M60 55 L84 58 L84 66 L60 66 Z" fill="#1b3540" stroke="#3fe0c4" stroke-width=".8"/>
+  </svg>`;
+}
+function renderShipCallout(ship, upgrade, side){
+  const atMax = shipUpgradeAtMax(ship, upgrade);
+  const cost = shipUpgradeFinalCost(upgrade);
+  const canBuy = !atMax && (state.credits || 0) >= cost;
+  const lv = (ship.upgrade_levels && ship.upgrade_levels[upgrade.id]) || 0;
+  return `<div class="exh-callout exh-callout-${side}" data-anchor="${upgrade.id}">
+    <div class="exh-head">${upgrade.icon} ${upgrade.label} <span class="exh-lv">${upgradeLevelText(lv)}</span></div>
+    <div class="exh-cmp">현재 <b>${shipUpgradeCurrentText(ship, upgrade)}</b> → <b>${atMax ? shipUpgradeCurrentText(ship, upgrade) : shipUpgradeNextText(ship, upgrade)}</b></div>
+    <button class="btn ${canBuy?'primary':''} exh-btn" data-ship-upgrade="${upgrade.id}" ${canBuy ? '' : 'disabled'}>${atMax ? '최대 강화' : fmt(cost)+'💰 강화'}</button>
+  </div>`;
+}
+function drawShipConnectors(){
+  const stage = document.getElementById('exhStage');
+  const svg = document.getElementById('exhConnectors');
+  const craft = document.getElementById('exhCraft');
+  if(!stage || !svg || !craft) return;
+  const sr = stage.getBoundingClientRect();
+  if(sr.width < 2) return; // collapse 가드
+  const cr = craft.getBoundingClientRect();
+  svg.setAttribute('viewBox', `0 0 ${sr.width} ${sr.height}`);
+  svg.innerHTML = '';
+  stage.querySelectorAll('.exh-callout').forEach(box => {
+    const id = box.dataset.anchor; const a = SHIP_ANCHORS[id]; if(!a) return;
+    const ax = cr.left - sr.left + cr.width * (a.x/100);
+    const ay = cr.top - sr.top + cr.height * (a.y/100);
+    const br = box.getBoundingClientRect();
+    const bx = br.left - sr.left + br.width/2;
+    const by = br.top - sr.top + br.height/2;
+    const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1', bx); ln.setAttribute('y1', by);
+    ln.setAttribute('x2', ax); ln.setAttribute('y2', ay);
+    ln.setAttribute('class','exh-conn-line');
+    svg.appendChild(ln);
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx', ax); dot.setAttribute('cy', ay); dot.setAttribute('r', 3);
+    dot.setAttribute('class','exh-conn-dot'); svg.appendChild(dot);
+  });
+}
 function exHangarHtml(){
   if(!exHangarOpen) return '';
   const ship = exShip();
-  const statRows = shipSummaryStats(ship).map(([l,v]) => `<div class="exhangar-stat">${l}<b>${v}</b></div>`).join('');
-  const upRows = SHIP_UPGRADES.map(u => {
-    const cost = shipUpgradeFinalCost(u);
-    const atMax = shipUpgradeAtMax(ship, u);
-    const canBuy = !atMax && (state.credits || 0) >= cost;
-    return `<div class="exhangar-up">
-      <div class="u-top"><span>${u.icon} ${u.label}</span><span>${atMax?'최대':fmt(cost)+'💰'}</span></div>
-      <div class="u-desc">${u.desc||''}</div>
-      <div class="u-cmp">현재 <b>${shipUpgradeCurrentText(ship,u)}</b> → 강화 후 <b>${atMax?shipUpgradeCurrentText(ship,u):shipUpgradeNextText(ship,u)}</b></div>
-      <button class="btn ${canBuy?'primary':''}" data-ship-upgrade="${u.id}" ${canBuy?'':'disabled'}>${atMax?'최대 강화 완료':'강화'}</button>
-    </div>`;
-  }).join('');
+  const byId = id => SHIP_UPGRADE_INDEX[id];
   return `<div class="exhangar-backdrop" id="exHangarBackdrop"><div class="exhangar-card">
     <button class="btn exhangar-x" id="exHangarX">✕</button>
     <h3>🛰️ 탐사선 격납고</h3>
     <p class="sub">크레딧으로 탐사선을 강화합니다. ⛽연료(폴드 에너지) 탱크를 올리면 <b>더 깊은 폴드 심도</b>의 좌표가 열립니다.</p>
-    <div class="exhangar-stats">${statRows}</div>
-    ${upRows}
+    <div class="exh-stage" id="exhStage">
+      <svg class="exh-connectors" id="exhConnectors" aria-hidden="true"></svg>
+      ${renderShipCallout(ship, byId('scanner'), 'top')}
+      <div class="exh-stage-mid">
+        ${renderShipCallout(ship, byId('durability'), 'left')}
+        <div class="exh-craft" id="exhCraft">${shipDiagramSvg()}</div>
+        ${renderShipCallout(ship, byId('harvester'), 'right')}
+      </div>
+      ${renderShipCallout(ship, byId('fuel_tank'), 'bottom')}
+    </div>
   </div></div>`;
 }
 function exTravelOverlay(p, done){
@@ -9303,6 +9377,9 @@ renderExploration = function(){
     if(hangarBack) hangarBack.addEventListener('click', e => { if(e.target === hangarBack){ exHangarOpen = false; sfx.tap(); renderExploration(); } });
     // 탐사선 강화
     body.querySelectorAll('[data-ship-upgrade]').forEach(btn => btn.addEventListener('click', () => upgradeShipStat(btn.dataset.shipUpgrade)));
+    // 격납고 다이어그램 연결선(레이아웃 확정 후 실측 좌표로 그림)
+    if(exHangarOpen) requestAnimationFrame(drawShipConnectors);
+    if(!window.__exhConnBound){ window.__exhConnBound = true; window.addEventListener('resize', () => { if(document.getElementById('exhStage')) drawShipConnectors(); }); }
     // 확대/축소 버튼
     const zin = $('#exZoomIn');
     if(zin) zin.addEventListener('click', () => { exView.scale *= 1.18; applyExTransform(); sfx.tap(); });
@@ -11143,7 +11220,7 @@ function upStatVal(s, k){ return k==='acc' ? s.acc+'%' : k==='crit' ? s.critRate
 function upStatCard(p, s, d){
   const lv = p.up[d.k] || 0, cost = upCost(lv), dis = state.credits < cost;
   return `<button class="up-stat" data-up="${d.k}" ${dis?'disabled':''}>
-    <div class="ust-name">${d.name}</div>
+    <div class="ust-name">${d.name} <span class="ust-lv">${upgradeLevelText(lv)}</span></div>
     <div class="ust-mid">
       <span class="ust-val">${upStatVal(s, d.k)}</span>
       <span class="ust-buy">💰${fmt(cost)}<small>강화</small></span>

@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-26 — 탐사선 격납고 개조실 UI 재설계 (중앙 탐사선 SVG + 사방 4콜아웃 연결선 + 강화 레벨 Lv 표시)
+- **계획 vs 현실 — 죽은 코드 발견:** [탐사선 개조실 UI 재설계 계획](superpowers/plans/2026-06-26-explorer-ship-upgrade-ui-redesign.md) Task 2~4가 지목한 함수(`executeExploration`·`explorationFuelCost`·`renderRegionBriefPopup`·`renderExplorationResult`·`renderShipModRoom`)가 **전부 죽은 코드**였다. `renderExploration`이 4번 재정의되고 **마지막(9233)만 활성** — 라이브 경로는 `ex*` 아틀라스 재작성본(`exHangarHtml`·`exploreViewRun`·`exResultHtml`·`exDetailHtml`). **라이브 러너 `exploreViewRun`은 이미 크레딧만 차감·연료 차감 없음**(궤도=연료탱크로만 게이팅) → **Task 2(연료 제거)는 라이브에서 이미 충족**. 사용자 결정(Option A)으로 죽은 코드는 그대로 두고, Task 3·4를 **라이브 `exHangarHtml`로 재지정**해 구현.
+- **Task 3 — 격납고 다이어그램:** `exHangarHtml`을 "중앙 탐사선 SVG(`shipDiagramSvg`) + 사방 4콜아웃(상=탐사장치·하=연료탱크·좌=내구성·우=채집기)"으로 교체. 콜아웃→부품 위치로 **점선 연결선**(`drawShipConnectors`가 `getBoundingClientRect` 실측 → SVG `<line>`+앵커 dot, `SHIP_ANCHORS` viewBox 100×100 기준). 라이브 `renderExploration`에서 `exHangarOpen`일 때 `requestAnimationFrame(drawShipConnectors)` + 리사이즈 1회 바인딩. 강화 버튼은 기존 `data-ship-upgrade`→`upgradeShipStat` 단일 경로 재사용. `exh-` 프리픽스 CSS.
+- **Task 4 — 강화 레벨(Lv.N):** 공용 헬퍼 `upgradeLevelText(count)=Lv.(count+1)`. 탐사선 콜아웃 `exh-head`(`upgrade_levels[id]` 기준)와 식물 강화 카드 `upStatCard`의 `ust-name`(`p.up[k]` 기준)에 Lv 배지(`.exh-lv`/`.ust-lv`).
+- **검증(preview 실측):** 셀프테스트 0 fail. 격납고: 콜아웃 4·연결선 4·앵커 dot 4·중앙 SVG 렌더, 실제 모바일 폭(375)에서 카드 내 수납·중앙행렬 무겹침. 강화 클릭 → 크레딧 차감(내구 140)·스탯 60→72·`upgrade_levels` 0→1·Lv 배지 Lv.1→Lv.2·연결선 재렌더. 식물 강화창: ust-lv Lv.1→Lv.2. (스크린샷은 배경 애니메이션으로 타임아웃 → 기하 측정으로 확정)
+- **미적용(Option A 범위 밖):** 죽은 연료/레거시 코드(`executeExploration`·구 `renderExploration` 3종·`renderShipModRoom`·연료 상점 항목·죽은 `shipSummaryStats` 중복) 정리는 후속. `min_equipment_bonus` 행성/지역 게이팅은 라이브 경로에서 미사용이라 무영향.
+
 ### 2026-06-26 — 메인화면 화분/나무 의자 정렬 수정 (의자가 화분 앞으로 튀어나옴 + 높이 어긋남)
 - **증상:** 메인화면에서 나무 의자(`.wood-stool`)가 화분(`.pp-pot`) **앞에** 그려지고, 화분 베이스가 좌석면보다 ~20px 아래로 꺼져 다리 사이에 박혀 높이가 안 맞음.
 - **원인 1 (z-order):** `.wood-stool`(z-index:1)과 `.pp-pot`(z-index:1)이 같은 z인데 의자가 DOM상 뒤라 화분 위에 페인팅 → 의자가 앞. **수정:** `.pp-stack{z-index:2}` 부여 → 화분+식물 그룹이 의자(z1) 위 단일 스택으로. (의자 뒤·화분/식물 앞)
