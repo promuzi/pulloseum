@@ -10206,6 +10206,50 @@ const VINE_FORM_PIXELS = {
 .forEach(function(e){ SPECIES_PIXELS[e[0]] = VINE_FORM_PIXELS[e[1]]; });
 
 /* 격자 1장 → SVG rect 묶음. 단계(gi)별 크기 가감(성장체=축소). 랜덤 부속·무늬·variant 색필터 미혼입. */
+/* === 속성별 효과 오버레이 — 같은 변이형이라도 속성에 맞는 효과(불꽃·물방울·번개·서리…)를
+   변이형 핵심 부위(칼날끝·아가리·독주머니 등 FORM_FX_FOCUS)에 얹어 "불 칼날/서리 아가리"처럼
+   변이 특징을 속성으로 재해석. 색이 아니라 모양으로 속성을 구분. (격자 svg 내부라 재픽셀화 무관) */
+const ELEMENT_FX_PAL = {
+  fire:  {X:'#fff3b0', F:'#ffd34a', f:'#ff6a2c'},
+  water: {X:'#ffffff', F:'#bfe9ff', f:'#3fb6f0'},
+  grass: {X:'#eaffd0', F:'#bdf5a8', f:'#5fce63'},
+  earth: {X:'#efe0bf', F:'#c9a26b', f:'#8a6a3d'},
+  wind:  {X:'#ffffff', F:'#d7fbf4', f:'#7fd0c2'},
+  bolt:  {X:'#ffffff', F:'#ffe14a', f:'#d8a200'},
+  ice:   {X:'#ffffff', F:'#cfe7ff', f:'#7fb8e8'},
+};
+const ELEMENT_FX_MOTIF = {  // 위로/아래로 흐르는 속성 입자 — 속성마다 형태가 다름
+  fire:  ["..X..","..XF.",".XFf.","XFFf.",".ff.."],     // 위로 타오르는 불꽃
+  water: [".X.","XFX","XFf",".f."],                       // 물방울
+  grass: ["..X",".XF","XFf","Xf."],                       // 떠다니는 잎
+  earth: [".XX.","XFFf","ffff"],                          // 바위 조각
+  wind:  ["XF..","..XFf","FX...","Xf.."],                 // 휘도는 바람결
+  bolt:  [".X..","XFf.","..Xf",".Xf.","Xf.."],            // 갈지자 번개
+  ice:   [".X.","XFX","FfXf",".X."],                      // 결정/눈송이
+};
+const FORM_FX_FOCUS = { base:[60,30], toxic:[60,26], pred:[60,24], weapon:[82,14], dragon:[60,26], normal:[60,18] };
+function fxRects(motif, pal, cell, ox, oy){
+  let out='';
+  for(let r=0;r<motif.length;r++){ const row=motif[r];
+    for(let c=0;c<row.length;c++){ const ch=row[c]; if(!pal[ch]) continue;
+      out += `<rect x="${(ox+c*cell).toFixed(1)}" y="${(oy+r*cell).toFixed(1)}" width="${cell}" height="${cell}" fill="${pal[ch]}"/>`; } }
+  return out;
+}
+function renderElementFx(el, formKey){
+  const pal = ELEMENT_FX_PAL[el], motif = ELEMENT_FX_MOTIF[el];
+  if(!pal || !motif) return '';
+  const mwU = Math.max.apply(null, motif.map(r=>r.length)), mhU = motif.length;
+  let s = '<g shape-rendering="crispEdges">';
+  // 주변 앰비언트(좌우 + 바닥 둘레) — 속성 아우라, 또렷하게
+  [[8,42,1.8],[100,40,1.8],[10,74,1.6],[100,72,1.6],[30,104,1.5],[80,104,1.5]].forEach(p => {
+    s += fxRects(motif, pal, p[2], p[0], p[1]); });
+  // 포커스 분출(크게) — 변이형 핵심 부위에서 속성 효과가 피어오름(불=칼날에 불꽃, 서리=아가리에 결정…)
+  const f = FORM_FX_FOCUS[formKey] || [60,26];
+  const fc = 2.6;
+  s += fxRects(motif, pal, fc, f[0]-mwU*fc/2, f[1]-mhU*fc);
+  s += '</g>';
+  return s;
+}
 function renderSpeciesPixels(pix, el, gi){
   const pal = speciesPixelPalette(el);
   const cell = pix.cell || 2;
@@ -10231,7 +10275,7 @@ function composePlantSvg(seedType, growth, element, opts){
   const pix = (opts.varKey && gi>=3) ? SPECIES_PIXELS[opts.varKey] : null;
   let bodyHtml, pixelMark='';
   if(pix){
-    bodyHtml = renderSpeciesPixels(pix, el, gi);
+    bodyHtml = renderSpeciesPixels(pix, el, gi) + renderElementFx(el, opts.form || 'base');
     pixelMark = ' data-pixelgrid="1"';   // 런타임 픽셀화 사후패스가 이 격자는 건드리지 않게 표식
   } else {
     const inner = `${composePlantBody(seedType, gi, P, el, shape)}${bodyAccentSvg(opts, el, gi, P)}`;
@@ -14154,12 +14198,16 @@ window.__test('pixel: 손그림 격자(redraw) 경로 + 폴백', function(){
   const other = composePlantSvg('flower','mature','fire',{varKey:'__none__'});
   __ok(other.indexOf('data-pixelgrid')<0, '미등록 종=기존 폴백');
 });
-window.__test('pixel: 속성=팔레트 리컬러만(격자=정체성 불변)', function(){
+window.__test('pixel: 변이형 격자 불변 + 속성 효과는 모양으로 다름', function(){
+  const ocount = s => (s.match(new RegExp('fill="'+STRUCT_PALETTE.O+'"','g'))||[]).length;
   const rc = s => (s.match(/<rect/g)||[]).length;
-  const g = composePlantSvg('vine','mature','grass',{varKey:'venom_weed'});
-  const f = composePlantSvg('vine','mature','fire',{varKey:'venom_weed'});
-  __eq(rc(g), rc(f), '두 속성 rect 수 동일(같은 격자=정체성 불변)');
-  __ok(g.indexOf(STRUCT_PALETTE.O)>=0 && f.indexOf(STRUCT_PALETTE.O)>=0, '구조 외곽선색 양쪽 동일(속성 무관)');
+  const g = composePlantSvg('vine','mature','grass',{varKey:'venom_weed', form:'toxic'});
+  const f = composePlantSvg('vine','mature','fire',{varKey:'venom_weed', form:'toxic'});
+  // 변이형 실루엣(구조 외곽선 격자)은 속성 무관 동일 — FX는 O색을 안 쓰므로 O-rect 수로 격자만 비교
+  __eq(ocount(g), ocount(f), '변이형 실루엣(구조 외곽선 격자) 속성 무관 동일');
+  // 속성 효과(FX)는 속성마다 모양이 달라 전체 rect 수가 달라진다(=색만 다른 게 아님)
+  __ok(rc(g)!==rc(f), '속성별 효과로 전체 모양이 달라짐(색만 차이 아님)');
+  __ok(g.indexOf(STRUCT_PALETTE.O)>=0 && f.indexOf(STRUCT_PALETTE.O)>=0, '구조 외곽선색 양쪽 존재');
   __ok(g.indexOf(ELEMENT_PALETTE.grass.main)>=0 && g.indexOf(ELEMENT_PALETTE.fire.main)<0, 'grass=풀 본체색만');
   __ok(f.indexOf(ELEMENT_PALETTE.fire.main)>=0 && f.indexOf(ELEMENT_PALETTE.grass.main)<0, 'fire=불 본체색만');
 });
