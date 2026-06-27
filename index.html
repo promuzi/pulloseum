@@ -9918,6 +9918,103 @@ function dualMushroomAccentSvg(varKey){
     + `<circle cx="46" cy="34" r="2.2" fill="${c}"/><circle cx="74" cy="36" r="2" fill="${c}"/>`
     + `<circle cx="60" cy="28" r="1.8" fill="${c}"/></g>`;
 }
+/* ===== 개체별 손그림 픽셀 격자(redraw) — 설계 2026-06-27 =====
+   175개체 각자 고유 ASCII 격자(성체 기준)로 정체성=모양(색·효과만의 구분 금지·하드 원칙).
+   속성(element)은 팔레트 리컬러 역할만. 구조 고정색(O 외곽·S/s/H 금속·W/w 목질·K/k 상아)은
+   속성 무관 동일 색, 본체(B/b/l)·기운(F/f)만 그 개체 자기 속성색. */
+const STRUCT_PALETTE = {
+  O:'#1b2436',                              // 외곽선(어둡되 다크 배경에서 식별되도록)
+  S:'#aab4c0', s:'#5e6c7b', H:'#e6eef4',    // 금속/갑옷: 강철·암부·하이라이트
+  W:'#7a5230', w:'#553720',                 // 목질
+  K:'#efe6cc', k:'#c7b48a',                 // 뿔/이빨(상아)
+};
+function elementBodyPalette(el){
+  const P = elementPalette(el);
+  return { B:P.main, b:P.dark, l:P.light, F:P.accent, f:P.main };
+}
+function speciesPixelPalette(el){ return Object.assign({}, STRUCT_PALETTE, elementBodyPalette(el)); }
+/* 종 픽셀 레지스트리 — 키=종 키, 값={ rows:[...ascii], cell?, ox?, oy? }. 바닥 base y96·중심 x=60 자동 정렬.
+   문자: O외곽 / B본체 b암부 l명부 / F기운 f기운암부 / K가시·이빨 k상아암 / S금속 s암 H광. (구조색=속성무관)
+   === 파일럿: 덩굴(vine) — 화풍·cell·정렬·팔레트 확정용 (2026-06-27) === */
+const SPECIES_PIXELS = {
+  // 베놈위드(독성 덩굴·풀) — 곧은 가시 줄기, 끝에 벌어진 독주머니
+  venom_weed: { cell:2, rows:[
+    ".....OOOOOO",
+    "...OOFFFFFFOO",
+    "..OFFFFffFFFFO",
+    "..OFFFffffFFFO",
+    "..OFFFFffFFFFO",
+    "...OfFFFFFFfO",
+    "....OObFFbOO",
+    "......OBBO",
+    ".....OBbBBO",
+    ".....OBbBBO",
+    "..kbBOBbBBO",
+    "...kbOBbBBO",
+    ".....OBbBBO",
+    ".....OBbBBOBbk",
+    ".....OBbBBObk",
+    ".....OBbBBO",
+    ".....OBbBBO",
+    "..kbBOBbBBO",
+    "...kbOBbBBO",
+    ".....OBbBBO",
+    ".....OBbBBOBbk",
+    ".....OBbBBObk",
+    ".....OBbBBO",
+    "....OBbBBBO",
+    "...lOBbBBOl",
+    "..OllBbBBllO",
+    ".OBllBbBBllBO",
+    ".OBBlBBBBlBBO",
+    "OBBBlBBBBlBBBO",
+    "OBBBBBBBBBBBBO",
+    ".OBBBBBBBBBBO",
+    "..OOOOOOOOOO",
+  ]},
+  // 쏜위드(풀 기본 덩굴) — 가시 박힌 곧은 덩굴, 잎 둘 (독주머니 없음)
+  thorn: { cell:2, rows:[
+    ".......OO",
+    "......OBBO",
+    ".....OBbBBO",
+    ".....OBbBBO",
+    "..kbBOBbBBO",
+    "...kbOBbBBO",
+    ".....OBbBBO",
+    "..OBBlOBbBBO",
+    ".OBBBlOBbBBOlBBBO",
+    ".OBBlOBbBBOlBBBBO",
+    "..OllOBbBBOlBBBO",
+    "...OOBbBBOOlBO",
+    ".....OBbBBO",
+    ".....OBbBBOBbk",
+    ".....OBbBBObk",
+    ".....OBbBBO",
+    "..kbBOBbBBO",
+    "...kbOBbBBO",
+    ".....OBbBBO",
+    "....OBbBBBO",
+    "...lOBbBBOl",
+    "..OllBbBBllO",
+    ".OBllBbBBllBO",
+    "OBBlBBBBBBlBBO",
+    "OBBBBBBBBBBBBO",
+    ".OBBBBBBBBBBO",
+    "..OOOOOOOOO",
+  ]},
+};
+/* 격자 1장 → SVG rect 묶음. 단계(gi)별 크기 가감(성장체=축소). 랜덤 부속·무늬·variant 색필터 미혼입. */
+function renderSpeciesPixels(pix, el, gi){
+  const pal = speciesPixelPalette(el);
+  const cell = pix.cell || 2;
+  let W = 0; for(let i=0;i<pix.rows.length;i++){ if(pix.rows[i].length>W) W=pix.rows[i].length; }
+  const H = pix.rows.length;
+  const ox = (pix.ox!=null) ? pix.ox : Math.round(60 - W*cell/2);
+  const oy = (pix.oy!=null) ? pix.oy : Math.round(96 - H*cell);
+  let g = pixelArt(pix.rows, pal, cell, ox, oy);
+  if(gi===3) g = `<g transform="translate(60,96) scale(.82) translate(-60,-96)">${g}</g>`; // 성장체=살짝 축소
+  return `<g shape-rendering="crispEdges">${g}</g>`;
+}
 function composePlantSvg(seedType, growth, element, opts){
   opts = opts||{}; const size = opts.size||120;
   const el = ELEMENTS[element] ? element : 'grass';
@@ -9928,15 +10025,23 @@ function composePlantSvg(seedType, growth, element, opts){
     ? `<circle cx="60" cy="52" r="${38+(evolved?6:0)}" fill="${opts.grade==='S'?'#ffd34a':P.main}" opacity="${evolved?0.22:(opts.grade==='S'?0.2:0.12)}"/>` : '';
   const spark = (opts.awakened||evolved) ? `<text x="90" y="26" font-size="15" fill="${P.accent}" stroke="${P.dark}" stroke-width=".4">✦</text><text x="22" y="40" font-size="10" fill="${P.accent}" stroke="${P.dark}" stroke-width=".3">✦</text>` : '';
   const shape = opts.varKey ? shapeFamily(opts.varKey) : (opts.bodyStyle || 'classic');
-  const inner = `${composePlantBody(seedType, gi, P, el, shape)}${bodyAccentSvg(opts, el, gi, P)}`;
-  const V = opts.varKey ? plantVariant(opts.varKey) : null;
-  const bodyHtml = V
-    ? `<g transform="translate(60,76) scale(${V.sx},${V.sy}) translate(-60,-76)"><g style="filter:hue-rotate(${V.hue}deg) saturate(${V.sat}) brightness(${V.bri})">${inner}</g>${markingSvg(V)}${featuresSvg(opts.varKey, P)}</g>`
-    : inner;
-  return `<svg width="${size}" height="${Math.round(size*140/120)}" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+  // 개체 손그림 격자: 성장체↑(gi>=3) + 등록 종 → 픽셀 경로(featuresSvg/markingSvg/variant 색필터 건너뜀)
+  const pix = (opts.varKey && gi>=3) ? SPECIES_PIXELS[opts.varKey] : null;
+  let bodyHtml, pixelMark='';
+  if(pix){
+    bodyHtml = renderSpeciesPixels(pix, el, gi);
+    pixelMark = ' data-pixelgrid="1"';   // 런타임 픽셀화 사후패스가 이 격자는 건드리지 않게 표식
+  } else {
+    const inner = `${composePlantBody(seedType, gi, P, el, shape)}${bodyAccentSvg(opts, el, gi, P)}`;
+    const V = opts.varKey ? plantVariant(opts.varKey) : null;
+    bodyHtml = V
+      ? `<g transform="translate(60,76) scale(${V.sx},${V.sy}) translate(-60,-76)"><g style="filter:hue-rotate(${V.hue}deg) saturate(${V.sat}) brightness(${V.bri})">${inner}</g>${markingSvg(V)}${featuresSvg(opts.varKey, P)}</g>`
+      : inner;
+  }
+  return `<svg width="${size}" height="${Math.round(size*140/120)}"${pixelMark} viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
     ${aura}
     ${bodyHtml}
-    ${opts.varKey ? dualMushroomAccentSvg(opts.varKey) : ''}
+    ${pix ? '' : (opts.varKey ? dualMushroomAccentSvg(opts.varKey) : '')}
     ${spark}
   </svg>`;
 }
@@ -10170,6 +10275,7 @@ function applyPixelArt(root){
     const svgStart = html.indexOf('<svg');
     if(svgStart < 0) return;                     // 이미 <img>(오버라이드 PNG)거나 비어있음 → 건너뜀
     el.dataset.px = '1';                         // 피드백 루프 차단(중복 처리 방지)
+    if(html.indexOf('data-pixelgrid') >= 0) return; // 손그림 픽셀 격자(redraw)는 이미 도트 → 재픽셀화 금지(블러 방지)
     const svg = html.slice(svgStart);
     const m = svg.match(/width="(\d+)/);
     const size = m ? parseInt(m[1],10) : 120;
@@ -13835,6 +13941,25 @@ window.__test('sprite: spriteFor/spriteStack=화분+식물 2레이어', function
   __eq(spritePotId(p), 'pot_gold', 'spritePotId=장착 화분');
   __eq(spritePotId({potId:'pot_glass'}), 'pot_glass', 'spritePotId=전투유닛 potId');
   __eq(spritePotId({}), 'pot_terra', 'spritePotId 기본=테라코타');
+});
+window.__test('pixel: 손그림 격자(redraw) 경로 + 폴백', function(){
+  const sp = SPECIES['venom_weed']; __ok(sp, 'venom_weed 존재');
+  const mat = composePlantSvg(sp.seedType,'mature','grass',{varKey:'venom_weed', form:(sp.baseVariants||[])[0]});
+  __ok(mat.indexOf('data-pixelgrid')>=0, '등록 종 성체=픽셀 격자 경로');
+  __ok(mat.indexOf('hue-rotate')<0, '픽셀 경로는 variant 색필터/랜덤 부속/무늬 스킵');
+  const spr = composePlantSvg(sp.seedType,'sprout','grass',{varKey:'venom_weed'});
+  __ok(spr.indexOf('data-pixelgrid')<0, '초반 단계(gi<3)=기존 폴백');
+  const other = composePlantSvg('flower','mature','fire',{varKey:'__none__'});
+  __ok(other.indexOf('data-pixelgrid')<0, '미등록 종=기존 폴백');
+});
+window.__test('pixel: 속성=팔레트 리컬러만(격자=정체성 불변)', function(){
+  const rc = s => (s.match(/<rect/g)||[]).length;
+  const g = composePlantSvg('vine','mature','grass',{varKey:'venom_weed'});
+  const f = composePlantSvg('vine','mature','fire',{varKey:'venom_weed'});
+  __eq(rc(g), rc(f), '두 속성 rect 수 동일(같은 격자=정체성 불변)');
+  __ok(g.indexOf(STRUCT_PALETTE.O)>=0 && f.indexOf(STRUCT_PALETTE.O)>=0, '구조 외곽선색 양쪽 동일(속성 무관)');
+  __ok(g.indexOf(ELEMENT_PALETTE.grass.main)>=0 && g.indexOf(ELEMENT_PALETTE.fire.main)<0, 'grass=풀 본체색만');
+  __ok(f.indexOf(ELEMENT_PALETTE.fire.main)>=0 && f.indexOf(ELEMENT_PALETTE.grass.main)<0, 'fire=불 본체색만');
 });
 window.__test('accent: form→accent 매핑', function(){
   __eq(accentFromForm('pred'),'maw'); __eq(accentFromForm('weapon'),'arms');

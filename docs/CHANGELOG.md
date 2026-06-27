@@ -2,11 +2,20 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
-### 2026-06-27 — 전체 픽셀(도트) 통일: 모든 개체 외형 런타임 픽셀화 (#3·#16 1·2단계)
+### 2026-06-27 — 개체 손그림 픽셀 격자(redraw) 인프라 + 덩굴 파일럿 2종 (#3)
+- **배경/결정:** "모든 개체 외형 바꾸기"에 두 접근이 충돌 — ① 런타임 픽셀화(절차 SVG 자동 도트화, 같은 타입+속성=색만 다름) ② main 확정 설계의 **개체별 손그림 격자 175장**(🚫 색·효과만의 구분 금지·정체성=모양 하드 원칙). 사용자 결정 = **redraw 채택 + 런타임 픽셀화는 폴백으로 공존**. 설계=[redraw spec](superpowers/specs/2026-06-27-pixel-sprite-individual-redraw-design.md).
+- **인프라:** `STRUCT_PALETTE`(O 외곽·S/s/H 금속·W/w 목질·K/k 상아 = 속성 무관 고정색) + `elementBodyPalette(el)`(B/b/l 본체·F/f 기운 = 속성 팔레트) + `speciesPixelPalette` 합성 + `SPECIES_PIXELS` 레지스트리 + `renderSpeciesPixels`(바닥 base y96·중심 x=60 자동 정렬, gi3 축소, 기존 `pixelArt` 재사용).
+- **`composePlantSvg` 분기:** 등록 종 + `gi>=3`(성장체↑) → 픽셀 경로(`featuresSvg`/`markingSvg`/variant 색필터 **스킵** — 사용자가 "지저분"하다던 랜덤 부속 제거), svg에 `data-pixelgrid` 표식. 초반 3단계·미등록 종은 기존 절차 폴백.
+- **공존 게이팅:** 런타임 픽셀화 사후 패스(`applyPixelArt`)가 `data-pixelgrid` 격자는 **재픽셀화 스킵**(블러 방지). 손그림 격자=정체성 / 런타임 픽셀화=아직 안 그린 종 임시 도트.
+- **덩굴 파일럿 2종:** `venom_weed`(곧은 가시 줄기+독주머니)·`thorn`(가시 줄기+잎 둘, 독주머니 없음), cell=2. **실루엣으로 구분**(모양=정체성) + 불/풀 리컬러 시 **구조색 불변·본체색만 변경** Chromium 실측.
+- **검증:** `__catalogSelfTest()` **0 fail**(픽셀 경로/폴백·속성 리컬러 불변 케이스 추가) · 게이팅(런타임 픽셀화가 격자 미교체) · 페이지 에러 0.
+- **다음:** 사용자 화풍/해상도 확인 → 덩굴 나머지 40종 → 타입별 묶음(다육→화초→목본→버섯, 버섯 보류).
+
+### 2026-06-27 — 전체 픽셀(도트) 통일: 모든 개체 외형 런타임 픽셀화 (#3·#16 1·2단계, 이후 redraw 폴백으로 격하)
 - **배경:** 175개체×6단계 외형이 전부 `composePlantSvg`의 부드러운 벡터 SVG라 픽셀 폰트·도트 톤과 어긋났다. 손그림 PNG로 전부 교체하면 1,000장+ 필요 → 비현실적. 설계 #16의 D2(엔진 런타임 픽셀화)로 **자산 0개로 전 개체를 일관된 도트로** 전환. 설계=[pixel-art-unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md) §7 1·2단계.
 - **규정(1단계):** `:root --px:3px`(온스크린 도트 1칸) + 전역 제한 팔레트 `PIXEL_PALETTE`(7속성 `ELEMENT_PALETTE` 램프 5색 + 중립색 ≈24색, `ELEMENT_PALETTE` 직후).
 - **엔진(2단계):** `pixelizeSvg(svg,size,cb)` = SVG→`Image`→offscreen 캔버스 `round(size/--px)` 격자로 다운샘플 → ImageData 색을 `PIXEL_PALETTE` 최근접 스냅(불투명만) → `toDataURL` → 표시는 `image-rendering:pixelated` 정수배 확대. **외형 마크업 해시로 캐시**(외형당 1회만 굽기, 캐시 히트 동기 반환).
-- **사후 패스(비동기 분리):** 렌더는 기존대로 동기 SVG 주입 유지(셀프테스트·dex 동기성 무영향) → `MutationObserver`(rAF 디바운스)가 `.ss-plant`/`.plant-layer`의 내부 SVG만 픽셀화 `<img>`로 교체(`data-px` 플래그로 피드백 루프 차단). **화분 레이어(`.ss-pot`)는 이미 픽셀 그리드라 제외.** 정상 부팅에서만 옵저버 기동(`startPixelArtObserver`), `__DEX_MODE`·`state.pixelArt===false`면 미동작.
+- **사후 패스(비동기 분리):** 렌더는 기존대로 동기 SVG 주입 유지(셀프테스트·dex 동기성 무영향) → `MutationObserver`(rAF 디바운스)가 `.ss-plant`/`.plant-layer`의 내부 SVG만 픽셀화 `<img>`로 교체(`data-px` 플래그로 피드백 루프 차단). **화분 레이어(`.ss-pot`)는 이미 픽셀 그리드라 제외.** 정상 부팅에서만 옵저버 기동(`startPixelArtObserver`), `__DEX_MODE`·`state.pixelArt===false`면 미동작. (후속: 손그림 격자(redraw)가 생긴 종은 `data-pixelgrid` 표식으로 재픽셀화 스킵 → 런타임 픽셀화는 "아직 안 그린 종" 폴백으로 격하됨.)
 - **검증(Chromium/Playwright):** `__catalogSelfTest()` **0 fail** · 변이종(`spore_cap`, hue-rotate 인라인 필터) 래스터화 성공 + **캔버스 오염 없음**(dataURL 정상) · 캐시 동기 히트 · 타이틀/인게임 식물 레이어 전부 픽셀화·화분 0개 픽셀화(올바른 제외) · dex 모드 옵저버 미실행·`__DEX_API` 정상 · 페이지 에러 0.
 - **비범위(후속):** UI 토큰화(버튼·카드·HP바)=3단계, AI 그림(`SPRITE_OVERRIDES`+`assets/`+sw.js)=4단계, 모션 엔진=5단계, 사운드=6단계.
 
