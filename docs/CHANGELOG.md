@@ -2,6 +2,11 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-27 — 픽셀 격자 양산 배치 1: 덩굴 변이형 템플릿 3종 (#3, 누적 5/42)
+- 화풍 사용자 승인(고해상 cell=1.8) 후 양산 착수. 변이형(form)이 실루엣을 결정하는 원칙으로 **변이형별 템플릿** 추가: `carni_vine`(포식=이빨 포충낭/아가리)·`whip_vine`(무기=칼날+미늘 채찍)·`draca_flame`(용족=뿔+막날개+비늘띠). 앞선 파일럿(`thorn` base·`venom_weed` toxic) 포함 **6 변이형 중 5개 템플릿 확정**(남은 form=normal).
+- 5종이 서로 완전히 다른 실루엣으로 구분(모양=정체성)·속성 리컬러 불변 — Chromium 콘택트시트 실측. `__catalogSelfTest()` 0 fail·게이팅 유지.
+- 다음: normal 템플릿 + 덩굴 나머지 37종(템플릿 변주) → 타입별 묶음.
+
 ### 2026-06-27 — 개체 손그림 픽셀 격자(redraw) 인프라 + 덩굴 파일럿 2종 (#3)
 - **배경/결정:** "모든 개체 외형 바꾸기"에 두 접근이 충돌 — ① 런타임 픽셀화(절차 SVG 자동 도트화, 같은 타입+속성=색만 다름) ② main 확정 설계의 **개체별 손그림 격자 175장**(🚫 색·효과만의 구분 금지·정체성=모양 하드 원칙). 사용자 결정 = **redraw 채택 + 런타임 픽셀화는 폴백으로 공존**. 설계=[redraw spec](superpowers/specs/2026-06-27-pixel-sprite-individual-redraw-design.md).
 - **인프라:** `STRUCT_PALETTE`(O 외곽·S/s/H 금속·W/w 목질·K/k 상아 = 속성 무관 고정색) + `elementBodyPalette(el)`(B/b/l 본체·F/f 기운 = 속성 팔레트) + `speciesPixelPalette` 합성 + `SPECIES_PIXELS` 레지스트리 + `renderSpeciesPixels`(바닥 base y96·중심 x=60 자동 정렬, gi3 축소, 기존 `pixelArt` 재사용).
