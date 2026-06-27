@@ -10261,14 +10261,29 @@ function renderElementFx(el, formKey){
   s += '</g>';
   return s;
 }
+/* 식물 격자 해상도를 낮춰(픽셀을 키워) 화분 픽셀과 중간 크기로 맞춘다. 최근접 다운샘플(1회 캐시). */
+const PIXEL_DOWNSCALE = 0.66; // 유효 cell ≈ 1.7/0.66 ≈ 2.6 (화분도 같은 크기로 재작성)
+function downscaleRows(rows, f){
+  const oh = rows.length; let ow=0; for(let i=0;i<oh;i++){ if(rows[i].length>ow) ow=rows[i].length; }
+  const nh = Math.max(1, Math.round(oh*f)), nw = Math.max(1, Math.round(ow*f));
+  const out = [];
+  for(let r=0;r<nh;r++){ const sr = Math.min(oh-1, Math.floor((r+0.5)/f)); let line='';
+    for(let c=0;c<nw;c++){ const sc = Math.min(ow-1, Math.floor((c+0.5)/f)); line += (rows[sr] && rows[sr][sc]) || ' '; }
+    out.push(line); }
+  return out;
+}
 function renderSpeciesPixels(pix, el, gi){
   const pal = speciesPixelPalette(el);
-  const cell = pix.cell || 2;
-  let W = 0; for(let i=0;i<pix.rows.length;i++){ if(pix.rows[i].length>W) W=pix.rows[i].length; }
-  const H = pix.rows.length;
+  let rows = pix.rows, cell = pix.cell || 2;
+  if(PIXEL_DOWNSCALE && PIXEL_DOWNSCALE < 1){
+    if(!pix.__ds) pix.__ds = downscaleRows(pix.rows, PIXEL_DOWNSCALE);
+    rows = pix.__ds; cell = cell / PIXEL_DOWNSCALE;
+  }
+  let W = 0; for(let i=0;i<rows.length;i++){ if(rows[i].length>W) W=rows[i].length; }
+  const H = rows.length;
   const ox = (pix.ox!=null) ? pix.ox : Math.round(60 - W*cell/2);
   const oy = (pix.oy!=null) ? pix.oy : Math.round(96 - H*cell);
-  let g = pixelArt(pix.rows, pal, cell, ox, oy);
+  let g = pixelArt(rows, pal, cell, ox, oy);
   if(gi===3) g = `<g transform="translate(60,96) scale(.82) translate(-60,-96)">${g}</g>`; // 성장체=살짝 축소
   return `<g shape-rendering="crispEdges">${g}</g>`;
 }
@@ -10286,7 +10301,7 @@ function composePlantSvg(seedType, growth, element, opts){
   const pix = (opts.varKey && gi>=3) ? SPECIES_PIXELS[opts.varKey] : null;
   let bodyHtml, pixelMark='';
   if(pix){
-    bodyHtml = renderElementFx(el, opts.form || 'base') + renderSpeciesPixels(pix, el, gi); // 속성 형상 뒤에·본체 앞
+    bodyHtml = renderSpeciesPixels(pix, el, gi); // 속성 주변 효과(프릴) 제거 — 사용자 요청
     pixelMark = ' data-pixelgrid="1"';   // 런타임 픽셀화 사후패스가 이 격자는 건드리지 않게 표식
   } else {
     const inner = `${composePlantBody(seedType, gi, P, el, shape)}${bodyAccentSvg(opts, el, gi, P)}`;
@@ -10319,76 +10334,104 @@ function pixelArt(rows, pal, cell, ox, oy){
   }
   return out;
 }
-/* 등급별 픽셀 화분(나무 도트 톤). 14열×9행, cell=5, ox=25, oy=94 → 입구≈y96·바닥≈y139·중심 x=60. */
+/* 등급별 픽셀 화분 — 식물 픽셀과 같은 도트 크기로 맞추려 고해상화(cell≈2.8, ~20×15). potVisual이 자동 정렬(중심 x=60·바닥 y139). */
 const POT_PIXELS = {
-  pot_terra: { // 테라코타(기본) — 메인화면 빈 화분 기준
-    pal:{ T:'#c87b48', t:'#b5673a', d:'#934e29', D:'#7d3f20', r:'#cd8350' },
+  pot_terra: { cell:2.8, // 테라코타(기본)
+    pal:{ T:'#d98a52', t:'#c87b48', d:'#934e29', D:'#7d3f20', r:'#e0975f' },
     rows:[
-      "  TTTTTTTTTT  ",
-      " rrrrrrrrrrrr ",
-      "  tttttttttt  ",
-      "  Ttttttttd   ",
-      "  Ttttttttd   ",
-      "  Ttttttttd   ",
-      "   Tttttdd    ",
-      "   DDDDDDDD   ",
-      "    DDDDDD    ",
+      "...TTTTTTTTTTTTTT...",
+      "..rrrrrrrrrrrrrrrr..",
+      "..ttttttttttttdddd..",
+      "...Tttttttttttttd...",
+      "...Tttttttttttttd...",
+      "...Tttttttttttttd...",
+      "...Ttttttttttttd....",
+      "....Tttttttttttd....",
+      "....Ttttttttttd.....",
+      ".....Tttttttttd.....",
+      ".....Ttttttttd......",
+      "......ttttttdd......",
+      "......DDDDDDDD......",
+      ".......DDDDDD.......",
+      "........DDDD........",
     ],
   },
-  pot_ceramic: { // 도자기 — 초록 유약
+  pot_ceramic: { cell:2.8, // 도자기 — 초록 유약
     pal:{ G:'#8fe89a', g:'#5fd56a', d:'#37a347', D:'#2c7d39', r:'#aff0b6' },
     rows:[
-      "  GGGGGGGGGG  ",
-      " rrrrrrrrrrrr ",
-      "  gggggggggg  ",
-      "  Gggggggggd  ",
-      "  Gggggggggd  ",
-      "  Gggggggggd  ",
-      "   Gggggddd   ",
-      "   DDDDDDDD   ",
-      "    DDDDDD    ",
+      "...GGGGGGGGGGGGGG...",
+      "..rrrrrrrrrrrrrrrr..",
+      "..ggggggggggggdddd..",
+      "...Gggggggggggggd...",
+      "...Gggggggggggggd...",
+      "...Gggggggggggggd...",
+      "...Ggggggggggggd....",
+      "....Gggggggggggd....",
+      "....Ggggggggggd.....",
+      ".....Gggggggggd.....",
+      ".....Ggggggggd......",
+      "......ggggggdd......",
+      "......DDDDDDDD......",
+      ".......DDDDDD.......",
+      "........DDDD........",
     ],
   },
-  pot_glass: { // 유리 — 반투명 하늘색 + 안쪽 흙·수면
+  pot_glass: { cell:2.8, // 유리 — 반투명 + 수면·흙
     pal:{ L:'#bdecff', l:'#7fd4f5', w:'#4ac6ff', s:'#6b4a30', d:'#2f8fc0', D:'#1f6f99' },
     rows:[
-      "  LLLLLLLLLL  ",
-      " LllllllllllL ",
-      "  Llllllllld  ",
-      "  Lwwwwwwwwd  ",
-      "  Lwwwwwwwwd  ",
-      "  Lssssssssd  ",
-      "   Lssssddd   ",
-      "   DDDDDDDD   ",
-      "    DDDDDD    ",
+      "...LLLLLLLLLLLLLL...",
+      "..LllllllllllllllL..",
+      "..lllllllllllldddd..",
+      "...Lwwwwwwwwwwwwd...",
+      "...Lwwwwwwwwwwwwd...",
+      "...Lwwwwwwwwwwwd....",
+      "...Lwwwwwwwwwwwd....",
+      "....Lsssssssssd.....",
+      "....Lssssssssd......",
+      ".....Lsssssssd......",
+      ".....Lssssssd.......",
+      "......ssssddd.......",
+      "......DDDDDDDD......",
+      ".......DDDDDD.......",
+      "........DDDD........",
     ],
   },
-  pot_crystal: { // 크리스탈 — 면 분할 보라 결정 화분(상단 결정 돌기 + 좌광/우암 면)
+  pot_crystal: { cell:2.8, // 크리스탈 — 면 분할 + 상단 결정 돌기
     pal:{ P:'#e0c8ff', p:'#b98cff', v:'#9b6bff', d:'#7a4ad0', D:'#5a32a0' },
     rows:[
-      "  P  P  P  P  ",
-      "  pppppppppp  ",
-      "  PppppvvvvD  ",
-      "  PppppvvvvD  ",
-      "  PppppvvvvD  ",
-      "   PppvvvvD   ",
-      "   PppvvvvD   ",
-      "    vvvvDD    ",
-      "    DDDDDD    ",
+      "...P...P...P...P....",
+      "...ppppppppppppp....",
+      "..ppppppppvvvvvvD...",
+      "..PpppppppvvvvvvD...",
+      "..PpppppppvvvvvvD...",
+      "...PppppppvvvvvD....",
+      "...PppppppvvvvD.....",
+      "....PppppvvvvD......",
+      "....PppppvvvvD......",
+      ".....PppvvvvD.......",
+      ".....PppvvvD........",
+      "......vvvvDD........",
+      "......DDDDDD........",
+      ".......DDDD.........",
     ],
   },
-  pot_gold: { // 황금 — 금빛 + 왕관 테두리
+  pot_gold: { cell:2.8, // 황금 — 금빛 + 왕관 테두리
     pal:{ Y:'#ffe7a0', y:'#ffc24a', o:'#ff9a3c', d:'#d4730a', D:'#9c5208', k:'#ffd24a' },
     rows:[
-      " k k kk k k k ",
-      " kkkkkkkkkkkk ",
-      "  YYYYYYYYYY  ",
-      "  Yyyyyyyyod  ",
-      "  Yyyyyyyyod  ",
-      "  Yyyyyyyyod  ",
-      "   Yyyyoodd   ",
-      "   DDDDDDDD   ",
-      "    DDDDDD    ",
+      ".k..k.kk.kk.k..k....",
+      "..kkkkkkkkkkkkkkk...",
+      "..YYYYYYYYYYYYYY....",
+      "..yyyyyyyyyyyoodd...",
+      "...Yyyyyyyyyyyod....",
+      "...Yyyyyyyyyyyod....",
+      "...Yyyyyyyyyyod.....",
+      "....Yyyyyyyyod.....",
+      "....Yyyyyyyod......",
+      ".....Yyyyyood......",
+      ".....Yyyyood.......",
+      "......yyoodd.......",
+      "......DDDDDD.......",
+      ".......DDDD........",
     ],
   },
 };
@@ -10400,7 +10443,10 @@ function potVisual(potId, size){
     return `<img src="${POT_SPRITE_OVERRIDES[potId]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:block"/>`;
   }
   const art = POT_PIXELS[potId] || POT_PIXELS.pot_terra;
-  const body = pixelArt(art.rows, art.pal, 5, 25, 94);
+  const cell = art.cell || 5;
+  let W=0; for(let i=0;i<art.rows.length;i++){ if(art.rows[i].length>W) W=art.rows[i].length; }
+  const ox = Math.round(60 - W*cell/2), oy = Math.round(139 - art.rows.length*cell); // 바닥 y139·중심 x60
+  const body = pixelArt(art.rows, art.pal, cell, ox, oy);
   return `<svg width="${size}" height="${h}" viewBox="0 0 120 140" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }
 /* 화분 레이어(뒤) + 식물 레이어(앞) 2레이어 스택. 둘 다 같은 120x140 좌표 → 식물이 화분에 앉음.
@@ -14209,18 +14255,18 @@ window.__test('pixel: 손그림 격자(redraw) 경로 + 폴백', function(){
   const other = composePlantSvg('flower','mature','fire',{varKey:'__none__'});
   __ok(other.indexOf('data-pixelgrid')<0, '미등록 종=기존 폴백');
 });
-window.__test('pixel: 변이형 격자 불변 + 속성 효과는 모양으로 다름', function(){
-  const ocount = s => (s.match(new RegExp('fill="'+STRUCT_PALETTE.O+'"','g'))||[]).length;
+window.__test('pixel: 변이 격자 리컬러 + 무기는 속성별 칼날 상이', function(){
   const rc = s => (s.match(/<rect/g)||[]).length;
   const g = composePlantSvg('vine','mature','grass',{varKey:'venom_weed', form:'toxic'});
   const f = composePlantSvg('vine','mature','fire',{varKey:'venom_weed', form:'toxic'});
-  // 변이형 실루엣(구조 외곽선 격자)은 속성 무관 동일 — FX는 O색을 안 쓰므로 O-rect 수로 격자만 비교
-  __eq(ocount(g), ocount(f), '변이형 실루엣(구조 외곽선 격자) 속성 무관 동일');
-  // 속성 효과(FX)는 속성마다 모양이 달라 전체 rect 수가 달라진다(=색만 다른 게 아님)
-  __ok(rc(g)!==rc(f), '속성별 효과로 전체 모양이 달라짐(색만 차이 아님)');
-  __ok(g.indexOf(STRUCT_PALETTE.O)>=0 && f.indexOf(STRUCT_PALETTE.O)>=0, '구조 외곽선색 양쪽 존재');
+  // 공통 변이 격자(독성)는 속성 무관 동일 격자 → 리컬러만(rect 수 동일)
+  __eq(rc(g), rc(f), '공통 변이 격자=속성 무관 동일(리컬러)');
   __ok(g.indexOf(ELEMENT_PALETTE.grass.main)>=0 && g.indexOf(ELEMENT_PALETTE.fire.main)<0, 'grass=풀 본체색만');
   __ok(f.indexOf(ELEMENT_PALETTE.fire.main)>=0 && f.indexOf(ELEMENT_PALETTE.grass.main)<0, 'fire=불 본체색만');
+  // 무기 변이형은 속성별 칼날 모양이 달라 rect 수가 다름(색만 차이 아님)
+  const wf = composePlantSvg('vine','mature','fire',{varKey:'whip_vine', form:'weapon'});
+  const wi = composePlantSvg('vine','mature','ice',{varKey:'frost_whip', form:'weapon'});
+  __ok(rc(wf)!==rc(wi), '무기=속성별 칼날 모양 상이');
 });
 window.__test('accent: form→accent 매핑', function(){
   __eq(accentFromForm('pred'),'maw'); __eq(accentFromForm('weapon'),'arms');
