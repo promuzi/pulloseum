@@ -10218,35 +10218,34 @@ const ELEMENT_FX_PAL = {
   bolt:  {X:'#ffffff', F:'#ffe14a', f:'#d8a200'},
   ice:   {X:'#ffffff', F:'#cfe7ff', f:'#7fb8e8'},
 };
-const ELEMENT_FX_MOTIF = {  // 위로/아래로 흐르는 속성 입자 — 속성마다 형태가 다름
-  fire:  ["..X..","..XF.",".XFf.","XFFf.",".ff.."],     // 위로 타오르는 불꽃
-  water: [".X.","XFX","XFf",".f."],                       // 물방울
-  grass: ["..X",".XF","XFf","Xf."],                       // 떠다니는 잎
-  earth: [".XX.","XFFf","ffff"],                          // 바위 조각
-  wind:  ["XF..","..XFf","FX...","Xf.."],                 // 휘도는 바람결
-  bolt:  [".X..","XFf.","..Xf",".Xf.","Xf.."],            // 갈지자 번개
-  ice:   [".X.","XFX","FfXf",".X."],                      // 결정/눈송이
+/* 속성 프릴(돌기) — 점이 아니라 본체색+외곽선의 큰 형상. 몸체 둘레에 돋아 실루엣을 속성으로 변형.
+   문자: B본체메인 l명부 F기운(accent) O외곽 — speciesPixelPalette(el)로 본체와 같은 톤 리컬러. */
+const ELEMENT_FRILL = {
+  fire:  ["..F..","..BF.",".FBl.","FBBlF","FBBBF","lBBBl","OBBBO",".OBO."],    // 이글거리는 불꽃 혀
+  water: ["..l..",".lBl.","FBBBF",".FBBl","l.FBB","Bl.OB",".OBBO","..OO."],     // 흐르는 물갈퀴
+  grass: ["..l..",".lBl.","lBBBl","FlBlF",".lBl.","lBBBl","OBBBO",".OBO."],     // 겹잎 프릴
+  earth: [".OBBO","OBBlBO","OBBBBO","OBlBBO","OBBBBO",".OOOO"],                 // 바위 갑옷
+  wind:  ["FBl..",".lBBl","..lBB",".FBBl","lBBl.","Bl...","O...."],            // 휘도는 바람 날
+  bolt:  ["..F..","..BF.",".FB..","FBF..","..BF.",".FB..","FBl..","O...."],    // 삐죽삐죽 번개
+  ice:   ["..l..","..B..",".OBO.","lBBBl","OBlBO",".OBO.","..B..","..O.."],    // 돋은 결정 가시
 };
-const FORM_FX_FOCUS = { base:[60,30], toxic:[60,26], pred:[60,24], weapon:[82,14], dragon:[60,26], normal:[60,18] };
-function fxRects(motif, pal, cell, ox, oy){
-  let out='';
+/* 프릴을 돋울 둘레 앵커 [x,y,cell,flip] — flip=좌우반전(좌측은 바깥쪽으로) */
+const FRILL_ANCHORS = [ [30,30,1.5,0],[90,30,1.5,1],[24,52,1.6,0],[96,52,1.6,1],[26,76,1.5,0],[94,76,1.5,1],[60,10,1.7,0] ];
+function frillRects(motif, pal, cell, ox, oy, flip){
+  let out=''; const W = Math.max.apply(null, motif.map(r=>r.length));
   for(let r=0;r<motif.length;r++){ const row=motif[r];
-    for(let c=0;c<row.length;c++){ const ch=row[c]; if(!pal[ch]) continue;
-      out += `<rect x="${(ox+c*cell).toFixed(1)}" y="${(oy+r*cell).toFixed(1)}" width="${cell}" height="${cell}" fill="${pal[ch]}"/>`; } }
+    for(let c=0;c<row.length;c++){ const ch=row[c]; if(ch===' '||ch==='.'||!pal[ch]) continue;
+      const cc = flip ? (W-1-c) : c;
+      out += `<rect x="${(ox+cc*cell).toFixed(1)}" y="${(oy+r*cell).toFixed(1)}" width="${cell}" height="${cell}" fill="${pal[ch]}"/>`; } }
   return out;
 }
 function renderElementFx(el, formKey){
-  const pal = ELEMENT_FX_PAL[el], motif = ELEMENT_FX_MOTIF[el];
-  if(!pal || !motif) return '';
-  const mwU = Math.max.apply(null, motif.map(r=>r.length)), mhU = motif.length;
+  const motif = ELEMENT_FRILL[el]; if(!motif) return '';
+  const pal = speciesPixelPalette(el);
+  const W = Math.max.apply(null, motif.map(r=>r.length)), Hh = motif.length;
   let s = '<g shape-rendering="crispEdges">';
-  // 주변 앰비언트(좌우 + 바닥 둘레) — 속성 아우라, 또렷하게
-  [[8,42,1.8],[100,40,1.8],[10,74,1.6],[100,72,1.6],[30,104,1.5],[80,104,1.5]].forEach(p => {
-    s += fxRects(motif, pal, p[2], p[0], p[1]); });
-  // 포커스 분출(크게) — 변이형 핵심 부위에서 속성 효과가 피어오름(불=칼날에 불꽃, 서리=아가리에 결정…)
-  const f = FORM_FX_FOCUS[formKey] || [60,26];
-  const fc = 2.6;
-  s += fxRects(motif, pal, fc, f[0]-mwU*fc/2, f[1]-mhU*fc);
+  FRILL_ANCHORS.forEach(a => { const cell=a[2];
+    s += frillRects(motif, pal, cell, a[0]-W*cell/2, a[1]-Hh*cell/2, a[3]); });
   s += '</g>';
   return s;
 }
@@ -10275,7 +10274,7 @@ function composePlantSvg(seedType, growth, element, opts){
   const pix = (opts.varKey && gi>=3) ? SPECIES_PIXELS[opts.varKey] : null;
   let bodyHtml, pixelMark='';
   if(pix){
-    bodyHtml = renderSpeciesPixels(pix, el, gi) + renderElementFx(el, opts.form || 'base');
+    bodyHtml = renderElementFx(el, opts.form || 'base') + renderSpeciesPixels(pix, el, gi); // 속성 형상 뒤에·본체 앞
     pixelMark = ' data-pixelgrid="1"';   // 런타임 픽셀화 사후패스가 이 격자는 건드리지 않게 표식
   } else {
     const inner = `${composePlantBody(seedType, gi, P, el, shape)}${bodyAccentSvg(opts, el, gi, P)}`;
