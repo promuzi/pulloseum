@@ -107,4 +107,6 @@ const SPECIES_PIXELS = {
 
 **✅ 배치 2 — normal 템플릿 + base 7속성 완성:** `green_vine`(normal/풀=무성한 둥근 잎) + 기본 덩굴 6속성(`vine_fire` 불꽃잎·`vine_water` 물방울잎·`vine_earth` 넓은잎·`vine_wind` 휜잎·`vine_bolt` 번개잎·`vine_ice` 결정잎). **속성별 잎 모양을 다르게**(색만 구분 금지 준수). 6 변이형 템플릿 전부 확보(base·toxic·pred·dragon·weapon·normal). 셀프테스트 0 fail.
 
-**🔜 다음:** 덩굴 나머지 30종(toxic/pred/dragon/weapon/normal 각 6 + 속성·아키타입 변주) → 타입별 묶음(다육→화초→목본→버섯). 단계별 고유 격자·초반 3단계·죽은 `FEATURE_MODULES` 정리는 1바퀴 후(YAGNI §8). **진행: 덩굴 12/42.**
+**✅ 배치 3 — weapon 7속성 완성:** `whip_vine`(칼날채찍)·`kelp_whip`(넓은 켈프날)·`thorn_whip`(가는 외날)·`root_club`(옹이 곤봉)·`wind_whip`(갈래 채찍)·`volt_whip`(갈래 번개날)·`frost_whip`(각진 결정날). 무기형 안에서도 곤봉/채찍/칼날 실루엣 차별.
+
+**🔜 다음:** 덩굴 나머지 24종(toxic/pred/dragon/normal 각 6 + 속성·아키타입 변주) → 타입별 묶음(다육→화초→목본→버섯). 단계별 고유 격자·초반 3단계·죽은 `FEATURE_MODULES` 정리는 1바퀴 후(YAGNI §8). **진행: 덩굴 18/42.**
