@@ -100,12 +100,14 @@ const SPECIES_PIXELS = {
 - `composePlantSvg` 분기: `opts.varKey` 등록 종 + `gi>=3` → 픽셀 경로(`featuresSvg`/`markingSvg`/variant 색필터 **스킵**), 그 외 기존 폴백. 픽셀 경로 svg에 `data-pixelgrid` 표식.
 - **런타임 픽셀화(unification 폴백)와 공존:** 사후 패스 `applyPixelArt`가 `data-pixelgrid` 격자는 **재픽셀화 스킵**(블러 방지). 손그림 격자 = 정체성 / 런타임 픽셀화 = 아직 안 그린 종 임시 도트 폴백.
 
-**✅ 덩굴 5종 — 6 변이형 중 5개 실루엣 템플릿 확정(화풍 사용자 승인):**
+> ⚠️ **용어:** 비버섯 종의 **변이형 = 5개**(일반·포식·무기·독성·용족). 포자(spore)=버섯 전용, 발광(lumen)=폐지라 제외. 여기에 base(비변이)를 더해 덩굴은 6개 그룹 × 7속성 = 42.
+
+**✅ 덩굴 5종 — 6개 그룹(base + 5 변이형) 중 5개 실루엣 템플릿 확정(화풍 사용자 승인):**
 - 고해상 **cell=1.8(~22×42칸)**. 변이형이 실루엣을 결정 → 개체가 모양으로 구분(정체성=모양 검증), 속성은 리컬러만(구조색 불변·본체색만 변경 실측).
   - `thorn`(base/풀) = 잎+가시 / `venom_weed`(toxic/풀) = 가시 줄기+열린 독주머니 / `carni_vine`(pred/불) = 이빨 포충낭(아가리) / `whip_vine`(weapon/불) = 칼날+미늘 채찍 / `draca_flame`(dragon/불) = 뿔+막날개+비늘띠.
 - 셀프테스트 케이스 2종(픽셀 경로/폴백·속성 리컬러 불변) — `__catalogSelfTest()` **0 fail**.
 
-**✅ 배치 2 — normal 템플릿 + base 7속성 완성:** `green_vine`(normal/풀=무성한 둥근 잎) + 기본 덩굴 6속성(`vine_fire` 불꽃잎·`vine_water` 물방울잎·`vine_earth` 넓은잎·`vine_wind` 휜잎·`vine_bolt` 번개잎·`vine_ice` 결정잎). **속성별 잎 모양을 다르게**(색만 구분 금지 준수). 6 변이형 템플릿 전부 확보(base·toxic·pred·dragon·weapon·normal). 셀프테스트 0 fail.
+**✅ 배치 2 — normal 템플릿 + base 7속성 완성:** `green_vine`(normal/풀=무성한 둥근 잎) + 기본 덩굴 6속성(`vine_fire` 불꽃잎·`vine_water` 물방울잎·`vine_earth` 넓은잎·`vine_wind` 휜잎·`vine_bolt` 번개잎·`vine_ice` 결정잎). **속성별 잎 모양을 다르게**(색만 구분 금지 준수). 6개 그룹 템플릿 전부 확보(base + 5 변이형: toxic·pred·dragon·weapon·normal). 셀프테스트 0 fail.
 
 **✅ 배치 3 — weapon 7속성 완성:** `whip_vine`(칼날채찍)·`kelp_whip`(넓은 켈프날)·`thorn_whip`(가는 외날)·`root_club`(옹이 곤봉)·`wind_whip`(갈래 채찍)·`volt_whip`(갈래 번개날)·`frost_whip`(각진 결정날). 무기형 안에서도 곤봉/채찍/칼날 실루엣 차별.
 

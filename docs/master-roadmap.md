@@ -20,7 +20,7 @@
 |---|------|------|-------------|----------|
 | 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟢 **컨셉+스킬확장: P0 엔진 6종+인프라 + 전 175 개체 단계별 컨셉 스킬(40 손작업+660 생성기) + 광신 자해화상 완료** | **밸런스 점검 · 깊은 개체별 큐레이션** (§4-1-A) | [species](species-system-guide.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · [plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
-| 3 | 도트 UI 적용 | 🟢 redraw 인프라 + ****덩굴 42/42 완성**(6 변이형 전부, 화풍 승인 2026-06-27)** + 런타임 픽셀화 폴백 공존 | 타입별 묶음(다육→화초→목본)(다육→화초→목본→버섯) | [redraw spec](superpowers/specs/2026-06-27-pixel-sprite-individual-redraw-design.md) · [unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md) |
+| 3 | 도트 UI 적용 | 🟢 redraw 인프라 + **덩굴 42/42 완성**(base + 5 변이형[일반·포식·무기·독성·용족] ×7속성, 화풍 승인 2026-06-27) + 런타임 픽셀화 폴백 공존 | 타입별 묶음(다육→화초→목본, 버섯 보류) | [redraw spec](superpowers/specs/2026-06-27-pixel-sprite-individual-redraw-design.md) · [unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
 | 10 | 전투 화면 UI 수정 | 🔲 미착수 | 카드/판정창 레이아웃·연출 개편 | — |
