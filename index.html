@@ -10204,6 +10204,18 @@ const VINE_FORM_PIXELS = {
 /* 42 덩굴 종 → 변이형 매핑 (속성별 자동 리컬러) */
 [['vine_fire','base'],['vine_water','base'],['thorn','base'],['vine_earth','base'],['vine_wind','base'],['vine_bolt','base'],['vine_ice','base'],['venom_weed','toxic'],['tox_vine','toxic'],['blight_vine','toxic'],['tox_kelp','toxic'],['swamp_vine','toxic'],['spore_vine','toxic'],['acid_vine','toxic'],['carni_vine','pred'],['leech_vine','pred'],['root_eater','pred'],['wind_ripper','pred'],['blood_weed','pred'],['volt_leech','pred'],['frost_leech','pred'],['whip_vine','weapon'],['kelp_whip','weapon'],['thorn_whip','weapon'],['root_club','weapon'],['wind_whip','weapon'],['volt_whip','weapon'],['frost_whip','weapon'],['draca_vine','dragon'],['draca_flame','dragon'],['draca_tide','dragon'],['draca_thorn','dragon'],['draca_root','dragon'],['draca_wind','dragon'],['draca_glace','dragon'],['glow_vine','normal'],['kelp_vine','normal'],['green_vine','normal'],['terra_vine','normal'],['aero_vine','normal'],['dynamo_vine','normal'],['ever_vine','normal']]
 .forEach(function(e){ SPECIES_PIXELS[e[0]] = VINE_FORM_PIXELS[e[1]]; });
+/* 무기 변이형 — 속성별 칼날 모양 재해석(불=불꽃날·빙결=결정날·번개=번개날·물=물결날·풀=가시날·바람=바람날·대지=돌몽둥이) + 공유 갑옷 줄기 */
+const WEAPON_STALK = ["....OBbbBO","...SOBbbBOS","..SsOBbbBOsS","....OBSSBO","....OBbbBO","...SOBbbBOS","..SsOBbbBOsS","....OBSSBO","....OBbbBO","....OBbbBO","...OBSSSBO","..lOBbbbBOl",".OllBBSSSBBllO",".OBlBBbbbBBlBO","OBBlBBBBBBBlBBO","OBBBBBBBBBBBBBO",".OBBBBBBBBBBBO","..OOOOOOOOOOO"];
+const WEAPON_BLADES = {
+  fire: [".......F.","......FBF","......FBl",".....FBBlF",".....FBBlF","....FBBBlF","....FBBBlF","...FBBBBlF","...lBBBBlF","..FlBBBBBF","..lBBBBBF.","...lBBBBF.","...OBBBBO.","....OBBBO.","....OBbBO."],
+  ice: [".......l..","......OBO.","......HBl.",".....OBBBO",".....HBBBl","....OBBBBO","....HBBBBl","...OBBBBBO","...lBBBBBl","..OBBBBBBO","..HBBBBBl.","...OBBBBO.","....OBBO..","....OBbBO."],
+  bolt: [".......F..","......FBl.",".....FBBl.","...FBBBF..","....lBBBF.",".....FBBBl","...FBBBF..","....lBBBF.",".....FBBl.","...FBBBF..","....OBBO..","....OBbBO."],
+  water: [".....FBl..","....FBBBl.","...FBBBBBl","..FBBBBBBl","..lBBBBBBl","...lBBBBBl","....lBBBBl",".....lBBBl",".....OBBBO","....OBBBO.","....OBbBO."],
+  grass: ["......l...",".....lBl..","....OBBBO.","...KBBlBBK","...OBBBBBO","...KBBlBBK","...OBBBBBO","...KBBBBK.","....OBBBO.","....OBBO..","....OBbBO."],
+  wind: ["...FBl....","..FBBl....",".FBBl.FBl.","FBBl.FBBl.","lBl.FBBl..","...FBBl...","..FBBl....","..OBBO....","...OBO....","...OBbBO.."],
+  earth: ["...OOOOO..","..OWWWWWWO",".OWWlWWWWO",".OWWWWlWWO",".OWWlWWWWO",".OWWWWWWWO","..OWWWWWO.","...OWWWO..","....OWO...","....OBbBO."],
+};
+[['whip_vine','fire'],['frost_whip','ice'],['volt_whip','bolt'],['kelp_whip','water'],['thorn_whip','grass'],['wind_whip','wind'],['root_club','earth']].forEach(function(e){ SPECIES_PIXELS[e[0]] = { cell:1.7, rows: WEAPON_BLADES[e[1]].concat(WEAPON_STALK) }; });
 
 /* 격자 1장 → SVG rect 묶음. 단계(gi)별 크기 가감(성장체=축소). 랜덤 부속·무늬·variant 색필터 미혼입. */
 /* === 속성별 효과 오버레이 — 같은 변이형이라도 속성에 맞는 효과(불꽃·물방울·번개·서리…)를
