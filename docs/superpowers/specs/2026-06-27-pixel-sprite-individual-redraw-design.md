@@ -105,4 +105,6 @@ const SPECIES_PIXELS = {
   - `thorn`(base/풀) = 잎+가시 / `venom_weed`(toxic/풀) = 가시 줄기+열린 독주머니 / `carni_vine`(pred/불) = 이빨 포충낭(아가리) / `whip_vine`(weapon/불) = 칼날+미늘 채찍 / `draca_flame`(dragon/불) = 뿔+막날개+비늘띠.
 - 셀프테스트 케이스 2종(픽셀 경로/폴백·속성 리컬러 불변) — `__catalogSelfTest()` **0 fail**.
 
-**🔜 다음:** `normal`(일반) 템플릿 + 덩굴 나머지 37종(form 템플릿 변주, 속성·아키타입별 디테일) → 타입별 묶음(다육→화초→목본→버섯). 단계별 고유 격자·초반 3단계·죽은 `FEATURE_MODULES` 정리는 1바퀴 후(YAGNI §8). **진행: 덩굴 5/42.**
+**✅ 배치 2 — normal 템플릿 + base 7속성 완성:** `green_vine`(normal/풀=무성한 둥근 잎) + 기본 덩굴 6속성(`vine_fire` 불꽃잎·`vine_water` 물방울잎·`vine_earth` 넓은잎·`vine_wind` 휜잎·`vine_bolt` 번개잎·`vine_ice` 결정잎). **속성별 잎 모양을 다르게**(색만 구분 금지 준수). 6 변이형 템플릿 전부 확보(base·toxic·pred·dragon·weapon·normal). 셀프테스트 0 fail.
+
+**🔜 다음:** 덩굴 나머지 30종(toxic/pred/dragon/weapon/normal 각 6 + 속성·아키타입 변주) → 타입별 묶음(다육→화초→목본→버섯). 단계별 고유 격자·초반 3단계·죽은 `FEATURE_MODULES` 정리는 1바퀴 후(YAGNI §8). **진행: 덩굴 12/42.**
