@@ -109,4 +109,4 @@ const SPECIES_PIXELS = {
 
 **✅ 배치 3 — weapon 7속성 완성:** `whip_vine`(칼날채찍)·`kelp_whip`(넓은 켈프날)·`thorn_whip`(가는 외날)·`root_club`(옹이 곤봉)·`wind_whip`(갈래 채찍)·`volt_whip`(갈래 번개날)·`frost_whip`(각진 결정날). 무기형 안에서도 곤봉/채찍/칼날 실루엣 차별.
 
-**🔜 다음:** 덩굴 나머지 18종(toxic/dragon/normal 각 6 + 속성·아키타입 변주) → 타입별 묶음(다육→화초→목본→버섯). 단계별 고유 격자·초반 3단계·죽은 `FEATURE_MODULES` 정리는 1바퀴 후(YAGNI §8). **진행: 덩굴 24/42.**
+**🔜 다음:** 덩굴 나머지 12종(dragon/normal 각 6 + 속성·아키타입 변주) → 타입별 묶음(다육→화초→목본→버섯). 단계별 고유 격자·초반 3단계·죽은 `FEATURE_MODULES` 정리는 1바퀴 후(YAGNI §8). **진행: 덩굴 30/42.**
