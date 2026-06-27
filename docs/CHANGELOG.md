@@ -2,6 +2,9 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-27 — 픽셀 격자 배치 6: dragon 7속성 (#3, 누적 36/42)
+- `draca_flame`/`draca_tide`/`draca_thorn`/`draca_root`(무날개 육중)/`draca_wind`(큰 날개)/`draca_glace`/`draca_vine` — 용족 뿔·날개·비늘띠, 날개 크기·뿔 변주 + 속성 리컬러. 셀프테스트 0 fail.
+
 ### 2026-06-27 — 픽셀 격자 배치 5: toxic 7속성 (#3, 누적 30/42)
 - `venom_weed`/`blight_vine`(시든)/`tox_kelp`(이중)/`swamp_vine`(진흙혹)/`spore_vine`(포자분출)/`acid_vine`(산액방울)/`tox_vine`(결정) — 독주머니 변주 + 가시 줄기 공통. 셀프테스트 0 fail.
 
