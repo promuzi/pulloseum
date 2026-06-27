@@ -1611,6 +1611,7 @@ input[type=range]{width:100%;accent-color:var(--neon);height:26px;}
   --px-panel:#0d1a2b; --px-panel2:#0a1422; --px-edge:#22506b;
   --px-edge-on:#2dd4bf;
   --px-sh:rgba(3,8,14,.6);
+  --px:3px; /* 전역 픽셀 단위 — 도트 1칸의 온스크린 크기(설계 §3). 식물 런타임 픽셀화 격자가 이 값을 참조. */
 }
 /* ── 픽셀 폰트 전역 ── */
 body{
@@ -9618,6 +9619,16 @@ const ELEMENT_PALETTE = {
   ice:   { main:'#a8d8ff', dark:'#5f9fd8', light:'#e8f6ff', accent:'#ffffff', stem:'#6f9fc0' },
 };
 function elementPalette(el){ return ELEMENT_PALETTE[el] || ELEMENT_PALETTE.grass; }
+/* 전역 제한 팔레트(RGB) — 런타임 픽셀화 시 색을 이 집합에 최근접 스냅해 톤을 통일(설계 §3 제한 팔레트 규율).
+   7속성 램프(main/dark/light/accent/stem) + 중립색(외곽 다크·줄기 갈색·흰·회색). 한 번만 평탄화해 둔다. */
+const PIXEL_PALETTE = (function(){
+  const hex2rgb = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+  const seen = new Set(), out = [];
+  const push = h => { const k=h.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(hex2rgb(h)); } };
+  Object.values(ELEMENT_PALETTE).forEach(p => ['main','dark','light','accent','stem'].forEach(k => push(p[k])));
+  ['#1b1230','#2a2140','#0d0a16','#7a5230','#5a3a20','#ffffff','#e8e8f0','#9aa0b0','#3a3550'].forEach(push); // 중립/외곽
+  return out;
+})();
 /* 속성 모티프 — 작은 장식으로 속성을 한눈에 표시(생장단계 gi에 따라 커짐) */
 function elementMotif(el, gi, cx, topY){
   const P = elementPalette(el); const n = 1 + Math.floor(gi/2); let s='';
@@ -10099,6 +10110,87 @@ function svgPlant(species, element, grade, awakened, size, growth){
   const form = (bv && bv.length) ? bv[0] : null;   // 변이종(태생 변이)은 종 외형에 액센트 반영
   const plant = composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, noPot:true, form, varKey:species });
   return spriteStack(potVisual('pot_terra', size), plant);   // 종 기준(식물 객체 없음) → 기본 화분
+}
+
+/* ================= 런타임 픽셀화(도트 통일) — 설계 #16 1·2단계 =================
+   절차 식물 SVG를 작은 격자로 래스터화 + 색 양자화 → 정수배 확대해 전 개체를 일관된 도트로.
+   비동기(Image.onload)라 동기 렌더 경로(spriteFor/셀프테스트/dex)에 넣지 않고, 렌더 후
+   MutationObserver 사후 패스가 식물 레이어(.ss-plant/.plant-layer)의 내부 SVG만 <img>로 교체한다.
+   화분 레이어(.ss-pot/.ss-spacer)는 이미 픽셀 그리드(POT_PIXELS)라 건드리지 않는다. */
+const PIXEL_ART_PX = 3;            // 온스크린 도트 1칸 px(= --px). bake 격자 = round(size/PX).
+const __pxCache = new Map();       // svg마크업 해시 → dataURL (외형당 1회만 굽기)
+let __pxCanvas = null;             // offscreen 캔버스 재사용
+function __nearestPaletteColor(r,g,b){
+  let bi=0, bd=Infinity;
+  for(let i=0;i<PIXEL_PALETTE.length;i++){
+    const p=PIXEL_PALETTE[i], dr=r-p[0], dg=g-p[1], db=b-p[2], d=dr*dr+dg*dg+db*db;
+    if(d<bd){ bd=d; bi=i; }
+  }
+  return PIXEL_PALETTE[bi];
+}
+/* svg 마크업 → 픽셀화 dataURL. 캐시 히트 시 cb 동기 호출, 미스 시 비동기 굽고 cb. */
+function pixelizeSvg(svgMarkup, displaySize, cb){
+  const key = displaySize + '|' + __hashStr(svgMarkup);
+  const hit = __pxCache.get(key);
+  if(hit){ cb(hit); return; }
+  const w = Math.max(8, Math.round(displaySize / PIXEL_ART_PX));
+  const h = Math.round(w * 140/120);
+  const img = new Image();
+  img.onload = function(){
+    try{
+      if(!__pxCanvas) __pxCanvas = document.createElement('canvas');
+      const cv = __pxCanvas; cv.width=w; cv.height=h;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0,0, w,h);              // 작은 격자로 다운샘플
+      const id = ctx.getImageData(0,0,w,h), d = id.data;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3] < 24){ d[i+3]=0; continue; }   // 거의 투명 → 완전 투명
+        const c = __nearestPaletteColor(d[i],d[i+1],d[i+2]);
+        d[i]=c[0]; d[i+1]=c[1]; d[i+2]=c[2]; d[i+3]=255;
+      }
+      ctx.putImageData(id,0,0);
+      const url = cv.toDataURL();                // SVG에 외부 리소스 없음 → 오염 없음
+      __pxCache.set(key, url);
+      cb(url);
+    }catch(e){ /* 래스터화 실패 시 원본 SVG 유지(아무것도 안 함) */ }
+  };
+  img.onerror = function(){};
+  img.src = 'data:image/svg+xml;charset=utf8,' + encodeURIComponent(svgMarkup);
+}
+/* 사후 패스: 아직 처리 안 된 식물 레이어의 내부 SVG를 픽셀화 <img>로 교체. */
+function applyPixelArt(root){
+  if(typeof __DEX_MODE!=='undefined' && __DEX_MODE) return;
+  if(typeof state!=='undefined' && state && state.pixelArt===false) return;
+  root = root || document.body;
+  const nodes = root.querySelectorAll('.ss-plant:not([data-px]), .plant-layer:not([data-px])');
+  nodes.forEach(el => {
+    const html = el.innerHTML;
+    const svgStart = html.indexOf('<svg');
+    if(svgStart < 0) return;                     // 이미 <img>(오버라이드 PNG)거나 비어있음 → 건너뜀
+    el.dataset.px = '1';                         // 피드백 루프 차단(중복 처리 방지)
+    const svg = html.slice(svgStart);
+    const m = svg.match(/width="(\d+)/);
+    const size = m ? parseInt(m[1],10) : 120;
+    pixelizeSvg(svg, size, url => {
+      const h = Math.round(size*140/120);
+      el.innerHTML = `<img src="${url}" width="${size}" height="${h}" alt="" style="image-rendering:pixelated;display:inline-block;vertical-align:top;object-fit:contain"/>`;
+    });
+  });
+}
+let __pxRaf = 0;
+function schedulePixelArt(){
+  if(__pxRaf) return;
+  __pxRaf = requestAnimationFrame(() => { __pxRaf = 0; applyPixelArt(document.body); });
+}
+function startPixelArtObserver(){
+  if(typeof __DEX_MODE!=='undefined' && __DEX_MODE) return;
+  const appEl = document.getElementById('app') || document.body;
+  try{
+    new MutationObserver(schedulePixelArt).observe(appEl, { childList:true, subtree:true });
+  }catch(e){}
+  schedulePixelArt(); // 초기 1회
 }
 
 /* ================= 스탯 계산 ================= */
@@ -13514,6 +13606,8 @@ if(__DEX_MODE){
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
   }
+  /* 도트 통일: 렌더된 식물 SVG를 런타임 픽셀화 <img>로 교체하는 사후 패스 감시 시작 */
+  startPixelArtObserver();
 }
 
 /* ===== 개발용 셀프테스트 (게임 로직 무관, 콘솔에서 __catalogSelfTest() 호출) =====

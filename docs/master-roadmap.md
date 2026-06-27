@@ -6,7 +6,7 @@
 >
 > ⚠️ **갱신 의무(가장 중요):** 코드/데이터/기획이 바뀌면 **그 변경을 이 문서(또는 해당 하위 문서)에 즉시 반영하고 함께 푸시**한다. 놓치는 것 없이, 항상 실시간으로. 규칙은 §6 참고.
 
-- **최종 갱신:** 2026-06-26
+- **최종 갱신:** 2026-06-27
 - **별칭:** 이 문서를 **"마스터 로드맵" = "로드맵" = "마스터 문서"** 무엇으로 부르든 전부 이 파일(`docs/master-roadmap.md`)을 가리킨다.
 - **📱 모바일에서 보기:** GitHub에서 열면 마크다운이 예쁘게 렌더링된다(푸시만 돼 있으면 항상 최신) → <https://github.com/promuzi/pulloseum/blob/main/docs/master-roadmap.md> (브라우저 즐겨찾기 또는 GitHub 앱에서 파일 열기).
 - **게임 실행:** [index.html](../index.html) (브라우저 더블클릭, 빌드 없음 — 전부 단일 파일에 인라인)
@@ -20,7 +20,7 @@
 |---|------|------|-------------|----------|
 | 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟢 **컨셉+스킬확장: P0 엔진 6종+인프라 + 전 175 개체 단계별 컨셉 스킬(40 손작업+660 생성기) + 광신 자해화상 완료** | **밸런스 점검 · 깊은 개체별 큐레이션** (§4-1-A) | [species](species-system-guide.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · [plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
-| 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
+| 3 | 도트 UI 적용 | 🟢 홀로그램 오버레이 + **전 개체 런타임 픽셀화(자산 0개로 175개체×6단계 전부 도트화, 2026-06-27)** | UI 토큰화(버튼·카드·HP바=3단계) → 식물 1종 PNG 시범 `SPRITE_OVERRIDES`(4단계) | [pixel-art](pixel-art-ui-roadmap.md) · [unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
 | 10 | 전투 화면 UI 수정 | 🔲 미착수 | 카드/판정창 레이아웃·연출 개편 | — |
@@ -146,7 +146,8 @@
 **구현 메모:** 식물에 `fruit` 상태 필드 신설 + `normalizeState` 마이그레이션(무회귀). 수확 연출 `#evolveModal` 재활용. 식물/화분 2레이어 분리(#12·#3 전제).
 
 ### 3. 도트(픽셀아트) UI 적용
-**상태/규격:** [pixel-art-ui-roadmap.md](pixel-art-ui-roadmap.md) — **작업 전 필독**. 방식은 캔버스 재작성이 아니라 **PNG를 DOM에 교체**(`spriteFor`의 `SPRITE_OVERRIDES`).
+**상태/규격:** [pixel-art-ui-roadmap.md](pixel-art-ui-roadmap.md) · 전체 도트/사운드 통일 설계 = [unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md) — **작업 전 필독**. 방식은 캔버스 재작성이 아니라 **PNG를 DOM에 교체**(`spriteFor`의 `SPRITE_OVERRIDES`) + 자산 없는 종은 **런타임 픽셀화**로 같은 톤 통일.
+- [x] **전 개체 런타임 픽셀화(2026-06-27, unification 1·2단계)** — `pixelizeSvg`(SVG→캔버스 다운샘플→`PIXEL_PALETTE` 양자화→`image-rendering:pixelated` 확대) + 외형 해시 캐시 + `MutationObserver` 사후 패스가 `.ss-plant`/`.plant-layer`만 도트 `<img>`로 교체(화분 제외). `--px:3px` 규정. **자산 0개로 175개체×6단계 전부 도트화.** 셀프테스트 0 fail·변이 hue필터 보존·캔버스 오염 없음·dex 가드 검증. (3단계 UI 토큰화·4단계 AI그림은 후속)
 - [ ] **식물·화분 분리 이미지** 여부 결정 — 권장: 분리(식물 PNG + 화분 PNG 레이어, 화분 입구 앵커, idle sway는 식물 레이어만). 겹쳤을 때 자연스러운지 시범 제작으로 검증(#2 화분과 직결)
 - [ ] 도트 생성 AI 선정·시범(PixelLab/Retro Diffusion 후보)
 - [ ] 적용 순서: 식물 → 아이콘 → 모달 창틀(9-slice) → 애니메이션
@@ -328,6 +329,7 @@
 
 > 확정된 결정만 날짜와 함께 한 줄로. 번복되면 줄을 갱신한다.
 
+- **2026-06-27** — **(#3 도트 UI — 전 개체 런타임 픽셀화 구현, unification 1·2단계)** "모든 개체 외형 바꾸기" 요청 → 손그림 1,000장+ 대신 설계 #16 D2(엔진 런타임 픽셀화)로 **자산 0개 전 개체 도트화**. `--px:3px` 규정 + `PIXEL_PALETTE`(7속성 램프+중립 ≈24색) + `pixelizeSvg`(SVG→캔버스 다운샘플→팔레트 양자화→`toDataURL`, 외형 해시 캐시) + `MutationObserver` 사후 패스(`.ss-plant`/`.plant-layer`만 `<img>` 교체, 화분 제외, `data-px` 루프차단). 비동기 굽기를 렌더 경로 밖으로 분리해 셀프테스트·dex 동기성 무영향. Chromium 검증: 셀프테스트 0 fail·변이 hue필터/오염 없음·전 식물 픽셀화·화분 0·dex 미실행. 후속=3단계 UI 토큰화·4단계 AI그림·5모션·6사운드. 설계=[unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md). (#3·#16)
 - **2026-06-26** — **(#16 탐사선 강화 UI — 구현 완료 + 계획 죽은코드 재지정)** [탐사선 개조실 UI 재설계 계획](superpowers/plans/2026-06-26-explorer-ship-upgrade-ui-redesign.md) 실행 중 **Task 2~4가 죽은 코드를 겨냥**함을 발견 — `renderExploration`이 4번 재정의되고 마지막(9233)만 활성, 라이브는 `ex*` 아틀라스 재작성본(`exHangarHtml`/`exploreViewRun`/`exResultHtml`). **라이브 러너는 이미 크레딧 전용·연료 차감 없음** → Task 2(연료 제거)는 라이브에서 이미 충족. **사용자 결정(Option A):** 죽은 코드는 두고 Task 3·4를 **라이브 `exHangarHtml`로 재지정**. 구현 = 중앙 탐사선 SVG(`shipDiagramSvg`)+사방 4콜아웃(`renderShipCallout`)+점선 연결선(`drawShipConnectors`, `SHIP_ANCHORS`)+강화 레벨(Lv) 표시(`upgradeLevelText`, 탐사선 콜아웃·식물 `upStatCard` 공용). 강화는 기존 `SHIP_UPGRADES`/`upgradeShipStat` 단일 경로 재사용. `exh-` CSS. `__catalogSelfTest()` 0 fail·preview 실측(콜아웃4·연결선4·강화 시 크레딧/스탯/Lv 상승·375폭 수납). **후속:** 죽은 연료/레거시 정리·SVG 외형. (#16)
 - **2026-06-26** — **(UI) 메인화면 화분/나무 의자 정렬 수정.** 의자(`.wood-stool`)가 화분(`.pp-pot`) 앞으로 튀어나오고 높이가 어긋나던 문제 — `.pp-stack{z-index:2}`로 화분+식물을 의자 위로(z-order), `.wood-stool` `margin-top -34px→-16px`로 화분 베이스를 좌석면에 안착. preview 실측 검증. (#10/메인UI)
 - **2026-06-26** — **(워크플로) 단일 main 전환.** 사용자 지시로 잔여 브랜치(feat/*·work-2·claude/* 등) 전부 삭제하고 main 하나로 통합(미병합 탐사선 Task 1은 머지 보존). 이후 작업은 main 직접(브랜치/워크트리 분기 지양). (운영)

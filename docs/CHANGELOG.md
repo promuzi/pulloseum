@@ -2,6 +2,14 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-06-27 — 전체 픽셀(도트) 통일: 모든 개체 외형 런타임 픽셀화 (#3·#16 1·2단계)
+- **배경:** 175개체×6단계 외형이 전부 `composePlantSvg`의 부드러운 벡터 SVG라 픽셀 폰트·도트 톤과 어긋났다. 손그림 PNG로 전부 교체하면 1,000장+ 필요 → 비현실적. 설계 #16의 D2(엔진 런타임 픽셀화)로 **자산 0개로 전 개체를 일관된 도트로** 전환. 설계=[pixel-art-unification spec](superpowers/specs/2026-06-26-pixel-art-unification-design.md) §7 1·2단계.
+- **규정(1단계):** `:root --px:3px`(온스크린 도트 1칸) + 전역 제한 팔레트 `PIXEL_PALETTE`(7속성 `ELEMENT_PALETTE` 램프 5색 + 중립색 ≈24색, `ELEMENT_PALETTE` 직후).
+- **엔진(2단계):** `pixelizeSvg(svg,size,cb)` = SVG→`Image`→offscreen 캔버스 `round(size/--px)` 격자로 다운샘플 → ImageData 색을 `PIXEL_PALETTE` 최근접 스냅(불투명만) → `toDataURL` → 표시는 `image-rendering:pixelated` 정수배 확대. **외형 마크업 해시로 캐시**(외형당 1회만 굽기, 캐시 히트 동기 반환).
+- **사후 패스(비동기 분리):** 렌더는 기존대로 동기 SVG 주입 유지(셀프테스트·dex 동기성 무영향) → `MutationObserver`(rAF 디바운스)가 `.ss-plant`/`.plant-layer`의 내부 SVG만 픽셀화 `<img>`로 교체(`data-px` 플래그로 피드백 루프 차단). **화분 레이어(`.ss-pot`)는 이미 픽셀 그리드라 제외.** 정상 부팅에서만 옵저버 기동(`startPixelArtObserver`), `__DEX_MODE`·`state.pixelArt===false`면 미동작.
+- **검증(Chromium/Playwright):** `__catalogSelfTest()` **0 fail** · 변이종(`spore_cap`, hue-rotate 인라인 필터) 래스터화 성공 + **캔버스 오염 없음**(dataURL 정상) · 캐시 동기 히트 · 타이틀/인게임 식물 레이어 전부 픽셀화·화분 0개 픽셀화(올바른 제외) · dex 모드 옵저버 미실행·`__DEX_API` 정상 · 페이지 에러 0.
+- **비범위(후속):** UI 토큰화(버튼·카드·HP바)=3단계, AI 그림(`SPRITE_OVERRIDES`+`assets/`+sw.js)=4단계, 모션 엔진=5단계, 사운드=6단계.
+
 ### 2026-06-26 — 이중 변이 버섯 28종 (포자 + 두 번째 변이) + 다변이 엔진
 - **배경:** 버섯은 전부 포자 단일 변이였음. 처음으로 **변이 2개**를 가진 종(포자 + toxic/pred/weapon/dragon)을 도입해 버섯 도감을 7→35종으로 확장. 설계=[spec](superpowers/specs/2026-06-26-spore-variant-rework-dual-variant-mushrooms-design.md) · 계획=[plan](superpowers/plans/2026-06-26-dual-variant-mushrooms.md).
 - **다변이 엔진(공존, 융합 메커니즘 없음):** 포자가 6변이형 중 유일하게 전용 스킬을 안 주는(매턴 발산 패시브) 변이라, 두 번째 변이를 그대로 얹어도 스킬 칸이 안 터짐 → **`cardFitsForm`·`variantSkillsOf`를 `p.form`(단수) → `base_variants` 전체로 확장**(헬퍼 `formsOf`). 다변이 종은 포자 카드 + 두 번째 변이 카드를 둘 다 장착 가능하고, 두 번째 변이 전용 스킬(포식기/주입·분사/비늘·브레스)이 하단 변이 바에 노출. 문자열 form 호출 하위호환 유지.
