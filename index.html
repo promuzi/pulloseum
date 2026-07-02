@@ -12140,6 +12140,44 @@ function makePlayerCombatant(p){
     skillGrades:p.skillGrades||{},
   });
 }
+/* ── 3v3 코어(스펙 §6): B에 팀 구조를 얹되 B.p/B.e는 "활성 유닛 별칭"으로 유지 —
+   applySkill/tickStatuses/updateBars 등 기존 호출부 무접촉. ── */
+function teamAliveCount(team){ return (team||[]).filter(u=>u && u.hp>0).length; }
+function unitDeckIds(u){ return u.loadout.concat(variantSkillsOf(u)).filter((v,i,a)=>a.indexOf(v)===i); }
+function beginTeamBattle(pUnits, eUnits, opts){
+  opts = opts || {};
+  const pPool = makeEnergyPool(Math.max(0, ...pUnits.map(u=>u.passives.energyBonus||0)));
+  const ePool = makeEnergyPool(Math.max(0, ...eUnits.map(u=>u.passives.energyBonus||0)));
+  pUnits.forEach(u => { attachEnergyPool(u, pPool); u.deckState = makeDeckState(unitDeckIds(u)); });
+  eUnits.forEach(u => { attachEnergyPool(u, ePool); u.deckState = makeDeckState(unitDeckIds(u)); });
+  B = {
+    pTeam:pUnits, eTeam:eUnits, pActive:0, eActive:0,
+    p:pUnits[0], e:eUnits[0], pPool, ePool,
+    league: opts.league || (pUnits.length>1 || eUnits.length>1 ? 'team' : 'solo'),
+    pIntent:null, eIntent:null, eForecast:null, _noUI: !!opts.noUI,
+    over:false, busy:false, turn:1, mission: opts.mission || undefined,
+  };
+  return B;
+}
+function renderActiveUnits(){
+  if(!B) return;
+  $('#eSpriteBox').innerHTML = spriteFor(B.e, 108);
+  $('#pSpriteBox').innerHTML = spriteFor(B.p, 108);
+  const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
+  const badge = u => { const f = FORMS[u.form||'normal']||FORMS.normal;
+    return u.form && u.form!=='normal' ? ` <span class="badge" style="color:${f.color};border:1px solid ${f.color}" title="${f.name}">${f.icon}</span>` : ''; };
+  $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${badge(B.e)}`;
+  $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>${badge(B.p)}`;
+  updateBars();
+}
+function switchActive(side, idx){
+  const team = side==='p' ? B.pTeam : B.eTeam;
+  const cur = side==='p' ? B.pActive : B.eActive;
+  if(idx===cur || !team[idx] || team[idx].hp<=0) return false;
+  if(side==='p'){ B.pActive = idx; B.p = team[idx]; } else { B.eActive = idx; B.e = team[idx]; }
+  if(!B._noUI){ renderActiveUnits(); if(typeof renderTeamBar==='function') renderTeamBar(); }
+  return true;
+}
 function startMatch(){
   const p = activePlant(); if(!p){ toast('식물이 없습니다'); return; }
   ensureSkillFields(p);
@@ -12149,7 +12187,7 @@ function startMatch(){
   const T = state.tournament;
   const playerC = makePlayerCombatant(p);
   const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p));
-  B = { p:playerC, e:enemyC, over:false, busy:false, turn:1 };
+  beginTeamBattle([playerC], [enemyC], { league:'solo' });
   bootBattleUI(p);
 }
 /* #15 미션 전투 진입 — 고정 적, 단판. 토너먼트 상태(state.tournament)는 건드리지 않는다. */
@@ -12164,7 +12202,7 @@ function startMissionBattle(cid, idx){
   const playerC = makePlayerCombatant(p);
   const enemyC = buildMissionEnemy(c, idx);
   if(!enemyC){ toast('미션 데이터 오류'); return; }
-  B = { p:playerC, e:enemyC, over:false, busy:false, turn:1, mission:{ cid, idx } };
+  beginTeamBattle([playerC], [enemyC], { league:'solo', mission:{ cid, idx } });
   bootBattleUI(p);
   if(spec.intro) blog(`<span class="em">${enemyC.name}</span> — ${spec.intro}`);
 }
@@ -12180,19 +12218,9 @@ function bootBattleUI(p){
   $('#battleScreen').classList.remove('cards-hidden');
   $('#battleArena').classList.remove('spread');
   renderBattleHeader();
-  $('#eSpriteBox').innerHTML = spriteFor(B.e, 108);
-  $('#pSpriteBox').innerHTML = spriteFor(B.p, 108);
+  renderActiveUnits();
   $('#eSpriteBox').classList.remove('enter','collapse');
   $('#pSpriteBox').classList.remove('enter','collapse');
-  const eEl = ELEMENTS[B.e.element], pEl = ELEMENTS[B.p.element];
-  const formBadge = unit => {
-    const form = FORMS[unit.form||'normal'] || FORMS.normal;
-    return unit.form && unit.form !== 'normal'
-      ? ` <span class="badge" style="color:${form.color};border:1px solid ${form.color}" title="${form.name}">${form.icon}</span>`
-      : '';
-  };
-  $('#eName').innerHTML = `${B.e.name} <span class="badge b-${B.e.element}">${eEl.icon}</span>${formBadge(B.e)}`;
-  $('#pName').innerHTML = `${B.p.name} <span class="badge b-${B.p.element}">${pEl.icon}</span>${formBadge(B.p)}`;
   $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}`;
   $('#pProfile').textContent = `👤 ${B.p.trainerName||state.profile_name||'재배사'}`;
   updateBars(); updateBattleHud();
@@ -14003,6 +14031,26 @@ window.__test('energy: shared pool via accessors', function(){
   u1.energy = 99; __eq(u1.energy, ENERGY_POOL_MAX, 'setter clamps to max');
   __eq(u1.energyMax, ENERGY_POOL_MAX, 'energyMax from pool');
   __eq(makeEnergyPool(2).max, ENERGY_POOL_MAX+2, 'bonus raises max');
+});
+
+window.__test('team: beginTeamBattle wiring + switchActive alias', function(){
+  seedBattleRng(777);
+  const mk = n => makeCombatant({ name:n, species:'spore_cap', element:'grass', grade:'C',
+    seedType:'mushroom', growth:'growing', form:'spore', baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,critRate:5,critMult:1.5,energy:3},
+    traits:[], loadout:['skill_basic_strike','skill_guard','skill_photosynthesis','skill_focus','skill_rally'], skillGrades:{}, cards:[] });
+  const savedB = (typeof B!=='undefined') ? B : null;
+  beginTeamBattle([mk('A1'),mk('A2'),mk('A3')], [mk('E1')], { league:'team', noUI:true });
+  __eq(B.pTeam.length, 3, 'pTeam 3'); __eq(B.eTeam.length, 1, 'eTeam 1(1v1 포맷 공존)');
+  __ok(B.p === B.pTeam[0] && B.e === B.eTeam[0], 'aliases');
+  __eq(B.p.energy, ENERGY_START, 'pool start');
+  B.pTeam[1].energy += 2; __eq(B.p.energy, ENERGY_START+2, 'team shares pool');
+  __ok(B.pTeam.every(u => u.deckState && u.deckState.hand.length>=1), 'deckState per unit');
+  __ok(switchActive('p', 1), 'switch ok');
+  __ok(B.p === B.pTeam[1] && B.pActive===1, 'alias moved');
+  __ok(!switchActive('p', 1), 'same idx rejected');
+  B.pTeam[2].hp = 0; __ok(!switchActive('p', 2), 'fainted rejected');
+  __eq(teamAliveCount(B.pTeam), 2, 'alive count');
+  B = savedB; clearBattleRng();
 });
 
 window.__test('i18n: josa picks particle by batchim', function(){
