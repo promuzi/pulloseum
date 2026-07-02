@@ -365,6 +365,8 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
 .cp-energy .off{opacity:.16;filter:grayscale(1);text-shadow:none;}
 .cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
 .cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.cp-pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
+.cp-pred:empty{display:none;}
 /* 기절 무료교대: 바 전체는 잠겨도 팀 바만 살아있게 */
 #cardPhase.freeswitch .cp-stack{opacity:1;filter:none;pointer-events:none;}
 #cardPhase.freeswitch #teamBar{pointer-events:auto;}
@@ -2240,6 +2242,7 @@ body{letter-spacing:.2px;}
         <div id="teamBar"></div>
         <div class="cp-energy" id="cardEnergy"></div>
         <div class="cp-hand" id="cardHand"></div>
+        <div class="cp-pred" id="cardPred"></div>
       </div>
     </div>
     <!-- 결과 (금속판 닫힘 + 보상 카드) -->
@@ -6762,7 +6765,7 @@ function plantKnownSkillIds(p){
   if(Array.isArray(p.bonus_skills)) p.bonus_skills.forEach(id => { if(ALL_SKILLS[id]) known.push(id); });
   return known.filter((v, i, a) => v && a.indexOf(v) === i && skillById(v, p));
 }
-const MAX_LOADOUT = 8; // 3v3 재설계: 덱 8장(스펙 2026-07-02 §3)
+const MAX_LOADOUT = 6; // 1v1 주력 확정(2026-07-02 플레이테스트): 6장 + 변이 스킬 바 — 한 식물 깊은 육성 축 유지
 const ENERGY_START = 2;      // 3v3: 시작 낮게(만땅 폐지) — 아끼는 커브(스펙 §3)
 const ENERGY_POOL_MAX = 8;   // 팀 공유 에너지 상한
 /* 변이형(포식·무기·카드) 유래 스킬은 스킬 탭에 노출하지 않고 전투 시 자동 합류한다. */
@@ -10390,7 +10393,7 @@ function renderTournamentBar(){
       statusV = '예선'; statusS = `${T.prelimWins}승 ${T.prelimLosses}패`;
       label = `⚔️ 예선 ${Math.min(played+1, round.bestOf)}경기 시작`;
     } else { statusV = round.name; statusS = '진행 중'; label = `⚔️ ${round.name} 경기 시작`; }
-  } else { statusV = '대기'; statusS = '신규 도전'; label = '⚡ 1v1 토너먼트 시작'; }
+  } else { statusV = '대기'; statusS = '신규 도전'; label = '⚔️ 토너먼트 시작'; }
   // #15 미션 진행 요약 배지
   const mDone = CAMPAIGNS.filter(c => missionProg(c.id).done).length;
   bar.innerHTML = `<div class="tcells">
@@ -10402,7 +10405,7 @@ function renderTournamentBar(){
       <div class="tc-k">경기 현황</div><div class="tc-v">${statusV}</div><div class="tc-s">${statusS}</div></div>
     <div class="tcell" data-league-team="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left;--clr:${RANK_TIERS[teamTierIdx()].color}">
       <span style="font-weight:800;color:${RANK_TIERS[teamTierIdx()].color}">⚔️ 3v3 팀 리그 · ${RANK_TIERS[teamTierIdx()].name}</span>
-      <span class="tc-s" style="margin:0">${fmt(state.team_rankPoints||0)}pt · ${state.team_tournament&&state.team_tournament.active?TOURNAMENT_ROUNDS[state.team_tournament.roundIndex].name+' 진행 중':'팀 3마리 출전'} ▶</span></div>
+      <span class="tc-s" style="margin:0">${fmt(state.team_rankPoints||0)}pt · ${state.team_tournament&&state.team_tournament.active?TOURNAMENT_ROUNDS[state.team_tournament.roundIndex].name+' 진행 중':'보조 리그 · 팀 3마리'} ▶</span></div>
     <div class="tcell" data-mission="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left">
       <span style="font-weight:800;color:#ffcf6b">🚩 미션 캠페인</span>
       <span class="tc-s" style="margin:0">${mDone}/${CAMPAIGNS.length} 클리어 · 스토리&전용 보상 ▶</span></div>
@@ -12447,15 +12450,16 @@ function skillCardHtml(id, pred){
 /* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
 function refreshSkillBar(){
   if(!B) return;
-  // (2026-07-02 플레이테스트) 8장 상시 오픈 — 스택/콤보 셋업을 계획할 수 있게. 손패 순환 폐지.
-  const ids = unitDeckIds(B.p);
+  // 1v1 주력(2026-07-02): 로드아웃 6 상시 오픈 + 변이 스킬 별도 바(옛 구조 복원, 손패 순환 없음)
   const variantIds = variantSkillsOf(B.p);
-  let html = ids.map(id => skillCardHtml(id, variantIds.includes(id))).join('');
+  const normals = B.p.loadout.filter(id => !variantIds.includes(id));
+  let html = normals.map(id => skillCardHtml(id, false)).join('');
   // 숨 고르기: 쓸 수 있는 스킬이 하나도 없을 때만 폴백으로 노출(데드락 방지)
-  if(!ids.some(id => !skillUnusable(B.p, id))){
+  if(!unitDeckIds(B.p).some(id => !skillUnusable(B.p, id))){
     html += `<button class="skillcard rest" id="restCard"><div class="sc-name">숨 고르기</div><div class="sc-icon">🌬️</div><div class="sc-foot"><span class="sc-cost">⚡+1</span></div></button>`;
   }
   $('#cardHand').innerHTML = html;
+  $('#cardPred').innerHTML = variantIds.map(id => skillCardHtml(id, true)).join('');
   let pips = `<span class="ce-label">⚡ 에너지</span>`;
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#cardEnergy').innerHTML = pips;
@@ -14284,8 +14288,8 @@ function __eq(a,b,msg){ if(a!==b) throw new Error((msg||'')+' expected '+JSON.st
 function __ok(c,msg){ if(!c) throw new Error(msg||'assertion failed'); }
 
 /* ── 3v3 재설계 테스트 (plan: 2026-07-02-battle-core-3v3-redesign) ── */
-window.__test('team: loadout 8 + team state migration + currentTeam', function(){
-  __eq(MAX_LOADOUT, 8, 'MAX_LOADOUT 8');
+window.__test('team: loadout 6 + team state migration + currentTeam', function(){
+  __eq(MAX_LOADOUT, 6, 'MAX_LOADOUT 6 (1v1 주력 — 6+변이 바)');
   if(typeof state==='undefined' || !state || !Array.isArray(state.plants)) return; // dex 모드 스킵
   __ok(Array.isArray(state.last_team), 'last_team array');
   __ok(typeof state.team_rankPoints==='number', 'team_rankPoints');
