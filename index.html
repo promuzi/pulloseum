@@ -10505,18 +10505,22 @@ function renderMissionCampaign(cid){
   const pr = missionProg(cid), total = missionStageCount(c), next = missionNextIdx(c);
   const rows = [];
   for(let i=0;i<total;i++){
-    const isBoss = i >= c.stages.length, spec = missionStageAt(c, i), sp = SPECIES[spec.species] || {};
+    const isBoss = i >= c.stages.length, spec = missionStageAt(c, i);
+    const ens = missionEnemiesAt(c, i), lead = ens[0] || {};
+    const names = ens.map(en => en.name || (SPECIES[en.species]||{}).name || '?').join(' + ');
     const cleared = pr.cleared.indexOf(i) >= 0;
     const open = cleared || i === next;
-    const gk = isBoss && spec.gimmick ? MISSION_GIMMICKS[spec.gimmick] : null;
+    const gkEntry = ens.find(en => en.gimmick);
+    const gk = isBoss && gkEntry ? MISSION_GIMMICKS[gkEntry.gimmick] : null;
     const rw = `💰${(spec.reward&&spec.reward.credit)||0}${spec.reward&&spec.reward.mineral ? ' · ⛏️'+spec.reward.mineral : ''}`;
+    const vsTag = ens.length>1 ? ` · ⚔️${ens.length}마리 팀전` : '';
     const status = open
       ? `<button class="mr-btn" data-mstage="${i}">${cleared ? '재도전' : '도전'}</button>`
       : `<span class="mr-stat">🔒</span>`;
     rows.push(`<div class="match-row ${cleared ? 'done' : (open ? 'cur' : 'lock')}">
       <div class="mr-ico">${isBoss ? '👑' : (i+1)}</div>
       <div class="mr-main">
-        <div class="mr-name">${spec.name || sp.name || '?'} <span style="opacity:.6;font-size:11px">${GROWTH_STAGE_NAMES[spec.growth]||''} · ${spec.grade||'B'}급${gk ? ' · '+gk.icon+' '+gk.name : ''}</span></div>
+        <div class="mr-name">${names} <span style="opacity:.6;font-size:11px">${GROWTH_STAGE_NAMES[lead.growth]||''} · ${lead.grade||'B'}급${gk ? ' · '+gk.icon+' '+gk.name : ''}${vsTag}</span></div>
         <div class="mr-sub">${open && spec.intro ? spec.intro : (isBoss ? '보스 — '+(gk?gk.desc:'') : '스테이지 '+(i+1))} · 첫클리어 ${rw}</div></div>
       ${status}</div>`);
   }
@@ -12034,8 +12038,11 @@ const CAMPAIGNS = [
       { species:'tree_fire',   growth:'juvenile', grade:'C', intro:'"이 잿빛 숲은 우리가 지킨다."',           reward:{credit:80} },
       { species:'cactus_fire', growth:'growing',  grade:'B', intro:'"가시도, 불꽃도 전부 준비됐다."',          reward:{credit:100} },
     ],
-    boss:{ species:'vine_fire', growth:'growing', grade:'B', statBoost:1.2, gimmick:'burn_aura',
-      name:'화산심장 덩굴', intro:'"칼데라의 심장은 누구에게도 내주지 않는다!"', reward:{credit:150, mineral:1} },
+    boss:{ intro:'"칼데라의 심장은 누구에게도 내주지 않는다!"', reward:{credit:150, mineral:1},
+      enemies:[
+        { species:'vine_fire', growth:'growing', grade:'B', statBoost:1.2, gimmick:'burn_aura', name:'화산심장 덩굴' },
+        { species:'flower_fire', growth:'growing', grade:'C', statBoost:1 },
+      ] },
     clearReward:{ species:'ember_heart', title:'화산 정복자' },
   },
   {
@@ -12049,10 +12056,17 @@ const CAMPAIGNS = [
       { species:'aqua',       growth:'growing', grade:'B', intro:'"수면 위의 것들은 돌아가라…"',          reward:{credit:100} },
       { species:'frost',      growth:'growing', grade:'B', intro:'"차가움을 견딜 수 있나?"',              reward:{credit:120} },
       { species:'tree_water', growth:'mature',  grade:'B', intro:'"해류가 너를 삼킬 것이다."',            reward:{credit:140} },
-      { species:'flower_ice', growth:'mature',  grade:'A', intro:'"심해의 꽃은 꺾이지 않는다."',          reward:{credit:160} },
+      { intro:'"심해의 꽃은 꺾이지 않는다."', reward:{credit:160},
+        enemies:[
+          { species:'flower_ice', growth:'mature', grade:'A' },
+          { species:'frost', growth:'mature', grade:'B', statBoost:1 },
+        ] },
     ],
-    boss:{ species:'tide_shield', growth:'mature', grade:'A', statBoost:1.25, gimmick:'shield_start',
-      cards:[['card_shieldw','A']], name:'해구의 방패', intro:'"이 해구의 문은 내가 닫았다. 열 수 있으면 열어보아라!"', reward:{credit:220, mineral:2} },
+    boss:{ intro:'"이 해구의 문은 내가 닫았다. 열 수 있으면 열어보아라!"', reward:{credit:220, mineral:2},
+      enemies:[
+        { species:'tide_shield', growth:'mature', grade:'A', statBoost:1.25, gimmick:'shield_start', cards:[['card_shieldw','A']], name:'해구의 방패' },
+        { species:'aqua', growth:'mature', grade:'B', statBoost:1 },
+      ] },
     clearReward:{ species:'leech_vine', title:'심해 개척자' },
   },
   {
@@ -12063,12 +12077,28 @@ const CAMPAIGNS = [
       outro:'"…훌륭하다. 내 시대는 여기까지다. 다음 시대는 너의 것이다." 전 챔피언이 자신의 창을 당신에게 넘긴다.',
     },
     stages:[
-      { species:'cactus_ice', growth:'mature',  grade:'A', cards:[['card_cellwall','A']], intro:'"챔피언의 1번 수문장이다. 몸부터 풀어라."', reward:{credit:180} },
-      { species:'volt_eater', growth:'mature',  grade:'A', intro:'"굶주린 녀석이니 조심해라. 나도 못 말린다."', reward:{credit:220} },
-      { species:'igni_drake', growth:'evolved', grade:'S', intro:'"내 전성기를 함께한 용이다. 예의를 갖춰라."', reward:{credit:260} },
+      { intro:'"챔피언의 1번 수문장이다. 몸부터 풀어라."', reward:{credit:180},
+        enemies:[
+          { species:'cactus_ice', growth:'mature', grade:'A', cards:[['card_cellwall','A']] },
+          { species:'vine_ice', growth:'mature', grade:'A' },
+        ] },
+      { intro:'"굶주린 녀석들이니 조심해라. 나도 못 말린다."', reward:{credit:220},
+        enemies:[
+          { species:'volt_eater', growth:'mature', grade:'A' },
+          { species:'frost_drake', growth:'mature', grade:'A' },
+        ] },
+      { intro:'"내 전성기를 함께한 용이다. 예의를 갖춰라."', reward:{credit:260},
+        enemies:[
+          { species:'igni_drake', growth:'evolved', grade:'S' },
+          { species:'ember_halberd', growth:'mature', grade:'A' },
+        ] },
     ],
-    boss:{ species:'draca_volt', growth:'evolved', grade:'S', statBoost:1.35, gimmick:'enrage_below_half',
-      name:'뇌룡 파른', intro:'"이 아이가 진심을 내면 나도 못 이긴다. — 가라, 파른!"', reward:{credit:400, mineral:5} },
+    boss:{ intro:'"이 아이들이 진심을 내면 나도 못 이긴다. — 가라, 파른!"', reward:{credit:400, mineral:5},
+      enemies:[
+        { species:'draca_volt', growth:'evolved', grade:'S', statBoost:1.35, gimmick:'enrage_below_half', name:'뇌룡 파른' },
+        { species:'igni_drake', growth:'mature', grade:'A', statBoost:1 },
+        { species:'volt_eater', growth:'mature', grade:'A', statBoost:1 },
+      ] },
     clearReward:{ species:'thunder_lance', title:'왕좌의 계승자' },
   },
 ];
@@ -12102,9 +12132,18 @@ function missionUnlocked(c){
   }
   return { ok:true };
 }
+/* 스테이지 적 목록 정규화 — enemies:[…](1~3) 신스키마, 단수 필드는 하위호환(1마리 취급). */
+function missionEnemiesAt(c, idx){
+  const spec = missionStageAt(c, idx);
+  return Array.isArray(spec.enemies) ? spec.enemies : [spec];
+}
+/* 스테이지 전체 적 팀 빌드(1~3) — 개별 사양은 buildMissionEnemy(스펙 오버라이드)로. */
+function buildMissionEnemies(c, idx){
+  return missionEnemiesAt(c, idx).map(en => buildMissionEnemy(c, idx, en)).filter(Boolean);
+}
 /* 저작 고정 적 — 난수 없음(같은 스테이지=항상 같은 적, 결정론 규율 준수). 스케일 = 생장×★난이도×부스트. */
-function buildMissionEnemy(c, idx){
-  const spec = missionStageAt(c, idx), isBoss = idx >= c.stages.length;
+function buildMissionEnemy(c, idx, specOverride){
+  const spec = specOverride || missionStageAt(c, idx), isBoss = idx >= c.stages.length;
   const sp = SPECIES[spec.species]; if(!sp) return null;
   const el = sp.element, seedType = SPECIES_SEEDTYPE[spec.species] || sp.seedType || 'grass';
   const growth = spec.growth || 'growing';
@@ -12264,12 +12303,15 @@ function startMissionBattle(cid, idx){
   hide('#missionModal');
   seedBattleRng(((Date.now() >>> 0) ^ ((idx+1) * 0x9E3779B1)) >>> 0);
   const spec = missionStageAt(c, idx);
-  const playerC = makePlayerCombatant(p);
-  const enemyC = buildMissionEnemy(c, idx);
-  if(!enemyC){ toast('미션 데이터 오류'); return; }
-  beginTeamBattle([playerC], [enemyC], { league:'solo', mission:{ cid, idx } });
+  const enemies = buildMissionEnemies(c, idx);
+  if(!enemies.length){ toast('미션 데이터 오류'); return; }
+  // 다인전 스테이지면 플레이어도 팀 출전, 단일이면 활성 식물 1마리(빠른 판)
+  const playerUnits = enemies.length>1
+    ? currentTeam().map(x=>{ ensureSkillFields(x); return makePlayerCombatant(x); })
+    : [makePlayerCombatant(p)];
+  beginTeamBattle(playerUnits, enemies, { league: enemies.length>1?'team':'solo', mission:{ cid, idx } });
   bootBattleUI(p);
-  if(spec.intro) blog(`<span class="em">${enemyC.name}</span> — ${spec.intro}`);
+  if(spec.intro) blog(`<span class="em">${B.e.name}</span> — ${spec.intro}`);
 }
 /* 전투 화면 부팅(공용) — 화면 전환·스프라이트·이름표·VS 인트로·스테이지 진입 예약 */
 function bootBattleUI(p){
@@ -13413,7 +13455,8 @@ async function endMissionMatch(won){
       btnLabel = '홈으로 — 다음 준비 ▶';
     }
   } else {
-    note = `<b>${spec.name || (SPECIES[spec.species]||{}).name || '적'}</b>에게 패배… 강화·성장 후 다시 도전하세요!`;
+    const leadEn = missionEnemiesAt(c, M.idx)[0] || {};
+    note = `<b>${leadEn.name || (SPECIES[leadEn.species]||{}).name || '적'}</b>에게 패배… 강화·성장 후 다시 도전하세요!`;
   }
   saveState();
   $('#battleResultCenter').innerHTML = `
@@ -14424,12 +14467,16 @@ window.__test('mission: campaign data integrity', function(){
   CAMPAIGNS.forEach(function(c){
     __ok(!ids[c.id], 'dup id '+c.id); ids[c.id]=1;
     __ok(c.stages.length>=2 && !!c.boss, 'stages+boss '+c.id);
-    c.stages.concat([c.boss]).forEach(function(st){
-      __ok(!!SPECIES[st.species], c.id+' species '+st.species);
-      __ok(GROWTH_STAT_MULT[st.growth]!=null, c.id+' growth '+st.growth);
-      (st.cards||[]).forEach(function(cd){ __ok(!!TRAIT_CARDS[cd[0]], c.id+' card '+cd[0]); });
-    });
-    __ok(!c.boss.gimmick || !!MISSION_GIMMICKS[c.boss.gimmick], c.id+' gimmick');
+    for(let i=0;i<missionStageCount(c);i++){
+      const ens = missionEnemiesAt(c, i);
+      __ok(ens.length>=1 && ens.length<=3, c.id+' stage'+i+' enemies 1..3');
+      ens.forEach(function(en){
+        __ok(!!SPECIES[en.species], c.id+' species '+en.species);
+        __ok(GROWTH_STAT_MULT[en.growth]!=null, c.id+' growth '+en.growth);
+        (en.cards||[]).forEach(function(cd){ __ok(!!TRAIT_CARDS[cd[0]], c.id+' card '+cd[0]); });
+        __ok(!en.gimmick || !!MISSION_GIMMICKS[en.gimmick], c.id+' gimmick');
+      });
+    }
     const cr = c.clearReward;
     __ok(cr && !!SPECIES[cr.species], c.id+' clearReward species');
     __eq(SPECIES[cr.species].released, false, c.id+' reward must be mission-exclusive(released:false)');
@@ -14438,18 +14485,23 @@ window.__test('mission: campaign data integrity', function(){
     }
   });
 });
-window.__test('mission: buildMissionEnemy deterministic + boss gimmick wired', function(){
+window.__test('mission: buildMissionEnemies deterministic + boss gimmick wired', function(){
   const c = CAMPAIGNS[0];
-  const u1 = buildMissionEnemy(c, 0), u2 = buildMissionEnemy(c, 0);
-  __ok(!!u1 && !!u2, 'enemy built');
-  __eq(u1.max, u2.max, 'deterministic hp'); __eq(u1.atk, u2.atk, 'deterministic atk');
-  const b = buildMissionEnemy(c, c.stages.length);
-  __ok(b.max > u1.max, 'boss stronger than stage1');
-  if(c.boss.gimmick==='burn_aura') __eq(b.gimmickAura, 'burn_aura', 'aura flag');
-  const c3 = CAMPAIGNS.find(x=>x.boss.gimmick==='enrage_below_half');
-  if(c3){ const b3 = buildMissionEnemy(c3, c3.stages.length); __ok(b3.turnHooks.threshold && b3.turnHooks.threshold.hpBelow===0.5, 'enrage → threshold hook'); }
-  const c2 = CAMPAIGNS.find(x=>x.boss.gimmick==='shield_start');
-  if(c2){ const b2 = buildMissionEnemy(c2, c2.stages.length); __ok((b2.barrier||0) >= Math.round(b2.max*0.30), 'shield_start → barrier'); }
+  const t1 = buildMissionEnemies(c, 0), t2 = buildMissionEnemies(c, 0);
+  __ok(t1.length>=1 && t1.length===t2.length, 'team built');
+  __eq(t1[0].max, t2[0].max, 'deterministic hp'); __eq(t1[0].atk, t2[0].atk, 'deterministic atk');
+  const bossTeam = buildMissionEnemies(c, c.stages.length);
+  __ok(bossTeam.length>=2, 'boss stage has escort (재저작)');
+  __ok(bossTeam[0].max > t1[0].max, 'boss stronger than stage1');
+  __ok(bossTeam.some(u=>u.gimmickAura==='burn_aura'), 'aura flag');
+  const findBossUnit = cid_gimmick => {
+    const cc = CAMPAIGNS.find(x => missionEnemiesAt(x, x.stages.length).some(en=>en.gimmick===cid_gimmick));
+    return cc ? buildMissionEnemies(cc, cc.stages.length).find(u=>u.gimmick===cid_gimmick) : null;
+  };
+  const b3 = findBossUnit('enrage_below_half');
+  if(b3) __ok(b3.turnHooks.threshold && b3.turnHooks.threshold.hpBelow===0.5, 'enrage → threshold hook');
+  const b2 = findBossUnit('shield_start');
+  if(b2) __ok((b2.barrier||0) >= Math.round(b2.max*0.30), 'shield_start → barrier');
 });
 window.__test('mission: progress shape + reward grant bypasses released gate', function(){
   if(typeof state==='undefined' || !state || !Array.isArray(state.seed_inventory)) return; // dex 모드(부팅 생략) 스킵
