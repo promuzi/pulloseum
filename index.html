@@ -364,18 +364,11 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
   box-shadow:0 4px 16px rgba(0,0,0,.5);text-shadow:0 0 10px rgba(255,225,74,.8);}
 .cp-energy .off{opacity:.16;filter:grayscale(1);text-shadow:none;}
 .cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
-.cp-hand{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;flex:1;}
+.cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 /* 기절 무료교대: 바 전체는 잠겨도 팀 바만 살아있게 */
 #cardPhase.freeswitch .cp-stack{opacity:1;filter:none;pointer-events:none;}
 #cardPhase.freeswitch #teamBar{pointer-events:auto;}
-/* 3v3: 손패4(2×2) + 우측 사이드(다음 카드/숨 고르기) + 팀 바 */
-#cardHandRow{display:flex;gap:6px;align-items:stretch;}
-#cardSide{width:88px;display:flex;flex-direction:column;gap:4px;}
-#cardNext{background:rgba(255,255,255,.04);border:1px dashed var(--line);border-radius:8px;padding:3px 4px;text-align:center;font-size:10px;color:var(--sub);}
-.cn-label{opacity:.7;letter-spacing:1px;}
-.cn-icon{font-size:16px;display:block;line-height:1.2;}
-.cn-name{display:block;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.skillcard.rest{border-style:dashed;opacity:.92;flex:1;}
+.skillcard.rest{border-style:dashed;opacity:.92;}
 #teamBar{display:flex;gap:6px;justify-content:center;}
 #teamBar.hidden{display:none;}
 .tb-slot{position:relative;flex:1;max-width:92px;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:3px 4px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;}
@@ -2246,13 +2239,7 @@ body{letter-spacing:.2px;}
       <div class="cp-stack">
         <div id="teamBar"></div>
         <div class="cp-energy" id="cardEnergy"></div>
-        <div id="cardHandRow">
-          <div class="cp-hand" id="cardHand"></div>
-          <div id="cardSide">
-            <div id="cardNext"><span class="cn-label">다음</span><div id="cardNextBody"></div></div>
-            <button id="restCard" class="skillcard rest"><div class="sc-name">숨 고르기</div><div class="sc-icon">🌬️</div><div class="sc-foot"><span class="sc-cost">⚡+1</span></div></button>
-          </div>
-        </div>
+        <div class="cp-hand" id="cardHand"></div>
       </div>
     </div>
     <!-- 결과 (금속판 닫힘 + 보상 카드) -->
@@ -6817,21 +6804,9 @@ function attachEnergyPool(unit, pool){
   unit.__energyPool = pool;
   return unit;
 }
-/* ── 덱8/손패4 CR 사이클(스펙 §3) — 셔플은 전투 시드 rng() → 결정론 ── */
-function makeDeckState(ids){
-  const order = (ids||[]).slice();
-  for(let i=order.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=order[i]; order[i]=order[j]; order[j]=t; }
-  return { hand: order.slice(0,4), queue: order.slice(4) };
-}
-function deckNext(ds){ return (ds && ds.queue.length) ? ds.queue[0] : null; }
-function deckPlay(ds, id){
-  if(!ds) return false;
-  const i = ds.hand.indexOf(id); if(i<0) return false;
-  ds.hand.splice(i,1);
-  if(ds.queue.length){ ds.queue.push(id); ds.hand.push(ds.queue.shift()); }
-  else ds.hand.push(id); // 카드 5장 미만: 사이클 없이 재사용
-  return true;
-}
+/* (2026-07-02 플레이테스트) 손패4 덱 순환(makeDeckState/deckPlay/deckNext) 폐지 —
+   턴제에서 스택/콤보 셋업(비늘·브레스·태그 콤보)을 계획할 수 없게 만들어 제거.
+   전투 스킬 접근 = unitDeckIds(유닛) 전체 상시 오픈 + 에너지 커브가 긴장 담당. */
 /* 실제 전투 로드아웃 = 장착한 일반 스킬 + 변이형 자동 스킬 */
 function plantBattleLoadout(p){
   const eq = (p.equipped_skills || []).filter(id => !isAutoFormSkill(id)).slice(0, MAX_LOADOUT);
@@ -12245,8 +12220,9 @@ function beginTeamBattle(pUnits, eUnits, opts){
   opts = opts || {};
   const pPool = makeEnergyPool(Math.max(0, ...pUnits.map(u=>u.passives.energyBonus||0)));
   const ePool = makeEnergyPool(Math.max(0, ...eUnits.map(u=>u.passives.energyBonus||0)));
-  pUnits.forEach(u => { attachEnergyPool(u, pPool); u.deckState = makeDeckState(unitDeckIds(u)); });
-  eUnits.forEach(u => { attachEnergyPool(u, ePool); u.deckState = makeDeckState(unitDeckIds(u)); });
+  // (2026-07-02 플레이테스트) 손패4 덱 순환 폐지 — 8장 상시 오픈(스택/콤보 셋업 복원)
+  pUnits.forEach(u => attachEnergyPool(u, pPool));
+  eUnits.forEach(u => attachEnergyPool(u, ePool));
   B = {
     pTeam:pUnits, eTeam:eUnits, pActive:0, eActive:0,
     p:pUnits[0], e:eUnits[0], pPool, ePool,
@@ -12471,12 +12447,15 @@ function skillCardHtml(id, pred){
 /* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
 function refreshSkillBar(){
   if(!B) return;
-  const ds = B.p.deckState || { hand: B.p.loadout.slice(0,4), queue: [] };
+  // (2026-07-02 플레이테스트) 8장 상시 오픈 — 스택/콤보 셋업을 계획할 수 있게. 손패 순환 폐지.
+  const ids = unitDeckIds(B.p);
   const variantIds = variantSkillsOf(B.p);
-  $('#cardHand').innerHTML = ds.hand.map(id => skillCardHtml(id, variantIds.includes(id))).join('');
-  const nb = $('#cardNextBody');
-  if(nb){ const nx = deckNext(ds); const s = nx ? skillById(nx, B.p) : null;
-    nb.innerHTML = s ? `<span class="cn-icon">${s.icon||'❔'}</span><span class="cn-name">${displaySkillName(s.name)}</span>` : '<span class="cn-none">—</span>'; }
+  let html = ids.map(id => skillCardHtml(id, variantIds.includes(id))).join('');
+  // 숨 고르기: 쓸 수 있는 스킬이 하나도 없을 때만 폴백으로 노출(데드락 방지)
+  if(!ids.some(id => !skillUnusable(B.p, id))){
+    html += `<button class="skillcard rest" id="restCard"><div class="sc-name">숨 고르기</div><div class="sc-icon">🌬️</div><div class="sc-foot"><span class="sc-cost">⚡+1</span></div></button>`;
+  }
+  $('#cardHand').innerHTML = html;
   let pips = `<span class="ce-label">⚡ 에너지</span>`;
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#cardEnergy').innerHTML = pips;
@@ -12702,7 +12681,7 @@ function aiTemperOf(u){ return AI_TEMPER[u.archetype || (SPECIES[u.species]&&SPE
 function aiPickIntent(){
   const e = B.e, t = aiTemperOf(e);
   // 예고한 큰 기술은 지킨다(§4 — 예고=플레이어가 대응할 기회)
-  if(B.eForecast && e.deckState && e.deckState.hand.includes(B.eForecast.id) && !skillUnusable(e, B.eForecast.id)){
+  if(B.eForecast && !skillUnusable(e, B.eForecast.id)){
     const id = B.eForecast.id; B.eForecast = null; return { kind:'skill', id };
   }
   B.eForecast = null;
@@ -12713,7 +12692,7 @@ function aiPickIntent(){
     if(bad && cand>=0 && rng() < 0.25*t.switch) return { kind:'switch', to:cand };
     if(e.hp < e.max*0.18 && cand>=0 && rng() < 0.35*t.switch) return { kind:'switch', to:cand };
   }
-  const hand = (e.deckState ? e.deckState.hand : e.loadout).filter(id => !skillUnusable(e, id));
+  const hand = unitDeckIds(e).filter(id => !skillUnusable(e, id));
   if(!hand.length) return { kind:'rest' };
   const catOf = id => { const s = skillById(id, e);
     if(s.heal && s.heal>=0.15) return 'heal';
@@ -12734,12 +12713,10 @@ function aiPickIntent(){
 /* 큰 기술 예고(§4): 턴 정리 때 다음 턴 3코+ 스킬 사용 계획이면 ⚠️ 노출(종류 숨김) */
 function updateEnemyForecast(){
   const e = B.e; B.eForecast = null;
-  if(e.deckState){
-    const bigs = e.deckState.hand.filter(id => { const s = skillById(id, e);
-      return s && !s.noEnergy && (s.cost||0)>=3 && effectiveCost(e, s) <= e.energy && (s.power||0)>0; });
-    if(bigs.length && rng() < 0.55){
-      B.eForecast = { id: bigs[Math.floor(rng()*bigs.length)] };
-    }
+  const bigs = unitDeckIds(e).filter(id => { const s = skillById(id, e);
+    return s && !s.noEnergy && (s.cost||0)>=3 && effectiveCost(e, s) <= e.energy && (s.power||0)>0; });
+  if(bigs.length && rng() < 0.55){
+    B.eForecast = { id: bigs[Math.floor(rng()*bigs.length)] };
   }
   const box = $('#eSpriteBox');
   if(box) box.classList.toggle('forecast', !!B.eForecast);
@@ -13052,7 +13029,6 @@ async function submitIntent(intent){
   if(intent.kind==='skill'){
     const s = skillById(intent.id, B.p);
     if(!s) return;
-    if(B.p.deckState && !B.p.deckState.hand.includes(intent.id)){ toast('손패에 없는 카드입니다'); return; }
     if(s.noEnergy){
       const rem = (B.p.uses && B.p.uses[intent.id]!=null) ? B.p.uses[intent.id] : (s.uses||0);
       if(rem <= 0){ toast('이 스킬은 더 쓸 수 없습니다 (횟수 소진)'); return; }
@@ -13115,7 +13091,6 @@ async function resolveTurn(pIntent, eIntent){
       setJudgeAction(side, id);
       await sleep(150);
       if(a.skipNext){ a.skipNext=false; if(a.zapNoRegen){ a._noRegen=true; a.zapNoRegen=false; } await animateJudgeCardUse(side,false); setVerdict(side, a._noRegen?'감전 — 움직일 수 없다!':'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
-      if(a.deckState) deckPlay(a.deckState, id); // 손패 사이클(봇 포함)
       await applySkill(a, d, skillById(id, a), side, {suppressMessages:true});
       if(await handleFaintAndMaybeEnd()) return;
       await sleep(240);
@@ -13487,7 +13462,7 @@ $('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderC
 $('#surrenderYes').addEventListener('click', () => { sfx.tap(); doSurrender(); });
 $('#battleSkillDetail').addEventListener('click', () => { hide('#battleSkillDetail'); });
 $('#sidePanel').addEventListener('click', (ev) => { if(ev.target.closest('[data-act="bag"]')){ sfx.tap(); openSeedBag(); } else if(ev.target.closest('[data-act="dex"]')){ sfx.tap(); openDex(); } });
-$('#tournamentBar').addEventListener('click', (ev) => { if(ev.target.closest('.tcell')){ sfx.tap(); openMatches(); } });
+$('#tournamentBar').addEventListener('click', (ev) => { if(ev.target.closest('.tcell[data-matches]')){ sfx.tap(); openMatches(); } }); // 3v3 리그/미션 행은 자체 핸들러(중복 모달 방지)
 $('#matchesModal').addEventListener('click', (ev) => { if(ev.target === $('#matchesModal')){ hide('#matchesModal'); } });
 $('#cardDetailModal').addEventListener('click', (ev) => {
   if(ev.target.closest('[data-detail-equip]')){ sfx.tap(); detailEquip(); return; }
@@ -14321,27 +14296,6 @@ window.__test('team: loadout 8 + team state migration + currentTeam', function()
   if(state.plants.length){ __ok(t.length>=1, 'has plants → team ≥1'); __ok(t.some(p=>p.id===state.activeId) || !activePlant(), 'active plant included'); }
 });
 
-window.__test('deck: CR cycle — shuffle/hand4/rotate/small-deck', function(){
-  seedBattleRng(12345);
-  const ds = makeDeckState(['a','b','c','d','e','f','g','h']);
-  __eq(ds.hand.length, 4, 'hand 4'); __eq(ds.queue.length, 4, 'queue 4');
-  const first = ds.hand[0], nxt = deckNext(ds);
-  __ok(!!nxt, 'next preview');
-  __ok(deckPlay(ds, first), 'play ok');
-  __eq(ds.hand.length, 4, 'refilled to 4');
-  __eq(ds.hand[3], nxt, 'drew previewed card');
-  __eq(ds.queue[ds.queue.length-1], first, 'played card to back');
-  __ok(!deckPlay(ds, 'zz'), 'not-in-hand rejected');
-  const small = makeDeckState(['x','y','z']); // 5장 미만 → 사이클 없이 재사용
-  __eq(small.hand.length, 3, 'small hand=all'); __eq(deckNext(small), null, 'no next');
-  __ok(deckPlay(small, 'x'), 'small play ok');
-  __ok(small.hand.includes('x'), 'small deck: card returns to hand');
-  seedBattleRng(999); const d1 = makeDeckState(['a','b','c','d','e','f']);
-  seedBattleRng(999); const d2 = makeDeckState(['a','b','c','d','e','f']);
-  __eq(JSON.stringify(d1), JSON.stringify(d2), 'deterministic shuffle');
-  clearBattleRng();
-});
-
 window.__test('energy: shared pool via accessors', function(){
   const pool = makeEnergyPool(0);
   __eq(pool.cur, ENERGY_START, 'start 2'); __eq(pool.max, ENERGY_POOL_MAX, 'max 8');
@@ -14367,7 +14321,7 @@ window.__test('team: beginTeamBattle wiring + switchActive alias', function(){
   __ok(B.p === B.pTeam[0] && B.e === B.eTeam[0], 'aliases');
   __eq(B.p.energy, ENERGY_START, 'pool start');
   B.pTeam[1].energy += 2; __eq(B.p.energy, ENERGY_START+2, 'team shares pool');
-  __ok(B.pTeam.every(u => u.deckState && u.deckState.hand.length>=1), 'deckState per unit');
+  __ok(unitDeckIds(B.p).length>=1, 'skills always open (no hand rotation)');
   __ok(switchActive('p', 1), 'switch ok');
   __ok(B.p === B.pTeam[1] && B.pActive===1, 'alias moved');
   __ok(!switchActive('p', 1), 'same idx rejected');
@@ -14393,8 +14347,8 @@ window.__test('ai: intent from hand + forecast honored + temper table', function
   B.ePool.cur = 8;
   const it = aiPickIntent();
   __ok(it && (it.kind==='skill'||it.kind==='rest'), 'intent shape');
-  if(it.kind==='skill') __ok(B.e.deckState.hand.includes(it.id), 'picks from hand');
-  const fid = B.e.deckState.hand[0];
+  if(it.kind==='skill') __ok(unitDeckIds(B.e).includes(it.id), 'picks from own kit');
+  const fid = unitDeckIds(B.e)[0];
   B.eForecast = { id: fid };
   const it2 = aiPickIntent();
   __eq(it2.kind, 'skill', 'forecast → skill intent');
@@ -15386,7 +15340,7 @@ window.__test('rng: 기본은 Math.random 폴백(비전투 무영향)', function
   const x=rng(); __ok(x>=0 && x<1, '폴백 rng가 [0,1) 밖');
 });
 window.__test('rng: 전투 시뮬 경로에 Math.random 직접호출 없음', function(){
-  const srcs = [applySkill, tickStatuses, aiPickIntent, resolveTurn, makeDeckState, buildMissionEnemy].map(f => f.toString()).join('\n');
+  const srcs = [applySkill, tickStatuses, aiPickIntent, resolveTurn, buildMissionEnemy].map(f => f.toString()).join('\n');
   __ok(!/Math\.random/.test(srcs), '전투 시뮬 함수에 Math.random 잔존(rng()로 교체 필요)');
 });
 window.__test('time: gameNow가 진행시간 출처 단일 지점', function(){
