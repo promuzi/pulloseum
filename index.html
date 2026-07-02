@@ -6768,6 +6768,21 @@ function currentTeam(){
   state.last_team = team.map(p=>p.id);
   return team;
 }
+/* ── 덱8/손패4 CR 사이클(스펙 §3) — 셔플은 전투 시드 rng() → 결정론 ── */
+function makeDeckState(ids){
+  const order = (ids||[]).slice();
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=order[i]; order[i]=order[j]; order[j]=t; }
+  return { hand: order.slice(0,4), queue: order.slice(4) };
+}
+function deckNext(ds){ return (ds && ds.queue.length) ? ds.queue[0] : null; }
+function deckPlay(ds, id){
+  if(!ds) return false;
+  const i = ds.hand.indexOf(id); if(i<0) return false;
+  ds.hand.splice(i,1);
+  if(ds.queue.length){ ds.queue.push(id); ds.hand.push(ds.queue.shift()); }
+  else ds.hand.push(id); // 카드 5장 미만: 사이클 없이 재사용
+  return true;
+}
 /* 실제 전투 로드아웃 = 장착한 일반 스킬 + 변이형 자동 스킬 */
 function plantBattleLoadout(p){
   const eq = (p.equipped_skills || []).filter(id => !isAutoFormSkill(id)).slice(0, MAX_LOADOUT);
@@ -13934,6 +13949,27 @@ window.__test('team: loadout 8 + team state migration + currentTeam', function()
   const t = currentTeam();
   __ok(Array.isArray(t) && t.length>=0 && t.length<=3, 'currentTeam ≤3');
   if(state.plants.length){ __ok(t.length>=1, 'has plants → team ≥1'); __ok(t.some(p=>p.id===state.activeId) || !activePlant(), 'active plant included'); }
+});
+
+window.__test('deck: CR cycle — shuffle/hand4/rotate/small-deck', function(){
+  seedBattleRng(12345);
+  const ds = makeDeckState(['a','b','c','d','e','f','g','h']);
+  __eq(ds.hand.length, 4, 'hand 4'); __eq(ds.queue.length, 4, 'queue 4');
+  const first = ds.hand[0], nxt = deckNext(ds);
+  __ok(!!nxt, 'next preview');
+  __ok(deckPlay(ds, first), 'play ok');
+  __eq(ds.hand.length, 4, 'refilled to 4');
+  __eq(ds.hand[3], nxt, 'drew previewed card');
+  __eq(ds.queue[ds.queue.length-1], first, 'played card to back');
+  __ok(!deckPlay(ds, 'zz'), 'not-in-hand rejected');
+  const small = makeDeckState(['x','y','z']); // 5장 미만 → 사이클 없이 재사용
+  __eq(small.hand.length, 3, 'small hand=all'); __eq(deckNext(small), null, 'no next');
+  __ok(deckPlay(small, 'x'), 'small play ok');
+  __ok(small.hand.includes('x'), 'small deck: card returns to hand');
+  seedBattleRng(999); const d1 = makeDeckState(['a','b','c','d','e','f']);
+  seedBattleRng(999); const d2 = makeDeckState(['a','b','c','d','e','f']);
+  __eq(JSON.stringify(d1), JSON.stringify(d2), 'deterministic shuffle');
+  clearBattleRng();
 });
 
 window.__test('i18n: josa picks particle by batchim', function(){
