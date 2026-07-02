@@ -284,6 +284,10 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
 #battleArena.spread .arena-fighter.player{transform:scale(.8);transform-origin:50% 100%;}
 .fsprite{position:relative;flex:0 0 auto;display:flex;justify-content:center;
   filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));}
+/* 3v3: 봇 큰 기술 예고(⚠️ 차오름 — 종류는 숨김, 대응 기회만 제공) */
+@keyframes forecastPulse{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.25);opacity:1}}
+#eSpriteBox.forecast::after{content:'⚠️';position:absolute;top:-8px;right:-4px;font-size:18px;z-index:3;
+  animation:forecastPulse .9s infinite;filter:drop-shadow(0 0 6px #ff9a4d);}
 /* 발밑 그림자(접지감) */
 .fsprite::after{content:'';position:absolute;left:50%;bottom:-6px;width:70%;height:16px;transform:translateX(-50%);
   background:radial-gradient(closest-side,rgba(0,0,0,.5),transparent);z-index:-1;}
@@ -12565,6 +12569,62 @@ function aiPickSkill(e){
   if(guardId && rng()<0.18) return guardId;
   return ids[Math.floor(rng()*ids.length)];
 }
+/* ── 봇 성향(스펙 §4) — 아키타입=읽을 수 있는 패턴. 가중치는 카테고리 선호 배율. ── */
+const AI_TEMPER = {
+  berserk:{atk:1.6,guard:0.3,heal:0.4,debuff:0.6,switch:0.3}, sage:{atk:1.2,guard:0.8,heal:0.8,debuff:0.8,switch:0.7},
+  trickster:{atk:0.9,guard:0.6,heal:0.6,debuff:1.6,switch:1.6}, stalwart:{atk:0.9,guard:1.5,heal:0.9,debuff:0.6,switch:0.4},
+  guardian:{atk:0.7,guard:1.7,heal:1.2,debuff:0.5,switch:0.5}, zealot:{atk:1.7,guard:0.2,heal:0.3,debuff:0.5,switch:0.2},
+  executioner:{atk:1.5,guard:0.5,heal:0.4,debuff:0.8,switch:0.6}, feral:{atk:1.4,guard:0.4,heal:0.5,debuff:0.5,switch:0.8},
+  strategist:{atk:0.8,guard:0.8,heal:0.7,debuff:1.7,switch:1.0}, hermit:{atk:0.7,guard:1.2,heal:1.6,debuff:0.6,switch:0.5},
+  tyrant:{atk:1.3,guard:0.7,heal:0.6,debuff:1.2,switch:0.4}, glutton:{atk:1.3,guard:0.5,heal:1.0,debuff:0.6,switch:0.5},
+  phantom:{atk:1.1,guard:0.5,heal:0.5,debuff:1.1,switch:1.4}, warlord:{atk:1.5,guard:0.8,heal:0.5,debuff:0.7,switch:0.5},
+};
+function aiTemperOf(u){ return AI_TEMPER[u.archetype || (SPECIES[u.species]&&SPECIES[u.species].archetype) || 'sage'] || AI_TEMPER.sage; }
+function aiPickIntent(){
+  const e = B.e, t = aiTemperOf(e);
+  // 예고한 큰 기술은 지킨다(§4 — 예고=플레이어가 대응할 기회)
+  if(B.eForecast && e.deckState && e.deckState.hand.includes(B.eForecast.id) && !skillUnusable(e, B.eForecast.id)){
+    const id = B.eForecast.id; B.eForecast = null; return { kind:'skill', id };
+  }
+  B.eForecast = null;
+  // 교체 판단(3v3만): 상성 불리+생존 대체자, 성향 배율
+  if(B.eTeam.length>1 && teamAliveCount(B.eTeam)>1){
+    const bad = eff(B.p.element, e.element) > 1.01;
+    const cand = B.eTeam.findIndex((u,i)=>i!==B.eActive && u.hp>0 && eff(B.p.element, u.element) <= 1.0);
+    if(bad && cand>=0 && rng() < 0.25*t.switch) return { kind:'switch', to:cand };
+    if(e.hp < e.max*0.18 && cand>=0 && rng() < 0.35*t.switch) return { kind:'switch', to:cand };
+  }
+  const hand = (e.deckState ? e.deckState.hand : e.loadout).filter(id => !skillUnusable(e, id));
+  if(!hand.length) return { kind:'rest' };
+  const catOf = id => { const s = skillById(id, e);
+    if(s.heal && s.heal>=0.15) return 'heal';
+    if(s.guardMult!=null) return 'guard';
+    if((s.power||0)>0) return 'atk';
+    if(s.enemyDebuff||s.dot||s.infuse) return 'debuff';
+    return 'atk'; };
+  let best=null, bestW=-1;
+  for(const id of hand){
+    const s = skillById(id, e), cat = catOf(id);
+    let w = (t[cat]||1) * (10 + (s.power||0)/20) * (0.9 + rng()*0.2);
+    if(cat==='heal' && e.hp < e.max*0.35) w *= 2.2;
+    if(cat==='heal' && e.hp > e.max*0.8) w *= 0.1;
+    if(w > bestW){ bestW = w; best = id; }
+  }
+  return best ? { kind:'skill', id:best } : { kind:'rest' };
+}
+/* 큰 기술 예고(§4): 턴 정리 때 다음 턴 3코+ 스킬 사용 계획이면 ⚠️ 노출(종류 숨김) */
+function updateEnemyForecast(){
+  const e = B.e; B.eForecast = null;
+  if(e.deckState){
+    const bigs = e.deckState.hand.filter(id => { const s = skillById(id, e);
+      return s && !s.noEnergy && (s.cost||0)>=3 && effectiveCost(e, s) <= e.energy && (s.power||0)>0; });
+    if(bigs.length && rng() < 0.55){
+      B.eForecast = { id: bigs[Math.floor(rng()*bigs.length)] };
+    }
+  }
+  const box = $('#eSpriteBox');
+  if(box) box.classList.toggle('forecast', !!B.eForecast);
+}
 async function applySkill(a, d, s, side, options={}){
   if(!s) return;
   const tgtSide = side==='p' ? 'e' : 'p';
@@ -14107,6 +14167,28 @@ window.__test('team: beginTeamBattle wiring + switchActive alias', function(){
 window.__test('turn: intent API surface (switch-first/rest/faint helpers)', function(){
   __ok(typeof submitIntent==='function' && typeof resolveTurn==='function', 'intent api exists');
   __ok(typeof promptFreeSwitch==='function' && typeof handleFaintAndMaybeEnd==='function', 'faint api exists');
+});
+
+window.__test('ai: intent from hand + forecast honored + temper table', function(){
+  __ok(typeof aiPickIntent==='function' && typeof updateEnemyForecast==='function', 'api');
+  __ok(AI_TEMPER.berserk && AI_TEMPER.guardian && Object.keys(AI_TEMPER).length>=14, 'temper 14+ archetypes');
+  seedBattleRng(4242);
+  const mk = (n,arch) => { const u = makeCombatant({ name:n, species:'spore_cap', element:'grass', grade:'C',
+    seedType:'mushroom', growth:'growing', form:'spore', baseStats:{hp:100,atk:20,def:15,spd:15,acc:90,elem:10,critRate:5,critMult:1.5,energy:3},
+    traits:[], loadout:['skill_basic_strike','skill_guard','skill_photosynthesis','skill_focus','skill_rally'], skillGrades:{}, cards:[] }); u.archetype=arch; return u; };
+  const savedB = (typeof B!=='undefined') ? B : null;
+  beginTeamBattle([mk('P','berserk')], [mk('E','berserk')], { league:'solo', noUI:true });
+  B.ePool.cur = 8;
+  const it = aiPickIntent();
+  __ok(it && (it.kind==='skill'||it.kind==='rest'), 'intent shape');
+  if(it.kind==='skill') __ok(B.e.deckState.hand.includes(it.id), 'picks from hand');
+  const fid = B.e.deckState.hand[0];
+  B.eForecast = { id: fid };
+  const it2 = aiPickIntent();
+  __eq(it2.kind, 'skill', 'forecast → skill intent');
+  __eq(it2.id, fid, 'forecast honored when playable');
+  __ok(B.eForecast===null, 'forecast consumed');
+  B = savedB; clearBattleRng();
 });
 
 window.__test('i18n: josa picks particle by batchim', function(){
