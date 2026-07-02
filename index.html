@@ -364,8 +364,28 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
   box-shadow:0 4px 16px rgba(0,0,0,.5);text-shadow:0 0 10px rgba(255,225,74,.8);}
 .cp-energy .off{opacity:.16;filter:grayscale(1);text-shadow:none;}
 .cp-energy .ce-label{font-size:12px;color:#ffe89a;font-weight:800;letter-spacing:1px;margin-right:5px;text-shadow:none;}
-.cp-hand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.cp-pred{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
+.cp-hand{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;flex:1;}
+/* 기절 무료교대: 바 전체는 잠겨도 팀 바만 살아있게 */
+#cardPhase.freeswitch .cp-stack{opacity:1;filter:none;pointer-events:none;}
+#cardPhase.freeswitch #teamBar{pointer-events:auto;}
+/* 3v3: 손패4(2×2) + 우측 사이드(다음 카드/숨 고르기) + 팀 바 */
+#cardHandRow{display:flex;gap:6px;align-items:stretch;}
+#cardSide{width:88px;display:flex;flex-direction:column;gap:4px;}
+#cardNext{background:rgba(255,255,255,.04);border:1px dashed var(--line);border-radius:8px;padding:3px 4px;text-align:center;font-size:10px;color:var(--sub);}
+.cn-label{opacity:.7;letter-spacing:1px;}
+.cn-icon{font-size:16px;display:block;line-height:1.2;}
+.cn-name{display:block;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.skillcard.rest{border-style:dashed;opacity:.92;flex:1;}
+#teamBar{display:flex;gap:6px;justify-content:center;}
+#teamBar.hidden{display:none;}
+.tb-slot{position:relative;flex:1;max-width:92px;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:3px 4px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;}
+.tb-slot.active{border-color:var(--neon);box-shadow:0 0 8px rgba(31,217,196,.35);}
+.tb-slot.dead{opacity:.35;filter:grayscale(1);cursor:default;}
+.tb-slot.pick{border-color:#ffcf6b;animation:pulse .8s infinite alternate;}
+.tb-hp{width:90%;height:4px;background:#1c2b3f;border-radius:2px;overflow:hidden;}
+.tb-hp i{display:block;height:100%;background:var(--neon);}
+.tb-adv{font-size:9px;color:#9be15d;}.tb-dis{font-size:9px;color:#ff8a70;}
+.tb-x{position:absolute;top:2px;right:4px;font-size:10px;color:#ff8a70;}
 .skillcard{position:relative;border:1px solid var(--gc,var(--line));border-radius:12px;text-align:center;
   background:linear-gradient(160deg,rgba(22,32,48,.96),rgba(12,18,30,.96));color:var(--text);
   padding:6px 6px 5px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;
@@ -2224,9 +2244,15 @@ body{letter-spacing:.2px;}
     <!-- 스킬 카드 페이즈 -->
     <div id="cardPhase" class="hidden">
       <div class="cp-stack">
+        <div id="teamBar"></div>
         <div class="cp-energy" id="cardEnergy"></div>
-        <div class="cp-hand" id="cardHand"></div>
-        <div class="cp-pred" id="cardPred"></div>
+        <div id="cardHandRow">
+          <div class="cp-hand" id="cardHand"></div>
+          <div id="cardSide">
+            <div id="cardNext"><span class="cn-label">다음</span><div id="cardNextBody"></div></div>
+            <button id="restCard" class="skillcard rest"><div class="sc-name">숨 고르기</div><div class="sc-icon">🌬️</div><div class="sc-foot"><span class="sc-cost">⚡+1</span></div></button>
+          </div>
+        </div>
       </div>
     </div>
     <!-- 결과 (금속판 닫힘 + 보상 카드) -->
@@ -11970,12 +11996,15 @@ function buildEnemy(roundIndex, tierIndex){
   if(form==='weapon') cards.push(cardKeyOf(pick(['card_sword','card_axe','card_gun','card_shieldw']), cardGrade));
   // 독성/용족 봇은 변이형 기본 스킬(묻히기·뿌리기 / 비늘·브레스)을 makeCombatant가 자동 부여 — 별도 카드 불필요
   const nameIdx = Math.min(5, roundIndex + (tierIndex>2?1:0));
-  return makeCombatant({
+  const u = makeCombatant({
     name:`${ENEMY_NAME_TIERS[nameIdx]} ${SPECIES[sp].name}`, trainerName:pick(ENEMY_TRAINER_NAMES), species:sp, element:el, grade, awakened:null,
     seedType, growth, form, predType, weapon:null,
     baseStats:{hp,atk,def,spd,acc,elem,critRate,critMult:1.5,energy:energyMax},
     traits, loadout, skillGrades, cards,
   });
+  // 3v3 성향 tell: 변이종은 정체성 아키타입, base 종은 해시 배정 — 모든 봇이 읽을 수 있는 패턴 보유
+  u.archetype = (SPECIES[sp] && SPECIES[sp].archetype) || archetypeOf(sp);
+  return u;
 }
 /* ===== #15 전투-미션/스토리 모드 (설계: docs/superpowers/specs/2026-06-26-mission-story-mode-design.md) =====
    캠페인 선택형 + 내부 선형 고정 적. 적 = 저작된 고정 사양(스케일 봇 아님·난수 없음=결정론).
@@ -12225,7 +12254,8 @@ function bootBattleUI(p){
   renderActiveUnits();
   $('#eSpriteBox').classList.remove('enter','collapse');
   $('#pSpriteBox').classList.remove('enter','collapse');
-  $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}`;
+  const eArch = ARCHETYPES[B.e.archetype || (SPECIES[B.e.species]&&SPECIES[B.e.species].archetype)];
+  $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}${eArch?` · 성향: ${eArch.name}`:''}`;
   $('#pProfile').textContent = `👤 ${B.p.trainerName||state.profile_name||'재배사'}`;
   updateBars(); updateBattleHud();
   playVsIntro(p);
@@ -12365,18 +12395,45 @@ function skillCardHtml(id, pred){
 /* 하단 고정 스킬바 — 매 턴 등장/퇴장 없이 상주. 불 켜짐/꺼짐(잠금)만 갱신. */
 function refreshSkillBar(){
   if(!B) return;
+  const ds = B.p.deckState || { hand: B.p.loadout.slice(0,4), queue: [] };
   const variantIds = variantSkillsOf(B.p);
-  const normals = B.p.loadout.filter(id => !variantIds.includes(id));
-  $('#cardHand').innerHTML = normals.map(id => skillCardHtml(id, false)).join('');
-  $('#cardPred').innerHTML = variantIds.map(id => skillCardHtml(id, true)).join('');
+  $('#cardHand').innerHTML = ds.hand.map(id => skillCardHtml(id, variantIds.includes(id))).join('');
+  const nb = $('#cardNextBody');
+  if(nb){ const nx = deckNext(ds); const s = nx ? skillById(nx, B.p) : null;
+    nb.innerHTML = s ? `<span class="cn-icon">${s.icon||'❔'}</span><span class="cn-name">${displaySkillName(s.name)}</span>` : '<span class="cn-none">—</span>'; }
   let pips = `<span class="ce-label">⚡ 에너지</span>`;
   for(let i=0;i<B.p.energyMax;i++) pips += `<span class="${i<B.p.energy?'':'off'}">⚡</span>`;
   $('#cardEnergy').innerHTML = pips;
+  renderTeamBar();
   bindSkillCards();
+  const rest = $('#restCard'); if(rest){ rest.onclick = () => { if(!B.busy && !B.over) submitIntent({kind:'rest'}); }; }
   const cp = $('#cardPhase');
   cp.classList.remove('hidden');
   cp.classList.toggle('locked', !!(B.busy || B.over)); // 판정 중·종료 시 전체 불 꺼짐(클릭 차단)
   syncStageToSkillBar(); // 스킬 수에 맞춘 하단바 높이 → 무대가 나머지 차지
+}
+/* 팀 바(스펙 §5/§7) — 슬롯: 초상·HP바·vs현재적 상성. freeSwitchMode=기절 무료교대 선택 강조. */
+function renderTeamBar(freeSwitchMode){
+  const bar = $('#teamBar'); if(!bar || !B) return;
+  if(B.pTeam.length<=1){ bar.innerHTML=''; bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  bar.innerHTML = B.pTeam.map((u,i)=>{
+    const active = i===B.pActive, dead = u.hp<=0;
+    const adv = eff(u.element, B.e.element), dis = eff(B.e.element, u.element);
+    const matchup = dead?'':(adv>1.01?'<span class="tb-adv">▲유리</span>':(dis>1.01?'<span class="tb-dis">▼불리</span>':'<span class="tb-adv" style="opacity:.4">—</span>'));
+    const hpPct = Math.max(0, Math.round(u.hp/u.max*100));
+    return `<button class="tb-slot${active?' active':''}${dead?' dead':''}${freeSwitchMode&&!dead&&!active?' pick':''}" data-team="${i}">
+      <span class="tb-spr">${spriteFor(u, 34)}</span>
+      <span class="tb-hp"><i style="width:${hpPct}%"></i></span>
+      ${matchup}${dead?'<span class="tb-x">✖</span>':''}
+    </button>`;
+  }).join('');
+  bar.querySelectorAll('.tb-slot').forEach(btn => btn.addEventListener('click', ()=>{
+    const i = +btn.dataset.team;
+    if(B._freeSwitchResolve){ if(B.pTeam[i].hp>0 && i!==B.pActive) B._freeSwitchResolve(i); return; }
+    if(B.busy || B.over || i===B.pActive || B.pTeam[i].hp<=0) return;
+    submitIntent({ kind:'switch', to:i });
+  }));
 }
 /* 하단 스킬바 실제 높이만큼 무대(#battleArena) 바닥을 맞춘다 — 스킬 적어도 휑하지 않게. */
 function syncStageToSkillBar(){
@@ -13042,7 +13099,11 @@ async function handleFaintAndMaybeEnd(){
 /* 플레이어 무료 교대 — 팀 바를 선택 모드로 강조하고 선택을 기다린다(renderTeamBar 연동) */
 function promptFreeSwitch(side){
   return new Promise(resolve => {
-    B._freeSwitchResolve = (idx) => { switchActive(side, idx); B._freeSwitchResolve = null; resolve(); };
+    const cp = $('#cardPhase'); if(cp) cp.classList.add('freeswitch');
+    B._freeSwitchResolve = (idx) => {
+      if(cp) cp.classList.remove('freeswitch');
+      switchActive(side, idx); B._freeSwitchResolve = null; resolve();
+    };
     if(typeof renderTeamBar==='function') renderTeamBar(true);
     toast('교대할 식물을 선택하세요');
   });
