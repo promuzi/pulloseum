@@ -268,7 +268,8 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
 .battle-surrender:disabled{opacity:.42;cursor:default;}
 /* 스탠딩 무대: 적(위) · 나(아래), 가운데는 카드/판정 창 공간 */
 #battleArena{position:absolute;left:0;right:0;top:0;bottom:38%;display:flex;flex-direction:column;justify-content:space-between;
-  padding:calc(50px + env(safe-area-inset-top,0px)) 12px 6px;z-index:2;}
+  padding:calc(50px + env(safe-area-inset-top,0px)) 12px 6px;z-index:2;
+  transition:bottom .28s ease;} /* 스킬바 높이 보정 시 무대가 스냅 대신 부드럽게 이동(꿈틀 방지) */
 /* 무대 바닥(수평선) — 식물이 허공에 뜨지 않게. 바닥을 무대 끝(=스킬바 상단)까지 채워 경계를 하나로. */
 #battleArena::before{content:'';position:absolute;left:0;right:0;top:50%;bottom:0;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(20,184,166,.05) 30%,rgba(20,184,166,.12));
@@ -284,10 +285,10 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
 #battleArena.spread .arena-fighter.player{transform:scale(.8);transform-origin:50% 100%;}
 .fsprite{position:relative;flex:0 0 auto;display:flex;justify-content:center;
   filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));}
-/* 3v3: 봇 큰 기술 예고(⚠️ 차오름 — 종류는 숨김, 대응 기회만 제공) */
-@keyframes forecastPulse{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.25);opacity:1}}
-#eSpriteBox.forecast::after{content:'⚠️';position:absolute;top:-8px;right:-4px;font-size:18px;z-index:3;
-  animation:forecastPulse .9s infinite;filter:drop-shadow(0 0 6px #ff9a4d);}
+/* 봇 큰 기술 예고(⚠️ — 종류는 숨김, 대응 기회만 제공). 크기 펄스는 꿈틀거려 보여 밝기만 은은하게. */
+@keyframes forecastPulse{0%,100%{opacity:.55}50%{opacity:1}}
+#eSpriteBox.forecast::after{content:'⚠️';position:absolute;top:-8px;right:-4px;font-size:17px;z-index:3;
+  animation:forecastPulse 1.6s ease-in-out infinite;filter:drop-shadow(0 0 5px #ff9a4d);}
 /* 발밑 그림자(접지감) */
 .fsprite::after{content:'';position:absolute;left:50%;bottom:-6px;width:70%;height:16px;transform:translateX(-50%);
   background:radial-gradient(closest-side,rgba(0,0,0,.5),transparent);z-index:-1;}
@@ -12494,11 +12495,22 @@ function renderTeamBar(freeSwitchMode){
     submitIntent({ kind:'switch', to:i });
   }));
 }
-/* 하단 스킬바 실제 높이만큼 무대(#battleArena) 바닥을 맞춘다 — 스킬 적어도 휑하지 않게. */
+/* 하단 스킬바 실제 높이만큼 무대(#battleArena) 바닥을 맞춘다 — 스킬 적어도 휑하지 않게.
+   ⚠️ 빈/미배치 순간(오프셋 <60px)의 측정값이 박제되면 무대가 바 뒤로 늘어져 식물이 스킬바에
+   깔리는 버그(2026-07-02 실측 19px) → 저값은 무시하고 다음 프레임에 재보정(자가치유). */
 function syncStageToSkillBar(){
   const cp=$('#cardPhase'), ar=$('#battleArena'); if(!cp||!ar) return;
-  if(cp.classList.contains('hidden')){ ar.style.bottom=''; return; }
-  ar.style.bottom = Math.round(cp.offsetHeight) + 'px';
+  const apply = () => {
+    if(cp.classList.contains('hidden')){ ar.style.bottom=''; return; }
+    const h = cp.offsetHeight;
+    if(h < 60) return; // 레이아웃 전 빈 측정 — 신뢰하지 않음
+    ar.style.bottom = Math.round(h) + 'px';
+  };
+  apply();
+  requestAnimationFrame(() => requestAnimationFrame(apply)); // 리플로우/폰트 안정 후 재보정
+}
+if(!window.__battleResizeBound){ window.__battleResizeBound = true;
+  window.addEventListener('resize', () => { if(B && !B.over) syncStageToSkillBar(); });
 }
 /* 판정 중 스킬바 잠금(불 끔) — 카드는 보이되 클릭 차단. */
 function lockSkillBar(){ const cp=$('#cardPhase'); if(cp) cp.classList.add('locked'); }
