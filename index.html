@@ -6745,7 +6745,7 @@ function plantKnownSkillIds(p){
   if(Array.isArray(p.bonus_skills)) p.bonus_skills.forEach(id => { if(ALL_SKILLS[id]) known.push(id); });
   return known.filter((v, i, a) => v && a.indexOf(v) === i && skillById(v, p));
 }
-const MAX_LOADOUT = 6;
+const MAX_LOADOUT = 8; // 3v3 재설계: 덱 8장(스펙 2026-07-02 §3)
 /* 변이형(포식·무기·카드) 유래 스킬은 스킬 탭에 노출하지 않고 전투 시 자동 합류한다. */
 function isAutoFormSkill(id){ return id === 'skill_weapon' || id === 'skill_card_predation' || /^skill_card_/.test(id); }
 function plantSkillPool(p){ return plantKnownSkillIds(p).filter(id => !isAutoFormSkill(id)); }
@@ -6756,6 +6756,17 @@ function plantSkillUnlockMap(p){
   const unlock = {};
   GROWTH_STAGE_ORDER.forEach(stage => { plantStageSkillPool(p, stage).forEach(id => { if(!(id in unlock)) unlock[id] = stage; }); });
   return unlock;
+}
+/* 3v3 팀 — last_team 우선, 비면 활성 식물+앞선 식물로 채움(최대 3). 반환=plant 객체 배열. */
+function currentTeam(){
+  const byId = id => (state.plants||[]).find(p => p.id === id);
+  let team = (state.last_team||[]).map(byId).filter(Boolean);
+  const act = activePlant();
+  if(act && !team.some(p => p.id === act.id)) team.unshift(act);
+  for(const p of (state.plants||[])){ if(team.length>=3) break; if(!team.some(x=>x.id===p.id)) team.push(p); }
+  team = team.slice(0,3);
+  state.last_team = team.map(p=>p.id);
+  return team;
 }
 /* 실제 전투 로드아웃 = 장착한 일반 스킬 + 변이형 자동 스킬 */
 function plantBattleLoadout(p){
@@ -6969,6 +6980,12 @@ function normalizeState(s){
   // #15 미션/스토리 모드 진행 상태 (무회귀 마이그레이션)
   if(!s.mission_progress || typeof s.mission_progress !== 'object') s.mission_progress = {};
   if(!Array.isArray(s.mission_titles)) s.mission_titles = [];
+  // 3v3 재설계(스펙 2026-07-02): 팀 편성·재배사(3v3) 랭크 트랙
+  if(!Array.isArray(s.last_team)) s.last_team = [];
+  s.last_team = s.last_team.filter(id => (s.plants||[]).some(p => p.id === id)).slice(0,3);
+  if(typeof s.team_rankPoints !== 'number') s.team_rankPoints = 0;
+  if(typeof s.team_rankTier !== 'number') s.team_rankTier = rankTierIndexFromPoints(s.team_rankPoints);
+  if(s.team_tournament === undefined) s.team_tournament = null;
   if(!s.exploration_ship) s.exploration_ship = newExplorerShip();
   s.exploration_ship.stats = { ...newExplorerShip().stats, ...(s.exploration_ship.stats || {}) };
   // 4스탯 체계로 정리 — 구 세이브의 저항/보관/연료 스탯은 폐기, 핵심 4스탯만 보존/보정
@@ -13905,6 +13922,19 @@ window.__catalogSelfTest = function(){
 };
 function __eq(a,b,msg){ if(a!==b) throw new Error((msg||'')+' expected '+JSON.stringify(b)+' got '+JSON.stringify(a)); }
 function __ok(c,msg){ if(!c) throw new Error(msg||'assertion failed'); }
+
+/* ── 3v3 재설계 테스트 (plan: 2026-07-02-battle-core-3v3-redesign) ── */
+window.__test('team: loadout 8 + team state migration + currentTeam', function(){
+  __eq(MAX_LOADOUT, 8, 'MAX_LOADOUT 8');
+  if(typeof state==='undefined' || !state || !Array.isArray(state.plants)) return; // dex 모드 스킵
+  __ok(Array.isArray(state.last_team), 'last_team array');
+  __ok(typeof state.team_rankPoints==='number', 'team_rankPoints');
+  __ok(typeof state.team_rankTier==='number', 'team_rankTier');
+  __ok(state.team_tournament===null || typeof state.team_tournament==='object', 'team_tournament slot');
+  const t = currentTeam();
+  __ok(Array.isArray(t) && t.length>=0 && t.length<=3, 'currentTeam ≤3');
+  if(state.plants.length){ __ok(t.length>=1, 'has plants → team ≥1'); __ok(t.some(p=>p.id===state.activeId) || !activePlant(), 'active plant included'); }
+});
 
 window.__test('i18n: josa picks particle by batchim', function(){
   __eq(josa('체력','이가'), '체력이', '받침 → 이');
