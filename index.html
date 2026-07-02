@@ -12846,9 +12846,9 @@ async function openJudge(playerId, enemyId){
   $('#battleArena').classList.add('spread'); // 식물 위·아래로 벌림
   await sleep(540); // spread 트랜지션(.5s) 완료 후 측정해야 정확
   $('#judgeCards').innerHTML = `
-    <div class="jw-slot left" id="judgeSlotLeft">${judgeCardMarkup('p',playerId)}</div>
+    <div class="jw-slot left" id="judgeSlotLeft">${playerId ? judgeCardMarkup('p',playerId) : ''}</div>
     <div class="jw-order" id="judgeOrder"></div>
-    <div class="jw-slot right" id="judgeSlotRight">${judgeCardMarkup('e',enemyId)}</div>`;
+    <div class="jw-slot right" id="judgeSlotRight">${enemyId ? judgeCardMarkup('e',enemyId) : ''}</div>`;
   jw.classList.remove('close','open'); show('#judgeWindow');
   positionJudgeInGap();
   void jw.offsetWidth; jw.classList.add('open');
@@ -12866,75 +12866,126 @@ async function finishMatch(won){
   await sleep(380);
   await endMatch(won);
 }
-async function playerSkill(skillId){
+/* ── 3v3 의도 수집(스펙 §1): 플레이어 입력 → 봇 의도 → 해소. playerSkill은 하위호환 어댑터. ── */
+async function playerSkill(skillId){ return submitIntent({ kind:'skill', id:skillId }); }
+async function submitIntent(intent){
   if(!B || B.busy || B.over) return;
-  const s = skillById(skillId, B.p);
-  if(!s){ return; }
-  if(s.noEnergy){
-    const rem = (B.p.uses && B.p.uses[skillId]!=null) ? B.p.uses[skillId] : (s.uses||0);
-    if(rem <= 0){ toast('이 스킬은 더 쓸 수 없습니다 (횟수 소진)'); return; }
-  } else if(B.p.energy < effectiveCost(B.p, s)){ toast('⚡에너지가 부족합니다'); return; } // 태그 비용 할인 반영
-  B.busy = true;
-  updateBattleHud();
-  hide('#battleSkillDetail');
-  lockSkillBar();
+  if(intent.kind==='skill'){
+    const s = skillById(intent.id, B.p);
+    if(!s) return;
+    if(B.p.deckState && !B.p.deckState.hand.includes(intent.id)){ toast('손패에 없는 카드입니다'); return; }
+    if(s.noEnergy){
+      const rem = (B.p.uses && B.p.uses[intent.id]!=null) ? B.p.uses[intent.id] : (s.uses||0);
+      if(rem <= 0){ toast('이 스킬은 더 쓸 수 없습니다 (횟수 소진)'); return; }
+    } else if(B.p.energy < effectiveCost(B.p, s)){ toast('⚡에너지가 부족합니다'); return; } // 태그 비용 할인 반영
+  }
+  if(intent.kind==='switch' && !(B.pTeam[intent.to] && B.pTeam[intent.to].hp>0 && intent.to!==B.pActive)){ toast('교체할 수 없는 대상입니다'); return; }
+  B.busy = true; B.pIntent = intent;
+  updateBattleHud(); hide('#battleSkillDetail'); lockSkillBar();
   try{ sfx.tap(); }catch(e){}
   await sleep(280);
-  const eId = aiPickSkill(B.e);
-  // 양쪽 카드 공개(내=왼·상대=오른) → 선공 판정
-  await openJudge(skillId, eId);
-  const pChosen=skillById(skillId,B.p), eChosen=skillById(eId,B.e);
-  const pAttack=!!(pChosen && pChosen.power>0), eAttack=!!(eChosen && eChosen.power>0);
-  const pDefense=isPriorityDefenseSkill(pChosen), eDefense=isPriorityDefenseSkill(eChosen);
-  const needsOrder=pAttack || eAttack;
-  const prioritySide = needsOrder && pDefense!==eDefense ? (pDefense?'p':'e') : null;
-  let playerFirst=true;
-  if(needsOrder && !prioritySide){
-    const myS = effStat(B.p,'spd'), enS = effStat(B.e,'spd');
-    const firstChance = clamp(50 + (myS - enS), 5, 95);
-    playerFirst = rng()*100 < firstChance;
-    B.firstSide = playerFirst ? 'p' : 'e';
-  } else {
-    B.firstSide = prioritySide;
+  const eIntent = (typeof aiPickIntent==='function') ? aiPickIntent() : { kind:'skill', id:aiPickSkill(B.e) };
+  B.eIntent = eIntent;
+  await resolveTurn(intent, eIntent);
+}
+async function resolveTurn(pIntent, eIntent){
+  // ① 교체·휴식 먼저(포켓몬 룰 §1) — 교체/휴식한 쪽은 이번 턴 스킬 없음
+  for(const pair of [['p',pIntent],['e',eIntent]]){
+    const side = pair[0], intent = pair[1];
+    if(intent.kind==='switch'){
+      switchActive(side, intent.to);
+      const u = side==='p' ? B.p : B.e;
+      blog(`<span class="em">${u.name}</span> 교체 투입!`);
+      setVerdict(side==='p'?'e':'p', '교체! — '+u.name, 'effect');
+      await sleep(520);
+    }
+    if(intent.kind==='rest'){
+      const u = side==='p' ? B.p : B.e;
+      u.energy += 1;
+      blog(`<span class="em">${u.name}</span> 숨을 고른다 (⚡+1)`);
+      await sleep(320);
+    }
   }
-  // 선공 화살표는 공격이 관여할 때만(둘 다 비공격이면 순서 의미 없음)
-  if(needsOrder){
-    const arrowSide = prioritySide || B.firstSide;
-    setJudgeOrder(arrowSide, prioritySide ? '방어 우선' : (arrowSide==='p'?'선공 · 나':'선공 · 상대'));
-    await sleep(860);
-  } else {
-    await sleep(300);
+  const pSkill = pIntent.kind==='skill' ? pIntent.id : null;
+  const eSkill = eIntent.kind==='skill' ? eIntent.id : null;
+  if(pSkill || eSkill){
+    await openJudge(pSkill, eSkill); // 동시 공개(한쪽 null이면 그 슬롯 비움)
+    const pChosen = pSkill ? skillById(pSkill, B.p) : null, eChosen = eSkill ? skillById(eSkill, B.e) : null;
+    const pAttack = !!(pChosen && pChosen.power>0), eAttack = !!(eChosen && eChosen.power>0);
+    const pDefense = isPriorityDefenseSkill(pChosen), eDefense = isPriorityDefenseSkill(eChosen);
+    const needsOrder = pAttack || eAttack;
+    const prioritySide = needsOrder && pDefense!==eDefense ? (pDefense?'p':'e') : null;
+    let playerFirst = true;
+    if(needsOrder && !prioritySide){
+      const myS = effStat(B.p,'spd'), enS = effStat(B.e,'spd');
+      playerFirst = rng()*100 < clamp(50 + (myS - enS), 5, 95);
+      B.firstSide = playerFirst ? 'p' : 'e';
+    } else { B.firstSide = prioritySide; }
+    if(needsOrder){
+      const arrowSide = prioritySide || B.firstSide;
+      setJudgeOrder(arrowSide, prioritySide ? '방어 우선' : (arrowSide==='p'?'선공 · 나':'선공 · 상대'));
+      await sleep(860);
+    } else await sleep(300);
+    const seq = prioritySide ? (prioritySide==='p'?['p','e']:['e','p'])
+              : (needsOrder ? (playerFirst?['p','e']:['e','p']) : ['p','e']);
+    for(const side of seq){
+      const id = side==='p' ? pSkill : eSkill;
+      if(!id) continue;
+      const a = side==='p' ? B.p : B.e, d = side==='p' ? B.e : B.p;
+      if(a.hp<=0) continue;
+      setJudgeAction(side, id);
+      await sleep(150);
+      if(a.skipNext){ a.skipNext=false; if(a.zapNoRegen){ a._noRegen=true; a.zapNoRegen=false; } await animateJudgeCardUse(side,false); setVerdict(side, a._noRegen?'감전 — 움직일 수 없다!':'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
+      if(a.deckState) deckPlay(a.deckState, id); // 손패 사이클(봇 포함)
+      await applySkill(a, d, skillById(id, a), side, {suppressMessages:true});
+      if(await handleFaintAndMaybeEnd()) return;
+      await sleep(240);
+    }
   }
-  // 실행 순서: 방어 우선 → 선공(기동성) → (둘 다 비공격이면 나부터). 한 명씩 순차 처리.
-  const seq = prioritySide
-    ? (prioritySide==='p' ? ['p','e'] : ['e','p'])
-    : (needsOrder ? (playerFirst ? ['p','e'] : ['e','p']) : ['p','e']);
-  const idOf = side => side==='p' ? skillId : eId;
-  for(const side of seq){
-    const a = side==='p' ? B.p : B.e;
-    const d = side==='p' ? B.e : B.p;
-    const chosen = skillById(idOf(side), a);
-    if(a.hp<=0) continue;
-    setJudgeAction(side, idOf(side)); // 행동 카드만 홈 슬롯에, 반대 슬롯 비움(판정 자리)
-    await sleep(150);
-    if(a.skipNext){ a.skipNext=false; if(a.zapNoRegen){ a._noRegen=true; a.zapNoRegen=false; } await animateJudgeCardUse(side,false); setVerdict(side, a._noRegen?'감전 — 움직일 수 없다!':'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
-    await applySkill(a, d, chosen, side, {suppressMessages:true});
-    if(d.hp<=0){ await finishMatch(side==='p'); return; }
-    if(a.hp<=0){ await finishMatch(side!=='p'); return; }
-    await sleep(240);
-  }
-  await tickStatuses(B.p,'p'); if(B.e.hp<=0){ await finishMatch(true); return; } if(B.p.hp<=0){ await finishMatch(false); return; }
-  await tickStatuses(B.e,'e'); if(B.p.hp<=0){ await finishMatch(false); return; } if(B.e.hp<=0){ await finishMatch(true); return; }
+  await tickStatuses(B.p,'p'); if(await handleFaintAndMaybeEnd()) return;
+  await tickStatuses(B.e,'e'); if(await handleFaintAndMaybeEnd()) return;
   // 감전 스턴 턴에는 에너지 회복 차단(번개 시그니처)
   if(B.p._noRegen){ B.p._noRegen=false; } else B.p.energy = Math.min(B.p.energyMax, B.p.energy+1);
   if(B.e._noRegen){ B.e._noRegen=false; } else B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
+  if(typeof updateEnemyForecast==='function') updateEnemyForecast(); // 봇 큰 기술 예고(Task 6)
   await sleep(300);
   closeJudge();
-  B.turn += 1;
+  B.turn += 1; B.pIntent = B.eIntent = null;
   B.busy = false; updateBars(); updateBattleHud();
   if(!B.over){ renderBattleIdleView(); } // 스킬바 즉시 재활성(턴 종료 대기 제거)
+}
+/* 기절 처리(스펙 §2): 팀 전멸=종료 / 생존자 있으면 무료 교대(플레이어=선택, 봇=자동) */
+async function handleFaintAndMaybeEnd(){
+  updateBars();
+  for(const side of ['e','p']){
+    const team = side==='p' ? B.pTeam : B.eTeam;
+    const active = side==='p' ? B.p : B.e;
+    if(active.hp > 0) continue;
+    if(teamAliveCount(team)===0){ await finishMatch(side==='e'); return true; }
+    blog(`<span class="em">${active.name}</span> 쓰러졌다! 다음 식물 투입…`);
+    const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
+    if(box){ box.classList.remove('enter'); box.classList.add('collapse'); }
+    await sleep(600);
+    if(side==='e'){
+      const idx = team.findIndex(u=>u.hp>0);
+      switchActive('e', idx);
+    } else {
+      await promptFreeSwitch('p');
+    }
+    if(box){ box.classList.remove('collapse'); box.classList.add('enter'); }
+    await sleep(420);
+  }
+  return false;
+}
+/* 플레이어 무료 교대 — 팀 바를 선택 모드로 강조하고 선택을 기다린다(renderTeamBar 연동) */
+function promptFreeSwitch(side){
+  return new Promise(resolve => {
+    B._freeSwitchResolve = (idx) => { switchActive(side, idx); B._freeSwitchResolve = null; resolve(); };
+    if(typeof renderTeamBar==='function') renderTeamBar(true);
+    toast('교대할 식물을 선택하세요');
+  });
 }
 /* 항복: 재확인 후 진행 */
 function confirmSurrender(){ if(!B || B.over || B.busy) return; show('#surrenderConfirm'); try{ sfx.tap(); }catch(e){} }
@@ -14051,6 +14102,11 @@ window.__test('team: beginTeamBattle wiring + switchActive alias', function(){
   B.pTeam[2].hp = 0; __ok(!switchActive('p', 2), 'fainted rejected');
   __eq(teamAliveCount(B.pTeam), 2, 'alive count');
   B = savedB; clearBattleRng();
+});
+
+window.__test('turn: intent API surface (switch-first/rest/faint helpers)', function(){
+  __ok(typeof submitIntent==='function' && typeof resolveTurn==='function', 'intent api exists');
+  __ok(typeof promptFreeSwitch==='function' && typeof handleFaintAndMaybeEnd==='function', 'faint api exists');
 });
 
 window.__test('i18n: josa picks particle by batchim', function(){
