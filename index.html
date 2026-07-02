@@ -6746,6 +6746,8 @@ function plantKnownSkillIds(p){
   return known.filter((v, i, a) => v && a.indexOf(v) === i && skillById(v, p));
 }
 const MAX_LOADOUT = 8; // 3v3 재설계: 덱 8장(스펙 2026-07-02 §3)
+const ENERGY_START = 2;      // 3v3: 시작 낮게(만땅 폐지) — 아끼는 커브(스펙 §3)
+const ENERGY_POOL_MAX = 8;   // 팀 공유 에너지 상한
 /* 변이형(포식·무기·카드) 유래 스킬은 스킬 탭에 노출하지 않고 전투 시 자동 합류한다. */
 function isAutoFormSkill(id){ return id === 'skill_weapon' || id === 'skill_card_predation' || /^skill_card_/.test(id); }
 function plantSkillPool(p){ return plantKnownSkillIds(p).filter(id => !isAutoFormSkill(id)); }
@@ -6767,6 +6769,23 @@ function currentTeam(){
   team = team.slice(0,3);
   state.last_team = team.map(p=>p.id);
   return team;
+}
+/* ── 팀 공유 에너지 풀(스펙 §3/§6) — 유닛 energy/energyMax를 풀 위 accessor로 재정의해
+   기존 엔진 코드(a.energy±=, drainEnergy, energyGain …)가 무수정으로 공유 풀을 때리게 한다. ── */
+function makeEnergyPool(bonus){ return { cur: ENERGY_START, max: ENERGY_POOL_MAX + (bonus||0) }; }
+function attachEnergyPool(unit, pool){
+  Object.defineProperty(unit, 'energy', {
+    configurable: true,
+    get(){ return pool.cur; },
+    set(v){ pool.cur = clamp(Math.round(v), 0, pool.max); },
+  });
+  Object.defineProperty(unit, 'energyMax', {
+    configurable: true,
+    get(){ return pool.max; },
+    set(_v){ /* 풀이 진실 — 개별 재정의 무시 */ },
+  });
+  unit.__energyPool = pool;
+  return unit;
 }
 /* ── 덱8/손패4 CR 사이클(스펙 §3) — 셔플은 전투 시드 rng() → 결정론 ── */
 function makeDeckState(ids){
@@ -13970,6 +13989,20 @@ window.__test('deck: CR cycle — shuffle/hand4/rotate/small-deck', function(){
   seedBattleRng(999); const d2 = makeDeckState(['a','b','c','d','e','f']);
   __eq(JSON.stringify(d1), JSON.stringify(d2), 'deterministic shuffle');
   clearBattleRng();
+});
+
+window.__test('energy: shared pool via accessors', function(){
+  const pool = makeEnergyPool(0);
+  __eq(pool.cur, ENERGY_START, 'start 2'); __eq(pool.max, ENERGY_POOL_MAX, 'max 8');
+  const u1 = { energy:5, energyMax:5 }, u2 = { energy:3, energyMax:3 };
+  attachEnergyPool(u1, pool); attachEnergyPool(u2, pool);
+  u1.energy += 3; // 기존 엔진 문법 그대로
+  __eq(u2.energy, Math.min(ENERGY_POOL_MAX, ENERGY_START+3), 'shared across team');
+  u2.energy = Math.max(0, u2.energy - 4);
+  __eq(u1.energy, u2.energy, 'still shared');
+  u1.energy = 99; __eq(u1.energy, ENERGY_POOL_MAX, 'setter clamps to max');
+  __eq(u1.energyMax, ENERGY_POOL_MAX, 'energyMax from pool');
+  __eq(makeEnergyPool(2).max, ENERGY_POOL_MAX+2, 'bonus raises max');
 });
 
 window.__test('i18n: josa picks particle by batchim', function(){
