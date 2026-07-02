@@ -2,6 +2,16 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-07-02 — ⭐ 전투 코어 3v3 재설계 1차 구현 (재미 재설계 1부 — 팀·심리전·손패·두 리그)
+- **배경:** 사용자 "재미 재설계" 브레인스토밍 → 진단: 전투에 의미 있는 결정 부재(1v1 고정·6스킬 상시 오픈·읽을 봇 없음). 비전 B(팀3+심리전)+CR 긴장 흡수로 확정, 같은 날 스펙→플랜→Task 1~10 구현.
+- **팀 전투:** 3마리 출전(`currentTeam`/`last_team`), **교체=턴 소모**(들어오는 식물이 공격 받음·기절 시 무료 교대 `promptFreeSwitch`), 팀 전멸=종료. `B.p/B.e`=활성 유닛 별칭 유지로 기존 엔진 호출부 무접촉(`beginTeamBattle`/`switchActive`).
+- **손패/에너지:** 로드아웃 6→8장=덱, **손패 4장 CR 사이클**(`makeDeckState/deckPlay/deckNext`, rng 셔플=결정론, 다음 카드 미리보기), **팀 공유 에너지 커브**(시작2·+1/턴·최대8, `attachEnergyPool` accessor로 기존 `a.energy±=` 코드 무수정 통과), 숨 고르기(⚡+1) 폴백.
+- **심리전:** 동시 의도 수집(`submitIntent`→`aiPickIntent`→`resolveTurn`), 봇=**아키타입 14종 성향 가중치**(`AI_TEMPER`, base 종 봇도 `archetypeOf` 배정+적 정보에 성향 표시), 불리 상성 교체 판단, **3코+ 큰 기술 ⚠️예고**(예고한 수는 지킴 — 가드/교체 대응 창출).
+- **두 리그(랭크 분리):** ⚡1v1=개체 랭크(기존 계승) / ⚔️3v3=**재배사 랭크 신설**(`team_rankPoints/team_rankTier/team_tournament`·`endTeamMatch`·보상 1.25×). 토너먼트 바에 3v3 리그 행 추가.
+- **미션 연동:** 스테이지 `enemies[]`(1~3) 스키마+단수 하위호환, 캠페인 3종 재저작(볼카르/네레이돈 보스+호위, 챔피언 전 스테이지 팀전). 다인전이면 플레이어도 팀 출전.
+- **정리:** 구 `aiPickSkill`·`#cardPred` 제거, 결정론 가드 테스트를 `aiPickIntent/resolveTurn/makeDeckState/buildMissionEnemy`로 확장.
+- **검증:** 셀프테스트 신규 7종 포함 **0 fail**, preview E2E — 1v1/3v3 리그·미션 팀전·자발 교체·기절 교대·예고까지 전 구간 콘솔 에러 0. 스펙=[battle-core-3v3](superpowers/specs/2026-07-02-battle-core-3v3-redesign-design.md) · 플랜=[plan](superpowers/plans/2026-07-02-battle-core-3v3-redesign.md).
+
 ### 2026-07-02 — 전면 품질 감사 → #15 미션/스토리 모드 구현 + 아키타입 실효과 + 밸런스 3건 + 조사 유틸
 - **배경:** 사용자 지시("전부 파악하고 공격적인 수정·추가·구현")로 전면 감사 — 하드 에러 0(셀프테스트·콘솔·전 탭·전투 판정 전부 통과), 진짜 갭은 **깊이/완성도**로 판정: 아키타입 이름만 다름·미션 모드 미구현·밸런스 확정 이슈 방치·조사 버그·로드맵 stale.
 - **#15 미션/스토리 모드 1차 구현(최대 작업):** `CAMPAIGNS` 3종(볼카르★2·네레이돈★3·전 챔피언★5 선행게이트) + `MISSION_GIMMICKS` 5종 + `mission_progress`/`mission_titles` 마이그레이션. 적=`buildMissionEnemy` 저작 고정 사양(**난수 0=결정론**). 보스 기믹: 작열 오라(신규 aura 블록)·선제 방어막(barrier)·격노(아드레날린 훅 재사용). 전투 배선: `makePlayerCombatant`/`bootBattleUI` 추출(공용) + `startMissionBattle`/`endMissionMatch`(토너먼트 상태 무접촉). 보상: 첫클리어 크레딧/미네랄·캠페인 완료=**보상종(`released:false` 우회 확정 지급)+칭호+개봉연출+outro**. UI: 토너먼트 바 "🚩 미션 캠페인" 배너 → 캠페인 목록/스테이지 사다리/스토리 박스. E2E preview 검증(클리어 체인·기믹 실발동·게이트 잠금).

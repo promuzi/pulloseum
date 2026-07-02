@@ -12687,21 +12687,7 @@ function fxPopup(side, text, cls){
   box.appendChild(sp);
   setTimeout(()=>sp.remove(), 950);
 }
-function aiPickSkill(e){
-  const cand = e.loadout.concat(variantSkillsOf(e)).filter((v,i,a)=>a.indexOf(v)===i); // 하단 변이 스킬 바(무기/독성/용족)도 봇 후보에 포함
-  const ids = cand.filter(id => { const s = skillById(id,e); if(!s) return false; if(s.noEnergy){ const rem=(e.uses&&e.uses[id]!=null)?e.uses[id]:(s.uses||0); return rem>0; } return effectiveCost(e, s) <= e.energy; });
-  if(!ids.length) return 'skill_basic_strike';
-  const get = id => skillById(id,e);
-  const healId = ids.find(id => { const s=get(id); return s.heal && s.heal>=0.2; });
-  if(e.hp < e.max*0.32 && healId && rng()<0.6) return healId;
-  const drainId = ids.find(id => get(id).kind==='drain');
-  if(drainId && rng()<0.5) return drainId;
-  const dmgIds = ids.filter(id => { const s=get(id); return s.power && s.power>0; }).sort((a,b)=>(get(b).power||0)-(get(a).power||0));
-  if(dmgIds.length && rng()<0.72) return dmgIds[0];
-  const guardId = ids.find(id => get(id).guardMult!=null);
-  if(guardId && rng()<0.18) return guardId;
-  return ids[Math.floor(rng()*ids.length)];
-}
+/* (2026-07-02) 구 aiPickSkill 제거 — 3v3 재설계로 aiPickIntent(성향 가중·손패 기반)가 대체. */
 /* ── 봇 성향(스펙 §4) — 아키타입=읽을 수 있는 패턴. 가중치는 카테고리 선호 배율. ── */
 const AI_TEMPER = {
   berserk:{atk:1.6,guard:0.3,heal:0.4,debuff:0.6,switch:0.3}, sage:{atk:1.2,guard:0.8,heal:0.8,debuff:0.8,switch:0.7},
@@ -13077,7 +13063,7 @@ async function submitIntent(intent){
   updateBattleHud(); hide('#battleSkillDetail'); lockSkillBar();
   try{ sfx.tap(); }catch(e){}
   await sleep(280);
-  const eIntent = (typeof aiPickIntent==='function') ? aiPickIntent() : { kind:'skill', id:aiPickSkill(B.e) };
+  const eIntent = aiPickIntent();
   B.eIntent = eIntent;
   await resolveTurn(intent, eIntent);
 }
@@ -15400,7 +15386,7 @@ window.__test('rng: 기본은 Math.random 폴백(비전투 무영향)', function
   const x=rng(); __ok(x>=0 && x<1, '폴백 rng가 [0,1) 밖');
 });
 window.__test('rng: 전투 시뮬 경로에 Math.random 직접호출 없음', function(){
-  const srcs = [applySkill, tickStatuses, aiPickSkill].map(f => f.toString()).join('\n');
+  const srcs = [applySkill, tickStatuses, aiPickIntent, resolveTurn, makeDeckState, buildMissionEnemy].map(f => f.toString()).join('\n');
   __ok(!/Math\.random/.test(srcs), '전투 시뮬 함수에 Math.random 잔존(rng()로 교체 필요)');
 });
 window.__test('time: gameNow가 진행시간 출처 단일 지점', function(){

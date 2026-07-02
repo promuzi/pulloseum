@@ -1,10 +1,10 @@
-# 전투 코어 3v3 재설계 — 팀·심리전·손패 (✅ 설계 승인 2026-07-02 · 구현 진행)
+# 전투 코어 3v3 재설계 — 팀·심리전·손패 (✅ 구현 완료 2026-07-02)
 
 > **왜:** 현재 전투에 "의미 있는 결정"이 없다 — 1v1 고정이라 상성이 전투 중 결정이 아니고, 6스킬이 상시 열려 있어 아끼는 긴장이 없고, 봇은 읽을 패턴이 없다. 클래시로얄/포켓몬/양육 재료가 전부 껍데기로만 존재.
 > **무엇:** 포켓몬의 뼈대(팀3·교체 심리전)에 클래시로얄의 긴장(덱8/손패4·에너지 커브·예고 대응)을 이식한 **전투 코어 전면 재설계**. 3부작 스펙의 1부.
 
 - **작성:** 2026-07-02 (브레인스토밍 세션)
-- **상태:** ✅ **사용자 승인(2026-07-02)** — 뿌리 결정 5개 전부 확정. 구현 계획 = [plans/2026-07-02-battle-core-3v3-redesign.md](../plans/2026-07-02-battle-core-3v3-redesign.md).
+- **상태:** ✅ **구현 완료(2026-07-02)** — Task 1~10 전부 구현·E2E 검증. 계획 = [plans/2026-07-02-battle-core-3v3-redesign.md](../plans/2026-07-02-battle-core-3v3-redesign.md) · 구현 상세 = 로드맵 §5 결정 로그 #17. 잔여 = 밸런스 체감 튜닝·팀 편성 홈 UI·2부 메타루프.
 - **관련:** [battle-mechanics](../../battle-mechanics-deep-dive.md) · [judge-overlay UI](2026-06-25-battle-judge-overlay-rework-design.md) · [tag-synergy](2026-06-25-skill-tag-synergy-system-design.md) · [server-authority(결정론)](2026-06-26-server-authority-anticheat-design.md) · [mission](2026-06-26-mission-story-mode-design.md)
 
 ---
