@@ -10415,7 +10415,7 @@ function renderTournamentBar(){
       statusV = '예선'; statusS = `${T.prelimWins}승 ${T.prelimLosses}패`;
       label = `⚔️ 예선 ${Math.min(played+1, round.bestOf)}경기 시작`;
     } else { statusV = round.name; statusS = '진행 중'; label = `⚔️ ${round.name} 경기 시작`; }
-  } else { statusV = '대기'; statusS = '신규 도전'; label = '⚔️ 토너먼트 시작'; }
+  } else { statusV = '대기'; statusS = '신규 도전'; label = '⚡ 1v1 토너먼트 시작'; }
   // #15 미션 진행 요약 배지
   const mDone = CAMPAIGNS.filter(c => missionProg(c.id).done).length;
   bar.innerHTML = `<div class="tcells">
@@ -10425,12 +10425,17 @@ function renderTournamentBar(){
       <div class="tc-k">토너먼트명</div><div class="tc-v" style="color:var(--neon)">${tournamentTitle(p).replace(' 토너먼트','')}</div><div class="tc-s">토너먼트</div></div>
     <div class="tcell" data-matches="1">
       <div class="tc-k">경기 현황</div><div class="tc-v">${statusV}</div><div class="tc-s">${statusS}</div></div>
+    <div class="tcell" data-league-team="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left;--clr:${RANK_TIERS[teamTierIdx()].color}">
+      <span style="font-weight:800;color:${RANK_TIERS[teamTierIdx()].color}">⚔️ 3v3 팀 리그 · ${RANK_TIERS[teamTierIdx()].name}</span>
+      <span class="tc-s" style="margin:0">${fmt(state.team_rankPoints||0)}pt · ${state.team_tournament&&state.team_tournament.active?TOURNAMENT_ROUNDS[state.team_tournament.roundIndex].name+' 진행 중':'팀 3마리 출전'} ▶</span></div>
     <div class="tcell" data-mission="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left">
       <span style="font-weight:800;color:#ffcf6b">🚩 미션 캠페인</span>
       <span class="tc-s" style="margin:0">${mDone}/${CAMPAIGNS.length} 클리어 · 스토리&전용 보상 ▶</span></div>
   </div>`;
   const mc = bar.querySelector('[data-mission]');
   if(mc) mc.addEventListener('click', () => { openMissionModal(); });
+  const tl = bar.querySelector('[data-league-team]');
+  if(tl) tl.addEventListener('click', () => { if((state.plants||[]).length<1){ toast('식물이 필요합니다'); return; } startBattle('team'); });
   if(btn) btn.textContent = label;
 }
 /* 참가 가능한 경기 목록(향후 다듬을 예정) */
@@ -12149,15 +12154,35 @@ function grantMissionSpecies(speciesKey, cid){
   state.seed_inventory.push(entry);
   return entry;
 }
-/* ===== 토너먼트 진행 ===== */
-function startBattle(){
+/* ===== 토너먼트 진행 (두 리그 — 스펙 §9: 1v1=개체 랭크 / 3v3=재배사 랭크) ===== */
+function teamTierIdx(){ return clamp(state.team_rankTier||0, 0, RANK_TIERS.length-1); }
+/* 3v3 봇 팀 — buildEnemy 재사용 + 속성 다양성 보장(전원 동일 속성 방지) */
+function buildEnemyTeam(roundIndex, tierIndex, n){
+  const team = [];
+  let guard = 0;
+  while(team.length < n && guard++ < 30){
+    const u = buildEnemy(roundIndex, tierIndex);
+    if(team.length && team.every(x=>x.element===u.element) && guard < 25) continue; // 다양성
+    team.push(u);
+  }
+  return team;
+}
+function startBattle(league){
+  league = league || 'solo';
   const p = activePlant();
   if(!p){ toast('전투할 식물이 없습니다. 탐사 후 종자 가방에서 심어주세요'); openSeedBag(); return; }
   ensureSkillFields(p);
-  if(!state.tournament || !state.tournament.active || state.tournament.plantId !== p.id){
-    state.tournament = { active:true, roundIndex:0, prelimWins:0, prelimLosses:0, plantId:p.id };
+  if(league==='team'){
+    const team = currentTeam();
+    if(!state.team_tournament || !state.team_tournament.active){
+      state.team_tournament = { active:true, roundIndex:0, prelimWins:0, prelimLosses:0, teamIds:team.map(x=>x.id) };
+    }
+  } else {
+    if(!state.tournament || !state.tournament.active || state.tournament.plantId !== p.id){
+      state.tournament = { active:true, roundIndex:0, prelimWins:0, prelimLosses:0, plantId:p.id };
+    }
   }
-  startMatch();
+  startMatch(league);
 }
 /* 플레이어 전투체 생성 — 토너먼트/미션 공용 */
 function makePlayerCombatant(p){
@@ -12211,16 +12236,23 @@ function switchActive(side, idx){
   if(!B._noUI){ renderActiveUnits(); if(typeof renderTeamBar==='function') renderTeamBar(); }
   return true;
 }
-function startMatch(){
+function startMatch(league){
+  league = league || 'solo';
   const p = activePlant(); if(!p){ toast('식물이 없습니다'); return; }
   ensureSkillFields(p);
+  const T = league==='team' ? state.team_tournament : state.tournament;
   // 전투 난수 시드 주입(현재는 클라 임의 시드; 추후 서버 제공 시드로 교체).
   // makeCombatant/buildEnemy의 난수보다 먼저 실행되어야 함.
-  seedBattleRng(((Date.now() >>> 0) ^ ((((state.tournament&&state.tournament.roundIndex)||0)+1) * 0x9E3779B1)) >>> 0);
-  const T = state.tournament;
-  const playerC = makePlayerCombatant(p);
-  const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p));
-  beginTeamBattle([playerC], [enemyC], { league:'solo' });
+  seedBattleRng(((Date.now() >>> 0) ^ ((((T&&T.roundIndex)||0)+1) * 0x9E3779B1)) >>> 0);
+  if(league==='team'){
+    const team = currentTeam().map(x=>{ ensureSkillFields(x); return makePlayerCombatant(x); });
+    const bots = buildEnemyTeam(T.roundIndex, teamTierIdx(), 3);
+    beginTeamBattle(team, bots, { league:'team' });
+  } else {
+    const playerC = makePlayerCombatant(p);
+    const enemyC = buildEnemy(T.roundIndex, plantRankTierIdx(p));
+    beginTeamBattle([playerC], [enemyC], { league:'solo' });
+  }
   bootBattleUI(p);
 }
 /* #15 미션 전투 진입 — 고정 적, 단판. 토너먼트 상태(state.tournament)는 건드리지 않는다. */
@@ -12293,7 +12325,7 @@ function playVsIntro(p){
     <div class="vs-strip-pfp">${spriteFor(B.p, 84)}</div>`;
   $('#vsTname').textContent = (B.mission
     ? ((CAMPAIGNS.find(x=>x.id===B.mission.cid)||{}).name || '미션')
-    : tournamentTitle(p)) + '!';
+    : (B.league==='team' ? `${RANK_TIERS[teamTierIdx()].name} 팀 토너먼트` : tournamentTitle(p))) + '!';
   clearTimeout(ov._t1); clearTimeout(ov._t2);
   ov.classList.remove('exit', 'play', 'hidden');
   void ov.offsetWidth; // 리플로우로 애니메이션 재시작 보장
@@ -12309,11 +12341,13 @@ function renderBattleHeader(){
     $('#battleHeader').innerHTML = `🚩 ${c?c.name:'미션'} · <b style="color:var(--neon)">${isBoss?'👑 보스':'스테이지 '+(B.mission.idx+1)}</b>`;
     return;
   }
-  const p = activePlant(), T = state.tournament; if(!T) return;
+  const isTeam = B && B.league==='team';
+  const p = activePlant(), T = isTeam ? state.team_tournament : state.tournament; if(!T) return;
   const round = TOURNAMENT_ROUNDS[T.roundIndex];
   let prog='';
   if(round.key==='prelim'){ let dots=''; for(let i=0;i<round.bestOf;i++){ dots += (i<T.prelimWins?'🟢':(i<T.prelimWins+T.prelimLosses?'🔴':'⚪')); } prog=` · ${dots}`; }
-  $('#battleHeader').innerHTML = `${tournamentTitle(p)} · <b style="color:var(--neon)">${round.name}</b>${prog}`;
+  const title = isTeam ? `${RANK_TIERS[teamTierIdx()].name} 팀 토너먼트` : tournamentTitle(p);
+  $('#battleHeader').innerHTML = `${title} · <b style="color:var(--neon)">${round.name}</b>${prog}`;
 }
 /* 스킬 위력을 "공격 배수"로 표기 — 예: ×1.7(공격력) / ×1.0(속성).
    상대 방어를 계산한 실제 피해 대신 스킬의 공격 계수만 보여준다(정보 과다 방지). */
@@ -13141,8 +13175,96 @@ function checkPromotion(p){
   if(newTier > (p.rankTier||0)){ p.rankTier = newTier; return true; }
   return false;
 }
+function checkTeamPromotion(){
+  const nt = rankTierIndexFromPoints(state.team_rankPoints||0);
+  if(nt > (state.team_rankTier||0)){ state.team_rankTier = nt; return true; }
+  return false;
+}
+/* 3v3 리그 경기 종료 — 재배사 랭크 트랙(스펙 §9). 구조는 endMatch(1v1 개체 랭크)와 대칭. */
+async function endTeamMatch(won){
+  B.over = true; updateBars(); updateBattleHud();
+  closeJudge();
+  const loserBox = won ? $('#eSpriteBox') : $('#pSpriteBox');
+  if(loserBox){ loserBox.classList.remove('enter'); loserBox.classList.add('collapse'); }
+  blog(won ? '상대 팀 전멸! <b>팀 승리!</b>' : '우리 팀 전멸…');
+  try{ won ? sfx.win() : sfx.lose(); }catch(e){}
+  await sleep(950);
+  const T = state.team_tournament, round = TOURNAMENT_ROUNDS[T.roundIndex];
+  const tIdx = teamTierIdx();
+  if(won) state.wins = (state.wins||0)+1; else state.losses = (state.losses||0)+1;
+  const gain = Math.round((won ? round.reward + tIdx*30 : Math.round(round.reward*0.25)+10) * 1.25); // 3v3 보상 소폭 상향(§9)
+  addCredits(gain);
+  let xpAmt = 0;
+  const teamPlants = (T.teamIds||[]).map(id=>state.plants.find(x=>x.id===id)).filter(Boolean);
+  if(won){ xpAmt = Math.round((12 + T.roundIndex*8)*0.6); teamPlants.forEach(pl=>gainGrowthExp(pl, xpAmt)); gainPlayerExp(45 + T.roundIndex*20); }
+  let careGain = null;
+  if(won){ const w=1+Math.floor(Math.random()*2); grantCareReward('water', w); careGain={water:w, fert:0}; if(Math.random()<0.5){ grantCareReward('fert',1); careGain.fert=1; } }
+  let progressLabel = round.name, outcomeKind = won?'win':'lose', outcomeText = won?'승리':'패배';
+  let note='', btnLabel='홈으로 돌아가기', outcome='', champBonus=0;
+  if(round.key==='prelim'){
+    if(won) T.prelimWins++; else T.prelimLosses++;
+    const played = T.prelimWins + T.prelimLosses;
+    if(played >= round.bestOf){
+      if(T.prelimWins >= round.needWins){
+        T.roundIndex=1; T.prelimWins=0; T.prelimLosses=0; outcome='continue';
+        progressLabel='🏆 16강 본선 진출!'; outcomeKind='win'; outcomeText='예선 통과'; btnLabel='홈으로 — 본선 준비 ▶';
+        note=`팀 예선 ${round.bestOf}경기 종료 — <b>16강 본선 진출!</b> 팀을 정비하고 도전하세요.`;
+      } else { outcome='eliminated'; }
+    } else {
+      outcome='continue'; btnLabel='홈으로 — 준비하기 ▶';
+      progressLabel = won ? `팀 예선 ${T.prelimWins}승째` : `팀 예선 ${T.prelimWins}승 ${T.prelimLosses}패`;
+      note=`팀 예선 현황 <b>${T.prelimWins}승 ${T.prelimLosses}패</b> (${played}/${round.bestOf}경기)`;
+    }
+  } else {
+    if(won){
+      state.team_rankPoints = (state.team_rankPoints||0) + round.point;
+      if(round.key==='final'){ outcome='champion'; }
+      else {
+        T.roundIndex++; outcome='continue'; const next=TOURNAMENT_ROUNDS[T.roundIndex];
+        const promotedMid = checkTeamPromotion();
+        progressLabel=`${next.name} 진출!`; btnLabel='홈으로 — 다음 준비 ▶';
+        note=`${round.name} 통과 · 팀 티어 점수 +${round.point}(누적 ${fmt(state.team_rankPoints)})${promotedMid?` · 🎉<b>${RANK_TIERS[state.team_rankTier].name} 승급!</b>`:''}`;
+      }
+    } else outcome='eliminated';
+  }
+  if(outcome==='champion'){
+    champBonus = 200 + tIdx*120;
+    state.team_rankPoints = (state.team_rankPoints||0) + champBonus;
+    addCredits(champBonus);
+    const promoted = checkTeamPromotion();
+    progressLabel='👑 팀 콜로세움 제패'; outcomeKind='champ'; outcomeText='우승';
+    note=`팀 전 경기 석권! 팀 티어 점수 +${round.point+champBonus}(누적 ${fmt(state.team_rankPoints)})${promoted?` · 🎉<b>${RANK_TIERS[state.team_rankTier].name} 승급!</b>`:''}`;
+    btnLabel='콜로세움 나가기'; state.team_tournament.active=false;
+  } else if(outcome==='eliminated'){
+    const lose = round.key==='prelim' ? 20 : 0;
+    state.team_rankPoints = Math.max(RANK_TIERS[teamTierIdx()].threshold, (state.team_rankPoints||0) - lose);
+    state.team_tournament.active=false;
+    progressLabel = round.key==='prelim' ? '팀 예선 탈락' : `${round.name} 탈락`;
+    outcomeKind='lose'; outcomeText='탈락';
+    note=`<b>${round.name}</b>에서 탈락… ${lose?`팀 티어 점수 -${lose} · `:''}팀을 강화해 다시 도전하세요!`;
+    btnLabel='콜로세움 나가기';
+  }
+  saveState();
+  const rewards = [`<div class="mr-card gold"><div class="mc-ic">💰</div><div class="mc-v">+${fmt(gain)}</div><div class="mc-l">크레딧</div></div>`];
+  if(won && xpAmt) rewards.push(`<div class="mr-card exp"><div class="mc-ic">⭐</div><div class="mc-v">+${xpAmt}×${teamPlants.length}</div><div class="mc-l">팀 성장 경험치</div></div>`);
+  if(careGain){ rewards.push(`<div class="mr-card"><div class="mc-ic">💧</div><div class="mc-v">+${careGain.water}${careGain.fert?' 🌿'+careGain.fert:''}</div><div class="mc-l">양육 자원</div></div>`); }
+  if(champBonus) rewards.push(`<div class="mr-card bonus"><div class="mc-ic">👑</div><div class="mc-v">+${fmt(champBonus)}</div><div class="mc-l">우승 보너스</div></div>`);
+  $('#battleResultCenter').innerHTML = `
+    <div class="mr-progress">${progressLabel}</div>
+    <div class="mr-outcome ${outcomeKind}">${outcomeText}</div>
+    <div class="mr-rewards">${rewards.join('')}</div>
+    <div class="mr-note">${note}</div>
+    <button class="btn primary" id="battleResultBtn">${btnLabel}</button>`;
+  hideCardPhase();
+  const br = $('#battleResult');
+  br.classList.remove('shut','reveal'); show('#battleResult'); void br.offsetWidth;
+  br.classList.add('shut');
+  setTimeout(() => br.classList.add('reveal'), 430);
+  $('#battleResultBtn').addEventListener('click', closeBattleResult, { once:true });
+}
 async function endMatch(won){
   if(B && B.mission) return endMissionMatch(won); // #15 미션 전투는 토너먼트 진행과 분리
+  if(B && B.league==='team') return endTeamMatch(won); // 3v3 리그 = 재배사 랭크 트랙
   B.over = true; updateBars(); updateBattleHud();
   closeJudge();
   // 진 식물이 쓰러지는 연출
@@ -14250,6 +14372,15 @@ window.__test('ai: intent from hand + forecast honored + temper table', function
   __eq(it2.id, fid, 'forecast honored when playable');
   __ok(B.eForecast===null, 'forecast consumed');
   B = savedB; clearBattleRng();
+});
+
+window.__test('league: buildEnemyTeam diversity + team rank fields', function(){
+  seedBattleRng(31337);
+  const team = buildEnemyTeam(1, 0, 3);
+  __eq(team.length, 3, '3 bots');
+  __ok(new Set(team.map(u=>u.species)).size >= 2, 'species diversity ≥2');
+  __ok(team.every(u=>u.hp>0 && u.loadout.length>0 && u.archetype), 'units sane + archetype tell');
+  clearBattleRng();
 });
 
 window.__test('i18n: josa picks particle by batchim', function(){
