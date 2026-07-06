@@ -1,10 +1,22 @@
 # Pulloseum (풀로세움)
 
-> A space-botany battle colosseum, built as a single self-contained web game.
-> 미래 우주를 배경으로 외계 식물을 탐사·수집·육성해 토너먼트에서 싸우는 웹게임.
+<p align="center">
+  <img src="assets/icons/og-image.png" alt="Pulloseum" width="640">
+</p>
 
-**▶ Play now (live): https://promuzi.github.io/pulloseum/**
-No install, no build, no sign-up — it runs entirely in the browser and saves to local storage.
+<p align="center">
+  <b>A space-botany battle colosseum, built as a single self-contained web game.</b><br>
+  미래 우주를 배경으로 외계 식물을 탐사·수집·육성해 토너먼트에서 싸우는 웹게임.
+</p>
+
+<p align="center">
+  <a href="https://promuzi.github.io/pulloseum/"><b>▶ Play now (live demo)</b></a> ·
+  <a href="docs/master-roadmap.md">Roadmap</a> ·
+  <a href="LICENSE">MIT License</a>
+</p>
+
+> **No install, no build, no sign-up** — it runs entirely in the browser and saves to local
+> storage. The whole game (code + data) is one `index.html`.
 
 ---
 
