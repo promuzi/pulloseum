@@ -109,3 +109,8 @@
 - 브레인스토밍/설계 박제: `docs/superpowers/specs/YYYY-MM-DD-<주제>-design.md` (미완 설계는 여기 박제 + 로드맵 §2 문서지도에 등록 → 다음 세션 진입점).
 - ✅ **#2 양육/열매+화분 설계(완료):** [nurture-fruit-system-design](docs/superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [collectible-pots-design](docs/superpowers/specs/2026-06-24-collectible-pots-design.md)
 - **#1 종/스킬 개체 고유화**(타입/속성 공통 컨셉·개체별 고유스킬3[성장체/성체/완숙체]·외형 액센트[변이형→모듈 자동]) = [design](docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md) — **구현 완료(2026-06-25):** base 35 + 변이 140 고유스킬(`ind.<key>.g/.m/.e`, grid 종은 `SPECIES_CATALOG`에 `{rarity,stageSkills}`만·새싹/유체는 공유 `STAGE_SKILLS` 자동) + 외형 액센트(변이형 자동 + 버섯 포자) + 탐사 분포(`MUTANT_SIGNATURES`) + 밸런스 1차. ⚠️ **버섯=전부 포자(비포자 변이 없음·확정).** 엔진 제약: 스킬당 `selfBuff`/`enemyDebuff` 각 1개·관통 `pierce:0.5`·화상/출혈 0.06·중독 0.05. 현황·다음은 로드맵 §1/§5. 변이 권위=[mutation 재설계](docs/superpowers/specs/2026-06-24-mutation-forms-cards-redesign-design.md).
+
+
+## 서브 에이전트 사용 규칙
+- 서브 에이전트의 과도한 활용은 최소한으로 하고, 필요한 경우에는 보수적으로 사용할 것.
+- 정말 대규모로 하위 에이전트가 필요한 경우, 실행 전에 사용자에게 거듭 확인할 것.
