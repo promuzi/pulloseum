@@ -2,6 +2,16 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-09-10 — P0-C 전투 피드백 · P0-D 정리 · 메인 재배치 (UX 설계 §6·§7 구현, 사용자 위임 "전부 진행 후 사후보고")
+- **타이밍 재배분(§6):** 판정 spread .5→.25s, 선공 카드 860→533ms, 행동 카드 150+460→80+340ms, 피격 후 560→HP바 이징(≤500)+상성 문구 300ms, 행동 간 240→120, 상태 틱 420→240, 턴 정리 300→160. **실측(헤드리스, 양쪽 공격 1턴): 6.0s → 4.4s, 2배속 2.2s.**
+- **피격 연출 `hitFx()`(포켓몬 Emerald 순서):** 흰 플래시(2f) → 히트스톱(일반 33·굉장 50·급소 83ms, `sleep`) → 넉백 6px(공격자 반대쪽, steps) + 무대 흔들림(`#battleArena.shake-s/m` 1~2px·180~240ms) → 데미지 숫자 24px(굉장·치명 32px `.big` 팝) → HP바 피해 비례 이징(.25~1.0s, 인라인 transition-duration) → **상성 문구는 HP바 완료 후**. 효과음 4종(`sfx.hit/hitStrong/hitWeak/crit`). HP바 색 임계 `hpBarClass()`: >50 청록·>20 노랑·≤20 빨강.
+- **상대 의도 매 턴(§7-9):** `updateEnemyForecast()`가 턴 끝에 `aiPickIntent()`로 다음 수를 미리 정해 `B.eNextIntent`에 두고 `renderEnemyIntent()`가 상대 카드 아래 `#eIntent`에 "다음 ⚔️ 공격 ~N 상성↑" / 🛡️ 방어 / 💚 회복 / 🔻 약화 / 🔁 교체 / 💤 숨 고르기 표시(3코스트+면 ⚠️ 유지). `submitIntent`는 예고가 아직 유효(`enemyIntentValid`)하면 그대로 씀. 예상 피해 = `estimateHitDamage()`(난수·치명 제외 순수). 판정 중엔 흐림.
+- **2배속:** `sleep()`이 `battleSleepMs()`를 거쳐 전투 중(`B && !B.over`) `state.battle_speed===2`면 절반(하한 16ms). CSS 연출은 `#battleScreen.speed2{--bs:.5}` 배율. 토글 `#speedBtn`은 에너지 줄 오른쪽(상단 헤더는 토너먼트명이 차지). 세이브에 기억.
+- **애니:** 대기 = 식물 레이어(`.ss-plant`/`.pp-plant`)만 한 도트 위아래 `idleBob`(steps 2, 전투 1.2s·메인 1.6s, 상대는 위상 차). 공격 = 뒤로 움찔→돌진 16px→복귀 4스텝(`lungeP/E`, 기존 `skill-use` 훅 재사용). 피격 = `.fsprite.hit`. reduced-motion이면 대기·흔들림 정지.
+- **P0-D:** 상점 특가 4·재화 6 원화 카드 제거(데이터 `SHOP_SPECIAL_PACKS`/`SHOP_CURRENCY_PACKS` 보존, `renderShop`에서만 뺌) · 함선 탭 `hidden`(`#bottomNav` 4열, `openShip` 코드 보존) · 방 전환 fade-through 225ms(`#shopModal`/`#explorationModal` 배경 불투명, 밝기 필터 제거, `#nurseryScreen`도 동일) · 결과 화면: 승리 시 "🎴 스킬·카드 장착해 보기"(`closeBattleResult`→관리창 스킬 탭), 패배 시 상성/능력치 한 줄 힌트(`.mr-hint`).
+- **메인 재배치(§7-3, P1 앞당김):** 왼쪽 스탯 8칸 폐지 → 하단 `#keyStats`(체력·공격·방어·기동 4칸 + 다음 단계까지 성장 게이지, `renderKeyStats`). 왼쪽 레일엔 타입·속성·변이 알약만, 레일 폭 110→104 복귀로 종 이름 한 줄. `.main-body`는 column flex. 나머지 4 수치는 관리창 강화 탭.
+- **검증:** 셀프테스트 134건(신규 1: HP 색 임계·2배속 sleep 범위·예상 피해 순수·의도 유효성) — 실패는 기존 team 1건뿐. `audit.mjs` 12px 미만 0·44px 미만 0 유지. 헤드리스 1턴 관측: 피격 플래시·무대 흔들림·돌진 클래스가 매 적중마다 발생, 의도 칩이 턴 전후 갱신. 전후 비교 = 세션 아티팩트 "풀로세움 P0-C·D 전투 피드백과 정리". `tools/shots/shoot.mjs` 장면 11=관리창 스킬 탭, 15=결과 화면 추가.
+
 ### 2026-09-10 — P0-B 가독성·조작 (UX 설계 §5 구현)
 - **픽셀 폰트 동봉:** `assets/fonts/Galmuri11.woff2`·`Galmuri11-Bold.woff2`·`Galmuri14.woff2`(SIL OFL 1.1, 라이선스 동봉 `LICENSE-Galmuri-OFL.txt`) + `@font-face`(스타일시트 끝 "P0-B" 블록). 이전엔 CSS 참조만 있고 파일이 없어 **맑은 고딕으로 렌더**되고 있었음. Galmuri9는 미동봉(`.tagline`은 11로). `sw.js` 프리캐시에 폰트 3개 추가, 캐시 v1→v2.
 - **글자 12px 하한:** 스타일시트의 `font-size` 7~11.5px 규칙 116개 + JS 인라인 9개를 일괄 12px로 치환(스크립트). 줄바꿈 후속: 스탯 라벨·전투 에너지 라벨 `white-space:nowrap`, 전투 카드 이름 `clamp(9.5px…)`→12px 고정.

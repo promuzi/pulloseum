@@ -35,10 +35,11 @@ const SCENES = [
   { id: '08_shop', run: async p => { await p.evaluate(() => { const x = document.querySelector('#upgradeModal .pm-close, #upgradeModal [class*=close]'); if (x && x.offsetParent) x.click(); }); await nav(p, '상점'); await sleep(1200); await p.evaluate(() => window.scrollTo(0, 0)); } },
   { id: '09_explore', run: async p => { await nav(p, '탐사'); await sleep(1200); } },
   { id: '10_nursery', run: async p => { await nav(p, '식물양육'); await sleep(1200); } },
-  { id: '11_ship', run: async p => { await nav(p, '함선'); await sleep(1200); } },
+  { id: '11_skilltab', run: async p => { await nav(p, '식물·전투'); await sleep(600); await p.click('#centerPlant'); await sleep(700); await clickText(p, '스킬'); await sleep(700); } },
   { id: '12_battle_start', run: async p => { await nav(p, '식물·전투'); await sleep(800); await p.evaluate(() => { try { startBattle(); } catch (e) {} }); await sleep(4200); } },
-  { id: '13_battle_judge', run: async p => { await p.evaluate(() => { const c = [...document.querySelectorAll('.skillcard')].filter(e => e.offsetParent)[0]; if (c) c.click(); }); await sleep(2600); } },
+  { id: '13_battle_judge', run: async p => { await p.evaluate(() => { const c = [...document.querySelectorAll('.skillcard')].filter(e => e.offsetParent)[0]; if (c) c.click(); }); await sleep(1900); } },
   { id: '14_battle_after', run: async p => { await sleep(2500); } },
+  { id: '15_battle_result', run: async p => { await p.evaluate(() => { try { B.eTeam.forEach(u => { u.hp = Math.min(u.hp, 1); }); B.e.hp = 1; updateBars(); } catch (e) {} }); await sleep(300); await p.evaluate(() => { try { const ids = unitDeckIds(B.p).filter(id => { const s = skillById(id, B.p); return s && s.power > 0 && !skillUnusable(B.p, id); }); if (ids.length) submitIntent({ kind: 'skill', id: ids[0] }); } catch (e) {} }); await sleep(7000); } },
 ];
 
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--allow-file-access-from-files', '--disable-web-security', '--hide-scrollbars'] });

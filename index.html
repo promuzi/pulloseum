@@ -2180,6 +2180,108 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .stat-box .sb-v{text-align:center;}
 .cp-energy .ce-label{white-space:nowrap;}
 .sc-name{font-size:12px;}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ P0-C 전투 피드백 (2026-09-10, UX 설계 §6·§7-9)
+   타이밍 재배분(한 턴 ≈4.0→2.6s) · 피격 플래시/히트스톱/넉백/무대 흔들림 · 데미지 24/32px ·
+   HP바 피해 비례 이징+색 임계 · 상대 다음 행동 예고 · 2배속 · 대기/공격 스텝 애니
+   ════════════════════════════════════════════════════════════ */
+#battleScreen{--bs:1;}            /* 2배속이면 .5 — 연출 길이 배율 */
+#battleScreen.speed2{--bs:.5;}
+.arena-fighter{transition:transform .25s cubic-bezier(.2,.85,.3,1),filter .22s ease;}   /* 판정 spread .5→.25s */
+/* HP바: 피해 비례 이징(인라인 duration) + 색 임계(>50 청록 · >20 노랑 · ≤20 빨강) */
+.hpbar>div{transition:width .45s cubic-bezier(.2,.7,.3,1),background-color .25s;}
+.hpbar>div.mid{background:#ffd34a !important;}
+.hpbar>div.low{background:#ff6b4a !important;}
+/* 데미지 숫자: 24px·1.1s·44px 상승. 굉장/치명은 32px 팝 스케일 */
+.dmgpop{font-size:24px;animation:rise calc(1.1s*var(--bs,1)) ease-out forwards;}
+.dmgpop.big{font-size:32px;color:#ffb347;animation:risePop calc(1.3s*var(--bs,1)) ease-out forwards;}
+.dmgpop.crit.strong{background:#c9962f;color:#1a1200;}
+@keyframes rise{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1}100%{opacity:0;transform:translate(-50%,-44px)}}
+@keyframes risePop{0%{opacity:0;transform:translate(-50%,6px) scale(.6)}12%{opacity:1;transform:translate(-50%,-4px) scale(1.25)}30%{transform:translate(-50%,-10px) scale(1)}100%{opacity:0;transform:translate(-50%,-52px) scale(1)}}
+/* 피격: 흰 플래시(2f) → 넉백 6px(공격자 반대쪽) → 복귀. 픽셀이라 steps */
+.fsprite.hit{animation:hitP calc(.36s*var(--bs,1)) steps(1,end) both;}
+.arena-fighter.enemy .fsprite.hit{animation-name:hitE;}
+@keyframes hitP{0%{filter:brightness(5) saturate(0) drop-shadow(0 10px 16px rgba(0,0,0,.55))}9%{filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));transform:translate(-6px,4px)}36%{transform:translate(4px,-2px)}63%{transform:translate(-2px,1px)}100%{transform:none}}
+@keyframes hitE{0%{filter:brightness(5) saturate(0) drop-shadow(0 10px 16px rgba(0,0,0,.55))}9%{filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));transform:translate(6px,-4px)}36%{transform:translate(-4px,2px)}63%{transform:translate(2px,-1px)}100%{transform:none}}
+/* 무대 흔들림: 일반 1px·180ms, 굉장/치명 2px·240ms */
+#battleArena.shake-s{animation:arenaShake calc(.18s*var(--bs,1)) steps(4,end);--sh:1px;}
+#battleArena.shake-m{animation:arenaShake calc(.24s*var(--bs,1)) steps(6,end);--sh:2px;}
+@keyframes arenaShake{0%{transform:translate(0,0)}25%{transform:translate(var(--sh),calc(var(--sh)*-1))}50%{transform:translate(calc(var(--sh)*-1),var(--sh))}75%{transform:translate(var(--sh),var(--sh))}100%{transform:translate(0,0)}}
+/* 공격: 뒤로 움찔 → 상대 쪽으로 돌진 → 복귀(4스텝) */
+.arena-fighter.player.skill-use .fsprite{animation:lungeP calc(.4s*var(--bs,1)) steps(4,end) both;}
+.arena-fighter.enemy.skill-use .fsprite{animation:lungeE calc(.4s*var(--bs,1)) steps(4,end) both;}
+@keyframes lungeP{0%{transform:translate(0,0)}25%{transform:translate(-4px,4px)}50%{transform:translate(16px,-16px) scale(1.05)}75%{transform:translate(6px,-6px)}100%{transform:none}}
+@keyframes lungeE{0%{transform:translate(0,0)}25%{transform:translate(4px,-4px)}50%{transform:translate(-16px,16px) scale(1.05)}75%{transform:translate(-6px,6px)}100%{transform:none}}
+/* 대기: 식물만 한 도트(×2 표시 기준 2px) 위아래 — 화분은 고정 */
+@keyframes idleBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.fsprite .ss-plant{animation:idleBob 1.2s steps(2,end) infinite;}
+.arena-fighter.enemy .fsprite .ss-plant{animation-delay:.6s;}
+.pp-stack .pp-plant{animation:idleBob 1.6s steps(2,end) infinite;}
+.pp-stack.sprout-in .pp-plant{animation:sproutIn .6s cubic-bezier(.2,.9,.3,1.2) both, idleBob 1.6s steps(2,end) .6s infinite;}
+/* 상대 다음 행동 예고 칩(상대 카드 아래) */
+.eintent{margin-top:5px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;min-height:16px;white-space:nowrap;}
+.eintent .ei-k,.eintent .ei-v{white-space:nowrap;}
+.eintent .ei-k{color:var(--sub);font-weight:700;letter-spacing:.04em;}
+.eintent .ei-v{color:#ffd7a8;font-weight:800;}
+.eintent .ei-v b{color:#fff;}
+.eintent .ei-v i{font-style:normal;font-size:12px;padding:0 4px;border-radius:3px;background:rgba(255,255,255,.1);}
+.eintent .ei-v.atk{color:#ff9a82;}
+.eintent .ei-v.guard{color:#9fd8ff;}
+.eintent .ei-v.heal{color:#7df0a8;}
+.eintent .ei-v.deb{color:#c89cff;}
+.eintent .ei-v.buff{color:#ffe89a;}
+/* 2배속 토글 — 에너지 줄 오른쪽 끝(상단 헤더는 토너먼트명·라운드 점이 차지) */
+.cp-energy-row{display:flex;align-items:center;gap:6px;}
+.cp-energy-row>.cp-energy{flex:1;min-width:0;}
+.battle-turn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+.battle-speed{flex:0 0 auto;pointer-events:auto;min-width:54px;min-height:44px;border:1px solid rgba(60,230,210,.32);border-radius:999px;padding:5px 10px;
+  background:rgba(7,13,23,.82);color:var(--neon);font-size:12px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.35);}
+#battleArena.spread .eintent{opacity:.35;}   /* 판정 중엔 "다음" 예고를 흐리게(지금 행동과 혼동 방지) */
+.battle-speed.on{background:rgba(45,212,191,.22);border-color:#aef7ec;color:#eafffb;}
+.battle-speed:active{transform:scale(.96);}
+/* 결과 화면: 패배 힌트 · 승리 장착 유도 */
+.mr-hint{font-size:12px;color:#ffd7a8;background:rgba(255,180,90,.08);border:1px solid rgba(255,180,90,.3);border-radius:6px;padding:8px 10px;margin:8px 0 0;line-height:1.45;}
+.mr-cta{width:100%;margin-top:8px;}
+@media (prefers-reduced-motion:reduce){
+  .fsprite .ss-plant,.pp-stack .pp-plant{animation:none !important;}
+  #battleArena.shake-s,#battleArena.shake-m{animation:none !important;}
+  .fsprite.hit{animation-duration:.12s !important;}
+}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ P0-D 정리 (2026-09-10, UX 설계 §7-5·§7-8·O4)
+   ════════════════════════════════════════════════════════════ */
+/* 함선 탭 v1.0 숨김(정체성과 안 이어지고 안내 없음) → 하단 탭 4개 */
+#bottomNav{grid-template-columns:repeat(4,1fr);}
+#bottomNav .navbtn[data-nav="mode"]{display:none !important;}
+/* 방 전환 = fade-through 225ms(Material 진입 감속). 뒤 화면 비침 제거: 방 역할 모달은 불투명 바탕, 밝기 필터 없음 */
+#shopModal,#explorationModal{background:#070b16 !important;}
+#shopModal .modal-card,#explorationModal .modal-card{animation:fadeThroughIn .225s cubic-bezier(0,0,.2,1) both !important;}
+#nurseryScreen:not(.hidden){animation:fadeThroughFixed .225s cubic-bezier(0,0,.2,1) both !important;}
+@keyframes fadeThroughIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:none}}
+@keyframes fadeThroughFixed{0%{opacity:0;transform:translateX(-50%) scale(.98)}100%{opacity:1;transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){
+  #shopModal .modal-card,#explorationModal .modal-card{animation:fadeThroughIn .15s linear both !important;}
+  #nurseryScreen:not(.hidden){animation:none !important;}
+}
+
+/* ════════════════════════════════════════════════════════════
+   ▓▓▓ 메인 재배치 (UX 설계 §7-3): 좌측 스탯 8칸 → 하단 핵심 4 + 성장 게이지 한 줄
+   좌측 레일엔 타입/속성/변이 알약만 남고 레일 폭은 104로 복귀(종 이름 한 줄). 전체 수치는 관리창 강화 탭
+   ════════════════════════════════════════════════════════════ */
+#mainStage{--main-rail:104px;width:100%;}
+.main-body{flex-direction:column;align-items:stretch;}
+#keyStats{flex:0 0 auto;width:100%;padding:2px 12px 4px;display:flex;flex-direction:column;gap:5px;}
+.ks-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;}
+.ks{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 2px;border-radius:4px;
+  background:rgba(10,30,42,.72);border:1px solid rgba(125,240,226,.30);}
+.ks-k{font-size:12px;color:#9fe2d8;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:2px;letter-spacing:-.5px;}
+.ks-v{font-size:13px;color:#b6f7ed;font-weight:900;text-shadow:0 0 6px rgba(125,240,226,.5);}
+.ks-growth{display:flex;align-items:center;gap:8px;}
+.ks-growth .growthbar{flex:1;margin:0;height:10px;}
+.ks-gtext{font-size:12px;color:var(--sub);white-space:nowrap;}
+#centerPlant .hint{white-space:nowrap;}   /* 좁은 중앙 열에서 안내 한 줄 유지(flex 중앙이라 양쪽으로 균등 넘침) */
 </style>
 </head>
 <body>
@@ -2257,6 +2359,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
         <div id="centerPlant"></div>
         <div id="sidePanel"></div>
       </div>
+      <div id="keyStats" class="hidden"></div>
     </div>
     <div id="tournamentBar"></div>
     <button id="btnBattle">⚔️ 전투 시작</button>
@@ -2265,7 +2368,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
       <button class="navbtn" data-nav="explore"><span class="ni" data-pic="sat"></span><span class="nl">탐사</span></button>
       <button class="navbtn center active" data-nav="home"><span class="ni" data-pic="leaf"></span><span class="nl">식물·전투</span></button>
       <button class="navbtn" data-nav="nursery"><span class="ni" data-pic="pot"></span><span class="nl">식물양육</span><span class="nav-dot" id="nurseryNavDot" hidden></span></button>
-      <button class="navbtn" data-nav="mode"><span class="ni" data-pic="rocket"></span><span class="nl">함선</span></button>
+      <button class="navbtn" data-nav="mode" hidden><span class="ni" data-pic="rocket"></span><span class="nl">함선</span></button><!-- v1.0 숨김(UX §7-8) — 오픈월드 확장 때 복귀 -->
     </nav>
   </section>
 
@@ -2284,6 +2387,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
           <div class="hpbar"><div id="eHpBar"></div></div>
           <div class="hptext" id="eHpText"></div>
           <div class="energy" id="eEnergy"></div>
+          <div class="eintent" id="eIntent"></div>
         </div>
         <div class="fsprite" id="eSpriteBox"></div>
       </div>
@@ -2308,7 +2412,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
     <div id="cardPhase" class="hidden">
       <div class="cp-stack">
         <div id="teamBar"></div>
-        <div class="cp-energy" id="cardEnergy"></div>
+        <div class="cp-energy-row"><div class="cp-energy" id="cardEnergy"></div><button class="battle-speed" id="speedBtn" type="button" aria-pressed="false" title="전투 배속">▶ 1×</button></div>
         <div class="cp-hand" id="cardHand"></div>
         <div class="cp-pred" id="cardPred"></div>
       </div>
@@ -7559,7 +7663,9 @@ async function cloudForceDownload(){
 
 /* ================= 유틸 ================= */
 const $ = s => document.querySelector(s);
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const sleep = ms => new Promise(r=>setTimeout(r, battleSleepMs(ms)));
+/* 전투 2배속(P0-C): 전투 중(B 살아있고 미종료)이고 state.battle_speed===2면 대기 절반(하한 16ms=1f). 전투 밖 연출은 그대로 */
+function battleSleepMs(ms){ try{ if(B && !B.over && state && state.battle_speed===2) return Math.max(16, Math.round(ms/2)); }catch(e){} return ms; }
 const rand = (a,b) => a + Math.random()*(b-a);
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const fmt = n => n.toLocaleString('ko-KR');
@@ -9759,6 +9865,9 @@ function beep(freq, dur, type, vol){
 const sfx = {
   tap:   ()=>beep(520,0.06,'square',0.03),
   hit:   ()=>beep(150,0.13,'sawtooth',0.06),
+  hitStrong:()=>{ beep(120,0.14,'sawtooth',0.07); setTimeout(()=>beep(90,0.16,'square',0.06),60); },   // 효과 굉장: 낮은 2연타
+  hitWeak:  ()=>beep(220,0.08,'triangle',0.035),                                                     // 효과 별로: 가벼운 톡
+  crit:     ()=>{ beep(160,0.08,'sawtooth',0.07); setTimeout(()=>beep(80,0.2,'sawtooth',0.08),50); setTimeout(()=>beep(1200,0.05,'square',0.04),60); }, // 치명타: 둔탁+날카로움
   heal:  ()=>beep(660,0.12,'sine',0.05),
   roll:  ()=>beep(440,0.05,'triangle',0.03),
   win:   ()=>{ beep(523,0.1,'square',0.05); setTimeout(()=>beep(659,0.1,'square',0.05),110); setTimeout(()=>beep(784,0.22,'square',0.05),220); },
@@ -10680,20 +10789,22 @@ function movePlantOrder(src, dst){
 function renderCenter(){
   const box = $('#centerPlant'), sp = $('#statPanel'), side = $('#sidePanel');
   const p = activePlant();
+  const ks = $('#keyStats');
   if(!p){
     if(sp) sp.innerHTML = '';
     if(side) side.innerHTML = bagFabHtml();
+    if(ks){ ks.innerHTML = ''; ks.classList.add('hidden'); }
     box.innerHTML = `
       <div class="plant-stage"><span class="pp-stack"><span class="pp-spacer">${potVisual('pot_terra',150)}</span><span class="pp-pot">${potVisual('pot_terra',150)}</span></span><span class="wood-stool"></span></div>
       <div class="pname">빈 화분</div>
-      <div class="hint">▲ 탭해서 첫 종자 심기</div>`;
+      <div class="hint">▲ 탭해서 종자 심기</div>`;
     return;
   }
   const s = calcStats(p);
-  if(sp) sp.innerHTML = `
-    <div class="info-pills">${plantInfoPills(p, false)}</div>
-    <div class="stat-grid">${mainStatBoxes(p, s)}</div>`;
+  // 스탯 8칸은 하단 #keyStats(핵심 4 + 성장 게이지)로 이동(UX §7-3). 전체 수치는 관리창 강화 탭
+  if(sp) sp.innerHTML = `<div class="info-pills">${plantInfoPills(p, false)}</div>`;
   if(side) side.innerHTML = bagFabHtml();
+  renderKeyStats(p, s);
   ensureNurseryFields(p);
   const ppL = plantLayers(p, p.growth_stage||'mature', 150);          // 도트 PNG면 144(=48×3)로 스냅, 화분도 PNG
   const ppPot = ppL.pot, ppPlant = ppL.plant;
@@ -11034,6 +11145,19 @@ const MAIN_STAT_DEFS = [
   { k:'acc', icon:'🎯', name:'적중', suf:'%' }, { k:'elem', icon:'✨', name:'속성' },
   { k:'critRate', icon:'💥', name:'치명', suf:'%' }, { k:'energy', icon:'⚡', name:'에너지' },
 ];
+/* 메인 하단 핵심 4스탯 + 성장 게이지(UX §7-3). 나머지 4칸(적중·속성·치명·에너지)은 관리창 강화 탭에서 */
+function renderKeyStats(p, s){
+  const ks = $('#keyStats'); if(!ks) return;
+  const IC = {hp:'hp',atk:'atk',def:'def',spd:'spd'};
+  const defs = [['hp','❤️','체력'],['atk','⚔️','공격'],['def','🛡️','방어'],['spd','💨','기동']];
+  const isMax = p.growth_stage === GROWTH_STAGE_ORDER[GROWTH_STAGE_ORDER.length-1];
+  const need = growthExpNeeded(p), cur = Math.round(p.growth_exp||0);
+  const pct = isMax ? 100 : Math.max(0, Math.min(100, Math.round(cur/need*100)));
+  const nextName = isMax ? '' : growthStageName(nextGrowthStage(p.growth_stage), p.seed_type);
+  ks.classList.remove('hidden');
+  ks.innerHTML = `<div class="ks-row">${defs.map(([k,ic,nm]) => `<div class="ks"><span class="ks-k">${window.pxIcon?pxIcon(IC[k],'12px'):ic}${nm}</span><b class="ks-v">${s[k]}</b></div>`).join('')}</div>
+    <div class="ks-growth"><div class="growthbar"><span style="width:${pct}%"></span></div><div class="ks-gtext">${isMax ? '최종 단계' : `${nextName}까지 ${cur}/${need}`}</div></div>`;
+}
 function mainStatBoxes(p, s){
   const IC={hp:'hp',atk:'atk',def:'def',spd:'spd',acc:'acc',elem:'elem',critRate:'crit',energy:'energy'};
   return MAIN_STAT_DEFS.map(d => `<div class="stat-box"><div class="sb-k">${window.pxIcon?pxIcon(IC[d.k]||'','12px'):d.icon} ${d.name}</div><div class="sb-v">${s[d.k]}${d.suf||''}</div></div>`).join('');
@@ -11743,9 +11867,9 @@ function renderShop(){
   const itemBoxes = renderShopLane(supplyBoxesByGroup('item'), item => `data-shop-box="${item.id}"`);
   const traitBoxes = `<div class="shop-subtitle">변이형별 카드 보급상자</div>` + renderShopLane(supplyBoxesByGroup('trait'), item => `data-shop-box="${item.id}"`);
   const potLane = renderShopLane(POT_SHOP.map(x=>({ ...x, icon: potVisual(x.id, 40), disabled: !!(state.pot_inventory&&state.pot_inventory[x.id]) })), item => `data-buy-pot="${item.id}"`);
+  // P0-D(UX §7-5): 미동작 IAP 카드(특가·재화 원화 팩)는 비공개 테스트 빌드에서 제거 — 결제 연동 후 별도 빌드에서 복귀(SHOP_SPECIAL_PACKS·SHOP_CURRENCY_PACKS 데이터는 보존)
+  void special; void currency;
   $('#shopList').innerHTML =
-    renderShopBlock('특가', '구글 스토어 결제 예정 · 현재 선택 불가', special) +
-    renderShopBlock('재화', '구글 스토어 결제 예정 · 현재 선택 불가', currency) +
     renderShopBlock('소모품 · 아이템', '식물 생장 경험치 아이템. 레벨업 물약은 무료로 무한 구매할 수 있습니다.', growthItems) +
     renderShopBlock('🪴 양육 화분', '식물원 열매 충전 속도·최대 개수를 올립니다. 상급 화분은 보급상자·탐사 보상으로.', potLane) +
     renderShopBlock('성장 보급상자', '생장 경험치 아이템이 무작위로 들어 있습니다. 탐사 보상으로도 얻을 수 있습니다.', itemBoxes) +
@@ -12434,6 +12558,7 @@ function bootBattleUI(p){
   $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}${eArch?` · 성향: ${eArch.name}`:''}`;
   $('#pProfile').textContent = `👤 ${B.p.trainerName||state.profile_name||'재배사'}`;
   updateBars(); updateBattleHud();
+  applyBattleSpeed(); renderEnemyIntent(null);
   playVsIntro(p);
   // VS 인트로 후 식물 등장 → 첫 카드 페이즈
   clearTimeout(B._stageT);
@@ -12444,6 +12569,7 @@ function enterBattleStage(){
   if(!B || B.over) return;
   $('#eSpriteBox').classList.add('enter');
   $('#pSpriteBox').classList.add('enter');
+  try{ updateEnemyForecast(); }catch(e){}   // 1턴부터 상대 의도 노출
   clearTimeout(B._cardT);
   B._cardT = setTimeout(() => { if(B && !B.over && !B.busy) renderBattleIdleView(); }, 640);
 }
@@ -12647,6 +12773,12 @@ function updateBattleHud(){
   $('#battleTurn').textContent = `${B.turn||1}턴`;
   $('#surrenderBtn').disabled = !!(B.busy || B.over);
 }
+/* 2배속(P0-C): 대기(sleep) 절반 + CSS 연출 배율(--bs). 설정은 세이브에 남는다 */
+function applyBattleSpeed(){
+  const on = !!(state && state.battle_speed===2);
+  const bs = $('#battleScreen'); if(bs) bs.classList.toggle('speed2', on);
+  const b = $('#speedBtn'); if(b){ b.textContent = on ? '▶▶ 2×' : '▶ 1×'; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on?'true':'false'); }
+}
 function renderBattleIdleView(){
   if(!B || B.over || B.busy) return;
   updateBattleHud();
@@ -12748,8 +12880,8 @@ function statusTags(u){
 function updateBars(){
   if(!B) return;
   const ep = Math.max(0, B.e.hp/B.e.max*100), pp = Math.max(0, B.p.hp/B.p.max*100);
-  $('#eHpBar').style.width = ep+'%';  $('#eHpBar').className = ep<30 ? 'low' : '';
-  $('#pHpBar').style.width = pp+'%';  $('#pHpBar').className = pp<30 ? 'low' : '';
+  $('#eHpBar').style.width = ep+'%';  $('#eHpBar').className = hpBarClass(ep);
+  $('#pHpBar').style.width = pp+'%';  $('#pHpBar').className = hpBarClass(pp);
   $('#eHpText').textContent = `${Math.max(0,B.e.hp)} / ${B.e.max}` + statusTags(B.e);
   $('#pHpText').textContent = `${Math.max(0,B.p.hp)} / ${B.p.max}` + statusTags(B.p);
   let pips = '';
@@ -12783,16 +12915,16 @@ async function animateJudgeCardUse(side, isAttack){
   if(card){ card.classList.remove('acting'); void card.offsetWidth; card.classList.add('acting'); setTimeout(()=>card.classList.remove('acting'),520); }
   const fighter = $(side==='p' ? '#playerFighter' : '#enemyFighter');
   if(isAttack && fighter){ fighter.classList.add('skill-use'); setTimeout(()=>fighter.classList.remove('skill-use'),440); }
-  await sleep(460);
+  await sleep(340);   // 행동 카드 유지(앞선 80ms 포함 ≈ 420) + 공격 스텝 애니(.4s)가 이 안에서 겹쳐 돈다
 }
-function popup(side, text, isHeal){
+function popup(side, text, isHeal, cls){
   const box = side==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
   if(!box) return;
   const sp = document.createElement('span');
-  sp.className = 'dmgpop' + (isHeal ? ' heal' : '');
+  sp.className = 'dmgpop' + (isHeal ? ' heal' : '') + (cls ? ' '+cls : '');
   sp.textContent = text;
   box.appendChild(sp);
-  setTimeout(()=>sp.remove(), 950);
+  setTimeout(()=>sp.remove(), 1400);
 }
 /* 식물 위 순간 효과 텍스트 — 치명타(crit)/버프(buf)/디버프(deb) */
 function fxPopup(side, text, cls){
@@ -12802,7 +12934,30 @@ function fxPopup(side, text, cls){
   sp.className = 'dmgpop ' + (cls||'');
   sp.textContent = text;
   box.appendChild(sp);
-  setTimeout(()=>sp.remove(), 950);
+  setTimeout(()=>sp.remove(), 1400);
+}
+/* HP바 색 임계(UX §6): >50 청록 · >20 노랑(mid) · ≤20 빨강(low) */
+function hpBarClass(pct){ return pct<=20 ? 'low' : pct<=50 ? 'mid' : ''; }
+/* P0-C 피격 연출 묶음(포켓몬 Emerald 순서 근거): 흰 플래시(2f) → 히트스톱(일반 2f·굉장 3f·급소 5f) → 넉백+무대 흔들림 →
+   데미지 숫자(24px, 굉장/치명 32px) → HP바 이징(피해 비율 비례 .25~1.0s). 반환 = HP바 이징 ms(상성 문구는 그 뒤에 띄운다) */
+async function hitFx(tgtSide, o){
+  const box = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
+  const arena = $('#battleArena');
+  const crit = !!o.crit, strong = o.elemMult>1, weak = o.elemMult<1;
+  const stop = crit ? 83 : strong ? 50 : 33;
+  if(box){ box.classList.remove('hit','shake'); void box.offsetWidth; box.classList.add('hit'); setTimeout(()=>box.classList.remove('hit'), 420); }
+  try{ crit ? sfx.crit() : strong ? sfx.hitStrong() : weak ? sfx.hitWeak() : sfx.hit(); }catch(e){}
+  await sleep(stop);                                   // 히트스톱: 이 사이엔 숫자도 HP바도 움직이지 않는다
+  if(arena){ const k = (crit||strong) ? 'shake-m' : 'shake-s'; arena.classList.remove('shake-s','shake-m'); void arena.offsetWidth; arena.classList.add(k); setTimeout(()=>arena.classList.remove(k), 320); }
+  popup(tgtSide, '-'+o.dm, false, (crit||strong) ? 'big' : '');
+  if(crit) fxPopup(tgtSide, '치명타!', 'crit');
+  else if(strong) fxPopup(tgtSide, '효과 굉장!', 'crit strong');
+  const ratio = o.max>0 ? o.dm/o.max : 0;
+  const dur = Math.round(Math.min(1000, Math.max(250, ratio*1200)));
+  const bar = tgtSide==='p' ? $('#pHpBar') : $('#eHpBar');
+  if(bar){ bar.style.transitionDuration = battleSleepMs(dur)+'ms'; setTimeout(()=>{ bar.style.transitionDuration=''; }, battleSleepMs(dur)+50); }
+  updateBars();
+  return battleSleepMs(dur);
 }
 /* (2026-07-02) 구 aiPickSkill 제거 — 3v3 재설계로 aiPickIntent(성향 가중·손패 기반)가 대체. */
 /* ── 봇 성향(스펙 §4) — 아키타입=읽을 수 있는 패턴. 가중치는 카테고리 선호 배율. ── */
@@ -12849,15 +13004,51 @@ function aiPickIntent(){
   return best ? { kind:'skill', id:best } : { kind:'rest' };
 }
 /* 큰 기술 예고(§4): 턴 정리 때 다음 턴 3코+ 스킬 사용 계획이면 ⚠️ 노출(종류 숨김) */
+/* P0-C(UX §7-9): 매 턴 끝에 봇이 다음 수를 미리 정하고 상대 카드 아래에 "다음: ⚔️ 공격 ~24"처럼 보여준다(Into the Breach·StS 방식).
+   3코스트+ 큰 기술이면 ⚠️도 함께. 예고한 수는 지킨다(submitIntent가 B.eNextIntent를 우선 사용, 못 쓰게 됐으면 그때 새로 고름). */
 function updateEnemyForecast(){
-  const e = B.e; B.eForecast = null;
-  const bigs = unitDeckIds(e).filter(id => { const s = skillById(id, e);
-    return s && !s.noEnergy && (s.cost||0)>=3 && effectiveCost(e, s) <= e.energy && (s.power||0)>0; });
-  if(bigs.length && rng() < 0.55){
-    B.eForecast = { id: bigs[Math.floor(rng()*bigs.length)] };
+  if(!B || B.over) return;
+  B.eForecast = null;
+  const intent = aiPickIntent();          // 다음 턴의 수를 지금 결정(예고 = 대응 기회)
+  if(intent.kind==='skill') B.eForecast = { id:intent.id };
+  B.eNextIntent = intent;
+  renderEnemyIntent(intent);
+}
+function enemyIntentValid(it){
+  if(!it || !B) return false;
+  if(it.kind==='skill') return !skillUnusable(B.e, it.id);
+  if(it.kind==='switch') return !!(B.eTeam[it.to] && B.eTeam[it.to].hp>0 && it.to!==B.eActive);
+  return it.kind==='rest';
+}
+/* 예상 피해(난수·치명 제외, applySkill 공식과 같은 뼈대) — 순수 함수 */
+function estimateHitDamage(a, d, s){
+  if(!a || !d || !s || !(s.power>0)) return 0;
+  const normal = effStat(a,'atk') * (s.power * (s.breathScale ? breathPowerMult(a) : 1)) / 100;
+  const elementPart = s.elem ? (a.elem||0) * eff(a.element, d.element) : 0;
+  const raw = normal + elementPart;
+  const flatDef = effStat(d,'def') * (1 - (s.pierce||0));
+  let dm = Math.max(1, Math.max(raw*0.25, raw - flatDef));
+  if(d.guard) dm *= d.guard.mult;
+  return Math.max(1, Math.round(dm));
+}
+function renderEnemyIntent(intent){
+  const el = $('#eIntent'); const box = $('#eSpriteBox');
+  if(!el) return;
+  if(!intent || !B){ el.innerHTML=''; if(box) box.classList.remove('forecast'); return; }
+  let html='', cls='', big=false;
+  if(intent.kind==='switch'){ html='🔁 교체 준비'; cls='sw'; }
+  else if(intent.kind==='rest'){ html='💤 숨 고르기'; cls='rest'; }
+  else {
+    const s = skillById(intent.id, B.e);
+    if(s && s.power>0){ const est = estimateHitDamage(B.e, B.p, s); const m = s.elem ? eff(B.e.element, B.p.element) : 1; html = `⚔️ 공격 <b>~${est}</b>${m>1?' <i>상성↑</i>':m<1?' <i>상성↓</i>':''}`; cls='atk'; }
+    else if(s && s.guardMult!=null){ html='🛡️ 방어 태세'; cls='guard'; }
+    else if(s && s.heal){ html='💚 회복'; cls='heal'; }
+    else if(s && (s.enemyDebuff||s.dot||s.infuse)){ html='🔻 약화·지속피해'; cls='deb'; }
+    else { html='✨ 강화'; cls='buff'; }
+    big = !!(s && !s.noEnergy && (s.cost||0)>=3);
   }
-  const box = $('#eSpriteBox');
-  if(box) box.classList.toggle('forecast', !!B.eForecast);
+  if(box) box.classList.toggle('forecast', big);
+  el.innerHTML = `<span class="ei-k">다음</span><span class="ei-v ${cls}">${html}</span>`;
 }
 async function applySkill(a, d, s, side, options={}){
   if(!s) return;
@@ -12951,7 +13142,7 @@ async function applySkill(a, d, s, side, options={}){
       blog(`▶ ${isAoe?'광역':'단일'} 공격이 빗나갔다! <span style="color:var(--sub)">(회피 ${dodge}%)</span>`);
       sfx.tap();
       setVerdict(side,'빗나갔다!','miss');
-      await sleep(560);
+      await sleep(450);
       updateBars(); return;
     }
     // 데미지 = 공격×위력%(노멀) + 속성수치×타입배율(원소) − 방어(고정)
@@ -12998,17 +13189,15 @@ async function applySkill(a, d, s, side, options={}){
       if(survived){ d.hp = Math.max(1, Math.round(d.max*d.passives.surviveHpAfter)); effectNotes.push('치명상을 버텨냈다!'); blog(`▶ ✨ <span class="em">${d.name}</span> 치명상을 버텨냈다!`); if(d.passives.surviveOnce) d.passives.surviveChance = 0; }
     }
     if(absorbed>0) effectNotes.push('보호막이 공격을 막았다!');
-    const tgtBox = tgtSide==='p' ? $('#pSpriteBox') : $('#eSpriteBox');
-    tgtBox.classList.add('shake'); setTimeout(()=>tgtBox.classList.remove('shake'),420);
-    popup(tgtSide,'-'+dm,false);
-    if(crit) fxPopup(tgtSide,'치명타!','crit');
+    // P0-C 피격 연출: 플래시 → 히트스톱 → 넉백·무대 흔들림 → 숫자 → HP바 이징(피해 비례). 상성 문구는 HP바가 다 줄어든 뒤(포켓몬 순서)
+    const hpDur = await hitFx(tgtSide, { crit, elemMult, dm, max:d.max });
     blog(`▶ <b>${dm}</b> 피해${d.guard?' (방어 감소)':''}${crit?' · 💥치명타!':''}`);
     if(s.elem){ if(elemMult>1) blog('▶ 효과가 굉장했다! 🔥'); else if(elemMult<1) blog('▶ 효과가 별로였다…'); }
-    sfx.hit();
     const hitMessage = elemMult>1 ? '효과가 굉장하다!' : (elemMult<1 ? '효과가 별로다…' : '정확히 들어갔다!');
     const hitTone = elemMult>1 ? 'good' : (elemMult<1 ? 'weak' : '');
+    await sleep(Math.min(hpDur, 500));
     setVerdict(side, hitMessage, hitTone);
-    await sleep(560);
+    await sleep(300);
     const predLs = (s.pred && a.cardFx) ? (a.cardFx.predBoost.lifesteal||0) : 0;
     const ls = (s.lifesteal||0) + (a.passives.lifestealPct||0) + predLs;
     if(ls>0 && dm>0){ const h=Math.round(dm*ls*healMult(a)), before=a.hp; a.hp=Math.min(a.max,a.hp+h); if(a.hp>before){ popup(side,'회복',true); effectNotes.push('체력이 회복되었다!'); } blog(`▶ 🩸 ${Math.round(ls*100)}% 흡혈 (+${h})`); }
@@ -13095,7 +13284,7 @@ async function tickStatuses(u, side){
     }
   }
   // 순차 메시지 폐지 — 지속피해/상태는 데미지 숫자 + 상태 VFX + statusTags 아이콘으로 동시에 전달
-  if(changed){ updateBars(); await sleep(420); }
+  if(changed){ updateBars(); await sleep(240); }
 }
 /* 슬롯용 카드 1장 — id(judgePlayerCard/judgeEnemyCard)는 animateJudgeCardUse 호환 유지. */
 function judgeCardMarkup(side, id){
@@ -13138,7 +13327,7 @@ function positionJudgeInGap(){
 async function openJudge(playerId, enemyId){
   const jw = $('#judgeWindow');
   $('#battleArena').classList.add('spread'); // 식물 위·아래로 벌림
-  await sleep(540); // spread 트랜지션(.5s) 완료 후 측정해야 정확
+  await sleep(270); // spread 트랜지션(.25s) 완료 후 측정해야 정확
   $('#judgeCards').innerHTML = `
     <div class="jw-slot left" id="judgeSlotLeft">${playerId ? judgeCardMarkup('p',playerId) : ''}</div>
     <div class="jw-order" id="judgeOrder"></div>
@@ -13147,7 +13336,7 @@ async function openJudge(playerId, enemyId){
   positionJudgeInGap();
   void jw.offsetWidth; jw.classList.add('open');
   try{ sfx.roll(); }catch(e){}
-  await sleep(360);
+  await sleep(240);
 }
 function closeJudge(){
   const arena=$('#battleArena'); if(arena) arena.classList.remove('spread'); // 식물 원위치
@@ -13176,8 +13365,11 @@ async function submitIntent(intent){
   B.busy = true; B.pIntent = intent;
   updateBattleHud(); hide('#battleSkillDetail'); lockSkillBar();
   try{ sfx.tap(); }catch(e){}
-  await sleep(280);
-  const eIntent = aiPickIntent();
+  await sleep(200);
+  // 예고한 수는 지킨다(P0-C): 턴 끝에 미리 정한 B.eNextIntent가 아직 유효하면 그대로, 아니면 새로 고른다
+  const planned = B.eNextIntent; B.eNextIntent = null;
+  const eIntent = (planned && enemyIntentValid(planned)) ? planned : aiPickIntent();
+  B.eForecast = null;
   B.eIntent = eIntent;
   await resolveTurn(intent, eIntent);
 }
@@ -13190,7 +13382,7 @@ async function resolveTurn(pIntent, eIntent){
       const u = side==='p' ? B.p : B.e;
       blog(`<span class="em">${u.name}</span> 교체 투입!`);
       setVerdict(side==='p'?'e':'p', '교체! — '+u.name, 'effect');
-      await sleep(520);
+      await sleep(400);
     }
     if(intent.kind==='rest'){
       const u = side==='p' ? B.p : B.e;
@@ -13217,8 +13409,8 @@ async function resolveTurn(pIntent, eIntent){
     if(needsOrder){
       const arrowSide = prioritySide || B.firstSide;
       setJudgeOrder(arrowSide, prioritySide ? '방어 우선' : (arrowSide==='p'?'선공 · 나':'선공 · 상대'));
-      await sleep(860);
-    } else await sleep(300);
+      await sleep(533);   // 선공 카드 32f(B_WAIT_TIME_SHORT)
+    } else await sleep(200);
     const seq = prioritySide ? (prioritySide==='p'?['p','e']:['e','p'])
               : (needsOrder ? (playerFirst?['p','e']:['e','p']) : ['p','e']);
     for(const side of seq){
@@ -13227,11 +13419,11 @@ async function resolveTurn(pIntent, eIntent){
       const a = side==='p' ? B.p : B.e, d = side==='p' ? B.e : B.p;
       if(a.hp<=0) continue;
       setJudgeAction(side, id);
-      await sleep(150);
-      if(a.skipNext){ a.skipNext=false; if(a.zapNoRegen){ a._noRegen=true; a.zapNoRegen=false; } await animateJudgeCardUse(side,false); setVerdict(side, a._noRegen?'감전 — 움직일 수 없다!':'마비되어 움직일 수 없다!','effect'); await sleep(620); updateBars(); continue; }
+      await sleep(80);
+      if(a.skipNext){ a.skipNext=false; if(a.zapNoRegen){ a._noRegen=true; a.zapNoRegen=false; } await animateJudgeCardUse(side,false); setVerdict(side, a._noRegen?'감전 — 움직일 수 없다!':'마비되어 움직일 수 없다!','effect'); await sleep(500); updateBars(); continue; }
       await applySkill(a, d, skillById(id, a), side, {suppressMessages:true});
       if(await handleFaintAndMaybeEnd()) return;
-      await sleep(240);
+      await sleep(120);
     }
   }
   await tickStatuses(B.p,'p'); if(await handleFaintAndMaybeEnd()) return;
@@ -13241,8 +13433,8 @@ async function resolveTurn(pIntent, eIntent){
   if(B.e._noRegen){ B.e._noRegen=false; } else B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
-  if(typeof updateEnemyForecast==='function') updateEnemyForecast(); // 봇 큰 기술 예고(Task 6)
-  await sleep(300);
+  if(typeof updateEnemyForecast==='function') updateEnemyForecast(); // 상대 다음 수 예고(P0-C: 매 턴)
+  await sleep(160);
   closeJudge();
   B.turn += 1; B.pIntent = B.eIntent = null;
   B.busy = false; updateBars(); updateBattleHud();
@@ -13481,6 +13673,15 @@ async function endMatch(won){
     btnLabel='콜로세움 나가기';
   }
   saveState();
+  // P0-D(UX §7-10): 패배 → 상성 한 줄 힌트(오류 회복) / 승리 → 장착 유도(투자 단계로 연결)
+  let hint = '';
+  if(!won){
+    const pEl = ELEMENTS[B.p.element], eEl = ELEMENTS[B.e.element];
+    const m = eff(B.e.element, B.p.element);
+    hint = m>1 ? `상성이 불리했어요: ${eEl.icon} ${eEl.name} → ${pEl.icon} ${pEl.name}. 다른 속성 식물로 바꾸거나 방어·회복 스킬로 버텨 보세요.`
+               : `상대 능력치가 앞섰어요. 식물을 탭해 강화(체력·공격)하거나 스킬 구성을 바꿔 보세요.`;
+  }
+  const ctaHtml = won ? `<button class="btn ghost mr-cta" id="battleResultLoadout">🎴 스킬·카드 장착해 보기</button>` : '';
 
   // 금속판이 위·아래에서 닫히고 → 결과·보상 카드 공개
   const rewards = [`<div class="mr-card gold"><div class="mc-ic">💰</div><div class="mc-v">+${fmt(gain)}</div><div class="mc-l">크레딧</div></div>`];
@@ -13491,8 +13692,10 @@ async function endMatch(won){
     <div class="mr-progress">${progressLabel}</div>
     <div class="mr-outcome ${outcomeKind}">${outcomeText}</div>
     <div class="mr-rewards">${rewards.join('')}</div>
-    <div class="mr-note">${note}</div>
-    <button class="btn primary" id="battleResultBtn">${btnLabel}</button>`;
+    <div class="mr-note">${note}</div>${hint ? `<div class="mr-hint">💡 ${hint}</div>` : ''}
+    <button class="btn primary" id="battleResultBtn">${btnLabel}</button>${ctaHtml}`;
+  const loadoutBtn = $('#battleResultLoadout');
+  if(loadoutBtn) loadoutBtn.addEventListener('click', () => { closeBattleResult(); const ap = activePlant(); if(!ap) return; upgradeTab = 'skill'; swapPending = null; renderUpgrade(); show('#upgradeModal'); }, { once:true });
   hideCardPhase(); // 결과 화면 진입 시 스킬바 숨김
   const br = $('#battleResult');
   br.classList.remove('shut','reveal'); show('#battleResult'); void br.offsetWidth;
@@ -13595,6 +13798,7 @@ $('#btnSettings').addEventListener('click', () => { openSettings(); });
 $('#btnBattle').addEventListener('click', () => { sfx.tap(); if($('#btnBattle').dataset.mode === 'plant'){ openSeedBag(); return; } startBattle(); });
 // 전투: 항복(재확인) · 스킬 상세 닫기
 $('#surrenderBtn').addEventListener('click', () => confirmSurrender());
+$('#speedBtn').addEventListener('click', () => { state.battle_speed = state.battle_speed===2 ? 1 : 2; saveState(); applyBattleSpeed(); try{ sfx.tap(); }catch(e){} });
 $('#pSpriteBox').addEventListener('click', () => showBattlePlantDetail());
 $('#surrenderNo').addEventListener('click', () => { sfx.tap(); hide('#surrenderConfirm'); });
 $('#surrenderYes').addEventListener('click', () => { sfx.tap(); doSurrender(); });
@@ -14818,6 +15022,28 @@ window.__test('sprite: 도트 PNG 오버라이드 = 48 정수배 스냅 + 화분
   if(small.indexOf('width="34"')<0 || small.indexOf('image-rendering:auto')<0) fails.push('34px 썸네일은 그대로+부드럽게여야');
   const vec = spriteFor({ seed_type:'flower', growth_stage:'mature', element:'fire' }, 140);
   if(vec.indexOf('pot_terra.png')>=0) fails.push('절차 SVG 식물엔 화분 PNG를 쓰면 안 됨');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('ux: 전투 피드백 헬퍼(HP 색 임계·2배속 sleep 범위·예상 피해 순수·의도 유효성)', function(){
+  const fails = [];
+  if(hpBarClass(100)!=='' || hpBarClass(51)!=='' || hpBarClass(50)!=='mid' || hpBarClass(21)!=='mid' || hpBarClass(20)!=='low' || hpBarClass(0)!=='low') fails.push('hpBarClass 임계: >50 청록 · 21~50 노랑 · ≤20 빨강');
+  const savedB = B, savedSpd = state.battle_speed;
+  try{
+    B = null; state.battle_speed = 2; if(battleSleepMs(400)!==400) fails.push('전투 밖에서는 sleep 그대로');
+    B = { over:false }; if(battleSleepMs(400)!==200) fails.push('전투 중 2배속 = 절반'); if(battleSleepMs(10)!==16) fails.push('2배속 하한 16ms(1f)');
+    B = { over:true }; if(battleSleepMs(400)!==400) fails.push('전투 종료 후 sleep 그대로');
+    state.battle_speed = 1; B = { over:false }; if(battleSleepMs(400)!==400) fails.push('1배속은 그대로');
+    // 의도 유효성·예상 피해(순수): 합성 전투 상태
+    B = { over:false, eActive:0, eTeam:[{hp:10},{hp:0},{hp:5}], e:{ hp:10, energy:9, energyMax:9, buffs:[], dots:[], passives:{}, uses:{}, atk:100, def:20, elem:0, element:'fire', species:'tree_fire' }, p:{ hp:50, max:50, buffs:[], dots:[], passives:{}, atk:50, def:30, elem:0, element:'grass' } };
+    if(!enemyIntentValid({kind:'rest'})) fails.push('rest는 항상 유효');
+    if(enemyIntentValid({kind:'switch',to:1})) fails.push('쓰러진 팀원으로 교체 불가');
+    if(enemyIntentValid({kind:'switch',to:0})) fails.push('활성 유닛으로 교체 불가');
+    if(!enemyIntentValid({kind:'switch',to:2})) fails.push('살아있는 다른 팀원 교체 유효');
+    if(estimateHitDamage(B.e, B.p, {power:0})!==0) fails.push('비공격 스킬 예상 피해 0');
+    const d1 = estimateHitDamage(B.e, B.p, {power:100}), d2 = estimateHitDamage(B.e, B.p, {power:100});
+    if(!(d1>=1) || d1!==d2) fails.push('예상 피해는 ≥1이고 결정적(순수)');
+    B.e.elem = 30; if(estimateHitDamage(B.e, B.p, {power:100, elem:true}) <= estimateHitDamage(B.e, B.p, {power:100})) fails.push('속성 수치 있으면 속성기 예상 피해 증가');
+  } finally { B = savedB; state.battle_speed = savedSpd; }
   if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('ux: 첫 세션 게이트(첫 식물 전 슬롯 숨김·큰 버튼=심기·3v3/미션은 2승부터)', function(){
