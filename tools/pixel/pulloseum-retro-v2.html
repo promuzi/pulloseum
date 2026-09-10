@@ -1,0 +1,133 @@
+<title>풀로세움 렌더러 v2 전후</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;600&family=DotGothic16&display=swap">
+<style>
+:root{
+  --ground:#f2f4f7; --panel:#ffffff; --stage:#1b2430; --stage2:#111822; --line:#d6dde6;
+  --text:#121821; --muted:#5a6675; --accent:#0b8fc4; --warm:#b8720d; --chip:#e8eef5;
+  --font-display:"Black Han Sans","IBM Plex Sans KR",sans-serif;
+  --font-body:"IBM Plex Sans KR","Noto Sans KR",system-ui,sans-serif;
+  --font-dot:"DotGothic16","IBM Plex Sans KR",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --ground:#0d1219; --panel:#151c26; --line:#263140; --text:#e6edf5; --muted:#8b98aa; --accent:#4fd1ff; --warm:#ffb347; --chip:#1f2a38; }
+}
+:root[data-theme="dark"]{ --ground:#0d1219; --panel:#151c26; --line:#263140; --text:#e6edf5; --muted:#8b98aa; --accent:#4fd1ff; --warm:#ffb347; --chip:#1f2a38; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
+header{display:grid;gap:10px;margin-bottom:22px}
+h1{font-family:var(--font-display);font-weight:400;font-size:38px;line-height:1.1;margin:0;text-wrap:balance}
+.sub{color:var(--muted);max-width:68ch;margin:0}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:22px}
+.ctrl label{font-family:var(--font-dot);font-size:12.5px;color:var(--text);display:flex;align-items:center;gap:6px;cursor:pointer}
+.lineup{background:var(--stage);border-radius:8px;padding:16px 12px 12px;display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:18px;position:relative;overflow:hidden}
+.lineup .row{display:flex;justify-content:center;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.lineup .tag{font-family:var(--font-dot);font-size:11px;color:#8b98aa;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px}
+.name{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.name h2{font-family:var(--font-display);font-weight:400;font-size:24px;margin:0}
+.chip{font-family:var(--font-dot);font-size:11.5px;padding:2px 8px;border-radius:3px;background:var(--chip)}
+.stage{background:var(--stage);border-radius:6px;padding:14px 10px 24px;display:flex;align-items:flex-end;justify-content:center;gap:16px;position:relative;overflow:hidden}
+.stage::after{content:"";position:absolute;left:0;right:0;bottom:0;height:30px;background:var(--stage2);pointer-events:none}
+.stage>*{position:relative;z-index:1}
+.col{display:grid;justify-items:center;gap:6px}
+.col .t{font-family:var(--font-dot);font-size:11px;color:#8b98aa}
+.stack{position:relative;display:block}
+.stack img{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated}
+.pal{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.pal i{display:block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.25)}
+.pal b{font-family:var(--font-dot);font-weight:400;font-size:11px;color:var(--muted);margin:0 6px 0 2px}
+.note{color:var(--muted);font-size:13.5px;margin:0}
+.decide{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warm);border-radius:8px;padding:18px 20px;margin-top:26px}
+.decide h2{font-family:var(--font-display);font-weight:400;font-size:24px;margin:0 0 8px}
+.decide ol{margin:8px 0 0;padding-left:20px;max-width:72ch}
+.decide li{margin-bottom:8px}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>풀로세움 렌더러 v2 전후</h1>
+  <p class="sub">형태 레시피는 확정본 그대로. 렌더 규칙만 조사 결과대로 바꿨다. ① Resurrect 64 마스터 팔레트로 양자화해 램프·단을 배정 ② 광원 좌상단 림 셰이딩(램프 단 ±1) ③ 외곽선 3분법(밑면 검정 / 광원 쪽은 같은 계열 두 단 아래 / 그늘 쪽은 램프 최암 / 화분 접지면은 선 없음) ④ 고아 픽셀 병합 + 외곽선 ㄱ자 더블 제거. 아래 체크로 단계를 하나씩 끄고 켤 수 있다.</p>
+</header>
+
+<div class="ctrl">
+  <label><input type="checkbox" id="oPal" checked> ① 팔레트 양자화</label>
+  <label><input type="checkbox" id="oRim" checked> ② 림 셰이딩</label>
+  <label><input type="checkbox" id="oOut" checked> ③ selout 외곽선</label>
+  <label><input type="checkbox" id="oClean" checked> ④ 정리(고아·더블)</label>
+</div>
+
+<div id="lineup" class="lineup"></div>
+<div id="list" class="grid"></div>
+
+<div class="decide">
+  <h2>보는 법</h2>
+  <ol>
+    <li>왼쪽 "v1"은 어제 확정본 렌더(색 ×0.42 외곽선). 오른쪽 "v2"는 같은 도형을 새 규칙으로.</li>
+    <li>체크를 하나씩 꺼 보면 어느 규칙이 어떤 차이를 만드는지 보인다. ①만 켜면 "색만 통일", ①+③이면 "외곽선 효과".</li>
+    <li>아직 안 한 것: 계단 길이 균일화, 내부 AA, 밴딩 검사. 이 셋은 v2 판정 뒤에.</li>
+  </ol>
+</div>
+</div>
+
+<script src="sprites-data.js"></script>
+<script src="renderer-v2.js"></script>
+<script>
+'use strict';
+const HINT = { tree_fire: 'fire', aqua: 'water', gaia: 'grass', thorn: 'grass', spore_cap: 'grass' };
+/* 종별 재질 오버라이드 = 보조 램프. 속성 hue를 침범하지 않게 나무껍질·바위·크림 대는 중성 램프로 */
+const MAP = {
+  tree_fire: {},
+  gaia: { '#9a8f7a': ['gray',4], '#6e6656': ['gray',3], '#c9c0ad': ['light',3], '#f0c54a': ['bolt',3], '#fff2b0': ['bolt',4], '#8fbf4a': ['grass',3] },
+  thorn: { '#f1e6c8': ['light',3] },
+  spore_cap: { '#e8dcb5': ['light',3], '#b9a878': ['light',2], '#8b7d55': ['light',1], '#fff8e0': ['light',4] },
+  aqua: {}
+};
+const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+function raster(svg){
+  return new Promise(res => { const img = new Image(); img.onload = () => {
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0, W, H);
+    const d = x.getImageData(0, 0, W, H), p = d.data; for (let i = 3; i < p.length; i += 4) p[i] = p[i] < 128 ? 0 : 255; x.putImageData(d, 0, 0); res(c);
+  }; img.onerror = () => res(null); img.src = svgUrl(svg); });
+}
+/* v1 렌더(어제): 가장자리 1px을 ×0.42 */
+function v1(canvas){
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(canvas, 0, 0);
+  const d = x.getImageData(0, 0, W, H), p = d.data, src = new Uint8ClampedArray(p);
+  const a = (X, Y) => (X < 0 || Y < 0 || X >= W || Y >= H) ? 0 : src[(Y*W + X)*4 + 3];
+  for (let y = 0; y < H; y++) for (let X = 0; X < W; X++) { const i = (y*W + X)*4; if (src[i+3] < 128) continue;
+    if (a(X-1,y) < 128 || a(X+1,y) < 128 || a(X,y-1) < 128 || a(X,y+1) < 128) { p[i] = Math.round(src[i]*.42); p[i+1] = Math.round(src[i+1]*.42); p[i+2] = Math.round(src[i+2]*.42); } }
+  x.putImageData(d, 0, 0); return c;
+}
+function stack(plant, pot, k){ return `<span class="stack" style="width:${W*k}px;height:${H*k}px"><img src="${pot}" alt=""><img src="${plant}" alt=""></span>`; }
+function col(title, plant, pot, k){ return `<div class="col">${stack(plant, pot, k)}<span class="t">${title}</span></div>`; }
+
+async function render(){
+  const o = { pal: oPal.checked, rim: oRim.checked, outline: oOut.checked, clean: oClean.checked };
+  const potC = await raster(POT);
+  const potV1 = potC.toDataURL();
+  const potV2 = (o.pal ? renderV2(potC, { hint: 'earth', groundY: 99, rim: false, outline: false, clean: false }) : potC).toDataURL();
+  const lineV1 = [], lineV2 = [], cards = [];
+  for (const k of Object.keys(SPR)) {
+    const s = SPR[k]; const base = await raster(s.svg);
+    const a = v1(base).toDataURL();
+    let bC;
+    if (o.pal) bC = renderV2(base, { hint: HINT[k], map: MAP[k], rim: o.rim, outline: o.outline, clean: o.clean });
+    else bC = o.outline ? v1(base) : base;
+    const b = bC.toDataURL();
+    lineV1.push(stack(a, potV1, 2)); lineV2.push(stack(b, potV2, 2));
+    const ramps = usedRamps(base, HINT[k], MAP[k]);
+    cards.push(`<section class="card" id="${k}">
+      <div class="name"><h2>${s.name}</h2><span class="chip">${s.type}</span><span class="chip">${s.el}</span></div>
+      <div class="stage">${col('v1 ×3', a, potV1, 3)}${col('v2 ×3', b, potV2, 3)}${col('v1', a, potV1, 1)}${col('v2', b, potV2, 1)}</div>
+      <div class="pal">${ramps.map(r => `<b>${r}</b>` + RAMPS[r].map(h => `<i style="background:${h}" title="${h}"></i>`).join('')).join('')}</div>
+      <p class="note">${s.motif}. 배정된 램프 = ${ramps.join(' · ')} (속성 우대: ${HINT[k]})</p>
+    </section>`);
+  }
+  document.getElementById('lineup').innerHTML = `<div class="row">${lineV1.join('')}</div><div class="tag">v1 (어제)</div><div class="row">${lineV2.join('')}</div><div class="tag">v2 (새 규칙)</div>`;
+  document.getElementById('list').innerHTML = cards.join('');
+}
+['oPal','oRim','oOut','oClean'].forEach(id => document.getElementById(id).addEventListener('change', render));
+render();
+</script>
