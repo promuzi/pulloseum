@@ -55,6 +55,7 @@
 | **[species-system-guide.md](species-system-guide.md)** | 종 시스템: 속성×타입 35종, 외형 자동생성 규칙, 탐사 드롭·무지개 종자 연동 | 종 추가·외형·탐사 분포 |
 | **[trait-growth-roadmap.md](trait-growth-roadmap.md)** | 용어 체계(타입/속성/생장/변이형/잠재특성), 변이형↔카드 매핑, 잠재특성 향후 설계 | 변이형/특성/타입 설계 |
 | **[pixel-art-ui-roadmap.md](pixel-art-ui-roadmap.md)** | 도트화 인계: 채택 방식(PNG 교체), 규격, AI 도트 도구, 모션, 미확정 결정 | #3·#5 작업 시작 전 필독 |
+| **[superpowers/specs/2026-09-10-ux-audit-and-design.md](superpowers/specs/2026-09-10-ux-audit-and-design.md)** | **UX 진단·설계(2026-09-10)** — 신규 유저 흐름 실측(탭 타깃·글자 크기 화면 7종)·관찰 11건(P0~P2), 재미 원칙→적용표, 첫 세션 10분 설계, 가독성·조작 규칙표, 전투 피드백·전환 타이밍표(포켓몬 Emerald 원본·Material 근거), 화면별 설계 10절, 1주일 P0 배치, 검증법(RITE·think-aloud·질문지 10). 출처 100여 건 | **비공개 테스트 전 P0 작업의 진입점** |
 | **[sprite-quality-research.md](sprite-quality-research.md)** | **레트로 도트 스프라이트 품질 조사(2026-09-10)** — 확정 규격 48×56·×1/×2/×3·외곽선 색별 어두운 톤·점눈. 기법 10규칙(광원·HSV 램프·selout·클린업·AA·밴딩) / 마스터 팔레트 Resurrect 64 속성 7램프 hex / 벤치마크(포켓몬 Gen3·Cassette Beasts) / 도구·AI·에셋 라이선스(CC0만) / 토큰 비용. 출처 100여 건 | **#3 도트 스프라이트 렌더러 개선 진입점** |
 | **[android-capacitor-wrapper.md](android-capacitor-wrapper.md)** | Capacitor 안드로이드 포장·APK 빌드 절차, 네이티브 세이브 | #9 빌드·출시 |
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
