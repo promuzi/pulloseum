@@ -9667,8 +9667,8 @@ function renderSeedBag(){
     btn.addEventListener('click', e => { e.stopPropagation(); sellSeed(btn.dataset.sellSeed); });
   });
   document.querySelectorAll('#seedBagBody [data-plant-seed]').forEach(btn => {
-    // 심기 = 1탭(UX §7-2). 이름은 기본값으로 심고, 바꾸고 싶으면 관리창 연필로. (확인창 openPlantConfirm은 보류)
-    btn.addEventListener('click', e => { e.stopPropagation(); sfx.tap(); plantSeedFromBag(btn.dataset.plantSeed); });
+    // 첫 심기만 1탭(UX §7-2, 이름은 자동·관리창 연필로 수정). 두 번째부터는 확인창(이름 입력·무지개 ??? 연출·오탭 방지)
+    btn.addEventListener('click', e => { e.stopPropagation(); sfx.tap(); if(isFreshPlayer()) plantSeedFromBag(btn.dataset.plantSeed); else openPlantConfirm(btn.dataset.plantSeed); });
   });
   $('#seedBagExplore').addEventListener('click', () => {
     hide('#seedBagModal');

@@ -4,7 +4,7 @@
 
 ### 2026-09-10 — P0-A 첫 세션 재배선 (UX 설계 §7-1·§7-2 구현) + 화면 스크린샷 도구
 - **첫 식물 전:** 슬롯 격자(`#collectionBar`, 잠긴 5칸)·티어·3v3·미션 배너 숨김(`isFreshPlayer`). 큰 버튼은 "⚔️ 전투 시작"(식물 없으면 무반응) 대신 **"🌱 첫 종자 심기"**(`data-mode='plant'` → `openSeedBag`). 빈 화분 안내 "▲ 탭해서 첫 종자 심기".
-- **심기 1탭:** 종자 가방 "심기" = `plantSeedFromBag(id)` 즉시(확인창 `openPlantConfirm`·이름 입력 생략, 이름은 관리창 연필로). 심기 후 **강화 모달 자동 오픈 폐지** → 화분에서 돋아나는 `sproutIn` 0.6s 연출 + 토스트 "돋아났어요 — 아래 버튼으로 첫 전투를!".
+- **심기 1탭(첫 식물만):** 종자 가방 "심기"는 식물이 0일 때만 `plantSeedFromBag(id)` 즉시(확인창·이름 입력 생략, 이름은 관리창 연필로). **두 번째부터는 기존 확인창 `openPlantConfirm`**(이름 입력·무지개 ??? 연출·오탭 방지 — 사용자 결정 2026-09-10). 심기 후 **강화 모달 자동 오픈 폐지** → 화분에서 돋아나는 `sproutIn` 0.6s 연출 + 토스트 "돋아났어요 — 아래 버튼으로 첫 전투를!".
 - **첫 전투 CTA:** 첫 전투 전(`hasBattled()` false)까지 `#btnBattle.cta-pulse` 숨쉬기 강조(prefers-reduced-motion 시 정지).
 - **3v3 리그·미션 캠페인 행 = 1v1 2승부터 노출**(`advancedModesUnlocked`). 기존 세이브 보호: 팀 토너먼트 진행 중·팀 랭크 포인트·미션 클리어분 있으면 즉시 노출. ⚠️ `missionProg()`가 빈 항목을 지연 생성하므로 키 존재가 아니라 `cleared.length/done`으로 판정.
 - **도구:** `tools/shots/shoot.mjs`(puppeteer-core + 설치된 Chrome, 375×812, 14장면 순차 캡처 → `tools/shots/out/<label>/`, gitignore). 전후 비교 페이지는 세션 아티팩트 "풀로세움 P0-A 전후".
