@@ -37,3 +37,6 @@ android/local.properties
 # ===== 디자인 탐색 산출물 (36MB, PUBLIC 저장소라 추적 안 함 - 2026-09-04 사용자 확정) =====
 # plate PNG/PDF는 design/assets/gen.mjs로 재생성 가능
 design/
+
+# ===== 스크린샷 도구 산출물 =====
+tools/shots/out/

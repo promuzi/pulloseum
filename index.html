@@ -222,6 +222,13 @@ body.coll-editing #collectionBar .chip[data-id]:active{cursor:grabbing;}
   box-shadow:4px 4px 0 rgba(0,0,0,.45);animation:pulse 2.2s ease-in-out infinite;}
 @keyframes pulse{0%,100%{box-shadow:4px 4px 0 rgba(0,0,0,.45),0 0 0 rgba(45,212,191,0)}50%{box-shadow:4px 4px 0 rgba(0,0,0,.45),0 0 16px rgba(45,212,191,.6)}}
 #btnBattle:active{transform:scale(.97);}
+/* 첫 세션 CTA: 다음에 할 한 가지(첫 심기/첫 전투)만 숨쉬기 강조. 그 뒤엔 평소 글로우로 복귀 */
+#btnBattle.cta-pulse{animation:ctaPulse 1.4s ease-in-out infinite;}
+@keyframes ctaPulse{0%,100%{transform:scale(1);box-shadow:4px 4px 0 rgba(0,0,0,.45),0 0 0 rgba(45,212,191,0)}50%{transform:scale(1.035);box-shadow:4px 4px 0 rgba(0,0,0,.45),0 0 22px rgba(45,212,191,.75)}}
+/* 심기 직후 화분에서 돋아나는 연출(모달 대신 화면 자체가 보상) */
+.pp-stack.sprout-in .pp-plant{animation:sproutIn .6s cubic-bezier(.2,.9,.3,1.2) both;transform-origin:50% 100%;}
+@keyframes sproutIn{0%{transform:translateY(10px) scaleY(.1);opacity:0}45%{opacity:1}100%{transform:translateY(0) scaleY(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){#btnBattle.cta-pulse{animation:none}.pp-stack.sprout-in .pp-plant{animation:none}}
 
 /* ===== 하단 헤더 (클래시 로얄식 5탭) ===== */
 #bottomNav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:60;
@@ -9615,6 +9622,7 @@ function plantSeedFromBag(inventoryId, customName = ''){
   const p = createPlantedPlantFromSeed(entry, seed, customName);
   state.seed_inventory.splice(index, 1);
   if(selectedSeedInventoryId === inventoryId) selectedSeedInventoryId = state.seed_inventory[0] ? state.seed_inventory[0].inventory_id : null;
+  const first = state.plants.length === 0;
   state.plants.push(p);
   state.activeId = p.id;
   saveState(); sfx.heal();
@@ -9622,8 +9630,9 @@ function plantSeedFromBag(inventoryId, customName = ''){
   hide('#seedBagModal');
   pendingPlantSeedId = null;
   renderMain();
-  openUpgrade();
-  toast(`${josa(p.name,'을를')} 심었습니다`);
+  // 강화 모달 자동 오픈 폐지(UX §7-2) — 첫 식물은 화면에서 보고, 다음 결정은 "첫 전투"
+  const stack = $('#centerPlant .pp-stack'); if(stack){ stack.classList.remove('sprout-in'); void stack.offsetWidth; stack.classList.add('sprout-in'); }
+  toast(first ? `${josa(p.name,'이가')} 돋아났어요 — 아래 버튼으로 첫 전투를!` : `${josa(p.name,'을를')} 심었습니다`);
 }
 function renderSeedBag(){
   const body = $('#seedBagBody');
@@ -9658,7 +9667,8 @@ function renderSeedBag(){
     btn.addEventListener('click', e => { e.stopPropagation(); sellSeed(btn.dataset.sellSeed); });
   });
   document.querySelectorAll('#seedBagBody [data-plant-seed]').forEach(btn => {
-    btn.addEventListener('click', e => { e.stopPropagation(); sfx.tap(); openPlantConfirm(btn.dataset.plantSeed); });
+    // 심기 = 1탭(UX §7-2). 이름은 기본값으로 심고, 바꾸고 싶으면 관리창 연필로. (확인창 openPlantConfirm은 보류)
+    btn.addEventListener('click', e => { e.stopPropagation(); sfx.tap(); plantSeedFromBag(btn.dataset.plantSeed); });
   });
   $('#seedBagExplore').addEventListener('click', () => {
     hide('#seedBagModal');
@@ -10415,7 +10425,13 @@ function renderTournamentBar(){
   const bar = $('#tournamentBar'); if(!bar) return;
   const btn = $('#btnBattle');
   const p = activePlant();
-  if(!p){ bar.innerHTML=''; if(btn) btn.textContent='⚔️ 전투 시작'; return; }
+  if(!p){
+    // 식물이 없을 때 큰 버튼은 "죽은 전투 시작"이 아니라 지금 할 수 있는 한 가지 = 종자 심기
+    bar.innerHTML='';
+    if(btn){ btn.textContent = '🌱 첫 종자 심기'; btn.dataset.mode = 'plant'; btn.classList.add('cta-pulse'); }
+    return;
+  }
+  if(btn){ btn.dataset.mode = 'battle'; btn.classList.toggle('cta-pulse', !hasBattled()); }
   const T = state.tournament;
   const inProgress = T && T.active && T.plantId===p.id;
   const tier = plantRankTier(p);
@@ -10439,12 +10455,12 @@ function renderTournamentBar(){
       <div class="tc-k">토너먼트명</div><div class="tc-v" style="color:var(--neon)">${tournamentTitle(p).replace(' 토너먼트','')}</div><div class="tc-s">토너먼트</div></div>
     <div class="tcell" data-matches="1">
       <div class="tc-k">경기 현황</div><div class="tc-v">${statusV}</div><div class="tc-s">${statusS}</div></div>
-    <div class="tcell" data-league-team="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left;--clr:${RANK_TIERS[teamTierIdx()].color}">
+    ${advancedModesUnlocked() ? `<div class="tcell" data-league-team="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left;--clr:${RANK_TIERS[teamTierIdx()].color}">
       <span style="font-weight:800;color:${RANK_TIERS[teamTierIdx()].color}">⚔️ 3v3 팀 리그 · ${RANK_TIERS[teamTierIdx()].name}</span>
       <span class="tc-s" style="margin:0">${fmt(state.team_rankPoints||0)}pt · ${state.team_tournament&&state.team_tournament.active?TOURNAMENT_ROUNDS[state.team_tournament.roundIndex].name+' 진행 중':'보조 리그 · 팀 3마리'} ▶</span></div>
     <div class="tcell" data-mission="1" style="cursor:pointer;grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;text-align:left">
       <span style="font-weight:800;color:#ffcf6b">🚩 미션 캠페인</span>
-      <span class="tc-s" style="margin:0">${mDone}/${CAMPAIGNS.length} 클리어 · 스토리&전용 보상 ▶</span></div>
+      <span class="tc-s" style="margin:0">${mDone}/${CAMPAIGNS.length} 클리어 · 스토리&전용 보상 ▶</span></div>` : ''}
   </div>`;
   const mc = bar.querySelector('[data-mission]');
   if(mc) mc.addEventListener('click', () => { openMissionModal(); });
@@ -10551,9 +10567,23 @@ function renderMissionCampaign(cid){
   const bk = $('#missionBack'); if(bk) bk.addEventListener('click', () => { renderMissionList(); try{ sfx.tap(); }catch(e){} });
   const cl = $('#missionClose2'); if(cl) cl.addEventListener('click', () => { hide('#missionModal'); try{ sfx.tap(); }catch(e){} });
 }
+/* 첫 세션 게이트(2026-09-10 UX §7-1): 첫 식물 전에는 슬롯 격자·티어·배너를 숨겨 결정을 하나로 만든다 */
+function isFreshPlayer(){ return !(state.plants && state.plants.length); }
+function hasBattled(){ return ((state.wins||0) + (state.losses||0)) > 0; }
+/* 3v3 리그·미션 캠페인은 1v1 2승부터 노출(첫 10분 결정 수를 줄임). 이미 진행 중이면 항상 보임 */
+function advancedModesUnlocked(){
+  if((state.wins||0) >= 2) return true;
+  if(state.team_tournament && state.team_tournament.active) return true;
+  if((state.team_rankPoints||0) > 0) return true;
+  const mp = state.mission_progress || {};   // missionProg()가 빈 항목을 지연 생성하므로 실제 진행분만 센다
+  if(Object.keys(mp).some(k => mp[k] && (mp[k].done || (Array.isArray(mp[k].cleared) && mp[k].cleared.length)))) return true;
+  return false;
+}
 function renderCollection(){
   const bar = $('#collectionBar');
   const cap = potCapacity();
+  if(isFreshPlayer()){ bar.innerHTML = ''; bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
   let html = '';
   for(let i=0;i<POT_MAX;i++){
     const p = state.plants[i];
@@ -10596,7 +10626,7 @@ function renderCenter(){
     box.innerHTML = `
       <div class="plant-stage"><span class="pp-stack"><span class="pp-spacer">${potVisual('pot_terra',150)}</span><span class="pp-pot">${potVisual('pot_terra',150)}</span></span><span class="wood-stool"></span></div>
       <div class="pname">빈 화분</div>
-      <div class="hint">▲ 화분을 탭해 종자를 심어보세요</div>`;
+      <div class="hint">▲ 탭해서 첫 종자 심기</div>`;
     return;
   }
   const s = calcStats(p);
@@ -13502,7 +13532,7 @@ $('#btnStart').addEventListener('click', () => {
 });
 $('#btnTitleSettings').addEventListener('click', () => { openSettings(); });
 $('#btnSettings').addEventListener('click', () => { openSettings(); });
-$('#btnBattle').addEventListener('click', () => { sfx.tap(); startBattle(); });
+$('#btnBattle').addEventListener('click', () => { sfx.tap(); if($('#btnBattle').dataset.mode === 'plant'){ openSeedBag(); return; } startBattle(); });
 // 전투: 항복(재확인) · 스킬 상세 닫기
 $('#surrenderBtn').addEventListener('click', () => confirmSurrender());
 $('#pSpriteBox').addEventListener('click', () => showBattlePlantDetail());
@@ -14728,6 +14758,34 @@ window.__test('sprite: 도트 PNG 오버라이드 = 48 정수배 스냅 + 화분
   if(small.indexOf('width="34"')<0 || small.indexOf('image-rendering:auto')<0) fails.push('34px 썸네일은 그대로+부드럽게여야');
   const vec = spriteFor({ seed_type:'flower', growth_stage:'mature', element:'fire' }, 140);
   if(vec.indexOf('pot_terra.png')>=0) fails.push('절차 SVG 식물엔 화분 PNG를 쓰면 안 됨');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('ux: 첫 세션 게이트(첫 식물 전 슬롯 숨김·큰 버튼=심기·3v3/미션은 2승부터)', function(){
+  const fails = [];
+  const saved = { plants: state.plants, wins: state.wins, losses: state.losses, tt: state.team_tournament, tr: state.team_rankPoints, mp: state.mission_progress };
+  try{
+    state.plants = []; state.wins = 0; state.losses = 0; state.team_tournament = null; state.team_rankPoints = 0; state.mission_progress = {};
+    if(!isFreshPlayer()) fails.push('식물 0 = 신규여야 함');
+    if(hasBattled()) fails.push('0승 0패 = 미전투');
+    if(advancedModesUnlocked()) fails.push('신규는 3v3/미션 잠김');
+    renderCollection();
+    if(!$('#collectionBar').classList.contains('hidden')) fails.push('신규는 슬롯 격자 숨김');
+    renderTournamentBar();
+    const btn = $('#btnBattle');
+    if(btn.dataset.mode !== 'plant' || btn.textContent.indexOf('종자') < 0) fails.push('신규 큰 버튼 = 첫 종자 심기');
+    if($('#tournamentBar').querySelector('[data-league-team]')) fails.push('신규엔 3v3 행 없음');
+    state.wins = 2;
+    if(!advancedModesUnlocked()) fails.push('2승이면 3v3/미션 열림');
+    state.wins = 0; state.team_rankPoints = 10;
+    if(!advancedModesUnlocked()) fails.push('팀 랭크 진행분 있으면 열림(기존 세이브 보호)');
+    state.team_rankPoints = 0; state.mission_progress = { c1:{ cleared:[], done:false } };
+    if(advancedModesUnlocked()) fails.push('missionProg 지연 생성 빈 항목은 진행으로 안 침');
+    state.mission_progress = { c1:{ cleared:[0], done:false } };
+    if(!advancedModesUnlocked()) fails.push('미션 1스테이지 클리어면 열림');
+  } finally {
+    state.plants = saved.plants; state.wins = saved.wins; state.losses = saved.losses; state.team_tournament = saved.tt; state.team_rankPoints = saved.tr; state.mission_progress = saved.mp;
+    try{ renderCollection(); renderTournamentBar(); }catch(e){}
+  }
   if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('accent: form→accent 매핑', function(){
