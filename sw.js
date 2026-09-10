@@ -1,12 +1,15 @@
 /* 풀로세움 PWA 서비스워커 — 홈 화면 추가 + 오프라인 셸.
    HTML은 network-first(항상 최신 게임), 정적 자산은 cache-first. 버전 올리면 구 캐시 정리. */
-const CACHE = 'pulloseum-v1';
+const CACHE = 'pulloseum-v2';
 const PRECACHE = [
   './',
   './site.webmanifest',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/apple-touch-icon.png',
+  './assets/fonts/Galmuri11.woff2',
+  './assets/fonts/Galmuri11-Bold.woff2',
+  './assets/fonts/Galmuri14.woff2',
 ];
 
 self.addEventListener('install', (e) => {
