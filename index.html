@@ -2172,7 +2172,12 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 @media (prefers-reduced-motion:reduce){.chip,.dcard,.slot,.skillcard,.tcell{transition:none;}}
 
 /* 12px로 올린 뒤 생긴 줄바꿈 정리: 스탯 라벨·전투 에너지 라벨은 한 줄, 전투 카드 이름은 vw clamp 대신 고정 12px */
-.stat-box .sb-k{white-space:nowrap;}
+/* 스탯 8칸: 두 열 폭 동일(1fr의 min-content 확장 차단) + 라벨·숫자 중앙 정렬 + "에너지" 3글자가 들어가게 레일 104→116 */
+#mainStage{--main-rail:110px;}
+.stat-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3px;}
+.stat-box{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:4px 2px 3px !important;}
+.stat-box .sb-k{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:2px;max-width:100%;letter-spacing:-.5px;}
+.stat-box .sb-v{text-align:center;}
 .cp-energy .ce-label{white-space:nowrap;}
 .sc-name{font-size:12px;}
 </style>
