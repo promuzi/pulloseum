@@ -9704,6 +9704,37 @@ const sfx = {
      생장=seed|sprout|juvenile|growing|mature|evolved, 속성=fire|water|grass|earth|wind|bolt|ice */
 const SPRITE_OVERRIDES = {};
 const NAME_OVERRIDES = {};
+/* ▶ 레트로 도트 스프라이트(48×56, tools/pixel 렌더러 v2 산출, 2026-09-10). 종 키 = 전 생장 단계 공용(단계별 그림은 "종.단계" 키로 덮어쓴다).
+   도트는 정수배로만 또렷하므로 표시 크기를 48의 배수로 스냅한다(snapPixelSize). 규격 근거 = docs/sprite-quality-research.md */
+const PIXEL_SPRITE_GRID = 48;
+['tree_fire','aqua','gaia','thorn','spore_cap'].forEach(k => { SPRITE_OVERRIDES[k] = 'assets/sprites/' + k + '.png'; });
+POT_SPRITE_OVERRIDES.pot_terra = 'assets/sprites/pot_terra.png';
+function snapPixelSize(size){
+  if(size < PIXEL_SPRITE_GRID) return size;                       // 48 미만(목록 썸네일)은 그대로 두고 부드럽게 축소
+  let k = Math.max(1, Math.round(size / PIXEL_SPRITE_GRID));
+  if(k * PIXEL_SPRITE_GRID > size * 1.35) k = Math.max(1, k - 1); // 요청 크기의 35%까지만 초과 허용 (140→144, 72~118→96)
+  return k * PIXEL_SPRITE_GRID;
+}
+/* 도트 PNG <img> 한 조각(스냅된 크기, 48 미만은 부드럽게). 화분 레이어와 같은 120:140 비율 */
+function pixelImgHtml(src, sz){
+  const h = Math.round(sz*140/120), ir = sz < PIXEL_SPRITE_GRID ? 'auto' : 'pixelated';
+  return `<img src="${src}" width="${sz}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top;image-rendering:${ir}"/>`;
+}
+/* 종 키(+단계)로 오버라이드 키 찾기: "종.단계" > "종" */
+function pixelOverrideKey(species, growth){
+  if(!species) return null;
+  const g = growth || 'mature';
+  return SPRITE_OVERRIDES[species + '.' + g] ? species + '.' + g : (SPRITE_OVERRIDES[species] ? species : null);
+}
+/* 식물 객체 + 단계 → {sz, pot, plant} 레이어 한 벌. 도트 PNG면 스냅 크기·PNG 화분, 아니면 절차 SVG·SVG 화분.
+   spriteFor를 못 쓰는 자리(양육 격자·양육 상세·진화 전후·메인 중앙)에서 쓴다. */
+function plantLayers(p, stage, size){
+  const potId = (p && p.nursery && p.nursery.potId) || (p && p.potId) || 'pot_terra';
+  const ov = pixelOverrideKey(p && p.species, stage);
+  if(ov){ const sz = snapPixelSize(size); return { sz, pot: potVisual(potId, sz, true), plant: pixelImgHtml(SPRITE_OVERRIDES[ov], sz) }; }
+  return { sz: size, pot: potVisual(potId, size, false),
+    plant: composePlantSvg(seedTypeOf(p), stage || 'mature', (p && p.element) || 'grass', { size, grade:p&&p.grade, awakened:p&&p.awakened, noPot:true, form:p&&p.form, varKey:p&&p.species }) };
+}
 function spriteKey(seedType, growth, element){ return `${seedType}_${growth}_${element}`; }
 function shade(hex, amt){
   const h = (hex||'#6bdd6b').replace('#','');
@@ -10128,11 +10159,13 @@ const POT_PIXELS = {
   },
 };
 /* 화분 종류별 픽셀 레이어(식물과 동일 120x140 viewBox 정렬). PNG 교체 훅=POT_SPRITE_OVERRIDES. */
-function potVisual(potId, size){
+function potVisual(potId, size, usePng){
   size = size || 78;
   const h = Math.round(size*140/120);
-  if(POT_SPRITE_OVERRIDES[potId]){
-    return `<img src="${POT_SPRITE_OVERRIDES[potId]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:block"/>`;
+  // usePng=false: 식물이 절차 SVG일 때는 화분도 SVG로(도트 화분 PNG를 비정수배로 늘리지 않도록). 기본은 PNG 허용.
+  if(POT_SPRITE_OVERRIDES[potId] && usePng !== false){
+    const ir = size < PIXEL_SPRITE_GRID ? 'auto' : 'pixelated';
+    return `<img src="${POT_SPRITE_OVERRIDES[potId]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:block;image-rendering:${ir}"/>`;
   }
   const art = POT_PIXELS[potId] || POT_PIXELS.pot_terra;
   const body = pixelArt(art.rows, art.pal, 5, 25, 94);
@@ -10157,14 +10190,13 @@ function spriteFor(obj, size){
   let ovKey = null;
   if(indKey){ if(SPRITE_OVERRIDES[indKey+'.'+growth]) ovKey=indKey+'.'+growth; else if(SPRITE_OVERRIDES[indKey]) ovKey=indKey; }
   if(!ovKey){ const k=spriteKey(seedType, growth, element); if(SPRITE_OVERRIDES[k]) ovKey=k; }
-  let plantHtml;
   if(ovKey){
-    const h = Math.round(size*140/120);
-    plantHtml = `<img src="${SPRITE_OVERRIDES[ovKey]}" width="${size}" height="${h}" alt="" style="object-fit:contain;display:inline-block;vertical-align:top"/>`;
-  } else {
-    plantHtml = composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, noPot:true, form:obj&&obj.form, varKey:indKey });
+    // 도트 PNG: 크기를 48의 정수배로 스냅하고 화분도 같은 크기로(스택 정렬). 48 미만은 부드럽게 축소.
+    const sz = snapPixelSize(size);
+    return spriteStack(potVisual(spritePotId(obj), sz, true), pixelImgHtml(SPRITE_OVERRIDES[ovKey], sz));
   }
-  return spriteStack(potVisual(spritePotId(obj), size), plantHtml);
+  const plantHtml = composePlantSvg(seedType, growth, element, { size, grade:obj&&obj.grade, awakened:obj&&obj.awakened, noPot:true, form:obj&&obj.form, varKey:indKey });
+  return spriteStack(potVisual(spritePotId(obj), size, false), plantHtml);
 }
 /* 이름 생성: 속성 + 장착 변이 카드(종류·개수) + 식물 타입. 생장 단계 칭호는 표시처에서 별도. */
 const ELEM_ADJ = { fire:'불꽃', water:'물빛', grass:'초록', earth:'대지', wind:'질풍', bolt:'뇌전', ice:'서리' };
@@ -10201,12 +10233,15 @@ const SPECIES_SEEDTYPE = (function(){ const m={}; Object.keys(SPECIES).forEach(k
 /* 씨앗/타이틀 등 종(species) 기준 호출 → 통합 속성·생장 외형 생성기로 위임.
    element 누락 시 종의 고정 속성을 사용해 항상 속성과 외형을 일치시킨다. */
 function svgPlant(species, element, grade, awakened, size, growth){
+  // 도트 PNG 오버라이드(종 단위)는 종 기준 렌더(도감·타이틀·팝업)에도 적용 — spriteFor와 같은 정수배 규칙
+  const ovKey = pixelOverrideKey(species, growth);
+  if(ovKey){ const sz = snapPixelSize(size || 78); return spriteStack(potVisual('pot_terra', sz, true), pixelImgHtml(SPRITE_OVERRIDES[ovKey], sz)); }
   const seedType = SPECIES_SEEDTYPE[species] || 'grass';
   const el = ELEMENTS[element] ? element : (SPECIES[species] ? SPECIES[species].element : 'grass');
   const bv = SPECIES[species] && SPECIES[species].baseVariants;
   const form = (bv && bv.length) ? bv[0] : null;   // 변이종(태생 변이)은 종 외형에 액센트 반영
   const plant = composePlantSvg(seedType, growth || 'mature', el, { size, grade, awakened, noPot:true, form, varKey:species });
-  return spriteStack(potVisual('pot_terra', size), plant);   // 종 기준(식물 객체 없음) → 기본 화분
+  return spriteStack(potVisual('pot_terra', size, false), plant);   // 종 기준(식물 객체 없음) → 기본 화분
 }
 
 /* ================= 스탯 계산 ================= */
@@ -10570,10 +10605,8 @@ function renderCenter(){
     <div class="stat-grid">${mainStatBoxes(p, s)}</div>`;
   if(side) side.innerHTML = bagFabHtml();
   ensureNurseryFields(p);
-  const ppSize = 150;
-  const ppPot = potVisual(p.nursery.potId, ppSize);
-  const ppPlant = composePlantSvg(seedTypeOf(p), p.growth_stage||'mature', p.element||'grass',
-    { size:ppSize, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species });
+  const ppL = plantLayers(p, p.growth_stage||'mature', 150);          // 도트 PNG면 144(=48×3)로 스냅, 화분도 PNG
+  const ppPot = ppL.pot, ppPlant = ppL.plant;
   box.innerHTML = `
     <div class="plant-stage"><span class="pp-stack"><span class="pp-spacer">${ppPot}</span><span class="pp-pot">${ppPot}</span><span class="pp-plant">${ppPlant}</span></span><span class="wood-stool"></span></div>
     <div class="pname">${plantDisplayName(p)}</div>
@@ -10786,10 +10819,9 @@ function statDiffRowsHtml(before, after){
   }).join('');
 }
 function showEvolveModal(p, fromStage, toStage, before, after, newSkillIds){
-  const st = seedTypeOf(p), el = p.element || 'grass';
-  const potId = (p.nursery && p.nursery.potId) || 'pot_terra';
-  const beforeSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, fromStage, el, { size:120, noPot:true, form:p.form, varKey:p.species }));
-  const afterSprite = spriteStack(potVisual(potId,120), composePlantSvg(st, toStage, el, { size:120, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species }));
+  const bL = plantLayers(p, fromStage, 120), aL = plantLayers(p, toStage, 120);
+  const beforeSprite = spriteStack(bL.pot, bL.plant);
+  const afterSprite = spriteStack(aL.pot, aL.plant);
   const skillsHtml = (newSkillIds && newSkillIds.length)
     ? newSkillIds.map((id, i) => { const s = skillById(id, p) || { name:id, icon:'✨' }; return `<span class="evo-skill" style="animation-delay:${1.3 + i*0.1}s">${s.icon||'✨'} ${displaySkillName(s.name)}</span>`; }).join('')
     : '<span class="muted">이번 단계에서 새로 해금된 스킬은 없습니다.</span>';
@@ -13528,9 +13560,8 @@ function renderNurseryGrid(){
       } else {
         ensureNurseryFields(p); nurseryTick(p, gameNow());
         const n = p.nursery;
-        const st = seedTypeOf(p), el = p.element || 'grass';
-        const plantLayer = composePlantSvg(st, p.growth_stage || 'seed', el, {size:78, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species});
-        const potLayer = potVisual(p.nursery.potId, 78);
+        const nL = plantLayers(p, p.growth_stage || 'seed', 78);
+        const plantLayer = nL.plant, potLayer = nL.pot;
         const canFruit = nurseryMaxFruits(p) > 0;
         const full = canFruit && n.ripe.length >= n.maxFruits;
         const gaugePct = Math.round((full?1:n.gauge)*100);
@@ -13556,9 +13587,8 @@ function openNurseryDetail(idx){
   if(!p){ toast('화분에 식물이 없습니다'); return; }
   ensureNurseryFields(p); nurseryTick(p, gameNow());
   const n = p.nursery;
-  const st = seedTypeOf(p), el = p.element || 'grass';
-  const dPlant = composePlantSvg(st, p.growth_stage||'seed', el, {size:72, grade:p.grade, awakened:p.awakened, noPot:true, form:p.form, varKey:p.species});
-  const dPot = potVisual(p.nursery.potId, 72);
+  const dL = plantLayers(p, p.growth_stage||'seed', 72);
+  const dPlant = dL.plant, dPot = dL.pot;
   const elIcon = ELEMENTS[p.element] ? ELEMENTS[p.element].icon+' '+ELEMENTS[p.element].name : '';
   const formName = FORMS[p.form] ? FORMS[p.form].name : '일반 변이형';
   const c = state.care || { water:0, fert:0 };
@@ -14683,6 +14713,22 @@ window.__test('sprite: spriteFor/spriteStack=화분+식물 2레이어', function
   __eq(spritePotId(p), 'pot_gold', 'spritePotId=장착 화분');
   __eq(spritePotId({potId:'pot_glass'}), 'pot_glass', 'spritePotId=전투유닛 potId');
   __eq(spritePotId({}), 'pot_terra', 'spritePotId 기본=테라코타');
+});
+window.__test('sprite: 도트 PNG 오버라이드 = 48 정수배 스냅 + 화분 PNG 동반', function(){
+  const fails = [];
+  const snaps = { 140:144, 118:96, 108:96, 84:96, 80:96, 78:96, 72:96, 48:48, 34:34, 28:28 };
+  Object.keys(snaps).forEach(s => { if(snapPixelSize(+s) !== snaps[s]) fails.push('snap '+s+'→'+snapPixelSize(+s)+' (기대 '+snaps[s]+')'); });
+  ['tree_fire','aqua','gaia','thorn','spore_cap'].forEach(k => { if(!SPRITE_OVERRIDES[k]) fails.push('오버라이드 누락 '+k); });
+  const html = spriteFor({ species:'tree_fire', element:'fire', growth_stage:'mature' }, 140);
+  if(html.indexOf('assets/sprites/tree_fire.png')<0) fails.push('식물 PNG 미사용');
+  if(html.indexOf('width="144"')<0) fails.push('140→144 스냅 안 됨');
+  if(html.indexOf('assets/sprites/pot_terra.png')<0) fails.push('화분 PNG 미동반');
+  if(html.indexOf('image-rendering:pixelated')<0) fails.push('pixelated 누락');
+  const small = spriteFor({ species:'tree_fire', element:'fire', growth_stage:'mature' }, 34);
+  if(small.indexOf('width="34"')<0 || small.indexOf('image-rendering:auto')<0) fails.push('34px 썸네일은 그대로+부드럽게여야');
+  const vec = spriteFor({ seed_type:'flower', growth_stage:'mature', element:'fire' }, 140);
+  if(vec.indexOf('pot_terra.png')>=0) fails.push('절차 SVG 식물엔 화분 PNG를 쓰면 안 됨');
+  if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('accent: form→accent 매핑', function(){
   __eq(accentFromForm('pred'),'maw'); __eq(accentFromForm('weapon'),'arms');

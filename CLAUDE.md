@@ -42,7 +42,7 @@
 - **`docs/dex/plant-codex.html`** — 식물 도감(카드뉴스형). 데이터 복제 없이 숨은 `<iframe src="../../index.html?dex=1">`로 게임을 불러와 `window.__DEX_API`에서 실제 데이터·함수를 읽어 렌더 → 종/스킬/스탯/**외형(절차적 SVG, `composePlantSvg`)** 은 index.html만 고치면 자동 반영(외형은 단계 리본 클릭 시 같이 자람). `?dex=1`은 부팅·세이브·SW 생략(데이터 전용). ⚠️ `sw.js`(PWA)가 게임을 캐시하니 preview 테스트 시 옛 게임이 읽히면 서비스워커·캐시 비우기. 잔여작업: [docs/dex/HANDOFF.md](docs/dex/HANDOFF.md)
 - **`data/alien-plant-pvp-data.js`** — 데이터 원본(참고용). `scripts/validate-alien-plant-data.js`로 검증 가능.
 - **`tools/`** — 브라우저로 여는 무설치 dev 유틸(빌드 없음). 현재 `sprite-prep.html`(분홍 화분 제거→120×140 정렬→PNG/스프라이트시트). `scripts/`(Node 생성기)와 구분.
-- **`assets/sprites/`** — 사용자가 직접 그린 식물 스프라이트 PNG 드롭 위치(120×140·투명·base y96). 파일명=등록키(`종_단계`/`종`/`타입_단계_속성`) → `SPRITE_OVERRIDES` 등록. 화분은 게임이 자동 합성. → [art guide](docs/sprite-art-motion-guide.md)
+- **`assets/sprites/`** — 식물 스프라이트 PNG 드롭 위치. **정본 규격(2026-09-10) = 레트로 도트 48×56·투명·밑동 y38**(120×140의 0.4배, `tools/pixel/` 렌더러 v2 산출 — 레시피 `sprites-data.js`가 형태의 정본, 렌더 규칙은 `docs/sprite-quality-research.md`). 파일명=등록키(`종_단계`/`종`/`타입_단계_속성`) → `SPRITE_OVERRIDES` 등록. 도트 PNG는 `snapPixelSize`가 48 정수배로 표시(140→144 등). 화분은 게임이 자동 합성(테라코타는 `pot_terra.png`, 절차 SVG 식물엔 SVG 화분). 옛 120×140 규격 손그림 안내 = [art guide](docs/sprite-art-motion-guide.md)
 - **`_analysis/pdf_pages/`** — 기획서 PDF를 페이지별 PNG로 변환한 것 (기획 참고용, page_01~09에 내용 있음).
 - **`바탕 화면/풀로세움 기획서.pdf`** — 원본 기획서(이 폴더 밖, 데스크탑).
 - **Godot 관련 파일**(`.godot/`, `*.gd`, `*.tscn`, `scenes/`, `Main.tscn`, `docs/pluloseum_godot_migration_plan.md`, `data/pluloseum_godot_data.json`) — 과거 Godot 이식 시도의 잔재. **이 웹게임과 무관**하니 무시. `.gitignore`로 추적 제외함.

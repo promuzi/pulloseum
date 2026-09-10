@@ -20,7 +20,7 @@
 |---|------|------|-------------|----------|
 | 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟢 **컨셉+스킬확장: P0 엔진 6종+인프라 + 전 175 개체 단계별 컨셉 스킬(40 손작업+660 생성기) + 광신 자해화상 완료** | **밸런스 점검 · 깊은 개체별 큐레이션** (§4-1-A) | [species](species-system-guide.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · [plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
-| 3 | 도트 UI 적용 | 🟡 홀로그램 오버레이 적용 | 식물 1종 PNG 시범 → `SPRITE_OVERRIDES` | [pixel-art](pixel-art-ui-roadmap.md) |
+| 3 | 도트 UI 적용 | 🟢 **레트로 도트 스프라이트 5종 반입(2026-09-10)** — 48×56 레시피 렌더러 v2(`tools/pixel/`), `SPRITE_OVERRIDES` 5종+테라코타 화분, 정수배 표시 `snapPixelSize` | 나머지 30종 레시피 → 단계별 그림 → 대기 프레임 → UI 도트 통일 | [sprite-quality-research](sprite-quality-research.md) · [pixel-art](pixel-art-ui-roadmap.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
 | 10 | 전투 화면 UI 수정 | 🟡 **2차 개편까지 완료**(2026-06-25 포켓몬식 개편→판정 오버레이 재개편 — 표가 "미착수"로 남아있던 stale 정정 2026-07-02) | 추가 다듬기·연출 보강(사용자 피드백 대기) | [judge-overlay](superpowers/specs/2026-06-25-battle-judge-overlay-rework-design.md) |
