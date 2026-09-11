@@ -2135,14 +2135,22 @@ body{letter-spacing:.2px;}
 .tagline{font-family:'Galmuri11',sans-serif;}   /* Galmuri9 미동봉 → 11로 통일 */
 html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 
-/* HUD: 숫자만 24px, 단위·라벨은 12px. 경험치 바는 12px 글자가 들어가게 14px 높이 */
-.thl-badge{font-size:12px;}
-.thl-badge b{font-size:24px;line-height:1;vertical-align:-2px;}
+/* HUD(사용자 피드백 2026-09-11 "글자 너무 큼"): 숫자 24px → 갈무리14 15px. 갈무리는 실측 12px(G11)·15px(G14)·24px(G11)만 번짐 없음.
+   레벨·크레딧·젬 알약 높이 32px 통일. 설정 = 보이는 알약 32×32 + 투명 히트 영역 44×44(혼자 48 박스라 튀던 문제) */
+.th-level,.th-coin,.th-min{height:32px;box-sizing:border-box;padding-top:0 !important;padding-bottom:0 !important;}
+.thl-badge{font-size:12px;font-weight:400 !important;display:inline-flex;align-items:baseline;gap:3px;}   /* Lv 라벨도 숫자와 같은 굵기 */
+.thl-badge b,.th-coin b,.th-min b{font-family:'Galmuri14','Galmuri11',sans-serif;font-size:15px;font-weight:400;line-height:1;}
 .thl-bar{width:66px;height:14px;}
 .thl-exptext{font-size:12px;line-height:1;}
-.th-coin,.th-min{font-size:12px;padding:3px 9px;}
-.th-coin b,.th-min b{font-size:24px;line-height:1;}
-.iconbtn,#btnSettings{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;padding:0 8px;}
+.th-coin,.th-min{font-size:12px;padding-left:9px;padding-right:9px;gap:4px;}
+.iconbtn:not(#btnSettings){min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+#btnSettings{width:44px;height:44px;min-width:0;min-height:0;padding:0;margin:0 -6px;flex:0 0 auto;
+  background:transparent !important;border:none !important;box-shadow:none !important;display:inline-flex;align-items:center;justify-content:center;}
+#btnSettings>span{width:32px;height:32px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;color:#cfdae3;border-radius:3px;
+  background:linear-gradient(180deg, rgba(12,34,46,.78), rgba(8,20,30,.72));border:1px solid var(--holo-line);
+  box-shadow:0 0 12px rgba(45,212,191,.22), 0 2px 0 rgba(2,8,14,.5);}   /* 다른 HUD 알약과 같은 홀로 칩 룩 */
+#btnSettings:active{transform:none;filter:none;}
+#btnSettings:active>span{transform:translate(1px,1px);filter:brightness(1.18);}
 
 /* 슬롯 격자: 55×43 → 60×48, 코너 배지는 12px */
 .chip{width:60px !important;height:48px !important;}
@@ -2252,9 +2260,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 /* ════════════════════════════════════════════════════════════
    ▓▓▓ P0-D 정리 (2026-09-10, UX 설계 §7-5·§7-8·O4)
    ════════════════════════════════════════════════════════════ */
-/* 함선 탭 v1.0 숨김(정체성과 안 이어지고 안내 없음) → 하단 탭 4개 */
-#bottomNav{grid-template-columns:repeat(4,1fr);}
-#bottomNav .navbtn[data-nav="mode"]{display:none !important;}
+/* 함선 탭 = 잠금(사용자 결정 2026-09-11: 나중에 키울 기능이라 자리는 보이게 두고, 탭하면 준비 중 안내). 하단 탭 5개 */
 /* 방 전환 = fade-through 225ms(Material 진입 감속). 뒤 화면 비침 제거: 방 역할 모달은 불투명 바탕, 밝기 필터 없음 */
 #shopModal,#explorationModal{background:#070b16 !important;}
 #shopModal .modal-card,#explorationModal .modal-card{animation:fadeThroughIn .225s cubic-bezier(0,0,.2,1) both !important;}
@@ -2340,7 +2346,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
         <span class="th-coin"><span class="hicon" data-pic="coin" data-size="15px" style="color:#ffd98a"></span><b id="creditView">0</b></span>
         <span class="th-min"><span class="hicon" data-pic="gem" data-size="15px" style="color:#7df0e2"></span><b id="mineralView">0</b></span>
       </div>
-      <button class="iconbtn" id="btnSettings"><span data-pic="gear" data-size="17px"></span></button>
+      <button class="iconbtn" id="btnSettings" aria-label="설정"><span data-pic="gear" data-size="15px"></span></button>
     </header>
     <div id="profileRow">
       <button id="profileBanner" type="button" title="프로필">
@@ -2368,7 +2374,7 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
       <button class="navbtn" data-nav="explore"><span class="ni" data-pic="sat"></span><span class="nl">탐사</span></button>
       <button class="navbtn center active" data-nav="home"><span class="ni" data-pic="leaf"></span><span class="nl">식물·전투</span></button>
       <button class="navbtn" data-nav="nursery"><span class="ni" data-pic="pot"></span><span class="nl">식물양육</span><span class="nav-dot" id="nurseryNavDot" hidden></span></button>
-      <button class="navbtn" data-nav="mode" hidden><span class="ni" data-pic="rocket"></span><span class="nl">함선</span></button><!-- v1.0 숨김(UX §7-8) — 오픈월드 확장 때 복귀 -->
+      <button class="navbtn locked" data-nav="mode" aria-disabled="true"><span class="ni" data-pic="rocket"></span><span class="nl">함선</span><span class="navlock">🔒</span></button><!-- 잠금(2026-09-11) — 열 때 locked·navlock 제거 + 핸들러를 openShip()으로 -->
     </nav>
   </section>
 
@@ -14136,7 +14142,7 @@ function showFruitReveal(f, skill, fruits){
 
 /* 하단 헤더 네비게이션 (상점 / 탐사 / 식물·전투 / 모드 / 길드) */
 const LOCKED_SECTIONS = {
-  mode:  { emoji:'🎮', title:'모드', desc:'생존·레이드·이벤트 등 다양한 특수 대전 모드가 이곳에 열릴 예정입니다.<br>조금만 기다려 주세요!' },
+  mode:  { emoji:'🚀', title:'함선', desc:'탐사선 안을 걸어 다니며 꾸미고 키우는 공간이 준비 중입니다.<br>조금만 기다려 주세요!' },
   guild: { emoji:'🏰', title:'길드', desc:'다른 재배사들과 길드를 만들어 협동 토너먼트와 길드 상점을 즐길 수 있게 됩니다.<br>곧 만나요!' },
 };
 function setNavActive(key){
@@ -14367,7 +14373,7 @@ $('#bottomNav').addEventListener('click', (ev) => {
   if(nav === 'shop'){ setNavActive('shop'); openShop(); }
   else if(nav === 'explore'){ setNavActive('explore'); openExploration(); }
   else if(nav === 'home'){ setNavActive('home'); pendingShopOpening = null; renderMain(); }
-  else if(nav === 'mode'){ openShip(); }
+  else if(nav === 'mode'){ openLockedSection('mode'); }   // 함선 = 잠금(2026-09-11). 열 때 openShip()으로
   else if(nav === 'nursery'){ setNavActive('nursery'); openNursery(); }
   else if(nav === 'guild'){ openLockedSection(nav); }
 });
@@ -15022,6 +15028,14 @@ window.__test('sprite: 도트 PNG 오버라이드 = 48 정수배 스냅 + 화분
   if(small.indexOf('width="34"')<0 || small.indexOf('image-rendering:auto')<0) fails.push('34px 썸네일은 그대로+부드럽게여야');
   const vec = spriteFor({ seed_type:'flower', growth_stage:'mature', element:'fire' }, 140);
   if(vec.indexOf('pot_terra.png')>=0) fails.push('절차 SVG 식물엔 화분 PNG를 쓰면 안 됨');
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('ux: 함선 탭 = 잠금(보이되 탭하면 준비 중 안내)', function(){
+  const fails = [];
+  const b = document.querySelector('#bottomNav .navbtn[data-nav="mode"]');
+  if(!b) fails.push('함선 탭 버튼 없음');
+  else { if(b.hidden) fails.push('함선 탭은 숨기지 않음'); if(!b.classList.contains('locked')) fails.push('함선 탭은 locked'); if(!b.querySelector('.navlock')) fails.push('자물쇠 배지 없음'); }
+  if(!(LOCKED_SECTIONS.mode && LOCKED_SECTIONS.mode.title==='함선')) fails.push('잠금 안내 제목 = 함선');
   if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('ux: 전투 피드백 헬퍼(HP 색 임계·2배속 sleep 범위·예상 피해 순수·의도 유효성)', function(){
