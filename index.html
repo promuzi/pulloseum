@@ -2227,25 +2227,12 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .arena-fighter.enemy .fsprite .ss-plant{animation-delay:.6s;}
 .pp-stack .pp-plant{animation:idleBob 1.6s steps(2,end) infinite;}
 .pp-stack.sprout-in .pp-plant{animation:sproutIn .6s cubic-bezier(.2,.9,.3,1.2) both, idleBob 1.6s steps(2,end) .6s infinite;}
-/* 상대 다음 행동 예고 칩(상대 카드 아래) */
-.eintent{margin-top:5px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;min-height:16px;white-space:nowrap;}
-.eintent .ei-k,.eintent .ei-v{white-space:nowrap;}
-.eintent .ei-k{color:var(--sub);font-weight:700;letter-spacing:.04em;}
-.eintent .ei-v{color:#ffd7a8;font-weight:800;}
-.eintent .ei-v b{color:#fff;}
-.eintent .ei-v i{font-style:normal;font-size:12px;padding:0 4px;border-radius:3px;background:rgba(255,255,255,.1);}
-.eintent .ei-v.atk{color:#ff9a82;}
-.eintent .ei-v.guard{color:#9fd8ff;}
-.eintent .ei-v.heal{color:#7df0a8;}
-.eintent .ei-v.deb{color:#c89cff;}
-.eintent .ei-v.buff{color:#ffe89a;}
 /* 2배속 토글 — 에너지 줄 오른쪽 끝(상단 헤더는 토너먼트명·라운드 점이 차지) */
 .cp-energy-row{display:flex;align-items:center;gap:6px;}
 .cp-energy-row>.cp-energy{flex:1;min-width:0;}
 .battle-turn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
 .battle-speed{flex:0 0 auto;pointer-events:auto;min-width:54px;min-height:44px;border:1px solid rgba(60,230,210,.32);border-radius:999px;padding:5px 10px;
   background:rgba(7,13,23,.82);color:var(--neon);font-size:12px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.35);}
-#battleArena.spread .eintent{opacity:.35;}   /* 판정 중엔 "다음" 예고를 흐리게(지금 행동과 혼동 방지) */
 .battle-speed.on{background:rgba(45,212,191,.22);border-color:#aef7ec;color:#eafffb;}
 .battle-speed:active{transform:scale(.96);}
 /* 결과 화면: 패배 힌트 · 승리 장착 유도 */
@@ -2393,7 +2380,6 @@ html{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
           <div class="hpbar"><div id="eHpBar"></div></div>
           <div class="hptext" id="eHpText"></div>
           <div class="energy" id="eEnergy"></div>
-          <div class="eintent" id="eIntent"></div>
         </div>
         <div class="fsprite" id="eSpriteBox"></div>
       </div>
@@ -12564,7 +12550,7 @@ function bootBattleUI(p){
   $('#eProfile').textContent = `👤 ${B.e.trainerName||'상대 재배사'}${eArch?` · 성향: ${eArch.name}`:''}`;
   $('#pProfile').textContent = `👤 ${B.p.trainerName||state.profile_name||'재배사'}`;
   updateBars(); updateBattleHud();
-  applyBattleSpeed(); renderEnemyIntent(null);
+  applyBattleSpeed();
   playVsIntro(p);
   // VS 인트로 후 식물 등장 → 첫 카드 페이즈
   clearTimeout(B._stageT);
@@ -12575,7 +12561,6 @@ function enterBattleStage(){
   if(!B || B.over) return;
   $('#eSpriteBox').classList.add('enter');
   $('#pSpriteBox').classList.add('enter');
-  try{ updateEnemyForecast(); }catch(e){}   // 1턴부터 상대 의도 노출
   clearTimeout(B._cardT);
   B._cardT = setTimeout(() => { if(B && !B.over && !B.busy) renderBattleIdleView(); }, 640);
 }
@@ -13009,52 +12994,17 @@ function aiPickIntent(){
   }
   return best ? { kind:'skill', id:best } : { kind:'rest' };
 }
-/* 큰 기술 예고(§4): 턴 정리 때 다음 턴 3코+ 스킬 사용 계획이면 ⚠️ 노출(종류 숨김) */
-/* P0-C(UX §7-9): 매 턴 끝에 봇이 다음 수를 미리 정하고 상대 카드 아래에 "다음: ⚔️ 공격 ~24"처럼 보여준다(Into the Breach·StS 방식).
-   3코스트+ 큰 기술이면 ⚠️도 함께. 예고한 수는 지킨다(submitIntent가 B.eNextIntent를 우선 사용, 못 쓰게 됐으면 그때 새로 고름). */
+/* 큰 기술 예고(§4): 턴 정리 때 다음 턴 3코+ 스킬 사용 계획이면 ⚠️ 노출(종류 숨김).
+   ⛔ 상대의 다음 수(종류·예상 피해)는 공개하지 않는다 — PvP 예정이라 사람 상대에겐 줄 수 없는 정보(2026-09-11 사용자 결정, P0-C 매 턴 의도 표시 폐기). */
 function updateEnemyForecast(){
-  if(!B || B.over) return;
-  B.eForecast = null;
-  const intent = aiPickIntent();          // 다음 턴의 수를 지금 결정(예고 = 대응 기회)
-  if(intent.kind==='skill') B.eForecast = { id:intent.id };
-  B.eNextIntent = intent;
-  renderEnemyIntent(intent);
-}
-function enemyIntentValid(it){
-  if(!it || !B) return false;
-  if(it.kind==='skill') return !skillUnusable(B.e, it.id);
-  if(it.kind==='switch') return !!(B.eTeam[it.to] && B.eTeam[it.to].hp>0 && it.to!==B.eActive);
-  return it.kind==='rest';
-}
-/* 예상 피해(난수·치명 제외, applySkill 공식과 같은 뼈대) — 순수 함수 */
-function estimateHitDamage(a, d, s){
-  if(!a || !d || !s || !(s.power>0)) return 0;
-  const normal = effStat(a,'atk') * (s.power * (s.breathScale ? breathPowerMult(a) : 1)) / 100;
-  const elementPart = s.elem ? (a.elem||0) * eff(a.element, d.element) : 0;
-  const raw = normal + elementPart;
-  const flatDef = effStat(d,'def') * (1 - (s.pierce||0));
-  let dm = Math.max(1, Math.max(raw*0.25, raw - flatDef));
-  if(d.guard) dm *= d.guard.mult;
-  return Math.max(1, Math.round(dm));
-}
-function renderEnemyIntent(intent){
-  const el = $('#eIntent'); const box = $('#eSpriteBox');
-  if(!el) return;
-  if(!intent || !B){ el.innerHTML=''; if(box) box.classList.remove('forecast'); return; }
-  let html='', cls='', big=false;
-  if(intent.kind==='switch'){ html='🔁 교체 준비'; cls='sw'; }
-  else if(intent.kind==='rest'){ html='💤 숨 고르기'; cls='rest'; }
-  else {
-    const s = skillById(intent.id, B.e);
-    if(s && s.power>0){ const est = estimateHitDamage(B.e, B.p, s); const m = s.elem ? eff(B.e.element, B.p.element) : 1; html = `⚔️ 공격 <b>~${est}</b>${m>1?' <i>상성↑</i>':m<1?' <i>상성↓</i>':''}`; cls='atk'; }
-    else if(s && s.guardMult!=null){ html='🛡️ 방어 태세'; cls='guard'; }
-    else if(s && s.heal){ html='💚 회복'; cls='heal'; }
-    else if(s && (s.enemyDebuff||s.dot||s.infuse)){ html='🔻 약화·지속피해'; cls='deb'; }
-    else { html='✨ 강화'; cls='buff'; }
-    big = !!(s && !s.noEnergy && (s.cost||0)>=3);
+  const e = B.e; B.eForecast = null;
+  const bigs = unitDeckIds(e).filter(id => { const s = skillById(id, e);
+    return s && !s.noEnergy && (s.cost||0)>=3 && effectiveCost(e, s) <= e.energy && (s.power||0)>0; });
+  if(bigs.length && rng() < 0.55){
+    B.eForecast = { id: bigs[Math.floor(rng()*bigs.length)] };
   }
-  if(box) box.classList.toggle('forecast', big);
-  el.innerHTML = `<span class="ei-k">다음</span><span class="ei-v ${cls}">${html}</span>`;
+  const box = $('#eSpriteBox');
+  if(box) box.classList.toggle('forecast', !!B.eForecast);
 }
 async function applySkill(a, d, s, side, options={}){
   if(!s) return;
@@ -13372,10 +13322,7 @@ async function submitIntent(intent){
   updateBattleHud(); hide('#battleSkillDetail'); lockSkillBar();
   try{ sfx.tap(); }catch(e){}
   await sleep(200);
-  // 예고한 수는 지킨다(P0-C): 턴 끝에 미리 정한 B.eNextIntent가 아직 유효하면 그대로, 아니면 새로 고른다
-  const planned = B.eNextIntent; B.eNextIntent = null;
-  const eIntent = (planned && enemyIntentValid(planned)) ? planned : aiPickIntent();
-  B.eForecast = null;
+  const eIntent = aiPickIntent();   // ⚠️예고한 큰 기술이 있으면 aiPickIntent가 그 수를 지킨다
   B.eIntent = eIntent;
   await resolveTurn(intent, eIntent);
 }
@@ -13439,7 +13386,7 @@ async function resolveTurn(pIntent, eIntent){
   if(B.e._noRegen){ B.e._noRegen=false; } else B.e.energy = Math.min(B.e.energyMax, B.e.energy+1);
   if(B.p.energy>=B.p.energyMax && B.p.passives.nextAtkBonus>0) B.p.nextAtk = B.p.passives.nextAtkBonus;
   if(B.e.energy>=B.e.energyMax && B.e.passives.nextAtkBonus>0) B.e.nextAtk = B.e.passives.nextAtkBonus;
-  if(typeof updateEnemyForecast==='function') updateEnemyForecast(); // 상대 다음 수 예고(P0-C: 매 턴)
+  if(typeof updateEnemyForecast==='function') updateEnemyForecast(); // 봇 큰 기술 ⚠️예고(종류 숨김 — 다음 수 전체 공개 금지, PvP)
   await sleep(160);
   closeJudge();
   B.turn += 1; B.pIntent = B.eIntent = null;
@@ -15038,7 +14985,7 @@ window.__test('ux: 함선 탭 = 잠금(보이되 탭하면 준비 중 안내)', 
   if(!(LOCKED_SECTIONS.mode && LOCKED_SECTIONS.mode.title==='함선')) fails.push('잠금 안내 제목 = 함선');
   if(fails.length) throw new Error(fails.join(' | '));
 });
-window.__test('ux: 전투 피드백 헬퍼(HP 색 임계·2배속 sleep 범위·예상 피해 순수·의도 유효성)', function(){
+window.__test('ux: 전투 피드백 헬퍼(HP 색 임계·2배속 sleep 범위)', function(){
   const fails = [];
   if(hpBarClass(100)!=='' || hpBarClass(51)!=='' || hpBarClass(50)!=='mid' || hpBarClass(21)!=='mid' || hpBarClass(20)!=='low' || hpBarClass(0)!=='low') fails.push('hpBarClass 임계: >50 청록 · 21~50 노랑 · ≤20 빨강');
   const savedB = B, savedSpd = state.battle_speed;
@@ -15047,17 +14994,14 @@ window.__test('ux: 전투 피드백 헬퍼(HP 색 임계·2배속 sleep 범위·
     B = { over:false }; if(battleSleepMs(400)!==200) fails.push('전투 중 2배속 = 절반'); if(battleSleepMs(10)!==16) fails.push('2배속 하한 16ms(1f)');
     B = { over:true }; if(battleSleepMs(400)!==400) fails.push('전투 종료 후 sleep 그대로');
     state.battle_speed = 1; B = { over:false }; if(battleSleepMs(400)!==400) fails.push('1배속은 그대로');
-    // 의도 유효성·예상 피해(순수): 합성 전투 상태
-    B = { over:false, eActive:0, eTeam:[{hp:10},{hp:0},{hp:5}], e:{ hp:10, energy:9, energyMax:9, buffs:[], dots:[], passives:{}, uses:{}, atk:100, def:20, elem:0, element:'fire', species:'tree_fire' }, p:{ hp:50, max:50, buffs:[], dots:[], passives:{}, atk:50, def:30, elem:0, element:'grass' } };
-    if(!enemyIntentValid({kind:'rest'})) fails.push('rest는 항상 유효');
-    if(enemyIntentValid({kind:'switch',to:1})) fails.push('쓰러진 팀원으로 교체 불가');
-    if(enemyIntentValid({kind:'switch',to:0})) fails.push('활성 유닛으로 교체 불가');
-    if(!enemyIntentValid({kind:'switch',to:2})) fails.push('살아있는 다른 팀원 교체 유효');
-    if(estimateHitDamage(B.e, B.p, {power:0})!==0) fails.push('비공격 스킬 예상 피해 0');
-    const d1 = estimateHitDamage(B.e, B.p, {power:100}), d2 = estimateHitDamage(B.e, B.p, {power:100});
-    if(!(d1>=1) || d1!==d2) fails.push('예상 피해는 ≥1이고 결정적(순수)');
-    B.e.elem = 30; if(estimateHitDamage(B.e, B.p, {power:100, elem:true}) <= estimateHitDamage(B.e, B.p, {power:100})) fails.push('속성 수치 있으면 속성기 예상 피해 증가');
   } finally { B = savedB; state.battle_speed = savedSpd; }
+  if(fails.length) throw new Error(fails.join(' | '));
+});
+window.__test('battle: 상대 다음 수 비공개(PvP 예정) — 큰 기술 ⚠️만, 종류·예상 피해 표시 없음', function(){
+  const fails = [];
+  if(document.getElementById('eIntent')) fails.push('#eIntent(매 턴 의도 칩)를 되살리지 말 것');
+  if(typeof renderEnemyIntent !== 'undefined' || typeof estimateHitDamage !== 'undefined') fails.push('의도 표시·예상 피해 함수가 없어야 함');
+  if(String(updateEnemyForecast).indexOf('aiPickIntent') >= 0) fails.push('예고가 다음 수 전체를 미리 정하면 안 됨(큰 기술만)');
   if(fails.length) throw new Error(fails.join(' | '));
 });
 window.__test('ux: 첫 세션 게이트(첫 식물 전 슬롯 숨김·큰 버튼=심기·3v3/미션은 2승부터)', function(){
