@@ -20,6 +20,8 @@ import { POT_GEO, POT3, renderPot } from './pot3d.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), measure = args.includes('--measure'), anim = args.includes('--anim'), keys = args.filter(a => !a.startsWith('--'));
+const EYES_ON = args.includes('--eyes');   // 눈 덧그리기(EYE 틀) — 사용자 판단으로 끔(2026-10-15 "눈 인식을 못하는 것 같으니 그냥 둬"). 켜려면 --eyes
+const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고, 깜빡일 때만 실제 눈 칸을 눈꺼풀로 덮는다(2026-10-15 사용자 "그림 바꾸지 말고 실제 눈을 인식해서")
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 
 // 눈 찾기: 아주 어두운 덩어리(눈동자) 중 둘레가 훨씬 밝은 것(홍채·흰자·반짝임) → 크기·높이가 비슷하고 옆으로 나란한 한 쌍
@@ -128,7 +130,7 @@ function load(key, file = null) {
   for (let i = 0; i < n; i++) if (!isBg[i]) { const x = i % im.w, y = (i - x) / im.w; top = Math.min(top, y); bot = Math.max(bot, y); left = Math.min(left, x); right = Math.max(right, x); }
   if (cut) S = { cx: (left + right) / 2, cy: bot, a: (right - left) / 6, b: 0 };   // 누끼: 식물 전체 폭의 가운데를 판 가운데로
   // 눈: 지정(eyes.mjs)한 대략 자리 근처(반지름 60)에서 가장 어두운 칸들의 무게중심으로 맞춘다
-  const spec = EYES[key], eyes = [];
+  const spec = EYES_ON || BLINK ? EYES[key] : null, eyes = [];
   if (spec && !file) for (const [ex, ey] of spec.src) {
     const R0 = 60, cand = [];
     for (let y = Math.max(0, ey - R0); y < Math.min(im.h, ey + R0); y++) for (let x = Math.max(0, ex - R0); x < Math.min(im.w, ex + R0); x++) {
@@ -171,7 +173,7 @@ export function convert(key, { file = null, scale = null } = {}) {
   const s = scale || Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
   if (!S.b) S.cy -= 3 / s;   // 누끼: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게
   // 눈: 원본 자리 → 도트 좌표, 그 자리를 가운데로 EYE 틀 크기의 상자
-  const spec = EYES[key], grid = spec ? EYE[spec.style].g : null;
+  const spec = EYES_ON ? EYES[key] : null, grid = spec ? EYE[spec.style].g : null;
   const eyes = spec ? eyeSrc.map(([ex, ey], n2) => {
     const w = grid[0].length, h = grid.length, X = P.cx + (ex - S.cx) * s, Y = P.cy + (ey - S.cy) * s;
     return { x: Math.round(X - w / 2), y: Math.round(Y - h / 2), w, h, mirror: n2 % 2 === 1 && !!EYE[spec.style].mirror };
@@ -245,12 +247,54 @@ export function convert(key, { file = null, scale = null } = {}) {
     }
     ct2 = nx;
   }
-  return { cm, ct: ct2, palLab, matL, key, eyes, s };
+  // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만)
+  const eyeC = BLINK ? eyeSrc.map(([ex, ey]) => [P.cx + (ex - S.cx) * s, P.cy + (ey - S.cy) * s]) : [];
+  return { cm, ct: ct2, palLab, matL, key, eyes, eyeC, s };
+}
+
+// 실제 그려진 눈 칸 찾기: 눈동자 가운데에서 반지름 4.5 안, 둘레(4.5~6.5) 살결 색과 뚜렷이 다른 칸 → 가장 어두운 칸에 이어진 덩어리
+function eyeMask(out, cx, cy) {
+  const px = (x, y) => { const k = (y * W + x) * 4; return out.data[k + 3] < 128 ? null : '#' + [0, 1, 2].map(j => out.data[k + j].toString(16).padStart(2, '0')).join(''); };
+  const ring = new Map();
+  for (let y = Math.floor(cy - 7); y <= cy + 7; y++) for (let x = Math.floor(cx - 7); x <= cx + 7; x++) {
+    const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), c = x >= 0 && y >= 0 && x < W && y < H ? px(x, y) : null;
+    if (c && d > 4.5 && d < 6.5) ring.set(c, (ring.get(c) || 0) + 1);
+  }
+  const skin = [...ring].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (!skin) return null;
+  const sk = oklab(skin), cand = new Map();
+  let dark = null, dl = 9;
+  for (let y = Math.floor(cy - 5); y <= cy + 5; y++) for (let x = Math.floor(cx - 5); x <= cx + 5; x++) {
+    if (x < 0 || y < 0 || x >= W || y >= H || Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > 4.5) continue;
+    const c = px(x, y);
+    if (!c) continue;
+    const o = oklab(c);
+    if (Math.hypot(o[0] - sk[0], o[1] - sk[1], o[2] - sk[2]) > 0.07) { cand.set(y * W + x, o[0]); if (o[0] < dl) { dl = o[0]; dark = y * W + x; } }
+  }
+  if (dark === null) return null;
+  const mask = new Set([dark]), st = [dark];
+  while (st.length) { const i = st.pop(), x = i % W; for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, i - W, i + W]) if (cand.has(j) && !mask.has(j)) { mask.add(j); st.push(j); } }
+  const lidCol = (() => { const [L, A, B] = oklab(px(dark % W, Math.floor(dark / W))); return fromOklab(Math.max(0.15, L), A, B); })();
+  return { mask, skin, lidCol };
+}
+// 깜빡임: half = 눈 칸의 위 절반을 살결로 + 가운데 줄은 눈꺼풀 선, closed = 눈 칸 전부 살결 + 가운데 줄 선. open 은 아무것도 안 바꿈
+function blinkEyes(out, cv, state, dx = 0) {
+  if (state === 'open') return;
+  for (const [cx, cy] of cv.eyeC) {
+    const m = eyeMask(out, cx + dx, cy);
+    if (!m) continue;
+    const ys = [...m.mask].map(i => Math.floor(i / W)), mid = Math.round((Math.min(...ys) + Math.max(...ys)) / 2);
+    for (const i of m.mask) {
+      const x = i % W, y = (i - x) / W;
+      if (y === mid) out.set(x, y, m.lidCol);
+      else if (state === 'closed' || y < mid) out.set(x, y, m.skin);
+    }
+  }
 }
 
 // 눈 그리기: open = 종별 EYE 틀 그대로 / half = 위 절반을 눈꺼풀(둘레 살결 색)로 / closed = 눈꺼풀 + 가운데 한 줄
 function drawEyes(out, cv, state, dx = 0) {
-  const spec = EYES[cv.key];
+  const spec = EYES_ON ? EYES[cv.key] : null;
   if (!spec) return;
   const grid = EYE[spec.style].g, col = { k: spec.k || '#2e222f', w: spec.w || '#ffffff', g: spec.g || '#f9c22b', c: spec.c || '#fbff86', i: spec.i || '#fb6b1d', l: spec.l || '#3e3546' };
   for (const e of cv.eyes) {
@@ -278,6 +322,7 @@ function drawEyes(out, cv, state, dx = 0) {
 export function paint(cv, { shiftRow = null, tone = null, eye = 'open' } = {}) {
   const out = paintBody(cv, { shiftRow, tone });
   drawEyes(out, cv, eye, cv.eyes.length && shiftRow ? shiftRow(cv.eyes[0].y) : 0);
+  if (BLINK && cv.eyeC.length) blinkEyes(out, cv, eye, shiftRow ? shiftRow(Math.round(cv.eyeC[0][1])) : 0);
   return out;
 }
 function paintBody(cv, { shiftRow = null, tone = null } = {}) {
@@ -310,7 +355,7 @@ const stages = args.includes('--stages');
 const cvs = stages ? [] : keys.map(k => {
   const cv = convert(k);
   writeFileSync(resolve(here, 'out', 'conv', k + '_96x112.png'), paint(cv).png());
-  console.log(`${k.padEnd(13)} 변환 완료 · 축척 ${cv.s.toFixed(4)} · 눈 ${cv.eyes.length ? cv.eyes.map(e => `${e.x},${e.y} ${e.w}×${e.h}`).join(' / ') : '못 찾음'}`);
+  console.log(`${k.padEnd(13)} 변환 완료 · 축척 ${cv.s.toFixed(4)}${EYES_ON ? ' · 눈 ' + (cv.eyes.length ? cv.eyes.map(e => `${e.x},${e.y} ${e.w}×${e.h}`).join(' / ') : '지정 없음') : ''}`);
   return cv;
 });
 
@@ -364,4 +409,11 @@ if (anim) {
   }
   writeFileSync(resolve(here, 'out', 'conv', keys.join('+') + '.gif'), encodeGIF(frames, { delay: 10 }));
   console.log('움직임 →', resolve(here, 'out', 'conv', keys.join('+') + '.gif'));
+  // 깜빡임 확인판: 뜬 눈 · 반쯤 · 감음을 4배로 나란히(흔들림 없이)
+  if (BLINK) for (const cv of cvs) {
+    const Z4 = 4, sh = new Img(8 + 3 * (W * Z4 + 8), H * Z4 + 16, '#2e222f');
+    ['open', 'half', 'closed'].forEach((st, k) => { const p = new Img(W, H); p.blit(pot.back, 0, 0); p.blit(paint(cv, { eye: st }), 0, 0); p.blit(pot.front, 0, 0); sh.fill(8 + k * (W * Z4 + 8), 8, W * Z4, H * Z4, '#323353'); sh.blit(p, 8 + k * (W * Z4 + 8), 8, Z4); });
+    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink.png'), sh.png());
+    console.log('깜빡임 확인 →', resolve(here, 'out', 'conv', cv.key + '_blink.png'));
+  }
 }
