@@ -24,7 +24,15 @@ export const ATTACKS = {
   vine_wind: { kind: 'blades', move: 'lunge', c: ['#ffffff', '#e8e0fa', '#b0a0e8', '#4c3e90'], status: 'swirl' },
   spore_cap: { kind: 'spores', move: 'cast', c: ['#fffbd8', '#f8e488', '#d0b050', '#6a5a28'], status: 'spore' },
 };
-export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21 })[A.kind] || 18;
+// 변이 스킬(변이형별 기본 스킬, 설계 = specs/2026-10-15-v2-mutation-staging-design.md ⑥) — 공격하는 쪽은 변이 후광·문장을 두른다
+export const VARIANTS = {
+  predator: { kind: 'bite', move: 'lunge', c: ['#ffffff', '#ffd0d6', '#e8344a', '#5a0e1c'], status: 'drain' },
+  weapon: { kind: 'sword', move: 'lunge', c: ['#ffffff', '#e8eef8', '#9aa8c0', '#3a4458'], status: 'none' },
+  toxic: { kind: 'poison', move: 'cast', c: ['#f0d8ff', '#c890f0', '#8a40c8', '#3a1660'], fizz: '#b8f070', status: 'poison' },
+  dragon: { kind: 'breath', move: 'cast', c: ['#ffffff', '#c8ffa0', '#5ac850', '#1e5a2a'], status: 'none' },
+  spore: { kind: 'sporepuff', move: 'cast', c: ['#fffbd8', '#f8e488', '#d0b050', '#6a5a28'], status: 'weaken' },
+};
+export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18 })[A.kind] || 18;
 
 // 공격하는 쪽 몸놀림: 0~5 대기, 6~11 준비(점점), 12 멈춤, 13~14 동작, 15 넘침, 16~23 복귀
 export function attackerPose(f, A) {
@@ -162,6 +170,41 @@ export function skillFx(P, A, f, L, T, G, seed = 1) {
       if (k >= 1 && k < 10) particles(P.p, burstParticles(seed, T[0], T[1], 9, 2, [c[1], c[2], c[3]], { g: 0.06, life: 9, size: 2 }), k - 1);
       break;
     }
+    case 'bite': {   // 포식 물기: 위·아래 턱(이빨 지그재그)이 벌어졌다 맞는 장에 닫힘 → 진홍 빛이 공격 쪽으로(흡혈)
+      const open = f < I - 2 ? 0 : k < 0 ? 9 + (k + 2) * 3 : k === 0 ? 1 : k === 1 ? 0 : -1;
+      if (open >= 0 && f >= I - 3 && k <= 1) [-1, 1].forEach(s => {
+        const yb = T[1] + s * (open + 3);
+        crescent(P.o, T[0], yb - s * 10, 13, s < 0 ? 0.35 : -2.8, s < 0 ? 2.8 : -0.35, 3.6, c[0], c[2]);
+        for (let i = -8; i <= 8; i += 4) { P.o(Math.floor(T[0] + i), Math.floor(yb + s * 1), c[0]); P.o(Math.floor(T[0] + i + 1), Math.floor(yb + s * 2), c[0]); }
+      });
+      if (k >= 2 && k < 14) for (let q = 0; q < 4; q++) { const t = (k - 2 - q) / 9; if (t < 0 || t > 1) continue; const x = T[0] + (L[0] - T[0]) * t, y = T[1] + (L[1] - T[1]) * t - Math.sin(Math.PI * t) * 12; disc(P.o, x, y, 1.6, q % 2 ? c[2] : c[1]); }
+      if (k >= 0 && k < 8) particles(P.p, burstParticles(seed, T[0], T[1], 6, 1.6, [c[1], c[2], c[3]], { g: 0.1, life: 8 }), k);
+      break;
+    }
+    case 'sword': {   // 무기 검 베기: 굵은 강철 사선 + 초승달 잔상 → 쇠 불꽃
+      if (k === 0) { line(P.o, [T[0] - 20, T[1] - 18], [T[0] + 18, T[1] + 16], c[0], 2); crescent(P.o, T[0] - 4, T[1], 22, -2.3, 0.7, 4, c[1], c[2]); }
+      if (k === 1) { line(P.o, [T[0] - 20, T[1] - 18], [T[0] + 18, T[1] + 16], c[1], 2); crescent(P.o, T[0] - 4, T[1], 23, -2.4, 0.8, 2.6, c[2], c[2], u => Math.floor(u * 5) % 2 === 0); }
+      if (k >= 0 && k < 6) particles(P.p, burstParticles(seed, T[0] - 2, T[1] - 2, 10, 3, ['#ffffff', '#fff2a0', '#f0a030'], { g: 0.2, life: 6 }), k);
+      break;
+    }
+    case 'poison': {   // 독성 독 뿌리기: 보라 독방울이 포물선으로 날아가 터지며 튐
+      const t = f - 13, dur = 6;
+      if (t >= 0 && t < dur) { const u = t / dur, x = L[0] + 8 + (T[0] - L[0] - 8) * u, y = L[1] + (T[1] - L[1]) * u - Math.sin(Math.PI * u) * 14; disc(P.o, x, y, 4.2, c[2]); disc(P.o, x - 0.6, y - 0.8, 2.6, c[1]); P.o(Math.floor(x) - 2, Math.floor(y) - 2, c[0]); }
+      if (k >= 0 && k < 3) { disc(P.o, T[0], T[1], 6 - k, c[2]); disc(P.o, T[0], T[1], 3.5 - k, c[1]); }
+      if (k >= 0 && k < 12) particles(P.p, burstParticles(seed, T[0], T[1], 12, 2, [c[1], c[2], c[3]], { g: 0.18, life: 12, up: 0.8, size: 2 }), k);
+      break;
+    }
+    case 'breath': {   // 용족 숨결(자기 속성 — 여기선 풀): 입에서 대상까지 넓어지는 원뿔 입자 + 맞는 곳 소용돌이
+      const t = f - 12;
+      if (t >= 0 && t < 12) for (let q = 0; q < 40; q++) { const r = rng(seed + q * 13 + t * 101), u = ((t + q * 0.3) % 6) / 6, x = L[0] + 10 + (T[0] - L[0] - 10) * u, spread = 2 + u * 13, y = L[1] + (T[1] - L[1]) * u + (r() - 0.5) * spread * 2; if (q % 5 === 0) disc(P.o, x, y, 1.5 + u, u < 0.5 ? c[1] : c[2]); else P.p(Math.floor(x), Math.floor(y), q % 2 ? c[0] : c[2]); }
+      if (k >= 0 && k < 8) ringPx(P.o, T[0], T[1], 6 + k * 2, k < 4 ? c[1] : c[2], a => Math.floor(a * 2 + k) % 2 === 0, 1, 2);
+      break;
+    }
+    case 'sporepuff': {   // 포자 퍼프(턴 끝 자동): 대상 위에서 포자 구름이 피어남 + 약화 표시(아래 화살표)
+      if (k >= 0 && k < 14) { const R = 4 + k * 1.5, r1 = rng(seed); for (let i = 0; i < 26; i++) { const a = r1() * 6.283, rr = R * Math.sqrt(r1()); const x = T[0] + Math.cos(a) * rr, y = T[1] - 6 + Math.sin(a) * rr * 0.7 - k * 0.4; if (k > 10 && i % 2) continue; if (i % 6 === 0) disc(P.o, x, y, 1.6, c[1]); else P.p(Math.floor(x), Math.floor(y), i % 3 ? c[2] : c[0]); } }
+      if (k >= 4 && k < 18) { const x = T[0] + 16, y = T[1] - 18 + Math.min(4, k - 4); for (let j = 0; j < 7; j++) P.o(x, y + j, '#a8b8ff'); for (let s = 1; s <= 3; s++) { P.o(x - s, y + 6 - s, '#a8b8ff'); P.o(x + s, y + 6 - s, '#a8b8ff'); } }
+      break;
+    }
     case 'spores': {   // 포자 구름: 몽글몽글 퍼지며 천천히 날아가 대상을 감쌈
       const t = f - 13, dur = 8;
       if (t >= 0 && t < dur + 16) { const u = Math.min(1, t / dur), cx = L[0] + 10 + (T[0] - L[0] - 10) * ease(u), cy = L[1] - 4 + (T[1] - L[1]) * u - Math.sin(Math.PI * u) * 6, R = 5 + u * 10 + Math.max(0, t - dur) * 0.5, r1 = rng(seed); for (let i = 0; i < 30; i++) { const a = r1() * 6.283 + t * 0.15, rr = R * Math.sqrt(r1()), x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.8; if (t > dur + 10 && i % 2) continue; if (i % 6 === 0) disc(P.o, x, y, 1.6, c[1]); else P.p(Math.floor(x), Math.floor(y), i % 3 === 0 ? c[0] : c[2]); } }
@@ -187,5 +230,10 @@ export function statusFx(P, A, f, T, G, pts, L, seed = 1) {
     case 'dust': for (let q = 0; q < 5; q++) { const r = rng(seed + q * 7), x = T[0] - 14 + r() * 28, t = (k + q * 4) % 12, y = T[1] - 8 + t * 1.8; if (y < G) disc(P.o, x, y, 1.1, q % 2 ? '#b8a688' : '#8c7a60'); } if (k < 9) for (let q = 0; q < 3; q++) disc(P.o, T[0] - 12 + q * 12, G - 2 - k * 0.4, 3 - k * 0.3, '#9a8c7c'); break;
     case 'swirl': { const n = 14, rot = k * 0.5; for (let i = 0; i < n; i++) { if (i % 4 === 3 || (fade && i % 2)) continue; const a = rot + i / n * Math.PI * 2; disc(P.o, T[0] + Math.cos(a) * 16, T[1] - 8 + Math.sin(a) * 5, 0.9, i % 3 ? c[1] : c[0]); } break; }
     case 'spore': for (let i = 0; i < 8; i++) { if (fade && i % 2) continue; const a = k * 0.18 + i * 0.785; disc(P.o, T[0] + Math.cos(a) * 13, T[1] - 4 + Math.sin(a * 1.3) * 7, 1, i % 2 ? c[0] : c[1]); } break;
+    case 'poison': {   // 독: 대상에서 보라 거품이 오르고 머리 위 독 칸 눈금이 1 → 2로 쌓임
+      for (let q = 0; q < 3; q++) { const t = (k + q * 4) % 12, x = T[0] - 8 + q * 8, y = T[1] + 6 - t * 1.4; if (!(fade && q)) { disc(P.o, x, y, 1.2, c[1]); P.p(Math.floor(x), Math.floor(y) - 1, A.fizz || c[0]); } }
+      const n = k < 6 ? 1 : 2; for (let i = 0; i < n; i++) { disc(P.o, T[0] - 4 + i * 6, T[1] - 24, 2, c[2]); P.o(Math.floor(T[0] - 5 + i * 6), Math.floor(T[1] - 25), c[0]); }
+      break;
+    }
   }
 }

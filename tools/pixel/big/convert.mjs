@@ -847,27 +847,31 @@ if (anim) {
 
 // 공격(--attack <키…>): 종마다 다음 종을 상대로 대표 기술 한 번(attack.mjs) — 무대 236×120, 48장 × 0.05초.
 //   → out/conv/<키>_attack.gif(2배), attacks_all.gif·(--mp4) attacks_all.mp4(3배, 이어 붙임), attacks_sheet.png(핵심 장면: 준비·동작·맞음·맞음+2·맞음+6)
-if (args.includes('--attack')) {
+// 변이 스킬(--variants <공격 키> <대상 키>): 같은 식물에 5변이형 기본 변이 스킬을 차례로(공격 쪽 = 변이 후광·문장) → variants_all.mp4·variants_sheet.png
+if (args.includes('--attack') || args.includes('--variants')) {
   const { encodeGIF } = await import('./gif.mjs');
   const { idleRig, attackField } = await import('./motion.mjs');
-  const { ATTACKS, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
+  const { ATTACKS, VARIANTS, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
+  const { rimTint, emblem } = await import('./forms.mjs');
   const pot = renderPot(POT3.pot_terra), SW = 236, SH = 120, AX = 4, AY = 4, TX = SW - W - 4, TY = 4, BG = '#2f3150';
   const rigs = cvs.map(cv => idleRig(cv));
   const mirror = im => { const o = new Img(im.w, im.h); for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) { const s = (y * im.w + x) * 4, d = (y * im.w + im.w - 1 - x) * 4; o.data.set(im.data.subarray(s, s + 4), d); } return o; };
   const flash = im => { const o = new Img(W, H); for (let i = 0; i < W * H; i++) if (im.data[i * 4 + 3] >= 128) o.data.set([255, 255, 255, 255], i * 4); return o; };
   const plantAt = (k, pose) => paint(cvs[k], { maps: rasterize(cvs[k].src, attackField(rigs[k], pose)), eyeOff: [pose.qx || 0, pose.qy || 0] });
   const zoom = (list, z) => list.map(c => { const o = new Img(c.w * z, c.h * z, BG); o.blit(c, 0, 0, z); return o; });
-  const all = [], sheetRows = [];
-  for (let a = 0; a < cvs.length; a++) {
-    const t = (a + 1) % cvs.length, A = ATTACKS[cvs[a].key];
-    if (!A || cvs.length < 2) continue;
+  const variants = args.includes('--variants'), all = [], sheetRows = [];
+  const jobs = variants ? Object.keys(VARIANTS).map(form => ({ a: 0, t: cvs.length > 1 ? 1 : 0, A: VARIANTS[form], form, name: form })) : cvs.map((cv, a) => ({ a, t: (a + 1) % cvs.length, A: ATTACKS[cv.key], form: null, name: cv.key }));
+  for (const { a, t, A, form, name } of jobs) {
+    if (!A || (!variants && cvs.length < 2)) continue;
     const I = impactAt(A), ra = rigs[a], rt = rigs[t], frames = [];
     // 대상 윗머리 점 셋(무대 좌표, 좌우 뒤집힘)
     const pts = [-8, 0, 8].map(dx => { const x = Math.round(rt.hx + dx); let y = 0; while (y < H && cvs[t].cm[y * W + x] < 0) y++; return [TX + (W - 1 - x), TY + Math.min(y, H - 1)]; });
     for (let f = 0; f < FRA; f++) {
       const fz = f === I + 1 ? I : f, pose = attackerPose(fz, A), prev = attackerPose(Math.max(0, fz - 1), A), tp = targetPose(f, I);
-      const stage = new Img(SW, SH, BG), [sx, sy] = cameraShake(f, A, I);
-      stage.blit(plantInPot(plantAt(a, { ...pose, px: prev.qx, py: prev.qy }), pot), AX + sx, AY + sy);
+      const stage = new Img(SW, SH, BG), [sx, sy] = cameraShake(f, A, I), aim = plantAt(a, { ...pose, px: prev.qx, py: prev.qy });
+      if (form) rimTint(aim, form, 0.45, 0.4 + 0.25 * Math.sin(f / FRA * 4 * Math.PI), Math.floor(P.cy) - 3);
+      stage.blit(plantInPot(aim, pot), AX + sx, AY + sy);
+      if (form) emblem((x, y, c) => stage.set(x, y, c), 2, 2, form, 2);
       let tim = plantAt(t, { qx: -tp.kb, qy: 0, sq: tp.kb ? 0.6 : 0, px: -Math.max(0, tp.kb - 1), py: 0 });
       if (tp.flash) tim = flash(tim);
       stage.blit(mirror(plantInPot(tim, pot)), TX + sx + tp.shake, TY + sy);
@@ -882,20 +886,21 @@ if (args.includes('--attack')) {
       for (const [i, c] of lp) stage.set(i % SW, Math.floor(i / SW), c);
       frames.push(stage);
     }
-    writeFileSync(resolve(here, 'out', 'conv', cvs[a].key + '_attack.gif'), encodeGIF(zoom(frames, 2), { delay: 5 }));
+    writeFileSync(resolve(here, 'out', 'conv', name + (variants ? '_variant.gif' : '_attack.gif')), encodeGIF(zoom(frames, 2), { delay: 5 }));
     const fl = args.find(x => x.startsWith('--frames='));   // 검토용: 지정 장을 2배로 나란히
-    if (fl) { const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (SW * 2 + 4), SH * 2 + 8, '#2e222f'); list.forEach((ff, i) => st.blit(frames[Math.min(FRA - 1, ff)], 4 + i * (SW * 2 + 4), 4, 2)); writeFileSync(resolve(here, 'out', 'conv', cvs[a].key + '_attack_frames.png'), st.png()); }
+    if (fl) { const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (SW * 2 + 4), SH * 2 + 8, '#2e222f'); list.forEach((ff, i) => st.blit(frames[Math.min(FRA - 1, ff)], 4 + i * (SW * 2 + 4), 4, 2)); writeFileSync(resolve(here, 'out', 'conv', name + '_attack_frames.png'), st.png()); }
     all.push(...frames);
     sheetRows.push([10, 13, I, I + 2, I + 6].map(f => frames[Math.min(FRA - 1, f)]));
-    console.log(`${cvs[a].key.padEnd(13)} 공격 → ${cvs[t].key} · ${A.kind}/${A.move} · 맞는 장 ${I} · 성질 ${A.status}`);
+    console.log(`${name.padEnd(13)} ${cvs[a].key} → ${cvs[t].key} · ${A.kind}/${A.move} · 맞는 장 ${I} · 성질 ${A.status}`);
   }
   if (all.length) {
-    writeFileSync(resolve(here, 'out', 'conv', 'attacks_all.gif'), encodeGIF(zoom(all, 2), { delay: 5 }));
-    if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', 'attacks_all.mp4'), zoom(all, 3), { delay: 5, loops: 1, fps: 20 });
+    const tag = variants ? 'variants' : 'attacks';
+    writeFileSync(resolve(here, 'out', 'conv', tag + '_all.gif'), encodeGIF(zoom(all, 2), { delay: 5 }));
+    if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', tag + '_all.mp4'), zoom(all, 3), { delay: 5, loops: 1, fps: 20 });
     const sheet = new Img(4 + 5 * (SW + 4), 4 + sheetRows.length * (SH + 4), '#2e222f');
     sheetRows.forEach((row, r) => row.forEach((im, c) => sheet.blit(im, 4 + c * (SW + 4), 4 + r * (SH + 4))));
-    writeFileSync(resolve(here, 'out', 'conv', 'attacks_sheet.png'), sheet.png());
-    console.log('공격 모아보기 →', resolve(here, 'out', 'conv', 'attacks_sheet.png'));
+    writeFileSync(resolve(here, 'out', 'conv', tag + '_sheet.png'), sheet.png());
+    console.log('모아보기 →', resolve(here, 'out', 'conv', tag + '_sheet.png'));
   }
 }
 
