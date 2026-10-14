@@ -14,7 +14,7 @@ export default function spark() {
   [0, 72, 144, 216, 288].forEach((a, i) => (i % 2 ? pB : pF).add(poly(place(BOLT, 48, 32, a + 12, 1.5), { hz: 3.6, bev: 3.4 })));
   glow(S, 'petalF', 48, 32, 15, 15, 1);
   glow(S, 'petalB', 48, 32, 15, 15, 1);
-  S.layer('disk', { ramp: R.bolt, ...MAT.petal, lip: 0, bias: -0.02 }).add(ellipse(48, 32, 8.5, 7.5, { hz: 5 }));
+  S.layer('disk', { ramp: R.olive, ...MAT.petal, lip: 0, bias: -0.1 }).add(ellipse(48, 32, 8.5, 7.5, { hz: 5 }));
   // 더듬이 수술 셋 + 끝의 빛 구슬, 사이를 잇는 전기
   const tips = [[30, 8], [52, 2], [72, 10]];
   for (const t of tips) S.line([48, 25], t, '#a2a947');
@@ -26,6 +26,6 @@ export default function spark() {
   zigzag(S, [12, 38], [3, 30], 4, 1.8, '#ffffff');
   zigzag(S, [76, 50], [88, 56], 3, 1.8, '#fbff86');
   zigzag(S, [16, 58], [6, 64], 3, 1.6, '#fbff86');
-  eyes(S, [[43, 30], [51, 30]]);
+  eyes(S, [[42, 30], [51, 30]], { style: 'wide' });   // 크게 뜬 눈 — 전기에 찌릿한
   return S;
 }

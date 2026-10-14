@@ -21,6 +21,6 @@ export default function cactusWind() {
   arc(S, 82, 30, 8, 200, 330, '#eaaded');
   arc(S, 86, 56, 5, 210, 340, '#a884f3');
   arc(S, 14, 30, 6, 190, 320, '#a884f3');
-  eyes(S, [[42, 27], [51, 27]]);
+  eyes(S, [[42, 27], [52, 27]], { style: 'ring', k: '#45293f' });   // 동그랗게 뜬 눈 — 휘파람 부는 얼굴
   return S;
 }

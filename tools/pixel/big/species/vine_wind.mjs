@@ -20,6 +20,6 @@ export default function vineWind() {
   leaf(S, 'head', { base: [62, 29], tip: [63, 39], width: 2.4, at: 0.35, rib: false, ramp: R.light, mat: MAT.metal });
   // 목에서 나부끼는 리본 잎(앞)
   leaf(S, 'ribbonF', { ...RB, path: wavy([56, 27], [4, 16], 3.2, 1.6, 30, 0.2), width: 3.2 });
-  eyes(S, [[63, 19], [69, 16]]);
+  eyes(S, [[62, 20], [68, 17]], { style: 'keen' });   // 가는 눈 — 자객
   return S;
 }

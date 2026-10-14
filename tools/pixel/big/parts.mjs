@@ -94,9 +94,29 @@ export function hole(S, name, cx, cy, rx, ry, o = {}) {
   return S.layer(name, { ramp: R.hole, ...MAT.hole, ...o }).add(ellipse(cx, cy, rx, ry, { hz: Math.min(rx, ry) }));
 }
 
-// 눈: [[x, y], ...] 왼쪽 위 칸. 기본 = 세로로 둥근 2×3 어두운 점 + 왼쪽 위 흰 반짝임(순한 눈매). 어두운 바탕이면 color 를 밝게
-export function eyes(S, list, { w = 2, h = 3, color = '#2e222f', hi = '#ffffff' } = {}) {
-  for (const [x, y] of list) { S.rect(x, y, w, h, color); if (hi) S.paint([[x, y]], hi); }
+// 눈 모양 틀(종마다 성격에 맞게 고른다). 글자 = k 눈동자(어두움) · w 흰자·반짝임 · g 빛 · c 빛 속 밝은 점 · i 홍채 · l 눈꺼풀.
+// mirror 면 오른눈은 좌우를 뒤집는다(안쪽 눈꼬리 방향을 맞춤).
+export const EYE = {
+  dot:    { g: ['wk', 'kk', 'kk'] },                    // 둥근 점
+  flat:   { g: ['wkk', 'kkk'] },                        // 납작 — 진지함
+  fierce: { g: ['wk.', 'kkk'], mirror: true },          // 안쪽 눈꼬리가 내려간 매서운 눈
+  calm:   { g: ['.kk.', 'k..k'] },                      // 감은 눈 — 평온
+  side:   { g: ['kww', 'kww'] },                        // 흰자 + 한쪽으로 쏠린 눈동자 — 곁눈질
+  wide:   { g: ['www', 'wkw', 'www'] },                 // 크게 뜬 눈 — 흥분
+  sleepy: { g: ['lll', 'wkk'] },                        // 반쯤 감긴 눈
+  ember:  { g: ['gc.', 'ggg'], mirror: true },          // 빛나는 매서운 눈
+  glint:  { g: ['cg', 'gg'] },                          // 작은 빛 점
+  iris:   { g: ['wkk', 'kik', 'kkk'] },                 // 속에 불씨가 도는 눈
+  ring:   { g: ['kkk', 'kwk', 'kkk'] },                 // 동그란 고리 — 놀람
+  keen:   { g: ['kkw'], mirror: true },                 // 가는 선 — 날카로움
+};
+// 눈: [[x, y], ...] 왼쪽 위 칸. style = EYE 의 이름, 색은 k·w·g·c·i·l 로 바꾼다
+export function eyes(S, list, { style = 'dot', k = '#2e222f', w = '#ffffff', g = '#f9c22b', c = '#fbff86', i = '#fb6b1d', l = '#3e3546' } = {}) {
+  const st = EYE[style], col = { k, w, g, c, i, l };
+  list.forEach(([x, y], n) => st.g.forEach((row, dy) => {
+    const r = n % 2 && st.mirror ? [...row].reverse() : [...row];
+    r.forEach((ch, dx) => { if (col[ch]) S.paint([[x + dx, y + dy]], col[ch]); });
+  }));
 }
 
 // 호(말린 꽃잎 끝·주름 선): 가운데, 반지름, 시작·끝 각(도, 0 = 오른쪽, 90 = 아래)
@@ -285,47 +305,4 @@ export function place(tpl, cx, cy, ang, sc = 1) {
   return tpl.map(([x, y]) => [cx + (x * c - y * s) * sc, cy + (x * s + y * c) * sc]);
 }
 
-// 테라코타 화분(따로 그리는 96×112 판 — 식물 판을 위에 겹친다)
-function potShape(ramp, mat, { body = null, rim = ramp } = {}) {
-  const S = new Sprite(W, H, { ground: H });
-  S.layer('soil', { ramp: R.soil, ...MAT.soil }).add(ellipse(48, 77.5, 19, 3, { hz: 1.5 }));
-  S.layer('body', { ramp, ...mat }).add(body || taper(48, 81, 106, 18, 14.5, { hz: 12 }));
-  S.layer('foot', { ramp, ...mat, bias: -0.06 }).add(limb([[36, 107.5], [60, 107.5]], [3, 3], { hz: 1 }));
-  S.layer('rim', { ramp: rim, ...mat, bias: 0.04 }).add(limb([[28, 80.5], [68, 80.5]], [3.4, 3.4], { hz: 1 }));
-  return S;
-}
-export function potTerra() { return potShape(R.earth, MAT.clay); }
-
-// 화분 다섯(게임 열쇠 → 그리는 함수)
-export const POTS = {
-  pot_terra: potTerra,
-  pot_ceramic() {   // 흰 유약 + 파란 띠 두 줄
-    const S = potShape(R.light, { ...MAT.clay, spec: [24, 0.9] });
-    S.layer('band', { ramp: R.water, ...MAT.clay, group: 'body' })
-      .add(taper(48, 89.5, 94.5, 16.8, 16.1, { hz: 12.2 })).add(taper(48, 98.5, 100.5, 15.5, 15.3, { hz: 12.2 }));
-    return S;
-  },
-  pot_glass() {     // 투명 유리 너머 흙 + 세로 반사광
-    const S = potShape(R.lily, MAT.gel, { rim: R.lily });
-    S.layer('inside', { ramp: R.soil, ...MAT.soil, group: 'body', outlineIn: false }).add(taper(48, 84, 101, 15.2, 12.4, { hz: 8 }));
-    S.line([34, 85], [35, 101], '#ffffff');
-    S.line([36, 86], [36, 92], '#c7dcd0');
-    S.line([60, 86], [59, 96], '#8fd3ff');
-    return S;
-  },
-  pot_crystal() {   // 면이 선 자수정
-    const body = [
-      plane([[30, 81], [40, 81], [42, 106], [34, 106]], { h0: 5, g: [0.45, 0], ref: [40, 81] }),
-      plane([[40, 81], [56, 81], [54, 106], [42, 106]], { h0: 6.5, g: [0, 0.04], ref: [48, 81] }),
-      plane([[56, 81], [66, 81], [62, 106], [54, 106]], { h0: 5, g: [-0.45, 0], ref: [56, 81] }),
-    ];
-    const S = potShape(R.wind, { ...MAT.rock, smooth: 0.25, spec: [40, 0.96] }, { body: body[0] });
-    body.slice(1).forEach(p => S.layer('body').add(p));
-    return S;
-  },
-  pot_gold() {      // 금 + 돋을새김 점 띠
-    const S = potShape(R.gold, MAT.metal);
-    spots(S, 'body', [30, 36, 42, 48, 54, 60, 66].map(x => [x, 92.5, 1.3]), 4);
-    return S;
-  },
-};
+// 화분은 pot3d.mjs(3D로 비춰 그림, 식물 뒤·앞 두 장)

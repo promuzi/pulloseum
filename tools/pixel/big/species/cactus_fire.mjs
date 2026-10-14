@@ -14,7 +14,7 @@ export default function cactusFire() {
   zigzag(S, [58, 36], [61, 68], 6, 1.1, '#f79617', body.z);
   zigzag(S, [48, 58], [47, 74], 3, 1, '#f9c22b', body.z);
   // 눈
-  eyes(S, [[41, 44], [51, 44]]);
+  eyes(S, [[41, 44], [52, 44]], { style: 'ember', g: '#f79617', c: '#fbff86' });   // 달아오른 매서운 눈 — 반격하는 벽
   // 불: 정수리 셋 + 팔 끝
   flame(S, 'fire', { base: [44, 34], tip: [36, 12], bend: [36, 24], width: 4.6 });
   flame(S, 'fire', { base: [52, 33], tip: [59, 7], bend: [61, 21], width: 5.2 });

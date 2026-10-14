@@ -22,7 +22,7 @@ export default function flowerFire() {
   const coal = S.layer('coal', { ramp: R.char, ...MAT.petal, lip: 0, bias: 0.12 }).add(ellipse(47, 33, 8.5, 7, { hz: 5 }));
   zigzag(S, [40, 31], [42, 39], 3, 1, '#f9c22b', coal.z);
   zigzag(S, [54, 30], [52, 38], 3, 1, '#f9c22b', coal.z);
-  eyes(S, [[43, 30], [50, 30]]);
+  eyes(S, [[42, 30], [49, 30]], { style: 'iris' });   // 속에 불씨가 도는 눈 — 터지기 직전
   // 수술 + 불씨
   for (const e of [[30, 10], [62, 8], [74, 22]]) { S.line([47, 30], e, '#9e4539'); S.paint([e, [e[0], e[1] - 1]], '#f9c22b'); }
   S.paint([[20, 4], [84, 6], [6, 30], [90, 34], [40, 2]], '#fb6b1d');

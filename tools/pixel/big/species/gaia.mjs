@@ -24,6 +24,6 @@ export default function gaia() {
   // 이끼
   const moss = S.layer('moss', { ramp: R.grass, ...MAT.leaf, spec: null });
   for (const [x, y, rx] of [[25, 29.5, 6], [36, 29, 4], [48, 25, 4.5], [76, 27.5, 4], [33, 62.5, 3.5], [62, 62, 4]]) moss.add(ellipse(x, y, rx, 1.8, { hz: 1.2 }));
-  eyes(S, [[41, 36], [52, 36]]);
+  eyes(S, [[42, 36], [52, 36]], { style: 'glint', g: '#fbb954', c: '#fbff86' });   // 이마 그늘 속 작은 호박빛 — 오래된 골렘
   return S;
 }

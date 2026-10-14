@@ -24,6 +24,6 @@ export default function flowerWind() {
   S.layer('disk', { ramp: R.wind, ...MAT.petal, bias: 0.06 }).add(ellipse(57, 30, 7.5, 6, { hz: 4.5 }));
   for (const [b, t] of [[[13, 44], [5, 41]], [[20, 63], [10, 61]], [[46, 6], [38, 3]], [[8, 55], [2, 52]]])
     leaf(S, 'loose', { ...P, base: b, tip: t, width: 1.7, teeth: 0, rib: false });
-  eyes(S, [[53, 28], [59, 28]]);
+  eyes(S, [[53, 28], [59, 28]], { style: 'side' });   // 바람 쪽으로 곁눈질
   return S;
 }

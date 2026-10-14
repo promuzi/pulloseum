@@ -22,6 +22,6 @@ export default function aqua() {
   // 물방울: 꽃잎 끝에서 떨어지는 한 방울 + 반짝임
   S.layer('drop', { ramp: R.water, ...MAT.gel }).add(ellipse(17, 39, 1.6, 2.3, { hz: 1.6 }));
   S.paint([[27, 26], [66, 16], [70, 26], [35, 33]], '#ffffff');
-  eyes(S, [[41, 54], [52, 54]]);
+  eyes(S, [[40, 55], [52, 55]], { style: 'calm', k: '#323353' });   // 감은 눈 — 치유하는 평온함
   return S;
 }

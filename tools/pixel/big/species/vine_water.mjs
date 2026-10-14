@@ -27,6 +27,6 @@ export default function vineWater() {
   // 잎 끝 물방울
   const dr = S.layer('drop', { ramp: R.water, ...MAT.gel });
   for (const [x, y] of [[8, 9], [89, 9], [92, 59]]) dr.add(ellipse(x, y, 1.5, 2.1, { hz: 1.5 }));
-  eyes(S, [[38, 21], [46, 21]]);
+  eyes(S, [[37, 21], [46, 21]], { style: 'sleepy', l: '#484a77' });   // 반쯤 감긴 눈 — 느긋하게 빨아들이는
   return S;
 }

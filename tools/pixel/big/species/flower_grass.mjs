@@ -43,6 +43,6 @@ export default function flowerGrass() {
   leaf(S, 'shield', { base: [46, 59], tip: [13, 54], bend: [27, 63], width: 9.5, at: 0.45, full: 0.7, baseW: 1.6, teeth: 12, serr: 0.1, fold: 0.6, veins: 5 });
 
   // 눈(투구 틈 안쪽 얼굴)
-  eyes(S, [[39, 27], [50, 27]]);
+  eyes(S, [[38, 27], [50, 27]], { style: 'flat' });   // 납작한 눈 — 진지한 기사
   return S;
 }
