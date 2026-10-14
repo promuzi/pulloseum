@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2e222f">
+<title>풀로세움</title>
+<style>
+@font-face{font-family:Pretendard;font-weight:600;font-display:block;src:url('../assets/fonts/Pretendard-SemiBold.woff2') format('woff2');}
+@font-face{font-family:Pretendard;font-weight:700;font-display:block;src:url('../assets/fonts/Pretendard-Bold.woff2') format('woff2');}
+@font-face{font-family:Pretendard;font-weight:800;font-display:block;src:url('../assets/fonts/Pretendard-ExtraBold.woff2') format('woff2');}
+@font-face{font-family:Pretendard;font-weight:900;font-display:block;src:url('../assets/fonts/Pretendard-Black.woff2') format('woff2');}
+html,body{margin:0;height:100%;background:#1a1420;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+#screen{display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="screen"></canvas></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

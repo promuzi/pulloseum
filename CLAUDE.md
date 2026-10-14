@@ -32,6 +32,7 @@
 - 빌드 과정 없음. 순수 HTML/CSS/JS(바닐라).
 
 ## 구조 (중요)
+- 🆕 **`v2/` = 전면 도트 재제작판(2026-10-14~, 옛 `index.html`은 그대로 라이브).** 진입 `v2/src/main.js`, 장면 `v2/src/scenes/`, 그림 `v2/src/art/`(팔레트·아이콘·UI·배경), 촬영 `node tools/shots/v2shots.mjs --label <이름>`, 식물 PNG `node tools/pixel/export.mjs`. 규칙: 그림은 정수 칸 도트, 글자는 프리텐다드 고해상도, 색은 `art/palette.js`에서만. 첫 출시 = 3v3·미션·변이 카드 제외. 결정·현황 = CHANGELOG 2026-10-14.
 - ⚠️ **문서 속 `~NNNN` 줄번호는 근사치이며 자주 어긋난다**(index.html이 빠르게 커짐 — 현재 ~14,700줄). 위치는 줄번호가 아니라 **심볼명 grep**으로 찾을 것(예: `grep -n "applyVariantIdentity" index.html`).
 - ⚠️ **같은 함수가 여러 번 재정의되기도 한다 — 마지막 정의가 활성(나머지는 죽은 코드).** 함수 수정 전 `grep -n "function 이름\|이름 = function"`로 **라이브 정의(맨 마지막)** 확인. 구버전을 고치면 화면에 안 보인다(2026-06-26 탐사 계획이 죽은 `renderShipModRoom`/`executeExploration`을 겨냥해 헛수고한 사례). 죽은 함수 삭제 시 **`'use strict'`라 `function foo(){}` 선언을 지우면 이후 `foo = function(){}` 재할당이 깨진다** → 선언 보존용 빈 스텁을 남길 것. (참조 그래프로 "닫힌 죽은 클러스터" 증명 후 콘텐츠-앵커 splice로 삭제)
 - **`index.html`** — 게임 전체가 이 한 파일에 들어 있음. CSS·JS·**게임 데이터 전부 인라인**.

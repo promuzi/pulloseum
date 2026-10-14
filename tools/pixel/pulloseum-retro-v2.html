@@ -75,15 +75,8 @@ h1{font-family:var(--font-display);font-weight:400;font-size:38px;line-height:1.
 <script src="renderer-v2.js"></script>
 <script>
 'use strict';
-const HINT = { tree_fire: 'fire', aqua: 'water', gaia: 'grass', thorn: 'grass', spore_cap: 'grass' };
-/* 종별 재질 오버라이드 = 보조 램프. 속성 hue를 침범하지 않게 나무껍질·바위·크림 대는 중성 램프로 */
-const MAP = {
-  tree_fire: {},
-  gaia: { '#9a8f7a': ['gray',4], '#6e6656': ['gray',3], '#c9c0ad': ['light',3], '#f0c54a': ['bolt',3], '#fff2b0': ['bolt',4], '#8fbf4a': ['grass',3] },
-  thorn: { '#f1e6c8': ['light',3] },
-  spore_cap: { '#e8dcb5': ['light',3], '#b9a878': ['light',2], '#8b7d55': ['light',1], '#fff8e0': ['light',4] },
-  aqua: {}
-};
+const HINT = SPR_HINT; /* 종별 렌더 설정은 sprites-data.js(SPR_HINT·SPR_MAP)가 정본 */
+const MAP = SPR_MAP;
 const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
 function raster(svg){
   return new Promise(res => { const img = new Image(); img.onload = () => {

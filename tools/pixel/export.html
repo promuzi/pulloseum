@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>도트 스프라이트 내보내기</title>
+<body style="background:#222">
+<script src="sprites-data.js"></script>
+<script src="renderer-v2.js"></script>
+<script>
+'use strict';
+const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+function raster(svg){
+  return new Promise(res => { const img = new Image(); img.onload = () => {
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0, W, H);
+    const d = x.getImageData(0, 0, W, H), p = d.data; for (let i = 3; i < p.length; i += 4) p[i] = p[i] < 128 ? 0 : 255; x.putImageData(d, 0, 0); res(c);
+  }; img.onerror = () => res(null); img.src = svgUrl(svg); });
+}
+// 식물 = renderV2 전 과정, 화분 = 팔레트 양자화만(테라코타 확정본과 같은 설정)
+window.__export = async function(){
+  const out = {};
+  for (const k of Object.keys(SPR)) { const base = await raster(SPR[k].svg); out[k] = renderV2(base, { hint: SPR_HINT[k], map: SPR_MAP[k] }).toDataURL('image/png'); }
+  for (const k of Object.keys(POTS)) { const base = await raster(POTS[k]); out[k] = renderV2(base, { hint: POT_HINT[k], groundY: 99, rim: false, outline: false, clean: false }).toDataURL('image/png'); }
+  return out;
+};
+// 검토용 한 장: 화분 + 식물, 이름표
+window.__sheet = async function(keys, scale){
+  const imgs = {};
+  const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
+  const all = await window.__export();
+  for (const k of Object.keys(all)) imgs[k] = await load(all[k]);
+  const cols = Math.min(keys.length, 6), rows = Math.ceil(keys.length / cols);
+  const cw = W * scale + 24, ch = H * scale + 40;
+  const c = document.createElement('canvas'); c.width = cols * cw + 24; c.height = rows * ch + 24;
+  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  x.fillStyle = '#2b2238'; x.fillRect(0, 0, c.width, c.height);
+  keys.forEach((k, i) => {
+    const X = 12 + (i % cols) * cw + 12, Y = 12 + Math.floor(i / cols) * ch + 8;
+    x.fillStyle = '#3e3546'; x.fillRect(X - 6, Y - 4, W * scale + 12, H * scale + 34);
+    x.drawImage(imgs.pot_terra, X, Y, W * scale, H * scale);
+    x.drawImage(imgs[k], X, Y, W * scale, H * scale);
+    x.fillStyle = '#c7dcd0'; x.font = '600 16px "Malgun Gothic", sans-serif'; x.textAlign = 'center';
+    x.fillText((SPR[k] ? SPR[k].name : k), X + W * scale / 2, Y + H * scale + 22);
+  });
+  return c.toDataURL('image/png');
+};
+</script>
