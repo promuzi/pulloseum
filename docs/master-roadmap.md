@@ -6,7 +6,7 @@
 >
 > ⚠️ **갱신 의무(가장 중요):** 코드/데이터/기획이 바뀌면 **그 변경을 이 문서(또는 해당 하위 문서)에 즉시 반영하고 함께 푸시**한다. 놓치는 것 없이, 항상 실시간으로. 규칙은 §6 참고.
 
-- **최종 갱신:** 2026-07-02
+- **최종 갱신:** 2026-10-15
 - **별칭:** 이 문서를 **"마스터 로드맵" = "로드맵" = "마스터 문서"** 무엇으로 부르든 전부 이 파일(`docs/master-roadmap.md`)을 가리킨다.
 - **📱 모바일에서 보기:** GitHub에서 열면 마크다운이 예쁘게 렌더링된다(푸시만 돼 있으면 항상 최신) → <https://github.com/promuzi/pulloseum/blob/main/docs/master-roadmap.md> (브라우저 즐겨찾기 또는 GitHub 앱에서 파일 열기).
 - **게임 실행:** [index.html](../index.html) (브라우저 더블클릭, 빌드 없음 — 전부 단일 파일에 인라인)
@@ -20,7 +20,7 @@
 |---|------|------|-------------|----------|
 | 1 | 식물 종류 확장 | 🟢 base 35 + 변이 140 + 탐사 분포 / 🟢 **컨셉+스킬확장: P0 엔진 6종+인프라 + 전 175 개체 단계별 컨셉 스킬(40 손작업+660 생성기) + 광신 자해화상 완료** | **밸런스 점검 · 깊은 개체별 큐레이션** (§4-1-A) | [species](species-system-guide.md) · [concept-skill](superpowers/specs/2026-06-26-individual-concept-skill-expansion-design.md) · [plan](superpowers/plans/2026-06-26-individual-concept-skill-expansion.md) |
 | 2 | 양육/열매 시스템 ⭐ | ✅ **구현 완료**(개봉연출 통일까지) | (후속) 전투/랜덤상자 물·비료 추가 공급원·밸런스 튜닝 | [nurture spec](superpowers/specs/2026-06-24-nurture-fruit-system-design.md) · [plan](superpowers/plans/2026-06-24-nurture-fruit-system.md) |
-| 3 | 도트 UI 적용 | 🟢 **레트로 도트 스프라이트 5종 반입(2026-09-10)** — 48×56 레시피 렌더러 v2(`tools/pixel/`), `SPRITE_OVERRIDES` 5종+테라코타 화분, 정수배 표시 `snapPixelSize` | 나머지 30종 레시피 → 단계별 그림 → 대기 프레임 → UI 도트 통일 | [sprite-quality-research](sprite-quality-research.md) · [pixel-art](pixel-art-ui-roadmap.md) |
+| 3 | 도트 UI 적용 | 🟢 **v2 큰 판 식물 12종(2026-10-15)** — 코덱스 컨셉 → 96×112 도트 변환(`tools/pixel/big/convert.mjs`, 순서 = 스킬 `plant-sprite`), 대기 동작·깜빡임·종별 특성 효과·공격 12종·변이 연출 시제품·휴대폰용 MP4. 옛 48×56 5종(2026-09-10)은 옛 `index.html`용 | **v2 무대 도트 크기 결정(사용자)** → v2 전투에 대기·공격 시트 연결 → 나머지 11종 생장 단계 | [이어받기·밤샘 계획](superpowers/plans/2026-10-15-v2-plant-motion-fx-overnight.md) · [전투 연출](superpowers/specs/2026-10-15-v2-battle-presentation-design.md) · [변이 연출](superpowers/specs/2026-10-15-v2-mutation-staging-design.md) · [sprite-quality-research](sprite-quality-research.md) |
 | 4 | 함선/길드/방꾸 → **오픈월드** | 🟡 함선 기초 有 | 타일 워킹 → 오픈월드 확장, 가구 기능 연결 | — |
 | 5 | 애니메이션 | 🟡 일부 有 | 도입부/전환 연출(3번 연동) | [pixel-art §4](pixel-art-ui-roadmap.md) |
 | 10 | 전투 화면 UI 수정 | 🟡 **2차 개편까지 완료**(2026-06-25 포켓몬식 개편→판정 오버레이 재개편 — 표가 "미착수"로 남아있던 stale 정정 2026-07-02) | 추가 다듬기·연출 보강(사용자 피드백 대기) | [judge-overlay](superpowers/specs/2026-06-25-battle-judge-overlay-rework-design.md) |

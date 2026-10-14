@@ -1,6 +1,7 @@
 # 풀로세움 (Pulloseum) — 프로젝트 안내
 
 > 다른 PC에서 이 폴더를 Codex로 열면 이 파일을 먼저 읽고 맥락을 파악하세요.
+> **이어받기(v2 식물 그림, 2026-10-15) = `C:\dev\pulloseum\docs\superpowers\plans\2026-10-15-v2-plant-motion-fx-overnight.md`** — 맨 위 「최근 세션 맥락」부터. 컨셉 → 도트 변환 순서·검수 = `.claude/skills/plant-sprite/SKILL.md`.
 
 ## ★ 개발 방향은 여기부터 (작업 시작 전 반드시 먼저 읽을 것)
 - **마스터 개발 로드맵 → [docs/master-roadmap.md](docs/master-roadmap.md)** — 현재 구현 현황·앞으로의 방향·확정 결정·**모든 하위 문서로 가는 지도**가 한곳에 모인 **유일 허브(SSOT)**. 어떤 기기/AI로 작업하든 이 파일을 먼저 읽고 현황을 파악한다. 세부 수치/설계는 그 안의 "문서 지도"를 타고 하위 문서로 들어간다.

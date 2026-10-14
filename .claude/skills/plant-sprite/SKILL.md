@@ -10,7 +10,7 @@ description: 풀로세움 v2 식물 도트 그림을 만들 때(새 종 추가·
 
 ## 1. 컨셉(코덱스) — 비용: 새로 그리기 장당 5시간 한도 약 1~3%p, 참고 그림을 주고 그리기·편집 장당 약 4~8%p
 - 새 종 = **처음부터 누끼(실제 알파)·화분·흙·그림자 없이, 밑동은 흙 높이에서 깔끔히 끝나게** 요청(`concept\PROMPT.md` 첫 줄 지시). 저장 `concept\cut\<키>.png`.
-- 옛 컨셉(화분 있음)은 그대로 두고, 화분 색 지우기로 밑동이 깨지면 그 종만 **코덱스 편집 누끼**(`concept\CUT_PROMPT*.md` 형식 — "식물은 그대로, 화분·흙·자갈·그림자만 지우고 밑동을 흙 선에서 마감, 위치 이동 금지").
+- 옛 컨셉(화분 있음)은 그대로 두고, 화분 색 지우기로 밑동이 깨지면 그 종만 **코덱스 편집 누끼**(`concept\CUT_PROMPT*.md` 형식 — "식물은 그대로, 화분·흙·자갈·그림자만 지우고 밑동을 흙 선에서 마감, 위치 이동 금지"). 위치가 그대로라 눈 좌표·흙 기준은 원래 컨셉에서 잰 값을 그대로 쓴다.
 - 실행: `node "C:/dev/codex-plugin-cc/plugins/codex/scripts/codex-companion.mjs" task --write --cwd "C:/dev/pulloseum" --prompt-file "tools/pixel/big/concept/<요청>.md"`(백그라운드). 사용량은 `~\.codex\sessions\...\rollout-*.jsonl`의 token_count(rate_limits)로 전후를 재서 보고.
 
 ## 2. 변환 + 검수 (매번, 사용자에게 보내기 전에 직접 본다)
@@ -19,7 +19,7 @@ node tools/pixel/big/convert.mjs <키…>                 # 96×112 변환(축�
 node tools/pixel/big/roster.mjs <키…>                  # 화분에 심은 전체 검수판
 node tools/pixel/big/roster.mjs --guide <키…>          # 화분 축(세로)·흙선(가로) — 밑동이 축 위에 있나
 ```
-- **없던 것·빠진 것:** 입처럼 보이는 눈, 끊긴 가는 줄기·깃털(→ `convert.mjs` `TUNE[키].fill` 0.3쯤), 사라진 눈, 흙 위 검은 점.
+- **없던 것·빠진 것:** 입처럼 보이는 눈, 끊긴 가는 줄기·깃털(→ `convert.mjs` `TUNE[키].fill` 0.3쯤), 사라진 눈, 흙 위 검은 점, 잘린 밑동(어두운 대가 흙 지우기에 같이 지워짐 → 그 종은 누끼, 2026-10-15 버섯), 경계에 낀 엉뚱한 색 점(→ `convert.mjs <키> --probe=x,y` 로 그 칸 재질 확인, 2026-10-15 수련 빨간 점).
 - **가상 3D 배치:** 기준 = 원래 컨셉 화분의 흙 타원 가운데(가로 = 화분 몸통 윤곽 가운데). 누끼도 원래 컨셉에서 잰다. 몸 축 3~20° 기울면 자동으로 바로 세움.
 - **흙 경계·앞뒤:** `potblend.mjs`가 밑동을 흙으로 덮고(들쭉날쭉), 테 바깥까지 뻗은 덩어리(돌주먹 등)만 화분 앞에 둔다. 밑동 확대로 확인.
 
@@ -38,6 +38,8 @@ node tools/pixel/big/roster.mjs --guide <키…>          # 화분 축(세로)·
 - 공격: `convert.mjs --attack --mp4 <키…>` → `attacks_all.mp4`·`attacks_sheet.png`. 종별 기술은 `attack.mjs` `ATTACKS`(kind·move·색·status). 큰 효과는 어두운 테두리 층(o), 입자는 p 층.
 - 변이: `convert.mjs --forms --mp4 <키>` → `<키>_forms.mp4`·`_reveal.mp4`. 설계 = `docs\superpowers\specs\2026-10-15-v2-mutation-staging-design.md`.
 - 검토 정지 그림: `--frames=a,b,c`(대기·공격 모두).
+- 흔들림은 큰 원본을 매 장 다시 줄여 만든다. 줄 단위 정수 이동만 하면 가로 이음선이 움직여 보이고, 매 장 새로 줄이기만 하면 칸이 끓는다 → 앞 장 기준 문턱(hysteresis) + 변위가 고른 곳은 정수 이동 섞기(`mixedMaps`). 움직임을 고칠 때 이 둘을 빼지 않는다.
+- 여러 명령을 이어 백그라운드로 굽는 중에 `convert.mjs`를 고치면 뒤 명령이 고친 파일을 읽는다 → 고친 뒤 `node --check tools/pixel/big/convert.mjs`부터.
 
 ## 6. 전달·기록
 - 사용자에게는 **SendUserFile로 MP4(+검수판 PNG)** — 휴대폰에서 재생되는 H.264(블렌더로 구움, `video.mjs`).
