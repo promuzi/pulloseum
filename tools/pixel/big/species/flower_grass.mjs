@@ -1,11 +1,11 @@
 // 페탈로즈(flower_grass) — 꽃잎 투구를 쓴 장미 기사. 형태·단서는 tools/pixel/sprites-data.js 의 48×56 판과 같다:
 //   머리(봉오리)가 몸보다 크다 · 오른쪽 잎 칼날이 윤곽 밖으로 솟는다 · 투구 틈 = 얼굴(점눈 둘) · 왼쪽 잎은 방패처럼 내림 · 줄기에 가시
-import { plant, R, MAT, stem, leaf, thorns, petal, hole, eyes } from '../parts.mjs';
+import { plant, R, MAT, stem, leaf, thorns, petal, eyes } from '../parts.mjs';
 import { ellipse } from '../engine.mjs';
 
 export default function flowerGrass() {
   const S = plant();
-  const slit = ellipse(45, 28.5, 15, 3.1);   // 투구 눈구멍 — 앞 꽃잎들을 이 모양으로 도려낸다
+  const slit = ellipse(45, 28.5, 15, 3.6);   // 투구 틈 — 앞 꽃잎들을 이 모양으로 도려내 안쪽 얼굴이 보이게
 
   // 머리 뒤로 보이는 꽃받침 두 장
   leaf(S, 'sepalB', { base: [42, 41], tip: [21, 47], bend: [30, 39], width: 3.2, at: 0.3, rib: false });
@@ -18,7 +18,9 @@ export default function flowerGrass() {
 
   // 머리 = 닫힌 장미 봉오리 투구(뒤 덩이 → 눈구멍 속 → 뾰족한 속봉오리 → 감싼 속꽃잎 둘 → 양옆 겉꽃잎 → 턱 꽃잎)
   petal(S, 'head', 45, 25, 20, 21, { hz: 16, bias: -0.12, vgrad: 0.2 });
-  hole(S, 'slit', 45, 28.5, 16, 4.6);
+  // 틈 안쪽 = 연분홍 속꽃잎 얼굴(어두운 구멍이 아니라)
+  S.layer('slit', { ramp: ['#a24b6f', '#cf657f', '#ed8099', '#fdcbb0', '#fdcbb0'], amb: 0.4, dif: 0.5, th: [0.3, 0.5, 0.78], dither: 0.06, casts: false })
+    .add(ellipse(45, 28.5, 16, 5, { hz: 4 }));
   leaf(S, 'tip', { base: [46, 20], tip: [48, 1], bend: [43.5, 9], width: 6.5, at: 0.4, full: 0.7, fold: 0.2, rib: false, ramp: R.rose, mat: MAT.petal });
   petal(S, 'wrapR', 53, 15, 9, 11, { rot: 0.45, hz: 8 });
   petal(S, 'wrapL', 39, 14, 8, 10, { rot: -0.5, hz: 7 });
@@ -38,9 +40,9 @@ export default function flowerGrass() {
   stem(S, 'sword', [[47, 60], [53, 57.5], [58.5, 55]], [2.0, 1.8, 1.6]);
 
   // 왼쪽 = 내려 든 방패 잎
-  leaf(S, 'shield', { base: [46, 61], tip: [12, 58], bend: [27, 67], width: 9.5, at: 0.45, full: 0.7, baseW: 1.6, teeth: 12, serr: 0.1, fold: 0.6, veins: 5 });
+  leaf(S, 'shield', { base: [46, 59], tip: [13, 54], bend: [27, 63], width: 9.5, at: 0.45, full: 0.7, baseW: 1.6, teeth: 12, serr: 0.1, fold: 0.6, veins: 5 });
 
-  // 눈
-  eyes(S, [[38, 27], [50, 27]]);
+  // 눈(투구 틈 안쪽 얼굴)
+  eyes(S, [[39, 27], [50, 27]]);
   return S;
 }

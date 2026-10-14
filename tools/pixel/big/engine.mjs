@@ -70,6 +70,49 @@ export function poly(pts, { hz = 3, bev = 2 } = {}) {
   }, [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]);
 }
 
+// 평면 조각(결정 면처럼 한 면이 한 방향만 보게): h = h0 + g·(p − ref)
+export function plane(pts, { h0 = 4, g = [0, 0], ref = pts[0] } = {}) {
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  return prim((px, py) => insidePoly(px, py, pts) ? Math.max(0.05, h0 + g[0] * (px - ref[0]) + g[1] * (py - ref[1])) : null,
+    [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]);
+}
+
+// 직사각형(같은 높이) — 주로 도려내기용
+export function box(x0, y0, x1, y1, h = 1) { return prim(() => h, [x0, y0, x1, y1]); }
+
+// 골 진 기둥(선인장): limb 와 같은 관인데, 둘레 각도에 따라 높이가 오르내려 세로 골·등성이가 생긴다.
+// ribs = 앞에서 보이는 등성이 수, amp = 골 깊이(0~1). 돌려주는 모양의 ridges(n) = 등성이 각도(라디안) 목록
+export function ribbed(pts, radii, { ribs = 5, amp = 0.25, hz = 1 } = {}) {
+  const segs = [];
+  for (let i = 0; i < pts.length - 1; i++) segs.push([pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], radii[i], radii[i + 1]]);
+  const m = Math.max(...radii), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const f = prim((px, py) => {
+    let best = null;
+    for (const [ax, ay, bx, by, ra, rb] of segs) {
+      const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy;
+      const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / l2));
+      const qx = ax + vx * t, qy = ay + vy * t, d = Math.hypot(px - qx, py - qy), r = ra + (rb - ra) * t;
+      if (d > r) continue;
+      const side = vx * (py - ay) - vy * (px - ax) >= 0 ? 1 : -1, th = Math.asin(Math.min(1, d / r)) * side;
+      const h = Math.sqrt(Math.max(0, r * r - d * d)) * hz * (1 - amp * 0.5 * (1 - Math.cos(2 * ribs * th)));
+      if (best === null || h > best) best = h;
+    }
+    return best;
+  }, [Math.min(...xs) - m, Math.min(...ys) - m, Math.max(...xs) + m, Math.max(...ys) + m]);
+  f.ribs = ribs;
+  return f;
+}
+
+// 골 진 공·통(통 선인장): 타원체에 세로 골. 등성이는 둘레 각도로 정해져 몸 윤곽을 따라 휜다.
+export function ribBall(cx, cy, rx, ry, { ribs = 6, amp = 0.3, hz = rx } = {}) {
+  return prim((px, py) => {
+    const u = (px - cx) / rx, v = (py - cy) / ry, q = 1 - v * v, r2 = u * u + v * v;
+    if (r2 > 1 || q <= 0) return null;
+    const th = Math.asin(Math.max(-1, Math.min(1, u / Math.sqrt(q))));
+    return hz * Math.sqrt(1 - r2) * (1 - amp * 0.5 * (1 - Math.cos(2 * ribs * th)));
+  }, [cx - rx, cy - ry, cx + rx, cy + ry]);
+}
+
 // 세로 원통(위아래 반폭이 다른 화분 몸통 등)
 export function taper(cx, y0, y1, w0, w1, { hz = 10 } = {}) {
   const r = Math.max(w0, w1);
@@ -186,21 +229,10 @@ export class Sprite {
     this.layers.push(l);
     return l;
   }
-  paint(pts, color) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), color]); }
-  rect(x, y, w, h, color) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.paints.push([x + i, y + j, color]); }
-  line(a, b, color) {   // 한 칸 굵기 선(브레젠험)
-    let x0 = Math.round(a[0]), y0 = Math.round(a[1]);
-    const x1 = Math.round(b[0]), y1 = Math.round(b[1]);
-    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-    let err = dx + dy;
-    for (;;) {
-      this.paints.push([x0, y0, color]);
-      if (x0 === x1 && y0 === y1) break;
-      const e2 = 2 * err;
-      if (e2 >= dy) { err += dy; x0 += sx; }
-      if (e2 <= dx) { err += dx; y0 += sy; }
-    }
-  }
+  // 직접 찍기. mask(층 번호)를 주면 그 층 위나 빈칸에만 찍는다(앞의 다른 층은 덮지 않음)
+  paint(pts, color, mask) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), color, mask]); }
+  rect(x, y, w, h, color, mask) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.paints.push([x + i, y + j, color, mask]); }
+  line(a, b, color, mask) { for (const [x, y] of linePx(a, b)) this.paints.push([x, y, color, mask]); }
 
   // → { lid: 층 번호(-1 빈칸), tone: 명암 1~4, ok: 외곽선 종류 }
   // ok: 0 없음, 1 안쪽 경계(램프 0), 2 밑면(잉크), 3 빛 쪽 실루엣, 4 그늘 쪽 실루엣, 5 말린 끝(층 lip 단)
@@ -217,6 +249,7 @@ export class Sprite {
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
         const px = x + 0.5, py = y + 0.5;
         if (lay.cuts.length && lay.cuts.some(c => c(px, py) !== null)) continue;
+        if (lay.skip && lay.skip.has(y * W + x)) continue;   // 점무늬로 비우는 칸(안개 등) — 뒤 층이 비친다
         let m = -Infinity, n = 0;
         const hs = [];
         for (const p of lay.prims) { const v = p(px, py); if (v !== null) { hs.push(v); if (v > m) m = v; n++; } }
@@ -315,7 +348,12 @@ export function colorize(sp, r, { selout = true } = {}) {
     }
     out[i] = c;
   }
-  for (const [x, y, c] of sp.paints) if (x >= 0 && y >= 0 && x < W && y < H) out[y * W + x] = c;
+  for (const [x, y, c, m] of sp.paints) {
+    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const i = y * W + x;
+    if (m !== undefined && r.lid[i] >= 0 && r.lid[i] !== m) continue;
+    out[i] = c;
+  }
   return out;
 }
 

@@ -1,49 +1,52 @@
 // 큰 판 식물 굽기: node tools/pixel/big/make.mjs [키 ...]   (키를 빼면 species/ 의 전부)
 // 결과 = tools/pixel/big/out/
-//   <키>_96x112.png      식물만(투명, selout 외곽선) — 게임 반입 후보
-//   <키>_sheet.png       검토판(3배): 옛 48×56(×2) | 새 그림 | 실루엣 — 전부 테라코타 화분 포함
-//   pot_terra_96x112.png 같은 엔진으로 그린 화분
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+//   <키>_96x112.png        식물만(투명) — 게임 반입 후보
+//   pot_<종류>_96x112.png  화분 다섯(같은 엔진)
+//   roster_sheet.png        검토판: 종 전부(테라코타 화분 위, 2배) · roster_sil.png 같은 배치의 실루엣 · pots_sheet.png 화분 다섯
+import { writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Img, colorize, decodePNG } from './engine.mjs';
-import { W, H, potTerra } from './parts.mjs';
+import { Img, colorize } from './engine.mjs';
+import { W, H, POTS } from './parts.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url)), repo = resolve(here, '..', '..', '..'), outDir = resolve(here, 'out');
+const here = dirname(fileURLToPath(import.meta.url)), outDir = resolve(here, 'out');
 mkdirSync(outDir, { recursive: true });
+const ORDER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap'];
+const all = readdirSync(resolve(here, 'species')).filter(f => f.endsWith('.mjs')).map(f => f.slice(0, -4));
 const keys = process.argv.slice(2).filter(a => !a.startsWith('--'));
-const todo = keys.length ? keys : readdirSync(resolve(here, 'species')).filter(f => f.endsWith('.mjs')).map(f => f.slice(0, -4));
+const todo = keys.length ? keys : [...ORDER.filter(k => all.includes(k)), ...all.filter(k => !ORDER.includes(k))];
+const toImg = sp => Img.fromColors(W, H, colorize(sp, sp.render()));
 
-const pot = potTerra(), potImg = Img.fromColors(W, H, colorize(pot, pot.render()));
-writeFileSync(resolve(outDir, 'pot_terra_96x112.png'), potImg.png());
+const pots = {};
+for (const [k, fn] of Object.entries(POTS)) { pots[k] = toImg(fn()); writeFileSync(resolve(outDir, `${k}_96x112.png`), pots[k].png()); }
 
-const Z = 3, PAD = 12, BG = '#323353', EDGE = '#2e222f', LIGHTBG = '#c7dcd0';
+const plants = {};
 for (const key of todo) {
-  const build = (await import(pathToFileURL(resolve(here, 'species', key + '.mjs')).href)).default;
-  const t0 = Date.now(), sp = build(), r = sp.render();
-  const softC = colorize(sp, r), soft = Img.fromColors(W, H, softC);
-  writeFileSync(resolve(outDir, `${key}_96x112.png`), soft.png());
-  const panels = [];
-  const oldP = resolve(repo, 'assets', 'sprites', key + '.png'), oldPot = resolve(repo, 'assets', 'sprites', 'pot_terra.png');
-  if (existsSync(oldP)) {
-    const p = new Img(W, H);
-    if (existsSync(oldPot)) p.blit(decodePNG(readFileSync(oldPot)), 0, 0, 2);
-    p.blit(decodePNG(readFileSync(oldP)), 0, 0, 2);
-    panels.push(p);
-  }
-  const p = new Img(W, H);
-  p.blit(potImg, 0, 0); p.blit(soft, 0, 0);
-  panels.push(p);
-  const sil = new Img(W, H);
-  sil.blit(potImg, 0, 0, 1, EDGE); sil.blit(soft, 0, 0, 1, EDGE);
-  panels.push(sil);
-  const sheet = new Img(PAD + panels.length * (W * Z + PAD), H * Z + PAD * 2, EDGE);
-  panels.forEach((p, i) => {
-    const x = PAD + i * (W * Z + PAD);
-    sheet.fill(x, PAD, W * Z, H * Z, i === panels.length - 1 ? LIGHTBG : BG);
-    sheet.blit(p, x, PAD, Z);
+  const t0 = Date.now(), sp = (await import(pathToFileURL(resolve(here, 'species', key + '.mjs')).href)).default();
+  const cols = colorize(sp, sp.render()), im = Img.fromColors(W, H, cols);
+  plants[key] = im;
+  writeFileSync(resolve(outDir, `${key}_96x112.png`), im.png());
+  // 화분 밖 아래: 흙 높이 근처(y ≥ 66)에서 화분 테두리 폭(x 25~71) 밖에 있는 칸 = 허공에 놓인 것처럼 보이는 부분
+  const out = cols.reduce((n, c, i) => n + (c && Math.floor(i / W) >= 66 && (i % W < 25 || i % W > 71) ? 1 : 0), 0);
+  console.log(`${key.padEnd(13)} 칸 ${cols.filter(Boolean).length} · 색 ${new Set(cols.filter(Boolean)).size} · 층 ${sp.layers.length} · 화분 밖 아래 ${out} · ${Date.now() - t0}ms`);
+}
+
+// 검토판: 칸마다 화분 + 식물, Z배, COLS열
+function sheet(items, Z, COLS, bg, tint = null) {
+  const PAD = 8, rows = Math.ceil(items.length / COLS);
+  const S = new Img(PAD + COLS * (W * Z + PAD), PAD + rows * (H * Z + PAD), '#2e222f');
+  items.forEach((layers, i) => {
+    const x = PAD + (i % COLS) * (W * Z + PAD), y = PAD + Math.floor(i / COLS) * (H * Z + PAD), p = new Img(W, H);
+    for (const im of layers) p.blit(im, 0, 0, 1, tint);
+    S.fill(x, y, W * Z, H * Z, bg);
+    S.blit(p, x, y, Z);
   });
-  writeFileSync(resolve(outDir, `${key}_sheet.png`), sheet.png());
-  const cols = new Set(softC.filter(Boolean)), filled = softC.filter(Boolean).length;
-  console.log(`${key}: ${W}×${H} 칸 ${filled} · 색 ${cols.size} · 층 ${sp.layers.length} · ${Date.now() - t0}ms → ${resolve(outDir, key + '_sheet.png')}`);
+  return S;
+}
+if (!keys.length || process.argv.includes('--sheet')) {
+  const list = Object.keys(plants).map(k => [pots.pot_terra, plants[k]]), z = +(process.argv.find(a => a.startsWith('--z=')) || '--z=2').slice(4);
+  writeFileSync(resolve(outDir, 'roster_sheet.png'), sheet(list, z, Math.max(1, Math.min(4, Math.floor(1600 / (W * z)))), '#323353').png());
+  writeFileSync(resolve(outDir, 'roster_sil.png'), sheet(list, 1, 6, '#c7dcd0', '#2e222f').png());
+  writeFileSync(resolve(outDir, 'pots_sheet.png'), sheet(Object.values(pots).map(p => [p]), 2, 5, '#323353').png());
+  console.log('검토판 →', resolve(outDir, 'roster_sheet.png'));
 }
