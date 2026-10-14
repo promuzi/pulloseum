@@ -22,6 +22,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), measure = args.includes('--measure'), anim = args.includes('--anim'), keys = args.filter(a => !a.startsWith('--'));
 const EYES_ON = args.includes('--eyes');   // 눈 덧그리기(EYE 틀) — 사용자 판단으로 끔(2026-10-15 "눈 인식을 못하는 것 같으니 그냥 둬"). 켜려면 --eyes
 const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고, 깜빡일 때만 실제 눈 칸을 눈꺼풀로 덮는다(2026-10-15 사용자 "그림 바꾸지 말고 실제 눈을 인식해서")
+const MP4 = args.includes('--mp4');        // 움직임을 GIF와 함께 휴대폰에서도 재생되는 MP4로(사용자가 원격 휴대폰으로 확인 — video.mjs)
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 
 // 눈 찾기: 아주 어두운 덩어리(눈동자) 중 둘레가 훨씬 밝은 것(홍채·흰자·반짝임) → 크기·높이가 비슷하고 옆으로 나란한 한 쌍
@@ -129,6 +130,11 @@ function load(key, file = null) {
   let top = im.h, bot = 0, left = im.w, right = 0;
   for (let i = 0; i < n; i++) if (!isBg[i]) { const x = i % im.w, y = (i - x) / im.w; top = Math.min(top, y); bot = Math.max(bot, y); left = Math.min(left, x); right = Math.max(right, x); }
   if (cut) S = { cx: (left + right) / 2, cy: bot, a: (right - left) / 6, b: 0 };   // 누끼: 식물 전체 폭의 가운데를 판 가운데로
+  if (file) {   // 생장 단계 누끼: 밑동(맨 아래 3%) 가운데를 판 가운데로 — 단계마다 줄기가 화분 같은 자리에서 나오게
+    let bx = 0, bn = 0;
+    for (let y = Math.floor(bot - (bot - top) * 0.03); y <= bot; y++) for (let x = 0; x < im.w; x++) if (!isBg[y * im.w + x]) { bx += x; bn++; }
+    if (bn) S.cx = bx / bn;
+  }
   // 눈: 지정(eyes.mjs)한 대략 자리 근처(반지름 60)에서 가장 어두운 칸들의 무게중심으로 맞춘다
   const spec = EYES_ON || BLINK ? EYES[key] : null, eyes = [];
   if (spec && !file) for (const [ex, ey] of spec.src) {
@@ -378,24 +384,35 @@ const cvs = stages ? [] : keys.map(k => {
   return cv;
 });
 
-// --stages <키>: 생장 단계 누끼(concept/stages/<키>_<단계>.png)를 단계마다 판에 맞춰 변환해 한 줄로(새싹 → 새잎 → 꽃봉오리 → 성체 → 만개)
-// 크기는 거의 같게(사용자 2026-10-15 "어린 단계가 너무 작다 — 크기는 비슷하게, 외형으로 차이") — 단계별 키 비율 FIT
-const FIT = { sprout: 0.86, juvenile: 0.9, growing: 0.95, mature: 1, evolved: 1 };
+// --stages <키>: 생장 3단계 — 어린(young) → 자람(teen) → 성체(mature = 원래 컨셉). 어린·자람은 코덱스가 단계마다 따로 디자인해 그린 누끼(concept/stages/<키>_<단계>.png)
+// 크기도 코덱스가 그린 그대로 — 성체와 같은 축척(원본 한 칸당 판 칸 수)으로 줄이고 단계별로 키우거나 줄이지 않는다
+// (2026-10-15 사용자 "생장단계 임의로 너가 그리지 말고 코덱스로 각각", "3개로 줄이자" — 게임의 6단계와 잇는 법은 CHANGELOG)
+const STAGES = ['young', 'teen', 'mature'];
 if (stages) {
-  const key = keys[0], pot = renderPot(POT3.pot_terra), mature = convert(key), list = [];
-  for (const st of ['sprout', 'juvenile', 'growing', 'mature', 'evolved']) {
-    const f = resolve(here, 'concept', 'stages', `${key}_${st}.png`);
-    const cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, fit: FIT[st] }) : null;
+  const key = keys[0], pot = renderPot(POT3.pot_terra), mature = convert(key), list = [], srcs = [];
+  for (const st of STAGES) {
+    const f = st === 'mature' ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'stages', `${key}_${st}.png`);
+    const cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s }) : null;
     if (!cv) continue;
     const im = paint(cv);
     writeFileSync(resolve(here, 'out', 'conv', `${key}_${st}_96x112.png`), im.png());
-    list.push(im);
-    console.log(`${st.padEnd(9)} 눈 ${cv.eyes.length ? 'O' : 'X'}`);
+    list.push(im); srcs.push(decodePNG(readFileSync(f)));
+    let t = H, l = W, r = 0, out = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (im.data[(y * W + x) * 4 + 3] > 127) { t = Math.min(t, y); l = Math.min(l, x); r = Math.max(r, x); if (y > P.cy - P.b * 1.5 && y < P.cy && Math.abs(x + 0.5 - P.cx) > P.a + 1) out++; }
+    console.log(`${st.padEnd(7)} 키 ${(P.cy - t).toFixed(0)}칸 · 폭 ${l}~${r} · 화분 밖 아래 ${out}칸`);
   }
-  const Z = 3, sheet = new Img(8 + list.length * (W * Z + 8), H * Z + 16, '#2e222f');
-  list.forEach((im, k) => { const p = new Img(W, H); p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0); sheet.fill(8 + k * (W * Z + 8), 8, W * Z, H * Z, '#323353'); sheet.blit(p, 8 + k * (W * Z + 8), 8, Z); });
+  // 위: 코덱스 그림(성체는 원래 컨셉) / 아래: 도트 변환 + 3D 화분
+  const Z = 3, PW = W * Z, sheet = new Img(8 + list.length * (PW + 8), 8 + PW + 8 + H * Z + 8, '#2e222f');
+  const BG = [0x32, 0x33, 0x53];   // 줄인 그림을 판 바탕색 위에 반투명 가장자리까지 섞어 얹는다
+  const shrink = (src, w, h) => { const o = new Img(w, h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const x0 = Math.floor(x * src.w / w), x1 = Math.max(x0 + 1, Math.floor((x + 1) * src.w / w)), y0 = Math.floor(y * src.h / h), y1 = Math.max(y0 + 1, Math.floor((y + 1) * src.h / h)), s3 = [0, 0, 0]; let a = 0; for (let j = y0; j < y1; j++) for (let i = x0; i < x1; i++) { const q = (j * src.w + i) * 4, al = src.data[q + 3]; for (let c = 0; c < 3; c++) s3[c] += src.data[q + c] * al; a += al; } const full = 255 * (x1 - x0) * (y1 - y0); for (let c = 0; c < 3; c++) o.data[(y * w + x) * 4 + c] = Math.round((s3[c] + BG[c] * (full - a)) / full); o.data[(y * w + x) * 4 + 3] = 255; } return o; };
+  list.forEach((im, k) => {
+    const X = 8 + k * (PW + 8), p = new Img(W, H);
+    sheet.fill(X, 8, PW, PW, '#323353'); sheet.blit(shrink(srcs[k], PW, PW), X, 8);
+    p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0);
+    sheet.fill(X, 16 + PW, PW, H * Z, '#323353'); sheet.blit(p, X, 16 + PW, Z);
+  });
   writeFileSync(resolve(here, 'out', 'conv', `${key}_stages.png`), sheet.png());
-  console.log('생장 단계 →', resolve(here, 'out', 'conv', `${key}_stages.png`));
+  console.log('생장 단계 →', resolve(here, 'out', 'conv', `${key}_stages.png`), '· 축척', mature.s.toFixed(4));
 }
 
 // 움직임: 몸 흔들림(밑동 고정, 위로 갈수록 크게 휘는 줄 밀기) + 불 재질은 색 띠가 위로 흐르고 + 종별 효과(번개·불티)
@@ -430,6 +447,7 @@ if (anim) {
   }
   writeFileSync(resolve(here, 'out', 'conv', keys.join('+') + '.gif'), encodeGIF(frames, { delay: 10 }));
   console.log('움직임 →', resolve(here, 'out', 'conv', keys.join('+') + '.gif'));
+  if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', keys.join('+') + '.mp4'), frames, { delay: 10, loops: 8 });
   // 깜빡임 확인판: 뜬 눈 · 반쯤 · 감음을 4배로 나란히(흔들림 없이)
   if (BLINK) for (const cv of cvs) {
     const Z4 = 4, sh = new Img(8 + 3 * (W * Z4 + 8), H * Z4 + 16, '#2e222f');
@@ -444,22 +462,29 @@ if (anim) {
       face.blit(crop, 8 + k * (CW * Z10 + 8), 8, Z10);
     });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.png'), face.png());
-    // 영상(GIF): 얼굴 10배 — 흔들림 없이 깜빡임만 / 화분 전체 4배 — 흔들림·효과와 함께. 장마다 길이: 뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06
+    // 영상: 얼굴 — 흔들림 없이 깜빡임만 / 화분 전체 — 흔들림·효과와 함께. 장마다 길이: 뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06
+    // GIF(얼굴 10배·전체 4배) + --mp4면 휴대폰용 MP4(얼굴 20배·전체 8배, 여러 바퀴)
     const seq = [['open', 160], ['half', 6], ['closed', 12], ['half', 6]];
-    const faceFr = seq.map(([st]) => { const im = paint(cv, { eye: st }), cr = new Img(CW * Z10, CHh * Z10, '#323353'), c1 = new Img(CW, CHh, '#323353'); for (let y = 0; y < CHh; y++) for (let x = 0; x < CW; x++) { const sx = X0 + x, sy = Y0 + y; if (sx >= 0 && sy >= 0 && sx < W && sy < H) { const s4 = (sy * W + sx) * 4; if (im.data[s4 + 3] > 127) c1.data.set(im.data.subarray(s4, s4 + 4), (y * CW + x) * 4); } } cr.blit(c1, 0, 0, Z10); return cr; });
-    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.gif'), encodeGIF(faceFr, { delay: seq.map(s => s[1]) }));
-    const fx = FX[cv.key] || { sway: 1 }, ZF = 4, full = [], del = [];
+    const zoom = (list, z, bg) => list.map(c => { const o = new Img(c.w * z, c.h * z, bg); o.blit(c, 0, 0, z); return o; });
+    const faces = seq.map(([st]) => { const im = paint(cv, { eye: st }), c1 = new Img(CW, CHh, '#323353'); for (let y = 0; y < CHh; y++) for (let x = 0; x < CW; x++) { const sx = X0 + x, sy = Y0 + y; if (sx >= 0 && sy >= 0 && sx < W && sy < H) { const s4 = (sy * W + sx) * 4; if (im.data[s4 + 3] > 127) c1.data.set(im.data.subarray(s4, s4 + 4), (y * CW + x) * 4); } } return c1; });
+    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.gif'), encodeGIF(zoom(faces, Z10, '#323353'), { delay: seq.map(s => s[1]) }));
+    const fx = FX[cv.key] || { sway: 1 }, plants = [], del = [];
     for (let f = 0; f < 32; f++) {   // 흔들림 1.6초 두 바퀴 + 끝에서 한 번 깜빡임
       const t = (f % 16) / 16, eye = f === 26 ? 'closed' : f === 25 || f === 27 ? 'half' : 'open';
       const shiftRow = y => y >= P.cy - 2 ? 0 : Math.round(fx.sway * Math.sin(2 * Math.PI * t) * ((P.cy - y) / (P.cy - 6)) ** 1.4);
       const im = paint(cv, { shiftRow, eye }), S2 = { paints: [], paint(pts, c) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), c]); } };
       if (fx.bolts) fx.bolts.forEach(([a, b], q) => { if ((f + q) % 3) bolt({ paint: S2.paint.bind(S2), w: W }, a, b, { seed: f * 31 + q * 7 + 1, depth: 2, amp: 0.3, fork: 0.3, glow: '#fbe36a' }); });
       for (const [x, y, c] of S2.paints) im.set(x, y, c);
-      const p = new Img(W, H), fr = new Img(W * ZF, H * ZF, '#2f3150');
-      p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0); fr.blit(p, 0, 0, ZF);
-      full.push(fr); del.push(eye === 'closed' ? 12 : eye === 'half' ? 6 : 10);
+      const p = new Img(W, H, '#2f3150');
+      p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0);
+      plants.push(p); del.push(eye === 'closed' ? 12 : eye === 'half' ? 6 : 10);
     }
-    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_full.gif'), encodeGIF(full, { delay: del }));
+    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_full.gif'), encodeGIF(zoom(plants, 4, '#2f3150'), { delay: del }));
+    if (MP4) {
+      const { writeMP4 } = await import('./video.mjs');
+      writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_face.mp4'), zoom(faces, 20, '#323353'), { delay: seq.map(s => s[1]), loops: 6 });
+      writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_full.mp4'), zoom(plants, 8, '#2f3150'), { delay: del, loops: 4 });
+    }
     const geo = eyeGeometry(paint(cv), cv);
     console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 ` + geo.map((g, k) => `${k ? '오른쪽' : '왼쪽'} 폭 ${(g.u1 - g.u0).toFixed(1)} 높이 ${(g.v1 - g.v0).toFixed(1)}`).join(' / '));
   }
