@@ -142,8 +142,24 @@ export function findTips(cv, rig, { minR = 10 } = {}) {
   return best.filter((b, k) => b && b.r >= minR && b.r >= (best[(k + N - 1) % N]?.r ?? 0) && b.r >= (best[(k + 1) % N]?.r ?? 0));
 }
 
+// 공격 몸놀림: 얼굴(머리) 이동 qx·qy(정수), 눌림 sq(+ 눌림·옆으로 넓어짐, − 늘어남), 먼 끝은 앞 장 이동(px·py)에 끌려 늦게(뒤따름)
+// 줄기는 밑동(0)에서 얼굴 아래(1)까지 부드럽게 휘고 밑동은 흙에 고정 — 큰 원본에서 다시 줄이므로 소수 칸도 된다
+export function attackField(rig, { qx = 0, qy = 0, sq = 0, px = qx, py = qy } = {}) {
+  const { yA, hx, hy, Rh, Rf } = rig;
+  return (X, Y) => {
+    const ppx = X + 0.5, ppy = Y + 0.5;
+    if (ppy >= yA) return [0, 0];
+    const wa = sm(yA, yA - 6, ppy), ws = sm(yA, hy + Rf + 2, ppy), ddx = ppx - hx, ddy = ppy - hy, r = Math.hypot(ddx, ddy) || 1;
+    const far = sm(Rh, Rh + 14, r) * 0.6, face = 1 - sm(Rf, Rf + 3, r);
+    let dx = (qx + (px - qx) * far) * ws, dy = (qy + (py - qy) * far) * ws;
+    dy += sq * clamp01(-ddy / Rh) * (1 - sm(Rh, Rh * 1.6, r)) * (1 - face);
+    dx += Math.sign(ddx) * sq * 0.6 * sm(Rf, Rh, Math.abs(ddx)) * (1 - sm(Rh * 0.8, Rh * 1.3, Math.abs(ddy))) * (1 - face);
+    return [dx * wa, dy * wa];
+  };
+}
+
 // 1칸 선 잇기 + L자 모서리 가운데 칸 빼기(도트 선을 깔끔하게)
-function strokePx(pts) {
+export function strokePx(pts) {
   const px = [];
   for (let i = 1; i < pts.length; i++) for (const p of linePx(pts[i - 1], pts[i])) { const q = px[px.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) px.push(p); }
   const out = [];
@@ -155,7 +171,7 @@ function strokePx(pts) {
   return out;
 }
 // 날카로운 각의 지그재그 꼭짓점(벼락 줄기): 나아가는 방향으로 n마디, 마디마다 좌우로 번갈아 꺾임
-function zigzag(o, ang, len, r, n = 4) {
+export function zigzag(o, ang, len, r, n = 4) {
   const ux = Math.cos(ang), uy = Math.sin(ang), vx = -uy, vy = ux, pts = [[o[0], o[1]]];
   let side = r() < 0.5 ? 1 : -1;
   for (let i = 1; i < n; i++) { const s = (i + (r() - 0.5) * 0.3) / n, a = side * (1.4 + r() * 2.2); pts.push([o[0] + ux * len * s + vx * a, o[1] + uy * len * s + vy * a]); side = -side; }
@@ -163,7 +179,7 @@ function zigzag(o, ang, len, r, n = 4) {
   return pts;
 }
 // 굵기 있는 지그재그 칠하기: 길이 비율 s의 반폭 hw(s)(끝은 가늘고 가운데 굵게), 안쪽 = core, 바깥 = edge, keep(s)로 조각만 남기기
-function fillBolt(paint, pts, hw, core, edge, keep = () => true, inner = 0.9) {
+export function fillBolt(paint, pts, hw, core, edge, keep = () => true, inner = 0.9) {
   const seg = [], cum = [0];
   for (let i = 1; i < pts.length; i++) { const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(L); cum.push(cum[i - 1] + L); }
   const tot = cum[cum.length - 1] || 1, xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);

@@ -449,6 +449,35 @@ export function rasterize(src, warp = null, prev = null) {
   despeck(cm);
   return { cm, ct: ct2 };
 }
+// 움직임 장마다 지도 만들기(fields = 장마다 {field}) — 두 가지를 섞는다:
+//  ① 반올림한 이동이 둘레와 같은 칸 = 쉬는 그림을 정수 칸만큼 통째로 옮긴 값(무늬가 한 덩어리로 움직여 자글거리지 않음 — 도트 작가가 부위를 1칸씩 옮기는 방식)
+//  ② 반올림 값이 바뀌는 이음매 둘레 = 큰 원본에서 다시 줄인 값(정수 밀기의 줄 이음매 = 움직이는 가로선을 매끈하게 이음), 불 재질(isF)도 늘 ②(일렁임)
+// ②는 앞 장과 비교(이력 유지)하려고 차례대로 두 바퀴 돌려 두 번째 바퀴 값을 쓴다(끝 장 → 첫 장도 이어지게)
+export function mixedMaps(cv, fields, isF = null) {
+  const out = [], FRn = fields.length;
+  let prev = null;
+  for (let pass = 0; pass < 2; pass++) for (let f = 0; f < FRn; f++) {
+    const { field } = fields[f], hr = rasterize(cv.src, field, prev);
+    prev = { ...hr, warp: field };
+    if (!pass) continue;
+    const R = new Int8Array(W * H * 2), cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H);
+    for (let i = 0; i < W * H; i++) { const [dx, dy] = field(i % W, Math.floor(i / W)); R[i * 2] = Math.round(dx); R[i * 2 + 1] = Math.round(dy); }
+    for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
+      const i = Y * W + X, rx = R[i * 2], ry = R[i * 2 + 1];
+      let seam = false;
+      for (let oy = -1; oy <= 1 && !seam; oy++) for (let ox = -1; ox <= 1; ox++) {
+        const x2 = X + ox, y2 = Y + oy;
+        if (x2 >= 0 && y2 >= 0 && x2 < W && y2 < H && (R[(y2 * W + x2) * 2] !== rx || R[(y2 * W + x2) * 2 + 1] !== ry)) { seam = true; break; }
+      }
+      const sx = X - rx, sy = Y - ry, si = sx >= 0 && sy >= 0 && sx < W && sy < H ? sy * W + sx : -1;
+      const fire = isF && ((si >= 0 && cv.cm[si] >= 0 && isF[cv.cm[si]]) || (hr.cm[i] >= 0 && isF[hr.cm[i]]));
+      if (seam || fire || si < 0) { cm[i] = hr.cm[i]; ct[i] = hr.ct[i]; } else { cm[i] = cv.cm[si]; ct[i] = cv.ct[si]; }
+    }
+    out[f] = { cm, ct };
+  }
+  return out;
+}
+
 // 흙 둘레의 떨어진 작은 점 없애기: 몸(가장 큰 덩어리)과 이어지지 않은 6칸 이하 덩어리가 흙 높이 띠(흙 가운데 − 1.6 반높이 아래)에 있으면
 // 컨셉 흙의 자갈·그늘이 남은 것 — 지운다(2026-10-15 밑동 검수: 아쿠아벌브·스파크번·게일캑터스·포자버섯 흙 위 검은 점)
 function despeck(cm) {
@@ -699,15 +728,48 @@ if (anim) {
   const { encodeGIF } = await import('./gif.mjs');
   const { idleRig, idleField, fireRig, fireField, emberFrame, findTips, electricPlan, electricFrame } = await import('./motion.mjs');
   const pot = renderPot(POT3.pot_terra), FR = 64, DT = 5, Z = 3, BG = '#2f3150';
-  // blinkAt = 깜빡이는 장(없으면 안 깜빡임). 96칸 판에서 눈 칸 찾기가 꽃잎으로 번지는 종(장미·불꽃꽃·선인장)은 고칠 때까지 끔 — 검증된 건 스파크번
+  // 종별 특성(사용자 2026-10-15 "식물 특성을 살려 — 단단한 금속은 반짝임·유광, 미끄덩한지 덩굴인지"): 몸놀림 세기 + amb(fx.mjs 효과)
+  //  blinkAt = 깜빡이는 장(eyes.mjs에 눈 타원을 잰 종만, 종마다 다른 때) · 무거운 종은 숨이 작고, 말랑한 종은 눌림이 크고, 덩굴·리본은 펄럭임이 크다
+  const LEAF = { hue: [85, 160], cmin: 0.04 };
   const FX = {
-    flower_grass: { bob: 2, sway: 1, open: 1, petal: 0.6, leaf: 1.2 },
-    flower_fire: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, fire: { up: 2, side: 0.8 } },
-    cactus_fire: { bob: 1, sway: 0.5, open: 0, petal: 0, leaf: 0.6, fire: { up: 2.5, side: 0.9 } },
+    flower_grass: { bob: 2, sway: 1, open: 1, petal: 0.6, leaf: 1.2, blinkAt: 22, amb: { shine: { mat: LEAF, box: [10, 0, 38, 44], at: 6, len: 6 }, petals: { from: 'head', color: '#f08aa0', edge: '#d8607a', dim: '#b04a62', vx: 0.12, vy: 0.32, every: 64, at: 34, life: 40 } } },
+    thorn: { bob: 1.5, sway: 0.8, open: 1, petal: 1.1, leaf: 2.2, blinkAt: 40 },
+    aqua: { bob: 2, squash: 1.5, sway: 0.8, open: 0.6, petal: 0.6, leaf: 1.0, amb: { bubbles: { mat: { hue: [170, 250], lmin: 0.62, cmin: 0.03 }, n: 3 }, drips: { n: 2, every: 40 }, twinkle: { mat: { hue: [170, 250], lmin: 0.7 }, n: 1, every: 28 } } },
+    flower_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.5, leaf: 1.4, blinkAt: 14, amb: { wind: { n: 2, y0: 6, y1: 52 }, petals: { from: 'right', color: '#c9a8f0', edge: '#a888e0', dim: '#8a70c0', vx: 0.95, vy: 0.06, sway: 1, every: 32, life: 26, n: 2 } } },
     spark: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, electric: true, blinkAt: 50 },
+    vine_water: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.6, leaf: 1.6, flutter: 1, blinkAt: 30, amb: { drips: { n: 2, every: 36 } } },
+    cactus_fire: { bob: 1, sway: 0.5, open: 0, petal: 0, leaf: 0.6, fire: { up: 2.5, side: 0.9 }, blinkAt: 58 },
+    gaia: { bob: 1, squash: 0.6, sway: 0.4, open: 0, petal: 0, leaf: 0.3, blinkAt: 46, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 20 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 2, every: 20 }, dust: { n: 5, pebble: { from: [70, 40], at: 44, floor: 75 } } } },
+    flower_fire: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, fire: { up: 2, side: 0.8 }, blinkAt: 26 },
+    cactus_wind: { bob: 1, sway: 0.6, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 10, amb: { wind: { n: 2, y0: 8, y1: 50 }, swirl: { at: 'holes', every: 24 } } },
+    vine_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.6, leaf: 1.9, blinkAt: 36, amb: { shine: { mat: { cmax: 0.05, lmin: 0.62 }, at: 18, len: 6 }, wind: { n: 1, y0: 10, y1: 60 } } },
+    spore_cap: { bob: 2, squash: 1.5, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, blinkAt: 18, amb: { spores: { from: 'cap', n: 7 } } },
   };
   const rigs = cvs.map(cv => idleRig(cv));
   const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);
+  // 특성 효과 자리: 'head' = 머리 오른쪽 위, 'cap' = 갓 아래 가장자리, 'right' = 가장 오른쪽 끝 두 곳, 'holes' = 가장 높은 끝 두 곳 옆
+  const { ambientPlan, ambientFrame } = await import('./fx.mjs');
+  const resolveFrom = (k, v) => {
+    const r = rigs[k];
+    if (Array.isArray(v)) return v;
+    if (v === 'head') return [[r.hx + r.Rh * 0.5, r.hy - r.Rh * 0.3]];
+    if (v === 'cap') return [[r.hx - r.Rh, r.hy - 2], [r.hx, r.hy - 8], [r.hx + r.Rh, r.hy - 2]];
+    const tips = findTips(cvs[k], r);
+    if (v === 'right') return [...tips].sort((a, b) => b.x - a.x).slice(0, 2).map(t => [t.x, t.y]);
+    if (v === 'holes') return [...tips].sort((a, b) => a.y - b.y).slice(0, 2).map(t => [t.x + (t.x < r.hx ? -3 : 3), t.y + 4]);
+    return [[r.hx, r.hy]];
+  };
+  const ambs = cvs.map((cv, k) => {
+    const a = (FX[cv.key] || {}).amb;
+    if (!a) return null;
+    const A = JSON.parse(JSON.stringify(a));
+    if (A.petals) A.petals.from = resolveFrom(k, A.petals.from);
+    if (A.spores) A.spores.from = resolveFrom(k, A.spores.from);
+    if (A.swirl) A.swirl.at = resolveFrom(k, A.swirl.at);
+    const pl = ambientPlan(cv, rigs[k], A, FR, 11 + k);
+    console.log(`${cv.key.padEnd(13)} 특성 효과 · ${Object.keys(A).join('·')}${pl.shine ? ' · 광택 칸 ' + pl.shine.map(s => s.set.size).join('/') : ''}${pl.gems ? ` · 수정 면 ${pl.gems.facets.length}` : ''}${pl.bubbles ? ` · 거품 칸 ${pl.bubbles.cells.length}` : ''}${pl.drips ? ` · 물방울 ${pl.drips.tips.length}곳` : ''}${pl.twinkle ? ` · 반짝 칸 ${pl.twinkle.cells.length}` : ''}`);
+    return pl;
+  });
   // 불 재질 = 가장 밝은 단이 밝고 선명한 주황·노랑인 재질
   const fireMat = cv => cv.matL.map((_, m) => { const c = cv.palLab[m * LV + LV - 1]; return hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68; });
   const fires = cvs.map(cv => (FX[cv.key] || {}).fire ? fireRig(cv, fireMat(cv)) : null);
@@ -718,34 +780,7 @@ if (anim) {
     return { field, head };
   };
   const fieldsAll = cvs.map((_, k) => Array.from({ length: FR }, (_, f) => fieldOf(k, f)));
-  // 장마다 지도 만들기 — 두 가지를 섞는다:
-  //  ① 반올림한 이동이 둘레와 같은 칸 = 쉬는 그림을 정수 칸만큼 통째로 옮긴 값(무늬가 한 덩어리로 움직여 자글거리지 않음 — 도트 작가가 부위를 1칸씩 옮기는 방식)
-  //  ② 반올림 값이 바뀌는 이음매 둘레 = 큰 원본에서 다시 줄인 값(정수 밀기의 줄 이음매 = 움직이는 가로선을 매끈하게 이음), 불 재질도 늘 ②(일렁임)
-  // ②는 앞 장과 비교(이력 유지)하려고 차례대로 두 바퀴 돌려 두 번째 바퀴 값을 쓴다(끝 장 → 첫 장도 이어지게)
-  const mapsAll = cvs.map((cv, k) => {
-    const out = [], isF = fires[k] ? fireMat(cv) : null;
-    let prev = null;
-    for (let pass = 0; pass < 2; pass++) for (let f = 0; f < FR; f++) {
-      const { field } = fieldsAll[k][f], hr = rasterize(cv.src, field, prev);
-      prev = { ...hr, warp: field };
-      if (!pass) continue;
-      const R = new Int8Array(W * H * 2), cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H);
-      for (let i = 0; i < W * H; i++) { const [dx, dy] = field(i % W, Math.floor(i / W)); R[i * 2] = Math.round(dx); R[i * 2 + 1] = Math.round(dy); }
-      for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
-        const i = Y * W + X, rx = R[i * 2], ry = R[i * 2 + 1];
-        let seam = false;
-        for (let oy = -1; oy <= 1 && !seam; oy++) for (let ox = -1; ox <= 1; ox++) {
-          const x2 = X + ox, y2 = Y + oy;
-          if (x2 >= 0 && y2 >= 0 && x2 < W && y2 < H && (R[(y2 * W + x2) * 2] !== rx || R[(y2 * W + x2) * 2 + 1] !== ry)) { seam = true; break; }
-        }
-        const sx = X - rx, sy = Y - ry, si = sx >= 0 && sy >= 0 && sx < W && sy < H ? sy * W + sx : -1;
-        const fire = isF && ((si >= 0 && cv.cm[si] >= 0 && isF[cv.cm[si]]) || (hr.cm[i] >= 0 && isF[hr.cm[i]]));
-        if (seam || fire || si < 0) { cm[i] = hr.cm[i]; ct[i] = hr.ct[i]; } else { cm[i] = cv.cm[si]; ct[i] = cv.ct[si]; }
-      }
-      out[f] = { cm, ct };
-    }
-    return out;
-  });
+  const mapsAll = cvs.map((cv, k) => mixedMaps(cv, fieldsAll[k], fires[k] ? fireMat(cv) : null));
   // k번째 종의 f번째 장(96×112): 화분 뒤 → 식물 → 화분 앞 → 효과
   const frameOf = (k, f, bg = null) => {
     const cv = cvs[k], rig = rigs[k], fx = FX[cv.key] || {}, sec = f * DT / 100, { field, head } = fieldsAll[k][f];
@@ -774,16 +809,17 @@ if (anim) {
       }
     }
     if (fires[k]) emberFrame(f, fires[k], at, put, { seed: 3 + k });
+    if (ambs[k]) ambientFrame(f, ambs[k], im, at, put, (1 - Math.cos(2 * Math.PI * (fx.breaths || 2) * Math.floor(f / 2) * 2 / FR)) / 2);
     const out = plantInPot(im, pot, bg);
     for (const [x, y, c] of fxPaint) out.set(x, y, c);
     return out;
   };
   const zoom = (list, z, bg) => list.map(c => { const o = new Img(c.w * z, c.h * z, bg); o.blit(c, 0, 0, z); return o; });
-  // 여러 종: 2열 격자(휴대폰 세로 화면에 맞게) 3배
-  const cols = cvs.length > 2 ? 2 : cvs.length, rows = Math.ceil(cvs.length / cols), frames = [];
+  // 여러 종 격자: 4종까지 2열 3배, 7종 이상은 4열 2배(휴대폰에서 한 화면에 — 12종 = 768×672)
+  const cols = cvs.length > 6 ? 4 : cvs.length > 2 ? 2 : cvs.length, ZG = cvs.length > 6 ? 2 : Z, rows = Math.ceil(cvs.length / cols), frames = [];
   for (let f = 0; f < FR; f++) {
-    const fr = new Img(cols * W * Z, rows * H * Z, BG);
-    cvs.forEach((cv, k) => fr.blit(frameOf(k, f), (k % cols) * W * Z, Math.floor(k / cols) * H * Z, Z));
+    const fr = new Img(cols * W * ZG, rows * H * ZG, BG);
+    cvs.forEach((cv, k) => fr.blit(frameOf(k, f), (k % cols) * W * ZG, Math.floor(k / cols) * H * ZG, ZG));
     frames.push(fr);
   }
   const base = resolve(here, 'out', 'conv', keys.join('+'));
@@ -807,6 +843,90 @@ if (anim) {
     for (let f = 0; f < FR; f++) { const a = one[f].data, c = one[(f + 1) % FR].data; for (let i = 0; i < a.length; i += 4) if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) ch++; }
     console.log(`${cvs[k].key.padEnd(13)} 얼굴 (${r.hx.toFixed(1)}, ${r.hy.toFixed(1)}) 머리 반지름 ${r.Rh.toFixed(1)} · 떠 있는 조각 ${r.bits.filter(Boolean).length}개${eplans[k] ? ' · 전기 끝점 ' + findTips(cvs[k], r).length + '개' : ''}${fires[k] ? ` · 불 칸 ${fires[k].n}개·혀 끝 ${fires[k].tips.length}개` : ''} · 장마다 바뀐 칸 평균 ${(ch / FR).toFixed(0)}`);
   }
+}
+
+// 공격(--attack <키…>): 종마다 다음 종을 상대로 대표 기술 한 번(attack.mjs) — 무대 236×120, 48장 × 0.05초.
+//   → out/conv/<키>_attack.gif(2배), attacks_all.gif·(--mp4) attacks_all.mp4(3배, 이어 붙임), attacks_sheet.png(핵심 장면: 준비·동작·맞음·맞음+2·맞음+6)
+if (args.includes('--attack')) {
+  const { encodeGIF } = await import('./gif.mjs');
+  const { idleRig, attackField } = await import('./motion.mjs');
+  const { ATTACKS, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
+  const pot = renderPot(POT3.pot_terra), SW = 236, SH = 120, AX = 4, AY = 4, TX = SW - W - 4, TY = 4, BG = '#2f3150';
+  const rigs = cvs.map(cv => idleRig(cv));
+  const mirror = im => { const o = new Img(im.w, im.h); for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) { const s = (y * im.w + x) * 4, d = (y * im.w + im.w - 1 - x) * 4; o.data.set(im.data.subarray(s, s + 4), d); } return o; };
+  const flash = im => { const o = new Img(W, H); for (let i = 0; i < W * H; i++) if (im.data[i * 4 + 3] >= 128) o.data.set([255, 255, 255, 255], i * 4); return o; };
+  const plantAt = (k, pose) => paint(cvs[k], { maps: rasterize(cvs[k].src, attackField(rigs[k], pose)), eyeOff: [pose.qx || 0, pose.qy || 0] });
+  const zoom = (list, z) => list.map(c => { const o = new Img(c.w * z, c.h * z, BG); o.blit(c, 0, 0, z); return o; });
+  const all = [], sheetRows = [];
+  for (let a = 0; a < cvs.length; a++) {
+    const t = (a + 1) % cvs.length, A = ATTACKS[cvs[a].key];
+    if (!A || cvs.length < 2) continue;
+    const I = impactAt(A), ra = rigs[a], rt = rigs[t], frames = [];
+    // 대상 윗머리 점 셋(무대 좌표, 좌우 뒤집힘)
+    const pts = [-8, 0, 8].map(dx => { const x = Math.round(rt.hx + dx); let y = 0; while (y < H && cvs[t].cm[y * W + x] < 0) y++; return [TX + (W - 1 - x), TY + Math.min(y, H - 1)]; });
+    for (let f = 0; f < FRA; f++) {
+      const fz = f === I + 1 ? I : f, pose = attackerPose(fz, A), prev = attackerPose(Math.max(0, fz - 1), A), tp = targetPose(f, I);
+      const stage = new Img(SW, SH, BG), [sx, sy] = cameraShake(f, A, I);
+      stage.blit(plantInPot(plantAt(a, { ...pose, px: prev.qx, py: prev.qy }), pot), AX + sx, AY + sy);
+      let tim = plantAt(t, { qx: -tp.kb, qy: 0, sq: tp.kb ? 0.6 : 0, px: -Math.max(0, tp.kb - 1), py: 0 });
+      if (tp.flash) tim = flash(tim);
+      stage.blit(mirror(plantInPot(tim, pot)), TX + sx + tp.shake, TY + sy);
+      const L = [AX + ra.hx + pose.qx + sx, AY + ra.hy + pose.qy + sy], T = [TX + (W - 1 - rt.hx) + tp.kb + sx, TY + rt.hy + sy], G = TY + POT_GEO.cy + sy;
+      // 효과 두 층: o = 큰 모양(어두운 1칸 테두리를 둘러 몸 위에서도 읽히게), p = 잔 입자(테두리 없음)
+      const lo = new Map(), lp = new Map(), inS = (x, y) => x >= 0 && y >= 0 && x < SW && y < SH;
+      const P2 = { o: (x, y, c) => { if (inS(x, y)) lo.set(y * SW + x, c); }, p: (x, y, c) => { if (inS(x, y)) lp.set(y * SW + x, c); } };
+      skillFx(P2, A, fz, L, T, G, 7 + a);
+      statusFx(P2, A, f, T, G, pts.map(([x, y]) => [x + tp.kb + sx, y + sy]), L, 9 + a);
+      for (const i of lo.keys()) { const x = i % SW, y = (i - x) / SW; for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) if (inS(nx, ny) && !lo.has(ny * SW + nx)) stage.set(nx, ny, '#1a1424'); }
+      for (const [i, c] of lo) stage.set(i % SW, Math.floor(i / SW), c);
+      for (const [i, c] of lp) stage.set(i % SW, Math.floor(i / SW), c);
+      frames.push(stage);
+    }
+    writeFileSync(resolve(here, 'out', 'conv', cvs[a].key + '_attack.gif'), encodeGIF(zoom(frames, 2), { delay: 5 }));
+    const fl = args.find(x => x.startsWith('--frames='));   // 검토용: 지정 장을 2배로 나란히
+    if (fl) { const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (SW * 2 + 4), SH * 2 + 8, '#2e222f'); list.forEach((ff, i) => st.blit(frames[Math.min(FRA - 1, ff)], 4 + i * (SW * 2 + 4), 4, 2)); writeFileSync(resolve(here, 'out', 'conv', cvs[a].key + '_attack_frames.png'), st.png()); }
+    all.push(...frames);
+    sheetRows.push([10, 13, I, I + 2, I + 6].map(f => frames[Math.min(FRA - 1, f)]));
+    console.log(`${cvs[a].key.padEnd(13)} 공격 → ${cvs[t].key} · ${A.kind}/${A.move} · 맞는 장 ${I} · 성질 ${A.status}`);
+  }
+  if (all.length) {
+    writeFileSync(resolve(here, 'out', 'conv', 'attacks_all.gif'), encodeGIF(zoom(all, 2), { delay: 5 }));
+    if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', 'attacks_all.mp4'), zoom(all, 3), { delay: 5, loops: 1, fps: 20 });
+    const sheet = new Img(4 + 5 * (SW + 4), 4 + sheetRows.length * (SH + 4), '#2e222f');
+    sheetRows.forEach((row, r) => row.forEach((im, c) => sheet.blit(im, 4 + c * (SW + 4), 4 + r * (SH + 4))));
+    writeFileSync(resolve(here, 'out', 'conv', 'attacks_sheet.png'), sheet.png());
+    console.log('공격 모아보기 →', resolve(here, 'out', 'conv', 'attacks_sheet.png'));
+  }
+}
+
+// 변이 연출 시제품(--forms <키>): 무변이 + 5변이형(테두리 빛·문장·기운)을 3×2로 → <키>_forms.png·.gif(·mp4), 발견 공개 5변이형 이어 붙임 → <키>_reveal.gif(·mp4)
+if (args.includes('--forms') && cvs.length) {
+  const { encodeGIF } = await import('./gif.mjs');
+  const { idleRig, idleField } = await import('./motion.mjs');
+  const { FORMS, emblem, rimTint, auraFrame, revealFrame } = await import('./forms.mjs');
+  const pot = renderPot(POT3.pot_terra), FR = 64, BG = '#2f3150', cv = cvs[0], rig = idleRig(cv), forms = [null, ...Object.keys(FORMS)];
+  const fields = Array.from({ length: FR }, (_, f) => idleField(rig, Math.floor(f / 2) * 2 / FR, {})), maps = mixedMaps(cv, fields);
+  const plantFrame = (f, form) => {
+    const { field, head } = fields[f], im = paint(cv, { maps: maps[f], eyeOff: head }), parts = [];
+    const at = p => { const [dx, dy] = field(Math.max(0, Math.min(W - 1, Math.floor(p[0]))), Math.max(0, Math.min(H - 1, Math.floor(p[1])))); return [p[0] + dx, p[1] + dy]; };
+    if (form) { auraFrame(f, form, rig, cv.eyeC, at, (x, y, c) => parts.push([x, y, c]), im, FR); rimTint(im, form, 0.45, 0.4 + 0.25 * Math.sin(f / FR * 4 * Math.PI), Math.floor(P.cy) - 3); }
+    const out = plantInPot(im, pot, BG);
+    for (const [x, y, c] of parts) if (x >= 0 && y >= 0 && x < W && y < H) out.set(x, y, c);
+    if (form) emblem((x, y, c) => out.set(x, y, c), 2, 2, form, 2);
+    return out;
+  };
+  const zoom = (list, z) => list.map(c => { const o = new Img(c.w * z, c.h * z, BG); o.blit(c, 0, 0, z); return o; });
+  const grid = [];
+  for (let f = 0; f < FR; f++) { const g = new Img(3 * W * 2, 2 * H * 2, BG); forms.forEach((fm, i) => g.blit(plantFrame(f, fm), (i % 3) * W * 2, Math.floor(i / 3) * H * 2, 2)); grid.push(g); }
+  const base = resolve(here, 'out', 'conv', cv.key);
+  writeFileSync(base + '_forms.png', grid[20].png());
+  writeFileSync(base + '_forms.gif', encodeGIF(grid, { delay: 5 }));
+  const rev = [];
+  for (const fm of forms.slice(1)) for (let k = 0; k < 40; k++) { const st = new Img(W, H, BG); revealFrame(st, k, fm, P.cx, P.cy - 14, () => st.blit(plantFrame((k * 2) % FR, fm), 0, 0)); rev.push(st); }
+  writeFileSync(base + '_reveal.gif', encodeGIF(zoom(rev, 3), { delay: 5 }));
+  { const pick = [2, 7, 10, 12, 14, 17, 30], st = new Img(4 + pick.length * (W * 2 + 4), H * 2 + 8, '#2e222f'); pick.forEach((k, i) => st.blit(rev[160 + k], 4 + i * (W * 2 + 4), 4, 2)); writeFileSync(base + '_reveal_frames.png', st.png()); }   // 검토: 용족 공개 핵심 장
+  if (MP4) { const { writeMP4 } = await import('./video.mjs'); writeMP4(base + '_forms.mp4', grid, { delay: 5, loops: 3, fps: 20 }); writeMP4(base + '_reveal.mp4', zoom(rev, 4), { delay: 5, loops: 1, fps: 20 }); }
+  console.log('변이 연출 →', base + '_forms.png · _forms.gif · _reveal.gif');
 }
 
 // 깜빡임 확인(--blink, 움직임 없이도 됨): 종마다 뜬 눈 · 반쯤 · 감음 4배 + 얼굴 10배, 여러 종이면 얼굴을 한 장(blink_all.png)으로
