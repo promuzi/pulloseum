@@ -52,6 +52,30 @@ function sheet(items, Z, COLS, bg, tint = null) {
   });
   return S;
 }
+// --anim: 한 바퀴 FR장을 그려 out/anim/<키들>.gif(화분에 심은 모습 나란히, 3배, 0.1초 간격) + _strip.png(프레임 띠)
+if (process.argv.includes('--anim')) {
+  const { encodeGIF } = await import('./gif.mjs');
+  const FR = 8, Z = 3, T = pots.pot_terra, aDir = resolve(outDir, 'anim'), mods = [];
+  mkdirSync(aDir, { recursive: true });
+  for (const key of todo) mods.push((await import(pathToFileURL(resolve(here, 'species', key + '.mjs')).href)).default);
+  const frames = [];
+  for (let i = 0; i < FR; i++) {
+    const fr = new Img(mods.length * W * Z, H * Z, '#2f3150');
+    mods.forEach((fn, m) => {
+      const sp = fn({ t: i / FR, i }), p = new Img(W, H);
+      p.blit(T.back, 0, 0); p.blit(Img.fromColors(W, H, colorize(sp, sp.render(), { map: PASTEL, keepMap: PASTEL_EYE })), 0, 0); p.blit(T.front, 0, 0);
+      fr.blit(p, m * W * Z, 0, Z);
+    });
+    frames.push(fr);
+  }
+  const name = todo.join('+');
+  writeFileSync(resolve(aDir, name + '.gif'), encodeGIF(frames, { delay: 10 }));
+  const strip = new Img(FR * mods.length * W, H, '#2f3150');
+  frames.forEach((fr, i) => { const small = new Img(mods.length * W, H); for (let y = 0; y < H; y++) for (let x = 0; x < mods.length * W; x++) { const k = ((y * Z) * fr.w + x * Z) * 4; small.data.set(fr.data.subarray(k, k + 4), (y * small.w + x) * 4); } strip.blit(small, i * mods.length * W, 0); });
+  writeFileSync(resolve(aDir, name + '_strip.png'), strip.png());
+  console.log('움직임 →', resolve(aDir, name + '.gif'));
+}
+
 if (!keys.length || process.argv.includes('--sheet')) {
   const T = pots.pot_terra, list = Object.keys(plants).map(k => [T.back, plants[k], T.front]);
   const z = +(process.argv.find(a => a.startsWith('--z=')) || '--z=2').slice(4);

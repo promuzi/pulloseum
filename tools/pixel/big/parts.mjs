@@ -1,7 +1,8 @@
 // 큰 판(96×112) 식물 부품 묶음 — 종 그림은 이 부품을 조립해서 만든다(species/<키>.mjs).
 // 판 규격: 96×112(48×56 의 두 배, v2 화면이 ×2 로 그리던 크기를 ×1 로), 밑동(흙 높이) y = 76, 화분은 76 아래.
 // 색은 v2/src/art/palette.js 의 Resurrect 64 램프만 쓴다(램프 5색 = 외곽선·그늘·중간·밝음·가장 밝음).
-import { Sprite, ellipse, limb, taper, blade, bez, linePx, ribbed, ribBall, plane, box, BAYER4 } from './engine.mjs';
+import { Sprite, ellipse, limb, taper, blade, bez, linePx, ribbed, ribBall, plane, box, BAYER4, rng, sway, hueRamp } from './engine.mjs';
+export { hueRamp, sway };
 import { RAMP } from '../../../v2/src/art/palette.js';
 
 export const W = 96, H = 112, GROUND = 76;
@@ -72,6 +73,13 @@ export function leaf(S, name, o) {
   return lay;
 }
 
+// 가장자리에 다른 색 테가 도는 잎(장미 잎의 붉은 가장자리 등): 같은 잎을 조금 넓게 rim 색으로 뒤에 깔고 그 위에 잎.
+// 둘은 같은 무리라 사이에 선이 안 생기고, 바깥 외곽선은 테 색의 어두운 단이 된다.
+export function leafRim(S, name, o, rimRamp, extra = 0.9) {
+  leaf(S, name + 'Rim', { ...o, width: o.width + extra, rib: false, veins: 0, ramp: rimRamp, group: name });
+  return leaf(S, name, { ...o, group: name });
+}
+
 // 가시: [밑 x, 밑 y, 끝 x, 끝 y, 굵기] 목록. hook = 가운데가 솟고 끝이 아래로 휘는 정도(장미 가시)
 export function thorns(S, name, list, o = {}) {
   const { hook = 0.25, ramp = R.earth, ...lo } = o;
@@ -109,6 +117,8 @@ export const EYE = {
   iris:   { g: ['wkk', 'kik', 'kkk'] },                 // 속에 불씨가 도는 눈
   ring:   { g: ['kkk', 'kwk', 'kkk'] },                 // 동그란 고리 — 놀람
   keen:   { g: ['kkw'], mirror: true },                 // 가는 선 — 날카로움
+  lidIris: { g: ['lll', 'wik', 'iii'] },                // 눈꺼풀 + 홍채 — 차분하게 내려다봄
+  big:    { g: ['.kk.', 'kwik', 'kiik', '.kk.'] },      // 크고 둥근 눈(테두리 + 홍채 + 반짝임)
 };
 // 눈: [[x, y], ...] 왼쪽 위 칸. style = EYE 의 이름, 색은 k·w·g·c·i·l 로 바꾼다
 export function eyes(S, list, { style = 'dot', k = '#2e222f', w = '#ffffff', g = '#f9c22b', c = '#fbff86', i = '#fb6b1d', l = '#3e3546' } = {}) {
@@ -130,25 +140,76 @@ export function arc(S, cx, cy, r, a0, a1, color, n = 10) {
   }
 }
 
-// 불꽃·빛 혀(스스로 빛나는 층, 외곽선 없음): 가운데일수록 밝다. 같은 이름으로 여러 번 부르면 한 층에 모인다.
+// 불 색(온도순): 바깥 짙은 빨강 → 주황 → 노랑 → 작은 흰 속불. 갈색은 연기·흙으로 읽혀 쓰지 않는다.
+export const FIRE = ['#7a2335', '#d9433a', '#f57a2a', '#fcc246', '#fff4c4'];
+
+// 불꽃 혀(스스로 빛나는 층, 외곽선 없음). 같은 이름으로 여러 번 부르면 한 층에 모인다.
+// t(0~1, 한 바퀴)를 주면 움직인다 — 자리는 그대로 두고 모양만: 끝이 좌우로 빠르게 흔들리고 키가 출렁이며,
+// 가장자리 톱니(불 혀)가 끝 쪽으로 기어오르고, 끝에서 작은 불덩이가 떨어져 나가 오르며 사라진다. ph = 혀마다 다른 위상.
 export function flame(S, name, o) {
-  const { base, tip, bend = mid(o.base, o.tip), path = null, width = 4, at = 0.35, full = 0.8, teeth = 0, serr = 0.3,
-    core = 0.4, ramp = R.fire, ...lo } = o;
+  const { base, tip, bend = mid(o.base, o.tip), width = 4, at = 0.35, full = 0.8, teeth = 0, serr = 0.3,
+    core = 0.28, ramp = FIRE, t = null, ph = 0, ...lo } = o;
+  let T = tip, C = bend, wd = width, tt = teeth, ss = serr, toff = 0;
+  const blobs = [];
+  if (t !== null) {
+    const dx = tip[0] - base[0], dy = tip[1] - base[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, px = -uy, py = ux;
+    const lenK = 1 + 0.13 * Math.sin(2 * Math.PI * (3 * t + ph)) + 0.06 * Math.sin(2 * Math.PI * (5 * t + 2 * ph));
+    const side = sway(t, width * 0.5, ph, 2) + sway(t, width * 0.22, ph + 0.3, 3);
+    T = [base[0] + dx * lenK + px * side, base[1] + dy * lenK + py * side];
+    C = [bend[0] + px * side * 0.45, bend[1] + py * side * 0.45];
+    wd = width * (1 + 0.08 * Math.sin(2 * Math.PI * (2 * t + ph + 0.25)));
+    tt = teeth || 3; ss = teeth ? serr : 0.32; toff = 2 * t + ph;
+    for (let j = 0; j < 2; j++) {
+      const p = (((2 * t + j * 0.5 + ph) % 1) + 1) % 1, r = (1 - p) * wd * 0.42;
+      if (r > 0.65) blobs.push([T[0] + ux * (1.5 + p * 9) + px * sway(p, 1.2, ph), T[1] + uy * (1.5 + p * 9) + py * sway(p, 1.2, ph), r]);
+    }
+  }
   const k = Math.log(0.5) / Math.log(at);
-  const b = blade(path || bez(base, bend, tip, 24), t => width * Math.sin(Math.PI * Math.min(1, t) ** k) ** full, { hz: 1, fold: 0, teeth, serr });
+  const b = blade(bez(base, C, T, 24), u => wd * Math.sin(Math.PI * Math.min(1, u) ** k) ** full, { hz: 1, fold: 0, teeth: tt, serr: ss, toff });
   const lay = S.layer(name, { ramp, outlineIn: false, outlineOut: false, casts: false, ...lo });
   lay.flames = lay.flames || [];
+  lay.blobs = lay.blobs || [];
   lay.flames.push([b, core]);
+  for (const bl of blobs) { lay.blobs.push(bl); lay.add(ellipse(bl[0], bl[1], bl[2], bl[2] * 1.15, { hz: 1 })); }
   lay.emissive = (x, y) => {
     let best = 9, bt = 1, bc = 0.4;
     for (const [fb, c] of lay.flames) {
-      const [t, d] = fb.uv(x + 0.5, y + 0.5), w = fb.width(t);
-      if (w > 0.3 && Math.abs(d) <= w && Math.abs(d) / w < best) { best = Math.abs(d) / w; bt = t; bc = c; }
+      const [u, d] = fb.uv(x + 0.5, y + 0.5), w = fb.width(u);
+      if (w > 0.3 && Math.abs(d) <= w && Math.abs(d) / w < best) { best = Math.abs(d) / w; bt = u; bc = c; }
     }
-    return best < bc && bt < 0.8 ? 4 : best < 0.6 ? 3 : best < 0.85 ? 2 : 1;
+    if (best < 9) return best < bc && bt < 0.45 ? 4 : best < 0.42 ? 3 : best < 0.72 ? 2 : 1;
+    for (const [bx, by, r] of lay.blobs) { const q = Math.hypot(x + 0.5 - bx, y + 0.5 - by) / r; if (q <= 1.2) return q < 0.55 ? 3 : 2; }
+    return 1;
   };
   return lay.add(b);
 }
+
+// 번개(중점 변위): a → b 를 depth 번 쪼개며 가운데 점을 옆으로 밀고(쪼갤 때마다 절반), 가끔 곁가지를 친다.
+// seed 가 다르면 모양이 다르다 — 프레임마다 씨앗을 바꾸면 지지직 튄다. 흰 속선 + 둘레 빛.
+export function bolt(S, a, b, { seed = 1, depth = 4, amp = 0.3, fork = 0.5, core = '#ffffff', glow = '#fbe36a', mask } = {}) {
+  const r = rng(seed), pts = [a];
+  const sub = (p, q, d, am) => {
+    if (d === 0) { pts.push(q); return; }
+    const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1, off = (r() * 2 - 1) * am * L;
+    const m = [(p[0] + q[0]) / 2 - dy / L * off, (p[1] + q[1]) / 2 + dx / L * off];
+    sub(p, m, d - 1, am * 0.5); sub(m, q, d - 1, am * 0.5);
+  };
+  sub(a, b, depth, amp);
+  const lines = [pts];
+  for (let i = 2; i < pts.length - 2; i++) if (r() < fork / 4) {
+    const p = pts[i], q = pts[i + 1], ang = Math.atan2(q[1] - p[1], q[0] - p[0]) + (r() < 0.5 ? -1 : 1) * (0.5 + r() * 0.6), len = 3 + r() * 5;
+    const e = [p[0] + Math.cos(ang) * len, p[1] + Math.sin(ang) * len];
+    lines.push([p, [(p[0] + e[0]) / 2 + (r() - 0.5) * 2, (p[1] + e[1]) / 2 + (r() - 0.5) * 2], e]);
+  }
+  const key = (x, y) => y * 4096 + x, core1 = new Set(), glow1 = new Set();
+  for (const ln of lines) for (let i = 0; i < ln.length - 1; i++) for (const [x, y] of linePx(ln[i], ln[i + 1])) core1.add(key(x, y));
+  for (const k of core1) { const x = k % 4096, y = (k - x) / 4096; for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!core1.has(key(x + ox, y + oy))) glow1.add(key(x + ox, y + oy)); }
+  for (const k of glow1) S.paint([[k % 4096, (k - k % 4096) / 4096]], glow, mask);
+  for (const k of core1) S.paint([[k % 4096, (k - k % 4096) / 4096]], core, mask);
+}
+
+// 시간에 따라 흔들리는 점: p 를 (ax, ay)만큼 위상 ph, 한 바퀴 k번
+export const swayPt = (p, t, ax, ay = 0, ph = 0, k = 1) => (t === null || t === undefined) ? p : [p[0] + sway(t, ax, ph, k), p[1] + sway(t, ay, ph + 0.25, k)];
 
 // 안에서 번지는 빛: 그 층의 타원 안 칸을 k단 밝게(가장자리는 점무늬로 섞음)
 export function glow(S, layerName, cx, cy, rx, ry, k = 1) {

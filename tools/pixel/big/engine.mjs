@@ -136,7 +136,7 @@ export function bez(a, c, b, n = 20) {
 // 잎몸: 가운데 선(밑 → 끝 점들) + 반폭 함수 wfn(t), t = 0(밑)~1(끝).
 // fold = 가운데 잎맥에서 접힌 정도(0 둥근 등, 1 지붕처럼 꺾임 — 한쪽은 빛, 한쪽은 그늘), teeth·serr = 톱니 수·깊이(끝 쪽을 향함)
 // 돌려주는 모양에 uv(px, py) → [t, 옆 거리(부호)], width(t) 가 붙어 있어 잎맥 무늬가 같은 좌표를 쓴다.
-export function blade(pts, wfn, { hz = 3, fold = 0.6, teeth = 0, serr = 0 } = {}) {
+export function blade(pts, wfn, { hz = 3, fold = 0.6, teeth = 0, serr = 0, toff = 0 } = {}) {
   const segs = [];
   let L = 0;
   for (let i = 0; i < pts.length - 1; i++) {
@@ -156,7 +156,7 @@ export function blade(pts, wfn, { hz = 3, fold = 0.6, teeth = 0, serr = 0 } = {}
   };
   const width = t => {
     let w = wfn(t);
-    if (teeth && t > 0.06 && t < 0.94) w *= 1 - serr * (1 - ((t * teeth) % 1));
+    if (teeth && t > 0.06 && t < 0.94) w *= 1 - serr * (1 - (((t * teeth - toff) % 1) + 1) % 1);   // toff 를 시간에 따라 올리면 톱니(불 혀)가 끝 쪽으로 기어오른다
     return w;
   };
   let wm = 0;
@@ -343,6 +343,33 @@ export function fromOklab(L, A, B) {
   return '#' + [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s]
     .map(c => toByte(c).toString(16).padStart(2, '0')).join('');
 }
+const labToLin = (L, A, B) => {
+  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3, m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3, s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+};
+// OKLCH(밝기 L, 채도 C, 색상 h도) → hex. 화면에 못 내는 색이면 채도를 줄여 맞춘다
+export function oklch(L, C, h) {
+  const r = h * Math.PI / 180;
+  for (let k = 0; k < 40; k++, C *= 0.93) {
+    const lin = labToLin(L, C * Math.cos(r), C * Math.sin(r));
+    if (lin.every(v => v >= -0.0005 && v <= 1.0005) || k === 39) return '#' + lin.map(c => toByte(c).toString(16).padStart(2, '0')).join('');
+  }
+}
+// 색조를 돌리며 만드는 램프(인디 도트식 hue shifting) — [외곽선, 그늘, 중간, 밝음, 가장 밝음]
+// 어두운 단은 차가운 쪽(cool, 파랑·보라)으로, 밝은 단은 따뜻한 쪽(warm, 노랑)으로 색상이 돌고,
+// 그늘은 채도를 살짝 올려 탁해지지 않게, 가장 밝은 단은 채도를 내려 따뜻한 흰빛으로. h = 바탕 색상(도), c = 채도(0.05~0.2)
+export function hueRamp(h, c, { L = [0.31, 0.46, 0.61, 0.75, 0.88], cool = 270, warm = 88, shift = [30, 17, 0, 11, 22], cs = [0.8, 1.1, 1, 0.82, 0.55] } = {}) {
+  const toward = (a, b, d) => { const df = ((b - a + 540) % 360) - 180; return a + Math.sign(df) * Math.min(Math.abs(df), d); };
+  return L.map((l, i) => oklch(l, c * cs[i], i < 2 ? toward(h, cool, shift[i]) : i > 2 ? toward(h, warm, shift[i]) : h));
+}
+// 씨앗 난수(같은 씨앗 = 같은 수열) — 프레임마다 다른 번개 모양 등
+export function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+// 고리 시간 흔들림: 한 바퀴(t 0→1)에 k번, 위상 ph
+export const sway = (t, amp, ph = 0, k = 1) => amp * Math.sin(2 * Math.PI * (k * t + ph));
+
 // 파스텔: 밝기를 위로 모으고(lift + keep × L) 채도를 줄인다(sat, 상한 cmax). 색상(hue)은 그대로.
 export function pastelizer({ lift = 0.36, keep = 0.64, sat = 0.62, cmax = 0.11 } = {}) {
   const cache = new Map();
