@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Img, colorize, decodePNG } from './engine.mjs';
 import { W, H } from './parts.mjs';
 import { POT3, renderPot } from './pot3d.mjs';
+import { plantInPot } from './potblend.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url)), keys = process.argv.slice(2).filter(a => !a.startsWith('--')), Z = 3, CH = H * Z, PAD = 8;
 const pot = renderPot(POT3.pot_terra);
@@ -33,8 +34,7 @@ for (const [r, key] of keys.entries()) {
   const cv = resolve(here, 'out', 'conv', key + '_96x112.png');
   if (existsSync(cv)) panes.push(decodePNG(readFileSync(cv)));
   panes.forEach((im, c) => {
-    const p = new Img(W, H), x = PAD * (2 + c) + CH + c * W * Z;
-    p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0);
+    const p = plantInPot(im, pot), x = PAD * (2 + c) + CH + c * W * Z;
     sheet.fill(x, y, W * Z, CH, '#323353');
     sheet.blit(p, x, y, Z);
   });

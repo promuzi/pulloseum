@@ -18,6 +18,7 @@ import { decodePNG, Img, oklab, fromOklab, INK, BAYER4, rng } from './engine.mjs
 import { W, H, EYE } from './parts.mjs';
 import { EYES } from './eyes.mjs';
 import { POT_GEO, POT3, renderPot } from './pot3d.mjs';
+import { plantInPot } from './potblend.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), measure = args.includes('--measure'), anim = args.includes('--anim'), keys = args.filter(a => !a.startsWith('--'));
@@ -25,6 +26,8 @@ const EYES_ON = args.includes('--eyes');   // 눈 덧그리기(EYE 틀) — 사�
 const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고, 깜빡일 때만 실제 눈 칸을 눈꺼풀로 덮는다(2026-10-15 사용자 "그림 바꾸지 말고 실제 눈을 인식해서")
 const MP4 = args.includes('--mp4');        // 움직임을 GIF와 함께 휴대폰에서도 재생되는 MP4로(사용자가 원격 휴대폰으로 확인 — video.mjs)
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
+// 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
+const TUNE = { flower_wind: { fill: 0.3 } };
 
 // 눈 찾기: 아주 어두운 덩어리(눈동자) 중 둘레가 훨씬 밝은 것(홍채·흰자·반짝임) → 크기·높이가 비슷하고 옆으로 나란한 한 쌍
 function findEyes(im, lab, isBg, top, bot) {
@@ -66,18 +69,49 @@ function findEyes(im, lab, isBg, top, bot) {
   return pair;
 }
 
-function load(key, file = null) {
-  const cutP = resolve(here, 'concept', 'cut', key + '.png'), cut = !!file || existsSync(cutP);
-  const im = decodePNG(readFileSync(file || (cut ? cutP : resolve(here, 'concept', key + '.png')))), n = im.w * im.h;
-  const lab = new Float32Array(n * 3);
+function labOf(im) {
+  const n = im.w * im.h, lab = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
     const k = i * 4, c = oklab('#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join(''));
     lab[i * 3] = c[0]; lab[i * 3 + 1] = c[1]; lab[i * 3 + 2] = c[2];
   }
-  const isBg = new Uint8Array(n);
-  if (cut) for (let i = 0; i < n; i++) isBg[i] = im.data[i * 4 + 3] < 128 ? 1 : 0;
-  else {
-    // 배경: 모서리 색과 비슷한 칸을 가장자리부터 채우고, 식물에 갇힌 넓은 배경 구멍(잎·꽃 사이)도 배경으로
+  return lab;
+}
+// 컨셉 그림(화분 있음)의 흙 타원: 아래쪽 어두운 갈색 칸 → 가장 긴 줄 묶음 → 타원(가운데·반폭·반높이)
+function soilOf(im, lab, isBg) {
+  const rows = [];
+  for (let y = Math.floor(im.h * 0.45); y < im.h; y++) {
+    let c = 0;
+    for (let x = 0; x < im.w; x++) { const i = y * im.w + x; if (isBg[i]) continue; const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]), h = hueOf(lab[i * 3 + 1], lab[i * 3 + 2]); if (L > 0.17 && L < 0.46 && C > 0.012 && C < 0.1 && h > 18 && h < 90) c++; }
+    if (c > im.w * 0.05) rows.push(y);
+  }
+  let best = [0, -1], s0 = rows[0];
+  for (let k = 1; k <= rows.length; k++) if (k === rows.length || rows[k] !== rows[k - 1] + 1) { if (rows[k - 1] - s0 > best[1] - best[0]) best = [s0, rows[k - 1]]; s0 = rows[k]; }
+  const xs = [];
+  for (let y = best[0]; y <= best[1]; y++) for (let x = 0; x < im.w; x++) { const i = y * im.w + x; if (isBg[i]) continue; const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]); if (L < 0.46 && C < 0.1) xs.push(x); }
+  xs.sort((a, b) => a - b);
+  const xL = xs[Math.floor(xs.length * 0.03)], xR = xs[Math.floor(xs.length * 0.97)];
+  const S = { cx: (xL + xR) / 2, cy: (best[0] + best[1]) / 2, a: (xR - xL) / 2, b: (best[1] - best[0]) / 2 };
+  // 화분 축(가로 가운데)은 흙이 아니라 화분 몸통 윤곽의 왼·오른 끝 가운데로 잰다 — 조명과 상관없게(2026-10-15 실측):
+  //  흙으로 재면 식물이 가린 만큼 보이는 흙만 세어 쏠리고(엠버캑터스 697 vs 실제 ~627), 테라코타 색으로 재면 밝은 왼쪽이 빠져 12종 모두 오른쪽으로 쏠림.
+  //  바닥 그림자를 피하려고 몸통 윗부분 줄(흙 아래 2~5 반높이)만, 줄마다 이어진 덩어리(테두리~테두리)만 센다.
+  const mids = [];
+  for (let y = Math.round(S.cy + S.b * 2); y < Math.min(im.h - 1, S.cy + S.b * 5); y += 2) {
+    let l = 0, r = im.w - 1;
+    while (l < im.w && isBg[y * im.w + l]) l++;
+    while (r > 0 && isBg[y * im.w + r]) r--;
+    if (r - l < S.a) continue;
+    let gap = 0;
+    for (let x = l; x <= r; x++) if (isBg[y * im.w + x]) gap++;
+    if (gap < (r - l) * 0.05) mids.push((l + r) / 2);
+  }
+  if (mids.length >= 5) { mids.sort((a, b) => a - b); S.cx = mids[Math.floor(mids.length / 2)]; }
+  return S;
+}
+// 배경(화분 있는 컨셉): 모서리 색과 비슷한 칸을 가장자리부터 채우고, 식물에 갇힌 넓은 배경 구멍(잎·꽃 사이)도 배경으로
+function bgOf(im, lab) {
+  const n = im.w * im.h, isBg = new Uint8Array(n);
+  {
     const bg = [0, 1, 2].map(c => ([0, im.w - 1, n - im.w, n - 1].reduce((s, i) => s + lab[i * 3 + c], 0) / 4));
     const dist = i => Math.hypot(lab[i * 3] - bg[0], (lab[i * 3 + 1] - bg[1]) * 1.5, (lab[i * 3 + 2] - bg[2]) * 1.5);
     const st = [];
@@ -101,22 +135,26 @@ function load(key, file = null) {
       if (reg.length >= 140) for (const j of reg) isBg[j] = 1;
     }
   }
-  // 흙(누끼가 아닐 때만): 아래쪽 어두운 갈색 칸 → 가장 긴 줄 묶음 → 타원
+  return isBg;
+}
+
+// 판에 놓는 기준(가상 3D, 2026-10-15 사용자 "기준축을 세워 정밀하게 — 화분 가운데, 기울지 않게"):
+//   식물이 흙에 닿는 중심 = 컨셉 그림 속 화분의 흙 타원 가운데 → 우리 3D 화분 흙 가운데(POT_GEO)에 맞춘다.
+//   누끼 그림도 같은 자리의 원래 컨셉(화분 있음)에서 흙 타원을 재어 쓴다(그림 폭 가운데·맨 아래 점을 쓰면 꽃잎 날림·앞쪽 돌주먹 때문에 옆·뒤로 밀림).
+//   화분 없는 그림(생장 단계)만 밑동(맨 아래 3%) 가운데를 쓴다.
+function load(key, file = null) {
+  const cutP = resolve(here, 'concept', 'cut', key + '.png'), origP = resolve(here, 'concept', key + '.png'), cut = !!file || existsSync(cutP);
+  const im = decodePNG(readFileSync(file || (cut ? cutP : origP))), n = im.w * im.h, lab = labOf(im);
+  let isBg = new Uint8Array(n);
+  if (cut) for (let i = 0; i < n; i++) isBg[i] = im.data[i * 4 + 3] < 128 ? 1 : 0;
+  else isBg = bgOf(im, lab);
   let S = null;
+  if (cut && !file && existsSync(origP)) {   // 누끼: 원래 컨셉의 흙 타원 가운데
+    const o = decodePNG(readFileSync(origP)), ol = labOf(o), so = soilOf(o, ol, bgOf(o, ol));
+    S = { cx: so.cx, cy: so.cy, a: so.a, b: 0, ref: 'soil' };
+  }
   if (!cut) {
-    const rows = [];
-    for (let y = Math.floor(im.h * 0.45); y < im.h; y++) {
-      let c = 0;
-      for (let x = 0; x < im.w; x++) { const i = y * im.w + x; if (isBg[i]) continue; const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]), h = hueOf(lab[i * 3 + 1], lab[i * 3 + 2]); if (L > 0.17 && L < 0.46 && C > 0.012 && C < 0.1 && h > 18 && h < 90) c++; }
-      if (c > im.w * 0.05) rows.push(y);
-    }
-    let best = [0, -1], s0 = rows[0];
-    for (let k = 1; k <= rows.length; k++) if (k === rows.length || rows[k] !== rows[k - 1] + 1) { if (rows[k - 1] - s0 > best[1] - best[0]) best = [s0, rows[k - 1]]; s0 = rows[k]; }
-    const xs = [];
-    for (let y = best[0]; y <= best[1]; y++) for (let x = 0; x < im.w; x++) { const i = y * im.w + x; if (isBg[i]) continue; const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]); if (L < 0.46 && C < 0.1) xs.push(x); }
-    xs.sort((a, b) => a - b);
-    const xL = xs[Math.floor(xs.length * 0.03)], xR = xs[Math.floor(xs.length * 0.97)];
-    S = { cx: (xL + xR) / 2, cy: (best[0] + best[1]) / 2, a: (xR - xL) / 2, b: (best[1] - best[0]) / 2 };
+    S = soilOf(im, lab, isBg);
     // 화분 빼기: 앞 테 아래(화분 몸통)는 화분 폭 안 전부, 입구(뒤 테 ~ 앞 테)에서는 흙·테라코타·테 하이라이트 색만
     const rimTop = S.cy - S.b * 1.4, rimFront = S.cy + S.b * 1.15, rimL = S.cx - S.a * 1.32, rimR = S.cx + S.a * 1.32;
     for (let y = Math.floor(rimTop); y < im.h; y++) for (let x = 0; x < im.w; x++) {
@@ -124,22 +162,45 @@ function load(key, file = null) {
       if (isBg[i]) continue;
       const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2], C = Math.hypot(A, B), h = hueOf(A, B), inPot = x > rimL && x < rimR;
       const terra = h > 35 && h < 70 && C > 0.05 && C < 0.14 && L > 0.36 && L < 0.86, dirt = L < 0.47 && C < 0.075 && h > 33 && h < 95, shine = L > 0.7 && C < 0.1 && h > 35 && h < 105;
-      if ((inPot && (terra || dirt || shine)) || (y > rimFront && x > rimL - S.a * 0.15 && x < rimR + S.a * 0.15) || y > rimFront + S.b * 3) isBg[i] = 1;
+      // 흙 입구 안의 어둡고 탁한 칸(흙 그늘·자갈 틈)은 색상과 상관없이 흙 — 남기면 우리 흙 위에 검은 점으로 흩어짐(2026-10-15 밑동 검수)
+      const opening = ((x - S.cx) / (S.a * 1.1)) ** 2 + ((y - S.cy) / (S.b * 1.4)) ** 2 <= 1, soilDark = opening && L < 0.35 && C < 0.1;
+      if ((inPot && (terra || dirt || shine)) || soilDark || (y > rimFront && x > rimL - S.a * 0.15 && x < rimR + S.a * 0.15) || y > rimFront + S.b * 3) isBg[i] = 1;
     }
   }
   // 식물 범위
   let top = im.h, bot = 0, left = im.w, right = 0;
   for (let i = 0; i < n; i++) if (!isBg[i]) { const x = i % im.w, y = (i - x) / im.w; top = Math.min(top, y); bot = Math.max(bot, y); left = Math.min(left, x); right = Math.max(right, x); }
-  if (cut) S = { cx: (left + right) / 2, cy: bot, a: (right - left) / 6, b: 0 };   // 누끼: 식물 전체 폭의 가운데를 판 가운데로
-  if (file) {   // 생장 단계 누끼: 밑동(맨 아래 3%) 가운데를 판 가운데로 — 단계마다 줄기가 화분 같은 자리에서 나오게
+  if (cut && !S) {   // 화분 없는 그림(생장 단계): 밑동(맨 아래 3%) 가운데, 맨 아래 줄 — 단계마다 줄기가 화분 같은 자리에서 나오게
     let bx = 0, bn = 0;
     for (let y = Math.floor(bot - (bot - top) * 0.03); y <= bot; y++) for (let x = 0; x < im.w; x++) if (!isBg[y * im.w + x]) { bx += x; bn++; }
-    if (bn) S.cx = bx / bn;
+    S = { cx: bn ? bx / bn : (left + right) / 2, cy: bot, a: (right - left) / 6, b: 0, ref: 'base' };
   }
-  // 눈: 지정(eyes.mjs)한 대략 자리 근처(반지름 60)에서 가장 어두운 칸들의 무게중심으로 맞춘다
-  const spec = EYES_ON || BLINK || anim ? EYES[key] : null, eyes = [];
-  if (spec && !file) for (const [ex, ey] of spec.src) {
-    const R0 = 60, cand = [];
+  // 밑동 기울기(재기만): 흙 가운데 위 줄기 칸들의 가운데를 줄마다 잇는 선의 기울기 — 크면 바로 세우기를 검토
+  {
+    const pts = [], y0 = Math.round(S.cy - (S.cy - top) * 0.22), y1 = Math.round(S.cy - (S.cy - top) * 0.04);
+    for (let y = y0; y <= y1; y++) {
+      let l = Math.round(S.cx), r = l;
+      if (isBg[y * im.w + l]) continue;
+      while (l > 0 && !isBg[y * im.w + l - 1]) l--;
+      while (r < im.w - 1 && !isBg[y * im.w + r + 1]) r++;
+      if (r - l < (S.cy - top) * 0.35) pts.push([y, (l + r) / 2]);
+    }
+    if (pts.length > 4) { const my = pts.reduce((a, p) => a + p[0], 0) / pts.length, mx = pts.reduce((a, p) => a + p[1], 0) / pts.length, sxy = pts.reduce((a, p) => a + (p[0] - my) * (p[1] - mx), 0), syy = pts.reduce((a, p) => a + (p[0] - my) ** 2, 0); S.tilt = Math.atan(sxy / syy) * 180 / Math.PI; }
+  }
+  // 몸 축 바로 세우기: 흙 가운데 → 위쪽 60% 무게중심을 잇는 선이 수직에서 3~20° 기울면 흙 가운데를 축으로 반대로 돌려 무게중심을 밑동 위에 둔다
+  // (사용자 2026-10-15 "중심축을 세우고 기울지 않게". 20°를 넘으면 원래 그런 모양(덩굴 몸통 등)으로 보고 그대로)
+  {
+    let gx = 0, gy = 0, gn = 0;
+    const yCut = S.cy - (S.cy - top) * 0.4;
+    for (let i = 0; i < n; i++) { if (isBg[i]) continue; const x = i % im.w, y = (i - x) / im.w; if (y < yCut) { gx += x; gy += y; gn++; } }
+    S.axis = gn ? Math.atan2(gx / gn - S.cx, S.cy - gy / gn) * 180 / Math.PI : 0;
+    S.rot = Math.abs(S.axis) >= 3 && Math.abs(S.axis) <= 20 ? -S.axis * Math.PI / 180 : 0;
+  }
+  // 눈: 지정(eyes.mjs)한 대략 자리 근처(반지름 40)에서 가장 어두운 칸들의 무게중심으로 맞춘다
+  const spec = EYES[key] || null, eyes = [];   // 눈 자리·영역은 늘 잰다(줄일 때 눈 칸을 따로 다루므로 정지 그림과 움직임이 같게)
+  if (spec && spec.box && !file) for (const [ex, ey] of spec.box) eyes.push([ex, ey]);   // 직접 잰 눈 타원 가운데
+  else if (spec && spec.src && !file) for (const [ex, ey] of spec.src) {
+    const R0 = 40, cand = [];
     for (let y = Math.max(0, ey - R0); y < Math.min(im.h, ey + R0); y++) for (let x = Math.max(0, ex - R0); x < Math.min(im.w, ex + R0); x++) {
       const i = y * im.w + x;
       if (!isBg[i] && (x - ex) ** 2 + (y - ey) ** 2 < R0 * R0) cand.push([lab[i * 3], x, y]);
@@ -148,7 +209,79 @@ function load(key, file = null) {
     const k = cand.slice(0, Math.max(20, Math.floor(cand.length * 0.04)));
     eyes.push([k.reduce((s, c) => s + c[1], 0) / k.length, k.reduce((s, c) => s + c[2], 0) / k.length]);
   }
-  return { im, lab, isBg, S, top, bot, left, right, cut, eyes };
+  // 눈 영역(원본 해상도) — 다시 칠하기·깜빡임용. 반지름 = 두 눈 사이 거리 × 0.42(22~55칸), 살결 = 두 눈 사이(콧등)와 눈 둘레에서 가장 흔한 색
+  const dist = eyes.length === 2 ? Math.hypot(eyes[1][0] - eyes[0][0], eyes[1][1] - eyes[0][1]) : 100;
+  const bridge = eyes.length === 2 ? [(eyes[0][0] + eyes[1][0]) / 2, (eyes[0][1] + eyes[1][1]) / 2, dist * 0.22] : null;
+  const ellipse = ([cx, cy, rx, ry]) => { const mask = new Set(); for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) { if (x < 0 || y < 0 || x >= im.w || y >= im.h) continue; const i = y * im.w + x; if (!isBg[i] && ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1) mask.add(i); } return { mask, skin: null }; };
+  const eyeMasks = !spec || spec.closed || file ? [] : spec.box ? spec.box.map(ellipse) : eyes.map(([cx, cy]) => eyeMaskSrc(im, lab, isBg, cx, cy, Math.max(22, Math.min(55, dist * 0.42)), bridge));
+  if (args.includes('--eyedebug') && eyeMasks.some(Boolean)) {   // 검토용: 눈 둘레 원본에 눈 영역을 자홍으로 칠해 저장
+    const ex = eyes.reduce((s, e) => s + e[0], 0) / eyes.length, ey = eyes.reduce((s, e) => s + e[1], 0) / eyes.length, CW = 320, CH = 200;
+    const o = new Img(CW, CH, '#000000'), X0 = Math.round(ex - CW / 2), Y0 = Math.round(ey - CH / 2), all = new Set();
+    eyeMasks.forEach(m => { if (m) m.mask.forEach(i => all.add(i)); });
+    for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+      const sx = X0 + x, sy = Y0 + y;
+      if (sx < 0 || sy < 0 || sx >= im.w || sy >= im.h) continue;
+      const i = sy * im.w + sx, k = i * 4, a = all.has(i);
+      o.data.set([a ? (im.data[k] + 255) >> 1 : im.data[k], a ? im.data[k + 1] >> 1 : im.data[k + 1], a ? (im.data[k + 2] + 255) >> 1 : im.data[k + 2], 255], (y * CW + x) * 4);
+    }
+    mkdirSync(resolve(here, 'out', 'conv'), { recursive: true });
+    writeFileSync(resolve(here, 'out', 'conv', key + '_eyes_src.png'), o.png());
+  }
+  return { im, lab, isBg, S, top, bot, left, right, cut, eyes, eyeMasks };
+}
+
+// 눈 영역(원본 해상도): 눈 아래 볼에서 살결 색을 재고, 눈동자 둘레 타원(가로 R·세로 0.8R) 안에서 살결과 뚜렷이 다른 칸 중
+// 눈동자(가장 어두운 칸)에 이어진 덩어리 + 그 덩어리가 둘러싼 구멍(흰자·반짝임). 96칸 판에서 찾으면 꽃잎·외곽선으로 번져서(2026-10-15 실측) 원본에서 찾는다.
+function eyeMaskSrc(im, lab, isBg, cx, cy, R, bridge = null) {
+  const w = im.w, h = im.h, bins = new Map();
+  // 살결: 눈 둘레 고리(1.15R~1.5R)와 두 눈 사이(콧등 원)의 색을 묶음(밝기 0.05·색 0.04 칸)으로 세어 가장 많은 묶음의 평균 — 콧등은 두 배로 센다
+  const add = (i, wt) => { const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2], k = `${Math.round(L / 0.05)},${Math.round(A / 0.04)},${Math.round(B / 0.04)}`, b = bins.get(k) || [0, 0, 0, 0]; b[0] += L * wt; b[1] += A * wt; b[2] += B * wt; b[3] += wt; bins.set(k, b); };
+  for (let y = Math.round(cy - R * 1.5); y <= cy + R * 1.5; y++) for (let x = Math.round(cx - R * 1.5); x <= cx + R * 1.5; x++) {
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const d = Math.hypot((x - cx) / R, (y - cy) / R), i = y * w + x;
+    if (!isBg[i] && d >= 1.15 && d <= 1.5) add(i, 1);
+  }
+  if (bridge) for (let y = Math.round(bridge[1] - bridge[2]); y <= bridge[1] + bridge[2]; y++) for (let x = Math.round(bridge[0] - bridge[2]); x <= bridge[0] + bridge[2]; x++) {
+    if (x < 0 || y < 0 || x >= w || y >= h || Math.hypot(x - bridge[0], y - bridge[1]) > bridge[2]) continue;
+    const i = y * w + x;
+    if (!isBg[i]) add(i, 2);
+  }
+  const top = [...bins.values()].sort((a, b) => b[3] - a[3])[0];
+  if (!top) return null;
+  const skin = [top[0] / top[3], top[1] / top[3], top[2] / top[3]];
+  const inE = (x, y) => ((x - cx) / R) ** 2 + ((y - cy) / (R * 0.75)) ** 2 <= 1;
+  const diff = i => Math.hypot(lab[i * 3] - skin[0], lab[i * 3 + 1] - skin[1], lab[i * 3 + 2] - skin[2]);
+  let dark = -1, dl = 9;
+  for (let y = Math.round(cy - R * 0.5); y <= cy + R * 0.5; y++) for (let x = Math.round(cx - R * 0.5); x <= cx + R * 0.5; x++) {
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const i = y * w + x;
+    if (!isBg[i] && lab[i * 3] < dl) { dl = lab[i * 3]; dark = i; }
+  }
+  if (dark < 0) return null;
+  const mask = new Set([dark]), st = [dark];
+  while (st.length) {
+    const i = st.pop(), x = i % w, y = (i - x) / w;
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+      const j = ny * w + nx;
+      if (nx >= 0 && ny >= 0 && nx < w && ny < h && !mask.has(j) && !isBg[j] && inE(nx, ny) && diff(j) > 0.12) { mask.add(j); st.push(j); }
+    }
+  }
+  // 구멍 메우기: 덩어리를 감싼 상자 테두리에서 덩어리 밖으로 채워 닿지 않는 칸 = 흰자·반짝임
+  let x0 = w, x1 = 0, y0 = h, y1 = 0;
+  for (const i of mask) { const x = i % w, y = (i - x) / w; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const bw = x1 - x0 + 3, bh = y1 - y0 + 3, out = new Uint8Array(bw * bh), q = [];
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) if (x === 0 || y === 0 || x === bw - 1 || y === bh - 1) { out[y * bw + x] = 1; q.push(y * bw + x); }
+  while (q.length) {
+    const k = q.pop(), x = k % bw, y = (k - x) / bw;
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+      if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
+      const kk = ny * bw + nx;
+      if (out[kk] || mask.has((y0 - 1 + ny) * w + (x0 - 1 + nx))) continue;
+      out[kk] = 1; q.push(kk);
+    }
+  }
+  for (let y = 1; y < bh - 1; y++) for (let x = 1; x < bw - 1; x++) if (!out[y * bw + x]) mask.add((y0 - 1 + y) * w + (x0 - 1 + x));
+  return { mask, skin };
 }
 
 if (measure) {
@@ -176,13 +309,15 @@ function kmeans(pts, K, wt, iters = 18) {
 }
 
 export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
-  const { im, lab, isBg, S, top, left, right, eyes: eyeSrc } = load(key, file), n = im.w * im.h;
+  const { im, lab, isBg, S, top, left, right, eyes: eyeSrc, eyeMasks } = load(key, file), n = im.w * im.h;
   const s = scale || fit * Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
-  if (!S.b) S.cy -= 3 / s;   // 누끼: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게
+  if (S.ref === 'base') S.cy -= 3 / s;   // 화분 없는 그림: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게(흙 기준 그림은 흙 가운데가 곧 기준)
+  const rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
+  const toOut = (x, y) => { const u = (x - S.cx) * s, v = (y - S.cy) * s; return [P.cx + u * rc - v * rs, P.cy + u * rs + v * rc]; };   // 원본 자리 → 판 자리(몸 축 바로 세우기 포함)
   // 눈: 원본 자리 → 도트 좌표, 그 자리를 가운데로 EYE 틀 크기의 상자
   const spec = EYES_ON ? EYES[key] : null, grid = spec ? EYE[spec.style].g : null;
   const eyes = spec ? eyeSrc.map(([ex, ey], n2) => {
-    const w = grid[0].length, h = grid.length, X = P.cx + (ex - S.cx) * s, Y = P.cy + (ey - S.cy) * s;
+    const w = grid[0].length, h = grid.length, [X, Y] = toOut(ex, ey);
     return { x: Math.round(X - w / 2), y: Math.round(Y - h / 2), w, h, mirror: n2 % 2 === 1 && !!EYE[spec.style].mirror };
   }) : [];
   // ① 재질: 표본(성기게) → 색상·채도 위주 k-평균
@@ -203,11 +338,40 @@ export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
   }
   const palLab = acc.map((a, k) => a[3] ? [a[0] / a[3], a[1] / a[3] * 1.12, a[2] / a[3] * 1.12] : [mat.cent[Math.floor(k / LV)][0], 0, 0]);
   const matL = mat.cent.map(c => c[0]);
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL };
+  // 눈 영역 표시(원본 칸마다 눈 번호) — 줄일 때 눈 칸은 눈 색으로만, 둘레는 살결로만 정해 속눈썹 그림자가 번져 엉뚱한 입처럼 보이지 않게
+  const eyeId = new Int8Array(n).fill(-1);
+  (eyeMasks || []).forEach((mk, k) => { if (mk) for (const i of mk.mask) eyeId[i] = k; });
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, fill: (TUNE[key] || {}).fill ?? 0.5 };
   const { cm, ct } = rasterize(src);
-  // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만)
-  const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => [P.cx + (ex - S.cx) * s, P.cy + (ey - S.cy) * s]) : [];
-  return { cm, ct, palLab, matL, key, eyes, eyeC, s, src };
+  // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만) + 눈 영역 → 판 칸(원본 블록의 30% 이상이 눈이면 눈 칸)
+  const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => toOut(ex, ey)) : [];
+  const eyeGrid = (eyeMasks || []).map(m => {
+    if (!m) return null;
+    const cnt = new Map();
+    for (const i of m.mask) { const x = i % im.w, y = (i - x) / im.w, [X, Y] = toOut(x + 0.5, y + 0.5), k = Math.floor(Y) * W + Math.floor(X); cnt.set(k, (cnt.get(k) || 0) + 1); }
+    const pts = [...cnt].filter(([k, c]) => c >= 0.35 / (s * s) && cm[k] >= 0).map(([k]) => k);
+    return pts.length ? { pts, skin: m.skin } : null;
+  });
+  const sp = EYES[key];
+  const eyeCheek = sp && sp.cheek && !file ? toOut(sp.cheek[0], sp.cheek[1]).map(Math.floor) : null;   // 볼(살결 색을 뜰 판 칸)
+  // 눈 반짝임 살리기: 원본 눈 타원 안 가장 밝은 점(L > 0.88, 15칸 이상)의 무게중심 칸이 밝지 않으면, 그 점들의 재질 가장 밝은 단으로 한 칸 찍는다
+  // — 작은 눈이 줄면서 반짝임이 빠지면 속눈썹 선만 남아 입·초승달처럼 읽힘(윈드페탈, 2026-10-15)
+  if (sp && sp.box && !sp.closed && !file) for (const [ex, ey, rx, ry] of sp.box) {
+    let sx = 0, sy = 0, n2 = 0;
+    const mc = new Float32Array(KM);
+    for (let y = Math.floor(ey - ry); y <= ey + ry; y++) for (let x = Math.floor(ex - rx); x <= ex + rx; x++) {
+      if (x < 0 || y < 0 || x >= im.w || y >= im.h || ((x + 0.5 - ex) / rx) ** 2 + ((y + 0.5 - ey) / ry) ** 2 > 1) continue;
+      const i = y * im.w + x;
+      if (pm[i] >= 0 && lab[i * 3] > 0.88) { sx += x; sy += y; n2++; mc[pm[i]]++; }
+    }
+    if (n2 < 15) continue;
+    const [X, Y] = toOut(sx / n2 + 0.5, sy / n2 + 0.5).map(Math.floor), k = Y * W + X;
+    if (X < 0 || Y < 0 || X >= W || Y >= H || cm[k] < 0) continue;
+    let m = 0;
+    for (let q = 1; q < KM; q++) if (mc[q] > mc[m]) m = q;
+    if (matL[cm[k]] < 0.75 || ct[k] < LV - 1) { cm[k] = m; ct[k] = LV - 1; }
+  }
+  return { cm, ct, palLab, matL, key, eyes, eyeC, eyeGrid, eyeCheek, s, src };
 }
 
 // ③ 다수 재질로 줄이기 + ④ 정리 — 원본(재질·단이 정해진 큰 그림)을 판 칸으로.
@@ -216,26 +380,31 @@ export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
 // prev = 바로 앞 장 {cm, ct, warp}: 같은 원본 자리가 앞 장에 놓였던 칸과 비교해, 차이가 작으면 앞 장 값을 그대로 둔다(이력 유지)
 //   — 매 장 다시 줄일 때 생기는 '끓음'(테두리·명암 칸이 장마다 뒤바뀌며 자글거림)을 막고, 확실히 움직인 칸만 바뀌게
 export function rasterize(src, warp = null, prev = null) {
-  const { pm, pl, w: iw, h: ih, S, s, matL } = src;
-  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(KM), lv = new Float32Array(KM);
+  const { pm, pl, w: iw, h: ih, S, s, matL, eyeId, fill: F0 = 0.5 } = src, rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
+  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(KM), lv = new Float32Array(KM), cnE = new Float32Array(KM), lvE = new Float32Array(KM);
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
-    const [dx, dy] = warp ? warp(X, Y) : [0, 0];
-    const x0 = S.cx + (X - dx - P.cx) / s, y0 = S.cy + (Y - dy - P.cy) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;
-    cnt.fill(0); lv.fill(0);
-    let tot = 0, fg = 0;
+    const [dx, dy] = warp ? warp(X, Y) : [0, 0], u = X - dx - P.cx, v = Y - dy - P.cy;
+    const x0 = S.cx + (u * rc + v * rs) / s, y0 = S.cy + (-u * rs + v * rc) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;   // 몸 축 바로 세우기(S.rot) 되돌려 원본 자리
+    cnt.fill(0); lv.fill(0); cnE.fill(0); lvE.fill(0);
+    let tot = 0, fg = 0, fgE = 0;
     for (let y = Math.max(0, Math.floor(y0)); y < Math.min(ih, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(iw, Math.ceil(x1)); x++) {
       const i = y * iw + x;
       tot++;
       if (pm[i] < 0) continue;
-      fg++; cnt[pm[i]]++; lv[pm[i]] += pl[i];
+      fg++;
+      if (eyeId && eyeId[i] >= 0) { fgE++; cnE[pm[i]]++; lvE[pm[i]] += pl[i]; } else { cnt[pm[i]]++; lv[pm[i]] += pl[i]; }
     }
+    // 눈 칸(블록의 30% 이상이 눈 타원): 눈 색끼리만 다수결, 아니면 눈 아닌 칸끼리만 — 속눈썹 그늘이 살결로, 살결이 눈으로 번지지 않게.
+    // (반짝임은 convert의 '가장 밝은 점' 한 칸으로만 살린다 — 밝은 재질을 고르는 규칙은 밝은 주황 눈동자를 지워 없앰, 블레이즈블룸 2026-10-15)
+    if (fgE >= 0.3 * fg && fgE > 0) { cnt.set(cnE); lv.set(lvE); }
+    else if (fgE > 0 && fg - fgE === 0) { cnt.set(cnE); lv.set(lvE); }
     let pi = -1;   // 앞 장에서 같은 원본 자리였던 칸
     if (prev) {
       const [qx, qy] = prev.warp ? prev.warp(X, Y) : [0, 0], X2 = Math.round(X - dx + qx), Y2 = Math.round(Y - dy + qy);
       if (X2 >= 0 && Y2 >= 0 && X2 < W && Y2 < H) pi = Y2 * W + X2;
     }
     const fill = !tot ? 0 : fg / tot, was = pi >= 0 && prev.cm[pi] >= 0;
-    if (!tot || fill < (pi < 0 ? 0.5 : was ? 0.38 : 0.62)) continue;
+    if (!tot || fill < (pi < 0 ? F0 : was ? F0 - 0.12 : F0 + 0.12)) continue;
     let m = 0;
     for (let k = 1; k < KM; k++) if (cnt[k] > cnt[m]) m = k;
     if (was && cnt[prev.cm[pi]] >= cnt[m] * 0.75) m = prev.cm[pi];
@@ -277,7 +446,27 @@ export function rasterize(src, warp = null, prev = null) {
     }
     ct2 = nx;
   }
+  despeck(cm);
   return { cm, ct: ct2 };
+}
+// 흙 둘레의 떨어진 작은 점 없애기: 몸(가장 큰 덩어리)과 이어지지 않은 6칸 이하 덩어리가 흙 높이 띠(흙 가운데 − 1.6 반높이 아래)에 있으면
+// 컨셉 흙의 자갈·그늘이 남은 것 — 지운다(2026-10-15 밑동 검수: 아쿠아벌브·스파크번·게일캑터스·포자버섯 흙 위 검은 점)
+function despeck(cm) {
+  const comp = new Int32Array(W * H).fill(-1), sizes = [], cells = [];
+  for (let i = 0; i < W * H; i++) {
+    if (cm[i] < 0 || comp[i] >= 0) continue;
+    const id = sizes.length, st = [i], list = [];
+    comp[i] = id;
+    while (st.length) {
+      const j = st.pop(), x = j % W, y = (j - x) / W;
+      list.push(j);
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const X = x + ox, Y = y + oy, k = Y * W + X; if ((ox || oy) && X >= 0 && Y >= 0 && X < W && Y < H && cm[k] >= 0 && comp[k] < 0) { comp[k] = id; st.push(k); } }
+    }
+    sizes.push(list.length); cells.push(list);
+  }
+  if (!sizes.length) return;
+  const main = sizes.indexOf(Math.max(...sizes)), band = P.cy - P.b * 1.6;
+  cells.forEach((list, id) => { if (id !== main && list.length <= 6 && list.every(j => Math.floor(j / W) >= band)) for (const j of list) cm[j] = -1; });
 }
 
 // 실제 그려진 눈 칸 찾기: 눈동자 가운데에서 반지름 4.5 안, 둘레(4.5~6.5) 살결 색과 뚜렷이 다른 칸 → 가장 어두운 칸에 이어진 덩어리
@@ -339,6 +528,54 @@ function blinkEyes(out, cv, state, dx = 0, dy = 0) {
   }
 }
 
+// 깜빡임(눈 영역 판 칸 cv.eyeGrid 사용) — 기준은 blinkEyes와 같다(θ = 두 눈 무게중심 각도, 눈마다 폭·높이 따로, 감음 = ∪ 곡선, 반쯤 = 위쪽만 덮고 평평한 선).
+// 살결 = 눈 칸을 둘러싼 고리 중 눈 가운데보다 아래(볼)에서 가장 흔한 밝은 색 — 위쪽은 꽃잎·이마일 수 있어서. 눈꺼풀 선 = 눈 칸 중 가장 어두운 색.
+function blinkGrid(out, cv, state, dx = 0, dy = 0) {
+  const px = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return null; const k = (y * W + x) * 4; return out.data[k + 3] < 128 ? null : '#' + [0, 1, 2].map(j => out.data[k + j].toString(16).padStart(2, '0')).join(''); };
+  const grids = cv.eyeGrid.filter(Boolean), eyes = grids.map(g => g.pts.map(k => [k % W + dx, Math.floor(k / W) + dy]));
+  if (!eyes.length) return;
+  const cen = eyes.map(e => [e.reduce((s, p) => s + p[0] + 0.5, 0) / e.length, e.reduce((s, p) => s + p[1] + 0.5, 0) / e.length]);
+  const th = cen.length === 2 ? Math.atan2(cen[1][1] - cen[0][1], cen[1][0] - cen[0][0]) : 0, c = Math.cos(th), s = Math.sin(th);
+  eyes.forEach((e, k) => {
+    const set = new Set(e.map(([x, y]) => y * W + x)), ring = new Map(), [ox, oy] = cen[k];
+    let lidC = null, lidL = 9;
+    for (const [x, y] of e) {
+      const col = px(x, y);
+      if (col) { const L = oklab(col)[0]; if (L < lidL) { lidL = L; lidC = col; } }
+      for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1], [x - 1, y + 1], [x + 1, y + 1]]) {
+        if (set.has(ny * W + nx) || ny + 0.5 < oy) continue;
+        const cc = px(nx, ny);
+        if (cc && oklab(cc)[0] > 0.35) ring.set(cc, (ring.get(cc) || 0) + 1);
+      }
+    }
+    // 살결: 직접 찍은 볼(eyes.mjs cheek) 둘레 3×3에서 가장 흔한 밝은 색 → 없으면 원본에서 잰 살결에 가장 가까운 고리 색 → 아래 고리에서 가장 흔한 밝은 색
+    let skin = null;
+    if (cv.eyeCheek) {
+      const cc = new Map();
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const c2 = px(cv.eyeCheek[0] + dx + ox, cv.eyeCheek[1] + dy + oy); if (c2 && oklab(c2)[0] > 0.35) cc.set(c2, (cc.get(c2) || 0) + 1); }
+      skin = [...cc].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    }
+    if (!skin && grids[k].skin) {
+      const sk = grids[k].skin, near = [...ring.keys()].map(cc => { const o = oklab(cc); return [cc, Math.hypot(o[0] - sk[0], o[1] - sk[1], o[2] - sk[2])]; }).sort((a, b) => a[1] - b[1])[0];
+      if (near && near[1] <= 0.15) skin = near[0];
+    }
+    if (!skin) skin = [...ring].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (!skin || !lidC) return;
+    const uv = e.map(([x, y]) => { const X = x + 0.5 - ox, Y = y + 0.5 - oy; return [X * c + Y * s, -X * s + Y * c]; });
+    const us = uv.map(p => p[0]), vs = uv.map(p => p[1]), u0 = Math.min(...us) - 0.5, u1 = Math.max(...us) + 0.5, v0 = Math.min(...vs) - 0.5, v1 = Math.max(...vs) + 0.5;
+    const w = u1 - u0, h = v1 - v0, um = (u0 + u1) / 2;
+    const curve = state === 'closed'
+      ? u => (v0 + v1) / 2 + h * 0.12 + Math.max(0.7, w * 0.22) * (1 - ((u - um) / (w / 2)) ** 2)
+      : u => (v0 + v1) / 2 - Math.max(0.3, w * 0.08) * (1 - ((u - um) / (w / 2)) ** 2);
+    e.forEach(([x, y], i) => { const [u, v] = uv[i]; if (state === 'closed' || v < curve(u)) out.set(x, y, skin); });
+    const [L, A, B] = oklab(lidC), lc = fromOklab(Math.max(0.15, L), A, B), seen = new Set();
+    for (let u = u0 + 0.25; u <= u1 - 0.25; u += 0.25) {
+      const v = curve(u), X = Math.floor(ox + u * c - v * s), Y = Math.floor(oy + u * s + v * c), key = Y * W + X;
+      if (!seen.has(key)) { seen.add(key); out.set(X, Y, lc); }
+    }
+  });
+}
+
 // 눈 그리기: open = 종별 EYE 틀 그대로 / half = 위 절반을 눈꺼풀(둘레 살결 색)로 / closed = 눈꺼풀 + 가운데 한 줄
 function drawEyes(out, cv, state, dx = 0) {
   const spec = EYES_ON ? EYES[cv.key] : null;
@@ -373,7 +610,10 @@ export function paint(cv, { warp = null, maps = null, tone = null, eye = 'open',
   const out = paintBody(cv, { warp, maps, tone, srcOf });
   const off = (x, y) => eyeOff || (warp ? warp(Math.round(x), Math.round(y)) : [0, 0]);
   if (cv.eyes.length) drawEyes(out, cv, eye, off(cv.eyes[0].x, cv.eyes[0].y)[0]);
-  if (cv.eyeC.length && eye !== 'open') { const ex = cv.eyeC.reduce((s, e) => s + e[0], 0) / cv.eyeC.length, ey = cv.eyeC.reduce((s, e) => s + e[1], 0) / cv.eyeC.length; blinkEyes(out, cv, eye, ...off(ex, ey)); }
+  if (cv.eyeC.length && eye !== 'open') {
+    const ex = cv.eyeC.reduce((s, e) => s + e[0], 0) / cv.eyeC.length, ey = cv.eyeC.reduce((s, e) => s + e[1], 0) / cv.eyeC.length;
+    if (cv.eyeGrid && cv.eyeGrid.some(Boolean)) blinkGrid(out, cv, eye, ...off(ex, ey)); else blinkEyes(out, cv, eye, ...off(ex, ey));
+  }
   return out;
 }
 function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } = {}) {
@@ -415,7 +655,8 @@ const stages = args.includes('--stages');
 const cvs = stages ? [] : keys.map(k => {
   const cv = convert(k);
   writeFileSync(resolve(here, 'out', 'conv', k + '_96x112.png'), paint(cv).png());
-  console.log(`${k.padEnd(13)} 변환 완료 · 축척 ${cv.s.toFixed(4)}${EYES_ON ? ' · 눈 ' + (cv.eyes.length ? cv.eyes.map(e => `${e.x},${e.y} ${e.w}×${e.h}`).join(' / ') : '지정 없음') : ''}`);
+  const S0 = cv.src.S;
+  console.log(`${k.padEnd(13)} 변환 완료 · 축척 ${cv.s.toFixed(4)} · 기준 ${S0.ref === 'soil' ? '누끼+원래 흙' : S0.ref === 'base' ? '밑동' : '흙'} (${S0.cx.toFixed(0)}, ${S0.cy.toFixed(0)}) · 몸 축 ${(S0.axis || 0).toFixed(1)}°${S0.rot ? ` → ${(-S0.rot * 180 / Math.PI).toFixed(1)}° 돌려 세움` : ''}${EYES_ON ? ' · 눈 ' + (cv.eyes.length ? cv.eyes.map(e => `${e.x},${e.y} ${e.w}×${e.h}`).join(' / ') : '지정 없음') : ''}`);
   return cv;
 });
 
@@ -441,9 +682,8 @@ if (stages) {
   const BG = [0x32, 0x33, 0x53];   // 줄인 그림을 판 바탕색 위에 반투명 가장자리까지 섞어 얹는다
   const shrink = (src, w, h) => { const o = new Img(w, h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const x0 = Math.floor(x * src.w / w), x1 = Math.max(x0 + 1, Math.floor((x + 1) * src.w / w)), y0 = Math.floor(y * src.h / h), y1 = Math.max(y0 + 1, Math.floor((y + 1) * src.h / h)), s3 = [0, 0, 0]; let a = 0; for (let j = y0; j < y1; j++) for (let i = x0; i < x1; i++) { const q = (j * src.w + i) * 4, al = src.data[q + 3]; for (let c = 0; c < 3; c++) s3[c] += src.data[q + c] * al; a += al; } const full = 255 * (x1 - x0) * (y1 - y0); for (let c = 0; c < 3; c++) o.data[(y * w + x) * 4 + c] = Math.round((s3[c] + BG[c] * (full - a)) / full); o.data[(y * w + x) * 4 + 3] = 255; } return o; };
   list.forEach((im, k) => {
-    const X = 8 + k * (PW + 8), p = new Img(W, H);
+    const X = 8 + k * (PW + 8), p = plantInPot(im, pot);
     sheet.fill(X, 8, PW, PW, '#323353'); sheet.blit(shrink(srcs[k], PW, PW), X, 8);
-    p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0);
     sheet.fill(X, 16 + PW, PW, H * Z, '#323353'); sheet.blit(p, X, 16 + PW, Z);
   });
   writeFileSync(resolve(here, 'out', 'conv', `${key}_stages.png`), sheet.png());
@@ -534,8 +774,7 @@ if (anim) {
       }
     }
     if (fires[k]) emberFrame(f, fires[k], at, put, { seed: 3 + k });
-    const out = new Img(W, H, bg);
-    out.blit(pot.back, 0, 0); out.blit(im, 0, 0); out.blit(pot.front, 0, 0);
+    const out = plantInPot(im, pot, bg);
     for (const [x, y, c] of fxPaint) out.set(x, y, c);
     return out;
   };
@@ -568,10 +807,17 @@ if (anim) {
     for (let f = 0; f < FR; f++) { const a = one[f].data, c = one[(f + 1) % FR].data; for (let i = 0; i < a.length; i += 4) if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) ch++; }
     console.log(`${cvs[k].key.padEnd(13)} 얼굴 (${r.hx.toFixed(1)}, ${r.hy.toFixed(1)}) 머리 반지름 ${r.Rh.toFixed(1)} · 떠 있는 조각 ${r.bits.filter(Boolean).length}개${eplans[k] ? ' · 전기 끝점 ' + findTips(cvs[k], r).length + '개' : ''}${fires[k] ? ` · 불 칸 ${fires[k].n}개·혀 끝 ${fires[k].tips.length}개` : ''} · 장마다 바뀐 칸 평균 ${(ch / FR).toFixed(0)}`);
   }
-  // 깜빡임 확인판: 뜬 눈 · 반쯤 · 감음을 4배로 나란히(흔들림 없이)
-  if (BLINK) for (const cv of cvs) {
+}
+
+// 깜빡임 확인(--blink, 움직임 없이도 됨): 종마다 뜬 눈 · 반쯤 · 감음 4배 + 얼굴 10배, 여러 종이면 얼굴을 한 장(blink_all.png)으로
+if (BLINK) {
+  const { encodeGIF } = await import('./gif.mjs');
+  const pot = renderPot(POT3.pot_terra), allFaces = [];
+  const zoom = (list, z, bg) => list.map(c => { const o = new Img(c.w * z, c.h * z, bg); o.blit(c, 0, 0, z); return o; });
+  for (const cv of cvs) {
+    if (!cv.eyeC.length || (EYES[cv.key] || {}).closed) continue;
     const Z4 = 4, sh = new Img(8 + 3 * (W * Z4 + 8), H * Z4 + 16, '#2e222f');
-    ['open', 'half', 'closed'].forEach((st, k) => { const p = new Img(W, H); p.blit(pot.back, 0, 0); p.blit(paint(cv, { eye: st }), 0, 0); p.blit(pot.front, 0, 0); sh.fill(8 + k * (W * Z4 + 8), 8, W * Z4, H * Z4, '#323353'); sh.blit(p, 8 + k * (W * Z4 + 8), 8, Z4); });
+    ['open', 'half', 'closed'].forEach((st, k) => { const p = plantInPot(paint(cv, { eye: st }), pot); sh.fill(8 + k * (W * Z4 + 8), 8, W * Z4, H * Z4, '#323353'); sh.blit(p, 8 + k * (W * Z4 + 8), 8, Z4); });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink.png'), sh.png());
     // 얼굴 확대(10배, 두 눈 둘레 30×18칸): 뜬 눈 · 반쯤 · 감음 + 잰 값
     const ex = cv.eyeC.reduce((a, e) => a + e[0], 0) / cv.eyeC.length, ey = cv.eyeC.reduce((a, e) => a + e[1], 0) / cv.eyeC.length;
@@ -582,12 +828,20 @@ if (anim) {
       face.blit(crop, 8 + k * (CW * Z10 + 8), 8, Z10);
     });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.png'), face.png());
-    // 얼굴 영상: 흔들림 없이 깜빡임만(뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06). GIF 10배 + --mp4면 MP4 20배. 화분 전체는 위의 <키>_idle
+    allFaces.push(face);
+    // 얼굴 영상: 흔들림 없이 깜빡임만(뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06). GIF 10배 + --mp4면 MP4 20배. 화분 전체는 --anim의 <키>_idle
     const seq = [['open', 160], ['half', 6], ['closed', 12], ['half', 6]];
     const faces = seq.map(([st]) => { const im = paint(cv, { eye: st }), c1 = new Img(CW, CHh, '#323353'); for (let y = 0; y < CHh; y++) for (let x = 0; x < CW; x++) { const sx = X0 + x, sy = Y0 + y; if (sx >= 0 && sy >= 0 && sx < W && sy < H) { const s4 = (sy * W + sx) * 4; if (im.data[s4 + 3] > 127) c1.data.set(im.data.subarray(s4, s4 + 4), (y * CW + x) * 4); } } return c1; });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.gif'), encodeGIF(zoom(faces, Z10, '#323353'), { delay: seq.map(s => s[1]) }));
     if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_face.mp4'), zoom(faces, 20, '#323353'), { delay: seq.map(s => s[1]), loops: 6 });
     const geo = eyeGeometry(paint(cv), cv);
-    console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 ` + geo.map((g, k) => `${k ? '오른쪽' : '왼쪽'} 폭 ${(g.u1 - g.u0).toFixed(1)} 높이 ${(g.v1 - g.v0).toFixed(1)}`).join(' / '));
+    console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 칸 ${(cv.eyeGrid || []).map(g => g ? g.pts.length : 0).join('·')}`);
+  }
+  if (allFaces.length > 1) {
+    const sheet = new Img(allFaces[0].w, allFaces.reduce((s, f) => s + f.h, 0), '#2e222f');
+    let y = 0;
+    for (const f of allFaces) { sheet.blit(f, 0, y); y += f.h; }
+    writeFileSync(resolve(here, 'out', 'conv', 'blink_all.png'), sheet.png());
+    console.log('깜빡임 모아보기 →', resolve(here, 'out', 'conv', 'blink_all.png'));
   }
 }
