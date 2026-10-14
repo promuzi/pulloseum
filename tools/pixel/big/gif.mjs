@@ -1,4 +1,5 @@
 // 움직이는 검토판용 GIF89a 인코더 — 같은 크기 프레임(Img, 불투명) 여러 장 → 전역 팔레트(256색 이하) + LZW, 무한 반복
+// delay = 1/100초 단위, 숫자 하나면 모든 장 같게, 배열이면 장마다(깜빡임처럼 짧은 장을 섞을 때)
 export function encodeGIF(frames, { delay = 10 } = {}) {
   const w = frames[0].w, h = frames[0].h, pal = new Map(), idx = [];
   for (const f of frames) {
@@ -17,8 +18,8 @@ export function encodeGIF(frames, { delay = 10 } = {}) {
   for (const [k, i] of pal) { table[i * 3] = k >> 16; table[i * 3 + 1] = (k >> 8) & 255; table[i * 3 + 2] = k & 255; }
   out.push(...table);
   out.push(0x21, 0xff, 11, ...[...'NETSCAPE2.0'].map(c => c.charCodeAt(0)), 3, 1, 0, 0, 0);
-  for (const ix of idx) {
-    out.push(0x21, 0xf9, 4, 0, ...u16(delay), 0, 0);
+  for (const [n, ix] of idx.entries()) {
+    out.push(0x21, 0xf9, 4, 0, ...u16(Array.isArray(delay) ? delay[n] : delay), 0, 0);
     out.push(0x2c, 0, 0, 0, 0, ...u16(w), ...u16(h), 0, mcs);
     const data = lzw(ix, mcs);
     for (let i = 0; i < data.length; i += 255) { const n = Math.min(255, data.length - i); out.push(n); for (let j = 0; j < n; j++) out.push(data[i + j]); }

@@ -444,6 +444,22 @@ if (anim) {
       face.blit(crop, 8 + k * (CW * Z10 + 8), 8, Z10);
     });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.png'), face.png());
+    // 영상(GIF): 얼굴 10배 — 흔들림 없이 깜빡임만 / 화분 전체 4배 — 흔들림·효과와 함께. 장마다 길이: 뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06
+    const seq = [['open', 160], ['half', 6], ['closed', 12], ['half', 6]];
+    const faceFr = seq.map(([st]) => { const im = paint(cv, { eye: st }), cr = new Img(CW * Z10, CHh * Z10, '#323353'), c1 = new Img(CW, CHh, '#323353'); for (let y = 0; y < CHh; y++) for (let x = 0; x < CW; x++) { const sx = X0 + x, sy = Y0 + y; if (sx >= 0 && sy >= 0 && sx < W && sy < H) { const s4 = (sy * W + sx) * 4; if (im.data[s4 + 3] > 127) c1.data.set(im.data.subarray(s4, s4 + 4), (y * CW + x) * 4); } } cr.blit(c1, 0, 0, Z10); return cr; });
+    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.gif'), encodeGIF(faceFr, { delay: seq.map(s => s[1]) }));
+    const fx = FX[cv.key] || { sway: 1 }, ZF = 4, full = [], del = [];
+    for (let f = 0; f < 32; f++) {   // 흔들림 1.6초 두 바퀴 + 끝에서 한 번 깜빡임
+      const t = (f % 16) / 16, eye = f === 26 ? 'closed' : f === 25 || f === 27 ? 'half' : 'open';
+      const shiftRow = y => y >= P.cy - 2 ? 0 : Math.round(fx.sway * Math.sin(2 * Math.PI * t) * ((P.cy - y) / (P.cy - 6)) ** 1.4);
+      const im = paint(cv, { shiftRow, eye }), S2 = { paints: [], paint(pts, c) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), c]); } };
+      if (fx.bolts) fx.bolts.forEach(([a, b], q) => { if ((f + q) % 3) bolt({ paint: S2.paint.bind(S2), w: W }, a, b, { seed: f * 31 + q * 7 + 1, depth: 2, amp: 0.3, fork: 0.3, glow: '#fbe36a' }); });
+      for (const [x, y, c] of S2.paints) im.set(x, y, c);
+      const p = new Img(W, H), fr = new Img(W * ZF, H * ZF, '#2f3150');
+      p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0); fr.blit(p, 0, 0, ZF);
+      full.push(fr); del.push(eye === 'closed' ? 12 : eye === 'half' ? 6 : 10);
+    }
+    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_full.gif'), encodeGIF(full, { delay: del }));
     const geo = eyeGeometry(paint(cv), cv);
     console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 ` + geo.map((g, k) => `${k ? '오른쪽' : '왼쪽'} 폭 ${(g.u1 - g.u0).toFixed(1)} 높이 ${(g.v1 - g.v0).toFixed(1)}`).join(' / '));
   }
