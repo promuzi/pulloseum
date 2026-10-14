@@ -330,8 +330,45 @@ export class Sprite {
   }
 }
 
+// ── 색 공간: sRGB ↔ OKLab(Björn Ottosson) — 파스텔 변환용
+const toLin = c => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const toByte = c => Math.round(255 * Math.max(0, Math.min(1, c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055)));
+export function oklab(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => toLin(parseInt(hex.slice(i, i + 2), 16)));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+}
+export function fromOklab(L, A, B) {
+  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3, m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3, s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+  return '#' + [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s]
+    .map(c => toByte(c).toString(16).padStart(2, '0')).join('');
+}
+// 파스텔: 밝기를 위로 모으고(lift + keep × L) 채도를 줄인다(sat, 상한 cmax). 색상(hue)은 그대로.
+export function pastelizer({ lift = 0.36, keep = 0.64, sat = 0.62, cmax = 0.11 } = {}) {
+  const cache = new Map();
+  return hex => {
+    if (!hex) return hex;
+    if (!cache.has(hex)) {
+      const [L, A, B] = oklab(hex), C = Math.hypot(A, B), h = Math.atan2(B, A), C2 = Math.min(C * sat, cmax);
+      cache.set(hex, fromOklab(lift + keep * L, C2 * Math.cos(h), C2 * Math.sin(h)));
+    }
+    return cache.get(hex);
+  };
+}
+// 이미 그린 그림판의 색을 통째로 바꾼다(화분 등)
+export function mapImg(im, fn) {
+  const out = new Img(im.w, im.h);
+  for (let i = 0; i < im.w * im.h; i++) {
+    const k = i * 4;
+    if (im.data[k + 3] < 128) continue;
+    out.set(i % im.w, (i - i % im.w) / im.w, fn('#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join('')));
+  }
+  return out;
+}
+
 // 렌더 결과 → 칸마다 색(hex) 또는 null. selout=false 면 실루엣도 전부 램프 0(메카식 진한 외곽선).
-export function colorize(sp, r, { selout = true } = {}) {
+// map = 색 바꾸기(파스텔 등), keepMap = sp.keep 칸(눈)에 쓸 바꾸기
+export function colorize(sp, r, { selout = true, map = null, keepMap = null } = {}) {
   const W = sp.w, H = sp.h, out = new Array(W * H).fill(null);
   for (let i = 0; i < W * H; i++) {
     const j = r.lid[i];
@@ -354,6 +391,7 @@ export function colorize(sp, r, { selout = true } = {}) {
     if (m !== undefined && r.lid[i] >= 0 && r.lid[i] !== m) continue;
     out[i] = c;
   }
+  if (map) for (let i = 0; i < out.length; i++) if (out[i]) out[i] = (sp.keep && sp.keep.has(i) ? keepMap || map : map)(out[i]);
   return out;
 }
 

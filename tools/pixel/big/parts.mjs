@@ -113,9 +113,10 @@ export const EYE = {
 // 눈: [[x, y], ...] 왼쪽 위 칸. style = EYE 의 이름, 색은 k·w·g·c·i·l 로 바꾼다
 export function eyes(S, list, { style = 'dot', k = '#2e222f', w = '#ffffff', g = '#f9c22b', c = '#fbff86', i = '#fb6b1d', l = '#3e3546' } = {}) {
   const st = EYE[style], col = { k, w, g, c, i, l };
+  S.keep = S.keep || new Set();   // 눈 칸 — 색 바꾸기(파스텔)를 약하게 받는다
   list.forEach(([x, y], n) => st.g.forEach((row, dy) => {
     const r = n % 2 && st.mirror ? [...row].reverse() : [...row];
-    r.forEach((ch, dx) => { if (col[ch]) S.paint([[x + dx, y + dy]], col[ch]); });
+    r.forEach((ch, dx) => { if (col[ch]) { S.paint([[x + dx, y + dy]], col[ch]); S.keep.add((y + dy) * S.w + x + dx); } });
   }));
 }
 

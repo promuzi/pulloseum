@@ -4,15 +4,18 @@
 //   pot_<종류>_back.png · pot_<종류>_front.png  화분 다섯(3D, pot3d.mjs) — 화면은 back → 식물 → front 순서로 겹친다
 //   roster_sheet.png  검토판: 종 전부(테라코타 화분에 심은 모습, 2배) · roster_sil.png 실루엣 · pots_sheet.png 화분 다섯
 //   --z=N 이면 검토판 배율 N(키를 주고 --sheet 를 붙이면 그 종만 검토판)
+//   --pastel 이면 같은 그림을 파스텔 색으로 바꿔 out/pastel/ 에 쓴다(눈은 약하게만 바꿈)
 import { writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Img, colorize } from './engine.mjs';
+import { Img, colorize, pastelizer, mapImg } from './engine.mjs';
 import { W, H } from './parts.mjs';
 import { POT3, renderPot } from './pot3d.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url)), outDir = resolve(here, 'out');
+const here = dirname(fileURLToPath(import.meta.url)), pastel = process.argv.includes('--pastel');
+const outDir = resolve(here, 'out', pastel ? 'pastel' : '');
 mkdirSync(outDir, { recursive: true });
+const PASTEL = pastel ? pastelizer() : null, PASTEL_EYE = pastel ? pastelizer({ lift: 0.12, keep: 0.88, sat: 0.85, cmax: 0.16 }) : null;
 const ORDER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap'];
 const all = readdirSync(resolve(here, 'species')).filter(f => f.endsWith('.mjs')).map(f => f.slice(0, -4));
 const keys = process.argv.slice(2).filter(a => !a.startsWith('--'));
@@ -21,6 +24,7 @@ const todo = keys.length ? keys : [...ORDER.filter(k => all.includes(k)), ...all
 const pots = {};
 for (const [k, st] of Object.entries(POT3)) {
   pots[k] = renderPot(st);
+  if (PASTEL) pots[k] = { back: mapImg(pots[k].back, PASTEL), front: mapImg(pots[k].front, PASTEL) };
   writeFileSync(resolve(outDir, `${k}_back.png`), pots[k].back.png());
   writeFileSync(resolve(outDir, `${k}_front.png`), pots[k].front.png());
 }
@@ -28,7 +32,7 @@ for (const [k, st] of Object.entries(POT3)) {
 const plants = {};
 for (const key of todo) {
   const t0 = Date.now(), sp = (await import(pathToFileURL(resolve(here, 'species', key + '.mjs')).href)).default();
-  const cols = colorize(sp, sp.render()), im = Img.fromColors(W, H, cols);
+  const cols = colorize(sp, sp.render(), { map: PASTEL, keepMap: PASTEL_EYE }), im = Img.fromColors(W, H, cols);
   plants[key] = im;
   writeFileSync(resolve(outDir, `${key}_96x112.png`), im.png());
   // 화분 밖 아래: 흙 높이 근처(y ≥ 66)에서 화분 테두리 폭(x 25~71) 밖에 있는 칸 = 허공에 놓인 것처럼 보이는 부분
