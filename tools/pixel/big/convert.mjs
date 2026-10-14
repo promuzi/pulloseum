@@ -277,17 +277,36 @@ function eyeMask(out, cx, cy) {
   const lidCol = (() => { const [L, A, B] = oklab(px(dark % W, Math.floor(dark / W))); return fromOklab(Math.max(0.15, L), A, B); })();
   return { mask, skin, lidCol };
 }
-// 깜빡임: half = 눈 칸의 위 절반을 살결로 + 가운데 줄은 눈꺼풀 선, closed = 눈 칸 전부 살결 + 가운데 줄 선. open 은 아무것도 안 바꿈
+// 깜빡임 — 실제 그려진 눈을 재서 방향에 맞게 감는다(사용자 2026-10-15: "얼굴이 정면이 아니라 기울었고 먼 눈은 작다, 감은 눈은 자연스러운 곡선").
+// 기준: ① 얼굴 기울기 θ = 두 눈 칸 무게중심을 잇는 선의 각도 ② 눈마다 θ 축으로 돌린 좌표(u 가로, v 세로)에서 폭·높이를 따로 잼
+//       → 원근으로 작게 그려진 먼 눈은 작은 그대로 ③ 감은 눈 = θ 축을 따라 아래로 처지는 곡선(∪), 처짐 = 폭 × 0.22(최소 0.7칸), 높이는 눈 가운데보다 살짝 아래
+//       ④ 반쯤 = 같은 축에서 눈 가운데 위쪽만 살결로 덮고 거의 평평한(살짝 ∩) 눈꺼풀 선. 뜬 눈(open)은 그림 그대로.
+export function eyeGeometry(out, cv, dx = 0) {
+  const ms = cv.eyeC.map(([cx, cy]) => eyeMask(out, cx + dx, cy)).filter(Boolean);
+  if (!ms.length) return [];
+  const cen = ms.map(m => { let sx = 0, sy = 0; for (const i of m.mask) { sx += i % W + 0.5; sy += Math.floor(i / W) + 0.5; } return [sx / m.mask.size, sy / m.mask.size]; });
+  const th = ms.length === 2 ? Math.atan2(cen[1][1] - cen[0][1], cen[1][0] - cen[0][0]) : 0, c = Math.cos(th), s = Math.sin(th);
+  return ms.map((m, k) => {
+    const [ox, oy] = cen[k], uv = [...m.mask].map(i => { const x = i % W + 0.5 - ox, y = Math.floor(i / W) + 0.5 - oy; return [x * c + y * s, -x * s + y * c]; });
+    const us = uv.map(p => p[0]), vs = uv.map(p => p[1]);
+    return { m, ox, oy, th, c, s, u0: Math.min(...us) - 0.5, u1: Math.max(...us) + 0.5, v0: Math.min(...vs) - 0.5, v1: Math.max(...vs) + 0.5, uv };
+  });
+}
 function blinkEyes(out, cv, state, dx = 0) {
   if (state === 'open') return;
-  for (const [cx, cy] of cv.eyeC) {
-    const m = eyeMask(out, cx + dx, cy);
-    if (!m) continue;
-    const ys = [...m.mask].map(i => Math.floor(i / W)), mid = Math.round((Math.min(...ys) + Math.max(...ys)) / 2);
-    for (const i of m.mask) {
-      const x = i % W, y = (i - x) / W;
-      if (y === mid) out.set(x, y, m.lidCol);
-      else if (state === 'closed' || y < mid) out.set(x, y, m.skin);
+  for (const g of eyeGeometry(out, cv, dx)) {
+    const { m, ox, oy, c, s, u0, u1, v0, v1 } = g, w = u1 - u0, h = v1 - v0, um = (u0 + u1) / 2;
+    const toXY = (u, v) => [ox + u * c - v * s, oy + u * s + v * c];
+    const curve = state === 'closed'
+      ? u => (v0 + v1) / 2 + h * 0.12 + Math.max(0.7, w * 0.22) * (1 - ((u - um) / (w / 2)) ** 2)    // 아래로 처지는 ∪
+      : u => (v0 + v1) / 2 - Math.max(0.3, w * 0.08) * (1 - ((u - um) / (w / 2)) ** 2);              // 거의 평평한 ∩
+    // 덮기: closed = 눈 칸 전부, half = 곡선 위쪽만
+    [...m.mask].forEach((i, k) => { const [u, v] = g.uv[k]; if (state === 'closed' || v < curve(u)) out.set(i % W, Math.floor(i / W), m.skin); });
+    // 곡선 그리기: 촘촘히 짚어 칸으로 반올림, 같은 칸은 한 번
+    const seen = new Set();
+    for (let u = u0 + 0.25; u <= u1 - 0.25; u += 0.25) {
+      const [x, y] = toXY(u, curve(u)), X = Math.floor(x), Y = Math.floor(y), key = Y * W + X;
+      if (!seen.has(key)) { seen.add(key); out.set(X, Y, m.lidCol); }
     }
   }
 }
@@ -416,6 +435,16 @@ if (anim) {
     const Z4 = 4, sh = new Img(8 + 3 * (W * Z4 + 8), H * Z4 + 16, '#2e222f');
     ['open', 'half', 'closed'].forEach((st, k) => { const p = new Img(W, H); p.blit(pot.back, 0, 0); p.blit(paint(cv, { eye: st }), 0, 0); p.blit(pot.front, 0, 0); sh.fill(8 + k * (W * Z4 + 8), 8, W * Z4, H * Z4, '#323353'); sh.blit(p, 8 + k * (W * Z4 + 8), 8, Z4); });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink.png'), sh.png());
-    console.log('깜빡임 확인 →', resolve(here, 'out', 'conv', cv.key + '_blink.png'));
+    // 얼굴 확대(10배, 두 눈 둘레 30×18칸): 뜬 눈 · 반쯤 · 감음 + 잰 값
+    const ex = cv.eyeC.reduce((a, e) => a + e[0], 0) / cv.eyeC.length, ey = cv.eyeC.reduce((a, e) => a + e[1], 0) / cv.eyeC.length;
+    const CW = 30, CHh = 18, Z10 = 10, X0 = Math.round(ex - CW / 2), Y0 = Math.round(ey - CHh / 2), face = new Img(8 + 3 * (CW * Z10 + 8), CHh * Z10 + 16, '#2e222f');
+    ['open', 'half', 'closed'].forEach((st, k) => {
+      const im = paint(cv, { eye: st }), crop = new Img(CW, CHh, '#323353');
+      for (let y = 0; y < CHh; y++) for (let x = 0; x < CW; x++) { const sx = X0 + x, sy = Y0 + y; if (sx >= 0 && sy >= 0 && sx < W && sy < H) { const s4 = (sy * W + sx) * 4; if (im.data[s4 + 3] > 127) crop.data.set(im.data.subarray(s4, s4 + 4), (y * CW + x) * 4); } }
+      face.blit(crop, 8 + k * (CW * Z10 + 8), 8, Z10);
+    });
+    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.png'), face.png());
+    const geo = eyeGeometry(paint(cv), cv);
+    console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 ` + geo.map((g, k) => `${k ? '오른쪽' : '왼쪽'} 폭 ${(g.u1 - g.u0).toFixed(1)} 높이 ${(g.v1 - g.v0).toFixed(1)}`).join(' / '));
   }
 }
