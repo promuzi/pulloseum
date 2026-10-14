@@ -168,9 +168,9 @@ function kmeans(pts, K, wt, iters = 18) {
   return { cent, assign: p => { let b = 0, bd = Infinity; cent.forEach((c, j) => { const d = d2(p, c); if (d < bd) { bd = d; b = j; } }); return b; } };
 }
 
-export function convert(key, { file = null, scale = null } = {}) {
+export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
   const { im, lab, isBg, S, top, left, right, eyes: eyeSrc } = load(key, file), n = im.w * im.h;
-  const s = scale || Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
+  const s = scale || fit * Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
   if (!S.b) S.cy -= 3 / s;   // 누끼: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게
   // 눈: 원본 자리 → 도트 좌표, 그 자리를 가운데로 EYE 틀 크기의 상자
   const spec = EYES_ON ? EYES[key] : null, grid = spec ? EYE[spec.style].g : null;
@@ -359,12 +359,14 @@ const cvs = stages ? [] : keys.map(k => {
   return cv;
 });
 
-// --stages <키>: 생장 단계 누끼(concept/stages/<키>_<단계>.png)를 성체(컨셉)와 같은 축척으로 변환해 한 줄로(새싹 → 새잎 → 꽃봉오리 → 성체 → 만개)
+// --stages <키>: 생장 단계 누끼(concept/stages/<키>_<단계>.png)를 단계마다 판에 맞춰 변환해 한 줄로(새싹 → 새잎 → 꽃봉오리 → 성체 → 만개)
+// 크기는 거의 같게(사용자 2026-10-15 "어린 단계가 너무 작다 — 크기는 비슷하게, 외형으로 차이") — 단계별 키 비율 FIT
+const FIT = { sprout: 0.86, juvenile: 0.9, growing: 0.95, mature: 1, evolved: 1 };
 if (stages) {
   const key = keys[0], pot = renderPot(POT3.pot_terra), mature = convert(key), list = [];
   for (const st of ['sprout', 'juvenile', 'growing', 'mature', 'evolved']) {
     const f = resolve(here, 'concept', 'stages', `${key}_${st}.png`);
-    const cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s }) : null;
+    const cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, fit: FIT[st] }) : null;
     if (!cv) continue;
     const im = paint(cv);
     writeFileSync(resolve(here, 'out', 'conv', `${key}_${st}_96x112.png`), im.png());
