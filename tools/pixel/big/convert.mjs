@@ -341,7 +341,13 @@ export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
   // 눈 영역 표시(원본 칸마다 눈 번호) — 줄일 때 눈 칸은 눈 색으로만, 둘레는 살결로만 정해 속눈썹 그림자가 번져 엉뚱한 입처럼 보이지 않게
   const eyeId = new Int8Array(n).fill(-1);
   (eyeMasks || []).forEach((mk, k) => { if (mk) for (const i of mk.mask) eyeId[i] = k; });
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, fill: (TUNE[key] || {}).fill ?? 0.5 };
+  // 눈 둘레 보호(작은 조각 정리에서 눈동자·홍채를 지우지 않게): 눈 타원보다 1.5칸 넓게
+  const protect = new Uint8Array(W * H), spx = EYES[key];
+  if (spx && spx.box && !file) for (const [ex, ey, rx, ry] of spx.box) {
+    const [X, Y] = toOut(ex, ey), RX = rx * s + 1.5, RY = ry * s + 1.5;
+    for (let y = Math.floor(Y - RY); y <= Y + RY; y++) for (let x = Math.floor(X - RX); x <= X + RX; x++) if (x >= 0 && y >= 0 && x < W && y < H && ((x + 0.5 - X) / RX) ** 2 + ((y + 0.5 - Y) / RY) ** 2 <= 1) protect[y * W + x] = 1;
+  }
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, fill: (TUNE[key] || {}).fill ?? 0.5 };
   const { cm, ct } = rasterize(src);
   // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만) + 눈 영역 → 판 칸(원본 블록의 30% 이상이 눈이면 눈 칸)
   const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => toOut(ex, ey)) : [];
@@ -445,6 +451,25 @@ export function rasterize(src, warp = null, prev = null) {
       if (cnt[b] >= 4) nx[i] = b;
     }
     ct2 = nx;
+  }
+  // 경계에 낀 작은 조각 정리: 같은 재질 3칸 이하 덩어리가 서로 다른 두 재질 이상 사이에 끼어 있으면(배경 제외) 둘레에서 가장 많은 재질로 —
+  // 꽃잎·잎 경계의 주황 그늘 조각이 경계선 규칙으로 빨간 점이 되던 것(아쿠아벌브 2026-10-15). 줄기 하나에 붙은 가시(둘레 재질 1개)·눈 둘레(src.protect)는 남김
+  {
+    const seen = new Uint8Array(W * H), prot = src.protect;
+    for (let i = 0; i < W * H; i++) {
+      if (cm[i] < 0 || seen[i] || matL[cm[i]] < 0.3 || matL[cm[i]] > 0.9) continue;
+      const st = [i], comp = [], m = cm[i];
+      seen[i] = 1;
+      while (st.length && comp.length <= 4) { const j = st.pop(), x = j % W; comp.push(j); for (const k of [x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, j - W, j + W]) if (k >= 0 && k < W * H && !seen[k] && cm[k] === m) { seen[k] = 1; st.push(k); } }
+      if (comp.length > 4 || (prot && comp.some(j => prot[j]))) continue;
+      const nbm = new Map();
+      let edge = false;   // 배경에 닿음(실루엣 가장자리 — 가시 같은 작은 돌기는 남김)
+      for (const j of comp) { const x = j % W; for (const k of [x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, j - W, j + W]) { if (k < 0 || k >= W * H || cm[k] < 0) { edge = true; continue; } if (cm[k] !== m) nbm.set(cm[k], (nbm.get(cm[k]) || 0) + 1); } }
+      // 바꾸는 경우: 서로 다른 두 재질 이상 사이에 낌(3칸 이하) 또는 몸 안쪽(배경에 안 닿음)에 떨어져 있는 4칸 이하 조각(그 재질 본체는 따로 있음)
+      if (!nbm.size || (!(comp.length <= 3 && nbm.size >= 2) && edge)) continue;
+      const to = [...nbm].sort((a, b) => b[1] - a[1])[0][0];
+      for (const j of comp) { cm[j] = to; const x = j % W, near = [x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, j - W, j + W].find(k => k >= 0 && k < W * H && cm[k] === to); if (near != null) ct2[j] = ct2[near]; }
+    }
   }
   despeck(cm);
   return { cm, ct: ct2 };
@@ -664,7 +689,9 @@ function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } =
   }
   out.src = src;
   const col = (m, l) => { const [L, A, B] = palLab[m * LV + l]; return fromOklab(L, A, B); };
-  const dark = (m, d) => { const [L, A, B] = palLab[m * LV]; return fromOklab(Math.max(0.1, L - d), A * 1.3, B * 1.3); };
+  // 외곽선 색 = 재질의 가장 어두운 단을 더 어둡게. 단, 아주 밝은 재질(흰·크림 꽃잎, 밝기 0.8 넘음)은 그 칸 자신의 단 색을 어둡게 —
+  // 가장 어두운 단이 원본의 주황 그늘이라 테두리가 빨간 점처럼 튀었음(아쿠아벌브 수련, 2026-10-15 검수)
+  const dark = (m, d, l = null) => { const [L, A, B] = palLab[m * LV + (l != null && matL[m] > 0.8 ? Math.max(0, Math.min(LV - 1, l)) : 0)]; const k = l != null && matL[m] > 0.8 ? 1.05 : 1.3; return fromOklab(Math.max(0.1, L - d), A * k, B * k); };
   const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x;
   for (let i = 0; i < W * H; i++) {
     const m = cm[i];
@@ -672,8 +699,8 @@ function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } =
     const x = i % W, y = (i - x) / W, nb = [at(x, y - 1), at(x - 1, y), at(x, y + 1), at(x + 1, y)];
     const empty = nb.map(j => j < 0 || cm[j] < 0);
     let c = col(m, Math.max(0, Math.min(LV - 1, ct[i])));
-    if (empty.some(Boolean)) c = empty[2] && y < P.cy ? INK : (empty[2] || empty[3]) ? dark(m, 0.16) : dark(m, 0.06);
-    else if (nb.some(j => cm[j] !== m && matL[cm[j]] - matL[m] > 0.15)) c = dark(m, 0.08);   // 더 밝은 재질과 맞닿은 어두운 쪽 = 경계선
+    if (empty.some(Boolean)) c = empty[2] && y < P.cy ? INK : (empty[2] || empty[3]) ? dark(m, 0.16, ct[i]) : dark(m, 0.06, ct[i]);
+    else if (nb.some(j => cm[j] !== m && matL[cm[j]] - matL[m] > 0.15)) c = dark(m, 0.08, ct[i]);   // 더 밝은 재질과 맞닿은 어두운 쪽 = 경계선
     out.set(x, y, c);
   }
   return out;
@@ -684,6 +711,8 @@ const stages = args.includes('--stages');
 const cvs = stages ? [] : keys.map(k => {
   const cv = convert(k);
   writeFileSync(resolve(here, 'out', 'conv', k + '_96x112.png'), paint(cv).png());
+  const probe = args.find(a => a.startsWith('--probe='));   // 검토용: 판 칸의 재질·단·색 찍기 --probe=x,y;x,y
+  if (probe) for (const pt of probe.slice(8).split(';')) { const [x, y] = pt.split(',').map(Number), i = y * W + x, m = cv.cm[i]; if (m < 0) { console.log(`  (${x},${y}) 빈칸`); continue; } const [L, A, B] = cv.palLab[m * LV + cv.ct[i]]; console.log(`  (${x},${y}) 재질 ${m}(밝기 ${cv.matL[m].toFixed(2)}) 단 ${cv.ct[i]} · L ${L.toFixed(2)} C ${Math.hypot(A, B).toFixed(3)} h ${hueOf(A, B).toFixed(0)} · 그린 색 ${(() => { const im = paint(cv), k = i * 4; return '#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join(''); })()}`); }
   const S0 = cv.src.S;
   console.log(`${k.padEnd(13)} 변환 완료 · 축척 ${cv.s.toFixed(4)} · 기준 ${S0.ref === 'soil' ? '누끼+원래 흙' : S0.ref === 'base' ? '밑동' : '흙'} (${S0.cx.toFixed(0)}, ${S0.cy.toFixed(0)}) · 몸 축 ${(S0.axis || 0).toFixed(1)}°${S0.rot ? ` → ${(-S0.rot * 180 / Math.PI).toFixed(1)}° 돌려 세움` : ''}${EYES_ON ? ' · 눈 ' + (cv.eyes.length ? cv.eyes.map(e => `${e.x},${e.y} ${e.w}×${e.h}`).join(' / ') : '지정 없음') : ''}`);
   return cv;
