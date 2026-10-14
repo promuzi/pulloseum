@@ -53,25 +53,79 @@ export function idleRig(cv) {
 
 // 숨쉬기 — saint11 "Character Idle"을 식물로 옮김:
 //  · 숨을 내쉬면 아래로 내려앉고 옆으로 넓어진다(부피 유지 — "세로로만 움직이면 지루하다, 가로가 세로를 보완") → 줄기가 눌리며 머리가 1~2칸 내려앉고 머리 둘레가 1칸 벌어짐
-//  · 팔을 벌리듯 잎이 바깥으로 1칸 벌어졌다 돌아옴
-//  · 먼 끝(잎·꽃잎 끝)은 머리카락처럼 늦게 따라오고, 얼굴 내용은 윤곽보다 한 박자 늦게 움직임
-//  · 좌우로는 한 바퀴에 한 번 느리게 기울기(밑동은 흙에 고정, 위로 갈수록 휨)
-// t = 한 바퀴(0~1) 안 시각, 숨은 한 바퀴에 breaths번. 돌려주는 함수 (x, y) → [dx, dy] = 그 칸에 올 그림이 원래 자리에서 움직인 양(정수 칸)
-export function idleWarp(rig, t, { bob = 2, squash = 1, open = 1, sway = 1, breaths = 2 } = {}) {
+//  · 팔을 벌리듯 잎이 바깥으로 벌어졌다 돌아옴, 얼굴 내용은 윤곽보다 한 박자 늦게, 좌우로는 한 바퀴에 한 번 기울기(밑동은 흙에 고정)
+//  · 꽃잎·잎은 생긴 방향대로(사용자 2026-10-15 "형태에 따라"): 꽃잎은 머리에서 뻗은 방향에 수직으로, 잎은 줄기에서 뻗은 방향에 수직(위아래)으로
+//    밑에서 끝으로 번지는 물결로 펄럭이고(끝일수록 크게·늦게), 꽃잎마다 박자가 다르다
+// 값은 소수 칸 — 장마다 큰 원본에서 다시 줄이므로(rasterize) 정수 반올림 이음매가 없다. 얼굴만 정수 칸으로 통째로 옮겨 눈·입 모양이 흔들리지 않게 한다.
+// t = 한 바퀴(0~1) 안 시각. 돌려주는 field(X, Y) → [dx, dy] = 판 칸 (X, Y)에 올 그림이 원래 판 자리에서 움직인 양, head = 얼굴 이동(정수)
+export function idleField(rig, t, { bob = 2, squash = 1, open = 1, sway = 1, petal = 1, leaf = 1.2, breaths = 2, flutter = 2 } = {}) {
   const { yA, ax, hx, hy, Rh, Rf } = rig;
   const breath = u => (1 - Math.cos(2 * Math.PI * breaths * u)) / 2;   // 0 = 들숨(위), 1 = 날숨(아래) — 끝에서 머물고 가운데서 빠름
   const lean = u => Math.sin(2 * Math.PI * u);
-  return (x, y) => {
-    if (y >= yA) return [0, 0];
-    const px = x + 0.5, py = y + 0.5, r = Math.hypot(px - hx, py - hy);
-    const u = t - 0.045 * sm(Rh, Rh + 14, r) - (r < Rf ? 0.025 : 0);
-    const b = breath(u), wa = sm(yA, yA - 6, py), wv = sm(yA, hy + Rh * 0.5, py), ws = sm(yA, hy, py);
-    let dy = bob * b * wv + squash * b * clamp01((hy - py) / Rh) * (1 - sm(Rh, Rh * 1.6, r));
-    let dx = sway * lean(u) * ws;
-    dx += Math.sign(px - hx) * squash * b * sm(Rf, Rh, Math.abs(px - hx)) * (1 - sm(Rh * 0.8, Rh * 1.3, Math.abs(py - hy)));
-    dx += Math.sign(px - ax) * open * b * sm(4, 12, Math.abs(px - ax)) * sm(hy + Rh * 0.4, hy + Rh * 0.9, py);
-    return [Math.round(dx * wa), Math.round(dy * wa)];
+  const qx = Math.round(sway * lean(t - 0.03)), qy = Math.round(bob * breath(t - 0.03)), b = breath(t);
+  const field = (X, Y) => {
+    const px = X + 0.5, py = Y + 0.5;
+    if (py >= yA) return [0, 0];
+    const wa = sm(yA, yA - 6, py), ws = sm(yA, hy + Rf + 2, py);   // 줄기(밑동 0 → 얼굴 아래 1)
+    let dx = qx * ws, dy = qy * ws;
+    const ddx = px - hx, ddy = py - hy, r = Math.hypot(ddx, ddy) || 1, face = 1 - sm(Rf, Rf + 3, r);
+    // 머리 눌림: 얼굴 밖에서 옆으로 넓어지고 위가 눌림
+    dx += Math.sign(ddx) * squash * b * sm(Rf, Rh, Math.abs(ddx)) * (1 - sm(Rh * 0.8, Rh * 1.3, Math.abs(ddy))) * (1 - face);
+    dy += squash * b * clamp01(-ddy / Rh) * (1 - sm(Rh, Rh * 1.6, r)) * (1 - face);
+    // 꽃잎: 머리 둘레 방향(접선)으로 펄럭임 — 머리 높이까지만, 꽃잎(각도)마다 박자 다르게
+    const th = Math.atan2(ddy, ddx), lobe = 1.3 * Math.sin(2 * th + 0.7) + 0.8 * Math.sin(3 * th + 2.1);
+    const tang = petal * sm(Rf + 1, Rh + 10, r) * (1 - sm(hy + Rh * 0.6, hy + Rh * 1.1, py)) * Math.sin(2 * Math.PI * flutter * t - 0.18 * (r - Rf) + lobe);
+    dx += -ddy / r * tang; dy += ddx / r * tang;
+    // 잎: 머리 아래, 줄기에서 바깥으로 뻗은 쪽 — 위아래 펄럭임(줄기 쪽 → 끝으로 번짐) + 날숨에 벌어짐(끝이 늦게)
+    const wl = sm(hy + Rh * 0.6, hy + Rh * 1.1, py);
+    if (wl > 0) {
+      const u = Math.abs(px - ax), side = Math.sign(px - ax) || 1;
+      dy += wl * leaf * sm(3, 14, u) * Math.min(1, u / 18) * Math.sin(2 * Math.PI * flutter * t - 0.22 * u + (side > 0 ? 0 : 2.2));
+      dx += wl * side * open * breath(t - 0.05 * sm(4, 20, u)) * sm(4, 12, u);
+    }
+    return [dx * wa, dy * wa];
   };
+  return { field, head: [qx, qy] };
+}
+
+// 불 — saint11 "Fire Tutorial": "불은 흐름" · 불꽃을 밑동(부피 유지, 모양만 바뀜)과 떨어져 나가는 입자로 나눔 · 물결은 밑에서 밝게 시작해 올라가며
+//  뾰족하게 사라짐 · 가운데가 가장 빠름 · "같은 모양을 조금씩 틀리게 다시 그리기". 불티는 깜빡이며 조금씩 움직임.
+// 쉬는 모습에서 불 재질 칸(위로 3칸 번진 무게) + 기둥마다 불 꼭대기 → 혀가 오르내리고(꼭대기일수록 크게), 옆으로 일렁이는 물결이 위로 흐른다.
+export function fireRig(cv, isFire) {
+  const F0 = new Float32Array(W * H), top = new Int16Array(W).fill(-1);
+  for (let i = 0; i < W * H; i++) if (cv.cm[i] >= 0 && isFire[cv.cm[i]]) F0[i] = 1;
+  const F1 = new Float32Array(W * H), wF = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = 0; k <= 3; k++) if (y + k < H) v = Math.max(v, F0[(y + k) * W + x] * (1 - k * 0.2)); F1[y * W + x] = v; }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) wF[y * W + x] = (F1[y * W + Math.max(0, x - 1)] + 2 * F1[y * W + x] + F1[y * W + Math.min(W - 1, x + 1)]) / 4;
+  for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (F0[y * W + x]) { top[x] = y; break; }
+  // 불 혀 끝: 양옆 기둥보다 높은 꼭대기(불티가 떨어져 나가는 자리)
+  const tips = [];
+  for (let x = 1; x < W - 1; x++) if (top[x] >= 0 && (top[x - 1] < 0 || top[x] <= top[x - 1]) && (top[x + 1] < 0 || top[x] < top[x + 1])) tips.push([x + 0.5, top[x]]);
+  return { wF, top, tips, n: F0.reduce((a, v) => a + v, 0) };
+}
+export function fireField(fr, tf, { up = 2, side = 0.8 } = {}) {
+  const { wF, top } = fr;
+  return (X, Y) => {
+    const w = wF[Y * W + X];
+    if (!w || top[X] < 0) return [0, 0];
+    const tip = 1 - clamp01((Y - top[X]) / 8);   // 꼭대기 1 → 8칸 아래 0
+    const dy = -up * w * tip * (0.5 + 0.5 * Math.sin(2 * Math.PI * 6 * tf + X * 0.8 + 1.3 * Math.sin(X * 0.31 + 2 * Math.PI * tf)));
+    const dx = side * w * (0.3 + tip) * Math.sin(2 * Math.PI * 4 * tf + Y * 0.7 + X * 0.2);
+    return [dx, dy];
+  };
+}
+// 불티: 불 혀 끝에서 떨어져 올라가며 노랑 → 주황 → 빨강으로 꺼짐(8장), 끝마다 다른 박자
+export function emberFrame(f, fr, at, paint, { seed = 3, every = 10, life = 8, max = 6 } = {}) {
+  const r = rng(seed), tips = fr.tips.filter((_, i) => i % Math.max(1, Math.ceil(fr.tips.length / max)) === 0);
+  tips.forEach(([x, y]) => {
+    const ph = Math.floor(r() * every), drift = (r() - 0.5) * 0.8;
+    const k = ((f + ph) % every + every) % every;
+    if (k >= life) return;
+    const o = at([x, y]), px = o[0] + drift * k + Math.sin(k * 1.7 + ph) * 0.6, py = o[1] - 1 - k * 1.2;
+    if (py < 0) return;
+    paint(Math.floor(px), Math.floor(py), k < 3 ? '#ffe066' : k < 6 ? '#fcae3a' : '#e8642a');
+    if (k === 0) paint(Math.floor(px), Math.floor(py) + 1, '#fcae3a');   // 갓 떨어진 불티는 길쭉하게
+  });
 }
 
 // 끝점(꽃잎·잎 끝): 몸 윤곽 칸 중 머리 가운데에서 가장 먼 칸을 각도 24칸마다 고르고, 양옆 칸보다 멀리 튀어나온 것만

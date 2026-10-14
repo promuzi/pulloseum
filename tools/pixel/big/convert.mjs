@@ -203,22 +203,45 @@ export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
   }
   const palLab = acc.map((a, k) => a[3] ? [a[0] / a[3], a[1] / a[3] * 1.12, a[2] / a[3] * 1.12] : [mat.cent[Math.floor(k / LV)][0], 0, 0]);
   const matL = mat.cent.map(c => c[0]);
-  // ③ 다수 재질로 줄이기
-  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H);
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL };
+  const { cm, ct } = rasterize(src);
+  // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만)
+  const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => [P.cx + (ex - S.cx) * s, P.cy + (ey - S.cy) * s]) : [];
+  return { cm, ct, palLab, matL, key, eyes, eyeC, s, src };
+}
+
+// ③ 다수 재질로 줄이기 + ④ 정리 — 원본(재질·단이 정해진 큰 그림)을 판 칸으로.
+// warp(X, Y) → [dx, dy](소수 칸): 판 칸 (X, Y)에 원래 판 자리 (X − dx, Y − dy)의 원본을 가져온다.
+// 움직임 장마다 큰 원본에서 다시 줄이므로 정수 칸 밀기에서 생기는 줄 이음매(움직이는 가로선)가 없다(Vapor Trails·데드셀 방식: 크게 움직이고 매 장 도트로).
+// prev = 바로 앞 장 {cm, ct, warp}: 같은 원본 자리가 앞 장에 놓였던 칸과 비교해, 차이가 작으면 앞 장 값을 그대로 둔다(이력 유지)
+//   — 매 장 다시 줄일 때 생기는 '끓음'(테두리·명암 칸이 장마다 뒤바뀌며 자글거림)을 막고, 확실히 움직인 칸만 바뀌게
+export function rasterize(src, warp = null, prev = null) {
+  const { pm, pl, w: iw, h: ih, S, s, matL } = src;
+  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(KM), lv = new Float32Array(KM);
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
-    const x0 = S.cx + (X - P.cx) / s, y0 = S.cy + (Y - P.cy) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;
-    const cnt = new Float32Array(KM), lv = new Float32Array(KM);
+    const [dx, dy] = warp ? warp(X, Y) : [0, 0];
+    const x0 = S.cx + (X - dx - P.cx) / s, y0 = S.cy + (Y - dy - P.cy) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;
+    cnt.fill(0); lv.fill(0);
     let tot = 0, fg = 0;
-    for (let y = Math.max(0, Math.floor(y0)); y < Math.min(im.h, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(im.w, Math.ceil(x1)); x++) {
-      const i = y * im.w + x;
+    for (let y = Math.max(0, Math.floor(y0)); y < Math.min(ih, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(iw, Math.ceil(x1)); x++) {
+      const i = y * iw + x;
       tot++;
       if (pm[i] < 0) continue;
       fg++; cnt[pm[i]]++; lv[pm[i]] += pl[i];
     }
-    if (!tot || fg / tot < 0.5) continue;
+    let pi = -1;   // 앞 장에서 같은 원본 자리였던 칸
+    if (prev) {
+      const [qx, qy] = prev.warp ? prev.warp(X, Y) : [0, 0], X2 = Math.round(X - dx + qx), Y2 = Math.round(Y - dy + qy);
+      if (X2 >= 0 && Y2 >= 0 && X2 < W && Y2 < H) pi = Y2 * W + X2;
+    }
+    const fill = !tot ? 0 : fg / tot, was = pi >= 0 && prev.cm[pi] >= 0;
+    if (!tot || fill < (pi < 0 ? 0.5 : was ? 0.38 : 0.62)) continue;
     let m = 0;
     for (let k = 1; k < KM; k++) if (cnt[k] > cnt[m]) m = k;
-    cm[Y * W + X] = m; cl[Y * W + X] = lv[m] / cnt[m];
+    if (was && cnt[prev.cm[pi]] >= cnt[m] * 0.75) m = prev.cm[pi];
+    let l = lv[m] / cnt[m];
+    if (was && prev.cm[pi] === m && Math.abs(l - prev.ct[pi]) <= 0.85) l = prev.ct[pi];
+    cm[Y * W + X] = m; cl[Y * W + X] = l;
   }
   // ④ 정리: 외딴 재질 칸(8이웃 중 같은 재질 ≤ 1)은 이웃 다수로 — 단, 아주 어둡거나 밝은 재질(눈·반짝임)은 남김
   const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x;
@@ -254,9 +277,7 @@ export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
     }
     ct2 = nx;
   }
-  // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만)
-  const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => [P.cx + (ex - S.cx) * s, P.cy + (ey - S.cy) * s]) : [];
-  return { cm, ct: ct2, palLab, matL, key, eyes, eyeC, s };
+  return { cm, ct: ct2 };
 }
 
 // 실제 그려진 눈 칸 찾기: 눈동자 가운데에서 반지름 4.5 안, 둘레(4.5~6.5) 살결 색과 뚜렷이 다른 칸 → 가장 어두운 칸에 이어진 덩어리
@@ -347,18 +368,27 @@ function drawEyes(out, cv, state, dx = 0) {
 // 색 입히기(+ ⑤ 외곽선). 같은 함수를 움직임 프레임에도 쓴다.
 // warp(x, y) → [dx, dy] = 그 칸에 올 그림이 원래 자리에서 움직인 양(정수) — 재질·단 지도를 옮긴 뒤 외곽선을 새로 그려 선이 끊기지 않는다.
 // out.src[i] = 출력 칸 i가 가져온 원래 칸(없으면 -1) — 떠 있는 조각 깜빡임 등에 쓴다.
-export function paint(cv, { warp = null, tone = null, eye = 'open' } = {}) {
-  const out = paintBody(cv, { warp, tone });
-  const off = (x, y) => warp ? warp(Math.round(x), Math.round(y)) : [0, 0];
+// maps = 장마다 큰 원본에서 다시 줄인 {cm, ct}(rasterize), eyeOff = 그 장의 얼굴 이동(정수), srcOf(x, y) = 그 칸이 온 원래 판 칸
+export function paint(cv, { warp = null, maps = null, tone = null, eye = 'open', eyeOff = null, srcOf = null } = {}) {
+  const out = paintBody(cv, { warp, maps, tone, srcOf });
+  const off = (x, y) => eyeOff || (warp ? warp(Math.round(x), Math.round(y)) : [0, 0]);
   if (cv.eyes.length) drawEyes(out, cv, eye, off(cv.eyes[0].x, cv.eyes[0].y)[0]);
   if (cv.eyeC.length && eye !== 'open') { const ex = cv.eyeC.reduce((s, e) => s + e[0], 0) / cv.eyeC.length, ey = cv.eyeC.reduce((s, e) => s + e[1], 0) / cv.eyeC.length; blinkEyes(out, cv, eye, ...off(ex, ey)); }
   return out;
 }
-function paintBody(cv, { warp = null, tone = null } = {}) {
+function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } = {}) {
   const { palLab, matL } = cv, out = new Img(W, H);
   const cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H), src = new Int32Array(W * H).fill(-1);
   for (let i = 0; i < W * H; i++) {
-    const x = i % W, y = (i - x) / W, [dx, dy] = warp ? warp(x, y) : [0, 0], sx = x - dx, sy = y - dy;
+    const x = i % W, y = (i - x) / W;
+    if (maps) {
+      cm[i] = maps.cm[i];
+      if (cm[i] < 0) continue;
+      ct[i] = tone ? tone(cm[i], maps.ct[i], x, y) : maps.ct[i];
+      src[i] = srcOf ? srcOf(x, y) : i;
+      continue;
+    }
+    const [dx, dy] = warp ? warp(x, y) : [0, 0], sx = x - dx, sy = y - dy;
     if (sx < 0 || sx >= W || sy < 0 || sy >= H) continue;
     const j = sy * W + sx;
     cm[i] = cv.cm[j]; ct[i] = tone ? tone(cv.cm[j], cv.ct[j], sx, sy) : cv.ct[j]; src[i] = cv.cm[j] >= 0 ? j : -1;
@@ -420,31 +450,72 @@ if (stages) {
   console.log('생장 단계 →', resolve(here, 'out', 'conv', `${key}_stages.png`), '· 축척', mature.s.toFixed(4));
 }
 
-// 움직임(--anim): 숨쉬기(motion.mjs idleWarp — 날숨에 내려앉으며 옆으로 넓어지고, 잎은 벌어지고, 먼 끝·얼굴 내용은 늦게) + 깜빡임 + 종별 효과
-//   불 = 밝은 불 재질의 단이 위로 흐르고 불티가 오름 / 전기 = saint11 방식 벼락·호·불똥 + 떠 있는 번개 문양 깜빡임
-// 64장 × 0.05초 = 3.2초 한 바퀴: 몸은 두 장마다(0.1초) 바뀌고 효과는 장마다(전기는 빨라야 한다). 숨은 한 바퀴에 두 번, 좌우 기울기는 한 번.
+// 움직임(--anim): 숨쉬기(motion.mjs idleField — 날숨에 내려앉으며 옆으로 넓어지고, 꽃잎·잎은 생긴 방향대로 펄럭이고, 얼굴은 늦게) + 깜빡임 + 종별 효과
+//   불 = 불 혀가 오르내리고 옆으로 일렁이는 물결이 위로 흐르며(fireField), 밝은 단이 밑에서 올라가고, 불티가 혀 끝에서 떨어져 나감
+//   전기 = saint11 방식 벼락·호·불똥 + 떠 있는 번개 문양 깜빡임
+// 장마다 큰 원본을 움직여 다시 줄인다(rasterize) — 정수 칸 밀기의 줄 이음매(움직이는 가로선)가 없다.
+// 64장 × 0.05초 = 3.2초 한 바퀴: 몸은 두 장마다(0.1초) 바뀌고 불·전기는 장마다. 숨은 한 바퀴에 두 번, 좌우 기울기는 한 번.
 if (anim) {
   const { encodeGIF } = await import('./gif.mjs');
-  const { idleRig, idleWarp, findTips, electricPlan, electricFrame } = await import('./motion.mjs');
+  const { idleRig, idleField, fireRig, fireField, emberFrame, findTips, electricPlan, electricFrame } = await import('./motion.mjs');
   const pot = renderPot(POT3.pot_terra), FR = 64, DT = 5, Z = 3, BG = '#2f3150';
   // blinkAt = 깜빡이는 장(없으면 안 깜빡임). 96칸 판에서 눈 칸 찾기가 꽃잎으로 번지는 종(장미·불꽃꽃·선인장)은 고칠 때까지 끔 — 검증된 건 스파크번
   const FX = {
-    flower_grass: { bob: 2, sway: 1, open: 1 },
-    flower_fire: { bob: 2, sway: 1, open: 1, fire: true, embers: [[30, 20], [48, 10], [66, 18]] },
-    cactus_fire: { bob: 1, sway: 0.5, open: 0, fire: true, embers: [[40, 12], [50, 8], [62, 14]] },
-    spark: { bob: 2, sway: 1, open: 1, electric: true, blinkAt: 50 },
+    flower_grass: { bob: 2, sway: 1, open: 1, petal: 0.6, leaf: 1.2 },
+    flower_fire: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, fire: { up: 2, side: 0.8 } },
+    cactus_fire: { bob: 1, sway: 0.5, open: 0, petal: 0, leaf: 0.6, fire: { up: 2.5, side: 0.9 } },
+    spark: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, electric: true, blinkAt: 50 },
   };
   const rigs = cvs.map(cv => idleRig(cv));
   const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);
+  // 불 재질 = 가장 밝은 단이 밝고 선명한 주황·노랑인 재질
+  const fireMat = cv => cv.matL.map((_, m) => { const c = cv.palLab[m * LV + LV - 1]; return hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68; });
+  const fires = cvs.map(cv => (FX[cv.key] || {}).fire ? fireRig(cv, fireMat(cv)) : null);
+  // 장마다 움직임 장(field) — 몸은 두 장마다, 불은 장마다
+  const fieldOf = (k, f) => {
+    const fx = FX[cvs[k].key] || {}, { field: body, head } = idleField(rigs[k], Math.floor(f / 2) * 2 / FR, fx), ff = fires[k] ? fireField(fires[k], f / FR, fx.fire) : null;
+    const field = ff ? (X, Y) => { const a = body(X, Y), b = ff(Math.max(0, Math.min(W - 1, Math.round(X - a[0]))), Math.max(0, Math.min(H - 1, Math.round(Y - a[1])))); return [a[0] + b[0], a[1] + b[1]]; } : body;
+    return { field, head };
+  };
+  const fieldsAll = cvs.map((_, k) => Array.from({ length: FR }, (_, f) => fieldOf(k, f)));
+  // 장마다 지도 만들기 — 두 가지를 섞는다:
+  //  ① 반올림한 이동이 둘레와 같은 칸 = 쉬는 그림을 정수 칸만큼 통째로 옮긴 값(무늬가 한 덩어리로 움직여 자글거리지 않음 — 도트 작가가 부위를 1칸씩 옮기는 방식)
+  //  ② 반올림 값이 바뀌는 이음매 둘레 = 큰 원본에서 다시 줄인 값(정수 밀기의 줄 이음매 = 움직이는 가로선을 매끈하게 이음), 불 재질도 늘 ②(일렁임)
+  // ②는 앞 장과 비교(이력 유지)하려고 차례대로 두 바퀴 돌려 두 번째 바퀴 값을 쓴다(끝 장 → 첫 장도 이어지게)
+  const mapsAll = cvs.map((cv, k) => {
+    const out = [], isF = fires[k] ? fireMat(cv) : null;
+    let prev = null;
+    for (let pass = 0; pass < 2; pass++) for (let f = 0; f < FR; f++) {
+      const { field } = fieldsAll[k][f], hr = rasterize(cv.src, field, prev);
+      prev = { ...hr, warp: field };
+      if (!pass) continue;
+      const R = new Int8Array(W * H * 2), cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H);
+      for (let i = 0; i < W * H; i++) { const [dx, dy] = field(i % W, Math.floor(i / W)); R[i * 2] = Math.round(dx); R[i * 2 + 1] = Math.round(dy); }
+      for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
+        const i = Y * W + X, rx = R[i * 2], ry = R[i * 2 + 1];
+        let seam = false;
+        for (let oy = -1; oy <= 1 && !seam; oy++) for (let ox = -1; ox <= 1; ox++) {
+          const x2 = X + ox, y2 = Y + oy;
+          if (x2 >= 0 && y2 >= 0 && x2 < W && y2 < H && (R[(y2 * W + x2) * 2] !== rx || R[(y2 * W + x2) * 2 + 1] !== ry)) { seam = true; break; }
+        }
+        const sx = X - rx, sy = Y - ry, si = sx >= 0 && sy >= 0 && sx < W && sy < H ? sy * W + sx : -1;
+        const fire = isF && ((si >= 0 && cv.cm[si] >= 0 && isF[cv.cm[si]]) || (hr.cm[i] >= 0 && isF[hr.cm[i]]));
+        if (seam || fire || si < 0) { cm[i] = hr.cm[i]; ct[i] = hr.ct[i]; } else { cm[i] = cv.cm[si]; ct[i] = cv.ct[si]; }
+      }
+      out[f] = { cm, ct };
+    }
+    return out;
+  });
   // k번째 종의 f번째 장(96×112): 화분 뒤 → 식물 → 화분 앞 → 효과
   const frameOf = (k, f, bg = null) => {
-    const cv = cvs[k], rig = rigs[k], fx = FX[cv.key] || {}, t = Math.floor(f / 2) * 2 / FR, sec = f * DT / 100;
-    const warp = idleWarp(rig, t, fx);
-    const fire = fx.fire ? cv.palLab.map((c, q) => q % LV === LV - 1 && hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68) : null;
-    const tone = fire ? (m, l, x, y) => fire[m * LV + LV - 1] ? Math.max(0, Math.min(LV - 1, l + [1, 0, -1, 0][Math.floor(((y / 5 + sec * 5) % 4 + 4) % 4)])) : l : null;
+    const cv = cvs[k], rig = rigs[k], fx = FX[cv.key] || {}, sec = f * DT / 100, { field, head } = fieldsAll[k][f];
+    const isF = fires[k] ? fireMat(cv) : null;
+    const tone = isF ? (m, l, x, y) => isF[m] ? Math.max(0, Math.min(LV - 1, l + [1, 0, -1, 0][Math.floor(((y / 5 + sec * 5) % 4 + 4) % 4)])) : l : null;
     const b = fx.blinkAt, eye = b == null ? 'open' : f === b + 1 || f === b + 2 ? 'closed' : f === b || f === b + 3 ? 'half' : 'open';
-    const im = paint(cv, { warp, tone, eye });
-    const at = p => { const [dx, dy] = warp(Math.max(0, Math.min(W - 1, Math.floor(p[0]))), Math.max(0, Math.min(H - 1, Math.floor(p[1])))); return [p[0] + dx, p[1] + dy]; };
+    const maps = mapsAll[k][f];
+    const srcOf = (x, y) => { const [dx, dy] = field(x, y), sx = Math.round(x - dx), sy = Math.round(y - dy); return sx >= 0 && sy >= 0 && sx < W && sy < H ? sy * W + sx : -1; };
+    const im = paint(cv, { maps, tone, eye, eyeOff: head, srcOf });
+    const at = p => { const [dx, dy] = field(Math.max(0, Math.min(W - 1, Math.floor(p[0]))), Math.max(0, Math.min(H - 1, Math.floor(p[1])))); return [p[0] + dx, p[1] + dy]; };
     const fxPaint = [], put = (x, y, c) => fxPaint.push([x, y, c]);
     if (eplans[k]) {
       const { flash, bitState } = electricFrame(f, eplans[k], at, put);
@@ -462,7 +533,7 @@ if (anim) {
         for (let c = 0; c < 3; c++) im.data[q + c] = Math.round(im.data[q + c] + (255 - im.data[q + c]) * 0.45);
       }
     }
-    if (fx.embers) fx.embers.forEach(([x, y], q) => { const p = (2 * f / FR + q / fx.embers.length) % 1, o = at([x, y]), yy = o[1] - p * 10; if (yy > 0) put(Math.round(o[0] + Math.sin(2 * Math.PI * (p + q)) * 2), Math.round(yy), p < 0.5 ? '#fcc246' : '#f57a2a'); });
+    if (fires[k]) emberFrame(f, fires[k], at, put, { seed: 3 + k });
     const out = new Img(W, H, bg);
     out.blit(pot.back, 0, 0); out.blit(im, 0, 0); out.blit(pot.front, 0, 0);
     for (const [x, y, c] of fxPaint) out.set(x, y, c);
@@ -492,7 +563,10 @@ if (anim) {
     const one = Array.from({ length: FR }, (_, f) => frameOf(k, f, BG)), p = resolve(here, 'out', 'conv', cvs[k].key + '_idle'), r = rigs[k];
     writeFileSync(p + '.gif', encodeGIF(zoom(one, 4, BG), { delay: DT }));
     if (MP4) (await import('./video.mjs')).writeMP4(p + '.mp4', zoom(one, 8, BG), { delay: DT, loops: 4, fps: 20 });
-    console.log(`${cvs[k].key.padEnd(13)} 숨쉬기 뼈대 · 얼굴 (${r.hx.toFixed(1)}, ${r.hy.toFixed(1)}) 머리 반지름 ${r.Rh.toFixed(1)} · 고정선 y${r.yA} · 떠 있는 조각 ${r.bits.filter(Boolean).length}개${eplans[k] ? ' · 전기 끝점 ' + findTips(cvs[k], r).length + '개' : ''}`);
+    // 떨림 재기: 장마다 바뀐 칸 수(평균) — 매 장 다시 줄이는 방식의 위험(테두리 칸이 자글자글 끓음) 확인용
+    let ch = 0;
+    for (let f = 0; f < FR; f++) { const a = one[f].data, c = one[(f + 1) % FR].data; for (let i = 0; i < a.length; i += 4) if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) ch++; }
+    console.log(`${cvs[k].key.padEnd(13)} 얼굴 (${r.hx.toFixed(1)}, ${r.hy.toFixed(1)}) 머리 반지름 ${r.Rh.toFixed(1)} · 떠 있는 조각 ${r.bits.filter(Boolean).length}개${eplans[k] ? ' · 전기 끝점 ' + findTips(cvs[k], r).length + '개' : ''}${fires[k] ? ` · 불 칸 ${fires[k].n}개·혀 끝 ${fires[k].tips.length}개` : ''} · 장마다 바뀐 칸 평균 ${(ch / FR).toFixed(0)}`);
   }
   // 깜빡임 확인판: 뜬 눈 · 반쯤 · 감음을 4배로 나란히(흔들림 없이)
   if (BLINK) for (const cv of cvs) {
