@@ -21,14 +21,23 @@ function shrink(src, w, h) {
   }
   return out;
 }
-const sheet = new Img(PAD * 3 + CH + W * Z, PAD + keys.length * (CH + PAD), '#2e222f');
+// 세 칸: 컨셉 | 코드로 그린 도트 | 컨셉을 변환한 도트(out/conv 에 있으면). --conv 면 코드 칸을 빼고 둘만.
+const { existsSync } = await import('node:fs');
+const onlyConv = process.argv.includes('--conv'), cols = onlyConv ? 1 : 2;
+const sheet = new Img(PAD * (2 + cols) + CH + W * Z * cols, PAD + keys.length * (CH + PAD), '#2e222f');
 for (const [r, key] of keys.entries()) {
   const y = PAD + r * (CH + PAD);
   sheet.blit(shrink(decodePNG(readFileSync(resolve(here, 'concept', key + '.png'))), CH, CH), PAD, y);
-  const sp = (await import(pathToFileURL(resolve(here, 'species', key + '.mjs')).href)).default(), p = new Img(W, H);
-  p.blit(pot.back, 0, 0); p.blit(Img.fromColors(W, H, colorize(sp, sp.render())), 0, 0); p.blit(pot.front, 0, 0);
-  sheet.fill(PAD * 2 + CH, y, W * Z, CH, '#323353');
-  sheet.blit(p, PAD * 2 + CH, y, Z);
+  const panes = [];
+  if (!onlyConv) { const sp = (await import(pathToFileURL(resolve(here, 'species', key + '.mjs')).href)).default(); panes.push(Img.fromColors(W, H, colorize(sp, sp.render()))); }
+  const cv = resolve(here, 'out', 'conv', key + '_96x112.png');
+  if (existsSync(cv)) panes.push(decodePNG(readFileSync(cv)));
+  panes.forEach((im, c) => {
+    const p = new Img(W, H), x = PAD * (2 + c) + CH + c * W * Z;
+    p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0);
+    sheet.fill(x, y, W * Z, CH, '#323353');
+    sheet.blit(p, x, y, Z);
+  });
 }
 writeFileSync(resolve(here, 'out', 'compare.png'), sheet.png());
 console.log('비교판 →', resolve(here, 'out', 'compare.png'));

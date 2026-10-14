@@ -1,29 +1,45 @@
-// 가이아록(gaia) — 다육 × 대지. 움직이지 않는 요새. 선인장 몸에 각진 바위 갑주를 두르고, 어깨엔 청록 결정이 솟고, 바위 위엔 이끼. 거대한 돌주먹이 땅을 짚는다.
-import { plant, R, MAT, cactusBall, crystal, eyes } from '../parts.mjs';
-import { ellipse, limb, plane } from '../engine.mjs';
+// 가이아록(gaia) — 바위 갑주 선인장 요새. 컨셉 아트 concept/gaia.png 를 따른다:
+//   넓고 낮은 골 진 초록 선인장 몸을 둥글둥글한 베이지 바윗덩이들이 덮고, 왼쪽 위로 청록 결정이 솟으며,
+//   바위 틈엔 이끼, 앞에는 두 돌주먹이 흙을 짚고, 바위 사이로 작은 호박빛 눈이 내다본다.
+// 움직임: 거의 움직이지 않는 요새 — 결정에 빛이 한 번 스치고, 이끼가 아주 살짝 흔들린다.
+import { plant, MAT, cactusBall, crystal, eyes } from '../parts.mjs';
+import { ellipse, poly, oklch } from '../engine.mjs';
 
-export default function gaia() {
-  const S = plant();
-  const rock = (name, faces, o = {}) => { const l = S.layer(name, { ramp: R.warm, ...MAT.rock, smooth: 0.3, ...o }); faces.forEach(f => l.add(f)); return l; };
-  // 선인장 몸
-  cactusBall(S, 'core', 48, 50, 19.5, 28, { ribs: 6, amp: 0.3, ramp: R.grass, bias: -0.06, spine: { every: 8, len: 3, color: '#b2ba90' } });
-  // 바위 갑주: 어깨 둘(윗면·앞면), 배판, 이마판
-  rock('shL', [plane([[12, 40], [24, 27], [40, 29], [35, 40]], { h0: 6, g: [0, 0.5], ref: [26, 40] }), plane([[12, 40], [35, 40], [37, 51], [16, 53]], { h0: 6, g: [0.1, 0], ref: [26, 40] })]);
-  rock('shR', [plane([[56, 28], [72, 25], [86, 36], [62, 39]], { h0: 6, g: [0, 0.5], ref: [70, 38] }), plane([[62, 39], [86, 36], [83, 50], [64, 51]], { h0: 6, g: [-0.25, 0], ref: [70, 38] })]);
-  rock('belly', [plane([[33, 55], [62, 53], [67, 69], [58, 76], [38, 76], [30, 68]], { h0: 6, g: [0, 0.05], ref: [48, 60] })], { bias: -0.04 });
-  rock('brow', [plane([[31, 27], [63, 24], [60, 32], [35, 33]], { h0: 6, g: [0, 0.6], ref: [47, 32] })]);
-  // 팔 + 돌주먹: 어깨에서 내려와 화분 흙 위를 짚는다(몸 앞)
-  S.layer('arms', { ramp: R.warm, ...MAT.rock, bias: -0.04 }).add(limb([[21, 46], [23, 56], [30, 64]], [5.6, 5.8, 5.4])).add(limb([[75, 44], [73, 55], [66, 63]], [5.6, 5.8, 5.4]));
-  rock('fistL', [plane([[25, 77], [24, 67], [29, 61], [39, 62], [42, 71], [39, 77]], { h0: 6, g: [0.12, 0.06], ref: [33, 69] })]);
-  rock('fistR', [plane([[57, 77], [54, 71], [57, 62], [67, 61], [72, 67], [71, 77]], { h0: 6, g: [-0.1, 0.06], ref: [63, 69] })]);
-  // 결정
-  crystal(S, 'xtal', [70, 28], -72, 17, 3.3);
-  crystal(S, 'xtal', [77, 31], -35, 12, 2.7);
-  crystal(S, 'xtal', [63, 27], -104, 10, 2.4);
-  crystal(S, 'xtal2', [21, 53], -158, 9, 2.2);
-  // 이끼
-  const moss = S.layer('moss', { ramp: R.grass, ...MAT.leaf, spec: null });
-  for (const [x, y, rx] of [[25, 29.5, 6], [36, 29, 4], [48, 25, 4.5], [76, 27.5, 4], [33, 62.5, 3.5], [62, 62, 4]]) moss.add(ellipse(x, y, rx, 1.8, { hz: 1.2 }));
-  eyes(S, [[42, 36], [52, 36]], { style: 'glint', g: '#fbb954', c: '#fbff86' });   // 이마 그늘 속 작은 호박빛 — 오래된 골렘
+const CACT = [oklch(0.32, 0.05, 150), oklch(0.44, 0.08, 140), oklch(0.56, 0.1, 132), oklch(0.68, 0.11, 125), oklch(0.8, 0.11, 115)];
+const STONE = [oklch(0.4, 0.05, 55), oklch(0.56, 0.065, 66), oklch(0.7, 0.075, 75), oklch(0.81, 0.07, 82), oklch(0.9, 0.05, 88)];
+const XTAL = [oklch(0.4, 0.07, 205), oklch(0.56, 0.1, 192), oklch(0.7, 0.12, 182), oklch(0.82, 0.11, 175), oklch(0.93, 0.07, 170)];
+const MOSS = [oklch(0.4, 0.07, 140), oklch(0.55, 0.11, 130), oklch(0.68, 0.14, 122), oklch(0.79, 0.15, 115), oklch(0.88, 0.13, 108)];
+
+// 바윗덩이: 가운데 (x, y), 반지름 r, 모서리 수 n, 각도 a — 둥글게 깎인 다각형
+const rock = (x, y, r, n = 6, a = 0, sq = 0.85) => poly(Array.from({ length: n }, (_, i) => {
+  const th = a + i * 2 * Math.PI / n, rr = r * (0.86 + 0.14 * Math.cos(i * 2.3 + a * 3));
+  return [x + Math.cos(th) * rr, y + Math.sin(th) * rr * sq];
+}), { hz: r * 0.55, bev: r * 0.45 });
+
+export default function gaia(f = {}) {
+  const S = plant(), t = f.t ?? null;
+  // 선인장 몸(넓고 낮다)
+  cactusBall(S, 'core', 48, 52, 25, 22, { ribs: 7, amp: 0.3, ramp: CACT, spine: { every: 7, len: 3, color: STONE[4] } });
+  // 결정(왼쪽 위)
+  crystal(S, 'xtal', [26, 36], -115, 16, 3.4, { ramp: XTAL });
+  crystal(S, 'xtal', [31, 33], -82, 13, 3, { ramp: XTAL });
+  crystal(S, 'xtal', [21, 40], -150, 10, 2.6, { ramp: XTAL });
+  crystal(S, 'xtal', [62, 32], -70, 8, 2.2, { ramp: XTAL });
+  // 바윗덩이들(층마다 다른 무리 — 맞닿은 자리에 선과 그림자)
+  const R = { ramp: STONE, ...MAT.rock, smooth: 0.5 };
+  // 얼굴(눈) 자리 47,41 둘레만 비워 두고 몸을 덮는다
+  [[34, 31, 10, 6, 0.3], [60, 30, 10.5, 7, 0.1], [71, 44, 9, 6, 0.6], [25, 47, 9, 5, 0.2], [62, 55, 9.5, 6, 0.9], [36, 56, 9, 6, 0.4], [48, 27, 7, 5, 0.7], [73, 61, 7, 6, 0.2], [22, 61, 7, 6, 0.7]]
+    .forEach(([x, y, r, n, a], k) => S.layer('stone' + (k % 4), R).add(rock(x, y, r, n, a)));
+  // 이끼(바위 위)
+  const sw = t === null ? 0 : Math.sin(2 * Math.PI * t) * 0.4;
+  const moss = S.layer('moss', { ramp: MOSS, ...MAT.leaf, spec: null });
+  [[33, 23.5, 5], [59, 22, 5], [48, 21.5, 3.5], [71, 37, 3.5], [25, 40, 3.5], [62, 48, 3.5], [36, 49, 3]].forEach(([x, y, r]) => moss.add(ellipse(x + sw, y, r, 1.7, { hz: 1.2 })));
+  // 돌주먹 둘(앞, 흙을 짚음)
+  S.layer('fistL', R).add(rock(35, 69, 10, 7, 0.4, 0.78));
+  S.layer('fistR', R).add(rock(61, 69, 10, 7, 0.1, 0.78));
+  moss.add(ellipse(33, 62.5, 4, 1.6, { hz: 1 })).add(ellipse(63, 62.5, 4, 1.6, { hz: 1 }));
+  // 결정을 스치는 빛(한 바퀴에 한 번)
+  if (t !== null) { const p = t * 1.6; if (p < 1) S.paint([[22 + p * 12, 28 + p * 4], [23 + p * 12, 28 + p * 4]], '#ffffff', S.layer('xtal').z); }
+  eyes(S, [[42, 40], [51, 40]], { style: 'glint', g: oklch(0.78, 0.15, 70), c: oklch(0.93, 0.1, 95) });
   return S;
 }

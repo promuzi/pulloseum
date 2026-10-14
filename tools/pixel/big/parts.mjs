@@ -119,6 +119,8 @@ export const EYE = {
   keen:   { g: ['kkw'], mirror: true },                 // 가는 선 — 날카로움
   lidIris: { g: ['lll', 'wik', 'iii'] },                // 눈꺼풀 + 홍채 — 차분하게 내려다봄
   big:    { g: ['.kk.', 'kwik', 'kiik', '.kk.'] },      // 크고 둥근 눈(테두리 + 홍채 + 반짝임)
+  cat:    { g: ['gg.', 'gkg'], mirror: true },          // 노란 눈 + 눈동자, 안쪽 눈꼬리가 내려감 — 사나운 장난꾸러기
+  blaze:  { g: ['gcg.', 'gggg', '.gg.'], mirror: true }, // 크게 달아오른 매서운 눈
 };
 // 눈: [[x, y], ...] 왼쪽 위 칸. style = EYE 의 이름, 색은 k·w·g·c·i·l 로 바꾼다
 export function eyes(S, list, { style = 'dot', k = '#2e222f', w = '#ffffff', g = '#f9c22b', c = '#fbff86', i = '#fb6b1d', l = '#3e3546' } = {}) {
