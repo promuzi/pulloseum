@@ -1,132 +1,253 @@
-// 컨셉 아트 → 도트 변환: 그림 자체를 줄여 도트로 만든다(따라 그리기가 아니라 같은 그림).
+// 컨셉 아트 → 도트 변환: 그림 자체를 도트로 만든다(따라 그리기가 아니라 같은 그림).
+//   node tools/pixel/big/convert.mjs <키…>             변환 → out/conv/<키>_96x112.png
 //   node tools/pixel/big/convert.mjs --measure <키…>   컨셉마다 흙 타원·식물 키 재기
-//   node tools/pixel/big/convert.mjs <키…>             변환 → out/conv/<키>_96x112.png (+ _front.png = 화분 앞을 덮는 잎)
-// 순서: ① 배경 지우기(가장자리에서 퍼져 나가며 바탕색과 비슷한 칸) ② 흙 타원 찾기(어두운 갈색 칸)
-//       ③ 흙 너비를 우리 3D 화분 흙 너비에 맞춰 축척·위치 계산 ④ 화분·흙 칸 빼기(화분 폭 안의 흙 선 아래)
-//       ⑤ 넓이 평균으로 줄이기(전경만 섞음) ⑥ OKLab k-평균으로 색 묶기 ⑦ 외곽선(selout) ⑧ 외딴 칸 정리
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+//   node tools/pixel/big/convert.mjs --anim <키…>      변환 + 움직임 8장 → out/conv/<키…>.gif
+// 입력: concept/cut/<키>.png(코덱스가 화분·배경을 지운 투명 누끼)가 있으면 그것, 없으면 concept/<키>.png 에서 배경·화분을 직접 지운다.
+// 도트답게 만드는 순서(평균 축소는 경계가 뭉개지고 붓 질감이 남아 도트 느낌이 없어진다):
+//   ① 재질 나누기 — 색상·채도 위주 k-평균으로 꽃잎·잎·얼굴·불 같은 재질 K개
+//   ② 재질마다 밝기를 4단 띠로(그 재질 픽셀의 밝기 분위수) → 재질×단 = 팔레트
+//   ③ 줄이기 — 도트 칸마다 원본 블록의 '다수 재질' 하나만 고르고, 그 재질 픽셀의 평균 단 → 섞인 색·흐린 경계 없음
+//   ④ 정리 — 외딴 재질 칸·외딴 단 칸을 이웃에 맞춤(눈·반짝임처럼 아주 어둡거나 밝은 재질은 남김)
+//   ⑤ 외곽선 — 실루엣은 selout(밑면 잉크·그늘 쪽 진하게·빛 쪽 옅게), 밝기 차 큰 재질 경계는 어두운 쪽 칸을 그 재질의 외곽선 색으로
+//   ⑥ 밑동을 흙 속으로 몇 칸 늘려(화분 앞 테가 가림) 심긴 것처럼
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { decodePNG, Img, oklab, fromOklab, INK } from './engine.mjs';
-import { W, H } from './parts.mjs';
-import { POT_GEO } from './pot3d.mjs';
+import { decodePNG, Img, oklab, fromOklab, INK, BAYER4, rng } from './engine.mjs';
+import { W, H, bolt } from './parts.mjs';
+import { POT_GEO, POT3, renderPot } from './pot3d.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const args = process.argv.slice(2), measure = args.includes('--measure'), keys = args.filter(a => !a.startsWith('--'));
+const args = process.argv.slice(2), measure = args.includes('--measure'), anim = args.includes('--anim'), keys = args.filter(a => !a.startsWith('--'));
+const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 
 function load(key) {
-  const im = decodePNG(readFileSync(resolve(here, 'concept', key + '.png'))), n = im.w * im.h;
+  const cutP = resolve(here, 'concept', 'cut', key + '.png'), cut = existsSync(cutP);
+  const im = decodePNG(readFileSync(cut ? cutP : resolve(here, 'concept', key + '.png'))), n = im.w * im.h;
   const lab = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    const k = i * 4, h = '#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join(''), c = oklab(h);
+    const k = i * 4, c = oklab('#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join(''));
     lab[i * 3] = c[0]; lab[i * 3 + 1] = c[1]; lab[i * 3 + 2] = c[2];
   }
-  // ① 배경: 네 모서리 평균 색에서 가까운 칸을 가장자리부터 채워 나간다
-  const bg = [0, 1, 2].map(c => ([0, im.w - 1, n - im.w, n - 1].reduce((s, i) => s + lab[i * 3 + c], 0) / 4));
-  const near = i => Math.hypot(lab[i * 3] - bg[0], (lab[i * 3 + 1] - bg[1]) * 1.5, (lab[i * 3 + 2] - bg[2]) * 1.5) < 0.055;
-  const isBg = new Uint8Array(n), st = [];
-  for (let x = 0; x < im.w; x++) st.push(x, n - im.w + x);
-  for (let y = 0; y < im.h; y++) st.push(y * im.w, y * im.w + im.w - 1);
-  while (st.length) {
-    const i = st.pop();
-    if (isBg[i] || !near(i)) continue;
-    isBg[i] = 1;
-    const x = i % im.w;
-    if (x > 0) st.push(i - 1); if (x < im.w - 1) st.push(i + 1); if (i >= im.w) st.push(i - im.w); if (i < n - im.w) st.push(i + im.w);
+  const isBg = new Uint8Array(n);
+  if (cut) for (let i = 0; i < n; i++) isBg[i] = im.data[i * 4 + 3] < 128 ? 1 : 0;
+  else {
+    // 배경: 모서리 색과 비슷한 칸을 가장자리부터 채우고, 식물에 갇힌 넓은 배경 구멍(잎·꽃 사이)도 배경으로
+    const bg = [0, 1, 2].map(c => ([0, im.w - 1, n - im.w, n - 1].reduce((s, i) => s + lab[i * 3 + c], 0) / 4));
+    const dist = i => Math.hypot(lab[i * 3] - bg[0], (lab[i * 3 + 1] - bg[1]) * 1.5, (lab[i * 3 + 2] - bg[2]) * 1.5);
+    const st = [];
+    for (let x = 0; x < im.w; x++) st.push(x, n - im.w + x);
+    for (let y = 0; y < im.h; y++) st.push(y * im.w, y * im.w + im.w - 1);
+    const fill = (seed, tol, mark) => {
+      const s = [...seed], got = [];
+      while (s.length) {
+        const i = s.pop();
+        if (mark[i] || dist(i) >= tol) continue;
+        mark[i] = 1; got.push(i);
+        const x = i % im.w;
+        if (x > 0) s.push(i - 1); if (x < im.w - 1) s.push(i + 1); if (i >= im.w) s.push(i - im.w); if (i < n - im.w) s.push(i + im.w);
+      }
+      return got;
+    };
+    fill(st, 0.055, isBg);
+    const seen = new Uint8Array(n);
+    for (let i = 0; i < n; i++) if (!isBg[i] && !seen[i] && dist(i) < 0.032) {
+      const reg = fill([i], 0.032, seen);
+      if (reg.length >= 140) for (const j of reg) isBg[j] = 1;
+    }
   }
-  // ② 흙: 아래쪽 절반의 어두운 갈색 칸 → 줄 단위 띠 → 타원
-  const soil = new Uint8Array(n);
-  for (let i = Math.floor(n * 0.45); i < n; i++) {
-    if (isBg[i]) continue;
-    const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]), h = (Math.atan2(lab[i * 3 + 2], lab[i * 3 + 1]) * 180 / Math.PI + 360) % 360;
-    if (L > 0.17 && L < 0.46 && C > 0.012 && C < 0.1 && h > 18 && h < 90) soil[i] = 1;
+  // 흙(누끼가 아닐 때만): 아래쪽 어두운 갈색 칸 → 가장 긴 줄 묶음 → 타원
+  let S = null;
+  if (!cut) {
+    const rows = [];
+    for (let y = Math.floor(im.h * 0.45); y < im.h; y++) {
+      let c = 0;
+      for (let x = 0; x < im.w; x++) { const i = y * im.w + x; if (isBg[i]) continue; const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]), h = hueOf(lab[i * 3 + 1], lab[i * 3 + 2]); if (L > 0.17 && L < 0.46 && C > 0.012 && C < 0.1 && h > 18 && h < 90) c++; }
+      if (c > im.w * 0.05) rows.push(y);
+    }
+    let best = [0, -1], s0 = rows[0];
+    for (let k = 1; k <= rows.length; k++) if (k === rows.length || rows[k] !== rows[k - 1] + 1) { if (rows[k - 1] - s0 > best[1] - best[0]) best = [s0, rows[k - 1]]; s0 = rows[k]; }
+    const xs = [];
+    for (let y = best[0]; y <= best[1]; y++) for (let x = 0; x < im.w; x++) { const i = y * im.w + x; if (isBg[i]) continue; const L = lab[i * 3], C = Math.hypot(lab[i * 3 + 1], lab[i * 3 + 2]); if (L < 0.46 && C < 0.1) xs.push(x); }
+    xs.sort((a, b) => a - b);
+    const xL = xs[Math.floor(xs.length * 0.03)], xR = xs[Math.floor(xs.length * 0.97)];
+    S = { cx: (xL + xR) / 2, cy: (best[0] + best[1]) / 2, a: (xR - xL) / 2, b: (best[1] - best[0]) / 2 };
+    // 화분 빼기: 앞 테 아래(화분 몸통)는 화분 폭 안 전부, 입구(뒤 테 ~ 앞 테)에서는 흙·테라코타·테 하이라이트 색만
+    const rimTop = S.cy - S.b * 1.4, rimFront = S.cy + S.b * 1.15, rimL = S.cx - S.a * 1.32, rimR = S.cx + S.a * 1.32;
+    for (let y = Math.floor(rimTop); y < im.h; y++) for (let x = 0; x < im.w; x++) {
+      const i = y * im.w + x;
+      if (isBg[i]) continue;
+      const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2], C = Math.hypot(A, B), h = hueOf(A, B), inPot = x > rimL && x < rimR;
+      const terra = h > 35 && h < 70 && C > 0.05 && C < 0.14 && L > 0.36 && L < 0.86, dirt = L < 0.47 && C < 0.075 && h > 33 && h < 95, shine = L > 0.7 && C < 0.1 && h > 35 && h < 105;
+      if ((inPot && (terra || dirt || shine)) || (y > rimFront && x > rimL - S.a * 0.15 && x < rimR + S.a * 0.15) || y > rimFront + S.b * 3) isBg[i] = 1;
+    }
   }
-  const rows = [];
-  for (let y = Math.floor(im.h * 0.45); y < im.h; y++) { let c = 0; for (let x = 0; x < im.w; x++) c += soil[y * im.w + x]; if (c > im.w * 0.05) rows.push(y); }
-  // 가장 긴 연속 줄 묶음 = 흙 띠
-  let best = [0, -1], s0 = rows[0];
-  for (let k = 1; k <= rows.length; k++) if (k === rows.length || rows[k] !== rows[k - 1] + 1) { if (rows[k - 1] - s0 > best[1] - best[0]) best = [s0, rows[k - 1]]; s0 = rows[k]; }
-  const xs = [];
-  for (let y = best[0]; y <= best[1]; y++) for (let x = 0; x < im.w; x++) if (soil[y * im.w + x]) xs.push(x);
-  xs.sort((a, b) => a - b);
-  const xL = xs[Math.floor(xs.length * 0.03)], xR = xs[Math.floor(xs.length * 0.97)];
-  const S = { cx: (xL + xR) / 2, cy: (best[0] + best[1]) / 2, a: (xR - xL) / 2, b: (best[1] - best[0]) / 2 };
-  let top = im.h;
-  for (let i = 0; i < n && top === im.h; i++) if (!isBg[i]) top = Math.floor(i / im.w);
-  let left = im.w, right = 0;
-  for (let y = 0; y < S.cy; y++) for (let x = 0; x < im.w; x++) if (!isBg[y * im.w + x]) { left = Math.min(left, x); right = Math.max(right, x); }
-  return { im, lab, isBg, soil, S, top, left, right };
+  // 식물 범위
+  let top = im.h, bot = 0, left = im.w, right = 0;
+  for (let i = 0; i < n; i++) if (!isBg[i]) { const x = i % im.w, y = (i - x) / im.w; top = Math.min(top, y); bot = Math.max(bot, y); left = Math.min(left, x); right = Math.max(right, x); }
+  if (cut) { let sx = 0, c = 0; for (let x = 0; x < im.w; x++) for (let y = bot - 40; y <= bot; y++) if (!isBg[y * im.w + x]) { sx += x; c++; } S = { cx: sx / c, cy: bot, a: (right - left) / 6, b: 0 }; }
+  return { im, lab, isBg, S, top, bot, left, right, cut };
 }
 
 if (measure) {
   for (const k of keys) {
-    const { S, top, left, right, im } = load(k);
-    console.log(`${k.padEnd(13)} 흙 가운데 (${S.cx.toFixed(0)}, ${S.cy.toFixed(0)}) 반폭 ${S.a.toFixed(0)} 반높이 ${S.b.toFixed(0)} · 식물 키/흙반폭 ${((S.cy - top) / S.a).toFixed(2)} · 왼쪽/흙반폭 ${((S.cx - left) / S.a).toFixed(2)} · 오른쪽/흙반폭 ${((right - S.cx) / S.a).toFixed(2)} (그림 ${im.w}×${im.h})`);
+    const { S, top, left, right, im, cut } = load(k);
+    console.log(`${k.padEnd(13)} ${cut ? '누끼' : '원본'} 흙 가운데 (${S.cx.toFixed(0)}, ${S.cy.toFixed(0)}) 반폭 ${S.a.toFixed(0)} · 식물 키/흙반폭 ${((S.cy - top) / S.a).toFixed(2)} · 좌 ${((S.cx - left) / S.a).toFixed(2)} 우 ${((right - S.cx) / S.a).toFixed(2)} (${im.w}×${im.h})`);
   }
   process.exit(0);
 }
 
-const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
-const P = POT_GEO, TOP = 3, HALFW = 46.5;
-for (const key of keys) {
-  const { im, lab, isBg, S, top, left, right } = load(key), n = im.w * im.h;
-  // ③ 축척: 키·폭이 판에 들어가게, 밑동 폭은 우리 화분 흙보다 너무 넓지 않게
-  const s = Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), P.a * 1.15 / S.a);
-  // ④ 화분·흙 빼기: 화분 테 위쪽(흙 가운데 − 반높이×1.4)부터 아래, 화분 폭 안에서 테라코타·흙 색 칸. 앞 테 아래 화분 몸통 폭 안은 전부.
-  const rimTop = S.cy - S.b * 1.4, rimFront = S.cy + S.b * 1.25, rimL = S.cx - S.a * 1.32, rimR = S.cx + S.a * 1.32;
-  const drop = new Uint8Array(n);
-  for (let y = Math.floor(rimTop); y < im.h; y++) for (let x = 0; x < im.w; x++) {
-    const i = y * im.w + x;
-    if (isBg[i]) continue;
-    const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2], C = Math.hypot(A, B), h = hueOf(A, B);
-    const inPot = x > rimL && x < rimR;
-    // 테라코타(채도 중간 — 빛나는 불·균열보다 덜 선명), 흙(어두운 갈색), 테 하이라이트(밝고 채도 낮은 따뜻한 색)
-    const terra = h > 33 && h < 70 && C > 0.05 && C < 0.14 && L > 0.36 && L < 0.86, dirt = L < 0.47 && C < 0.1 && h > 15 && h < 95;
-    const shine = L > 0.7 && C < 0.1 && h > 35 && h < 105;
-    if ((inPot && (terra || dirt || shine)) || (y > rimFront && x > rimL - S.a * 0.15 && x < rimR + S.a * 0.15) || (y > rimFront + S.b * 3)) drop[i] = 1;
+const P = POT_GEO, TOP = 3, HALFW = 46.5, KM = 8, LV = 4;
+// 결정적 k-평균(가장 먼 점부터 고르는 시작점)
+function kmeans(pts, K, wt, iters = 18) {
+  const d2 = (p, c) => wt.reduce((s, w, j) => s + w * (p[j] - c[j]) ** 2, 0);
+  const mean = [0, 1, 2].map(j => pts.reduce((s, p) => s + p[j], 0) / pts.length);
+  let cent = [pts.reduce((b, p) => d2(p, mean) > d2(b, mean) ? p : b, pts[0]).slice()];
+  while (cent.length < K) cent.push(pts.reduce((b, p) => { const dp = Math.min(...cent.map(c => d2(p, c))), db = Math.min(...cent.map(c => d2(b, c))); return dp > db ? p : b; }, pts[0]).slice());
+  let lab = new Int16Array(pts.length);
+  for (let it = 0; it < iters; it++) {
+    const sum = cent.map(() => [0, 0, 0, 0]);
+    pts.forEach((p, i) => { let b = 0, bd = Infinity; cent.forEach((c, j) => { const d = d2(p, c); if (d < bd) { bd = d; b = j; } }); lab[i] = b; sum[b][0] += p[0]; sum[b][1] += p[1]; sum[b][2] += p[2]; sum[b][3]++; });
+    cent = cent.map((c, j) => sum[j][3] ? [sum[j][0] / sum[j][3], sum[j][1] / sum[j][3], sum[j][2] / sum[j][3]] : c);
   }
-  // ⑤ 넓이 평균으로 줄이기(OKLab 평균, 전경만)
-  const cells = new Array(W * H).fill(null);
+  return { cent, assign: p => { let b = 0, bd = Infinity; cent.forEach((c, j) => { const d = d2(p, c); if (d < bd) { bd = d; b = j; } }); return b; } };
+}
+
+export function convert(key) {
+  const { im, lab, isBg, S, top, left, right } = load(key), n = im.w * im.h;
+  const s = Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
+  if (!S.b) S.cy -= 3 / s;   // 누끼: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게
+  // ① 재질: 표본(성기게) → 색상·채도 위주 k-평균
+  const sample = [];
+  for (let i = 0; i < n; i += 7) if (!isBg[i]) sample.push([lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]]);
+  const mat = kmeans(sample, KM, [0.35, 4, 4]);
+  // ② 재질마다 밝기 분위수 → 4단 문턱
+  const Ls = Array.from({ length: KM }, () => []);
+  for (const p of sample) Ls[mat.assign(p)].push(p[0]);
+  const cuts = Ls.map(a => { a.sort((x, y) => x - y); return [0.25, 0.5, 0.75].map(q => a[Math.floor(q * (a.length - 1))] ?? 0.5); });
+  const level = (m, L) => cuts[m].filter(c => L > c).length;
+  // 원본 칸마다 (재질, 단)
+  const pm = new Int8Array(n).fill(-1), pl = new Int8Array(n), acc = Array.from({ length: KM * LV }, () => [0, 0, 0, 0]);
+  for (let i = 0; i < n; i++) if (!isBg[i]) {
+    const p = [lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]], m = mat.assign(p), l = level(m, p[0]);
+    pm[i] = m; pl[i] = l;
+    const a = acc[m * LV + l]; a[0] += p[0]; a[1] += p[1]; a[2] += p[2]; a[3]++;
+  }
+  const palLab = acc.map((a, k) => a[3] ? [a[0] / a[3], a[1] / a[3] * 1.12, a[2] / a[3] * 1.12] : [mat.cent[Math.floor(k / LV)][0], 0, 0]);
+  const matL = mat.cent.map(c => c[0]);
+  // ③ 다수 재질로 줄이기
+  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H);
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
     const x0 = S.cx + (X - P.cx) / s, y0 = S.cy + (Y - P.cy) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;
-    let cnt = 0, tot = 0, L = 0, A = 0, B = 0;
+    const cnt = new Float32Array(KM), lv = new Float32Array(KM);
+    let tot = 0, fg = 0;
     for (let y = Math.max(0, Math.floor(y0)); y < Math.min(im.h, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(im.w, Math.ceil(x1)); x++) {
       const i = y * im.w + x;
       tot++;
-      if (isBg[i] || drop[i]) continue;
-      cnt++; L += lab[i * 3]; A += lab[i * 3 + 1]; B += lab[i * 3 + 2];
+      if (pm[i] < 0) continue;
+      fg++; cnt[pm[i]]++; lv[pm[i]] += pl[i];
     }
-    if (tot && cnt / tot >= 0.45) cells[Y * W + X] = [L / cnt, A / cnt, B / cnt];
+    if (!tot || fg / tot < 0.5) continue;
+    let m = 0;
+    for (let k = 1; k < KM; k++) if (cnt[k] > cnt[m]) m = k;
+    cm[Y * W + X] = m; cl[Y * W + X] = lv[m] / cnt[m];
   }
-  // ⑥ 색 묶기: OKLab k-평균(밝기 순 시작점) → 채도를 살짝 올려 선명하게
-  const K = 22, pts = cells.filter(Boolean).slice().sort((a, b) => a[0] - b[0]);
-  let cent = Array.from({ length: K }, (_, i) => pts[Math.floor((i + 0.5) * pts.length / K)].slice());
-  const nearest = p => { let b = 0, bd = Infinity; cent.forEach((c, j) => { const d = (p[0] - c[0]) ** 2 * 1.4 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (d < bd) { bd = d; b = j; } }); return b; };
-  for (let it = 0; it < 20; it++) {
-    const sum = cent.map(() => [0, 0, 0, 0]);
-    for (const p of pts) { const j = nearest(p); sum[j][0] += p[0]; sum[j][1] += p[1]; sum[j][2] += p[2]; sum[j][3]++; }
-    cent = cent.map((c, j) => sum[j][3] ? [sum[j][0] / sum[j][3], sum[j][1] / sum[j][3], sum[j][2] / sum[j][3]] : c);
+  // ④ 정리: 외딴 재질 칸(8이웃 중 같은 재질 ≤ 1)은 이웃 다수로 — 단, 아주 어둡거나 밝은 재질(눈·반짝임)은 남김
+  const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x;
+  for (let pass = 0; pass < 2; pass++) {
+    const nm = cm.slice(), nl = cl.slice();
+    for (let i = 0; i < W * H; i++) {
+      if (cm[i] < 0 || matL[cm[i]] < 0.3 || matL[cm[i]] > 0.9) continue;
+      const x = i % W, y = (i - x) / W, nb = [];
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (ox || oy) { const j = at(x + ox, y + oy); if (j >= 0 && cm[j] >= 0) nb.push(j); }
+      if (nb.filter(j => cm[j] === cm[i]).length > 1 || nb.length < 3) continue;
+      const votes = new Map();
+      for (const j of nb) votes.set(cm[j], (votes.get(cm[j]) || 0) + 1);
+      const m = [...votes].sort((a, b) => b[1] - a[1])[0][0], same = nb.filter(j => cm[j] === m);
+      nm[i] = m; nl[i] = same.reduce((s2, j) => s2 + cl[j], 0) / same.length;
+    }
+    cm.set(nm); cl.set(nl);
   }
-  const pal = cent.map(([L, A, B]) => fromOklab(L, A * 1.12, B * 1.12));
-  let idx = cells.map(p => p ? nearest(p) : -1);
-  // ⑧ 외딴 칸 정리: 네 이웃이 모두 같은 다른 색이면 그 색으로(밝기 차가 큰 반짝임·눈은 남김)
-  idx = idx.map((j, i) => {
-    if (j < 0) return j;
-    const x = i % W, y = (i - x) / W, nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([ox, oy]) => (x + ox < 0 || x + ox >= W || y + oy < 0 || y + oy >= H) ? -2 : idx[(y + oy) * W + x + ox]);
-    return nb.every(v => v === nb[0]) && nb[0] >= 0 && nb[0] !== j && Math.abs(cent[nb[0]][0] - cent[j][0]) < 0.22 ? nb[0] : j;
-  });
-  // ⑦ 외곽선(selout): 밑면은 잉크, 빛 쪽(위·왼)은 조금 어둡게, 그늘 쪽은 많이 어둡게
-  const out = new Img(W, H), dark = (j, d) => { const [L, A, B] = cent[j]; return fromOklab(Math.max(0.12, L - d), A * 1.25, B * 1.25); };
+  // 단 정하기 + 외딴 단(같은 재질 4이웃이 모두 같은 다른 단) 맞추기
+  const ct = new Int8Array(W * H);
+  for (let i = 0; i < W * H; i++) ct[i] = Math.max(0, Math.min(LV - 1, Math.round(cl[i])));
+  // 단 덩어리 정리(두 번): 같은 재질 8이웃 중 내 단이 1칸 이하이고 다른 한 단이 4칸 이상이면 그 단으로 — 점점이 튄 붓 질감 제거
+  let ct2 = ct;
+  for (let pass = 0; pass < 2; pass++) {
+    const nx = ct2.slice();
+    for (let i = 0; i < W * H; i++) {
+      if (cm[i] < 0 || matL[cm[i]] < 0.3) continue;
+      const x = i % W, y = (i - x) / W, cnt = new Int8Array(LV);
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (ox || oy) { const j = at(x + ox, y + oy); if (j >= 0 && cm[j] === cm[i]) cnt[ct2[j]]++; }
+      if (cnt[ct2[i]] > 1) continue;
+      let b = 0;
+      for (let l = 1; l < LV; l++) if (cnt[l] > cnt[b]) b = l;
+      if (cnt[b] >= 4) nx[i] = b;
+    }
+    ct2 = nx;
+  }
+  return { cm, ct: ct2, palLab, matL, key };
+}
+
+// 색 입히기(+ ⑤ 외곽선). 같은 함수를 움직임 프레임에도 쓴다.
+export function paint(cv, { shiftRow = null, tone = null } = {}) {
+  const { palLab, matL } = cv, out = new Img(W, H);
+  const cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H);
   for (let i = 0; i < W * H; i++) {
-    const j = idx[i];
-    if (j < 0) continue;
-    const x = i % W, y = (i - x) / W, e = (xx, yy) => xx < 0 || yy < 0 || xx >= W || yy >= H || idx[yy * W + xx] < 0;
-    const eU = e(x, y - 1), eL = e(x - 1, y), eD = e(x, y + 1), eR = e(x + 1, y);
-    let c = pal[j];
-    if (eD && y < P.cy) c = INK; else if (eD || eR) c = dark(j, 0.3); else if (eU || eL) c = dark(j, 0.14);
+    const x = i % W, y = (i - x) / W, dx = shiftRow ? shiftRow(y) : 0, sx = x - dx;
+    if (sx < 0 || sx >= W) continue;
+    const j = y * W + sx;
+    cm[i] = cv.cm[j]; ct[i] = tone ? tone(cv.cm[j], cv.ct[j], sx, y) : cv.ct[j];
+  }
+  const col = (m, l) => { const [L, A, B] = palLab[m * LV + l]; return fromOklab(L, A, B); };
+  const dark = (m, d) => { const [L, A, B] = palLab[m * LV]; return fromOklab(Math.max(0.1, L - d), A * 1.3, B * 1.3); };
+  const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x;
+  for (let i = 0; i < W * H; i++) {
+    const m = cm[i];
+    if (m < 0) continue;
+    const x = i % W, y = (i - x) / W, nb = [at(x, y - 1), at(x - 1, y), at(x, y + 1), at(x + 1, y)];
+    const empty = nb.map(j => j < 0 || cm[j] < 0);
+    let c = col(m, Math.max(0, Math.min(LV - 1, ct[i])));
+    if (empty.some(Boolean)) c = empty[2] && y < P.cy ? INK : (empty[2] || empty[3]) ? dark(m, 0.16) : dark(m, 0.06);
+    else if (nb.some(j => cm[j] !== m && matL[cm[j]] - matL[m] > 0.15)) c = dark(m, 0.08);   // 더 밝은 재질과 맞닿은 어두운 쪽 = 경계선
     out.set(x, y, c);
   }
-  mkdirSync(resolve(here, 'out', 'conv'), { recursive: true });
-  writeFileSync(resolve(here, 'out', 'conv', key + '_96x112.png'), out.png());
-  console.log(`${key.padEnd(13)} 축척 ${s.toFixed(4)} · 칸 ${idx.filter(v => v >= 0).length} · 색 ${K}`);
+  return out;
+}
+
+mkdirSync(resolve(here, 'out', 'conv'), { recursive: true });
+const cvs = keys.map(k => { const cv = convert(k); writeFileSync(resolve(here, 'out', 'conv', k + '_96x112.png'), paint(cv).png()); console.log(`${k.padEnd(13)} 변환 완료`); return cv; });
+
+// 움직임: 몸 흔들림(밑동 고정, 위로 갈수록 크게 휘는 줄 밀기) + 불 재질은 색 띠가 위로 흐르고 + 종별 효과(번개·불티)
+if (anim) {
+  const { encodeGIF } = await import('./gif.mjs');
+  const pot = renderPot(POT3.pot_terra), FR = 8, Z = 3, frames = [];
+  const FX = {
+    flower_fire: { sway: 1.2, embers: [[30, 20], [48, 10], [66, 18]] },
+    cactus_fire: { sway: 0.6, embers: [[40, 12], [50, 8], [62, 14]] },
+    spark: { sway: 1, bolts: [[[22, 30], [10, 24]], [[74, 26], [88, 20]], [[70, 50], [84, 56]], [[28, 52], [14, 58]]] },
+    flower_grass: { sway: 1.4 },
+  };
+  for (let f = 0; f < FR; f++) {
+    const t = f / FR, fr = new Img(cvs.length * W * Z, H * Z, '#2f3150');
+    cvs.forEach((cv, k) => {
+      const fx = FX[cv.key] || { sway: 1 };
+      const top = 6, base = P.cy;
+      const shiftRow = y => y >= base - 2 ? 0 : Math.round(fx.sway * Math.sin(2 * Math.PI * t) * ((base - y) / (base - top)) ** 1.4);
+      // 불 재질(밝고 선명한 주황·노랑): 높이와 시간에 따라 단이 위로 흐르게
+      const fire = cv.palLab.map((c, q) => q % LV === LV - 1 && hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68);
+      const tone = (m, l, x, y) => fire[m * LV + LV - 1] ? Math.max(0, Math.min(LV - 1, l + [1, 0, -1, 0][Math.floor(((y / 5 + 2 * t * 4) % 4 + 4) % 4)])) : l;
+      const im = paint(cv, { shiftRow, tone });
+      const S = { paints: [], line(a, b, c) { /* bolt 용 */ }, paint(pts, c) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), c]); } };
+      if (fx.bolts) fx.bolts.forEach(([a, b], q) => { if ((f + q) % 3) bolt({ paint: S.paint.bind(S), w: W }, a, b, { seed: f * 31 + q * 7 + 1, depth: 2, amp: 0.3, fork: 0.3, glow: '#fbe36a' }); });
+      if (fx.embers) fx.embers.forEach(([x, y], q) => { const p = (t + q / fx.embers.length) % 1, yy = y - p * 10; if (yy > 0) S.paint([[x + Math.sin(2 * Math.PI * (p + q)) * 2, yy]], p < 0.5 ? '#fcc246' : '#f57a2a'); });
+      for (const [x, y, c] of S.paints) im.set(x, y, c);
+      const p2 = new Img(W, H);
+      p2.blit(pot.back, 0, 0); p2.blit(im, 0, 0); p2.blit(pot.front, 0, 0);
+      fr.blit(p2, k * W * Z, 0, Z);
+    });
+    frames.push(fr);
+  }
+  writeFileSync(resolve(here, 'out', 'conv', keys.join('+') + '.gif'), encodeGIF(frames, { delay: 10 }));
+  console.log('움직임 →', resolve(here, 'out', 'conv', keys.join('+') + '.gif'));
 }

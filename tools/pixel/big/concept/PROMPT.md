@@ -1,3 +1,5 @@
+(2026-10-15 사용자 지시 — 다음 생성부터: 배경은 투명(누끼, 실제 알파)으로, 화분·흙 없이 식물만, 밑동은 흙 높이에서 깔끔하게 끝나게 요청한다. 이 파일의 아래 요청문은 첫 12장을 만든 기록이라 그대로 둔다.)
+
 Task: generate 12 concept art images (one image per creature) for a mobile monster-collecting game where the creatures are plants living in flower pots. These images are the visual target that a pixel artist will redraw as 96x112 pixel sprites, so shapes must be clear and readable.
 
 Save each image as a PNG file into C:\dev\pulloseum\tools\pixel\big\concept\ using exactly the file name given below (for example C:\dev\pulloseum\tools\pixel\big\concept\flower_grass.png). If the image tool saves files somewhere else, copy them into that folder with these names. Do not create, modify, or delete any other file in the repository, and do not commit.

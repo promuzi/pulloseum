@@ -7,7 +7,7 @@ import { Img, colorize, decodePNG } from './engine.mjs';
 import { W, H } from './parts.mjs';
 import { POT3, renderPot } from './pot3d.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url)), keys = process.argv.slice(2), Z = 3, CH = H * Z, PAD = 8;
+const here = dirname(fileURLToPath(import.meta.url)), keys = process.argv.slice(2).filter(a => !a.startsWith('--')), Z = 3, CH = H * Z, PAD = 8;
 const pot = renderPot(POT3.pot_terra);
 // 상자 평균으로 줄이기(컨셉 아트는 그림이라 평균 축소가 맞다)
 function shrink(src, w, h) {
