@@ -17,6 +17,8 @@ const torus = (x, y, z, R0, a, cy) => Math.hypot(Math.hypot(x, z) - R0, y - cy) 
 export const POT_GEO = { cx: POT_C[0], cy: POT_C[1] - YS * CE, a: rOut(YS) - WALL, b: (rOut(YS) - WALL) * SE };
 // 화면에서 테(입구) 타원: 안쪽 반지름 rin(이 안 = 화분 속), 바깥 반지름 rout, 세로 = 반지름 × k(내려다본 각도) — 식물 앞뒤 가르기(potblend)용
 export const RIM_GEO = { cx: POT_C[0], cy: POT_C[1], rin: RIM - RA, rout: RIM + RA, k: SE };
+// 화면에서 굽이 바닥에 닿는 원(가운데 cx·cy, 닿는 반지름 r, 굽 바깥 반지름 rf, 세로 = 반지름 × k) — 무대 바닥에 세우는 기준, 바닥을 타는 효과의 출발·도착
+export const BASE_GEO = { cx: POT_C[0], cy: POT_C[1] - (YB - 0.4 - 1.8) * CE, r: RB - 0.6, rf: RB + 1.2, k: SE };
 function body(x, y, z) {   // 속이 빈 원뿔대(흙 높이까지 비움)
   const q = Math.hypot(x, z), side = (q - RB) * EN[0] + (y - YB) * EN[1];
   return Math.max(Math.max(YB - y, y - YT, side), -Math.max(YS - y, y - YT - 6, side + WALL));

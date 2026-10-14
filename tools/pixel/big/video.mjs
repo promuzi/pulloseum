@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { Img } from './engine.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -16,13 +17,14 @@ export function findBlender() {
   return null;
 }
 
-// frames = 같은 크기 불투명 Img, delay = 1/100초(숫자 하나 또는 장마다 배열)
-export function writeMP4(out, frames, { delay = 10, loops = 1, fps = 50 } = {}) {
-  const blender = findBlender(), w = frames[0].w, h = frames[0].h;
+// frames = 같은 크기 불투명 Img, delay = 1/100초(숫자 하나 또는 장마다 배열), zoom = 장마다 정수배로 키워 쓰기(큰 장을 한꺼번에 메모리에 두지 않게)
+export function writeMP4(out, frames, { delay = 10, loops = 1, fps = 50, zoom = 1 } = {}) {
+  const blender = findBlender(), w = frames[0].w * zoom, h = frames[0].h * zoom;
   if (!blender) { console.log('MP4 건너뜀 — 블렌더를 찾지 못함'); return false; }
   if (w % 2 || h % 2) throw new Error(`MP4는 가로·세로가 짝수여야 함 (${w}×${h})`);
   const dir = mkdtempSync(join(tmpdir(), 'pullo-mp4-')), seq = [];
-  const files = frames.map((f, i) => { const n = `f${String(i).padStart(4, '0')}.png`; writeFileSync(join(dir, n), f.png()); return n; });
+  const big = f => { if (zoom === 1) return f; const o = new Img(w, h); o.blit(f, 0, 0, zoom); return o; };
+  const files = frames.map((f, i) => { const n = `f${String(i).padStart(4, '0')}.png`; writeFileSync(join(dir, n), big(f).png()); return n; });
   for (let l = 0; l < loops; l++) files.forEach((n, i) => { const d = Array.isArray(delay) ? delay[i] : delay; for (let k = 0; k < Math.max(1, Math.round(d * fps / 100)); k++) seq.push(n); });
   const job = join(dir, 'job.json'), dst = resolve(out);
   writeFileSync(job, JSON.stringify({ dir, seq, fps, w, h, out: dst }));

@@ -36,6 +36,8 @@ node tools/pixel/big/roster.mjs --guide <키…>          # 화분 축(세로)·
 - 대기: `convert.mjs --anim --mp4 <키…>` → `<키>_idle.mp4` + 격자. 종별 설정은 `convert.mjs`의 `FX`(bob·squash·sway·petal·leaf·flutter, `fire`, `electric`, `amb` = `fx.mjs` 효과: shine·gems·twinkle·drips·bubbles·petals·wind·swirl·spores·dust).
   종 특성으로 고른다 — 금속·칼날·은빛 = shine, 수정 = gems+twinkle, 물 = drips(+bubbles), 바람 = wind(+petals·swirl), 버섯 = spores, 대지 = dust + 숨 작게, 말랑함 = squash 크게, 덩굴·리본 = petal·leaf 크게.
 - 공격: `convert.mjs --attack --mp4 <키…>` → `attacks_all.mp4`·`attacks_sheet.png`. 종별 기술은 `attack.mjs` `ATTACKS`(kind·move·색·status). 큰 효과는 어두운 테두리 층(o), 입자는 p 층.
+  무대 = v2 전투 배치(`stage.mjs`: 나 = 왼쪽 아래, 상대 = 오른쪽 위·좌우 뒤집힘, 바닥 = 화분과 같은 26° 평면). 날아가는 효과는 L → T 방향(`S.D`), 몸에 붙은 출발점은 `S.fx`로 좌우 뒤집기 — 가로로 고정된 오프셋(`L[0] + 12` 같은)을 새로 쓰지 않는다.
+  땅을 타는 기술(`GROUND`)은 바닥 평면에서: 출발·도착 = 두 화분 굽 가장자리(`S.S0`·`S.E0`, 화분 뒤 반쪽이면 옆으로), 바닥에 눕는 것 = `P.f`, 서 있는 것 = `P.u`(깊이 = 바닥 닿는 줄 → 화분 앞뒤 가림), 먼지 = `P.s`(테두리 없음). 흙 높이(G) 줄을 바닥처럼 쓰면 화분 사이 허공을 지난다(2026-10-15 사용자 지적). 바닥 기술은 거꾸로(`_rev`)도 꼭 본다.
 - 변이: `convert.mjs --forms --mp4 <키>` → `<키>_forms.mp4`·`_reveal.mp4`. 설계 = `docs\superpowers\specs\2026-10-15-v2-mutation-staging-design.md`.
 - 검토 정지 그림: `--frames=a,b,c`(대기·공격 모두).
 - 흔들림은 큰 원본을 매 장 다시 줄여 만든다. 줄 단위 정수 이동만 하면 가로 이음선이 움직여 보이고, 매 장 새로 줄이기만 하면 칸이 끓는다 → 앞 장 기준 문턱(hysteresis) + 변위가 고른 곳은 정수 이동 섞기(`mixedMaps`). 움직임을 고칠 때 이 둘을 빼지 않는다.

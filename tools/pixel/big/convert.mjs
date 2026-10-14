@@ -874,58 +874,84 @@ if (anim) {
   }
 }
 
-// 공격(--attack <키…>): 종마다 다음 종을 상대로 대표 기술 한 번(attack.mjs) — 무대 236×120, 48장 × 0.05초.
-//   → out/conv/<키>_attack.gif(2배), attacks_all.gif·(--mp4) attacks_all.mp4(3배, 이어 붙임), attacks_sheet.png(핵심 장면: 준비·동작·맞음·맞음+2·맞음+6)
+// 공격(--attack <키…>): 종마다 다음 종을 상대로 대표 기술 한 번(attack.mjs) — v2 전투 배치 무대(stage.mjs, 270×348 1배), 48장 × 0.05초.
+//   나(왼쪽 아래) → 상대(오른쪽 위·좌우 뒤집힘). 바닥을 타는 기술(GROUND)은 거꾸로(상대 → 나)도 굽는다(<키>_rev). --both 면 모든 기술을 양쪽으로.
+//   그리는 순서(가상 3D 깊이): 무대 → 바닥 층(갈라짐·물자국) → 먼 화분보다 뒤에 선 효과 → 먼 화분 → 사이 효과 → 가까운 화분 → 앞 효과 → 공중 효과(o 테두리·p 입자) → 화면 흔들림
+//   → out/conv/<이름>_attack.gif(2배), attacks_all.mp4(--mp4, 3배·이어 붙임 — 없으면 attacks_all.gif), attacks_sheet.png(핵심 장면)
 // 변이 스킬(--variants <공격 키> <대상 키>): 같은 식물에 5변이형 기본 변이 스킬을 차례로(공격 쪽 = 변이 후광·문장) → variants_all.mp4·variants_sheet.png
 if (args.includes('--attack') || args.includes('--variants')) {
   const { encodeGIF } = await import('./gif.mjs');
   const { idleRig, attackField } = await import('./motion.mjs');
-  const { ATTACKS, VARIANTS, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
+  const { ATTACKS, VARIANTS, GROUND, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
   const { rimTint, emblem } = await import('./forms.mjs');
-  const pot = renderPot(POT3.pot_terra), SW = 236, SH = 120, AX = 4, AY = 4, TX = SW - W - 4, TY = 4, BG = '#2f3150';
+  const ST = await import('./stage.mjs'), { BASE_GEO } = await import('./pot3d.mjs');
+  const pot = renderPot(POT3.pot_terra), SW = ST.SW, SH = ST.SH, BGIM = ST.stageBg(), BG = '#2e222f';
   const rigs = cvs.map(cv => idleRig(cv));
   const mirror = im => { const o = new Img(im.w, im.h); for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) { const s = (y * im.w + x) * 4, d = (y * im.w + im.w - 1 - x) * 4; o.data.set(im.data.subarray(s, s + 4), d); } return o; };
   const flash = im => { const o = new Img(W, H); for (let i = 0; i < W * H; i++) if (im.data[i * 4 + 3] >= 128) o.data.set([255, 255, 255, 255], i * 4); return o; };
   const plantAt = (k, pose) => paint(cvs[k], { maps: rasterize(cvs[k].src, attackField(rigs[k], pose)), eyeOff: [pose.qx || 0, pose.qy || 0] });
   const zoom = (list, z) => list.map(c => { const o = new Img(c.w * z, c.h * z, BG); o.blit(c, 0, 0, z); return o; });
-  const variants = args.includes('--variants'), all = [], sheetRows = [];
-  const jobs = variants ? Object.keys(VARIANTS).map(form => ({ a: 0, t: cvs.length > 1 ? 1 : 0, A: VARIANTS[form], form, name: form })) : cvs.map((cv, a) => ({ a, t: (a + 1) % cvs.length, A: ATTACKS[cv.key], form: null, name: cv.key }));
-  for (const { a, t, A, form, name } of jobs) {
+  // 화면 흔들림: 장 전체를 옮기고 비는 가장자리는 끝 줄을 늘인다
+  const shift = (im, dx, dy) => { const o = new Img(im.w, im.h); for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) { const sx = Math.max(0, Math.min(im.w - 1, x - dx)), sy = Math.max(0, Math.min(im.h - 1, y - dy)); o.data.set(im.data.subarray((sy * im.w + sx) * 4, (sy * im.w + sx) * 4 + 4), (y * im.w + x) * 4); } return o; };
+  const variants = args.includes('--variants'), both = args.includes('--both'), all = [], sheetRows = [];
+  let jobs = variants ? Object.keys(VARIANTS).map(form => ({ a: 0, t: cvs.length > 1 ? 1 : 0, A: VARIANTS[form], form, name: form })) : cvs.map((cv, a) => ({ a, t: (a + 1) % cvs.length, A: ATTACKS[cv.key], form: null, name: cv.key }));
+  jobs = jobs.flatMap(j => j.A && (both || GROUND.has(j.A.kind)) ? [{ ...j, rev: false }, { ...j, rev: true, name: j.name + '_rev' }] : [{ ...j, rev: false }]);
+  const farY = ST.SPOTS.far.base[1], nearY = ST.SPOTS.near.base[1], inS = (x, y) => x >= 0 && y >= 0 && x < SW && y < SH;
+  for (const { a, t, A, form, name, rev } of jobs) {
     if (!A || (!variants && cvs.length < 2)) continue;
     const I = impactAt(A), ra = rigs[a], rt = rigs[t], frames = [];
-    // 대상 윗머리 점 셋(무대 좌표, 좌우 뒤집힘)
-    const pts = [-8, 0, 8].map(dx => { const x = Math.round(rt.hx + dx); let y = 0; while (y < H && cvs[t].cm[y * W + x] < 0) y++; return [TX + (W - 1 - x), TY + Math.min(y, H - 1)]; });
+    // 자리: 기본 = 나(가까움) → 상대(멂). 먼 쪽은 좌우 뒤집어 상대를 본다
+    const atk = rev ? ST.SPOTS.far : ST.SPOTS.near, tgt = rev ? ST.SPOTS.near : ST.SPOTS.far, aM = rev, tM = !rev;
+    const [AXs, AYs] = ST.spriteAt(atk.base), [TXs, TYs] = ST.spriteAt(tgt.base), dirY = Math.sign(tgt.base[1] - atk.base[1]);
+    const hxOf = (rig, M) => M ? W - 1 - rig.hx : rig.hx;
+    // 바닥 길: 공격 쪽 굽 가장자리(상대 쪽) → 대상 굽 가장자리(공격 쪽) — 화분 뒤 반쪽이면 옆으로 당김
+    const rf = BASE_GEO.rf + 3, phiS = ST.sideAngle(atk.base, tgt.base), phiE = ST.sideAngle(tgt.base, atk.base);
+    const S0 = ST.onRing(atk.base, rf, phiS), E0 = ST.onRing(tgt.base, rf, phiE);
+    // 대상 윗머리 점 셋(무대 좌표)
+    const pts = [-8, 0, 8].map(dx => { const x = Math.round(rt.hx + dx); let y = 0; while (y < H && cvs[t].cm[y * W + x] < 0) y++; return [TXs + (tM ? W - 1 - x : x), TYs + Math.min(y, H - 1)]; });
+    // 앞으로 내미는 몸놀림은 상대가 있는 위·아래로도 조금(마주 보는 각도)
+    const lean = p => A.move === 'lunge' && p.qx > 0 ? { ...p, qy: p.qy + Math.round(dirY * p.qx * 0.35) } : p;
     for (let f = 0; f < FRA; f++) {
-      const fz = f === I + 1 ? I : f, pose = attackerPose(fz, A), prev = attackerPose(Math.max(0, fz - 1), A), tp = targetPose(f, I);
-      const stage = new Img(SW, SH, BG), [sx, sy] = cameraShake(f, A, I), aim = plantAt(a, { ...pose, px: prev.qx, py: prev.qy });
+      const fz = f === I + 1 ? I : f, pose = lean(attackerPose(fz, A)), prev = lean(attackerPose(Math.max(0, fz - 1), A)), tp = targetPose(f, I, A);
+      const aim = plantAt(a, { ...pose, px: prev.qx, py: prev.qy });
       if (form) rimTint(aim, form, 0.45, 0.4 + 0.25 * Math.sin(f / FRA * 4 * Math.PI), Math.floor(P.cy) - 3);
-      stage.blit(plantInPot(aim, pot), AX + sx, AY + sy);
-      if (form) emblem((x, y, c) => stage.set(x, y, c), 2, 2, form, 2);
-      let tim = plantAt(t, { qx: -tp.kb, qy: 0, sq: tp.kb ? 0.6 : 0, px: -Math.max(0, tp.kb - 1), py: 0 });
+      const tqy = Math.round(dirY * tp.kb * 0.35);   // 넉백도 공격 반대쪽 위·아래로
+      let tim = plantAt(t, { qx: -tp.kb, qy: tqy, sq: tp.kb ? 0.6 : 0, px: -Math.max(0, tp.kb - 1), py: tqy });
       if (tp.flash) tim = flash(tim);
-      stage.blit(mirror(plantInPot(tim, pot)), TX + sx + tp.shake, TY + sy);
-      const L = [AX + ra.hx + pose.qx + sx, AY + ra.hy + pose.qy + sy], T = [TX + (W - 1 - rt.hx) + tp.kb + sx, TY + rt.hy + sy], G = TY + POT_GEO.cy + sy;
-      // 효과 두 층: o = 큰 모양(어두운 1칸 테두리를 둘러 몸 위에서도 읽히게), p = 잔 입자(테두리 없음)
-      const lo = new Map(), lp = new Map(), inS = (x, y) => x >= 0 && y >= 0 && x < SW && y < SH;
-      const P2 = { o: (x, y, c) => { if (inS(x, y)) lo.set(y * SW + x, c); }, p: (x, y, c) => { if (inS(x, y)) lp.set(y * SW + x, c); } };
-      skillFx(P2, A, fz, L, T, G, 7 + a);
-      statusFx(P2, A, f, T, G, pts.map(([x, y]) => [x + tp.kb + sx, y + sy]), L, 9 + a);
-      for (const i of lo.keys()) { const x = i % SW, y = (i - x) / SW; for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) if (inS(nx, ny) && !lo.has(ny * SW + nx)) stage.set(nx, ny, '#1a1424'); }
-      for (const [i, c] of lo) stage.set(i % SW, Math.floor(i / SW), c);
+      const aSpr = aM ? mirror(plantInPot(aim, pot)) : plantInPot(aim, pot), tSpr = tM ? mirror(plantInPot(tim, pot)) : plantInPot(tim, pot);
+      const L = [AXs + hxOf(ra, aM) + (aM ? -pose.qx : pose.qx), AYs + ra.hy + pose.qy];
+      const T = [TXs + hxOf(rt, tM) + (tM ? tp.kb : -tp.kb), TYs + rt.hy + tqy - tp.hop], G = TYs + POT_GEO.cy - tp.hop;
+      const dl = Math.hypot(T[0] - L[0], T[1] - L[1]) || 1;
+      const S = { D: [(T[0] - L[0]) / dl, (T[1] - L[1]) / dl], fx: Math.sign(T[0] - L[0]) || 1, K: ST.K, A0: atk.base, B0: tgt.base, S0, E0, phiS, phiE, rf };
+      // 효과 층: f = 바닥(색 또는 어둡게 곱), u = 바닥에 선 것(깊이 = 바닥 닿는 줄 → 화분 앞뒤, 테두리), s = 바닥에 선 부드러운 것(먼지, 테두리 없음), o = 공중 큰 모양(테두리), p = 입자
+      const lf = new Map(), lu = [new Map(), new Map(), new Map()], ls = [new Map(), new Map(), new Map()], lo = new Map(), lp = new Map(), dep = d => d < farY ? 0 : d < nearY ? 1 : 2;
+      const P2 = { o: (x, y, c) => { if (inS(x, y)) lo.set(y * SW + x, c); }, p: (x, y, c) => { if (inS(x, y)) lp.set(y * SW + x, c); }, f: (x, y, c) => { if (inS(x, y)) lf.set(y * SW + x, c); }, u: (x, y, c, d) => { if (inS(x, y)) lu[dep(d)].set(y * SW + x, c); }, s: (x, y, c, d) => { if (inS(x, y)) ls[dep(d)].set(y * SW + x, c); } };
+      skillFx(P2, A, fz, L, T, G, 7 + a, S);
+      statusFx(P2, A, f, T, G, pts.map(([x, y]) => [x + (tM ? tp.kb : -tp.kb), y + tqy - tp.hop]), L, 9 + a);
+      const stage = new Img(SW, SH); stage.data.set(BGIM.data);
+      for (const [i, c] of lf) { if (typeof c === 'number') for (let q = 0; q < 3; q++) stage.data[i * 4 + q] = Math.round(stage.data[i * 4 + q] * c); else stage.set(i % SW, Math.floor(i / SW), c); }
+      const outlined = m => { for (const i of m.keys()) { const x = i % SW, y = (i - x) / SW; for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) if (inS(nx, ny) && !m.has(ny * SW + nx)) stage.set(nx, ny, '#1a1424'); } for (const [i, c] of m) stage.set(i % SW, Math.floor(i / SW), c); };
+      const sprites = [[aSpr, AXs, AYs, atk === ST.SPOTS.far], [tSpr, TXs + tp.shake, TYs - tp.hop, tgt === ST.SPOTS.far]].sort((p, q) => q[3] - p[3]);   // 먼 쪽 먼저
+      const soft = m => { for (const [i, c] of m) stage.set(i % SW, Math.floor(i / SW), c); };
+      outlined(lu[0]); soft(ls[0]); stage.blit(sprites[0][0], sprites[0][1], sprites[0][2]);
+      outlined(lu[1]); soft(ls[1]); stage.blit(sprites[1][0], sprites[1][1], sprites[1][2]);
+      outlined(lu[2]); soft(ls[2]); outlined(lo);
       for (const [i, c] of lp) stage.set(i % SW, Math.floor(i / SW), c);
-      frames.push(stage);
+      if (form) emblem((x, y, c) => stage.set(x, y, c), 4, SH - 22, form, 2);   // 변이 문장: 공격 쪽(왼쪽 아래) 구석
+      const [sx, sy] = cameraShake(f, A, I);
+      frames.push(sx || sy ? shift(stage, sx, sy) : stage);
     }
     writeFileSync(resolve(here, 'out', 'conv', name + (variants ? '_variant.gif' : '_attack.gif')), encodeGIF(zoom(frames, 2), { delay: 5 }));
-    const fl = args.find(x => x.startsWith('--frames='));   // 검토용: 지정 장을 2배로 나란히
-    if (fl) { const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (SW * 2 + 4), SH * 2 + 8, '#2e222f'); list.forEach((ff, i) => st.blit(frames[Math.min(FRA - 1, ff)], 4 + i * (SW * 2 + 4), 4, 2)); writeFileSync(resolve(here, 'out', 'conv', name + '_attack_frames.png'), st.png()); }
+    const fl = args.find(x => x.startsWith('--frames='));   // 검토용: 지정 장을 나란히(1배)
+    if (fl) { const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (SW + 4), SH + 8, '#2e222f'); list.forEach((ff, i) => st.blit(frames[Math.min(FRA - 1, ff)], 4 + i * (SW + 4), 4)); writeFileSync(resolve(here, 'out', 'conv', name + '_attack_frames.png'), st.png()); }
     all.push(...frames);
-    sheetRows.push([10, 13, I, I + 2, I + 6].map(f => frames[Math.min(FRA - 1, f)]));
-    console.log(`${name.padEnd(13)} ${cvs[a].key} → ${cvs[t].key} · ${A.kind}/${A.move} · 맞는 장 ${I} · 성질 ${A.status}`);
+    sheetRows.push((GROUND.has(A.kind) ? [13, 15, 17, I, I + 3] : [10, 13, I, I + 2, I + 6]).map(f => frames[Math.min(FRA - 1, f)]));
+    console.log(`${name.padEnd(17)} ${cvs[a].key} → ${cvs[t].key} · ${A.kind}/${A.move} · 맞는 장 ${I} · 성질 ${A.status}${rev ? ' · 상대 → 나' : ''}`);
   }
   if (all.length) {
     const tag = variants ? 'variants' : 'attacks';
-    writeFileSync(resolve(here, 'out', 'conv', tag + '_all.gif'), encodeGIF(zoom(all, 2), { delay: 5 }));
-    if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', tag + '_all.mp4'), zoom(all, 3), { delay: 5, loops: 1, fps: 20 });
+    if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', tag + '_all.mp4'), all, { delay: 5, loops: 1, fps: 20, zoom: 3 });
+    else writeFileSync(resolve(here, 'out', 'conv', tag + '_all.gif'), encodeGIF(zoom(all, 2), { delay: 5 }));
     const sheet = new Img(4 + 5 * (SW + 4), 4 + sheetRows.length * (SH + 4), '#2e222f');
     sheetRows.forEach((row, r) => row.forEach((im, c) => sheet.blit(im, 4 + c * (SW + 4), 4 + r * (SH + 4))));
     writeFileSync(resolve(here, 'out', 'conv', tag + '_sheet.png'), sheet.png());
