@@ -1,7 +1,8 @@
 // 컨셉 아트 → 도트 변환: 그림 자체를 도트로 만든다(따라 그리기가 아니라 같은 그림).
 //   node tools/pixel/big/convert.mjs <키…>             변환 → out/conv/<키>_96x112.png
 //   node tools/pixel/big/convert.mjs --measure <키…>   컨셉마다 흙 타원·식물 키 재기
-//   node tools/pixel/big/convert.mjs --anim <키…>      변환 + 움직임 8장 → out/conv/<키…>.gif
+//   node tools/pixel/big/convert.mjs --anim <키…>      변환 + 움직임 64장(숨쉬기·깜빡임·불·전기, motion.mjs) → out/conv/<키…>.gif + <키>_idle.gif (--mp4면 휴대폰용 MP4도)
+//   node tools/pixel/big/convert.mjs --stages <키>     생장 3단계(어린·자람·성체) 검토판
 // 입력: concept/cut/<키>.png(코덱스가 화분·배경을 지운 투명 누끼)가 있으면 그것, 없으면 concept/<키>.png 에서 배경·화분을 직접 지운다.
 // 도트답게 만드는 순서(평균 축소는 경계가 뭉개지고 붓 질감이 남아 도트 느낌이 없어진다):
 //   ① 재질 나누기 — 색상·채도 위주 k-평균으로 꽃잎·잎·얼굴·불 같은 재질 K개
@@ -14,7 +15,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodePNG, Img, oklab, fromOklab, INK, BAYER4, rng } from './engine.mjs';
-import { W, H, bolt, EYE } from './parts.mjs';
+import { W, H, EYE } from './parts.mjs';
 import { EYES } from './eyes.mjs';
 import { POT_GEO, POT3, renderPot } from './pot3d.mjs';
 
@@ -136,7 +137,7 @@ function load(key, file = null) {
     if (bn) S.cx = bx / bn;
   }
   // 눈: 지정(eyes.mjs)한 대략 자리 근처(반지름 60)에서 가장 어두운 칸들의 무게중심으로 맞춘다
-  const spec = EYES_ON || BLINK ? EYES[key] : null, eyes = [];
+  const spec = EYES_ON || BLINK || anim ? EYES[key] : null, eyes = [];
   if (spec && !file) for (const [ex, ey] of spec.src) {
     const R0 = 60, cand = [];
     for (let y = Math.max(0, ey - R0); y < Math.min(im.h, ey + R0); y++) for (let x = Math.max(0, ex - R0); x < Math.min(im.w, ex + R0); x++) {
@@ -254,7 +255,7 @@ export function convert(key, { file = null, scale = null, fit = 1 } = {}) {
     ct2 = nx;
   }
   // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만)
-  const eyeC = BLINK ? eyeSrc.map(([ex, ey]) => [P.cx + (ex - S.cx) * s, P.cy + (ey - S.cy) * s]) : [];
+  const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => [P.cx + (ex - S.cx) * s, P.cy + (ey - S.cy) * s]) : [];
   return { cm, ct: ct2, palLab, matL, key, eyes, eyeC, s };
 }
 
@@ -287,8 +288,8 @@ function eyeMask(out, cx, cy) {
 // 기준: ① 얼굴 기울기 θ = 두 눈 칸 무게중심을 잇는 선의 각도 ② 눈마다 θ 축으로 돌린 좌표(u 가로, v 세로)에서 폭·높이를 따로 잼
 //       → 원근으로 작게 그려진 먼 눈은 작은 그대로 ③ 감은 눈 = θ 축을 따라 아래로 처지는 곡선(∪), 처짐 = 폭 × 0.22(최소 0.7칸), 높이는 눈 가운데보다 살짝 아래
 //       ④ 반쯤 = 같은 축에서 눈 가운데 위쪽만 살결로 덮고 거의 평평한(살짝 ∩) 눈꺼풀 선. 뜬 눈(open)은 그림 그대로.
-export function eyeGeometry(out, cv, dx = 0) {
-  const ms = cv.eyeC.map(([cx, cy]) => eyeMask(out, cx + dx, cy)).filter(Boolean);
+export function eyeGeometry(out, cv, dx = 0, dy = 0) {
+  const ms = cv.eyeC.map(([cx, cy]) => eyeMask(out, cx + dx, cy + dy)).filter(Boolean);
   if (!ms.length) return [];
   const cen = ms.map(m => { let sx = 0, sy = 0; for (const i of m.mask) { sx += i % W + 0.5; sy += Math.floor(i / W) + 0.5; } return [sx / m.mask.size, sy / m.mask.size]; });
   const th = ms.length === 2 ? Math.atan2(cen[1][1] - cen[0][1], cen[1][0] - cen[0][0]) : 0, c = Math.cos(th), s = Math.sin(th);
@@ -298,9 +299,9 @@ export function eyeGeometry(out, cv, dx = 0) {
     return { m, ox, oy, th, c, s, u0: Math.min(...us) - 0.5, u1: Math.max(...us) + 0.5, v0: Math.min(...vs) - 0.5, v1: Math.max(...vs) + 0.5, uv };
   });
 }
-function blinkEyes(out, cv, state, dx = 0) {
+function blinkEyes(out, cv, state, dx = 0, dy = 0) {
   if (state === 'open') return;
-  for (const g of eyeGeometry(out, cv, dx)) {
+  for (const g of eyeGeometry(out, cv, dx, dy)) {
     const { m, ox, oy, c, s, u0, u1, v0, v1 } = g, w = u1 - u0, h = v1 - v0, um = (u0 + u1) / 2;
     const toXY = (u, v) => [ox + u * c - v * s, oy + u * s + v * c];
     const curve = state === 'closed'
@@ -344,21 +345,25 @@ function drawEyes(out, cv, state, dx = 0) {
 }
 
 // 색 입히기(+ ⑤ 외곽선). 같은 함수를 움직임 프레임에도 쓴다.
-export function paint(cv, { shiftRow = null, tone = null, eye = 'open' } = {}) {
-  const out = paintBody(cv, { shiftRow, tone });
-  drawEyes(out, cv, eye, cv.eyes.length && shiftRow ? shiftRow(cv.eyes[0].y) : 0);
-  if (BLINK && cv.eyeC.length) blinkEyes(out, cv, eye, shiftRow ? shiftRow(Math.round(cv.eyeC[0][1])) : 0);
+// warp(x, y) → [dx, dy] = 그 칸에 올 그림이 원래 자리에서 움직인 양(정수) — 재질·단 지도를 옮긴 뒤 외곽선을 새로 그려 선이 끊기지 않는다.
+// out.src[i] = 출력 칸 i가 가져온 원래 칸(없으면 -1) — 떠 있는 조각 깜빡임 등에 쓴다.
+export function paint(cv, { warp = null, tone = null, eye = 'open' } = {}) {
+  const out = paintBody(cv, { warp, tone });
+  const off = (x, y) => warp ? warp(Math.round(x), Math.round(y)) : [0, 0];
+  if (cv.eyes.length) drawEyes(out, cv, eye, off(cv.eyes[0].x, cv.eyes[0].y)[0]);
+  if (cv.eyeC.length && eye !== 'open') { const ex = cv.eyeC.reduce((s, e) => s + e[0], 0) / cv.eyeC.length, ey = cv.eyeC.reduce((s, e) => s + e[1], 0) / cv.eyeC.length; blinkEyes(out, cv, eye, ...off(ex, ey)); }
   return out;
 }
-function paintBody(cv, { shiftRow = null, tone = null } = {}) {
+function paintBody(cv, { warp = null, tone = null } = {}) {
   const { palLab, matL } = cv, out = new Img(W, H);
-  const cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H);
+  const cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H), src = new Int32Array(W * H).fill(-1);
   for (let i = 0; i < W * H; i++) {
-    const x = i % W, y = (i - x) / W, dx = shiftRow ? shiftRow(y) : 0, sx = x - dx;
-    if (sx < 0 || sx >= W) continue;
-    const j = y * W + sx;
-    cm[i] = cv.cm[j]; ct[i] = tone ? tone(cv.cm[j], cv.ct[j], sx, y) : cv.ct[j];
+    const x = i % W, y = (i - x) / W, [dx, dy] = warp ? warp(x, y) : [0, 0], sx = x - dx, sy = y - dy;
+    if (sx < 0 || sx >= W || sy < 0 || sy >= H) continue;
+    const j = sy * W + sx;
+    cm[i] = cv.cm[j]; ct[i] = tone ? tone(cv.cm[j], cv.ct[j], sx, sy) : cv.ct[j]; src[i] = cv.cm[j] >= 0 ? j : -1;
   }
+  out.src = src;
   const col = (m, l) => { const [L, A, B] = palLab[m * LV + l]; return fromOklab(L, A, B); };
   const dark = (m, d) => { const [L, A, B] = palLab[m * LV]; return fromOklab(Math.max(0.1, L - d), A * 1.3, B * 1.3); };
   const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x;
@@ -415,39 +420,80 @@ if (stages) {
   console.log('생장 단계 →', resolve(here, 'out', 'conv', `${key}_stages.png`), '· 축척', mature.s.toFixed(4));
 }
 
-// 움직임: 몸 흔들림(밑동 고정, 위로 갈수록 크게 휘는 줄 밀기) + 불 재질은 색 띠가 위로 흐르고 + 종별 효과(번개·불티)
+// 움직임(--anim): 숨쉬기(motion.mjs idleWarp — 날숨에 내려앉으며 옆으로 넓어지고, 잎은 벌어지고, 먼 끝·얼굴 내용은 늦게) + 깜빡임 + 종별 효과
+//   불 = 밝은 불 재질의 단이 위로 흐르고 불티가 오름 / 전기 = saint11 방식 벼락·호·불똥 + 떠 있는 번개 문양 깜빡임
+// 64장 × 0.05초 = 3.2초 한 바퀴: 몸은 두 장마다(0.1초) 바뀌고 효과는 장마다(전기는 빨라야 한다). 숨은 한 바퀴에 두 번, 좌우 기울기는 한 번.
 if (anim) {
   const { encodeGIF } = await import('./gif.mjs');
-  const pot = renderPot(POT3.pot_terra), FR = 16, Z = 3, frames = [];   // 16장(1.6초) 한 바퀴, 12~14장째에 눈 깜빡임
+  const { idleRig, idleWarp, findTips, electricPlan, electricFrame } = await import('./motion.mjs');
+  const pot = renderPot(POT3.pot_terra), FR = 64, DT = 5, Z = 3, BG = '#2f3150';
+  // blinkAt = 깜빡이는 장(없으면 안 깜빡임). 96칸 판에서 눈 칸 찾기가 꽃잎으로 번지는 종(장미·불꽃꽃·선인장)은 고칠 때까지 끔 — 검증된 건 스파크번
   const FX = {
-    flower_fire: { sway: 1.2, embers: [[30, 20], [48, 10], [66, 18]] },
-    cactus_fire: { sway: 0.6, embers: [[40, 12], [50, 8], [62, 14]] },
-    spark: { sway: 1, bolts: [[[22, 30], [10, 24]], [[74, 26], [88, 20]], [[70, 50], [84, 56]], [[28, 52], [14, 58]]] },
-    flower_grass: { sway: 1.4 },
+    flower_grass: { bob: 2, sway: 1, open: 1 },
+    flower_fire: { bob: 2, sway: 1, open: 1, fire: true, embers: [[30, 20], [48, 10], [66, 18]] },
+    cactus_fire: { bob: 1, sway: 0.5, open: 0, fire: true, embers: [[40, 12], [50, 8], [62, 14]] },
+    spark: { bob: 2, sway: 1, open: 1, electric: true, blinkAt: 50 },
   };
+  const rigs = cvs.map(cv => idleRig(cv));
+  const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);
+  // k번째 종의 f번째 장(96×112): 화분 뒤 → 식물 → 화분 앞 → 효과
+  const frameOf = (k, f, bg = null) => {
+    const cv = cvs[k], rig = rigs[k], fx = FX[cv.key] || {}, t = Math.floor(f / 2) * 2 / FR, sec = f * DT / 100;
+    const warp = idleWarp(rig, t, fx);
+    const fire = fx.fire ? cv.palLab.map((c, q) => q % LV === LV - 1 && hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68) : null;
+    const tone = fire ? (m, l, x, y) => fire[m * LV + LV - 1] ? Math.max(0, Math.min(LV - 1, l + [1, 0, -1, 0][Math.floor(((y / 5 + sec * 5) % 4 + 4) % 4)])) : l : null;
+    const b = fx.blinkAt, eye = b == null ? 'open' : f === b + 1 || f === b + 2 ? 'closed' : f === b || f === b + 3 ? 'half' : 'open';
+    const im = paint(cv, { warp, tone, eye });
+    const at = p => { const [dx, dy] = warp(Math.max(0, Math.min(W - 1, Math.floor(p[0]))), Math.max(0, Math.min(H - 1, Math.floor(p[1])))); return [p[0] + dx, p[1] + dy]; };
+    const fxPaint = [], put = (x, y, c) => fxPaint.push([x, y, c]);
+    if (eplans[k]) {
+      const { flash, bitState } = electricFrame(f, eplans[k], at, put);
+      for (let i = 0; i < W * H; i++) {   // 떠 있는 번개 문양: 가끔 숨고 가끔 하얗게
+        const j = im.src[i];
+        if (j < 0) continue;
+        const st = bitState[rig.comp[j]];
+        if (st === 1) im.data[i * 4 + 3] = 0;
+        else if (st === 2) im.set(i % W, Math.floor(i / W), '#ffffff');
+      }
+      for (const fl of flash) for (let y = Math.floor(fl.y - fl.r); y <= fl.y + fl.r; y++) for (let x = Math.floor(fl.x - fl.r); x <= fl.x + fl.r; x++) {   // 대비 장: 번쩍임 둘레 식물을 밝게
+        if (x < 0 || y < 0 || x >= W || y >= H || Math.hypot(x + 0.5 - fl.x, y + 0.5 - fl.y) > fl.r) continue;
+        const q = (y * W + x) * 4;
+        if (im.data[q + 3] < 128) continue;
+        for (let c = 0; c < 3; c++) im.data[q + c] = Math.round(im.data[q + c] + (255 - im.data[q + c]) * 0.45);
+      }
+    }
+    if (fx.embers) fx.embers.forEach(([x, y], q) => { const p = (2 * f / FR + q / fx.embers.length) % 1, o = at([x, y]), yy = o[1] - p * 10; if (yy > 0) put(Math.round(o[0] + Math.sin(2 * Math.PI * (p + q)) * 2), Math.round(yy), p < 0.5 ? '#fcc246' : '#f57a2a'); });
+    const out = new Img(W, H, bg);
+    out.blit(pot.back, 0, 0); out.blit(im, 0, 0); out.blit(pot.front, 0, 0);
+    for (const [x, y, c] of fxPaint) out.set(x, y, c);
+    return out;
+  };
+  const zoom = (list, z, bg) => list.map(c => { const o = new Img(c.w * z, c.h * z, bg); o.blit(c, 0, 0, z); return o; });
+  // 여러 종: 2열 격자(휴대폰 세로 화면에 맞게) 3배
+  const cols = cvs.length > 2 ? 2 : cvs.length, rows = Math.ceil(cvs.length / cols), frames = [];
   for (let f = 0; f < FR; f++) {
-    const t = f / FR, fr = new Img(cvs.length * W * Z, H * Z, '#2f3150');
-    cvs.forEach((cv, k) => {
-      const fx = FX[cv.key] || { sway: 1 };
-      const top = 6, base = P.cy;
-      const shiftRow = y => y >= base - 2 ? 0 : Math.round(fx.sway * Math.sin(2 * Math.PI * t) * ((base - y) / (base - top)) ** 1.4);
-      // 불 재질(밝고 선명한 주황·노랑): 높이와 시간에 따라 단이 위로 흐르게
-      const fire = cv.palLab.map((c, q) => q % LV === LV - 1 && hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68);
-      const tone = (m, l, x, y) => fire[m * LV + LV - 1] ? Math.max(0, Math.min(LV - 1, l + [1, 0, -1, 0][Math.floor(((y / 5 + 2 * t * 4) % 4 + 4) % 4)])) : l;
-      const im = paint(cv, { shiftRow, tone, eye: f === 13 ? 'closed' : f === 12 || f === 14 ? 'half' : 'open' });
-      const S = { paints: [], line(a, b, c) { /* bolt 용 */ }, paint(pts, c) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), c]); } };
-      if (fx.bolts) fx.bolts.forEach(([a, b], q) => { if ((f + q) % 3) bolt({ paint: S.paint.bind(S), w: W }, a, b, { seed: f * 31 + q * 7 + 1, depth: 2, amp: 0.3, fork: 0.3, glow: '#fbe36a' }); });
-      if (fx.embers) fx.embers.forEach(([x, y], q) => { const p = (t + q / fx.embers.length) % 1, yy = y - p * 10; if (yy > 0) S.paint([[x + Math.sin(2 * Math.PI * (p + q)) * 2, yy]], p < 0.5 ? '#fcc246' : '#f57a2a'); });
-      for (const [x, y, c] of S.paints) im.set(x, y, c);
-      const p2 = new Img(W, H);
-      p2.blit(pot.back, 0, 0); p2.blit(im, 0, 0); p2.blit(pot.front, 0, 0);
-      fr.blit(p2, k * W * Z, 0, Z);
-    });
+    const fr = new Img(cols * W * Z, rows * H * Z, BG);
+    cvs.forEach((cv, k) => fr.blit(frameOf(k, f), (k % cols) * W * Z, Math.floor(k / cols) * H * Z, Z));
     frames.push(fr);
   }
-  writeFileSync(resolve(here, 'out', 'conv', keys.join('+') + '.gif'), encodeGIF(frames, { delay: 10 }));
-  console.log('움직임 →', resolve(here, 'out', 'conv', keys.join('+') + '.gif'));
-  if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', keys.join('+') + '.mp4'), frames, { delay: 10, loops: 8 });
+  const base = resolve(here, 'out', 'conv', keys.join('+'));
+  writeFileSync(base + '.gif', encodeGIF(frames, { delay: DT }));
+  console.log('움직임 →', base + '.gif');
+  if (MP4) (await import('./video.mjs')).writeMP4(base + '.mp4', frames, { delay: DT, loops: 4, fps: 20 });
+  // --frames=a,b,c: 종마다 그 장들을 나란히(검토용 정지 그림)
+  const fl = args.find(a => a.startsWith('--frames='));
+  if (fl) for (let k = 0; k < cvs.length; k++) {
+    const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (W * Z + 4), H * Z + 8, '#2e222f');
+    list.forEach((f, i) => st.blit(frameOf(k, f, BG), 4 + i * (W * Z + 4), 4, Z));
+    writeFileSync(resolve(here, 'out', 'conv', cvs[k].key + '_frames.png'), st.png());
+  }
+  // 종마다 크게: GIF 4배 + MP4 8배
+  for (let k = 0; k < cvs.length; k++) {
+    const one = Array.from({ length: FR }, (_, f) => frameOf(k, f, BG)), p = resolve(here, 'out', 'conv', cvs[k].key + '_idle'), r = rigs[k];
+    writeFileSync(p + '.gif', encodeGIF(zoom(one, 4, BG), { delay: DT }));
+    if (MP4) (await import('./video.mjs')).writeMP4(p + '.mp4', zoom(one, 8, BG), { delay: DT, loops: 4, fps: 20 });
+    console.log(`${cvs[k].key.padEnd(13)} 숨쉬기 뼈대 · 얼굴 (${r.hx.toFixed(1)}, ${r.hy.toFixed(1)}) 머리 반지름 ${r.Rh.toFixed(1)} · 고정선 y${r.yA} · 떠 있는 조각 ${r.bits.filter(Boolean).length}개${eplans[k] ? ' · 전기 끝점 ' + findTips(cvs[k], r).length + '개' : ''}`);
+  }
   // 깜빡임 확인판: 뜬 눈 · 반쯤 · 감음을 4배로 나란히(흔들림 없이)
   if (BLINK) for (const cv of cvs) {
     const Z4 = 4, sh = new Img(8 + 3 * (W * Z4 + 8), H * Z4 + 16, '#2e222f');
@@ -462,29 +508,11 @@ if (anim) {
       face.blit(crop, 8 + k * (CW * Z10 + 8), 8, Z10);
     });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.png'), face.png());
-    // 영상: 얼굴 — 흔들림 없이 깜빡임만 / 화분 전체 — 흔들림·효과와 함께. 장마다 길이: 뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06
-    // GIF(얼굴 10배·전체 4배) + --mp4면 휴대폰용 MP4(얼굴 20배·전체 8배, 여러 바퀴)
+    // 얼굴 영상: 흔들림 없이 깜빡임만(뜬 눈 1.6초 → 반쯤 0.06 → 감음 0.12 → 반쯤 0.06). GIF 10배 + --mp4면 MP4 20배. 화분 전체는 위의 <키>_idle
     const seq = [['open', 160], ['half', 6], ['closed', 12], ['half', 6]];
-    const zoom = (list, z, bg) => list.map(c => { const o = new Img(c.w * z, c.h * z, bg); o.blit(c, 0, 0, z); return o; });
     const faces = seq.map(([st]) => { const im = paint(cv, { eye: st }), c1 = new Img(CW, CHh, '#323353'); for (let y = 0; y < CHh; y++) for (let x = 0; x < CW; x++) { const sx = X0 + x, sy = Y0 + y; if (sx >= 0 && sy >= 0 && sx < W && sy < H) { const s4 = (sy * W + sx) * 4; if (im.data[s4 + 3] > 127) c1.data.set(im.data.subarray(s4, s4 + 4), (y * CW + x) * 4); } } return c1; });
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.gif'), encodeGIF(zoom(faces, Z10, '#323353'), { delay: seq.map(s => s[1]) }));
-    const fx = FX[cv.key] || { sway: 1 }, plants = [], del = [];
-    for (let f = 0; f < 32; f++) {   // 흔들림 1.6초 두 바퀴 + 끝에서 한 번 깜빡임
-      const t = (f % 16) / 16, eye = f === 26 ? 'closed' : f === 25 || f === 27 ? 'half' : 'open';
-      const shiftRow = y => y >= P.cy - 2 ? 0 : Math.round(fx.sway * Math.sin(2 * Math.PI * t) * ((P.cy - y) / (P.cy - 6)) ** 1.4);
-      const im = paint(cv, { shiftRow, eye }), S2 = { paints: [], paint(pts, c) { for (const [x, y] of pts) this.paints.push([Math.round(x), Math.round(y), c]); } };
-      if (fx.bolts) fx.bolts.forEach(([a, b], q) => { if ((f + q) % 3) bolt({ paint: S2.paint.bind(S2), w: W }, a, b, { seed: f * 31 + q * 7 + 1, depth: 2, amp: 0.3, fork: 0.3, glow: '#fbe36a' }); });
-      for (const [x, y, c] of S2.paints) im.set(x, y, c);
-      const p = new Img(W, H, '#2f3150');
-      p.blit(pot.back, 0, 0); p.blit(im, 0, 0); p.blit(pot.front, 0, 0);
-      plants.push(p); del.push(eye === 'closed' ? 12 : eye === 'half' ? 6 : 10);
-    }
-    writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_full.gif'), encodeGIF(zoom(plants, 4, '#2f3150'), { delay: del }));
-    if (MP4) {
-      const { writeMP4 } = await import('./video.mjs');
-      writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_face.mp4'), zoom(faces, 20, '#323353'), { delay: seq.map(s => s[1]), loops: 6 });
-      writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_full.mp4'), zoom(plants, 8, '#2f3150'), { delay: del, loops: 4 });
-    }
+    if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_face.mp4'), zoom(faces, 20, '#323353'), { delay: seq.map(s => s[1]), loops: 6 });
     const geo = eyeGeometry(paint(cv), cv);
     console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 ` + geo.map((g, k) => `${k ? '오른쪽' : '왼쪽'} 폭 ${(g.u1 - g.u0).toFixed(1)} 높이 ${(g.v1 - g.v0).toFixed(1)}`).join(' / '));
   }
