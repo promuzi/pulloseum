@@ -72,7 +72,7 @@ const STATUS = {
   burn: { name: '화상', icon: 'fire', col: '#ff7a3a' }, poison: { name: '독', icon: 'poison', col: '#b866ff', stack: 5 },
   wet: { name: '젖음', icon: 'water', col: '#4f9dff' }, chill: { name: '빙결', icon: 'ice', col: '#c4ecff', stack: 3 },
   shock: { name: '감전', icon: 'bolt', col: '#ffd84a', stack: 3 }, stun: { name: '기절', icon: 'star', col: '#ff86c8' },
-  bind: { name: '덩굴', icon: 'vine', col: '#6fd25c' },
+  bind: { name: '덩굴', icon: 'vine', col: '#6fd25c' }, spore: { name: '포자', icon: 'mushroom', col: '#8fe0b8', stack: 3 },
   // 쉬는 차례(빙결 3 = 얼음 · 감전 3 = 마비) · 추가 디버프(2026-10-15 사용자 "기생 씨앗·그늘·꽃가루 좋아보임, 나머지도 다 넣고") · 버팀(쉬고 난 다음 턴)
   frozen: { name: '얼음', icon: 'ice', col: '#e8f8ff' }, paral: { name: '마비', icon: 'bolt', col: '#ffe680' },
   leech: { name: '기생', icon: 'seed', col: '#c8e04a' }, shade: { name: '그늘', icon: 'shade', col: '#a0a3c8' },
@@ -85,13 +85,17 @@ const FX_MSG = {
   burn: x => `${ga(x)} 화상을 입었다!`, poison: (x, e) => (e.n > 1 ? `${x}에게 독이 ${e.n}겹 쌓였다!` : `${ga(x)} 독에 걸렸다!`), wet: x => `${ga(x)} 흠뻑 젖었다! 둔해지고 적중·방어가 떨어진다`,
   chill: (x, e) => `${ga(x)} 얼어 간다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''), shock: (x, e) => `${ga(x)} 감전됐다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''),
   frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`,
+  spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
   bind: (x, e) => `덩굴이 ${x}의 ${eul(e.skill)} 묶었다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 에너지가 안 찬다`,
   pollen: x => `${x}에게 꽃가루가 날렸다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 자세를 못 잡는다`, root: x => `${x}의 뿌리가 묶였다! 교체할 수 없다`,
   weak: x => `${ga(x)} 약해졌다! 공격이 떨어진다`, corrode: x => `${x}의 껍질이 부식됐다! 방어가 떨어진다`,
 };
+const CURE_FIRE = { frozen: '얼음이 녹았다', chill: '냉기가 녹았다', wet: '몸이 말랐다', spore: '포자가 탔다' };
 const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서' };
 // 내가 쉬는 차례일 때 대사(넘기기 단추를 누르게)
-function skipMsg(sc) { const u = sc.B.me; sc.v.msg = `${ga(u.name)} ${SKIP_WHY[u.eff.skip.src] || ''} 움직일 수 없다!`; }
+// 2026-10-15 사용자 "넘기기 말고 문구만 뜨고 자동으로 넘기게" — 이 문구가 잠깐 뜬 뒤 턴이 저절로 진행됨(SKIP_AUTO_MS)
+const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서' }, SKIP_AUTO_MS = 1100;
+function skipMsg(sc) { const u = sc.B.me; sc.v.msg = `${ga(u.name)} ${SKIP_STATE[u.eff.skip.src] || ''} 움직일 수 없다!`; }
 const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9', text: '#d8faff', num: '#97e8f7' };
 const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
 const swCache = new Map();
@@ -199,7 +203,7 @@ export const battle = {
     if (v.phase !== 'pick') return;
     const rest = mustSkip(B.me);
     if (rest) sk = REST; else if (!sk || !canUse(B.me, sk)) return;
-    v.picked = sk.id; v.en.me -= sk.cost || 0;
+    v.picked = sk.id; v.en.me -= sk.cost || 0; v.autoSkipAt = null;
     v.eff = { me: listOf(B.me), foe: listOf(B.foe) };   // 이번 턴 시작 모습(계산이 끝나면 B의 효과는 이미 턴 끝 상태)
     const turn = this.mode === 'swap3' ? playTurn3(B, rest ? { kind: 'rest' } : { kind: 'skill', skill: sk }) : playTurn(B, sk);
     this.play(app, this.buildSteps(turn));
@@ -237,11 +241,13 @@ export const battle = {
       else if (e.t === 'fx') out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e) });
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga(STATUS[e.id].name)} 통하지 않는다` });
       else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${ga(e.name)} 버텼다! 방금 쉬어서 다시 쉬지 않는다` });
-      else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.includes('frozen') ? '얼음이 녹았다' : e.ids.includes('chill') ? '냉기가 녹았다' : '몸이 말랐다'}!` });
+      else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.slice(0, 2).map(k => CURE_FIRE[k]).join(' · ')}!` });
+      else if (e.t === 'bloom') out.push({ kind: 'bloom', ms: 900, ev: e, side: e.who, msg: `${e.name}의 포자가 피어났다! 숨이 막힌다` });
+      else if (e.t === 'grow') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
       else if (e.t === 'skip') out.push({ kind: 'skipT', ms: 900, ev: e, side: e.who, msg: `${ga(e.name)} ${SKIP_WHY[e.src] || ''} 움직일 수 없다!` });
       else if (e.t === 'tick') out.push({ kind: 'tick', ms: 750, ev: e, side: e.who, msg: `${ga(e.name)} ${e.id === 'burn' ? '화상' : '독'}으로 아파한다!` });
       else if (e.t === 'drain') out.push({ kind: 'drain', ms: 950, ev: e, side: e.who, msg: `기생 씨앗이 ${e.name}의 체력을 빨아들인다!` });
-      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, msg: `그늘 때문에 ${e.name}의 에너지가 차지 않았다` });
+      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 에너지가 차지 않았다` : `그늘 때문에 ${e.name}의 에너지가 차지 않았다` });
       else if (e.t === 'expire') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
     }
     out.push({ kind: 'end', ms: 450 });
@@ -260,6 +266,7 @@ export const battle = {
     if (st.kind === 'fx') { const S = STATUS[st.ev.id]; if (S) this.pop(st.side, S.name + (S.stack && st.ev.n ? ' ' + st.ev.n : '') + '!', null, t, false, -16, S.col || '#97e8f7'); }
     if (st.kind === 'skipT' && st.side === 'me' && st.ev.refund) v.en.me += st.ev.refund;
     if (st.kind === 'tick') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS[st.ev.id].col); }
+    if (st.kind === 'bloom') { this.hurt(st.side, st.ev.dmg, 'hit', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.spore.col); this.pop(st.side, '포자!', null, t, false, -16, STATUS.spore.col); }
     if (st.kind === 'drain') {
       this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.leech.col);
       if (st.ev.to && st.ev.heal > 0) { this.heal(st.ev.to, st.ev.heal); this.pop(st.ev.to, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0'); }
@@ -292,6 +299,11 @@ export const battle = {
   pop(who, text, tone, t, big = false, dy = 0, col = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92]; this.v.pops.push({ text, tone, t0: t, x, y: y + dy, big, col }); },
   tick(app) {
     const v = this.v, t = app.t;
+    // 내가 쉬는 차례: 문구만 잠깐 보이고 턴이 저절로 진행(3:3도 교체 못 함)
+    if (v.phase === 'pick' && !this.shot && !(this.p && this.p.phase) && mustSkip(this.B.me)) {   // 촬영(?phase=)은 멈춘 그림 그대로
+      if (v.autoSkipAt == null) v.autoSkipAt = t + SKIP_AUTO_MS;
+      else if (t >= v.autoSkipAt) { v.autoSkipAt = null; this.pick(app, REST); }
+    }
     if (v.phase === 'play') {
       if (v.t0 == null) { v.t0 = t; this.startStep(v.steps[v.si], t); }
       let st = v.steps[v.si];
@@ -416,8 +428,7 @@ export const battle = {
     g.rect(0, PY0, W, 1, T.ink); g.rect(0, PY0 + 1, W, 1, T.panel.frame); g.rect(0, PY0 + 2, W, 1, T.panel.frameLo);
     msgBox(g, 8, PY0 + 9, W - 16, 36);
     const skipNow = v.phase === 'pick' && mustSkip(B.me);
-    g.para ? g.para(v.msg, 18, PY0 + 15, skipNow ? W - 112 : W - 40, { font: 'bold', color: T.mtext.main }) : g.text(v.msg, 18, PY0 + 20, { font: 'bold', color: T.mtext.main });
-    if (skipNow) button(app, 'bt_rest', W - 92, PY0 + 16, 76, 22, '넘기기', { style: 'night', onTap: () => this.pick(app, REST) });
+    g.para ? g.para(v.msg, 18, PY0 + 15, W - 40, { font: 'bold', color: T.mtext.main }) : g.text(v.msg, 18, PY0 + 20, { font: 'bold', color: T.mtext.main });
     if (v.phase === 'pick' && !skipNow && Math.floor(t / 450) % 2) g.rect(W - 22, PY0 + 31, 5, 3, T.mtext.sub);
     const ey = PY0 + 53;
     g.text(this.mode === 'swap3' ? '팀 에너지' : '에너지', 12, ey, { font: 'bold', color: T.text.gold });

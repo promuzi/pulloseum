@@ -2,7 +2,7 @@
 //  양쪽 식물 셋, 한 번에 앞에 선 하나만 싸운다. 내 차례 = 기술 또는 교체 — 교체가 먼저 일어나고 들어온 식물이 상대 기술을 맞는다(포켓몬처럼).
 //  쓰러지면 턴 끝에 다음 식물(나 = 직접 고름·턴을 안 씀, 봇 = 상성을 보고 고름) · 셋 다 쓰러지면 끝. 기력은 팀이 함께 쓴다(시작 2 · 턴마다 +1 · 최대 8).
 //  계산은 1:1과 같은 rules.resolveTurn(같은 씨앗·같은 선택 → 같은 결과, 화면 무관). 화면은 B.me·B.foe(앞에 선 식물)를 읽으면 된다.
-//  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례에도 교체는 됨(재배사가 하는 일) · 에너지 회복은 앞 식물이 그늘이면 안 참.
+//  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
 import { makeRng, resolveTurn } from './rules.js';
 import { elemMult, aiPick, REST, closeTurn } from './model.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf } from './status.js';
@@ -21,7 +21,6 @@ function aiSwitch(B, rng) {
   const bench = aliveOf(B, 'foe').filter(i => i !== B.act.foe);
   if (!bench.length || !canSwitch(B.foe)) return null;
   const f = B.foe, best = bench.reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a));
-  if (mustSkip(f) && benchScore(B, best) > 0.6 && rng() < 0.5) return best;                   // 쉬는 차례면 바꿔서 풀기도
   if (elemMult(B.me.el, f.el) > 1 && benchScore(B, best) > 1.1 && rng() < 0.45) return best;   // 상성이 나쁘면 가끔 바꿈
   if (f.hp < f.max * 0.25 && benchScore(B, best) > 0.9 && rng() < 0.25) return best;           // 거의 쓰러질 때도 가끔
   return null;

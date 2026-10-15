@@ -190,6 +190,34 @@ const fixed = v => () => v;
   const cur = B.me; playTurn3(B, { kind: 'switch', to: 2 });
   ok(B.me === cur || B.me.hp <= 0, '뿌리 묶기면 교체 안 됨');
 }
+{ // 3:3 쉬는 차례엔 교체도 못 함(사용자 2026-10-15) — 고른 교체는 무시되고 그 턴은 쉼
+  const me = ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe = ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k));
+  const B = makeTeamBattle({ me, foe, seed: 12 });
+  apply(B.me, 'stun', 1, ctx(B.foe, 1, []));
+  const cur = B.me, t = playTurn3(B, { kind: 'switch', to: 1 });
+  ok(B.me === cur && t.events.some(e => e.t === 'skip' && e.who === 'me'), '쉬는 차례엔 교체 안 되고 그 턴 쉼');
+}
+// ── 9. 포자(버섯 종): 턴 끝마다 자라 3이면 피어남(10% + 에너지 안 참) · 불에 탐 · 버섯은 안 걸림 ──
+{
+  const a = mk('me', 'spore_cap'), b = mk('foe', 'gaia');
+  apply(b, 'spore', 1, ctx(a, 1, []));
+  ok(b.eff.spore.n === 1, '포자 1');
+  endTurn([[b, a]], 1, []);
+  ok(b.eff.spore.n === 1, '붙은 턴 끝엔 안 자람');
+  const ev1 = []; endTurn([[b, a]], 2, ev1);
+  ok(b.eff.spore && b.eff.spore.n === 2 && ev1.some(e => e.t === 'grow'), '다음 턴 끝부터 스스로 자람(2)');
+  const hp0 = b.hp, ev2 = []; endTurn([[b, a]], 3, ev2);
+  ok(!b.eff.spore && hp0 - b.hp === Math.round(b.max * 0.08) && ev2.some(e => e.t === 'bloom') && b.eff.choke, '3이면 피어남: 8% 피해 + 숨막힘');
+  const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'gaia'), seed: 4 });
+  apply(B.foe, 'spore', 3, ctx(B.me, 1, []));
+  const tt = playTurn(B, B.me.kit[1]);
+  ok(tt.events.some(e => e.t === 'noEnergy' && e.who === 'foe' && e.why === 'spore'), '포자가 피면 그 턴 끝 에너지 안 참');
+  const c = mk('foe', 'flower_grass'); apply(c, 'spore', 1, ctx(a, 1, []));
+  const fe = []; onHit(mk('me', 'cactus_fire'), c, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
+  ok(!c.eff.spore && fe.some(e => e.t === 'cure' && e.ids.includes('spore')), '불에 맞으면 포자가 탐');
+  const m = mk('foe', 'spore_cap'), me2 = []; apply(m, 'spore', 1, ctx(a, 1, me2));
+  ok(!m.eff.spore && me2.some(e => e.t === 'immune'), '버섯은 포자에 안 걸림');
+}
 // ── 9. 같은 씨앗 → 같은 결과 ──
 const runPair = (k1, k2, seed, off = false) => {
   const strip = u => { if (off) u.kit = u.kit.map(s => ({ ...s, inflict: undefined })); return u; };

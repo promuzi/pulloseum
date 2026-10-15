@@ -9,6 +9,8 @@
 //  · 쉬고 난 다음 턴은 '버팀'(기절·빙결·감전이 안 걸림) — 연속으로 쉬기 막기(다른 게임 조사 뒤 추천 → 사용자 "쉬는 거 다음 턴 방어 좋다").
 //  · 같은 날 사용자 "기동성 떨어지면 회피도 당연히 어려워져야 함" → 기동성 하나가 선공 확률과 회피 자세 효과에 같이 들어감(mobK).
 //    "젖음을 연계용으로만 너무 강하게 하지 말자 — 기동성 ↓ · 적중 ↓ · 방어 조금 ↓, 종합 디버프 느낌" → 젖음 = 셋 다, 연계는 두 배 → 하나 더.
+//  · 같은 날 사용자: 쉬는 차례는 문구만 띄우고 자동으로 넘김(화면) · 3:3에서 쉬는 중엔 교체도 안 됨 · 버섯 디버프는 '포자'로 ·
+//    기생 씨앗 · 뿌리 묶기(+ 그늘 · 부식)는 속성·종·생장에 묶이지 않는 변이·특수 기술용(식물 기술표에서 뺌, 규칙은 남겨 둠).
 // 턴 세는 법: exp = 마지막으로 영향을 주는 턴 번호(턴 끝에 exp ≤ 지금 턴이면 사라짐) · left = 남은 턴 끝 횟수(지속 피해·빨아들이기).
 
 export const FX = {
@@ -26,12 +28,14 @@ export const FX = {
   root:    { turns: 2 },                                      // 교체 못 함(3:3)
   weak:    { turns: 2, atkK: 0.8 },                           // 공격 −20%
   corrode: { turns: 2, defK: 0.6 },                           // 방어 −40%
+  spore:   { jong: 'mushroom', stack: 3, bloom: 0.08 },      // 버섯 종 전용: 붙은 다음 턴부터 턴 끝마다 1씩 자라 3이면 피어남(최대 체력 8% 피해 + 그 턴 에너지 안 참) → 0 · 불에 맞으면 탐
+  choke:   { turns: 0 },                                      // (포자가 피어 숨이 막힘 — 그 턴 끝 에너지 +1 없음, 창에는 안 보임)
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
 export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
 const SKIP_IDS = ['stun', 'chill', 'shock'];
-const TIMED = ['wet', 'bind', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode', 'brace'];
-const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'bind', 'leech', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode'];
+const TIMED = ['wet', 'bind', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke'];
+const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode'];
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[id]);
@@ -56,8 +60,8 @@ export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1);
 export const missAddOf = u => (has(u, 'pollen') ? FX.pollen.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
 export const mustSkip = u => has(u, 'skip');
-export const noEnergy = u => has(u, 'shade');
-export const canSwitch = u => !has(u, 'root');
+export const noEnergy = u => has(u, 'shade') || has(u, 'choke');
+export const canSwitch = u => !has(u, 'root') && !has(u, 'skip');   // 뿌리 묶기 · 쉬는 차례(얼음·마비·기절)면 교체 못 함
 // 고를 수 있는 기술: 에너지 · 덩굴로 묶인 칸 · 도발(자세 금지)
 export function canUse(u, s, energy = u.energy) {
   if (!s || (s.cost || 0) > energy) return false;
@@ -98,7 +102,7 @@ export function consumeSkip(u, turn, ev, refund = 0) {
 export function apply(tgt, id, n, ctx) {
   const D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id };
   if (!D || tgt.hp <= 0) return;
-  if (D.el && tgt.el === D.el) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성은 안 걸림
+  if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
   if (SKIP_IDS.includes(id) && (e.brace || e.skip)) { ev.push({ t: 'resist', ...base, why: e.brace ? 'brace' : 'skip' }); return; }
   if (id === 'poison') {
     const p = e.poison ||= { n: 0, last: T };
@@ -109,6 +113,11 @@ export function apply(tgt, id, n, ctx) {
     s.n = Math.min(D.stack, s.n + add); s.last = T;
     ev.push({ t: 'fx', ...base, n: s.n, wet, list: listOf(tgt) });
     if (s.n >= D.stack) { delete e[id]; setSkip(tgt, D.skip, ctx); }   // 3이 되면 한 번 쉬고 0으로
+  } else if (id === 'spore') {
+    const sp = e.spore ||= { n: 0, last: T };
+    sp.n = Math.min(D.stack, sp.n + n); sp.last = T;
+    ev.push({ t: 'fx', ...base, n: sp.n, list: listOf(tgt) });
+    if (sp.n >= D.stack) bloom(tgt, T, ev);
   } else if (id === 'stun') {
     setSkip(tgt, 'stun', ctx);
   } else if (id === 'burn' || id === 'leech') {
@@ -124,13 +133,20 @@ export function apply(tgt, id, n, ctx) {
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   }
 }
+// 포자가 피어남: 최대 체력 10% 피해 + 그 턴 끝 에너지 +1 없음(숨 막힘) → 0으로
+function bloom(u, turn, ev) {
+  const e = E(u), d = Math.max(1, Math.round(u.max * FX.spore.bloom));
+  u.hp = Math.max(0, u.hp - d);
+  delete e.spore; e.choke = { exp: turn };
+  ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, list: listOf(u) });
+}
 // 맞았을 때(빗나감이 아니면): ① 공격 속성 연계 ② 기술 효과
 export function onHit(att, tgt, skill, ctx) {
   if (tgt.hp <= 0) return;
   const e = E(tgt), ev = ctx.ev;
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
-    const gone = ['frozen', 'chill', 'wet'].filter(k => e[k]);
+    const gone = ['frozen', 'chill', 'wet', 'spore'].filter(k => e[k]);
     if (e.skip && e.skip.src === 'frozen') { delete e.skip; if (!gone.includes('frozen')) gone.unshift('frozen'); }   // 얼음이 녹으면 쉬기도 풀림
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
@@ -164,6 +180,11 @@ export function endTurn(pairs, turn, ev) {
       if (opp && opp.hp > 0) { const before = opp.hp; opp.hp = Math.min(opp.max, opp.hp + Math.round(take * healK(opp))); heal = opp.hp - before; }
       if (--e.leech.left <= 0) delete e.leech;
       ev.push({ t: 'drain', who: u.id, name: u.name, to: opp ? opp.id : null, toName: opp ? opp.name : '', dmg: take, heal, list: listOf(u), list2: opp ? listOf(opp) : null });
+    }
+    if (e.spore && u.hp > 0 && e.spore.last < turn) {   // 포자는 붙은 다음 턴부터 턴 끝마다 스스로 자람(자리 잡는 데 한 턴)
+      e.spore.n += 1;
+      if (e.spore.n >= FX.spore.stack) bloom(u, turn, ev);
+      else ev.push({ t: 'grow', who: u.id, name: u.name, n: e.spore.n, list: listOf(u) });
     }
     let dec = false;
     for (const k of ['chill', 'shock']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
