@@ -13,7 +13,7 @@ export const nursery = {
     const { g, W, H, t, state: s } = app;
     plainBg(g, W, H, t, 'nursery_garden');
     hud(app, s);
-    g.text('양육', 12, 32, { font: 'head', color: T.text.main, shadow: T.ink });
+    g.text('양육', 12, 32, { font: 'head', color: T.text.main, outline: T.ink });
     let rx = W - 12;
     rx -= chip(g, rx - 46, 31, `${s.care.fert}`, { icon: 'fert' }) + 4;
     chip(g, rx - 46 - 4, 31, `${s.care.water}`, { icon: 'water' });

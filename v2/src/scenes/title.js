@@ -5,7 +5,7 @@ import { T } from '../art/theme.js';
 import { bigTitle } from './common.js';
 
 // 밤 정원 타이틀 그림(assets/v2/bg/title_night.png)의 떠 있는 섬 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
-export const TITLE_ISLAND = [135, 258];
+export const TITLE_ISLAND = [134, 266];
 
 export const title = {
   theme: 'night',   // 밤 정원(장소 테마 — 2026-10-15)

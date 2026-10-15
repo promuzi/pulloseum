@@ -8,7 +8,15 @@ import { decodePNG, Img } from './engine.mjs';
 const [inp, out, ...rest] = process.argv.slice(2);
 const opt = Object.fromEntries(rest.filter(a => a.startsWith('--')).map(a => { const [k, v] = a.slice(2).split('='); return [k, v === undefined ? true : Number(v)]; }));
 const W = opt.w || 270, H = opt.h || 405, N = opt.colors || 48, CROP = opt.crop || H;
-const src = decodePNG(readFileSync(inp)), w0 = src.w, h0 = src.h, sx = w0 / W, sy = h0 / H;
+// --band: 화면 그림(1024×1536)의 가운데 띠만(가로 = 세로 × W/H) — 안내판 bgguide.mjs <화면> 의 빗금 밖을 잘라 냄
+const full = decodePNG(readFileSync(inp));
+let src = full;
+if (opt.band) {
+  const bw = Math.round(full.h * W / H), bx = Math.round((full.w - bw) / 2);
+  src = { w: bw, h: full.h, data: new Uint8Array(bw * full.h * 4) };
+  for (let y = 0; y < full.h; y++) src.data.set(full.data.subarray((y * full.w + bx) * 4, (y * full.w + bx + bw) * 4), y * bw * 4);
+}
+const w0 = src.w, h0 = src.h, sx = w0 / W, sy = h0 / H;
 
 // sRGB ↔ OKLab
 const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };

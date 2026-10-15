@@ -3,6 +3,8 @@
 import { W, H } from './parts.mjs';
 import { POT_GEO as P } from './pot3d.mjs';
 import { rng, linePx } from './engine.mjs';
+import { strokePx, zigzag, fillBolt } from './fxcore.mjs';
+export { strokePx, zigzag, fillBolt };   // 정의는 fxcore.mjs(브라우저 게임과 함께 씀)
 
 const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 const clamp01 = v => Math.max(0, Math.min(1, v));
@@ -158,42 +160,6 @@ export function attackField(rig, { qx = 0, qy = 0, sq = 0, px = qx, py = qy } = 
   };
 }
 
-// 1칸 선 잇기 + L자 모서리 가운데 칸 빼기(도트 선을 깔끔하게)
-export function strokePx(pts) {
-  const px = [];
-  for (let i = 1; i < pts.length; i++) for (const p of linePx(pts[i - 1], pts[i])) { const q = px[px.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) px.push(p); }
-  const out = [];
-  for (let i = 0; i < px.length; i++) {
-    const a = out[out.length - 1], c = px[i + 1];
-    if (a && c && Math.abs(a[0] - c[0]) === 1 && Math.abs(a[1] - c[1]) === 1) continue;
-    out.push(px[i]);
-  }
-  return out;
-}
-// 날카로운 각의 지그재그 꼭짓점(벼락 줄기): 나아가는 방향으로 n마디, 마디마다 좌우로 번갈아 꺾임
-export function zigzag(o, ang, len, r, n = 4) {
-  const ux = Math.cos(ang), uy = Math.sin(ang), vx = -uy, vy = ux, pts = [[o[0], o[1]]];
-  let side = r() < 0.5 ? 1 : -1;
-  for (let i = 1; i < n; i++) { const s = (i + (r() - 0.5) * 0.3) / n, a = side * (1.4 + r() * 2.2); pts.push([o[0] + ux * len * s + vx * a, o[1] + uy * len * s + vy * a]); side = -side; }
-  pts.push([o[0] + ux * len, o[1] + uy * len]);
-  return pts;
-}
-// 굵기 있는 지그재그 칠하기: 길이 비율 s의 반폭 hw(s)(끝은 가늘고 가운데 굵게), 안쪽 = core, 바깥 = edge, keep(s)로 조각만 남기기
-export function fillBolt(paint, pts, hw, core, edge, keep = () => true, inner = 0.9) {
-  const seg = [], cum = [0];
-  for (let i = 1; i < pts.length; i++) { const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(L); cum.push(cum[i - 1] + L); }
-  const tot = cum[cum.length - 1] || 1, xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-  for (let y = Math.floor(Math.min(...ys) - 3); y <= Math.max(...ys) + 3; y++) for (let x = Math.floor(Math.min(...xs) - 3); x <= Math.max(...xs) + 3; x++) {
-    let bd = 9, bs = 0;
-    for (let i = 1; i < pts.length; i++) {
-      const [ax, ay] = pts[i - 1], [bx, by] = pts[i], dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
-      const u = Math.max(0, Math.min(1, ((x + 0.5 - ax) * dx + (y + 0.5 - ay) * dy) / L2)), d = Math.hypot(x + 0.5 - ax - dx * u, y + 0.5 - ay - dy * u);
-      if (d < bd) { bd = d; bs = (cum[i - 1] + seg[i - 1] * u) / tot; }
-    }
-    const h = hw(bs);
-    if (bd <= h && keep(bs)) paint(x, y, bd <= h - inner ? core : edge);
-  }
-}
 
 // 전기 — saint11 "Electricity Tutorial":
 //  "전기 움직임은 빨라야 한다"(한 장 0.05초) · "늘 깜빡이게"(빈 장을 섞음) · "호·벼락·연기를 섞는다"

@@ -10,8 +10,8 @@
 //   바닥에 눕는 것(갈라짐·물자국·고리·웅덩이)은 바닥 층 f, 서 있는 것(돌가시·물마루·물기둥·먼지)은 바닥에 닿는 줄(깊이)로 화분과 앞뒤를 가리는 u 층.
 //   근거: 바닥 위 고리는 납작한 타원이고 고리 → 점으로 갈라져 사라짐(Budget Pixel 비 4장), 바닥 높이 충격파 = 납작한 원판(Tuts+ 충돌 충격파),
 //   땅을 타고 간 힘은 대상 발밑에서 솟는다(포켓몬 대지의힘 — the ground under the target erupts).
-import { rng } from './engine.mjs';
-import { zigzag, fillBolt, strokePx } from './motion.mjs';
+import { rng, zigzag, fillBolt, strokePx } from './fxcore.mjs';
+
 
 export const FRA = 48;
 const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };

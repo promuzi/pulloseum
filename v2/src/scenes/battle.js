@@ -1,4 +1,3 @@
-import { ELEMENT } from '../art/palette.js';
 import { arena1 } from '../art/bg.js';
 import { icon, tinted } from '../art/icons.js';
 import { drawBig, drawPortrait, BGIMG } from '../art/sprites.js';
@@ -37,9 +36,9 @@ function skillButton(app, x, y, w, h, sk, st) {
   const { yy } = btnBody(g, x, y, w, h, S, down);
   if (lit) { g.rect(x - 1, yy - 1, w + 2, 1, T.text.gold); g.rect(x - 1, yy + h - 1 - (down ? 1 : 0), w + 2, 1, T.text.gold); g.rect(x - 1, yy, 1, h - 1, T.text.gold); g.rect(x + w, yy, 1, h - 1, T.text.gold); }
   const cat = sk.cats[0];
-  // 속성 점(왼쪽 위) + 이름
-  if (sk.el) { g.rect(x + 6, yy + 8, 4, 4, T.ink); g.rect(x + 7, yy + 9, 2, 2, poor ? S.text : ELEMENT[sk.el].main); }
-  g.text(sk.name, x + (sk.el ? 13 : 8), yy + 5, { font: 'bold', color: S.text });
+  // 이름 + 속성 아이콘(오른쪽 위)
+  g.text(sk.name, x + 8, yy + 5, { font: 'bold', color: S.text });
+  if (sk.el) g.img(poor ? tinted(sk.el, S.text) : icon(sk.el), x + w - 19, yy + 5);
   // 분류 아이콘 + 이름 · 비용
   g.img(poor ? tinted(CAT_ICON[cat], S.text) : icon(CAT_ICON[cat]), x + 8, yy + 23);
   g.text(CAT_NAME[cat], x + 22, yy + 23, { color: S.text });

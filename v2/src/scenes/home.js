@@ -8,7 +8,7 @@ import { gradeBadge, STAT_DEF } from './common.js';
 import { STAGE_NAME } from '../data/mock.js';
 
 // 함선 식물 방 그림(assets/v2/bg/home_ship.png)의 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
-export const HOME_PEDESTAL = [135, 254];
+export const HOME_PEDESTAL = [135, 244];
 
 export const home = {
   theme: 'ship',   // 함선 안(장소 테마 — 2026-10-15)
