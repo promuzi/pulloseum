@@ -47,6 +47,7 @@ function frame(ts) {
   const q = new URLSearchParams(location.search);
   router.set(q.get('scene') || 'title', Object.fromEntries(q.entries()));
   window.__ready = { missing, bad };
+  window.__pause = (on = true) => { running = !on; };   // 촬영 도구가 시간을 직접 넘길 때 원래 화면 갱신을 멈춤(두 시계가 섞이면 끌기·용수철 계산이 꼬임)
   requestAnimationFrame(frame);
 })();
 

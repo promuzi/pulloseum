@@ -10,6 +10,7 @@ import { explore } from './explore.js';
 import { shop } from './shop.js';
 import { nursery } from './nursery.js';
 import { dex } from './dex.js';
+import { storage } from './storage.js';
 
 // 아이콘 검토판(개발용)
 const icons = {
@@ -28,4 +29,4 @@ const icons = {
   },
 };
 
-export const SCENES = { title, home, battle, result, bag, plant, explore, shop, nursery, dex, icons };
+export const SCENES = { title, home, battle, result, bag, plant, explore, shop, nursery, storage, dex, icons };

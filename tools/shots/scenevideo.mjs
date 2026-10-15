@@ -25,7 +25,7 @@ try {
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(url + '/v2/index.html?scene=title', { waitUntil: 'load' });
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
-  await p.evaluate((scene, params) => { const a = window.__app; window.__vid = { cv: document.createElement('canvas') }; const V = window.__vid; V.cv.width = 270; V.cv.height = 600; V.ctx = V.cv.getContext('2d'); V.ctx.imageSmoothingEnabled = false; a.g.ctx = V.ctx; a.W = 270; a.H = 600; a.router.set(scene, params); }, scene, params);
+  await p.evaluate((scene, params) => { window.__pause && window.__pause(true); const a = window.__app; window.__vid = { cv: document.createElement('canvas') }; const V = window.__vid; V.cv.width = 270; V.cv.height = 600; V.ctx = V.cv.getContext('2d'); V.ctx.imageSmoothingEnabled = false; a.g.ctx = V.ctx; a.W = 270; a.H = 600; a.router.set(scene, params); }, scene, params);
   const N = Math.round(sec * 30), done = new Set();
   for (let i = 0; i < N; i++) {
     const t = 1000 + i * 33;

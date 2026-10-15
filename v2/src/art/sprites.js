@@ -58,9 +58,9 @@ export function smallCanvas(key, potKey = 'pot_terra') {
 
 // ── 장소 배경(코덱스 그림 → tools/pixel/big/bgconv.mjs 로 정확한 칸 도트) — assets/v2/bg/<이름>.png ──
 export const BGIMG = {};
-export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'home_loft', 'home_loft_dim', 'nursery_garden', 'nursery_farm'];
+export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'home_loft', 'home_loft_dim', 'nursery_garden', 'nursery_farm', 'nursery_lift'];
 export const BGMETA = {};   // 그림에 딸린 자리 정보(json) — 스마트팜 식물 자리 등
-const BG_META_NAMES = ['nursery_farm', 'home_loft'];
+const BG_META_NAMES = ['nursery_farm', 'home_loft', 'nursery_lift'];
 export async function loadBg(base = '../assets/v2/bg/') {
   const got = await Promise.all(BG_NAMES.map(n => load(base + n + '.png')));
   BG_NAMES.forEach((n, i) => { if (got[i]) BGIMG[n] = got[i]; });
@@ -101,6 +101,33 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
   part(g, src, sx, sy, m.w, m.h, x, y, fl);
   part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
   part(g, src, sx, sy + m.rows * m.h, m.w, m.h, x, y, fl);
+  return true;
+}
+// 큰 판 한 장 고르기(숨쉬기 + 깜빡임)
+function bigFrame(key, m, t) {
+  let f = Math.floor(t / m.frameMs) % m.frames;
+  if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
+  return [(f % m.cols) * m.w, Math.floor(f / m.cols) * m.h];
+}
+// 잔디에 심긴 큰 판 식물(화분 없이, 양육 스마트팜): (bx, by) = 흙 줄 가운데. 흙 줄 아래는 안 그림 — 뒤 층 → between(잔디 덤불) → 앞 층
+export function drawBigPlanted(g, key, bx, by, opt = {}) {
+  const P = BIG[key]; if (!P) return false;
+  const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]), [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
+  const cut = Math.round(by) - y;
+  g.clip(x, y, m.w, cut, () => part(g, P.sheet, sx, sy, m.w, m.h, x, y, false));
+  if (opt.between) opt.between();
+  g.clip(x, y, m.w, cut + 2, () => part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
+  return true;
+}
+// 화분째 큰 판 식물: (bx, by) = 화분 흙 줄 가운데. between = 식물 뒤 층과 화분 앞 사이(흙 위 잔디 마개 등)
+export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
+  const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra; if (!pot) return false;
+  const m = P ? P.meta : { w: 96, h: 112, soil: [48, 75.7] }, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]);
+  part(g, pot.back, 0, 0, 96, 112, x, y, false);
+  let sx = 0, sy = 0; if (P) { [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))); part(g, P.sheet, sx, sy, m.w, m.h, x, y, false); }
+  if (opt.between) opt.between(x, y);
+  part(g, pot.front, 0, 0, 96, 112, x, y, false);
+  if (P) part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false);
   return true;
 }
 // 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),

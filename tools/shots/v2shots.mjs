@@ -35,6 +35,7 @@ export const SHOTS = [
   ['10_explore', 'explore', {}],
   ['11_shop', 'shop', {}],
   ['12_nursery', 'nursery', {}],
+  ['12_storage', 'storage', {}],
   ['13_dex', 'dex', {}],
   ['99_icons', 'icons', {}],
 ];

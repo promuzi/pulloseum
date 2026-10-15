@@ -30,20 +30,35 @@ const KIT_PETAL = [
   { id: 'd', name: '덩굴 새순', cost: 1, power: 55, cats: ['attack'], el: 'grass' },
 ];
 
+// 동면 보관고 시험 데이터(37그루): 종·등급·단계를 돌려 가며
+const GRADES = ['S', 'A', 'B', 'C', 'D'], STAGES = ['sprout', 'juvenile', 'growing', 'mature'];
+const STORE_KEYS = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap'];
+function mockStorage() {
+  return Array.from({ length: 37 }, (_, i) => {
+    const key = STORE_KEYS[(i * 5 + 3) % STORE_KEYS.length];
+    return { id: 100 + i, key, name: SPECIES[key].name + (i >= 12 ? '-' + (Math.floor(i / 12) + 1) : ''), grade: GRADES[(i * 3 + 1) % 5], stage: STAGES[(i * 7) % 4], pot: 'pot_terra', days: 1 + ((i * 13) % 40) };
+  });
+}
+
 export function mockState() {
   return {
     level: 3, exp: 34, expMax: 90, credits: 1240, gems: 12,
     active: 0,
     plants: [
-      { id: 1, key: 'flower_grass', name: '페탈로즈', grade: 'A', stage: 'sprout', exp: 12, expNext: 45, pot: 'pot_terra',
+      { id: 1, key: 'flower_grass', name: '페탈로즈', grade: 'A', stage: 'sprout', exp: 12, expNext: 45, pot: 'pot_terra', fruit: { have: 3, max: 3, gauge: 1 },
         stats: { hp: 100, atk: 35, def: 24, spd: 30, acc: 86, elem: 14, crit: 5, energy: 2 },
         lv: { hp: 2, atk: 3, def: 1, spd: 1, acc: 1, elem: 1, crit: 1, energy: 1 }, kit: KIT_PETAL,
         known: [...KIT_PETAL, { id: 'e', name: '덩굴 일격', cost: 2, power: 140, cats: ['attack'], el: 'grass', lock: '새잎에서' }] ,
         rank: { tier: '브론즈', pts: 40, next: 300 } },
-      { id: 2, key: 'cactus_fire', name: '엠버캑터', grade: 'S', stage: 'sprout', pot: 'pot_ceramic' },
-      { id: 3, key: 'vine_water', name: '타이드바인', grade: 'D', stage: 'juvenile', pot: 'pot_terra' },
+      { id: 2, key: 'cactus_fire', name: '엠버캑터', grade: 'S', stage: 'sprout', pot: 'pot_ceramic', fruit: { have: 1, max: 3, gauge: 0.62 } },
+      { id: 3, key: 'vine_water', name: '타이드바인', grade: 'D', stage: 'juvenile', pot: 'pot_terra', fruit: { have: 0, max: 2, gauge: 0.18 } },
+      { id: 4, key: 'thorn', name: '쏜위드', grade: 'B', stage: 'sprout', pot: 'pot_terra', fruit: { have: 2, max: 3, gauge: 0.4 } },
+      { id: 5, key: 'aqua', name: '아쿠아벌브', grade: 'C', stage: 'sprout', pot: 'pot_glass', fruit: { have: 0, max: 2, gauge: 0.82 } },
+      { id: 6, key: 'spark', name: '스파크번', grade: 'A', stage: 'sprout', pot: 'pot_terra', fruit: { have: 3, max: 3, gauge: 1 } },
     ],
-    slots: 3, slotsMax: 6,
+    slots: 8, slotsMax: 12,   // 양육(스마트팜) 자리 = 열린 수 · 최대
+    storageMax: 120,          // 동면 보관고(2026-10-15 사용자 "보관해 둘 수 있는 양은 100개 정도 이상으로")
+    storage: mockStorage(),
     seeds: [
       { id: 's1', name: '무지개 종자', rainbow: true, price: 40 },
       { id: 's2', key: 'flower_wind', name: '윈드페탈 종자', rarity: 'common', price: 40, from: '세라핀 · 윈드테라스' },
