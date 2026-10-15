@@ -46,3 +46,6 @@ tools/shots/out/
 tools/pixel/big/out/stem/
 # 탐사선 검수판(shipconv.mjs · 정비 화면 촬영으로 다시 만듦)
 tools/pixel/big/out/ship/
+
+# v2 서버 저장소(계정·세이브·플레이 기록 — 절대 깃에 안 올림)
+server/data/

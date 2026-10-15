@@ -1,0 +1,142 @@
+// 서버 통째 시험(화면 없이): 임시 저장소로 서버를 켜고 → 가입 둘 · 양육 · 봇 판 끝까지 · 이어 하기 · 기권 · 친구 대결 방(실시간 알림) · 잘못된 요청
+//   node tools/test/server.mjs
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const PORT = 18000 + Math.floor(Math.random() * 1000), BASE = `http://127.0.0.1:${PORT}`;
+const dir = mkdtempSync(join(tmpdir(), 'pullo-'));
+const srv = spawn(process.execPath, ['--no-warnings', 'server/index.mjs', '--port', String(PORT), '--db', join(dir, 't.db')], { stdio: ['ignore', 'pipe', 'pipe'] });
+let out = ''; srv.stdout.on('data', d => { out += d; }); srv.stderr.on('data', d => { out += d; });
+let fails = 0, n = 0;
+const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function call(path, body, token, method) {
+  const r = await fetch(BASE + path, { method: method || (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  return { status: r.status, ...j };
+}
+// 실시간 알림 읽기(fetch 흐름)
+function listen(token) {
+  const ev = [], ctrl = new AbortController();
+  (async () => {
+    try {
+      const r = await fetch(BASE + '/api/room/events', { headers: { authorization: 'Bearer ' + token }, signal: ctrl.signal });
+      const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+      for (;;) { const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i; while ((i = buf.indexOf('\n\n')) >= 0) { const chunk = buf.slice(0, i); buf = buf.slice(i + 2); let type = 'message', data = null; for (const line of chunk.split('\n')) { if (line.startsWith('event: ')) type = line.slice(7); else if (line.startsWith('data: ')) data = JSON.parse(line.slice(6)); } if (data !== null || type !== 'message') ev.push({ type, data }); } }
+    } catch {}
+  })();
+  return { ev, stop: () => ctrl.abort(), wait: async (type, from = 0, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const i = ev.findIndex((e, k) => k >= from && e.type === type); if (i >= 0) return { ...ev[i], i }; await sleep(30); } return null; } };
+}
+
+try {
+  for (let i = 0; i < 50; i++) { try { const r = await fetch(BASE + '/api/health'); if (r.ok) break; } catch {} await sleep(100); }
+  // ── 가입 · 로그인 ──
+  const bad = await call('/api/register', { login: 'A', password: '123', nickname: '', starter: 'x' });
+  ok(bad.status === 400 && /아이디/.test(bad.error), '잘못된 가입은 막힘: ' + bad.error);
+  const A = await call('/api/register', { login: 'alice', password: 'secret1', nickname: '앨리스', starter: 'flower_grass' });
+  ok(A.status === 200 && A.token && A.state.plants.length === 1, '가입 → 열쇠 + 처음 식물');
+  const dup = await call('/api/register', { login: 'alice', password: 'secret1', nickname: 'x', starter: 'aqua' });
+  ok(dup.status === 400 && /이미/.test(dup.error), '같은 아이디 막힘');
+  const B = await call('/api/register', { login: 'bob', password: 'secret2', nickname: '밥', starter: 'cactus_fire' });
+  ok(B.status === 200, '두 번째 가입');
+  const wrong = await call('/api/login', { login: 'alice', password: 'nope' });
+  ok(wrong.status === 400, '틀린 비밀번호 막힘');
+  const L1 = await call('/api/login', { login: 'alice', password: 'secret1' });
+  ok(L1.status === 200 && L1.state.profile.name === '앨리스', '로그인 → 같은 세이브');
+  const me = await call('/api/me', null, A.token);
+  ok(me.status === 200 && me.user.login === 'alice', '열쇠로 내 정보');
+  ok((await call('/api/me', null, 'nope')).status === 401, '잘못된 열쇠 = 401');
+  // ── 양육(자동 저장) ──
+  const pid = A.state.plants[0].uid;
+  const f = await call('/api/act', { op: 'feed', args: { id: pid, kind: 'water', n: 3 } }, A.token);
+  ok(f.status === 200 && f.state.plants[0].lv === 2 && f.state.items.water === 3, '물 3번 → Lv2 · 물 3 남음');
+  const again = await call('/api/me', null, L1.token);
+  ok(again.state.plants[0].lv === 2, '다른 열쇠(다른 기기)로 봐도 저장돼 있음');
+  const ev = await call('/api/act', { op: 'evolve', args: { id: pid } }, A.token);
+  ok(ev.status === 400 && /Lv6/.test(ev.error), 'Lv6 전 진화 막힘: ' + ev.error);
+  const buy = await call('/api/act', { op: 'buy', args: { item: 'water10' } }, A.token);
+  ok(buy.status === 200 && buy.state.items.water === 13 && buy.state.wallet.gems === 14, '보석으로 물 10');
+  const unk = await call('/api/act', { op: 'addXp', args: { n: 99999 } }, A.token);
+  ok(unk.status === 400, '목록에 없는 일(경험치 직접 주기) 막힘');
+  const ex = await call('/api/act', { op: 'explore', args: { planet: 'ex_ermias' } }, A.token);
+  ok(ex.status === 200 && ex.res.got.length >= 1 && ex.state.items.fuel === 4, '탐사 → 보상 · 연료 1 씀');
+  const far = await call('/api/act', { op: 'explore', args: { planet: 'ex_tiamen' } }, A.token);
+  ok(far.status === 400 && /Lv13/.test(far.error), '먼 궤도는 레벨 문턱');
+  // ── 봇 판(서버가 한 턴씩) ──
+  const st = await call('/api/battle/start', {}, A.token);
+  ok(st.status === 200 && st.id && st.view.me && st.view.foe && !st.view.seed, '판 시작 → 판 모습(씨앗은 안 옴)');
+  const st2 = await call('/api/battle/start', {}, A.token);
+  ok(st2.id === st.id && st2.resume, '안 끝난 판은 이어서');
+  const badMove = await call('/api/battle/turn', { id: st.id, act: 'nope' }, A.token);
+  ok(badMove.status === 400, '모르는 기술 막힘');
+  let r = null, turns = 0;
+  while (turns < 90) {
+    const v = (r && r.view) || st.view, kit = v.me.kit, en = v.me.energy;
+    const sk = [...kit].reverse().find(k => k.act === 'attack' && (k.cost || 0) <= en) || kit[0];
+    r = await call('/api/battle/turn', { id: st.id, act: sk.id }, A.token); turns++;
+    if (r.status !== 200) { ok(false, '턴 실패 ' + r.error); break; }
+    if (r.over) break;
+  }
+  ok(r && r.over && r.reward && r.state, `판 끝(${turns}턴, ${r && r.over}) → 보상 ${r && r.reward && r.reward.credits}`);
+  ok(r.state.tournament.wins + r.state.tournament.losses === 1, '대회 기록 1판');
+  const after = await call('/api/battle/turn', { id: st.id, act: 'basic' }, A.token);
+  ok(after.status === 400, '끝난 판엔 수를 못 둠');
+  const st3 = await call('/api/battle/start', {}, A.token);
+  ok(st3.id !== st.id && !st3.resume, '새 판');
+  const ff = await call('/api/battle/forfeit', { id: st3.id }, A.token);
+  ok(ff.status === 200 && ff.reward.forfeit && ff.state.tournament.losses >= 1, '기권 = 진 판(보상 없음)');
+  // ── 친구 대결 방 ──
+  const la = listen(A.token), lb = listen(B.token);
+  await sleep(200);
+  const room = await call('/api/room/create', {}, A.token);
+  ok(room.status === 200 && /^[A-Z2-9]{6}$/.test(room.code), '방 만들기 → 코드 ' + room.code);
+  const nf = await call('/api/room/join', { code: 'ZZZZZZ' }, B.token);
+  ok(nf.status === 400, '없는 코드 막힘');
+  const jn = await call('/api/room/join', { code: room.code.toLowerCase() }, B.token);
+  ok(jn.status === 200 && jn.members.length === 2, '코드로 들어감(소문자도)');
+  ok(await la.wait('room'), 'A에게 방 알림');
+  await call('/api/room/ready', { on: true }, A.token);
+  await call('/api/room/ready', { on: true }, B.token);
+  const sa = await la.wait('start'), sb = await lb.wait('start');
+  ok(sa && sb && sa.data.view.me.name !== sb.data.view.me.name && sa.data.view.me.key === sb.data.view.foe.key, '둘 다 준비 → 대결 시작(서로 나·상대가 뒤바뀐 모습)');
+  let endA = null, endB = null, k = 0, fromA = 0, fromB = 0;
+  while (k < 60) {
+    const va = (la.ev.slice(fromA).reverse().find(e => e.type === 'turn' || e.type === 'start') || sa).data.view;
+    const vb = (lb.ev.slice(fromB).reverse().find(e => e.type === 'turn' || e.type === 'start') || sb).data.view;
+    const pickOf = v => ([...v.me.kit].reverse().find(x => x.act === 'attack' && (x.cost || 0) <= v.me.energy) || v.me.kit[0]).id;
+    const ia = la.ev.length, ib = lb.ev.length;
+    await call('/api/room/move', { act: pickOf(va) }, A.token);
+    await call('/api/room/move', { act: pickOf(vb) }, B.token);
+    const ta = await la.wait('turn', ia), tb = await lb.wait('turn', ib);
+    if (!ta || !tb) { ok(false, '턴 알림 안 옴'); break; }
+    fromA = ta.i; fromB = tb.i; k++;
+    endA = la.ev.find(e => e.type === 'end'); endB = lb.ev.find(e => e.type === 'end');
+    if (ta.data.view.over) { endA = await la.wait('end', ia); endB = await lb.wait('end', ib); break; }
+  }
+  ok(endA && endB && endA.data.win !== endB.data.win, `대결 끝(${k}턴) → 한 명만 이김`);
+  ok(endA && endA.data.state && endA.data.reward, '결과에 보상·상태');
+  const ra = await call('/api/room', null, A.token);
+  ok(ra.room && ra.room.phase === 'lobby' && ra.room.last, '끝나면 같은 방(다시 하기)');
+  const em = await call('/api/room/emote', { i: 2 }, B.token);
+  ok(em.ok && await la.wait('emote'), '감정 표현 전달');
+  await call('/api/room/leave', {}, B.token);
+  const rb = await call('/api/room', null, B.token);
+  ok(!rb.room, '나가기');
+  la.stop(); lb.stop();
+  // ── 로그아웃 ──
+  await call('/api/logout', {}, L1.token);
+  ok((await call('/api/me', null, L1.token)).status === 401, '로그아웃한 열쇠는 못 씀');
+  ok((await fetch(BASE + '/v2/')).status === 200 && (await fetch(BASE + '/server/data/t.db')).status === 404 && (await fetch(BASE + '/v2/../server/db.mjs')).status === 404, '게임 파일만 내보냄(저장소·서버 코드는 못 받음)');
+  // ── 플레이 기록 보고서 ──
+  const rep = spawnSync(process.execPath, ['--no-warnings', 'server/report.mjs', '--db', join(dir, 't.db')], { encoding: 'utf8' });
+  ok(rep.status === 0 && /봇 판/.test(rep.stdout) && /친구 대결 1판|대결 1판/.test(rep.stdout), '플레이 기록 보고서' + (rep.status ? '\n' + rep.stderr : ''));
+  if (process.argv.includes('--report')) console.log(rep.stdout);
+} catch (e) { fails++; console.log('오류', e); }
+srv.kill();
+await sleep(200);
+try { rmSync(dir, { recursive: true, force: true }); } catch {}
+if (fails) console.log('--- 서버 출력 ---\n' + out);
+console.log(`서버 시험 ${n}개 중 ${n - fails}개 통과`);
+process.exit(fails ? 1 : 0);

@@ -1,7 +1,7 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
 import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY } from './catalog.js';
-import { plantStats } from './logic.js';
+import { plantStats, Err } from './logic.js';
 import { BASICS, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
 import { makeRng } from '../battle/rules.js';
@@ -47,20 +47,74 @@ export function setupBot({ seed, mode, mine, foes, trainer, rank }) {
   }
   return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank }), seed });
 }
-// 다시 돌리기: acts = 화면이 고른 순서대로 — 1:1 = 기술 id, 3:3 = { kind: 'skill', id } | { kind: 'switch', to } | { kind: 'rest' } | { kind: 'send', to }
+// 한 수: 1:1 = 기술 id('rest' = 쉬는 차례), 3:3 = { kind: 'skill', id } | { kind: 'switch', to } | { kind: 'rest' } | { kind: 'send', to }(쓰러진 자리 채우기)
+//  잘못된 수는 Err — 서버는 화면이 보낸 수를 이걸로만 판에 넣음(봇 판은 서버가 한 턴씩 풂: 화면은 씨앗을 모르고 결과만 받음)
+export const MAX_TURNS = 80;
+const bad = msg => { throw new Err(msg); };
+export function botStep(B, mode, a) {
+  if (B.over) bad('이미 끝난 판이에요');
+  if (B.turn > MAX_TURNS) bad('판이 너무 길어요');
+  if (mode === 'swap3') {
+    if (!a || typeof a !== 'object') bad('잘못된 수');
+    if (a.kind === 'send') {
+      if (B.need !== 'me') bad('지금은 내보낼 때가 아니에요');
+      const u = B.team.me[a.to]; if (!Number.isInteger(a.to) || !u || u.hp <= 0) bad('그 식물은 나갈 수 없어요');
+      return { send: sendIn(B, a.to) };
+    }
+    if (B.need === 'me') bad('다음 식물을 먼저 골라 주세요');
+    if (a.kind === 'skill') { const k = B.me.kit.find(x => x.id === a.id); if (!k) bad('모르는 기술'); return { turn: playTurn3(B, { kind: 'skill', skill: k }) }; }
+    if (a.kind === 'switch') { if (!Number.isInteger(a.to) || !B.team.me[a.to]) bad('잘못된 교체'); return { turn: playTurn3(B, { kind: 'switch', to: a.to }) }; }
+    if (a.kind === 'rest') return { turn: playTurn3(B, { kind: 'rest' }) };
+    bad('잘못된 수');
+  }
+  if (typeof a !== 'string') bad('잘못된 수');
+  const k = a === 'rest' ? REST : B.me.kit.find(x => x.id === a);
+  if (!k) bad('모르는 기술');
+  return { turn: playTurn(B, k) };
+}
+// 다시 돌리기(서버가 저장한 수들로 판을 다시 세움 — 같은 씨앗·같은 수 → 같은 판)
 export function replayBot(spec, acts) {
   const B = setupBot(spec);
-  for (const a of acts) {
-    if (B.over) break;
-    if (spec.mode === 'swap3') {
-      if (a.kind === 'send') { if (B.need === 'me') sendIn(B, a.to); continue; }
-      if (B.need === 'me') { const nx = B.team.me.findIndex(u => u.hp > 0); if (nx >= 0) sendIn(B, nx); }
-      const act = a.kind === 'skill' ? { kind: 'skill', skill: B.me.kit.find(k => k.id === a.id) || B.me.kit[0] } : a.kind === 'switch' ? { kind: 'switch', to: a.to } : { kind: 'rest' };
-      playTurn3(B, act);
-    } else playTurn(B, B.me.kit.find(k => k.id === a) || REST);
-    if (B.turn > 80) break;
+  for (const a of acts) { if (B.over) break; botStep(B, spec.mode, a); }
+  return B;
+}
+// 화면에 보낼 판 모습(유닛 값 그대로 — 화면은 이걸로 자기 판을 고쳐 씀)
+const unitV = u => ({ id: u.id, key: u.key, name: u.name, el: u.el, jong: u.jong, pot: u.pot, stage: u.stage, shiny: !!u.shiny, legend: !!u.legend, trainer: u.trainer, rank: u.rank,
+  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null });
+export function viewOf(B) {
+  if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
+  return { mode: '1v1', turn: B.turn, over: B.over, me: unitV(B.me), foe: unitV(B.foe) };
+}
+// 화면 쪽: 서버가 보낸 모습으로 판을 세우고(처음) · 턴마다 같은 유닛 객체를 고쳐 씀(교체 연출이 유닛 객체를 붙잡고 있음)
+const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank'];
+export function battleFromView(v) {
+  if (v.mode === 'swap3') {
+    const B = makeTeamBattle({ me: v.team.me.map(u => ({ ...u })), foe: v.team.foe.map(u => ({ ...u })), seed: 1 });
+    applyView(B, v);
+    return B;
   }
-  return { over: B.over, turns: B.turn - 1 };
+  return { me: { ...v.me }, foe: { ...v.foe }, rng: null, turn: v.turn, over: v.over, log: [] };
+}
+export function applyView(B, v) {
+  B.turn = v.turn; B.over = v.over;
+  if (v.mode === 'swap3') {
+    B.need = v.need; B.act = { ...v.act }; B.pool = { ...v.pool };   // 에너지 = 팀 풀(유닛 energy 는 B.pool 을 읽음)
+    for (const side of ['me', 'foe']) v.team[side].forEach((u, i) => { const t = B.team[side][i]; for (const k of UNIT_KEYS) t[k] = u[k]; });
+    B.me = B.team.me[B.act.me]; B.foe = B.team.foe[B.act.foe];
+    return;
+  }
+  for (const side of ['me', 'foe']) { const t = B[side], u = v[side]; for (const k of UNIT_KEYS) t[k] = u[k]; t.energy = u.energy; }
+}
+// PvP B 쪽 모습: 나·상대를 바꾸고(id 도 'me'/'foe'로), 승패도 뒤집음
+const FLIP = { win: 'lose', lose: 'win' };
+export function viewFor(B, side) {
+  const v = viewOf(B);
+  if (side !== 'b') return v;
+  return { ...v, over: FLIP[v.over] || v.over, me: { ...v.foe, id: 'me' }, foe: { ...v.me, id: 'foe' } };
+}
+export function turnFor(turn, side) {
+  if (side !== 'b') return turn;
+  return { ...turn, mySkill: turn.foeSkill, foeSkill: turn.mySkill, before: { me: turn.before.foe, foe: turn.before.me }, first: SW[turn.first] || turn.first, events: mirrorEvents(turn.events) };
 }
 // PvP(1:1): 서버가 두 사람 선택으로 한 턴씩 풂 — 사건은 A 쪽에서 본 것('me' = A). B에게 보낼 땐 mirror로 뒤집음
 export function setupPvp({ seed, a, b, aName, bName }) {

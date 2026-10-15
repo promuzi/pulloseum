@@ -80,7 +80,7 @@ export const growPct = p => (p.lv >= LV_MAX ? 1 : p.gxp / growNeed(p.stage, p.lv
 export function feed(s, id, kind, n = 1) {
   const p = getPlant(s, id);
   need(kind === 'water' || kind === 'fert', '물이나 비료만 줄 수 있어요');
-  need((s.items[kind] || 0) >= n && n >= 1, `${ITEMS[kind].name}이 모자라요`);
+  need((s.items[kind] || 0) >= n && n >= 1, kind === 'water' ? '물이 모자라요' : '비료가 모자라요');
   need(p.lv < LV_MAX, p.stage < 2 ? 'Lv6이에요 — 진화하면 더 자라요' : '다 자랐어요');
   const ups = [];
   let used = 0;
@@ -105,7 +105,7 @@ export function evolve(s, id, rng) {
   p.stage++; p.lv = 1; p.gxp = 0;
   const have = known(p), pool = bloomPool(p.key, p.stage).filter(x => !have.has(x.id)), n = rng() < 0.4 ? 2 : 1, got = [];
   for (let i = 0; i < n && pool.length; i++) { const x = pickW(rng, pool); pool.splice(pool.indexOf(x), 1); got.push({ id: x.id, to: learnNow(p, x.id) }); }
-  const xp = addXp(s, XP.evolve);
+  const xp = addXp(s, XP.evolve, rng);
   return { stage: p.stage, got, xp };
 }
 // 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b2)·조커에 놓고 원래 기술은 '지운 기술'로, 또는 새 기술을 안 배움(skip — 지운 기술로)
@@ -204,7 +204,7 @@ export function plantSeed(s, seedId, rng, now) {
   need(freeSlots(s) > 0, '스마트팜 자리가 없어요 — 보관고로 옮기거나 재배사 레벨을 올려요');
   const seed = s.seeds.splice(i, 1)[0], p = makePlant(s, seed, rng, now);
   s.plants.push(p);
-  const xp = addXp(s, XP.plant);
+  const xp = addXp(s, XP.plant, rng);
   return { plant: p.uid, xp };
 }
 export function toStorage(s, id) {
@@ -248,7 +248,7 @@ export function harvest(s, id, rng, now) {
   for (let i = 0; i < p.hv.have; i++) got.push(rollFruit(s, p, rng));
   p.hv.have = 0; p.hv.t0 = now;
   for (const r of got) grant(s, r);
-  const xp = addXp(s, XP.harvest * got.length);
+  const xp = addXp(s, XP.harvest * got.length, rng);
   return { got, xp };
 }
 export function harvestAll(s, rng, now) {
@@ -256,7 +256,7 @@ export function harvestAll(s, rng, now) {
   for (const p of s.plants) { harvestSync(p, now); for (let i = 0; i < p.hv.have; i++) got.push(rollFruit(s, p, rng)); if (p.hv.have) { p.hv.have = 0; p.hv.t0 = now; } }
   need(got.length, '아직 맺힌 열매가 없어요');
   for (const r of got) grant(s, r);
-  const xp = addXp(s, XP.harvest * got.length);
+  const xp = addXp(s, XP.harvest * got.length, rng);
   return { got, xp };
 }
 
@@ -302,6 +302,15 @@ export function sell(s, id) {
   s.wallet.credits += n;
   return { credits: n, name: p.name };
 }
+// 종자 팔기(돈 출처 — 사용자 2026-10-16 "판매-씨앗, 키운 식물, 주운 물건")
+export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1) * (sd.trait ? 1.5 : 1));
+export function sellSeed(s, seedId) {
+  const i = s.seeds.findIndex(x => x.id === seedId);
+  need(i >= 0, '그 종자가 없어요');
+  const sd = s.seeds.splice(i, 1)[0], n = seedPrice(sd);
+  s.wallet.credits += n;
+  return { credits: n, key: sd.key };
+}
 export function dismantle(s, id, rng) {
   const p = takePlant(s, id), q = Math.min(1, p.invest / 1500 + 0.25 * p.stage + (p.lv - 1) * 0.03), got = [];
   const n = 1 + p.stage + (p.lv >= 4 ? 1 : 0);
@@ -324,6 +333,8 @@ export function fuelSync(s, now) {
   return s.items.fuel;
 }
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
+// 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
+export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) harvestSync(p, now); return s; }
 export function explore(s, planetId, rng, now) {
   const pl = PLANETS.find(x => x.id === planetId);
   need(pl, '모르는 행성');
@@ -345,7 +356,7 @@ export function explore(s, planetId, rng, now) {
   if (rng() < 0.03) got.push({ kind: 'regress', n: 1, rar: 4 });
   for (const r of got) grant(s, r);
   for (const r of got) if (r.kind === 'seed' && !s.discovered.includes(r.seed.key)) s.discovered.push(r.seed.key);
-  const xp = addXp(s, XP.explore);
+  const xp = addXp(s, XP.explore, rng);
   return { planet: pl.name, got, xp };
 }
 
@@ -362,14 +373,14 @@ export function buy(s, itemId, rng) {
 }
 
 // ── 재배사 경험치 · 레벨업 보상(클래시로얄처럼 상자 — 화면이 pending을 열어 보여 줌) ──
-export function addXp(s, n) {
+export function addXp(s, n, rng) {
   const u = s.user, ups = [];
   u.xp += n;
   while (u.xp >= userNeed(u.level)) {
     u.xp -= userNeed(u.level); u.level++;
     const r = levelReward(u.level), box = { ...r };
     give(s, r);
-    if (r.seed) { const sd = seedOf(s, rollSpecies(Math.random, r.seed), Math.random); s.seeds.push(sd); box.seed = sd; }
+    if (r.seed) { const sd = seedOf(s, rollSpecies(rng, r.seed), rng); s.seeds.push(sd); box.seed = sd; }
     s.pending.push({ kind: 'level', level: u.level, box, slots: farmSlots(u.level) });
     ups.push(u.level);
   }
@@ -380,10 +391,17 @@ export function ackPending(s, n) { s.pending.splice(0, Math.max(1, n | 0)); retu
 // ── 전투 보상(서버가 결과를 확인한 뒤에만) ──
 const ROUNDS = ['예선', '16강', '8강', '4강', '결승'];
 const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
-export function battleReward(s, { mode, win, rng }) {
+export const PVP_DAILY = 15;   // 친구 대결 보상은 하루 15판까지(친구끼리 일부러 져 주며 돈·경험치를 쌓지 않게) — 승패 기록은 늘 남음
+export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
   const r = { credits: 0, water: 0, fert: 0 };
-  if (mode === 'pvp') { r.credits = win ? 80 : 30; s.pvp[win ? 'wins' : 'losses']++; }
-  else {
+  if (mode === 'pvp') {
+    s.pvp[win ? 'wins' : 'losses']++;
+    const day = Math.floor(now / 864e5);
+    if (s.pvp.day !== day) { s.pvp.day = day; s.pvp.n = 0; }
+    if (short || s.pvp.n >= PVP_DAILY) { r.capped = short ? 'short' : 'daily'; r.xp = { gained: 0, ups: [] }; return r; }   // 너무 짧은 판(3턴 미만) · 하루 한도 = 보상 없음
+    s.pvp.n++;
+    r.credits = win ? 80 : 30;
+  } else {
     const tier = TIERS.indexOf(s.tournament.tier);
     r.credits = win ? 60 + 15 * tier : 15;
     if (win && rng() < 0.5) r.water = 1 + (rng() < 0.3 ? 1 : 0);
@@ -400,6 +418,15 @@ export function battleReward(s, { mode, win, rng }) {
     }
   }
   give(s, r);
-  r.xp = addXp(s, mode === 'pvp' ? (win ? XP.pvpWin : XP.pvpLose) : (win ? XP.botWin : XP.botLose));
+  r.xp = addXp(s, mode === 'pvp' ? (win ? XP.pvpWin : XP.pvpLose) : (win ? XP.botWin : XP.botLose), rng);
+  return r;
+}
+// 기권·도중에 떠남 = 진 판으로만 남김(보상 없음 — 판을 열었다 버리며 상대를 고르거나 경험치를 쌓지 못하게)
+export function battleForfeit(s, mode) {
+  if (mode === 'pvp') { s.pvp.losses++; return { forfeit: true }; }
+  if (mode === 'swap3') { s.swap3.losses++; return { forfeit: true }; }
+  const T = s.tournament; T.losses++;
+  const r = { forfeit: true };
+  if (T.losses >= 3) { T.wins = 0; T.losses = 0; T.round = ROUNDS[0]; r.reset = true; }
   return r;
 }
