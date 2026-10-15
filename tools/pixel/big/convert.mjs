@@ -949,10 +949,11 @@ if (args.includes('--export') && cvs.length) {
 //   그리는 순서(가상 3D 깊이): 무대 → 바닥 층(갈라짐·물자국) → 먼 화분보다 뒤에 선 효과 → 먼 화분 → 사이 효과 → 가까운 화분 → 앞 효과 → 공중 효과(o 테두리·p 입자) → 화면 흔들림
 //   → out/conv/<이름>_attack.gif(2배), attacks_all.mp4(--mp4, 3배·이어 붙임 — 없으면 attacks_all.gif), attacks_sheet.png(핵심 장면)
 // 변이 스킬(--variants <공격 키> <대상 키>): 같은 식물에 5변이형 기본 변이 스킬을 차례로(공격 쪽 = 변이 후광·문장) → variants_all.mp4·variants_sheet.png
-if (args.includes('--attack') || args.includes('--variants')) {
+// 무기 변이(--weapons <공격 키> <대상 키>): 무기 공격 13가지(검 베기·찌르기, 도끼, 총 셋, 망치, 창, 단검, 채찍, 낫, 방패)를 차례로 → weapons_all.mp4·weapons_sheet.png
+if (args.includes('--attack') || args.includes('--variants') || args.includes('--weapons')) {
   const { encodeGIF } = await import('./gif.mjs');
   const { idleRig, attackField } = await import('./motion.mjs');
-  const { ATTACKS, VARIANTS, GROUND, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
+  const { ATTACKS, VARIANTS, WEAPONS, GROUND, FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } = await import('./attack.mjs');
   const { rimTint, emblem } = await import('./forms.mjs');
   const ST = await import('./stage.mjs'), { BASE_GEO } = await import('./pot3d.mjs');
   const pot = renderPot(POT3.pot_terra), SW = ST.SW, SH = ST.SH, BGIM = ST.stageBg(), BG = '#2e222f';
@@ -963,12 +964,15 @@ if (args.includes('--attack') || args.includes('--variants')) {
   const zoom = (list, z) => list.map(c => { const o = new Img(c.w * z, c.h * z, BG); o.blit(c, 0, 0, z); return o; });
   // 화면 흔들림: 장 전체를 옮기고 비는 가장자리는 끝 줄을 늘인다
   const shift = (im, dx, dy) => { const o = new Img(im.w, im.h); for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) { const sx = Math.max(0, Math.min(im.w - 1, x - dx)), sy = Math.max(0, Math.min(im.h - 1, y - dy)); o.data.set(im.data.subarray((sy * im.w + sx) * 4, (sy * im.w + sx) * 4 + 4), (y * im.w + x) * 4); } return o; };
-  const variants = args.includes('--variants'), both = args.includes('--both'), all = [], sheetRows = [];
-  let jobs = variants ? Object.keys(VARIANTS).map(form => ({ a: 0, t: cvs.length > 1 ? 1 : 0, A: VARIANTS[form], form, name: form })) : cvs.map((cv, a) => ({ a, t: (a + 1) % cvs.length, A: ATTACKS[cv.key], form: null, name: cv.key }));
-  jobs = jobs.flatMap(j => j.A && (both || GROUND.has(j.A.kind)) ? [{ ...j, rev: false }, { ...j, rev: true, name: j.name + '_rev' }] : [{ ...j, rev: false }]);
+  const variants = args.includes('--variants'), weapons = args.includes('--weapons'), both = args.includes('--both'), all = [], sheetRows = [];
+  const only = (args.find(x => x.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
+  let jobs = weapons ? Object.keys(WEAPONS).filter(wk => !only.length || only.includes(wk)).map(wk => ({ a: 0, t: cvs.length > 1 ? 1 : 0, A: WEAPONS[wk], form: 'weapon', name: wk }))
+    : variants ? Object.keys(VARIANTS).map(form => ({ a: 0, t: cvs.length > 1 ? 1 : 0, A: VARIANTS[form], form, name: form })) : cvs.map((cv, a) => ({ a, t: (a + 1) % cvs.length, A: ATTACKS[cv.key], form: null, name: cv.key }));
+  const revOnly = (args.find(x => x.startsWith('--rev=')) || '').slice(6).split(',').filter(Boolean);   // 이 이름들만 거꾸로(상대 → 나)도
+  jobs = jobs.flatMap(j => j.A && (both || GROUND.has(j.A.kind) || revOnly.includes(j.name)) ? [{ ...j, rev: false }, { ...j, rev: true, name: j.name + '_rev' }] : [{ ...j, rev: false }]);
   const farY = ST.SPOTS.far.base[1], nearY = ST.SPOTS.near.base[1], inS = (x, y) => x >= 0 && y >= 0 && x < SW && y < SH;
   for (const { a, t, A, form, name, rev } of jobs) {
-    if (!A || (!variants && cvs.length < 2)) continue;
+    if (!A || (!variants && !weapons && cvs.length < 2)) continue;
     const I = impactAt(A), ra = rigs[a], rt = rigs[t], frames = [];
     // 자리: 기본 = 나(가까움) → 상대(멂). 먼 쪽은 좌우 뒤집어 상대를 본다
     const atk = rev ? ST.SPOTS.far : ST.SPOTS.near, tgt = rev ? ST.SPOTS.near : ST.SPOTS.far, aM = rev, tM = !rev;
@@ -992,7 +996,7 @@ if (args.includes('--attack') || args.includes('--variants')) {
       const L = [AXs + hxOf(ra, aM) + (aM ? -pose.qx : pose.qx), AYs + ra.hy + pose.qy];
       const T = [TXs + hxOf(rt, tM) + (tM ? tp.kb : -tp.kb), TYs + rt.hy + tqy - tp.hop], G = TYs + POT_GEO.cy - tp.hop;
       const dl = Math.hypot(T[0] - L[0], T[1] - L[1]) || 1;
-      const S = { D: [(T[0] - L[0]) / dl, (T[1] - L[1]) / dl], fx: Math.sign(T[0] - L[0]) || 1, K: ST.K, A0: atk.base, B0: tgt.base, S0, E0, phiS, phiE, rf };
+      const S = { D: [(T[0] - L[0]) / dl, (T[1] - L[1]) / dl], fx: Math.sign(T[0] - L[0]) || 1, K: ST.K, A0: atk.base, B0: tgt.base, S0, E0, phiS, phiE, rf, Rh: ra.Rh, soilA: AYs + POT_GEO.cy };
       // 효과 층: f = 바닥(색 또는 어둡게 곱), u = 바닥에 선 것(깊이 = 바닥 닿는 줄 → 화분 앞뒤, 테두리), s = 바닥에 선 부드러운 것(먼지, 테두리 없음), o = 공중 큰 모양(테두리), p = 입자
       const lf = new Map(), lu = [new Map(), new Map(), new Map()], ls = [new Map(), new Map(), new Map()], lo = new Map(), lp = new Map(), dep = d => d < farY ? 0 : d < nearY ? 1 : 2;
       const P2 = { o: (x, y, c) => { if (inS(x, y)) lo.set(y * SW + x, c); }, p: (x, y, c) => { if (inS(x, y)) lp.set(y * SW + x, c); }, f: (x, y, c) => { if (inS(x, y)) lf.set(y * SW + x, c); }, u: (x, y, c, d) => { if (inS(x, y)) lu[dep(d)].set(y * SW + x, c); }, s: (x, y, c, d) => { if (inS(x, y)) ls[dep(d)].set(y * SW + x, c); } };
@@ -1011,7 +1015,7 @@ if (args.includes('--attack') || args.includes('--variants')) {
       const [sx, sy] = cameraShake(f, A, I);
       frames.push(sx || sy ? shift(stage, sx, sy) : stage);
     }
-    writeFileSync(resolve(here, 'out', 'conv', name + (variants ? '_variant.gif' : '_attack.gif')), encodeGIF(zoom(frames, 2), { delay: 5 }));
+    writeFileSync(resolve(here, 'out', 'conv', name + (variants ? '_variant.gif' : weapons ? '_weapon.gif' : '_attack.gif')), encodeGIF(zoom(frames, 2), { delay: 5 }));
     const fl = args.find(x => x.startsWith('--frames='));   // 검토용: 지정 장을 나란히(1배)
     if (fl) { const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (SW + 4), SH + 8, '#2e222f'); list.forEach((ff, i) => st.blit(frames[Math.min(FRA - 1, ff)], 4 + i * (SW + 4), 4)); writeFileSync(resolve(here, 'out', 'conv', name + '_attack_frames.png'), st.png()); }
     all.push(...frames);
@@ -1019,7 +1023,7 @@ if (args.includes('--attack') || args.includes('--variants')) {
     console.log(`${name.padEnd(17)} ${cvs[a].key} → ${cvs[t].key} · ${A.kind}/${A.move} · 맞는 장 ${I} · 성질 ${A.status}${rev ? ' · 상대 → 나' : ''}`);
   }
   if (all.length) {
-    const tag = variants ? 'variants' : 'attacks';
+    const tag = (args.find(x => x.startsWith('--tag=')) || '').slice(6) || (variants ? 'variants' : weapons ? 'weapons' : 'attacks');
     if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', tag + '_all.mp4'), all, { delay: 5, loops: 1, fps: 20, zoom: 3 });
     else writeFileSync(resolve(here, 'out', 'conv', tag + '_all.gif'), encodeGIF(zoom(all, 2), { delay: 5 }));
     const sheet = new Img(4 + 5 * (SW + 4), 4 + sheetRows.length * (SH + 4), '#2e222f');

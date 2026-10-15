@@ -115,11 +115,10 @@ export const battle = {
     const msg = hit ? '효과가 굉장하다!' : `${st.me.name}는 무엇을 할까?`;
     g.text(msg, 18, PY + 20, { font: 'bold', color: C.ink });
     if (!hit && Math.floor(t / 450) % 2) g.rect(W - 22, PY + 30, 5, 3, C.ink);
-    // 에너지 줄 + 배속
+    // 에너지 줄(빨리 감기 단추 없음 — 2026-10-15 사용자 "필요 없는 기능")
     const ey = PY + 52;
     g.text('에너지', 12, ey + 1, { color: C.gold });
     energyPips(g, 52, ey, st.me.energy, st.me.energyMax, 12);
-    button(app, 'bt_speed', W - 46, ey - 3, 38, 18, '1×', { style: 'night', icon: 'play', onTap: () => app.toast('2배속') });
     // 기술 6칸
     const gx = 8, gy = PY + 76, cw = Math.floor((W - 16 - 6) / 2), ch = 44;
     for (let i = 0; i < 6; i++) {

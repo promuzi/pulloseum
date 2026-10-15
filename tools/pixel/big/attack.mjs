@@ -38,8 +38,26 @@ export const VARIANTS = {
   dragon: { kind: 'breath', move: 'cast', c: ['#ffffff', '#c8ffa0', '#5ac850', '#1e5a2a'], status: 'none' },
   spore: { kind: 'sporepuff', move: 'cast', c: ['#fffbd8', '#f8e488', '#d0b050', '#6a5a28'], status: 'weaken' },
 };
+// 무기 변이 공격(설계 = specs/2026-10-15-v2-battle-rules-design.md §9) — 동작 중 무기 모양이 보이고, 맞은 뒤 무기별 성질이 남는다
+const STEEL = ['#ffffff', '#e8eef8', '#9aa8c0', '#3a4458'], WOOD = ['#f0d0a0', '#c8945a', '#8a5a30', '#3e2a18'], GUNC = ['#fffbe0', '#ffe070', '#ff9a30', '#8a3a10'], GUNW = ['#d8c8a0', '#9a8a6a', '#5a4e3a', '#2a2420'];
+export const WEAPONS = {
+  sword_slash: { kind: 'w_slash', move: 'lunge', c: STEEL, w: WOOD, blood: ['#ffd0d0', '#ff5a5a', '#c02838', '#5a0c18'], status: 'bleed' },
+  sword_thrust: { kind: 'w_thrust', move: 'lunge', c: STEEL, w: WOOD, status: 'none' },
+  axe_chop: { kind: 'w_chop', move: 'slam', c: STEEL, w: WOOD, status: 'guardbreak' },
+  axe_sweep: { kind: 'w_sweep', move: 'lunge', c: STEEL, w: WOOD, status: 'none', area: true },
+  gun_shot: { kind: 'w_shot', move: 'shoot', c: GUNC, w: GUNW, status: 'none' },
+  gun_burst: { kind: 'w_burst', move: 'shoot', c: GUNC, w: GUNW, status: 'none' },
+  gun_snipe: { kind: 'w_snipe', move: 'shoot', c: GUNC, w: GUNW, status: 'none' },
+  hammer_smash: { kind: 'w_smash', move: 'slam', c: ['#f0e8e0', '#c0b0a0', '#807060', '#3a3028'], w: WOOD, status: 'stun' },
+  spear_thrust: { kind: 'w_spear', move: 'lunge', c: STEEL, w: WOOD, status: 'none' },
+  dagger_flurry: { kind: 'w_flurry', move: 'lunge', c: STEEL, w: WOOD, tox: ['#f0d8ff', '#c890f0', '#8a40c8', '#3a1660'], fizz: '#b8f070', status: 'poison' },
+  whip_bind: { kind: 'w_bind', move: 'cast', c: ['#e8f8b0', '#9ad050', '#4a8a30', '#1e3a18'], status: 'bind' },
+  scythe_reap: { kind: 'w_reap', move: 'lunge', c: ['#f0fff0', '#b8e0c0', '#6a9a7a', '#24402e'], w: WOOD, status: 'none', area: true },
+  shield_bash: { kind: 'w_bash', move: 'lunge', c: ['#fff4d8', '#e0c070', '#a07830', '#4a3010'], status: 'guardself' },
+};
 export const GROUND = new Set(['slam', 'wave']);   // 바닥을 타고 가는 기술
-export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18 })[A.kind] || 18;
+export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18,
+  w_slash: 15, w_thrust: 14, w_chop: 19, w_sweep: 16, w_shot: 15, w_burst: 15, w_snipe: 18, w_smash: 19, w_spear: 15, w_flurry: 16, w_bind: 17, w_reap: 16, w_bash: 15 })[A.kind] || 18;
 
 // 공격하는 쪽 몸놀림(앞 = 상대 쪽, 그림 좌표 qx+): 0~5 대기, 6~11 준비(점점), 12 멈춤, 13~14 동작, 15 넘침, 16~23 복귀
 export function attackerPose(f, A) {
@@ -48,6 +66,11 @@ export function attackerPose(f, A) {
     if (f <= 12) return { qx: -Math.round(2 * prep), qy: -Math.round(4 * prep), sq: -1.5 * prep };
     if (f <= 15) return { qx: 2, qy: 3, sq: 2 };
     return { qx: Math.round(2 * back), qy: Math.round(3 * back), sq: 2 * back };
+  }
+  if (A.move === 'shoot') {   // 총: 겨누며 조금 웅크림 → 쏘는 장에 뒤로 반동 → 돌아옴
+    if (f <= 12) return { qx: -Math.round(prep), qy: Math.round(prep), sq: 0.8 * prep };
+    if (f <= 14) return { qx: -3, qy: 0, sq: -0.6 };
+    return { qx: -Math.round(3 * back), qy: 0, sq: -0.6 * back };
   }
   const reach = A.move === 'lunge' ? 8 : 4;
   if (f <= 11 || hold) return { qx: -Math.round((A.move === 'lunge' ? 4 : 3) * prep), qy: Math.round(prep), sq: 1.2 * prep };
@@ -207,9 +230,270 @@ function groundOf(S) { const dx = S.E0[0] - S.S0[0], dz = (S.E0[1] - S.S0[1]) / 
 // 도착점에서 솟는 바위 조각: [바닥에서 옆(세계, 도착 둘레 접선 쪽), 길이 배율, 밑 반폭, 바깥으로 벌어짐] — 첫째가 식물을 찌르는 큰 조각
 const SHARDS = [[0, 1, 7, 0], [-10, 0.55, 4.5, 0.55], [9, 0.45, 4, 0.6]];
 
+// ── 무기 변이 공격(설계 = specs/2026-10-15-v2-battle-rules-design.md §9) ──
+// 식물은 무기를 몸 옆(상대 쪽)에 늘 들고 있다 → 준비(뒤로 젖힘·겨눔) → 휘두름(잔상 호) → 맞는 자리에 무기 그림자가 내리치거나(도끼·망치·낫·방패)
+// 베인 자국·꿰뚫는 줄·총알이 닿음 → 무기별 성질(출혈·방어 깨짐·기절·독·묶기·방패 기운).
+// 무기 그림 = 손잡이 g 에서 끝 쪽 각 a 로 뻗은 작은 도형들(u = 길이, v = 옆 — 얼굴 오른쪽 기준, 왼쪽을 보면 v 를 뒤집음). 공중 층(o)이라 어두운 테두리가 저절로 둘린다.
+const ptA = (p, a, r) => [p[0] + Math.cos(a) * r, p[1] + Math.sin(a) * r];
+// 몸을 두른 고리: 앞 반쪽만(뒤 반쪽은 몸이 가림 — 공중 층은 식물보다 위에 그려지므로) + 아래 한 칸 그늘
+function ellipseRingPx(put, cx, cy, rx, ry, colFront, colEdge) { const n = Math.max(24, Math.round(rx * 6)); for (let i = 0; i <= n; i++) { const a = -0.12 + i / n * (Math.PI + 0.24), x = Math.floor(cx + Math.cos(a) * rx), y = Math.floor(cy + Math.sin(a) * ry); put(x, y, colFront); put(x, y + 1, colEdge); } }
+function starBurst(put, x, y, r1, r2, n, c0, c1, rot = 0) { for (let i = 0; i < n; i++) { const a = rot + i * Math.PI * 2 / n; line(put, [x + Math.cos(a) * r1, y + Math.sin(a) * r1], [x + Math.cos(a) * r2 * (i % 2 ? 0.7 : 1), y + Math.sin(a) * r2 * (i % 2 ? 0.7 : 1)], i % 2 ? c1 : c0); } }
+// 채운 다각형(가로줄 채우기)
+function poly(put, pts, col) {
+  const ys = pts.map(p => p[1]), y0 = Math.floor(Math.min(...ys)), y1 = Math.ceil(Math.max(...ys));
+  for (let y = y0; y <= y1; y++) {
+    const yc = y + 0.5, xs = [];
+    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; if ((a[1] <= yc) !== (b[1] <= yc)) xs.push(a[0] + (yc - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); }
+    xs.sort((p, q) => p - q);
+    for (let i = 0; i + 1 < xs.length; i += 2) for (let x = Math.round(xs[i]); x < Math.round(xs[i + 1]); x++) put(x, y, col);
+  }
+}
+const GOLD = ['#fff0b0', '#f0c040', '#b07820', '#5a3a10'];
+const angF = (fx, a) => fx > 0 ? a : Math.PI - a;   // 얼굴 오른쪽 기준 각 → 무대 각
+// 열쇠 장 사이를 부드럽게: keys = [[장, 값], …]
+function keyAt(keys, f) { if (f <= keys[0][0]) return keys[0][1]; for (let i = 1; i < keys.length; i++) if (f <= keys[i][0]) { const [f0, v0] = keys[i - 1], [f1, v1] = keys[i], u = (f - f0) / (f1 - f0); return v0 + (v1 - v0) * u * u * (3 - 2 * u); } return keys[keys.length - 1][1]; }
+
+// 무기 한 자루: kind = sword·dagger·axe·hammer·spear·scythe·gun·shield·whip, g = 손잡이, a = 무대 각, sc = 크기, ghost = 맞는 자리에 내리치는 무기 그림자(밝은 두 색).
+// 돌려주는 값 = 무기 끝(총구·창끝·날끝)
+function drawWeapon(put, kind, g, a, fx, A, { sc = 1, ghost = false, len = 30 } = {}) {
+  const c = A.c, w = A.w || WOOD, ca = Math.cos(a), sa = Math.sin(a);
+  const T = ([u, v]) => [g[0] + (ca * u - sa * v * fx) * sc, g[1] + (sa * u + ca * v * fx) * sc];
+  const F = (pts, col) => poly(put, pts.map(T), col);
+  const Ln = (p, q, col) => { for (const [x, y] of strokePx([T(p), T(q)])) put(x, y, col); };
+  const lit = Math.sign(fx * (sa - ca)) || -1;   // 빛(왼쪽 위)을 받는 쪽의 v 부호
+  const cc = ghost ? [c[0], c[0], c[1], c[1]] : c, ww = ghost ? [c[0], c[1], c[1], c[2]] : w, gg = ghost ? [c[0], c[1], c[1], c[2]] : GOLD;
+  const haft = (u0, u1, hw = 1) => { F([[u0, -hw], [u1, -hw], [u1, hw], [u0, hw]], ww[1]); Ln([u0, lit * hw * 0.5], [u1, lit * hw * 0.5], ww[0]); };
+  switch (kind) {
+    case 'sword': case 'dagger': {   // 손잡이 · 금빛 가드 · 날(빛 받는 날끝 밝게, 반대 날끝 어둡게)
+      const s = kind === 'dagger' ? 0.5 : 1, bl = 24 * s;
+      haft(-6 * s - 1, 0, 1.1); disc(put, ...T([-6 * s - 2, 0]), 1.5 * sc, gg[1]);
+      F([[0, -4.6 * s - 0.6], [2.2, -4.6 * s - 0.6], [2.2, 4.6 * s + 0.6], [0, 4.6 * s + 0.6]], gg[1]);
+      F([[2, -2], [bl + 2, -2], [bl + 6, 0], [bl + 2, 2], [2, 2]], cc[1]);
+      Ln([3, lit * 1.3], [bl + 3, lit * 0.6], cc[0]); Ln([3, -lit * 1.3], [bl + 2, -lit * 1.3], cc[2]);
+      return T([bl + 6, 0]);
+    }
+    case 'axe': {   // 긴 자루 + 휘두르는 쪽(v+)으로 넓은 날 + 뒤 뿔
+      haft(-8, 25, 1);
+      F([[13, -2.4], [21, -2.4], [21, 1.6], [26, 5], [25.5, 12], [18, 11], [14.5, 6], [15, 1.6]], cc[2]);
+      F([[16, 2.4], [20, 2.4], [23.6, 6], [23.2, 10], [18.6, 9.4], [16.4, 6]], cc[1]);
+      Ln([25.6, 5.6], [25, 11.4], cc[0]); Ln([24.6, 11.6], [18.6, 10.8], cc[0]);
+      F([[15, -2.4], [19.6, -2.4], [17.3, -6.2]], cc[2]);
+      return T([25, 9]);
+    }
+    case 'hammer': {   // 자루 + 가로로 긴 머리(쇠띠 둘)
+      haft(-8, 20, 1.1);
+      F([[18, -7.5], [28, -7.5], [28, 7.5], [18, 7.5]], cc[2]);
+      F([[18, -7.5 * lit], [28, -7.5 * lit], [28, -4 * lit], [18, -4 * lit]], cc[1]);
+      Ln([20.5, -7], [20.5, 7], cc[3]); Ln([25.5, -7], [25.5, 7], cc[3]);
+      return T([23, 0]);
+    }
+    case 'spear': {   // 긴 자루(len) + 잎 모양 창끝 + 금빛 묶음
+      haft(-14, len, 0.9);
+      F([[len - 1, -2.6], [len + 4, -3.3], [len + 12, 0], [len + 4, 3.3], [len - 1, 2.6]], cc[1]);
+      Ln([len, lit * 1.2], [len + 10, 0], cc[0]); Ln([len, -lit * 1.6], [len + 8, -lit * 0.5], cc[2]);
+      F([[len - 3.4, -1.9], [len - 1, -1.9], [len - 1, 1.9], [len - 3.4, 1.9]], gg[1]);
+      return T([len + 12, 0]);
+    }
+    case 'scythe': {   // 긴 자루 + 끝에서 앞쪽으로 휘어 내려오는 낫날(안쪽 날 밝게)
+      haft(-10, 28, 1);
+      F([[25, -1.4], [29.5, -1], [31.5, 5], [30.5, 12], [26.5, 18.5], [19.5, 23], [23.5, 15], [25.8, 8.5], [25.6, 2.5]], cc[1]);
+      Ln([29.6, -0.6], [31.2, 5], cc[2]); Ln([31.2, 5.4], [30.2, 12], cc[2]); Ln([30, 12.4], [26.4, 18.4], cc[2]);
+      Ln([20.4, 21.6], [23.6, 14.6], cc[0]); Ln([23.8, 14.2], [25.4, 8.4], cc[0]);
+      return T([26, 18]);
+    }
+    case 'gun': {   // 씨앗총: 손잡이(아래) · 몸통 · 총열 · 총구 · 위에 초록 씨앗 통
+      F([[-5, 2], [-1, 2], [-3.4, 9], [-7.4, 9]], ww[2]);
+      F([[-7, -3.2], [6, -3.2], [6, 3], [-7, 3]], ww[1]); Ln([-6.5, lit * 2.4], [5.5, lit * 2.4], ww[0]);
+      F([[6, -2.2], [16, -2.2], [16, 1.8], [6, 1.8]], ww[2]); Ln([6.5, lit * 1.3], [15.5, lit * 1.3], ww[1]);
+      F([[15, -3], [18, -3], [18, 2.6], [15, 2.6]], ww[3]);
+      const tk = T([-1, -5.4]); disc(put, tk[0], tk[1], 2.5 * sc, ghost ? cc[1] : '#6ab848'); put(Math.floor(tk[0] - 1), Math.floor(tk[1] - 1), ghost ? cc[0] : '#d8f8b0');
+      return T([18.6, -0.2]);
+    }
+    case 'shield': {   // 방패(앞을 봄 — 돌리지 않음, 빛은 늘 왼쪽 위): 테 · 몸 · 빛 받는 왼쪽 반 · 가운데 돌기
+      const Q = (pts, col) => poly(put, pts.map(([x, y]) => [g[0] + x * sc, g[1] + y * sc]), col);
+      Q([[-7.5, -9.5], [7.5, -9.5], [7.5, 2], [0, 11], [-7.5, 2]], cc[3]);
+      Q([[-6.5, -8.5], [6.5, -8.5], [6.5, 1.6], [0, 9.6], [-6.5, 1.6]], cc[2]);
+      Q([[-6.5, -8.5], [0, -8.5], [0, 9.6], [-6.5, 1.6]], cc[1]);
+      disc(put, g[0], g[1] - 0.5 * sc, 2.3 * sc, cc[0]);
+      return g;
+    }
+    case 'whip': {   // 짧은 손잡이(덩굴은 따로 그림)
+      haft(-6, 2, 1.3);
+      return T([2.5, 0]);
+    }
+  }
+  return g;
+}
+
+// 큰 방패(방패 변이, 2026-10-15 사용자 "너무 작고 옹졸 — 상대 쪽으로 큰 방패, 식물 앞으로 빼서 그만큼 가려지게, 상대가 쓰면 식물이 가려지게"):
+//  화분 옆 바닥점 Gp 위에 떠서 상대 쪽을 막아선다. 바닥에 선 것(u 층)이라 깊이 = Gp 줄 → 상대가 카메라 쪽(우리 앞)이면 그 식물 앞을 가리고,
+//  상대가 먼 쪽이면 내 화분 옆(같은 깊이)에서 몸 옆을 가린다. front = 앞면이 보임(금테·나무판·잎 문장), 아니면 뒷면(어두운 판·가죽끈·감은 덩굴).
+function bigShield(put, Gp, d, front, fx, A, { W = 36, Hh = 52, lift = 10, ghost = false } = {}) {
+  const c = A.c, w = ghost ? [c[0], c[1], c[1], c[2]] : WOOD, cx = Gp[0], top = Gp[1] - lift - Hh;
+  const hwAt = y => { const t = (y - top) / Hh; if (t < 0 || t > 1) return 0; if (t < 0.06) return W / 2 - (0.06 - t) * 40; if (t < 0.55) return W / 2; const u = (t - 0.55) / 0.45; return W / 2 * Math.sqrt(Math.max(0, 1 - u * u)); };
+  const rim = ghost ? [c[0], c[1]] : front ? [c[1], c[2]] : [c[2], c[3]];
+  for (let y = Math.floor(top); y <= top + Hh; y++) {
+    const hw = hwAt(y + 0.5); if (hw <= 0.4) continue;
+    for (let x = Math.round(cx - hw); x < Math.round(cx + hw); x++) {
+      const dx = x + 0.5 - cx, ex = hw - Math.abs(dx), ey = y + 0.5 - top, edge = ex < 2.2 || ey < 2.2 || hwAt(y + 2.5) < Math.abs(dx) + 0.6;
+      const plank = Math.round(dx + 100) % 7 === 0;
+      const col = edge ? (dx < 0 || ey < 2.2 ? rim[0] : rim[1]) : front ? (plank ? w[2] : dx < 0 ? w[0] : w[1]) : (plank ? w[3] : w[2]);
+      put(x, y, col, d);
+    }
+  }
+  if (front) {   // 잎 문장 + 금 돌기
+    const ly = top + Hh * 0.44, g1 = ghost ? c[0] : '#8cd860', g2 = ghost ? c[1] : '#4a9a3a', g3 = ghost ? c[2] : '#24501e';
+    for (let y = -8; y <= 8; y++) { const hw = 4.6 * Math.cos(y / 8.6 * Math.PI / 2); for (let x = -Math.round(hw); x < Math.round(hw); x++) put(Math.round(cx + x), Math.round(ly + y), x * fx < 0 ? g1 : g2, d); }
+    for (let y = -7; y <= 7; y++) put(Math.round(cx) - (fx < 0 ? 1 : 0), Math.round(ly + y), g3, d);
+    disc((x, y, col) => put(x, y, col, d), cx, top + 5, 2.2, ghost ? c[0] : c[0]);
+  } else {   // 가죽끈 + 끈을 감아 쥔 덩굴(식물이 들고 있음)
+    const sy = Math.round(top + Hh * 0.4);
+    for (let x = Math.round(-W / 2 + 3); x < Math.round(W / 2 - 3); x++) { put(Math.round(cx + x), sy, ghost ? c[1] : '#7a5038', d); put(Math.round(cx + x), sy + 1, ghost ? c[2] : '#4a2e1e', d); }
+    for (let q = -2; q <= 2; q++) { put(Math.round(cx + q * 2 - fx * 3), sy - 1 + (q & 1), ghost ? c[0] : '#6ab848', d); put(Math.round(cx + q * 2 - fx * 3), sy + 2 - (q & 1), ghost ? c[1] : '#2e6a26', d); }
+  }
+}
+
+const WKIND = { w_slash: 'sword', w_thrust: 'sword', w_chop: 'axe', w_sweep: 'axe', w_shot: 'gun', w_burst: 'gun', w_snipe: 'gun', w_smash: 'hammer', w_spear: 'spear', w_flurry: 'dagger', w_bind: 'whip', w_reap: 'scythe', w_bash: 'shield' };
+const REST = { w_slash: -1.15, w_thrust: -1.0, w_chop: -1.0, w_sweep: -1.0, w_smash: -1.2, w_spear: -1.25, w_flurry: -0.9, w_reap: -1.35, w_bind: -1.0, w_bash: 0 };
+// 무기를 든 각(얼굴 오른쪽 기준, 0 = 앞 수평 · −π/2 = 위)의 열쇠 장. aim = 상대를 겨눈 각
+function swingKeys(kind, aim) {
+  const R = REST[kind];
+  switch (kind) {
+    case 'w_slash': return [[0, R], [6, R], [12, -2.6], [13, -0.3], [14, 0.7], [18, 0.7], [26, R]];
+    case 'w_chop': return [[0, R], [6, R], [12, -2.9], [13, -1.2], [14, 0.6], [19, 0.6], [27, R]];
+    case 'w_sweep': return [[0, R], [6, R], [12, -3.0], [13, -0.9], [14, 0.35], [19, 0.35], [27, R]];
+    case 'w_smash': return [[0, R], [6, R], [12, -2.5], [13, -1.0], [14, 0.45], [20, 0.45], [28, R]];
+    case 'w_reap': return [[0, R], [6, R], [12, -2.8], [13, -0.6], [14, 0.5], [19, 0.5], [27, R]];
+    case 'w_bind': return [[0, R], [8, R], [12, -2.4], [13, aim], [20, aim], [27, R]];
+    case 'w_shot': case 'w_burst': case 'w_snipe': return [[0, aim + 0.55], [6, aim + 0.55], [10, aim], [24, aim], [30, aim + 0.55]];
+    default: return [[0, R], [7, R], [11, aim], [21, aim], [28, R]];   // 찌르기류(검 찌르기·창·단검)
+  }
+}
+// 손을 무기 방향으로 밀고 당김(찌르기·방패 밀치기)
+const PUSH = {
+  w_thrust: [[0, 0], [9, 0], [12, -7], [13, 10], [16, 10], [21, 0]],
+  w_spear: [[0, 0], [9, 0], [12, -8], [13, 0]],
+  w_flurry: [[0, 0], [11, 0], [12, -3], [13, 7], [14, -2], [15, 7], [16, -2], [17, 7], [19, 0]],
+  w_bash: [[0, 0], [8, 0], [12, -4], [13, 10], [16, 10], [22, 0]],
+};
+// 맞는 자리에 내리치는 무기 그림자: 손잡이 = 대상 머리에서 (옆, 아래), 크기, 장(k)별 얼굴 오른쪽 기준 각
+const GHOST = {
+  w_chop: { at: [-22, 4], sc: 1.55, ang: { '-2': -2.3, '-1': -1.1, 0: 0.45, 1: 0.45, 2: 0.45 } },
+  w_smash: { at: [-34, 4], sc: 1.7, ang: { '-2': -2.2, '-1': -1.2, 0: -0.3, 1: -0.3, 2: -0.3 } },
+  w_reap: { at: [-30, 10], sc: 1.6, ang: { '-2': -2.6, '-1': -1.2, 0: 0.1, 1: 0.6 } },
+};
+
+function weaponFx(P, A, f, L, T, G, seed, S) {
+  const I = impactAt(A), c = A.c, w = A.w || WOOD, k = f - I, fx = S.fx || 1, R = S.Rh || 15, kind = A.kind, wk = WKIND[kind];
+  const H = [L[0] + fx * (R + 7), Math.min(L[1] + R + 9, (S.soilA ?? 1e9) - 10)];   // 손잡이 자리: 몸 옆(상대 쪽, 얼굴에 안 겹치게 머리 아래) · 흙보다 위
+  const aimF = Math.atan2(T[1] - H[1], Math.abs(T[0] - H[0])), toT = Math.atan2(T[1] - H[1], T[0] - H[0]), dist = Math.hypot(T[0] - H[0], T[1] - H[1]);
+  const shots = kind === 'w_burst' ? [13, 14, 15] : kind === 'w_snipe' ? [17] : [13];
+  const fa = ff => keyAt(swingKeys(kind, aimF), ff), a = angF(fx, fa(f));
+  const push = wk === 'gun' ? (shots.includes(f) ? -3.5 : shots.includes(f - 1) ? -1.5 : 0) : PUSH[kind] ? keyAt(PUSH[kind], f) : 0;
+  const g = wk === 'shield' ? ptA(H, toT, 4 + push) : ptA(H, a, push);
+  // 휘두름 잔상: 한 장에 0.6rad 넘게 돌면 손잡이 둘레에 무기 길이만큼 호
+  const reach = { sword: 30, axe: 26, hammer: 27, scythe: 30 }[wk], d0 = fa(f - 1), d1 = fa(f);
+  if (reach && Math.abs(d1 - d0) > 0.6) crescentF(fx, P.p, g[0], g[1], reach, Math.min(d0, d1), Math.max(d0, d1), 6, c[0], c[1]);
+  // 창은 찌르는 동안 자루가 상대까지 늘어남
+  const ext = kind === 'w_spear' ? keyAt([[12, 0], [13, 0.55], [14, 1], [15, 1], [16, 0.6], [17, 0.25], [18, 0]], f) : 0;
+  let tip = g;
+  if (wk === 'shield' && S.A0 && S.B0) {   // 큰 방패: 화분 옆 상대 쪽 바닥점에 서서(밀치기 때 앞으로) 깊이로 식물과 앞뒤를 가림
+    const ph = S.phiS ?? 0, r0 = (S.rf || 18) + 7, r = r0 + Math.max(-3, push * 0.9), Kk = S.K || 0.4384;
+    const Gp = [S.A0[0] + Math.cos(ph) * r, S.A0[1] + Math.sin(ph) * r * Kk], d = S.A0[1] + Math.sin(ph) * r0 * Kk;
+    bigShield(P.u || ((x, y, col) => P.o(x, y, col)), Gp, Math.round(d), S.B0[1] > S.A0[1], fx, A);
+  } else tip = drawWeapon(P.o, wk, g, a, fx, A, { len: 30 + Math.max(0, dist - 40) * ext, sc: wk === 'gun' ? 1.35 : 1 });
+  // 무기 그림자(맞는 자리)
+  const gh = GHOST[kind];
+  if (gh && gh.ang[k] !== undefined) drawWeapon(P.o, wk, [T[0] + gh.at[0] * fx, T[1] + gh.at[1]], angF(fx, gh.ang[k]), fx, A, { sc: gh.sc, ghost: true });
+  switch (kind) {
+    case 'w_slash': {   // 검 베기: 큰 초승달 베기 → 베인 자리 붉은 줄 + 피 방울(출혈 강화)
+      if (k === 0) crescentF(fx, P.o, T[0] - 6 * fx, T[1], 32, -2.4, 0.9, 7, c[0], c[1]);
+      if (k === 1) crescentF(fx, P.o, T[0] - 6 * fx, T[1], 33, -2.6, 1.1, 4.5, c[1], c[2]);
+      if (k === 2) crescentF(fx, P.o, T[0] - 6 * fx, T[1], 34, -2.6, 1.1, 2.4, c[2], c[2], u => Math.floor(u * 6) % 2 === 0);
+      if (k >= 1 && k < 10) for (const [x, y] of strokePx([[T[0] - 13 * fx, T[1] - 11], [T[0] + 13 * fx, T[1] + 9]])) if (k < 6 || (x + y) % 2) P.o(x, y, k < 3 ? A.blood[1] : A.blood[2]);
+      if (k >= 1 && k < 14) particles(P.p, burstParticles(seed, T[0], T[1], 12, 1.7, A.blood.slice(1), { g: 0.25, life: 13, up: 0.6, size: 2 }), k - 1);
+      break;
+    }
+    case 'w_thrust': {   // 검 찌르기: 칼끝에서 곧은 섬광 → 칼 그림자가 대상을 꿰뚫음 → 뒤로 빠지는 불꽃
+      if (f === 13) line(P.p, tip, ptA(T, toT, -6), c[0], 2);
+      if (k === 0 || k === 1) drawWeapon(P.o, 'sword', ptA(T, toT, 14 - 39), toT, fx, A, { sc: 1.3, ghost: true });
+      if (k === 0) starBurst(P.o, T[0], T[1], 3, 13, 8, c[0], c[1], 0.3);
+      if (k === 1) starBurst(P.p, T[0], T[1], 6, 15, 8, c[1], c[2], 0.6);
+      if (k >= 0 && k < 8) particles(P.p, burstParticles(seed, ...ptA(T, toT, 12), 9, 2.4, [c[0], c[1], c[2]], { g: 0.08, life: 8 }), k);
+      break;
+    }
+    case 'w_chop': {   // 도끼 내려찍기: 큰 도끼 그림자가 위에서 내리꽂힘(호) → 바닥 잔금 · 방어 파편(방어 깨기)
+      if (k === 0 || k === 1) crescentF(fx, P.p, T[0] + gh.at[0] * fx, T[1] + gh.at[1], 40, -1.1, 0.45, k ? 3 : 6, c[0], c[1]);
+      if (k >= 0 && k < 12 && S.B0) radialCracks(P.f, S.B0, S.rf + 1, S.K, seed + 5, k >= 7);
+      if (k >= 1 && k < 12) particles(P.p, burstParticles(seed + 9, T[0], T[1] + 4, 10, 2.2, ['#e8f4ff', '#a8c0e0', '#607898'], { g: 0.3, life: 11, up: 1.4, size: 2 }), k - 1);
+      break;
+    }
+    case 'w_sweep': {   // 도끼 휘두르기(범위): 대상 앞을 크게 휩쓰는 넓은 호 + 바람결
+      if (k >= 0 && k < 3) crescentF(fx, P.o, T[0] - 24 * fx, T[1] + 2, 42, -0.95, 0.95, [8, 5, 2.4][k], c[k ? 1 : 0], c[k < 2 ? 1 : 2], k === 2 ? u => Math.floor(u * 6) % 2 === 0 : undefined);
+      if (k >= 0 && k < 6) for (let q = 0; q < 4; q++) line(P.p, [T[0] + (10 + k * 3) * fx, T[1] - 15 + q * 9], [T[0] + (24 + k * 3) * fx, T[1] - 16 + q * 9], c[1]);
+      break;
+    }
+    case 'w_shot': case 'w_burst': case 'w_snipe': {   // 씨앗총: 총구 불꽃 + 씨앗 탄(꼬리) → 맞은 자리 폭발, 씨앗 껍질이 뒤로 튐 / 연사 = 3발 / 저격 = 붉은 조준선 뒤 굵은 한 발
+      const M = tip;
+      if (kind === 'w_snipe' && f >= 8 && f <= 16 && f % 2 === 0) { for (const [x, y] of strokePx([M, T])) if ((x + y) % 3 === 0) P.p(x, y, '#ff4a4a'); ringPx(P.p, T[0], T[1], 7, '#ff4a4a', q => Math.floor(q * 4 / Math.PI) % 2 === 0); }
+      shots.forEach((fs, q) => {
+        const t = f - fs, tg = [T[0] + (kind === 'w_burst' ? [-3, 3, 0][q] : 0), T[1] + (kind === 'w_burst' ? [-4, 2, 6][q] : 0)];
+        if (t === 0) { disc(P.o, M[0], M[1], kind === 'w_snipe' ? 5 : 3.5, c[1]); disc(P.o, M[0], M[1], kind === 'w_snipe' ? 3 : 2, c[0]); starBurst(P.p, M[0], M[1], 3, kind === 'w_snipe' ? 12 : 8, 6, c[0], c[2], 0.2); }
+        if (kind === 'w_snipe' && t === 0) line(P.o, M, tg, c[0], 2);
+        if (kind !== 'w_snipe' && (t === 0 || t === 1)) { const u = (t + 1) / 2, b = [M[0] + (tg[0] - M[0]) * u, M[1] + (tg[1] - M[1]) * u]; line(P.p, ptA(b, toT, -14), b, c[0]); disc(P.o, b[0], b[1], 2, c[1]); }
+        const kk = t - (kind === 'w_snipe' ? 1 : 2);
+        if (kk >= 0 && kk < 3) { disc(P.o, tg[0], tg[1], [4, 5.5, 3.5][kk], c[kk ? 2 : 1]); ringPx(P.o, tg[0], tg[1], 5 + kk * 3, c[1]); }
+        if (kk >= 0 && kk < 8) particles(P.p, burstParticles(seed + q * 3, tg[0], tg[1], 7, 2, [c[0], c[1], c[2]], { g: 0.15, life: 7 }), kk);
+        if (t >= 0 && t < 10) particles(P.p, [{ x: g[0] - 2 * fx, y: g[1] - 3, vx: -1.3 * fx, vy: -2.2, g: 0.4, life: 10, t0: 0, cols: [w[0], w[1]], size: 2 }], t);   // 씨앗 껍질
+      });
+      if (kind === 'w_snipe' && k >= 0 && k < 3) starBurst(P.o, T[0], T[1], 5, 17, 8, c[0], c[1], 0.4);
+      break;
+    }
+    case 'w_smash': {   // 망치 강타: 큰 망치 그림자가 머리 위로 내리찍음 → 별빛 + 바닥 충격 고리 → 머리 위 별 빙빙(기절)
+      if (k === 0 || k === 1) starBurst(P.p, T[0], T[1] - 12, 6, 15, 8, c[0], c[1], 0.2);
+      if (k >= 0 && k < 5 && S.B0) floorRing(P.f, S.B0, S.rf + 4 + k * 7, S.K, k < 3 ? c[0] : c[1], q => k < 3 || Math.floor(q * 3) % 2 === 0);
+      if (k >= 0 && k < 9) particles(P.p, burstParticles(seed, T[0], T[1] - 6, 10, 2.4, [c[0], c[1], c[2]], { g: 0.3, life: 9, up: 1 }), k);
+      break;
+    }
+    case 'w_spear': {   // 창 찌르기: 자루가 쭉 늘어나 대상을 찌름(긴 거리) → 불꽃 → 거둠
+      if (k >= 0 && k < 3) starBurst(P.o, T[0], T[1], 3, 12 - k * 2, 6, c[0], c[1], toT);
+      if (k >= 0 && k < 7) particles(P.p, burstParticles(seed, ...ptA(T, toT, 6), 8, 2.2, [c[0], c[1], c[2]], { g: 0.1, life: 7 }), k);
+      break;
+    }
+    case 'w_flurry': {   // 단검 연속 찌르기: 짧은 찌르기 셋(자리 바꿔) + 작은 X 자국 → 독 쌓임
+      [[-6, -6], [5, 2], [-2, 8]].forEach(([dx, dy], q) => { const t = f - (I - 2 + q), x = T[0] + dx, y = T[1] + dy; if (t === 0 || t === 1) { line(P.o, [x - 5, y - 5], [x + 5, y + 5], t ? c[1] : c[0]); line(P.o, [x + 5, y - 5], [x - 5, y + 5], t ? c[1] : c[0]); } if (t >= 0 && t < 5) particles(P.p, burstParticles(seed + q, x, y, 5, 1.8, [c[0], c[1]], { g: 0.1, life: 5 }), t); });
+      break;
+    }
+    case 'w_bind': {   // 덩굴 채찍: 쉴 땐 손잡이에서 늘어진 덩굴 → 뒤로 젖혔다 뻗어 → 대상 아랫몸을 고리 셋이 감아 조임(묶기)
+      const vc = A.c, low = [T[0], (T[1] + G) / 2 + 2];
+      if (f >= 13 && f <= 19) {
+        const e = Math.min(1, (f - 12) / 4), to = [tip[0] + (low[0] - tip[0]) * e, tip[1] + (low[1] - tip[1]) * e], mid = [(tip[0] + to[0]) / 2, Math.min(tip[1], to[1]) - 18 * e], pts = [];
+        for (let i = 0; i <= 24; i++) { const t = i / 24, u = 1 - t; pts.push([u * u * tip[0] + 2 * u * t * mid[0] + t * t * to[0], u * u * tip[1] + 2 * u * t * mid[1] + t * t * to[1]]); }
+        for (const [x, y] of strokePx(pts)) { P.o(x, y, vc[1]); P.o(x, y + 1, vc[2]); }
+      } else {   // 늘어진 덩굴(손잡이 끝 → 아래로 한 번 말림)
+        const pts = [tip, [tip[0] + fx * 5, tip[1] + 6], [tip[0] + fx * 3, tip[1] + 12], [tip[0] - fx * 1, tip[1] + 10], [tip[0], tip[1] + 7]];
+        for (const [x, y] of strokePx(pts)) { P.o(x, y, vc[1]); P.o(x + 1, y, vc[2]); }
+      }
+      if (k >= 0 && k < 6) { const r = 16 - k * 0.8; [-8, 0, 8].forEach(dy => ellipseRingPx(P.o, low[0], low[1] + dy, r, r * 0.32, vc[1], vc[3])); }
+      break;
+    }
+    case 'w_reap': {   // 낫 베어 넘기기(범위): 큰 낫 그림자가 대상을 가로지름 + 넓은 호 → 초록 빛이 공격 쪽으로(흡수)
+      if (k >= 0 && k < 3) crescentF(fx, P.o, T[0] - 30 * fx, T[1] + 4, 46, -0.7, 0.75, [7, 5, 2.6][k], c[k ? 1 : 0], c[k < 2 ? 1 : 2], k === 2 ? u => Math.floor(u * 6) % 2 === 0 : undefined);
+      if (k >= 2 && k < 14) for (let q = 0; q < 5; q++) { const t = (k - 2 - q) / 9; if (t < 0 || t > 1) continue; const x = T[0] + (L[0] - T[0]) * t, y = T[1] + (L[1] - T[1]) * t - Math.sin(Math.PI * t) * 14; disc(P.o, x, y, 1.6, q % 2 ? c[1] : '#a8ff90'); }
+      break;
+    }
+    case 'w_bash': {   // 방패 밀치기: 방패를 앞세워 밀고 들어감 → 방패 그림자가 대상 옆을 들이받음 → 밀림 물결 ))) → 내 둘레 방어 기운
+      if (k >= -1 && k <= 2) bigShield((x, y, col) => P.o(x, y, col), [T[0] - fx * [30, 19, 17, 17][k + 1], T[1] + 34], 0, true, fx, A, { ghost: true, W: 30, Hh: 44 });
+      if (k >= 0 && k < 5) for (let q = 0; q < 3; q++) crescentF(fx, P.p, T[0] + (6 + q * 5 + k * 2) * fx, T[1], 11 + q * 2, -0.8, 0.8, 1.3, c[0], c[1]);
+      break;
+    }
+  }
+}
+
 // 기술 효과(공격 → 대상). L = 공격 쪽 머리, T = 대상 머리, G = 대상 흙 높이(무대 y),
 // S = 무대: D(L→T 단위), fx(상대가 오른쪽이면 +1), K, A0·B0(공격·대상 화분 굽 가운데), S0·E0(바닥 길 출발·도착), phiE(도착 각), rf(굽 반지름)
 export function skillFx(P, A, f, L, T, G, seed = 1, S = { D: [1, 0], fx: 1 }) {
+  if (A.kind.startsWith('w_')) return weaponFx(P, A, f, L, T, G, seed, S);
   const I = impactAt(A), c = A.c, k = f - I, fx = S.fx, D = S.D;
   switch (A.kind) {
     case 'slash': {   // 장미 칼날 잎 베기: 초승달(흰 속·연두 겉) → 꽉 찬 베기 → 조각 → 흩어짐 + 꽃잎 터짐
@@ -401,9 +685,15 @@ export function statusFx(P, A, f, T, G, pts, L, seed = 1) {
     case 'swirl': { const n = 14, rot = k * 0.5; for (let i = 0; i < n; i++) { if (i % 4 === 3 || (fade && i % 2)) continue; const a = rot + i / n * Math.PI * 2; disc(P.o, T[0] + Math.cos(a) * 16, T[1] - 8 + Math.sin(a) * 5, 0.9, i % 3 ? c[1] : c[0]); } break; }
     case 'spore': for (let i = 0; i < 8; i++) { if (fade && i % 2) continue; const a = k * 0.18 + i * 0.785; disc(P.o, T[0] + Math.cos(a) * 13, T[1] - 4 + Math.sin(a * 1.3) * 7, 1, i % 2 ? c[0] : c[1]); } break;
     case 'poison': {   // 독: 대상에서 보라 거품이 오르고 머리 위 독 칸 눈금이 1 → 2로 쌓임
-      for (let q = 0; q < 3; q++) { const t = (k + q * 4) % 12, x = T[0] - 8 + q * 8, y = T[1] + 6 - t * 1.4; if (!(fade && q)) { disc(P.o, x, y, 1.2, c[1]); P.p(Math.floor(x), Math.floor(y) - 1, A.fizz || c[0]); } }
-      const n = k < 6 ? 1 : 2; for (let i = 0; i < n; i++) { disc(P.o, T[0] - 4 + i * 6, T[1] - 24, 2, c[2]); P.o(Math.floor(T[0] - 5 + i * 6), Math.floor(T[1] - 25), c[0]); }
+      const tc = A.tox || c;
+      for (let q = 0; q < 3; q++) { const t = (k + q * 4) % 12, x = T[0] - 8 + q * 8, y = T[1] + 6 - t * 1.4; if (!(fade && q)) { disc(P.o, x, y, 1.2, tc[1]); P.p(Math.floor(x), Math.floor(y) - 1, A.fizz || tc[0]); } }
+      const n = k < 6 ? 1 : 2; for (let i = 0; i < n; i++) { disc(P.o, T[0] - 4 + i * 6, T[1] - 24, 2, tc[2]); P.o(Math.floor(T[0] - 5 + i * 6), Math.floor(T[1] - 25), tc[0]); }
       break;
     }
+    case 'bleed': pts.slice(0, 3).forEach(([x, y], q) => { const t = (k + q * 5) % 11, yy = y + 6 + t * 1.8; if (yy < G && !(fade && q)) { const b = A.blood || ['#ffd0d0', '#ff5a5a', '#c02838', '#5a0c18']; disc(P.o, x + q * 4 - 4, yy, 1.2, b[2]); P.p(Math.floor(x + q * 4 - 4), Math.floor(yy) - 1, b[1]); } }); break;   // 출혈: 붉은 방울이 흘러내림
+    case 'stun': if (!fade || k % 2) for (let i = 0; i < 3; i++) { const a = k * 0.45 + i * 2.094, x = T[0] + Math.cos(a) * 12, y = T[1] - 20 + Math.sin(a) * 3.5; starBurst(P.o, x, y, 0, 2.6, 4, '#fff6a0', '#ffd040', 0.4); } break;   // 기절: 머리 위 별 셋이 빙빙
+    case 'bind': { const cy = (T[1] + G) / 2 + 2; if (!(fade && k % 2)) [-8, 0, 8].forEach(dy => ellipseRingPx(P.o, T[0], cy + dy, 11.5, 3.7, c[1], c[3])); break; }   // 묶기: 아랫몸 덩굴 고리가 남음
+    case 'guardbreak': if (k < 10) for (let q = 0; q < 4; q++) { const t = k + q * 2, x = T[0] - 12 + q * 8 + Math.sin(t) * 2, y = T[1] - 6 + t * 2.2; if (y < G) { P.o(Math.floor(x), Math.floor(y), '#c8dcf8'); P.o(Math.floor(x) + 1, Math.floor(y) + 1, '#7890b8'); } } break;   // 방어 깨짐: 푸른 파편이 떨어짐
+    case 'guardself': if (k < 12 && !(k > 8 && k % 2)) ringPx(P.o, L[0], L[1] + 4, 18 + (k % 3), c[1], a => Math.floor(a * 6 / Math.PI + k) % 3 !== 0, 1.25, 1); break;   // 방패: 내 둘레 방어 기운
   }
 }
