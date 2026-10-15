@@ -38,7 +38,12 @@ function part(g, im, sx, sy, w, h, x, y, flip) {
 // 화분에 심은 큰 판 식물: (bx, by) = 화분 굽이 바닥에 닿는 점. t = 시각(ms), phase = 숨 엇갈림(ms), flip = 좌우 뒤집기(상대), flash = 맞은 순간 하얗게
 export function drawBig(g, key, potKey, bx, by, opt = {}) {
   const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra;
-  if (!P || !pot) return false;
+  if (!pot) return false;
+  if (!P) {   // 빈 화분
+    const x = Math.round(bx - 48), y = Math.round(by - 96.55);
+    part(g, pot.back, 0, 0, 96, 112, x, y, false); part(g, pot.front, 0, 0, 96, 112, x, y, false);
+    return !key;
+  }
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   let f = Math.floor(t / m.frameMs) % m.frames;
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;

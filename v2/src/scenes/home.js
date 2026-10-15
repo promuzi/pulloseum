@@ -1,9 +1,9 @@
 import { C, ELEMENT, TYPE } from '../art/palette.js';
-import { room, stand } from '../art/bg.js';
+import { room1, stand1 } from '../art/bg.js';
 import { hud, navBar, button, bar, chip, rbox, fmt } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { plantStack, bob } from '../art/sprites.js';
-import { stage, gradeBadge, STAT_DEF } from './common.js';
+import { drawBig } from '../art/sprites.js';
+import { gradeBadge, STAT_DEF } from './common.js';
 import { STAGE_NAME } from '../data/mock.js';
 
 export const home = {
@@ -12,15 +12,12 @@ export const home = {
     const { g, W, H, t, state: s } = app;
     const p = this.empty ? null : s.plants[s.active];
     g.rect(0, 0, W, H, '#2b2238');
-    // 무대(2배 도트): 온실 함교 + 받침 + 식물
+    // 무대(1배 도트 — 2026-10-15 ①안): 온실 함교 + 둥근 탁자 + 큰 판 식물(숨쉬기·깜빡임 시트)
     const SY = 28, SH = 300;
-    stage(app, 0, SY, W, SH, (w2, w, h) => {
-      room(w2, w, h, t);
-      const cx = Math.floor(w / 2), topY = h - 38;
-      stand(w2, cx, topY);
-      if (p) plantStack(w2, p.key, p.pot, cx - 24, topY - 56, { bob: bob(t) });
-      else plantStack(w2, null, 'pot_terra', cx - 24, topY - 56);
-    });
+    room1(g, 0, SY, W, SH, t);
+    const mid = Math.floor(W / 2), topY = SY + 226;
+    stand1(g, mid, topY);
+    drawBig(g, p ? p.key : null, p ? p.pot : 'pot_terra', mid, topY, { t });
     hud(app, s);
     // 오른쪽 둥근 버튼: 가방·도감
     const sideBtn = (id, ic, label, y, scene) => {

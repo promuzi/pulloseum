@@ -30,8 +30,8 @@ export function planet(g, cx, cy, r, ramp, opt = {}) {
     const nx = dx / r, ny = dy / r, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
     let L = (-0.55 * nx - 0.6 * ny + 0.58 * nz); // 빛 방향
     L = L * 0.5 + 0.5; // 0~1
-    // 띠 무늬(가스 행성)
-    if (opt.bands) L += Math.sin((dy + cy) * 0.9 + dx * 0.15) * 0.06;
+    // 띠 무늬(가스 행성) — opt.k = 띠 촘촘함 배율(1배 무대에서 큰 행성은 0.5)
+    if (opt.bands) L += Math.sin(((dy + cy) * 0.9 + dx * 0.15) * (opt.k || 1)) * 0.06;
     const X = cx + dx, Y = cy + dy;
     const lv = L * 4.2; let i = Math.floor(lv); const fr = lv - i;
     if (fr > 0.5 && ((X + Y) & 1)) i++; // 경계 디더
@@ -50,7 +50,7 @@ export function planet(g, cx, cy, r, ramp, opt = {}) {
 }
 
 // 우주 바탕: 위에서 아래로 짙은 보라→남색 띠 + 성운 디더 + 별
-export function space(g, x, y, w, h, t, seed = 11) {
+export function space(g, x, y, w, h, t, seed = 11, density = 0.014) {
   g.vgrad(x, y, w, h, ['#1f1828', C.ink, '#3a2a48', C.dusk, '#2e2a4a', C.night]);
   // 성운 얼룩 두 개
   const R = rng(seed + 3);
@@ -64,7 +64,22 @@ export function space(g, x, y, w, h, t, seed = 11) {
       if (((X * 7 + Y * 13) & 15) < lvl) g.px(X, Y, col);
     }
   }
-  stars(g, x, y, w, h, t, seed, 0.014);
+  if (density) stars(g, x, y, w, h, t, seed, density);
+}
+// 타이틀 우주 바탕(1배): 성운·별·행성을 한 번 그려 둔다(큰 행성은 칸마다 명암이라 매 장 그리면 무거움)
+const titleCache = new Map();
+export function titleBg1(g, w, h) {
+  const key = w + 'x' + h;
+  let L = titleCache.get(key);
+  if (!L) {
+    L = layer(w, h);
+    space(L.g, 0, 0, w, h, 0, 11, 0.004);
+    planet(L.g, 12, h - 44, 92, 'water', { bands: true, k: 0.5 });
+    planet(L.g, w - 44, 108, 18, 'earth', { ring: true, ringCol: '#ab947a' });
+    planet(L.g, 56, 60, 6, 'wind');
+    titleCache.set(key, L);
+  }
+  g.img(L.cv, 0, 0);
 }
 
 // ── 온실 함교(홈 무대). 반해상도 층에 그린다(화면에선 2배) ──
@@ -214,6 +229,84 @@ function drawArena1(g, w, h) {
   const ry = Math.round(108 * FLOOR_K), cy = Math.round(fy + (h - fy) * 0.5);
   g.ellipseRing(Math.round(cx), cy, 108, ry, '#625565'); g.ellipseRing(Math.round(cx), cy, 107, ry - 1, '#625565');
 }
+// ── 온실 함교(홈 무대) 1배 — 위 room(2배 층용)을 1배 칸으로 다시 그림. w·h = 1배 크기 ──
+export function room1(g, x0, y0, w, h, t) {
+  g.clip(x0, y0, w, h, () => {
+    const X = x => x0 + x, Y = y => y0 + y;
+    g.rect(X(0), Y(0), w, h, '#2b2238');
+    const PW = 44;   // 뒷벽 금속판(세로 이음새·리벳)
+    for (let px = -8; px < w; px += PW) {
+      g.rect(X(px), Y(0), PW - 2, h, C.shade);
+      g.rect(X(px), Y(0), 1, h, '#4a3d58');
+      g.rect(X(px + PW - 3), Y(0), 1, h, '#2b2238');
+      for (let ry = 28; ry < h; ry += 40) { g.rect(X(px + 6), Y(ry), 2, 2, C.slate); g.rect(X(px + PW - 9), Y(ry), 2, 2, C.slate); }
+    }
+    g.rect(X(0), Y(0), w, 12, C.ink); g.rect(X(0), Y(2), w, 8, '#3a2f45'); g.rect(X(0), Y(2), w, 1, '#4a3d58');   // 위 들보
+    for (let x = 8; x < w; x += 20) g.rect(X(x), Y(6), 2, 2, C.slate);
+    // 둥근 관측창
+    const cx = Math.floor(w / 2), cy = 84, r = 64;
+    g.disc(X(cx), Y(cy), r + 6, C.ink); g.disc(X(cx), Y(cy), r + 4, '#7f708a'); g.disc(X(cx), Y(cy), r + 2, '#4a3d58'); g.disc(X(cx), Y(cy), r, C.ink);
+    for (let dy = -r + 2; dy <= r - 2; dy++) { const hw = Math.floor(Math.sqrt((r - 2) ** 2 - dy * dy)); g.rect(X(cx - hw), Y(cy + dy), hw * 2 + 1, 1, dy < -20 ? '#1f1828' : dy < 20 ? '#2a1f33' : '#352845'); }
+    const R = rng(21);
+    for (let i = 0; i < 150; i++) { const a = R() * 6.28, d = R() * (r - 4), tw = Math.sin(t / 500 + i); g.px(X(Math.round(cx + Math.cos(a) * d)), Y(Math.round(cy + Math.sin(a) * d)), tw > 0.6 ? C.white : tw > -0.3 ? C.mute : C.slate); }
+    for (let i = -36; i <= 36; i++) { const yy = Math.round(cy + 16 + i * 0.45 + Math.sin(i / 6) * 4); if ((i + 80) % 5) g.rect(X(cx + i), Y(yy), 1, 2, '#45293f'); }   // 성운 줄기
+    planet(g, X(cx - 28), Y(cy - 26), 16, 'ice');
+    planet(g, X(cx + 34), Y(cy - 38), 6, 'earth');
+    g.rect(X(cx - r + 2), Y(cy), (r - 2) * 2, 1, '#4a3d58'); g.rect(X(cx), Y(cy - r + 2), 1, (r - 2) * 2, '#4a3d58');   // 창살
+    for (let k = 0; k < 12; k++) g.px(X(cx - 40 + k), Y(cy - 40 + k), '#625565');   // 반사광
+    for (let a = 0; a < 8; a++) { const rad = a * Math.PI / 4; g.rect(X(Math.round(cx + Math.cos(rad) * (r + 4))) - 1, Y(Math.round(cy + Math.sin(rad) * (r + 4))) - 1, 2, 2, C.mist); }
+    // 왼쪽 선반 + 작은 화분 둘, 오른쪽 계기판
+    const shY = 140;
+    g.rect(X(8), Y(shY), 48, 3, C.ink); g.rect(X(8), Y(shY), 48, 1, '#966c6c');
+    for (const [sx, sy, leaf] of [[16, shY - 12, C.green], [36, shY - 14, '#a884f3']]) {
+      g.rect(X(sx), Y(sy + 6), 14, 8, C.ink); g.rect(X(sx + 1), Y(sy + 6), 12, 7, '#cd683d'); g.rect(X(sx + 1), Y(sy + 6), 12, 2, '#e6904e');
+      for (const [lx, ly] of [[6, 4], [4, 2], [8, 0], [10, 2], [5, 3], [9, 1]]) g.rect(X(sx + lx), Y(sy + ly), 2, 2, leaf);
+    }
+    const mx = w - 52, my = 120;
+    g.rect(X(mx), Y(my), 40, 28, C.ink); g.rect(X(mx + 2), Y(my + 2), 36, 24, '#1b3b35');
+    for (let i = 0; i < 32; i++) g.px(X(mx + 4 + i), Y(my + 14 + Math.round(Math.sin(i * 0.45 + t / 300) * 6)), '#30e1b9');
+    g.rect(X(mx + 33), Y(my + 4), 2, 2, Math.floor(t / 400) % 2 ? C.red : '#6e2727');
+    // 바닥(원근 줄) + 받침대 뒤 바닥 빛
+    const fy = h - 68;
+    g.rect(X(0), Y(fy), w, h - fy, '#3a2f45'); g.rect(X(0), Y(fy), w, 1, '#7f708a'); g.rect(X(0), Y(fy + 1), w, 1, C.ink);
+    for (let k = 0; k < 4; k++) { const yy = fy + 10 + k * 14 + 2 * k * k; if (yy < h) g.rect(X(0), Y(yy), w, 1, '#2b2238'); }
+    for (let i = -6; i <= 6; i++) g.line(X(cx + i * 12), Y(fy + 4), X(cx + i * 44), Y(h), '#2b2238');
+    g.ellipse(X(cx), Y(fy + 36), 60, Math.round(60 * FLOOR_K * 0.6), '#45293f');
+    // 천장 성장등
+    g.rect(X(cx - 26), Y(12), 52, 6, C.ink); g.rect(X(cx - 24), Y(12), 48, 4, '#7f708a'); g.rect(X(cx - 18), Y(16), 36, 2, '#fbff86');
+    // 양 모서리 늘어진 덩굴
+    for (const [vx, len, ph] of [[12, 124, 0], [w - 14, 96, 2]]) {
+      const sway = Math.round(Math.sin(t / 900 + ph)) * 2;
+      for (let y = 0; y < len; y++) {
+        const xx = vx + Math.round(Math.sin((y / 2 + ph * 7) / 6) * 3) + (y > len / 2 ? sway : 0);
+        g.rect(X(xx), Y(y), 2, 1, '#239063');
+        if (y % 10 === 0) { const d = (y / 10) % 2 ? 1 : -1; g.rect(X(xx + d * 3), Y(y - 2), 4, 4, '#1ebc73'); g.rect(X(xx + d * 5), Y(y - 2), 2, 2, '#91db69'); }
+      }
+    }
+  });
+}
+// 둥근 나무 탁자(홈 무대 화분 받침, 1배): 윗면 = 바닥 각도의 타원, 앞 테 두께 + 다리 셋 + 그림자. (cx, cy) = 윗면 가운데(화분 굽이 닿는 점)
+export function stand1(g, cx, cy, rx = 46) {
+  const ry = Math.round(rx * FLOOR_K);
+  g.dither(cx - rx - 4, cy + ry + 28, rx * 2 + 8, 4, C.ink, 10);   // 바닥 그림자
+  for (const lx of [cx - Math.round(rx * 0.62), cx + Math.round(rx * 0.62) - 4, cx - 2]) { g.rect(lx, cy + 4, 5, ry + 24 - (lx === cx - 2 ? 4 : 0), C.ink); g.rect(lx + 1, cy + 4, 2, ry + 23 - (lx === cx - 2 ? 4 : 0), '#966c6c'); }   // 다리
+  g.ellipse(cx, cy + 5, rx, ry, C.ink);          // 앞 테 두께(아래)
+  g.ellipse(cx, cy + 4, rx - 1, ry, '#694f62');
+  g.ellipse(cx, cy, rx, ry, C.ink);              // 윗면
+  g.ellipse(cx, cy, rx - 1, ry - 1, '#ab947a');
+  g.ellipse(cx - 3, cy - 1, rx - 8, ry - 4, '#c7b8a0');
+  for (let i = -2; i <= 2; i++) g.rect(cx - rx + 10 + (i + 2) * Math.round((rx * 2 - 20) / 5), cy - 1 + (i % 2), 6, 1, '#ab947a');   // 나뭇결
+}
+// 떠 있는 소행성 받침(타이틀, 1배): (cx, cy) = 윗면 가운데
+export function asteroid1(g, cx, cy) {
+  const R = rng(5);
+  g.ellipse(cx, cy + 6, 60, 14, C.ink); g.ellipse(cx, cy + 4, 58, 12, '#625565'); g.ellipse(cx, cy, 56, Math.round(56 * FLOOR_K * 0.45), '#7f708a');
+  g.ellipse(cx - 6, cy - 2, 44, 6, '#9babb2');
+  for (let i = 0; i < 18; i++) g.rect(cx - 44 + Math.floor(R() * 88), cy + 3 + Math.floor(R() * 6), 2, 1, '#625565');
+  for (let k = 0; k < 4; k++) { const w = 44 - k * 10, y = cy + 14 + k * 6, x = cx - w / 2 + (k % 2) * 2; g.rect(x, y, w, 6, k % 2 ? '#3e3546' : '#45293f'); g.rect(x, y, 1, 6, C.ink); g.rect(x + w - 1, y, 1, 6, C.ink); }   // 아래 바위 뿌리
+  g.rect(cx - 4, cy + 38, 8, 3, C.ink);
+}
+
 // 받침 원판(1배): 화분 굽이 닿는 점 (cx, cy), 가로 반지름 rx — 세로는 바닥 각도대로
 export function pad1(g, cx, cy, rx, glow) {
   const ry = Math.round(rx * FLOOR_K);

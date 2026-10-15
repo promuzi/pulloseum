@@ -1,9 +1,9 @@
 import { C, ELEMENT, TYPE } from '../art/palette.js';
-import { plainBg, stand, pad } from '../art/bg.js';
+import { plainBg, pad1 } from '../art/bg.js';
 import { panel, rbox, rrect, button, bar, chip, tabs, fmt } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { plantStack, bob } from '../art/sprites.js';
-import { header, stage, gradeBadge, STAT_DEF } from './common.js';
+import { drawBig } from '../art/sprites.js';
+import { header, gradeBadge, STAT_DEF } from './common.js';
 import { STAGE_NAME, CAT_ICON, CAT_NAME } from '../data/mock.js';
 
 export const plant = {
@@ -14,13 +14,12 @@ export const plant = {
     plainBg(g, W, H, t);
     header(app, p.name, { right: '' });
     g.img(icon('pencil'), 36 + g.textW(p.name, 'head') + 6, 11);
-    // 초상(2배 무대)
+    // 초상(1배 도트 — 2026-10-15 ①안): 받침 + 큰 판 식물
     panel(g, 8, 38, 106, 124, 'dark');
-    stage(app, 10, 40, 102, 120, (st, w, h) => {
-      st.rect(0, 0, w, h, '#2b2238');
-      const cx = Math.floor(w / 2);
-      pad(st, cx, h - 4, 20, 4, null);
-      plantStack(st, p.key, p.pot, cx - 24, h - 58, { bob: bob(t) });
+    g.clip(10, 40, 102, 120, () => {
+      g.rect(10, 40, 102, 120, '#2b2238');
+      pad1(g, 61, 151, 40);
+      drawBig(g, p.key, p.pot, 61, 151, { t });
     });
     // 오른쪽 정보
     const ix = 122;

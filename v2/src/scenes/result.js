@@ -1,9 +1,9 @@
 import { C } from '../art/palette.js';
-import { arena, pad } from '../art/bg.js';
+import { arena1, pad1 } from '../art/bg.js';
 import { panel, rbox, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { plantStack, bob } from '../art/sprites.js';
-import { stage, bigTitle } from './common.js';
+import { drawBig } from '../art/sprites.js';
+import { bigTitle } from './common.js';
 
 export const result = {
   enter(p) { this.win = p.win !== false && p.win !== 'false'; },
@@ -11,24 +11,25 @@ export const result = {
     const { g, W, H, t } = app;
     const win = this.win;
     g.rect(0, 0, W, H, '#2b2238');
-    // 무대: 경기장을 어둡게 깔고, 이긴 식물 뒤로 빛살
-    stage(app, 0, 0, W, 340, (s, w, h) => {
-      arena(s, w, h, t);
-      s.alpha(0.72, () => s.rect(0, 0, w, h, '#1f1828'));
-      const cx = Math.floor(w / 2), cy = 118;
+    // 무대(1배 도트 — 2026-10-15 ①안): 경기장을 어둡게 깔고, 이긴 식물 뒤로 빛살
+    const SH = 340;
+    g.clip(0, 0, W, SH, () => {
+      arena1(g, 0, 0, W, SH, t);
+      g.alpha(0.72, () => g.rect(0, 0, W, SH, '#1f1828'));
+      const cx = Math.floor(W / 2), cy = 240;
       if (win) {
         const n = 14, rot = t / 4000;
         for (let i = 0; i < n; i++) {
           const a0 = rot + i * (Math.PI * 2 / n), a1 = a0 + Math.PI / n;
-          s.poly([[cx, cy - 30], [cx + Math.cos(a0) * 120, cy - 30 + Math.sin(a0) * 120], [cx + Math.cos(a1) * 120, cy - 30 + Math.sin(a1) * 120]], i % 2 ? '#352845' : '#3e2a4d');
+          g.poly([[cx, cy - 64], [cx + Math.cos(a0) * 240, cy - 64 + Math.sin(a0) * 240], [cx + Math.cos(a1) * 240, cy - 64 + Math.sin(a1) * 240]], i % 2 ? '#352845' : '#3e2a4d');
         }
       }
       // 아래로 갈수록 바탕색으로 녹아드는 띠
-      s.vgrad(0, h - 26, w, 26, ['#2b2238']);
-      s.dither(0, h - 40, w, 14, '#2b2238', 8);
-      pad(s, cx, cy + 2, 26, 7, win ? C.gold : C.slate);
-      plantStack(s, 'flower_grass', 'pot_terra', cx - 24, cy - 52, { bob: bob(t) });
-      if (win) for (let i = 0; i < 12; i++) { const a = t / 700 + i * 0.52, r = 32 + (i % 3) * 7; s.px(Math.round(cx + Math.cos(a) * r), Math.round(cy - 30 + Math.sin(a) * r * 0.7), i % 2 ? C.gold3 : C.white); }
+      g.vgrad(0, SH - 52, W, 52, ['#2b2238']);
+      g.dither(0, SH - 80, W, 28, '#2b2238', 8);
+      pad1(g, cx, cy, 52, win ? C.gold : C.slate);
+      drawBig(g, 'flower_grass', 'pot_terra', cx, cy, { t });
+      if (win) for (let i = 0; i < 12; i++) { const a = t / 700 + i * 0.52, r = 64 + (i % 3) * 14; g.rect(Math.round(cx + Math.cos(a) * r), Math.round(cy - 64 + Math.sin(a) * r * 0.7), 2, 2, i % 2 ? C.gold3 : C.white); }
     });
     // 제목 + 진행
     bigTitle(g, win ? '승리' : '패배', W / 2, 30, Object.assign({ font: 'huge' }, win ? { top: C.gold3, mid: C.gold, low: C.gold1, shadow: '#9e4539' } : { top: C.mist, mid: C.mute, low: C.slate2, shadow: C.shade }));
