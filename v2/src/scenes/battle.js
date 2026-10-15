@@ -1,4 +1,5 @@
 import { arena1 } from '../art/bg.js';
+import { arenaLife } from '../art/arenaLife.js';
 import { icon, tinted } from '../art/icons.js';
 import { drawBig, drawBigPose, drawPortrait, BGIMG } from '../art/sprites.js';
 import { T, plate, msgBox, btnBody, tbar, tpips, padV, venueOf } from '../art/theme.js';
@@ -124,7 +125,7 @@ export const battle = {
         if (st) this.startStep(st, t);
       }
       if (!st) this.finishTurn(app);
-    } else if (v.phase === 'over' && !v.leaving && t - v.overT0 > 1700) { v.leaving = true; app.go('result', { win: this.B.over === 'win', venue: T.key }); }   // 한 번만(매 장 부르면 전환이 계속 처음부터)
+    } else if (v.phase === 'over' && !v.leaving && t - v.overT0 > 1700) { v.leaving = true; app.go('result', { win: this.B.over === 'win', venue: T.key }, 'shutter'); }   // 한 번만(매 장 부르면 전환이 계속 처음부터)
     for (const k of ['me', 'foe']) { const d = v.hp[k] - v.show[k]; v.show[k] += Math.abs(d) < 0.6 ? d : d * 0.18; }
     v.pops = v.pops.filter(p => t - p.t0 < 1100);
   },
@@ -160,6 +161,7 @@ export const battle = {
       if (fr) c.translate(fr.cam[0], fr.cam[1]);
       const bg = BGIMG['arena_' + T.key];
       if (bg) g.img(bg, 0, AY); else arena1(g, 0, AY, W, AH, t);
+      if (bg && T.key === 'colosseum') arenaLife(g, bg, 0, AY, t);   // 돔 너머 비행체·별·관중 불빛
       padV(g, EX, EY, 40, false);
       padV(g, PX, PY, 42, true);
       if (fr) { c.drawImage(boardCanvas('floor'), 0, AY); c.drawImage(boardCanvas('back'), 0, AY); }
@@ -189,7 +191,7 @@ export const battle = {
     const fp = app.input.isPressed('bt_flag');
     btnBody(g, W - 31, 3, 26, 18, T.btn.second, fp);
     g.img(icon('flag'), W - 24, 5 + (fp ? 1 : 0));
-    app.input.hit('bt_flag', W - 31, 3, 26, 18, () => app.go('home'), 6);
+    app.input.hit('bt_flag', W - 31, 3, 26, 18, () => app.go('home', {}, 'shutter'), 6);
     // 체력판
     infoBox(app, 6, AY + 122, B.foe, v.show.foe, v.en.foe, false);   // 상대 판 = 왼쪽 빈 바닥 위(뒤 벽 가운데 통창·관중석을 가리지 않게)
     infoBox(app, W - 146, AY + AH - 62, B.me, v.show.me, v.en.me, true);

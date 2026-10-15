@@ -9,7 +9,8 @@ import { Img } from './engine.mjs';
 const here = dirname(fileURLToPath(import.meta.url)), K = 0.4384;
 const mode = process.argv[2] || 'arena';
 const im = new Img(1024, 1536, '#8a8a8a');
-const S = mode === 'arena' ? 1024 / 270 : 1536 / 600, OX = mode === 'arena' ? 0 : (1024 - 270 * S) / 2;
+const arenaLike = mode === 'arena' || mode === 'colosseum';
+const S = arenaLike ? 1024 / 270 : 1536 / 600, OX = arenaLike ? 0 : (1024 - 270 * S) / 2;
 const P = (x, y) => [Math.round(OX + x * S), Math.round(y * S)];
 const set = (x, y, c) => { if (x >= 0 && y >= 0 && x < 1024 && y < 1536) im.set(x, y, c); };
 const box = (x, y, w, h, c) => { const [x0, y0] = P(x, y), [x1, y1] = P(x + w, y + h); for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) set(xx, yy, c); };
@@ -25,6 +26,16 @@ if (mode === 'arena') {
   ring(135, 226, 112, 112 * K, '#7a7a7a'); ring(135, 226, 56, 56 * K, '#7a7a7a');
   ring(76, 302, 42, 42 * K, '#e02020', 14, 3); ring(194, 142, 40, 40 * K, '#e02020', 14, 3);
   rect(6, 6, 132, 60, '#2050e0'); rect(132, 290, 132, 46, '#2050e0');
+  box(0, 348, 270, 405 - 348, '#7a4a9a');
+} else if (mode === 'colosseum') {   // 콜로세움(2026-10-15 사용자 "거대한 콜로세움, 흙 바닥, 관중석 밖은 우주, 투명한 돔, 다양한 종족, 떠다니는 비행체"):
+  //  위 = 투명한 돔 너머 우주(넓게 — 게임이 비행체를 띄움) · 관중석 다섯 줄 · 낮은 벽 · 흙 바닥, 체력판 자리 = 지금 전투 화면(상대 왼쪽 6,122 · 나 오른쪽 124,286)
+  box(0, 0, 270, 64, '#1c2440');                       // 돔 너머 우주
+  for (let r = 0; r < 5; r++) box(0, 58 + r * 12, 270, 12, r % 2 ? '#c87a3a' : '#e09a52');   // 관중석 다섯 줄
+  box(0, 118, 270, 10, '#5a5a62');                     // 낮은 벽
+  box(0, 128, 270, 405 - 128, '#b49a78');              // 흙 바닥
+  ring(135, 226, 112, 112 * K, '#8a7458'); ring(135, 226, 56, 56 * K, '#8a7458');
+  ring(76, 302, 42, 42 * K, '#e02020', 14, 3); ring(194, 142, 40, 40 * K, '#e02020', 14, 3);
+  rect(6, 122, 140, 64, '#2050e0'); rect(124, 286, 140, 56, '#2050e0');
   box(0, 348, 270, 405 - 348, '#7a4a9a');
 } else if (mode === 'title') {   // 밤하늘 + 떠 있는 섬(윗면 = 빨간 타원, 식물은 게임이 가운데 세움) · 위 = 제목 글자 · 아래 = 단추 둘
   box(0, 0, 270, 600, '#26305a');

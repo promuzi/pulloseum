@@ -58,7 +58,7 @@ export function smallCanvas(key, potKey = 'pot_terra') {
 
 // ── 장소 배경(코덱스 그림 → tools/pixel/big/bgconv.mjs 로 정확한 칸 도트) — assets/v2/bg/<이름>.png ──
 export const BGIMG = {};
-export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'home_loft', 'home_loft_dim', 'nursery_garden', 'nursery_farm', 'nursery_lift'];
+export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'home_loft', 'home_loft_dim', 'nursery_garden', 'nursery_farm', 'nursery_lift', 'arena_colosseum'];
 export const BGMETA = {};   // 그림에 딸린 자리 정보(json) — 스마트팜 식물 자리 등
 const BG_META_NAMES = ['nursery_farm', 'home_loft', 'nursery_lift'];
 export async function loadBg(base = '../assets/v2/bg/') {

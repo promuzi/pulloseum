@@ -174,6 +174,13 @@ THEMES.loft = {
   nav: { bg: '#212b3c', bg2: '#283347', top: '#121a26', sep: '#3a4250', icon: '#829bb7', dim: '#4a5568', on: '#f0be7d', onLo: '#a8743a', badge: '#ff8a6a' },
 };
 
+// 콜로세움(2026-10-15 사용자 "전투는 거대한 콜로세움 — 흙 바닥, 관중석 밖은 우주, 투명한 돔, 다양한 종족, 떠다니는 비행체"):
+//  대회 기본 경기장. UI 는 홈(코덱스 원형 방)과 같은 푸른 홀로그램 판 + 주황 단추, 받침 = 모래색 돌. 그림 = concept/ui/arena_colosseum.png → bgconv
+THEMES.colosseum = {
+  ...THEMES.loft, key: 'colosseum', name: '콜로세움',
+  pad: { fill: '#a88a66', top: '#c4a77e', rim: '#7e6448', edge: '#2e2218', glow: '#97e8f7', glow2: '#f0a070' },
+};
+
 // 홀로그램 판(크기·색마다 한 번 만들어 둠): 가장자리 밝은 1칸 + 안쪽 어두운 1칸 + 반투명 디더 채움(짝수 줄 = 밝은 주사선) + 모서리 꺾쇠
 const holoCache = new Map();
 const BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
@@ -198,9 +205,10 @@ export const holo = (g, x, y, w, h, s, dens) => { g.c.imageSmoothingEnabled = fa
 
 export let T = THEMES.ship;
 export function setTheme(key) { T = THEMES[key] || THEMES.ship; return T; }
-export const VENUE_OF_TIER = { bronze: 'garden', silver: 'garden', gold: 'ship', platinum: 'ship', diamond: 'night', master: 'night', pulloseum: 'night' };
+// 대회 경기장 = 콜로세움(2026-10-15 사용자: 전투는 콜로세움, "전투장도 나중에 상황별로") — 옛 세 장소(온실·우주선·밤 정원)는 상황별 경기장 후보로 남김(?venue=)
+export const VENUE_OF_TIER = { bronze: 'colosseum', silver: 'colosseum', gold: 'colosseum', platinum: 'colosseum', diamond: 'colosseum', master: 'colosseum', pulloseum: 'colosseum' };
 export const TIER_KEY = { 브론즈: 'bronze', 실버: 'silver', 골드: 'gold', 플래티넘: 'platinum', 다이아: 'diamond', 마스터: 'master', 풀로세움: 'pulloseum' };
-export const venueOf = tierName => VENUE_OF_TIER[TIER_KEY[tierName] || tierName] || 'garden';
+export const venueOf = tierName => VENUE_OF_TIER[TIER_KEY[tierName] || tierName] || 'colosseum';
 
 // ── 모양 ──
 // 모서리를 c칸 깎은 사각형(채움)

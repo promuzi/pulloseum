@@ -23,6 +23,8 @@ export const SHOTS = [
   ['04_bag', 'bag', {}],
   ['05_plant_skill', 'plant', { tab: 'skill' }],
   ['06_plant_up', 'plant', { tab: 'up' }],
+  ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
+  ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
   ['07_battle_garden', 'battle', { phase: 'pick', venue: 'garden' }],
   ['07_battle_ship', 'battle', { phase: 'pick', venue: 'ship' }],
   ['07_battle_night', 'battle', { phase: 'pick', venue: 'night' }],
