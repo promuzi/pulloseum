@@ -36,6 +36,7 @@ export const SHOTS = [
   ['08_battle_hit_cell', 'battle', { phase: 'hit', venue: 'cell' }],
   ['09_result', 'result', { win: true }],
   ['10_explore', 'explore', {}],
+  ['10_hangar', 'hangar', {}],
   ['11_shop', 'shop', {}],
   ['12_nursery', 'nursery', {}],
   ['12_storage', 'storage', {}],

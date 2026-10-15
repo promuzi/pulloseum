@@ -1,6 +1,6 @@
 import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted } from '../art/sprites.js';
+import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
 import { STAGE_NAME, SPECIES } from '../data/mock.js';
@@ -200,7 +200,7 @@ export const nursery = {
   // 잔디에 심긴 식물(큰 판 그림 — 2026-10-15 "식물이 너무 멀어 좀 땡겨와줘", 숨쉬기·깜빡임 그대로): 흙 줄 위만, 밑동은 잔디 덤불이 덮음
   planted(g, it, sx, sy, band, t) {
     const ry = Math.max(2, Math.min(7, Math.round(band * 0.24)));
-    if (!drawBigPlanted(g, it.p.key, sx, sy, { t, phase: it.i * 700, between: () => grassOval(g, sx, sy, 17, ry, it.seed) })) grassOval(g, sx, sy, 17, ry, it.seed);
+    if (!drawBigPlanted(g, bigKey(it.p.key, it.p.stage), sx, sy, { t, phase: it.i * 700, between: () => grassOval(g, sx, sy, 17, ry, it.seed) })) grassOval(g, sx, sy, 17, ry, it.seed);
   },
   // 고른 식물: 잔디 마개를 인 화분이 기계 구멍에서 솟음(구멍 = 금속 테 · 어두운 통로 속 고리 · 푸른 불빛, 화분 아래 피스톤과 받침)
   lifted(g, it, sx, sy, band, L, t) {
@@ -224,7 +224,7 @@ export const nursery = {
     c.save(); c.beginPath(); c.rect(0, 0, 400, sy);
     for (let dy = 0; dy <= ry; dy++) { const half = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry))) + 0.5); c.rect(sx - half, sy + dy, half * 2 + 1, 1); }
     c.clip();
-    drawBigPotted(g, it.p.key, it.p.pot, sx, soilY, { t, phase: it.i * 700, between: () => grassOval(g, sx, soilY - 2, 17, 4, it.seed) });   // 화분 위 잔디 마개(상자 잔디와 같은 색·같은 풀잎 점)
+    drawBigPotted(g, bigKey(it.p.key, it.p.stage), it.p.pot, sx, soilY, { t, phase: it.i * 700, between: () => grassOval(g, sx, soilY - 2, 17, 4, it.seed) });   // 화분 위 잔디 마개(상자 잔디와 같은 색·같은 풀잎 점)
     c.restore();
   },
 
