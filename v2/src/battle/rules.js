@@ -1,5 +1,5 @@
 // v2 전투 규칙(순수 계산) — 화면·DOM·시각과 무관, 같은 씨앗이면 같은 결과(서버 재검증 #8). 설계 = docs/superpowers/specs/2026-10-15-v2-battle-rules-design.md
-// 사용자 결정(2026-10-15): 선공은 기동이 빠른 쪽이 '확률로' · 방어는 후공일 때만(선공 방어는 판정이 먼저라 헛됨) · 회피는 선공일 때만(자세를 먼저 잡아야 함) ·
+// 사용자 결정(2026-10-15): 선공은 기동이 빠른 쪽이 '확률로' · 방어는 후공일 때만(선공 방어는 판정이 먼저라 헛됨) · 회피는 선공·후공 모두(같은 날 정정 "회피는 후공도 가능하게") ·
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
@@ -99,8 +99,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   A.st.nextInit = 0; B.st.nextInit = 0;
   ev.push({ t: 'first', who: first.id, chance: first === A ? pA : 1 - pA });
   const actOf = u => (u === A ? actA : actB);
-  // 자세 성립: 방어 = 후공일 때만(먼저 하면 판정이 끝나 헛됨), 회피 = 선공일 때만(자세를 먼저 잡아야 함)
-  const stanceOk = (u, kind) => (kind === 'guard' ? u === second : kind === 'evade' ? u === first : false);
+  // 자세 성립: 방어 = 후공일 때만(먼저 하면 판정이 끝나 헛됨), 회피 = 순서와 상관없이(선공·후공 모두)
+  const stanceOk = (u, kind) => (kind === 'guard' ? u === second : kind === 'evade');
   for (const [u, foe] of [[first, second], [second, first]]) {
     const a = actOf(u), d = actOf(foe);
     if (u.hp <= 0) break;

@@ -7,6 +7,7 @@
 - **설계:** `docs/superpowers/specs/2026-10-15-v2-battle-rules-design.md` — 근거 = Darkest Dungeon 선공, WoW·메카 한 번 굴림 명중표, 메카 pityLimit·Dota PRD, Yomi·Monster Hunter Stories 상성, 포켓몬 방어 감쇠·범위 75%, Super Auto Pets·Backpack Battles 유령 대전. 순서 판정표·회피 변주 8·무기 9종(모션·효과)·불운 보정 실제 평균 표·열린 질문 3.
 - **계산 모듈:** `v2/src/battle/rules.js`(씨앗 난수·선공 확률·불운 보정·명중표·한 턴 해소, 화면 무관) + 시험 `v2/src/battle/rules.test.mjs` 13개 통과. 시험 중 발견: 선공에 불운 보정을 그대로 쓰면 같은 기동끼리 번갈아 고정 → 선공만 한 번 여유.
 - **화면:** v2 전투에서 상대 성향·큰 기술 ⚠ 제거, 닉네임·랭크만.
+- **정정(사용자 "회피는 후공도 가능하게"):** 회피는 선공·후공 모두 성립(설계 §4·`rules.js stanceOk`·시험 갱신, 13개 통과). 방어는 그대로 후공 전용.
 - **생장 단계:** 어린 단계 = 도트 면적이 성체의 42%보다 크면 그 비율까지 축척을 줄임(`--young-area`, 원래 49~60% → 42%), 5종 다시 변환 `stages_5.png`.
 
 ### 2026-10-15 — v2 전투 화면에 새 식물(1배 무대) · 게임용 그림 묶음 · 생장 단계 4종 착수

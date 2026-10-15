@@ -72,14 +72,14 @@ test('순서 판정: 선공 방어 → 후공 공격 = 방어 헛됨(판정이 �
   assert.equal(st.active, false); assert.equal(hit.guard, false);
 });
 
-test('순서 판정: 선공 회피 → 후공 공격 = 회피 성립(표가 옮겨짐) · 선공 공격 → 후공 회피 = 회피 못 함', () => {
+test('순서 판정: 회피는 선공·후공 모두 성립(표가 옮겨짐)', () => {
   const A = unit('A'), B = unit('B');
-  let ev = resolveTurn(A, B, EVADE, STRIKE, script([0, 0.5])).events;
+  let ev = resolveTurn(A, B, EVADE, STRIKE, script([0, 0.5])).events;   // 선공 회피 → 후공 공격
   assert.equal(ev.find(e => e.t === 'stance').active, true);
   assert.equal(ev.find(e => e.t === 'hit').evade, true);
-  ev = resolveTurn(unit('A'), unit('B'), STRIKE, EVADE, script([0, 0.5])).events;
-  assert.equal(ev.find(e => e.t === 'stance').active, false);
-  assert.equal(ev.find(e => e.t === 'hit').evade, false);
+  ev = resolveTurn(unit('A'), unit('B'), STRIKE, EVADE, script([0, 0.5])).events;   // 선공 공격 → 후공 회피
+  assert.equal(ev.find(e => e.t === 'stance').active, true);
+  assert.equal(ev.find(e => e.t === 'hit').evade, true);
 });
 
 test('순서 판정: 둘 다 공격 = 선공이 먼저 때림, 선공이 쓰러뜨리면 후공은 못 침', () => {
