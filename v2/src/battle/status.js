@@ -1,6 +1,6 @@
 // v2 상태 효과(버프·디버프) — 순수 계산(화면·시각과 무관, 씨앗 난수만). 설계·결정 = docs/superpowers/specs/2026-10-15-v2-status-effects-design.md
 // 사용자 결정(2026-10-15):
-//  · 디버프 = 화상 · 독 · 젖음 · 빙결 · 감전 · 기절 · 덩굴 + 기생 씨앗 · 그늘 · 꽃가루 · 도발 · 뿌리 묶기 · 약화 · 부식
+//  · 디버프 = 화상 · 독 · 젖음 · 빙결 · 감전 · 기절 · 덩굴 + 기생 씨앗 · 그늘 · 강풍(처음 이름 꽃가루) · 도발 · 뿌리 묶기 · 약화 · 부식
 //  · 겹침은 독만(5겹까지). 독은 2턴 넘게 새로 안 걸리면 턴마다 1겹씩 줄어듦. 빙결·감전은 3이 되면 한 턴 쉬고 0으로
 //    (빙결·감전 쌓인 수가 자연히 줄어드는 것도 독과 같은 규칙 — 내 추천).
 //  · 턴 수는 효과마다 같음(기술마다 다르지 않음) · 빗나가면 안 걸림, 방어 자세여도 걸림, 치명이라고 더 걸리지 않음 · 같은 속성은 안 걸림
@@ -23,7 +23,7 @@ export const FX = {
   bind:    { turns: 1 },                                      // 다음 턴 기술 하나가 묶임
   leech:   { left: 3, drain: 0.025 },                         // 턴 끝 3번 최대 체력 2.5%를 빨아 건너편 앞 식물이 회복
   shade:   { turns: 0 },                                      // 이번 턴 끝 에너지 +1이 안 들어옴
-  pollen:  { turns: 2, missAdd: 12 },                         // 적중 ↓(내 공격 빗나감 칸 +12)
+  gale:    { turns: 2, missAdd: 12 },                         // 강풍(바람 속성): 적중 ↓(내 공격 빗나감 칸 +12) — 사용자 "강풍이라고 바꾸자"
   taunt:   { turns: 1 },                                      // 다음 턴 방어·회피 자세 못 씀
   root:    { turns: 2 },                                      // 교체 못 함(3:3)
   weak:    { turns: 2, atkK: 0.8 },                           // 공격 −20%
@@ -34,8 +34,8 @@ export const FX = {
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
 export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
 const SKIP_IDS = ['stun', 'chill', 'shock'];
-const TIMED = ['wet', 'bind', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke'];
-const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode'];
+const TIMED = ['wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke'];
+const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode'];
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[id]);
@@ -57,7 +57,7 @@ export function evadeK(def, att) {
 export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1);
 export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1);
 export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1);
-export const missAddOf = u => (has(u, 'pollen') ? FX.pollen.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
+export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
 export const mustSkip = u => has(u, 'skip');
 export const noEnergy = u => has(u, 'shade') || has(u, 'choke');

@@ -136,7 +136,7 @@ const fixed = v => () => v;
   const r2 = resolveTurn(me, foe, REST, foe.kit[0], fixed(0.5), { turn: 2 });
   ok(r2.events.some(e => e.t === 'skip' && e.who === 'me' && e.refund === 0) && !mustSkip(me), '다음 턴에 쉼(쉬기 = 에너지 0)');
 }
-// ── 7. 기생 씨앗 · 그늘 · 덩굴 · 도발 · 뿌리 · 약화 · 부식 · 꽃가루 ──
+// ── 7. 기생 씨앗 · 그늘 · 덩굴 · 도발 · 뿌리 · 약화 · 부식 · 강풍 ──
 {
   const a = mk('me', 'vine_water'), b = mk('foe', 'gaia');
   a.hp = 100;
@@ -173,10 +173,10 @@ const fixed = v => () => v;
   ok(weak < plain, `약화 = 공격 ↓ (${plain} → ${weak})`);
   a.eff = {}; apply(b, 'corrode', 1, ctx(a, 1, []));
   ok(dmg(a, b) > plain, '부식 = 방어 ↓');
-  const p = mk('me', 'gaia'); apply(p, 'pollen', 1, ctx(b, 1, []));
+  const p = mk('me', 'gaia'); apply(p, 'gale', 1, ctx(b, 1, []));
   const t0 = resolveTurn(mk('me', 'gaia'), mk('foe', 'aqua'), sk(p, 's1'), REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
   const t1 = resolveTurn(p, mk('foe', 'aqua'), sk(p, 's1'), REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
-  ok(t1.miss === t0.miss + 12, '꽃가루 = 빗나감 칸 +12');
+  ok(t1.miss === t0.miss + 12, '강풍 = 빗나감 칸 +12');
 }
 // ── 8. 3:3: 교체하면 독·화상만 · 뿌리 묶기면 교체 못 함 ──
 {
