@@ -749,9 +749,18 @@ const STAGES = ['young', 'teen', 'mature'];
 if (stages) {
   const key = keys[0], pot = renderPot(POT3.pot_terra), mature = convert(key), list = [], srcs = [], ref = labStats(key);
   const mk = +(args.find(a => a.startsWith('--match='))?.slice(8) ?? 1);   // 단계 그림 색을 성체 색 분포에 맞추는 세기(0 = 그대로)
+  // 어린 단계 몸집(2026-10-15 사용자 "외형 차이가 적어 아쉬움 — 1단계는 더 줄여도, 무조건 말고 몸체 크기 기준으로(버섯은 덩치가 비슷해 구분 어려움)"):
+  //  도트 칸 수(몸 면적)가 성체의 YA배보다 크면 그 비율이 되게 축척을 줄이고, 이미 작으면 그대로
+  const area = cv => { let n = 0; for (let i = 0; i < W * H; i++) if (cv.cm[i] >= 0) n++; return n; };
+  const aM = area(mature), YA = +(args.find(a => a.startsWith('--young-area='))?.slice(13) ?? 0.42);
   for (const st of STAGES) {
     const f = st === 'mature' ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'stages', `${key}_${st}.png`);
-    const cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s, match: mk ? ref : null, matchK: mk }) : null;
+    let cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s, match: mk ? ref : null, matchK: mk }) : null;
+    if (cv && st !== 'mature') {
+      const r = area(cv) / aM;
+      if (st === 'young' && YA > 0 && r > YA) { const k = Math.sqrt(YA / r); cv = convert(key, { file: f, scale: mature.s * k, match: mk ? ref : null, matchK: mk }); console.log(`young   몸 면적 성체의 ${(r * 100).toFixed(0)}% → 축척 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
+      else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}%${st === 'young' ? ' (이미 작아 그대로)' : ''}`);
+    }
     if (!cv) continue;
     const im = paint(cv);
     writeFileSync(resolve(here, 'out', 'conv', `${key}_${st}_96x112.png`), im.png());
