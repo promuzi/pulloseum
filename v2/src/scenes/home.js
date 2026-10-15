@@ -7,19 +7,21 @@ import { T, plate, btnBody, tbar } from '../art/theme.js';
 import { gradeBadge, STAT_DEF } from './common.js';
 import { STAGE_NAME } from '../data/mock.js';
 
-// 함선 식물 방 그림(assets/v2/bg/home_ship.png)의 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
-export const HOME_PEDESTAL = [135, 244];
+// 홈 그림마다 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
+//  cell = 흰 쿠션 타일 독방(2026-10-15 사용자가 말한 대기 화면 — 둥근 통창 앞 흰 타일 받침, 천장 주황 원뿔 빛, tools/pixel/big/cell_bg.mjs)
+//  ship = 우주선 식물 방(코덱스, 그 전 시안)
+export const HOME_PEDESTAL = { cell: [135, 262], ship: [135, 244] };
 
 export const home = {
-  theme: 'ship',   // 함선 안(장소 테마 — 2026-10-15)
-  enter(p) { this.empty = !!p.empty; },
+  theme(app) { return this.look || 'cell'; },   // 대기 화면 = 독방(?look=ship 으로 옛 우주선 방)
+  enter(p) { this.empty = !!p.empty; this.look = p.look || null; },
   draw(app) {
     const { g, W, H, t, state: s } = app;
     const p = this.empty ? null : s.plants[s.active];
-    const bg = BGIMG.home_ship;
+    const bg = BGIMG['home_' + T.key];
     const SY = 28, SH = 300;
     let mid = Math.floor(W / 2), topY = SY + 226;
-    if (bg) { g.img(bg, 0, 0); [mid, topY] = HOME_PEDESTAL; }
+    if (bg) { g.img(bg, 0, 0); [mid, topY] = HOME_PEDESTAL[T.key] || HOME_PEDESTAL.ship; }
     else {   // 그림이 없을 때: 코드로 그린 온실 함교 + 둥근 탁자
       g.rect(0, 0, W, H, T.bg);
       room1(g, 0, SY, W, SH, t);

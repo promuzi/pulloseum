@@ -117,3 +117,74 @@ const big = new Img(W * z, H * z); big.blit(im, 0, 0, z);
 mkdirSync(resolve(here, 'out', 'conv'), { recursive: true });
 writeFileSync(resolve(here, 'out', 'conv', 'arena_cell_x' + z + '.png'), big.png());
 console.log('독방 경기장 →', resolve(repo, 'assets', 'v2', 'bg', 'arena_cell.png'));
+
+// ════ 홈(대기 화면) — 같은 독방(2026-10-15 사용자: "전투 말고, 대기 화면 말하는 거임") ════
+// 270×600: 뒤 벽(타일) 가운데 큰 둥근 통창 → 그 앞 흰 타일 원통 받침 위에 식물(게임이 그림, 받침 윗면 가운데 = HOME_CELL) → 천장 등 하나의 주황 원뿔이 식물로.
+// 아래(정보 판·하단 탭 자리)는 바닥만 이어 그림. 상단 정보줄·오른쪽 가방·도감 단추·좌우 화살표는 게임이 그림.
+{
+  const HW = 270, HH = 600, HF = 304, PED = [135, 262], PR = 46, PRY = Math.round(PR * K), PED_BOT = HF + 6;
+  const hm = new Img(HW, HH, COOL[1]);
+  const hput = (x, y, c) => { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < HW && y < HH && c) hm.set(x, y, c); };
+  const LX = 135, LTOP = 12;
+  // 빛: 원뿔(등 → 받침 윗면 양끝) 안 타일은 따뜻하게 밝게, 받침 윗면·발치 바닥은 웅덩이
+  const hlight = (x, y, floor) => {
+    let L = 0, warm = 0;
+    if (y >= LTOP && y <= PED[1] + 4) { const t = (y - LTOP) / (PED[1] - LTOP), half = 7 + (PR + 4 - 7) * t, e = Math.abs(x - LX) / half; if (e <= 1) { const s = (0.95 - 0.3 * t) * (1 - e ** 4 * 0.6); L += s * 1.6; warm = Math.max(warm, s); } }
+    if (floor) { const d = Math.hypot((x - PED[0]) / 84, (y - PED_BOT) / (84 * K)); const c = Math.max(0, Math.min(1, 1.05 - d)); L += c * 2.2; warm = Math.max(warm, c * 0.9); }
+    return { L, warm };
+  };
+  const hv = x => Math.max(0, Math.abs(x - 135) / 135 - 0.5) * 2.6;
+  // 벽
+  for (let y = 0; y < HF; y++) for (let x = 0; x < HW; x++) {
+    const u = (((x - OX) % TW) + TW) % TW / TW, v = (y % THh) / THh, { L, warm } = hlight(x, y, false);
+    const base = 3.9 + bulge(u, v, TW, THh) * 1.5 + L - Math.max(0, 1 - y / 16) * 1.3 - Math.max(0, 1 - (HF - y) / 16) * 1.0 - hv(x);
+    hput(x, y, tone(warm > 0.12 + th(x, y) * 0.5 ? WARM : COOL, base, x, y));
+  }
+  for (let x = 0; x < HW; x++) { hput(x, HF - 3, COOL[3]); hput(x, HF - 2, COOL[2]); hput(x, HF - 1, COOL[1]); }
+  // 바닥
+  for (let y = HF; y < HH; y++) for (let x = 0; x < HW; x++) {
+    const u = (((x - OX) % FW) + FW) % FW / FW, v = (((y - HF) % FH) + FH) % FH / FH, { L, warm } = hlight(x, y, true);
+    const base = 2.6 + bulgeFloor(u, v, FW, FH) + L + Math.min(1, (y - HF) / 120) * 1.4 - Math.max(0, 1 - (y - HF) / 18) * 1.5 - hv(x);
+    hput(x, y, tone(warm > 0.12 + th(x, y) * 0.5 ? WARM : COOL, base, x, y));
+  }
+  // 둥근 통창(식물 뒤): 두꺼운 테·볼트 + 바깥 어둠 + 사선 반사, 원뿔이 지나는 유리는 따뜻하게 비침
+  const HC = [135, 150], HRO = 72, HRI = 62;
+  for (let y = HC[1] - HRO - 1; y <= HC[1] + HRO + 1; y++) for (let x = HC[0] - HRO - 1; x <= HC[0] + HRO + 1; x++) {
+    const dx = x + 0.5 - HC[0], dy = y + 0.5 - HC[1], r = Math.hypot(dx, dy);
+    if (r > HRO + 0.6) continue;
+    if (r > HRO - 0.6) { hput(x, y, COOL[1]); continue; }
+    if (r > HRI + 0.5) { const t = (r - HRI) / (HRO - HRI), lit = -(dx + dy) / (r * 1.414); const { warm } = hlight(x, y, false); hput(x, y, tone(warm > 0.2 ? WARM : COOL, 5.0 + lit * 1.6 + (0.5 - Math.abs(t - 0.5)) * 2.2 + warm * 1.2, x, y)); continue; }
+    if (r > HRI - 0.6) { hput(x, y, COOL[0]); continue; }
+    let gl = 1.1 + (dy + HRI) / (2 * HRI) * 1.5;
+    const band = dx * 0.7 + dy * 0.7;
+    if (band > -40 && band < -29) gl += 1.6; if (band > -21 && band < -15) gl += 1.1;
+    if (r > HRI - 5 && dx + dy < -HRI * 0.9) gl += 1.5;
+    const { warm } = hlight(x, y, false);
+    hput(x, y, warm > 0.25 && th(x, y) < warm * 0.8 ? WARM[Math.min(9, 3 + Math.round(gl))] : tone(GLASS, gl, x, y));
+  }
+  for (const [sx, sy] of [[104, 112], [160, 100], [176, 140], [116, 176], [150, 196], [92, 150], [182, 182]]) hput(sx, sy, GLASS[5]);
+  for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 + Math.PI / 10, bx = Math.round(HC[0] + Math.cos(a) * (HRI + 5)), by = Math.round(HC[1] + Math.sin(a) * (HRI + 5)); hput(bx, by, COOL[8]); hput(bx + 1, by + 1, COOL[2]); }
+  // 받침: 흰 타일 원통(옆면 = 가운데 밝고 양옆 어둡게 + 세로 이음새, 윗면 = 빛 웅덩이 + 둥근 이음새) + 바닥 그늘
+  for (let y = PED_BOT - PRY - 2; y <= PED_BOT + PRY + 2; y++) for (let x = PED[0] - PR - 6; x <= PED[0] + PR + 6; x++) { const d = ((x - PED[0]) / (PR + 5)) ** 2 + ((y - PED_BOT - 2) / (PRY + 3)) ** 2; if (d < 1 && th(x, y) < 0.6 * (1 - d) + 0.2) hput(x, y, COOL[1]); }
+  for (let x = PED[0] - PR; x <= PED[0] + PR; x++) {
+    const nx = (x + 0.5 - PED[0]) / PR; if (Math.abs(nx) > 1) continue;
+    const ey = Math.sqrt(1 - nx * nx) * PRY, ytop = PED[1] + ey, ybot = PED_BOT + ey, ang = Math.asin(nx);
+    for (let y = Math.floor(ytop); y <= ybot; y++) {
+      const seamV = Math.abs(((ang / (Math.PI / 7)) % 1 + 1) % 1 - 0.5) > 0.46, seamH = Math.abs(y - (ytop + ybot) / 2) < 0.6;
+      const { warm } = hlight(x, y, false), shade = 5.2 - nx * nx * 2.4 - nx * 0.6 + warm * 1.0 - (seamV || seamH ? 1.6 : 0) - (y > ybot - 2 ? 1.2 : 0);
+      hput(x, y, tone(warm > 0.25 ? WARM : COOL, shade, x, y));
+    }
+  }
+  for (let y = PED[1] - PRY - 1; y <= PED[1] + PRY + 1; y++) for (let x = PED[0] - PR; x <= PED[0] + PR; x++) {
+    const d = ((x + 0.5 - PED[0]) / PR) ** 2 + ((y + 0.5 - PED[1]) / PRY) ** 2; if (d > 1) continue;
+    const rim = d > 0.82, ring = Math.abs(Math.sqrt(d) - 0.55) < 0.05;
+    hput(x, y, rim ? WARM[d > 0.95 ? 5 : 8] : tone(WARM, 7.4 - d * 1.6 - (ring ? 1.5 : 0), x, y));
+  }
+  // 천장 등(위 가운데, 상단 정보줄 사이로 보임)
+  for (let j = 0; j < 9; j++) { const w = 8 + j; for (let i = -w; i <= w; i++) hput(LX + i, j + 2, j === 0 ? LAMP.rim : (Math.abs(i) === w ? COOL[1] : LAMP.body)); }
+  for (let i = -8; i <= 8; i++) hput(LX + i, 11, i % 3 === 0 ? LAMP.hot : LAMP.lens);
+  writeFileSync(resolve(repo, 'assets', 'v2', 'bg', 'home_cell.png'), hm.png());
+  const hb = new Img(HW * z, HH * z); hb.blit(hm, 0, 0, z);
+  writeFileSync(resolve(here, 'out', 'conv', 'home_cell_x' + z + '.png'), hb.png());
+  console.log('독방 홈 →', resolve(repo, 'assets', 'v2', 'bg', 'home_cell.png'), '· 받침 윗면 가운데', PED);
+}
