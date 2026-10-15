@@ -753,13 +753,22 @@ if (stages) {
   //  도트 칸 수(몸 면적)가 성체의 YA배보다 크면 그 비율이 되게 축척을 줄이고, 이미 작으면 그대로
   const area = cv => { let n = 0; for (let i = 0; i < W * H; i++) if (cv.cm[i] >= 0) n++; return n; };
   const aM = area(mature), YA = +(args.find(a => a.startsWith('--young-area='))?.slice(13) ?? 0.42);
+  // 자람 단계도 같은 식(2026-10-15 나머지 7종: 코덱스가 자람 단계를 성체보다 크게 그려 판 위가 잘림 — 키 76칸 상한에 붙음) → 성체의 TA배를 넘으면 그만큼
+  const TA = +(args.find(a => a.startsWith('--teen-area='))?.slice(12) ?? 0.72);
   for (const st of STAGES) {
     const f = st === 'mature' ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'stages', `${key}_${st}.png`);
     let cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s, match: mk ? ref : null, matchK: mk }) : null;
     if (cv && st !== 'mature') {
       const r = area(cv) / aM;
-      if (st === 'young' && YA > 0 && r > YA) { const k = Math.sqrt(YA / r); cv = convert(key, { file: f, scale: mature.s * k, match: mk ? ref : null, matchK: mk }); console.log(`young   몸 면적 성체의 ${(r * 100).toFixed(0)}% → 축척 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
-      else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}%${st === 'young' ? ' (이미 작아 그대로)' : ''}`);
+      const lim = st === 'young' ? YA : TA;
+      let sc = mature.s;
+      if (lim > 0 && r > lim) { const k = Math.sqrt(lim / r); sc *= k; cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 축척 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
+      else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% (이미 작아 그대로)`);
+      // 키 상한(길쭉한 종은 면적이 작아도 판 위에 닿아 잘림): 자람 = 성체 키 − 2칸(최대 73) · 어린 = 성체 키의 82% — 잘린 키는 실제보다 작게 재지므로 몇 번 되풀이
+      const top = c => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (c.cm[y * W + x] >= 0) return y; return H; };
+      const hM = P.cy - top(mature), cap = st === 'young' ? Math.floor(hM * 0.82) : Math.min(Math.floor(hM - 2), 73);
+      for (let it = 0; it < 6 && P.cy - top(cv) > cap; it++) { sc *= Math.min(0.95, cap / (P.cy - top(cv))); cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); }
+      if (sc < mature.s * (lim > 0 && r > lim ? Math.sqrt(lim / r) : 1) - 1e-9) console.log(`${st.padEnd(7)} 키 상한 ${cap}칸 → 축척 ${(sc / mature.s).toFixed(2)}배`);
     }
     if (!cv) continue;
     const im = paint(cv);
