@@ -5,7 +5,7 @@
 //  먼지: 빛기둥 안에서만 보이는 작은 점 — 기둥 가운데일수록·전등이 밝을수록 밝고, 저마다 다른 박자로 떠다니다 가끔 빛을 받아 반짝.
 //  흐림: 빛기둥 안 아주 옅은 따뜻한 안개가 천천히 피어오름(감기는 잡음 무늬를 위로 밀어 올림).
 //  창: sky.js 우주 — 들어올 때마다 다음 풍경, 오래 머물면 디더로 다음 풍경. 유리 위로 이어지는 원뿔 빛 띠 + 옅은 반사.
-import { BGIMG, BGMETA, drawBig } from './sprites.js';
+import { BGIMG, BGMETA, BIG, drawBig, bigBox } from './sprites.js';
 import { makeSky, renderSky, blendSky, SKY_KINDS, rng } from './sky.js';
 
 export const LOFT_STOOL = [134, 356];   // 의자 앉는 판 윗면 가운데(격자 확대로 잼) = 화분 굽이 닿는 점
@@ -165,4 +165,57 @@ export function loftFront(app) {
     g.px(Math.round(m.x), Math.round(m.y), col);
     if (glint && b > 0.8) { g.px(Math.round(m.x) + 1, Math.round(m.y), '#e2b888'); g.px(Math.round(m.x) - 1, Math.round(m.y), '#e2b888'); }
   }
+}
+
+// ── 암실(2026-10-15 사용자 "가운데 식물을 누르면 주변 전등이 꺼지면서 암실이 되는 연출과 함께 위 주황전등만 남아서 집중시키고") ──
+//  방 전체를 짙은 남색으로 덮되 위 전등(갓·전구)·빛기둥(원뿔)·의자 둘레 바닥 고인 빛은 남기고, 창 밖 우주는 조금 덜 덮어 별이 희미하게 보이게.
+//  덮개는 한 번 만들어 두고(빛 세기 → 덮는 세기, 1/16 단계) 세기 a만 바꿔 그린다.
+const DARK = [5, 7, 15];
+function darkCanvas() {
+  if (S.darkCv) return S.darkCv;
+  const W = 270, H = 600, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d'), im = c.createImageData(W, H), d = im.data;
+  const sm = (e0, e1, v) => { const k = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return k * k * (3 - 2 * k); };
+  const B4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    // 빛기둥: 가운데는 밝게 차고 가장자리는 넓게 부드럽게, 바닥 가까이서 고인 빛으로 이어짐
+    let light = y >= 34 ? sm(0.04, 0.62, S.coneI(x, y)) * (1 - sm(372, 420, y)) : 0;
+    const fx = ((x + 0.5 - 135) / 28) ** 2 + ((y + 0.5 - 22) / 18) ** 2;   // 전등 갓·전구
+    if (fx < 1) light = Math.max(light, 1 - fx * 0.4);
+    const pool = ((x + 0.5 - 134) / 92) ** 2 + ((y + 0.5 - 396) / 26) ** 2;   // 의자 둘레 바닥 고인 빛
+    if (pool < 1) light = Math.max(light, (1 - pool) ** 0.8 * 0.72);
+    let a = (1 - light) * 0.92;
+    const wx = x - S.x0, wy = y - S.y0;
+    if (wx >= 0 && wy >= 0 && wx < S.w && wy < S.h && S.mask[wy * S.w + wx]) a = 0.8;   // 창 밖 우주: 빛기둥과 상관없이 고르게(밝은 행성이 식물보다 눈에 띄지 않게, 별은 희미하게)
+    // 8단으로 나누고 단 사이는 4×4 바둑 점으로 섞음(도트 그림답게 — 매끈한 띠 대신)
+    const lv = a * 8, b = Math.floor(lv), q = b + (B4[y & 3][x & 3] / 16 < lv - b ? 1 : 0);
+    const i = (y * W + x) * 4; d[i] = DARK[0]; d[i + 1] = DARK[1]; d[i + 2] = DARK[2]; d[i + 3] = Math.round(Math.min(8, q) / 8 * 255);
+  }
+  c.putImageData(im, 0, 0);
+  return (S.darkCv = cv);
+}
+export function loftDark(app, a) {
+  if (!S || a <= 0) return;
+  app.g.alpha(Math.min(1, a), () => { app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(darkCanvas(), 0, 0); });
+}
+// 방 한 장면(배경 → 암실 덮개 → 식물 → 빛기둥 흐림·먼지)을 카메라 아래 그림: 방 자리 (px, py)를 화면 (sx, sy)에 z배로.
+//  plant = 식물 그리기(없으면 의자 위 기본), 확대 끝값은 기기 배율 s에 맞춰 z·s 가 정수가 되게(도트 칸 크기가 고르게) — loftZoom
+export function loftView(app, { dark = 0, z = 1, px = 134, py = 300, sx = px, sy = py, plant = null } = {}) {
+  const c = app.g.c;
+  if (z !== 1 || dark > 0) app.g.rect(0, 0, app.W, app.H, '#05070f');   // 다가간 카메라가 방 그림 밖(아래)을 비출 때 앞 장이 남아 보이지 않게
+  c.save();
+  if (z !== 1 || sx !== px || sy !== py) { c.translate(sx, sy); c.scale(z, z); c.translate(-px, -py); }
+  loftBack(app);
+  loftDark(app, dark);
+  if (plant) plant();
+  loftFront(app);
+  c.restore();
+}
+export const loftZoom = (app, want) => { const s = app.pxScale || (app.screen && app.screen.s) || 1; return s < 2 ? want : Math.max(1, Math.round(s * want) / s); };   // pxScale = 촬영 배율
+
+// 의자 위 식물(12° 화분 판)의 칠해진 범위 가운데 높이(방 좌표) — 홈 옆 창 줄을 여기에 맞추고, 식물 관리 카메라도 여기를 기준으로 다가감
+export function loftPlantCy(key) {
+  const my = LOFT_STOOL[1], P = key && BIG[key], box = key && bigBox(key);
+  if (!P || !box) return my - 22;   // 빈 화분: 화분 몸 가운데쯤
+  return (Math.round(my - 2 - P.meta.base[1]) + box[0] + my) / 2;
 }

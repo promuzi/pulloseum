@@ -12,6 +12,7 @@ const STEEL = { hi: '#e8ecf2', a: '#c6ccd6', b: '#a2aab8', c: '#7e8796', d: '#59
 const GUN = { hi: '#7d8696', a: '#555d6c', b: '#3b424f', c: '#2b313b', d: '#20252d', edge: '#0c0f13', lipHi: '#6c7586', bolt: '#9aa3b2', boltLo: '#14181e', seal: '#08090b', rail: '#171b21', railHi: '#3a414d' };
 export const TRANSITIONS = {
   dither: { close: 110, hold: 0, open: 110 },
+  cut: { close: 0, hold: 0, open: 0 },   // 바로 바꿈 — 장면이 스스로 이어 주는 연출(홈 → 식물 관리 암실·탐사 → 정비 홀로그램)이 끝난 뒤
   shutter: { close: 260, hold: 210, open: 280, metal: true },
   shutterClose: { close: 260, hold: 210, open: 0, metal: true },   // 닫고 끝(다음 화면 = 닫힌 셔터 위 매칭 대기)
   shutterOpen: { close: 0, hold: 90, open: 300, metal: true },     // 닫힌 채로 시작해 열기만(매칭 대기 → 전투)
@@ -115,6 +116,7 @@ function sparks(g, cx, cy, hold, horiz) {
   }
 }
 const DRAW = {
+  cut() {},
   dither: (g, W, H, k) => fadeDither(g, W, H, k),
   shutter: (g, W, H, k, hold) => {
     const s = hold >= 0 && hold < 160 ? [3, -3, 2, -2, 1, -1, 1, 0][Math.floor(hold / 20)] || 0 : 0, half = Math.ceil(H / 2);

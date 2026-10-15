@@ -4,6 +4,8 @@ import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody } from '../art/theme.js';
+import { drawShip, SHIP_SC } from '../art/ship.js';
+import { hangarBack, SHIP } from './hangar.js';
 
 // 옛 게임 우주 지도 데이터(궤도·각도) — 1궤도만 열림
 const PLANETS = [
@@ -22,18 +24,27 @@ const PLANETS = [
 ];
 const ORB = { 1: [46, 26], 2: [74, 42], 3: [100, 57], 4: [124, 71] };
 const RAD = { 1: 7, 2: 7, 3: 8, 4: 9 };
+// 탐사선(2026-10-15 사용자 "탐사선 누르면 탐사선 모양이 홀로그램처럼 변하는 오버랩 효과와 함께 확대되며 탐사선 강화와 셋팅 UI로"):
+//  지도 가운데 = 내 탐사선(진짜 배 색, 작게). 누르면 ① 밝은 줄이 위에서 아래로 훑으며 지나간 칸부터 홀로그램(오버랩) ② 동시에 커지며 정비 화면 자리로
+//  ③ 바탕은 정비실(짙은 디스플레이·투영기)로 겹쳐 바뀜 → 정비 화면이 이어 받음. 돌아오면 거꾸로(아래에서 위로 훑으며 진짜 배로, 작아지며 지도로).
+const MINI = { sc: 0.26, cy: 194 }, MORPH_MS = 950, BACK_MS = 800;
+const ease = k => k * k * (3 - 2 * k);
 
 export const explore = {
   theme: 'night',   // 밤 정원(장소 테마 — 2026-10-15)
-  enter() { this.sel = 'ex_ermias'; },
+  enter(p = {}) { this.sel = 'ex_ermias'; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; },
   draw(app) {
     const { g, W, H, t, state: s } = app;
     if (BGIMG.explore_night) g.img(BGIMG.explore_night, 0, 0); else space(g, 0, 0, W, H, t, 71);
     const cx = Math.round(W / 2), cy = 196;
     // 궤도(점선) — 열린 궤도는 밝게
     for (const o of [4, 3, 2, 1]) g.ellipseRing(cx, cy, ORB[o][0], ORB[o][1], o === 1 ? T.text.accent : T.deep.frame, 2);
-    // 가운데 모선
-    g.disc(cx, cy, 6, C.ink); g.disc(cx, cy, 5, '#625565'); g.disc(cx - 1, cy - 1, 3, '#9babb2'); g.rect(cx - 9, cy, 18, 1, C.mute); g.px(cx, cy - 7 + (Math.floor(t / 500) % 2), C.teal4);
+    // 가운데 = 내 탐사선(누르면 정비) — 아래 옅은 빛 고리가 숨 쉬듯 퍼짐(누를 수 있다는 표시)
+    const pulse = (t % 1800) / 1800;
+    g.ellipseRing(cx, MINI.cy + 16, Math.round(9 + pulse * 7), Math.round(3 + pulse * 2), pulse < 0.6 ? T.text.accent : T.deep.frame, 2);
+    if (!this.morph && !this.unmorph) drawShip(g, cx, MINI.cy + Math.round(Math.sin(t / 700)), MINI.sc, 0, { t });
+    g.text('탐사선', cx, MINI.cy + 22, { color: T.text.sub, align: 'center', outline: T.ink });
+    if (!this.morph && !this.unmorph) app.input.hit('ex_ship', cx - 22, MINI.cy - 18, 44, 40, () => { this.morph = { t0: app.t }; });
     // 행성
     const sorted = [...PLANETS].sort((a, b) => Math.sin(a.angle * Math.PI / 180) - Math.sin(b.angle * Math.PI / 180));
     for (const p of sorted) {
@@ -68,6 +79,21 @@ export const explore = {
       button(app, 'go_' + i, W - 88, y + 6, 64, 24, String(cost), { style: 'gold', icon: 'coin', onTap: () => app.toast(name + ' 탐사') });
       y += 42;
     });
+    navBar(app, 'explore');
+    this.morphDraw(app);
+  },
+  // 탐사선 ↔ 정비 홀로그램 연출(지도 위에 겹쳐 그림): f = 0(지도의 작은 진짜 배) → 1(정비 화면의 큰 홀로그램)
+  morphDraw(app) {
+    const { g, t, state: s } = app;
+    let f = null, dir = 1;
+    if (this.morph) { f = Math.min(1, (t - this.morph.t0) / MORPH_MS); if (f >= 1 && !this.morph.gone) { this.morph.gone = true; app.go('hangar', { from: 'explore' }, 'cut'); } }
+    else if (this.unmorph) { if (this.unmorph.t0 == null) this.unmorph.t0 = t; f = 1 - Math.min(1, (t - this.unmorph.t0) / BACK_MS); dir = -1; if (f <= 0) { this.unmorph = null; return; } }
+    if (f == null) return;
+    const zoom = ease(Math.max(0, Math.min(1, (f - 0.12) / 0.88))), scan = Math.max(0, Math.min(1, f / 0.8));
+    hangarBack(app, ease(Math.min(1, f * 1.4)));   // 바탕이 정비실로 겹쳐 바뀜
+    hud(app, s);
+    const cx = Math.round(135 + (SHIP.cx - 135) * zoom), cy = Math.round(MINI.cy + (SHIP.cy - MINI.cy) * zoom), sc = MINI.sc + (SHIP_SC - MINI.sc) * zoom;
+    drawShip(g, cx, cy, sc, dir === 1 ? scan : Math.min(1, f * 1.25), { t, dir });
     navBar(app, 'explore');
   },
 };

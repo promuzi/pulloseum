@@ -185,3 +185,16 @@ export function plantStack(g, key, potKey, x, y, opt = {}) {
 // 숨쉬기: 1.2초 주기로 1칸 위아래(두 단계)
 export const bob = (t, phase = 0) => (Math.floor((t + phase) / 600) % 2) ? 1 : 0;
 export const SPRITE = { W: SP_W, H: SP_H };
+// 큰 판 첫 장(under·over)의 칠해진 범위 [위, 아래, 왼, 오른](판 좌표, 한 번 재 둠) — 홈 옆 창을 식물 가운데에 맞출 때(2026-10-15 "식물의 중앙과 디스플레이 전체 중앙을 정렬시켜 항상")
+const boxCache = new Map();
+export function bigBox(key) {
+  if (boxCache.has(key)) return boxCache.get(key);
+  const P = BIG[key]; if (!P) return null;
+  const m = P.meta, c = document.createElement('canvas'); c.width = m.w; c.height = m.h;
+  const x = c.getContext('2d'); x.drawImage(P.sheet, 0, 0, m.w, m.h, 0, 0, m.w, m.h); x.drawImage(P.sheet, 0, m.rows * m.h, m.w, m.h, 0, 0, m.w, m.h);
+  const d = x.getImageData(0, 0, m.w, m.h).data;
+  let t = m.h, b = -1, l = m.w, r = -1;
+  for (let yy = 0; yy < m.h; yy++) for (let xx = 0; xx < m.w; xx++) if (d[(yy * m.w + xx) * 4 + 3] >= 128) { t = Math.min(t, yy); b = Math.max(b, yy); l = Math.min(l, xx); r = Math.max(r, xx); }
+  const box = b < 0 ? null : [t, b, l, r];
+  boxCache.set(key, box); return box;
+}

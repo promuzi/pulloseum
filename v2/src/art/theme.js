@@ -194,8 +194,10 @@ export function holoCanvas(w, h, s, dens = 10) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (x === 0 || y === 0 || x === w - 1 || y === h - 1) put(x, y, s.frame);
     else if (x === 1 || y === 1 || x === w - 2 || y === h - 2) { if ((x + y) % 2) put(x, y, s.frameLo); }
-    else if (y % 2 === 0) { if (BAY[y & 3][x & 3] < dens + 3) put(x, y, s.fill2 || s.fill); }
-    else if (BAY[y & 3][x & 3] < dens) put(x, y, s.fill);
+    // 속은 거의 꽉 채움(2026-10-15 사용자 "UI의 글자가 작거나 깨지는 거 같아 — 특히 식물 아래 이름"): 반투명 점무늬 구멍으로 밝은 벽이 비쳐
+    //  글자 획 사이에 흰 점이 섞여 깨져 보였음 → 구멍은 16칸에 1칸만(홀로그램 느낌은 주사선 두 색 줄·밝은 테·꺾쇠로)
+    else if (y % 2 === 0) put(x, y, s.fill2 || s.fill);
+    else if (BAY[y & 3][x & 3] < Math.max(dens, 15)) put(x, y, s.fill);
   }
   const L = Math.min(5, Math.floor(Math.min(w, h) / 4));
   for (const [cx, cy, dx, dy] of [[0, 0, 1, 1], [w - 1, 0, -1, 1], [0, h - 1, 1, -1], [w - 1, h - 1, -1, -1]]) for (let k = 0; k < L; k++) { put(cx + dx * k, cy, s.frameHi); put(cx, cy + dy * k, s.frameHi); }

@@ -58,11 +58,11 @@ window.__shot = (name, params = {}, opt = {}) => {
   const cv = document.createElement('canvas'); cv.width = W * k; cv.height = H * k;
   const cx = cv.getContext('2d'); cx.setTransform(k, 0, 0, k, 0, 0); cx.imageSmoothingEnabled = false;
   const realG = app.g.c; app.g.ctx = cx;
-  app.W = W; app.H = H; app.t = opt.t ?? 1000; app.state = mockState();
+  app.W = W; app.H = H; app.t = opt.t ?? 1000; app.state = mockState(); app.pxScale = k;
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;
   router.draw(app);
   if (opt.toast) drawToast(app, opt.toast);
-  input.pressedId = null; app.g.ctx = realG;
+  input.pressedId = null; app.g.ctx = realG; app.pxScale = 0;
   return cv.toDataURL('image/png');
 };

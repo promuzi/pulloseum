@@ -4,6 +4,10 @@ export const FONT = {
   body: { weight: 600, size: 11 },
   bold: { weight: 800, size: 11 },
   head: { weight: 800, size: 14 },
+  // 2026-10-15 사용자 "UI의 글자가 작거나 깨지는 거 같아. 특히 식물 아래 이름은 많이 깨짐" — 홈·식물 관리용 한 단계 큰 글자
+  label: { weight: 700, size: 12 },
+  value: { weight: 800, size: 13 },
+  name: { weight: 800, size: 16 },
   big:  { weight: 900, size: 30 },
   huge: { weight: 900, size: 46 },
 };
