@@ -27,7 +27,7 @@ const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고,
 const MP4 = args.includes('--mp4');        // 움직임을 GIF와 함께 휴대폰에서도 재생되는 MP4로(사용자가 원격 휴대폰으로 확인 — video.mjs)
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 } };   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 } };   // 쏜위드: 자람이 덩굴손만 넓게 뻗고 몸통은 어린 단계만 해 작아 보임(사용자 "중간 생장체가 초기보다 작은 느낌") → 어린 줄이고 자람 키움, 성체가 납작한 덤불이라 자람 키 상한을 성체 + 4칸까지   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
 // 눈 자리(eyes.mjs): 컨셉·누끼는 종 키로, 생장 단계 그림(concept/stages/<키>_<단계>.png)은 그 파일 이름 키로 따로 잰다 — 단계마다 얼굴 자리가 달라서
 const eyeSpec = (key, file) => (file ? EYES[file.replace(/^.*[\\/]/, '').replace(/\.png$/, '')] : EYES[key]) || null;
 
@@ -773,13 +773,15 @@ if (stages) {
       const r = area(cv) / aM;
       const lim = st === 'young' ? YA : TA;
       let sc = mature.s;
+      const minA = st === 'teen' ? (TUNE[key] || {}).teenMinArea : null;   // 자람이 너무 작으면 키움(덩굴손을 가늘게 뻗어 몸통이 어린 단계보다 작아 보이는 종)
       if (lim > 0 && r > lim) { const k = Math.sqrt(lim / r); sc *= k; cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 축척 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
-      else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% (이미 작아 그대로)`);
+      else if (minA && r < minA) { const k = Math.sqrt(minA / r); sc *= k; cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 키움 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
+      else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% (그대로)`);
       // 키 상한(길쭉한 종은 면적이 작아도 판 위에 닿아 잘림): 자람 = 성체 키 − 2칸(최대 73) · 어린 = 성체 키의 82% — 잘린 키는 실제보다 작게 재지므로 몇 번 되풀이
       const top = c => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (c.cm[y * W + x] >= 0) return y; return H; };
-      const hM = P.cy - top(mature), cap = st === 'young' ? Math.floor(hM * 0.82) : Math.min(Math.floor(hM - 2), 73);
+      const hM = P.cy - top(mature), cap = st === 'young' ? Math.floor(hM * 0.82) : Math.min(Math.floor(hM - 2 + ((TUNE[key] || {}).teenCapAdd || 0)), 73);
       for (let it = 0; it < 6 && P.cy - top(cv) > cap; it++) { sc *= Math.min(0.95, cap / (P.cy - top(cv))); cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); }
-      if (sc < mature.s * (lim > 0 && r > lim ? Math.sqrt(lim / r) : 1) - 1e-9) console.log(`${st.padEnd(7)} 키 상한 ${cap}칸 → 축척 ${(sc / mature.s).toFixed(2)}배`);
+      if (sc < mature.s * (lim > 0 && r > lim ? Math.sqrt(lim / r) : minA && r < minA ? Math.sqrt(minA / r) : 1) - 1e-9) console.log(`${st.padEnd(7)} 키 상한 ${cap}칸 → 축척 ${(sc / mature.s).toFixed(2)}배`);
     }
     if (!cv) continue;
     if (st !== 'mature') { const S2 = cv.src.S; console.log(`${st.padEnd(7)} 기준 (${S2.cx.toFixed(0)}, ${S2.cy.toFixed(0)}) ${S2.ref} · 몸 축 ${(S2.axis || 0).toFixed(1)}°${S2.rot ? ' → 돌려 세움' : ''}`); }
