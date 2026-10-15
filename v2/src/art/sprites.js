@@ -71,6 +71,31 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
   part(g, src, sx, sy + m.rows * m.h, m.w, m.h, x, y, fl);
   return true;
 }
+// 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),
+//  sq = 눌림(+ = 흙 줄 기준 세로로 줄어듦, − = 늘어남). 화분은 그대로라 밑동은 흙에 박힌 채(영상 굽기 attackField 의 근사).
+export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
+  const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra;
+  if (!P || !pot || (!opt.qx && !opt.qy && !opt.sq)) return drawBig(g, key, potKey, bx, by, opt);
+  const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
+  const f = Math.floor(t / m.frameMs) % m.frames, sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
+  const src = opt.flash ? P.white : P.sheet, fl = !!opt.flip, soil = m.soil[1], sc = 1 - (opt.sq || 0) * 0.03, qx = opt.qx || 0, qy = opt.qy || 0;
+  const rows = oy => {
+    const c = g.c; c.save(); c.imageSmoothingEnabled = false;
+    if (fl) { c.translate(x + m.w, y); c.scale(-1, 1); } else c.translate(x, y);
+    for (let yd = 0; yd < m.h; yd++) {
+      const ys = yd >= soil ? yd : Math.round(soil - (soil - yd) / sc);
+      if (ys < 0 || ys >= m.h) continue;
+      const w = Math.max(0, Math.min(1, (soil - ys) / soil));
+      c.drawImage(src, sx, oy + ys, m.w, 1, Math.round(qx * w), yd + Math.round(qy * w), m.w, 1);
+    }
+    c.restore();
+  };
+  part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
+  rows(sy);
+  part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
+  rows(sy + m.rows * m.h);
+  return true;
+}
 
 const SP_W = 48, SP_H = 56;
 // 화분 + 식물 한 몸. (x,y) = 48×56 판의 왼쪽 위. bob = 식물만 위로 n칸(숨쉬기)

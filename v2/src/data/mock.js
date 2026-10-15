@@ -20,8 +20,8 @@ export const STAGE_NAME = {
   mushroom: { sprout: '균사', juvenile: '버섯눈', growing: '어린갓', mature: '성숙버섯', evolved: '포자갓' },
   tree: { sprout: '떡잎', juvenile: '묘목', growing: '어린나무', mature: '성목', evolved: '거목' },
 };
-export const CAT_ICON = { attack: 'sword', guard: 'shield', buff: 'up', debuff: 'down', heal_hp: 'heal', heal_energy: 'energy' };
-export const CAT_NAME = { attack: '공격', guard: '방어', buff: '강화', debuff: '약화', heal_hp: '회복', heal_energy: '기력' };
+export const CAT_ICON = { attack: 'sword', guard: 'shield', evade: 'speed', buff: 'up', debuff: 'down', heal_hp: 'heal', heal_energy: 'energy' };
+export const CAT_NAME = { attack: '공격', guard: '방어', evade: '회피', buff: '강화', debuff: '약화', heal_hp: '회복', heal_energy: '기력' };
 
 const KIT_PETAL = [
   { id: 'a', name: '꽃대 찌르기', cost: 0, power: 125, cats: ['attack'], el: null },
