@@ -1,4 +1,4 @@
-import { hud, navBar, button } from '../art/ui.js';
+import { hud, navBar, button, holoTab } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
@@ -238,14 +238,12 @@ export const nursery = {
     // 열 바꾸기(2열 · 3열) — 누르면 상자가 새 자리로 건너감
     [2, 3].forEach((n, i) => {
       const x = W - 132 + i * 27, on = this.cols === n, id = 'nur_col' + n, pr = app.input.isPressed(id);
-      btnBody(g, x, 32, 25, 19, on ? T.btn.primary : T.btn.second, pr);
-      g.text(n + '열', x + 12.5, 35 + (pr ? 1 : 0), { font: on ? 'bold' : 'body', color: on ? '#ffffff' : T.btn.second.text, align: 'center' });
-      app.input.hit(id, x, 32, 25, 19, () => { if (this.cols !== n) this.relayout(app, () => { this.cols = n; this.scroll = clamp(Math.round(this.scroll * (n === 3 ? 2 / 3 : 1.5)), 0, this.maxScroll(s)); }); }, 3);
+      holoTab(app, id, x, 31, 25, 21, n + '열', on, null);
+      app.input.hit(id, x, 31, 25, 21, () => { if (this.cols !== n) this.relayout(app, () => { this.cols = n; this.scroll = clamp(Math.round(this.scroll * (n === 3 ? 2 / 3 : 1.5)), 0, this.maxScroll(s)); }); }, 3);
     });
     const sid = 'nur_sort', spr = app.input.isPressed(sid), sw = 72;
-    btnBody(g, W - 76, 32, sw, 19, T.btn.second, spr);
-    g.text('정렬 · ' + SORTS[this.sortI][1], W - 76 + sw / 2, 35 + (spr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
-    app.input.hit(sid, W - 76, 32, sw, 19, () => this.relayout(app, () => { this.sortI = (this.sortI + 1) % SORTS.length; }), 3);
+    holoTab(app, sid, W - 76, 31, sw, 21, '정렬 · ' + SORTS[this.sortI][1], false, null, 'body');
+    app.input.hit(sid, W - 76, 31, sw, 21, () => this.relayout(app, () => { this.sortI = (this.sortI + 1) % SORTS.length; }), 3);
     // 고른 식물 정보(앞 턱 위에 뜬 홀로그램)
     const it = this.order && this.order.find(x => x.id === this.sel), PY = 400;
     holo(g, 10, PY, W - 20, 70, st, 13);

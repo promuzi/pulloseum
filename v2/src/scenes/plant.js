@@ -1,5 +1,5 @@
 import { ELEMENT, TYPE } from '../art/palette.js';
-import { button, fmt, rbox } from '../art/ui.js';
+import { button, fmt, rbox, holoTab } from '../art/ui.js';
 import { icon, tinted } from '../art/icons.js';
 import { bigKey } from '../art/sprites.js';
 import { T, btnBody, tbar, holo } from '../art/theme.js';
@@ -65,12 +65,7 @@ export const plant = {
     const { g, W, H } = app, st = T.card || T.panel;
     holo(g, 4, SHEET_Y, W - 8, H - SHEET_Y + 6, st, 16);
     const tw = Math.floor((W - 24) / TABS.length);
-    TABS.forEach((tb, i) => {
-      const on = tb.id === this.tab, x = 12 + i * tw, S = on ? T.btn.gold : T.btn.second;
-      const { yy } = btnBody(g, x, SHEET_Y + 8, tw - 4, 28, S, !on && app.input.isPressed('pt_' + tb.id));
-      g.text(tb.label, x + (tw - 4) / 2, yy + 6, { font: 'value', color: S.text, align: 'center' });
-      if (live) app.input.hit('pt_' + tb.id, x, SHEET_Y + 8, tw - 4, 28, () => { this.tab = tb.id; }, 2);
-    });
+    TABS.forEach((tb, i) => holoTab(app, 'pt_' + tb.id, 12 + i * tw, SHEET_Y + 8, tw - 4, 27, tb.label, tb.id === this.tab, live ? () => { this.tab = tb.id; } : null, 'value'));
     const y0 = SHEET_Y + 44;
     if (this.tab === 'up') this.drawUp(app, p, y0, live);
     else if (this.tab === 'set') this.drawSet(app, p, y0, live);

@@ -124,14 +124,19 @@ export function loftBack(app) {
 // 식물(전등에 맞춰 어두워지거나 밝아짐): 화분+식물을 따로 그린 뒤 그 칸에만 색을 덮음
 export function loftPlant(app, key, pot, bx, by) {
   const { g, t } = app, k = S ? S.k ?? 1 : 1;
-  if (!S || k === 1) return drawBig(g, key, pot, bx, by, { t, flat: true });   // flat = 의자 각도(12°) 화분
+  const dk = S ? S.darkA || 0 : 0;
+  if (!S || (k === 1 && dk <= 0)) return drawBig(g, key, pot, bx, by, { t, flat: true });   // flat = 의자 각도(12°) 화분
   if (!S.plantCv) { S.plantCv = document.createElement('canvas'); S.plantCv.width = 140; S.plantCv.height = 140; }
   const c = S.plantCv.getContext('2d'); c.imageSmoothingEnabled = false;
   c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, 140, 140);
   drawBig({ c }, key, pot, 70, 124, { t, flat: true });
   c.globalCompositeOperation = 'source-atop';
-  c.fillStyle = k < 1 ? `rgba(10,14,30,${((1 - k) * 0.42).toFixed(3)})` : `rgba(255,200,130,${((k - 1) * 0.6).toFixed(3)})`;
-  c.fillRect(0, 0, 140, 140);
+  if (k !== 1) { c.fillStyle = k < 1 ? `rgba(10,14,30,${((1 - k) * 0.42).toFixed(3)})` : `rgba(255,200,130,${((k - 1) * 0.6).toFixed(3)})`; c.fillRect(0, 0, 140, 140); }
+  if (dk > 0) {   // 암실: 위 전등 빛을 받아 위쪽이 따뜻하게 밝아지고 화분 아래로 갈수록 원래 색
+    const gr = c.createLinearGradient(0, 24, 0, 124);
+    gr.addColorStop(0, `rgba(255,214,150,${(0.34 * dk).toFixed(3)})`); gr.addColorStop(0.55, `rgba(255,196,120,${(0.16 * dk).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,196,120,0)');
+    c.fillStyle = gr; c.fillRect(0, 0, 140, 140);
+  }
   c.globalCompositeOperation = 'source-over';
   g.c.drawImage(S.plantCv, Math.round(bx) - 70, Math.round(by) - 124);
   return true;
@@ -167,37 +172,113 @@ export function loftFront(app) {
   }
 }
 
-// ── 암실(2026-10-15 사용자 "가운데 식물을 누르면 주변 전등이 꺼지면서 암실이 되는 연출과 함께 위 주황전등만 남아서 집중시키고") ──
-//  방 전체를 짙은 남색으로 덮되 위 전등(갓·전구)·빛기둥(원뿔)·의자 둘레 바닥 고인 빛은 남기고, 창 밖 우주는 조금 덜 덮어 별이 희미하게 보이게.
-//  덮개는 한 번 만들어 두고(빛 세기 → 덮는 세기, 1/16 단계) 세기 a만 바꿔 그린다.
-const DARK = [5, 7, 15];
+// ── 암실(2026-10-15 사용자 "가운데 식물을 누르면 주변 전등이 꺼지면서 암실이 되는 연출과 함께 위 주황전등만 남아서 집중시키고",
+//  같은 날 바로잡음 "원래 사진처럼 존재하는 윗조명(원뿔 형태의 주황색)만 남겨달라는 의미야, 새로운 조명 만들지 말고") ──
+//  새 빛을 그리지 않는다: 원래 그림에서 떼어 둔 전등 빛(loft_light.mjs — 단계 a = 전등 끈 방)으로
+//  암실 = 전등 끈 방 × 0.14(방 모양만 희미하게) + 원래 그림의 전등 빛(원뿔 + 그 빛이 닿은 의자 둘레 바닥)만.
+//  흰 벽에 번진 파르스름한 빛(네모 타일 자국)은 빼고 주황빛 칸만(원래 칸의 빨강 − 파랑, 5×5로 고름). 창은 반투명 짙은 덮개(우주가 희미하게).
+const DARK = [5, 7, 15], AMB = 0.14;
 function darkCanvas() {
   if (S.darkCv) return S.darkCv;
-  const W = 270, H = 600, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const c = cv.getContext('2d'), im = c.createImageData(W, H), d = im.data;
-  const sm = (e0, e1, v) => { const k = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return k * k * (3 - 2 * k); };
-  const B4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+  const bg = BGIMG.home_loft, dimIm = BGIMG.home_loft_dim, D = S.meta.dim, W = bg.width, H = bg.height;
+  const read = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); return x.getImageData(0, 0, im.width, im.height).data; };
+  const o = read(bg), dm = dimIm ? read(dimIm) : null, off = new Uint8ClampedArray(o);
+  const keep = new Float32Array(W * H);
+  // 끈 방(단계 a 띠)과 빛을 남길 자리(상자 가장자리는 부드럽게)
+  for (const b of D.boxes) for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    const X = b.x + x, Y = b.y + y, d = (Y * W + X) * 4;
+    if (dm) { const s = ((b.oy + y) * dimIm.width + x) * 4; if (dm[s + 3] > 0) { off[d] = dm[s]; off[d + 1] = dm[s + 1]; off[d + 2] = dm[s + 2]; } }
+    keep[Y * W + X] = Math.max(0, Math.min(1, Math.min(x, b.w - 1 - x, y, b.h - 1 - y) / 10));
+  }
+  // 주황빛 정도(원래 칸 빨강 − 파랑)를 5×5로 고름 — 바닥 빛 가장자리가 점점이 자글거리지 않게
+  const warm0 = new Float32Array(W * H), warm = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) warm0[i] = Math.max(0, Math.min(1, (o[i * 4] - o[i * 4 + 2] - 8) / 36));
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    // 빛기둥: 가운데는 밝게 차고 가장자리는 넓게 부드럽게, 바닥 가까이서 고인 빛으로 이어짐
-    let light = y >= 34 ? sm(0.04, 0.62, S.coneI(x, y)) * (1 - sm(372, 420, y)) : 0;
-    const fx = ((x + 0.5 - 135) / 28) ** 2 + ((y + 0.5 - 22) / 18) ** 2;   // 전등 갓·전구
-    if (fx < 1) light = Math.max(light, 1 - fx * 0.4);
-    const pool = ((x + 0.5 - 134) / 92) ** 2 + ((y + 0.5 - 396) / 26) ** 2;   // 의자 둘레 바닥 고인 빛
-    if (pool < 1) light = Math.max(light, (1 - pool) ** 0.8 * 0.72);
-    let a = (1 - light) * 0.92;
-    const wx = x - S.x0, wy = y - S.y0;
-    if (wx >= 0 && wy >= 0 && wx < S.w && wy < S.h && S.mask[wy * S.w + wx]) a = 0.8;   // 창 밖 우주: 빛기둥과 상관없이 고르게(밝은 행성이 식물보다 눈에 띄지 않게, 별은 희미하게)
-    // 8단으로 나누고 단 사이는 4×4 바둑 점으로 섞음(도트 그림답게 — 매끈한 띠 대신)
-    const lv = a * 8, b = Math.floor(lv), q = b + (B4[y & 3][x & 3] / 16 < lv - b ? 1 : 0);
-    const i = (y * W + x) * 4; d[i] = DARK[0]; d[i + 1] = DARK[1]; d[i + 2] = DARK[2]; d[i + 3] = Math.round(Math.min(8, q) / 8 * 255);
+    let s = 0, n = 0;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < W && Y < H) { s += warm0[Y * W + X]; n++; } }
+    warm[y * W + x] = s / n;
+  }
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d'), im = c.createImageData(W, H), d = im.data;
+  for (let i = 0; i < W * H; i++) {
+    const k = i * 4, x = i % W, y = (i - x) / W, wx = x - S.x0, wy = y - S.y0;
+    if (wx >= 0 && wy >= 0 && wx < S.w && wy < S.h && S.mask[wy * S.w + wx]) { d[k] = DARK[0]; d[k + 1] = DARK[1]; d[k + 2] = DARK[2]; d[k + 3] = 204; continue; }   // 창 = 반투명 짙은 덮개
+    const kp = keep[i] * warm[i];
+    for (let ch = 0; ch < 3; ch++) d[k + ch] = Math.round(off[k + ch] * AMB + DARK[ch] * (1 - AMB) * 0.6 + Math.max(0, o[k + ch] - off[k + ch]) * kp);
+    d[k + 3] = 255;
   }
   c.putImageData(im, 0, 0);
   return (S.darkCv = cv);
 }
 export function loftDark(app, a) {
+  if (S) S.darkA = Math.max(0, Math.min(1, a));
   if (!S || a <= 0) return;
-  app.g.alpha(Math.min(1, a), () => { app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(darkCanvas(), 0, 0); });
+  app.g.alpha(Math.min(1, a), () => { app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(darkCanvas(), 0, 0); app.g.c.drawImage(beamCanvas(), 0, 0); });   // 암실 + 전등 → 식물 빛줄기
 }
+
+// ── 빛줄기(암실에서 전등 → 식물, 2026-10-15 사용자 "빛이 내려오는 중간도 있어야 하는데 왜 없앴어? 약간의 먼지가 있는 느낌으로 빛의 경로가 보였으면 해. 식물도 빛을 받아 강조되고") ──
+//  새 모양을 짓지 않는다: 그림 속 주황 원뿔(전등 아래 폭 30칸 → 창 위 87칸)의 양쪽 가장자리를 주황 칸으로 재어 직선으로 맞추고, 그 선을 그대로 아래로 이어 의자까지.
+//  가운데가 짙고 가장자리로 옅어지는 반투명 주황(8단 바둑 점 번짐), 위는 그림 속 원뿔 끝에 겹쳐 이어지고 아래는 바닥에 고인 빛으로 사라짐.
+//  그 안에 옅은 안개(잡음 무늬가 천천히 피어오름)와 천천히 떠도는 먼지, 식물은 위에서 받는 따뜻한 빛(loftPlant).
+const BEAM = { y0: 108, y1: 392, a: 0.32, col: [255, 190, 116] };
+function beamGeo() {
+  if (S.beam) return S.beam;
+  const bg = BGIMG.home_loft, c = document.createElement('canvas'); c.width = bg.width; c.height = bg.height;
+  const cx = c.getContext('2d'); cx.drawImage(bg, 0, 0);
+  const d = cx.getImageData(0, 0, bg.width, bg.height).data, W = bg.width, rows = [];
+  for (let y = 44; y <= 112; y++) { let l = -1, r = -1; for (let x = 60; x < 210; x++) { const k = (y * W + x) * 4; if (d[k] - d[k + 2] > 28) { if (l < 0) l = x; r = x; } } if (l >= 0) rows.push([y, l, r]); }
+  const fit = pts => { let n = 0, a = 0, b = 0, aa = 0, ab = 0; for (const [p, q] of pts) { n++; a += p; b += q; aa += p * p; ab += p * q; } const k = (n * ab - a * b) / (n * aa - a * a); return [(b - k * a) / n, k]; };
+  const L = rows.length > 4 ? fit(rows.map(r => [r[0], r[1]])) : [132, -0.346], R = rows.length > 4 ? fit(rows.map(r => [r[0], r[2]])) : [136.3, 0.358];
+  const at = y => { const l = L[0] + L[1] * y, r = R[0] + R[1] * y; return [(l + r) / 2, Math.max(1, (r - l) / 2)]; };
+  // 세기(0~1): 가운데 짙게 · 위는 그림 원뿔 끝(창 위 테)에서 겹쳐 시작 · 아래는 바닥 빛으로 사라짐 · 넓어질수록 조금 옅게
+  const sm = (e0, e1, v) => { const k = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return k * k * (3 - 2 * k); };
+  const I = (x, y) => { if (y < BEAM.y0 || y > BEAM.y1) return 0; const [c0, hw] = at(y), u = Math.abs(x + 0.5 - c0) / hw; if (u >= 1) return 0; return (1 - u) ** 1.25 * sm(BEAM.y0, BEAM.y0 + 16, y) * (1 - sm(330, BEAM.y1, y)) * (1 - 0.35 * Math.max(0, y - 118) / 274); };
+  return (S.beam = { at, I });
+}
+function beamCanvas() {
+  if (S.beamCv) return S.beamCv;
+  const { I } = beamGeo(), W = 270, H = 600, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d'), im = c.createImageData(W, H), d = im.data, B4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+  for (let y = BEAM.y0; y <= BEAM.y1; y++) for (let x = 0; x < W; x++) {
+    const v = I(x, y) * 8; if (v <= 0) continue;
+    const b = Math.floor(v), q = b + (B4[y & 3][x & 3] / 16 < v - b ? 1 : 0); if (!q) continue;
+    const i = (y * W + x) * 4; d[i] = BEAM.col[0]; d[i + 1] = BEAM.col[1]; d[i + 2] = BEAM.col[2]; d[i + 3] = Math.round(q / 8 * BEAM.a * 255);
+  }
+  c.putImageData(im, 0, 0);
+  return (S.beamCv = cv);
+}
+// 빛줄기 안 안개 + 먼지(암실 세기 a, 식물 앞에 그림)
+function beamFront(app, a) {
+  const { g, t } = app, { I } = beamGeo(), dt = Math.min(50, Math.max(0, t - (S.bft || t))); S.bft = t;
+  if (!S.bhz) { const w = 270, h = BEAM.y1 - BEAM.y0 + 1, cv = document.createElement('canvas'); cv.width = w; cv.height = h; S.bhz = { cv, ctx: cv.getContext('2d'), img: cv.getContext('2d').createImageData(w, h), w, h }; }
+  const Z = S.bhz, d = Z.img.data, N = S.N, oy = Math.floor(t / 140), ox = Math.floor(t / 1100);
+  for (let y = 0; y < Z.h; y++) for (let x = 0; x < Z.w; x++) {
+    const Y = BEAM.y0 + y, i = (y * Z.w + x) * 4, bi = I(x, Y);
+    if (bi <= 0.04) { d[i + 3] = 0; continue; }
+    const n = N[((Y + oy) & 63) * 64 + ((x + ox) & 63)] * 0.6 + N[((Y + (oy >> 1) + 23) & 63) * 64 + ((x - ox + 5) & 63)] * 0.4;
+    const al = Math.max(0, (n - 0.44) * 2.2) * bi * 0.22 * a;
+    d[i] = 255; d[i + 1] = 214; d[i + 2] = 160; d[i + 3] = Math.min(255, al * 255) | 0;
+  }
+  Z.ctx.putImageData(Z.img, 0, 0);
+  g.c.drawImage(Z.cv, 0, BEAM.y0);
+  if (!S.bmotes) {
+    const mr = rng(97); S.bmotes = [];
+    S.bspawn = m => { for (let k = 0; k < 30; k++) { const y = BEAM.y0 + 12 + mr() * (BEAM.y1 - BEAM.y0 - 60), [c0, hw] = beamGeo().at(y), x = c0 + (mr() * 2 - 1) * hw * 0.8; if (I(x, y) > 0.18) { m.x = x; m.y = y; return m; } } m.x = 134; m.y = 220; return m; };
+    for (let k = 0; k < 44; k++) S.bmotes.push(S.bspawn({ vx: (mr() - 0.5) * 2, vy: (mr() - 0.45) * 2.6, per: 2600 + mr() * 4400, ph: mr() * 6.28, amp: 2 + mr() * 4, tw: 1000 + mr() * 2000, sp: mr() * 6.28 }));
+  }
+  for (const m of S.bmotes) {
+    m.x += (m.vx + Math.cos(t / m.per + m.ph) * m.amp * 0.6) * dt / 1000;
+    m.y += (m.vy + Math.sin(t / (m.per * 1.3) + m.ph) * m.amp * 0.35) * dt / 1000;
+    const bi = I(m.x, m.y);
+    if (bi < 0.06) { S.bspawn(m); continue; }
+    let b = Math.min(1, bi * 1.6) * a * (0.55 + 0.45 * Math.sin(t / m.tw + m.ph));
+    const glint = Math.sin(t / 2100 + m.sp * 3) > 0.986;
+    if (glint) b = Math.max(b, 0.9 * a);
+    if (b < 0.28) continue;
+    g.px(Math.round(m.x), Math.round(m.y), b > 0.8 ? '#fff6e2' : b > 0.5 ? '#ffe0b0' : '#e2b888');
+  }
+}
+
 // 방 한 장면(배경 → 암실 덮개 → 식물 → 빛기둥 흐림·먼지)을 카메라 아래 그림: 방 자리 (px, py)를 화면 (sx, sy)에 z배로.
 //  plant = 식물 그리기(없으면 의자 위 기본), 확대 끝값은 기기 배율 s에 맞춰 z·s 가 정수가 되게(도트 칸 크기가 고르게) — loftZoom
 export function loftView(app, { dark = 0, z = 1, px = 134, py = 300, sx = px, sy = py, plant = null } = {}) {
@@ -209,6 +290,7 @@ export function loftView(app, { dark = 0, z = 1, px = 134, py = 300, sx = px, sy
   loftDark(app, dark);
   if (plant) plant();
   loftFront(app);
+  if (dark > 0 && S) beamFront(app, Math.min(1, dark));   // 빛줄기 안 안개·먼지(식물 앞)
   c.restore();
 }
 export const loftZoom = (app, want) => { const s = app.pxScale || (app.screen && app.screen.s) || 1; return s < 2 ? want : Math.max(1, Math.round(s * want) / s); };   // pxScale = 촬영 배율

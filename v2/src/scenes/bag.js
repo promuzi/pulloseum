@@ -1,6 +1,6 @@
 import { TYPE } from '../art/palette.js';
 import { plainBg } from '../art/bg.js';
-import { button, chip } from '../art/ui.js';
+import { button, chip, holoTab } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { T, plate, btnBody } from '../art/theme.js';
 import { header, seedArt } from './common.js';
@@ -16,11 +16,8 @@ export const bag = {
     // 정렬
     let x = 10; const y0 = 37;
     [['rarity', '희귀도'], ['name', '이름'], ['planet', '행성']].forEach(([id, label]) => {
-      const on = this.sort === id, st = on ? T.btn.primary : T.btn.second;
-      const w = g.textW(label) + 16;
-      btnBody(g, x, y0, w, 19, st, !on);
-      g.text(label, x + w / 2, y0 + 3 + (on ? 0 : 1), { color: st.text, align: 'center', font: on ? 'bold' : 'body' });
-      app.input.hit('sort_' + id, x, y0, w, 19, () => { this.sort = id; }, 5);
+      const on = this.sort === id, w = g.textW(label, 'label') + 18;
+      holoTab(app, 'sort_' + id, x, y0, w, 21, label, on, () => { this.sort = id; });
       x += w + 5;
     });
     // 목록

@@ -29,7 +29,7 @@ const MODES = [
   { id: 'league', icon: 'shield', name: '3:3 팀 리그', desc: '세 그루가 교체하며 싸우는 리그', lock: '3:3 팀 리그는 첫 출시 뒤에 열려요' },
   { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
 ];
-const BANNER = { x: 6, y: 28, w: 258, h: 30 };
+const BANNER = { x: 4, y: 27, w: 262, h: 60 };   // 위 상태 바(x 4~266)와 같은 가장자리 · 높이 2배(2026-10-15 사용자 "배너 높이 2배로 · 배너랑 위의 바 정렬이 안 맞아")
 const BANNER_COL = ['#97e8f7', '#f0be7d', '#9ff0b0', '#c8a8f0'];   // 배너 색(왼쪽 띠·이름 밑줄)
 const TIER_COL = { 브론즈: '#d89a62', 실버: '#c8d2e0', 골드: '#f0c858', 플래티넘: '#9ff0e0', 다이아: '#a8d0ff', 마스터: '#e0a8ff', 풀로세움: '#ffd890' };
 const ease = k => k * k * (3 - 2 * k);
@@ -204,20 +204,23 @@ export const home = {
       app.input.hit('ms_' + m.id, x + 8, by, w - 16, 54, () => { if (lock) app.toast(m.lock); else { s.mode = m.id; this.modeSheet = false; } });
     });
   },
-  // 프로필 배너: 배너 색 띠 · 대표 식물 얼굴 · 이름(굵게) · 칭호 · 오른쪽 랭크(색)·점수 막대 · 연필
+  // 프로필 배너(높이 60): 배너 색 띠 · 대표 식물 얼굴(50칸) · 이름(16)·칭호 · 오른쪽 랭크(색)·점수·막대 · 연필
   banner(app, x, y, tappable, bw = BANNER.w) {
     const { g, state: s } = app, pf = s.profile || {}, st = T.card || T.panel, P = T.ptext, { h } = BANNER, w = bw, col = BANNER_COL[pf.color || 0];
-    holo(g, x, y, w, h, st, 13);
+    holo(g, x, y, w, h, st, 16);   // 꽉 채움(뒤 원뿔 빛이 구멍으로 점점이 비치지 않게)
     g.rect(x + 1, y + 2, 3, h - 4, col);
-    g.rect(x + 8, y + 3, 24, 24, '#0a1e2c'); g.rect(x + 8, y + 3, 24, 1, col);
-    g.clip(x + 9, y + 4, 22, 22, () => drawPortrait(g, pf.avatar || 'flower_grass', x + 8, y + 4, 24, false));
-    g.text(pf.name || '재배사', x + 38, y + 3, { font: 'bold', color: P.main });
-    g.text(pf.title || '', x + 38, y + 16, { color: P.sub });
-    const tier = s.tournament?.tier || '브론즈', rk = (s.plants[0] && s.plants[0].rank) || { pts: 0, next: 300 }, tx = x + w - 96;
-    const tw = g.textW(tier, 'bold'); g.text(tier, tx, y + 3, { font: 'bold', color: TIER_COL[tier] || P.main });
-    g.text(`${rk.pts}/${rk.next}`, tx + tw + 4, y + 3, { color: P.dim });   // 랭크 이름 바로 뒤(겹치지 않게)
-    tbar(g, tx, y + 19, 68, 4, rk.pts / rk.next, 'exp');
-    g.img(icon('pencil'), x + w - 22, y + 8);
+    g.rect(x + 8, y + 4, 52, 52, '#0a1e2c'); g.rect(x + 8, y + 4, 52, 1, col); g.rect(x + 8, y + 55, 52, 1, col);
+    g.clip(x + 9, y + 5, 50, 50, () => drawPortrait(g, pf.avatar || 'flower_grass', x + 9, y + 5, 50, false));
+    const rx = x + w - 80, nx = x + 68;   // 오른쪽 랭크 칸(80) — 왼쪽 이름·칭호 칸이 좁은 배너(설정 창)에서도 잘리지 않게
+    g.clip(nx, y + 4, rx - nx - 4, 48, () => {
+      g.text(pf.name || '재배사', nx, y + 10, { font: 'name', color: P.main });
+      g.text(pf.title || '', nx, y + 34, { font: 'label', color: P.sub });
+    });
+    const tier = s.tournament?.tier || '브론즈', rk = (s.plants[0] && s.plants[0].rank) || { pts: 0, next: 300 };
+    g.text(tier, rx, y + 9, { font: 'value', color: TIER_COL[tier] || P.main });
+    g.img(icon('pencil'), x + w - 19, y + 9);
+    g.text(`${rk.pts}/${rk.next}`, rx, y + 27, { font: 'label', color: P.sub });
+    tbar(g, rx, y + 45, w - (rx - x) - 9, 5, rk.pts / rk.next, 'exp');
     if (tappable) app.input.hit('home_profile', x, y, w, h, () => { this.editing = true; }, 2);
   },
   // 프로필 설정 창: 미리보기 배너 · 이름 바꾸기 · 대표 식물 · 칭호 · 배너 색 · 완료
@@ -225,11 +228,11 @@ export const home = {
     const { g, W, H, state: s } = app, pf = s.profile, st = T.card || T.panel, P = T.ptext;
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     app.input.hit('pf_block', 0, 0, W, H, () => {});
-    const x = 14, y = 92, w = W - 28, h = 380;
-    holo(g, x, y, w, h, st, 14);
+    const x = 14, y = 80, w = W - 28, h = 404;
+    holo(g, x, y, w, h, st, 15);
     g.text('프로필 설정', x + 12, y + 10, { font: 'head', color: P.main });
     this.banner(app, x + 6, y + 32, false, w - 12);
-    let yy = y + 74;
+    let yy = y + 104;
     g.text('이름', x + 12, yy + 5, { color: P.sub });
     g.text(pf.name, x + 60, yy + 5, { font: 'bold', color: P.main });
     button(app, 'pf_name', x + w - 72, yy, 60, 22, '바꾸기', { style: 'night', icon: 'pencil', onTap: () => { const v = typeof prompt === 'function' ? prompt('이름(12자까지)', pf.name) : null; if (v && v.trim()) pf.name = v.trim().slice(0, 12); } });

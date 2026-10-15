@@ -84,17 +84,23 @@ export function elemChip(g, x, y, el) {
   return chip(g, x, y, E.name, { icon: el, color: E.light });
 }
 
-// 탭 줄. tabs=[{id,label}], active=id — 켜진 탭 = 판 색, 꺼진 탭 = 어두운 속
+// 홀로그램 탭(2026-10-15 사용자 "여러 탭들도 홀로그램 느낌을 내줘"): 고른 탭 = 밝은 청록 판 + 아래 빛 줄, 안 고른 탭 = 짙고 흐린 판(파란 테).
+//  판 속은 꽉 채움(글자 깨짐 방지), 반짝이거나 움직이는 꾸밈 없음(지글거림·어지러움 방지)
+const TAB_ON = { fill: '#1f5f86', fill2: '#2a7099', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' };
+const TAB_OFF = { fill: '#0b1d2e', fill2: '#0f2538', frame: '#2f5f7a', frameHi: '#4c88a9', frameLo: '#183a52' };
+export function holoTab(app, id, x, y, w, h, label, on, onTap, font = 'label') {
+  const { g, input } = app, pr = input.isPressed(id), yy = y + (pr && !on ? 1 : 0);
+  holo(g, x, yy, w, h, on ? TAB_ON : TAB_OFF, 16);
+  if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#97e8f7'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e4fbff'); }   // 아래 빛 줄
+  g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2), { font, color: on ? '#ffffff' : '#7fb8d0', align: 'center' });
+  if (onTap) input.hit(id, x, y, w, h, onTap, 3);
+}
+// 탭 줄. tabs=[{id,label}], active=id
 export function tabs(app, x, y, w, list, active, onPick) {
-  const { g, input } = app;
   const tw = Math.floor(w / list.length);
   list.forEach((t, i) => {
-    const tx = x + i * tw, on = t.id === active;
-    const ww = i === list.length - 1 ? w - tw * i : tw;
-    const st = on ? T.btn.second : T.btn.off;
-    btnBody(g, tx, y, ww - 1, 22, st, !on);
-    g.text(t.label, tx + (ww - 1) / 2, y + 5 + (on ? 0 : 1), { font: on ? 'bold' : 'body', color: on ? st.text : T.text.dim, align: 'center' });
-    input.hit('tab_' + t.id, tx, y, ww - 1, 22, () => onPick(t.id), 4);
+    const tx = x + i * tw, ww = i === list.length - 1 ? w - tw * i : tw;
+    holoTab(app, 'tab_' + t.id, tx, y, ww - 2, 22, t.label, t.id === active, () => onPick(t.id));
   });
 }
 
