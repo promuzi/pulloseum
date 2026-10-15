@@ -48,7 +48,7 @@ export const result = {
     });
     g.text('예선 2승 0패 · 5판 중 2판', W / 2, y + 76, { color: T.text.main, align: 'center' });
     if (!win) g.text('불은 풀에 강해요. 물 속성 식물로 바꿔 보세요', W / 2, y + 94, { color: T.text.gold, align: 'center' });
-    button(app, 'res_home', 25, H - 112, W - 50, 30, '홈으로', { style: 'teal', font: 'head', onTap: () => app.go('home') });
+    button(app, 'res_home', 25, H - 112, W - 50, 30, '홈으로', { style: 'teal', font: 'head', onTap: () => app.go('home', {}, 'shutter') });
     button(app, 'res_skill', 25, H - 72, W - 50, 26, '기술 장착하러 가기', { style: 'night', icon: 'sword', onTap: () => app.go('plant', { tab: 'skill' }) });
   },
 };

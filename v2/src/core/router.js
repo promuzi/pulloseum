@@ -8,9 +8,11 @@ import { C, BAYER4 } from '../art/palette.js';
 import { setTheme } from '../art/theme.js';
 
 const STEEL = { hi: '#e8ecf2', a: '#c6ccd6', b: '#a2aab8', c: '#7e8796', d: '#596170', edge: '#2a2f3a', rivet: '#eef2f8', rivetLo: '#4a5160' };
+// 어둡고 두꺼운 철 셔터(2026-10-15 사용자: 전환 = ① 철 셔터, "더 어둡고 두꺼운 느낌으로") — 건메탈 골판 + 두꺼운 맞물림 턱 + 큰 볼트 + 고무 띠, 양옆 레일
+const GUN = { hi: '#7d8696', a: '#555d6c', b: '#3b424f', c: '#2b313b', d: '#20252d', edge: '#0c0f13', lipHi: '#6c7586', bolt: '#9aa3b2', boltLo: '#14181e', seal: '#08090b', rail: '#171b21', railHi: '#3a414d' };
 export const TRANSITIONS = {
   dither: { close: 110, hold: 0, open: 110 },
-  shutter: { close: 210, hold: 170, open: 240, metal: true },
+  shutter: { close: 260, hold: 210, open: 280, metal: true },
   doors: { close: 220, hold: 170, open: 240, metal: true },
   iris: { close: 260, hold: 140, open: 260, metal: true },
   pixel: { close: 260, hold: 60, open: 260 },
@@ -68,6 +70,27 @@ function plate(g, x, y, w, h, edge) {
   if (edge === 'right') { g.rect(x + w - L, y, L, h, STEEL.d); g.rect(x + w - L, y, 1, h, STEEL.hi); g.rect(x + w - 1, y, 1, h, STEEL.edge); for (let yy = y + 8; yy < y + h; yy += 22) { g.rect(x + w - 4, yy, 2, 2, STEEL.rivet); g.px(x + w - 3, yy + 1, STEEL.rivetLo); } }
   if (edge === 'left') { g.rect(x, y, L, h, STEEL.d); g.rect(x, y, 1, h, STEEL.edge); g.rect(x + L - 1, y, 1, h, STEEL.c); for (let yy = y + 8; yy < y + h; yy += 22) { g.rect(x + 2, yy, 2, 2, STEEL.rivet); g.px(x + 3, yy + 1, STEEL.rivetLo); } }
 }
+// 두꺼운 건메탈 셔터 판: 골판(14칸마다 위 빛줄 · 가운데 · 아래 깊은 홈 2칸) + 닿는 쪽 두꺼운 턱(16칸: 빛줄·큰 볼트·고무 띠)
+function heavyPlate(g, x, y, w, h, edge) {
+  x = Math.round(x); y = Math.round(y);
+  g.rect(x, y, w, h, GUN.b);
+  const P = 14, L = 16, top = edge === 'top';
+  for (let yy = top ? y + L : y; yy < (top ? y + h : y + h - L); yy += P) {   // 골판 한 장씩
+    g.rect(x, yy, w, 1, GUN.a); g.rect(x, yy + 1, w, 1, GUN.hi);
+    g.rect(x, yy + 7, w, 1, GUN.c);
+    g.rect(x, yy + P - 2, w, 2, GUN.edge);
+  }
+  const ly = top ? y : y + h - L;   // 맞물림 턱
+  g.rect(x, ly, w, L, GUN.d);
+  g.rect(x, ly + (top ? 3 : 0), w, 1, GUN.lipHi); g.rect(x, ly + (top ? L - 1 : L - 4), w, 1, GUN.edge);
+  g.rect(x, top ? ly : ly + L - 3, w, 3, GUN.seal);   // 고무 띠(닿는 날)
+  for (let xx = x + 12; xx < x + w - 6; xx += 26) { const by = ly + (top ? 7 : 5); g.rect(xx, by, 3, 3, GUN.bolt); g.px(xx + 2, by + 2, GUN.boltLo); g.px(xx, by, '#c8d0dc'); }
+}
+// 묵직하게 닿을 때 이음매에서 양옆으로 퍼지는 먼지(회색 점)
+function dust(g, W, cy, hold) {
+  const k = hold / 200;
+  for (let i = 0; i < 18; i++) { const side = i % 2 ? 1 : -1, x = W / 2 + side * (8 + (i * 13) % 110) * (0.4 + k), y = cy + ((i * 7) % 9 - 4) * (0.5 + k * 1.5); if ((i * 3 + Math.floor(hold / 40)) % 4) g.rect(Math.round(x), Math.round(y), 2, 1, k < 0.5 ? '#8a8f98' : '#5a5f68'); }
+}
 // 닿는 순간: 판이 위아래(또는 좌우)로 2칸 흔들리고 이음매에서 불꽃 몇 칸이 튐(처음 140ms)
 const shake = hold => (hold >= 0 && hold < 120 ? [2, -2, 1, -1, 1, 0][Math.floor(hold / 20)] || 0 : 0);
 function sparks(g, cx, cy, hold, horiz) {
@@ -82,10 +105,11 @@ function sparks(g, cx, cy, hold, horiz) {
 const DRAW = {
   dither: (g, W, H, k) => fadeDither(g, W, H, k),
   shutter: (g, W, H, k, hold) => {
-    const s = shake(hold), half = Math.ceil(H / 2);
-    plate(g, 0, -half + half * k + s, W, half, 'bottom');
-    plate(g, 0, H - half * k - s, W, half + 1, 'top');
-    if (k >= 1) { g.rect(0, half - 1 + s, W, 2, STEEL.edge); sparks(g, W / 2, half, hold, true); }
+    const s = hold >= 0 && hold < 160 ? [3, -3, 2, -2, 1, -1, 1, 0][Math.floor(hold / 20)] || 0 : 0, half = Math.ceil(H / 2);
+    heavyPlate(g, 0, -half + half * k + s, W, half, 'bottom');
+    heavyPlate(g, 0, H - half * k - s, W, half + 1, 'top');
+    g.rect(0, 0, 5, H, GUN.rail); g.rect(4, 0, 1, H, GUN.railHi); g.rect(W - 5, 0, 5, H, GUN.rail); g.rect(W - 5, 0, 1, H, GUN.railHi);   // 양옆 레일
+    if (k >= 1) { g.rect(0, half - 2 + s, W, 4, GUN.seal); sparks(g, W / 2, half, hold, true); if (hold >= 0 && hold < 200) dust(g, W, half + s, hold); }
   },
   doors: (g, W, H, k, hold) => {
     const s = shake(hold), half = Math.ceil(W / 2);

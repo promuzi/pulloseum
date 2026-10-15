@@ -77,7 +77,7 @@ export const home = {
       app.input.hit(id, x - 10, py - 12, 20, 24, () => this.flip(d), 2);
     }
     const TR = s.tournament;
-    button(app, 'home_cta', 60, 470, 150, 44, '토너먼트 출전', { style: 'gold', font: 'head', icon: 'sword', iconTint: true, sub: `${TR.round} · ${TR.wins}승 ${TR.losses}패`, onTap: () => app.go('battle') });
+    button(app, 'home_cta', 60, 470, 150, 44, '토너먼트 출전', { style: 'gold', font: 'head', icon: 'sword', iconTint: true, sub: `${TR.round} · ${TR.wins}승 ${TR.losses}패`, onTap: () => app.go('battle', {}, 'shutter') });   // 전투장으로 = 철 셔터
     app.input.hit('home_plant', mx - 40, my - 100, 80, 104, () => app.go('plant'));
     navBar(app, 'home', { badge: { nursery: true } });
   },
@@ -201,7 +201,7 @@ export const home = {
     g.img(icon('trophy'), 21, y + 6);
     g.text(`${TR.name} · ${TR.round}`, 36, y + 6, { color: T.text.gold });
     g.text(`${TR.wins}승 ${TR.losses}패 / ${TR.bestOf}판`, W - 21, y + 6, { color: T.text.main, align: 'right' });
-    button(app, 'home_cta', 25, H - 96, W - 50, 34, '토너먼트 출전', { style: 'gold', font: 'head', icon: 'sword', onTap: () => app.go('battle') });
+    button(app, 'home_cta', 25, H - 96, W - 50, 34, '토너먼트 출전', { style: 'gold', font: 'head', icon: 'sword', onTap: () => app.go('battle', {}, 'shutter') });   // 전투장으로 = 철 셔터
     // 식물 누르면 관리
     app.input.hit('home_plant', mid - 50, topY - 150, 100, 150, () => app.go('plant'));
     navBar(app, 'home', { badge: { nursery: true } });
