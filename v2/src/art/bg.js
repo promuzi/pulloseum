@@ -1,6 +1,8 @@
 // 배경(전부 코드로 직접 그린 도트). 같은 씨앗값이면 같은 그림 — 별 위치가 매번 바뀌지 않는다.
 import { C, RAMP } from './palette.js';
 import { layer } from '../core/gfx.js';
+import { T } from './theme.js';
+import { BGIMG } from './sprites.js';
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -325,28 +327,25 @@ export function pad(g, cx, cy, rx, ry, glow) {
 }
 
 // ── 상점 / 양육 / 일반 창 바탕(1배) ──
-export function plainBg(g, w, h, t, tone = 'night') {
-  if (tone === 'nursery') {
-    g.vgrad(0, 0, w, h, ['#16302d', '#1b3b35', '#20453b', '#1b3b35']);
-    // 유리 온실 창살
-    for (let x = -h; x < w; x += 26) g.line(x, 0, x + h * 0.6, h, '#22524a');
-    for (let y = 30; y < h; y += 46) g.rect(0, y, w, 1, '#22524a');
-    stars(g, 0, 0, w, 90, t, 51, 0.006);
-    return;
-  }
-  if (tone === 'shop') {
-    g.vgrad(0, 0, w, h, ['#2b2238', '#3a2a48', '#2e2a4a', '#2b2238']);
-    for (let y = 0; y < h; y += 6) g.dither(0, y, w, 1, '#3e3546', 4);
-    return;
-  }
-  g.vgrad(0, 0, w, h, ['#1f1828', C.ink, '#2b2238', '#2e2a4a']);
-  stars(g, 0, 0, w, h, t, 61, 0.006);
+// 장소 테마(theme.js)를 따른다: 장소 그림이 있으면 그림(assets/v2/bg/<이름>.png, 코덱스 → bgconv), 없으면 테마 색 + 은은한 결
+//   우주선 = 선체 판 이음새·리벳 · 온실 = 유리 창살 · 밤 정원 = 별
+export function plainBg(g, w, h, t, name) {
+  const im = name && BGIMG[name];
+  if (im) { g.img(im, 0, 0); return; }
+  g.vgrad(0, 0, w, h, [T.bg2, T.bg, T.bg, T.bg2]);
+  if (T.key === 'garden') {
+    for (let x = -h; x < w; x += 26) g.line(x, 0, x + h * 0.6, h, T.bgLine);
+    for (let y = 30; y < h; y += 46) g.rect(0, y, w, 1, T.bgLine);
+  } else if (T.key === 'ship') {
+    for (let y = 44; y < h; y += 48) g.rect(0, y, w, 1, T.bgLine);
+    for (let y = 20; y < h; y += 48) for (let x = 27; x < w; x += 54) { g.rect(x, y - 20, 1, 47, T.bgLine); g.px(x + 4, y - 16, T.bgLine); g.px(x - 4, y + 22, T.bgLine); }
+  } else stars(g, 0, 0, w, h, t, 61, 0.008);
 }
 // 상점 차양
 export function awning(g, y, w) {
   const sw = 14;
   for (let x = 0; x < w; x += sw) {
-    const col = (x / sw) % 2 ? C.mist : C.teal;
+    const col = (x / sw) % 2 ? T.panel.frame : T.btn.primary.fill;
     g.rect(x, y, sw, 10, col);
     // 물결 끝
     for (let k = 0; k < sw; k++) { const d = Math.round(Math.sin((k / sw) * Math.PI) * 3); g.rect(x + k, y + 10, 1, d, col); }

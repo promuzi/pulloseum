@@ -27,6 +27,23 @@ export async function loadBig(base = '../assets/v2/') {
   ]);
   return [...ROSTER.filter(k => !BIG[k]), ...POTS.filter(p => !POT_BIG[p])];
 }
+// ── 장소 배경(코덱스 그림 → tools/pixel/big/bgconv.mjs 로 정확한 칸 도트) — assets/v2/bg/<이름>.png ──
+export const BGIMG = {};
+export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night'];
+export async function loadBg(base = '../assets/v2/bg/') {
+  const got = await Promise.all(BG_NAMES.map(n => load(base + n + '.png')));
+  BG_NAMES.forEach((n, i) => { if (got[i]) BGIMG[n] = got[i]; });
+  return BG_NAMES.filter(n => !BGIMG[n]);
+}
+// 얼굴 초상: 대기 첫 장에서 머리 둘레 s×s 를 1배로 잘라 (x, y)에(under·over 두 층). flip = 좌우 뒤집기(상대)
+export function drawPortrait(g, key, x, y, s, flip = false) {
+  const P = BIG[key]; if (!P) return false;
+  const m = P.meta, hx = Math.round(m.head[0]), hy = Math.round(m.head[1]);
+  const sx = Math.max(0, Math.min(m.w - s, hx - Math.floor(s / 2))), sy = Math.max(0, Math.min(m.h - s, hy - Math.floor(s / 2) + 3));
+  part(g, P.sheet, sx, sy, s, s, x, y, flip);
+  part(g, P.sheet, sx, sy + m.rows * m.h, s, s, x, y, flip);
+  return true;
+}
 function whiteOf(im) { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = C.white; x.fillRect(0, 0, c.width, c.height); return c; }
 // 깜빡임은 한 바퀴(3.2초)마다 종·바퀴 번호로 반쯤만 → 3~6초에 한 번쯤, 무작위처럼
 function blinkLoop(key, n) { let h = (n + 1) * 2654435761; for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 2246822519); return ((h >>> 15) & 1) === 0; }

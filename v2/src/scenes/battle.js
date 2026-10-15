@@ -1,126 +1,128 @@
-import { C, ELEMENT } from '../art/palette.js';
-import { arena1, pad1 } from '../art/bg.js';
-import { panel, rbox, rrect, bar, chip, button } from '../art/ui.js';
-import { icon } from '../art/icons.js';
-import { drawBig } from '../art/sprites.js';
-import { energyPips, dimIcon, bigTitle } from './common.js';
+import { ELEMENT } from '../art/palette.js';
+import { arena1 } from '../art/bg.js';
+import { icon, tinted } from '../art/icons.js';
+import { drawBig, drawPortrait, BGIMG } from '../art/sprites.js';
+import { T, plate, msgBox, btnBody, tbar, tpips, padV, venueOf } from '../art/theme.js';
+import { bigTitle } from './common.js';
 import { mockBattle, CAT_ICON, CAT_NAME } from '../data/mock.js';
 
+// 체력판: 얼굴 초상 + (상대만) 닉네임·랭크 + 이름·속성 + 체력 막대 + 에너지 칸 + 체력 숫자
+//  봇·사람 구분 없이 같은 정보만(성향·다음 수 경고 없음 — 2026-10-15 사용자)
 function infoBox(app, x, y, u, mine) {
-  const { g } = app;
-  panel(g, x, y, 132, mine ? 46 : 60, 'night');
-  let yy = y + 5;
-  if (!mine) { g.text(`${u.trainer} · ${u.rank}`, x + 7, yy, { color: C.mute }); yy += 14; }   // 봇·사람 구분 없이 같은 정보만(성향·다음 수 경고 없음 — 2026-10-15 사용자)
-  g.text(u.name, x + 7, yy, { font: 'bold', color: C.white });
-  g.img(icon(u.el), x + 132 - 18, yy);
+  const { g } = app, w = 140, h = mine ? 56 : 64, P = T.ptext;
+  plate(g, x, y, w, h);
+  plate(g, x + 5, y + 5, 30, 30, 'deep');
+  g.clip(x + 9, y + 9, 22, 22, () => drawPortrait(g, u.key, x + 8, y + 8, 24, !mine));
+  let yy = y + 6;
+  const tx = x + 40;
+  if (!mine) { g.text(`${u.trainer} · ${u.rank}`, tx, yy, { color: P.sub }); yy += 13; }
+  g.text(u.name, tx, yy, { font: 'bold', color: P.main });
+  g.img(icon(u.el), x + w - 20, yy);
   yy += 15;
-  bar(g, x + 7, yy, 118, 6, u.hp / u.max, 'hp');
+  tbar(g, tx, yy, w - 46, 6, u.hp / u.max, 'hp');
   yy += 9;
-  for (let i = 0; i < u.energyMax; i++) { const on = i < u.energy; g.rect(x + 7 + i * 6, yy + 3, 4, 5, C.ink); g.rect(x + 8 + i * 6, yy + 4, 2, 3, on ? C.gold : C.night2); }
-  g.text(`${u.hp}/${u.max}`, x + 132 - 7, yy, { color: C.mist, align: 'right' });
+  tpips(g, tx - 1, yy + 1, u.energy, Math.min(u.energyMax, 8), 7);
+  g.text(`${u.hp}/${u.max}`, x + w - 7, mine ? y + h - 17 : yy + 8, { color: P.sub, align: 'right' });
 }
 
 function skillButton(app, x, y, w, h, sk, st) {
   const { g, input } = app;
   if (!sk) {
-    rrect(g, x, y, w, h, 4, C.shade);
-    rrect(g, x + 1, y + 1, w - 2, h - 2, 3, '#2b2238');
-    g.text('빈 칸', x + w / 2, y + h / 2 - 6, { color: C.slate, align: 'center' });
+    btnBody(g, x, y, w, h, T.btn.off, true);
+    g.text('빈 칸', x + w / 2, y + h / 2 - 6, { color: T.btn.off.text, align: 'center' });
     return;
   }
-  const id = 'sk_' + sk.id;
-  const down = input.isPressed(id);
-  const yy = y + (down ? 1 : 0);
-  const lit = st.picked === sk.id;
-  const poor = sk.cost > st.energy;
+  const id = 'sk_' + sk.id, down = input.isPressed(id), lit = st.picked === sk.id, poor = sk.cost > st.energy;
+  const S = poor ? T.btn.off : T.btn.primary;
+  const { yy } = btnBody(g, x, y, w, h, S, down);
+  if (lit) { g.rect(x - 1, yy - 1, w + 2, 1, T.text.gold); g.rect(x - 1, yy + h - 1 - (down ? 1 : 0), w + 2, 1, T.text.gold); g.rect(x - 1, yy, 1, h - 1, T.text.gold); g.rect(x + w, yy, 1, h - 1, T.text.gold); }
   const cat = sk.cats[0];
-  const tone = poor ? { fill: C.shade, hi: C.slate, lip: C.ink, name: C.slate2 } : { fill: C.night2, hi: '#4d65b4', lip: C.night, name: C.white };
-  rrect(g, x, yy, w, h - (down ? 1 : 0), 4, lit ? C.teal3 : C.ink);
-  rrect(g, x + 1, yy + 1, w - 2, h - 2 - (down ? 1 : 0), 3, tone.lip);
-  rrect(g, x + 1, yy + 1, w - 2, h - 4, 3, tone.fill);
-  g.rect(x + 4, yy + 1, w - 8, 1, tone.hi);
-  // 속성 띠(왼쪽)
-  const ec = sk.el ? ELEMENT[sk.el].main : C.mute;
-  g.rect(x + 2, yy + 5, 2, h - 12, poor ? C.slate : ec);
-  g.text(sk.name, x + 9, yy + 6, { font: 'bold', color: tone.name });
-  // 분류 아이콘 + 이름
-  g.img(poor ? dimIcon(CAT_ICON[cat]) : icon(CAT_ICON[cat]), x + 9, yy + 24);
-  g.text(CAT_NAME[cat], x + 23, yy + 24, { color: poor ? C.slate : C.mute });
-  // 비용
-  if (sk.cost === 0) g.text('무료', x + w - 8, yy + 24, { color: poor ? C.slate : C.teal4, align: 'right' });
-  else { g.text(String(sk.cost), x + w - 8, yy + 24, { font: 'bold', color: poor ? C.slate : C.gold, align: 'right' }); g.img(poor ? dimIcon('energy') : icon('energy'), x + w - 22, yy + 24); }
+  // 속성 점(왼쪽 위) + 이름
+  if (sk.el) { g.rect(x + 6, yy + 8, 4, 4, T.ink); g.rect(x + 7, yy + 9, 2, 2, poor ? S.text : ELEMENT[sk.el].main); }
+  g.text(sk.name, x + (sk.el ? 13 : 8), yy + 5, { font: 'bold', color: S.text });
+  // 분류 아이콘 + 이름 · 비용
+  g.img(poor ? tinted(CAT_ICON[cat], S.text) : icon(CAT_ICON[cat]), x + 8, yy + 23);
+  g.text(CAT_NAME[cat], x + 22, yy + 23, { color: S.text });
+  if (sk.cost === 0) g.text('무료', x + w - 9, yy + 23, { color: S.text, align: 'right' });
+  else { g.text(String(sk.cost), x + w - 9, yy + 23, { font: 'bold', color: S.text, align: 'right' }); g.img(poor ? tinted('energy', S.text) : icon('energy'), x + w - 23, yy + 23); }
   if (!poor && st.phase === 'pick') input.hit(id, x, y, w, h, () => { st.picked = sk.id; app.toast(sk.name); }, 2);
 }
 
 export const battle = {
-  enter(p) { this.st = mockBattle(p.phase || 'pick'); },
+  // 경기장 = 랭크 단계로(브론즈·실버 온실 → 골드·플래티넘 우주선 → 다이아 이상 밤 정원), 촬영·시험은 ?venue= 로 고름
+  theme(app) { return this.st?.venue || venueOf(app.state.tournament?.tier); },
+  enter(p) { this.st = mockBattle(p.phase || 'pick'); if (p.venue) this.st.venue = p.venue; },
   draw(app) {
     const { g, W, H, t } = app;
     const st = this.st;
     const PANEL_H = 228, AY = 24, AH = H - PANEL_H - AY;
-    g.rect(0, 0, W, H, C.ink);
+    g.rect(0, 0, W, H, T.ink);
     const hit = st.hit;
     // 무대(1배 도트 — 배경·받침·식물이 같은 칸 크기, 2026-10-15 사용자 결정 ①안): 나 = 왼쪽 아래, 상대 = 오른쪽 위(좌우 뒤집힘)가 비스듬히 마주 봄
-    //  식물 = 큰 판 96×112(대기 숨쉬기·깜빡임·특성 효과가 시트에 들어 있음), 받침 가운데 = 화분 굽이 바닥에 닿는 점
+    //  배경 = 장소별 경기장 그림(관중석 포함, assets/v2/bg/arena_<장소>.png), 받침·식물은 화분 굽이 바닥에 닿는 점에 맞춰 그린다
     g.clip(0, AY, W, AH, () => {
-      arena1(g, 0, AY, W, AH, t);
+      const bg = BGIMG['arena_' + T.key];
+      if (bg) g.img(bg, 0, AY); else arena1(g, 0, AY, W, AH, t);
       const ex = W - 76, ey = AY + 142, px = 76, py = AY + AH - 46, shake = hit ? 2 : 0;
-      pad1(g, ex, ey, 40, null);
-      pad1(g, px, py, 42, C.teal3);
+      padV(g, ex, ey, 40, false);
+      padV(g, px, py, 42, true);
       drawBig(g, st.foe.key, st.foe.pot, ex + shake, ey, { t, phase: 1600, flip: true, flash: !!hit });
       drawBig(g, st.me.key, st.me.pot, px + (hit ? 4 : 0), py, { t });
       if (hit) { // 타격 불꽃: 상대 몸 가운데
         const cx = ex, cy = ey - 60;
-        for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r1 = 12, r2 = i % 2 ? 26 : 34, c1 = i % 2 ? C.gold3 : C.white; for (const o of [0, 1]) g.line(Math.round(cx + Math.cos(a) * r1) + o, Math.round(cy + Math.sin(a) * r1), Math.round(cx + Math.cos(a) * r2) + o, Math.round(cy + Math.sin(a) * r2), c1); }
-        g.disc(cx, cy, 8, C.white);
+        for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r1 = 12, r2 = i % 2 ? 26 : 34, c1 = i % 2 ? T.text.gold : '#ffffff'; for (const o of [0, 1]) g.line(Math.round(cx + Math.cos(a) * r1) + o, Math.round(cy + Math.sin(a) * r1), Math.round(cx + Math.cos(a) * r2) + o, Math.round(cy + Math.sin(a) * r2), c1); }
+        g.disc(cx, cy, 8, '#ffffff');
       }
     });
-    // 위 띠: 턴 · 대회 · 항복
-    g.rect(0, 0, W, AY, C.ink); g.rect(0, AY - 1, W, 1, C.shade);
-    rbox(g, 6, 4, 36, 16, 4, C.night); g.text(`${st.turn}턴`, 24, 6, { font: 'bold', color: C.teal3, align: 'center' });
-    g.text(`새싹 브론즈 · ${st.round}`, W / 2 - 18, 6, { color: C.mist, align: 'center' });
-    for (let i = 0; i < st.bestOf; i++) { const x = W / 2 + 34 + i * 7; g.rect(x, 9, 5, 5, C.ink); g.rect(x + 1, 10, 3, 3, i < st.wins ? C.gold : (i === st.wins ? C.mist : C.slate)); }
+    // 위 띠: 턴 · 대회 · 판 수 · 항복
+    g.rect(0, 0, W, AY, T.bg2); g.rect(0, AY - 2, W, 1, T.panel.frameLo); g.rect(0, AY - 1, W, 1, T.ink);
+    btnBody(g, 5, 3, 38, 18, T.btn.second, true);
+    g.text(`${st.turn}턴`, 24, 6, { font: 'bold', color: T.btn.second.text, align: 'center' });
+    g.text(`${st.tierName || '새싹 브론즈'} · ${st.round}`, W / 2 - 14, 6, { color: T.text.main, align: 'center' });
+    for (let i = 0; i < st.bestOf; i++) { const x = W / 2 + 40 + i * 7; g.rect(x, 8, 6, 6, T.ink); g.rect(x + 1, 9, 4, 4, i < st.wins ? T.text.gold : (i === st.wins ? T.text.main : T.bar.back)); }
     const fp = app.input.isPressed('bt_flag');
-    rbox(g, W - 30, 4 + (fp ? 1 : 0), 24, 16, 4, C.shade); g.img(icon('flag'), W - 24, 6 + (fp ? 1 : 0));
-    app.input.hit('bt_flag', W - 30, 4, 24, 16, () => app.go('home'), 6);
-    // 상태판
+    btnBody(g, W - 31, 3, 26, 18, T.btn.second, fp);
+    g.img(icon('flag'), W - 24, 5 + (fp ? 1 : 0));
+    app.input.hit('bt_flag', W - 31, 3, 26, 18, () => app.go('home'), 6);
+    // 체력판
     infoBox(app, 6, AY + 6, st.foe, false);
-    infoBox(app, W - 138, AY + AH - 58, st.me, true);
+    infoBox(app, W - 146, AY + AH - 62, st.me, true);
     // 판정 띠(행동 중)
     if (hit) {
-      const my = st.kit.find(k => k.id === st.picked);
+      const my = st.kit.find(k => k.id === st.picked), P = T.ptext;
       const cy = AY + Math.round(AH * 0.47);
-      // 내 카드
-      rbox(g, 10, cy, 104, 34, 5, C.night, C.teal3); g.rect(13, cy + 1, 98, 1, C.teal4);
-      g.text('나', 18, cy + 5, { color: C.teal3 });
-      g.img(icon(CAT_ICON[my.cats[0]]), 32, cy + 5);
-      g.text(my.name, 18, cy + 19, { font: 'bold', color: C.white });
-      // 선공 화살표
-      g.text('선공', W / 2, cy + 4, { color: C.gold, align: 'center' });
-      g.img(icon('left'), W / 2 - 4, cy + 19);
-      // 상대 카드(다음 차례 — 동시에 공개, 아직 행동 전이라 흐리게)
-      rbox(g, W - 114, cy, 104, 34, 5, C.shade); g.rect(W - 111, cy + 1, 98, 1, C.slate);
-      g.text('상대', W - 106, cy + 5, { color: C.slate2 }); g.img(icon('sword'), W - 82, cy + 5);
-      g.text(st.foeSkill || '물살 새순', W - 106, cy + 19, { font: 'bold', color: C.mute });
+      plate(g, 8, cy, 108, 38);
+      g.text('나', 14, cy + 6, { color: P.accent });
+      g.img(icon(CAT_ICON[my.cats[0]]), 28, cy + 6);
+      g.text(my.name, 14, cy + 20, { font: 'bold', color: P.main });
+      g.text('선공', W / 2, cy + 4, { font: 'bold', color: T.text.gold, align: 'center', shadow: T.ink });
+      g.img(icon('left'), W / 2 - 4, cy + 20);
+      // 상대 카드(다음 차례 — 동시에 공개, 아직 행동 전이라 어두운 판)
+      plate(g, W - 116, cy, 108, 38, 'deep');
+      g.text('상대', W - 110, cy + 6, { color: T.text.dim }); g.img(icon('sword'), W - 86, cy + 6);
+      g.text(st.foeSkill || '물살 새순', W - 110, cy + 20, { font: 'bold', color: T.text.sub });
       // 피해 숫자(굉장 = 큰 숫자) — 상대 왼쪽 위
       const nx = 124, ny = AY + 70;
-      bigTitle(g, `-${hit.dmg}`, nx, ny, { top: '#fca790', mid: C.red, low: '#ae2334', shadow: '#6e2727' });
-      rbox(g, nx - 31, ny + 36, 62, 15, 4, C.gold); g.text('효과 굉장!', nx, ny + 38, { font: 'bold', color: C.ink, align: 'center' });
+      bigTitle(g, `-${hit.dmg}`, nx, ny, { top: '#fca790', mid: '#e83b3b', low: '#ae2334', shadow: '#6e2727' });
+      btnBody(g, nx - 33, ny + 35, 66, 17, T.btn.gold, true);
+      g.text('효과 굉장!', nx, ny + 38, { font: 'bold', color: T.btn.gold.text, align: 'center' });
     }
-    // 아래 판
+    // 아래 판: 대사 상자 → 에너지 → 기술 6칸
     const PY = H - PANEL_H;
-    g.rect(0, PY, W, PANEL_H, '#2b2238'); g.rect(0, PY, W, 1, C.slate); g.rect(0, PY + 1, W, 1, C.ink);
-    // 대사 상자(밝은 종이)
-    panel(g, 8, PY + 8, W - 16, 36, 'paper');
+    g.rect(0, PY, W, PANEL_H, T.bg2);
+    for (let y = PY + 6; y < H; y += 6) g.rect(0, y, W, 1, T.bg);   // 은은한 가로결
+    g.rect(0, PY, W, 1, T.ink); g.rect(0, PY + 1, W, 1, T.panel.frame); g.rect(0, PY + 2, W, 1, T.panel.frameLo);
+    msgBox(g, 8, PY + 9, W - 16, 36);
     const msg = hit ? '효과가 굉장하다!' : `${st.me.name}는 무엇을 할까?`;
-    g.text(msg, 18, PY + 20, { font: 'bold', color: C.ink });
-    if (!hit && Math.floor(t / 450) % 2) g.rect(W - 22, PY + 30, 5, 3, C.ink);
+    g.text(msg, 18, PY + 20, { font: 'bold', color: T.mtext.main });
+    if (!hit && Math.floor(t / 450) % 2) g.rect(W - 22, PY + 31, 5, 3, T.mtext.sub);
     // 에너지 줄(빨리 감기 단추 없음 — 2026-10-15 사용자 "필요 없는 기능")
-    const ey = PY + 52;
-    g.text('에너지', 12, ey + 1, { color: C.gold });
-    energyPips(g, 52, ey, st.me.energy, st.me.energyMax, 12);
+    const ey = PY + 53;
+    g.text('에너지', 12, ey, { font: 'bold', color: T.text.gold });
+    tpips(g, 54, ey + 2, st.me.energy, st.me.energyMax, 9);
+    g.text(`${st.me.energy}/${st.me.energyMax}`, W - 12, ey, { color: T.text.sub, align: 'right' });
     // 기술 6칸
-    const gx = 8, gy = PY + 76, cw = Math.floor((W - 16 - 6) / 2), ch = 44;
+    const gx = 8, gy = PY + 72, cw = Math.floor((W - 16 - 6) / 2), ch = 44;
     for (let i = 0; i < 6; i++) {
       const col = i % 2, row = Math.floor(i / 2);
       skillButton(app, gx + col * (cw + 6), gy + row * (ch + 6), cw, ch, st.kit[i], { ...st, energy: st.me.energy });

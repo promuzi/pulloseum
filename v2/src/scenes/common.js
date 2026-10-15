@@ -1,7 +1,8 @@
 // 화면 공용 조각: 무대 층(2배 도트), 머리줄, 큰 제목, 씨앗 그림, 스탯 정의
 import { C, RAMP, ELEMENT } from '../art/palette.js';
-import { icon } from '../art/icons.js';
+import { icon, tinted } from '../art/icons.js';
 import { rbox, button } from '../art/ui.js';
+import { T, btnBody } from '../art/theme.js';
 import { drawTitle } from '../core/text.js';
 import { layer } from '../core/gfx.js';
 
@@ -20,17 +21,16 @@ export function stage(app, x, y, w, h, drawFn) {
 // 머리줄: 뒤로 + 제목 (+ 오른쪽 글)
 export function header(app, title, opt = {}) {
   const { g, W } = app;
-  g.rect(0, 0, W, 30, C.ink);
-  g.rect(0, 0, W, 29, '#2b2238');
-  g.rect(0, 29, W, 1, C.shade);
+  g.rect(0, 0, W, 30, T.bg2);
+  g.rect(0, 28, W, 1, T.panel.frameLo); g.rect(0, 29, W, 1, T.ink);
   if (opt.back !== false) {
     const pressed = app.input.isPressed('hdr_back');
-    rbox(g, 6, 6 + (pressed ? 1 : 0), 22, 18, 4, C.night);
-    g.img(icon('back'), 12, 11 + (pressed ? 1 : 0));
-    app.input.hit('hdr_back', 6, 6, 22, 18, () => app.go(opt.backTo || 'home'), 6);
+    btnBody(g, 6, 5, 24, 20, T.btn.second, pressed);
+    g.img(tinted('back', T.btn.second.text), 13, 11 + (pressed ? 1 : 0));
+    app.input.hit('hdr_back', 6, 5, 24, 20, () => app.go(opt.backTo || 'home'), 6);
   }
-  g.text(title, opt.back === false ? 12 : 36, 8, { font: 'head', color: C.white, shadow: C.ink });
-  if (opt.right) g.text(opt.right, W - 10, 10, { color: opt.rightColor || C.mute, align: 'right' });
+  g.text(title, opt.back === false ? 12 : 37, 8, { font: 'head', color: T.text.main, shadow: T.ink });
+  if (opt.right) g.text(opt.right, W - 10, 10, { color: opt.rightColor || T.text.sub, align: 'right' });
 }
 
 // 큰 제목: 고해상도 글자 + 3단 색 띠 + 외곽선 + 그림자
@@ -88,7 +88,7 @@ export function dimIcon(name) {
 // 등급 알약
 const GRADE_COL = { S: C.gold, A: '#a884f3', B: C.blue, C: C.green, D: C.mute };
 export function gradeBadge(g, x, y, grade) {
-  rbox(g, x, y, 15, 15, 3, GRADE_COL[grade] || C.mute);
+  rbox(g, x, y, 15, 15, 3, GRADE_COL[grade] || C.mute, T.ink);
   g.text(grade, x + 8, y + 2, { font: 'bold', color: C.ink, align: 'center' });
 }
 

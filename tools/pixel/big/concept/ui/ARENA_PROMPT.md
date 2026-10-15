@@ -1,0 +1,19 @@
+Task: generate THREE background images (one per arena) for the battle screen of a mobile pixel-art game. Save them as:
+- C:\dev\pulloseum\tools\pixel\big\concept\ui\arena_ship.png
+- C:\dev\pulloseum\tools\pixel\big\concept\ui\arena_garden.png
+- C:\dev\pulloseum\tools\pixel\big\concept\ui\arena_night.png
+(if the image tool saves elsewhere, copy them there with these names). Do not create, modify, or delete any other file in the repository, and do not commit.
+
+Look at these two reference images first:
+1. Style reference: C:\dev\pulloseum\tools\pixel\big\concept\ui\direction_battle_crowd.png - three art directions side by side. LEFT = ship arena, MIDDLE = garden arena, RIGHT = night arena. Match each arena's look, palette, materials, lighting and its packed cheering crowd (small plant creatures in little pots, little aliens, small round robots, flags, banners, light sticks).
+2. Layout guide: C:\dev\pulloseum\tools\pixel\big\concept\ui\arena_guide.png - follow its layout exactly (same 1024x1536 frame). Bands from top: dark navy band = a little sky/space visible above the stands; orange striped band = tiered stands packed with the crowd; dark gray band = a low arena wall/barrier; light gray area = the arena floor (seen from about 26 degrees above, so circles on the floor are flat ellipses, height = 0.44 x width); the gray rings = where the floor's big circular pattern/emblem goes (center of the arena). Red dashed ellipses = the two spots where the game itself will draw the round pads and the plant fighters: keep those spots as plain, calm floor (no emblem, no decoration, no objects). Blue rectangles = HP panels drawn by the game on top later (no important detail there). Purple band at the bottom = hidden behind the game's action panel: just continue the floor plainly. Do not draw any of the guide's colors, lines, dashes or rectangles themselves.
+
+Each image: portrait 1024x1536, only the empty arena (NO plant fighters, NO pots, NO pads, NO UI, NO panels, NO buttons, NO words, letters or numbers, NO watermark, NO frame). Crisp modern 16-bit pixel art drawn on a pixel grid of about 3.8 screen pixels per art pixel (the image will be reduced to exactly 270x405 art pixels, so avoid details smaller than one art pixel and avoid smooth gradients - use dithering). Light from the top-left, hue-shifted shading (cool shadows, warm light). Polished indie game quality. The crowd and stands are lively but slightly darker and less saturated than the floor's center, so the fighters added later will stand out; keep the floor texture calm and low-contrast so attack effects stay readable.
+
+arena_ship.png - "Starship arena: white hull + teal neon". Inside a starship: tiered white hull balconies with teal neon edges packed with the crowd (robots, aliens, plant spectators waving pink and teal light sticks, a few hanging banners), a strip of space with a blue-violet nebula above the stands, a low white-and-teal barrier wall, a floor of dark glossy metal plates with a glowing teal ring pattern at the center.
+
+arena_garden.png - "Solarpunk greenhouse colosseum: warm". Cream stone terraces with arches, planters and hanging garlands packed with the crowd (plant spectators in little pots, aliens, robots, pennant flags), a glimpse of the glass dome with brass ribs and a peach-and-lilac sky above, a low cream stone wall with ivy, warm lamps, a floor of cream stone slabs with moss and tiny flowers in the cracks and a soft leaf emblem ring at the center.
+
+arena_night.png - "Pastel night garden: dreamy". Lavender stone terraces lit by small glowing mushroom lanterns, packed with the crowd holding tiny glowing lights, pastel banners with stars, a starry deep navy-teal sky with soft mint and lilac aurora ribbons above the stands, a low lavender stone wall with flowers, a floor of soft lavender stone tiles with a pale star-compass ring at the center.
+
+When done, reply with the three saved file paths.

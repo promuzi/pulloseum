@@ -1,8 +1,8 @@
-import { C } from '../art/palette.js';
 import { plainBg, awning } from '../art/bg.js';
-import { hud, navBar, panel, rbox, button } from '../art/ui.js';
+import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { IMG } from '../art/sprites.js';
+import { T, plate, btnBody } from '../art/theme.js';
 
 // 화분 그림은 48×56 판의 아래쪽(화분 부분)만 잘라 쓴다
 function potArt(g, key, cx, y) {
@@ -24,28 +24,29 @@ const SECTIONS = [
 ];
 
 export const shop = {
+  theme: 'ship',   // 함선 장터(장소 테마 — 2026-10-15)
   draw(app) {
     const { g, W, H, t, state: s } = app;
-    plainBg(g, W, H, t, 'shop');
+    plainBg(g, W, H, t, 'shop_ship');
     awning(g, 28, W);
     hud(app, s);
     let y = 50;
     const cw = Math.floor((W - 16 - 12) / 3);
     SECTIONS.forEach(sec => {
-      g.text(sec.title, 12, y + 4, { font: 'head', color: C.white, shadow: C.ink });
+      g.text(sec.title, 12, y + 4, { font: 'head', color: T.text.main, shadow: T.ink });
       y += 24;
       sec.items.forEach((it, i) => {
         const x = 8 + i * (cw + 6);
-        panel(g, x, y, cw, 108, 'night');
+        plate(g, x, y, cw, 110);
         // 진열대
-        rbox(g, x + 8, y + 8, cw - 16, 38, 4, '#2b2238');
-        g.rect(x + 10, y + 40, cw - 20, 2, C.wood1);
+        plate(g, x + 7, y + 7, cw - 14, 40, 'deep');
+        g.rect(x + 11, y + 40, cw - 22, 2, T.deep.frame);
         if (it.pot) potArt(g, it.pot, x + cw / 2, y + 20);
         else { const ic = icon(it.art); g.img(ic, Math.round(x + cw / 2 - ic.width / 2), y + 24); }
-        g.text(it.name, x + cw / 2, y + 52, { font: 'bold', color: C.white, align: 'center' });
-        g.text(it.desc, x + cw / 2, y + 67, { color: C.mute, align: 'center' });
-        if (it.price < 0) { rbox(g, x + 6, y + 82, cw - 12, 20, 4, C.shade); g.text('구매 불가', x + cw / 2, y + 86, { color: C.slate2, align: 'center' }); }
-        else button(app, 'buy_' + it.id, x + 6, y + 82, cw - 12, 20, it.price ? String(it.price) : '무료', { style: it.price ? 'gold' : 'teal', icon: it.price ? 'coin' : null, onTap: () => app.toast(it.name) });
+        g.text(it.name, x + cw / 2, y + 52, { font: 'bold', color: T.ptext.main, align: 'center' });
+        g.text(it.desc, x + cw / 2, y + 67, { color: T.ptext.sub, align: 'center' });
+        if (it.price < 0) { btnBody(g, x + 6, y + 83, cw - 12, 21, T.btn.off, true); g.text('구매 불가', x + cw / 2, y + 87, { color: T.btn.off.text, align: 'center' }); }
+        else button(app, 'buy_' + it.id, x + 6, y + 83, cw - 12, 21, it.price ? String(it.price) : '무료', { style: it.price ? 'gold' : 'teal', icon: it.price ? 'coin' : null, onTap: () => app.toast(it.name) });
       });
       y += 118;
     });

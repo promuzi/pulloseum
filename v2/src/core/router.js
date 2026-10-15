@@ -1,5 +1,7 @@
 // 화면 전환: 어두운 점이 차오르며 사라지고(110ms) 새 화면이 점이 빠지며 나타난다(110ms) — 도트식 페이드.
+// 그리기 전에 화면의 장소 테마를 고른다(scene.theme = 'ship'|'garden'|'night' 또는 (app) => 키).
 import { C, BAYER4 } from '../art/palette.js';
+import { setTheme } from '../art/theme.js';
 
 export class Router {
   constructor(scenes) { this.scenes = scenes; this.cur = null; this.name = null; this.pending = null; this.t0 = 0; this.phase = 0; }
@@ -16,6 +18,8 @@ export class Router {
     const T = 110;
     if (this.phase === 1 && app.t - this.t0 >= T) { const p = this.pending; this.set(p.name, p.params); this.phase = 2; this.t0 = app.t; }
     if (this.phase === 2 && app.t - this.t0 >= T) this.phase = 0;
+    const th = this.cur.theme;
+    setTheme(typeof th === 'function' ? th.call(this.cur, app) : th || 'ship');
     this.cur.draw(app);
     if (this.phase) {
       const k = Math.min(1, (app.t - this.t0) / T);
