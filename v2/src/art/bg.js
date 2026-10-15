@@ -1,5 +1,6 @@
 // 배경(전부 코드로 직접 그린 도트). 같은 씨앗값이면 같은 그림 — 별 위치가 매번 바뀌지 않는다.
 import { C, RAMP } from './palette.js';
+import { layer } from '../core/gfx.js';
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -182,6 +183,46 @@ export function arena(g, w, h, t) {
   // 바닥 큰 원 문양
   g.ellipseRing(Math.round(cx), Math.round(fy + (h - fy) * 0.5), 54, 22, '#625565', 3);
 }
+// ── 전투 무대 1배 도트(2026-10-15 사용자 결정 ①안: 배경·받침·식물이 같은 칸 크기 — 위 arena 는 2배 층용 옛 판) ──
+// 바닥 = 화분 그림(tools/pixel/big/pot3d.mjs)과 같은 26° 내려다본 평면 → 바닥 위 원은 세로 = 가로 × FLOOR_K. 정적인 부분은 한 번 그려 둔다.
+export const FLOOR_K = 0.4384;
+const arenaCache = new Map();
+export function arena1(g, x0, y0, w, h, t) {
+  const key = w + 'x' + h;
+  let L = arenaCache.get(key);
+  if (!L) { L = layer(w, h); drawArena1(L.g, w, h); arenaCache.set(key, L); }
+  g.img(L.cv, x0, y0);
+  stars(g, x0, y0, w, 50, t, 31, 0.005);
+}
+function drawArena1(g, w, h) {
+  g.vgrad(0, 0, w, 92, ['#1f1828', C.ink, '#3a2a48']);
+  for (const lx of [20, w - 26]) { g.rect(lx, 12, 6, 40, C.ink); g.rect(lx - 4, 8, 14, 6, C.slate); g.rect(lx - 2, 10, 10, 2, '#fbff86'); }
+  const sy = 52;   // 관중석 넉 줄
+  for (let row = 0; row < 4; row++) {
+    const yy = sy + row * 10, R = rng(40 + row);
+    g.rect(0, yy, w, 10, row % 2 ? '#3a2f45' : '#45293f'); g.rect(0, yy, w, 1, C.ink);
+    for (let x = 2; x < w; x += 5) if (R() < 0.55) { g.rect(x, yy + 3, 2, 2, [C.slate, '#7f708a', '#a24b6f', '#4d65b4', '#0b8a8f'][Math.floor(R() * 5)]); g.rect(x, yy + 5, 2, 1, C.ink); }
+  }
+  const wy = 92;   // 경기장 벽
+  g.rect(0, wy, w, 12, '#625565'); g.rect(0, wy, w, 1, '#9babb2'); g.rect(0, wy + 11, w, 1, C.ink);
+  for (let x = 8; x < w; x += 24) g.rect(x, wy + 4, 12, 4, '#7f708a');
+  const fy = wy + 12;   // 돌판 바닥: 원근 줄 + 가운데 큰 원(바닥 평면 타원)
+  g.rect(0, fy, w, h - fy, '#4a3d58');
+  for (let k = 0; k < 12; k++) { const yy = fy + Math.round(2 * (k * k * 1.15 + k * 2)); if (yy < h) g.rect(0, yy, w, 1, '#3e3546'); }
+  const cx = w / 2;
+  for (let i = -8; i <= 8; i++) g.line(Math.round(cx + i * 18), fy, Math.round(cx + i * 60), h, '#3e3546');
+  const ry = Math.round(108 * FLOOR_K), cy = Math.round(fy + (h - fy) * 0.5);
+  g.ellipseRing(Math.round(cx), cy, 108, ry, '#625565'); g.ellipseRing(Math.round(cx), cy, 107, ry - 1, '#625565');
+}
+// 받침 원판(1배): 화분 굽이 닿는 점 (cx, cy), 가로 반지름 rx — 세로는 바닥 각도대로
+export function pad1(g, cx, cy, rx, glow) {
+  const ry = Math.round(rx * FLOOR_K);
+  g.ellipse(cx, cy + 2, rx + 1, ry + 1, C.ink);
+  g.ellipse(cx, cy, rx, ry, '#625565');
+  g.ellipse(cx, cy, rx - 2, ry - 2, '#7f708a');
+  if (glow) g.ellipseRing(cx, cy, rx - 2, ry - 2, glow);
+}
+
 // 받침 원판(식물 서는 자리)
 export function pad(g, cx, cy, rx, ry, glow) {
   g.ellipse(cx, cy + 2, rx + 1, ry + 1, C.ink);

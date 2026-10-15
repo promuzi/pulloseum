@@ -16,6 +16,40 @@ export async function loadSprites(base = '../assets/sprites/') {
   return keys.filter(k => !IMG[k]);
 }
 
+// ── 큰 판 식물(96×112, 컨셉 그림을 도트로 변환 — node tools/pixel/big/convert.mjs --export <키…>) ──
+// 종마다 시트 한 장: 대기 64장(눈 뜸) + 깜빡임 4장 × 두 층(under = 화분 뒤와 화분 앞 사이, over = 화분 앞보다 앞·특성 효과) + 정보 json
+export const BIG = {}, POT_BIG = {};
+export async function loadBig(base = '../assets/v2/') {
+  const json = u => fetch(u).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  await Promise.all([
+    ...ROSTER.map(async k => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '.png'), json(base + 'plants/' + k + '.json')]); if (im && meta) BIG[k] = { sheet: im, white: whiteOf(im), meta }; }),
+    ...POTS.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_back.png'), load(base + 'pots/' + p + '_front.png')]); if (b && f) POT_BIG[p] = { back: b, front: f }; }),
+  ]);
+  return [...ROSTER.filter(k => !BIG[k]), ...POTS.filter(p => !POT_BIG[p])];
+}
+function whiteOf(im) { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = C.white; x.fillRect(0, 0, c.width, c.height); return c; }
+// 깜빡임은 한 바퀴(3.2초)마다 종·바퀴 번호로 반쯤만 → 3~6초에 한 번쯤, 무작위처럼
+function blinkLoop(key, n) { let h = (n + 1) * 2654435761; for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 2246822519); return ((h >>> 15) & 1) === 0; }
+function part(g, im, sx, sy, w, h, x, y, flip) {
+  const c = g.c; c.imageSmoothingEnabled = false;
+  if (flip) { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(im, sx, sy, w, h, 0, 0, w, h); c.restore(); }
+  else c.drawImage(im, sx, sy, w, h, x, y, w, h);
+}
+// 화분에 심은 큰 판 식물: (bx, by) = 화분 굽이 바닥에 닿는 점. t = 시각(ms), phase = 숨 엇갈림(ms), flip = 좌우 뒤집기(상대), flash = 맞은 순간 하얗게
+export function drawBig(g, key, potKey, bx, by, opt = {}) {
+  const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra;
+  if (!P || !pot) return false;
+  const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
+  let f = Math.floor(t / m.frameMs) % m.frames;
+  if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
+  const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h, src = opt.flash ? P.white : P.sheet, fl = !!opt.flip;
+  part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
+  part(g, src, sx, sy, m.w, m.h, x, y, fl);
+  part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
+  part(g, src, sx, sy + m.rows * m.h, m.w, m.h, x, y, fl);
+  return true;
+}
+
 const SP_W = 48, SP_H = 56;
 // 화분 + 식물 한 몸. (x,y) = 48×56 판의 왼쪽 위. bob = 식물만 위로 n칸(숨쉬기)
 export function plantStack(g, key, potKey, x, y, opt = {}) {

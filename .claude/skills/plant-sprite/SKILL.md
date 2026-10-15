@@ -29,8 +29,9 @@ node tools/pixel/big/roster.mjs --guide <키…>          # 화분 축(세로)·
 - 색으로 눈을 자동으로 찾지 않는다(꽃잎·그늘로 번짐 — 2026-10-15 실측).
 
 ## 4. 생장 3단계(어린·자람·성체)
-- 어린·자람은 코덱스가 단계마다 디자인해 누끼로(`concept\STAGES3_PROMPT.md` 형식, 크기는 성체의 85~95%). 내가 크기·모양을 임의로 바꾸지 않는다.
-- `node tools/pixel/big/convert.mjs --stages <키>` → `<키>_stages.png`(위 원화·아래 도트, 같은 축척).
+- 어린·자람은 코덱스가 단계마다 디자인해 누끼로(`concept\STAGES3_<키>.md` 형식, 크기는 성체의 85~95%, 장당 5시간 한도 약 8%p·주간 약 1.5%p). 내가 크기·모양을 임의로 바꾸지 않는다.
+- 단계 그림도 눈을 따로 잰다: `eyes.mjs`에 `<키>_young`·`<키>_teen` 키로 box·cheek(안 재면 줄일 때 눈이 사라짐).
+- `node tools/pixel/big/convert.mjs --stages <키>` → `<키>_stages.png`(위 원화·아래 도트, 같은 축척). 단계 그림 색은 성체 색 분포에 맞춘 뒤 줄인다(기본 `--match=1`, 눈 제외) — 코덱스 단계 그림은 테두리 빛·그늘이 세서 그대로 줄이면 노랑·검정 얼룩.
 
 ## 5. 움직임·효과·공격·변이
 - 대기: `convert.mjs --anim --mp4 <키…>` → `<키>_idle.mp4` + 격자. 종별 설정은 `convert.mjs`의 `FX`(bob·squash·sway·petal·leaf·flutter, `fire`, `electric`, `amb` = `fx.mjs` 효과: shine·gems·twinkle·drips·bubbles·petals·wind·swirl·spores·dust).
@@ -43,6 +44,11 @@ node tools/pixel/big/roster.mjs --guide <키…>          # 화분 축(세로)·
 - 흔들림은 큰 원본을 매 장 다시 줄여 만든다. 줄 단위 정수 이동만 하면 가로 이음선이 움직여 보이고, 매 장 새로 줄이기만 하면 칸이 끓는다 → 앞 장 기준 문턱(hysteresis) + 변위가 고른 곳은 정수 이동 섞기(`mixedMaps`). 움직임을 고칠 때 이 둘을 빼지 않는다.
 - 여러 명령을 이어 백그라운드로 굽는 중에 `convert.mjs`를 고치면 뒤 명령이 고친 파일을 읽는다 → 고친 뒤 `node --check tools/pixel/big/convert.mjs`부터.
 
-## 6. 전달·기록
+## 6. 게임에 넣기(v2)
+- `node tools/pixel/big/convert.mjs --export <키…>` → `assets/v2/plants/<키>.png·.json`(대기 64장 + 깜빡임 4장 × under·over 두 층) + `assets/v2/pots/`. 게임은 `v2/src/art/sprites.js drawBig(g, 키, 화분, 굽x, 굽y, {t, flip, flash})`로 화분 뒤 → under → 화분 앞 → over.
+- 식물이 서는 무대는 1배 도트(2026-10-15 ①안): `bg.js arena1`·`pad1`(받침 세로 = 가로 × 0.4384). 2배 층(`common.js stage`)에 큰 판 식물을 넣지 않는다(칸 크기가 섞임).
+- 확인: `node tools/shots/v2shots.mjs --label <이름> --only battle` → `tools/shots/out/<이름>/`.
+
+## 7. 전달·기록
 - 사용자에게는 **SendUserFile로 MP4(+검수판 PNG)** — 휴대폰에서 재생되는 H.264(블렌더로 구움, `video.mjs`).
 - `docs\CHANGELOG.md` 맨 위 항목 + 바뀐 결정은 `docs\master-roadmap.md` 결정 로그. 커밋은 내가 바꾼 파일만 골라서(`git add <경로>`), GIF·검토 띠는 저장소 제외(`out\conv\.gitignore`).

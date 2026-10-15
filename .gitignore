@@ -12,8 +12,9 @@ index_*.html.bak
 *.tscn
 *.gd
 *.uid
-scenes/
-tests/
+# 맨 위(Godot) 폴더만 — 슬래시 없이 쓰면 v2/src/scenes/(v2 화면 코드)까지 빠진다(2026-10-15 발견: 10-14 v2 커밋에 화면 코드가 통째로 빠져 있었음)
+/scenes/
+/tests/
 scripts/build-godot-data.js
 data/pluloseum_godot_data.json
 docs/pluloseum_godot_migration_plan.md

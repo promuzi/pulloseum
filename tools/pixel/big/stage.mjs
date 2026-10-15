@@ -33,6 +33,38 @@ function line(im, x0, y0, x1, y1, col) {
   for (let i = 0; i <= n; i++) px(im, Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), col);
 }
 
+// 지금 v2 무대 그대로(bg.js arena·pad 를 2배 도트 단위 135×174에 그린 뒤 2배로 키움) — 무대 도트 크기 비교용(②·③안)
+export const SPOTS2 = { near: [76, 304], far: [194, 144] };   // 2배 무대의 받침 가운데(1배 좌표)
+export function stageBg2x() {
+  const w = 135, h = 174, im = new Img(w, h, '#2e222f');
+  const sky = ['#1f1828', '#2e222f', '#3a2a48'];
+  for (let y = 0; y < 44; y++) for (let x = 0; x < w; x++) px(im, x, y, sky[Math.min(2, Math.floor(y / 44 * 3))]);
+  const R = rng(31);
+  for (let i = 0; i < 40; i++) px(im, Math.floor(R() * w), Math.floor(R() * 34), R() < 0.2 ? '#fbff86' : '#c7dcd0');
+  for (const lx of [10, w - 12]) { rect(im, lx, 6, 3, 20, '#2e222f'); rect(im, lx - 2, 4, 7, 3, '#625565'); rect(im, lx - 1, 5, 5, 1, '#fbff86'); }
+  const sy = 26;
+  for (let row = 0; row < 4; row++) {
+    const yy = sy + row * 5, R2 = rng(40 + row);
+    rect(im, 0, yy, w, 5, row % 2 ? '#3a2f45' : '#45293f'); rect(im, 0, yy, w, 1, '#2e222f');
+    for (let x = 1; x < w; x += 3) if (R2() < 0.55) { px(im, x, yy + 2, ['#625565', '#7f708a', '#a24b6f', '#4d65b4', '#0b8a8f'][Math.floor(R2() * 5)]); px(im, x, yy + 3, '#2e222f'); }
+  }
+  const wy = sy + 20;
+  rect(im, 0, wy, w, 6, '#625565'); rect(im, 0, wy, w, 1, '#9babb2'); rect(im, 0, wy + 5, w, 1, '#2e222f');
+  for (let x = 4; x < w; x += 12) rect(im, x, wy + 2, 6, 2, '#7f708a');
+  const fy = wy + 6;
+  rect(im, 0, fy, w, h - fy, '#4a3d58');
+  for (let k = 0; k < 9; k++) { const yy = fy + Math.round(k * k * 1.15 + k * 2); if (yy < h) rect(im, 0, yy, w, 1, '#3e3546'); }
+  const cx = w / 2;
+  for (let i = -8; i <= 8; i++) line(im, Math.round(cx + i * 9), fy, Math.round(cx + i * 30), h, '#3e3546');
+  ellipseRing(im, Math.round(cx), Math.round(fy + (h - fy) * 0.5), 54, 22, '#625565', 3);
+  for (const [bx, by, rx, ry, glow] of [[w - 38, 72, 22, 6, null], [38, h - 22, 24, 7, '#30e1b9']]) {
+    ellipse(im, bx, by + 2, rx + 1, ry + 1, '#2e222f'); ellipse(im, bx, by, rx, ry, '#625565'); ellipse(im, bx, by - 1, rx - 2, ry - 2, '#7f708a');
+    if (glow) ellipseRing(im, bx, by - 1, rx - 2, ry - 2, glow);
+  }
+  const out = new Img(w * 2, h * 2); out.blit(im, 0, 0, 2);
+  return out;
+}
+
 // 무대 바탕: 하늘·관중석·벽·돌판 바닥(원근 줄·가운데 큰 원)·받침 둘 — v2 bg.js arena 를 1배로 옮김
 export function stageBg() {
   const im = new Img(SW, SH, '#2e222f');
