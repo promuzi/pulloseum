@@ -8,6 +8,12 @@
       "port": 8765
     },
     {
+      "name": "pullo-server-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--no-warnings", "server/index.mjs", "--port", "8788", "--db", "server/data/dev.db"],
+      "port": 8788
+    },
+    {
       "name": "pullosseum-alt",
       "runtimeExecutable": "powershell",
       "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".claude/serve.ps1", "-Port", "8771"],

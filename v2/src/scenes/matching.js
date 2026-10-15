@@ -4,22 +4,32 @@ import { drawPortrait, ROSTER } from '../art/sprites.js';
 import { T } from '../art/theme.js';
 import { ELEMENT } from '../art/palette.js';
 import { drawShutterClosed, GUN } from '../core/router.js';
+import { bot } from '../net/api.js';
 
 // 매칭 대기(2026-10-15 사용자 "셔터 닫히고 매칭하는 대기시간 연출도"):
 //  출전 → 철 셔터가 쾅 닫힘(shutterClose) → 닫힌 셔터에 박힌 작은 화면이 켜져 상대를 찾음 — 여러 종족 얼굴이 슬롯처럼 넘어가다 점점 느려져 멈춤,
 //  셔터 양옆 주황 등 깜빡임 · 걸린 시간 → "상대 발견!" + 상대 재배사·랭크·식물(초록 등) → 셔터가 열리며 콜로세움(shutterOpen).
 //  찾는 동안 '취소' = 셔터가 열리며 홈으로.
 const SEARCH = 2700, FOUND = 1400;   // 찾기 · 발견 보여 주기(ms)
-const FOE = { key: 'vine_water', name: '타이드바인', trainer: '코스모싹', rank: '브론즈 2', el: 'water' };   // 전투 화면의 상대와 같게(서버가 붙여 줄 자리)
 const SCR = { x: 45, y: 168, w: 180, h: 200 };   // 셔터에 박힌 화면
 
 export const matching = {
   theme: 'colosseum',
-  enter(p = {}) { this.t0 = null; this.left = false; this.params = p; },
+  enter(p = {}) { this.t0 = null; this.left = false; this.params = p; this.res = null; this.asked = false; this.foundT = null; },
+  // 서버에 판을 열어 달라고 함(상대·씨앗은 서버가 정함 — 안 끝난 판이 있으면 그 판을 이어서)
+  ask(app) {
+    this.asked = true;
+    bot.start(app).then(r => { this.res = r; }).catch(e => { app.toast(e.message); if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } });
+  },
   draw(app) {
     const { g, W, H, t } = app;
     if (this.t0 == null) this.t0 = t;
-    const a = t - this.t0, found = a >= SEARCH, half = drawShutterClosed(g, W, H);
+    if (!this.asked) this.ask(app);
+    const a = t - this.t0, ready = !!this.res && a >= (this.res && this.res.resume ? 600 : SEARCH);
+    if (ready && this.foundT == null) this.foundT = t;
+    const found = this.foundT != null, half = drawShutterClosed(g, W, H);
+    const v = this.res && this.res.view, F = v ? (v.mode === 'swap3' ? v.team.foe[0] : v.foe) : null;
+    const FOE = F ? { key: F.key, name: v.mode === 'swap3' ? F.name + ' 외 둘' : F.name, trainer: F.trainer || '상대', rank: F.rank || '', el: F.el } : { key: 'vine_water', name: '', trainer: '', rank: '', el: 'water' };
     // 셔터 양옆 등(이음매 위아래): 찾는 중 = 주황 깜빡임, 찾음 = 초록 켜짐
     const on = found || Math.floor(a / 300) % 2 === 0, lamp = found ? ['#7cf0a0', '#d8ffe4'] : ['#f0a050', '#ffe0b0'];
     for (const x of [14, W - 22]) for (const y of [half - 26, half + 18]) { g.rect(x, y, 8, 8, GUN.edge); g.rect(x + 1, y + 1, 6, 6, on ? lamp[0] : '#3a2a18'); if (on) g.rect(x + 2, y + 2, 2, 2, lamp[1]); }
@@ -34,7 +44,7 @@ export const matching = {
     // 얼굴 슬롯: 찾는 동안 여러 종족이 넘어가다 끝에 갈수록 느려짐 → 찾으면 상대 얼굴
     const fx = x + w / 2 - 22, fy = y + 46
     let key = FOE.key;
-    if (!found) { let tt = 0, i = 0; while (tt < a && i < 400) { tt += 60 + 340 * (tt / SEARCH) ** 3; i++; } key = ROSTER[(i * 5 + 3) % ROSTER.length]; }
+    if (!found) { let tt = 0, i = 0; const aa = Math.min(a, SEARCH - 1); while (tt < aa && i < 400) { tt += 60 + 340 * (tt / SEARCH) ** 3; i++; } key = ROSTER[(i * 5 + 3 + (a >= SEARCH ? Math.floor(a / 300) : 0)) % ROSTER.length]; }
     g.rect(fx - 2, fy - 2, 48, 48, found ? '#9ff0b0' : '#3f9fd0'); g.rect(fx - 1, fy - 1, 46, 46, '#0a1e2c');
     g.clip(fx, fy, 44, 44, () => drawPortrait(g, key, fx + 2, fy + 2, 40, true));
     if (!found) for (let yy = fy; yy < fy + 44; yy += 3) g.rect(fx, yy, 44, 1, 'rgba(6,18,28,0.45)');   // 넘어가는 동안 흐린 주사선
@@ -49,15 +59,15 @@ export const matching = {
       g.text('같은 랭크 재배사를 찾고 있어요', x + w / 2, y + 136, { color: P.dim, align: 'center' });
       button(app, 'mt_cancel', x + w / 2 - 36, y + h - 32, 72, 24, '취소', { style: 'night', onTap: () => { if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } } });
     } else {
-      const fk = Math.min(1, (a - SEARCH) / 160);
+      const fa = t - this.foundT, fk = Math.min(1, fa / 160);
       if (fk < 1) g.c.save(), g.c.globalAlpha = 1 - fk, g.rect(x, y, w, h, '#d8faff'), g.c.restore();   // 찾은 순간 화면이 한 번 번쩍
-      g.text('상대 발견!', x + w / 2, y + 14, { font: 'head', color: P.gold, align: 'center' });
+      g.text(this.res.resume ? '하던 판이 있어요!' : '상대 발견!', x + w / 2, y + 14, { font: 'head', color: P.gold, align: 'center' });
       g.text(`${FOE.trainer} · ${FOE.rank}`, x + w / 2, y + 102, { color: P.sub, align: 'center' });
       const el = ELEMENT[FOE.el], nw = g.textW(FOE.name, 'bold');
       g.text(FOE.name, x + w / 2 - 7, y + 120, { font: 'bold', color: P.main, align: 'center' });
       g.img(icon(FOE.el), Math.round(x + w / 2 + nw / 2 - 3), y + 121);
-      g.text('곧 경기가 시작돼요', x + w / 2, y + 146, { color: el ? el.light || P.dim : P.dim, align: 'center' });
-      if (a >= SEARCH + FOUND && !this.left) { this.left = true; app.go('battle', { ...(this.params.venue ? { venue: this.params.venue } : {}), ...(this.params.mode ? { mode: this.params.mode } : {}) }, 'shutterOpen'); }
+      g.text(this.res.resume ? '이어서 싸워요' : '곧 경기가 시작돼요', x + w / 2, y + 146, { color: el ? el.light || P.dim : P.dim, align: 'center' });
+      if (fa >= FOUND && !this.left) { this.left = true; app.battleBoot = { kind: 'bot', ...this.res }; app.go('battle', { net: 'bot', ...(this.params.venue ? { venue: this.params.venue } : {}) }, 'shutterOpen'); }
     }
   },
 };

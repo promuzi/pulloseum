@@ -126,9 +126,9 @@ export const SKILLS = Object.fromEntries([
   S('u_thorn_1', '가시 채찍', 'grass', 'u', 60, 1, { inflict: { id: 'poison', n: 1 } }),
   S('u_thorn_2', '가시 그물', 'grass', 'u', 80, 2, { inflict: { id: 'bind' } }),
   S('u_thorn_3', '독가시 덤불', 'grass', 'u', 110, 3, { inflict: { id: 'poison', n: 2 } }),
-  S('u_aqua_1', '물방울', 'water', 'u', 60, 1, { ranged: true, inflict: { id: 'wet' } }),
+  S('u_aqua_1', '물방울', 'water', 'u', 66, 1, { ranged: true, inflict: { id: 'wet' } }),   // 2026-10-16 봇 상대 승률 41%(처음 셋 중 가장 낮음) → 위력 60 → 66
   S('u_aqua_2', '물거품 방패', 'water', 'u', 0, 2, { self: 'shield', also: 'purify' }),
-  S('u_aqua_3', '물방울 세례', 'water', 'u', 100, 3, { ranged: true, inflict: { id: 'wet' } }),
+  S('u_aqua_3', '물방울 세례', 'water', 'u', 112, 3, { ranged: true, inflict: { id: 'wet' } }),
   S('u_wind_1', '꽃잎 바람', 'wind', 'u', 55, 1, { ranged: true, inflict: { id: 'gale' } }),
   S('u_wind_2', '꽃잎 회오리', 'wind', 'u', 85, 2, { ranged: true, self: 'haste' }),
   S('u_wind_3', '꽃잎 돌풍', 'wind', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'weak' } }),
@@ -196,8 +196,9 @@ export const RARITY_COL = ['#e8eef4', '#7cf0a0', '#6fb8ff', '#c48cff', '#ffb04a'
 // ── 재배사 레벨 ──
 export const userNeed = L => 60 + 40 * L;
 export const XP = { botWin: 30, botLose: 12, pvpWin: 40, pvpLose: 15, explore: 18, harvest: 2, evolve: 25, plant: 5 };
-export const FARM_START = 3, FARM_MAX = 12;
-export const farmSlots = L => Math.min(FARM_MAX, FARM_START + [2, 3, 5, 7, 9, 12, 15, 18, 21].filter(x => L >= x).length);
+export const FARM_START = 3, FARM_MAX = 12, STORE_MAX = 120;   // 스마트팜 칸(재배사 레벨로 열림) · 동면 보관고(사용자 "100개 정도 이상")
+export const FARM_LV = [2, 3, 5, 7, 9, 12, 15, 18, 21];        // 이 레벨마다 스마트팜 한 칸
+export const farmSlots = L => Math.min(FARM_MAX, FARM_START + FARM_LV.filter(x => L >= x).length);
 // 레벨업 보상(클래시로얄 왕 레벨처럼 — 상자 하나): 돈 · 물 · 비료 + 가끔 보석 · 회귀 주사 · 종자
 export function levelReward(L) {
   const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0 };

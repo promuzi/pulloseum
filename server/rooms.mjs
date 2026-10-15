@@ -120,9 +120,10 @@ export function makeRooms({ game, log }) {
     broadcastRoom(r);
   }
   function battleMsg(r, uid) { const side = sideOf(r, uid); return { view: viewFor(r.B, side), deadline: r.deadline, now: Date.now(), turn: r.B.turn, moved: !!r.moves[side] }; }
-  function move(uid, act, now) {
+  function move(uid, act, now, turn) {
     const r = roomOf(uid); if (!r || r.phase !== 'battle') fail('대결 중이 아니에요');
     const side = sideOf(r, uid); if (!side) fail('대결 중이 아니에요');
+    if (turn != null && turn !== r.B.turn) fail('이미 지난 턴이에요');   // 시간이 넘어 대신 둔 턴에 늦게 온 수가 다음 턴으로 넘어가지 않게
     if (r.moves[side]) fail('이번 턴은 이미 골랐어요');
     const u = side === 'a' ? r.B.me : r.B.foe;
     if (typeof act !== 'string' || (act !== 'rest' && !u.kit.some(k => k.id === act))) fail('모르는 기술');

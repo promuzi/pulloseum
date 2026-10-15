@@ -40,7 +40,7 @@ export function hangarBack(app, k = 1) {
 export const hangar = {
   theme: 'loft',
   enter(p = {}) { this.sel = p.part || 'scanner'; this.fx = null; this.from = p.from || null; this.inT = null; this.out = null; this.choose = p.choose ? 'open' : null; this.preset = p.model ? +p.model : null; },   // ?model=n = 그 배로(촬영용)   // ?choose=1 = 모양 고르기 창(촬영용)
-  lv(s, id) { s.ship = s.ship || { levels: { scanner: 1, durability: 2, harvester: 1, fuel_tank: 1 } }; return s.ship.levels[id] || 0; },
+  lv(s, id) { s.ship = s.ship || {}; if (!s.ship.levels) s.ship.levels = { scanner: 1, durability: 1, harvester: 1, fuel_tank: 1 }; return s.ship.levels[id] || 0; },
   model(s) { return (s.ship && s.ship.model) || 1; },
   val(pt, lv) { return Math.min(pt.max, pt.base + pt.step * lv); },
   cost(lv) { return Math.round(120 * Math.pow(lv + 1, 1.4) / 10) * 10; },
@@ -88,7 +88,7 @@ export const hangar = {
       if (im) { const k = Math.min(100 / im.height, (cw - 12) / im.width), dw = Math.round(im.width * k), dh = Math.round(im.height * k); g.c.imageSmoothingEnabled = false; g.c.drawImage(im, Math.round(cx0 + cw / 2 - dw / 2), yy + 8, dw, dh); }
       g.text(sh.name, Math.round(cx0 + cw / 2), yy + 114, { font: 'label', color: on ? '#ffe8c8' : P.main, align: 'center' });
       g.text(sh.desc, Math.round(cx0 + cw / 2), yy + 134, { color: P.sub, align: 'center' });
-      app.input.hit(id, cx0, cy0, Math.round(cw), 160, () => { s.ship.model = sh.n; this.choose = null; app.toast(sh.name + '(으)로 정했어요'); });
+      app.input.hit(id, cx0, cy0, Math.round(cw), 160, () => { s.ship.model = sh.n; this.choose = null; app.act('setShip', { model: sh.n }).then(r => r && app.toast(sh.name + ' — 정했어요')); });
     });
   },
   panels(app, cx, cy, fx, live, model) {
@@ -121,7 +121,6 @@ export const hangar = {
     g.text('지금', 22, PY + 50, { color: P.dim }); g.text(fmtV(cur), 50, PY + 50, { font: 'bold', color: P.main });
     if (!atMax) { g.text('→', 94, PY + 50, { color: P.dim }); g.text(fmtV(nxt), 108, PY + 50, { font: 'bold', color: '#9ff0b0' }); }
     tbar(g, 22, PY + 68, 120, 5, cur / pt.max, 'exp');
-    const can = !atMax && s.credits >= cost;
-    button(app, 'hg_up', W - 116, PY + 52, 96, 40, atMax ? '최대 강화' : '강화', { style: 'gold', font: 'head', icon: atMax ? null : 'up', iconTint: true, disabled: !can, sub: atMax ? null : `${fmt(cost)} 크레딧`, onTap: !live ? null : () => { s.credits -= cost; s.ship.levels[pt.id] = lv + 1; this.fx = { id: pt.id, t0: app.t }; app.toast(`${pt.label} 강화!`); } });
+    button(app, 'hg_up', W - 116, PY + 52, 96, 40, '강화', { style: 'gold', font: 'head', disabled: true, sub: '다음 업데이트에서' });   // MVP: 탐사선 강화는 아직(연료·레벨로 탐사)
   },
 };

@@ -79,10 +79,12 @@ export function makeGame({ q, log }) {
     log(uid, 'battle.start', { mode, mine: mine.map(plantLite), foes: foes.map(plantLite), tier: T.tier, round: T.round }, now);
     return { id, mode, view: viewOf(B), info };
   }
-  function battleTurn(uid, id, act, now) {
+  function battleTurn(uid, id, act, now, turn = null) {
     const b = q.battle.get(String(id || ''), uid);
     if (!b || b.done) fail('끝났거나 없는 판이에요');
     const spec = JSON.parse(b.spec), acts = JSON.parse(b.acts), B = replayBot(spec, acts);
+    // 화면이 아는 턴과 다르면(응답을 못 받고 다시 보냄 등) 수를 넣지 않고 지금 판 모습만 돌려줌 → 화면이 다시 맞춤
+    if (turn != null && (turn !== B.turn || (spec.mode === 'swap3' && act && act.kind === 'send' && B.need !== 'me'))) return { resync: true, view: viewOf(B), over: B.over };
     const step = botStep(B, spec.mode, act);
     acts.push(act);
     q.putActs.run(JSON.stringify(acts), now, b.id);

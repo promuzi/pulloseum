@@ -3,7 +3,7 @@
 import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
-  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS,
+  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX,
 } from './catalog.js';
 
 export class Err extends Error {}
@@ -26,7 +26,7 @@ export function newGame({ nickname, starter }, rng, now) {
     scions: [], seeds: [], plants: [], storage: [], active: 0, team: [], mode: 'tournament',
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 },
     swap3: { wins: 0, losses: 0 }, pvp: { wins: 0, losses: 0 },
-    discovered: [], pending: [],
+    discovered: [], pending: [], ship: { model: null },
   };
   s.plants.push(makePlant(s, { key: starter }, rng, now));
   for (let i = 0; i < 2; i++) s.seeds.push(seedOf(s, rollSpecies(rng, 'common'), rng));
@@ -207,17 +207,20 @@ export function plantSeed(s, seedId, rng, now) {
   const xp = addXp(s, XP.plant, rng);
   return { plant: p.uid, xp };
 }
-export function toStorage(s, id) {
+export function toStorage(s, id, now = 0) {
   const p = getPlant(s, id);
   need(s.plants.length > 1, '스마트팜에 하나는 남겨 둬요');
-  s.plants.splice(s.plants.indexOf(p), 1); s.storage.push(p); fixActive(s);
+  need(s.storage.length < STORE_MAX, `보관고가 꽉 찼어요(${STORE_MAX})`);
+  s.plants.splice(s.plants.indexOf(p), 1); p.slept = now; s.storage.push(p); fixActive(s);
   return {};
 }
+// 탐사선 모양(꾸미기 — 성능 차이 없음)
+export function setShip(s, model) { need(Number.isInteger(model) && model >= 1 && model <= 9, '없는 모양'); s.ship = { ...(s.ship || {}), model }; return {}; }
 export function fromStorage(s, id, now) {
   const i = s.storage.findIndex(x => x.uid === id);
   need(i >= 0, '보관고에 없어요');
   need(freeSlots(s) > 0, '스마트팜 자리가 없어요');
-  const p = s.storage.splice(i, 1)[0]; p.hv = { t0: now, have: 0 }; s.plants.push(p);
+  const p = s.storage.splice(i, 1)[0]; p.hv = { t0: now, have: 0 }; delete p.slept; s.plants.push(p);
   return {};
 }
 

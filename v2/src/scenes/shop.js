@@ -1,29 +1,16 @@
 import { plainBg, awning } from '../art/bg.js';
 import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { SMALL_POT } from '../art/sprites.js';
-import { T, plate, btnBody } from '../art/theme.js';
+import { T, plate, holo } from '../art/theme.js';
+import { seedArt } from './common.js';
+import { SHOP, SPECIES } from '../game/catalog.js';
+import { showGot } from './popups.js';
 
-// 화분 그림 = 작은 칸 화분(48×56, 위 뒤 · 아래 앞 — small.mjs)에서 화분 둘레만 잘라 뒤 → 앞 순서로
-function potArt(g, key, cx, y) {
-  const im = SMALL_POT[key]; if (!im) return;
-  const c = g.c; c.imageSmoothingEnabled = false;
-  c.drawImage(im, 10, 28, 28, 24, cx - 14, y - 4, 28, 24);
-  c.drawImage(im, 10, 56 + 28, 28, 24, cx - 14, y - 4, 28, 24);
-}
-
-const SECTIONS = [
-  { title: '소모품', items: [
-    { id: 'lvpot', name: '레벨업 물약', desc: '한 단계 성장', price: 0, art: 'potion' },
-    { id: 'lock', name: '생장 멈춤 물약', desc: '단계 고정', price: 300, art: 'clock' },
-    { id: 'box', name: '성장 상자', desc: '경험치 아이템', price: 200, art: 'box' },
-  ] },
-  { title: '화분', items: [
-    { id: 'pot_ceramic', name: '도자기 화분', desc: '충전 +15%', price: 400, pot: 'pot_ceramic' },
-    { id: 'pot_glass', name: '유리 화분', desc: '열매 +1', price: 900, pot: 'pot_glass' },
-    { id: 'pot_crystal', name: '크리스탈 화분', desc: '탐사에서 발견', price: -1, pot: 'pot_crystal' },
-  ] },
-];
+// 상점(2026-10-16 사용자 "물 비료는 전투 탐사 수확에서 얻고 상점에서는 유료 재화로 구매"):
+//  종자 꾸러미 = 돈, 보급품(물 · 비료 · 회귀 주사 · 연료) = 보석. 아래 = 암시장(식물 팔기 · 해체 — 컨셉은 뒷골목, 실제는 판매 + 해체).
+const ART = { seed_common: { seed: 'grass' }, seed_rare: { seed: 'bolt', rare: true }, water10: { ic: 'water' }, fert5: { ic: 'fert' }, regress1: { ic: 'potion' }, fuel3: { ic: 'energy' } };
+const DESC = { seed_common: '흔한 식물', seed_rare: '희귀 식물', water10: '생장 +10씩', fert5: '생장 +25씩', regress1: '기술 되돌리기', fuel3: '탐사 3번' };
+const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', water10: '물 10', fert5: '비료 5', regress1: '회귀 주사', fuel3: '연료 3' };
 
 export const shop = {
   theme: 'ship',   // 함선 장터(장소 테마 — 2026-10-15)
@@ -32,26 +19,40 @@ export const shop = {
     plainBg(g, W, H, t, 'shop_ship');
     awning(g, 28, W);
     hud(app, s);
-    let y = 50;
-    const cw = Math.floor((W - 16 - 12) / 3);
-    SECTIONS.forEach(sec => {
-      g.text(sec.title, 12, y + 4, { font: 'head', color: T.text.main, shadow: T.ink });
+    const cw = Math.floor((W - 16 - 12) / 3), P = T.ptext;
+    let y = 46;
+    const sections = [['종자 꾸러미', SHOP.filter(x => x.give.seed)], ['보급품', SHOP.filter(x => !x.give.seed)]];
+    for (const [title, items] of sections) {
+      g.text(title, 12, y + 4, { font: 'head', color: T.text.main, shadow: T.ink });
+      if (title === '보급품') g.text('보석으로 사요', W - 12, y + 7, { color: T.text.sub, align: 'right', shadow: T.ink });
       y += 24;
-      sec.items.forEach((it, i) => {
-        const x = 8 + i * (cw + 6);
-        plate(g, x, y, cw, 110);
-        // 진열대
-        plate(g, x + 7, y + 7, cw - 14, 40, 'deep');
-        g.rect(x + 11, y + 40, cw - 22, 2, T.deep.frame);
-        if (it.pot) potArt(g, it.pot, x + cw / 2, y + 20);
-        else { const ic = icon(it.art); g.img(ic, Math.round(x + cw / 2 - ic.width / 2), y + 24); }
-        g.text(it.name, x + cw / 2, y + 52, { font: 'bold', color: T.ptext.main, align: 'center' });
-        g.text(it.desc, x + cw / 2, y + 67, { color: T.ptext.sub, align: 'center' });
-        if (it.price < 0) { btnBody(g, x + 6, y + 83, cw - 12, 21, T.btn.off, true); g.text('구매 불가', x + cw / 2, y + 87, { color: T.btn.off.text, align: 'center' }); }
-        else button(app, 'buy_' + it.id, x + 6, y + 83, cw - 12, 21, it.price ? String(it.price) : '무료', { style: it.price ? 'gold' : 'teal', icon: it.price ? 'coin' : null, onTap: () => app.toast(it.name) });
+      items.forEach((it, i) => {
+        const col = i % 3, x = 8 + col * (cw + 6), yy = y + Math.floor(i / 3) * 106, A = ART[it.id] || {};
+        plate(g, x, yy, cw, 100);
+        plate(g, x + 7, yy + 7, cw - 14, 36, 'deep');
+        if (A.seed) { seedArt(g, x + cw / 2, yy + 25, A.seed); if (A.rare) g.img(icon('star'), x + cw / 2 + 8, yy + 10); }
+        else { const ic = icon(A.ic || 'box'); g.img(ic, Math.round(x + cw / 2 - ic.width), yy + 25 - ic.height, 2); }
+        g.text(SHORT[it.id] || it.name, x + cw / 2, yy + 48, { font: 'bold', color: P.main, align: 'center' });
+        g.text(DESC[it.id] || '', x + cw / 2, yy + 63, { color: P.sub, align: 'center' });
+        const [cur, n] = Object.entries(it.cost)[0], can = s.wallet[cur] >= n;
+        button(app, 'buy_' + it.id, x + 6, yy + 76, cw - 12, 19, String(n), { style: can ? 'gold' : 'off', icon: cur === 'gems' ? 'gem' : 'coin', disabled: !can, onTap: () => this.buy(app, it) });
       });
-      y += 118;
-    });
+      y += Math.ceil(items.length / 3) * 106 + 4;
+    }
+    // 암시장
+    const pr = app.input.isPressed('to_market'), my = y + 2 + (pr ? 1 : 0), mh = 58;
+    holo(g, 8, my, W - 16, mh, { fill: '#1c1424', fill2: '#241a2e', frame: '#a884f3', frameHi: '#e0c8ff', frameLo: '#4a3460' }, 16);
+    g.img(icon('coin'), 18, my + 10, 2);
+    g.text('암시장', 46, my + 8, { font: 'head', color: '#e8d8ff' });
+    g.text('식물 팔기(싸게) · 해체하면 접목 가지', 46, my + 30, { color: '#b8a8d8' });
+    g.text('›', W - 22, my + 16, { font: 'head', color: '#e8d8ff' });
+    app.input.hit('to_market', 8, y + 2, W - 16, mh, () => app.go('market'), 2);
     navBar(app, 'shop');
+  },
+  async buy(app, it) {
+    const r = await app.act('buy', { item: it.id });
+    if (!r) return;
+    if (r.seed) { const sp = SPECIES[r.seed.key]; showGot(app, it.name, [{ kind: 'seed', seed: r.seed, rar: sp.rarity === 'rare' ? 3 : 1 }], '가방에 넣었어요 — 스마트팜에 심어 보세요'); }
+    else app.toast(Object.entries(r.give).map(([k, n]) => `${{ water: '물', fert: '비료', regress: '회귀 주사', fuel: '연료' }[k] || k} +${n}`).join(' · '));
   },
 };

@@ -1,6 +1,6 @@
 // 풀로세움 v2 서버 — 설치할 것 없이 Node 하나로(내장 http · sqlite · crypto).
-//   실행: node server/index.mjs            → http://localhost:8787 (같은 PC)
-//         node server/index.mjs --host 0.0.0.0 --port 8787   → 같은 와이파이의 친구도 접속(방화벽 허용 필요)
+//   실행: node server/index.mjs            → http://localhost:8790 (같은 PC)
+//         node server/index.mjs --host 0.0.0.0   → 같은 와이파이의 친구도 접속(방화벽 허용 필요)
 //   저장 = server/data/pulloseum.db(깃에 안 올림). 플레이 기록 보기 = node server/report.mjs
 //  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드) · 게임 파일 내보내기
 import http from 'node:http';
@@ -17,7 +17,7 @@ import { STARTERS } from '../v2/src/game/catalog.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = join(HERE, '..');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : process.env['PULLO_' + k.toUpperCase()] || d; };
-const PORT = +arg('port', 8787), HOST = arg('host', '127.0.0.1'), DB = arg('db', join(HERE, 'data', 'pulloseum.db'));
+const PORT = +arg('port', 8790), HOST = arg('host', '127.0.0.1'), DB = arg('db', join(HERE, 'data', 'pulloseum.db'));
 const BODY_MAX = 64 * 1024;
 
 const { q } = openDb(DB);
@@ -78,6 +78,13 @@ const API = {
     log(uid, 'register', { starter }, now);
     return { token, user: { id: uid, login, nickname: nick }, state: s, ver: 1 };
   },
+  'POST /api/check': (req, b, now) => {   // 가입 전 아이디 쓸 수 있는지(식물 고르기 전에 알려 주려고)
+    if (!allowTry('c' + ipOf(req), now)) throw new HttpErr(429, '잠시 뒤에 다시 해 주세요');
+    const login = String(b.login || '').trim().toLowerCase();
+    if (!LOGIN_RE.test(login)) throw new Err('아이디는 영어 소문자·숫자·밑줄 3~20자예요');
+    if (q.userByLogin.get(login)) throw new Err('이미 있는 아이디예요');
+    return { ok: true };
+  },
   'POST /api/login': (req, b, now) => {
     if (!allowTry(ipOf(req), now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
     const login = String(b.login || '').trim().toLowerCase(), pw = String(b.password || '');
@@ -91,7 +98,7 @@ const API = {
   'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: { id: u.id, login: u.login, nickname: u.nickname }, ...game.state(u.id, now) }; },
   'POST /api/act': (req, b, now) => { const u = authed(req, now); return game.act(u.id, String(b.op || ''), b.args || {}, now); },
   'POST /api/battle/start': (req, b, now) => { const u = authed(req, now); return game.battleStart(u.id, now); },
-  'POST /api/battle/turn': (req, b, now) => { const u = authed(req, now); return game.battleTurn(u.id, b.id, b.act, now); },
+  'POST /api/battle/turn': (req, b, now) => { const u = authed(req, now); return game.battleTurn(u.id, b.id, b.act, now, b.turn == null ? null : +b.turn); },
   'POST /api/battle/forfeit': (req, b, now) => { const u = authed(req, now); return game.battleForfeit(u.id, b.id, now); },
   'GET /api/room': (req, b, now) => rooms.view(authed(req, now).id),
   'POST /api/room/create': (req, b, now) => rooms.create(authed(req, now).id, now),
@@ -99,7 +106,7 @@ const API = {
   'POST /api/room/leave': (req, b, now) => rooms.leave(authed(req, now).id, now),
   'POST /api/room/pick': (req, b, now) => rooms.pick(authed(req, now).id, b.plant, now),
   'POST /api/room/ready': (req, b, now) => rooms.ready(authed(req, now).id, !!b.on, now),
-  'POST /api/room/move': (req, b, now) => rooms.move(authed(req, now).id, b.act, now),
+  'POST /api/room/move': (req, b, now) => rooms.move(authed(req, now).id, b.act, now, b.turn == null ? null : +b.turn),
   'POST /api/room/forfeit': (req, b, now) => rooms.forfeit(authed(req, now).id, now),
   'POST /api/room/emote': (req, b, now) => rooms.emote(authed(req, now).id, b.i, now),
 };

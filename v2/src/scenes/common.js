@@ -85,6 +85,45 @@ export function dimIcon(name) {
   x.putImageData(d, 0, 0); dim.set(name, c); return c;
 }
 
+// 별(개체값 합으로 1~5 — 등급 대신, 2026-10-16 사용자 "등급 대신 개체값 수치 혹은 별의 수"): 작은 별 n개(빈 별 포함 max개). 폭을 돌려줌
+const STAR7 = ['...a...', '..aba..', 'aabbbaa', '.abbba.', '.abbba.', 'abb.bba', 'aa...aa'];
+const starCache = new Map();
+function starCv(on) {
+  const k = on ? 1 : 0; let cv = starCache.get(k); if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = 7; cv.height = 8; const c = cv.getContext('2d');
+  const col = on ? { a: '#f0a830', b: '#ffd84a' } : { a: '#2b3c50', b: '#3e5670' };
+  STAR7.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '.') return; c.fillStyle = col[ch]; c.fillRect(x, y, 1, 1); }));
+  if (on) { c.fillStyle = '#fff6c8'; c.fillRect(3, 2, 1, 1); c.fillRect(2, 3, 1, 1); }
+  c.fillStyle = 'rgba(5,7,15,0.7)'; c.fillRect(1, 7, 2, 1); c.fillRect(4, 7, 2, 1);
+  starCache.set(k, cv); return cv;
+}
+export function miniStars(g, x, y, n, max = 5) {
+  for (let i = 0; i < max; i++) g.img(starCv(i < n), x + i * 8, y);
+  return max * 8 - 1;
+}
+// 개체값 원형 게이지(사용자 "숫자와 원형 그래프 게이지 — 꽉 차면 최대치, 얼마나 올릴지 알 수 있게"): 반지름 r · 두께 3 · v/max 만큼 채움 · 가운데 숫자
+const ringCache = new Map();
+export function ivRing(g, cx, cy, r, v, max, col, opt = {}) {
+  const key = [r, v, max, col, opt.add || 0].join('|');
+  let cv = ringCache.get(key);
+  if (!cv) {
+    cv = document.createElement('canvas'); cv.width = cv.height = r * 2 + 2; const c = cv.getContext('2d');
+    const fill = v / max, add = Math.min(1, (v + (opt.add || 0)) / max);
+    for (let y = 0; y < r * 2 + 2; y++) for (let x = 0; x < r * 2 + 2; x++) {
+      const dx = x + 0.5 - (r + 1), dy = y + 0.5 - (r + 1), d = Math.hypot(dx, dy);
+      if (d > r + 0.5 || d < r - 3.5) continue;
+      const a = ((Math.atan2(dx, -dy) / (Math.PI * 2)) + 1) % 1;   // 12시부터 시계 방향
+      const edge = d > r - 0.5 || d < r - 2.5;
+      c.fillStyle = a < fill ? (edge ? hexDim(col) : col) : a < add ? '#9ff0b0' : edge ? '#0a1626' : '#1d3346';
+      c.fillRect(x, y, 1, 1);
+    }
+    ringCache.set(key, cv);
+  }
+  g.img(cv, cx - r - 1, cy - r - 1);
+  g.text(String(v), cx, cy - 7, { font: 'value', color: v >= max ? '#ffd890' : '#ffffff', align: 'center' });
+}
+const hexDim = h => { const n = parseInt(h.slice(1), 16), f = v => Math.round(v * 0.62).toString(16).padStart(2, '0'); return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255); };
+
 // 등급 알약
 const GRADE_COL = { S: C.gold, A: '#a884f3', B: C.blue, C: C.green, D: C.mute };
 export function gradeBadge(g, x, y, grade) {

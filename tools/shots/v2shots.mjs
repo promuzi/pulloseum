@@ -18,6 +18,10 @@ const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Pro
 
 export const SHOTS = [
   ['01_title', 'title', {}],
+  ['01_starter', 'starter', {}],
+  ['02_home_chest', 'home', {}, { level: 6 }],
+  ['02_home_chest_open', 'home', {}, { level: 6, chestOpen: 4000 }],
+  ['02_home_settings', 'home', {}, { sheet: 'settings' }],
   ['02_home', 'home', {}],
   ['03_home_empty', 'home', { empty: true }],
   ['03_home_profile', 'home', { profile: true }],
@@ -30,9 +34,13 @@ export const SHOTS = [
   ['05_plant_skill_sel', 'plant', { tab: 'skill', sel: '1' }],
   ['06_plant_up', 'plant', { tab: 'up' }],
   ['06_plant_set', 'plant', { tab: 'set' }],
+  ['06_plant_iv', 'plant', { tab: 'iv' }],
+  ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],
+  ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
   ['07_battle_status', 'battle', { phase: 'pick', venue: 'colosseum', status: '1' }],
+  ['07_battle_info', 'battle', { phase: 'pick', venue: 'colosseum', status: '1', info: '1' }],
   ['07_battle_fx', 'battle', { phase: 'pick', venue: 'colosseum', me: 'flower_fire', foe: 'gaia', pre: 'foe:burn,poison3,wet,chill2,shock1,leech;me:shade,gale' }],
   ['07_battle_skip', 'battle', { phase: 'pick', venue: 'colosseum', pre: 'me:stun;foe:weak,corrode' }],
   ['07_battle_bind', 'battle', { phase: 'pick', venue: 'colosseum', energy: '4', pre: 'me:bind,taunt' }],
@@ -55,9 +63,14 @@ export const SHOTS = [
   ['10_hangar_m4', 'hangar', { model: '4', part: 'harvester' }],
   ['10_hangar_choose', 'hangar', {}],
   ['11_shop', 'shop', {}],
+  ['11_market', 'market', {}],
+  ['14_room_lobby', 'room', { demo: 'lobby' }],
+  ['14_room_in', 'room', { demo: 'in' }],
+  ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '재배사 경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
   ['12_nursery', 'nursery', {}],
   ['12_storage', 'storage', {}],
   ['13_dex', 'dex', {}],
+  ['15_matching', 'matching', {}],
   ['99_icons', 'icons', {}],
 ];
 
@@ -73,9 +86,9 @@ try {
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
   const ready = await p.evaluate(() => window.__ready);
   if (ready.missing.length || ready.bad.length) console.log('경고', JSON.stringify(ready));
-  for (const [id, scene, params] of SHOTS) {
+  for (const [id, scene, params, opt] of SHOTS) {
     if (only && !only.includes(id) && !only.includes(scene)) continue;
-    const data = await p.evaluate((scene, params, scale) => window.__shot(scene, params, { scale: scene === 'icons' ? 6 : scale }), scene, params, scale);
+    const data = await p.evaluate((scene, params, scale, opt) => window.__shot(scene, params, { scale: scene === 'icons' ? 6 : scale, ...(opt || {}) }), scene, params, scale, opt);
     writeFileSync(resolve(out, `v2_${id}.png`), Buffer.from(data.split(',')[1], 'base64'));
     console.log('saved', `v2_${id}.png`);
   }

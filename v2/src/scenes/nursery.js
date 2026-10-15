@@ -3,8 +3,11 @@ import { icon } from '../art/icons.js';
 import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
-import { STAGE_NAME, SPECIES } from '../data/mock.js';
-import { gradeBadge } from './common.js';
+import { miniStars } from './common.js';
+import { farmSlots, FARM_MAX, SKILLS, STORE_MAX } from '../game/catalog.js';
+import { stageKey, stageName, stars, growInfo, fruitOf, slotLv } from '../game/view.js';
+import { showGot } from './popups.js';
+import { eul } from '../core/josa.js';
 
 // 양육 = 스마트팜 2판(2026-10-15 사용자):
 //  "계단식으로 만들면 멀리 있는 게 안 보여 — 위아래 드래그하면 멀리 있는 게 앞으로 말려오는 느낌",
@@ -20,8 +23,8 @@ const BD = 2.7, BH = 0.95;                                          // 상자 �
 const GR = ['#10261a', '#183a22', '#21502b', '#2c6834', '#3a823e', '#4c9a48', '#62b254', '#86cc66', '#a8e084'];   // 잔디 한 벌(상자 윗면 · 심은 자리 덤불 · 화분 마개)
 const CER = { ink: '#252d3c', lo: '#8f99ad', mid: '#d6dce5', hi: '#eef2f6', top: '#fbfcfd', side: '#aeb8c8', lid: '#bcc5d2', lidLo: '#9aa4b6' };
 const MET = { tread: '#222a36', groove: '#191f29', noseHi: '#8794aa', riser: '#12171f', cleat: '#1b212b', led: '#2a6f94' };
-const SORTS = [['plant', '심은 순'], ['grade', '등급 순'], ['fruit', '열매 순'], ['name', '이름 순']];
-const GORDER = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+const SORTS = [['plant', '심은 순'], ['star', '별 순'], ['fruit', '열매 순'], ['name', '이름 순']];
+const hnum = str => { let h = 7; for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) | 0; return h >>> 0; };
 const ease = k => 1 - (1 - k) ** 3;
 const ease2 = k => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -47,16 +50,16 @@ export const nursery = {
   enter(p = {}) { this.scroll = 0; this.vel = 0; this.dragging = false; this.sel = null; this.selT = -1e9; this.mods = new Map(); this.lastT = null; this.cols = +p.cols || this.cols || 2; this.sortI = this.sortI || 0; this.order = null; },   // ?cols=3 = 3열로 열기(검토용)
   // 칸 목록: 식물 + 빈 자리 + 잠긴 자리(정렬은 식물만, 빈 자리·잠긴 자리는 뒤)
   items(s) {
-    const it = s.plants.map((p, i) => ({ kind: 'plant', p, i, id: 'p' + p.id, seed: p.id * 31 + 7 }));
-    for (let i = s.plants.length; i < s.slots; i++) it.push({ kind: 'empty', id: 'e' + i, seed: i * 17 + 3 });
-    for (let i = s.slots; i < s.slotsMax; i++) it.push({ kind: 'lock', id: 'l' + i, lv: 4 + (i - s.slots) * 3, seed: i * 13 });
+    const open = farmSlots(s.user.level), it = s.plants.map((p, i) => ({ kind: 'plant', p, i, id: 'p' + p.uid, seed: hnum(p.uid) % 99991 }));
+    for (let i = s.plants.length; i < open; i++) it.push({ kind: 'empty', id: 'e' + i, seed: i * 17 + 3 });
+    for (let i = Math.max(open, s.plants.length); i < FARM_MAX; i++) it.push({ kind: 'lock', id: 'l' + i, lv: slotLv(i), seed: i * 13 });
     return it;
   },
   sorted(s) {
     const it = this.items(s), mode = SORTS[this.sortI][0];
     const plants = it.filter(x => x.kind === 'plant'), rest = it.filter(x => x.kind !== 'plant');
-    const fr = x => (x.p.fruit ? x.p.fruit.have / x.p.fruit.max : 0);
-    if (mode === 'grade') plants.sort((a, b) => GORDER[a.p.grade] - GORDER[b.p.grade] || a.i - b.i);
+    const now = this.app ? this.app.now() : Date.now(), fr = x => { const f = fruitOf(x.p, now); return f.max ? f.have / f.max : 0; };
+    if (mode === 'star') plants.sort((a, b) => stars(b.p) - stars(a.p) || a.i - b.i);
     if (mode === 'fruit') plants.sort((a, b) => fr(b) - fr(a) || a.i - b.i);
     if (mode === 'name') plants.sort((a, b) => a.p.name.localeCompare(b.p.name, 'ko'));
     return [...plants, ...rest];
@@ -88,7 +91,10 @@ export const nursery = {
     const dt = this.lastT == null ? 0 : clamp((t - this.lastT) / 1000, 0, 0.05); this.lastT = t;   // 시간이 거꾸로 가도(촬영 도구 등) 0
     const C = this.cols, mx = this.maxScroll(s);
     if (!Number.isFinite(this.scroll)) { this.scroll = 0; this.vel = 0; }   // 안전장치(굴림 값이 망가지면 처음으로)
-    if (!this.order) this.order = this.sorted(s);
+    // 칸 목록: 서버가 새 상태를 주면 같은 자리(id)는 새 식물 값으로 바꿔 끼우고, 칸이 늘거나 줄면(심기·보관·판매·레벨업) 다시 정렬
+    const fresh = this.items(s), byId = new Map(fresh.map(x => [x.id, x]));
+    if (!this.order || this.order.length !== fresh.length || this.order.some(x => !byId.has(x.id))) this.order = this.sorted(s);
+    else this.order = this.order.map(x => byId.get(x.id));
     if (this.sel == null) { const f = this.order.find(x => x.kind === 'plant'); if (f) this.sel = f.id; }   // 처음엔 맨 앞 식물이 이미 솟아 있음
     // 영상·검토용 자동 끌기(sc.auto = { t0, dur, v 줄/초 }) — 손가락으로 끄는 것과 같게 굴린 뒤 그 속도로 놓음
     if (this.auto) { const a = this.auto; if (t < a.t0 + a.dur) { this.dragging = true; this.scroll += a.v * dt; } else { this.dragging = false; this.vel = a.v; this.auto = null; } }
@@ -184,7 +190,7 @@ export const nursery = {
     const sx = Math.round((fxl + fxr) / 2), sy = Math.round((By + Fy0) / 2), fh = Fy1 - Fy0;
     // 앞면 표시: 잠김 = 자물쇠, 식물 = 상태 불빛(열매 다 참 초록 · 자라는 중 주황), 빈 자리 = 꺼짐
     if (it.kind === 'lock') { const ic = icon('lockS'); if (ic && fh >= ic.height + 2) g.img(ic, sx - Math.floor(ic.width / 2), Fy0 + Math.floor((fh - ic.height) / 2)); return null; }
-    const f = it.kind === 'plant' ? (it.p.fruit || { have: 0, max: 1 }) : null;
+    const f = it.kind === 'plant' ? fruitOf(it.p, app.now()) : null;
     const led = !f ? '#5a6478' : f.have >= f.max ? '#7cf0a0' : f.have > 0 ? '#ffd27a' : '#f0a050';
     g.rect(Fx1 - 5, Fy0 + Math.max(2, Math.floor(fh / 2) - 1), 2, 2, led);
     const isSel = this.sel === it.id;
@@ -200,7 +206,7 @@ export const nursery = {
   // 잔디에 심긴 식물(큰 판 그림 — 2026-10-15 "식물이 너무 멀어 좀 땡겨와줘", 숨쉬기·깜빡임 그대로): 흙 줄 위만, 밑동은 잔디 덤불이 덮음
   planted(g, it, sx, sy, band, t) {
     const ry = Math.max(2, Math.min(7, Math.round(band * 0.24)));
-    if (!drawBigPlanted(g, bigKey(it.p.key, it.p.stage), sx, sy, { t, phase: it.i * 700, between: () => grassOval(g, sx, sy, 17, ry, it.seed) })) grassOval(g, sx, sy, 17, ry, it.seed);
+    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p)), sx, sy, { t, phase: it.i * 700, between: () => grassOval(g, sx, sy, 17, ry, it.seed) })) grassOval(g, sx, sy, 17, ry, it.seed);
   },
   // 고른 식물: 잔디 마개를 인 화분이 기계 구멍에서 솟음(구멍 = 금속 테 · 어두운 통로 속 고리 · 푸른 불빛, 화분 아래 피스톤과 받침)
   lifted(g, it, sx, sy, band, L, t) {
@@ -224,48 +230,86 @@ export const nursery = {
     c.save(); c.beginPath(); c.rect(0, 0, 400, sy);
     for (let dy = 0; dy <= ry; dy++) { const half = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry))) + 0.5); c.rect(sx - half, sy + dy, half * 2 + 1, 1); }
     c.clip();
-    drawBigPotted(g, bigKey(it.p.key, it.p.stage), it.p.pot, sx, soilY, { t, phase: it.i * 700, between: () => grassOval(g, sx, soilY - 2, 17, 4, it.seed) });   // 화분 위 잔디 마개(상자 잔디와 같은 색·같은 풀잎 점)
+    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p)), it.p.pot, sx, soilY, { t, phase: it.i * 700, between: () => grassOval(g, sx, soilY - 2, 17, 4, it.seed) });   // 화분 위 잔디 마개(상자 잔디와 같은 색·같은 풀잎 점)
     c.restore();
   },
 
-  // 위 줄(제목·자리 수·열·정렬) · 고른 식물 정보 · 아래 단추
+  // 위 줄(제목·자리 수·열·정렬) · 고른 식물 정보와 할 일(물 · 비료 · 수확 · 진화 · 보관) · 아래 단추
   ui(app) {
-    const { g, W, H, state: s } = app, P = T.ptext, st = T.card || T.panel;
+    const { g, W, H, state: s } = app, P = T.ptext, st = T.card || T.panel, now = app.now();
     hud(app, s);
     g.text('양육', 12, 34, { font: 'head', color: '#ffffff', outline: '#14324e' });
-    const cap = `${s.plants.length}/${s.slots}`;
+    const cap = `${s.plants.length}/${farmSlots(s.user.level)}`;
     g.text(cap, 52, 37, { color: '#eef7ff', outline: '#14324e' });
     // 열 바꾸기(2열 · 3열) — 누르면 상자가 새 자리로 건너감
     [2, 3].forEach((n, i) => {
-      const x = W - 132 + i * 27, on = this.cols === n, id = 'nur_col' + n, pr = app.input.isPressed(id);
+      const x = W - 132 + i * 27, on = this.cols === n, id = 'nur_col' + n;
       holoTab(app, id, x, 31, 25, 21, n + '열', on, null);
       app.input.hit(id, x, 31, 25, 21, () => { if (this.cols !== n) this.relayout(app, () => { this.cols = n; this.scroll = clamp(Math.round(this.scroll * (n === 3 ? 2 / 3 : 1.5)), 0, this.maxScroll(s)); }); }, 3);
     });
-    const sid = 'nur_sort', spr = app.input.isPressed(sid), sw = 72;
+    const sid = 'nur_sort', sw = 72;
     holoTab(app, sid, W - 76, 31, sw, 21, '정렬 · ' + SORTS[this.sortI][1], false, null, 'body');
     app.input.hit(sid, W - 76, 31, sw, 21, () => this.relayout(app, () => { this.sortI = (this.sortI + 1) % SORTS.length; }), 3);
-    // 고른 식물 정보(앞 턱 위에 뜬 홀로그램)
-    const it = this.order && this.order.find(x => x.id === this.sel), PY = 400;
-    holo(g, 10, PY, W - 20, 70, st, 13);
+    // 고른 식물 정보(앞 턱 위에 뜬 홀로그램): 왼쪽 = 이름·별 · 단계·Lv · 생장 막대 · 열매, 오른쪽 = 할 일 2×2
+    const it = this.order && this.order.find(x => x.id === this.sel), PY = 398, PH = 102;
+    holo(g, 10, PY, W - 20, PH, st, 13);
     if (it && it.kind === 'plant') {
-      const p = it.p, sp = SPECIES[p.key] || { type: 'flower' }, f = p.fruit || { have: 0, max: 1, gauge: 0 };
-      g.text(p.name, 20, PY + 8, { font: 'bold', color: P.main });
-      gradeBadge(g, 22 + g.textW(p.name, 'bold'), PY + 6, p.grade);
-      g.text(STAGE_NAME[sp.type][p.stage], 44 + g.textW(p.name, 'bold'), PY + 8, { color: P.sub });
-      g.img(icon('fruit'), 20, PY + 28); g.text(`열매 ${f.have}/${f.max}`, 34, PY + 27, { color: f.have ? P.gold : P.sub });
-      g.text('다음 열매', 20, PY + 45, { color: P.sub }); tbar(g, 70, PY + 49, 96, 5, f.gauge, 'exp');
-      button(app, 'nur_one', W - 90, PY + 9, 70, 24, '수확', { style: 'teal', icon: 'fruit', disabled: !f.have, onTap: () => app.toast('수확') });
-      button(app, 'nur_keep', W - 90, PY + 38, 70, 24, '보관', { style: 'night', icon: 'box', onTap: () => app.toast('동면 보관고로 옮겨요') });
+      const p = it.p, f = fruitOf(p, now), gi = growInfo(p), nw = g.textW(p.name, 'bold');
+      g.text(p.name, 20, PY + 8, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
+      miniStars(g, 25 + nw, PY + 10, stars(p));
+      const colR = W - 136;   // 왼쪽 칸 오른 끝(오른쪽 = 할 일 단추)
+      g.text(`${stageName(p)} · Lv${p.lv}`, 20, PY + 25, { color: P.sub });
+      if (gi.ready) g.text('진화할 수 있어요!', 20, PY + 41, { font: 'bold', color: '#ffd890' });
+      else if (gi.done) g.text('다 자랐어요', 20, PY + 41, { color: P.sub });
+      else { g.text(`생장 ${gi.cur}/${gi.need}`, 20, PY + 41, { color: P.sub }); tbar(g, 20, PY + 56, colR - 20, 4, gi.pct, 'exp'); }
+      g.img(icon('fruit'), 20, PY + 64); g.text(`열매 ${f.have}/${f.max}`, 34, PY + 63, { color: f.have ? P.gold : P.sub });
+      if (f.have < f.max) tbar(g, 34 + g.textW(`열매 ${f.have}/${f.max}`) + 6, PY + 68, Math.max(10, colR - (40 + g.textW(`열매 ${f.have}/${f.max}`))), 4, f.gauge, 'exp');
+      g.text(`물 ${s.items.water || 0} · 비료 ${s.items.fert || 0}`, 20, PY + 81, { color: P.dim });
+      const bx = W - 128, bw = 56, bh = 30, gap = 4, r1 = PY + 8, r2 = r1 + bh + gap;
+      if (gi.ready) button(app, 'nur_evo', bx, r1, bw * 2 + gap, bh, '진화하기', { style: 'gold', font: 'bold', icon: 'up', iconTint: true, onTap: () => this.evolve(app, p) });
+      else {
+        button(app, 'nur_water', bx, r1, bw, bh, '물', { style: 'teal', icon: 'water', disabled: gi.done || !s.items.water, onTap: () => this.feed(app, p, 'water') });
+        button(app, 'nur_fert', bx + bw + gap, r1, bw, bh, '비료', { style: 'teal', icon: 'fert', disabled: gi.done || !s.items.fert, onTap: () => this.feed(app, p, 'fert') });
+      }
+      button(app, 'nur_one', bx, r2, bw, bh, '수확', { style: 'gold', icon: 'fruit', iconTint: true, disabled: !f.have, onTap: () => this.harvest(app, p) });
+      button(app, 'nur_keep', bx + bw + gap, r2, bw, bh, '보관', { style: 'night', icon: 'box', disabled: s.plants.length < 2, onTap: () => app.act('toStorage', { id: p.uid }).then(r => r && app.toast(`${eul(p.name)} 동면 보관고로 옮겼어요`)) });
+      button(app, 'nur_care', bx, r2 + bh + 4, bw * 2 + gap, 20, '식물 관리 ›', { style: 'night', onTap: () => { const i = s.plants.indexOf(p); if (i >= 0 && i !== s.active) { s.active = i; app.act('setActive', { id: p.uid }); } app.go('plant', {}); } });
     } else if (it && it.kind === 'empty') {
       g.text('빈 자리', 20, PY + 10, { font: 'bold', color: P.main });
       g.text('종자를 심거나 보관고에서 깨워 오세요', 20, PY + 30, { color: P.sub });
+      button(app, 'nur_sow', 20, PY + 56, 110, 30, '종자 심기', { style: 'gold', icon: 'seed', iconTint: true, onTap: () => app.go('bag', { tab: 'seed' }) });
+      button(app, 'nur_wake', 138, PY + 56, 110, 30, '보관고 보기', { style: 'night', icon: 'box', onTap: () => app.go('storage') });
+    } else if (it && it.kind === 'lock') {
+      g.text('잠긴 자리', 20, PY + 10, { font: 'bold', color: P.main });
+      g.text(`재배사 Lv${it.lv}에 열려요 — 지금 Lv${s.user.level}`, 20, PY + 30, { color: P.sub });
+      g.text('대결 · 탐사 · 수확으로 재배사 경험치를 모아요', 20, PY + 50, { color: P.dim });
     } else {
       g.text('화분을 눌러 고르세요', 20, PY + 10, { font: 'bold', color: P.main });
       g.text('위아래로 끌면 계단이 굴러가요', 20, PY + 30, { color: P.sub });
     }
-    const n = (s.storage || []).length;
-    button(app, 'nur_store', 10, H - 92, 118, 40, '동면 보관고', { style: 'night', icon: 'box', sub: `${n}/${s.storageMax || 120}`, onTap: () => app.go('storage') });
-    button(app, 'har_all', 134, H - 92, W - 144, 40, '전체 수확', { style: 'gold', font: 'head', icon: 'fruit', iconTint: true, onTap: () => app.toast('전체 수확') });
+    const n = (s.storage || []).length, ready = s.plants.reduce((a, p) => a + fruitOf(p, now).have, 0);
+    button(app, 'nur_store', 10, H - 90, 118, 38, '동면 보관고', { style: 'night', icon: 'box', sub: `${n}/${STORE_MAX}`, onTap: () => app.go('storage') });
+    button(app, 'har_all', 134, H - 90, W - 144, 38, ready ? `전체 수확 ${ready}` : '전체 수확', { style: 'gold', font: 'head', icon: 'fruit', iconTint: true, disabled: !ready, onTap: () => app.act('harvestAll', {}).then(r => r && showGot(app, '열매 수확', r.got, `재배사 경험치 +${r.xp.gained}`)) });
     navBar(app, 'nursery');
+  },
+  async feed(app, p, kind) {
+    const r = await app.act('feed', { id: p.uid, kind, n: 1 });
+    if (!r) return;
+    const up = r.ups[r.ups.length - 1];
+    if (up) {
+      app.toast(`${p.name} Lv${up.lv}! 강화 포인트 +${up.pts}` + (up.harvest ? ' · 열매 칸 +1' : ''));
+      const box = r.ups.find(u => u.box);
+      if (box) showGot(app, 'Lv6 달성 선물', Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요');
+    }
+  },
+  async evolve(app, p) {
+    const r = await app.act('evolve', { id: p.uid });
+    if (!r) return;
+    const TO = { battle: '전투 칸에', joker: '조커 칸에', pend: '놓을 칸 고르기' };
+    showGot(app, `진화! ${['어린', '자라는', '다 자란'][r.stage]} 단계`, r.got.map(x => ({ kind: 'skill', skill: x.id, to: TO[x.to], rar: SKILLS[x.id] && SKILLS[x.id].tier === 'c3' ? 4 : 3 })), r.got.some(x => x.to === 'pend') ? '칸이 꽉 찼어요 — 식물 관리에서 놓을 칸을 골라요' : '새 기술이 피었어요');
+  },
+  async harvest(app, p) {
+    const r = await app.act('harvest', { id: p.uid });
+    if (r) showGot(app, `${p.name} 열매 수확`, r.got, `재배사 경험치 +${r.xp.gained}`);
   },
 };

@@ -1,6 +1,6 @@
 import { C } from '../art/palette.js';
 import { ICON_SRC, icon } from '../art/icons.js';
-import { title } from './title.js';
+import { title, starter } from './title.js';
 import { home } from './home.js';
 import { battle } from './battle.js';
 import { result } from './result.js';
@@ -13,6 +13,8 @@ import { dex } from './dex.js';
 import { storage } from './storage.js';
 import { matching } from './matching.js';
 import { hangar } from './hangar.js';
+import { room } from './room.js';
+import { market } from './market.js';
 
 // 아이콘 검토판(개발용)
 const icons = {
@@ -31,4 +33,4 @@ const icons = {
   },
 };
 
-export const SCENES = { title, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons };
+export const SCENES = { title, starter, room, market, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons };

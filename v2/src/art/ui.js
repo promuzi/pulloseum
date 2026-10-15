@@ -3,6 +3,7 @@
 import { ELEMENT } from './palette.js';
 import { icon, tinted } from './icons.js';
 import { T, plate, msgBox, btnBody, tbar, holo } from './theme.js';
+import { userNeed } from '../game/catalog.js';
 
 // 모서리가 r칸 둥근 사각형(채움). r 칸짜리 도트 원 모서리.
 export function rrect(g, x, y, w, h, r, col) {
@@ -107,11 +108,17 @@ export function tabs(app, x, y, w, list, active, onPick) {
 // 숫자 콤마
 export const fmt = n => Math.round(n).toLocaleString('ko-KR');
 
+// 위 정보줄 숫자: 게임 상태(user · wallet) → 레벨 · 경험 · 돈 · 보석
+export function hudData(s) {
+  if (!s) return { level: 1, exp: 0, expMax: 1, credits: 0, gems: 0 };
+  if (!s.user) return s;
+  return { level: s.user.level, exp: s.user.xp, expMax: userNeed(s.user.level), credits: s.wallet.credits, gems: s.wallet.gems };
+}
 // 작은 알약 판(상단 정보줄): 어두운 속 + 빛 한 줄
 function pill(g, x, y, w, h) { if (T.holo) return holo(g, x, y, w, h, T.deep, 9); rbox(g, x, y, w, h, 4, T.deep.fill, T.ink); g.rect(x + 3, y + 1, w - 6, 1, T.deep.frameHi); }
 // 상단 정보줄: 레벨·경험치 / 크레딧 / 젬 / 설정
-export function hud(app, s) {
-  const { g, W } = app;
+export function hud(app, st) {
+  const { g, W } = app, s = hudData(st);
   const y = 6;
   if (T.hudPlain) return hudPlain(app, s);
   pill(g, 4, y, 92, 18);
@@ -121,7 +128,7 @@ export function hud(app, s) {
   const gx = W - 22;   // 설정(보이는 판 18×18, 터치 여유 4)
   pill(g, gx, y, 18, 18);
   g.img(icon('gear'), gx + 4, y + 4);
-  app.input.hit('hud_gear', gx, y, 18, 18, () => app.toast && app.toast('설정'), 6);
+  app.input.hit('hud_gear', gx, y, 18, 18, () => app.openSettings && app.openSettings(), 6);
   const gemTxt = fmt(s.gems), gw = g.textW(gemTxt) + 24, gemX = gx - 4 - gw;
   pill(g, gemX, y, gw, 18);
   g.img(icon('gem'), gemX + 5, y + 4);
@@ -145,7 +152,7 @@ function hudPlain(app, s) {
   g.text(`${s.exp}/${s.expMax}`, 108, y + 4, { color: H.sub, align: 'right' });
   const gx = W - 24;   // 설정
   holo(g, gx, y, 20, h, st, 13); g.img(tinted('gear', H.icon), gx + 4, y + 4);
-  app.input.hit('hud_gear', gx, y, 20, h, () => app.toast && app.toast('설정'), 3);
+  app.input.hit('hud_gear', gx, y, 20, h, () => app.openSettings && app.openSettings(), 3);
   const gemTxt = fmt(s.gems), gw = g.textW(gemTxt) + 24, gemX = gx - 4 - gw;
   holo(g, gemX, y, gw, h, st, 13); g.img(icon('gem'), gemX + 5, y + 4); g.text(gemTxt, gemX + 19, y + 4, { color: H.text });
   const cTxt = fmt(s.credits), cw = g.textW(cTxt) + 24, cX = gemX - 4 - cw;

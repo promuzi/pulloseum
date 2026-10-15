@@ -17,6 +17,19 @@ export const STATUS = {
   gale: { name: '강풍', icon: 'wind', col: '#c0a8ff' }, taunt: { name: '도발', icon: 'target', col: '#ff5a5a' },
   root: { name: '뿌리', icon: 'tree', col: '#c08a5a' }, weak: { name: '약화', icon: 'down', col: '#ff8a8a' },
   corrode: { name: '부식', icon: 'potion', col: '#b9a04a' }, brace: { name: '버팀', icon: 'lock', buff: true },
+  // 버프(2026-10-16 구현 — 속성 짝: 불 분노 · 물 정화 · 풀 재생 · 대지 철벽 · 바람 가속 · 번개 집중 · 빙결 보호막 · 선인장 반사)
+  rage: { name: '분노', icon: 'fire', buff: true }, wall: { name: '철벽', icon: 'shield', buff: true }, haste: { name: '가속', icon: 'speed', buff: true },
+  regen: { name: '재생', icon: 'heal', buff: true }, thorns: { name: '반사', icon: 'cactus', buff: true }, shield: { name: '보호막', icon: 'ice', buff: true },
+  purified: { name: '정화', icon: 'water', buff: true }, focus: { name: '집중', icon: 'crit', buff: true },
+};
+// 효과 설명(전투 화면 '효과' 단추 — 한 줄씩)
+export const STATUS_DESC = {
+  burn: '턴 끝 체력 4%씩 3번 · 회복이 절반', poison: '턴 끝 체력 2% × 겹침(5겹까지) · 안 걸리면 줄어듦', wet: '기동 · 적중 · 방어 ↓ · 빙결·감전이 더 쌓임',
+  chill: '기동 ↓ · 3이 되면 한 턴 얼음', shock: '3이 되면 한 턴 마비', stun: '다음 차례를 쉼', frozen: '얼어서 한 턴 쉼(받는 피해 ↓)', paral: '몸이 굳어 한 턴 쉼',
+  bind: '기술 하나가 한 턴 묶임', leech: '턴 끝 체력을 상대가 빨아감(3번)', shade: '그 턴 끝 에너지가 안 참', gale: '적중 ↓', taunt: '방어·회피 자세를 못 씀',
+  root: '교체할 수 없음', weak: '공격 ↓', corrode: '방어 ↓', spore: '턴 끝마다 자라 3이면 피어남(피해 + 에너지 안 참)', brace: '방금 쉬어서 쉬게 하는 효과에 안 걸림',
+  rage: '공격 +25%', wall: '받는 피해 −20%', haste: '기동 +30%(먼저 움직이고 잘 피함)', regen: '턴 끝 체력 5% 회복(3번)', thorns: '붙어서 때린 상대에게 피해 30%를 되돌림',
+  shield: '최대 체력 15%만큼 피해를 먼저 막음', purified: '나쁜 효과가 안 걸림(한 턴)', focus: '다음 공격 치명 +25', guard: '방어 자세 — 받는 피해 ↓', evade: '회피 자세 — 빗나감 ↑', initReady: '다음 턴 먼저 움직이기 쉬움',
 };
 export const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9', text: '#d8faff', num: '#97e8f7' };
 export const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };

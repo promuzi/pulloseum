@@ -29,6 +29,8 @@ export function measure(str, fontKey = 'body') {
   return Math.ceil(meas.measureText(String(str)).width);
 }
 export function lineH(fontKey = 'body') { return metrics(FONT[fontKey]).h; }
+// 글자 상자(올림 없는 실제 높이) — 작은 창 속 글자를 위아래 같은 간격으로 놓을 때
+export function glyphH(fontKey = 'body') { const f = FONT[fontKey]; metrics(f); meas.font = css(f); const m = meas.measureText('한글가힣'); return (m.actualBoundingBoxAscent || f.size * 0.86) + (m.actualBoundingBoxDescent || f.size * 0.1); }
 
 // 글자 그리기. y = 글자 윗선. opt: {color, align, shadow, outline}
 export function drawText(ctx, str, x, y, opt = {}) {
