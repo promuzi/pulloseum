@@ -31,6 +31,7 @@ export const SHOTS = [
   ['06_plant_set', 'plant', { tab: 'set' }],
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
+  ['07_battle_status', 'battle', { phase: 'pick', venue: 'colosseum', status: '1' }],
   ['07_battle_swap3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7' }],
   ['07_battle_swap3_sheet', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', sheet: '1' }],
   ['07_battle_garden', 'battle', { phase: 'pick', venue: 'garden' }],

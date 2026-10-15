@@ -44,3 +44,5 @@ tools/shots/out/
 
 # 줄기 가운데 검수판(stemcheck.mjs가 언제든 다시 만듦)
 tools/pixel/big/out/stem/
+# 탐사선 검수판(shipconv.mjs · 정비 화면 촬영으로 다시 만듦)
+tools/pixel/big/out/ship/

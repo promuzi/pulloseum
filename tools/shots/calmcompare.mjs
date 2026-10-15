@@ -13,8 +13,10 @@ const { decodePNG, Img } = await import('../pixel/big/engine.mjs');
 const { writeMP4 } = await import('../pixel/big/video.mjs');
 const argv = process.argv.slice(2), get = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : null; };
 const acts = argv.flatMap((a, i) => (a === '--act' ? [argv[i + 1]] : [])).map(s => { const j = s.indexOf(':'); return { t: +s.slice(0, j), js: s.slice(j + 1) }; });
-const scene = get('scene') || 'home', sec = +(get('sec') || 5), out = get('out') || 'calm_' + scene, params = JSON.parse(get('params') || '{}'), K = 2;
+const scene = get('scene') || 'home', sec = +(get('sec') || 5), out = get('out') || 'calm_' + scene, params = JSON.parse(get('params') || '{}'), K = +(get('scale') || 2);
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
+const CROP = (get('crop') || '').split(',').filter(Boolean).map(Number);   // --crop x,y,w,h = 그 구역만(논리 칸) — 체력판·식물처럼 작은 데를 크게 볼 때
+const cropIt = im => { if (CROP.length !== 4) return im; const [cx, cy, cw, ch] = CROP.map(v => v * (typeof K === 'number' ? K : 1)), o = new Img(cw, ch); for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const k = ((cy + y) * im.w + cx + x) * 4; o.data.set(im.data.subarray(k, k + 4), (y * cw + x) * 4); } return o; };
 const repo = resolve(here, '..', '..'), outDir = resolve(here, 'out'); mkdirSync(outDir, { recursive: true });
 const { srv, url } = await serve(repo);
 const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
@@ -34,7 +36,7 @@ try {
       const p = pages[k];
       for (const [j, ac] of acts.entries()) if (!done[k].has(j) && t - 1000 >= ac.t) { done[k].add(j); await p.evaluate((js, tt) => { const a = window.__app; a.t = tt; const sc = a.router.cur; eval(js); }, ac.js, t); }
       const u = await p.evaluate(tt => { const a = window.__app; a.t = tt; a.input.begin(); a.router.draw(a); return window.__vcv.toDataURL('image/png'); }, t);
-      pair.push(decodePNG(Buffer.from(u.split(',')[1], 'base64')));
+      pair.push(cropIt(decodePNG(Buffer.from(u.split(',')[1], 'base64'))));
     }
     const G = 12, o = new Img(pair[0].w * 2 + G, pair[0].h, '#000000');
     o.blit(pair[0], 0, 0); o.blit(pair[1], pair[0].w + G, 0);

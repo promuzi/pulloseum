@@ -2,7 +2,7 @@ import { arena1 } from '../art/bg.js';
 import { arenaLife } from '../art/arenaLife.js';
 import { icon, tinted } from '../art/icons.js';
 import { drawBig, drawBigPose, drawPortrait, BGIMG } from '../art/sprites.js';
-import { T, plate, msgBox, btnBody, tbar, tpips, padV, venueOf } from '../art/theme.js';
+import { T, plate, msgBox, btnBody, tbar, tpips, padV, venueOf, holo } from '../art/theme.js';
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
@@ -33,22 +33,73 @@ function teamPips(g, x, y, team, active) {
 }
 const TIER = { miss: ['빗나감', 'dim', '빗나갔다!'], graze: ['스침', 'sub', '살짝 스쳤다'], hit: ['정타', 'main', ''], crit: ['치명!', 'gold', '급소에 맞았다!'] };
 
-// 체력판: 얼굴 초상 + (상대만) 닉네임·랭크 + 이름·속성 + 체력 막대 + 에너지 칸 + 체력 숫자. 봇·사람 구분 없이 같은 정보만(2026-10-15 사용자)
-function infoBox(app, x, y, u, hp, en, mine) {
-  const { g } = app, w = 140, h = mine ? 56 : 64, P = T.ptext;
+// 체력판(2026-10-15 사용자 "체력이 얼마나 남았는지가 창 아래에 있어 — 체력바 바로 옆에", "행동력도 이런 식으로 얼마나 남았는지", "식물 아이콘은 창에 넣을 필요 없어"):
+//  (상대만) 재배사 · 랭크 / 이름 + 속성 / 체력 막대 + 바로 옆 체력 숫자 / 에너지 칸 + 바로 옆 에너지 숫자. 봇·사람 구분 없이 같은 정보만.
+//  아래 = 효과별 작은 창(statusWins). 판 높이를 돌려줌(효과 창을 바로 아래 붙이려고)
+const BOX_W = 140;
+const boxH = mine => (mine ? 46 : 58);
+function infoBox(app, x0, y0, u, bar, en, mine) {
+  const { g, t } = app, w = BOX_W, h = boxH(mine), P = T.ptext, fx = bar.fx, S = fx && HURT[fx.kind], age = fx ? t - fx.t0 : 1e9;
+  let x = x0, y = y0;
+  if (S && S.shake && age < S.shakeMs) { const a = Math.max(1, Math.round(S.shake * (1 - age / S.shakeMs))); x += (Math.floor(age / 40) % 2 ? 1 : -1) * a; y += Math.floor(age / 60) % 2 ? Math.ceil(a / 2) : 0; }   // 판째 흔들림(도트 칸 단위, 점점 작게)
   plate(g, x, y, w, h);
-  plate(g, x + 5, y + 5, 30, 30, 'deep');
-  g.clip(x + 9, y + 9, 22, 22, () => drawPortrait(g, u.key, x + 8, y + 8, 24, !mine));
-  let yy = y + 6;
-  const tx = x + 40;
+  if (S && S.frame && age < S.flash) { g.rect(x - 1, y - 1, w + 2, 1, '#ffffff'); g.rect(x - 1, y + h, w + 2, 1, '#ffffff'); g.rect(x - 1, y, 1, h, '#ffffff'); g.rect(x + w, y, 1, h, '#ffffff'); }   // 치명 = 판 테두리 번쩍
+  let yy = y + 5;
+  const tx = x + 8;
   if (!mine) { g.text(`${u.trainer} · ${u.rank}`, tx, yy, { color: P.sub }); yy += 13; }
   g.text(u.name, tx, yy, { font: 'bold', color: P.main });
-  g.img(icon(u.el), x + w - 20, yy);
-  yy += 15;
-  tbar(g, tx, yy, w - 46, 6, hp / u.max, 'hp');
-  yy += 9;
+  g.img(icon(u.el), tx + g.textW(u.name, 'bold') + 5, yy + 1);
+  yy += 16;
+  // 숫자 = 초록 막대(지금 체력)와 같이 내려감, 깎인 주황 칸이 머무는 동안만 주황빛. 막대 폭은 가장 긴 숫자(최대/최대) 기준으로 고정(숫자 자릿수가 줄어도 막대가 안 늘어나게)
+  const hpTxt = `${Math.ceil(bar.main)}/${u.max}`, bw = w - 16 - g.textW(`${u.max}/${u.max}`, 'bold') - 5;
+  hpBar(g, tx, yy + 3, bw, 7, bar, u.max, t);
+  g.text(hpTxt, x + w - 8, yy, { font: 'bold', color: S && age < S.hold ? '#ffd090' : P.main, align: 'right' });
+  yy += 13;
   tpips(g, tx - 1, yy + 1, en, u.energyMax, 7);
-  g.text(`${Math.ceil(hp)}/${u.max}`, x + w - 7, mine ? y + h - 17 : yy + 8, { color: P.sub, align: 'right' });
+  g.text(`에너지 ${en}/${u.energyMax}`, x + w - 8, yy - 1, { color: P.sub, align: 'right' });
+  return h;
+}
+// 버프·디버프 창(메카 게임 적 상태처럼 — 효과마다 같은 폭의 작은 반투명 창: 효과 색 아이콘 · 이름 · 숫자(겹침·남은 턴), 풀리면 사라짐).
+//  체력판 바로 아래 두 줄로(한 줄에 둘). 이로운 효과 = 청록 테, 해로운 효과 = 붉은 테
+const STATUS = {
+  guard: { name: '방어 자세', icon: 'shield', buff: true }, evade: { name: '회피 자세', icon: 'speed', buff: true },
+  atkUp: { name: '공격 ↑', icon: 'sword', buff: true }, critReady: { name: '치명 준비', icon: 'crit', buff: true }, initReady: { name: '선공 준비', icon: 'ff', buff: true },
+  poison: { name: '독', icon: 'warn', buff: false }, burn: { name: '화상', icon: 'fire', buff: false }, wet: { name: '젖음', icon: 'water', buff: false },
+  defDown: { name: '방어 ↓', icon: 'shield', buff: false }, shock: { name: '감전', icon: 'bolt', buff: false },
+};
+const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' }, SW_BAD = { fill: '#3a1622', fill2: '#46192a', frame: '#ff8a8a', frameHi: '#ffd0d0', frameLo: '#a04050' };
+function statusWins(g, x, y, list) {
+  const cw = (BOX_W - 4) / 2;
+  list.slice(0, 4).forEach((st, i) => {
+    const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, X = Math.round(x + (i % 2) * (cw + 4)), Y = y + Math.floor(i / 2) * 18;
+    holo(g, X, Y, Math.round(cw), 16, D.buff ? SW_ON : SW_BAD, 16);
+    g.img(icon(D.icon), X + 3, Y + 3);
+    g.text(D.name, X + 16, Y + 2, { color: D.buff ? '#d8faff' : '#ffd8d8' });
+    if (st.n != null) g.text(String(st.n), X + Math.round(cw) - 4, Y + 2, { font: 'bold', color: D.buff ? '#97e8f7' : '#ff9a9a', align: 'right' });
+  });
+}
+
+// 체력바 연출(2026-10-15 사용자 "체력바에서 줄어든 만큼 먼저 주황색으로 뜨고, 이게 나중에 쭉 줄어들게. 치명타나 피해가 크면 흔들림과 번쩍임,
+//  효과가 안 좋거나 중간일 때도 다르게" — 근거: 격투 게임의 늦게 줄어드는 막대(스트리트 파이터 4 흰 체력은 약 1초 머문 뒤 변함, 철권 회복 가능 체력),
+//  소울 시리즈의 새로 깎인 칸 따로 칠하기, 포켓몬은 막대가 일정 속도로 줄고 효과는 문구·소리로, 타격감 연구의 번쩍임 50~100ms):
+//  본 막대는 맞자마자 새 값으로 빠르게, 그 사이 '깎인 칸'이 주황으로 머물다가(hold) 본 막대까지 쭉 줄어듦(drain). 연달아 맞으면 깎인 칸이 쌓인다.
+const HURT = {
+  graze: { hold: 260, drain: 380, main: 200, shake: 0, shakeMs: 0, flash: 0, col: '#f6cf8a', hi: '#fff0d0' },                  // 스침·방어로 막음 = 옅은 주황, 짧게
+  hit: { hold: 420, drain: 460, main: 120, shake: 1, shakeMs: 140, flash: 0, col: '#f39a3c', hi: '#ffd090' },                    // 정타
+  big: { hold: 600, drain: 520, main: 90, shake: 2, shakeMs: 260, flash: 90, col: '#ff8a2a', hi: '#ffc080', blink: true },       // 효과 굉장·체력 25% 넘게
+  crit: { hold: 720, drain: 560, main: 70, shake: 3, shakeMs: 340, flash: 120, col: '#ff7a1a', hi: '#ffb070', blink: true, frame: true },   // 치명
+};
+const easeOut = k => 1 - (1 - k) ** 2;
+function hpBar(g, x, y, w, h, bar, max, t) {
+  const B = T.bar, rm = Math.max(0, Math.min(1, bar.main / max)), rt = Math.max(0, Math.min(1, bar.trail / max)), c = rm <= 0.2 ? B.low : rm <= 0.5 ? B.mid : B.hp;
+  g.rect(x, y, w, h, T.ink); g.rect(x + 1, y + 1, w - 2, h - 2, B.back);
+  const fw = Math.round((w - 2) * rm), tw = Math.round((w - 2) * rt), fx = bar.fx, S = fx ? HURT[fx.kind] : HURT.hit, age = fx ? t - fx.t0 : 1e9;
+  if (tw > fw) {   // 깎인 칸: 큰 피해·치명은 처음에 하얗게 번쩍, 머무는 동안 두 주황이 번갈아 깜빡
+    const white = S.flash && age < S.flash, alt = S.blink && age < S.hold && Math.floor(age / 90) % 2;
+    g.rect(x + 1 + fw, y + 1, tw - fw, h - 2, white ? '#ffffff' : alt ? S.hi : S.col);
+    g.rect(x + 1 + fw, y + 1, tw - fw, 1, white ? '#ffffff' : S.hi);
+  }
+  if (fw > 0) { g.rect(x + 1, y + 1, fw, h - 2, c[0]); g.rect(x + 1, y + 1, fw, 1, c[1]); if (h > 4) g.rect(x + 1, y + h - 2, fw, 1, c[2]); }
 }
 
 function skillButton(app, x, y, w, h, sk, can, lit, onTap) {
@@ -88,7 +139,7 @@ export const battle = {
     }
     const B = this.B;
     this.seed = seed;
-    this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, show: { me: B.me.hp, foe: B.foe.hp }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, msg: `${eun(B.me.name)} 무엇을 할까?`, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: 1, picked: null, uid: 0 };
+    this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, msg: `${eun(B.me.name)} 무엇을 할까?`, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: 1, picked: null, uid: 0 };
     this.sheet = p.sheet ? { forced: false } : null;   // 교체 창(?sheet=1 = 열린 채 촬영)
     this.shot = p.phase === 'hit' ? 'hit' : null;   // 촬영용: 첫 턴 공격이 맞는 장에서 멈춘 그림
     if (this.shot) this.pick(null, B.me.kit[3]);
@@ -126,7 +177,7 @@ export const battle = {
       else if (e.t === 'stance') out.push({ kind: 'stance', ms: 950, who: e.who, stance: e.kind, active: e.active, msg: `${nm(e.who)}의 ${sk(e.who).name}!` + (e.active ? '' : ' 하지만 먼저라 막을 게 없다') });
       else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!` }); }
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!` });
-      else if (e.t === 'energy') out.push({ kind: 'note', ms: 650, msg: `${nm(e.who)} 기력 +${e.gain}` });
+      else if (e.t === 'energy') out.push({ kind: 'note', ms: 650, msg: `${nm(e.who)} 에너지 +${e.gain}` });
       else if (e.t === 'status') out.push({ kind: 'note', ms: 650, msg: `${nm(e.to)}에게 ${e.status}` });
     }
     out.push({ kind: 'end', ms: 450 });
@@ -139,18 +190,27 @@ export const battle = {
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }
     if (st.kind === 'stance') v.stance[st.who] = { kind: st.stance, active: st.active };
-    if (st.kind === 'counter') { v.hp[st.to] = Math.max(0, v.hp[st.to] - st.ev.dmg); this.pop(st.to, `-${st.ev.dmg}`, 'bad', t); }
+    if (st.kind === 'counter') { this.hurt(st.to, st.ev.dmg, 'hit', t); this.pop(st.to, `-${st.ev.dmg}`, 'bad', t); }
     if (st.kind === 'end') { v.en = { me: B.me.energy, foe: B.foe.energy }; }
   },
   // 교체 단계 가운데쯤: 보이는 식물·체력판을 들어온 식물로(체력 = 들어올 때 값)
-  swapView(st) { const v = this.v; st.swapped = true; v.view[st.who] = st.toU; v.gone[st.who] = false; v.hp[st.who] = v.show[st.who] = st.hp; v.stance[st.who] = null; },
+  swapView(st) { const v = this.v; st.swapped = true; v.view[st.who] = st.toU; v.gone[st.who] = false; v.hp[st.who] = st.hp; v.bar[st.who] = { main: st.hp, trail: st.hp, fx: null }; v.stance[st.who] = null; },
+  // 맞기: 본 막대 목표를 내리고 깎인 칸은 지금 보이는 높이(연달아 맞으면 남은 깎인 칸 위에서)부터
+  hurt(side, dmg, kind, t) {
+    const v = this.v, b = v.bar[side], before = v.hp[side];
+    v.hp[side] = Math.max(0, before - dmg);
+    b.fx = { kind, t0: t, from: Math.max(b.trail, b.main), mainFrom: b.main };
+  },
   applyHit(st, t) {
     const v = this.v, e = st.ev, A = this.B[st.who], dEl = e.tgtEl || this.B[st.to].el;
     st.applied = true;
     const [label, tone, line] = TIER[e.tier];
-    if (e.tier !== 'miss') { v.hp[st.to] = Math.max(0, v.hp[st.to] - e.dmg); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true); }
+    const great = e.tier !== 'miss' && elemMult(st.skill.el, dEl) > 1, maxHp = (v.view[st.to] || this.B[st.to]).max;
+    if (e.tier !== 'miss') {
+      const kind = e.tier === 'crit' ? 'crit' : (great || e.dmg >= maxHp * 0.25) ? 'big' : (e.tier === 'graze' || e.guard) ? 'graze' : 'hit';
+      this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true);
+    }
     this.pop(st.to, label, tone, t, false, -16);
-    const great = e.tier !== 'miss' && elemMult(st.skill.el, dEl) > 1;
     const extra = [line, great ? '효과가 굉장하다!' : '', e.guard ? '방어 자세로 막았다' : '', e.evade && e.tier !== 'miss' ? '피하려 했지만' : ''].filter(Boolean).join(' · ');
     if (extra) v.msg = `${A.name}의 ${st.skill.name}! ${extra}`;
   },
@@ -175,7 +235,14 @@ export const battle = {
       if (st && st.kind === 'switch' && !st.swapped && t - v.t0 >= st.ms * 0.45) this.swapView(st);
       if (!st) this.finishTurn(app);
     } else if (v.phase === 'over' && !v.leaving && t - v.overT0 > 1700) { v.leaving = true; app.go('result', { win: this.B.over === 'win', venue: T.key }, 'shutter'); }   // 한 번만(매 장 부르면 전환이 계속 처음부터)
-    for (const k of ['me', 'foe']) { const d = v.hp[k] - v.show[k]; v.show[k] += Math.abs(d) < 0.6 ? d : d * 0.18; }
+    for (const k of ['me', 'foe']) {
+      const b = v.bar[k], to = v.hp[k], fx = b.fx;
+      if (!fx) { b.main = b.trail = to; continue; }
+      const S = HURT[fx.kind], age = t - fx.t0;
+      b.main = fx.mainFrom + (to - fx.mainFrom) * Math.min(1, age / S.main);
+      b.trail = age < S.hold ? fx.from : fx.from + (to - fx.from) * easeOut(Math.min(1, (age - S.hold) / S.drain));
+      if (age >= S.hold + S.drain && age >= S.shakeMs) { b.fx = null; b.main = b.trail = to; }
+    }
     v.pops = v.pops.filter(p => t - p.t0 < 1100);
   },
   finishTurn(app) {
@@ -261,9 +328,12 @@ export const battle = {
     g.img(icon('flag'), W - 24, 5 + (fp ? 1 : 0));
     app.input.hit('bt_flag', W - 31, 3, 26, 18, () => app.go('home', {}, 'shutter'), 6);
     // 체력판(+ 3:3은 팀 셋 표시: 밝은 칸 = 남은 식물, 테 = 앞에 선 식물, 어두운 × = 쓰러짐)
-    infoBox(app, 6, AY + 4, v.view.foe, v.show.foe, v.en.foe, false);   // 상대 판 = 위 띠 바로 아래 왼쪽(2026-10-15 사용자 "상대의 체력바를 위로 올려서 붙여")
-    infoBox(app, W - 146, AY + AH - 62, v.view.me, v.show.me, v.en.me, true);
-    if (this.mode === 'swap3') { teamPips(g, 150, AY + 8, B.team.foe, v.view.foe); teamPips(g, W - 146, AY + AH - 75, B.team.me, v.view.me); }
+    const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false);   // 상대 판 = 위 띠 바로 아래 왼쪽(2026-10-15 사용자 "상대의 체력바를 위로 올려서 붙여")
+    statusWins(g, 6, AY + 4 + fh + 3, this.statuses('foe'));
+    const MY = AY + AH - boxH(true) - 40;   // 내 판: 아래 효과 창 두 줄(36칸) 자리를 남김
+    infoBox(app, W - 146, MY, v.view.me, v.bar.me, v.en.me, true);
+    statusWins(g, W - 146, MY + boxH(true) + 3, this.statuses('me'));
+    if (this.mode === 'swap3') { teamPips(g, 150, AY + 8, B.team.foe, v.view.foe); teamPips(g, W - 146, MY - 11, B.team.me, v.view.me); }
     // 아래 판: 대사 상자 → 에너지 → 기술 6칸(3:3은 마지막 칸 = 교체)
     const PY0 = H - PANEL_H;
     g.rect(0, PY0, W, PANEL_H, T.bg2);
@@ -273,7 +343,7 @@ export const battle = {
     g.para ? g.para(v.msg, 18, PY0 + 15, W - 40, { font: 'bold', color: T.mtext.main }) : g.text(v.msg, 18, PY0 + 20, { font: 'bold', color: T.mtext.main });
     if (v.phase === 'pick' && Math.floor(t / 450) % 2) g.rect(W - 22, PY0 + 31, 5, 3, T.mtext.sub);
     const ey = PY0 + 53;
-    g.text(this.mode === 'swap3' ? '팀 기력' : '에너지', 12, ey, { font: 'bold', color: T.text.gold });
+    g.text(this.mode === 'swap3' ? '팀 에너지' : '에너지', 12, ey, { font: 'bold', color: T.text.gold });
     tpips(g, 62, ey + 2, v.en.me, B.me.energyMax, 9);
     g.text(`${v.en.me}/${B.me.energyMax}`, W - 12, ey, { color: T.text.sub, align: 'right' });
     const gx = 8, gy = PY0 + 72, cw = Math.floor((W - 16 - 6) / 2), ch = 44;
@@ -284,6 +354,16 @@ export const battle = {
       skillButton(app, x, y, cw, ch, sk, can, v.picked === sk?.id, () => this.pick(app, sk));
     }
     if (this.sheet) this.swapSheet(app);
+  },
+  // 한쪽 식물의 효과 목록(창 순서 = 이로운 것 먼저)
+  statuses(side) {
+    const v = this.v, u = v.view[side], out = [], sv = v.stance[side];
+    if (sv && sv.active) out.push({ id: sv.kind === 'guard' ? 'guard' : 'evade' });
+    if (u && u.st && u.st.nextCrit) out.push({ id: 'critReady', n: u.st.nextCrit });
+    if (u && u.st && u.st.nextInit) out.push({ id: 'initReady', n: 1 });
+    for (const x of (u && u.status) || []) out.push(x);
+    if (this.p && this.p.status) out.push(...(side === 'me' ? [{ id: 'atkUp', n: 2 }, { id: 'guard' }] : [{ id: 'poison', n: 3 }, { id: 'wet', n: 2 }, { id: 'defDown', n: 1 }]));
+    return out.sort((a, b) => ((STATUS[b.id] || {}).buff ? 1 : 0) - ((STATUS[a.id] || {}).buff ? 1 : 0));
   },
   // 교체 단추(3:3 — 기술 6칸의 마지막 칸)
   swapButton(app, x, y, w, h, can) {

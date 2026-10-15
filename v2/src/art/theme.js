@@ -170,6 +170,7 @@ THEMES.loft = {
   text: { main: '#eef3f8', sub: '#a8bcd2', dim: '#5a6a82', accent: '#97e8f7', gold: '#f9dc9a', bad: '#ff8a8a', good: '#9ff0b0' },
   ptext: { main: '#e4fbff', sub: '#a6ecf8', dim: '#6fa6c2', accent: '#e4fbff', gold: '#ffd890', bad: '#ff9a9a', good: '#a8f8c0' },
   card: { fill: '#174a6c', fill2: '#1f5f86', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' },   // 식물 옆 홀로그램 카드(글자가 읽히게 조금 더 짙게)
+  bar: { ...THEMES.room.bar, mid: ['#f2d23c', '#fff4a8', '#a08a1c'] },   // 체력 절반 아래 = 노랑(포켓몬처럼 초록 → 노랑 → 빨강) — 깎인 칸 주황과 헷갈리지 않게
   hudPlain: { ring: '#87acc7', ink: '#121a26', fill: '#2b374b', text: '#eef3f8', sub: '#87acc7', gold: '#f9dc9a', icon: '#a8bcd2', track: '#2b374b', bar: '#97e8f7', barHi: '#e4fbff' },
   nav: { bg: '#212b3c', bg2: '#283347', top: '#121a26', sep: '#3a4250', icon: '#829bb7', dim: '#4a5568', on: '#f0be7d', onLo: '#a8743a', badge: '#ff8a6a' },
 };
