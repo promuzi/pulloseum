@@ -6,7 +6,7 @@ import { FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx
 import { BIG } from '../art/sprites.js';
 
 export const SW = 270, SH = 348, K = 0.4384, FRAME_MS = 50;
-export const SPOTS = { near: [76, 302], far: [194, 142] };   // 받침 가운데 = 화분 굽이 바닥에 닿는 점(무대 좌표)
+export const SPOTS = { near: [80, 282], far: [186, 156] };   // 받침 가운데 = 화분 굽이 바닥에 닿는 점(무대 좌표)
 const BASE = { cx: 48, cy: 96.548, rf: 16.2 }, SOIL_Y = 75.696, INK = '#1a1424';
 export { FRA, impactAt };
 const onRing = (c, r, phi) => [c[0] + Math.cos(phi) * r, c[1] + Math.sin(phi) * r * K];

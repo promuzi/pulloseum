@@ -12,7 +12,9 @@ import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
 //   선공 판정 → (자세) → 공격 연출(영상 굽기와 같은 attack.mjs 를 장마다) → 맞는 장에 판정·피해 → 되받아치기 → 턴 끝 기력 +1 → 다음 턴 / 승패
 // 무대 = 1배 도트 270×348(배경 = 장소 경기장 그림, 받침·식물은 화분 굽 자리), 경기장 = 랭크로(venueOf).
 const PANEL_H = 228, AY = 24;
-const EX = 194, EY = AY + 142, PX = 76, PY = AY + 302;   // 먼(상대)·가까운(나) 받침 가운데(fx.js SPOTS 와 같음)
+// 먼(상대)·가까운(나) 받침 가운데(fx.js SPOTS · stage.mjs SPOTS 와 같음). 2026-10-15 사용자 "화분 아래 반석이 땅을 넘어 관중석까지 올라가 있어 · 두 식물이 좀 가까워도 돼":
+//  콜로세움 그림의 관중석 벽 밑단 = 무대 y 133 → 상대 받침(18° 납작, 세로 11칸)은 그 아래 흙에, 둘 사이는 가로 118 → 106 · 세로 160 → 126칸(내 받침 오른 끝이 내 체력판에 안 닿게)
+const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 const hasB = s => { const c = s.charCodeAt(s.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 !== 0; };
 const ga = s => s + (hasB(s) ? '이' : '가'), eun = s => s + (hasB(s) ? '은' : '는');
 const TIER = { miss: ['빗나감', 'dim', '빗나갔다!'], graze: ['스침', 'sub', '살짝 스쳤다'], hit: ['정타', 'main', ''], crit: ['치명!', 'gold', '급소에 맞았다!'] };
@@ -152,8 +154,9 @@ export const battle = {
       const u = B[who]; let pose = null, flash = false, dx = 0, dy = 0;
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && st.kind === 'counter' && who === st.to && t - v.t0 < 160) flash = true;
-      if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip })); return; }
-      drawBigPose(g, u.key, u.pot, x + dx, y + dy, { t, phase, flip, flash, ...(pose || {}) });
+      const view = who === 'foe' ? 'far' : null;   // 먼 쪽 화분 = 18°(덜 내려다봄, 사용자 "상대의 화분 각도도 조정해줘")
+      if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      drawBigPose(g, u.key, u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 바닥 효과 → 먼 뒤 효과 → 상대 → 사이 효과 → 나 → 앞·공중 효과 → 자세 표시·숫자, 화면 흔들림은 무대 통째로
     g.clip(0, AY, W, AH, () => {
@@ -162,7 +165,7 @@ export const battle = {
       const bg = BGIMG['arena_' + T.key];
       if (bg) g.img(bg, 0, AY); else arena1(g, 0, AY, W, AH, t);
       if (bg && T.key === 'colosseum') arenaLife(g, bg, 0, AY, t);   // 돔 너머 비행체·별·관중 불빛
-      padV(g, EX, EY, 40, false);
+      padV(g, EX, EY, 36, false, FAR_K);
       padV(g, PX, PY, 42, true);
       if (fr) { c.drawImage(boardCanvas('floor'), 0, AY); c.drawImage(boardCanvas('back'), 0, AY); }
       unit('foe', EX, EY, true, 1600);
@@ -193,7 +196,7 @@ export const battle = {
     g.img(icon('flag'), W - 24, 5 + (fp ? 1 : 0));
     app.input.hit('bt_flag', W - 31, 3, 26, 18, () => app.go('home', {}, 'shutter'), 6);
     // 체력판
-    infoBox(app, 6, AY + 122, B.foe, v.show.foe, v.en.foe, false);   // 상대 판 = 왼쪽 빈 바닥 위(뒤 벽 가운데 통창·관중석을 가리지 않게)
+    infoBox(app, 6, AY + 4, B.foe, v.show.foe, v.en.foe, false);   // 상대 판 = 위 띠 바로 아래 왼쪽(2026-10-15 사용자 "상대의 체력바를 위로 올려서 붙여")
     infoBox(app, W - 146, AY + AH - 62, B.me, v.show.me, v.en.me, true);
     // 아래 판: 대사 상자 → 에너지 → 기술 6칸
     const PY0 = H - PANEL_H;

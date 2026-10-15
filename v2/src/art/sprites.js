@@ -24,8 +24,8 @@ export async function loadBig(base = '../assets/v2/') {
   await Promise.all([
     ...ROSTER.map(async k => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '.png'), json(base + 'plants/' + k + '.json')]); if (im && meta) BIG[k] = { sheet: im, white: whiteOf(im), meta }; }),
     ...POTS.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_back.png'), load(base + 'pots/' + p + '_front.png')]); if (b && f) POT_BIG[p] = { back: b, front: f }; }),
-    // 대기실 의자 위 화분 = 12°로 다시 그린 판(tools/pixel/big/pot_flat.mjs)
-    ...POTS.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_flat_back.png'), load(base + 'pots/' + p + '_flat_front.png')]); if (b && f) POT_BIG[p + '_flat'] = { back: b, front: f }; }),
+    // 각도를 바꾼 화분(tools/pixel/big/pot_flat.mjs): flat = 대기실 의자 위 12° · far = 전투 먼 쪽(상대) 18°
+    ...POTS.flatMap(p => Object.keys(VIEW_DY).map(async v => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_' + v + '_back.png'), load(base + 'pots/' + p + '_' + v + '_front.png')]); if (b && f) POT_BIG[p + '_' + v] = { back: b, front: f }; })),
     // 생장 단계 묶음(어린·자람, convert.mjs --export --stage=…) — 없으면 성체 그림을 씀
     ...ROSTER.flatMap(k => ['young', 'teen'].map(async st => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '_' + st + '.png'), json(base + 'plants/' + k + '_' + st + '.json')]); if (im && meta) BIG[k + '_' + st] = { sheet: im, white: whiteOf(im), meta }; })),
   ]);
@@ -92,11 +92,16 @@ function part(g, im, sx, sy, w, h, x, y, flip) {
 // 게임 단계 → 그림 단계(CHANGELOG 2026-10-15 "게임 6단계와 잇기": 씨앗·새싹·유체 → 어린, 성장체 → 자람, 성체·완숙체 → 성체)
 const STAGE_ART = { seed: 'young', sprout: 'young', juvenile: 'young', growing: 'teen', mature: null, evolved: null };
 export function bigKey(key, stage) { const st = STAGE_ART[stage]; return st && BIG[key + '_' + st] ? key + '_' + st : key; }
+// 화분 각도(opt.view 또는 옛 opt.flat): 덜 내려다본 판은 굽이 그만큼 아래라 판을 올려 굽을 같은 바닥점에 둔다
+const VIEW_DY = { flat: 2, far: 1 };
+function potView(potKey, opt) {
+  const v = opt.view || (opt.flat ? 'flat' : null), alt = v && POT_BIG[(potKey || 'pot_terra') + '_' + v];
+  return alt ? [alt, VIEW_DY[v]] : [POT_BIG[potKey] || POT_BIG.pot_terra, 0];
+}
 export function drawBig(g, key, potKey, bx, by, opt = {}) {
-  const flat = opt.flat && POT_BIG[(potKey || 'pot_terra') + '_flat'];   // 대기실 의자 위 = 12° 화분(굽이 2칸 아래라 판을 2칸 올림)
-  const P = BIG[key], pot = flat || POT_BIG[potKey] || POT_BIG.pot_terra;
+  const P = BIG[key], [pot, vdy] = potView(potKey, opt);
   if (!pot) return false;
-  if (flat) by -= 2;
+  by -= vdy;
   if (!P) {   // 빈 화분
     const x = Math.round(bx - 48), y = Math.round(by - 96.55);
     part(g, pot.back, 0, 0, 96, 112, x, y, false); part(g, pot.front, 0, 0, 96, 112, x, y, false);
@@ -142,8 +147,9 @@ export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
 // 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),
 //  sq = 눌림(+ = 흙 줄 기준 세로로 줄어듦, − = 늘어남). 화분은 그대로라 밑동은 흙에 박힌 채(영상 굽기 attackField 의 근사).
 export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
-  const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra;
+  const P = BIG[key], [pot, vdy] = potView(potKey, opt);
   if (!P || !pot || (!opt.qx && !opt.qy && !opt.sq)) return drawBig(g, key, potKey, bx, by, opt);
+  by -= vdy;
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   const f = Math.floor(t / m.frameMs) % m.frames, sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
   const src = opt.flash ? P.white : P.sheet, fl = !!opt.flip, soil = m.soil[1], sc = 1 - (opt.sq || 0) * 0.03, qx = opt.qx || 0, qy = opt.qy || 0;

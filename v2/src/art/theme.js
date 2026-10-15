@@ -405,8 +405,9 @@ export function tpips(g, x, y, cur, max, gap = 8) {
 }
 
 // 받침 원판(경기장마다): (cx, cy) = 화분 굽이 바닥에 닿는 점, rx = 가로 반지름(세로 = 바닥 각도 0.4384배)
-export function padV(g, cx, cy, rx, mine) {
-  const P = T.pad, ry = Math.round(rx * 0.4384);
+// k = 세로/가로(내려다본 각도의 sin) — 기본 26°, 먼 쪽(상대)은 화분처럼 18°(0.31)로 납작하게
+export function padV(g, cx, cy, rx, mine, k = 0.4384) {
+  const P = T.pad, ry = Math.round(rx * k);
   g.ellipse(cx, cy + 3, rx + 1, ry + 1, T.ink);              // 두께 그늘
   g.ellipse(cx, cy + 2, rx, ry, P.edge);
   g.ellipse(cx, cy, rx, ry, P.rim);

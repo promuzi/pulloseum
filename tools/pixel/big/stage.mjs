@@ -6,7 +6,7 @@ import { BASE_GEO as B } from './pot3d.mjs';
 
 export const SW = 270, SH = 348, K = B.k;
 // 받침 가운데 = 화분 굽이 닿는 점(v2 battle.js 의 받침 자리를 2배 → 1배로)
-export const SPOTS = { near: { base: [76, 302], pad: [42, 1] }, far: { base: [194, 142], pad: [40, 0] } };
+export const SPOTS = { near: { base: [80, 282], pad: [42, 1] }, far: { base: [186, 156], pad: [36, 0] } };   // v2 battle.js EX·EY·PX·PY 와 같음(2026-10-15 가깝게·상대 받침 흙 위로)
 // 화분 그림(96×112) 왼쪽 위 — 굽 가운데가 받침 가운데에 오게
 export const spriteAt = base => [Math.round(base[0] - B.cx), Math.round(base[1] - B.cy)];
 // 바닥 원 위 점: 가운데 c, 반지름 r(가로 칸), 각 phi(0 = 오른쪽, π/2 = 보는 쪽)
