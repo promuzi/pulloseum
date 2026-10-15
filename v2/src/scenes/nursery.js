@@ -101,26 +101,34 @@ export const nursery = {
     const cam = M.cam, st = M.step, TW = st.tw;
     const P = (X, Y, Z) => { const zz = Z - cam.CZ; return [cam.CX + cam.F * X / zz, cam.CY - cam.F * (Y - cam.E) / zz]; };
     const zAt = u => st.z0 + u * st.dz, yAt = u => st.y0 + u * st.dy;
-    // 상자 자리(용수철로 따라감 — 열이 오른쪽일수록 조금 늦게, 살짝 넘쳤다 돌아옴)
+    // 상자 자리: 계단에 딱 붙어 함께 움직임(늦게 따라가게 했더니 앞 계단 챌면에 가려 앞면이 사라지고 깜빡였음 — 2026-10-15 사용자 지적).
+    //  차라락 = 끄는 속도만큼 서랍이 살짝 앞으로 빠지며 들썩 — 열마다 45ms·홀짝 줄 20ms씩 늦춘 속도를 읽어 줄줄이
+    this.hist = this.hist || [];
+    const sv = dt > 0 ? (this.scroll - (this.prevScroll ?? this.scroll)) / dt : 0; this.prevScroll = this.scroll;
+    this.hist.push([t, sv]); while (this.hist.length > 48 || (this.hist.length && t - this.hist[0][0] > 700)) this.hist.shift();
+    const vAt = tt => { let v = 0; for (const [ht, hv] of this.hist) { if (ht <= tt) v = hv; else break; } return v; };
     const list = this.order.map((it, i) => {
-      const col = i % C, row = Math.floor(i / C), Xt = (col - (C - 1) / 2) * BOX[C].gap, ut = row - this.scroll;
-      let m = this.mods.get(it.id); if (!m) { m = { X: Xt, u: ut, vu: 0, tw: null }; this.mods.set(it.id, m); }
-      let hop = 0;
-      if (m.tw) {
+      const col = i % C, row = Math.floor(i / C), Xt = (col - (C - 1) / 2) * BOX[C].gap;
+      let m = this.mods.get(it.id); if (!m) { m = { X: Xt, u: row - this.scroll, pull: 0, tw: null }; this.mods.set(it.id, m); }
+      let hop = 0, fly = false;
+      if (m.tw) {   // 정렬·열 바꾸기: 들려서 새 자리로
         const k = clamp((t - m.tw.t0) / m.tw.dur, 0, 1), e = ease2(k);
-        m.X = m.tw.X0 + (Xt - m.tw.X0) * e; m.u = m.tw.r0 + (row - m.tw.r0) * e - this.scroll; hop = Math.sin(Math.PI * k) * 1.25;
-        if (k >= 1) { m.tw = null; m.vu = 0; }
-      } else if (dt > 0) {
-        const w = 2 * Math.PI * (2.7 - col * 0.5), z = 0.6;
-        m.vu += (w * w * (ut - m.u) - 2 * z * w * m.vu) * dt; m.u += m.vu * dt; m.X = Xt;
-      } else { m.u = ut; m.X = Xt; }
-      return { it, m, hop };
+        m.X = m.tw.X0 + (Xt - m.tw.X0) * e; m.u = m.tw.r0 + (row - m.tw.r0) * e - this.scroll; hop = Math.sin(Math.PI * k) * 1.25; fly = k > 0 && k < 1;
+        if (k >= 1) m.tw = null;
+      } else { m.X = Xt; m.u = row - this.scroll; }
+      const v = Math.abs(vAt(t - 25 - col * 45 - (row % 2) * 20)), tg = clamp(v * 0.09, 0, 0.55);
+      m.pull += (tg - m.pull) * (dt > 0 ? 1 - Math.exp(-dt / (tg > m.pull ? 0.04 : 0.11)) : 0);
+      return { it, m, hop: hop + m.pull * 0.5, pull: m.pull, fly };
     });
-    // 그리기: 계단과 상자를 깊이 순(먼 것 먼저)
+    // 그리기: 깊이 순(먼 것 먼저). 같은 깊이 = 계단 먼저, 상자는 바깥 열 먼저 — 순서를 늘 같게(바뀌면 깜빡임). 정렬로 건너가는 상자는 공중이라 맨 위.
     const draws = [];
-    for (let k = Math.floor(this.scroll) - 2; k <= Math.floor(this.scroll) + 4; k++) draws.push({ d: k - this.scroll + 0.001, step: true });
-    for (const L of list) if (L.m.u > -1.6 && L.m.u < 3.6) draws.push({ d: L.m.u, L });
-    draws.sort((a, b) => b.d - a.d || (a.step ? -1 : 1) || Math.abs(b.L ? b.L.m.X : 0) - Math.abs(a.L ? a.L.m.X : 0));
+    for (let k = Math.floor(this.scroll) - 2; k <= Math.floor(this.scroll) + 4; k++) draws.push({ d: k - this.scroll, step: true, o: k });
+    list.forEach((L, i) => { if (L.m.u > -1.6 && L.m.u < 3.6) draws.push({ d: L.m.u, L, o: i }); });
+    const rank = x => (x.step ? 0 : x.L.fly ? 2 : 1);
+    draws.sort((a, b) => ((rank(a) === 2) !== (rank(b) === 2) ? rank(a) - rank(b) : 0)
+      || (b.d - a.d > 1e-6 ? 1 : a.d - b.d > 1e-6 ? -1 : 0)
+      || rank(a) - rank(b)
+      || (a.L && b.L ? Math.abs(b.L.m.X) - Math.abs(a.L.m.X) || a.o - b.o : a.o - b.o));
     const hits = [];
     g.clip(0, M.clip.top, W, M.clip.bottom - M.clip.top, () => {
       for (const d of draws) {
@@ -152,7 +160,7 @@ export const nursery = {
   // 세라믹 상자 하나(+ 식물). 반환 = 누를 자리
   box(app, P, zAt, yAt, L, C) {
     const { g, t } = app, { it, m, hop } = L, w = BOX[C].w, X = m.X, u = m.u;
-    const zc = zAt(u), yb = yAt(u) + hop, zf = zc - BD / 2, zb = zc + BD / 2, ytop = yb + BH;
+    const zc = zAt(u) - (L.pull || 0), yb = yAt(u) + hop, zf = zc - BD / 2, zb = zc + BD / 2, ytop = yb + BH;   // pull = 서랍처럼 앞으로 빠진 만큼(디딤판 안)
     const [fxl, fyt] = P(X - w / 2, ytop, zf), [fxr] = P(X + w / 2, ytop, zf), [, fyb] = P(X - w / 2, yb, zf);
     const [bxl, byt] = P(X - w / 2, ytop, zb), [bxr] = P(X + w / 2, ytop, zb), [bxl2, byb2] = P(X - w / 2, yb, zb), [bxr2] = P(X + w / 2, yb, zb);
     const Fx0 = Math.round(fxl), Fx1 = Math.round(fxr), Fy0 = Math.round(fyt), Fy1 = Math.round(fyb), By = Math.round(byt);
