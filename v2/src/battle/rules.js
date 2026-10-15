@@ -122,7 +122,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const guardOn = still && d.act === 'guard' && stanceOk(foe, 'guard');
     const evadeOn = still && d.act === 'evade' && stanceOk(foe, 'evade');
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
-    const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
+    const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
     u.st.nextCrit = 0;
     const key = foe.id, j = judgeHit(t, u.st.miss[key] || 0, rng);
     u.st.miss[key] = j.missStreak;

@@ -83,13 +83,21 @@ const fixed = v => () => v;
   const a = mk('me', 'vine_wind'), b = mk('foe', 'gaia');
   const s0 = effSpd(b);
   apply(b, 'wet', 1, ctx(a, 1, []));
-  ok(Math.abs(effSpd(b) - s0 * 0.7) < 1e-9, '젖음 = 기동 −30%');
-  const ev0 = mk('foe', 'gaia'), evT = (u) => resolveTurn(mk('me', 'flower_grass', { spd: 99 }), u, mk('me', 'flower_grass').kit[0], sk(u, 'evade'), fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
-  const dry = evT(ev0), wetU = mk('foe', 'gaia'); apply(wetU, 'wet', 1, ctx(a, 1, []));
-  ok(evT(wetU).miss < dry.miss, `젖으면 회피 자세가 덜 됨(빗나감 칸 ${dry.miss} → ${evT(wetU).miss})`);
+  ok(Math.abs(effSpd(b) - s0 * 0.8) < 1e-9, '젖음 = 기동성 −20%');
+  // 회피 자세 = 상대와 기동을 견줌(같은 기동이면 그대로, 느려지면 덜, 빠르면 더)
+  const evT = (u, attSpd) => resolveTurn(mk('me', 'flower_grass', { spd: attSpd }), u, mk('me', 'flower_grass').kit[0], sk(u, 'evade'), fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
+  const ev0 = mk('foe', 'gaia'), same = evT(ev0, ev0.spd), wetU = mk('foe', 'gaia'); apply(wetU, 'wet', 1, ctx(a, 1, []));
+  ok(evT(wetU, ev0.spd).miss < same.miss, `젖으면 회피 자세가 덜 됨(빗나감 칸 ${same.miss} → ${evT(wetU, ev0.spd).miss})`);
+  ok(evT(mk('foe', 'gaia'), 10).miss > same.miss && evT(mk('foe', 'gaia'), 60).miss < same.miss, '상대보다 빠르면 더 잘 피하고 느리면 덜 피함');
+  // 젖음 = 적중 ↓ · 방어 ↓ 도
+  const hitOf = (att, def) => resolveTurn(att, def, att.kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit');
+  const wa = mk('me', 'gaia'); apply(wa, 'wet', 1, ctx(b, 1, []));
+  ok(hitOf(wa, mk('foe', 'aqua')).table.miss === hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).table.miss + 8, '젖으면 내 공격 빗나감 칸 +8');
+  const wd = mk('foe', 'flower_fire'); apply(wd, 'wet', 1, ctx(a, 1, []));
+  ok(hitOf(mk('me', 'gaia'), wd).dmg > hitOf(mk('me', 'gaia'), mk('foe', 'flower_fire')).dmg, '젖으면 방어 ↓(받는 피해 ↑)');
   apply(b, 'chill', 1, ctx(a, 1, []));
-  ok(b.eff.chill.n === 2, '젖은 상대 = 빙결 두 배');
-  ok(Math.abs(effSpd(b) - s0 * 0.7 * 0.8) < 1e-9, '빙결 = 기동 −20%(쌓인 수와 무관)');
+  ok(b.eff.chill.n === 2, '젖은 상대 = 빙결 하나 더');
+  ok(Math.abs(effSpd(b) - s0 * 0.8 * 0.8) < 1e-9, '빙결 = 기동성 −20%(쌓인 수와 무관)');
   apply(b, 'chill', 1, ctx(a, 1, []));
   ok(!b.eff.chill && mustSkip(b) && b.eff.frozen, '빙결 3 → 얼음(쉼) · 0으로');
   const c = mk('foe', 'flower_grass');

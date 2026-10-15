@@ -4,17 +4,18 @@
 //  · 겹침은 독만(5겹까지). 독은 2턴 넘게 새로 안 걸리면 턴마다 1겹씩 줄어듦. 빙결·감전은 3이 되면 한 턴 쉬고 0으로
 //    (빙결·감전 쌓인 수가 자연히 줄어드는 것도 독과 같은 규칙 — 내 추천).
 //  · 턴 수는 효과마다 같음(기술마다 다르지 않음) · 빗나가면 안 걸림, 방어 자세여도 걸림, 치명이라고 더 걸리지 않음 · 같은 속성은 안 걸림
-//  · 3:3 교체하면 독·화상만 따라감 · 연계 = 젖은 상대는 감전·빙결이 두 배로 쌓임, 물에 맞으면 화상이 꺼짐, 불에 맞으면 젖음·빙결·얼음이 녹음
+//  · 3:3 교체하면 독·화상만 따라감 · 연계 = 젖은 상대는 감전·빙결이 하나 더 쌓임, 물에 맞으면 화상이 꺼짐, 불에 맞으면 젖음·빙결·얼음이 녹음
 //  · 쉬는 시점 = 다음 행동 한 번 취소(아직 안 움직였으면 이번 행동, 이미 움직였으면 다음 턴 — 쓴 에너지는 돌려줌)
-//  · 쉬고 난 다음 턴은 '버팀'(기절·빙결·감전이 안 걸림) — 연속으로 쉬기 막기. 다른 게임 조사(Wizard101 스턴 막이 · 다크 던전 기절 저항 ·
-//    WoW 점감) 뒤의 내 추천, 사용자 결정 대기(RULES_FX.brace = false 로 끔).
+//  · 쉬고 난 다음 턴은 '버팀'(기절·빙결·감전이 안 걸림) — 연속으로 쉬기 막기(다른 게임 조사 뒤 추천 → 사용자 "쉬는 거 다음 턴 방어 좋다").
+//  · 같은 날 사용자 "기동성 떨어지면 회피도 당연히 어려워져야 함" → 기동성 하나가 선공 확률과 회피 자세 효과에 같이 들어감(mobK).
+//    "젖음을 연계용으로만 너무 강하게 하지 말자 — 기동성 ↓ · 적중 ↓ · 방어 조금 ↓, 종합 디버프 느낌" → 젖음 = 셋 다, 연계는 두 배 → 하나 더.
 // 턴 세는 법: exp = 마지막으로 영향을 주는 턴 번호(턴 끝에 exp ≤ 지금 턴이면 사라짐) · left = 남은 턴 끝 횟수(지속 피해·빨아들이기).
 
 export const FX = {
   burn:    { el: 'fire', left: 3, dot: 0.04, keep: true },   // 턴 끝 3번 최대 체력 4% · 그동안 받는 회복 절반
   poison:  { stack: 5, dot: 0.02, keep: true },              // 겹마다 턴 끝 최대 체력 2%
-  wet:     { el: 'water', turns: 2 },                         // 기동성 −30%(기동 = 선공 · 회피 자세 효과 둘 다)
-  chill:   { el: 'ice', stack: 3, skip: 'frozen' },           // 쌓여 있는 동안 기동성 −20% · 3 = 얼음(한 번 쉼, 그동안 받는 피해 −25%)
+  wet:     { el: 'water', turns: 2, mob: 0.8, missAdd: 8, defK: 0.85 },   // 종합: 기동성 −20% · 적중 ↓(빗나감 칸 +8) · 방어 −15%
+  chill:   { el: 'ice', stack: 3, skip: 'frozen', mob: 0.8 }, // 쌓여 있는 동안 기동성 −20% · 3 = 얼음(한 번 쉼, 그동안 받는 피해 −25%)
   shock:   { el: 'bolt', stack: 3, skip: 'paral' },           // 3 = 마비(한 번 쉼)
   stun:    { skip: 'stun' },                                  // 바로 한 번 쉼
   bind:    { turns: 1 },                                      // 다음 턴 기술 하나가 묶임
@@ -26,7 +27,8 @@ export const FX = {
   weak:    { turns: 2, atkK: 0.8 },                           // 공격 −20%
   corrode: { turns: 2, defK: 0.6 },                           // 방어 −40%
 };
-export const RULES_FX = { wetSpdK: 0.7, chillSpdK: 0.8, frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackK: 2, brace: true };
+// evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
+export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
 const SKIP_IDS = ['stun', 'chill', 'shock'];
 const TIMED = ['wet', 'bind', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode', 'brace'];
 const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'bind', 'leech', 'shade', 'pollen', 'taunt', 'root', 'weak', 'corrode'];
@@ -35,18 +37,23 @@ const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[id]);
 
 // ── 다른 계산이 읽는 값 ──
-export function effSpd(u) {
+// 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 얼음, 나중에 가속 버프) → 선공 확률과 회피 자세에 같이 들어감
+export function mobK(u) {
   let k = 1;
-  if (has(u, 'wet')) k *= RULES_FX.wetSpdK;
-  if (has(u, 'chill') || has(u, 'frozen')) k *= RULES_FX.chillSpdK;
-  return (u.spd || 1) * k;
+  if (has(u, 'wet')) k *= FX.wet.mob;
+  if (has(u, 'chill') || has(u, 'frozen')) k *= FX.chill.mob;
+  return k;
 }
-// 기동성 = 선공 확률의 기동 + 회피 자세가 옮기는 칸(2026-10-15 시험: 이 게임은 방어 자세가 후공일 때만 통해서, 기동만 깎으면 느려진 쪽이 오히려 방어가 잘 됨)
-export function evadeK(u) { let k = 1; if (has(u, 'wet')) k *= RULES_FX.wetSpdK; if (has(u, 'chill') || has(u, 'frozen')) k *= RULES_FX.chillSpdK; return k; }
+export const effSpd = u => (u.spd || 1) * mobK(u);
+// 회피 자세 효과: 상대보다 빠르면 잘 피하고, 느리면(원래 느린 식물이든 젖음·빙결로 느려졌든) 덜 피함
+export function evadeK(def, att) {
+  const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
+  return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
+}
 export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1);
-export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1);
+export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1);
 export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1);
-export const missAddOf = u => (has(u, 'pollen') ? FX.pollen.missAdd : 0);
+export const missAddOf = u => (has(u, 'pollen') ? FX.pollen.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
 export const mustSkip = u => has(u, 'skip');
 export const noEnergy = u => has(u, 'shade');
@@ -98,7 +105,7 @@ export function apply(tgt, id, n, ctx) {
     p.n = Math.min(D.stack, p.n + n); p.last = T;
     ev.push({ t: 'fx', ...base, n: p.n, list: listOf(tgt) });
   } else if (id === 'chill' || id === 'shock') {
-    const wet = !!e.wet, add = n * (wet ? RULES_FX.wetStackK : 1), s = e[id] ||= { n: 0, last: T };
+    const wet = !!e.wet, add = n + (wet ? RULES_FX.wetStackAdd : 0), s = e[id] ||= { n: 0, last: T };
     s.n = Math.min(D.stack, s.n + add); s.last = T;
     ev.push({ t: 'fx', ...base, n: s.n, wet, list: listOf(tgt) });
     if (s.n >= D.stack) { delete e[id]; setSkip(tgt, D.skip, ctx); }   // 3이 되면 한 번 쉬고 0으로
