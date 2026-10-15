@@ -17,7 +17,7 @@ const input = new Input(screen);
 const router = new Router(SCENES);
 const app = {
   screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: mockState(), toastMsg: null, toastT: 0,
-  go(name, params) { router.go(name, params, app.t); },
+  go(name, params, style) { router.go(name, params, app.t, style); },
   toast(msg) { app.toastMsg = msg; app.toastT = app.t; },
 };
 window.__app = app;
