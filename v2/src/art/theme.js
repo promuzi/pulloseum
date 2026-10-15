@@ -129,6 +129,52 @@ THEMES.cell = {
   pad: { fill: '#a0a0a7', top: '#bdbdc2', rim: '#6c6c75', edge: '#26262c', glow: '#f0a050', glow2: '#c8583a' },
 };
 
+// 원기둥 방(홈, 클로드 직접 — 2026-10-15 사용자 "관련 스펙은 푸른색 홀로그램처럼, 최신 기능 + 절제된 디자인과 여백"):
+//   스펙·판·작은 단추 = 푸른 홀로그램(반투명 디더 채움 + 밝은 테두리 1칸 + 주사선 + 모서리 꺾쇠 — Dead Space 식 '게임 속 홀로그램'),
+//   큰 단추 하나만 흰 세라믹(평범한 물건 쪽). 배경 = tools/pixel/big/room_bg.mjs(원기둥 방·통창·주황 원뿔 등·다리 셋 원목 의자)
+THEMES.room = {
+  key: 'room', name: '원기둥 방', shape: 'chamfer', holo: true,
+  ink: '#0a0e1a', bg: '#121a2c', bg2: '#0c1222', bgLine: '#1a2440',
+  panel: { fill: '#0d2a4a', fill2: '#174a74', frame: '#62d4ff', frameHi: '#c8f4ff', frameLo: '#1f5f8f', frameDk: '#0a1c32' },
+  deep: { fill: '#0a2038', fill2: '#123a5e', frame: '#3f9fd0', frameHi: '#8fe0ff', frameLo: '#174a74', frameDk: '#08182c' },
+  msg: { fill: '#0d2a4a', fill2: '#174a74', edge: '#62d4ff', edgeHi: '#c8f4ff', edgeLo: '#1f5f8f' },
+  btn: {
+    primary: { holo: true, fill: '#0f3456', fill2: '#1a5a88', hi: '#62d4ff', hi2: '#c8f4ff', lo: '#0a2038', ring: '#62d4ff', text: '#d8f6ff' },
+    gold: { solid: true, fill: '#e4e8ee', hi: '#f6f7f9', hi2: '#ffffff', lo: '#8f99ad', ring: '#0a0e1a', text: '#141a2a' },
+    second: { holo: true, fill: '#0a2038', fill2: '#123a5e', hi: '#3f9fd0', hi2: '#8fe0ff', lo: '#08182c', ring: '#3f9fd0', text: '#a8e6ff' },
+    off: { holo: true, fill: '#0b1626', fill2: '#0f1e32', hi: '#1f3a58', hi2: '#2a4a6a', lo: '#08101c', ring: '#1f3a58', text: '#3a5a78' },
+    danger: { holo: true, fill: '#3a1020', fill2: '#5a1a30', hi: '#ff7a8a', hi2: '#ffc0c8', lo: '#200810', ring: '#ff7a8a', text: '#ffd0d8' },
+    good: { holo: true, fill: '#0f3456', fill2: '#1a5a88', hi: '#62d4ff', hi2: '#c8f4ff', lo: '#0a2038', ring: '#62d4ff', text: '#d8f6ff' },
+  },
+  text: { main: '#e6f6ff', sub: '#8fc0dc', dim: '#4a6a88', accent: '#8fe8ff', gold: '#ffb868', bad: '#ff8a8a', good: '#9ff0b0' },
+  ptext: { main: '#d0f4ff', sub: '#82c8e8', dim: '#3f7fa8', accent: '#8fe8ff', gold: '#ffc070', bad: '#ff8a8a', good: '#9ff0b0' },
+  mtext: { main: '#d0f4ff', sub: '#82c8e8' },
+  bar: { back: '#08182c', hp: ['#7fe0a0', '#d0ffe0', '#3f9f6a'], mid: ['#ffb060', '#ffe0b0', '#9a5a20'], low: ['#ff7a7a', '#ffc8c8', '#9a2a2a'], exp: ['#62d4ff', '#d8f8ff', '#2a7fb0'] },
+  pip: { on: '#62d4ff', onHi: '#e0faff', onLo: '#1f5f8f', off: '#0f2a44', offLo: '#08182c', kind: 'led' },
+  pad: { fill: '#2a3550', top: '#3a4868', rim: '#5a6a8a', edge: '#0a0e1a', glow: '#62d4ff', glow2: '#ff7a8a' },
+};
+// 홀로그램 판(크기·색마다 한 번 만들어 둠): 가장자리 밝은 1칸 + 안쪽 어두운 1칸 + 반투명 디더 채움(짝수 줄 = 밝은 주사선) + 모서리 꺾쇠
+const holoCache = new Map();
+const BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+export function holoCanvas(w, h, s, dens = 10) {
+  w |= 0; h |= 0;
+  const key = [w, h, s.fill, s.frame, dens].join('|');
+  let cv = holoCache.get(key); if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const c = cv.getContext('2d'), id = c.createImageData(w, h), d = id.data;
+  const put = (x, y, hex) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const n = parseInt(hex.slice(1, 7), 16), i = (y * w + x) * 4; d[i] = n >> 16; d[i + 1] = (n >> 8) & 255; d[i + 2] = n & 255; d[i + 3] = 255; };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) put(x, y, s.frame);
+    else if (x === 1 || y === 1 || x === w - 2 || y === h - 2) { if ((x + y) % 2) put(x, y, s.frameLo); }
+    else if (y % 2 === 0) { if (BAY[y & 3][x & 3] < dens + 3) put(x, y, s.fill2 || s.fill); }
+    else if (BAY[y & 3][x & 3] < dens) put(x, y, s.fill);
+  }
+  const L = Math.min(5, Math.floor(Math.min(w, h) / 4));
+  for (const [cx, cy, dx, dy] of [[0, 0, 1, 1], [w - 1, 0, -1, 1], [0, h - 1, 1, -1], [w - 1, h - 1, -1, -1]]) for (let k = 0; k < L; k++) { put(cx + dx * k, cy, s.frameHi); put(cx, cy + dy * k, s.frameHi); }
+  c.putImageData(id, 0, 0); holoCache.set(key, cv); return cv;
+}
+export const holo = (g, x, y, w, h, s, dens) => { g.c.imageSmoothingEnabled = false; g.c.drawImage(holoCanvas(w, h, s, dens), x | 0, y | 0); };
+
 export let T = THEMES.ship;
 export function setTheme(key) { T = THEMES[key] || THEMES.ship; return T; }
 export const VENUE_OF_TIER = { bronze: 'garden', silver: 'garden', gold: 'ship', platinum: 'ship', diamond: 'night', master: 'night', pulloseum: 'night' };
@@ -147,6 +193,7 @@ const fillShape = (g, x, y, w, h, r, col) => (T.shape === 'round' ? rrect(g, x, 
 export function plate(g, x, y, w, h, kind = 'panel') {
   const s = T[kind] || T.panel;
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (T.holo) { holo(g, x, y, w, h, s, kind === 'deep' ? 8 : 10); return; }
   if (T.key === 'cell') { pillow(g, x, y, w, h, s, 4); return; }
   if (T.key === 'retro') {   // 두꺼운 쇠 테(빛 받는 위·왼 밝게, 아래·오른 그늘) + 네 모서리 나사 + 짙은 속
     cham(g, x, y, w, h, 2, T.ink);
@@ -203,6 +250,7 @@ export const inset = () => (T.key === 'night' ? 3 : 4);
 export function msgBox(g, x, y, w, h) {
   const s = T.msg;
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (T.holo) { holo(g, x, y, w, h, { fill: s.fill, fill2: s.fill2, frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 11); return; }
   if (T.key === 'cell') { pillow(g, x, y, w, h, { fill: s.fill, fill2: '#e8e8ec', frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 4); return; }
   if (T.key === 'retro') {   // 브라운관: 쇠 테두리 + 짙은 녹색 화면 + 주사선 + 구석 나사
     cham(g, x, y, w, h, 2, T.ink);
@@ -235,6 +283,18 @@ export function msgBox(g, x, y, w, h) {
 // 단추 몸통(글자·아이콘은 ui.button이 얹음). down = 눌림(1칸 내려가고 아래 턱이 사라짐)
 export function btnBody(g, x, y, w, h, st, down = false) {
   const yy = y + (down ? 1 : 0), hh = h - (down ? 1 : 0), lip = down ? 0 : 2;
+  if (T.holo && st.holo) {   // 홀로그램 단추: 반투명 판(눌리면 1칸 내려가고 더 밝게)
+    holo(g, x, yy, w, hh, { fill: down ? st.fill2 : st.fill, fill2: st.fill2, frame: st.hi, frameHi: st.hi2, frameLo: st.lo }, down ? 13 : 10);
+    return { yy, inner: hh - 2 };
+  }
+  if (T.holo && st.solid) {   // 흰 세라믹 단추(큰 단추 하나): 둥근 몸 + 위 빛 + 아래 두툼한 턱
+    const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
+    rrect(g, x, yk, w, hk, 6, st.ring);
+    rrect(g, x + 1, yk + 1, w - 2, hk - 2, 5, st.lo);
+    rrect(g, x + 1, yk + 1, w - 2, hk - 2 - lp, 5, st.fill);
+    g.rect(x + 6, yk + 2, w - 12, 1, st.hi2); g.rect(x + 4, yk + 3, w - 8, 1, st.hi);
+    return { yy: yk, inner: hk - 2 - lp };
+  }
   if (T.key === 'cell') {   // 쿠션 타일 단추: 두툼한 아래 턱 3칸(눌리면 1칸), 위 둥근 빛
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
     rrect(g, x, yk, w, hk, 5, st.ring);

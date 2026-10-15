@@ -10,10 +10,10 @@ import { STAGE_NAME } from '../data/mock.js';
 // 홈 그림마다 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
 //  cell = 흰 쿠션 타일 독방(2026-10-15 사용자가 말한 대기 화면 — 둥근 통창 앞 흰 타일 받침, 천장 주황 원뿔 빛, tools/pixel/big/cell_bg.mjs)
 //  ship = 우주선 식물 방(코덱스, 그 전 시안)
-export const HOME_PEDESTAL = { cell: [135, 262], ship: [135, 244] };
+export const HOME_PEDESTAL = { room: [135, 262], cell: [135, 262], ship: [135, 244] };
 
 export const home = {
-  theme(app) { return this.look || 'cell'; },   // 대기 화면 = 독방(?look=ship 으로 옛 우주선 방)
+  theme(app) { return this.look || 'room'; },   // 대기 화면 = 원기둥 방(?look=cell 독방 · ?look=ship 옛 우주선 방)
   enter(p) { this.empty = !!p.empty; this.look = p.look || null; },
   draw(app) {
     const { g, W, H, t, state: s } = app;

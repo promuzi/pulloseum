@@ -2,7 +2,7 @@
 // 색·모양은 장소 테마(theme.js: 우주선 · 온실 · 밤 정원)를 따른다 — 화면마다 라우터가 setTheme 한 뒤 그린다.
 import { ELEMENT } from './palette.js';
 import { icon, tinted } from './icons.js';
-import { T, plate, msgBox, btnBody, tbar } from './theme.js';
+import { T, plate, msgBox, btnBody, tbar, holo } from './theme.js';
 
 // 모서리가 r칸 둥근 사각형(채움). r 칸짜리 도트 원 모서리.
 export function rrect(g, x, y, w, h, r, col) {
@@ -65,8 +65,8 @@ export function chip(g, x, y, label, opt = {}) {
   const tw = label ? g.textW(label) : 0;
   const w = (ic ? ic.width + (label ? 3 : 0) : 0) + tw + 8;
   const h = 15;
-  rbox(g, x, y, w, h, 3, opt.fill || T.deep.fill, opt.line || T.ink);
-  g.rect(x + 2, y + 1, w - 4, 1, T.deep.frameHi);
+  if (T.holo) holo(g, x, y, w, h, T.deep, 8); else rbox(g, x, y, w, h, 3, opt.fill || T.deep.fill, opt.line || T.ink);
+  if (!T.holo) g.rect(x + 2, y + 1, w - 4, 1, T.deep.frameHi);
   let cx = x + 4;
   if (ic) { g.img(ic, cx, y + 2); cx += ic.width + 3; }
   if (label) g.text(label, cx, y + 2, { color: opt.color || T.text.main });
@@ -101,7 +101,7 @@ export function tabs(app, x, y, w, list, active, onPick) {
 export const fmt = n => Math.round(n).toLocaleString('ko-KR');
 
 // 작은 알약 판(상단 정보줄): 어두운 속 + 빛 한 줄
-function pill(g, x, y, w, h) { rbox(g, x, y, w, h, 4, T.deep.fill, T.ink); g.rect(x + 3, y + 1, w - 6, 1, T.deep.frameHi); }
+function pill(g, x, y, w, h) { if (T.holo) return holo(g, x, y, w, h, T.deep, 9); rbox(g, x, y, w, h, 4, T.deep.fill, T.ink); g.rect(x + 3, y + 1, w - 6, 1, T.deep.frameHi); }
 // 상단 정보줄: 레벨·경험치 / 크레딧 / 젬 / 설정
 export function hud(app, s) {
   const { g, W } = app;
