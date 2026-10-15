@@ -153,6 +153,27 @@ THEMES.room = {
   pip: { on: '#62d4ff', onHi: '#e0faff', onLo: '#1f5f8f', off: '#0f2a44', offLo: '#08182c', kind: 'led' },
   pad: { fill: '#2a3550', top: '#3a4868', rim: '#5a6a8a', edge: '#0a0e1a', glow: '#62d4ff', glow2: '#ff7a8a' },
 };
+// 코덱스 홈 시안(2026-10-15 사용자 "코덱스 판이 마음에 들어 — 이걸 살릴 수 있나?"): concept/ui/cell_home.png 의 UI 를 그대로 따름 —
+//   상단 = 판 없이 아이콘·숫자, 식물 옆 작은 푸른 홀로그램 카드, 주황 큰 단추 하나(모서리 꺾임·진한 갈색 아이콘), 하단 탭 = 짙은 남색 + 강철색 아이콘(고른 탭 주황 + 밑줄).
+//   색은 시안에서 뽑음(bgconv 색 모으기). 배경 = 코덱스가 UI·식물을 지운 판(cell_home_clean.png → home_loft.png)
+THEMES.loft = {
+  ...THEMES.room, key: 'loft', name: '원형 방(코덱스)',
+  ink: '#121a26', bg: '#212b3c', bg2: '#1e2838', bgLine: '#283347',
+  panel: { fill: '#25688d', fill2: '#3c7b9e', frame: '#97e8f7', frameHi: '#d8faff', frameLo: '#4c88a9', frameDk: '#173a52' },
+  deep: { fill: '#1e4a6a', fill2: '#25688d', frame: '#649db9', frameHi: '#97e8f7', frameLo: '#2a5a7a', frameDk: '#123048' },
+  msg: { fill: '#25688d', fill2: '#3c7b9e', edge: '#97e8f7', edgeHi: '#d8faff', edgeLo: '#4c88a9' },
+  btn: {
+    ...THEMES.room.btn,
+    gold: { solid: true, notch: true, fill: '#eca548', hi: '#f7bb59', hi2: '#ffd890', lo: '#b8762c', ring: '#1a1208', text: '#4a2c10', sub: '#7a4a1c' },
+    second: { holo: true, fill: '#1e4a6a', fill2: '#25688d', hi: '#649db9', hi2: '#97e8f7', lo: '#123048', ring: '#649db9', text: '#d8faff' },
+  },
+  text: { main: '#eef3f8', sub: '#a8bcd2', dim: '#5a6a82', accent: '#97e8f7', gold: '#f9dc9a', bad: '#ff8a8a', good: '#9ff0b0' },
+  ptext: { main: '#e4fbff', sub: '#a6ecf8', dim: '#6fa6c2', accent: '#e4fbff', gold: '#ffd890', bad: '#ff9a9a', good: '#a8f8c0' },
+  card: { fill: '#174a6c', fill2: '#1f5f86', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' },   // 식물 옆 홀로그램 카드(글자가 읽히게 조금 더 짙게)
+  hudPlain: { ring: '#87acc7', ink: '#121a26', fill: '#2b374b', text: '#eef3f8', sub: '#87acc7', gold: '#f9dc9a', icon: '#a8bcd2', track: '#2b374b', bar: '#97e8f7', barHi: '#e4fbff' },
+  nav: { bg: '#212b3c', bg2: '#283347', top: '#121a26', sep: '#3a4250', icon: '#829bb7', dim: '#4a5568', on: '#f0be7d', onLo: '#a8743a', badge: '#ff8a6a' },
+};
+
 // 홀로그램 판(크기·색마다 한 번 만들어 둠): 가장자리 밝은 1칸 + 안쪽 어두운 1칸 + 반투명 디더 채움(짝수 줄 = 밝은 주사선) + 모서리 꺾쇠
 const holoCache = new Map();
 const BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
@@ -286,6 +307,14 @@ export function btnBody(g, x, y, w, h, st, down = false) {
   if (T.holo && st.holo) {   // 홀로그램 단추: 반투명 판(눌리면 1칸 내려가고 더 밝게)
     holo(g, x, yy, w, hh, { fill: down ? st.fill2 : st.fill, fill2: st.fill2, frame: st.hi, frameHi: st.hi2, frameLo: st.lo }, down ? 13 : 10);
     return { yy, inner: hh - 2 };
+  }
+  if (T.holo && st.solid && st.notch) {   // 코덱스 시안의 주황 단추: 모서리 2칸 꺾임 + 아래 그늘 띠 + 위 빛 줄
+    const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
+    cham(g, x, yk, w, hk, 3, st.ring);
+    cham(g, x + 1, yk + 1, w - 2, hk - 2, 2, st.lo);
+    cham(g, x + 1, yk + 1, w - 2, hk - 2 - lp, 2, st.fill);
+    g.rect(x + 4, yk + 2, w - 8, 1, st.hi2); g.rect(x + 3, yk + 3, w - 6, 1, st.hi);
+    return { yy: yk, inner: hk - 2 - lp };
   }
   if (T.holo && st.solid) {   // 흰 세라믹 단추(큰 단추 하나): 둥근 몸 + 위 빛 + 아래 두툼한 턱
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);

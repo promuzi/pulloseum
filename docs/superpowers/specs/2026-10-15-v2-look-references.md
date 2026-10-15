@@ -11,5 +11,13 @@
 | 전투 | 거대한 콜로세움, **바닥은 흙**, 관중석 밖은 **우주**, **투명한 돔**, 다양한 종족, **떠다니는 비행체**(나중에 상황별 경기장) | 흙 바닥 원형 투기장 + 계단식 관중석(여러 종족) + 투명 돔 너머 우주·행성 + 돔 밖을 도는 비행체 | 지오노시스 투기장(기둥·짐승 문·관람석, [Archivum](https://archivum.wiki/article/geonosian_arena_(monument))), 사카아르 투기장(여러 종족을 모아 싸움 붙임, [Art of Thor: Ragnarok 서평](https://cinemasentries.com/?p=74788)), 우주를 비추는 돔 콜로세움(포켓몬 배틀 레볼루션 Stargazer Colosseum, [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Stargazer_Colosseum)) — 같은 게임의 장소별 콜로세움 = 상황별 경기장 선례 |
 | 화면 전환(전투장 이동·대기·종료) | 심플한 **금속 부딪힘** 또는 도트 느낌, 애매하면 후보 여러 장 | 후보: ① 위아래 철 셔터가 쾅 닫힘(흔들림 + 불꽃 몇 칸) ② 좌우 두 쪽 미닫이 ③ 원형 닫힘(아이리스) ④ 도트 디더 녹기 | 록맨 보스 셔터 = 들어가기 전 잠깐 멈춰 긴장을 만드는 장치([ericwbailey](https://ericwbailey.design/published/in-defense-of-mega-man-boss-lairs)), 메트로이드 문 = 로딩을 가리는 장치([Siliconera](https://www.siliconera.com/here-is-why-metroid-prime-had-morph-ball-doors/)), 원형 닫힘·두 쪽 자르기·녹기([TV Tropes Iris Out](https://www.tvtropes.org/pmwiki/pmwiki.php/Main/IrisOut), [RMMV Transitions](https://github.com/HashakGik/Transitions-RMMV)) |
 
+## 대기실 움직임(같은 날 추가 — 코덱스 원형 방을 살린 뒤)
+
+| 요소 | 사용자 요구 | 적용 | 근거 |
+|---|---|---|---|
+| 창밖 | "바깥 풍경이 우주가 아닌 그냥 다른 행성 같은데" · 고정 말고 바뀌고 움직이게 | 별 세 겹 시차(먼 겹 느리게, 한 칸씩만 이동), 별마다 엇갈린 반짝임 / 행성 = 칸 좌표를 구면으로 펴고 잡음을 흘려 자전, 빛 거리로 낮→밤 색 띠, 띠 경계 체크 디더, 대기 테두리 / 들어올 때마다 다른 풍경 | 정수 칸 시차 스크롤([Slynyrd Pixelblog 23](https://www.slynyrd.com/blog/2019/11/12/pixelblog-23-parallax-scrolling)), 도트 행성 생성기(구면 펴기·fbm·빛 띠·디더, MIT — [Deep-Fold PixelPlanets](https://github.com/Deep-Fold/PixelPlanets), [itch](https://deep-fold.itch.io/pixel-planet-generator)) |
+| 전등 | 고정 말고 깜빡임 | 밝기 단계 그림을 미리 굽고(a 꺼짐 … m 평소 … o 조금 밝게) 글자 줄을 80ms씩 재생 — 평소 m, 가끔 짧은 깜빡임 묶음 | 퀘이크 빛 글자(lightstyle) — 'a'~'z' 밝기, 'm' 평소, "mmamammmmammamamaaamammma" = 형광등 깜빡임([Valve 위키](https://developer.valvesoftware.com/wiki/Lightstyle), [Alan Zucconi](https://www.alanzucconi.com/2021/06/15/valve-flickering-lights/)) |
+| 먼지·흐림 | "먼지 같은 흐림 등" | 빛기둥 모양을 따라서만 보이는 먼지 점(저마다 박자·천천히 떠다님·가끔 반짝), 빛기둥 안 옅은 안개 무늬가 위로 피어오름 | 먼지는 빛줄기 세기만큼만 빛나고 저마다 박자로 떠다님([Framer sun beams](https://www.framer.com/marketplace/components/sun-beams/)), 빛 경계 칸이 반짝이는 도트 빛([itch.io 데브로그](https://itch.io/devlog/1556032/new-light.amp)) |
+
 ## 그리는 사람
 - 2026-10-15: 홈은 클로드가 직접(칸마다 시선 계산 도구 `tools/pixel/big/room_bg.mjs`), 같은 설명의 코덱스 판(`concept/ui/cell_home.png`)과 비교해 사용자가 정함.

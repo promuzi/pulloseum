@@ -58,9 +58,9 @@ export function smallCanvas(key, potKey = 'pot_terra') {
 
 // ── 장소 배경(코덱스 그림 → tools/pixel/big/bgconv.mjs 로 정확한 칸 도트) — assets/v2/bg/<이름>.png ──
 export const BGIMG = {};
-export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'nursery_garden', 'nursery_farm'];
+export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'home_loft', 'home_loft_dim', 'nursery_garden', 'nursery_farm'];
 export const BGMETA = {};   // 그림에 딸린 자리 정보(json) — 스마트팜 식물 자리 등
-const BG_META_NAMES = ['nursery_farm'];
+const BG_META_NAMES = ['nursery_farm', 'home_loft'];
 export async function loadBg(base = '../assets/v2/bg/') {
   const got = await Promise.all(BG_NAMES.map(n => load(base + n + '.png')));
   BG_NAMES.forEach((n, i) => { if (got[i]) BGIMG[n] = got[i]; });

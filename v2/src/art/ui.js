@@ -42,15 +42,16 @@ export function button(app, id, x, y, w, h, label, opt = {}) {
   const st = T.btn[opt.disabled ? 'off' : (STYLE[opt.style || 'teal'] || 'primary')];
   const down = input.isPressed(id) && !opt.disabled;
   const { yy, inner } = btnBody(g, x, y, w, h, st, down);
-  const ic = opt.icon && icon(opt.icon);
+  const ic = opt.icon && (opt.disabled || opt.iconTint ? tinted(opt.icon, st.text) : icon(opt.icon));   // iconTint = 글자색 한 가지(코덱스 시안의 진한 갈색 아이콘)
   const font = opt.font || 'body';
   const tw = label ? g.textW(label, font) : 0;
   const total = (ic ? ic.width + (label ? 3 : 0) : 0) + tw;
   let cx = Math.round(x + (w - total) / 2);
-  const lh = g.lineH(font);
-  const ty = yy + 1 + Math.round((inner - lh) / 2);
-  if (ic) { g.img(opt.disabled ? tinted(opt.icon, st.text) : ic, cx, yy + 1 + Math.round((inner - ic.height) / 2)); cx += ic.width + 3; }
+  const lh = g.lineH(font), sh = opt.sub ? g.lineH('body') + 1 : 0;   // sub = 아래 작은 둘째 줄(대회 상황 등)
+  const ty = yy + 1 + Math.round((inner - lh - sh) / 2);
+  if (ic) { g.img(ic, cx, ty + Math.round((lh - ic.height) / 2)); cx += ic.width + 3; }
   if (label) g.text(label, cx, ty, { font, color: st.text });
+  if (opt.sub) g.text(opt.sub, x + w / 2, ty + lh + 1, { color: st.sub || st.text, align: 'center' });
   if (!opt.disabled && opt.onTap) input.hit(id, x, y, w, h, opt.onTap, opt.pad ?? 4);
 }
 
@@ -106,6 +107,7 @@ function pill(g, x, y, w, h) { if (T.holo) return holo(g, x, y, w, h, T.deep, 9)
 export function hud(app, s) {
   const { g, W } = app;
   const y = 6;
+  if (T.hudPlain) return hudPlain(app, s);
   pill(g, 4, y, 92, 18);
   g.text('Lv', 9, y + 4, { color: T.text.accent });
   g.text(String(s.level), 25, y + 4, { font: 'bold', color: T.text.main });
@@ -124,6 +126,24 @@ export function hud(app, s) {
   g.text(cTxt, cX + 19, y + 4, { color: T.text.gold });
 }
 
+// 판 없는 상단 줄(코덱스 홈 시안): 왼쪽 = 둥근 레벨 배지 + 가는 경험 막대, 오른쪽 = 크레딧·젬·설정. 가운데(천장 등)는 비움
+function hudPlain(app, s) {
+  const { g, W } = app, H = T.hudPlain, y = 7;
+  g.disc(14, y + 8, 9, H.ring); g.disc(14, y + 8, 8, H.ink); g.disc(14, y + 8, 7, H.fill);
+  g.text(String(s.level), 14, y + 2, { font: 'bold', color: H.text, align: 'center' });
+  g.rect(26, y + 6, 58, 5, H.ink); g.rect(27, y + 7, 56, 3, H.track);
+  g.rect(27, y + 7, Math.round(56 * Math.max(0, Math.min(1, s.exp / s.expMax))), 3, H.bar); g.rect(27, y + 7, Math.round(56 * Math.max(0, Math.min(1, s.exp / s.expMax))), 1, H.barHi);
+  const gx = W - 17;
+  g.img(tinted('gear', H.icon), gx, y + 3);
+  app.input.hit('hud_gear', gx - 4, y - 1, 20, 20, () => app.toast && app.toast('설정'), 4);
+  const gemTxt = fmt(s.gems), gw = g.textW(gemTxt), gemX = gx - 10 - gw;
+  g.text(gemTxt, gemX, y + 3, { color: H.text, outline: H.ink });
+  g.img(icon('gem'), gemX - 14, y + 2);
+  const cTxt = fmt(s.credits), cw = g.textW(cTxt), cX = gemX - 24 - cw;
+  g.text(cTxt, cX, y + 3, { color: H.gold, outline: H.ink });
+  g.img(icon('coin'), cX - 14, y + 3);
+}
+
 // 하단 탭. active = 'shop'|'explore'|'home'|'nursery'|'ship'
 export const NAV = [
   { id: 'shop', label: '상점', icon: 'navShop', scene: 'shop' },
@@ -135,6 +155,25 @@ export const NAV = [
 export function navBar(app, active, opt = {}) {
   const { g, W, H, input } = app;
   const h = 44, y = H - h;
+  if (T.nav) {   // 코덱스 홈 시안: 짙은 남색 띠 + 가는 칸막이, 강철색 한 빛깔 아이콘, 고른 탭 = 주황 아이콘·글자 + 밑줄
+    const N = T.nav, n = NAV.length, sw = Math.floor(W / n), x0 = Math.floor((W - sw * n) / 2);
+    g.rect(0, y, W, h, N.bg); g.rect(0, y, W, 1, N.top); g.rect(0, y + 1, W, 1, N.bg2);
+    NAV.forEach((t, i) => {
+      const x = x0 + i * sw, on = t.id === active, pressed = input.isPressed('nav_' + t.id);
+      if (i) g.rect(x, y + 11, 1, h - 22, N.sep);
+      const col = on ? N.on : t.locked ? N.dim : N.icon, ic = tinted(t.icon, col), by = y + 6 + (pressed ? 1 : 0);
+      g.img(ic, x + Math.floor((sw - ic.width) / 2), by);
+      if (t.locked) g.img(tinted('lock', N.dim), x + Math.floor(sw / 2) + 5, by - 2);
+      g.text(t.label, x + sw / 2, by + 19, { color: col, align: 'center', font: on ? 'bold' : 'body' });
+      if (on) { g.rect(x + Math.floor(sw / 2) - 9, y + h - 4, 18, 2, N.on); g.rect(x + Math.floor(sw / 2) - 7, y + h - 2, 14, 1, N.onLo); }
+      if (opt.badge && opt.badge[t.id]) { g.disc(x + sw / 2 + 9, by + 1, 3, N.bg); g.disc(x + sw / 2 + 9, by + 1, 2, N.badge); }
+      input.hit('nav_' + t.id, x, y, sw, h, () => {
+        if (t.locked) return app.toast && app.toast('함선은 준비 중이에요');
+        if (t.scene && app.go) app.go(t.scene);
+      });
+    });
+    return;
+  }
   g.rect(0, y, W, h, T.ink);
   g.rect(0, y + 1, W, h - 1, T.bg2);
   g.rect(0, y + 1, W, 1, T.panel.frameLo); g.rect(0, y + 2, W, 1, T.panel.frame);

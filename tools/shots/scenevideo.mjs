@@ -2,7 +2,7 @@
 //   node tools/shots/scenevideo.mjs --scene nursery --sec 4 --act "1200:sc.sel=1;sc.selT=a.t" --act "2600:sc.sel=2;sc.selT=a.t" --out nursery_lift
 //   (동작 = "밀리초:자바스크립트", a = 앱, sc = 지금 장면) → tools/shots/out/<out>.mp4(2배)
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from './static-server.mjs';
@@ -14,6 +14,7 @@ const { writeMP4 } = await import('../pixel/big/video.mjs');
 const argv = process.argv.slice(2), get = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : null; };
 const acts = argv.flatMap((a, i) => (a === '--act' ? [argv[i + 1]] : [])).map(s => { const j = s.indexOf(':'); return { t: +s.slice(0, j), js: s.slice(j + 1) }; });
 const scene = get('scene') || 'nursery', sec = +(get('sec') || 4), out = get('out') || scene + '_video', params = JSON.parse(get('params') || '{}');
+const pngAt = (get('png') || '').split(',').filter(Boolean).map(Number);   // 검토용: 이 밀리초의 장면을 PNG로도(out/<out>_<ms>.png)
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const repo = resolve(here, '..', '..'), outDir = resolve(here, 'out'); mkdirSync(outDir, { recursive: true });
 const { srv, url } = await serve(repo);
@@ -31,6 +32,7 @@ try {
     for (const [k, ac] of acts.entries()) if (!done.has(k) && t - 1000 >= ac.t) { done.add(k); await p.evaluate((js, tt) => { const a = window.__app; a.t = tt; const sc = a.router.cur; eval(js); }, ac.js, t); }
     const u = await p.evaluate(tt => { const a = window.__app; a.t = tt; a.input.begin(); a.router.draw(a); return window.__vid.cv.toDataURL('image/png'); }, t);
     frames.push(decodePNG(Buffer.from(u.split(',')[1], 'base64')));
+    const ms = t - 1000; if (pngAt.some(p => ms <= p && p < ms + 33)) writeFileSync(resolve(outDir, `${out}_${ms}.png`), Buffer.from(u.split(',')[1], 'base64'));
   }
   if (errs.length) console.log('페이지 오류:', errs.join(' | '));
 } finally { await b.close(); srv.close(); }
