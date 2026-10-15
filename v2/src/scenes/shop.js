@@ -1,13 +1,15 @@
 import { plainBg, awning } from '../art/bg.js';
 import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { IMG } from '../art/sprites.js';
+import { SMALL_POT } from '../art/sprites.js';
 import { T, plate, btnBody } from '../art/theme.js';
 
-// 화분 그림은 48×56 판의 아래쪽(화분 부분)만 잘라 쓴다
+// 화분 그림 = 작은 칸 화분(48×56, 위 뒤 · 아래 앞 — small.mjs)에서 화분 둘레만 잘라 뒤 → 앞 순서로
 function potArt(g, key, cx, y) {
-  const im = IMG[key]; if (!im) return;
-  g.c.drawImage(im, 12, 37, 24, 19, cx - 12, y, 24, 19);
+  const im = SMALL_POT[key]; if (!im) return;
+  const c = g.c; c.imageSmoothingEnabled = false;
+  c.drawImage(im, 10, 28, 28, 24, cx - 14, y - 4, 28, 24);
+  c.drawImage(im, 10, 56 + 28, 28, 24, cx - 14, y - 4, 28, 24);
 }
 
 const SECTIONS = [

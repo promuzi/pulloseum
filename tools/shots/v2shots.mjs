@@ -29,6 +29,8 @@ export const SHOTS = [
   ['07_battle_retro', 'battle', { phase: 'pick', venue: 'retro' }],
   ['08_battle_hit', 'battle', { phase: 'hit', venue: 'garden' }],
   ['08_battle_hit_retro', 'battle', { phase: 'hit', venue: 'retro' }],
+  ['07_battle_cell', 'battle', { phase: 'pick', venue: 'cell' }],
+  ['08_battle_hit_cell', 'battle', { phase: 'hit', venue: 'cell' }],
   ['09_result', 'result', { win: true }],
   ['10_explore', 'explore', {}],
   ['11_shop', 'shop', {}],

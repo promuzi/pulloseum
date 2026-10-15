@@ -1,6 +1,6 @@
 import { plainBg } from '../art/bg.js';
 import { icon } from '../art/icons.js';
-import { IMG, ROSTER } from '../art/sprites.js';
+import { smallCanvas, ROSTER } from '../art/sprites.js';
 import { T, plate } from '../art/theme.js';
 import { header } from './common.js';
 import { SPECIES } from '../data/mock.js';
@@ -19,7 +19,7 @@ export const dex = {
       plate(g, x, y, cw, ch, got ? 'panel' : 'deep');
       g.text(String(i + 1).padStart(3, '0'), x + 7, y + 6, { color: got ? P.sub : T.text.dim });
       if (got) g.img(icon(sp.el), x + cw - 17, y + 6);
-      const im = IMG[k], px = Math.round(x + cw / 2 - 24), py = y + 18;
+      const im = smallCanvas(k), px = Math.round(x + cw / 2 - 24), py = y + 18;
       g.ellipse(x + cw / 2, py + 33, 14, 2, T.deep.fill);
       if (im) { if (got) g.img(im, px, py - 4); else g.silhouette(im, px, py - 4, T.deep.frame); }
       g.text(got ? sp.name : '???', x + cw / 2, y + ch - 21, { font: got ? 'bold' : 'body', color: got ? P.main : T.text.dim, align: 'center' });

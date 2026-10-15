@@ -104,6 +104,31 @@ THEMES.retro = {
   pad: { fill: '#474c49', top: '#555a54', rim: '#787c70', edge: '#21262b', glow: '#dba04a', glow2: '#a0402e', hazard: true },
 };
 
+// 흰 쿠션 타일 독방(클로드 직접 시안 — 2026-10-15 사용자 "미래 느낌·화려함보다 심플함, 세련됨보다 투박함, 흰 볼록한 타일이 가득한 독방,
+//   약간 어둡고 가운데 둥근 통창, 천장에서 주황 조명이 원뿔로"): 판·단추 = 흰 쿠션 타일(두꺼운 검은 테 + 위 밝음·아래 그늘 + 두툼한 턱),
+//   어두운 바탕 위 흰 타일이라 단순하고 또렷하게, 강조 = 주황 등불색. 경기장 그림 = tools/pixel/big/cell_bg.mjs
+THEMES.cell = {
+  key: 'cell', name: '타일 독방', shape: 'round',
+  ink: '#16161a', bg: '#1e1e23', bg2: '#18181c', bgLine: '#26262c',
+  panel: { fill: '#c9c9ce', fill2: '#e2e2e6', frame: '#a0a0a7', frameHi: '#f0f0f2', frameLo: '#6c6c75', frameDk: '#56565f', bolt: null },
+  deep: { fill: '#34343b', fill2: '#3e3e46', frame: '#56565f', frameHi: '#6c6c75', frameLo: '#26262c', frameDk: '#1b1b20' },
+  msg: { fill: '#d6d6da', edge: '#a0a0a7', edgeHi: '#f0f0f2', edgeLo: '#6c6c75' },
+  btn: {
+    primary: { fill: '#d6d6da', hi: '#ececee', hi2: '#ffffff', lo: '#85858d', ring: '#16161a', text: '#1e1e24' },
+    gold: { fill: '#e0903e', hi: '#f2aa5c', hi2: '#ffd09a', lo: '#8e5424', ring: '#16161a', text: '#1e1208' },
+    second: { fill: '#85858d', hi: '#a0a0a7', hi2: '#bdbdc2', lo: '#4d4d57', ring: '#16161a', text: '#101014' },
+    off: { fill: '#3a3a42', hi: '#44444c', hi2: '#44444c', lo: '#26262c', ring: '#16161a', text: '#6a6a72' },
+    danger: { fill: '#c8583a', hi: '#e07a58', hi2: '#f4a888', lo: '#7a2e1e', ring: '#16161a', text: '#1e0e08' },
+    good: { fill: '#d6d6da', hi: '#ececee', hi2: '#ffffff', lo: '#85858d', ring: '#16161a', text: '#1e1e24' },
+  },
+  text: { main: '#ececee', sub: '#a8a8b0', dim: '#62626a', accent: '#f0a050', gold: '#f2b866', bad: '#e8705a', good: '#8fd08a' },
+  ptext: { main: '#1e1e24', sub: '#4e4e58', dim: '#7a7a84', accent: '#b8601a', gold: '#a85a10', bad: '#b03a2a', good: '#2f7a3a' },
+  mtext: { main: '#1e1e24', sub: '#5a5a62' },
+  bar: { back: '#16161a', hp: ['#7ac85e', '#c0eaa0', '#3e7a30'], mid: ['#e0903e', '#f8c890', '#8e5424'], low: ['#d0503a', '#f0907a', '#6e2a24'], exp: ['#e0903e', '#f8c890', '#8e5424'] },
+  pip: { on: '#f0a050', onHi: '#ffe0b0', onLo: '#8e5424', off: '#3a3a42', offLo: '#26262c', kind: 'led' },
+  pad: { fill: '#a0a0a7', top: '#bdbdc2', rim: '#6c6c75', edge: '#26262c', glow: '#f0a050', glow2: '#c8583a' },
+};
+
 export let T = THEMES.ship;
 export function setTheme(key) { T = THEMES[key] || THEMES.ship; return T; }
 export const VENUE_OF_TIER = { bronze: 'garden', silver: 'garden', gold: 'ship', platinum: 'ship', diamond: 'night', master: 'night', pulloseum: 'night' };
@@ -122,6 +147,7 @@ const fillShape = (g, x, y, w, h, r, col) => (T.shape === 'round' ? rrect(g, x, 
 export function plate(g, x, y, w, h, kind = 'panel') {
   const s = T[kind] || T.panel;
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (T.key === 'cell') { pillow(g, x, y, w, h, s, 4); return; }
   if (T.key === 'retro') {   // 두꺼운 쇠 테(빛 받는 위·왼 밝게, 아래·오른 그늘) + 네 모서리 나사 + 짙은 속
     cham(g, x, y, w, h, 2, T.ink);
     cham(g, x + 1, y + 1, w - 2, h - 2, 1, s.frameLo);
@@ -161,6 +187,15 @@ export function plate(g, x, y, w, h, kind = 'panel') {
     g.rect(x + 4, y + 3, w - 8, 1, s.fill2);
   }
 }
+// 쿠션 타일(독방 테마): 검은 테 + 위·왼 밝은 둥근 턱 2칸 + 아래·오른 그늘 2칸 + 가운데 속(위 한 줄 더 밝게) — 단순하고 두툼하게
+function pillow(g, x, y, w, h, s, r = 4) {
+  rrect(g, x, y, w, h, r, T.ink);
+  rrect(g, x + 1, y + 1, w - 2, h - 2, r - 1, s.frameLo);
+  rrect(g, x + 1, y + 1, w - 3, h - 3, r - 1, s.frame);
+  rrect(g, x + 2, y + 2, w - 5, h - 5, Math.max(1, r - 2), s.frameHi);
+  rrect(g, x + 3, y + 3, w - 6, h - 6, Math.max(1, r - 2), s.fill);
+  g.rect(x + 4, y + 3, w - 9, 1, s.fill2);
+}
 // 안쪽 속 좌표(테 두께만큼 들인 곳)
 export const inset = () => (T.key === 'night' ? 3 : 4);
 
@@ -168,6 +203,7 @@ export const inset = () => (T.key === 'night' ? 3 : 4);
 export function msgBox(g, x, y, w, h) {
   const s = T.msg;
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (T.key === 'cell') { pillow(g, x, y, w, h, { fill: s.fill, fill2: '#e8e8ec', frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 4); return; }
   if (T.key === 'retro') {   // 브라운관: 쇠 테두리 + 짙은 녹색 화면 + 주사선 + 구석 나사
     cham(g, x, y, w, h, 2, T.ink);
     g.rect(x + 1, y + 1, w - 2, h - 2, s.edgeLo);
@@ -199,6 +235,15 @@ export function msgBox(g, x, y, w, h) {
 // 단추 몸통(글자·아이콘은 ui.button이 얹음). down = 눌림(1칸 내려가고 아래 턱이 사라짐)
 export function btnBody(g, x, y, w, h, st, down = false) {
   const yy = y + (down ? 1 : 0), hh = h - (down ? 1 : 0), lip = down ? 0 : 2;
+  if (T.key === 'cell') {   // 쿠션 타일 단추: 두툼한 아래 턱 3칸(눌리면 1칸), 위 둥근 빛
+    const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
+    rrect(g, x, yk, w, hk, 5, st.ring);
+    rrect(g, x + 1, yk + 1, w - 2, hk - 2, 4, st.lo);
+    rrect(g, x + 1, yk + 1, w - 2, hk - 2 - lp, 4, st.hi);
+    rrect(g, x + 2, yk + 3, w - 4, hk - 5 - lp, 3, st.fill);
+    g.rect(x + 5, yk + 2, w - 10, 1, st.hi2);
+    return { yy: yk, inner: hk - 2 - lp };
+  }
   if (T.key === 'retro') {   // 투박한 건반: 두꺼운 아래 턱(3칸) · 위·왼 밝은 비탈 2칸 · 아래·오른 그늘
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
     cham(g, x, yk, w, hk, 2, T.ink);

@@ -191,7 +191,7 @@ export const battle = {
     g.img(icon('flag'), W - 24, 5 + (fp ? 1 : 0));
     app.input.hit('bt_flag', W - 31, 3, 26, 18, () => app.go('home'), 6);
     // 체력판
-    infoBox(app, 6, AY + 6, B.foe, v.show.foe, v.en.foe, false);
+    infoBox(app, 6, AY + 122, B.foe, v.show.foe, v.en.foe, false);   // 상대 판 = 왼쪽 빈 바닥 위(뒤 벽 가운데 통창·관중석을 가리지 않게)
     infoBox(app, W - 146, AY + AH - 62, B.me, v.show.me, v.en.me, true);
     // 아래 판: 대사 상자 → 에너지 → 기술 6칸
     const PY0 = H - PANEL_H;

@@ -27,9 +27,38 @@ export async function loadBig(base = '../assets/v2/') {
   ]);
   return [...ROSTER.filter(k => !BIG[k]), ...POTS.filter(p => !POT_BIG[p])];
 }
+// ── 작은 칸 그림(양육·도감·상점, 2026-10-15): 큰 판 대기 첫 장을 도트 규칙대로 절반(48×56) — tools/pixel/big/small.mjs → assets/v2/small/ ──
+//  식물 = 위 under · 아래 over(48×112), 화분 = 위 뒤 · 아래 앞(48×112). 그리는 순서는 큰 판과 같음(화분 뒤 → under → 화분 앞 → over)
+export const SMALL = {}, SMALL_POT = {};
+export async function loadSmall(base = '../assets/v2/small/') {
+  await Promise.all([
+    ...ROSTER.map(async k => { const im = await load(base + k + '.png'); if (im) SMALL[k] = im; }),
+    ...POTS.map(async p => { const im = await load(base + 'pots/' + p + '.png'); if (im) SMALL_POT[p] = im; }),
+  ]);
+  return [...ROSTER.filter(k => !SMALL[k]), ...POTS.filter(p => !SMALL_POT[p])];
+}
+// (x, y) = 48×56 칸의 왼쪽 위. bob = 식물만 위로 n칸(숨쉬기)
+export function drawSmall(g, key, potKey, x, y, opt = {}) {
+  const pl = SMALL[key], pt = SMALL_POT[potKey] || SMALL_POT.pot_terra, b = opt.bob || 0, c = g.c;
+  if (!pt) return false;
+  c.imageSmoothingEnabled = false;
+  c.drawImage(pt, 0, 0, 48, 56, x, y, 48, 56);
+  if (pl) c.drawImage(pl, 0, 0, 48, 56, x, y - b, 48, 56);
+  c.drawImage(pt, 0, 56, 48, 56, x, y, 48, 56);
+  if (pl) c.drawImage(pl, 0, 56, 48, 56, x, y - b, 48, 56);
+  return !!pl;
+}
+// 한 장으로 합친 작은 그림(실루엣·잘라 쓰기용, 종·화분마다 한 번)
+const smallCache = new Map();
+export function smallCanvas(key, potKey = 'pot_terra') {
+  const id = key + '|' + potKey; let cv = smallCache.get(id);
+  if (!cv) { cv = document.createElement('canvas'); cv.width = 48; cv.height = 56; drawSmall({ c: cv.getContext('2d') }, key, potKey, 0, 0); smallCache.set(id, cv); }
+  return cv;
+}
+
 // ── 장소 배경(코덱스 그림 → tools/pixel/big/bgconv.mjs 로 정확한 칸 도트) — assets/v2/bg/<이름>.png ──
 export const BGIMG = {};
-export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'title_night', 'home_ship', 'nursery_garden'];
+export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'nursery_garden'];
 export async function loadBg(base = '../assets/v2/bg/') {
   const got = await Promise.all(BG_NAMES.map(n => load(base + n + '.png')));
   BG_NAMES.forEach((n, i) => { if (got[i]) BGIMG[n] = got[i]; });

@@ -1,7 +1,7 @@
 import { plainBg } from '../art/bg.js';
 import { hud, navBar, button, chip } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { plantStack, bob } from '../art/sprites.js';
+import { drawSmall, bob } from '../art/sprites.js';
 import { T, plate, tbar } from '../art/theme.js';
 import { STAGE_NAME, SPECIES } from '../data/mock.js';
 
@@ -32,7 +32,7 @@ export const nursery = {
       const ready = f.have > 0;
       plate(g, x, y, cw, ch);
       plate(g, x + 6, y + 6, 54, 66, 'deep');
-      plantStack(g, p.key, p.pot, x + 9, y + 10, { bob: bob(t, i * 300) });
+      drawSmall(g, p.key, p.pot, x + 9, y + 12, { bob: bob(t, i * 300) });
       if (ready) g.img(icon('fruit'), x + 46, y + 9 + (Math.floor(t / 500 + i) % 2));   // 열매 반짝
       g.text(p.name, x + 65, y + 9, { font: 'bold', color: P.main });
       const sp = SPECIES[p.key];
