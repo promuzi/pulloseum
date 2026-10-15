@@ -4,6 +4,7 @@
 //     띠 경계는 체크 디더 — Deep-Fold PixelPlanets 방식(MIT, https://github.com/Deep-Fold/PixelPlanets)을 따라 새로 씀.
 //     잡음은 풍경을 만들 때 한 바퀴치 표로 한 번 굽고, 매 장면은 표를 밀어 읽기만(가벼움).
 //  ③ 가끔 별똥별 · 먼 배 불빛. 홈에 들어올 때마다 다음 풍경, 오래 머물면 디더로 스르륵 다음 풍경.
+import { slow } from '../core/motion.js';
 const B4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 const th = (x, y) => (B4[y & 3][x & 3] + 0.5) / 16;
 export function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -73,7 +74,7 @@ function lightIdx(d, x, y) {
   return i;
 }
 function renderPlanet(pl, t) {
-  const step = Math.floor(t / pl.msPerPx), cstep = Math.floor(t / (pl.msPerPx * 0.6));
+  const step = Math.floor(t / (pl.msPerPx * slow(2.5))), cstep = Math.floor(t / (pl.msPerPx * 0.6 * slow(2.5)));
   if (step === pl.lastStep && cstep === pl.lastC) return;
   pl.lastStep = step; pl.lastC = cstep;
   const { tex, cl, crater, TW, P, buf, lo, hi, cq } = pl;
@@ -195,8 +196,8 @@ export function renderSky(S, t0, mask) {
   for (let y = 0; y < h; y++) { const row = y * BW, o = y * w; for (let x = 0; x < w; x++) out[o + x] = bg[row + md(x + off, BW)]; }
   // 별
   for (const s of S.stars) {
-    const x = md(s.x - Math.floor(t / s.ms), BW) - 48; if (x < 0 || x >= w) continue;
-    const ph = Math.sin(t / s.per * 6.283 + s.ph), ramp = s.warm ? STAR.warm : STAR[s.layer];
+    const x = md(s.x - Math.floor(t / (s.ms * slow(2.5))), BW) - 48; if (x < 0 || x >= w) continue;
+    const ph = Math.sin(t / (s.per * slow(3)) * 6.283 + s.ph), ramp = s.warm ? STAR.warm : STAR[s.layer];
     const lv = s.layer === 'far' ? (ph > 0.3 ? 1 : 0) : ph > 0.55 ? 2 : ph > -0.4 ? 1 : 0;
     out[s.y * w + x] = ramp[lv];
     if (s.big && ph > 0.86) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Y = s.y + dy; if (X >= 0 && X < w && Y >= 0 && Y < h) out[Y * w + X] = ramp[0]; }

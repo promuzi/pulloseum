@@ -3,6 +3,7 @@
 //     (먼 것은 어둡고 느리게, 가까운 것은 밝고 빠르게, 항해등 깜빡임·엔진 빛). 한 칸씩만 움직여 도트가 번지지 않게.
 //  ② 하늘의 밝은 별 몇 개가 엇갈린 박자로 반짝 ③ 관중석에 가끔 사진 불빛이 톡(작은 흰 점 + 십자 빛 한 번)
 import { rng } from './sky.js';
+import { MOTION, slow } from '../core/motion.js';
 
 // 작은 도트 비행체(문자 격자, 오른쪽을 향함): o 외곽 · b 몸 · h 밝은 면 · w 창 · e 엔진 빛 · r·g 항해등
 // (처음엔 8칸 남짓에 어두워 거의 안 보였음 → 7~17칸 · 가까운 것은 밝은 은회색 + 창 불빛 + 엔진 꼬리)
@@ -75,20 +76,20 @@ export function arenaLife(g, img, ox, oy, t) {
     const P = PAL[v.near], rows = v.sh, wd = Math.max(...rows.map(r => r.length)), on = Math.floor((t - v.born) / v.blink) % 2 === 0;
     // 엔진 꼬리: 뒤로 점점 옅은 점(한 칸 건너)
     const ey = v.y + 1 + (rows.length > 3 ? 1 : 0), tail = v.near ? 7 : 4;
-    for (let k = 1; k <= tail; k++) if ((k + Math.floor(t / 80)) % 2) { c.fillStyle = k < tail / 2 ? P.e : P.t; c.fillRect(v.dir > 0 ? x - k : x + wd - 1 + k, ey, 1, 1); }
+    for (let k = 1; k <= tail; k++) if ((k + Math.floor(t / (80 * slow(3)))) % 2) { c.fillStyle = k < tail / 2 ? P.e : P.t; c.fillRect(v.dir > 0 ? x - k : x + wd - 1 + k, ey, 1, 1); }
     for (let j = 0; j < rows.length; j++) for (let k = 0; k < wd; k++) {
       const ch = rows[j][v.dir > 0 ? k : wd - 1 - k] || '.'; if (ch === '.') continue;
       if ((ch === 'r' || ch === 'g') && !on) continue;
-      if (ch === 'e' && (Math.floor(t / 90) + i) % 3 === 0) continue;   // 엔진 빛 떨림
+      if (!MOTION.calm && ch === 'e' && (Math.floor(t / 90) + i) % 3 === 0) continue;   // 엔진 빛 떨림
       c.fillStyle = P[ch]; c.fillRect(x + k, v.y + j, 1, 1);
     }
   }
   c.globalCompositeOperation = 'destination-in'; c.drawImage(S.mk, 0, 0); c.globalCompositeOperation = 'source-over';
   g.c.imageSmoothingEnabled = false; g.c.drawImage(S.lay, ox, oy);
   // ② 별 반짝임
-  for (const s of S.stars) { const k = Math.sin(t / s.per * 6.283 + s.ph); if (k > 0.75) { g.px(ox + s.x, oy + s.y, '#ffffff'); if (k > 0.95) { g.px(ox + s.x - 1, oy + s.y, '#8fa0c8'); g.px(ox + s.x + 1, oy + s.y, '#8fa0c8'); } } else if (k < -0.6) g.px(ox + s.x, oy + s.y, '#5a6890'); }
+  for (const s of S.stars) { const k = Math.sin(t / (s.per * slow(3)) * 6.283 + s.ph); if (k > 0.75) { g.px(ox + s.x, oy + s.y, '#ffffff'); if (k > 0.95) { g.px(ox + s.x - 1, oy + s.y, '#8fa0c8'); g.px(ox + s.x + 1, oy + s.y, '#8fa0c8'); } } else if (k < -0.6) g.px(ox + s.x, oy + s.y, '#5a6890'); }
   // ③ 관중석 사진 불빛
-  if (S.crowd.length && t > S.nextFlash) { const i = S.crowd[Math.floor(S.r() * S.crowd.length)]; S.flashes.push({ x: i % S.w, y: Math.floor(i / S.w), t0: t }); S.nextFlash = t + 250 + S.r() * 900; }
+  if (S.crowd.length && t > S.nextFlash) { const i = S.crowd[Math.floor(S.r() * S.crowd.length)]; S.flashes.push({ x: i % S.w, y: Math.floor(i / S.w), t0: t }); S.nextFlash = t + (250 + S.r() * 900) * slow(3); }   // 차분하게 = 사진 불빛 1/3
   S.flashes = S.flashes.filter(f => t - f.t0 < 140);
   for (const f of S.flashes) { g.px(ox + f.x, oy + f.y, '#ffffff'); if (t - f.t0 < 60) { g.px(ox + f.x - 1, oy + f.y, '#fff2c8'); g.px(ox + f.x + 1, oy + f.y, '#fff2c8'); g.px(ox + f.x, oy + f.y - 1, '#fff2c8'); g.px(ox + f.x, oy + f.y + 1, '#fff2c8'); } }
 }

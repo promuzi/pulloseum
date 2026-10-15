@@ -6,6 +6,7 @@
 //  흐림: 빛기둥 안 아주 옅은 따뜻한 안개가 천천히 피어오름(감기는 잡음 무늬를 위로 밀어 올림).
 //  창: sky.js 우주 — 들어올 때마다 다음 풍경, 오래 머물면 디더로 다음 풍경. 유리 위로 이어지는 원뿔 빛 띠 + 옅은 반사.
 import { BGIMG, BGMETA, BIG, drawBig, bigBox } from './sprites.js';
+import { MOTION, slow } from '../core/motion.js';
 import { makeSky, renderSky, blendSky, SKY_KINDS, rng } from './sky.js';
 
 export const LOFT_STOOL = [134, 356];   // 의자 앉는 판 윗면 가운데(격자 확대로 잼) = 화분 굽이 닿는 점
@@ -147,7 +148,7 @@ export function loftFront(app) {
   if (!S) return;
   const { g, t } = app, k = S.k ?? 1, dt = Math.min(50, Math.max(0, t - (S.ft || t))); S.ft = t;
   // 흐림: 잡음 무늬를 위로 밀어 올리며(초당 약 9칸) 기둥 모양만큼만 옅게
-  const { hz, himg, N } = S, d = himg.data, oy = Math.floor(t / 110), ox = Math.floor(t / 900);
+  const { hz, himg, N } = S, d = himg.data, oy = Math.floor(t / (110 * slow(3))), ox = Math.floor(t / (900 * slow(3)));
   for (let y = 0; y < hz.h; y++) for (let x = 0; x < hz.w; x++) {
     const X = hz.x + x, Y = hz.y + y, i = (y * hz.w + x) * 4, ci = S.coneI(X, Y);
     if (ci <= 0.03) { d[i + 3] = 0; continue; }
@@ -159,11 +160,11 @@ export function loftFront(app) {
   g.c.drawImage(S.hcv, hz.x, hz.y);
   // 먼지
   for (const m of S.motes) {
-    m.x += (m.vx + Math.cos(t / m.per + m.ph) * m.amp * 0.6) * dt / 1000;
-    m.y += (m.vy + Math.sin(t / (m.per * 1.3) + m.ph) * m.amp * 0.35) * dt / 1000;
+    m.x += (m.vx + Math.cos(t / m.per + m.ph) * m.amp * 0.6) * dt / 1000 / slow(2);
+    m.y += (m.vy + Math.sin(t / (m.per * 1.3) + m.ph) * m.amp * 0.35) * dt / 1000 / slow(2);
     if (m.y < 32 || m.y > 182 || S.coneI(m.x, m.y) < 0.05) S.spawn(m);
-    let b = S.coneI(m.x, m.y) * Math.max(0.35, 1 - (m.y - 40) / 190) * k * (0.6 + 0.4 * Math.sin(t / m.tw + m.ph));
-    const glint = Math.sin(t / 1900 + m.sp * 3) > 0.985;
+    let b = S.coneI(m.x, m.y) * Math.max(0.35, 1 - (m.y - 40) / 190) * k * (MOTION.calm ? 0.8 : 0.6 + 0.4 * Math.sin(t / m.tw + m.ph));
+    const glint = !MOTION.calm && Math.sin(t / 1900 + m.sp * 3) > 0.985;
     if (glint) b = Math.max(b, 0.95 * k);
     if (b < 0.3) continue;
     const col = b > 0.82 ? '#fff6e2' : b > 0.55 ? '#ffe0b0' : '#e2b888';
@@ -251,7 +252,7 @@ function beamCanvas() {
 function beamFront(app, a) {
   const { g, t } = app, { I } = beamGeo(), dt = Math.min(50, Math.max(0, t - (S.bft || t))); S.bft = t;
   if (!S.bhz) { const w = 270, h = BEAM.y1 - BEAM.y0 + 1, cv = document.createElement('canvas'); cv.width = w; cv.height = h; S.bhz = { cv, ctx: cv.getContext('2d'), img: cv.getContext('2d').createImageData(w, h), w, h }; }
-  const Z = S.bhz, d = Z.img.data, N = S.N, oy = Math.floor(t / 140), ox = Math.floor(t / 1100);
+  const Z = S.bhz, d = Z.img.data, N = S.N, oy = Math.floor(t / (140 * slow(3))), ox = Math.floor(t / (1100 * slow(3)));
   for (let y = 0; y < Z.h; y++) for (let x = 0; x < Z.w; x++) {
     const Y = BEAM.y0 + y, i = (y * Z.w + x) * 4, bi = I(x, Y);
     if (bi <= 0.04) { d[i + 3] = 0; continue; }
@@ -267,12 +268,12 @@ function beamFront(app, a) {
     for (let k = 0; k < 44; k++) S.bmotes.push(S.bspawn({ vx: (mr() - 0.5) * 2, vy: (mr() - 0.45) * 2.6, per: 2600 + mr() * 4400, ph: mr() * 6.28, amp: 2 + mr() * 4, tw: 1000 + mr() * 2000, sp: mr() * 6.28 }));
   }
   for (const m of S.bmotes) {
-    m.x += (m.vx + Math.cos(t / m.per + m.ph) * m.amp * 0.6) * dt / 1000;
-    m.y += (m.vy + Math.sin(t / (m.per * 1.3) + m.ph) * m.amp * 0.35) * dt / 1000;
+    m.x += (m.vx + Math.cos(t / m.per + m.ph) * m.amp * 0.6) * dt / 1000 / slow(2);
+    m.y += (m.vy + Math.sin(t / (m.per * 1.3) + m.ph) * m.amp * 0.35) * dt / 1000 / slow(2);
     const bi = I(m.x, m.y);
     if (bi < 0.06) { S.bspawn(m); continue; }
-    let b = Math.min(1, bi * 1.6) * a * (0.55 + 0.45 * Math.sin(t / m.tw + m.ph));
-    const glint = Math.sin(t / 2100 + m.sp * 3) > 0.986;
+    let b = Math.min(1, bi * 1.6) * a * (MOTION.calm ? 0.78 : 0.55 + 0.45 * Math.sin(t / m.tw + m.ph));
+    const glint = !MOTION.calm && Math.sin(t / 2100 + m.sp * 3) > 0.986;
     if (glint) b = Math.max(b, 0.9 * a);
     if (b < 0.28) continue;
     g.px(Math.round(m.x), Math.round(m.y), b > 0.8 ? '#fff6e2' : b > 0.5 ? '#ffe0b0' : '#e2b888');

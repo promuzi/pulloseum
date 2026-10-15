@@ -70,6 +70,7 @@ export function mockState() {
     ],
     bagMax: 20,
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 1, losses: 0, bestOf: 5 },
+    mode: 'tournament', team: [0, 1, 2], swap3: { wins: 0, losses: 0 },   // 전투 종류 · 3:3 교체전 내 팀(식물 번호) · 교체전 승패
     care: { water: 3, fert: 1 },
     discovered: ['flower_grass', 'cactus_fire', 'vine_water', 'thorn', 'aqua', 'gaia'],
   };

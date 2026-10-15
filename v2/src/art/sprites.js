@@ -1,5 +1,6 @@
 // 그림 파일(48×56 도트) 불러오기. 원본 레시피 = tools/pixel/sprites-data.js, 내보내기 = node tools/pixel/export.mjs
 import { C } from './palette.js';
+import { frameAt } from '../core/motion.js';
 
 // 첫 출시 도감 = 1궤도 행성 세 곳의 기본 11종 + 지역 희귀 스포어캡
 export const ROSTER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap'];
@@ -108,7 +109,7 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
     return !key;
   }
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
-  let f = Math.floor(t / m.frameMs) % m.frames;
+  let f = frameAt(t, m.frameMs, m.frames);
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
   const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h, src = opt.flash ? P.white : P.sheet, fl = !!opt.flip;
   part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
@@ -119,7 +120,7 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
 }
 // 큰 판 한 장 고르기(숨쉬기 + 깜빡임)
 function bigFrame(key, m, t) {
-  let f = Math.floor(t / m.frameMs) % m.frames;
+  let f = frameAt(t, m.frameMs, m.frames);
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
   return [(f % m.cols) * m.w, Math.floor(f / m.cols) * m.h];
 }
@@ -151,7 +152,7 @@ export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
   if (!P || !pot || (!opt.qx && !opt.qy && !opt.sq)) return drawBig(g, key, potKey, bx, by, opt);
   by -= vdy;
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
-  const f = Math.floor(t / m.frameMs) % m.frames, sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
+  const f = frameAt(t, m.frameMs, m.frames), sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
   const src = opt.flash ? P.white : P.sheet, fl = !!opt.flip, soil = m.soil[1], sc = 1 - (opt.sq || 0) * 0.03, qx = opt.qx || 0, qy = opt.qy || 0;
   const rows = oy => {
     const c = g.c; c.save(); c.imageSmoothingEnabled = false;

@@ -26,18 +26,21 @@ const SHOW_MS = 320;                              // 식물이 의자 투영기�
 export const FOCUS = { want: 1.35, sx: 135, sy: 150, ms: 1150, back: 850 };
 const MODES = [
   { id: 'tournament', icon: 'sword', name: '1:1 토너먼트', desc: '개체 랭크 대회 · 예선은 5판 3선승' },
-  { id: 'league', icon: 'shield', name: '3:3 팀 리그', desc: '세 그루가 교체하며 싸우는 리그', lock: '3:3 팀 리그는 첫 출시 뒤에 열려요' },
+  { id: 'swap3', icon: 'shield', name: '3:3 교체전', desc: '내 식물 셋 · 포켓몬처럼 바꿔 가며 싸움' },   // 2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임, 이름도 팀리그라고는 하지 말자"
   { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
 ];
 const BANNER = { x: 4, y: 27, w: 262, h: 60 };   // 위 상태 바(x 4~266)와 같은 가장자리 · 높이 2배(2026-10-15 사용자 "배너 높이 2배로 · 배너랑 위의 바 정렬이 안 맞아")
 const BANNER_COL = ['#97e8f7', '#f0be7d', '#9ff0b0', '#c8a8f0'];   // 배너 색(왼쪽 띠·이름 밑줄)
 const TIER_COL = { 브론즈: '#d89a62', 실버: '#c8d2e0', 골드: '#f0c858', 플래티넘: '#9ff0e0', 다이아: '#a8d0ff', 마스터: '#e0a8ff', 풀로세움: '#ffd890' };
 const ease = k => k * k * (3 - 2 * k);
+// 3:3 내 팀(식물 번호 셋) — 정한 적 없으면 앞에서부터 셋
+const teamIdx = s => (s.team && s.team.length === 3 ? s.team : (s.team = s.plants.slice(0, 3).map((_, i) => i)));
+const teamOf = s => teamIdx(s).map(i => s.plants[i]);
 
 export const home = {
   theme(app) { return this.look || 'loft'; },   // 대기 화면 = 코덱스 원형 방(?look=room·cell·ship 옛 시안)
   enter(p) {
-    this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes;
+    this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.forceMode = p.mode || null;   // ?mode=swap3 = 그 전투 종류로(촬영용)
     this.focus = p.focus ? { t0: 0, hold: true } : null;   // ?focus=1 = 다 어두워진 장(촬영용)
     this.unfocus = p.from === 'plant' ? { t0: null } : null;   // 식물 관리에서 돌아오면 거꾸로(카메라가 물러나고 불이 켜짐)
     this.colCy = null;
@@ -71,6 +74,7 @@ export const home = {
   drawLoft(app) {
     const { g, W, t, state: s } = app;
     if (this.showT == null) this.showT = t;
+    if (this.forceMode) { s.mode = this.forceMode; this.forceMode = null; }
     const p = this.empty ? null : s.plants[s.active], key = p ? bigKey(p.key, p.stage) : null;
     const [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), cam = this.camera(app, pc);
     // 식물: 의자 속 투영기에서 아래부터 위로 나타남(바꿀 때마다) — 드러나는 줄에 푸른 빛 한 줄
@@ -178,19 +182,25 @@ export const home = {
     g.img(icon(mode.icon), x + 7, y + 6);
     g.text(mode.name, x + 21, y + 5, { font: 'label', color: P.main });
     for (let j = 0; j < 3; j++) g.rect(x + w - 13 + j, y + 9 + j, 7 - j * 2, 1, P.sub);   // ▾ = 바꿀 수 있음
-    g.text(`${TR.name} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
-    for (let i = 0; i < TR.bestOf; i++) { const c = i < TR.wins ? '#ffd890' : i < TR.wins + TR.losses ? '#ff8a8a' : '#24425a'; g.rect(x + 7 + i * 10, y + 40, 8, 6, '#0a1e2c'); g.rect(x + 8 + i * 10, y + 41, 6, 4, c); }
-    g.text(`${TR.wins}승 ${TR.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
+    const swap = mode.id === 'swap3', SW = s.swap3 || { wins: 0, losses: 0 };
+    if (swap) {   // 3:3 = 내 팀 셋 얼굴 + 교체전 승패
+      teamOf(s).forEach((pl, i) => { const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1e2c'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key, fx + 1, y + 21, 17, false)); });
+      g.text(`${SW.wins}승 ${SW.losses}패`, x + w - 7, y + 39, { font: 'label', color: P.main, align: 'right' });
+    } else {
+      g.text(`${TR.name} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
+      for (let i = 0; i < TR.bestOf; i++) { const c = i < TR.wins ? '#ffd890' : i < TR.wins + TR.losses ? '#ff8a8a' : '#24425a'; g.rect(x + 7 + i * 10, y + 40, 8, 6, '#0a1e2c'); g.rect(x + 8 + i * 10, y + 41, 6, 4, c); }
+      g.text(`${TR.wins}승 ${TR.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
+    }
     if (live) app.input.hit('home_mode', x, BATTLE_Y, w, h, () => { this.modeSheet = true; }, 2);
     const bx = x + w + 6;
-    button(app, 'home_cta', bx, BATTLE_Y, W - 8 - bx, h, '출전', { style: 'gold', font: 'name', icon: 'sword', iconTint: true, sub: `${TR.round} ${TR.wins + TR.losses + 1}경기째`, onTap: live ? () => app.go('matching', {}, 'shutterClose') : null });   // 출전 = 철 셔터가 닫히고 상대 찾기 → 열리며 전투장
+    button(app, 'home_cta', bx, BATTLE_Y, W - 8 - bx, h, '출전', { style: 'gold', font: 'name', icon: 'sword', iconTint: true, sub: swap ? '식물 셋 · 교체 가능' : `${TR.round} ${TR.wins + TR.losses + 1}경기째`, onTap: live ? () => app.go('matching', { mode: mode.id }, 'shutterClose') : null });   // 출전 = 철 셔터가 닫히고 상대 찾기 → 열리며 전투장
   },
-  // 전투 종류 고르기(첫 출시 = 1:1 토너먼트만 — 3:3 리그·미션은 잠금 표시, CHANGELOG 2026-10-14 첫 출시 범위)
+  // 전투 종류 고르기: 1:1 토너먼트 · 3:3 교체전(내 팀 셋은 아래 칸을 눌러 바꿈) · 미션(첫 출시 뒤 — 잠금 표시)
   modeSheetDraw(app) {
     const { g, W, H, state: s } = app, P = T.ptext;
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     app.input.hit('ms_block', 0, 0, W, H, () => { this.modeSheet = false; });
-    const x = 12, w = W - 24, h = 50 + MODES.length * 60, y = BATTLE_Y + BATTLE_H - h;
+    const swapOn = (s.mode || 'tournament') === 'swap3', x = 12, w = W - 24, h = 50 + MODES.length * 60 + (swapOn ? 100 : 0), y = BATTLE_Y + BATTLE_H - h;
     holo(g, x, y, w, h, T.card || T.panel, 16);
     g.text('전투 종류', x + 12, y + 10, { font: 'head', color: P.main });
     MODES.forEach((m, i) => {
@@ -201,8 +211,21 @@ export const home = {
       g.text(m.desc, x + 48, yy + 30, { color: lock ? P.dim : P.sub });
       if (lock) g.img(icon('lock'), x + w - 30, yy + 21);
       else if (on) g.text('선택됨', x + w - 18, yy + 10, { font: 'label', color: '#f0be7d', align: 'right' });
-      app.input.hit('ms_' + m.id, x + 8, by, w - 16, 54, () => { if (lock) app.toast(m.lock); else { s.mode = m.id; this.modeSheet = false; } });
+      app.input.hit('ms_' + m.id, x + 8, by, w - 16, 54, () => { if (lock) app.toast(m.lock); else { s.mode = m.id; if (m.id !== 'swap3') this.modeSheet = false; } });
     });
+    if (swapOn) {   // 내 팀 셋: 칸을 누르면 팀에 없는 다음 식물로 바뀜
+      const ty = y + 34 + MODES.length * 60;
+      g.text('내 팀', x + 14, ty + 4, { font: 'label', color: P.sub });
+      const team = teamIdx(s);
+      team.forEach((pi, k) => {
+        const tx = x + 60 + k * 60, pl = s.plants[pi], id = 'ms_team' + k, pr = app.input.isPressed(id), yy = ty + (pr ? 1 : 0);
+        holo(g, tx, yy, 56, 54, T.deep, 16);
+        g.clip(tx + 3, yy + 3, 50, 34, () => drawPortrait(g, pl.key, tx + 8, yy + 2, 40, false));
+        g.text(pl.name, tx + 28, yy + 38, { color: P.main, align: 'center' });
+        app.input.hit(id, tx, ty, 56, 54, () => { const used = new Set(team), n = s.plants.length; let j = pi; for (let q = 0; q < n; q++) { j = (j + 1) % n; if (!used.has(j)) break; } team[k] = j; s.team = [...team]; });
+      });
+      button(app, 'ms_done', x + w / 2 - 40, ty + 60, 80, 30, '확인', { style: 'gold', font: 'label', onTap: () => { this.modeSheet = false; } });
+    }
   },
   // 프로필 배너(높이 60): 배너 색 띠 · 대표 식물 얼굴(50칸) · 이름(16)·칭호 · 오른쪽 랭크(색)·점수·막대 · 연필
   banner(app, x, y, tappable, bw = BANNER.w) {

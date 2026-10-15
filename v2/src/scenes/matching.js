@@ -57,7 +57,7 @@ export const matching = {
       g.text(FOE.name, x + w / 2 - 7, y + 120, { font: 'bold', color: P.main, align: 'center' });
       g.img(icon(FOE.el), Math.round(x + w / 2 + nw / 2 - 3), y + 121);
       g.text('곧 경기가 시작돼요', x + w / 2, y + 146, { color: el ? el.light || P.dim : P.dim, align: 'center' });
-      if (a >= SEARCH + FOUND && !this.left) { this.left = true; app.go('battle', this.params.venue ? { venue: this.params.venue } : {}, 'shutterOpen'); }
+      if (a >= SEARCH + FOUND && !this.left) { this.left = true; app.go('battle', { ...(this.params.venue ? { venue: this.params.venue } : {}), ...(this.params.mode ? { mode: this.params.mode } : {}) }, 'shutterOpen'); }
     }
   },
 };
