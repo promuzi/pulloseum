@@ -634,6 +634,20 @@ export const ICON_SRC = {
     'oyyyyyyyyyo',
     'ooooooooooo',
   ],
+  // 그늘(햇빛을 가린 구름) — 전투 효과 창(2026-10-15)
+  shade: [
+    '...........',
+    '...ooo.....',
+    '..ollmo....',
+    '.olllmmooo.',
+    '.ollmmmlmmo',
+    'ollmmmmmmmo',
+    'olmmmmmmmso',
+    'ommmmmmmsso',
+    '.osssssssdo',
+    '..ooooooooo',
+    '...........',
+  ],
   // 독(보라 방울 + 기포) — 전투 효과 창(2026-10-15)
   poison: [
     '....o......',

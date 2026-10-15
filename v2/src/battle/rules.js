@@ -3,6 +3,8 @@
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
+import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, onHit } from './status.js';
+
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
   let a = seed >>> 0;
@@ -82,14 +84,16 @@ export function baseDamage(att, def, skill, elemMult = 1) {
 }
 
 // ── 한 턴 해소 ──
-// u = { id, spd, atk, def, acc, eva, crit, hp, st: { miss:{적id:연속}, init:연속, lastStance, critTaken, nextInit, nextCrit } }
-// a = 행동(기술): { act:'attack'|'guard'|'evade'|'other', power, area, ranged, contact, guardMult, blockCrit, shift, counter, ... }
+// u = { id, spd, atk, def, acc, eva, crit, hp, st: { miss:{적id:연속}, init:연속, lastStance, critTaken, nextInit, nextCrit }, eff: 상태 효과(status.js) }
+// a = 행동(기술): { act:'attack'|'guard'|'evade'|'skip'|'other', power, area, ranged, contact, guardMult, blockCrit, shift, counter, inflict, ... }
+// o = { elemMult, turn } — turn = 턴 번호(상태 효과의 '몇 턴'을 셈)
 // 반환 = { first, events:[…] } — 화면 연출은 events를 순서대로 읽기만 한다
 export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const ev = [], st = u => (u.st ||= { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null });
   st(A); st(B);
-  // ① 선공: 기동 비율 확률 + 불운 보정(유리한 쪽이든 불리한 쪽이든 '먼저 가기'가 계속 실패하면 확정)
-  const pA = initiativeChance(A.spd, B.spd, (A.st.nextInit || 0) - (B.st.nextInit || 0));
+  const T = o.turn || 0, skipped = new Set();
+  // ① 선공: 기동 비율 확률 + 불운 보정(유리한 쪽이든 불리한 쪽이든 '먼저 가기'가 계속 실패하면 확정). 기동 = 젖음·빙결이면 줄어듦
+  const pA = initiativeChance(effSpd(A), effSpd(B), (A.st.nextInit || 0) - (B.st.nextInit || 0));
   let first;
   if (A.st.init >= pityLimit(pA) + RULES.initPitySlack) first = A;
   else if (B.st.init >= pityLimit(1 - pA) + RULES.initPitySlack) first = B;
@@ -104,31 +108,39 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   for (const [u, foe] of [[first, second], [second, first]]) {
     const a = actOf(u), d = actOf(foe);
     if (u.hp <= 0) break;
+    // 쉬는 차례(얼음·마비·기절): 고른 행동이 취소되고 쓴 에너지는 돌려받음 — 이번 턴 앞에서 걸렸어도 아직 안 움직였으면 여기서 취소
+    if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); continue; }
+    if (a.act === 'skip') { skipped.add(u); continue; }
     if (a.act === 'guard' || a.act === 'evade') {
       const ok = stanceOk(u, a.act), rep = u.st.lastStance === a.act;
       ev.push({ t: 'stance', who: u.id, kind: a.act, id: a.id, active: ok, repeat: rep });
       continue;
     }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }
-    // 공격: 상대 자세가 이 공격에 걸리는지
-    const guardOn = d.act === 'guard' && stanceOk(foe, 'guard');
-    const evadeOn = d.act === 'evade' && stanceOk(foe, 'evade');
+    // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
+    const still = !mustSkip(foe) && !skipped.has(foe);
+    const guardOn = still && d.act === 'guard' && stanceOk(foe, 'guard');
+    const evadeOn = still && d.act === 'evade' && stanceOk(foe, 'evade');
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
-    const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep, critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0 });
+    const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
     u.st.nextCrit = 0;
     const key = foe.id, j = judgeHit(t, u.st.miss[key] || 0, rng);
     u.st.miss[key] = j.missStreak;
     let tier = j.tier;
     if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';
-    let dmg = Math.round(baseDamage(u, foe, a, o.elemMult ? o.elemMult(u, foe) : 1) * RULES.tierMult[tier] * (guardOn ? 1 - (1 - (d.guardMult ?? 0.5)) * rep : 1));
+    // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓)
+    const hitDmg = (x, y, sk, el) => baseDamage({ atk: x.atk * atkK(x) }, { def: y.def * defK(y) }, sk, el) * dmgTakenK(y);
+    let dmg = Math.round(hitDmg(u, foe, a, o.elemMult ? o.elemMult(u, foe) : 1) * RULES.tierMult[tier] * (guardOn ? 1 - (1 - (d.guardMult ?? 0.5)) * rep : 1));
     if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
     foe.hp = Math.max(0, foe.hp - dmg);
     foe.st.critTaken = tier === 'crit';
     ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area });
+    // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자)
+    if (tier !== 'miss') onHit(u, foe, a, { turn: T, rng, ev });
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침)
     const avoided = evadeOn && (tier === 'miss' || tier === 'graze');
     if (avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {
-      const cd = Math.max(1, Math.round(baseDamage(foe, u, { power: d.counter }) ));
+      const cd = Math.max(1, Math.round(hitDmg(foe, u, { power: d.counter }, 1)));
       u.hp = Math.max(0, u.hp - cd);
       ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id });
     }
@@ -138,6 +150,6 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (guardOn && d.counterPct && foe.hp > 0) { const cd = Math.max(1, Math.round(dmg * d.counterPct)); u.hp = Math.max(0, u.hp - cd); ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id }); }
     if (guardOn && d.energyOnBlock) ev.push({ t: 'energy', who: foe.id, gain: d.energyOnBlock });
   }
-  for (const u of [A, B]) { const a = actOf(u); u.st.lastStance = a.act === 'guard' || a.act === 'evade' ? a.act : null; }
+  for (const u of [A, B]) { const a = actOf(u); u.st.lastStance = !skipped.has(u) && (a.act === 'guard' || a.act === 'evade') ? a.act : null; }
   return { first: first.id, events: ev };
 }
