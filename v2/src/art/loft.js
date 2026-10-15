@@ -124,11 +124,11 @@ export function loftBack(app) {
 // 식물(전등에 맞춰 어두워지거나 밝아짐): 화분+식물을 따로 그린 뒤 그 칸에만 색을 덮음
 export function loftPlant(app, key, pot, bx, by) {
   const { g, t } = app, k = S ? S.k ?? 1 : 1;
-  if (!S || k === 1) return drawBig(g, key, pot, bx, by, { t });
+  if (!S || k === 1) return drawBig(g, key, pot, bx, by, { t, flat: true });   // flat = 의자 각도(12°) 화분
   if (!S.plantCv) { S.plantCv = document.createElement('canvas'); S.plantCv.width = 140; S.plantCv.height = 140; }
   const c = S.plantCv.getContext('2d'); c.imageSmoothingEnabled = false;
   c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, 140, 140);
-  drawBig({ c }, key, pot, 70, 124, { t });
+  drawBig({ c }, key, pot, 70, 124, { t, flat: true });
   c.globalCompositeOperation = 'source-atop';
   c.fillStyle = k < 1 ? `rgba(10,14,30,${((1 - k) * 0.42).toFixed(3)})` : `rgba(255,200,130,${((k - 1) * 0.6).toFixed(3)})`;
   c.fillRect(0, 0, 140, 140);

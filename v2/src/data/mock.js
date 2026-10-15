@@ -45,18 +45,21 @@ export function mockState() {
     level: 3, exp: 34, expMax: 90, credits: 1240, gems: 12,
     active: 0,
     plants: [
-      { id: 1, key: 'flower_grass', name: '페탈로즈', grade: 'A', stage: 'sprout', exp: 12, expNext: 45, pot: 'pot_terra', fruit: { have: 3, max: 3, gauge: 1 },
+      { id: 1, key: 'flower_grass', name: '페탈로즈', grade: 'A', stage: 'mature', exp: 12, expNext: 45, pot: 'pot_terra', fruit: { have: 3, max: 3, gauge: 1 },
         stats: { hp: 100, atk: 35, def: 24, spd: 30, acc: 86, elem: 14, crit: 5, energy: 2 },
         lv: { hp: 2, atk: 3, def: 1, spd: 1, acc: 1, elem: 1, crit: 1, energy: 1 }, kit: KIT_PETAL,
         known: [...KIT_PETAL, { id: 'e', name: '덩굴 일격', cost: 2, power: 140, cats: ['attack'], el: 'grass', lock: '새잎에서' }] ,
         rank: { tier: '브론즈', pts: 40, next: 300 } },
-      { id: 2, key: 'cactus_fire', name: '엠버캑터', grade: 'S', stage: 'sprout', pot: 'pot_ceramic', fruit: { have: 1, max: 3, gauge: 0.62 } },
+      { id: 2, key: 'cactus_fire', name: '엠버캑터', grade: 'S', stage: 'growing', pot: 'pot_ceramic', fruit: { have: 1, max: 3, gauge: 0.62 } },
       { id: 3, key: 'vine_water', name: '타이드바인', grade: 'D', stage: 'juvenile', pot: 'pot_terra', fruit: { have: 0, max: 2, gauge: 0.18 } },
       { id: 4, key: 'thorn', name: '쏜위드', grade: 'B', stage: 'sprout', pot: 'pot_terra', fruit: { have: 2, max: 3, gauge: 0.4 } },
-      { id: 5, key: 'aqua', name: '아쿠아벌브', grade: 'C', stage: 'sprout', pot: 'pot_glass', fruit: { have: 0, max: 2, gauge: 0.82 } },
-      { id: 6, key: 'spark', name: '스파크번', grade: 'A', stage: 'sprout', pot: 'pot_terra', fruit: { have: 3, max: 3, gauge: 1 } },
+      { id: 5, key: 'aqua', name: '아쿠아벌브', grade: 'C', stage: 'growing', pot: 'pot_glass', fruit: { have: 0, max: 2, gauge: 0.82 } },
+      { id: 6, key: 'spark', name: '스파크번', grade: 'A', stage: 'mature', pot: 'pot_terra', fruit: { have: 3, max: 3, gauge: 1 } },
     ],
     slots: 8, slotsMax: 12,   // 양육(스마트팜) 자리 = 열린 수 · 최대
+    // 내 프로필(홈 배너 — 2026-10-15 사용자 "그 아래에 배너처럼 내 프로필 설정하게"): 이름 · 칭호 · 대표 식물(얼굴) · 배너 색
+    profile: { name: '재배사', title: '꿈꾸는 원예가', avatar: 'flower_grass', color: 0 },
+    titles: ['초보 재배사', '꿈꾸는 원예가', '콜로세움 신인', '별빛 수집가'],
     storageMax: 120,          // 동면 보관고(2026-10-15 사용자 "보관해 둘 수 있는 양은 100개 정도 이상으로")
     storage: mockStorage(),
     seeds: [

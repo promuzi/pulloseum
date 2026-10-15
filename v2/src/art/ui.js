@@ -126,22 +126,24 @@ export function hud(app, s) {
   g.text(cTxt, cX + 19, y + 4, { color: T.text.gold });
 }
 
-// 판 없는 상단 줄(코덱스 홈 시안): 왼쪽 = 둥근 레벨 배지 + 가는 경험 막대, 오른쪽 = 크레딧·젬·설정. 가운데(천장 등)는 비움
+// 상단 상태 바(2026-10-15 사용자 "기존 초기 UI인 상단 레벨·크레딧 등 보고 바를 만들고" — 옛 메인 화면의 칸 나눈 띠):
+//  왼쪽 칸 = Lv·경험 막대·경험 수, 오른쪽 칸들 = 크레딧 · 젬 · 설정. 가운데(천장 전등)는 비워 둠. 칸 = 홀로그램 판
 function hudPlain(app, s) {
-  const { g, W } = app, H = T.hudPlain, y = 7;
-  g.disc(14, y + 8, 9, H.ring); g.disc(14, y + 8, 8, H.ink); g.disc(14, y + 8, 7, H.fill);
-  g.text(String(s.level), 14, y + 2, { font: 'bold', color: H.text, align: 'center' });
-  g.rect(26, y + 6, 58, 5, H.ink); g.rect(27, y + 7, 56, 3, H.track);
-  g.rect(27, y + 7, Math.round(56 * Math.max(0, Math.min(1, s.exp / s.expMax))), 3, H.bar); g.rect(27, y + 7, Math.round(56 * Math.max(0, Math.min(1, s.exp / s.expMax))), 1, H.barHi);
-  const gx = W - 17;
-  g.img(tinted('gear', H.icon), gx, y + 3);
-  app.input.hit('hud_gear', gx - 4, y - 1, 20, 20, () => app.toast && app.toast('설정'), 4);
-  const gemTxt = fmt(s.gems), gw = g.textW(gemTxt), gemX = gx - 10 - gw;
-  g.text(gemTxt, gemX, y + 3, { color: H.text, outline: H.ink });
-  g.img(icon('gem'), gemX - 14, y + 2);
-  const cTxt = fmt(s.credits), cw = g.textW(cTxt), cX = gemX - 24 - cw;
-  g.text(cTxt, cX, y + 3, { color: H.gold, outline: H.ink });
-  g.img(icon('coin'), cX - 14, y + 3);
+  const { g, W } = app, H = T.hudPlain, st = T.card || T.deep, y = 4, h = 19;
+  holo(g, 4, y, 108, h, st, 13);
+  g.text('Lv', 9, y + 4, { color: H.sub });
+  g.text(String(s.level), 23, y + 4, { font: 'bold', color: H.text });
+  const r = Math.max(0, Math.min(1, s.exp / s.expMax)), bx = 36, bw = 40;
+  g.rect(bx, y + 8, bw, 4, H.ink); g.rect(bx + 1, y + 9, bw - 2, 2, H.track);
+  g.rect(bx + 1, y + 9, Math.round((bw - 2) * r), 2, H.bar); g.rect(bx + 1, y + 9, Math.round((bw - 2) * r), 1, H.barHi);
+  g.text(`${s.exp}/${s.expMax}`, 108, y + 4, { color: H.sub, align: 'right' });
+  const gx = W - 24;   // 설정
+  holo(g, gx, y, 20, h, st, 13); g.img(tinted('gear', H.icon), gx + 4, y + 4);
+  app.input.hit('hud_gear', gx, y, 20, h, () => app.toast && app.toast('설정'), 3);
+  const gemTxt = fmt(s.gems), gw = g.textW(gemTxt) + 24, gemX = gx - 4 - gw;
+  holo(g, gemX, y, gw, h, st, 13); g.img(icon('gem'), gemX + 5, y + 4); g.text(gemTxt, gemX + 19, y + 4, { color: H.text });
+  const cTxt = fmt(s.credits), cw = g.textW(cTxt) + 24, cX = gemX - 4 - cw;
+  holo(g, cX, y, cw, h, st, 13); g.img(icon('coin'), cX + 5, y + 4); g.text(cTxt, cX + 19, y + 4, { color: H.gold });
 }
 
 // 하단 탭. active = 'shop'|'explore'|'home'|'nursery'|'ship'

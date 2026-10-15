@@ -24,6 +24,10 @@ export async function loadBig(base = '../assets/v2/') {
   await Promise.all([
     ...ROSTER.map(async k => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '.png'), json(base + 'plants/' + k + '.json')]); if (im && meta) BIG[k] = { sheet: im, white: whiteOf(im), meta }; }),
     ...POTS.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_back.png'), load(base + 'pots/' + p + '_front.png')]); if (b && f) POT_BIG[p] = { back: b, front: f }; }),
+    // 대기실 의자 위 화분 = 12°로 다시 그린 판(tools/pixel/big/pot_flat.mjs)
+    ...POTS.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_flat_back.png'), load(base + 'pots/' + p + '_flat_front.png')]); if (b && f) POT_BIG[p + '_flat'] = { back: b, front: f }; }),
+    // 생장 단계 묶음(어린·자람, convert.mjs --export --stage=…) — 없으면 성체 그림을 씀
+    ...ROSTER.flatMap(k => ['young', 'teen'].map(async st => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '_' + st + '.png'), json(base + 'plants/' + k + '_' + st + '.json')]); if (im && meta) BIG[k + '_' + st] = { sheet: im, white: whiteOf(im), meta }; })),
   ]);
   return [...ROSTER.filter(k => !BIG[k]), ...POTS.filter(p => !POT_BIG[p])];
 }
@@ -85,9 +89,14 @@ function part(g, im, sx, sy, w, h, x, y, flip) {
   else c.drawImage(im, sx, sy, w, h, x, y, w, h);
 }
 // 화분에 심은 큰 판 식물: (bx, by) = 화분 굽이 바닥에 닿는 점. t = 시각(ms), phase = 숨 엇갈림(ms), flip = 좌우 뒤집기(상대), flash = 맞은 순간 하얗게
+// 게임 단계 → 그림 단계(CHANGELOG 2026-10-15 "게임 6단계와 잇기": 씨앗·새싹·유체 → 어린, 성장체 → 자람, 성체·완숙체 → 성체)
+const STAGE_ART = { seed: 'young', sprout: 'young', juvenile: 'young', growing: 'teen', mature: null, evolved: null };
+export function bigKey(key, stage) { const st = STAGE_ART[stage]; return st && BIG[key + '_' + st] ? key + '_' + st : key; }
 export function drawBig(g, key, potKey, bx, by, opt = {}) {
-  const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra;
+  const flat = opt.flat && POT_BIG[(potKey || 'pot_terra') + '_flat'];   // 대기실 의자 위 = 12° 화분(굽이 2칸 아래라 판을 2칸 올림)
+  const P = BIG[key], pot = flat || POT_BIG[potKey] || POT_BIG.pot_terra;
   if (!pot) return false;
+  if (flat) by -= 2;
   if (!P) {   // 빈 화분
     const x = Math.round(bx - 48), y = Math.round(by - 96.55);
     part(g, pot.back, 0, 0, 96, 112, x, y, false); part(g, pot.front, 0, 0, 96, 112, x, y, false);

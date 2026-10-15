@@ -2,7 +2,7 @@ import { ELEMENT, TYPE } from '../art/palette.js';
 import { room1, stand1 } from '../art/bg.js';
 import { hud, navBar, button, chip, fmt } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { drawBig, BGIMG } from '../art/sprites.js';
+import { drawBig, drawPortrait, bigKey, BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { gradeBadge, STAT_DEF } from './common.js';
 import { STAGE_NAME } from '../data/mock.js';
@@ -14,12 +14,17 @@ export const HOME_PEDESTAL = { room: [135, 262], cell: [135, 262], ship: [135, 2
 const SPK = { flower_grass: ['flower', 'grass'], cactus_fire: ['cactus', 'fire'], vine_water: ['vine', 'water'] };   // 임시 데이터 종 → 타입·속성
 // 왼쪽 스펙 창(2026-10-15 사용자 "좌측에 카드처럼 스팩별로 각자의 창으로 띄워. 우측에는 가방이나 이것저것. 배치는 처음 UI를 보고 참고해"
 //  — 옛 게임 메인 화면의 왼쪽 타입·속성·변이 칸 + 오른쪽 가방·도감 큰 단추 배치): 스펙 하나 = 작은 푸른 홀로그램 창 하나, 묶음(정체 · 능력치 · 자람) 사이는 조금 띄움
-const SPEC = { x: 6, y: 114, w: 78, h: 20, gap: 3 };
+const SPEC = { x: 6, y: 150, w: 78, h: 20, gap: 3 };   // 2026-10-15 "스펙을 좀 더 낮추고" — 위에 상태 바 + 프로필 배너가 들어와서
+const SIDE_Y = [150, 193, 236];                   // 오른쪽 단추(가방·도감·관리)도 같이 내림
 const SHOW_MS = 320;                              // 식물이 의자 투영기에서 나타나는 시간(바꿀 때마다), 스펙 창은 한 장씩 펼쳐짐
+// 프로필 배너(2026-10-15 사용자 "그 아래에 배너처럼 내 프로필 설정하게" — 옛 메인 화면의 '재배사' 카드): 대표 식물 얼굴 · 이름 · 칭호 · 랭크, 누르면 설정 창
+const BANNER = { x: 6, y: 28, w: 258, h: 30 };
+const BANNER_COL = ['#97e8f7', '#f0be7d', '#9ff0b0', '#c8a8f0'];   // 배너 색(왼쪽 띠·이름 밑줄)
+const TIER_COL = { 브론즈: '#d89a62', 실버: '#c8d2e0', 골드: '#f0c858', 플래티넘: '#9ff0e0', 다이아: '#a8d0ff', 마스터: '#e0a8ff', 풀로세움: '#ffd890' };
 
 export const home = {
   theme(app) { return this.look || 'loft'; },   // 대기 화면 = 코덱스 원형 방(?look=room·cell·ship 옛 시안)
-  enter(p) { this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; enterLoft(); },   // 나타나기 연출은 식물을 바꿀 때만
+  enter(p) { this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; enterLoft(); },   // ?profile=1 = 프로필 설정 창 열린 채(검토용)   // 나타나기 연출은 식물을 바꿀 때만
   onDrag(dy, dx) { this.swipe += dx; },
   onRelease(ev) {   // 식물 위에서 옆으로 밀면 다음·이전 식물
     const s = this.app && this.app.state; this.swipe = 0;
@@ -42,7 +47,7 @@ export const home = {
     const [mx, my] = LOFT_STOOL, show = Math.min(1, (t - this.showT) / SHOW_MS);
     // 식물: 의자 속 투영기에서 아래부터 위로 나타남(바꿀 때마다) — 드러나는 줄에 푸른 빛 한 줄
     const top = my - 100, reveal = Math.round(top + (1 - show) * 104);
-    g.clip(0, reveal, W, 120, () => loftPlant(app, p ? p.key : null, p ? p.pot : 'pot_terra', mx, my));
+    g.clip(0, reveal, W, 120, () => loftPlant(app, p ? bigKey(p.key, p.stage) : null, p ? p.pot : 'pot_terra', mx, my));   // 단계 그림(어린·자람·성체)
     if (show < 1) { g.rect(mx - 26, reveal, 52, 1, '#97e8f7'); g.rect(mx - 18, reveal - 1, 36, 1, '#e4fbff'); }
     loftFront(app);
     hud(app, s);
@@ -54,9 +59,10 @@ export const home = {
       g.text(label, W - 22.5, yy + 21, { color: st.text, align: 'center' });
       app.input.hit(id, W - 40, y, 35, 37, go, 3);
     };
-    sideBtn('home_bag', 'navBag', '가방', 114, () => app.go('bag'));
-    sideBtn('home_dex', 'navBook', '도감', 157, () => app.go('dex'));
-    sideBtn('home_care', 'up', '관리', 200, () => app.go('plant'));
+    sideBtn('home_bag', 'navBag', '가방', SIDE_Y[0], () => app.go('bag'));
+    sideBtn('home_dex', 'navBook', '도감', SIDE_Y[1], () => app.go('dex'));
+    sideBtn('home_care', 'up', '관리', SIDE_Y[2], () => app.go('plant'));
+    this.banner(app, BANNER.x, BANNER.y, true);
     // 이름 + 등급(의자 아래, 홀로그램 글자)
     const nm = p ? p.name : '빈 화분', nw = g.textW(nm, 'bold') + (p ? 19 : 0), nx = Math.round(mx - nw / 2);
     holo(g, nx - 7, 413, nw + 14, 19, T.card || T.panel, 14);
@@ -80,6 +86,52 @@ export const home = {
     button(app, 'home_cta', 60, 470, 150, 44, '토너먼트 출전', { style: 'gold', font: 'head', icon: 'sword', iconTint: true, sub: `${TR.round} · ${TR.wins}승 ${TR.losses}패`, onTap: () => app.go('matching', {}, 'shutterClose') });   // 출전 = 철 셔터가 닫히고 상대 찾기 → 열리며 전투장
     app.input.hit('home_plant', mx - 40, my - 100, 80, 104, () => app.go('plant'));
     navBar(app, 'home', { badge: { nursery: true } });
+    if (this.editing) this.profileSheet(app);
+  },
+  // 프로필 배너: 배너 색 띠 · 대표 식물 얼굴 · 이름(굵게) · 칭호 · 오른쪽 랭크(색)·점수 막대 · 연필
+  banner(app, x, y, tappable, bw = BANNER.w) {
+    const { g, state: s } = app, pf = s.profile || {}, st = T.card || T.panel, P = T.ptext, { h } = BANNER, w = bw, col = BANNER_COL[pf.color || 0];
+    holo(g, x, y, w, h, st, 13);
+    g.rect(x + 1, y + 2, 3, h - 4, col);
+    g.rect(x + 8, y + 3, 24, 24, '#0a1e2c'); g.rect(x + 8, y + 3, 24, 1, col);
+    g.clip(x + 9, y + 4, 22, 22, () => drawPortrait(g, pf.avatar || 'flower_grass', x + 8, y + 4, 24, false));
+    g.text(pf.name || '재배사', x + 38, y + 3, { font: 'bold', color: P.main });
+    g.text(pf.title || '', x + 38, y + 16, { color: P.sub });
+    const tier = s.tournament?.tier || '브론즈', rk = (s.plants[0] && s.plants[0].rank) || { pts: 0, next: 300 }, tx = x + w - 96;
+    const tw = g.textW(tier, 'bold'); g.text(tier, tx, y + 3, { font: 'bold', color: TIER_COL[tier] || P.main });
+    g.text(`${rk.pts}/${rk.next}`, tx + tw + 4, y + 3, { color: P.dim });   // 랭크 이름 바로 뒤(겹치지 않게)
+    tbar(g, tx, y + 19, 68, 4, rk.pts / rk.next, 'exp');
+    g.img(icon('pencil'), x + w - 22, y + 8);
+    if (tappable) app.input.hit('home_profile', x, y, w, h, () => { this.editing = true; }, 2);
+  },
+  // 프로필 설정 창: 미리보기 배너 · 이름 바꾸기 · 대표 식물 · 칭호 · 배너 색 · 완료
+  profileSheet(app) {
+    const { g, W, H, state: s } = app, pf = s.profile, st = T.card || T.panel, P = T.ptext;
+    g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
+    app.input.hit('pf_block', 0, 0, W, H, () => {});
+    const x = 14, y = 92, w = W - 28, h = 380;
+    holo(g, x, y, w, h, st, 14);
+    g.text('프로필 설정', x + 12, y + 10, { font: 'head', color: P.main });
+    this.banner(app, x + 6, y + 32, false, w - 12);
+    let yy = y + 74;
+    g.text('이름', x + 12, yy + 5, { color: P.sub });
+    g.text(pf.name, x + 60, yy + 5, { font: 'bold', color: P.main });
+    button(app, 'pf_name', x + w - 72, yy, 60, 22, '바꾸기', { style: 'night', icon: 'pencil', onTap: () => { const v = typeof prompt === 'function' ? prompt('이름(12자까지)', pf.name) : null; if (v && v.trim()) pf.name = v.trim().slice(0, 12); } });
+    yy += 34; g.text('대표 식물', x + 12, yy, { color: P.sub }); yy += 16;
+    s.plants.slice(0, 6).forEach((p, i) => {
+      const px = x + 12 + i * 37, on = pf.avatar === p.key;
+      g.rect(px, yy, 32, 32, on ? BANNER_COL[pf.color || 0] : '#3f6a88'); g.rect(px + 1, yy + 1, 30, 30, '#0a1e2c');
+      g.clip(px + 2, yy + 2, 28, 28, () => drawPortrait(g, p.key, px + 2, yy + 2, 28, false));
+      app.input.hit('pf_av' + i, px, yy, 32, 32, () => { pf.avatar = p.key; });
+    });
+    yy += 44; g.text('칭호', x + 12, yy, { color: P.sub }); yy += 16;
+    (s.titles || []).forEach((tt, i) => {
+      const bx = x + 12 + (i % 2) * ((w - 30) / 2 + 6), by = yy + Math.floor(i / 2) * 28, bw = (w - 30) / 2, on = pf.title === tt;
+      button(app, 'pf_t' + i, Math.round(bx), by, Math.round(bw), 22, tt, { style: on ? 'teal' : 'night', onTap: () => { pf.title = tt; } });
+    });
+    yy += 64; g.text('배너 색', x + 12, yy, { color: P.sub }); yy += 16;
+    BANNER_COL.forEach((c, i) => { const bx = x + 12 + i * 30, on = (pf.color || 0) === i; g.rect(bx, yy, 24, 18, on ? '#ffffff' : '#0a1e2c'); g.rect(bx + 2, yy + 2, 20, 14, c); app.input.hit('pf_c' + i, bx, yy, 24, 18, () => { pf.color = i; }, 2); });
+    button(app, 'pf_done', x + w / 2 - 50, y + h - 40, 100, 30, '완료', { style: 'gold', font: 'head', onTap: () => { this.editing = false; } });
   },
   // 왼쪽 스펙 창: 타입 · 속성 · 단계 / 체력 · 공격 · 방어 · 기동 / 새잎까지(막대). 식물을 바꾸면 위에서부터 한 장씩 왼쪽에서 펼쳐짐
   specs(app, p) {

@@ -20,6 +20,7 @@ export const SHOTS = [
   ['01_title', 'title', {}],
   ['02_home', 'home', {}],
   ['03_home_empty', 'home', { empty: true }],
+  ['03_home_profile', 'home', { profile: true }],
   ['04_bag', 'bag', {}],
   ['05_plant_skill', 'plant', { tab: 'skill' }],
   ['06_plant_up', 'plant', { tab: 'up' }],

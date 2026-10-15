@@ -34,7 +34,8 @@ function partOf(x, y, z) {
   return q < rOut(y) - WALL * 0.5 ? 'inner' : 'outer';
 }
 
-export function renderPot(style) {
+export function renderPot(style, el = 26) {   // el = 내려다보는 각도(도) — 대기실 의자 위는 12°(의자 앉는 판이 거의 옆에서 본 각도)
+  const SE = Math.sin(el * Math.PI / 180), CE = Math.cos(el * Math.PI / 180);
   const N = W * H, dep = new Float32Array(N).fill(Infinity), tone = new Int8Array(N).fill(-1);
   const mat = new Array(N).fill(null), grp = new Array(N).fill(null), back = new Uint8Array(N);
   for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
