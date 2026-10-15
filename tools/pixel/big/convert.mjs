@@ -27,7 +27,7 @@ const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고,
 const MP4 = args.includes('--mp4');        // 움직임을 GIF와 함께 휴대폰에서도 재생되는 MP4로(사용자가 원격 휴대폰으로 확인 — video.mjs)
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
-const TUNE = { flower_wind: { fill: 0.3 } };
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 } };   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
 // 눈 자리(eyes.mjs): 컨셉·누끼는 종 키로, 생장 단계 그림(concept/stages/<키>_<단계>.png)은 그 파일 이름 키로 따로 잰다 — 단계마다 얼굴 자리가 달라서
 const eyeSpec = (key, file) => (file ? EYES[file.replace(/^.*[\\/]/, '').replace(/\.png$/, '')] : EYES[key]) || null;
 
@@ -172,10 +172,21 @@ function load(key, file = null) {
   // 식물 범위
   let top = im.h, bot = 0, left = im.w, right = 0;
   for (let i = 0; i < n; i++) if (!isBg[i]) { const x = i % im.w, y = (i - x) / im.w; top = Math.min(top, y); bot = Math.max(bot, y); left = Math.min(left, x); right = Math.max(right, x); }
-  if (cut && !S) {   // 화분 없는 그림(생장 단계): 밑동(맨 아래 3%) 가운데, 맨 아래 줄 — 단계마다 줄기가 화분 같은 자리에서 나오게
-    let bx = 0, bn = 0;
-    for (let y = Math.floor(bot - (bot - top) * 0.03); y <= bot; y++) for (let x = 0; x < im.w; x++) if (!isBg[y * im.w + x]) { bx += x; bn++; }
-    S = { cx: bn ? bx / bn : (left + right) / 2, cy: bot, a: (right - left) / 6, b: 0, ref: 'base' };
+  if (cut && !S) {   // 화분 없는 그림(생장 단계): 밑동 = 아래 8% 띠에서 '몸 가운데에 가장 가까운 덩어리'(줄기)의 가운데·맨 아래 —
+    //  띠 전체 평균을 쓰면 줄기보다 아래로 처진 바위 주먹·잎이 섞여 밑동이 옆으로 밀리고, 그만큼 몸이 기울었다고 보고 돌려 세워 오히려 기움
+    //  (2026-10-15 사용자 "바위선인장 축이 기울어져 있어" — 가이아록 자람 단계가 오른쪽 주먹 끝을 밑동으로 잡아 17.6° 돌아감)
+    let gx = 0, gn = 0;
+    for (let i = 0; i < n; i++) if (!isBg[i]) { gx += i % im.w; gn++; }
+    const cxAll = gn ? gx / gn : (left + right) / 2, yb0 = Math.floor(bot - (bot - top) * 0.08);
+    const col = new Uint8Array(im.w);
+    for (let y = yb0; y <= bot; y++) for (let x = 0; x < im.w; x++) if (!isBg[y * im.w + x]) col[x] = 1;
+    const segs = [];   // 띠에 칠이 있는 열들의 이어진 범위(2칸 이하 틈은 이어 봄)
+    for (let x = 0; x < im.w; x++) if (col[x]) { const last = segs[segs.length - 1]; if (last && x - last[1] <= 3) last[1] = x; else segs.push([x, x]); }
+    const seg = segs.reduce((b, s2) => (!b || Math.abs((s2[0] + s2[1]) / 2 - cxAll) < Math.abs((b[0] + b[1]) / 2 - cxAll) ? s2 : b), null) || [left, right];
+    let bx = 0, bn = 0, by = yb0;
+    for (let y = yb0; y <= bot; y++) for (let x = seg[0]; x <= seg[1]; x++) if (!isBg[y * im.w + x]) by = Math.max(by, y);
+    for (let y = Math.floor(by - (bot - top) * 0.03); y <= by; y++) for (let x = seg[0]; x <= seg[1]; x++) if (!isBg[y * im.w + x]) { bx += x; bn++; }
+    S = { cx: bn ? bx / bn : (seg[0] + seg[1]) / 2, cy: by, a: (right - left) / 6, b: 0, ref: 'base' };
   }
   // 밑동 기울기(재기만): 흙 가운데 위 줄기 칸들의 가운데를 줄마다 잇는 선의 기울기 — 크면 바로 세우기를 검토
   {
@@ -752,9 +763,9 @@ if (stages) {
   // 어린 단계 몸집(2026-10-15 사용자 "외형 차이가 적어 아쉬움 — 1단계는 더 줄여도, 무조건 말고 몸체 크기 기준으로(버섯은 덩치가 비슷해 구분 어려움)"):
   //  도트 칸 수(몸 면적)가 성체의 YA배보다 크면 그 비율이 되게 축척을 줄이고, 이미 작으면 그대로
   const area = cv => { let n = 0; for (let i = 0; i < W * H; i++) if (cv.cm[i] >= 0) n++; return n; };
-  const aM = area(mature), YA = +(args.find(a => a.startsWith('--young-area='))?.slice(13) ?? 0.42);
+  const aM = area(mature), YA = +(args.find(a => a.startsWith('--young-area='))?.slice(13) ?? (TUNE[key] || {}).youngArea ?? 0.42);
   // 자람 단계도 같은 식(2026-10-15 나머지 7종: 코덱스가 자람 단계를 성체보다 크게 그려 판 위가 잘림 — 키 76칸 상한에 붙음) → 성체의 TA배를 넘으면 그만큼
-  const TA = +(args.find(a => a.startsWith('--teen-area='))?.slice(12) ?? 0.72);
+  const TA = +(args.find(a => a.startsWith('--teen-area='))?.slice(12) ?? (TUNE[key] || {}).teenArea ?? 0.72);
   for (const st of STAGES) {
     const f = st === 'mature' ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'stages', `${key}_${st}.png`);
     let cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s, match: mk ? ref : null, matchK: mk }) : null;
@@ -771,6 +782,7 @@ if (stages) {
       if (sc < mature.s * (lim > 0 && r > lim ? Math.sqrt(lim / r) : 1) - 1e-9) console.log(`${st.padEnd(7)} 키 상한 ${cap}칸 → 축척 ${(sc / mature.s).toFixed(2)}배`);
     }
     if (!cv) continue;
+    if (st !== 'mature') { const S2 = cv.src.S; console.log(`${st.padEnd(7)} 기준 (${S2.cx.toFixed(0)}, ${S2.cy.toFixed(0)}) ${S2.ref} · 몸 축 ${(S2.axis || 0).toFixed(1)}°${S2.rot ? ' → 돌려 세움' : ''}`); }
     const im = paint(cv);
     writeFileSync(resolve(here, 'out', 'conv', `${key}_${st}_96x112.png`), im.png());
     list.push(im); srcs.push(decodePNG(readFileSync(f)));
