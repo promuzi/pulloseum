@@ -1,6 +1,6 @@
 // 지글거림 재기(2026-10-15 "픽셀이 너무 지글거려서 어지럽다는 평가" — 해결책 분석용):
 //  한 장면을 1배(논리 칸)로 30fps N장 그려, 장마다 바뀐 칸과 '깜빡임'(A → B → A, 두 장 안에 되돌아옴 = 끓는 칸)을 구역별로 센다.
-//   node tools/shots/jitter.mjs --scene home [--sec 3] [--params '{...}'] [--calm]   (--calm = window.__calm 켜고 같은 측정)
+//   node tools/shots/jitter.mjs --scene home [--sec 3] [--params '{...}'] [--calm]   (기본 = 예전 움직임으로 재기, --calm = 차분하게 — 2026-10-15부터 게임 기본값)
 //  구역 = 화면 좌표 상자(장면마다 아래 ZONES), 나머지 = 전체에서 상자들을 뺀 곳.
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';

@@ -634,6 +634,20 @@ export const ICON_SRC = {
     'oyyyyyyyyyo',
     'ooooooooooo',
   ],
+  // 독(보라 방울 + 기포) — 전투 효과 창(2026-10-15)
+  poison: [
+    '....o......',
+    '...ovo..o..',
+    '..ovVvo.oVo',
+    '..ovVvo..o.',
+    '.ovVvvvo...',
+    'ovvvvvvvo..',
+    'ovvvvvvuo..',
+    'ovvvvvvuo..',
+    'ouvvvvuuo..',
+    '.ouuuuuo...',
+    '..ooooo....',
+  ],
   lockS: [
     '..ooo..',
     '.o...o.',

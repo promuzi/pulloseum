@@ -59,23 +59,39 @@ function infoBox(app, x0, y0, u, bar, en, mine) {
   g.text(`에너지 ${en}/${u.energyMax}`, x + w - 8, yy - 1, { color: P.sub, align: 'right' });
   return h;
 }
-// 버프·디버프 창(메카 게임 적 상태처럼 — 효과마다 같은 폭의 작은 반투명 창: 효과 색 아이콘 · 이름 · 숫자(겹침·남은 턴), 풀리면 사라짐).
-//  체력판 바로 아래 두 줄로(한 줄에 둘). 이로운 효과 = 청록 테, 해로운 효과 = 붉은 테
+// 버프·디버프 창(메카 게임 적 상태처럼 — 효과마다 작은 반투명 창: 아이콘 · 이름 · 숫자(겹침·남은 턴), 풀리면 사라짐).
+//  2026-10-15 사용자 "불필요하게 넓어, 한 줄에 3개씩", "디버프 별로 색을 다르게, 독·화상 등 추가" →
+//  체력판 바로 아래 한 줄에 셋(45·45·46칸) · 두 줄까지(넘치면 마지막 칸 = +n). 이로운 효과 = 청록 홀로그램 하나로, 해로운 효과 = 효과마다 제 색.
+//  gauge = 문턱이 있는 효과(빙결·감전 — 칸이 다 차면 한 턴 쉼)는 숫자 대신 세로 칸이 아래부터 참. 이름은 두 글자까지(창 폭).
 const STATUS = {
-  guard: { name: '방어 자세', icon: 'shield', buff: true }, evade: { name: '회피 자세', icon: 'speed', buff: true },
-  atkUp: { name: '공격 ↑', icon: 'sword', buff: true }, critReady: { name: '치명 준비', icon: 'crit', buff: true }, initReady: { name: '선공 준비', icon: 'ff', buff: true },
-  poison: { name: '독', icon: 'warn', buff: false }, burn: { name: '화상', icon: 'fire', buff: false }, wet: { name: '젖음', icon: 'water', buff: false },
-  defDown: { name: '방어 ↓', icon: 'shield', buff: false }, shock: { name: '감전', icon: 'bolt', buff: false },
+  guard: { name: '방어', icon: 'shield', buff: true }, evade: { name: '회피', icon: 'speed', buff: true },
+  critReady: { name: '치명', icon: 'crit', buff: true }, initReady: { name: '선공', icon: 'ff', buff: true },
+  atkUp: { name: '공격↑', buff: true }, defDown: { name: '방어↓', col: '#ff6a6a' },
+  burn: { name: '화상', icon: 'fire', col: '#ff7a3a' }, poison: { name: '독', icon: 'poison', col: '#b866ff' },
+  wet: { name: '젖음', icon: 'water', col: '#4f9dff' }, chill: { name: '빙결', icon: 'ice', col: '#c4ecff', gauge: 3 },
+  shock: { name: '감전', icon: 'bolt', col: '#ffd84a', gauge: 3 }, stun: { name: '기절', icon: 'star', col: '#ff86c8' },
+  bind: { name: '덩굴', icon: 'vine', col: '#6fd25c' },
 };
-const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' }, SW_BAD = { fill: '#3a1622', fill2: '#46192a', frame: '#ff8a8a', frameHi: '#ffd0d0', frameLo: '#a04050' };
+const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9', text: '#d8faff', num: '#97e8f7' };
+const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+const swCache = new Map();
+const swStyle = col => { let s = swCache.get(col); if (!s) swCache.set(col, s = { fill: hexMix(col, '#0a0c18', 0.8), fill2: hexMix(col, '#0a0c18', 0.72), frame: col, frameHi: hexMix(col, '#ffffff', 0.55), frameLo: hexMix(col, '#000000', 0.45), text: hexMix(col, '#ffffff', 0.72), num: hexMix(col, '#ffffff', 0.35) }); return s; };
+const SW_W = 45, SW_H = 16, SW_GAP = 2;
 function statusWins(g, x, y, list) {
-  const cw = (BOX_W - 4) / 2;
-  list.slice(0, 4).forEach((st, i) => {
-    const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, X = Math.round(x + (i % 2) * (cw + 4)), Y = y + Math.floor(i / 2) * 18;
-    holo(g, X, Y, Math.round(cw), 16, D.buff ? SW_ON : SW_BAD, 16);
-    g.img(icon(D.icon), X + 3, Y + 3);
-    g.text(D.name, X + 16, Y + 2, { color: D.buff ? '#d8faff' : '#ffd8d8' });
-    if (st.n != null) g.text(String(st.n), X + Math.round(cw) - 4, Y + 2, { font: 'bold', color: D.buff ? '#97e8f7' : '#ff9a9a', align: 'right' });
+  const shown = list.length > 6 ? [...list.slice(0, 5), { more: list.length - 5 }] : list;
+  shown.forEach((st, i) => {
+    const c = i % 3, X = x + c * (SW_W + SW_GAP), w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W, Y = y + Math.floor(i / 3) * (SW_H + 2);
+    if (st.more) { holo(g, X, Y, w, SW_H, SW_ON, 16); g.text(`+${st.more}`, X + (w >> 1), Y + 2, { font: 'bold', color: SW_ON.text, align: 'center' }); return; }
+    const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a');
+    holo(g, X, Y, w, SW_H, S, 16);
+    // 가운데 정렬: [아이콘][이름][숫자 또는 세로 칸]
+    const ic = D.icon ? icon(D.icon) : null, nw = g.textW(D.name), num = !D.gauge && st.n != null ? String(st.n) : null;
+    const tail = D.gauge ? 2 + 3 : num ? 2 + g.textW(num) : 0, cw = (ic ? 12 : 0) + nw + tail;
+    let cx = X + Math.max(2, (w - cw) >> 1);
+    if (ic) { g.img(ic, cx, Y + 3 + ((11 - ic.height) >> 1)); cx += 12; }
+    g.text(D.name, cx, Y + 2, { color: S.text }); cx += nw + 2;
+    if (D.gauge) for (let k = 0; k < D.gauge; k++) g.rect(cx, Y + 11 - k * 4, 3, 3, k < (st.n || 0) ? S.num : S.frameLo);   // 아래부터 차는 문턱 칸
+    else if (num) g.text(num, cx, Y + 2, { color: S.num });
   });
 }
 
@@ -359,10 +375,11 @@ export const battle = {
   statuses(side) {
     const v = this.v, u = v.view[side], out = [], sv = v.stance[side];
     if (sv && sv.active) out.push({ id: sv.kind === 'guard' ? 'guard' : 'evade' });
-    if (u && u.st && u.st.nextCrit) out.push({ id: 'critReady', n: u.st.nextCrit });
-    if (u && u.st && u.st.nextInit) out.push({ id: 'initReady', n: 1 });
+    if (u && u.st && u.st.nextCrit) out.push({ id: 'critReady' });
+    if (u && u.st && u.st.nextInit) out.push({ id: 'initReady' });
     for (const x of (u && u.status) || []) out.push(x);
-    if (this.p && this.p.status) out.push(...(side === 'me' ? [{ id: 'atkUp', n: 2 }, { id: 'guard' }] : [{ id: 'poison', n: 3 }, { id: 'wet', n: 2 }, { id: 'defDown', n: 1 }]));
+    // 검토용 예시(?status=1): 나 = 이로운 셋 + 기절, 상대 = 해로운 여섯(화상 3턴 · 독 2겹 · 젖음 2턴 · 빙결 2/3 · 감전 1/3 · 덩굴)
+    if (this.p && this.p.status) out.push(...(side === 'me' ? [{ id: 'guard' }, { id: 'critReady' }, { id: 'initReady' }, { id: 'stun' }] : [{ id: 'burn', n: 3 }, { id: 'poison', n: 2 }, { id: 'wet', n: 2 }, { id: 'chill', n: 2 }, { id: 'shock', n: 1 }, { id: 'bind' }]));
     return out.sort((a, b) => ((STATUS[b.id] || {}).buff ? 1 : 0) - ((STATUS[a.id] || {}).buff ? 1 : 0));
   },
   // 교체 단추(3:3 — 기술 6칸의 마지막 칸)

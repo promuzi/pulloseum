@@ -1,11 +1,11 @@
 // 움직임 세기(2026-10-15 "픽셀이 너무 지글거려서 어지럽다는 평가" — tools/shots/jitter.mjs 로 잰 지글거림 원인 셋을 줄이는 '차분하게'):
 //  ① 식물 숨쉬기 = 그림 장을 4장씩 묶어 0.2초마다 바꿈(도트 작가식 '적은 장, 오래 머묾' — 가장자리 칸이 초당 10번 뒤집히던 것을 5번으로)
 //  ② 빛기둥 안개·먼지 = 안개 무늬를 3배 느리게, 먼지는 밝기 출렁임·반짝임 없이 천천히 ③ 창밖 우주 = 별 깜빡임 3배 느리게, 행성 표면 돌기·별 흐름 2.5배 느리게.
-//  켜는 법: 설정(나중) · 주소 ?calm=1 · 기기의 '동작 줄이기'(prefers-reduced-motion) · 검토 도구 window.__calm
-export const MOTION = { calm: false };
+//  같은 날 사용자 "차분한 버전 좋은 거 같아" → 기본으로 켬. 예전 움직임 = 주소 ?calm=0 · 검토 도구 window.__calm = false (설정 단추는 나중)
+export const MOTION = { calm: true };
 try {
   const q = new URLSearchParams(location.search);
-  if (q.get('calm') === '1' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) MOTION.calm = true;
+  if (q.get('calm') === '0') MOTION.calm = false;
   Object.defineProperty(window, '__calm', { get: () => MOTION.calm, set: v => { MOTION.calm = !!v; }, configurable: true });
 } catch {}
 // 그림 장 번호: 차분하게면 hold 장씩 묶어 같은 장을 오래 보여 줌
