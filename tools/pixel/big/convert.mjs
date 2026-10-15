@@ -27,7 +27,17 @@ const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고,
 const MP4 = args.includes('--mp4');        // 움직임을 GIF와 함께 휴대폰에서도 재생되는 MP4로(사용자가 원격 휴대폰으로 확인 — video.mjs)
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 } };   // 쏜위드: 자람이 덩굴손만 넓게 뻗고 몸통은 어린 단계만 해 작아 보임(사용자 "중간 생장체가 초기보다 작은 느낌") → 어린 줄이고 자람 키움, 성체가 납작한 덤불이라 자람 키 상한을 성체 + 4칸까지   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true } };
+// 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
+//  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
+//  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
+//  표에 없는 그림은 변환 때 줄기를 재서 1.5칸 넘게 비끼면 경고한다(아래 convert)
+const STEM = {
+  flower_grass_young: 1, flower_grass: -3, thorn_teen: -1, thorn: -3, aqua: -1, flower_wind_young: -1, flower_wind_teen: -1,
+  spark_young: 1, spark: -1, vine_water_young: -3, vine_water: -5, cactus_fire: -2, flower_fire_young: -1, cactus_wind_teen: -2, cactus_wind: -5,
+  vine_wind_teen: -1, vine_wind: -4,
+  gaia: 0,   // 가운데 몸통(+3칸)이 두 돌주먹에 가려 애매 — 주먹 사이 가운데·무게중심이 이미 가운데라 그대로
+};   // 쏜위드: 자람이 덩굴손만 넓게 뻗고 몸통은 어린 단계만 해 작아 보임(사용자 "중간 생장체가 초기보다 작은 느낌") → 어린 줄이고 자람 키움, 성체가 납작한 덤불이라 자람 키 상한을 성체 + 4칸까지   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
 // 눈 자리(eyes.mjs): 컨셉·누끼는 종 키로, 생장 단계 그림(concept/stages/<키>_<단계>.png)은 그 파일 이름 키로 따로 잰다 — 단계마다 얼굴 자리가 달라서
 const eyeSpec = (key, file) => (file ? EYES[file.replace(/^.*[\\/]/, '').replace(/\.png$/, '')] : EYES[key]) || null;
 
@@ -166,7 +176,10 @@ function load(key, file = null) {
       const terra = h > 35 && h < 70 && C > 0.05 && C < 0.14 && L > 0.36 && L < 0.86, dirt = L < 0.47 && C < 0.075 && h > 33 && h < 95, shine = L > 0.7 && C < 0.1 && h > 35 && h < 105;
       // 흙 입구 안의 어둡고 탁한 칸(흙 그늘·자갈 틈)은 색상과 상관없이 흙 — 남기면 우리 흙 위에 검은 점으로 흩어짐(2026-10-15 밑동 검수)
       const opening = ((x - S.cx) / (S.a * 1.1)) ** 2 + ((y - S.cy) / (S.b * 1.4)) ** 2 <= 1, soilDark = opening && L < 0.35 && C < 0.1;
-      if ((inPot && (terra || dirt || shine)) || soilDark || (y > rimFront && x > rimL - S.a * 0.15 && x < rimR + S.a * 0.15) || y > rimFront + S.b * 3) isBg[i] = 1;
+      // potClean(종별 TUNE): 테 둘레(입구 밖 ~ 바깥 테 + 30%)의 테라코타 빛 칸은 밝기와 상관없이 화분 — 테 그늘(짙은 적갈)·테 반짝임(밝은 주황)이 남아
+      //  몸을 돌려 세울 때 같이 기울어 우리 화분 테 위에 붉은 금으로 튀어나옴(타이드바인 2026-10-15). 주황·빨강 몸인 종(불꽃·엠버)에는 켜지 말 것
+      const rimJunk = (TUNE[key] || {}).potClean && y < rimFront + S.b * 2 && x > rimL - S.a * 0.3 && x < rimR + S.a * 0.3 && (!opening || y < S.cy - S.b * 0.6) && h > 20 && h < 75 && C > 0.05;
+      if ((inPot && (terra || dirt || shine)) || soilDark || rimJunk || (y > rimFront && x > rimL - S.a * 0.15 && x < rimR + S.a * 0.15) || y > rimFront + S.b * 3) isBg[i] = 1;
     }
   }
   // 식물 범위
@@ -348,6 +361,9 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
   const s = scale || fit * Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
   if (S.ref === 'base') S.cy -= 3 / s;   // 화분 없는 그림: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게(흙 기준 그림은 흙 가운데가 곧 기준)
   const rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
+  // 줄기 가운데 맞추기(STEM): 기준점을 몸 축 돌림까지 되돌려 옮겨 판 위에서 정확히 sh칸 가로로만 밀리게(모든 장·눈·깜빡임이 같은 S를 씀)
+  const okey = file ? file.replace(/\\/g, '/').split('/').pop().replace(/\.png$/, '') : key, sh = STEM[okey] || 0;
+  if (sh) { S.cx -= sh * rc / s; S.cy += sh * rs / s; }
   const toOut = (x, y) => { const u = (x - S.cx) * s, v = (y - S.cy) * s; return [P.cx + u * rc - v * rs, P.cy + u * rs + v * rc]; };   // 원본 자리 → 판 자리(몸 축 바로 세우기 포함)
   // 눈: 원본 자리 → 도트 좌표, 그 자리를 가운데로 EYE 틀 크기의 상자
   const spec = EYES_ON ? EYES[key] : null, grid = spec ? EYE[spec.style].g : null;
@@ -384,6 +400,17 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
   }
   const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, fill: (TUNE[key] || {}).fill ?? 0.5 };
   const { cm, ct } = rasterize(src);
+  // 줄기 재기(재발 방지): 흙 가운데 줄 바로 위에서 위로 6칸 넘게 이어진 열 덩어리 중 몸 무게중심에 가장 가까운 것 — STEM 에 없는데 1.5칸 넘게 비끼면 경고
+  if (STEM[okey] == null) {
+    const sy = Math.floor(P.cy) - 1, run = x => { let n = 0; for (let y = sy; y >= 0 && cm[y * W + x] >= 0; y--) n++; return n; };
+    let gx = 0, gn = 0;
+    for (let i = 0; i < sy * W; i++) if (cm[i] >= 0) { gx += i % W + 0.5; gn++; }
+    const cg = gn ? gx / gn : P.cx, segs = [];
+    for (let x = 0; x < W; x++) if (run(x) >= 6) { const l = segs[segs.length - 1]; if (l && x - l[1] <= 1) l[1] = x; else segs.push([x, x]); }
+    const b = segs.reduce((q, s2) => (!q || Math.abs((s2[0] + s2[1] + 1) / 2 - cg) < Math.abs((q[0] + q[1] + 1) / 2 - cg) ? s2 : q), null);
+    const off = b ? (b[0] + b[1] + 1) / 2 - P.cx : null;
+    if (off != null && Math.abs(off) > 1.5) console.log(`⚠ ${okey}: 줄기 가운데가 화분 가운데서 ${off > 0 ? '+' : ''}${off.toFixed(1)}칸 — node tools/pixel/big/stemcheck.mjs ${okey} 로 가운데 선을 보고 convert.mjs STEM 에 옮길 칸 수를 적을 것`);
+  }
   // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만) + 눈 영역 → 판 칸(원본 블록의 30% 이상이 눈이면 눈 칸)
   const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => toOut(ex, ey)) : [];
   const eyeGrid = (eyeMasks || []).map(m => {
@@ -741,9 +768,33 @@ function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } =
   return out;
 }
 
+// 생장 단계 그림 한 장(concept/stages/<키>_<단계>.png) → 판 칸 cv. 크기 = 성체와 같은 축척에서 시작해 몸집 규칙으로 맞춤(--stages 검토판·--stage= 게임 묶음 공용):
+//  어린 = 성체 면적의 42%(TUNE youngArea) · 자람 = 72%(teenArea)보다 크면 줄이고, 자람이 teenMinArea 보다 작으면 키움,
+//  키 상한 = 어린 성체 키의 82% · 자람 성체 키 − 2칸(+ teenCapAdd, 최대 73) — 잘린 키는 작게 재지므로 몇 번 되풀이
+function stageCv(key, st, mature, ref, mk = 1) {
+  const f = resolve(here, 'concept', 'stages', `${key}_${st}.png`);
+  if (!existsSync(f)) return null;
+  const area = c => { let n = 0; for (let i = 0; i < W * H; i++) if (c.cm[i] >= 0) n++; return n; };
+  const aM = area(mature), T2 = TUNE[key] || {};
+  const YA = +(args.find(a => a.startsWith('--young-area='))?.slice(13) ?? T2.youngArea ?? 0.42), TA = +(args.find(a => a.startsWith('--teen-area='))?.slice(12) ?? T2.teenArea ?? 0.72);
+  const conv = sc => convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk });
+  let sc = mature.s, cv = conv(sc);
+  const r = area(cv) / aM, lim = st === 'young' ? YA : TA, minA = st === 'teen' ? T2.teenMinArea : null;
+  if (lim > 0 && r > lim) { const k = Math.sqrt(lim / r); sc *= k; cv = conv(sc); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 축척 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
+  else if (minA && r < minA) { const k = Math.sqrt(minA / r); sc *= k; cv = conv(sc); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 키움 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
+  else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% (그대로)`);
+  const top = c => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (c.cm[y * W + x] >= 0) return y; return H; };
+  const hM = P.cy - top(mature), cap = st === 'young' ? Math.floor(hM * 0.82) : Math.min(Math.floor(hM - 2 + (T2.teenCapAdd || 0)), 73), sc0 = sc;
+  for (let it = 0; it < 6 && P.cy - top(cv) > cap; it++) { sc *= Math.min(0.95, cap / (P.cy - top(cv))); cv = conv(sc); }
+  if (sc < sc0 - 1e-9) console.log(`${st.padEnd(7)} 키 상한 ${cap}칸 → 축척 ${(sc / mature.s).toFixed(2)}배`);
+  return cv;
+}
+
 mkdirSync(resolve(here, 'out', 'conv'), { recursive: true });
 const stages = args.includes('--stages');
-const cvs = stages ? [] : keys.map(k => {
+// --stage=young|teen(+ --export·--anim): 성체 대신 그 단계 그림으로 묶음·영상을 만든다 → 파일 이름 <키>_<단계>
+const ONE_STAGE = args.find(a => a.startsWith('--stage='))?.slice(8) || null;
+const cvs = stages ? [] : ONE_STAGE ? keys.map(k => { const m = convert(k), cv = stageCv(k, ONE_STAGE, m, labStats(k), 1); if (cv) cv.outKey = `${k}_${ONE_STAGE}`; return cv; }).filter(Boolean) : keys.map(k => {
   const cv = convert(k);
   writeFileSync(resolve(here, 'out', 'conv', k + '_96x112.png'), paint(cv).png());
   const probe = args.find(a => a.startsWith('--probe='));   // 검토용: 판 칸의 재질·단·색 찍기 --probe=x,y;x,y
@@ -762,27 +813,9 @@ if (stages) {
   const mk = +(args.find(a => a.startsWith('--match='))?.slice(8) ?? 1);   // 단계 그림 색을 성체 색 분포에 맞추는 세기(0 = 그대로)
   // 어린 단계 몸집(2026-10-15 사용자 "외형 차이가 적어 아쉬움 — 1단계는 더 줄여도, 무조건 말고 몸체 크기 기준으로(버섯은 덩치가 비슷해 구분 어려움)"):
   //  도트 칸 수(몸 면적)가 성체의 YA배보다 크면 그 비율이 되게 축척을 줄이고, 이미 작으면 그대로
-  const area = cv => { let n = 0; for (let i = 0; i < W * H; i++) if (cv.cm[i] >= 0) n++; return n; };
-  const aM = area(mature), YA = +(args.find(a => a.startsWith('--young-area='))?.slice(13) ?? (TUNE[key] || {}).youngArea ?? 0.42);
-  // 자람 단계도 같은 식(2026-10-15 나머지 7종: 코덱스가 자람 단계를 성체보다 크게 그려 판 위가 잘림 — 키 76칸 상한에 붙음) → 성체의 TA배를 넘으면 그만큼
-  const TA = +(args.find(a => a.startsWith('--teen-area='))?.slice(12) ?? (TUNE[key] || {}).teenArea ?? 0.72);
   for (const st of STAGES) {
     const f = st === 'mature' ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'stages', `${key}_${st}.png`);
-    let cv = st === 'mature' ? mature : existsSync(f) ? convert(key, { file: f, scale: mature.s, match: mk ? ref : null, matchK: mk }) : null;
-    if (cv && st !== 'mature') {
-      const r = area(cv) / aM;
-      const lim = st === 'young' ? YA : TA;
-      let sc = mature.s;
-      const minA = st === 'teen' ? (TUNE[key] || {}).teenMinArea : null;   // 자람이 너무 작으면 키움(덩굴손을 가늘게 뻗어 몸통이 어린 단계보다 작아 보이는 종)
-      if (lim > 0 && r > lim) { const k = Math.sqrt(lim / r); sc *= k; cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 축척 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
-      else if (minA && r < minA) { const k = Math.sqrt(minA / r); sc *= k; cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% → 키움 ×${k.toFixed(2)} → ${(area(cv) / aM * 100).toFixed(0)}%`); }
-      else console.log(`${st.padEnd(7)} 몸 면적 성체의 ${(r * 100).toFixed(0)}% (그대로)`);
-      // 키 상한(길쭉한 종은 면적이 작아도 판 위에 닿아 잘림): 자람 = 성체 키 − 2칸(최대 73) · 어린 = 성체 키의 82% — 잘린 키는 실제보다 작게 재지므로 몇 번 되풀이
-      const top = c => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (c.cm[y * W + x] >= 0) return y; return H; };
-      const hM = P.cy - top(mature), cap = st === 'young' ? Math.floor(hM * 0.82) : Math.min(Math.floor(hM - 2 + ((TUNE[key] || {}).teenCapAdd || 0)), 73);
-      for (let it = 0; it < 6 && P.cy - top(cv) > cap; it++) { sc *= Math.min(0.95, cap / (P.cy - top(cv))); cv = convert(key, { file: f, scale: sc, match: mk ? ref : null, matchK: mk }); }
-      if (sc < mature.s * (lim > 0 && r > lim ? Math.sqrt(lim / r) : minA && r < minA ? Math.sqrt(minA / r) : 1) - 1e-9) console.log(`${st.padEnd(7)} 키 상한 ${cap}칸 → 축척 ${(sc / mature.s).toFixed(2)}배`);
-    }
+    const cv = st === 'mature' ? mature : stageCv(key, st, mature, ref, mk);
     if (!cv) continue;
     if (st !== 'mature') { const S2 = cv.src.S; console.log(`${st.padEnd(7)} 기준 (${S2.cx.toFixed(0)}, ${S2.cy.toFixed(0)}) ${S2.ref} · 몸 축 ${(S2.axis || 0).toFixed(1)}°${S2.rot ? ' → 돌려 세움' : ''}`); }
     const im = paint(cv);
@@ -928,11 +961,11 @@ if (anim) {
   if (fl) for (let k = 0; k < cvs.length; k++) {
     const list = fl.slice(9).split(',').map(Number), st = new Img(4 + list.length * (W * Z + 4), H * Z + 8, '#2e222f');
     list.forEach((f, i) => st.blit(frameOf(k, f, BG), 4 + i * (W * Z + 4), 4, Z));
-    writeFileSync(resolve(here, 'out', 'conv', cvs[k].key + '_frames.png'), st.png());
+    writeFileSync(resolve(here, 'out', 'conv', (cvs[k].outKey || cvs[k].key) + '_frames.png'), st.png());
   }
   // 종마다 크게: GIF 4배 + MP4 8배
   for (let k = 0; k < cvs.length; k++) {
-    const one = Array.from({ length: FR }, (_, f) => frameOf(k, f, BG)), p = resolve(here, 'out', 'conv', cvs[k].key + '_idle'), r = rigs[k];
+    const one = Array.from({ length: FR }, (_, f) => frameOf(k, f, BG)), p = resolve(here, 'out', 'conv', (cvs[k].outKey || cvs[k].key) + '_idle'), r = rigs[k];
     writeFileSync(p + '.gif', encodeGIF(zoom(one, 4, BG), { delay: DT }));
     if (MP4) (await import('./video.mjs')).writeMP4(p + '.mp4', zoom(one, 8, BG), { delay: DT, loops: 4, fps: 20 });
     // 떨림 재기: 장마다 바뀐 칸 수(평균) — 매 장 다시 줄이는 방식의 위험(테두리 칸이 자글자글 끓음) 확인용
@@ -960,10 +993,11 @@ if (args.includes('--export') && cvs.length) {
       const cx = (i % COLS) * W, cy = Math.floor(i / COLS) * H;
       sheet.blit(under, cx, cy); sheet.blit(over, cx, cy + rows * H);
     });
-    writeFileSync(resolve(dir, 'plants', cv.key + '.png'), sheet.png());
+    const okey = cv.outKey || cv.key;   // 단계 묶음은 <키>_<단계>
+    writeFileSync(resolve(dir, 'plants', okey + '.png'), sheet.png());
     const r = rigs[k];
-    writeFileSync(resolve(dir, 'plants', cv.key + '.json'), JSON.stringify({ w: W, h: H, cols: COLS, rows, frames: FR, frameMs: DT * 10, blinkAt: b ?? null, blinkIndex: b != null ? FR : null, base: [BASE_GEO.cx, +BASE_GEO.cy.toFixed(2)], soil: [POT_GEO.cx, +POT_GEO.cy.toFixed(2)], head: [+r.hx.toFixed(1), +r.hy.toFixed(1)], headR: +r.Rh.toFixed(1) }));
-    console.log(`${cv.key.padEnd(13)} 묶음 → ${resolve(dir, 'plants', cv.key + '.png')} · ${N}장${b != null ? '(깜빡임 4장 포함)' : ''}`);
+    writeFileSync(resolve(dir, 'plants', okey + '.json'), JSON.stringify({ w: W, h: H, cols: COLS, rows, frames: FR, frameMs: DT * 10, blinkAt: b ?? null, blinkIndex: b != null ? FR : null, base: [BASE_GEO.cx, +BASE_GEO.cy.toFixed(2)], soil: [POT_GEO.cx, +POT_GEO.cy.toFixed(2)], head: [+r.hx.toFixed(1), +r.hy.toFixed(1)], headR: +r.Rh.toFixed(1) }));
+    console.log(`${okey.padEnd(13)} 묶음 → ${resolve(dir, 'plants', okey + '.png')} · ${N}장${b != null ? '(깜빡임 4장 포함)' : ''}`);
   });
 }
 
