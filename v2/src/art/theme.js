@@ -80,6 +80,30 @@ export const THEMES = {
   },
 };
 
+// 레트로(클로드 직접 시안 — 2026-10-15 사용자 "너무 화려 — 약간 레트로 느낌의 우주선에 투박한 느낌"): 바랜 쇠 테(나사 넷)·짙은 쇳빛 속·
+//   녹색 브라운관 대사 상자(주사선)·올리브 건반 단추(두꺼운 턱)·호박색 강조·LED 에너지 칸·경고 빗금 받침. 경기장 그림 = tools/pixel/big/retro_bg.mjs
+THEMES.retro = {
+  key: 'retro', name: '레트로 화물선', shape: 'chamfer',
+  ink: '#121518', bg: '#21262b', bg2: '#191d21', bgLine: '#2a3035',
+  panel: { fill: '#2a3035', fill2: '#343a3f', frame: '#8f9283', frameHi: '#c9c5ad', frameLo: '#555a54', frameDk: '#21262b', bolt: '#c9c5ad' },
+  deep: { fill: '#191d21', fill2: '#21262b', frame: '#555a54', frameHi: '#787c70', frameLo: '#3b403f', frameDk: '#121518' },
+  msg: { fill: '#14302a', edge: '#787c70', edgeHi: '#aaa995', edgeLo: '#474c49', scan: '#11281f' },
+  btn: {
+    primary: { fill: '#667650', hi: '#869468', hi2: '#a8b088', lo: '#3a4530', ring: '#2c3326', text: '#f2ead0' },
+    gold: { fill: '#dba04a', hi: '#f2c774', hi2: '#fff0c4', lo: '#7a5520', ring: '#4a3214', text: '#2a1a08' },
+    second: { fill: '#656a61', hi: '#8f9283', hi2: '#aaa995', lo: '#3b403f', ring: '#2a3035', text: '#f2ead0' },
+    off: { fill: '#2f3439', hi: '#3a4045', hi2: '#3a4045', lo: '#21262b', ring: '#191d21', text: '#6a6e66' },
+    danger: { fill: '#a0402e', hi: '#c8603e', hi2: '#e89a72', lo: '#6e2a24', ring: '#3f1a14', text: '#f2ead0' },
+    good: { fill: '#667650', hi: '#869468', hi2: '#a8b088', lo: '#3a4530', ring: '#2c3326', text: '#f2ead0' },
+  },
+  text: { main: '#ece4c8', sub: '#aaa995', dim: '#6a6e66', accent: '#dba04a', gold: '#f2c774', bad: '#e0603e', good: '#86d28e' },
+  ptext: { main: '#ece4c8', sub: '#aaa995', dim: '#6a6e66', accent: '#dba04a', gold: '#f2c774', bad: '#e0603e', good: '#86d28e' },
+  mtext: { main: '#9fe0a0', sub: '#4f8a62' },
+  bar: { back: '#121518', hp: ['#86c860', '#c4e8a0', '#3f7a2e'], mid: ['#dba04a', '#f2c774', '#7a5520'], low: ['#d0503a', '#f0907a', '#6e2a24'], exp: ['#dba04a', '#f2c774', '#7a5520'] },
+  pip: { on: '#dba04a', onHi: '#fff0c4', onLo: '#7a5520', off: '#2f3439', offLo: '#191d21', kind: 'led' },
+  pad: { fill: '#474c49', top: '#555a54', rim: '#787c70', edge: '#21262b', glow: '#dba04a', glow2: '#a0402e', hazard: true },
+};
+
 export let T = THEMES.ship;
 export function setTheme(key) { T = THEMES[key] || THEMES.ship; return T; }
 export const VENUE_OF_TIER = { bronze: 'garden', silver: 'garden', gold: 'ship', platinum: 'ship', diamond: 'night', master: 'night', pulloseum: 'night' };
@@ -98,6 +122,18 @@ const fillShape = (g, x, y, w, h, r, col) => (T.shape === 'round' ? rrect(g, x, 
 export function plate(g, x, y, w, h, kind = 'panel') {
   const s = T[kind] || T.panel;
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (T.key === 'retro') {   // 두꺼운 쇠 테(빛 받는 위·왼 밝게, 아래·오른 그늘) + 네 모서리 나사 + 짙은 속
+    cham(g, x, y, w, h, 2, T.ink);
+    cham(g, x + 1, y + 1, w - 2, h - 2, 1, s.frameLo);
+    g.rect(x + 2, y + 1, w - 4, 2, s.frame); g.rect(x + 1, y + 2, 2, h - 4, s.frame);
+    g.rect(x + 2, y + 1, w - 4, 1, s.frameHi);
+    g.rect(x + 3, y + h - 3, w - 5, 1, s.frameLo); g.rect(x + w - 3, y + 3, 1, h - 5, s.frameLo);
+    g.rect(x + 3, y + 3, w - 6, h - 6, s.frameDk);
+    g.rect(x + 4, y + 4, w - 8, h - 8, s.fill);
+    g.rect(x + 4, y + 4, w - 8, 1, s.fill2);
+    if (s.bolt && w > 20 && h > 16) for (const [bx, by] of [[x + 1, y + 1], [x + w - 3, y + 1], [x + 1, y + h - 3], [x + w - 3, y + h - 3]]) { g.rect(bx, by, 2, 2, s.bolt); g.px(bx + 1, by + 1, s.frameLo); }
+    return;
+  }
   if (T.key === 'ship') {
     cham(g, x, y, w, h, 4, T.ink);
     cham(g, x + 1, y + 1, w - 2, h - 2, 3, s.frameLo);
@@ -132,6 +168,16 @@ export const inset = () => (T.key === 'night' ? 3 : 4);
 export function msgBox(g, x, y, w, h) {
   const s = T.msg;
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (T.key === 'retro') {   // 브라운관: 쇠 테두리 + 짙은 녹색 화면 + 주사선 + 구석 나사
+    cham(g, x, y, w, h, 2, T.ink);
+    g.rect(x + 1, y + 1, w - 2, h - 2, s.edgeLo);
+    g.rect(x + 1, y + 1, w - 2, 1, s.edgeHi); g.rect(x + 1, y + 2, 1, h - 4, s.edge);
+    g.rect(x + 3, y + 3, w - 6, h - 6, T.ink);
+    g.rect(x + 4, y + 4, w - 8, h - 8, s.fill);
+    for (let yy = y + 5; yy < y + h - 4; yy += 2) g.rect(x + 4, yy, w - 8, 1, s.scan);
+    for (const bx of [x + 1, x + w - 3]) { g.rect(bx, y + 1, 2, 2, s.edgeHi); g.rect(bx, y + h - 3, 2, 2, s.edgeHi); }
+    return;
+  }
   if (T.key === 'garden') {
     rrect(g, x, y, w, h, 4, T.ink);
     rrect(g, x + 1, y + 1, w - 2, h - 2, 3, s.edgeLo);
@@ -153,6 +199,15 @@ export function msgBox(g, x, y, w, h) {
 // 단추 몸통(글자·아이콘은 ui.button이 얹음). down = 눌림(1칸 내려가고 아래 턱이 사라짐)
 export function btnBody(g, x, y, w, h, st, down = false) {
   const yy = y + (down ? 1 : 0), hh = h - (down ? 1 : 0), lip = down ? 0 : 2;
+  if (T.key === 'retro') {   // 투박한 건반: 두꺼운 아래 턱(3칸) · 위·왼 밝은 비탈 2칸 · 아래·오른 그늘
+    const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
+    cham(g, x, yk, w, hk, 2, T.ink);
+    g.rect(x + 1, yk + 1, w - 2, hk - 2, st.lo);
+    g.rect(x + 1, yk + 1, w - 2, hk - 2 - lp, st.fill);
+    g.rect(x + 2, yk + 1, w - 4, 1, st.hi2); g.rect(x + 2, yk + 2, w - 4, 1, st.hi); g.rect(x + 1, yk + 2, 1, hk - 4 - lp, st.hi); g.rect(x + 2, yk + 3, 1, hk - 6 - lp, st.hi);
+    g.rect(x + w - 2, yk + 2, 1, hk - 4 - lp, st.lo);
+    return { yy: yk, inner: hk - 2 - lp };
+  }
   if (T.key === 'ship') {
     cham(g, x, yy, w, hh, 3, T.ink);
     cham(g, x + 1, yy + 1, w - 2, hh - 2, 2, st.lo);
@@ -190,6 +245,11 @@ export function tpips(g, x, y, cur, max, gap = 8) {
   const P = T.pip;
   for (let i = 0; i < max; i++) {
     const on = i < cur, cx = x + i * gap + 3, a = on ? P.on : P.off, hi = on ? P.onHi : P.off, lo = on ? P.onLo : P.offLo;
+    if (P.kind === 'led') {   // 네모 LED: 검은 틀 + 불빛 + 빛 한 점
+      g.rect(cx - 3, y, 7, 7, T.ink); g.rect(cx - 2, y + 1, 5, 5, lo); g.rect(cx - 2, y + 1, 4, 4, a);
+      if (on) g.px(cx - 1, y + 2, hi);
+      continue;
+    }
     if (P.kind === 'leaf') {   // 잎: 비스듬한 타원 + 잎맥
       for (let j = 0; j < 7; j++) { const hw = [1, 2, 2, 3, 2, 2, 1][j], ox = Math.round((3 - j) * 0.35); g.rect(cx - hw + ox - 1, y + j, hw * 2 + 2, 1, T.ink); }
       for (let j = 1; j < 6; j++) { const hw = [1, 2, 2, 2, 1][j - 1], ox = Math.round((3 - j) * 0.35); g.rect(cx - hw + ox, y + j, hw * 2, 1, a); }
@@ -211,5 +271,11 @@ export function padV(g, cx, cy, rx, mine) {
   g.ellipse(cx, cy - 1, rx - 2, ry - 2, P.fill);
   g.ellipse(cx - Math.round(rx * 0.12), cy - 2, Math.round(rx * 0.7), Math.max(2, ry - 6), P.top);   // 윗면 빛(왼쪽 위)
   if (P.moss) for (const [dx, dy] of [[-0.8, 0.3], [0.7, 0.45], [0.2, 0.7]]) g.rect(Math.round(cx + dx * rx), Math.round(cy + dy * ry), 3, 1, P.moss);
+  if (P.hazard) {   // 레트로: 테두리에 노랑·검정 경고 빗금 고리 + 안쪽 색 띠(내 쪽 호박 · 상대 녹 빨강)
+    const n = Math.round(rx * 6);
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, px = Math.round(cx + Math.cos(a) * (rx - 1)), py = Math.round(cy - 1 + Math.sin(a) * (ry - 1)); g.px(px, py, Math.floor(i / 3) % 2 ? T.ink : '#c09c36'); }
+    g.ellipseRing(cx, cy - 1, rx - 5, Math.max(2, ry - 4), mine ? P.glow : P.glow2, 0);
+    return;
+  }
   g.ellipseRing(cx, cy - 1, rx - 3, ry - 2, mine ? P.glow : P.glow2, 0);
 }
