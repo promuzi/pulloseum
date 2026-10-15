@@ -24,4 +24,6 @@ export const EYES = {
   spark_teen: { box: [[610, 674, 33, 50], [740, 698, 34, 42]], cheek: [676, 714] },
   cactus_fire_young: { box: [[574, 803, 52, 42], [755, 803, 40, 42]], cheek: [630, 830] },
   cactus_fire_teen: { box: [[580, 807, 51, 42], [755, 806, 38, 42]], cheek: [640, 838] },
+  spore_cap_young: { box: [[582, 805, 34, 42], [710, 808, 40, 38]], cheek: [641, 824] },
+  spore_cap_teen: { box: [[594, 775, 29, 40], [694, 788, 30, 29]], cheek: [641, 811] },
 };
