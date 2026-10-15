@@ -27,7 +27,7 @@ const RAD = { 1: 7, 2: 7, 3: 8, 4: 9 };
 // 탐사선(2026-10-15 사용자 "탐사선 누르면 탐사선 모양이 홀로그램처럼 변하는 오버랩 효과와 함께 확대되며 탐사선 강화와 셋팅 UI로"):
 //  지도 가운데 = 내 탐사선(진짜 배 색, 작게). 누르면 ① 밝은 줄이 위에서 아래로 훑으며 지나간 칸부터 홀로그램(오버랩) ② 동시에 커지며 정비 화면 자리로
 //  ③ 바탕은 정비실(짙은 디스플레이·투영기)로 겹쳐 바뀜 → 정비 화면이 이어 받음. 돌아오면 거꾸로(아래에서 위로 훑으며 진짜 배로, 작아지며 지도로).
-const MINI = { sc: 0.26, cy: 194 }, MORPH_MS = 950, BACK_MS = 800;
+const MINI = { sc: 0.246, cy: 194 }, MORPH_MS = 950, BACK_MS = 800;   // 큰 그림 130칸 × 0.246 = 지도용 작은 그림 32칸
 const ease = k => k * k * (3 - 2 * k);
 
 export const explore = {
@@ -42,7 +42,8 @@ export const explore = {
     // 가운데 = 내 탐사선(누르면 정비) — 아래 옅은 빛 고리가 숨 쉬듯 퍼짐(누를 수 있다는 표시)
     const pulse = (t % 1800) / 1800;
     g.ellipseRing(cx, MINI.cy + 16, Math.round(9 + pulse * 7), Math.round(3 + pulse * 2), pulse < 0.6 ? T.text.accent : T.deep.frame, 2);
-    if (!this.morph && !this.unmorph) drawShip(g, cx, MINI.cy + Math.round(Math.sin(t / 700)), MINI.sc, 0, { t });
+    const model = (s.ship && s.ship.model) || 1;
+    if (!this.morph && !this.unmorph) drawShip(g, cx, MINI.cy + Math.round(Math.sin(t / 700)), 1, 0, { t, model, small: true });
     g.text('탐사선', cx, MINI.cy + 22, { color: T.text.sub, align: 'center', outline: T.ink });
     if (!this.morph && !this.unmorph) app.input.hit('ex_ship', cx - 22, MINI.cy - 18, 44, 40, () => { this.morph = { t0: app.t }; });
     // 행성
@@ -93,7 +94,9 @@ export const explore = {
     hangarBack(app, ease(Math.min(1, f * 1.4)));   // 바탕이 정비실로 겹쳐 바뀜
     hud(app, s);
     const cx = Math.round(135 + (SHIP.cx - 135) * zoom), cy = Math.round(MINI.cy + (SHIP.cy - MINI.cy) * zoom), sc = MINI.sc + (SHIP_SC - MINI.sc) * zoom;
-    drawShip(g, cx, cy, sc, dir === 1 ? scan : Math.min(1, f * 1.25), { t, dir });
+    const model = (s.ship && s.ship.model) || 1;
+    if (zoom < 0.04) drawShip(g, cx, cy, 1, 0, { t, model, small: true });   // 막 누른 순간·돌아온 끝 = 지도용 작은 그림
+    else drawShip(g, cx, cy, sc, dir === 1 ? scan : Math.min(1, f * 1.25), { t, dir, model });
     navBar(app, 'explore');
   },
 };

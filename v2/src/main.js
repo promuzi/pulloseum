@@ -6,6 +6,7 @@ import { Input } from './core/input.js';
 import { Router } from './core/router.js';
 import { loadSprites, loadBig, loadBg, loadSmall } from './art/sprites.js';
 import { checkIcons } from './art/icons.js';
+import { loadShips } from './art/ship.js';
 import { toast as drawToast } from './art/ui.js';
 import { mockState } from './data/mock.js';
 import { SCENES } from './scenes/index.js';
@@ -40,7 +41,7 @@ function frame(ts) {
 
 (async () => {
   await loadFonts();
-  const missing = [...await loadSprites(), ...(await loadBig()).map(k => 'v2/' + k), ...(await loadBg()).map(k => 'bg/' + k), ...(await loadSmall()).map(k => 'small/' + k)];
+  const missing = [...await loadSprites(), ...(await loadBig()).map(k => 'v2/' + k), ...(await loadBg()).map(k => 'bg/' + k), ...(await loadSmall()).map(k => 'small/' + k), ...(await loadShips()).map(k => 'ships/' + k)];
   const bad = checkIcons();
   if (missing.length) console.warn('빠진 그림', missing);
   if (bad.length) console.warn('아이콘 오류', bad);
