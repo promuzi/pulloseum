@@ -27,6 +27,7 @@ export const SHOTS = [
   ['03_home_focus', 'home', { focus: true }],
   ['04_bag', 'bag', {}],
   ['05_plant_skill', 'plant', { tab: 'skill' }],
+  ['05_plant_skill_sel', 'plant', { tab: 'skill', sel: '1' }],
   ['06_plant_up', 'plant', { tab: 'up' }],
   ['06_plant_set', 'plant', { tab: 'set' }],
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],

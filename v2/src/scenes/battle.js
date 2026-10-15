@@ -7,6 +7,7 @@ import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx } from '../battle/status.js';
+import { STATUS, SW_ON, swStyle } from '../art/statusLook.js';
 import { button } from '../art/ui.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -65,21 +66,6 @@ function infoBox(app, x0, y0, u, bar, en, mine) {
 //  체력판 바로 아래 한 줄에 셋(45·45·46칸) · 두 줄까지(넘치면 마지막 칸 = +n). 이로운 효과 = 청록 홀로그램 하나로, 해로운 효과 = 효과마다 제 색.
 //  같은 날 사용자 "창에 숫자는 중첩수만, 빙결과 감전도 마찬가지로" → 숫자는 겹침 수가 있는 효과(stack = 최대 겹침)만: 독(5) · 빙결·감전(3 — 다 차면 한 턴 쉬고 0).
 //  남은 턴은 숫자로 안 보임(턴 수는 논의 중). 이름은 두 글자까지(창 폭).
-const STATUS = {
-  guard: { name: '방어', icon: 'shield', buff: true }, evade: { name: '회피', icon: 'speed', buff: true },
-  critReady: { name: '치명', icon: 'crit', buff: true }, initReady: { name: '선공', icon: 'ff', buff: true },
-  atkUp: { name: '공격↑', buff: true }, defDown: { name: '방어↓', col: '#ff6a6a' },
-  burn: { name: '화상', icon: 'fire', col: '#ff7a3a' }, poison: { name: '독', icon: 'poison', col: '#b866ff', stack: 5 },
-  wet: { name: '젖음', icon: 'water', col: '#4f9dff' }, chill: { name: '빙결', icon: 'ice', col: '#c4ecff', stack: 3 },
-  shock: { name: '감전', icon: 'bolt', col: '#ffd84a', stack: 3 }, stun: { name: '기절', icon: 'star', col: '#ff86c8' },
-  bind: { name: '덩굴', icon: 'vine', col: '#6fd25c' }, spore: { name: '포자', icon: 'mushroom', col: '#8fe0b8', stack: 3 },
-  // 쉬는 차례(빙결 3 = 얼음 · 감전 3 = 마비) · 추가 디버프(2026-10-15 사용자 "기생 씨앗·그늘·꽃가루(→ 강풍) 좋아보임, 나머지도 다 넣고") · 버팀(쉬고 난 다음 턴)
-  frozen: { name: '얼음', icon: 'ice', col: '#e8f8ff' }, paral: { name: '마비', icon: 'bolt', col: '#ffe680' },
-  leech: { name: '기생', icon: 'seed', col: '#c8e04a' }, shade: { name: '그늘', icon: 'shade', col: '#a0a3c8' },
-  gale: { name: '강풍', icon: 'wind', col: '#c0a8ff' }, taunt: { name: '도발', icon: 'target', col: '#ff5a5a' },
-  root: { name: '뿌리', icon: 'tree', col: '#c08a5a' }, weak: { name: '약화', icon: 'down', col: '#ff8a8a' },
-  corrode: { name: '부식', icon: 'potion', col: '#b9a04a' }, brace: { name: '버팀', icon: 'lock', buff: true },
-};
 // 전투 사건 문구(이름 = 그 사건 때의 식물)
 const FX_MSG = {
   burn: x => `${ga(x)} 화상을 입었다!`, poison: (x, e) => (e.n > 1 ? `${x}에게 독이 ${e.n}겹 쌓였다!` : `${ga(x)} 독에 걸렸다!`), wet: x => `${ga(x)} 흠뻑 젖었다! 둔해지고 적중·방어가 떨어진다`,
@@ -96,10 +82,6 @@ const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절
 // 2026-10-15 사용자 "넘기기 말고 문구만 뜨고 자동으로 넘기게" — 이 문구가 잠깐 뜬 뒤 턴이 저절로 진행됨(SKIP_AUTO_MS)
 const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서' }, SKIP_AUTO_MS = 1100;
 function skipMsg(sc) { const u = sc.B.me; sc.v.msg = `${ga(u.name)} ${SKIP_STATE[u.eff.skip.src] || ''} 움직일 수 없다!`; }
-const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9', text: '#d8faff', num: '#97e8f7' };
-const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
-const swCache = new Map();
-const swStyle = col => { let s = swCache.get(col); if (!s) swCache.set(col, s = { fill: hexMix(col, '#0a0c18', 0.8), fill2: hexMix(col, '#0a0c18', 0.72), frame: col, frameHi: hexMix(col, '#ffffff', 0.55), frameLo: hexMix(col, '#000000', 0.45), text: hexMix(col, '#ffffff', 0.72), num: hexMix(col, '#ffffff', 0.35) }); return s; };
 const SW_W = 45, SW_H = 16, SW_GAP = 2;
 function statusWins(g, x, y, list) {
   const shown = list.length > 6 ? [...list.slice(0, 5), { more: list.length - 5 }] : list;

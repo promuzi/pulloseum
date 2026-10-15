@@ -4,7 +4,9 @@ import { icon, tinted } from '../art/icons.js';
 import { bigKey } from '../art/sprites.js';
 import { T, btnBody, tbar, holo } from '../art/theme.js';
 import { gradeBadge, STAT_DEF } from './common.js';
-import { STAGE_NAME, CAT_ICON, CAT_NAME } from '../data/mock.js';
+import { STAGE_NAME, CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
+import { kitOf, BASICS } from '../battle/model.js';
+import { fxChip } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
 import { FOCUS, SPK } from './home.js';
 
@@ -13,12 +15,44 @@ import { FOCUS, SPK } from './home.js';
 //  홈이 불을 끄고 다가간 그 카메라 그대로(암실 · 전등 빛기둥 · 의자 위 식물 1.35배) — 위 = 돌아가기·이름·정체성 꼬리표, 아래 = 판이 올라오며 기술 · 강화 · 설정.
 //  돌아가기 = 판이 내려가고 홈이 카메라를 물리며 불을 켬(home.js unfocus).
 const SHEET_Y = 258, IN_MS = 320, OUT_MS = 220;
+// 기술 탭 시안 데이터(규칙 상태로 옮기기 전): 전투 기술 3(식물 기술 둘 + 속성 공통 버프 기술) · 조커 · 지운 기술 · 회귀 주사 수
+const BUFF_SKILL = { fire: ['불타오르기', '분노'], water: ['맑은 물', '정화'], grass: ['광합성', '재생'], earth: ['단단해지기', '철벽'], wind: ['순풍', '가속'], bolt: ['정전기 충전', '집중'], ice: ['얼음 껍질', '보호막'] };
+const JOKER_MOCK = { flower_grass: { id: 'u1', name: '가시 장미', power: 90, cost: 2, el: 'grass', cats: ['attack'], inflict: { id: 'poison', n: 2 } } };
+const FORGOT_MOCK = { flower_grass: [{ id: 'old1', name: '덩굴 새순', power: 60, cost: 1, el: 'grass', cats: ['attack'], inflict: { id: 'bind' } }] };
+function skillSet(p) {
+  if (p._sk) return p._sk;
+  const el = (SPECIES[p.key] || {}).el || 'grass', [bn, bf] = BUFF_SKILL[el] || BUFF_SKILL.grass, own = kitOf(p.key).filter(s => s.id[0] === 's');
+  return (p._sk = { battle: [own[0], own[1], { id: 'b1', name: bn, cost: 1, el, cats: ['buff'], buff: bf }], joker: JOKER_MOCK[p.key] || null, forgot: FORGOT_MOCK[p.key] || [], regress: 2 });
+}
+// 기술 카드: 이름 · 속성 / 분류 · 효과 칩 · 비용. 조커 칸은 금빛 테, 고른 칸은 청록 테
+function skillCard(app, id, x, y, w, h, sk, sel, onTap, joker = false) {
+  const { g, input } = app, down = !!onTap && input.isPressed(id);
+  if (!sk) {
+    holo(g, x, y, w, h, T.deep, 16);
+    g.text(joker ? '빈 조커 칸' : '빈 칸', x + w / 2, y + 11, { font: 'label', color: T.text.dim, align: 'center' });
+  } else {
+    const S = T.btn.second, { yy } = btnBody(g, x, y, w, h, S, down);
+    g.text(sk.name, x + 8, yy + 3, { font: 'label', color: S.text });
+    if (sk.el) g.img(icon(sk.el), x + w - 18, yy + 4);
+    const cat = sk.cats[0];
+    g.img(icon(CAT_ICON[cat]), x + 8, yy + 19);
+    g.text(CAT_NAME[cat], x + 22, yy + 18, { color: S.text });
+    const cx = x + 22 + g.textW(CAT_NAME[cat]) + 8;
+    if (sk.inflict) fxChip(g, cx, yy + 17, sk.inflict.id); else if (sk.buff) fxChip(g, cx, yy + 17, null, sk.buff);
+    if (sk.cost) { g.img(icon('energy'), x + w - 23, yy + 19); g.text(String(sk.cost), x + w - 8, yy + 18, { font: 'label', color: S.text, align: 'right' }); }
+    else g.text('무료', x + w - 8, yy + 18, { color: S.text, align: 'right' });
+  }
+  const fc = sel ? '#97e8f7' : joker ? '#ffd890' : null;
+  if (fc) { g.rect(x - 1, y - 1, w + 2, 1, fc); g.rect(x - 1, y + h, w + 2, 1, fc); g.rect(x - 1, y, 1, h, fc); g.rect(x + w, y, 1, h, fc); }
+  if (onTap) input.hit(id, x, y, w, h, onTap, 2);
+}
 const TABS = [{ id: 'skill', label: '기술' }, { id: 'up', label: '강화' }, { id: 'set', label: '설정' }];
 const ease = k => k * k * (3 - 2 * k);
 
 export const plant = {
   theme: 'loft',
-  enter(p) { this.tab = p.tab || 'skill'; this.t0 = p.focus ? null : -1e9; this.out = null; this.gone = false; },   // 홈 암실 연출에서 왔을 때만 판이 올라옴
+  enter(p) { this.sel = p.sel == null ? null : p.sel === 'j' ? 'j' : +p.sel; this.tab = p.tab || 'skill';   // ?sel = 검토 촬영(고른 칸)
+ this.t0 = p.focus ? null : -1e9; this.out = null; this.gone = false; },   // 홈 암실 연출에서 왔을 때만 판이 올라옴
   draw(app) {
     const { g, W, H, t, state: s } = app;
     const p = s.plants[s.active], key = bigKey(p.key, p.stage), [mx, my] = LOFT_STOOL, pc = loftPlantCy(key);
@@ -84,34 +118,63 @@ export const plant = {
       y += 34;
     });
   },
+  // 기술 탭(2026-10-16 사용자 "기억하는 기술은 전투 칸만큼 — 조커로 하나 보관만 할 수 있게, UI 고민"):
+  //  기본기 셋(늘 있음, 작은 칩) · 전투 기술 3칸(전투에 나감) · 조커 1칸(보관만 — 전투 칸과 자리 바꾸기) ·
+  //  지운 기술(진화 때 새 기술에 밀려 지운 것 → 유전자 회귀 주사(완제품 아이템)로 되돌림). 지금은 시안 데이터(skillSet).
   drawSkill(app, p, y0, live) {
-    const { g, W } = app, P = T.ptext, kit = p.kit || [], known = p.known || kit;
-    g.text('장착한 기술', 14, y0, { font: 'value', color: P.main });
-    g.text(`${kit.length}/6`, W - 14, y0, { font: 'label', color: P.sub, align: 'right' });
-    const cw = Math.floor((W - 28 - 6) / 2), ch = 34;
-    for (let i = 0; i < 6; i++) {
-      const x = 14 + (i % 2) * (cw + 6), y = y0 + 20 + Math.floor(i / 2) * (ch + 4), sk = kit[i];
-      if (!sk) { btnBody(g, x, y, cw, ch, T.btn.off, true); g.text('빈 칸', x + cw / 2, y + 11, { font: 'label', color: T.btn.off.text, align: 'center' }); continue; }
-      const st = T.btn.second;
-      btnBody(g, x, y, cw, ch, st, true);
-      if (sk.el) g.img(icon(sk.el), x + cw - 17, y + 5);
-      g.text(sk.name, x + 7, y + 3, { font: 'label', color: st.text });
-      g.img(icon(CAT_ICON[sk.cats[0]]), x + 7, y + 20);
-      g.text(CAT_NAME[sk.cats[0]], x + 21, y + 19, { color: st.text });
-      if (sk.cost) { g.img(icon('energy'), x + cw - 22, y + 20); g.text(String(sk.cost), x + cw - 7, y + 19, { font: 'label', color: st.text, align: 'right' }); }
-      else g.text('무료', x + cw - 7, y + 19, { color: st.text, align: 'right' });
+    const { g, W } = app, P = T.ptext, S = skillSet(p);
+    // 기본기
+    g.text('기본기', 14, y0 + 1, { font: 'label', color: P.sub });
+    let x = 14 + g.textW('기본기', 'label') + 8;
+    for (const b of BASICS) { const w = 20 + g.textW(b.name); rbox(g, x, y0, w, 16, 4, '#10283c', '#2f5a78'); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, y0 + 2); g.text(b.name, x + 16, y0 + 2, { color: '#cfefff' }); x += w + 4; }
+    // 전투 기술 3칸
+    let y = y0 + 24;
+    g.text('전투 기술', 14, y, { font: 'value', color: P.main });
+    g.text(`${S.battle.filter(Boolean).length}/3`, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' });
+    y += 18;
+    const tap = i => (live ? () => this.pickSlot(app, S, i) : null);
+    for (let i = 0; i < 3; i++) { skillCard(app, 'sk_b' + i, 14, y, W - 28, 34, S.battle[i], this.sel === i, tap(i)); y += 38; }
+    // 조커 1칸
+    y += 4;
+    g.text('조커', 14, y, { font: 'value', color: '#ffd890' });
+    g.text('보관만 — 전투엔 안 나가요', 14 + g.textW('조커', 'value') + 8, y + 2, { color: P.sub });
+    y += 18;
+    skillCard(app, 'sk_j', 14, y, W - 28, 34, S.joker, this.sel === 'j', tap('j'), true);
+    y += 40;
+    if (this.sel != null) g.text(this.sel === 'j' ? '바꿀 전투 칸을 눌러요' : '조커 칸을 누르면 자리를 바꿔요', W / 2, y - 3, { color: '#97e8f7', align: 'center' });
+    // 지운 기술 + 회귀 주사
+    y += 12;
+    g.text('지운 기술', 14, y, { font: 'value', color: P.main });
+    g.img(icon('potion'), W - 92, y + 1);
+    g.text(`회귀 주사 ${S.regress}`, W - 14, y + 1, { font: 'label', color: '#c8f4ff', align: 'right' });
+    y += 18;
+    for (const sk of S.forgot) {
+      if (y > app.H - 28) break;
+      holo(g, 12, y, W - 24, 26, T.deep, 16);
+      g.text(sk.name, 20, y + 6, { font: 'label', color: T.text.dim });
+      if (sk.inflict) fxChip(g, 24 + g.textW(sk.name, 'label'), y + 5, sk.inflict.id);
+      button(app, 'sk_back_' + sk.id, W - 84, y + 3, 66, 20, '되돌리기', { style: 'night', font: 'label', disabled: !S.regress, onTap: live ? () => this.regress(app, S, sk) : null });
+      y += 30;
     }
-    let y = y0 + 20 + 3 * (ch + 4) + 4;
-    g.text('익힌 기술', 14, y, { font: 'value', color: P.main }); y += 19;
-    for (const sk of known) {
-      if (y > app.H - 26) break;
-      const locked = !!sk.lock;
-      holo(g, 12, y, W - 24, 24, T.deep, 16);
-      g.img(icon(locked ? 'lock' : CAT_ICON[sk.cats[0]]), 19, y + 7);
-      g.text(sk.name, 35, y + 5, { font: 'label', color: locked ? T.text.dim : '#e4fbff' });
-      g.text(locked ? sk.lock + ' 배움' : '장착됨', W - 20, y + 5, { color: locked ? T.text.dim : '#97e8f7', align: 'right' });
-      y += 27;
-    }
+  },
+  // 칸 고르기: 전투 칸 ↔ 조커 자리 바꾸기(같은 칸을 다시 누르면 취소)
+  pickSlot(app, S, i) {
+    if (this.sel == null) { this.sel = i; return; }
+    if (this.sel === i) { this.sel = null; return; }
+    const a = this.sel, b = i;
+    if (a !== 'j' && b !== 'j') { this.sel = i; return; }   // 전투 칸끼리는 고르기만 옮김
+    const bi = a === 'j' ? b : a;
+    [S.battle[bi], S.joker] = [S.joker, S.battle[bi]];
+    this.sel = null;
+    app.toast('조커와 자리를 바꿨어요');
+  },
+  // 되돌리기: 빈 전투 칸 → 빈 조커 칸 순서로, 다 차 있으면 안내
+  regress(app, S, sk) {
+    if (!S.regress) return;
+    const hole = S.battle.findIndex(x => !x);
+    if (hole >= 0) S.battle[hole] = sk; else if (!S.joker) S.joker = sk; else { app.toast('칸이 다 찼어요 — 하나를 비우고 되돌려요'); return; }
+    S.forgot = S.forgot.filter(x => x !== sk); S.regress--;
+    app.toast(`${sk.name} — 유전자 회귀 주사로 되돌렸어요`);
   },
   // 설정: 이름 · 화분 · 동면 보관(첫 판 = 자리만, 실제 동작은 게임 규칙 상태로 옮길 때)
   drawSet(app, p, y0, live) {
