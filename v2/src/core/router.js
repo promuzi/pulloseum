@@ -13,6 +13,8 @@ const GUN = { hi: '#7d8696', a: '#555d6c', b: '#3b424f', c: '#2b313b', d: '#2025
 export const TRANSITIONS = {
   dither: { close: 110, hold: 0, open: 110 },
   shutter: { close: 260, hold: 210, open: 280, metal: true },
+  shutterClose: { close: 260, hold: 210, open: 0, metal: true },   // 닫고 끝(다음 화면 = 닫힌 셔터 위 매칭 대기)
+  shutterOpen: { close: 0, hold: 90, open: 300, metal: true },     // 닫힌 채로 시작해 열기만(매칭 대기 → 전투)
   doors: { close: 220, hold: 170, open: 240, metal: true },
   iris: { close: 260, hold: 140, open: 260, metal: true },
   pixel: { close: 260, hold: 60, open: 260 },
@@ -86,6 +88,16 @@ function heavyPlate(g, x, y, w, h, edge) {
   g.rect(x, top ? ly : ly + L - 3, w, 3, GUN.seal);   // 고무 띠(닿는 날)
   for (let xx = x + 12; xx < x + w - 6; xx += 26) { const by = ly + (top ? 7 : 5); g.rect(xx, by, 3, 3, GUN.bolt); g.px(xx + 2, by + 2, GUN.boltLo); g.px(xx, by, '#c8d0dc'); }
 }
+// 다 닫힌 셔터(매칭 대기 화면 바탕): 위·아래 판이 가운데서 맞물림 + 양옆 레일 + 이음매 고무 띠
+export function drawShutterClosed(g, W, H) {
+  const half = Math.ceil(H / 2);
+  heavyPlate(g, 0, 0, W, half, 'bottom');
+  heavyPlate(g, 0, half, W, H - half + 1, 'top');
+  g.rect(0, 0, 5, H, GUN.rail); g.rect(4, 0, 1, H, GUN.railHi); g.rect(W - 5, 0, 5, H, GUN.rail); g.rect(W - 5, 0, 1, H, GUN.railHi);
+  g.rect(0, half - 2, W, 4, GUN.seal);
+  return half;
+}
+export { GUN };
 // 묵직하게 닿을 때 이음매에서 양옆으로 퍼지는 먼지(회색 점)
 function dust(g, W, cy, hold) {
   const k = hold / 200;
@@ -111,6 +123,8 @@ const DRAW = {
     g.rect(0, 0, 5, H, GUN.rail); g.rect(4, 0, 1, H, GUN.railHi); g.rect(W - 5, 0, 5, H, GUN.rail); g.rect(W - 5, 0, 1, H, GUN.railHi);   // 양옆 레일
     if (k >= 1) { g.rect(0, half - 2 + s, W, 4, GUN.seal); sparks(g, W / 2, half, hold, true); if (hold >= 0 && hold < 200) dust(g, W, half + s, hold); }
   },
+  shutterClose: (g, W, H, k, hold, t) => DRAW.shutter(g, W, H, k, hold, t),
+  shutterOpen: (g, W, H, k, hold, t) => DRAW.shutter(g, W, H, k, -1, t),   // 여는 쪽은 쾅 흔들림·불꽃 없이
   doors: (g, W, H, k, hold) => {
     const s = shake(hold), half = Math.ceil(W / 2);
     plate(g, -half + half * k + s, 0, half, H, 'right');
