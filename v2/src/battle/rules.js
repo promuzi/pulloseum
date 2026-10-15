@@ -3,7 +3,7 @@
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
-import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, onHit } from './status.js';
+import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, onHit, selfBuff, healK, has, listOf } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -116,6 +116,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       ev.push({ t: 'stance', who: u.id, kind: a.act, id: a.id, active: ok, repeat: rep });
       continue;
     }
+    const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }); };   // 나에게 거는 버프(버프 기술 · 공격 기술 덤)
+    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); continue; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }
     // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
     const still = !mustSkip(foe) && !skipped.has(foe);
@@ -132,11 +134,16 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const hitDmg = (x, y, sk, el) => baseDamage({ atk: x.atk * atkK(x) }, { def: y.def * defK(y) }, sk, el) * dmgTakenK(y);
     let dmg = Math.round(hitDmg(u, foe, a, o.elemMult ? o.elemMult(u, foe) : 1) * RULES.tierMult[tier] * (guardOn ? 1 - (1 - (d.guardMult ?? 0.5)) * rep : 1));
     if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
+    let absorb = 0;   // 보호막이 먼저 막음
+    if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; if (sh.hp <= 0) delete foe.eff.shield; }
     foe.hp = Math.max(0, foe.hp - dmg);
     foe.st.critTaken = tier === 'crit';
-    ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area });
+    ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, absorb, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, list: absorb ? listOf(foe) : undefined });
+    if (tier !== 'miss' && dmg > 0 && a.drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * a.drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
+    if (tier !== 'miss' && dmg > 0 && has(foe, 'thorns') && a.contact !== false && !a.ranged && !a.area && u.hp > 0) { const rd = Math.max(1, Math.round(dmg * 0.3)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 반사(가시)
     // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자)
     if (tier !== 'miss') onHit(u, foe, a, { turn: T, rng, ev });
+    if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침)
     const avoided = evadeOn && (tier === 'miss' || tier === 'graze');
     if (avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {

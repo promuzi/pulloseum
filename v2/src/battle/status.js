@@ -29,12 +29,23 @@ export const FX = {
   weak:    { turns: 2, atkK: 0.8 },                           // 공격 −20%
   corrode: { turns: 2, defK: 0.6 },                           // 방어 −40%
   spore:   { jong: 'mushroom', stack: 3, bloom: 0.08 },      // 버섯 종 전용: 붙은 다음 턴부터 턴 끝마다 1씩 자라 3이면 피어남(최대 체력 8% 피해 + 그 턴 에너지 안 참) → 0 · 불에 맞으면 탐
-  choke:   { turns: 0 },                                      // (포자가 피어 숨이 막힘 — 그 턴 끝 에너지 +1 없음, 창에는 안 보임)
+  choke:   { turns: 0 },
+  // 버프(2026-10-16 — 기술 체계 문서 §3 짝: 불 분노 · 물 정화 · 풀 재생 · 대지 철벽 · 바람 가속 · 번개 집중 · 빙결 보호막 · 선인장 반사). 겹치지 않고 다시 걸면 새로
+  rage:    { buff: true, turns: 3, atkK: 1.25 },             // 분노: 공격 +25%
+  wall:    { buff: true, turns: 2, dmgK: 0.8 },              // 철벽: 받는 피해 −20%
+  haste:   { buff: true, turns: 2, mob: 1.3 },               // 가속: 기동성 +30%(선공 · 회피)
+  regen:   { buff: true, left: 3, heal: 0.05 },              // 재생: 턴 끝 3번 최대 체력 5% 회복(화상이면 절반, 그늘이면 멈춤)
+  thorns:  { buff: true, turns: 2, reflect: 0.3 },           // 반사: 붙어서 때린 상대에게 받은 피해 30%(멀리서 · 범위는 안 됨)
+  shield:  { buff: true, turns: 3, hp: 0.15 },               // 보호막: 최대 체력 15%만큼 먼저 막음
+  purified:{ buff: true, turns: 1 },                         // 정화: 나쁜 효과를 다 지우고 다음 턴까지 안 걸림
+  focus:   { buff: true },                                   // 집중: 다음 공격 치명 +25(u.st.nextCrit — 회피 성공 보상 '치명 준비'와 같은 칸)                                      // (포자가 피어 숨이 막힘 — 그 턴 끝 에너지 +1 없음, 창에는 안 보임)
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
 export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
 const SKIP_IDS = ['stun', 'chill', 'shock'];
-const TIMED = ['wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke'];
+const TIMED = ['wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke', 'rage', 'wall', 'haste', 'thorns', 'shield', 'purified'];
+const BUFFS = ['rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
+const DEBUFFS = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'choke'];
 const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode'];
 
 const E = u => (u.eff ||= {});
@@ -46,6 +57,7 @@ export function mobK(u) {
   let k = 1;
   if (has(u, 'wet')) k *= FX.wet.mob;
   if (has(u, 'chill') || has(u, 'frozen')) k *= FX.chill.mob;
+  if (has(u, 'haste')) k *= FX.haste.mob;
   return k;
 }
 export const effSpd = u => (u.spd || 1) * mobK(u);
@@ -54,9 +66,9 @@ export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
-export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1);
+export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1) * (has(u, 'rage') ? FX.rage.atkK : 1);
 export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1);
-export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1);
+export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1) * (has(u, 'wall') ? FX.wall.dmgK : 1);
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
 export const mustSkip = u => has(u, 'skip');
@@ -76,6 +88,8 @@ export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.bind &&
 export function listOf(u) {
   const e = (u && u.eff) || {}, out = [];
   if (e.brace) out.push({ id: 'brace' });
+  for (const k of BUFFS) if (e[k]) out.push({ id: k });
+  if (u && u.st && u.st.nextCrit) out.push({ id: 'focus' });
   if (e.skip) out.push({ id: e.skip.src });
   else if (e.frozen) out.push({ id: 'frozen' });
   for (const k of ORDER) if (e[k]) out.push(e[k].n ? { id: k, n: e[k].n } : { id: k });
@@ -103,6 +117,7 @@ export function apply(tgt, id, n, ctx) {
   const D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id };
   if (!D || tgt.hp <= 0) return;
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
+  if (!D.buff && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 중엔 나쁜 효과가 안 걸림
   if (SKIP_IDS.includes(id) && (e.brace || e.skip)) { ev.push({ t: 'resist', ...base, why: e.brace ? 'brace' : 'skip' }); return; }
   if (id === 'poison') {
     const p = e.poison ||= { n: 0, last: T };
@@ -140,13 +155,29 @@ function bloom(u, turn, ev) {
   delete e.spore; e.choke = { exp: turn };
   ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, list: listOf(u) });
 }
+// 나에게 버프 걸기(버프 기술 또는 공격 기술의 덤)
+export function selfBuff(u, id, ctx) {
+  const e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
+  if (id === 'focus') { u.st = u.st || { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null }; u.st.nextCrit = Math.max(u.st.nextCrit || 0, 25); ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
+  if (id === 'purify') {
+    const gone = DEBUFFS.filter(k => e[k]);
+    for (const k of gone) delete e[k];
+    e.purified = { exp: T + FX.purified.turns };
+    ctx.ev.push({ t: 'fx', ...base, id: 'purified', ids: gone, list: listOf(u) }); return;
+  }
+  const D = FX[id]; if (!D) return;
+  if (id === 'regen') e.regen = { left: D.left };
+  else if (id === 'shield') e.shield = { exp: T + D.turns, hp: Math.max(1, Math.round(u.max * D.hp)) };
+  else e[id] = { exp: T + D.turns };
+  ctx.ev.push({ t: 'fx', ...base, list: listOf(u) });
+}
 // 맞았을 때(빗나감이 아니면): ① 공격 속성 연계 ② 기술 효과
 export function onHit(att, tgt, skill, ctx) {
   if (tgt.hp <= 0) return;
   const e = E(tgt), ev = ctx.ev;
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
-    const gone = ['frozen', 'chill', 'wet', 'spore'].filter(k => e[k]);
+    const gone = ['frozen', 'chill', 'wet', 'spore', 'bind', 'leech', 'root'].filter(k => e[k]);   // 불이 얼음·냉기·물기·포자 + 덩굴·기생 씨앗·뿌리(식물로 묶은 것)를 태움
     if (e.skip && e.skip.src === 'frozen') { delete e.skip; if (!gone.includes('frozen')) gone.unshift('frozen'); }   // 얼음이 녹으면 쉬기도 풀림
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
@@ -180,6 +211,10 @@ export function endTurn(pairs, turn, ev) {
       if (opp && opp.hp > 0) { const before = opp.hp; opp.hp = Math.min(opp.max, opp.hp + Math.round(take * healK(opp))); heal = opp.hp - before; }
       if (--e.leech.left <= 0) delete e.leech;
       ev.push({ t: 'drain', who: u.id, name: u.name, to: opp ? opp.id : null, toName: opp ? opp.name : '', dmg: take, heal, list: listOf(u), list2: opp ? listOf(opp) : null });
+    }
+    if (e.regen && u.hp > 0) {   // 재생: 그늘이면 멈춤(햇빛이 없음), 화상이면 절반
+      if (!e.shade) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
+      if (--e.regen.left <= 0) { delete e.regen; ev.push({ t: 'expire', who: u.id, ids: ['regen'], list: listOf(u) }); }
     }
     if (e.spore && u.hp > 0 && e.spore.last < turn) {   // 포자는 붙은 다음 턴부터 턴 끝마다 스스로 자람(자리 잡는 데 한 턴)
       e.spore.n += 1;

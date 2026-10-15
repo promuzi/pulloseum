@@ -76,9 +76,15 @@ export function closeTurn(pair, turn, ev, gain) {
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {
-  const T = B.turn;
   const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill) ? mySkill : B.me.kit[0];
   const foeSkill = mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
+  return playTurnVs(B, me, foeSkill);
+}
+// 두 쪽이 다 고른 한 턴(PvP — 서버가 두 사람 선택으로 풂, 봇 판도 이걸 씀). 기술은 id 또는 기술 객체
+export function playTurnVs(B, mySkill, foeSkill) {
+  const T = B.turn, pickOf = (u, s) => { const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k) ? k : u.kit[0]; };
+  const me = pickOf(B.me, mySkill);
+  foeSkill = pickOf(B.foe, foeSkill);
   const before = { me: B.me.hp, foe: B.foe.hp };
   B.me.energy -= me.cost || 0; B.foe.energy -= foeSkill.cost || 0;
   B.me.curEl = me.el; B.foe.curEl = foeSkill.el;

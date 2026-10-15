@@ -3,7 +3,7 @@
 import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST } from '../../v2/src/battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, RULES_FX } from '../../v2/src/battle/status.js';
+import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, RULES_FX } from '../../v2/src/battle/status.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 
 let fails = 0, n = 0;
@@ -217,6 +217,60 @@ const fixed = v => () => v;
   ok(!c.eff.spore && fe.some(e => e.t === 'cure' && e.ids.includes('spore')), '불에 맞으면 포자가 탐');
   const m = mk('foe', 'spore_cap'), me2 = []; apply(m, 'spore', 1, ctx(a, 1, me2));
   ok(!m.eff.spore && me2.some(e => e.t === 'immune'), '버섯은 포자에 안 걸림');
+}
+// ── 9-2. 버프: 분노·철벽·가속·재생·반사·보호막·정화·집중 ──
+{
+  const sb = (u, id, t = 1, ev = []) => selfBuff(u, id, { turn: t, ev });
+  const hitOf = (x, y, s = x.kit[0]) => resolveTurn(x, y, s, REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit');
+  const plain = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).dmg;
+  const r = mk('me', 'gaia'); sb(r, 'rage');
+  const rd = hitOf(r, mk('foe', 'aqua')).dmg;
+  ok(rd > plain, `분노 = 주는 피해 ↑ (${plain} → ${rd})`);
+  const w = mk('foe', 'aqua'); sb(w, 'wall');
+  const wd = hitOf(mk('me', 'gaia'), w).dmg;
+  ok(wd < plain, `철벽 = 받는 피해 ↓ (${plain} → ${wd})`);
+  const h = mk('me', 'gaia'), s0 = effSpd(h); sb(h, 'haste');
+  ok(effSpd(h) > s0, '가속 = 기동성 ↑');
+  const x = mk('foe', 'aqua');
+  const g = mk('me', 'gaia'); g.hp = Math.round(g.max / 2); sb(g, 'regen');
+  const ev1 = []; endTurn([[g, x]], 1, ev1);
+  const rg = ev1.find(e => e.t === 'regen');
+  ok(rg && rg.heal === Math.round(g.max * 0.05), '재생 = 턴 끝 5% 회복');
+  endTurn([[g, x]], 2, []); endTurn([[g, x]], 3, []);
+  ok(!g.eff.regen, '재생은 3번 뒤 끝');
+  const g2 = mk('me', 'gaia'); g2.hp = 10; sb(g2, 'regen'); apply(g2, 'shade', 1, ctx(x, 1, []));
+  const ev2 = []; endTurn([[g2, x]], 1, ev2);
+  ok(!ev2.some(e => e.t === 'regen'), '그늘이면 재생 멈춤');
+  const g3 = mk('me', 'gaia'); g3.hp = Math.round(g3.max / 2); sb(g3, 'regen'); apply(g3, 'burn', 1, ctx(x, 1, []));
+  const ev3 = []; endTurn([[g3, x]], 1, ev3);
+  ok((ev3.find(e => e.t === 'regen') || {}).heal === Math.round(g3.max * 0.05 * 0.5), '화상이면 재생 절반');
+  const th = mk('foe', 'aqua'); sb(th, 'thorns');
+  const att = mk('me', 'gaia'), hp0 = att.hp;
+  const evT = resolveTurn(att, th, att.kit[0], REST, fixed(0.5), { turn: 1 }).events;
+  const hT = evT.find(e => e.t === 'hit'), rf = evT.find(e => e.t === 'reflect');
+  ok(rf && rf.dmg === Math.max(1, Math.round(hT.dmg * 0.3)) && hp0 - att.hp === rf.dmg, '반사 = 붙어서 때리면 30% 되돌림');
+  const th2 = mk('foe', 'aqua'); sb(th2, 'thorns'); const att2 = mk('me', 'gaia');
+  const evT2 = resolveTurn(att2, th2, { ...att2.kit[0], ranged: true }, REST, fixed(0.5), { turn: 1 }).events;
+  ok(!evT2.some(e => e.t === 'reflect'), '멀리서 때리면 반사 없음');
+  const sh = mk('foe', 'aqua'); sb(sh, 'shield'); const cap = sh.eff.shield.hp;
+  ok(cap === Math.round(sh.max * 0.15), '보호막 = 최대 체력 15%');
+  const hS = hitOf(mk('me', 'gaia'), sh);
+  ok(hS.absorb === Math.min(cap, plain) && hS.dmg === plain - hS.absorb, '보호막이 먼저 막음');
+  const p = mk('me', 'gaia'); apply(p, 'poison', 1, ctx(x, 1, [])); apply(p, 'wet', 1, ctx(x, 1, []));
+  sb(p, 'purify');
+  ok(!p.eff.poison && !p.eff.wet && p.eff.purified, '정화 = 나쁜 효과 다 지움');
+  const evR = []; apply(p, 'burn', 1, ctx(x, 2, evR));
+  ok(!p.eff.burn && evR.some(e => e.t === 'resist'), '정화 중엔 안 걸림');
+  const f = mk('me', 'gaia'); sb(f, 'focus');
+  ok(f.st.nextCrit === 25 && listOf(f).some(o => o.id === 'focus'), '집중 = 다음 공격 치명 +25');
+  const tc0 = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).table, tc1 = hitOf(f, mk('foe', 'aqua')).table;
+  ok(tc1.crit > tc0.crit && !f.st.nextCrit, '집중은 한 번 쓰면 사라짐');
+  const bs = { id: 'x_rage', name: '불타오르기', el: 'fire', act: 'buff', self: 'rage', cost: 0, cats: ['buff'] };
+  const u = mk('me', 'gaia'), evB = resolveTurn(u, mk('foe', 'aqua'), bs, REST, fixed(0.5), { turn: 1 }).events;
+  ok(evB.some(e => e.t === 'cast') && u.eff.rage, '버프 기술 = 나에게 걸림');
+  const u2 = mk('me', 'gaia');
+  resolveTurn(u2, mk('foe', 'aqua'), { ...u2.kit[0], also: 'haste' }, REST, fixed(0.5), { turn: 1 });
+  ok(u2.eff.haste, '공격 기술의 덤 버프');
 }
 // ── 9. 같은 씨앗 → 같은 결과 ──
 const runPair = (k1, k2, seed, off = false) => {
