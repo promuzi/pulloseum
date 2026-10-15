@@ -10,7 +10,7 @@ function infoBox(app, x, y, u, mine) {
   const { g } = app;
   panel(g, x, y, 132, mine ? 46 : 60, 'night');
   let yy = y + 5;
-  if (!mine) { g.text(`${u.trainer} · ${u.temper}`, x + 7, yy, { color: C.mute }); yy += 14; }
+  if (!mine) { g.text(`${u.trainer} · ${u.rank}`, x + 7, yy, { color: C.mute }); yy += 14; }   // 봇·사람 구분 없이 같은 정보만(성향·다음 수 경고 없음 — 2026-10-15 사용자)
   g.text(u.name, x + 7, yy, { font: 'bold', color: C.white });
   g.img(icon(u.el), x + 132 - 18, yy);
   yy += 15;
@@ -65,7 +65,7 @@ export const battle = {
     g.clip(0, AY, W, AH, () => {
       arena1(g, 0, AY, W, AH, t);
       const ex = W - 76, ey = AY + 142, px = 76, py = AY + AH - 46, shake = hit ? 2 : 0;
-      pad1(g, ex, ey, 40, st.foe.warn ? C.gold : null);
+      pad1(g, ex, ey, 40, null);
       pad1(g, px, py, 42, C.teal3);
       drawBig(g, st.foe.key, st.foe.pot, ex + shake, ey, { t, phase: 1600, flip: true, flash: !!hit });
       drawBig(g, st.me.key, st.me.pot, px + (hit ? 4 : 0), py, { t });
@@ -86,7 +86,6 @@ export const battle = {
     // 상태판
     infoBox(app, 6, AY + 6, st.foe, false);
     infoBox(app, W - 138, AY + AH - 58, st.me, true);
-    if (st.foe.warn) { g.img(icon('warn'), 6 + 132 + 4, AY + 10); }
     // 판정 띠(행동 중)
     if (hit) {
       const my = st.kit.find(k => k.id === st.picked);

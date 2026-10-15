@@ -61,7 +61,7 @@ export function mockBattle(phase = 'pick') {
   return {
     phase, turn: phase === 'pick' ? 1 : 2, round: '예선', roundNo: 2, bestOf: 5, wins: 1,
     me: { key: 'flower_grass', name: '페탈로즈', el: 'grass', pot: 'pot_terra', hp: 100, max: 100, energy: 2, energyMax: 8, trainer: '재배사' },
-    foe: { key: 'vine_water', name: '신참 타이드바인', el: 'water', pot: 'pot_terra', hp: phase === 'pick' ? 112 : 48, max: 112, energy: 3, energyMax: 8, trainer: '코스모싹', temper: '책략', warn: phase === 'pick' },
+    foe: { key: 'vine_water', name: '타이드바인', el: 'water', pot: 'pot_terra', hp: phase === 'pick' ? 112 : 48, max: 112, energy: 3, energyMax: 8, trainer: '코스모싹', rank: '브론즈 2' },
     kit: KIT_PETAL,
     picked: 'a',
     hit: phase === 'hit' ? { side: 'foe', dmg: 64, mult: 1.5 } : null,
