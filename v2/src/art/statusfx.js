@@ -8,9 +8,10 @@
 //  · 도트 그림에 맞게 그림 1화소 = 1칸으로만 그림(매끈한 흐림 없이, 색 몇 개) — GodotCon 2026 '도트 그림 절차 효과'(잡음 · 색 줄이기)
 import { plantLayer } from './sprites.js';
 
-export const SFX_LIFE = { burn: 1150, poison: 900, shock: 700, paral: 800, chill: 900, frozen: 1050, wet: 900, stun: 1150, spore: 800, bloom: 1000, steam: 800 };
+export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, paral: 800, chill: 900, frozen: 1050, wet: 900, stun: 1150, spore: 800, bloom: 1000, steam: 800 };
 // 사건 → 연출: 걸릴 때(fx) · 턴 끝 피해(tick) · 피어남(bloom) · 쉬는 차례(skip: 얼음 · 마비 · 기절) · 풀림(cure = 김)
-export const SFX_OF_FX = { burn: 'burn', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore' };
+//  화상: 걸릴 때 = ignite(불이 확 붙어 일렁이다 잦아듦 + 타닥), 턴 끝 피해 = burn(불꽃이 잠깐 다시 솟음 + 타닥)
+export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore' };
 export function sfxAdd(list, who, kind, t) { if (SFX_LIFE[kind]) list.push({ who, kind, t0: t, id: (list.n = (list.n || 0) + 1) }); }
 export const sfxAlive = (list, t) => list.filter(e => t - e.t0 < SFX_LIFE[e.kind]);
 
@@ -67,40 +68,70 @@ function picks(e, S, n, filter, salt) {
   return (e[key] = out);
 }
 
-// ── 화상: 타닥타닥(2026-10-16 사용자 "화상만 좀 바꿔줘 그냥 타닥타닥 거리는 걸로" — 타들어가는 띠 · 그을림은 뺌) ──
-//  식물 여기저기서 불똥이 두 번씩 짝지어 톡톡 터지고(번쩍 → 불티 네댓 개가 튀어 떨어짐), 작은 불꽃 셋이 깜빡, 터질 때마다 식물에 불빛이 일렁
+// ── 화상: 불이 붙어 일렁이는 불꽃 + 타닥타닥(2026-10-16 사용자 "화상만 그냥 타닥타닥 거리는 걸로" → "타닥 효과가 작거나 연해, 불이 붙은 연출도 넣어줘") ──
+//  걸릴 때(ignite) = 식물 윗면 여러 자리에서 불꽃이 확 솟아(0.15초) 일렁이다 잦아듦 · 턴 끝 피해(burn) = 불꽃이 잠깐 다시 솟음(작게)
+//  타닥 = 불똥이 짝지어 터짐(흰 가운데 + 세 칸 갈래 번쩍 · 둘레 빛 → 불티 여덟이 위 · 옆으로 튀었다 떨어짐) · 그동안 식물이 주황 불빛으로 일렁
 const FIRE = ['#fff3c4', '#ffc23a', '#ff6a1a', '#c8281e'];
-const POPS = [0, 75, 300, 380, 560, 625, 770];   // 타닥 · 타닥 · 타닥 · 탁(짝지어 불규칙하게)
-function burn(g, L, S, e, age) {
-  const at = k => POPS[k] + Math.round((hash(e.id, k + 40) - 0.5) * 40);
-  // 터질 때마다 식물 전체가 주황 불빛으로 잠깐 물듦
+const POPS = { ignite: [40, 110, 300, 370, 540, 610, 790, 850, 1020], burn: [0, 75, 300, 380, 560, 625, 770] };   // 타닥 · 타닥 …(짝지어 불규칙하게)
+// 불꽃 한 줄기(도트): 밑이 넓고 끝이 가는 모양 · 위로 갈수록 흔들림 · 속 흰빛/노랑 → 주황 → 가장자리 · 끝 빨강
+function flame(g, x, y, W, H, ph, a) {
+  for (let d = 0; d < H; d++) {
+    const r = d / H, w = Math.max(1, Math.round(W * (1 - r ** 1.35))), x0 = x - Math.floor(w / 2) + Math.round(Math.sin(ph + d * 0.55) * r * 1.8);
+    for (let c = 0; c < w; c++) {
+      const edge = c === 0 || c === w - 1, col = r > 0.78 ? '#c8281e' : edge ? (r > 0.5 ? '#c8281e' : '#ff6a1a') : r < 0.22 ? '#fff3c4' : r < 0.5 ? '#ffe08a' : '#ffc23a';
+      dot(g, x0 + c, y - d, col, a);
+    }
+  }
+}
+// 불꽃 자리: 그림 가로를 n칸으로 나눠 칸마다 가장 위쪽 '윗면이 빈' 칸(머리 · 잎 끝) — 식물 전체에 고르게 붙음
+function flameSpots(e, L, S, n) {
+  if (e.fs) return e.fs;
+  const best = new Array(n).fill(-1), span = Math.max(1, S.x1 - S.x0 + 1);
+  for (const i of S.op) {
+    if (S.H[i] < 0.18 || S.alpha(i - L.w)) continue;
+    const x = i % L.w, b = Math.min(n - 1, Math.floor(((x - S.x0) / span) * n));
+    if (best[b] < 0 || Math.floor(i / L.w) < Math.floor(best[b] / L.w)) best[b] = i;
+  }
+  return (e.fs = best.filter(i => i >= 0));
+}
+function burn(g, L, S, e, age, ignite) {
+  const P = ignite ? POPS.ignite : POPS.burn, life = ignite ? SFX_LIFE.ignite : SFX_LIFE.burn, at = k => P[k] + Math.round((hash(e.id, k + 40) - 0.5) * 40);
+  const up = ignite ? cl(age / 150) * cl((life - 260 - age) / 380) : cl(age / 120) * cl((780 - age) / 300);   // 불꽃 세기(솟음 → 일렁 → 잦아듦)
+  // 식물이 주황 불빛으로 일렁(불꽃이 있는 동안 + 터질 때마다 더 밝게)
   let flick = 0;
-  for (let k = 0; k < POPS.length; k++) { const a = age - at(k); if (a >= 0 && a < 180) flick = Math.max(flick, 1 - a / 180); }
-  if (flick > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#ff7a2a', 0.26 * flick); blit(g, L, ov); }
-  // 작은 불꽃 셋: 윗면이 빈 칸 위에 2칸 폭 · 2~5칸 높이(밑 노랑 → 주황 → 끝 빨강), 70ms마다 높이 · 켜짐이 바뀜
-  const fl = picks(e, S, 3, i => S.H[i] > 0.2 && !S.alpha(i - L.w), 8), fb = Math.floor(age / 70);
-  if (age > 40 && age < 900) fl.forEach((i, k) => {
-    if (hash(k + 11, fb) > 0.82) return;
-    const [x, y] = scr(L, i % L.w, Math.floor(i / L.w)), hgt = 2 + Math.floor(hash(k + 3, fb) * 4), lean = hash(k, fb) < 0.5 ? -1 : 1;
-    for (let d = 0; d < hgt; d++) { const col = FIRE[Math.min(3, 1 + Math.floor((d / hgt) * 3))]; dot(g, x + (d >= hgt - 1 && hgt > 3 ? lean : 0), y - 1 - d, col, 1); if (d < hgt - 2) dot(g, x + lean, y - 1 - d, d === 0 ? FIRE[0] : col, 1); }
-  });
-  // 톡: 번쩍(흰 가운데 + 노란 네 갈래 — 별처럼) + 둘레 빛 + 불티 여섯이 위 · 옆으로 튀었다 떨어짐(앞 2칸 · 꼬리 두 칸)
-  const spots = picks(e, S, POPS.length, i => S.H[i] > 0.15, 1), c = g.c;
+  for (let k = 0; k < P.length; k++) { const a = age - at(k); if (a >= 0 && a < 180) flick = Math.max(flick, 1 - a / 180); }
+  const tint = Math.max(0.22 * up * (0.8 + 0.2 * Math.sin(age / 45)), 0.32 * flick);
+  if (tint > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#ff6a1a', tint); blit(g, L, ov); }
+  // 불꽃: 칸마다 높이 · 흔들림이 70ms마다 바뀜, 가끔 끝에서 불 조각이 떨어져 올라감
+  if (up > 0.04) {
+    const fs = flameSpots(e, L, S, ignite ? 8 : 5), fb = Math.floor(age / 70);
+    fs.forEach((i, k) => {
+      const [x, y] = scr(L, i % L.w, Math.floor(i / L.w)), big = k % 3 !== 1;
+      const H = Math.round((ignite ? (big ? 11 : 8) : big ? 7 : 5) * up * (0.75 + 0.5 * hash(k, fb))), W = ignite ? (big ? 5 : 4) : big ? 4 : 3;
+      if (H < 2) return;
+      flame(g, x, y + 1, W, H, age / 160 + k * 1.7, 1);
+      if (hash(k + 5, fb) < 0.35) dot(g, x + Math.round(Math.sin(age / 90 + k) * 2), y - H - 1 - ((age / 30) % 4), FIRE[2], 0.85);   // 떨어져 오르는 불 조각
+    });
+  }
+  // 타닥: 번쩍(흰 가운데 + 세 칸 갈래 + 대각 한 칸) + 둘레 빛 + 불티 여덟(앞 2칸 · 꼬리 두 칸)
+  const spots = picks(e, S, P.length, i => S.H[i] > 0.15, 1), c = g.c;
   spots.forEach((i, k) => {
-    const a = age - at(k); if (a < 0 || a > 460) return;
+    const a = age - at(k); if (a < 0 || a > 520) return;
     const [x, y] = scr(L, i % L.w, Math.floor(i / L.w));
-    if (a < 170) { const gr = c.createRadialGradient(x + 0.5, y + 0.5, 0, x + 0.5, y + 0.5, 13), al = 0.5 * (1 - a / 170); gr.addColorStop(0, `rgba(255,200,100,${al.toFixed(3)})`); gr.addColorStop(1, 'rgba(255,200,100,0)'); c.save(); c.fillStyle = gr; c.fillRect(x - 13, y - 13, 27, 27); c.restore(); }
-    if (a < 60) { dot(g, x, y, '#ffffff', 1); for (let d = 1; d <= 2; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) dot(g, x + dx, y + dy, d === 1 ? '#fff3c4' : '#ffc23a', 1); }
-    else if (a < 130) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) dot(g, x + dx, y + dy, dx || dy ? '#ff6a1a' : '#ffc23a', 1 - (a - 60) / 90); }
-    const n = 6;
-    for (let j = 0; j < n; j++) {
-      const life = 320 + 110 * hash(k * 9 + j, 5), q = a / life; if (q >= 1) continue;
-      const an = -Math.PI / 2 + (hash(k * 7 + j, e.id) - 0.5) * 3.0, v = 60 + 60 * hash(k * 5 + j, 3), G = 240;
+    if (a < 190) { const R = 17, gr = c.createRadialGradient(x + 0.5, y + 0.5, 0, x + 0.5, y + 0.5, R), al = 0.6 * (1 - a / 190); gr.addColorStop(0, `rgba(255,205,110,${al.toFixed(3)})`); gr.addColorStop(1, 'rgba(255,205,110,0)'); c.save(); c.fillStyle = gr; c.fillRect(x - R, y - R, R * 2 + 1, R * 2 + 1); c.restore(); }
+    if (a < 70) {
+      dot(g, x, y, '#ffffff', 1);
+      for (let d = 1; d <= 3; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) dot(g, x + dx, y + dy, d === 1 ? '#ffffff' : d === 2 ? '#fff3c4' : '#ffc23a', 1);
+      for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) dot(g, x + dx, y + dy, '#ffe08a', 1);
+    } else if (a < 150) { const f = 1 - (a - 70) / 80; for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) dot(g, x + dx, y + dy, dx || dy ? '#ff6a1a' : '#ffc23a', f); }
+    for (let j = 0; j < 8; j++) {
+      const lf = 360 + 130 * hash(k * 9 + j, 5), q = a / lf; if (q >= 1) continue;
+      const an = -Math.PI / 2 + (hash(k * 7 + j, e.id) - 0.5) * 3.1, v = 75 + 70 * hash(k * 5 + j, 3), G = 260;
       const pos = s => [x + Math.cos(an) * v * s, y + Math.sin(an) * v * s + 0.5 * G * s * s], tau = a / 1000;
-      const [px, py] = pos(tau), [t1x, t1y] = pos(Math.max(0, tau - 0.018)), [t2x, t2y] = pos(Math.max(0, tau - 0.036)), ci = q < 0.25 ? 0 : q < 0.55 ? 1 : q < 0.8 ? 2 : 3;
-      dot(g, t2x, t2y, FIRE[Math.min(3, ci + 2)], 0.4 * (1 - q));   // 꼬리
-      dot(g, t1x, t1y, FIRE[Math.min(3, ci + 1)], 0.7 * (1 - q));
-      dot(g, px, py, FIRE[ci], 1 - q * q, q < 0.4 ? 2 : 1);
+      const [px, py] = pos(tau), [t1x, t1y] = pos(Math.max(0, tau - 0.016)), [t2x, t2y] = pos(Math.max(0, tau - 0.032)), ci = q < 0.3 ? 0 : q < 0.6 ? 1 : q < 0.85 ? 2 : 3;
+      dot(g, t2x, t2y, FIRE[Math.min(3, ci + 2)], 0.5 * (1 - q));   // 꼬리
+      dot(g, t1x, t1y, FIRE[Math.min(3, ci + 1)], 0.8 * (1 - q));
+      dot(g, px, py, FIRE[ci], 1 - q * q, q < 0.55 ? 2 : 1);
     }
   });
 }
@@ -227,11 +258,14 @@ function steam(g, L, S, e, age) {
 // 식물 하나 위에 그 식물의 효과를 모두(식물을 그린 바로 뒤에 부름). p = { key, pot, bx, by, flip, view, t, phase }
 export function drawSfx(g, list, who, t, p) {
   let L = null, S = null, N = null;
+  // 화상 둘(불 붙음 · 턴 끝 피해)이 겹치면 새것만 — 주황 불빛이 두 겹으로 짙어지지 않게
+  const fire = list.filter(e => e.who === who && (e.kind === 'burn' || e.kind === 'ignite') && t - e.t0 >= 0 && t - e.t0 < SFX_LIFE[e.kind]).pop();
   for (const e of list) {
     if (e.who !== who) continue;
+    if ((e.kind === 'burn' || e.kind === 'ignite') && e !== fire) continue;
     const age = t - e.t0; if (age < 0 || age >= SFX_LIFE[e.kind]) continue;
     if (!L) { L = plantLayer(p.key, p.pot, p.bx, p.by, { t: p.t, phase: p.phase, flip: p.flip, view: p.view }); if (!L) return; S = scan(L); if (!S.op.length) return; N = noiseOf(p.key, L.w, L.h); }
-    if (e.kind === 'burn') burn(g, L, S, e, age);
+    if (e.kind === 'burn' || e.kind === 'ignite') burn(g, L, S, e, age, e.kind === 'ignite');
     else if (e.kind === 'poison') poison(g, L, S, e, age, N);
     else if (e.kind === 'shock' || e.kind === 'paral') shock(g, L, S, e, age, e.kind === 'paral');
     else if (e.kind === 'chill' || e.kind === 'frozen') frost(g, L, S, e, age, N, e.kind === 'frozen');
