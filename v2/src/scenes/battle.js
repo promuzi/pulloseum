@@ -19,6 +19,7 @@ import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eul } from '../core/josa.js';
+import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxGlow } from '../art/statusfx.js';
 import { TFX, setTfx, popLife, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
@@ -151,7 +152,7 @@ export const battle = {
       app.battleBoot = null;
     } else this.setupLocal(app);
     const B = this.B;
-    this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, led: null, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: B.turn, picked: null, uid: 0, eff: { me: listOf(B.me), foe: listOf(B.foe) }, foeReady: false };
+    this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, led: null, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: B.turn, picked: null, uid: 0, eff: { me: listOf(B.me), foe: listOf(B.foe) }, foeReady: false, sfx: [] };
     if (B.over) { this.v.phase = 'over'; this.v.overT0 = app.t; }
     else if (this.mode === 'swap3' && B.need === 'me') { this.v.phase = 'need'; this.sheet = { forced: true }; }
     else this.prompt(app);
@@ -325,9 +326,36 @@ export const battle = {
     }
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
     if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
+    if (st.kind === 'tick') sfxAdd(v.sfx, st.side, st.ev.id, t);
+    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t);
+    if (st.kind === 'bloom') sfxAdd(v.sfx, st.side, 'bloom', t);
+    if (st.kind === 'skipT') sfxAdd(v.sfx, st.side, { frozen: 'frozen', paral: 'paral', stun: 'stun' }[st.ev.src], t);
+    if (st.kind === 'cure') sfxAdd(v.sfx, st.side, 'steam', t);
     if (st.kind === 'end') v.en = { me: B.me.energy, foe: B.foe.energy };
   },
+  demoStatus(app) {
+    this.v.demoAt = Infinity;   // 한 번만
+    const B = this.B, me = B.me, foe = B.foe, bt = Math.round(foe.max * 0.04), pt = Math.round(me.max * 0.04), bl = Math.round(foe.max * 0.08);
+    const events = [
+      { t: 'fx', to: 'foe', id: 'burn', name: foe.name },
+      { t: 'tick', who: 'foe', id: 'burn', dmg: bt, name: foe.name },
+      { t: 'fx', to: 'me', id: 'poison', n: 2, name: me.name },
+      { t: 'tick', who: 'me', id: 'poison', n: 2, dmg: pt, name: me.name },
+      { t: 'fx', to: 'foe', id: 'shock', n: 2, name: foe.name },
+      { t: 'fx', to: 'me', id: 'chill', n: 2, name: me.name },
+      { t: 'fx', to: 'foe', id: 'wet', name: foe.name },
+      { t: 'fx', to: 'me', id: 'stun', name: me.name },
+      { t: 'fx', to: 'foe', id: 'spore', n: 2, name: foe.name },
+      { t: 'bloom', who: 'foe', dmg: bl, name: foe.name },
+      { t: 'skip', who: 'me', src: 'frozen', name: me.name },
+      { t: 'cure', to: 'foe', name: foe.name, id: 'burn', why: 'water' },
+    ];
+    foe.hp -= bt + bl; me.hp -= pt;
+    B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
+    this.play(app, this.buildSteps({ mySkill: me.kit[0], foeSkill: foe.kit[0], events }));
+  },
   demoText(app) {
+    this.v.demoAt = Infinity;
     const B = this.B, me = B.me, foe = B.foe, mine = me.kit.find(s => s.power && s.cost >= 3) || me.kit[0], theirs = foe.kit.find(s => s.power && s.cost >= 2) || foe.kit[0];
     const a1 = Math.round(foe.max * 0.36), tick = Math.round(foe.max * 0.06), a2 = foe.hp - a1 - tick, hit = Math.round(me.max * 0.28), regen = Math.round(me.max * 0.08);
     const events = [
@@ -412,7 +440,7 @@ export const battle = {
       if (v.autoSkipAt == null) v.autoSkipAt = t + SKIP_AUTO_MS;
       else if (t >= v.autoSkipAt) { v.autoSkipAt = null; this.pick(app, REST); }
     }
-    if (this.p && this.p.demo === 'text' && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) this.demoText(app); }
+    if (this.p && (this.p.demo === 'text' || this.p.demo === 'status') && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) (this.p.demo === 'status' ? this.demoStatus(app) : this.demoText(app)); }
     if (v.phase === 'play') {
       if (v.t0 == null) { v.t0 = t; this.startStep(v.steps[v.si], t, app); }
       let st = v.steps[v.si];
@@ -445,6 +473,7 @@ export const battle = {
       if (age >= S.hold + S.drain && age >= S.shakeMs) { b.fx = null; b.main = b.trail = to; }
     }
     v.pops = v.pops.filter(p => t - p.t0 < popLife(p));
+    v.sfx = sfxAlive(v.sfx, t);
   },
   finishTurn(app) {
     const B = this.B, v = this.v;
@@ -488,7 +517,9 @@ export const battle = {
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      if (v.sfx.length) drawSfxGlow(g, v.sfx, who, t, x, y);
       drawBigPose(g, u.key, u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
+      if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: u.key, pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
     //  그림은 270×348 — 화면이 넓거나 길면 가운데로 · 아래(기술 판)에 붙이고, 남는 둘레는 그림 가장자리 색으로

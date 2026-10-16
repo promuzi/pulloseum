@@ -48,7 +48,7 @@ try {
       if (label) { sc.font = `800 ${13 * K}px Pretendard, sans-serif`; sc.fillStyle = '#e6f3ff'; sc.textAlign = 'center'; sc.fillText(NAME[key] || key, GAP + col * (CW * K + GAP) + (CW * K) / 2, TOP - 6 * K); }
     });
     return S.toDataURL('image/png');
-  }, keys, at, [CX, CY, CW, CH], K, label, { phase: 'pick', venue, demo: 'text', ...(me ? { me } : {}), ...(foe ? { foe } : {}) }, +(get('cols') || 0), origins);
+  }, keys, at, [CX, CY, CW, CH], K, label, { phase: 'pick', venue, demo: get('demo') || 'text', ...(me ? { me } : {}), ...(foe ? { foe } : {}) }, +(get('cols') || 0), origins);
   writeFileSync(resolve(outDir, out + '.png'), Buffer.from(png.split(',')[1], 'base64'));
   if (errs.length) console.log('페이지 오류:', errs.join(' | '));
   console.log('저장:', resolve(outDir, out + '.png'));

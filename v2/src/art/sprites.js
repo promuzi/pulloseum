@@ -119,6 +119,24 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
   part(g, src, sx, sy + m.rows * m.h, m.w, m.h, x, y, fl);
   return true;
 }
+// 지금 장에서 '보이는 식물 칸'만(화분 앞판에 가린 칸은 뺌, 뒤집기 전 그림 좌표) — 상태 효과(타들어감 · 물들임)를 화분 말고 식물에만 입힐 때
+//  반환 { img: ImageData(w×h), x, y(화면 왼쪽 위), w, h, flip } — drawBig 과 같은 자리 · 같은 장(깜빡임 포함)
+let layerCv = null, layerCx = null;
+export function plantLayer(key, potKey, bx, by, opt = {}) {
+  const P = BIG[key], [pot, vdy] = potView(potKey, opt);
+  if (!P || !pot) return null;
+  const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - vdy - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
+  let f = frameAt(t, m.frameMs, m.frames);
+  if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
+  const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
+  if (!layerCv) { layerCv = document.createElement('canvas'); layerCx = layerCv.getContext('2d', { willReadFrequently: true }); }
+  if (layerCv.width !== m.w || layerCv.height !== m.h) { layerCv.width = m.w; layerCv.height = m.h; }
+  const c = layerCx; c.imageSmoothingEnabled = false; c.clearRect(0, 0, m.w, m.h);
+  c.globalCompositeOperation = 'source-over'; c.drawImage(P.sheet, sx, sy, m.w, m.h, 0, 0, m.w, m.h);
+  c.globalCompositeOperation = 'destination-out'; c.drawImage(pot.front, 0, 0, m.w, m.h, 0, 0, m.w, m.h);
+  c.globalCompositeOperation = 'source-over'; c.drawImage(P.sheet, sx, sy + m.rows * m.h, m.w, m.h, 0, 0, m.w, m.h);
+  return { img: c.getImageData(0, 0, m.w, m.h), x, y, w: m.w, h: m.h, flip: !!opt.flip };
+}
 // 큰 판 한 장 고르기(숨쉬기 + 깜빡임)
 function bigFrame(key, m, t) {
   let f = frameAt(t, m.frameMs, m.frames);
