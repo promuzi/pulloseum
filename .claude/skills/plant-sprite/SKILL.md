@@ -9,7 +9,7 @@ description: 풀로세움 v2 식물 도트 그림을 만들 때(새 종 추가·
 사용자 취향(꼭 지킴): 규칙표로 종을 획일화하지 않음 · 옛 48×56 외형 참고 금지 · 눈은 그림 그대로(덧그리기 금지), 깜빡임만 · 무섭거나 징그러운 것 금지(없던 입·틈 속 빛나는 눈) · 결과는 휴대폰에서 보이게 MP4 · 산출물 안에 설명 글자 넣지 않음.
 
 ## 1. 컨셉(코덱스) — 비용: 새로 그리기 장당 5시간 한도 약 1~3%p, 참고 그림을 주고 그리기·편집 장당 약 4~8%p
-- 새 종 = **처음부터 누끼(실제 알파)·화분·흙·그림자 없이, 밑동은 흙 높이에서 깔끔히 끝나게** 요청(`concept\PROMPT.md` 첫 줄 지시). 저장 `concept\cut\<키>.png`.
+- 새 종 = **밝은 단색 회색 배경(#d9d9d9)·화분·흙·그림자 없이, 밑동은 흙 높이에서 깔끔히 끝나게** 요청(2026-10-17부터 — 투명 누끼 요청은 그림 품질이 떨어짐. 예 `concept\new3\NEW3_PROMPT.md`: 정면 몸 + 머리 20° 옆 · 시선 자연스럽게 · 상징 하나를 크게 · 몸에서 떨어진 효과 선 금지 · "Do not open any image file"). 받은 그림 → `node tools/pixel/big/greycut.mjs <원본> concept\cut\<키>.png [--main]`(--main = 몸에서 떨어진 바람 줄 · 물보라 지움 — 줄이면 점가루가 됨). ~~처음부터 누끼(실제 알파)~~(2026-10-15 방식).
 - 옛 컨셉(화분 있음)은 그대로 두고, 화분 색 지우기로 밑동이 깨지면 그 종만 **코덱스 편집 누끼**(`concept\CUT_PROMPT*.md` 형식 — "식물은 그대로, 화분·흙·자갈·그림자만 지우고 밑동을 흙 선에서 마감, 위치 이동 금지"). 위치가 그대로라 눈 좌표·흙 기준은 원래 컨셉에서 잰 값을 그대로 쓴다.
 - 실행: `node "C:/dev/codex-plugin-cc/plugins/codex/scripts/codex-companion.mjs" task --write --cwd "C:/dev/pulloseum" --prompt-file "tools/pixel/big/concept/<요청>.md"`(백그라운드). 사용량은 `~\.codex\sessions\...\rollout-*.jsonl`의 token_count(rate_limits)로 전후를 재서 보고.
 
