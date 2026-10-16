@@ -285,7 +285,9 @@ function downV(A, t, len, v) {   // 디스플레이 꺼지는 소리(처음 화�
   env(g, t, v, 0.01, len); s.connect(g); g.connect(A.fx); s.start(t); s.stop(t + len + 0.02);
   return 2;
 }
-// 조율(오케스트라가 A에 맞추는 '우우웅'): 오보에 A가 먼저, 여러 악기가 조금씩 어긋난 음으로 들어와 흔들리다 같은 음 · 5도로 모이고, 화분이 나타날 때쯤 사라짐
+// 조율(오케스트라가 A에 맞추는 '우우웅'): 오보에 A가 먼저, 여러 악기가 조금씩 어긋난 음으로 들어와 흔들리다 같은 음 · 5도로 모이며
+//  화분이 나타나는 때(1.45마디)까지 쭉 커지고(거름망도 열려 밝아짐) → 그 순간 바람에 날리듯 흩어짐(2026-10-17 사용자 "서서히 줄지 않고 쭉 커지다가 흩어지든 날리는 느낌"):
+//  음마다 조금씩 다른 때에 위 · 아래로 갈라지며(전체는 멀어지듯 조금 낮아짐) 좌우로 퍼지고 빠르게 사라짐 + 바람 소리(잡음 거름망이 위로 쓸려 올라가며 왼쪽 → 오른쪽)
 const TUNE = [   // [음, 파형, 거름망, 들어오는 때(초), 처음 어긋남(센트), 세기, 떨림(센트)]
   ['A4', 'pulse25', ['bandpass', 1300, 1.3], 0.15, 7, 0.1, 4],      // 오보에(조율 시작음)
   ['A4', 'square', ['lowpass', 1700, 0.7], 0.85, -26, 0.05, 0],     // 클라리넷
@@ -298,24 +300,42 @@ const TUNE = [   // [음, 파형, 거름망, 들어오는 때(초), 처음 어�
 ];
 function droneV(A, t, len) {
   const ac = A.ac, dg = ac.createGain(); dg.gain.value = 1; dg.connect(A.drone); A.droneNow = dg;
-  const peak = t + len * 0.72, fade = t + len * 0.8, end = t + len * 1.04; let nodes = 1;
-  for (const [nm, w, flt, at, c0, v, vib] of TUNE) {
-    const f = NOTE(nm), o = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain(), t1 = t + at, conv = t1 + 1.7 + at * 0.25; nodes += 3;
+  const rel = t + len * 0.725, pan = () => (ac.createStereoPanner ? ac.createStereoPanner() : null);   // 흩어지는 때 = 처음 화면 INTRO.reveal(1.45마디 = 이 소리 길이 2마디의 0.725)
+  let nodes = 1;
+  TUNE.forEach(([nm, w, flt, at, c0, v, vib], i) => {
+    const f = NOTE(nm), o = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain(), pn = pan(), t1 = t + at;
+    const D = Math.max(0.6, Math.min(1.7 + at * 0.25, rel - 0.06 - t1)), d = rel + (i % 4) * 0.04, dir = i % 2 ? 1 : -1, end = d + 0.75 + 0.12 * (i % 3);
+    nodes += pn ? 4 : 3;
     if (A.pw && A.pw[w]) o.setPeriodicWave(A.pw[w]); else o.type = w === 'pulse25' ? 'square' : w;
     o.frequency.setValueAtTime(f * 2 ** (c0 / 1200), t1);
-    o.frequency.linearRampToValueAtTime(f * 2 ** ((-c0 * 0.4) / 1200), t1 + 0.75);   // 지나쳤다가
-    o.frequency.linearRampToValueAtTime(f * 2 ** ((c0 * 0.15) / 1200), t1 + 1.25);   // 다시 조금
-    o.frequency.linearRampToValueAtTime(f, conv);                                       // 모임
+    o.frequency.linearRampToValueAtTime(f * 2 ** ((-c0 * 0.4) / 1200), t1 + D * 0.44);   // 지나쳤다가
+    o.frequency.linearRampToValueAtTime(f * 2 ** ((c0 * 0.15) / 1200), t1 + D * 0.73);   // 다시 조금
+    o.frequency.linearRampToValueAtTime(f, t1 + D);                                         // 모임(늦게 들어온 악기도 흩어지기 전에)
+    o.frequency.setValueAtTime(f, d);
+    o.frequency.exponentialRampToValueAtTime(f * 2 ** ((dir * (50 + 30 * (i % 3)) - 70) / 1200), end);   // 흩어짐
     if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 4.8 + (at % 1); lg.gain.value = f * (2 ** (vib / 1200) - 1); l.connect(lg); lg.connect(o.frequency); l.start(t1); l.stop(end); nodes += 2; }
-    fl.type = flt[0]; fl.frequency.value = flt[1]; fl.Q.value = flt[2];
-    g.gain.value = 0; g.gain.setValueAtTime(0, t1); g.gain.linearRampToValueAtTime(v * 1.2, t1 + 0.7); g.gain.linearRampToValueAtTime(v * 2.2, peak); g.gain.setTargetAtTime(0, fade, (end - fade) / 3.2);
-    o.connect(fl); fl.connect(g); g.connect(dg); o.start(t1); o.stop(end + 0.1);
-  }
-  // 객석 숨소리(아주 옅은 낮은 잡음)
+    fl.type = flt[0]; fl.Q.value = flt[2];
+    fl.frequency.setValueAtTime(flt[1] * 0.75, t1); fl.frequency.linearRampToValueAtTime(flt[1] * 1.6, rel);   // 커지며 밝아짐
+    fl.frequency.exponentialRampToValueAtTime(flt[1] * 3, end);                                                   // 흩어질 때 위로 쓸려 얇아짐
+    g.gain.setValueAtTime(0, t1); g.gain.linearRampToValueAtTime(v * 1.2, t1 + 0.7); g.gain.linearRampToValueAtTime(v * 2.8, rel);   // 쭉 커짐(줄지 않음)
+    g.gain.setValueAtTime(v * 2.8, d); g.gain.exponentialRampToValueAtTime(0.0004, end);
+    o.connect(fl); fl.connect(g);
+    if (pn) { pn.pan.setValueAtTime(0, d); pn.pan.linearRampToValueAtTime(dir * (0.35 + 0.18 * (i % 3)), end); g.connect(pn); pn.connect(dg); } else g.connect(dg);
+    o.start(t1); o.stop(end + 0.05);
+  });
+  // 객석 숨소리(아주 옅은 낮은 잡음 — 함께 커지다 흩어질 때 사라짐)
   const n = ac.createBufferSource(), nf = ac.createBiquadFilter(), ng = ac.createGain(); nodes += 3;
   n.buffer = A.noise; n.loop = true; nf.type = 'bandpass'; nf.frequency.value = 480; nf.Q.value = 0.7;
-  ng.gain.value = 0; ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(0.03, peak); ng.gain.setTargetAtTime(0, fade, 0.25);
-  n.connect(nf); nf.connect(ng); ng.connect(dg); n.start(t, nOff(t)); n.stop(end);
+  ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(0.035, rel); ng.gain.setTargetAtTime(0, rel, 0.12);
+  n.connect(nf); nf.connect(ng); ng.connect(dg); n.start(t, nOff(t)); n.stop(rel + 1);
+  // 바람(흩어지는 순간): 잡음 거름망이 낮은 데서 높은 데로 쓸려 올라가며 왼쪽 → 오른쪽으로 지나감
+  const wn = ac.createBufferSource(), wf = ac.createBiquadFilter(), wg = ac.createGain(), wp = pan(); nodes += wp ? 4 : 3;
+  wn.buffer = A.noise; wn.loop = true; wf.type = 'bandpass'; wf.Q.value = 1.1;
+  wf.frequency.setValueAtTime(420, rel - 0.05); wf.frequency.exponentialRampToValueAtTime(5200, rel + 0.85);
+  wg.gain.setValueAtTime(0, rel - 0.05); wg.gain.linearRampToValueAtTime(0.11, rel + 0.1); wg.gain.exponentialRampToValueAtTime(0.0004, rel + 1);
+  wn.connect(wf); wf.connect(wg);
+  if (wp) { wp.pan.setValueAtTime(-0.5, rel); wp.pan.linearRampToValueAtTime(0.6, rel + 0.9); wg.connect(wp); wp.connect(dg); } else wg.connect(dg);
+  wn.start(rel - 0.05, nOff(rel)); wn.stop(rel + 1.05);
   return nodes;
 }
 // 사건 하나 → 소리. e = { t, i(악기), f, fs, len, v, o, pat, ms }

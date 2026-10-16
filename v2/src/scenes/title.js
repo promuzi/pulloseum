@@ -16,7 +16,7 @@ import { soundLocked, introTime, introSkip, bootPlan, musicNow, lampNow, MUSIC_B
 //  그리고 터치하면 주변 검은 배경이 밝아지는 느낌으로 대기화면으로 이어지게" · "처음에는 음악단? 조율할때 나는 우우웅하는 소리처럼 검은 배경에서 점점 들리면서
 //  화분 등장할 때쯤 자연스럽게 끝남. 그리고 전등 켜지는 소리가 두드 두드등 나면서 전등도 그에 맞게 켜짐"):
 //  대기 화면의 원형 방이 전부 꺼진 디스플레이인 채 — 음악 지휘자(core/music.js 처음 화면 곡)의 시각을 그대로 따라감(소리와 그림이 같은 순간):
-//   0~2마디 = 검정 + 조율(우우웅) → 1.45마디쯤 의자 속 투영기가 아래부터 의자 · 식물을 푸르게 비춤(조율이 사라질 때쯤) →
+//   0~2마디 = 검정 + 조율(우우웅 — 끝까지 커짐) → 1.45마디 의자 속 투영기가 형광등처럼 깜빡 켜지며 의자 · 식물이 나타남 = 조율이 바람에 날리듯 흩어짐(2026-10-17) →
 //   2마디 = 전등 점화 '두드 두드등'(전등 칸 사건을 따라 켜졌다 꺼졌다, '등'에 켜진 채) → 로고가 전광판처럼 켜짐 → 3마디부터 단추 · 베이스와 지지직 되풀이 · 천천히 킥.
 //  누르면(로그인 상태) 다음 박에 디스플레이가 켜지기 시작(loft.js loftBoot — LED 가 방 덩어리마다 생김새를 따라 하나씩) → 대기 곡이 떨어지는 마디에 대기 화면으로('cut').
 //  조율 중에 누르면 건너뜀(다음 마디가 점화). 소리가 막힌 브라우저 = 검정 + 작은 '눌러서 시작' → 누르면 그때부터(조율을 놓치지 않게).
@@ -108,15 +108,30 @@ export function registerForm(app, sc, keep = {}) {
 // ── 처음 화면 · 처음 식물 고르기가 같이 쓰는 그림 ──
 // 꺼진 방 + 전등(k) + 빛줄기 + 의자 · 식물(rv = 투영기가 아래부터 비춘 정도) + 빛줄기 안 먼지
 //  dy = 방을 위로 올림(짧은 화면 — 대기 화면과 같은 값이면 켜질 때 방이 안 튐)
-function nightRoom(app, key, pot, k, rv, dy = 0) {
+// 투영기 빛(2026-10-17 사용자 "화분도 스스륵 올라오기보다 빛이 켜지면서 등장하는 걸로"): 아래부터 쓸어 올리던 것 대신 →
+//  형광등처럼 깜빡 · 깜빡 켜지며 의자 · 식물이 한꺼번에 나타남(마지막으로 켜질 때 번쩍했다 가라앉음) + 의자 둘레 푸른 빛 무리.
+//  rv = 켜진 뒤 지난 몫(0~1, 처음 화면 = 0.42마디) · quick = 처음 식물 고르기에서 식물을 바꿀 때(깜빡임 없이 번쩍 한 번)
+const FLICK = [[0, 0.035, 1], [0.035, 0.085, 0.1], [0.085, 0.12, 0.8], [0.12, 0.2, 0.1], [0.2, 9, 1]];   // [시작, 끝, 켜짐]
+function lightOf(rv, quick) {
+  if (rv <= 0) return [0, 0];
+  if (quick) return [1, Math.max(0, 1 - rv * 1.4)];
+  const on = FLICK.find(([a, b]) => rv >= a && rv < b)[2], fl = rv < 0.035 ? 0.7 : rv >= 0.2 ? Math.max(0, 1 - (rv - 0.2) / 0.3) : 0;
+  return [on, fl];
+}
+function nightRoom(app, key, pot, k, rv, dy = 0, quick = false) {
   const { g, W, H } = app, [mx, my] = LOFT_STOOL, kk = Math.min(1, k);
   if (dy) { g.rect(0, 0, W, H, BG0); g.c.save(); g.c.translate(0, dy); }
   loftNight(app, k);
   loftNightBeam(app, kk);
   if (rv > 0) {
-    const top = my - 116, bot = 412, ry = Math.round(bot - (bot - top) * rv);
-    g.clip(0, ry, W, H - ry, () => { loftNightStool(app, 1 - kk); loftNightPlant(app, key, pot, mx, my, { dark: 0.74 * (1 - kk), cool: 1 - kk, warm: kk }); });
-    if (rv < 1) { g.rect(mx - 30, ry, 60, 1, '#8ccfff'); g.rect(mx - 20, ry - 1, 40, 1, '#e6f3ff'); }   // 투영기 빛 줄(대기 화면의 식물 나타남과 같은 꼴)
+    const [on, fl] = lightOf(rv, quick), c = g.c, ga = (0.12 * on + 0.3 * fl) * (1 - kk);
+    if (ga > 0.005) {   // 빛 무리(의자 위 식물 둘레로 퍼짐 — 더하기 빛)
+      const gr = c.createRadialGradient(mx, my - 46, 4, mx, my - 30, 96);
+      gr.addColorStop(0, `rgba(150,205,255,${ga.toFixed(3)})`); gr.addColorStop(0.5, `rgba(90,150,230,${(ga * 0.45).toFixed(3)})`); gr.addColorStop(1, 'rgba(90,150,230,0)');
+      const op = c.globalCompositeOperation; c.globalCompositeOperation = 'lighter'; c.fillStyle = gr; c.fillRect(mx - 100, my - 150, 200, 200); c.globalCompositeOperation = op;
+    }
+    loftNightStool(app, (1 - kk) * on);
+    g.alpha(on, () => loftNightPlant(app, key, pot, mx, my, { dark: 0.74 * (1 - kk) * (1 - 0.7 * fl), cool: (1 - kk) * (1 + 2.2 * fl), warm: kk }));
   }
   loftNightFront(app, kk);
   if (dy) g.c.restore();
@@ -243,7 +258,7 @@ export const starter = {
     const key = STARTERS[this.i], sp = SPECIES[key], [mx, my0] = LOFT_STOOL, dy = roomDy(app), my = my0 + dy;   // 짧은 화면 = 방 · 글자를 같이 올림(대기 화면과 같은 높이)
     if (this.boot) return drawBoot(this, app, key, 'pot_terra', null, dy);
     const L = lampNow(), k = L.letter === 'a' && !L.burst ? 1 : L.k;   // 처음 화면 곡이 아니면(바로 들어온 촬영 등) 켜진 전등
-    nightRoom(app, key, 'pot_terra', k, clamp01((t - this.showT) / 320), dy);
+    nightRoom(app, key, 'pot_terra', k, clamp01((t - this.showT) / 420), dy, true);
     g.text('처음 식물을 골라 주세요', W / 2, Math.max(34, 150 + dy), { font: 'head', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
     for (const [id, d, x] of [['st_prev', -1, 26], ['st_next', 1, W - 26]]) {
       const pr = app.input.isPressed(id), c = pr ? '#ffffff' : '#8ccfff', cy = my - 50;
