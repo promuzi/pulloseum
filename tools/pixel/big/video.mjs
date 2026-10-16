@@ -37,6 +37,22 @@ export function writeMP4(out, frames, { delay = 10, loops = 1, fps = 50, zoom = 
   return true;
 }
 
+// 이미 PNG 로 써 둔 장들(dir 안 files, 한 장 = 한 영상 장) + 소리(WAV, 선택) → MP4(H.264 + AAC). 긴 영상은 장을 메모리에 두지 않게 이 길로
+//  crf = 블렌더 화질 이름(PERC_LOSSLESS · HIGH · MEDIUM …) — 용량을 맞출 때
+export function writeMP4Files(out, dir, files, { fps = 30, w, h, audio = null, crf = 'PERC_LOSSLESS' } = {}) {
+  const blender = findBlender();
+  if (!blender) { console.log('MP4 건너뜀 — 블렌더를 찾지 못함'); return false; }
+  if (w % 2 || h % 2) throw new Error(`MP4는 가로·세로가 짝수여야 함 (${w}×${h})`);
+  const job = join(dir, 'job.json'), dst = resolve(out);
+  writeFileSync(job, JSON.stringify({ dir, seq: files, fps, w, h, out: dst, audio: audio ? resolve(audio) : null, crf }));
+  rmSync(dst, { force: true });
+  const r = spawnSync(blender, ['-b', '--factory-startup', '--python-exit-code', '1', '-P', join(here, 'mp4_blender.py'), '--', job], { encoding: 'utf8', maxBuffer: 64 << 20 });
+  if (r.status !== 0 || !existsSync(dst)) { console.log('MP4 실패:', (r.stdout || '').slice(-2000), (r.stderr || '').slice(-2000)); return false; }
+  const buf = readFileSync(dst);
+  console.log(`MP4 → ${dst} · ${w}×${h} · ${(files.length / fps).toFixed(1)}초 · ${avcProfile(buf)}${audio ? ' · 소리 ' + (buf.indexOf('mp4a') >= 0 ? 'AAC' : '없음?') : ''} · ${(buf.length / 1048576).toFixed(1)}MB`);
+  return true;
+}
+
 // avcC 상자에서 H.264 프로필 읽기 — High(100)·Main(77)·Baseline(66)은 휴대폰 재생 가능, High 4:4:4(244)는 안 됨
 function avcProfile(buf) {
   const i = buf.indexOf('avcC');

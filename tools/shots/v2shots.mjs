@@ -17,7 +17,9 @@ const out = resolve(here, 'out', label); mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 
 export const SHOTS = [
-  ['01_title', 'title', {}],
+  ['01_title', 'title', { at: '12' }],                     // 처음 화면(전등 켜진 뒤 — at = 처음 화면 곡 초)
+  ['01_title_dark', 'title', { at: '4.7' }],               // 조율 끝 · 투영기가 의자와 식물을 비춤
+  ['01_title_boot', 'title', { at: '12', bootu: '0.5' }],  // 디스플레이 켜짐 중간
   ['01_starter', 'starter', {}],
   ['02_home_chest', 'home', {}, { level: 6 }],
   ['02_home_chest_open', 'home', {}, { level: 6, chestOpen: 4000 }],

@@ -7,7 +7,7 @@
 //  창: sky.js 우주 — 들어올 때마다 다음 풍경, 오래 머물면 디더로 다음 풍경. 유리 위로 이어지는 원뿔 빛 띠 + 옅은 반사.
 import { BGIMG, BGMETA, BIG, drawBig, bigBox } from './sprites.js';
 import { MOTION, slow } from '../core/motion.js';
-import { lampSound } from '../core/sound.js';
+import { lampSound, lampNow } from '../core/sound.js';
 import { makeSky, renderSky, blendSky, SKY_KINDS, rng } from './sky.js';
 
 export const LOFT_STOOL = [134, 356];   // 의자 앉는 판 윗면 가운데(격자 확대로 잼) = 화분 굽이 닿는 점
@@ -15,11 +15,12 @@ const LV = { a: 0, e: 1, h: 2, k: 3, o: 4 };   // 단계 그림 번호(m = 원�
 const K = { a: 0, e: 0.33, h: 0.58, k: 0.83, m: 1, o: 1.17 };
 // 형광등 떨림(2026-10-16 사용자 "전등 깜빡이 더 빠르게. 진짜 지지징" → 같은 날 "너무 잦아. 지직, 지지직 2개 하고 패턴을 지직 · 지지직 · 지직-지지직, 텀은 길게 — 눈이 피로할 수 있음"):
 //  한 글자 = 34ms(퀘이크 빛 글자 — a = 꺼짐 · k = 반쯤 · h = 다시 붙는 중 · m = 평소). 지 = 꺼졌다 반쯤, 직 = 길게 꺼졌다 다시 붙음.
-//  묶음 셋 = 지직(0.17초) · 지지직(0.27초) · 지직-지지직(사이 0.3초 쉼), 처음 15~25초 뒤 · 그다음 35~60초마다 한 번, 묶음 사이 떨림 없음
+//  묶음 셋 = 지직(0.17초) · 지지직(0.27초) · 지직-지지직(사이 0.3초 쉼).
+//  같은 날 "전등 지지직 효과에 맞춰 중간중간 브레이크와 함께 베이스 솔로" → 떨리는 때는 음악 지휘자(core/music.js)가 정함: 대기 곡 브레이크 자리에서만
+//  (첫 바퀴 약 29초 뒤 · 그다음 약 43초마다 — 예전 35~60초 텀 그대로 드물게), 소리(지지직)와 빛이 같은 순간.
 const STEP = 34;
 const JJ = 'akaah', JJJ = 'akakaaah';
 const BURSTS = [[JJ, 0.45], [JJJ, 0.35], [JJ + 'mmmmmmmmm' + JJJ, 0.2]];
-const pickBurst = r => { let x = r; for (const [p, w] of BURSTS) { if ((x -= w) < 0) return p; } return JJ; };
 const WARM = [255, 214, 160];
 let S = null, visits = 0;
 
@@ -70,24 +71,24 @@ function setup() {
     flick: { next: 0, pat: null, start: 0 }, sky: null, skyB: null, mix: null, last: 0, plantCv: null, visits: -1 };
 }
 
-// 지금 전등 글자(t ms)
+// 지금 전등 글자(t ms): 검토 손잡이(__loft.burst)로 띄운 묶음이 있으면 그것, 아니면 지휘자의 전등 칸(대기 곡 브레이크 자리에서만 떪)
 function lampLetter(t) {
   const f = S.flick;
-  if (!f.next) f.next = t + 15000 + S.r() * 10000;   // 처음 = 15~25초 뒤
-  if (!f.pat && t >= f.next) { f.pat = pickBurst(S.r()); f.start = t; lampSound(f.pat, STEP); }
   if (f.pat) {
     const i = Math.floor((t - f.start) / STEP);
-    if (i < f.pat.length) return f.pat[i];
-    f.pat = null; f.next = t + 35000 + S.r() * 25000;   // 그다음 35~60초마다
+    if (i >= 0 && i < f.pat.length) return f.pat[i];
+    f.pat = null;
   }
-  return 'm';
+  const L = lampNow();
+  return L.letter === 'a' && !L.burst ? 'm' : L.letter;   // 처음 화면 곡의 '꺼진 바탕'은 방 그림엔 쓰지 않음(꺼진 방은 loftNight 가 그림)
 }
 
 // 배경 + 전등 단계 + 창 밖 우주 + 유리 위 빛 띠. 반환 = 지금 전등 밝기 k
+function ensure() { if (!S && BGIMG.home_loft) { S = setup(); if (S) S.r = rng(1234); } return !!S; }
 export function loftBack(app) {
   const { g, t } = app;
   const bg = BGIMG.home_loft; if (!bg) return 1;
-  if (!S) { S = setup(); if (!S) { g.img(bg, 0, 0); return 1; } S.r = rng(1234); }
+  if (!ensure()) { g.img(bg, 0, 0); return 1; }
   g.img(bg, 0, 0);
   // 들어올 때마다 다음 풍경, 75초 머물면 디더로 다음 풍경(1.6초)
   if (S.visits !== visits || !S.sky) {
@@ -186,8 +187,9 @@ export function loftFront(app) {
 //  암실 = 전등 끈 방 × 0.14(방 모양만 희미하게) + 원래 그림의 전등 빛(원뿔 + 그 빛이 닿은 의자 둘레 바닥)만.
 //  흰 벽에 번진 파르스름한 빛(네모 타일 자국)은 빼고 주황빛 칸만(원래 칸의 빨강 − 파랑, 5×5로 고름). 창은 반투명 짙은 덮개(우주가 희미하게).
 const DARK = [5, 7, 15], AMB = 0.14;
-function darkCanvas() {
-  if (S.darkCv) return S.darkCv;
+// 원래 그림(o) · 전등 끈 방(off) · 전등 빛을 남길 정도(kp = 상자 가장자리 부드럽게 × 주황빛) — 암실과 처음 화면(꺼진 디스플레이 방)이 같이 씀, 한 번만 잼
+function lampLayers() {
+  if (S.lamp) return S.lamp;
   const bg = BGIMG.home_loft, dimIm = BGIMG.home_loft_dim, D = S.meta.dim, W = bg.width, H = bg.height;
   const read = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); return x.getImageData(0, 0, im.width, im.height).data; };
   const o = read(bg), dm = dimIm ? read(dimIm) : null, off = new Uint8ClampedArray(o);
@@ -199,20 +201,25 @@ function darkCanvas() {
     keep[Y * W + X] = Math.max(0, Math.min(1, Math.min(x, b.w - 1 - x, y, b.h - 1 - y) / 10));
   }
   // 주황빛 정도(원래 칸 빨강 − 파랑)를 5×5로 고름 — 바닥 빛 가장자리가 점점이 자글거리지 않게
-  const warm0 = new Float32Array(W * H), warm = new Float32Array(W * H);
+  const warm0 = new Float32Array(W * H), kp = new Float32Array(W * H);
   for (let i = 0; i < W * H; i++) warm0[i] = Math.max(0, Math.min(1, (o[i * 4] - o[i * 4 + 2] - 8) / 36));
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let s = 0, n = 0;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < W && Y < H) { s += warm0[Y * W + X]; n++; } }
-    warm[y * W + x] = s / n;
+    kp[y * W + x] = keep[y * W + x] * (s / n);
   }
+  return (S.lamp = { o, off, kp, W, H });
+}
+const inGlass = (x, y) => { const wx = x - S.x0, wy = y - S.y0; return wx >= 0 && wy >= 0 && wx < S.w && wy < S.h && !!S.mask[wy * S.w + wx]; };
+function darkCanvas() {
+  if (S.darkCv) return S.darkCv;
+  const { o, off, kp, W, H } = lampLayers();
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d'), im = c.createImageData(W, H), d = im.data;
   for (let i = 0; i < W * H; i++) {
-    const k = i * 4, x = i % W, y = (i - x) / W, wx = x - S.x0, wy = y - S.y0;
-    if (wx >= 0 && wy >= 0 && wx < S.w && wy < S.h && S.mask[wy * S.w + wx]) { d[k] = DARK[0]; d[k + 1] = DARK[1]; d[k + 2] = DARK[2]; d[k + 3] = 204; continue; }   // 창 = 반투명 짙은 덮개
-    const kp = keep[i] * warm[i];
-    for (let ch = 0; ch < 3; ch++) d[k + ch] = Math.round(off[k + ch] * AMB + DARK[ch] * (1 - AMB) * 0.6 + Math.max(0, o[k + ch] - off[k + ch]) * kp);
+    const k = i * 4, x = i % W, y = (i - x) / W;
+    if (inGlass(x, y)) { d[k] = DARK[0]; d[k + 1] = DARK[1]; d[k + 2] = DARK[2]; d[k + 3] = 204; continue; }   // 창 = 반투명 짙은 덮개
+    for (let ch = 0; ch < 3; ch++) d[k + ch] = Math.round(off[k + ch] * AMB + DARK[ch] * (1 - AMB) * 0.6 + Math.max(0, o[k + ch] - off[k + ch]) * kp[i]);
     d[k + 3] = 255;
   }
   c.putImageData(im, 0, 0);
@@ -308,4 +315,116 @@ export function loftPlantCy(key) {
   const my = LOFT_STOOL[1], P = key && BIG[key], box = key && bigBox(key);
   if (!P || !box) return my - 22;   // 빈 화분: 화분 몸 가운데쯤
   return (Math.round(my - 2 - P.meta.base[1]) + box[0] + my) / 2;
+}
+
+// ── 꺼진 디스플레이 방(처음 화면, 2026-10-16 사용자 "검은 배경에 의자에 내 식물이 올려져 있고. 천장에서 불빛이 지지직 거리면서 켜져.
+//  그리고 터치하면 주변 검은 배경이 밝아지는 느낌으로 대기화면으로 이어지게" · "대기실의 공간은 전부 디스플레이였다는 설정") ──
+//  방 = 전부 디스플레이 → 꺼져 있으면 검정. 보이는 건 전등 빛(원래 그림에서 떼어 둔 원뿔 · 바닥에 고인 빛 — 암실과 같은 셈, 새 빛을 짓지 않음) + 그 빛을 받은 의자.
+//  전등이 켜지면(k) 꺼진 화면 유리에 방 모양이 아주 희미하게 비침(× NAMB). 창(유리 디스플레이)도 꺼져 검정.
+const NDARK = [3, 4, 10], NAMB = 0.05, STOOL_LIT = 0.85;
+const legOn = (X, Y, x0, y0, x1, y1, hw) => Y >= y0 && Y <= y1 && Math.abs(X - (x0 + ((x1 - x0) * (Y - y0)) / (y1 - y0))) <= hw;
+// 의자: 앉는 판 윗면 타원 + 두께 띠 + 다리 셋(tools/pixel/big/loft_light.mjs 와 같은 잰 값)
+const inStool = (x, y) => { const X = x + 0.5, Y = y + 0.5; return ((X - 134.5) / 32.5) ** 2 + ((Y - 355.5) / 6.5) ** 2 <= 1 || ((X - 134.5) / 32) ** 2 + ((Y - 361.5) / 7.5) ** 2 <= 1 || legOn(X, Y, 116.5, 362, 108, 406, 4.6) || legOn(X, Y, 136, 362, 136, 395, 4.2) || legOn(X, Y, 154.5, 362, 161, 406, 4.6); };
+function nightLayers() {
+  if (S.night) return S.night;
+  const { o, off, kp, W, H } = lampLayers();
+  const mk = () => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); return { cv, c, im: c.createImageData(W, H) }; };
+  const A = mk(), B = mk(), Cs = mk(), u32 = new Uint32Array(W * H), a = A.im.data, b = B.im.data, s = Cs.im.data;
+  for (let i = 0; i < W * H; i++) {
+    const k = i * 4, x = i % W, y = (i - x) / W, glass = inGlass(x, y), lum = (o[k] * 0.3 + o[k + 1] * 0.59 + o[k + 2] * 0.11) / 255;
+    const st = !glass && inStool(x, y) && lum < 0.72, v = [0, 0, 0];
+    for (let ch = 0; ch < 3; ch++) {
+      const base = glass ? NDARK[ch] : NDARK[ch] + off[k + ch] * NAMB, li = glass ? 0 : st ? o[k + ch] * STOOL_LIT : Math.max(0, o[k + ch] - off[k + ch]) * kp[i];
+      a[k + ch] = Math.round(base); b[k + ch] = Math.round(li); v[ch] = Math.min(255, a[k + ch] + b[k + ch]);
+    }
+    a[k + 3] = 255; b[k + 3] = b[k] || b[k + 1] || b[k + 2] ? 255 : 0;
+    u32[i] = (0xff000000 | (v[2] << 16) | (v[1] << 8) | v[0]) >>> 0;
+    if (st) { s[k] = Math.round(o[k] * 0.2 + 12); s[k + 1] = Math.round(o[k + 1] * 0.22 + 20); s[k + 2] = Math.round(o[k + 2] * 0.28 + 40); s[k + 3] = 255; }   // 불 꺼진 의자: 의자 속 투영기의 푸른 빛만 받은 듯 희미하게
+  }
+  A.c.putImageData(A.im, 0, 0); B.c.putImageData(B.im, 0, 0); Cs.c.putImageData(Cs.im, 0, 0);
+  return (S.night = { off: A.cv, light: B.cv, stool: Cs.cv, u32 });
+}
+// 꺼진 방 + 전등 세기 k: 검정 → 꺼진 화면에 비친 방(k) → 전등 빛 더하기(k)
+export function loftNight(app, k) {
+  const { g } = app;
+  g.rect(0, 0, app.W, app.H, '#030409');
+  if (!ensure() || k <= 0) return;
+  const N = nightLayers(), c = g.c, kk = Math.min(1, k);
+  c.imageSmoothingEnabled = false;
+  g.alpha(kk, () => c.drawImage(N.off, 0, 0));
+  const op = c.globalCompositeOperation; c.globalCompositeOperation = 'lighter';
+  g.alpha(kk, () => c.drawImage(N.light, 0, 0));
+  if (k > 1) g.alpha(Math.min(1, (k - 1) * 0.8), () => c.drawImage(N.light, 0, 0));   // 'o'(잠깐 더 밝게)
+  c.globalCompositeOperation = op;
+}
+// 전등 → 의자 빛줄기(암실과 같은 그림) · 그 안 안개와 먼지
+export function loftNightBeam(app, a) { if (ensure() && a > 0) app.g.alpha(Math.min(1, a), () => { app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(beamCanvas(), 0, 0); }); }
+export function loftNightFront(app, a) { if (ensure() && a > 0) beamFront(app, Math.min(1, a)); }
+// 불 꺼진 의자(투영기의 푸른 빛만)
+export function loftNightStool(app, a) { if (ensure() && a > 0) app.g.alpha(Math.min(1, a), () => app.g.c.drawImage(nightLayers().stool, 0, 0)); }
+// 처음 화면의 식물: dark = 짙게 덮음 · cool = 투영기의 푸른 기운 · warm = 위 전등에서 받는 따뜻한 빛(암실과 같은 셈)
+export function loftNightPlant(app, key, pot, bx, by, { dark = 0, warm = 0, cool = 0 } = {}) {
+  const { g, t } = app;
+  if (!ensure()) return drawBig(g, key, pot, bx, by, { t, flat: true });
+  if (!S.nplantCv) { S.nplantCv = document.createElement('canvas'); S.nplantCv.width = 140; S.nplantCv.height = 140; }
+  const c = S.nplantCv.getContext('2d'); c.imageSmoothingEnabled = false;
+  c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, 140, 140);
+  drawBig({ c }, key, pot, 70, 124, { t, flat: true });
+  c.globalCompositeOperation = 'source-atop';
+  if (dark > 0) { c.fillStyle = `rgba(4,6,14,${Math.min(1, dark).toFixed(3)})`; c.fillRect(0, 0, 140, 140); }
+  if (cool > 0) { c.fillStyle = `rgba(90,150,230,${(0.2 * cool).toFixed(3)})`; c.fillRect(0, 0, 140, 140); }
+  if (warm > 0) {
+    const gr = c.createLinearGradient(0, 24, 0, 124), w = Math.min(1.2, warm);
+    gr.addColorStop(0, `rgba(255,214,150,${(0.34 * w).toFixed(3)})`); gr.addColorStop(0.55, `rgba(255,196,120,${(0.16 * w).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,196,120,0)');
+    c.fillStyle = gr; c.fillRect(0, 0, 140, 140);
+  }
+  c.globalCompositeOperation = 'source-over';
+  g.c.drawImage(S.nplantCv, Math.round(bx) - 70, Math.round(by) - 124);
+}
+
+// ── 디스플레이 켜짐(같은 날 "디스플레이 화면이 켜지는 듯한 요소 — LED 하나하나 켜지는 그런거. 그걸 대기실의 공간감(원형 벽과 바닥 등)을 분리해서 자연스레") ──
+//  방을 덩어리로 나눠 저마다 생김새를 따라 LED(2×2칸)가 하나씩 켜짐:
+//   바닥 = 의자에서 타원 고리로 퍼짐(바닥 타일 고리 그대로) → 벽 = 바닥 물결이 벽 밑에 닿는 대로 둘레를 따라 양옆으로 번지며 위로 타고 오름 →
+//   천장 = 벽 윗단에서 전등 쪽으로 모임 → 창 테 = 아래에서 위로 고리를 따라 → 창(유리 디스플레이) = 가운데 가로 줄에서 위아래로 펼쳐짐(옛 화면 켜지듯).
+//  LED 는 켜지기 직전 푸른 불씨 → 하얗게 번쩍(점 무늬 — 칸마다 한 점이 더 밝음) → 원래 색. 의자는 디스플레이가 아님(전등 빛을 받은 그대로).
+//  경계 = 그림을 격자 확대로 잰 곡선(천장 ↔ 벽 y = 87 − 0.00137(x−135)², 벽 ↔ 바닥 y = 338 + 0.000494(x−135)², 창 가운데 (134, 208) 테 반지름 101).
+const yCW = x => 87 - 0.00137 * (x - 135) ** 2, yWF = x => 338 + 0.000494 * (x - 135) ** 2;
+const floorT = (x, y) => 0.5 * Math.min(1, Math.hypot((x - 134) / 1.9, y - 380) / 230);
+const hsh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+function bootTau() {
+  if (S.tau) return S.tau;
+  const { W, H } = lampLayers(), tau = new Float32Array(W * H);
+  for (let cy = 0; cy < H; cy += 2) for (let cx = 0; cx < W; cx += 2) {
+    const x = cx + 1, y = cy + 1;
+    let t;
+    if (Math.hypot(x - 134, y - 208) <= 101) t = 0.48 + 0.24 * (Math.abs(Math.atan2(x - 134, y - 208)) / Math.PI);   // 창 테(유리는 아래에서 다시)
+    else if (Math.abs(x - 135) <= 24 && y < 40) t = 0.84;                                                          // 전등 갓
+    else if (inStool(x, y)) t = -1;                                                                                // 의자
+    else if (y < yCW(x)) t = 0.42 + 0.42 * (1 - Math.min(1, Math.hypot((x - 135) / 1.6, y - 20) / 140));         // 천장
+    else if (y > yWF(x)) t = floorT(x, y);                                                                         // 바닥
+    else { const yb = yWF(x), yt = yCW(x); t = floorT(x, yb) + (0.32 * (yb - y)) / (yb - yt); }                    // 벽
+    if (t >= 0) t += (hsh(cx, cy) - 0.5) * 0.05;
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) if (cy + j < H && cx + i < W) tau[(cy + j) * W + cx + i] = t;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inGlass(x, y)) tau[y * W + x] = 0.62 + 0.3 * Math.min(1, Math.abs(y + 0.5 - 208) / 88) + (hsh(y, 7) - 0.5) * 0.008;
+  return (S.tau = tau);
+}
+const PRE = 90, FL = 170, LEDC = [120, 190, 255], FLASH = [226, 244, 255];
+// u = 0..1 진행, D = 전체 길이(ms): 방 그림(loftBack) 위에 — 아직 안 켜진 칸 = 꺼진 방(전등 빛만), 켜지는 칸 = 불씨 → 번쩍, 켜진 칸 = 비움
+export function loftBoot(app, u, D) {
+  if (!ensure()) return;
+  const N = nightLayers(), tau = bootTau(), { W, H } = lampLayers();
+  if (!S.bootCv) { S.bootCv = document.createElement('canvas'); S.bootCv.width = W; S.bootCv.height = H; S.bootCx = S.bootCv.getContext('2d'); S.bootIm = S.bootCx.createImageData(W, H); S.bootU = new Uint32Array(S.bootIm.data.buffer); }
+  const out = S.bootU, night = N.u32, el = u * D;
+  for (let i = 0; i < W * H; i++) {
+    const tt = tau[i];
+    if (tt < 0) { out[i] = 0; continue; }
+    const d = el - tt * D;
+    if (d < -PRE) out[i] = night[i];
+    else if (d < 0) { const f = 0.34 * (1 + d / PRE), c = night[i], r = c & 255, gg = (c >> 8) & 255, b = (c >> 16) & 255; out[i] = (0xff000000 | (Math.round(b + (LEDC[2] - b) * f) << 16) | (Math.round(gg + (LEDC[1] - gg) * f) << 8) | Math.round(r + (LEDC[0] - r) * f)) >>> 0; }
+    else if (d < FL) { const x = i % W, y = (i - x) / W, a = (1 - d / FL) ** 1.6 * ((x & 1) || (y & 1) ? 0.55 : 1); out[i] = ((Math.round(a * 255) << 24) | (FLASH[2] << 16) | (FLASH[1] << 8) | FLASH[0]) >>> 0; }
+    else out[i] = 0;
+  }
+  S.bootCx.putImageData(S.bootIm, 0, 0);
+  app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(S.bootCv, 0, 0);
 }
