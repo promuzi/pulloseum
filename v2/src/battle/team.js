@@ -35,15 +35,20 @@ function swapIn(B, side, to, ev, forced = false) {
   return e;
 }
 
-// 한 턴: myAct = { kind: 'skill', skill } | { kind: 'switch', to } | { kind: 'rest' }(쉬는 차례)
-export function playTurn3(B, myAct) {
-  const T = B.turn, ev = [], foeSw = aiSwitch(B, B.rng);
-  const foeSkill = foeSw == null ? (mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng)) : null;
-  const meSwitch = myAct.kind === 'switch' && canSwitch(B.me) && B.team.me[myAct.to] && B.team.me[myAct.to].hp > 0 && myAct.to !== B.act.me;
+// 사람의 수 → 이번 턴 기술: 쉬는 차례 = 쉬기, rest = 넘어감(시간 초과 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 3:3만 평타로 바꿨음), 못 쓰는 기술 = 평타
+const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side]) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
+const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill) ? a.skill : u.kit[0]);
+
+// 한 턴: myAct = { kind: 'skill', skill } | { kind: 'switch', to } | { kind: 'rest' }(쉬는 차례 · 시간 초과)
+//  foeAct = 친구 대결(사람)의 수 — 없으면 봇이 고름. 친구 대결은 쓰러진 자리를 저마다 직접 채움(턴 끝 B.need = 'me' | 'foe' | 'both')
+export function playTurn3(B, myAct, foeAct = null) {
+  const T = B.turn, ev = [], human = !!foeAct;
+  const foeSw = human ? (okSwitch(B, 'foe', foeAct) ? foeAct.to : null) : aiSwitch(B, B.rng);
+  const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
+  const meSwitch = okSwitch(B, 'me', myAct);
   if (meSwitch) swapIn(B, 'me', myAct.to, ev);
   if (foeSw != null) swapIn(B, 'foe', foeSw, ev);
-  let mySkill = meSwitch ? null : mustSkip(B.me) || myAct.kind === 'rest' ? REST : myAct.kind === 'skill' && canUse(B.me, myAct.skill) ? myAct.skill : B.me.kit[0];
-  if (mySkill === REST && !mustSkip(B.me)) mySkill = B.me.kit[0];   // 쉴 차례가 아니면 평타
+  const mySkill = meSwitch ? null : skillOf(B.me, myAct);
   const before = { me: B.me.hp, foe: B.foe.hp };
   if (mySkill) B.me.energy -= mySkill.cost || 0;
   if (foeSkill) B.foe.energy -= foeSkill.cost || 0;
@@ -67,6 +72,7 @@ export function playTurn3(B, myAct) {
   for (const e of ev) if (e.t === 'faint' && e.idx == null) e.idx = B.act[e.who];
   if (!aliveOf(B, 'foe').length) B.over = 'win';
   else if (!aliveOf(B, 'me').length) B.over = 'lose';
+  else if (human) { const m = B.me.hp <= 0, f = B.foe.hp <= 0; B.need = m && f ? 'both' : m ? 'me' : f ? 'foe' : null; }
   else {
     if (B.foe.hp <= 0) swapIn(B, 'foe', aiNext(B), ev, true);
     if (B.me.hp <= 0) B.need = 'me';
@@ -75,8 +81,8 @@ export function playTurn3(B, myAct) {
   B.log.push(turn); B.turn++;
   return turn;
 }
-// 내 식물이 쓰러진 자리에 다음 식물(공짜 — 턴을 쓰지 않음)
-export function sendIn(B, to) { const ev = []; swapIn(B, 'me', to, ev, true); B.need = null; return ev[0]; }
+// 쓰러진 자리에 다음 식물(공짜 — 턴을 쓰지 않음). 친구 대결은 side = 'foe'도 — 둘 다 비었으면(both) 남은 쪽이 need로 남음
+export function sendIn(B, to, side = 'me') { const ev = []; swapIn(B, side, to, ev, true); B.need = B.need === 'both' ? (side === 'me' ? 'foe' : 'me') : null; return ev[0]; }
 
 // 시제품 능력치(타입·속성으로 — 게임 규칙 상태로 옮길 때 실제 값으로 바꿈)
 const TYPE_BASE = { flower: [210, 34, 22, 30], vine: [232, 32, 24, 26], cactus: [252, 31, 28, 22], mushroom: [224, 30, 26, 24] };
