@@ -47,8 +47,10 @@ export const home = {
     this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.forceMode = p.mode || null;   // ?mode=swap3 = 그 전투 종류로(촬영용)
     this.focus = p.focus ? { t0: 0, hold: true } : null;   // ?focus=1 = 다 어두워진 장(촬영용)
     this.unfocus = p.from === 'plant' ? { t0: null } : null;   // 식물 관리에서 돌아오면 거꾸로(카메라가 물러나고 불이 켜짐)
+    this.bootIn = p.from === 'boot' ? { t0: null } : null;     // 처음 화면에서 디스플레이가 켜지며 들어옴 = 식물은 이미 의자 위(투영 다시 안 함) · 옆 창 · 글자만 서서히
+    this.noReveal = !!this.bootIn;
     this.colCy = null;
-    if (p.from !== 'plant') enterLoft();   // 창 밖 풍경은 홈에 새로 들어올 때만 다음 것으로(식물 관리 갔다 오면 그대로)
+    if (p.from !== 'plant' && p.from !== 'boot') enterLoft();   // 창 밖 풍경은 홈에 새로 들어올 때만 다음 것으로(식물 관리 갔다 오면 · 처음 화면이 고른 풍경이면 그대로)
   },
   onDrag(dy, dx) { this.swipe += dx; },
   onRelease(ev) {   // 식물 위에서 옆으로 밀면 다음·이전 식물
@@ -56,10 +58,11 @@ export const home = {
     if (!s || T.key !== 'loft' || this.focus || Math.abs(ev.dx) < 32 || Math.abs(ev.dx) < Math.abs(ev.dy) * 1.2 || ev.y0 < 220 || ev.y0 > 430) return;
     this.flip(ev.dx < 0 ? 1 : -1);
   },
-  flip(d) { const s = this.app.state; if (s.plants.length < 2) return; s.active = (s.active + d + s.plants.length) % s.plants.length; this.showT = this.app.t; this.app.act('setActive', { id: s.plants[s.active].uid }); },
+  flip(d) { const s = this.app.state; if (s.plants.length < 2) return; s.active = (s.active + d + s.plants.length) % s.plants.length; this.showT = this.app.t; this.noReveal = false; this.app.act('setActive', { id: s.plants[s.active].uid }); },
   startFocus(app) { if (!this.focus && !this.empty) this.focus = { t0: app.t }; },
   draw(app) {
     this.app = app;
+    if (!app.state) return loftView(app, {});   // 로그아웃 직후(처음 화면으로 넘어가는 짧은 동안) — 방만
     return this.drawLoft(app);
   },
 
@@ -81,15 +84,18 @@ export const home = {
     const p = this.empty ? null : s.plants[s.active], key = p ? bigKey(p.key, stageKey(p)) : null;
     const [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), cam = this.camera(app, pc);
     // 식물: 의자 속 투영기에서 아래부터 위로 나타남(바꿀 때마다) — 드러나는 줄에 푸른 빛 한 줄
-    const show = Math.min(1, (t - this.showT) / SHOW_MS), reveal = Math.round(my - 100 + (1 - show) * 104);
+    const show = this.noReveal ? 1 : Math.min(1, (t - this.showT) / SHOW_MS), reveal = Math.round(my - 100 + (1 - show) * 104);
     loftView(app, { dark: cam.dark, z: cam.z, px: mx, py: pc, sx: cam.sx, sy: cam.sy, plant: () => {
       g.clip(0, reveal, W, 120, () => loftPlant(app, key, p ? p.pot : 'pot_terra', mx, my));   // 단계 그림(어린·자람·성체)
       if (show < 1) { g.rect(mx - 26, reveal, 52, 1, '#8ccfff'); g.rect(mx - 18, reveal - 1, 36, 1, '#e6f3ff'); }
     } });
-    if (cam.ui <= 0) return;
-    const live = cam.ui >= 1 && !this.focus;   // 연출 중엔 누르기 막음
+    if (this.bootIn && this.bootIn.t0 == null) this.bootIn.t0 = t;
+    const bk = this.bootIn ? Math.min(1, (t - this.bootIn.t0) / 600) : 1, ui = cam.ui * bk;
+    if (this.bootIn && bk >= 1) this.bootIn = null;
+    if (ui <= 0) return;
+    const live = ui >= 1 && !this.focus;   // 연출 중엔 누르기 막음
     this.colCy = this.colCy == null ? pc : this.colCy + (pc - this.colCy) * 0.22;   // 옆 창 줄 가운데가 식물 가운데를 부드럽게 따라감
-    g.alpha(cam.ui, () => this.drawUI(app, p, live));
+    g.alpha(ui, () => this.drawUI(app, p, live));
   },
   drawUI(app, p, live) {
     const { g, state: s } = app, [mx, my] = LOFT_STOOL;

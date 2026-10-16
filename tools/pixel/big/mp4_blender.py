@@ -1,5 +1,5 @@
-# 블렌더 배경 실행용: PNG 장 목록(job.json) → MP4(H.264, yuv420p). video.mjs가 부른다.
-# 시퀀서에 그림 띠 하나를 깔고 그대로 굽는다 — 색 변환은 Standard(그림 색 그대로), 크기 조정 없음(장 크기 = 영상 크기).
+# 블렌더 배경 실행용: PNG 장 목록(job.json) → MP4(H.264, yuv420p) [+ 소리 띠(WAV → AAC)]. video.mjs가 부른다.
+# 시퀀서에 그림 띠 하나(+ 소리 띠 하나)를 깔고 그대로 굽는다 — 색 변환은 Standard(그림 색 그대로), 크기 조정 없음(장 크기 = 영상 크기).
 import json
 import os
 import sys
@@ -31,9 +31,16 @@ im.color_mode = 'RGB'
 ff = r.ffmpeg
 ff.format = 'MPEG4'
 ff.codec = 'H264'
-ff.constant_rate_factor = 'PERC_LOSSLESS'   # 무손실(LOSSLESS)은 4:4:4라 휴대폰이 못 튼다
+ff.constant_rate_factor = job.get('crf') or 'PERC_LOSSLESS'   # 무손실(LOSSLESS)은 4:4:4라 휴대폰이 못 튼다
 ff.ffmpeg_preset = 'BEST'
 ff.audio_codec = 'NONE'
+if job.get('audio'):   # 소리 띠: 1장에서 시작 · AAC 스테레오 44.1kHz
+    snd = strips.new_sound(name='audio', filepath=job['audio'], channel=2, frame_start=1)
+    ff.audio_codec = 'AAC'
+    ff.audio_bitrate = 192
+    ff.audio_channels = 'STEREO'
+    ff.audio_mixrate = 44100
+    print('sound strip', snd.frame_final_duration, 'frames')
 
 vs = sc.view_settings
 vs.view_transform = 'Standard'

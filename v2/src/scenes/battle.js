@@ -458,7 +458,7 @@ export const battle = {
     });
   },
   // 승패: 가운데 큰 글자(네모 없이) — 승리 = 금빛, 패배 = 회청, 아래 한 줄 까닭(있으면)
-  title(app, win, sub) { this.v.title = { win, sub, t0: app.t }; music(null); sfx(win ? 'win' : 'lose'); },
+  title(app, win, sub) { this.v.title = { win, sub, t0: app.t }; music(win ? 'win' : 'lose'); sfx(win ? 'win' : 'lose'); },
   drawTitle(app) {
     const T0 = this.v.title; if (!T0) return;
     const { g, t } = app, c = g.c, k = Math.min(1, (t - T0.t0) / 220), y = Math.round(LED_CY - 30 + (1 - k) * 12), sc = c.getTransform().a || 1;

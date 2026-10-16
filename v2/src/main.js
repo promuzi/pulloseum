@@ -16,6 +16,7 @@ import { drawOverlays } from './scenes/popups.js';
 import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
+import { tryAutoStart } from './core/sound.js';
 
 const screen = new Screen(document.getElementById('screen'));
 screen.resize();
@@ -62,6 +63,7 @@ function frame(ts) {
 }
 // 시험 도구: 창이 가려져 브라우저가 그림 시계를 멈췄을 때(미리보기 창 등) 시간을 직접 넘기며 그림 — 넘긴 만큼 시계를 앞당겨 둬서 진짜 시계와 섞여도 시간이 거꾸로 가지 않음
 window.__advance = (ms = 600, dt = 33) => { const t0 = Math.max(app.t, performance.now() + timeOff); for (let k = dt; k <= ms; k += dt) frameBody(t0 + k); timeOff = app.t - performance.now(); return { scene: router.name, t: app.t }; };
+window.__frame = ts => frameBody(ts);   // 영상 도구: 정확한 시각(ms)으로 한 장(누르기 처리 · 겹창 · 알림 띠까지 실제와 같게)
 function frameBody(ts) {
   try {
     app.t = ts; app.W = screen.W; app.H = screen.H;
@@ -88,6 +90,7 @@ function frameBody(ts) {
   if (q0.get('ui')) setUi(q0.get('ui'));   // 창 겉모습 후보 비교(?ui=sky|screen|glass|metal|ink|holo)
   if (q0.get('scene') || q0.has('offline')) { net.offline = true; app.state = mockState(); }
   router.set(q0.get('scene') || 'title', Object.fromEntries(q0.entries()));
+  if (!q0.has('mute')) tryAutoStart();   // 자동 재생이 막혀 있지 않으면(앱 WebView 등) 바로 소리 — 막혀 있으면 첫 누름에(처음 화면 = 작은 '눌러서 시작')
   window.__ready = { missing, bad };
   window.__pause = (on = true) => { running = !on; };   // 촬영 도구가 시간을 직접 넘길 때 원래 화면 갱신을 멈춤(두 시계가 섞이면 끌기·용수철 계산이 꼬임)
   window.__holoFx = holoFx;   // 검토 도구: 창 띠리릭 켜기·간격

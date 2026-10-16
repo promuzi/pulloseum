@@ -6,9 +6,13 @@
 // 그리기 전에 화면의 장소 테마를 고른다(scene.theme = 키 또는 (app) => 키).
 import { C, BAYER4 } from '../art/palette.js';
 import { setTheme, setHoloClock } from '../art/theme.js';
-import { transSound, music } from './sound.js';
-// 장면 → 배경 음악(없으면 홈 음악)
-const SCENE_MUSIC = { title: 'title', starter: 'title', battle: 'battle', matching: 'battle' };
+import { transSound, music, musicTick } from './sound.js';
+// 장면 → 음악 상태(지휘자 core/music.js STATES — 없으면 대기). 같은 곡 안의 상태(대기 · 메뉴 · 스마트팜 · 탐사 · 식물 관리)끼리는 곡이 이어지고 세션만 바뀜,
+//  전투 · 매칭 · 처음 화면은 다른 곡 — 바뀜은 다음 마디에 이음 장식을 붙여서(2026-10-16 사용자 "끊기지 않고 자연스레 이어지게")
+const SCENE_MUSIC = {
+  title: 'title', starter: 'title', home: 'home', plant: 'focus', matching: 'ready', battle: 'battle', result: 'result',
+  nursery: 'farm', storage: 'farm', explore: 'space', hangar: 'space', bag: 'menu', dex: 'menu', shop: 'menu', market: 'menu', room: 'menu',
+};
 
 const STEEL = { hi: '#e8ecf2', a: '#c6ccd6', b: '#a2aab8', c: '#7e8796', d: '#596170', edge: '#2a2f3a', rivet: '#eef2f8', rivetLo: '#4a5160' };
 // 어둡고 두꺼운 철 셔터(2026-10-15 사용자: 전환 = ① 철 셔터, "더 어둡고 두꺼운 느낌으로") — 건메탈 골판 + 두꺼운 맞물림 턱 + 큰 볼트 + 고무 띠, 양옆 레일
@@ -40,6 +44,7 @@ export class Router {
     transSound(this.style, 'start');
   }
   draw(app) {
+    musicTick();   // 음악 앞당겨 예약(영상 기록 땐 이 장의 시각으로만)
     const S = TRANSITIONS[this.style] || TRANSITIONS.dither;
     if (this.phase === 1 && app.t - this.t0 >= S.close) { const p = this.pending; this.set(p.name, p.params); this.phase = S.hold ? 3 : 2; this.t0 = app.t; if (S.close) transSound(this.style, 'shut'); if (!S.hold && S.open) transSound(this.style, 'open'); }
     if (this.phase === 3 && app.t - this.t0 >= S.hold) { this.phase = 2; this.t0 = app.t; if (S.open) transSound(this.style, 'open'); }
