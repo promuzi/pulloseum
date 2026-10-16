@@ -6,6 +6,7 @@ import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
 import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
+import { LEAGUES } from '../v2/src/game/catalog.js';
 
 export const newRng = () => makeRng(randomInt(1, 2 ** 31 - 1));
 const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
@@ -68,6 +69,7 @@ export function makeGame({ q, log }) {
     const mode = s.mode === 'swap3' ? 'swap3' : 'tournament';
     const mine = mode === 'swap3' ? teamPlants(s) : [s.plants[s.active] || s.plants[0]];
     if (!mine[0]) fail('싸울 식물이 없어요');
+    if (mode === 'tournament') { L.leaguesOf(s); const cap = L.leagueCap(s); if (mine[0].stage > cap) fail(`${LEAGUES[s.league].name}는 ${LEAGUES[s.league].desc} — 리그를 바꾸거나 다른 식물을 내보내 주세요`); }
     if (mode === 'swap3' && mine.length < 3) fail('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요');
     const seed = randomInt(1, 2 ** 31 - 1), rng = makeRng(randomInt(1, 2 ** 31 - 1)), tier = Math.max(0, TIERS.indexOf(s.tournament.tier));
     const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier));

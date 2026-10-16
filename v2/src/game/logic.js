@@ -4,6 +4,7 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeMaxDur, probeUpCost, REPAIR_PER, EXPLORE_COST,
+  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward,
 } from './catalog.js';
 
 export class Err extends Error {}
@@ -30,6 +31,7 @@ export function newGame({ nickname, starter }, rng, now) {
   };
   s.plants.push(makePlant(s, { key: starter }, rng, now));
   for (let i = 0; i < 2; i++) s.seeds.push(seedOf(s, rollSpecies(rng, 'common'), rng));
+  s.league = 'sprout'; leaguesOf(s); seasonSync(s, now);
   return s;
 }
 
@@ -341,7 +343,7 @@ export function fuelSync(s, now) {
 }
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
-export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) harvestSync(p, now); return s; }
+export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) harvestSync(p, now); seasonSync(s, now); return s; }
 // 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로)
 export function probeOf(s) {
   if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])), dur: probeMaxDur(1) };
@@ -446,7 +448,40 @@ export function ackPending(s, n) { s.pending.splice(0, Math.max(1, n | 0)); retu
 
 // ── 전투 보상(서버가 결과를 확인한 뒤에만) ──
 const ROUNDS = ['예선', '16강', '8강', '4강', '결승'];
-const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
+// ── 리그 · 시즌 ── s.tournament = 지금 고른 리그의 기록(다른 화면 · 서버가 그대로 읽음), s.leagues = 리그마다 기록 보관, s.league = 고른 리그
+const freshT = (lg, tier = '브론즈') => ({ tier, name: `${LEAGUES[lg].short} ${tier}`, round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 });
+export function leaguesOf(s) {
+  if (!s.league || !LEAGUES[s.league]) s.league = 'sprout';
+  if (!s.leagues) s.leagues = {};
+  for (const k of LEAGUE_KEYS) if (!s.leagues[k]) s.leagues[k] = k === s.league && s.tournament ? { ...s.tournament } : freshT(k);
+  if (!s.tournament) s.tournament = { ...s.leagues[s.league] };
+  return s.leagues;
+}
+export const leagueCap = s => LEAGUES[s.league || 'sprout'].cap;
+export function setLeague(s, lg) {
+  need(LEAGUES[lg], '모르는 리그');
+  leaguesOf(s);
+  s.leagues[s.league] = { ...s.tournament };   // 지금 리그 기록을 넣어 두고
+  s.league = lg; s.tournament = { ...s.leagues[lg] };
+  return { league: lg };
+}
+// 시즌 넘김(상태를 맞출 때마다): 지난 시즌 최고 단계로 상자 · 칭호 → 모든 리그 두 단계 내려가 예선부터
+export function seasonSync(s, now) {
+  leaguesOf(s);
+  const n = seasonOf(now);
+  if (!s.season) { s.season = { n, best: Object.fromEntries(LEAGUE_KEYS.map(k => [k, TIERS.indexOf((k === s.league ? s.tournament : s.leagues[k]).tier)])) }; return; }
+  if (n <= s.season.n) return;
+  s.leagues[s.league] = { ...s.tournament };
+  const best = s.season.best, top = Math.max(0, ...LEAGUE_KEYS.map(k => best[k] || 0)), box = { credits: 0, gems: 0, fuel: 0 };
+  for (const k of LEAGUE_KEYS) { const r = seasonReward(best[k] || 0); box.credits += r.credits; box.gems += r.gems; box.fuel += r.fuel; }
+  give(s, box);
+  const title = top >= 2 ? `${TIERS[top]} 재배사` : null;
+  if (title && !s.titles.includes(title)) s.titles.push(title);
+  s.pending.push({ kind: 'season', n: s.season.n, best: { ...best }, box, title });
+  for (const k of LEAGUE_KEYS) { const t0 = Math.max(0, TIERS.indexOf(s.leagues[k].tier) - 2); s.leagues[k] = freshT(k, TIERS[t0]); }
+  s.tournament = { ...s.leagues[s.league] };
+  s.season = { n, best: Object.fromEntries(LEAGUE_KEYS.map(k => [k, TIERS.indexOf(s.leagues[k].tier)])) };
+}
 export const PVP_DAILY = 15;   // 친구 대결 보상은 하루 15판까지(친구끼리 일부러 져 주며 돈·경험치를 쌓지 않게) — 승패 기록은 늘 남음
 export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
   const r = { credits: 0, water: 0, fert: 0 };
@@ -469,7 +504,10 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
       const T = s.tournament; T[win ? 'wins' : 'losses']++;
       if (T.wins >= 3) {   // 이번 라운드 통과 → 다음 라운드(결승 통과 = 다음 단계 대회)
         const i = ROUNDS.indexOf(T.round);
-        if (i >= ROUNDS.length - 1) { T.tier = TIERS[Math.min(TIERS.length - 1, tier + 1)]; T.name = `새싹 ${T.tier}`; T.round = ROUNDS[0]; r.credits += 300; }
+        if (i >= ROUNDS.length - 1) {
+          T.tier = TIERS[Math.min(TIERS.length - 1, tier + 1)]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.round = ROUNDS[0]; r.credits += 300; r.tierUp = T.tier;
+          leaguesOf(s); if (s.season) s.season.best[s.league] = Math.max(s.season.best[s.league] || 0, TIERS.indexOf(T.tier));   // 시즌 최고 기록
+        }
         else T.round = ROUNDS[i + 1];
         T.wins = 0; T.losses = 0; r.round = T.round;
       } else if (T.losses >= 3) { T.wins = 0; T.losses = 0; T.round = ROUNDS[0]; r.reset = true; }

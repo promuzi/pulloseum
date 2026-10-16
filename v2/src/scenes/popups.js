@@ -6,7 +6,7 @@ import { icon } from '../art/icons.js';
 import { button, fmt } from '../art/ui.js';
 import { T, holo } from '../art/theme.js';
 import { bigTitle, seedArt } from './common.js';
-import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME } from '../game/catalog.js';
+import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME, TIERS, LEAGUES, LEAGUE_KEYS } from '../game/catalog.js';
 import { net } from '../net/api.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 
@@ -15,11 +15,11 @@ const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 
 // 보상 한 칸의 아이콘 · 이름 · 수
 export const KIND = {
   credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'water', name: '물' }, fert: { icon: 'fert', name: '비료' },
-  regress: { icon: 'potion', name: '회귀 주사' }, fuel: { icon: 'energy', name: '탐사 연료' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
+  regress: { icon: 'potion', name: '회귀 주사' }, fuel: { icon: 'energy', name: '연료 캡슐' }, parts: { icon: 'gear', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
   const out = [];
-  for (const k of ['credits', 'water', 'fert', 'gems', 'regress']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
+  for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
   if (box.seed && typeof box.seed === 'object') out.push({ kind: 'seed', seed: box.seed, rar: 3 });
   return out;
 }
@@ -65,15 +65,16 @@ function rays(g, cx, cy, t, k, col) {
 }
 const LC = { cy: 300, gridY: 352 };
 function levelChest(app, item) {
+  const season = item.kind === 'season', key = season ? 'season' + item.n : item.level;   // 시즌 마감 상자도 같은 연출(2026-10-16 리그 · 시즌)
   const { g, W, H, t, input } = app;
   const o = app.chest && app.chest.item === item ? app.chest : (app.chest = { item, t0: t, open: null }, sfx('levelup'), app.chest);
-  const list = rewardList(item.box), slotsUp = farmSlots(item.level) - farmSlots(item.level - 1);
-  const orbit = Object.entries(ORBIT_LV).find(([, lv]) => lv === item.level);
+  const list = rewardList(item.box), slotsUp = season ? 0 : farmSlots(item.level) - farmSlots(item.level - 1);
+  const orbit = season ? null : Object.entries(ORBIT_LV).find(([, lv]) => lv === item.level);
   g.c.fillStyle = 'rgba(4,7,14,0.86)'; g.c.fillRect(0, 0, W, H);
   input.hit('chest_block', 0, 0, W, H, () => {});
   const k0 = ease(Math.min(1, (t - o.t0) / 380));
-  bigTitle(g, '재배사 레벨 업!', W / 2, 70 - Math.round((1 - k0) * 20), { top: '#fff6c8', mid: '#ffd84a', low: '#f79617', shadow: '#5a2e0a' });
-  bigTitle(g, 'Lv ' + item.level, W / 2, 112, { font: 'huge', top: '#ffffff', mid: '#c8f8ec', low: '#8efbdb', shadow: '#1e3a5a' });
+  bigTitle(g, season ? `시즌 ${item.n} 마감!` : '재배사 레벨 업!', W / 2, 70 - Math.round((1 - k0) * 20), { top: '#fff6c8', mid: '#ffd84a', low: '#f79617', shadow: '#5a2e0a' });
+  bigTitle(g, season ? TIERS[Math.max(0, ...Object.values(item.best || {}))] : 'Lv ' + item.level, W / 2, 112, { font: 'huge', top: '#ffffff', mid: '#c8f8ec', low: '#8efbdb', shadow: '#1e3a5a' });
   const op = o.open == null ? 0 : ease(Math.min(1, (t - o.open) / 260));
   if (o.open != null) rays(g, W / 2, LC.cy - 30, t, op, '#ffd84a');
   const bob = o.open == null ? Math.round(Math.abs(Math.sin(t / 260)) * -6) : 0, sq = o.open == null && Math.abs(Math.sin(t / 260)) < 0.12 ? 1 : 0;
@@ -88,6 +89,7 @@ function levelChest(app, item) {
   const extra = [];
   if (slotsUp > 0) extra.push(`스마트팜 칸 +${slotsUp} (이제 ${farmSlots(item.level)}칸)`);
   if (orbit) extra.push(`${orbit[0]}궤도가 열렸어요 — ${PLANETS.filter(p => p.orbit === +orbit[0]).map(p => p.name).join(' · ')}`);
+  if (season) { extra.push(LEAGUE_KEYS.map(k => `${LEAGUES[k].short} ${TIERS[(item.best || {})[k] || 0]}`).join(' · ')); if (item.title) extra.push(`칭호: ${item.title}`); extra.push('새 시즌 — 리그마다 두 단계 내려가 예선부터'); }
   list.forEach((r, i) => {
     const age = t - o.open - 280 - i * 230; if (age < 0) return;
     const k = Math.min(1, age / 260), e = back(k), tx = x0 + (i % 2) * (cw + gap), ty = LC.gridY + Math.floor(i / 2) * 52;
@@ -98,7 +100,7 @@ function levelChest(app, item) {
   const done = t - o.open - 280 - list.length * 230 > 200;
   let y = LC.gridY + Math.ceil(list.length / 2) * 52 + 4;
   if (done) for (const s of extra) { g.text(s, W / 2, y, { font: 'bold', color: '#9ff0b0', align: 'center', outline: C.ink }); y += 17; }
-  if (done) button(app, 'chest_ok', W / 2 - 60, Math.min(H - 52, y + 8), 120, 34, '확인', { style: 'gold', font: 'head', onTap: () => { (app.ackedLv || (app.ackedLv = new Set())).add(item.level); app.chest = null; app.act('ack', { n: 1 }); } });   // 서버가 맨 앞 하나를 지움(요청은 차례대로) — 응답 전까지 같은 상자가 다시 안 뜨게 레벨로 기억
+  if (done) button(app, 'chest_ok', W / 2 - 60, Math.min(H - 52, y + 8), 120, 34, '확인', { style: 'gold', font: 'head', onTap: () => { (app.ackedLv || (app.ackedLv = new Set())).add(key); app.chest = null; app.act('ack', { n: 1 }); } });   // 서버가 맨 앞 하나를 지움(요청은 차례대로) — 응답 전까지 같은 상자가 다시 안 뜨게 레벨로 기억
   else input.hit('chest_skip', 0, 0, W, H, () => { o.open -= 5000; });   // 누르면 남은 보상 바로
 }
 
@@ -163,7 +165,7 @@ export function drawOverlays(app) {
   if (app.popup) return gotPopup(app, app.popup);
   if (app.sheet === 'settings') return settingsSheet(app);
   if (s && s.pending && s.pending.length && !NO_CHEST.has(app.router.name) && !app.router.phase) {
-    const item = s.pending.find(x => !(app.ackedLv && app.ackedLv.has(x.level)));
-    if (item && item.kind === 'level') return levelChest(app, item);
+    const item = s.pending.find(x => !(app.ackedLv && app.ackedLv.has(x.kind === 'season' ? 'season' + x.n : x.level)));
+    if (item && (item.kind === 'level' || item.kind === 'season')) return levelChest(app, item);
   }
 }

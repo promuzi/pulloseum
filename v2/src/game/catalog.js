@@ -253,6 +253,15 @@ export const PLANETS = [
   { id: 'ex_tiamen', name: '티아멘', orbit: 4, hazard: 3, rich: 1.6, vital: 1, kind: 'mixed', pool: ['frost_bell', 'vine_wind', 'cactus_wind'], legend: true },   // 얼음 바람 = 빙결 · 바람, 아주 위험
 ];
 export const KIND_NAME = { seed: '종자가 많아요', mixed: '종자 · 자원 섞임', resource: '자원이 많아요' };
+// ── 리그 · 시즌(1:1 토너먼트) — 리그는 단계별(성장 설계 2026-10-15 "리그는 단계별(어린 · 자라는 · 무제한)"), 리그마다 단계 사다리(브론즈 → 풀로세움) 따로
+//  시즌 = 2주. 끝나면 리그마다 그 시즌 가장 높이 간 단계로 상자(돈 · 보석 · 연료 캡슐 · 골드부터 칭호) → 모든 리그가 두 단계 내려가 예선부터
+export const LEAGUES = { sprout: { name: '새싹 리그', short: '새싹', cap: 0, desc: '어린 식물만' }, growing: { name: '자람 리그', short: '자람', cap: 1, desc: '자라는 단계까지' }, open: { name: '무제한 리그', short: '무제한', cap: 2, desc: '단계 제한 없음' } };
+export const LEAGUE_KEYS = Object.keys(LEAGUES);
+export const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
+export const SEASON = { days: 14, epoch: Date.UTC(2026, 9, 12, 15) };   // 2026-10-13(화) 0시(한국) 시작, 2주마다
+export const seasonOf = now => 1 + Math.floor((now - SEASON.epoch) / (SEASON.days * 864e5));
+export const seasonEnd = n => SEASON.epoch + n * SEASON.days * 864e5;
+export const seasonReward = tier => ({ credits: 150 + 150 * tier, gems: 3 * tier, fuel: 1 + Math.floor(tier / 2) });
 // 탐사선 부위(사용자 정리: 연료 탱크 = 거리 · 내구성 = 성공/실패 · 탐사 장치 = 질 좋은 보상(종자 제외) · 채집기 = 보상 수 · 종자 보관함 = 종자 개체값)
 export const PROBE = {
   tank: { name: '연료 탱크', max: 4, desc: '갈 수 있는 궤도가 넓어져요' },

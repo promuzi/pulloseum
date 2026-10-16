@@ -5,8 +5,8 @@ import { icon } from '../art/icons.js';
 import { drawBig, drawPortrait, bigKey, BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
-import { SPECIES, JONG } from '../game/catalog.js';
-import { plantStats } from '../game/logic.js';
+import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../game/catalog.js';
+import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
@@ -211,6 +211,7 @@ export const home = {
     const bx = x + w + 6;
     const go = () => {
       if (pvp) return app.go('room', {}, 'shutterClose');
+      if (!swap && !pvp) { leaguesOf(s); const cap = leagueCap(s), p = s.plants[s.active] || s.plants[0]; if (p && p.stage > cap) return app.toast(`${LEAGUES[s.league].name}는 ${LEAGUES[s.league].desc} — 리그를 바꾸거나 다른 식물을 내보내요`); }
       if (swap && s.plants.length < 3) return app.toast('3:3 교체전은 스마트팜에 식물이 셋 있어야 해요');
       app.go('matching', { mode: mode.id }, 'shutterClose');
     };
@@ -222,7 +223,7 @@ export const home = {
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     const close = () => { this.modeSheet = false; if (this.teamDirty) { this.teamDirty = false; app.act('setTeam', { team: teamIdx(s).map(i => s.plants[i].uid) }); } };
     app.input.hit('ms_block', 0, 0, W, H, close);
-    const cur = modeOf(app), swapOn = cur === 'swap3', x = 12, w = W - 24, h = 50 + MODES.length * 60 + (swapOn ? 100 : 0), y = Math.max(28, BATTLE_Y + BATTLE_H - h);
+    const cur = modeOf(app), swapOn = cur === 'swap3', tourOn = cur === 'tournament', x = 12, w = W - 24, h = 50 + MODES.length * 60 + (swapOn ? 100 : 0) + (tourOn ? 98 : 0), y = Math.max(28, BATTLE_Y + BATTLE_H - h);
     holo(g, x, y, w, h, T.card || T.panel, 16);
     g.text('전투 종류', x + 12, y + 10, { font: 'head', color: P.main });
     MODES.forEach((m, i) => {
@@ -239,9 +240,21 @@ export const home = {
         if (m.id === 'swap3' && s.plants.length < 3) return app.toast('식물이 셋 있어야 해요 — 종자를 심어 보세요');
         app.ui = { ...(app.ui || {}), mode: null };
         if (s.mode !== m.id) { s.mode = m.id; if (m.id === 'swap3') { s.team = teamIdx(s); this.teamDirty = true; } app.act('setMode', { mode: m.id }); }
-        if (m.id !== 'swap3') this.modeSheet = false;
+        if (m.id !== 'swap3' && m.id !== 'tournament') this.modeSheet = false;
       });
     });
+    if (tourOn) {   // 리그(2026-10-16 — 단계별: 새싹 = 어린 식물만 · 자람 = 자라는 단계까지 · 무제한) + 시즌
+      const ly = y + 34 + MODES.length * 60, lgs = leaguesOf(s), n = seasonOf(app.now()), days = Math.max(0, Math.ceil((seasonEnd(n) - app.now()) / 864e5)), lw = Math.floor((w - 16 - 8) / 3);
+      g.text(`리그 · 시즌 ${n} · ${days}일 남음`, x + 14, ly + 2, { font: 'label', color: P.sub });
+      LEAGUE_KEYS.forEach((k, i) => {
+        const lx = x + 8 + i * (lw + 4), on = s.league === k, rec = on ? s.tournament : lgs[k], id = 'ms_lg_' + k, pr = app.input.isPressed(id), yy = ly + 20 + (pr ? 1 : 0);
+        holo(g, lx, yy, lw, 50, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
+        g.text(LEAGUES[k].short, lx + lw / 2, yy + 5, { font: 'label', color: on ? '#ffe8c8' : P.main, align: 'center' });
+        g.text(rec.tier, lx + lw / 2, yy + 20, { font: 'bold', color: TIER_COL[rec.tier] || P.main, align: 'center' });
+        g.text(LEAGUES[k].desc, lx + lw / 2, yy + 34, { color: P.dim, align: 'center' });
+        app.input.hit(id, lx, ly + 20, lw, 50, () => { if (s.league !== k) { setLeague(s, k); app.act('setLeague', { league: k }); } this.modeSheet = false; });
+      });
+    }
     if (swapOn) {   // 내 팀 셋: 칸을 누르면 팀에 없는 다음 식물로 바뀜
       const ty = y + 34 + MODES.length * 60;
       g.text('내 팀', x + 14, ty + 4, { font: 'label', color: P.sub });
