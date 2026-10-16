@@ -29,7 +29,7 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, fit: 1.12 }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -888,6 +888,7 @@ async function animKit() {
     blade_vine: { bob: 1.5, sway: 1.1, open: 0.6, petal: 1, leaf: 1.6, fire: { up: 1.6, side: 0.7 }, blinkAt: 24, amb: { shine: { mat: { cmax: 0.05, lmin: 0.55 }, at: 10, len: 6 } } },
     toxi_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.6, blinkAt: 48, amb: { drips: { n: 2, every: 30 } } },
     draco_fruit: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 32, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 22 }, shine: { mat: { cmax: 0.06, lmin: 0.8 }, at: 14, len: 6 } } },
+    drake_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.8, flutter: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 52 },   // 태생 용족 불 선인장: 가시 끝 불 · 날개 살짝
     title_hero: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 44 },   // 처음 화면 대표 캐릭터 = 불꽃 용 선인장(가시 끝 불)
     ember_cap: { bob: 2, squash: 1.4, sway: 0.6, open: 0.6, petal: 0.5, leaf: 0.8, fire: { up: 1.8, side: 0.8 }, blinkAt: 16, amb: { spores: { from: 'cap', n: 6 } } },
   };
