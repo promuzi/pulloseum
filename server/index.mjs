@@ -120,6 +120,12 @@ const server = http.createServer(async (req, res) => {
       const u = authed(req, t0);
       return rooms.subscribe(u.id, req, res);
     }
+    if (path === '/api/room/poll' && req.method === 'GET') {   // 대결 방 소식(기다리는 요청 — 터널을 거쳐도 막히지 않음)
+      const u = authed(req, t0), after = Number(new URL(req.url, 'http://x').searchParams.get('after'));
+      const out = await rooms.poll(u.id, Number.isFinite(after) ? after : -1, req);
+      if (res.destroyed || res.writableEnded) return;
+      return json(res, 200, { ...out, now: Date.now() });
+    }
     const h = API[req.method + ' ' + path];
     if (h) {
       const body = req.method === 'POST' ? await readBody(req) : {};
@@ -135,7 +141,7 @@ const server = http.createServer(async (req, res) => {
     console.error(new Date().toISOString(), req.method, path, e);
     if (!res.headersSent) json(res, 500, { error: '서버에 문제가 생겼어요' });
   } finally {
-    if (path.startsWith('/api/') && path !== '/api/room/events') { const ms = Date.now() - t0; if (ms > 300) console.log('느림', req.method, path, ms + 'ms'); }
+    if (path.startsWith('/api/') && path !== '/api/room/events' && path !== '/api/room/poll') { const ms = Date.now() - t0; if (ms > 300) console.log('느림', req.method, path, ms + 'ms'); }
   }
 });
 server.keepAliveTimeout = 65000;

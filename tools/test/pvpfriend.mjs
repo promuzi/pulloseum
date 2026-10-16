@@ -17,22 +17,14 @@ try { token = (await call('/api/login', { login: LOGIN, password: PW })).token; 
 catch { token = (await call('/api/register', { login: LOGIN, password: PW, nickname: '가짜 친구', starter: 'cactus_fire' })).token; }
 console.log('들어감', LOGIN);
 await call('/api/room/join', { code: CODE });
-let view = null, games = 0, turn = 0;
-const r = await fetch(BASE + '/api/room/events', { headers: { authorization: 'Bearer ' + token } });
-const rd = r.body.getReader(), dec = new TextDecoder();
-let buf = '';
+let view = null, games = 0, turn = 0, after = -1;
 await call('/api/room/ready', { on: true });
 const pick = v => { const k = [...v.me.kit].reverse().find(x => x.act === 'attack' && (x.cost || 0) <= v.me.energy) || v.me.kit[0]; return k.id; };
 async function moveSoon(v) { await sleep(600 + Math.random() * 900); try { await call('/api/room/move', { act: pick(v), turn: v.turn }); } catch (e) { console.log('수 실패', e.message); } }
-for (;;) {
-  const { value, done } = await rd.read();
-  if (done) break;
-  buf += dec.decode(value, { stream: true });
-  let i;
-  while ((i = buf.indexOf('\n\n')) >= 0) {
-    const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
-    let type = null, data = null;
-    for (const line of chunk.split('\n')) { if (line.startsWith('event: ')) type = line.slice(7); else if (line.startsWith('data: ')) data = JSON.parse(line.slice(6)); }
+for (;;) {   // 기다리는 요청으로 소식 받기(화면과 같은 길)
+  const j = await call('/api/room/poll?after=' + after);
+  after = j.seq;
+  for (const { type, data } of j.events || []) {
     if (type === 'start') { view = data.view; turn = 0; console.log('대결 시작 — 상대', view.foe.name); moveSoon(view); }
     else if (type === 'turn') { view = data.view; turn++; if (!view.over) moveSoon(view); }
     else if (type === 'end') {

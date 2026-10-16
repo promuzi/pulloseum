@@ -64,35 +64,29 @@ export async function act(app, op, args) {
   return r.res;
 }
 
-// ── 친구 대결 방: 서버 → 화면 한 줄 흐름(fetch 로 읽음 — 로그인 열쇠를 주소에 안 실으려고). 끊기면 점점 늦게 다시 붙음 ──
+// ── 친구 대결 방 소식: 기다리는 요청(롱 폴링) — "after 번 다음 소식 있어?"를 묻고, 서버는 생길 때까지 25초까지 붙잡았다가 바로 답함.
+//  (2026-10-16 실측: 클라우드플레어 무료 터널이 열어 둔 흐름을 쌓아 둬 흐름 방식은 친구 PC에서 알림이 안 옴 → 응답마다 끝이 있는 이 방식)
+//  처음엔 after = -1 → 지금 방 모습 통째로. 끊기면 점점 늦게 다시 물음.
 export function openStream(onEvent) {
-  let stop = false, ctrl = null, wait = 500;
+  let stop = false, ctrl = null, after = -1, fails = 0, opened = false;
   (async () => {
     while (!stop) {
       try {
         ctrl = new AbortController();
-        const r = await fetch('/api/room/events', { headers: { authorization: 'Bearer ' + net.token }, signal: ctrl.signal });
+        const r = await fetch('/api/room/poll?after=' + after, { headers: { authorization: 'Bearer ' + net.token }, signal: ctrl.signal, cache: 'no-store' });
         if (r.status === 401) { onEvent('auth', null); break; }
-        if (!r.ok || !r.body) throw new Error('stream');
-        wait = 500; onEvent('open', null);
-        const rd = r.body.getReader(), dec = new TextDecoder();
-        let buf = '';
-        for (;;) {
-          const { value, done } = await rd.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          let i;
-          while ((i = buf.indexOf('\n\n')) >= 0) {
-            const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
-            let type = null, data = null;
-            for (const line of chunk.split('\n')) { if (line.startsWith('event: ')) type = line.slice(7); else if (line.startsWith('data: ')) { try { data = JSON.parse(line.slice(6)); } catch {} } }
-            if (type) onEvent(type, data);
-          }
-        }
-      } catch {}
-      if (stop) break;
-      onEvent('lost', null);
-      await new Promise(res => setTimeout(res, wait)); wait = Math.min(8000, wait * 2);
+        if (!r.ok) throw new Error('poll ' + r.status);
+        const j = await r.json();
+        if (j.now) net.off = j.now - Date.now();
+        if (!opened || fails) { opened = true; onEvent('open', null); }
+        fails = 0;
+        for (const e of j.events || []) { if (stop) break; onEvent(e.type, e.data); }
+        after = j.seq;
+      } catch {
+        if (stop) break;
+        fails++; onEvent('lost', null);
+        await new Promise(res => setTimeout(res, Math.min(8000, 400 * 2 ** fails)));
+      }
     }
   })();
   return { close() { stop = true; try { ctrl && ctrl.abort(); } catch {} } };

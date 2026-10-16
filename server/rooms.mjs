@@ -15,13 +15,49 @@ const OTHER = { a: 'b', b: 'a' }, BASIC = new Set(['basic', 'guard', 'evade']);
 export function makeRooms({ game, log }) {
   const rooms = new Map(), byUser = new Map(), subs = new Map();
 
-  // ── 알림 흐름 ──
+  // ── 알림 ──
+  //  기본 = 기다리는 요청(롱 폴링): 화면이 "after 다음 소식"을 묻고, 없으면 서버가 25초까지 붙잡았다가 소식이 생기는 즉시 답함.
+  //  (2026-10-16 실측: 클라우드플레어 무료 터널이 열어 둔 흐름(text/event-stream)을 쌓아 둬 알림이 안 옴 → 응답마다 끝이 있는 방식으로)
+  //  흐름(SSE)도 남겨 둠(같은 PC·같은 와이파이에선 됨). 사람마다 최근 소식 60개를 번호(seq)와 함께 보관.
+  const queues = new Map(), seen = new Map();   // uid → { seq, list, waiters } · uid → 마지막으로 소식을 받아 간 시각
+  const qOf = uid => { let q = queues.get(uid); if (!q) queues.set(uid, q = { seq: 0, list: [], waiters: new Set() }); return q; };
   function send(uid, type, data) {
+    const q = qOf(uid), ev = { seq: ++q.seq, type, data };
+    q.list.push(ev); if (q.list.length > 60) q.list.shift();
+    for (const w of [...q.waiters]) w();
     const set = subs.get(uid); if (!set) return;
     const line = `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
     for (const res of set) { try { res.write(line); } catch {} }
   }
-  const online = uid => (subs.get(uid) || new Set()).size > 0;
+  const online = uid => (subs.get(uid) || new Set()).size > 0 || Date.now() - (seen.get(uid) || 0) < 35000;
+  // 지금 모습 통째로(처음 묻거나 너무 오래 안 물어 소식을 놓쳤을 때)
+  function snapshot(uid) {
+    const r = roomOf(uid), out = [{ type: 'room', data: r ? roomView(r, uid) : null }];
+    if (r && r.phase === 'battle' && sideOf(r, uid)) out.push({ type: 'battle', data: battleMsg(r, uid) });
+    return out;
+  }
+  function markSeen(uid) {
+    const was = online(uid); seen.set(uid, Date.now());
+    if (!was) { const r = roomOf(uid); if (r) { const m = r.members.find(x => x.uid === uid); if (m) m.gone = null; broadcastRoom(r); } }
+  }
+  async function poll(uid, after, req) {
+    const q = qOf(uid);
+    markSeen(uid);
+    if (!(after >= 0) || (q.list.length && after < q.list[0].seq - 1) || after > q.seq) return { seq: q.seq, events: snapshot(uid) };
+    let evs = q.list.filter(e => e.seq > after);
+    if (!evs.length) {
+      await new Promise(res => {
+        let tm = null;
+        const done = () => { clearTimeout(tm); q.waiters.delete(done); res(); };
+        tm = setTimeout(done, 25000);
+        q.waiters.add(done);
+        req.on('close', done);
+      });
+      seen.set(uid, Date.now());
+      evs = q.list.filter(e => e.seq > after);
+    }
+    return { seq: q.seq, events: evs };
+  }
   function subscribe(uid, req, res) {
     res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache, no-transform', connection: 'keep-alive', 'x-accel-buffering': 'no' });
     res.write(': 연결\n\n');
@@ -31,10 +67,7 @@ export function makeRooms({ game, log }) {
     if (r) { const m = r.members.find(x => x.uid === uid); if (m) m.gone = null; broadcastRoom(r); if (r.phase === 'battle') send(uid, 'battle', battleMsg(r, uid)); }
     else send(uid, 'room', null);
     const ping = setInterval(() => { try { res.write(': 숨\n\n'); } catch {} }, 15000);
-    req.on('close', () => {
-      clearInterval(ping); set.delete(res);
-      if (!set.size) { subs.delete(uid); const rr = roomOf(uid); if (rr) { const m = rr.members.find(x => x.uid === uid); if (m) m.gone = Date.now(); broadcastRoom(rr); } }
-    });
+    req.on('close', () => { clearInterval(ping); set.delete(res); if (!set.size) subs.delete(uid); });   // 끊김 판정은 시계(아래)가 함
   }
 
   // ── 방 ──
@@ -189,6 +222,10 @@ export function makeRooms({ game, log }) {
   setInterval(() => {
     const now = Date.now();
     for (const r of [...rooms.values()]) {
+      // 있음/없음: 소식을 35초 넘게 안 받아 가면 끊긴 것(바뀌면 방 사람들에게 알림)
+      let changed = false;
+      for (const m of r.members) { const on = online(m.uid); if (m.on !== on) { m.on = on; changed = true; } if (on) m.gone = null; else if (!m.gone) m.gone = now; }
+      if (changed) broadcastRoom(r);
       if (r.phase === 'battle') {
         for (const side of ['a', 'b']) { const m = r.members.find(x => x.uid === r.sides[side]); if (m && m.gone && now - m.gone > GRACE_MS) { end(r, OTHER[side], 'left', now); break; } }
         if (r.phase === 'battle' && now > r.deadline) {
@@ -199,7 +236,8 @@ export function makeRooms({ game, log }) {
         }
       } else if (now - r.touched > IDLE_MS) { for (const m of r.members) { byUser.delete(m.uid); send(m.uid, 'room', null); } rooms.delete(r.code); }
     }
+    for (const [uid, q] of queues) if (!q.waiters.size && !byUser.has(uid) && now - (seen.get(uid) || 0) > 3600e3) { queues.delete(uid); seen.delete(uid); }   // 한 시간 넘게 조용한 사람 소식함 정리
   }, 1000).unref();
 
-  return { subscribe, create, join, leave, pick, ready, move, forfeit, emote, view, count: () => rooms.size };
+  return { subscribe, poll, create, join, leave, pick, ready, move, forfeit, emote, view, count: () => rooms.size };
 }

@@ -17,17 +17,21 @@ async function call(path, body, token, method) {
   const j = await r.json().catch(() => ({}));
   return { status: r.status, ...j };
 }
-// 실시간 알림 읽기(fetch 흐름)
+// 실시간 알림 읽기(기다리는 요청 — 화면과 같은 길 /api/room/poll)
 function listen(token) {
   const ev = [], ctrl = new AbortController();
+  let stopped = false, after = -1;
   (async () => {
-    try {
-      const r = await fetch(BASE + '/api/room/events', { headers: { authorization: 'Bearer ' + token }, signal: ctrl.signal });
-      const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
-      for (;;) { const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i; while ((i = buf.indexOf('\n\n')) >= 0) { const chunk = buf.slice(0, i); buf = buf.slice(i + 2); let type = 'message', data = null; for (const line of chunk.split('\n')) { if (line.startsWith('event: ')) type = line.slice(7); else if (line.startsWith('data: ')) data = JSON.parse(line.slice(6)); } if (data !== null || type !== 'message') ev.push({ type, data }); } }
-    } catch {}
+    while (!stopped) {
+      try {
+        const r = await fetch(BASE + '/api/room/poll?after=' + after, { headers: { authorization: 'Bearer ' + token }, signal: ctrl.signal });
+        const j = await r.json();
+        for (const e of j.events || []) ev.push({ type: e.type, data: e.data });
+        after = j.seq;
+      } catch { if (stopped) break; await sleep(100); }
+    }
   })();
-  return { ev, stop: () => ctrl.abort(), wait: async (type, from = 0, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const i = ev.findIndex((e, k) => k >= from && e.type === type); if (i >= 0) return { ...ev[i], i }; await sleep(30); } return null; } };
+  return { ev, stop: () => { stopped = true; ctrl.abort(); }, wait: async (type, from = 0, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const i = ev.findIndex((e, k) => k >= from && e.type === type); if (i >= 0) return { ...ev[i], i }; await sleep(30); } return null; } };
 }
 
 try {
