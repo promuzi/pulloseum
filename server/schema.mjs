@@ -17,6 +17,7 @@ export const STMTS = {
   addUser: 'INSERT INTO users (login, pass, nickname, created) VALUES (?, ?, ?, ?)',
   seen: 'UPDATE users SET last_seen = ? WHERE id = ?',
   setNick: 'UPDATE users SET nickname = ? WHERE id = ?',
+  setProvider: 'UPDATE users SET provider = ? WHERE id = ?',
   addSession: 'INSERT INTO sessions (token, user_id, expires) VALUES (?, ?, ?)',
   session: 'SELECT * FROM sessions WHERE token = ?',
   delSession: 'DELETE FROM sessions WHERE token = ?',

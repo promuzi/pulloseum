@@ -9,7 +9,21 @@ import { STARTERS } from '../v2/src/game/catalog.js';
 export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
 
 // adminKey = 관리 열쇠(Cloudflare 비밀값 ADMIN_KEY · PC 환경변수 PULLO_ADMIN_KEY) — 없으면 관리 주소는 아예 없음(404)
-export function makeApi({ q, game, rooms, log, adminKey = null }) {
+// googleClientId = 구글 로그인 클라이언트 ID(공개값 — Cloudflare 변수 GOOGLE_CLIENT_ID · PC PULLO_GOOGLE_CLIENT_ID) — 없으면 구글 단추를 안 보임
+//  구글 계정 = login 'g:<구글 sub>'(아이디 규칙과 겹치지 않음) · 비밀번호 없음 · provider 'google'(2026-10-16 사용자 "남은 거 다해줘" — 구글 로그인)
+export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId = null, fetchFn = globalThis.fetch }) {
+  const GID = googleClientId ? String(googleClientId).trim() : '';
+  const pub = u => ({ id: u.id, login: u.provider === 'google' ? '구글 계정' : u.login, nickname: u.nickname });   // 화면에 보일 계정(구글 sub는 안 보냄)
+  // 구글 접근 토큰 확인: tokeninfo의 받는 쪽(aud/azp)이 우리 클라이언트 ID인지 → userinfo로 이름. 남의 앱에서 받은 토큰은 거절
+  async function googleWho(token) {
+    if (!GID) throw new HttpErr(404, '없는 주소예요');
+    const t = String(token || '');
+    if (!t || t.length > 4096) throw new Err('구글 로그인이 끊겼어요 — 다시 해 주세요');
+    const ti = await fetchFn('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(t)).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    if (!ti || (ti.aud !== GID && ti.azp !== GID) || !ti.sub || !(Number(ti.expires_in) > 0)) throw new Err('구글 로그인을 확인하지 못했어요 — 다시 해 주세요');
+    const ui = await fetchFn('https://openidconnect.googleapis.com/v1/userinfo', { headers: { authorization: 'Bearer ' + t } }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    return { sub: String(ti.sub), name: (ui && (ui.given_name || ui.name)) || '' };
+  }
   const AK = adminKey ? String(adminKey).trim() : '';   // 비밀값을 파이프로 넣으면 끝에 줄바꿈이 붙을 수 있어 양쪽 다 다듬음
   const isAdmin = req => { const k = Buffer.from(String(req.header('x-admin-key') || '').trim()), a = Buffer.from(AK); return !!AK && k.length === a.length && timingSafeEqual(k, a); };   // 길이는 바이트로(한글이 섞이면 글자 수만 같아도 비교가 터짐)
   const hits = new Map(), regs = new Map();   // 너무 잦은 요청(계정마다 10초에 80번) · 가입 제한(IP마다 하루 10개)
@@ -38,6 +52,23 @@ export function makeApi({ q, game, rooms, log, adminKey = null }) {
 
   const API = {
     'GET /api/health': () => ({ ok: true, rooms: rooms.count() }),
+    'GET /api/config': () => ({ google: GID || null }),
+    // 구글: 있는 계정이면 로그인, 처음이면 { need: 'register' } → 화면이 처음 식물을 고르게 한 뒤 starter와 함께 다시
+    'POST /api/google': async (req, b, now) => {
+      if (!allowTry('g' + req.ip, now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
+      const who = await googleWho(b.token), login = 'g:' + who.sub, u = q.userByLogin.get(login);
+      if (u) { const token = newSession(q, u.id, now), st = game.state(u.id, now); log(u.id, 'login', { provider: 'google' }, now); return { token, user: pub(u), ...st }; }
+      const starter = String(b.starter || ''), nick = cleanNick(b.nickname || who.name) || '재배사';
+      if (!starter) return { need: 'register', name: cleanNick(who.name) };
+      if (!STARTERS.includes(starter)) throw new Err('처음 식물을 골라 주세요');
+      const day = Math.floor(now / 864e5), k = req.ip + ':' + day, n = regs.get(k) || 0;
+      if (n >= 10) throw new HttpErr(429, '오늘은 더 만들 수 없어요');
+      const r = q.addUser.run(login, '!google', nick, now), uid = Number(r.lastInsertRowid);
+      q.setProvider.run('google', uid); regs.set(k, n + 1);
+      const s = game.create(uid, { nickname: nick, starter }, now), token = newSession(q, uid, now);
+      log(uid, 'register', { starter, provider: 'google' }, now);
+      return { token, user: { id: uid, login: '구글 계정', nickname: nick }, state: s, ver: 1 };
+    },
     'POST /api/register': (req, b, now) => {
       const day = Math.floor(now / 864e5), k = req.ip + ':' + day, n = regs.get(k) || 0;
       if (n >= 10) throw new HttpErr(429, '오늘은 더 만들 수 없어요');
@@ -67,10 +98,10 @@ export function makeApi({ q, game, rooms, log, adminKey = null }) {
       if (!u || !checkPass(pw, u.pass)) throw new Err('아이디나 비밀번호가 맞지 않아요');
       const token = newSession(q, u.id, now), st = game.state(u.id, now);
       log(u.id, 'login', {}, now);
-      return { token, user: { id: u.id, login: u.login, nickname: u.nickname }, ...st };
+      return { token, user: pub(u), ...st };
     },
     'POST /api/logout': (req) => { endSession(q, tokenOf(req)); return { ok: true }; },
-    'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: { id: u.id, login: u.login, nickname: u.nickname }, ...game.state(u.id, now) }; },
+    'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: pub(u), ...game.state(u.id, now) }; },
     'POST /api/act': (req, b, now) => { const u = authed(req, now); return game.act(u.id, String(b.op || ''), b.args || {}, now); },
     'POST /api/battle/start': (req, b, now) => { const u = authed(req, now); return game.battleStart(u.id, now); },
     'POST /api/battle/turn': (req, b, now) => { const u = authed(req, now); return game.battleTurn(u.id, b.id, b.act, now, b.turn == null ? null : +b.turn); },
@@ -102,7 +133,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null }) {
       }
       const h = API[req.method + ' ' + req.path];
       if (!h) throw new HttpErr(404, '없는 주소예요');
-      const out = h(req, req.body || {}, now);
+      const out = await h(req, req.body || {}, now);   // 구글 확인처럼 밖에 묻는 길은 기다림
       return { status: 200, body: { ...out, now: Date.now() } };
     } catch (e) {
       if (e instanceof Err) return { status: 400, body: { error: e.message } };

@@ -38,6 +38,33 @@ export function enterGame(app) {
   app.go('home', {}, 'dither');
 }
 async function signed(app, r) { net.setToken(r.token); app.user = r.user; app.state = r.state; }
+// 구글로 계속하기(2026-10-16): 구글 창(GIS 토큰 창) → 접근 토큰 → 서버가 구글에 확인 → 있는 계정 = 로그인 · 처음 = 처음 식물 고르기 → 계정
+//  단추는 서버가 클라이언트 ID를 알려 줄 때만(/api/config). 구글 스크립트는 단추가 보일 때 미리 불러 둠(누르는 순간 창이 막히지 않게)
+let gisP = null;
+export function loadGis() {
+  if (gisP) return gisP;
+  gisP = new Promise((res, rej) => {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return res();
+    const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = () => res(); s.onerror = () => { gisP = null; rej(new Error('구글 로그인을 불러오지 못했어요')); };
+    document.head.appendChild(s);
+  });
+  return gisP;
+}
+export function googleLogin(app, sc) {
+  const G = window.google && window.google.accounts && window.google.accounts.oauth2;
+  if (!G || !app.googleId) { loadGis().catch(e => app.toast(e.message)); app.toast('구글 로그인을 준비하는 중이에요 — 잠시 뒤 다시 눌러 주세요'); return; }
+  const tc = G.initTokenClient({ client_id: app.googleId, scope: 'openid profile', callback: async r => {
+    if (!r || !r.access_token) { app.toast('구글 로그인을 그만뒀어요'); return; }
+    try {
+      const out = await net.req('/api/google', { token: r.access_token });
+      if (out.need === 'register') { app.reg = { google: r.access_token, nickname: out.name || '' }; app.go('starter', {}, 'dither'); return; }
+      await signed(app, out); if (sc) sc.mode = 'in';
+      enterGame(app);
+    } catch (e) { app.toast(e.message); }
+  } });
+  tc.requestAccessToken();
+}
 export function loginForm(app, sc) {
   openForm(app, {
     title: '로그인', note: '아이디와 비밀번호를 써 주세요',
@@ -121,6 +148,7 @@ export const title = {
   startBoot(app) { startBoot(this, app); },
   async check(app) {
     this.checking = true;
+    if (!net.offline && app.googleId === undefined) net.req('/api/config').then(c => { app.googleId = c.google || null; if (app.googleId) loadGis().catch(() => {}); }).catch(() => { app.googleId = null; });
     if (!net.token) { this.mode = 'out'; return; }
     try { const r = await net.req('/api/me'); app.user = r.user; app.state = r.state; this.mode = 'in'; }
     catch (e) { this.mode = e.status === 0 ? 'down' : 'out'; this.err = e.status === 0 ? e.message : null; }
@@ -176,7 +204,8 @@ export const title = {
     if (this.mode === 'out') {
       button(app, 'title_login', bx, y0, bw, 34, '로그인', { style: 'night', font: 'head', onTap: on(() => loginForm(app, this)) });
       button(app, 'title_new', bx, y0 + 44, bw, 34, '새로 시작하기', { style: 'gold', font: 'head', onTap: on(() => registerForm(app, this)) });
-      if (app.invite) g.text(`초대받은 방 ${app.invite} — 로그인하면 바로 들어가요`, W / 2, y0 + 88, { color: '#ffe8a8', align: 'center', outline: T.ink });
+      if (app.googleId) button(app, 'title_google', bx, y0 + 88, bw, 30, '구글로 계속하기', { style: 'night', font: 'bold', onTap: on(() => googleLogin(app, this)) });
+      if (app.invite) g.text(`초대받은 방 ${app.invite} — 로그인하면 바로 들어가요`, W / 2, y0 + (app.googleId ? 126 : 88), { color: '#ffe8a8', align: 'center', outline: T.ink });
       return;
     }
     button(app, 'title_start', bx, y0, bw, 36, app.invite ? '초대받은 방으로' : '게임 시작', { style: 'gold', font: 'head', onTap: on(() => enterGame(app)) });
@@ -227,7 +256,7 @@ export const starter = {
       app.input.hit('st_' + k2, x - 2, fy - 2, fw + 4, fw + 4, () => { if (this.i !== i) { this.i = i; this.showT = app.t; } });
     });
     button(app, 'st_go', 40, Math.min(H - 46, fy + fw + 10), W - 80, 36, this.busy ? '만드는 중…' : `${ro(sp.name)} 시작`, { style: 'gold', font: 'head', disabled: this.busy, onTap: () => this.go(app, key) });
-    button(app, 'st_back', 8, 6, 52, 22, '‹ 뒤로', { style: 'night', onTap: () => { const r = app.reg; app.go('title'); setTimeout(() => registerForm(app, null, { login: r && r.login, nick: r && r.nickname }), 250); } });
+    button(app, 'st_back', 8, 6, 52, 22, '‹ 뒤로', { style: 'night', onTap: () => { const r = app.reg; app.go('title'); if (r && !r.google) setTimeout(() => registerForm(app, null, { login: r.login, nick: r.nickname }), 250); } });
   },
   async go(app, key) {
     if (this.busy) return;
@@ -235,13 +264,14 @@ export const starter = {
     if (!r) { app.go('title'); return; }
     this.busy = true;
     try {
-      const out = await net.req('/api/register', { ...r, starter: key });
+      const out = r.google ? await net.req('/api/google', { token: r.google, starter: key, nickname: r.nickname }) : await net.req('/api/register', { ...r, starter: key });
       net.setToken(out.token); app.user = out.user; app.state = out.state; app.reg = null;
       app.toast(`${wa(SPECIES[key].name)} 함께 시작해요!`);
       enterGame(app);
     } catch (e) {
       app.toast(e.message);
-      if (/아이디/.test(e.message)) { app.go('title'); setTimeout(() => registerForm(app, null, { login: r.login, nick: r.nickname }), 250); }
+      if (!r.google && /아이디/.test(e.message)) { app.go('title'); setTimeout(() => registerForm(app, null, { login: r.login, nick: r.nickname }), 250); }
+      if (r.google && /구글/.test(e.message)) app.go('title');   // 구글 토큰이 끊김 = 처음부터
     } finally { this.busy = false; }
   },
 };

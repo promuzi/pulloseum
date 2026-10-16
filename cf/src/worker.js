@@ -18,7 +18,7 @@ export class Hub extends DurableObject {
     super(ctx, env);
     const { q } = doDb(ctx.storage.sql);
     const log = makeLog(q), game = makeGame({ q, log }), rooms = makeRooms({ game, log });
-    this.api = makeApi({ q, game, rooms, log, adminKey: env.ADMIN_KEY || null });
+    this.api = makeApi({ q, game, rooms, log, adminKey: env.ADMIN_KEY || null, googleClientId: env.GOOGLE_CLIENT_ID || null });
   }
   async fetch(request) {
     const url = new URL(request.url);
