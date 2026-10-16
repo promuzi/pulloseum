@@ -32,8 +32,8 @@ export function hangarBack(app, k = 1) {
     for (let gy = y + 8; gy < y + h; gy += 16) g.rect(x, gy, w, 1, '#0b1826');
     const px0 = SHIP.cx, py0 = y + h - 34;
     for (let yy = SHIP.cy + 50; yy < py0; yy++) { const kk = (yy - (SHIP.cy + 50)) / (py0 - SHIP.cy - 50), hw = Math.round(20 + (1 - kk) * 36); for (let xx = -hw; xx <= hw; xx++) if (B4[yy & 3][(xx + 64) & 3] < 3 + kk * 2) g.px(px0 + xx, yy, '#0f2a3c'); }
-    g.ellipse(px0, py0 + 6, 46, 9, '#141b25'); g.ellipse(px0, py0 + 4, 44, 8, '#232d3c'); g.ellipseRing(px0, py0 + 3, 38, 6, '#3f9fd0', 0); g.ellipseRing(px0, py0 + 3, 30, 5, '#97e8f7', 2);
-    g.rect(px0 - 3, py0 + 1, 6, 2, Math.floor(t / 400) % 2 ? '#e4fbff' : '#97e8f7');
+    g.ellipse(px0, py0 + 6, 46, 9, '#141b25'); g.ellipse(px0, py0 + 4, 44, 8, '#232d3c'); g.ellipseRing(px0, py0 + 3, 38, 6, '#4a8edc', 0); g.ellipseRing(px0, py0 + 3, 30, 5, '#8ccfff', 2);
+    g.rect(px0 - 3, py0 + 1, 6, 2, Math.floor(t / 400) % 2 ? '#e6f3ff' : '#8ccfff');
   });
 }
 
@@ -93,7 +93,7 @@ export const hangar = {
   },
   panels(app, cx, cy, fx, live, model) {
     const { g, W, state: s } = app;
-    g.text('탐사선 정비', 12, 34, { font: 'head', color: '#e4fbff' });
+    g.text('탐사선 정비', 12, 34, { font: 'head', color: '#e6f3ff' });
     button(app, 'hg_back', W - 58, 31, 50, 20, '‹ 탐사', { style: 'night', onTap: live ? () => { this.out = app.t; } : null });
     button(app, 'hg_model', W - 112, 31, 50, 20, '모양', { style: 'night', onTap: live ? () => { this.choose = 'open'; } : null });
     // 이름표 + 점선(부위 → 이름표)
@@ -104,10 +104,10 @@ export const hangar = {
       for (let i = 0; i <= n; i += 2) g.px(Math.round(ax + (ex - ax) * i / n), Math.round(ay + (ey - ay) * i / n), on ? HC.sel : '#3f7f9a');
       g.rect(ax - 1, ay - 1, 3, 3, on ? HC.sel : HC.line);
       holo(g, bx, by, bw, bh, on ? { fill: '#3a2a18', fill2: '#5a3e20', frame: HC.sel, frameHi: '#ffe8c8', frameLo: '#a8743a' } : (T.card || T.panel), 12);
-      g.text(pt.label, bx + 6, by + 3, { font: 'label', color: on ? '#ffe8c8' : '#e4fbff' });
-      g.text(`Lv.${lv}`, bx + bw - 6, by + 4, { color: on ? HC.sel : '#97e8f7', align: 'right' });
+      g.text(pt.label, bx + 6, by + 3, { font: 'label', color: on ? '#ffe8c8' : '#e6f3ff' });
+      g.text(`Lv.${lv}`, bx + bw - 6, by + 4, { color: on ? HC.sel : '#8ccfff', align: 'right' });
       const maxLv = Math.ceil((pt.max - pt.base) / pt.step);
-      for (let i = 0; i < Math.min(8, maxLv); i++) g.rect(bx + 6 + i * 8, by + 21, 6, 3, i < lv ? (on ? HC.sel : '#97e8f7') : '#1e3a50');
+      for (let i = 0; i < Math.min(8, maxLv); i++) g.rect(bx + 6 + i * 8, by + 21, 6, 3, i < lv ? (on ? HC.sel : '#8ccfff') : '#1e3a50');
       if (live) { app.input.hit('hg_' + pt.id, bx, by, bw, bh, () => { this.sel = pt.id; }, 2); app.input.hit('hg_part_' + pt.id, ax - 14, ay - 14, 28, 28, () => { this.sel = pt.id; }); }
     }
     // 고른 부위 정보 + 강화

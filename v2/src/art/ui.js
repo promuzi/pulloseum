@@ -87,19 +87,19 @@ export function elemChip(g, x, y, el) {
 
 // 홀로그램 탭(2026-10-15 사용자 "여러 탭들도 홀로그램 느낌을 내줘"): 고른 탭 = 밝은 청록 판 + 아래 빛 줄, 안 고른 탭 = 짙고 흐린 판(파란 테).
 //  판 속은 꽉 채움(글자 깨짐 방지), 반짝이거나 움직이는 꾸밈 없음(지글거림·어지러움 방지)
-const TAB_ON = { fill: '#1f5f86', fill2: '#2a7099', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' };
-const TAB_OFF = { fill: '#0b1d2e', fill2: '#0f2538', frame: '#2f5f7a', frameHi: '#4c88a9', frameLo: '#183a52' };
+const TAB_ON = { fill: '#1f5c96', fill2: '#2a7099', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#4f84bf' };
+const TAB_OFF = { fill: '#0b1d2e', fill2: '#0f2538', frame: '#2f5c8a', frameHi: '#4f84bf', frameLo: '#18385e' };
 export function holoTab(app, id, x, y, w, h, label, on, onTap, font = 'label') {
   const { g, input } = app, pr = input.isPressed(id), yy = y + (pr && !on ? 1 : 0), acc = UI_ACCENT[UI];
   holo(g, x, yy, w, h, on ? TAB_ON : TAB_OFF, 16);
-  if (UI === 'holo') { if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#97e8f7'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e4fbff'); } }   // 옛 홀로그램: 아래 빛 줄
+  if (UI === 'holo') { if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#8ccfff'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e6f3ff'); } }   // 옛 홀로그램: 아래 빛 줄
   else if (on) g.rect(x + Math.round(w / 2) - Math.min(9, (w >> 2)), yy + h - 3, Math.min(18, w >> 1), 2, acc);   // 고른 탭 = 글자 아래 짧은 강조 줄(한 가지 색)
-  g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2) - (on && UI !== 'holo' ? 1 : 0), { font, color: on ? '#ffffff' : UI === 'holo' ? '#7fb8d0' : '#8e9cb0', align: 'center' });
+  g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2) - (on && UI !== 'holo' ? 1 : 0), { font, color: on ? '#ffffff' : UI === 'holo' ? '#86acd6' : '#8e9cb0', align: 'center' });
   if (onTap) input.hit(id, x, y, w, h, onTap, 3);
 }
 // 작은 꼬리표 판(종 · 속성 · 단계) — 창과 같은 겉모습
 export function tagBox(g, x, y, w, h) { holo(g, x, y, w, h, TAG_STYLE, 16); }
-const TAG_STYLE = { fill: '#10283c', fill2: '#12304a', frame: '#4c88a9', frameHi: '#97e8f7', frameLo: '#183a52' };
+const TAG_STYLE = { fill: '#102844', fill2: '#12304a', frame: '#4f84bf', frameHi: '#8ccfff', frameLo: '#18385e' };
 // 탭 줄. tabs=[{id,label}], active=id
 export function tabs(app, x, y, w, list, active, onPick) {
   const tw = Math.floor(w / list.length);

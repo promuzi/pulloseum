@@ -49,7 +49,7 @@ function skillCard(app, id, x, y, w, h, sk, sel, onTap, frame = null, emptyLabel
     if (sk.cost) { g.img(icon('energy'), x + w - 23, yy + 19); g.text(String(sk.cost), x + w - 8, yy + 18, { font: 'label', color: S.text, align: 'right' }); }
     else g.text('무료', x + w - 8, yy + 18, { color: S.text, align: 'right' });
   }
-  const fc = frame || (sel ? '#97e8f7' : null);
+  const fc = frame || (sel ? '#8ccfff' : null);
   if (fc) { g.rect(x - 1, y - 1, w + 2, 1, fc); g.rect(x - 1, y + h, w + 2, 1, fc); g.rect(x - 1, y, 1, h, fc); g.rect(x + w, y, 1, h, fc); }
   if (onTap) input.hit(id, x, y, w, h, onTap, 2);
 }
@@ -94,7 +94,7 @@ export const plant = {
     const sp = SPECIES[p.key], el = ELEMENT[sp.el];
     const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${p.lv}` }];
     let x = 8;
-    for (const r of list) { const w = 22 + g.textW(r.label, 'label'); tagBox(g, x, 40, w, 18); g.img(icon(r.ic), x + 5, 44); g.text(r.label, x + 18, 43, { font: 'label', color: r.col || '#e4fbff' }); x += w + 4; }
+    for (const r of list) { const w = 22 + g.textW(r.label, 'label'); tagBox(g, x, 40, w, 18); g.img(icon(r.ic), x + 5, 44); g.text(r.label, x + 18, 43, { font: 'label', color: r.col || '#e6f3ff' }); x += w + 4; }
     if (p.legend || p.trait) { const tag = p.legend ? '전설' : p.trait === 'fruity' ? '열매용' : '관상용', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#3a2a18', '#f0be7d'); g.text(tag, x + 6, 43, { font: 'label', color: '#ffd890' }); }
     // 생장 판(오른쪽 위): Lv · 생장 막대 · 물/비료(또는 진화)
     const gi = growInfo(p), bx = W - 98, st = T.card || T.panel;
@@ -134,7 +134,7 @@ export const plant = {
     });
     this.maxY = Math.max(0, bottom - H + 12);
     if (this.scrollY > this.maxY) this.scrollY = this.maxY;
-    if (this.maxY > 0) { const bh = Math.max(16, Math.round(h * h / (h + this.maxY))), by = top + Math.round((h - bh) * this.scrollY / this.maxY); g.rect(W - 7, by, 2, bh, '#4c88a9'); }
+    if (this.maxY > 0) { const bh = Math.max(16, Math.round(h * h / (h + this.maxY))), by = top + Math.round((h - bh) * this.scrollY / this.maxY); g.rect(W - 7, by, 2, bh, '#4f84bf'); }
   },
   // 판 안 누르기: 끌어 올린 만큼 자리를 옮겨 등록(그린 자리와 누르는 자리를 맞춤)
   hitY(y) { return y - this.scrollY; },
@@ -146,7 +146,7 @@ export const plant = {
     const { g, W, state: s } = app, P = T.ptext, S = p.skills;
     g.text('기본기', 14, y0 + 1, { font: 'label', color: P.sub });
     let x = 14 + g.textW('기본기', 'label') + 8;
-    for (const b of BASICS) { const w = 20 + g.textW(b.name); tagBox(g, x, y0, w, 16); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, y0 + 2); g.text(b.name, x + 16, y0 + 2, { color: '#cfefff' }); x += w + 4; }
+    for (const b of BASICS) { const w = 20 + g.textW(b.name); tagBox(g, x, y0, w, 16); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, y0 + 2); g.text(b.name, x + 16, y0 + 2, { color: '#d4e9ff' }); x += w + 4; }
     let y = y0 + 24;
     const pend = p.pend && p.pend[0];
     const hit = (id, xx, yy, w, h, fn) => this.hit(app, live, id, xx, yy, w, h, fn);
@@ -175,7 +175,7 @@ export const plant = {
     skillCard(app, 'sk_j', 14, y, W - 28, 34, skillOf(S.joker), this.sel === 'j', null, '#ffd890', '빈 조커 칸');
     hit('sk_j', 14, y, W - 28, 34, () => this.pickSlot(app, p, 'j'));
     y += 40;
-    if (this.sel != null && !pend) { g.text(this.sel === 'j' ? '바꿀 전투 칸을 눌러요' : '조커 칸을 누르면 자리를 바꿔요', W / 2, y - 3, { color: '#97e8f7', align: 'center' }); y += 10; }
+    if (this.sel != null && !pend) { g.text(this.sel === 'j' ? '바꿀 전투 칸을 눌러요' : '조커 칸을 누르면 자리를 바꿔요', W / 2, y - 3, { color: '#8ccfff', align: 'center' }); y += 10; }
     y += 4;
     const bw = Math.floor((W - 34) / 2);
     this.btn(app, live, 'sk_forgot', 14, y, bw, 30, `지운 기술 ${S.forgot.length}`, { style: 'night', icon: 'potion' }, () => { this.sub = 'forgot'; this.scrollY = 0; });
@@ -203,7 +203,7 @@ export const plant = {
     const { g, W, state: s } = app, P = T.ptext, S = p.skills, n = s.items.regress || 0, free = S.battle.includes(null) || !S.joker;
     this.btn(app, live, 'fg_back', 12, y0 - 2, 52, 22, '‹ 기술', { style: 'night' }, () => { this.sub = null; this.scrollY = 0; });
     g.text('지운 기술', 72, y0 + 1, { font: 'value', color: P.main });
-    g.img(icon('potion'), W - 100, y0 + 2); g.text(`회귀 주사 ${n}`, W - 14, y0 + 2, { font: 'label', color: '#c8f4ff', align: 'right' });
+    g.img(icon('potion'), W - 100, y0 + 2); g.text(`회귀 주사 ${n}`, W - 14, y0 + 2, { font: 'label', color: '#d0e8ff', align: 'right' });
     let y = y0 + 28;
     g.text(free ? '되돌리면 빈 전투 칸(없으면 조커 칸)으로 가요' : '칸이 다 찼어요 — 하나를 비워야 되돌릴 수 있어요', 14, y, { color: free ? P.sub : '#ffb0a0' });
     y += 20;
@@ -248,12 +248,12 @@ export const plant = {
     let y = y0 + 40;
     STAT_KEYS.forEach((k, i) => {
       const d = STAT_DEF.find(x => x.k === k) || { icon: 'sparkle', name: STAT_NAME[k] };
-      if (i) g.rect(14, y - 3, W - 28, 1, '#24506e');
+      if (i) g.rect(14, y - 3, W - 28, 1, '#244e7e');
       // 줄 = [아이콘 · 이름 / 포인트당 얼마 · 몇 번 강화] · 값(오른쪽 맞춤) · +1 단추
       const n = (p.up || {})[k] || 0;
       g.img(icon(d.icon), 16, y + 8);
       g.text(STAT_NAME[k], 32, y + 2, { font: 'label', color: P.main });
-      g.text(`+${UP_GAIN[k]}${k === 'crit' ? '%' : ''}씩` + (n ? ` · ${n}강` : ''), 32, y + 17, { color: n ? '#97e8f7' : P.dim });
+      g.text(`+${UP_GAIN[k]}${k === 'crit' ? '%' : ''}씩` + (n ? ` · ${n}강` : ''), 32, y + 17, { color: n ? '#8ccfff' : P.dim });
       g.text(k === 'crit' ? `${ps[k]}%` : k === 'acc' ? `+${ps[k]}` : fmt(ps[k]), W - 106, y + 6, { font: 'value', color: P.main, align: 'right' });
       this.btn(app, live, 'up_' + k, W - 98, y + 1, 84, 26, `+1 · ${cost}`, { style: 'gold', font: 'label', disabled: !p.pts || s.wallet.credits < cost }, () => app.act('upgrade', { id: p.uid, stat: k, n: 1 }));
       y += 33;
@@ -279,7 +279,7 @@ export const plant = {
       if (foods.length) this.hit(app, live, 'iv_' + k, cx - 24, cy - 24, 48, 74, () => { this.ivStat = k; });
     });
     let y = cy + 64;
-    g.rect(14, y - 6, W - 28, 1, '#24506e');
+    g.rect(14, y - 6, W - 28, 1, '#244e7e');
     g.text('거름 주기', 14, y, { font: 'value', color: P.main });
     g.text(`같은 ${SPECIES[p.key].name}를 먹여 고른 개체값을 올려요`, 14, y + 18, { color: P.sub });
     y += 38;

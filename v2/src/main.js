@@ -101,7 +101,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   const realG = app.g.c; app.g.ctx = cx;
   app.W = W; app.H = H; app.t = opt.t ?? 1000; app.state = mockState(); app.pxScale = k;
   app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null;
-  setUi(opt.ui || 'glass');
+  setUi(opt.ui || 'sky');
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;

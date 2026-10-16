@@ -1,7 +1,7 @@
 // 전광판(2026-10-16 사용자 "안내 문구는 따로 창을 만들지 않고 나와 적 식물 사이 가운데에 전광판 효과처럼 팍 나오는 느낌"):
 //  검은 판 + 얇은 쇠 테 + 빛나는 글자 위에 1칸 격자(점 무늬) → 글자가 점(LED)으로 보임. 나타날 땐 가운데 줄에서 위아래로 팍 펼쳐지고 테가 한 번 번쩍.
 //  대결 방 초대 코드도 같은 판.
-export const LED = { amber: '#ffcf4a', teal: '#8ff8e2', red: '#ff7a5a', gold: '#ffe27a', white: '#f4fbff', green: '#9ff0b0', violet: '#d8b8ff' };
+export const LED = { amber: '#ffcf4a', teal: '#9ad2ff', red: '#ff7a5a', gold: '#ffe27a', white: '#f4fbff', green: '#9ff0b0', violet: '#d8b8ff' };
 const glowOf = col => { const n = parseInt(col.slice(1), 16), f = v => Math.round(v * 0.38).toString(16).padStart(2, '0'); return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255); };
 
 // 판: (x, y, w, h), k = 펼쳐진 정도(0~1), flash = 테 번쩍(0~1)

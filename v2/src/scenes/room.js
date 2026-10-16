@@ -77,14 +77,14 @@ export const room = {
   },
   // 방이 없을 때: 설명 · 방 만들기 · 코드로 들어가기
   lobby(app) {
-    const { g, W, state: s } = app, x = PANEL.x, w = PANEL.w, y = 44, P = { main: '#d8faff', sub: '#7fd0e8', dim: '#4f8aa8' };
-    holo(g, x, y, w, 250, { fill: '#06121c', fill2: '#0a1a28', frame: '#2f5f7a', frameHi: '#97e8f7', frameLo: '#183a52' }, 16);
+    const { g, W, state: s } = app, x = PANEL.x, w = PANEL.w, y = 44, P = { main: '#e0f0ff', sub: '#8cc4ee', dim: '#4f8aa8' };
+    holo(g, x, y, w, 250, { fill: '#06111f', fill2: '#0a182c', frame: '#2f5c8a', frameHi: '#8ccfff', frameLo: '#18385e' }, 16);
     ledText(g, '친구와 1:1 대결', W / 2, y + 14, { font: 'head', color: LED.teal });
     const lines = ['방을 만들면 초대 코드가 나와요', '친구에게 코드나 링크를 보내요', '둘 다 준비하면 바로 시작!'];
     lines.forEach((l, i) => { g.text(`${i + 1}`, x + 22, y + 46 + i * 22, { font: 'bold', color: '#ffd890' }); g.text(l, x + 36, y + 46 + i * 22, { color: P.main }); });
     const p = s.plants[s.active] || s.plants[0];
     if (p) {
-      g.rect(W / 2 - 33, y + 122, 66, 66, '#3f9fd0'); g.rect(W / 2 - 32, y + 123, 64, 64, '#0a1e2c');
+      g.rect(W / 2 - 33, y + 122, 66, 66, '#4a8edc'); g.rect(W / 2 - 32, y + 123, 64, 64, '#0a1c32');
       g.clip(W / 2 - 31, y + 124, 62, 62, () => drawPortrait(g, p.key, W / 2 - 31, y + 124, 62, false));
       g.text(`나갈 식물: ${p.name}`, W / 2, y + 196, { font: 'bold', color: P.main, align: 'center' });
       g.text(`${stageName(p)} Lv${p.lv} — 방에서 바꿀 수 있어요`, W / 2, y + 214, { color: P.sub, align: 'center' });
@@ -108,40 +108,40 @@ export const room = {
     const cw = 118, cy = 132, ch = 196;
     [me, foe].forEach((m, i) => {
       const x = 12 + i * (cw + 10);
-      holo(g, x, cy, cw, ch, m && m.ready ? { fill: '#0d2a1c', fill2: '#123622', frame: '#7cf0a0', frameHi: '#d8ffe4', frameLo: '#2a6a44' } : { fill: '#06121c', fill2: '#0a1a28', frame: '#2f5f7a', frameHi: '#97e8f7', frameLo: '#183a52' }, 16);
+      holo(g, x, cy, cw, ch, m && m.ready ? { fill: '#0d2a1c', fill2: '#123622', frame: '#7cf0a0', frameHi: '#d8ffe4', frameLo: '#2a6a44' } : { fill: '#06111f', fill2: '#0a182c', frame: '#2f5c8a', frameHi: '#8ccfff', frameLo: '#18385e' }, 16);
       if (!m) {
-        g.text('친구를', x + cw / 2, cy + 60, { font: 'bold', color: '#7fd0e8', align: 'center' });
-        g.text('기다리는 중' + '.'.repeat(1 + Math.floor(t / 400) % 3), x + cw / 2, cy + 78, { font: 'bold', color: '#7fd0e8', align: 'center' });
+        g.text('친구를', x + cw / 2, cy + 60, { font: 'bold', color: '#8cc4ee', align: 'center' });
+        g.text('기다리는 중' + '.'.repeat(1 + Math.floor(t / 400) % 3), x + cw / 2, cy + 78, { font: 'bold', color: '#8cc4ee', align: 'center' });
         g.text('코드를 보내 주세요', x + cw / 2, cy + 104, { color: '#4f8aa8', align: 'center' });
         return;
       }
       // 프로필 줄: 배너 색 테의 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
-      const bc = ['#97e8f7', '#f0be7d', '#9ff0b0', '#c8a8f0'][m.color || 0];
-      g.rect(x + 8, cy + 8, 30, 30, bc); g.rect(x + 9, cy + 9, 28, 28, '#0a1e2c');
+      const bc = ['#8ccfff', '#f0be7d', '#9ff0b0', '#c8a8f0'][m.color || 0];
+      g.rect(x + 8, cy + 8, 30, 30, bc); g.rect(x + 9, cy + 9, 28, 28, '#0a1c32');
       if (m.avatar) g.clip(x + 9, cy + 9, 28, 28, () => drawPortrait(g, m.avatar, x + 9, cy + 9, 28, false));
       let nm = m.name; while (g.textW(nm, 'bold') > cw - 50 && nm.length > 2) nm = nm.slice(0, -1);
       g.text(nm, x + 44, cy + 9, { font: 'bold', color: '#ffffff' });
       g.text(`재배사 Lv${m.level || 1}`, x + 44, cy + 25, { color: '#ffd890' });
       let tt = m.title || ''; while (g.textW(tt) > cw - 16 && tt.length > 2) tt = tt.slice(0, -1);
-      g.text(tt, x + cw / 2, cy + 44, { color: '#7fd0e8', align: 'center' });
-      if (m.me) g.text('(나)', x + cw - 8, cy + 9, { color: '#97e8f7', align: 'right' });
+      g.text(tt, x + cw / 2, cy + 44, { color: '#8cc4ee', align: 'center' });
+      if (m.me) g.text('(나)', x + cw - 8, cy + 9, { color: '#8ccfff', align: 'right' });
       // 가운데: 내 식물(나만 보임) / 상대 = 비밀
       const px = x + cw / 2 - 28, py = cy + 62, c = m.card;
-      g.rect(px - 1, py - 1, 58, 58, m.me ? '#3f9fd0' : '#2a3a4e'); g.rect(px, py, 56, 56, '#0a1e2c');
+      g.rect(px - 1, py - 1, 58, 58, m.me ? '#4a8edc' : '#2a3a4e'); g.rect(px, py, 56, 56, '#0a1c32');
       if (m.me && c) {
         g.clip(px + 1, py + 1, 54, 54, () => drawPortrait(g, c.key, px + 1, py + 1, 54, false));
         g.img(icon(SPECIES[c.key].el), px + 58 - 12, py + 2);
-        g.text(c.name, x + cw / 2, py + 60, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#d8faff', align: 'center' });
-        g.text(`${STAGES[c.stage]} · Lv${c.lv}`, x + cw / 2, py + 76, { color: '#7fd0e8', align: 'center' });
+        g.text(c.name, x + cw / 2, py + 60, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#e0f0ff', align: 'center' });
+        g.text(`${STAGES[c.stage]} · Lv${c.lv}`, x + cw / 2, py + 76, { color: '#8cc4ee', align: 'center' });
         button(app, 'rm_pick', x + 10, py + 94, cw - 20, 20, '식물 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.picker = true; else app.toast('준비를 풀고 바꿔요'); } });
       } else {
-        g.text('?', x + cw / 2, py + 18, { font: 'big', color: '#2f5f7a', align: 'center' });
-        g.text('고른 식물은', x + cw / 2, py + 62, { color: '#7fd0e8', align: 'center' });
-        g.text('대결에서 공개', x + cw / 2, py + 78, { color: '#7fd0e8', align: 'center' });
+        g.text('?', x + cw / 2, py + 18, { font: 'big', color: '#2f5c8a', align: 'center' });
+        g.text('고른 식물은', x + cw / 2, py + 62, { color: '#8cc4ee', align: 'center' });
+        g.text('대결에서 공개', x + cw / 2, py + 78, { color: '#8cc4ee', align: 'center' });
       }
       const rc = m.ready ? '#7cf0a0' : '#3a4a5e';
       g.rect(x + 10, cy + ch - 20, 8, 8, '#05070b'); g.rect(x + 11, cy + ch - 19, 6, 6, rc);
-      g.text(!m.online ? '연결 끊김' : m.ready ? '준비 완료!' : '준비 중', x + 24, cy + ch - 22, { font: 'bold', color: !m.online ? '#ff9a8a' : m.ready ? '#9ff0b0' : '#7fd0e8' });
+      g.text(!m.online ? '연결 끊김' : m.ready ? '준비 완료!' : '준비 중', x + 24, cy + ch - 22, { font: 'bold', color: !m.online ? '#ff9a8a' : m.ready ? '#9ff0b0' : '#8cc4ee' });
       if (m.host) g.text('방장', x + cw - 10, cy + ch - 22, { color: '#ffd890', align: 'right' });
       // 감정 표현 말풍선(전광판) — 그 사람 카드 가운데 위
       const em = app.room.emotes.filter(e => (e.me === !!m.me) && performance.now() - e.t < 2600).pop();
@@ -167,7 +167,7 @@ export const room = {
     s.plants.forEach((p, i) => {
       const ry = y + 36 + i * 42, id = 'pk_' + i, pr = app.input.isPressed(id);
       holo(g, 16, ry + (pr ? 1 : 0), W - 32, 38, T.deep, 16);
-      g.rect(22, ry + 4, 30, 30, '#0a1e2c'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
+      g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
       g.text(p.name, 60, ry + 5, { font: 'bold', color: T.ptext.main });
       g.text(`${stageName(p)} Lv${p.lv}`, 60, ry + 21, { color: T.ptext.sub });
       g.img(icon(SPECIES[p.key].el), W - 40, ry + 13);

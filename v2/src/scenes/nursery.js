@@ -199,7 +199,7 @@ export const nursery = {
       if (isSel) this.lifted(g, it, sx, sy, band, Math.round(LIFT * ease(clamp((t - this.selT) / LIFT_MS, 0, 1))), t);
       else this.planted(g, it, sx, sy, band, t);
       if (f.have > 0 && !isSel) { const ic = icon('fruit'), by2 = sy - 86 + (Math.floor(t / 500 + it.i) % 2); g.img(ic, sx - Math.floor(ic.width / 2), by2); }
-    } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#97e8f7', 0); }
+    } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#8ccfff', 0); }
     if (u < -0.4 || u > 2.7) return null;
     return { id: 'nur_' + it.id, x: Fx0, y: sy - 78, w: Fx1 - Fx0, h: Fy1 - sy + 80, fn: () => { if (this.sel !== it.id) { this.sel = it.id; this.selT = app.t; } } };
   },
@@ -219,7 +219,7 @@ export const nursery = {
     g.ellipseRing(sx, sy + 1, rx - 3, Math.max(1, ry - 1), '#2a3342', 0);
     g.ellipse(sx, sy + 1, Math.max(2, rx - 6), Math.max(1, ry - 2), '#080b10');
     for (const [dx, dy] of [[-rx - 1, 0], [rx + 1, 0], [-Math.round(rx * 0.6), ry], [Math.round(rx * 0.6), ry]]) g.px(sx + dx, sy + dy, '#c2cad8');
-    for (const dx of [-9, -3, 3, 9]) g.px(sx + dx, sy - Math.max(1, ry - 1) + 1, '#3f9fd0');
+    for (const dx of [-9, -3, 3, 9]) g.px(sx + dx, sy - Math.max(1, ry - 1) + 1, '#4a8edc');
     const soilY = sy - L, potFoot = soilY + 21;   // 화분 흙 줄 · 굽(큰 판: 흙 75.7 → 굽 96.55)
     if (potFoot < sy) {   // 피스톤: 굵은 금속 막대(마디 하나) + 화분 받침 원판(테 밝게)
       g.rect(sx - 3, potFoot, 7, sy - potFoot + 2, '#4a5568'); g.rect(sx - 2, potFoot, 1, sy - potFoot + 2, '#8a97ae'); g.rect(sx + 3, potFoot, 1, sy - potFoot + 2, '#2e3646');

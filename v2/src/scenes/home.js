@@ -33,7 +33,7 @@ const MODES = [
   { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
 ];
 const BANNER = { x: 4, y: 27, w: 262, h: 60 };   // 위 상태 바(x 4~266)와 같은 가장자리 · 높이 2배(2026-10-15 사용자 "배너 높이 2배로 · 배너랑 위의 바 정렬이 안 맞아")
-const BANNER_COL = ['#97e8f7', '#f0be7d', '#9ff0b0', '#c8a8f0'];   // 배너 색(왼쪽 띠·이름 밑줄)
+const BANNER_COL = ['#8ccfff', '#f0be7d', '#9ff0b0', '#c8a8f0'];   // 배너 색(왼쪽 띠·이름 밑줄)
 const TIER_COL = { 브론즈: '#d89a62', 실버: '#c8d2e0', 골드: '#f0c858', 플래티넘: '#9ff0e0', 다이아: '#a8d0ff', 마스터: '#e0a8ff', 풀로세움: '#ffd890' };
 const ease = k => k * k * (3 - 2 * k);
 // 3:3 내 팀(식물 번호 셋) — 정한 적 없으면 앞에서부터 셋
@@ -84,7 +84,7 @@ export const home = {
     const show = Math.min(1, (t - this.showT) / SHOW_MS), reveal = Math.round(my - 100 + (1 - show) * 104);
     loftView(app, { dark: cam.dark, z: cam.z, px: mx, py: pc, sx: cam.sx, sy: cam.sy, plant: () => {
       g.clip(0, reveal, W, 120, () => loftPlant(app, key, p ? p.pot : 'pot_terra', mx, my));   // 단계 그림(어린·자람·성체)
-      if (show < 1) { g.rect(mx - 26, reveal, 52, 1, '#97e8f7'); g.rect(mx - 18, reveal - 1, 36, 1, '#e4fbff'); }
+      if (show < 1) { g.rect(mx - 26, reveal, 52, 1, '#8ccfff'); g.rect(mx - 18, reveal - 1, 36, 1, '#e6f3ff'); }
     } });
     if (cam.ui <= 0) return;
     const live = cam.ui >= 1 && !this.focus;   // 연출 중엔 누르기 막음
@@ -109,13 +109,13 @@ export const home = {
     // 이름표 + 넘기기 화살표 · 정체성 꼬리표 · 몇 번째 식물 점
     const [nx, nw] = this.namePlate(app, p, mx), n = s.plants.length;
     if (n > 1) for (const [id, d, x] of [['home_prev', -1, nx - 9], ['home_next', 1, nx + nw + 8]]) {
-      const pr = app.input.isPressed(id), c = pr ? '#e4fbff' : '#97e8f7', cy = NAME_Y + 12;
+      const pr = app.input.isPressed(id), c = pr ? '#e6f3ff' : '#8ccfff', cy = NAME_Y + 12;
       for (let j = 0; j < 5; j++) g.rect(d < 0 ? x - j : x + j, cy - 4 + j, 1, 9 - j * 2, c);   // 큰 쪽 = 뒤, 뾰족한 쪽 = 가리키는 쪽
       if (live) app.input.hit(id, x - 14, cy - 14, 28, 28, () => this.flip(d), 2);
     }
     this.tags(app, p, mx);
     const dx0 = Math.round(mx - (n - 1) * 4.5);
-    for (let i = 0; i < n; i++) { const x = dx0 + i * 9; g.rect(x - 2, DOT_Y - 2, 5, 5, '#2b374b'); g.rect(x - 1, DOT_Y - 1, 3, 3, i === s.active ? '#f0be7d' : '#87acc7'); }
+    for (let i = 0; i < n; i++) { const x = dx0 + i * 9; g.rect(x - 2, DOT_Y - 2, 5, 5, '#2b374b'); g.rect(x - 1, DOT_Y - 1, 3, 3, i === s.active ? '#f0be7d' : '#8eaed2'); }
     this.battleBlock(app, live);
     if (live) app.input.hit('home_plant', mx - 40, my - 100, 80, 104, () => this.startFocus(app));
     navBar(app, 'home', { badge: { nursery: s.plants.some(q => fruitOf(q, app.now()).have > 0 || growInfo(q).ready) } });
@@ -134,7 +134,7 @@ export const home = {
       if (k > 0) {
         const w = Math.max(3, Math.round(CARD.w * k)), x = CARD.x;
         holo(g, x, y, w, h, st, 15);
-        if (k < 1) g.rect(x + w - 1, y, 1, h, '#e4fbff');
+        if (k < 1) g.rect(x + w - 1, y, 1, h, '#e6f3ff');
         else {
           const ic = icon(r.ic), lh = g.lineH('value'), ty = r.bar != null ? y + 4 : y + Math.round((h - lh) / 2);
           g.img(ic, x + 6, ty + Math.round((lh - ic.height) / 2));
@@ -177,7 +177,7 @@ export const home = {
     list.forEach((r, i) => {
       tagBox(g, x, TAG_Y, ws[i], 18);
       g.img(icon(r.ic), x + 5, TAG_Y + 4);
-      g.text(r.label, x + 18, TAG_Y + 3, { font: 'label', color: r.col || '#e4fbff' });
+      g.text(r.label, x + 18, TAG_Y + 3, { font: 'label', color: r.col || '#e6f3ff' });
       x += ws[i] + gap;
     });
   },
@@ -194,11 +194,11 @@ export const home = {
       g.text('방 만들기 · 코드 넣기', x + 7, y + 21, { color: P.sub });
       g.text(`${PV.wins}승 ${PV.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
     } else if (swap) {   // 3:3 = 내 팀 셋 얼굴 + 교체전 승패
-      teamOf(s).forEach((pl, i) => { if (!pl) return; const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1e2c'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key, fx + 1, y + 21, 17, false)); });
+      teamOf(s).forEach((pl, i) => { if (!pl) return; const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1c32'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key, fx + 1, y + 21, 17, false)); });
       g.text(`${SW.wins}승 ${SW.losses}패`, x + w - 7, y + 39, { font: 'label', color: P.main, align: 'right' });
     } else {
       g.text(`${TR.name} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
-      for (let i = 0; i < TR.bestOf; i++) { const c = i < TR.wins ? '#ffd890' : i < TR.wins + TR.losses ? '#ff8a8a' : '#24425a'; g.rect(x + 7 + i * 10, y + 40, 8, 6, '#0a1e2c'); g.rect(x + 8 + i * 10, y + 41, 6, 4, c); }
+      for (let i = 0; i < TR.bestOf; i++) { const c = i < TR.wins ? '#ffd890' : i < TR.wins + TR.losses ? '#ff8a8a' : '#244066'; g.rect(x + 7 + i * 10, y + 40, 8, 6, '#0a1c32'); g.rect(x + 8 + i * 10, y + 41, 6, 4, c); }
       g.text(`${TR.wins}승 ${TR.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
     }
     if (live) app.input.hit('home_mode', x, BATTLE_Y, w, h, () => { this.modeSheet = true; }, 2);
@@ -255,7 +255,7 @@ export const home = {
     const { g, state: s } = app, pf = s.profile || {}, st = T.card || T.panel, P = T.ptext, { h } = BANNER, w = bw, col = BANNER_COL[pf.color || 0];
     holo(g, x, y, w, h, st, 16);   // 꽉 채움(뒤 원뿔 빛이 구멍으로 점점이 비치지 않게)
     g.rect(x + 1, y + 2, 3, h - 4, col);
-    g.rect(x + 8, y + 4, 52, 52, '#0a1e2c'); g.rect(x + 8, y + 4, 52, 1, col); g.rect(x + 8, y + 55, 52, 1, col);
+    g.rect(x + 8, y + 4, 52, 52, '#0a1c32'); g.rect(x + 8, y + 4, 52, 1, col); g.rect(x + 8, y + 55, 52, 1, col);
     g.clip(x + 9, y + 5, 50, 50, () => drawPortrait(g, pf.avatar || 'flower_grass', x + 9, y + 5, 50, false));
     const rx = x + w - 80, nx = x + 68;   // 오른쪽 랭크 칸(80) — 왼쪽 이름·칭호 칸이 좁은 배너(설정 창)에서도 잘리지 않게
     g.clip(nx, y + 4, rx - nx - 4, 48, () => {
@@ -285,7 +285,7 @@ export const home = {
     yy += 34; g.text('대표 식물', x + 12, yy, { color: P.sub }); yy += 16;
     s.plants.slice(0, 6).forEach((p, i) => {
       const px = x + 12 + i * 37, on = pf.avatar === p.key;
-      g.rect(px, yy, 32, 32, on ? BANNER_COL[pf.color || 0] : '#3f6a88'); g.rect(px + 1, yy + 1, 30, 30, '#0a1e2c');
+      g.rect(px, yy, 32, 32, on ? BANNER_COL[pf.color || 0] : '#3f6a88'); g.rect(px + 1, yy + 1, 30, 30, '#0a1c32');
       g.clip(px + 2, yy + 2, 28, 28, () => drawPortrait(g, p.key, px + 2, yy + 2, 28, false));
       app.input.hit('pf_av' + i, px, yy, 32, 32, () => { if (pf.avatar !== p.key) { pf.avatar = p.key; app.act('setProfile', { avatar: p.key }); } });
     });
@@ -295,7 +295,7 @@ export const home = {
       button(app, 'pf_t' + i, Math.round(bx), by, Math.round(bw), 22, tt, { style: on ? 'teal' : 'night', onTap: () => { if (pf.title !== tt) { pf.title = tt; app.act('setProfile', { title: tt }); } } });
     });
     yy += 64; g.text('배너 색', x + 12, yy, { color: P.sub }); yy += 16;
-    BANNER_COL.forEach((c, i) => { const bx = x + 12 + i * 30, on = (pf.color || 0) === i; g.rect(bx, yy, 24, 18, on ? '#ffffff' : '#0a1e2c'); g.rect(bx + 2, yy + 2, 20, 14, c); app.input.hit('pf_c' + i, bx, yy, 24, 18, () => { if ((pf.color || 0) !== i) { pf.color = i; app.act('setProfile', { color: i }); } }, 2); });
+    BANNER_COL.forEach((c, i) => { const bx = x + 12 + i * 30, on = (pf.color || 0) === i; g.rect(bx, yy, 24, 18, on ? '#ffffff' : '#0a1c32'); g.rect(bx + 2, yy + 2, 20, 14, c); app.input.hit('pf_c' + i, bx, yy, 24, 18, () => { if ((pf.color || 0) !== i) { pf.color = i; app.act('setProfile', { color: i }); } }, 2); });
     button(app, 'pf_done', x + w / 2 - 50, y + h - 40, 100, 30, '완료', { style: 'gold', font: 'head', onTap: () => { this.editing = false; } });
   }
 };

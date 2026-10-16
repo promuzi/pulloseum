@@ -79,7 +79,7 @@ export const explore = {
     g.text('사는 식물', 18, py + 48, { color: PT.dim });
     P.pool.forEach((k, i) => {
       const x = 18 + i * 44, y = py + 64, known = s.discovered.includes(k);
-      g.rect(x, y, 38, 38, '#0a1e2c'); g.rect(x, y, 38, 1, SPECIES[k].rarity === 'rare' ? '#6fb8ff' : '#2f5f7a');
+      g.rect(x, y, 38, 38, '#0a1c32'); g.rect(x, y, 38, 1, SPECIES[k].rarity === 'rare' ? '#6fb8ff' : '#2f5c8a');
       if (known) g.clip(x + 1, y + 1, 36, 36, () => drawPortrait(g, k, x + 1, y + 1, 36, false));
       else g.text('?', x + 19, y + 11, { font: 'head', color: '#3f6a88', align: 'center' });
     });
@@ -87,7 +87,7 @@ export const explore = {
     // 연료 칸 + 다음 연료까지
     const fy = py + 110, fuel = s.items.fuel || 0;
     g.img(icon('energy'), 18, fy);
-    for (let i = 0; i < FUEL.max; i++) { const x = 34 + i * 12; g.rect(x, fy + 1, 9, 9, '#0a1e2c'); if (i < fuel) { g.rect(x + 1, fy + 2, 7, 7, '#ffd84a'); g.rect(x + 1, fy + 2, 7, 1, '#fff6c8'); } }
+    for (let i = 0; i < FUEL.max; i++) { const x = 34 + i * 12; g.rect(x, fy + 1, 9, 9, '#0a1c32'); if (i < fuel) { g.rect(x + 1, fy + 2, 7, 7, '#ffd84a'); g.rect(x + 1, fy + 2, 7, 1, '#fff6c8'); } }
     g.text(fuel >= FUEL.max ? '연료 가득' : `다음 연료 ${left(s.fuelT + FUEL.regenMin * 60000 - now)}`, 34 + FUEL.max * 12 + 4, fy, { color: PT.sub });
     const go = !locked && fuel > 0 && !this.warp;
     button(app, 'ex_go', 18, fy + 18, W - 36, 30, locked ? `재배사 Lv${need}에 열려요` : fuel > 0 ? '탐사하기 · 연료 1' : '연료가 차면 갈 수 있어요', { style: 'gold', font: 'bold', icon: locked ? 'lockS' : 'navExplore', iconTint: true, disabled: !go, onTap: () => this.go(app, P) });
@@ -108,7 +108,7 @@ export const explore = {
     for (let i = 0; i < 46; i++) {
       const a = i * 2.399 + 0.3, d0 = 30 + (i * 37) % 170, d = d0 * (1 - k * 0.9), len = 4 + k * 26;
       const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.8;
-      for (let j = 0; j < len; j += 2) g.px(Math.round(x + Math.cos(a) * j), Math.round(y + Math.sin(a) * j * 0.8), j < 4 ? '#ffffff' : '#97e8f7');
+      for (let j = 0; j < len; j += 2) g.px(Math.round(x + Math.cos(a) * j), Math.round(y + Math.sin(a) * j * 0.8), j < 4 ? '#ffffff' : '#8ccfff');
     }
     if (k > 0.75) g.alpha((k - 0.75) / 0.25, () => g.rect(0, 0, W, H, '#e8faff'));
     if (k >= 1 && w.res) {

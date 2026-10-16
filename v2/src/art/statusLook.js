@@ -31,7 +31,7 @@ export const STATUS_DESC = {
   rage: '공격 +25%', wall: '받는 피해 −20%', haste: '기동 +30%(먼저 움직이고 잘 피함)', regen: '턴 끝 체력 5% 회복(3번)', thorns: '붙어서 때린 상대에게 피해 30%를 되돌림',
   shield: '최대 체력 15%만큼 피해를 먼저 막음', purified: '나쁜 효과가 안 걸림(한 턴)', focus: '다음 공격 치명 +25', guard: '방어 자세 — 받는 피해 ↓', evade: '회피 자세 — 빗나감 ↑', initReady: '다음 턴 먼저 움직이기 쉬움',
 };
-export const SW_ON = { fill: '#123a52', fill2: '#16465f', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9', text: '#d8faff', num: '#97e8f7' };
+export const SW_ON = { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#4f84bf', text: '#e0f0ff', num: '#8ccfff' };
 export const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
 export const swCache = new Map();
 export const swStyle = col => { let s = swCache.get(col); if (!s) swCache.set(col, s = { fill: hexMix(col, '#0a0c18', 0.8), fill2: hexMix(col, '#0a0c18', 0.72), frame: col, frameHi: hexMix(col, '#ffffff', 0.55), frameLo: hexMix(col, '#000000', 0.45), text: hexMix(col, '#ffffff', 0.72), num: hexMix(col, '#ffffff', 0.35) }); return s; };

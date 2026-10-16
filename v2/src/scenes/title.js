@@ -78,7 +78,7 @@ export const title = {
     drawBig(g, star ? star.key : 'flower_grass', 'pot_terra', cx, py + (bg ? 0 : bob), { t });
     // 반딧불 포자
     const R = rng(9);
-    for (let i = 0; i < 9; i++) { const a = t / 1400 + i, x = cx + Math.round(Math.cos(a * 1.3 + i) * (54 + i * 6)), y = py - 64 + Math.round(Math.sin(a + i * 2) * 36); if (R() > 0.2) { g.rect(x, y, 2, 2, i % 2 ? '#cddf6c' : '#8ff8e2'); g.px(x - 1, y, T.ink); } }
+    for (let i = 0; i < 9; i++) { const a = t / 1400 + i, x = cx + Math.round(Math.cos(a * 1.3 + i) * (54 + i * 6)), y = py - 64 + Math.round(Math.sin(a + i * 2) * 36); if (R() > 0.2) { g.rect(x, y, 2, 2, i % 2 ? '#cddf6c' : '#9ad2ff'); g.px(x - 1, y, T.ink); } }
     bigTitle(g, '풀로세움', W / 2, 74, { top: '#ffffff', mid: '#c8f8ec', low: '#8efbdb', line: T.ink, shadow: '#5e5cb1' });
     g.text('식물 배틀 콜로세움', W / 2, 112, { color: T.text.main, align: 'center', shadow: T.ink });
     const bw = 170, bx = Math.round((W - bw) / 2), y0 = H - 178;
@@ -122,23 +122,23 @@ export const starter = {
     const key = STARTERS[this.i], sp = SPECIES[key], [cx, py] = TITLE_ISLAND, k = Math.min(1, (t - this.showT) / 280);
     g.clip(0, Math.round(py - 120 + (1 - k) * 120), W, 140, () => drawBig(g, key, 'pot_terra', cx, py, { t }));
     for (const [id, d, x] of [['st_prev', -1, 26], ['st_next', 1, W - 26]]) {
-      const pr = app.input.isPressed(id), c = pr ? '#ffffff' : '#97e8f7', cy = py - 50;
+      const pr = app.input.isPressed(id), c = pr ? '#ffffff' : '#8ccfff', cy = py - 50;
       for (let j = 0; j < 7; j++) g.rect(d < 0 ? x - j : x + j, cy - 6 + j, 1, 13 - j * 2, c);
       app.input.hit(id, x - 18, cy - 22, 36, 44, () => { this.i = (this.i + d + STARTERS.length) % STARTERS.length; this.showT = app.t; }, 2);
     }
     // 이름 · 종 · 속성 · 설명
     const y = py + 22, el = ELEMENT[sp.el];
     g.text(sp.name, W / 2, y, { font: 'name', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
-    const tags = [[sp.type, JONG[sp.type], '#e4fbff'], [sp.el, ELEM[sp.el], el.light]];
+    const tags = [[sp.type, JONG[sp.type], '#e6f3ff'], [sp.el, ELEM[sp.el], el.light]];
     let tw = tags.reduce((a, [, l]) => a + 22 + g.textW(l, 'label') + 4, -4), tx = Math.round(W / 2 - tw / 2);
-    for (const [ic, l, col] of tags) { const w = 22 + g.textW(l, 'label'); holo(g, tx, y + 24, w, 18, { fill: '#10283c', fill2: '#12304a', frame: '#4c88a9', frameHi: '#97e8f7', frameLo: '#183a52' }, 16); g.img(icon(ic), tx + 5, y + 28); g.text(l, tx + 18, y + 27, { font: 'label', color: col }); tx += w + 4; }
-    holo(g, 14, y + 50, W - 28, 46, { fill: '#0b1d2e', fill2: '#0f2538', frame: '#2f5f7a', frameHi: '#4c88a9', frameLo: '#183a52' }, 16);
+    for (const [ic, l, col] of tags) { const w = 22 + g.textW(l, 'label'); holo(g, tx, y + 24, w, 18, { fill: '#102844', fill2: '#12304a', frame: '#4f84bf', frameHi: '#8ccfff', frameLo: '#18385e' }, 16); g.img(icon(ic), tx + 5, y + 28); g.text(l, tx + 18, y + 27, { font: 'label', color: col }); tx += w + 4; }
+    holo(g, 14, y + 50, W - 28, 46, { fill: '#0b1d2e', fill2: '#0f2538', frame: '#2f5c8a', frameHi: '#4f84bf', frameLo: '#18385e' }, 16);
     g.para ? g.para(DESC[key], 24, y + 56, W - 48, { color: '#d8f0ff' }) : g.text(DESC[key], 24, y + 58, { color: '#d8f0ff' });
     // 얼굴 셋
     const fy = y + 106, fw = 52, gap = 12, fx0 = Math.round(W / 2 - (fw * 3 + gap * 2) / 2);
     STARTERS.forEach((k2, i) => {
       const x = fx0 + i * (fw + gap), on = i === this.i;
-      g.rect(x - 2, fy - 2, fw + 4, fw + 4, on ? '#ffd890' : '#2f5f7a'); g.rect(x, fy, fw, fw, '#0a1e2c');
+      g.rect(x - 2, fy - 2, fw + 4, fw + 4, on ? '#ffd890' : '#2f5c8a'); g.rect(x, fy, fw, fw, '#0a1c32');
       g.clip(x + 1, fy + 1, fw - 2, fw - 2, () => drawPortrait(g, k2, x + 1, fy + 1, fw - 2, false));
       app.input.hit('st_' + k2, x - 2, fy - 2, fw + 4, fw + 4, () => { if (this.i !== i) { this.i = i; this.showT = app.t; } });
     });

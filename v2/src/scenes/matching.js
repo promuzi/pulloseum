@@ -37,15 +37,15 @@ export const matching = {
     const { x, y, w, h } = SCR;
     g.rect(x - 6, y - 6, w + 12, h + 12, GUN.edge); g.rect(x - 5, y - 5, w + 10, h + 10, GUN.d); g.rect(x - 5, y - 5, w + 10, 1, GUN.lipHi);
     for (const [bx, by] of [[x - 3, y - 3], [x + w, y - 3], [x - 3, y + h], [x + w, y + h]]) { g.rect(bx, by, 3, 3, GUN.bolt); g.px(bx + 2, by + 2, GUN.boltLo); }
-    g.rect(x, y, w, h, '#06121c');
-    for (let yy = y + 1; yy < y + h; yy += 2) g.rect(x, yy, w, 1, '#0a1a28');
-    const sweep = y + ((a / 9) % (h + 20)) - 10; if (sweep > y && sweep < y + h) g.rect(x, Math.round(sweep), w, 1, '#14324a');   // 훑는 줄
-    const P = { main: '#d8faff', sub: '#7fd0e8', dim: '#3f7f9a', gold: '#ffd890', good: '#9ff0b0' };
+    g.rect(x, y, w, h, '#06111f');
+    for (let yy = y + 1; yy < y + h; yy += 2) g.rect(x, yy, w, 1, '#0a182c');
+    const sweep = y + ((a / 9) % (h + 20)) - 10; if (sweep > y && sweep < y + h) g.rect(x, Math.round(sweep), w, 1, '#14304f');   // 훑는 줄
+    const P = { main: '#e0f0ff', sub: '#8cc4ee', dim: '#3f7f9a', gold: '#ffd890', good: '#9ff0b0' };
     // 얼굴 슬롯: 찾는 동안 여러 종족이 넘어가다 끝에 갈수록 느려짐 → 찾으면 상대 얼굴
     const fx = x + w / 2 - 22, fy = y + 46
     let key = FOE.key;
     if (!found) { let tt = 0, i = 0; const aa = Math.min(a, SEARCH - 1); while (tt < aa && i < 400) { tt += 60 + 340 * (tt / SEARCH) ** 3; i++; } key = ROSTER[(i * 5 + 3 + (a >= SEARCH ? Math.floor(a / 300) : 0)) % ROSTER.length]; }
-    g.rect(fx - 2, fy - 2, 48, 48, found ? '#9ff0b0' : '#3f9fd0'); g.rect(fx - 1, fy - 1, 46, 46, '#0a1e2c');
+    g.rect(fx - 2, fy - 2, 48, 48, found ? '#9ff0b0' : '#4a8edc'); g.rect(fx - 1, fy - 1, 46, 46, '#0a1c32');
     g.clip(fx, fy, 44, 44, () => drawPortrait(g, key, fx + 2, fy + 2, 40, true));
     if (!found) for (let yy = fy; yy < fy + 44; yy += 3) g.rect(fx, yy, 44, 1, 'rgba(6,18,28,0.45)');   // 넘어가는 동안 흐린 주사선
     if (!found) {
@@ -55,12 +55,12 @@ export const matching = {
       g.text(`00:${String(sec).padStart(2, '0')}`, x + w / 2, y + 102, { color: P.sub, align: 'center' });
       // 찾는 막대(왕복)
       const bx = x + 24, bw = w - 48, pos = (Math.sin(a / 260) + 1) / 2;
-      g.rect(bx, y + 122, bw, 4, '#0e2a3c'); g.rect(Math.round(bx + pos * (bw - 30)), y + 122, 30, 4, '#3f9fd0'); g.rect(Math.round(bx + pos * (bw - 30)) + 4, y + 122, 22, 1, '#97e8f7');
+      g.rect(bx, y + 122, bw, 4, '#0e2844'); g.rect(Math.round(bx + pos * (bw - 30)), y + 122, 30, 4, '#4a8edc'); g.rect(Math.round(bx + pos * (bw - 30)) + 4, y + 122, 22, 1, '#8ccfff');
       g.text('같은 랭크 재배사를 찾고 있어요', x + w / 2, y + 136, { color: P.dim, align: 'center' });
       button(app, 'mt_cancel', x + w / 2 - 36, y + h - 32, 72, 24, '취소', { style: 'night', onTap: () => { if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } } });
     } else {
       const fa = t - this.foundT, fk = Math.min(1, fa / 160);
-      if (fk < 1) g.c.save(), g.c.globalAlpha = 1 - fk, g.rect(x, y, w, h, '#d8faff'), g.c.restore();   // 찾은 순간 화면이 한 번 번쩍
+      if (fk < 1) g.c.save(), g.c.globalAlpha = 1 - fk, g.rect(x, y, w, h, '#e0f0ff'), g.c.restore();   // 찾은 순간 화면이 한 번 번쩍
       g.text(this.res.resume ? '하던 판이 있어요!' : '상대 발견!', x + w / 2, y + 14, { font: 'head', color: P.gold, align: 'center' });
       g.text(`${FOE.trainer} · ${FOE.rank}`, x + w / 2, y + 102, { color: P.sub, align: 'center' });
       const el = ELEMENT[FOE.el], nw = g.textW(FOE.name, 'bold');

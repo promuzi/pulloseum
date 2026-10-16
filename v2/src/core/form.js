@@ -3,20 +3,20 @@
 let cur = null;
 const CSS = `
 .pf-wrap{position:fixed;inset:0;z-index:10;display:flex;justify-content:center;align-items:flex-start;background:rgba(6,10,18,.62);font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-user-select:text;user-select:text;overflow:auto}
-.pf-box{margin:12vh 0 24px;width:min(88vw,330px);background:#0b1d2e;border:2px solid #97e8f7;box-shadow:0 0 0 2px #05070f,0 6px 0 2px #05070f;padding:16px 16px 14px;color:#e4fbff}
+.pf-box{margin:12vh 0 24px;width:min(88vw,330px);background:#0b1d2e;border:2px solid #8ccfff;box-shadow:0 0 0 2px #05070f,0 6px 0 2px #05070f;padding:16px 16px 14px;color:#e6f3ff}
 .pf-box h2{margin:0 0 4px;font-size:19px;font-weight:800;letter-spacing:-.2px}
 .pf-note{margin:0 0 6px;color:#9cc4dc;font-size:13px;font-weight:600;line-height:1.45}
-.pf-box label{display:block;margin:12px 0 5px;color:#97e8f7;font-size:13px;font-weight:700}
-.pf-box input{box-sizing:border-box;width:100%;height:46px;padding:0 12px;background:#06121c;border:2px solid #2f5f7a;color:#fff;font:600 16px Pretendard,"Malgun Gothic",sans-serif;border-radius:0;outline:none;-webkit-appearance:none}
-.pf-box input:focus{border-color:#97e8f7}
+.pf-box label{display:block;margin:12px 0 5px;color:#8ccfff;font-size:13px;font-weight:700}
+.pf-box input{box-sizing:border-box;width:100%;height:46px;padding:0 12px;background:#06111f;border:2px solid #2f5c8a;color:#fff;font:600 16px Pretendard,"Malgun Gothic",sans-serif;border-radius:0;outline:none;-webkit-appearance:none}
+.pf-box input:focus{border-color:#8ccfff}
 .pf-hint{margin-top:4px;color:#6f98b4;font-size:12px;font-weight:600}
 .pf-err{min-height:18px;margin:10px 0 0;color:#ff9a8a;font-size:13px;font-weight:700}
 .pf-btns{display:flex;gap:8px;margin-top:8px}
 .pf-btns button{flex:1;height:46px;border:0;border-radius:0;font:800 15px Pretendard,"Malgun Gothic",sans-serif;cursor:pointer;box-shadow:inset 0 -4px 0 rgba(0,0,0,.32)}
 .pf-ok{background:#f0be7d;color:#2a1a08}
-.pf-cancel{background:#1f3a52;color:#cfefff}
+.pf-cancel{background:#1f3a52;color:#d4e9ff}
 .pf-btns button:disabled{opacity:.5}
-.pf-alt{display:block;margin:12px auto 0;background:none;border:0;color:#97e8f7;font:700 13px Pretendard,"Malgun Gothic",sans-serif;text-decoration:underline;cursor:pointer}
+.pf-alt{display:block;margin:12px auto 0;background:none;border:0;color:#8ccfff;font:700 13px Pretendard,"Malgun Gothic",sans-serif;text-decoration:underline;cursor:pointer}
 `;
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 

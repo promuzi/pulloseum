@@ -17,7 +17,7 @@ function rrect(g, x, y, w, h, r, col) {
 export const THEMES = {
   ship: {
     key: 'ship', name: '우주선 경기장', shape: 'chamfer',
-    ink: '#06121c', bg: '#0b1d2c', bg2: '#082033', bgLine: '#174f5c',
+    ink: '#06111f', bg: '#0b1d2c', bg2: '#082033', bgLine: '#174f5c',
     panel: { fill: '#1a3145', fill2: '#2a4961', frame: '#e3e9ef', frameHi: '#ffffff', frameLo: '#8db2bf', frameDk: '#3f677d', bolt: '#6c90a0' },
     deep: { fill: '#10243a', fill2: '#1a3145', frame: '#3f677d', frameHi: '#6c90a0', frameLo: '#2a4961', frameDk: '#0b1d2c' },
     msg: { fill: '#0b273d', edge: '#28aaba', edgeHi: '#77f0f1', edgeLo: '#186c7e' },
@@ -27,7 +27,7 @@ export const THEMES = {
       second: { fill: '#2a4961', hi: '#3f677d', hi2: '#6c90a0', lo: '#10243a', ring: '#10243a', text: '#e3e9ef' },
       off: { fill: '#14263a', hi: '#1a3145', hi2: '#1a3145', lo: '#0b1d2c', ring: '#0b1d2c', text: '#4a6278' },
       danger: { fill: '#e2537b', hi: '#f48aa8', hi2: '#ffc0d0', lo: '#8b2440', ring: '#8b2440', text: '#ffffff' },
-      good: { fill: '#3ec25f', hi: '#45f777', hi2: '#b8ffc8', lo: '#1f6a34', ring: '#1f6a34', text: '#06121c' },
+      good: { fill: '#3ec25f', hi: '#45f777', hi2: '#b8ffc8', lo: '#1f6a34', ring: '#1f6a34', text: '#06111f' },
     },
     text: { main: '#ffffff', sub: '#a8c8d8', dim: '#5a7a90', accent: '#57f1f5', gold: '#ffc83c', bad: '#ff7a8a', good: '#45f777' },
     ptext: { main: '#ffffff', sub: '#a8c8d8', dim: '#5a7a90', accent: '#57f1f5', gold: '#ffc83c', bad: '#ff7a8a', good: '#45f777' },
@@ -135,23 +135,23 @@ THEMES.cell = {
 THEMES.room = {
   key: 'room', name: '원기둥 방', shape: 'chamfer', holo: true,
   ink: '#0a0e1a', bg: '#121a2c', bg2: '#0c1222', bgLine: '#1a2440',
-  panel: { fill: '#0d2a4a', fill2: '#174a74', frame: '#62d4ff', frameHi: '#c8f4ff', frameLo: '#1f5f8f', frameDk: '#0a1c32' },
-  deep: { fill: '#0a2038', fill2: '#123a5e', frame: '#3f9fd0', frameHi: '#8fe0ff', frameLo: '#174a74', frameDk: '#08182c' },
-  msg: { fill: '#0d2a4a', fill2: '#174a74', edge: '#62d4ff', edgeHi: '#c8f4ff', edgeLo: '#1f5f8f' },
+  panel: { fill: '#0d2a4a', fill2: '#174a74', frame: '#6cb8ff', frameHi: '#d0e8ff', frameLo: '#1f5f8f', frameDk: '#0a1c32' },
+  deep: { fill: '#0a2038', fill2: '#123a5e', frame: '#4a8edc', frameHi: '#8fe0ff', frameLo: '#174a74', frameDk: '#08182c' },
+  msg: { fill: '#0d2a4a', fill2: '#174a74', edge: '#6cb8ff', edgeHi: '#d0e8ff', edgeLo: '#1f5f8f' },
   btn: {
-    primary: { holo: true, fill: '#0f3456', fill2: '#1a5a88', hi: '#62d4ff', hi2: '#c8f4ff', lo: '#0a2038', ring: '#62d4ff', text: '#d8f6ff' },
+    primary: { holo: true, fill: '#0f3456', fill2: '#1a5a88', hi: '#6cb8ff', hi2: '#d0e8ff', lo: '#0a2038', ring: '#6cb8ff', text: '#d8f6ff' },
     gold: { solid: true, fill: '#e4e8ee', hi: '#f6f7f9', hi2: '#ffffff', lo: '#8f99ad', ring: '#0a0e1a', text: '#141a2a' },
-    second: { holo: true, fill: '#0a2038', fill2: '#123a5e', hi: '#3f9fd0', hi2: '#8fe0ff', lo: '#08182c', ring: '#3f9fd0', text: '#a8e6ff' },
+    second: { holo: true, fill: '#0a2038', fill2: '#123a5e', hi: '#4a8edc', hi2: '#8fe0ff', lo: '#08182c', ring: '#4a8edc', text: '#a8e6ff' },
     off: { holo: true, fill: '#0b1626', fill2: '#0f1e32', hi: '#1f3a58', hi2: '#2a4a6a', lo: '#08101c', ring: '#1f3a58', text: '#3a5a78' },
     danger: { holo: true, fill: '#3a1020', fill2: '#5a1a30', hi: '#ff7a8a', hi2: '#ffc0c8', lo: '#200810', ring: '#ff7a8a', text: '#ffd0d8' },
-    good: { holo: true, fill: '#0f3456', fill2: '#1a5a88', hi: '#62d4ff', hi2: '#c8f4ff', lo: '#0a2038', ring: '#62d4ff', text: '#d8f6ff' },
+    good: { holo: true, fill: '#0f3456', fill2: '#1a5a88', hi: '#6cb8ff', hi2: '#d0e8ff', lo: '#0a2038', ring: '#6cb8ff', text: '#d8f6ff' },
   },
-  text: { main: '#e6f6ff', sub: '#8fc0dc', dim: '#4a6a88', accent: '#8fe8ff', gold: '#ffb868', bad: '#ff8a8a', good: '#9ff0b0' },
-  ptext: { main: '#d0f4ff', sub: '#82c8e8', dim: '#3f7fa8', accent: '#8fe8ff', gold: '#ffc070', bad: '#ff8a8a', good: '#9ff0b0' },
+  text: { main: '#e6f6ff', sub: '#8fc0dc', dim: '#4a6a88', accent: '#8cc8ff', gold: '#ffb868', bad: '#ff8a8a', good: '#9ff0b0' },
+  ptext: { main: '#d0f4ff', sub: '#82c8e8', dim: '#3f7fa8', accent: '#8cc8ff', gold: '#ffc070', bad: '#ff8a8a', good: '#9ff0b0' },
   mtext: { main: '#d0f4ff', sub: '#82c8e8' },
-  bar: { back: '#08182c', hp: ['#7fe0a0', '#d0ffe0', '#3f9f6a'], mid: ['#ffb060', '#ffe0b0', '#9a5a20'], low: ['#ff7a7a', '#ffc8c8', '#9a2a2a'], exp: ['#62d4ff', '#d8f8ff', '#2a7fb0'] },
-  pip: { on: '#62d4ff', onHi: '#e0faff', onLo: '#1f5f8f', off: '#0f2a44', offLo: '#08182c', kind: 'led' },
-  pad: { fill: '#2a3550', top: '#3a4868', rim: '#5a6a8a', edge: '#0a0e1a', glow: '#62d4ff', glow2: '#ff7a8a' },
+  bar: { back: '#08182c', hp: ['#7fe0a0', '#d0ffe0', '#3f9f6a'], mid: ['#ffb060', '#ffe0b0', '#9a5a20'], low: ['#ff7a7a', '#ffc8c8', '#9a2a2a'], exp: ['#6cb8ff', '#d8f8ff', '#2a7fb0'] },
+  pip: { on: '#6cb8ff', onHi: '#e0faff', onLo: '#1f5f8f', off: '#0f2a44', offLo: '#08182c', kind: 'led' },
+  pad: { fill: '#2a3550', top: '#3a4868', rim: '#5a6a8a', edge: '#0a0e1a', glow: '#6cb8ff', glow2: '#ff7a8a' },
 };
 // 코덱스 홈 시안(2026-10-15 사용자 "코덱스 판이 마음에 들어 — 이걸 살릴 수 있나?"): concept/ui/cell_home.png 의 UI 를 그대로 따름 —
 //   상단 = 판 없이 아이콘·숫자, 식물 옆 작은 푸른 홀로그램 카드, 주황 큰 단추 하나(모서리 꺾임·진한 갈색 아이콘), 하단 탭 = 짙은 남색 + 강철색 아이콘(고른 탭 주황 + 밑줄).
@@ -159,19 +159,19 @@ THEMES.room = {
 THEMES.loft = {
   ...THEMES.room, key: 'loft', name: '원형 방(코덱스)',
   ink: '#121a26', bg: '#212b3c', bg2: '#1e2838', bgLine: '#283347',
-  panel: { fill: '#25688d', fill2: '#3c7b9e', frame: '#97e8f7', frameHi: '#d8faff', frameLo: '#4c88a9', frameDk: '#173a52' },
-  deep: { fill: '#1e4a6a', fill2: '#25688d', frame: '#649db9', frameHi: '#97e8f7', frameLo: '#2a5a7a', frameDk: '#123048' },
-  msg: { fill: '#25688d', fill2: '#3c7b9e', edge: '#97e8f7', edgeHi: '#d8faff', edgeLo: '#4c88a9' },
+  panel: { fill: '#26649e', fill2: '#3c78b0', frame: '#8ccfff', frameHi: '#e0f0ff', frameLo: '#4f84bf', frameDk: '#173860' },
+  deep: { fill: '#1e4878', fill2: '#26649e', frame: '#6699cc', frameHi: '#8ccfff', frameLo: '#2a5888', frameDk: '#122f52' },
+  msg: { fill: '#26649e', fill2: '#3c78b0', edge: '#8ccfff', edgeHi: '#e0f0ff', edgeLo: '#4f84bf' },
   btn: {
     ...THEMES.room.btn,
     gold: { solid: true, notch: true, fill: '#eca548', hi: '#f7bb59', hi2: '#ffd890', lo: '#b8762c', ring: '#1a1208', text: '#4a2c10', sub: '#7a4a1c' },
-    second: { holo: true, fill: '#1e4a6a', fill2: '#25688d', hi: '#649db9', hi2: '#97e8f7', lo: '#123048', ring: '#649db9', text: '#d8faff' },
+    second: { holo: true, fill: '#1e4878', fill2: '#26649e', hi: '#6699cc', hi2: '#8ccfff', lo: '#122f52', ring: '#6699cc', text: '#e0f0ff' },
   },
-  text: { main: '#eef3f8', sub: '#a8bcd2', dim: '#5a6a82', accent: '#97e8f7', gold: '#f9dc9a', bad: '#ff8a8a', good: '#9ff0b0' },
-  ptext: { main: '#e4fbff', sub: '#a6ecf8', dim: '#6fa6c2', accent: '#e4fbff', gold: '#ffd890', bad: '#ff9a9a', good: '#a8f8c0' },
-  card: { fill: '#174a6c', fill2: '#1f5f86', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' },   // 식물 옆 홀로그램 카드(글자가 읽히게 조금 더 짙게)
+  text: { main: '#eef3f8', sub: '#a8bcd2', dim: '#5a6a82', accent: '#8ccfff', gold: '#f9dc9a', bad: '#ff8a8a', good: '#9ff0b0' },
+  ptext: { main: '#e6f3ff', sub: '#b8dcfa', dim: '#78a2cc', accent: '#e6f3ff', gold: '#ffd890', bad: '#ff9a9a', good: '#a8f8c0' },
+  card: { fill: '#17487a', fill2: '#1f5c96', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#4f84bf' },   // 식물 옆 홀로그램 카드(글자가 읽히게 조금 더 짙게)
   bar: { ...THEMES.room.bar, mid: ['#f2d23c', '#fff4a8', '#a08a1c'] },   // 체력 절반 아래 = 노랑(포켓몬처럼 초록 → 노랑 → 빨강) — 깎인 칸 주황과 헷갈리지 않게
-  hudPlain: { ring: '#87acc7', ink: '#121a26', fill: '#2b374b', text: '#eef3f8', sub: '#87acc7', gold: '#f9dc9a', icon: '#a8bcd2', track: '#2b374b', bar: '#97e8f7', barHi: '#e4fbff' },
+  hudPlain: { ring: '#8eaed2', ink: '#121a26', fill: '#2b374b', text: '#eef3f8', sub: '#8eaed2', gold: '#f9dc9a', icon: '#a8bcd2', track: '#2b374b', bar: '#8ccfff', barHi: '#e6f3ff' },
   nav: { bg: '#212b3c', bg2: '#283347', top: '#121a26', sep: '#3a4250', icon: '#829bb7', dim: '#4a5568', on: '#f0be7d', onLo: '#a8743a', badge: '#ff8a6a' },
 };
 
@@ -179,18 +179,20 @@ THEMES.loft = {
 //  대회 기본 경기장. UI 는 홈(코덱스 원형 방)과 같은 푸른 홀로그램 판 + 주황 단추, 받침 = 모래색 돌. 그림 = concept/ui/arena_colosseum.png → bgconv
 THEMES.colosseum = {
   ...THEMES.loft, key: 'colosseum', name: '콜로세움',
-  pad: { fill: '#a88a66', top: '#c4a77e', rim: '#7e6448', edge: '#2e2218', glow: '#97e8f7', glow2: '#f0a070' },
+  pad: { fill: '#a88a66', top: '#c4a77e', rim: '#7e6448', edge: '#2e2218', glow: '#8ccfff', glow2: '#f0a070' },
 };
 
 // ── 창 겉모습(2026-10-16 사용자 "홀로그램 창 디자인이 너무 밤티야 바꿔줘 전체적으로") ──
-//  옛 홀로그램(밝은 청록 테 + 주사선 줄무늬 + 모서리 꺾쇠)을 걷어냄. 후보 셋(?ui= 로 비교):
-//   glass = 짙은 반투명 유리 · 둥근 모서리 · 옅은 테 한 줄 · 위 안쪽 빛 한 줄 — 창마다의 색(효과 창 등)은 속과 테에 조금만(기본)
+//  옛 홀로그램(밝은 청록 테 + 주사선 줄무늬 + 모서리 꺾쇠)을 걷어냄. 같은 날 사용자 "하늘색의 디스플레이는 안 돼? 지금은 약간 청록색인데" → UI 색을 하늘색 계열로, 기본 = screen. 후보(?ui= 로 비교):
+//   sky    = 하늘색 디스플레이(밝게) — 창 색이 비치는 밝은 하늘색 판 · 위쪽이 빛남 · 하늘색 테(기본)
+//   screen = 하늘색 디스플레이(차분) — 한 단 어둡게
+//   glass = 짙은 반투명 유리 · 둥근 모서리 · 옅은 테 한 줄 · 위 안쪽 빛 한 줄 — 창마다의 색(효과 창 등)은 속과 테에 조금만
 //   metal = 무광 쇳빛 판 · 얇은 빛 턱(위·왼 밝게 · 아래·오른 그늘) · 모서리 한 칸 깎음 — 투박한 우주선
 //   ink   = 먹빛 반투명 캡슐 · 테 없음 · 큰 둥근 모서리(아이폰식)
 //   holo  = 옛 홀로그램(비교용)
-export let UI = 'glass';
+export let UI = 'sky';
 const LIGHT_TEXT = new Set(['ship', 'night', 'retro']);   // 판 글자가 밝은 장소(유리 판으로 바꿔도 읽힘)
-export const UI_ACCENT = { glass: '#f0be7d', metal: '#e8b04a', ink: '#ffffff', holo: '#97e8f7' };
+export const UI_ACCENT = { screen: '#f0be7d', sky: '#f0be7d', glass: '#f0be7d', metal: '#e8b04a', ink: '#ffffff', holo: '#8ccfff' };
 export function setUi(name) { if (UI_ACCENT[name] && name !== UI) { UI = name; holoCache.clear(); } }
 const rgbOf = hex => { const n = parseInt(String(hex || '#000000').slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 const mixC = (a, b, k) => [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * k));
@@ -224,7 +226,18 @@ function panelPixels(w, h, s, put) {
     }
     return;
   }
-  // glass(기본): 짙은 반투명 유리 — 속 = 남먹색에 창 색 35%, 위가 살짝 밝음 · 테 = 속과 창 테 색을 섞은 옅은 한 줄 · 위 안쪽 빛 한 줄
+  if (UI === 'screen' || UI === 'sky') {   // 하늘색 디스플레이(사용자 "하늘색의 디스플레이는 안 돼?"): 창 색이 그대로 비치는 판 · 위쪽이 빛나는 화면 · 하늘색 테 · 위 안쪽 빛 한 줄(sky = 한 단 더 밝게)
+    const bright = UI === 'sky', r = h >= 16 && w >= 16 ? 3 : 2, base = bright ? lit(mixC([26, 62, 108], fill, 0.7), 10) : mixC([14, 30, 56], fill, 0.74), rim = mixC(base, mixC(edge, hi, bright ? 0.5 : 0.35), bright ? 0.75 : 0.66);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!inRound(x, y, w, h, r)) continue;
+      const isEdge = !inRound(x - 1, y, w, h, r) || !inRound(x + 1, y, w, h, r) || !inRound(x, y - 1, w, h, r) || !inRound(x, y + 1, w, h, r) || x === 0 || y === 0 || x === w - 1 || y === h - 1;
+      if (isEdge) { put(x, y, rim, 252); continue; }
+      const k = y / Math.max(1, h - 1), glow = k < 0.4 ? (1 - k / 0.4) * 14 : 0;
+      put(x, y, y === 1 ? lit(base, 30) : lit(base, glow + 3 - 9 * k), 236);
+    }
+    return;
+  }
+  // glass: 짙은 반투명 유리 — 속 = 남먹색에 창 색 35%, 위가 살짝 밝음 · 테 = 속과 창 테 색을 섞은 옅은 한 줄 · 위 안쪽 빛 한 줄
   const r = h >= 16 && w >= 16 ? 3 : 2, base = mixC([15, 21, 33], fill, 0.35), rim = mixC(base, mixC(edge, hi, 0.3), 0.42);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (!inRound(x, y, w, h, r)) continue;
@@ -280,9 +293,9 @@ const fillShape = (g, x, y, w, h, r, col) => (T.shape === 'round' ? rrect(g, x, 
 
 // 판(체력판·카드·창): kind = 'panel'(기본) | 'deep'(한 단 어두운 속)
 export function plate(g, x, y, w, h, kind = 'panel') {
-  const s = T[kind] || T.panel;
+  const glassy = UI !== 'holo' && LIGHT_TEXT.has(T.key), s = glassy ? THEMES.loft[kind] || THEMES.loft.panel : T[kind] || T.panel;   // 새 겉모습: 장소가 달라도 판 색은 같은 하늘색 디스플레이
   x |= 0; y |= 0; w |= 0; h |= 0;
-  if (T.holo || (UI !== 'holo' && LIGHT_TEXT.has(T.key))) { holo(g, x, y, w, h, s, kind === 'deep' ? 8 : 10); return; }   // 새 겉모습 = 판도 창과 같은 유리(글자가 밝은 장소만 — 온실·독방은 판 글자가 어두워 옛 판 그대로)
+  if (T.holo || glassy) { holo(g, x, y, w, h, s, kind === 'deep' ? 8 : 10); return; }   // 새 겉모습 = 판도 창과 같은 유리(글자가 밝은 장소만 — 온실·독방은 판 글자가 어두워 옛 판 그대로)
   if (T.key === 'cell') { pillow(g, x, y, w, h, s, 4); return; }
   if (T.key === 'retro') {   // 두꺼운 쇠 테(빛 받는 위·왼 밝게, 아래·오른 그늘) + 네 모서리 나사 + 짙은 속
     cham(g, x, y, w, h, 2, T.ink);
@@ -337,7 +350,7 @@ export const inset = () => (T.key === 'night' ? 3 : 4);
 
 // 대사·안내 상자
 export function msgBox(g, x, y, w, h) {
-  const s = T.msg;
+  const s = UI !== 'holo' && LIGHT_TEXT.has(T.key) ? THEMES.loft.msg : T.msg;
   x |= 0; y |= 0; w |= 0; h |= 0;
   if (T.holo || (UI !== 'holo' && LIGHT_TEXT.has(T.key))) { holo(g, x, y, w, h, { fill: s.fill, fill2: s.fill2 || s.fill, frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 11); return; }
   if (T.key === 'cell') { pillow(g, x, y, w, h, { fill: s.fill, fill2: '#e8e8ec', frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 4); return; }

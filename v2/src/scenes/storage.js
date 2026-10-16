@@ -74,7 +74,7 @@ export const storage = {
     const { g, t } = app, on = !!item, sel = on && this.sel === item.p.uid;
     const ph = (idx * 0.618) % 1, br = on ? 0.5 + 0.5 * Math.sin(t / 2600 * 6.283 + ph * 6.283) : 0;   // 숨 박자(캡슐마다 엇갈림)
     // 틀: 바깥 어두운 금속 + 왼쪽 빛 받는 테
-    const frame = sel ? '#97e8f7' : '#2a3242', fr2 = sel ? '#e4fbff' : '#3e485a';
+    const frame = sel ? '#8ccfff' : '#2a3242', fr2 = sel ? '#e6f3ff' : '#3e485a';
     for (let j = 0; j < PH; j++) { const ins = j < 8 ? Math.ceil(8 - Math.sqrt(64 - (8 - j - 0.5) ** 2)) : 0; g.rect(x + ins, y + j, CW - ins * 2, 1, j === 0 ? frame : '#161b25'); g.px(x + ins, y + j, frame); g.px(x + CW - 1 - ins, y + j, '#10141c'); if (j > 6) g.px(x + ins + 1, y + j, fr2); }
     // 유리 속(안쪽 4칸): 아래에서 올라오는 빛 — 띠 사이를 디더로
     const gx = x + 5, gy = y + 6, gw = CW - 10, gh = PH - 22;
@@ -96,12 +96,12 @@ export const storage = {
     // 받침: 금속 띠 + 불빛 + 번호
     const by = y + PH - 15;
     g.rect(x + 2, by, CW - 4, 13, '#1c222e'); g.rect(x + 2, by, CW - 4, 1, '#3a4458'); g.rect(x + 2, by + 12, CW - 4, 1, '#0b0e14');
-    g.rect(x + 6, by + 5, 3, 3, on ? (br > 0.5 ? '#7fe8ff' : '#3f9fd0') : '#2a3240');
-    g.text(String(idx + 1).padStart(3, '0'), x + CW - 6, by + 1, { color: on ? '#87acc7' : '#3a4458', align: 'right' });
+    g.rect(x + 6, by + 5, 3, 3, on ? (br > 0.5 ? '#7fe8ff' : '#4a8edc') : '#2a3240');
+    g.text(String(idx + 1).padStart(3, '0'), x + CW - 6, by + 1, { color: on ? '#8eaed2' : '#3a4458', align: 'right' });
     // 바닥에 비친 캡슐 빛
     if (on) { g.c.fillStyle = `rgba(90,200,230,${(0.07 + br * 0.06).toFixed(3)})`; g.c.fillRect(x + 8, y + PH + 1, CW - 16, 2); }
     // 이름
-    if (on) { let nm = item.p.name; while (g.textW(nm) > CW + 6 && nm.length > 2) nm = nm.slice(0, -1); g.text(nm, x + CW / 2, y + PH + 6, { color: sel ? '#e4fbff' : '#a8bcd2', align: 'center' }); }
+    if (on) { let nm = item.p.name; while (g.textW(nm) > CW + 6 && nm.length > 2) nm = nm.slice(0, -1); g.text(nm, x + CW / 2, y + PH + 6, { color: sel ? '#e6f3ff' : '#a8bcd2', align: 'center' }); }
     app.input.hit('cap_' + idx, x, y, CW, PH + 18, () => { if (on) this.sel = item.p.uid; else this.sel = null; });
   },
   ui(app, list, total) {
@@ -113,7 +113,7 @@ export const storage = {
     g.text('‹ 양육', 31, 35 + (bpr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
     app.input.hit(bid, 8, 32, 46, 19, () => app.go('nursery'), 3);
     g.text('동면 보관고', 62, 33, { font: 'head', color: '#eef7ff' });
-    g.text(`${(s.storage || []).length}/${total}`, 62 + g.textW('동면 보관고', 'head') + 6, 36, { color: '#87acc7' });
+    g.text(`${(s.storage || []).length}/${total}`, 62 + g.textW('동면 보관고', 'head') + 6, 36, { color: '#8eaed2' });
     const sid = 'sto_sort', spr = app.input.isPressed(sid);
     btnBody(g, W - 74, 32, 66, 19, T.btn.second, spr);
     g.text('정렬 · ' + SORTS[this.sortI][1], W - 41, 35 + (spr ? 1 : 0), { color: T.btn.second.text, align: 'center' });

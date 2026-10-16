@@ -30,10 +30,10 @@ const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
 function teamPips(g, x, y, team, active) {
   team.forEach((u, i) => {
     const X = x + i * 12, dead = u.hp <= 0, on = u === active;
-    g.rect(X, y, 10, 8, on ? '#e4fbff' : '#0a1e2c');
+    g.rect(X, y, 10, 8, on ? '#e6f3ff' : '#0a1c32');
     g.rect(X + 1, y + 1, 8, 6, dead ? '#1a2230' : '#3fb8e0');
     if (dead) { for (let k = 0; k < 4; k++) { g.px(X + 3 + k, y + 2 + k, '#5a6a82'); g.px(X + 6 - k, y + 2 + k, '#5a6a82'); } }
-    else g.rect(X + 2, y + 2, 4, 1, '#c8f4ff');
+    else g.rect(X + 2, y + 2, 4, 1, '#d0e8ff');
   });
 }
 // 경기장 그림 둘레 색(맨 윗줄 · 왼쪽 줄의 가운데 칸) — 넓거나 긴 화면에서 그림 밖을 같은 색으로
@@ -320,7 +320,7 @@ export const battle = {
     if (st.kind === 'stance') v.stance[st.who] = { kind: st.stance, active: st.active };
     if (st.kind === 'counter') { this.hurt(st.to, st.ev.dmg, 'hit', t); this.pop(st.to, `-${st.ev.dmg}`, 'bad', t); }
     if (st.ev && st.ev.list && st.side) v.eff[st.side] = st.ev.list;
-    if (st.kind === 'fx') { const S = STATUS[st.ev.id]; if (S) this.pop(st.side, S.name + (S.stack && st.ev.n ? ' ' + st.ev.n : '') + '!', null, t, false, -16, S.buff ? '#97e8f7' : S.col || '#97e8f7'); }
+    if (st.kind === 'fx') { const S = STATUS[st.ev.id]; if (S) this.pop(st.side, S.name + (S.stack && st.ev.n ? ' ' + st.ev.n : '') + '!', null, t, false, -16, S.buff ? '#8ccfff' : S.col || '#8ccfff'); }
     if (st.kind === 'skipT' && st.side === 'me' && st.ev.refund) v.en.me += st.ev.refund;
     if (st.kind === 'skipT' && st.side === 'foe' && st.ev.refund) v.en.foe += st.ev.refund;
     if (st.kind === 'tick') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS[st.ev.id].col); }
@@ -331,7 +331,7 @@ export const battle = {
       if (st.ev.to && st.ev.list2) v.eff[st.ev.to] = st.ev.list2;
     }
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0'); }
-    if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true); this.pop(st.ev.who, '반사!', null, t, false, -16, '#97e8f7'); }
+    if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
     if (st.kind === 'end') v.en = { me: B.me.energy, foe: B.foe.energy };
   },
   heal(side, amt) { const v = this.v, u = v.view[side]; v.hp[side] = Math.min(u ? u.max : 9999, v.hp[side] + amt); v.bar[side] = { main: v.hp[side], trail: v.hp[side], fx: null }; },
@@ -351,7 +351,7 @@ export const battle = {
       if (e.dmg > 0) { this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true); }
     }
     this.pop(st.to, label, tone, t, false, -16);
-    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#97e8f7'); if (e.list) v.eff[st.to] = e.list; }
+    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; }
     const extra = [e.evade && e.tier !== 'miss' ? '피하려 했지만 맞았다' : '', line, great ? '효과가 굉장하다!' : '', e.guard ? '방어 자세로 막았다' : '', e.absorb && !e.dmg ? '보호막이 다 막았다' : ''].filter(Boolean).join(' · ');
     if (extra) v.led = { text: `${A.name}의 ${st.skill.name}! ${extra}`, col: e.tier === 'crit' || great ? LED.gold : e.tier === 'miss' ? TONE.miss : LED.amber, t0: t, keep: true };
   },
@@ -426,7 +426,7 @@ export const battle = {
         if (k < 0.45) { if (st.fromU) { const q = k / 0.45; g.alpha(1 - q, () => drawBig(g, st.fromU.key, st.fromU.pot, x, y + Math.round(q * 8), { t, flip, view })); } return; }
         const q = Math.min(1, (k - 0.45) / 0.4), top = y - 112, rv = Math.round(top + (1 - q) * 116);
         g.clip(0, rv, W, 140, () => drawBig(g, st.toU.key, st.toU.pot, x, y, { t, flip, view }));
-        if (q < 1) { g.rect(x - 26, rv, 52, 1, '#97e8f7'); g.rect(x - 18, rv - 1, 36, 1, '#e4fbff'); }
+        if (q < 1) { g.rect(x - 26, rv, 52, 1, '#8ccfff'); g.rect(x - 18, rv - 1, 36, 1, '#e6f3ff'); }
         return;
       }
       const u = v.view[who];
@@ -481,7 +481,7 @@ export const battle = {
     // 체력판(+ 3:3 팀 셋 표시)
     const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false);
     statusWins(g, 6, AY + 4 + fh + 3, this.statuses('foe'));
-    if (this.net === 'pvp' && v.foeReady && v.phase !== 'play') { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#123a52', fill2: '#16465f', frame: '#9ff0b0', frameHi: '#e4fbff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
+    if (this.net === 'pvp' && v.foeReady && v.phase !== 'play') { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     const MY = AY + AH - boxH(true) - 40;
     infoBox(app, W - 146, MY, v.view.me, v.bar.me, v.en.me, true);
     statusWins(g, W - 146, MY + boxH(true) + 3, this.statuses('me'));
@@ -578,7 +578,7 @@ export const battle = {
       g.img(icon(u.el), x + 54 + g.textW(u.name, 'bold') + 5, yy + 6);
       tbar(g, x + 54, yy + 24, 110, 6, u.hp / u.max, 'hp');
       g.text(`${Math.ceil(u.hp)}/${u.max}`, x + 170, yy + 21, { color: S.text });
-      if (on || dead) g.text(on ? '싸우는 중' : '쓰러짐', x + w - 18, yy + 5, { color: on ? '#97e8f7' : T.text.dim, align: 'right' });
+      if (on || dead) g.text(on ? '싸우는 중' : '쓰러짐', x + w - 18, yy + 5, { color: on ? '#8ccfff' : T.text.dim, align: 'right' });
       if (can) input.hit(id, x + 8, ry, w - 16, 44, () => this.pickSwitch(app, i));
     });
     if (!forced) button(app, 'sw_close', x + w / 2 - 40, y + h - 36, 80, 26, '닫기', { style: 'night', onTap: () => { this.sheet = null; } });
