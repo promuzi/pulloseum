@@ -1,5 +1,6 @@
 (2026-10-16 사용자 "남은 거 다해줘" — 남은 스킬 카드 그림 91장을 코덱스에 한 번에 요청한 기록. 기본기 셋에서 배운 '작게 줄여도 읽히게' 조건을 그대로 건다.
- 결과 → `python tools/pixel/big/skillart.py <원본> assets/v2/skills/<기술 id>.png` (58×52 · 16색) → `v2/src/art/skillcard.js`가 기술 id로 찾음.)
+ 결과 → `python tools/pixel/big/skillart.py <원본> assets/v2/skills/<기술 id>.png` (58×52 · 16색) → `v2/src/art/skillcard.js`가 기술 id로 찾음.
+ 같은 날 75장에서 사용 한도로 멈춤 → 남은 14장 + 샘플 둘(꽃잎 칼날 · 불덩이 — 옛 요청서라 잔무늬가 많아 줄이면 톤이 탁함) 다시. 사용자 "한식물-한스킬로 하는 고유 스킬은 식물의 외관을 어느정도 보여주는 것도 좋아보임. 똑같이 말고 단순화 시켜서" → u_ 줄에 [plant: …].)
 
 Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle skill cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.
 
@@ -13,6 +14,8 @@ Style for every image (same as the three basic-move icons already in that folder
 - Plants and plant parts (leaves, petals, vines, roots, cactus, mushroom caps) are the heroes; no humans, no animals, no faces needed.
 - Attacks show the moment of impact or launch with one bold motion shape; buffs (marked "self") show the plant part glowing or wrapped in the effect; status effects are shown by their color (burn orange flames, poison purple, wet blue drops, bind green vines, gale wind streaks, shock yellow sparks, chill ice crystals, stun stars, spore pale yellow spores, weak downward red arrow shape, taunt red angry spike, shade dark cloud, corrode green acid).
 - Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.
+
+Signature skills (file names starting with u_): each belongs to exactly one plant, named in [plant: ...]. For these, also show that plant itself, simplified: open its concept image at C:\dev\pulloseum\tools\pixel\big\concept\<plant>.png, keep only its 2 or 3 most recognizable features (overall silhouette, main colors, one signature part such as the rose head, the bulb, the cactus pads, the mushroom cap), and draw it in the same flat icon style as everything else - a simplified, mascot-like version, not a copy of the concept art. The plant performs or emits the skill. Plant plus effect together are still at most 2 or 3 big shapes, and the effect stays the focal point.
 
 Images (file name - element - what it shows):
 
@@ -93,17 +96,19 @@ u_tide_3.png - water - a big wave crashing down
 u_ember_1.png - fire - a cactus spitting a small ember
 u_ember_2.png - fire - fiery cactus spines shot out in a fan
 u_gaia_1.png - earth - a stone fist punching forward with a red angry spike mark (taunt)
-u_gaia_2.png - earth - self buff: rock armor plates covering a sprout
-u_gaia_3.png - earth - a huge stone slam onto the ground with stun stars
-u_blaze_1.png - fire - burning petals flying
-u_blaze_2.png - fire - self buff: a flower blooming with heat, glowing red-hot
-u_blaze_3.png - fire - a flower bursting open in a blossom of flames
-u_gale_1.png - wind - a ring of wind shooting forward
-u_gale_2.png - wind - a spiky whirlwind full of cactus spines
-u_gale_3.png - wind - a strong twisting whirlwind gust
-u_gvine_1.png - wind - wind coiling around vines, wrapping
-u_gvine_2.png - wind - a vine whip made of wind
-u_gvine_3.png - wind - sharp cutting wind blades
-u_spore_1.png - grass - a single spore shot from a mushroom
-u_spore_2.png - grass - a spore explosion bursting outward
-u_spore_3.png - grass - a large drifting spore cloud
+u_gaia_2.png - earth - [plant: gaia] self buff: rock armor plates covering the plant
+u_gaia_3.png - earth - [plant: gaia] the plant slamming a huge stone onto the ground, with stun stars
+u_blaze_1.png - fire - [plant: flower_fire] burning petals flying from the flower
+u_blaze_2.png - fire - [plant: flower_fire] self buff: the flower blooming with heat, glowing red-hot
+u_blaze_3.png - fire - [plant: flower_fire] the flower bursting open in a blossom of flames
+u_gale_1.png - wind - [plant: cactus_wind] a ring of wind shooting forward from the cactus
+u_gale_2.png - wind - [plant: cactus_wind] a spiky whirlwind full of cactus spines around the cactus
+u_gale_3.png - wind - [plant: cactus_wind] a strong twisting whirlwind gust launched by the cactus
+u_gvine_1.png - wind - [plant: vine_wind] wind coiling around the plant's vines, wrapping
+u_gvine_2.png - wind - [plant: vine_wind] the plant lashing a vine whip made of wind
+u_gvine_3.png - wind - [plant: vine_wind] sharp cutting wind blades flung from the plant
+u_spore_1.png - grass - [plant: spore_cap] a single spore shot from the mushroom
+u_spore_2.png - grass - [plant: spore_cap] a spore explosion bursting out of the mushroom cap
+u_spore_3.png - grass - [plant: spore_cap] a large drifting spore cloud rising from the mushroom
+u_petal_3.png - grass - [plant: flower_grass] the rose plant slashing a big crescent blade made of sharp petals
+u_ember_3.png - fire - [plant: cactus_fire] the ember cactus hurling one big round fireball
