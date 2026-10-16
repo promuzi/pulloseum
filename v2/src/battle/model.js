@@ -46,6 +46,9 @@ const SKILLS = {
   draco_fruit: [{ id: 's1', name: '서리 비늘', power: 60, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙룡의 숨', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill', n: 2 } }],
   ember_cap: [{ id: 's1', name: '불씨 포자', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'spore', n: 1 } }, { id: 's2', name: '불꽃 포자 구름', power: 100, cost: 3, el: 'fire', ranged: true, area: true, inflict: { id: 'spore', n: 2 } }],
   drake_cactus: [{ id: 's1', name: '용불 가시', power: 60, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '화룡의 숨결', power: 115, cost: 4, el: 'fire', ranged: true, area: true, inflict: { id: 'burn' } }],
+  gat_cap: [{ id: 's1', name: '부채 바람', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '갓 회오리', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'spore', n: 2 } }],
+  mask_vine: [{ id: 's1', name: '탈춤 휘감기', power: 60, cost: 1, el: 'earth', inflict: { id: 'bind' } }, { id: 's2', name: '대지의 탈춤', power: 115, cost: 4, el: 'earth', area: true, inflict: { id: 'stun' } }],
+  drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock', n: 2 } }],
 };
 // 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 40 공격 · 방어 자세 · 회피 자세)은
 //  BASICS 그대로, 이름만 식물마다 [공격, 방어, 회피]. 이름은 임시(사용자가 고칠 수 있음) — 기술 id(basic · guard · evade)는 그대로라 서버·기록·친구 대결과 맞음
@@ -72,6 +75,9 @@ export const BASIC_NAMES = {
   draco_fruit: ['비늘 박치기', '비늘 웅크리기', '서리 날갯짓'],
   ember_cap: ['갓 박치기', '갓 덮기', '불티 연막'],
   drake_cactus: ['가시 박치기', '비늘 웅크리기', '날개 비키기'],
+  gat_cap: ['갓 박치기', '갓 숙이기', '바람 타기'],
+  mask_vine: ['소매 덩굴 치기', '탈 가리기', '춤사위 비키기'],
+  drum_cactus: ['북채 내려치기', '북 방패', '장단 비키기'],
 };
 export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
 export function kitOf(key) {

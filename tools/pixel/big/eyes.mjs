@@ -30,6 +30,10 @@ export const EYES = {
   // 처음 화면 대표 캐릭터(2026-10-17 사용자가 후보 셋 중 ㄴ '불꽃 용 선인장'을 고름 — concept/title/hero_b.png = cut/title_hero.png)
   // 새 태생 용족 드레이크캑터 — 2026-10-17 사용자 "좀 더 멋있는 용 같았으면" · "참고 사진 없이 아예 새로" → concept/drake/drake_v2.png(글로만 · 머리는 옆으로 · 보이는 눈 하나) → greycut = cut/drake_cactus.png(옛 안 = cut/drake_cactus_v1.png)
   drake_cactus: { box: [[704, 245, 31, 18]], cheek: [700, 278] },
+  // 새 셋(2026-10-17 — concept/new3/<키>.png 회색 배경 → greycut = cut/<키>.png, 1254×1254 격자 확대로 잼)
+  gat_cap: { box: [[593, 497, 46, 24], [699, 510, 23, 19]], cheek: [650, 545] },          // 갓 아래 선비 얼굴 · 왼쪽으로 곁눈
+  mask_vine: { box: [[620, 353, 57, 34], [765, 414, 36, 31]], closed: true },             // 하회탈의 웃는 초승달 눈 = 원래 감은 눈(깜빡임 없음)
+  drum_cactus: { box: [[679, 609, 53, 55], [871, 676, 31, 42]], cheek: [790, 620] },      // 크게 뜬 신난 눈
   title_hero: { box: [[527, 428, 45, 45], [733, 428, 43, 45]], cheek: [630, 455] },   // 2026-10-17 같은 구도로 새로(concept/title/hero_d.png — 정면 · 갈빗대 선인장 몸 + 빨간 용 비늘 · 뿔 · 날개 → 배경 지움)
   ember_cap: { box: [[542, 736, 44, 23], [726, 763, 44, 17]], cheek: [632, 760] },
   // 생장 단계 그림(concept/stages/<키>_<단계>.png) — 단계마다 얼굴 자리가 달라 파일마다 잰다

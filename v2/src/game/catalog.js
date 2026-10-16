@@ -35,7 +35,11 @@ export const SPECIES = {
   toxi_cactus: { name: '톡시캑터', type: 'cactus', el: 'grass', rarity: 'rare', branch: 'desert', form: 'toxic' },
   draco_fruit: { name: '드라코프루트', type: 'cactus', el: 'ice', rarity: 'rare', branch: 'desert', form: 'dragon' },
   ember_cap: { name: '엠버캡', type: 'mushroom', el: 'fire', rarity: 'rare', branch: 'shade', form: 'spore' },
-  drake_cactus: { name: '드레이크캑터', type: 'cactus', el: 'fire', rarity: 'rare', branch: 'desert', form: 'dragon' },   // 2026-10-17 태생 용족(불 선인장 용 — 갈빗대 몸에 용 비늘 · 뿔 · 날개)
+  drake_cactus: { name: '드레이크캑터', type: 'cactus', el: 'fire', rarity: 'rare', branch: 'desert', form: 'dragon' },
+  // 2026-10-17 새 셋(사용자 "식물이라는 컨셉 때문에 디자인이 비슷해져 — 갓을 쓴 형태 등 상징적인 걸 강조") = 빈 칸(버섯 × 바람 · 덩굴 × 대지 · 선인장 × 번개), 일반 식물(카드 = 일반 카드)
+  gat_cap: { name: '갓캡', type: 'mushroom', el: 'wind', rarity: 'common', branch: 'meadow' },      // 버섯 갓 = 선비의 갓 · 갓끈 · 잎 부채
+  mask_vine: { name: '탈바인', type: 'vine', el: 'earth', rarity: 'common', branch: 'desert' },     // 하회탈 얼굴 · 탈춤 소매 덩굴
+  drum_cactus: { name: '드럼캑터', type: 'cactus', el: 'bolt', rarity: 'rare', branch: 'desert' },  // 천둥북 고리 · 북채 팔   // 2026-10-17 태생 용족(불 선인장 용 — 갈빗대 몸에 용 비늘 · 뿔 · 날개)
 };
 for (const k of Object.keys(SPECIES)) SPECIES[k].base = base(SPECIES[k].type, SPECIES[k].el);
 for (const k of Object.keys(SPECIES)) if (SPECIES[k].form) { const b = SPECIES[k].base; b.hp = Math.round(b.hp * 0.94); b.atk = Math.round(b.atk * 0.94); b.def = Math.round(b.def * 0.94); }   // 변이 고정 종 = 능력치 조금 낮음(대신 변이 칸 둘이 처음부터)
@@ -199,6 +203,15 @@ export const SKILLS = Object.fromEntries([
   S('u_drake_1', '용불 가시', 'fire', 'u', 60, 1, { ranged: true, inflict: { id: 'burn' } }),
   S('u_drake_2', '비늘 갑옷', 'fire', 'u', 0, 2, { self: 'wall', also: 'thorns' }),
   S('u_drake_3', '화룡의 숨결', 'fire', 'u', 115, 4, { ranged: true, area: true, inflict: { id: 'burn' } }),
+  S('u_gat_1', '부채 바람', 'wind', 'u', 55, 1, { ranged: true, inflict: { id: 'gale' } }),
+  S('u_gat_2', '갓끈 휘날리기', 'wind', 'u', 0, 2, { self: 'haste', also: 'focus' }),
+  S('u_gat_3', '갓 회오리', 'wind', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'spore', n: 2 } }),
+  S('u_tal_1', '탈춤 휘감기', 'earth', 'u', 60, 1, { inflict: { id: 'bind' } }),
+  S('u_tal_2', '탈놀이', 'earth', 'u', 70, 2, { inflict: { id: 'taunt' } }),
+  S('u_tal_3', '대지의 탈춤', 'earth', 'u', 115, 4, { area: true, inflict: { id: 'stun' } }),
+  S('u_drum_1', '북채 번개', 'bolt', 'u', 60, 1, { ranged: true, inflict: { id: 'shock', n: 1 } }),
+  S('u_drum_2', '천둥 장단', 'bolt', 'u', 0, 2, { self: 'focus', also: 'haste' }),
+  S('u_drum_3', '뇌고 연타', 'bolt', 'u', 120, 4, { ranged: true, area: true, inflict: { id: 'shock', n: 2 } }),
   // 변이 기술(2026-10-16 사용자 "변이 스킬은 별개로 2칸 — 최대 6칸" · 추천안 "변이마다 정해진 목록에서 언제든 골라 끼움 · 에너지 대신 충전" · "변이식물의 장점은 변이스킬로 6칸"):
   //  tier 'm' · form = 변이형 · 에너지 0 · charge = 쓰고 나서 못 쓰는 턴 수 · 잊기 없음(목록 안에서 언제든 바꿈). 수치는 시제품 — 밸런스는 나중에(사용자)
   S('m_bite', '물어뜯기', null, 'm', 70, 0, { form: 'predator', uses: 3, drain: 0.4 }),
@@ -240,7 +253,7 @@ export const formSkills = form => Object.values(SKILLS).filter(x => x.tier === '
 export const MUT_SLOTS = 2;   // 옛 변이 칸 둘(p.skills.mut) — 2026-10-17부터 카드 칸 둘(game/cards.js)로 옮겨 감(logic.js normCards)
 // 탐사 종자가 변이일 확률(지역 mut 배율을 곱함 — 행성 지역 고르기) · 변이 고정 종(SPECIES[키].form)은 늘 그 변이
 export const MUT_P = 0.04;
-const UNI = { flower_grass: 'petal', thorn: 'thorn', aqua: 'aqua', flower_wind: 'wind', spark: 'spark', vine_water: 'tide', cactus_fire: 'ember', gaia: 'gaia', flower_fire: 'blaze', cactus_wind: 'gale', vine_wind: 'gvine', spore_cap: 'spore', frost_bell: 'frost', volt_vine: 'volt', stone_cap: 'stone', jelly_cap: 'jelly', fang_trap: 'fang', blade_vine: 'blade', toxi_cactus: 'toxi', draco_fruit: 'draco', ember_cap: 'emcap', drake_cactus: 'drake' };
+const UNI = { flower_grass: 'petal', thorn: 'thorn', aqua: 'aqua', flower_wind: 'wind', spark: 'spark', vine_water: 'tide', cactus_fire: 'ember', gaia: 'gaia', flower_fire: 'blaze', cactus_wind: 'gale', vine_wind: 'gvine', spore_cap: 'spore', frost_bell: 'frost', volt_vine: 'volt', stone_cap: 'stone', jelly_cap: 'jelly', fang_trap: 'fang', blade_vine: 'blade', toxi_cactus: 'toxi', draco_fruit: 'draco', ember_cap: 'emcap', drake_cactus: 'drake', gat_cap: 'gat', mask_vine: 'tal', drum_cactus: 'drum' };
 export const uniqueOf = (key, stage) => `u_${UNI[key]}_${stage + 1}`;
 export const TIER_NAME = { u: '개성', c1: '하급', c2: '중급', c3: '상급', g: '가지', s: '특수', m: '변이' };
 const tierAt = stage => ['c1', 'c2', 'c3'][stage];
@@ -309,13 +322,13 @@ export const HARVEST_TABLE = [
 //  종자끼리의 확률(어느 식물이 나오나)은 행성만 정함 — 탐사선 부위와 상관없음(사용자 "종자끼리의 확률은 변하지 않는걸로")
 export const PLANETS = [
   { id: 'ex_ermias', name: '에르미아스', orbit: 1, hazard: 0, rich: 1, vital: 1, kind: 'seed', pool: ['flower_grass', 'aqua', 'spark', 'vine_water', 'flower_wind'] },   // 온화한 우림 = 여러 속성 고루(시작)
-  { id: 'ex_calisto', name: '칼리스토', orbit: 1, hazard: 1, rich: 1.1, vital: 0, kind: 'resource', pool: ['gaia', 'cactus_fire', 'stone_cap'] },   // 채굴 잔해 건조 지대 = 대지 · 불 · 부품(나중에 기계)
-  { id: 'ex_seraphin', name: '세라핀', orbit: 1, hazard: 0, rich: 1, vital: 1, kind: 'seed', pool: ['flower_wind', 'cactus_wind', 'vine_wind'] },   // 부유 고원 = 바람
+  { id: 'ex_calisto', name: '칼리스토', orbit: 1, hazard: 1, rich: 1.1, vital: 0, kind: 'resource', pool: ['gaia', 'cactus_fire', 'stone_cap', 'mask_vine'] },   // 채굴 잔해 건조 지대 = 대지 · 불 · 부품(나중에 기계)
+  { id: 'ex_seraphin', name: '세라핀', orbit: 1, hazard: 0, rich: 1, vital: 1, kind: 'seed', pool: ['flower_wind', 'cactus_wind', 'vine_wind', 'gat_cap'] },   // 부유 고원 = 바람
   { id: 'ex_kairen', name: '카이렌', orbit: 2, hazard: 0, rich: 1.3, vital: 1, kind: 'seed', pool: ['flower_fire', 'flower_grass', 'thorn', 'toxi_cactus'] },   // 따뜻한 들판 = 불 · 풀, 쉬움
   { id: 'ex_mirdin', name: '미르딘', orbit: 2, hazard: 1, rich: 1.1, vital: 2, kind: 'seed', pool: ['thorn', 'spore_cap', 'vine_water', 'jelly_cap', 'fang_trap'] },   // 안개 습지 = 풀 · 물, 생기 높음
-  { id: 'ex_volkar', name: '볼카르', orbit: 2, hazard: 2, rich: 1.2, vital: 1, kind: 'mixed', pool: ['spark', 'volt_vine', 'cactus_fire', 'flower_fire', 'blade_vine', 'drake_cactus'] },   // 번개 화산 = 번개 · 불, 위험
+  { id: 'ex_volkar', name: '볼카르', orbit: 2, hazard: 2, rich: 1.2, vital: 1, kind: 'mixed', pool: ['spark', 'volt_vine', 'cactus_fire', 'flower_fire', 'blade_vine', 'drake_cactus', 'drum_cactus'] },   // 번개 화산 = 번개 · 불, 위험
   { id: 'ex_veloc', name: '벨로크', orbit: 3, hazard: 3, rich: 1.5, vital: 0, kind: 'resource', pool: ['cactus_fire', 'gaia', 'flower_fire', 'stone_cap', 'ember_cap'], legend: true },   // 용암 바위 사막 = 불 · 대지, 자원 · 아주 위험
-  { id: 'ex_aztel', name: '아즈텔', orbit: 3, hazard: 0, rich: 1.3, vital: 1, kind: 'seed', pool: ['flower_wind', 'flower_grass', 'vine_wind'] },   // 꽃잎 바람 고원 = 바람 · 풀, 먼데도 쉬움
+  { id: 'ex_aztel', name: '아즈텔', orbit: 3, hazard: 0, rich: 1.3, vital: 1, kind: 'seed', pool: ['flower_wind', 'flower_grass', 'vine_wind', 'gat_cap'] },   // 꽃잎 바람 고원 = 바람 · 풀, 먼데도 쉬움
   { id: 'ex_octavis', name: '옥타비스', orbit: 3, hazard: 1, rich: 1.3, vital: 2, kind: 'seed', pool: ['aqua', 'vine_water', 'jelly_cap'], legend: true },   // 해저 동굴 = 물, 생기 높음
   { id: 'ex_nereidon', name: '네레이돈', orbit: 4, hazard: 2, rich: 1.4, vital: 1, kind: 'mixed', pool: ['vine_water', 'aqua', 'jelly_cap', 'frost_bell'], legend: true },   // 고리 바다 = 물 · 빙결
   { id: 'ex_tiamen', name: '티아멘', orbit: 4, hazard: 3, rich: 1.6, vital: 1, kind: 'mixed', pool: ['frost_bell', 'vine_wind', 'cactus_wind', 'draco_fruit'], legend: true },   // 얼음 바람 = 빙결 · 바람, 아주 위험
@@ -334,12 +347,12 @@ const REGIONS = {
   ],
   ex_calisto: [
     { id: 'pit', name: '채굴장', need: 1, rare: 1, mut: 1 },
-    { id: 'canyon', name: '마른 협곡', need: 2, pool: ['cactus_fire', 'cactus_fire', 'gaia'], dv: 1, kind: 'mixed', rare: 1, mut: 1 },   // 불 선인장 · 종자 늘어남
+    { id: 'canyon', name: '마른 협곡', need: 2, pool: ['cactus_fire', 'cactus_fire', 'gaia', 'mask_vine'], dv: 1, kind: 'mixed', rare: 1, mut: 1 },   // 불 선인장 · 종자 늘어남
     { id: 'scrap', name: '기계 무덤', need: 3, pool: ['stone_cap', 'stone_cap', 'gaia'], dh: 1, rare: 1.3, mut: 2 },   // 대지 · 부품(나중에 기계 식물)
   ],
   ex_seraphin: [
     { id: 'hill', name: '바람 언덕', need: 1, rare: 1, mut: 1 },
-    { id: 'bridge', name: '구름 다리', need: 2, pool: ['vine_wind', 'vine_wind', 'flower_wind'], rare: 1, mut: 1 },
+    { id: 'bridge', name: '구름 다리', need: 2, pool: ['vine_wind', 'vine_wind', 'flower_wind', 'gat_cap'], rare: 1, mut: 1 },
     { id: 'eye', name: '폭풍의 눈', need: 3, pool: ['cactus_wind', 'cactus_wind', 'vine_wind'], dh: 2, dv: 1, kind: 'mixed', rare: 1.6, mut: 2 },
   ],
   ex_kairen: [
@@ -355,7 +368,7 @@ const REGIONS = {
   ex_volkar: [
     { id: 'foot', name: '화산 기슭', need: 1, rare: 1, mut: 1 },
     { id: 'ash', name: '잿빛 들', need: 2, pool: ['flower_fire', 'flower_fire', 'cactus_fire'], dh: -1, kind: 'seed', rare: 0.8, mut: 1 },   // 불 · 덜 위험
-    { id: 'thunder', name: '천둥 고개', need: 3, pool: ['volt_vine', 'spark'], dh: 1, rare: 1.3, mut: 2 },   // 번개
+    { id: 'thunder', name: '천둥 고개', need: 3, pool: ['volt_vine', 'spark', 'drum_cactus'], dh: 1, rare: 1.3, mut: 2 },   // 번개
     { id: 'lava', name: '용암 광맥', need: 4, pool: ['cactus_fire', 'cactus_fire', 'volt_vine', 'blade_vine', 'drake_cactus'], dh: 1, kind: 'resource', rare: 1.3, mut: 1.5 },   // 부품
   ],
   ex_veloc: [

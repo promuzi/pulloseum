@@ -41,6 +41,10 @@ export const ATTACKS = {
   draco_fruit: { kind: 'breath', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
   ember_cap: { kind: 'spores', move: 'cast', c: ['#fff6c8', '#ffc848', '#f26a22', '#8a2416'], status: 'burn' },
   drake_cactus: { kind: 'breath', move: 'cast', c: ['#fff6c8', '#ffb040', '#e8442a', '#7a1a14'], status: 'burn' },   // 태생 용족 = 불 숨결
+  // 새 셋(2026-10-17): 갓 버섯 = 부채 바람 · 하회탈 덩굴 = 덩굴 채찍(흙빛) · 천둥북 선인장 = 번개
+  gat_cap: { kind: 'gale', move: 'cast', c: ['#ffffff', '#e4d8fa', '#b49ae8', '#5a4a98'], petal: ['#cfe8b8', '#8ab870'], status: 'swirl' },
+  mask_vine: { kind: 'whip', move: 'lunge', c: ['#f4e4c0', '#d8b47a', '#9a7040', '#4a3420'], status: 'dust' },
+  drum_cactus: { kind: 'bolt', move: 'cast', c: ['#ffffff', '#fff4b0', '#ffd84a', '#c87a20'], status: 'shock' },
 };
 // 개성 기술(catalog.js u_*)마다 제 모습(2026-10-16 사용자 "불가시 난사가 불씨와 스킬 모션·효과가 같다") — 있는 연출(kind)을 그 종 색·성질로 다시 쓴다(새 그림 없음).
 //   전투는 ATTACKS[기술 id] → ATTACKS[종] 순으로 찾는다(battle.js). 여기 없는 공격 기술 = 종 연출: 1단 기술, 단 종 연출이 그 이름으로 만들어진 기술
@@ -62,6 +66,9 @@ const UNIQUE = {
   u_volt_2: ['volt_vine', 'rings'], u_volt_3: ['volt_vine', 'whip'],                // 방전 · 고압 채찍
   u_stone_1: ['stone_cap', 'spores'],                                               // 돌가루 포자
   u_jelly_2: ['jelly_cap', 'whip'], u_jelly_3: ['jelly_cap', 'spores'],             // 흐물 촉수 · 해파리 비
+  u_gat_3: ['gat_cap', 'spores'],                                                   // 갓 회오리(포자를 바람에 실어)
+  u_tal_2: ['mask_vine', 'rings'], u_tal_3: ['mask_vine', 'slam'],                  // 탈놀이(놀리는 고리) · 대지의 탈춤
+  u_drum_3: ['drum_cactus', 'rings'],                                               // 뇌고 연타(북소리 번개 고리)
 };
 const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam' };   // 나머지 = cast(그 연출을 쓰는 종과 같은 몸놀림)
 for (const [id, [sp, kind]] of Object.entries(UNIQUE)) {

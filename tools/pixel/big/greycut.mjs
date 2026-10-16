@@ -1,10 +1,11 @@
 // 밝은 단색 배경(코덱스에 #d9d9d9로 그리게 한 컨셉 — 2026-10-17 품질 원인: 투명 누끼 요청은 그림이 나빠짐) → 투명 누끼
-//   node tools/pixel/big/greycut.mjs <원본.png> <누끼.png>
+//   node tools/pixel/big/greycut.mjs <원본.png> <누끼.png> [--main]
+//   --main = 몸통 덩어리(가장 큰 것)만 남김 — 몸에서 떨어진 바람 줄 · 물보라 같은 효과 선은 줄이면 점가루가 됨(움직임 효과가 따로 그림, 갓캡 2026-10-17)
 // 규칙은 convert.mjs bgOf 와 같음: 네 모서리 색과 가까운 칸을 가장자리부터 흘려 채우고(OKLab 거리 0.055), 몸에 갇힌 넓은 배경 구멍(0.032 · 140칸 이상)도 배경
 import { readFileSync, writeFileSync } from 'node:fs';
 import { decodePNG, encodePNG, oklab } from './engine.mjs';
 
-const [src, dst] = process.argv.slice(2);
+const [src, dst] = process.argv.slice(2).filter(a => !a.startsWith('--')), mainOnly = process.argv.includes('--main');
 if (!src || !dst) { console.log('node tools/pixel/big/greycut.mjs <원본.png> <누끼.png>'); process.exit(1); }
 const im = decodePNG(readFileSync(src)), n = im.w * im.h, lab = new Float32Array(n * 3);
 for (let i = 0; i < n; i++) { const k = i * 4, c = oklab('#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join('')); lab[i * 3] = c[0]; lab[i * 3 + 1] = c[1]; lab[i * 3 + 2] = c[2]; }
@@ -28,6 +29,18 @@ for (let y = 0; y < im.h; y++) edge.push(y * im.w, y * im.w + im.w - 1);
 fill(edge, 0.055, isBg);
 const seen = new Uint8Array(n);
 for (let i = 0; i < n; i++) if (!isBg[i] && !seen[i] && dist(i) < 0.032) { const reg = fill([i], 0.032, seen); if (reg.length >= 140) for (const j of reg) isBg[j] = 1; }
+if (mainOnly) {   // 이어진 덩어리(네 방향) 중 가장 큰 것만
+  const lab = new Int32Array(n).fill(-1), size = [];
+  for (let i = 0; i < n; i++) {
+    if (isBg[i] || lab[i] >= 0) continue;
+    const id = size.length, st = [i]; let c = 0; lab[i] = id;
+    while (st.length) { const j = st.pop(); c++; const x = j % im.w; for (const k of [x > 0 ? j - 1 : -1, x < im.w - 1 ? j + 1 : -1, j - im.w, j + im.w]) if (k >= 0 && k < n && !isBg[k] && lab[k] < 0) { lab[k] = id; st.push(k); } }
+    size.push(c);
+  }
+  const big = size.indexOf(Math.max(...size));
+  for (let i = 0; i < n; i++) if (!isBg[i] && lab[i] !== big) isBg[i] = 1;
+  console.log('떨어진 조각 ' + (size.length - 1) + '개 지움');
+}
 const out = new Uint8Array(im.data);
 let kept = 0;
 for (let i = 0; i < n; i++) { if (isBg[i]) out[i * 4 + 3] = 0; else kept++; }
