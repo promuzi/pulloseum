@@ -85,10 +85,12 @@ export function makeBattle({ me, foe, seed = 20261015 }) {
   return { me, foe, rng: makeRng(seed), turn: 1, over: null, log: [] };
 }
 // 턴 끝 공통(1:1·3:3): 화상·독·기생 씨앗 → 에너지 +1(그늘이면 안 참, gain 으로 넘김) → 정한 턴이 지난 효과 사라짐
-export function closeTurn(pair, turn, ev, gain) {
+//  pair = [선공, 후공](턴 끝 피해도 선공 쪽 먼저 — 늘 'me'가 먼저면 같이 쓰러질 때 한쪽만 늘 짐) · stop() 이 참이면 거기서 끝(판이 끝남)
+export function closeTurn(pair, turn, ev, gain, stop = () => false) {
   const [a, b] = pair;
-  endTurn([[a, b], [b, a]], turn, ev);
-  for (const u of pair) { if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: has(u, 'choke') ? 'spore' : 'shade' }); else gain(u); }
+  endTurn([[a, b], [b, a]], turn, ev, stop);
+  if (stop()) return;
+  for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: has(u, 'choke') ? 'spore' : 'shade' }); else gain(u); }
   for (const u of pair) expire(u, turn, ev);
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
@@ -108,8 +110,11 @@ export function playTurnVs(B, mySkill, foeSkill) {
   const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d) => elemMult(u.curEl, d.el), turn: T });
   const events = res.events.filter(e => !(e.t === 'first' && (me === REST || foeSkill === REST)));   // 한쪽이 쉬면 선공 판정은 보여 주지 않음
   for (const e of events) if (e.t === 'skip' && e.refund) B[e.who].energy += e.refund;   // 취소된 행동의 에너지 돌려줌
-  closeTurn([B.me, B.foe], T, events, u => { u.energy = Math.min(u.energyMax, u.energy + 1); });
-  if (B.me.hp <= 0 || B.foe.hp <= 0) B.over = B.foe.hp <= 0 ? 'win' : 'lose';
+  // 누가 쓰러지면 그 자리에서 판이 끝남(턴 끝 피해 없음) · 같이 쓰러지는 일 없이 먼저 쓰러진 쪽이 짐(2026-10-16 — 전엔 둘 다 쓰러지면 늘 'me' 승리)
+  const down = () => B.me.hp <= 0 || B.foe.hp <= 0;
+  if (!down()) closeTurn(res.first === B.foe.id ? [B.foe, B.me] : [B.me, B.foe], T, events, u => { u.energy = Math.min(u.energyMax, u.energy + 1); }, down);
+  const fell = events.find(e => e.t === 'faint');
+  if (fell) B.over = fell.who === B.foe.id ? 'win' : 'lose';
   const turn = { n: B.turn, mySkill: me, foeSkill, before, events, first: res.first };
   B.log.push(turn); B.turn++;
   return turn;

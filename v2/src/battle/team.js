@@ -47,10 +47,11 @@ export function playTurn3(B, myAct) {
   const before = { me: B.me.hp, foe: B.foe.hp };
   if (mySkill) B.me.energy -= mySkill.cost || 0;
   if (foeSkill) B.foe.energy -= foeSkill.cost || 0;
+  let res = null;
   if (mySkill || foeSkill) {
     const idle = { id: 'switch', act: 'other' };
     B.me.curEl = mySkill ? mySkill.el : null; B.foe.curEl = foeSkill ? foeSkill.el : null;
-    const res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d) => elemMult(u.curEl, d.el), turn: T });
+    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d) => elemMult(u.curEl, d.el), turn: T });
     for (const e of res.events) {
       if (e.t === 'act' && e.id === 'switch') continue;
       if (e.t === 'first' && (!mySkill || !foeSkill || mySkill === REST || foeSkill === REST)) continue;   // 한쪽이 바꾸거나 쉬면 선공 판정은 보여 주지 않음
@@ -59,12 +60,16 @@ export function playTurn3(B, myAct) {
       ev.push(e);
     }
   }
-  closeTurn([B.me, B.foe], T, ev, u => { const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(8, B.pool[side] + 1); });
-  for (const side of ['foe', 'me']) if (B[side].hp <= 0) {
-    ev.push({ t: 'faint', who: side, idx: B.act[side], key: B[side].key, name: B[side].name });
-    if (!aliveOf(B, side).length) { B.over = side === 'foe' ? 'win' : 'lose'; break; }
-    if (side === 'foe') swapIn(B, 'foe', aiNext(B), ev, true);
-    else B.need = 'me';
+  // 쓰러짐 사건은 쓰러진 그 자리에서(rules · 턴 끝) — 한쪽 식물이 다 쓰러지면 그 자리에서 판이 끝나 같이 끝나는 일이 없음(먼저 다 쓰러진 쪽이 짐)
+  //  앞 식물 하나만 쓰러졌으면 턴 끝 효과는 남은 식물에 그대로(포켓몬처럼), 턴 끝 피해도 선공 쪽 먼저
+  const out = () => !aliveOf(B, 'me').length || !aliveOf(B, 'foe').length;
+  if (!out()) closeTurn(res && res.first === B.foe.id ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(8, B.pool[side] + 1); }, out);
+  for (const e of ev) if (e.t === 'faint' && e.idx == null) e.idx = B.act[e.who];
+  if (!aliveOf(B, 'foe').length) B.over = 'win';
+  else if (!aliveOf(B, 'me').length) B.over = 'lose';
+  else {
+    if (B.foe.hp <= 0) swapIn(B, 'foe', aiNext(B), ev, true);
+    if (B.me.hp <= 0) B.need = 'me';
   }
   const turn = { n: B.turn, mySkill, foeSkill, mySwitch: myAct.kind === 'switch' ? myAct.to : null, foeSwitch: foeSw, before, events: ev };
   B.log.push(turn); B.turn++;

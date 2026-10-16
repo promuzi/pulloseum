@@ -3,7 +3,7 @@
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
-import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, onHit, selfBuff, healK, has, listOf } from './status.js';
+import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, onHit, selfBuff, healK, has, listOf, noteFall } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -105,9 +105,10 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const actOf = u => (u === A ? actA : actB);
   // 자세 성립: 방어 = 후공일 때만(먼저 하면 판정이 끝나 헛됨), 회피 = 순서와 상관없이(선공·후공 모두)
   const stanceOk = (u, kind) => (kind === 'guard' ? u === second : kind === 'evade');
+  // 누가 쓰러지면 그 턴의 남은 행동은 없음(쓰러진 식물을 때리거나 쓰러진 식물이 움직이지 않게 — 2026-10-16 판정 순서 점검)
   for (const [u, foe] of [[first, second], [second, first]]) {
     const a = actOf(u), d = actOf(foe);
-    if (u.hp <= 0) break;
+    if (u.hp <= 0 || foe.hp <= 0) break;
     // 쉬는 차례(얼음·마비·기절): 고른 행동이 취소되고 쓴 에너지는 돌려받음 — 이번 턴 앞에서 걸렸어도 아직 안 움직였으면 여기서 취소
     if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); continue; }
     if (a.act === 'skip') { skipped.add(u); continue; }
@@ -140,7 +141,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     foe.st.critTaken = tier === 'crit';
     ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, absorb, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, list: absorb ? listOf(foe) : undefined });
     if (tier !== 'miss' && dmg > 0 && a.drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * a.drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
-    if (tier !== 'miss' && dmg > 0 && has(foe, 'thorns') && a.contact !== false && !a.ranged && !a.area && u.hp > 0) { const rd = Math.max(1, Math.round(dmg * 0.3)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 반사(가시)
+    if (tier !== 'miss' && dmg > 0 && has(foe, 'thorns') && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * 0.3)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 반사(가시) — 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
     // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자)
     if (tier !== 'miss') onHit(u, foe, a, { turn: T, rng, ev });
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
@@ -156,6 +157,12 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (avoided && d.onAvoid) ev.push({ t: 'status', who: foe.id, to: u.id, status: d.onAvoid, from: d.id });
     if (guardOn && d.counterPct && foe.hp > 0) { const cd = Math.max(1, Math.round(dmg * d.counterPct)); u.hp = Math.max(0, u.hp - cd); ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id }); }
     if (guardOn && d.energyOnBlock) ev.push({ t: 'energy', who: foe.id, gain: d.energyOnBlock });
+    noteFall(foe, ev); noteFall(u, ev);   // 맞은 쪽 먼저(되받아치기 · 반사는 그 뒤에 일어남)
+    if (foe.hp <= 0 || u.hp <= 0) {
+      // 후공이 잡은 자세(회피 되받아치기로 선공이 쓰러진 경우 등)는 자기 차례가 안 와도 화면에 보이게
+      if (u === first && foe.hp > 0 && (d.act === 'guard' || d.act === 'evade')) ev.push({ t: 'stance', who: foe.id, kind: d.act, id: d.id, active: stanceOk(foe, d.act), repeat: foe.st.lastStance === d.act });
+      break;
+    }
   }
   for (const u of [A, B]) { const a = actOf(u); u.st.lastStance = !skipped.has(u) && (a.act === 'guard' || a.act === 'evade') ? a.act : null; }
   return { first: first.id, events: ev };

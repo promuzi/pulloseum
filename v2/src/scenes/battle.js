@@ -341,6 +341,7 @@ export const battle = {
       { t: 'faint', who: 'foe', name: foe.name },
     ];
     me.hp = me.hp - hit + regen; foe.hp = 0; B.over = 'win';
+    this.v.en.foe = Math.max(this.v.en.foe, theirs.cost || 0);   // 검토 판: 상대 기술값만큼은 있게(에너지 칸이 −로 안 보이게)
     B.log.push({ mySkill: mine, foeSkill: theirs });
     this.play(app, this.buildSteps({ mySkill: mine, foeSkill: theirs, events }));
   },
@@ -448,7 +449,8 @@ export const battle = {
   finishTurn(app) {
     const B = this.B, v = this.v;
     v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn; v.foeReady = false;
-    if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
+    // 판이 끝나면 쓰러짐 연출로 이미 사라진 식물은 그대로 둠(2026-10-16 사용자 "승리 문구 뜨면서 사라졌던 식물이 다시 나와서 사라지는 효과")
+    if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = B.over ? Object.fromEntries(['me', 'foe'].filter(s => v.gone[s] && B[s].hp <= 0).map(s => [s, true])) : {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
     if (B.over) {
       v.phase = 'over'; v.overT0 = app.t;
       const win = B.over === 'win', why = this.end && this.end.why && this.end.why !== 'ko';
@@ -542,14 +544,20 @@ export const battle = {
     g.c.fillStyle = shade; g.c.fillRect(0, HY - 16, W, H - HY + 16);
     this.topBar(app);
     // 체력판(3:3 남은 식물은 아래 교체 칸에)
-    const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false);
-    statusWins(g, 6, AY + 4 + fh + 3, this.statuses('foe'));
+    const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false), theirs = this.statuses('foe');
+    statusWins(g, 6, AY + 4 + fh + 3, theirs);
     if (this.net === 'pvp' && v.foeReady && v.phase !== 'play') { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     infoBox(app, W - 146, MY, v.view.me, v.bar.me, v.en.me, true);
     const mine = this.statuses('me'), rows = Math.ceil(Math.min(6, mine.length) / 3);
     if (rows) statusWins(g, W - 146, MY - 3 - rows * (SW_H + 2) + 2, mine);
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
+    // 효과 설명 = 체력판 · 효과 창을 누르면(2026-10-16 사용자 "맨 아래 효과 버튼은 뭐야? 이거 필요한 거야?" → 아래 단추를 빼고 효과가 보이는 그 자리에서)
+    if (live) {
+      const foeRows = Math.ceil(Math.min(6, theirs.length) / 3), myTop = rows ? MY - 3 - rows * (SW_H + 2) + 2 : MY, open = () => { this.info2 = true; };
+      app.input.hit('fx_foe', 6, AY + 4, BOX_W, fh + (foeRows ? 3 + foeRows * (SW_H + 2) : 0), open, 2);
+      app.input.hit('fx_me', W - 146, myTop, BOX_W, MY + boxH(true) - myTop, open, 2);
+    }
     const hx = Math.round((W - CARD_W * 3 - CARD_GX * 2) / 2);
     this.drawTimer(app, hx, HY - 8, CARD_W * 3 + CARD_GX * 2);
     this.hand(app, HY - CARD_Y, live, skipNow);
@@ -635,16 +643,14 @@ export const battle = {
   // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 효과 설명 · 감정(친구 대결) · 기권
   miscRow(app, y, live) {
     const { W } = app, B = this.B, v = this.v, list = [], gap = 6;
-    let x0 = 8, span = W - 16;
     if (this.mode === 'swap3') {
-      const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me), tw = 154;
-      this.teamTile(app, 'bt_swap', x0, y, tw, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
-      x0 += tw + gap; span -= tw + gap;
+      const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me);
+      this.teamTile(app, 'bt_swap', 8, y, 154, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
     }
-    list.push({ id: 'bt_info', label: '효과', icon: 'sparkle', can: true, fn: () => { this.info2 = true; } });
+    // 감정 = 오른쪽 끝 작은 단추(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
     list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });
-    const w = Math.floor((span - gap * (list.length - 1)) / list.length);
-    list.forEach((b, i) => button(app, b.id, x0 + i * (w + gap), y, i === list.length - 1 ? span - (w + gap) * (list.length - 1) : w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
+    const w = 80;
+    list.forEach((b, i) => button(app, b.id, W - 8 - w - (list.length - 1 - i) * (w + gap), y, w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
   },
   // 3:3 팀 칸 = 교체 단추(2026-10-16 사용자 "3:3에서 남은 수를 표시하는 네모 박스 등은 아래의 교체 칸에 적절한 방식으로 새로 UI 만들어서 붙여놔"):
   //  ⇄(뿌리 묶이면 자물쇠) · 내 식물 셋 얼굴(앞에 선 식물 = 주황 테, 아래 체력 실선, 쓰러짐 = 흐리게 + ✕) | '상대' + 남은 칸 셋(누군지는 안 보임) — 누르면 교체 창

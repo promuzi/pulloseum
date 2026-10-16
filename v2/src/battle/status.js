@@ -185,10 +185,15 @@ export function onHit(att, tgt, skill, ctx) {
   if (skill.inflict) apply(tgt, skill.inflict.id, skill.inflict.n || 1, { ...ctx, by: att });
 }
 
+// 쓰러짐 사건(2026-10-16 — 판정 순서 점검 tools/test/edgecases.mjs): 체력이 0이 된 그 자리에서 한 번만. 먼저 쓰러진 쪽이 진다(model·team이 첫 쓰러짐으로 승패)
+export function noteFall(u, ev) { if (u && u.hp <= 0 && !ev.some(e => e.t === 'faint' && e.who === u.id)) ev.push({ t: 'faint', who: u.id, name: u.name, key: u.key }); }
+
 // ── 턴 끝 ──
 // pairs = [[유닛, 건너편 앞 식물], …]: 화상·독 피해, 기생 씨앗(빨아서 건너편 회복), 빙결·감전·독 줄어듦
-export function endTurn(pairs, turn, ev) {
+//  순서 = 이번 턴 선공 쪽 먼저(누가 늘 먼저가 아니게) · stop() 이 참이 되면 거기서 멈춤(1:1 = 누가 쓰러지면, 3:3 = 한쪽 식물이 다 쓰러지면 판이 끝나서)
+export function endTurn(pairs, turn, ev, stop = null) {
   for (const [u, opp] of pairs) {
+    if (stop && stop()) break;
     const e = u.eff;
     if (!e || u.hp <= 0) continue;
     if (e.burn) {
@@ -223,7 +228,8 @@ export function endTurn(pairs, turn, ev) {
     }
     let dec = false;
     for (const k of ['chill', 'shock']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
-    if (dec) ev.push({ t: 'expire', who: u.id, ids: [], list: listOf(u) });
+    if (dec && u.hp > 0) ev.push({ t: 'expire', who: u.id, ids: [], list: listOf(u) });
+    noteFall(u, ev);
   }
 }
 // 턴 끝 마지막(에너지 회복 뒤): 정한 턴이 지난 효과 · 쉰 턴이 끝난 얼음 · 버팀

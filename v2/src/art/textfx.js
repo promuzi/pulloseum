@@ -15,7 +15,7 @@ import { rrect } from './ui.js';
 import { hexMix } from './statusLook.js';
 
 export const TFX_KEYS = ['now', 'a', 'b', 'c', 'd'];
-export const TFX = { key: 'now' };
+export const TFX = { key: 'd' };   // 2026-10-16 사용자 "연출은 d가 좋다" → ㉣ 굴림이 기본(나머지는 ?tfx= 로 비교용)
 export const setTfx = k => { if (TFX_KEYS.includes(k)) TFX.key = k; };
 try {
   setTfx(new URLSearchParams(location.search).get('tfx'));
