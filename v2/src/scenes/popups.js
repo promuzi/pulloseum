@@ -156,7 +156,12 @@ function settingsSheet(app) {
   button(app, 'st_music', x + 14 + half + 8, yy, half, 30, SOUND.music ? '음악 켬' : '음악 끔', { style: SOUND.music ? 'night' : 'off', icon: 'heart', iconTint: true, onTap: () => setMusicOn(!SOUND.music) }); yy += 40;
   if (!net.offline && u) button(app, 'st_out', x + 14, yy, w - 28, 30, '로그아웃', { style: 'red', onTap: () => { app.sheet = null; ask(app, '로그아웃할까요?', u.provider === 'google' ? "다시 들어올 땐 '구글로 계속하기'를 누르면 돼요" : '다시 들어올 땐 아이디·비밀번호가 필요해요', () => app.logout()); } });
   yy += 40;
-  if (!net.offline && u) button(app, 'st_del', x + 14, yy, w - 28, 26, '계정 지우기', { style: 'off', onTap: () => { app.sheet = null; deleteForm(app); } });
+  if (!net.offline && u) button(app, 'st_del', x + 14, yy, half, 26, '계정 지우기', { style: 'off', onTap: () => { app.sheet = null; deleteForm(app); } });
+  // 개인정보처리방침(플레이 정책 — 앱 안에서도 볼 수 있어야 함). 앱 웹뷰에선 같은 창, 브라우저에선 새 탭
+  button(app, 'st_priv', x + 14 + half + 8, yy, half, 26, '개인정보처리방침', { style: 'off', onTap: () => {
+    const url = location.origin + '/v2/privacy.html';
+    if (/PulloseumApp/.test(navigator.userAgent)) location.href = url; else window.open(url, '_blank', 'noopener');
+  } });
   button(app, 'st_close', W / 2 - 50, y + h - 42, 100, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { app.sheet = null; } });
 }
 
