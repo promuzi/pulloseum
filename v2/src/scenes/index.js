@@ -15,6 +15,8 @@ import { matching } from './matching.js';
 import { hangar } from './hangar.js';
 import { room } from './room.js';
 import { cardFront } from '../art/skillcard.js';
+import { drawPortrait, BIG } from '../art/sprites.js';
+import { SPECIES } from '../game/catalog.js';
 import { SKILLS } from '../game/catalog.js';
 import { BASICS } from '../battle/model.js';
 
@@ -51,4 +53,20 @@ const cardlab = {
   },
 };
 
-export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons, cardlab };
+// 얼굴 칸 검토판(개발용 · ?scene=portraitlab): 종마다 [지금 28 · 고친 28 · 고친 40 · 고친 54]
+const portraitlab = {
+  draw(app) {
+    const { g, W } = app;
+    g.rect(0, 0, W, app.H, '#141a26');
+    Object.keys(SPECIES).filter(k => BIG[k]).forEach((k, i) => {
+      const col = i % 2, row = Math.floor(i / 2), x0 = 4 + col * 134, y0 = 4 + row * 58;
+      const box = (x, y, sz, fn) => { g.rect(x - 1, y - 1, sz + 2, sz + 2, '#4a8edc'); g.rect(x, y, sz, sz, '#0a1c32'); g.clip(x, y, sz, sz, fn); };
+      box(x0, y0, 28, () => drawPortrait(g, k, x0, y0, 28, false, 28));
+      box(x0 + 31, y0, 28, () => drawPortrait(g, k, x0 + 31, y0, 28));
+      box(x0 + 62, y0, 40, () => drawPortrait(g, k, x0 + 62, y0, 40));
+      g.text(SPECIES[k].name, x0, y0 + 42, { color: '#e6f3ff' });
+    });
+  },
+};
+
+export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons, cardlab, portraitlab };

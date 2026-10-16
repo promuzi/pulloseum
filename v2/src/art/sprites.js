@@ -75,10 +75,12 @@ export async function loadBg(base = '../assets/v2/bg/') {
   return BG_NAMES.filter(n => !BGIMG[n]);
 }
 // 얼굴 초상: 대기 첫 장에서 머리 둘레 s×s 를 1배로 잘라 (x, y)에(under·over 두 층). flip = 좌우 뒤집기(상대)
-// src = 그림에서 잘라 올 칸(기본 s — 1:1). 작은 칸에 얼굴 전체를 넣을 땐 src를 크게(예 s 20 · src 40 = 반으로 줄여 그림, 2배 화면에선 그대로 또렷)
-export function drawPortrait(g, key, x, y, s, flip = false, src = s) {
+// src = 그림에서 잘라 올 칸. 기본(2026-10-16 사용자 "식물 정사각형 사진이 이상한 곳을 찍고 있어" — 전엔 늘 1:1이라 작은 칸엔 머리 한 귀퉁이만):
+//  44칸 이하 = 2배로 잘라 반으로 줄임(얼굴 전체 + 몸 위쪽, 칸이 고르게) · 그보다 큰 칸 = 1:1
+export function drawPortrait(g, key, x, y, s, flip = false, src = null) {
   const P = BIG[key]; if (!P) return false;
   const m = P.meta, hx = Math.round(m.head[0]), hy = Math.round(m.head[1]);
+  if (src == null) src = s * 2 <= Math.min(m.w, 88) ? s * 2 : s;
   const sx = Math.max(0, Math.min(m.w - src, hx - Math.floor(src / 2))), sy = Math.max(0, Math.min(m.h - src, hy - Math.floor(src / 2) + 3));
   part(g, P.sheet, sx, sy, src, src, x, y, flip, s, s);
   part(g, P.sheet, sx, sy + m.rows * m.h, src, src, x, y, flip, s, s);

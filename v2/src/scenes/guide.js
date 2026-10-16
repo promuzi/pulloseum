@@ -106,10 +106,10 @@ export const GUIDES = [
     ready: (app, sc) => !sc.pickFor,
     steps: [{ at: 'gr_*', text: '접목 가지는 속성이나 종이 맞는 식물에게 기술을 바로 가르쳐요. 해체 · 탐사 · 수확에서 나와요.' }] },
   { id: 'explore', scene: 'explore', btn: app => [app.W - 24, 30],
-    ready: (app, sc) => !sc.morph && !sc.unmorph && !sc.warp,
+    ready: (app, sc) => !sc.morph && !sc.unmorph && !sc.warp && !sc.map,
     steps: [
-      { at: 'pl_*', text: '행성을 골라 탐사를 보내요. 먼 궤도는 연료 탱크를 키우고 재배사 레벨이 올라야 열려요.' },
-      { at: (app, sc) => sc.regR, text: '행성마다 지역이 있어요. 지역마다 나오는 식물 · 위험 · 귀한 보상이 다르고, 탐사 장치를 키우면 하나씩 열려요. 위험한 곳일수록 변이 종자가 잘 나와요.' },
+      { at: 'pl_*', text: '행성을 누르면 그 행성 지도가 열려요. 먼 궤도는 연료 탱크를 키우고 재배사 레벨이 올라야 열려요.' },
+      { at: (app, sc) => sc.regR, text: '지도의 핀을 눌러 지역을 골라요. 지역마다 나오는 식물 · 위험 · 귀한 보상이 다르고, 탐사 장치를 키우면 하나씩 열려요. 위험한 곳일수록 변이 종자가 잘 나와요.' },
       { at: (app, sc) => sc.oddsR, text: '탐사비 · 성공 확률 · 닳는 내구도를 보고 보내요. 실패하면 탐사선이 크게 닳아요.' },
       { at: (app, sc) => sc.fuelR, text: '탐사 한 번에 연료 캡슐 하나를 써요. 캡슐은 시간이 지나면 다시 차요.' },
       { at: 'ex_ship', text: '탐사선을 누르면 정비실로 가요.' },
