@@ -97,6 +97,8 @@ export const room = {
   join: code => net.req('/api/room/join', { code }),
   leave: () => net.req('/api/room/leave', {}),
   pick: plant => net.req('/api/room/pick', { plant }),
+  mode: mode => net.req('/api/room/mode', { mode }),   // 방장만: '1v1' | 'swap3'
+  team: plants => net.req('/api/room/team', { plants }),   // 3:3 팀(식물 uid 셋, 앞 = 먼저 나감)
   ready: on => net.req('/api/room/ready', { on }),
   move: (act, turn) => net.req('/api/room/move', { act, turn }),
   forfeit: () => net.req('/api/room/forfeit', {}),

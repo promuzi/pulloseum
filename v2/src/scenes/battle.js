@@ -120,8 +120,10 @@ const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun
 //  가운데 네모 전광판을 없애고 글자는 식물 머리 위에서만 짧게 — 기술 이름 = 리본, 피해 = 큰 숫자(치명 = 더 크게 · 흔들림), 판정·효과 = 한두 낱말, 승패 = 가운데 큰 글자(네모 없이).
 //  목록·글꼴·움직임 = docs/superpowers/specs/2026-10-16-v2-battle-text-direction.md
 const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기절해서 쉼' };
+// 3:3 쓰러진 자리: 봇 판 = 늘 'me', 친구 대결 = 'me' · 'foe' · 'both'(둘 다 고름 — 서버 rooms.mjs)
+const needMe = B => B.need === 'me' || B.need === 'both';
 // 시간 막대(같은 날 사용자 "타이머 역할하는 바도 넣어주고. 안 하면 넘어가는 걸로"): 고르는 차례마다 봇 판 30초 · 친구 대결 = 서버 40초, 다 되면 넘어감(쉬기)
-const PICK_MS = 30000, PVP_MS = 40000;
+const PICK_MS = 30000, PVP_MS = 40000, SEND_MS = 20000;   // 친구 3:3 쓰러진 자리 고르기 = 20초(서버 rooms.mjs)
 // 전광판 글자색(사건 종류별)
 
 const HURT = {
@@ -145,22 +147,23 @@ function hpBar(g, x, y, w, h, bar, max, t) {
 
 export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
     if (boot) {
       this.net = boot.kind; this.id = boot.id || null; this.info = boot.info || null; this.code = boot.code || null;
       this.B = battleFromView(boot.view); this.mode = boot.view.mode === 'swap3' ? 'swap3' : '1v1'; this.seed = 7919;
-      this.deadline = boot.deadline || null;
+      this.deadline = boot.deadline || null; this.stepMs = boot.step === 'send' ? SEND_MS : PVP_MS;
       app.battleBoot = null;
     } else this.setupLocal(app);
     const B = this.B;
     this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, led: null, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: B.turn, picked: null, uid: 0, eff: { me: listOf(B.me), foe: listOf(B.foe) }, foeReady: false, sfx: [] };
     if (B.over) { this.v.phase = 'over'; this.v.overT0 = app.t; }
-    else if (this.mode === 'swap3' && B.need === 'me') { this.v.phase = 'need'; this.sheet = { forced: true }; }
+    else if (this.mode === 'swap3' && needMe(B)) { this.v.phase = 'need'; this.sheet = { forced: true }; }
+    else if (this.mode === 'swap3' && B.need === 'foe') { this.v.phase = 'wait'; this.v.waitSend = true; }   // 친구 대결: 상대가 다음 식물을 고르는 중
     else this.prompt(app);
-    if (boot && boot.moved) this.v.phase = 'wait';
+    if (boot && boot.moved) { this.v.phase = 'wait'; this.sheet = null; }
     if (this.shot) this.pick(null, B.me.kit[3]);
   },
   setupLocal(app) {
@@ -226,18 +229,25 @@ export const battle = {
     if (r.turn) { B.log.push(r.turn); this.play(app, this.buildSteps(r.turn)); }
     else if (r.send) this.play(app, [this.switchStep(r.send), { kind: 'end', ms: 300 }]);
   },
-  // 친구 대결 알림(room.js 가 넘겨줌)
+  // 친구 대결 알림(room.js 가 넘겨줌). 연출 중에 온 판 소식(상대가 먼저 다음 식물을 골라 'send'가 빨리 오는 등)은 줄 세웠다가 연출이 끝나면
   onNet(app, type, data) {
     if (!this.B || this.net !== 'pvp') return;
     const v = this.v;
-    if (type === 'foeReady') { v.foeReady = true; return; }
-    if (type === 'turn') { this.deadline = data.deadline; v.foeReady = false; this.onResult(app, { turn: data.turn, view: data.view }); return; }
-    if (type === 'battle') { this.deadline = data.deadline; applyView(this.B, data.view); if (v.phase !== 'play') { this.finishTurn(app); if (data.moved && v.phase === 'pick') v.phase = 'wait'; } return; }
+    if (v.phase === 'play' && (type === 'turn' || type === 'send' || type === 'battle')) { (this.queue = this.queue || []).push({ type, data }); return; }
+    if (type === 'foeReady') { v.foeReady = data.turn; return; }   // 이 턴(번호)에 상대가 골랐음 — 연출이 끝나도 남음
+    if (type === 'turn') { this.deadline = data.deadline; this.stepMs = data.step === 'send' ? SEND_MS : PVP_MS; v.foeReady = null; this.onResult(app, { turn: data.turn, view: data.view }); return; }
+    if (type === 'send') {   // 3:3 쓰러진 자리를 채움(양쪽 함께 공개) → 교체 연출 → 다음 턴
+      this.deadline = data.deadline; this.stepMs = PVP_MS; v.foeReady = null; v.waitSend = false; this.sheet = null;
+      applyView(this.B, data.view);
+      this.play(app, [...data.sends.map(e => this.switchStep(e)), { kind: 'end', ms: 300 }]);
+      return;
+    }
+    if (type === 'battle') { this.deadline = data.deadline; this.stepMs = data.step === 'send' ? SEND_MS : PVP_MS; applyView(this.B, data.view); if (v.phase !== 'play') { this.finishTurn(app); if (data.moved && (v.phase === 'pick' || v.phase === 'need')) { v.phase = 'wait'; this.sheet = null; } } return; }
     if (type === 'end') {
       this.end = data; this.result = { reward: data.reward };
       if (data.state) app.state = data.state;
       if (!this.B.over) {   // 기권 · 시간 넘김 · 나감 = 쓰러뜨리지 않고 끝남
-        this.B.over = data.win ? 'win' : 'lose';
+        this.B.over = data.win ? 'win' : 'lose'; this.sheet = null;
         if (v.phase !== 'play') { v.phase = 'over'; v.overT0 = app.t; this.title(app, data.win, data.win ? ({ forfeit: '상대가 기권했다', timeout: '상대가 시간을 넘겼다', left: '상대가 나갔다' }[data.why] || '') : ({ forfeit: '기권했다', timeout: '시간을 넘겼다', left: '연결이 끊겼다' }[data.why] || '')); }
       }
     }
@@ -247,6 +257,7 @@ export const battle = {
     const B = this.B, v = this.v;
     if (this.sheet && this.sheet.forced) {
       this.sheet = null;
+      if (this.net === 'pvp') { v.phase = 'wait'; R.move({ kind: 'send', to }, B.turn).catch(e => { app.toast(e.message); if (v.phase === 'wait') { v.phase = 'need'; this.sheet = { forced: true }; } }); return; }   // 상대도 고르면 'send' 알림
       if (this.net) { v.phase = 'wait'; bot.turn(app, this.id, { kind: 'send', to }, B.turn).then(r => this.onResult(app, r)).catch(e => { app.toast(e.message); v.phase = 'need'; this.sheet = { forced: true }; }); return; }
       const e = sendIn(B, to); this.play(app, [this.switchStep(e), { kind: 'end', ms: 300 }]); return;
     }
@@ -462,7 +473,7 @@ export const battle = {
     if (v.phase === 'over' || v.phase === 'play' || v.phase === 'need') return;
     const pvp = this.net === 'pvp' && this.deadline, left = pvp ? this.deadline - net.now() : v.pickT0 != null ? PICK_MS - (t - v.pickT0) : null;
     if (left == null) return;
-    const r = Math.max(0, Math.min(1, left / (pvp ? PVP_MS : PICK_MS))), fw = Math.round((w - 2) * r), sec = Math.ceil(left / 1000);
+    const r = Math.max(0, Math.min(1, left / (pvp ? this.stepMs || PVP_MS : PICK_MS))), fw = Math.round((w - 2) * r), sec = Math.ceil(left / 1000);
     if (sec <= 10 && sec > 0 && v.tickSec !== sec && !this.shot) { v.tickSec = sec; sfx(sec <= 3 ? 'tickLast' : 'tick'); }
     rrect(g, x, y, w, 4, 2, '#0b1322'); g.rect(x + 1, y + 1, w - 2, 2, '#1c2a40');
     const col = r > 0.5 ? '#8ccfff' : r > 0.2 ? '#f0be7d' : Math.floor(t / 250) % 2 ? '#ff6a5a' : '#ffb4a6';
@@ -513,15 +524,17 @@ export const battle = {
   },
   finishTurn(app) {
     const B = this.B, v = this.v;
-    v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn; v.foeReady = false;
+    v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn;
     // 판이 끝나면 쓰러짐 연출로 이미 사라진 식물은 그대로 둠(2026-10-16 사용자 "승리 문구 뜨면서 사라졌던 식물이 다시 나와서 사라지는 효과")
     if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = B.over ? Object.fromEntries(['me', 'foe'].filter(s => v.gone[s] && B[s].hp <= 0).map(s => [s, true])) : {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
     if (B.over) {
       v.phase = 'over'; v.overT0 = app.t;
       const win = B.over === 'win', why = this.end && this.end.why && this.end.why !== 'ko';
       this.title(app, win, why ? (win ? '상대가 기권했다' : '기권했다') : win ? (this.mode === 'swap3' ? '상대 식물을 모두 쓰러뜨렸다' : `${ga(B.foe.name)} 쓰러졌다`) : (this.mode === 'swap3' ? '내 식물이 모두 쓰러졌다' : `${ga(B.me.name)} 쓰러졌다`));
-    } else if (B.need === 'me') { v.phase = 'need'; v.picked = null; this.sheet = { forced: true }; }
-    else { v.phase = 'pick'; v.picked = null; this.prompt(app); }
+    } else if (needMe(B)) { v.phase = 'need'; v.picked = null; this.sheet = { forced: true }; }
+    else if (B.need === 'foe') { v.phase = 'wait'; v.picked = null; v.waitSend = true; }   // 친구 대결: 상대가 다음 식물을 고르는 중
+    else { v.phase = 'pick'; v.picked = null; v.waitSend = false; this.prompt(app); }
+    if (this.queue && this.queue.length) { const q = this.queue.shift(); this.onNet(app, q.type, q.data); }   // 연출 중에 온 소식
   },
   draw(app) {
     const { g, W, H, t } = app;
@@ -615,7 +628,12 @@ export const battle = {
     // 체력판(3:3 남은 식물은 아래 교체 칸에)
     const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false), theirs = this.statuses('foe');
     statusWins(g, 6, AY + 4 + fh + 3, theirs);
-    if (this.net === 'pvp' && v.foeReady && v.phase !== 'play') { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
+    if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
+    if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
+      const sec = this.deadline ? Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)) : null, label = '상대가 다음 식물을 고르는 중' + (sec != null ? ` · ${sec}` : ''), w = g.textW(label) + 16, x = Math.round((W - w) / 2), y = LED_CY - 8;
+      holo(g, x, y, w, 18, { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#18385e' }, 16);
+      g.text(label, W / 2, y + (18 - glyphH('body')) / 2, { color: '#e0f0ff', align: 'center' });
+    }
     infoBox(app, W - 146, MY, v.view.me, v.bar.me, v.en.me, true);
     const mine = this.statuses('me'), rows = Math.ceil(Math.min(6, mine.length) / 3);
     if (rows) statusWins(g, W - 146, MY - 3 - rows * (SW_H + 2) + 2, mine);
@@ -701,7 +719,7 @@ export const battle = {
     btnBody(g, 28, 3, 38, 18, T.btn.second, true);
     g.text(`${v.turn}턴`, 47, 6, { font: 'bold', color: T.btn.second.text, align: 'center' });
     if (this.net === 'pvp') {
-      g.text('친구 대결' + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
+      g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 대결') + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
     } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
     else {
       const title = I ? I.title : '새싹 브론즈 · 예선', wins = I ? I.wins : 1, losses = I ? I.losses : 0;
@@ -790,6 +808,7 @@ export const battle = {
     input.hit('sw_block', 0, 0, W, H, () => {});
     plate(g, x, y, w, h);
     g.text(forced ? '다음에 내보낼 식물' : '교체할 식물', x + 12, y + 10, { font: 'head', color: P.main });
+    if (forced && this.net === 'pvp' && this.deadline) { const sec = Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)); g.text(`${sec}초`, x + w - 12, y + 12, { font: 'bold', color: sec <= 5 ? '#ff8a7a' : P.sub, align: 'right' }); }   // 넘기면 서버가 살아 있는 첫 식물로
     B.team.me.forEach((u, i) => {
       const ry = y + 34 + i * 50, on = i === B.act.me, dead = u.hp <= 0, can = !on && !dead && this.v.phase !== 'wait', id = 'sw_' + i, down = can && input.isPressed(id);
       const S = can ? T.btn.second : T.btn.off, { yy } = btnBody(g, x + 8, ry, w - 16, 44, S, down);
@@ -799,7 +818,7 @@ export const battle = {
       g.img(icon(u.el), x + 54 + g.textW(u.name, 'bold') + 5, yy + 6);
       tbar(g, x + 54, yy + 24, 110, 6, u.hp / u.max, 'hp');
       g.text(`${Math.ceil(u.hp)}/${u.max}`, x + 170, yy + 21, { color: S.text });
-      if (on || dead) g.text(on ? '싸우는 중' : '쓰러짐', x + w - 18, yy + 5, { color: on ? '#8ccfff' : T.text.dim, align: 'right' });
+      if (on || dead) g.text(dead ? '쓰러짐' : '싸우는 중', x + w - 18, yy + 5, { color: dead ? T.text.dim : '#8ccfff', align: 'right' });   // 쓰러진 자리를 채울 땐 앞 식물도 '쓰러짐'
       if (can) input.hit(id, x + 8, ry, w - 16, 44, () => this.pickSwitch(app, i));
     });
     if (!forced) button(app, 'sw_close', x + w / 2 - 40, y + h - 36, 80, 26, '닫기', { style: 'night', onTap: () => { this.sheet = null; } });

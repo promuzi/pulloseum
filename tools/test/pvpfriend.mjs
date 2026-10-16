@@ -16,17 +16,34 @@ async function call(path, body) {
 try { token = (await call('/api/login', { login: LOGIN, password: PW })).token; }
 catch { token = (await call('/api/register', { login: LOGIN, password: PW, nickname: '가짜 친구', starter: 'cactus_fire' })).token; }
 console.log('들어감', LOGIN);
+{ const me = await call('/api/me'); for (const sd of me.state.seeds.slice(0, Math.max(0, 3 - me.state.plants.length))) await call('/api/act', { op: 'plantSeed', args: { seed: sd.id } }); }   // 3:3이면 식물 셋(처음 종자 둘을 심음)
 await call('/api/room/join', { code: CODE });
 let view = null, games = 0, turn = 0, after = -1;
 await call('/api/room/ready', { on: true });
 const pick = v => { const k = [...v.me.kit].reverse().find(x => x.act === 'attack' && (x.cost || 0) <= v.me.energy) || v.me.kit[0]; return k.id; };
-async function moveSoon(v) { await sleep(600 + Math.random() * 900); try { await call('/api/room/move', { act: pick(v), turn: v.turn }); } catch (e) { console.log('수 실패', e.message); } }
+// 3:3(교체전): 내 쪽이 쓰러졌으면 다음 식물(살아 있는 첫 식물), 상대 쪽만이면 기다림, 아니면 기술(가끔 교체)
+const SW_K = +arg('switch', 0.12);
+function act3(v) {
+  const alive = v.team.me.map((u, i) => (u.hp > 0 && i !== v.act.me ? i : -1)).filter(i => i >= 0);
+  if (v.need === 'me' || v.need === 'both') return { kind: 'send', to: alive[0] };
+  if (v.need) return null;
+  if (alive.length && Math.random() < SW_K) return { kind: 'switch', to: alive[Math.floor(Math.random() * alive.length)] };
+  const u = v.team.me[v.act.me], k = [...u.kit].reverse().find(x => x.act === 'attack' && (x.cost || 0) <= v.pool.me) || u.kit[0];
+  return { kind: 'skill', id: k.id };
+}
+async function moveSoon(v) {
+  const a = v.mode === 'swap3' ? act3(v) : pick(v);
+  if (!a) return;
+  await sleep(600 + Math.random() * 900);
+  try { await call('/api/room/move', { act: a, turn: v.turn }); } catch (e) { console.log('수 실패', e.message); }
+}
 for (;;) {   // 기다리는 요청으로 소식 받기(화면과 같은 길)
   const j = await call('/api/room/poll?after=' + after);
   after = j.seq;
   for (const { type, data } of j.events || []) {
-    if (type === 'start') { view = data.view; turn = 0; console.log('대결 시작 — 상대', view.foe.name); moveSoon(view); }
+    if (type === 'start') { view = data.view; turn = 0; console.log('대결 시작 —', view.mode === 'swap3' ? '3:3' : '상대 ' + view.foe.name); moveSoon(view); }
     else if (type === 'turn') { view = data.view; turn++; if (!view.over) moveSoon(view); }
+    else if (type === 'send') { view = data.view; moveSoon(view); }
     else if (type === 'end') {
       games++; console.log(`끝: ${data.win ? '가짜 친구 승' : '가짜 친구 패'} (${data.why}, ${data.turns}턴)`);
       if (games >= GAMES) { await call('/api/room/leave', {}); process.exit(0); }
