@@ -94,6 +94,20 @@ export const WEAPONS = {
   scythe_reap: { kind: 'w_reap', move: 'lunge', c: ['#f0fff0', '#b8e0c0', '#6a9a7a', '#24402e'], w: WOOD, status: 'none', area: true },
   shield_bash: { kind: 'w_bash', move: 'lunge', c: ['#fff4d8', '#e0c070', '#a07830', '#4a3010'], status: 'guardself' },
 };
+// 변이 기술(카드)마다 제 모습(2026-10-17 — 전엔 그 식물 종 연출을 빌려 씀): 변이 연출(VARIANTS) · 무기 연출(WEAPONS)을 기술 id로, 속성 카드는 그 속성 색
+//  전투는 ATTACKS[기술 id] → ATTACKS[종] 순으로 찾음(battle.js). 용의 숨결(속성 = 그 식물)은 종 연출 그대로(드레이크캑터 · 드라코프루트 = 숨결)
+{
+  const EC = { fire: ATTACKS.cactus_fire.c, water: ATTACKS.aqua.c, earth: ATTACKS.gaia.c, bolt: ATTACKS.spark.c, ice: ATTACKS.frost_bell.c, wind: ATTACKS.flower_wind.c, grass: ATTACKS.flower_grass.c };
+  const as = (B, o) => ({ ...B, ...o });
+  Object.assign(ATTACKS, {
+    m_bite: VARIANTS.predator, m_devour: as(VARIANTS.predator, {}), m_burrow: as(VARIANTS.predator, { c: EC.earth, status: 'dust' }), m_maw: as(VARIANTS.predator, { c: EC.water, status: 'wet' }),
+    m_slash: WEAPONS.sword_slash, m_shot: WEAPONS.gun_shot, m_smash: WEAPONS.hammer_smash,
+    m_flame: as(WEAPONS.sword_slash, { c: EC.fire, blood: EC.fire, status: 'burn' }), m_spear: as(WEAPONS.spear_thrust, { c: EC.bolt, status: 'shock' }),
+    m_spit: VARIANTS.toxic, m_acid: as(VARIANTS.toxic, {}), m_miasma: as(VARIANTS.toxic, {}), m_bile: as(VARIANTS.toxic, { c: EC.water }), m_ivy: { kind: 'whip', move: 'lunge', c: VARIANTS.toxic.c, status: 'poison' },
+    m_puff: VARIANTS.spore, m_sleep: as(VARIANTS.spore, {}), m_gust: as(VARIANTS.spore, { c: EC.wind }),
+    m_roar: { kind: 'rings', move: 'cast', c: VARIANTS.dragon.c, status: 'swirl' }, m_frostclaw: { kind: 'slash', move: 'lunge', c: EC.ice, status: 'swirl', petal: [EC.ice[1], EC.ice[2]] }, m_voltclaw: { kind: 'slash', move: 'lunge', c: EC.bolt, status: 'shock', petal: [EC.bolt[1], EC.bolt[2]] },
+  });
+}
 export const GROUND = new Set(['slam', 'wave']);   // 바닥을 타고 가는 기술
 export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18,
   w_slash: 15, w_thrust: 14, w_chop: 19, w_sweep: 16, w_shot: 15, w_burst: 15, w_snipe: 18, w_smash: 19, w_spear: 15, w_flurry: 16, w_bind: 17, w_reap: 16, w_bash: 15 })[A.kind] || 18;

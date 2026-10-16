@@ -8,6 +8,7 @@
 import { T, holo } from '../art/theme.js';
 import { button } from '../art/ui.js';
 import { wrap, lineH, glyphH } from '../core/text.js';
+import { SPECIES } from '../game/catalog.js';
 
 const ACC = '#f0be7d', ACC_HI = '#ffe8c8', DIM = 'rgba(3,6,12,0.74)', ENTER_MS = 200, WAIT_MS = 550;
 const ease = k => 1 - (1 - k) ** 3;
@@ -16,7 +17,7 @@ const sc0 = sc => sc || {};
 const hdrBtn = app => [Math.round((app.hdrRightX || app.W - 4) - 22), 7];
 // 식물 관리 판 끌어 넘기기: 맨 위 · 맨 아래
 const top = (app, sc) => { sc.scrollY = 0; }, bottom = (app, sc) => { sc.scrollY = sc.maxY || 0; };
-const activeForm = app => { const s = app.state, p = s && (s.plants[s.active] || s.plants[0]); return p && p.form; };
+const innateOf = app => { const s = app.state, p = s && (s.plants[s.active] || s.plants[0]); return !!(p && SPECIES[p.key] && SPECIES[p.key].form); };   // 태생 변이(카드를 전투 칸에도)
 
 // ── 화면별 안내 ──
 export const GUIDES = [
@@ -63,9 +64,15 @@ export const GUIDES = [
       { at: (app, sc) => sc.growR, prep: top, text: '물 · 비료를 주면 레벨이 올라요. 오를 때마다 강화 포인트가 생기고, 다 자라면 진화해요.' },
       { at: ['sk_forgot', 'sk_graft'], prep: bottom, text: '지운 기술은 회귀 주사로 되돌리고, 접목 가지로는 맞는 기술을 바로 배워요.' },
     ] },
-  { id: 'plant_mut', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && !!activeForm(app), btn: app => [app.W - 24, 9],
+  { id: 'plant_card', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub, btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
-    steps: [{ at: 'skc_m*', prep: bottom, text: '변이 식물만 가진 변이 칸 둘이에요. 에너지 대신 판마다 정해진 횟수만큼 쓰고, 옆 목록의 기술을 끌어다 언제든 바꿔 끼워요.' }] },
+    steps: [
+      { at: ['skc_c0', 'skc_c1'], prep: bottom, text: '카드 칸 둘이에요. 일반 식물은 능력치를 크게 올리는 일반 카드를, 변이 식물은 그 변이 카드만 넣어요.' },
+      { at: 'skc_cl*', prep: bottom, text: '가방에 있는 맞는 카드예요. 꾹 눌러 카드 칸으로 끌면 끼우고, 칸의 카드를 여기로 끌면 빼요.' },
+    ] },
+  { id: 'plant_innate', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && innateOf(app), btn: app => [app.W - 24, 9],
+    ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
+    steps: [{ at: 'skc_b*', prep: top, text: '태생 변이 식물은 전투 칸에도 그 변이의 기술 카드를 넣을 수 있어요. 가방 카드를 꾹 눌러 전투 칸으로 끌어요.' }] },
   { id: 'plant_up', scene: 'plant', when: (app, sc) => sc.tab === 'up', btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && !sc.out,
     steps: [
@@ -98,10 +105,13 @@ export const GUIDES = [
   { id: 'bag', scene: 'bag', when: (app, sc) => sc.tab === 'seed', btn: hdrBtn,
     ready: (app, sc) => !sc.pickFor,
     steps: [
-      { at: 'tab_*', text: '종자 · 접목 가지 · 물건을 나눠서 봐요.' },
+      { at: 'tab_*', text: '종자 · 접목 가지 · 카드 · 물건을 나눠서 봐요.' },
       { at: 'plant_*', text: '종자를 심으면 스마트팜에서 자라요. 개체값은 심을 때 정해져요.' },
       { at: 'bag_explore', text: '종자는 탐사에서 가장 많이 얻어요.' },
     ] },
+  { id: 'bag_card', scene: 'bag', when: (app, sc) => sc.tab === 'card', btn: hdrBtn,
+    ready: (app, sc) => !sc.pickFor,
+    steps: [{ at: 'cd_*', text: '카드는 식물의 카드 칸에 끼워요. 일반 카드는 일반 식물에, 변이 카드는 그 변이 식물에만 맞아요. 탐사 · 해체 · 상점에서 얻어요.' }] },
   { id: 'bag_scion', scene: 'bag', when: (app, sc) => sc.tab === 'scion', btn: hdrBtn,
     ready: (app, sc) => !sc.pickFor,
     steps: [{ at: 'gr_*', text: '접목 가지는 속성이나 종이 맞는 식물에게 기술을 바로 가르쳐요. 해체 · 탐사 · 수확에서 나와요.' }] },

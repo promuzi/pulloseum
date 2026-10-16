@@ -73,23 +73,25 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   runOp(s2, 'guide', { id: 'battle' }, { rng: makeRng(1), now: 0 });
   ok(s2.guide.battle === 1, '서버 일 목록(ops guide)으로');
 }
-// ⑥ 변이 칸 둘(변이 식물 = 여섯) · 충전 · 변이 종자
+// ⑥ 변이 식물 = 카드 칸의 기술 카드(2026-10-17 — 옛 변이 칸 둘을 카드 칸으로) · 판마다 횟수 · 변이 종자
 {
-  const { setMut, makePlant, seedOf, formsFor } = await import('../../v2/src/game/logic.js');
+  const { setCards, makePlant, seedOf, formsFor } = await import('../../v2/src/game/logic.js');
+  const { isSkillCard } = await import('../../v2/src/game/cards.js');
   const { unitOf, botPlant } = await import('../../v2/src/game/fight.js');
   const { makeBattle, playTurnVs } = await import('../../v2/src/battle/model.js');
   const { canUse, usesLeft } = await import('../../v2/src/battle/status.js');
   const { formSkills, SKILLS } = await import('../../v2/src/game/catalog.js');
   const s = game(), rng = makeRng(9);
   const p = makePlant(s, { key: 'cactus_fire', form: 'weapon' }, rng, 0); s.plants.push(p);
-  ok(p.form === 'weapon' && JSON.stringify(p.skills.mut) === JSON.stringify(formSkills('weapon').slice(0, 2)), '변이 종자 → 변이 식물 · 변이 칸 둘: ' + JSON.stringify(p.skills.mut));
+  ok(p.form === 'weapon' && isSkillCard(p.cards[0]) && p.cards[1] && !isSkillCard(p.cards[1]), '변이 종자 → 변이 식물 · 카드 칸 = 그 변이 기술 카드 + 패시브: ' + JSON.stringify(p.cards));
   const kit = kitOfPlant(p);
-  ok(kit.length === 6 && kit.filter(k => k.mut).length === 2, '변이 식물 손패 = 여섯(넷 + 변이 둘): ' + kit.map(k => k.id));
-  throws(() => setMut(s, p.uid, ['m_bite', null]), '다른 변이 기술');
-  throws(() => setMut(s, p.uid, ['m_slash', 'm_slash']), '같은 변이 기술 두 칸');
-  throws(() => setMut(s, s.plants[0].uid, ['m_slash', null]), '변이 아닌 식물');
-  setMut(s, p.uid, ['m_smash', 'm_slash']);
-  ok(JSON.stringify(p.skills.mut) === '["m_smash","m_slash"]', '변이 칸 바꾸기(목록 안에서 언제든)');
+  ok(kit.length === 5 && kit.filter(k => k.mut && k.extra).length === 1, '변이 식물 손패 = 넷 + 카드 칸 기술 하나: ' + kit.map(k => k.id));
+  s.cards = { m_bite: 1, m_slash: 2, m_smash: 1 };
+  throws(() => setCards(s, p.uid, ['m_bite', null]), '다른 변이 카드');
+  throws(() => setCards(s, p.uid, ['m_slash', 'm_slash']), '같은 카드 두 칸');
+  throws(() => setCards(s, s.plants[0].uid, ['m_slash', null]), '변이 아닌 식물에 변이 카드');
+  setCards(s, p.uid, ['m_smash', 'm_slash']);
+  ok(JSON.stringify(p.cards) === '["m_smash","m_slash"]', '카드 칸 바꾸기(가방에서 끼움)');
   // 횟수: 칼날 베기(판마다 3번) — 연달아 세 번 쓰고 넷째부터 그 판엔 못 씀 · 쇠망치(1번) — 한 번
   const me = unitOf('me', p), foe = unitOf('foe', makePlant(s, { key: 'gaia' }, rng, 0)); foe.hp = foe.max = 99999;
   const B = makeBattle({ me, foe, seed: 3 }), slash = me.kit.find(k => k.id === 'm_slash'), smash = me.kit.find(k => k.id === 'm_smash');
@@ -102,7 +104,7 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const B2 = makeBattle({ me: unitOf('me', p), foe: unitOf('foe', makePlant(s, { key: 'gaia' }, rng, 0)), seed: 4 });
   ok(canUse(B2.me, B2.me.kit.find(k => k.id === 'm_slash')), '새 판 = 횟수 다시 가득');
   // 숨결 = 그 식물 속성
-  const d = makePlant(s, { key: 'aqua', form: 'dragon' }, rng, 0);
+  const d = makePlant(s, { key: 'aqua', form: 'dragon' }, rng, 0); d.cards = ['m_breath', null];
   ok(kitOfPlant(d).find(k => k.id === 'm_breath').el === 'water', '용의 숨결 = 식물 속성');
   // 변이 종자: 탐사 배율이 있을 때만 · 버섯 = 포자만
   let n = 0, bad = 0;
@@ -110,8 +112,8 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   ok(n > 200 && n < 450 && !bad, `변이 종자 비율(배율 2) ${(n / 40).toFixed(1)}% · 맞지 않는 변이 ${bad}`);
   ok(!seedOf(s, 'thorn', rng).form, '배율 없는 종자는 변이 없음');
   ok(Object.values(SKILLS).filter(x => x.tier === 'm').every(x => (x.cost || 0) === 0 && x.uses >= 1 && !x.charge), '변이 기술 = 에너지 0 · 판마다 횟수');
-  // 봇: 자라는 단계부터 가끔 변이
-  let bf = 0; for (let i = 0; i < 400; i++) { const b = botPlant(makeRng(i), 1, 3, 0); if (b.form) { bf++; ok(kitOfPlant(b).length === 6, '변이 봇 손패 여섯'); } }
+  // 봇: 자라는 단계부터 가끔 변이(그 변이 카드 둘 — 기술 카드 하나는 꼭)
+  let bf = 0; for (let i = 0; i < 400; i++) { const b = botPlant(makeRng(i), 1, 3, 0); if (b.form) { bf++; const k = kitOfPlant(b); ok(k.length === 4 + b.cards.filter(isSkillCard).length && b.cards.some(isSkillCard), '변이 봇 손패 = 넷 + 기술 카드'); } }
   ok(bf > 10 && bf < 70, '변이 봇 ' + bf + '/400');
 }
 console.log(fails ? `실패 ${fails}` : '모두 통과');

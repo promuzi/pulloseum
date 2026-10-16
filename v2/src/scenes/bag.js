@@ -6,10 +6,13 @@ import { header, seedArt } from './common.js';
 import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft, FORMS } from '../game/catalog.js';
 import { seedPrice, freeSlots } from '../game/logic.js';
 import { ask } from './popups.js';
+import { CARDS, CARD_SLOTS, cardFits, cardFace, isSkillCard } from '../game/cards.js';
+import { cardTiny } from '../art/skillcard.js';
 import { eul } from '../core/josa.js';
 
 // 가방: 종자(심기 · 팔기) · 접목 가지(맞는 식물에 접목) · 물건(물 · 비료 · 회귀 주사 · 연료)
-const TABS = [['seed', '종자'], ['scion', '접목 가지'], ['item', '물건']];
+const TABS = [['seed', '종자'], ['scion', '접목 가지'], ['card', '카드'], ['item', '물건']];   // 카드 탭(2026-10-17)
+const cardList = s => Object.keys(s.cards || {}).filter(id => s.cards[id] > 0 && CARDS[id]).sort((a, b) => (CARDS[a].form || '').localeCompare(CARDS[b].form || '') || CARDS[b].rar - CARDS[a].rar);
 const ROW = 60, TOP = 64;
 export const bag = {
   theme: 'ship',
@@ -22,7 +25,7 @@ export const bag = {
     header(app, '가방', { right: this.tab === 'seed' ? `스마트팜 빈 자리 ${Math.max(0, free)}` : '' });
     let x = 10;
     for (const [id, label] of TABS) { const w = g.textW(label, 'label') + 22; holoTab(app, 'tab_' + id, x, 37, w, 21, label, this.tab === id, () => { this.tab = id; this.scroll = 0; this.pickFor = null; }); x += w + 5; }
-    const list = this.tab === 'seed' ? s.seeds : this.tab === 'scion' ? s.scions : Object.keys(ITEMS);
+    const list = this.tab === 'seed' ? s.seeds : this.tab === 'scion' ? s.scions : this.tab === 'card' ? cardList(s) : Object.keys(ITEMS);
     const bottom = H - 58, viewH = bottom - TOP;
     this.max = Math.max(0, list.length * ROW - viewH);
     if (this.scroll > this.max) this.scroll = this.max;
@@ -33,12 +36,14 @@ export const bag = {
         if (y + ROW < TOP || y > bottom) return;
         if (this.tab === 'seed') this.seedRow(app, it, y, free, hits);
         else if (this.tab === 'scion') this.scionRow(app, it, y, hits);
+        else if (this.tab === 'card') this.cardRow(app, it, y, hits);
         else this.itemRow(app, it, y);
       });
-      if (!list.length) g.text(this.tab === 'seed' ? '종자가 없어요' : '접목 가지가 없어요', W / 2, TOP + 30, { color: T.text.sub, align: 'center' });
+      if (!list.length) g.text(this.tab === 'seed' ? '종자가 없어요' : this.tab === 'card' ? '카드가 없어요' : '접목 가지가 없어요', W / 2, TOP + 30, { color: T.text.sub, align: 'center' });
     });
     for (const h of hits) if (h.y >= TOP && h.y + h.h <= bottom) app.input.hit(h.id, h.x, h.y, h.w, h.h, h.fn, 2);
-    if (this.pickFor) this.graftSheet(app);
+    if (this.pickFor && this.pickFor.card) this.cardSheet(app);
+    else if (this.pickFor) this.graftSheet(app);
     else button(app, 'bag_explore', 25, H - 46, W - 50, 30, '우주 지도에서 종자 찾기', { style: 'night', icon: 'navExplore', onTap: () => app.go('explore') });
   },
   // 버튼은 그리고, 누르는 자리는 목록 밖으로 나가지 않을 때만(끌어 넘기는 목록)
@@ -73,6 +78,39 @@ export const bag = {
     g.text(`배울 수 있는 식물: ${who}`, 52, y + 37, { color: P.dim });
     const ok = s.plants.some(p => !canGraft(p, sc.skill));
     this.btn(app, hits, 'gr_' + sc.id, W - 66, y + 14, 50, 26, '접목', { style: 'gold', disabled: !ok }, () => { this.pickFor = sc; });
+  },
+  // 카드 한 줄: 작은 카드 · 이름 · 일반/변이 · 효과 한 줄 · 장 수 · 끼우기(맞는 식물 고르기)
+  cardRow(app, id, y, hits) {
+    const { g, W, state: s } = app, P = T.ptext, c = CARDS[id], f = cardFace(id), F = c.form && FORMS[c.form];
+    plate(g, 8, y, W - 16, 54);
+    plate(g, 13, y + 7, 32, 40, 'deep');
+    cardTiny(g, 19, y + 13, f);
+    g.text(c.name, 52, y + 6, { font: 'bold', color: F ? F.light : '#d8f2ff' });
+    g.text(`${F ? F.name + ' 변이' : '일반'} · ${c.kind === 'skill' ? '기술' : '패시브'}`, 52, y + 22, { color: P.sub });
+    const sk = c.kind === 'skill' && SKILLS[c.skill], line = c.kind === 'skill' ? `위력 ${sk.power || '–'} · 판마다 ${sk.uses}번` : (c.desc || [])[0] || '';
+    let ln = line; const maxW = W - 124; while (g.textW(ln) > maxW && ln.length > 2) ln = ln.slice(0, -1); if (ln !== line) ln = ln.slice(0, -1) + '…';   // 끼우기 단추 앞에서 자름(뒷면 = 식물 관리에서)
+    g.text(ln, 52, y + 37, { color: P.dim });
+    g.text('×' + s.cards[id], W - 72, y + 8, { font: 'bold', color: '#ffd890', align: 'right' });
+    const ok = s.plants.some(p => !cardFits(p, id));
+    this.btn(app, hits, 'cd_' + id, W - 66, y + 26, 50, 22, '끼우기', { style: 'gold', disabled: !ok }, () => { this.pickFor = { card: id }; });
+  },
+  // 카드를 끼울 식물 고르기(스마트팜 식물 중 맞는 것 — 빈 카드 칸에)
+  cardSheet(app) {
+    const { g, W, H, state: s } = app, id = this.pickFor.card, c = CARDS[id], P = T.ptext;
+    g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
+    app.input.hit('cs_block', 0, 0, W, H, () => { this.pickFor = null; });
+    const rows = s.plants.length, h = 70 + rows * 40, y = Math.max(40, H - h - 20);
+    plate(g, 10, y, W - 20, h);
+    app.input.hit('cs_in', 10, y, W - 20, h, () => {});
+    g.text(`${eul(c.name)} 누구에게?`, 22, y + 10, { font: 'head', color: P.main });
+    s.plants.forEach((p, i) => {
+      const ry = y + 36 + i * 40, why = cardFits(p, id), Cs = [...(p.cards || []), null, null].slice(0, CARD_SLOTS), has = Cs.includes(id) || p.skills.battle.includes(id), free = Cs.indexOf(null);
+      const no = why || (has ? '이미 끼웠어요' : free < 0 ? '카드 칸이 차 있어요' : null);
+      g.text(p.name, 22, ry + 6, { font: 'bold', color: no ? T.text.dim : P.main });
+      g.text(no || '끼울 수 있어요', 22, ry + 22, { color: no ? '#ffb0a0' : '#9ff0b0' });
+      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: () => { const nc = [...Cs]; nc[free] = id; app.act('setCards', { id: p.uid, cards: nc }).then(r => { if (r) { this.pickFor = null; app.toast(`${p.name}에게 끼웠어요`); } }); } });
+    });
+    button(app, 'cs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
   itemRow(app, k, y) {
     const { g, W, state: s } = app, P = T.ptext, it = ITEMS[k], ic = { water: 'can', fert: 'fert', regress: 'potion', fuel: 'energy' }[k];

@@ -8,7 +8,8 @@ import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
 
 export function makeTeamBattle({ me, foe, seed = 20261015 }) {
-  const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: 2, foe: 2 }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
+  const start = T => Math.max(2, ...T.map(u => (typeof u.energy === 'number' ? u.energy : 2)));   // 시작 에너지 = 팀에서 가장 큰 값(카드 '엽록체 증식' — 2026-10-17)
+  const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: start(me), foe: start(foe) }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
   for (const side of ['me', 'foe']) for (const u of B.team[side]) Object.defineProperty(u, 'energy', { get: () => B.pool[side], set: v => { B.pool[side] = v; }, configurable: true, enumerable: true });
   B.me = me[0]; B.foe = foe[0];
   return B;

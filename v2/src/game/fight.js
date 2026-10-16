@@ -1,6 +1,7 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY, FORM_KEYS, formSkills, MUT_SLOTS } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY, FORM_KEYS } from './catalog.js';
+import { CARDS, passivesOf, isSkillCard, formCards, rollCard } from './cards.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
@@ -8,25 +9,34 @@ import { makeRng } from '../battle/rules.js';
 
 // 손패 = 전투 칸 넷(배운 기술 · 기본기 섞어서 — 2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개"), 순서 그대로.
 //  옛 판(v4 표시 없음 = 전투 3칸 + 기본기 셋 늘)은 그때 손패 그대로 — 이어 하는 판 · 다시 돌리기가 같은 결과가 나오게
+//  카드(2026-10-17): 태생 변이의 전투 칸 카드 = 그 자리 그대로(extra: false), 카드 칸의 기술 카드 = 손패 뒤에 붙음(extra: true — 화면 아래 줄)
 export function kitOfPlant(p) {
-  const S = p.skills, B = basicsOf(p.key), sk = id => B.find(b => b.id === id) || ({ act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key });
+  const S = p.skills, B = basicsOf(p.key), pas = passivesOf(p.cards), sk = id => B.find(b => b.id === id) || (isSkillCard(id) ? cardSkill(p, id, pas, false) : { act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key });
   if (!S.v4) return [...B, ...S.battle.filter(Boolean).map(sk)];
-  const kit = S.battle.filter(id => id && (SKILLS[id] || B.some(b => b.id === id))).map(sk);
-  return [...(kit.length ? kit : B), ...mutKit(p)];
+  const kit = S.battle.filter(id => id && (isSkillCard(id) ? CARDS[id].form === p.form : SKILLS[id] || B.some(b => b.id === id))).map(sk);
+  return [...(kit.length ? kit : B), ...cardKit(p, pas)];
 }
-// 변이 칸 둘(그 식물 변이의 기술만 · 에너지 대신 판마다 정해진 횟수) — 숨결(elOwn)은 그 식물 속성, 연출은 기술 id(attack.mjs)
-export function mutKit(p) {
-  if (!p.form || !p.skills || !Array.isArray(p.skills.mut)) return [];
-  const el = SPECIES[p.key] && SPECIES[p.key].el;
-  return p.skills.mut.slice(0, MUT_SLOTS).filter(id => id && SKILLS[id] && SKILLS[id].form === p.form).map(id => ({ ...SKILLS[id], ...(SKILLS[id].elOwn ? { el } : {}), mut: true }));
+// 기술 카드 하나 → 손패 기술(그 식물 변이의 것만 · 에너지 대신 판마다 정해진 횟수): 숨결(elOwn)은 그 식물 속성, 단조 · 위턱(mutPow) = 위력 ↑, 탄약 보급(mutUses) = 횟수 +
+function cardSkill(p, id, pas, extra) {
+  const s = SKILLS[id], el = SPECIES[p.key] && SPECIES[p.key].el, o = { ...s, ...(s.elOwn ? { el } : {}), mut: true, extra };
+  if (pas.mutPow && o.power) o.power = Math.round(o.power * (1 + pas.mutPow));
+  if (pas.mutUses && o.uses) o.uses += pas.mutUses;
+  return o;
 }
+export function cardKit(p, pas = passivesOf(p.cards)) {
+  return (p.cards || []).filter(id => isSkillCard(id) && SKILLS[id] && CARDS[id].form === p.form).map(id => cardSkill(p, id, pas, true));
+}
+export const mutKit = p => cardKit(p);   // 옛 이름(시험 · 다른 화면)
+// 화면(식물 관리)용: 이 식물에 끼운 기술 카드가 전투에서 어떤 기술이 되나(숨결 = 그 식물 속성 · 단조 · 탄약 보급 반영)
+export const cardSkillOf = (p, id) => (isSkillCard(id) && SKILLS[id] ? cardSkill(p, id, passivesOf(p.cards), false) : null);
 // 전투 유닛(rules.js가 읽는 값) — 화면 그림용 key · stage(그림 단계) · pot · shiny도 실어 둠
+//  카드 패시브(2026-10-17): 능력치 배율(체력 · 공격 · 방어 · 기동 %, 치명 +) · 시작 에너지 + · 나머지 효과는 u.pas 로 규칙이 읽음(rules.js · status.js)
 export function unitOf(id, p, extra = {}) {
-  const st = plantStats(p), sp = SPECIES[p.key];
+  const st = plantStats(p), sp = SPECIES[p.key], pas = passivesOf(p.cards), k = s => 1 + (pas[s] || 0), hp = Math.round(st.hp * k('hp'));
   return {
     id, key: p.key, name: p.name, el: sp.el, jong: sp.type, pot: p.pot || 'pot_terra', stage: STAGE_KEY[p.stage], shiny: !!p.shiny, legend: !!p.legend,
-    hp: st.hp, max: st.hp, atk: st.atk, def: st.def, spd: st.spd, acc: st.acc, eva: 0, crit: st.crit,
-    energy: 2, energyMax: 8, kit: kitOfPlant(p), eff: {}, ...extra,
+    hp, max: hp, atk: Math.round(st.atk * k('atk')), def: Math.round(st.def * k('def')), spd: Math.round(st.spd * k('spd')), acc: st.acc, eva: 0, crit: st.crit + (pas.crit || 0),
+    energy: 2 + (pas.energy || 0), energyMax: 8, kit: kitOfPlant(p), eff: {}, pas, cards: (p.cards || []).filter(Boolean), ...extra,
   };
 }
 // 봇 식물: 내 식물 단계에 맞춰(공정하게) 무작위 식물 · 레벨 · 개체값 · 강화 · 기술
@@ -52,11 +62,14 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
   const extra = battle[2] && rng() < 0.5 ? battle[2] : rng() < 0.5 ? 'guard' : 'evade';
   const four = [battle[0], battle[1] || (rng() < 0.5 ? 'guard' : 'evade'), 'basic', extra].filter((x, i, a) => x && a.indexOf(x) === i);
   for (const b of ['guard', 'evade']) if (four.length < 4 && !four.includes(b)) four.push(b);
-  // 변이 봇(자라는 단계부터 가끔 — 사람과 같은 변이 칸 둘): 버섯 = 포자 · 그 밖 = 포식 · 무기 · 독성 · 용족 중
-  let form = sp.form || null, mut = [null, null];
+  // 변이 봇(자라는 단계부터 가끔): 버섯 = 포자 · 그 밖 = 포식 · 무기 · 독성 · 용족 중
+  let form = sp.form || null;
   if (!form && stage >= 1 && rng() < 0.08 + 0.02 * tierBoost) { const fs = sp.type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'); form = fs[Math.floor(rng() * fs.length)]; }
-  if (form) { const list = formSkills(form); for (let i = 0; i < MUT_SLOTS && list.length; i++) mut[i] = list.splice(Math.floor(rng() * list.length), 1)[0]; }
-  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, skills: { battle: four.slice(0, 4), joker: null, forgot: [], learned: [], v4: 1, mut }, shiny: false, legend: false };
+  // 카드(2026-10-17 — 사람과 같은 카드 칸 둘): 변이 봇 = 그 변이 카드 둘(기술 하나 + 무작위 하나), 일반 봇 = 단계만큼(어린 0~1 · 자람 1 · 다 자람 1~2) 일반 카드
+  const cards = [null, null];
+  if (form) { const fc = formCards(form), sk = fc.filter(isSkillCard); cards[0] = sk[Math.floor(rng() * sk.length)]; const rest = fc.filter(x => x !== cards[0]); cards[1] = rest[Math.floor(rng() * rest.length)]; }
+  else { const n = stage === 0 ? (rng() < 0.5 ? 1 : 0) : stage === 1 ? 1 : rng() < 0.6 ? 2 : 1; for (let i = 0; i < n; i++) { let c = rollCard(rng, 'normal'); if (cards.includes(c)) c = null; cards[i] = c; } }
+  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: four.slice(0, 4), joker: null, forgot: [], learned: [], v4: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 
@@ -101,13 +114,14 @@ export function replayBot(spec, acts) {
 }
 // 화면에 보낼 판 모습(유닛 값 그대로 — 화면은 이걸로 자기 판을 고쳐 씀)
 const unitV = u => ({ id: u.id, key: u.key, name: u.name, el: u.el, jong: u.jong, pot: u.pot, stage: u.stage, shiny: !!u.shiny, legend: !!u.legend, trainer: u.trainer, rank: u.rank, tlv: u.tlv,
-  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, used: u.used || null });   // used = 변이 기술을 이번 판에 쓴 횟수
+  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, used: u.used || null,   // used = 변이 기술을 이번 판에 쓴 횟수
+  pas: u.pas || null, cards: u.cards || null });   // 카드(패시브 합 · 끼운 카드 id — 친구 대결에선 상대 것을 감춤, rooms.mjs)
 export function viewOf(B) {
   if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
   return { mode: '1v1', turn: B.turn, over: B.over, me: unitV(B.me), foe: unitV(B.foe) };
 }
 // 화면 쪽: 서버가 보낸 모습으로 판을 세우고(처음) · 턴마다 같은 유닛 객체를 고쳐 씀(교체 연출이 유닛 객체를 붙잡고 있음)
-const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'used', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
+const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'used', 'pas', 'cards', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
 export function battleFromView(v) {
   if (v.mode === 'swap3') {
     const B = makeTeamBattle({ me: v.team.me.map(u => ({ ...u })), foe: v.team.foe.map(u => ({ ...u })), seed: 1 });

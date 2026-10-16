@@ -8,10 +8,12 @@ import { T, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars, ivRing } from './common.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { basicsOf } from '../battle/model.js';
+import { cardSkillOf } from '../game/fight.js';
 import { fxChip, BUFF_LOOK } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
 import { FOCUS, focusOf, plantSheetY } from './home.js';
-import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, formSkills, MUT_SLOTS } from '../game/catalog.js';
+import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS } from '../game/catalog.js';
+import { CARDS, CARD_SLOTS, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { plantStats, sellPrice, BASIC_IDS } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL } from '../game/view.js';
 import { openForm } from '../core/form.js';
@@ -28,8 +30,10 @@ const TABS = [{ id: 'skill', label: '기술' }, { id: 'up', label: '강화' }, {
 const IV_COL = { hp: '#7cf0a0', atk: '#ff8a6a', def: '#6fb8ff', spd: '#ffd84a' };
 const ease = k => k * k * (3 - 2 * k);
 const skillOf = id => (id ? { act: 'attack', cats: ['attack'], ...SKILLS[id] } : null);
+const isCardKey = k => !!k && ((k[0] === 'c' && /^c\d$/.test(k)) || k.startsWith('cl:'));   // 카드 칸 · 가방 카드(2026-10-17)
 // 기본기도 카드로(전투 칸에 넣고 뺌 — 2026-10-16 사용자 "기본스킬 3개도 바꿀 수 있게")
-const skOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p.key).find(b => b.id === id), basic: true } : skillOf(id));
+const skOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p.key).find(b => b.id === id), basic: true } : isSkillCard(id) ? cardSkillOf(p, id) : skillOf(id));   // 기술 카드 = 전투에서 쓰는 모습(숨결 속성 · 단조 위력)
+const faceOn = (p, id) => (isSkillCard(id) ? cardSkillOf(p, id) : cardFace(id));   // 카드 칸에 끼운 카드
 const fxOf = sk => (sk.inflict ? { id: sk.inflict.id } : sk.self ? { buff: BUFF_LOOK[sk.self] || sk.self } : null);
 
 // 기술 카드: 이름 · 속성 / 분류 · 효과 칩 · 비용. 조커 칸 = 금빛 테, 고른 칸 = 청록 테, 새 기술 = 주황 테
@@ -77,7 +81,7 @@ export const plant = {
     this.cardDrag = null;
     const to = this.cardKeyAt(D.x, D.y), app = this.app, p = app && app.state && (app.state.plants[app.state.active] || app.state.plants[0]);
     if (!to || to === D.key || !p) return;
-    if (D.key[0] === 'm' || to[0] === 'm') return this.dropMut(app, p, D.key, to);   // 변이 칸('m0' · 'm1') · 변이 목록('ml:기술')
+    if (isCardKey(D.key) || isCardKey(to) || isSkillCard(this.idAt(p, D.key))) return this.dropCard(app, p, D.key, to);   // 카드 칸('c0' · 'c1') · 가방 카드('cl:카드') · 태생 변이 전투 칸의 기술 카드
     if (D.key === 'pend') { this.sel = null; return this.pickSlot(app, p, to); }   // 새로 핀 기술 → 놓은 칸에(확인)
     if (p.pend && p.pend.length) return app.toast('새로 핀 기술부터 놓아 주세요');
     this.sel = D.key; this.pickSlot(app, p, to);   // 끈 카드 → 놓은 칸(자리 바꿈 규칙)
@@ -210,15 +214,18 @@ export const plant = {
     const stored = [...BASIC_IDS.filter(id => !B4.includes(id)).map(id => 'x:' + id), 'j'];
     stored.forEach((k, i) => this.card(app, p, live, k, cx(i), y, k === 'j' ? skillOf(S.joker) : skOf(p, k.slice(2)), false, k === 'j' ? '#ffd890' : '#7fa8d8', '빈 보관'));
     y += PCARD.h + 14;
-    // 변이 칸 둘(변이 식물만 — 2026-10-16 사용자 "변이식물의 장점은 변이스킬로 6칸") + 그 변이 목록에서 남은 기술(끌어서 바꿔 끼움 · 잊기 없음)
-    if (p.form && FORMS[p.form]) {
-      const F = FORMS[p.form], M = [...(S.mut || []), null, null].slice(0, MUT_SLOTS), rest = formSkills(p.form).filter(id => !M.includes(id));
-      g.text(`변이 기술 · ${F.name}`, 14, y, { font: 'value', color: F.light });
-      y += 18;
-      M.forEach((id, i) => this.card(app, p, live, 'm' + i, cx(i), y, skillOf(id), false, F.col, '빈 칸'));
-      rest.slice(0, 2).forEach((id, i) => this.card(app, p, live, 'ml:' + id, cx(2 + i), y, skillOf(id), false, null));
-      y += PCARD.h + 14;
-    }
+    // 카드 칸 둘(2026-10-17 사용자 카드 구조 — 모든 식물): 일반 식물 = 일반 카드 · 변이 식물 = 그 변이 카드 · 오른쪽 = 가방의 맞는 카드(꾹 눌러 끌어 끼움 · 칸의 카드를 가방 줄로 끌면 뺌)
+    const look = p.form && FORMS[p.form] ? FORMS[p.form] : NORMAL_LOOK, Cs = [...(p.cards || []), null, null].slice(0, CARD_SLOTS);
+    const on = [...Cs, ...S.battle].filter(Boolean), bag = Object.keys(s.cards || {}).filter(id => s.cards[id] > 0 && CARDS[id] && !cardFits(p, id) && !on.includes(id));
+    g.text(p.form && FORMS[p.form] ? `카드 · ${look.name} 변이` : '카드', 14, y, { font: 'value', color: look.light });
+    g.text(`가방 ${bag.reduce((a, id) => a + s.cards[id], 0)}`, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' });
+    y += 18;
+    Cs.forEach((id, i) => this.card(app, p, live, 'c' + i, cx(i), y, faceOn(p, id), false, look.col, '빈 칸'));
+    const by0 = y;
+    bag.forEach((id, i) => { const k = i + 2, cy = y + Math.floor(k / 4) * (PCARD.h + 8); this.card(app, p, live, 'cl:' + id, cx(k % 4), cy, cardFace(id), false, null); if (s.cards[id] > 1) this.countTag(app, cx(k % 4), cy, s.cards[id]); });
+    const rows = Math.max(1, Math.ceil((bag.length + 2) / 4));
+    this.cardRects['cl:'] = { x: cx(2), y: this.hitY(by0), w: cx(3) + PCARD.w - cx(2), h: rows * (PCARD.h + 8), sk: null };   // 가방 줄(빈 곳에 놓아도 뺌)
+    y += rows * (PCARD.h + 8) + 6;
     const bw = Math.floor((W - 34) / 2);
     this.btn(app, live, 'sk_forgot', 14, y, bw, 30, `지운 기술 ${S.forgot.length}`, { style: 'night', icon: 'potion' }, () => { this.sub = 'forgot'; this.scrollY = 0; });
     this.btn(app, live, 'sk_graft', 20 + bw, y, bw, 30, `접목 가지 ${s.scions.length}`, { style: 'night', icon: 'vine' }, () => { this.sub = 'graft'; this.scrollY = 0; });
@@ -238,17 +245,36 @@ export const plant = {
     this.cardRects[k] = { x, y: this.hitY(y), w: PCARD.w, h: PCARD.h, sk };
     this.hit(app, live, id, x, y, PCARD.w, PCARD.h, () => { if (sk) this.openPeek(app, k); });   // 누름 = 뒷면 크게(다시 누르면 닫힘)
   },
-  // 변이 칸 끌어 놓기: 칸 ↔ 칸 = 순서 · 목록 → 칸 = 끼움(있던 것은 목록으로) · 칸 → 목록 카드 = 그 기술과 맞바꿈
-  dropMut(app, p, a, b) {
-    const isM = k => k && k[0] === 'm';
-    if (!isM(a) || !isM(b)) return app.toast('변이 기술은 변이 칸에만 놓아요');
-    const M = [...(p.skills.mut || []), null, null].slice(0, MUT_SLOTS), slot = k => (k === 'm0' ? 0 : k === 'm1' ? 1 : -1), idOf = k => (k.startsWith('ml:') ? k.slice(3) : M[slot(k)]);
-    const sa = slot(a), sb = slot(b);
-    if (sa >= 0 && sb >= 0) [M[sa], M[sb]] = [M[sb], M[sa]];
-    else if (sb >= 0) M[sb] = idOf(a);
-    else if (sa >= 0) M[sa] = idOf(b);
-    else return;
-    app.act('setMut', { id: p.uid, mut: M }).then(r => r && app.toast('변이 칸을 바꿨어요'));
+  // 가방 카드 장 수(2장 넘으면 오른쪽 아래 '×n')
+  countTag(app, x, y, n) {
+    const { g } = app, txt = '×' + n, tw = g.textW(txt, 'label') + 6, tx = x + PCARD.w - tw - 4, ty = y + 4 + 52 - 15;   // 그림 칸 오른쪽 아래(이름 띠를 가리지 않게)
+    rrect(g, tx, ty, tw, 13, 3, 'rgba(6,10,20,0.88)');
+    g.text(txt, tx + 3, ty, { font: 'label', color: '#ffd890' });
+  },
+  // 칸 이름 → 그 칸의 카드 · 기술 id
+  idAt(p, k) { if (!k) return null; if (k[0] === 'c' && k[1] !== 'l') return (p.cards || [])[+k.slice(1)] || null; if (k.startsWith('cl:')) return k.slice(3) || null; if (k[0] === 'b') return p.skills.battle[+k.slice(1)] || null; return null; },
+  // 카드 끌어 놓기(2026-10-17): 가방 → 카드 칸 = 끼움(있던 카드는 가방으로) · 칸 ↔ 칸 = 자리 바꿈 · 칸 → 가방 줄 = 뺌 ·
+  //  태생 변이 = 기술 카드를 전투 칸에도(전투 칸의 배운 기술은 보관 칸으로, 기본기는 그냥 빠짐 — 늘 앎) · 전투 칸의 카드를 가방 줄로 끌면 빠지고 그 자리는 기본기
+  dropCard(app, p, a, b) {
+    if (!b) return;
+    const S = p.skills, Bt = [...S.battle, null, null, null, null].slice(0, 4), Cs = [...(p.cards || []), null, null].slice(0, CARD_SLOTS);
+    const slotOf = k => (k && k[0] === 'c' && k[1] !== 'l' ? { t: 'c', i: +k.slice(1) } : k && k.startsWith('cl:') ? { t: 'bag' } : k && k[0] === 'b' ? { t: 'b', i: +k.slice(1) } : null);
+    const A = slotOf(a), Bk = slotOf(b), id = this.idAt(p, a);
+    if (!A || !Bk || !id) return app.toast('카드는 카드 칸에 놓아요');
+    if (A.t === 'bag' && Bk.t === 'bag') return;
+    const innate = !!(SPECIES[p.key] && SPECIES[p.key].form), basic = () => BASIC_IDS.find(x => !Bt.includes(x)) || null;
+    if (Bk.t === 'b' && !(innate && isSkillCard(id))) return app.toast(innate ? '기술 칸엔 기술 카드만 넣어요' : '기술 칸엔 태생 변이 식물만 카드를 넣어요');
+    if (A.t === 'bag' && Bk.t !== 'bag') { const why = cardFits(p, id); if (why) return app.toast(why); }
+    const put = (sl, v) => { if (sl.t === 'c') Cs[sl.i] = v; else if (sl.t === 'b') Bt[sl.i] = v; };
+    const at = sl => (sl.t === 'c' ? Cs[sl.i] : sl.t === 'b' ? Bt[sl.i] : null);
+    if (Bk.t === 'bag') put(A, A.t === 'b' ? basic() : null);   // 빼기
+    else if (A.t === 'bag') { const old = at(Bk); put(Bk, id); if (Bk.t === 'b' && old && !isSkillCard(old) && !BASIC_IDS.includes(old) && S.joker) return app.toast('보관 칸이 차 있어요 — 조커 칸을 먼저 비워요'); }
+    else {   // 칸 ↔ 칸(카드 칸 · 전투 칸): 맞바꿈 — 카드가 아닌 기술이 카드 칸으로 가면 안 됨
+      const old = at(Bk);
+      if (A.t === 'c' && old && !isSkillCard(old) && Bk.t === 'b') { if (BASIC_IDS.includes(old)) { put(Bk, id); put(A, null); } else return app.toast('카드 칸엔 카드만 놓아요'); }
+      else { put(Bk, id); put(A, old || (A.t === 'b' ? basic() : null)); }
+    }
+    app.act('setSlots', { id: p.uid, battle: Bt, cards: Cs }).then(r => r && app.toast(Bk.t === 'bag' ? '카드를 가방에 넣었어요' : A.t === 'bag' ? '카드를 끼웠어요' : '자리를 바꿨어요'));
   },
   cardKeyAt(x, y) { for (const [k, r] of Object.entries(this.cardRects || {})) if (k !== 'pend' && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return k; return null; },
   // 누름 = 그 카드를 앞으로 가져와 뒤집어 뒷면(전투 손패의 꾹과 같은 움직임 — art/skillcard.js) · 아무 데나 누르면 다시 뒤집혀 제자리로
@@ -280,6 +306,7 @@ export const plant = {
       const go = () => app.act('place', { id: p.uid, skill: pend, target: k === 'j' ? 'joker' : k }).then(r => r && app.toast(`${eul(nm)} 놓았어요`));
       if (!old) return go();
       if (BASIC_IDS.includes(old)) return ask(app, `${eul(nm)} 이 칸에 놓을까요?`, `기본기 ${eun(skOf(p, old).name)} 보관으로 가요`, go, '놓기');
+      if (isSkillCard(old)) return ask(app, `${eul(nm)} 이 칸에 놓을까요?`, `카드 ${eun(SKILLS[old].name)} 가방으로 가요`, go, '놓기');
       return ask(app, `${eul(nm)} 이 칸에 놓을까요?`, `원래 기술 ${eun(SKILLS[old].name)} 지운 기술로 가요`, go, '놓기');
     }
     if (this.sel == null) { this.sel = k; return; }
@@ -291,7 +318,7 @@ export const plant = {
     if (b[0] === 'b') { const j = +b.slice(1); [B4[i], B4[j]] = [B4[j], B4[i]]; }
     else if (b === 'j') B4[i] = S.joker || null;   // 조커 ↔ 전투 칸(전투 칸에 있던 배운 기술은 조커로, 기본기면 보관으로)
     else B4[i] = b.slice(2);                       // 보관한 기본기를 전투 칸에(있던 배운 기술은 조커로)
-    const learned = [...S.battle, S.joker].filter(x => x && !BASIC_IDS.includes(x)), left = learned.filter(x => !B4.includes(x));
+    const learned = [...S.battle, S.joker].filter(x => x && !BASIC_IDS.includes(x) && !isSkillCard(x)), left = learned.filter(x => !B4.includes(x));
     this.sel = null;
     if (left.length > 1) return app.toast('보관 칸은 하나예요 — 조커 칸의 기술을 먼저 전투 칸으로 옮겨요');
     if (!B4.some(Boolean)) return app.toast('전투 칸에 기술이 하나는 있어야 해요');

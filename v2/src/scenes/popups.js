@@ -12,6 +12,8 @@ import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME, T
 import { net } from '../net/api.js';
 import { sellPrice } from '../game/logic.js';
 import { eul } from '../core/josa.js';
+import { CARDS, cardFace } from '../game/cards.js';
+import { cardTiny } from '../art/skillcard.js';
 import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 import { drawGuide } from './guide.js';
@@ -21,18 +23,20 @@ const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 
 // 보상 한 칸의 아이콘 · 이름 · 수
 export const KIND = {
   credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'can', name: '물' }, fert: { icon: 'fert', name: '비료' },
-  regress: { icon: 'potion', name: '회귀 주사' }, fuel: { icon: 'energy', name: '연료 캡슐' }, parts: { icon: 'gear', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
+  regress: { icon: 'potion', name: '회귀 주사' }, card: { icon: 'star', name: '카드' }, fuel: { icon: 'energy', name: '연료 캡슐' }, parts: { icon: 'gear', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
   const out = [];
   for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
   if (box.seed && typeof box.seed === 'object') out.push({ kind: 'seed', seed: box.seed, rar: 3 });
+  if (box.card && CARDS[box.card]) out.push({ kind: 'card', card: box.card, rar: CARDS[box.card].rar });
   return out;
 }
 export function gotLabel(r) {
   if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; return { name: (r.seed.legend ? '전설 ' : '') + (r.seed.shiny ? '색 변종 ' : '') + (sp ? sp.name : '종자'), n: '종자' }; }
   if (r.kind === 'scion') { const s = SKILLS[r.skill]; return { name: s ? s.name : '접목 가지', n: '접목 · ' + (s ? TIER_NAME[s.tier] : '') }; }
   if (r.kind === 'skill') { const s = SKILLS[r.skill]; return { name: s ? s.name : '새 기술', n: r.to || '새 기술' }; }
+  if (r.kind === 'card') { const c = CARDS[r.card]; return { name: c ? c.name : '카드', n: c && c.form ? '변이 카드' : '카드' }; }
   return { name: KIND[r.kind] ? KIND[r.kind].name : r.kind, n: '+' + fmt(r.n || 1) };
 }
 // 보상 칸(가로 w × 세로 44): 희귀도 테 · 아이콘(2배) · 수 · 이름
@@ -44,6 +48,7 @@ export function gotCell(g, x, y, w, r, k = 1) {
   const S = 36, sx = x + 5, sy = y + Math.round((h - S) / 2);
   rrect(g, sx, sy, S, S, 4, '#06111c'); rrect(g, sx + 1, sy + 1, S - 2, S - 2, 3, '#0f2436'); g.rect(sx + 3, sy + S - 3, S - 6, 1, col);
   if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; seedArt(g, sx + S / 2, sy + S / 2, sp ? sp.el : 'grass'); }
+  else if (r.kind === 'card') cardTiny(g, sx + 8, sy + 4, cardFace(r.card));   // 카드 = 작은 카드 모양
   else { const ic = icon((KIND[r.kind] || KIND.credits).icon); g.img(ic, Math.round(sx + S / 2 - ic.width), Math.round(sy + S / 2 - ic.height), 2); }
   const tx = sx + S + 7, room = x + w - 6 - tx, nf = g.textW(L.n, 'name') <= room ? 'name' : g.textW(L.n, 'bold') <= room ? 'bold' : 'body';   // 긴 수(접목 · 중급 등)는 작은 글꼴로
   const hn = glyphH(nf), hb = glyphH('body'), top = y + Math.round((h - hn - 3 - hb) / 2);

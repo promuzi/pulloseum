@@ -216,6 +216,16 @@ export const SKILLS = Object.fromEntries([
   S('m_breath', '용의 숨결', null, 'm', 100, 0, { form: 'dragon', uses: 2, ranged: true, elOwn: true }),   // 속성 = 그 식물 속성(kitOfPlant)
   S('m_scale', '비늘 방패', null, 'm', 0, 0, { form: 'dragon', uses: 2, self: 'shield' }),
   S('m_roar', '용의 포효', null, 'm', 55, 0, { form: 'dragon', uses: 2, inflict: { id: 'taunt' } }),
+  // 속성 변이 기술(2026-10-17 사용자 "변이 카드 수를 늘리자 — 불 속성 공격도 있고 물도 있고 · 다 만들지 말고 어울리는 거와 연결해서"): 변이마다 어울리는 속성 한두 개만
+  S('m_flame', '달군 칼날', 'fire', 'm', 85, 0, { form: 'weapon', uses: 2, inflict: { id: 'burn' } }),
+  S('m_spear', '번개 창', 'bolt', 'm', 80, 0, { form: 'weapon', uses: 2, ranged: true, inflict: { id: 'shock', n: 1 } }),
+  S('m_burrow', '땅굴 습격', 'earth', 'm', 90, 0, { form: 'predator', uses: 2, drain: 0.3 }),
+  S('m_maw', '심해 아가리', 'water', 'm', 85, 0, { form: 'predator', uses: 2, drain: 0.3, inflict: { id: 'wet' } }),
+  S('m_bile', '독물 쏘기', 'water', 'm', 70, 0, { form: 'toxic', uses: 3, ranged: true, inflict: { id: 'poison', n: 1 } }),
+  S('m_ivy', '독가시 덩굴', 'grass', 'm', 80, 0, { form: 'toxic', uses: 2, inflict: { id: 'poison', n: 2 } }),
+  S('m_gust', '포자 바람', 'wind', 'm', 60, 0, { form: 'spore', uses: 3, ranged: true, area: true, inflict: { id: 'spore', n: 1 } }),
+  S('m_frostclaw', '서리 발톱', 'ice', 'm', 90, 0, { form: 'dragon', uses: 2, inflict: { id: 'chill', n: 1 } }),
+  S('m_voltclaw', '뇌룡 발톱', 'bolt', 'm', 90, 0, { form: 'dragon', uses: 2, inflict: { id: 'shock', n: 1 } }),
 ].map(s => [s.id, s]));
 // 변이형(변이 연출 설계 2026-10-15: 포식 = 진홍 · 무기 = 강철 · 독성 = 보라 · 포자 = 금빛 · 용족 = 청록) — 포자는 버섯 전용. 일반(무변이) = null
 export const FORMS = {
@@ -227,7 +237,7 @@ export const FORMS = {
 };
 export const FORM_KEYS = Object.keys(FORMS);
 export const formSkills = form => Object.values(SKILLS).filter(x => x.tier === 'm' && x.form === form).map(x => x.id);
-export const MUT_SLOTS = 2;
+export const MUT_SLOTS = 2;   // 옛 변이 칸 둘(p.skills.mut) — 2026-10-17부터 카드 칸 둘(game/cards.js)로 옮겨 감(logic.js normCards)
 // 탐사 종자가 변이일 확률(지역 mut 배율을 곱함 — 행성 지역 고르기) · 변이 고정 종(SPECIES[키].form)은 늘 그 변이
 export const MUT_P = 0.04;
 const UNI = { flower_grass: 'petal', thorn: 'thorn', aqua: 'aqua', flower_wind: 'wind', spark: 'spark', vine_water: 'tide', cactus_fire: 'ember', gaia: 'gaia', flower_fire: 'blaze', cactus_wind: 'gale', vine_wind: 'gvine', spore_cap: 'spore', frost_bell: 'frost', volt_vine: 'volt', stone_cap: 'stone', jelly_cap: 'jelly', fang_trap: 'fang', blade_vine: 'blade', toxi_cactus: 'toxi', draco_fruit: 'draco', ember_cap: 'emcap', drake_cactus: 'drake' };
@@ -279,6 +289,7 @@ export function levelReward(L) {
   const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0, fuel: 1 + (L % 5 === 0 ? 1 : 0) };
   if (L % 4 === 0) r.regress = 1;
   if (L % 5 === 0) r.seed = 'rare';
+  if (L % 3 === 2) r.card = 'normal';   // 카드(2026-10-17): 세 레벨마다 일반 카드 한 장(addXp가 뽑음)
   return r;
 }
 
@@ -405,6 +416,8 @@ export const SHINY_P = 1 / 64, LEGEND_P = 1 / 120, TRAIT_P = 0.12;   // 색 변�
 export const SHOP = [
   { id: 'seed_common', name: '일반 종자 꾸러미', cost: { credits: 120 }, give: { seed: 'common' } },
   { id: 'seed_rare', name: '희귀 종자 꾸러미', cost: { credits: 480 }, give: { seed: 'rare' } },
+  { id: 'card_basic', name: '일반 카드 꾸러미', cost: { credits: 300 }, give: { card: 'normal' } },   // 카드(2026-10-17) — 일반 식물용
+  { id: 'card_mut', name: '변이 카드 꾸러미', cost: { gems: 18 }, give: { card: 'mut' } },          // 변이 식물용(가진 변이 쪽이 자주)
   { id: 'water10', name: '물 10', cost: { gems: 6 }, give: { water: 10 } },
   { id: 'fert5', name: '비료 5', cost: { gems: 8 }, give: { fert: 5 } },
   { id: 'regress1', name: '유전자 회귀 주사', cost: { gems: 15 }, give: { regress: 1 } },

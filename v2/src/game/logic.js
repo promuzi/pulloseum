@@ -4,7 +4,8 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
-  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, formSkills, MUT_SLOTS, MUT_P } from './catalog.js';
+  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P } from './catalog.js';
+import { CARDS, CARD_SLOTS, cardFits, rollCard, formCards, isSkillCard } from './cards.js';
 
 export class Err extends Error {}
 const need = (c, msg) => { if (!c) throw new Err(msg); };
@@ -26,10 +27,11 @@ export function newGame({ nickname, starter }, rng, now) {
     scions: [], seeds: [], plants: [], storage: [], active: 0, team: [], mode: 'tournament',
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 },
     swap3: { wins: 0, losses: 0 }, pvp: { wins: 0, losses: 0 },
-    discovered: [], pending: [], ship: { model: null },
+    discovered: [], pending: [], ship: { model: null }, cards: {}, cardsV: 1,
   };
   s.plants.push(makePlant(s, { key: starter }, rng, now));
   for (let i = 0; i < 2; i++) s.seeds.push(seedOf(s, rollSpecies(rng, 'common'), rng));
+  s.plants[0].cards[0] = rollCard(rng, 'normal');   // 처음 식물 = 일반 카드 한 장(카드 칸이 있다는 걸 바로 보게 — 2026-10-17)
   s.league = 'sprout'; leaguesOf(s); seasonSync(s, now);
   return s;
 }
@@ -49,12 +51,14 @@ export function makePlant(s, seed, rng, now) {
     skills: { battle: [null, null, null, null], joker: null, forgot: [], learned: [], v4: 1 }, pend: [],
     hv: { t0: now, have: 0 },
   };
-  if (p.form) p.skills.mut = formSkills(p.form).slice(0, MUT_SLOTS);   // 변이 식물 = 변이 칸 둘(전투 칸 넷 + 둘 = 여섯)
   // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기(평타 · 방어 — 회피는 보관)
   learnNow(p, uniqueOf(p.key, 0));
   const c1 = bloomPool(p.key, 0).filter(x => x.id !== uniqueOf(p.key, 0));
   if (c1.length) learnNow(p, pickW(rng, c1).id);
   fillBasics(p);
+  // 카드 칸 둘(2026-10-17): 변이 식물은 처음 필 때 그 변이 카드 둘(기술 카드 하나 + 패시브 하나 — 전엔 변이 칸 둘이 저절로 찼음)
+  p.cards = [null, null];
+  if (p.form) { const fc = formCards(p.form); p.cards = [pick(rng, fc.filter(isSkillCard)), pick(rng, fc.filter(id => !isSkillCard(id)))]; }
   if (!s.discovered.includes(p.key)) s.discovered.push(p.key);
   return p;
 }
@@ -66,7 +70,6 @@ function fillBasics(p) { const b = p.skills.battle, left = BASIC_IDS.filter(id =
 // 옛 세이브(전투 3칸 + 기본기 셋은 늘 손패): 빈 칸 · 넷째 칸을 기본기로 채워 넷으로(한 번만 — 그 뒤 비운 칸은 그대로)
 export function normSkills(p) {
   const S = p && p.skills; if (!S) return p;
-  if (p.form && !Array.isArray(S.mut)) S.mut = formSkills(p.form).slice(0, MUT_SLOTS);   // 변이 칸 둘(처음 = 목록 앞 둘)
   if (S.v4) return p;
   const b = (Array.isArray(S.battle) ? S.battle : []).slice(0, LOADOUT);
   while (b.length < LOADOUT) b.push(null);
@@ -86,6 +89,57 @@ function learnNow(p, id) {
   p.pend.push(id); return 'pend';
 }
 export const findPlant = (s, id) => s.plants.find(p => p.uid === id) || null;
+
+// ── 카드(2026-10-17 — 표 = cards.js): 가방 s.cards = { id: 장 수 } · 식물 p.cards = 카드 칸 둘 · 태생 변이는 전투 칸에도 그 변이의 기술 카드 ──
+const addCard = (s, id, n = 1) => { s.cards[id] = (s.cards[id] || 0) + n; };
+const tally = list => { const o = {}; for (const x of list) if (x) o[x] = (o[x] || 0) + 1; return o; };
+const cardsOn = p => [...(p.cards || []), ...((p.skills && p.skills.battle) || []).filter(isSkillCard)].filter(Boolean);
+// 식물이 떠날 때(팔기 · 해체 · 거름) 끼운 카드는 가방으로
+const releaseCards = (s, p) => { for (const id of cardsOn(p)) if (CARDS[id]) addCard(s, id); };
+export const formsOwned = s => [...new Set([...s.plants, ...(s.storage || [])].map(p => p.form).filter(Boolean))];
+const OLD_MUT = { predator: ['m_bite', 'm_devour', 'm_hunt'], weapon: ['m_slash', 'm_shot', 'm_smash'], toxic: ['m_spit', 'm_acid', 'm_miasma'], spore: ['m_puff', 'm_sleep', 'm_bloom'], dragon: ['m_breath', 'm_scale', 'm_roar'] };
+// 옛 세이브 맞추기: 카드 칸 · 가방 · 옛 변이 칸 둘(p.skills.mut — 2026-10-16) → 카드 칸(끼워 둔 기술은 그대로, 그 변이의 나머지 옛 기술은 카드로 가방에 — 잃는 것 없게)
+export function normCards(s) {
+  if (!s.cards || typeof s.cards !== 'object' || Array.isArray(s.cards)) s.cards = {};
+  for (const p of [...(s.plants || []), ...(s.storage || [])]) {
+    if (!Array.isArray(p.cards)) p.cards = [null, null];
+    while (p.cards.length < CARD_SLOTS) p.cards.push(null);
+    const S = p.skills;
+    if (S && Array.isArray(S.mut)) {
+      const m = S.mut.filter(id => id && SKILLS[id] && SKILLS[id].form === p.form).slice(0, CARD_SLOTS);
+      m.forEach((id, i) => { if (!p.cards[i]) p.cards[i] = id; else addCard(s, id); });
+      for (const id of OLD_MUT[p.form] || []) if (!m.includes(id)) addCard(s, id);
+      delete S.mut;
+    }
+  }
+  if (!s.cardsV) { s.cardsV = 1; addCard(s, 'n_wall'); }   // 카드가 생기기 전부터 하던 사람 = 일반 카드 한 장(새 계정은 처음 식물에 한 장)
+  return s;
+}
+// 전투 칸 넷 + 카드 칸 둘을 한 번에 정하기(화면이 새 배열을 보냄 — 끼우기 · 빼기 · 자리 바꾸기 모두):
+//  카드 칸 = 맞는 카드(일반 식물 = 일반 카드 · 변이 식물 = 그 변이 카드) · 전투 칸의 카드 = 태생 변이의 기술 카드만 · 한 식물에 같은 것 두 번 없이 ·
+//  새로 끼운 카드는 가방에서 빠지고 뺀 카드는 가방으로 · 배운 기술 · 기본기 규칙은 전과 같음(뺀 배운 기술은 보관 한 칸에만)
+export function setSlots(s, id, battle, cards) {
+  const p = getPlant(s, id); normSkills(p); normCards(s);
+  need(Array.isArray(battle) && battle.length === LOADOUT, '전투 칸은 넷이에요');
+  need(Array.isArray(cards) && cards.length === CARD_SLOTS, '카드 칸은 둘이에요');
+  const B = battle.map(x => (x == null || x === '' ? null : String(x))), C = cards.map(x => (x == null || x === '' ? null : String(x)));
+  for (const x of C) if (x) { const why = cardFits(p, x); need(!why, why); }
+  for (const x of B) if (isSkillCard(x)) { need(!!SPECIES[p.key].form, '기술 칸엔 태생 변이 식물만 카드를 넣어요'); const why = cardFits(p, x); need(!why, why); }
+  const all = [...B, ...C].filter(Boolean);
+  need(new Set(all).size === all.length, '같은 것을 두 칸에 둘 수 없어요');
+  const learned = new Set([...p.skills.battle, p.skills.joker].filter(x => x && !isBasic(x) && !isSkillCard(x))), plain = B.filter(x => x && !isSkillCard(x));
+  for (const x of plain) need(isBasic(x) || learned.has(x), '모르는 기술이에요');
+  const left = [...learned].filter(x => !plain.includes(x));
+  need(left.length <= 1, '보관 칸은 하나예요 — 배운 기술은 하나만 뺄 수 있어요');
+  need(B.some(Boolean), '전투 칸에 기술이 하나는 있어야 해요');
+  const before = tally(cardsOn(p)), after = tally([...B.filter(isSkillCard), ...C]);
+  for (const [k, n] of Object.entries(after)) { const add = n - (before[k] || 0); if (add > 0) need((s.cards[k] || 0) >= add, `${CARDS[k].name} 카드가 가방에 없어요`); }
+  for (const [k, n] of Object.entries(after)) { const add = n - (before[k] || 0); if (add > 0) { s.cards[k] -= add; if (s.cards[k] <= 0) delete s.cards[k]; } }
+  for (const [k, n] of Object.entries(before)) { const back = n - (after[k] || 0); if (back > 0) addCard(s, k, back); }
+  p.skills.battle = B; p.skills.joker = left[0] || null; p.cards = C;
+  return {};
+}
+export function setCards(s, id, cards) { const p = getPlant(s, id); normSkills(p); return setSlots(s, id, p.skills.battle, cards); }
 const getPlant = (s, id) => { const p = findPlant(s, id); need(p, '그 식물이 스마트팜에 없어요'); return p; };
 
 // 능력치(전투에 들어가는 값): 기본 × 단계 × (1 + 개체값%) + 강화
@@ -142,28 +196,22 @@ export function placePending(s, id, skill, target) {
   if (slot === 'skip') { p.skills.forgot.push(skill); return { forgot: skill }; }
   const old = slot === 'joker' ? p.skills.joker : p.skills.battle[slot];
   if (slot === 'joker') p.skills.joker = skill; else p.skills.battle[slot] = skill;
+  if (isSkillCard(old)) { normCards(s); addCard(s, old); return { forgot: null, card: old }; }   // 태생 변이 전투 칸의 카드 = 가방으로
   if (old && !isBasic(old)) { p.skills.forgot.push(old); return { forgot: old }; }
   return { forgot: null };
 }
 // 전투 칸 넷 정하기(화면이 새 배열을 보냄): 배운 기술 · 기본기 셋 중에서, 같은 것 두 번 없이 · 전투 칸에서 뺀 배운 기술은 조커(보관) 한 칸에만 — 기본기는 빼도 늘 앎
 export function setLoadout(s, id, list) {
-  const p = getPlant(s, id); normSkills(p);
-  need(Array.isArray(list) && list.length === LOADOUT, '전투 칸은 넷이에요');
-  const L = list.map(x => (x == null || x === '' ? null : String(x)));
-  const learned = new Set([...p.skills.battle, p.skills.joker].filter(x => x && !isBasic(x))), seen = new Set();
-  for (const x of L) { if (!x) continue; need(!seen.has(x), '같은 기술을 두 칸에 둘 수 없어요'); seen.add(x); need(isBasic(x) || learned.has(x), '모르는 기술이에요'); }
-  const left = [...learned].filter(x => !seen.has(x));
-  need(left.length <= 1, '보관 칸은 하나예요 — 배운 기술은 하나만 뺄 수 있어요');
-  need(L.some(Boolean), '전투 칸에 기술이 하나는 있어야 해요');
-  p.skills.battle = L; p.skills.joker = left[0] || null;
-  return {};
+  const p = getPlant(s, id); normCards(s);
+  return setSlots(s, id, list, p.cards);   // 카드 칸은 그대로(태생 변이의 전투 칸 카드도 이 규칙으로 — 2026-10-17)
 }
 // 전투 칸 ↔ 조커 자리 바꾸기(옛 화면용 — 기본기 자리면 기본기는 보관으로)
 export function swapJoker(s, id, slot) {
   const p = getPlant(s, id); normSkills(p);
   const b = p.skills.battle;
   need(slot >= 0 && slot < LOADOUT, '칸을 골라 주세요');
-  const out = b[slot]; b[slot] = p.skills.joker; p.skills.joker = out && !isBasic(out) ? out : null;
+  const out = b[slot]; b[slot] = p.skills.joker; p.skills.joker = out && !isBasic(out) && !isSkillCard(out) ? out : null;
+  if (isSkillCard(out)) { normCards(s); addCard(s, out); }   // 카드는 보관 칸이 아니라 가방으로
   return {};
 }
 // 강화: 레벨업 포인트 + 돈(상한 없음 — 몰빵 가능), 리셋 = 돈
@@ -196,6 +244,7 @@ export function merge(s, id, foodId, stat) {
   const add = 1 + Math.floor(starsOf(food.ivs) / 2), before = p.ivs[stat] || 0;
   p.ivs[stat] = Math.min(IV_MAX, before + add);
   from.splice(from.indexOf(food), 1);
+  normCards(s); releaseCards(s, food);
   fixActive(s);
   return { stat, from: before, to: p.ivs[stat] };
 }
@@ -312,6 +361,7 @@ function grant(s, r) {
   else if (r.kind === 'water' || r.kind === 'fert' || r.kind === 'regress' || r.kind === 'fuel' || r.kind === 'parts') s.items[r.kind] = (s.items[r.kind] || 0) + r.n;
   else if (r.kind === 'seed') s.seeds.push(r.seed);
   else if (r.kind === 'scion') s.scions.push({ id: uid(s), skill: r.skill });
+  else if (r.kind === 'card') { normCards(s); addCard(s, r.card); }
 }
 export function rollSpecies(rng, rarity, pool) {
   const keys = (pool || Object.keys(SPECIES)).filter(k => !rarity || SPECIES[k].rarity === rarity);
@@ -327,16 +377,6 @@ export function seedOf(s, key, rng, o = {}) {
   return sd;
 }
 export const formsFor = key => (SPECIES[key] && SPECIES[key].type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'));
-// 변이 칸 둘 정하기(그 변이 목록 안에서 언제든 — 잊기 없음): 같은 기술 두 번 없이, 빈 칸 허용
-export function setMut(s, id, list) {
-  const p = getPlant(s, id); normSkills(p);
-  need(p.form, '변이 식물만 변이 칸이 있어요');
-  need(Array.isArray(list) && list.length === MUT_SLOTS, '변이 칸은 둘이에요');
-  const ok = formSkills(p.form), L = list.map(x => (x == null || x === '' ? null : String(x))), seen = new Set();
-  for (const x of L) { if (!x) continue; need(ok.includes(x), '이 변이의 기술이 아니에요'); need(!seen.has(x), '같은 기술을 두 칸에 둘 수 없어요'); seen.add(x); }
-  p.skills.mut = L;
-  return {};
-}
 // 접목 가지 굴리기 — q(0~1) = 투자·단계가 높을수록 상급·특수 확률 ↑
 export function rollScion(rng, p, q) {
   const sp = SPECIES[p.key], fit = Object.values(SKILLS).filter(x => x.tier !== 'u' && (x.tier === 's' || x.el === sp.el || x.jong === sp.type || (x.tier === 'g' && x.branch === sp.branch)));
@@ -351,9 +391,10 @@ export function sellPrice(p) {
 }
 const takePlant = (s, id) => {
   let i = s.plants.findIndex(x => x.uid === id);
-  if (i >= 0) { need(s.plants.length > 1, '스마트팜에 하나는 남겨 둬요'); const p = s.plants.splice(i, 1)[0]; fixActive(s); return p; }
+  normCards(s);
+  if (i >= 0) { need(s.plants.length > 1, '스마트팜에 하나는 남겨 둬요'); const p = s.plants.splice(i, 1)[0]; fixActive(s); releaseCards(s, p); return p; }
   i = s.storage.findIndex(x => x.uid === id); need(i >= 0, '그 식물이 없어요');
-  return s.storage.splice(i, 1)[0];
+  const p = s.storage.splice(i, 1)[0]; releaseCards(s, p); return p;
 };
 // 처음 안내 봤음(화면 이름 — 화면이 처음 열릴 때 한 번만 뜨게, 기기를 바꿔도). 이름 모양 · 개수 제한
 export function seeGuide(s, id) {
@@ -386,6 +427,7 @@ export function dismantle(s, id, rng) {
     else if (r < 0.8 + 0.05 * q) got.push({ kind: 'regress', n: 1, rar: 4 });
     else got.push({ kind: rng() < 0.5 ? 'water' : 'fert', n: 2, rar: 1 });
   }
+  if (rng() < (p.form ? 0.5 : 0.25)) { const c = rollCard(rng, p.form || 'normal'); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); }   // 카드(2026-10-17)
   for (const r of got) grant(s, r);
   return { got, name: p.name };
 }
@@ -400,7 +442,7 @@ export function fuelSync(s, now) {
 }
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
-export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) normSkills(p); seasonSync(s, now); return s; }
+export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) normSkills(p); normCards(s); seasonSync(s, now); return s; }
 // 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로) — 옛 세이브의 내구도(dur)는 이제 안 씀(2026-10-16 없앰)
 export function probeOf(s) {
   if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])) };
@@ -412,7 +454,7 @@ export function probeOf(s) {
 //  2026-10-16 사용자 "탐사선 스펙 = 딱 여행 갈 수 있는 기준선과 그에 준하는 확률 높이기 스펙 · 숫자로 복잡하게 말고 전부 레벨로 · 권장 레벨 쓰고 · 다른 게 미달이어도 필수 스펙만 갖추면 갈 수 있게":
 //  필수(모자라면 못 감) = 연료 탱크 ≥ 궤도 · 탐사 장치 ≥ 지역 단계 / 권장 = 내구성 — 지역 위험 + 먼 궤도 + 위험한 곳에선 짐(탐사 장치 + 채집기)이 무거우면 +1(사용자 "실패 리스크는 보상 관련 스펙과도 연결, 특히 내구성에")
 //  성공 = 권장을 채우면 95% · 한 단계 모자랄 때마다 −20%p(가장 낮아도 30%). 내구도(닳고 고치기)는 없앰
-//  region = 지역 id(또는 regionOf 결과) · gem = 보상 칸 하나가 귀한 것(접목 가지 · 회귀 주사 · 보석)일 확률
+//  region = 지역 id(또는 regionOf 결과) · gem = 보상 칸 하나가 귀한 것(접목 가지 · 회귀 주사 · 보석 · 카드)일 확률
 export function exploreOdds(s, pl, region) {
   const P = probeOf(s), V = P.lv, load = (V.scanner - 1) + (V.cargo - 1), Z = regionOf(pl, region && typeof region === 'object' ? region.id : region), hz = Z.hazard;
   const hull = Math.max(1, Math.min(PROBE.hull.max, 1 + hz + Math.floor((pl.orbit - 1) / 2) + (hz >= 1 && load >= 5 ? 1 : 0))), short = Math.max(0, hull - V.hull);
@@ -444,7 +486,8 @@ export function explore(s, planetId, rng, now, regionId) {
       got.push({ kind: 'seed', seed: seedOf(s, key, rng, { legend, ivk: Z.vital + Math.floor((P.lv.vault - 1) / 2), mut: Z.mut || 1 }), rar: legend ? 4 : SPECIES[key].rarity === 'rare' ? 2 : 1 });
     }
     const n = 1 + Math.floor((P.lv.cargo - 1) * 0.75 + rng() * 0.5), q = (P.lv.scanner - 1) / 4;   // 채집기 = 개수, 탐사 장치 = 등급(0~1)
-    for (let i = 0; i < n; i++) got.push(rollLoot(Z, q, O.cost, rng));
+    const owned = formsOwned(s);
+    for (let i = 0; i < n; i++) got.push(rollLoot(Z, q, O.cost, rng, owned));
   } else got.push({ kind: 'credits', n: Math.round(O.cost * 0.15), rar: 0 });   // 실패: 건진 것 조금
   for (const r of got) grant(s, r);
   for (const r of got) if (r.kind === 'seed' && !s.discovered.includes(r.seed.key)) s.discovered.push(r.seed.key);
@@ -455,9 +498,9 @@ export function explore(s, planetId, rng, now, regionId) {
 //  pl = 지역(regionOf — 종류 · 귀한 보상 배수 rare · 식물은 그 지역 것)
 function lootW(pl, q) {
   const res = pl.kind === 'resource' ? 2 : pl.kind === 'mixed' ? 1.3 : 1, rr = pl.rare || 1;
-  return [{ k: 'credits', w: 30 }, { k: 'water', w: 22 }, { k: 'fert', w: 14 }, { k: 'parts', w: 18 * res }, { k: 'scion', w: (4 + 10 * q) * rr }, { k: 'regress', w: (1 + 4 * q) * rr }, { k: 'gems', w: (0.5 + 3 * q) * rr }];
+  return [{ k: 'credits', w: 30 }, { k: 'water', w: 22 }, { k: 'fert', w: 14 }, { k: 'parts', w: 18 * res }, { k: 'scion', w: (4 + 10 * q) * rr }, { k: 'regress', w: (1 + 4 * q) * rr }, { k: 'gems', w: (0.5 + 3 * q) * rr }, { k: 'card', w: (2 + 4 * q) * rr }];
 }
-function rollLoot(pl, q, cost, rng) {
+function rollLoot(pl, q, cost, rng, owned = []) {
   const res = pl.kind === 'resource' ? 2 : pl.kind === 'mixed' ? 1.3 : 1, rich = pl.rich || 1;
   const x = pickW(rng, lootW(pl, q)).k;
   if (x === 'credits') return { kind: 'credits', n: Math.round(cost * (0.15 + 0.25 * rng()) * rich), rar: 0 };
@@ -465,6 +508,7 @@ function rollLoot(pl, q, cost, rng) {
   if (x === 'parts') return { kind: 'parts', n: Math.max(1, Math.round((1 + 2 * rng()) * res * rich)), rar: 1 };
   if (x === 'scion') return { kind: 'scion', skill: rollScion(rng, { key: pick(rng, pl.pool) }, Math.min(1, 0.2 + 0.6 * q + 0.1 * (pl.orbit - 1))), rar: 3 };
   if (x === 'regress') return { kind: 'regress', n: 1, rar: 4 };
+  if (x === 'card') { const c = rollCard(rng, rng() < Math.min(0.6, 0.2 * (pl.mut || 1)) ? 'mut' : 'normal', owned); return { kind: 'card', card: c, rar: CARDS[c].rar }; }
   return { kind: 'gems', n: 1 + Math.floor(rng() * 2 + q), rar: 4 };
 }
 // 탐사선 강화: 돈 + 부품(자원형 행성에서 많이)
@@ -487,6 +531,7 @@ export function buy(s, itemId, rng) {
   for (const [k, v] of Object.entries(it.cost)) s.wallet[k] -= v;
   const g = it.give;
   if (g.seed) { const sd = seedOf(s, rollSpecies(rng, g.seed), rng); s.seeds.push(sd); return { seed: sd }; }
+  if (g.card) { const c = rollCard(rng, g.card, formsOwned(s)); grant(s, { kind: 'card', card: c }); return { card: c }; }
   give(s, g);
   return { give: g };
 }
@@ -500,6 +545,7 @@ export function addXp(s, n, rng) {
     const r = levelReward(u.level), box = { ...r };
     give(s, r);
     if (r.seed) { const sd = seedOf(s, rollSpecies(rng, r.seed), rng); s.seeds.push(sd); box.seed = sd; }
+    if (r.card) { const c = rollCard(rng, r.card); grant(s, { kind: 'card', card: c }); box.card = c; }
     s.pending.push({ kind: 'level', level: u.level, box, slots: farmSlots(u.level) });
     ups.push(u.level);
   }

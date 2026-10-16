@@ -71,6 +71,23 @@ export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'we
 export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1) * (has(u, 'wall') ? FX.wall.dmgK : 1);
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
+// 카드 패시브(2026-10-17 — game/cards.js, 전투 유닛 u.pas): 공격 배율(용의 분노 = 내 체력 절반 아래 · 공생 균사 = 상대 나쁜 효과 수) · 피해 배율(소화액 = 상대 체력 30% 아래 · 강산 = 독 걸린 상대 · 강철 비늘 = 받는 피해 ↓)
+export const debuffCount = u => { const e = (u && u.eff) || {}; return DEBUFFS.filter(k => e[k]).length + (e.skip || e.frozen ? 1 : 0); };
+export function pasAtkK(u, foe) {
+  const p = u && u.pas; if (!p) return 1;
+  let k = 1;
+  if (p.wrath && u.hp < u.max * 0.5) k *= 1 + p.wrath;
+  if (p.mycel && foe) k *= 1 + p.mycel * Math.min(4, debuffCount(foe));
+  return k;
+}
+export function pasDmgK(att, def) {
+  let k = 1;
+  const a = att && att.pas, d = def && def.pas;
+  if (a && a.exec && def.hp < def.max * 0.3) k *= 1 + a.exec;
+  if (a && a.acid && has(def, 'poison')) k *= 1 + a.acid;
+  if (d && d.guard) k *= 1 - d.guard;
+  return k;
+}
 export const mustSkip = u => has(u, 'skip');
 export const noEnergy = u => has(u, 'shade') || has(u, 'choke');
 export const canSwitch = u => !has(u, 'root') && !has(u, 'skip');   // 뿌리 묶기 · 쉬는 차례(얼음·마비·기절)면 교체 못 함
@@ -123,6 +140,10 @@ export function apply(tgt, id, n, ctx) {
   if (!D || tgt.hp <= 0) return;
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
   if (!D.buff && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 중엔 나쁜 효과가 안 걸림
+  if (tgt.pas && tgt.pas.immune && tgt.pas.immune.includes(id)) { ev.push({ t: 'immune', ...base, card: true }); return; }   // 카드(해독 체질)
+  const by = ctx.by && ctx.by.pas;
+  if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
+  if (by && id === 'spore' && by.sporeAdd) n += by.sporeAdd;      // 카드(포자 번식)
   if (SKIP_IDS.includes(id) && (e.brace || e.skip)) { ev.push({ t: 'resist', ...base, why: e.brace ? 'brace' : 'skip' }); return; }
   if (id === 'poison') {
     const p = e.poison ||= { n: 0, last: T };
@@ -225,6 +246,10 @@ export function endTurn(pairs, turn, ev, stop = null) {
     if (e.regen && u.hp > 0) {   // 재생: 그늘이면 멈춤(햇빛이 없음), 화상이면 절반
       if (!e.shade) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
       if (--e.regen.left <= 0) { delete e.regen; ev.push({ t: 'expire', who: u.id, ids: ['regen'], list: listOf(u) }); }
+    }
+    if (u.pas && u.hp > 0 && u.hp < u.max && (u.pas.regen || (u.pas.rot && opp))) {   // 카드: 재생 비늘(최대 체력 %) · 부생 회복(상대 나쁜 효과 하나당 %) — 화상이면 절반
+      const r = (u.pas.regen || 0) + (u.pas.rot && opp ? u.pas.rot * debuffCount(opp) : 0);
+      if (r > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.max(1, Math.round(u.max * r * healK(u)))); if (u.hp > before) ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, card: true, list: listOf(u) }); }
     }
     if (e.spore && u.hp > 0 && e.spore.last < turn) {   // 포자는 붙은 다음 턴부터 턴 끝마다 스스로 자람(자리 잡는 데 한 턴)
       e.spore.n += 1;

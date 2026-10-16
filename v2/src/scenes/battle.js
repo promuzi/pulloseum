@@ -11,7 +11,8 @@ import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.j
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
-import { cardFront, cardSlot, renderFaces, drawFlip } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, drawFlip, cardTiny } from '../art/skillcard.js';
+import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
 import { glyphH, wrap } from '../core/text.js';
@@ -42,7 +43,9 @@ const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 //  기타 줄(교체 · 감정) → 손패 → 내 체력판 → 경기장(그림 348칸을 손패 위에 붙이고, 짧으면 위 하늘을 잘라 올리고 길면 위에 하늘을 늘임)
 //  옛 판(손패 여섯 = 기본기 셋 + 배운 기술 셋)은 두 줄 그대로
 const HAND_W = 62, HAND_GX = 4, MISC_H = 32, BOT_PAD = 10;
-const mutHand = kit => !!(kit && kit.some(s => s.mut));   // 변이 칸 둘(2026-10-16 사용자 "변이식물의 장점은 변이스킬로 6칸")
+// 카드 칸의 기술 카드 = 아래 줄(2026-10-17 카드 칸 — 태생 변이가 전투 칸에 넣은 기술 카드는 extra: false 라 위 줄 제자리). 옛 판(extra 없음)의 변이 기술도 아래 줄
+const isExtra = s => !!s && (s.extra ?? !!s.mut);
+const mutHand = kit => !!(kit && kit.some(isExtra));   // 변이 칸 둘(2026-10-16 사용자 "변이식물의 장점은 변이스킬로 6칸")
 const handRows = kit => (kit && kit.length > 4 ? 2 : 1);
 function layOf(H, rows, merged = false) {
   const miscY = merged ? null : H - BOT_PAD - MISC_H, HY = (merged ? H - BOT_PAD : miscY - 8) - rows * CARD_H - (rows - 1) * CARD_GY, AH = HY - AY + 28;
@@ -205,7 +208,7 @@ export const battle = {
     const four = u => { u.kit = [...u.kit.filter(s => s.id[0] === 's'), ...u.kit.filter(s => s.id[0] !== 's')].slice(0, 4); };
     for (const u of B.team ? [...B.team.me, ...B.team.foe] : [B.me, B.foe]) four(u);
     if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &used=1 = 첫 변이 기술을 한 번 씀)
-      const ms = formSkills(p.mut).slice(0, 2).map(id => ({ ...SKILLS[id], mut: true, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));
+      const ms = (p.mk ? String(p.mk).split(',').filter(id => SKILLS[id]) : formSkills(p.mut).slice(0, 2)).map(id => ({ ...SKILLS[id], mut: true, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));   // &mk=기술,기술 = 그 변이 기술로(연출 검토)
       B.me.kit.push(...ms);
       if (p.used) B.me.used = { [ms[0].id]: +p.used };
     }
@@ -699,7 +702,7 @@ export const battle = {
   // 손패: 여섯 장(위 줄 = 기본기 · 아래 줄 = 배운 기술, 모자라면 빈 칸). 꾹(0.32초) 누르면 그 카드를 앞으로 가져와 뒷면(상세)을 봄
   hand(app, PY0, live, skipNow) {
     const { g, W, input } = app, B = this.B, v = this.v, mh = mutHand(B.me.kit), one = handRows(B.me.kit) === 1 || mh;
-    const kit = mh ? [...B.me.kit.filter(s => !s.mut), null, null, null, null].slice(0, 4).concat(B.me.kit.filter(s => s.mut)) : B.me.kit;   // 변이 = 아래 줄 왼쪽 둘
+    const kit = mh ? [...B.me.kit.filter(s => !isExtra(s)), null, null, null, null].slice(0, 4).concat(B.me.kit.filter(isExtra)) : B.me.kit;   // 카드 칸 기술 = 아래 줄 왼쪽 둘
     this.cards = {}; this.useWas = this.useWas || {}; this.shineAt = this.shineAt || {};
     const CW = one ? HAND_W : CARD_W, GX = one ? HAND_GX : CARD_GX, per = one ? 4 : 3, n = mh ? kit.length : one ? 4 : 6, x0 = Math.round((W - CW * per - GX * (per - 1)) / 2);
     for (let i = 0; i < n; i++) {
@@ -867,7 +870,8 @@ export const battle = {
   infoSheet(app) {
     const { g, W, H, input } = app, P = T.ptext, rows = [];
     for (const side of ['foe', 'me']) for (const st of this.statuses(side)) rows.push({ side, st });
-    const h = Math.min(H - 60, 74 + Math.max(1, rows.length) * 30), y = Math.round((H - h) / 2), x = 10, w = W - 20;
+    const mine = ((this.v.view.me && this.v.view.me.cards) || []).filter(id => CARDS[id] && CARDS[id].kind === 'passive');   // 내 카드 패시브(2026-10-17 — 상대 카드는 친구 대결에서 안 보임)
+    const h = Math.min(H - 60, 74 + Math.max(1, rows.length) * 30 + (mine.length ? 34 : 0)), y = Math.round((H - h) / 2), x = 10, w = W - 20;
     g.c.fillStyle = 'rgba(6,10,18,0.7)'; g.c.fillRect(0, 0, W, H);
     input.hit('in_block', 0, 0, W, H, () => { this.info2 = false; });
     holo(g, x, y, w, h, T.card || T.panel, 16);
@@ -881,6 +885,11 @@ export const battle = {
       g.text(`${who ? who.name : ''}${side === 'me' ? '(나)' : ''}`, x + 60, yy + 1, { color: P.sub });
       g.text(STATUS_DESC[st.id] || '', x + 10, yy + 17, { color: P.main });
       yy += 30;
+    }
+    if (mine.length && yy <= y + h - 70) {   // 내 카드: 작은 카드 + 이름
+      let cx = x + 10;
+      g.text('내 카드', cx, yy + 8, { color: P.sub }); cx += g.textW('내 카드') + 8;
+      for (const id of mine) { cardTiny(g, cx, yy, cardFace(id)); g.text(CARDS[id].name, cx + 24, yy + 8, { color: P.main }); cx += 30 + g.textW(CARDS[id].name); }
     }
     button(app, 'in_close', W / 2 - 50, y + h - 36, 100, 28, '닫기', { style: 'night', onTap: () => { this.info2 = false; } });
   },

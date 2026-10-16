@@ -48,6 +48,7 @@ const artOf = sk => SKILLART[sk.id] || SKILLART[NAME_ID[sk.name]] || null;
 
 // 그림 창의 큰 아이콘: 거는 효과 > 내 버프 > (공격 아닌) 분류 > 속성 > 칼
 function artIcon(sk) {
+  if (sk.passive && sk.icon) return sk.icon;   // 패시브 카드(game/cards.js)
   const f = sk.inflict && STATUS[sk.inflict.id];
   if (f && f.icon) return f.icon;
   const b = sk.self && STATUS[BUFF_KEY[sk.self] || sk.self];
@@ -60,9 +61,9 @@ function artIcon(sk) {
 const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 const tempArt = new Map();
 function placeholderArt(sk) {
-  const name = artIcon(sk), key = (sk.el || '-') + '|' + name;
+  const name = artIcon(sk), look = sk.passive && sk.look, key = (sk.el || '-') + '|' + name + (look ? '|' + look.col : '');
   let cv = tempArt.get(key); if (cv) return cv;
-  const E = elOf(sk), W = ART_W, H = ART_H;
+  const E = look ? { main: look.col, light: look.light, dark: hexMix(look.col, '#0b1322', 0.55) } : elOf(sk), W = ART_W, H = ART_H;
   cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d'), id = c.createImageData(W, H), d = id.data;
   const steps = [E.light, hexMix(E.light, E.main, 0.55), E.main, hexMix(E.main, E.dark, 0.5), E.dark, hexMix(E.dark, '#0b1322', 0.45)].map(hexRgb);
@@ -91,6 +92,7 @@ function placeholderArt(sk) {
 
 // 테: 먹선 → 속성 색 금속 테 2칸(위·왼 빛 · 아래·오른 그늘) → 안쪽 먹선. 고른 카드 = 금빛 테
 const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
+  : sk.passive && sk.look ? [sk.look.col, sk.look.light, hexMix(sk.look.col, C.ink, 0.5)]   // 일반 카드 = 하늘색 테
   : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
 function cardFrame(g, x, y, w, h, sk, lit) {
   const [mid, hi, lo] = frameCols(sk, lit);
@@ -113,6 +115,7 @@ function diamond(g, cx, cy, r, [fill, hi, lo]) {
 const pct = v => Math.round(v * 100) + '%';
 export function statOf(sk, o = {}) {
   if (!sk) return null;
+  if (sk.passive) { const L = sk.look || {}; return sk.badge ? { kind: 'pill', txt: sk.badge[0], icon: null, col: [hexMix(L.col || '#5fb3d9', C.ink, 0.25), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)], label: '효과' } : null; }
   if (sk.act === 'attack') return sk.power ? { kind: sk.area ? 'bomb' : 'pow', txt: String(sk.power), label: '위력' } : null;   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
   const half = !!o.halved, k = half ? RULES.repeatStanceK : 1;   // 바로 전 턴에도 같은 자세 = 효과 절반(rules.js) — 두 번째에만 바뀐 수 · 주황
   if (sk.act === 'guard') return { kind: 'block', txt: pct((1 - (sk.guardMult ?? 0.5)) * k), label: '막음', half };
@@ -187,7 +190,7 @@ function statBadge(g, xr, cy, st, dim, gh) {
     c.drawImage(cv, sx, cy - 8);
     num(g, st.txt, sx + cv.width / 2, cy, gh);
   } else {   // 광역(폭탄) · 회피 · 보호막 · 회복 = 아이콘 + 알약(아이콘이 알약 왼쪽 끝에 걸침)
-    const B = BADGE[st.kind], pw = tw + 9, px = xr - pw, py = cy - 7, [f, h, l] = dim ? GEM.off : st.half ? WARM : B.col, ic = icon(B.icon);
+    const B = BADGE[st.kind] || { icon: st.icon, col: st.col }, pw = tw + 9, px = xr - pw, py = cy - 7, [f, h, l] = dim ? GEM.off : st.half ? WARM : st.col || B.col, ic = B.icon ? icon(B.icon) : null;   // pill = 카드 수치(색을 st 가 줌 · 아이콘 없음 — 그림에 이미 있음)
     rrect(g, px, py, pw, 14, 5, C.ink); rrect(g, px + 1, py + 1, pw - 2, 12, 4, f);
     g.rect(px + 4, py + 2, pw - 8, 1, h); g.rect(px + 4, py + 11, pw - 8, 1, l);
     if (ic) g.alpha(dim ? 0.55 : 1, () => g.img(ic, px - 8, cy - 5));
@@ -221,7 +224,11 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
   if (sk.uses) usesDial(g, x + 9, y + 9, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim, gh);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
-  else {
+  else if (sk.passive) {   // 패시브 카드: 비용 대신 카드 색 마름모 + 반짝이
+    const L = sk.look || {}, ic = icon('sparkle');
+    diamond(g, x + 9, y + 9, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
+    if (ic) g.img(tinted('sparkle', '#ffffff'), x + 9 - Math.floor(ic.width / 2), y + 9 - Math.floor(ic.height / 2));
+  } else {
     diamond(g, x + 9, y + 9, 7, dim ? (o.short ? GEM.bad : GEM.off) : GEM.ok);
     g.text(String(sk.cost || 0), x + 9.5, y + 9 - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
   }
@@ -271,6 +278,7 @@ export function cardSlot(g, x, y, w, h, label = '') {
 
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
+  if (sk.passive) return passiveBack(g, w, h, sk);
   const E = elOf(sk), P = 14, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';
   const wm = icon(artIcon(sk));   // 아래쪽 옅은 문양(앞면 그림의 아이콘)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(artIcon(sk), E.light), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
@@ -323,6 +331,36 @@ function cardBack(g, w, h, sk, o) {
     else if ((sk.cost || 0) > (o.energy ?? 99)) line(`에너지가 모자람 — 지금 ${o.energy} · 필요 ${sk.cost}`, '#ff9a9a', 'bold');
     else line('지금은 못 씀', '#ff9a9a', 'bold');
   }
+}
+// 패시브 카드 뒷면(2026-10-17 카드): 이름 · '일반 카드 · 패시브' 꼬리표 · 큰 수(앞면 수치) · 설명 줄 · 누가 쓰나
+function passiveBack(g, w, h, sk) {
+  const L = sk.look || {}, P = 14, cw = w - P * 2, wm = sk.icon && icon(sk.icon);
+  if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(sk.icon, L.light || '#d8f2ff'), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
+  let y = 16;
+  g.text(sk.name, P, y, { font: 'head', color: C.text });
+  y += 22;
+  const who = sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이 카드` : '일반 카드';
+  g.text(`${who} · 패시브`, P, y, { color: C.sub }); y += 18;
+  g.rect(P, y, cw, 1, hexMix(L.col || '#5fb3d9', C.ink, 0.35)); y += 9;
+  if (sk.badge) {
+    rrect(g, P, y, cw, 34, 4, C.ink); rrect(g, P + 1, y + 1, cw - 2, 32, 3, C.plate);
+    g.text('효과', P + 8, y + 5, { color: C.dim });
+    const ic = icon(sk.badge[1]); if (ic) g.img(ic, P + 8, y + 18);
+    g.text(sk.badge[0], P + (ic ? 22 : 8), y + 15, { font: 'name', color: L.light || C.text });
+    y += 44;
+  }
+  for (const d of sk.desc || []) for (const ln of wrap(d, 'body', cw)) { g.text(ln, P, y, { color: C.text }); y += 15; }
+  y += 6;
+  g.text(sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이 식물만 끼워요` : '일반 식물만 끼워요', P, y, { color: C.dim });
+}
+// 작은 카드(보상 칸 · 가방 줄 · 상점 — 그림 대신 카드 모양): (x, y) 왼쪽 위, 20×28 — 테 색 = 카드 색, 가운데 = 카드 아이콘
+export function cardTiny(g, x, y, sk) {
+  if (!sk) return;
+  const [mid, hi, lo] = frameCols(sk, false), w = 20, h = 28, ic = icon(artIcon(sk));
+  rrect(g, x, y, w, h, 3, C.ink); rrect(g, x + 1, y + 1, w - 2, h - 2, 2, mid);
+  g.rect(x + 3, y + 1, w - 6, 1, hi); g.rect(x + 3, y + h - 2, w - 6, 1, lo);
+  rrect(g, x + 3, y + 3, w - 6, h - 6, 1, hexMix(mid, C.ink, 0.55));
+  if (ic) g.img(ic, x + Math.round((w - ic.width) / 2), y + Math.round((h - ic.height) / 2));
 }
 // 뒷면 바탕(테 안쪽): 위가 한 단 밝은 남색(점 섞어 이음)
 function backBody(g, x, y, w, h) {
