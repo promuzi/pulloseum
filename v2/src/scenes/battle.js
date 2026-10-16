@@ -19,7 +19,7 @@ import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eul } from '../core/josa.js';
-import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx } from '../art/statusfx.js';
+import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf } from '../art/statusfx.js';
 import { TFX, setTfx, popLife, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
@@ -327,7 +327,10 @@ export const battle = {
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
     if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
     if (st.kind === 'tick') sfxAdd(v.sfx, st.side, st.ev.id, t);
-    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t);
+    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: st.ev.id === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 });
+    if (st.kind === 'drain') sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to });
+    if (st.kind === 'heal') sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t);
+    if (st.kind === 'reflect') sfxAdd(v.sfx, st.ev.who, 'thornsHit', t);
     if (st.kind === 'bloom') sfxAdd(v.sfx, st.side, 'bloom', t);
     if (st.kind === 'skipT') sfxAdd(v.sfx, st.side, { frozen: 'frozen', paral: 'paral', stun: 'stun' }[st.ev.src], t);
     if (st.kind === 'cure') sfxAdd(v.sfx, st.side, 'steam', t);
@@ -351,6 +354,21 @@ export const battle = {
       { t: 'cure', to: 'foe', name: foe.name, id: 'burn', why: 'water' },
     ];
     foe.hp -= bt + bl; me.hp -= pt;
+    B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
+    this.play(app, this.buildSteps({ mySkill: me.kit[0], foeSkill: foe.kit[0], events }));
+  },
+  // 검토 판 ?demo=status2: 나머지 효과(덩굴 · 뿌리 · 기생 씨앗 · 빨아들이기 · 약화 · 도발 · 부식 · 그늘 · 강풍) + 버프(분노 · 철벽 · 가속 · 재생 · 반사 · 보호막 · 정화 · 집중)
+  demoStatus2(app) {
+    this.v.demoAt = Infinity;
+    const B = this.B, me = B.me, foe = B.foe, F = (to, id, o = {}) => ({ t: 'fx', to, id, name: B[to].name, ...o });
+    const events = [
+      F('foe', 'bind', { skill: '파도 덮치기' }), F('foe', 'root'), F('foe', 'leech'),
+      { t: 'drain', who: 'foe', name: foe.name, to: 'me', toName: me.name, dmg: 6, heal: 6 },
+      F('me', 'weak'), F('me', 'taunt'), F('foe', 'corrode'), F('foe', 'shade'), F('foe', 'gale'),
+      F('me', 'rage'), F('me', 'wall'), F('me', 'haste'), F('me', 'regen'), { t: 'regen', who: 'me', name: me.name, heal: 9 },
+      F('me', 'thorns'), { t: 'reflect', who: 'me', to: 'foe', dmg: 5 }, F('me', 'shield'), F('me', 'purified'), F('me', 'focus'),
+    ];
+    foe.hp -= 11;
     B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
     this.play(app, this.buildSteps({ mySkill: me.kit[0], foeSkill: foe.kit[0], events }));
   },
@@ -392,7 +410,7 @@ export const battle = {
     if (e.tier !== 'hit') this.pop(st.to, label, tone, t, false, e.tier === 'crit' ? -36 : -16);   // 보통 맞힘(정타)은 글자 없이 숫자만
     if (great) this.pop(st.to, '효과 굉장!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);
     if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
-    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; }
+    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); }
   },
   // ex = { share: 그 한 방이 깎은(채운) 체력 몫, kill: 결정타 } — 글자 연출 ㉠~㉣이 크기·강조에 씀(지금 연출은 안 씀)
   pop(who, text, tone, t, big = false, dy = 0, col = null, size = null, ex = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92], v = this.v; v.pops.push({ text, tone, t0: t, x, y: y + dy, dy, big, col, size, who, id: (v.pid = (v.pid || 0) + 1), share: ex ? ex.share : null, kill: !!(ex && ex.kill) }); },
@@ -440,7 +458,7 @@ export const battle = {
       if (v.autoSkipAt == null) v.autoSkipAt = t + SKIP_AUTO_MS;
       else if (t >= v.autoSkipAt) { v.autoSkipAt = null; this.pick(app, REST); }
     }
-    if (this.p && (this.p.demo === 'text' || this.p.demo === 'status') && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) (this.p.demo === 'status' ? this.demoStatus(app) : this.demoText(app)); }
+    if (this.p && ['text', 'status', 'status2'].includes(this.p.demo) && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) ({ text: () => this.demoText(app), status: () => this.demoStatus(app), status2: () => this.demoStatus2(app) })[this.p.demo](); }
     if (v.phase === 'play') {
       if (v.t0 == null) { v.t0 = t; this.startStep(v.steps[v.si], t, app); }
       let st = v.steps[v.si];
@@ -517,6 +535,8 @@ export const battle = {
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      const sw = v.sfx.length || (v.eff[who] || []).some(s => s.id === 'gale') ? swayOf(v.sfx, { [who]: (v.eff[who] || []).map(s => s.id) }, who, t) : 0;
+      if (sw) pose = { ...(pose || {}), qx: ((pose && pose.qx) || 0) - sw };
       drawBigPose(g, u.key, u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
       if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: u.key, pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
@@ -543,6 +563,7 @@ export const battle = {
       if (fr) c.drawImage(boardCanvas('mid'), 0, AY);
       unit('me', PX, PY, false, 0);
       if (fr) { c.drawImage(boardCanvas('front'), 0, AY); c.drawImage(boardCanvas('air'), 0, AY); }
+      if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [PX, PY], foe: [EX, EY] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
       for (const who of ['me', 'foe']) {
         const s = v.stance[who]; if (!s) continue;
         const [x, y] = who === 'me' ? [PX, PY - 118] : [EX, EY - 118];

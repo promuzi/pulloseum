@@ -8,11 +8,15 @@
 //  · 도트 그림에 맞게 그림 1화소 = 1칸으로만 그림(매끈한 흐림 없이, 색 몇 개) — GodotCon 2026 '도트 그림 절차 효과'(잡음 · 색 줄이기)
 import { plantLayer } from './sprites.js';
 
-export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, paral: 800, chill: 900, frozen: 1050, wet: 900, stun: 1150, spore: 800, bloom: 1000, steam: 800 };
+export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, paral: 800, chill: 900, frozen: 1050, wet: 900, stun: 1150, spore: 800, bloom: 1000, steam: 800,
+  bind: 1000, root: 1000, leech: 900, drain: 800, weak: 800, taunt: 800, corrode: 950, shade: 1200, gale: 1000,
+  rage: 900, wall: 800, haste: 750, regen: 900, heal: 700, thorns: 850, thornsHit: 450, shield: 950, shieldHit: 400, purified: 900, focus: 800 };
 // 사건 → 연출: 걸릴 때(fx) · 턴 끝 피해(tick) · 피어남(bloom) · 쉬는 차례(skip: 얼음 · 마비 · 기절) · 풀림(cure = 김)
 //  화상: 걸릴 때 = ignite(불이 확 붙어 일렁이다 잦아듦 + 타닥), 턴 끝 피해 = burn(불꽃이 잠깐 다시 솟음 + 타닥)
-export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore' };
-export function sfxAdd(list, who, kind, t) { if (SFX_LIFE[kind]) list.push({ who, kind, t0: t, id: (list.n = (list.n || 0) + 1) }); }
+export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore',
+  bind: 'bind', root: 'root', leech: 'leech', weak: 'weak', taunt: 'taunt', corrode: 'corrode', shade: 'shade', gale: 'gale',
+  rage: 'rage', wall: 'wall', haste: 'haste', regen: 'regen', thorns: 'thorns', shield: 'shield', purified: 'purified', focus: 'focus' };
+export function sfxAdd(list, who, kind, t, o = null) { if (SFX_LIFE[kind]) list.push({ who, kind, t0: t, id: (list.n = (list.n || 0) + 1), ...(o || {}) }); }
 export const sfxAlive = (list, t) => list.filter(e => t - e.t0 < SFX_LIFE[e.kind]);
 
 // ── 도움 ──
@@ -255,6 +259,174 @@ function steam(g, L, S, e, age) {
   }
 }
 
+// 네 갈래 반짝(도트): 흰 가운데 + s칸 팔
+function twinkle(g, x, y, s, hex) { if (s < 1) return; dot(g, x, y, '#ffffff', 1); for (let d = 1; d <= s; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) dot(g, x + dx, y + dy, hex, 1 - (d - 1) / (s + 1)); }
+// ── 나머지 해로운 효과(2026-10-16 사용자 "남은 거 다해줘") ──
+const fadeIO = (age, life, a = 140, b = 220) => Math.min(cl(age / a), cl((life - age) / b));
+const rowSpan = (L, S, y) => { let l = -1, r = -1; for (let x = 0; x < L.w; x++) if (S.alpha(y * L.w + x)) { if (l < 0) l = x; r = x; } return [l, r]; };
+// 덩굴: 덩굴 세 줄이 몸을 휘감으며 자라고(앞은 밝게 · 뒤는 몸에 가려짐) 한 번 조였다 풀림
+function bind(g, L, S, e, age) {
+  const life = SFX_LIFE.bind, grow = cl(age / 320), f = fadeIO(age, life, 1, 260), sq = age > 320 && age < 560 ? Math.sin((Math.PI * (age - 320)) / 240) : 0;
+  [0.2, 0.44, 0.68].forEach((lv, k) => {
+    const yr = Math.round(S.y1 - (S.y1 - S.y0) * lv); let [xl, xr] = rowSpan(L, S, yr); if (xl < 0) return;
+    xl -= 2; xr += 2; const n = Math.round((xr - xl) * grow);
+    for (let s = 0; s <= n; s++) {
+      const x = xl + s, ph = s / 4.5 + k * 1.3, y = yr + Math.round(Math.sin(ph) * (2.2 - sq * 1.2)), front = Math.cos(ph) > 0;
+      if (!front && S.alpha(y * L.w + x)) continue;   // 뒤로 돌아간 덩굴은 몸에 가려짐
+      const [sx, sy] = scr(L, x, y);
+      dot(g, sx, sy, front ? '#7fe06a' : '#2e5a26', f); dot(g, sx, sy + 1, front ? '#3f8a34' : '#1e3a1a', f);
+      if (front && s % 8 === 4) { dot(g, sx, sy - 1, '#a8ec8a', f); dot(g, sx + 1, sy - 2, '#a8ec8a', f); dot(g, sx + 1, sy - 1, '#6fd25c', f); }   // 작은 잎
+    }
+  });
+}
+// 뿌리 묶기: 흙에서 뿌리 넷이 줄기를 감으며 솟음
+function root(g, L, S, e, age) {
+  const life = SFX_LIFE.root, grow = oQ(cl(age / 380)), f = fadeIO(age, life, 1, 260);
+  [-11, -5, 5, 11].forEach((dx, k) => {   // 굵은 뿌리(2칸: 밝은 줄 + 짙은 줄, 끝은 가늘고 밝게)가 흙에서 솟아 줄기 쪽으로 휘어 감김
+    const H = Math.round((20 + 6 * hash(e.id, k)) * grow);
+    for (let d = 0; d < H; d++) {
+      const [sx, sy] = scr(L, Math.round(S.cx + dx * (1 - d / 30) + Math.sin(d * 0.4 + k) * 2), S.y1 + 1 - d), tip = d >= H - 3;
+      dot(g, sx, sy, tip ? '#e8c090' : '#c08a5a', f); if (!tip) { dot(g, sx + 1, sy, '#6a3e1e', f); dot(g, sx - 1, sy, '#3a2210', f * 0.8); }
+    }
+  });
+}
+// 기생 씨앗: 씨앗이 머리에 떨어져 박히고 덩굴손이 퍼짐
+function leech(g, L, S, e, age) {
+  const life = SFX_LIFE.leech, f = fadeIO(age, life, 1, 240), [sx, top] = scr(L, Math.round(S.cx), S.y0 + 6), fall = cl(age / 160), y = Math.round(top - 26 * (1 - fall * fall));
+  const SEED = ['.ss.', 'sSSs', 'sSSs', '.sd.'], C = { s: '#7a5028', S: '#c89048', d: '#4a2e14' };   // 씨앗(4×4 도트)
+  SEED.forEach((row, dy) => [...row].forEach((ch, dx) => { if (C[ch]) dot(g, sx - 2 + dx, y - 2 + dy, C[ch], f); }));
+  if (age > 160) for (let k = 0; k < 5; k++) {   // 덩굴손 다섯이 몸을 타고 퍼짐(2칸 → 끝 1칸)
+    const an = (k / 5) * Math.PI * 2 + 0.4, len = Math.round(13 * oQ(cl((age - 160) / 380)));
+    for (let d = 2; d <= len; d++) { const x = sx + Math.round(Math.cos(an) * d + Math.sin(d * 0.7 + k) * 1.5), yy = y + 1 + Math.round(Math.sin(an) * d * 0.75); dot(g, x, yy, d >= len - 1 ? '#e6ff9a' : '#6fd25c', f); if (d < len - 3) dot(g, x, yy + 1, '#2e7a2a', f); }
+  }
+}
+// 약화: 빨간 아래 꺾쇠 셋이 몸을 타고 내려가며 사라짐 + 잿빛으로 한 번 물듦
+function weak(g, L, S, e, age) {
+  const life = SFX_LIFE.weak, a = 0.3 * Math.sin(Math.PI * cl(age / 500));
+  if (a > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#6a6474', a); blit(g, L, ov); }
+  for (let k = 0; k < 3; k++) {   // 아래 꺾쇠(9칸 폭 · 2칸 두께 · 짙은 테)
+    const b = age - k * 110, q = cl(b / 520); if (b < 0 || q >= 1) continue;
+    const [cx, cy] = scr(L, Math.round(S.cx + (k - 1) * 11), S.y0 + 2 + Math.round(q * 22)), al = Math.sin(Math.PI * q);
+    for (let d = -4; d <= 4; d++) { const y = cy - (4 - Math.abs(d)); dot(g, cx + d, y - 1, '#5a1010', al); dot(g, cx + d, y, '#ff5a5a', al); dot(g, cx + d, y + 1, '#ff8a8a', al); dot(g, cx + d, y + 2, '#5a1010', al * 0.9); }
+  }
+}
+// 도발: 머리 옆에 화난 표시가 톡 튀어나와 떨리고 몸이 빨갛게 두 번 번쩍
+function taunt(g, L, S, e, age) {
+  const life = SFX_LIFE.taunt, fl = (age < 120 || (age > 220 && age < 340)) ? 0.32 : 0;
+  if (fl) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#ff3a3a', fl); blit(g, L, ov); }
+  // 화난 표시(💢, 11×11 도트 — 네 귀퉁이에서 가운데로 굽은 핏줄 넷, 빨강 + 짙은 테)가 머리 옆에서 톡 커졌다 떨림
+  const [hx, hy] = scr(L, Math.round(S.cx + (S.x1 - S.x0) * 0.34), S.y0 + 1), j = age > 90 && age < 420 ? Math.round(Math.sin(age / 22)) : 0, f = fadeIO(age, life, 60, 200);
+  const MARK = ['.oo.....oo.', 'orro...orro', 'or.ro.or.ro', '.o.ro.or.o.', '...o...o...', '...........', '...o...o...', '.o.ro.or.o.', 'or.ro.or.ro', 'orro...orro', '.oo.....oo.'], C = { o: '#5a0e0e', r: '#ff4a4a' };
+  const big = age > 60 && age < 140 ? 1 : 0;
+  MARK.forEach((row, dy) => [...row].forEach((ch, dx) => { if (!C[ch]) return; const x = hx + j - 5 + dx + (big ? Math.sign(dx - 5) : 0), y = hy - 5 + dy + (big ? Math.sign(dy - 5) : 0); dot(g, x, y, C[ch], f); }));
+}
+// 부식: 올리브빛으로 물들고 몸 위에서 산 거품이 톡톡 · 산 방울이 떨어짐
+function corrode(g, L, S, e, age, N) {
+  const life = SFX_LIFE.corrode, a = 0.3 * fadeIO(age, life, 120, 300) * (0.8 + 0.2 * Math.sin(age / 60));
+  if (a > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, N[i] > 0.6 ? '#6a7a1a' : '#9aa83a', a + (N[i] > 0.6 ? 0.15 : 0)); blit(g, L, ov); }
+  const sp = picks(e, S, 9, i => S.H[i] > 0.15, 9);
+  sp.forEach((i, k) => {
+    const b = age - k * 70, q = b / 260; if (b < 0 || q > 1.3) return;
+    const [x, y] = scr(L, i % L.w, Math.floor(i / L.w));
+    if (q <= 1) { dot(g, x, y, '#e6f08a', 1); dot(g, x + 1, y, '#a8c040', 0.9); dot(g, x, y - 1, '#a8c040', 0.9); }
+    else for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) dot(g, x + dx * 2, y + dy * 2, '#e6f08a', 1.3 - q);
+  });
+}
+// 그늘(식물 쪽): 구름 그늘 아래로 들어가 어두워짐 — 구름 · 땅 그림자는 drawSfxMap
+function shadeOn(g, L, S, e, age) {
+  const a = 0.42 * fadeIO(age, SFX_LIFE.shade, 260, 320);
+  if (a > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#141433', a); blit(g, L, ov); }
+}
+// 강풍(식물 쪽): 잎 몇 장이 바람에 뜯겨 날아감 — 몸 흔들림은 swayOf, 화면을 가로지르는 바람은 drawSfxMap
+function galeOn(g, L, S, e, age) {
+  const dir = e.dir || 1, sp = picks(e, S, 7, i => S.H[i] > 0.35 && !S.alpha(i - L.w), 10);
+  sp.forEach((i, k) => {
+    const b = age - 80 - k * 70, q = cl(b / 600); if (b < 0 || q >= 1) return;
+    const [x0, y0] = scr(L, i % L.w, Math.floor(i / L.w)), x = x0 + dir * q * (60 + 30 * hash(k, 3)), y = y0 - Math.sin(q * Math.PI) * 8 + Math.sin(b / 50 + k) * 2;
+    dot(g, x, y, k % 2 ? '#7fe06a' : '#c8e888', 1 - q * q, 2); dot(g, x + dir, y + 1, '#3f8a34', 1 - q * q);
+  });
+}
+
+// ── 이로운 효과(버프) ──
+// 분노: 몸 둘레에서 붉은 기운이 일렁이며 오르고 몸이 붉게 달아오름
+function rage(g, L, S, e, age, N) {
+  const life = SFX_LIFE.rage, f = fadeIO(age, life, 120, 300), ov = overlay(L.w, L.h), fb = Math.floor(age / 60);
+  for (const i of S.op) put(ov, i, '#ff3a2a', 0.22 * f * (0.8 + 0.2 * Math.sin(age / 50)));
+  for (const i of S.op) { if (!edgeOf(L, S, i) || hash(i, fb) > 0.35) continue; const x = i % L.w, y = Math.floor(i / L.w); if (y > 0 && !S.alpha(i - L.w)) put(ov, i - L.w, hash(i, fb + 3) < 0.5 ? '#ff6a1a' : '#c8281e', 0.9 * f); }
+  blit(g, L, ov);
+  const sp = picks(e, S, 10, i => S.H[i] > 0.1, 11);
+  sp.forEach((i, k) => { const b = age - k * 50, q = cl(b / 500); if (b < 0 || q >= 1) return; const [x, y] = scr(L, i % L.w, Math.floor(i / L.w)); dot(g, x + Math.sin(b / 70 + k) * 1.2, y - q * 18, q < 0.5 ? '#ff8a5a' : '#c8281e', (1 - q) * f, q < 0.4 ? 2 : 1); });
+}
+// 철벽: 몸에 돌판 무늬가 번쩍 덮였다 스며듦 + 테두리 흰빛(쨍)
+function wall(g, L, S, e, age) {
+  const life = SFX_LIFE.wall, f = fadeIO(age, life, 80, 360), ov = overlay(L.w, L.h);
+  for (const i of S.op) { const x = i % L.w, y = Math.floor(i / L.w), line = y % 5 === 0 || (x + (Math.floor(y / 5) % 2) * 3) % 6 === 0; put(ov, i, edgeOf(L, S, i) && age < 160 ? '#ffffff' : line ? '#5a6a82' : '#9ab0c8', (edgeOf(L, S, i) && age < 160 ? 0.9 : line ? 0.55 : 0.32) * f); }
+  blit(g, L, ov);
+}
+// 가속: 바깥쪽으로 잔상 둘(하늘빛) + 속도 줄
+let ghostCv = null, ghostCx = null;
+function haste(g, L, S, e, age) {
+  const life = SFX_LIFE.haste, f = fadeIO(age, life, 60, 260), back = -(e.dir || 1);
+  if (!ghostCv) { ghostCv = document.createElement('canvas'); ghostCx = ghostCv.getContext('2d'); }
+  if (ghostCv.width !== L.w || ghostCv.height !== L.h) { ghostCv.width = L.w; ghostCv.height = L.h; }
+  ghostCx.putImageData(L.img, 0, 0); ghostCx.globalCompositeOperation = 'source-in'; ghostCx.fillStyle = '#8fe6ff'; ghostCx.fillRect(0, 0, L.w, L.h); ghostCx.globalCompositeOperation = 'source-over';
+  const c = g.c;
+  [[4, 0.4], [8, 0.2]].forEach(([d, a]) => {
+    const off = Math.round(back * d * (0.6 + 0.4 * Math.sin(age / 90)));
+    c.save(); c.imageSmoothingEnabled = false; c.globalAlpha *= a * f;
+    if (L.flip) { c.translate(L.x + off + L.w, L.y); c.scale(-1, 1); c.drawImage(ghostCv, 0, 0); } else c.drawImage(ghostCv, L.x + off, L.y);
+    c.restore();
+  });
+  for (let k = 0; k < 5; k++) { const [x, y] = scr(L, back > 0 ? S.x1 + 3 : S.x0 - 3, Math.round(S.y0 + (S.y1 - S.y0) * (0.2 + k * 0.15))), len = 6 + Math.round(hash(k, Math.floor(age / 80)) * 8); for (let d = 0; d < len; d++) dot(g, x + back * d, y, '#e6f7ff', f * (1 - d / len)); }
+}
+// 재생 · 회복: 초록으로 한 번 물들고 더하기 표시가 떠오름(회복은 작게)
+function regen(g, L, S, e, age, small) {
+  const life = SFX_LIFE[small ? 'heal' : 'regen'], a = 0.24 * Math.sin(Math.PI * cl(age / (life * 0.7)));
+  if (a > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#5fe08a', a); blit(g, L, ov); }
+  const sp = picks(e, S, small ? 3 : 6, i => S.H[i] > 0.2, 12);
+  sp.forEach((i, k) => {
+    const b = age - k * 90, q = cl(b / 560); if (b < 0 || q >= 1) return;
+    const [x, y0] = scr(L, i % L.w, Math.floor(i / L.w)), y = Math.round(y0 - q * 16), al = Math.sin(Math.PI * q);
+    dot(g, x, y, '#ffffff', al); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) dot(g, x + dx, y + dy, Math.abs(dx) + Math.abs(dy) === 2 ? '#2fb86a' : '#7ef0a0', al);
+  });
+}
+// 반사(가시): 몸 테두리에서 가시가 바깥으로 쑥 돋았다 들어감(반사 순간 = 짧게 번쩍)
+function thorns(g, L, S, e, age, hit) {
+  const life = SFX_LIFE[hit ? 'thornsHit' : 'thorns'], out = hit ? Math.sin(Math.PI * cl(age / life)) : Math.min(oQ(cl(age / 160)), cl((life - age) / 260)), len = Math.round(5 * out);
+  if (len < 1) return;
+  const cx = (S.x0 + S.x1) / 2, cy = (S.y0 + S.y1) / 2;
+  let n = 0;
+  for (const i of S.op) {   // 테두리 칸 셋에 하나꼴로 바깥으로 가시(밑 갈색 2칸 · 끝 밝게)
+    if (!edgeOf(L, S, i) || n++ % 3) continue;
+    const x = i % L.w, y = Math.floor(i / L.w), dx = x - cx, dy = y - cy, m = Math.hypot(dx, dy) || 1;
+    for (let d = 1; d <= len; d++) { const [sx, sy] = scr(L, Math.round(x + (dx / m) * d), Math.round(y + (dy / m) * d)); dot(g, sx, sy, d === len ? (hit ? '#ffffff' : '#fff0b0') : d >= len - 1 ? '#ffd27a' : '#a8743a', 1); }
+  }
+}
+// 보호막: 몸을 감싸는 물방울 막이 톡 생기고 빛 띠가 한 바퀴(막는 순간 = 흰빛 번쩍)
+function shield(g, L, S, e, age, hit) {
+  const life = SFX_LIFE[hit ? 'shieldHit' : 'shield'], sc = hit ? 1 : kf(age, [[0, 0.6], [140, 1.06, oQ], [220, 1]]), f = hit ? 1 - age / life : fadeIO(age, life, 1, 300);
+  const [cx, cy] = scr(L, Math.round((S.x0 + S.x1) / 2), Math.round((S.y0 + S.y1) / 2)), rx = ((S.x1 - S.x0) / 2 + 5) * sc, ry = ((S.y1 - S.y0) / 2 + 5) * sc, c = g.c;
+  c.save(); c.globalAlpha *= 0.13 * f; c.fillStyle = '#8fd8ff'; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.restore();
+  const n = Math.round((rx + ry) * 2.2), band = (age / 700) * Math.PI * 2;
+  for (let k = 0; k < n; k++) {
+    const an = (k / n) * Math.PI * 2, x = Math.round(cx + Math.cos(an) * rx), y = Math.round(cy + Math.sin(an) * ry), hl = Math.cos(an - band) > 0.85;
+    dot(g, x, y, hit ? '#ffffff' : hl ? '#ffffff' : '#9ff0ff', f * (hit ? 1 : hl ? 1 : 0.75));
+  }
+}
+// 정화: 흰빛으로 한 번 씻기고 반짝이 고리가 발밑에서 머리로 오름
+function purify(g, L, S, e, age) {
+  const life = SFX_LIFE.purified, a = 0.45 * cl(1 - age / 260);
+  if (a > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#ffffff', a); blit(g, L, ov); }
+  const q = cl(age / (life * 0.85)), [cx, by] = scr(L, Math.round((S.x0 + S.x1) / 2), S.y1), y = by - q * (S.y1 - S.y0 + 6), rx = (S.x1 - S.x0) / 2 + 3;
+  for (let k = 0; k < 10; k++) { const an = (k / 10) * Math.PI * 2 + age / 200, x = cx + Math.cos(an) * rx, yy = y + Math.sin(an) * 3, s = Math.sin(an) > 0 ? 2 : 1; twinkle(g, Math.round(x), Math.round(yy), s + 1, Math.sin(an) > 0 ? '#ffffff' : '#bfe8ff'); }
+}
+// 집중: 머리 둘레에 조준 꺾쇠 넷이 좁혀 들어오고 금빛 반짝
+function focus(g, L, S, e, age) {
+  const life = SFX_LIFE.focus, q = oQ(cl(age / 380)), f = fadeIO(age, life, 60, 220), [cx, cy] = scr(L, Math.round(S.cx), S.y0 + 8), r = Math.round(16 - 9 * q);
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (let d = 0; d < 4; d++) { dot(g, cx + sx * r - sx * d, cy + sy * r, '#ffd84a', f); dot(g, cx + sx * r, cy + sy * r - sy * d, '#ffd84a', f); }
+  if (age > 380) twinkle(g, cx, cy, 2 + Math.round(2 * Math.sin(Math.PI * cl((age - 380) / 300))), '#ffffff');
+}
+
 // 식물 하나 위에 그 식물의 효과를 모두(식물을 그린 바로 뒤에 부름). p = { key, pot, bx, by, flip, view, t, phase }
 export function drawSfx(g, list, who, t, p) {
   let L = null, S = null, N = null;
@@ -273,5 +445,81 @@ export function drawSfx(g, list, who, t, p) {
     else if (e.kind === 'stun') stun(g, L, S, e, age);
     else if (e.kind === 'spore' || e.kind === 'bloom') spores(g, L, S, e, age, e.kind === 'bloom');
     else if (e.kind === 'steam') steam(g, L, S, e, age);
+    else if (e.kind === 'bind') bind(g, L, S, e, age);
+    else if (e.kind === 'root') root(g, L, S, e, age);
+    else if (e.kind === 'leech') leech(g, L, S, e, age);
+    else if (e.kind === 'weak') weak(g, L, S, e, age);
+    else if (e.kind === 'taunt') taunt(g, L, S, e, age);
+    else if (e.kind === 'corrode') corrode(g, L, S, e, age, N);
+    else if (e.kind === 'shade') shadeOn(g, L, S, e, age);
+    else if (e.kind === 'gale') galeOn(g, L, S, e, age);
+    else if (e.kind === 'rage') rage(g, L, S, e, age, N);
+    else if (e.kind === 'wall') wall(g, L, S, e, age);
+    else if (e.kind === 'haste') haste(g, L, S, e, age);
+    else if (e.kind === 'regen' || e.kind === 'heal') regen(g, L, S, e, age, e.kind === 'heal');
+    else if (e.kind === 'thorns' || e.kind === 'thornsHit') thorns(g, L, S, e, age, e.kind === 'thornsHit');
+    else if (e.kind === 'shield' || e.kind === 'shieldHit') shield(g, L, S, e, age, e.kind === 'shieldHit');
+    else if (e.kind === 'purified') purify(g, L, S, e, age);
+    else if (e.kind === 'focus') focus(g, L, S, e, age);
   }
+}
+
+// ── 경기장 전체에 그리는 것(두 식물을 다 그린 뒤 한 번): 강풍 = 화면을 가로지르는 바람 · 그늘 = 구름과 땅 그림자 · 기생 씨앗 빨아들이기 = 기운 알갱이가 건너감 ──
+//  (2026-10-16 사용자 "맵에 영향을 주는 강풍 등은 다른 방식으로 연출해봐") — 강풍이 걸려 있는 동안엔 그 식물 둘레에 옅은 바람이 계속 지나감
+//  P = { me: [x, 받침 y], foe: [...] }, area = [x0, y0, w, h](경기장), active = { me: [효과 id…], foe: […] }
+export function drawSfxMap(g, list, t, P, area, active) {
+  const [ax, ay, aw, ah] = area, c = g.c;
+  for (const e of list) {
+    const age = t - e.t0; if (age < 0 || age >= SFX_LIFE[e.kind]) continue;
+    const [px, py] = P[e.who] || [0, 0];
+    if (e.kind === 'gale') {   // 큰 바람: 줄 스물둘이 화면을 가로질러 휙(밝은 줄 + 아래 그늘 줄 — 밝은 모래 위에서도 보이게, 끝은 말림) · 잎이 굴러가며 날아감 · 흙먼지
+      const dir = e.dir || 1, life = SFX_LIFE.gale, al = 0.9 * fadeIO(age, life, 80, 260);
+      for (let k = 0; k < 22; k++) {
+        const b = age - k * 28; if (b < 0) continue;
+        const sp = 0.55 + 0.3 * hash(k, e.id), x = dir > 0 ? ax - 70 + b * sp : ax + aw + 70 - b * sp, y = Math.round(ay + 26 + hash(k + 7, e.id) * (ah - 60)), len = 30 + Math.round(hash(k, 5) * 40);
+        if (x < ax - 110 || x > ax + aw + 110) continue;
+        for (let d = 0; d < len; d++) {
+          const xx = x - dir * d, yy = y + Math.round(Math.sin(xx / 18 + k) * 1.5), a = al * (1 - d / len);
+          dot(g, xx, yy + 1, '#6a5a88', a * 0.35); dot(g, xx, yy, k % 4 ? '#f4f8ff' : '#c0a8ff', a);
+        }
+        if (k % 3 === 0) for (let s = 0; s < 6; s++) { const an = (s / 6) * Math.PI * 1.6; dot(g, x + dir * Math.round(2 + Math.cos(an) * 3), y - 3 + Math.round(Math.sin(an) * 3), '#f4f8ff', al); }   // 앞끝 말림
+      }
+      for (let k = 0; k < 8; k++) {   // 잎(2×2 + 그늘 한 칸)이 화면을 가로질러 굴러감
+        const b = age - 60 - k * 70; if (b < 0) continue;
+        const x = dir > 0 ? ax - 10 + b * 0.42 : ax + aw + 10 - b * 0.42, y = ay + 40 + hash(k + 3, e.id) * (ah - 90) + Math.sin(b / 60 + k) * 5;
+        if (x < ax - 20 || x > ax + aw + 20) continue;
+        dot(g, x, y, k % 2 ? '#7fe06a' : '#c8e888', al, 2); dot(g, x + (Math.floor(b / 80) % 2 ? 2 : -1), y + 1, '#3f8a34', al);
+      }
+      for (let k = 0; k < 6; k++) { const b = age - 120 - k * 60, q = cl(b / 500); if (b < 0 || q >= 1) continue; const x = px - dir * 20 + dir * q * 70, y = py - 2 - Math.sin(q * Math.PI) * 6; puff(g, x, y, '#cdb48a', 0.55 * (1 - q), q < 0.5 ? 1 : 2); }
+    } else if (e.kind === 'shade') {   // 구름이 옆에서 흘러와 그 식물 위에 멈춤 · 땅에 그림자
+      const life = SFX_LIFE.shade, f = fadeIO(age, life, 260, 320), cx = px + 14 + (1 - oQ(cl(age / 420))) * -60 * (e.dir || 1), cy = py - 146;
+      c.save(); c.globalAlpha *= 0.32 * f; c.fillStyle = '#0e0e24'; c.beginPath(); c.ellipse(cx, py - 2, 46, 12, 0, 0, Math.PI * 2); c.fill(); c.restore();
+      const CLOUD = ['....xxxx......', '..xxxxxxxxx...', '.xxxxxxxxxxxx.', 'xxxxxxxxxxxxxx', '.xxxxxxxxxxxx.'];
+      CLOUD.forEach((row, dy) => [...row].forEach((ch, dx) => { if (ch === 'x') for (let s = 0; s < 3; s++) for (let u = 0; u < 3; u++) dot(g, Math.round(cx - 21 + dx * 3 + s), Math.round(cy + dy * 3 + u), dy === 0 || (dy === 1 && dx < 4) ? '#7a7a9a' : '#4a4a68', 0.9 * f); }));
+    } else if (e.kind === 'drain' && e.to && P[e.to]) {   // 기생 씨앗이 빨아들인 기운: 알갱이 다섯이 둥글게 건너감
+      const [tx, ty] = P[e.to], sy = py - 40, ey = ty - 40;
+      for (let k = 0; k < 5; k++) {
+        const q = cl((age - k * 70) / 520); if (q <= 0 || q >= 1) continue;
+        const mx = (px + tx) / 2, my = Math.min(sy, ey) - 40, x = (1 - q) ** 2 * px + 2 * (1 - q) * q * mx + q * q * tx, y = (1 - q) ** 2 * sy + 2 * (1 - q) * q * my + q * q * ey;
+        dot(g, x - 1, y - 1, '#6fd25c', 0.6, 4); dot(g, x, y, '#e6ff9a', 1, 2);
+      }
+    }
+  }
+  // 강풍이 걸려 있는 동안: 그 식물 둘레에 옅은 바람 줄이 가끔 지나감
+  for (const side of ['me', 'foe']) {
+    if (!(active[side] || []).includes('gale') || !P[side]) continue;
+    const [px, py] = P[side];
+    for (let k = 0; k < 3; k++) {
+      const per = 1100 + k * 230, b = (t + k * 400) % per, q = b / 700; if (q >= 1) continue;
+      const x = px - 50 + q * 100, y = py - 30 - k * 24 - Math.sin(q * Math.PI) * 3, len = 16;
+      for (let d = 0; d < len; d++) dot(g, x - d, y, '#e6f3ff', 0.35 * Math.sin(Math.PI * q) * (1 - d / len));
+    }
+  }
+}
+// 강풍에 흔들림(식물 그림 줄을 위로 갈수록 옆으로 — drawBigPose qx): 큰 바람이 불 땐 크게, 걸려 있는 동안은 살랑
+export function swayOf(list, active, who, t) {
+  let q = 0;
+  for (const e of list) { if (e.who !== who || e.kind !== 'gale') continue; const age = t - e.t0; if (age >= 0 && age < SFX_LIFE.gale) q = Math.max(q, Math.sin(Math.PI * cl(age / SFX_LIFE.gale)) * (2.5 + Math.sin(age / 70))); }
+  if ((active[who] || []).includes('gale')) q = Math.max(q, 1 + Math.sin(t / 260) * 0.8);
+  return Math.round(q);
 }
