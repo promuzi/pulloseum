@@ -1,6 +1,6 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY, FORM_KEYS, formSkills, MUT_SLOTS } from './catalog.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
@@ -12,7 +12,13 @@ export function kitOfPlant(p) {
   const S = p.skills, B = basicsOf(p.key), sk = id => B.find(b => b.id === id) || ({ act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key });
   if (!S.v4) return [...B, ...S.battle.filter(Boolean).map(sk)];
   const kit = S.battle.filter(id => id && (SKILLS[id] || B.some(b => b.id === id))).map(sk);
-  return kit.length ? kit : B;
+  return [...(kit.length ? kit : B), ...mutKit(p)];
+}
+// 변이 칸 둘(그 식물 변이의 기술만 · 에너지 대신 충전) — 숨결(elOwn)은 그 식물 속성, 연출은 기술 id(attack.mjs)
+export function mutKit(p) {
+  if (!p.form || !p.skills || !Array.isArray(p.skills.mut)) return [];
+  const el = SPECIES[p.key] && SPECIES[p.key].el;
+  return p.skills.mut.slice(0, MUT_SLOTS).filter(id => id && SKILLS[id] && SKILLS[id].form === p.form).map(id => ({ ...SKILLS[id], ...(SKILLS[id].elOwn ? { el } : {}), mut: true }));
 }
 // 전투 유닛(rules.js가 읽는 값) — 화면 그림용 key · stage(그림 단계) · pot · shiny도 실어 둠
 export function unitOf(id, p, extra = {}) {
@@ -42,7 +48,11 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
   const extra = battle[2] && rng() < 0.5 ? battle[2] : rng() < 0.5 ? 'guard' : 'evade';
   const four = [battle[0], battle[1] || (rng() < 0.5 ? 'guard' : 'evade'), 'basic', extra].filter((x, i, a) => x && a.indexOf(x) === i);
   for (const b of ['guard', 'evade']) if (four.length < 4 && !four.includes(b)) four.push(b);
-  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', skills: { battle: four.slice(0, 4), joker: null, forgot: [], learned: [], v4: 1 }, shiny: false, legend: false };
+  // 변이 봇(자라는 단계부터 가끔 — 사람과 같은 변이 칸 둘): 버섯 = 포자 · 그 밖 = 포식 · 무기 · 독성 · 용족 중
+  let form = sp.form || null, mut = [null, null];
+  if (!form && stage >= 1 && rng() < 0.08 + 0.02 * tierBoost) { const fs = sp.type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'); form = fs[Math.floor(rng() * fs.length)]; }
+  if (form) { const list = formSkills(form); for (let i = 0; i < MUT_SLOTS && list.length; i++) mut[i] = list.splice(Math.floor(rng() * list.length), 1)[0]; }
+  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, skills: { battle: four.slice(0, 4), joker: null, forgot: [], learned: [], v4: 1, mut }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 
@@ -87,13 +97,13 @@ export function replayBot(spec, acts) {
 }
 // 화면에 보낼 판 모습(유닛 값 그대로 — 화면은 이걸로 자기 판을 고쳐 씀)
 const unitV = u => ({ id: u.id, key: u.key, name: u.name, el: u.el, jong: u.jong, pot: u.pot, stage: u.stage, shiny: !!u.shiny, legend: !!u.legend, trainer: u.trainer, rank: u.rank, tlv: u.tlv,
-  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null });
+  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, cd: u.cd || null });   // cd = 변이 기술 충전(남은 턴)
 export function viewOf(B) {
   if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
   return { mode: '1v1', turn: B.turn, over: B.over, me: unitV(B.me), foe: unitV(B.foe) };
 }
 // 화면 쪽: 서버가 보낸 모습으로 판을 세우고(처음) · 턴마다 같은 유닛 객체를 고쳐 씀(교체 연출이 유닛 객체를 붙잡고 있음)
-const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
+const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'cd', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
 export function battleFromView(v) {
   if (v.mode === 'swap3') {
     const B = makeTeamBattle({ me: v.team.me.map(u => ({ ...u })), foe: v.team.foe.map(u => ({ ...u })), seed: 1 });

@@ -1,7 +1,7 @@
 // v2 전투 판 만들기 — 식물(종·스탯) → 전투 유닛, 기술 목록(기본기 셋 + 종 기술), 속성 상성, 상대 고르기.
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
 import { makeRng, resolveTurn } from './rules.js';
-import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX } from './status.js';
+import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX, useCharge, tickCharge } from './status.js';
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
 const WEAK = { fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] };
@@ -103,6 +103,7 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false) {
   if (stop()) return;
   for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: has(u, 'choke') ? 'spore' : 'shade' }); else gain(u); }
   for (const u of pair) expire(u, turn, ev);
+  for (const u of pair) tickCharge(u);   // 변이 기술 충전(앞에 선 식물만 — 3:3 대기석은 그대로)
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {
@@ -117,6 +118,7 @@ export function playTurnVs(B, mySkill, foeSkill) {
   foeSkill = pickOf(B.foe, foeSkill);
   const before = { me: B.me.hp, foe: B.foe.hp };
   B.me.energy -= me.cost || 0; B.foe.energy -= foeSkill.cost || 0;
+  useCharge(B.me, me); useCharge(B.foe, foeSkill);
   B.me.curEl = me.el; B.foe.curEl = foeSkill.el;
   const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d) => elemMult(u.curEl, d.el), turn: T });
   const events = res.events.filter(e => !(e.t === 'first' && (me === REST || foeSkill === REST)));   // 한쪽이 쉬면 선공 판정은 보여 주지 않음

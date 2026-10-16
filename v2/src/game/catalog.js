@@ -173,10 +173,40 @@ export const SKILLS = Object.fromEntries([
   S('u_jelly_1', '젤리 방울', 'water', 'u', 60, 1, { ranged: true, inflict: { id: 'wet' } }),
   S('u_jelly_2', '흐물 촉수', 'water', 'u', 80, 2, { inflict: { id: 'spore', n: 1 } }),
   S('u_jelly_3', '해파리 비', 'water', 'u', 105, 3, { ranged: true, area: true, inflict: { id: 'wet' } }),
+  // 변이 기술(2026-10-16 사용자 "변이 스킬은 별개로 2칸 — 최대 6칸" · 추천안 "변이마다 정해진 목록에서 언제든 골라 끼움 · 에너지 대신 충전" · "변이식물의 장점은 변이스킬로 6칸"):
+  //  tier 'm' · form = 변이형 · 에너지 0 · charge = 쓰고 나서 못 쓰는 턴 수 · 잊기 없음(목록 안에서 언제든 바꿈). 수치는 시제품 — 밸런스는 나중에(사용자)
+  S('m_bite', '물어뜯기', null, 'm', 70, 0, { form: 'predator', charge: 2, drain: 0.4 }),
+  S('m_devour', '집어삼키기', null, 'm', 110, 0, { form: 'predator', charge: 4, drain: 0.6 }),
+  S('m_hunt', '사냥 본능', null, 'm', 0, 0, { form: 'predator', charge: 3, self: 'focus', also: 'rage' }),
+  S('m_slash', '칼날 베기', null, 'm', 90, 0, { form: 'weapon', charge: 2 }),
+  S('m_shot', '가시 탄환', null, 'm', 75, 0, { form: 'weapon', charge: 2, ranged: true }),
+  S('m_smash', '쇠망치 내려치기', null, 'm', 115, 0, { form: 'weapon', charge: 4, inflict: { id: 'stun' } }),
+  S('m_spit', '독 뱉기', null, 'm', 50, 0, { form: 'toxic', charge: 2, ranged: true, inflict: { id: 'poison', n: 2 } }),
+  S('m_acid', '부식액', null, 'm', 65, 0, { form: 'toxic', charge: 3, ranged: true, inflict: { id: 'corrode' } }),
+  S('m_miasma', '독안개', null, 'm', 45, 0, { form: 'toxic', charge: 4, ranged: true, area: true, inflict: { id: 'poison', n: 3 } }),
+  S('m_puff', '포자 퍼프', null, 'm', 45, 0, { form: 'spore', charge: 2, ranged: true, inflict: { id: 'weak' } }),
+  S('m_sleep', '잠 포자', null, 'm', 30, 0, { form: 'spore', charge: 4, ranged: true, inflict: { id: 'stun' } }),
+  S('m_bloom', '포자 만개', null, 'm', 0, 0, { form: 'spore', charge: 4, self: 'regen', also: 'purify' }),
+  S('m_breath', '용의 숨결', null, 'm', 100, 0, { form: 'dragon', charge: 3, ranged: true, elOwn: true }),   // 속성 = 그 식물 속성(kitOfPlant)
+  S('m_scale', '비늘 방패', null, 'm', 0, 0, { form: 'dragon', charge: 3, self: 'shield' }),
+  S('m_roar', '용의 포효', null, 'm', 55, 0, { form: 'dragon', charge: 3, inflict: { id: 'taunt' } }),
 ].map(s => [s.id, s]));
+// 변이형(변이 연출 설계 2026-10-15: 포식 = 진홍 · 무기 = 강철 · 독성 = 보라 · 포자 = 금빛 · 용족 = 청록) — 포자는 버섯 전용. 일반(무변이) = null
+export const FORMS = {
+  predator: { name: '포식', col: '#e8344a', light: '#ffd0d6' },
+  weapon: { name: '무기', col: '#9aa8c0', light: '#e8eef8' },
+  toxic: { name: '독성', col: '#a868e8', light: '#f0d8ff' },
+  spore: { name: '포자', col: '#d0b050', light: '#fffbd8' },
+  dragon: { name: '용족', col: '#30e1b9', light: '#c8fff0' },
+};
+export const FORM_KEYS = Object.keys(FORMS);
+export const formSkills = form => Object.values(SKILLS).filter(x => x.tier === 'm' && x.form === form).map(x => x.id);
+export const MUT_SLOTS = 2;
+// 탐사 종자가 변이일 확률(지역 mut 배율을 곱함 — 행성 지역 고르기) · 변이 고정 종(SPECIES[키].form)은 늘 그 변이
+export const MUT_P = 0.04;
 const UNI = { flower_grass: 'petal', thorn: 'thorn', aqua: 'aqua', flower_wind: 'wind', spark: 'spark', vine_water: 'tide', cactus_fire: 'ember', gaia: 'gaia', flower_fire: 'blaze', cactus_wind: 'gale', vine_wind: 'gvine', spore_cap: 'spore', frost_bell: 'frost', volt_vine: 'volt', stone_cap: 'stone', jelly_cap: 'jelly' };
 export const uniqueOf = (key, stage) => `u_${UNI[key]}_${stage + 1}`;
-export const TIER_NAME = { u: '개성', c1: '하급', c2: '중급', c3: '상급', g: '가지', s: '특수' };
+export const TIER_NAME = { u: '개성', c1: '하급', c2: '중급', c3: '상급', g: '가지', s: '특수', m: '변이' };
 const tierAt = stage => ['c1', 'c2', 'c3'][stage];
 // 진화(또는 처음) 때 피어날 후보: 그 단계 개성 + 그 단계 급의 속성·종 공통 + (자라는 단계부터) 가지
 export function bloomPool(key, stage) {
@@ -193,6 +223,7 @@ export function canGraft(p, skillId) {
   const s = SKILLS[skillId], sp = SPECIES[p.key];
   if (!s) return '없는 기술';
   if (s.tier === 's') return null;
+  if (s.tier === 'm') return '변이 기술은 변이 칸에서 골라요';
   if (s.tier === 'u') return '개성 기술은 그 식물만 가져요';
   if (s.tier === 'g') return s.branch === sp.branch || p.legend ? null : `${BRANCH[s.branch]} 식물만 배워요`;
   if (!(s.el === sp.el || s.jong === sp.type)) return '속성이나 종이 맞지 않아요';
@@ -252,6 +283,72 @@ export const PLANETS = [
   { id: 'ex_nereidon', name: '네레이돈', orbit: 4, hazard: 2, rich: 1.4, vital: 1, kind: 'mixed', pool: ['vine_water', 'aqua', 'jelly_cap', 'frost_bell'], legend: true },   // 고리 바다 = 물 · 빙결
   { id: 'ex_tiamen', name: '티아멘', orbit: 4, hazard: 3, rich: 1.6, vital: 1, kind: 'mixed', pool: ['frost_bell', 'vine_wind', 'cactus_wind'], legend: true },   // 얼음 바람 = 빙결 · 바람, 아주 위험
 ];
+// 지역(2026-10-16 사용자 "행성 지도에서 지역 고르기" — 지역마다 나오는 속성·종, 위험과 귀한 보상, 종자 위주/부품 위주를 다르게 · 탐사 장치 단계에 따라 하나씩 열림):
+//  행성마다 3~4곳 · need = 탐사 장치 단계 · 첫 곳(need 1) = 행성 값 그대로(옛 판과 같은 확률 · 보상 — 다른 값을 넣지 말 것)
+//  pool = 그 행성 식물 중 일부(흔한 것을 겹쳐 쓰면 더 자주 · 흔한 것 하나 이상) · dh · dv = 행성 위험 · 생기에 더함(위험 0~3 · 생기 0~2 안으로) · kind = 종자형/섞임/자원형 바꿈
+//  rare = 귀한 보상 배수(희귀 종자 18% · 접목 가지 · 회귀 주사 · 보석에 곱함 — 위험이 높은 곳일수록 큼: dh −1 = 0.8 · 0 = 1 · +1 = 1.3 · +2 = 1.6) · mut = 변이 종자 확률 배수(1 · 1.5 · 2)
+//  수치는 가볍게(사용자 "벨런스 보고 보정도 나중에")
+const REGIONS = {
+  ex_ermias: [
+    { id: 'grove', name: '우림 입구', need: 1, rare: 1, mut: 1 },
+    { id: 'brook', name: '이끼 개울', need: 2, pool: ['aqua', 'aqua', 'vine_water', 'flower_grass'], rare: 1, mut: 1 },   // 물 · 풀
+    { id: 'storm', name: '번개 숲', need: 3, pool: ['flower_wind', 'spark'], dh: 1, kind: 'mixed', rare: 1.3, mut: 1.5 },   // 바람 · 번개
+    { id: 'vault', name: '시료 창고', need: 4, dh: 1, dv: 1, rare: 1.3, mut: 2 },   // 옛 문명 시료 = 고루 · 생기 높음
+  ],
+  ex_calisto: [
+    { id: 'pit', name: '채굴장', need: 1, rare: 1, mut: 1 },
+    { id: 'canyon', name: '마른 협곡', need: 2, pool: ['cactus_fire', 'cactus_fire', 'gaia'], dv: 1, kind: 'mixed', rare: 1, mut: 1 },   // 불 선인장 · 종자 늘어남
+    { id: 'scrap', name: '기계 무덤', need: 3, pool: ['stone_cap', 'stone_cap', 'gaia'], dh: 1, rare: 1.3, mut: 2 },   // 대지 · 부품(나중에 기계 식물)
+  ],
+  ex_seraphin: [
+    { id: 'hill', name: '바람 언덕', need: 1, rare: 1, mut: 1 },
+    { id: 'bridge', name: '구름 다리', need: 2, pool: ['vine_wind', 'vine_wind', 'flower_wind'], rare: 1, mut: 1 },
+    { id: 'eye', name: '폭풍의 눈', need: 3, pool: ['cactus_wind', 'cactus_wind', 'vine_wind'], dh: 2, dv: 1, kind: 'mixed', rare: 1.6, mut: 2 },
+  ],
+  ex_kairen: [
+    { id: 'field', name: '꽃 들판', need: 1, rare: 1, mut: 1 },
+    { id: 'bramble', name: '가시 덤불', need: 2, pool: ['thorn', 'thorn', 'flower_grass'], dh: 1, rare: 1.3, mut: 1 },   // 풀
+    { id: 'ember', name: '불꽃 언덕', need: 3, pool: ['flower_fire', 'flower_fire', 'thorn'], dh: 1, dv: 1, kind: 'mixed', rare: 1.3, mut: 1.5 },   // 불
+  ],
+  ex_mirdin: [
+    { id: 'mire', name: '안개 늪', need: 1, rare: 1, mut: 1 },
+    { id: 'shade', name: '그늘 숲', need: 2, pool: ['thorn', 'spore_cap'], rare: 1, mut: 1.5 },   // 풀 · 스포어캡
+    { id: 'pond', name: '젤리 연못', need: 3, pool: ['vine_water', 'jelly_cap'], dh: 1, kind: 'mixed', rare: 1.3, mut: 1.5 },   // 물 · 젤리캡
+  ],
+  ex_volkar: [
+    { id: 'foot', name: '화산 기슭', need: 1, rare: 1, mut: 1 },
+    { id: 'ash', name: '잿빛 들', need: 2, pool: ['flower_fire', 'flower_fire', 'cactus_fire'], dh: -1, kind: 'seed', rare: 0.8, mut: 1 },   // 불 · 덜 위험
+    { id: 'thunder', name: '천둥 고개', need: 3, pool: ['volt_vine', 'spark'], dh: 1, rare: 1.3, mut: 2 },   // 번개
+    { id: 'lava', name: '용암 광맥', need: 4, pool: ['cactus_fire', 'cactus_fire', 'volt_vine'], dh: 1, kind: 'resource', rare: 1.3, mut: 1.5 },   // 부품
+  ],
+  ex_veloc: [
+    { id: 'sands', name: '용암 사막', need: 1, rare: 1, mut: 1 },
+    { id: 'crater', name: '식은 화구', need: 2, pool: ['flower_fire', 'flower_fire', 'cactus_fire'], dh: -1, dv: 1, kind: 'mixed', rare: 0.8, mut: 1 },   // 불 · 덜 위험
+    { id: 'obsidian', name: '흑요석 굴', need: 3, pool: ['gaia', 'stone_cap', 'stone_cap'], dv: 1, rare: 1, mut: 2 },   // 대지 · 부품
+  ],
+  ex_aztel: [
+    { id: 'petal', name: '꽃잎 고원', need: 1, rare: 1, mut: 1 },
+    { id: 'pollen', name: '꽃가루 계곡', need: 2, pool: ['flower_grass', 'flower_grass', 'flower_wind'], dv: 1, rare: 1, mut: 1 },   // 풀 · 생기 높음
+    { id: 'gust', name: '돌개바람 절벽', need: 3, pool: ['vine_wind', 'vine_wind', 'flower_wind'], dh: 2, kind: 'mixed', rare: 1.6, mut: 1.5 },   // 바람 · 위험
+  ],
+  ex_octavis: [
+    { id: 'shallow', name: '얕은 동굴', need: 1, rare: 1, mut: 1 },
+    { id: 'crystal', name: '수정 동굴', need: 2, pool: ['aqua', 'jelly_cap'], dh: 1, kind: 'resource', rare: 1.3, mut: 1.5 },   // 부품
+    { id: 'trench', name: '심해 해구', need: 3, pool: ['vine_water', 'jelly_cap'], dh: 2, rare: 1.6, mut: 2 },   // 젤리캡 · 아주 위험
+  ],
+  ex_nereidon: [
+    { id: 'waves', name: '물결 바다', need: 1, rare: 1, mut: 1 },
+    { id: 'reef', name: '산호 섬', need: 2, pool: ['aqua', 'aqua', 'vine_water'], dh: -1, dv: 1, kind: 'seed', rare: 0.8, mut: 1 },   // 물 · 덜 위험 · 생기 높음
+    { id: 'ring', name: '얼음 고리', need: 3, pool: ['vine_water', 'aqua', 'frost_bell'], dh: 1, rare: 1.3, mut: 1.5 },   // 빙결
+    { id: 'glacier', name: '빙하 해구', need: 4, pool: ['vine_water', 'jelly_cap', 'frost_bell'], dh: 1, kind: 'resource', rare: 1.3, mut: 2 },   // 부품
+  ],
+  ex_tiamen: [
+    { id: 'blizzard', name: '눈보라 벌판', need: 1, rare: 1, mut: 1 },
+    { id: 'hollow', name: '바람굴', need: 2, pool: ['cactus_wind', 'vine_wind', 'vine_wind'], dh: -1, kind: 'seed', rare: 0.8, mut: 1 },   // 바람 · 덜 위험
+    { id: 'spire', name: '얼음 첨탑', need: 3, pool: ['cactus_wind', 'frost_bell'], dv: 1, rare: 1, mut: 2 },   // 빙결 · 생기 높음
+  ],
+};
+for (const p of PLANETS) p.regions = REGIONS[p.id];
 export const KIND_NAME = { seed: '종자가 많아요', mixed: '종자 · 자원 섞임', resource: '자원이 많아요' };
 // ── 리그 · 시즌(1:1 토너먼트) — 리그는 단계별(성장 설계 2026-10-15 "리그는 단계별(어린 · 자라는 · 무제한)"), 리그마다 단계 사다리(브론즈 → 풀로세움) 따로
 //  시즌 = 2주. 끝나면 리그마다 그 시즌 가장 높이 간 단계로 상자(돈 · 보석 · 연료 캡슐 · 골드부터 칭호) → 모든 리그가 두 단계 내려가 예선부터
@@ -266,7 +363,7 @@ export const seasonReward = tier => ({ credits: 150 + 150 * tier, gems: 3 * tier
 export const PROBE = {
   tank: { name: '연료 탱크', max: 4, desc: '갈 수 있는 궤도가 넓어져요' },
   hull: { name: '내구성', max: 5, desc: '성공률이 오르고 내구도가 늘어요' },
-  scanner: { name: '탐사 장치', max: 5, desc: '종자 말고 다른 보상의 등급이 올라요' },
+  scanner: { name: '탐사 장치', max: 5, desc: '새 지역이 열리고 귀한 보상이 올라요' },
   cargo: { name: '채집기', max: 5, desc: '가져오는 보상이 늘어요(무거워져 위험한 곳에서 더 닳아요)' },
   vault: { name: '종자 보관함', max: 5, desc: '종자 개체값이 좋게 나올 확률이 올라요' },
 };

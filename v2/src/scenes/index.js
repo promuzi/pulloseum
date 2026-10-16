@@ -14,6 +14,9 @@ import { storage } from './storage.js';
 import { matching } from './matching.js';
 import { hangar } from './hangar.js';
 import { room } from './room.js';
+import { cardFront } from '../art/skillcard.js';
+import { SKILLS } from '../game/catalog.js';
+import { BASICS } from '../battle/model.js';
 
 // 아이콘 검토판(개발용)
 const icons = {
@@ -32,4 +35,20 @@ const icons = {
   },
 };
 
-export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons };
+// 카드 덧표시 검토판(개발용 · ?scene=cardlab): 왼쪽 = 보통, 오른쪽 = 그 상황(같은 자세 두 번째 · 충전 중 등)
+const LAB = [['w_whirl', {}, {}, '흡수 = 회복 아이콘'], ['u_wind_3', {}, {}, '광역 = 폭탄'], ['guard', {}, { halved: true }, '같은 자세 두 번째'],
+  ['u_thorn_3', {}, {}, '효과 겹 수'], ['m_bite', {}, { can: false, cd: 2 }, '변이 · 충전 중'], ['m_scale', {}, { can: false, cd: 1 }, '변이 · 충전 중']];
+const cardlab = {
+  draw(app) {
+    const { g, W } = app;
+    g.rect(0, 0, W, app.H, '#141a26');
+    LAB.forEach(([id, a, b, label], i) => {
+      const sk = SKILLS[id] || BASICS.find(x => x.id === id), col = i % 2, row = Math.floor(i / 2), x0 = 6 + col * 132, y0 = 6 + row * 112;
+      cardFront(g, x0, y0, 62, 90, sk, { can: true, ...a });
+      cardFront(g, x0 + 66, y0, 62, 90, sk, { can: true, ...b });
+      g.text(label, x0 + 64, y0 + 93, { font: 'bold', color: '#e6f3ff', align: 'center' });
+    });
+  },
+};
+
+export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons, cardlab };

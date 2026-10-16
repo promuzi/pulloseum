@@ -7,8 +7,8 @@ import { T, plate, btnBody, tbar } from '../art/theme.js';
 import { drawShip, drawMother, drawShipMini, SHIP_SC } from '../art/ship.js';
 import { hangarBack, shipAt } from './hangar.js';
 import { sfx } from '../core/sound.js';
-import { PLANETS as CAT_PLANETS, ORBIT_LV, FUEL, SPECIES, KIND_NAME, probeMaxDur } from '../game/catalog.js';
-import { fuelSync, probeOf, exploreOdds } from '../game/logic.js';
+import { PLANETS as CAT_PLANETS, ORBIT_LV, FUEL, SPECIES, KIND_NAME, RARITY_COL, probeMaxDur } from '../game/catalog.js';
+import { fuelSync, probeOf, exploreOdds, regionOf } from '../game/logic.js';
 import { left } from '../game/view.js';
 import { showGot } from './popups.js';
 
@@ -36,13 +36,13 @@ const MOTHER_W = 56, MINI = { sc: 0.105 }, MORPH_MS = 950, BACK_MS = 800, REACH_
 // 탐사 출발(2026-10-16 사용자 "탐사 가는 모션과 애니메이션도 따로"): 집게에서 떨어짐 → 고른 행성으로 곡선 비행(꼬리 자취) → 행성에 닿아 빛 고리 → 결과
 const UNDOCK = 380, FLY = 950, LAND = 420;
 // 아래 판 높이(내용 끝까지) — 짧은 화면은 판을 아래(탭 줄 위)에 붙이고 지도 가운데를 그 위 빈 곳 한가운데로
-const PANEL_H = 190;
+const PANEL_H = 196;
 const ease = k => k * k * (3 - 2 * k);
 const reachR = (o, k = 1.12) => { const lo = ORB[Math.max(1, Math.floor(o))], hi = ORB[Math.min(4, Math.ceil(o))], f = o - Math.floor(o); return [(lo[0] + (hi[0] - lo[0]) * f) * k, (lo[1] + (hi[1] - lo[1]) * f) * k]; };
 
 export const explore = {
   theme: 'night',   // 밤 정원(장소 테마 — 2026-10-15)
-  enter(p = {}) { this.sel = this.sel || 'ex_ermias'; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
+  enter(p = {}) { this.sel = this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
   draw(app) {
     const { g, W, H, t, state: s } = app, now = app.now(), P = probeOf(s);
     fuelSync(s, now);
@@ -87,34 +87,46 @@ export const explore = {
     this.warpDraw(app);
   },
   reachNow(t) { const R = this.reach; if (!R) return 1; const k = Math.min(1, (t - R.t0) / REACH_MS); return R.from + (R.to - R.from) * ease(k); },
-  // 아래 판: 고른 행성(환경 · 나오는 속성 · 위험 · 생기 · 사는 식물) → 탐사비 · 연료 캡슐 · 성공 확률 · 내구도 → 탐사 보내기
+  // 아래 판: 고른 행성 → 지역 칸(탐사 장치 단계로 하나씩 열림) → 그 지역의 나오는 속성 · 위험 · 생기 · 종자형/자원형 · 사는 식물 · 귀한 보상
+  //  → 탐사비 · 연료 캡슐 · 성공 확률 · 내구도 → 탐사 보내기(고른 지역으로)
   panel(app, s, now, P) {
     const { g, W, H } = app, pl = PLANETS.find(p => p.id === this.sel), PT = T.ptext, needLv = ORBIT_LV[pl.orbit], lvLock = s.user.level < needLv, far = pl.orbit > P.lv.tank;
-    const py = this.py || 300, O = exploreOdds(s, pl), max = probeMaxDur(P.lv.hull);
+    const Z = regionOf(pl, this.reg[pl.id]), rLock = P.lv.scanner < Z.need;
+    const py = this.py || 300, O = exploreOdds(s, pl, Z), max = probeMaxDur(P.lv.hull);
     plate(g, 8, py, W - 16, H - py - 50);
     g.text(pl.name, 18, py + 8, { font: 'head', color: PT.main });
     btnBody(g, W - 72, py + 7, 56, 18, lvLock || far ? T.btn.off : T.btn.primary, true); g.text(`${pl.orbit}궤도`, W - 44, py + 10, { color: (lvLock || far ? T.btn.off : T.btn.primary).text, align: 'center', font: 'bold' });
-    g.text(pl.note || '', 18, py + 27, { color: PT.sub });
-    // 나오는 속성(아이콘) · 위험(점 셋) · 생기(개체값 ★) · 종자형/자원형
-    const els = [...new Set(pl.pool.map(k => SPECIES[k].el))];
-    els.forEach((el, i) => g.img(icon(el), 18 + i * 13, py + 45));
-    let x2 = 18 + els.length * 13 + 6;
-    g.text('위험', x2, py + 44, { color: PT.dim }); x2 += g.textW('위험') + 3;
-    for (let i = 0; i < 3; i++) g.rect(x2 + i * 7, py + 47, 5, 5, i < pl.hazard ? '#ff7a5c' : '#1e3046');
-    x2 += 26;
-    g.text('생기', x2, py + 44, { color: PT.dim }); x2 += g.textW('생기') + 3;
-    for (let i = 0; i < 2; i++) g.rect(x2 + i * 7, py + 47, 5, 5, i < (pl.vital || 0) ? '#7cf0a0' : '#1e3046');
-    g.text(KIND_NAME[pl.kind] || '', W - 18, py + 44, { color: pl.kind === 'resource' ? '#f0be7d' : PT.sub, align: 'right' });
-    // 사는 식물
-    pl.pool.forEach((k, i) => {
-      const x = 18 + i * 34, y = py + 60, known = s.discovered.includes(k);
-      g.rect(x, y, 30, 30, '#0a1c32'); g.rect(x, y, 30, 1, SPECIES[k].rarity === 'rare' ? '#6fb8ff' : '#2f5c8a');
-      if (known) g.clip(x + 1, y + 1, 28, 28, () => drawPortrait(g, k, x + 1, y + 1, 28, false));
-      else g.text('?', x + 15, y + 8, { font: 'head', color: '#3f6a88', align: 'center' });
+    // 지역 칸: 한 줄 같은 폭 · 같은 높이 · 양 끝 = 아래 큰 단추 양 끝 · 고른 곳 = 밝게 · 잠긴 곳 = 자물쇠 + '장치 N'(눌러 미리 보기는 됨 → 정비실 단추)
+    const regs = pl.regions || [Z], RG = 6, rw = Math.floor((W - 36 - RG * (regs.length - 1)) / regs.length), rx = Math.round((W - rw * regs.length - RG * (regs.length - 1)) / 2), ry = py + 29;
+    this.regR = [rx - 3, ry - 3, W - 2 * rx + 6, 24];   // 처음 안내가 가리킬 자리
+    regs.forEach((R, i) => {
+      const lock = P.lv.scanner < R.need;
+      button(app, 'rg_' + R.id, rx + i * (rw + RG), ry, rw, 18, lock ? `장치 ${R.need}` : R.name, { style: R.id === Z.id ? 'teal' : lock ? 'off' : 'night', icon: lock ? 'lockS' : null, iconTint: true, onTap: () => { this.reg[pl.id] = R.id; } });
     });
-    if (pl.legend) g.text('전설이 아주 드물게', W - 18, py + 70, { color: '#ffb04a', align: 'right' });
+    // 나오는 속성(아이콘) · 위험(점 셋) · 생기(개체값 ★) · 종자형/자원형 — 고른 지역 값
+    const sp = [...new Set(Z.pool)], els = [...new Set(sp.map(k => SPECIES[k].el))], iy = py + 51;
+    els.forEach((el, i) => g.img(icon(el), 18 + i * 13, iy + 1));
+    let x2 = 18 + els.length * 13 + 6;
+    g.text('위험', x2, iy, { color: PT.dim }); x2 += g.textW('위험') + 3;
+    for (let i = 0; i < 3; i++) g.rect(x2 + i * 7, iy + 3, 5, 5, i < Z.hazard ? '#ff7a5c' : '#1e3046');
+    x2 += 26;
+    g.text('생기', x2, iy, { color: PT.dim }); x2 += g.textW('생기') + 3;
+    for (let i = 0; i < 2; i++) g.rect(x2 + i * 7, iy + 3, 5, 5, i < Z.vital ? '#7cf0a0' : '#1e3046');
+    g.text(KIND_NAME[Z.kind] || '', W - 18, iy, { color: Z.kind === 'resource' ? '#f0be7d' : PT.sub, align: 'right' });
+    // 사는 식물(그 지역) · 오른쪽 = 귀한 보상(보상 칸 하나가 접목 가지 · 회귀 주사 · 보석일 확률 — 정비실 탐사 장치와 같은 말) · 전설
+    const ty = py + 66, tp = sp.length >= 5 ? 32 : 34;   // 다섯 칸이면 사이를 좁혀 오른쪽 글자 자리
+    sp.forEach((k, i) => {
+      const x = 18 + i * tp, known = s.discovered.includes(k);
+      g.rect(x, ty, 30, 30, '#0a1c32'); g.rect(x, ty, 30, 1, SPECIES[k].rarity === 'rare' ? '#6fb8ff' : '#2f5c8a');
+      if (known) g.clip(x + 1, ty + 1, 28, 28, () => drawPortrait(g, k, x + 1, ty + 1, 28, false));
+      else g.text('?', x + 15, ty + 8, { font: 'head', color: '#3f6a88', align: 'center' });
+    });
+    const gy = pl.legend ? ty + 2 : ty + 9, gv = `${Math.round(O.gem * 100)}%`;
+    g.text(gv, W - 18, gy, { font: 'bold', color: RARITY_COL[3], align: 'right' });
+    g.text('귀한 보상', W - 18 - g.textW(gv, 'bold') - 4, gy, { color: PT.dim, align: 'right' });
+    if (pl.legend) g.text('전설이 아주 드물게', W - 18, ty + 16, { color: '#ffb04a', align: 'right' });
     // 탐사비 · 성공 확률 · 닳는 양 · 내구도
-    const y3 = py + 98, okP = Math.round(O.ok * 100);
+    const y3 = py + 104, okP = Math.round(O.ok * 100);
     this.oddsR = [12, y3 - 3, W - 24, 32]; this.fuelR = [12, y3 + 33, W - 24, 15];   // 처음 안내가 가리킬 자리
     g.text(`탐사비 ${O.cost}`, 18, y3, { font: 'bold', color: s.wallet.credits >= O.cost ? PT.main : '#ff9a8a' });
     g.text(`성공 ${okP}%`, 92, y3, { font: 'bold', color: okP >= 85 ? '#9ff0b0' : okP >= 65 ? '#ffd890' : '#ff9a8a' });
@@ -128,15 +140,15 @@ export const explore = {
     for (let i = 0; i < Math.max(FUEL.max, Math.min(6, fuel)); i++) { const x = 34 + i * 12; g.rect(x, fy + 1, 9, 9, '#0a1c32'); if (i < fuel) { g.rect(x + 1, fy + 2, 7, 7, '#ffd84a'); g.rect(x + 1, fy + 2, 7, 1, '#fff6c8'); } }
     const nx = 34 + Math.max(FUEL.max, Math.min(6, fuel)) * 12 + 4;
     g.text((fuel > 6 ? `+${fuel - 6} · ` : '') + (fuel >= FUEL.max ? '연료 캡슐' : `다음 캡슐 ${left(s.fuelT + FUEL.regenMin * 60000 - now)}`), nx, fy, { color: PT.sub });
-    const broken = P.dur <= 0, go = !lvLock && !far && !broken && fuel > 0 && s.wallet.credits >= O.cost && !this.warp;
-    const label = lvLock ? `재배사 Lv${needLv}에 열려요` : far ? `연료 탱크 ${pl.orbit}단계가 필요해요` : broken ? '탐사선을 고쳐야 해요' : fuel <= 0 ? '연료 캡슐이 없어요' : s.wallet.credits < O.cost ? '탐사비가 모자라요' : `탐사 보내기 · 캡슐 1 · ${O.cost}`;
-    button(app, 'ex_go', 18, fy + 18, W - 36, 30, label, { style: 'gold', font: 'bold', icon: go ? 'navExplore' : 'lockS', iconTint: true, disabled: !go, onTap: () => this.go(app, pl) });
-    if ((far || broken) && !this.warp && !this.morph) button(app, 'ex_fix', W - 150, py + 7, 72, 18, '정비실', { style: 'night', onTap: () => { this.morph = { t0: app.t, part: broken ? 'hull' : 'tank' }; } });
+    const broken = P.dur <= 0, go = !lvLock && !far && !rLock && !broken && fuel > 0 && s.wallet.credits >= O.cost && !this.warp;
+    const label = lvLock ? `재배사 Lv${needLv}에 열려요` : far ? `연료 탱크 ${pl.orbit}단계가 필요해요` : rLock ? `탐사 장치 ${Z.need}단계가 필요해요` : broken ? '탐사선을 고쳐야 해요' : fuel <= 0 ? '연료 캡슐이 없어요' : s.wallet.credits < O.cost ? '탐사비가 모자라요' : `탐사 보내기 · 캡슐 1 · ${O.cost}`;
+    button(app, 'ex_go', 18, fy + 18, W - 36, 30, label, { style: 'gold', font: 'bold', icon: go ? 'navExplore' : 'lockS', iconTint: true, disabled: !go, onTap: () => this.go(app, pl, Z.id) });
+    if ((far || broken || rLock) && !this.warp && !this.morph) button(app, 'ex_fix', W - 150, py + 7, 72, 18, '정비실', { style: 'night', onTap: () => { this.morph = { t0: app.t, part: broken ? 'hull' : far ? 'tank' : 'scanner' }; } });
   },
-  async go(app, P) {
+  async go(app, P, region) {
     this.warp = { t0: app.t, res: null, P };
     sfx('whoosh');
-    const r = await app.act('explore', { planet: P.id });
+    const r = await app.act('explore', { planet: P.id, region });
     if (!r) { this.warp = null; return; }
     this.warp.res = r;
   },

@@ -73,5 +73,42 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   runOp(s2, 'guide', { id: 'battle' }, { rng: makeRng(1), now: 0 });
   ok(s2.guide.battle === 1, '서버 일 목록(ops guide)으로');
 }
+// ⑥ 변이 칸 둘(변이 식물 = 여섯) · 충전 · 변이 종자
+{
+  const { setMut, makePlant, seedOf, formsFor } = await import('../../v2/src/game/logic.js');
+  const { unitOf, botPlant } = await import('../../v2/src/game/fight.js');
+  const { makeBattle, playTurnVs } = await import('../../v2/src/battle/model.js');
+  const { canUse, chargeLeft } = await import('../../v2/src/battle/status.js');
+  const { formSkills, SKILLS } = await import('../../v2/src/game/catalog.js');
+  const s = game(), rng = makeRng(9);
+  const p = makePlant(s, { key: 'cactus_fire', form: 'weapon' }, rng, 0); s.plants.push(p);
+  ok(p.form === 'weapon' && JSON.stringify(p.skills.mut) === JSON.stringify(formSkills('weapon').slice(0, 2)), '변이 종자 → 변이 식물 · 변이 칸 둘: ' + JSON.stringify(p.skills.mut));
+  const kit = kitOfPlant(p);
+  ok(kit.length === 6 && kit.filter(k => k.mut).length === 2, '변이 식물 손패 = 여섯(넷 + 변이 둘): ' + kit.map(k => k.id));
+  throws(() => setMut(s, p.uid, ['m_bite', null]), '다른 변이 기술');
+  throws(() => setMut(s, p.uid, ['m_slash', 'm_slash']), '같은 변이 기술 두 칸');
+  throws(() => setMut(s, s.plants[0].uid, ['m_slash', null]), '변이 아닌 식물');
+  setMut(s, p.uid, ['m_smash', 'm_slash']);
+  ok(JSON.stringify(p.skills.mut) === '["m_smash","m_slash"]', '변이 칸 바꾸기(목록 안에서 언제든)');
+  // 충전: 칼날 베기(충전 2) — 1턴 씀 → 2 · 3턴 못 씀 → 4턴 다시
+  const me = unitOf('me', p), foe = unitOf('foe', makePlant(s, { key: 'gaia' }, rng, 0)); foe.hp = foe.max = 99999;
+  const B = makeBattle({ me, foe, seed: 3 }), slash = me.kit.find(k => k.id === 'm_slash');
+  const okAt = [];
+  for (let t = 1; t <= 4; t++) { okAt.push(canUse(B.me, slash)); playTurnVs(B, canUse(B.me, slash) ? slash : 'rest', 'rest'); }
+  ok(JSON.stringify(okAt) === '[true,false,false,true]', '충전 2 = 쓰고 두 턴 기다림: ' + JSON.stringify(okAt));
+  ok(slash.cost === 0 && chargeLeft(B.me, slash) === 2, '에너지 안 씀 · 쓴 턴 끝 = 남은 충전 2');
+  // 숨결 = 그 식물 속성
+  const d = makePlant(s, { key: 'aqua', form: 'dragon' }, rng, 0);
+  ok(kitOfPlant(d).find(k => k.id === 'm_breath').el === 'water', '용의 숨결 = 식물 속성');
+  // 변이 종자: 탐사 배율이 있을 때만 · 버섯 = 포자만
+  let n = 0, bad = 0;
+  for (let i = 0; i < 4000; i++) { const sd = seedOf(s, i % 2 ? 'spore_cap' : 'thorn', rng, { mut: 2 }); if (sd.form) { n++; if (!formsFor(sd.key).includes(sd.form)) bad++; } }
+  ok(n > 200 && n < 450 && !bad, `변이 종자 비율(배율 2) ${(n / 40).toFixed(1)}% · 맞지 않는 변이 ${bad}`);
+  ok(!seedOf(s, 'thorn', rng).form, '배율 없는 종자는 변이 없음');
+  ok(Object.values(SKILLS).filter(x => x.tier === 'm').every(x => (x.cost || 0) === 0 && x.charge > 0), '변이 기술 = 에너지 0 · 충전 있음');
+  // 봇: 자라는 단계부터 가끔 변이
+  let bf = 0; for (let i = 0; i < 400; i++) { const b = botPlant(makeRng(i), 1, 3, 0); if (b.form) { bf++; ok(kitOfPlant(b).length === 6, '변이 봇 손패 여섯'); } }
+  ok(bf > 10 && bf < 70, '변이 봇 ' + bf + '/400');
+}
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

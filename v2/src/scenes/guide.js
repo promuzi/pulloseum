@@ -16,6 +16,7 @@ const sc0 = sc => sc || {};
 const hdrBtn = app => [Math.round((app.hdrRightX || app.W - 4) - 22), 7];
 // 식물 관리 판 끌어 넘기기: 맨 위 · 맨 아래
 const top = (app, sc) => { sc.scrollY = 0; }, bottom = (app, sc) => { sc.scrollY = sc.maxY || 0; };
+const activeForm = app => { const s = app.state, p = s && (s.plants[s.active] || s.plants[0]); return p && p.form; };
 
 // ── 화면별 안내 ──
 export const GUIDES = [
@@ -48,6 +49,11 @@ export const GUIDES = [
       { at: 'bt_swap', text: '내 팀 셋이에요. 누르면 다른 식물로 바꿔요. 앞 식물이 쓰러지면 다음에 내보낼 식물을 골라요.' },
       { at: 'fx_foe', text: '상대 이름 옆 칸은 상대에게 남은 식물이에요.' },
     ] },
+  { id: 'battle_mut', scene: 'battle', when: (app, sc) => !!(sc.B && sc.B.me && sc.B.me.kit && sc.B.me.kit.some(k => k.mut)), btn: app => [app.W - 21, 4],
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
+    auto: (app, sc) => sc.net !== 'pvp',
+    pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
+    steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 에너지를 쓰지 않고, 쓰고 나면 왼쪽 위 숫자만큼 턴을 기다려요.' }] },
   { id: 'plant', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub, btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
     steps: [
@@ -57,6 +63,9 @@ export const GUIDES = [
       { at: (app, sc) => sc.growR, prep: top, text: '물 · 비료를 주면 레벨이 올라요. 오를 때마다 강화 포인트가 생기고, 다 자라면 진화해요.' },
       { at: ['sk_forgot', 'sk_graft'], prep: bottom, text: '지운 기술은 회귀 주사로 되돌리고, 접목 가지로는 맞는 기술을 바로 배워요.' },
     ] },
+  { id: 'plant_mut', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && !!activeForm(app), btn: app => [app.W - 24, 9],
+    ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
+    steps: [{ at: 'skc_m*', prep: bottom, text: '변이 식물만 가진 변이 칸 둘이에요. 에너지 대신 쓰고 나면 몇 턴 충전되고, 옆 목록의 기술을 끌어다 언제든 바꿔 끼워요.' }] },
   { id: 'plant_up', scene: 'plant', when: (app, sc) => sc.tab === 'up', btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && !sc.out,
     steps: [
@@ -100,6 +109,7 @@ export const GUIDES = [
     ready: (app, sc) => !sc.morph && !sc.unmorph && !sc.warp,
     steps: [
       { at: 'pl_*', text: '행성을 골라 탐사를 보내요. 먼 궤도는 연료 탱크를 키우고 재배사 레벨이 올라야 열려요.' },
+      { at: (app, sc) => sc.regR, text: '행성마다 지역이 있어요. 지역마다 나오는 식물 · 위험 · 귀한 보상이 다르고, 탐사 장치를 키우면 하나씩 열려요. 위험한 곳일수록 변이 종자가 잘 나와요.' },
       { at: (app, sc) => sc.oddsR, text: '탐사비 · 성공 확률 · 닳는 내구도를 보고 보내요. 실패하면 탐사선이 크게 닳아요.' },
       { at: (app, sc) => sc.fuelR, text: '탐사 한 번에 연료 캡슐 하나를 써요. 캡슐은 시간이 지나면 다시 차요.' },
       { at: 'ex_ship', text: '탐사선을 누르면 정비실로 가요.' },

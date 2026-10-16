@@ -6,9 +6,10 @@ import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo, UI, UI_ACCENT } fr
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
-import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx } from '../battle/status.js';
+import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, chargeLeft } from '../battle/status.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
+import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
 import { cardFront, cardSlot, renderFaces, drawFlip } from '../art/skillcard.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
@@ -41,9 +42,10 @@ const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 //  기타 줄(교체 · 감정) → 손패 → 내 체력판 → 경기장(그림 348칸을 손패 위에 붙이고, 짧으면 위 하늘을 잘라 올리고 길면 위에 하늘을 늘임)
 //  옛 판(손패 여섯 = 기본기 셋 + 배운 기술 셋)은 두 줄 그대로
 const HAND_W = 62, HAND_GX = 4, MISC_H = 32, BOT_PAD = 10;
+const mutHand = kit => !!(kit && kit.some(s => s.mut));   // 변이 칸 둘(2026-10-16 사용자 "변이식물의 장점은 변이스킬로 6칸")
 const handRows = kit => (kit && kit.length > 4 ? 2 : 1);
-function layOf(H, rows) {
-  const miscY = H - BOT_PAD - MISC_H, HY = miscY - 8 - rows * CARD_H - (rows - 1) * CARD_GY, AH = HY - AY + 28;
+function layOf(H, rows, merged = false) {
+  const miscY = merged ? null : H - BOT_PAD - MISC_H, HY = (merged ? H - BOT_PAD : miscY - 8) - rows * CARD_H - (rows - 1) * CARD_GY, AH = HY - AY + 28;
   return { miscY, HY, AH, oy: AH - 348, MY: HY - 12 - boxH(true) };
 }
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
@@ -202,6 +204,11 @@ export const battle = {
     // 시험판 손패도 진짜와 같은 넷(배운 기술 둘 + 평타 + 방어 — 2026-10-16 "전투에 들고가는 스킬은 4개")
     const four = u => { u.kit = [...u.kit.filter(s => s.id[0] === 's'), ...u.kit.filter(s => s.id[0] !== 's')].slice(0, 4); };
     for (const u of B.team ? [...B.team.me, ...B.team.foe] : [B.me, B.foe]) four(u);
+    if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &cd=2 = 첫 변이 기술 충전 중)
+      const ms = formSkills(p.mut).slice(0, 2).map(id => ({ ...SKILLS[id], mut: true, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));
+      B.me.kit.push(...ms);
+      if (p.cd) B.me.cd = { [ms[0].id]: +p.cd };
+    }
     if (p.pre) for (const part of String(p.pre).split(';')) {   // 효과 미리 걸기(검토·영상용)
       const [who, ids] = part.split(':'), u = B[who], by = B[who === 'me' ? 'foe' : 'me'];
       if (u && ids) for (const tok of ids.split(',')) { const m = tok.match(/^([a-z]+)(\d*)$/); if (m) applyFx(u, m[1], +(m[2] || 1), { turn: 1, rng: () => 0.5, ev: [], by }); }
@@ -569,7 +576,7 @@ export const battle = {
     const { g, W, H, t } = app;
     if (!this.B) this.setup(app);
     this.tick(app);
-    const B = this.B, v = this.v, Lay = this.lay = layOf(H, handRows(B.me.kit)), AH = Lay.AH;
+    const B = this.B, v = this.v, Lay = this.lay = layOf(H, handRows(B.me.kit), mutHand(B.me.kit)), AH = Lay.AH;
     g.rect(0, 0, W, H, T.ink);
     const st = v.phase === 'play' ? v.steps[v.si] : null;
     let fr = null;
@@ -679,10 +686,11 @@ export const battle = {
       app.input.hit('fx_foe', 6, AY + 4 + oyT, BOX_W, fh + (foeRows ? 3 + foeRows * (SW_H + 2) : 0), open, 2);
       app.input.hit('fx_me', W - 146, myTop, BOX_W, MY + boxH(true) - myTop, open, 2);
     }
-    const hw = hrows === 1 ? 4 * HAND_W + 3 * HAND_GX : CARD_W * 3 + CARD_GX * 2, hx = Math.round((W - hw) / 2);
+    const hw = hrows === 1 || mutHand(B.me.kit) ? 4 * HAND_W + 3 * HAND_GX : CARD_W * 3 + CARD_GX * 2, hx = Math.round((W - hw) / 2);
     this.drawTimer(app, hx, HY - 8, hw);
     this.hand(app, HY - CARD_Y, live, skipNow);
-    this.miscRow(app, HY + hrows * CARD_H + (hrows - 1) * CARD_GY + 8, live);
+    if (mutHand(B.me.kit)) this.miscRow(app, HY - CARD_Y + CARD_Y + CARD_H + CARD_GY, live, hx + 2 * (HAND_W + HAND_GX));   // 아래 줄 오른쪽
+    else this.miscRow(app, HY + hrows * CARD_H + (hrows - 1) * CARD_GY + 8, live);
     if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
     if (this.info2) this.infoSheet(app);
@@ -690,9 +698,10 @@ export const battle = {
   },
   // 손패: 여섯 장(위 줄 = 기본기 · 아래 줄 = 배운 기술, 모자라면 빈 칸). 꾹(0.32초) 누르면 그 카드를 앞으로 가져와 뒷면(상세)을 봄
   hand(app, PY0, live, skipNow) {
-    const { g, W, input } = app, B = this.B, v = this.v, kit = B.me.kit, one = handRows(kit) === 1;
+    const { g, W, input } = app, B = this.B, v = this.v, mh = mutHand(B.me.kit), one = handRows(B.me.kit) === 1 || mh;
+    const kit = mh ? [...B.me.kit.filter(s => !s.mut), null, null, null, null].slice(0, 4).concat(B.me.kit.filter(s => s.mut)) : B.me.kit;   // 변이 = 아래 줄 왼쪽 둘
     this.cards = {}; this.useWas = this.useWas || {}; this.shineAt = this.shineAt || {};
-    const CW = one ? HAND_W : CARD_W, GX = one ? HAND_GX : CARD_GX, per = one ? 4 : 3, n = one ? 4 : 6, x0 = Math.round((W - CW * per - GX * (per - 1)) / 2);
+    const CW = one ? HAND_W : CARD_W, GX = one ? HAND_GX : CARD_GX, per = one ? 4 : 3, n = mh ? kit.length : one ? 4 : 6, x0 = Math.round((W - CW * per - GX * (per - 1)) / 2);
     for (let i = 0; i < n; i++) {
       const sk = kit[i], x = x0 + (i % per) * (CW + GX), y = PY0 + CARD_Y + Math.floor(i / per) * (CARD_H + CARD_GY), CARD_W = CW;   // 한 줄 넷 = 좁은 카드(그림은 가운데를 잘라 1배 그대로)
       if (!sk) { cardSlot(g, x, y, CARD_W, CARD_H, '빈 칸'); continue; }
@@ -704,10 +713,11 @@ export const battle = {
         const hold = input.down && input.down.id === id ? input.holdMs() : 0, rise = hold > 120 ? Math.min(3, Math.round((hold - 120) / 60)) : 0;   // 꾹 누르는 동안 살짝 들림
         const down = can && input.isPressed(id) && !rise, sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
         rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, lit ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.32)');   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
-        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, shine: sh != null && sh < 1 ? sh : null });
+        const cd = chargeLeft(B.me, sk), halved = !!(B.me.st && B.me.st.lastStance && B.me.st.lastStance === sk.act);
+        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, cd, halved, shine: sh != null && sh < 1 ? sh : null });
       }
       if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => { sfx('select'); this.pick(app, sk); } : () => sfx('deny'), 2);
-      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock };
+      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock, cd: chargeLeft(B.me, sk), halved: !!(B.me.st && B.me.st.lastStance === sk.act) };
     }
     const d = input.down;
     if (live && d && !d.moved && this.cards[d.id] && input.holdMs() >= HOLD_MS) this.openPeek(app, d.id);
@@ -720,7 +730,7 @@ export const battle = {
     const { input, W } = app, ref = this.cards[id], k = app.g.c.getTransform().a || 1, foe = this.v.view.foe, sk = ref.sk;
     input.claimHold();
     const BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
-    const o = { can: ref.can, short: ref.short, lock: ref.lock, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
+    const o = { can: ref.can, short: ref.short, lock: ref.lock, cd: ref.cd, halved: ref.halved, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
     this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
     app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
   },
@@ -763,11 +773,16 @@ export const battle = {
     }
   },
   // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 효과 설명 · 감정(친구 대결) · 기권
-  miscRow(app, y, live) {
-    const { W } = app, B = this.B, v = this.v, list = [], gap = 6;
+  miscRow(app, y, live, rx0 = null) {
+    const { W } = app, B = this.B, v = this.v, list = [], gap = 6, side = rx0 != null, sw = side ? W - 8 - rx0 : 0;
     if (this.mode === 'swap3') {
       const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me);
-      this.teamTile(app, 'bt_swap', 8, y, 112, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
+      this.teamTile(app, 'bt_swap', side ? rx0 : 8, side ? y + 8 : y, side ? sw : 112, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
+    }
+    if (side) {   // 아래 줄 오른쪽: (3:3 팀 칸) · 감정 — 같은 폭
+      const ey = this.mode === 'swap3' ? y + 48 : y + 29;
+      button(app, 'bt_emote', rx0, ey, sw, 32, '감정', { style: 'night', icon: 'heart', iconTint: true, onTap: live ? () => { this.emoteOpen = true; } : null });
+      return;
     }
     // 감정 = 오른쪽 끝 작은 단추(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
     list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });

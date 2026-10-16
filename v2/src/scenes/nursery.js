@@ -4,7 +4,7 @@ import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey, bigBox, BIG } fro
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
 import { miniStars } from './common.js';
-import { farmSlots, FARM_MAX, SKILLS, STORE_MAX } from '../game/catalog.js';
+import { farmSlots, FARM_MAX, SKILLS, STORE_MAX, FORMS } from '../game/catalog.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, slotLv } from '../game/view.js';
 import { showGot, sellAsk, cutAsk } from './popups.js';
 import { eul } from '../core/josa.js';
@@ -295,7 +295,7 @@ export const nursery = {
       g.text(p.name, 20, PY + 8, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
       miniStars(g, 25 + nw, PY + 10, stars(p));
       const colR = W - 136;   // 왼쪽 칸 오른 끝(오른쪽 = 할 일 단추)
-      g.text(`${stageName(p)} · Lv${p.lv}`, 20, PY + 25, { color: P.sub });
+      g.text(`${stageName(p)} · Lv${p.lv}` + (p.form && FORMS[p.form] ? ` · ${FORMS[p.form].name} 변이` : ''), 20, PY + 25, { color: p.form && FORMS[p.form] ? FORMS[p.form].light : P.sub });
       if (gi.ready) g.text('진화할 수 있어요!', 20, PY + 41, { font: 'bold', color: '#ffd890' });
       else if (gi.done) g.text('다 자랐어요', 20, PY + 41, { color: P.sub });
       else { g.text(`생장 ${gi.cur}/${gi.need}`, 20, PY + 41, { color: P.sub }); tbar(g, 20, PY + 56, colR - 20, 4, gi.pct, 'exp'); }

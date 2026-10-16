@@ -3,7 +3,7 @@ import { button, chip, holoTab } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { T, plate } from '../art/theme.js';
 import { header, seedArt } from './common.js';
-import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft } from '../game/catalog.js';
+import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft, FORMS } from '../game/catalog.js';
 import { seedPrice, freeSlots } from '../game/logic.js';
 import { ask } from './popups.js';
 import { eul } from '../core/josa.js';
@@ -56,7 +56,7 @@ export const bag = {
     cx += chip(g, cx, y + 19, sp.rarity === 'rare' ? '희귀' : '흔함', { color: sp.rarity === 'rare' ? '#9fd0ff' : '#b8c4d4' }) + 4;
     cx += chip(g, cx, y + 19, JONG[sp.type], { icon: sp.type }) + 4;
     g.img(icon(sp.el), cx, y + 21);
-    const tags = [sd.shiny && '색 변종', sd.trait === 'fruity' && '열매용', sd.trait === 'ornamental' && '관상용', sd.ivk > 0 && '좋은 개체값 확률 ↑'].filter(Boolean);
+    const tags = [sd.form && FORMS[sd.form] && FORMS[sd.form].name + ' 변이', sd.shiny && '색 변종', sd.trait === 'fruity' && '열매용', sd.trait === 'ornamental' && '관상용', sd.ivk > 0 && '좋은 개체값 확률 ↑'].filter(Boolean);
     g.text(tags.length ? tags.join(' · ') : ELEM[sp.el] + ' 속성', 52, y + 37, { color: tags.length ? '#ffd890' : P.dim });
     const price = seedPrice(sd);
     this.btn(app, hits, 'plant_' + sd.id, W - 66, y + 6, 50, 20, '심기', { style: 'teal', disabled: free <= 0 }, () => app.act('plantSeed', { seed: sd.id }).then(r => { if (r) { const i = app.state.plants.findIndex(p => p.uid === r.plant); if (i >= 0) { app.state.active = i; app.act('setActive', { id: r.plant }); } app.go('nursery', { planted: r.plant }); } }));   // 심으면 스마트팜으로 — 그 자리로 굴러가 씨앗이 떨어져 싹이 남

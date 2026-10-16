@@ -4,8 +4,7 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeMaxDur, probeUpCost, REPAIR_PER, EXPLORE_COST,
-  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward,
-} from './catalog.js';
+  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, formSkills, MUT_SLOTS, MUT_P } from './catalog.js';
 
 export class Err extends Error {}
 const need = (c, msg) => { if (!c) throw new Err(msg); };
@@ -45,11 +44,12 @@ export function makePlant(s, seed, rng, now) {
   if (seed.legend) for (const k of IV_KEYS) ivs[k] = Math.max(ivs[k], 7);
   const p = {
     uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
-    shiny: !!seed.shiny, legend: !!seed.legend, trait: seed.trait || null,
+    shiny: !!seed.shiny, legend: !!seed.legend, trait: seed.trait || null, form: seed.form || sp.form || null,
     pts: 0, up: {}, spent: 0, invest: 0, pot: 'pot_terra', born: now,
     skills: { battle: [null, null, null, null], joker: null, forgot: [], learned: [], v4: 1 }, pend: [],
     hv: { t0: now, have: 0 },
   };
+  if (p.form) p.skills.mut = formSkills(p.form).slice(0, MUT_SLOTS);   // 변이 식물 = 변이 칸 둘(전투 칸 넷 + 둘 = 여섯)
   // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기(평타 · 방어 — 회피는 보관)
   learnNow(p, uniqueOf(p.key, 0));
   const c1 = bloomPool(p.key, 0).filter(x => x.id !== uniqueOf(p.key, 0));
@@ -65,7 +65,9 @@ const isBasic = id => BASIC_IDS.includes(id);
 function fillBasics(p) { const b = p.skills.battle, left = BASIC_IDS.filter(id => !b.includes(id)); for (let i = 0; i < b.length; i++) if (!b[i] && left.length) b[i] = left.shift(); }
 // 옛 세이브(전투 3칸 + 기본기 셋은 늘 손패): 빈 칸 · 넷째 칸을 기본기로 채워 넷으로(한 번만 — 그 뒤 비운 칸은 그대로)
 export function normSkills(p) {
-  const S = p && p.skills; if (!S || S.v4) return p;
+  const S = p && p.skills; if (!S) return p;
+  if (p.form && !Array.isArray(S.mut)) S.mut = formSkills(p.form).slice(0, MUT_SLOTS);   // 변이 칸 둘(처음 = 목록 앞 둘)
+  if (S.v4) return p;
   const b = (Array.isArray(S.battle) ? S.battle : []).slice(0, LOADOUT);
   while (b.length < LOADOUT) b.push(null);
   S.battle = b; fillBasics(p); S.v4 = 1;
@@ -319,7 +321,21 @@ export function seedOf(s, key, rng, o = {}) {
   const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend, t = rng();
   const sd = { id: uid(s), key, shiny, legend, trait: t < TRAIT_P / 2 ? 'fruity' : t < TRAIT_P ? 'ornamental' : null };
   if (o.ivk > 0) sd.ivk = o.ivk;   // 심을 때 개체값을 이만큼 더 굴림(탐사 종자)
+  // 변이: 변이 고정 종은 늘 그 변이, 탐사 종자(o.mut = 지역 배율)는 가끔 — 버섯 = 포자, 그 밖 = 포식 · 무기 · 독성 · 용족
+  if (SPECIES[key].form) sd.form = SPECIES[key].form;
+  else if (o.mut > 0 && rng() < MUT_P * o.mut) { const fs = formsFor(key); sd.form = fs[Math.floor(rng() * fs.length)]; }
   return sd;
+}
+export const formsFor = key => (SPECIES[key] && SPECIES[key].type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'));
+// 변이 칸 둘 정하기(그 변이 목록 안에서 언제든 — 잊기 없음): 같은 기술 두 번 없이, 빈 칸 허용
+export function setMut(s, id, list) {
+  const p = getPlant(s, id); normSkills(p);
+  need(p.form, '변이 식물만 변이 칸이 있어요');
+  need(Array.isArray(list) && list.length === MUT_SLOTS, '변이 칸은 둘이에요');
+  const ok = formSkills(p.form), L = list.map(x => (x == null || x === '' ? null : String(x))), seen = new Set();
+  for (const x of L) { if (!x) continue; need(ok.includes(x), '이 변이의 기술이 아니에요'); need(!seen.has(x), '같은 기술을 두 칸에 둘 수 없어요'); seen.add(x); }
+  p.skills.mut = L;
+  return {};
 }
 // 접목 가지 굴리기 — q(0~1) = 투자·단계가 높을수록 상급·특수 확률 ↑
 export function rollScion(rng, p, q) {
@@ -394,17 +410,26 @@ export function probeOf(s) {
 }
 // 이번 탐사의 성공 확률 · 닳는 양(화면이 미리 보여 줌 — 같은 계산)
 //  짐(탐사 장치 + 채집기 단계)이 무거울수록 위험한 행성에서 더 실패하고 더 닳음(사용자 "실패 리스크는 보상 관련 스펙과도 연결, 특히 내구성에") · 내구도가 낮을수록 실패 ↑
-export function exploreOdds(s, pl) {
-  const P = probeOf(s), V = P.lv, max = probeMaxDur(V.hull), load = (V.scanner - 1) + (V.cargo - 1), hz = pl.hazard || 0;
+//  region = 지역 id(또는 regionOf 결과) — 위험은 지역 값 · gem = 보상 칸 하나가 귀한 것(접목 가지 · 회귀 주사 · 보석)일 확률
+export function exploreOdds(s, pl, region) {
+  const P = probeOf(s), V = P.lv, max = probeMaxDur(V.hull), load = (V.scanner - 1) + (V.cargo - 1), Z = regionOf(pl, region && typeof region === 'object' ? region.id : region), hz = Z.hazard;
   const ok = 0.96 - 0.07 * hz - 0.012 * load * (1 + 0.5 * hz) + 0.025 * (V.hull - 1) - 0.3 * (1 - P.dur / max);
-  return { ok: Math.max(0.35, Math.min(0.98, ok)), wear: Math.round(3 + 4 * hz + 1.5 * load * (1 + 0.3 * hz)), load, max, cost: EXPLORE_COST[pl.orbit] };
+  const W = lootW(Z, (V.scanner - 1) / 4), gem = W.slice(4).reduce((a, x) => a + x.w, 0) / W.reduce((a, x) => a + x.w, 0);
+  return { ok: Math.max(0.35, Math.min(0.98, ok)), wear: Math.round(3 + 4 * hz + 1.5 * load * (1 + 0.3 * hz)), load, max, cost: EXPLORE_COST[pl.orbit], gem };
 }
-export function explore(s, planetId, rng, now) {
+// 지역(catalog REGIONS — 탐사 장치 단계로 하나씩 열림): 행성 값에 지역 값을 얹어 돌려줌(위험 0~3 · 생기 0~2 안으로)
+//  id가 없거나 모르면 첫 지역 = 행성 값 그대로(옛 화면 · 옛 요청도 같은 확률 · 보상)
+export function regionOf(pl, id) {
+  const rs = pl.regions || [], R = (id && rs.find(r => r.id === id)) || rs[0] || { id: 'base', name: pl.name, need: 1 };
+  return { ...pl, ...R, planet: pl.id, need: R.need || 1, hazard: Math.max(0, Math.min(3, (pl.hazard || 0) + (R.dh || 0))), vital: Math.max(0, Math.min(2, (pl.vital || 0) + (R.dv || 0))), kind: R.kind || pl.kind, pool: R.pool || pl.pool, rare: R.rare || 1, mut: R.mut || 1 };
+}
+export function explore(s, planetId, rng, now, regionId) {
   const pl = PLANETS.find(x => x.id === planetId);
   need(pl, '모르는 행성');
   need(planetOpen(s, pl), `재배사 Lv${ORBIT_LV[pl.orbit]}부터 갈 수 있어요`);
-  const P = probeOf(s), O = exploreOdds(s, pl);
+  const P = probeOf(s), Z = regionOf(pl, regionId), O = exploreOdds(s, pl, Z);   // Z = 고른 지역(없으면 첫 지역)
   need(pl.orbit <= P.lv.tank, `연료 탱크 ${pl.orbit}단계가 있어야 ${pl.orbit}궤도까지 가요`);
+  need(P.lv.scanner >= Z.need, `탐사 장치 ${Z.need}단계가 필요해요`);
   need(P.dur > 0, '탐사선이 망가졌어요 — 정비실에서 고쳐 주세요');
   fuelSync(s, now);
   need(s.items.fuel >= 1, '연료 캡슐이 없어요 — 시간이 지나면 차요');
@@ -413,23 +438,28 @@ export function explore(s, planetId, rng, now) {
   const ok = rng() < O.ok, got = [], wear = ok ? Math.round(O.wear * (0.7 + 0.6 * rng())) : Math.round(O.wear * 2.2);
   P.dur = Math.max(0, P.dur - wear);
   if (ok) {
-    if (rng() < ({ seed: 0.92, mixed: 0.7, resource: 0.35 }[pl.kind] ?? 0.85)) {   // 종자: 행성 식물 중(흔한 것 · 드문 것 비율은 그대로)
-      const pool = pl.pool.filter(k => SPECIES[k].rarity === 'common'), rare = pl.pool.filter(k => SPECIES[k].rarity === 'rare');
-      const key = rare.length && rng() < 0.18 ? pick(rng, rare) : pick(rng, pool.length ? pool : pl.pool), legend = !!pl.legend && rng() < LEGEND_P;
-      got.push({ kind: 'seed', seed: seedOf(s, key, rng, { legend, ivk: (pl.vital || 0) + Math.floor((P.lv.vault - 1) / 2) }), rar: legend ? 4 : SPECIES[key].rarity === 'rare' ? 2 : 1 });
+    if (rng() < ({ seed: 0.92, mixed: 0.7, resource: 0.35 }[Z.kind] ?? 0.85)) {   // 종자: 그 지역 식물 중(드문 것 18% × 지역 귀한 보상 배수)
+      const pool = Z.pool.filter(k => SPECIES[k].rarity === 'common'), rare = Z.pool.filter(k => SPECIES[k].rarity === 'rare');
+      const key = rare.length && rng() < 0.18 * Z.rare ? pick(rng, rare) : pick(rng, pool.length ? pool : Z.pool), legend = !!pl.legend && rng() < LEGEND_P;
+      got.push({ kind: 'seed', seed: seedOf(s, key, rng, { legend, ivk: Z.vital + Math.floor((P.lv.vault - 1) / 2), mut: Z.mut || 1 }), rar: legend ? 4 : SPECIES[key].rarity === 'rare' ? 2 : 1 });
     }
     const n = 1 + Math.floor((P.lv.cargo - 1) * 0.75 + rng() * 0.5), q = (P.lv.scanner - 1) / 4;   // 채집기 = 개수, 탐사 장치 = 등급(0~1)
-    for (let i = 0; i < n; i++) got.push(rollLoot(pl, q, O.cost, rng));
+    for (let i = 0; i < n; i++) got.push(rollLoot(Z, q, O.cost, rng));
   } else got.push({ kind: 'credits', n: Math.round(O.cost * 0.15), rar: 0 });   // 실패: 건진 것 조금
   for (const r of got) grant(s, r);
   for (const r of got) if (r.kind === 'seed' && !s.discovered.includes(r.seed.key)) s.discovered.push(r.seed.key);
   const xp = addXp(s, ok ? XP.explore : Math.round(XP.explore / 3), rng);
-  return { planet: pl.name, ok, got, xp, wear, dur: P.dur, max: O.max, cost: O.cost };
+  return { planet: pl.name, region: Z.id, area: Z.name, ok, got, xp, wear, dur: P.dur, max: O.max, cost: O.cost };
 }
 // 종자 말고 보상 한 칸: 자원형 행성 = 부품 많이 · 풍요 = 양 · 탐사 장치(q) = 접목 가지 · 회귀 주사 · 보석 쪽으로. 돈은 작게(탐사비보다 적게 — 탐사로 돈을 불리지 못하게)
+//  pl = 지역(regionOf — 종류 · 귀한 보상 배수 rare · 식물은 그 지역 것)
+function lootW(pl, q) {
+  const res = pl.kind === 'resource' ? 2 : pl.kind === 'mixed' ? 1.3 : 1, rr = pl.rare || 1;
+  return [{ k: 'credits', w: 30 }, { k: 'water', w: 22 }, { k: 'fert', w: 14 }, { k: 'parts', w: 18 * res }, { k: 'scion', w: (4 + 10 * q) * rr }, { k: 'regress', w: (1 + 4 * q) * rr }, { k: 'gems', w: (0.5 + 3 * q) * rr }];
+}
 function rollLoot(pl, q, cost, rng) {
   const res = pl.kind === 'resource' ? 2 : pl.kind === 'mixed' ? 1.3 : 1, rich = pl.rich || 1;
-  const x = pickW(rng, [{ k: 'credits', w: 30 }, { k: 'water', w: 22 }, { k: 'fert', w: 14 }, { k: 'parts', w: 18 * res }, { k: 'scion', w: 4 + 10 * q }, { k: 'regress', w: 1 + 4 * q }, { k: 'gems', w: 0.5 + 3 * q }]).k;
+  const x = pickW(rng, lootW(pl, q)).k;
   if (x === 'credits') return { kind: 'credits', n: Math.round(cost * (0.15 + 0.25 * rng()) * rich), rar: 0 };
   if (x === 'water' || x === 'fert') return { kind: x, n: Math.max(1, Math.round((1 + rng()) * rich)), rar: 1 };
   if (x === 'parts') return { kind: 'parts', n: Math.max(1, Math.round((1 + 2 * rng()) * res * rich)), rar: 1 };

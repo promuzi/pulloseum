@@ -13,8 +13,9 @@ import { ELEMENT, BAYER4 } from './palette.js';
 import { rrect } from './ui.js';
 import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
-import { TIER_NAME, SKILLS } from '../game/catalog.js';
+import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
 import { FX } from '../battle/status.js';
+import { RULES } from '../battle/rules.js';
 
 const C = { ink: '#0b1322', body: '#12294a', body2: '#183a62', plate: '#0c1e36', band: '#0c1526', text: '#eef4ff', sub: '#a9cdf0', dim: '#7396bb', line: '#8ccfff', gold: '#ffd890', good: '#ffd890' };
 const GEM = { ok: ['#2d6fe0', '#9fd0ff', '#15347c'], bad: ['#c8392e', '#ff9e8e', '#5c1410'], off: ['#5b616e', '#a7adb8', '#2c3038'] };   // [속, 빛, 그늘]
@@ -89,7 +90,8 @@ function placeholderArt(sk) {
 }
 
 // 테: 먹선 → 속성 색 금속 테 2칸(위·왼 빛 · 아래·오른 그늘) → 안쪽 먹선. 고른 카드 = 금빛 테
-const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
+const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
+  : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
 function cardFrame(g, x, y, w, h, sk, lit) {
   const [mid, hi, lo] = frameCols(sk, lit);
   rrect(g, x, y, w, h, 5, C.ink);
@@ -109,11 +111,12 @@ function diamond(g, cx, cy, r, [fill, hi, lo]) {
 //  공격 = 검(위력 그대로 — 상대에게 얼마나 들어갈지는 써 보며 상대 방어를 가늠) · 방어 = 방패(막는 몫 %) · 회피 = 빗나감 +% · 보호막 · 회복 = 최대 체력의 %
 //  수는 규칙에서 그대로: 방어 자세 guardMult · 회피 자세 shift.miss(battle/model.js BASICS) · 철벽 · 보호막 · 재생(battle/status.js FX). 분노 · 가속 · 집중 · 반사 · 정화 = 비움
 const pct = v => Math.round(v * 100) + '%';
-export function statOf(sk) {
+export function statOf(sk, o = {}) {
   if (!sk) return null;
-  if (sk.act === 'attack') return sk.power ? { kind: 'pow', txt: String(sk.power), label: '위력' } : null;
-  if (sk.act === 'guard') return { kind: 'block', txt: pct(1 - (sk.guardMult ?? 0.5)), label: '막음' };
-  if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: sk.shift.miss + '%', label: '회피' } : null;
+  if (sk.act === 'attack') return sk.power ? { kind: sk.area ? 'bomb' : 'pow', txt: String(sk.power), label: '위력' } : null;   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
+  const half = !!o.halved, k = half ? RULES.repeatStanceK : 1;   // 바로 전 턴에도 같은 자세 = 효과 절반(rules.js) — 두 번째에만 바뀐 수 · 주황
+  if (sk.act === 'guard') return { kind: 'block', txt: pct((1 - (sk.guardMult ?? 0.5)) * k), label: '막음', half };
+  if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: Math.round(sk.shift.miss * k) + '%', label: '회피', half } : null;
   for (const b of [sk.self, sk.also]) {   // 버프 기술은 주 효과(self)부터 수가 있는 것 하나
     if (b === 'wall') return { kind: 'block', txt: pct(1 - FX.wall.dmgK), label: '막음' };
     if (b === 'shield') return { kind: 'barrier', txt: pct(FX.shield.hp), label: '보호막' };
@@ -124,6 +127,7 @@ export function statOf(sk) {
 const STEEL = ['#9fb0c8', '#e6eef8', '#4c5a70'];   // [속, 빛, 그늘] 검날(바탕 카드 테와 같은 쇠)
 const BADGE = {
   pow: { icon: 'sword' }, block: { icon: 'shield' },
+  bomb: { icon: 'bomb', col: POW },                                       // 광역 공격 = 폭탄 + 주황(공격 쪽 색)
   dodge: { icon: 'speed', col: ['#0b8a8f', '#30e1b9', '#0b5e65'] },     // 청록(회피 아이콘 결)
   barrier: { icon: 'ice', col: ['#4d9be6', '#8fd3ff', '#4d65b4'] },     // 하늘색(보호막 = 효과 칩과 같은 얼음 결정)
   heal: { icon: 'heal', col: ['#239063', '#91db69', '#165a4c'] },       // 초록
@@ -160,12 +164,13 @@ function swordCv(bl, dim) {
 }
 // 방패(위는 평평 · 아래는 뾰족): 너비 sw(짝수 — 끝이 두 칸), 속 20줄 = 위 12줄 곧게(숫자 칸) → 아래 8줄 좁아짐(끝 = 카드 y+22, 묶임·도발 꼬리표 바로 위)
 //  짙은 쇠 바탕(바탕 카드의 밝은 쇠 테와 갈림) + 밝은 테두리(위·왼 빛 · 아래·오른 그늘), 오른쪽 반은 한 단 어둡게
-function shieldCv(sw, dim) {
-  const F = dim ? GEM.off : [NONE.dark, NONE.light, NONE.main], mid = sw / 2;
+const WARM = ['#8a5a24', '#ffd890', '#a8743a'];   // 절반이 된 자세(주황 — 바뀐 걸 알게)
+function shieldCv(sw, dim, warm) {
+  const F = dim ? GEM.off : warm ? WARM : [NONE.dark, NONE.light, NONE.main], mid = sw / 2;
   const inset = r => (r === 0 ? 1 : r < 12 ? 0 : Math.round((mid - 1) * ((r - 11) / 8) ** 1.5));
   const inside = (i, j) => j >= 1 && j <= 20 && i >= 1 + inset(j - 1) && i <= sw - inset(j - 1);
   const col = (i, j, at) => (!at(i, j - 1) || !at(i - 1, j) ? F[1] : !at(i, j + 1) || !at(i + 1, j) ? F[2] : i <= mid ? F[0] : hexMix(F[0], C.ink, 0.3));
-  return bake(`block|${sw}|${dim ? 1 : 0}`, sw + 2, 22, inside, col);
+  return bake(`block|${sw}|${dim ? 1 : 0}|${warm ? 1 : 0}`, sw + 2, 22, inside, col);
 }
 const num = (g, txt, cx, cy, gh) => g.text(txt, cx, cy - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
 // xr = 오른쪽 끝(이 칸 앞까지), cy = 가운데 줄(비용 숫자와 같은 줄)
@@ -178,11 +183,11 @@ function statBadge(g, xr, cy, st, dim, gh) {
     c.drawImage(cv, sx, cy - 8);
     num(g, st.txt, sx + 10 + bl / 2, cy, gh);
   } else if (st.kind === 'block') {   // 방패 속에 막는 몫
-    const sw = Math.max(16, tw + 8) & ~1, cv = shieldCv(sw, dim), sx = xr - cv.width;
+    const sw = Math.max(16, tw + 8) & ~1, cv = shieldCv(sw, dim, st.half), sx = xr - cv.width;
     c.drawImage(cv, sx, cy - 8);
     num(g, st.txt, sx + cv.width / 2, cy, gh);
-  } else {   // 회피 · 보호막 · 회복 = 효과 칩과 같은 아이콘 + 알약(아이콘이 알약 왼쪽 끝에 걸침)
-    const B = BADGE[st.kind], pw = tw + 9, px = xr - pw, py = cy - 7, [f, h, l] = dim ? GEM.off : B.col, ic = icon(B.icon);
+  } else {   // 광역(폭탄) · 회피 · 보호막 · 회복 = 아이콘 + 알약(아이콘이 알약 왼쪽 끝에 걸침)
+    const B = BADGE[st.kind], pw = tw + 9, px = xr - pw, py = cy - 7, [f, h, l] = dim ? GEM.off : st.half ? WARM : B.col, ic = icon(B.icon);
     rrect(g, px, py, pw, 14, 5, C.ink); rrect(g, px + 1, py + 1, pw - 2, 12, 4, f);
     g.rect(px + 4, py + 2, pw - 8, 1, h); g.rect(px + 4, py + 11, pw - 8, 1, l);
     if (ic) g.alpha(dim ? 0.55 : 1, () => g.img(ic, px - 8, cy - 5));
@@ -215,15 +220,47 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   }
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
-  diamond(g, x + 9, y + 9, 7, dim ? (o.short ? GEM.bad : GEM.off) : GEM.ok);
-  g.text(String(sk.cost || 0), x + 9.5, y + 9 - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
-  statBadge(g, x + w - 2, y + 9, statOf(sk), dim, gh);
+  if (sk.charge) chargeDial(g, x + 9, y + 9, sk.charge, FORMS[sk.form], dim, gh);   // 변이 기술 = 에너지 대신 쓰고 나서 기다리는 턴
+  else {
+    diamond(g, x + 9, y + 9, 7, dim ? (o.short ? GEM.bad : GEM.off) : GEM.ok);
+    g.text(String(sk.cost || 0), x + 9.5, y + 9 - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+  }
+  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, gh);
+  cardMarks(g, x, y, w, sk, dim);
+  if (o.cd > 0) {   // 충전 중: 그림 가운데 = 시계 + 남은 턴
+    const txt = String(o.cd), ci = icon('clock'), tw = g.textW(txt, 'name') + 16, lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 20) / 2);
+    rrect(g, lx - 3, ly, tw + 6, 20, 4, 'rgba(6,10,20,0.88)');
+    if (ci) g.img(ci, lx, ly + 5);
+    g.text(txt, lx + 14, ly + Math.round((20 - glyphH('name')) / 2), { font: 'name', color: (FORMS[sk.form] || {}).light || '#ffffff' });
+  }
   if (dim && o.lock) {   // 묶임 · 도발: 그림 가운데에 짧게(자세한 까닭은 뒷면)
     const L = STATUS[o.lock] || {}, li = L.icon && icon(L.icon), txt = LOCK_SHORT[o.lock] || '', tw = g.textW(txt, 'bold') + (li ? 14 : 0), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 15) / 2);
     rrect(g, lx - 4, ly, tw + 8, 15, 3, 'rgba(6,10,20,0.88)');
     if (li) g.img(li, lx, ly + 2);
     g.text(txt, lx + (li ? 14 : 0), ly + Math.round((15 - gh) / 2), { font: 'bold', color: L.col || '#ff8a8a' });
   }
+}
+
+// 덧표시(2026-10-16 사용자가 샘플을 보고 고름: "회복은 회복 아이콘만 아래에 — 수치는 꾹 눌러서" · "효과 겹수는 좋아" · 원거리 · 체력 글자 · 연속 미리 보기는 뺌)
+function tag(g, xr, y, txt, col, ic) {   // 작은 꼬리표(오른쪽 끝 xr 맞춤): 짙은 속 + 글자(+ 아이콘)
+  const im = ic && icon(ic), tw = g.textW(txt) + (im ? im.width + 2 : 0) + 6, x = Math.round(xr - tw);
+  rrect(g, x, y, tw, 12, 3, 'rgba(6,10,20,0.86)');
+  let cx = x + 3;
+  if (im) { g.img(im, cx, y + 1); cx += im.width + 2; }
+  g.text(txt, cx, y, { color: col });
+  return x;
+}
+function cardMarks(g, x, y, w, sk, dim) {
+  const xr = x + w - 3, artB = y + 4 + ART_H;
+  if (sk.drain && sk.act === 'attack') { const im = icon('heal'); rrect(g, xr - 13, y + 18, 13, 13, 3, 'rgba(6,10,20,0.86)'); if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, xr - 11, y + 19)); }   // 흡수(때린 만큼 회복)
+  if (sk.inflict && (sk.inflict.n || 1) > 1) { const L = STATUS[sk.inflict.id] || {}; tag(g, xr, artB - 14, '×' + sk.inflict.n, dim ? '#a7adb8' : (L.col || '#ffffff'), L.icon); }   // 걸리는 효과 겹 수
+}
+// 충전 다이얼(변이 기술 — 비용 마름모 자리): 변이 색 원 + 기다리는 턴 수 + 위쪽 눈금
+function chargeDial(g, cx, cy, n, F, dim, gh) {
+  const col = dim ? GEM.off : [F ? F.col : '#8ea3c2', F ? F.light : '#ffffff', C.ink];
+  g.disc(cx, cy, 8, C.ink); g.disc(cx, cy, 7, col[0]); g.disc(cx, cy, 5, hexMix(col[0], C.ink, 0.45));
+  g.rect(cx, cy - 7, 1, 2, col[1]);
+  g.text(String(n), cx + 0.5, cy - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
 }
 
 // 빈 칸(배운 기술이 셋보다 적을 때 · 꾹 눌러 들어 올린 카드의 자리)
@@ -243,22 +280,24 @@ function cardBack(g, w, h, sk, o) {
   g.text(sk.name, P, y, { font: 'head', color: C.text });
   if (ei) { g.disc(w - P - 7, y + 7, 9, C.ink); g.disc(w - P - 7, y + 7, 8, E.dark); g.img(ei, w - P - 12, y + 2); }
   y += 22;
-  const tags = [TIER_NAME[sk.tier], CAT_NAME[cat], sk.act === 'attack' ? (sk.ranged ? '원거리' : '근접') : null, sk.area ? '광역' : null, sk.el ? `${E.name} 속성` : null].filter(Boolean);
+  const tags = [sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이` : TIER_NAME[sk.tier], CAT_NAME[cat], sk.act === 'attack' ? (sk.ranged ? '원거리' : '근접') : null, sk.area ? '광역' : null, sk.el ? `${E.name} 속성` : null].filter(Boolean);
   for (const ln of wrap(tags.join(' · '), 'body', cw)) { g.text(ln, P, y, { color: C.sub }); y += 14; }
   y += 4; g.rect(P, y, cw, 1, hexMix(E.main, C.ink, 0.35)); y += 9;
   // 큰 수: 앞면 오른쪽 위 수치(위력 · 막음 · 회피 · 보호막 · 회복 — 없으면 위력 —) · 비용
-  const st = statOf(sk), bw = Math.floor((cw - 8) / 2), box = (bx, label, val, ic) => {
+  const st = statOf(sk, o), bw = Math.floor((cw - 8) / 2), box = (bx, label, val, ic) => {
     rrect(g, bx, y, bw, 34, 4, C.ink); rrect(g, bx + 1, y + 1, bw - 2, 32, 3, C.plate);
     g.text(label, bx + 8, y + 5, { color: C.dim });
     if (ic) g.img(icon(ic), bx + 8, y + 18);
     g.text(val, bx + (ic ? 22 : 8), y + 15, { font: 'name', color: C.text });
   };
   box(P, st ? st.label : '위력', st ? st.txt : '—', st ? BADGE[st.kind].icon : null);
-  box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
+  if (sk.charge) box(P + bw + 8, '충전', `${sk.charge}턴`, 'clock'); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
   y += 44;
   // 설명 줄: 기본기 → 규칙 문장, 효과 → 칩 + 누구에게 + 한 줄 설명
   const line = (txt, col = C.text, font = 'body') => { for (const ln of wrap(txt, font, cw)) { g.text(ln, P, y, { font, color: col }); y += 15; } };
   if (BASIC_DESC[sk.id]) for (const ln of BASIC_DESC[sk.id]) line(ln);
+  if (sk.drain) line(`때린 피해의 ${Math.round(sk.drain * 100)}%만큼 회복`, '#9ff0b0');
+  if (st && st.half) line(`바로 전 턴에도 같은 자세 — 효과 절반`, '#ffd890');
   const fx = [];
   if (sk.inflict) fx.push({ id: sk.inflict.id, n: sk.inflict.n || 1, to: '상대에게' });
   if (sk.self) fx.push({ id: BUFF_KEY[sk.self] || sk.self, buff: BUFF_LOOK[sk.self], to: '나에게' });
@@ -280,7 +319,8 @@ function cardBack(g, w, h, sk, o) {
   // 못 쓰는 까닭
   if (o.can === false) {
     y += 4;
-    if (o.lock) line(LOCK_TEXT[o.lock] || '지금은 못 씀', (STATUS[o.lock] || {}).col || '#ff8a8a', 'bold');
+    if (o.cd > 0) line(`충전 중 — ${o.cd}턴 남음`, (FORMS[sk.form] || {}).light || '#ff9a9a', 'bold');
+    else if (o.lock) line(LOCK_TEXT[o.lock] || '지금은 못 씀', (STATUS[o.lock] || {}).col || '#ff8a8a', 'bold');
     else if ((sk.cost || 0) > (o.energy ?? 99)) line(`에너지가 모자람 — 지금 ${o.energy} · 필요 ${sk.cost}`, '#ff9a9a', 'bold');
     else line('지금은 못 씀', '#ff9a9a', 'bold');
   }
@@ -296,7 +336,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   const S = BW / w, mk = () => { const cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k); return cv; };
   const front = mk(), fc = front.getContext('2d'), G1 = new Gfx(fc);
   fc.setTransform(k * S, 0, 0, k * S, 0, 0);
-  cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock });
+  cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock, halved: o.halved, cd: o.cd });
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   bc.setTransform(k * S, 0, 0, k * S, 0, 0);
   cardFrame(G2, 0, 0, w, h, sk, false); backBody(G2, 0, 0, w, h);

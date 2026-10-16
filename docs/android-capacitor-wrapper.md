@@ -34,6 +34,8 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 .\gradlew.bat assembleDebug
 ```
 성공하면 `BUILD SUCCESSFUL`, APK = `C:\dev\pulloseum\android\app\build\outputs\apk\debug\app-debug.apk`.
+- 2026-10-16 첫 빌드 성공(처음엔 Gradle 내려받기 포함 6분 · 디버그 APK 6.2MB · 아이콘 = 페탈로즈 대 아쿠아벌브). ⚠ Git Bash에서 `cmd //c "gradlew.bat …"`는 파일을 못 찾음 → PowerShell에서 `.\gradlew.bat`(또는 `cmd /c ".\gradlew.bat assembleDebug > log 2>&1"`).
+- 디버그 APK = 시험용(디버그 키 서명). 플레이 스토어엔 새 업로드 키로 `bundleRelease`(AAB) — 아래 체크리스트.
 
 Android Studio로 하려면 `File > Open`에서 `C:\dev\pulloseum\android`를 열고 `Build > Build Bundle(s) / APK(s) > Build APK(s)`.
 
@@ -60,7 +62,7 @@ Android Studio로 하려면 `File > Open`에서 `C:\dev\pulloseum\android`를 �
 - [ ] 앱판 구글 로그인용 **Android 클라이언트**(구글 클라우드 → 클라이언트 만들기 → Android): 패키지 이름 `com.promuzi.pulloseum` + 서명 키 SHA-1(시험 키 · 플레이 앱 서명 키 각각 하나씩).
 - [ ] 버전 `android/app/build.gradle`의 `versionCode`(올릴 때마다 +1) · `versionName`.
 - [ ] 타깃 API: 출시 시점 구글 요구치를 콘솔에서 확인(지금 `variables.gradle` = 35. 2026-08-31부터 새 앱은 36을 요구할 가능성이 큼 → Capacitor 판 올림이 필요할 수 있음).
-- [ ] 아이콘 · 시작 화면(지금은 Capacitor 기본) — 그림은 코덱스, `android/app/src/main/res/mipmap-*` · `drawable*`.
+- [x] 아이콘 · 시작 화면(2026-10-16 — 사용자가 코덱스 시안 셋 중 '페탈로즈 대 아쿠아벌브'를 고름): 원본 `tools/pixel/big/concept/icon/icon_b.png` → `python tools/pixel/big/concept/icon/make_icons.py`가 `mipmap-*`(둥근 · 원 · 적응형 앞 층 108dp 중 80dp) · `drawable*/splash.png`(검정 + 가운데 아이콘) · 스토어 `assets/store/icon_512.png`를 만듦. 아이콘을 바꾸면 다시 빌드.
 - [ ] 스토어 자산: 앱 아이콘 512 · 그래픽 이미지 1024×500 · 휴대전화 스크린샷 2장 이상 · 짧은 설명 · 자세한 설명.
 - [x] **개인정보처리방침 주소** = `https://pulloseum.getchat.workers.dev/v2/privacy`(원본 `v2/privacy.html` — 수집 항목 · 위탁(Cloudflare · Google) · 계정 지우기 · 문의 이메일, 책임자 = '풀로세움 운영자'). 게임 안 설정 창에도 단추가 있음(플레이 정책 — 앱 안에서도 볼 수 있어야 함). 수집 항목이 바뀌면 이 페이지도 같이 고친다.
 - [ ] 데이터 보안 양식(위 수집 항목 · 암호화 전송 · 계정 삭제 방법), 콘텐츠 등급 설문, 광고 없음 · 앱 내 결제 없음 표시.

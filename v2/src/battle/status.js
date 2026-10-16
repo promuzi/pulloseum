@@ -75,8 +75,13 @@ export const mustSkip = u => has(u, 'skip');
 export const noEnergy = u => has(u, 'shade') || has(u, 'choke');
 export const canSwitch = u => !has(u, 'root') && !has(u, 'skip');   // 뿌리 묶기 · 쉬는 차례(얼음·마비·기절)면 교체 못 함
 // 고를 수 있는 기술: 에너지 · 덩굴로 묶인 칸 · 도발(자세 금지)
+// 변이 기술 충전(2026-10-16 사용자 추천안 "에너지 대신 몇 턴에 한 번 충전"): u.cd[기술 id] = 남은 턴 — 쓴 턴 끝부터 charge 턴 못 씀
+export const chargeLeft = (u, s) => (s && s.charge && u && u.cd ? u.cd[s.id] || 0 : 0);
+export function useCharge(u, s) { if (u && s && s.charge) { u.cd = u.cd || {}; u.cd[s.id] = s.charge + 1; } }
+export function tickCharge(u) { if (!u || !u.cd) return; for (const k of Object.keys(u.cd)) if (--u.cd[k] <= 0) delete u.cd[k]; }
 export function canUse(u, s, energy = u.energy) {
   if (!s || (s.cost || 0) > energy) return false;
+  if (chargeLeft(u, s) > 0) return false;
   const e = u.eff || {};
   if (e.bind && e.bind.skill === s.id) return false;
   if (e.taunt && (s.act === 'guard' || s.act === 'evade')) return false;

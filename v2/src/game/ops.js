@@ -13,6 +13,7 @@ export const OPS = {
   evolve: (s, a, c) => L.evolve(s, str(a.id), c.rng),
   place: (s, a) => L.placePending(s, str(a.id), str(a.skill), str(a.target, 8)),
   swapJoker: (s, a) => L.swapJoker(s, str(a.id), int(a.slot, 0, 3)),
+  setMut: (s, a) => L.setMut(s, str(a.id), Array.isArray(a.mut) && a.mut.length === 2 ? a.mut.map(v => (v == null ? null : str(v))) : bad()),
   setLoadout: (s, a) => L.setLoadout(s, str(a.id), Array.isArray(a.battle) && a.battle.length === 4 ? a.battle.map(v => (v == null ? null : str(v))) : bad()),
   upgrade: (s, a) => L.upgrade(s, str(a.id), str(a.stat, 8), int(a.n, 1, 50, 1)),
   resetPoints: (s, a) => L.resetPoints(s, str(a.id)),
@@ -34,7 +35,7 @@ export const OPS = {
   harvestAll: (s, a, c) => L.harvestAll(s, c.rng, c.now),
   sell: (s, a) => L.sell(s, str(a.id)),
   dismantle: (s, a, c) => L.dismantle(s, str(a.id), c.rng),
-  explore: (s, a, c) => L.explore(s, str(a.planet), c.rng, c.now),
+  explore: (s, a, c) => L.explore(s, str(a.planet), c.rng, c.now, opt(a.region, v => str(v, 24))),   // region 없음 = 첫 지역(옛 화면)
   upgradeProbe: (s, a) => L.upgradeProbe(s, str(a.part, 12)),
   repairProbe: s => L.repairProbe(s),
   buy: (s, a, c) => L.buy(s, str(a.item), c.rng),

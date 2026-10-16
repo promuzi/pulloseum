@@ -131,6 +131,7 @@ export const SHOTS = [
   ['20_guide_room_1', 'room', {'demo':'lobby'}, { guide: 1 }],
   ['20_guide_room_2', 'room', {'demo':'lobby'}, { guide: 2 }],
   ['20_guide_dex_0', 'dex', {}, { guide: 0 }],
+  ['98_cardlab', 'cardlab', {}],   // 카드 추가 표시 검토판
   ['99_icons', 'icons', {}],
 ];
 

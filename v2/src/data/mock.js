@@ -30,7 +30,7 @@ export function mockState(now = Date.now()) {
   p0.ivs = { hp: 7, atk: 9, def: 5, spd: 6 }; p0.up = { atk: 4, hp: 2 }; p0.spent = 6; p0.pts = 3; p0.invest = 420;
   p0.skills.forgot.push('j_scent');
   const add = (key, stage, lv, o = {}) => { const p = makePlant(s, { key, ...o }, rng, now - 3 * 3600e3); s.plants.push(p); return grow(s, p, stage, lv, rng); };
-  add('cactus_fire', 1, 3); add('vine_water', 0, 2); add('thorn', 0, 1); add('aqua', 1, 6); add('spark', 2, 2, { shiny: true });
+  add('cactus_fire', 1, 3, { form: 'weapon' }); add('vine_water', 0, 2); add('thorn', 0, 1); add('aqua', 1, 6); add('spark', 2, 2, { shiny: true });
   // 열매: 식물마다 다르게(다 참 · 하나 · 없음)
   s.plants.forEach((p, i) => { p.hv = { t0: now - [0, 3, 1, 4, 2, 0][i] * 60000, have: [3, 1, 0, 2, 0, 4][i] }; });
   for (let i = 0; i < 37; i++) {
@@ -38,6 +38,7 @@ export function mockState(now = Date.now()) {
     p.stage = (i * 7) % 3; p.lv = 1 + (i * 3) % 6; p.slept = now - (1 + (i * 13) % 40) * 864e5; s.storage.push(p);
   }
   s.seeds = [seedOf(s, 'flower_wind', rng, { shiny: false }), seedOf(s, 'spark', rng, { shiny: true }), seedOf(s, 'gaia', rng, { shiny: false }), seedOf(s, 'spore_cap', rng, { legend: true, shiny: false })];
+  s.seeds.push({ ...seedOf(s, 'flower_fire', rng, { shiny: false }), form: 'predator' });   // 변이 종자(검토)
   s.scions = [{ id: 'sc1', skill: rollScion(rng, p0, 0.4) }, { id: 'sc2', skill: 'sp_leech' }];
   s.user = { level: 5, xp: 120 };
   s.wallet = { credits: 1240, gems: 32 };
