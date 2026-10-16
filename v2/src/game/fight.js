@@ -105,22 +105,30 @@ export function applyView(B, v) {
   }
   for (const side of ['me', 'foe']) { const t = B[side], u = v[side]; for (const k of UNIT_KEYS) t[k] = u[k]; t.energy = u.energy; }
 }
-// PvP B 쪽 모습: 나·상대를 바꾸고(id 도 'me'/'foe'로), 승패도 뒤집음
+// PvP B 쪽 모습: 나·상대를 바꾸고(id 도 'me'/'foe'로), 승패도 뒤집음. 3:3은 팀 · 앞 번호 · 기력 · 쓰러진 자리(need)도
 const FLIP = { win: 'lose', lose: 'win' };
 export function viewFor(B, side) {
   const v = viewOf(B);
   if (side !== 'b') return v;
+  if (v.mode === 'swap3') return { ...v, over: FLIP[v.over] || v.over, need: SW[v.need] || v.need, act: { me: v.act.foe, foe: v.act.me }, pool: { me: v.pool.foe, foe: v.pool.me }, team: { me: v.team.foe.map(u => ({ ...u, id: 'me' })), foe: v.team.me.map(u => ({ ...u, id: 'foe' })) } };
   return { ...v, over: FLIP[v.over] || v.over, me: { ...v.foe, id: 'me' }, foe: { ...v.me, id: 'foe' } };
 }
 export function turnFor(turn, side) {
   if (side !== 'b') return turn;
-  return { ...turn, mySkill: turn.foeSkill, foeSkill: turn.mySkill, before: { me: turn.before.foe, foe: turn.before.me }, first: SW[turn.first] || turn.first, events: mirrorEvents(turn.events) };
+  return { ...turn, mySkill: turn.foeSkill, foeSkill: turn.mySkill, mySwitch: turn.foeSwitch, foeSwitch: turn.mySwitch, before: { me: turn.before.foe, foe: turn.before.me }, first: SW[turn.first] || turn.first, events: mirrorEvents(turn.events) };
 }
 // PvP(1:1): 서버가 두 사람 선택으로 한 턴씩 풂 — 사건은 A 쪽에서 본 것('me' = A). B에게 보낼 땐 mirror로 뒤집음
 export function setupPvp({ seed, a, b, aName, bName }) {
   return makeBattle({ me: unitOf('me', a, { trainer: aName }), foe: unitOf('foe', b, { trainer: bName }), seed });
 }
 export const pvpTurn = (B, aSkill, bSkill) => playTurnVs(B, aSkill, bSkill);
+// PvP 3:3(2026-10-16 사용자 "남은 거 다해줘" — 3:3 친구 대결): 양쪽 식물 셋, 수는 두 사람이 고르고 쓰러진 자리도 저마다 직접(B.need = 'me' | 'foe' | 'both')
+export function setupPvp3({ seed, a, b, aName, bName }) {
+  return makeTeamBattle({ me: a.map(p => unitOf('me', p, { trainer: aName })), foe: b.map(p => unitOf('foe', p, { trainer: bName })), seed });
+}
+// 서버가 받은 수({ kind:'skill', id } · { kind:'switch', to } · { kind:'rest' }) → 판 수(기술 객체)
+const act3 = (u, a) => (a && a.kind === 'skill' ? { kind: 'skill', skill: u.kit.find(k => k.id === a.id) || u.kit[0] } : a && (a.kind === 'switch' || a.kind === 'rest') ? { kind: a.kind, to: a.to } : { kind: 'rest' });
+export const pvpTurn3 = (B, aAct, bAct) => playTurn3(B, act3(B.me, aAct), act3(B.foe, bAct));
 const SW = { me: 'foe', foe: 'me' };
 export function mirrorEvents(events) {
   return events.map(e => { const o = { ...e }; if (o.who in SW) o.who = SW[o.who]; if (o.to in SW) o.to = SW[o.to]; return o; });

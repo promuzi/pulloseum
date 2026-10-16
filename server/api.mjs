@@ -80,6 +80,8 @@ export function makeApi({ q, game, rooms, log, adminKey = null }) {
     'POST /api/room/join': (req, b, now) => rooms.join(authed(req, now).id, b.code, now),
     'POST /api/room/leave': (req, b, now) => rooms.leave(authed(req, now).id, now),
     'POST /api/room/pick': (req, b, now) => rooms.pick(authed(req, now).id, b.plant, now),
+    'POST /api/room/mode': (req, b, now) => rooms.setMode(authed(req, now).id, String(b.mode || ''), now),
+    'POST /api/room/team': (req, b, now) => rooms.setTeam(authed(req, now).id, b.plants, now),
     'POST /api/room/ready': (req, b, now) => rooms.ready(authed(req, now).id, !!b.on, now),
     'POST /api/room/move': (req, b, now) => rooms.move(authed(req, now).id, b.act, now, b.turn == null ? null : +b.turn),
     'POST /api/room/forfeit': (req, b, now) => rooms.forfeit(authed(req, now).id, now),

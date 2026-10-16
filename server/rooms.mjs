@@ -2,15 +2,20 @@
 //  방 만들기 → 초대 코드 6자 → 친구가 코드로 들어옴 → 저마다 식물 고르고 준비 → 1:1 대결(서버가 두 사람 수를 받아 한 턴씩 풂) → 결과 · 같은 방에서 다시.
 //  방은 서버 메모리에만(서버를 다시 켜면 사라짐 — MVP). 실시간 알림 = 서버 → 화면 한 줄 흐름(text/event-stream).
 //  턴 시간 40초: 안 고르면 넘어감(쉬기 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 평타로 대신), 두 번 연속이면 진 판. 대결 중 연결이 60초 넘게 끊기면 진 판.
+//  3:3 교체전(같은 날 "남은 거 다해줘" — 설계 docs/superpowers/specs/2026-10-16-v2-pvp-3v3.md): 방장이 방식을 고름, 팀 = 저장된 3:3 팀.
+//   앞 식물이 쓰러지면 그쪽 사람이 다음 식물을 고름(둘 다면 둘 다, 서로 모르게 — 20초 넘으면 살아 있는 첫 식물). 상대 대기석은 나온 식물만 보냄.
 import { randomInt } from 'node:crypto';
-import { setupPvp, pvpTurn, viewFor, turnFor } from '../v2/src/game/fight.js';
+import { setupPvp, pvpTurn, setupPvp3, pvpTurn3, viewFor, turnFor, mirrorEvents } from '../v2/src/game/fight.js';
+import { sendIn, aliveOf } from '../v2/src/battle/team.js';
 import { STAGES } from '../v2/src/game/catalog.js';
 import { fail } from './game.mjs';
 import { plantLite } from './log.mjs';
 
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 헷갈리는 0·O·1·I 뺌
-const TURN_MS = 40000, GRACE_MS = 60000, IDLE_MS = 30 * 60000, MAX_ROOMS = 300, EMOTE_MS = 1500;
+const TURN_MS = 40000, SEND_MS = 20000, GRACE_MS = 60000, IDLE_MS = 30 * 60000, MAX_ROOMS = 300, EMOTE_MS = 1500;
 const OTHER = { a: 'b', b: 'a' }, BASIC = new Set(['basic', 'guard', 'evade']);
+const SIDE = { a: 'me', b: 'foe' };   // 판 안에서 A(방의 첫 사람) = me, B = foe
+const needSides = B => ({ me: ['a'], foe: ['b'], both: ['a', 'b'] })[B.need] || [];
 
 export function makeRooms({ game, log }) {
   const rooms = new Map(), byUser = new Map(), subs = new Map();
@@ -78,15 +83,20 @@ export function makeRooms({ game, log }) {
   function member(uid, now) {
     const got = game.plantOf(uid, null);
     if (!got) fail('대결할 식물이 없어요');
-    return { uid, ...prof(got), plant: got.plant.uid, card: card(got.plant), ready: false, joined: now, gone: null, lastEmote: 0 };
+    const m = { uid, ...prof(got), plant: got.plant.uid, card: card(got.plant), team: null, teamCards: [], ready: false, joined: now, gone: null, lastEmote: 0 };
+    teamTo(m, null);
+    return m;
   }
-  // 프로필 · 레벨 · 고른 식물을 지금 세이브로 다시 읽음(판이 끝나 레벨이 오르거나 식물을 보관·판매했을 때)
-  function refresh(m) { try { const got = game.plantOf(m.uid, m.plant); if (got) { Object.assign(m, prof(got)); m.plant = got.plant.uid; m.card = card(got.plant); } } catch {} }
+  // 3:3 팀(식물 uid 셋 + 카드) — 고른 셋이 사라졌으면 저장된 팀 → 앞에서부터 셋, 셋이 안 되면 없음
+  const teamTo = (m, uids) => { const t = game.teamOf(m.uid, uids); m.team = t ? t.plants.map(p => p.uid) : null; m.teamCards = t ? t.plants.map(card) : []; };
+  // 프로필 · 레벨 · 고른 식물 · 팀을 지금 세이브로 다시 읽음(판이 끝나 레벨이 오르거나 식물을 보관·판매했을 때)
+  function refresh(m) { try { const got = game.plantOf(m.uid, m.plant); if (got) { Object.assign(m, prof(got)); m.plant = got.plant.uid; m.card = card(got.plant); } teamTo(m, m.team); } catch {} }
   const card = p => ({ uid: p.uid, key: p.key, name: p.name, stage: p.stage, stageName: STAGES[p.stage], lv: p.lv, shiny: !!p.shiny, legend: !!p.legend });
+  const movedOf = (r, side) => !!side && (r.sends ? r.sends[side] != null : !!r.moves[side]);   // 이번 차례 수를 냈는지(고르기 = 기술 · 교체, 채우기 = 다음 식물)
   function roomView(r, uid) {
-    const b = r.phase === 'battle' ? { turn: r.B.turn, deadline: r.deadline, moved: !!r.moves[sideOf(r, uid)], foeMoved: !!r.moves[OTHER[sideOf(r, uid)]] } : null;
-    return { code: r.code, host: r.host === uid, phase: r.phase, battle: b, last: r.last || null,
-      members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card)은 나에게만
+    const sd = sideOf(r, uid), b = r.phase === 'battle' ? { turn: r.B.turn, deadline: r.deadline, step: r.sends ? 'send' : 'pick', moved: movedOf(r, sd), foeMoved: movedOf(r, OTHER[sd]) } : null;
+    return { code: r.code, host: r.host === uid, phase: r.phase, mode: r.mode, battle: b, last: r.last || null,
+      members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, team: m.uid === uid ? m.teamCards : null, team3: !!m.team, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card) · 팀은 나에게만, 팀이 되는지(team3)는 둘 다
   }
   function broadcastRoom(r) { for (const m of r.members) send(m.uid, 'room', roomView(r, m.uid)); }
   const touch = (r, now) => { r.touched = now; };
@@ -94,7 +104,7 @@ export function makeRooms({ game, log }) {
   function create(uid, now) {
     if (rooms.size >= MAX_ROOMS) fail('방이 너무 많아요 — 잠시 뒤에 다시 해 주세요');
     leave(uid, now);
-    const r = { code: code(), host: uid, created: now, touched: now, members: [member(uid, now)], phase: 'lobby', B: null, moves: {}, last: null, games: 0 };
+    const r = { code: code(), host: uid, created: now, touched: now, members: [member(uid, now)], phase: 'lobby', mode: '1v1', B: null, moves: {}, sends: null, last: null, games: 0 };
     rooms.set(r.code, r); byUser.set(uid, r.code);
     log(uid, 'room', { op: 'create' }, now);
     broadcastRoom(r);
@@ -134,10 +144,35 @@ export function makeRooms({ game, log }) {
     touch(r, now); broadcastRoom(r);
     return roomView(r, uid);
   }
+  // 방식(1:1 · 3:3 교체전) — 방장만, 대기 중에만. 바뀌면 둘 다 준비가 풀림
+  function setMode(uid, mode, now) {
+    const r = roomOf(uid); if (!r) fail('방에 있지 않아요');
+    if (r.host !== uid) fail('방장만 바꿀 수 있어요');
+    if (r.phase === 'battle') fail('대결 중엔 못 바꿔요');
+    if (mode !== '1v1' && mode !== 'swap3') fail('모르는 방식이에요');
+    if (r.mode !== mode) { r.mode = mode; for (const m of r.members) { m.ready = false; refresh(m); } }
+    touch(r, now); broadcastRoom(r);
+    return roomView(r, uid);
+  }
+  // 3:3 팀 바꾸기(셋 — 순서 = 나설 순서). 화면은 같은 셋을 setTeam 으로 저장도 함(팀 정의는 하나)
+  function setTeam(uid, uids, now) {
+    const r = roomOf(uid); if (!r) fail('방에 있지 않아요');
+    if (r.phase === 'battle') fail('대결 중엔 못 바꿔요');
+    const want = Array.isArray(uids) ? uids.map(String) : [];
+    if (want.length !== 3 || new Set(want).size !== 3) fail('식물 셋을 골라 주세요');
+    const t = game.teamOf(uid, want);
+    if (!t || t.plants.some((p, i) => p.uid !== want[i])) fail('스마트팜에 있는 식물만 나갈 수 있어요');
+    const m = r.members.find(x => x.uid === uid);
+    m.team = want; m.teamCards = t.plants.map(card); m.ready = false;
+    touch(r, now); broadcastRoom(r);
+    return roomView(r, uid);
+  }
   function ready(uid, on, now) {
     const r = roomOf(uid); if (!r) fail('방에 있지 않아요');
     if (r.phase === 'battle') return roomView(r, uid);
-    const m = r.members.find(x => x.uid === uid); m.ready = !!on; touch(r, now);
+    const m = r.members.find(x => x.uid === uid);
+    if (on && r.mode === 'swap3' && !m.team) fail('3:3은 스마트팜에 식물이 셋 있어야 해요');
+    m.ready = !!on; touch(r, now);
     if (r.members.length === 2 && r.members.every(x => x.ready)) start(r, now);
     else broadcastRoom(r);
     return roomView(r, uid);
@@ -145,28 +180,44 @@ export function makeRooms({ game, log }) {
 
   // ── 대결 ──
   function start(r, now) {
-    const [ma, mb] = r.members, ga = game.plantOf(ma.uid, ma.plant), gb = game.plantOf(mb.uid, mb.plant);
-    if (!ga || !gb) { for (const m of r.members) m.ready = false; broadcastRoom(r); return; }
-    r.B = setupPvp({ seed: randomInt(1, 2 ** 31 - 1), a: ga.plant, b: gb.plant, aName: ga.profile.name, bName: gb.profile.name });
-    r.B.me.rank = `재배사 Lv${ga.level}`; r.B.foe.rank = `재배사 Lv${gb.level}`; r.B.me.tlv = ga.level; r.B.foe.tlv = gb.level;   // 체력판 위 '이름 · Lv'(상대 판에만 보임)
-    r.revealed = { a: new Set(), b: new Set() };   // 상대에게 보인 기술(쓴 것만)
-    r.phase = 'battle'; r.sides = { a: ma.uid, b: mb.uid }; r.moves = {}; r.timeouts = { a: 0, b: 0 }; r.picks = { a: {}, b: {} };
-    r.plants = { a: plantLite(ga.plant), b: plantLite(gb.plant) }; r.deadline = now + TURN_MS; r.games++;
+    const [ma, mb] = r.members, seed = randomInt(1, 2 ** 31 - 1), stop = () => { for (const m of r.members) m.ready = false; broadcastRoom(r); };
+    if (r.mode === 'swap3') {
+      const ta = game.teamOf(ma.uid, ma.team), tb = game.teamOf(mb.uid, mb.team);
+      if (!ta || !tb) return stop();
+      r.B = setupPvp3({ seed, a: ta.plants, b: tb.plants, aName: ta.profile.name, bName: tb.profile.name });
+      for (const [units, lv] of [[r.B.team.me, ta.level], [r.B.team.foe, tb.level]]) for (const u of units) { u.rank = `재배사 Lv${lv}`; u.tlv = lv; }
+      r.revealed = { a: [0, 1, 2].map(() => new Set()), b: [0, 1, 2].map(() => new Set()) };   // 식물마다 상대에게 보인 기술(쓴 것만)
+      r.shown = { a: new Set([0]), b: new Set([0]) };   // 상대에게 보인 식물(앞에 나온 적 있는 것)
+      r.plants = { a: ta.plants.map(plantLite), b: tb.plants.map(plantLite) };
+    } else {
+      const ga = game.plantOf(ma.uid, ma.plant), gb = game.plantOf(mb.uid, mb.plant);
+      if (!ga || !gb) return stop();
+      r.B = setupPvp({ seed, a: ga.plant, b: gb.plant, aName: ga.profile.name, bName: gb.profile.name });
+      r.B.me.rank = `재배사 Lv${ga.level}`; r.B.foe.rank = `재배사 Lv${gb.level}`; r.B.me.tlv = ga.level; r.B.foe.tlv = gb.level;   // 체력판 위 '이름 · Lv'(상대 판에만 보임)
+      r.revealed = { a: new Set(), b: new Set() };   // 상대에게 보인 기술(쓴 것만)
+      r.plants = { a: plantLite(ga.plant), b: plantLite(gb.plant) };
+    }
+    r.phase = 'battle'; r.sides = { a: ma.uid, b: mb.uid }; r.moves = {}; r.sends = null; r.timeouts = { a: 0, b: 0 }; r.picks = { a: {}, b: {} };
+    r.deadline = now + TURN_MS; r.games++;
     for (const m of r.members) m.ready = false;
     for (const side of ['a', 'b']) send(r.sides[side], 'start', { ...battleMsg(r, r.sides[side]), code: r.code });
     broadcastRoom(r);
   }
-  function battleMsg(r, uid) { const side = sideOf(r, uid); return { view: viewOf(r, side), deadline: r.deadline, now: Date.now(), turn: r.B.turn, moved: !!r.moves[side] }; }
+  function battleMsg(r, uid) { const side = sideOf(r, uid); return { view: viewOf(r, side), deadline: r.deadline, now: Date.now(), turn: r.B.turn, step: r.sends ? 'send' : 'pick', moved: movedOf(r, side) }; }
   // 내 화면에 보낼 판: 상대 = 기본기 + 이미 쓴 기술만, 능력치·속 사정(빗나감 연속 등) 없이 — 체력 · 에너지 · 효과 · 이름 · 그림만
+  //  3:3: 상대 대기석 중 아직 안 나온 식물은 자리만(살았는지) — 누가 있는지는 나올 때 처음 보임
+  const hideFoe = (f, seen) => ({ ...f, kit: f.kit.filter(k => BASIC.has(k.id) || seen.has(k.id)), atk: null, def: null, spd: null, acc: null, eva: null, crit: null, st: f.st ? { nextInit: f.st.nextInit || 0, nextCrit: f.st.nextCrit || 0 } : null });
   function viewOf(r, side) {
-    const v = viewFor(r.B, side), f = v.foe, seen = r.revealed[OTHER[side]];
-    return { ...v, foe: { ...f, kit: f.kit.filter(k => BASIC.has(k.id) || seen.has(k.id)), atk: null, def: null, spd: null, acc: null, eva: null, crit: null, st: f.st ? { nextInit: f.st.nextInit || 0, nextCrit: f.st.nextCrit || 0 } : null } };
+    const v = viewFor(r.B, side), O = OTHER[side];
+    if (v.mode === 'swap3') return { ...v, team: { me: v.team.me, foe: v.team.foe.map((u, i) => (r.shown[O].has(i) ? hideFoe(u, r.revealed[O][i]) : { id: 'foe', hidden: true, name: '?', key: null, el: null, jong: null, hp: u.hp > 0 ? 1 : 0, max: 1, energy: u.energy, energyMax: u.energyMax, kit: [], eff: {}, st: null })) } };
+    return { ...v, foe: hideFoe(v.foe, r.revealed[O]) };
   }
   const turnOf = (turn, side) => { const t = turnFor(turn, side); return { ...t, events: t.events.map(e => (e.t === 'hit' ? { ...e, table: undefined, forced: undefined } : e)) }; };   // 적중 표(능력치로 계산한 칸)는 안 보냄
   function move(uid, act, now, turn) {
     const r = roomOf(uid); if (!r || r.phase !== 'battle') fail('대결 중이 아니에요');
     const side = sideOf(r, uid); if (!side) fail('대결 중이 아니에요');
     if (turn != null && turn !== r.B.turn) fail('이미 지난 턴이에요');   // 시간이 넘어 대신 둔 턴에 늦게 온 수가 다음 턴으로 넘어가지 않게
+    if (r.mode === 'swap3') return move3(r, side, act, now);
     if (r.moves[side]) fail('이번 턴은 이미 골랐어요');
     const u = side === 'a' ? r.B.me : r.B.foe;
     if (typeof act !== 'string' || (act !== 'rest' && !u.kit.some(k => k.id === act))) fail('모르는 기술');
@@ -175,15 +226,57 @@ export function makeRooms({ game, log }) {
     if (r.moves.a && r.moves.b) resolve(r, now);
     return { ok: true };
   }
+  // 3:3 수: 고르는 차례 = { kind:'skill', id } · { kind:'switch', to } · { kind:'rest' }, 쓰러진 자리 채우는 차례 = { kind:'send', to }
+  function move3(r, side, act, now) {
+    const B = r.B, me = SIDE[side];
+    if (!act || typeof act !== 'object') fail('잘못된 수');
+    if (r.sends) {
+      if (!needSides(B).includes(side)) fail('상대가 다음 식물을 고르는 중이에요');
+      if (act.kind !== 'send') fail('다음 식물을 먼저 골라 주세요');
+      if (r.sends[side] != null) fail('이미 골랐어요');
+      const u = B.team[me][act.to];
+      if (!Number.isInteger(act.to) || !u || u.hp <= 0) fail('그 식물은 나갈 수 없어요');
+      r.sends[side] = act.to; touch(r, now);
+      if (needSides(B).every(s => r.sends[s] != null)) applySends(r, now);
+      else send(r.sides[OTHER[side]], 'foeReady', { turn: B.turn });
+      return { ok: true };
+    }
+    if (r.moves[side]) fail('이번 턴은 이미 골랐어요');
+    if (act.kind === 'skill') { if (!B[me].kit.some(k => k.id === act.id)) fail('모르는 기술'); }
+    else if (act.kind === 'switch') { if (!Number.isInteger(act.to) || !B.team[me][act.to]) fail('잘못된 교체'); }
+    else if (act.kind !== 'rest') fail('잘못된 수');
+    r.moves[side] = act.kind === 'skill' ? { kind: 'skill', id: act.id } : act.kind === 'switch' ? { kind: 'switch', to: act.to } : { kind: 'rest' };
+    r.timeouts[side] = 0; touch(r, now);
+    send(r.sides[OTHER[side]], 'foeReady', { turn: B.turn });
+    if (r.moves.a && r.moves.b) resolve(r, now);
+    return { ok: true };
+  }
   function resolve(r, now) {
-    const { a, b } = r.moves;
-    for (const [side, mv] of [['a', a], ['b', b]]) r.picks[side][mv] = (r.picks[side][mv] || 0) + 1;
-    const turn = pvpTurn(r.B, a, b);
-    if (turn.mySkill && turn.mySkill.id) r.revealed.a.add(turn.mySkill.id);
-    if (turn.foeSkill && turn.foeSkill.id) r.revealed.b.add(turn.foeSkill.id);
-    r.moves = {}; r.deadline = now + TURN_MS;
-    for (const side of ['a', 'b']) send(r.sides[side], 'turn', { turn: turnOf(turn, side), view: viewOf(r, side), deadline: r.deadline, now });
-    if (r.B.over) end(r, r.B.over === 'win' ? 'a' : 'b', 'ko', now);
+    const { a, b } = r.moves, B = r.B;
+    for (const [side, mv] of [['a', a], ['b', b]]) { const k = typeof mv === 'string' ? mv : mv.kind === 'skill' ? mv.id : mv.kind; r.picks[side][k] = (r.picks[side][k] || 0) + 1; }
+    let turn;
+    if (r.mode === 'swap3') {
+      turn = pvpTurn3(B, a, b);
+      r.shown.a.add(B.act.me); r.shown.b.add(B.act.foe);   // 교체로 나온 식물 공개, 기술은 쓴 식물에(같은 턴에 쓰러져도 판이 자리를 안 바꿈)
+      if (turn.mySkill && turn.mySkill.id) r.revealed.a[B.act.me].add(turn.mySkill.id);
+      if (turn.foeSkill && turn.foeSkill.id) r.revealed.b[B.act.foe].add(turn.foeSkill.id);
+    } else {
+      turn = pvpTurn(B, a, b);
+      if (turn.mySkill && turn.mySkill.id) r.revealed.a.add(turn.mySkill.id);
+      if (turn.foeSkill && turn.foeSkill.id) r.revealed.b.add(turn.foeSkill.id);
+    }
+    const fill = r.mode === 'swap3' && !B.over && needSides(B).length > 0;
+    r.moves = {}; r.sends = fill ? {} : null; r.deadline = now + (fill ? SEND_MS : TURN_MS);
+    for (const side of ['a', 'b']) send(r.sides[side], 'turn', { turn: turnOf(turn, side), view: viewOf(r, side), deadline: r.deadline, step: fill ? 'send' : 'pick', now });
+    if (B.over) end(r, B.over === 'win' ? 'a' : 'b', 'ko', now);
+  }
+  // 쓰러진 자리 채우기(필요한 쪽이 다 골랐거나 시간이 넘음): A 다음 B 순서로 내보내고 둘에게 함께 알림
+  function applySends(r, now) {
+    const B = r.B, evs = [];
+    for (const side of ['a', 'b']) if (r.sends[side] != null) evs.push(sendIn(B, r.sends[side], SIDE[side]));
+    r.sends = null; r.shown.a.add(B.act.me); r.shown.b.add(B.act.foe);
+    r.deadline = now + TURN_MS;
+    for (const side of ['a', 'b']) send(r.sides[side], 'send', { sends: side === 'b' ? mirrorEvents(evs) : evs, view: viewOf(r, side), deadline: r.deadline, turn: B.turn, now });
   }
   function forfeit(uid, now) {
     const r = roomOf(uid); if (!r || r.phase !== 'battle') fail('대결 중이 아니에요');
@@ -201,9 +294,9 @@ export function makeRooms({ game, log }) {
       try { out = game.pvpResult(uid, { win, short, forfeit: !win && (why === 'forfeit' || why === 'left' || why === 'timeout') }, now); } catch (e) { out = { reward: null, state: null }; }
       send(uid, 'end', { win, why, turns, reward: out.reward, state: out.state, view: viewOf(r, side) });
     }
-    log(r.sides[winSide], 'pvp', { why, turns, short, loser: r.sides[loseSide], win: r.plants[winSide], lose: r.plants[loseSide], picksWin: r.picks[winSide], picksLose: r.picks[loseSide], game: r.games }, now);
-    r.last = { winner: (r.members.find(m => m.uid === r.sides[winSide]) || {}).name || '', why, turns };
-    r.B = null; r.sides = null; r.moves = {};
+    log(r.sides[winSide], 'pvp', { mode: r.mode, why, turns, short, loser: r.sides[loseSide], win: r.plants[winSide], lose: r.plants[loseSide], picksWin: r.picks[winSide], picksLose: r.picks[loseSide], game: r.games }, now);
+    r.last = { winner: (r.members.find(m => m.uid === r.sides[winSide]) || {}).name || '', why, turns, mode: r.mode };
+    r.B = null; r.sides = null; r.moves = {}; r.sends = null;
     for (const m of r.members) { m.ready = false; refresh(m); }
     touch(r, now); broadcastRoom(r);
   }
@@ -229,10 +322,15 @@ export function makeRooms({ game, log }) {
       if (r.phase === 'battle') {
         for (const side of ['a', 'b']) { const m = r.members.find(x => x.uid === r.sides[side]); if (m && m.gone && now - m.gone > GRACE_MS) { end(r, OTHER[side], 'left', now); break; } }
         if (r.phase === 'battle' && now > r.deadline) {
-          const late = ['a', 'b'].filter(sd => !r.moves[sd]);
-          for (const sd of late) { r.timeouts[sd]++; r.moves[sd] = 'rest'; }   // 시간 초과 = 넘어감
-          const quit = late.find(sd => r.timeouts[sd] >= 2);
-          if (quit) end(r, OTHER[quit], 'timeout', now); else resolve(r, now);
+          if (r.sends) {   // 쓰러진 자리: 시간이 넘으면 살아 있는 첫 식물(시간 초과로 세지 않음)
+            for (const sd of needSides(r.B)) if (r.sends[sd] == null) r.sends[sd] = aliveOf(r.B, SIDE[sd])[0];
+            applySends(r, now);
+          } else {
+            const late = ['a', 'b'].filter(sd => !r.moves[sd]);
+            for (const sd of late) { r.timeouts[sd]++; r.moves[sd] = r.mode === 'swap3' ? { kind: 'rest' } : 'rest'; }   // 시간 초과 = 넘어감
+            const quit = late.find(sd => r.timeouts[sd] >= 2);
+            if (quit) end(r, OTHER[quit], 'timeout', now); else resolve(r, now);
+          }
         }
       } else if (now - r.touched > IDLE_MS) { for (const m of r.members) { byUser.delete(m.uid); send(m.uid, 'room', null); } rooms.delete(r.code); }
     }
@@ -240,5 +338,5 @@ export function makeRooms({ game, log }) {
   }, 1000);
   if (clock.unref) clock.unref();   // Node: 이 시계 때문에 꺼지지 않는 일 없게(Cloudflare 엔 없음)
 
-  return { subscribe, poll, create, join, leave, pick, ready, move, forfeit, emote, view, count: () => rooms.size };
+  return { subscribe, poll, create, join, leave, pick, setMode, setTeam, ready, move, forfeit, emote, view, count: () => rooms.size };
 }

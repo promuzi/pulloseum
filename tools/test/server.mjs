@@ -15,9 +15,12 @@ let fails = 0, n = 0;
 const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function call(path, body, token, method) {
-  const r = await fetch(BASE + path, { method: method || (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
-  const j = await r.json().catch(() => ({}));
-  return { status: r.status, ...j };
+  for (let k = 0; ; k++) {
+    const r = await fetch(BASE + path, { method: method || (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 429 && k < 8 && path !== '/api/login' && path !== '/api/register') { await sleep(1500); continue; }   // 사람보다 빠른 시험이 요청 한도(계정마다 10초 80번)에 걸리면 잠깐 쉬고 다시
+    return { status: r.status, ...j };
+  }
 }
 // 실시간 알림 읽기(기다리는 요청 — 화면과 같은 길 /api/room/poll)
 function listen(token) {
@@ -27,6 +30,7 @@ function listen(token) {
     while (!stopped) {
       try {
         const r = await fetch(BASE + '/api/room/poll?after=' + after, { headers: { authorization: 'Bearer ' + token }, signal: ctrl.signal });
+        if (!r.ok) { await sleep(r.status === 429 ? 1000 : 100); continue; }   // 너무 잦음(계정마다 10초 80번) — 화면처럼 같은 번호로 다시 물음
         const j = await r.json();
         for (const e of j.events || []) ev.push({ type: e.type, data: e.data });
         after = j.seq;
@@ -139,13 +143,71 @@ try {
   const rb = await call('/api/room', null, B.token);
   ok(!rb.room, '나가기');
   la.stop(); lb.stop();
+  // ── 3:3 친구 대결(교체전): 방식 · 팀 · 상대 대기석 숨김 · 쓰러진 자리 채우기 · 끝까지 ──
+  for (const T of [A, B]) { const s3 = (await call('/api/me', null, T.token)).state; for (const sd of s3.seeds.slice(0, 2)) await call('/api/act', { op: 'plantSeed', args: { seed: sd.id } }, T.token); }
+  const la3 = listen(A.token), lb3 = listen(B.token);
+  await sleep(200);
+  ok((await call('/api/room/join', { code: room.code }, B.token)).status === 200, '같은 방에 다시 들어옴');
+  ok((await call('/api/room/mode', { mode: 'swap3' }, B.token)).status === 400, '방장만 방식을 바꿈');
+  const md = await call('/api/room/mode', { mode: 'swap3' }, A.token), mineA = md.members && md.members.find(m => m.me);
+  ok(md.status === 200 && md.mode === 'swap3' && mineA.team.length === 3 && md.members.every(m => m.team3) && md.members.find(m => !m.me).team === null, '3:3 방식 → 내 팀 셋은 보이고 상대 팀은 안 보임');
+  const order = mineA.team.map(c => c.uid).reverse();
+  const tm = await call('/api/room/team', { plants: order }, A.token);
+  ok(tm.status === 200 && tm.members.find(m => m.me).team[0].uid === order[0], '팀 순서 바꾸기(앞 = 먼저 나감)');
+  ok((await call('/api/room/team', { plants: [order[0], order[0], order[1]] }, A.token)).status === 400, '같은 식물 둘은 막힘');
+  await call('/api/room/ready', { on: true }, A.token);
+  await call('/api/room/ready', { on: true }, B.token);
+  const s3a = await la3.wait('start'), s3b = await lb3.wait('start');
+  ok(s3a && s3b && s3a.data.view.mode === 'swap3' && s3a.data.view.team.me.every(u => u.key && u.atk != null), '3:3 대결 시작(내 셋은 다 보임)');
+  ok(s3a && s3a.data.view.team.foe.filter(u => u.hidden).length === 2 && !s3a.data.view.team.foe[0].hidden && s3a.data.view.team.foe[1].key === null && s3a.data.view.team.foe[0].atk === null, '상대 대기석 둘은 자리만 · 앞 식물은 능력치 없이');
+  {
+    const L = { a: la3, b: lb3 }, TK = { a: A.token, b: B.token }, V = { a: s3a.data.view, b: s3b.data.view }, from = { a: 0, b: 0 };
+    let turns3 = 0, sends3 = 0, sw3 = 0, wrongSide = null, deadSend = null, over3 = false, end3 = {};
+    const alive = (v, skip) => v.team.me.map((u, i) => (u.hp > 0 && i !== skip ? i : -1)).filter(i => i >= 0);
+    for (let g = 0; g < 160 && !over3; g++) {
+      await sleep(450);   // 사람보다 훨씬 빠르면 요청 한도(계정마다 10초 80번)에 걸림
+      const need = { a: ['me', 'both'].includes(V.a.need), b: ['me', 'both'].includes(V.b.need) };
+      if (need.a || need.b) {   // 쓰러진 자리 채우기
+        const idle = need.a ? (need.b ? null : 'b') : 'a';
+        if (idle && wrongSide == null) wrongSide = (await call('/api/room/move', { act: { kind: 'basic' }, turn: V[idle].turn }, TK[idle])).status;
+        const at = { a: L.a.ev.length, b: L.b.ev.length };
+        for (const s of ['a', 'b']) if (need[s]) {
+          if (deadSend == null) deadSend = (await call('/api/room/move', { act: { kind: 'send', to: V[s].act.me }, turn: V[s].turn }, TK[s])).status;
+          const r3 = await call('/api/room/move', { act: { kind: 'send', to: alive(V[s], V[s].act.me)[0] }, turn: V[s].turn }, TK[s]);
+          if (r3.status !== 200) { ok(false, '채우기 실패 ' + r3.error); g = 999; }
+        }
+        const ea = await L.a.wait('send', at.a), eb = await L.b.wait('send', at.b);
+        if (!ea || !eb) { ok(false, '채우기 알림 안 옴'); break; }
+        V.a = ea.data.view; V.b = eb.data.view; from.a = ea.i; from.b = eb.i; sends3++;
+        continue;
+      }
+      const at = { a: L.a.ev.length, b: L.b.ev.length };
+      for (const s of ['a', 'b']) {
+        const v = V[s], bench = alive(v, v.act.me), me3 = v.team.me[v.act.me];
+        const act = (g % 5 === 2 && bench.length) ? (sw3++, { kind: 'switch', to: bench[0] }) : { kind: 'skill', id: ([...me3.kit].reverse().find(x => x.act === 'attack' && (x.cost || 0) <= v.pool.me) || me3.kit[0]).id };
+        const r3 = await call('/api/room/move', { act, turn: v.turn }, TK[s]);
+        if (r3.status !== 200) { ok(false, '3:3 수 실패 ' + r3.error); g = 999; }
+      }
+      const ta = await L.a.wait('turn', at.a), tb = await L.b.wait('turn', at.b);
+      if (!ta || !tb) { ok(false, '3:3 턴 알림 안 옴'); break; }
+      V.a = ta.data.view; V.b = tb.data.view; turns3++;
+      if (V.a.over) { end3.a = await L.a.wait('end', at.a); end3.b = await L.b.wait('end', at.b); over3 = true; }
+    }
+    ok(over3 && end3.a && end3.b && end3.a.data.win !== end3.b.data.win, `3:3 끝까지(${turns3}턴 · 채우기 ${sends3}번 · 교체 ${sw3}번) → 한 명만 이김`);
+    ok(sends3 > 0 && deadSend === 400 && (wrongSide == null || wrongSide === 400), '쓰러진 식물은 못 내보냄 · 채울 쪽이 아니면 못 둠');
+    ok(V.a.team.foe.every(u => u.hidden || u.key) && V.b.team.me.every((u, i) => u.key === V.a.team.foe[i].key || V.a.team.foe[i].hidden), '나온 식물만 공개(끝까지 숨은 식물은 자리만)');
+  }
+  const r3 = await call('/api/room', null, A.token);
+  ok(r3.room && r3.room.phase === 'lobby' && r3.room.mode === 'swap3' && r3.room.last && r3.room.last.mode === 'swap3', '3:3 끝 → 같은 방 · 방식 그대로');
+  await call('/api/room/leave', {}, B.token); await call('/api/room/leave', {}, A.token);
+  la3.stop(); lb3.stop();
   // ── 로그아웃 ──
   await call('/api/logout', {}, L1.token);
   ok((await call('/api/me', null, L1.token)).status === 401, '로그아웃한 열쇠는 못 씀');
   ok((await fetch(BASE + '/v2/')).status === 200 && (await fetch(BASE + '/server/data/t.db')).status === 404 && (await fetch(BASE + '/v2/../server/db.mjs')).status === 404, '게임 파일만 내보냄(저장소·서버 코드는 못 받음)');
   // ── 플레이 기록 보고서 ──
   const rep = EXT ? null : spawnSync(process.execPath, ['--no-warnings', 'server/report.mjs', '--db', join(dir, 't.db')], { encoding: 'utf8' });
-  if (rep) ok(rep.status === 0 && /봇 판/.test(rep.stdout) && /친구 대결 1판|대결 1판/.test(rep.stdout), '플레이 기록 보고서' + (rep.status ? '\n' + rep.stderr : ''));
+  if (rep) ok(rep.status === 0 && /봇 판/.test(rep.stdout) && /대결 2판\(1:1 1 · 3:3 1\)/.test(rep.stdout), '플레이 기록 보고서' + (rep.status ? '\n' + rep.stderr : ''));
   if (rep && process.argv.includes('--report')) console.log(rep.stdout);
 } catch (e) { fails++; console.log('오류', e); }
 if (srv) srv.kill();

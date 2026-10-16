@@ -103,8 +103,9 @@ table(['수', '고른 횟수', '쓴 판', '그 판 승률'], top(sk, 15).map(([k
 w('## 4. 친구 대결');
 const pv = ev.filter(e => e.kind === 'pvp'), why = {}, pw = {};
 let pt = 0;
-for (const e of pv) { inc(why, e.d.why); pt += e.d.turns; if (e.d.win) inc(pw, e.d.win.key); }
-w(`- 대결 ${pv.length}판 · 평균 ${avg(pt, pv.length)}턴 · 끝난 이유: ${Object.entries(why).map(([k, n]) => `${{ ko: '쓰러뜨림', forfeit: '기권', timeout: '시간 넘김', left: '나감' }[k] || k} ${n}`).join(' · ') || '–'}`);
+for (const e of pv) { inc(why, e.d.why); pt += e.d.turns; for (const p of [].concat(e.d.win || [])) inc(pw, p.key); }   // 3:3은 이긴 쪽 식물 셋
+const n3 = pv.filter(e => e.d.mode === 'swap3').length;
+w(`- 대결 ${pv.length}판(1:1 ${pv.length - n3} · 3:3 ${n3}) · 평균 ${avg(pt, pv.length)}턴 · 끝난 이유: ${Object.entries(why).map(([k, n]) => `${{ ko: '쓰러뜨림', forfeit: '기권', timeout: '시간 넘김', left: '나감' }[k] || k} ${n}`).join(' · ') || '–'}`);
 w(`- 이긴 식물: ${top(pw, 8).map(([k, n]) => `${nm(k)} ${n}`).join(' · ') || '–'}`);
 const capped = ev.filter(e => e.kind === 'pvp.result' && e.d.capped).length;
 w(`- 보상 없이 끝난 판(3턴 미만·하루 한도): ${capped}`);

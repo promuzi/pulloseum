@@ -112,7 +112,15 @@ export function makeGame({ q, log }) {
     const p = (plantUid && s.plants.find(x => x.uid === plantUid)) || s.plants[s.active] || s.plants[0];
     return p ? { plant: clone(p), profile: { ...s.profile }, level: s.user.level } : null;
   }
-  return { create, state, act, battleStart, battleTurn, battleForfeit, pvpResult, plantOf, load };
+  // 3:3 친구 대결에 나갈 셋 — 고른 셋 → 없거나 틀리면 저장된 3:3 팀 → 스마트팜 앞에서부터 셋, 셋이 안 되면 null
+  function teamOf(uid, uids) {
+    const { s } = load(uid);
+    let list = Array.isArray(uids) ? uids.map(u => s.plants.find(p => p.uid === u)).filter(Boolean) : [];
+    if (list.length !== 3 || new Set(list).size !== 3) list = teamPlants(s);
+    if (list.length !== 3) list = s.plants.slice(0, 3);
+    return list.length === 3 ? { plants: list.map(clone), profile: { ...s.profile }, level: s.user.level } : null;
+  }
+  return { create, state, act, battleStart, battleTurn, battleForfeit, pvpResult, plantOf, teamOf, load };
 }
 
 // 고른 수 세기(1:1 = 기술 id, 3:3 = skill:id · switch · rest · send)
