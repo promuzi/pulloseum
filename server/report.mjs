@@ -2,9 +2,10 @@
 //   node server/report.mjs                 → 최근 7일, 화면에 출력
 //   node server/report.mjs --days 30 --out docs/play-report.md   (저장소에 남길 땐 계정 번호가 없는 이 요약만)
 //   node server/report.mjs --db 다른.db
+//   node server/report.mjs --url https://pulloseum.getchat.workers.dev   (올린 서버 — 관리 열쇠 = cf/.admin-key, 깃 밖)
 //  계정마다의 원본 기록은 server/data/ 안에만 있음(깃에 안 올림). 보고서는 모두 합계·비율이라 누가 무엇을 했는지는 안 드러남.
 import { DatabaseSync } from 'node:sqlite';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { SPECIES, SKILLS, PLANETS, STAGES, STAT_NAME } from '../v2/src/game/catalog.js';
@@ -12,7 +13,18 @@ import { SPECIES, SKILLS, PLANETS, STAGES, STAT_NAME } from '../v2/src/game/cata
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const DAYS = +arg('days', 7), DB = arg('db', join(HERE, 'data', 'pulloseum.db')), OUT = arg('out', null);
-const db = new DatabaseSync(DB);
+const URL_ = arg('url', null);
+let data;
+if (URL_) {
+  const key = readFileSync(arg('key-file', join(HERE, '..', 'cf', '.admin-key')), 'utf8').trim();
+  const r = await fetch(URL_.replace(/\/$/, '') + '/api/admin/export', { headers: { 'x-admin-key': key } });
+  if (!r.ok) throw new Error('내보내기 실패 ' + r.status);
+  data = await r.json();
+} else {
+  const db = new DatabaseSync(DB);
+  data = { users: db.prepare('SELECT id, created, last_seen FROM users').all(), events: db.prepare('SELECT user_id, t, kind, data FROM events').all(), saves: db.prepare('SELECT user_id, state FROM saves').all() };
+}
+const EVENTS = data.events.map(e => ({ ...e, d: JSON.parse(e.data) })).sort((a, b) => a.t - b.t);
 const now = Date.now(), from = now - DAYS * 864e5, DAY = 864e5;
 const day = t => new Date(t + 9 * 3600e3).toISOString().slice(0, 10);   // 한국 시간 날짜
 const pct = (a, b) => (b ? (100 * a / b).toFixed(0) + '%' : '–');
@@ -22,10 +34,10 @@ const skn = k => (SKILLS[k] ? SKILLS[k].name : { basic: '기본 공격', guard: 
 const inc = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; return o; };
 const top = (o, n = 12) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n);
 
-const users = db.prepare('SELECT id, created, last_seen FROM users').all();
-const ev = db.prepare('SELECT user_id, t, kind, data FROM events WHERE t >= ? ORDER BY t').all(from).map(e => ({ ...e, d: JSON.parse(e.data) }));
-const allEv = db.prepare('SELECT user_id, t, kind FROM events').all();
-const saves = db.prepare('SELECT user_id, state FROM saves').all().map(r => ({ uid: r.user_id, s: JSON.parse(r.state) }));
+const users = data.users;
+const ev = EVENTS.filter(e => e.t >= from);
+const allEv = EVENTS;
+const saves = data.saves.map(r => ({ uid: r.user_id, s: JSON.parse(r.state) }));
 const L = [];
 const w = s => L.push(s);
 const table = (head, rows) => { w('| ' + head.join(' | ') + ' |'); w('|' + head.map(() => '---').join('|') + '|'); for (const r of rows) w('| ' + r.join(' | ') + ' |'); w(''); };
@@ -65,7 +77,7 @@ const did = Object.fromEntries(Object.keys(firsts).map(k => [k, new Set()]));
 for (const e of allEvFull()) { const k = e.kind === 'act' ? (e.d.op === 'harvestAll' ? 'harvest' : e.d.op) : e.kind === 'pvp.result' ? 'pvp' : e.kind; if (did[k]) did[k].add(e.user_id); }
 w(`- 한 번이라도 해 본 사람(가입 ${users.length}명 중): ${Object.entries(firsts).map(([k, n]) => `${n} ${pct(did[k].size, users.length)}`).join(' · ')}`);
 w('');
-function allEvFull() { return db.prepare("SELECT user_id, kind, data FROM events WHERE kind IN ('act', 'battle', 'pvp.result')").all().map(e => ({ ...e, d: JSON.parse(e.data) })); }
+function allEvFull() { return EVENTS.filter(e => e.kind === 'act' || e.kind === 'battle' || e.kind === 'pvp.result'); }
 
 // ── 3. 봇 판 ──
 w('## 3. 봇 판');

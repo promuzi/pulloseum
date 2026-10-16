@@ -22,7 +22,7 @@ const { q } = openDb(DB);
 const log = makeLog(q);
 const game = makeGame({ q, log });
 const rooms = makeRooms({ game, log });
-const api = makeApi({ q, game, rooms, log });
+const api = makeApi({ q, game, rooms, log, adminKey: process.env.PULLO_ADMIN_KEY || null });
 const serveStatic = makeStatic(ROOT);
 
 const json = (res, code, obj) => { const b = Buffer.from(JSON.stringify(obj)); res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'content-length': b.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }); res.end(b); };

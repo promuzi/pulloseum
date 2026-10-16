@@ -30,4 +30,8 @@ export const STMTS = {
   doneBattle: 'UPDATE battles SET done = ?, updated = ? WHERE id = ?',
   purgeBattles: 'DELETE FROM battles WHERE done != 0 AND updated < ?',
   addEvent: 'INSERT INTO events (user_id, t, kind, data) VALUES (?, ?, ?, ?)',
+  // 보고서용 내보내기(관리 열쇠가 있을 때만 — api.mjs GET /api/admin/export): 계정은 번호 · 만든 때 · 마지막 접속만(아이디 · 비밀번호 · IP 없음)
+  exportUsers: 'SELECT id, created, last_seen FROM users',
+  exportEvents: 'SELECT user_id, t, kind, data FROM events',
+  exportSaves: 'SELECT user_id, state FROM saves',
 };

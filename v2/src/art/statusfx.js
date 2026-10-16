@@ -424,7 +424,8 @@ function purify(g, L, S, e, age) {
 }
 // 집중: 머리 둘레에 조준 꺾쇠 넷이 좁혀 들어오고 금빛 반짝
 function focus(g, L, S, e, age) {
-  const life = SFX_LIFE.focus, q = oQ(cl(age / 380)), f = fadeIO(age, life, 60, 220), [cx, cy] = scr(L, Math.round(S.cx), S.y0 + 8), r = Math.round(16 - 9 * q);
+  // 자리 = 식물 한가운데(2026-10-16 사용자 "집중의 표식을 식물의 중앙쯤으로 — 지금은 머리에 있어")
+  const life = SFX_LIFE.focus, q = oQ(cl(age / 380)), f = fadeIO(age, life, 60, 220), [cx, cy] = scr(L, Math.round(S.cx), Math.round((S.y0 + S.y1) / 2)), r = Math.round(18 - 9 * q);
   for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (let d = 0; d < 4; d++) { dot(g, cx + sx * r - sx * d, cy + sy * r, '#ffd84a', f); dot(g, cx + sx * r, cy + sy * r - sy * d, '#ffd84a', f); }
   if (age > 380) twinkle(g, cx, cy, 2 + Math.round(2 * Math.sin(Math.PI * cl((age - 380) / 300))), '#ffffff');
 }

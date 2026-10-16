@@ -2,12 +2,16 @@
 //  req = { method, path, query: URLSearchParams, header(이름), ip, body(객체), onClose(fn) } → { status, body } (기다리는 요청은 Promise) · API 주소가 아니면 null
 //  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드 · 기다리는 요청)
 import { hashPass, checkPass, newSession, userOfToken, endSession, allowTry, LOGIN_RE } from './auth.mjs';
+import { timingSafeEqual } from 'node:crypto';
 import { Err } from '../v2/src/game/logic.js';
 import { STARTERS } from '../v2/src/game/catalog.js';
 
 export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
 
-export function makeApi({ q, game, rooms, log }) {
+// adminKey = 관리 열쇠(Cloudflare 비밀값 ADMIN_KEY · PC 환경변수 PULLO_ADMIN_KEY) — 없으면 관리 주소는 아예 없음(404)
+export function makeApi({ q, game, rooms, log, adminKey = null }) {
+  const AK = adminKey ? String(adminKey).trim() : '';   // 비밀값을 파이프로 넣으면 끝에 줄바꿈이 붙을 수 있어 양쪽 다 다듬음
+  const isAdmin = req => { const k = Buffer.from(String(req.header('x-admin-key') || '').trim()), a = Buffer.from(AK); return !!AK && k.length === a.length && timingSafeEqual(k, a); };   // 길이는 바이트로(한글이 섞이면 글자 수만 같아도 비교가 터짐)
   const hits = new Map(), regs = new Map();   // 너무 잦은 요청(계정마다 10초에 80번) · 가입 제한(IP마다 하루 10개)
   let lastPurge = 0;
   function rate(key, now, max = 80, win = 10000) {
@@ -80,6 +84,8 @@ export function makeApi({ q, game, rooms, log }) {
     'POST /api/room/move': (req, b, now) => rooms.move(authed(req, now).id, b.act, now, b.turn == null ? null : +b.turn),
     'POST /api/room/forfeit': (req, b, now) => rooms.forfeit(authed(req, now).id, now),
     'POST /api/room/emote': (req, b, now) => rooms.emote(authed(req, now).id, b.i, now),
+    // 플레이 기록 보고서용 내보내기(server/report.mjs --url) — 관리 열쇠가 맞을 때만, 아니면 없는 주소처럼
+    'GET /api/admin/export': (req) => { if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요'); return { users: q.exportUsers.all(), events: q.exportEvents.all(), saves: q.exportSaves.all() }; },
   };
 
   async function handle(req) {
