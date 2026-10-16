@@ -1,18 +1,24 @@
-// 전투 기술 카드(2026-10-16 사용자 "전투시 스킬도 뭔가 세로로 긴 카드 느낌을 내고 싶어. 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌이 나면서 뒷면에 상세 내용이 적힌 느낌?")
-//  앞면 = 비용 보석(왼쪽 위) · 속성(오른쪽 위) · 그림 창(속성 색 · 효과/분류 큰 아이콘 · 창과 같은 연한 세로 결) · 이름 · 위력
+// 전투 기술 카드(2026-10-16 사용자 "전투시 스킬도 뭔가 세로로 긴 카드 느낌 — 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌, 뒷면에 상세"
+//  → "카드 디자인이 너무 별로임 예쁘게 해봐. 자료 참고해서").
+//  참고: Marvel Snap(그림이 주인공 · 비용 = 왼쪽 위 파란 원 · 위력 = 오른쪽 위 주황 원 · 글은 최소), Balatro(도트 카드 · 굵은 먹선 테 · 그림자 · 고르면 떠오르고
+//   금빛 · 특별할 때 비스듬한 빛 띠가 스침), 카드 틀 관례(틀 색 = 종류·속성, 보석은 모서리, 이름 띠는 대비 높게).
+//  앞면 = 속성 색 도톰한 금속 테(위·왼 밝게 · 아래·오른 어둡게) · 그림(코덱스 스킬 그림을 도트로 — 없으면 속성 빛 + 큰 아이콘 임시 그림) ·
+//   이름 띠(그림 아래를 짙게 덮으며 이어짐) · 비용 마름모(전투 화면 MP와 같은 파랑, 모자라면 빨강) · 위력 알약(공격만, 주황)
 //  뒷면 = 같은 테 + 상세(등급 · 분류 · 사거리 · 위력 · 비용 · 걸리는 효과와 설명 · 지금 상대에게의 상성 · 못 쓰는 까닭)
 //  꾹 누르기(battle.js) = 카드가 화면 가운데로 다가오며 커지고 원근 있게 뒤집힘 — 2D 캔버스라 세로 조각마다 깊이만큼 높이·간격을 줄여 3D 뒤집기를 흉내(drawFlip)
 import { Gfx } from '../core/gfx.js';
 import { wrap, glyphH } from '../core/text.js';
 import { icon, tinted } from './icons.js';
-import { ELEMENT } from './palette.js';
+import { ELEMENT, BAYER4 } from './palette.js';
 import { rrect } from './ui.js';
 import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
-import { TIER_NAME } from '../game/catalog.js';
+import { TIER_NAME, SKILLS } from '../game/catalog.js';
 
-const C = { ink: '#0b1322', body: '#12294a', body2: '#183a62', plate: '#0c1e36', text: '#e6f3ff', sub: '#a9cdf0', dim: '#7396bb', line: '#8ccfff', gold: '#ffd890', good: '#ffd890', gem: '#24180a', gemRing: '#f0be7d', gemText: '#ffe9b8' };
-const NONE = { name: '무속성', main: '#7f97b8', light: '#cfe0f4', dark: '#3c5474' };
+const C = { ink: '#0b1322', body: '#12294a', body2: '#183a62', plate: '#0c1e36', band: '#0c1526', text: '#eef4ff', sub: '#a9cdf0', dim: '#7396bb', line: '#8ccfff', gold: '#ffd890', good: '#ffd890' };
+const GEM = { ok: ['#2d6fe0', '#9fd0ff', '#15347c'], bad: ['#c8392e', '#ff9e8e', '#5c1410'], off: ['#5b616e', '#a7adb8', '#2c3038'] };   // [속, 빛, 그늘]
+const POW = ['#f08a24', '#ffd08a', '#7a320c'];
+const NONE = { name: '무속성', main: '#8ea3c2', light: '#dfe8f5', dark: '#46566e' };
 export const elOf = sk => (sk && ELEMENT[sk.el]) || NONE;
 const BUFF_KEY = { purify: 'purified' };   // 기술의 self 이름 → 효과 표 이름
 // 기본기 설명(battle/model.js BASICS 규칙 그대로)
@@ -22,7 +28,20 @@ const BASIC_DESC = {
   evade: ['먼저든 늦게든 성립', '상대 공격이 빗나갈 확률 +22', '스칠 확률 +14'],
 };
 export const LOCK_TEXT = { bind: '덩굴에 묶여 이번 턴 못 씀', taunt: '도발에 넘어가 자세를 못 씀' };
-const LOCK_SHORT = { bind: '묶임', taunt: '도발' };   // 카드 앞면(그림 창 위)
+const LOCK_SHORT = { bind: '묶임', taunt: '도발' };   // 카드 앞면(그림 위)
+export const ART_W = 58, ART_H = 52;   // 그림 칸(논리 칸) — 코덱스 그림은 tools/pixel/big/bgconv.mjs --fit --w=58 --h=52 로 줄여 assets/v2/skills/<기술 id>.png
+
+// ── 스킬 그림(코덱스 원화 → 도트). 없으면 임시 그림 ──
+export const SKILLART = {};
+export const SKILLART_NAMES = ['u_petal_3', 'u_ember_3'];   // 2026-10-16 코덱스 샘플 두 장(꽃잎 칼날 · 불덩이)
+const NAME_ID = Object.fromEntries(Object.entries(SKILLS).map(([id, s]) => [s.name, id]));   // 시험판 기술(model.js s1·s2)도 이름으로 그림을 찾음
+const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+export async function loadSkillArt(base = '../assets/v2/skills/') {
+  const got = await Promise.all(SKILLART_NAMES.map(n => load(base + n + '.png')));
+  SKILLART_NAMES.forEach((n, i) => { if (got[i]) SKILLART[n] = got[i]; });
+  return SKILLART_NAMES.filter(n => !SKILLART[n]);
+}
+const artOf = sk => SKILLART[sk.id] || SKILLART[NAME_ID[sk.name]] || null;
 
 // 그림 창의 큰 아이콘: 거는 효과 > 내 버프 > (공격 아닌) 분류 > 속성 > 칼
 function artIcon(sk) {
@@ -34,68 +53,107 @@ function artIcon(sk) {
   if (cat !== 'attack') return CAT_ICON[cat] || 'sword';
   return sk.el && icon(sk.el) ? sk.el : 'sword';
 }
-
-// 테와 몸(앞·뒤 같음): 겉 먹선 → 속성 색 테(고르면 금빛) → 먹선 → 남색 몸(위가 한 단 밝게). R = 모서리
-function cardFrame(g, x, y, w, h, sk, lit, R = 4) {
-  const E = elOf(sk);
-  rrect(g, x, y, w, h, R, C.ink);
-  rrect(g, x + 1, y + 1, w - 2, h - 2, R - 1, lit ? C.gold : hexMix(E.main, C.line, 0.45));
-  rrect(g, x + 2, y + 2, w - 4, h - 4, Math.max(1, R - 2), C.ink);
-  rrect(g, x + 3, y + 3, w - 6, h - 6, Math.max(1, R - 3), C.body);
-  g.vgrad(x + 4, y + 4, w - 8, h - 8, [C.body2, C.body, C.body]);   // 위가 한 단 밝은 몸(점 섞어 이음)
-  g.rect(x + 4, y + 3, w - 8, 1, hexMix(C.body2, C.line, 0.35));
-}
-
-// 앞면(손패 크기 w×h, 논리 칸 — 지금 66×88). o = { can, lit, lock }
-//  위 줄 = 비용 보석 · 속성 표, 그림 창 = 속성 색 세로 그라데이션 + 연한 세로 결 + 큰 아이콘(그림자), 이름(두 줄까지), 아래 = 위력 또는 분류
-export function cardFront(g, x, y, w, h, sk, o = {}) {
-  x |= 0; y |= 0;
-  const E = elOf(sk), c = g.c, gr = 7, top = gr * 2 + 3;
-  cardFrame(g, x, y, w, h, sk, o.lit);
-  const ax = x + 5, ay = y + top + 1, aw = w - 10, ah = Math.round(h * 0.31);
-  g.rect(ax - 1, ay - 1, aw + 2, ah + 2, C.ink);
-  g.vgrad(ax, ay, aw, ah, [E.dark, hexMix(E.dark, E.main, 0.55), E.main]);
-  c.fillStyle = 'rgba(230,243,255,0.10)';
-  for (let xx = ax + 1; xx < ax + aw; xx += 3) c.fillRect(xx, ay, 1, ah);
-  g.rect(ax, ay + ah - 1, aw, 1, hexMix(E.light, '#ffffff', 0.3));
-  const name = artIcon(sk), ic = icon(name);
+// 임시 그림(58×52 도트, 한 번 굽고 재사용): 속성 빛이 가운데서 번지는 배경(디더 네 단) + 옅은 빛살 + 큰 아이콘(먹선 · 그림자) + 반짝이
+const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const tempArt = new Map();
+function placeholderArt(sk) {
+  const name = artIcon(sk), key = (sk.el || '-') + '|' + name;
+  let cv = tempArt.get(key); if (cv) return cv;
+  const E = elOf(sk), W = ART_W, H = ART_H;
+  cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d'), id = c.createImageData(W, H), d = id.data;
+  const steps = [E.light, hexMix(E.light, E.main, 0.55), E.main, hexMix(E.main, E.dark, 0.5), E.dark, hexMix(E.dark, '#0b1322', 0.45)].map(hexRgb);
+  const cx = W / 2, cy = H * 0.46, R = Math.hypot(W / 2, H / 2) * 0.95;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, r = Math.hypot(dx, dy) / R, a = Math.atan2(dy, dx);
+    const ray = Math.cos(a * 8) > 0.82 ? -0.35 : 0;   // 빛살 여덟(조금 밝게)
+    let t = Math.max(0, Math.min(steps.length - 1.001, (r * 1.15 + ray * (1 - r)) * (steps.length - 1)));
+    const i0 = Math.floor(t), f = t - i0, pick = BAYER4[y & 3][x & 3] / 16 < f ? i0 + 1 : i0, col = steps[pick], k = (y * W + x) * 4;
+    d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255;
+  }
+  c.putImageData(id, 0, 0);
+  const ic = icon(name);
   if (ic) {
-    const s = Math.max(1, Math.min(4, Math.floor(Math.min(aw - 6, ah - 4) / ic.width))), iw = ic.width * s, ih = ic.height * s, ix = Math.round(ax + (aw - iw) / 2), iy = Math.round(ay + (ah - ih) / 2);
+    const s = 3, iw = ic.width * s, ih = ic.height * s, ix = Math.round((W - iw) / 2), iy = Math.round((H - ih) / 2) - 1, ink = tinted(name, '#0b1322');
     c.imageSmoothingEnabled = false;
-    c.globalAlpha = 0.4; c.drawImage(tinted(name, C.ink), ix + s, iy + s, iw, ih); c.globalAlpha = 1;
+    c.globalAlpha = 0.45; c.drawImage(ink, ix + 3, iy + 3, iw, ih); c.globalAlpha = 1;   // 그림자
+    for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) c.drawImage(ink, ix + ox, iy + oy, iw, ih);   // 먹선
     c.drawImage(ic, ix, iy, iw, ih);
   }
-  const gx = x + gr + 2, gy = y + gr + 2;   // 비용 보석(왼쪽 위)
-  g.disc(gx, gy, gr, C.ink); g.disc(gx, gy, gr - 1, C.gemRing); g.disc(gx, gy, gr - 3, C.gem);
-  g.text(String(sk.cost || 0), gx + 0.5, gy - Math.round(glyphH('bold') / 2), { font: 'bold', color: C.gemText, align: 'center' });
-  const ei = sk.el && icon(sk.el);   // 속성 표(오른쪽 위)
-  if (ei) { const ex = x + w - gr - 2; g.disc(ex, gy, gr, C.ink); g.disc(ex, gy, gr - 1, E.dark); g.img(ei, ex - 5, gy - 5); }
-  const foot = !!sk.power, z0 = ay + ah + 2, z1 = foot ? y + h - 16 : y + h - 5, lines = wrap(sk.name, 'bold', w - 8).slice(0, 2), lh = 12, gh = glyphH('bold');   // 위력 없는 카드(자세 · 버프)는 아래 줄 없이 이름만(분류는 그림 아이콘)
-  const ny = Math.round(z0 + (z1 - z0 - (lines.length - 1) * lh - gh) / 2);
+  c.fillStyle = '#ffffff';
+  for (const [sx, sy] of [[9, 9], [W - 11, 13], [12, H - 15], [W - 9, H - 18]]) { c.globalAlpha = 0.85; c.fillRect(sx, sy, 1, 1); c.globalAlpha = 0.45; c.fillRect(sx - 1, sy, 3, 1); c.fillRect(sx, sy - 1, 1, 3); }
+  c.globalAlpha = 1;
+  tempArt.set(key, cv); return cv;
+}
+
+// 테: 먹선 → 속성 색 금속 테 2칸(위·왼 빛 · 아래·오른 그늘) → 안쪽 먹선. 고른 카드 = 금빛 테
+const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
+function cardFrame(g, x, y, w, h, sk, lit) {
+  const [mid, hi, lo] = frameCols(sk, lit);
+  rrect(g, x, y, w, h, 5, C.ink);
+  rrect(g, x + 1, y + 1, w - 2, h - 2, 4, mid);
+  g.rect(x + 4, y + 1, w - 8, 1, hi); g.rect(x + 1, y + 4, 1, h - 8, hi);   // 위·왼 빛
+  g.rect(x + 4, y + h - 2, w - 8, 1, lo); g.rect(x + w - 2, y + 4, 1, h - 8, lo);   // 아래·오른 그늘
+  rrect(g, x + 3, y + 3, w - 6, h - 6, 2, C.ink);
+}
+// 마름모(비용 보석): (cx, cy) 가운데, r = 반지름
+function diamond(g, cx, cy, r, [fill, hi, lo]) {
+  for (let dy = -r - 1; dy <= r + 1; dy++) { const hw = r + 1 - Math.abs(dy); g.rect(cx - hw, cy + dy, hw * 2 + 1, 1, C.ink); }
+  for (let dy = -r; dy <= r; dy++) { const hw = r - Math.abs(dy); g.rect(cx - hw, cy + dy, hw * 2 + 1, 1, dy < 0 ? hexMix(fill, hi, 0.25) : fill); }
+  for (let k = 0; k < r; k++) { g.px(cx - r + k, cy - k, hi); g.px(cx + k + 1, cy + r - k - 1, lo); }   // 왼쪽 위 빛줄 · 오른쪽 아래 그늘줄
+}
+
+// 앞면(손패 크기 w×h, 논리 칸 — 지금 66×90). o = { can(쓸 수 있나), short(에너지가 모자라나), lit(고름), lock, shine(0~1 빛 띠) }
+export function cardFront(g, x, y, w, h, sk, o = {}) {
+  x |= 0; y |= 0;
+  const c = g.c, ax = x + 4, ay = y + 4, aw = w - 8, ah = ART_H, dim = o.can === false;
+  cardFrame(g, x, y, w, h, sk, o.lit);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(artOf(sk) || placeholderArt(sk), ax, ay, aw, ah);
+  // 이름 띠: 그림 아래 열 칸을 짙게 덮으며 이어지고, 위에 테 색 가는 줄
+  const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
+  gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
+  c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
+  g.rect(ax, by, aw, bh, C.band);
+  g.rect(ax, by, aw, 1, hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));
+  const lines = wrap(sk.name, 'bold', aw - 4).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font: 'bold', color: C.text, align: 'center' }));
-  if (foot) { g.rect(x + 7, z1, w - 14, 1, hexMix(E.main, C.ink, 0.55)); g.text(`위력 ${sk.power}`, x + w / 2, z1 + 3, { font: 'bold', color: C.sub, align: 'center' }); }
-  if (o.can === false) {   // 못 씀: 어둡게(묶임 · 도발은 까닭 글자)
-    rrect(g, x + 1, y + 1, w - 2, h - 2, 3, 'rgba(6,10,20,0.58)');
-    if (o.lock) {   // 그림 창 가운데에 짧게(자세한 까닭은 뒷면)
-      const L = STATUS[o.lock] || {}, li = L.icon && icon(L.icon), txt = LOCK_SHORT[o.lock] || '', tw = g.textW(txt, 'bold') + (li ? 14 : 0), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 15) / 2);
-      rrect(g, lx - 4, ly, tw + 8, 15, 3, 'rgba(6,10,20,0.85)');
-      if (li) g.img(li, lx, ly + 2);
-      g.text(txt, lx + (li ? 14 : 0), ly + Math.round((15 - glyphH('bold')) / 2), { font: 'bold', color: L.col || '#ff8a8a' });
-    }
+  if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
+    const p = o.shine, bx = ax - 16 + p * (aw + 32);
+    c.save(); c.beginPath(); c.rect(ax, ay, aw, h - 8); c.clip();
+    c.fillStyle = 'rgba(255,255,255,0.32)';
+    c.beginPath(); c.moveTo(bx, ay + h); c.lineTo(bx + 7, ay + h); c.lineTo(bx + 7 + h * 0.5, ay - 4); c.lineTo(bx + h * 0.5, ay - 4); c.closePath(); c.fill();
+    c.restore();
+  }
+  if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
+  // 비용 마름모(왼쪽 위) · 위력 알약(오른쪽 위, 공격만)
+  diamond(g, x + 9, y + 9, 7, dim ? (o.short ? GEM.bad : GEM.off) : GEM.ok);
+  g.text(String(sk.cost || 0), x + 9.5, y + 9 - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+  if (sk.power) {
+    const txt = String(sk.power), pw = g.textW(txt, 'bold') + 9, px = x + w - pw - 2, py = y + 2, [pf, ph, pl] = POW;
+    rrect(g, px, py, pw, 14, 5, C.ink); rrect(g, px + 1, py + 1, pw - 2, 12, 4, dim ? GEM.off[0] : pf);
+    g.rect(px + 4, py + 2, pw - 8, 1, dim ? GEM.off[1] : ph); g.rect(px + 4, py + 11, pw - 8, 1, dim ? GEM.off[2] : pl);
+    g.text(txt, px + pw / 2 + 0.5, py + Math.round((14 - gh) / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+  }
+  if (dim && o.lock) {   // 묶임 · 도발: 그림 가운데에 짧게(자세한 까닭은 뒷면)
+    const L = STATUS[o.lock] || {}, li = L.icon && icon(L.icon), txt = LOCK_SHORT[o.lock] || '', tw = g.textW(txt, 'bold') + (li ? 14 : 0), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 15) / 2);
+    rrect(g, lx - 4, ly, tw + 8, 15, 3, 'rgba(6,10,20,0.88)');
+    if (li) g.img(li, lx, ly + 2);
+    g.text(txt, lx + (li ? 14 : 0), ly + Math.round((15 - gh) / 2), { font: 'bold', color: L.col || '#ff8a8a' });
   }
 }
 
 // 빈 칸(배운 기술이 셋보다 적을 때 · 꾹 눌러 들어 올린 카드의 자리)
 export function cardSlot(g, x, y, w, h, label = '') {
-  rrect(g, x, y, w, h, 4, 'rgba(140,207,255,0.16)');
-  rrect(g, x + 1, y + 1, w - 2, h - 2, 3, 'rgba(8,14,26,0.55)');
+  rrect(g, x, y, w, h, 5, 'rgba(140,207,255,0.16)');
+  rrect(g, x + 1, y + 1, w - 2, h - 2, 4, 'rgba(8,14,26,0.55)');
   if (label) g.text(label, x + w / 2, y + Math.round(h / 2) - 6, { color: C.dim, align: 'center' });
 }
 
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
   const E = elOf(sk), P = 14, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';
-  const wm = icon(artIcon(sk));   // 아래쪽 옅은 문양(앞면 그림 창의 아이콘)
+  const wm = icon(artIcon(sk));   // 아래쪽 옅은 문양(앞면 그림의 아이콘)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(artIcon(sk), E.light), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
   let y = 16;
   const ei = sk.el && icon(sk.el);
@@ -144,16 +202,21 @@ function cardBack(g, w, h, sk, o) {
     else line('지금은 못 씀', '#ff9a9a', 'bold');
   }
 }
+// 뒷면 바탕(테 안쪽): 위가 한 단 밝은 남색(점 섞어 이음)
+function backBody(g, x, y, w, h) {
+  rrect(g, x + 4, y + 4, w - 8, h - 8, 1, C.body);
+  g.vgrad(x + 4, y + 4, w - 8, h - 8, [C.body2, C.body, C.body]);
+}
 
 // 꾹 눌러 볼 큰 카드 두 장(앞 · 뒤)을 기기 화소로 미리 그림: 앞면 = 손패 그림 그대로 S배(테·도트·글자가 함께 커짐), 뒷면 = 같은 테를 S배 + 상세는 1배 글자
 export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   const S = BW / w, mk = () => { const cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k); return cv; };
   const front = mk(), fc = front.getContext('2d'), G1 = new Gfx(fc);
   fc.setTransform(k * S, 0, 0, k * S, 0, 0);
-  cardFront(G1, 0, 0, w, h, sk, { can: o.can, lock: o.lock });
+  cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock });
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   bc.setTransform(k * S, 0, 0, k * S, 0, 0);
-  cardFrame(G2, 0, 0, w, h, sk, false);
+  cardFrame(G2, 0, 0, w, h, sk, false); backBody(G2, 0, 0, w, h);
   bc.setTransform(k, 0, 0, k, 0, 0);
   cardBack(G2, BW, BH, sk, o);
   return { front, back };

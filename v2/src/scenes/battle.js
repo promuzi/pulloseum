@@ -8,7 +8,7 @@ import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx } from '../battle/status.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle } from '../art/statusLook.js';
-import { button } from '../art/ui.js';
+import { button, rrect } from '../art/ui.js';
 import { cardFront, cardSlot, renderFaces, drawFlip } from '../art/skillcard.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -27,7 +27,8 @@ import { ga, eun, eul } from '../core/josa.js';
 const PANEL_H = 228, AY = 24;
 // 손패(2026-10-16 사용자 "스킬도 세로로 긴 카드 — 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌" → "카드가 너무 커, 기본 평타·방어·회피도 그렇게 하지 마"):
 //  여섯 장 모두 같은 카드(위 줄 = 기본기 셋 · 아래 줄 = 배운 기술 셋), 66×88(3:4)
-const CARD_W = 66, CARD_H = 88, CARD_Y = 7, CARD_GX = 10, CARD_GY = 5, HOLD_MS = 320, PEEK_OPEN = 380, PEEK_CLOSE = 280;
+//  (같은 날 "카드 디자인이 너무 별로 — 자료 참고해서" → art/skillcard.js 다시: 그림이 주인공 · 속성 금속 테 · 파란 비용 마름모 · 주황 위력 알약 · 그림자 · 고르면 금빛으로 떠오름)
+const CARD_W = 66, CARD_H = 90, CARD_Y = 6, CARD_GX = 10, CARD_GY = 4, HOLD_MS = 320, PEEK_OPEN = 380, PEEK_CLOSE = 280, SHINE_MS = 520;
 const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
 const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
@@ -137,7 +138,7 @@ function hpBar(g, x, y, w, h, bar, max, t) {
 
 export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
-  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = false; this.peek = null; this.peekShot = false; this.cards = {}; },
+  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = false; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -473,7 +474,7 @@ export const battle = {
     g.rect(0, PY0, W, 1, T.ink); g.rect(0, PY0 + 1, W, 1, T.panel.frame); g.rect(0, PY0 + 2, W, 1, T.panel.frameLo);
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     this.hand(app, PY0, live, skipNow);
-    this.miscRow(app, PY0 + CARD_Y + CARD_H * 2 + CARD_GY + 6, live);
+    this.miscRow(app, PY0 + CARD_Y + CARD_H * 2 + CARD_GY + 4, live);
     if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
     if (this.info2) this.infoSheet(app);
@@ -482,20 +483,23 @@ export const battle = {
   // 손패: 여섯 장(위 줄 = 기본기 · 아래 줄 = 배운 기술, 모자라면 빈 칸). 꾹(0.32초) 누르면 그 카드를 앞으로 가져와 뒷면(상세)을 봄
   hand(app, PY0, live, skipNow) {
     const { g, W, input } = app, B = this.B, v = this.v, kit = B.me.kit;
-    this.cards = {};
+    this.cards = {}; this.useWas = this.useWas || {}; this.shineAt = this.shineAt || {};
     const x0 = Math.round((W - CARD_W * 3 - CARD_GX * 2) / 2);
     for (let i = 0; i < 6; i++) {
       const sk = kit[i], x = x0 + (i % 3) * (CARD_W + CARD_GX), y = PY0 + CARD_Y + Math.floor(i / 3) * (CARD_H + CARD_GY);
       if (!sk) { cardSlot(g, x, y, CARD_W, CARD_H, '빈 칸'); continue; }
-      const id = 'sk_' + sk.id, lock = v.phase === 'pick' ? lockOf(B.me, sk) : null, can = live && v.phase === 'pick' && !skipNow && canUse(B.me, sk), lit = v.picked === sk.id;
+      const id = 'sk_' + sk.id, pickNow = v.phase === 'pick', lock = pickNow ? lockOf(B.me, sk) : null, usable = !skipNow && canUse(B.me, sk), can = live && pickNow && usable, lit = v.picked === sk.id;
+      const show = pickNow ? usable : true, short = (sk.cost || 0) > B.me.energy;   // 어둡게 = 고르는 차례에 규칙상 못 쓸 때만(넘어가는 연출 중엔 그대로)
+      if (pickNow) { if (usable && this.useWas[id] === false) this.shineAt[id] = app.t; this.useWas[id] = usable; }   // 쓸 수 있게 된 순간 = 빛 띠
       if (this.peek && this.peek.id === id) cardSlot(g, x, y, CARD_W, CARD_H);   // 들어 올린 카드의 자리
       else {
         const hold = input.down && input.down.id === id ? input.holdMs() : 0, rise = hold > 120 ? Math.min(3, Math.round((hold - 120) / 60)) : 0;   // 꾹 누르는 동안 살짝 들림
-        const down = can && input.isPressed(id) && !rise;
-        cardFront(g, x, y + (lit ? -2 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can, lit, lock });
+        const down = can && input.isPressed(id) && !rise, sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
+        rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, lit ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.32)');   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
+        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, shine: sh != null && sh < 1 ? sh : null });
       }
       if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => this.pick(app, sk) : null, 2);
-      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can, lock };
+      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock };
     }
     const d = input.down;
     if (live && d && !d.moved && this.cards[d.id] && input.holdMs() >= HOLD_MS) this.openPeek(app, d.id);
@@ -507,7 +511,7 @@ export const battle = {
     const { input, W } = app, ref = this.cards[id], k = app.g.c.getTransform().a || 1, foe = this.v.view.foe, sk = ref.sk;
     input.claimHold();
     const BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
-    const o = { can: ref.can, lock: ref.lock, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
+    const o = { can: ref.can, short: ref.short, lock: ref.lock, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
     this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
     app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
   },

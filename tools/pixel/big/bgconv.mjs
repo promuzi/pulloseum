@@ -1,7 +1,7 @@
 // 배경 컨셉 그림(코덱스, 1024×1536 등) → 정확한 칸 도트 배경(기본 270×405).
 // 1) 칸 평균으로 줄인 그림에서 k-평균(OKLab)으로 색 N개를 뽑고 2) 원본의 모든 점을 그 색에 맞춘 뒤 3) 칸마다 가장 많은 색(최빈)을 쓰되,
 //    가장 많은 색이 칸의 절반도 안 되면(가는 선이 칸 경계에 걸침) 칸 평균에 가장 가까운 색을 쓴다 — 가는 선이 사라지지 않게.
-// 사용: node tools/pixel/big/bgconv.mjs <in.png> <out.png> [--w=270] [--h=405] [--colors=48] [--crop=348] [--zoom=3(미리보기 <out>_x3.png)]
+// 사용: node tools/pixel/big/bgconv.mjs <in.png> <out.png> [--w=270] [--h=405] [--colors=48] [--crop=348] [--zoom=3(미리보기 <out>_x3.png)] [--fit [--fy=0.5]]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { decodePNG, Img } from './engine.mjs';
 
@@ -15,6 +15,12 @@ if (opt.band) {
   const bw = Math.round(full.h * W / H), bx = Math.round((full.w - bw) / 2);
   src = { w: bw, h: full.h, data: new Uint8Array(bw * full.h * 4) };
   for (let y = 0; y < full.h; y++) src.data.set(full.data.subarray((y * full.w + bx) * 4, (y * full.w + bx + bw) * 4), y * bw * 4);
+}
+// --fit: 원본을 출력 비율로 가운데 잘라 냄(정사각 스킬 그림 → 카드 그림 칸 58×52 등 — 2026-10-16), --fy=0~1 = 세로 자르는 자리(0.5 = 가운데)
+if (opt.fit) {
+  const ar = W / H, sw = Math.min(src.w, Math.round(src.h * ar)), sh = Math.min(src.h, Math.round(src.w / ar)), bx = Math.round((src.w - sw) / 2), by = Math.round((src.h - sh) * (opt.fy ?? 0.5)), o = src;
+  src = { w: sw, h: sh, data: new Uint8Array(sw * sh * 4) };
+  for (let y = 0; y < sh; y++) src.data.set(o.data.subarray(((by + y) * o.w + bx) * 4, ((by + y) * o.w + bx + sw) * 4), y * sw * 4);
 }
 const w0 = src.w, h0 = src.h, sx = w0 / W, sy = h0 / H;
 
