@@ -13,6 +13,8 @@ const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => a.start
 const label = args.label || 'v2';
 const scale = +(args.scale || 3);
 const only = args.only ? String(args.only).split(',') : null;
+// --size 270x480 = 그 논리 크기로(기기마다 화면 높이 480~660 · 폭 256~300 — 겹침 확인)
+const SIZE = args.size ? String(args.size).split('x').map(Number) : null;
 const out = resolve(here, 'out', label); mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 
@@ -98,7 +100,7 @@ try {
   if (ready.missing.length || ready.bad.length) console.log('경고', JSON.stringify(ready));
   for (const [id, scene, params, opt] of SHOTS) {
     if (only && !only.includes(id) && !only.includes(scene)) continue;
-    const data = await p.evaluate((scene, params, scale, opt) => window.__shot(scene, params, { scale: scene === 'icons' ? 6 : scale, ...(opt || {}) }), scene, params, scale, { ...(opt || {}), ...(args.ui ? { ui: args.ui } : {}) });
+    const data = await p.evaluate((scene, params, scale, opt) => window.__shot(scene, params, { scale: scene === 'icons' ? 6 : scale, ...(opt || {}) }), scene, params, scale, { ...(opt || {}), ...(args.ui ? { ui: args.ui } : {}), ...(SIZE ? { W: SIZE[0], H: SIZE[1] } : {}) });
     writeFileSync(resolve(out, `v2_${id}.png`), Buffer.from(data.split(',')[1], 'base64'));
     console.log('saved', `v2_${id}.png`);
   }

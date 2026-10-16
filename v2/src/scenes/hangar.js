@@ -53,7 +53,7 @@ export function hangarBack(app, k = 1) {
 
 export const hangar = {
   theme: 'loft',
-  enter(p = {}) { this.sel = PROBE[p.part] ? p.part : 'scanner'; this.fx = null; this.from = p.from || null; this.inT = null; this.out = null; this.choose = p.choose ? 'open' : null; this.preset = p.model ? +p.model : null; },   // ?model=n = 그 배로(촬영용)   // ?choose=1 = 모양 고르기 창(촬영용)
+  enter(p = {}) { this.sel = PROBE[p.part] ? p.part : 'scanner'; this.fx = null; this.from = p.from || null; this.inT = null; this.out = null; this.gone = false; this.choose = p.choose ? 'open' : null; this.preset = p.model ? +p.model : null; },   // ?model=n = 그 배로(촬영용)   // ?choose=1 = 모양 고르기 창(촬영용)
   lv(s, id) { s.ship = s.ship || {}; return probeOf(s).lv[id] || 1; },
   model(s) { return (s.ship && s.ship.model) || 1; },
   draw(app) {

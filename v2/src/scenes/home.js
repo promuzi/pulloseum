@@ -21,11 +21,21 @@ export const HOME_PEDESTAL = { room: [135, 262], cell: [135, 262], ship: [135, 2
 const CARD = { x: 6, w: 92, h: 25, gap: 4, grp: 8, growH: 31 };
 const SIDE = { w: 50, h: 50, gap: 7 };
 const NAME_Y = 404, TAG_Y = 433, DOT_Y = 458, BATTLE_Y = 467, BATTLE_H = 54;
+// 짧은 화면(높이 480~599 — 휴대폰 브라우저는 주소 줄 때문에 거의 다 이쪽): 배너 아래 전부(방 그림 · 식물 · 옆 창 · 이름표 · 전투 줄)를 같이 올려 아래 줄이 탭 줄 위에 붙게. 방 그림 윗부분(천장)이 배너 뒤로 잘림
+export const homeDy = app => Math.min(0, app.H - 600);
+const BATTLE_Y0 = BATTLE_Y;
 const SHOW_MS = 320;                              // 식물이 의자 투영기에서 나타나는 시간(바꿀 때마다), 스펙 창은 한 장씩 펼쳐짐
 // 식물 누르기(2026-10-15 사용자 "가운데 식물을 누르면 주변 전등이 꺼지면서 암실이 되는 연출과 함께 위 주황전등만 남아서 집중시키고,
 //  동시에 식물이 조금 확대되는 줌. 이렇게 집중시키면서 식물의 강화와 각종 식물 스킬과 세팅을 할 수 있는 기능으로"):
 //  ① 옆 창·글자가 사라지며 방 불이 꺼짐(위 전등·빛기둥만 남음) ② 그 사이 카메라가 식물로 다가감(1.35배 — 기기 배율에 맞춰 칸 크기 고르게) ③ 식물 관리(plant.js)가 같은 카메라로 이어 받음
 export const FOCUS = { want: 1.35, sx: 135, sy: 150, ms: 1150, back: 850 };
+// 식물 관리 판 윗변(짧은 화면은 판이 조금 올라옴) · 카메라 자리 = 식물 가운데가 위 이름·꼬리표(끝 62)와 생장 줄(판 위 34칸) 사이 가운데, 그 높이에 맞춰 덜 키움
+//  (2026-10-16 사용자 "식물 선택시에 줌할때 식물이 중앙에 있었으면" — plant.js 와 같은 값)
+export const plantSheetY = app => (app.H >= 540 ? 258 : Math.round(258 + (app.H - 540) * 0.6));
+export function focusOf(app) {
+  const top = 62, bot = plantSheetY(app) - 34;
+  return { want: Math.max(1, Math.min(FOCUS.want, (bot - top) / 120)), sx: Math.round(app.W / 2), sy: Math.round((top + bot) / 2) };
+}
 const MODES = [
   { id: 'tournament', icon: 'sword', name: '1:1 토너먼트', desc: '개체 랭크 대회 · 예선은 5판 3선승' },
   { id: 'swap3', icon: 'shield', name: '3:3 교체전', desc: '내 식물 셋 · 포켓몬처럼 바꿔 가며 싸움' },   // 2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임, 이름도 팀리그라고는 하지 말자"
@@ -55,7 +65,8 @@ export const home = {
   onDrag(dy, dx) { this.swipe += dx; },
   onRelease(ev) {   // 식물 위에서 옆으로 밀면 다음·이전 식물
     const s = this.app && this.app.state; this.swipe = 0;
-    if (!s || T.key !== 'loft' || this.focus || Math.abs(ev.dx) < 32 || Math.abs(ev.dx) < Math.abs(ev.dy) * 1.2 || ev.y0 < 220 || ev.y0 > 430) return;
+    const dy = homeDy(this.app);
+    if (!s || T.key !== 'loft' || this.focus || Math.abs(ev.dx) < 32 || Math.abs(ev.dx) < Math.abs(ev.dy) * 1.2 || ev.y0 < 220 + dy || ev.y0 > 430 + dy) return;
     this.flip(ev.dx < 0 ? 1 : -1);
   },
   flip(d) { const s = this.app.state; if (s.plants.length < 2) return; s.active = (s.active + d + s.plants.length) % s.plants.length; this.showT = this.app.t; this.noReveal = false; this.app.act('setActive', { id: s.plants[s.active].uid }); },
@@ -68,14 +79,14 @@ export const home = {
 
   // ── 코덱스 원형 방 ──
   // 카메라·암실·글자 세기: f = 0(홈) → 1(식물 관리 자리). 누름 = 글자가 사라지고(앞 25%) 불이 꺼져 위 전등만 남은 방을 잠깐 보인 뒤(40%까지) 식물로 다가감, 돌아옴 = 거꾸로
-  camera(app, pc) {
-    const t = app.t, Z = loftZoom(app, FOCUS.want);
+  camera(app, pc0) {
+    const t = app.t, F = focusOf(app), Z = loftZoom(app, F.want), pc = pc0 + homeDy(app);   // pc = 화면에서 식물 가운데(짧은 화면은 올라감)
     let f = 0;
     if (this.focus) f = this.focus.hold ? 1 : Math.min(1, (t - this.focus.t0) / FOCUS.ms);
     else if (this.unfocus) { if (this.unfocus.t0 == null) this.unfocus.t0 = t; f = 1 - Math.min(1, (t - this.unfocus.t0) / FOCUS.back); if (f <= 0) this.unfocus = null; }
     if (this.focus && !this.focus.hold && f >= 1 && !this.focus.gone) { this.focus.gone = true; app.go('plant', { focus: true }, 'cut'); }
     const mv = ease(Math.max(0, Math.min(1, (f - 0.38) / 0.62)));
-    return { f, dark: ease(Math.min(1, f / 0.4)), ui: 1 - Math.min(1, f / 0.25), z: 1 + (Z - 1) * mv, sx: LOFT_STOOL[0] + (FOCUS.sx - LOFT_STOOL[0]) * mv, sy: pc + (FOCUS.sy - pc) * mv };
+    return { f, dark: ease(Math.min(1, f / 0.4)), ui: 1 - Math.min(1, f / 0.25), z: 1 + (Z - 1) * mv, sx: LOFT_STOOL[0] + (F.sx - LOFT_STOOL[0]) * mv, sy: pc + (F.sy - pc) * mv };
   },
   drawLoft(app) {
     const { g, W, t, state: s } = app;
@@ -94,34 +105,36 @@ export const home = {
     if (this.bootIn && bk >= 1) this.bootIn = null;
     if (ui <= 0) return;
     const live = ui >= 1 && !this.focus;   // 연출 중엔 누르기 막음
-    this.colCy = this.colCy == null ? pc : this.colCy + (pc - this.colCy) * 0.22;   // 옆 창 줄 가운데가 식물 가운데를 부드럽게 따라감
+    const pcs = pc + homeDy(app);
+    this.colCy = this.colCy == null ? pcs : this.colCy + (pcs - this.colCy) * 0.22;   // 옆 창 줄 가운데가 식물 가운데를 부드럽게 따라감
     g.alpha(ui, () => this.drawUI(app, p, live));
   },
   drawUI(app, p, live) {
-    const { g, state: s } = app, [mx, my] = LOFT_STOOL;
+    const { g, state: s } = app, [mx, my0] = LOFT_STOOL, dy = homeDy(app), my = my0 + dy, NY = NAME_Y + dy;
     hud(app, s);
     this.banner(app, BANNER.x, BANNER.y, live);
     if (!p) {
       this.namePlate(app, null, mx);
-      button(app, 'home_cta', 60, BATTLE_Y, 150, 44, '첫 종자 심기', { style: 'gold', font: 'head', icon: 'seed', iconTint: true, onTap: () => app.go('bag') });
+      button(app, 'home_cta', 60, BATTLE_Y + dy, 150, 44, '첫 종자 심기', { style: 'gold', font: 'head', icon: 'seed', iconTint: true, onTap: () => app.go('bag') });
       navBar(app, 'home');
       return;
     }
-    // 옆 창 두 줄: 세로 가운데 = 식물 가운데(이름표 위·배너 아래로 넘지 않게)
-    const LH = 4 * CARD.h + 3 * CARD.gap + CARD.grp + CARD.growH, RH = 3 * SIDE.h + 2 * SIDE.gap;
-    const fit = h0 => Math.max(BANNER.y + BANNER.h + 8, Math.min(NAME_Y - 6 - h0, this.colCy - h0 / 2));
+    // 옆 창 두 줄: 세로 가운데 = 식물 가운데(이름표 위·배너 아래로 넘지 않게) · 오른쪽 = 가방 · 도감(관리 단추는 뺌 — 식물을 누르면 식물 관리, 2026-10-16 사용자)
+    const LH = 4 * CARD.h + 3 * CARD.gap + CARD.grp + CARD.growH, RH = 2 * SIDE.h + SIDE.gap;
+    const fit = h0 => Math.max(BANNER.y + BANNER.h + 8, Math.min(NY - 6 - h0, this.colCy - h0 / 2));
     this.specs(app, p, fit(LH));
     this.sideButtons(app, fit(RH), live);
     // 이름표 + 넘기기 화살표 · 정체성 꼬리표 · 몇 번째 식물 점
     const [nx, nw] = this.namePlate(app, p, mx), n = s.plants.length;
+    if (p.pts > 0 || (p.pend && p.pend.length)) { g.disc(nx + nw - 3, NY + 3, 4, '#05070f'); g.disc(nx + nw - 3, NY + 3, 3, '#ff7a5a'); }   // 쓸 강화 포인트 · 놓을 새 기술(식물을 눌러 식물 관리로)
     if (n > 1) for (const [id, d, x] of [['home_prev', -1, nx - 9], ['home_next', 1, nx + nw + 8]]) {
-      const pr = app.input.isPressed(id), c = pr ? '#e6f3ff' : '#8ccfff', cy = NAME_Y + 12;
+      const pr = app.input.isPressed(id), c = pr ? '#e6f3ff' : '#8ccfff', cy = NY + 12;
       for (let j = 0; j < 5; j++) g.rect(d < 0 ? x - j : x + j, cy - 4 + j, 1, 9 - j * 2, c);   // 큰 쪽 = 뒤, 뾰족한 쪽 = 가리키는 쪽
       if (live) app.input.hit(id, x - 14, cy - 14, 28, 28, () => this.flip(d), 2);
     }
     this.tags(app, p, mx);
-    const dx0 = Math.round(mx - (n - 1) * 4.5);
-    for (let i = 0; i < n; i++) { const x = dx0 + i * 9; g.rect(x - 2, DOT_Y - 2, 5, 5, '#2b374b'); g.rect(x - 1, DOT_Y - 1, 3, 3, i === s.active ? '#f0be7d' : '#8eaed2'); }
+    const dx0 = Math.round(mx - (n - 1) * 4.5), DY = DOT_Y + dy;
+    for (let i = 0; i < n; i++) { const x = dx0 + i * 9; g.rect(x - 2, DY - 2, 5, 5, '#2b374b'); g.rect(x - 1, DY - 1, 3, 3, i === s.active ? '#f0be7d' : '#8eaed2'); }
     this.battleBlock(app, live);
     if (live) app.input.hit('home_plant', mx - 40, my - 100, 80, 104, () => this.startFocus(app));
     navBar(app, 'home', { badge: { nursery: s.plants.some(q => fruitOf(q, app.now()).have > 0 || growInfo(q).ready) } });
@@ -154,42 +167,40 @@ export const home = {
       y += h + CARD.gap;
     }
   },
-  // 오른쪽 큰 단추: 가방 · 도감 · 관리(관리 = 식물 누른 것과 같은 암실 연출로 식물 관리)
+  // 오른쪽 큰 단추: 가방 · 도감(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에)
   sideButtons(app, y0, live) {
     const { g, W } = app, x = W - 6 - SIDE.w, st = T.btn.second;
-    [['home_bag', 'navBag', '가방', () => app.go('bag')], ['home_dex', 'navBook', '도감', () => app.go('dex')], ['home_care', 'up', '관리', () => this.startFocus(app)]].forEach(([id, ic, label, go], i) => {
+    [['home_bag', 'navBag', '가방', () => app.go('bag')], ['home_dex', 'navBook', '도감', () => app.go('dex')]].forEach(([id, ic, label, go], i) => {
       const y = Math.round(y0) + i * (SIDE.h + SIDE.gap), { yy, inner } = btnBody(g, x, y, SIDE.w, SIDE.h, st, app.input.isPressed(id)), im = icon(ic);
       g.img(im, x + Math.floor((SIDE.w - im.width * 2) / 2), yy + 3 + Math.floor((30 - im.height * 2) / 2), 2);   // 2배 도트 아이콘
       g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: st.text, align: 'center' });
-      const p = app.state.plants[app.state.active];
-      if (id === 'home_care' && p && (p.pts > 0 || (p.pend && p.pend.length))) { g.disc(x + SIDE.w - 6, yy + 5, 4, '#05070f'); g.disc(x + SIDE.w - 6, yy + 5, 3, '#ff7a5a'); }   // 쓸 강화 포인트 · 놓을 새 기술이 있음
       if (live) app.input.hit(id, x, y, SIDE.w, SIDE.h, go, 3);
     });
   },
   // 이름표(꽉 찬 판 — 반투명 점무늬 위 글자가 깨져 보였음) → [x, 폭]
   namePlate(app, p, mx) {
-    const { g } = app, nm = p ? p.name : '빈 화분', nw = g.textW(nm, 'name'), w = nw + 20 + (p ? 45 : 0), x = Math.round(mx - w / 2);
-    holo(g, x, NAME_Y, w, 24, T.card || T.panel, 16);
-    g.text(nm, x + 10, NAME_Y + 3, { font: 'name', color: p && p.shiny ? '#ffe8a8' : T.ptext.main });
-    if (p) miniStars(g, x + 10 + nw + 6, NAME_Y + 8, stars(p));   // 별 = 개체값 합(등급 대신)
+    const { g } = app, NY = NAME_Y + homeDy(app), nm = p ? p.name : '빈 화분', nw = g.textW(nm, 'name'), w = nw + 20 + (p ? 45 : 0), x = Math.round(mx - w / 2);
+    holo(g, x, NY, w, 24, T.card || T.panel, 16);
+    g.text(nm, x + 10, NY + 3, { font: 'name', color: p && p.shiny ? '#ffe8a8' : T.ptext.main });
+    if (p) miniStars(g, x + 10 + nw + 6, NY + 8, stars(p));   // 별 = 개체값 합(등급 대신)
     return [x, w];
   },
   // 정체성 꼬리표: 타입 · 속성 · 생장 단계 — 능력치 창과 다른 꼴(둥근 작은 꼬리표, 아이콘 + 글자)
   tags(app, p, mx) {
-    const { g } = app, sp = SPECIES[p.key], el = ELEMENT[sp.el];
+    const { g } = app, sp = SPECIES[p.key], el = ELEMENT[sp.el], TY = TAG_Y + homeDy(app);
     const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${p.lv}` }];
     const ws = list.map(r => 22 + g.textW(r.label, 'label')), gap = 4, total = ws.reduce((a, b) => a + b, 0) + gap * (list.length - 1);
     let x = Math.round(mx - total / 2);
     list.forEach((r, i) => {
-      tagBox(g, x, TAG_Y, ws[i], 18);
-      g.img(icon(r.ic), x + 5, TAG_Y + 4);
-      g.text(r.label, x + 18, TAG_Y + 3, { font: 'label', color: r.col || '#e6f3ff' });
+      tagBox(g, x, TY, ws[i], 18);
+      g.img(icon(r.ic), x + 5, TY + 4);
+      g.text(r.label, x + 18, TY + 3, { font: 'label', color: r.col || '#e6f3ff' });
       x += ws[i] + gap;
     });
   },
   // 전투: 왼쪽 카드 = 지금 고른 전투 종류 + 대회 현황(대회 이름·라운드·5판 점·승패, 누르면 종류 고르기) · 오른쪽 = 출전
   battleBlock(app, live) {
-    const { g, W, state: s } = app, TR = s.tournament, P = T.ptext, mode = MODES.find(m => m.id === modeOf(app)) || MODES[0];
+    const { g, W, state: s } = app, TR = s.tournament, P = T.ptext, mode = MODES.find(m => m.id === modeOf(app)) || MODES[0], BATTLE_Y = BATTLE_Y0 + homeDy(app);
     const x = 8, w = 116, h = BATTLE_H, pr = app.input.isPressed('home_mode'), y = BATTLE_Y + (pr ? 1 : 0);
     holo(g, x, y, w, h, T.card || T.panel, 15);
     g.img(icon(mode.icon), x + 7, y + 6);
@@ -223,7 +234,7 @@ export const home = {
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     const close = () => { this.modeSheet = false; if (this.teamDirty) { this.teamDirty = false; app.act('setTeam', { team: teamIdx(s).map(i => s.plants[i].uid) }); } };
     app.input.hit('ms_block', 0, 0, W, H, close);
-    const cur = modeOf(app), swapOn = cur === 'swap3', tourOn = cur === 'tournament', x = 12, w = W - 24, h = 50 + MODES.length * 60 + (swapOn ? 100 : 0) + (tourOn ? 98 : 0), y = Math.max(28, BATTLE_Y + BATTLE_H - h);
+    const cur = modeOf(app), swapOn = cur === 'swap3', tourOn = cur === 'tournament', x = 12, w = W - 24, h = 50 + MODES.length * 60 + (swapOn ? 100 : 0) + (tourOn ? 98 : 0), y = Math.max(28, BATTLE_Y + homeDy(app) + BATTLE_H - h);
     holo(g, x, y, w, h, T.card || T.panel, 16);
     g.text('전투 종류', x + 12, y + 10, { font: 'head', color: P.main });
     MODES.forEach((m, i) => {
@@ -293,7 +304,7 @@ export const home = {
     const { g, W, H, state: s } = app, pf = s.profile, st = T.card || T.panel, P = T.ptext;
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     app.input.hit('pf_block', 0, 0, W, H, () => {});
-    const x = 14, y = 80, w = W - 28, h = 404;
+    const x = 14, w = W - 28, h = 404, y = Math.max(24, Math.min(80, Math.round((H - h) / 2)));   // 짧은 화면은 가운데로
     holo(g, x, y, w, h, st, 15);
     g.text('프로필 설정', x + 12, y + 10, { font: 'head', color: P.main });
     this.banner(app, x + 6, y + 32, false, w - 12);

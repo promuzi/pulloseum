@@ -162,7 +162,7 @@ const DRAW = {
       const tmp = DRAW._tmp || (DRAW._tmp = document.createElement('canvas'));
       tmp.width = sw; tmp.height = sh; const tc = tmp.getContext('2d'); tc.imageSmoothingEnabled = true;
       const tf = g.c.getTransform(), sc = tf.a || 1;
-      tc.drawImage(cv, 0, 0, W * sc, H * sc, 0, 0, sw, sh);
+      tc.drawImage(cv, tf.e, tf.f, W * sc, H * sc, 0, 0, sw, sh);   // 장면 자리(화면 틀이 가운데로 옮긴 만큼)부터
       g.c.imageSmoothingEnabled = false; g.c.drawImage(tmp, 0, 0, sw, sh, 0, 0, sw * b, sh * b);
     }
     fadeDither(g, W, H, Math.max(0, (k - 0.55) / 0.45));

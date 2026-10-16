@@ -1,6 +1,7 @@
 // 화면 = 논리 크기(가로 256~300 칸) 기준으로 그리되, 캔버스는 기기 해상도로 둔다.
 // 그림(도트)은 정수 칸 위치에만 그려서 정확히 s배 정사각형이 되고, 글자는 기기 해상도로 매끈하게 그려진다.
-export const MIN_W = 256, MAX_W = 300, MIN_H = 480, MAX_H = 660;
+//  폭 하한 270 = 장면이 늘 270칸으로 그려짐(main.js 화면 틀 — 더 넓으면 가운데 + 양옆 이어 그림). 높이 480~599는 장면마다 아래를 바닥에 붙여 맞춤
+export const MIN_W = 270, MAX_W = 300, MIN_H = 480, MAX_H = 660;
 
 export function pickLayout(devW, devH) {
   for (let s = 10; s >= 1; s--) {
@@ -35,6 +36,6 @@ export class Screen {
   present() {}
   toLogical(clientX, clientY) {
     const r = this.display.getBoundingClientRect();
-    return { x: Math.floor((clientX - r.left) / r.width * this.W), y: Math.floor((clientY - r.top) / r.height * this.H) };
+    return { x: Math.floor((clientX - r.left) / r.width * this.W) - (this.ox || 0), y: Math.floor((clientY - r.top) / r.height * this.H) };   // ox = 가운데 맞춘 장면의 왼쪽 여백
   }
 }
