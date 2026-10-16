@@ -10,7 +10,7 @@ import { plantLite } from './log.mjs';
 
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 헷갈리는 0·O·1·I 뺌
 const TURN_MS = 40000, GRACE_MS = 60000, IDLE_MS = 30 * 60000, MAX_ROOMS = 300, EMOTE_MS = 1500;
-const OTHER = { a: 'b', b: 'a' };
+const OTHER = { a: 'b', b: 'a' }, BASIC = new Set(['basic', 'guard', 'evade']);
 
 export function makeRooms({ game, log }) {
   const rooms = new Map(), byUser = new Map(), subs = new Map();
@@ -41,16 +41,19 @@ export function makeRooms({ game, log }) {
   const roomOf = uid => { const c = byUser.get(uid); return c ? rooms.get(c) : null; };
   const sideOf = (r, uid) => (r.sides ? (r.sides.a === uid ? 'a' : r.sides.b === uid ? 'b' : null) : null);
   function code() { for (let k = 0; k < 50; k++) { let c = ''; for (let i = 0; i < 6; i++) c += ABC[randomInt(ABC.length)]; if (!rooms.has(c)) return c; } fail('잠시 뒤에 다시 해 주세요'); }
+  const prof = got => ({ name: got.profile.name, title: got.profile.title, avatar: got.profile.avatar, color: got.profile.color, level: got.level });
   function member(uid, now) {
     const got = game.plantOf(uid, null);
     if (!got) fail('대결할 식물이 없어요');
-    return { uid, name: got.profile.name, title: got.profile.title, avatar: got.profile.avatar, color: got.profile.color, plant: got.plant.uid, card: card(got.plant), ready: false, joined: now, gone: null, lastEmote: 0 };
+    return { uid, ...prof(got), plant: got.plant.uid, card: card(got.plant), ready: false, joined: now, gone: null, lastEmote: 0 };
   }
+  // 프로필 · 레벨 · 고른 식물을 지금 세이브로 다시 읽음(판이 끝나 레벨이 오르거나 식물을 보관·판매했을 때)
+  function refresh(m) { try { const got = game.plantOf(m.uid, m.plant); if (got) { Object.assign(m, prof(got)); m.plant = got.plant.uid; m.card = card(got.plant); } } catch {} }
   const card = p => ({ uid: p.uid, key: p.key, name: p.name, stage: p.stage, stageName: STAGES[p.stage], lv: p.lv, shiny: !!p.shiny, legend: !!p.legend });
   function roomView(r, uid) {
     const b = r.phase === 'battle' ? { turn: r.B.turn, deadline: r.deadline, moved: !!r.moves[sideOf(r, uid)], foeMoved: !!r.moves[OTHER[sideOf(r, uid)]] } : null;
     return { code: r.code, host: r.host === uid, phase: r.phase, battle: b, last: r.last || null,
-      members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, card: m.card, ready: m.ready, online: online(m.uid) })) };
+      members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card)은 나에게만
   }
   function broadcastRoom(r) { for (const m of r.members) send(m.uid, 'room', roomView(r, m.uid)); }
   const touch = (r, now) => { r.touched = now; };
@@ -73,7 +76,7 @@ export function makeRooms({ game, log }) {
     if (r.phase === 'battle') fail('이미 대결 중인 방이에요');
     leave(uid, now);
     r.members.push(member(uid, now)); byUser.set(uid, r.code); touch(r, now);
-    for (const m of r.members) m.ready = false;
+    for (const m of r.members) { m.ready = false; refresh(m); }
     log(uid, 'room', { op: 'join' }, now);
     broadcastRoom(r);
     return roomView(r, uid);
@@ -112,14 +115,21 @@ export function makeRooms({ game, log }) {
     const [ma, mb] = r.members, ga = game.plantOf(ma.uid, ma.plant), gb = game.plantOf(mb.uid, mb.plant);
     if (!ga || !gb) { for (const m of r.members) m.ready = false; broadcastRoom(r); return; }
     r.B = setupPvp({ seed: randomInt(1, 2 ** 31 - 1), a: ga.plant, b: gb.plant, aName: ga.profile.name, bName: gb.profile.name });
-    r.B.me.rank = r.B.foe.rank = '친구 대결';   // 체력판 위 '재배사 · 랭크' 자리(상대 판에만 보임)
+    r.B.me.rank = `재배사 Lv${ga.level}`; r.B.foe.rank = `재배사 Lv${gb.level}`;   // 체력판 위 '재배사 · 레벨'(상대 판에만 보임)
+    r.revealed = { a: new Set(), b: new Set() };   // 상대에게 보인 기술(쓴 것만)
     r.phase = 'battle'; r.sides = { a: ma.uid, b: mb.uid }; r.moves = {}; r.timeouts = { a: 0, b: 0 }; r.picks = { a: {}, b: {} };
     r.plants = { a: plantLite(ga.plant), b: plantLite(gb.plant) }; r.deadline = now + TURN_MS; r.games++;
     for (const m of r.members) m.ready = false;
     for (const side of ['a', 'b']) send(r.sides[side], 'start', { ...battleMsg(r, r.sides[side]), code: r.code });
     broadcastRoom(r);
   }
-  function battleMsg(r, uid) { const side = sideOf(r, uid); return { view: viewFor(r.B, side), deadline: r.deadline, now: Date.now(), turn: r.B.turn, moved: !!r.moves[side] }; }
+  function battleMsg(r, uid) { const side = sideOf(r, uid); return { view: viewOf(r, side), deadline: r.deadline, now: Date.now(), turn: r.B.turn, moved: !!r.moves[side] }; }
+  // 내 화면에 보낼 판: 상대 = 기본기 + 이미 쓴 기술만, 능력치·속 사정(빗나감 연속 등) 없이 — 체력 · 에너지 · 효과 · 이름 · 그림만
+  function viewOf(r, side) {
+    const v = viewFor(r.B, side), f = v.foe, seen = r.revealed[OTHER[side]];
+    return { ...v, foe: { ...f, kit: f.kit.filter(k => BASIC.has(k.id) || seen.has(k.id)), atk: null, def: null, spd: null, acc: null, eva: null, crit: null, st: f.st ? { nextInit: f.st.nextInit || 0, nextCrit: f.st.nextCrit || 0 } : null } };
+  }
+  const turnOf = (turn, side) => { const t = turnFor(turn, side); return { ...t, events: t.events.map(e => (e.t === 'hit' ? { ...e, table: undefined, forced: undefined } : e)) }; };   // 적중 표(능력치로 계산한 칸)는 안 보냄
   function move(uid, act, now, turn) {
     const r = roomOf(uid); if (!r || r.phase !== 'battle') fail('대결 중이 아니에요');
     const side = sideOf(r, uid); if (!side) fail('대결 중이 아니에요');
@@ -136,8 +146,10 @@ export function makeRooms({ game, log }) {
     const { a, b } = r.moves;
     for (const [side, mv] of [['a', a], ['b', b]]) r.picks[side][mv] = (r.picks[side][mv] || 0) + 1;
     const turn = pvpTurn(r.B, a, b);
+    if (turn.mySkill && turn.mySkill.id) r.revealed.a.add(turn.mySkill.id);
+    if (turn.foeSkill && turn.foeSkill.id) r.revealed.b.add(turn.foeSkill.id);
     r.moves = {}; r.deadline = now + TURN_MS;
-    for (const side of ['a', 'b']) send(r.sides[side], 'turn', { turn: turnFor(turn, side), view: viewFor(r.B, side), deadline: r.deadline, now });
+    for (const side of ['a', 'b']) send(r.sides[side], 'turn', { turn: turnOf(turn, side), view: viewOf(r, side), deadline: r.deadline, now });
     if (r.B.over) end(r, r.B.over === 'win' ? 'a' : 'b', 'ko', now);
   }
   function forfeit(uid, now) {
@@ -154,12 +166,12 @@ export function makeRooms({ game, log }) {
       const uid = r.sides[side], win = side === winSide;
       let out = null;
       try { out = game.pvpResult(uid, { win, short, forfeit: !win && (why === 'forfeit' || why === 'left' || why === 'timeout') }, now); } catch (e) { out = { reward: null, state: null }; }
-      send(uid, 'end', { win, why, turns, reward: out.reward, state: out.state, view: viewFor(r.B, side) });
+      send(uid, 'end', { win, why, turns, reward: out.reward, state: out.state, view: viewOf(r, side) });
     }
     log(r.sides[winSide], 'pvp', { why, turns, short, loser: r.sides[loseSide], win: r.plants[winSide], lose: r.plants[loseSide], picksWin: r.picks[winSide], picksLose: r.picks[loseSide], game: r.games }, now);
     r.last = { winner: (r.members.find(m => m.uid === r.sides[winSide]) || {}).name || '', why, turns };
     r.B = null; r.sides = null; r.moves = {};
-    for (const m of r.members) m.ready = false;
+    for (const m of r.members) { m.ready = false; refresh(m); }
     touch(r, now); broadcastRoom(r);
   }
   function emote(uid, i, now) {

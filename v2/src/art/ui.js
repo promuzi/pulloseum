@@ -2,7 +2,7 @@
 // 색·모양은 장소 테마(theme.js: 우주선 · 온실 · 밤 정원)를 따른다 — 화면마다 라우터가 setTheme 한 뒤 그린다.
 import { ELEMENT } from './palette.js';
 import { icon, tinted } from './icons.js';
-import { T, plate, msgBox, btnBody, tbar, holo } from './theme.js';
+import { T, THEMES, plate, msgBox, btnBody, tbar, holo, UI, UI_ACCENT } from './theme.js';
 import { userNeed } from '../game/catalog.js';
 
 // 모서리가 r칸 둥근 사각형(채움). r 칸짜리 도트 원 모서리.
@@ -90,12 +90,16 @@ export function elemChip(g, x, y, el) {
 const TAB_ON = { fill: '#1f5f86', fill2: '#2a7099', frame: '#97e8f7', frameHi: '#e4fbff', frameLo: '#4c88a9' };
 const TAB_OFF = { fill: '#0b1d2e', fill2: '#0f2538', frame: '#2f5f7a', frameHi: '#4c88a9', frameLo: '#183a52' };
 export function holoTab(app, id, x, y, w, h, label, on, onTap, font = 'label') {
-  const { g, input } = app, pr = input.isPressed(id), yy = y + (pr && !on ? 1 : 0);
+  const { g, input } = app, pr = input.isPressed(id), yy = y + (pr && !on ? 1 : 0), acc = UI_ACCENT[UI];
   holo(g, x, yy, w, h, on ? TAB_ON : TAB_OFF, 16);
-  if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#97e8f7'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e4fbff'); }   // 아래 빛 줄
-  g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2), { font, color: on ? '#ffffff' : '#7fb8d0', align: 'center' });
+  if (UI === 'holo') { if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#97e8f7'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e4fbff'); } }   // 옛 홀로그램: 아래 빛 줄
+  else if (on) g.rect(x + Math.round(w / 2) - Math.min(9, (w >> 2)), yy + h - 3, Math.min(18, w >> 1), 2, acc);   // 고른 탭 = 글자 아래 짧은 강조 줄(한 가지 색)
+  g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2) - (on && UI !== 'holo' ? 1 : 0), { font, color: on ? '#ffffff' : UI === 'holo' ? '#7fb8d0' : '#8e9cb0', align: 'center' });
   if (onTap) input.hit(id, x, y, w, h, onTap, 3);
 }
+// 작은 꼬리표 판(종 · 속성 · 단계) — 창과 같은 겉모습
+export function tagBox(g, x, y, w, h) { holo(g, x, y, w, h, TAG_STYLE, 16); }
+const TAG_STYLE = { fill: '#10283c', fill2: '#12304a', frame: '#4c88a9', frameHi: '#97e8f7', frameLo: '#183a52' };
 // 탭 줄. tabs=[{id,label}], active=id
 export function tabs(app, x, y, w, list, active, onPick) {
   const tw = Math.floor(w / list.length);
@@ -170,8 +174,8 @@ export const NAV = [
 export function navBar(app, active, opt = {}) {
   const { g, W, H, input } = app;
   const h = 44, y = H - h;
-  if (T.nav) {   // 코덱스 홈 시안: 짙은 남색 띠 + 가는 칸막이, 강철색 한 빛깔 아이콘, 고른 탭 = 주황 아이콘·글자 + 밑줄
-    const N = T.nav, n = NAV.length, sw = Math.floor(W / n), x0 = Math.floor((W - sw * n) / 2);
+  if (T.nav || UI !== 'holo') {   // 코덱스 홈 시안: 짙은 남색 띠 + 가는 칸막이, 강철색 한 빛깔 아이콘, 고른 탭 = 주황 아이콘·글자 + 밑줄(새 겉모습에선 모든 화면 같은 탭 줄)
+    const N = T.nav || THEMES.loft.nav, n = NAV.length, sw = Math.floor(W / n), x0 = Math.floor((W - sw * n) / 2);
     g.rect(0, y, W, h, N.bg); g.rect(0, y, W, 1, N.top); g.rect(0, y + 1, W, 1, N.bg2);
     NAV.forEach((t, i) => {
       const x = x0 + i * sw, on = t.id === active, pressed = input.isPressed('nav_' + t.id);

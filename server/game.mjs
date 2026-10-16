@@ -110,7 +110,7 @@ export function makeGame({ q, log }) {
   function plantOf(uid, plantUid) {
     const { s } = load(uid);
     const p = (plantUid && s.plants.find(x => x.uid === plantUid)) || s.plants[s.active] || s.plants[0];
-    return p ? { plant: clone(p), profile: { ...s.profile } } : null;
+    return p ? { plant: clone(p), profile: { ...s.profile }, level: s.user.level } : null;
   }
   return { create, state, act, battleStart, battleTurn, battleForfeit, pvpResult, plantOf, load };
 }

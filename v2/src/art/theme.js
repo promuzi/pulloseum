@@ -182,13 +182,70 @@ THEMES.colosseum = {
   pad: { fill: '#a88a66', top: '#c4a77e', rim: '#7e6448', edge: '#2e2218', glow: '#97e8f7', glow2: '#f0a070' },
 };
 
-// 홀로그램 판(크기·색마다 한 번 만들어 둠): 가장자리 밝은 1칸 + 안쪽 어두운 1칸 + 반투명 디더 채움(짝수 줄 = 밝은 주사선) + 모서리 꺾쇠
+// ── 창 겉모습(2026-10-16 사용자 "홀로그램 창 디자인이 너무 밤티야 바꿔줘 전체적으로") ──
+//  옛 홀로그램(밝은 청록 테 + 주사선 줄무늬 + 모서리 꺾쇠)을 걷어냄. 후보 셋(?ui= 로 비교):
+//   glass = 짙은 반투명 유리 · 둥근 모서리 · 옅은 테 한 줄 · 위 안쪽 빛 한 줄 — 창마다의 색(효과 창 등)은 속과 테에 조금만(기본)
+//   metal = 무광 쇳빛 판 · 얇은 빛 턱(위·왼 밝게 · 아래·오른 그늘) · 모서리 한 칸 깎음 — 투박한 우주선
+//   ink   = 먹빛 반투명 캡슐 · 테 없음 · 큰 둥근 모서리(아이폰식)
+//   holo  = 옛 홀로그램(비교용)
+export let UI = 'glass';
+const LIGHT_TEXT = new Set(['ship', 'night', 'retro']);   // 판 글자가 밝은 장소(유리 판으로 바꿔도 읽힘)
+export const UI_ACCENT = { glass: '#f0be7d', metal: '#e8b04a', ink: '#ffffff', holo: '#97e8f7' };
+export function setUi(name) { if (UI_ACCENT[name] && name !== UI) { UI = name; holoCache.clear(); } }
+const rgbOf = hex => { const n = parseInt(String(hex || '#000000').slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const mixC = (a, b, k) => [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * k));
+const lit = (c, d) => c.map(v => Math.max(0, Math.min(255, Math.round(v + d))));
+// 둥근 모서리 안쪽인가(r칸 둥근 사각형)
+const inRound = (x, y, w, h, r) => {
+  const dx = x < r ? r - x - 0.5 : x >= w - r ? x - (w - r) + 0.5 : 0, dy = y < r ? r - y - 0.5 : y >= h - r ? y - (h - r) + 0.5 : 0;
+  return dx * dx + dy * dy <= r * r + 0.25;
+};
+function panelPixels(w, h, s, put) {
+  const fill = rgbOf(s.fill), edge = rgbOf(s.frame), hi = rgbOf(s.frameHi || s.frame);
+  if (UI === 'metal') {   // 쇳빛: 겉 먹선 · 위·왼 빛 턱 · 아래·오른 그늘 · 속 = 쇳빛에 창 색 조금 · 윗변 가운데 짧은 색 줄(창 정체)
+    const base = mixC([46, 50, 58], fill, 0.22);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const corner = (x === 0 || x === w - 1) && (y === 0 || y === h - 1);
+      if (corner) continue;
+      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) { put(x, y, [13, 15, 19], 255); continue; }
+      const k = y / Math.max(1, h - 1);
+      let c = lit(base, 7 - 14 * k);
+      if (y === 1 || x === 1) c = lit(base, y === 1 ? 34 : 18);
+      else if (y === h - 2 || x === w - 2) c = lit(base, y === h - 2 ? -26 : -16);
+      put(x, y, c, 255);
+    }
+    return;
+  }
+  if (UI === 'ink') {   // 먹빛 캡슐: 테 없이 반투명 · 창 색은 아주 조금
+    const r = Math.min(Math.floor(h / 2), 7), base = mixC([10, 12, 18], fill, 0.16);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!inRound(x, y, w, h, r)) continue;
+      put(x, y, lit(base, y === 0 ? 10 : 0), y === 0 ? 205 : 184);
+    }
+    return;
+  }
+  // glass(기본): 짙은 반투명 유리 — 속 = 남먹색에 창 색 35%, 위가 살짝 밝음 · 테 = 속과 창 테 색을 섞은 옅은 한 줄 · 위 안쪽 빛 한 줄
+  const r = h >= 16 && w >= 16 ? 3 : 2, base = mixC([15, 21, 33], fill, 0.35), rim = mixC(base, mixC(edge, hi, 0.3), 0.42);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!inRound(x, y, w, h, r)) continue;
+    const isEdge = !inRound(x - 1, y, w, h, r) || !inRound(x + 1, y, w, h, r) || !inRound(x, y - 1, w, h, r) || !inRound(x, y + 1, w, h, r) || x === 0 || y === 0 || x === w - 1 || y === h - 1;
+    if (isEdge) { put(x, y, rim, 250); continue; }
+    const k = y / Math.max(1, h - 1);
+    put(x, y, y === 1 ? lit(base, 22) : lit(base, 9 - 15 * k), 228);
+  }
+}
 const holoCache = new Map();
 const BAY = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 export function holoCanvas(w, h, s, dens = 10) {
   w |= 0; h |= 0;
-  const key = [w, h, s.fill, s.frame, dens].join('|');
+  const key = [UI, w, h, s.fill, s.frame, s.frameHi, dens].join('|');
   let cv = holoCache.get(key); if (cv) return cv;
+  if (UI !== 'holo') {
+    cv = document.createElement('canvas'); cv.width = Math.max(1, w); cv.height = Math.max(1, h);
+    const c = cv.getContext('2d'), id = c.createImageData(cv.width, cv.height), d = id.data;
+    panelPixels(w, h, s, (x, y, rgb, a) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const i = (y * w + x) * 4; d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = a; });
+    c.putImageData(id, 0, 0); holoCache.set(key, cv); return cv;
+  }
   cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const c = cv.getContext('2d'), id = c.createImageData(w, h), d = id.data;
   const put = (x, y, hex) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const n = parseInt(hex.slice(1, 7), 16), i = (y * w + x) * 4; d[i] = n >> 16; d[i + 1] = (n >> 8) & 255; d[i + 2] = n & 255; d[i + 3] = 255; };
@@ -225,7 +282,7 @@ const fillShape = (g, x, y, w, h, r, col) => (T.shape === 'round' ? rrect(g, x, 
 export function plate(g, x, y, w, h, kind = 'panel') {
   const s = T[kind] || T.panel;
   x |= 0; y |= 0; w |= 0; h |= 0;
-  if (T.holo) { holo(g, x, y, w, h, s, kind === 'deep' ? 8 : 10); return; }
+  if (T.holo || (UI !== 'holo' && LIGHT_TEXT.has(T.key))) { holo(g, x, y, w, h, s, kind === 'deep' ? 8 : 10); return; }   // 새 겉모습 = 판도 창과 같은 유리(글자가 밝은 장소만 — 온실·독방은 판 글자가 어두워 옛 판 그대로)
   if (T.key === 'cell') { pillow(g, x, y, w, h, s, 4); return; }
   if (T.key === 'retro') {   // 두꺼운 쇠 테(빛 받는 위·왼 밝게, 아래·오른 그늘) + 네 모서리 나사 + 짙은 속
     cham(g, x, y, w, h, 2, T.ink);
@@ -282,7 +339,7 @@ export const inset = () => (T.key === 'night' ? 3 : 4);
 export function msgBox(g, x, y, w, h) {
   const s = T.msg;
   x |= 0; y |= 0; w |= 0; h |= 0;
-  if (T.holo) { holo(g, x, y, w, h, { fill: s.fill, fill2: s.fill2, frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 11); return; }
+  if (T.holo || (UI !== 'holo' && LIGHT_TEXT.has(T.key))) { holo(g, x, y, w, h, { fill: s.fill, fill2: s.fill2 || s.fill, frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 11); return; }
   if (T.key === 'cell') { pillow(g, x, y, w, h, { fill: s.fill, fill2: '#e8e8ec', frame: s.edge, frameHi: s.edgeHi, frameLo: s.edgeLo }, 4); return; }
   if (T.key === 'retro') {   // 브라운관: 쇠 테두리 + 짙은 녹색 화면 + 주사선 + 구석 나사
     cham(g, x, y, w, h, 2, T.ink);
@@ -315,8 +372,10 @@ export function msgBox(g, x, y, w, h) {
 // 단추 몸통(글자·아이콘은 ui.button이 얹음). down = 눌림(1칸 내려가고 아래 턱이 사라짐)
 export function btnBody(g, x, y, w, h, st, down = false) {
   const yy = y + (down ? 1 : 0), hh = h - (down ? 1 : 0), lip = down ? 0 : 2;
-  if (T.holo && st.holo) {   // 홀로그램 단추: 반투명 판(눌리면 1칸 내려가고 더 밝게)
-    holo(g, x, yy, w, hh, { fill: down ? st.fill2 : st.fill, fill2: st.fill2, frame: st.hi, frameHi: st.hi2, frameLo: st.lo }, down ? 13 : 10);
+  if (T.holo && st.holo) {   // 창과 같은 판 단추(눌리면 1칸 내려가고 더 밝게) — 새 겉모습에선 아래 그늘 한 줄로 '누르는 것'임을 보임
+    const live = st !== T.btn.off, fillB = UI === 'holo' ? (down ? st.fill2 : st.fill) : down ? st.hi : live ? st.fill2 : st.fill;   // 새 겉모습: 누를 수 있는 단추 = 한 단 밝은 유리, 눌림 = 더 밝게
+    holo(g, x, yy, w, hh, { fill: fillB, fill2: st.fill2, frame: st.hi, frameHi: st.hi2, frameLo: st.lo }, down ? 13 : 10);
+    if (UI !== 'holo' && !down && w > 8) { g.c.fillStyle = 'rgba(0,0,0,0.38)'; g.c.fillRect(x + 3, yy + hh, w - 6, 1); }
     return { yy, inner: hh - 2 };
   }
   if (T.holo && st.solid && st.notch) {   // 코덱스 시안의 주황 단추: 모서리 2칸 꺾임 + 아래 그늘 띠 + 위 빛 줄

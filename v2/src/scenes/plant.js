@@ -1,5 +1,5 @@
 import { ELEMENT } from '../art/palette.js';
-import { button, fmt, rbox, holoTab } from '../art/ui.js';
+import { button, fmt, rbox, holoTab, tagBox } from '../art/ui.js';
 import { icon, tinted } from '../art/icons.js';
 import { bigKey } from '../art/sprites.js';
 import { T, btnBody, tbar, holo } from '../art/theme.js';
@@ -94,7 +94,7 @@ export const plant = {
     const sp = SPECIES[p.key], el = ELEMENT[sp.el];
     const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${p.lv}` }];
     let x = 8;
-    for (const r of list) { const w = 22 + g.textW(r.label, 'label'); rbox(g, x, 40, w, 18, 5, '#10283c', '#4c88a9'); g.img(icon(r.ic), x + 5, 44); g.text(r.label, x + 18, 43, { font: 'label', color: r.col || '#e4fbff' }); x += w + 4; }
+    for (const r of list) { const w = 22 + g.textW(r.label, 'label'); tagBox(g, x, 40, w, 18); g.img(icon(r.ic), x + 5, 44); g.text(r.label, x + 18, 43, { font: 'label', color: r.col || '#e4fbff' }); x += w + 4; }
     if (p.legend || p.trait) { const tag = p.legend ? '전설' : p.trait === 'fruity' ? '열매용' : '관상용', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#3a2a18', '#f0be7d'); g.text(tag, x + 6, 43, { font: 'label', color: '#ffd890' }); }
     // 생장 판(오른쪽 위): Lv · 생장 막대 · 물/비료(또는 진화)
     const gi = growInfo(p), bx = W - 98, st = T.card || T.panel;
@@ -146,7 +146,7 @@ export const plant = {
     const { g, W, state: s } = app, P = T.ptext, S = p.skills;
     g.text('기본기', 14, y0 + 1, { font: 'label', color: P.sub });
     let x = 14 + g.textW('기본기', 'label') + 8;
-    for (const b of BASICS) { const w = 20 + g.textW(b.name); rbox(g, x, y0, w, 16, 4, '#10283c', '#2f5a78'); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, y0 + 2); g.text(b.name, x + 16, y0 + 2, { color: '#cfefff' }); x += w + 4; }
+    for (const b of BASICS) { const w = 20 + g.textW(b.name); tagBox(g, x, y0, w, 16); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, y0 + 2); g.text(b.name, x + 16, y0 + 2, { color: '#cfefff' }); x += w + 4; }
     let y = y0 + 24;
     const pend = p.pend && p.pend[0];
     const hit = (id, xx, yy, w, h, fn) => this.hit(app, live, id, xx, yy, w, h, fn);

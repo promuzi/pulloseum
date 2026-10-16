@@ -88,7 +88,7 @@ try {
   if (ready.missing.length || ready.bad.length) console.log('경고', JSON.stringify(ready));
   for (const [id, scene, params, opt] of SHOTS) {
     if (only && !only.includes(id) && !only.includes(scene)) continue;
-    const data = await p.evaluate((scene, params, scale, opt) => window.__shot(scene, params, { scale: scene === 'icons' ? 6 : scale, ...(opt || {}) }), scene, params, scale, opt);
+    const data = await p.evaluate((scene, params, scale, opt) => window.__shot(scene, params, { scale: scene === 'icons' ? 6 : scale, ...(opt || {}) }), scene, params, scale, { ...(opt || {}), ...(args.ui ? { ui: args.ui } : {}) });
     writeFileSync(resolve(out, `v2_${id}.png`), Buffer.from(data.split(',')[1], 'base64'));
     console.log('saved', `v2_${id}.png`);
   }

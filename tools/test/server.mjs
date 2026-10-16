@@ -96,11 +96,16 @@ try {
   ok(nf.status === 400, '없는 코드 막힘');
   const jn = await call('/api/room/join', { code: room.code.toLowerCase() }, B.token);
   ok(jn.status === 200 && jn.members.length === 2, '코드로 들어감(소문자도)');
+  const otherA = jn.members.find(m => !m.me), meB = jn.members.find(m => m.me);
+  ok(otherA && otherA.card === null && typeof otherA.level === 'number' && otherA.name === '앨리스' && meB.card && meB.card.key === 'cactus_fire', '방: 상대는 프로필·이름·레벨만(고른 식물 안 보임), 내 식물은 보임');
   ok(await la.wait('room'), 'A에게 방 알림');
   await call('/api/room/ready', { on: true }, A.token);
   await call('/api/room/ready', { on: true }, B.token);
   const sa = await la.wait('start'), sb = await lb.wait('start');
   ok(sa && sb && sa.data.view.me.name !== sb.data.view.me.name && sa.data.view.me.key === sb.data.view.foe.key, '둘 다 준비 → 대결 시작(서로 나·상대가 뒤바뀐 모습)');
+  const BASIC = ['basic', 'guard', 'evade'];
+  ok(sa.data.view.foe.kit.every(k => BASIC.includes(k.id)) && sa.data.view.foe.atk === null && sa.data.view.me.kit.length > 3 && /Lv\d/.test(sa.data.view.foe.rank), '대결: 상대 기술(쓰기 전)·능력치는 안 옴, 내 기술은 다 옴, 상대 = 재배사 레벨');
+  let firstB = null;
   let endA = null, endB = null, k = 0, fromA = 0, fromB = 0;
   while (k < 60) {
     const va = (la.ev.slice(fromA).reverse().find(e => e.type === 'turn' || e.type === 'start') || sa).data.view;
@@ -108,10 +113,13 @@ try {
     const pickOf = v => ([...v.me.kit].reverse().find(x => x.act === 'attack' && (x.cost || 0) <= v.me.energy) || v.me.kit[0]).id;
     const ia = la.ev.length, ib = lb.ev.length;
     await call('/api/room/move', { act: pickOf(va) }, A.token);
-    await call('/api/room/move', { act: pickOf(vb) }, B.token);
+    const mvB = pickOf(vb); if (firstB == null) firstB = mvB;
+    await call('/api/room/move', { act: mvB }, B.token);
     const ta = await la.wait('turn', ia), tb = await lb.wait('turn', ib);
     if (!ta || !tb) { ok(false, '턴 알림 안 옴'); break; }
     fromA = ta.i; fromB = tb.i; k++;
+    if (k === 1) ok(BASIC.includes(firstB) || ta.data.view.foe.kit.some(x => x.id === firstB), '상대가 쓴 기술은 그다음부터 보임');
+    if (k === 1) ok(ta.data.turn.events.every(e => e.t !== 'hit' || e.table === undefined), '적중 표(능력치로 계산한 칸)는 안 옴');
     endA = la.ev.find(e => e.type === 'end'); endB = lb.ev.find(e => e.type === 'end');
     if (ta.data.view.over) { endA = await la.wait('end', ia); endB = await lb.wait('end', ib); break; }
   }

@@ -57,7 +57,7 @@ export const room = {
     drawShutterClosed(g, W, H);
     if (this.p.demo) {   // 촬영·검토용 방 모습(서버 없이)
       app.room = { online: true, emotes: this.p.demo === 'in' ? [{ i: 1, me: false, t: performance.now() }] : [], view: this.p.demo === 'in' ? { code: 'K7P2QX', host: true, phase: 'lobby', battle: null, last: { winner: '밥', why: 'ko', turns: 7 },
-        members: [{ me: true, host: true, name: '재배사', title: '꿈꾸는 원예가', card: { key: 'flower_grass', name: '페탈로즈', stage: 2, lv: 4 }, ready: true, online: true }, { me: false, host: false, name: '밥', title: '초보 재배사', card: { key: 'cactus_fire', name: '엠버캑터', stage: 1, lv: 3 }, ready: false, online: true }] } : null };
+        members: [{ me: true, host: true, name: '재배사', title: '꿈꾸는 원예가', avatar: 'flower_grass', color: 0, level: 5, card: { key: 'flower_grass', name: '페탈로즈', stage: 2, lv: 4 }, ready: true, online: true }, { me: false, host: false, name: '밥', title: '초보 재배사', avatar: 'aqua', color: 1, level: 3, card: null, ready: false, online: true }] } : null };
     } else if (net.offline) {
       ledBoard(g, [{ text: '서버에 연결해야 해요', color: LED.red }], W / 2, 200, { font: 'bold' });
       button(app, 'rm_home', W / 2 - 60, 250, 120, 32, '돌아가기', { style: 'night', onTap: () => app.go('home', {}, 'shutterOpen') });
@@ -103,7 +103,8 @@ export const room = {
     const link = `${location.origin}/v2/?room=${v.code}`;
     button(app, 'rm_copy', 30, 92, 102, 24, '코드 복사', { style: 'night', onTap: () => copy(app, v.code, '코드를 복사했어요') });
     button(app, 'rm_link', 138, 92, 102, 24, '링크 복사', { style: 'night', onTap: () => copy(app, link, '초대 링크를 복사했어요') });
-    // 두 사람 카드
+    // 두 사람 카드(사용자 2026-10-16 "친구대결에서 서로의 패는 보여주지 말자 — 프로필과 이름, 레벨 이정도만"):
+    //  위 = 프로필(대표 식물 얼굴 · 이름 · 재배사 Lv · 칭호), 가운데 = 내 카드만 고른 식물(상대는 '?' — 대결에서 공개), 아래 = 준비 불
     const cw = 118, cy = 132, ch = 196;
     [me, foe].forEach((m, i) => {
       const x = 12 + i * (cw + 10);
@@ -114,20 +115,37 @@ export const room = {
         g.text('코드를 보내 주세요', x + cw / 2, cy + 104, { color: '#4f8aa8', align: 'center' });
         return;
       }
-      g.text(m.name + (m.me ? ' (나)' : ''), x + cw / 2, cy + 8, { font: 'bold', color: '#ffffff', align: 'center' });
-      g.text(m.title || '', x + cw / 2, cy + 25, { color: '#7fd0e8', align: 'center' });
-      const c = m.card, px = x + cw / 2 - 30;
-      g.rect(px - 1, cy + 42, 62, 62, '#3f9fd0'); g.rect(px, cy + 43, 60, 60, '#0a1e2c');
-      if (c) g.clip(px + 1, cy + 44, 58, 58, () => drawPortrait(g, c.key, px + 1, cy + 44, 58, !m.me));
-      if (c) { g.text(c.name, x + cw / 2, cy + 110, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#d8faff', align: 'center' }); g.text(`${STAGES[c.stage]} · Lv${c.lv}`, x + cw / 2, cy + 127, { color: '#7fd0e8', align: 'center' }); g.img(icon(SPECIES[c.key].el), x + cw - 18, cy + 46); }
+      // 프로필 줄: 배너 색 테의 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
+      const bc = ['#97e8f7', '#f0be7d', '#9ff0b0', '#c8a8f0'][m.color || 0];
+      g.rect(x + 8, cy + 8, 30, 30, bc); g.rect(x + 9, cy + 9, 28, 28, '#0a1e2c');
+      if (m.avatar) g.clip(x + 9, cy + 9, 28, 28, () => drawPortrait(g, m.avatar, x + 9, cy + 9, 28, false));
+      let nm = m.name; while (g.textW(nm, 'bold') > cw - 50 && nm.length > 2) nm = nm.slice(0, -1);
+      g.text(nm, x + 44, cy + 9, { font: 'bold', color: '#ffffff' });
+      g.text(`재배사 Lv${m.level || 1}`, x + 44, cy + 25, { color: '#ffd890' });
+      let tt = m.title || ''; while (g.textW(tt) > cw - 16 && tt.length > 2) tt = tt.slice(0, -1);
+      g.text(tt, x + cw / 2, cy + 44, { color: '#7fd0e8', align: 'center' });
+      if (m.me) g.text('(나)', x + cw - 8, cy + 9, { color: '#97e8f7', align: 'right' });
+      // 가운데: 내 식물(나만 보임) / 상대 = 비밀
+      const px = x + cw / 2 - 28, py = cy + 62, c = m.card;
+      g.rect(px - 1, py - 1, 58, 58, m.me ? '#3f9fd0' : '#2a3a4e'); g.rect(px, py, 56, 56, '#0a1e2c');
+      if (m.me && c) {
+        g.clip(px + 1, py + 1, 54, 54, () => drawPortrait(g, c.key, px + 1, py + 1, 54, false));
+        g.img(icon(SPECIES[c.key].el), px + 58 - 12, py + 2);
+        g.text(c.name, x + cw / 2, py + 60, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#d8faff', align: 'center' });
+        g.text(`${STAGES[c.stage]} · Lv${c.lv}`, x + cw / 2, py + 76, { color: '#7fd0e8', align: 'center' });
+        button(app, 'rm_pick', x + 10, py + 94, cw - 20, 20, '식물 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.picker = true; else app.toast('준비를 풀고 바꿔요'); } });
+      } else {
+        g.text('?', x + cw / 2, py + 18, { font: 'big', color: '#2f5f7a', align: 'center' });
+        g.text('고른 식물은', x + cw / 2, py + 62, { color: '#7fd0e8', align: 'center' });
+        g.text('대결에서 공개', x + cw / 2, py + 78, { color: '#7fd0e8', align: 'center' });
+      }
       const rc = m.ready ? '#7cf0a0' : '#3a4a5e';
-      g.rect(x + 10, cy + ch - 26, 8, 8, '#05070b'); g.rect(x + 11, cy + ch - 25, 6, 6, rc);
-      g.text(!m.online ? '연결 끊김' : m.ready ? '준비 완료!' : '준비 중', x + 24, cy + ch - 28, { font: 'bold', color: !m.online ? '#ff9a8a' : m.ready ? '#9ff0b0' : '#7fd0e8' });
-      if (m.host) g.text('방장', x + cw - 10, cy + ch - 28, { color: '#ffd890', align: 'right' });
-      if (m.me) button(app, 'rm_pick', x + 10, cy + 146, cw - 20, 20, '식물 바꾸기', { style: 'night', onTap: () => { if (!me.ready) this.picker = true; else app.toast('준비를 풀고 바꿔요'); } });
-      // 감정 표현 말풍선(전광판)
+      g.rect(x + 10, cy + ch - 20, 8, 8, '#05070b'); g.rect(x + 11, cy + ch - 19, 6, 6, rc);
+      g.text(!m.online ? '연결 끊김' : m.ready ? '준비 완료!' : '준비 중', x + 24, cy + ch - 22, { font: 'bold', color: !m.online ? '#ff9a8a' : m.ready ? '#9ff0b0' : '#7fd0e8' });
+      if (m.host) g.text('방장', x + cw - 10, cy + ch - 22, { color: '#ffd890', align: 'right' });
+      // 감정 표현 말풍선(전광판) — 그 사람 카드 가운데 위
       const em = app.room.emotes.filter(e => (e.me === !!m.me) && performance.now() - e.t < 2600).pop();
-      if (em) ledBoard(g, [{ text: EMOTES[em.i] || '!', color: LED.gold }], x + cw / 2, cy + 74, { font: 'bold', maxW: cw + 20 });   // 말풍선 = 그 사람 식물 얼굴 위
+      if (em) ledBoard(g, [{ text: EMOTES[em.i] || '!', color: LED.gold }], x + cw / 2, py + 28, { font: 'bold', maxW: cw + 20 });
     });
     // 준비
     const both = v.members.length === 2, ready = me && me.ready;

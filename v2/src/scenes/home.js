@@ -1,6 +1,6 @@
 import { ELEMENT } from '../art/palette.js';
 import { room1, stand1 } from '../art/bg.js';
-import { hud, navBar, button, chip, fmt, rbox } from '../art/ui.js';
+import { hud, navBar, button, chip, fmt, rbox, tagBox } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawBig, drawPortrait, bigKey, BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
@@ -175,7 +175,7 @@ export const home = {
     const ws = list.map(r => 22 + g.textW(r.label, 'label')), gap = 4, total = ws.reduce((a, b) => a + b, 0) + gap * (list.length - 1);
     let x = Math.round(mx - total / 2);
     list.forEach((r, i) => {
-      rbox(g, x, TAG_Y, ws[i], 18, 5, '#10283c', '#4c88a9');
+      tagBox(g, x, TAG_Y, ws[i], 18);
       g.img(icon(r.ic), x + 5, TAG_Y + 4);
       g.text(r.label, x + 18, TAG_Y + 3, { font: 'label', color: r.col || '#e4fbff' });
       x += ws[i] + gap;
