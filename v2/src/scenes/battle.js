@@ -17,7 +17,7 @@ import { glyphH, wrap } from '../core/text.js';
 import { battleFromView, applyView } from '../game/fight.js';
 import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
-import { EMOTES } from './room.js';
+import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eun, eul } from '../core/josa.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
@@ -28,6 +28,7 @@ const PANEL_H = 228, AY = 24;
 // 손패(2026-10-16 사용자 "스킬도 세로로 긴 카드 — 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌" → "카드가 너무 커, 기본 평타·방어·회피도 그렇게 하지 마"):
 //  여섯 장 모두 같은 카드(위 줄 = 기본기 셋 · 아래 줄 = 배운 기술 셋), 66×88(3:4)
 //  (같은 날 "카드 디자인이 너무 별로 — 자료 참고해서" → art/skillcard.js 다시: 그림이 주인공 · 속성 금속 테 · 파란 비용 마름모 · 주황 위력 알약 · 그림자 · 고르면 금빛으로 떠오름)
+const EMOTE_CD = 3000;   // 감정 보낸 뒤 3초는 못 보냄(도배 막기)
 const CARD_W = 66, CARD_H = 90, CARD_Y = 6, CARD_GX = 10, CARD_GY = 4, HOLD_MS = 320, PEEK_OPEN = 380, PEEK_CLOSE = 280, SHINE_MS = 520;
 const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
@@ -138,7 +139,7 @@ function hpBar(g, x, y, w, h, bar, max, t) {
 
 export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
-  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = false; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; },
+  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -536,8 +537,13 @@ export const battle = {
   topBar(app) {
     const { g, W, t } = app, v = this.v, I = this.info;
     g.rect(0, 0, W, AY, T.bg2); g.rect(0, AY - 2, W, 1, T.panel.frameLo); g.rect(0, AY - 1, W, 1, T.ink);
-    btnBody(g, 5, 3, 38, 18, T.btn.second, true);
-    g.text(`${v.turn}턴`, 24, 6, { font: 'bold', color: T.btn.second.text, align: 'center' });
+    // 기권 = 왼쪽 위 작은 깃발(2026-10-16 사용자 "기권은 상단 좌측에 작게 — 실수로 누를 수 없게"): 흐린 작은 단추 · 터치 여유 없음 · 누르면 확인 창
+    const live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek, canFlag = v.phase !== 'over', fdown = canFlag && app.input.isPressed('bt_flag');
+    btnBody(g, 4, 3, 20, 18, T.btn.off, fdown);
+    g.img(tinted('flag', canFlag ? '#c9d6e8' : '#5a6a80'), 9, 7 + (fdown ? 1 : 0));
+    if (live && canFlag) app.input.hit('bt_flag', 4, 3, 20, 18, () => this.forfeit(app), 0);
+    btnBody(g, 28, 3, 38, 18, T.btn.second, true);
+    g.text(`${v.turn}턴`, 47, 6, { font: 'bold', color: T.btn.second.text, align: 'center' });
     if (this.net === 'pvp') {
       g.text('친구 대결' + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
       if (this.deadline && v.phase !== 'over') {
@@ -558,8 +564,7 @@ export const battle = {
     const { W } = app, B = this.B, v = this.v, list = [];
     if (this.mode === 'swap3') { const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me); list.push({ id: 'bt_swap', label: canSwitch(B.me) ? '교체' : '교체 못 함', icon: 'ff', can, fn: () => { this.sheet = { forced: false }; } }); }
     list.push({ id: 'bt_info', label: '효과', icon: 'sparkle', can: true, fn: () => { this.info2 = true; } });
-    if (this.net === 'pvp') list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });
-    list.push({ id: 'bt_flag', label: '기권', icon: 'flag', can: v.phase !== 'over', red: true, fn: () => this.forfeit(app) });
+    list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });
     const gap = 6, w = Math.floor((W - 16 - gap * (list.length - 1)) / list.length);
     list.forEach((b, i) => button(app, b.id, 8 + i * (w + gap), y, i === list.length - 1 ? W - 16 - (w + gap) * (list.length - 1) : w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
   },
@@ -574,13 +579,24 @@ export const battle = {
     g.alpha(fade * (blink ? 0.55 : 1), () => ledBoard(g, lines.map(text => ({ text, color: L.col })), W / 2, LED_CY, { font: 'bold', k: easeOut(k), flash, maxW: W - 16 }));
   },
   // 친구 대결 감정 표현: 보낸 쪽 식물 위에 작은 전광판(2.6초)
+  // 감정 표현: 보낸 쪽 식물 머리 위 말풍선(친구 대결 = 서버 알림, 봇 판 = 이 화면에서 + 봇이 가끔 대답) · 상대 끄기면 상대 것은 안 그림
   drawEmotes(app) {
-    if (this.net !== 'pvp' || !app.room) return;
-    const { g } = app, now = performance.now();
-    for (const e of app.room.emotes.filter(x => now - x.t < 2600)) {
-      const [x, y] = e.me ? [PX, PY - 140] : [EX, EY - 128];
-      ledBoard(g, [{ text: EMOTES[e.i] || '!', color: LED.gold }], x, y, { font: 'bold' });
+    const { g } = app, now = performance.now(), list = [...(this.net === 'pvp' && app.room ? app.room.emotes : []), ...this.localEmotes];
+    for (const side of [false, true]) {   // 사람마다 가장 최근 하나만
+      if (!side && this.muteFoe) continue;
+      const e = list.filter(x => !!x.me === side && now >= x.t && now - x.t < EMOTE_LIFE).pop();
+      if (e) emoteBubble(g, e.i, side ? PX : EX, side ? PY - 104 : EY - 98, now - e.t);
     }
+  },
+  sendEmote(app, i) {
+    this.emoteOpen = false;
+    const now = performance.now();
+    if (now - this.emoteT < EMOTE_CD) return;
+    this.emoteT = now;
+    if (this.net === 'pvp') { R.emote(i).catch(() => {}); return; }
+    this.localEmotes.push({ i, me: true, t: now });
+    if (Math.random() < 0.45 && BOT_REPLY[i] != null) this.localEmotes.push({ i: BOT_REPLY[i], me: false, t: now + 900 + Math.random() * 700 });   // 봇이 가끔 대답
+    this.localEmotes = this.localEmotes.filter(x => now - x.t < EMOTE_LIFE * 2);
   },
   statuses(side) {
     const v = this.v, u = v.view[side], out = [], sv = v.stance[side];
@@ -633,12 +649,22 @@ export const battle = {
     }
     button(app, 'in_close', W / 2 - 40, y + h - 34, 80, 26, '닫기', { style: 'night', onTap: () => { this.info2 = false; } });
   },
+  // 감정 고르는 판(클래시 로얄식): 위 = 이모지 4×2, 아래 = 대사 3×2, 오른쪽 위 = 상대 감정 끄기. 보낸 뒤 3초는 못 보냄
   emoteSheet(app) {
-    const { g, W, H, input } = app, h = 130, y = H - h - 50, x = 10, w = W - 20;
+    const { g, W, H, input } = app, P = T.ptext, x = 8, w = W - 16, h = 182, y = H - h - 46, cool = performance.now() - this.emoteT < EMOTE_CD;
     g.c.fillStyle = 'rgba(6,10,18,0.5)'; g.c.fillRect(0, 0, W, H);
     input.hit('em_block', 0, 0, W, H, () => { this.emoteOpen = false; });
-    holo(g, x, y, w, h, T.card || T.panel, 16);
-    const bw = Math.floor((w - 24 - 8) / 2);
-    EMOTES.forEach((e, i) => button(app, 'em_' + i, x + 12 + (i % 2) * (bw + 8), y + 12 + Math.floor(i / 2) * 36, bw, 30, e, { style: 'night', onTap: () => { this.emoteOpen = false; R.emote(i).catch(() => {}); } }));
+    plate(g, x, y, w, h);
+    g.text('감정 표현', x + 12, y + 10, { font: 'head', color: P.main });
+    button(app, 'em_mute', x + w - 104, y + 7, 92, 22, this.muteFoe ? '상대 감정 켜기' : '상대 감정 끄기', { style: 'night', font: 'body', onTap: () => { this.muteFoe = !this.muteFoe; } });
+    const ew = Math.floor((w - 24 - 18) / 4);
+    EMOJI.forEach((k, j) => {
+      const i = PHRASES.length + j, bx = x + 12 + (j % 4) * (ew + 6), by = y + 36 + Math.floor(j / 4) * 46, id = 'em_' + i, down = !cool && input.isPressed(id);
+      const { yy } = btnBody(g, bx, by, ew, 42, cool ? T.btn.off : T.btn.second, down);
+      g.alpha(cool ? 0.45 : 1, () => drawEmoji(g, k, bx + Math.round((ew - 30) / 2), yy + 5, 2));
+      if (!cool) input.hit(id, bx, by, ew, 42, () => this.sendEmote(app, i), 1);
+    });
+    const pw = Math.floor((w - 24 - 12) / 3);
+    PHRASES.forEach((t, i) => button(app, 'em_' + i, x + 12 + (i % 3) * (pw + 6), y + 132 + Math.floor(i / 3) * 24, pw, 21, t, { style: 'night', font: 'body', disabled: cool, onTap: cool ? null : () => this.sendEmote(app, i) }));
   },
 };

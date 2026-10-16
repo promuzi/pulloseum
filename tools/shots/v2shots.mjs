@@ -41,6 +41,7 @@ export const SHOTS = [
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
   ['07_battle_status', 'battle', { phase: 'pick', venue: 'colosseum', status: '1' }],
   ['07_battle_peek', 'battle', { phase: 'pick', venue: 'colosseum', peek: 's1' }],
+  ['07_battle_emote', 'battle', { phase: 'pick', venue: 'colosseum', emote: '1' }],
   ['07_battle_cards_ember', 'battle', { phase: 'pick', venue: 'colosseum', me: 'cactus_fire', foe: 'flower_grass', energy: '4' }],
   ['07_battle_peek_art', 'battle', { phase: 'pick', venue: 'colosseum', energy: '4', peek: 's2' }],
   ['07_battle_peek_mid', 'battle', { phase: 'pick', venue: 'colosseum', peek: 's2', peekP: '0.45' }],

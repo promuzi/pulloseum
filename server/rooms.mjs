@@ -212,7 +212,7 @@ export function makeRooms({ game, log }) {
     const m = r.members.find(x => x.uid === uid);
     if (now - m.lastEmote < EMOTE_MS) return { ok: false };
     m.lastEmote = now;
-    const n = Math.max(0, Math.min(7, i | 0));
+    const n = Math.max(0, Math.min(13, i | 0));   // 0~5 대사 · 6~13 이모지(v2/src/art/emotes.js)
     for (const o of r.members) send(o.uid, 'emote', { i: n, me: o.uid === uid, name: m.name });
     return { ok: true };
   }

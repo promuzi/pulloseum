@@ -12,7 +12,8 @@ import { stageName } from '../game/view.js';
 // 친구 대결 방(2026-10-16 사용자 "몇몇 친구랑 할 수 있게 · 임의로 방만들기와 초대코드 등"):
 //  방 만들기 → 6자 코드(전광판) · 코드/링크 복사 → 친구가 코드로 들어옴 → 저마다 식물 고르고 준비 → 둘 다 준비면 셔터가 닫히며 대결.
 //  끝나면 같은 방으로 돌아와 다시 할 수 있음. 실시간 알림 = net/api.js openStream(방 · 전투 · 결과 화면이 같이 씀).
-export const EMOTES = ['잘 부탁해!', '좋은 수!', '아차…', '한 판 더?', '고마워!', '잘 싸웠어!'];
+import { PHRASES as EMOTES, emoteBubble } from '../art/emotes.js';   // 대사 0~5(감정 표현 이모지 6~13은 전투 화면 판에서)
+export { EMOTES };
 const PANEL = { x: 12, w: 246 };
 
 export function ensureStream(app) {
@@ -145,7 +146,7 @@ export const room = {
       if (m.host) g.text('방장', x + cw - 10, cy + ch - 22, { color: '#ffd890', align: 'right' });
       // 감정 표현 말풍선(전광판) — 그 사람 카드 가운데 위
       const em = app.room.emotes.filter(e => (e.me === !!m.me) && performance.now() - e.t < 2600).pop();
-      if (em) ledBoard(g, [{ text: EMOTES[em.i] || '!', color: LED.gold }], x + cw / 2, py + 28, { font: 'bold', maxW: cw + 20 });
+      if (em) emoteBubble(g, em.i, x + cw / 2, py + 40, performance.now() - em.t);   // 전투와 같은 말풍선
     });
     // 준비
     const both = v.members.length === 2, ready = me && me.ready;
