@@ -35,6 +35,33 @@ export const ATTACKS = {
   stone_cap: { kind: 'slam', move: 'slam', c: ['#f4e8c8', '#d8bc88', '#a08458', '#4a3a24'], gem: '#8ff0e0', status: 'dust' },
   jelly_cap: { kind: 'bubbles', move: 'cast', c: ['#f6feff', '#b8e8fc', '#6ab8ec', '#2a5a96'], status: 'wet' },
 };
+// 개성 기술(catalog.js u_*)마다 제 모습(2026-10-16 사용자 "불가시 난사가 불씨와 스킬 모션·효과가 같다") — 있는 연출(kind)을 그 종 색·성질로 다시 쓴다(새 그림 없음).
+//   전투는 ATTACKS[기술 id] → ATTACKS[종] 순으로 찾는다(battle.js). 여기 없는 공격 기술 = 종 연출: 1단 기술, 단 종 연출이 그 이름으로 만들어진 기술
+//   (불덩이 · 낙뢰 · 대지 내려치기 · 파도 덮치기 · 갓 내려찍기 · 포자 구름 — 그 종은 1단 기술을 여기서 바꿈). 위력 0(방어·강화) 기술은 공격 연출이 없다.
+const UNIQUE = {
+  u_petal_2: ['flower_grass', 'whip'], u_petal_3: ['flower_grass', 'blades'],      // 장미 가시 · 꽃잎 칼날
+  u_thorn_2: ['thorn', 'rings'], u_thorn_3: ['thorn', 'slam'],                      // 가시 그물 · 독가시 덤불(가시가 땅을 타고 와 솟음)
+  u_aqua_3: ['aqua', 'breath'],                                                     // 물방울 세례
+  u_wind_2: ['flower_wind', 'bloom'], u_wind_3: ['flower_wind', 'breath'],          // 꽃잎 회오리 · 꽃잎 돌풍
+  u_spark_1: ['spark', 'fireball'], u_spark_2: ['spark', 'spores'],                 // 전기 불꽃 · 전기 꽃가루
+  u_tide_1: ['vine_water', 'whip'], u_tide_2: ['vine_water', 'gale'],               // 물살 새순 · 조류 휘감기
+  u_ember_1: ['cactus_fire', 'bubbles'], u_ember_2: ['cactus_fire', 'blades'],      // 불씨 · 불가시 난사
+  u_gaia_1: ['gaia', 'slash'],                                                      // 돌 주먹
+  u_blaze_3: ['flower_fire', 'gale'],                                               // 불꽃 만개(불꽃 꽃잎 = 종 연출)
+  u_gale_2: ['cactus_wind', 'bloom'], u_gale_3: ['cactus_wind', 'gale'],            // 가시 회오리 · 돌개바람
+  u_gvine_2: ['vine_wind', 'whip'], u_gvine_3: ['vine_wind', 'slash'],              // 바람 채찍 · 칼바람
+  u_spore_1: ['spore_cap', 'poison'], u_spore_2: ['spore_cap', 'fireball'],         // 포자 · 포자 폭발
+  u_frost_2: ['frost_bell', 'bloom'], u_frost_3: ['frost_bell', 'spores'],          // 서리꽃 날림 · 빙결의 종
+  u_volt_2: ['volt_vine', 'rings'], u_volt_3: ['volt_vine', 'whip'],                // 방전 · 고압 채찍
+  u_stone_1: ['stone_cap', 'spores'],                                               // 돌가루 포자
+  u_jelly_2: ['jelly_cap', 'whip'], u_jelly_3: ['jelly_cap', 'spores'],             // 흐물 촉수 · 해파리 비
+};
+const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam' };   // 나머지 = cast(그 연출을 쓰는 종과 같은 몸놀림)
+for (const [id, [sp, kind]] of Object.entries(UNIQUE)) {
+  const B = ATTACKS[sp];
+  ATTACKS[id] = { kind, move: MOVE_OF[kind] || 'cast', c: B.c, status: B.status,
+    ...((kind === 'slash' || kind === 'gale') && { petal: B.petal || [B.c[1], B.c[2]] }), ...(kind === 'slam' && { gem: B.gem || B.c[0] }) };
+}
 // 변이 스킬(변이형별 기본 스킬, 설계 = specs/2026-10-15-v2-mutation-staging-design.md ⑥) — 공격하는 쪽은 변이 후광·문장을 두른다
 export const VARIANTS = {
   predator: { kind: 'bite', move: 'lunge', c: ['#ffffff', '#ffd0d6', '#e8344a', '#5a0e1c'], status: 'drain' },
