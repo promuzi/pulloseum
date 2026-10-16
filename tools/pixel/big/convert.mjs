@@ -27,7 +27,9 @@ const BLINK = args.includes('--blink');    // 그려진 눈은 그대로 두고,
 const MP4 = args.includes('--mp4');        // 움직임을 GIF와 함께 휴대폰에서도 재생되는 MP4로(사용자가 원격 휴대폰으로 확인 — video.mjs)
 const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true } };
+//  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
+//  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 } };
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -374,14 +376,15 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
   // ① 재질: 표본(성기게) → 색상·채도 위주 k-평균
   const sample = [];
   for (let i = 0; i < n; i += 7) if (!isBg[i]) sample.push([lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]]);
-  const mat = kmeans(sample, KM, [0.35, 4, 4]);
+  const K = (TUNE[key] || {}).km || KM;   // 재질 수(종별 — 눈 색이 얼굴색과 같은 무리로 묶이는 종은 늘림)
+  const mat = kmeans(sample, K, [0.35, 4, 4]);
   // ② 재질마다 밝기 분위수 → 4단 문턱
-  const Ls = Array.from({ length: KM }, () => []);
+  const Ls = Array.from({ length: K }, () => []);
   for (const p of sample) Ls[mat.assign(p)].push(p[0]);
   const cuts = Ls.map(a => { a.sort((x, y) => x - y); return [0.25, 0.5, 0.75].map(q => a[Math.floor(q * (a.length - 1))] ?? 0.5); });
   const level = (m, L) => cuts[m].filter(c => L > c).length;
   // 원본 칸마다 (재질, 단)
-  const pm = new Int8Array(n).fill(-1), pl = new Int8Array(n), acc = Array.from({ length: KM * LV }, () => [0, 0, 0, 0]);
+  const pm = new Int8Array(n).fill(-1), pl = new Int8Array(n), acc = Array.from({ length: K * LV }, () => [0, 0, 0, 0]);
   for (let i = 0; i < n; i++) if (!isBg[i]) {
     const p = [lab[i * 3], lab[i * 3 + 1], lab[i * 3 + 2]], m = mat.assign(p), l = level(m, p[0]);
     pm[i] = m; pl[i] = l;
@@ -398,7 +401,7 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
     const [X, Y] = toOut(ex, ey), RX = rx * s + 1.5, RY = ry * s + 1.5;
     for (let y = Math.floor(Y - RY); y <= Y + RY; y++) for (let x = Math.floor(X - RX); x <= X + RX; x++) if (x >= 0 && y >= 0 && x < W && y < H && ((x + 0.5 - X) / RX) ** 2 + ((y + 0.5 - Y) / RY) ** 2 <= 1) protect[y * W + x] = 1;
   }
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, fill: (TUNE[key] || {}).fill ?? 0.5 };
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
   const { cm, ct } = rasterize(src);
   // 줄기 재기(재발 방지): 흙 가운데 줄 바로 위에서 위로 6칸 넘게 이어진 열 덩어리 중 몸 무게중심에 가장 가까운 것 — STEM 에 없는데 1.5칸 넘게 비끼면 경고
   if (STEM[okey] == null) {
@@ -426,7 +429,7 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
   // — 작은 눈이 줄면서 반짝임이 빠지면 속눈썹 선만 남아 입·초승달처럼 읽힘(윈드페탈, 2026-10-15)
   if (sp && sp.box && !sp.closed) for (const [ex, ey, rx, ry] of sp.box) {
     let sx = 0, sy = 0, n2 = 0;
-    const mc = new Float32Array(KM);
+    const mc = new Float32Array(K);
     for (let y = Math.floor(ey - ry); y <= ey + ry; y++) for (let x = Math.floor(ex - rx); x <= ex + rx; x++) {
       if (x < 0 || y < 0 || x >= im.w || y >= im.h || ((x + 0.5 - ex) / rx) ** 2 + ((y + 0.5 - ey) / ry) ** 2 > 1) continue;
       const i = y * im.w + x;
@@ -436,7 +439,7 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
     const [X, Y] = toOut(sx / n2 + 0.5, sy / n2 + 0.5).map(Math.floor), k = Y * W + X;
     if (X < 0 || Y < 0 || X >= W || Y >= H || cm[k] < 0) continue;
     let m = 0;
-    for (let q = 1; q < KM; q++) if (mc[q] > mc[m]) m = q;
+    for (let q = 1; q < K; q++) if (mc[q] > mc[m]) m = q;
     if (matL[cm[k]] < 0.75 || ct[k] < LV - 1) { cm[k] = m; ct[k] = LV - 1; }
   }
   return { cm, ct, palLab, matL, key, eyes, eyeC, eyeGrid, eyeCheek, s, src };
@@ -448,8 +451,8 @@ export function convert(key, { file = null, scale = null, fit = 1, match = null,
 // prev = 바로 앞 장 {cm, ct, warp}: 같은 원본 자리가 앞 장에 놓였던 칸과 비교해, 차이가 작으면 앞 장 값을 그대로 둔다(이력 유지)
 //   — 매 장 다시 줄일 때 생기는 '끓음'(테두리·명암 칸이 장마다 뒤바뀌며 자글거림)을 막고, 확실히 움직인 칸만 바뀌게
 export function rasterize(src, warp = null, prev = null) {
-  const { pm, pl, w: iw, h: ih, S, s, matL, eyeId, fill: F0 = 0.5 } = src, rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
-  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(KM), lv = new Float32Array(KM), cnE = new Float32Array(KM), lvE = new Float32Array(KM);
+  const { pm, pl, w: iw, h: ih, S, s, matL, eyeId, fill: F0 = 0.5, eyeDark = null, eyeVivid = false, matC = null } = src, K = src.km || KM, rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
+  const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(K), lv = new Float32Array(K), cnE = new Float32Array(K), lvE = new Float32Array(K);
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
     const [dx, dy] = warp ? warp(X, Y) : [0, 0], u = X - dx - P.cx, v = Y - dy - P.cy;
     const x0 = S.cx + (u * rc + v * rs) / s, y0 = S.cy + (-u * rs + v * rc) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;   // 몸 축 바로 세우기(S.rot) 되돌려 원본 자리
@@ -464,7 +467,8 @@ export function rasterize(src, warp = null, prev = null) {
     }
     // 눈 칸(블록의 30% 이상이 눈 타원): 눈 색끼리만 다수결, 아니면 눈 아닌 칸끼리만 — 속눈썹 그늘이 살결로, 살결이 눈으로 번지지 않게.
     // (반짝임은 convert의 '가장 밝은 점' 한 칸으로만 살린다 — 밝은 재질을 고르는 규칙은 밝은 주황 눈동자를 지워 없앰, 블레이즈블룸 2026-10-15)
-    if (fgE >= 0.3 * fg && fgE > 0) { cnt.set(cnE); lv.set(lvE); }
+    const eyeCell = fgE >= 0.3 * fg && fgE > 0;
+    if (eyeCell) { cnt.set(cnE); lv.set(lvE); }
     else if (fgE > 0 && fg - fgE === 0) { cnt.set(cnE); lv.set(lvE); }
     let pi = -1;   // 앞 장에서 같은 원본 자리였던 칸
     if (prev) {
@@ -474,10 +478,20 @@ export function rasterize(src, warp = null, prev = null) {
     const fill = !tot ? 0 : fg / tot, was = pi >= 0 && prev.cm[pi] >= 0;
     if (!tot || fill < (pi < 0 ? F0 : was ? F0 - 0.12 : F0 + 0.12)) continue;
     let m = 0;
-    for (let k = 1; k < KM; k++) if (cnt[k] > cnt[m]) m = k;
+    for (let k = 1; k < K; k++) if (cnt[k] > cnt[m]) m = k;
     if (was && cnt[prev.cm[pi]] >= cnt[m] * 0.75) m = prev.cm[pi];
     let l = lv[m] / cnt[m];
     if (was && prev.cm[pi] === m && Math.abs(l - prev.ct[pi]) <= 0.85) l = prev.ct[pi];
+    if (eyeCell && eyeVivid && matC) {
+      let vm = -1;
+      for (let k = 0; k < K; k++) if (cnE[k] >= 0.15 * fgE && (vm < 0 || matC[k] > matC[vm])) vm = k;
+      if (vm >= 0) { m = vm; l = lvE[vm] / cnE[vm]; }
+    }
+    if (eyeCell && eyeDark != null) {   // 눈 칸 = 눈 안에서 15% 넘게 차지하는 재질 중 가장 어두운 것의 어두운 단(흰자·반짝임이 넓어 다수결로는 눈동자가 사라지는 종)
+      let dm = -1;
+      for (let k = 0; k < K; k++) if (cnE[k] >= 0.15 * fgE && (dm < 0 || matL[k] < matL[dm])) dm = k;
+      if (dm >= 0) { m = dm; l = Math.min(lvE[dm] / cnE[dm], eyeDark); } else l = Math.min(l, eyeDark);
+    }
     cm[Y * W + X] = m; cl[Y * W + X] = l;
   }
   // ④ 정리: 외딴 재질 칸(8이웃 중 같은 재질 ≤ 1)은 이웃 다수로 — 단, 아주 어둡거나 밝은 재질(눈·반짝임)은 남김
@@ -863,6 +877,11 @@ async function animKit() {
     cactus_wind: { bob: 1, sway: 0.6, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 10, amb: { wind: { n: 2, y0: 8, y1: 50 }, swirl: { at: 'holes', every: 24 } } },
     vine_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.6, leaf: 1.9, blinkAt: 36, amb: { shine: { mat: { cmax: 0.05, lmin: 0.62 }, at: 18, len: 6 }, wind: { n: 1, y0: 10, y1: 60 } } },
     spore_cap: { bob: 2, squash: 1.5, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, blinkAt: 18, amb: { spores: { from: 'cap', n: 7 } } },
+    // 새 종 넷(2026-10-16): 얼음 종꽃 = 서리 반짝 · 매끈한 빛 / 전깃줄 덩굴 = 전기 / 바위 버섯 = 수정 · 먼지 · 숨 작게 / 해파리 버섯 = 말랑 · 물방울 · 거품
+    frost_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, blinkAt: 28, amb: { twinkle: { mat: { hue: [190, 260], lmin: 0.75 }, n: 2, every: 24 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 12, len: 6 } } },
+    volt_vine: { bob: 1.5, sway: 1.1, open: 1, petal: 1.4, leaf: 1.8, electric: true, blinkAt: 42 },
+    stone_cap: { bob: 1, squash: 0.6, sway: 0.3, open: 0, petal: 0, leaf: 0.3, blinkAt: 34, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 16 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 1, every: 26 }, dust: { n: 4 } } },
+    jelly_cap: { bob: 2, squash: 2.2, sway: 0.8, open: 0.6, petal: 1.2, leaf: 0.8, blinkAt: 20, amb: { drips: { n: 2, every: 34 }, bubbles: { mat: { hue: [190, 260], lmin: 0.6, cmin: 0.03 }, n: 3 } } },
   };
   const rigs = cvs.map(cv => idleRig(cv));
   const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);
