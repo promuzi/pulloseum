@@ -890,6 +890,10 @@ async function animKit() {
     draco_fruit: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 32, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 22 }, shine: { mat: { cmax: 0.06, lmin: 0.8 }, at: 14, len: 6 } } },
     gat_cap: { bob: 1.5, squash: 0.8, sway: 0.9, open: 0.4, petal: 1.2, leaf: 1.4, flutter: 1, blinkAt: 22, amb: { wind: { n: 2, y0: 20, y1: 70 } } },   // 갓끈 · 부채 바람
     mask_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1, blinkAt: 999 },   // 탈춤 소매 덩굴(탈 = 감은 눈 — 깜빡임 없음)
+    lantern_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.6, flutter: 0.8, blinkAt: 26 },   // 청사초롱 흔들림
+    jar_cactus: { bob: 1, squash: 0.8, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 30, amb: { drips: { n: 2, every: 36 } } },   // 물동이 물방울
+    goblin_cap: { bob: 2, squash: 1.4, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, electric: true, blinkAt: 34 },   // 방망이 번개
+    crown_cap: { bob: 1.5, squash: 1.2, sway: 0.6, open: 0.4, petal: 0.5, leaf: 0.8, blinkAt: 44 },
     drum_cactus: { bob: 1.5, squash: 0.8, sway: 0.6, open: 0, petal: 0.4, leaf: 0.6, electric: true, blinkAt: 36 },   // 북 · 북채 번개
     drake_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.8, flutter: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 52 },   // 태생 용족 불 선인장: 가시 끝 불 · 날개 살짝
     title_hero: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 44 },   // 처음 화면 대표 캐릭터 = 불꽃 용 선인장(가시 끝 불)

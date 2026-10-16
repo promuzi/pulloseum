@@ -45,6 +45,11 @@ export const ATTACKS = {
   gat_cap: { kind: 'gale', move: 'cast', c: ['#ffffff', '#e4d8fa', '#b49ae8', '#5a4a98'], petal: ['#cfe8b8', '#8ab870'], status: 'swirl' },
   mask_vine: { kind: 'whip', move: 'lunge', c: ['#f4e4c0', '#d8b47a', '#9a7040', '#4a3420'], status: 'dust' },
   drum_cactus: { kind: 'bolt', move: 'cast', c: ['#ffffff', '#fff4b0', '#ffd84a', '#c87a20'], status: 'shock' },
+  // 둘째 넷(2026-10-17): 청사초롱 = 차가운 빛 덩이 · 물동이 = 물결 · 도깨비 방망이 = 번개 내려찍기 · 얼음 왕관 = 서리 포자
+  lantern_vine: { kind: 'fireball', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
+  jar_cactus: { kind: 'wave', move: 'lunge', c: ['#f4feff', '#a8e4f8', '#5ab0e0', '#244e88'], status: 'wet' },
+  goblin_cap: { kind: 'slam', move: 'slam', c: ['#fff6c8', '#ffd84a', '#c87a20', '#5a3410'], gem: '#fff4b0', status: 'shock' },
+  crown_cap: { kind: 'spores', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
 };
 // 개성 기술(catalog.js u_*)마다 제 모습(2026-10-16 사용자 "불가시 난사가 불씨와 스킬 모션·효과가 같다") — 있는 연출(kind)을 그 종 색·성질로 다시 쓴다(새 그림 없음).
 //   전투는 ATTACKS[기술 id] → ATTACKS[종] 순으로 찾는다(battle.js). 여기 없는 공격 기술 = 종 연출: 1단 기술, 단 종 연출이 그 이름으로 만들어진 기술
@@ -69,6 +74,10 @@ const UNIQUE = {
   u_gat_3: ['gat_cap', 'spores'],                                                   // 갓 회오리(포자를 바람에 실어)
   u_tal_2: ['mask_vine', 'rings'], u_tal_3: ['mask_vine', 'slam'],                  // 탈놀이(놀리는 고리) · 대지의 탈춤
   u_drum_3: ['drum_cactus', 'rings'],                                               // 뇌고 연타(북소리 번개 고리)
+  u_lamp_2: ['lantern_vine', 'whip'], u_lamp_3: ['lantern_vine', 'gale'],           // 서리 덩굴 · 청사초롱 눈보라
+  u_jar_3: ['jar_cactus', 'slam'],                                                  // 물동이 내려치기
+  u_dok_2: ['goblin_cap', 'spores'],                                                // 도깨비 장난(포자)
+  u_crown_3: ['crown_cap', 'gale'],                                                 // 빙왕의 포자(눈보라에 실어)
 };
 const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam' };   // 나머지 = cast(그 연출을 쓰는 종과 같은 몸놀림)
 for (const [id, [sp, kind]] of Object.entries(UNIQUE)) {

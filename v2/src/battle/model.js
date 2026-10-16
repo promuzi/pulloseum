@@ -48,6 +48,10 @@ const SKILLS = {
   drake_cactus: [{ id: 's1', name: '용불 가시', power: 60, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '화룡의 숨결', power: 115, cost: 4, el: 'fire', ranged: true, area: true, inflict: { id: 'burn' } }],
   gat_cap: [{ id: 's1', name: '부채 바람', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '갓 회오리', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'spore', n: 2 } }],
   mask_vine: [{ id: 's1', name: '탈춤 휘감기', power: 60, cost: 1, el: 'earth', inflict: { id: 'bind' } }, { id: 's2', name: '대지의 탈춤', power: 115, cost: 4, el: 'earth', area: true, inflict: { id: 'stun' } }],
+  lantern_vine: [{ id: 's1', name: '초롱 불빛', power: 60, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '청사초롱 눈보라', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill', n: 2 } }],
+  jar_cactus: [{ id: 's1', name: '물동이 쏟기', power: 60, cost: 1, el: 'water', inflict: { id: 'wet' } }, { id: 's2', name: '물동이 내려치기', power: 115, cost: 3, el: 'water', area: true, inflict: { id: 'wet' } }],
+  goblin_cap: [{ id: 's1', name: '방망이 찌릿', power: 60, cost: 1, el: 'bolt', inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '금 나와라 뚝딱', power: 120, cost: 4, el: 'bolt', inflict: { id: 'shock', n: 2 } }],
+  crown_cap: [{ id: 's1', name: '서리 광채', power: 55, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙왕의 포자', power: 100, cost: 3, el: 'ice', ranged: true, area: true, inflict: { id: 'spore', n: 2 } }],
   drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock', n: 2 } }],
 };
 // 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 40 공격 · 방어 자세 · 회피 자세)은
@@ -78,6 +82,10 @@ export const BASIC_NAMES = {
   gat_cap: ['갓 박치기', '갓 숙이기', '바람 타기'],
   mask_vine: ['소매 덩굴 치기', '탈 가리기', '춤사위 비키기'],
   drum_cactus: ['북채 내려치기', '북 방패', '장단 비키기'],
+  lantern_vine: ['초롱 흔들기', '초롱 감싸기', '덩굴 비키기'],
+  jar_cactus: ['동이 박치기', '똬리 웅크리기', '출렁 비키기'],
+  goblin_cap: ['방망이 휘두르기', '방망이 막기', '도깨비 걸음'],
+  crown_cap: ['왕관 박치기', '망토 두르기', '얼음 미끄럼'],
 };
 export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
 export function kitOf(key) {
