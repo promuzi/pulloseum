@@ -49,3 +49,5 @@ tools/pixel/big/out/ship/
 
 # v2 서버 저장소(계정·세이브·플레이 기록 — 절대 깃에 안 올림)
 server/data/
+# 서버 터널 프로그램(클라우드플레어 cloudflared.exe — 받아서 쓰는 실행 파일, 저장소에 안 올림)
+server/bin/
