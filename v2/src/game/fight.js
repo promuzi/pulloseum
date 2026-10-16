@@ -14,7 +14,7 @@ export function kitOfPlant(p) {
   const kit = S.battle.filter(id => id && (SKILLS[id] || B.some(b => b.id === id))).map(sk);
   return [...(kit.length ? kit : B), ...mutKit(p)];
 }
-// 변이 칸 둘(그 식물 변이의 기술만 · 에너지 대신 충전) — 숨결(elOwn)은 그 식물 속성, 연출은 기술 id(attack.mjs)
+// 변이 칸 둘(그 식물 변이의 기술만 · 에너지 대신 판마다 정해진 횟수) — 숨결(elOwn)은 그 식물 속성, 연출은 기술 id(attack.mjs)
 export function mutKit(p) {
   if (!p.form || !p.skills || !Array.isArray(p.skills.mut)) return [];
   const el = SPECIES[p.key] && SPECIES[p.key].el;
@@ -97,13 +97,13 @@ export function replayBot(spec, acts) {
 }
 // 화면에 보낼 판 모습(유닛 값 그대로 — 화면은 이걸로 자기 판을 고쳐 씀)
 const unitV = u => ({ id: u.id, key: u.key, name: u.name, el: u.el, jong: u.jong, pot: u.pot, stage: u.stage, shiny: !!u.shiny, legend: !!u.legend, trainer: u.trainer, rank: u.rank, tlv: u.tlv,
-  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, cd: u.cd || null });   // cd = 변이 기술 충전(남은 턴)
+  hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, used: u.used || null });   // used = 변이 기술을 이번 판에 쓴 횟수
 export function viewOf(B) {
   if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
   return { mode: '1v1', turn: B.turn, over: B.over, me: unitV(B.me), foe: unitV(B.foe) };
 }
 // 화면 쪽: 서버가 보낸 모습으로 판을 세우고(처음) · 턴마다 같은 유닛 객체를 고쳐 씀(교체 연출이 유닛 객체를 붙잡고 있음)
-const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'cd', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
+const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'used', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
 export function battleFromView(v) {
   if (v.mode === 'swap3') {
     const B = makeTeamBattle({ me: v.team.me.map(u => ({ ...u })), foe: v.team.foe.map(u => ({ ...u })), seed: 1 });

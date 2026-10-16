@@ -53,7 +53,7 @@ export const GUIDES = [
     ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
-    steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 에너지를 쓰지 않고, 쓰고 나면 왼쪽 위 숫자만큼 턴을 기다려요.' }] },
+    steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 에너지를 쓰지 않고, 판마다 쓸 수 있는 횟수가 정해져 있어요(왼쪽 위 숫자). 다 쓰면 그 판엔 못 써요.' }] },
   { id: 'plant', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub, btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
     steps: [
@@ -65,7 +65,7 @@ export const GUIDES = [
     ] },
   { id: 'plant_mut', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && !!activeForm(app), btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
-    steps: [{ at: 'skc_m*', prep: bottom, text: '변이 식물만 가진 변이 칸 둘이에요. 에너지 대신 쓰고 나면 몇 턴 충전되고, 옆 목록의 기술을 끌어다 언제든 바꿔 끼워요.' }] },
+    steps: [{ at: 'skc_m*', prep: bottom, text: '변이 식물만 가진 변이 칸 둘이에요. 에너지 대신 판마다 정해진 횟수만큼 쓰고, 옆 목록의 기술을 끌어다 언제든 바꿔 끼워요.' }] },
   { id: 'plant_up', scene: 'plant', when: (app, sc) => sc.tab === 'up', btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && !sc.out,
     steps: [

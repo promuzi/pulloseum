@@ -37,9 +37,9 @@ const icons = {
   },
 };
 
-// 카드 덧표시 검토판(개발용 · ?scene=cardlab): 왼쪽 = 보통, 오른쪽 = 그 상황(같은 자세 두 번째 · 충전 중 등)
+// 카드 덧표시 검토판(개발용 · ?scene=cardlab): 왼쪽 = 보통, 오른쪽 = 그 상황(같은 자세 두 번째 · 변이 횟수 등)
 const LAB = [['w_whirl', {}, {}, '흡수 = 회복 아이콘'], ['u_wind_3', {}, {}, '광역 = 폭탄'], ['guard', {}, { halved: true }, '같은 자세 두 번째'],
-  ['u_thorn_3', {}, {}, '효과 겹 수'], ['m_bite', {}, { can: false, cd: 2 }, '변이 · 충전 중'], ['m_scale', {}, { can: false, cd: 1 }, '변이 · 충전 중']];
+  ['u_thorn_3', {}, {}, '효과 겹 수'], ['m_bite', {}, { left: 1 }, '변이 · 1번 남음'], ['m_scale', {}, { can: false, left: 0 }, '변이 · 다 씀']];
 const cardlab = {
   draw(app) {
     const { g, W } = app;

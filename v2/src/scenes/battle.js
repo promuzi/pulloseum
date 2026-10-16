@@ -6,7 +6,7 @@ import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo, UI, UI_ACCENT } fr
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
-import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, chargeLeft } from '../battle/status.js';
+import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, usesLeft } from '../battle/status.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
@@ -204,10 +204,10 @@ export const battle = {
     // 시험판 손패도 진짜와 같은 넷(배운 기술 둘 + 평타 + 방어 — 2026-10-16 "전투에 들고가는 스킬은 4개")
     const four = u => { u.kit = [...u.kit.filter(s => s.id[0] === 's'), ...u.kit.filter(s => s.id[0] !== 's')].slice(0, 4); };
     for (const u of B.team ? [...B.team.me, ...B.team.foe] : [B.me, B.foe]) four(u);
-    if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &cd=2 = 첫 변이 기술 충전 중)
+    if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &used=1 = 첫 변이 기술을 한 번 씀)
       const ms = formSkills(p.mut).slice(0, 2).map(id => ({ ...SKILLS[id], mut: true, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));
       B.me.kit.push(...ms);
-      if (p.cd) B.me.cd = { [ms[0].id]: +p.cd };
+      if (p.used) B.me.used = { [ms[0].id]: +p.used };
     }
     if (p.pre) for (const part of String(p.pre).split(';')) {   // 효과 미리 걸기(검토·영상용)
       const [who, ids] = part.split(':'), u = B[who], by = B[who === 'me' ? 'foe' : 'me'];
@@ -713,11 +713,11 @@ export const battle = {
         const hold = input.down && input.down.id === id ? input.holdMs() : 0, rise = hold > 120 ? Math.min(3, Math.round((hold - 120) / 60)) : 0;   // 꾹 누르는 동안 살짝 들림
         const down = can && input.isPressed(id) && !rise, sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
         rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, lit ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.32)');   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
-        const cd = chargeLeft(B.me, sk), halved = !!(B.me.st && B.me.st.lastStance && B.me.st.lastStance === sk.act);
-        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, cd, halved, shine: sh != null && sh < 1 ? sh : null });
+        const left = sk.uses ? usesLeft(B.me, sk) : null, halved = !!(B.me.st && B.me.st.lastStance && B.me.st.lastStance === sk.act);
+        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, left, halved, shine: sh != null && sh < 1 ? sh : null });
       }
       if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => { sfx('select'); this.pick(app, sk); } : () => sfx('deny'), 2);
-      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock, cd: chargeLeft(B.me, sk), halved: !!(B.me.st && B.me.st.lastStance === sk.act) };
+      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock, left: sk.uses ? usesLeft(B.me, sk) : null, halved: !!(B.me.st && B.me.st.lastStance === sk.act) };
     }
     const d = input.down;
     if (live && d && !d.moved && this.cards[d.id] && input.holdMs() >= HOLD_MS) this.openPeek(app, d.id);
@@ -730,7 +730,7 @@ export const battle = {
     const { input, W } = app, ref = this.cards[id], k = app.g.c.getTransform().a || 1, foe = this.v.view.foe, sk = ref.sk;
     input.claimHold();
     const BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
-    const o = { can: ref.can, short: ref.short, lock: ref.lock, cd: ref.cd, halved: ref.halved, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
+    const o = { can: ref.can, short: ref.short, lock: ref.lock, left: ref.left, halved: ref.halved, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
     this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
     app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
   },

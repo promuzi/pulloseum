@@ -206,7 +206,7 @@ export function makeRooms({ game, log }) {
   function battleMsg(r, uid) { const side = sideOf(r, uid); return { view: viewOf(r, side), deadline: r.deadline, now: Date.now(), turn: r.B.turn, step: r.sends ? 'send' : 'pick', moved: movedOf(r, side) }; }
   // 내 화면에 보낼 판: 상대 = 기본기 + 이미 쓴 기술만, 능력치·속 사정(빗나감 연속 등) 없이 — 체력 · 에너지 · 효과 · 이름 · 그림만
   //  3:3: 상대 대기석 중 아직 안 나온 식물은 자리만(살았는지) — 누가 있는지는 나올 때 처음 보임
-  const hideFoe = (f, seen) => ({ ...f, cd: null, kit: f.kit.filter(k => BASIC.has(k.id) || seen.has(k.id)), atk: null, def: null, spd: null, acc: null, eva: null, crit: null, st: f.st ? { nextInit: f.st.nextInit || 0, nextCrit: f.st.nextCrit || 0 } : null });
+  const hideFoe = (f, seen) => ({ ...f, used: null, kit: f.kit.filter(k => BASIC.has(k.id) || seen.has(k.id)), atk: null, def: null, spd: null, acc: null, eva: null, crit: null, st: f.st ? { nextInit: f.st.nextInit || 0, nextCrit: f.st.nextCrit || 0 } : null });
   function viewOf(r, side) {
     const v = viewFor(r.B, side), O = OTHER[side];
     if (v.mode === 'swap3') return { ...v, team: { me: v.team.me, foe: v.team.foe.map((u, i) => (r.shown[O].has(i) ? hideFoe(u, r.revealed[O][i]) : { id: 'foe', hidden: true, name: '?', key: null, el: null, jong: null, hp: u.hp > 0 ? 1 : 0, max: 1, energy: u.energy, energyMax: u.energyMax, kit: [], eff: {}, st: null })) } };

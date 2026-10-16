@@ -220,18 +220,17 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   }
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
-  if (sk.charge) chargeDial(g, x + 9, y + 9, sk.charge, FORMS[sk.form], dim, gh);   // 변이 기술 = 에너지 대신 쓰고 나서 기다리는 턴
+  if (sk.uses) usesDial(g, x + 9, y + 9, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim, gh);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
   else {
     diamond(g, x + 9, y + 9, 7, dim ? (o.short ? GEM.bad : GEM.off) : GEM.ok);
     g.text(String(sk.cost || 0), x + 9.5, y + 9 - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
   }
   statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, gh);
   cardMarks(g, x, y, w, sk, dim);
-  if (o.cd > 0) {   // 충전 중: 그림 가운데 = 시계 + 남은 턴
-    const txt = String(o.cd), ci = icon('clock'), tw = g.textW(txt, 'name') + 16, lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 20) / 2);
-    rrect(g, lx - 3, ly, tw + 6, 20, 4, 'rgba(6,10,20,0.88)');
-    if (ci) g.img(ci, lx, ly + 5);
-    g.text(txt, lx + 14, ly + Math.round((20 - glyphH('name')) / 2), { font: 'name', color: (FORMS[sk.form] || {}).light || '#ffffff' });
+  if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
+    const txt = '다 씀', tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);
+    rrect(g, lx - 5, ly, tw + 10, 17, 4, 'rgba(6,10,20,0.88)');
+    g.text(txt, lx, ly + Math.round((17 - gh) / 2), { font: 'bold', color: (FORMS[sk.form] || {}).light || '#ffffff' });
   }
   if (dim && o.lock) {   // 묶임 · 도발: 그림 가운데에 짧게(자세한 까닭은 뒷면)
     const L = STATUS[o.lock] || {}, li = L.icon && icon(L.icon), txt = LOCK_SHORT[o.lock] || '', tw = g.textW(txt, 'bold') + (li ? 14 : 0), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 15) / 2);
@@ -256,7 +255,7 @@ function cardMarks(g, x, y, w, sk, dim) {
   if (sk.inflict && (sk.inflict.n || 1) > 1) { const L = STATUS[sk.inflict.id] || {}; tag(g, xr, artB - 14, '×' + sk.inflict.n, dim ? '#a7adb8' : (L.col || '#ffffff'), L.icon); }   // 걸리는 효과 겹 수
 }
 // 충전 다이얼(변이 기술 — 비용 마름모 자리): 변이 색 원 + 기다리는 턴 수 + 위쪽 눈금
-function chargeDial(g, cx, cy, n, F, dim, gh) {
+function usesDial(g, cx, cy, n, F, dim, gh) {   // 변이 기술 횟수(변이 색 동그라미 + 숫자)
   const col = dim ? GEM.off : [F ? F.col : '#8ea3c2', F ? F.light : '#ffffff', C.ink];
   g.disc(cx, cy, 8, C.ink); g.disc(cx, cy, 7, col[0]); g.disc(cx, cy, 5, hexMix(col[0], C.ink, 0.45));
   g.rect(cx, cy - 7, 1, 2, col[1]);
@@ -291,7 +290,7 @@ function cardBack(g, w, h, sk, o) {
     g.text(val, bx + (ic ? 22 : 8), y + 15, { font: 'name', color: C.text });
   };
   box(P, st ? st.label : '위력', st ? st.txt : '—', st ? BADGE[st.kind].icon : null);
-  if (sk.charge) box(P + bw + 8, '충전', `${sk.charge}턴`, 'clock'); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
+  if (sk.uses) box(P + bw + 8, '판마다', o.left != null ? `${o.left} / ${sk.uses}번` : `${sk.uses}번`, null); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
   y += 44;
   // 설명 줄: 기본기 → 규칙 문장, 효과 → 칩 + 누구에게 + 한 줄 설명
   const line = (txt, col = C.text, font = 'body') => { for (const ln of wrap(txt, font, cw)) { g.text(ln, P, y, { font, color: col }); y += 15; } };
@@ -319,7 +318,7 @@ function cardBack(g, w, h, sk, o) {
   // 못 쓰는 까닭
   if (o.can === false) {
     y += 4;
-    if (o.cd > 0) line(`충전 중 — ${o.cd}턴 남음`, (FORMS[sk.form] || {}).light || '#ff9a9a', 'bold');
+    if (o.left === 0) line('이번 판엔 다 썼어요', (FORMS[sk.form] || {}).light || '#ff9a9a', 'bold');
     else if (o.lock) line(LOCK_TEXT[o.lock] || '지금은 못 씀', (STATUS[o.lock] || {}).col || '#ff8a8a', 'bold');
     else if ((sk.cost || 0) > (o.energy ?? 99)) line(`에너지가 모자람 — 지금 ${o.energy} · 필요 ${sk.cost}`, '#ff9a9a', 'bold');
     else line('지금은 못 씀', '#ff9a9a', 'bold');
@@ -336,7 +335,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   const S = BW / w, mk = () => { const cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k); return cv; };
   const front = mk(), fc = front.getContext('2d'), G1 = new Gfx(fc);
   fc.setTransform(k * S, 0, 0, k * S, 0, 0);
-  cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock, halved: o.halved, cd: o.cd });
+  cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock, halved: o.halved, left: o.left });
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   bc.setTransform(k * S, 0, 0, k * S, 0, 0);
   cardFrame(G2, 0, 0, w, h, sk, false); backBody(G2, 0, 0, w, h);

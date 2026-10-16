@@ -175,21 +175,21 @@ export const SKILLS = Object.fromEntries([
   S('u_jelly_3', '해파리 비', 'water', 'u', 105, 3, { ranged: true, area: true, inflict: { id: 'wet' } }),
   // 변이 기술(2026-10-16 사용자 "변이 스킬은 별개로 2칸 — 최대 6칸" · 추천안 "변이마다 정해진 목록에서 언제든 골라 끼움 · 에너지 대신 충전" · "변이식물의 장점은 변이스킬로 6칸"):
   //  tier 'm' · form = 변이형 · 에너지 0 · charge = 쓰고 나서 못 쓰는 턴 수 · 잊기 없음(목록 안에서 언제든 바꿈). 수치는 시제품 — 밸런스는 나중에(사용자)
-  S('m_bite', '물어뜯기', null, 'm', 70, 0, { form: 'predator', charge: 2, drain: 0.4 }),
-  S('m_devour', '집어삼키기', null, 'm', 110, 0, { form: 'predator', charge: 4, drain: 0.6 }),
-  S('m_hunt', '사냥 본능', null, 'm', 0, 0, { form: 'predator', charge: 3, self: 'focus', also: 'rage' }),
-  S('m_slash', '칼날 베기', null, 'm', 90, 0, { form: 'weapon', charge: 2 }),
-  S('m_shot', '가시 탄환', null, 'm', 75, 0, { form: 'weapon', charge: 2, ranged: true }),
-  S('m_smash', '쇠망치 내려치기', null, 'm', 115, 0, { form: 'weapon', charge: 4, inflict: { id: 'stun' } }),
-  S('m_spit', '독 뱉기', null, 'm', 50, 0, { form: 'toxic', charge: 2, ranged: true, inflict: { id: 'poison', n: 2 } }),
-  S('m_acid', '부식액', null, 'm', 65, 0, { form: 'toxic', charge: 3, ranged: true, inflict: { id: 'corrode' } }),
-  S('m_miasma', '독안개', null, 'm', 45, 0, { form: 'toxic', charge: 4, ranged: true, area: true, inflict: { id: 'poison', n: 3 } }),
-  S('m_puff', '포자 퍼프', null, 'm', 45, 0, { form: 'spore', charge: 2, ranged: true, inflict: { id: 'weak' } }),
-  S('m_sleep', '잠 포자', null, 'm', 30, 0, { form: 'spore', charge: 4, ranged: true, inflict: { id: 'stun' } }),
-  S('m_bloom', '포자 만개', null, 'm', 0, 0, { form: 'spore', charge: 4, self: 'regen', also: 'purify' }),
-  S('m_breath', '용의 숨결', null, 'm', 100, 0, { form: 'dragon', charge: 3, ranged: true, elOwn: true }),   // 속성 = 그 식물 속성(kitOfPlant)
-  S('m_scale', '비늘 방패', null, 'm', 0, 0, { form: 'dragon', charge: 3, self: 'shield' }),
-  S('m_roar', '용의 포효', null, 'm', 55, 0, { form: 'dragon', charge: 3, inflict: { id: 'taunt' } }),
+  S('m_bite', '물어뜯기', null, 'm', 70, 0, { form: 'predator', uses: 3, drain: 0.4 }),
+  S('m_devour', '집어삼키기', null, 'm', 110, 0, { form: 'predator', uses: 1, drain: 0.6 }),
+  S('m_hunt', '사냥 본능', null, 'm', 0, 0, { form: 'predator', uses: 2, self: 'focus', also: 'rage' }),
+  S('m_slash', '칼날 베기', null, 'm', 90, 0, { form: 'weapon', uses: 3 }),
+  S('m_shot', '가시 탄환', null, 'm', 75, 0, { form: 'weapon', uses: 3, ranged: true }),
+  S('m_smash', '쇠망치 내려치기', null, 'm', 115, 0, { form: 'weapon', uses: 1, inflict: { id: 'stun' } }),
+  S('m_spit', '독 뱉기', null, 'm', 50, 0, { form: 'toxic', uses: 3, ranged: true, inflict: { id: 'poison', n: 2 } }),
+  S('m_acid', '부식액', null, 'm', 65, 0, { form: 'toxic', uses: 2, ranged: true, inflict: { id: 'corrode' } }),
+  S('m_miasma', '독안개', null, 'm', 45, 0, { form: 'toxic', uses: 1, ranged: true, area: true, inflict: { id: 'poison', n: 3 } }),
+  S('m_puff', '포자 퍼프', null, 'm', 45, 0, { form: 'spore', uses: 3, ranged: true, inflict: { id: 'weak' } }),
+  S('m_sleep', '잠 포자', null, 'm', 30, 0, { form: 'spore', uses: 1, ranged: true, inflict: { id: 'stun' } }),
+  S('m_bloom', '포자 만개', null, 'm', 0, 0, { form: 'spore', uses: 1, self: 'regen', also: 'purify' }),
+  S('m_breath', '용의 숨결', null, 'm', 100, 0, { form: 'dragon', uses: 2, ranged: true, elOwn: true }),   // 속성 = 그 식물 속성(kitOfPlant)
+  S('m_scale', '비늘 방패', null, 'm', 0, 0, { form: 'dragon', uses: 2, self: 'shield' }),
+  S('m_roar', '용의 포효', null, 'm', 55, 0, { form: 'dragon', uses: 2, inflict: { id: 'taunt' } }),
 ].map(s => [s.id, s]));
 // 변이형(변이 연출 설계 2026-10-15: 포식 = 진홍 · 무기 = 강철 · 독성 = 보라 · 포자 = 금빛 · 용족 = 청록) — 포자는 버섯 전용. 일반(무변이) = null
 export const FORMS = {

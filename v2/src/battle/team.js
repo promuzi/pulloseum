@@ -5,7 +5,7 @@
 //  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
 import { makeRng, resolveTurn } from './rules.js';
 import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
-import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCharge } from './status.js';
+import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
 
 export function makeTeamBattle({ me, foe, seed = 20261015 }) {
   const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: 2, foe: 2 }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
@@ -50,8 +50,8 @@ export function playTurn3(B, myAct, foeAct = null) {
   if (foeSw != null) swapIn(B, 'foe', foeSw, ev);
   const mySkill = meSwitch ? null : skillOf(B.me, myAct);
   const before = { me: B.me.hp, foe: B.foe.hp };
-  if (mySkill) { B.me.energy -= mySkill.cost || 0; useCharge(B.me, mySkill); }
-  if (foeSkill) { B.foe.energy -= foeSkill.cost || 0; useCharge(B.foe, foeSkill); }
+  if (mySkill) { B.me.energy -= mySkill.cost || 0; useCount(B.me, mySkill); }
+  if (foeSkill) { B.foe.energy -= foeSkill.cost || 0; useCount(B.foe, foeSkill); }
   let res = null;
   if (mySkill || foeSkill) {
     const idle = { id: 'switch', act: 'other' };
