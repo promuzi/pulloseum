@@ -73,21 +73,22 @@ export async function loadBg(base = '../assets/v2/bg/') {
   return BG_NAMES.filter(n => !BGIMG[n]);
 }
 // 얼굴 초상: 대기 첫 장에서 머리 둘레 s×s 를 1배로 잘라 (x, y)에(under·over 두 층). flip = 좌우 뒤집기(상대)
-export function drawPortrait(g, key, x, y, s, flip = false) {
+// src = 그림에서 잘라 올 칸(기본 s — 1:1). 작은 칸에 얼굴 전체를 넣을 땐 src를 크게(예 s 20 · src 40 = 반으로 줄여 그림, 2배 화면에선 그대로 또렷)
+export function drawPortrait(g, key, x, y, s, flip = false, src = s) {
   const P = BIG[key]; if (!P) return false;
   const m = P.meta, hx = Math.round(m.head[0]), hy = Math.round(m.head[1]);
-  const sx = Math.max(0, Math.min(m.w - s, hx - Math.floor(s / 2))), sy = Math.max(0, Math.min(m.h - s, hy - Math.floor(s / 2) + 3));
-  part(g, P.sheet, sx, sy, s, s, x, y, flip);
-  part(g, P.sheet, sx, sy + m.rows * m.h, s, s, x, y, flip);
+  const sx = Math.max(0, Math.min(m.w - src, hx - Math.floor(src / 2))), sy = Math.max(0, Math.min(m.h - src, hy - Math.floor(src / 2) + 3));
+  part(g, P.sheet, sx, sy, src, src, x, y, flip, s, s);
+  part(g, P.sheet, sx, sy + m.rows * m.h, src, src, x, y, flip, s, s);
   return true;
 }
 function whiteOf(im) { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = C.white; x.fillRect(0, 0, c.width, c.height); return c; }
 // 깜빡임은 한 바퀴(3.2초)마다 종·바퀴 번호로 반쯤만 → 3~6초에 한 번쯤, 무작위처럼
 function blinkLoop(key, n) { let h = (n + 1) * 2654435761; for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 2246822519); return ((h >>> 15) & 1) === 0; }
-function part(g, im, sx, sy, w, h, x, y, flip) {
+function part(g, im, sx, sy, w, h, x, y, flip, dw = w, dh = h) {
   const c = g.c; c.imageSmoothingEnabled = false;
-  if (flip) { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(im, sx, sy, w, h, 0, 0, w, h); c.restore(); }
-  else c.drawImage(im, sx, sy, w, h, x, y, w, h);
+  if (flip) { c.save(); c.translate(x + dw, y); c.scale(-1, 1); c.drawImage(im, sx, sy, w, h, 0, 0, dw, dh); c.restore(); }
+  else c.drawImage(im, sx, sy, w, h, x, y, dw, dh);
 }
 // 화분에 심은 큰 판 식물: (bx, by) = 화분 굽이 바닥에 닿는 점. t = 시각(ms), phase = 숨 엇갈림(ms), flip = 좌우 뒤집기(상대), flash = 맞은 순간 하얗게
 // 게임 단계 → 그림 단계(CHANGELOG 2026-10-15 "게임 6단계와 잇기": 씨앗·새싹·유체 → 어린, 성장체 → 자람, 성체·완숙체 → 성체)

@@ -53,6 +53,7 @@ export const SHOTS = [
   ['07_battle_root3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pre: 'me:root,poison2;foe:chill2' }],
   ['07_battle_swap3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7' }],
   ['07_battle_swap3_sheet', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', sheet: '1' }],
+  ['07_battle_swap3_dead', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', dead: 'me2,foe1' }],
   ['07_battle_garden', 'battle', { phase: 'pick', venue: 'garden' }],
   ['07_battle_ship', 'battle', { phase: 'pick', venue: 'ship' }],
   ['07_battle_night', 'battle', { phase: 'pick', venue: 'night' }],

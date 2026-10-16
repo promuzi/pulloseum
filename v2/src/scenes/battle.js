@@ -2,7 +2,7 @@ import { arena1 } from '../art/bg.js';
 import { arenaLife } from '../art/arenaLife.js';
 import { icon, tinted } from '../art/icons.js';
 import { drawBig, drawBigPose, drawPortrait, BGIMG } from '../art/sprites.js';
-import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo } from '../art/theme.js';
+import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo, UI, UI_ACCENT } from '../art/theme.js';
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
@@ -19,6 +19,7 @@ import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eul } from '../core/josa.js';
+import { TFX, setTfx, popLife, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
 //   선공 판정 → (자세) → 공격 연출(attack.mjs 장마다) → 맞는 장에 판정·피해 → 되받아치기 → 턴 끝 효과·기력 +1 → 다음 턴 / 승패
@@ -33,15 +34,6 @@ const CARD_W = 66, CARD_H = 90, CARD_Y = 6, CARD_GX = 10, CARD_GY = 4, HOLD_MS =
 const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
 const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
-function teamPips(g, x, y, team, active) {
-  team.forEach((u, i) => {
-    const X = x + i * 12, dead = u.hp <= 0, on = u === active;
-    g.rect(X, y, 10, 8, on ? '#e6f3ff' : '#0a1c32');
-    g.rect(X + 1, y + 1, 8, 6, dead ? '#1a2230' : '#3fb8e0');
-    if (dead) { for (let k = 0; k < 4; k++) { g.px(X + 3 + k, y + 2 + k, '#5a6a82'); g.px(X + 6 - k, y + 2 + k, '#5a6a82'); } }
-    else g.rect(X + 2, y + 2, 4, 1, '#d0e8ff');
-  });
-}
 // 경기장 그림 둘레 색(맨 윗줄 · 왼쪽 줄의 가운데 칸) — 넓거나 긴 화면에서 그림 밖을 같은 색으로
 const edgeCache = new Map();
 function edgeCols(img) {
@@ -148,7 +140,7 @@ function hpBar(g, x, y, w, h, bar, max, t) {
 
 export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
-  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -185,6 +177,7 @@ export const battle = {
       if (u && ids) for (const tok of ids.split(',')) { const m = tok.match(/^([a-z]+)(\d*)$/); if (m) applyFx(u, m[1], +(m[2] || 1), { turn: 1, rng: () => 0.5, ev: [], by }); }
     }
     if (p.energy) { B.me.energy = +p.energy; B.foe.energy = +p.energy; }
+    if (p.dead && B.team) for (const tok of String(p.dead).split(',')) { const m = tok.match(/^(me|foe)(\d)$/), u = m && B.team[m[1]][+m[2]]; if (u) u.hp = 0; }   // 쓰러진 팀원 미리(검토·촬영 — 예 dead=me2,foe1)
     this.shot = p.phase === 'hit' ? 'hit' : null;
     this.sheet = p.sheet ? { forced: false } : null;   // ?sheet=1 = 교체 창이 열린 채(촬영)
   },
@@ -318,21 +311,38 @@ export const battle = {
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack' || st.kind === 'cast') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }
     if (st.kind === 'stance') v.stance[st.who] = { kind: st.stance, active: st.active };
-    if (st.kind === 'counter') { this.hurt(st.to, st.ev.dmg, 'hit', t); this.pop(st.to, `-${st.ev.dmg}`, 'bad', t); }
+    if (st.kind === 'counter') { this.hurt(st.to, st.ev.dmg, 'hit', t); this.pop(st.to, `-${st.ev.dmg}`, 'bad', t, false, 0, null, null, { ...this.amt(st.to, st.ev.dmg), kill: v.hp[st.to] <= 0 }); }
     if (st.ev && st.ev.list && st.side) v.eff[st.side] = st.ev.list;
     if (st.kind === 'fx') { const S = STATUS[st.ev.id]; if (S) this.pop(st.side, S.name + (S.stack && st.ev.n ? ' ' + st.ev.n : '') + '!', null, t, false, -16, S.buff ? '#8ccfff' : S.col || '#8ccfff'); }
     if (st.kind === 'skipT' && st.side === 'me' && st.ev.refund) v.en.me += st.ev.refund;
     if (st.kind === 'skipT' && st.side === 'foe' && st.ev.refund) v.en.foe += st.ev.refund;
-    if (st.kind === 'tick') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS[st.ev.id].col); }
-    if (st.kind === 'bloom') { this.hurt(st.side, st.ev.dmg, 'hit', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.spore.col); this.pop(st.side, '포자!', null, t, false, -16, STATUS.spore.col); }
+    if (st.kind === 'tick') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS[st.ev.id].col, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); }
+    if (st.kind === 'bloom') { this.hurt(st.side, st.ev.dmg, 'hit', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.spore.col, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.side, '포자!', null, t, false, -16, STATUS.spore.col); }
     if (st.kind === 'drain') {
-      this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.leech.col);
-      if (st.ev.to && st.ev.heal > 0) { this.heal(st.ev.to, st.ev.heal); this.pop(st.ev.to, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0'); }
+      this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.leech.col, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 });
+      if (st.ev.to && st.ev.heal > 0) { this.heal(st.ev.to, st.ev.heal); this.pop(st.ev.to, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.ev.to, st.ev.heal)); }
       if (st.ev.to && st.ev.list2) v.eff[st.ev.to] = st.ev.list2;
     }
-    if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0'); }
-    if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
+    if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
+    if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
     if (st.kind === 'end') v.en = { me: B.me.energy, foe: B.foe.energy };
+  },
+  demoText(app) {
+    const B = this.B, me = B.me, foe = B.foe, mine = me.kit.find(s => s.power && s.cost >= 3) || me.kit[0], theirs = foe.kit.find(s => s.power && s.cost >= 2) || foe.kit[0];
+    const a1 = Math.round(foe.max * 0.36), tick = Math.round(foe.max * 0.06), a2 = foe.hp - a1 - tick, hit = Math.round(me.max * 0.28), regen = Math.round(me.max * 0.08);
+    const events = [
+      { t: 'first', who: 'me' },
+      { t: 'hit', who: 'me', to: 'foe', tier: 'hit', dmg: a1 },
+      { t: 'fx', to: 'foe', id: 'burn', name: foe.name, n: 1 },
+      { t: 'hit', who: 'foe', to: 'me', tier: 'crit', dmg: hit },
+      { t: 'heal', who: 'me', heal: regen, name: me.name },
+      { t: 'tick', who: 'foe', id: 'burn', dmg: tick, name: foe.name },
+      { t: 'hit', who: 'me', to: 'foe', tier: 'crit', dmg: a2 },
+      { t: 'faint', who: 'foe', name: foe.name },
+    ];
+    me.hp = me.hp - hit + regen; foe.hp = 0; B.over = 'win';
+    B.log.push({ mySkill: mine, foeSkill: theirs });
+    this.play(app, this.buildSteps({ mySkill: mine, foeSkill: theirs, events }));
   },
   heal(side, amt) { const v = this.v, u = v.view[side]; v.hp[side] = Math.min(u ? u.max : 9999, v.hp[side] + amt); v.bar[side] = { main: v.hp[side], trail: v.hp[side], fx: null }; },
   swapView(st) { const v = this.v; st.swapped = true; v.view[st.who] = st.toU; v.gone[st.who] = false; v.hp[st.who] = st.hp; v.bar[st.who] = { main: st.hp, trail: st.hp, fx: null }; v.stance[st.who] = null; if (st.list) v.eff[st.who] = st.list; },
@@ -348,14 +358,16 @@ export const battle = {
     const great = e.tier !== 'miss' && elemMult(st.skill.el, dEl) > 1, maxHp = (v.view[st.to] || this.B[st.to]).max;
     if (e.tier !== 'miss') {
       const kind = e.tier === 'crit' ? 'crit' : (great || e.dmg >= maxHp * 0.25) ? 'big' : (e.tier === 'graze' || e.guard) ? 'graze' : 'hit';
-      if (e.dmg > 0) { this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true, 0, null, e.tier === 'crit' ? 'crit' : null); }
+      if (e.dmg > 0) { this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true, 0, null, e.tier === 'crit' ? 'crit' : null, { share: e.dmg / maxHp, kill: v.hp[st.to] <= 0 }); }
     }
     if (e.tier !== 'hit') this.pop(st.to, label, tone, t, false, e.tier === 'crit' ? -36 : -16);   // 보통 맞힘(정타)은 글자 없이 숫자만
     if (great) this.pop(st.to, '효과 굉장!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);
     if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
     if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; }
   },
-  pop(who, text, tone, t, big = false, dy = 0, col = null, size = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92]; this.v.pops.push({ text, tone, t0: t, x, y: y + dy, big, col, size }); },
+  // ex = { share: 그 한 방이 깎은(채운) 체력 몫, kill: 결정타 } — 글자 연출 ㉠~㉣이 크기·강조에 씀(지금 연출은 안 씀)
+  pop(who, text, tone, t, big = false, dy = 0, col = null, size = null, ex = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92], v = this.v; v.pops.push({ text, tone, t0: t, x, y: y + dy, dy, big, col, size, who, id: (v.pid = (v.pid || 0) + 1), share: ex ? ex.share : null, kill: !!(ex && ex.kill) }); },
+  amt(side, n) { const u = this.v.view[side] || this.B[side]; return { share: n / ((u && u.max) || 200) }; },
   // 기술 이름 리본: 쓰는 식물 머리 위 속성 색 둥근 띠 + 흰 굵은 글자, 옆에서 미끄러져 들어와 그 단계 끝에 사라짐
   ribbon(who, text, el, t, ms) { this.v.ribbon = { who, text, el, t0: t, ms: Math.max(500, ms || 0) }; },
   drawRibbon(app) {
@@ -399,6 +411,7 @@ export const battle = {
       if (v.autoSkipAt == null) v.autoSkipAt = t + SKIP_AUTO_MS;
       else if (t >= v.autoSkipAt) { v.autoSkipAt = null; this.pick(app, REST); }
     }
+    if (this.p && this.p.demo === 'text' && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) this.demoText(app); }
     if (v.phase === 'play') {
       if (v.t0 == null) { v.t0 = t; this.startStep(v.steps[v.si], t, app); }
       let st = v.steps[v.si];
@@ -416,7 +429,7 @@ export const battle = {
       }
       if (st && st.kind === 'switch' && !st.swapped && t - v.t0 >= st.ms * 0.45) this.swapView(st);
       if (!st) this.finishTurn(app);
-    } else if (v.phase === 'over' && !v.leaving && t - v.overT0 > 1700) {
+    } else if (v.phase === 'over' && !v.leaving && !(this.p && this.p.demo) && t - v.overT0 > 1700) {
       v.leaving = true;
       const me = (this.B.team ? this.B.team.me[0] : this.B.me) || this.B.me, foe = this.B.foe;
       app.lastResult = { win: this.B.over === 'win', mode: this.net === 'pvp' ? 'pvp' : this.mode === 'swap3' ? 'swap3' : 'tournament', reward: this.result ? this.result.reward : null, info: this.info, me: { key: me.key, pot: me.pot, stage: me.stage, el: me.el }, foe: { el: foe.el }, why: this.end ? this.end.why : 'ko' };
@@ -430,7 +443,7 @@ export const battle = {
       b.trail = age < S.hold ? fx.from : fx.from + (to - fx.from) * easeOut(Math.min(1, (age - S.hold) / S.drain));
       if (age >= S.hold + S.drain && age >= S.shakeMs) { b.fx = null; b.main = b.trail = to; }
     }
-    v.pops = v.pops.filter(p => t - p.t0 < 1100);
+    v.pops = v.pops.filter(p => t - p.t0 < popLife(p));
   },
   finishTurn(app) {
     const B = this.B, v = this.v;
@@ -506,13 +519,16 @@ export const battle = {
         g.img(s.active ? icon(ic) : tinted(ic, T.btn.off.text), x - 5, y + 5);
       }
       c.restore();
-      for (const p of v.pops) {   // 떠오르는 글자: 처음 0.14초 톡 튀어 오르고 1.1초 동안 올라가며 사라짐 · 치명 = 큰 금빛 숫자 + 흔들림
+      if (TFX.key !== 'now') {   // 글자 연출 ㉠~㉣(?tfx=a|b|c|d) — art/textfx.js
+        tfxPops(g, v.pops, t, v.ribbon);
+        if (v.ribbon) tfxRibbon(g, v.ribbon, t, ...(v.ribbon.who === 'me' ? [PX, PY - 126] : [EX, EY - 118]), v.ribbon.who === 'me' ? -1 : 1);
+        tfxTitle(g, v.title, t, 135, LED_CY - 30 + Math.round(glyphH('huge') / 2));
+      } else for (const p of v.pops) {   // 떠오르는 글자: 처음 0.14초 톡 튀어 오르고 1.1초 동안 올라가며 사라짐 · 치명 = 큰 금빛 숫자 + 흔들림
         const age = t - p.t0, k = age / 1100, y = Math.round(p.y - Math.min(1, age / 140) * 5 - k * 12), col = p.col || { bad: '#ff6a6a', gold: '#ffd84a', dim: '#c8c8d0', sub: '#e8e0b0', main: '#ffffff' }[p.tone] || '#ffffff';
         const crit = p.size === 'crit', sx = crit && age < 280 ? (Math.floor(age / 40) % 2 ? 2 : -2) : 0;
         g.alpha(Math.min(1, (1 - k) * 2.2), () => g.text(p.text, p.x + sx, y - (crit ? 12 : 0), { font: crit ? 'big' : p.big ? 'name' : 'value', color: col, align: 'center', outline: crit ? '#3a1806' : T.ink, outlineW: crit ? 4 : 3 }));
       }
-      this.drawRibbon(app);
-      this.drawTitle(app);
+      if (TFX.key === 'now') { this.drawRibbon(app); this.drawTitle(app); }
       this.drawEmotes(app);
       c.restore();
     });
@@ -525,14 +541,13 @@ export const battle = {
     shade.addColorStop(0, 'rgba(8,12,22,0)'); shade.addColorStop(0.22, 'rgba(8,12,22,0.62)'); shade.addColorStop(1, 'rgba(8,12,22,0.9)');
     g.c.fillStyle = shade; g.c.fillRect(0, HY - 16, W, H - HY + 16);
     this.topBar(app);
-    // 체력판(+ 3:3 팀 셋 표시)
+    // 체력판(3:3 남은 식물은 아래 교체 칸에)
     const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false);
     statusWins(g, 6, AY + 4 + fh + 3, this.statuses('foe'));
     if (this.net === 'pvp' && v.foeReady && v.phase !== 'play') { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     infoBox(app, W - 146, MY, v.view.me, v.bar.me, v.en.me, true);
     const mine = this.statuses('me'), rows = Math.ceil(Math.min(6, mine.length) / 3);
-    if (rows) statusWins(g, W - 146, MY - 3 - (this.mode === 'swap3' ? 13 : 0) - rows * (SW_H + 2) + 2, mine);
-    if (this.mode === 'swap3') { teamPips(g, 150 + (this.net === 'pvp' ? 40 : 0), AY + 8, B.team.foe, v.view.foe); teamPips(g, W - 146, MY - 11, B.team.me, v.view.me); }
+    if (rows) statusWins(g, W - 146, MY - 3 - rows * (SW_H + 2) + 2, mine);
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     const hx = Math.round((W - CARD_W * 3 - CARD_GX * 2) / 2);
@@ -619,12 +634,48 @@ export const battle = {
   },
   // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 효과 설명 · 감정(친구 대결) · 기권
   miscRow(app, y, live) {
-    const { W } = app, B = this.B, v = this.v, list = [];
-    if (this.mode === 'swap3') { const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me); list.push({ id: 'bt_swap', label: canSwitch(B.me) ? '교체' : '교체 못 함', icon: 'ff', can, fn: () => { this.sheet = { forced: false }; } }); }
+    const { W } = app, B = this.B, v = this.v, list = [], gap = 6;
+    let x0 = 8, span = W - 16;
+    if (this.mode === 'swap3') {
+      const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me), tw = 154;
+      this.teamTile(app, 'bt_swap', x0, y, tw, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
+      x0 += tw + gap; span -= tw + gap;
+    }
     list.push({ id: 'bt_info', label: '효과', icon: 'sparkle', can: true, fn: () => { this.info2 = true; } });
     list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });
-    const gap = 6, w = Math.floor((W - 16 - gap * (list.length - 1)) / list.length);
-    list.forEach((b, i) => button(app, b.id, 8 + i * (w + gap), y, i === list.length - 1 ? W - 16 - (w + gap) * (list.length - 1) : w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
+    const w = Math.floor((span - gap * (list.length - 1)) / list.length);
+    list.forEach((b, i) => button(app, b.id, x0 + i * (w + gap), y, i === list.length - 1 ? span - (w + gap) * (list.length - 1) : w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
+  },
+  // 3:3 팀 칸 = 교체 단추(2026-10-16 사용자 "3:3에서 남은 수를 표시하는 네모 박스 등은 아래의 교체 칸에 적절한 방식으로 새로 UI 만들어서 붙여놔"):
+  //  ⇄(뿌리 묶이면 자물쇠) · 내 식물 셋 얼굴(앞에 선 식물 = 주황 테, 아래 체력 실선, 쓰러짐 = 흐리게 + ✕) | '상대' + 남은 칸 셋(누군지는 안 보임) — 누르면 교체 창
+  //  앞에 선 두 식물의 체력·쓰러짐은 연출 중 숫자(v.hp)를 따라감(판정이 끝나기 전에 미리 알리지 않게)
+  teamTile(app, id, x, y, w, h, can, bound, fn) {
+    const { g, input } = app, B = this.B, v = this.v, st = T.btn[can ? 'second' : 'off'], down = !!fn && input.isPressed(id);
+    const { yy } = btnBody(g, x, y, w, h, st, down), cy = yy + Math.floor((h - 2) / 2), acc = UI_ACCENT[UI] || '#f0be7d';
+    const hpOf = (side, u) => (u === v.view[side] ? v.hp[side] : u.hp), hpCol = r => (r > 0.5 ? '#5fe08a' : r > 0.2 ? '#f0be7d' : '#ff6a5a');
+    let cx = x + 7;
+    const ic = tinted(bound ? 'lock' : 'ff', st.text), lab = bound ? '묶임' : '교체';   // 왼쪽 칸 = 아이콘 위 · 이름 아래
+    g.img(ic, cx + 11 - Math.floor(ic.width / 2), cy - 12); g.text(lab, cx + 11, cy + 1, { color: st.text, align: 'center' }); cx += 22 + 6;
+    B.team.me.forEach((u, i) => {
+      const sx = cx + i * 25, sy = cy - 13, on = u === v.view.me, hp = hpOf('me', u), dead = hp <= 0, r = Math.max(0, hp / u.max);
+      rrect(g, sx, sy, 22, 22, 3, on && !dead ? acc : '#08111e');
+      rrect(g, sx + 1, sy + 1, 20, 20, 2, dead ? '#121a26' : '#1a2c46');
+      g.alpha(dead ? 0.3 : 1, () => g.clip(sx + 1, sy + 1, 20, 20, () => drawPortrait(g, u.key, sx + 1, sy + 1, 20, false, 40)));   // 얼굴 전체(40칸 → 20칸)
+      if (dead) for (let k = 0; k < 9; k++) { g.rect(sx + 6 + k, sy + 6 + k, 2, 1, '#ff6a5a'); g.rect(sx + 14 - k, sy + 6 + k, 2, 1, '#ff6a5a'); }
+      g.rect(sx + 1, sy + 23, 20, 2, '#08111e');
+      if (!dead) g.rect(sx + 1, sy + 23, Math.max(1, Math.round(20 * r)), 2, hpCol(r));
+    });
+    cx += 3 * 25 - 3 + 6;
+    g.rect(cx, yy + 6, 1, h - 14, hexMix(st.text, '#08111e', 0.6)); cx += 6;
+    g.text('상대', cx + 12, cy - 12, { color: st.text, align: 'center' });
+    B.team.foe.forEach((u, i) => {
+      const px = cx + i * 9, py = cy + 3, dead = hpOf('foe', u) <= 0, on = u === v.view.foe && !dead;
+      g.rect(px, py, 7, 7, on ? '#ffd2c4' : '#08111e');
+      g.rect(px + 1, py + 1, 5, 5, dead ? '#1a2230' : '#ff7a5c');
+      if (dead) { g.px(px + 2, py + 2, '#5a6a82'); g.px(px + 4, py + 4, '#5a6a82'); g.px(px + 4, py + 2, '#5a6a82'); g.px(px + 2, py + 4, '#5a6a82'); g.px(px + 3, py + 3, '#5a6a82'); }
+      else g.rect(px + 2, py + 2, 2, 1, '#ffd2c4');
+    });
+    if (fn) input.hit(id, x, y, w, h, fn, 4);
   },
   // 친구 대결 감정 표현: 보낸 쪽 식물 위에 작은 전광판(2.6초)
   // 감정 표현: 보낸 쪽 식물 머리 위 말풍선(친구 대결 = 서버 알림, 봇 판 = 이 화면에서 + 봇이 가끔 대답) · 상대 끄기면 상대 것은 안 그림
