@@ -37,7 +37,6 @@ export const OPS = {
   dismantle: (s, a, c) => L.dismantle(s, str(a.id), c.rng),
   explore: (s, a, c) => L.explore(s, str(a.planet), c.rng, c.now, opt(a.region, v => str(v, 24))),   // region 없음 = 첫 지역(옛 화면)
   upgradeProbe: (s, a) => L.upgradeProbe(s, str(a.part, 12)),
-  repairProbe: s => L.repairProbe(s),
   buy: (s, a, c) => L.buy(s, str(a.item), c.rng),
   ack: (s, a) => L.ackPending(s, int(a.n, 1, 50, 1)),
   guide: (s, a) => L.seeGuide(s, str(a.id, 16)),

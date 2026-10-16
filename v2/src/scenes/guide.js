@@ -109,8 +109,8 @@ export const GUIDES = [
     ready: (app, sc) => !sc.morph && !sc.unmorph && !sc.warp && !sc.map,
     steps: [
       { at: 'pl_*', text: '행성을 누르면 그 행성 지도가 열려요. 먼 궤도는 연료 탱크를 키우고 재배사 레벨이 올라야 열려요.' },
-      { at: (app, sc) => sc.regR, text: '지도의 핀을 눌러 지역을 골라요. 지역마다 나오는 식물 · 위험 · 귀한 보상이 다르고, 탐사 장치를 키우면 하나씩 열려요. 위험한 곳일수록 변이 종자가 잘 나와요.' },
-      { at: (app, sc) => sc.oddsR, text: '탐사비 · 성공 확률 · 닳는 내구도를 보고 보내요. 실패하면 탐사선이 크게 닳아요.' },
+      { at: (app, sc) => sc.regR, text: '지도의 대륙 하나가 지역 하나예요. 눌러서 골라요. 지역마다 나오는 식물 · 위험 · 귀한 보상이 다르고, 탐사 장치를 키우면 하나씩 열려요. 위험한 곳일수록 변이 종자가 잘 나와요.' },
+      { at: (app, sc) => sc.oddsR, text: '필수 단계가 모자라면 못 가요. 권장 단계가 모자라도 갈 수는 있지만 실패할 수 있어요. 둘 다 정비실에서 올려요.' },
       { at: (app, sc) => sc.fuelR, text: '탐사 한 번에 연료 캡슐 하나를 써요. 캡슐은 시간이 지나면 다시 차요.' },
       { at: 'ex_ship', text: '탐사선을 누르면 정비실로 가요.' },
     ] },
@@ -118,7 +118,6 @@ export const GUIDES = [
     ready: (app, sc) => !sc.choose && !sc.out && sc.inT != null && app.t - sc.inT > 700,
     steps: [
       { at: ['hg_tank', 'hg_hull', 'hg_scanner', 'hg_cargo', 'hg_vault'], text: '탐사선 부품 다섯이에요. 눌러 고르고 아래에서 강화해요. 강화에 쓰는 부품은 탐사에서 모여요.' },
-      { at: 'hg_fix', text: '내구도는 탐사할수록 닳아요. 내구성 칸에서 고치고, 다 닳으면 탐사를 못 가요.' },
       { at: 'hg_model', text: '탐사선 겉모습은 여기서 바꿔요. 성능은 같아요.' },
     ] },
   { id: 'shop', scene: 'shop', btn: app => [app.W - 24, 48],

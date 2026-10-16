@@ -71,7 +71,7 @@ try {
   const unk = await call('/api/act', { op: 'addXp', args: { n: 99999 } }, A.token);
   ok(unk.status === 400, '목록에 없는 일(경험치 직접 주기) 막힘');
   const ex = await call('/api/act', { op: 'explore', args: { planet: 'ex_ermias' } }, A.token);
-  ok(ex.status === 200 && ex.res.got.length >= 1 && ex.state.items.fuel === 2 && ex.state.wallet.credits < buy.state.wallet.credits && ex.state.probe && ex.res.dur <= ex.res.max, '탐사 → 보상 · 연료 캡슐 1 · 탐사비 · 내구도');
+  ok(ex.status === 200 && ex.res.got.length >= 1 && ex.state.items.fuel === 2 && ex.state.wallet.credits < buy.state.wallet.credits && ex.state.probe && ex.res.area, '탐사 → 보상 · 연료 캡슐 1 · 탐사비 · 지역');
   const far = await call('/api/act', { op: 'explore', args: { planet: 'ex_tiamen' } }, A.token);
   ok(far.status === 400 && /Lv13/.test(far.error), '먼 궤도는 레벨 문턱');
   // ── 봇 판(서버가 한 턴씩) ──

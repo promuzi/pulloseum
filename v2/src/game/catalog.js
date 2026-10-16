@@ -362,15 +362,14 @@ export const seasonReward = tier => ({ credits: 150 + 150 * tier, gems: 3 * tier
 // 탐사선 부위(사용자 정리: 연료 탱크 = 거리 · 내구성 = 성공/실패 · 탐사 장치 = 질 좋은 보상(종자 제외) · 채집기 = 보상 수 · 종자 보관함 = 종자 개체값)
 export const PROBE = {
   tank: { name: '연료 탱크', max: 4, desc: '갈 수 있는 궤도가 넓어져요' },
-  hull: { name: '내구성', max: 5, desc: '성공률이 오르고 내구도가 늘어요' },
+  hull: { name: '내구성', max: 5, desc: '위험한 곳에서도 탐사에 성공해요' },
   scanner: { name: '탐사 장치', max: 5, desc: '새 지역이 열리고 귀한 보상이 올라요' },
-  cargo: { name: '채집기', max: 5, desc: '가져오는 보상이 늘어요(무거워져 위험한 곳에서 더 닳아요)' },
+  cargo: { name: '채집기', max: 5, desc: '가져오는 보상이 늘어요(무거워 위험한 곳은 내구성이 더 필요해요)' },
   vault: { name: '종자 보관함', max: 5, desc: '종자 개체값이 좋게 나올 확률이 올라요' },
 };
 export const PROBE_KEYS = Object.keys(PROBE);
-export const probeMaxDur = hullLv => 60 + 20 * (hullLv - 1);
 export const probeUpCost = lv => ({ credits: Math.round(150 * Math.pow(lv, 1.5) / 10) * 10, parts: 3 * lv });   // lv → lv+1
-export const REPAIR_PER = 2;                                                     // 내구도 1당 돈
+// 탐사선 스펙 = 필수(연료 탱크 = 궤도 · 탐사 장치 = 지역 단계 — 모자라면 못 감) + 권장(내구성 — 모자라면 실패할 수 있음, logic exploreOdds) · 내구도(닳고 고치기)는 2026-10-16 없앰
 export const EXPLORE_COST = { 1: 40, 2: 70, 3: 110, 4: 160 };                     // 탐사 한 번 = 연료 캡슐 1 + 이 돈(사용자 "탐사에는 돈이 필요하고, 잘 아껴 써야") — 탐사로 얻는 돈의 평균은 늘 이보다 적게
 export const ORBIT_LV = { 1: 1, 2: 4, 3: 8, 4: 13 };
 export const FUEL = { max: 3, regenMin: 480 };               // 연료 캡슐: 무료로는 8시간에 1(하루 3) · 그 밖에 레벨업 상자 · 대결 승리 · 보석 상점(사용자 "뽑기 쿠폰처럼" — 돈만으로 무한 탐사 막기)

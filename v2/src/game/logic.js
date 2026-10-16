@@ -3,7 +3,7 @@
 import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
-  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeMaxDur, probeUpCost, REPAIR_PER, EXPLORE_COST,
+  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, formSkills, MUT_SLOTS, MUT_P } from './catalog.js';
 
 export class Err extends Error {}
@@ -401,21 +401,23 @@ export function fuelSync(s, now) {
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
 export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) normSkills(p); seasonSync(s, now); return s; }
-// 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로)
+// 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로) — 옛 세이브의 내구도(dur)는 이제 안 씀(2026-10-16 없앰)
 export function probeOf(s) {
-  if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])), dur: probeMaxDur(1) };
+  if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])) };
   for (const k of Object.keys(PROBE)) if (!s.probe.lv[k]) s.probe.lv[k] = 1;
   if (s.items.parts == null) s.items.parts = 0;
   return s.probe;
 }
-// 이번 탐사의 성공 확률 · 닳는 양(화면이 미리 보여 줌 — 같은 계산)
-//  짐(탐사 장치 + 채집기 단계)이 무거울수록 위험한 행성에서 더 실패하고 더 닳음(사용자 "실패 리스크는 보상 관련 스펙과도 연결, 특히 내구성에") · 내구도가 낮을수록 실패 ↑
-//  region = 지역 id(또는 regionOf 결과) — 위험은 지역 값 · gem = 보상 칸 하나가 귀한 것(접목 가지 · 회귀 주사 · 보석)일 확률
+// 이번 탐사의 필수 · 권장 단계와 성공 확률(화면이 미리 보여 줌 — 같은 계산)
+//  2026-10-16 사용자 "탐사선 스펙 = 딱 여행 갈 수 있는 기준선과 그에 준하는 확률 높이기 스펙 · 숫자로 복잡하게 말고 전부 레벨로 · 권장 레벨 쓰고 · 다른 게 미달이어도 필수 스펙만 갖추면 갈 수 있게":
+//  필수(모자라면 못 감) = 연료 탱크 ≥ 궤도 · 탐사 장치 ≥ 지역 단계 / 권장 = 내구성 — 지역 위험 + 먼 궤도 + 위험한 곳에선 짐(탐사 장치 + 채집기)이 무거우면 +1(사용자 "실패 리스크는 보상 관련 스펙과도 연결, 특히 내구성에")
+//  성공 = 권장을 채우면 95% · 한 단계 모자랄 때마다 −20%p(가장 낮아도 30%). 내구도(닳고 고치기)는 없앰
+//  region = 지역 id(또는 regionOf 결과) · gem = 보상 칸 하나가 귀한 것(접목 가지 · 회귀 주사 · 보석)일 확률
 export function exploreOdds(s, pl, region) {
-  const P = probeOf(s), V = P.lv, max = probeMaxDur(V.hull), load = (V.scanner - 1) + (V.cargo - 1), Z = regionOf(pl, region && typeof region === 'object' ? region.id : region), hz = Z.hazard;
-  const ok = 0.96 - 0.07 * hz - 0.012 * load * (1 + 0.5 * hz) + 0.025 * (V.hull - 1) - 0.3 * (1 - P.dur / max);
+  const P = probeOf(s), V = P.lv, load = (V.scanner - 1) + (V.cargo - 1), Z = regionOf(pl, region && typeof region === 'object' ? region.id : region), hz = Z.hazard;
+  const hull = Math.max(1, Math.min(PROBE.hull.max, 1 + hz + Math.floor((pl.orbit - 1) / 2) + (hz >= 1 && load >= 5 ? 1 : 0))), short = Math.max(0, hull - V.hull);
   const W = lootW(Z, (V.scanner - 1) / 4), gem = W.slice(4).reduce((a, x) => a + x.w, 0) / W.reduce((a, x) => a + x.w, 0);
-  return { ok: Math.max(0.35, Math.min(0.98, ok)), wear: Math.round(3 + 4 * hz + 1.5 * load * (1 + 0.3 * hz)), load, max, cost: EXPLORE_COST[pl.orbit], gem };
+  return { ok: Math.max(0.3, 0.95 - 0.2 * short), req: { tank: pl.orbit, scanner: Z.need }, rec: { hull }, short, load, cost: EXPLORE_COST[pl.orbit], gem };
 }
 // 지역(catalog REGIONS — 탐사 장치 단계로 하나씩 열림): 행성 값에 지역 값을 얹어 돌려줌(위험 0~3 · 생기 0~2 안으로)
 //  id가 없거나 모르면 첫 지역 = 행성 값 그대로(옛 화면 · 옛 요청도 같은 확률 · 보상)
@@ -430,13 +432,11 @@ export function explore(s, planetId, rng, now, regionId) {
   const P = probeOf(s), Z = regionOf(pl, regionId), O = exploreOdds(s, pl, Z);   // Z = 고른 지역(없으면 첫 지역)
   need(pl.orbit <= P.lv.tank, `연료 탱크 ${pl.orbit}단계가 있어야 ${pl.orbit}궤도까지 가요`);
   need(P.lv.scanner >= Z.need, `탐사 장치 ${Z.need}단계가 필요해요`);
-  need(P.dur > 0, '탐사선이 망가졌어요 — 정비실에서 고쳐 주세요');
   fuelSync(s, now);
   need(s.items.fuel >= 1, '연료 캡슐이 없어요 — 시간이 지나면 차요');
   need(s.wallet.credits >= O.cost, `탐사비 ${O.cost}이 모자라요`);
   s.items.fuel--; s.wallet.credits -= O.cost;
-  const ok = rng() < O.ok, got = [], wear = ok ? Math.round(O.wear * (0.7 + 0.6 * rng())) : Math.round(O.wear * 2.2);
-  P.dur = Math.max(0, P.dur - wear);
+  const ok = rng() < O.ok, got = [];
   if (ok) {
     if (rng() < ({ seed: 0.92, mixed: 0.7, resource: 0.35 }[Z.kind] ?? 0.85)) {   // 종자: 그 지역 식물 중(드문 것 18% × 지역 귀한 보상 배수)
       const pool = Z.pool.filter(k => SPECIES[k].rarity === 'common'), rare = Z.pool.filter(k => SPECIES[k].rarity === 'rare');
@@ -449,7 +449,7 @@ export function explore(s, planetId, rng, now, regionId) {
   for (const r of got) grant(s, r);
   for (const r of got) if (r.kind === 'seed' && !s.discovered.includes(r.seed.key)) s.discovered.push(r.seed.key);
   const xp = addXp(s, ok ? XP.explore : Math.round(XP.explore / 3), rng);
-  return { planet: pl.name, region: Z.id, area: Z.name, ok, got, xp, wear, dur: P.dur, max: O.max, cost: O.cost };
+  return { planet: pl.name, region: Z.id, area: Z.name, ok, got, xp, cost: O.cost };
 }
 // 종자 말고 보상 한 칸: 자원형 행성 = 부품 많이 · 풍요 = 양 · 탐사 장치(q) = 접목 가지 · 회귀 주사 · 보석 쪽으로. 돈은 작게(탐사비보다 적게 — 탐사로 돈을 불리지 못하게)
 //  pl = 지역(regionOf — 종류 · 귀한 보상 배수 rare · 식물은 그 지역 것)
@@ -467,16 +467,7 @@ function rollLoot(pl, q, cost, rng) {
   if (x === 'regress') return { kind: 'regress', n: 1, rar: 4 };
   return { kind: 'gems', n: 1 + Math.floor(rng() * 2 + q), rar: 4 };
 }
-// 탐사선 고치기: 내구도 1당 돈 — 돈이 모자라면 되는 만큼
-export function repairProbe(s) {
-  const P = probeOf(s), max = probeMaxDur(P.lv.hull), miss = max - P.dur;
-  need(miss > 0, '고칠 곳이 없어요');
-  const n = Math.min(miss, Math.floor(s.wallet.credits / REPAIR_PER));
-  need(n > 0, '고칠 돈이 모자라요');
-  s.wallet.credits -= n * REPAIR_PER; P.dur += n;
-  return { fixed: n, cost: n * REPAIR_PER, dur: P.dur, max };
-}
-// 탐사선 강화: 돈 + 부품(자원형 행성에서 많이) — 내구성을 올리면 내구도 한도와 지금 값이 같이 오름
+// 탐사선 강화: 돈 + 부품(자원형 행성에서 많이)
 export function upgradeProbe(s, part) {
   need(PROBE[part], '없는 부위');
   const P = probeOf(s), lv = P.lv[part];
@@ -485,7 +476,6 @@ export function upgradeProbe(s, part) {
   need(s.wallet.credits >= c.credits, '돈이 모자라요');
   need((s.items.parts || 0) >= c.parts, `부품이 ${c.parts}개 필요해요`);
   s.wallet.credits -= c.credits; s.items.parts -= c.parts; P.lv[part] = lv + 1;
-  if (part === 'hull') P.dur = Math.min(probeMaxDur(lv + 1), P.dur + 20);
   return { part, lv: lv + 1, cost: c };
 }
 

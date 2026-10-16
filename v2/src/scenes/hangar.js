@@ -1,8 +1,8 @@
 import { hud, navBar, button, fmt } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { T, holo, tbar } from '../art/theme.js';
+import { T, holo } from '../art/theme.js';
 import { drawShip, HOLO, SHIP_SC, SHIPS, SHIPIMG, partAt } from '../art/ship.js';
-import { PROBE, probeMaxDur, probeUpCost, REPAIR_PER } from '../game/catalog.js';
+import { PROBE, probeUpCost } from '../game/catalog.js';
 import { probeOf } from '../game/logic.js';
 
 // 탐사선 정비(2026-10-15 사용자 "탐사선 누르고 스펙 강화하는 창은 디스플레이에 떠 있는 탐사선 홀로그램에 각 부분을 강화하는 느낌으로"):
@@ -12,7 +12,8 @@ import { probeOf } from '../game/logic.js';
 //  수치·이름 = 옛 게임 SHIP_UPGRADES(연료 탱크 = 탐사 궤도, 내구성 = 성공률, 채집기 = 보상 개수, 탐사 장치 = 높은 등급 확률)
 // 이름표 = 디스플레이 네 모서리(탐사 장치 왼위 · 채집기 오른위 · 내구성 왼아래 · 연료 탱크 오른아래) — 배 그림(세로 149~279)과 겹치지 않게, 폭 넓은 원반선도
 // 2026-10-16 사용자 정리 → 부위 다섯(규칙 = catalog PROBE · logic explore): 연료 탱크 = 거리 · 내구성 = 성공/실패 · 탐사 장치 = 질 좋은 보상(종자 제외) · 채집기 = 보상 수 · 종자 보관함 = 종자 개체값
-//  강화 = 돈 + 부품(자원이 많은 행성에서) — 서버 일 upgradeProbe, 고치기 = 내구도 1당 돈(repairProbe). 이름표 자리: 네 모서리 + 아래 가운데(종자 보관함)
+//  강화 = 돈 + 부품(자원이 많은 행성에서) — 서버 일 upgradeProbe. 이름표 자리: 네 모서리 + 아래 가운데(종자 보관함)
+//  2026-10-16 사용자 "숫자로 복잡하게 말고 전부 레벨로" — 내구도(닳고 고치기) 없앰: 스펙 = 필수(연료 탱크 · 탐사 장치) + 권장(내구성) 단계
 // 이름표 자리 = 디스플레이 기준(짧은 화면은 디스플레이가 낮아짐): [x, 위에서 · 아래에서(음수)]
 const PARTS = [
   { id: 'scanner', at: 'scanner', box: [14, 16] },
@@ -26,7 +27,7 @@ const boxAt = (pt, D) => [pt.box[0], pt.box[1] >= 0 ? D.y + pt.box[1] : D.y + D.
 const rareP = q => Math.round(100 * (4 + 10 * q + 1 + 4 * q + 0.5 + 3 * q) / (30 + 22 + 14 + 18 + 4 + 10 * q + 1 + 4 * q + 0.5 + 3 * q));
 const VAL = {
   tank: lv => `${lv}궤도까지`,
-  hull: lv => `내구도 ${probeMaxDur(lv)}`,
+  hull: lv => `권장 내구성 Lv.${lv}인 곳까지 안전`,
   scanner: lv => `귀한 보상 ${rareP((lv - 1) / 4)}%`,
   cargo: lv => { const a = 1 + Math.floor((lv - 1) * 0.75), b = 1 + Math.floor((lv - 1) * 0.75 + 0.5); return a === b ? `보상 ${a}개` : `보상 ${a}~${b}개`; },
   vault: lv => `개체값 ${1 + Math.floor((lv - 1) / 2)}번 굴려 좋은 쪽`,
@@ -127,7 +128,7 @@ export const hangar = {
       if (live) { app.input.hit('hg_' + pt.id, bx, by, bw, bh, () => { this.sel = pt.id; }, 2); app.input.hit('hg_part_' + pt.id, ax - 14, ay - 14, 28, 28, () => { this.sel = pt.id; }); }
     }
     // 고른 부위 정보 + 강화
-    const pt = PARTS.find(p => p.id === this.sel), lv = this.lv(s, pt.id), atMax = lv >= pt.max, c = probeUpCost(lv), Pr = probeOf(s), dmax = probeMaxDur(Pr.lv.hull);
+    const pt = PARTS.find(p => p.id === this.sel), lv = this.lv(s, pt.id), atMax = lv >= pt.max, c = probeUpCost(lv);
     const PY = D.y + D.h + 10, st = T.card || T.panel, P = T.ptext, parts = s.items.parts || 0;
     holo(g, 10, PY, W - 20, 104, st, 13);
     g.text(pt.label, 22, PY + 8, { font: 'head', color: P.main });
@@ -136,10 +137,6 @@ export const hangar = {
     g.text(pt.desc, 22, PY + 30, { color: P.sub });
     g.text('지금', 22, PY + 50, { color: P.dim }); g.text(VAL[pt.id](lv), 50, PY + 50, { font: 'bold', color: P.main });
     if (!atMax) g.text(`→ ${VAL[pt.id](lv + 1)}`, 50, PY + 64, { font: 'bold', color: '#9ff0b0' });
-    // 내구도(모든 부위 판에 — 탐사 때마다 닳음) + 고치기
-    g.text('내구도', 22, PY + 82, { color: P.dim }); tbar(g, 58, PY + 85, 48, 5, Pr.dur / dmax, 'hp'); g.text(`${Pr.dur}/${dmax}`, 110, PY + 82, { color: Pr.dur / dmax < 0.3 ? '#ff9a8a' : P.sub });
-    const miss = dmax - Pr.dur, fix = Math.min(miss, Math.floor(s.wallet.credits / REPAIR_PER));
-    if (miss > 0) button(app, 'hg_fix', W - 116, PY + 28, 96, 20, `고치기 · ${fix * REPAIR_PER}`, { style: 'night', disabled: !live || fix <= 0, onTap: () => app.act('repairProbe', {}).then(r => { if (r) { this.fx = { id: 'hull', t0: app.t }; app.toast(`내구도 +${r.fixed}`); } }) });
     const can = !atMax && s.wallet.credits >= c.credits && parts >= c.parts;
     button(app, 'hg_up', W - 116, PY + 52, 96, 40, atMax ? '끝까지 올림' : '강화', { style: 'gold', font: 'head', disabled: !live || !can, sub: atMax ? '' : `돈 ${c.credits} · 부품 ${c.parts}`, onTap: () => app.act('upgradeProbe', { part: pt.id }).then(r => { if (r) { this.fx = { id: pt.id, t0: app.t }; app.toast(`${pt.label} Lv.${r.lv}`); } }) });
   },
