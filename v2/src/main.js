@@ -2,10 +2,10 @@
 //  진행은 서버가 맡음(로그인 · 일 하나마다 자동 저장 — net/api.js). ?offline=1 이나 ?scene=(촬영·검토 도구)이면 이 브라우저에서 같은 규칙으로 돌림(저장 안 함).
 import { Screen } from './core/screen.js';
 import { Gfx } from './core/gfx.js';
-import { loadFonts } from './core/text.js';
+import { loadFonts, resetMetrics } from './core/text.js';
 import { Input } from './core/input.js';
 import { Router } from './core/router.js';
-import { loadSprites, loadBig, loadBg, loadSmall } from './art/sprites.js';
+import { loadSprites, loadBig, loadBg, loadSmall, FIRST_BIG, FIRST_BG } from './art/sprites.js';
 import { loadSkillArt } from './art/skillcard.js';
 import { checkIcons } from './art/icons.js';
 import { loadShips } from './art/ship.js';
@@ -100,17 +100,25 @@ function frameBody(ts) {
 }
 
 (async () => {
-  await loadFonts();
-  const missing = [...await loadSprites(), ...(await loadBig()).map(k => 'v2/' + k), ...(await loadBg()).map(k => 'bg/' + k), ...(await loadSmall()).map(k => 'small/' + k), ...(await loadShips()).map(k => 'ships/' + k), ...(await loadSkillArt()).map(k => 'skills/' + k)];
-  const bad = checkIcons();
-  if (missing.length) console.warn('빠진 그림', missing);
-  if (bad.length) console.warn('아이콘 오류', bad);
+  // 처음 로딩(2026-10-17 사용자 "처음에 로딩시간 너무 긴데"): 처음 화면 그림만 먼저 → 바로 조율, 글꼴 · 나머지는 조율 · 점화 동안 한꺼번에(전엔 글꼴 다음 묶음 여섯을 하나씩 차례로)
+  const toTitle = !q0.get('scene');
+  if (toTitle) await Promise.all([loadBg(undefined, FIRST_BG), loadBig(undefined, FIRST_BIG)]);   // 처음 화면 그림만 먼저(글꼴 3.2MB와 통신을 나눠 쓰지 않게 — 글꼴은 그 뒤)
+  const fonts = loadFonts().then(resetMetrics);
+  if (!toTitle) await fonts;   // 검토 화면은 글자부터(촬영 도구가 바로 그림)
+  const rest = Promise.all([loadSprites(), loadBig(), loadBg(), loadSmall(), loadShips(), loadSkillArt(), fonts]).then(([a, b, c, d, e, f]) => {
+    const missing = [...a, ...b.map(k => 'v2/' + k), ...c.map(k => 'bg/' + k), ...d.map(k => 'small/' + k), ...e.map(k => 'ships/' + k), ...f.map(k => 'skills/' + k)], bad = checkIcons();
+    if (missing.length) console.warn('빠진 그림', missing);
+    if (bad.length) console.warn('아이콘 오류', bad);
+    app.assetsReady = true;
+    return { missing, bad };
+  });
+  if (!toTitle) await rest;
   // 검토 도구(?scene=)·오프라인 체험(?offline=1) = 시험 세이브로 이 브라우저에서
   if (q0.get('ui')) setUi(q0.get('ui'));   // 창 겉모습 후보 비교(?ui=sky|screen|glass|metal|ink|holo)
   if (q0.get('scene') || q0.has('offline')) { net.offline = true; app.state = mockState(); }
   router.set(q0.get('scene') || 'title', Object.fromEntries(q0.entries()));
   if (!q0.has('mute')) tryAutoStart();   // 자동 재생이 막혀 있지 않으면(앱 WebView 등) 바로 소리 — 막혀 있으면 첫 누름에(처음 화면 = 작은 '눌러서 시작')
-  window.__ready = { missing, bad };
+  rest.then(r => { window.__ready = r; });   // 촬영 · 시험 도구는 다 받은 뒤(__ready)를 기다림
   window.__pause = (on = true) => { running = !on; };   // 촬영 도구가 시간을 직접 넘길 때 원래 화면 갱신을 멈춤(두 시계가 섞이면 끌기·용수철 계산이 꼬임)
   window.__holoFx = holoFx;   // 검토 도구: 창 띠리릭 켜기·간격
   requestAnimationFrame(frame);

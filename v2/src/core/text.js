@@ -15,6 +15,8 @@ const FAMILY = 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 const css = f => `${f.weight} ${f.size}px ${FAMILY}`;
 const meas = document.createElement('canvas').getContext('2d');
 
+// 글꼴이 늦게 오면(처음 화면은 글꼴을 기다리지 않음) 대신 글꼴로 잰 높이를 버리고 다시 잼
+export function resetMetrics() { for (const f of Object.values(FONT)) delete f.m; }
 // 글자 윗선(한글 기준)까지의 높이를 한 번만 잰다
 function metrics(f) {
   if (f.m) return f.m;

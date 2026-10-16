@@ -1,5 +1,5 @@
 import { button } from '../art/ui.js';
-import { drawPortrait, bigKey, BIG } from '../art/sprites.js';
+import { drawPortrait, bigKey, BIG, drawBig } from '../art/sprites.js';
 import { icon } from '../art/icons.js';
 import { ELEMENT } from '../art/palette.js';
 import { ro, wa } from '../core/josa.js';
@@ -8,6 +8,7 @@ import { bigTitle } from './common.js';
 import { net } from '../net/api.js';
 import { openForm } from '../core/form.js';
 import { STARTERS, SPECIES, JONG, ELEM } from '../game/catalog.js';
+import { STAGE_NAME } from '../data/mock.js';
 import { stageKey } from '../game/view.js';
 import { LOFT_STOOL, enterLoft, loftBack, loftFront, loftBoot, loftNight, loftNightBeam, loftNightFront, loftNightStool, loftNightPlant, loftPrepare } from '../art/loft.js';
 import { soundLocked, introTime, introSkip, bootPlan, musicNow, lampNow, MUSIC_BAR, MUSIC_STEP } from '../core/sound.js';
@@ -25,8 +26,9 @@ const B = MUSIC_BAR, S16 = MUSIC_STEP;
 export const INTRO = { ign: 2 * B, logo: 2 * B + 10 * S16, ui: 3 * B };   // 조율 2마디(빠르게 절정 — 2026-10-17 "절정까지 너무 느긋해") → 점화 → 로고 → 단추
 const BG0 = '#030409';
 // 대기 화면의 그 의자 · 내 대표 식물(로그인 전이면 기본 식물)
-// 로딩 화면(처음 화면)의 의자 = 늘 대표 캐릭터(2026-10-17 사용자 "로딩화면에 그거 너무 안 멋있다는 평 — 간지나는 걸로" → 후보 셋 중 ㄴ) · 디스플레이가 켜지며 내 식물로 바뀜
-const HERO = ['title_hero', 'pot_terra'];
+// 로딩 화면(처음 화면)의 의자 = 늘 대표 식물(2026-10-17 사용자 "로딩화면에 그거 너무 안 멋있다는 평 — 간지나는 걸로" → 같은 날 "첫 조명 받는 인트로 식물은 바위 선인장으로" = 가이아록 성체) ·
+//  디스플레이가 켜지며 내 식물로 바뀜(불꽃 용 선인장 안은 새 태생 용족 식물로 돌림)
+const HERO = ['gaia', 'pot_terra'];
 const myPlant = app => { const s = app.state, p = s && s.plants && s.plants[s.active]; return p ? [bigKey(p.key, stageKey(p)), p.pot || 'pot_terra'] : ['flower_grass', 'pot_terra']; };
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -34,6 +36,7 @@ const clamp01 = v => Math.max(0, Math.min(1, v));
 export const LOGIN_RE = /^[a-z0-9_]{3,20}$/;
 // 들어가기: 처음 화면 · 처음 식물 고르기에서는 디스플레이가 켜지며 대기 화면으로 이어짐, 초대 링크면 대결 방으로
 export function enterGame(app) {
+  if (!app.assetsReady) { app.pendingEnter = true; return; }   // 처음 화면을 빨리 띄워서 그림 · 글꼴을 아직 받는 중 — 다 받는 즉시 들어감(처음 화면 draw)
   if (app.invite && !net.offline) { const code = app.invite; app.invite = null; return app.go('room', { join: code }, 'shutterClose'); }
   const sc = app.router.cur;
   if (sc && sc.startBoot && (app.router.name === 'title' || app.router.name === 'starter')) return sc.startBoot(app);
@@ -174,7 +177,8 @@ export const title = {
   draw(app) {
     const { g, W, H } = app;
     if (this.mode === 'boot' && !this.checking) this.check(app);
-    const own = myPlant(app), [key, pot] = BIG.title_hero ? HERO : own;
+    if (app.pendingEnter && app.assetsReady) { app.pendingEnter = false; enterGame(app); }
+    const own = myPlant(app), [key, pot] = BIG[HERO[0]] ? HERO : own;
     if (this.boot) return drawBoot(this, app, key, pot, () => this.ui(app, 1, false), 0, own);
     const it = this.it();
     // 화면이 검을 때 한 장에 한 가지씩 미리 잼(점화 · 켜짐 순간 멈칫 없게) — 그린 것은 바로 아래에서 검정으로 덮임
@@ -222,7 +226,7 @@ export const title = {
       if (app.invite) g.text(`초대받은 방 ${app.invite}`, W / 2, y0 + (app.googleId ? 130 : 86), { color: '#ffe8a8', align: 'center', outline: T.ink });
       return;
     }
-    button(app, 'title_start', bx, y0, bw, 34, app.invite ? '초대받은 방으로' : '게임 시작', { style: 'gold', font: 'head', onTap: on(() => enterGame(app)) });
+    button(app, 'title_start', bx, y0, bw, 34, !app.assetsReady ? '준비 중' + '.'.repeat(1 + Math.floor(t / 350) % 3) : app.invite ? '초대받은 방으로' : '게임 시작', { style: 'gold', font: 'head', onTap: on(() => enterGame(app)) });
     const who = net.offline && !app.user ? '오프라인 체험 — 저장되지 않아요' : app.user ? `${app.user.nickname} 님 · ${app.user.login}` : '';
     g.text(who, W / 2, y0 + 42, { color: T.text.sub, align: 'center', outline: T.ink });
     if (!net.offline && app.user) button(app, 'title_out', bx, y0 + 62, bw, 34, '다른 계정으로', { style: 'night', onTap: on(() => app.logout()) });
@@ -237,15 +241,33 @@ const DESC = {
 };
 export const starter = {
   theme: 'loft',
-  enter(p = {}) { this.i = 0; this.showT = null; this.busy = false; this.boot = null; this.p = p; },
+  enter(p = {}) { this.i = 0; this.showT = null; this.busy = false; this.boot = null; this.p = p; this.evo = null; },
   startBoot(app) { startBoot(this, app); },
+  // 진화도: 어린 → 자람 → 성체(그 종 단계 이름) — 누르면 닫힘
+  evoDraw(app, key, dy) {
+    const { g, W, H, t } = app, sp = SPECIES[key], nm = STAGE_NAME[sp.type] || STAGE_NAME.flower, a = clamp01((t - this.evo.t0) / 180);
+    g.alpha(0.82 * a, () => g.rect(0, 0, W, H, '#05070f'));
+    g.alpha(a, () => {
+      g.text(`${sp.name} 진화`, W / 2, 120 + dy, { font: 'head', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
+      const steps = [['sprout', nm.sprout], ['growing', nm.growing], ['mature', nm.mature]], by = 330 + dy;
+      steps.forEach(([st, label], i) => {
+        const cx = Math.round(W / 2 + (i - 1) * 86);
+        drawBig(g, bigKey(key, st), 'pot_terra', cx, by, { t: t + i * 400 });
+        g.text(label, cx, by + 14, { font: 'label', color: i === 0 ? '#ffd890' : '#e6f3ff', align: 'center', outline: T.ink, outlineW: 2 });
+        if (i < 2) for (let j = 0; j < 5; j++) g.rect(cx + 40 + j, by - 40 - 4 + j, 1, 9 - j * 2, '#8ccfff');   // 다음 단계 화살표
+      });
+    });
+    app.input.hit('st_evo_close', 0, 0, W, H, () => { this.evo = null; });
+  },
   draw(app) {
     const { g, W, H, t } = app;
     if (this.showT == null) this.showT = t - 1000;
     const key = STARTERS[this.i], sp = SPECIES[key], [mx, my0] = LOFT_STOOL, dy = roomDy(app), my = my0 + dy;   // 짧은 화면 = 방 · 글자를 같이 올림(대기 화면과 같은 높이)
-    if (this.boot) return drawBoot(this, app, key, 'pot_terra', null, dy);
+    const art = bigKey(key, 'sprout');   // 처음 단계(새싹) 그림 — 고른 뒤 대기 화면에도 이 단계로 들어감
+    if (this.boot) return drawBoot(this, app, art, 'pot_terra', null, dy);
     const L = lampNow(), k = L.letter === 'a' && !L.burst ? 1 : L.k;   // 처음 화면 곡이 아니면(바로 들어온 촬영 등) 켜진 전등
-    nightRoom(app, key, 'pot_terra', k, clamp01((t - this.showT) / 420), dy);
+    nightRoom(app, art, 'pot_terra', k, clamp01((t - this.showT) / 420), dy);
+    app.input.hit('st_evo', mx - 40, my - 110, 80, 110, () => { this.evo = { t0: app.t }; });   // 식물을 누르면 진화도
     g.text('처음 식물을 골라 주세요', W / 2, Math.max(34, 150 + dy), { font: 'head', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
     for (const [id, d, x] of [['st_prev', -1, 26], ['st_next', 1, W - 26]]) {
       const pr = app.input.isPressed(id), c = pr ? '#ffffff' : '#8ccfff', cy = my - 50;
@@ -270,6 +292,8 @@ export const starter = {
     });
     button(app, 'st_go', 40, Math.min(H - 46, fy + fw + 10), W - 80, 36, this.busy ? '만드는 중…' : `${ro(sp.name)} 시작`, { style: 'gold', font: 'head', disabled: this.busy, onTap: () => this.go(app, key) });
     button(app, 'st_back', 8, 6, 52, 22, '‹ 뒤로', { style: 'night', onTap: () => { const r = app.reg; app.go('title'); if (r && !r.google) setTimeout(() => registerForm(app, null, { login: r.login, nick: r.nickname }), 250); } });
+    button(app, 'st_evo_btn', W - 70, 6, 62, 22, '진화 보기', { style: 'night', onTap: () => { this.evo = { t0: app.t }; } });
+    if (this.evo) this.evoDraw(app, key, dy);
   },
   async go(app, key) {
     if (this.busy) return;

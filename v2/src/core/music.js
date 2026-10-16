@@ -430,10 +430,14 @@ const CH = {
   Dm9: ['C4', 'E4', 'F4', 'A4'], Bbmaj9: ['C4', 'D4', 'F4', 'A4'], Gm9: ['Bb3', 'D4', 'F4', 'A4'], A7b9: ['Bb3', 'C#4', 'E4', 'G4'],
   A7sus: ['A3', 'D4', 'E4', 'G4'], C6: ['G3', 'C4', 'E4', 'A4'], Fmaj9: ['A3', 'C4', 'E4', 'G4'],
   Dmaj: ['D4', 'F#4', 'A4', 'D5'], Dadd9: ['D4', 'F4', 'A4', 'E5'],
+  // 재즈팝 긴장음(T — 같은 화음에 11 · #11 · 13 · #9 b13) · 미끄러짐(S — 다음 화음 반음 위에서 미끄러져 들어감)
+  Dm11: ['C4', 'E4', 'G4', 'A4'], Bbmaj9s11: ['C4', 'D4', 'E4', 'A4'], Gm13: ['Bb3', 'E4', 'F4', 'A4'], A7alt: ['G3', 'C4', 'F4', 'Bb4'],
+  Ebm9: ['Db4', 'F4', 'Gb4', 'Bb4'], Bmaj9: ['C#4', 'D#4', 'F#4', 'A#4'], Abm9: ['B3', 'Eb4', 'Gb4', 'Bb4'], Bb7b9: ['Ab3', 'B3', 'D4', 'F4'],
   // 전투(금관 찌름)
   Dm: ['F3', 'A3', 'D4'], Dmc: ['E3', 'A3', 'D4'], Bb: ['F3', 'Bb3', 'D4'], A: ['E3', 'A3', 'C#4'], Gm: ['G3', 'Bb3', 'D4'], Eb: ['G3', 'Bb3', 'Eb4'],
 };
-const PAD_UP = c => CH[c].slice(1).map(n => NOTE(n) * 2);   // 패드 = 건반 화음 위 셋을 한 옥타브 위로
+const PAD_UP = c => CH[c].slice(1).map(n => NOTE(n) * 2);
+const TENS = { Dm9: 'Dm11', Bbmaj9: 'Bbmaj9s11', Gm9: 'Gm13', A7b9: 'A7alt' }, SLIP = { Dm9: 'Ebm9', Bbmaj9: 'Bmaj9', Gm9: 'Abm9', A7b9: 'Bb7b9' };   // 패드 = 건반 화음 위 셋을 한 옥타브 위로
 const PROG = ['Dm9', 'Bbmaj9', 'Gm9', 'A7b9'];   // 대기(붐뱁) 진행 i – VI – iv – V
 // 처음 화면 · 대기 공통 베이스 '두드 두드등'(근음 두드 · 두드 → '등' = 끌어올리는 긴 음 → 다음 화음으로 잇는 음)
 const BASS_A = [
@@ -468,9 +472,13 @@ const FOCUS_MEL = {
 // ── 스마트팜 = 재즈팝: 거의 곧은 16분(살짝 스윙) · 2 · 4박 스네어 + 박수 · 그루브 베이스 · 로즈 화음 · 신스 리드(+ 비브라폰 겹침) ──
 //  베이스: 처음 부분 · 막 바뀐 마디 = 근음 · 옥타브만 → 그 뒤 = 16분 고스트 · 옥타브 · 다음 근음에 반음 · 온음으로 닿음
 const PB0 = ['D2^ - - - - - . . D3 - - - . . . .', 'Bb1^ - - - - - . . Bb2 - - - . . . .', 'G1^ - - - - - . . G2 - - - . . . .', 'A1^ - - - - - . . A2 - - - . . C#2 -'];
-const PB = ['D2^ - . D2_ . . D3 - . . A2 - C3 - . A2', 'Bb1^ - . Bb1_ . . Bb2 - . . F2 - D2 - . F#2', 'G1^ - . G1_ . . G2 - . . D2 - F2 - . Bb1', 'A1^ - . A1_ . . A2 - . . E2 - G2 - . C#2'];
+const PB = ['D2^ - . D2_ . . D3 - . . A2 - C3 - . A2', 'Bb1^ - . Bb1_ . . Bb2 - . . F2 - D2 - . F#2', 'G1^ - . G1_ . . G2 - . . D2 - F2 - . Bb1', 'A1^ - . A1_ . . A2 - . . E2 - G2 - . Eb2'];   // A7 끝 = Eb(으뜸 D에 반음 위에서 닿음 — 대리 화음 느낌)
 //  로즈(뿌리음 없는 9화음 그대로): 처음 부분 = 온음표 → 그 뒤 = 길게 잡고 엇박에 한 번 밀기
 const COMPP = ['C - - - - - - - . . C_ - - - - -', '. . C - - - - - - - C_ - - - . .', 'C - - - - - - - . . C_ - - - - -', '. . C - - - - - - - C_ - - - . .'];
+//  그루브(가락 부분): 긴장음 화음이 엇박을 타며 밀고(2박 '그리고' · 3박 '그리고') · 마디 끝 '4박 그리고'에 다음 화음 반음 위 화음 → 다음 마디 첫 박으로 미끄러져 내려옴
+const COMPJ = ['T - - . . . T_ - . . T_ - - . S_ .', '. . T - - . . . T_ . . T_ - - S_ .', 'T - - . . . T_ - . . T_ - - . S_ .', '. . T - - . . . T_ . . T_ - . S_ .'];
+//  스네어: 2 · 4박 + 고스트(16분 뒤 칸) — 박을 타는 느낌
+const PSN = ['. . . . X . . o . . o . X . . o', '. . . . X . . o . . o . X . o .'];
 //  북: 처음 부분 = 8분 하이햇 + 1박 킥 + 여린 백비트 → 그 뒤 = 16분 하이햇 · 킥(1 · 2박 '그리고' · 3박) · 2 · 4박 스네어 + 박수
 const PK = ['X . . . . . x . X . . . . . . .', 'X . . . . . x . X . . x . . . .'];
 const PH = ['x o x o x o x o x o x o x o x o', 'x o x o x o x o x o x o x o O .'];
@@ -566,19 +574,20 @@ const ARR = {
   // 재즈팝(스마트팜 · 보관고): 처음 부분 · 막 바뀐 마디 = 옅은 북 + 근음 베이스 + 로즈 온음표 → 그 뒤 그루브 + 신스 리드(비브라폰 겹침)
   jpop(q, cur, st, sb, k) {
     const { first, ci, brk, sect } = q, L = {};
-    if (brk) {   // 브레이크: 대기처럼 베이스 솔로(같은 가락) — 첫 박만 다 같이, 하이햇은 옅게, 끝 마디는 스네어 채움으로 돌아감
+    if (brk) {   // 브레이크: 대기처럼 베이스 솔로(같은 가락) 위로 로즈 · 북이 옅게 계속(2026-10-17 사용자 "후반부에 재즈가 끊기던데") — 끝 마디는 스네어 채움으로 돌아감
       L.pbass = P(brk === 'b1' ? SOLO1 : SOLO2[brk === 'b2a' ? 0 : 1]);
-      L.comp = P('C_ - - - . . . . . . . . . . . .'); L.pkick = P('X . . . . . . . . . . . . . . .');
-      L.phat = P('x . x . x . x . x . x . x . x .');
-      if (brk !== 'b2a') L.psn = P('. . . . . . . . . . . . o x x X');
+      L.comp = P(brk === 'b2a' ? 'T - - . . . T_ . . . T_ - - . . .' : 'T - - . . . T_ . . . . . T_ - S_ .');
+      L.pkick = P('X . . . . . . . X . . . . . . .');
+      L.phat = P('x o x o x o x o x o x o x o x o');
+      L.psn = P(brk === 'b2a' ? '. . . . o . . o . . o . o . . o' : '. . . . o . . o . . o . o x x X');
       return L;
     }
     const soft = sect === 'A' || k === 0;
     L.pbass = P(soft ? PB0[ci] : PB[ci]);
-    L.comp = P(soft ? 'C - - - - - - - - - - - - - - -' : COMPP[ci]);
+    L.comp = P(soft ? 'C - - - - - - - - - - - - - - -' : COMPJ[ci]);
     L.pkick = P(soft ? 'X . . . . . . . . . . . . . . .' : PK[ci === 3 ? 1 : 0]);
     L.phat = P(soft ? 'x . x . x . x . x . x . x . x .' : PH[ci === 3 ? 1 : 0]);
-    L.psn = P(soft ? '. . . . o . . . . . . . o . . .' : ci === 3 ? '. . . . X . . . . . . o X . . o' : '. . . . X . . . . . . . X . . .');
+    L.psn = P(soft ? '. . . . o . . . . . . . o . . .' : PSN[ci === 3 ? 1 : 0]);
     if (!soft) L.pclap = P('. . . . x . . . . . . . x . . .');
     const mel = sect === 'A2' ? PJ1 : sect === 'B' ? (first ? PJ1 : PJ2) : sect === 'A3' ? LEAD3 : null;
     if (mel) { L.syn = P(mel[ci]); L.vib = L.syn; }
@@ -597,7 +606,7 @@ const ARR = {
     }
     L.str = P((sect === 'B' ? 'C' : 'H') + ' - - - - - - - - - - - - - - -');   // 첼로가 가락이거나 가락이 없을 땐 바이올린을 위로
     L.pizz = P(PZR[ch][0] + '^ . . . . . . . ' + (sect === 'B' ? PZR[ch][1] + '_' : '.') + ' . . . . . . .');
-    L.harp = P(sect === 'A2' || sect === 'B' ? HARP8[ci] : HFLO[ci]);
+    L.harp = P(sect === 'A2' || sect === 'B' || k < 2 ? HARP8[ci] : HFLO[ci]);   // 막 들어온 두 마디 = 8분(옛 결의 박 느낌을 이어 받음)
     if (sect !== 'A2') L.cel = P(CEL[ci]);
     if (ci === 0 || k === 0) L.timp = P(ROOT[ch] + ' . . . . . . . . . . . . . . .');
     L.cb = P(ROOT[ch] + ' - - - - - - - - - - - - - - -');
@@ -644,13 +653,14 @@ const SONGS = {
       if (pst && pst.song === 'home') {
         const psty = pst.style || 'hip', PL = ARR[psty](q, cur, pst, sb, 99), on = (s2, Lx, ly) => !!Lx[ly] && mixOf(s2, ly) > 0;
         if (!q.brk) for (const ly of MELO) if (on(st, L, ly) && !on(pst, PL, ly) && (k === 0 || q.ci % 2)) delete L[ly];   // 브레이크 마디의 가락은 그 자체로 한 묶음 — 그대로
-        if (k === 0) {
-          const r = out.ramp = {};
-          if (psty === sty) for (const ly in L) r[ly] = [mixOf(pst, ly), mixOf(st, ly)];   // 같은 결(붐뱁끼리): 층 세기를 한 마디 동안 옮겨 감
-          else {   // 다른 결: 새 타악은 마디 동안 차오르고, 옛 결은 꼬리(라이드 한 번 · 현악 화음)만 남기고 사라짐
-            for (const ly of PERC_IN) if (L[ly]) r[ly] = [0.3 * mixOf(st, ly), mixOf(st, ly)];
-            const T = TAIL[psty];
-            if (T) for (const ly in T) if (!L[ly]) { L[ly] = P(T[ly]); r[ly] = [0.8 * mixOf(pst, ly), 0]; }
+        if (k === 0 && psty === sty) { const r = out.ramp = {}; for (const ly in L) r[ly] = [mixOf(pst, ly), mixOf(st, ly)]; }   // 같은 결(붐뱁끼리): 층 세기를 한 마디 동안 옮겨 감
+        else if (psty !== sty) {   // 다른 결(2026-10-17 "속도도 확 변하고 세션도 확 바뀌어"): 두 마디에 걸쳐 섞음 — 옛 결은 가락 · 북까지 남아 1 → 0.6 → 0, 새 결은 0.15 → 0.6 → 1
+          const r = out.ramp = {}, oldK = k === 0 ? [1, 0.6] : [0.6, 0], newK = k === 0 ? [0.15, 0.6] : [0.6, 1], newMel = MELO.some(ly => L[ly]);
+          for (const ly in L) { const m = mixOf(st, ly); r[ly] = [newK[0] * m, newK[1] * m]; }
+          for (const ly in PL) {
+            if (L[ly] || mixOf(pst, ly) <= 0) continue;
+            if (MELO.includes(ly) && newMel) continue;   // 새 결 가락이 들어오면 옛 가락은 비킴(두 가락이 겹치지 않게)
+            L[ly] = PL[ly]; const m = mixOf(pst, ly); r[ly] = [oldK[0] * m, oldK[1] * m];
           }
         }
       }
@@ -932,7 +942,7 @@ export class Conductor {
       return;
     }
     if (inst === 'ep' || inst === 'pad' || inst === 'stab' || inst === 'str') {
-      const c = nm === 'C' || nm === 'H' ? p.ch : nm === 'N' ? p.nx : nm;
+      const c = nm === 'C' || nm === 'H' ? p.ch : nm === 'N' ? p.nx : nm === 'T' ? TENS[p.ch] || p.ch : nm === 'S' ? SLIP[p.nx] || p.nx : nm;   // T = 긴장음 · S = 다음 화음 반음 위(미끄러짐)
       if (!CH[c]) return;
       if (inst === 'pad') return this.out({ t, i: 'pad', fs: PAD_UP(c), len: lt, v, opt: true });
       if (inst === 'str') return this.out({ t, i: 'str', fs: ((nm === 'H' ? STRH : STR)[c] || CH[c]).map(NOTE), len: lt, v, opt: true });   // H = 바이올린 한 옥타브 위

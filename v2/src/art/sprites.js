@@ -23,15 +23,19 @@ export async function loadSprites(base = '../assets/sprites/') {
 // ── 큰 판 식물(96×112, 컨셉 그림을 도트로 변환 — node tools/pixel/big/convert.mjs --export <키…>) ──
 // 종마다 시트 한 장: 대기 64장(눈 뜸) + 깜빡임 4장 × 두 층(under = 화분 뒤와 화분 앞 사이, over = 화분 앞보다 앞·특성 효과) + 정보 json
 export const BIG = {}, POT_BIG = {};
-export async function loadBig(base = '../assets/v2/') {
+export const FIRST_BIG = ['gaia'], FIRST_BG = ['home_loft', 'home_loft_dim'];   // 처음 화면에 필요한 것(먼저 받음 — main.js)
+const bigTried = new Set();
+export async function loadBig(base = '../assets/v2/', only = null) {
   const json = u => fetch(u).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  const keys = (only || [...ROSTER, ...BIG_EXTRA]).filter(k => !bigTried.has(k)), pots = (only ? ['pot_terra'] : POTS).filter(p => !bigTried.has(p));   // 처음엔 테라코타 화분만
+  keys.forEach(k => bigTried.add(k)); pots.forEach(p => bigTried.add(p));
   await Promise.all([
-    ...[...ROSTER, ...BIG_EXTRA].map(async k => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '.png'), json(base + 'plants/' + k + '.json')]); if (im && meta) BIG[k] = { sheet: im, white: whiteOf(im), meta }; }),
-    ...POTS.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_back.png'), load(base + 'pots/' + p + '_front.png')]); if (b && f) POT_BIG[p] = { back: b, front: f }; }),
+    ...keys.map(async k => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '.png'), json(base + 'plants/' + k + '.json')]); if (im && meta) BIG[k] = { sheet: im, white: whiteOf(im), meta }; }),
+    ...pots.map(async p => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_back.png'), load(base + 'pots/' + p + '_front.png')]); if (b && f) POT_BIG[p] = { back: b, front: f }; }),
     // 각도를 바꾼 화분(tools/pixel/big/pot_flat.mjs): flat = 대기실 의자 위 12° · far = 전투 먼 쪽(상대) 18°
-    ...POTS.flatMap(p => Object.keys(VIEW_DY).map(async v => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_' + v + '_back.png'), load(base + 'pots/' + p + '_' + v + '_front.png')]); if (b && f) POT_BIG[p + '_' + v] = { back: b, front: f }; })),
+    ...pots.flatMap(p => Object.keys(VIEW_DY).map(async v => { const [b, f] = await Promise.all([load(base + 'pots/' + p + '_' + v + '_back.png'), load(base + 'pots/' + p + '_' + v + '_front.png')]); if (b && f) POT_BIG[p + '_' + v] = { back: b, front: f }; })),
     // 생장 단계 묶음(어린·자람, convert.mjs --export --stage=…) — 없으면 성체 그림을 씀
-    ...ROSTER.filter(k => STAGED.has(k)).flatMap(k => ['young', 'teen'].map(async st => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '_' + st + '.png'), json(base + 'plants/' + k + '_' + st + '.json')]); if (im && meta) BIG[k + '_' + st] = { sheet: im, white: whiteOf(im), meta }; })),
+    ...(only ? [] : ROSTER).filter(k => STAGED.has(k)).flatMap(k => ['young', 'teen'].map(async st => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '_' + st + '.png'), json(base + 'plants/' + k + '_' + st + '.json')]); if (im && meta) BIG[k + '_' + st] = { sheet: im, white: whiteOf(im), meta }; })),
   ]);
   return [...ROSTER.filter(k => !BIG[k]), ...BIG_EXTRA.filter(k => !BIG[k]), ...POTS.filter(p => !POT_BIG[p])];
 }
@@ -69,10 +73,11 @@ export const BGIMG = {};
 export const BG_NAMES = ['arena_ship', 'arena_garden', 'arena_night', 'arena_retro', 'arena_cell', 'title_night', 'home_ship', 'home_cell', 'home_room', 'home_loft', 'home_loft_dim', 'nursery_garden', 'nursery_farm', 'nursery_lift', 'arena_colosseum'];
 export const BGMETA = {};   // 그림에 딸린 자리 정보(json) — 스마트팜 식물 자리 등
 const BG_META_NAMES = ['nursery_farm', 'home_loft', 'nursery_lift'];
-export async function loadBg(base = '../assets/v2/bg/') {
-  const got = await Promise.all(BG_NAMES.map(n => load(base + n + '.png')));
-  BG_NAMES.forEach((n, i) => { if (got[i]) BGIMG[n] = got[i]; });
-  await Promise.all(BG_META_NAMES.map(async n => { try { const r = await fetch(base + n + '.json'); if (r.ok) BGMETA[n] = await r.json(); } catch {} }));
+export async function loadBg(base = '../assets/v2/bg/', only = null) {
+  const names = (only || BG_NAMES).filter(n => !BGIMG[n]), metas = (only || BG_META_NAMES).filter(n => BG_META_NAMES.includes(n) && !BGMETA[n]);
+  const got = await Promise.all(names.map(n => load(base + n + '.png')));
+  names.forEach((n, i) => { if (got[i]) BGIMG[n] = got[i]; });
+  await Promise.all(metas.map(async n => { try { const r = await fetch(base + n + '.json'); if (r.ok) BGMETA[n] = await r.json(); } catch {} }));
   return BG_NAMES.filter(n => !BGIMG[n]);
 }
 // 얼굴 초상: 대기 첫 장에서 머리 둘레 s×s 를 1배로 잘라 (x, y)에(under·over 두 층). flip = 좌우 뒤집기(상대)
