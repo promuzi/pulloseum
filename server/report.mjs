@@ -18,7 +18,7 @@ const day = t => new Date(t + 9 * 3600e3).toISOString().slice(0, 10);   // 한�
 const pct = (a, b) => (b ? (100 * a / b).toFixed(0) + '%' : '–');
 const avg = (a, b) => (b ? (a / b).toFixed(1) : '–');
 const nm = k => (SPECIES[k] ? SPECIES[k].name : k);
-const skn = k => (SKILLS[k] ? SKILLS[k].name : { basic: '평타', guard: '방어 자세', evade: '회피 자세', rest: '쉬기', switch: '교체', send: '내보내기' }[k] || k);
+const skn = k => (SKILLS[k] ? SKILLS[k].name : { basic: '기본 공격', guard: '기본 방어', evade: '기본 회피', rest: '쉬기', switch: '교체', send: '내보내기' }[k] || k);
 const inc = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; return o; };
 const top = (o, n = 12) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n);
 

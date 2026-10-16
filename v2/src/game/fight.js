@@ -2,13 +2,13 @@
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
 import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY } from './catalog.js';
 import { plantStats, Err } from './logic.js';
-import { BASICS, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
+import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
 import { makeRng } from '../battle/rules.js';
 
 export function kitOfPlant(p) {
   const own = p.skills.battle.filter(Boolean).map(id => ({ act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key }));
-  return [...BASICS.map(b => ({ ...b, fx: b.act === 'attack' ? p.key : null })), ...own];
+  return [...basicsOf(p.key), ...own];
 }
 // 전투 유닛(rules.js가 읽는 값) — 화면 그림용 key · stage(그림 단계) · pot · shiny도 실어 둠
 export function unitOf(id, p, extra = {}) {

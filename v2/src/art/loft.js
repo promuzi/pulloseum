@@ -1,7 +1,7 @@
 // 원형 방(코덱스 홈)을 살아 있게 — 2026-10-15 사용자 "바깥 풍경 … 고정이 아니라 바뀌고, 애니 효과도 … 전등 효과도 고정이 아닌
 //  깜빡거리거나 먼지같은 흐림 등 효과도 알아보고 잘 넣어줘".
 //  전등: 퀘이크 빛 글자 방식(글자 a = 꺼짐 … m = 평소, 한 글자 = 80ms — Valve 개발 위키 Lightstyle·Alan Zucconi 글) — 평소엔 m,
-//    7~15초마다 짧은 깜빡임 묶음 하나. 단계 그림은 tools/pixel/big/loft_light.mjs 가 배경에서 빛 층을 떼어 구움(원뿔·바닥 고인 빛).
+//    4~10초마다 형광등처럼 빠르게 떠는 묶음 하나(아래 BURSTS — 2026-10-16 빠르게). 단계 그림은 tools/pixel/big/loft_light.mjs 가 배경에서 빛 층을 떼어 구움(원뿔·바닥 고인 빛).
 //  먼지: 빛기둥 안에서만 보이는 작은 점 — 기둥 가운데일수록·전등이 밝을수록 밝고, 저마다 다른 박자로 떠다니다 가끔 빛을 받아 반짝.
 //  흐림: 빛기둥 안 아주 옅은 따뜻한 안개가 천천히 피어오름(감기는 잡음 무늬를 위로 밀어 올림).
 //  창: sky.js 우주 — 들어올 때마다 다음 풍경, 오래 머물면 디더로 다음 풍경. 유리 위로 이어지는 원뿔 빛 띠 + 옅은 반사.
@@ -12,14 +12,17 @@ import { makeSky, renderSky, blendSky, SKY_KINDS, rng } from './sky.js';
 export const LOFT_STOOL = [134, 356];   // 의자 앉는 판 윗면 가운데(격자 확대로 잼) = 화분 굽이 닿는 점
 const LV = { a: 0, e: 1, h: 2, k: 3, o: 4 };   // 단계 그림 번호(m = 원본, 덧그림 없음)
 const K = { a: 0, e: 0.33, h: 0.58, k: 0.83, m: 1, o: 1.17 };
-const BURSTS = ['mkmamhm', 'mmhammaemm', 'makmmahmm', 'mmeaaaeekmm', 'mhmkm', 'mmamammmmammamamaaamamm'];   // 마지막 = 퀘이크 '형광등 깜빡임' 줄인 것
+// 형광등 떨림(2026-10-16 사용자 "대기화면 전등 깜빡이 더 빠르게. 진짜 지지징 하면서 그러는 효과"): 한 글자 80 → 34ms, 낡은 형광등처럼 빠르게 떨다 잠깐 꺼졌다 다시 붙는 묶음
+//  (퀘이크 '형광등 깜빡임' 빛 글자를 빠르게 — 글자 a = 꺼짐 · e·h·k = 어두움 · m = 평소). 묶음 사이에도 가끔 한두 칸 'k'로 아주 짧게 떨림
+const STEP = 34;
+const BURSTS = ['mamakamaaammhmm', 'mkamamaaaaamhmamm', 'maeamaaeammkmm', 'mmaamhmaaaaaemhammm', 'makakamamm', 'mamaaaaaaeaaamamaehmm'];
 const WARM = [255, 214, 160];
 let S = null, visits = 0;
 
 export function enterLoft() { visits++; if (S) S.fresh = true; }
 // 검토·영상용 손잡이(콘솔·tools/shots/scenevideo.mjs --act): 깜빡임 묶음 바로 · 별똥별 바로 · 먼 배 바로 · 풍경 번호
 globalThis.__loft = {
-  burst(p = 'mmhammaemm') { if (S) { S.flick.pat = p; S.flick.start = globalThis.__app ? globalThis.__app.t : 0; } },
+  burst(p = 'mkamamaaaaamhmamm') { if (S) { S.flick.pat = p; S.flick.start = globalThis.__app ? globalThis.__app.t : 0; } },
   meteor() { if (S && S.sky) S.sky.nextEvt = 0; },
   ship() { if (S && S.sky) S.sky.nextShip = 0; },
   view(i) { visits = i; },
@@ -66,13 +69,15 @@ function setup() {
 // 지금 전등 글자(t ms)
 function lampLetter(t) {
   const f = S.flick;
-  if (!f.next) f.next = t + 5000 + S.r() * 5000;
-  if (!f.pat && t >= f.next) { f.pat = BURSTS[Math.floor(S.r() * (S.r() < 0.12 ? BURSTS.length : BURSTS.length - 1))]; f.start = t; }
+  if (!f.next) f.next = t + 2500 + S.r() * 3000;
+  if (!f.pat && t >= f.next) { f.pat = BURSTS[Math.floor(S.r() * BURSTS.length)]; f.start = t; }
   if (f.pat) {
-    const i = Math.floor((t - f.start) / 80);
+    const i = Math.floor((t - f.start) / STEP);
     if (i < f.pat.length) return f.pat[i];
-    f.pat = null; f.next = t + 7000 + S.r() * 8000;
+    f.pat = null; f.next = t + 4000 + S.r() * 6000;   // 4~10초마다 한 묶음
   }
+  if (!f.jit) f.jit = t + 1200 + S.r() * 2500;   // 묶음 사이 짧은 떨림
+  if (t >= f.jit) { if (t < f.jit + STEP * (1 + (f.jn || 0))) return 'k'; f.jn = S.r() < 0.4 ? 1 : 0; f.jit = t + 1500 + S.r() * 3500; }
   return 'm';
 }
 

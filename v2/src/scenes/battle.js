@@ -7,8 +7,9 @@ import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx } from '../battle/status.js';
-import { STATUS, STATUS_DESC, SW_ON, swStyle, fxChip, BUFF_LOOK } from '../art/statusLook.js';
+import { STATUS, STATUS_DESC, SW_ON, swStyle } from '../art/statusLook.js';
 import { button } from '../art/ui.js';
+import { cardFront, cardSlot, renderFaces, drawFlip } from '../art/skillcard.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
 import { ledBoard, LED } from '../art/led.js';
@@ -24,6 +25,9 @@ import { ga, eun, eul } from '../core/josa.js';
 // 화면(2026-10-16 사용자): 안내 문구 = 따로 창 없이 두 식물 사이 가운데 전광판(LED)으로 팍 · 기술 칸 = 옛 대사 상자 자리로 올림 · 빈 아래 줄 = 기타 단추(교체 · 효과 · 감정 · 기권)
 //  체력판 = 'HP'·'MP' 이름 왼쪽, 막대·칸 왼쪽 맞춤, 숫자만 오른쪽 · 효과 창 = 글자·아이콘 같은 줄, 위아래 같은 간격.
 const PANEL_H = 228, AY = 24;
+// 손패(2026-10-16 사용자 "스킬도 세로로 긴 카드 — 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌" → "카드가 너무 커, 기본 평타·방어·회피도 그렇게 하지 마"):
+//  여섯 장 모두 같은 카드(위 줄 = 기본기 셋 · 아래 줄 = 배운 기술 셋), 66×88(3:4)
+const CARD_W = 66, CARD_H = 88, CARD_Y = 7, CARD_GX = 10, CARD_GY = 5, HOLD_MS = 320, PEEK_OPEN = 380, PEEK_CLOSE = 280;
 const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
 const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
@@ -131,33 +135,9 @@ function hpBar(g, x, y, w, h, bar, max, t) {
   if (fw > 0) { g.rect(x + 1, y + 1, fw, h - 2, c[0]); g.rect(x + 1, y + 1, fw, 1, c[1]); if (h > 4) g.rect(x + 1, y + h - 2, fw, 1, c[2]); }
 }
 
-// 기술 단추: 이름 · 속성 / 분류(또는 효과 칩) · 비용. lock = 'bind' | 'taunt'
-function skillButton(app, x, y, w, h, sk, can, lit, onTap, lock = null) {
-  const { g, input } = app;
-  if (!sk) { btnBody(g, x, y, w, h, T.btn.off, true); g.text('빈 칸', x + w / 2, y + h / 2 - 6, { color: T.btn.off.text, align: 'center' }); return; }
-  const id = 'sk_' + sk.id, down = can && input.isPressed(id), S = can ? T.btn.primary : T.btn.off;
-  const { yy } = btnBody(g, x, y, w, h, S, down);
-  if (lit) { g.rect(x - 1, yy - 1, w + 2, 1, T.text.gold); g.rect(x - 1, yy + h - 1 - (down ? 1 : 0), w + 2, 1, T.text.gold); g.rect(x - 1, yy, 1, h - 1, T.text.gold); g.rect(x + w, yy, 1, h - 1, T.text.gold); }
-  const cat = sk.cats[0];
-  g.text(sk.name, x + 8, yy + 5, { font: 'bold', color: S.text });
-  if (sk.el) g.img(can ? icon(sk.el) : tinted(sk.el, S.text), x + w - 19, yy + 5);
-  const fxId = sk.inflict ? sk.inflict.id : null, buff = !fxId && sk.self ? BUFF_LOOK[sk.self] : null;
-  if (lock) {
-    const L = STATUS[lock === 'bind' ? 'bind' : 'taunt'];
-    if (lock === 'bind') for (let k = 0; k < w - 4; k++) { const wv = Math.round(Math.sin(k / 5) * 2); g.px(x + 2 + k, yy + 15 + wv, '#2f7a2a'); g.px(x + 2 + k, yy + 16 + wv, L.col); g.px(x + 2 + k, yy + 29 - wv, '#2f7a2a'); }
-    g.text(lock === 'bind' ? '덩굴에 묶임' : '도발 — 못 씀', x + w - 9, yy + 25, { font: 'bold', color: L.col, align: 'right' });
-    return;
-  }
-  if (fxId || buff) fxChip(g, x + 7, yy + 23, fxId, buff);
-  else { g.img(can ? icon(CAT_ICON[cat] || 'sword') : tinted(CAT_ICON[cat] || 'sword', S.text), x + 8, yy + 25); g.text(CAT_NAME[cat] || '', x + 22, yy + 25, { color: S.text }); }
-  if (!sk.cost) g.text('무료', x + w - 9, yy + 25, { color: S.text, align: 'right' });
-  else { g.text(String(sk.cost), x + w - 9, yy + 25, { font: 'bold', color: S.text, align: 'right' }); g.img(can ? icon('energy') : tinted('energy', S.text), x + w - 23, yy + 25); }
-  if (can) input.hit(id, x, y, w, h, onTap, 2);
-}
-
 export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
-  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = false; },
+  enter(p) { this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = false; this.peek = null; this.peekShot = false; this.cards = {}; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -491,17 +471,62 @@ export const battle = {
     g.rect(0, PY0, W, PANEL_H, T.bg2);
     for (let y = PY0 + 6; y < H; y += 6) g.rect(0, y, W, 1, T.bg);
     g.rect(0, PY0, W, 1, T.ink); g.rect(0, PY0 + 1, W, 1, T.panel.frame); g.rect(0, PY0 + 2, W, 1, T.panel.frameLo);
-    const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen;
-    const gx = 8, gy = PY0 + 10, cw = Math.floor((W - 16 - 6) / 2), ch = 48;
-    for (let i = 0; i < 6; i++) {
-      const col = i % 2, row = Math.floor(i / 2), x = gx + col * (cw + 6), y = gy + row * (ch + 6);
-      const sk = B.me.kit[i], lock = sk && v.phase === 'pick' ? lockOf(B.me, sk) : null, can = live && !!sk && v.phase === 'pick' && !skipNow && canUse(B.me, sk);
-      skillButton(app, x, y, cw, ch, sk, can, v.picked === (sk && sk.id), () => this.pick(app, sk), lock);
-    }
-    this.miscRow(app, PY0 + 10 + 3 * (ch + 6) + 2, live);
+    const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
+    this.hand(app, PY0, live, skipNow);
+    this.miscRow(app, PY0 + CARD_Y + CARD_H * 2 + CARD_GY + 6, live);
+    if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
     if (this.info2) this.infoSheet(app);
     if (this.emoteOpen) this.emoteSheet(app);
+  },
+  // 손패: 여섯 장(위 줄 = 기본기 · 아래 줄 = 배운 기술, 모자라면 빈 칸). 꾹(0.32초) 누르면 그 카드를 앞으로 가져와 뒷면(상세)을 봄
+  hand(app, PY0, live, skipNow) {
+    const { g, W, input } = app, B = this.B, v = this.v, kit = B.me.kit;
+    this.cards = {};
+    const x0 = Math.round((W - CARD_W * 3 - CARD_GX * 2) / 2);
+    for (let i = 0; i < 6; i++) {
+      const sk = kit[i], x = x0 + (i % 3) * (CARD_W + CARD_GX), y = PY0 + CARD_Y + Math.floor(i / 3) * (CARD_H + CARD_GY);
+      if (!sk) { cardSlot(g, x, y, CARD_W, CARD_H, '빈 칸'); continue; }
+      const id = 'sk_' + sk.id, lock = v.phase === 'pick' ? lockOf(B.me, sk) : null, can = live && v.phase === 'pick' && !skipNow && canUse(B.me, sk), lit = v.picked === sk.id;
+      if (this.peek && this.peek.id === id) cardSlot(g, x, y, CARD_W, CARD_H);   // 들어 올린 카드의 자리
+      else {
+        const hold = input.down && input.down.id === id ? input.holdMs() : 0, rise = hold > 120 ? Math.min(3, Math.round((hold - 120) / 60)) : 0;   // 꾹 누르는 동안 살짝 들림
+        const down = can && input.isPressed(id) && !rise;
+        cardFront(g, x, y + (lit ? -2 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can, lit, lock });
+      }
+      if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => this.pick(app, sk) : null, 2);
+      this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can, lock };
+    }
+    const d = input.down;
+    if (live && d && !d.moved && this.cards[d.id] && input.holdMs() >= HOLD_MS) this.openPeek(app, d.id);
+    const pk = this.p && this.p.peek;   // 검토 촬영(?peek=기술 id&peekP=0~1): 그 카드를 꺼내 본 채로 멈춤
+    if (pk && !this.peek && !this.peekShot && this.cards['sk_' + pk]) { this.peekShot = true; this.openPeek(app, 'sk_' + pk); this.peek.pin = true; this.peek.p = this.p.peekP != null ? +this.p.peekP : 1; }
+  },
+  // 꺼내 보기 시작: 앞·뒤 큰 그림을 기기 화소로 한 번 그려 둠(기본기는 단추 자리에서 작은 카드로 생겨남)
+  openPeek(app, id) {
+    const { input, W } = app, ref = this.cards[id], k = app.g.c.getTransform().a || 1, foe = this.v.view.foe, sk = ref.sk;
+    input.claimHold();
+    const BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
+    const o = { can: ref.can, lock: ref.lock, energy: this.v.en.me, foe: foe ? { name: foe.name, el: foe.el } : null, mult: sk.act === 'attack' && sk.el && foe ? elemMult(sk.el, foe.el) : 1 };
+    this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
+    app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
+  },
+  // 꺼내 본 카드: 잡고 있으면 화면 가운데로 다가오며(살짝 떠오름 · 그림자) 원근 있게 뒤집혀 뒷면, 손을 떼면 다시 뒤집혀 제자리로
+  drawPeek(app) {
+    const { g, W, H, input, t } = app, P = this.peek, c = g.c, k = c.getTransform().a || 1, dt = Math.min(50, Math.max(0, t - P.last));
+    P.last = t;
+    const holding = P.pin || input.holding;
+    if (!P.pin) P.p = holding ? Math.min(1, P.p + dt / PEEK_OPEN) : Math.max(0, P.p - dt / PEEK_CLOSE);
+    if (!holding && P.p <= 0) { this.peek = null; return; }
+    const q = P.p, pos = 1 - (1 - q) ** 3, th = Math.PI * (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
+    c.fillStyle = `rgba(6,10,18,${(0.62 * pos).toFixed(3)})`; c.fillRect(0, 0, W, H);
+    input.hit('peek_block', 0, 0, W, H, null);
+    const F = P.from, fx = F.x + F.w / 2, fy = F.y + F.h / 2, tx = W / 2, ty = Math.round((AY + H - PANEL_H) / 2) + 4;
+    const cx = fx + (tx - fx) * pos, cy = fy + (ty - fy) * pos - Math.sin(pos * Math.PI) * 14, w = F.w + (P.BW - F.w) * pos, h = F.h + (P.BH - F.h) * pos;
+    const pw = Math.max(2, w * Math.abs(Math.cos(th)));   // 그림자 = 지금 보이는 폭만큼, 다가올수록 크게 번짐
+    c.save(); c.shadowColor = `rgba(0,0,0,${(0.6 * pos).toFixed(3)})`; c.shadowBlur = 18 * k * pos; c.shadowOffsetY = 10 * k * pos;
+    c.fillStyle = `rgba(0,0,0,${(0.25 * pos).toFixed(3)})`; c.fillRect(cx - pw / 2, cy - h / 2 + 3, pw, h - 6); c.restore();
+    drawFlip(c, P.faces.front, P.faces.back, cx, cy, w, h, th);
   },
   // 위 띠: 턴 · 대회 이름(또는 3:3 · 친구 대결) · 판 점 · (친구 대결) 남은 시간
   topBar(app) {

@@ -1,5 +1,6 @@
 // 터치: 매 프레임 화면이 "누를 수 있는 영역"을 등록하고, 손을 뗀 위치의 맨 위 영역을 실행한다.
 // 끌기: 4칸 넘게 움직이면 누르기 대신 끌기(drag: 이번 움직임 dx·dy + 시작점) → 손을 떼면 release(전체 dx·dy + 마지막 속도 vx·vy 칸/초)
+// 꾹: 움직이지 않고 누르고 있는 시간 = holdMs(). 장면이 claimHold()로 가져가면 손을 떼도 누르기(tap)가 안 나감(전투 기술 카드 뒷면 보기)
 export class Input {
   constructor(screen) {
     this.screen = screen;
@@ -11,7 +12,7 @@ export class Input {
     const now = () => performance.now();
     el.addEventListener('pointerdown', e => {
       const p = screen.toLogical(e.clientX, e.clientY); const r = this.hitAt(p.x, p.y);
-      this.down = { ...p, id: r && r.id, x0: p.x, y0: p.y, moved: false, hist: [{ t: now(), x: p.x, y: p.y }] }; this.pressedId = r && r.id;
+      this.down = { ...p, id: r && r.id, x0: p.x, y0: p.y, moved: false, held: false, t0: now(), hist: [{ t: now(), x: p.x, y: p.y }] }; this.pressedId = r && r.id;
       try { el.setPointerCapture(e.pointerId); } catch {}
     });
     el.addEventListener('pointermove', e => {
@@ -23,7 +24,7 @@ export class Input {
     const up = e => {
       if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
       const r = this.hitAt(p.x, p.y);
-      if (!d.moved && r && r.id === d.id) this.queue.push({ type: 'tap', region: r });
+      if (!d.moved && !d.held && r && r.id === d.id) this.queue.push({ type: 'tap', region: r });
       if (d.moved) {
         const a = d.hist[0], b = d.hist[d.hist.length - 1], dt = Math.max(16, b.t - a.t);
         this.queue.push({ type: 'release', dx: p.x - d.x0, dy: p.y - d.y0, x0: d.x0, y0: d.y0, vx: (b.x - a.x) / dt * 1000, vy: (b.y - a.y) / dt * 1000 });
@@ -38,6 +39,9 @@ export class Input {
   hit(id, x, y, w, h, fn, pad = 0) { this.regions.push({ id, x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2, fn }); }
   hitAt(x, y) { for (let i = this.regions.length - 1; i >= 0; i--) { const r = this.regions[i]; if (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h) return r; } return null; }
   isPressed(id) { return this.pressedId === id; }
+  holdMs() { const d = this.down; return d && !d.moved && !d.held ? performance.now() - d.t0 : 0; }
+  claimHold() { if (this.down) this.down.held = true; this.pressedId = null; }
+  get holding() { return !!(this.down && this.down.held); }
   get dragging() { return !!(this.down && this.down.moved); }
   flush(scene) {
     const q = this.queue; this.queue = [];

@@ -37,9 +37,26 @@ const SKILLS = {
   vine_wind: [{ id: 's1', name: '휘감는 바람', power: 65, cost: 1, el: 'wind', ranged: true, inflict: { id: 'bind' } }, { id: 's2', name: '칼바람', power: 105, cost: 3, el: 'wind', ranged: true, inflict: { id: 'gale' } }],
   spore_cap: [{ id: 's1', name: '포자', power: 50, cost: 1, el: 'grass', ranged: true, inflict: { id: 'spore', n: 1 } }, { id: 's2', name: '포자 구름', power: 90, cost: 3, el: 'grass', ranged: true, area: true, inflict: { id: 'spore', n: 2 } }],
 };
+// 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 40 공격 · 방어 자세 · 회피 자세)은
+//  BASICS 그대로, 이름만 식물마다 [공격, 방어, 회피]. 이름은 임시(사용자가 고칠 수 있음) — 기술 id(basic · guard · evade)는 그대로라 서버·기록·친구 대결과 맞음
+export const BASIC_NAMES = {
+  flower_grass: ['잎사귀 치기', '꽃잎 오므리기', '꽃잎 흩날리기'],
+  thorn: ['덩굴 후리기', '가시 세우기', '덩굴 숨기'],
+  aqua: ['알뿌리 박치기', '물막 두르기', '물결 피하기'],
+  flower_wind: ['꽃대 휘두르기', '잎 겹치기', '바람 타기'],
+  spark: ['꽃머리 박치기', '전기막 치기', '번쩍 피하기'],
+  vine_water: ['덩굴 낚아채기', '덩굴 똬리', '물살 타기'],
+  cactus_fire: ['가시 박치기', '몸 웅크리기', '아지랑이'],
+  gaia: ['바위 박치기', '바위 되기', '모래 숨기'],
+  flower_fire: ['꽃잎 할퀴기', '꽃잎 방패', '불꽃 흔들기'],
+  cactus_wind: ['가시팔 휘두르기', '가시 갑옷', '회오리 피하기'],
+  vine_wind: ['덩굴 감아치기', '덩굴 감싸기', '덩굴 그네'],
+  spore_cap: ['갓 박치기', '갓 덮기', '포자 연막'],
+};
+export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
 export function kitOf(key) {
   const own = (SKILLS[key] || SKILLS.flower_grass).map(s => ({ act: 'attack', cats: ['attack'], ...s, fx: key }));
-  return [...BASICS.map(b => ({ ...b, fx: b.act === 'attack' ? key : null })), ...own];
+  return [...basicsOf(key), ...own];
 }
 
 // 유닛: id·이름·속성·스탯(rules.js 가 읽는 hp·atk·def·spd·acc·eva·crit) + 에너지·기술 + 상태 효과(eff)

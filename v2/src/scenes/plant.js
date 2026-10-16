@@ -5,7 +5,7 @@ import { bigKey } from '../art/sprites.js';
 import { T, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars, ivRing } from './common.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
-import { BASICS } from '../battle/model.js';
+import { basicsOf } from '../battle/model.js';
 import { fxChip, BUFF_LOOK } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
 import { FOCUS } from './home.js';
@@ -145,9 +145,10 @@ export const plant = {
   drawSkill(app, p, y0, live) {
     const { g, W, state: s } = app, P = T.ptext, S = p.skills;
     g.text('기본기', 14, y0 + 1, { font: 'label', color: P.sub });
-    let x = 14 + g.textW('기본기', 'label') + 8;
-    for (const b of BASICS) { const w = 20 + g.textW(b.name); tagBox(g, x, y0, w, 16); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, y0 + 2); g.text(b.name, x + 16, y0 + 2, { color: '#d4e9ff' }); x += w + 4; }
-    let y = y0 + 24;
+    const bx0 = 14 + g.textW('기본기', 'label') + 8;   // 기본기 이름이 식물마다라 길면 다음 줄로
+    let x = bx0, by = y0;
+    for (const b of basicsOf(p.key)) { const w = 20 + g.textW(b.name); if (x + w > W - 14 && x > bx0) { x = bx0; by += 20; } tagBox(g, x, by, w, 16); g.img(icon(CAT_ICON[b.cats[0]]), x + 4, by + 2); g.text(b.name, x + 16, by + 2, { color: '#d4e9ff' }); x += w + 4; }
+    let y = by + 24;
     const pend = p.pend && p.pend[0];
     const hit = (id, xx, yy, w, h, fn) => this.hit(app, live, id, xx, yy, w, h, fn);
     if (pend) {   // 새로 핀 기술: 칸이 꽉 차서 놓을 칸을 골라야 함
