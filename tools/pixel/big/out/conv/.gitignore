@@ -2,3 +2,5 @@
 *.gif
 *_frames.png
 *_eyes_src.png
+# 눈 위치 재기용 잘라 본 그림(eyes.mjs가 cut 그림에서 다시 만듦)
+eyes_*.png
