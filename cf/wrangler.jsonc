@@ -8,5 +8,7 @@
   "assets": { "directory": "./public", "binding": "ASSETS" },
   "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // 구글 로그인 웹 클라이언트 ID(공개값 — 화면에도 그대로 보임, 비밀값 아님) · 만드는 법 = cf/배포.md '구글 로그인 켜기'
+  "vars": { "GOOGLE_CLIENT_ID": "19442831901-l49q0ut04btc9brrhig9oqb0jt4f3i98.apps.googleusercontent.com" }
 }

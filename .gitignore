@@ -33,6 +33,10 @@ android/.gradle/
 android/app/build/
 android/build/
 android/local.properties
+# 서명 키 · 비밀번호(공개 저장소 — 절대 올리지 않음)
+android/keystore.properties
+*.keystore
+*.jks
 .superpowers/
 
 # ===== 디자인 탐색 산출물 (36MB, PUBLIC 저장소라 추적 안 함 - 2026-09-04 사용자 확정) =====

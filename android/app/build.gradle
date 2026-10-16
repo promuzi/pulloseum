@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+// 서명 키 정보 = 깃 밖 android/keystore.properties(깃 무시)에서 읽음 — 없으면(다른 PC) 기본 디버그 키로 서명
+//  ⚠ app/pulloseum.keystore는 2026-10-16까지 공개 저장소에 비밀번호와 함께 올라가 있던 키 → 시험용으로만 쓰고, 플레이 출시는 새 업로드 키(docs/android-capacitor-wrapper.md)
+def keystoreProps = new Properties()
+def keystoreFile = rootProject.file('keystore.properties')
+if (keystoreFile.exists()) { keystoreFile.withInputStream { keystoreProps.load(it) } }
+
 android {
     namespace "com.promuzi.pulloseum"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,22 +22,23 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // 프로젝트 고정 서명키 — 어느 PC/빌드에서든 같은 키로 서명해야
-    // '삭제 없이 덮어쓰기 설치(install -r)'가 되어 진행도(네이티브 저장소)가 유지된다.
+    // 같은 키로 서명해야 '삭제 없이 덮어쓰기 설치(install -r)'가 된다
     signingConfigs {
         common {
-            storeFile file('pulloseum.keystore')
-            storePassword 'pulloseum0619'
-            keyAlias 'pulloseum'
-            keyPassword 'pulloseum0619'
+            if (keystoreFile.exists()) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.common
+            if (keystoreFile.exists()) { signingConfig signingConfigs.common }
         }
         release {
-            signingConfig signingConfigs.common
+            if (keystoreFile.exists()) { signingConfig signingConfigs.common }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

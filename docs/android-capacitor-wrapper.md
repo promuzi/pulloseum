@@ -56,7 +56,8 @@ Android Studio로 하려면 `File > Open`에서 `C:\dev\pulloseum\android`를 �
 ## 플레이 스토어 출시 체크리스트
 
 - [ ] 구글 플레이 개발자 계정(사용자 — 등록비 · 본인 확인). 새 개인 계정은 프로덕션 전에 **비공개 테스트**(테스터 여러 명 · 2주)를 요구할 수 있다 — 계정을 만들 때 콘솔 안내를 확인.
-- [ ] 업로드 키 만들기 · 보관(깃 금지 — 잃으면 업데이트 불가). 출시 묶음 = `.\gradlew.bat bundleRelease`(AAB).
+- [ ] **새** 업로드 키 만들기 · 보관(깃 금지 — 잃으면 업데이트 불가). 출시 묶음 = `.\gradlew.bat bundleRelease`(AAB). ⚠ 지금 서명 키 `android/app/pulloseum.keystore`는 2026-10-16까지 공개 저장소에 비밀번호와 함께 올라가 있던 키라 시험 빌드에만 쓴다(저장소에서는 뺐고, 비밀번호는 깃 밖 `android/keystore.properties` — 이 PC에만 있음, 없으면 기본 디버그 키로 서명). 새 키를 만들면 같은 파일의 값만 바꾼다.
+- [ ] 앱판 구글 로그인용 **Android 클라이언트**(구글 클라우드 → 클라이언트 만들기 → Android): 패키지 이름 `com.promuzi.pulloseum` + 서명 키 SHA-1(시험 키 · 플레이 앱 서명 키 각각 하나씩).
 - [ ] 버전 `android/app/build.gradle`의 `versionCode`(올릴 때마다 +1) · `versionName`.
 - [ ] 타깃 API: 출시 시점 구글 요구치를 콘솔에서 확인(지금 `variables.gradle` = 35. 2026-08-31부터 새 앱은 36을 요구할 가능성이 큼 → Capacitor 판 올림이 필요할 수 있음).
 - [ ] 아이콘 · 시작 화면(지금은 Capacitor 기본) — 그림은 코덱스, `android/app/src/main/res/mipmap-*` · `drawable*`.
