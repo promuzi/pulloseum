@@ -51,7 +51,7 @@ export function makeRooms({ game, log }) {
         const done = () => { clearTimeout(tm); q.waiters.delete(done); res(); };
         tm = setTimeout(done, 25000);
         q.waiters.add(done);
-        req.on('close', done);
+        if (req && req.onClose) req.onClose(done);   // 끊기면 바로 놓아줌(Node = 소켓 닫힘, Cloudflare = 요청 취소)
       });
       seen.set(uid, Date.now());
       evs = q.list.filter(e => e.seq > after);
@@ -148,7 +148,7 @@ export function makeRooms({ game, log }) {
     const [ma, mb] = r.members, ga = game.plantOf(ma.uid, ma.plant), gb = game.plantOf(mb.uid, mb.plant);
     if (!ga || !gb) { for (const m of r.members) m.ready = false; broadcastRoom(r); return; }
     r.B = setupPvp({ seed: randomInt(1, 2 ** 31 - 1), a: ga.plant, b: gb.plant, aName: ga.profile.name, bName: gb.profile.name });
-    r.B.me.rank = `재배사 Lv${ga.level}`; r.B.foe.rank = `재배사 Lv${gb.level}`;   // 체력판 위 '재배사 · 레벨'(상대 판에만 보임)
+    r.B.me.rank = `재배사 Lv${ga.level}`; r.B.foe.rank = `재배사 Lv${gb.level}`; r.B.me.tlv = ga.level; r.B.foe.tlv = gb.level;   // 체력판 위 '이름 · Lv'(상대 판에만 보임)
     r.revealed = { a: new Set(), b: new Set() };   // 상대에게 보인 기술(쓴 것만)
     r.phase = 'battle'; r.sides = { a: ma.uid, b: mb.uid }; r.moves = {}; r.timeouts = { a: 0, b: 0 }; r.picks = { a: {}, b: {} };
     r.plants = { a: plantLite(ga.plant), b: plantLite(gb.plant) }; r.deadline = now + TURN_MS; r.games++;
@@ -219,7 +219,7 @@ export function makeRooms({ game, log }) {
   function view(uid) { const r = roomOf(uid); return r ? { room: roomView(r, uid), battle: r.phase === 'battle' ? battleMsg(r, uid) : null } : { room: null }; }
 
   // ── 시계(1초마다): 턴 시간 넘김 · 끊긴 사람 · 오래 빈 방 ──
-  setInterval(() => {
+  const clock = setInterval(() => {
     const now = Date.now();
     for (const r of [...rooms.values()]) {
       // 있음/없음: 소식을 35초 넘게 안 받아 가면 끊긴 것(바뀌면 방 사람들에게 알림)
@@ -237,7 +237,8 @@ export function makeRooms({ game, log }) {
       } else if (now - r.touched > IDLE_MS) { for (const m of r.members) { byUser.delete(m.uid); send(m.uid, 'room', null); } rooms.delete(r.code); }
     }
     for (const [uid, q] of queues) if (!q.waiters.size && !byUser.has(uid) && now - (seen.get(uid) || 0) > 3600e3) { queues.delete(uid); seen.delete(uid); }   // 한 시간 넘게 조용한 사람 소식함 정리
-  }, 1000).unref();
+  }, 1000);
+  if (clock.unref) clock.unref();   // Node: 이 시계 때문에 꺼지지 않는 일 없게(Cloudflare 엔 없음)
 
   return { subscribe, poll, create, join, leave, pick, ready, move, forfeit, emote, view, count: () => rooms.size };
 }

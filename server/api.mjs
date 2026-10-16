@@ -1,0 +1,107 @@
+// 서버 길(주소 → 할 일) — Node(server/index.mjs)와 Cloudflare(cf/src/worker.js)가 같이 씀. 들어오고 나가는 꼴만 플랫폼이 맞춰 줌.
+//  req = { method, path, query: URLSearchParams, header(이름), ip, body(객체), onClose(fn) } → { status, body } (기다리는 요청은 Promise) · API 주소가 아니면 null
+//  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드 · 기다리는 요청)
+import { hashPass, checkPass, newSession, userOfToken, endSession, allowTry, LOGIN_RE } from './auth.mjs';
+import { Err } from '../v2/src/game/logic.js';
+import { STARTERS } from '../v2/src/game/catalog.js';
+
+export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
+
+export function makeApi({ q, game, rooms, log }) {
+  const hits = new Map(), regs = new Map();   // 너무 잦은 요청(계정마다 10초에 80번) · 가입 제한(IP마다 하루 10개)
+  let lastPurge = 0;
+  function rate(key, now, max = 80, win = 10000) {
+    const r = hits.get(key) || { n: 0, t0: now };
+    if (now - r.t0 > win) { r.n = 0; r.t0 = now; }
+    r.n++; hits.set(key, r);
+    if (r.n > max) throw new HttpErr(429, '너무 빨라요 — 잠시 뒤에 다시 해 주세요');
+  }
+  function maintain(now) {   // 1분마다: 오래된 요청 세기 · 지난 로그인 열쇠 · 일주일 지난 끝난 봇 판 정리
+    if (now - lastPurge < 60000) return;
+    lastPurge = now;
+    for (const [k, r] of hits) if (now - r.t0 > 60000) hits.delete(k);
+    q.purgeSessions.run(now); q.purgeBattles.run(now - 7 * 864e5);
+  }
+  const tokenOf = req => { const h = req.header('authorization') || ''; return h.startsWith('Bearer ') ? h.slice(7).trim() : null; };
+  const cleanNick = v => String(v || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 12);
+  function authed(req, now) {
+    const u = userOfToken(q, tokenOf(req), now);
+    if (!u) throw new HttpErr(401, '다시 로그인해 주세요');
+    rate('u' + u.id, now);
+    q.seen.run(now, u.id);
+    return u;
+  }
+
+  const API = {
+    'GET /api/health': () => ({ ok: true, rooms: rooms.count() }),
+    'POST /api/register': (req, b, now) => {
+      const day = Math.floor(now / 864e5), k = req.ip + ':' + day, n = regs.get(k) || 0;
+      if (n >= 10) throw new HttpErr(429, '오늘은 더 만들 수 없어요');
+      const login = String(b.login || '').trim().toLowerCase(), pw = String(b.password || ''), nick = cleanNick(b.nickname), starter = String(b.starter || '');
+      if (!LOGIN_RE.test(login)) throw new Err('아이디는 영어 소문자·숫자·밑줄 3~20자예요');
+      if (pw.length < 6 || pw.length > 72) throw new Err('비밀번호는 6~72자예요');
+      if (!nick) throw new Err('별명을 써 주세요');
+      if (!STARTERS.includes(starter)) throw new Err('처음 식물을 골라 주세요');
+      if (q.userByLogin.get(login)) throw new Err('이미 있는 아이디예요');
+      const r = q.addUser.run(login, hashPass(pw), nick, now), uid = Number(r.lastInsertRowid);
+      regs.set(k, n + 1);
+      const s = game.create(uid, { nickname: nick, starter }, now), token = newSession(q, uid, now);
+      log(uid, 'register', { starter }, now);
+      return { token, user: { id: uid, login, nickname: nick }, state: s, ver: 1 };
+    },
+    'POST /api/check': (req, b, now) => {   // 가입 전 아이디 쓸 수 있는지(식물 고르기 전에 알려 주려고)
+      if (!allowTry('c' + req.ip, now)) throw new HttpErr(429, '잠시 뒤에 다시 해 주세요');
+      const login = String(b.login || '').trim().toLowerCase();
+      if (!LOGIN_RE.test(login)) throw new Err('아이디는 영어 소문자·숫자·밑줄 3~20자예요');
+      if (q.userByLogin.get(login)) throw new Err('이미 있는 아이디예요');
+      return { ok: true };
+    },
+    'POST /api/login': (req, b, now) => {
+      if (!allowTry(req.ip, now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
+      const login = String(b.login || '').trim().toLowerCase(), pw = String(b.password || '');
+      const u = q.userByLogin.get(login);
+      if (!u || !checkPass(pw, u.pass)) throw new Err('아이디나 비밀번호가 맞지 않아요');
+      const token = newSession(q, u.id, now), st = game.state(u.id, now);
+      log(u.id, 'login', {}, now);
+      return { token, user: { id: u.id, login: u.login, nickname: u.nickname }, ...st };
+    },
+    'POST /api/logout': (req) => { endSession(q, tokenOf(req)); return { ok: true }; },
+    'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: { id: u.id, login: u.login, nickname: u.nickname }, ...game.state(u.id, now) }; },
+    'POST /api/act': (req, b, now) => { const u = authed(req, now); return game.act(u.id, String(b.op || ''), b.args || {}, now); },
+    'POST /api/battle/start': (req, b, now) => { const u = authed(req, now); return game.battleStart(u.id, now); },
+    'POST /api/battle/turn': (req, b, now) => { const u = authed(req, now); return game.battleTurn(u.id, b.id, b.act, now, b.turn == null ? null : +b.turn); },
+    'POST /api/battle/forfeit': (req, b, now) => { const u = authed(req, now); return game.battleForfeit(u.id, b.id, now); },
+    'GET /api/room': (req, b, now) => rooms.view(authed(req, now).id),
+    'POST /api/room/create': (req, b, now) => rooms.create(authed(req, now).id, now),
+    'POST /api/room/join': (req, b, now) => rooms.join(authed(req, now).id, b.code, now),
+    'POST /api/room/leave': (req, b, now) => rooms.leave(authed(req, now).id, now),
+    'POST /api/room/pick': (req, b, now) => rooms.pick(authed(req, now).id, b.plant, now),
+    'POST /api/room/ready': (req, b, now) => rooms.ready(authed(req, now).id, !!b.on, now),
+    'POST /api/room/move': (req, b, now) => rooms.move(authed(req, now).id, b.act, now, b.turn == null ? null : +b.turn),
+    'POST /api/room/forfeit': (req, b, now) => rooms.forfeit(authed(req, now).id, now),
+    'POST /api/room/emote': (req, b, now) => rooms.emote(authed(req, now).id, b.i, now),
+  };
+
+  async function handle(req) {
+    const now = Date.now();
+    if (!req.path.startsWith('/api/')) return null;
+    try {
+      maintain(now);
+      if (req.path === '/api/room/poll' && req.method === 'GET') {   // 대결 방 소식(기다리는 요청 — 터널·Cloudflare를 거쳐도 막히지 않음)
+        const u = authed(req, now), after = Number(req.query.get('after'));
+        const out = await rooms.poll(u.id, Number.isFinite(after) ? after : -1, req);
+        return { status: 200, body: { ...out, now: Date.now() } };
+      }
+      const h = API[req.method + ' ' + req.path];
+      if (!h) throw new HttpErr(404, '없는 주소예요');
+      const out = h(req, req.body || {}, now);
+      return { status: 200, body: { ...out, now: Date.now() } };
+    } catch (e) {
+      if (e instanceof Err) return { status: 400, body: { error: e.message } };
+      if (e instanceof HttpErr) return { status: e.code, body: { error: e.message } };
+      console.error(new Date().toISOString(), req.method, req.path, e);
+      return { status: 500, body: { error: '서버에 문제가 생겼어요' } };
+    }
+  }
+  return { handle, authed };
+}

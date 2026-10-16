@@ -71,9 +71,9 @@ export function makeGame({ q, log }) {
     if (mode === 'swap3' && mine.length < 3) fail('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요');
     const seed = randomInt(1, 2 ** 31 - 1), rng = makeRng(randomInt(1, 2 ** 31 - 1)), tier = Math.max(0, TIERS.indexOf(s.tournament.tier));
     const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier));
-    const T = s.tournament, trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`;
+    const T = s.tournament, trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${T.name} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
-    const spec = { seed, mode, mine: mine.map(clone), foes, trainer, rank, info };
+    const spec = { seed, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info };
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');
     q.addBattle.run(id, uid, mode, JSON.stringify(spec), '[]', now, now);
     log(uid, 'battle.start', { mode, mine: mine.map(plantLite), foes: foes.map(plantLite), tier: T.tier, round: T.round }, now);

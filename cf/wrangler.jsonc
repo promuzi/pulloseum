@@ -1,0 +1,12 @@
+// 풀로세움 v2 Cloudflare 판 — 주소 = https://pulloseum.getchat.workers.dev (homocarbo · 메카와 같은 계정, workers.dev 하위 주소 'getchat'은 바꾸지 않음 — 갯챗이 깨짐)
+//  올리기 = cf/배포.md · 정적 파일 모으기 = node cf/build.mjs(cf/public, 깃 밖)
+{
+  "name": "pulloseum",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
+  "observability": { "enabled": true }
+}

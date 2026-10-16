@@ -62,7 +62,7 @@ export function kitOf(key) {
 // 유닛: id·이름·속성·스탯(rules.js 가 읽는 hp·atk·def·spd·acc·eva·crit) + 에너지·기술 + 상태 효과(eff)
 export function makeUnit(id, sp, o) {
   return {
-    id, key: o.key, name: o.name || sp.name, el: sp.el, jong: sp.type, pot: o.pot || 'pot_terra', trainer: o.trainer, rank: o.rank,
+    id, key: o.key, name: o.name || sp.name, el: sp.el, jong: sp.type, pot: o.pot || 'pot_terra', trainer: o.trainer, rank: o.rank, tlv: o.tlv,
     hp: o.hp, max: o.hp, atk: o.atk, def: o.def, spd: o.spd, acc: 0, eva: 0, crit: o.crit ?? 5,
     energy: 2, energyMax: 8, kit: kitOf(o.key), eff: {},
   };

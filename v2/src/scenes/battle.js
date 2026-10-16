@@ -68,9 +68,13 @@ function infoBox(app, x0, y0, u, bar, en, mine) {
   if (S && S.frame && age < S.flash) { g.rect(x - 1, y - 1, w + 2, 1, '#ffffff'); g.rect(x - 1, y + h, w + 2, 1, '#ffffff'); g.rect(x - 1, y, 1, h, '#ffffff'); g.rect(x + w, y, 1, h, '#ffffff'); }
   let yy = y + 5;
   const tx = x + 8, bx = tx + LBL_W, right = x + w - 8, numW = g.textW(`${u.max}/${u.max}`, 'bold');
-  if (!mine) { g.text(`${u.trainer || '상대'} · ${u.rank || ''}`, tx, yy, { color: P.sub }); yy += 13; }
+  // 상대 줄 = 재배사 이름 · 재배사 레벨만(2026-10-16 사용자 "상대 상태창 위 글자 대신 적의 이름과 레벨만 — 맨 위에 리그가 나와 있으니 중복")
+  if (!mine) { const lv = u.tlv ? `Lv ${u.tlv}` : (u.rank || '').replace(/^재배사\s*/, ''); g.text(lv ? `${u.trainer || '상대'} · ${lv}` : u.trainer || '상대', tx, yy, { color: P.sub }); yy += 13; }
   g.text(u.name, tx, yy, { font: 'bold', color: u.shiny ? '#ffe8a8' : P.main });
-  g.img(icon(u.el), tx + g.textW(u.name, 'bold') + 5, yy + 1);
+  // 이름 옆 = 속성 + 종(꽃 · 덩굴 · 선인장 · 버섯 · 나무) 아이콘(같은 날 사용자 "속성 옆에 어떤 종인지 아이콘 그림 형태로")
+  const ex = tx + g.textW(u.name, 'bold') + 5, ji = u.jong && icon(u.jong);
+  g.img(icon(u.el), ex, yy + 1);
+  if (ji) g.img(ji, ex + 13, yy + 1);
   yy += 16;
   g.text('HP', tx, yy, { font: 'bold', color: P.sub });
   hpBar(g, bx, yy + 3, right - numW - 5 - bx, 7, bar, u.max, t);
@@ -169,10 +173,10 @@ export const battle = {
     const mk = (id, k, extra = {}) => { const sp = SPECIES[k]; return makeUnit(id, sp, { key: k, name: sp.name, ...protoStats(sp), ...extra }); };
     if (this.mode === 'swap3') {
       const keys = s && s.plants && s.plants.length >= 3 ? s.plants.slice(0, 3).map(x => x.key) : ['flower_grass', 'cactus_fire', 'vine_water'];
-      this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2' })), seed });
+      this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 })), seed });
     } else {
       const me = p.me && SPECIES[p.me] ? mk('me', p.me) : makeUnit('me', SPECIES.flower_grass, { key: 'flower_grass', name: '페탈로즈', hp: 220, atk: 35, def: 24, spd: 30, crit: 5 });
-      const foe = p.foe && SPECIES[p.foe] ? mk('foe', p.foe, { trainer: '코스모싹', rank: '브론즈 2' }) : makeUnit('foe', SPECIES.vine_water, { key: 'vine_water', name: '타이드바인', hp: 240, atk: 32, def: 22, spd: 26, crit: 5, trainer: '코스모싹', rank: '브론즈 2' });
+      const foe = p.foe && SPECIES[p.foe] ? mk('foe', p.foe, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 }) : makeUnit('foe', SPECIES.vine_water, { key: 'vine_water', name: '타이드바인', hp: 240, atk: 32, def: 22, spd: 26, crit: 5, trainer: '코스모싹', rank: '브론즈 2', tlv: 6 });
       this.B = makeBattle({ me, foe, seed });
     }
     const B = this.B;
@@ -377,16 +381,16 @@ export const battle = {
     if (T0.sub) g.alpha(k, () => g.text(T0.sub, 135, y + 54, { font: 'bold', color: '#eef4ff', align: 'center', outline: '#0b1322', outlineW: 3 }));
   },
   // 시간 막대: 아래 판 윗선을 따라 줄어듦(하늘 → 주황 → 빨강 깜빡), 10초 남으면 오른쪽 끝에 초
-  drawTimer(app, y) {
-    const { g, W, t } = app, v = this.v;
+  drawTimer(app, x, y, w) {
+    const { g, t } = app, v = this.v;
     if (v.phase === 'over' || v.phase === 'play' || v.phase === 'need') return;
     const pvp = this.net === 'pvp' && this.deadline, left = pvp ? this.deadline - net.now() : v.pickT0 != null ? PICK_MS - (t - v.pickT0) : null;
     if (left == null) return;
-    const r = Math.max(0, Math.min(1, left / (pvp ? PVP_MS : PICK_MS))), fw = Math.round((W - 2) * r);
-    g.rect(0, y, W, 4, '#0b1322'); g.rect(1, y + 1, W - 2, 2, '#1c2a40');
+    const r = Math.max(0, Math.min(1, left / (pvp ? PVP_MS : PICK_MS))), fw = Math.round((w - 2) * r);
+    rrect(g, x, y, w, 4, 2, '#0b1322'); g.rect(x + 1, y + 1, w - 2, 2, '#1c2a40');
     const col = r > 0.5 ? '#8ccfff' : r > 0.2 ? '#f0be7d' : Math.floor(t / 250) % 2 ? '#ff6a5a' : '#ffb4a6';
-    if (fw > 0) { g.rect(1, y + 1, fw, 2, col); g.rect(1, y + 1, fw, 1, hexMix(col, '#ffffff', 0.45)); }
-    if (left <= 10000) g.text(String(Math.max(0, Math.ceil(left / 1000))), W - 6, y - 12, { font: 'bold', color: col, align: 'right', outline: '#0b1322', outlineW: 3 });
+    if (fw > 0) { g.rect(x + 1, y + 1, fw, 2, col); g.rect(x + 1, y + 1, fw, 1, hexMix(col, '#ffffff', 0.45)); }
+    if (left <= 10000) g.text(String(Math.max(0, Math.ceil(left / 1000))), x + w, y - 13, { font: 'bold', color: col, align: 'right', outline: '#0b1322', outlineW: 3 });
   },
   tick(app) {
     const v = this.v, t = app.t;
@@ -512,24 +516,29 @@ export const battle = {
       this.drawEmotes(app);
       c.restore();
     });
+    // 아래(2026-10-16 사용자 "아래 스킬바의 배경이 별로야. 배경을 없애고 카드만 나열되는 느낌" + "스킬바와 식물/상태바의 거리가 너무 멀어 땡겨줘"):
+    //  판 배경 없이 경기장 바닥 끝 줄을 아래로 늘여 잇고, 손패 자리부터 아래로 갈수록 어둡게 → 카드는 내 체력판 바로 아래부터
+    const MY = AY + AH - boxH(true) - 40, HY = MY + boxH(true) + 12;   // HY = 손패 맨 위
+    if (bg) { g.c.imageSmoothingEnabled = false; g.c.drawImage(bg, 0, bg.height - 1, bg.width, 1, 0, AY + AH, W, H - AY - AH); }
+    else g.rect(0, AY + AH, W, H - AY - AH, '#0b0d1a');
+    const shade = g.c.createLinearGradient(0, HY - 16, 0, H);
+    shade.addColorStop(0, 'rgba(8,12,22,0)'); shade.addColorStop(0.22, 'rgba(8,12,22,0.62)'); shade.addColorStop(1, 'rgba(8,12,22,0.9)');
+    g.c.fillStyle = shade; g.c.fillRect(0, HY - 16, W, H - HY + 16);
     this.topBar(app);
     // 체력판(+ 3:3 팀 셋 표시)
     const fh = infoBox(app, 6, AY + 4, v.view.foe, v.bar.foe, v.en.foe, false);
     statusWins(g, 6, AY + 4 + fh + 3, this.statuses('foe'));
     if (this.net === 'pvp' && v.foeReady && v.phase !== 'play') { const x = 6 + BOX_W + 4, y = AY + 8; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
-    const MY = AY + AH - boxH(true) - 40;
     infoBox(app, W - 146, MY, v.view.me, v.bar.me, v.en.me, true);
-    statusWins(g, W - 146, MY + boxH(true) + 3, this.statuses('me'));
+    const mine = this.statuses('me'), rows = Math.ceil(Math.min(6, mine.length) / 3);
+    if (rows) statusWins(g, W - 146, MY - 3 - (this.mode === 'swap3' ? 13 : 0) - rows * (SW_H + 2) + 2, mine);
     if (this.mode === 'swap3') { teamPips(g, 150 + (this.net === 'pvp' ? 40 : 0), AY + 8, B.team.foe, v.view.foe); teamPips(g, W - 146, MY - 11, B.team.me, v.view.me); }
-    // 아래 판: 기술 6칸(위 = 옛 대사 상자 자리) → 기타 단추 줄
-    const PY0 = H - PANEL_H;
-    g.rect(0, PY0, W, PANEL_H, T.bg2);
-    for (let y = PY0 + 6; y < H; y += 6) g.rect(0, y, W, 1, T.bg);
-    g.rect(0, PY0, W, 1, T.ink); g.rect(0, PY0 + 1, W, 1, T.panel.frame); g.rect(0, PY0 + 2, W, 1, T.panel.frameLo);
-    this.drawTimer(app, PY0 - 1);
+    // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
-    this.hand(app, PY0, live, skipNow);
-    this.miscRow(app, PY0 + CARD_Y + CARD_H * 2 + CARD_GY + 4, live);
+    const hx = Math.round((W - CARD_W * 3 - CARD_GX * 2) / 2);
+    this.drawTimer(app, hx, HY - 8, CARD_W * 3 + CARD_GX * 2);
+    this.hand(app, HY - CARD_Y, live, skipNow);
+    this.miscRow(app, HY + CARD_H * 2 + CARD_GY + 8, live);
     if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
     if (this.info2) this.infoSheet(app);

@@ -12,7 +12,7 @@
 |---|---|---|
 | 규칙(서버·화면 공용) | `v2/src/game/catalog.js` 표 · `logic.js` 규칙 · `ops.js` 화면이 부를 수 있는 일 목록 · `fight.js` 식물→전투, 봇, 한 수, 판 모습 · `view.js` 화면 표시값 | 순수 함수(시각·난수를 밖에서 받음) |
 | 전투 엔진 | `v2/src/battle/` rules · status(버프 8종 포함) · model · team | 같은 씨앗·같은 수 → 같은 결과 |
-| 서버 | `server/index.mjs`(주소) · `auth.mjs`(계정) · `db.mjs`(SQLite) · `game.mjs`(진행·봇 판) · `rooms.mjs`(친구 대결) · `log.mjs`(플레이 기록) · `static.mjs`(게임 파일) · `report.mjs`(보고서) | Node 하나, 설치 없음 |
+| 서버 | `server/api.mjs`(모든 `/api/*` 길 안내 — 요청 → `{status, body}`, 두 판 공용) · `schema.mjs`(표) · `auth.mjs`(계정) · `game.mjs`(진행·봇 판) · `rooms.mjs`(친구 대결) · `log.mjs`(플레이 기록) · `report.mjs`(보고서) / PC 껍데기 `index.mjs`(주소) · `db.mjs`(node:sqlite) · `static.mjs`(게임 파일) / Cloudflare 껍데기 `cf/src/worker.js`(앞단 + Durable Object `Hub`) · `cf/src/dodb.js`(DO SQLite) · `cf/build.mjs`(게임 파일 모으기) | PC = Node 하나, 설치 없음 · 친구용 = https://pulloseum.getchat.workers.dev(`cf/배포.md`) |
 | 화면 | `v2/src/net/api.js`(서버와 이야기) · `core/form.js`(글 입력 판) · `scenes/`(title·starter·home·nursery·plant·bag·shop·market·explore·storage·matching·battle·result·room·popups) | 캔버스 도트 + 입력만 DOM |
 
 - **봇 판 = 서버가 한 턴씩 풂**: 서버가 씨앗·상대를 정해 저장, 화면은 고른 수만 보냄 → 서버가 저장된 수를 다시 돌려 판을 세우고 새 수를 넣음. 화면은 씨앗을 모름(미리 계산해 이기는 수 찾기 불가). 새로고침·서버 재시작에도 판이 이어짐(2시간 안). 기권·버림 = 진 판(보상 없음).
@@ -67,10 +67,11 @@
 - 보고서는 합계·비율만이라 저장소에 남겨도 됨(원본 기록은 `server/data/`에만). 친구들에게 "밸런스를 위해 플레이 기록을 모은다"고 한 번 알려 두는 게 좋음.
 
 ## 6. 시험
-- `node tools/test/status.mjs` 규칙 79개 · `node tools/test/team3v3.mjs` · `node tools/test/server.mjs` 서버 36개(가입 · 자동 저장 · 봇 판 끝까지 · 이어 하기 · 기권 · 친구 방 실시간 · 잘못된 요청 · 파일 노출 · 보고서) · `node tools/test/botbalance.mjs`.
+- `node tools/test/status.mjs` 규칙 79개 · `node tools/test/team3v3.mjs` · `node tools/test/server.mjs` 서버 40개(가입 · 자동 저장 · 봇 판 끝까지 · 이어 하기 · 기권 · 친구 방 실시간 · 잘못된 요청 · 파일 노출 · 보고서) · `node tools/test/botbalance.mjs`.
+- Cloudflare 판: `node cf/test_cf.mjs`(이 컴퓨터 안에서 진짜 Workers 실행기를 임시 저장소로 띄우고 같은 서버 시험 39개 — 보고서만 빠짐) · 올린 뒤 `node cf/pagecheck.mjs https://pulloseum.getchat.workers.dev`(게임 화면이 뜨고 빠진 파일·오류·실패 요청 0인지).
 - 혼자 친구 대결 시험: 방을 만들고 `node tools/test/pvpfriend.mjs --code 코드 --base http://localhost:8788`(가짜 친구가 들어와 준비·대결).
 - 화면 촬영: `node tools/shots/v2shots.mjs --label 이름 --scale 2` — 새 촬영 = 처음 식물 · 레벨업 상자(닫힘·열림) · 설정 · 개체값 · 지운 기술 · 접목 · 효과 설명 · 암시장 · 방(로비·안) · 수확 판 · 매칭.
 
 ## 7. 다음(남은 것)
-- 바깥 친구 접속: 같은 와이파이 = `--host 0.0.0.0`, 인터넷 = 클라우드플레어 빠른 터널(`server\bin\cloudflared.exe` 받음 · `start.ps1 -Tunnel`, 주소는 켤 때마다 바뀌고 이 PC가 켜져 있어야 함). 남은 것 = 고정 주소·PC 없이 돌리는 서버 호스팅.
+- ✅ 바깥 친구 접속(2026-10-16 사용자 "ㅇㅇ 올려"): **https://pulloseum.getchat.workers.dev** — Cloudflare 무료 요금제(앞단 Worker + Durable Object `Hub` 하나의 SQLite), PC를 꺼도 늘 같은 주소. 저장소는 PC 서버와 따로(이 PC 저장소엔 계정 0개라 옮길 것 없었음). 화면·서버 코드를 바꾸면 `cf/배포.md`대로 다시 올림. 옛 빠른 터널(`start.ps1 -Tunnel`)은 이제 안 씀.
 - 구글 등 로그인 연결(`provider`) · 3:3 친구 대결 · 탐사선 강화 · 단계별 리그·시즌 · 출시 빌드(Capacitor)에 v2 연결 · 옛 `index.html`과의 관계 정리.

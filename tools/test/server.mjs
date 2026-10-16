@@ -1,14 +1,16 @@
 // 서버 통째 시험(화면 없이): 임시 저장소로 서버를 켜고 → 가입 둘 · 양육 · 봇 판 끝까지 · 이어 하기 · 기권 · 친구 대결 방(실시간 알림) · 잘못된 요청
-//   node tools/test/server.mjs
+//   node tools/test/server.mjs            (Node 서버를 임시 저장소로 켜서)
+//   node tools/test/server.mjs --base URL (이미 떠 있는 서버 — Cloudflare 판 시험 cf/test_cf.mjs 가 씀, 보고서 시험은 건너뜀)
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const PORT = 18000 + Math.floor(Math.random() * 1000), BASE = `http://127.0.0.1:${PORT}`;
+const EXT = (i => (i > 0 ? process.argv[i + 1] : null))(process.argv.indexOf('--base'));
+const PORT = 18000 + Math.floor(Math.random() * 1000), BASE = EXT || `http://127.0.0.1:${PORT}`;
 const dir = mkdtempSync(join(tmpdir(), 'pullo-'));
-const srv = spawn(process.execPath, ['--no-warnings', 'server/index.mjs', '--port', String(PORT), '--db', join(dir, 't.db')], { stdio: ['ignore', 'pipe', 'pipe'] });
-let out = ''; srv.stdout.on('data', d => { out += d; }); srv.stderr.on('data', d => { out += d; });
+const srv = EXT ? null : spawn(process.execPath, ['--no-warnings', 'server/index.mjs', '--port', String(PORT), '--db', join(dir, 't.db')], { stdio: ['ignore', 'pipe', 'pipe'] });
+let out = ''; if (srv) { srv.stdout.on('data', d => { out += d; }); srv.stderr.on('data', d => { out += d; }); }
 let fails = 0, n = 0;
 const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -142,11 +144,11 @@ try {
   ok((await call('/api/me', null, L1.token)).status === 401, '로그아웃한 열쇠는 못 씀');
   ok((await fetch(BASE + '/v2/')).status === 200 && (await fetch(BASE + '/server/data/t.db')).status === 404 && (await fetch(BASE + '/v2/../server/db.mjs')).status === 404, '게임 파일만 내보냄(저장소·서버 코드는 못 받음)');
   // ── 플레이 기록 보고서 ──
-  const rep = spawnSync(process.execPath, ['--no-warnings', 'server/report.mjs', '--db', join(dir, 't.db')], { encoding: 'utf8' });
-  ok(rep.status === 0 && /봇 판/.test(rep.stdout) && /친구 대결 1판|대결 1판/.test(rep.stdout), '플레이 기록 보고서' + (rep.status ? '\n' + rep.stderr : ''));
-  if (process.argv.includes('--report')) console.log(rep.stdout);
+  const rep = EXT ? null : spawnSync(process.execPath, ['--no-warnings', 'server/report.mjs', '--db', join(dir, 't.db')], { encoding: 'utf8' });
+  if (rep) ok(rep.status === 0 && /봇 판/.test(rep.stdout) && /친구 대결 1판|대결 1판/.test(rep.stdout), '플레이 기록 보고서' + (rep.status ? '\n' + rep.stderr : ''));
+  if (rep && process.argv.includes('--report')) console.log(rep.stdout);
 } catch (e) { fails++; console.log('오류', e); }
-srv.kill();
+if (srv) srv.kill();
 await sleep(200);
 try { rmSync(dir, { recursive: true, force: true }); } catch {}
 if (fails) console.log('--- 서버 출력 ---\n' + out);
