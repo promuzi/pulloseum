@@ -286,21 +286,25 @@ function downV(A, t, len, v) {   // 디스플레이 꺼지는 소리(처음 화�
   return 2;
 }
 // 조율(오케스트라가 A에 맞추는 '우우웅'): 오보에 A가 먼저, 여러 악기가 조금씩 어긋난 음으로 들어와 흔들리다 같은 음 · 5도로 모이며
-//  화분이 나타나는 때(1.45마디)까지 쭉 커지고(거름망도 열려 밝아짐) → 그 순간 바람에 날리듯 흩어짐(2026-10-17 사용자 "서서히 줄지 않고 쭉 커지다가 흩어지든 날리는 느낌"):
+//  전등이 켜져 화분이 보이는 때(3마디 점화 '두드')까지 쭉 커지고(거름망도 열려 밝아짐 · 끝 마디에 높은 현 · 튜바 · 트럼펫이 더해지고 공기 소리가 차오름 = 클라이맥스) → 그 순간 바람에 날리듯 흩어짐
+//  (2026-10-17 사용자 "서서히 줄지 않고 쭉 커지다가 흩어지든 날리는 느낌" → "클라이막스로 커지기 전에 꺼지는 느낌 · 좀 더 늘려줘" = 2마디 → 3마디):
 //  음마다 조금씩 다른 때에 위 · 아래로 갈라지며(전체는 멀어지듯 조금 낮아짐) 좌우로 퍼지고 빠르게 사라짐 + 바람 소리(잡음 거름망이 위로 쓸려 올라가며 왼쪽 → 오른쪽)
-const TUNE = [   // [음, 파형, 거름망, 들어오는 때(초), 처음 어긋남(센트), 세기, 떨림(센트)]
-  ['A4', 'pulse25', ['bandpass', 1300, 1.3], 0.15, 7, 0.1, 4],      // 오보에(조율 시작음)
-  ['A4', 'square', ['lowpass', 1700, 0.7], 0.85, -26, 0.05, 0],     // 클라리넷
-  ['A4', 'sawtooth', ['lowpass', 2600, 0.6], 1.15, 18, 0.042, 9],   // 바이올린 둘째
-  ['E5', 'sawtooth', ['lowpass', 3200, 0.6], 1.55, 29, 0.032, 10],  // 바이올린 첫째(A–E 5도)
-  ['A3', 'sawtooth', ['lowpass', 1500, 0.6], 1.85, -20, 0.05, 7],   // 비올라
-  ['D3', 'sawtooth', ['lowpass', 900, 0.6], 2.25, 15, 0.055, 6],    // 첼로(D–A 5도)
-  ['A2', 'sawtooth', ['lowpass', 520, 0.7], 2.55, -12, 0.06, 0],    // 콘트라베이스
-  ['A3', 'triangle', ['lowpass', 1200, 0.5], 2.85, 9, 0.05, 0],     // 호른
+const TUNE = [   // [음, 파형, 거름망, 들어오는 때(초), 처음 어긋남(센트), 세기, 떨림(센트)] — 3마디(8초) 동안 차례로 들어와 쌓임
+  ['A4', 'pulse25', ['bandpass', 1300, 1.3], 0.2, 7, 0.1, 4],       // 오보에(조율 시작음)
+  ['A4', 'square', ['lowpass', 1700, 0.7], 1.1, -26, 0.05, 0],      // 클라리넷
+  ['A4', 'sawtooth', ['lowpass', 2600, 0.6], 1.6, 18, 0.042, 9],    // 바이올린 둘째
+  ['E5', 'sawtooth', ['lowpass', 3200, 0.6], 2.2, 29, 0.032, 10],   // 바이올린 첫째(A–E 5도)
+  ['A3', 'sawtooth', ['lowpass', 1500, 0.6], 2.7, -20, 0.05, 7],    // 비올라
+  ['D3', 'sawtooth', ['lowpass', 900, 0.6], 3.3, 15, 0.055, 6],     // 첼로(D–A 5도)
+  ['A2', 'sawtooth', ['lowpass', 520, 0.7], 3.8, -12, 0.06, 0],     // 콘트라베이스
+  ['A3', 'triangle', ['lowpass', 1200, 0.5], 4.3, 9, 0.05, 0],      // 호른
+  ['A5', 'sawtooth', ['lowpass', 4200, 0.6], 5.0, 22, 0.022, 11],   // 바이올린 높은 A(끝 마디 — 밝게)
+  ['A1', 'sawtooth', ['lowpass', 300, 0.7], 5.6, -10, 0.07, 0],     // 튜바(무게)
+  ['E4', 'square', ['bandpass', 1500, 1.0], 6.2, 14, 0.032, 5],     // 트럼펫(5도 — 클라이맥스)
 ];
 function droneV(A, t, len) {
   const ac = A.ac, dg = ac.createGain(); dg.gain.value = 1; dg.connect(A.drone); A.droneNow = dg;
-  const rel = t + len * 0.725, pan = () => (ac.createStereoPanner ? ac.createStereoPanner() : null);   // 흩어지는 때 = 처음 화면 INTRO.reveal(1.45마디 = 이 소리 길이 2마디의 0.725)
+  const rel = t + len - 0.02, pan = () => (ac.createStereoPanner ? ac.createStereoPanner() : null);   // 흩어지는 때 = 전등 점화(처음 화면 INTRO.ign = 3마디 = 이 소리 길이)
   let nodes = 1;
   TUNE.forEach(([nm, w, flt, at, c0, v, vib], i) => {
     const f = NOTE(nm), o = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain(), pn = pan(), t1 = t + at;
@@ -315,10 +319,11 @@ function droneV(A, t, len) {
     o.frequency.exponentialRampToValueAtTime(f * 2 ** ((dir * (50 + 30 * (i % 3)) - 70) / 1200), end);   // 흩어짐
     if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 4.8 + (at % 1); lg.gain.value = f * (2 ** (vib / 1200) - 1); l.connect(lg); lg.connect(o.frequency); l.start(t1); l.stop(end); nodes += 2; }
     fl.type = flt[0]; fl.Q.value = flt[2];
-    fl.frequency.setValueAtTime(flt[1] * 0.75, t1); fl.frequency.linearRampToValueAtTime(flt[1] * 1.6, rel);   // 커지며 밝아짐
-    fl.frequency.exponentialRampToValueAtTime(flt[1] * 3, end);                                                   // 흩어질 때 위로 쓸려 얇아짐
-    g.gain.setValueAtTime(0, t1); g.gain.linearRampToValueAtTime(v * 1.2, t1 + 0.7); g.gain.linearRampToValueAtTime(v * 2.8, rel);   // 쭉 커짐(줄지 않음)
-    g.gain.setValueAtTime(v * 2.8, d); g.gain.exponentialRampToValueAtTime(0.0004, end);
+    fl.frequency.setValueAtTime(flt[1] * 0.75, t1); fl.frequency.linearRampToValueAtTime(flt[1] * 2, rel);   // 커지며 밝아짐
+    fl.frequency.exponentialRampToValueAtTime(flt[1] * 3.2, end);                                               // 흩어질 때 위로 쓸려 얇아짐
+    const tA = t1 + 0.7, tB = Math.max(tA + 0.1, rel - 2.4);
+    g.gain.setValueAtTime(0, t1); g.gain.linearRampToValueAtTime(v * 1.2, tA); g.gain.linearRampToValueAtTime(v * 1.8, tB); g.gain.exponentialRampToValueAtTime(v * 3.2, rel);   // 쭉 커짐 → 끝에서 더 빠르게(클라이맥스)
+    g.gain.setValueAtTime(v * 3.2, d); g.gain.exponentialRampToValueAtTime(0.0004, end);
     o.connect(fl); fl.connect(g);
     if (pn) { pn.pan.setValueAtTime(0, d); pn.pan.linearRampToValueAtTime(dir * (0.35 + 0.18 * (i % 3)), end); g.connect(pn); pn.connect(dg); } else g.connect(dg);
     o.start(t1); o.stop(end + 0.05);
@@ -328,6 +333,12 @@ function droneV(A, t, len) {
   n.buffer = A.noise; n.loop = true; nf.type = 'bandpass'; nf.frequency.value = 480; nf.Q.value = 0.7;
   ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(0.035, rel); ng.gain.setTargetAtTime(0, rel, 0.12);
   n.connect(nf); nf.connect(ng); ng.connect(dg); n.start(t, nOff(t)); n.stop(rel + 1);
+  // 공기 소리(끝 2초): 잡음 거름망이 위로 올라가며 차오름 — 클라이맥스로 밀어 올림
+  const rn = ac.createBufferSource(), rf = ac.createBiquadFilter(), rg = ac.createGain(); nodes += 3;
+  rn.buffer = A.noise; rn.loop = true; rf.type = 'bandpass'; rf.Q.value = 0.9;
+  rf.frequency.setValueAtTime(600, rel - 2.2); rf.frequency.exponentialRampToValueAtTime(2600, rel);
+  rg.gain.setValueAtTime(0.0004, rel - 2.2); rg.gain.exponentialRampToValueAtTime(0.05, rel); rg.gain.setTargetAtTime(0, rel, 0.08);
+  rn.connect(rf); rf.connect(rg); rg.connect(dg); rn.start(rel - 2.2, nOff(rel - 2)); rn.stop(rel + 0.6);
   // 바람(흩어지는 순간): 잡음 거름망이 낮은 데서 높은 데로 쓸려 올라가며 왼쪽 → 오른쪽으로 지나감
   const wn = ac.createBufferSource(), wf = ac.createBiquadFilter(), wg = ac.createGain(), wp = pan(); nodes += wp ? 4 : 3;
   wn.buffer = A.noise; wn.loop = true; wf.type = 'bandpass'; wf.Q.value = 1.1;
@@ -561,15 +572,15 @@ const styleOf = s => (STATES[s] && STATES[s].style) || 'hip';
 
 // 곡: bar(곡 안 마디 번호, 지금 상태, 상태 정의) → { L: 층 → 16칸, ch 화음, nx 다음 화음, base 전등 바탕 글자, ramp 층 → [마디 첫 칸 세기, 끝 칸 세기] }
 const SONGS = {
-  // 처음 화면: 0~1마디 조율 → 2마디 전등 점화('두드 두드등' — 음마다 전등이 따라 켜짐) → 3마디부터 베이스 + 전등 지지직 되풀이, 천천히 킥
+  // 처음 화면: 0~2마디 조율(끝까지 커짐) → 3마디 전등 점화('두드 두드등' — 음마다 전등이 따라 켜짐 · 조율이 흩어짐) → 4마디부터 베이스 + 전등 지지직 되풀이, 천천히 킥
   title: {
     swing: 0.56, crkVis: 0.4,
     bar(sb) {
       if (sb < 0) return { L: {}, base: 'a' };
       if (sb === 0) return { L: { drone: P('X . . . . . . . . . . . . . . .') }, base: 'a' };
-      if (sb === 1) return { L: {}, base: 'a' };
-      if (sb === 2) return { L: { bass: P('D2^ . D2_ . . . D2^ . D2_ . D2/^ - - - - -'), ign: P('1 . 2 . . . 1 . 2 . 3 . . . . .'), hum: P('. . . . . . . . . . X - - - - -') }, base: 'a' };
-      const lb = sb - 3, ci = lb % 4, L = {};
+      if (sb === 1 || sb === 2) return { L: {}, base: 'a' };
+      if (sb === 3) return { L: { bass: P('D2^ . D2_ . . . D2^ . D2_ . D2/^ - - - - -'), ign: P('1 . 2 . . . 1 . 2 . 3 . . . . .'), hum: P('. . . . . . . . . . X - - - - -') }, base: 'a' };
+      const lb = sb - 4, ci = lb % 4, L = {};
       L.bass = P(lb % 8 === 7 ? TITLE_FILL : BASS_A[ci]);
       L.crk = P(lb % 8 === 7 ? 'J . . . j . . . . . . . J . t t' : ci === 3 ? '. . . . j . . . . . . . J . t t' : '. . . . j . . . . . . . J . . .');
       if (lb >= 1) L.kick = P(lb < 3 ? 'o . . . . . . . . . . . . . . .' : lb < 5 ? 'x . . . . . . . . . x . . . . .' : D.kick1);   // 천천히 킥: 한 번 → 두 번 → 붐뱁 킥
@@ -782,8 +793,8 @@ export class Conductor {
   skipIntro() {
     if (this.cur.state !== 'title') return false;
     const nb = Math.ceil(this.n / 16), sb = nb - this.cur.start;
-    if (sb > 2) return false;
-    this.cur.start = nb - 2; this.planB = -1;
+    if (sb > 3) return false;
+    this.cur.start = nb - 3; this.planB = -1;
     this.out({ t: this.stepT(this.n), i: 'cut' });
     return true;
   }
@@ -859,7 +870,7 @@ export class Conductor {
       if (vis > 0) this.lampAdd(t, c[0], 'm', vis);
       return this.out({ t, i: 'crk', pat: c[0], ms: LAMP_MS, v: c[1] * 0.5 * m });
     }
-    if (ly === 'drone') return this.out({ t, i: 'drone', len: BAR * 2 });
+    if (ly === 'drone') return this.out({ t, i: 'drone', len: BAR * 3 });
     if (ly === 'hum') return this.out({ t, i: 'hum', len: len * STEP, v: 0.07 * m });
     if (ly === 'fx') {
       if (nm === 'C') return this.out({ t, i: 'crash', v: 0.2 * m });
