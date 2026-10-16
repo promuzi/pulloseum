@@ -62,7 +62,7 @@ Android Studio로 하려면 `File > Open`에서 `C:\dev\pulloseum\android`를 �
 - [ ] 타깃 API: 출시 시점 구글 요구치를 콘솔에서 확인(지금 `variables.gradle` = 35. 2026-08-31부터 새 앱은 36을 요구할 가능성이 큼 → Capacitor 판 올림이 필요할 수 있음).
 - [ ] 아이콘 · 시작 화면(지금은 Capacitor 기본) — 그림은 코덱스, `android/app/src/main/res/mipmap-*` · `drawable*`.
 - [ ] 스토어 자산: 앱 아이콘 512 · 그래픽 이미지 1024×500 · 휴대전화 스크린샷 2장 이상 · 짧은 설명 · 자세한 설명.
-- [x] **개인정보처리방침 주소** = `https://pulloseum.getchat.workers.dev/v2/privacy.html`(원본 `v2/privacy.html` — 수집 항목 · 위탁(Cloudflare · Google) · 계정 지우기 · 문의 이메일, 책임자 = '풀로세움 운영자'). 게임 안 설정 창에도 단추가 있음(플레이 정책 — 앱 안에서도 볼 수 있어야 함). 수집 항목이 바뀌면 이 페이지도 같이 고친다.
+- [x] **개인정보처리방침 주소** = `https://pulloseum.getchat.workers.dev/v2/privacy`(원본 `v2/privacy.html` — 수집 항목 · 위탁(Cloudflare · Google) · 계정 지우기 · 문의 이메일, 책임자 = '풀로세움 운영자'). 게임 안 설정 창에도 단추가 있음(플레이 정책 — 앱 안에서도 볼 수 있어야 함). 수집 항목이 바뀌면 이 페이지도 같이 고친다.
 - [ ] 데이터 보안 양식(위 수집 항목 · 암호화 전송 · 계정 삭제 방법), 콘텐츠 등급 설문, 광고 없음 · 앱 내 결제 없음 표시.
 - [x] 계정 삭제 길(구글 정책 — 앱 안 + 웹에서 삭제 요청 방법): 설정 → '계정 지우기'(아이디 계정 = 비밀번호 · 구글 계정 = '지우기') → 서버 `POST /api/account/delete`가 계정 · 로그인 열쇠 · 저장 · 봇 판 · 플레이 기록을 모두 지움(시험 `tools/test/google.mjs`). 콘솔의 '웹 삭제 요청 주소' = 게임 주소 `https://pulloseum.getchat.workers.dev/v2/` + "로그인 → 설정 → 계정 지우기" 안내.
 

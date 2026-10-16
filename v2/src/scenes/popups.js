@@ -159,7 +159,7 @@ function settingsSheet(app) {
   if (!net.offline && u) button(app, 'st_del', x + 14, yy, half, 26, '계정 지우기', { style: 'off', onTap: () => { app.sheet = null; deleteForm(app); } });
   // 개인정보처리방침(플레이 정책 — 앱 안에서도 볼 수 있어야 함). 앱 웹뷰에선 같은 창, 브라우저에선 새 탭
   button(app, 'st_priv', x + 14 + half + 8, yy, half, 26, '개인정보처리방침', { style: 'off', onTap: () => {
-    const url = location.origin + '/v2/privacy.html';
+    const url = location.origin + '/v2/privacy';   // Cloudflare가 privacy.html → privacy로 넘김
     if (/PulloseumApp/.test(navigator.userAgent)) location.href = url; else window.open(url, '_blank', 'noopener');
   } });
   button(app, 'st_close', W / 2 - 50, y + h - 42, 100, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { app.sheet = null; } });
