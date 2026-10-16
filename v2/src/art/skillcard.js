@@ -33,7 +33,7 @@ export const ART_W = 58, ART_H = 52;   // 그림 칸(논리 칸) — 코덱스 �
 
 // ── 스킬 그림(코덱스 원화 → 도트). 없으면 임시 그림 ──
 export const SKILLART = {};
-export const SKILLART_NAMES = ['u_petal_3', 'u_ember_3'];   // 2026-10-16 코덱스 샘플 두 장(꽃잎 칼날 · 불덩이)
+export const SKILLART_NAMES = ['u_petal_3', 'u_ember_3', 'basic', 'guard', 'evade'];   // 2026-10-16 코덱스: 샘플 둘(꽃잎 칼날 · 불덩이) + 기본기 셋(잎사귀 치기 · 잎 방패 · 잎 피하기 — 모든 식물 공용)
 const NAME_ID = Object.fromEntries(Object.entries(SKILLS).map(([id, s]) => [s.name, id]));   // 시험판 기술(model.js s1·s2)도 이름으로 그림을 찾음
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadSkillArt(base = '../assets/v2/skills/') {

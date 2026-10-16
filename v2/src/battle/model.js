@@ -99,7 +99,7 @@ export function playTurn(B, mySkill) {
 }
 // 두 쪽이 다 고른 한 턴(PvP — 서버가 두 사람 선택으로 풂, 봇 판도 이걸 씀). 기술은 id 또는 기술 객체
 export function playTurnVs(B, mySkill, foeSkill) {
-  const T = B.turn, pickOf = (u, s) => { const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k) ? k : u.kit[0]; };
+  const T = B.turn, pickOf = (u, s) => { if (s === 'rest' || s === REST) return REST; const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k) ? k : u.kit[0]; };   // 'rest' = 넘어감(시간 초과)
   const me = pickOf(B.me, mySkill);
   foeSkill = pickOf(B.foe, foeSkill);
   const before = { me: B.me.hp, foe: B.foe.hp };

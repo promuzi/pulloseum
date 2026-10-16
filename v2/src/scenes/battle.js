@@ -7,22 +7,22 @@ import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx } from '../battle/status.js';
-import { STATUS, STATUS_DESC, SW_ON, swStyle } from '../art/statusLook.js';
+import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
+import { ELEMENT } from '../art/palette.js';
 import { button, rrect } from '../art/ui.js';
 import { cardFront, cardSlot, renderFaces, drawFlip } from '../art/skillcard.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
-import { ledBoard, LED } from '../art/led.js';
 import { glyphH, wrap } from '../core/text.js';
 import { battleFromView, applyView } from '../game/fight.js';
 import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
-import { ga, eun, eul } from '../core/josa.js';
+import { ga, eul } from '../core/josa.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
 //   선공 판정 → (자세) → 공격 연출(attack.mjs 장마다) → 맞는 장에 판정·피해 → 되받아치기 → 턴 끝 효과·기력 +1 → 다음 턴 / 승패
-// 화면(2026-10-16 사용자): 안내 문구 = 따로 창 없이 두 식물 사이 가운데 전광판(LED)으로 팍 · 기술 칸 = 옛 대사 상자 자리로 올림 · 빈 아래 줄 = 기타 단추(교체 · 효과 · 감정 · 기권)
+// 화면(2026-10-16 사용자): 안내 문구 = 가운데 전광판 없이 식물 머리 위 짧은 글자·리본(아래 '전투 글자 연출') · 기술 = 카드 여섯 장 · 아래 줄 = 기타 단추(교체 · 효과 · 감정), 기권 = 위 띠 왼쪽 작은 깃발
 //  체력판 = 'HP'·'MP' 이름 왼쪽, 막대·칸 왼쪽 맞춤, 숫자만 오른쪽 · 효과 창 = 글자·아이콘 같은 줄, 위아래 같은 간격.
 const PANEL_H = 228, AY = 24;
 // 손패(2026-10-16 사용자 "스킬도 세로로 긴 카드 — 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌" → "카드가 너무 커, 기본 평타·방어·회피도 그렇게 하지 마"):
@@ -115,8 +115,13 @@ const FX_MSG = {
 const CURE_FIRE = { frozen: '얼음이 녹았다', chill: '냉기가 녹았다', wet: '몸이 말랐다', spore: '포자가 탔다', bind: '덩굴이 탔다', leech: '기생 씨앗이 탔다', root: '뿌리가 풀렸다' };
 const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서' };
 const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서' }, SKIP_AUTO_MS = 1100;
+// 전투 글자 연출(2026-10-16 사용자 "가운데 문구가 이상해. 네모난 배경색에 무엇을 할까? 이것도 어색해. 일일이 이런 문구 넣지 마" → "출력 문구 목록 정리 — 효과·폰트·연출"):
+//  가운데 네모 전광판을 없애고 글자는 식물 머리 위에서만 짧게 — 기술 이름 = 리본, 피해 = 큰 숫자(치명 = 더 크게 · 흔들림), 판정·효과 = 한두 낱말, 승패 = 가운데 큰 글자(네모 없이).
+//  목록·글꼴·움직임 = docs/superpowers/specs/2026-10-16-v2-battle-text-direction.md
+const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기절해서 쉼' };
+// 시간 막대(같은 날 사용자 "타이머 역할하는 바도 넣어주고. 안 하면 넘어가는 걸로"): 고르는 차례마다 봇 판 30초 · 친구 대결 = 서버 40초, 다 되면 넘어감(쉬기)
+const PICK_MS = 30000, PVP_MS = 40000;
 // 전광판 글자색(사건 종류별)
-const TONE = { turn: LED.teal, hit: LED.amber, big: LED.gold, miss: '#c8c8d0', fx: LED.violet, buff: LED.teal, heal: LED.green, skip: LED.violet, wait: LED.teal, win: LED.gold, lose: LED.red, note: LED.amber };
 
 const HURT = {
   graze: { hold: 260, drain: 380, main: 200, shake: 0, shakeMs: 0, flash: 0, col: '#f6cf8a', hi: '#fff0d0' },
@@ -152,9 +157,9 @@ export const battle = {
     const B = this.B;
     this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, led: null, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: B.turn, picked: null, uid: 0, eff: { me: listOf(B.me), foe: listOf(B.foe) }, foeReady: false };
     if (B.over) { this.v.phase = 'over'; this.v.overT0 = app.t; }
-    else if (this.mode === 'swap3' && B.need === 'me') { this.v.phase = 'need'; this.sheet = { forced: true }; this.say(app, '다음에 내보낼 식물을 골라 줘!', 'turn', true); }
+    else if (this.mode === 'swap3' && B.need === 'me') { this.v.phase = 'need'; this.sheet = { forced: true }; }
     else this.prompt(app);
-    if (boot && boot.moved) { this.v.phase = 'wait'; this.say(app, '상대를 기다리는 중…', 'wait', true); }
+    if (boot && boot.moved) this.v.phase = 'wait';
     if (this.shot) this.pick(null, B.me.kit[3]);
   },
   setupLocal(app) {
@@ -180,17 +185,17 @@ export const battle = {
     this.sheet = p.sheet ? { forced: false } : null;   // ?sheet=1 = 교체 창이 열린 채(촬영)
   },
   // 전광판: 새 글이면 팍 펼쳐짐. keep = 다음 글까지 계속, 아니면 ms 뒤 사라짐
-  say(app, text, tone = 'note', keep = false, ms = 1600) { this.v.led = { text, col: TONE[tone] || tone, t0: app ? app.t : 0, keep, ms }; },
+  // 고르는 차례 시작: 안내 글자 없이 시간 막대만 새로. 쉬는 차례면 내 식물 위에 까닭 한 마디
   prompt(app) {
-    const B = this.B;
-    if (mustSkip(B.me)) { const u = B.me; this.say(app, `${ga(u.name)} ${SKIP_STATE[u.eff.skip.src] || ''} 움직일 수 없다!`, 'skip', true); return; }
-    this.say(app, `${eun(B.me.name)} 무엇을 할까?`, 'turn', false, 1500);
+    const B = this.B, t = app ? app.t : 0;
+    this.v.pickT0 = t;
+    if (mustSkip(B.me)) this.pop('me', SKIP_POP[B.me.eff.skip.src] || '쉼', null, t, false, -16, (STATUS[B.me.eff.skip.src] || {}).col || '#c0a8ff');
   },
   // 기술 고르기 — 쉬는 차례면 '쉬기', 덩굴·도발로 막힌 칸은 못 고름
   pick(app, sk) {
     const B = this.B, v = this.v;
     if (v.phase !== 'pick') return;
-    const rest = mustSkip(B.me);
+    const rest = mustSkip(B.me) || sk === REST;   // REST = 쉬는 차례 · 시간 초과(넘어감)
     if (rest) sk = REST; else if (!sk || !canUse(B.me, sk)) return;
     v.picked = sk.id; v.autoSkipAt = null;
     v.eff = { me: listOf(B.me), foe: listOf(B.foe) };   // 이번 턴 시작 모습(계산이 끝나면 B의 효과는 이미 턴 끝 상태)
@@ -205,7 +210,6 @@ export const battle = {
     v.phase = 'wait'; v.en.me -= cost;
     const back = e => { if (e) app.toast(e.message); if (v.phase === 'wait') { v.phase = 'pick'; v.picked = null; v.en.me = B.me.energy; this.prompt(app); } };
     if (this.net === 'pvp') {
-      this.say(app, '상대를 기다리는 중…', 'wait', true);
       R.move(act, turn).catch(back);
       return;
     }
@@ -226,13 +230,13 @@ export const battle = {
     const v = this.v;
     if (type === 'foeReady') { v.foeReady = true; return; }
     if (type === 'turn') { this.deadline = data.deadline; v.foeReady = false; this.onResult(app, { turn: data.turn, view: data.view }); return; }
-    if (type === 'battle') { this.deadline = data.deadline; applyView(this.B, data.view); if (v.phase !== 'play') { this.finishTurn(app); if (data.moved && v.phase === 'pick') { v.phase = 'wait'; this.say(app, '상대를 기다리는 중…', 'wait', true); } } return; }
+    if (type === 'battle') { this.deadline = data.deadline; applyView(this.B, data.view); if (v.phase !== 'play') { this.finishTurn(app); if (data.moved && v.phase === 'pick') v.phase = 'wait'; } return; }
     if (type === 'end') {
       this.end = data; this.result = { reward: data.reward };
       if (data.state) app.state = data.state;
       if (!this.B.over) {   // 기권 · 시간 넘김 · 나감 = 쓰러뜨리지 않고 끝남
         this.B.over = data.win ? 'win' : 'lose';
-        if (v.phase !== 'play') { v.phase = 'over'; v.overT0 = app.t; this.say(app, data.win ? ({ forfeit: '상대가 기권했다!', timeout: '상대가 시간을 넘겼다!', left: '상대가 나갔다!' }[data.why] || '이겼다!') : ({ forfeit: '기권했다…', timeout: '시간을 넘겨 졌다…', left: '연결이 끊겨 졌다…' }[data.why] || '졌다…'), data.win ? 'win' : 'lose', true); }
+        if (v.phase !== 'play') { v.phase = 'over'; v.overT0 = app.t; this.title(app, data.win, data.win ? ({ forfeit: '상대가 기권했다', timeout: '상대가 시간을 넘겼다', left: '상대가 나갔다' }[data.why] || '') : ({ forfeit: '기권했다', timeout: '시간을 넘겼다', left: '연결이 끊겼다' }[data.why] || '')); }
       }
     }
   },
@@ -253,7 +257,7 @@ export const battle = {
   forfeit(app) {
     ask(app, '기권할까요?', this.net === 'pvp' ? '이 판은 진 것으로 남아요' : '진 판으로 남고 보상이 없어요', () => {
       if (this.net === 'pvp') { R.forfeit().catch(e => app.toast(e.message)); return; }
-      if (this.net === 'bot') { bot.forfeit(app, this.id).then(r => { this.result = { reward: r.reward }; this.B.over = 'lose'; this.v.phase = 'over'; this.v.overT0 = app.t - 900; this.say(app, '기권했다…', 'lose', true); }).catch(e => app.toast(e.message)); return; }
+      if (this.net === 'bot') { bot.forfeit(app, this.id).then(r => { this.result = { reward: r.reward }; this.B.over = 'lose'; this.v.phase = 'over'; this.v.overT0 = app.t - 900; this.title(app, false, '기권했다'); }).catch(e => app.toast(e.message)); return; }
       app.go('home', {}, 'shutter');
     }, '기권');
   },
@@ -271,9 +275,9 @@ export const battle = {
       if (e.t === 'switch') out.push(this.switchStep(e));
       else if (e.t === 'faint') out.push({ kind: 'faint', ms: 900, who: e.who, msg: `${ga(e.name)} 쓰러졌다!`, tone: e.who === 'me' ? 'lose' : 'win' });
       else if (e.t === 'first') out.push({ kind: 'first', ms: 750, who: e.who, msg: `${ga(nm(e.who))} 먼저 움직인다!`, tone: 'note' });
-      else if (e.t === 'stance') out.push({ kind: 'stance', ms: 950, who: e.who, stance: e.kind, active: e.active, msg: `${nm(e.who)}의 ${sk(e.who).name}!` + (e.active ? '' : ' 하지만 먼저라 막을 게 없다'), tone: 'note' });
+      else if (e.t === 'stance') out.push({ kind: 'stance', ms: 950, who: e.who, skill: sk(e.who), stance: e.kind, active: e.active, msg: `${nm(e.who)}의 ${sk(e.who).name}!` + (e.active ? '' : ' 하지만 먼저라 막을 게 없다'), tone: 'note' });
       else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
-      else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
+      else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!`, tone: 'hit' });
       else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff; out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
@@ -287,7 +291,7 @@ export const battle = {
       else if (e.t === 'heal') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${ga(e.name)} 체력을 빨아들였다!`, tone: 'heal' });
       else if (e.t === 'regen') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${e.name}의 체력이 재생된다`, tone: 'heal' });
       else if (e.t === 'reflect') out.push({ kind: 'reflect', ms: 750, ev: e, side: e.to, msg: `가시에 찔렸다! ${nm(e.to)}도 아프다`, tone: 'hit' });
-      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 에너지가 차지 않았다` : `그늘 때문에 ${e.name}의 에너지가 차지 않았다`, tone: 'note' });
+      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 에너지가 차지 않았다` : `그늘 때문에 ${e.name}의 에너지가 차지 않았다`, tone: 'note' });
       else if (e.t === 'expire') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
     }
     out.push({ kind: 'end', ms: 450 });
@@ -296,7 +300,17 @@ export const battle = {
   startStep(st, t, app) {
     const v = this.v, B = this.B;
     if (!st) return;
-    if (st.msg) v.led = { text: st.msg, col: TONE[st.tone] || st.tone || LED.amber, t0: t, keep: true };
+    // 글자(가운데 전광판 없음): 기술 이름 = 쓰는 식물 위 리본, 나머지 = 머리 위 한두 낱말(st.msg 문장은 목록·기록용으로만 남김)
+    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance') && st.skill) this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms);
+    if (st.kind === 'counter') this.ribbon(st.who, '되받아치기', null, t, st.ms);
+    if (st.kind === 'switch') this.ribbon(st.who, st.toU.name, st.toU.el, t, st.ms);
+    if (st.kind === 'first') this.pop(st.who, '먼저!', null, t, false, -16, '#8ccfff');
+    if (st.kind === 'stance' && !st.active) this.pop(st.who, '헛자세', 'dim', t, false, -16);
+    if (st.kind === 'fxnote') this.pop(st.side, st.ev.t === 'immune' ? '면역' : '버팀!', st.ev.t === 'immune' ? 'dim' : null, t, false, -16, st.ev.t === 'immune' ? null : '#8ccfff');
+    if (st.kind === 'cure') this.pop(st.side, st.ev.why === 'water' ? '화상 꺼짐' : CURE_FIRE[st.ev.ids[0]] || '풀림', null, t, false, -16, '#8ccfff');
+    if (st.kind === 'skipT') this.pop(st.side, SKIP_POP[st.ev.src] || '쉼', null, t, false, -16, (STATUS[st.ev.src] || {}).col || '#c0a8ff');
+    if (st.kind === 'note' && st.side) this.pop(st.side, '에너지 막힘', 'dim', t, false, -16);
+    if (st.kind === 'faint') this.pop(st.who, '쓰러짐', 'dim', t, false, -16);
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack' || st.kind === 'cast') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }
     if (st.kind === 'stance') v.stance[st.who] = { kind: st.stance, active: st.active };
@@ -330,16 +344,53 @@ export const battle = {
     const great = e.tier !== 'miss' && elemMult(st.skill.el, dEl) > 1, maxHp = (v.view[st.to] || this.B[st.to]).max;
     if (e.tier !== 'miss') {
       const kind = e.tier === 'crit' ? 'crit' : (great || e.dmg >= maxHp * 0.25) ? 'big' : (e.tier === 'graze' || e.guard) ? 'graze' : 'hit';
-      if (e.dmg > 0) { this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true); }
+      if (e.dmg > 0) { this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true, 0, null, e.tier === 'crit' ? 'crit' : null); }
     }
-    this.pop(st.to, label, tone, t, false, -16);
+    if (e.tier !== 'hit') this.pop(st.to, label, tone, t, false, e.tier === 'crit' ? -36 : -16);   // 보통 맞힘(정타)은 글자 없이 숫자만
+    if (great) this.pop(st.to, '효과 굉장!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);
+    if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
     if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; }
-    const extra = [e.evade && e.tier !== 'miss' ? '피하려 했지만 맞았다' : '', line, great ? '효과가 굉장하다!' : '', e.guard ? '방어 자세로 막았다' : '', e.absorb && !e.dmg ? '보호막이 다 막았다' : ''].filter(Boolean).join(' · ');
-    if (extra) v.led = { text: `${A.name}의 ${st.skill.name}! ${extra}`, col: e.tier === 'crit' || great ? LED.gold : e.tier === 'miss' ? TONE.miss : LED.amber, t0: t, keep: true };
   },
-  pop(who, text, tone, t, big = false, dy = 0, col = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92]; this.v.pops.push({ text, tone, t0: t, x, y: y + dy, big, col }); },
+  pop(who, text, tone, t, big = false, dy = 0, col = null, size = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92]; this.v.pops.push({ text, tone, t0: t, x, y: y + dy, big, col, size }); },
+  // 기술 이름 리본: 쓰는 식물 머리 위 속성 색 둥근 띠 + 흰 굵은 글자, 옆에서 미끄러져 들어와 그 단계 끝에 사라짐
+  ribbon(who, text, el, t, ms) { this.v.ribbon = { who, text, el, t0: t, ms: Math.max(500, ms || 0) }; },
+  drawRibbon(app) {
+    const R = this.v.ribbon; if (!R) return;
+    const { g, t } = app, age = t - R.t0; if (age > R.ms) return;
+    const E = ELEMENT[R.el] || { main: '#7f97b8', light: '#cfe0f4', dark: '#3c5474' }, w = g.textW(R.text, 'bold') + 18, h = 17;
+    const [cx, cy] = R.who === 'me' ? [PX, PY - 126] : [EX, EY - 118], slide = Math.max(0, 1 - age / 120), a = Math.min(1, age / 90) * (age > R.ms - 160 ? Math.max(0, (R.ms - age) / 160) : 1);
+    const x = Math.round(cx - w / 2 + (R.who === 'me' ? -10 : 10) * slide);
+    g.alpha(a, () => {
+      rrect(g, x, cy, w, h, 7, '#0b1322'); rrect(g, x + 1, cy + 1, w - 2, h - 2, 6, hexMix(E.dark, '#0b1322', 0.2));
+      g.rect(x + 6, cy + 1, w - 12, 1, E.light); g.rect(x + 6, cy + h - 2, w - 12, 1, hexMix(E.dark, '#000000', 0.3));
+      g.text(R.text, x + w / 2, cy + Math.round((h - glyphH('bold')) / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: '#0b1322', outlineW: 2 });
+    });
+  },
+  // 승패: 가운데 큰 글자(네모 없이) — 승리 = 금빛, 패배 = 회청, 아래 한 줄 까닭(있으면)
+  title(app, win, sub) { this.v.title = { win, sub, t0: app.t }; },
+  drawTitle(app) {
+    const T0 = this.v.title; if (!T0) return;
+    const { g, t } = app, c = g.c, k = Math.min(1, (t - T0.t0) / 220), y = Math.round(LED_CY - 30 + (1 - k) * 12), sc = c.getTransform().a || 1;
+    c.save(); c.shadowColor = T0.win ? 'rgba(255,196,70,0.75)' : 'rgba(110,150,210,0.55)'; c.shadowBlur = 16 * sc;
+    g.alpha(k, () => g.text(T0.win ? '승리!' : '패배', 135, y, { font: 'huge', color: T0.win ? '#ffd84a' : '#b4c8e2', align: 'center', outline: T0.win ? '#3a2006' : '#0e1626', outlineW: 5 }));
+    c.restore();
+    if (T0.sub) g.alpha(k, () => g.text(T0.sub, 135, y + 54, { font: 'bold', color: '#eef4ff', align: 'center', outline: '#0b1322', outlineW: 3 }));
+  },
+  // 시간 막대: 아래 판 윗선을 따라 줄어듦(하늘 → 주황 → 빨강 깜빡), 10초 남으면 오른쪽 끝에 초
+  drawTimer(app, y) {
+    const { g, W, t } = app, v = this.v;
+    if (v.phase === 'over' || v.phase === 'play' || v.phase === 'need') return;
+    const pvp = this.net === 'pvp' && this.deadline, left = pvp ? this.deadline - net.now() : v.pickT0 != null ? PICK_MS - (t - v.pickT0) : null;
+    if (left == null) return;
+    const r = Math.max(0, Math.min(1, left / (pvp ? PVP_MS : PICK_MS))), fw = Math.round((W - 2) * r);
+    g.rect(0, y, W, 4, '#0b1322'); g.rect(1, y + 1, W - 2, 2, '#1c2a40');
+    const col = r > 0.5 ? '#8ccfff' : r > 0.2 ? '#f0be7d' : Math.floor(t / 250) % 2 ? '#ff6a5a' : '#ffb4a6';
+    if (fw > 0) { g.rect(1, y + 1, fw, 2, col); g.rect(1, y + 1, fw, 1, hexMix(col, '#ffffff', 0.45)); }
+    if (left <= 10000) g.text(String(Math.max(0, Math.ceil(left / 1000))), W - 6, y - 12, { font: 'bold', color: col, align: 'right', outline: '#0b1322', outlineW: 3 });
+  },
   tick(app) {
     const v = this.v, t = app.t;
+    if (v.phase === 'pick' && this.net !== 'pvp' && !this.shot && !(this.p && this.p.phase) && v.pickT0 != null && t - v.pickT0 >= PICK_MS && !mustSkip(this.B.me)) { this.pop('me', '시간 초과', null, t, false, -16, '#f0be7d'); this.pick(app, REST); }
     if (v.phase === 'pick' && !this.shot && !(this.p && this.p.phase) && mustSkip(this.B.me)) {
       if (v.autoSkipAt == null) v.autoSkipAt = t + SKIP_AUTO_MS;
       else if (t >= v.autoSkipAt) { v.autoSkipAt = null; this.pick(app, REST); }
@@ -384,8 +435,8 @@ export const battle = {
     if (B.over) {
       v.phase = 'over'; v.overT0 = app.t;
       const win = B.over === 'win', why = this.end && this.end.why && this.end.why !== 'ko';
-      this.say(app, why ? (win ? '상대가 기권했다!' : '졌다…') : win ? (this.mode === 'swap3' ? '상대 식물을 모두 쓰러뜨렸다!' : `${ga(B.foe.name)} 쓰러졌다! 승리!`) : (this.mode === 'swap3' ? '내 식물이 모두 쓰러졌다…' : `${ga(B.me.name)} 쓰러졌다…`), win ? 'win' : 'lose', true);
-    } else if (B.need === 'me') { v.phase = 'need'; v.picked = null; this.say(app, '다음에 내보낼 식물을 골라 줘!', 'turn', true); this.sheet = { forced: true }; }
+      this.title(app, win, why ? (win ? '상대가 기권했다' : '기권했다') : win ? (this.mode === 'swap3' ? '상대 식물을 모두 쓰러뜨렸다' : `${ga(B.foe.name)} 쓰러졌다`) : (this.mode === 'swap3' ? '내 식물이 모두 쓰러졌다' : `${ga(B.me.name)} 쓰러졌다`));
+    } else if (B.need === 'me') { v.phase = 'need'; v.picked = null; this.sheet = { forced: true }; }
     else { v.phase = 'pick'; v.picked = null; this.prompt(app); }
   },
   draw(app) {
@@ -451,11 +502,13 @@ export const battle = {
         g.img(s.active ? icon(ic) : tinted(ic, T.btn.off.text), x - 5, y + 5);
       }
       c.restore();
-      for (const p of v.pops) {
-        const k = (t - p.t0) / 1100, y = Math.round(p.y - k * 16), col = p.col || { bad: '#ff6a6a', gold: '#ffd84a', dim: '#c8c8d0', sub: '#e8e0b0', main: '#ffffff' }[p.tone] || '#ffffff';
-        g.alpha(Math.min(1, (1 - k) * 2.2), () => g.text(p.text, p.x, y, { font: p.big ? 'head' : 'bold', color: col, align: 'center', outline: T.ink, outlineW: 3 }));
+      for (const p of v.pops) {   // 떠오르는 글자: 처음 0.14초 톡 튀어 오르고 1.1초 동안 올라가며 사라짐 · 치명 = 큰 금빛 숫자 + 흔들림
+        const age = t - p.t0, k = age / 1100, y = Math.round(p.y - Math.min(1, age / 140) * 5 - k * 12), col = p.col || { bad: '#ff6a6a', gold: '#ffd84a', dim: '#c8c8d0', sub: '#e8e0b0', main: '#ffffff' }[p.tone] || '#ffffff';
+        const crit = p.size === 'crit', sx = crit && age < 280 ? (Math.floor(age / 40) % 2 ? 2 : -2) : 0;
+        g.alpha(Math.min(1, (1 - k) * 2.2), () => g.text(p.text, p.x + sx, y - (crit ? 12 : 0), { font: crit ? 'big' : p.big ? 'name' : 'value', color: col, align: 'center', outline: crit ? '#3a1806' : T.ink, outlineW: crit ? 4 : 3 }));
       }
-      this.drawLed(app, 270);
+      this.drawRibbon(app);
+      this.drawTitle(app);
       this.drawEmotes(app);
       c.restore();
     });
@@ -473,6 +526,7 @@ export const battle = {
     g.rect(0, PY0, W, PANEL_H, T.bg2);
     for (let y = PY0 + 6; y < H; y += 6) g.rect(0, y, W, 1, T.bg);
     g.rect(0, PY0, W, 1, T.ink); g.rect(0, PY0 + 1, W, 1, T.panel.frame); g.rect(0, PY0 + 2, W, 1, T.panel.frameLo);
+    this.drawTimer(app, PY0 - 1);
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     this.hand(app, PY0, live, skipNow);
     this.miscRow(app, PY0 + CARD_Y + CARD_H * 2 + CARD_GY + 4, live);
@@ -546,11 +600,6 @@ export const battle = {
     g.text(`${v.turn}턴`, 47, 6, { font: 'bold', color: T.btn.second.text, align: 'center' });
     if (this.net === 'pvp') {
       g.text('친구 대결' + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
-      if (this.deadline && v.phase !== 'over') {
-        const sec = Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)), low = sec <= 10;
-        btnBody(g, W - 43, 3, 38, 18, low && Math.floor(t / 300) % 2 ? T.btn.danger : T.btn.second, true);
-        g.text(`${sec}초`, W - 24, 6, { font: 'bold', color: (low ? T.btn.danger : T.btn.second).text, align: 'center' });
-      }
     } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
     else {
       const title = I ? I.title : '새싹 브론즈 · 예선', wins = I ? I.wins : 1, losses = I ? I.losses : 0;
@@ -567,16 +616,6 @@ export const battle = {
     list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });
     const gap = 6, w = Math.floor((W - 16 - gap * (list.length - 1)) / list.length);
     list.forEach((b, i) => button(app, b.id, 8 + i * (w + gap), y, i === list.length - 1 ? W - 16 - (w + gap) * (list.length - 1) : w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
-  },
-  // 전광판: 두 식물 사이 가운데 — 새 글이면 가운데 줄에서 위아래로 팍 펼쳐지고 테가 번쩍, 고르는 차례 안내는 잠깐 뒤 사라짐
-  drawLed(app, W = app.W) {
-    const L = this.v.led; if (!L) return;
-    const { g, t } = app, age = app.pxScale ? 400 : Math.max(0, t - L.t0);   // 촬영(한 장)은 다 펼친 모습
-    if (!L.keep && age > L.ms) return;
-    const k = Math.min(1, age / 90), flash = age < 150 ? 1 - age / 150 : 0, fade = L.keep ? 1 : Math.min(1, (L.ms - age) / 220);
-    const lines = wrap(L.text, 'bold', W - 44).slice(0, 2);
-    const blink = age < 200 && Math.floor(age / 50) % 2 === 1;   // 켜질 때 두 번 깜빡
-    g.alpha(fade * (blink ? 0.55 : 1), () => ledBoard(g, lines.map(text => ({ text, color: L.col })), W / 2, LED_CY, { font: 'bold', k: easeOut(k), flash, maxW: W - 16 }));
   },
   // 친구 대결 감정 표현: 보낸 쪽 식물 위에 작은 전광판(2.6초)
   // 감정 표현: 보낸 쪽 식물 머리 위 말풍선(친구 대결 = 서버 알림, 봇 판 = 이 화면에서 + 봇이 가끔 대답) · 상대 끄기면 상대 것은 안 그림

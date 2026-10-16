@@ -1,7 +1,7 @@
 // 친구 대결 방(사용자 2026-10-16 "임의로 방만들기와 초대코드 등 넣어봐 · pvp는 임시로 mvp삼아"):
 //  방 만들기 → 초대 코드 6자 → 친구가 코드로 들어옴 → 저마다 식물 고르고 준비 → 1:1 대결(서버가 두 사람 수를 받아 한 턴씩 풂) → 결과 · 같은 방에서 다시.
 //  방은 서버 메모리에만(서버를 다시 켜면 사라짐 — MVP). 실시간 알림 = 서버 → 화면 한 줄 흐름(text/event-stream).
-//  턴 시간 40초: 안 고르면 평타로 대신 두고, 두 번 연속이면 진 판. 대결 중 연결이 60초 넘게 끊기면 진 판.
+//  턴 시간 40초: 안 고르면 넘어감(쉬기 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 평타로 대신), 두 번 연속이면 진 판. 대결 중 연결이 60초 넘게 끊기면 진 판.
 import { randomInt } from 'node:crypto';
 import { setupPvp, pvpTurn, viewFor, turnFor } from '../v2/src/game/fight.js';
 import { STAGES } from '../v2/src/game/catalog.js';
@@ -230,7 +230,7 @@ export function makeRooms({ game, log }) {
         for (const side of ['a', 'b']) { const m = r.members.find(x => x.uid === r.sides[side]); if (m && m.gone && now - m.gone > GRACE_MS) { end(r, OTHER[side], 'left', now); break; } }
         if (r.phase === 'battle' && now > r.deadline) {
           const late = ['a', 'b'].filter(sd => !r.moves[sd]);
-          for (const sd of late) { r.timeouts[sd]++; r.moves[sd] = 'basic'; }
+          for (const sd of late) { r.timeouts[sd]++; r.moves[sd] = 'rest'; }   // 시간 초과 = 넘어감
           const quit = late.find(sd => r.timeouts[sd] >= 2);
           if (quit) end(r, OTHER[quit], 'timeout', now); else resolve(r, now);
         }
