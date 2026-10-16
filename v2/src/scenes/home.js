@@ -38,7 +38,7 @@ export function focusOf(app) {
 }
 const MODES = [
   { id: 'tournament', icon: 'sword', name: '1:1 토너먼트', desc: '개체 랭크 대회 · 예선은 5판 3선승' },
-  { id: 'swap3', icon: 'shield', name: '3:3 교체전', desc: '내 식물 셋 · 포켓몬처럼 바꿔 가며 싸움' },   // 2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임, 이름도 팀리그라고는 하지 말자"
+  { id: 'swap3', icon: 'shield', name: '3:3 교체전', desc: '내 식물 셋 · 바꿔 가며 싸움' },   // 2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임, 이름도 팀리그라고는 하지 말자"
   { id: 'pvp', icon: 'target', name: '친구 대결', desc: '초대 코드로 친구와 1:1 · 방 만들기' },   // 2026-10-16 사용자 "서버도 열어서 몇몇 친구랑 할 수 있게"
   { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
 ];
@@ -248,7 +248,7 @@ export const home = {
       app.input.hit('ms_' + m.id, x + 8, by, w - 16, 54, () => {
         if (lock) return app.toast(m.lock);
         if (m.id === 'pvp') { app.ui = { ...(app.ui || {}), mode: 'pvp' }; this.modeSheet = false; return; }
-        if (m.id === 'swap3' && s.plants.length < 3) return app.toast('식물이 셋 있어야 해요 — 종자를 심어 보세요');
+        if (m.id === 'swap3' && s.plants.length < 3) return app.toast('식물이 셋 있어야 해요');
         app.ui = { ...(app.ui || {}), mode: null };
         if (s.mode !== m.id) { s.mode = m.id; if (m.id === 'swap3') { s.team = teamIdx(s); this.teamDirty = true; } app.act('setMode', { mode: m.id }); }
         if (m.id !== 'swap3' && m.id !== 'tournament') this.modeSheet = false;

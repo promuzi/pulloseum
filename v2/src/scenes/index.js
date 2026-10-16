@@ -14,7 +14,6 @@ import { storage } from './storage.js';
 import { matching } from './matching.js';
 import { hangar } from './hangar.js';
 import { room } from './room.js';
-import { market } from './market.js';
 
 // 아이콘 검토판(개발용)
 const icons = {
@@ -33,4 +32,4 @@ const icons = {
   },
 };
 
-export const SCENES = { title, starter, room, market, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons };
+export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons };

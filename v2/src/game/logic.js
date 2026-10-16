@@ -47,22 +47,39 @@ export function makePlant(s, seed, rng, now) {
     uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
     shiny: !!seed.shiny, legend: !!seed.legend, trait: seed.trait || null,
     pts: 0, up: {}, spent: 0, invest: 0, pot: 'pot_terra', born: now,
-    skills: { battle: [null, null, null], joker: null, forgot: [], learned: [] }, pend: [],
+    skills: { battle: [null, null, null, null], joker: null, forgot: [], learned: [], v4: 1 }, pend: [],
     hv: { t0: now, have: 0 },
   };
-  // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중)
+  // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기(평타 · 방어 — 회피는 보관)
   learnNow(p, uniqueOf(p.key, 0));
   const c1 = bloomPool(p.key, 0).filter(x => x.id !== uniqueOf(p.key, 0));
   if (c1.length) learnNow(p, pickW(rng, c1).id);
+  fillBasics(p);
   if (!s.discovered.includes(p.key)) s.discovered.push(p.key);
   return p;
 }
-const known = p => new Set([...p.skills.battle.filter(Boolean), p.skills.joker, ...p.skills.forgot, ...p.pend].filter(Boolean));
-// 새 기술 놓기: 빈 전투 칸 → 빈 조커 칸 → 다 차면 '고르기 대기'(pend — 화면이 무엇을 지울지 물음)
+// 기술 칸(2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개이며, 기본 스킬은 조커처럼 항상 빼고 넣고 가능(버릴 수 없음)" · "기본스킬 3개도 바꿀 수 있게"):
+//  battle = 전투에 들고 가는 넷(배운 기술 · 기본기 섞어서) · joker = 배운 기술 하나 보관 · 기본기 셋은 늘 앎(지울 수 없음 — 전투 칸에 없으면 보관에 있는 셈)
+export const BASIC_IDS = ['basic', 'guard', 'evade'], LOADOUT = 4;
+const isBasic = id => BASIC_IDS.includes(id);
+function fillBasics(p) { const b = p.skills.battle, left = BASIC_IDS.filter(id => !b.includes(id)); for (let i = 0; i < b.length; i++) if (!b[i] && left.length) b[i] = left.shift(); }
+// 옛 세이브(전투 3칸 + 기본기 셋은 늘 손패): 빈 칸 · 넷째 칸을 기본기로 채워 넷으로(한 번만 — 그 뒤 비운 칸은 그대로)
+export function normSkills(p) {
+  const S = p && p.skills; if (!S || S.v4) return p;
+  const b = (Array.isArray(S.battle) ? S.battle : []).slice(0, LOADOUT);
+  while (b.length < LOADOUT) b.push(null);
+  S.battle = b; fillBasics(p); S.v4 = 1;
+  return p;
+}
+const known = p => new Set([...p.skills.battle.filter(x => x && !isBasic(x)), p.skills.joker, ...p.skills.forgot, ...p.pend].filter(Boolean));
+// 새 기술 놓기: 빈 전투 칸 → 전투 칸의 기본기 자리(기본기는 보관으로 — 회피 · 방어 · 평타 순) → 빈 조커 칸 → 다 차면 '고르기 대기'(pend — 화면이 무엇을 지울지 물음)
 function learnNow(p, id) {
+  normSkills(p);
   const b = p.skills.battle, i = b.indexOf(null);
   if (!p.skills.learned.includes(id)) p.skills.learned.push(id);
   if (i >= 0) { b[i] = id; return 'battle'; }
+  const bi = ['evade', 'guard', 'basic'].map(x => b.indexOf(x)).find(k => k >= 0);
+  if (bi != null && b.filter(x => x && !isBasic(x)).length < LOADOUT - 1) { b[bi] = id; return 'battle'; }   // 기본기를 하나는 남김(배운 기술만 넷이면 보관으로)
   if (!p.skills.joker) { p.skills.joker = id; return 'joker'; }
   p.pend.push(id); return 'pend';
 }
@@ -112,24 +129,39 @@ export function evolve(s, id, rng) {
   const xp = addXp(s, XP.evolve, rng);
   return { stage: p.stage, got, xp };
 }
-// 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b2)·조커에 놓고 원래 기술은 '지운 기술'로, 또는 새 기술을 안 배움(skip — 지운 기술로)
+// 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b3)·조커에 놓고 원래 기술은 '지운 기술'로(기본기 자리였으면 기본기는 그냥 보관), 또는 새 기술을 안 배움(skip — 지운 기술로)
 export function placePending(s, id, skill, target) {
   const p = getPlant(s, id), i = p.pend.indexOf(skill);
+  normSkills(p);
   need(i >= 0, '기다리는 기술이 아니에요');
+  const slot = target === 'joker' ? 'joker' : target === 'skip' ? 'skip' : +String(target).replace('b', '');
+  need(slot === 'joker' || slot === 'skip' || (slot >= 0 && slot < LOADOUT), '놓을 칸을 골라 주세요');
   p.pend.splice(i, 1);
-  if (target === 'skip') { p.skills.forgot.push(skill); return { forgot: skill }; }
-  const slot = target === 'joker' ? 'joker' : +String(target).replace('b', '');
-  need(slot === 'joker' || (slot >= 0 && slot < 3), '놓을 칸을 골라 주세요');
+  if (slot === 'skip') { p.skills.forgot.push(skill); return { forgot: skill }; }
   const old = slot === 'joker' ? p.skills.joker : p.skills.battle[slot];
   if (slot === 'joker') p.skills.joker = skill; else p.skills.battle[slot] = skill;
-  if (old) p.skills.forgot.push(old);
-  return { forgot: old };
+  if (old && !isBasic(old)) { p.skills.forgot.push(old); return { forgot: old }; }
+  return { forgot: null };
 }
-// 전투 칸 ↔ 조커 자리 바꾸기
+// 전투 칸 넷 정하기(화면이 새 배열을 보냄): 배운 기술 · 기본기 셋 중에서, 같은 것 두 번 없이 · 전투 칸에서 뺀 배운 기술은 조커(보관) 한 칸에만 — 기본기는 빼도 늘 앎
+export function setLoadout(s, id, list) {
+  const p = getPlant(s, id); normSkills(p);
+  need(Array.isArray(list) && list.length === LOADOUT, '전투 칸은 넷이에요');
+  const L = list.map(x => (x == null || x === '' ? null : String(x)));
+  const learned = new Set([...p.skills.battle, p.skills.joker].filter(x => x && !isBasic(x))), seen = new Set();
+  for (const x of L) { if (!x) continue; need(!seen.has(x), '같은 기술을 두 칸에 둘 수 없어요'); seen.add(x); need(isBasic(x) || learned.has(x), '모르는 기술이에요'); }
+  const left = [...learned].filter(x => !seen.has(x));
+  need(left.length <= 1, '보관 칸은 하나예요 — 배운 기술은 하나만 뺄 수 있어요');
+  need(L.some(Boolean), '전투 칸에 기술이 하나는 있어야 해요');
+  p.skills.battle = L; p.skills.joker = left[0] || null;
+  return {};
+}
+// 전투 칸 ↔ 조커 자리 바꾸기(옛 화면용 — 기본기 자리면 기본기는 보관으로)
 export function swapJoker(s, id, slot) {
-  const p = getPlant(s, id), b = p.skills.battle;
-  need(slot >= 0 && slot < 3, '칸을 골라 주세요');
-  [b[slot], p.skills.joker] = [p.skills.joker, b[slot]];
+  const p = getPlant(s, id); normSkills(p);
+  const b = p.skills.battle;
+  need(slot >= 0 && slot < LOADOUT, '칸을 골라 주세요');
+  const out = b[slot]; b[slot] = p.skills.joker; p.skills.joker = out && !isBasic(out) ? out : null;
   return {};
 }
 // 강화: 레벨업 포인트 + 돈(상한 없음 — 몰빵 가능), 리셋 = 돈
@@ -180,8 +212,9 @@ export function regress(s, id, skill) {
   const p = getPlant(s, id), i = p.skills.forgot.indexOf(skill);
   need(i >= 0, '지운 기술이 아니에요');
   need((s.items.regress || 0) >= 1, '유전자 회귀 주사가 없어요');
+  normSkills(p);
   const b = p.skills.battle;
-  need(b.includes(null) || !p.skills.joker, '칸이 다 찼어요 — 하나를 비우고 되돌려요');
+  need(b.includes(null) || b.some(isBasic) || !p.skills.joker, '칸이 다 찼어요 — 하나를 비우고 되돌려요');
   s.items.regress--; p.skills.forgot.splice(i, 1);
   return { skill, to: learnNow(p, skill) };
 }
@@ -343,7 +376,7 @@ export function fuelSync(s, now) {
 }
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
-export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) harvestSync(p, now); seasonSync(s, now); return s; }
+export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) normSkills(p); seasonSync(s, now); return s; }
 // 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로)
 export function probeOf(s) {
   if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])), dur: probeMaxDur(1) };

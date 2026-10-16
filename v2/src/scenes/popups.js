@@ -3,11 +3,15 @@
 //  ② 받은 것 판(수확 · 탐사 · 해체) ③ 예/아니오 ④ 설정(계정 · 로그아웃 · 주소 복사)
 import { C, RAMP } from '../art/palette.js';
 import { icon } from '../art/icons.js';
-import { button, fmt } from '../art/ui.js';
+import { button, fmt, rrect } from '../art/ui.js';
+import { glyphH } from '../core/text.js';
 import { T, holo } from '../art/theme.js';
 import { bigTitle, seedArt } from './common.js';
+import { drawPortrait } from '../art/sprites.js';
 import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME, TIERS, LEAGUES, LEAGUE_KEYS } from '../game/catalog.js';
 import { net } from '../net/api.js';
+import { sellPrice } from '../game/logic.js';
+import { eul } from '../core/josa.js';
 import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 
@@ -15,7 +19,7 @@ const ease = k => 1 - (1 - k) ** 3;
 const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; };
 // 보상 한 칸의 아이콘 · 이름 · 수
 export const KIND = {
-  credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'water', name: '물' }, fert: { icon: 'fert', name: '비료' },
+  credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'can', name: '물' }, fert: { icon: 'fert', name: '비료' },
   regress: { icon: 'potion', name: '회귀 주사' }, fuel: { icon: 'energy', name: '연료 캡슐' }, parts: { icon: 'gear', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
@@ -35,30 +39,52 @@ export function gotCell(g, x, y, w, r, k = 1) {
   const col = RARITY_COL[Math.max(0, Math.min(4, r.rar || 0))], L = gotLabel(r), h = 46;
   holo(g, x, y, w, h, { fill: '#0d1f30', fill2: '#12283c', frame: col, frameHi: '#ffffff', frameLo: '#2a4258' }, 16);
   if (k < 1) return;
-  if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; seedArt(g, x + 15, y + 23, sp ? sp.el : 'grass'); }
-  else { const ic = icon((KIND[r.kind] || KIND.credits).icon); g.img(ic, x + 15 - ic.width, y + 23 - ic.height, 2); }
-  g.text(L.n, x + 32, y + 7, { font: 'bold', color: col });
-  let nm = L.name; while (g.textW(nm) > w - 38 && nm.length > 2) nm = nm.slice(0, -1);
-  g.text(nm, x + 32, y + 25, { color: '#cfe8f8' });
+  // 왼쪽 = 아이콘 칸(짙은 네모 + 등급 색 테 — 게임 보상 칸처럼), 오른쪽 = 수(크게) 위 · 이름 아래, 글 묶음은 칸 세로 가운데(2026-10-16 사용자 '+240 돈' 사진 "글자와 아이콘 배치")
+  const S = 36, sx = x + 5, sy = y + Math.round((h - S) / 2);
+  rrect(g, sx, sy, S, S, 4, '#06111c'); rrect(g, sx + 1, sy + 1, S - 2, S - 2, 3, '#0f2436'); g.rect(sx + 3, sy + S - 3, S - 6, 1, col);
+  if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; seedArt(g, sx + S / 2, sy + S / 2, sp ? sp.el : 'grass'); }
+  else { const ic = icon((KIND[r.kind] || KIND.credits).icon); g.img(ic, Math.round(sx + S / 2 - ic.width), Math.round(sy + S / 2 - ic.height), 2); }
+  const tx = sx + S + 7, room = x + w - 6 - tx, nf = g.textW(L.n, 'name') <= room ? 'name' : g.textW(L.n, 'bold') <= room ? 'bold' : 'body';   // 긴 수(접목 · 중급 등)는 작은 글꼴로
+  const hn = glyphH(nf), hb = glyphH('body'), top = y + Math.round((h - hn - 3 - hb) / 2);
+  g.text(L.n, tx, top, { font: nf, color: col });
+  let nm = L.name; while (g.textW(nm) > x + w - 6 - tx && nm.length > 2) nm = nm.slice(0, -1);
+  g.text(nm, tx, top + hn + 3, { color: '#cfe8f8' });
 }
 
 // ── ① 레벨업 상자 ──
+// 보급 상자(2026-10-16 사용자 "선물 상자는 목함 대신, 첨단 상자 느낌으로" — 장소 톤 '투박한 레트로 우주선'에 맞춰):
+//  건메탈 몸통(골판 · 양옆 범퍼와 볼트) · 바닥 경고 줄무늬 · 가운데 잠금 모듈(닫힘 = 주황 불 깜빡 · 열림 = 초록) · 몸통을 가로지르는 청록 빛줄,
+//  뚜껑 = 모서리 깎은 금속 판 — 열리면 위로 들리며 뒤로 젖혀지고 안에서 청록 빛이 새어 나옴
 function chestArt(g, cx, by, open, t) {   // 상자(가로 64): by = 바닥. open 0~1 = 뚜껑이 열린 정도
-  const W = 64, H = 34, x = Math.round(cx - W / 2), y = by - H;
-  const wood = ['#4a2a14', '#6b3e1f', '#8a5530', '#a86a3c'], gold = ['#7a5418', '#c89a30', '#f0c858', '#fff0a8'];
-  g.rect(x - 2, by - 2, W + 4, 4, '#05070f');
-  g.rect(x, y, W, H, wood[1]); g.rect(x + 2, y + 2, W - 4, H - 6, wood[2]); for (let i = 0; i < 4; i++) g.rect(x + 2, y + 6 + i * 7, W - 4, 1, wood[0]);
-  g.rect(x, y, W, 3, gold[1]); g.rect(x, y, W, 1, gold[3]); g.rect(x, by - 4, W, 4, gold[1]); g.rect(x, by - 1, W, 1, gold[0]);
-  for (const sx of [x, x + W - 6]) { g.rect(sx, y, 6, H, gold[1]); g.rect(sx + 1, y, 1, H, gold[3]); g.rect(sx + 5, y, 1, H, gold[0]); }
-  g.rect(x - 1, y - 1, W + 2, 1, '#05070f'); g.rect(x - 1, y, 1, H, '#05070f'); g.rect(x + W, y, 1, H, '#05070f');
-  // 뚜껑: 닫힘 = 둥근 지붕, 열림 = 뒤로 젖혀져 위로 올라감
-  const lh = 16, ly = y - lh + 2 - Math.round(open * 22), squash = Math.round(open * 9);
-  for (let j = 0; j < lh - squash; j++) { const ins = Math.max(0, 6 - Math.round(Math.sqrt(Math.max(0, j * 6)))), yy = ly + j + squash; g.rect(x + ins, yy, W - ins * 2, 1, j < 2 ? gold[2] : j % 5 === 0 ? wood[0] : wood[3 - (j > 8 ? 1 : 0)]); }
-  g.rect(x, ly + lh - 2, W, 2, gold[1]);
-  // 자물쇠
-  const lx = Math.round(cx - 6), lockY = y - 2 - Math.round(open * 22);
-  g.rect(lx, lockY, 12, 12, '#05070f'); g.rect(lx + 1, lockY + 1, 10, 10, gold[2]); g.rect(lx + 1, lockY + 1, 10, 2, gold[3]); g.rect(lx + 5, lockY + 5, 2, 4, '#4a2a14');
-  if (!open) { const sh = (Math.floor(t / 120) % 12); if (sh < 3) g.rect(x + 8 + sh * 18, y + 6, 2, 10, 'rgba(255,255,255,0.35)'); }
+  const W = 64, H = 32, x = Math.round(cx - W / 2), y = by - H, M = ['#14181f', '#232a35', '#323a47', '#4a5362', '#6c7688', '#a2abba'], CY = ['#1e4a6a', '#2f7aa0', '#62c4ec', '#c8f4ff'];
+  g.rect(x - 3, by - 1, W + 6, 3, '#05070f');   // 그림자
+  // 몸통
+  g.rect(x, y, W, H, M[0]); g.rect(x + 1, y + 1, W - 2, H - 2, M[2]); g.rect(x + 1, y + 1, W - 2, 1, M[4]);
+  for (let i = 0; i < 3; i++) { g.rect(x + 7, y + 8 + i * 6, W - 14, 1, M[1]); g.rect(x + 7, y + 9 + i * 6, W - 14, 1, M[3]); }   // 골판
+  // 바닥 경고 줄무늬(노랑 · 검정 비스듬)
+  for (let xx = 0; xx < W - 2; xx++) for (let yy = 0; yy < 4; yy++) g.px(x + 1 + xx, by - 5 + yy, ((xx + yy) >> 2) % 2 ? '#f0c040' : '#1a1a1a');
+  g.rect(x + 1, by - 6, W - 2, 1, M[1]);
+  // 양옆 범퍼 + 볼트
+  for (const sx of [x - 2, x + W - 5]) { g.rect(sx, y + 2, 7, H - 4, M[1]); g.rect(sx + 1, y + 3, 5, H - 6, M[3]); g.rect(sx + 1, y + 3, 5, 1, M[5]); for (const yb of [y + 6, y + H - 10]) { g.rect(sx + 2, yb, 3, 3, M[5]); g.px(sx + 4, yb + 2, M[0]); } }
+  // 청록 빛줄(천천히 숨 쉼)
+  const glow = 0.55 + 0.45 * Math.sin(t / 380), lc = open > 0 ? CY[3] : glow > 0.7 ? CY[2] : CY[1];
+  g.rect(x + 6, y + 5, W - 12, 1, lc);
+  // 잠금 모듈(가운데): 테 · 화면 · 불(닫힘 = 주황 깜빡, 열림 = 초록)
+  const lx = Math.round(cx - 8), ly2 = y + 9;
+  g.rect(lx, ly2, 16, 14, M[0]); g.rect(lx + 1, ly2 + 1, 14, 12, M[4]); g.rect(lx + 2, ly2 + 2, 12, 7, '#0a1420');
+  const led = open > 0 ? '#7cf0a0' : Math.floor(t / 350) % 2 ? '#ff9a3a' : '#7a3a10';
+  g.rect(lx + 6, ly2 + 4, 4, 3, led); g.px(lx + 6, ly2 + 4, '#ffffff');
+  g.rect(lx + 3, ly2 + 10, 10, 1, M[1]);
+  // 뚜껑: 모서리 깎은 금속 판(두께 9) — 열림 = 위로 22칸 들리며 눌려 보임(젖혀짐), 안에서 빛
+  const lh = 9, up = Math.round(open * 24), squash = Math.round(open * 4), ly = y - lh + 1 - up;
+  if (open > 0) {   // 열린 틈 사이 빛기둥
+    const a = Math.min(1, open * 1.6);
+    g.alpha(0.45 * a, () => { g.rect(x + 4, ly + lh, W - 8, y - (ly + lh), CY[2]); });
+    g.alpha(0.7 * a, () => g.rect(x + 8, y - 2, W - 16, 2, CY[3]));
+  }
+  for (let j = 0; j < lh - squash; j++) { const ins = j < 2 ? 3 - j : 0, yy = ly + j + squash; g.rect(x - 1 + ins, yy, W + 2 - ins * 2, 1, j === 0 ? M[5] : j === 1 ? M[4] : j === lh - squash - 1 ? M[0] : M[3]); }
+  g.rect(x + 10, ly + squash + 4, W - 20, 1, lc);   // 뚜껑 빛줄
+  if (!open) { const sh = (Math.floor(t / 120) % 14); if (sh < 3) g.rect(x + 8 + sh * 16, y + 2, 2, H - 8, 'rgba(255,255,255,0.18)'); }   // 반짝 훑음
 }
 function rays(g, cx, cy, t, k, col) {
   const n = 12, rot = t / 2600;
@@ -81,7 +107,6 @@ function levelChest(app, item) {
   const bob = o.open == null ? Math.round(Math.abs(Math.sin(t / 260)) * -6) : 0, sq = o.open == null && Math.abs(Math.sin(t / 260)) < 0.12 ? 1 : 0;
   chestArt(g, W / 2, LC.cy + bob + sq, op, t);
   if (o.open == null) {
-    g.text('상자를 눌러 열어요', W / 2, LC.cy + 16, { font: 'bold', color: '#ffe8a8', align: 'center', outline: C.ink });
     input.hit('chest_open', W / 2 - 50, LC.cy - 70, 100, 90, () => { o.open = app.t; }, 6);
     return;
   }
@@ -123,17 +148,28 @@ function gotPopup(app, P) {
 }
 
 // ── ③ 예/아니오 ──
-export function ask(app, msg, sub, onYes, yes = '네') { app.confirm = { msg, sub, onYes, yes, t0: app.t }; }
+//  opt.face = 식물 얼굴(어떤 식물인지 한눈에) · opt.danger = 되돌릴 수 없는 일(팔기 · 해체 — '예'가 빨강, 창이 뜨고 0.4초는 안 눌림: 같은 자리 두 번 눌러 실수하지 않게)
+export function ask(app, msg, sub, onYes, yes = '네', opt = {}) { app.confirm = { msg, sub, onYes, yes, t0: app.t, face: opt.face || null, danger: !!opt.danger }; }
 function confirmBox(app, Q) {
-  const { g, W, H, input } = app, w = W - 40, h = Q.sub ? 112 : 94, x = 20, y = Math.round(H / 2 - h / 2) - 20, PT = T.ptext;
+  const { g, W, H, input, t } = app, fh = Q.face ? 50 : 0, w = W - 40, h = (Q.sub ? 112 : 94) + fh, x = 20, y = Math.round(H / 2 - h / 2) - 20, PT = T.ptext;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('cf_block', 0, 0, W, H, () => {});
   holo(g, x, y, w, h, T.card || T.panel, 16);
-  g.text(Q.msg, W / 2, y + 14, { font: 'bold', color: PT.main, align: 'center' });
-  if (Q.sub) g.para ? g.para(Q.sub, x + 14, y + 34, w - 28, { color: PT.sub }) : g.text(Q.sub, W / 2, y + 34, { color: PT.sub, align: 'center' });
-  const bw = Math.floor((w - 36) / 2);
+  if (Q.face) { const fx = Math.round(W / 2 - 21); g.rect(fx - 1, y + 11, 44, 44, Q.danger ? '#ff8a7a' : '#4a8edc'); g.rect(fx, y + 12, 42, 42, '#0a1c32'); g.clip(fx + 1, y + 13, 40, 40, () => drawPortrait(g, Q.face, fx + 1, y + 13, 40, false)); }
+  g.text(Q.msg, W / 2, y + 14 + fh, { font: 'bold', color: PT.main, align: 'center' });
+  if (Q.sub) g.para ? g.para(Q.sub, x + 14, y + 34 + fh, w - 28, { color: Q.danger ? '#ffb0a0' : PT.sub }) : g.text(Q.sub, W / 2, y + 34 + fh, { color: PT.sub, align: 'center' });
+  const bw = Math.floor((w - 36) / 2), armed = !Q.danger || t - Q.t0 > 400;
   button(app, 'cf_no', x + 12, y + h - 42, bw, 30, '아니요', { style: 'night', font: 'bold', onTap: () => { app.confirm = null; } });
-  button(app, 'cf_yes', x + 24 + bw, y + h - 42, bw, 30, Q.yes, { style: 'gold', font: 'bold', onTap: () => { const f = Q.onYes; app.confirm = null; f && f(); } });
+  button(app, 'cf_yes', x + 24 + bw, y + h - 42, bw, 30, Q.yes, { style: Q.danger ? 'red' : 'gold', font: 'bold', disabled: !armed, onTap: () => { const f = Q.onYes; app.confirm = null; f && f(); } });
+}
+
+// 고른 식물 팔기 · 해체(2026-10-16 사용자 "암시장 빼고 식물 선택하며 그 아래에 팔기 해체하기로 버튼 — 팝업으로 실수하지 않게"): 스마트팜 · 보관고 · 식물 관리 설정이 같이 씀
+export function sellAsk(app, p, after) {
+  const price = sellPrice(p);
+  ask(app, `${eul(p.name)} 팔까요?`, `돈 ${price} · 되돌릴 수 없어요`, () => app.act('sell', { id: p.uid }).then(r => { if (r) { app.toast(`돈 +${r.credits}`); if (after) after(); } }), '팔기', { face: p.key, danger: true });
+}
+export function cutAsk(app, p, after) {
+  ask(app, `${eul(p.name)} 해체할까요?`, '접목 가지 · 회귀 주사 같은 물건이 나와요 · 되돌릴 수 없어요', () => app.act('dismantle', { id: p.uid }).then(r => { if (r) { showGot(app, `${p.name} 해체`, r.got); if (after) after(); } }), '해체', { face: p.key, danger: true });
 }
 
 // ── ④ 설정 ──
@@ -146,7 +182,7 @@ function settingsSheet(app) {
   g.text('설정', x + 14, y + 12, { font: 'head', color: PT.main });
   let yy = y + 42;
   g.text(net.offline ? '오프라인 체험(저장 안 됨)' : u ? `계정: ${u.login}` : '로그인 안 함', x + 14, yy, { font: 'bold', color: PT.main }); yy += 18;
-  g.text(net.offline ? '서버에 연결하면 진행이 저장돼요' : '하는 일마다 서버에 자동 저장돼요', x + 14, yy, { color: PT.sub }); yy += 26;
+  yy += 12;
   button(app, 'st_copy', x + 14, yy, w - 28, 30, '친구에게 보낼 게임 주소 복사', { style: 'night', icon: 'navShip', onTap: () => {
     const url = location.origin + '/v2/';
     try { navigator.clipboard.writeText(url).then(() => app.toast('주소를 복사했어요'), () => app.toast(url)); } catch { app.toast(url); }

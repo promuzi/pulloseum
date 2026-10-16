@@ -13,13 +13,15 @@ import { probeOf } from '../game/logic.js';
 // 이름표 = 디스플레이 네 모서리(탐사 장치 왼위 · 채집기 오른위 · 내구성 왼아래 · 연료 탱크 오른아래) — 배 그림(세로 149~279)과 겹치지 않게, 폭 넓은 원반선도
 // 2026-10-16 사용자 정리 → 부위 다섯(규칙 = catalog PROBE · logic explore): 연료 탱크 = 거리 · 내구성 = 성공/실패 · 탐사 장치 = 질 좋은 보상(종자 제외) · 채집기 = 보상 수 · 종자 보관함 = 종자 개체값
 //  강화 = 돈 + 부품(자원이 많은 행성에서) — 서버 일 upgradeProbe, 고치기 = 내구도 1당 돈(repairProbe). 이름표 자리: 네 모서리 + 아래 가운데(종자 보관함)
+// 이름표 자리 = 디스플레이 기준(짧은 화면은 디스플레이가 낮아짐): [x, 위에서 · 아래에서(음수)]
 const PARTS = [
-  { id: 'scanner', at: 'scanner', box: [14, 74] },
-  { id: 'cargo', at: 'harvester', box: [178, 74] },
-  { id: 'hull', at: 'durability', box: [14, 316] },
-  { id: 'tank', at: 'fuel_tank', box: [178, 316] },
-  { id: 'vault', at: 'vault', box: [83, 352], bw: 104 },
+  { id: 'scanner', at: 'scanner', box: [14, 16] },
+  { id: 'cargo', at: 'harvester', box: [178, 16] },
+  { id: 'hull', at: 'durability', box: [14, -72] },
+  { id: 'tank', at: 'fuel_tank', box: [178, -72] },
+  { id: 'vault', at: 'vault', box: [83, -36], bw: 104 },
 ].map(p => ({ ...p, label: PROBE[p.id].name, desc: PROBE[p.id].desc, max: PROBE[p.id].max }));
+const boxAt = (pt, D) => [pt.box[0], pt.box[1] >= 0 ? D.y + pt.box[1] : D.y + D.h + pt.box[1]];
 // 부위 단계 → 화면에 보일 값(규칙과 같은 식)
 const rareP = q => Math.round(100 * (4 + 10 * q + 1 + 4 * q + 0.5 + 3 * q) / (30 + 22 + 14 + 18 + 4 + 10 * q + 1 + 4 * q + 0.5 + 3 * q));
 const VAL = {
@@ -30,22 +32,24 @@ const VAL = {
   vault: lv => `개체값 ${1 + Math.floor((lv - 1) / 2)}번 굴려 좋은 쪽`,
 };
 const HC = HOLO;
+// 디스플레이 = 짧은 화면(480~599)은 세로를 줄이고(아래 판 · 탭 줄이 겹치지 않게) 배는 그 가운데 — 탐사 → 정비 확대 연출도 같은 자리로
+export const dispOf = app => ({ x: 8, y: 58, w: 254, h: Math.max(200, Math.min(330, (app ? app.H : 600) - 270)) });
+export const shipAt = app => { const D = dispOf(app); return { cx: 135, cy: Math.round(D.y + D.h / 2 - 9) }; };
 export const SHIP = { cx: 135, cy: 214 };
-const DISP = { x: 8, y: 58, w: 254, h: 330 };
 const B4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 const SC = SHIP_SC, IN_MS = 380, OUT_MS = 200;
 
 // 정비실 바닥(탐사 → 정비 연출이 같은 것을 깔며 넘어옴): 짙은 바탕 · 디스플레이 판 + 홀로그램 격자 · 아래 투영기(빛 고리 + 위로 퍼지는 옅은 빛)
 export function hangarBack(app, k = 1) {
-  const { g, W, H, t } = app;
+  const { g, W, H, t } = app, S = shipAt(app);
   g.alpha(k, () => {
     g.rect(0, 0, W, H, '#070b12');
-    const { x, y, w, h } = DISP;
+    const { x, y, w, h } = dispOf(app);
     g.rect(x - 2, y - 2, w + 4, h + 4, '#1b2330'); g.rect(x - 1, y - 1, w + 2, h + 2, '#2e3a4c'); g.rect(x, y, w, h, '#060d16');
     for (let gx = x + 8; gx < x + w; gx += 16) g.rect(gx, y, 1, h, '#0b1826');
     for (let gy = y + 8; gy < y + h; gy += 16) g.rect(x, gy, w, 1, '#0b1826');
-    const px0 = SHIP.cx, py0 = y + h - 34;
-    for (let yy = SHIP.cy + 50; yy < py0; yy++) { const kk = (yy - (SHIP.cy + 50)) / (py0 - SHIP.cy - 50), hw = Math.round(20 + (1 - kk) * 36); for (let xx = -hw; xx <= hw; xx++) if (B4[yy & 3][(xx + 64) & 3] < 3 + kk * 2) g.px(px0 + xx, yy, '#0f2a3c'); }
+    const px0 = S.cx, py0 = y + h - 34;
+    for (let yy = S.cy + 50; yy < py0; yy++) { const kk = (yy - (S.cy + 50)) / (py0 - S.cy - 50), hw = Math.round(20 + (1 - kk) * 36); for (let xx = -hw; xx <= hw; xx++) if (B4[yy & 3][(xx + 64) & 3] < 3 + kk * 2) g.px(px0 + xx, yy, '#0f2a3c'); }
     g.ellipse(px0, py0 + 6, 46, 9, '#141b25'); g.ellipse(px0, py0 + 4, 44, 8, '#232d3c'); g.ellipseRing(px0, py0 + 3, 38, 6, '#4a8edc', 0); g.ellipseRing(px0, py0 + 3, 30, 5, '#8ccfff', 2);
     g.rect(px0 - 3, py0 + 1, 6, 2, Math.floor(t / 400) % 2 ? '#e6f3ff' : '#8ccfff');
   });
@@ -66,7 +70,7 @@ export const hangar = {
     hangarBack(app);
     hud(app, s);
     // 탐사선 홀로그램
-    const bob = Math.round(Math.sin(t / 900) * 1.5), cx = SHIP.cx, cy = SHIP.cy + bob;
+    const S = shipAt(app), bob = Math.round(Math.sin(t / 900) * 1.5), cx = S.cx, cy = S.cy + bob;
     const glitch = (t % 3100) < 90 ? { y: ((t / 3100) | 0) * 37 % 80 - 40, dx: (((t / 3100) | 0) % 2 ? 2 : -2) } : null;
     const fx = this.fx && t - this.fx.t0 < 900 ? this.fx : null;
     s.ship = s.ship || {};
@@ -89,13 +93,12 @@ export const hangar = {
     const { g, W, H, state: s } = app, P = T.ptext, first = this.choose === 'first';
     g.c.fillStyle = 'rgba(6,10,18,0.78)'; g.c.fillRect(0, 0, W, H);
     app.input.hit('hc_block', 0, 0, W, H, () => {});
-    const x = 10, w = W - 20, y = 70, h = 404;
+    const x = 10, w = W - 20, h = 390, y = Math.max(30, Math.min(70, H - h - 50));
     holo(g, x, y, w, h, T.card || T.panel, 16);
     g.text(first ? '탐사선을 골라 주세요' : '탐사선 모양', x + 12, y + 10, { font: 'head', color: P.main });
-    g.text('넷 다 성능은 같아요 · 나중에 꾸미기에서 바꿀 수 있어요', x + 12, y + 32, { color: P.sub });
     const cur = s.ship.model;
     SHIPS.forEach((sh, i) => {
-      const cw = (w - 30) / 2, cx0 = Math.round(x + 10 + (i % 2) * (cw + 10)), cy0 = y + 54 + Math.floor(i / 2) * 168, on = cur === sh.n, id = 'hc_' + sh.n, pr = app.input.isPressed(id), yy = cy0 + (pr ? 1 : 0);
+      const cw = (w - 30) / 2, cx0 = Math.round(x + 10 + (i % 2) * (cw + 10)), cy0 = y + 38 + Math.floor(i / 2) * 168, on = cur === sh.n, id = 'hc_' + sh.n, pr = app.input.isPressed(id), yy = cy0 + (pr ? 1 : 0);
       holo(g, cx0, yy, Math.round(cw), 160, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
       const im = SHIPIMG[sh.n] && SHIPIMG[sh.n].big;
       if (im) { const k = Math.min(100 / im.height, (cw - 12) / im.width), dw = Math.round(im.width * k), dh = Math.round(im.height * k); g.c.imageSmoothingEnabled = false; g.c.drawImage(im, Math.round(cx0 + cw / 2 - dw / 2), yy + 8, dw, dh); }
@@ -110,8 +113,9 @@ export const hangar = {
     button(app, 'hg_back', W - 58, 31, 50, 20, '‹ 탐사', { style: 'night', onTap: live ? () => { this.out = app.t; } : null });
     button(app, 'hg_model', W - 112, 31, 50, 20, '모양', { style: 'night', onTap: live ? () => { this.choose = 'open'; } : null });
     // 이름표 + 점선(부위 → 이름표)
+    const D = dispOf(app);
     for (const pt of PARTS) {
-      const [bx, by] = pt.box, bw = pt.bw || 78, bh = 30, on = this.sel === pt.id, lv = this.lv(s, pt.id);
+      const [bx, by] = boxAt(pt, D), bw = pt.bw || 78, bh = 30, on = this.sel === pt.id, lv = this.lv(s, pt.id);
       const pa = partAt(model, pt.at), ax = cx + Math.round(pa[0] * SC), ay = cy + Math.round(pa[1] * SC), ex = bx < SHIP.cx ? bx + bw : bx, ey = by + bh / 2;   // 부위 자리(배마다 다름 — art/ship.js PARTS)
       const n = Math.max(Math.abs(ex - ax), Math.abs(ey - ay));
       for (let i = 0; i <= n; i += 2) g.px(Math.round(ax + (ex - ax) * i / n), Math.round(ay + (ey - ay) * i / n), on ? HC.sel : '#3f7f9a');
@@ -124,7 +128,7 @@ export const hangar = {
     }
     // 고른 부위 정보 + 강화
     const pt = PARTS.find(p => p.id === this.sel), lv = this.lv(s, pt.id), atMax = lv >= pt.max, c = probeUpCost(lv), Pr = probeOf(s), dmax = probeMaxDur(Pr.lv.hull);
-    const PY = DISP.y + DISP.h + 10, st = T.card || T.panel, P = T.ptext, parts = s.items.parts || 0;
+    const PY = D.y + D.h + 10, st = T.card || T.panel, P = T.ptext, parts = s.items.parts || 0;
     holo(g, 10, PY, W - 20, 104, st, 13);
     g.text(pt.label, 22, PY + 8, { font: 'head', color: P.main });
     g.text(`Lv.${lv}`, 24 + g.textW(pt.label, 'head') + 6, PY + 11, { color: HC.sel });

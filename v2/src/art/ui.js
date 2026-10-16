@@ -53,6 +53,7 @@ export function button(app, id, x, y, w, h, label, opt = {}) {
   if (ic) { g.img(ic, cx, ty + Math.round((lh - ic.height) / 2)); cx += ic.width + 3; }
   if (label) g.text(label, cx, ty, { font, color: st.text });
   if (opt.sub) g.text(opt.sub, x + w / 2, ty + lh + 1, { color: st.sub || st.text, align: 'center' });
+  input.mark(id, x, y, w, h);
   if (!opt.disabled && opt.onTap) input.hit(id, x, y, w, h, opt.onTap, opt.pad ?? 4);
 }
 
@@ -95,6 +96,7 @@ export function holoTab(app, id, x, y, w, h, label, on, onTap, font = 'label') {
   if (UI === 'holo') { if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#8ccfff'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e6f3ff'); } }   // 옛 홀로그램: 아래 빛 줄
   else if (on) g.rect(x + Math.round(w / 2) - Math.min(9, (w >> 2)), yy + h - 3, Math.min(18, w >> 1), 2, acc);   // 고른 탭 = 글자 아래 짧은 강조 줄(한 가지 색)
   g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2) - (on && UI !== 'holo' ? 1 : 0), { font, color: on ? '#ffffff' : UI === 'holo' ? '#86acd6' : '#8e9cb0', align: 'center' });
+  input.mark(id, x, y, w, h);
   if (onTap) input.hit(id, x, y, w, h, onTap, 3);
 }
 // 작은 꼬리표 판(종 · 속성 · 단계) — 창과 같은 겉모습

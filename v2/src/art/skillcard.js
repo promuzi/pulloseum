@@ -110,7 +110,8 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   const c = g.c, ax = x + 4, ay = y + 4, aw = w - 8, ah = ART_H, dim = o.can === false;
   cardFrame(g, x, y, w, h, sk, o.lit);
   c.imageSmoothingEnabled = false;
-  c.drawImage(artOf(sk) || placeholderArt(sk), ax, ay, aw, ah);
+  { const im = artOf(sk) || placeholderArt(sk), sw = Math.min(aw, im.width);   // 좁은 카드(손패 한 줄 넷)는 그림 가운데를 잘라 1배 그대로(줄이면 도트가 뭉개짐)
+    c.drawImage(im, Math.floor((im.width - sw) / 2), 0, sw, im.height, ax + Math.floor((aw - sw) / 2), ay, sw, ah); }
   // 이름 띠: 그림 아래 열 칸을 짙게 덮으며 이어지고, 위에 테 색 가는 줄
   const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
   gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');

@@ -74,11 +74,10 @@ export const SHOTS = [
   ['10_hangar_m4', 'hangar', { model: '4', part: 'harvester' }],
   ['10_hangar_choose', 'hangar', {}],
   ['11_shop', 'shop', {}],
-  ['11_market', 'market', {}],
   ['14_room_lobby', 'room', { demo: 'lobby' }],
   ['14_room_in', 'room', { demo: 'in' }],
   ['14_room_in3', 'room', { demo: 'in3' }],   // 3:3 교체전 방(내 팀 셋)
-  ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '재배사 경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
+  ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
   ['12_nursery', 'nursery', {}],
   ['12_storage', 'storage', {}],
   ['13_dex', 'dex', {}],

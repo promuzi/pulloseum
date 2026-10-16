@@ -79,8 +79,11 @@ export function makeUnit(id, sp, o) {
 // 상대 고르기(봇 — 사람과 같은 정보만 씀): 쓸 수 있는 기술 중 가중 추첨. 위력·상성이 좋으면 자주, 체력이 낮으면 방어·회피를 조금 더,
 //  상대에게 아직 없는 효과(같은 속성 면역이 아니면)를 거는 기술은 조금 더.
 const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack ? true : !has(foe, f.id)); };
+// 못 쓰는 기술을 골랐을 때 대신 = 손패에서 쓸 수 있는 첫 기술, 없으면 넘어감(손패 넷에 기본기가 없으면 기력이 모자랄 수 있음)
+export const firstOk = u => u.kit.find(s => canUse(u, s)) || REST;
 export function aiPick(u, foe, rng) {
   const ok = u.kit.filter(s => canUse(u, s));
+  if (!ok.length) return REST;
   const low = u.hp < u.max * 0.4;
   const w = ok.map(s => (s.act === 'attack' ? 1 + (s.power || 0) / 45 + (elemMult(s.el, foe.el) > 1 ? 1.2 : 0) + (newFx(s, foe) ? 0.6 : 0) : s.act === 'guard' ? (low ? 1.3 : 0.45) : (low ? 1.1 : 0.55)));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;
@@ -103,13 +106,13 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false) {
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {
-  const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill) ? mySkill : B.me.kit[0];
+  const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill) ? mySkill : firstOk(B.me);
   const foeSkill = mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
   return playTurnVs(B, me, foeSkill);
 }
 // 두 쪽이 다 고른 한 턴(PvP — 서버가 두 사람 선택으로 풂, 봇 판도 이걸 씀). 기술은 id 또는 기술 객체
 export function playTurnVs(B, mySkill, foeSkill) {
-  const T = B.turn, pickOf = (u, s) => { if (s === 'rest' || s === REST) return REST; const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k) ? k : u.kit[0]; };   // 'rest' = 넘어감(시간 초과)
+  const T = B.turn, pickOf = (u, s) => { if (s === 'rest' || s === REST) return REST; const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k) ? k : firstOk(u); };   // 'rest' = 넘어감(시간 초과)
   const me = pickOf(B.me, mySkill);
   foeSkill = pickOf(B.foe, foeSkill);
   const before = { me: B.me.hp, foe: B.foe.hp };

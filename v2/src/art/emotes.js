@@ -4,14 +4,14 @@
 import { rrect } from './ui.js';
 import { glyphH } from '../core/text.js';
 
-export const PHRASES = ['잘 부탁해!', '좋은 수!', '아차…', '한 판 더?', '고마워!', '잘 싸웠어!'];
+export const PHRASES = ['잘 부탁해!', '좋은 수!', '아차…', '안녕!', '고마워!', '잘 싸웠어!'];   // 3 = 인사(2026-10-16 사용자 "한 판 더? 빼고 인사로")
 export const EMOJI = ['smile', 'laugh', 'wow', 'cry', 'angry', 'sweat', 'love', 'cool'];
 export const EMOJI_NAME = { smile: '웃음', laugh: '폭소', wow: '놀람', cry: '울음', angry: '화남', sweat: '진땀', love: '하트', cool: '여유' };
 export const EMOTE_N = PHRASES.length + EMOJI.length, EMOTE_LIFE = 2600;
 export const isEmoji = i => i >= PHRASES.length;
 // 봇 대답(봇 판에서 내가 보내면 가끔): 대사·이모지 → 어울리는 번호
 const E = k => PHRASES.length + EMOJI.indexOf(k);
-export const BOT_REPLY = { 0: 0, 1: 4, 2: E('laugh'), 3: E('cool'), 4: E('smile'), 5: 5, [E('smile')]: E('smile'), [E('laugh')]: E('laugh'), [E('wow')]: E('cool'), [E('cry')]: E('sweat'), [E('angry')]: E('laugh'), [E('sweat')]: E('smile'), [E('love')]: E('love'), [E('cool')]: E('wow') };
+export const BOT_REPLY = { 0: 0, 1: 4, 2: E('laugh'), 3: 3, 4: E('smile'), 5: 5, [E('smile')]: E('smile'), [E('laugh')]: E('laugh'), [E('wow')]: E('cool'), [E('cry')]: E('sweat'), [E('angry')]: E('laugh'), [E('sweat')]: E('smile'), [E('love')]: E('love'), [E('cool')]: E('wow') };
 
 // ── 도트 이모지(15×15, 한 번 굽고 재사용) ──
 const INK = '#3b2610', FACE = '#ffd23a', SHADE = '#eda21e', HI = '#fff4b0', RED = '#e8463a', BLUE = '#5ab4ff', PINK = '#ff8aa8', DARK = '#7a2418', WHITE = '#ffffff';

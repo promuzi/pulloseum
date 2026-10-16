@@ -58,7 +58,18 @@ const sizeOf = p => mix(0.85, 1.3, cl((p.share || 0.1) / 0.3));   // 그 한 방
 // 낱말이 화면 밖 · 상대 체력판(왼쪽 위, x 146까지)에 걸치지 않게 가로 자리를 당김(half = 낱말 반폭)
 const fit = (p, px, half) => Math.min(266 - half, Math.max(p.who === 'foe' ? 150 + half : 4 + half, px));
 // 낱말 자리: 새 연출은 글자가 커서 위로 쌓으면 겹침 → '치명!'은 숫자 바깥쪽 옆 꼬리표(안쪽은 상대 체력판과 겹침), '효과 굉장!'은 숫자 위(치명과 같이면 큰 숫자만큼 더 위 — battle.js 가 그때 dy −52)
-const placeOf = p => { const y0 = p.y - (p.dy || 0); return p.text === '치명!' ? [p.x + dirOf(p) * 48, y0 - 14] : p.text === '효과 굉장!' ? [p.x, y0 - ((p.dy || 0) <= -50 ? 40 : 30)] : [p.x, p.y]; };
+const placeOf0 = p => { const y0 = p.y - (p.dy || 0); return p.text === '치명!' ? [p.x + dirOf(p) * 48, y0 - 14] : p.text === '효과 굉장!' ? [p.x, y0 - ((p.dy || 0) <= -50 ? 40 : 30)] : [p.x, p.y]; };
+// slot = 같은 식물 위에 아직 떠 있는 낱말과 겹치면 한 칸(17)씩 위로(2026-10-16 사용자 "치명타나 효과가 굉장했다 … 동시에 나와서 겹쳐져서 안 보인 적이 있어" — 여러 번 때리는 기술 · 연달아 온 사건)
+const placeOf = p => { const [x, y] = placeOf0(p); return [x, y - (p.slot || 0) * 17]; };
+export function wordSlot(pops, np, t) {
+  if (kindOf(np) !== 'word') return 0;
+  const box = p => { const [x, y] = placeOf(p), w = measure(p.text, 'value') / 2 + 4; return [x - w, y - 9, x + w, y + 9]; };
+  for (let s = 0; s < 5; s++) {
+    np.slot = s; const a = box(np);
+    if (!pops.some(q => q !== np && q.who === np.who && kindOf(q) === 'word' && t - q.t0 < popLife(q) && (b => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3])(box(q)))) return s;
+  }
+  return 5;
+}
 
 // 가운데(x, y) 기준 글자 한 덩이 — o = {font, s|sx|sy, rot, skew, alpha, fill(색 · 함수), line, lw, under{dx,dy,col}, glow{col,blur(기기 화소)}}
 function word(c, str, x, y, o) {

@@ -32,6 +32,7 @@ const app = {
   toast(msg) { app.toastMsg = msg; app.toastT = app.t; },
   now() { return net.now(); },
   // 일 하나(서버에 보내고 새 상태를 받음 — 요청은 차례대로). 실패하면 알림 띠를 띄우고 null
+  settle() { return chain; },   // 보낸 일이 다 끝난 뒤(식물 바꾸기 직후 출전해도 바꾼 식물로 — 2026-10-16 사용자 "다른 식물로 전투가 시작된 적이 있어")
   act(op, args) {
     const p = chain.then(async () => {
       app.busy++;

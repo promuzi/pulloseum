@@ -7,12 +7,15 @@ import { STORE_MAX } from '../game/catalog.js';
 import { freeSlots } from '../game/logic.js';
 import { stageName, stars } from '../game/view.js';
 import { eul } from '../core/josa.js';
+import { sellAsk, cutAsk } from './popups.js';
 
 // 동면 보관고(2026-10-15 사용자 "스마트팜에 들어가는 수는 한계가 있지만, 그냥 심고 동면 보관의 느낌으로 보관해 둘 수 있는 양은 100개 정도 이상으로.
 //  디자인은 동면 캡슐 느낌으로, 쭉 있고, 어두운 방 느낌에 캡슐 내부만 은은하게 빛나는 느낌으로"):
 //  어두운 방 · 선반 위 캡슐이 네 줄로 쭉(120칸) · 캡슐 속 아래에서 올라오는 푸른 빛이 저마다 다른 박자로 숨 쉬듯 밝아졌다 어두워짐 ·
 //  안의 식물은 차갑게 물든 채 잠들어 있고 서리 알갱이가 천천히 떠오름 · 빈 캡슐은 꺼진 유리. 위아래로 끌어 넘김(관성).
-const COLS = 4, CW = 54, PH = 78, ROW = 104, TOP = 66, BOT = 468, X0 = 12, GAP = 10;   // 캡슐 목록은 TOP ~ BOT 사이
+const COLS = 4, CW = 54, PH = 78, ROW = 104, TOP = 66, BOT0 = 468, X0 = 12, GAP = 10;   // 캡슐 목록은 TOP ~ BOT 사이
+// 짧은 화면(480~599): 목록 아래 끝 · 아래 판을 같이 올림(아래 판이 탭 줄에 가리지 않게)
+const botOf = app => BOT0 + Math.min(0, ((app && app.H) || 600) - 600);
 const GLOW = ['#0b1e2a', '#0f2d3c', '#15404f', '#1d5868', '#287486', '#3a92a4', '#5ab4c4'];   // 캡슐 속 빛(어두움 → 밝음)
 const SORTS = [['in', '보관 순'], ['star', '별 순'], ['name', '이름 순']];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -39,8 +42,8 @@ export const storage = {
     if (mode === 'name') it.sort((a, b) => a.p.name.localeCompare(b.p.name, 'ko'));
     return it;
   },
-  maxScroll(s) { const rows = Math.ceil(STORE_MAX / COLS); return Math.max(0, rows * ROW - (BOT - TOP)); },
-  onDrag(dy, dx, ev) { if (ev.y0 < TOP - 10 || ev.y0 > BOT) return; this.dragging = true; this.vel = 0; const mx = this.maxScroll(this.app.state), out = this.scroll < 0 || this.scroll > mx; this.scroll -= dy * (out ? 0.35 : 1); },
+  maxScroll(s) { const rows = Math.ceil(STORE_MAX / COLS); return Math.max(0, rows * ROW - (botOf(this.app) - TOP)); },
+  onDrag(dy, dx, ev) { if (ev.y0 < TOP - 10 || ev.y0 > botOf(this.app)) return; this.dragging = true; this.vel = 0; const mx = this.maxScroll(this.app.state), out = this.scroll < 0 || this.scroll > mx; this.scroll -= dy * (out ? 0.35 : 1); },
   onRelease(ev) { if (!this.dragging) return; this.dragging = false; this.vel = clamp(-ev.vy, -2400, 2400); },
 
   draw(app) {
@@ -55,6 +58,7 @@ export const storage = {
     // 어두운 방(위 → 아래 아주 옅게 밝아짐)
     g.vgrad(0, 0, W, H, ['#04060a', '#060912', '#080c16']);
     const list = this.list(s), total = STORE_MAX, sc = Math.round(this.scroll);
+    const BOT = botOf(app);
     g.clip(0, TOP - 6, W, BOT - TOP + 6, () => {
       const r0 = Math.max(0, Math.floor((sc - 20) / ROW)), r1 = Math.min(Math.ceil(total / COLS) - 1, Math.floor((sc + BOT) / ROW));
       for (let r = r0; r <= r1; r++) {
@@ -119,18 +123,17 @@ export const storage = {
     g.text('정렬 · ' + SORTS[this.sortI][1], W - 41, 35 + (spr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
     app.input.hit(sid, W - 74, 32, 66, 19, () => { this.sortI = (this.sortI + 1) % SORTS.length; }, 3);
     // 고른 캡슐 정보
-    const it = list.find(x => x.p.uid === this.sel), PY = 476;
-    holo(g, 10, PY, W - 20, 56, st, 13);
+    const it = list.find(x => x.p.uid === this.sel), PY = botOf(app) + 8;
     if (it) {
+      holo(g, 10, PY, W - 20, 56, st, 13);   // 고른 캡슐이 없으면 판 없음(설명 글은 ? 안내로)
       const p = it.p, days = p.slept ? Math.max(1, Math.ceil((app.now() - p.slept) / 864e5)) : 0, room = freeSlots(s) > 0;
       g.text(p.name, 20, PY + 8, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
       miniStars(g, 25 + g.textW(p.name, 'bold'), PY + 10, stars(p));
       g.text(`${stageName(p)} Lv${p.lv}` + (days ? ` · 동면 ${days}일째` : ''), 20, PY + 28, { color: P.sub });
+      button(app, 'sto_sell', W - 196, PY + 14, 50, 28, '팔기', { style: 'night', icon: 'coin', onTap: () => sellAsk(app, p, () => { this.sel = null; }) });
+      button(app, 'sto_cut', W - 142, PY + 14, 46, 28, '해체', { style: 'night', onTap: () => cutAsk(app, p, () => { this.sel = null; }) });
       button(app, 'sto_wake', W - 92, PY + 14, 72, 28, '깨우기', { style: 'teal', icon: 'sun', disabled: !room, onTap: () => app.act('fromStorage', { id: p.uid }).then(r => { if (r) { this.sel = null; app.toast(`${eul(p.name)} 스마트팜으로 깨웠어요`); } }) });
       if (!room) g.text('스마트팜 자리가 없어요', W - 56, PY + 44, { color: '#ffb0a0', align: 'center' });
-    } else {
-      g.text('캡슐을 눌러 고르세요', 20, PY + 10, { font: 'bold', color: P.main });
-      g.text('잠든 식물은 자라지 않고 열매도 맺지 않아요', 20, PY + 30, { color: P.sub });
     }
     navBar(app, 'nursery');
   },

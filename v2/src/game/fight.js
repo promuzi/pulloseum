@@ -6,9 +6,13 @@ import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/mode
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
 import { makeRng } from '../battle/rules.js';
 
+// 손패 = 전투 칸 넷(배운 기술 · 기본기 섞어서 — 2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개"), 순서 그대로.
+//  옛 판(v4 표시 없음 = 전투 3칸 + 기본기 셋 늘)은 그때 손패 그대로 — 이어 하는 판 · 다시 돌리기가 같은 결과가 나오게
 export function kitOfPlant(p) {
-  const own = p.skills.battle.filter(Boolean).map(id => ({ act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key }));
-  return [...basicsOf(p.key), ...own];
+  const S = p.skills, B = basicsOf(p.key), sk = id => B.find(b => b.id === id) || ({ act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key });
+  if (!S.v4) return [...B, ...S.battle.filter(Boolean).map(sk)];
+  const kit = S.battle.filter(id => id && (SKILLS[id] || B.some(b => b.id === id))).map(sk);
+  return kit.length ? kit : B;
 }
 // 전투 유닛(rules.js가 읽는 값) — 화면 그림용 key · stage(그림 단계) · pot · shiny도 실어 둠
 export function unitOf(id, p, extra = {}) {
@@ -34,8 +38,11 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
     if (st > 0 && rng() < 0.7) battle.push(uniqueOf(key, st));
     else if (pool.length) battle.push(pool[Math.floor(rng() * pool.length)].id);
   }
-  while (battle.length < 3) battle.push(null);
-  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', skills: { battle: battle.slice(0, 3), joker: null, forgot: [], learned: [] }, shiny: false, legend: false };
+  // 봇 손패 넷 = 배운 기술 앞 둘 + 평타 + 방어나 회피(사람과 같은 넷 — 셋째 배운 기술이 있으면 방어 · 회피 대신 반쯤)
+  const extra = battle[2] && rng() < 0.5 ? battle[2] : rng() < 0.5 ? 'guard' : 'evade';
+  const four = [battle[0], battle[1] || (rng() < 0.5 ? 'guard' : 'evade'), 'basic', extra].filter((x, i, a) => x && a.indexOf(x) === i);
+  for (const b of ['guard', 'evade']) if (four.length < 4 && !four.includes(b)) four.push(b);
+  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', skills: { battle: four.slice(0, 4), joker: null, forgot: [], learned: [], v4: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 

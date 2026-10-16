@@ -37,7 +37,9 @@ export class Input {
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', () => { this.down = null; this.pressedId = null; });
   }
-  begin() { this.regions = []; }
+  begin() { this.regions = []; this.marks = []; }
+  // 그린 자리(꺼진 단추도) — 처음 안내가 가리킬 곳을 찾을 때(누르는 자리는 꺼진 단추엔 없음)
+  mark(id, x, y, w, h) { this.marks.push({ id, x, y, w, h }); }
   // 영역 등록. pad = 보이는 크기보다 넓은 투명 터치 여유
   hit(id, x, y, w, h, fn, pad = 0) { this.regions.push({ id, x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2, fn }); }
   hitAt(x, y) { for (let i = this.regions.length - 1; i >= 0; i--) { const r = this.regions[i]; if (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h) return r; } return null; }

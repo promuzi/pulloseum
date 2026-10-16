@@ -155,15 +155,18 @@ export function drawBigPlanted(g, key, bx, by, opt = {}) {
   g.clip(x, y, m.w, cut + 2, () => part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
   return true;
 }
-// 화분째 큰 판 식물: (bx, by) = 화분 흙 줄 가운데. between = 식물 뒤 층과 화분 앞 사이(흙 위 잔디 마개 등)
+// 화분째 큰 판 식물: (bx, by) = 화분 흙 줄 가운데. between = 흙 위 잔디 마개 등 — 식물 뒤에(capUnder — 몸통이 넓은 선인장 · 버섯도 마개에 묻혀 '얹힌' 듯 보이지 않게, 2026-10-16 사용자 "불 선인장이 화분의 중앙이 아닌 다른 곳에")
+//  reveal(0~1) = 흙에서 위로 자라 나오는 만큼(심기 연출)
 export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
   const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra; if (!pot) return false;
   const m = P ? P.meta : { w: 96, h: 112, soil: [48, 75.7] }, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]);
+  const rv = opt.reveal == null ? 1 : Math.max(0, Math.min(1, opt.reveal)), cy = y + Math.round(m.soil[1] * (1 - rv)), plant = fn => (rv >= 1 ? fn() : g.clip(x, cy, m.w, m.h, fn));
   part(g, pot.back, 0, 0, 96, 112, x, y, false);
-  let sx = 0, sy = 0; if (P) { [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))); part(g, P.sheet, sx, sy, m.w, m.h, x, y, false); }
-  if (opt.between) opt.between(x, y);
+  if (opt.between && opt.capUnder) opt.between(x, y);
+  let sx = 0, sy = 0; if (P && rv > 0) { [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))); plant(() => part(g, P.sheet, sx, sy, m.w, m.h, x, y, false)); }
+  if (opt.between && !opt.capUnder) opt.between(x, y);
   part(g, pot.front, 0, 0, 96, 112, x, y, false);
-  if (P) part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false);
+  if (P && rv > 0) plant(() => part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
   return true;
 }
 // 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),

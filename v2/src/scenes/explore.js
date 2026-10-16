@@ -4,8 +4,9 @@ import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { BGIMG, drawPortrait } from '../art/sprites.js';
 import { T, plate, btnBody, tbar } from '../art/theme.js';
-import { drawShip, drawMother, SHIP_SC } from '../art/ship.js';
-import { hangarBack, SHIP } from './hangar.js';
+import { drawShip, drawMother, drawShipMini, SHIP_SC } from '../art/ship.js';
+import { hangarBack, shipAt } from './hangar.js';
+import { sfx } from '../core/sound.js';
 import { PLANETS as CAT_PLANETS, ORBIT_LV, FUEL, SPECIES, KIND_NAME, probeMaxDur } from '../game/catalog.js';
 import { fuelSync, probeOf, exploreOdds } from '../game/logic.js';
 import { left } from '../game/view.js';
@@ -31,7 +32,11 @@ const PLANETS = CAT_PLANETS.map(p => ({ ...p, ...LOOK[p.id] }));
 const ORB = { 1: [46, 26], 2: [74, 42], 3: [100, 57], 4: [124, 71] };
 const RAD = { 1: 7, 2: 7, 3: 8, 4: 9 };
 // 모선 = 지도 가운데(폭 56칸), 탐사선 = 아래 도킹 집게에 작게(MINI.sc). 누르면 탐사선으로 확대 · 본채는 검게 배경으로 → 정비(2026-10-15 "홀로그램처럼 변하며 확대")
-const MOTHER_W = 56, MINI = { sc: 0.105 }, MORPH_MS = 950, BACK_MS = 800, WARP_MS = 900, REACH_MS = 700;
+const MOTHER_W = 56, MINI = { sc: 0.105 }, MORPH_MS = 950, BACK_MS = 800, REACH_MS = 700;
+// 탐사 출발(2026-10-16 사용자 "탐사 가는 모션과 애니메이션도 따로"): 집게에서 떨어짐 → 고른 행성으로 곡선 비행(꼬리 자취) → 행성에 닿아 빛 고리 → 결과
+const UNDOCK = 380, FLY = 950, LAND = 420;
+// 아래 판 높이(내용 끝까지) — 짧은 화면은 판을 아래(탭 줄 위)에 붙이고 지도 가운데를 그 위 빈 곳 한가운데로
+const PANEL_H = 190;
 const ease = k => k * k * (3 - 2 * k);
 const reachR = (o, k = 1.12) => { const lo = ORB[Math.max(1, Math.floor(o))], hi = ORB[Math.min(4, Math.ceil(o))], f = o - Math.floor(o); return [(lo[0] + (hi[0] - lo[0]) * f) * k, (lo[1] + (hi[1] - lo[1]) * f) * k]; };
 
@@ -42,7 +47,8 @@ export const explore = {
     const { g, W, H, t, state: s } = app, now = app.now(), P = probeOf(s);
     fuelSync(s, now);
     if (BGIMG.explore_night) g.img(BGIMG.explore_night, 0, 0); else space(g, 0, 0, W, H, t, 71);
-    const cx = Math.round(W / 2), cy = 196, lvOpen = o => s.user.level >= ORBIT_LV[o], reach = o => o <= P.lv.tank;
+    const py = this.py = Math.max(210, H - 44 - 6 - PANEL_H), cx = Math.round(W / 2), cy = this.cy = Math.round((26 + py) / 2), lvOpen = o => s.user.level >= ORBIT_LV[o], reach = o => o <= P.lv.tank;
+    this.pp = this.pp || {};
     // 닿는 범위 고리: 연료 탱크 단계가 바뀌면 부드럽게 커짐(정비에서 강화하고 돌아온 때)
     if (!this.reach || this.reach.to !== P.lv.tank) this.reach = { from: this.reach ? this.reachNow(t) : P.lv.tank, to: P.lv.tank, t0: t };
     const rn = this.reachNow(t);
@@ -54,7 +60,7 @@ export const explore = {
     let dock = [cx, cy + 10];
     if (!this.morph && !this.unmorph) {
       dock = drawMother(g, cx, cy + bob, MOTHER_W);
-      if (!this.warp) drawShip(g, Math.round(dock[0]), Math.round(dock[1]) - 2, MINI.sc, 0, { t, model, smooth: true });
+      if (!this.warp) drawShipMini(g, Math.round(dock[0]), Math.round(dock[1]) - 2, model);   // 1배 도트(모선과 같은 칸)
     }
     this.dock = dock;
     if (!this.morph && !this.unmorph && !this.warp) app.input.hit('ex_ship', cx - MOTHER_W / 2, cy - 20, MOTHER_W, 44, () => { this.morph = { t0: app.t }; });
@@ -62,6 +68,7 @@ export const explore = {
     for (const p of sorted) {
       const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit], locked = !lvOpen(p.orbit), far = !reach(p.orbit);
       const x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry), r = RAD[p.orbit];
+      this.pp[p.id] = [x, y, r];
       g.disc(x, y, r + 1, C.ink);
       planet(g, x, y, r, p.ramp, { ring: p.ring, ringCol: C.mute });
       if (locked || far) { g.dither(x - r - 1, y - r - 1, r * 2 + 3, r * 2 + 3, C.ink, far && !locked ? 7 : 9); g.img(icon('lockS'), x - 3, y - 3); }
@@ -83,7 +90,7 @@ export const explore = {
   // 아래 판: 고른 행성(환경 · 나오는 속성 · 위험 · 생기 · 사는 식물) → 탐사비 · 연료 캡슐 · 성공 확률 · 내구도 → 탐사 보내기
   panel(app, s, now, P) {
     const { g, W, H } = app, pl = PLANETS.find(p => p.id === this.sel), PT = T.ptext, needLv = ORBIT_LV[pl.orbit], lvLock = s.user.level < needLv, far = pl.orbit > P.lv.tank;
-    const py = 300, O = exploreOdds(s, pl), max = probeMaxDur(P.lv.hull);
+    const py = this.py || 300, O = exploreOdds(s, pl), max = probeMaxDur(P.lv.hull);
     plate(g, 8, py, W - 16, H - py - 50);
     g.text(pl.name, 18, py + 8, { font: 'head', color: PT.main });
     btnBody(g, W - 72, py + 7, 56, 18, lvLock || far ? T.btn.off : T.btn.primary, true); g.text(`${pl.orbit}궤도`, W - 44, py + 10, { color: (lvLock || far ? T.btn.off : T.btn.primary).text, align: 'center', font: 'bold' });
@@ -127,30 +134,44 @@ export const explore = {
   },
   async go(app, P) {
     this.warp = { t0: app.t, res: null, P };
+    sfx('whoosh');
     const r = await app.act('explore', { planet: P.id });
     if (!r) { this.warp = null; return; }
     this.warp.res = r;
   },
-  // 접힘(시공간 폴드) 연출: 탐사선이 집게에서 떨어져 나가고 별이 가운데로 빨려 들며 하얗게 → 결과(다녀온 탐사선은 다시 집게로)
+  // 탐사 출발: 집게에서 내려와 엔진 불꽃(UNDOCK) → 고른 행성으로 휘는 길을 따라 날아가며 작아짐 · 꼬리 자취(FLY) → 행성에 닿으면 번쩍 + 빛 고리(LAND)
+  //  → 결과가 오면 결과 창(아직이면 '탐사 중' · 고리가 계속 퍼짐). 다녀온 탐사선은 다시 집게에
   warpDraw(app) {
     const w = this.warp; if (!w) return;
-    const { g, W, H, t, state: s } = app, k = Math.min(1, (t - w.t0) / WARP_MS);
+    const { g, W, H, t, state: s } = app, a = t - w.t0, model = (s.ship && s.ship.model) || 1;
     app.input.hit('warp_block', 0, 0, W, H, () => {});
-    const cx = W / 2, cy = 196, [dx, dy] = this.dock || [cx, cy + 10];
-    { const q = ease(Math.min(1, k * 1.6)), model = (s.ship && s.ship.model) || 1;   // 떨어져 나가는 탐사선
-      if (q < 1) g.alpha(1 - q, () => drawShip(g, Math.round(dx), Math.round(dy - 2 + q * 26), MINI.sc * (1 + q * 0.6), 0, { t, model, smooth: true })); }
-    g.c.fillStyle = `rgba(4,6,16,${(0.5 * k).toFixed(3)})`; g.c.fillRect(0, 0, W, H);
-    for (let i = 0; i < 46; i++) {
-      const a = i * 2.399 + 0.3, d0 = 30 + (i * 37) % 170, d = d0 * (1 - k * 0.9), len = 4 + k * 26;
-      const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.8;
-      for (let j = 0; j < len; j += 2) g.px(Math.round(x + Math.cos(a) * j), Math.round(y + Math.sin(a) * j * 0.8), j < 4 ? '#ffffff' : '#8ccfff');
-    }
-    if (k > 0.75) g.alpha((k - 0.75) / 0.25, () => g.rect(0, 0, W, H, '#e8faff'));
-    if (k >= 1 && w.res) {
-      const r = w.res; this.warp = null;
-      const sub = `재배사 경험치 +${r.xp.gained} · 내구도 -${r.wear}(${r.dur}/${r.max})`;
-      if (r.ok) showGot(app, `${r.planet} 탐사`, r.got, sub);
-      else showGot(app, `${r.planet} 탐사 실패 — 탐사선이 크게 흔들렸어요`, r.got, sub);
+    const [dx, dy] = this.dock || [W / 2, (this.cy || 196) + 10], pp = (this.pp && this.pp[w.P.id]) || [W / 2, (this.cy || 196) - 60, 8];
+    const flame = (x, y, rot, n) => { for (let i = 0; i < n; i++) { const d = 7 + i * 2 + (Math.floor(t / 60 + i) % 2); g.px(Math.round(x - Math.sin(rot) * d), Math.round(y + Math.cos(rot) * d), i < 2 ? '#fff6c8' : i < 4 ? '#ffb04a' : '#ff6a3a'); } };
+    if (a < UNDOCK) {
+      const k = ease(a / UNDOCK), y = dy - 2 + Math.round(k * 9);
+      flame(dx, y, 0, 2 + Math.round(k * 3));
+      drawShipMini(g, dx, y, model);
+    } else if (a < UNDOCK + FLY) {
+      if (!w.flew) { w.flew = true; sfx('swing'); }
+      const k = ease((a - UNDOCK) / FLY), sx = dx, sy = dy + 7, ex = pp[0], ey = pp[1];
+      const mx = (sx + ex) / 2 + (ey - sy) * 0.3, my = (sy + ey) / 2 - (ex - sx) * 0.3 - 16;   // 휘는 길(가운데 조절점)
+      const bz = u => [(1 - u) * (1 - u) * sx + 2 * (1 - u) * u * mx + u * u * ex, (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * my + u * u * ey];
+      for (let i = 1; i < 18; i++) { const u = k - i * 0.022; if (u < 0) break; const [x, y] = bz(u); g.alpha(1 - i / 18, () => g.px(Math.round(x), Math.round(y), i < 4 ? '#ffe8a8' : '#8ccfff')); }   // 꼬리 자취
+      const [x, y] = bz(k), [x2, y2] = bz(Math.min(1, k + 0.02)), rot = Math.atan2(y2 - y, x2 - x) + Math.PI / 2, hh = Math.max(6, Math.round(14 * (1 - k * 0.5)));
+      flame(x, y, rot, 4);
+      drawShipMini(g, x, y, model, rot, hh);
+    } else {
+      const a2 = a - UNDOCK - FLY;
+      if (!w.landed) { w.landed = true; sfx('land'); }
+      if (a2 < LAND) g.alpha(1 - a2 / LAND, () => g.disc(pp[0], pp[1], pp[2] + 3, '#fff6c8'));   // 닿는 순간 번쩍
+      for (let i = 0; i < 2; i++) { const k = ((a2 / 650) + i * 0.5) % 1, r = Math.round(pp[2] + 4 + k * 18); g.alpha(1 - k, () => g.ellipseRing(pp[0], pp[1], r, Math.round(r * 0.7), '#ffd890', 0)); }
+      if (a2 >= LAND && !w.res) g.text('탐사 중' + '.'.repeat(1 + Math.floor(a2 / 300) % 3), pp[0], pp[1] + pp[2] + 7, { color: '#ffd890', align: 'center', outline: T.ink });
+      if (a2 >= LAND && w.res) {
+        const r = w.res; this.warp = null;
+        const sub = `경험치 +${r.xp.gained} · 내구도 -${r.wear}(${r.dur}/${r.max})`;
+        if (r.ok) showGot(app, `${r.planet} 탐사`, r.got, sub);
+        else showGot(app, `${r.planet} 탐사 실패 — 탐사선이 크게 흔들렸어요`, r.got, sub);
+      }
     }
   },
   // 모선 → 정비: 탐사선 쪽으로 확대 · 본채는 검게 물러나 배경으로, 탐사선은 홀로그램으로(지도 위에 겹쳐 그림): f = 0(지도) → 1(정비 화면의 큰 홀로그램)
@@ -163,12 +184,12 @@ export const explore = {
     const zoom = ease(Math.max(0, Math.min(1, (f - 0.12) / 0.88))), scan = Math.max(0, Math.min(1, f / 0.8));
     hangarBack(app, ease(Math.min(1, f * 1.4)));
     hud(app, s);
-    const [d0x, d0y] = this.dock || [135, 206], px = Math.round(d0x + (SHIP.cx - d0x) * zoom), py = Math.round(d0y - 2 + (SHIP.cy - d0y + 2) * zoom), sc = MINI.sc + (SHIP_SC - MINI.sc) * zoom;
+    const SHIP = shipAt(app), [d0x, d0y] = this.dock || [135, 206], px = Math.round(d0x + (SHIP.cx - d0x) * zoom), py = Math.round(d0y - 2 + (SHIP.cy - d0y + 2) * zoom), sc = MINI.sc + (SHIP_SC - MINI.sc) * zoom;
     // 본채: 집게가 탐사선을 따라가게 같이 커지며(카메라가 다가감) 검게 → 사라짐
     { const mw = MOTHER_W * (sc / MINI.sc), black = ease(Math.min(1, f * 1.8)), al = 1 - ease(Math.max(0, Math.min(1, (f - 0.55) / 0.4)));
       if (al > 0.01) { const [ox, oy] = [px - mw * 0.006, py + 2 - mw * 0.3 * (36 / 56)]; drawMother(g, Math.round(ox), Math.round(oy), Math.round(mw), black, al); } }
     const model = (s.ship && s.ship.model) || 1;
-    if (zoom < 0.04) drawShip(g, px, py, MINI.sc, 0, { t, model, smooth: true });
+    if (zoom < 0.04) drawShipMini(g, px, py, model);   // 시작 = 집게에 붙은 1배 도트 그대로
     else drawShip(g, px, py, sc, dir === 1 ? scan : Math.min(1, f * 1.25), { t, dir, model, smooth: sc < 0.5 });
     navBar(app, 'explore');
   },

@@ -4,7 +4,7 @@
 //  계산은 1:1과 같은 rules.resolveTurn(같은 씨앗·같은 선택 → 같은 결과, 화면 무관). 화면은 B.me·B.foe(앞에 선 식물)를 읽으면 된다.
 //  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
 import { makeRng, resolveTurn } from './rules.js';
-import { elemMult, aiPick, REST, closeTurn } from './model.js';
+import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf } from './status.js';
 
 export function makeTeamBattle({ me, foe, seed = 20261015 }) {
@@ -37,7 +37,7 @@ function swapIn(B, side, to, ev, forced = false) {
 
 // 사람의 수 → 이번 턴 기술: 쉬는 차례 = 쉬기, rest = 넘어감(시간 초과 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 3:3만 평타로 바꿨음), 못 쓰는 기술 = 평타
 const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side]) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
-const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill) ? a.skill : u.kit[0]);
+const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill) ? a.skill : firstOk(u));
 
 // 한 턴: myAct = { kind: 'skill', skill } | { kind: 'switch', to } | { kind: 'rest' }(쉬는 차례 · 시간 초과)
 //  foeAct = 친구 대결(사람)의 수 — 없으면 봇이 고름. 친구 대결은 쓰러진 자리를 저마다 직접 채움(턴 끝 B.need = 'me' | 'foe' | 'both')

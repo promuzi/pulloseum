@@ -81,20 +81,17 @@ export const room = {
   // 방이 없을 때: 설명 · 방 만들기 · 코드로 들어가기
   lobby(app) {
     const { g, W, state: s } = app, x = PANEL.x, w = PANEL.w, y = 44, P = { main: '#e0f0ff', sub: '#8cc4ee', dim: '#4f8aa8' };
-    holo(g, x, y, w, 250, { fill: '#06111f', fill2: '#0a182c', frame: '#2f5c8a', frameHi: '#8ccfff', frameLo: '#18385e' }, 16);
+    holo(g, x, y, w, 166, { fill: '#06111f', fill2: '#0a182c', frame: '#2f5c8a', frameHi: '#8ccfff', frameLo: '#18385e' }, 16);
     ledText(g, '친구 대결 · 1:1 · 3:3', W / 2, y + 14, { font: 'head', color: LED.teal });
-    const lines = ['방을 만들면 초대 코드가 나와요', '친구에게 코드나 링크를 보내요', '둘 다 준비하면 바로 시작!'];
-    lines.forEach((l, i) => { g.text(`${i + 1}`, x + 22, y + 46 + i * 22, { font: 'bold', color: '#ffd890' }); g.text(l, x + 36, y + 46 + i * 22, { color: P.main }); });
     const p = s.plants[s.active] || s.plants[0];
     if (p) {
-      g.rect(W / 2 - 33, y + 122, 66, 66, '#4a8edc'); g.rect(W / 2 - 32, y + 123, 64, 64, '#0a1c32');
-      g.clip(W / 2 - 31, y + 124, 62, 62, () => drawPortrait(g, p.key, W / 2 - 31, y + 124, 62, false));
-      g.text(`나갈 식물: ${p.name}`, W / 2, y + 196, { font: 'bold', color: P.main, align: 'center' });
-      g.text(`${stageName(p)} Lv${p.lv} — 방에서 바꿀 수 있어요`, W / 2, y + 214, { color: P.sub, align: 'center' });
+      g.rect(W / 2 - 33, y + 44, 66, 66, '#4a8edc'); g.rect(W / 2 - 32, y + 45, 64, 64, '#0a1c32');
+      g.clip(W / 2 - 31, y + 46, 62, 62, () => drawPortrait(g, p.key, W / 2 - 31, y + 46, 62, false));
+      g.text(`나갈 식물: ${p.name}`, W / 2, y + 120, { font: 'bold', color: P.main, align: 'center' });
+      g.text(`${stageName(p)} Lv${p.lv}`, W / 2, y + 138, { color: P.sub, align: 'center' });
     }
-    g.text('한 턴 40초 · 보상은 하루 15판까지', W / 2, y + 232, { color: P.dim, align: 'center' });
-    button(app, 'rm_make', 34, 312, W - 68, 40, '방 만들기', { style: 'gold', font: 'head', icon: 'plus', iconTint: true, disabled: this.busy || !app.room.online, onTap: () => this.call(app, () => R.create()) });
-    button(app, 'rm_join', 34, 362, W - 68, 36, '코드로 들어가기', { style: 'teal', font: 'bold', disabled: this.busy || !app.room.online, onTap: () => openForm(app, {
+    button(app, 'rm_make', 34, y + 182, W - 68, 40, '방 만들기', { style: 'gold', font: 'head', icon: 'plus', iconTint: true, disabled: this.busy || !app.room.online, onTap: () => this.call(app, () => R.create()) });
+    button(app, 'rm_join', 34, y + 232, W - 68, 36, '코드로 들어가기', { style: 'teal', font: 'bold', disabled: this.busy || !app.room.online, onTap: () => openForm(app, {
       title: '코드로 들어가기', note: '친구가 보낸 6자 코드를 써 주세요', fields: [{ id: 'code', label: '초대 코드', max: 8, auto: 'off' }], ok: '들어가기',
       onSubmit: async val => { try { const r = await R.join(val.code.trim()); if (app.room) app.room.view = r; return null; } catch (e) { return e.message; } },
     }) });
@@ -111,7 +108,7 @@ export const room = {
     if (v.host) {
       const bw2 = Math.floor((W - 68 - 6) / 2);
       [['1v1', '1:1 대결'], ['swap3', '3:3 교체전']].forEach(([id, label], i) => button(app, 'rm_mode_' + id, 34 + i * (bw2 + 6), 122, bw2, 20, label, { style: (v.mode || '1v1') === id ? 'gold' : 'night', disabled: this.busy, onTap: () => { if ((v.mode || '1v1') !== id) this.call(app, () => R.mode(id)); } }));
-    } else g.text(swap ? '3:3 교체전 — 방장이 골랐어요' : '1:1 대결 — 방장이 골랐어요', W / 2, 126, { color: '#ffd890', align: 'center' });
+    } else g.text(swap ? '3:3 교체전' : '1:1 대결', W / 2, 126, { color: '#ffd890', align: 'center' });
     // 두 사람 카드(사용자 2026-10-16 "친구대결에서 서로의 패는 보여주지 말자 — 프로필과 이름, 레벨 이정도만"):
     //  위 = 프로필(대표 식물 얼굴 · 이름 · 재배사 Lv · 칭호), 가운데 = 내 카드만 고른 식물 · 3:3이면 팀 셋(상대는 '?' — 대결에서 공개), 아래 = 준비 불
     const cw = 118, cy = 148, ch = 196;
@@ -121,7 +118,6 @@ export const room = {
       if (!m) {
         g.text('친구를', x + cw / 2, cy + 60, { font: 'bold', color: '#8cc4ee', align: 'center' });
         g.text('기다리는 중' + '.'.repeat(1 + Math.floor(t / 400) % 3), x + cw / 2, cy + 78, { font: 'bold', color: '#8cc4ee', align: 'center' });
-        g.text('코드를 보내 주세요', x + cw / 2, cy + 104, { color: '#4f8aa8', align: 'center' });
         return;
       }
       // 프로필 줄: 배너 색 테의 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
@@ -146,7 +142,6 @@ export const room = {
             g.text(String(k + 1), fx + 3, fy + 1, { font: 'bold', color: '#ffffff', outline: '#05070b', outlineW: 2 });
           });
           g.text(`${tc[0].name} 먼저`, x + cw / 2, py + 46, { font: 'bold', color: '#e0f0ff', align: 'center' });
-          g.text('누른 순서대로 나가요', x + cw / 2, py + 62, { color: '#8cc4ee', align: 'center' });
           button(app, 'rm_team', x + 10, py + 94, cw - 20, 20, '팀 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.teamPick = []; else app.toast('준비를 풀고 바꿔요'); } });
         } else {
           g.text('스마트팜에', x + cw / 2, py + 18, { font: 'bold', color: '#ffb0a0', align: 'center' });
@@ -163,8 +158,7 @@ export const room = {
         const no3 = swap && !m.team3;
         g.rect(px - 1, py - 1, 58, 58, '#2a3a4e'); g.rect(px, py, 56, 56, '#0a1c32');
         g.text('?', x + cw / 2, py + 18, { font: 'big', color: '#2f5c8a', align: 'center' });
-        g.text(no3 ? '식물이 셋' : swap ? '고른 팀은' : '고른 식물은', x + cw / 2, py + 62, { color: no3 ? '#ffb0a0' : '#8cc4ee', align: 'center' });
-        g.text(no3 ? '있어야 해요' : '대결에서 공개', x + cw / 2, py + 78, { color: no3 ? '#ffb0a0' : '#8cc4ee', align: 'center' });
+        if (no3) { g.text('식물이 셋', x + cw / 2, py + 62, { color: '#ffb0a0', align: 'center' }); g.text('있어야 해요', x + cw / 2, py + 78, { color: '#ffb0a0', align: 'center' }); }
       }
       const rc = m.ready ? '#7cf0a0' : '#3a4a5e';
       g.rect(x + 10, cy + ch - 16, 8, 8, '#05070b'); g.rect(x + 11, cy + ch - 15, 6, 6, rc);   // 위 '바꾸기' 단추(카드 +176까지)와 안 겹치게
@@ -175,8 +169,8 @@ export const room = {
       if (em) emoteBubble(g, em.i, x + cw / 2, py + 40, performance.now() - em.t);   // 전투와 같은 말풍선
     });
     // 준비
-    const both = v.members.length === 2, ready = me && me.ready, no3 = swap && me && !me.team3 && !ready;
-    button(app, 'rm_ready', 34, cy + ch + 10, W - 68, 40, ready ? '준비 취소' : '준비', { style: ready ? 'night' : 'gold', font: 'head', disabled: this.busy || no3, sub: no3 ? '3:3은 식물이 셋 있어야 해요' : both ? (ready ? '친구를 기다려요' : '둘 다 준비하면 시작') : '친구가 들어오면 시작', onTap: () => this.call(app, () => R.ready(!ready)) });
+    const ready = me && me.ready, no3 = swap && me && !me.team3 && !ready;
+    button(app, 'rm_ready', 34, cy + ch + 10, W - 68, 40, ready ? '준비 취소' : '준비', { style: ready ? 'night' : 'gold', font: 'head', disabled: this.busy || no3, sub: no3 ? '3:3은 식물이 셋 있어야 해요' : null, onTap: () => this.call(app, () => R.ready(!ready)) });
     let y = cy + ch + 60;
     if (v.last) { g.text(`지난 판${v.last.mode === 'swap3' ? '(3:3)' : ''} · ${v.last.winner} 승 · ${v.last.turns}턴` + (v.last.why === 'ko' ? '' : ` (${{ forfeit: '기권', timeout: '시간 넘김', left: '나감' }[v.last.why] || v.last.why})`), W / 2, y, { color: '#ffd890', align: 'center' }); y += 20; }
     // 감정 표현 단추(셋씩 두 줄)
@@ -203,22 +197,21 @@ export const room = {
   },
   // 3:3 팀 고르기: 누른 순서 = 나설 순서(1 · 2 · 3), 다시 누르면 빠짐 → 셋이면 '이 팀으로'(홈의 3:3 팀으로도 저장 — 팀 정의는 하나)
   teamSheet(app) {
-    const { g, W, H, state: s } = app, sel = this.teamPick, n = s.plants.length, h = 100 + n * 42, y = Math.max(28, H - h - 12);
+    const { g, W, H, state: s } = app, sel = this.teamPick, n = s.plants.length, h = 84 + n * 42, y = Math.max(28, H - h - 12);
     g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
     app.input.hit('tp_block', 0, 0, W, H, () => { this.teamPick = null; });
     holo(g, 10, y, W - 20, h, T.card || T.panel, 16);
     app.input.hit('tp_in', 10, y, W - 20, h, () => {});
     g.text('3:3 팀 고르기', 22, y + 10, { font: 'head', color: T.ptext.main });
-    g.text('누른 순서대로 나가요 — 1번이 먼저', 22, y + 30, { color: T.ptext.sub });
     s.plants.forEach((p, i) => {
-      const ry = y + 50 + i * 42, id = 'tp_' + i, k = sel.indexOf(p.uid), pr = app.input.isPressed(id);
+      const ry = y + 34 + i * 42, id = 'tp_' + i, k = sel.indexOf(p.uid), pr = app.input.isPressed(id);
       holo(g, 16, ry + (pr ? 1 : 0), W - 32, 38, k >= 0 ? { fill: '#0d2a1c', fill2: '#123622', frame: '#7cf0a0', frameHi: '#d8ffe4', frameLo: '#2a6a44' } : T.deep, 16);
       g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
       g.text(p.name, 60, ry + 5, { font: 'bold', color: T.ptext.main });
       g.text(`${stageName(p)} Lv${p.lv}`, 60, ry + 21, { color: T.ptext.sub });
       g.img(icon(SPECIES[p.key].el), W - 66, ry + 13);
       if (k >= 0) { g.rect(W - 46, ry + 9, 20, 20, '#05070b'); g.rect(W - 45, ry + 10, 18, 18, k === 0 ? '#f0be7d' : '#7cf0a0'); g.text(String(k + 1), W - 36, ry + 12, { font: 'bold', color: '#05070b', align: 'center' }); }
-      app.input.hit(id, 16, ry, W - 32, 38, () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < 3) sel.push(p.uid); else app.toast('셋까지 골라요 — 빼고 다시 눌러요'); });
+      app.input.hit(id, 16, ry, W - 32, 38, () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < 3) sel.push(p.uid); else app.toast('셋까지 골라요'); });
     });
     button(app, 'tp_ok', 34, y + h - 44, W - 68, 32, sel.length === 3 ? '이 팀으로' : `${sel.length}/3 골랐어요`, { style: 'gold', font: 'bold', disabled: sel.length !== 3 || this.busy, onTap: () => this.saveTeam(app, [...sel]) });
   },

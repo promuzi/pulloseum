@@ -107,8 +107,10 @@ export function registerForm(app, sc, keep = {}) {
 
 // ── 처음 화면 · 처음 식물 고르기가 같이 쓰는 그림 ──
 // 꺼진 방 + 전등(k) + 빛줄기 + 의자 · 식물(rv = 투영기가 아래부터 비춘 정도) + 빛줄기 안 먼지
-function nightRoom(app, key, pot, k, rv) {
+//  dy = 방을 위로 올림(짧은 화면 — 대기 화면과 같은 값이면 켜질 때 방이 안 튐)
+function nightRoom(app, key, pot, k, rv, dy = 0) {
   const { g, W, H } = app, [mx, my] = LOFT_STOOL, kk = Math.min(1, k);
+  if (dy) { g.rect(0, 0, W, H, BG0); g.c.save(); g.c.translate(0, dy); }
   loftNight(app, k);
   loftNightBeam(app, kk);
   if (rv > 0) {
@@ -117,24 +119,31 @@ function nightRoom(app, key, pot, k, rv) {
     if (rv < 1) { g.rect(mx - 30, ry, 60, 1, '#8ccfff'); g.rect(mx - 20, ry - 1, 40, 1, '#e6f3ff'); }   // 투영기 빛 줄(대기 화면의 식물 나타남과 같은 꼴)
   }
   loftNightFront(app, kk);
+  if (dy) g.c.restore();
 }
+// 대기 화면이 짧은 화면에서 방을 올리는 값(home.js homeDy와 같음)
+const roomDy = app => Math.min(0, app.H - 600);
 // 켜짐: 다음 박에 시작 → 대기 곡 마디에 대기 화면으로. 그동안 처음 화면 곡은 그대로 이어지고 종 · 건반이 화음을 타고 올라감(music.js FILLS.boot)
 function startBoot(sc, app) {
   if (sc.boot) return;
   const b = bootPlan();
   sc.boot = { t0: b.t0, t1: b.t1, a0: app.t };
 }
-function drawBoot(sc, app, key, pot, uiDraw) {
+//  dy0 = 켜지기 전 방 높이(처음 화면 0 · 처음 식물 고르기 = 대기 화면 값) → 켜지는 동안 대기 화면 높이로 천천히 옮김(짧은 화면)
+function drawBoot(sc, app, key, pot, uiDraw, dy0 = 0) {
   const { g } = app, [mx, my] = LOFT_STOOL, bt = sc.boot, now = sc.p && sc.p.bootu != null ? bt.t0 + (bt.t1 - bt.t0) * +sc.p.bootu : musicNow();
   const D = Math.max(0.2, bt.t1 - bt.t0), u = clamp01((now - bt.t0) / D), fade = 1 - clamp01((app.t - bt.a0) / 260);
-  if (now < bt.t0) { nightRoom(app, key, pot, lampNow().k, 1); if (fade > 0 && uiDraw) g.alpha(fade, uiDraw); return; }
+  if (now < bt.t0) { nightRoom(app, key, pot, lampNow().k, 1, dy0); if (fade > 0 && uiDraw) g.alpha(fade, uiDraw); return; }
+  const dy = Math.round(dy0 + (roomDy(app) - dy0) * u * u * (3 - 2 * u));
   g.rect(0, 0, app.W, app.H, BG0);    // 방 그림(270×600)보다 넓거나 긴 화면의 남는 곳
+  g.c.save(); g.c.translate(0, dy);
   loftBack(app);                       // 켜진 방(창 밖 우주까지) 위에
   loftBoot(app, u, D * 1000);          // 아직 안 켜진 칸 = 꺼진 방
   loftNightBeam(app, 1 - u);           // 빛줄기는 방이 밝아지며 사라짐(대기 화면엔 원래 그림의 원뿔만)
   loftNightPlant(app, key, pot, mx, my, { warm: 1 - u });
   g.alpha(u, () => loftFront(app));
   loftNightFront(app, 1 - u);
+  g.c.restore();
   if (fade > 0 && uiDraw) g.alpha(fade, uiDraw);
   if (u >= 1 && !bt.gone && !(sc.p && sc.p.bootu != null)) { bt.gone = true; app.go('home', { from: 'boot' }, 'cut'); }
 }
@@ -208,7 +217,7 @@ export const title = {
       button(app, 'title_login', bx, y0, bw, 34, '로그인', { style: 'night', font: 'head', onTap: on(() => loginForm(app, this)) });
       button(app, 'title_new', bx, y0 + 44, bw, 34, '새로 시작하기', { style: 'gold', font: 'head', onTap: on(() => registerForm(app, this)) });
       if (app.googleId) button(app, 'title_google', bx, y0 + 88, bw, 30, '구글로 계속하기', { style: 'night', font: 'bold', onTap: on(() => googleLogin(app, this)) });
-      if (app.invite) g.text(`초대받은 방 ${app.invite} — 로그인하면 바로 들어가요`, W / 2, y0 + (app.googleId ? 126 : 88), { color: '#ffe8a8', align: 'center', outline: T.ink });
+      if (app.invite) g.text(`초대받은 방 ${app.invite}`, W / 2, y0 + (app.googleId ? 126 : 88), { color: '#ffe8a8', align: 'center', outline: T.ink });
       return;
     }
     button(app, 'title_start', bx, y0, bw, 36, app.invite ? '초대받은 방으로' : '게임 시작', { style: 'gold', font: 'head', onTap: on(() => enterGame(app)) });
@@ -231,19 +240,18 @@ export const starter = {
   draw(app) {
     const { g, W, H, t } = app;
     if (this.showT == null) this.showT = t - 1000;
-    const key = STARTERS[this.i], sp = SPECIES[key], [mx, my] = LOFT_STOOL;
-    if (this.boot) return drawBoot(this, app, key, 'pot_terra', null);
+    const key = STARTERS[this.i], sp = SPECIES[key], [mx, my0] = LOFT_STOOL, dy = roomDy(app), my = my0 + dy;   // 짧은 화면 = 방 · 글자를 같이 올림(대기 화면과 같은 높이)
+    if (this.boot) return drawBoot(this, app, key, 'pot_terra', null, dy);
     const L = lampNow(), k = L.letter === 'a' && !L.burst ? 1 : L.k;   // 처음 화면 곡이 아니면(바로 들어온 촬영 등) 켜진 전등
-    nightRoom(app, key, 'pot_terra', k, clamp01((t - this.showT) / 320));
-    g.text('처음 식물을 골라 주세요', W / 2, 150, { font: 'head', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
-    g.text('어느 식물이든 끝까지 키울 수 있어요', W / 2, 174, { color: '#d8c4a4', align: 'center', outline: T.ink });
+    nightRoom(app, key, 'pot_terra', k, clamp01((t - this.showT) / 320), dy);
+    g.text('처음 식물을 골라 주세요', W / 2, Math.max(34, 150 + dy), { font: 'head', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
     for (const [id, d, x] of [['st_prev', -1, 26], ['st_next', 1, W - 26]]) {
       const pr = app.input.isPressed(id), c = pr ? '#ffffff' : '#8ccfff', cy = my - 50;
       for (let j = 0; j < 7; j++) g.rect(d < 0 ? x - j : x + j, cy - 6 + j, 1, 13 - j * 2, c);
       app.input.hit(id, x - 18, cy - 22, 36, 44, () => { this.i = (this.i + d + STARTERS.length) % STARTERS.length; this.showT = app.t; }, 2);
     }
     // 이름 · 종 · 속성 · 설명(의자 다리 아래)
-    const y = 412, el = ELEMENT[sp.el];
+    const y = 412 + dy, el = ELEMENT[sp.el];
     g.text(sp.name, W / 2, y, { font: 'name', color: '#ffffff', align: 'center', outline: T.ink, outlineW: 3 });
     const tags = [[sp.type, JONG[sp.type], '#e6f3ff'], [sp.el, ELEM[sp.el], el.light]];
     let tw = tags.reduce((a, [, l]) => a + 22 + g.textW(l, 'label') + 4, -4), tx = Math.round(W / 2 - tw / 2);

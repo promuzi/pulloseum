@@ -11,7 +11,7 @@ import { transSound, music, musicTick } from './sound.js';
 //  전투 · 매칭 · 처음 화면은 다른 곡 — 바뀜은 다음 마디에 이음 장식을 붙여서(2026-10-16 사용자 "끊기지 않고 자연스레 이어지게")
 const SCENE_MUSIC = {
   title: 'title', starter: 'title', home: 'home', plant: 'focus', matching: 'ready', battle: 'battle', result: 'result',
-  nursery: 'farm', storage: 'farm', explore: 'space', hangar: 'space', bag: 'menu', dex: 'menu', shop: 'menu', market: 'menu', room: 'menu',
+  nursery: 'farm', storage: 'farm', explore: 'space', hangar: 'space', bag: 'menu', dex: 'menu', shop: 'menu', room: 'menu',
 };
 
 const STEEL = { hi: '#e8ecf2', a: '#c6ccd6', b: '#a2aab8', c: '#7e8796', d: '#596170', edge: '#2a2f3a', rivet: '#eef2f8', rivetLo: '#4a5160' };

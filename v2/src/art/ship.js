@@ -70,6 +70,28 @@ export function drawMother(g, cx, cy, w, black = 0, alpha = 1) {
   c.restore();
   return [x + w * MOTHER.dock[0], y + h * MOTHER.dock[1]];
 }
+// 모선 집게에 붙은 작은 탐사선 = 1배 도트(모선 그림과 같은 칸 크기 — 2026-10-16 사용자 "탐사선과 우주선의 픽셀 차이가 있는지 어색해 보여":
+//  전엔 큰 그림을 부드럽게 줄여 흐릿했음) → 큰 그림을 줄인 뒤 반투명 칸은 반 넘으면 불투명 · 아니면 지우고, 바깥에 어두운 테 1칸. 배마다 한 번 만들어 둠
+const miniCache = new Map();
+export function shipMini(model, h = 14) {
+  const P = SHIPIMG[model] || SHIPIMG[1]; if (!P) return null;
+  const key = model + '|' + h; if (miniCache.has(key)) return miniCache.get(key);
+  const im = P.big, w = Math.max(5, Math.round(im.width * h / im.height)), a = document.createElement('canvas'); a.width = w + 2; a.height = h + 2;
+  const ax = a.getContext('2d'); ax.imageSmoothingEnabled = true; ax.imageSmoothingQuality = 'high'; ax.drawImage(im, 1, 1, w, h);
+  const d = ax.getImageData(0, 0, w + 2, h + 2), p = d.data, W2 = w + 2, H2 = h + 2, on = new Uint8Array(W2 * H2);
+  for (let i = 0; i < W2 * H2; i++) { if (p[i * 4 + 3] >= 110) { p[i * 4 + 3] = 255; on[i] = 1; } else p[i * 4 + 3] = 0; }
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) { const i = y * W2 + x; if (on[i]) continue; if ((x > 0 && on[i - 1]) || (x < W2 - 1 && on[i + 1]) || (y > 0 && on[i - W2]) || (y < H2 - 1 && on[i + W2])) { p[i * 4] = 16; p[i * 4 + 1] = 20; p[i * 4 + 2] = 28; p[i * 4 + 3] = 255; } }
+  ax.putImageData(d, 0, 0);
+  miniCache.set(key, a); return a;
+}
+// (cx, cy) = 가운데, rot = 기울기(라디안 — 날아갈 방향, 0 = 앞이 위)
+export function drawShipMini(g, cx, cy, model, rot = 0, h = 14) {
+  const m = shipMini(model, h); if (!m) return;
+  const c = g.c; c.save(); c.imageSmoothingEnabled = false;
+  if (rot) { c.translate(Math.round(cx), Math.round(cy)); c.rotate(rot); c.drawImage(m, -Math.round(m.width / 2), -Math.round(m.height / 2)); }
+  else c.drawImage(m, Math.round(cx - m.width / 2), Math.round(cy - m.height / 2));
+  c.restore();
+}
 // 그리기: (cx, cy) = 배 가운데, sc = 배율(1 = 정비 크기), mix = 홀로그램으로 바뀐 정도(0 = 진짜 배, 1 = 홀로그램)
 //  opt: model(1~4), sel = 고른 부위, flash = 강화 번쩍 부위, glitch = {y, dx}, small = 지도용 작은 그림, dir = -1 이면 아래 → 위로 훑음
 export function drawShip(g, cx, cy, sc, mix, opt = {}) {
