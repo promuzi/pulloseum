@@ -210,7 +210,7 @@ function panelPixels(w, h, s, put) {
   const fill = rgbOf(s.fill), edge = rgbOf(s.frame), hi = rgbOf(s.frameHi || s.frame);
   if (UI === 'mecha') {   // 메카 하늘색 디스플레이: 속 = 창 색을 짙게(왼쪽) → 창 색에 테 색 25%(오른쪽)를 110°로 · 뒤가 비침(왼 86% → 오른 75%) · 테 1칸 · 위 안쪽 빛 · 오른쪽 위 꺾쇠
     const dark = mixC(fill, [0, 0, 0], 0.42), light = mixC(fill, edge, 0.25), rim = mixC(edge, dark, 0.22), shine = mixC(hi, [255, 255, 255], 0.2);
-    const dx = 0.9397, dy = 0.342, span = (w - 1) * dx + (h - 1) * dy || 1, L = Math.max(3, Math.min(8, Math.round(w / 7))), cH = h >= 14 ? 3 : 2;
+    const dx = 0.9397, dy = 0.342, span = (w - 1) * dx + (h - 1) * dy || 1, L = Math.max(3, Math.min(8, Math.round(w / 7))), cH = h >= 14 ? 3 : 2, grille = w >= 12 && h >= 8;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if ((y === 0 && x >= w - L) || (x === w - 1 && y < cH)) { put(x, y, shine, 255); continue; }   // 꺾쇠(메카 .status::before)
       if ((x === 0 || x === w - 1) && (y === 0 || y === h - 1)) continue;   // 모서리 한 칸만 깎음(거의 네모)
@@ -219,6 +219,7 @@ function panelPixels(w, h, s, put) {
       let c = mixC(dark, light, t);
       if (y === 1) c = mixC(c, hi, 0.28);   // 위 안쪽 빛 한 줄
       else if (y === h - 2) c = mixC(c, edge, 0.14);
+      else if (grille && x >= 2 && (x - 2) % 3 === 0) c = mixC(c, hi, 0.07);   // 투사 결: 3칸마다 아주 연한 세로줄(띠리릭 빛이 이 줄을 타고 오름 — holo())
       put(x, y, c, Math.round(219 - 28 * t));
     }
     return;
@@ -293,28 +294,24 @@ export function holoCanvas(w, h, s, dens = 10) {
   for (const [cx, cy, dx, dy] of [[0, 0, 1, 1], [w - 1, 0, -1, 1], [0, h - 1, 1, -1], [w - 1, h - 1, -1, -1]]) for (let k = 0; k < L; k++) { put(cx + dx * k, cy, s.frameHi); put(cx, cy + dy * k, s.frameHi); }
   c.putImageData(id, 0, 0); holoCache.set(key, cv); return cv;
 }
-// 띠리릭(2026-10-16 사용자 "지지직 거리는거 그런느낌말고, 연한 세로줄이 띠리릭 올라오는 그런거" — 바로 앞에 넣었던 지지직(깜빡·조각 밀림·잡음)은 걷어냄), mecha 겉모습만:
-//  6.4초마다 화면 아래에서 위로 물결 한 번 — 창마다 자기 높이에 닿을 때(아래 창 먼저, 맨 위 창은 0.7초 늦게) 연한 세로줄 무리가 창 아래에서 위로 훑고 올라감.
-//  줄은 2칸마다 하나, 줄마다 길이·출발이 조금씩 달라 머리가 들쭉날쭉 · 머리(위)가 밝고 꼬리로 갈수록 옅음(메카 조종석 '투사기 빛 = 발밑에서 위로 퍼짐'처럼 아래 → 위).
-//  창 바탕에만 그림(글자는 창 위에 따로 그려져 그대로). 시계 = 라우터가 넣는 app.t · 화면 높이 app.H, 정지 촬영 __shot 은 끔.
-export const holoFx = { t: 0, H: 600, on: true, period: 6400 };
-export function setHoloClock(t, H) { holoFx.t = t; if (H) holoFx.H = H; }
+// 홀로그램 결(2026-10-16 사용자 "연한 세로줄이 띠리릭 올라오는" — 화면 아래에서 한꺼번에 올라오던 첫 판은 "너무 대충 … 화면 맨 아래에서 위로 구불구불한 줄 올리는 거잖아,
+//  소스 등 기법 찾아서 제대로"). 홀로그램 셰이더의 층 나누기를 따름 — shaders.com hologram(투사 결 · 위로 흐르는 주사선 · 새로 고침 띠 · 가장자리 빛),
+//  Godot 'Simple Hologram'(줄 = fract(y·밀도 − 시간·속도)), Ren'Py SWHolo(줄마다 투명도) — 가로 주사선 대신 사용자 말대로 세로 결에, 창마다 따로:
+//  ① 투사 결 = 3칸마다 아주 연한 세로줄(늘 — panelPixels 에 구움)
+//  ② 띠리릭 = 창마다 8~13초에 한 번, 세로줄마다 빛 한 토막(머리 밝고 꼬리로 옅게, 8칸)이 창 아래에서 위로 오름 — 왼쪽 줄부터 차례로 출발(창 폭과 상관없이 0.26초 안에)해 물결처럼
+//  ③ 빛 머리가 위 테에 닿는 순간 그 자리 테가 잠깐 밝아짐(빛이 테에 부딪힘)
+//  창 바탕에만 그림(글자는 창 위에 따로 그려져 그대로) · 시계 = 라우터가 넣는 app.t · 정지 촬영(__shot)은 끔 · 검토 영상은 gap 을 줄여 잦게
+export const holoFx = { t: 0, on: true, gap: 8000, spread: 260 };   // gap = 창마다 띠리릭 간격(8~13초 — 화면 전체로는 3할쯤의 시간에 어딘가 한 창)
+export function setHoloClock(t) { holoFx.t = t; }
 const hash32 = n => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; };
-const combCache = new Map();
-function comb(w, bh, col) {   // 세로줄 무리 한 장(w × (bh + 6))
-  const key = w + '|' + bh + '|' + col;
-  let cv = combCache.get(key); if (cv) return cv;
-  const CH = bh + 6, [r, g, b] = rgbOf(col);
-  cv = document.createElement('canvas'); cv.width = Math.max(1, w); cv.height = CH;
-  const c = cv.getContext('2d'), id = c.createImageData(cv.width, CH), d = id.data;
-  for (let x = 2; x < w - 2; x += 2) {
-    const q = hash32(Math.imul(x + 1, 2654435761) ^ bh), o = q % 7, L = Math.max(3, bh - ((q >>> 4) % 4));
-    for (let v = 0; v < L && o + v < CH; v++) {
-      const k = v / L, a = k < 0.18 ? 1 : (1 - (k - 0.18) / 0.82) ** 1.6, i = ((o + v) * cv.width + x) * 4;
-      d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = Math.round(255 * 0.3 * a);
-    }
-  }
-  c.putImageData(id, 0, 0); combCache.set(key, cv); return cv;
+const PULSE = [0.62, 0.5, 0.38, 0.28, 0.2, 0.13, 0.08, 0.04], pulseCache = new Map();
+function pulse(col) {   // 빛 한 토막(1 × 8): 위(머리) 밝게 → 아래(꼬리) 옅게
+  let cv = pulseCache.get(col); if (cv) return cv;
+  const [r, g, b] = rgbOf(col);
+  cv = document.createElement('canvas'); cv.width = 1; cv.height = PULSE.length;
+  const c = cv.getContext('2d'), id = c.createImageData(1, PULSE.length);
+  PULSE.forEach((a, i) => id.data.set([r, g, b, Math.round(255 * a)], i * 4));
+  c.putImageData(id, 0, 0); pulseCache.set(col, cv); return cv;
 }
 export const holo = (g, x, y, w, h, s, dens) => {
   x |= 0; y |= 0; w |= 0; h |= 0;
@@ -322,12 +319,20 @@ export const holo = (g, x, y, w, h, s, dens) => {
   c.imageSmoothingEnabled = false;
   c.drawImage(holoCanvas(w, h, s, dens), x, y);
   if (UI !== 'mecha' || !holoFx.on || w < 12 || h < 8) return;
-  const P = holoFx.period, seed = hash32(Math.imul(w, 73856093) ^ Math.imul(h, 19349663) ^ Math.imul(x >> 4, 83492791));
-  const start = Math.round((1 - Math.min(1, Math.max(0, (y + h) / holoFx.H))) * 700) + (seed % 90), D = 380 + h * 3, u = (((holoFx.t - start) % P) + P) % P;
-  if (u >= D) return;
-  const cm = comb(w, Math.max(5, Math.min(14, Math.round(h * 0.45))), s.frameHi || s.frame), CH = cm.height;
-  const top = Math.round(h - (u / D) * (h + CH)), sy = Math.max(0, 1 - top), dy = Math.max(1, top), n = Math.min(CH - sy, h - 1 - dy);   // 무리 맨 위: 창 바닥 → 창 위 너머
-  if (n > 0) c.drawImage(cm, 0, sy, w, n, x, y + dy, w, n);
+  const seed = hash32(Math.imul(w, 73856093) ^ Math.imul(h, 19349663) ^ Math.imul(x >> 3, 83492791)), P = Math.round(holoFx.gap * (1 + (seed % 1000) / 1500)), u = (holoFx.t + (seed >>> 6)) % P;
+  const R = 200 + h * 3, L = PULSE.length;
+  if (u >= R + holoFx.spread + 100) return;
+  const cols = Math.floor((w - 5) / 3) + 1, st = holoFx.spread / cols, lit = s.frameHi || s.frame, pv = pulse(lit), top = R * (h - 3) / (h - 3 + L);
+  for (let i = 0; i < cols; i++) {
+    const tc = u - i * st; if (tc < 0) break;
+    const xx = x + 2 + i * 3;
+    if (tc <= R) {
+      const head = Math.round(h - 2 - (tc / R) * (h - 3 + L)), sy = Math.max(0, 1 - head), dy = Math.max(1, head), n = Math.min(L - sy, h - 1 - dy);   // 머리: 창 바닥 줄 → 위 테 너머
+      if (n > 0) c.drawImage(pv, 0, sy, 1, n, xx, y + dy, 1, n);
+    }
+    const hit = tc - top;   // 머리가 위 테에 닿은 뒤 지난 시간
+    if (hit >= 0 && hit < 90) { c.fillStyle = lit; c.globalAlpha = 0.7 * (1 - hit / 90); c.fillRect(xx - (hit < 30 ? 1 : 0), y, hit < 30 ? 3 : 1, 1); c.globalAlpha = 1; }
+  }
 };
 
 export let T = THEMES.ship;

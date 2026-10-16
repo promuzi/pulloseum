@@ -41,7 +41,7 @@ export class Router {
     if (this.phase === 2 && app.t - this.t0 >= S.open) this.phase = 0;
     const th = this.cur.theme;
     setTheme(typeof th === 'function' ? th.call(this.cur, app) : th || 'ship');
-    setHoloClock(app.t, app.H);   // 창 띠리릭 시계
+    setHoloClock(app.t);   // 창 띠리릭 시계
     this.cur.draw(app);
     if (!this.phase) return;
     const dt = app.t - this.t0;
