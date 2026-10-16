@@ -13,12 +13,18 @@ export class HttpErr extends Error { constructor(code, msg) { super(msg); this.c
 //  구글 계정 = login 'g:<구글 sub>'(아이디 규칙과 겹치지 않음) · 비밀번호 없음 · provider 'google'(2026-10-16 사용자 "남은 거 다해줘" — 구글 로그인)
 export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId = null, fetchFn = globalThis.fetch }) {
   const GID = googleClientId ? String(googleClientId).trim() : '';
-  const pub = u => ({ id: u.id, login: u.provider === 'google' ? '구글 계정' : u.login, nickname: u.nickname });   // 화면에 보일 계정(구글 sub는 안 보냄)
+  const pub = u => ({ id: u.id, login: u.provider === 'google' ? '구글 계정' : u.login, nickname: u.nickname, provider: u.provider || 'local' });   // 화면에 보일 계정(구글 sub는 안 보냄)
   // 구글 접근 토큰 확인: tokeninfo의 받는 쪽(aud/azp)이 우리 클라이언트 ID인지 → userinfo로 이름. 남의 앱에서 받은 토큰은 거절
-  async function googleWho(token) {
+  //  idToken = 안드로이드 앱(네이티브 구글 로그인 — 웹뷰 팝업은 구글이 막음)이 주는 ID 토큰: 받는 쪽 = 우리 웹 클라이언트 ID · 발급 = 구글 · 안 지남
+  async function googleWho(token, idToken, now) {
     if (!GID) throw new HttpErr(404, '없는 주소예요');
-    const t = String(token || '');
+    const t = String(idToken || token || '');
     if (!t || t.length > 4096) throw new Err('구글 로그인이 끊겼어요 — 다시 해 주세요');
+    if (idToken) {
+      const it = await fetchFn('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(t)).then(r => (r.ok ? r.json() : null)).catch(() => null);
+      if (!it || it.aud !== GID || !/^(https:\/\/)?accounts\.google\.com$/.test(String(it.iss || '')) || !it.sub || !(Number(it.exp) * 1000 > now)) throw new Err('구글 로그인을 확인하지 못했어요 — 다시 해 주세요');
+      return { sub: String(it.sub), name: it.given_name || it.name || '' };
+    }
     const ti = await fetchFn('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(t)).then(r => (r.ok ? r.json() : null)).catch(() => null);
     if (!ti || (ti.aud !== GID && ti.azp !== GID) || !ti.sub || !(Number(ti.expires_in) > 0)) throw new Err('구글 로그인을 확인하지 못했어요 — 다시 해 주세요');
     const ui = await fetchFn('https://openidconnect.googleapis.com/v1/userinfo', { headers: { authorization: 'Bearer ' + t } }).then(r => (r.ok ? r.json() : null)).catch(() => null);
@@ -56,7 +62,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     // 구글: 있는 계정이면 로그인, 처음이면 { need: 'register' } → 화면이 처음 식물을 고르게 한 뒤 starter와 함께 다시
     'POST /api/google': async (req, b, now) => {
       if (!allowTry('g' + req.ip, now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
-      const who = await googleWho(b.token), login = 'g:' + who.sub, u = q.userByLogin.get(login);
+      const who = await googleWho(b.token, b.idToken, now), login = 'g:' + who.sub, u = q.userByLogin.get(login);
       if (u) { const token = newSession(q, u.id, now), st = game.state(u.id, now); log(u.id, 'login', { provider: 'google' }, now); return { token, user: pub(u), ...st }; }
       const starter = String(b.starter || ''), nick = cleanNick(b.nickname || who.name) || '재배사';
       if (!starter) return { need: 'register', name: cleanNick(who.name) };
@@ -67,7 +73,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       q.setProvider.run('google', uid); regs.set(k, n + 1);
       const s = game.create(uid, { nickname: nick, starter }, now), token = newSession(q, uid, now);
       log(uid, 'register', { starter, provider: 'google' }, now);
-      return { token, user: { id: uid, login: '구글 계정', nickname: nick }, state: s, ver: 1 };
+      return { token, user: { id: uid, login: '구글 계정', nickname: nick, provider: 'google' }, state: s, ver: 1 };
     },
     'POST /api/register': (req, b, now) => {
       const day = Math.floor(now / 864e5), k = req.ip + ':' + day, n = regs.get(k) || 0;
@@ -82,7 +88,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       regs.set(k, n + 1);
       const s = game.create(uid, { nickname: nick, starter }, now), token = newSession(q, uid, now);
       log(uid, 'register', { starter }, now);
-      return { token, user: { id: uid, login, nickname: nick }, state: s, ver: 1 };
+      return { token, user: { id: uid, login, nickname: nick, provider: 'local' }, state: s, ver: 1 };
     },
     'POST /api/check': (req, b, now) => {   // 가입 전 아이디 쓸 수 있는지(식물 고르기 전에 알려 주려고)
       if (!allowTry('c' + req.ip, now)) throw new HttpErr(429, '잠시 뒤에 다시 해 주세요');
@@ -101,6 +107,16 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       return { token, user: pub(u), ...st };
     },
     'POST /api/logout': (req) => { endSession(q, tokenOf(req)); return { ok: true }; },
+    // 계정 지우기(구글 플레이 정책 — 앱 안에서 지울 수 있어야 함): 아이디 계정 = 비밀번호 다시 · 구글 계정 = 확인 글자 '지우기'. 되돌릴 수 없음
+    'POST /api/account/delete': (req, b, now) => {
+      const u = authed(req, now);
+      if (!allowTry('d' + req.ip, now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
+      if (u.provider === 'google') { if (String(b.confirm || '').trim() !== '지우기') throw new Err("확인 칸에 '지우기'라고 써 주세요"); }
+      else { const row = q.userByLogin.get(u.login); if (!row || !checkPass(String(b.password || ''), row.pass)) throw new Err('비밀번호가 맞지 않아요'); }
+      rooms.leave(u.id, now);
+      q.delUserSessions.run(u.id); q.delSave.run(u.id); q.delBattles.run(u.id); q.delEvents.run(u.id); q.delUser.run(u.id);
+      return { ok: true };
+    },
     'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: pub(u), ...game.state(u.id, now) }; },
     'POST /api/act': (req, b, now) => { const u = authed(req, now); return game.act(u.id, String(b.op || ''), b.args || {}, now); },
     'POST /api/battle/start': (req, b, now) => { const u = authed(req, now); return game.battleStart(u.id, now); },

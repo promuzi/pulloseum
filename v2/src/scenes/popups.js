@@ -8,6 +8,7 @@ import { T, holo } from '../art/theme.js';
 import { bigTitle, seedArt } from './common.js';
 import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME, TIERS, LEAGUES, LEAGUE_KEYS } from '../game/catalog.js';
 import { net } from '../net/api.js';
+import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 
 const ease = k => 1 - (1 - k) ** 3;
@@ -137,7 +138,7 @@ function confirmBox(app, Q) {
 
 // ── ④ 설정 ──
 function settingsSheet(app) {
-  const { g, W, H, input } = app, x = 14, w = W - 28, h = 276, y = 70, PT = T.ptext, u = app.user;
+  const { g, W, H, input } = app, x = 14, w = W - 28, h = 290, y = 70, PT = T.ptext, u = app.user;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('st_block', 0, 0, W, H, () => { app.sheet = null; });
   input.hit('st_in', x, y, w, h, () => {});
@@ -153,9 +154,25 @@ function settingsSheet(app) {
   const half = Math.floor((w - 28 - 8) / 2);
   button(app, 'st_sfx', x + 14, yy, half, 30, SOUND.sfx ? '효과음 켬' : '효과음 끔', { style: SOUND.sfx ? 'night' : 'off', icon: 'sparkle', iconTint: true, onTap: () => setSfxOn(!SOUND.sfx) });
   button(app, 'st_music', x + 14 + half + 8, yy, half, 30, SOUND.music ? '음악 켬' : '음악 끔', { style: SOUND.music ? 'night' : 'off', icon: 'heart', iconTint: true, onTap: () => setMusicOn(!SOUND.music) }); yy += 40;
-  if (!net.offline && u) button(app, 'st_out', x + 14, yy, w - 28, 30, '로그아웃', { style: 'red', onTap: () => { app.sheet = null; ask(app, '로그아웃할까요?', '다시 들어올 땐 아이디·비밀번호가 필요해요', () => app.logout()); } });
+  if (!net.offline && u) button(app, 'st_out', x + 14, yy, w - 28, 30, '로그아웃', { style: 'red', onTap: () => { app.sheet = null; ask(app, '로그아웃할까요?', u.provider === 'google' ? "다시 들어올 땐 '구글로 계속하기'를 누르면 돼요" : '다시 들어올 땐 아이디·비밀번호가 필요해요', () => app.logout()); } });
   yy += 40;
+  if (!net.offline && u) button(app, 'st_del', x + 14, yy, w - 28, 26, '계정 지우기', { style: 'off', onTap: () => { app.sheet = null; deleteForm(app); } });
   button(app, 'st_close', W / 2 - 50, y + h - 42, 100, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { app.sheet = null; } });
+}
+
+// 계정 지우기(구글 플레이 정책 — 앱 안에서 지울 수 있어야 함): 아이디 계정 = 비밀번호 · 구글 계정 = 확인 글자 '지우기' → 서버가 계정 · 저장 · 기록 전부 지움
+function deleteForm(app) {
+  const google = app.user && app.user.provider === 'google';
+  openForm(app, {
+    title: '계정 지우기', note: '계정과 식물 · 진행 · 기록이 모두 지워지고 되돌릴 수 없어요',
+    fields: [google ? { id: 'cf', label: "확인 — '지우기'라고 써 주세요", max: 6 } : { id: 'pw', label: '비밀번호', type: 'password', auto: 'current-password', max: 72 }],
+    ok: '영원히 지우기',
+    onSubmit: async v => {
+      try { await net.req('/api/account/delete', google ? { confirm: v.cf } : { password: v.pw }); } catch (e) { return e.message; }
+      app.logout(true); app.toast('계정을 지웠어요');
+      return null;
+    },
+  });
 }
 
 const NO_CHEST = new Set(['title', 'starter', 'battle', 'matching', 'room']);

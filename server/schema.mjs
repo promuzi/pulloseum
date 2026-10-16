@@ -18,6 +18,12 @@ export const STMTS = {
   seen: 'UPDATE users SET last_seen = ? WHERE id = ?',
   setNick: 'UPDATE users SET nickname = ? WHERE id = ?',
   setProvider: 'UPDATE users SET provider = ? WHERE id = ?',
+  // 계정 지우기(계정 · 로그인 열쇠 · 저장 · 봇 판 · 플레이 기록 전부)
+  delUserSessions: 'DELETE FROM sessions WHERE user_id = ?',
+  delSave: 'DELETE FROM saves WHERE user_id = ?',
+  delBattles: 'DELETE FROM battles WHERE user_id = ?',
+  delEvents: 'DELETE FROM events WHERE user_id = ?',
+  delUser: 'DELETE FROM users WHERE id = ?',
   addSession: 'INSERT INTO sessions (token, user_id, expires) VALUES (?, ?, ?)',
   session: 'SELECT * FROM sessions WHERE token = ?',
   delSession: 'DELETE FROM sessions WHERE token = ?',

@@ -40,6 +40,8 @@ export function enterGame(app) {
 async function signed(app, r) { net.setToken(r.token); app.user = r.user; app.state = r.state; }
 // 구글로 계속하기(2026-10-16): 구글 창(GIS 토큰 창) → 접근 토큰 → 서버가 구글에 확인 → 있는 계정 = 로그인 · 처음 = 처음 식물 고르기 → 계정
 //  단추는 서버가 클라이언트 ID를 알려 줄 때만(/api/config). 구글 스크립트는 단추가 보일 때 미리 불러 둠(누르는 순간 창이 막히지 않게)
+//  안드로이드 앱(웹뷰) 안에서는 구글이 이 팝업 로그인을 막음 → 단추 숨김(앱판 = 네이티브 구글 로그인 → ID 토큰 → 같은 /api/google, docs/android-capacitor-wrapper.md)
+const inApp = () => /PulloseumApp/.test(navigator.userAgent) || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 let gisP = null;
 export function loadGis() {
   if (gisP) return gisP;
@@ -148,7 +150,8 @@ export const title = {
   startBoot(app) { startBoot(this, app); },
   async check(app) {
     this.checking = true;
-    if (!net.offline && app.googleId === undefined) net.req('/api/config').then(c => { app.googleId = c.google || null; if (app.googleId) loadGis().catch(() => {}); }).catch(() => { app.googleId = null; });
+    if (app.googleId === undefined && (net.offline || inApp())) app.googleId = null;
+    if (app.googleId === undefined) net.req('/api/config').then(c => { app.googleId = c.google || null; if (app.googleId) loadGis().catch(() => {}); }).catch(() => { app.googleId = null; });
     if (!net.token) { this.mode = 'out'; return; }
     try { const r = await net.req('/api/me'); app.user = r.user; app.state = r.state; this.mode = 'in'; }
     catch (e) { this.mode = e.status === 0 ? 'down' : 'out'; this.err = e.status === 0 ? e.message : null; }

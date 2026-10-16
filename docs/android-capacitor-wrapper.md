@@ -1,289 +1,70 @@
-# 풀로세움 Android 개발용 앱 포장 가이드
+# 풀로세움 안드로이드 앱 (Capacitor 껍데기)
 
-이 프로젝트는 기존 `index.html`을 앱 안에 넣지 않고, Capacitor Android 앱이 아래 원격 주소를 여는 방식으로 포장한다.
+## 지금 구조 (2026-10-16 — v2로 바꿈)
 
-```text
-https://promuzi.github.io/pulloseum/
+- 앱은 게임 파일을 안에 넣지 않고 **v2 주소를 여는 껍데기**다: `https://pulloseum.getchat.workers.dev/v2/` (`capacitor.config.json`의 `server.url`).
+- 그래서 게임 화면 · 서버를 고치면 Cloudflare에 다시 올리기만 하면(`cf/배포.md`) 앱에도 바로 반영된다. APK를 다시 만들 필요가 없다.
+- 진행은 서버 계정에 저장된다(v2). 앱을 지워도 같은 계정으로 들어가면 그대로다.
+- 옛 판(v1, 저장소 맨 위 `index.html`)은 GitHub Pages `https://promuzi.github.io/pulloseum/`에 그대로 있다. 앱은 이제 옛 판을 열지 않는다.
+
+### 앱에만 있는 설정
+
+| 설정 | 어디 | 왜 |
+|---|---|---|
+| 배경 검정 | `capacitor.config.json` `backgroundColor` | 처음 화면이 검은 방이라 켜질 때 흰 화면이 번쩍이지 않게 |
+| 사용자 에이전트 끝에 `PulloseumApp/2` | `capacitor.config.json` `android.appendUserAgent` | 화면이 앱 안인지 안다 → 구글 팝업 로그인 단추를 숨김(아래) |
+| 시스템 막대 밑으로 안 들어가게 | `capacitor.config.json` `android.adjustMarginsForEdgeToEdge: "auto"` | 안드로이드 15부터 화면이 상태 막대 밑까지 그려져 위 띠가 가려지는 것 막기 |
+| 소리가 누르기 전에도 나옴 | `android/app/src/main/java/com/promuzi/pulloseum/MainActivity.java` | 웹뷰 기본값은 '사람이 눌러야 소리' — 처음 화면 음악(조율 소리 · 전등 베이스)이 바로 나오게. 브라우저판은 그대로 '화면을 누르면 시작해요' |
+| 세로 고정 | `android/app/src/main/AndroidManifest.xml` `screenOrientation="portrait"` | 화면이 세로 전용 |
+
+위 설정을 바꾸면 APK를 다시 만들어야 한다(아래 빌드). 앱 이름 · 아이콘 · 패키지명 · 권한 · 플러그인 · `server.url` · 버전도 마찬가지.
+
+## 빌드 (이 기기 = MSI)
+
+있는 것: Android Studio 내장 JDK(`C:\Program Files\Android\Android Studio\jbr`) · SDK(`%LOCALAPPDATA%\Android\Sdk`, 플랫폼 35 · 36.1). 처음 한 번은 Capacitor 패키지(`npm install`)와 Gradle 8.11.1 · 안드로이드 빌드 도구를 내려받는다(합쳐 수백 MB).
+
+PowerShell:
 ```
-
-현재 저장소에는 Capacitor Android 프로젝트가 이미 추가되어 있다. 기존 게임 파일 구조는 그대로 유지한다.
-
-## 현재 완료된 것
-
-- `package.json`, `package-lock.json` 추가
-- `@capacitor/core`, `@capacitor/cli`, `@capacitor/android` 설치
-- `capacitor.config.json` 추가
-- `android/` 프로젝트 생성
-- 개발용 APK 빌드 성공 확인
-- 생성된 APK 위치:
-
-```text
-android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-## 1. 설치 여부 확인
-
-PowerShell을 열고 프로젝트 폴더로 이동한다.
-
-```powershell
-cd "C:\Users\soosa\OneDrive\문서\풀로세움"
-```
-
-Node.js 확인:
-
-```powershell
-& "C:\Program Files\nodejs\node.exe" --version
-& "C:\Program Files\nodejs\npm.cmd" --version
-```
-
-현재 확인된 버전:
-
-```text
-Node.js v24.17.0
-npm 11.13.0
-```
-
-Android Studio 내장 JDK 확인:
-
-```powershell
-& "C:\Program Files\Android\Android Studio\jbr\bin\java.exe" -version
-```
-
-현재 확인된 버전:
-
-```text
-OpenJDK 21.0.10
-```
-
-Android SDK 확인:
-
-```powershell
-Test-Path "$env:LOCALAPPDATA\Android\Sdk"
-```
-
-`True`가 나오면 SDK 폴더가 있다.
-
-### 설치가 안 되어 있다면
-
-Node.js:
-
-1. https://nodejs.org 접속
-2. LTS 버전 다운로드
-3. 설치 중 옵션은 기본값 그대로 진행
-4. 설치 후 PowerShell을 새로 열고 `node --version`, `npm --version` 확인
-
-Android Studio:
-
-1. https://developer.android.com/studio 접속
-2. Android Studio 다운로드 및 설치
-3. Android Studio 실행
-4. 처음 실행 마법사에서 `Standard` 선택
-5. 설치가 끝나면 시작 화면에서 `More Actions` 클릭
-6. `SDK Manager` 클릭
-7. `SDK Platforms` 탭에서 `Android 15.0 (API 35)` 체크
-8. `SDK Tools` 탭에서 아래 항목 체크
-   - Android SDK Build-Tools
-   - Android SDK Platform-Tools
-   - Android SDK Command-line Tools
-9. `Apply` 클릭 후 설치 완료까지 기다림
-
-JDK는 Android Studio 안에 포함된 JDK를 쓰면 된다. 별도로 Java를 설치하지 않아도 된다.
-
-## 2. Capacitor 설치와 초기화
-
-이 프로젝트는 이미 초기화되어 있으므로, 새 PC에서 처음 받을 때는 보통 이것만 실행하면 된다.
-
-```powershell
-cd "C:\Users\soosa\OneDrive\문서\풀로세움"
-& "C:\Program Files\nodejs\npm.cmd" install
-```
-
-처음부터 직접 만드는 경우의 기본 명령은 아래와 같다.
-
-```powershell
-npm init -y
-npm install @capacitor/core @capacitor/cli @capacitor/android
-npx cap init "풀로세움" "com.promuzi.pulloseum" --web-dir www
-```
-
-이 폴더처럼 경로나 폴더명이 한글이면 `npm init -y`가 패키지명을 한글로 잡아 실패할 수 있다. 그 경우 `package.json`의 `"name"`은 `pulloseum`처럼 영문 소문자로 둔다.
-
-`npx` 실행 중 `"node" is not recognized`가 나오면 PowerShell에서 먼저 PATH를 보정한다.
-
-```powershell
-$env:Path = "C:\Program Files\nodejs;" + $env:Path
-```
-
-## 3. Capacitor 설정
-
-핵심 설정 파일은 `capacitor.config.json`이다.
-
-```json
-{
-  "appId": "com.promuzi.pulloseum",
-  "appName": "풀로세움",
-  "webDir": "www",
-  "server": {
-    "url": "https://promuzi.github.io/pulloseum/",
-    "cleartext": false
-  }
-}
-```
-
-`server.url`이 있으므로 앱은 내장된 게임 파일이 아니라 GitHub Pages 주소를 연다.
-
-`www/index.html`은 Capacitor가 요구하는 최소 자리표시자다. 실제 게임 `index.html`을 앱에 넣은 것이 아니다.
-
-설정을 바꾼 뒤 Android 프로젝트에 반영하려면:
-
-```powershell
-$env:Path = "C:\Program Files\nodejs;" + $env:Path
-& "C:\Program Files\nodejs\npx.cmd" cap sync android
-```
-
-## 4. Android 프로젝트 생성
-
-처음 한 번만 실행한다.
-
-```powershell
-$env:Path = "C:\Program Files\nodejs;" + $env:Path
-& "C:\Program Files\nodejs\npx.cmd" cap add android
-```
-
-이미 `android/` 폴더가 있으면 다시 실행하지 않아도 된다.
-
-## 5. APK 만들기
-
-### 방법 A: Android Studio에서 만들기
-
-1. Android Studio 실행
-2. `File` > `Open` 클릭
-3. 아래 폴더 선택
-
-```text
-C:\Users\soosa\OneDrive\문서\풀로세움\android
-```
-
-4. 오른쪽 아래 또는 상단에 `Gradle Sync`가 돌면 끝날 때까지 기다림
-5. 상단 메뉴에서 `Build` 클릭
-6. `Build Bundle(s) / APK(s)` 클릭
-7. `Build APK(s)` 클릭
-8. 빌드가 끝나면 오른쪽 아래 알림에서 `locate` 클릭
-
-APK 위치:
-
-```text
-C:\Users\soosa\OneDrive\문서\풀로세움\android\app\build\outputs\apk\debug\app-debug.apk
-```
-
-### 방법 B: PowerShell에서 만들기
-
-```powershell
-cd "C:\Users\soosa\OneDrive\문서\풀로세움\android"
+cd C:\dev\pulloseum
+npm install
+npx cap sync android
+cd android
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-$env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
 .\gradlew.bat assembleDebug
 ```
+성공하면 `BUILD SUCCESSFUL`, APK = `C:\dev\pulloseum\android\app\build\outputs\apk\debug\app-debug.apk`.
 
-성공하면 마지막에 `BUILD SUCCESSFUL`이 나온다.
+Android Studio로 하려면 `File > Open`에서 `C:\dev\pulloseum\android`를 열고 `Build > Build Bundle(s) / APK(s) > Build APK(s)`.
 
-한글 경로 때문에 Gradle이 막히는 문제를 피하려고 `android/gradle.properties`에 아래 설정을 추가해두었다.
+## 폰에 설치
 
-```properties
-android.overridePathCheck=true
+1. 폰 `설정 > 휴대전화 정보 > 빌드 번호` 7번 → 개발자 옵션 → `USB 디버깅` 켜기 → USB 연결 → 폰에서 허용.
+2. PowerShell:
 ```
-
-## 6. 폰에 설치하기
-
-### Android Studio로 설치
-
-1. Android 폰에서 `설정` 열기
-2. `휴대전화 정보` 또는 `디바이스 정보`로 이동
-3. `빌드 번호`를 7번 연속 터치해서 개발자 옵션 켜기
-4. `설정` > `개발자 옵션` 이동
-5. `USB 디버깅` 켜기
-6. USB 케이블로 PC와 연결
-7. 폰에 `USB 디버깅을 허용하시겠습니까?`가 뜨면 `허용`
-8. Android Studio 상단 기기 선택 드롭다운에서 내 폰 선택
-9. 초록색 실행 버튼 클릭
-
-### PowerShell로 설치
-
-폰을 USB로 연결한 뒤:
-
-```powershell
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-& "$env:ANDROID_HOME\platform-tools\adb.exe" devices
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r "C:\dev\pulloseum\android\app\build\outputs\apk\debug\app-debug.apk"
 ```
+케이블 없이: APK 파일을 폰으로 보내 열기(출처를 알 수 없는 앱 허용 필요).
 
-기기 목록에 `device`라고 나오면 설치한다.
+## 앱판 구글 로그인 (남은 일)
 
-```powershell
-& "$env:ANDROID_HOME\platform-tools\adb.exe" install -r "C:\Users\soosa\OneDrive\문서\풀로세움\android\app\build\outputs\apk\debug\app-debug.apk"
-```
+- 구글은 앱 속 웹뷰에서 팝업 로그인을 막는다(`disallowed_useragent`). 그래서 앱에서는 '구글로 계속하기' 단추를 숨겨 두었다(`v2/src/scenes/title.js inApp`). 아이디 · 비밀번호 로그인은 앱에서도 된다.
+- 켜려면: 네이티브 구글 로그인 플러그인(예: `@capgo/capacitor-social-login`) → 구글이 준 **ID 토큰**을 `POST /api/google { idToken }`로. 서버는 이미 ID 토큰을 받는다(받는 쪽 = 웹 클라이언트 ID · 발급 = 구글 · 안 지남 — `server/api.mjs googleWho`, 시험 `tools/test/google.mjs`).
+- 필요한 것: 구글 클라우드에 **Android 클라이언트 ID**(패키지 `com.promuzi.pulloseum` + 서명 키 SHA-1 — 디버그 키와 출시 키 둘 다) 추가, 플러그인 설치 · `npx cap sync android`, `title.js`에서 앱이면 플러그인으로 로그인하는 갈래.
 
-폰이 연결되지 않은 현재 상태에서는 `adb devices` 결과가 빈 목록으로 나온다.
+## 플레이 스토어 출시 체크리스트
 
-## 7. 게임 수정 후 앱 반영 방식
+- [ ] 구글 플레이 개발자 계정(사용자 — 등록비 · 본인 확인). 새 개인 계정은 프로덕션 전에 **비공개 테스트**(테스터 여러 명 · 2주)를 요구할 수 있다 — 계정을 만들 때 콘솔 안내를 확인.
+- [ ] 업로드 키 만들기 · 보관(깃 금지 — 잃으면 업데이트 불가). 출시 묶음 = `.\gradlew.bat bundleRelease`(AAB).
+- [ ] 버전 `android/app/build.gradle`의 `versionCode`(올릴 때마다 +1) · `versionName`.
+- [ ] 타깃 API: 출시 시점 구글 요구치를 콘솔에서 확인(지금 `variables.gradle` = 35. 2026-08-31부터 새 앱은 36을 요구할 가능성이 큼 → Capacitor 판 올림이 필요할 수 있음).
+- [ ] 아이콘 · 시작 화면(지금은 Capacitor 기본) — 그림은 코덱스, `android/app/src/main/res/mipmap-*` · `drawable*`.
+- [ ] 스토어 자산: 앱 아이콘 512 · 그래픽 이미지 1024×500 · 휴대전화 스크린샷 2장 이상 · 짧은 설명 · 자세한 설명.
+- [ ] **개인정보처리방침 주소**(필수 — 계정 아이디 · 닉네임 · 구글 계정 번호 · 플레이 기록 · 접속 IP(가입 · 시도 제한)를 서버에 저장). 웹 주소 하나에 올려 두고 콘솔에 적는다.
+- [ ] 데이터 보안 양식(위 수집 항목 · 암호화 전송 · 계정 삭제 방법), 콘텐츠 등급 설문, 광고 없음 · 앱 내 결제 없음 표시.
+- [x] 계정 삭제 길(구글 정책 — 앱 안 + 웹에서 삭제 요청 방법): 설정 → '계정 지우기'(아이디 계정 = 비밀번호 · 구글 계정 = '지우기') → 서버 `POST /api/account/delete`가 계정 · 로그인 열쇠 · 저장 · 봇 판 · 플레이 기록을 모두 지움(시험 `tools/test/google.mjs`). 콘솔의 '웹 삭제 요청 주소' = 게임 주소 `https://pulloseum.getchat.workers.dev/v2/` + "로그인 → 설정 → 계정 지우기" 안내.
 
-이 앱은 원격 URL을 여는 껍데기 앱이다. 따라서 게임 내용만 바꿀 때는 APK를 다시 만들 필요가 없다.
+## 옛 판(v1) 앱 이야기
 
-게임 수정 후:
-
-```powershell
-git add index.html
-git commit -m "Update game"
-git push
-```
-
-GitHub Pages 배포가 끝나면 앱을 다시 열었을 때 최신 웹게임이 표시된다.
-
-다만 아래 변경은 APK를 다시 빌드해야 한다.
-
-- 앱 이름 변경
-- 아이콘/스플래시 변경
-- 패키지명 변경
-- 권한 추가
-- Capacitor 플러그인 추가
-- `server.url` 변경
-- Play Store 출시용 서명/버전 변경
-
-주의할 점:
-
-- 앱 안의 저장 데이터는 Android WebView의 localStorage에 저장된다.
-- GitHub Pages의 웹 파일이 바뀌어도 같은 URL이면 보통 세이브는 유지된다.
-- 앱을 삭제하면 앱 WebView localStorage도 같이 지워질 수 있다.
-- 인터넷이 안 되거나 GitHub Pages가 내려가면 게임을 불러오지 못한다.
-
-## 8. 진행도(세이브) 유실 대책 — 2단계 보호
-
-모바일 앱에서 진행도가 사라지는 문제(캐시 삭제·OS 저장공간 정리·앱 재설치)를 막기 위해 두 겹으로 대비한다.
-
-### ① 세이브 내보내기/가져오기 (웹만, 즉시 적용)
-
-`index.html` 설정 화면에 **💾 진행도 내보내기 / 📥 진행도 가져오기** 버튼이 있다.
-
-- 내보내기: 현재 진행도를 base64 코드(한글 안전 인코딩)로 만들어 복사 → 메모앱·메일 등에 보관.
-- 가져오기: 그 코드를 붙여넣어 복원(기기 변경·재설치 후에도 사용).
-- 순수 웹 기능이라 **APK 재빌드 없이** `git push` → GitHub Pages 배포만으로 앱에 반영된다(7장 참고).
-
-### ② 네이티브 영구저장 (`@capacitor/preferences`) — APK 재빌드 필요
-
-WebView localStorage가 날아가도 살아남도록, 저장할 때 안드로이드 네이티브 저장소(`Preferences`)에 한 부 더 복사한다. 앱 시작 시 localStorage가 비어 있으면 네이티브 저장소에서 자동 복구한다.
-
-- 웹 코드(`index.html`)는 이미 적용됨: `saveState()`가 `window.Capacitor.Plugins.Preferences`가 있으면 미러 저장하고, 시작 시 `reconcileNativeSave()`가 대조·복구한다. 플러그인이 없으면(일반 브라우저) 기존 localStorage 동작 그대로라 안전하다.
-- `package.json`에 `@capacitor/preferences` 의존성도 선언됨.
-
-**실제로 켜려면 빌드 머신에서** 다음을 실행하고 APK를 다시 만들어야 한다(플러그인 추가이므로 7장의 "재빌드 필요" 항목에 해당).
-
-```powershell
-& "C:\Program Files\nodejs\npm.cmd" install
-& "C:\Program Files\nodejs\npx.cmd" cap sync android
-# 이후 Android Studio에서 다시 빌드하거나
-& "C:\Program Files\nodejs\npx.cmd" cap open android
-```
-
-`cap sync` 후 새 APK를 기기에 설치하면, 그때부터 캐시 삭제·eviction에도 진행도가 네이티브 저장소에 남아 자동 복구된다.
-
-> 검증 팁: 기기에서 진행 → 안드로이드 설정 > 앱 > 풀로세움 > 저장공간 > **캐시 지우기** 후 앱 재실행 → 진행도가 복구되면 ② 동작.
+예전 앱은 `https://promuzi.github.io/pulloseum/`(v1)을 열었고, 세이브가 웹뷰 localStorage라 `@capacitor/preferences`로 한 부 더 복사했다(`index.html saveState`/`reconcileNativeSave`). v2는 서버 저장이라 필요 없지만 의존성은 남겨 두었다(해 없음).

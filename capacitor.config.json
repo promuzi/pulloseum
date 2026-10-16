@@ -2,8 +2,13 @@
   "appId": "com.promuzi.pulloseum",
   "appName": "풀로세움",
   "webDir": "www",
+  "backgroundColor": "#000000",
   "server": {
-    "url": "https://promuzi.github.io/pulloseum/",
+    "url": "https://pulloseum.getchat.workers.dev/v2/",
     "cleartext": false
+  },
+  "android": {
+    "appendUserAgent": "PulloseumApp/2",
+    "adjustMarginsForEdgeToEdge": "auto"
   }
 }
