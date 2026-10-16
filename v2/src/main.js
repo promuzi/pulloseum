@@ -14,7 +14,7 @@ import { SCENES } from './scenes/index.js';
 import { drawOverlays } from './scenes/popups.js';
 import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
-import { setUi } from './art/theme.js';
+import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
 
 const screen = new Screen(document.getElementById('screen'));
 screen.resize();
@@ -84,11 +84,12 @@ function frameBody(ts) {
   if (missing.length) console.warn('빠진 그림', missing);
   if (bad.length) console.warn('아이콘 오류', bad);
   // 검토 도구(?scene=)·오프라인 체험(?offline=1) = 시험 세이브로 이 브라우저에서
-  if (q0.get('ui')) setUi(q0.get('ui'));   // 창 겉모습 후보 비교(?ui=glass|metal|ink|holo)
+  if (q0.get('ui')) setUi(q0.get('ui'));   // 창 겉모습 후보 비교(?ui=sky|screen|glass|metal|ink|holo)
   if (q0.get('scene') || q0.has('offline')) { net.offline = true; app.state = mockState(); }
   router.set(q0.get('scene') || 'title', Object.fromEntries(q0.entries()));
   window.__ready = { missing, bad };
   window.__pause = (on = true) => { running = !on; };   // 촬영 도구가 시간을 직접 넘길 때 원래 화면 갱신을 멈춤(두 시계가 섞이면 끌기·용수철 계산이 꼬임)
+  window.__holoFx = holoFx;   // 검토 도구: 창 띠리릭 켜기·간격
   requestAnimationFrame(frame);
 })();
 
@@ -101,7 +102,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   const realG = app.g.c; app.g.ctx = cx;
   app.W = W; app.H = H; app.t = opt.t ?? 1000; app.state = mockState(); app.pxScale = k;
   app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null;
-  setUi(opt.ui || 'sky');
+  setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;

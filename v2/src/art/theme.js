@@ -190,9 +190,13 @@ THEMES.colosseum = {
 //   metal = 무광 쇳빛 판 · 얇은 빛 턱(위·왼 밝게 · 아래·오른 그늘) · 모서리 한 칸 깎음 — 투박한 우주선
 //   ink   = 먹빛 반투명 캡슐 · 테 없음 · 큰 둥근 모서리(아이폰식)
 //   holo  = 옛 홀로그램(비교용)
-export let UI = 'sky';
+//   mecha = 메카 최신 조종석의 '하늘색 바탕 디스플레이 홀로그램'(같은 날 사용자 "그 메카 프로젝트 보면 홀로그램 창 느낌이 나서 좋은데" → "최신 작업본도 참고해봐. 본 게임 말구"
+//           = mecha-haran `proto/cockpit/v2/style.css` `.mv5 .hud .status`, 요구 47) — 뒤가 비치는 판 · 비스듬히(110°) 짙은 남색 → 밝은 하늘색 · 얇은 하늘색 테 ·
+//           위 안쪽 빛 한 줄 · 거의 네모난 모서리 · 오른쪽 위 모서리에만 밝은 꺾쇠 하나(기본)
+export const UI_DEFAULT = 'mecha';
+export let UI = UI_DEFAULT;
 const LIGHT_TEXT = new Set(['ship', 'night', 'retro']);   // 판 글자가 밝은 장소(유리 판으로 바꿔도 읽힘)
-export const UI_ACCENT = { screen: '#f0be7d', sky: '#f0be7d', glass: '#f0be7d', metal: '#e8b04a', ink: '#ffffff', holo: '#8ccfff' };
+export const UI_ACCENT = { mecha: '#f0be7d', screen: '#f0be7d', sky: '#f0be7d', glass: '#f0be7d', metal: '#e8b04a', ink: '#ffffff', holo: '#8ccfff' };
 export function setUi(name) { if (UI_ACCENT[name] && name !== UI) { UI = name; holoCache.clear(); } }
 const rgbOf = hex => { const n = parseInt(String(hex || '#000000').slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 const mixC = (a, b, k) => [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * k));
@@ -204,6 +208,21 @@ const inRound = (x, y, w, h, r) => {
 };
 function panelPixels(w, h, s, put) {
   const fill = rgbOf(s.fill), edge = rgbOf(s.frame), hi = rgbOf(s.frameHi || s.frame);
+  if (UI === 'mecha') {   // 메카 하늘색 디스플레이: 속 = 창 색을 짙게(왼쪽) → 창 색에 테 색 25%(오른쪽)를 110°로 · 뒤가 비침(왼 86% → 오른 75%) · 테 1칸 · 위 안쪽 빛 · 오른쪽 위 꺾쇠
+    const dark = mixC(fill, [0, 0, 0], 0.42), light = mixC(fill, edge, 0.25), rim = mixC(edge, dark, 0.22), shine = mixC(hi, [255, 255, 255], 0.2);
+    const dx = 0.9397, dy = 0.342, span = (w - 1) * dx + (h - 1) * dy || 1, L = Math.max(3, Math.min(8, Math.round(w / 7))), cH = h >= 14 ? 3 : 2;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if ((y === 0 && x >= w - L) || (x === w - 1 && y < cH)) { put(x, y, shine, 255); continue; }   // 꺾쇠(메카 .status::before)
+      if ((x === 0 || x === w - 1) && (y === 0 || y === h - 1)) continue;   // 모서리 한 칸만 깎음(거의 네모)
+      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) { put(x, y, rim, 228); continue; }
+      const t = (x * dx + y * dy) / span;
+      let c = mixC(dark, light, t);
+      if (y === 1) c = mixC(c, hi, 0.28);   // 위 안쪽 빛 한 줄
+      else if (y === h - 2) c = mixC(c, edge, 0.14);
+      put(x, y, c, Math.round(219 - 28 * t));
+    }
+    return;
+  }
   if (UI === 'metal') {   // 쇳빛: 겉 먹선 · 위·왼 빛 턱 · 아래·오른 그늘 · 속 = 쇳빛에 창 색 조금 · 윗변 가운데 짧은 색 줄(창 정체)
     const base = mixC([46, 50, 58], fill, 0.22);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -274,7 +293,42 @@ export function holoCanvas(w, h, s, dens = 10) {
   for (const [cx, cy, dx, dy] of [[0, 0, 1, 1], [w - 1, 0, -1, 1], [0, h - 1, 1, -1], [w - 1, h - 1, -1, -1]]) for (let k = 0; k < L; k++) { put(cx + dx * k, cy, s.frameHi); put(cx, cy + dy * k, s.frameHi); }
   c.putImageData(id, 0, 0); holoCache.set(key, cv); return cv;
 }
-export const holo = (g, x, y, w, h, s, dens) => { g.c.imageSmoothingEnabled = false; g.c.drawImage(holoCanvas(w, h, s, dens), x | 0, y | 0); };
+// 띠리릭(2026-10-16 사용자 "지지직 거리는거 그런느낌말고, 연한 세로줄이 띠리릭 올라오는 그런거" — 바로 앞에 넣었던 지지직(깜빡·조각 밀림·잡음)은 걷어냄), mecha 겉모습만:
+//  6.4초마다 화면 아래에서 위로 물결 한 번 — 창마다 자기 높이에 닿을 때(아래 창 먼저, 맨 위 창은 0.7초 늦게) 연한 세로줄 무리가 창 아래에서 위로 훑고 올라감.
+//  줄은 2칸마다 하나, 줄마다 길이·출발이 조금씩 달라 머리가 들쭉날쭉 · 머리(위)가 밝고 꼬리로 갈수록 옅음(메카 조종석 '투사기 빛 = 발밑에서 위로 퍼짐'처럼 아래 → 위).
+//  창 바탕에만 그림(글자는 창 위에 따로 그려져 그대로). 시계 = 라우터가 넣는 app.t · 화면 높이 app.H, 정지 촬영 __shot 은 끔.
+export const holoFx = { t: 0, H: 600, on: true, period: 6400 };
+export function setHoloClock(t, H) { holoFx.t = t; if (H) holoFx.H = H; }
+const hash32 = n => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; };
+const combCache = new Map();
+function comb(w, bh, col) {   // 세로줄 무리 한 장(w × (bh + 6))
+  const key = w + '|' + bh + '|' + col;
+  let cv = combCache.get(key); if (cv) return cv;
+  const CH = bh + 6, [r, g, b] = rgbOf(col);
+  cv = document.createElement('canvas'); cv.width = Math.max(1, w); cv.height = CH;
+  const c = cv.getContext('2d'), id = c.createImageData(cv.width, CH), d = id.data;
+  for (let x = 2; x < w - 2; x += 2) {
+    const q = hash32(Math.imul(x + 1, 2654435761) ^ bh), o = q % 7, L = Math.max(3, bh - ((q >>> 4) % 4));
+    for (let v = 0; v < L && o + v < CH; v++) {
+      const k = v / L, a = k < 0.18 ? 1 : (1 - (k - 0.18) / 0.82) ** 1.6, i = ((o + v) * cv.width + x) * 4;
+      d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = Math.round(255 * 0.3 * a);
+    }
+  }
+  c.putImageData(id, 0, 0); combCache.set(key, cv); return cv;
+}
+export const holo = (g, x, y, w, h, s, dens) => {
+  x |= 0; y |= 0; w |= 0; h |= 0;
+  const c = g.c;
+  c.imageSmoothingEnabled = false;
+  c.drawImage(holoCanvas(w, h, s, dens), x, y);
+  if (UI !== 'mecha' || !holoFx.on || w < 12 || h < 8) return;
+  const P = holoFx.period, seed = hash32(Math.imul(w, 73856093) ^ Math.imul(h, 19349663) ^ Math.imul(x >> 4, 83492791));
+  const start = Math.round((1 - Math.min(1, Math.max(0, (y + h) / holoFx.H))) * 700) + (seed % 90), D = 380 + h * 3, u = (((holoFx.t - start) % P) + P) % P;
+  if (u >= D) return;
+  const cm = comb(w, Math.max(5, Math.min(14, Math.round(h * 0.45))), s.frameHi || s.frame), CH = cm.height;
+  const top = Math.round(h - (u / D) * (h + CH)), sy = Math.max(0, 1 - top), dy = Math.max(1, top), n = Math.min(CH - sy, h - 1 - dy);   // 무리 맨 위: 창 바닥 → 창 위 너머
+  if (n > 0) c.drawImage(cm, 0, sy, w, n, x, y + dy, w, n);
+};
 
 export let T = THEMES.ship;
 export function setTheme(key) { T = THEMES[key] || THEMES.ship; return T; }
