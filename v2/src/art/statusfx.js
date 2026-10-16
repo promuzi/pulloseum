@@ -8,7 +8,7 @@
 //  · 도트 그림에 맞게 그림 1화소 = 1칸으로만 그림(매끈한 흐림 없이, 색 몇 개) — GodotCon 2026 '도트 그림 절차 효과'(잡음 · 색 줄이기)
 import { plantLayer } from './sprites.js';
 
-export const SFX_LIFE = { burn: 950, poison: 900, shock: 700, paral: 800, chill: 900, frozen: 1050, wet: 900, stun: 1150, spore: 800, bloom: 1000, steam: 800 };
+export const SFX_LIFE = { burn: 1150, poison: 900, shock: 700, paral: 800, chill: 900, frozen: 1050, wet: 900, stun: 1150, spore: 800, bloom: 1000, steam: 800 };
 // 사건 → 연출: 걸릴 때(fx) · 턴 끝 피해(tick) · 피어남(bloom) · 쉬는 차례(skip: 얼음 · 마비 · 기절) · 풀림(cure = 김)
 export const SFX_OF_FX = { burn: 'burn', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore' };
 export function sfxAdd(list, who, kind, t) { if (SFX_LIFE[kind]) list.push({ who, kind, t0: t, id: (list.n = (list.n || 0) + 1) }); }
@@ -67,41 +67,42 @@ function picks(e, S, n, filter, salt) {
   return (e[key] = out);
 }
 
-// ── 화상: 아래에서 위로 타는 띠가 올라갔다 내려오고, 지나간 자리는 잠깐 그을림 · 불꽃 혀 · 불티 · 연기 ──
+// ── 화상: 타닥타닥(2026-10-16 사용자 "화상만 좀 바꿔줘 그냥 타닥타닥 거리는 걸로" — 타들어가는 띠 · 그을림은 뺌) ──
+//  식물 여기저기서 불똥이 두 번씩 짝지어 톡톡 터지고(번쩍 → 불티 네댓 개가 튀어 떨어짐), 작은 불꽃 셋이 깜빡, 터질 때마다 식물에 불빛이 일렁
 const FIRE = ['#fff3c4', '#ffc23a', '#ff6a1a', '#c8281e'];
-function burn(g, L, S, e, age, N) {
-  const ov = overlay(L.w, L.h), band = 0.1, f = Math.floor(age / 60);
-  const th = kf(age, [[0, -0.06], [280, 0.6, oQ], [430, 0.6], [950, -0.06, ioQ]]), soot = age < 560 ? 1 : 1 - (age - 560) / 390;
-  const Sv = i => 0.62 * S.H[i] + 0.38 * N[i];
-  for (const i of S.op) {
-    const s = Sv(i);
-    if (s < th - band) { const a = Math.min(0.78, ((th - band - s) / 0.2) * 0.78) * soot, coal = hash(i, f) < 0.04; put(ov, i, coal ? '#ff7a2a' : '#1a0c08', coal ? 0.9 * soot : a); }   // 그을림(가끔 숯불 칸)
-    else if (s < th) { const u = (s - (th - band)) / band + (hash(i, f) - 0.5) * 0.3; put(ov, i, FIRE[u < 0.25 ? 0 : u < 0.55 ? 1 : u < 0.8 ? 2 : 3], 1); }   // 타는 띠
-    else if (s < th + 0.05) put(ov, i, '#ff8a3a', 0.28);   // 띠 바로 위 = 달아오름
-  }
-  // 불꽃 혀: 타는 띠가 그림 윗선에 닿은 기둥에서 위로 2~4칸(60ms마다 흔들림)
-  if (th > 0) for (let x = 0; x < L.w; x++) {
-    let top = -1;
-    for (let y = S.y0; y <= S.y1; y++) { const i = y * L.w + x; if (S.alpha(i)) { const s = Sv(i); if (s >= th - band && s < th + 0.02) top = i; break; } }
-    if (top < 0 || hash(x, f) > 0.55) continue;
-    const hgt = 2 + Math.floor(hash(x + 31, f) * 3), ty = Math.floor(top / L.w);
-    for (let k = 1; k <= hgt && ty - k >= 0; k++) put(ov, (ty - k) * L.w + x, FIRE[Math.min(3, k)], 1);
-  }
-  blit(g, L, ov);
-  // 불티: 타는 띠에서 떨어져 나와 흔들리며 위로(1칸)
-  const sp = picks(e, S, 20, i => S.H[i] < 0.75, 1);
-  sp.forEach((i, k) => {
-    const ts = k * 30, a = age - ts, life = 560; if (a < 0 || a > life) return;
-    const [x, y] = scr(L, i % L.w, Math.floor(i / L.w)), q = a / life;
-    dot(g, x + Math.sin(a / 90 + k) * 1.5, y - q * (22 + 12 * hash(k, 9)), q < 0.4 ? '#ffe08a' : q < 0.75 ? '#ff8a2a' : '#c8281e', 1 - q * q, k % 4 === 0 && q < 0.5 ? 2 : 1);
+const POPS = [0, 75, 300, 380, 560, 625, 770];   // 타닥 · 타닥 · 타닥 · 탁(짝지어 불규칙하게)
+function burn(g, L, S, e, age) {
+  const at = k => POPS[k] + Math.round((hash(e.id, k + 40) - 0.5) * 40);
+  // 터질 때마다 식물 전체가 주황 불빛으로 잠깐 물듦
+  let flick = 0;
+  for (let k = 0; k < POPS.length; k++) { const a = age - at(k); if (a >= 0 && a < 180) flick = Math.max(flick, 1 - a / 180); }
+  if (flick > 0.02) { const ov = overlay(L.w, L.h); for (const i of S.op) put(ov, i, '#ff7a2a', 0.26 * flick); blit(g, L, ov); }
+  // 작은 불꽃 셋: 윗면이 빈 칸 위에 2칸 폭 · 2~5칸 높이(밑 노랑 → 주황 → 끝 빨강), 70ms마다 높이 · 켜짐이 바뀜
+  const fl = picks(e, S, 3, i => S.H[i] > 0.2 && !S.alpha(i - L.w), 8), fb = Math.floor(age / 70);
+  if (age > 40 && age < 900) fl.forEach((i, k) => {
+    if (hash(k + 11, fb) > 0.82) return;
+    const [x, y] = scr(L, i % L.w, Math.floor(i / L.w)), hgt = 2 + Math.floor(hash(k + 3, fb) * 4), lean = hash(k, fb) < 0.5 ? -1 : 1;
+    for (let d = 0; d < hgt; d++) { const col = FIRE[Math.min(3, 1 + Math.floor((d / hgt) * 3))]; dot(g, x + (d >= hgt - 1 && hgt > 3 ? lean : 0), y - 1 - d, col, 1); if (d < hgt - 2) dot(g, x + lean, y - 1 - d, d === 0 ? FIRE[0] : col, 1); }
   });
-  // 연기: 그을린 꼭대기에서 회색 2칸이 위로
-  if (age > 380) for (let k = 0; k < 4; k++) {
-    const a = age - 380 - k * 70; if (a < 0) continue;
-    const q = a / 500; if (q > 1) continue;
-    const [x, y] = scr(L, Math.round(S.cx + (hash(e.id, k) - 0.5) * (S.x1 - S.x0) * 0.6), S.y0 + Math.round((S.y1 - S.y0) * 0.35));
-    puff(g, x + Math.sin(a / 140 + k) * 2, y - q * 16, '#5a5560', 0.6 * (1 - q), q < 0.5 ? 1 : 2);
-  }
+  // 톡: 번쩍(흰 가운데 + 노란 네 갈래 — 별처럼) + 둘레 빛 + 불티 여섯이 위 · 옆으로 튀었다 떨어짐(앞 2칸 · 꼬리 두 칸)
+  const spots = picks(e, S, POPS.length, i => S.H[i] > 0.15, 1), c = g.c;
+  spots.forEach((i, k) => {
+    const a = age - at(k); if (a < 0 || a > 460) return;
+    const [x, y] = scr(L, i % L.w, Math.floor(i / L.w));
+    if (a < 170) { const gr = c.createRadialGradient(x + 0.5, y + 0.5, 0, x + 0.5, y + 0.5, 13), al = 0.5 * (1 - a / 170); gr.addColorStop(0, `rgba(255,200,100,${al.toFixed(3)})`); gr.addColorStop(1, 'rgba(255,200,100,0)'); c.save(); c.fillStyle = gr; c.fillRect(x - 13, y - 13, 27, 27); c.restore(); }
+    if (a < 60) { dot(g, x, y, '#ffffff', 1); for (let d = 1; d <= 2; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) dot(g, x + dx, y + dy, d === 1 ? '#fff3c4' : '#ffc23a', 1); }
+    else if (a < 130) { for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) dot(g, x + dx, y + dy, dx || dy ? '#ff6a1a' : '#ffc23a', 1 - (a - 60) / 90); }
+    const n = 6;
+    for (let j = 0; j < n; j++) {
+      const life = 320 + 110 * hash(k * 9 + j, 5), q = a / life; if (q >= 1) continue;
+      const an = -Math.PI / 2 + (hash(k * 7 + j, e.id) - 0.5) * 3.0, v = 60 + 60 * hash(k * 5 + j, 3), G = 240;
+      const pos = s => [x + Math.cos(an) * v * s, y + Math.sin(an) * v * s + 0.5 * G * s * s], tau = a / 1000;
+      const [px, py] = pos(tau), [t1x, t1y] = pos(Math.max(0, tau - 0.018)), [t2x, t2y] = pos(Math.max(0, tau - 0.036)), ci = q < 0.25 ? 0 : q < 0.55 ? 1 : q < 0.8 ? 2 : 3;
+      dot(g, t2x, t2y, FIRE[Math.min(3, ci + 2)], 0.4 * (1 - q));   // 꼬리
+      dot(g, t1x, t1y, FIRE[Math.min(3, ci + 1)], 0.7 * (1 - q));
+      dot(g, px, py, FIRE[ci], 1 - q * q, q < 0.4 ? 2 : 1);
+    }
+  });
 }
 // 둥근 덩이(연기 · 김 · 포자 구름): r 1 = 3칸 더하기 모양, 2 = 5칸 둥근 덩이
 function puff(g, x, y, hex, a, r = 1) {
@@ -230,7 +231,7 @@ export function drawSfx(g, list, who, t, p) {
     if (e.who !== who) continue;
     const age = t - e.t0; if (age < 0 || age >= SFX_LIFE[e.kind]) continue;
     if (!L) { L = plantLayer(p.key, p.pot, p.bx, p.by, { t: p.t, phase: p.phase, flip: p.flip, view: p.view }); if (!L) return; S = scan(L); if (!S.op.length) return; N = noiseOf(p.key, L.w, L.h); }
-    if (e.kind === 'burn') burn(g, L, S, e, age, N);
+    if (e.kind === 'burn') burn(g, L, S, e, age);
     else if (e.kind === 'poison') poison(g, L, S, e, age, N);
     else if (e.kind === 'shock' || e.kind === 'paral') shock(g, L, S, e, age, e.kind === 'paral');
     else if (e.kind === 'chill' || e.kind === 'frozen') frost(g, L, S, e, age, N, e.kind === 'frozen');
@@ -238,15 +239,5 @@ export function drawSfx(g, list, who, t, p) {
     else if (e.kind === 'stun') stun(g, L, S, e, age);
     else if (e.kind === 'spore' || e.kind === 'bloom') spores(g, L, S, e, age, e.kind === 'bloom');
     else if (e.kind === 'steam') steam(g, L, S, e, age);
-  }
-}
-// 화상 중 둘레를 데우는 빛(식물보다 먼저 — 바닥에 깔림)
-export function drawSfxGlow(g, list, who, t, bx, by) {
-  for (const e of list) {
-    if (e.who !== who || e.kind !== 'burn') continue;
-    const age = t - e.t0; if (age < 0 || age >= SFX_LIFE.burn) continue;
-    const a = 0.32 * Math.sin(Math.PI * cl(age / SFX_LIFE.burn)), c = g.c, gr = c.createRadialGradient(bx, by - 26, 4, bx, by - 26, 46);
-    gr.addColorStop(0, `rgba(255,140,50,${a.toFixed(3)})`); gr.addColorStop(1, 'rgba(255,140,50,0)');
-    c.save(); c.fillStyle = gr; c.fillRect(bx - 50, by - 76, 100, 92); c.restore();
   }
 }

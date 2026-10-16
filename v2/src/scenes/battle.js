@@ -19,7 +19,7 @@ import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eul } from '../core/josa.js';
-import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxGlow } from '../art/statusfx.js';
+import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx } from '../art/statusfx.js';
 import { TFX, setTfx, popLife, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
@@ -517,7 +517,6 @@ export const battle = {
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
-      if (v.sfx.length) drawSfxGlow(g, v.sfx, who, t, x, y);
       drawBigPose(g, u.key, u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
       if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: u.key, pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
