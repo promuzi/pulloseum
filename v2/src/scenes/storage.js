@@ -117,7 +117,9 @@ export const storage = {
     g.text('‹ 양육', 31, 35 + (bpr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
     app.input.hit(bid, 8, 32, 46, 19, () => app.go('nursery'), 3);
     g.text('동면 보관고', 62, 33, { font: 'head', color: '#eef7ff' });
-    g.text(`${(s.storage || []).length}/${total}`, 62 + g.textW('동면 보관고', 'head') + 6, 36, { color: '#8eaed2' });
+    const cnt = `${(s.storage || []).length}/${total}`;
+    g.text(cnt, 62 + g.textW('동면 보관고', 'head') + 6, 36, { color: '#8eaed2' });
+    this.capX = 62 + g.textW('동면 보관고', 'head') + 6 + g.textW(cnt) + 5;   // 처음 안내 '?' 자리
     const sid = 'sto_sort', spr = app.input.isPressed(sid);
     btnBody(g, W - 74, 32, 66, 19, T.btn.second, spr);
     g.text('정렬 · ' + SORTS[this.sortI][1], W - 41, 35 + (spr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
@@ -125,15 +127,17 @@ export const storage = {
     // 고른 캡슐 정보
     const it = list.find(x => x.p.uid === this.sel), PY = botOf(app) + 8;
     if (it) {
-      holo(g, 10, PY, W - 20, 56, st, 13);   // 고른 캡슐이 없으면 판 없음(설명 글은 ? 안내로)
+      // 고른 캡슐 판(없으면 판 없음 — 설명 글은 ? 안내로): 위 = 이름 · 별 / 단계 · 동면 날, 아래 = 같은 폭 단추 셋(깨우기 · 팔기 · 해체)
+      holo(g, 10, PY, W - 20, 72, st, 13);
       const p = it.p, days = p.slept ? Math.max(1, Math.ceil((app.now() - p.slept) / 864e5)) : 0, room = freeSlots(s) > 0;
-      g.text(p.name, 20, PY + 8, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
-      miniStars(g, 25 + g.textW(p.name, 'bold'), PY + 10, stars(p));
-      g.text(`${stageName(p)} Lv${p.lv}` + (days ? ` · 동면 ${days}일째` : ''), 20, PY + 28, { color: P.sub });
-      button(app, 'sto_sell', W - 196, PY + 14, 50, 28, '팔기', { style: 'night', icon: 'coin', onTap: () => sellAsk(app, p, () => { this.sel = null; }) });
-      button(app, 'sto_cut', W - 142, PY + 14, 46, 28, '해체', { style: 'night', onTap: () => cutAsk(app, p, () => { this.sel = null; }) });
-      button(app, 'sto_wake', W - 92, PY + 14, 72, 28, '깨우기', { style: 'teal', icon: 'sun', disabled: !room, onTap: () => app.act('fromStorage', { id: p.uid }).then(r => { if (r) { this.sel = null; app.toast(`${eul(p.name)} 스마트팜으로 깨웠어요`); } }) });
-      if (!room) g.text('스마트팜 자리가 없어요', W - 56, PY + 44, { color: '#ffb0a0', align: 'center' });
+      g.text(p.name, 20, PY + 7, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
+      miniStars(g, 25 + g.textW(p.name, 'bold'), PY + 9, stars(p));
+      g.text(`${stageName(p)} Lv${p.lv}` + (days ? ` · 동면 ${days}일째` : ''), 20, PY + 24, { color: P.sub });
+      if (!room) g.text('스마트팜 자리가 없어요', W - 20, PY + 8, { color: '#ffb0a0', align: 'right' });
+      const bw = Math.floor((W - 40 - 8) / 3), by = PY + 42, bx = i => (i === 2 ? W - 20 - bw : 20 + i * (bw + 4));
+      button(app, 'sto_wake', bx(0), by, bw, 24, '깨우기', { style: 'teal', icon: 'sun', disabled: !room, onTap: () => app.act('fromStorage', { id: p.uid }).then(r => { if (r) { this.sel = null; app.toast(`${eul(p.name)} 스마트팜으로 깨웠어요`); } }) });
+      button(app, 'sto_sell', bx(1), by, bw, 24, '팔기', { style: 'night', icon: 'coin', onTap: () => sellAsk(app, p, () => { this.sel = null; }) });
+      button(app, 'sto_cut', bx(2), by, bw, 24, '해체', { style: 'night', icon: 'vine', onTap: () => cutAsk(app, p, () => { this.sel = null; }) });
     }
     navBar(app, 'nursery');
   },

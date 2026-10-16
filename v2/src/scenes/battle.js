@@ -498,6 +498,7 @@ export const battle = {
   // 시간 막대: 아래 판 윗선을 따라 줄어듦(하늘 → 주황 → 빨강 깜빡), 10초 남으면 오른쪽 끝에 초
   drawTimer(app, x, y, w) {
     const { g, t } = app, v = this.v;
+    this.timerR = [x, y - 2, w, 8];   // 처음 안내가 가리킬 자리
     if (v.phase === 'over' || v.phase === 'play' || v.phase === 'need') return;
     const pvp = this.net === 'pvp' && this.deadline, left = pvp ? this.deadline - net.now() : v.pickT0 != null ? PICK_MS - (t - v.pickT0) : null;
     if (left == null) return;
@@ -845,7 +846,7 @@ export const battle = {
       if (on || dead) g.text(dead ? '쓰러짐' : '싸우는 중', x + w - 18, yy + 5, { color: dead ? T.text.dim : '#8ccfff', align: 'right' });   // 쓰러진 자리를 채울 땐 앞 식물도 '쓰러짐'
       if (can) input.hit(id, x + 8, ry, w - 16, 44, () => this.pickSwitch(app, i));
     });
-    if (!forced) button(app, 'sw_close', x + w / 2 - 40, y + h - 36, 80, 26, '닫기', { style: 'night', onTap: () => { this.sheet = null; } });
+    if (!forced) button(app, 'sw_close', x + w / 2 - 50, y + h - 36, 100, 28, '닫기', { style: 'night', onTap: () => { this.sheet = null; } });
   },
   // 효과 설명 창: 양쪽 식물에 걸린 효과(이름 · 겹침 · 한 줄 설명)
   infoSheet(app) {
@@ -866,7 +867,7 @@ export const battle = {
       g.text(STATUS_DESC[st.id] || '', x + 10, yy + 17, { color: P.main });
       yy += 30;
     }
-    button(app, 'in_close', W / 2 - 40, y + h - 34, 80, 26, '닫기', { style: 'night', onTap: () => { this.info2 = false; } });
+    button(app, 'in_close', W / 2 - 50, y + h - 36, 100, 28, '닫기', { style: 'night', onTap: () => { this.info2 = false; } });
   },
   // 감정 고르는 판(클래시 로얄식): 위 = 이모지 4×2, 아래 = 대사 3×2, 오른쪽 위 = 상대 감정 끄기. 보낸 뒤 3초는 못 보냄
   emoteSheet(app) {

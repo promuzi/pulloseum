@@ -31,6 +31,7 @@ export function header(app, title, opt = {}) {
   }
   g.text(title, opt.back === false ? 12 : 37, 8, { font: 'head', color: T.text.main, shadow: T.ink });
   if (opt.right) g.text(opt.right, W - 10, 10, { color: opt.rightColor || T.text.sub, align: 'right' });
+  app.hdrRightX = opt.right ? W - 10 - g.textW(opt.right) : W - 4;   // 처음 안내 '?' 자리(오른쪽 글자 왼쪽)
 }
 
 // 큰 제목: 고해상도 글자 + 3단 색 띠 + 외곽선 + 그림자

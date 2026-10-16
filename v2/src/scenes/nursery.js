@@ -277,6 +277,7 @@ export const nursery = {
     g.text('양육', 12, 34, { font: 'head', color: '#ffffff', outline: '#14324e' });
     const cap = `${s.plants.length}/${farmSlots(s.user.level)}`;
     g.text(cap, 52, 37, { color: '#eef7ff', outline: '#14324e' });
+    this.capX = 52 + g.textW(cap) + 8;   // 처음 안내 '?' 자리
     // 열 바꾸기(2열 · 3열) — 누르면 상자가 새 자리로 건너감
     [2, 3].forEach((n, i) => {
       const x = W - 132 + i * 27, on = this.cols === n, id = 'nur_col' + n;
@@ -320,8 +321,9 @@ export const nursery = {
       g.text(`재배사 Lv${it.lv}에 열림 · 지금 Lv${s.user.level}`, 20, PY + 30, { color: P.sub });
     }
     const n = (s.storage || []).length, ready = s.plants.reduce((a, p) => a + fruitOf(p, now).have, 0);
-    button(app, 'nur_store', 10, H - 90, 118, 38, '동면 보관고', { style: 'night', icon: 'box', sub: `${n}/${STORE_MAX}`, onTap: () => app.go('storage') });
-    button(app, 'har_all', 134, H - 90, W - 144, 38, ready ? `전체 수확 ${ready}` : '전체 수확', { style: 'gold', font: 'head', icon: 'fruit', iconTint: true, disabled: !ready, onTap: () => app.act('harvestAll', {}).then(r => r && showGot(app, '열매 수확', r.got, `경험치 +${r.xp.gained}`)) });
+    const half = Math.floor((W - 20 - 6) / 2);
+    button(app, 'nur_store', 10, H - 90, half, 38, '동면 보관고', { style: 'night', icon: 'box', sub: `${n}/${STORE_MAX}`, onTap: () => app.go('storage') });
+    button(app, 'har_all', W - 10 - half, H - 90, half, 38, ready ? `전체 수확 ${ready}` : '전체 수확', { style: 'gold', font: 'head', icon: 'fruit', iconTint: true, disabled: !ready, onTap: () => app.act('harvestAll', {}).then(r => r && showGot(app, '열매 수확', r.got, `경험치 +${r.xp.gained}`)) });
     navBar(app, 'nursery');
   },
   async feed(app, p, kind) {

@@ -130,6 +130,7 @@ export const plant = {
   growStrip(app, p, live, y) {
     const { g, W, state: s } = app, P = T.ptext, gi = growInfo(p), st = T.card || T.panel, h = 26, x = 8, w = W - 16;
     holo(g, x, y, w, h, st, 16);
+    this.growR = [x, y, w, h];   // 처음 안내가 가리킬 자리
     const bw = gi.ready ? 96 : gi.done ? 0 : 92, lx = x + 8, rx = x + w - bw - 6;
     g.text(gi.ready ? '진화 가능' : gi.done ? '다 자랐어요' : `Lv${p.lv}`, lx, y + 6, { font: 'label', color: gi.ready ? '#ffd890' : P.sub });
     if (!gi.done && !gi.ready) {
@@ -313,7 +314,7 @@ export const plant = {
     g.text(String(p.pts), 14 + g.textW('강화 포인트', 'label') + 6, y0, { font: 'value', color: p.pts ? '#ffd890' : P.dim });
     g.text(`1포인트 = 돈 ${cost}`, 14, y0 + 18, { color: P.sub });
     const rc = resetCost(p);
-    this.btn(app, live, 'up_reset', W - 104, y0 - 2, 90, 30, `초기화 ${rc}`, { style: 'night', icon: 'coin', disabled: !spent }, () => ask(app, '강화를 처음으로 되돌릴까요?', `쓴 포인트 ${spent}개가 돌아와요 · 돈 ${rc}`, () => app.act('resetPoints', { id: p.uid })));
+    this.btn(app, live, 'up_reset', W - 98, y0 - 1, 84, 26, `초기화 ${rc}`, { style: 'night', icon: 'coin', disabled: !spent }, () => ask(app, '강화를 처음으로 되돌릴까요?', `쓴 포인트 ${spent}개가 돌아와요 · 돈 ${rc}`, () => app.act('resetPoints', { id: p.uid })));
     let y = y0 + 40;
     STAT_KEYS.forEach((k, i) => {
       const d = STAT_DEF.find(x => x.k === k) || { icon: 'sparkle', name: STAT_NAME[k] };

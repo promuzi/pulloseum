@@ -2,7 +2,7 @@ import { ELEMENT } from '../art/palette.js';
 import { room1, stand1 } from '../art/bg.js';
 import { hud, navBar, button, chip, fmt, rbox, tagBox } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { drawBig, drawPortrait, bigKey, BGIMG } from '../art/sprites.js';
+import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
 import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../game/catalog.js';
@@ -166,6 +166,7 @@ export const home = {
       }
       y += h + CARD.gap;
     }
+    this.specsR = [CARD.x, Math.round(y0), CARD.w, y - CARD.gap - Math.round(y0)];   // 처음 안내가 가리킬 자리
   },
   // 오른쪽 큰 단추: 가방 · 도감(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에)
   sideButtons(app, y0, live) {
@@ -277,7 +278,7 @@ export const home = {
         g.text(pl.name, tx + 28, yy + 38, { color: P.main, align: 'center' });
         app.input.hit(id, tx, ty, 56, 54, () => { const used = new Set(team), n = s.plants.length; let j = pi; for (let q = 0; q < n; q++) { j = (j + 1) % n; if (!used.has(j)) break; } if (used.has(j)) return; const nt = [...team]; nt[k] = j; s.team = nt; this.teamDirty = true; });
       });
-      button(app, 'ms_done', x + w / 2 - 40, ty + 60, 80, 30, '확인', { style: 'gold', font: 'label', onTap: close });
+      button(app, 'ms_done', x + w / 2 - 50, ty + 60, 100, 30, '확인', { style: 'gold', font: 'label', onTap: close });
     }
   },
   // 프로필 배너(높이 60): 배너 색 띠 · 대표 식물 얼굴(50칸) · 이름(16)·칭호 · 오른쪽 랭크(색)·점수·막대 · 연필
@@ -286,7 +287,7 @@ export const home = {
     holo(g, x, y, w, h, st, 16);   // 꽉 채움(뒤 원뿔 빛이 구멍으로 점점이 비치지 않게)
     g.rect(x + 1, y + 2, 3, h - 4, col);
     g.rect(x + 8, y + 4, 52, 52, '#0a1c32'); g.rect(x + 8, y + 4, 52, 1, col); g.rect(x + 8, y + 55, 52, 1, col);
-    g.clip(x + 9, y + 5, 50, 50, () => drawPortrait(g, pf.avatar || 'flower_grass', x + 9, y + 5, 50, false));
+    g.clip(x + 9, y + 5, 50, 50, () => drawWhole(g, pf.avatar || 'flower_grass', x + 9, y + 5, 50));   // 대표 식물 전체
     const rx = x + w - 80, nx = x + 68;   // 오른쪽 랭크 칸(80) — 왼쪽 이름·칭호 칸이 좁은 배너(설정 창)에서도 잘리지 않게
     g.clip(nx, y + 4, rx - nx - 4, 48, () => {
       g.text(pf.name || '재배사', nx, y + 10, { font: 'name', color: P.main });
@@ -316,7 +317,7 @@ export const home = {
     s.plants.slice(0, 6).forEach((p, i) => {
       const px = x + 12 + i * 37, on = pf.avatar === p.key;
       g.rect(px, yy, 32, 32, on ? BANNER_COL[pf.color || 0] : '#3f6a88'); g.rect(px + 1, yy + 1, 30, 30, '#0a1c32');
-      g.clip(px + 2, yy + 2, 28, 28, () => drawPortrait(g, p.key, px + 2, yy + 2, 28, false));
+      g.clip(px + 2, yy + 2, 28, 28, () => drawWhole(g, bigKey(p.key, stageKey(p)), px + 2, yy + 2, 28));   // 고를 식물 = 지금 단계 그림 전체
       app.input.hit('pf_av' + i, px, yy, 32, 32, () => { if (pf.avatar !== p.key) { pf.avatar = p.key; app.act('setProfile', { avatar: p.key }); } });
     });
     yy += 44; g.text('칭호', x + 12, yy, { color: P.sub }); yy += 16;

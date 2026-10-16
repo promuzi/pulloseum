@@ -84,6 +84,16 @@ export function drawPortrait(g, key, x, y, s, flip = false, src = s) {
   part(g, P.sheet, sx, sy + m.rows * m.h, src, src, x, y, flip, s, s);
   return true;
 }
+// 식물 전체(머리만이 아니라 — 2026-10-16 사용자 "프로필 설정에서 보이는 식물이 머리만 찍혀있어"): 칠한 범위를 정사각으로 감싸 s칸에 맞춤(그림 칸 밖은 안 읽음)
+export function drawWhole(g, key, x, y, s, flip = false) {
+  const P = BIG[key], b = P && bigBox(key); if (!b) return drawPortrait(g, key, x, y, s, flip);
+  const m = P.meta, [t, bt, l, r] = b, side = Math.max(bt - t + 1, r - l + 1) + 4, cx = (l + r + 1) / 2, cy = (t + bt + 1) / 2;
+  const w = Math.min(m.w, side), h = Math.min(m.h, side), sx = Math.round(Math.max(0, Math.min(m.w - w, cx - w / 2))), sy = Math.round(Math.max(0, Math.min(m.h - h, cy - h / 2)));
+  const k = s / side, dw = Math.round(w * k), dh = Math.round(h * k), dx = x + Math.round((s - dw) / 2), dy = y + Math.round((s - dh) / 2);
+  part(g, P.sheet, sx, sy, w, h, dx, dy, flip, dw, dh);
+  part(g, P.sheet, sx, sy + m.rows * m.h, w, h, dx, dy, flip, dw, dh);
+  return true;
+}
 function whiteOf(im) { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = C.white; x.fillRect(0, 0, c.width, c.height); return c; }
 // 깜빡임은 한 바퀴(3.2초)마다 종·바퀴 번호로 반쯤만 → 3~6초에 한 번쯤, 무작위처럼
 function blinkLoop(key, n) { let h = (n + 1) * 2654435761; for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 2246822519); return ((h >>> 15) & 1) === 0; }

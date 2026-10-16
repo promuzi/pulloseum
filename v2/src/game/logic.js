@@ -339,6 +339,14 @@ const takePlant = (s, id) => {
   i = s.storage.findIndex(x => x.uid === id); need(i >= 0, '그 식물이 없어요');
   return s.storage.splice(i, 1)[0];
 };
+// 처음 안내 봤음(화면 이름 — 화면이 처음 열릴 때 한 번만 뜨게, 기기를 바꿔도). 이름 모양 · 개수 제한
+export function seeGuide(s, id) {
+  need(/^[a-z0-9_]{1,16}$/.test(id), '잘못된 요청이에요');
+  s.guide = s.guide && typeof s.guide === 'object' ? s.guide : {};
+  need(s.guide[id] || Object.keys(s.guide).length < 40, '잘못된 요청이에요');
+  s.guide[id] = 1;
+  return { id };
+}
 export function sell(s, id) {
   const p = takePlant(s, id), n = sellPrice(p);
   s.wallet.credits += n;

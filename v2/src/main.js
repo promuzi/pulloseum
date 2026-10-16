@@ -13,6 +13,7 @@ import { toast as drawToast } from './art/ui.js';
 import { mockState } from './data/mock.js';
 import { SCENES } from './scenes/index.js';
 import { drawOverlays } from './scenes/popups.js';
+import { shotGuide } from './scenes/guide.js';
 import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
@@ -27,7 +28,7 @@ const q0 = new URLSearchParams(location.search);
 let chain = Promise.resolve();
 const app = {
   screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0,
-  popup: null, confirm: null, sheet: null, chest: null, busy: 0, invite: (q0.get('room') || '').toUpperCase() || null,
+  popup: null, confirm: null, sheet: null, chest: null, guide: null, guideWait: null, noGuide: (q0.has('scene') && !q0.has('guide')) || q0.has('noguide'), busy: 0, invite: (q0.get('room') || '').toUpperCase() || null,
   go(name, params, style) { router.go(name, params, app.t, style); },
   toast(msg) { app.toastMsg = msg; app.toastT = app.t; },
   now() { return net.now(); },
@@ -45,7 +46,7 @@ const app = {
   },
   logout(expired = false) {
     if (!expired && !net.offline && net.token) net.req('/api/logout', {}).catch(() => {});
-    net.setToken(null); app.user = null; app.state = null; app.sheet = null; app.popup = null; app.confirm = null;
+    net.setToken(null); app.user = null; app.state = null; app.sheet = null; app.popup = null; app.confirm = null; app.guide = null;
     if (app.room && app.room.stream) app.room.stream.close();
     app.room = null; closeForm();
     if (expired) app.toast('다시 로그인해 주세요');
@@ -91,7 +92,7 @@ function frameBody(ts) {
     if (app.toastMsg && app.t - app.toastT < 1600) drawToast(app, app.toastMsg); else app.toastMsg = null;
     stretchEdges(g.c, screen.s, screen.W, screen.H, F);
     screen.present();
-    input.flush(router.cur);
+    input.flush(app.guide ? null : router.cur);   // 처음 안내가 열린 동안엔 장면 끌기 · 밀기 없음
   } catch (e) {
     if (ts - lastErr > 2000) { lastErr = ts; console.error('화면 오류', router.name, e); window.__lastError = String(e && e.stack || e); }
     try { g.c.restore(); } catch {}
@@ -123,12 +124,13 @@ window.__shot = (name, params = {}, opt = {}) => {
   const cx = cv.getContext('2d'); cx.setTransform(k, 0, 0, k, 0, 0); cx.imageSmoothingEnabled = false; cx.translate(F.ox, 0);
   const realG = app.g.c; app.g.ctx = cx;
   app.W = F.w; app.H = F.h; app.t = opt.t ?? 1000; app.state = mockState(); app.pxScale = k;
-  app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null;
+  app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null; app.guide = null; app.guideWait = null; app.noGuide = true;
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;
   router.draw(app);
+  if (opt.guide != null) shotGuide(app, +opt.guide);   // 처음 안내 촬영(opt.guide = 몇 번째 장)
   if (opt.overlay !== false) { if (opt.chestOpen) { drawOverlays(app); if (app.chest) app.chest.open = app.t - (opt.chestOpen || 3000); } drawOverlays(app); }
   if (opt.toast) drawToast(app, opt.toast);
   stretchEdges(cx, k, W, H, F);

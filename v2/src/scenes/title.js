@@ -210,20 +210,20 @@ export const title = {
     if (this.mode === 'down') {
       g.text(this.err || '서버에 연결할 수 없어요', W / 2, y0 - 22, { font: 'bold', color: '#ffb0a0', align: 'center', outline: T.ink });
       button(app, 'title_retry', bx, y0, bw, 34, '다시 시도', { style: 'night', font: 'head', onTap: on(() => { this.mode = 'boot'; this.checking = false; }) });
-      button(app, 'title_off', bx, y0 + 44, bw, 28, '오프라인 체험(저장 안 됨)', { style: 'night', onTap: on(() => { net.offline = true; import('../data/mock.js').then(m => { app.state = m.mockState(); this.mode = 'in'; enterGame(app); }); }) });
+      button(app, 'title_off', bx, y0 + 44, bw, 34, '오프라인 체험(저장 안 됨)', { style: 'night', onTap: on(() => { net.offline = true; import('../data/mock.js').then(m => { app.state = m.mockState(); this.mode = 'in'; enterGame(app); }); }) });
       return;
     }
     if (this.mode === 'out') {
       button(app, 'title_login', bx, y0, bw, 34, '로그인', { style: 'night', font: 'head', onTap: on(() => loginForm(app, this)) });
       button(app, 'title_new', bx, y0 + 44, bw, 34, '새로 시작하기', { style: 'gold', font: 'head', onTap: on(() => registerForm(app, this)) });
-      if (app.googleId) button(app, 'title_google', bx, y0 + 88, bw, 30, '구글로 계속하기', { style: 'night', font: 'bold', onTap: on(() => googleLogin(app, this)) });
-      if (app.invite) g.text(`초대받은 방 ${app.invite}`, W / 2, y0 + (app.googleId ? 126 : 88), { color: '#ffe8a8', align: 'center', outline: T.ink });
+      if (app.googleId) button(app, 'title_google', bx, y0 + 88, bw, 34, '구글로 계속하기', { style: 'night', font: 'bold', onTap: on(() => googleLogin(app, this)) });
+      if (app.invite) g.text(`초대받은 방 ${app.invite}`, W / 2, y0 + (app.googleId ? 130 : 86), { color: '#ffe8a8', align: 'center', outline: T.ink });
       return;
     }
-    button(app, 'title_start', bx, y0, bw, 36, app.invite ? '초대받은 방으로' : '게임 시작', { style: 'gold', font: 'head', onTap: on(() => enterGame(app)) });
+    button(app, 'title_start', bx, y0, bw, 34, app.invite ? '초대받은 방으로' : '게임 시작', { style: 'gold', font: 'head', onTap: on(() => enterGame(app)) });
     const who = net.offline && !app.user ? '오프라인 체험 — 저장되지 않아요' : app.user ? `${app.user.nickname} 님 · ${app.user.login}` : '';
-    g.text(who, W / 2, y0 + 46, { color: T.text.sub, align: 'center', outline: T.ink });
-    if (!net.offline && app.user) button(app, 'title_out', bx + 34, y0 + 66, bw - 68, 24, '다른 계정으로', { style: 'night', onTap: on(() => app.logout()) });
+    g.text(who, W / 2, y0 + 42, { color: T.text.sub, align: 'center', outline: T.ink });
+    if (!net.offline && app.user) button(app, 'title_out', bx, y0 + 62, bw, 34, '다른 계정으로', { style: 'night', onTap: on(() => app.logout()) });
   },
 };
 

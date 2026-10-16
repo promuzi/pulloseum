@@ -70,11 +70,13 @@
 - `node tools/test/status.mjs` 규칙 79개 · `node tools/test/team3v3.mjs` · `node tools/test/server.mjs` 서버 40개(가입 · 자동 저장 · 봇 판 끝까지 · 이어 하기 · 기권 · 친구 방 실시간 · 잘못된 요청 · 파일 노출 · 보고서) · `node tools/test/botbalance.mjs`.
 - Cloudflare 판: `node cf/test_cf.mjs`(이 컴퓨터 안에서 진짜 Workers 실행기를 임시 저장소로 띄우고 같은 서버 시험 39개 — 보고서만 빠짐) · 올린 뒤 `node cf/pagecheck.mjs https://pulloseum.getchat.workers.dev`(게임 화면이 뜨고 빠진 파일·오류·실패 요청 0인지).
 - 혼자 친구 대결 시험: 방을 만들고 `node tools/test/pvpfriend.mjs --code 코드 --base http://localhost:8788`(가짜 친구가 들어와 준비·대결).
-- 화면 촬영: `node tools/shots/v2shots.mjs --label 이름 --scale 2` — 새 촬영 = 처음 식물 · 레벨업 상자(닫힘·열림) · 설정 · 개체값 · 지운 기술 · 접목 · 효과 설명 · 암시장 · 방(로비·안) · 수확 판 · 매칭.
+- 화면 촬영: `node tools/shots/v2shots.mjs --label 이름 --scale 2` — 새 촬영 = 처음 식물 · 레벨업 상자(닫힘·열림) · 설정 · 개체값 · 지운 기술 · 접목 · 효과 설명 · 방(로비·안) · 수확 판 · 매칭 · 처음 안내 장마다(`20_guide_*`). 짧은 기기 = `--size 270x480`. 처음 안내 동작 = `node tools/shots/guidecheck.mjs`.
 
 ## 7. 다음(남은 것)
 - ✅ 바깥 친구 접속(2026-10-16 사용자 "ㅇㅇ 올려"): **https://pulloseum.getchat.workers.dev** — Cloudflare 무료 요금제(앞단 Worker + Durable Object `Hub` 하나의 SQLite), PC를 꺼도 늘 같은 주소. 저장소는 PC 서버와 따로(이 PC 저장소엔 계정 0개라 옮길 것 없었음). 화면·서버 코드를 바꾸면 `cf/배포.md`대로 다시 올림. 옛 빠른 터널(`start.ps1 -Tunnel`)은 이제 안 씀.
 - ✅ 같은 날 끝냄: 3:3 친구 대결 · 탐사 개편(탐사선 부위 다섯) · 단계별 리그 셋 + 2주 시즌 · 구글 로그인(클라이언트 ID를 넣으면 켜짐 — `cf/배포.md`) · 계정 지우기 · 안드로이드 껍데기를 v2 주소로(`docs/android-capacitor-wrapper.md`). 자세한 내용 = CHANGELOG 2026-10-16 (18)~(22).
-- 사용자 몫: 구글 클라우드 웹 클라이언트 ID 만들기 · APK 첫 빌드 허락(내려받기 수백 MB) · 플레이 개발자 계정 · 개인정보처리방침 주소.
+- ✅ 같은 날 (23): 기기마다 겹침(화면 틀 270칸 · 짧은 기기 맞춤) · 기술 넷(기본기도 빼고 넣기) · 식물 관리 기술 카드 · 심기 · 탐사 출발 연출 · 암시장 뺌(팔기 · 해체 = 고른 식물 아래 + 확인 창) · 화면 설명 글 → 처음 안내(튜토리얼) · ? 단추 · 단추 크기 · 정렬 맞춤 · 물뿌리개 · 포대 아이콘. 자세한 내용 = CHANGELOG (23).
+- 다음(사용자 결정 · 제안 대기): **암시장 = 나중에 유저 간 거래 · 추가 구매처, 재배사 특정 레벨에 탐사 지도 궤도에 나타남**(사용자 2026-10-16) · 탐사 미니게임(보류) · 변이 기술 따로 두 칸(최대 여섯) · 배우는 방식 · 변이 특화 식물(제안 드림) · 행성 지도에서 지역 고르기(제안 드림).
+- 사용자 몫: APK 첫 빌드 허락(내려받기 수백 MB) · 플레이 개발자 계정.
 - 옛 `index.html`(v1) = GitHub Pages `https://promuzi.github.io/pulloseum/`에 그대로 두고, 앱 · 친구 주소는 v2만 연다. 옛 판에 '새 판으로' 안내를 넣거나 내릴지는 사용자 결정 대기(공개 페이지라 묻고 함).
 - 앱판 구글 로그인(네이티브 플러그인 → ID 토큰 — 서버는 준비됨) · 새 식물 다음 묶음 · 기계 · 이중 속성(사용자 "나중에").

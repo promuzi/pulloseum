@@ -59,8 +59,8 @@ export const bag = {
     const tags = [sd.shiny && '색 변종', sd.trait === 'fruity' && '열매용', sd.trait === 'ornamental' && '관상용', sd.ivk > 0 && '좋은 개체값 확률 ↑'].filter(Boolean);
     g.text(tags.length ? tags.join(' · ') : ELEM[sp.el] + ' 속성', 52, y + 37, { color: tags.length ? '#ffd890' : P.dim });
     const price = seedPrice(sd);
-    this.btn(app, hits, 'plant_' + sd.id, W - 66, y + 6, 50, 22, '심기', { style: 'teal', disabled: free <= 0 }, () => app.act('plantSeed', { seed: sd.id }).then(r => { if (r) { const i = app.state.plants.findIndex(p => p.uid === r.plant); if (i >= 0) { app.state.active = i; app.act('setActive', { id: r.plant }); } app.go('nursery', { planted: r.plant }); } }));   // 심으면 스마트팜으로 — 그 자리로 굴러가 씨앗이 떨어져 싹이 남
-    this.btn(app, hits, 'sell_' + sd.id, W - 66, y + 31, 50, 18, String(price), { style: 'night', icon: 'coin' }, () => ask(app, `${eul(sp.name + ' 종자')} 팔까요?`, `돈 ${price} 받기`, () => app.act('sellSeed', { seed: sd.id }).then(r => r && app.toast(`돈 +${r.credits}`)), '팔기'));
+    this.btn(app, hits, 'plant_' + sd.id, W - 66, y + 6, 50, 20, '심기', { style: 'teal', disabled: free <= 0 }, () => app.act('plantSeed', { seed: sd.id }).then(r => { if (r) { const i = app.state.plants.findIndex(p => p.uid === r.plant); if (i >= 0) { app.state.active = i; app.act('setActive', { id: r.plant }); } app.go('nursery', { planted: r.plant }); } }));   // 심으면 스마트팜으로 — 그 자리로 굴러가 씨앗이 떨어져 싹이 남
+    this.btn(app, hits, 'sell_' + sd.id, W - 66, y + 29, 50, 20, String(price), { style: 'night', icon: 'coin' }, () => ask(app, `${eul(sp.name + ' 종자')} 팔까요?`, `돈 ${price} 받기`, () => app.act('sellSeed', { seed: sd.id }).then(r => r && app.toast(`돈 +${r.credits}`)), '팔기'));
   },
   scionRow(app, sc, y, hits) {
     const { g, W, state: s } = app, P = T.ptext, sk = SKILLS[sc.skill];
@@ -98,6 +98,6 @@ export const bag = {
       g.text(known ? '이미 알아요' : why || '배울 수 있어요', 22, ry + 22, { color: why || known ? '#ffb0a0' : '#9ff0b0' });
       button(app, 'gp_' + i, W - 84, ry + 6, 60, 26, '접목', { style: 'gold', disabled: !!(why || known), onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; app.toast(r.to === 'pend' ? `${p.name} — 식물 관리에서 놓을 칸을 골라요` : `${p.name}: ${eul(sk.name)} 배웠어요`); } }) });
     });
-    button(app, 'gs_close', W / 2 - 40, y + h - 32, 80, 24, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
+    button(app, 'gs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
 };

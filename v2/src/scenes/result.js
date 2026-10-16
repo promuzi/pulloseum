@@ -68,11 +68,11 @@ export const result = {
     if (!pvp && L.mode !== 'swap3' && I.round && !rw.forfeit) { const T0 = app.state && app.state.tournament; if (T0) { g.text(`${T0.name} · ${T0.round} ${T0.wins}승 ${T0.losses}패`, W / 2, ty, { color: T.text.main, align: 'center' }); ty += 18; } }
     // 다음 할 일
     if (pvp) {
-      button(app, 'res_room', 25, H - 112, W - 50, 32, '방으로(다시 하기)', { style: 'teal', font: 'head', onTap: () => app.go('room', {}, 'shutter') });
-      button(app, 'res_leave', 25, H - 70, W - 50, 26, '방 나가기', { style: 'night', onTap: () => { const go = () => { closeStream(app); app.go('home', {}, 'shutter'); }; R.leave().then(go, go); } });
+      button(app, 'res_room', 25, H - 114, W - 50, 32, '방으로(다시 하기)', { style: 'teal', font: 'head', onTap: () => app.go('room', {}, 'shutter') });
+      button(app, 'res_leave', 25, H - 74, W - 50, 32, '방 나가기', { style: 'night', onTap: () => { const go = () => { closeStream(app); app.go('home', {}, 'shutter'); }; R.leave().then(go, go); } });
     } else {
-      button(app, 'res_again', 25, H - 112, W - 50, 32, '한 판 더', { style: 'gold', font: 'head', icon: 'sword', iconTint: true, onTap: () => app.go('matching', { mode: L.mode }, 'shutterClose') });
-      button(app, 'res_home', 25, H - 70, W - 50, 26, '홈으로', { style: 'teal', onTap: () => app.go('home', {}, 'shutter') });
+      button(app, 'res_again', 25, H - 114, W - 50, 32, '한 판 더', { style: 'gold', font: 'head', icon: 'sword', iconTint: true, onTap: () => app.go('matching', { mode: L.mode }, 'shutterClose') });
+      button(app, 'res_home', 25, H - 74, W - 50, 32, '홈으로', { style: 'teal', onTap: () => app.go('home', {}, 'shutter') });
     }
   },
 };

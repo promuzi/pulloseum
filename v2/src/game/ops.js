@@ -39,6 +39,7 @@ export const OPS = {
   repairProbe: s => L.repairProbe(s),
   buy: (s, a, c) => L.buy(s, str(a.item), c.rng),
   ack: (s, a) => L.ackPending(s, int(a.n, 1, 50, 1)),
+  guide: (s, a) => L.seeGuide(s, str(a.id, 16)),
 };
 
 // 한 가지 일 하기: 시간으로 차는 것을 먼저 맞추고 → 규칙 → 다시 맞춤. 반환 = 화면에 보일 결과

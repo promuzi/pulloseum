@@ -115,6 +115,7 @@ export const explore = {
     if (pl.legend) g.text('전설이 아주 드물게', W - 18, py + 70, { color: '#ffb04a', align: 'right' });
     // 탐사비 · 성공 확률 · 닳는 양 · 내구도
     const y3 = py + 98, okP = Math.round(O.ok * 100);
+    this.oddsR = [12, y3 - 3, W - 24, 32]; this.fuelR = [12, y3 + 33, W - 24, 15];   // 처음 안내가 가리킬 자리
     g.text(`탐사비 ${O.cost}`, 18, y3, { font: 'bold', color: s.wallet.credits >= O.cost ? PT.main : '#ff9a8a' });
     g.text(`성공 ${okP}%`, 92, y3, { font: 'bold', color: okP >= 85 ? '#9ff0b0' : okP >= 65 ? '#ffd890' : '#ff9a8a' });
     g.text(`내구 -${O.wear}쯤`, 160, y3, { color: PT.sub });

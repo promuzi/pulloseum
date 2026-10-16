@@ -90,8 +90,8 @@ export const room = {
       g.text(`나갈 식물: ${p.name}`, W / 2, y + 120, { font: 'bold', color: P.main, align: 'center' });
       g.text(`${stageName(p)} Lv${p.lv}`, W / 2, y + 138, { color: P.sub, align: 'center' });
     }
-    button(app, 'rm_make', 34, y + 182, W - 68, 40, '방 만들기', { style: 'gold', font: 'head', icon: 'plus', iconTint: true, disabled: this.busy || !app.room.online, onTap: () => this.call(app, () => R.create()) });
-    button(app, 'rm_join', 34, y + 232, W - 68, 36, '코드로 들어가기', { style: 'teal', font: 'bold', disabled: this.busy || !app.room.online, onTap: () => openForm(app, {
+    button(app, 'rm_make', x, y + 180, w, 38, '방 만들기', { style: 'gold', font: 'head', icon: 'plus', iconTint: true, disabled: this.busy || !app.room.online, onTap: () => this.call(app, () => R.create()) });
+    button(app, 'rm_join', x, y + 226, w, 38, '코드로 들어가기', { style: 'teal', font: 'bold', disabled: this.busy || !app.room.online, onTap: () => openForm(app, {
       title: '코드로 들어가기', note: '친구가 보낸 6자 코드를 써 주세요', fields: [{ id: 'code', label: '초대 코드', max: 8, auto: 'off' }], ok: '들어가기',
       onSubmit: async val => { try { const r = await R.join(val.code.trim()); if (app.room) app.room.view = r; return null; } catch (e) { return e.message; } },
     }) });
@@ -101,13 +101,13 @@ export const room = {
     const { g, W, H, t, state: s } = app, me = v.members.find(m => m.me), foe = v.members.find(m => !m.me);
     ledBoard(g, [{ text: v.code, color: LED.amber }], W / 2, 64, { font: 'big', minW: 170 });
     const link = `${location.origin}/v2/?room=${v.code}`;
-    button(app, 'rm_copy', 30, 92, 102, 24, '코드 복사', { style: 'night', onTap: () => copy(app, v.code, '코드를 복사했어요') });
-    button(app, 'rm_link', 138, 92, 102, 24, '링크 복사', { style: 'night', onTap: () => copy(app, link, '초대 링크를 복사했어요') });
+    const c2 = Math.floor((W - 24 - 6) / 2);   // 두 칸 기둥(아래 사람 카드 · 준비 단추와 같은 가장자리 12)
+    button(app, 'rm_copy', 12, 92, c2, 22, '코드 복사', { style: 'night', onTap: () => copy(app, v.code, '코드를 복사했어요') });
+    button(app, 'rm_link', W - 12 - c2, 92, c2, 22, '링크 복사', { style: 'night', onTap: () => copy(app, link, '초대 링크를 복사했어요') });
     // 방식(같은 날 3:3 친구 대결): 방장 = 1:1 · 3:3 교체전 고르기(바꾸면 둘 다 준비가 풀림), 친구 = 글자만
     const swap = v.mode === 'swap3';
     if (v.host) {
-      const bw2 = Math.floor((W - 68 - 6) / 2);
-      [['1v1', '1:1 대결'], ['swap3', '3:3 교체전']].forEach(([id, label], i) => button(app, 'rm_mode_' + id, 34 + i * (bw2 + 6), 122, bw2, 20, label, { style: (v.mode || '1v1') === id ? 'gold' : 'night', disabled: this.busy, onTap: () => { if ((v.mode || '1v1') !== id) this.call(app, () => R.mode(id)); } }));
+      [['1v1', '1:1 대결'], ['swap3', '3:3 교체전']].forEach(([id, label], i) => button(app, 'rm_mode_' + id, i ? W - 12 - c2 : 12, 120, c2, 22, label, { style: (v.mode || '1v1') === id ? 'gold' : 'night', disabled: this.busy, onTap: () => { if ((v.mode || '1v1') !== id) this.call(app, () => R.mode(id)); } }));
     } else g.text(swap ? '3:3 교체전' : '1:1 대결', W / 2, 126, { color: '#ffd890', align: 'center' });
     // 두 사람 카드(사용자 2026-10-16 "친구대결에서 서로의 패는 보여주지 말자 — 프로필과 이름, 레벨 이정도만"):
     //  위 = 프로필(대표 식물 얼굴 · 이름 · 재배사 Lv · 칭호), 가운데 = 내 카드만 고른 식물 · 3:3이면 팀 셋(상대는 '?' — 대결에서 공개), 아래 = 준비 불
@@ -170,12 +170,12 @@ export const room = {
     });
     // 준비
     const ready = me && me.ready, no3 = swap && me && !me.team3 && !ready;
-    button(app, 'rm_ready', 34, cy + ch + 10, W - 68, 40, ready ? '준비 취소' : '준비', { style: ready ? 'night' : 'gold', font: 'head', disabled: this.busy || no3, sub: no3 ? '3:3은 식물이 셋 있어야 해요' : null, onTap: () => this.call(app, () => R.ready(!ready)) });
+    button(app, 'rm_ready', 12, cy + ch + 10, W - 24, 40, ready ? '준비 취소' : '준비', { style: ready ? 'night' : 'gold', font: 'head', disabled: this.busy || no3, sub: no3 ? '3:3은 식물이 셋 있어야 해요' : null, onTap: () => this.call(app, () => R.ready(!ready)) });
     let y = cy + ch + 60;
     if (v.last) { g.text(`지난 판${v.last.mode === 'swap3' ? '(3:3)' : ''} · ${v.last.winner} 승 · ${v.last.turns}턴` + (v.last.why === 'ko' ? '' : ` (${{ forfeit: '기권', timeout: '시간 넘김', left: '나감' }[v.last.why] || v.last.why})`), W / 2, y, { color: '#ffd890', align: 'center' }); y += 20; }
     // 감정 표현 단추(셋씩 두 줄)
-    const bw = Math.floor((W - 28 - 8) / 3);
-    EMOTES.forEach((e, i) => button(app, 'rm_em' + i, 14 + (i % 3) * (bw + 4), y + Math.floor(i / 3) * 26, bw, 22, e, { style: 'night', onTap: () => R.emote(i).catch(() => {}) }));
+    const bw = Math.floor((W - 24 - 8) / 3), ex = i => (i % 3 === 2 ? W - 12 - bw : 12 + (i % 3) * (bw + 4));
+    EMOTES.forEach((e, i) => button(app, 'rm_em' + i, ex(i), y + Math.floor(i / 3) * 26, bw, 22, e, { style: 'night', onTap: () => R.emote(i).catch(() => {}) }));
   },
   // 나갈 식물 고르기(스마트팜 식물)
   pickSheet(app) {
@@ -213,7 +213,7 @@ export const room = {
       if (k >= 0) { g.rect(W - 46, ry + 9, 20, 20, '#05070b'); g.rect(W - 45, ry + 10, 18, 18, k === 0 ? '#f0be7d' : '#7cf0a0'); g.text(String(k + 1), W - 36, ry + 12, { font: 'bold', color: '#05070b', align: 'center' }); }
       app.input.hit(id, 16, ry, W - 32, 38, () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < 3) sel.push(p.uid); else app.toast('셋까지 골라요'); });
     });
-    button(app, 'tp_ok', 34, y + h - 44, W - 68, 32, sel.length === 3 ? '이 팀으로' : `${sel.length}/3 골랐어요`, { style: 'gold', font: 'bold', disabled: sel.length !== 3 || this.busy, onTap: () => this.saveTeam(app, [...sel]) });
+    button(app, 'tp_ok', 16, y + h - 44, W - 32, 32, sel.length === 3 ? '이 팀으로' : `${sel.length}/3 골랐어요`, { style: 'gold', font: 'bold', disabled: sel.length !== 3 || this.busy, onTap: () => this.saveTeam(app, [...sel]) });
   },
   async saveTeam(app, uids) {
     this.teamPick = null;
