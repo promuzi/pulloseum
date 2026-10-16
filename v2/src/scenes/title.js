@@ -9,7 +9,7 @@ import { net } from '../net/api.js';
 import { openForm } from '../core/form.js';
 import { STARTERS, SPECIES, JONG, ELEM } from '../game/catalog.js';
 import { stageKey } from '../game/view.js';
-import { LOFT_STOOL, enterLoft, loftBack, loftFront, loftBoot, loftNight, loftNightBeam, loftNightFront, loftNightStool, loftNightPlant } from '../art/loft.js';
+import { LOFT_STOOL, enterLoft, loftBack, loftFront, loftBoot, loftNight, loftNightBeam, loftNightFront, loftNightStool, loftNightPlant, loftPrepare } from '../art/loft.js';
 import { soundLocked, introTime, introSkip, bootPlan, musicNow, lampNow, MUSIC_BAR, MUSIC_STEP } from '../core/sound.js';
 
 // 처음 화면(2026-10-16 사용자 "초반 화면을 바꿔줘. 검은 배경에 의자에 내 식물이 올려져 있고. 천장에서 불빛이 지지직 거리면서 켜져.
@@ -99,6 +99,7 @@ function drawBoot(sc, app, key, pot, uiDraw) {
   const { g } = app, [mx, my] = LOFT_STOOL, bt = sc.boot, now = sc.p && sc.p.bootu != null ? bt.t0 + (bt.t1 - bt.t0) * +sc.p.bootu : musicNow();
   const D = Math.max(0.2, bt.t1 - bt.t0), u = clamp01((now - bt.t0) / D), fade = 1 - clamp01((app.t - bt.a0) / 260);
   if (now < bt.t0) { nightRoom(app, key, pot, lampNow().k, 1); if (fade > 0 && uiDraw) g.alpha(fade, uiDraw); return; }
+  g.rect(0, 0, app.W, app.H, BG0);    // 방 그림(270×600)보다 넓거나 긴 화면의 남는 곳
   loftBack(app);                       // 켜진 방(창 밖 우주까지) 위에
   loftBoot(app, u, D * 1000);          // 아직 안 켜진 칸 = 꺼진 방
   loftNightBeam(app, 1 - u);           // 빛줄기는 방이 밝아지며 사라짐(대기 화면엔 원래 그림의 원뿔만)
@@ -132,6 +133,8 @@ export const title = {
     const [key, pot] = myPlant(app);
     if (this.boot) return drawBoot(this, app, key, pot, () => this.ui(app, 1, false));
     const it = this.it();
+    // 화면이 검을 때 한 장에 한 가지씩 미리 잼(점화 · 켜짐 순간 멈칫 없게) — 그린 것은 바로 아래에서 검정으로 덮임
+    if (!this.prepared && (it == null || it < INTRO.reveal)) { this.prepStep = this.prepStep || 0; this.prepared = loftPrepare(app, this.prepStep++); }
     if (it == null) {   // 처음 화면 곡이 아직 — 소리가 막혀 첫 누름을 기다림(작은 표시) · 앞 곡이 마디를 마치는 중
       g.rect(0, 0, W, H, BG0);
       if (soundLocked()) {
@@ -142,7 +145,7 @@ export const title = {
       return;
     }
     // 전등: 지휘자의 전등 칸(촬영이면 점화 뒤 켜짐)
-    const k = this.at != null ? (it >= INTRO.ign + 0.45 ? 1 : 0) : lampNow().k;
+    const k = this.at != null ? (it >= INTRO.ign + 0.45 ? 1 : 0) : it < INTRO.ign - 0.02 ? 0 : lampNow().k;   // 점화 전엔 늘 꺼짐(곡이 막 시작된 첫 몇 장에 켜진 방이 비치지 않게)
     if (this.revealT == null && it >= INTRO.reveal) this.revealT = this.at != null ? -1e9 : app.t;
     const rv = this.revealT == null ? 0 : clamp01((app.t - this.revealT) / (INTRO.revealD * 1000));
     nightRoom(app, key, pot, k, rv);

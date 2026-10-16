@@ -2,7 +2,7 @@
 //   node tools/shots/soundreel.mjs --out music_reel                 = 음악 지휘자 상태 차례(아래 PLAN)를 가상으로 돌려 구움
 //   node tools/shots/soundreel.mjs --out sound_reel --sfx all      = 효과음 전부(0.7초 간격)
 //   node tools/shots/soundreel.mjs --out x --plan "0:title,13:boot,40:ready,45:battle,70:win,80:home" --sec 90
-//   --stems = 층마다 따로 굽고 세기(RMS)를 적음(섞음 고르기) · --nosfx/--nomusic
+//   --stems = 층마다 따로 굽고 세기(RMS)를 적음(섞음 고르기) · --nosfx/--nomusic · --loud(평균 −16dB, 꼭대기만 부드럽게 누름)
 //   결과 = tools/shots/out/<out>.wav (최고 0.9로 맞춤 — 게임 안 크기는 sound.js SOUND)
 import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -34,7 +34,7 @@ try {
     plan = (get('plan') || PLAN).split(',').map(s => { const [t, w] = s.split(':'); return w === 'boot' ? { t: +t, boot: true } : w === 'skip' ? { t: +t, skip: true } : { t: +t, state: w }; });
     sec = +(get('sec') || Math.max(...plan.map(x => x.t)) + 14);
   }
-  const opt = { noSfx: has('nosfx'), noMusic: has('nomusic') };
+  const opt = { noSfx: has('nosfx'), noMusic: has('nomusic'), loud: has('loud') };   // --loud = 휴대폰으로 듣기 좋게(평균 −16dB · 꼭대기만 부드럽게 누름)
   const r = await p.evaluate(async (plan, sec, opt) => window.__sound.reel(plan, sec, opt), plan, sec, opt);
   writeFileSync(resolve(outDir, out + '.wav'), Buffer.from(r.b64, 'base64'));
   console.log(`저장: ${resolve(outDir, out + '.wav')} · ${r.sec.toFixed(1)}초 · 최고 ${r.peak.toFixed(3)} · RMS ${r.rms.toFixed(4)} · 맞춤 배수 ${r.gain.toFixed(2)}${errs.length ? ' · 페이지 오류 ' + errs.join(' | ') : ''}`);

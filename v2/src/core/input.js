@@ -24,6 +24,7 @@ export class Input {
       if (d.moved) { this.queue.push({ type: 'drag', dx: p.x - d.x, dy: p.y - d.y, x0: d.x0, y0: d.y0 }); d.x = p.x; d.y = p.y; }
     });
     const up = e => {
+      unlock();   // 뗄 때만 소리를 허락하는 브라우저(iOS)도 있어 한 번 더
       if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
       const r = this.hitAt(p.x, p.y);
       if (!d.moved && !d.held && r && r.id === d.id) this.queue.push({ type: 'tap', region: r });

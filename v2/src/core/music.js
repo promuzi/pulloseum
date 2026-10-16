@@ -416,7 +416,7 @@ const SONGS = {
     swing: 0.6, crkVis: 0,
     bar(sb, cur, st) {
       const fl = st.flavor || 'win', prog = RPROG[fl];
-      if (sb === 0) return { L: { pad: P('C - - - - - - - - - - - - - - -') }, ch: prog[0], nx: prog[1] };   // 여운(멈춤 가락이 울리는 동안)
+      if (sb === 0) return { L: { pad: P('C^ - - - - - - - - - - - - - - -'), keys: P('. . . . . . . . C_ - - - - - - -') }, ch: prog[0], nx: prog[1] };   // 여운: 멈춤 가락이 울리는 동안 패드, 가락이 잦아든 뒤(반 마디) 건반이 살며시 — 빈 마디가 되지 않게
       const ci = (sb - 1) % 4, L = { keys: P('C - - - - - - - C_ - - - - - - -'), bass: P(RBASS[fl][ci]), crk: P('. . . . . . . . . . . . t . . .') };
       if (fl === 'win') { L.kick = P('x . . . . . . . . . x . . . . .'); L.snare = P('. . . . . . . . o . . . . . . .'); L.hat = P('x . o . x . o . x . o . x . o .'); }
       else L.hat = P('. . o . . . o . . . o . . . o .');
@@ -508,7 +508,7 @@ export class Conductor {
   stepT(n) { return this.t0 + n * STEP; }
   anchor(t) { this.t0 = t; this.n = 0; this.planB = -1; }
   // 처음 시작: 격자를 지금으로 맞추고 그 상태의 0마디부터
-  begin(state) { this.anchor(this.clock() + 0.06); this.cur = { state, start: 0, entry: 'silence' }; this.next = null; this.want = state; if (state === 'title') this.lampAdd(this.t0, '', 'a', 1); }
+  begin(state) { const now = this.clock(); this.anchor(now + 0.06); this.cur = { state, start: 0, entry: 'silence' }; this.next = null; this.want = state; if (state === 'title') this.lampAdd(now - 0.5, '', 'a', 1); }   // 처음 화면 = 전등 꺼진 채로 시작(바로 지금부터)
   onUnlock() { this.unlocked = true; if (this.cur.state === 'idle' && this.want !== 'idle') this.begin(this.want); }
   // 상태 바꾸기 요청: 다음 마디 첫 칸(남은 마지막 박 = 이음 장식), urgent = 다음 박부터 장식(멈춤 가락) → 그다음 마디
   request(state, o = {}) {

@@ -20,7 +20,7 @@
 | 작곡가에게 맡김 · 무료 음원(CC0) | 저작권이 깔끔 | 비용 · 찾는 시간 |
 
 - **AI 음악의 저작권:** 우리나라(문체부 · 한국저작권위원회 생성형 AI 안내서)도 AI만으로 만든 결과는 저작물로 등록되지 않고, 사람의 창작적 기여(직접 만든 것을 입력으로 · 결과를 상당히 고침 · 고르고 배열함)가 있는 부분만 인정. 그래서 AI 곡은 '쓸 권리'는 있어도 '남이 못 쓰게 막을 권리'는 약함.
-- **추천:** ① 출시 전까지는 지금 코드 칩튠을 다듬어 씀(완전히 우리 것). ② 곡 품질을 올리고 싶으면 **ElevenLabs Music 유료**로 장면별 연주곡을 만들고(상업 허락이 가장 분명), 사람이 고르고 · 자르고 · 반복 구간을 다듬어(사람 기여) `TRACK_FILES`에 넣음. ③ 효과음은 AI 말고 지금 방식 유지(짧고 반응이 빨라야 해서 코드가 더 나음).
+- **추천:** ① 출시 전까지는 지금 코드 칩튠을 다듬어 씀(완전히 우리 것). ② 곡 품질을 올리고 싶으면 **ElevenLabs Music 유료**로 장면별 연주곡을 만들고(상업 허락이 가장 분명), 사람이 고르고 · 자르고 · 반복 구간을 다듬어(사람 기여) 넣음(같은 날 `TRACK_FILES`는 걷어내고 지휘자로 바꿈 — 파일 곡을 쓰게 되면 상태마다 마디 길이에 맞춰 자른 곡을 박에 맞춰 잇는 쪽으로). ③ 효과음은 AI 말고 지금 방식 유지(짧고 반응이 빨라야 해서 코드가 더 나음).
 - 구독 결제는 사용자 몫(내가 하지 않음). 만들 때 쓸 프롬프트(영문, 가수 · 곡 이름 없음):
   - 홈: "Cozy 16-bit chiptune for a space greenhouse home screen, C major, 90 BPM, soft square lead and triangle bass, gentle arpeggios, calm and warm, seamless loop, instrumental, 60 seconds"
   - 전투: "Energetic 16-bit chiptune battle theme, A minor, 150 BPM, driving pulse bass, catchy square lead, fast arpeggios, punchy noise drums, plant monster arena, seamless loop, instrumental, 60 seconds"

@@ -27,13 +27,16 @@ function init() {
   return ctx;
 }
 // 첫 누름(input.js)에서 부름 — 브라우저가 소리를 허락
+//  누를 때(pointerdown)와 뗄 때(pointerup) 둘 다 부름 — 뗄 때만 소리를 허락하는 브라우저(iOS)도 있어서, 소리 상자가 아직 안 열렸으면 다시 열어 봄
 export function unlock() {
-  if (unlocked || REC) return;
-  unlocked = true;
-  if (!init()) { conductor.onUnlock(); return; }   // 소리 상자가 없는 브라우저 = 음악 없이 박자만(전등 · 처음 화면 연출은 그대로)
-  ctx.resume().then(attachMusic, () => {});
-  if (ctx.state === 'running') attachMusic();
-  setTimeout(() => { if (!A && !REC) conductor.onUnlock(); }, 1500);   // 소리 상자가 끝내 안 열려도 연출은 이어짐(나중에 열리면 그때부터 소리)
+  if (REC) return;
+  if (!unlocked) {
+    unlocked = true;
+    if (!init()) { conductor.onUnlock(); return; }   // 소리 상자가 없는 브라우저 = 음악 없이 박자만(전등 · 처음 화면 연출은 그대로)
+    setTimeout(() => { if (!A && !REC) conductor.onUnlock(); }, 1500);   // 소리 상자가 끝내 안 열려도 연출은 이어짐(나중에 열리면 그때부터 소리)
+  }
+  if (!ctx) return;
+  if (ctx.state === 'running') attachMusic(); else ctx.resume().then(attachMusic, () => {});
 }
 // 막혀 있지 않은 곳(앱 WebView · 자동 재생 허락)이면 누르기 전에 시작 — 막혀 있으면 소리 상자가 '멈춤'에 머물고 첫 누름을 기다림
 export function tryAutoStart() {
@@ -265,11 +268,15 @@ async function renderMix(events, sfxList, sec, opt = {}) {
 function wavB64([L, R], opt = {}) {
   const N = L.length; let peak = 0, sq = 0;
   for (let i = 0; i < N; i++) { const a = Math.abs(L[i]), b = Math.abs(R[i]); if (a > peak) peak = a; if (b > peak) peak = b; sq += L[i] * L[i] + R[i] * R[i]; }
-  const k = opt.gain || (peak > 0 ? 0.9 / peak : 1), buf = new ArrayBuffer(44 + N * 4), v = new DataView(buf);
+  const rms0 = Math.sqrt(sq / (2 * N));
+  // loud = 휴대폰으로 들어 보기 좋게(평균 세기를 −16dB 쯤으로 올리고 0.8 넘는 꼭대기만 부드럽게 눌러 찢어지지 않게), 아니면 최고 0.9로 맞춤
+  const k = opt.gain || (opt.loud && rms0 > 0 ? Math.max(1, Math.min(3, 0.16 / rms0)) : peak > 0 ? 0.9 / peak : 1), buf = new ArrayBuffer(44 + N * 4), v = new DataView(buf);
+  const lim = x => { const a = Math.abs(x); return a <= 0.8 ? x : Math.sign(x) * (0.8 + 0.2 * Math.tanh((a - 0.8) / 0.2)); };
+  const S16 = x => Math.max(-32768, Math.min(32767, Math.round((opt.loud ? lim(x * k) : x * k) * 32767)));
   const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
   w(0, 'RIFF'); v.setUint32(4, 36 + N * 4, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true);
   v.setUint32(24, 44100, true); v.setUint32(28, 44100 * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, N * 4, true);
-  for (let i = 0, o = 44; i < N; i++, o += 4) { v.setInt16(o, Math.max(-32768, Math.min(32767, Math.round(L[i] * k * 32767))), true); v.setInt16(o + 2, Math.max(-32768, Math.min(32767, Math.round(R[i] * k * 32767))), true); }
+  for (let i = 0, o = 44; i < N; i++, o += 4) { v.setInt16(o, S16(L[i]), true); v.setInt16(o + 2, S16(R[i]), true); }
   const u8 = new Uint8Array(buf); let s = '';
   for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
   return { b64: btoa(s), sec: N / 44100, peak, rms: Math.sqrt(sq / (2 * N)), gain: k };

@@ -54,7 +54,7 @@ try {
     sec = s + 1 / FPS;
   }
   if (errs.length) console.log('페이지 오류:', errs.join(' | '));
-  const w = await p.evaluate(sec => window.__sound.rec.wav(sec), sec);
+  const w = await p.evaluate(sec => window.__sound.rec.wav(sec, { loud: true }), sec);   // 휴대폰으로 듣기 좋게(평균 −16dB · 꼭대기만 부드럽게 누름)
   writeFileSync(resolve(outDir, out + '.wav'), Buffer.from(w.b64, 'base64'));
   console.log(`WAV → ${resolve(outDir, out + '.wav')} · ${w.sec.toFixed(1)}초 · 최고 ${w.peak.toFixed(3)} · RMS ${w.rms.toFixed(4)} · 맞춤 ×${w.gain.toFixed(2)}`);
 } finally { await b.close(); srv.close(); }

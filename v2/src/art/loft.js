@@ -344,6 +344,14 @@ function nightLayers() {
   A.c.putImageData(A.im, 0, 0); B.c.putImageData(B.im, 0, 0); Cs.c.putImageData(Cs.im, 0, 0);
   return (S.night = { off: A.cv, light: B.cv, stool: Cs.cv, u32 });
 }
+// 미리 재기(전등 빛 층 · 꺼진 방 · 켜짐 순서 · 빛줄기 · 창 밖 우주 — 느린 휴대폰에선 합쳐 0.2초 넘게 걸림): 처음 화면이 아직 검을 때
+//  한 장에 한 가지씩 불러 두면 점화 · 켜짐 순간에 멈칫하지 않음. 다 끝나면 true
+export function loftPrepare(app, step) {
+  if (!ensure()) return step >= 8;
+  if (step === 0) lampLayers(); else if (step === 1) nightLayers(); else if (step === 2) bootTau(); else if (step === 3) { beamCanvas(); bootFill(0, 1000); }
+  else if (step === 4) { app.g.c.save(); loftBack(app); loftFront(app); app.g.c.restore(); }   // 창 밖 우주 · 흐림 무늬(뒤에서 검정으로 덮음)
+  return step >= 4;
+}
 // 꺼진 방 + 전등 세기 k: 검정 → 꺼진 화면에 비친 방(k) → 전등 빛 더하기(k)
 export function loftNight(app, k) {
   const { g } = app;
@@ -413,6 +421,10 @@ const PRE = 90, FL = 170, LEDC = [120, 190, 255], FLASH = [226, 244, 255];
 // u = 0..1 진행, D = 전체 길이(ms): 방 그림(loftBack) 위에 — 아직 안 켜진 칸 = 꺼진 방(전등 빛만), 켜지는 칸 = 불씨 → 번쩍, 켜진 칸 = 비움
 export function loftBoot(app, u, D) {
   if (!ensure()) return;
+  bootFill(u, D);
+  app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(S.bootCv, 0, 0);
+}
+function bootFill(u, D) {
   const N = nightLayers(), tau = bootTau(), { W, H } = lampLayers();
   if (!S.bootCv) { S.bootCv = document.createElement('canvas'); S.bootCv.width = W; S.bootCv.height = H; S.bootCx = S.bootCv.getContext('2d'); S.bootIm = S.bootCx.createImageData(W, H); S.bootU = new Uint32Array(S.bootIm.data.buffer); }
   const out = S.bootU, night = N.u32, el = u * D;
@@ -426,5 +438,4 @@ export function loftBoot(app, u, D) {
     else out[i] = 0;
   }
   S.bootCx.putImageData(S.bootIm, 0, 0);
-  app.g.c.imageSmoothingEnabled = false; app.g.c.drawImage(S.bootCv, 0, 0);
 }

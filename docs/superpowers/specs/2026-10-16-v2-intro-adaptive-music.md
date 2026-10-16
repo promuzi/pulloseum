@@ -76,7 +76,8 @@
 
 ### 4. 확인 도구
 - **영상(소리 포함)**: `node tools/shots/introvideo.mjs [--out intro_flow] [--tap 15.95] [--home 36] [--battle 13] [--after 9] [--png 초,…] [--crf PERC_LOSSLESS]` — 처음 화면 → 누름 → 켜짐 + 붐뱁(브레이크 포함) → 출전 · 매칭 → 전투(카드 두 번) → 다시 대기. 그림 = 앱 시각을 30장/초로 정확히 넘기며 실제 화면 그대로(`main.js __frame` — 누르기 · 단추 소리까지), 소리 = 같은 시각으로 기록한 음악 · 효과음 사건을 오프라인으로 구움(`sound.js rec`) → 블렌더로 H.264 + AAC(`video.mjs writeMP4Files` · `mp4_blender.py` 소리 띠). 장 PNG는 임시 폴더에(긴 영상도 메모리에 안 쌓임).
-- **들어 보기(WAV)**: `node tools/shots/soundreel.mjs --out music_reel`(상태 차례 전부 — 처음 화면 → 대기 → 매칭 → 전투 → 승리 → 결과 → 대기 → 식물 관리 → … → 패배) · `--plan "0:title,13:boot,40:ready,44:battle,70:win"` · `--stems`(층 세기) · `--sfx all`(효과음 전부).
+- **들어 보기(WAV)**: `node tools/shots/soundreel.mjs --out music_reel`(상태 차례 전부 — 처음 화면 → 대기 → 매칭 → 전투 → 승리 → 결과 → 대기 → 식물 관리 → … → 패배) · `--plan "0:title,13:boot,40:ready,44:battle,70:win"` · `--stems`(층 세기) · `--sfx all`(효과음 전부) · `--loud`(휴대폰으로 듣기 좋게 평균 −16dB, 0.8 넘는 꼭대기만 부드럽게 누름 — 영상 도구는 늘 이것).
+- 처음 화면은 첫 장(검정)에서 전등 빛 층 · 꺼진 방 · 켜짐 순서를 미리 잼(`loft.js loftPrepare`) — 점화 · 켜짐 순간에 멈칫하지 않게.
 - **정지 그림**: `?scene=title&at=12`(초) · `&bootu=0.5`(켜짐 중간) · `v2shots.mjs`의 `01_title` · `01_title_dark` · `01_title_boot`. 소리 막힘 길 = `?mute=1`(자동 시작 안 함).
 - 콘솔: `__sound.conductor`(지금 상태 · 예약) · `__sound.lampNow()` · `__sound.introTime()`.
 
