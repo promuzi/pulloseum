@@ -1,0 +1,35 @@
+// 밝은 단색 배경(코덱스에 #d9d9d9로 그리게 한 컨셉 — 2026-10-17 품질 원인: 투명 누끼 요청은 그림이 나빠짐) → 투명 누끼
+//   node tools/pixel/big/greycut.mjs <원본.png> <누끼.png>
+// 규칙은 convert.mjs bgOf 와 같음: 네 모서리 색과 가까운 칸을 가장자리부터 흘려 채우고(OKLab 거리 0.055), 몸에 갇힌 넓은 배경 구멍(0.032 · 140칸 이상)도 배경
+import { readFileSync, writeFileSync } from 'node:fs';
+import { decodePNG, encodePNG, oklab } from './engine.mjs';
+
+const [src, dst] = process.argv.slice(2);
+if (!src || !dst) { console.log('node tools/pixel/big/greycut.mjs <원본.png> <누끼.png>'); process.exit(1); }
+const im = decodePNG(readFileSync(src)), n = im.w * im.h, lab = new Float32Array(n * 3);
+for (let i = 0; i < n; i++) { const k = i * 4, c = oklab('#' + [0, 1, 2].map(j => im.data[k + j].toString(16).padStart(2, '0')).join('')); lab[i * 3] = c[0]; lab[i * 3 + 1] = c[1]; lab[i * 3 + 2] = c[2]; }
+const bg = [0, 1, 2].map(c => [0, im.w - 1, n - im.w, n - 1].reduce((s, i) => s + lab[i * 3 + c], 0) / 4);
+const dist = i => Math.hypot(lab[i * 3] - bg[0], (lab[i * 3 + 1] - bg[1]) * 1.5, (lab[i * 3 + 2] - bg[2]) * 1.5);
+const isBg = new Uint8Array(n);
+const fill = (seed, tol, mark) => {
+  const s = [...seed], got = [];
+  while (s.length) {
+    const i = s.pop();
+    if (mark[i] || dist(i) >= tol) continue;
+    mark[i] = 1; got.push(i);
+    const x = i % im.w;
+    if (x > 0) s.push(i - 1); if (x < im.w - 1) s.push(i + 1); if (i >= im.w) s.push(i - im.w); if (i < n - im.w) s.push(i + im.w);
+  }
+  return got;
+};
+const edge = [];
+for (let x = 0; x < im.w; x++) edge.push(x, n - im.w + x);
+for (let y = 0; y < im.h; y++) edge.push(y * im.w, y * im.w + im.w - 1);
+fill(edge, 0.055, isBg);
+const seen = new Uint8Array(n);
+for (let i = 0; i < n; i++) if (!isBg[i] && !seen[i] && dist(i) < 0.032) { const reg = fill([i], 0.032, seen); if (reg.length >= 140) for (const j of reg) isBg[j] = 1; }
+const out = new Uint8Array(im.data);
+let kept = 0;
+for (let i = 0; i < n; i++) { if (isBg[i]) out[i * 4 + 3] = 0; else kept++; }
+writeFileSync(dst, encodePNG(im.w, im.h, out));
+console.log(`${dst} — 몸 ${(100 * kept / n).toFixed(1)}%`);
