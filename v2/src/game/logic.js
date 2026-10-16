@@ -3,7 +3,7 @@
 import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
-  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX,
+  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeMaxDur, probeUpCost, REPAIR_PER, EXPLORE_COST,
 } from './catalog.js';
 
 export class Err extends Error {}
@@ -22,7 +22,7 @@ export function newGame({ nickname, starter }, rng, now) {
     profile: { name: nickname, title: '초보 재배사', avatar: starter, color: 0 },
     titles: ['초보 재배사'],
     wallet: { credits: 200, gems: 20 },
-    items: { water: 6, fert: 2, regress: 0, fuel: FUEL.max }, fuelT: now,
+    items: { water: 6, fert: 2, regress: 0, fuel: FUEL.max, parts: 0 }, fuelT: now,
     scions: [], seeds: [], plants: [], storage: [], active: 0, team: [], mode: 'tournament',
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 },
     swap3: { wins: 0, losses: 0 }, pvp: { wins: 0, losses: 0 },
@@ -37,7 +37,9 @@ export function newGame({ nickname, starter }, rng, now) {
 export function makePlant(s, seed, rng, now) {
   const sp = SPECIES[seed.key];
   need(sp, '모르는 식물');
-  const ivs = Object.fromEntries(IV_KEYS.map(k => [k, Math.floor(rng() * (IV_MAX + 1))]));
+  // 개체값: 탐사 종자는 ivk번 더 굴려 가장 좋은 값(행성 생기 + 종자 보관함 — 2026-10-16 사용자 "얻어온 종자의 개체값이 좋을 확률이 증가"), 그 밖은 한 번
+  const roll = () => { let b = 0; for (let i = 0; i <= (seed.ivk || 0); i++) b = Math.max(b, Math.floor(rng() * (IV_MAX + 1))); return b; };
+  const ivs = Object.fromEntries(IV_KEYS.map(k => [k, roll()]));
   if (seed.legend) for (const k of IV_KEYS) ivs[k] = Math.max(ivs[k], 7);
   const p = {
     uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
@@ -266,11 +268,11 @@ export function harvestAll(s, rng, now) {
 // ── 보상 주기 ──
 function give(s, r) {
   for (const k of ['credits', 'gems']) if (r[k]) s.wallet[k] += r[k];
-  for (const k of ['water', 'fert', 'regress', 'fuel']) if (r[k]) s.items[k] = (s.items[k] || 0) + r[k];
+  for (const k of ['water', 'fert', 'regress', 'fuel', 'parts']) if (r[k]) s.items[k] = (s.items[k] || 0) + r[k];
 }
 function grant(s, r) {
   if (r.kind === 'credits' || r.kind === 'gems') s.wallet[r.kind] += r.n;
-  else if (r.kind === 'water' || r.kind === 'fert' || r.kind === 'regress' || r.kind === 'fuel') s.items[r.kind] = (s.items[r.kind] || 0) + r.n;
+  else if (r.kind === 'water' || r.kind === 'fert' || r.kind === 'regress' || r.kind === 'fuel' || r.kind === 'parts') s.items[r.kind] = (s.items[r.kind] || 0) + r.n;
   else if (r.kind === 'seed') s.seeds.push(r.seed);
   else if (r.kind === 'scion') s.scions.push({ id: uid(s), skill: r.skill });
 }
@@ -280,7 +282,9 @@ export function rollSpecies(rng, rarity, pool) {
 }
 export function seedOf(s, key, rng, o = {}) {
   const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend, t = rng();
-  return { id: uid(s), key, shiny, legend, trait: t < TRAIT_P / 2 ? 'fruity' : t < TRAIT_P ? 'ornamental' : null };
+  const sd = { id: uid(s), key, shiny, legend, trait: t < TRAIT_P / 2 ? 'fruity' : t < TRAIT_P ? 'ornamental' : null };
+  if (o.ivk > 0) sd.ivk = o.ivk;   // 심을 때 개체값을 이만큼 더 굴림(탐사 종자)
+  return sd;
 }
 // 접목 가지 굴리기 — q(0~1) = 투자·단계가 높을수록 상급·특수 확률 ↑
 export function rollScion(rng, p, q) {
@@ -327,7 +331,7 @@ export function dismantle(s, id, rng) {
   return { got, name: p.name };
 }
 
-// ── 탐사(연료 1 — 12분에 1씩 참, 최대 5) ──
+// ── 탐사(모선에서 탐사선이 다녀옴 — 연료 캡슐 1 + 탐사비, 2026-10-16 개편) ──
 export function fuelSync(s, now) {
   const per = FUEL.regenMin * MIN;
   if (s.items.fuel >= FUEL.max) { s.fuelT = now; return s.items.fuel; }
@@ -338,29 +342,78 @@ export function fuelSync(s, now) {
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
 export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) harvestSync(p, now); return s; }
+// 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로)
+export function probeOf(s) {
+  if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])), dur: probeMaxDur(1) };
+  for (const k of Object.keys(PROBE)) if (!s.probe.lv[k]) s.probe.lv[k] = 1;
+  if (s.items.parts == null) s.items.parts = 0;
+  return s.probe;
+}
+// 이번 탐사의 성공 확률 · 닳는 양(화면이 미리 보여 줌 — 같은 계산)
+//  짐(탐사 장치 + 채집기 단계)이 무거울수록 위험한 행성에서 더 실패하고 더 닳음(사용자 "실패 리스크는 보상 관련 스펙과도 연결, 특히 내구성에") · 내구도가 낮을수록 실패 ↑
+export function exploreOdds(s, pl) {
+  const P = probeOf(s), V = P.lv, max = probeMaxDur(V.hull), load = (V.scanner - 1) + (V.cargo - 1), hz = pl.hazard || 0;
+  const ok = 0.96 - 0.07 * hz - 0.012 * load * (1 + 0.5 * hz) + 0.025 * (V.hull - 1) - 0.3 * (1 - P.dur / max);
+  return { ok: Math.max(0.35, Math.min(0.98, ok)), wear: Math.round(3 + 4 * hz + 1.5 * load * (1 + 0.3 * hz)), load, max, cost: EXPLORE_COST[pl.orbit] };
+}
 export function explore(s, planetId, rng, now) {
   const pl = PLANETS.find(x => x.id === planetId);
   need(pl, '모르는 행성');
   need(planetOpen(s, pl), `재배사 Lv${ORBIT_LV[pl.orbit]}부터 갈 수 있어요`);
+  const P = probeOf(s), O = exploreOdds(s, pl);
+  need(pl.orbit <= P.lv.tank, `연료 탱크 ${pl.orbit}단계가 있어야 ${pl.orbit}궤도까지 가요`);
+  need(P.dur > 0, '탐사선이 망가졌어요 — 정비실에서 고쳐 주세요');
   fuelSync(s, now);
-  need(s.items.fuel >= 1, '탐사 연료가 없어요 — 조금 기다리면 차요');
-  s.items.fuel--;
-  const got = [], rich = 1 + (pl.orbit - 1) * 0.35;
-  // 종자 하나는 거의 늘(희귀 식물은 드물게), 그 밖에 돈·물·비료, 드물게 접목 가지·회귀 주사, 아주 드물게 색 변종·전설
-  if (rng() < 0.85) {
-    const pool = pl.pool.filter(k => SPECIES[k].rarity === 'common'), rare = pl.pool.filter(k => SPECIES[k].rarity === 'rare');
-    const key = rare.length && rng() < 0.18 ? pick(rng, rare) : pick(rng, pool.length ? pool : pl.pool);
-    const legend = !!pl.legend && rng() < LEGEND_P;
-    got.push({ kind: 'seed', seed: seedOf(s, key, rng, { legend }), rar: legend ? 4 : SPECIES[key].rarity === 'rare' ? 2 : 1 });
-  }
-  got.push({ kind: 'credits', n: Math.round((40 + rng() * 60) * rich), rar: 0 });
-  if (rng() < 0.55) got.push({ kind: rng() < 0.65 ? 'water' : 'fert', n: 1 + Math.floor(rng() * 2), rar: 1 });
-  if (rng() < 0.08 * rich) got.push({ kind: 'scion', skill: rollScion(rng, { key: pick(rng, pl.pool) }, 0.3 * rich - 0.3), rar: 3 });
-  if (rng() < 0.03) got.push({ kind: 'regress', n: 1, rar: 4 });
+  need(s.items.fuel >= 1, '연료 캡슐이 없어요 — 시간이 지나면 차요');
+  need(s.wallet.credits >= O.cost, `탐사비 ${O.cost}이 모자라요`);
+  s.items.fuel--; s.wallet.credits -= O.cost;
+  const ok = rng() < O.ok, got = [], wear = ok ? Math.round(O.wear * (0.7 + 0.6 * rng())) : Math.round(O.wear * 2.2);
+  P.dur = Math.max(0, P.dur - wear);
+  if (ok) {
+    if (rng() < ({ seed: 0.92, mixed: 0.7, resource: 0.35 }[pl.kind] ?? 0.85)) {   // 종자: 행성 식물 중(흔한 것 · 드문 것 비율은 그대로)
+      const pool = pl.pool.filter(k => SPECIES[k].rarity === 'common'), rare = pl.pool.filter(k => SPECIES[k].rarity === 'rare');
+      const key = rare.length && rng() < 0.18 ? pick(rng, rare) : pick(rng, pool.length ? pool : pl.pool), legend = !!pl.legend && rng() < LEGEND_P;
+      got.push({ kind: 'seed', seed: seedOf(s, key, rng, { legend, ivk: (pl.vital || 0) + Math.floor((P.lv.vault - 1) / 2) }), rar: legend ? 4 : SPECIES[key].rarity === 'rare' ? 2 : 1 });
+    }
+    const n = 1 + Math.floor((P.lv.cargo - 1) * 0.75 + rng() * 0.5), q = (P.lv.scanner - 1) / 4;   // 채집기 = 개수, 탐사 장치 = 등급(0~1)
+    for (let i = 0; i < n; i++) got.push(rollLoot(pl, q, O.cost, rng));
+  } else got.push({ kind: 'credits', n: Math.round(O.cost * 0.15), rar: 0 });   // 실패: 건진 것 조금
   for (const r of got) grant(s, r);
   for (const r of got) if (r.kind === 'seed' && !s.discovered.includes(r.seed.key)) s.discovered.push(r.seed.key);
-  const xp = addXp(s, XP.explore, rng);
-  return { planet: pl.name, got, xp };
+  const xp = addXp(s, ok ? XP.explore : Math.round(XP.explore / 3), rng);
+  return { planet: pl.name, ok, got, xp, wear, dur: P.dur, max: O.max, cost: O.cost };
+}
+// 종자 말고 보상 한 칸: 자원형 행성 = 부품 많이 · 풍요 = 양 · 탐사 장치(q) = 접목 가지 · 회귀 주사 · 보석 쪽으로. 돈은 작게(탐사비보다 적게 — 탐사로 돈을 불리지 못하게)
+function rollLoot(pl, q, cost, rng) {
+  const res = pl.kind === 'resource' ? 2 : pl.kind === 'mixed' ? 1.3 : 1, rich = pl.rich || 1;
+  const x = pickW(rng, [{ k: 'credits', w: 30 }, { k: 'water', w: 22 }, { k: 'fert', w: 14 }, { k: 'parts', w: 18 * res }, { k: 'scion', w: 4 + 10 * q }, { k: 'regress', w: 1 + 4 * q }, { k: 'gems', w: 0.5 + 3 * q }]).k;
+  if (x === 'credits') return { kind: 'credits', n: Math.round(cost * (0.15 + 0.25 * rng()) * rich), rar: 0 };
+  if (x === 'water' || x === 'fert') return { kind: x, n: Math.max(1, Math.round((1 + rng()) * rich)), rar: 1 };
+  if (x === 'parts') return { kind: 'parts', n: Math.max(1, Math.round((1 + 2 * rng()) * res * rich)), rar: 1 };
+  if (x === 'scion') return { kind: 'scion', skill: rollScion(rng, { key: pick(rng, pl.pool) }, Math.min(1, 0.2 + 0.6 * q + 0.1 * (pl.orbit - 1))), rar: 3 };
+  if (x === 'regress') return { kind: 'regress', n: 1, rar: 4 };
+  return { kind: 'gems', n: 1 + Math.floor(rng() * 2 + q), rar: 4 };
+}
+// 탐사선 고치기: 내구도 1당 돈 — 돈이 모자라면 되는 만큼
+export function repairProbe(s) {
+  const P = probeOf(s), max = probeMaxDur(P.lv.hull), miss = max - P.dur;
+  need(miss > 0, '고칠 곳이 없어요');
+  const n = Math.min(miss, Math.floor(s.wallet.credits / REPAIR_PER));
+  need(n > 0, '고칠 돈이 모자라요');
+  s.wallet.credits -= n * REPAIR_PER; P.dur += n;
+  return { fixed: n, cost: n * REPAIR_PER, dur: P.dur, max };
+}
+// 탐사선 강화: 돈 + 부품(자원형 행성에서 많이) — 내구성을 올리면 내구도 한도와 지금 값이 같이 오름
+export function upgradeProbe(s, part) {
+  need(PROBE[part], '없는 부위');
+  const P = probeOf(s), lv = P.lv[part];
+  need(lv < PROBE[part].max, '이미 끝까지 올렸어요');
+  const c = probeUpCost(lv);
+  need(s.wallet.credits >= c.credits, '돈이 모자라요');
+  need((s.items.parts || 0) >= c.parts, `부품이 ${c.parts}개 필요해요`);
+  s.wallet.credits -= c.credits; s.items.parts -= c.parts; P.lv[part] = lv + 1;
+  if (part === 'hull') P.dur = Math.min(probeMaxDur(lv + 1), P.dur + 20);
+  return { part, lv: lv + 1, cost: c };
 }
 
 // ── 상점 ──
@@ -404,11 +457,13 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
     if (short || s.pvp.n >= PVP_DAILY) { r.capped = short ? 'short' : 'daily'; r.xp = { gained: 0, ups: [] }; return r; }   // 너무 짧은 판(3턴 미만) · 하루 한도 = 보상 없음
     s.pvp.n++;
     r.credits = win ? 80 : 30;
+    if (win && rng() < 0.5) r.fuel = 1;
   } else {
     const tier = TIERS.indexOf(s.tournament.tier);
     r.credits = win ? 60 + 15 * tier : 15;
     if (win && rng() < 0.5) r.water = 1 + (rng() < 0.3 ? 1 : 0);
     if (win && rng() < 0.2) r.fert = 1;
+    if (win && rng() < 0.25) r.fuel = 1;
     if (mode === 'swap3') s.swap3[win ? 'wins' : 'losses']++;
     else {
       const T = s.tournament; T[win ? 'wins' : 'losses']++;

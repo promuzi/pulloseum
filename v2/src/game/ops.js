@@ -33,6 +33,8 @@ export const OPS = {
   sell: (s, a) => L.sell(s, str(a.id)),
   dismantle: (s, a, c) => L.dismantle(s, str(a.id), c.rng),
   explore: (s, a, c) => L.explore(s, str(a.planet), c.rng, c.now),
+  upgradeProbe: (s, a) => L.upgradeProbe(s, str(a.part, 12)),
+  repairProbe: s => L.repairProbe(s),
   buy: (s, a, c) => L.buy(s, str(a.item), c.rng),
   ack: (s, a) => L.ackPending(s, int(a.n, 1, 50, 1)),
 };

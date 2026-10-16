@@ -29,6 +29,11 @@ export const ATTACKS = {
   cactus_wind: { kind: 'rings', move: 'cast', c: ['#ffffff', '#e2e8fa', '#a8b4e0', '#4a5690'], status: 'swirl' },
   vine_wind: { kind: 'blades', move: 'lunge', c: ['#ffffff', '#e8e0fa', '#b0a0e8', '#4c3e90'], status: 'swirl' },
   spore_cap: { kind: 'spores', move: 'cast', c: ['#fffbd8', '#f8e488', '#d0b050', '#6a5a28'], status: 'spore' },
+  // 새 넷(2026-10-16): 얼음 종소리 = 퍼지는 서리 고리 · 전깃줄 덩굴 = 번개 줄기 · 바위 버섯 = 내려찍기 · 해파리 버섯 = 물방울
+  frost_bell: { kind: 'rings', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
+  volt_vine: { kind: 'bolt', move: 'cast', c: ['#ffffff', '#fff4c0', '#f0c040', '#9a6a1a'], status: 'shock' },
+  stone_cap: { kind: 'slam', move: 'slam', c: ['#f4e8c8', '#d8bc88', '#a08458', '#4a3a24'], gem: '#8ff0e0', status: 'dust' },
+  jelly_cap: { kind: 'bubbles', move: 'cast', c: ['#f6feff', '#b8e8fc', '#6ab8ec', '#2a5a96'], status: 'wet' },
 };
 // 변이 스킬(변이형별 기본 스킬, 설계 = specs/2026-10-15-v2-mutation-staging-design.md ⑥) — 공격하는 쪽은 변이 후광·문장을 두른다
 export const VARIANTS = {

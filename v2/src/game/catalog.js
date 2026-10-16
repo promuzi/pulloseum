@@ -11,7 +11,7 @@ const TYPE_BASE = { flower: [210, 34, 22, 30], vine: [232, 32, 24, 26], cactus: 
 const EL_ADD = { fire: [0, 3, 0, 1], water: [12, 0, 1, 0], wind: [0, 1, 0, 4], bolt: [0, 2, 0, 4], earth: [8, 0, 4, -2], grass: [6, 1, 1, 0], ice: [4, 1, 2, 0] };
 const base = (type, el) => { const b = TYPE_BASE[type], e = EL_ADD[el]; return { hp: b[0] + e[0], atk: b[1] + e[1], def: b[2] + e[2], spd: b[3] + e[3], acc: 0, crit: 5 }; };
 
-// 식물 12(그림이 있는 것) — 가지 = 가까운 식물 무리(중간 층 기술을 나눠 가짐)
+// 식물 16(그림이 있는 것) — 가지 = 가까운 식물 무리(중간 층 기술을 나눠 가짐). 2026-10-16 새 넷(사용자 "새식물 그대로 고 — 단계별로 만들어가자") = 빈 칸(빙결 없음 · 버섯 하나뿐) 채우기
 export const SPECIES = {
   flower_grass: { name: '페탈로즈', type: 'flower', el: 'grass', rarity: 'common', branch: 'meadow' },
   thorn: { name: '쏜위드', type: 'vine', el: 'grass', rarity: 'common', branch: 'shade' },
@@ -25,6 +25,10 @@ export const SPECIES = {
   cactus_wind: { name: '게일캑터', type: 'cactus', el: 'wind', rarity: 'common', branch: 'desert' },
   vine_wind: { name: '게일바인', type: 'vine', el: 'wind', rarity: 'common', branch: 'shade' },
   spore_cap: { name: '스포어캡', type: 'mushroom', el: 'grass', rarity: 'rare', branch: 'shade' },
+  frost_bell: { name: '프로스트벨', type: 'flower', el: 'ice', rarity: 'rare', branch: 'meadow' },
+  volt_vine: { name: '볼트바인', type: 'vine', el: 'bolt', rarity: 'common', branch: 'shade' },
+  stone_cap: { name: '스톤캡', type: 'mushroom', el: 'earth', rarity: 'common', branch: 'desert' },
+  jelly_cap: { name: '젤리캡', type: 'mushroom', el: 'water', rarity: 'rare', branch: 'shore' },
 };
 for (const k of Object.keys(SPECIES)) SPECIES[k].base = base(SPECIES[k].type, SPECIES[k].el);
 export const BRANCH = { meadow: '꽃밭 가지', shore: '물가 가지', desert: '사막 가지', shade: '숲그늘 가지' };
@@ -94,7 +98,7 @@ export const SKILLS = Object.fromEntries([
   S('b_thunder', '천둥', 'bolt', 'c3', 120, 4, { area: true, inflict: { id: 'shock', n: 2 } }),
   S('b_surge', '전류 폭주', 'bolt', 'c3', 150, 5, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('b_chain', '연쇄 번개', 'bolt', 'c3', 105, 3, { ranged: true, inflict: { id: 'shock', n: 1 }, self: 'haste' }),
-  // 빙결(빙결 식물은 아직 — 접목으로만)
+  // 빙결(빙결 식물 = 프로스트벨부터, 2026-10-16)
   S('i_frost', '서리', 'ice', 'c1', 55, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('i_shell', '얼음 껍질', 'ice', 'c1', 0, 1, { self: 'shield' }),
   S('i_spear', '얼음 창', 'ice', 'c2', 95, 2, { ranged: true, inflict: { id: 'chill', n: 1 } }),
@@ -156,8 +160,21 @@ export const SKILLS = Object.fromEntries([
   S('u_spore_1', '포자', 'grass', 'u', 50, 1, { ranged: true, inflict: { id: 'spore', n: 1 } }),
   S('u_spore_2', '포자 폭발', 'grass', 'u', 80, 2, { area: true, inflict: { id: 'spore', n: 1 } }),
   S('u_spore_3', '포자 구름', 'grass', 'u', 90, 3, { ranged: true, area: true, inflict: { id: 'spore', n: 2 } }),
+  // 새 넷(2026-10-16) — 효과 짝: 속성(빙결 = 빙결 · 번개 = 감전 · 대지 = 기절 · 물 = 젖음) 또는 종(꽃 = 약화 · 덩굴 = 덩굴 · 버섯 = 포자), 센 효과(겹 2 · 기절)는 비용 4
+  S('u_frost_1', '서리 종소리', 'ice', 'u', 60, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
+  S('u_frost_2', '서리꽃 날림', 'ice', 'u', 80, 2, { ranged: true, inflict: { id: 'weak' } }),
+  S('u_frost_3', '빙결의 종', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_volt_1', '전깃줄 감기', 'bolt', 'u', 60, 1, { inflict: { id: 'bind' } }),
+  S('u_volt_2', '방전', 'bolt', 'u', 85, 2, { ranged: true, inflict: { id: 'shock', n: 1 } }),
+  S('u_volt_3', '고압 채찍', 'bolt', 'u', 120, 4, { inflict: { id: 'shock', n: 2 } }),
+  S('u_stone_1', '돌가루 포자', 'earth', 'u', 55, 1, { ranged: true, inflict: { id: 'spore', n: 1 } }),
+  S('u_stone_2', '바위 갓', 'earth', 'u', 0, 2, { self: 'wall', also: 'shield' }),
+  S('u_stone_3', '갓 내려찍기', 'earth', 'u', 120, 4, { area: true, inflict: { id: 'stun' } }),
+  S('u_jelly_1', '젤리 방울', 'water', 'u', 60, 1, { ranged: true, inflict: { id: 'wet' } }),
+  S('u_jelly_2', '흐물 촉수', 'water', 'u', 80, 2, { inflict: { id: 'spore', n: 1 } }),
+  S('u_jelly_3', '해파리 비', 'water', 'u', 105, 3, { ranged: true, area: true, inflict: { id: 'wet' } }),
 ].map(s => [s.id, s]));
-const UNI = { flower_grass: 'petal', thorn: 'thorn', aqua: 'aqua', flower_wind: 'wind', spark: 'spark', vine_water: 'tide', cactus_fire: 'ember', gaia: 'gaia', flower_fire: 'blaze', cactus_wind: 'gale', vine_wind: 'gvine', spore_cap: 'spore' };
+const UNI = { flower_grass: 'petal', thorn: 'thorn', aqua: 'aqua', flower_wind: 'wind', spark: 'spark', vine_water: 'tide', cactus_fire: 'ember', gaia: 'gaia', flower_fire: 'blaze', cactus_wind: 'gale', vine_wind: 'gvine', spore_cap: 'spore', frost_bell: 'frost', volt_vine: 'volt', stone_cap: 'stone', jelly_cap: 'jelly' };
 export const uniqueOf = (key, stage) => `u_${UNI[key]}_${stage + 1}`;
 export const TIER_NAME = { u: '개성', c1: '하급', c2: '중급', c3: '상급', g: '가지', s: '특수' };
 const tierAt = stage => ['c1', 'c2', 'c3'][stage];
@@ -188,7 +205,8 @@ export const ITEMS = {
   water: { name: '물', icon: 'potion', desc: '생장치 +10' },
   fert: { name: '비료', icon: 'fert', desc: '생장치 +25' },
   regress: { name: '유전자 회귀 주사', icon: 'potion', desc: '지운 기술 하나를 되돌려요' },
-  fuel: { name: '탐사 연료', icon: 'energy', desc: '탐사 한 번' },
+  fuel: { name: '연료 캡슐', icon: 'energy', desc: '탐사 한 번(+ 탐사비)' },
+  parts: { name: '부품', icon: 'gear', desc: '탐사선 강화 재료' },
 };
 export const RARITY = ['common', 'uncommon', 'rare', 'epic', 'legend'];
 export const RARITY_COL = ['#e8eef4', '#7cf0a0', '#6fb8ff', '#c48cff', '#ffb04a'];   // 흰 · 초록 · 파랑 · 보라 · 주황(옛 판 5색과 같음)
@@ -201,7 +219,7 @@ export const FARM_LV = [2, 3, 5, 7, 9, 12, 15, 18, 21];        // 이 레벨마�
 export const farmSlots = L => Math.min(FARM_MAX, FARM_START + FARM_LV.filter(x => L >= x).length);
 // 레벨업 보상(클래시로얄 왕 레벨처럼 — 상자 하나): 돈 · 물 · 비료 + 가끔 보석 · 회귀 주사 · 종자
 export function levelReward(L) {
-  const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0 };
+  const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0, fuel: 1 + (L % 5 === 0 ? 1 : 0) };
   if (L % 4 === 0) r.regress = 1;
   if (L % 5 === 0) r.seed = 'rare';
   return r;
@@ -218,21 +236,38 @@ export const HARVEST_TABLE = [
 
 // ── 탐사(행성 11 — 탐사 화면 지도와 같은 이름) ──
 // 레벨 문턱은 여유 있게(보통 진행이면 걸리지 않고, 너무 앞서가는 사람만 잠깐 기다림): 1궤도 Lv1 · 2궤도 Lv4 · 3궤도 Lv8 · 4궤도 Lv13
+// 2026-10-16 사용자 개편: 모선(집)에서 탐사선이 다녀옴 · 먼 궤도라고 무조건 어렵지 않게 섞음 · 행성마다 나오는 속성이 다름 · 식물보다 자원이 많은 곳도.
+//  행성 변수: hazard 위험(0~3, 실패 · 내구 소모) · rich 풍요(보상 양) · vital 생기(0~2, 종자 개체값) · kind 종자형 seed / 섞임 mixed / 자원형 resource · pool = 나오는 식물(속성 = 그 환경)
+//  종자끼리의 확률(어느 식물이 나오나)은 행성만 정함 — 탐사선 부위와 상관없음(사용자 "종자끼리의 확률은 변하지 않는걸로")
 export const PLANETS = [
-  { id: 'ex_ermias', name: '에르미아스', orbit: 1, pool: ['flower_grass', 'aqua', 'spark', 'vine_water'] },
-  { id: 'ex_calisto', name: '칼리스토', orbit: 1, pool: ['gaia', 'cactus_fire', 'thorn'] },
-  { id: 'ex_seraphin', name: '세라핀', orbit: 1, pool: ['flower_wind', 'cactus_wind', 'vine_wind'] },
-  { id: 'ex_kairen', name: '카이렌', orbit: 2, pool: ['flower_fire', 'flower_grass', 'spore_cap'] },
-  { id: 'ex_mirdin', name: '미르딘', orbit: 2, pool: ['thorn', 'spore_cap', 'vine_wind'] },
-  { id: 'ex_volkar', name: '볼카르', orbit: 2, pool: ['spark', 'cactus_fire', 'flower_fire'] },
-  { id: 'ex_veloc', name: '벨로크', orbit: 3, pool: ['cactus_fire', 'gaia', 'flower_fire'], legend: true },
-  { id: 'ex_aztel', name: '아즈텔', orbit: 3, pool: ['flower_grass', 'flower_wind', 'spark'] },
-  { id: 'ex_octavis', name: '옥타비스', orbit: 3, pool: ['aqua', 'vine_water', 'spore_cap'], legend: true },
-  { id: 'ex_nereidon', name: '네레이돈', orbit: 4, pool: ['vine_water', 'aqua', 'thorn'], legend: true },
-  { id: 'ex_tiamen', name: '티아멘', orbit: 4, pool: ['vine_wind', 'cactus_wind', 'gaia'], legend: true },
+  { id: 'ex_ermias', name: '에르미아스', orbit: 1, hazard: 0, rich: 1, vital: 1, kind: 'seed', pool: ['flower_grass', 'aqua', 'spark', 'vine_water', 'flower_wind'] },   // 온화한 우림 = 여러 속성 고루(시작)
+  { id: 'ex_calisto', name: '칼리스토', orbit: 1, hazard: 1, rich: 1.1, vital: 0, kind: 'resource', pool: ['gaia', 'cactus_fire', 'stone_cap'] },   // 채굴 잔해 건조 지대 = 대지 · 불 · 부품(나중에 기계)
+  { id: 'ex_seraphin', name: '세라핀', orbit: 1, hazard: 0, rich: 1, vital: 1, kind: 'seed', pool: ['flower_wind', 'cactus_wind', 'vine_wind'] },   // 부유 고원 = 바람
+  { id: 'ex_kairen', name: '카이렌', orbit: 2, hazard: 0, rich: 1.3, vital: 1, kind: 'seed', pool: ['flower_fire', 'flower_grass', 'thorn'] },   // 따뜻한 들판 = 불 · 풀, 쉬움
+  { id: 'ex_mirdin', name: '미르딘', orbit: 2, hazard: 1, rich: 1.1, vital: 2, kind: 'seed', pool: ['thorn', 'spore_cap', 'vine_water', 'jelly_cap'] },   // 안개 습지 = 풀 · 물, 생기 높음
+  { id: 'ex_volkar', name: '볼카르', orbit: 2, hazard: 2, rich: 1.2, vital: 1, kind: 'mixed', pool: ['spark', 'volt_vine', 'cactus_fire', 'flower_fire'] },   // 번개 화산 = 번개 · 불, 위험
+  { id: 'ex_veloc', name: '벨로크', orbit: 3, hazard: 3, rich: 1.5, vital: 0, kind: 'resource', pool: ['cactus_fire', 'gaia', 'flower_fire', 'stone_cap'], legend: true },   // 용암 바위 사막 = 불 · 대지, 자원 · 아주 위험
+  { id: 'ex_aztel', name: '아즈텔', orbit: 3, hazard: 0, rich: 1.3, vital: 1, kind: 'seed', pool: ['flower_wind', 'flower_grass', 'vine_wind'] },   // 꽃잎 바람 고원 = 바람 · 풀, 먼데도 쉬움
+  { id: 'ex_octavis', name: '옥타비스', orbit: 3, hazard: 1, rich: 1.3, vital: 2, kind: 'seed', pool: ['aqua', 'vine_water', 'jelly_cap'], legend: true },   // 해저 동굴 = 물, 생기 높음
+  { id: 'ex_nereidon', name: '네레이돈', orbit: 4, hazard: 2, rich: 1.4, vital: 1, kind: 'mixed', pool: ['vine_water', 'aqua', 'jelly_cap', 'frost_bell'], legend: true },   // 고리 바다 = 물 · 빙결
+  { id: 'ex_tiamen', name: '티아멘', orbit: 4, hazard: 3, rich: 1.6, vital: 1, kind: 'mixed', pool: ['frost_bell', 'vine_wind', 'cactus_wind'], legend: true },   // 얼음 바람 = 빙결 · 바람, 아주 위험
 ];
+export const KIND_NAME = { seed: '종자가 많아요', mixed: '종자 · 자원 섞임', resource: '자원이 많아요' };
+// 탐사선 부위(사용자 정리: 연료 탱크 = 거리 · 내구성 = 성공/실패 · 탐사 장치 = 질 좋은 보상(종자 제외) · 채집기 = 보상 수 · 종자 보관함 = 종자 개체값)
+export const PROBE = {
+  tank: { name: '연료 탱크', max: 4, desc: '갈 수 있는 궤도가 넓어져요' },
+  hull: { name: '내구성', max: 5, desc: '성공률이 오르고 내구도가 늘어요' },
+  scanner: { name: '탐사 장치', max: 5, desc: '종자 말고 다른 보상의 등급이 올라요' },
+  cargo: { name: '채집기', max: 5, desc: '가져오는 보상이 늘어요(무거워져 위험한 곳에서 더 닳아요)' },
+  vault: { name: '종자 보관함', max: 5, desc: '종자 개체값이 좋게 나올 확률이 올라요' },
+};
+export const PROBE_KEYS = Object.keys(PROBE);
+export const probeMaxDur = hullLv => 60 + 20 * (hullLv - 1);
+export const probeUpCost = lv => ({ credits: Math.round(150 * Math.pow(lv, 1.5) / 10) * 10, parts: 3 * lv });   // lv → lv+1
+export const REPAIR_PER = 2;                                                     // 내구도 1당 돈
+export const EXPLORE_COST = { 1: 40, 2: 70, 3: 110, 4: 160 };                     // 탐사 한 번 = 연료 캡슐 1 + 이 돈(사용자 "탐사에는 돈이 필요하고, 잘 아껴 써야") — 탐사로 얻는 돈의 평균은 늘 이보다 적게
 export const ORBIT_LV = { 1: 1, 2: 4, 3: 8, 4: 13 };
-export const FUEL = { max: 5, regenMin: 12 };                // 연료: 12분에 1, 최대 5(탐사 1번 = 1)
+export const FUEL = { max: 3, regenMin: 480 };               // 연료 캡슐: 무료로는 8시간에 1(하루 3) · 그 밖에 레벨업 상자 · 대결 승리 · 보석 상점(사용자 "뽑기 쿠폰처럼" — 돈만으로 무한 탐사 막기)
 export const SHINY_P = 1 / 64, LEGEND_P = 1 / 120, TRAIT_P = 0.12;   // 색 변종 · 전설(전설 행성만) · 관상용/열매용
 
 // ── 상점(돈 = 종자·화분, 보석 = 물·비료·회귀 주사 — 사용자 "상점에서는 유료 재화로 구매") ──
@@ -242,7 +277,7 @@ export const SHOP = [
   { id: 'water10', name: '물 10', cost: { gems: 6 }, give: { water: 10 } },
   { id: 'fert5', name: '비료 5', cost: { gems: 8 }, give: { fert: 5 } },
   { id: 'regress1', name: '유전자 회귀 주사', cost: { gems: 15 }, give: { regress: 1 } },
-  { id: 'fuel3', name: '탐사 연료 3', cost: { gems: 5 }, give: { fuel: 3 } },
+  { id: 'fuel3', name: '연료 캡슐 3', cost: { gems: 5 }, give: { fuel: 3 } },
 ];
 // 암시장(컨셉) = 판매(돈, 무조건·적게) · 해체(접목 가지 등 무작위, 많이 키울수록 좋은 것 확률 ↑)
 export const SELL_BASE = { common: 40, rare: 110 };
