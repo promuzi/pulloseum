@@ -32,7 +32,11 @@ export function unitOf(id, p, extra = {}) {
 // 봇 식물: 내 식물 단계에 맞춰(공정하게) 무작위 식물 · 레벨 · 개체값 · 강화 · 기술
 const BOT_NAMES = ['코스모싹', '은하 원예단', '별가루 농부', '혜성 정원사', '궤도 식물원', '달빛 온실'];
 export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
-  const keys = Object.keys(SPECIES), key = keys[Math.floor(rng() * keys.length)], sp = SPECIES[key];
+  // 종 고르기: 드문 종은 덜, 변이 고정 종(태생 변이 — 드묾)은 더 드물게(2026-10-17 새 다섯을 넣자 봇 넷 중 하나가 변이가 됨)
+  const keys = Object.keys(SPECIES), wOf = k => (SPECIES[k].form ? 0.2 : SPECIES[k].rarity === 'rare' ? 0.6 : 1), tot = keys.reduce((a, k) => a + wOf(k), 0);
+  let r0 = rng() * tot, key = keys[keys.length - 1];
+  for (const k of keys) { r0 -= wOf(k); if (r0 <= 0) { key = k; break; } }
+  const sp = SPECIES[key];
   const lv = Math.max(1, Math.min(6, lvHint + Math.floor(rng() * 3) - 1));
   const ivs = Object.fromEntries(IV_KEYS.map(k => [k, Math.min(IV_MAX, Math.floor(rng() * 9) + tierBoost)]));
   const pts = (stage * 5 + lv - 1) * 2, up = {};

@@ -29,7 +29,7 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 } };
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -38,6 +38,7 @@ const STEM = {
   flower_grass_young: 1, flower_grass: -3, thorn_teen: -1, thorn: -3, aqua: -1, flower_wind_young: -1, flower_wind_teen: -1,
   spark_young: 1, spark: -1, vine_water_young: -3, vine_water: -5, cactus_fire: -2, flower_fire_young: -1, cactus_wind_teen: -2, cactus_wind: -5,
   vine_wind_teen: -1, vine_wind: -4,
+  blade_vine: 2,   // 2026-10-17 변환 경고 −2.0칸
   gaia: 0,   // 가운데 몸통(+3칸)이 두 돌주먹에 가려 애매 — 주먹 사이 가운데·무게중심이 이미 가운데라 그대로
 };   // 쏜위드: 자람이 덩굴손만 넓게 뻗고 몸통은 어린 단계만 해 작아 보임(사용자 "중간 생장체가 초기보다 작은 느낌") → 어린 줄이고 자람 키움, 성체가 납작한 덤불이라 자람 키 상한을 성체 + 4칸까지   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
 // 눈 자리(eyes.mjs): 컨셉·누끼는 종 키로, 생장 단계 그림(concept/stages/<키>_<단계>.png)은 그 파일 이름 키로 따로 잰다 — 단계마다 얼굴 자리가 달라서
@@ -882,6 +883,12 @@ async function animKit() {
     volt_vine: { bob: 1.5, sway: 1.1, open: 1, petal: 1.4, leaf: 1.8, electric: true, blinkAt: 42 },
     stone_cap: { bob: 1, squash: 0.6, sway: 0.3, open: 0, petal: 0, leaf: 0.3, blinkAt: 34, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 16 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 1, every: 26 }, dust: { n: 4 } } },
     jelly_cap: { bob: 2, squash: 2.2, sway: 0.8, open: 0.6, petal: 1.2, leaf: 0.8, blinkAt: 20, amb: { drips: { n: 2, every: 34 }, bubbles: { mat: { hue: [190, 260], lmin: 0.6, cmin: 0.03 }, n: 3 } } },
+    // 변이 고정 새 다섯(2026-10-17): 덫 꽃 = 덫이 크게 벌름 · 칼날 덩굴 = 불 + 칼날 번뜩 · 독 선인장 = 독 방울 · 용 과일 선인장 = 서리 반짝 · 불씨 버섯 = 불 + 불씨 포자
+    fang_trap: { bob: 1.5, squash: 1, sway: 0.9, open: 1.2, petal: 0.8, leaf: 1.6, blinkAt: 38 },
+    blade_vine: { bob: 1.5, sway: 1.1, open: 0.6, petal: 1, leaf: 1.6, fire: { up: 1.6, side: 0.7 }, blinkAt: 24, amb: { shine: { mat: { cmax: 0.05, lmin: 0.55 }, at: 10, len: 6 } } },
+    toxi_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.6, blinkAt: 48, amb: { drips: { n: 2, every: 30 } } },
+    draco_fruit: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 32, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 22 }, shine: { mat: { cmax: 0.06, lmin: 0.8 }, at: 14, len: 6 } } },
+    ember_cap: { bob: 2, squash: 1.4, sway: 0.6, open: 0.6, petal: 0.5, leaf: 0.8, fire: { up: 1.8, side: 0.8 }, blinkAt: 16, amb: { spores: { from: 'cap', n: 6 } } },
   };
   const rigs = cvs.map(cv => idleRig(cv));
   const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);

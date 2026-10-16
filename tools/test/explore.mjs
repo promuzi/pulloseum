@@ -65,7 +65,7 @@ for (const lv of [1, 3, 5]) for (const pl of PLANETS) pl.regions.forEach((R, ri)
 // 종자 종류 비율 = 부위와 상관없음(같은 행성 · 부위 1 vs 5 — 흔한 것끼리 비율 차 5%p 안) · 지역도(부위 3 vs 5)
 for (const pl of PLANETS) {
   const a = rows.find(r => r.id === pl.id && r.lv === 1 && r.ri === 0).keys, b = rows.find(r => r.id === pl.id && r.lv === 5 && r.ri === 0).keys, ta = Object.values(a).reduce((x, y) => x + y, 0), tb = Object.values(b).reduce((x, y) => x + y, 0);
-  for (const k of pl.pool) ok(Math.abs((a[k] || 0) / ta - (b[k] || 0) / tb) < 0.05, `${pl.name}: ${k} 비율이 부위로 바뀜`);
+  for (const k of pl.pool) { const pa = (a[k] || 0) / ta, pb = (b[k] || 0) / tb, p = (pa + pb) / 2; ok(Math.abs(pa - pb) <= 4 * Math.sqrt(p * (1 - p) * (1 / ta + 1 / tb)) + 0.01, `${pl.name}: ${k} 비율이 부위로 바뀜(${pa.toFixed(3)} · ${pb.toFixed(3)} · 종자 ${ta} · ${tb})`); }   // 표본 수에 맞춘 4σ(위험한 행성은 부위 1의 성공이 30%라 종자가 적음)
   pl.regions.forEach((R, ri) => {
     if (!ri || R.need > 3) return;
     const A = rows.find(r => r.id === pl.id && r.lv === 3 && r.ri === ri), B = rows.find(r => r.id === pl.id && r.lv === 5 && r.ri === ri);

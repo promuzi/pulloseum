@@ -34,6 +34,12 @@ export const ATTACKS = {
   volt_vine: { kind: 'bolt', move: 'cast', c: ['#ffffff', '#fff4c0', '#f0c040', '#9a6a1a'], status: 'shock' },
   stone_cap: { kind: 'slam', move: 'slam', c: ['#f4e8c8', '#d8bc88', '#a08458', '#4a3a24'], gem: '#8ff0e0', status: 'dust' },
   jelly_cap: { kind: 'bubbles', move: 'cast', c: ['#f6feff', '#b8e8fc', '#6ab8ec', '#2a5a96'], status: 'wet' },
+  // 변이 고정 새 다섯(2026-10-17): 덫 꽃 = 무는 덫 · 칼날 덩굴 = 불 칼날 · 독 선인장 = 독 · 용 과일 선인장 = 서리 숨결 · 불씨 버섯 = 불씨 포자
+  fang_trap: { kind: 'bite', move: 'lunge', c: ['#fff4d8', '#d8e070', '#7ca83a', '#2e4a1e'], status: 'dust' },
+  blade_vine: { kind: 'blades', move: 'lunge', c: ['#fff6c8', '#ffc848', '#f26a22', '#8a2416'], status: 'burn' },
+  toxi_cactus: { kind: 'poison', move: 'cast', c: ['#f0d8ff', '#c890f0', '#8a40c8', '#3a1660'], fizz: '#b8f070', status: 'poison' },
+  draco_fruit: { kind: 'breath', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
+  ember_cap: { kind: 'spores', move: 'cast', c: ['#fff6c8', '#ffc848', '#f26a22', '#8a2416'], status: 'burn' },
 };
 // 개성 기술(catalog.js u_*)마다 제 모습(2026-10-16 사용자 "불가시 난사가 불씨와 스킬 모션·효과가 같다") — 있는 연출(kind)을 그 종 색·성질로 다시 쓴다(새 그림 없음).
 //   전투는 ATTACKS[기술 id] → ATTACKS[종] 순으로 찾는다(battle.js). 여기 없는 공격 기술 = 종 연출: 1단 기술, 단 종 연출이 그 이름으로 만들어진 기술
