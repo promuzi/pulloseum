@@ -1,5 +1,5 @@
 import { button } from '../art/ui.js';
-import { drawPortrait, bigKey } from '../art/sprites.js';
+import { drawPortrait, bigKey, BIG } from '../art/sprites.js';
 import { icon } from '../art/icons.js';
 import { ELEMENT } from '../art/palette.js';
 import { ro, wa } from '../core/josa.js';
@@ -25,6 +25,8 @@ const B = MUSIC_BAR, S16 = MUSIC_STEP;
 export const INTRO = { ign: 2 * B, logo: 2 * B + 10 * S16, ui: 3 * B };   // 조율 2마디(빠르게 절정 — 2026-10-17 "절정까지 너무 느긋해") → 점화 → 로고 → 단추
 const BG0 = '#030409';
 // 대기 화면의 그 의자 · 내 대표 식물(로그인 전이면 기본 식물)
+// 로딩 화면(처음 화면)의 의자 = 늘 대표 캐릭터(2026-10-17 사용자 "로딩화면에 그거 너무 안 멋있다는 평 — 간지나는 걸로" → 후보 셋 중 ㄴ) · 디스플레이가 켜지며 내 식물로 바뀜
+const HERO = ['title_hero', 'pot_terra'];
 const myPlant = app => { const s = app.state, p = s && s.plants && s.plants[s.active]; return p ? [bigKey(p.key, stageKey(p)), p.pot || 'pot_terra'] : ['flower_grass', 'pot_terra']; };
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -129,7 +131,8 @@ function startBoot(sc, app) {
   sc.boot = { t0: b.t0, t1: b.t1, a0: app.t };
 }
 //  dy0 = 켜지기 전 방 높이(처음 화면 0 · 처음 식물 고르기 = 대기 화면 값) → 켜지는 동안 대기 화면 높이로 천천히 옮김(짧은 화면)
-function drawBoot(sc, app, key, pot, uiDraw, dy0 = 0) {
+//  own = 켜지며 바뀌어 들어올 내 식물([키, 화분]) — 처음 화면의 대표 캐릭터가 LED가 켜지는 앞부분에 내 식물로 스며 바뀜
+function drawBoot(sc, app, key, pot, uiDraw, dy0 = 0, own = null) {
   const { g } = app, [mx, my] = LOFT_STOOL, bt = sc.boot, now = sc.p && sc.p.bootu != null ? bt.t0 + (bt.t1 - bt.t0) * +sc.p.bootu : musicNow();
   const D = Math.max(0.2, bt.t1 - bt.t0), u = clamp01((now - bt.t0) / D), fade = 1 - clamp01((app.t - bt.a0) / 260);
   if (now < bt.t0) { nightRoom(app, key, pot, lampNow().k, 1, dy0); if (fade > 0 && uiDraw) g.alpha(fade, uiDraw); return; }
@@ -139,7 +142,9 @@ function drawBoot(sc, app, key, pot, uiDraw, dy0 = 0) {
   loftBack(app);                       // 켜진 방(창 밖 우주까지) 위에
   loftBoot(app, u, D * 1000);          // 아직 안 켜진 칸 = 꺼진 방
   loftNightBeam(app, 1 - u);           // 빛줄기는 방이 밝아지며 사라짐(대기 화면엔 원래 그림의 원뿔만)
-  loftNightPlant(app, key, pot, mx, my, { warm: 1 - u });
+  const sw = own && own[0] !== key ? clamp01((u - 0.08) / 0.3) : 0;   // 대표 캐릭터 → 내 식물(앞부분에 스며 바뀜)
+  if (sw < 1) g.alpha(1 - sw, () => loftNightPlant(app, key, pot, mx, my, { warm: 1 - u }));
+  if (sw > 0) g.alpha(sw, () => loftNightPlant(app, own[0], own[1], mx, my, { warm: 1 - u }));
   g.alpha(u, () => loftFront(app));
   loftNightFront(app, 1 - u);
   g.c.restore();
@@ -169,8 +174,8 @@ export const title = {
   draw(app) {
     const { g, W, H } = app;
     if (this.mode === 'boot' && !this.checking) this.check(app);
-    const [key, pot] = myPlant(app);
-    if (this.boot) return drawBoot(this, app, key, pot, () => this.ui(app, 1, false));
+    const own = myPlant(app), [key, pot] = BIG.title_hero ? HERO : own;
+    if (this.boot) return drawBoot(this, app, key, pot, () => this.ui(app, 1, false), 0, own);
     const it = this.it();
     // 화면이 검을 때 한 장에 한 가지씩 미리 잼(점화 · 켜짐 순간 멈칫 없게) — 그린 것은 바로 아래에서 검정으로 덮임
     if (!this.prepared && (it == null || it < INTRO.ign - 0.5)) { this.prepStep = this.prepStep || 0; this.prepared = loftPrepare(app, this.prepStep++); }
