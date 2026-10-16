@@ -16,7 +16,9 @@ export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, par
 export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore',
   bind: 'bind', root: 'root', leech: 'leech', weak: 'weak', taunt: 'taunt', corrode: 'corrode', shade: 'shade', gale: 'gale',
   rage: 'rage', wall: 'wall', haste: 'haste', regen: 'regen', thorns: 'thorns', shield: 'shield', purified: 'purified', focus: 'focus' };
-export function sfxAdd(list, who, kind, t, o = null) { if (SFX_LIFE[kind]) list.push({ who, kind, t0: t, id: (list.n = (list.n || 0) + 1), ...(o || {}) }); }
+export function sfxAdd(list, who, kind, t, o = null) { if (!SFX_LIFE[kind]) return null; const e = { who, kind, t0: t, id: (list.n = (list.n || 0) + 1), ...(o || {}) }; list.push(e); return e; }
+// 화상 타닥 시각(ms, 불똥이 터지는 때) — 소리를 같은 때에 내려고
+export const popTimes = e => (POPS[e.kind === 'ignite' ? 'ignite' : 'burn'] || []).map((ms, k) => ms + Math.round((hash(e.id, k + 40) - 0.5) * 40));
 export const sfxAlive = (list, t) => list.filter(e => t - e.t0 < SFX_LIFE[e.kind]);
 
 // ── 도움 ──

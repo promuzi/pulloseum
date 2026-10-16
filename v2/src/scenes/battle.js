@@ -19,7 +19,11 @@ import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eul } from '../core/josa.js';
-import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf } from '../art/statusfx.js';
+import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
+import { sfx, music } from '../core/sound.js';
+// 상태 효과 → 효과음 이름(core/sound.js SFX)
+const FX_SOUND = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', bind: 'bind', root: 'root', leech: 'leech', weak: 'weak', taunt: 'taunt', corrode: 'corrode', shade: 'shade', gale: 'gale', rage: 'rage', wall: 'wall', haste: 'haste', regen: 'regen', thorns: 'thorns', shield: 'shield', purified: 'purify', focus: 'focus' };
+const crackles = e => { if (e) for (const ms of popTimes(e)) sfx('crackle', { at: ms / 1000 }); };
 import { TFX, setTfx, popLife, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
@@ -299,7 +303,14 @@ export const battle = {
     const v = this.v, B = this.B;
     if (!st) return;
     // 글자(가운데 전광판 없음): 기술 이름 = 쓰는 식물 위 리본, 나머지 = 머리 위 한두 낱말(st.msg 문장은 목록·기록용으로만 남김)
-    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance') && st.skill) this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms);
+    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms); sfx(st.kind === 'stance' ? 'stance' : 'swing'); }
+    if (st.kind === 'first') sfx('first');
+    if (st.kind === 'fxnote') sfx('resist');
+    if (st.kind === 'cure') sfx('steam');
+    if (st.kind === 'skipT') sfx({ frozen: 'frozen', paral: 'shock', stun: 'stun' }[st.ev.src] || 'stun');
+    if (st.kind === 'note' && st.side) sfx('fizzle');
+    if (st.kind === 'faint') sfx('faint');
+    if (st.kind === 'counter') sfx('hit');
     if (st.kind === 'counter') this.ribbon(st.who, '되받아치기', null, t, st.ms);
     if (st.kind === 'switch') this.ribbon(st.who, st.toU.name, st.toU.el, t, st.ms);
     if (st.kind === 'first') this.pop(st.who, '먼저!', null, t, false, -16, '#8ccfff');
@@ -326,12 +337,12 @@ export const battle = {
     }
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
     if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
-    if (st.kind === 'tick') sfxAdd(v.sfx, st.side, st.ev.id, t);
-    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: st.ev.id === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 });
-    if (st.kind === 'drain') sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to });
-    if (st.kind === 'heal') sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t);
-    if (st.kind === 'reflect') sfxAdd(v.sfx, st.ev.who, 'thornsHit', t);
-    if (st.kind === 'bloom') sfxAdd(v.sfx, st.side, 'bloom', t);
+    if (st.kind === 'tick') { const se = sfxAdd(v.sfx, st.side, st.ev.id, t); if (st.ev.id === 'burn') crackles(se); else sfx('poison'); }
+    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: st.ev.id === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
+    if (st.kind === 'drain') { sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to }); sfx('drain'); }
+    if (st.kind === 'heal') { sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t); sfx(st.ev.t === 'regen' ? 'regen' : 'heal'); }
+    if (st.kind === 'reflect') { sfxAdd(v.sfx, st.ev.who, 'thornsHit', t); sfx('thorns'); }
+    if (st.kind === 'bloom') { sfxAdd(v.sfx, st.side, 'bloom', t); sfx('bloom'); }
     if (st.kind === 'skipT') sfxAdd(v.sfx, st.side, { frozen: 'frozen', paral: 'paral', stun: 'stun' }[st.ev.src], t);
     if (st.kind === 'cure') sfxAdd(v.sfx, st.side, 'steam', t);
     if (st.kind === 'end') v.en = { me: B.me.energy, foe: B.foe.energy };
@@ -403,6 +414,9 @@ export const battle = {
     st.applied = true;
     const [label, tone, line] = TIER[e.tier];
     const great = e.tier !== 'miss' && elemMult(st.skill.el, dEl) > 1, maxHp = (v.view[st.to] || this.B[st.to]).max;
+    sfx(e.tier === 'miss' ? 'miss' : e.tier === 'graze' ? 'graze' : e.tier === 'crit' ? 'crit' : e.dmg >= maxHp * 0.25 ? 'hitBig' : 'hit');
+    if (great) sfx('great');
+    if (e.guard) sfx('block');
     if (e.tier !== 'miss') {
       const kind = e.tier === 'crit' ? 'crit' : (great || e.dmg >= maxHp * 0.25) ? 'big' : (e.tier === 'graze' || e.guard) ? 'graze' : 'hit';
       if (e.dmg > 0) { this.hurt(st.to, e.dmg, kind, t); this.pop(st.to, `-${e.dmg}`, e.tier === 'crit' ? 'gold' : 'bad', t, true, 0, null, e.tier === 'crit' ? 'crit' : null, { share: e.dmg / maxHp, kill: v.hp[st.to] <= 0 }); }
@@ -410,10 +424,13 @@ export const battle = {
     if (e.tier !== 'hit') this.pop(st.to, label, tone, t, false, e.tier === 'crit' ? -36 : -16);   // 보통 맞힘(정타)은 글자 없이 숫자만
     if (great) this.pop(st.to, '효과 굉장!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);
     if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
-    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); }
+    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
   },
   // ex = { share: 그 한 방이 깎은(채운) 체력 몫, kill: 결정타 } — 글자 연출 ㉠~㉣이 크기·강조에 씀(지금 연출은 안 씀)
-  pop(who, text, tone, t, big = false, dy = 0, col = null, size = null, ex = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92], v = this.v; v.pops.push({ text, tone, t0: t, x, y: y + dy, dy, big, col, size, who, id: (v.pid = (v.pid || 0) + 1), share: ex ? ex.share : null, kill: !!(ex && ex.kill) }); },
+  pop(who, text, tone, t, big = false, dy = 0, col = null, size = null, ex = null) { const [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92], v = this.v; v.pops.push({ text, tone, t0: t, x, y: y + dy, dy, big, col, size, who, id: (v.pid = (v.pid || 0) + 1), share: ex ? ex.share : null, kill: !!(ex && ex.kill) });
+    // ㉣ 굴림: 숫자가 릴처럼 도는 동안 따닥따닥 → 멈출 때 딸깍(textfx.js D — 자리마다 50ms · 한 자리 380ms)
+    if (TFX.key === 'd' && /^[+-]\d+$/.test(text)) { const land = ((text.match(/\d/g) || []).length - 1) * 50 + 380; for (let ms = 0; ms < land - 30; ms += 45) sfx('roll', { at: ms / 1000 }); sfx('land', { at: land / 1000 }); }
+  },
   amt(side, n) { const u = this.v.view[side] || this.B[side]; return { share: n / ((u && u.max) || 200) }; },
   // 기술 이름 리본: 쓰는 식물 머리 위 속성 색 둥근 띠 + 흰 굵은 글자, 옆에서 미끄러져 들어와 그 단계 끝에 사라짐
   ribbon(who, text, el, t, ms) { this.v.ribbon = { who, text, el, t0: t, ms: Math.max(500, ms || 0) }; },
@@ -430,7 +447,7 @@ export const battle = {
     });
   },
   // 승패: 가운데 큰 글자(네모 없이) — 승리 = 금빛, 패배 = 회청, 아래 한 줄 까닭(있으면)
-  title(app, win, sub) { this.v.title = { win, sub, t0: app.t }; },
+  title(app, win, sub) { this.v.title = { win, sub, t0: app.t }; music(null); sfx(win ? 'win' : 'lose'); },
   drawTitle(app) {
     const T0 = this.v.title; if (!T0) return;
     const { g, t } = app, c = g.c, k = Math.min(1, (t - T0.t0) / 220), y = Math.round(LED_CY - 30 + (1 - k) * 12), sc = c.getTransform().a || 1;
@@ -445,7 +462,8 @@ export const battle = {
     if (v.phase === 'over' || v.phase === 'play' || v.phase === 'need') return;
     const pvp = this.net === 'pvp' && this.deadline, left = pvp ? this.deadline - net.now() : v.pickT0 != null ? PICK_MS - (t - v.pickT0) : null;
     if (left == null) return;
-    const r = Math.max(0, Math.min(1, left / (pvp ? PVP_MS : PICK_MS))), fw = Math.round((w - 2) * r);
+    const r = Math.max(0, Math.min(1, left / (pvp ? PVP_MS : PICK_MS))), fw = Math.round((w - 2) * r), sec = Math.ceil(left / 1000);
+    if (sec <= 10 && sec > 0 && v.tickSec !== sec && !this.shot) { v.tickSec = sec; sfx(sec <= 3 ? 'tickLast' : 'tick'); }
     rrect(g, x, y, w, 4, 2, '#0b1322'); g.rect(x + 1, y + 1, w - 2, 2, '#1c2a40');
     const col = r > 0.5 ? '#8ccfff' : r > 0.2 ? '#f0be7d' : Math.floor(t / 250) % 2 ? '#ff6a5a' : '#ffb4a6';
     if (fw > 0) { g.rect(x + 1, y + 1, fw, 2, col); g.rect(x + 1, y + 1, fw, 1, hexMix(col, '#ffffff', 0.45)); }
@@ -636,7 +654,7 @@ export const battle = {
         rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, lit ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.32)');   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
         cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, shine: sh != null && sh < 1 ? sh : null });
       }
-      if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => this.pick(app, sk) : null, 2);
+      if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => { sfx('select'); this.pick(app, sk); } : () => sfx('deny'), 2);
       this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock };
     }
     const d = input.down;
@@ -646,6 +664,7 @@ export const battle = {
   },
   // 꺼내 보기 시작: 앞·뒤 큰 그림을 기기 화소로 한 번 그려 둠(기본기는 단추 자리에서 작은 카드로 생겨남)
   openPeek(app, id) {
+    sfx('flip');
     const { input, W } = app, ref = this.cards[id], k = app.g.c.getTransform().a || 1, foe = this.v.view.foe, sk = ref.sk;
     input.claimHold();
     const BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
@@ -745,6 +764,7 @@ export const battle = {
     }
   },
   sendEmote(app, i) {
+    sfx('emote');
     this.emoteOpen = false;
     const now = performance.now();
     if (now - this.emoteT < EMOTE_CD) return;

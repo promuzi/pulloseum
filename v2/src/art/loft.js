@@ -7,6 +7,7 @@
 //  창: sky.js 우주 — 들어올 때마다 다음 풍경, 오래 머물면 디더로 다음 풍경. 유리 위로 이어지는 원뿔 빛 띠 + 옅은 반사.
 import { BGIMG, BGMETA, BIG, drawBig, bigBox } from './sprites.js';
 import { MOTION, slow } from '../core/motion.js';
+import { lampSound } from '../core/sound.js';
 import { makeSky, renderSky, blendSky, SKY_KINDS, rng } from './sky.js';
 
 export const LOFT_STOOL = [134, 356];   // 의자 앉는 판 윗면 가운데(격자 확대로 잼) = 화분 굽이 닿는 점
@@ -25,7 +26,7 @@ let S = null, visits = 0;
 export function enterLoft() { visits++; if (S) S.fresh = true; }
 // 검토·영상용 손잡이(콘솔·tools/shots/scenevideo.mjs --act): 깜빡임 묶음 바로 · 별똥별 바로 · 먼 배 바로 · 풍경 번호
 globalThis.__loft = {
-  burst(p = 'jj') { if (S) { S.flick.pat = { jj: JJ, jjj: JJJ, combo: BURSTS[2][0] }[p] || p; S.flick.start = globalThis.__app ? globalThis.__app.t : 0; } },   // 'jj' · 'jjj' · 'combo' 또는 글자 줄
+  burst(p = 'jj') { if (S) { S.flick.pat = { jj: JJ, jjj: JJJ, combo: BURSTS[2][0] }[p] || p; S.flick.start = globalThis.__app ? globalThis.__app.t : 0; lampSound(S.flick.pat, STEP); } },   // 'jj' · 'jjj' · 'combo' 또는 글자 줄
   meteor() { if (S && S.sky) S.sky.nextEvt = 0; },
   ship() { if (S && S.sky) S.sky.nextShip = 0; },
   view(i) { visits = i; },
@@ -73,7 +74,7 @@ function setup() {
 function lampLetter(t) {
   const f = S.flick;
   if (!f.next) f.next = t + 15000 + S.r() * 10000;   // 처음 = 15~25초 뒤
-  if (!f.pat && t >= f.next) { f.pat = pickBurst(S.r()); f.start = t; }
+  if (!f.pat && t >= f.next) { f.pat = pickBurst(S.r()); f.start = t; lampSound(f.pat, STEP); }
   if (f.pat) {
     const i = Math.floor((t - f.start) / STEP);
     if (i < f.pat.length) return f.pat[i];

@@ -8,6 +8,7 @@ import { T, holo } from '../art/theme.js';
 import { bigTitle, seedArt } from './common.js';
 import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME } from '../game/catalog.js';
 import { net } from '../net/api.js';
+import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 
 const ease = k => 1 - (1 - k) ** 3;
 const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; };
@@ -65,7 +66,7 @@ function rays(g, cx, cy, t, k, col) {
 const LC = { cy: 300, gridY: 352 };
 function levelChest(app, item) {
   const { g, W, H, t, input } = app;
-  const o = app.chest && app.chest.item === item ? app.chest : (app.chest = { item, t0: t, open: null });
+  const o = app.chest && app.chest.item === item ? app.chest : (app.chest = { item, t0: t, open: null }, sfx('levelup'), app.chest);
   const list = rewardList(item.box), slotsUp = farmSlots(item.level) - farmSlots(item.level - 1);
   const orbit = Object.entries(ORBIT_LV).find(([, lv]) => lv === item.level);
   g.c.fillStyle = 'rgba(4,7,14,0.86)'; g.c.fillRect(0, 0, W, H);
@@ -102,7 +103,7 @@ function levelChest(app, item) {
 }
 
 // ── ② 받은 것 판 ──
-export function showGot(app, title, got, sub) { app.popup = { title, got: got || [], sub, t0: app.t }; }
+export function showGot(app, title, got, sub) { app.popup = { title, got: got || [], sub, t0: app.t }; sfx('coin'); }
 function gotPopup(app, P) {
   const { g, W, H, t, input } = app, n = P.got.length, rows = Math.ceil(n / 2), h = 86 + rows * 52 + (P.sub ? 16 : 0), y = Math.round((H - h) / 2) - 10, x = 14, w = W - 28;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
@@ -134,7 +135,7 @@ function confirmBox(app, Q) {
 
 // ── ④ 설정 ──
 function settingsSheet(app) {
-  const { g, W, H, input } = app, x = 14, w = W - 28, h = 236, y = 70, PT = T.ptext, u = app.user;
+  const { g, W, H, input } = app, x = 14, w = W - 28, h = 276, y = 70, PT = T.ptext, u = app.user;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('st_block', 0, 0, W, H, () => { app.sheet = null; });
   input.hit('st_in', x, y, w, h, () => {});
@@ -147,6 +148,9 @@ function settingsSheet(app) {
     const url = location.origin + '/v2/';
     try { navigator.clipboard.writeText(url).then(() => app.toast('주소를 복사했어요'), () => app.toast(url)); } catch { app.toast(url); }
   } }); yy += 40;
+  const half = Math.floor((w - 28 - 8) / 2);
+  button(app, 'st_sfx', x + 14, yy, half, 30, SOUND.sfx ? '효과음 켬' : '효과음 끔', { style: SOUND.sfx ? 'night' : 'off', icon: 'sparkle', iconTint: true, onTap: () => setSfxOn(!SOUND.sfx) });
+  button(app, 'st_music', x + 14 + half + 8, yy, half, 30, SOUND.music ? '음악 켬' : '음악 끔', { style: SOUND.music ? 'night' : 'off', icon: 'heart', iconTint: true, onTap: () => setMusicOn(!SOUND.music) }); yy += 40;
   if (!net.offline && u) button(app, 'st_out', x + 14, yy, w - 28, 30, '로그아웃', { style: 'red', onTap: () => { app.sheet = null; ask(app, '로그아웃할까요?', '다시 들어올 땐 아이디·비밀번호가 필요해요', () => app.logout()); } });
   yy += 40;
   button(app, 'st_close', W / 2 - 50, y + h - 42, 100, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { app.sheet = null; } });

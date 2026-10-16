@@ -1,5 +1,6 @@
 // 터치: 매 프레임 화면이 "누를 수 있는 영역"을 등록하고, 손을 뗀 위치의 맨 위 영역을 실행한다.
 // 끌기: 4칸 넘게 움직이면 누르기 대신 끌기(drag: 이번 움직임 dx·dy + 시작점) → 손을 떼면 release(전체 dx·dy + 마지막 속도 vx·vy 칸/초)
+import { unlock, tapSound } from './sound.js';
 // 꾹: 움직이지 않고 누르고 있는 시간 = holdMs(). 장면이 claimHold()로 가져가면 손을 떼도 누르기(tap)가 안 나감(전투 기술 카드 뒷면 보기)
 export class Input {
   constructor(screen) {
@@ -11,6 +12,7 @@ export class Input {
     const el = screen.display;
     const now = () => performance.now();
     el.addEventListener('pointerdown', e => {
+      unlock();   // 브라우저는 사람이 한 번 눌러야 소리를 냄
       const p = screen.toLogical(e.clientX, e.clientY); const r = this.hitAt(p.x, p.y);
       this.down = { ...p, id: r && r.id, x0: p.x, y0: p.y, moved: false, held: false, t0: now(), hist: [{ t: now(), x: p.x, y: p.y }] }; this.pressedId = r && r.id;
       try { el.setPointerCapture(e.pointerId); } catch {}
@@ -46,7 +48,7 @@ export class Input {
   flush(scene) {
     const q = this.queue; this.queue = [];
     for (const ev of q) {
-      if (ev.type === 'tap' && ev.region.fn) ev.region.fn();
+      if (ev.type === 'tap' && ev.region.fn) { tapSound(ev.region.id); ev.region.fn(); }
       else if (ev.type === 'drag' && scene && scene.onDrag) scene.onDrag(ev.dy, ev.dx, ev);
       else if (ev.type === 'release' && scene && scene.onRelease) scene.onRelease(ev);
     }
