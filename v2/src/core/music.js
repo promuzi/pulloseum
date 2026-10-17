@@ -58,7 +58,7 @@ export function buildGraph(ac, out, noise, pw) {
   const synIn = G(1), echo = ac.createDelay(1), efb = G(0.26), ewet = G(0.2);
   echo.delayTime.value = BEAT * 0.75; synIn.connect(bus(0.36, 0.1, 0.25)); synIn.connect(echo); echo.connect(efb); efb.connect(echo); echo.connect(ewet); ewet.connect(bus(1, -0.3, 0.3));
   // 넓은 홀 울림(몽환적 실내악): 긴 잔향 하나 — 현악 · 첼로 · 하프 · 첼레스타 · 플루트 · 피치카토 · 팀파니가 보냄
-  const hall = ac.createConvolver(); hall.buffer = makeIR(ac, 3.2); const hret = G(0.26); hall.connect(hret); hret.connect(sum);
+  const hall = ac.createConvolver(); hall.buffer = makeIR(ac, 1.7); const hret = G(0.17); hall.connect(hret); hret.connect(sum);   // 2026-10-17 "몽환 요소 줄이고": 3.2초 · 0.26 → 1.7초 · 0.17
   const hbus = (v, p, sv, hv) => { const g = bus(v, p, sv), s = G(hv); g.connect(s); s.connect(hall); return g; };
   return {
     ac, noise, pw, tone, sum,
@@ -67,8 +67,8 @@ export function buildGraph(ac, out, noise, pw) {
     keys: keysIn, lead: bus(0.42, 0.16, 0.32), bell: bus(0.36, -0.22, 0.36), chip: bus(0.32, 0.1, 0.16), pad: padIn, stab: bus(0.3, 0.05, 0.25),
     crk: bus(0.5, 0, 0.1), fx: bus(0.45, 0, 0.3), drone, droneNow: null,
     vib: vibIn, syn: synIn,
-    harp: hbus(0.8, 0.14, 0.12, 0.6), pizz: hbus(0.8, -0.04, 0.1, 0.25), str: hbus(0.32, 0.06, 0.2, 0.7), timp: hbus(0.7, 0, 0.15, 0.5),
-    cello: hbus(0.55, -0.12, 0.15, 0.45), cel: hbus(0.5, -0.2, 0.1, 0.85), flute: hbus(0.42, 0.14, 0.15, 0.5),
+    harp: hbus(0.8, 0.14, 0.12, 0.32), pizz: hbus(0.8, -0.04, 0.1, 0.14), str: hbus(0.32, 0.06, 0.2, 0.38), timp: hbus(0.7, 0, 0.15, 0.3),
+    cello: hbus(0.55, -0.12, 0.15, 0.26), cel: hbus(0.5, -0.2, 0.1, 0.4), flute: hbus(0.42, 0.14, 0.15, 0.3),
   };
 }
 
@@ -604,15 +604,14 @@ const ARR = {
       else { L.harp = P(HSWEEP); L.timp = P('. . . . . . . . . . . . A1_ A1_ A1_ A1_'); }
       return L;
     }
-    L.str = P((sect === 'B' ? 'C' : 'H') + ' - - - - - - - - - - - - - - -');   // 첼로가 가락이거나 가락이 없을 땐 바이올린을 위로
-    L.pizz = P(PZR[ch][0] + '^ . . . . . . . ' + (sect === 'B' ? PZR[ch][1] + '_' : '.') + ' . . . . . . .');
-    L.harp = P(sect === 'A2' || sect === 'B' || k < 2 ? HARP8[ci] : HFLO[ci]);   // 막 들어온 두 마디 = 8분(옛 결의 박 느낌을 이어 받음)
-    if (sect !== 'A2') L.cel = P(CEL[ci]);
-    if (ci === 0 || k === 0) L.timp = P(ROOT[ch] + ' . . . . . . . . . . . . . . .');
-    L.cb = P(ROOT[ch] + ' - - - - - - - - - - - - - - -');
+    // 2026-10-17 "몽환 요소 줄이고 템포도 유지해": 현악 패드는 보통 음역 하나 · 피치카토가 네 박(근음 · 5음 번갈아)으로 대기 곡과 같은 박을 짚음 ·
+    //  하프는 막 들어온 두 마디(옛 결 박 이어 받기)와 B 부분만 8분 · 첼레스타 · 콘트라베이스 · 마디마다 팀파니는 뺌 · 가락은 한 악기(A2 첼로 · A3 · B 플루트)
+    L.str = P('C - - - - - - - - - - - - - - -');
+    L.pizz = P(PZR[ch][0] + '^ . . . ' + PZR[ch][1] + ' . . . ' + PZR[ch][0] + '_ . . . ' + PZR[ch][1] + '_ . . .');
+    if (sect === 'B' || k < 2) L.harp = P(HARP8[ci]);
     if (sect === 'A2') L.cmel = P(T8(CL1[ci], -1));   // 첼로가 대기 가락(한 옥타브 아래)
-    else if (sect === 'A3') { L.fl = P(CL3[ci]); L.cmel = P(T8(CL3[ci], -1)); }   // 플루트 + 첼로 옥타브 겹침
-    else L.cello = P(sect === 'B' ? CELLO_B[ci] : CELLO_A[ci]);
+    else if (sect === 'A3') L.fl = P(CL3[ci]);       // 플루트 혼자
+    else if (sect !== 'B') L.cello = P(CELLO_A[ci]);  // 처음 부분: 첼로 긴 음(받침)
     if (sect === 'B') L.fl = P((first ? CL1 : CL2)[ci]);
     return L;
   },
@@ -729,7 +728,7 @@ const LAYER = {
   keys: ['ep', 0.26], lead: ['lead', 0.5], chip: ['chip', 0.5], bell: ['bell', 0.42], pad: ['pad', 0.07], stab: ['stab', 0.26], crk: ['crk', 0.55], fx: ['fx', 0.2],
   mel: ['ep1', 0.2], fmel: ['bell', 0.6],   // 메뉴 건반 홑음 · 식물 관리 종
   pbass: ['bass', 0.3], comp: ['ep', 0.2], syn: ['syn', 0.37], vib: ['vib', 0.2], pkick: ['kick', 0.6], psn: ['snare', 0.5], pclap: ['clap', 0.32], phat: ['hat', 0.2],   // 재즈팝
-  pizz: ['pizz', 0.4], harp: ['harp', 0.13], str: ['str', 0.12], cb: ['cb', 0.6], cello: ['cello', 0.22], cmel: ['cello', 0.28], cel: ['cel', 0.14], fl: ['flute', 0.35], timp: ['timp', 0.2],   // 실내악
+  pizz: ['pizz', 0.42], harp: ['harp', 0.1], str: ['str', 0.1], cb: ['cb', 0.6], cello: ['cello', 0.22], cmel: ['cello', 0.28], cel: ['cel', 0.14], fl: ['flute', 0.35], timp: ['timp', 0.2],   // 실내악
 };
 const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'timp']);   // 이음 장식 동안 빼는 타악
 const DK = { X: 1.25, x: 1, o: 0.45, O: 1, r: 0.8, R: 0.75 };   // 북 글자 → 세기
