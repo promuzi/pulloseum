@@ -14,7 +14,8 @@ import { toast as drawToast } from './art/ui.js';
 import { mockState } from './data/mock.js';
 import { SCENES } from './scenes/index.js';
 import { drawOverlays, gotScroll } from './scenes/popups.js';
-import { draftScroll } from './scenes/draft.js';
+import { draftScroll, openDraft, draftShot } from './scenes/draft.js';
+import { CARDS, isSkillCard, cardFits } from './game/cards.js';
 import { shotGuide } from './scenes/guide.js';
 import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
@@ -181,11 +182,14 @@ window.__shot = (name, params = {}, opt = {}) => {
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   app.draft = null;
-  if (opt.draft) {   // 카드 고르기 촬영(opt.draft = { evo, at: 연 뒤 ms, n, pick, sel: [몇째 …], focus: 몇째, sy: 설명 판 넘긴 칸 })
-    const D = opt.draft, p = app.state.plants[app.state.active || 0], cands = bloomPool(p.key, Math.max(1, p.stage)).slice(0, D.n || 4).map(x => x.id);
-    p.drafts = [{ kind: D.evo ? 'evo' : 'lv', st: p.stage, lv: p.lv, pick: Math.min(D.pick || 2, cands.length), cands }];
-    app.draft = { uid: p.uid, t0: app.t - (D.at ?? 2600), sel: (D.sel || []).map(i => cands[i]).filter(Boolean), focus: D.focus != null ? cands[D.focus] : null, faces: null, sy: D.sy || 0,
-      evo: D.evo ? { from: bigKey(p.key, stageKey({ stage: Math.max(0, p.stage - 1) })), to: bigKey(p.key, stageKey(p)), pot: p.pot } : null };
+  if (opt.draft) {   // 고르기 화면 촬영(opt.draft = { evo, at: 연 뒤 ms, part: 'skill' | 'passive', n, pick, moves: [[위 줄 몇째, 칸]], sel, arm, peek: 칸 | 't<몇째>', sy })
+    const D = opt.draft, p = app.state.plants[params.act != null ? +params.act : (app.state.active || 0)], pas = D.part === 'passive';
+    const pool = pas ? Object.keys(CARDS).filter(id => !isSkillCard(id) && !cardFits(p, id) && !(p.cards || []).includes(id)) : bloomPool(p.key, Math.max(1, p.stage)).map(x => x.id);
+    const cands = pool.slice(0, D.n || (pas ? 3 : 4));
+    p.drafts = [{ kind: D.evo ? 'evo' : 'lv', part: pas ? 'passive' : 'skill', st: p.stage, lv: p.lv, pick: Math.min(D.pick || (pas ? 1 : 2), cands.length), cands }];
+    openDraft(app, p, D.evo ? { from: bigKey(p.key, stageKey({ stage: Math.max(0, p.stage - 1) })), to: bigKey(p.key, stageKey(p)), pot: p.pot } : null);
+    app.draft.t0 = app.t - (D.at ?? 2600);
+    if ((D.at ?? 2600) > 2000 || !D.evo) draftShot(app, D);
   }
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;

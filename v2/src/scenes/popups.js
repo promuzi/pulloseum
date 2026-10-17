@@ -271,7 +271,7 @@ function deleteForm(app) {
 const NO_CHEST = new Set(['title', 'starter', 'battle', 'matching', 'room']);
 export function drawOverlays(app) {
   const s = app.state;
-  if (app.confirm) return confirmBox(app, app.confirm);
+  if (app.confirm) { if (app.draft) draftScreen(app, app.draft); return confirmBox(app, app.confirm); }   // 고르기 화면 위의 확인 창(버릴까요?) = 고르기 화면은 그대로 두고 그 위에
   if (app.popup) return gotPopup(app, app.popup);
   if (app.draft) return draftScreen(app, app.draft);   // 레벨업 · 진화 카드 고르기(scenes/draft.js)
   if (app.sheet === 'settings') return settingsSheet(app);

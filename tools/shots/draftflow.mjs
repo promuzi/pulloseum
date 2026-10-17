@@ -1,5 +1,5 @@
 // 카드 고르기 흐름 점검(2026-10-18): 오프라인 판에서 실제 화면 함수로 — 비료로 레벨업 → 고르기 창 → 카드 누르기 → 확정(기술이 들어감) →
-//  Lv6 → 진화 → 연출 창 → 고르기 → 보류 → 기술 탭 '스킬 정하기'로 다시. 누르기 = 그 장에 등록된 영역 함수를 직접 실행(좌표 대신 — 같은 영역 · 같은 함수)
+//  Lv6 → 진화 → 연출 창 → 기술 고르기 → 패시브 고르기 → 보류 · 오래된 고르기 · 스킬 · 패시브 탭. 누르기 = 그 장에 등록된 영역 함수를 직접 실행(좌표 대신 — 같은 영역 · 같은 함수)
 //   node tools/shots/draftflow.mjs
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
@@ -42,31 +42,58 @@ try {
   await adv(600);
   let st = await plant();
   ok(await E(() => !!window.__app.draft), `레벨업 뒤 고르기 창이 열림(lv ${st.lv} · 고르기 ${st.drafts})`);
-  const before = st.known;
-  // 후보 카드 누르기 → 확정
-  const pickN = await E(uid => { const s = window.__app.state; const pl = s.plants.find(x => x.uid === uid); return pl.drafts[0].pick; }, uid);
-  // 누르기 = 영역 함수 직접 실행(화면 좌표 바꾸기 대신 — 같은 영역 · 같은 함수)
+  // 새 고르기 화면(2026-10-18): 위 줄 카드 누름 → [장착] → 아래 칸 누름(빈 칸 = 채움 · 찬 칸 = 바꿈, 원래 것은 위 줄로) · [되돌리기] · 버릴 것이 있으면 확인 창
   const press = id => E(id => { const A = window.__app; const rg = A.input.regions.filter(x => x.id === id).pop(); if (!rg || !rg.fn) return false; rg.fn(); return true; }, id);
-  for (let i = 0; i < pickN; i++) { ok(await press('draft_c' + i), `카드 ${i} 누름`); await adv(100); }
-  ok(await press('draft_ok'), '확정 누름'); await adv(800);
+  const D = () => E(() => { const d = window.__app.draft; return d && { top: [...(d.top || [])], lay: JSON.parse(JSON.stringify(d.lay || {})), sel: d.sel, arm: d.arm, glow: d.glow, dk: d.dk, hist: (d.hist || []).length }; });
+  const place = async (ti, key) => { ok(await press('dr_t' + ti), `위 줄 ${ti} 누름`); await adv(60); ok(await press('draft_arm'), '[장착] 누름'); await adv(60); ok(await press('dr_' + key), `${key} 칸 누름`); await adv(120); };
+  let d0 = await D();
+  ok(d0 && d0.dk && d0.dk.startsWith('skill') && d0.top.length >= 1, '기술 고르기 = 위 줄에 후보: ' + JSON.stringify(d0 && d0.top));
+  const cand0 = d0.top[0];
+  await place(0, 's0');
+  let d1 = await D();
+  ok(d1.lay.store.includes(cand0) && !d1.top.includes(cand0), '빈 보관 칸 = 채움');
+  ok(await press('draft_undo'), '[되돌리기] 누름'); await adv(100);
+  d1 = await D();
+  ok(d1.top.includes(cand0) && !d1.lay.store.includes(cand0) && d1.hist === 0, '되돌리기 = 처음대로');
+  const old0 = d1.lay.battle[0];
+  await place(0, 'b0');
+  d1 = await D();
+  ok(d1.lay.battle[0] === cand0 && d1.top.includes(old0) && d1.glow && d1.glow.key === 'b0' && d1.glow.id === old0, `찬 칸 = 바꿈 · 원래 것(${old0})은 위 줄 · 둘 다 빛남`);
+  ok(await press('draft_ok'), '확정 누름'); await adv(700);
+  ok(await E(() => !!window.__app.confirm), '버릴 것이 있으면 확인 창');
+  ok(await press('cf_yes'), '확인 창 [확정]'); await adv(900);
   st = await plant();
-  ok(st.known !== before && st.drafts === 0, `확정 뒤 기술이 들어가고 고르기 0 (남은 ${st.drafts})`);
+  const sk1 = await E(uid => window.__app.state.plants.find(x => x.uid === uid).skills, uid);
+  ok(sk1.battle[0] === cand0 && sk1.forgot.includes(old0) && st.drafts === 0, '확정 = 고른 기술이 그 칸 · 원래 것은 지운 기술');
   await adv(600);
   ok(await E(() => !window.__app.draft), '고르기 창 닫힘');
-  // ② Lv6까지 → 진화
+  // ② Lv6까지 → 진화 → 연출 → 기술 고르기 → 확정 → 패시브 고르기가 이어서
   for (let i = 0; i < 80 && (await plant()).lv < 6; i++) { await E(() => { const A = window.__app; return A.router.cur.feed(A, A.state.plants[A.state.active || 0], 'fert'); }); await adv(200); await E(() => { window.__app.popup = null; window.__app.draft = null; }); }
-  st = await plant(); ok(st.lv === 6, `Lv6 도달(단계 안 ${st.lv} · 쌓인 고르기 ${st.drafts})`);
-  const piled = st.drafts;
+  await E(uid => { window.__app.state.plants.find(x => x.uid === uid).drafts = []; }, uid);   // 단계 안 레벨업 고르기는 비우고 진화만 봄
+  st = await plant(); ok(st.lv === 6, `Lv6 도달(단계 안 ${st.lv})`);
   await E(() => { const A = window.__app; return A.router.cur.doEvolve(A, A.state.plants[A.state.active || 0]); });
   await adv(200);
   ok(await E(() => !!(window.__app.draft && window.__app.draft.evo)), '진화 → 연출 창');
   await adv(2600);
-  st = await plant(); ok(st.stage === 1 && st.drafts === piled + 2, `진화 뒤 단계 1 · 고르기 +2(기술 + 패시브) (${st.drafts})`);
-  // 보류 → '스킬 정하기'
+  st = await plant(); ok(st.stage === 1 && st.drafts === 2, `진화 뒤 단계 1 · 고르기 둘(기술 + 패시브) (${st.drafts})`);
+  d0 = await D();
+  ok(d0 && d0.dk.startsWith('skill'), '진화 고르기 = 기술 먼저');
+  const want = await E(uid => { const d = window.__app.state.plants.find(x => x.uid === uid).drafts[0]; return Math.min(d.pick, d.cands.length); }, uid);
+  ok(await E(() => window.__app.draft.maxSy > 0), '장착 · 보관이 화면보다 길면 아래 칸 끌어 넘김');
+  for (let i = 0; i < want; i++) await place(0, 's' + i);
+  ok(await press('draft_ok'), '확정 누름'); await adv(900);
+  d1 = await D();
+  ok(d1 && d1.dk.startsWith('passive') && Array.isArray(d1.lay.cards), '이어서 패시브 고르기 창');
   ok(await press('draft_later'), '보류 누름'); await adv(400);
   ok(await E(() => !window.__app.draft), '보류 뒤 창 닫힘');
-  await adv(400);
-  // ③ 식물 관리 스킬 · 패시브 탭(2026-10-18): 장착 기본기 [해제] → 보관 · 보관이 차면 막힘 · 패시브 탭 칸 셋
+  // ③ 오래된 고르기(다른 데서 먼저 확정됨) → 창이 조용히 닫힘
+  await E(async uid => { const m = await import('/v2/src/scenes/draft.js'), A = window.__app, pl = A.state.plants.find(x => x.uid === uid); m.openDraft(A, pl); }, uid);
+  await adv(300);
+  ok(await E(() => !!window.__app.draft), '다시 열림');
+  await E(uid => { window.__app.state.plants.find(x => x.uid === uid).drafts = []; }, uid);
+  await adv(300);
+  ok(await E(() => !window.__app.draft), '고르기가 없어지면 창 닫힘');
+  // ④ 식물 관리 스킬 · 패시브 탭(2026-10-18): 장착 기본기 [해제] → 보관 · 보관이 차면 막힘 · 패시브 탭 칸 셋
   await E(() => { const A = window.__app; A.draft = null; A.popup = null; A.router.set('plant', { tab: 'skill' }); });
   await adv(900);
   const lay = () => E(uid => { const s = window.__app.state, pl = s.plants.find(x => x.uid === uid); return { b: [...pl.skills.battle], s: [...pl.skills.store] }; }, uid);

@@ -48,10 +48,16 @@ export const SHOTS = [
   ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],
   ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
   ['06_draft_evo_0500', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 500 } }], ['06_draft_evo_1150', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1150 } }], ['06_draft_evo_1600', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1600 } }],   // 진화 연출(scenes/draft.js — 2026-10-18)
-  ['06_draft_evo', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: [1], focus: 1 } }],   // 진화 = 넷 중 둘 고르기
-  ['06_draft_evo_end', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: [1], focus: 1, sy: 999 } }],   // 설명 판 끝까지 넘김(글이 판보다 길 때)
+  ['06_draft_evo', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800 } }],   // 새 고르기 화면(2026-10-18): 위 = 얻은 카드 · 아래 = 장착 · 보관
+  ['06_draft_evo_sel', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: 1 } }],   // 카드 고름 = [장착]
+  ['06_draft_evo_arm', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: 1, arm: 1 } }],   // [장착] = 놓을 칸이 숨 쉼
+  ['06_draft_evo_placed', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, moves: [[1, 'b0']] } }],   // 바꿈 = 원래 것은 위 줄 · 둘 다 빛남
+  ['06_draft_evo_done', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, moves: [[1, 'b0'], [0, 's0']] } }],   // 다 놓음 = 확정 켜짐
+  ['06_draft_evo_scroll', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, moves: [[0, 's0']], sy: 999 } }],   // 아래 칸 끝까지 넘김
+  ['06_draft_peek', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, peek: 't0' } }],   // 꾹 = 뒷면
+  ['06_draft_passive', 'plant', { tab: 'skill' }, { draft: { part: 'passive', at: 900 } }],   // 패시브 고르기(일반 식물)
+  ['06_draft_passive_mut', 'plant', { tab: 'skill', act: '1' }, { draft: { part: 'passive', at: 900 } }],   // 패시브 고르기(변이 식물 — 장착 셋 · 보관 셋)
   ['06_draft_lv', 'plant', { tab: 'skill' }, { draft: { n: 3, pick: 1, at: 900 } }],   // 레벨업 = 셋 중 하나
-  ['06_plant_skill_draft', 'plant', { tab: 'skill' }, { plants: [{ drafts: [{ kind: 'lv', st: 1, lv: 3, pick: 1, cands: ['f_ball'] }] }] }],   // 보류한 고르기 = '스킬 정하기' 단추
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
   ['08_battle_reveal_0150', 'battle', { venue: 'colosseum', reveal: '150' }],
