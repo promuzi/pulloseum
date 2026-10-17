@@ -525,7 +525,7 @@ export const FARM_LV = [2, 3, 5, 7, 9, 12, 15, 18, 21];        // 이 레벨마�
 export const farmSlots = L => Math.min(FARM_MAX, FARM_START + FARM_LV.filter(x => L >= x).length);
 // 레벨업 보상(클래시로얄 왕 레벨처럼 — 상자 하나): 돈 · 물 · 비료 + 가끔 보석 · 회귀 주사 · 종자
 export function levelReward(L) {
-  const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0, fuel: 1 + (L % 5 === 0 ? 1 : 0) };
+  const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0, fuel: 1 + (L % 5 === 0 ? 1 : 0), parts: 2 + Math.floor(L / 2) };   // 부품(2026-10-17)
   if (L % 4 === 0) r.regress = 1;
   if (L % 5 === 0) r.seed = 'rare';
   if (L % 3 === 2) r.card = 'normal';   // 카드(2026-10-17): 세 레벨마다 일반 카드 한 장(addXp가 뽑음)
@@ -538,7 +538,7 @@ export const harvestMax = p => HARVEST.maxBase[p.stage] + (p.lv >= 3 ? 1 : 0) + 
 // 열매 하나 = 보상 한 가지: 돈·물·비료가 주로(92%), 나머지는 드물게
 export const HARVEST_TABLE = [
   { w: 46, kind: 'credits', rar: 0 }, { w: 22, kind: 'water', rar: 1 }, { w: 14, kind: 'fert', rar: 1 }, { w: 10, kind: 'credits', big: true, rar: 2 },
-  { w: 4, kind: 'seed', rar: 3 }, { w: 2.5, kind: 'scion', rar: 3 }, { w: 1.2, kind: 'regress', rar: 4 }, { w: 0.3, kind: 'gems', rar: 4 },
+  { w: 4, kind: 'seed', rar: 3 }, { w: 2.5, kind: 'scion', rar: 3 }, { w: 1.2, kind: 'regress', rar: 4 }, { w: 0.3, kind: 'gems', rar: 4 }, { w: 6, kind: 'parts', rar: 1 },   // 부품(2026-10-17)
 ];
 
 // ── 탐사(행성 11 — 탐사 화면 지도와 같은 이름) ──
@@ -661,6 +661,7 @@ export const SHOP = [
   { id: 'fert5', name: '비료 5', cost: { gems: 8 }, give: { fert: 5 } },
   { id: 'regress1', name: '유전자 회귀 주사', cost: { gems: 15 }, give: { regress: 1 } },
   { id: 'fuel3', name: '연료 캡슐 3', cost: { gems: 5 }, give: { fuel: 3 } },
+  { id: 'parts5', name: '탐사선 부품 5', cost: { credits: 350 }, give: { parts: 5 } },   // 부품(2026-10-17)
 ];
 // 암시장(컨셉) = 판매(돈, 무조건·적게) · 해체(접목 가지 등 무작위, 많이 키울수록 좋은 것 확률 ↑)
 export const SELL_BASE = { common: 40, rare: 110 };

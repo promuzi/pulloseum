@@ -15,7 +15,7 @@ export const result = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament && app.state.tournament.tier); },
   enter(p) { this.venue = p.venue || null; this.p = p; },
   draw(app) {
-    const { g, W, H, t } = app, L = app.lastResult || { win: this.p.win !== 'false' && this.p.win !== false, mode: 'tournament', reward: { credits: 60, water: 1, xp: { gained: 30 } }, me: { key: 'flower_grass', pot: 'pot_terra' } };
+    const { g, W, H, t } = app, L = app.lastResult || { win: this.p.win !== 'false' && this.p.win !== false, mode: 'tournament', reward: this.p.full ? { credits: 360, water: 2, fert: 1, fuel: 1, parts: 3, xp: { gained: 30 } } : { credits: 60, water: 1, xp: { gained: 30 } }, me: { key: 'flower_grass', pot: 'pot_terra' } };
     const win = !!L.win, rw = L.reward || {}, P = T.ptext, pvp = L.mode === 'pvp';
     g.rect(0, 0, W, H, T.bg2);
     const dy = Math.min(0, H - 600), SH = 340 + Math.round(dy * 2 / 3);   // 짧은 화면(480~599): 무대·보상 카드를 같이 올리고 식물은 조금만(제목 · 진행 알약과 안 겹치게)
@@ -53,15 +53,18 @@ export const result = {
     if (rw.xp && rw.xp.gained) cards.push(['star', '+' + rw.xp.gained, '경험치', P.accent]);
     if (rw.water) cards.push(['can', '+' + rw.water, '물', P.accent]);
     if (rw.fert) cards.push(['fert', '+' + rw.fert, '비료', P.accent]);
-    const y = 318 + Math.round(dy * 2 / 3), cw = cards.length > 3 ? 60 : 78, gap = 6, x0 = Math.round((W - cw * cards.length - gap * (cards.length - 1)) / 2);
+    if (rw.fuel) cards.push(['energy', '+' + rw.fuel, '연료', P.accent]);   // 연료 · 부품(2026-10-17 — 연료는 받아도 안 보였음)
+    if (rw.parts) cards.push(['gear', '+' + rw.parts, '부품', P.accent]);
+    //  넷 넘으면 두 줄(폭 270에 칸 여섯이 안 들어감) — 두 줄이면 판을 조금 올림
+    const per = cards.length > 4 ? Math.ceil(cards.length / 2) : cards.length, rowsN = cards.length ? Math.ceil(cards.length / per) : 0, cw = per > 3 ? 60 : 78, gap = 6, y = 318 + Math.round(dy * 2 / 3) - (rowsN > 1 ? 34 : 0);
     cards.forEach(([ic, v, label, col], i) => {
-      const x = x0 + i * (cw + gap);
-      plate(g, x, y, cw, 64);
-      g.img(icon(ic), x + cw / 2 - 5, y + 9);
-      g.text(v, x + cw / 2, y + 24, { font: 'head', color: col, align: 'center' });
-      g.text(label, x + cw / 2, y + 44, { color: P.sub, align: 'center' });
+      const r = Math.floor(i / per), inRow = Math.min(per, cards.length - r * per), x0 = Math.round((W - cw * inRow - gap * (inRow - 1)) / 2), x = x0 + (i % per) * (cw + gap), yy = y + r * 70;
+      plate(g, x, yy, cw, 64);
+      g.img(icon(ic), x + cw / 2 - 5, yy + 9);
+      g.text(v, x + cw / 2, yy + 24, { font: 'head', color: col, align: 'center' });
+      g.text(label, x + cw / 2, yy + 44, { color: P.sub, align: 'center' });
     });
-    let ty = y + (cards.length ? 76 : 8);
+    let ty = y + (cards.length ? rowsN * 70 + 6 : 8);
     if (!cards.length) { g.text(rw.capped === 'short' ? '3턴 안에 끝난 판은 보상이 없어요' : rw.capped === 'daily' ? '오늘 대결 보상은 다 받았어요(15판)' : rw.forfeit ? '기권한 판은 보상이 없어요' : '보상 없음', W / 2, ty + 20, { color: T.text.sub, align: 'center' }); ty += 40; }
     const lv = rw.xp && rw.xp.ups && rw.xp.ups.length ? rw.xp.ups[rw.xp.ups.length - 1] : 0;
     if (lv) { g.text(`재배사 Lv${lv}!`, W / 2, ty, { font: 'bold', color: '#ffd890', align: 'center' }); ty += 18; }

@@ -23,6 +23,7 @@ export const OPS = {
   regress: (s, a) => L.regress(s, str(a.id), str(a.skill)),
   rename: (s, a) => L.rename(s, str(a.id), str(a.name, 40)),
   setActive: (s, a) => L.setActive(s, idxOf(s, str(a.id))),
+  setFav: (s, a) => L.setFav(s, str(a.id), !!a.on),
   setTeam: (s, a) => L.setTeam(s, Array.isArray(a.team) && a.team.length === 3 ? a.team.map(u => idxOf(s, str(u))) : bad()),
   setMode: (s, a) => L.setMode(s, str(a.mode, 16)),
   setLeague: (s, a) => L.setLeague(s, str(a.league, 12)),

@@ -18,6 +18,7 @@ import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
 import { tryAutoStart, music } from './core/sound.js';
+import { runOp } from './game/ops.js';
 
 const screen = new Screen(document.getElementById('screen'));
 screen.resize();
@@ -26,8 +27,15 @@ const input = new Input(screen);
 const router = new Router(SCENES);
 const q0 = new URLSearchParams(location.search);
 let chain = Promise.resolve();
+// 빨리 반응(2026-10-17 사용자 "물주는거랑 비료 주는거 반응속도가 좀 느려 · 진화 버튼도 안 눌려 · 모든 버튼이 공통적으로"):
+//  일마다 서버 한 번 왕복(0.2~0.3초)을 기다린 뒤에야 화면이 바뀌고, 여러 번 누르면 차례로 줄을 섬 →
+//  QUICK(난수 · 보상 굴림 없는 일)은 같은 규칙(game/ops.js)으로 이 화면에서 먼저 하고 바로 보여 준 뒤 서버에 보냄.
+//  서버 상태는 줄 선 일이 다 끝났을 때 한 번만 받아 맞춤(중간 답으로 덮으면 뒤에 누른 것이 잠깐 되돌아감) · 서버가 거절하면 다시 받아 맞춤.
+//  그 밖의 일(진화 · 수확 · 탐사 · 구매 …)은 서버 답을 기다림 — 기다리는 동안 화면 맨 위 가는 띠(0.16초 넘으면)
+const QUICK = new Set(['feed', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
+let pendOps = 0, lastSrv = null, stale = false;
 const app = {
-  screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0,
+  screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0, waiting: 0, waitT: 0,
   popup: null, confirm: null, sheet: null, chest: null, guide: null, guideWait: null, noGuide: (q0.has('scene') && !q0.has('guide')) || q0.has('noguide'), busy: 0, invite: (q0.get('room') || '').toUpperCase() || null,
   go(name, params, style) { router.go(name, params, app.t, style); },
   toast(msg) { app.toastMsg = msg; app.toastT = app.t; },
@@ -35,14 +43,30 @@ const app = {
   // 일 하나(서버에 보내고 새 상태를 받음 — 요청은 차례대로). 실패하면 알림 띠를 띄우고 null
   settle() { return chain; },   // 보낸 일이 다 끝난 뒤(식물 바꾸기 직후 출전해도 바꾼 식물로 — 2026-10-16 사용자 "다른 식물로 전투가 시작된 적이 있어")
   act(op, args) {
+    if (net.offline) {   // 오프라인 체험 · 촬영: 이 화면에서 바로(저장 안 함)
+      const p0 = chain.then(async () => { try { return await netAct(app, op, args); } catch (e) { app.toast(e.message || '문제가 생겼어요'); return null; } });
+      chain = p0.catch(() => {});
+      return p0;
+    }
+    const quick = QUICK.has(op) && !!app.state;
+    let res = null;
+    if (quick) { try { res = runOp(app.state, op, args, { rng: Math.random, now: app.now() }); } catch (e) { app.toast(e.message || '할 수 없어요'); return Promise.resolve(null); } }
+    pendOps++;
+    if (!quick && app.waiting++ === 0) app.waitT = app.t;
     const p = chain.then(async () => {
       app.busy++;
-      try { return await netAct(app, op, args); }
-      catch (e) { app.toast(e.message || '문제가 생겼어요'); if (e.status === 401) app.logout(true); return null; }
-      finally { app.busy--; }
+      try { const r = await net.req('/api/act', { op, args }); lastSrv = r.state; return quick ? res : r.res; }
+      catch (e) { stale = true; app.toast(e.message || '문제가 생겼어요'); if (e.status === 401) app.logout(true); return null; }
+      finally {
+        app.busy--; if (!quick) app.waiting--;
+        if (--pendOps === 0) {
+          if (stale) { stale = false; lastSrv = null; if (net.token) net.req('/api/me').then(r => { if (r && r.state && pendOps === 0) app.state = r.state; }).catch(() => {}); }
+          else if (lastSrv && app.user) { app.state = lastSrv; lastSrv = null; }
+        }
+      }
     });
     chain = p.catch(() => {});
-    return p;
+    return quick ? Promise.resolve(res) : p;
   },
   logout(expired = false) {
     if (!expired && !net.offline && net.token) net.req('/api/logout', {}).catch(() => {});
@@ -63,11 +87,14 @@ window.addEventListener('resize', () => { if (!screen.fixed) { screen.resize(); 
 //  600칸보다 긴 기기는 장면 높이를 600에서 멈추고 아래 끝 줄을 늘여 이음(scene.tall = 그 장면은 높이 그대로 — 전투). 짧은 기기(480~599)는 장면마다 아래 줄을 바닥에 붙여 맞춤.
 export const VIEW_W = 270, VIEW_HMAX = 600;
 const frameOf = (W, H, tall = false) => ({ ox: Math.max(0, Math.floor((W - VIEW_W) / 2)), w: Math.min(W, VIEW_W), h: tall ? H : Math.min(H, VIEW_HMAX) });
-function stretchEdges(c, s, W, H, F) {
-  const cv = c.canvas, x0 = F.ox * s, x1 = (F.ox + F.w) * s, y1 = F.h * s, DW = W * s, DH = H * s;
-  if (F.h >= H && F.ox <= 0 && x1 >= DW) return;
+// 위 안전 여백(screen.oy — 카메라 구멍 · 둥근 모서리 · 노치)은 어두운 띠로 비움(장면은 그 아래부터) · 아래 여백 · 600칸 아래는 끝 줄을 늘여 이음
+const TOP_FILL = '#05070d';
+function stretchEdges(c, s, W, H, F, oy = 0, ob = 0) {
+  const cv = c.canvas, x0 = F.ox * s, x1 = (F.ox + F.w) * s, y0 = oy * s, y1 = (oy + F.h) * s, DW = W * s, DH = (H + oy + ob) * s;
+  if (!oy && y1 >= DH && F.ox <= 0 && x1 >= DW) return;
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
   if (y1 < DH) c.drawImage(cv, x0, y1 - 1, x1 - x0, 1, x0, y1, x1 - x0, DH - y1);
+  if (y0 > 0) { c.fillStyle = TOP_FILL; c.fillRect(x0, 0, x1 - x0, y0); }
   if (x0 > 0) c.drawImage(cv, x0, 0, 1, DH, 0, 0, x0, DH);
   if (x1 < DW) c.drawImage(cv, x1 - 1, 0, 1, DH, x1, 0, DW - x1, DH);
   c.restore();
@@ -92,12 +119,16 @@ function frameBody(ts) {
     const F = frameOf(screen.W, screen.H, !!(router.cur && router.cur.tall));
     app.t = ts; app.W = F.w; app.H = F.h; screen.ox = F.ox;
     screen.begin();
-    g.c.translate(F.ox, 0);
+    g.c.translate(F.ox, screen.oy || 0);
     input.begin();
     router.draw(app);
     if (!router.phase) drawOverlays(app);
     if (app.toastMsg && app.t - app.toastT < 1600) drawToast(app, app.toastMsg); else app.toastMsg = null;
-    stretchEdges(g.c, screen.s, screen.W, screen.H, F);
+    if (app.waiting > 0 && app.t - app.waitT > 160) {   // 서버 답을 기다리는 중: 화면 맨 위 2칸 띠에 빛 토막이 왼쪽 → 오른쪽
+      const w = app.W, seg = Math.round(w * 0.3), x = Math.round(((app.t - app.waitT) / 900 % 1) * (w + seg)) - seg;
+      g.rect(0, 0, w, 2, 'rgba(10,18,34,0.55)'); g.rect(Math.max(0, x), 0, Math.min(seg, w - Math.max(0, x), seg + x), 2, '#8ccfff');
+    }
+    stretchEdges(g.c, screen.s, screen.W, screen.H, F, screen.oy || 0, screen.ob || 0);
     screen.present();
     input.flush(app.guide ? null : router.cur);   // 처음 안내가 열린 동안엔 장면 끌기 · 밀기 없음
   } catch (e) {

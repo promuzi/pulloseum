@@ -27,7 +27,7 @@ export const KIND = {
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
   const out = [];
-  for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
+  for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel', 'parts']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
   if (box.seed && typeof box.seed === 'object') out.push({ kind: 'seed', seed: box.seed, rar: 3 });
   if (box.card && CARDS[box.card]) out.push({ kind: 'card', card: box.card, rar: CARDS[box.card].rar });
   return out;

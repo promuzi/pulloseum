@@ -80,6 +80,7 @@ export const SHOTS = [
   ['07_battle_cell', 'battle', { phase: 'pick', venue: 'cell' }],
   ['08_battle_hit_cell', 'battle', { phase: 'hit', venue: 'cell' }],
   ['09_result', 'result', { win: true }],
+  ['09_result_full', 'result', { win: true, full: '1' }],   // 보상 칸 여섯(두 줄 — 연료 · 부품, 2026-10-17)
   ['10_explore', 'explore', {}],
   ['10_explore_map', 'explore', { map: '1' }],   // 지역 판(연료 n/3 · 탐사 보내기 · 연료 1 · 돈 — 2026-10-17)
   ['10_hangar', 'hangar', { model: '1' }],

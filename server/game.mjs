@@ -67,16 +67,21 @@ export function makeGame({ q, log }) {
     log(uid, 'battle', { mode: spec.mode, win: false, forfeit: why, turns: acts.length, mine: spec.mine.map(plantLite), foes: spec.foes.map(plantLite), picks: countPicks(acts), L: s.user.level }, now);
     return { reward, state: s };
   }
+  // 지금 고른 판 종류 · 내 식물(1:1 = 고른 식물 · 3:3 = 저장된 팀)
+  const mineOf = s => { const mode = s.mode === 'swap3' ? 'swap3' : 'tournament'; return { mode, mine: mode === 'swap3' ? teamPlants(s) : [s.plants[s.active] || s.plants[0]].filter(Boolean) }; };
   function battleStart(uid, now) {
     const open = q.openBattle.get(uid);
-    if (open && now - open.created < RESUME_MS) {   // 안 끝난 판 = 이어서
-      const spec = JSON.parse(open.spec), B = replayBot(spec, JSON.parse(open.acts));
-      return { id: open.id, mode: spec.mode, view: viewOf(B), info: spec.info, resume: true };
-    }
-    if (open) forfeitRow(uid, open, now, 'stale');
+    let forfeited = null;
+    if (open && now - open.created < RESUME_MS) {
+      // 안 끝난 판 = 이어서 — 단, 그사이 고른 식물이 바뀌었으면(진화 · 다른 식물 · 3:3 팀 · 판 종류) 이어 하지 않고 진 판으로 정리한 뒤 새 판
+      //  (2026-10-17 사용자 "진화 막 시킨 후 다음 전투에는 진화전 모습이네" — 판을 시작할 때 저장한 식물 그대로 이어서 열었음)
+      const spec = JSON.parse(open.spec), now0 = mineOf(load(uid).s);
+      const same = now0.mode === spec.mode && now0.mine.length === spec.mine.length && spec.mine.every((p, i) => now0.mine[i].uid === p.uid && now0.mine[i].stage === p.stage);
+      if (same) { const B = replayBot(spec, JSON.parse(open.acts)); return { id: open.id, mode: spec.mode, view: viewOf(B), info: spec.info, resume: true }; }
+      forfeitRow(uid, open, now, 'changed'); forfeited = 'changed';
+    } else if (open) forfeitRow(uid, open, now, 'stale');
     const { s } = load(uid);
-    const mode = s.mode === 'swap3' ? 'swap3' : 'tournament';
-    const mine = mode === 'swap3' ? teamPlants(s) : [s.plants[s.active] || s.plants[0]];
+    const { mode, mine } = mineOf(s);
     if (!mine[0]) fail('싸울 식물이 없어요');
     if (mode === 'tournament') { L.leaguesOf(s); const cap = L.leagueCap(s); if (mine[0].stage > cap) fail(`${LEAGUES[s.league].name}는 ${LEAGUES[s.league].desc} — 리그를 바꾸거나 다른 식물을 내보내 주세요`); }
     if (mode === 'swap3' && mine.length < 3) fail('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요');
@@ -88,7 +93,7 @@ export function makeGame({ q, log }) {
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');
     q.addBattle.run(id, uid, mode, JSON.stringify(spec), '[]', now, now);
     log(uid, 'battle.start', { mode, mine: mine.map(plantLite), foes: foes.map(plantLite), tier: T.tier, round: T.round }, now);
-    return { id, mode, view: viewOf(B), info };
+    return { id, mode, view: viewOf(B), info, forfeited };
   }
   function battleTurn(uid, id, act, now, turn = null) {
     const b = q.battle.get(String(id || ''), uid);

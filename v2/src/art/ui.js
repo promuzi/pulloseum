@@ -149,13 +149,15 @@ export function hud(app, st) {
 //  왼쪽 칸 = Lv·경험 막대·경험 수, 오른쪽 칸들 = 크레딧 · 젬 · 설정. 가운데(천장 전등)는 비워 둠. 칸 = 홀로그램 판
 function hudPlain(app, s) {
   const { g, W } = app, H = T.hudPlain, st = T.card || T.deep, y = 4, h = 19;
-  holo(g, 4, y, 108, h, st, 13);
+  //  칸 폭 = 'Lv n' + 막대 + 경험 수(글자 폭을 재서 — 막대는 수 앞 5칸에서 끝남, 수가 길면 칸이 넓어짐 · 막대는 24칸 이상)
+  const lvW = g.textW(String(s.level), 'bold'), xt = `${s.exp}/${s.expMax}`, tw = g.textW(xt), bx = Math.max(36, 23 + lvW + 6), bw = Math.max(24, 104 - 5 - tw - bx), pw = bx + bw + 5 + tw + 6 - 4;
+  holo(g, 4, y, pw, h, st, 13);
   g.text('Lv', 9, y + 4, { color: H.sub });
   g.text(String(s.level), 23, y + 4, { font: 'bold', color: H.text });
-  const r = Math.max(0, Math.min(1, s.exp / s.expMax)), bx = 36, bw = 40;
+  const r = Math.max(0, Math.min(1, s.exp / s.expMax));
   g.rect(bx, y + 8, bw, 4, H.ink); g.rect(bx + 1, y + 9, bw - 2, 2, H.track);
   g.rect(bx + 1, y + 9, Math.round((bw - 2) * r), 2, H.bar); g.rect(bx + 1, y + 9, Math.round((bw - 2) * r), 1, H.barHi);
-  g.text(`${s.exp}/${s.expMax}`, 108, y + 4, { color: H.sub, align: 'right' });
+  g.text(xt, 4 + pw - 6, y + 4, { color: H.sub, align: 'right' });
   const gx = W - 24;   // 설정
   holo(g, gx, y, 20, h, st, 13); g.img(tinted('gear', H.icon), gx + 4, y + 4);
   app.input.hit('hud_gear', gx, y, 20, h, () => app.openSettings && app.openSettings(), 3);

@@ -23,7 +23,7 @@ export function newGame({ nickname, starter }, rng, now) {
     profile: { name: nickname, title: '초보 재배사', avatar: starter, color: 0 },
     titles: ['초보 재배사'],
     wallet: { credits: 200, gems: 20 },
-    items: { water: 6, fert: 2, regress: 0, fuel: FUEL.max, parts: 0 }, fuelT: now,
+    items: { water: 6, fert: 2, regress: 0, fuel: FUEL.max, parts: 6 }, fuelT: now,   // 부품 6 = 첫 강화 두 번(2026-10-17)
     scions: [], seeds: [], plants: [], storage: [], active: 0, team: [], mode: 'tournament',
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 },
     swap3: { wins: 0, losses: 0 }, pvp: { wins: 0, losses: 0 },
@@ -216,14 +216,28 @@ export function feed(s, id, kind, n = 1) {
   return { used, ups };
 }
 // 진화(Lv6에서 단추) — 다음 단계 Lv1, 기술 1~2개가 핌(상급은 미리 안 보임 — 무작위)
+// 리그 따라가기(2026-10-17 사용자 "식물 성장하면 자동으로 그에 맞는 리그로 바꿔줘 · 진화시 이미 진행중인게 있으면 한 번 안내해줘 초기화된다고"):
+//  고른 식물(s.active)이 진화해 지금 리그 단계 상한을 넘으면 그 단계를 받는 리그로 — 떠나는 리그의 이번 판(라운드 · 승패)은 처음부터(단계 · 점수는 그대로).
+//  evolveLeague = 진화 전에 화면이 물어볼지 정할 때(바뀌는지 · 진행 중이었는지)
+export function evolveLeague(s, p) {
+  if (!p || s.plants[s.active] !== p || p.stage >= 2) return null;
+  leaguesOf(s);
+  const st = p.stage + 1;
+  if (LEAGUES[s.league].cap >= st) return null;
+  const T = s.tournament;
+  return { from: s.league, to: LEAGUE_KEYS.find(k => LEAGUES[k].cap >= st), had: T.round !== ROUNDS[0] || T.wins > 0 || T.losses > 0, T: { ...T } };
+}
 export function evolve(s, id, rng) {
   const p = getPlant(s, id);
   need(p.lv >= LV_MAX && p.stage < 2, p.stage >= 2 ? '이미 다 자랐어요' : 'Lv6이 되어야 진화해요');
+  const lg = evolveLeague(s, p);
   p.stage++; p.lv = 1; p.gxp = 0;
+  let league = null;
+  if (lg) { const T = s.tournament; T.round = ROUNDS[0]; T.wins = 0; T.losses = 0; setLeague(s, lg.to); league = { from: lg.from, to: lg.to, reset: lg.had }; }
   const have = known(p), pool = bloomPool(p.key, p.stage).filter(x => !have.has(x.id)), n = rng() < 0.4 ? 2 : 1, got = [];
   for (let i = 0; i < n && pool.length; i++) { const x = pickW(rng, pool); pool.splice(pool.indexOf(x), 1); got.push({ id: x.id, to: learnNow(p, x.id) }); }
   const xp = addXp(s, XP.evolve, rng);
-  return { stage: p.stage, got, xp };
+  return { stage: p.stage, got, xp, league };
 }
 // 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b3)·조커에 놓고 원래 기술은 '지운 기술'로(기본기 자리였으면 기본기는 그냥 보관), 또는 새 기술을 안 배움(skip — 지운 기술로)
 export function placePending(s, id, skill, target) {
@@ -312,6 +326,8 @@ export function regress(s, id, skill) {
 // 이름 · 화분 · 대표 식물 · 팀 · 전투 종류
 export function rename(s, id, name) { const p = getPlant(s, id); const v = String(name || '').trim().slice(0, 10); need(v, '이름을 써 주세요'); p.name = v; return {}; }
 export function setActive(s, i) { need(i >= 0 && i < s.plants.length, '없는 식물'); s.active = i; return {}; }
+// 즐겨찾기(2026-10-17 사용자 "출전시킬 수 있는 식물 딱 나열해줘 · 즐겨찾기 기능도"): 대기실 고르기 목록 · 넘기기 화살표에서 앞에 옴
+export function setFav(s, id, on) { const p = getPlant(s, id); if (on) p.fav = true; else delete p.fav; return { fav: !!p.fav }; }
 export function setTeam(s, team) { need(Array.isArray(team) && team.length === 3 && new Set(team).size === 3 && team.every(i => i >= 0 && i < s.plants.length), '서로 다른 식물 셋을 골라 주세요'); s.team = team; return {}; }
 export function setMode(s, mode) { need(['tournament', 'swap3'].includes(mode), '모르는 전투 종류'); s.mode = mode; return {}; }
 export function setProfile(s, o) {
@@ -369,6 +385,7 @@ function rollFruit(s, p, rng) {
   if (e.kind === 'seed') return { kind: 'seed', seed: seedOf(s, p.key, rng), rar: e.rar };
   if (e.kind === 'scion') return { kind: 'scion', skill: rollScion(rng, p, 0.2), rar: e.rar };
   if (e.kind === 'regress') return { kind: 'regress', n: 1, rar: e.rar };
+  if (e.kind === 'parts') return { kind: 'parts', n: 1 + (rng() < 0.3 ? 1 : 0), rar: e.rar };
   return { kind: 'gems', n: 3, rar: e.rar };
 }
 export function harvest(s, id, rng, now) {
@@ -490,6 +507,7 @@ export function dismantle(s, id, rng) {
     else got.push({ kind: rng() < 0.5 ? 'water' : 'fert', n: 2, rar: 1 });
   }
   if (rng() < (p.form ? 0.5 : 0.25)) { const c = rollCard(rng, p.form || 'normal'); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); }   // 카드(2026-10-17)
+  got.push({ kind: 'parts', n: 1 + p.stage + (p.lv >= 4 ? 1 : 0), rar: 1 });   // 부품(2026-10-17) — 해체하면 늘 조금
   for (const r of got) grant(s, r);
   return { got, name: p.name };
 }
@@ -662,22 +680,24 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
     s.pvp.n++;
     r.credits = win ? 80 : 30;
     if (win && rng() < 0.5) r.fuel = 1;
+    if (win && rng() < 0.3) r.parts = 1;
   } else {
     const tier = TIERS.indexOf(s.tournament.tier);
     r.credits = win ? 60 + 15 * tier : 15;
     if (win && rng() < 0.5) r.water = 1 + (rng() < 0.3 ? 1 : 0);
     if (win && rng() < 0.2) r.fert = 1;
     if (win && rng() < 0.25) r.fuel = 1;
+    if (win && rng() < 0.4) r.parts = 1;   // 부품(2026-10-17)
     if (mode === 'swap3') s.swap3[win ? 'wins' : 'losses']++;
     else {
       const T = s.tournament; T[win ? 'wins' : 'losses']++;
       if (T.wins >= 3) {   // 이번 라운드 통과 → 다음 라운드(결승 통과 = 다음 단계 대회)
         const i = ROUNDS.indexOf(T.round);
         if (i >= ROUNDS.length - 1) {
-          T.tier = TIERS[Math.min(TIERS.length - 1, tier + 1)]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.round = ROUNDS[0]; r.credits += 300; r.tierUp = T.tier;
+          T.tier = TIERS[Math.min(TIERS.length - 1, tier + 1)]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.round = ROUNDS[0]; r.credits += 300; r.parts = (r.parts || 0) + 5; r.tierUp = T.tier;
           leaguesOf(s); if (s.season) s.season.best[s.league] = Math.max(s.season.best[s.league] || 0, TIERS.indexOf(T.tier));   // 시즌 최고 기록
         }
-        else T.round = ROUNDS[i + 1];
+        else { T.round = ROUNDS[i + 1]; r.parts = (r.parts || 0) + 2; }   // 라운드 통과 = 부품 2
         T.wins = 0; T.losses = 0; r.round = T.round;
       } else if (T.losses >= 3) { T.wins = 0; T.losses = 0; T.round = ROUNDS[0]; r.reset = true; }
     }

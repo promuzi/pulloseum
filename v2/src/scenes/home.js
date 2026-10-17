@@ -9,6 +9,7 @@ import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../gam
 import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
+import { inkOf } from '../core/text.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
 
 // 홈 그림마다 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
@@ -55,7 +56,7 @@ const teamOf = s => teamIdx(s).map(i => s.plants[i]);
 export const home = {
   theme(app) { return this.look || 'loft'; },   // 대기 화면 = 코덱스 원형 방(?look=room·cell·ship 옛 시안)
   enter(p) {
-    this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.forceMode = p.mode || null;   // ?mode=swap3 = 그 전투 종류로(촬영용)
+    this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.pickSheet = !!p.pick; this.forceMode = p.mode || null;   // ?mode=swap3 = 그 전투 종류로(촬영용)
     this.focus = p.focus ? { t0: 0, hold: true } : null;   // ?focus=1 = 다 어두워진 장(촬영용)
     this.unfocus = p.from === 'plant' ? { t0: null } : null;   // 식물 관리에서 돌아오면 거꾸로(카메라가 물러나고 불이 켜짐)
     this.bootIn = p.from === 'boot' ? { t0: null } : null;     // 처음 화면에서 디스플레이가 켜지며 들어옴 = 식물은 이미 의자 위(투영 다시 안 함) · 옆 창 · 글자만 서서히
@@ -70,7 +71,10 @@ export const home = {
     if (!s || T.key !== 'loft' || this.focus || Math.abs(ev.dx) < 32 || Math.abs(ev.dx) < Math.abs(ev.dy) * 1.2 || ev.y0 < 220 + dy || ev.y0 > 430 + dy) return;
     this.flip(ev.dx < 0 ? 1 : -1);
   },
-  flip(d) { const s = this.app.state; if (s.plants.length < 2) return; s.active = (s.active + d + s.plants.length) % s.plants.length; this.showT = this.app.t; this.noReveal = false; this.app.act('setActive', { id: s.plants[s.active].uid }); },
+  // 넘기는 차례 = 즐겨찾기 먼저(스마트팜 차례 그대로), 나머지 — 고르기 창 · 화살표 · 점이 같이 씀
+  order(s) { return s.plants.map((p, i) => i).sort((a, b) => (s.plants[b].fav ? 1 : 0) - (s.plants[a].fav ? 1 : 0) || a - b); },
+  pick(i) { const s = this.app.state; if (i === s.active || !s.plants[i]) return; s.active = i; this.showT = this.app.t; this.noReveal = false; this.app.act('setActive', { id: s.plants[i].uid }); },
+  flip(d) { const s = this.app.state; if (s.plants.length < 2) return; const ord = this.order(s), at = Math.max(0, ord.indexOf(s.active)); this.pick(ord[(at + d + ord.length) % ord.length]); },
   startFocus(app) { if (!this.focus && !this.empty) this.focus = { t0: app.t }; },
   draw(app) {
     this.app = app;
@@ -129,6 +133,7 @@ export const home = {
     this.sideButtons(app, fit(RH), live);
     // 이름표 + 넘기기 화살표 · 정체성 꼬리표 · 몇 번째 식물 점
     const [nx, nw] = this.namePlate(app, p, mx), n = s.plants.length;
+    if (live && n > 1) app.input.hit('home_name', nx, NY, nw, 24, () => { this.pickSheet = true; }, 3);   // 이름표 = 출전 식물 고르기 창
     if (p.pts > 0 || (p.pend && p.pend.length)) { g.disc(nx + nw - 3, NY + 3, 4, '#05070f'); g.disc(nx + nw - 3, NY + 3, 3, '#ff7a5a'); }   // 쓸 강화 포인트 · 놓을 새 기술(식물을 눌러 식물 관리로)
     if (n > 1) for (const [id, d, x] of [['home_prev', -1, nx - 9], ['home_next', 1, nx + nw + 8]]) {
       const pr = app.input.isPressed(id), c = pr ? '#e6f3ff' : '#8ccfff', cy = NY + 12;
@@ -137,12 +142,13 @@ export const home = {
     }
     this.tags(app, p, mx);
     const dx0 = Math.round(mx - (n - 1) * 4.5), DY = DOT_Y + dy;
-    for (let i = 0; i < n; i++) { const x = dx0 + i * 9; g.rect(x - 2, DY - 2, 5, 5, '#2b374b'); g.rect(x - 1, DY - 1, 3, 3, i === s.active ? '#f0be7d' : '#8eaed2'); }
+    this.order(s).forEach((pi, i) => { const x = dx0 + i * 9; g.rect(x - 2, DY - 2, 5, 5, '#2b374b'); g.rect(x - 1, DY - 1, 3, 3, pi === s.active ? '#f0be7d' : s.plants[pi].fav ? '#ff9fb4' : '#8eaed2'); });   // 즐겨찾기 = 분홍 점
     this.battleBlock(app, live);
     if (live) app.input.hit('home_plant', mx - 40, my - 100, 80, 104, () => this.startFocus(app));
     navBar(app, 'home', { badge: { nursery: s.plants.some(q => fruitOf(q, app.now()).have > 0 || growInfo(q).ready) } });
     if (this.editing) this.profileSheet(app);
     if (this.modeSheet) this.modeSheetDraw(app);
+    if (this.pickSheet) this.pickSheetDraw(app);
   },
   // 왼쪽 능력치 창: 체력 · 공격 · 방어 · 기동 / 새잎까지(막대). 식물을 바꾸면 위에서부터 한 장씩 왼쪽에서 펼쳐짐
   specs(app, p, y0) {
@@ -185,7 +191,9 @@ export const home = {
   namePlate(app, p, mx) {
     const { g } = app, NY = NAME_Y + homeDy(app), nm = p ? p.name : '빈 화분', nw = g.textW(nm, 'name'), w = nw + 20 + (p ? 45 : 0), x = Math.round(mx - w / 2);
     holo(g, x, NY, w, 24, T.card || T.panel, 16);
-    g.text(nm, x + 10, NY + 3, { font: 'name', color: p && p.shiny ? '#ffe8a8' : T.ptext.main });
+    // 글자 세로 가운데 = 판 가운데(잉크 기준 — 2026-10-17 사용자 "대기실 식물 이름 중앙정렬 — 살짝 위에 있어", 전엔 윗선 + 3칸)
+    const ik = inkOf('가힣', 'name'), ty = Math.round(NY + 12 + (ik.asc - ik.desc) / 2 - ik.top);
+    g.text(nm, x + 10, ty, { font: 'name', color: p && p.shiny ? '#ffe8a8' : T.ptext.main });
     if (p) miniStars(g, x + 10 + nw + 6, NY + 8, stars(p));   // 별 = 개체값 합(등급 대신)
     return [x, w];
   },
@@ -233,6 +241,35 @@ export const home = {
     button(app, 'home_cta', bx, BATTLE_Y, W - 8 - bx, h, pvp ? '대결 방' : '출전', { style: 'gold', font: 'name', icon: pvp ? 'target' : 'sword', iconTint: true, sub: pvp ? '친구와 1:1' : swap ? '식물 셋 · 교체 가능' : `${TR.round} ${TR.wins + TR.losses + 1}경기째`, onTap: live ? go : null });   // 출전 = 철 셔터가 닫히고 상대 찾기 → 열리며 전투장
   },
   // 전투 종류 고르기: 1:1 토너먼트 · 3:3 교체전(내 팀 셋은 아래 칸을 눌러 바꿈) · 미션(첫 출시 뒤 — 잠금 표시)
+  // 출전 식물 고르기(2026-10-17 사용자 "이거 누르면 출전시킬 수 있는 식물 딱 나열해줘 거기서 고를 수 있게 — 지금은 일일이 화살표 · 즐겨찾기 기능도"):
+  //  스마트팜 식물 두 줄 칸(얼굴 · 이름 · 별 · 단계 Lv) — 누름 = 그 식물로 · 오른쪽 위 하트 = 즐겨찾기(앞으로 옴, 창은 안 닫힘)
+  pickSheetDraw(app) {
+    const { g, W, H, state: s } = app, P = T.ptext, ord = this.order(s), cols = 2, gap = 6, x = 12, w = W - 24, cw = Math.floor((w - 16 - gap) / cols), chh = 50;
+    const rows = Math.ceil(ord.length / cols), h = 44 + rows * (chh + gap) - gap + 50, y = Math.max(30, Math.min(Math.round((H - h) / 2), H - h - 10));
+    g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
+    app.input.hit('pk_block', 0, 0, W, H, () => { this.pickSheet = false; });
+    app.input.hit('pk_in', x, y, w, h, () => {});
+    holo(g, x, y, w, h, T.card || T.panel, 16);
+    g.text('출전 식물', x + 12, y + 11, { font: 'head', color: P.main });
+    g.text(`${ord.length}`, x + w - 12, y + 14, { font: 'label', color: P.sub, align: 'right' });
+    ord.forEach((pi, i) => {
+      const q = s.plants[pi], on = pi === s.active, cx = x + 8 + (i % cols) * (cw + gap), id = 'pk_' + q.uid, pr = app.input.isPressed(id), cy = y + 40 + Math.floor(i / cols) * (chh + gap) + (pr ? 1 : 0);
+      holo(g, cx, cy, cw, chh, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
+      g.rect(cx + 5, cy + 5, 40, 40, '#0a1c32');
+      g.clip(cx + 5, cy + 5, 40, 40, () => drawPortrait(g, bigKey(q.key, stageKey(q)), cx + 5, cy + 5, 40, false));
+      const nx = cx + 50, room = cw - 50 - 22;
+      let nm = q.name; while (nm.length > 1 && g.textW(nm, 'bold') > room) nm = nm.slice(0, -1);
+      g.text(nm === q.name ? nm : nm.slice(0, -1) + '…', nx, cy + 7, { font: 'bold', color: q.shiny ? '#ffe8a8' : P.main });
+      miniStars(g, nx, cy + 25, stars(q));
+      g.text(`${stageName(q)} Lv${q.lv}`, nx, cy + 34, { font: 'label', color: P.sub });
+      app.input.hit(id, cx, cy, cw, chh, () => { this.pick(pi); this.pickSheet = false; });
+      // 즐겨찾기 하트(오른쪽 위 — 누르면 켜고 끔)
+      const hid = 'pkf_' + q.uid, hx = cx + cw - 19, hy = cy + 5, hi = icon('heart');
+      if (q.fav) g.img(hi, hx + 3, hy + 3); else g.silhouette(hi, hx + 3, hy + 3, '#4a5a72');
+      app.input.hit(hid, hx - 4, hy - 4, 24, 24, () => { const on2 = !q.fav; if (on2) q.fav = true; else delete q.fav; app.act('setFav', { id: q.uid, on: on2 }); });
+    });
+    button(app, 'pk_close', x + w / 2 - 50, y + h - 40, 100, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { this.pickSheet = false; } });
+  },
   modeSheetDraw(app) {
     const { g, W, H, state: s } = app, P = T.ptext;
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);

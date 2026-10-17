@@ -6,7 +6,9 @@ import { plainBg } from '../art/bg.js';
 import { miniStars } from './common.js';
 import { farmSlots, FARM_MAX, SKILLS, STORE_MAX, FORMS } from '../game/catalog.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, slotLv } from '../game/view.js';
-import { showGot, sellAsk, cutAsk } from './popups.js';
+import { ask, showGot, sellAsk, cutAsk } from './popups.js';
+import { evolveLeague } from '../game/logic.js';
+import { LEAGUES } from '../game/catalog.js';
 import { eul } from '../core/josa.js';
 import { sfx } from '../core/sound.js';
 
@@ -338,9 +340,16 @@ export const nursery = {
       if (box) showGot(app, 'Lv6 달성 선물', Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요');
     }
   },
-  async evolve(app, p) {
+  // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
+  evolve(app, p) {
+    const lg = evolveLeague(app.state, p);
+    if (lg && lg.had) return ask(app, `진화하면 ${LEAGUES[lg.to].name}로 바뀌어요`, `${LEAGUES[lg.from].short} 리그 ${lg.T.tier} ${lg.T.round}(${lg.T.wins}승 ${lg.T.losses}패)는 처음부터 다시 해요`, () => this.doEvolve(app, p), '진화');
+    return this.doEvolve(app, p);
+  },
+  async doEvolve(app, p) {
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
+    if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
     const TO = { battle: '전투 칸에', joker: '조커 칸에', pend: '놓을 칸 고르기' };
     showGot(app, `진화! ${['어린', '자라는', '다 자란'][r.stage]} 단계`, r.got.map(x => ({ kind: 'skill', skill: x.id, to: TO[x.to], rar: SKILLS[x.id] && SKILLS[x.id].tier === 'c3' ? 4 : 3 })), r.got.some(x => x.to === 'pend') ? '칸이 꽉 찼어요 — 식물 관리에서 놓을 칸을 골라요' : '새 기술이 피었어요');
   },

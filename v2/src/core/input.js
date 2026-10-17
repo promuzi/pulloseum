@@ -43,7 +43,7 @@ export class Input {
       unlock();   // 뗄 때만 소리를 허락하는 브라우저(iOS)도 있어 한 번 더
       if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
       const r = this.hitAt(p.x, p.y);
-      if (!d.moved && !d.held && r && r.id === d.id) this.queue.push({ type: 'tap', region: r });
+      if (!d.moved && !d.held && r && r.id === d.id) { this.queue.push({ type: 'tap', region: r }); this.flash = { id: r.id, t: now() }; }
       if (d.moved) {
         const a = d.hist[0], b = d.hist[d.hist.length - 1], dt = Math.max(16, b.t - a.t);
         this.queue.push({ type: 'release', dx: p.x - d.x0, dy: p.y - d.y0, x0: d.x0, y0: d.y0, vx: (b.x - a.x) / dt * 1000, vy: (b.y - a.y) / dt * 1000 });
@@ -64,7 +64,7 @@ export class Input {
   // 영역 등록. pad = 보이는 크기보다 넓은 투명 터치 여유
   hit(id, x, y, w, h, fn, pad = 0) { this.regions.push({ id, x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2, fn }); }
   hitAt(x, y) { for (let i = this.regions.length - 1; i >= 0; i--) { const r = this.regions[i]; if (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h) return r; } return null; }
-  isPressed(id) { return this.pressedId === id; }
+  isPressed(id) { return this.pressedId === id || (!!this.flash && this.flash.id === id && performance.now() - this.flash.t < 160); }   // 누른 뒤 0.16초는 눌린 모양(2026-10-17)
   holdMs() { const d = this.down; return d && !d.moved && !d.held ? performance.now() - d.t0 : 0; }
   claimHold() { if (this.down) this.down.held = true; this.pressedId = null; }
   get holding() { return !!(this.down && this.down.held); }

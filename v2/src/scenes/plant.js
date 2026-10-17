@@ -14,7 +14,8 @@ import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/l
 import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
 import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
-import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX } from '../game/logic.js';
+import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, evolveLeague } from '../game/logic.js';
+import { LEAGUES } from '../game/catalog.js';
 import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
@@ -461,9 +462,16 @@ export const plant = {
     const up = r.ups[r.ups.length - 1];
     if (up) { app.toast(`Lv${up.lv}! 강화 포인트 +${up.pts}`); const box = r.ups.find(u => u.box); if (box) showGot(app, 'Lv6 달성 선물', Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
   },
-  async evolve(app, p) {
+  // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
+  evolve(app, p) {
+    const lg = evolveLeague(app.state, p);
+    if (lg && lg.had) return ask(app, `진화하면 ${LEAGUES[lg.to].name}로 바뀌어요`, `${LEAGUES[lg.from].short} 리그 ${lg.T.tier} ${lg.T.round}(${lg.T.wins}승 ${lg.T.losses}패)는 처음부터 다시 해요`, () => this.doEvolve(app, p), '진화');
+    return this.doEvolve(app, p);
+  },
+  async doEvolve(app, p) {
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
+    if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
     const TO = { battle: '전투 칸에', joker: '조커 칸에', pend: '놓을 칸 고르기' };
     this.tab = 'skill'; this.sub = null; this.scrollY = 0;
     showGot(app, `진화! ${['어린', '자라는', '다 자란'][r.stage]} 단계`, r.got.map(x => ({ kind: 'skill', skill: x.id, to: TO[x.to], rar: SKILLS[x.id] && SKILLS[x.id].tier === 'c3' ? 4 : 3 })), r.got.some(x => x.to === 'pend') ? '칸이 꽉 찼어요 — 아래에서 놓을 칸을 골라요' : '새 기술이 피었어요');
