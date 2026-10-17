@@ -135,6 +135,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   app.W = F.w; app.H = F.h; app.t = opt.t ?? 1000; app.state = mockState(); app.pxScale = k;
   app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null; app.guide = null; app.guideWait = null; app.noGuide = true;
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
+  if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;

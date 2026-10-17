@@ -35,8 +35,19 @@ const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
 //  표에 없는 그림은 변환 때 줄기를 재서 1.5칸 넘게 비끼면 경고한다(아래 convert)
 // 흙에 앉히기(판 칸, + = 아래 · 앞으로) — 밑동이 넓은 몸(아래 SINK 설명 · 2026-10-17)
-const SINK = {flower_grass_young: 1, flower_grass_teen: 1, flower_grass: 1, thorn_young: 2, thorn_teen: 1, thorn: 1, aqua_young: 1, aqua_teen: 1, spark: 1, vine_water_young: 1, vine_water_teen: 1, cactus_fire_young: 2, cactus_fire_teen: 3, cactus_fire: 4, gaia_young: 2, gaia_teen: 2, gaia: 4, flower_fire_young: 1, flower_fire_teen: 1, flower_fire: 2, cactus_wind_young: 2, cactus_wind_teen: 3, cactus_wind: 5, vine_wind_teen: 1, spore_cap_young: 4, spore_cap_teen: 4, spore_cap: 5, frost_bell_young: 1, frost_bell_teen: 1, frost_bell: 1, volt_vine_young: 1, volt_vine_teen: 2, volt_vine: 2, stone_cap_young: 4, stone_cap_teen: 5, stone_cap: 3, jelly_cap_young: 3, jelly_cap_teen: 4, jelly_cap: 4, fang_trap_young: 2, fang_trap_teen: 2, fang_trap: 1, blade_vine_young: 2, blade_vine_teen: 3, blade_vine: 2, toxi_cactus_young: 4, toxi_cactus_teen: 3, toxi_cactus: 3, draco_fruit_young: 3, draco_fruit_teen: 3, draco_fruit: 3, ember_cap_young: 2, ember_cap_teen: 2, ember_cap: 2, drake_cactus_young: 3, drake_cactus_teen: 3, drake_cactus: 3, gat_cap_young: 1, gat_cap_teen: 1, gat_cap: 1, mask_vine_young: 1, mask_vine_teen: 2, mask_vine: 3, drum_cactus_young: 2, drum_cactus_teen: 2, drum_cactus: 3, lantern_vine_young: 1, lantern_vine_teen: 1, lantern_vine: 2, jar_cactus_young: 3, jar_cactus_teen: 3, jar_cactus: 3, goblin_cap_young: 2, goblin_cap_teen: 3, goblin_cap: 3, crown_cap_young: 1, crown_cap_teen: 3, crown_cap: 3, frost_drake_young: 5, frost_drake_teen: 4, frost_drake: 4 };   // 드레이크 · 프로스트드레이크는 말린 꼬리가 테에 걸쳐 덜 앉힘(드레이크 성체 꼬리는 2026-10-17 사용자 "꼬리만 위로" — 원화에서 190칸 올림 = python tools/pixel/big/partmove.py 원화 결과 290 900 435 0 -190) · sinkcalib.mjs 로 잰 값(밑동 반폭 × 흙 타원 납작함 × 0.75, 최대 5)
+const SINK = {flower_grass_young: 1, flower_grass_teen: 1, flower_grass: 1, thorn_young: 2, thorn_teen: 1, thorn: 1, aqua_young: 1, aqua_teen: 1, spark: 1, vine_water_young: 1, vine_water_teen: 1, cactus_fire_young: 2, cactus_fire_teen: 3, cactus_fire: 4, gaia_young: 3, gaia_teen: 4, gaia: 8, flower_fire_young: 1, flower_fire_teen: 1, flower_fire: 2, cactus_wind_young: 2, cactus_wind_teen: 3, cactus_wind: 5, vine_wind_teen: 1, spore_cap_young: 4, spore_cap_teen: 4, spore_cap: 5, frost_bell_young: 1, frost_bell_teen: 1, frost_bell: 1, volt_vine_young: 1, volt_vine_teen: 2, volt_vine: 2, stone_cap_young: 4, stone_cap_teen: 5, stone_cap: 3, jelly_cap_young: 3, jelly_cap_teen: 4, jelly_cap: 4, fang_trap_young: 2, fang_trap_teen: 2, fang_trap: 1, blade_vine_young: 2, blade_vine_teen: 3, blade_vine: 2, toxi_cactus_young: 4, toxi_cactus_teen: 3, toxi_cactus: 3, draco_fruit_young: 3, draco_fruit_teen: 3, draco_fruit: 3, ember_cap_young: 2, ember_cap_teen: 2, ember_cap: 2, drake_cactus_young: 3, drake_cactus_teen: 3, drake_cactus: 3, gat_cap_young: 1, gat_cap_teen: 1, gat_cap: 1, mask_vine_young: 1, mask_vine_teen: 2, mask_vine: 3, drum_cactus_young: 2, drum_cactus_teen: 2, drum_cactus: 3, lantern_vine_young: 1, lantern_vine_teen: 1, lantern_vine: 2, jar_cactus_young: 3, jar_cactus_teen: 3, jar_cactus: 3, goblin_cap_young: 2, goblin_cap_teen: 3, goblin_cap: 3, crown_cap_young: 1, crown_cap_teen: 3, crown_cap: 3, frost_drake_young: 5, frost_drake_teen: 4, frost_drake: 4 };   // 드레이크 · 프로스트드레이크는 말린 꼬리가 테에 걸쳐 덜 앉힘(드레이크 성체 꼬리는 2026-10-17 사용자 "꼬리만 위로" — 원화에서 190칸 올림 = python tools/pixel/big/partmove.py 원화 결과 290 900 435 0 -190) · sinkcalib.mjs 로 잰 값(밑동 반폭 × 흙 타원 납작함 × 0.75, 최대 5)
 // 손으로 더 돌리기(도, + = 시계 반대 방향) — 2026-10-17 사용자 "바위 선인장 반시계 방향으로 각도를 조금만"
+// 시험: SINK_TEST='{"gaia":8}' — 표를 고치지 않고 앉힘 깊이만 바꿔 보기
+const SINK_TEST = process.env.SINK_TEST ? JSON.parse(process.env.SINK_TEST) : {};
+const sinkOf = k => SINK_TEST[k] ?? SINK[k] ?? 0;
+// 화분 앞에 둘 부위(2026-10-17 사용자 "바위 선인장의 손은 어색하게 화분에 붙어 있어 — 신체별로 화분 밖에 손을 꺼내 놓는 느낌으로, 화분과 신체 중 어디를 나오게 할지 구분" ·
+//  "나중에 크고 멋있는 식물은 다양하게 연출"): 출력 키 → 원화(누끼) 좌표 다각형들. 그 부위는 도트 판에서도 늘 화분 앞판보다 앞(potblend over) · 흙으로 안 덮음.
+//  몸통은 화분 속(뒤)에 두고 손 · 꼬리 · 날개 끝처럼 화분 밖으로 내놓을 부위만 적는다. 적지 않은 종 = 예전 자동 규칙(테 밖으로 1.5칸 넘게 뻗은 덩어리만 앞)
+const FRONT = {
+  gaia: [[[318, 590], [606, 572], [622, 900], [306, 900]], [[732, 596], [1080, 590], [1084, 900], [726, 900]]],   // 가이아록 두 돌주먹(몸은 SINK 로 더 앉혀 주먹이 테 너머로 걸쳐 내려오게)
+  gaia_teen: [[[220, 760], [480, 730], [588, 860], [588, 990], [460, 1085], [220, 1085]], [[808, 935], [900, 840], [1030, 826], [1108, 890], [1108, 1115], [808, 1115]]],
+  gaia_young: [[[278, 770], [345, 728], [500, 735], [538, 800], [536, 905], [480, 960], [400, 992], [320, 980], [278, 900]], [[826, 830], [870, 800], [985, 795], [1025, 830], [1025, 960], [960, 998], [870, 990], [826, 940]]],
+};
 const ROT = { gaia: 4, drake_cactus: -3.3 };   // 드레이크캑터 = 날개 키우기 전 자동 보정(몸 축 −3.3° → 돌려 세움)과 같게 — 날개가 넓어져 잰 축이 −2.0°로 바뀌어 자동 보정이 꺼졌음(2026-10-17)
 const STEM = {
   flower_grass_young: 1, flower_grass: -3, thorn_teen: -1, thorn: -3, aqua: -1, flower_wind_young: -1, flower_wind_teen: -1,
@@ -376,7 +387,7 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
   if (sh) { S.cx -= sh * rc / s; S.cy += sh * rs / s; }
   // 흙에 앉히기(SINK — 2026-10-17 사용자 "화단에 박힌 불꽃 선인장이 여전히 중앙이 아닌 좀 뒤쪽"): 밑동이 넓은 몸은 아래 끝이 흙 가운데 줄에 걸치면
   //  앞쪽 흙이 다 드러나 뒤에 박힌 것처럼 보임(25° 내려다보기에서 굵은 밑동의 흙 닿는 둘레 앞쪽 = 흙 가운데 + 반폭 × 0.42) → 판에서 k칸 아래(앞)로
-  const sk = (process.env.SINK_TEST && JSON.parse(process.env.SINK_TEST)[okey]) ?? SINK[okey] ?? 0;
+  const sk = sinkOf(okey);
   if (sk) { S.cx -= sk * rs / s; S.cy -= sk * rc / s; }
   const toOut = (x, y) => { const u = (x - S.cx) * s, v = (y - S.cy) * s; return [P.cx + u * rc - v * rs, P.cy + u * rs + v * rc]; };   // 원본 자리 → 판 자리(몸 축 바로 세우기 포함)
   // 눈: 원본 자리 → 도트 좌표, 그 자리를 가운데로 EYE 틀 크기의 상자
@@ -476,7 +487,23 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     for (let q = 1; q < K; q++) if (mc[q] > mc[m]) m = q;
     if (matL[cm[k]] < 0.75 || ct[k] < LV - 1) { cm[k] = m; ct[k] = LV - 1; }
   }
-  return { cm, ct, am, palLab, matL, key, eyes, eyeC, eyeGrid, eyeCheek, s, src };
+  // 화분 앞 부위(FRONT): 원화 다각형 꼭짓점을 판 좌표로 옮겨 칸 가운데 기준으로 채움 → 한 칸 넓힘(움직임 장에서 1~2칸 흔들려도 안에 들게)
+  let front = null;
+  if (FRONT[okey]) {
+    front = new Uint8Array(W * H);
+    for (const poly of FRONT[okey]) {
+      const q = poly.map(([x, y]) => toOut(x, y));
+      for (let y = 0; y < H; y++) {
+        const yc = y + 0.5, xs = [];
+        for (let i = 0; i < q.length; i++) { const [x1, y1] = q[i], [x2, y2] = q[(i + 1) % q.length]; if ((y1 <= yc) !== (y2 <= yc)) xs.push(x1 + ((yc - y1) * (x2 - x1)) / (y2 - y1)); }
+        xs.sort((a, b) => a - b);
+        for (let i = 0; i + 1 < xs.length; i += 2) for (let x = Math.max(0, Math.ceil(xs[i] - 0.5)); x <= Math.min(W - 1, Math.floor(xs[i + 1] - 0.5)); x++) front[y * W + x] = 1;
+      }
+    }
+    const f2 = front.slice();
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (f2[y * W + x]) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < W && Y < H) front[Y * W + X] = 1; }
+  }
+  return { cm, ct, am, palLab, matL, key, eyes, eyeC, eyeGrid, eyeCheek, s, src, front };
 }
 
 // ③ 다수 재질로 줄이기 + ④ 정리 — 원본(재질·단이 정해진 큰 그림)을 판 칸으로.
@@ -904,7 +931,7 @@ const cvs = stages ? [] : ONE_STAGE ? keys.map(k => { const m = convert(k), cv =
 // (2026-10-15 사용자 "생장단계 임의로 너가 그리지 말고 코덱스로 각각", "3개로 줄이자" — 게임의 6단계와 잇는 법은 CHANGELOG)
 const STAGES = ['young', 'teen', 'mature'];
 if (stages) {
-  const key = keys[0], pot = renderPot(POT3.pot_terra), mature = convert(key), list = [], srcs = [], ref = labStats(key);
+  const key = keys[0], pot = renderPot(POT3.pot_terra), mature = convert(key), list = [], srcs = [], opts = [], ref = labStats(key);
   const mk = +(args.find(a => a.startsWith('--match='))?.slice(8) ?? 1);   // 단계 그림 색을 성체 색 분포에 맞추는 세기(0 = 그대로)
   // 어린 단계 몸집(2026-10-15 사용자 "외형 차이가 적어 아쉬움 — 1단계는 더 줄여도, 무조건 말고 몸체 크기 기준으로(버섯은 덩치가 비슷해 구분 어려움)"):
   //  도트 칸 수(몸 면적)가 성체의 YA배보다 크면 그 비율이 되게 축척을 줄이고, 이미 작으면 그대로
@@ -915,17 +942,17 @@ if (stages) {
     if (st !== 'mature') { const S2 = cv.src.S; console.log(`${st.padEnd(7)} 기준 (${S2.cx.toFixed(0)}, ${S2.cy.toFixed(0)}) ${S2.ref} · 몸 축 ${(S2.axis || 0).toFixed(1)}°${S2.rot ? ' → 돌려 세움' : ''}`); }
     const im = paint(cv);
     writeFileSync(resolve(here, 'out', 'conv', `${key}_${st}_96x112.png`), im.png());
-    list.push(im); srcs.push(decodePNG(readFileSync(f)));
-    let t = H, l = W, r = 0, out = 0;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (im.data[(y * W + x) * 4 + 3] > 127) { t = Math.min(t, y); l = Math.min(l, x); r = Math.max(r, x); if (y > P.cy - P.b * 1.5 && y < P.cy && Math.abs(x + 0.5 - P.cx) > P.a + 1) out++; }
-    console.log(`${st.padEnd(7)} 키 ${(P.cy - t).toFixed(0)}칸 · 폭 ${l}~${r} · 화분 밖 아래 ${out}칸`);
+    list.push(im); srcs.push(decodePNG(readFileSync(f))); opts.push({ sink: sinkOf(st === 'mature' ? key : `${key}_${st}`), frontMask: cv.front });
+    let t = H, l = W, r = 0, out = 0, fo = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (im.data[(y * W + x) * 4 + 3] > 127) { t = Math.min(t, y); l = Math.min(l, x); r = Math.max(r, x); if (y > P.cy - P.b * 1.5 && y < P.cy && Math.abs(x + 0.5 - P.cx) > P.a + 1) { if (cv.front && cv.front[y * W + x]) fo++; else out++; } }
+    console.log(`${st.padEnd(7)} 키 ${(P.cy - t).toFixed(0)}칸 · 폭 ${l}~${r} · 화분 밖 아래 ${out}칸${fo ? ` (화분 앞 부위 ${fo}칸은 따로)` : ''}`);
   }
   // 위: 코덱스 그림(성체는 원래 컨셉) / 아래: 도트 변환 + 3D 화분
   const Z = 3, PW = W * Z, sheet = new Img(8 + list.length * (PW + 8), 8 + PW + 8 + H * Z + 8, '#2e222f');
   const BG = [0x32, 0x33, 0x53];   // 줄인 그림을 판 바탕색 위에 반투명 가장자리까지 섞어 얹는다
   const shrink = (src, w, h) => { const o = new Img(w, h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const x0 = Math.floor(x * src.w / w), x1 = Math.max(x0 + 1, Math.floor((x + 1) * src.w / w)), y0 = Math.floor(y * src.h / h), y1 = Math.max(y0 + 1, Math.floor((y + 1) * src.h / h)), s3 = [0, 0, 0]; let a = 0; for (let j = y0; j < y1; j++) for (let i = x0; i < x1; i++) { const q = (j * src.w + i) * 4, al = src.data[q + 3]; for (let c = 0; c < 3; c++) s3[c] += src.data[q + c] * al; a += al; } const full = 255 * (x1 - x0) * (y1 - y0); for (let c = 0; c < 3; c++) o.data[(y * w + x) * 4 + c] = Math.round((s3[c] + BG[c] * (full - a)) / full); o.data[(y * w + x) * 4 + 3] = 255; } return o; };
   list.forEach((im, k) => {
-    const X = 8 + k * (PW + 8), p = plantInPot(im, pot);
+    const X = 8 + k * (PW + 8), p = plantInPot(im, pot, null, opts[k]);
     sheet.fill(X, 8, PW, PW, '#323353'); sheet.blit(shrink(srcs[k], PW, PW), X, 8);
     sheet.fill(X, 16 + PW, PW, H * Z, '#323353'); sheet.blit(p, X, 16 + PW, Z);
   });
@@ -1050,7 +1077,7 @@ async function animKit() {
   };
   // 화분 뒤 → 식물 → 화분 앞 → 효과
   const frameOf = (k, f, bg = null) => {
-    const { im, fxPaint } = partsOf(k, f), out = plantInPot(im, pot, bg, { sink: SINK[cvs[k].outKey || cvs[k].key] || 0 });
+    const { im, fxPaint } = partsOf(k, f), out = plantInPot(im, pot, bg, { sink: sinkOf(cvs[k].outKey || cvs[k].key), frontMask: cvs[k].front });
     for (const [x, y, c] of fxPaint) out.set(x, y, c);
     return out;
   };
@@ -1104,7 +1131,7 @@ if (args.includes('--export') && cvs.length) {
     if (b != null) ['half', 'closed', 'closed', 'half'].forEach((e, i) => list.push([(b + i) % FR, e]));
     const N = list.length, rows = Math.ceil(N / COLS), sheet = new Img(COLS * W, rows * 2 * H);
     list.forEach(([f, eye], i) => {
-      const { im, fxPaint } = partsOf(k, f, eye), { under, over } = plantLayers(im, pot, { sink: SINK[cv.outKey || cv.key] || 0 });
+      const { im, fxPaint } = partsOf(k, f, eye), { under, over } = plantLayers(im, pot, { sink: sinkOf(cv.outKey || cv.key), frontMask: cv.front });
       for (const [x, y, c] of fxPaint) over.set(x, y, c);
       const cx = (i % COLS) * W, cy = Math.floor(i / COLS) * H;
       sheet.blit(under, cx, cy); sheet.blit(over, cx, cy + rows * H);
@@ -1112,7 +1139,7 @@ if (args.includes('--export') && cvs.length) {
     const okey = cv.outKey || cv.key;   // 단계 묶음은 <키>_<단계>
     writeFileSync(resolve(dir, 'plants', okey + '.png'), sheet.png());
     const r = rigs[k];
-    writeFileSync(resolve(dir, 'plants', okey + '.json'), JSON.stringify({ w: W, h: H, cols: COLS, rows, frames: FR, frameMs: DT * 10, blinkAt: b ?? null, blinkIndex: b != null ? FR : null, base: [BASE_GEO.cx, +BASE_GEO.cy.toFixed(2)], soil: [POT_GEO.cx, +POT_GEO.cy.toFixed(2)], head: [+r.hx.toFixed(1), +r.hy.toFixed(1)], headR: +r.Rh.toFixed(1), sink: SINK[okey] || 0 }));   // sink = 흙에 앉힌 칸(스마트팜은 화분 없이 잔디에 심어 그만큼 다시 올림)
+    writeFileSync(resolve(dir, 'plants', okey + '.json'), JSON.stringify({ w: W, h: H, cols: COLS, rows, frames: FR, frameMs: DT * 10, blinkAt: b ?? null, blinkIndex: b != null ? FR : null, base: [BASE_GEO.cx, +BASE_GEO.cy.toFixed(2)], soil: [POT_GEO.cx, +POT_GEO.cy.toFixed(2)], head: [+r.hx.toFixed(1), +r.hy.toFixed(1)], headR: +r.Rh.toFixed(1), sink: sinkOf(okey) }));   // sink = 흙에 앉힌 칸(스마트팜은 화분 없이 잔디에 심어 그만큼 다시 올림)
     console.log(`${okey.padEnd(13)} 묶음 → ${resolve(dir, 'plants', okey + '.png')} · ${N}장${b != null ? '(깜빡임 4장 포함)' : ''}`);
   });
 }

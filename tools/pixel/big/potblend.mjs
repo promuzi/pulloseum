@@ -14,7 +14,7 @@ const inSoil = (x, y) => ((x + 0.5 - P.cx) / P.a) ** 2 + ((y + 0.5 - P.cy) / P.b
 const shade = (im, x, y, f) => { const k = (y * W + x) * 4; for (let c = 0; c < 3; c++) im.data[k + c] = Math.round(im.data[k + c] * f); };
 const outsideRim = (x, y) => ((x + 0.5 - RG.cx) / RG.rin) ** 2 + ((y + 0.5 - RG.cy) / (RG.rin * RG.k)) ** 2 > 1;
 
-export function plantInPot(plant, pot, bg = null, opt = {}) {
+export function plantInPot(plant, pot, bg = null, opt = {}) {   // opt = { sink, frontMask } — plantLayers 와 같음
   const { under, over } = plantLayers(plant, pot, opt), out = new Img(W, H, bg);
   out.blit(pot.back, 0, 0); out.blit(under, 0, 0); out.blit(pot.front, 0, 0); out.blit(over, 0, 0);
   return out;
@@ -22,10 +22,12 @@ export function plantInPot(plant, pot, bg = null, opt = {}) {
 
 // 화분 종류와 상관없이 끼울 수 있게 두 층으로 나눈다(게임이 화분 뒤 → under → 화분 앞 → over 순으로 그림):
 //  under = 식물 + 흙 덮기(밑동을 덮은 흙 무늬·닿은 그림자 — 흙은 다섯 화분 모두 같은 재질), over = 화분 앞판보다 앞에 나온 덩어리
-export function plantLayers(plant, pot, { cover = true, front = true, sink = 0 } = {}) {
+//  frontMask(판 칸 Uint8Array) = 화분 앞에 둘 부위(convert.mjs FRONT — 종마다 원화 다각형): 그 칸의 식물은 늘 앞판보다 앞 · 흙으로 안 덮음
+//   (2026-10-17 사용자 "바위 선인장의 손은 어색하게 화분에 붙어 있어 — 신체별로 화분 밖에 손을 꺼내 놓는 느낌으로, 화분과 신체 중 어디를 나오게 할지 구분")
+export function plantLayers(plant, pot, { cover = true, front = true, sink = 0, frontMask = null } = {}) {
   const under = new Img(W, H), over = new Img(W, H), tmp = new Img(W, H);
   tmp.blit(pot.back, 0, 0); tmp.blit(plant, 0, 0);
-  const hide = cover ? soilCover(tmp, plant, pot, { sink }) : null;
+  const hide = cover ? soilCover(tmp, plant, pot, { sink, frontMask }) : null;
   for (let i = 0; i < W * H; i++) {
     const k = i * 4, b = pot.back.data;
     if (plant.data[k + 3] >= 128 || tmp.data[k] !== b[k] || tmp.data[k + 1] !== b[k + 1] || tmp.data[k + 2] !== b[k + 2] || tmp.data[k + 3] !== b[k + 3]) { under.data.set(tmp.data.subarray(k, k + 4), k); under.data[k + 3] = 255; }
@@ -50,6 +52,7 @@ export function plantLayers(plant, pot, { cover = true, front = true, sink = 0 }
       if (far) for (const j of comp) if (pot.front.data[j * 4 + 3] >= 128) over.data.set(plant.data.subarray(j * 4, j * 4 + 4), j * 4);
     }
   }
+  if (frontMask) for (let i = 0; i < W * H; i++) if (frontMask[i] && plant.data[i * 4 + 3] >= 128) over.data.set(plant.data.subarray(i * 4, i * 4 + 4), i * 4);
   return { under, over };
 }
 
@@ -58,7 +61,7 @@ export function plantLayers(plant, pot, { cover = true, front = true, sink = 0 }
 //  밑동이 흙에 닿는 둘레의 앞쪽 호(가운데가 가장 낮고 양옆이 높게 — 반폭 × 흙 타원 납작함)를 따라가고, 칸마다 0~1칸 울퉁불퉁 + 가끔 흙덩이가
 //  밑동 위로 한 칸 묻음. 덮는 두께 = 3줄 + sink(convert SINK — 흙에 앉힌 만큼은 흙 속). 밑동 밖(흙 위에 놓인 잎 · 돌주먹)은 전처럼 3줄만.
 //  덮인 칸(흙 속)은 돌려줘서 앞판보다 앞에 그리는 덩어리에서 뺌(앉힌 몸통 아래가 화분 앞에 튀어나오지 않게)
-export function soilCover(out, plant, pot, { sink = 0 } = {}) {
+export function soilCover(out, plant, pot, { sink = 0, frontMask = null } = {}) {
   const on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && plant.data[(y * W + x) * 4 + 3] >= 128;
   const row = Math.floor(P.cy), c = Math.round(P.cx), hide = new Uint8Array(W * H);
   let found = -1;
@@ -79,7 +82,7 @@ export function soilCover(out, plant, pot, { sink = 0 } = {}) {
   }
   const hsh = x => ((x + 11) * 2654435761 >>> 0) % 7;   // 칸마다 정해진 들쭉날쭉(장마다 같게)
   const kk = P.b / P.a, tc = (tl + tr + 1) / 2, tr2 = Math.max(1, (tr - tl + 1) / 2), deep = 3 + Math.max(0, Math.round(sink));
-  const coverAt = (x, y, deepOk) => { if (!on(x, y) || (!deepOk && outsideRim(x, y))) return; const k = (y * W + x) * 4; out.data.set(pot.back.data.subarray(k, k + 4), k); hide[y * W + x] = 1; };   // deepOk = 줄기 기둥(흙 속은 테 밖이라도 화분 속 — 앞에 안 그림)
+  const coverAt = (x, y, deepOk) => { if (!on(x, y) || (!deepOk && outsideRim(x, y)) || (frontMask && frontMask[y * W + x])) return; const k = (y * W + x) * 4; out.data.set(pot.back.data.subarray(k, k + 4), k); hide[y * W + x] = 1; };   // deepOk = 줄기 기둥(흙 속은 테 밖이라도 화분 속 — 앞에 안 그림)
   for (let x = l; x <= r; x++) {
     const h = hsh(x), trunk = tl >= 0 && x >= tl && x <= tr;
     let top, depth;

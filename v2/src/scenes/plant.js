@@ -11,7 +11,7 @@ import { basicsOf } from '../battle/model.js';
 import { cardSkillOf } from '../game/fight.js';
 import { fxChip, BUFF_LOOK } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
-import { FOCUS, focusOf, plantSheetY } from './home.js';
+import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
 import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { plantStats, sellPrice, BASIC_IDS } from '../game/logic.js';
@@ -68,7 +68,8 @@ export const plant = {
   enter(p) {
     this.sel = p.sel == null ? null : p.sel === 'j' ? 'j' : 'b' + p.sel;   // ?sel = 검토 촬영(고른 칸)
     this.tab = p.tab || 'skill'; this.sub = p.sub || null; this.ivStat = null; this.scrollY = 0; this.maxY = 0;
-    this.t0 = p.focus ? null : -1e9; this.out = null; this.gone = false;   // 홈 암실 연출에서 왔을 때만 판이 올라옴
+    this.t0 = p.focus || p.zoomAt != null ? null : -1e9; this.out = null; this.gone = false;   // 홈 암실 연출에서 왔을 때만 판이 올라옴
+    this.zoomIn = !!p.zoom || p.zoomAt != null; this.zoomAt = p.zoomAt != null ? +p.zoomAt : 0;   // ?zoomAt=ms = 다가감 그 순간 촬영   // 홈이 다가가기 시작한 순간 넘어옴 = 남은 다가감을 여기서(판 올라옴과 같이)
     this.forceAct = p.act != null ? +p.act : null;   // 검토 촬영: 그 번째 식물로
   },
   onDrag(dy, dx, ev) {
@@ -94,10 +95,11 @@ export const plant = {
     if (!p) { app.go('home'); return; }
     const key = bigKey(p.key, stageKey(p)), [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), F = focusOf(app), SY = plantSheetY(app);
     this.app = app;
-    if (this.t0 == null) this.t0 = t;
-    loftView(app, { dark: 1, z: loftZoom(app, F.want), px: mx, py: pc, sx: F.sx, sy: F.sy, plant: () => loftPlant(app, key, p.pot, mx, my) });
-    // 들어옴 = 위 글자가 나타나고 아래 판이 올라옴, 나감 = 거꾸로 → 홈(불 켜짐)
-    let k = ease(Math.min(1, (t - this.t0) / IN_MS));
+    if (this.t0 == null) this.t0 = t - (this.zoomAt || 0);
+    const zk = this.zoomIn ? ease(Math.min(1, (t - this.t0) / ZOOM_MS)) : 1, Zw = loftZoom(app, F.want), sy0 = pc + homeDy(app);   // 다가감(홈 camera 와 같은 길)
+    loftView(app, { dark: 1, z: 1 + (Zw - 1) * zk, px: mx, py: pc, sx: mx + (F.sx - mx) * zk, sy: sy0 + (F.sy - sy0) * zk, plant: () => loftPlant(app, key, p.pot, mx, my) });
+    // 들어옴 = 위 글자가 나타나고 아래 판이 올라옴(다가가며 들어오면 다가감과 같이 — 판이 조금 앞서 아래 검은 칸을 가림), 나감 = 거꾸로 → 홈(불 켜짐)
+    let k = ease(Math.min(1, (t - this.t0) / (this.zoomIn ? ZOOM_MS * 0.8 : IN_MS)));
     if (this.out != null) { const o = Math.min(1, (t - this.out) / OUT_MS); k = Math.min(k, 1 - ease(o)); if (o >= 1 && !this.gone) { this.gone = true; app.go('home', { from: 'plant' }, 'cut'); } }
     const live = k >= 1 && this.out == null && !app.popup && !app.confirm;
     g.alpha(k, () => { this.top(app, p, live); this.growStrip(app, p, live, SY - 30); });

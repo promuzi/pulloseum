@@ -18,8 +18,12 @@ function makePW(ac, into) { for (const [k, duty] of [['pulse12', 0.125], ['pulse
 function init() {
   if (ctx) return ctx;
   const AC = globalThis.AudioContext || globalThis.webkitAudioContext; if (!AC) return null;
-  ctx = new AC();
-  master = ctx.createGain(); master.gain.value = 1; master.connect(ctx.destination);
+  // 소리 처리 여유 = 'balanced'(휴대폰에서 화면 계산이 몰릴 때 소리가 끊기는 일을 줄임 — 화면 동기는 음악 시계가 출력 지연을 빼서 그대로, 2026-10-17 사용자 "여전히 종종 음악이 지지직")
+  try { ctx = new AC({ latencyHint: 'balanced' }); } catch { ctx = new AC(); }
+  master = ctx.createGain(); master.gain.value = 1;
+  // 넘침 막기(리미터): 음악 · 효과음이 겹쳐 1을 넘으면 찢어지는 소리 → 봉우리만 눌러 줌
+  const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.15;
+  master.connect(lim); lim.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.gain.value = SOUND.sfx ? SOUND.sfxVol : 0; sfxBus.connect(master);
   musicBus = ctx.createGain(); musicBus.gain.value = SOUND.music ? SOUND.musicVol : 0; musicBus.connect(master);
   noiseBuf = makeNoise(ctx); makePW(ctx, PW);

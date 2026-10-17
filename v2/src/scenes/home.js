@@ -29,6 +29,7 @@ const SHOW_MS = 320;                              // 식물이 의자 투영기�
 //  동시에 식물이 조금 확대되는 줌. 이렇게 집중시키면서 식물의 강화와 각종 식물 스킬과 세팅을 할 수 있는 기능으로"):
 //  ① 옆 창·글자가 사라지며 방 불이 꺼짐(위 전등·빛기둥만 남음) ② 그 사이 카메라가 식물로 다가감(1.35배 — 기기 배율에 맞춰 칸 크기 고르게) ③ 식물 관리(plant.js)가 같은 카메라로 이어 받음
 export const FOCUS = { want: 1.35, sx: 135, sy: 150, ms: 1150, back: 850 };
+export const ZOOM_AT = 0.38, ZOOM_MS = Math.round(FOCUS.ms * (1 - ZOOM_AT));   // 다가가기 시작(f) · 남은 다가감 시간 — 식물 관리가 이어 받음
 // 식물 관리 판 윗변(짧은 화면은 판이 조금 올라옴) · 카메라 자리 = 식물 가운데가 위 이름·꼬리표(끝 62)와 생장 줄(판 위 34칸) 사이 가운데, 그 높이에 맞춰 덜 키움
 //  (2026-10-16 사용자 "식물 선택시에 줌할때 식물이 중앙에 있었으면" — plant.js 와 같은 값)
 export const plantSheetY = app => (app.H >= 540 ? 258 : Math.round(258 + (app.H - 540) * 0.6));
@@ -84,7 +85,8 @@ export const home = {
     let f = 0;
     if (this.focus) f = this.focus.hold ? 1 : Math.min(1, (t - this.focus.t0) / FOCUS.ms);
     else if (this.unfocus) { if (this.unfocus.t0 == null) this.unfocus.t0 = t; f = 1 - Math.min(1, (t - this.unfocus.t0) / FOCUS.back); if (f <= 0) this.unfocus = null; }
-    if (this.focus && !this.focus.hold && f >= 1 && !this.focus.gone) { this.focus.gone = true; app.go('plant', { focus: true }, 'cut'); }
+    // 카메라가 다가가기 시작하는 순간(f 0.38 — 글자는 이미 사라지고 방은 어두움) 식물 관리로 넘김: 남은 다가감과 아래 판 올라옴을 같이(2026-10-17 사용자 "아래 창 올라오는 게 느려서 화면 아래의 검은 게 보여 — 동시에 올라올 수 있게")
+    if (this.focus && !this.focus.hold && f >= ZOOM_AT && !this.focus.gone) { this.focus.gone = true; app.go('plant', { focus: true, zoom: true }, 'cut'); }
     const mv = ease(Math.max(0, Math.min(1, (f - 0.38) / 0.62)));
     return { f, dark: ease(Math.min(1, f / 0.4)), ui: 1 - Math.min(1, f / 0.25), z: 1 + (Z - 1) * mv, sx: LOFT_STOOL[0] + (F.sx - LOFT_STOOL[0]) * mv, sy: pc + (F.sy - pc) * mv };
   },

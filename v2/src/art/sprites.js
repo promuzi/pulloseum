@@ -96,7 +96,12 @@ export function drawPortrait(g, key, x, y, s, flip = false, src = null) {
   const P = BIG[key]; if (!P) return false;
   const m = P.meta, hx = Math.round(m.head[0]), hy = Math.round(m.head[1]);
   if (src == null) src = s * 2 <= Math.min(m.w, 88) ? s * 2 : s;
-  const sx = Math.max(0, Math.min(m.w - src, hx - Math.floor(src / 2))), sy = Math.max(0, Math.min(m.h - src, hy - Math.floor(src / 2) + 3));
+  let sy = Math.max(0, Math.min(m.h - src, hy - Math.floor(src / 2) + 3));
+  // 얼굴이 몸 아래쪽인 종(엠버캑터 — 불꽃 둔덕 가운데 눈): 얼굴을 가운데 두면 칸 아래가 식물 밑 빈칸으로 차고 위 불꽃이 잘림 → 빈칸이 8칸 넘으면 그만큼 칸을 올림(얼굴은 칸 위에서 68% 안쪽)
+  //  (2026-10-17 사용자 "불 선인장 프로필 사진이 너무 아래에 찍혀 있어")
+  const box = bigBox(key), empty = box ? sy + src - (box[1] + 1) : 0;
+  if (empty > 8) sy = Math.max(0, Math.max(hy - Math.round(src * 0.68), sy - (empty - 4)));
+  const sx = Math.max(0, Math.min(m.w - src, hx - Math.floor(src / 2)));
   part(g, P.sheet, sx, sy, src, src, x, y, flip, s, s);
   part(g, P.sheet, sx, sy + m.rows * m.h, src, src, x, y, flip, s, s);
   return true;

@@ -35,6 +35,7 @@ export const SHOTS = [
   ['03_home_focus', 'home', { focus: true }],
   ['04_bag', 'bag', {}],
   ['05_plant_skill', 'plant', { tab: 'skill' }],
+  ['05_plant_zoom_150', 'plant', { tab: 'skill', zoomAt: '150' }], ['05_plant_zoom_350', 'plant', { tab: 'skill', zoomAt: '350' }], ['05_plant_zoom_550', 'plant', { tab: 'skill', zoomAt: '550' }],   // 홈에서 다가가며 들어오는 중(판이 같이 올라옴 — 2026-10-17)
   ['05_plant_skill_sel', 'plant', { tab: 'skill', sel: '1' }],
   ['06_plant_up', 'plant', { tab: 'up' }],
   ['06_plant_set', 'plant', { tab: 'set' }],
@@ -91,6 +92,9 @@ export const SHOTS = [
   ['14_room_in3', 'room', { demo: 'in3' }],   // 3:3 교체전 방(내 팀 셋)
   ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
   ['12_nursery', 'nursery', {}],
+  ['12_nursery_gaia', 'nursery', {}, { plants: [{ key: 'gaia', stage: 2 }, { key: 'gaia', stage: 1 }, { key: 'gaia', stage: 0 }] }],   // 화분 앞 부위(주먹) — 잔디에 심은 세 단계
+  ['02_home_gaia', 'home', {}, { plants: [{ key: 'gaia', stage: 2 }] }],
+  ['05_plant_gaia', 'plant', { tab: 'skill' }, { plants: [{ key: 'gaia', stage: 2 }] }],
   ['12_storage', 'storage', {}],
   ['13_dex', 'dex', {}],
   ['15_matching', 'matching', {}],

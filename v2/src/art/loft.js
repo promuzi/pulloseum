@@ -324,16 +324,36 @@ export function loftPlantCy(key) {
 const NDARK = [3, 4, 10], NAMB = 0.05, STOOL_LIT = 0.85;
 const legOn = (X, Y, x0, y0, x1, y1, hw) => Y >= y0 && Y <= y1 && Math.abs(X - (x0 + ((x1 - x0) * (Y - y0)) / (y1 - y0))) <= hw;
 // 의자: 앉는 판 윗면 타원 + 두께 띠 + 다리 셋(tools/pixel/big/loft_light.mjs 와 같은 잰 값)
-const inStool = (x, y) => { const X = x + 0.5, Y = y + 0.5; return ((X - 134.5) / 32.5) ** 2 + ((Y - 355.5) / 6.5) ** 2 <= 1 || ((X - 134.5) / 32) ** 2 + ((Y - 361.5) / 7.5) ** 2 <= 1 || legOn(X, Y, 116.5, 362, 108, 406, 4.6) || legOn(X, Y, 136, 362, 136, 395, 4.2) || legOn(X, Y, 154.5, 362, 161, 406, 4.6); };
+const inSeat = (X, Y) => ((X - 134.5) / 32.5) ** 2 + ((Y - 355.5) / 6.5) ** 2 <= 1 || ((X - 134.5) / 32) ** 2 + ((Y - 361.5) / 7.5) ** 2 <= 1;
+const inLegs = (X, Y) => legOn(X, Y, 116.5, 362, 108, 406, 4.6) || legOn(X, Y, 136, 362, 136, 395, 4.2) || legOn(X, Y, 154.5, 362, 161, 406, 4.6);
+const inStool = (x, y) => { const X = x + 0.5, Y = y + 0.5; return inSeat(X, Y) || inLegs(X, Y); };   // 모양만(다른 쓰임 — 아래 칸 나누기)
+// 의자 칸 표: 모양 안에서도 나무 색만 — 판 = 어두운 나무 · 진한 주황 판(푸른빛 칸 뺌), 다리 = 어두운 나무 · 진한 주황 결(밝고 옅은 칸 = 바닥과 섞인 경계 → 뺌),
+//  그다음 바깥과 맞닿은 밝고 옅은 칸 한 겹 벗김(2026-10-17 사용자 "시작할 때 의자 부분 누끼가 다 안 따져 있어" → "여전히 픽셀 단위 하얀 게 있어")
+function stoolMask(o, W, H) {
+  const m = new Uint8Array(W * H), lumAt = k => (o[k] * 0.3 + o[k + 1] * 0.59 + o[k + 2] * 0.11) / 255, satAt = k => { const mx = Math.max(o[k], o[k + 1], o[k + 2]), mn = Math.min(o[k], o[k + 1], o[k + 2]); return (mx - mn) / Math.max(1, mx); };
+  for (let y = 340; y < Math.min(H, 415); y++) for (let x = 95; x < Math.min(W, 175); x++) {
+    if (inGlass(x, y)) continue;
+    const i = y * W + x, k = i * 4, X = x + 0.5, Y = y + 0.5, l = lumAt(k), sat = satAt(k), r = o[k], g = o[k + 1], b = o[k + 2];
+    if (inSeat(X, Y)) m[i] = (l < 0.5 && r >= b && b < g + 6) || (l < 0.72 && sat >= 0.35 && r > g && g > b) ? 1 : 0;
+    else if (inLegs(X, Y)) m[i] = (l < 0.42 && r >= b) || (sat >= 0.42 && r > g && g > b && l < 0.72) ? 1 : 0;
+  }
+  const peel = [];
+  for (let y = 340; y < Math.min(H, 415); y++) for (let x = 95; x < Math.min(W, 175); x++) {
+    const i = y * W + x, k = i * 4; if (!m[i]) continue;
+    const edge = !m[i - 1] || !m[i + 1] || !m[i - W] || !m[i + W];
+    if (edge && lumAt(k) > 0.36 && satAt(k) < 0.35) peel.push(i);
+  }
+  for (const i of peel) m[i] = 0;
+  return m;
+}
 function nightLayers() {
   if (S.night) return S.night;
   const { o, off, kp, W, H } = lampLayers();
   const mk = () => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); return { cv, c, im: c.createImageData(W, H) }; };
-  const A = mk(), B = mk(), Cs = mk(), u32 = new Uint32Array(W * H), a = A.im.data, b = B.im.data, s = Cs.im.data;
+  const A = mk(), B = mk(), Cs = mk(), u32 = new Uint32Array(W * H), a = A.im.data, b = B.im.data, s = Cs.im.data, SM = stoolMask(o, W, H);
   for (let i = 0; i < W * H; i++) {
     const k = i * 4, x = i % W, y = (i - x) / W, glass = inGlass(x, y), lum = (o[k] * 0.3 + o[k + 1] * 0.59 + o[k + 2] * 0.11) / 255;
-    // 의자 = 모양 안에서도 나무 색만(어두운 갈색 · 따뜻한 주황 판) — 모양이 다리보다 넓어 옆 벽(푸른 회색) · 바닥 그늘 · 경계 칸이 같이 떼어져 밝은 테두리로 보였음(2026-10-17 사용자 "시작할 때 의자 부분 누끼가 다 안 따져 있어")
-    const st = !glass && inStool(x, y) && (lum < 0.5 || (lum < 0.72 && o[k] - o[k + 2] > 55)) && o[k] >= o[k + 2], v = [0, 0, 0];
+    const st = !!SM[i], v = [0, 0, 0];   // 의자 = 나무 색 칸 표(stoolMask)
     for (let ch = 0; ch < 3; ch++) {
       const base = glass ? NDARK[ch] : NDARK[ch] + off[k + ch] * NAMB, li = glass ? 0 : st ? o[k + ch] * STOOL_LIT : Math.max(0, o[k + ch] - off[k + ch]) * kp[i];
       a[k + ch] = Math.round(base); b[k + ch] = Math.round(li); v[ch] = Math.min(255, a[k + ch] + b[k + ch]);

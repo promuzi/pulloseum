@@ -400,15 +400,6 @@ export const ICON_SRC = {
     '.olo...',
     '.oo....',
   ],
-  lockS: [   // 탭 아이콘 귀퉁이에 붙는 작은 자물쇠(7×7 — 2026-10-17 함선 로켓을 가리지 않게)
-    '..ooo..',
-    '.o...o.',
-    '.o...o.',
-    'ooooooo',
-    'ooo.ooo',
-    'ooo.ooo',
-    'ooooooo',
-  ],
   lock: [
     '...ooooo...',
     '..oo...oo..',
