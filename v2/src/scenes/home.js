@@ -134,7 +134,7 @@ export const home = {
     // 이름표 + 넘기기 화살표 · 정체성 꼬리표 · 몇 번째 식물 점
     const [nx, nw] = this.namePlate(app, p, mx), n = s.plants.length;
     if (live && n > 1) app.input.hit('home_name', nx, NY, nw, 24, () => { this.pickSheet = true; }, 3);   // 이름표 = 출전 식물 고르기 창
-    if (p.pts > 0 || (p.pend && p.pend.length) || (p.drafts && p.drafts.length)) { g.disc(nx + nw - 3, NY + 3, 4, '#05070f'); g.disc(nx + nw - 3, NY + 3, 3, '#ff7a5a'); }   // 쓸 강화 포인트 · 놓을 새 기술(식물을 눌러 식물 관리로)
+    if (p.pts > 0 || (p.drafts && p.drafts.length)) { g.disc(nx + nw - 3, NY + 3, 4, '#05070f'); g.disc(nx + nw - 3, NY + 3, 3, '#ff7a5a'); }   // 쓸 강화 포인트 · 놓을 새 기술(식물을 눌러 식물 관리로)
     if (n > 1) for (const [id, d, x] of [['home_prev', -1, nx - 9], ['home_next', 1, nx + nw + 8]]) {
       const pr = app.input.isPressed(id), c = pr ? '#e6f3ff' : '#8ccfff', cy = NY + 12;
       for (let j = 0; j < 5; j++) g.rect(d < 0 ? x - j : x + j, cy - 4 + j, 1, 9 - j * 2, c);   // 큰 쪽 = 뒤, 뾰족한 쪽 = 가리키는 쪽

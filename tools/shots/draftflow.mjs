@@ -61,13 +61,35 @@ try {
   await adv(200);
   ok(await E(() => !!(window.__app.draft && window.__app.draft.evo)), '진화 → 연출 창');
   await adv(2600);
-  st = await plant(); ok(st.stage === 1 && st.drafts === piled + 1, `진화 뒤 단계 1 · 고르기 +1 (${st.drafts})`);
+  st = await plant(); ok(st.stage === 1 && st.drafts === piled + 2, `진화 뒤 단계 1 · 고르기 +2(기술 + 패시브) (${st.drafts})`);
   // 보류 → '스킬 정하기'
   ok(await press('draft_later'), '보류 누름'); await adv(400);
   ok(await E(() => !window.__app.draft), '보류 뒤 창 닫힘');
   await adv(400);
-  ok(await press('sk_draft'), "'스킬 정하기' 단추 있음 · 누름"); await adv(600);
-  ok(await E(() => !!window.__app.draft), "'스킬 정하기' → 고르기 창 다시");
+  // ③ 식물 관리 스킬 · 패시브 탭(2026-10-18): 장착 기본기 [해제] → 보관 · 보관이 차면 막힘 · 패시브 탭 칸 셋
+  await E(() => { const A = window.__app; A.draft = null; A.popup = null; A.router.set('plant', { tab: 'skill' }); });
+  await adv(900);
+  const lay = () => E(uid => { const s = window.__app.state, pl = s.plants.find(x => x.uid === uid); return { b: [...pl.skills.battle], s: [...pl.skills.store] }; }, uid);
+  const slotOf = async id => (await lay()).b.indexOf(id);
+  const offBasic = async id => { const i = await slotOf(id); ok(await press('skc_b' + i), `${id} 카드 누름(b${i})`); await adv(600); ok(await press('peek_act'), '[해제] 누름'); await adv(700); };
+  const L0 = await lay(), basicOn = ['sun', 'evade', 'guard', 'basic'].find(x => L0.b.includes(x));
+  await offBasic(basicOn);
+  ok((await lay()).s.includes(basicOn) && !(await lay()).b.includes(basicOn), `장착 기본기 ${basicOn} [해제] = 보관으로`);
+  const filler = await E(async uid => {   // 보관을 진짜 기술로 여섯까지(시험용)
+    const { SKILLS } = await import('/v2/src/game/catalog.js'), s = window.__app.state, pl = s.plants.find(x => x.uid === uid);
+    const have = new Set([...pl.skills.battle, ...pl.skills.store, ...pl.skills.forgot]);
+    for (const id of Object.keys(SKILLS)) { if (pl.skills.store.length >= 6) break; if (!have.has(id) && SKILLS[id].tier === 'c1') pl.skills.store.push(id); }
+    return pl.skills.store.length;
+  }, uid);
+  if (filler >= 6) {
+    const other = (await lay()).b.find(x => x && x !== basicOn);
+    const i = (await lay()).b.indexOf(other);
+    ok(await press('skc_b' + i), '다른 장착 카드 누름'); await adv(600); await press('peek_act'); await adv(700);
+    ok((await lay()).b.includes(other), '보관이 차면 [해제] 막힘(장착 그대로)');
+  } else ok(true, '(보관 채울 지운 기술이 모자라 건너뜀)');
+  await E(() => { window.__app.router.set('plant', { tab: 'passive' }); });
+  await adv(700);
+  ok(await E(() => ['skc_c0', 'skc_c1', 'skc_c2'].every(id => window.__app.input.regions.some(r => r.id === id))), '패시브 탭 = 장착 칸 셋');
   ok(!errs.length, '페이지 오류 없음 ' + errs.join(' | '));
   const le = await E(() => window.__lastError || null); ok(!le, '화면 오류 없음 ' + (le || ''));
 } finally { await b.close(); srv.close(); }

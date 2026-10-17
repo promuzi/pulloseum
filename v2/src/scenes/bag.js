@@ -4,11 +4,12 @@ import { icon } from '../art/icons.js';
 import { T, plate } from '../art/theme.js';
 import { header, seedArt } from './common.js';
 import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft, FORMS } from '../game/catalog.js';
-import { seedPrice, freeSlots, MUT_MAX } from '../game/logic.js';
+import { seedPrice, freeSlots, MUT_MAX, SKILL_STORE, slotLayout } from '../game/logic.js';
 import { ask } from './popups.js';
-import { CARDS, CARD_SLOTS, cardFits, cardFace, isSkillCard } from '../game/cards.js';
+import { CARDS, PASS_STORE, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { cardTiny } from '../art/skillcard.js';
 import { eul } from '../core/josa.js';
+import { openDraft } from './draft.js';
 
 // 가방: 종자(심기 · 팔기) · 접목 가지(맞는 식물에 접목) · 물건(물 · 비료 · 회귀 주사 · 연료)
 const TABS = [['seed', '종자'], ['scion', '접목 가지'], ['card', '카드'], ['item', '물건']];   // 카드 탭(2026-10-17)
@@ -104,13 +105,18 @@ export const bag = {
     app.input.hit('cs_in', 10, y, W - 20, h, () => {});
     g.text(`${eul(c.name)} 누구에게?`, 22, y + 10, { font: 'head', color: P.main });
     s.plants.forEach((p, i) => {
-      const ry = y + 36 + i * 40, why = cardFits(p, id), Cs = [...(p.cards || []), null, null].slice(0, CARD_SLOTS), b = p.skills.battle, has = Cs.includes(id) || b.includes(id), free = Cs.indexOf(null);
-      const sk = isSkillCard(id), bi = b.indexOf(null) >= 0 ? b.indexOf(null) : ['evade', 'guard', 'basic'].map(x => b.indexOf(x)).find(k => k >= 0) ?? -1;
-      const no = why || (has ? '이미 끼웠어요' : sk ? (b.filter(isSkillCard).length >= MUT_MAX ? `기술 카드는 ${MUT_MAX}장까지예요` : bi < 0 ? '전투 칸이 차 있어요' : null) : free < 0 ? '카드 칸이 차 있어요' : null);
+      // 넣을 곳(2026-10-18 칸 개편): 기술 카드 = 빈 장착 칸(MUT_MAX 장 안) → 스킬 보관 빈 칸 · 패시브 = 빈 장착 칸 → (그 변이 패시브) 패시브 보관 빈 칸
+      const ry = y + 36 + i * 40, why = cardFits(p, id), L = slotLayout(p), sk = isSkillCard(id), has = [...L.battle, ...L.store, ...L.cards, ...L.pstore].includes(id);
+      const bi = L.battle.indexOf(null), ci = L.cards.indexOf(null);
+      const where = sk ? (bi >= 0 && L.battle.filter(isSkillCard).length < MUT_MAX ? 'b' : L.store.length < SKILL_STORE ? 's' : null) : (ci >= 0 ? 'c' : p.form && CARDS[id].form === p.form && L.pstore.length < PASS_STORE ? 'p' : null);
+      const no = why || (has ? '이미 끼웠어요' : !where ? (sk ? '스킬 칸이 차 있어요' : '패시브 칸이 차 있어요') : null);
       g.text(p.name, 22, ry + 6, { font: 'bold', color: no ? T.text.dim : P.main });
-      g.text(no || '끼울 수 있어요', 22, ry + 22, { color: no ? '#ffb0a0' : '#9ff0b0' });
-      const done = r => { if (r) { this.pickFor = null; app.toast(`${p.name}에게 끼웠어요`); } };
-      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: sk ? () => { const nb = [...b]; nb[bi] = id; app.act('setSlots', { id: p.uid, battle: nb, cards: Cs }).then(done); } : () => { const nc = [...Cs]; nc[free] = id; app.act('setCards', { id: p.uid, cards: nc }).then(done); } });
+      g.text(no || (where === 'b' || where === 'c' ? '장착에 끼워요' : '보관에 넣어요'), 22, ry + 22, { color: no ? '#ffb0a0' : '#9ff0b0' });
+      const done = r => { if (r) { this.pickFor = null; app.toast(`${p.name}에게 넣었어요`); } };
+      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: () => {
+        if (where === 'b') L.battle[bi] = id; else if (where === 's') L.store.push(id); else if (where === 'c') L.cards[ci] = id; else L.pstore.push(id);
+        app.act('setSlots', { id: p.uid, ...L }).then(done);
+      } });
     });
     button(app, 'cs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
@@ -133,10 +139,10 @@ export const bag = {
     app.input.hit('gs_in', 10, y, W - 20, h, () => {});
     g.text(`${eul(sk.name)} 누구에게?`, 22, y + 10, { font: 'head', color: P.main });
     s.plants.forEach((p, i) => {
-      const ry = y + 36 + i * 40, why = canGraft(p, sc.skill), known = [...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot, ...p.pend].includes(sc.skill);
+      const ry = y + 36 + i * 40, why = canGraft(p, sc.skill), known = [...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot].includes(sc.skill);
       g.text(p.name, 22, ry + 6, { font: 'bold', color: why || known ? T.text.dim : P.main });
       g.text(known ? '이미 알아요' : why || '배울 수 있어요', 22, ry + 22, { color: why || known ? '#ffb0a0' : '#9ff0b0' });
-      button(app, 'gp_' + i, W - 84, ry + 6, 60, 26, '접목', { style: 'gold', disabled: !!(why || known), onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; app.toast(r.to === 'pend' ? `${p.name} — 식물 관리에서 놓을 칸을 골라요` : `${p.name}: ${eul(sk.name)} 배웠어요`); } }) });
+      button(app, 'gp_' + i, W - 84, ry + 6, 60, 26, '접목', { style: 'gold', disabled: !!(why || known), onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; if (r.to === 'draft') openDraft(app, p); else app.toast(`${p.name}: ${eul(sk.name)} 배웠어요`); } }) });
     });
     button(app, 'gs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
