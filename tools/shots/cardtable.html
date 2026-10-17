@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>기술 · 변이 표</title>
+<style>
+@font-face { font-family: P; src: url(/assets/fonts/sub/Pretendard-SemiBold.woff2) format('woff2'); font-weight: 600; }
+@font-face { font-family: P; src: url(/assets/fonts/sub/Pretendard-ExtraBold.woff2) format('woff2'); font-weight: 800; }
+body { margin: 0; background: #070b14; font-family: P, sans-serif; font-weight: 600; color: #e6f1ff; }
+.sheet { width: 800px; padding: 26px 24px 28px; box-sizing: border-box; background: #0b1424; margin-bottom: 12px; }
+h1 { margin: 0 0 4px; font-size: 30px; font-weight: 800; color: #ffd890; }
+.sub { font-size: 16px; color: #8cb6de; margin-bottom: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 17px; line-height: 1.35; }
+th { text-align: left; font-weight: 800; color: #9fd0ff; font-size: 15px; padding: 6px 6px; border-bottom: 2px solid #2a5a8a; }
+td { padding: 6px 6px; border-bottom: 1px solid #1a3150; vertical-align: top; }
+tr.grp td { padding-top: 12px; border-bottom: 1px solid #2a5a8a; font-weight: 800; font-size: 19px; color: #fff; }
+.el { display: inline-block; min-width: 34px; text-align: center; border-radius: 6px; padding: 0 5px; font-size: 14px; font-weight: 800; color: #0b1424; }
+.dim { color: #7f9cc0; } .num { white-space: nowrap; } .nm { font-weight: 800; color: #fff; } .fx { color: #d8ecff; }
+.tag { display: inline-block; border: 1px solid #3a6a9a; border-radius: 5px; padding: 0 5px; font-size: 13px; color: #b8dcfa; margin-right: 3px; }
+</style></head><body><div id="root"></div>
+<script type="module">
+import { SPECIES, SKILLS, FORMS, TIER_NAME, JONG, uniquesOf } from '/v2/src/game/catalog.js';
+import { CARDS } from '/v2/src/game/cards.js';
+import { BASICS } from '/v2/src/battle/model.js';
+import { STATUS, STATUS_DESC, BUFF_LOOK } from '/v2/src/art/statusLook.js';
+import { statOf } from '/v2/src/art/skillcard.js';
+import { ELEMENT } from '/v2/src/art/palette.js';
+import { FORM_BEATS, FORM_WEAK, FORM_STRONG, WEAPON_TYPES, SKILL_WEAPON, FORM_K, RESIST_K } from '/v2/src/battle/matchup.js';
+import { CAT_NAME } from '/v2/src/data/mock.js';
+
+const esc = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const elTag = el => { const E = ELEMENT[el]; return E ? `<span class="el" style="background:${E.light || E.main}">${esc(E.name)}</span>` : '<span class="dim">—</span>'; };
+const STAGE = ['1단계', '2단계', '3단계'];
+const stName = id => (STATUS[id] ? STATUS[id].name : id);
+// 효과 줄: 거리 · 광역 · 상대에게 거는 것 · 나에게 거는 것 · 흡혈 · 접촉 · 내 속성
+function fx(sk) {
+  const out = [];
+  if (sk.act === 'attack') out.push(sk.area ? '광역' : sk.ranged ? '원거리' : '근접');
+  if (sk.contact) out.push('붙어서 때림');
+  if (sk.elOwn) out.push('내 속성으로');
+  if (sk.inflict) { const n = sk.inflict.n > 1 ? ` ${sk.inflict.n}겹` : '', p = sk.inflict.p ? ` ${Math.round(sk.inflict.p * 100)}%` : ''; out.push(`상대 ${stName(sk.inflict.id)}${n}${p}`); }
+  if (sk.self) out.push(`나 ${BUFF_LOOK[sk.self] || stName(sk.self)}`);
+  if (sk.also) out.push(`나 ${BUFF_LOOK[sk.also] || stName(sk.also)}`);
+  if (sk.drain) out.push(`피해의 ${Math.round(sk.drain * 100)}% 회복`);
+  return out.join(' · ');
+}
+const val = sk => { const st = statOf(sk); return st ? `${st.label} ${st.txt}` : '—'; };
+const cost = sk => (sk.uses ? `판마다 ${sk.uses}번` : `햇빛 ${sk.cost || 0}`);
+
+// 표 = 머리줄 + 줄(그룹 줄 = { grp }) → 장마다 ROWS 줄씩 나눔
+const ROWS = 40, sheets = [];
+function table(title, sub, head, rows) {
+  const parts = []; let cur = [], n = 0, grp = null;
+  for (const r of rows) {
+    if (r.grp) grp = r;
+    if (n >= ROWS && !r.grp) { parts.push(cur); cur = grp ? [{ grp: grp.grp + ' <span class="dim">(이어서)</span>' }] : []; n = cur.length; }   // 장이 바뀌면 묶음 이름을 다시
+    cur.push(r); n += 1;
+  }
+  if (cur.length) parts.push(cur);
+  parts.forEach((rs, i) => {
+    const t = parts.length > 1 ? `${title} (${i + 1}/${parts.length})` : title;
+    const body = rs.map(r => (r.grp ? `<tr class="grp"><td colspan="${head.length}">${r.grp}</td></tr>` : `<tr>${r.cells.map(c => `<td>${c}</td>`).join('')}</tr>`)).join('');
+    sheets.push(`<div class="sheet"><h1>${esc(t)}</h1>${sub ? `<div class="sub">${sub}</div>` : ''}<table><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr>${body}</table></div>`);
+  });
+}
+const S = Object.values(SKILLS);
+// ① 기본기
+table('기본기', '모든 식물이 늘 앎 · 스킬 칸에서 빼도 사라지지 않음', ['기술', '분류', '비용', '수치', '효과'],
+  BASICS.map(b => ({ cells: [`<span class="nm">${esc(b.name)}</span>`, esc(CAT_NAME[(b.cats || [])[0]] || ''), `햇빛 ${b.cost || 0}`, `<span class="num">${esc(val(b))}</span>`, `<span class="fx">${esc(b.id === 'sun' ? `그 턴 대신 햇빛 +${b.gain || 2}` : fx(b))}</span>`] })));
+// ② 개성 기술(식물마다 · 단계마다)
+{
+  const rows = [];
+  for (const [key, sp] of Object.entries(SPECIES)) {
+    const ids = [0, 1, 2].flatMap(st => uniquesOf(key, st).map(id => [st, id])).filter(([, id]) => SKILLS[id]);
+    if (!ids.length) continue;
+    rows.push({ grp: `${esc(sp.name)} ${elTag(sp.el)} <span class="dim">${esc(JONG[sp.type] || '')}${sp.form && FORMS[sp.form] ? ` · 태생 ${esc(FORMS[sp.form].name)} 변이` : ''}</span>` });
+    for (const [st, id] of ids) { const sk = SKILLS[id]; rows.push({ cells: [`<span class="dim">${STAGE[st]}</span>`, `<span class="nm">${esc(sk.name)}</span>`, elTag(sk.el), cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] }); }
+  }
+  table('개성 기술', '식물마다 그 단계에 피는 기술(진화 · 레벨업 고르기 후보)', ['단계', '기술', '속성', '비용', '수치', '효과'], rows);
+}
+// ③ 공통 기술(속성마다 하급 · 중급 · 상급)
+{
+  const rows = [], tiers = ['c1', 'c2', 'c3'];
+  for (const el of Object.keys(ELEMENT)) {
+    const list = S.filter(s => s.el === el && tiers.includes(s.tier) && !s.jong && !s.branch).sort((a, b) => tiers.indexOf(a.tier) - tiers.indexOf(b.tier));
+    if (!list.length) continue;
+    rows.push({ grp: `${elTag(el)} 속성` });
+    for (const sk of list) rows.push({ cells: [`<span class="dim">${TIER_NAME[sk.tier]}</span>`, `<span class="nm">${esc(sk.name)}</span>`, cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] });
+  }
+  table('공통 기술', '같은 속성 식물이 배움 · 하급 = 1단계부터 · 중급 = 2단계부터 · 상급 = 3단계', ['등급', '기술', '비용', '수치', '효과'], rows);
+}
+// ④ 종류 · 가지 · 특수
+{
+  const rows = [], BR = { desert: '사막 가지', shore: '물가 가지', meadow: '들판 가지', shade: '그늘 가지' };
+  const jong = S.filter(s => s.jong && s.tier !== 'u'), gs = S.filter(s => s.tier === 'g'), sp = S.filter(s => s.tier === 's');
+  if (jong.length) { rows.push({ grp: '종류 기술' }); for (const sk of jong) rows.push({ cells: [esc(JONG[sk.jong] || ''), `<span class="nm">${esc(sk.name)}</span>`, elTag(sk.el), cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] }); }
+  if (gs.length) { rows.push({ grp: '가지 기술(2단계부터 · 같은 가지)' }); for (const sk of gs) rows.push({ cells: [esc(BR[sk.branch] || sk.branch || ''), `<span class="nm">${esc(sk.name)}</span>`, elTag(sk.el), cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] }); }
+  if (sp.length) { rows.push({ grp: '특수 기술(누구나 접목)' }); for (const sk of sp) rows.push({ cells: ['', `<span class="nm">${esc(sk.name)}</span>`, elTag(sk.el), cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] }); }
+  table('종류 · 가지 · 특수 기술', '', ['누가', '기술', '속성', '비용', '수치', '효과'], rows);
+}
+// ⑤ 변이 기술 카드(변이마다 — 햇빛 대신 판마다 횟수)
+{
+  const rows = [];
+  for (const [f, F] of Object.entries(FORMS)) {
+    const list = S.filter(s => s.tier === 'm' && s.form === f); if (!list.length) continue;
+    rows.push({ grp: `<span style="color:${F.light}">${esc(F.name)} 변이</span>` });
+    for (const sk of list) { const w = SKILL_WEAPON[sk.id], W = w && WEAPON_TYPES[w]; rows.push({ cells: [`<span class="nm">${esc(sk.name)}</span>`, elTag(sk.el), W ? esc(W.name || w) : '<span class="dim">—</span>', cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] }); }
+  }
+  table('변이 기술 카드', '변이 식물이 스킬 칸 여섯 중 둘까지 · 햇빛 안 씀 · 판마다 정해진 횟수', ['기술', '속성', '무기', '횟수', '수치', '효과'], rows);
+}
+// ⑥ 패시브 카드(일반 · 변이)
+{
+  const rows = [], RAR = ['', '흔함', '드묾', '희귀'];
+  const pas = Object.values(CARDS).filter(c => c.kind === 'passive');
+  const groups = [[null, '일반 카드(일반 식물만)'], ...Object.entries(FORMS).map(([f, F]) => [f, `<span style="color:${F.light}">${esc(F.name)} 변이 패시브</span>`])];
+  for (const [f, title] of groups) {
+    const list = pas.filter(c => (c.form || null) === f); if (!list.length) continue;
+    rows.push({ grp: title });
+    for (const c of list) rows.push({ cells: [`<span class="nm">${esc(c.name)}</span>`, esc((c.desc || []).join(' · ')), `<span class="dim num">${RAR[c.rar] || ''}</span>`, `<span class="dim num">${c.w}</span>`] });
+  }
+  table('패시브 카드', '패시브 칸 둘 · 일반 식물 = 일반 카드 · 변이 식물 = 그 변이 패시브', ['카드', '효과', '<span class="num">등급</span>', '<span class="num">무게</span>'], rows);
+}
+// ⑦ 변이 상성
+{
+  const rows = [];
+  for (const [f, F] of Object.entries(FORMS)) {
+    const beats = FORM_BEATS[f], weak = FORM_WEAK[f] || [], strong = FORM_STRONG[f] || [];
+    rows.push({ cells: [`<span class="nm" style="color:${F.light}">${esc(F.name)}</span>`, beats ? `${esc(FORMS[beats].name)}에 셈 ×${FORM_K}` : '—', weak.map(elTag).join(' ') || '—', f === 'weapon' ? '무기 종류마다(아래)' : strong.map(elTag).join(' ') || '—'] });
+  }
+  rows.push({ grp: '무기 종류(무기 변이 기술)' });
+  for (const [w, W] of Object.entries(WEAPON_TYPES)) rows.push({ cells: [`<span class="nm">${esc(W.name || w)}</span>`, '', `<span class="dim">덜 듦 ×${RESIST_K}</span> ` + ((W.resist || []).map(elTag).join(' ') || '—'), `<span class="dim">셈 ×${FORM_K}</span> ` + ((W.strong || []).map(elTag).join(' ') || '—')] });
+  table('변이 상성', `피해 = 속성(×1.5) × 변이(셈 ×${FORM_K} · 안 듦 ×${RESIST_K}) · 변이끼리 다섯 바퀴`, ['변이', '변이끼리', '맞을 때 약한 속성', '칠 때 센 속성'], rows);
+}
+document.getElementById('root').innerHTML = sheets.join('');
+await document.fonts.ready;
+window.__ready = sheets.length;
+</script></body></html>
