@@ -396,6 +396,28 @@ function give(s, r) {
   for (const k of ['credits', 'gems']) if (r[k]) s.wallet[k] += r[k];
   for (const k of ['water', 'fert', 'regress', 'fuel', 'parts']) if (r[k]) s.items[k] = (s.items[k] || 0) + r[k];
 }
+// 쿠폰 보상(2026-10-17 사용자 "쿠폰코드 입력해서 상품 주는거 가능? 테스트용으로 나나 친구나 좀 줘보게"):
+//  보상 = { credits, gems, water, fert, regress, fuel, parts(수), seeds: ['common' | 'rare' …], cards: ['normal' | 'mut' | 카드 id …] }
+//  cleanCoupon = 관리 도구가 보낸 값을 아는 칸 · 한도 안으로만(모르는 칸은 버림) · couponGive = 넣고 '받은 것' 판 목록(explore 의 got 과 같은 꼴)
+const COUPON_N = { credits: 1e6, gems: 1e5, water: 1e4, fert: 1e4, regress: 1e3, fuel: 1e4, parts: 1e4 };
+const COUPON_RAR = { credits: 0, gems: 4, water: 1, fert: 1, regress: 4, fuel: 1, parts: 1 };
+export function cleanCoupon(raw = {}) {
+  const r = {};
+  for (const [k, cap] of Object.entries(COUPON_N)) { const n = Math.floor(+raw[k] || 0); if (n > 0) r[k] = Math.min(cap, n); }
+  const seeds = [].concat(raw.seeds || []).filter(x => x === 'common' || x === 'rare').slice(0, 10);
+  const cards = [].concat(raw.cards || []).filter(x => x === 'normal' || x === 'mut' || CARDS[x]).slice(0, 10);
+  if (seeds.length) r.seeds = seeds;
+  if (cards.length) r.cards = cards;
+  return r;
+}
+export function couponGive(s, raw, rng) {
+  const rw = cleanCoupon(raw), got = [], box = {};
+  for (const k of Object.keys(COUPON_N)) if (rw[k]) { box[k] = rw[k]; got.push({ kind: k, n: rw[k], rar: COUPON_RAR[k] }); }
+  give(s, box);
+  for (const r of rw.seeds || []) { const sd = seedOf(s, rollSpecies(rng, r), rng); s.seeds.push(sd); got.push({ kind: 'seed', seed: sd, rar: 3 }); }
+  for (const c of rw.cards || []) { const id = CARDS[c] ? c : rollCard(rng, c, formsOwned(s)); grant(s, { kind: 'card', card: id }); got.push({ kind: 'card', card: id, rar: CARDS[id].rar }); }
+  return got;
+}
 function grant(s, r) {
   if (r.kind === 'credits' || r.kind === 'gems') s.wallet[r.kind] += r.n;
   else if (r.kind === 'water' || r.kind === 'fert' || r.kind === 'regress' || r.kind === 'fuel' || r.kind === 'parts') s.items[r.kind] = (s.items[r.kind] || 0) + r.n;

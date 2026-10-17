@@ -40,6 +40,15 @@ export function makeGame({ q, log }) {
     return { state: s, res, ver: ver + 1 };
   }
 
+  // ── 쿠폰(api.mjs 가 번호 · 기간 · 쓴 수 · 받았는지를 확인한 뒤) ──
+  function coupon(uid, reward, code, now) {
+    const { s, ver } = load(uid), before = econ(s);
+    const got = L.couponGive(s, reward, newRng());
+    save(uid, s, now);
+    log(uid, 'coupon', { code, d: diff(before, econ(s)), n: got.length }, now);
+    return { state: s, got, ver: ver + 1 };
+  }
+
   // ── 봇 판 ──
   const teamPlants = s => (s.team && s.team.length === 3 ? s.team.map(i => s.plants[i]).filter(Boolean) : []);
   function finishBattle(uid, b, spec, acts, B, now) {
@@ -122,7 +131,7 @@ export function makeGame({ q, log }) {
     if (list.length !== 3) list = s.plants.slice(0, 3);
     return list.length === 3 ? { plants: list.map(clone), profile: { ...s.profile }, level: s.user.level } : null;
   }
-  return { create, state, act, battleStart, battleTurn, battleForfeit, pvpResult, plantOf, teamOf, load };
+  return { create, state, act, coupon, battleStart, battleTurn, battleForfeit, pvpResult, plantOf, teamOf, load };
 }
 
 // 고른 수 세기(1:1 = 기술 id, 3:3 = skill:id · switch · rest · send)

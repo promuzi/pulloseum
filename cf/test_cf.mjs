@@ -12,6 +12,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..'), CF = join(R
 const WRANGLER = process.env.WRANGLER_JS || 'C:/dev/homocarbo/node_modules/wrangler/bin/wrangler.js';
 const PORT = 8799, BASE = `http://127.0.0.1:${PORT}`;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const LOCAL_KEY = 'cf-local-test-key';   // 로컬 시험용 관리 열쇠(이 시험 안에서만 — 진짜 열쇠는 Cloudflare 비밀값)
 if (!existsSync(WRANGLER)) { console.error('wrangler 없음:', WRANGLER); process.exit(1); }
 
 const b = spawnSync(process.execPath, [join(CF, 'build.mjs')], { encoding: 'utf8' });
@@ -19,7 +20,7 @@ process.stdout.write(b.stdout); if (b.status) { process.stderr.write(b.stderr); 
 const persist = mkdtempSync(join(tmpdir(), 'pullo-cf-'));
 const env = { ...process.env, WRANGLER_SEND_METRICS: 'false', NO_COLOR: '1' };
 delete env.CLOUDFLARE_API_TOKEN;   // 이 기기 환경변수 토큰은 다른 프로젝트용 — 로컬 시험엔 필요 없음
-const child = spawn(process.execPath, [WRANGLER, 'dev', '--config', join(CF, 'wrangler.jsonc'), '--local', '--ip', '127.0.0.1', '--port', String(PORT), '--inspector-port', String(PORT + 1000), '--persist-to', persist, '--show-interactive-dev-session', 'false', '--log-level', 'warn'], { cwd: CF, env, windowsHide: true });
+const child = spawn(process.execPath, [WRANGLER, 'dev', '--config', join(CF, 'wrangler.jsonc'), '--local', '--ip', '127.0.0.1', '--port', String(PORT), '--inspector-port', String(PORT + 1000), '--persist-to', persist, '--show-interactive-dev-session', 'false', '--log-level', 'warn', '--var', 'ADMIN_KEY:' + LOCAL_KEY], { cwd: CF, env, windowsHide: true });
 let log = '';
 child.stdout.on('data', d => { log += d; }); child.stderr.on('data', d => { log += d; });
 let code = 1;
@@ -36,7 +37,15 @@ try {
   console.log(`정적 파일: /v2/ ${page.status} · / → ${root.status} ${root.headers.get('location') || ''}`);
   const t = spawnSync(process.execPath, [join(ROOT, 'tools', 'test', 'server.mjs'), '--base', BASE], { cwd: ROOT, encoding: 'utf8' });
   process.stdout.write(t.stdout); if (t.stderr) process.stdout.write(t.stderr);
-  code = t.status === 0 && page.status === 200 && root.status === 302 ? 0 : 1;
+  // 쿠폰(2026-10-17): Cloudflare 저장소(Durable Object SQLite)에서도 만들기 · 받기 · 두 번 막기
+  const J = async (path, body, h = {}) => { const r = await fetch(BASE + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', ...h }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, ...(await r.json().catch(() => ({}))) }; };
+  const mk = await J('/api/admin/coupon', { code: 'CFTEST1', reward: { credits: 77, seeds: ['common'] }, max: 1 }, { 'x-admin-key': LOCAL_KEY });
+  const rg = await J('/api/register', { login: 'cfcoupon', password: 'secret12', nickname: '쿠폰', starter: 'flower_grass' });
+  const auth = { authorization: 'Bearer ' + rg.token };
+  const r1 = await J('/api/coupon', { code: 'cftest1' }, auth), r2 = await J('/api/coupon', { code: 'CFTEST1' }, auth);
+  const cpOk = mk.ok && rg.token && r1.status === 200 && r1.got && r1.got.length === 2 && r1.state.wallet.credits === rg.state.wallet.credits + 77 && r2.status === 400;
+  console.log(cpOk ? '쿠폰(Cloudflare 저장소) 통과' : `쿠폰 실패: ${JSON.stringify({ mk, r1: r1.status, r2: r2.status, e: r1.error || r2.error })}`);
+  code = t.status === 0 && page.status === 200 && root.status === 302 && cpOk ? 0 : 1;
 } catch (e) { console.error(e.message); }
 finally {
   try { execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' }); } catch { child.kill(); }

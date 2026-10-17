@@ -3,7 +3,7 @@
 //  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드 · 기다리는 요청)
 import { hashPass, checkPass, newSession, userOfToken, endSession, allowTry, LOGIN_RE } from './auth.mjs';
 import { timingSafeEqual } from 'node:crypto';
-import { Err } from '../v2/src/game/logic.js';
+import { Err, cleanCoupon } from '../v2/src/game/logic.js';
 import { STARTERS } from '../v2/src/game/catalog.js';
 
 export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
@@ -48,6 +48,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
   }
   const tokenOf = req => { const h = req.header('authorization') || ''; return h.startsWith('Bearer ') ? h.slice(7).trim() : null; };
   const cleanNick = v => String(v || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 12);
+  const couponCode = v => { const c = String(v || '').toUpperCase().replace(/[\s-]/g, ''); return /^[A-Z0-9]{4,24}$/.test(c) ? c : ''; };   // 쿠폰 번호 = 영문 · 숫자 4~24자(띄어쓰기 · 붙임표 · 대소문자 무시)
   function authed(req, now) {
     const u = userOfToken(q, tokenOf(req), now);
     if (!u) throw new HttpErr(401, '다시 로그인해 주세요');
@@ -114,10 +115,26 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       if (u.provider === 'google') { if (String(b.confirm || '').trim() !== '지우기') throw new Err("확인 칸에 '지우기'라고 써 주세요"); }
       else { const row = q.userByLogin.get(u.login); if (!row || !checkPass(String(b.password || ''), row.pass)) throw new Err('비밀번호가 맞지 않아요'); }
       rooms.leave(u.id, now);
-      q.delUserSessions.run(u.id); q.delSave.run(u.id); q.delBattles.run(u.id); q.delEvents.run(u.id); q.delUser.run(u.id);
+      q.delUserSessions.run(u.id); q.delSave.run(u.id); q.delBattles.run(u.id); q.delEvents.run(u.id); q.delCouponUses.run(u.id); q.delUser.run(u.id);
       return { ok: true };
     },
     'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: pub(u), ...game.state(u.id, now) }; },
+    // 쿠폰 받기(2026-10-17 사용자 "쿠폰코드 입력해서 상품 주는거"): 계정마다 한 번 · 다 쓰인 · 기간 지난 쿠폰은 안 됨 · 틀린 번호를 마구 넣지 못하게 10분에 12번까지
+    'POST /api/coupon': (req, b, now) => {
+      const u = authed(req, now);
+      if (!allowTry('k' + u.id, now) || !allowTry('k' + req.ip, now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
+      const code = couponCode(b.code);
+      if (!code) throw new Err('쿠폰 번호를 확인해 주세요(영문 · 숫자 4~24자)');
+      const c = q.coupon.get(code);
+      if (!c) throw new Err('없는 쿠폰이에요');
+      if (c.expires && now > c.expires) throw new Err('기간이 끝난 쿠폰이에요');
+      if (q.couponUsed.get(code, u.id)) throw new Err('이미 받은 쿠폰이에요');
+      if (c.max_uses && c.used >= c.max_uses) throw new Err('다 쓰인 쿠폰이에요');
+      let rw = {}; try { rw = JSON.parse(c.reward); } catch {}
+      const out = game.coupon(u.id, rw, code, now);
+      q.useCoupon.run(code, u.id, now); q.bumpCoupon.run(code);
+      return { ...out, code };
+    },
     'POST /api/act': (req, b, now) => { const u = authed(req, now); return game.act(u.id, String(b.op || ''), b.args || {}, now); },
     'POST /api/battle/start': (req, b, now) => { const u = authed(req, now); return game.battleStart(u.id, now); },
     'POST /api/battle/turn': (req, b, now) => { const u = authed(req, now); return game.battleTurn(u.id, b.id, b.act, now, b.turn == null ? null : +b.turn); },
@@ -135,6 +152,22 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     'POST /api/room/emote': (req, b, now) => rooms.emote(authed(req, now).id, b.i, now),
     // 플레이 기록 보고서용 내보내기(server/report.mjs --url) — 관리 열쇠가 맞을 때만, 아니면 없는 주소처럼
     'GET /api/admin/export': (req) => { if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요'); return { users: q.exportUsers.all(), events: q.exportEvents.all(), saves: q.exportSaves.all() }; },
+    // 쿠폰 만들기 · 고치기 · 지우기 · 보기(관리 열쇠 — server/coupon.mjs). max = 쓸 수 있는 계정 수(0 = 끝없이) · days = 며칠 동안(0 = 끝없이)
+    'POST /api/admin/coupon': (req, b, now) => {
+      if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요');
+      const code = couponCode(b.code);
+      if (!code) throw new Err('쿠폰 번호는 영문 · 숫자 4~24자예요');
+      if (b.delete) { q.delCoupon.run(code); return { ok: true, deleted: code }; }
+      const reward = cleanCoupon(b.reward || {});
+      if (!Object.keys(reward).length) throw new Err('보상이 비었어요');
+      const max = Math.max(0, Math.floor(+b.max || 0)), expires = +b.days > 0 ? now + Math.round(+b.days * 864e5) : 0;
+      q.putCoupon.run(code, JSON.stringify(reward), max, expires, String(b.note || '').slice(0, 60), now);
+      return { ok: true, coupon: { code, reward, max, expires } };
+    },
+    'GET /api/admin/coupons': (req) => {
+      if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요');
+      return { coupons: q.coupons.all().map(c => { let reward = {}; try { reward = JSON.parse(c.reward); } catch {} return { ...c, reward }; }) };
+    },
   };
 
   async function handle(req) {

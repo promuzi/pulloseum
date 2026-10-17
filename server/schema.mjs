@@ -1,12 +1,16 @@
 // 저장소 표·문장 — Node 내장 SQLite(server/db.mjs)와 Cloudflare Durable Object SQLite(cf/src/dodb.js)가 같이 씀. 문장 이름 = q.이름(get · all · run)
 //  users(계정) · sessions(로그인 열쇠 해시) · saves(게임 상태 JSON, 할 때마다 저장 = 자동 저장) · battles(봇 판: 씨앗·상대·둔 수) · events(플레이 기록 — 밸런스·패턴 분석용)
+//  coupons(쿠폰 번호 · 보상 JSON · 쓸 수 있는 수(0 = 끝없이) · 쓴 수 · 끝나는 때(0 = 없음)) · coupon_uses(누가 어떤 쿠폰을 받았나 — 계정마다 한 번)
 export const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, login TEXT UNIQUE NOT NULL, pass TEXT NOT NULL, nickname TEXT NOT NULL, created INTEGER NOT NULL, provider TEXT NOT NULL DEFAULT 'local', last_seen INTEGER NOT NULL DEFAULT 0)",
   'CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS saves (user_id INTEGER PRIMARY KEY, state TEXT NOT NULL, version INTEGER NOT NULL, updated INTEGER NOT NULL)',
   "CREATE TABLE IF NOT EXISTS battles (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, mode TEXT NOT NULL, spec TEXT NOT NULL, acts TEXT NOT NULL DEFAULT '[]', created INTEGER NOT NULL, updated INTEGER NOT NULL, done INTEGER NOT NULL DEFAULT 0)",
   'CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, t INTEGER NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL)',
+  "CREATE TABLE IF NOT EXISTS coupons (code TEXT PRIMARY KEY, reward TEXT NOT NULL, max_uses INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', created INTEGER NOT NULL)",
+  'CREATE TABLE IF NOT EXISTS coupon_uses (code TEXT NOT NULL, user_id INTEGER NOT NULL, t INTEGER NOT NULL, PRIMARY KEY (code, user_id))',
   'CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id)',
+  'CREATE INDEX IF NOT EXISTS coupon_uses_user ON coupon_uses(user_id)',
   'CREATE INDEX IF NOT EXISTS battles_open ON battles(user_id, done)',
   'CREATE INDEX IF NOT EXISTS events_kind ON events(kind, t)',
   'CREATE INDEX IF NOT EXISTS events_user ON events(user_id, t)',
@@ -23,6 +27,7 @@ export const STMTS = {
   delSave: 'DELETE FROM saves WHERE user_id = ?',
   delBattles: 'DELETE FROM battles WHERE user_id = ?',
   delEvents: 'DELETE FROM events WHERE user_id = ?',
+  delCouponUses: 'DELETE FROM coupon_uses WHERE user_id = ?',
   delUser: 'DELETE FROM users WHERE id = ?',
   addSession: 'INSERT INTO sessions (token, user_id, expires) VALUES (?, ?, ?)',
   session: 'SELECT * FROM sessions WHERE token = ?',
@@ -37,6 +42,14 @@ export const STMTS = {
   doneBattle: 'UPDATE battles SET done = ?, updated = ? WHERE id = ?',
   purgeBattles: 'DELETE FROM battles WHERE done != 0 AND updated < ?',
   addEvent: 'INSERT INTO events (user_id, t, kind, data) VALUES (?, ?, ?, ?)',
+  // 쿠폰(2026-10-17): 만들기 · 고치기 = 관리 열쇠(api.mjs POST /api/admin/coupon — server/coupon.mjs), 받기 = 로그인한 계정마다 한 번
+  coupon: 'SELECT * FROM coupons WHERE code = ?',
+  putCoupon: 'INSERT INTO coupons (code, reward, max_uses, expires, note, created) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(code) DO UPDATE SET reward = excluded.reward, max_uses = excluded.max_uses, expires = excluded.expires, note = excluded.note',
+  coupons: 'SELECT code, reward, max_uses, used, expires, note, created FROM coupons ORDER BY created DESC',
+  delCoupon: 'DELETE FROM coupons WHERE code = ?',
+  couponUsed: 'SELECT t FROM coupon_uses WHERE code = ? AND user_id = ?',
+  useCoupon: 'INSERT INTO coupon_uses (code, user_id, t) VALUES (?, ?, ?)',
+  bumpCoupon: 'UPDATE coupons SET used = used + 1 WHERE code = ?',
   // 보고서용 내보내기(관리 열쇠가 있을 때만 — api.mjs GET /api/admin/export): 계정은 번호 · 만든 때 · 마지막 접속만(아이디 · 비밀번호 · IP 없음)
   exportUsers: 'SELECT id, created, last_seen FROM users',
   exportEvents: 'SELECT user_id, t, kind, data FROM events',

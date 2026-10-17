@@ -183,7 +183,7 @@ export function cutAsk(app, p, after) {
 
 // ── ④ 설정 ──
 function settingsSheet(app) {
-  const { g, W, H, input } = app, x = 14, w = W - 28, h = 290, y = 70, PT = T.ptext, u = app.user;
+  const { g, W, H, input } = app, u = app.user, online = !net.offline && !!u, x = 14, w = W - 28, h = online ? 330 : 290, y = 70, PT = T.ptext;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('st_block', 0, 0, W, H, () => { app.sheet = null; });
   input.hit('st_in', x, y, w, h, () => {});
@@ -199,6 +199,7 @@ function settingsSheet(app) {
     const url = location.origin + '/v2/';
     try { navigator.clipboard.writeText(url).then(() => app.toast('주소를 복사했어요'), () => app.toast(url)); } catch { app.toast(url); }
   } }); yy += 40;
+  if (online) { button(app, 'st_coupon', x + 14, yy, w - 28, 30, '쿠폰 입력', { style: 'night', icon: 'box', onTap: () => { app.sheet = null; couponForm(app); } }); yy += 40; }
   const half = Math.floor((w - 28 - 8) / 2);
   button(app, 'st_sfx', x + 14, yy, half, 30, SOUND.sfx ? '효과음 켬' : '효과음 끔', { style: SOUND.sfx ? 'night' : 'off', icon: 'sparkle', iconTint: true, onTap: () => setSfxOn(!SOUND.sfx) });
   button(app, 'st_music', x + 14 + half + 8, yy, half, 30, SOUND.music ? '음악 켬' : '음악 끔', { style: SOUND.music ? 'night' : 'off', icon: 'heart', iconTint: true, onTap: () => setMusicOn(!SOUND.music) }); yy += 40;
@@ -211,6 +212,22 @@ function settingsSheet(app) {
     if (/PulloseumApp/.test(navigator.userAgent)) location.href = url; else window.open(url, '_blank', 'noopener');
   } });
   button(app, 'st_close', x + 14, y + h - 42, w - 28, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { app.sheet = null; } });
+}
+
+// 쿠폰(2026-10-17 사용자 "쿠폰코드 입력해서 상품 주는거"): 서버가 번호를 확인해 보상을 넣고 → 받은 것 판(계정마다 한 번)
+function couponForm(app) {
+  openForm(app, {
+    title: '쿠폰 입력', note: '받은 쿠폰 번호를 써 주세요',
+    fields: [{ id: 'code', label: '쿠폰 번호', max: 32 }],
+    ok: '받기',
+    onSubmit: async v => {
+      let r;
+      try { r = await net.req('/api/coupon', { code: v.code }); } catch (e) { return e.message; }
+      if (r.state) app.state = r.state;
+      showGot(app, '쿠폰 보상', r.got, r.code);
+      return null;
+    },
+  });
 }
 
 // 계정 지우기(구글 플레이 정책 — 앱 안에서 지울 수 있어야 함): 아이디 계정 = 비밀번호 · 구글 계정 = 확인 글자 '지우기' → 서버가 계정 · 저장 · 기록 전부 지움
