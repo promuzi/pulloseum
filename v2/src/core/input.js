@@ -1,6 +1,18 @@
 // 터치: 매 프레임 화면이 "누를 수 있는 영역"을 등록하고, 손을 뗀 위치의 맨 위 영역을 실행한다.
 // 끌기: 4칸 넘게 움직이면 누르기 대신 끌기(drag: 이번 움직임 dx·dy + 시작점) → 손을 떼면 release(전체 dx·dy + 마지막 속도 vx·vy 칸/초)
 import { unlock, tapSound } from './sound.js';
+// 휴대폰 브라우저 전체 화면(2026-10-17 사용자 "모바일 위의 바와 아래의 홈 버튼이 남아 있어 — 전체 화면이 안 되는 느낌"): 처음 누를 때 한 번만 요청
+//  (브라우저는 사람이 누른 순간에만 허락). 앱(웹뷰)은 MainActivity가 바를 숨기므로 건너뜀 · 손가락 화면(터치)만
+let fullTried = false;
+function goFull() {
+  if (fullTried) return; fullTried = true;
+  try {
+    const inApp = /PulloseumApp/.test(navigator.userAgent) || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (inApp || !matchMedia('(pointer: coarse)').matches || document.fullscreenElement) return;
+    const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
+    const r = rq && rq.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {});
+  } catch {}
+}
 // 꾹: 움직이지 않고 누르고 있는 시간 = holdMs(). 장면이 claimHold()로 가져가면 손을 떼도 누르기(tap)가 안 나감(전투 기술 카드 뒷면 보기)
 export class Input {
   constructor(screen) {
@@ -13,6 +25,7 @@ export class Input {
     const now = () => performance.now();
     el.addEventListener('pointerdown', e => {
       unlock();   // 브라우저는 사람이 한 번 눌러야 소리를 냄
+      goFull();   // 휴대폰 브라우저: 처음 누를 때 전체 화면(위 주소창 · 아래 버튼 숨김 — 앱은 MainActivity가 따로)
       const p = screen.toLogical(e.clientX, e.clientY); const r = this.hitAt(p.x, p.y);
       this.down = { ...p, id: r && r.id, x0: p.x, y0: p.y, moved: false, held: false, t0: now(), hist: [{ t: now(), x: p.x, y: p.y }] }; this.pressedId = r && r.id;
       try { el.setPointerCapture(e.pointerId); } catch {}

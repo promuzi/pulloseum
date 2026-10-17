@@ -1,6 +1,6 @@
 import { button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { drawPortrait, ROSTER } from '../art/sprites.js';
+import { drawPortrait, ROSTER, bigKey } from '../art/sprites.js';
 import { T } from '../art/theme.js';
 import { ELEMENT } from '../art/palette.js';
 import { drawShutterClosed, GUN } from '../core/router.js';
@@ -30,7 +30,7 @@ export const matching = {
     if (ready && this.foundT == null) this.foundT = t;
     const found = this.foundT != null, half = drawShutterClosed(g, W, H);
     const v = this.res && this.res.view, F = v ? (v.mode === 'swap3' ? v.team.foe[0] : v.foe) : null;
-    const FOE = F ? { key: F.key, name: v.mode === 'swap3' ? F.name + ' 외 둘' : F.name, trainer: F.trainer || '상대', rank: F.rank || '', el: F.el } : { key: 'vine_water', name: '', trainer: '', rank: '', el: 'water' };
+    const FOE = F ? { key: F.key, stage: F.stage, name: v.mode === 'swap3' ? F.name + ' 외 둘' : F.name, trainer: F.trainer || '상대', rank: F.rank || '', el: F.el } : { key: 'vine_water', name: '', trainer: '', rank: '', el: 'water' };
     // 셔터 양옆 등(이음매 위아래): 찾는 중 = 주황 깜빡임, 찾음 = 초록 켜짐
     const on = found || Math.floor(a / 300) % 2 === 0, lamp = found ? ['#7cf0a0', '#d8ffe4'] : ['#f0a050', '#ffe0b0'];
     for (const x of [14, W - 22]) for (const y of [half - 26, half + 18]) { g.rect(x, y, 8, 8, GUN.edge); g.rect(x + 1, y + 1, 6, 6, on ? lamp[0] : '#3a2a18'); if (on) g.rect(x + 2, y + 2, 2, 2, lamp[1]); }
@@ -44,7 +44,7 @@ export const matching = {
     const P = { main: '#e0f0ff', sub: '#8cc4ee', dim: '#3f7f9a', gold: '#ffd890', good: '#9ff0b0' };
     // 얼굴 슬롯: 찾는 동안 여러 종족이 넘어가다 끝에 갈수록 느려짐 → 찾으면 상대 얼굴
     const fx = x + w / 2 - 22, fy = y + 46
-    let key = FOE.key;
+    let key = bigKey(FOE.key, FOE.stage);   // 상대 식물 단계 그림(2026-10-17)
     if (!found) { let tt = 0, i = 0; const aa = Math.min(a, SEARCH - 1); while (tt < aa && i < 400) { tt += 60 + 340 * (tt / SEARCH) ** 3; i++; } key = ROSTER[(i * 5 + 3 + (a >= SEARCH ? Math.floor(a / 300) : 0)) % ROSTER.length]; }
     g.rect(fx - 2, fy - 2, 48, 48, found ? '#9ff0b0' : '#4a8edc'); g.rect(fx - 1, fy - 1, 46, 46, '#0a1c32');
     g.clip(fx, fy, 44, 44, () => drawPortrait(g, key, fx + 2, fy + 2, 40, true));

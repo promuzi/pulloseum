@@ -1,7 +1,9 @@
 import { arena1 } from '../art/bg.js';
 import { arenaLife } from '../art/arenaLife.js';
 import { icon, tinted } from '../art/icons.js';
-import { drawBig, drawBigPose, drawPortrait, BGIMG } from '../art/sprites.js';
+import { drawBig, drawBigPose, drawPortrait, BGIMG, bigKey } from '../art/sprites.js';
+// 그림 키 = 그 식물 단계 그림(어린 · 자람 · 다 자람) — 2026-10-17 전엔 종 키로만 그려 늘 다 자란 모습이었음
+const artOf = u => (u ? bigKey(u.key, u.stage) : u);
 import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo, UI, UI_ACCENT } from '../art/theme.js';
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
@@ -194,7 +196,7 @@ export const battle = {
     const p = this.p, s = app.state;
     const seed = p.seed ? +p.seed : p.phase ? 20261015 : (Date.now() & 0x7fffffff);
     this.mode = p.mode === 'swap3' ? 'swap3' : '1v1'; this.seed = seed;
-    const mk = (id, k, extra = {}) => { const sp = SPECIES[k]; return makeUnit(id, sp, { key: k, name: sp.name, ...protoStats(sp), ...extra }); };
+    const mk = (id, k, extra = {}) => { const sp = SPECIES[k]; return makeUnit(id, sp, { key: k, name: sp.name, stage: p.stage || 'mature', ...protoStats(sp), ...extra }); };   // ?stage=sprout|growing = 검토용 단계 그림
     if (this.mode === 'swap3') {
       const keys = s && s.plants && s.plants.length >= 3 ? s.plants.slice(0, 3).map(x => x.key) : ['flower_grass', 'cactus_fire', 'vine_water'];
       this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 })), seed });
@@ -592,23 +594,23 @@ export const battle = {
       const view = who === 'foe' ? 'far' : null;
       if (st && st.kind === 'switch' && st.who === who) {
         const k = (t - v.t0) / st.ms;
-        if (k < 0.45) { if (st.fromU) { const q = k / 0.45; g.alpha(1 - q, () => drawBig(g, st.fromU.key, st.fromU.pot, x, y + Math.round(q * 8), { t, flip, view })); } return; }
+        if (k < 0.45) { if (st.fromU) { const q = k / 0.45; g.alpha(1 - q, () => drawBig(g, artOf(st.fromU), st.fromU.pot, x, y + Math.round(q * 8), { t, flip, view })); } return; }
         const q = Math.min(1, (k - 0.45) / 0.4), top = y - 112, rv = Math.round(top + (1 - q) * 116);
-        g.clip(0, rv, W, 140, () => drawBig(g, st.toU.key, st.toU.pot, x, y, { t, flip, view }));
+        g.clip(0, rv, W, 140, () => drawBig(g, artOf(st.toU), st.toU.pot, x, y, { t, flip, view }));
         if (q < 1) { g.rect(x - 26, rv, 52, 1, '#8ccfff'); g.rect(x - 18, rv - 1, 36, 1, '#e6f3ff'); }
         return;
       }
       const u = v.view[who];
       if (v.gone[who]) return;
-      if (st && st.kind === 'faint' && st.who === who) { const k = Math.min(1, (t - v.t0) / 700); g.alpha(1 - k, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      if (st && st.kind === 'faint' && st.who === who) { const k = Math.min(1, (t - v.t0) / 700); g.alpha(1 - k, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
       let pose = null, flash = false, dx = 0, dy = 0;
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
-      if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, u.key, u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
       const sw = v.sfx.length || (v.eff[who] || []).some(s => s.id === 'gale') ? swayOf(v.sfx, { [who]: (v.eff[who] || []).map(s => s.id) }, who, t) : 0;
       if (sw) pose = { ...(pose || {}), qx: ((pose && pose.qx) || 0) - sw };
-      drawBigPose(g, u.key, u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
-      if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: u.key, pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
+      drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
+      if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
     //  그림은 270×348 — 화면이 넓거나 길면 가운데로 · 아래(기술 판)에 붙이고, 남는 둘레는 그림 가장자리 색으로
@@ -806,7 +808,7 @@ export const battle = {
       const sx = cx + i * 25, sy = cy - 13, on = u === v.view.me, hp = hpOf('me', u), dead = hp <= 0, r = Math.max(0, hp / u.max);
       rrect(g, sx, sy, 22, 22, 3, on && !dead ? acc : '#08111e');
       rrect(g, sx + 1, sy + 1, 20, 20, 2, dead ? '#121a26' : '#1a2c46');
-      g.alpha(dead ? 0.3 : 1, () => g.clip(sx + 1, sy + 1, 20, 20, () => drawPortrait(g, u.key, sx + 1, sy + 1, 20, false, 40)));   // 얼굴 전체(40칸 → 20칸)
+      g.alpha(dead ? 0.3 : 1, () => g.clip(sx + 1, sy + 1, 20, 20, () => drawPortrait(g, artOf(u), sx + 1, sy + 1, 20, false, 40)));   // 얼굴 전체(40칸 → 20칸)
       if (dead) for (let k = 0; k < 9; k++) { g.rect(sx + 6 + k, sy + 6 + k, 2, 1, '#ff6a5a'); g.rect(sx + 14 - k, sy + 6 + k, 2, 1, '#ff6a5a'); }
       g.rect(sx + 1, sy + 23, 20, 2, '#08111e');
       if (!dead) g.rect(sx + 1, sy + 23, Math.max(1, Math.round(20 * r)), 2, hpCol(r));
@@ -856,7 +858,7 @@ export const battle = {
       const ry = y + 34 + i * 50, on = i === B.act.me, dead = u.hp <= 0, can = !on && !dead && this.v.phase !== 'wait', id = 'sw_' + i, down = can && input.isPressed(id);
       const S = can ? T.btn.second : T.btn.off, { yy } = btnBody(g, x + 8, ry, w - 16, 44, S, down);
       plate(g, x + 13, yy + 4, 34, 34, 'deep');
-      g.clip(x + 15, yy + 6, 30, 30, () => drawPortrait(g, u.key, x + 14, yy + 5, 32, false));
+      g.clip(x + 15, yy + 6, 30, 30, () => drawPortrait(g, artOf(u), x + 14, yy + 5, 32, false));
       g.text(u.name, x + 54, yy + 5, { font: 'bold', color: S.text });
       g.img(icon(u.el), x + 54 + g.textW(u.name, 'bold') + 5, yy + 6);
       tbar(g, x + 54, yy + 24, 110, 6, u.hp / u.max, 'hp');
