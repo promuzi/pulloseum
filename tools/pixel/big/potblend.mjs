@@ -22,10 +22,10 @@ export function plantInPot(plant, pot, bg = null, opt = {}) {
 
 // 화분 종류와 상관없이 끼울 수 있게 두 층으로 나눈다(게임이 화분 뒤 → under → 화분 앞 → over 순으로 그림):
 //  under = 식물 + 흙 덮기(밑동을 덮은 흙 무늬·닿은 그림자 — 흙은 다섯 화분 모두 같은 재질), over = 화분 앞판보다 앞에 나온 덩어리
-export function plantLayers(plant, pot, { cover = true, front = true } = {}) {
+export function plantLayers(plant, pot, { cover = true, front = true, sink = 0 } = {}) {
   const under = new Img(W, H), over = new Img(W, H), tmp = new Img(W, H);
   tmp.blit(pot.back, 0, 0); tmp.blit(plant, 0, 0);
-  if (cover) soilCover(tmp, plant, pot);
+  const hide = cover ? soilCover(tmp, plant, pot, { sink }) : null;
   for (let i = 0; i < W * H; i++) {
     const k = i * 4, b = pot.back.data;
     if (plant.data[k + 3] >= 128 || tmp.data[k] !== b[k] || tmp.data[k + 1] !== b[k + 1] || tmp.data[k + 2] !== b[k + 2] || tmp.data[k + 3] !== b[k + 3]) { under.data.set(tmp.data.subarray(k, k + 4), k); under.data[k + 3] = 255; }
@@ -35,7 +35,7 @@ export function plantLayers(plant, pot, { cover = true, front = true } = {}) {
     // — 테 띠 안에만 걸친 것(흙 위 연잎 가장자리)은 화분 속이라 테 뒤에 둔다(아쿠아벌브 2026-10-15)
     const y0 = Math.floor(RG.cy - RG.rin * RG.k * 0.2), q = new Uint8Array(W * H), seen = new Uint8Array(W * H);
     const beyond = (x, y) => ((x + 0.5 - RG.cx) / (RG.rout + 1.5)) ** 2 + ((y + 0.5 - RG.cy) / ((RG.rout + 1.5) * RG.k)) ** 2 > 1;
-    for (let y = y0; y < H; y++) for (let x = 0; x < W; x++) if (plant.data[(y * W + x) * 4 + 3] >= 128 && outsideRim(x, y)) q[y * W + x] = 1;
+    for (let y = y0; y < H; y++) for (let x = 0; x < W; x++) if (plant.data[(y * W + x) * 4 + 3] >= 128 && outsideRim(x, y) && !(hide && hide[y * W + x])) q[y * W + x] = 1;
     for (let i = 0; i < W * H; i++) {
       if (!q[i] || seen[i]) continue;
       const st = [i], comp = [];
@@ -53,23 +53,44 @@ export function plantLayers(plant, pot, { cover = true, front = true } = {}) {
   return { under, over };
 }
 
-export function soilCover(out, plant, pot) {
+// 흙 덮기 2(2026-10-17 사용자 "식물과 흙의 경계가 너무 일자가 되지 않게 자연스럽게" · "화단에 박힌 불꽃 선인장이 좀 뒤쪽"):
+//  줄기(밑동) 덩어리 = 흙 가운데 줄 위로 6칸 넘게 이어진 열들 중 화분 가운데에 가장 가까운 것. 그 기둥들은 흙 선이 가로 한 줄이 아니라
+//  밑동이 흙에 닿는 둘레의 앞쪽 호(가운데가 가장 낮고 양옆이 높게 — 반폭 × 흙 타원 납작함)를 따라가고, 칸마다 0~1칸 울퉁불퉁 + 가끔 흙덩이가
+//  밑동 위로 한 칸 묻음. 덮는 두께 = 3줄 + sink(convert SINK — 흙에 앉힌 만큼은 흙 속). 밑동 밖(흙 위에 놓인 잎 · 돌주먹)은 전처럼 3줄만.
+//  덮인 칸(흙 속)은 돌려줘서 앞판보다 앞에 그리는 덩어리에서 뺌(앉힌 몸통 아래가 화분 앞에 튀어나오지 않게)
+export function soilCover(out, plant, pot, { sink = 0 } = {}) {
   const on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && plant.data[(y * W + x) * 4 + 3] >= 128;
-  const row = Math.floor(P.cy), c = Math.round(P.cx);
+  const row = Math.floor(P.cy), c = Math.round(P.cx), hide = new Uint8Array(W * H);
   let found = -1;
   for (let d = 0; d < P.a && found < 0; d++) { if (on(c - d, row)) found = c - d; else if (on(c + d, row)) found = c + d; }
-  if (found < 0) return;
+  if (found < 0) return hide;
   let l = found, r = found;
   while (on(l - 1, row)) l--;
   while (on(r + 1, row)) r++;
+  // 줄기 덩어리(tl..tr)
+  const run = x => { let n = 0; for (let y = row - 1; y >= 0 && on(x, y); y--) n++; return n; };
+  let tl = -1, tr = -1, best = 1e9;
   for (let x = l; x <= r; x++) {
-    const jag = (x * 7 + 3) % 5 === 0 ? 0 : 1;
-    for (let y = row + jag; y <= row + jag + 2 && y < H; y++) {
-      if (!inSoil(x, y) || !on(x, y)) continue;
-      const k = (y * W + x) * 4;
-      out.data.set(pot.back.data.subarray(k, k + 4), k);
-    }
-    if (on(x, row + jag - 1)) shade(out, x, row + jag - 1, 0.82);
+    if (run(x) < 6) continue;
+    let e = x; while (e + 1 <= r && run(e + 1) >= 6) e++;
+    const d = Math.abs((x + e + 1) / 2 - P.cx);
+    if (d < best) { best = d; tl = x; tr = e; }
+    x = e;
+  }
+  const hsh = x => ((x + 11) * 2654435761 >>> 0) % 7;   // 칸마다 정해진 들쭉날쭉(장마다 같게)
+  const kk = P.b / P.a, tc = (tl + tr + 1) / 2, tr2 = Math.max(1, (tr - tl + 1) / 2), deep = 3 + Math.max(0, Math.round(sink));
+  const coverAt = (x, y, deepOk) => { if (!on(x, y) || (!deepOk && outsideRim(x, y))) return; const k = (y * W + x) * 4; out.data.set(pot.back.data.subarray(k, k + 4), k); hide[y * W + x] = 1; };   // deepOk = 줄기 기둥(흙 속은 테 밖이라도 화분 속 — 앞에 안 그림)
+  for (let x = l; x <= r; x++) {
+    const h = hsh(x), trunk = tl >= 0 && x >= tl && x <= tr;
+    let top, depth;
+    if (trunk) {
+      const dx = (x + 0.5 - tc) / tr2, arc = Math.round(kk * tr2 * Math.sqrt(Math.max(0, 1 - dx * dx)) * (sink ? 1 : 0.35));
+      top = row + arc + (h === 0 ? -1 : h < 3 ? 1 : 0); depth = deep + 1;
+    } else { top = row + (h < 4 ? 1 : 0); depth = 3; }
+    for (let y = top; y < top + depth && y < H; y++) if (trunk || inSoil(x, y)) coverAt(x, y, trunk);
+    if (on(x, top - 1) && !hide[(top - 1) * W + x]) shade(out, x, top - 1, 0.82);
+    if (trunk && h === 5 && on(x, top - 1) && inSoil(x, top - 1)) coverAt(x, top - 1);   // 흙덩이가 밑동에 묻음
   }
   for (const [x, f] of [[l - 1, 0.68], [l - 2, 0.84], [r + 1, 0.68], [r + 2, 0.84]]) for (let y = row - 1; y <= row + 1; y++) if (inSoil(x, y) && !on(x, y)) shade(out, x, y, f);
+  return hide;
 }

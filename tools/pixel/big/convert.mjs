@@ -34,11 +34,16 @@ const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
 //  표에 없는 그림은 변환 때 줄기를 재서 1.5칸 넘게 비끼면 경고한다(아래 convert)
+// 흙에 앉히기(판 칸, + = 아래 · 앞으로) — 밑동이 넓은 몸(아래 SINK 설명 · 2026-10-17)
+const SINK = {flower_grass_young: 1, flower_grass_teen: 1, flower_grass: 1, thorn_young: 2, thorn_teen: 1, thorn: 1, aqua_young: 1, aqua_teen: 1, spark: 1, vine_water_young: 1, vine_water_teen: 1, cactus_fire_young: 2, cactus_fire_teen: 3, cactus_fire: 4, gaia_young: 2, gaia_teen: 2, gaia: 4, flower_fire_young: 1, flower_fire_teen: 1, flower_fire: 2, cactus_wind_young: 2, cactus_wind_teen: 3, cactus_wind: 5, vine_wind_teen: 1, spore_cap_young: 4, spore_cap_teen: 4, spore_cap: 5, frost_bell_young: 1, frost_bell_teen: 1, frost_bell: 1, volt_vine_young: 1, volt_vine_teen: 2, volt_vine: 2, stone_cap_young: 4, stone_cap_teen: 5, stone_cap: 3, jelly_cap_young: 3, jelly_cap_teen: 4, jelly_cap: 4, fang_trap_young: 2, fang_trap_teen: 2, fang_trap: 1, blade_vine_young: 2, blade_vine_teen: 3, blade_vine: 2, toxi_cactus_young: 4, toxi_cactus_teen: 3, toxi_cactus: 3, draco_fruit_young: 3, draco_fruit_teen: 3, draco_fruit: 3, ember_cap_young: 2, ember_cap_teen: 2, ember_cap: 2, drake_cactus_young: 3, drake_cactus_teen: 3, drake_cactus: 3, gat_cap_young: 1, gat_cap_teen: 1, gat_cap: 1, mask_vine_young: 1, mask_vine_teen: 2, mask_vine: 3, drum_cactus_young: 2, drum_cactus_teen: 2, drum_cactus: 3, lantern_vine_young: 1, lantern_vine_teen: 1, lantern_vine: 2, jar_cactus_young: 3, jar_cactus_teen: 3, jar_cactus: 3, goblin_cap_young: 2, goblin_cap_teen: 3, goblin_cap: 3, crown_cap_young: 1, crown_cap_teen: 3, crown_cap: 3, frost_drake: 4 };   // 드레이크 · 프로스트드레이크는 말린 꼬리가 테에 걸쳐 덜 앉힘 · sinkcalib.mjs 로 잰 값(밑동 반폭 × 흙 타원 납작함 × 0.75, 최대 5)
+// 손으로 더 돌리기(도, + = 시계 반대 방향) — 2026-10-17 사용자 "바위 선인장 반시계 방향으로 각도를 조금만"
+const ROT = { gaia: 4 };
 const STEM = {
   flower_grass_young: 1, flower_grass: -3, thorn_teen: -1, thorn: -3, aqua: -1, flower_wind_young: -1, flower_wind_teen: -1,
   spark_young: 1, spark: -1, vine_water_young: -3, vine_water: -5, cactus_fire: -2, flower_fire_young: -1, cactus_wind_teen: -2, cactus_wind: -5,
   vine_wind_teen: -1, vine_wind: -4,
   blade_vine: 2,   // 2026-10-17 변환 경고 −2.0칸
+  stone_cap: -2,   // 2026-10-17 사용자 "돌로 된 버섯은 좀 더 좌측으로"
   gaia: 0,   // 가운데 몸통(+3칸)이 두 돌주먹에 가려 애매 — 주먹 사이 가운데·무게중심이 이미 가운데라 그대로
 };   // 쏜위드: 자람이 덩굴손만 넓게 뻗고 몸통은 어린 단계만 해 작아 보임(사용자 "중간 생장체가 초기보다 작은 느낌") → 어린 줄이고 자람 키움, 성체가 납작한 덤불이라 자람 키 상한을 성체 + 4칸까지   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
 // 눈 자리(eyes.mjs): 컨셉·누끼는 종 키로, 생장 단계 그림(concept/stages/<키>_<단계>.png)은 그 파일 이름 키로 따로 잰다 — 단계마다 얼굴 자리가 달라서
@@ -363,10 +368,15 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
   }
   const s = scale || fit * Math.min((P.cy - TOP) / (S.cy - top), HALFW / Math.max(S.cx - left, right - S.cx), S.b ? P.a * 1.15 / S.a : 9);
   if (S.ref === 'base') S.cy -= 3 / s;   // 화분 없는 그림: 밑동 끝이 흙 가운데보다 3칸 아래(흙 속)에 오게(흙 기준 그림은 흙 가운데가 곧 기준)
+  const okey = file ? file.replace(/\\/g, '/').split('/').pop().replace(/\.png$/, '') : key, sh = STEM[okey] || 0;
+  if (ROT[okey]) S.rot = (S.rot || 0) - ROT[okey] * Math.PI / 180;   // 손으로 더 돌리기(ROT — + = 시계 반대 방향, 흙 가운데 축)
   const rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
   // 줄기 가운데 맞추기(STEM): 기준점을 몸 축 돌림까지 되돌려 옮겨 판 위에서 정확히 sh칸 가로로만 밀리게(모든 장·눈·깜빡임이 같은 S를 씀)
-  const okey = file ? file.replace(/\\/g, '/').split('/').pop().replace(/\.png$/, '') : key, sh = STEM[okey] || 0;
   if (sh) { S.cx -= sh * rc / s; S.cy += sh * rs / s; }
+  // 흙에 앉히기(SINK — 2026-10-17 사용자 "화단에 박힌 불꽃 선인장이 여전히 중앙이 아닌 좀 뒤쪽"): 밑동이 넓은 몸은 아래 끝이 흙 가운데 줄에 걸치면
+  //  앞쪽 흙이 다 드러나 뒤에 박힌 것처럼 보임(25° 내려다보기에서 굵은 밑동의 흙 닿는 둘레 앞쪽 = 흙 가운데 + 반폭 × 0.42) → 판에서 k칸 아래(앞)로
+  const sk = (process.env.SINK_TEST && JSON.parse(process.env.SINK_TEST)[okey]) ?? SINK[okey] ?? 0;
+  if (sk) { S.cx -= sk * rs / s; S.cy -= sk * rc / s; }
   const toOut = (x, y) => { const u = (x - S.cx) * s, v = (y - S.cy) * s; return [P.cx + u * rc - v * rs, P.cy + u * rs + v * rc]; };   // 원본 자리 → 판 자리(몸 축 바로 세우기 포함)
   // 눈: 원본 자리 → 도트 좌표, 그 자리를 가운데로 EYE 틀 크기의 상자
   const spec = EYES_ON ? EYES[key] : null, grid = spec ? EYE[spec.style].g : null;
@@ -1039,7 +1049,7 @@ async function animKit() {
   };
   // 화분 뒤 → 식물 → 화분 앞 → 효과
   const frameOf = (k, f, bg = null) => {
-    const { im, fxPaint } = partsOf(k, f), out = plantInPot(im, pot, bg);
+    const { im, fxPaint } = partsOf(k, f), out = plantInPot(im, pot, bg, { sink: SINK[cvs[k].outKey || cvs[k].key] || 0 });
     for (const [x, y, c] of fxPaint) out.set(x, y, c);
     return out;
   };
@@ -1093,7 +1103,7 @@ if (args.includes('--export') && cvs.length) {
     if (b != null) ['half', 'closed', 'closed', 'half'].forEach((e, i) => list.push([(b + i) % FR, e]));
     const N = list.length, rows = Math.ceil(N / COLS), sheet = new Img(COLS * W, rows * 2 * H);
     list.forEach(([f, eye], i) => {
-      const { im, fxPaint } = partsOf(k, f, eye), { under, over } = plantLayers(im, pot);
+      const { im, fxPaint } = partsOf(k, f, eye), { under, over } = plantLayers(im, pot, { sink: SINK[cv.outKey || cv.key] || 0 });
       for (const [x, y, c] of fxPaint) over.set(x, y, c);
       const cx = (i % COLS) * W, cy = Math.floor(i / COLS) * H;
       sheet.blit(under, cx, cy); sheet.blit(over, cx, cy + rows * H);

@@ -49,6 +49,7 @@ node tools/pixel/big/stemcheck.mjs [키…]               # 게임 묶음(어린
 - 여러 명령을 이어 백그라운드로 굽는 중에 `convert.mjs`를 고치면 뒤 명령이 고친 파일을 읽는다 → 고친 뒤 `node --check tools/pixel/big/convert.mjs`부터.
 
 ## 6. 게임에 넣기(v2)
+- **흙에 앉히기 · 흙 경계(2026-10-17 사용자 "불꽃 선인장이 중앙이 아닌 좀 뒤쪽" · "식물과 흙의 경계가 너무 일자가 되지 않게"):** 굵은 밑동은 아래 끝이 흙 가운데 줄에 걸치면 뒤에 박힌 듯 보임 → `convert.mjs SINK`(판 칸, 밑동 반폭 × 흙 타원 납작함 × 0.75, 최대 5 — 새 그림 · 단계는 SINK를 비운 묶음에서 `node tools/pixel/big/sinkcalib.mjs <키>`로 재서 적음, 꼬리 · 다리가 테에 걸치면 덜). 흙 덮기(`potblend.mjs soilCover`)는 줄기 기둥에서 밑동 둘레 앞쪽 호를 따라 울퉁불퉁 · 흙 속 칸은 앞판 앞에 안 그림. 손으로 옮기기 = `STEM`(가로) · 돌리기 = `ROT`(도, + = 시계 반대). 검수 = 화분 격자(scratchpad pot_grid 방식 — 성체 · 자람 · 어린).
 - `node tools/pixel/big/convert.mjs --export <키…>` → `assets/v2/plants/<키>.png·.json`(대기 64장 + 깜빡임 4장 × under·over 두 층) + `assets/v2/pots/`. 게임은 `v2/src/art/sprites.js drawBig(g, 키, 화분, 굽x, 굽y, {t, flip, flash})`로 화분 뒤 → under → 화분 앞 → over.
   - 묶은 뒤 깜빡임 장이 실제로 감기는지 잰다(깜빡임 장 = 같은 자세 대기 장과 눈 칸이 달라야 함 — 2026-10-17 전엔 `--export`가 눈 자리를 안 잡아 모든 종이 게임에서 안 감겼고 숨쉬기 머리 자리도 검토 영상과 달랐음).
   - 아주 작은 눈이 불 재질 · 이음매에 걸려 움직임 장마다 반짝임이 빠졌다 생기면(드레이크캑터 금빛 눈) `TUNE[키].eyeHold = true` — 눈 둘레는 쉬는 그림을 얼굴 이동만큼 통째로 옮김. 밝은 무늬(`accent`)는 눈 둘레를 저절로 뺌.
