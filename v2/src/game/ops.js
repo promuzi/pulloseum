@@ -9,11 +9,14 @@ const opt = (v, f) => (v == null ? null : f(v));
 const idxOf = (s, uid) => s.plants.findIndex(p => p.uid === uid);
 const cell = v => (v == null || v === '' ? null : str(v));
 const cells = (v, n, exact) => (Array.isArray(v) && (exact ? v.length === n : v.length <= n) ? v.map(cell) : bad());   // 칸 배열(길이 · 원소 모양만 — 규칙은 logic)
+const cellsOpt = (v, n, exact) => (v == null ? undefined : cells(v, n, exact));
+const layoutArg = v => (v && typeof v === 'object' ? { battle: cellsOpt(v.battle, L.LOADOUT, true), store: cellsOpt(v.store, L.SKILL_STORE), cards: cellsOpt(v.cards, 3, true), pstore: cellsOpt(v.pstore, 3) } : bad());
 const cardsArg = v => (Array.isArray(v) && (v.length === 2 || v.length === 3) ? v.map(cell) : bad());   // 패시브 칸(옛 화면 둘 · 새 화면 셋)
 
 export const OPS = {
   feed: (s, a) => L.feed(s, str(a.id), a.kind === 'fert' ? 'fert' : 'water', int(a.n, 1, 99, 1)),
   evolve: (s, a, c) => L.evolve(s, str(a.id), c.rng),
+  draftApply: (s, a) => L.draftApply(s, str(a.id), int(a.n, 0, 20, 0), layoutArg(a.layout)),   // 새 고르기 화면 확정(놓은 배치 그대로 — 2026-10-18)
   draftPick: (s, a) => L.draftPick(s, str(a.id), int(a.n, 0, 20, 0), Array.isArray(a.picks) ? a.picks.slice(0, 8).map(x => String(x)) : []),   // 카드 고르기(2026-10-18)
   place: (s, a) => L.placePending(s, str(a.id), str(a.skill), str(a.target, 8)),
   swapJoker: (s, a) => L.swapJoker(s, str(a.id), int(a.slot, 0, L.LOADOUT - 1)),

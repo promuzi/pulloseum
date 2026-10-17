@@ -104,13 +104,13 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   ok(new Set(all).size === all.length, '고르기마다 후보가 겹치지 않음');
   const nDraft = p.drafts.length;
   evolve(s, id, makeRng(5));
-  const ev = p.drafts[p.drafts.length - 1];
-  ok(p.drafts.length === nDraft + 1 && ev.kind === 'evo' && ev.pick === Math.min(2, ev.cands.length), '진화 = 넷 중 둘(보류한 고르기도 남음): ' + JSON.stringify(ev));
+  const skillOnly = () => p.drafts.filter(d => d.part !== 'passive'), ev = skillOnly().pop();   // 진화 = 기술 고르기 + 패시브 고르기(2026-10-18)
+  ok(p.drafts.length === nDraft + 2 && ev.kind === 'evo' && ev.pick === Math.min(2, ev.cands.length), '진화 = 넷 중 둘(보류한 고르기도 남음): ' + JSON.stringify(ev));
   p.lv = 6; evolve(s, id, makeRng(6));
-  const last = p.drafts[p.drafts.length - 1];
+  const last = skillOnly().pop();
   ok(last.kind === 'evo' && last.st === 2 && last.pick === Math.min(3, last.cands.length), '마지막 진화 = 다섯 중 셋: ' + JSON.stringify(last));
   const n0 = p.drafts.length;
-  runOp(s, 'draftPick', { id, n: n0 - 1, picks: last.cands.slice(0, last.pick) }, { rng: makeRng(1), now: 0 });
+  runOp(s, 'draftPick', { id, n: p.drafts.indexOf(last), picks: last.cands.slice(0, last.pick) }, { rng: makeRng(1), now: 0 });
   ok(p.drafts.length === n0 - 1, '서버 일 목록(ops draftPick)');
 }
 // ⑤ 처음 안내 봤음
@@ -213,6 +213,54 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   ok(p.skills.store.includes(moved), '옛 꼴로 장착에서 뺀 기술 = 보관 뒤에');
   runOp(s, 'setSlots', { id: p.uid, ...slotLayout(p) }, { rng: makeRng(1), now: 0 });
   ok(true, '서버 일 목록(ops setSlots 새 꼴)');
+}
+// ⑧ 패시브 고르기(첫 진화 · 둘째 진화 · Lv16, 셋 중 하나) · 후보 섞기(사용자 "(나) — 예전 것도 배울 기회, 우선은 최신 것") · draftApply(놓은 배치 그대로 확정)
+{
+  const { feed, evolve, draftApply, slotLayout } = await import('../../v2/src/game/logic.js');
+  const { bloomPool } = await import('../../v2/src/game/catalog.js');
+  const s = game(), p = s.plants[0]; s.items.fert = 999; p.drafts = [];
+  while (p.lv < 6) feed(s, p.uid, 'fert', 1);
+  ok(!p.drafts.some(d => d.part === 'passive'), 'Lv6(단계 끝)엔 패시브 고르기 없음');
+  evolve(s, p.uid, makeRng(1));
+  const ev = p.drafts.filter(d => d.st === 1);
+  ok(ev.length === 2 && ev[0].part === 'skill' && ev[1].part === 'passive' && ev[1].pick === 1 && ev[1].cands.length >= 1 && ev[1].cands.length <= 3, '진화 = 기술 다음 패시브(셋 중 하나): ' + JSON.stringify(ev));
+  ok(ev[1].cands.every(id => !p.cards.includes(id)), '패시브 후보 = 그 식물에 없는 것');
+  const n = p.drafts.findIndex(d => d.part === 'skill'), d = p.drafts[n], L0 = slotLayout(p);
+  throws(() => draftApply(s, p.uid, n, { battle: L0.battle, store: L0.store }), '후보를 하나도 안 놓음 = 막힘');
+  throws(() => draftApply(s, p.uid, n, { battle: L0.battle, store: [...L0.store, 'f_ball'] }), '후보 아닌 기술 = 막힘');
+  const pick = d.cands.slice(0, d.pick), L1 = { battle: [...L0.battle], store: [...L0.store] }, out = L1.battle[0];
+  L1.battle[0] = pick[0]; for (const x of pick.slice(1)) L1.store.push(x);
+  const before = JSON.stringify(s), r = draftApply(s, p.uid, n, L1);
+  ok(r.dropped.includes(out) && p.skills.forgot.includes(out), '밀려나 남은 기존 기술 = 지운 기술: ' + JSON.stringify(r));
+  ok(!p.drafts.includes(d) && pick.every(x => [...p.skills.battle, ...p.skills.store].includes(x)), '확정 = 고른 기술이 칸에 · 고르기 빠짐');
+  const s2 = JSON.parse(before); draftApply(s2, p.uid, n, L1);
+  ok(JSON.stringify(s2.plants[0].skills) === JSON.stringify(p.skills), '같은 입력 = 같은 결과(화면 먼저 · 서버 같게)');
+  throws(() => draftApply(s, p.uid, 9, L1), '없는 고르기 번호 = 막힘');
+  const pn = p.drafts.findIndex(x => x.part === 'passive'), pd = p.drafts[pn], PL = slotLayout(p), nc = [...PL.cards];
+  nc[nc.indexOf(null)] = pd.cands[0];
+  if (pd.cands[1]) { const two = [...nc]; two[two.indexOf(null)] = pd.cands[1]; throws(() => draftApply(s, p.uid, pn, { cards: two, pstore: PL.pstore }), '패시브 둘 = 막힘(하나만)'); }
+  const bag0 = JSON.stringify(s.cards);
+  runOp(s, 'draftApply', { id: p.uid, n: pn, layout: { cards: nc, pstore: PL.pstore } }, { rng: makeRng(1), now: 0 });   // 서버 일 목록으로
+  ok(p.cards.includes(pd.cands[0]) && JSON.stringify(s.cards) === bag0, '고른 패시브 = 새 카드(가방 그대로)');
+  // Lv16 = 패시브 고르기
+  p.lv = 6; evolve(s, p.uid, makeRng(2)); p.drafts = [];
+  while (p.lv < 6) feed(s, p.uid, 'fert', 1);
+  ok(p.drafts.some(x => x.part === 'passive' && x.st === 2 && x.lv === 6), 'Lv16 = 패시브 고르기: ' + JSON.stringify(p.drafts.map(x => x.part + x.lv)));
+  // 후보 섞기: 이번 단계 기술을 다 알면 앞 단계 기술이 나옴 · 여럿 보면 이번 단계가 대부분
+  const q = game().plants[0], s3 = game(); s3.plants[0] = q; s3.items.fert = 999;
+  q.stage = 1; q.lv = 1; q.gxp = 0; q.drafts = [];
+  q.skills.forgot.push(...bloomPool(q.key, 1).map(x => x.id));
+  while (q.lv < 2) feed(s3, q.uid, 'fert', 1);
+  const p0 = new Set(bloomPool(q.key, 0).map(x => x.id)), dq = q.drafts.find(x => x.part === 'skill');
+  ok(dq && dq.cands.length >= 1 && dq.cands.every(id => p0.has(id)), '이번 단계를 다 알면 앞 단계 기술: ' + JSON.stringify(dq));
+  let cur = 0, all = 0;
+  for (let i = 0; i < 40; i++) {
+    const t = game(), w = t.plants[0]; t.items.fert = 999; w.uid = 'mix' + i; w.stage = 1; w.lv = 1; w.gxp = 0; w.drafts = [];
+    while (w.lv < 2) feed(t, w.uid, 'fert', 1);
+    const p1 = new Set(bloomPool(w.key, 1).map(x => x.id));
+    for (const id of (w.drafts.find(x => x.part === 'skill') || { cands: [] }).cands) { all++; if (p1.has(id)) cur++; }
+  }
+  ok(all > 0 && cur / all > 0.6 && cur < all, `이번 단계가 대부분 · 앞 단계도 가끔: ${cur}/${all}`);
 }
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);
