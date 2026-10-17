@@ -7,13 +7,14 @@ import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/mode
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
 import { makeRng } from '../battle/rules.js';
 
-// 손패 = 전투 칸 넷(배운 기술 · 기본기 섞어서 — 2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개"), 순서 그대로.
-//  옛 판(v4 표시 없음 = 전투 3칸 + 기본기 셋 늘)은 그때 손패 그대로 — 이어 하는 판 · 다시 돌리기가 같은 결과가 나오게
-//  카드(2026-10-17): 태생 변이의 전투 칸 카드 = 그 자리 그대로(extra: false), 카드 칸의 기술 카드 = 손패 뒤에 붙음(extra: true — 화면 아래 줄)
+// 손패 = 전투 칸 여섯(배운 기술 · 기본기 · 변이 기술 카드 섞어서 — 2026-10-17 사용자 "6개 들고 갈 수 있게 · 변이는 6개 중 2개를 변이 스킬 카드로"), 순서 그대로.
+//  옛 판은 그때 손패 그대로 — 이어 하는 판 · 다시 돌리기(서버가 판을 시작할 때 식물을 통째로 저장)가 같은 결과가 나오게:
+//  v4 표시 없음 = 전투 3칸 + 기본기 셋 늘 · v4 = 전투 넷 + 카드 칸의 기술 카드가 손패 뒤에(extra: true — 화면 아래 줄)
 export function kitOfPlant(p) {
   const S = p.skills, B = basicsOf(p.key), pas = passivesOf(p.cards), sk = id => B.find(b => b.id === id) || (isSkillCard(id) ? cardSkill(p, id, pas, false) : { act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key });
   if (!S.v4) return [...B, ...S.battle.filter(Boolean).map(sk)];
   const kit = S.battle.filter(id => id && (isSkillCard(id) ? CARDS[id].form === p.form : SKILLS[id] || B.some(b => b.id === id))).map(sk);
+  if (S.v6) return kit.length ? kit : B;
   return [...(kit.length ? kit : B), ...cardKit(p, pas)];
 }
 // 기술 카드 하나 → 손패 기술(그 식물 변이의 것만 · 에너지 대신 판마다 정해진 횟수): 숨결(elOwn)은 그 식물 속성, 단조 · 위턱(mutPow) = 위력 ↑, 탄약 보급(mutUses) = 횟수 +
@@ -59,18 +60,21 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
     if (st > 0 && us.length && rng() < 0.7) battle.push(us[Math.floor(rng() * us.length)]);   // 그 단계 개성 중 하나(2026-10-17 단계마다 여럿)
     else if (pool.length) battle.push(pool[Math.floor(rng() * pool.length)].id);
   }
-  // 봇 손패 넷 = 배운 기술 앞 둘 + 평타 + 방어나 회피(사람과 같은 넷 — 셋째 배운 기술이 있으면 방어 · 회피 대신 반쯤)
-  const extra = battle[2] && rng() < 0.5 ? battle[2] : rng() < 0.5 ? 'guard' : 'evade';
-  const four = [battle[0], battle[1] || (rng() < 0.5 ? 'guard' : 'evade'), 'basic', extra].filter((x, i, a) => x && a.indexOf(x) === i);
-  for (const b of ['guard', 'evade']) if (four.length < 4 && !four.includes(b)) four.push(b);
+  // 봇 손패 여섯 = 배운 기술(셋까지) + 평타 · 방어 · 회피(사람과 같은 여섯 칸 — 2026-10-17)
+  const six = [...battle, 'basic', 'guard', 'evade'];
+  while (six.length < 6) six.push(null);
   // 변이 봇(자라는 단계부터 가끔): 버섯 = 포자 · 그 밖 = 포식 · 무기 · 독성 · 용족 중
   let form = sp.form || null;
   if (!form && stage >= 1 && rng() < 0.08 + 0.02 * tierBoost) { const fs = sp.type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'); form = fs[Math.floor(rng() * fs.length)]; }
-  // 카드(2026-10-17 — 사람과 같은 카드 칸 둘): 변이 봇 = 그 변이 카드 둘(기술 하나 + 무작위 하나), 일반 봇 = 단계만큼(어린 0~1 · 자람 1 · 다 자람 1~2) 일반 카드
+  // 카드(2026-10-17 — 사람과 같은 칸): 변이 봇 = 그 변이 기술 카드 한두 장(전투 칸의 회피 · 방어 자리) + 그 변이 패시브 하나, 일반 봇 = 단계만큼(어린 0~1 · 자람 1 · 다 자람 1~2) 일반 카드
   const cards = [null, null];
-  if (form) { const fc = formCards(form), sk = fc.filter(isSkillCard); cards[0] = sk[Math.floor(rng() * sk.length)]; const rest = fc.filter(x => x !== cards[0]); cards[1] = rest[Math.floor(rng() * rest.length)]; }
+  if (form) {
+    const fc = formCards(form), sk = fc.filter(isSkillCard), pa = fc.filter(x => !isSkillCard(x)), n = stage >= 2 && rng() < 0.5 ? 2 : 1;
+    for (let i = 0; i < n && sk.length; i++) { const c = sk.splice(Math.floor(rng() * sk.length), 1)[0]; six[six.lastIndexOf(i ? 'guard' : 'evade')] = c; }
+    cards[0] = pa[Math.floor(rng() * pa.length)];
+  }
   else { const n = stage === 0 ? (rng() < 0.5 ? 1 : 0) : stage === 1 ? 1 : rng() < 0.6 ? 2 : 1; for (let i = 0; i < n; i++) { let c = rollCard(rng, 'normal'); if (cards.includes(c)) c = null; cards[i] = c; } }
-  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: four.slice(0, 4), joker: null, forgot: [], learned: [], v4: 1 }, shiny: false, legend: false };
+  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: six.slice(0, 6), joker: null, forgot: [], learned: [], v4: 1, v6: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 

@@ -12,10 +12,10 @@ export const OPS = {
   feed: (s, a) => L.feed(s, str(a.id), a.kind === 'fert' ? 'fert' : 'water', int(a.n, 1, 99, 1)),
   evolve: (s, a, c) => L.evolve(s, str(a.id), c.rng),
   place: (s, a) => L.placePending(s, str(a.id), str(a.skill), str(a.target, 8)),
-  swapJoker: (s, a) => L.swapJoker(s, str(a.id), int(a.slot, 0, 3)),
+  swapJoker: (s, a) => L.swapJoker(s, str(a.id), int(a.slot, 0, L.LOADOUT - 1)),
   setCards: (s, a) => L.setCards(s, str(a.id), Array.isArray(a.cards) && a.cards.length === 2 ? a.cards.map(v => (v == null ? null : str(v))) : bad()),   // 카드 칸 둘(2026-10-17)
-  setSlots: (s, a) => L.setSlots(s, str(a.id), Array.isArray(a.battle) && a.battle.length === 4 ? a.battle.map(v => (v == null ? null : str(v))) : bad(), Array.isArray(a.cards) && a.cards.length === 2 ? a.cards.map(v => (v == null ? null : str(v))) : bad()),
-  setLoadout: (s, a) => L.setLoadout(s, str(a.id), Array.isArray(a.battle) && a.battle.length === 4 ? a.battle.map(v => (v == null ? null : str(v))) : bad()),
+  setSlots: (s, a) => L.setSlots(s, str(a.id), Array.isArray(a.battle) && a.battle.length === L.LOADOUT ? a.battle.map(v => (v == null ? null : str(v))) : bad(), Array.isArray(a.cards) && a.cards.length === 2 ? a.cards.map(v => (v == null ? null : str(v))) : bad()),
+  setLoadout: (s, a) => L.setLoadout(s, str(a.id), Array.isArray(a.battle) && a.battle.length === L.LOADOUT ? a.battle.map(v => (v == null ? null : str(v))) : bad()),
   upgrade: (s, a) => L.upgrade(s, str(a.id), str(a.stat, 8), int(a.n, 1, 50, 1)),
   resetPoints: (s, a) => L.resetPoints(s, str(a.id)),
   merge: (s, a) => L.merge(s, str(a.id), str(a.food), str(a.stat, 8)),

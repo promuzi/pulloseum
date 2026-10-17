@@ -31,6 +31,12 @@ export function measure(str, fontKey = 'body') {
   return Math.ceil(meas.measureText(String(str)).width);
 }
 export function lineH(fontKey = 'body') { return metrics(FONT[fontKey]).h; }
+// 한 글자의 실제 잉크 높이(기준선 위 · 아래) + 그 글꼴 글자 윗선(drawText y)에서 기준선까지 — 기호 하나를 원 · 칸 가운데에 놓을 때
+export function inkOf(str, fontKey = 'body') {
+  const f = FONT[fontKey], m0 = metrics(f); meas.font = css(f);
+  const m = meas.measureText(String(str));
+  return { asc: m.actualBoundingBoxAscent || f.size * 0.72, desc: m.actualBoundingBoxDescent || 0, dx: ((m.actualBoundingBoxRight || m.width) - (m.actualBoundingBoxLeft || 0)) / 2 - m.width / 2, top: m0.asc };   // dx = 잉크 가운데가 글자 폭 가운데보다 오른쪽으로 얼마나
+}
 // 글자 상자(올림 없는 실제 높이) — 작은 창 속 글자를 위아래 같은 간격으로 놓을 때
 export function glyphH(fontKey = 'body') { const f = FONT[fontKey]; metrics(f); meas.font = css(f); const m = meas.measureText('한글가힣'); return (m.actualBoundingBoxAscent || f.size * 0.86) + (m.actualBoundingBoxDescent || f.size * 0.1); }
 

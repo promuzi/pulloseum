@@ -1,10 +1,10 @@
-// 카드 시험(2026-10-17 — 화면 없이 규칙만): 모든 식물 = 기술 칸 넷 + 카드 칸 둘 · 일반 식물 = 일반 카드 · 변이 식물 = 그 변이 카드 · 태생 변이는 전투 칸에도 기술 카드
+// 카드 시험(2026-10-17 — 화면 없이 규칙만): 모든 식물 = 전투 칸 여섯 + 카드 칸 둘(패시브) · 일반 식물 = 일반 카드 · 변이 식물 = 그 변이 패시브 + 전투 칸에 그 변이 기술 카드 둘까지
 //  ① 표(카드 수 · 기술 카드 = 변이 기술 · 패시브 수치 · 설명) ② 새 계정(처음 식물에 일반 카드 한 장) ③ 옛 세이브(변이 칸 둘 → 카드 칸 · 가방 · 한 번만)
 //  ④ 끼우기 · 빼기 · 자리 바꾸기(가방 장부) · 막는 것 ⑤ 태생 변이 전투 칸 ⑥ 식물이 떠나면 카드는 가방으로(팔기 · 해체 · 거름) · 새 기술 · 조커와 바꿀 때
 //  ⑦ 패시브가 전투에 닿는지(능력치 · 흡수 · 반사 · 독 겹 · 면역 · 비늘 · 재생 · 위력 · 횟수 · 분노 · 소화액 · 균사 · 부생 · 치명 피해 · 3:3 시작 에너지)
 //  ⑧ 얻는 곳(탐사 · 해체 · 상점 꾸러미 · 레벨업) ⑨ 봇 카드 · 다시 돌리기 같은 결과 ⑩ 서버 일 목록(setCards · setSlots)
 //   node tools/test/cards.mjs
-import { newGame, makePlant, syncTimers, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, merge, explore, buy, addXp, probeOf, Err, BASIC_IDS } from '../../v2/src/game/logic.js';
+import { newGame, makePlant, syncTimers, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, merge, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
 import { kitOfPlant, unitOf, botPlant, setupBot, replayBot } from '../../v2/src/game/fight.js';
 import { CARDS, CARD_SLOTS, NORMAL_CARDS, formCards, isSkillCard, cardFits, passivesOf, rollCard, cardFace } from '../../v2/src/game/cards.js';
 import { SKILLS, SPECIES, FORM_KEYS, PLANETS, SHOP, levelReward } from '../../v2/src/game/catalog.js';
@@ -42,21 +42,34 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   ok(s.cardsV === 1 && JSON.stringify(s.cards) === '{}', '새 계정 가방 빔 · 옮김 표시');
   ok(p.cards.length === CARD_SLOTS && NORMAL_CARDS.includes(p.cards[0]) && p.cards[1] === null, '처음 식물 = 일반 카드 한 장: ' + p.cards);
   const m = plant(s, 'thorn', { form: 'toxic' });
-  ok(m.cards.every(id => id && CARDS[id].form === 'toxic') && isSkillCard(m.cards[0]) && !isSkillCard(m.cards[1]), '변이 식물 = 그 변이 카드 둘(기술 + 패시브): ' + m.cards);
+  const msk = m.skills.battle.filter(isSkillCard);
+  ok(CARDS[m.cards[0]].form === 'toxic' && !isSkillCard(m.cards[0]) && m.cards[1] === null && msk.length === 1 && CARDS[msk[0]].form === 'toxic', '변이 식물 = 그 변이 패시브(카드 칸) + 기술 카드(전투 칸): ' + m.cards + ' / ' + m.skills.battle);
   const d = plant(s, 'drake_cactus');
-  ok(d.form === 'dragon' && d.cards.every(id => CARDS[id].form === 'dragon'), '태생 변이 = 그 변이 카드 둘');
+  ok(d.form === 'dragon' && CARDS[d.cards[0]].form === 'dragon' && d.skills.battle.some(id => isSkillCard(id) && CARDS[id].form === 'dragon'), '태생 변이 = 그 변이 카드 둘(패시브 + 기술)');
 }
-// ③ 옛 세이브
+// ③ 옛 세이브: 옛 변이 칸 둘(전투 칸 넷 시절) → 전투 칸 여섯의 기술 카드 · 카드 칸 둘에 기술 카드가 있던 판(v4) → 전투 칸으로
 {
-  const s = game(), p = plant(s, 'thorn', { form: 'predator' });
-  delete s.cardsV; s.cards = undefined; p.cards = undefined; p.skills.mut = ['m_bite', 'm_hunt'];
-  const st = s.storage; const q = makePlant(s, { key: 'aqua', form: 'weapon' }, makeRng(5), 0); q.cards = undefined; q.skills.mut = ['m_shot', null]; st.push(q);
+  const s = game(), p = plant(s, 'thorn', { form: 'predator' }), L0 = p.skills.battle[0];
+  delete s.cardsV; s.cards = undefined; p.cards = undefined;
+  p.skills = { battle: [L0, 'basic', 'guard', 'evade'], joker: null, forgot: [], learned: [L0], v4: 1, mut: ['m_bite', 'm_hunt'] };
+  const st = s.storage; const q = makePlant(s, { key: 'aqua', form: 'weapon' }, makeRng(5), 0), Q0 = q.skills.battle[0]; q.cards = undefined;
+  q.skills = { battle: [Q0, 'basic', 'guard', 'evade'], joker: null, forgot: [], learned: [Q0], v4: 1, mut: ['m_shot', null] }; st.push(q);
   syncTimers(s, 0);
-  ok(JSON.stringify(p.cards) === '["m_bite","m_hunt"]' && !('mut' in p.skills), '옛 변이 칸 → 카드 칸: ' + JSON.stringify(p.cards));
-  ok(JSON.stringify(q.cards) === '["m_shot",null]', '보관고 식물도');
+  ok(JSON.stringify(p.skills.battle) === JSON.stringify([L0, 'basic', 'guard', 'evade', 'm_bite', 'm_hunt']) && JSON.stringify(p.cards) === '[null,null]' && !('mut' in p.skills), '옛 변이 칸 → 전투 칸 여섯: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
+  ok(q.skills.battle.includes('m_shot') && JSON.stringify(q.cards) === '[null,null]', '보관고 식물도: ' + q.skills.battle);
   ok(s.cards.m_devour === 1 && s.cards.m_slash === 1 && s.cards.m_smash === 1 && s.cards.n_wall === 1, '나머지 옛 변이 기술 = 가방 카드 · 하던 사람 일반 카드 한 장: ' + bag(s));
-  const once = bag(s) + JSON.stringify(p.cards); syncTimers(s, 0); syncTimers(s, 5);
-  ok(bag(s) + JSON.stringify(p.cards) === once, '두 번 옮겨도 그대로');
+  const once = bag(s) + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards); syncTimers(s, 0); syncTimers(s, 5);
+  ok(bag(s) + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards) === once, '두 번 옮겨도 그대로');
+  // v4: 카드 칸에 기술 카드 둘 + 패시브 없음 → 늘어난 두 칸에 그대로(손패 여섯 = 전과 같은 기술)
+  const s2 = game(), r = plant(s2, 'thorn', { form: 'weapon' }), R0 = r.skills.battle[0];
+  r.skills = { battle: [R0, 'basic', 'guard', 'evade'], joker: 'j_spikes', forgot: [], learned: [R0, 'j_spikes'], v4: 1 }; r.cards = ['m_slash', 'm_shot'];
+  syncTimers(s2, 0);
+  ok(JSON.stringify(r.skills.battle) === JSON.stringify([R0, 'basic', 'guard', 'evade', 'm_slash', 'm_shot']) && r.skills.joker === 'j_spikes' && JSON.stringify(r.cards) === '[null,null]', 'v4 카드 칸 기술 카드 → 늘어난 두 칸(조커는 그대로): ' + r.skills.battle + ' / ' + r.cards);
+  // 기술 카드가 넘침(전투 칸 셋 · 다른 변이) → 가방
+  const s3 = game(), w = plant(s3, 'thorn', { form: 'weapon' });
+  w.skills.battle = ['m_slash', 'm_shot', 'm_smash', 'basic', 'm_bite', null]; w.cards = [null, null]; s3.cards = {};
+  syncTimers(s3, 0);
+  ok(w.skills.battle.filter(isSkillCard).length === 2 && s3.cards.m_smash === 1 && s3.cards.m_bite === 1, '넘친 기술 카드 · 다른 변이 카드 → 가방: ' + w.skills.battle + ' / ' + bag(s3));
 }
 // ④ 끼우기 · 빼기 · 자리 바꾸기
 {
@@ -76,14 +89,16 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   throws(() => setCards(s, p.uid, ['nope', null]), '없는 카드');
   const m = plant(s, 'thorn', { form: 'predator' }); s.cards.n_vacuole = 1;
   throws(() => setCards(s, m.uid, ['n_vacuole', null]), '변이 식물에 일반 카드');
+  throws(() => setCards(s, m.uid, ['m_bite', null]), '변이 기술 카드는 카드 칸에 못 넣음(전투 칸으로)');
   const before = { ...s.cards }, m0 = [...m.cards];
-  setCards(s, m.uid, ['m_bite', m0[1]]);
-  ok(m.cards[0] === 'm_bite' && s.cards[m0[0]] === (before[m0[0]] || 0) + 1 && !s.cards.m_bite, '변이 카드 바꿔 끼움(있던 건 가방으로)');
+  setCards(s, m.uid, ['v_sap', m0[1]]);
+  ok(m.cards[0] === 'v_sap' && s.cards[m0[0]] === (before[m0[0]] || 0) + 1 && !s.cards.v_sap, '변이 패시브 바꿔 끼움(있던 건 가방으로)');
   ok(cardFits(p, 'n_wall') === null && cardFits(m, 'n_wall') && cardFits(m, 'm_bite') === null && cardFits(m, 'm_slash'), 'cardFits');
 }
-// ⑤ 태생 변이 전투 칸
+// ⑤ 변이 식물 전투 칸(태생이든 변이 종자든 — 2026-10-17 "변이는 6개 중 2개를 변이 스킬 카드로")
 {
   const s = game(), d = plant(s, 'drake_cactus'), n = plant(s, 'thorn', { form: 'dragon' }); d.cards = [null, null]; n.cards = [null, null];
+  for (const x of [d, n]) x.skills.battle = x.skills.battle.map(id => (isSkillCard(id) ? null : id));   // 처음 핀 기술 카드는 비우고(무작위 — 시험 카드와 겹치지 않게)
   s.cards = { m_frostclaw: 1, m_voltclaw: 2, m_bite: 1, v_scale: 1 };
   const b0 = [...d.skills.battle], bi = b0.findIndex(x => BASIC_IDS.includes(x));
   const nb = [...b0]; nb[bi] = 'm_frostclaw';
@@ -91,7 +106,11 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   ok(d.skills.battle[bi] === 'm_frostclaw' && !s.cards.m_frostclaw, '태생 변이 = 전투 칸에 기술 카드(가방에서)');
   const k = kitOfPlant(d), fc = k.find(x => x.id === 'm_frostclaw');
   ok(fc && fc.extra === false && k.indexOf(fc) === bi, '전투 칸 카드 = 그 자리 손패(아래 줄 아님)');
-  throws(() => setSlots(s, n.uid, (() => { const x = [...n.skills.battle]; x[x.findIndex(v => BASIC_IDS.includes(v))] = 'm_voltclaw'; return x; })(), n.cards), '태생 아닌 변이는 전투 칸에 카드 못 넣음');
+  s.cards.m_breath = 1; s.cards.m_roar = 1; s.cards.m_scale = 1;
+  const put = (x, id) => { const bb = [...x.skills.battle], i = bb.indexOf(null) >= 0 ? bb.indexOf(null) : bb.findIndex(v => BASIC_IDS.includes(v)); bb[i] = id; return bb; };
+  setSlots(s, n.uid, put(n, 'm_breath'), n.cards); setSlots(s, n.uid, put(n, 'm_roar'), n.cards);
+  ok(['m_breath', 'm_roar'].every(id => n.skills.battle.includes(id)) && n.skills.battle.filter(isSkillCard).length === 2, '변이 종자 식물도 전투 칸에 기술 카드 둘: ' + n.skills.battle);
+  throws(() => setSlots(s, n.uid, put(n, 'm_scale'), n.cards), `기술 카드는 ${MUT_MAX}장까지`);
   throws(() => setSlots(s, d.uid, (() => { const x = [...d.skills.battle]; x[x.findIndex(v => BASIC_IDS.includes(v))] = 'm_bite'; return x; })(), d.cards), '다른 변이 카드는 전투 칸에도 안 됨');
   throws(() => setSlots(s, d.uid, (() => { const x = [...d.skills.battle]; x[x.findIndex(v => BASIC_IDS.includes(v))] = 'v_scale'; return x; })(), d.cards), '패시브 카드는 전투 칸에 못 넣음');
   // 전투 칸 카드를 빼면 가방으로(자리는 기본기)
@@ -172,9 +191,9 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const ev3 = []; endTurn([[rt, foeD]], 1, ev3);
   ok(rt.hp > 100, '부생 회복 = 상대 나쁜 효과만큼 회복');
   // 단조(위력) · 탄약 보급(횟수)
-  const wp = plant(s, 'thorn', { form: 'weapon' }); wp.cards = ['m_slash', 'v_forge'];
+  const wp = plant(s, 'thorn', { form: 'weapon' }); wp.skills.battle[5] = 'm_slash'; wp.cards = ['v_forge', null];
   ok(kitOfPlant(wp).find(x => x.id === 'm_slash').power === Math.round(SKILLS.m_slash.power * 1.2), '단조 = 변이 기술 위력 +20%');
-  wp.cards = ['m_slash', 'v_ammo'];
+  wp.cards = ['v_ammo', null];
   ok(kitOfPlant(wp).find(x => x.id === 'm_slash').uses === SKILLS.m_slash.uses + 1, '탄약 보급 = 횟수 +1');
   // 분노 · 소화액 · 균사 · 치명 피해
   const wr = { hp: 40, max: 100, pas: { wrath: 0.25 } }; ok(pasAtkK(wr, null) === 1.25 && pasAtkK({ ...wr, hp: 60 }, null) === 1, '용의 분노 = 체력 절반 아래만');
@@ -208,7 +227,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
 // ⑨ 봇 카드 · 다시 돌리기
 {
   let withCard = 0, bad = 0;
-  for (let i = 0; i < 300; i++) { const b = botPlant(makeRng(i), i % 3, 3, 0); if (b.cards.some(Boolean)) withCard++; for (const c of b.cards) if (c && cardFits(b, c)) bad++; if (new Set(b.cards.filter(Boolean)).size !== b.cards.filter(Boolean).length) bad++; }
+  for (let i = 0; i < 300; i++) { const b = botPlant(makeRng(i), i % 3, 3, 0); if (b.cards.some(Boolean)) withCard++; for (const c of b.cards) if (c && (cardFits(b, c) || isSkillCard(c))) bad++; for (const c of b.skills.battle) if (isSkillCard(c) && cardFits(b, c)) bad++; if (new Set(b.cards.filter(Boolean)).size !== b.cards.filter(Boolean).length) bad++; }
   ok(withCard > 150 && !bad, `봇 카드 ${withCard}/300 · 맞지 않음 ${bad}`);
   const s = game(), me = s.plants[0];
   const spec = { seed: 99, mode: '1v1', mine: [me], foes: [botPlant(makeRng(5), 1, 3, 1)], trainer: 'b', rank: 'r', tlv: 3 };

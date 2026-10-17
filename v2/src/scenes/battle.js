@@ -41,37 +41,42 @@ const PANEL_H = 228, AY = 24;
 const EMOTE_CD = 3000;   // 감정 보낸 뒤 3초는 못 보냄(도배 막기)
 const CARD_W = 66, CARD_H = 90, CARD_Y = 6, CARD_GX = 10, CARD_GY = 4, HOLD_MS = 320, PEEK_OPEN = 380, PEEK_CLOSE = 280, SHINE_MS = 520;
 const EX = 186, EY = AY + 156, PX = 80, PY = AY + 282, FAR_K = 0.31;
-// 손패 넷 = 한 줄(2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개" — 클래시 로얄처럼) · 화면 아래부터 쌓음(짧은 화면 겹침 — 휴대폰 브라우저 높이 480~560):
-//  기타 줄(교체 · 감정) → 손패 → 내 체력판 → 경기장(그림 348칸을 손패 위에 붙이고, 짧으면 위 하늘을 잘라 올리고 길면 위에 하늘을 늘임)
-//  옛 판(손패 여섯 = 기본기 셋 + 배운 기술 셋)은 두 줄 그대로
+// 손패 여섯 = 셋씩 두 줄(2026-10-17 사용자 "스킬 4개인 거 재미없어 — 6개 · 배치도 3개 3개로 두 줄") · 화면 아래부터 쌓음(짧은 화면 — 휴대폰 브라우저 높이 480~560):
+//  기타 줄(교체 · 감정) → 손패 → 내 체력판 → 경기장(layOf — 내 식물은 손패 바로 위, 그림 위는 화면 위에 붙이고 길면 벽 밑 땅을 늘임)
+//  옛 판(손패 넷 = 한 줄 · 변이 카드 칸 둘 = 아래 줄)은 이어 하는 판 그대로
 const HAND_W = 62, HAND_GX = 4, MISC_H = 32, BOT_PAD = 10;
 // 카드 칸의 기술 카드 = 아래 줄(2026-10-17 카드 칸 — 태생 변이가 전투 칸에 넣은 기술 카드는 extra: false 라 위 줄 제자리). 옛 판(extra 없음)의 변이 기술도 아래 줄
 const isExtra = s => !!s && (s.extra ?? !!s.mut);
 const mutHand = kit => !!(kit && kit.some(isExtra));   // 변이 칸 둘(2026-10-16 사용자 "변이식물의 장점은 변이스킬로 6칸")
 const handRows = kit => (kit && kit.length > 4 ? 2 : 1);
+// 경기장 자리(2026-10-17 사용자 "하늘쪽 우주가 잘려 있어 — 폰 길이와 상관없이" · "폰이 길어지면 하늘이 아니라 경기장 땅이 넓어지게 — 그래야 적 식물과 적의 상태창이 따로 놀지 않으니"):
+//  내 식물 밑동 = 손패 위 38칸 → 그림 땅(받침 둘 · 바닥 원)을 거기 맞춰 fy만큼 옮김. fy > 0(긴 화면) = 그림 위(하늘 · 관중석 · 벽)는 화면 위 그대로 + 벽 밑 땅을 fy줄 늘임(gap),
+//  fy < 0(짧은 화면) = 그림 위를 잘라 올림(lift). 상대 밑동은 위 띠 밑 FOE_MIN까지만 — 더 짧으면 내 식물만 손패를 따라 더 올라감(myDy · 연출 판도 그만큼 눌러 맞춤)
+const FOE_MIN = 114, ARENA_SPLIT = { colosseum: 150, ship: 156, garden: 156, night: 150, retro: 146, cell: 140 };   // 벽 밑 늘일 줄(그림 줄 — 그 위 = 하늘 · 관중석 · 벽 · 벽 그늘)
 function layOf(H, rows, merged = false) {
   const miscY = merged ? null : H - BOT_PAD - MISC_H, HY = (merged ? H - BOT_PAD : miscY - 8) - rows * CARD_H - (rows - 1) * CARD_GY, AH = HY - AY + 28;
-  return { miscY, HY, AH, oy: AH - 348, MY: HY - 12 - boxH(true) };
+  const want = HY - 38 - PY, fy = Math.max(FOE_MIN - EY, want), myDy = want - fy;
+  return { miscY, HY, AH, fy, gap: Math.max(0, fy), lift: Math.min(0, fy), myDy, led: Math.round((EY + PY - 100) / 2 + fy + myDy / 2), MY: HY - 12 - boxH(true) };
 }
-const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
+// 경기장 그림 + 벽 밑 늘인 땅(gap줄 — 바로 밑 땅 10여 줄에서 섞어 뽑음, 한 번 만든 판은 다시 씀)
+const artCache = new WeakMap();
+function arenaArt(bg, split, gap) {
+  let m = artCache.get(bg); if (!m) artCache.set(bg, (m = new Map()));
+  let cv = m.get(gap); if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = bg.width; cv.height = bg.height + gap;
+  const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+  c.drawImage(bg, 0, 0, bg.width, split, 0, 0, bg.width, split);
+  for (let j = 0; j < gap; j++) c.drawImage(bg, 0, split + ((Math.imul(j + 17, 2654435761) >>> 0) % 12), bg.width, 1, 0, split + j, bg.width, 1);
+  c.drawImage(bg, 0, split, bg.width, bg.height - split, 0, split + gap, bg.width, bg.height - split);
+  if (m.size > 6) m.clear();
+  m.set(gap, cv); return cv;
+}
+const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이(실제 자리 = layOf led)
 // 턴 시작 공개(drawReveal): 카드 나옴 → 상대 카드 뒤집힘 → 선공 · 후공 표 → 머묾 → 각자 식물로 들어감(ms)
 const RV_W = 92, RV_IN = 400, RV_FLIP0 = 400, RV_FLIP = 420, RV_BADGE = 900, RV_LAG = 170, RV_OUT = 380, REVEAL_MS = 2300, REVEAL1_MS = 1400;
 const backOut = q => { const a = 1.70158; return 1 + (a + 1) * (q - 1) ** 3 + a * (q - 1) ** 2; };
 const easeInOut = q => (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
 const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
-// 경기장 그림 둘레 색(맨 윗줄 · 왼쪽 줄의 가운데 칸) — 넓거나 긴 화면에서 그림 밖을 같은 색으로
-const edgeCache = new Map();
-function edgeCols(img) {
-  if (!img) return ['#0b0d1a', '#0b0d1a'];
-  let r = edgeCache.get(img); if (r) return r;
-  try {
-    const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-    const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
-    const px = (x, y) => { const d = c.getImageData(x, y, 1, 1).data; return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join(''); };
-    r = [px(Math.floor(img.width / 2), 0), px(0, Math.floor(img.height * 0.6))];
-  } catch { r = ['#0b0d1a', '#0b0d1a']; }
-  edgeCache.set(img, r); return r;
-}
 const TIER = { miss: ['빗나감', 'dim', '빗나갔다!'], graze: ['스침', 'sub', '살짝 스쳤다'], hit: ['정타', 'main', ''], crit: ['치명!', 'gold', '급소에 맞았다!'] };
 
 // 체력판: (상대만) 재배사 · 랭크 / 이름 + 속성 / HP 막대 + 숫자 / MP 칸 + 숫자 — 'HP'·'MP' 이름은 왼쪽, 막대·칸은 같은 x에서 시작, 숫자만 오른쪽
@@ -190,6 +195,7 @@ function hpBar(g, x, y, w, h, bar, max, t) {
 }
 
 export const battle = {
+  tall: true,   // 600칸보다 긴 화면도 장면 높이 그대로(main.js 화면 틀 — 긴 만큼 경기장 땅이 늘어남, 2026-10-17)
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
@@ -228,12 +234,12 @@ export const battle = {
       this.B = makeBattle({ me, foe, seed });
     }
     const B = this.B;
-    // 시험판 손패도 진짜와 같은 넷(배운 기술 둘 + 평타 + 방어 — 2026-10-16 "전투에 들고가는 스킬은 4개")
-    const four = u => { u.kit = [...u.kit.filter(s => s.id[0] === 's'), ...u.kit.filter(s => s.id[0] !== 's')].slice(0, 4); };
-    for (const u of B.team ? [...B.team.me, ...B.team.foe] : [B.me, B.foe]) four(u);
-    if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &used=1 = 첫 변이 기술을 한 번 씀)
-      const ms = (p.mk ? String(p.mk).split(',').filter(id => SKILLS[id]) : formSkills(p.mut).slice(0, 2)).map(id => ({ ...SKILLS[id], mut: true, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));   // &mk=기술,기술 = 그 변이 기술로(연출 검토)
-      B.me.kit.push(...ms);
+    // 시험판 손패도 진짜와 같은 여섯(배운 기술 + 기본기 — 2026-10-17 "6개 들고 갈 수 있게")
+    const six = u => { u.kit = [...u.kit.filter(s => s.id[0] === 's'), ...u.kit.filter(s => s.id[0] !== 's')].slice(0, 6); };
+    for (const u of B.team ? [...B.team.me, ...B.team.foe] : [B.me, B.foe]) six(u);
+    if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &used=1 = 첫 변이 기술을 한 번 씀) — 변이 기술 카드 = 손패 여섯 중 끝 칸(기본기 자리)
+      const ms = (p.mk ? String(p.mk).split(',').filter(id => SKILLS[id]) : formSkills(p.mut).slice(0, 2)).slice(0, 2).map(id => ({ ...SKILLS[id], mut: true, extra: false, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));   // &mk=기술,기술 = 그 변이 기술로(연출 검토)
+      B.me.kit.splice(Math.max(0, B.me.kit.length - ms.length), ms.length, ...ms);
       if (p.used) B.me.used = { [ms[0].id]: +p.used };
     }
     if (p.pre) for (const part of String(p.pre).split(';')) {   // 효과 미리 걸기(검토·영상용)
@@ -501,9 +507,12 @@ export const battle = {
     if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
     if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
   },
+  // 식물 밑동 자리(장면 270칸 안): 상대 = 그림 땅을 따라(fy) · 나 = 손패 바로 위(fy + myDy) — 머리 위 글자 · 표는 위 띠 밑까지만
+  at(who) { const L = this.lay; return who === 'me' ? [PX, PY + (L ? L.fy + L.myDy : 0)] : [EX, EY + (L ? L.fy : 0)]; },
+  above(who, d) { const [x, y] = this.at(who); return [x, Math.max(AY + 2, y - d)]; },
   // ex = { share: 그 한 방이 깎은(채운) 체력 몫, kill: 결정타 } — 글자 연출 ㉠~㉣이 크기·강조에 씀(지금 연출은 안 씀)
   pop(who, text, tone, t, big = false, dy = 0, col = null, size = null, ex = null) {
-    let [x, y] = who === 'me' ? [PX, PY - 92] : [EX, EY - 92];
+    let [x, y] = this.above(who, 92);
     const v = this.v, num = big || /^[+-]\d+$/.test(text);
     if (num) { const near = v.pops.filter(q => q.who === who && (q.big || /^[+-]\d+$/.test(q.text)) && t - q.t0 < 520).length; if (near) { x += (near % 2 ? 1 : -1) * 16; y -= 12 * near; } }   // 연달아 맞은 숫자는 비켜서
     const p = { text, tone, t0: t, x, y: y + dy, dy, big, col, size, who, id: (v.pid = (v.pid || 0) + 1), share: ex ? ex.share : null, kill: !!(ex && ex.kill) };
@@ -519,7 +528,7 @@ export const battle = {
     const R = this.v.ribbon; if (!R) return;
     const { g, t } = app, age = t - R.t0; if (age > R.ms) return;
     const E = ELEMENT[R.el] || { main: '#7f97b8', light: '#cfe0f4', dark: '#3c5474' }, w = g.textW(R.text, 'bold') + 18, h = 17;
-    const [cx, cy] = R.who === 'me' ? [PX, PY - 126] : [EX, EY - 118], slide = Math.max(0, 1 - age / 120), a = Math.min(1, age / 90) * (age > R.ms - 160 ? Math.max(0, (R.ms - age) / 160) : 1);
+    const [cx, cy] = this.above(R.who, R.who === 'me' ? 126 : 118), slide = Math.max(0, 1 - age / 120), a = Math.min(1, age / 90) * (age > R.ms - 160 ? Math.max(0, (R.ms - age) / 160) : 1);
     const x = Math.round(cx - w / 2 + (R.who === 'me' ? -10 : 10) * slide);
     g.alpha(a, () => {
       rrect(g, x, cy, w, h, 7, '#0b1322'); rrect(g, x + 1, cy + 1, w - 2, h - 2, 6, hexMix(E.dark, '#0b1322', 0.2));
@@ -531,7 +540,7 @@ export const battle = {
   title(app, win, sub) { this.v.title = { win, sub, t0: app.t }; music(win ? 'win' : 'lose'); sfx(win ? 'win' : 'lose'); },
   drawTitle(app) {
     const T0 = this.v.title; if (!T0) return;
-    const { g, t } = app, c = g.c, k = Math.min(1, (t - T0.t0) / 220), y = Math.round(LED_CY - 30 + (1 - k) * 12), sc = c.getTransform().a || 1;
+    const { g, t } = app, c = g.c, k = Math.min(1, (t - T0.t0) / 220), y = Math.round((this.lay ? this.lay.led : LED_CY) - 30 + (1 - k) * 12), sc = c.getTransform().a || 1;
     c.save(); c.shadowColor = T0.win ? 'rgba(255,196,70,0.75)' : 'rgba(110,150,210,0.55)'; c.shadowBlur = 16 * sc;
     g.alpha(k, () => g.text(T0.win ? '승리!' : '패배', 135, y, { font: 'huge', color: T0.win ? '#ffd84a' : '#b4c8e2', align: 'center', outline: T0.win ? '#3a2006' : '#0e1626', outlineW: 5 }));
     c.restore();
@@ -643,35 +652,38 @@ export const battle = {
       if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
-    //  그림은 270×348 — 화면이 넓거나 길면 가운데로 · 아래(기술 판)에 붙이고, 남는 둘레는 그림 가장자리 색으로
-    const bg = BGIMG['arena_' + T.key], ox = Math.floor((W - 270) / 2), oy = Lay.oy;   // oy < 0 = 짧은 화면: 그림 위(하늘·관중석 윗줄)를 잘라 올림
+    //  그림 270×348 = 위(하늘 · 관중석 · 벽)는 화면 위에 붙이고 길면 벽 밑 땅을 늘임 · 짧으면 위를 잘라 올림(layOf) · 넓은 화면 = 가운데 + 양옆을 그림 가장자리 한 줄로 이음
+    const bg = BGIMG['arena_' + T.key], ox = Math.floor((W - 270) / 2), [ex, ey] = this.at('foe'), [px, py] = this.at('me');
+    const art = bg ? arenaArt(bg, ARENA_SPLIT[T.key] || 150, Lay.gap) : null, ay = AY + Lay.lift;   // ay = 그림 맨 윗줄 자리
     g.clip(0, AY, W, AH, () => {
       const c = g.c;
-      if ((ox || oy > 0) && bg) {   // 그림 가장자리 한 줄을 늘여 둘레를 이음(관중석 줄은 관중석 색, 바닥 줄은 바닥 색) · 위 하늘은 위로 갈수록 어둡게
-        c.imageSmoothingEnabled = false;
-        const [top] = edgeCols(bg); g.rect(0, AY, W, AH, top);
-        if (ox) { c.drawImage(bg, 0, 0, 1, bg.height, 0, AY + oy, ox, bg.height); c.drawImage(bg, bg.width - 1, 0, 1, bg.height, ox + 270, AY + oy, W - ox - 270, bg.height); }
-        if (oy > 0) {   // 그림 위 남는 하늘: 맨 윗줄 색 + 위로 갈수록 어둡게 + 별 몇 개(한 줄을 늘이면 밝은 칸이 세로 줄로 보였음)
-          const sk = c.createLinearGradient(0, AY, 0, AY + oy); sk.addColorStop(0, 'rgba(4,6,14,0.75)'); sk.addColorStop(1, 'rgba(4,6,14,0)'); c.fillStyle = sk; c.fillRect(0, AY, W, oy);
-          for (let i = 0; i < 26; i++) { const sx = (i * 97 + 31) % W, syy = AY + ((i * 53 + 17) % Math.max(1, oy - 4)), tw = Math.floor(t / 700 + i) % 5 === 0; g.px(sx, syy, tw ? '#ffffff' : i % 3 ? '#8aa4c8' : '#d8e6ff'); }
-        }
-      } else if (ox || oy > 0) g.rect(0, AY, W, AH, '#0b0d1a');
-      c.save(); c.imageSmoothingEnabled = false; c.translate(ox, oy);
+      c.imageSmoothingEnabled = false;
+      if (!art) g.rect(0, AY, W, AH, '#0b0d1a');
+      else if (ox) { c.drawImage(art, 0, 0, 1, art.height, 0, ay, ox, art.height); c.drawImage(art, art.width - 1, 0, 1, art.height, ox + 270, ay, W - ox - 270, art.height); }
+      c.save(); c.translate(ox, 0);
       c.save();
       if (fr) c.translate(fr.cam[0], fr.cam[1]);
-      if (bg) g.img(bg, 0, AY); else arena1(g, 0, AY, 270, 348, t);
-      if (bg && T.key === 'colosseum') arenaLife(g, bg, 0, AY, t);
-      padV(g, EX, EY, 36, false, FAR_K);
-      padV(g, PX, PY, 42, true);
-      if (fr) { c.drawImage(boardCanvas('floor'), 0, AY); c.drawImage(boardCanvas('back'), 0, AY); }
-      unit('foe', EX, EY, true, 1600);
-      if (fr) c.drawImage(boardCanvas('mid'), 0, AY);
-      unit('me', PX, PY, false, 0);
-      if (fr) { c.drawImage(boardCanvas('front'), 0, AY); c.drawImage(boardCanvas('air'), 0, AY); }
-      if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [PX, PY], foe: [EX, EY] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
+      if (art) { c.drawImage(art, 0, ay); if (T.key === 'colosseum') arenaLife(g, bg, 0, ay, t); }
+      else arena1(g, 0, AY, 270, 348, t);
+      padV(g, ex, ey, 36, false, FAR_K);
+      padV(g, px, py, 42, true);
+      // 연출 판(공격 장마다 그린 270×348 — 받침 자리 기준): 땅을 따라 fy, 아주 짧은 화면은 상대 줄 아래를 눌러 내 식물 자리에 맞춤
+      const board = n => {
+        const b = boardCanvas(n), top = AY + Lay.fy;
+        if (!Lay.myDy) return c.drawImage(b, 0, top);
+        const cut = EY - AY, k = (PY - EY + Lay.myDy) / (PY - EY);
+        c.drawImage(b, 0, 0, b.width, cut, 0, top, b.width, cut);
+        c.drawImage(b, 0, cut, b.width, b.height - cut, 0, top + cut, b.width, Math.round((b.height - cut) * k));
+      };
+      if (fr) { board('floor'); board('back'); }
+      unit('foe', ex, ey, true, 1600);
+      if (fr) board('mid');
+      unit('me', px, py, false, 0);
+      if (fr) { board('front'); board('air'); }
+      if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
       for (const who of ['me', 'foe']) {
         const s = v.stance[who]; if (!s) continue;
-        const [x, y] = who === 'me' ? [PX, PY - 118] : [EX, EY - 118];
+        const [x, y] = this.above(who, 118);
         btnBody(g, x - 12, y, 24, 20, s.active ? T.btn.gold : T.btn.off, true);
         const ic = s.kind === 'guard' ? 'shield' : 'speed';
         g.img(s.active ? icon(ic) : tinted(ic, T.btn.off.text), x - 5, y + 5);
@@ -679,8 +691,8 @@ export const battle = {
       c.restore();
       if (TFX.key !== 'now') {   // 글자 연출 ㉠~㉣(?tfx=a|b|c|d) — art/textfx.js
         tfxPops(g, v.pops, t, v.ribbon);
-        if (v.ribbon) tfxRibbon(g, v.ribbon, t, ...(v.ribbon.who === 'me' ? [PX, PY - 126] : [EX, EY - 118]), v.ribbon.who === 'me' ? -1 : 1);
-        tfxTitle(g, v.title, t, 135, LED_CY - 30 + Math.round(glyphH('huge') / 2));
+        if (v.ribbon) tfxRibbon(g, v.ribbon, t, ...this.above(v.ribbon.who, v.ribbon.who === 'me' ? 126 : 118), v.ribbon.who === 'me' ? -1 : 1);
+        tfxTitle(g, v.title, t, 135, Lay.led - 30 + Math.round(glyphH('huge') / 2));
       } else for (const p of v.pops) {   // 떠오르는 글자: 처음 0.14초 톡 튀어 오르고 1.1초 동안 올라가며 사라짐 · 치명 = 큰 금빛 숫자 + 흔들림
         const age = t - p.t0, k = age / 1100, y = Math.round(p.y - Math.min(1, age / 140) * 5 - k * 12), col = p.col || { bad: '#ff6a6a', gold: '#ffd84a', dim: '#c8c8d0', sub: '#e8e0b0', main: '#ffffff' }[p.tone] || '#ffffff';
         const crit = p.size === 'crit', sx = crit && age < 280 ? (Math.floor(age / 40) % 2 ? 2 : -2) : 0;
@@ -692,8 +704,8 @@ export const battle = {
     });
     // 아래(2026-10-16 사용자 "아래 스킬바의 배경이 별로야. 배경을 없애고 카드만 나열되는 느낌" + "스킬바와 식물/상태바의 거리가 너무 멀어 땡겨줘"):
     //  판 배경 없이 경기장 바닥 끝 줄을 아래로 늘여 잇고, 손패 자리부터 아래로 갈수록 어둡게 → 카드는 내 체력판 바로 아래부터
-    const MY = Lay.MY, HY = Lay.HY, hrows = handRows(B.me.kit), oyT = Math.max(0, oy);   // HY = 손패 맨 위 · oyT = 위 하늘만큼 상대 체력판도 내려 경기장에 붙임
-    if (bg) { g.c.imageSmoothingEnabled = false; g.c.drawImage(bg, 0, Math.max(0, Math.min(bg.height - 1, AH - oy - 1)), bg.width, 1, 0, AY + AH, W, H - AY - AH); }
+    const MY = Lay.MY, HY = Lay.HY, hrows = handRows(B.me.kit), oyT = Lay.gap;   // HY = 손패 맨 위 · oyT = 늘인 땅만큼 상대 체력판도 상대 식물을 따라 내림
+    if (art) { g.c.imageSmoothingEnabled = false; g.c.drawImage(art, 0, Math.max(0, Math.min(art.height - 1, AY + AH - ay - 1)), art.width, 1, 0, AY + AH, W, H - AY - AH); }
     else g.rect(0, AY + AH, W, H - AY - AH, '#0b0d1a');
     const shade = g.c.createLinearGradient(0, HY - 16, 0, H);
     shade.addColorStop(0, 'rgba(8,12,22,0)'); shade.addColorStop(0.22, 'rgba(8,12,22,0.62)'); shade.addColorStop(1, 'rgba(8,12,22,0.9)');
@@ -706,7 +718,7 @@ export const battle = {
     statusWins(g, 6, AY + 4 + oyT + fh + 3, theirs);
     if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = AY + 8 + oyT; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
-      const sec = this.deadline ? Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)) : null, label = '상대가 다음 식물을 고르는 중' + (sec != null ? ` · ${sec}` : ''), w = g.textW(label) + 16, x = Math.round((W - w) / 2), y = LED_CY - 8 + oy;
+      const sec = this.deadline ? Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)) : null, label = '상대가 다음 식물을 고르는 중' + (sec != null ? ` · ${sec}` : ''), w = g.textW(label) + 16, x = Math.round((W - w) / 2), y = Lay.led - 8;
       holo(g, x, y, w, 18, { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#18385e' }, 16);
       g.text(label, W / 2, y + (18 - glyphH('body')) / 2, { color: '#e0f0ff', align: 'center' });
     }
@@ -797,12 +809,12 @@ export const battle = {
       const ref = st.mine && this.cards && this.cards['sk_' + st.mine.id];
       st.from = ref ? [ref.x + ref.w / 2, ref.y + ref.h / 2, ref.w / BW] : null;
     }
-    const F = st.faces, ox = Math.floor((W - 270) / 2), oy = L.oy, both = !!(st.mine && st.theirs), cy = Math.round(LED_CY + oy + 8);
+    const F = st.faces, ox = Math.floor((W - 270) / 2), both = !!(st.mine && st.theirs), cy = Math.round(L.led + 8);
     const OUT0 = ms - RV_OUT, out = age > OUT0 ? Math.min(1, (age - OUT0) / RV_OUT) ** 2 : 0, bt = age - RV_BADGE;
     c.fillStyle = `rgba(6,10,18,${(0.55 * Math.min(1, age / 220) * (1 - out)).toFixed(3)})`; c.fillRect(0, AY, W, L.AH);
     for (const who of ['foe', 'me']) {
       const sk = who === 'me' ? st.mine : st.theirs; if (!sk) continue;
-      const plant = [(who === 'me' ? PX : EX) + ox, (who === 'me' ? PY - 64 : EY - 56) + oy];   // 식물 몸 가운데쯤
+      const [bx, by] = this.at(who), plant = [bx + ox, by - (who === 'me' ? 64 : 56)];   // 식물 몸 가운데쯤
       const start = who === 'me' && st.from ? st.from : [...plant, 0.3], tx = both ? Math.round(W / 2 + (who === 'me' ? -1 : 1) * (F.BW / 2 + 9)) : Math.round(W / 2);
       const qi = backOut(Math.min(1, age / RV_IN)), lead = st.first === who, up = lead && bt > 0 ? Math.round(5 * Math.min(1, bt / 160)) : 0;
       let cx = start[0] + (tx - start[0]) * qi, ccy = start[1] + (cy - start[1]) * qi - up, sc = start[2] + (1 - start[2]) * qi;
@@ -897,7 +909,7 @@ export const battle = {
     for (const side of [false, true]) {   // 사람마다 가장 최근 하나만
       if (!side && this.muteFoe) continue;
       const e = list.filter(x => !!x.me === side && now >= x.t && now - x.t < EMOTE_LIFE).pop();
-      if (e) emoteBubble(g, e.i, side ? PX : EX, side ? PY - 104 : EY - 98, now - e.t);
+      if (e) emoteBubble(g, e.i, ...this.above(side ? 'me' : 'foe', side ? 104 : 98), now - e.t);
     }
   },
   sendEmote(app, i) {

@@ -48,32 +48,54 @@ export function makePlant(s, seed, rng, now) {
     uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
     shiny: !!seed.shiny, legend: !!seed.legend, trait: seed.trait || null, form: seed.form || sp.form || null,
     pts: 0, up: {}, spent: 0, invest: 0, pot: 'pot_terra', born: now,
-    skills: { battle: [null, null, null, null], joker: null, forgot: [], learned: [], v4: 1 }, pend: [],
+    skills: { battle: [null, null, null, null, null, null], joker: null, forgot: [], learned: [], v4: 1, v6: 1 }, pend: [],
     hv: { t0: now, have: 0 },
   };
-  // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기(평타 · 방어 — 회피는 보관)
+  // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기 셋(여섯째 칸은 비어 있음 — 변이 식물은 그 변이 기술 카드)
   learnNow(p, uniqueOf(p.key, 0));
   const c1 = bloomPool(p.key, 0).filter(x => !uniquesOf(p.key, 0).includes(x.id));
   if (c1.length) learnNow(p, pickW(rng, c1).id);
   fillBasics(p);
-  // 카드 칸 둘(2026-10-17): 변이 식물은 처음 필 때 그 변이 카드 둘(기술 카드 하나 + 패시브 하나 — 전엔 변이 칸 둘이 저절로 찼음)
+  // 카드 칸 둘(2026-10-17): 변이 식물은 처음 필 때 그 변이 카드 둘 — 기술 카드 하나는 전투 칸(빈 칸)에, 패시브 하나는 카드 칸에
   p.cards = [null, null];
-  if (p.form) { const fc = formCards(p.form); p.cards = [pick(rng, fc.filter(isSkillCard)), pick(rng, fc.filter(id => !isSkillCard(id)))]; }
+  if (p.form) {
+    const fc = formCards(p.form), sk = pick(rng, fc.filter(isSkillCard)), b = p.skills.battle;
+    p.cards = [pick(rng, fc.filter(id => !isSkillCard(id))), null];
+    const i = b.indexOf(null) >= 0 ? b.indexOf(null) : b.lastIndexOf('evade');
+    if (i >= 0) b[i] = sk;
+  }
   if (!s.discovered.includes(p.key)) s.discovered.push(p.key);
   return p;
 }
-// 기술 칸(2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개이며, 기본 스킬은 조커처럼 항상 빼고 넣고 가능(버릴 수 없음)" · "기본스킬 3개도 바꿀 수 있게"):
-//  battle = 전투에 들고 가는 넷(배운 기술 · 기본기 섞어서) · joker = 배운 기술 하나 보관 · 기본기 셋은 늘 앎(지울 수 없음 — 전투 칸에 없으면 보관에 있는 셈)
-export const BASIC_IDS = ['basic', 'guard', 'evade'], LOADOUT = 4;
+// 기술 칸(2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개이며, 기본 스킬은 조커처럼 항상 빼고 넣고 가능(버릴 수 없음)" · "기본스킬 3개도 바꿀 수 있게"
+//  → 2026-10-17 "스킬 4개인 거 재미없어 — 6개 들고 갈 수 있게 · 변이는 6개 중 2개를 변이 스킬 카드로"):
+//  battle = 전투에 들고 가는 여섯(배운 기술 · 기본기 · 변이 식물은 그 변이 기술 카드 MUT_MAX 장까지) · joker = 배운 기술 하나 보관 · 기본기 셋은 늘 앎(지울 수 없음 — 전투 칸에 없으면 보관에 있는 셈)
+export const BASIC_IDS = ['basic', 'guard', 'evade'], LOADOUT = 6, MUT_MAX = 2;
 const isBasic = id => BASIC_IDS.includes(id);
 function fillBasics(p) { const b = p.skills.battle, left = BASIC_IDS.filter(id => !b.includes(id)); for (let i = 0; i < b.length; i++) if (!b[i] && left.length) b[i] = left.shift(); }
-// 옛 세이브(전투 3칸 + 기본기 셋은 늘 손패): 빈 칸 · 넷째 칸을 기본기로 채워 넷으로(한 번만 — 그 뒤 비운 칸은 그대로)
+// 옛 세이브 맞추기(한 번씩 — 그 뒤 비운 칸은 그대로):
+//  가장 옛 판(전투 3칸 + 기본기 셋은 늘 손패) → 넷(빈 칸 · 넷째 칸 = 기본기) →
+//  v4(전투 넷) → v6(여섯): 늘어난 두 칸 = 카드 칸의 그 변이 기술 카드(전엔 손패 뒤에 붙던 것) → 보관 칸의 배운 기술 → 빠진 기본기 순.
+//  전투 칸 기술 카드가 MUT_MAX 장을 넘거나 카드 칸에 남은 기술 카드는 normCards 가 가방으로
 export function normSkills(p) {
   const S = p && p.skills; if (!S) return p;
-  if (S.v4) return p;
-  const b = (Array.isArray(S.battle) ? S.battle : []).slice(0, LOADOUT);
-  while (b.length < LOADOUT) b.push(null);
-  S.battle = b; fillBasics(p); S.v4 = 1;
+  if (!S.v4) {
+    const b = (Array.isArray(S.battle) ? S.battle : []).slice(0, 4);
+    while (b.length < 4) b.push(null);
+    S.battle = b; fillBasics(p); S.v4 = 1;
+  }
+  if (!S.v6) {
+    const b = S.battle.slice(0, 4), add = [];
+    while (b.length < 4) b.push(null);
+    let room = MUT_MAX - b.filter(isSkillCard).length;
+    if (p.form && Array.isArray(p.cards)) p.cards.forEach((id, i) => {
+      if (room > 0 && add.length < 2 && isSkillCard(id) && CARDS[id].form === p.form && !b.includes(id) && !add.includes(id)) { add.push(id); p.cards[i] = null; room--; }
+    });
+    if (add.length < 2 && S.joker) { add.push(S.joker); S.joker = null; }
+    for (const id of BASIC_IDS) if (add.length < 2 && !b.includes(id)) add.push(id);
+    while (add.length < 2) add.push(null);
+    S.battle = [...b, ...add]; S.v6 = 1;
+  }
   return p;
 }
 const known = p => new Set([...p.skills.battle.filter(x => x && !isBasic(x)), p.skills.joker, ...p.skills.forgot, ...p.pend].filter(Boolean));
@@ -111,20 +133,38 @@ export function normCards(s) {
       for (const id of OLD_MUT[p.form] || []) if (!m.includes(id)) addCard(s, id);
       delete S.mut;
     }
+    // 전투 칸 여섯(2026-10-17): 카드 칸 = 패시브만 — 카드 칸에 남은 그 변이 기술 카드는 전투 칸(빈 칸 → 기본기 자리)으로, 못 들어가거나 안 맞으면 가방 ·
+    //  전투 칸 기술 카드는 그 변이 것 MUT_MAX 장까지(넘거나 안 맞으면 가방, 그 자리는 빠진 기본기)
+    if (S && S.v6) {
+      let n = 0;
+      S.battle.forEach((id, i) => {
+        if (!isSkillCard(id)) return;
+        if (CARDS[id].form === p.form && n < MUT_MAX && S.battle.indexOf(id) === i) { n++; return; }
+        addCard(s, id); S.battle[i] = BASIC_IDS.find(x => !S.battle.includes(x)) || null;
+      });
+      p.cards.forEach((id, i) => {
+        if (!isSkillCard(id)) return;
+        p.cards[i] = null;
+        const at = S.battle.indexOf(null) >= 0 ? S.battle.indexOf(null) : ['evade', 'guard', 'basic'].map(x => S.battle.indexOf(x)).find(k => k >= 0) ?? -1;
+        if (CARDS[id].form === p.form && n < MUT_MAX && at >= 0 && !S.battle.includes(id)) { S.battle[at] = id; n++; }
+        else addCard(s, id);
+      });
+    }
   }
   if (!s.cardsV) { s.cardsV = 1; addCard(s, 'n_wall'); }   // 카드가 생기기 전부터 하던 사람 = 일반 카드 한 장(새 계정은 처음 식물에 한 장)
   return s;
 }
-// 전투 칸 넷 + 카드 칸 둘을 한 번에 정하기(화면이 새 배열을 보냄 — 끼우기 · 빼기 · 자리 바꾸기 모두):
-//  카드 칸 = 맞는 카드(일반 식물 = 일반 카드 · 변이 식물 = 그 변이 카드) · 전투 칸의 카드 = 태생 변이의 기술 카드만 · 한 식물에 같은 것 두 번 없이 ·
+// 전투 칸 여섯 + 카드 칸 둘을 한 번에 정하기(화면이 새 배열을 보냄 — 끼우기 · 빼기 · 자리 바꾸기 모두):
+//  카드 칸 = 맞는 패시브 카드(일반 식물 = 일반 카드 · 변이 식물 = 그 변이 패시브) · 전투 칸의 카드 = 변이 식물의 그 변이 기술 카드 MUT_MAX 장까지 · 한 식물에 같은 것 두 번 없이 ·
 //  새로 끼운 카드는 가방에서 빠지고 뺀 카드는 가방으로 · 배운 기술 · 기본기 규칙은 전과 같음(뺀 배운 기술은 보관 한 칸에만)
 export function setSlots(s, id, battle, cards) {
   const p = getPlant(s, id); normSkills(p); normCards(s);
-  need(Array.isArray(battle) && battle.length === LOADOUT, '전투 칸은 넷이에요');
+  need(Array.isArray(battle) && battle.length === LOADOUT, '전투 칸은 여섯이에요');
   need(Array.isArray(cards) && cards.length === CARD_SLOTS, '카드 칸은 둘이에요');
   const B = battle.map(x => (x == null || x === '' ? null : String(x))), C = cards.map(x => (x == null || x === '' ? null : String(x)));
-  for (const x of C) if (x) { const why = cardFits(p, x); need(!why, why); }
-  for (const x of B) if (isSkillCard(x)) { need(!!SPECIES[p.key].form, '기술 칸엔 태생 변이 식물만 카드를 넣어요'); const why = cardFits(p, x); need(!why, why); }
+  for (const x of C) if (x) { need(!isSkillCard(x), '기술 카드는 전투 칸에 넣어요'); const why = cardFits(p, x); need(!why, why); }
+  for (const x of B) if (isSkillCard(x)) { need(!!p.form, '기술 카드는 변이 식물만 넣어요'); const why = cardFits(p, x); need(!why, why); }
+  need(B.filter(isSkillCard).length <= MUT_MAX, `변이 기술 카드는 전투 칸에 ${MUT_MAX}장까지예요`);
   const all = [...B, ...C].filter(Boolean);
   need(new Set(all).size === all.length, '같은 것을 두 칸에 둘 수 없어요');
   const learned = new Set([...p.skills.battle, p.skills.joker].filter(x => x && !isBasic(x) && !isSkillCard(x))), plain = B.filter(x => x && !isSkillCard(x));

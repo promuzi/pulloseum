@@ -7,8 +7,7 @@
 //  장마다 prep(app, 장면) = 그 장을 열 때 화면을 맞춤(끌어 넘기는 판을 그 자리로) · side 'above' = 말풍선을 위에 먼저.
 import { T, holo } from '../art/theme.js';
 import { button } from '../art/ui.js';
-import { wrap, lineH, glyphH } from '../core/text.js';
-import { SPECIES } from '../game/catalog.js';
+import { wrap, lineH, inkOf } from '../core/text.js';
 
 const ACC = '#f0be7d', ACC_HI = '#ffe8c8', DIM = 'rgba(3,6,12,0.74)', ENTER_MS = 200, WAIT_MS = 550;
 const ease = k => 1 - (1 - k) ** 3;
@@ -17,7 +16,7 @@ const sc0 = sc => sc || {};
 const hdrBtn = app => [Math.round((app.hdrRightX || app.W - 4) - 22), 7];
 // 식물 관리 판 끌어 넘기기: 맨 위 · 맨 아래
 const top = (app, sc) => { sc.scrollY = 0; }, bottom = (app, sc) => { sc.scrollY = sc.maxY || 0; };
-const innateOf = app => { const s = app.state, p = s && (s.plants[s.active] || s.plants[0]); return !!(p && SPECIES[p.key] && SPECIES[p.key].form); };   // 태생 변이(카드를 전투 칸에도)
+const mutOf = app => { const s = app.state, p = s && (s.plants[s.active] || s.plants[0]); return !!(p && p.form); };   // 변이 식물(그 변이 기술 카드를 전투 칸에 — 2026-10-17 전투 칸 여섯)
 
 // ── 화면별 안내 ──
 export const GUIDES = [
@@ -59,7 +58,7 @@ export const GUIDES = [
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
     steps: [
       { at: 'pt_*', prep: top, text: '기술 · 강화 · 개체값 · 설정을 여기서 골라요.' },
-      { at: 'skc_b*', prep: top, text: '전투에 들고 가는 기술 넷이에요. 누르면 크게 보고, 꾹 눌러 끌면 자리를 바꿔요.' },
+      { at: 'skc_b*', prep: top, text: '전투에 들고 가는 기술 여섯이에요. 누르면 크게 보고, 꾹 눌러 끌면 자리를 바꿔요.' },
       { at: ['skc_x*', 'skc_j'], prep: bottom, text: '보관 칸이에요. 기본기는 빼도 사라지지 않고, 배운 기술은 하나만 맡겨 둘 수 있어요.' },
       { at: (app, sc) => sc.growR, prep: top, text: '물 · 비료를 주면 레벨이 올라요. 오를 때마다 강화 포인트가 생기고, 다 자라면 진화해요.' },
       { at: ['sk_forgot', 'sk_graft'], prep: bottom, text: '지운 기술은 회귀 주사로 되돌리고, 접목 가지로는 맞는 기술을 바로 배워요.' },
@@ -67,12 +66,12 @@ export const GUIDES = [
   { id: 'plant_card', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub, btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
     steps: [
-      { at: ['skc_c0', 'skc_c1'], prep: bottom, text: '카드 칸 둘이에요. 일반 식물은 능력치를 크게 올리는 일반 카드를, 변이 식물은 그 변이 카드만 넣어요.' },
+      { at: ['skc_c0', 'skc_c1'], prep: bottom, text: '카드 칸 둘이에요. 일반 식물은 능력치를 크게 올리는 일반 카드를, 변이 식물은 그 변이 패시브 카드를 넣어요.' },
       { at: 'skc_cl*', prep: bottom, text: '가방에 있는 맞는 카드예요. 꾹 눌러 카드 칸으로 끌면 끼우고, 칸의 카드를 여기로 끌면 빼요.' },
     ] },
-  { id: 'plant_innate', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && innateOf(app), btn: app => [app.W - 24, 9],
+  { id: 'plant_mutcard', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && mutOf(app), btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
-    steps: [{ at: 'skc_b*', prep: top, text: '태생 변이 식물은 전투 칸에도 그 변이의 기술 카드를 넣을 수 있어요. 가방 카드를 꾹 눌러 전투 칸으로 끌어요.' }] },
+    steps: [{ at: 'skc_b*', prep: top, text: '변이 식물은 전투 칸 여섯 중 둘까지 그 변이의 기술 카드를 넣어요. 가방 카드를 꾹 눌러 전투 칸으로 끌어요.' }] },
   { id: 'plant_up', scene: 'plant', when: (app, sc) => sc.tab === 'up', btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && !sc.out,
     steps: [
@@ -200,7 +199,10 @@ function helpBtn(app, x, y, fn) {
   if (!pr) g.disc(cx, cy + 1, 8, '#05070f');   // 아래 턱(눌리면 사라짐)
   g.disc(cx, cy, 8, '#05070f'); g.disc(cx, cy, 7, '#4f84bf'); g.disc(cx, cy, 6, '#16406a');
   g.rect(cx - 3, cy - 5, 6, 1, '#2a6aa0');
-  g.text('?', cx, cy - Math.round(glyphH('bold') / 2), { font: 'bold', color: '#e6f3ff', align: 'center' });   // 원 가운데(2026-10-17 사용자 "? 도움말 표시가 원 가운데에 있지 않고 좀 위로" — 전엔 1칸 더 올렸음)
+  // '?' = 실제 획(잉크) 가운데를 원 가운데에(2026-10-17 사용자 "? 도움말 표시가 원 가운데에 있지 않고 좀 위로" → "여전히 위에 있는 느낌"):
+  //  원 칸은 (cx − 6 … cx + 6) 13칸이라 가운데 = cx + 0.5 · cy + 0.5, 위가 큰 모양 · 아래 턱이라 0.3칸 더 아래(6배 촬영으로 잰 값 — 글자 잉크 잼보다 실제 획이 0.3칸 위에 그려짐)
+  const ink = inkOf('?', 'bold'), by = cy + (ink.asc - ink.desc) / 2 + 1.1, tx = cx + 0.5 - ink.dx;
+  g.text('?', tx, by - ink.top, { font: 'bold', color: '#e6f3ff', align: 'center' });
   input.mark('gd_help', x, y, 16, 16);
   if (fn) input.hit('gd_help', x, y, 16, 16, fn, 8);
 }

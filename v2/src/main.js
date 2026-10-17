@@ -60,9 +60,9 @@ window.addEventListener('resize', () => { if (!screen.fixed) { screen.resize(); 
 
 // 화면 틀(2026-10-16 사용자 "화면의 길이, 기기에 따라서 여러 창 혹은 글자가 겹치는게 있어" · "홀로그램 화면도 왼쪽으로 쏠려있어"):
 //  장면은 늘 가로 270칸으로 그림(그림·자리 값이 다 270 기준) — 더 넓은 기기는 가운데에 두고 양옆은 가장자리 한 줄을 늘여 잇고,
-//  600칸보다 긴 기기는 장면 높이를 600에서 멈추고 아래 끝 줄을 늘여 이음. 짧은 기기(480~599)는 장면마다 아래 줄을 바닥에 붙여 맞춤.
+//  600칸보다 긴 기기는 장면 높이를 600에서 멈추고 아래 끝 줄을 늘여 이음(scene.tall = 그 장면은 높이 그대로 — 전투). 짧은 기기(480~599)는 장면마다 아래 줄을 바닥에 붙여 맞춤.
 export const VIEW_W = 270, VIEW_HMAX = 600;
-const frameOf = (W, H) => ({ ox: Math.max(0, Math.floor((W - VIEW_W) / 2)), w: Math.min(W, VIEW_W), h: Math.min(H, VIEW_HMAX) });
+const frameOf = (W, H, tall = false) => ({ ox: Math.max(0, Math.floor((W - VIEW_W) / 2)), w: Math.min(W, VIEW_W), h: tall ? H : Math.min(H, VIEW_HMAX) });
 function stretchEdges(c, s, W, H, F) {
   const cv = c.canvas, x0 = F.ox * s, x1 = (F.ox + F.w) * s, y1 = F.h * s, DW = W * s, DH = H * s;
   if (F.h >= H && F.ox <= 0 && x1 >= DW) return;
@@ -82,7 +82,7 @@ window.__advance = (ms = 600, dt = 33) => { const t0 = Math.max(app.t, performan
 window.__frame = ts => frameBody(ts);   // 영상 도구: 정확한 시각(ms)으로 한 장(누르기 처리 · 겹창 · 알림 띠까지 실제와 같게)
 function frameBody(ts) {
   try {
-    const F = frameOf(screen.W, screen.H);
+    const F = frameOf(screen.W, screen.H, !!(router.cur && router.cur.tall));
     app.t = ts; app.W = F.w; app.H = F.h; screen.ox = F.ox;
     screen.begin();
     g.c.translate(F.ox, 0);
@@ -128,7 +128,7 @@ function frameBody(ts) {
 // 촬영: 정해진 논리 크기·배율로 한 장면을 오프스크린 캔버스에 그려 PNG 주소로 돌려준다(도구 tools/shots/v2shots.mjs)
 window.__shot = (name, params = {}, opt = {}) => {
   running = false; net.offline = true;
-  const W = opt.W || 270, H = opt.H || 600, k = opt.scale || 3, F = frameOf(W, H);
+  const W = opt.W || 270, H = opt.H || 600, k = opt.scale || 3, F = frameOf(W, H, !!(router.scenes[name] && router.scenes[name].tall));
   const cv = document.createElement('canvas'); cv.width = W * k; cv.height = H * k;
   const cx = cv.getContext('2d'); cx.setTransform(k, 0, 0, k, 0, 0); cx.imageSmoothingEnabled = false; cx.translate(F.ox, 0);
   const realG = app.g.c; app.g.ctx = cx;

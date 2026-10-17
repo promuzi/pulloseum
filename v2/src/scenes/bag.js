@@ -4,7 +4,7 @@ import { icon } from '../art/icons.js';
 import { T, plate } from '../art/theme.js';
 import { header, seedArt } from './common.js';
 import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft, FORMS } from '../game/catalog.js';
-import { seedPrice, freeSlots } from '../game/logic.js';
+import { seedPrice, freeSlots, MUT_MAX } from '../game/logic.js';
 import { ask } from './popups.js';
 import { CARDS, CARD_SLOTS, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { cardTiny } from '../art/skillcard.js';
@@ -94,7 +94,7 @@ export const bag = {
     const ok = s.plants.some(p => !cardFits(p, id));
     this.btn(app, hits, 'cd_' + id, W - 66, y + 26, 50, 22, '끼우기', { style: 'gold', disabled: !ok }, () => { this.pickFor = { card: id }; });
   },
-  // 카드를 끼울 식물 고르기(스마트팜 식물 중 맞는 것 — 빈 카드 칸에)
+  // 카드를 끼울 식물 고르기(스마트팜 식물 중 맞는 것): 패시브 = 빈 카드 칸에 · 변이 기술 카드 = 전투 칸(빈 칸 → 회피 · 방어 · 평타 자리, 그 변이 식물만 MUT_MAX 장까지 — 2026-10-17)
   cardSheet(app) {
     const { g, W, H, state: s } = app, id = this.pickFor.card, c = CARDS[id], P = T.ptext;
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
@@ -104,11 +104,13 @@ export const bag = {
     app.input.hit('cs_in', 10, y, W - 20, h, () => {});
     g.text(`${eul(c.name)} 누구에게?`, 22, y + 10, { font: 'head', color: P.main });
     s.plants.forEach((p, i) => {
-      const ry = y + 36 + i * 40, why = cardFits(p, id), Cs = [...(p.cards || []), null, null].slice(0, CARD_SLOTS), has = Cs.includes(id) || p.skills.battle.includes(id), free = Cs.indexOf(null);
-      const no = why || (has ? '이미 끼웠어요' : free < 0 ? '카드 칸이 차 있어요' : null);
+      const ry = y + 36 + i * 40, why = cardFits(p, id), Cs = [...(p.cards || []), null, null].slice(0, CARD_SLOTS), b = p.skills.battle, has = Cs.includes(id) || b.includes(id), free = Cs.indexOf(null);
+      const sk = isSkillCard(id), bi = b.indexOf(null) >= 0 ? b.indexOf(null) : ['evade', 'guard', 'basic'].map(x => b.indexOf(x)).find(k => k >= 0) ?? -1;
+      const no = why || (has ? '이미 끼웠어요' : sk ? (b.filter(isSkillCard).length >= MUT_MAX ? `기술 카드는 ${MUT_MAX}장까지예요` : bi < 0 ? '전투 칸이 차 있어요' : null) : free < 0 ? '카드 칸이 차 있어요' : null);
       g.text(p.name, 22, ry + 6, { font: 'bold', color: no ? T.text.dim : P.main });
       g.text(no || '끼울 수 있어요', 22, ry + 22, { color: no ? '#ffb0a0' : '#9ff0b0' });
-      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: () => { const nc = [...Cs]; nc[free] = id; app.act('setCards', { id: p.uid, cards: nc }).then(r => { if (r) { this.pickFor = null; app.toast(`${p.name}에게 끼웠어요`); } }); } });
+      const done = r => { if (r) { this.pickFor = null; app.toast(`${p.name}에게 끼웠어요`); } };
+      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: sk ? () => { const nb = [...b]; nb[bi] = id; app.act('setSlots', { id: p.uid, battle: nb, cards: Cs }).then(done); } : () => { const nc = [...Cs]; nc[free] = id; app.act('setCards', { id: p.uid, cards: nc }).then(done); } });
     });
     button(app, 'cs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },

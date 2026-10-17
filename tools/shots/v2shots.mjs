@@ -37,6 +37,8 @@ export const SHOTS = [
   ['05_plant_skill', 'plant', { tab: 'skill' }],
   ['05_plant_zoom_150', 'plant', { tab: 'skill', zoomAt: '150' }], ['05_plant_zoom_350', 'plant', { tab: 'skill', zoomAt: '350' }], ['05_plant_zoom_550', 'plant', { tab: 'skill', zoomAt: '550' }],   // 홈에서 다가가며 들어오는 중(판이 같이 올라옴 — 2026-10-17)
   ['05_plant_skill_sel', 'plant', { tab: 'skill', sel: '1' }],
+  ['05_plant_skill_mut', 'plant', { tab: 'skill', act: '1' }],   // 변이 종자 식물(무기 — 전투 칸 여섯 중 기술 카드 · 카드 칸 = 패시브, 2026-10-17)
+  ['05_plant_skill_drake', 'plant', { tab: 'skill', act: '6' }],   // 태생 변이(드레이크캑터)
   ['06_plant_up', 'plant', { tab: 'up' }],
   ['06_plant_set', 'plant', { tab: 'set' }],
   ['06_plant_iv', 'plant', { tab: 'iv' }],
