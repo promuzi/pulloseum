@@ -1,6 +1,6 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, bloomPool, STAGE_KEY, FORM_KEYS } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS } from './catalog.js';
 import { CARDS, passivesOf, isSkillCard, formCards, rollCard } from './cards.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
@@ -55,7 +55,8 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
   const battle = [uniqueOf(key, 0)];
   for (let st = 0; st <= stage && battle.length < 3; st++) {
     const pool = bloomPool(key, st).filter(x => !battle.includes(x.id));
-    if (st > 0 && rng() < 0.7) battle.push(uniqueOf(key, st));
+    const us = uniquesOf(key, st).filter(id => !battle.includes(id));
+    if (st > 0 && us.length && rng() < 0.7) battle.push(us[Math.floor(rng() * us.length)]);   // 그 단계 개성 중 하나(2026-10-17 단계마다 여럿)
     else if (pool.length) battle.push(pool[Math.floor(rng() * pool.length)].id);
   }
   // 봇 손패 넷 = 배운 기술 앞 둘 + 평타 + 방어나 회피(사람과 같은 넷 — 셋째 배운 기술이 있으면 방어 · 회피 대신 반쯤)

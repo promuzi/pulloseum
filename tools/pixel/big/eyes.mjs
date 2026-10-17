@@ -27,6 +27,7 @@ export const EYES = {
   blade_vine: { box: [[704, 423, 34, 28], [818, 427, 26, 28]], cheek: [760, 456] },
   toxi_cactus: { box: [[606, 725, 54, 33], [807, 746, 51, 29]], cheek: [705, 762] },
   draco_fruit: { box: [[675, 720, 51, 24], [889, 715, 24, 23]], cheek: [782, 736] },   // 다시 그린 안(cut/draco_fruit_v2.png — 비늘 몸 · 날개 · 뿔)은 사용자가 '전이 더 좋아'(2026-10-17) — 원래 그림 그대로
+  frost_drake: { box: [[739, 594, 41, 34], [916, 600, 17, 26]], cheek: [830, 610] },   // 2026-10-17 새 종(드라코프루트 다시 그린 안 = cut/frost_drake.png) · 아몬드 눈 둘(오른쪽 = 옆으로 돌아 가늘게)
   // 처음 화면 대표 캐릭터(2026-10-17 사용자가 후보 셋 중 ㄴ '불꽃 용 선인장'을 고름 — concept/title/hero_b.png = cut/title_hero.png)
   // 새 태생 용족 드레이크캑터 — 2026-10-17 사용자 "좀 더 멋있는 용 같았으면" · "참고 사진 없이 아예 새로" → concept/drake/drake_v2.png(글로만 · 머리는 옆으로 · 보이는 눈 하나) → greycut = cut/drake_cactus.png(옛 안 = cut/drake_cactus_v1.png)
   drake_cactus: { box: [[704, 245, 31, 18]], cheek: [700, 278] },

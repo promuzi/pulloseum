@@ -74,7 +74,7 @@ if (!ONLY) {
   // ③ 태생 변이(드레이크캑터: 카드 칸 둘 + 전투 칸 하나에 기술 카드) vs 같은 종 · 속성의 일반 식물(엠버캑터 + 일반 카드 둘)
   console.log('\n[태생 변이  vs  일반 식물 + 일반 카드 둘 — 태생 쪽 승률]');
   //  상대 = 같은 속성 일반 식물(속성 상성이 끼지 않게): 드레이크 · 블레이드 · 엠버캡 = 불, 드라코 = 빙결, 톡시 = 풀, 팽트랩 = 대지
-  for (const [inn, norm, f] of [['drake_cactus', 'cactus_fire', 'dragon'], ['draco_fruit', 'frost_bell', 'dragon'], ['blade_vine', 'flower_fire', 'weapon'], ['toxi_cactus', 'thorn', 'toxic'], ['fang_trap', 'gaia', 'predator'], ['ember_cap', 'cactus_fire', 'spore']]) {
+  for (const [inn, norm, f] of [['drake_cactus', 'cactus_fire', 'dragon'], ['frost_drake', 'frost_bell', 'dragon'], ['blade_vine', 'flower_fire', 'weapon'], ['toxi_cactus', 'thorn', 'toxic'], ['fang_trap', 'gaia', 'predator'], ['ember_cap', 'cactus_fire', 'spore']]) {
     let w = 0;
     for (let g = 0; g < GAMES; g++) {
       const base = 7000 + g * 11, pa = plantOf(inn, null, base), pb = plantOf(norm, null, base), fc = formCards(f), sk = fc.filter(isSkillCard), pas = fc.filter(id => !isSkillCard(id));

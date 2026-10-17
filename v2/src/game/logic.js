@@ -2,7 +2,7 @@
 // 표 = catalog.js. 모든 함수는 state를 그 자리에서 바꾸고 화면에 보여 줄 결과를 돌려줌. 안 되는 일은 Err(사용자에게 보일 한국어 문구)를 던짐.
 import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
-  uniqueOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
+  uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P } from './catalog.js';
 import { CARDS, CARD_SLOTS, cardFits, rollCard, formCards, isSkillCard } from './cards.js';
@@ -53,7 +53,7 @@ export function makePlant(s, seed, rng, now) {
   };
   // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기(평타 · 방어 — 회피는 보관)
   learnNow(p, uniqueOf(p.key, 0));
-  const c1 = bloomPool(p.key, 0).filter(x => x.id !== uniqueOf(p.key, 0));
+  const c1 = bloomPool(p.key, 0).filter(x => !uniquesOf(p.key, 0).includes(x.id));
   if (c1.length) learnNow(p, pickW(rng, c1).id);
   fillBasics(p);
   // 카드 칸 둘(2026-10-17): 변이 식물은 처음 필 때 그 변이 카드 둘(기술 카드 하나 + 패시브 하나 — 전엔 변이 칸 둘이 저절로 찼음)

@@ -38,7 +38,8 @@ export const ATTACKS = {
   fang_trap: { kind: 'bite', move: 'lunge', c: ['#fff4d8', '#d8e070', '#7ca83a', '#2e4a1e'], status: 'dust' },
   blade_vine: { kind: 'blades', move: 'lunge', c: ['#fff6c8', '#ffc848', '#f26a22', '#8a2416'], status: 'burn' },
   toxi_cactus: { kind: 'poison', move: 'cast', c: ['#f0d8ff', '#c890f0', '#8a40c8', '#3a1660'], fizz: '#b8f070', status: 'poison' },
-  draco_fruit: { kind: 'breath', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
+  draco_fruit: { kind: 'blades', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },   // 2026-10-17 보통 식물 = 서리 가시를 날림(숨결은 프로스트드레이크)
+  frost_drake: { kind: 'breath', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },   // 태생 용족 = 서리 숨결
   ember_cap: { kind: 'spores', move: 'cast', c: ['#fff6c8', '#ffc848', '#f26a22', '#8a2416'], status: 'burn' },
   drake_cactus: { kind: 'breath', move: 'cast', c: ['#fff6c8', '#ffb040', '#e8442a', '#7a1a14'], status: 'burn' },   // 태생 용족 = 불 숨결
   // 새 셋(2026-10-17): 갓 버섯 = 부채 바람 · 하회탈 덩굴 = 덩굴 채찍(흙빛) · 천둥북 선인장 = 번개
@@ -57,7 +58,12 @@ export const ATTACKS = {
 const UNIQUE = {
   u_petal_2: ['flower_grass', 'whip'], u_petal_3: ['flower_grass', 'blades'],      // 장미 가시 · 꽃잎 칼날
   u_thorn_2: ['thorn', 'rings'], u_thorn_3: ['thorn', 'slam'],                      // 가시 그물 · 독가시 덤불(가시가 땅을 타고 와 솟음)
-  u_aqua_3: ['aqua', 'breath'],                                                     // 물방울 세례
+  u_aqua_3: ['aqua', 'breath'],
+  u_draco_3: ['draco_fruit', 'rings'],
+  u_draco_2b: ['draco_fruit', 'breath'],
+  // 2026-10-17 단계마다 더 피는 개성(28종 × 공격 기술) — 종 색에 기술마다 다른 모습
+  u_petal_2b: ['flower_grass', 'bloom'], u_petal_3c: ['flower_grass', 'gale'], u_thorn_2b: ['thorn', 'bite'], u_thorn_3b: ['thorn', 'whip'], u_thorn_3c: ['thorn', 'wave'], u_aqua_3b: ['aqua', 'bloom'], u_wind_2b: ['flower_wind', 'blades'], u_wind_3c: ['flower_wind', 'rings'], u_spark_3b: ['spark', 'fireball'], u_spark_3c: ['spark', 'bolt'], u_tide_2b: ['vine_water', 'whip'], u_tide_3b: ['vine_water', 'rings'], u_ember_3b: ['cactus_fire', 'blades'], u_ember_3c: ['cactus_fire', 'rings'], u_gaia_3c: ['gaia', 'slam'], u_blaze_2b: ['flower_fire', 'blades'], u_blaze_3c: ['flower_fire', 'fireball'], u_gale_3b: ['cactus_wind', 'gale'], u_gale_3c: ['cactus_wind', 'blades'], u_gvine_2b: ['vine_wind', 'whip'], u_gvine_3c: ['vine_wind', 'gale'], u_spore_3b: ['spore_cap', 'spores'], u_spore_3c: ['spore_cap', 'rings'], u_frost_3b: ['frost_bell', 'rings'], u_frost_3c: ['frost_bell', 'breath'], u_volt_2b: ['volt_vine', 'rings'], u_volt_3c: ['volt_vine', 'bolt'], u_stone_3c: ['stone_cap', 'slam'], u_jelly_3b: ['jelly_cap', 'whip'], u_jelly_3c: ['jelly_cap', 'bubbles'], u_fang_3b: ['fang_trap', 'bite'], u_fang_3c: ['fang_trap', 'slam'], u_blade_3b: ['blade_vine', 'w_slash'], u_blade_3c: ['blade_vine', 'w_thrust'], u_toxi_2b: ['toxi_cactus', 'poison'], u_toxi_3c: ['toxi_cactus', 'blades'], u_emcap_3b: ['ember_cap', 'spores'], u_emcap_3c: ['ember_cap', 'fireball'], u_drake_2b: ['drake_cactus', 'gale'], u_drake_3c: ['drake_cactus', 'slam'], u_gat_3b: ['gat_cap', 'rings'], u_gat_3c: ['gat_cap', 'blades'], u_tal_2b: ['mask_vine', 'rings'], u_tal_3c: ['mask_vine', 'whip'], u_drum_2b: ['drum_cactus', 'rings'], u_drum_3c: ['drum_cactus', 'slam'], u_lamp_3b: ['lantern_vine', 'whip'], u_lamp_3c: ['lantern_vine', 'fireball'], u_jar_3c: ['jar_cactus', 'bubbles'], u_dok_2b: ['goblin_cap', 'fireball'], u_dok_3c: ['goblin_cap', 'slam'], u_crown_2b: ['crown_cap', 'rings'], u_crown_3c: ['crown_cap', 'breath'],                                            // 용 따라하기 = 작은 서리 콧김
+  u_fdrake_2b: ['frost_drake', 'whip'], u_fdrake_3c: ['frost_drake', 'slam'],       // 꼬리치기 · 빙하 낙하                                              // 서리 열매 터뜨리기 = 퍼지는 서리 고리                                                     // 물방울 세례
   u_wind_2: ['flower_wind', 'bloom'], u_wind_3: ['flower_wind', 'breath'],          // 꽃잎 회오리 · 꽃잎 돌풍
   u_spark_1: ['spark', 'fireball'], u_spark_2: ['spark', 'spores'],                 // 전기 불꽃 · 전기 꽃가루
   u_tide_1: ['vine_water', 'whip'], u_tide_2: ['vine_water', 'gale'],               // 물살 새순 · 조류 휘감기

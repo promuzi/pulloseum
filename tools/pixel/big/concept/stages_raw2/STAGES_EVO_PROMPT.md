@@ -1,5 +1,6 @@
 (2026-10-17 사용자 "용 처음 모습 뱀 > 이무기 > 용 느낌으로 · 처음부터 멋있으면 키웠을 때 강렬함이 약할 거 같아 · 다른 것들두" → 같은 날 다시 "새로 그린 애들 1 · 2번 진화 애들 다 바꿔줘 — 진화가 아니라 약간 성장한 느낌이야 지금은":
  오늘 그린 18종의 어린 · 자람 전부를 '작은 판'이 아니라 '다른 모습의 앞 단계(진화)'로 다시. 처음 11종(10-15 통과)과 게일바인 자람(10-15)은 그대로.
+ 같은 날 사용자 "나로 하자" — 파란 얼음 용(cut/draco_fruit_v2.png)은 새 종 프로스트드레이크(frost_drake · 태생 용족, cut/frost_drake.png)로, 둥근 드라코프루트는 보통 식물 → 드라코프루트 진화 = 열매 봉오리(용 알 아님) · 프로스트드레이크 = 알 → 새끼 용.
  결과 → stages_raw2/<키>_<단계>.png → `node tools/pixel/big/greycut.mjs … --main` → stages/<키>_<단계>.png. 첫 판(stages_raw/)은 기록으로 남김.)
 
 Task: for each plant creature below, redesign its earlier evolution stages (young and teen). The adult form already exists as the reference image given on its line (open only that reference image for that creature; do not modify it).
@@ -23,7 +24,9 @@ Creatures (key - reference image - young design - teen design):
 
 drake_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\drake_cactus.png - drake_cactus_young.png: a small red cactus SNAKE - a slender, plain serpent-shaped cactus rising from the soil in a gentle S-curve, a simple snake head with round eyes, only a few tiny soft spines; no horns, no wings, no legs, no crest. - drake_cactus_teen.png: an IMUGI (the Korean great serpent that has not yet become a dragon) - a longer, thicker serpent cactus in a bold S-curve, a ridge of spines along its back, two small horn nubs, short whiskers, faint ember cracks between scales; still NO wings and NO legs.
 
-draco_fruit - C:\dev\pulloseum\tools\pixel\big\concept\cut\draco_fruit.png - draco_fruit_young.png: a round dragon-fruit shaped like a DRAGON EGG - smooth pale pink-and-teal skin with tightly closed tiny bracts, a sleepy face peeking out; no pads, no frost. - draco_fruit_teen.png: the egg has cracked open at the top; small frosty wing pads and the first scale plates push out of the crack; one faint frost wisp.
+draco_fruit - C:\dev\pulloseum\tools\pixel\big\concept\cut\draco_fruit.png (a frosty dragon-fruit cactus - a plant, not a dragon) - draco_fruit_young.png: a small closed PITAYA BUD - smooth round pale pink-and-teal skin with tightly closed tiny bracts and a sleepy face peeking out; no frost, no spines, no side pads. - draco_fruit_teen.png: the bud has swollen into a young dragon fruit: its bracts start to curl outward with small icy tips, a few short red-tipped spines, the first small side pads, a light sprinkle of frost.
+
+frost_drake - C:\dev\pulloseum\tools\pixel\big\concept\cut\frost_drake.png (a born ice dragon cactus) - frost_drake_young.png: an ICE DRAGON EGG - a small round frosty egg with a faint pattern of tiny blue scales, a sleepy face peeking out of a small crack at the top; no wings, no horns, no tail. - frost_drake_teen.png: a HATCHLING - a small scaly icy-blue cactus body just out of the egg (one piece of eggshell still sitting on its head), two tiny wing-pad nubs, two short horn nubs, a short curled tail root; no big wings, no frost breath.
 
 fang_trap - C:\dev\pulloseum\tools\pixel\big\concept\cut\fang_trap.png - fang_trap_young.png: a tiny round CLOSED trap bud like a little clam on a short stem, soft fuzz instead of bristles, an innocent sleepy face; no teeth, no mouth showing. - fang_trap_teen.png: a small open trap mouth with short soft bristle-teeth and a cheeky grin, a second closed bud beside it.
 

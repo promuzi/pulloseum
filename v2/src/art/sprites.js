@@ -3,7 +3,7 @@ import { C } from './palette.js';
 import { frameAt } from '../core/motion.js';
 
 // 첫 출시 도감 = 1궤도 행성 세 곳의 기본 11종 + 지역 희귀 스포어캡
-export const ROSTER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap'];
+export const ROSTER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'frost_drake'];
 export const EXTRA = ['tree_fire'];
 export const BIG_EXTRA = [];   // 종이 아닌 큰 판 그림(처음 화면 대표 캐릭터 — 2026-10-17 사용자가 '불꽃 용 선인장'을 고름)
 export const POTS = ['pot_terra', 'pot_ceramic', 'pot_glass', 'pot_crystal', 'pot_gold'];
@@ -13,7 +13,7 @@ function load(src) { return new Promise(res => { const i = new Image(); i.onload
 
 // 옛 48×56 도트(assets/sprites)는 처음 12종만 · 생장 단계 그림(_young · _teen)도 있는 종만 부름 — 새 종(2026-10-16 프로스트벨 등)은 성체 그림 하나(없는 파일을 부르지 않게)
 // 생장 단계 그림이 있는 종(어린 · 자람 둘 다 — 하나만 있으면 그 단계만 바뀜). 새로 그리면 여기에 더함(2026-10-17)
-export const STAGED_KEYS = [...ROSTER];   // 2026-10-17 모든 종(29) 어린 · 자람 그림 있음
+export const STAGED_KEYS = ROSTER.filter(k => k !== 'frost_drake');   // 프로스트드레이크(2026-10-17 새 종)는 어린 · 자람 그림이 오면 넣음   // 2026-10-17 모든 종(29) 어린 · 자람 그림 있음
 const V1 = ROSTER.slice(0, 12), STAGED = new Set(STAGED_KEYS);
 export async function loadSprites(base = '../assets/sprites/') {
   const keys = [...V1, ...EXTRA, ...POTS];
