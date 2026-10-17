@@ -261,6 +261,12 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     c.beginPath(); c.moveTo(bx, ay + h); c.lineTo(bx + 7, ay + h); c.lineTo(bx + 7 + h * 0.5, ay - 4); c.lineTo(bx + h * 0.5, ay - 4); c.closePath(); c.fill();
     c.restore();
   }
+  // 속성 배지(2026-10-18 사용자 "카드가 어떤 속성인지 모르겠어" → 안 ①): 그림 왼쪽 아래 둥근 판 + 속성 아이콘(식물 이름 옆과 같은 그림) · 테 = 그 속성 색 —
+  //  속성 없는 기본기(평타 · 방어 · 회피 · 광합성)와 패시브는 없음. 지금 상대에게 잘 듣는지는 뒷면(꾹)에 이미 있음
+  if (sk.el && !sk.passive && ELEMENT[sk.el]) {
+    const ic = icon(sk.el);
+    if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
+  }
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
   if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
