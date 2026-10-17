@@ -55,6 +55,8 @@ node tools/pixel/big/stemcheck.mjs [키…]               # 게임 묶음(어린
 - `node tools/pixel/big/convert.mjs --export <키…>` → `assets/v2/plants/<키>.png·.json`(대기 64장 + 깜빡임 4장 × under·over 두 층) + `assets/v2/pots/`. 게임은 `v2/src/art/sprites.js drawBig(g, 키, 화분, 굽x, 굽y, {t, flip, flash})`로 화분 뒤 → under → 화분 앞 → over.
   - 묶은 뒤 깜빡임 장이 실제로 감기는지 잰다(깜빡임 장 = 같은 자세 대기 장과 눈 칸이 달라야 함 — 2026-10-17 전엔 `--export`가 눈 자리를 안 잡아 모든 종이 게임에서 안 감겼고 숨쉬기 머리 자리도 검토 영상과 달랐음).
   - 아주 작은 눈이 불 재질 · 이음매에 걸려 움직임 장마다 반짝임이 빠졌다 생기면(드레이크캑터 금빛 눈) `TUNE[키].eyeHold = true` — 눈 둘레는 쉬는 그림을 얼굴 이동만큼 통째로 옮김. 밝은 무늬(`accent`)는 눈 둘레를 저절로 뺌.
+  - 서리 털 · 잔 결처럼 한 칸보다 잘게 갈라진 질감이 밝고 어두운 점으로 튀면 `TUNE[키].soft = 4~7`(원화를 줄이기 전에 몸 칸끼리 상자 흐림 — 바이킹캡 7 · 구미호블룸 5, 2026-10-17). 외딴 칸 정리는 아주 밝거나 어두운 재질(눈 · 반짝임 보호)을 건너뛰어 이런 점은 남음. 얼굴이 작아 눈이 결에 묻히면 `eyeDark`를 같이.
+  - 종을 넣은 뒤 종 리그전 `node tools/test/specbalance.mjs [--stage 2]`로 새 종이 40~60% 안인지 본다(기울기 tilt로 맞춤 — 나머지 수치는 사용자 몫).
 - 식물이 서는 무대는 1배 도트(2026-10-15 ①안): `bg.js arena1`·`pad1`(받침 세로 = 가로 × 0.4384). 2배 층(`common.js stage`)에 큰 판 식물을 넣지 않는다(칸 크기가 섞임).
 - 확인: `node tools/shots/v2shots.mjs --label <이름> --only battle` → `tools/shots/out/<이름>/`.
 
