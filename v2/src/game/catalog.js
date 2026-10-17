@@ -46,15 +46,15 @@ export const SPECIES = {
   jar_cactus: { name: '동이캑터', type: 'cactus', el: 'water', rarity: 'common', branch: 'shore', role: 'ltank', tilt: { hp: 1.1, def: 1.1, atk: 0.92, spd: 0.95 } },    // 물동이를 인 선인장 · 똬리
   goblin_cap: { name: '도깨비캡', type: 'mushroom', el: 'bolt', rarity: 'common', branch: 'shade', role: 'dis', tilt: { spd: 1.08 } },  // 뿔 하나 · 번개 감긴 도깨비 방망이
   crown_cap: { name: '크라운캡', type: 'mushroom', el: 'ice', rarity: 'rare', branch: 'meadow', role: 'ltank', tilt: { hp: 1.1, def: 1.1, atk: 0.92, spd: 0.95 } },     // 얼음 왕관 갓 · 서리 이끼 망토   // 2026-10-17 태생 용족(불 선인장 용 — 갈빗대 몸에 용 비늘 · 뿔 · 날개)
-  // 2026-10-17 셋째 아홉(사용자 "더 다양한 식물을 늘려줘") = 같은 칸(종 × 속성)의 둘째 종 일곱 + 태생 변이 둘(무기 · 용족) — 상징 하나를 크게
+  // 2026-10-17 셋째 아홉(사용자 "더 다양한 식물을 늘려줘") = 같은 칸(종 × 속성)의 둘째 종 일곱 + 태생 변이 둘(무기 · 용족) — 상징 하나를 크게 · 기울기는 종 리그전(specbalance.mjs)으로 한 번 맞춤(아스트로 24% · 현무 32% · 닌자 37% · 구미호 65% → 가운데 쪽으로)
   gladi_cactus: { name: '글라디캑터', type: 'cactus', el: 'earth', rarity: 'rare', branch: 'desert', form: 'weapon', role: 'ctr', tilt: { def: 1.12, spd: 0.95 } },   // 검투사 투구 · 선인장 방패 · 가시 칼(태생 무기)
   jangseung_cactus: { name: '장승캑터', type: 'cactus', el: 'grass', rarity: 'common', branch: 'desert', role: 'tank', tilt: { hp: 1.15, def: 1.15, atk: 0.85, spd: 0.9 } },   // 마을 장승 얼굴 · 검은 갓
-  astro_cap: { name: '아스트로캡', type: 'mushroom', el: 'wind', rarity: 'rare', branch: 'meadow', role: 'fast', tilt: { spd: 1.2 } },   // 유리 우주 헬멧 · 공기통 분사
+  astro_cap: { name: '아스트로캡', type: 'mushroom', el: 'wind', rarity: 'rare', branch: 'meadow', role: 'fast', tilt: { spd: 1.12, atk: 1.12, hp: 1.05 } },   // 유리 우주 헬멧 · 공기통 분사
   viking_cap: { name: '바이킹캡', type: 'mushroom', el: 'ice', rarity: 'common', branch: 'shade', role: 'atk', tilt: { atk: 1.12, hp: 0.93, def: 0.93 } },   // 얼음 뿔 투구 · 땋은 서리 수염
-  hyunmu_cap: { name: '현무캡', type: 'mushroom', el: 'water', rarity: 'rare', branch: 'shore', form: 'dragon', role: 'tank', tilt: { hp: 1.15, def: 1.15, atk: 0.85, spd: 0.9 } },   // 거북 등껍질 갓 · 감긴 물뱀(태생 용족)
-  gumiho_bloom: { name: '구미호블룸', type: 'flower', el: 'fire', rarity: 'rare', branch: 'meadow', role: 'dot' },   // 여우 귀 꽃잎 · 아홉 꼬리 꽃잎 · 여우불
+  hyunmu_cap: { name: '현무캡', type: 'mushroom', el: 'water', rarity: 'rare', branch: 'shore', form: 'dragon', role: 'ltank', tilt: { hp: 1.1, def: 1.1, atk: 0.95, spd: 0.95 } },   // 거북 등껍질 갓 · 감긴 물뱀(태생 용족)
+  gumiho_bloom: { name: '구미호블룸', type: 'flower', el: 'fire', rarity: 'rare', branch: 'meadow', role: 'dot', tilt: { atk: 0.95 } },   // 여우 귀 꽃잎 · 아홉 꼬리 꽃잎 · 여우불
   wizard_bell: { name: '위저드벨', type: 'flower', el: 'bolt', rarity: 'rare', branch: 'meadow', role: 'dis', tilt: { spd: 1.08 } },   // 마법사 꽃잎 모자 · 별 지팡이
-  ninja_vine: { name: '닌자바인', type: 'vine', el: 'wind', rarity: 'rare', branch: 'shade', role: 'fast', tilt: { spd: 1.15, atk: 1.05 } },   // 복면 · 붉은 잎 목도리 · 잎 수리검
+  ninja_vine: { name: '닌자바인', type: 'vine', el: 'wind', rarity: 'rare', branch: 'shade', role: 'fast', tilt: { spd: 1.12, atk: 1.12 } },   // 복면 · 붉은 잎 목도리 · 잎 수리검
   diver_vine: { name: '해녀바인', type: 'vine', el: 'water', rarity: 'common', branch: 'shore', role: 'sup', tilt: { hp: 1.1 } },   // 물안경 · 주황 테왁 · 망사리
 };
 for (const k of Object.keys(SPECIES)) SPECIES[k].base = base(SPECIES[k].type, SPECIES[k].el);
