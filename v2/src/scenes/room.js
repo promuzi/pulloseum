@@ -7,7 +7,7 @@ import { ledBoard, ledText, LED } from '../art/led.js';
 import { net, openStream, room as R, act } from '../net/api.js';
 import { openForm } from '../core/form.js';
 import { SPECIES, STAGES } from '../game/catalog.js';
-import { stageName } from '../game/view.js';
+import { stageName, lvOf } from '../game/view.js';
 
 // 친구 대결 방(2026-10-16 사용자 "몇몇 친구랑 할 수 있게 · 임의로 방만들기와 초대코드 등"):
 //  방 만들기 → 6자 코드(전광판) · 코드/링크 복사 → 친구가 코드로 들어옴 → 저마다 식물 고르고 준비 → 둘 다 준비면 셔터가 닫히며 대결.
@@ -88,7 +88,7 @@ export const room = {
       g.rect(W / 2 - 33, y + 44, 66, 66, '#4a8edc'); g.rect(W / 2 - 32, y + 45, 64, 64, '#0a1c32');
       g.clip(W / 2 - 31, y + 46, 62, 62, () => drawPortrait(g, p.key, W / 2 - 31, y + 46, 62, false));
       g.text(`나갈 식물: ${p.name}`, W / 2, y + 120, { font: 'bold', color: P.main, align: 'center' });
-      g.text(`${stageName(p)} Lv${p.lv}`, W / 2, y + 138, { color: P.sub, align: 'center' });
+      g.text(`${stageName(p)} Lv${lvOf(p)}`, W / 2, y + 138, { color: P.sub, align: 'center' });
     }
     button(app, 'rm_make', x, y + 180, w, 38, '방 만들기', { style: 'gold', font: 'head', icon: 'plus', iconTint: true, disabled: this.busy || !app.room.online, onTap: () => this.call(app, () => R.create()) });
     button(app, 'rm_join', x, y + 226, w, 38, '코드로 들어가기', { style: 'teal', font: 'bold', disabled: this.busy || !app.room.online, onTap: () => openForm(app, {
@@ -152,7 +152,7 @@ export const room = {
         g.clip(px + 1, py + 1, 54, 54, () => drawPortrait(g, c.key, px + 1, py + 1, 54, false));
         g.img(icon(SPECIES[c.key].el), px + 58 - 12, py + 2);
         g.text(c.name, x + cw / 2, py + 60, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#e0f0ff', align: 'center' });
-        g.text(`${STAGES[c.stage]} · Lv${c.lv}`, x + cw / 2, py + 76, { color: '#8cc4ee', align: 'center' });
+        g.text(`${STAGES[c.stage]} · Lv${lvOf(c)}`, x + cw / 2, py + 76, { color: '#8cc4ee', align: 'center' });
         button(app, 'rm_pick', x + 10, py + 94, cw - 20, 20, '식물 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.picker = true; else app.toast('준비를 풀고 바꿔요'); } });
       } else {   // 상대 = 비밀(3:3이면 팀이 되는지만)
         const no3 = swap && !m.team3;
@@ -190,7 +190,7 @@ export const room = {
       holo(g, 16, ry + (pr ? 1 : 0), W - 32, 38, T.deep, 16);
       g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
       g.text(p.name, 60, ry + 5, { font: 'bold', color: T.ptext.main });
-      g.text(`${stageName(p)} Lv${p.lv}`, 60, ry + 21, { color: T.ptext.sub });
+      g.text(`${stageName(p)} Lv${lvOf(p)}`, 60, ry + 21, { color: T.ptext.sub });
       g.img(icon(SPECIES[p.key].el), W - 40, ry + 13);
       app.input.hit(id, 16, ry, W - 32, 38, () => { this.picker = false; this.call(app, () => R.pick(p.uid)); });
     });
@@ -208,7 +208,7 @@ export const room = {
       holo(g, 16, ry + (pr ? 1 : 0), W - 32, 38, k >= 0 ? { fill: '#0d2a1c', fill2: '#123622', frame: '#7cf0a0', frameHi: '#d8ffe4', frameLo: '#2a6a44' } : T.deep, 16);
       g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
       g.text(p.name, 60, ry + 5, { font: 'bold', color: T.ptext.main });
-      g.text(`${stageName(p)} Lv${p.lv}`, 60, ry + 21, { color: T.ptext.sub });
+      g.text(`${stageName(p)} Lv${lvOf(p)}`, 60, ry + 21, { color: T.ptext.sub });
       g.img(icon(SPECIES[p.key].el), W - 66, ry + 13);
       if (k >= 0) { g.rect(W - 46, ry + 9, 20, 20, '#05070b'); g.rect(W - 45, ry + 10, 18, 18, k === 0 ? '#f0be7d' : '#7cf0a0'); g.text(String(k + 1), W - 36, ry + 12, { font: 'bold', color: '#05070b', align: 'center' }); }
       app.input.hit(id, 16, ry, W - 32, 38, () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < 3) sel.push(p.uid); else app.toast('셋까지 골라요'); });

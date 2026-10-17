@@ -7,7 +7,7 @@ import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
 import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../game/catalog.js';
 import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
-import { stageKey, stageName, stars, growInfo, fruitOf } from '../game/view.js';
+import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { inkOf } from '../core/text.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
@@ -158,7 +158,7 @@ export const home = {
   specs(app, p, y0) {
     const { g, t } = app, st = T.card || T.panel, P = T.ptext, ps = plantStats(p), gi = growInfo(p);
     const rows = [...STAT_DEF.slice(0, 4).map(d => ({ ic: d.icon, label: d.name, val: ps[d.k] != null ? fmt(ps[d.k]) : '–' })), null,
-      gi.ready ? { ic: 'up', label: '진화!', val: 'Lv6', bar: 1, gold: true } : gi.done ? { ic: 'sun', label: '다 자람', val: 'Lv6', bar: 1 } : { ic: 'sun', label: `Lv${gi.lv}`, val: `${gi.cur}/${gi.need}`, bar: gi.pct }];
+      gi.ready ? { ic: 'up', label: '진화!', val: `Lv${gi.shown}`, bar: 1, gold: true } : gi.done ? { ic: 'sun', label: '다 자람', val: `Lv${gi.shown}`, bar: 1 } : { ic: 'sun', label: `Lv${gi.shown}`, val: `${gi.cur}/${gi.need}`, bar: gi.pct }];
     let y = Math.round(y0), n = 0;
     for (const r of rows) {
       if (!r) { y += CARD.grp - CARD.gap; continue; }
@@ -204,7 +204,7 @@ export const home = {
   // 정체성 꼬리표: 타입 · 속성 · 생장 단계 — 능력치 창과 다른 꼴(둥근 작은 꼬리표, 아이콘 + 글자)
   tags(app, p, mx) {
     const { g } = app, sp = SPECIES[p.key], el = ELEMENT[sp.el], TY = TAG_Y + homeDy(app);
-    const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${p.lv}` }];
+    const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${lvOf(p)}` }];
     const ws = list.map(r => 22 + g.textW(r.label, 'label')), gap = 4, total = ws.reduce((a, b) => a + b, 0) + gap * (list.length - 1);
     let x = Math.round(mx - total / 2);
     list.forEach((r, i) => {
@@ -265,7 +265,7 @@ export const home = {
       let nm = q.name; while (nm.length > 1 && g.textW(nm, 'bold') > room) nm = nm.slice(0, -1);
       g.text(nm === q.name ? nm : nm.slice(0, -1) + '…', nx, cy + 7, { font: 'bold', color: q.shiny ? '#ffe8a8' : P.main });
       miniStars(g, nx, cy + 25, stars(q));
-      g.text(`${stageName(q)} Lv${q.lv}`, nx, cy + 34, { font: 'label', color: P.sub });
+      g.text(`${stageName(q)} Lv${lvOf(q)}`, nx, cy + 34, { font: 'label', color: P.sub });
       app.input.hit(id, cx, cy, cw, chh, () => { this.pick(pi); this.pickSheet = false; });
       // 즐겨찾기 하트(오른쪽 위 — 누르면 켜고 끔)
       const hid = 'pkf_' + q.uid, hx = cx + cw - 19, hy = cy + 5, hi = icon('heart');

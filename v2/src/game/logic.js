@@ -199,7 +199,7 @@ export function feed(s, id, kind, n = 1) {
   const p = getPlant(s, id);
   need(kind === 'water' || kind === 'fert', '물이나 비료만 줄 수 있어요');
   need((s.items[kind] || 0) >= n && n >= 1, kind === 'water' ? '물이 모자라요' : '비료가 모자라요');
-  need(p.lv < LV_MAX, p.stage < 2 ? 'Lv6이에요 — 진화하면 더 자라요' : '다 자랐어요');
+  need(p.lv < LV_MAX, p.stage < 2 ? `Lv${p.stage * (LV_MAX - 1) + LV_MAX}이에요 — 진화하면 더 자라요` : '다 자랐어요');
   const ups = [];
   let used = 0;
   for (; used < n && p.lv < LV_MAX; used++) {
@@ -230,7 +230,7 @@ export function evolveLeague(s, p) {
 }
 export function evolve(s, id, rng) {
   const p = getPlant(s, id);
-  need(p.lv >= LV_MAX && p.stage < 2, p.stage >= 2 ? '이미 다 자랐어요' : 'Lv6이 되어야 진화해요');
+  need(p.lv >= LV_MAX && p.stage < 2, p.stage >= 2 ? '이미 다 자랐어요' : `Lv${p.stage * (LV_MAX - 1) + LV_MAX}이 되어야 진화해요`);
   const lg = evolveLeague(s, p);
   p.stage++; p.lv = 1; p.gxp = 0;
   let league = null;

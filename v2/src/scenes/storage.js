@@ -5,7 +5,7 @@ import { T, holo, btnBody } from '../art/theme.js';
 import { miniStars } from './common.js';
 import { STORE_MAX } from '../game/catalog.js';
 import { freeSlots } from '../game/logic.js';
-import { stageName, stars } from '../game/view.js';
+import { stageName, stars, lvOf } from '../game/view.js';
 import { eul } from '../core/josa.js';
 import { sellAsk, cutAsk } from './popups.js';
 
@@ -132,7 +132,7 @@ export const storage = {
       const p = it.p, days = p.slept ? Math.max(1, Math.ceil((app.now() - p.slept) / 864e5)) : 0, room = freeSlots(s) > 0;
       g.text(p.name, 20, PY + 7, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
       miniStars(g, 25 + g.textW(p.name, 'bold'), PY + 9, stars(p));
-      g.text(`${stageName(p)} Lv${p.lv}` + (days ? ` · 동면 ${days}일째` : ''), 20, PY + 24, { color: P.sub });
+      g.text(`${stageName(p)} Lv${lvOf(p)}` + (days ? ` · 동면 ${days}일째` : ''), 20, PY + 24, { color: P.sub });
       if (!room) g.text('스마트팜 자리가 없어요', W - 20, PY + 8, { color: '#ffb0a0', align: 'right' });
       const bw = Math.floor((W - 40 - 8) / 3), by = PY + 42, bx = i => (i === 2 ? W - 20 - bw : 20 + i * (bw + 4));
       button(app, 'sto_wake', bx(0), by, bw, 24, '깨우기', { style: 'teal', icon: 'sun', disabled: !room, onTap: () => app.act('fromStorage', { id: p.uid }).then(r => { if (r) { this.sel = null; app.toast(`${eul(p.name)} 스마트팜으로 깨웠어요`); } }) });

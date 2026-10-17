@@ -16,7 +16,7 @@ import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, 
 import { CARDS, CARD_SLOTS, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, evolveLeague } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
-import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL } from '../game/view.js';
+import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
 import { eul, ga, eun } from '../core/josa.js';
@@ -136,7 +136,7 @@ export const plant = {
     g.img(icon('pencil'), 44 + nw + 50, 12);
     if (live) app.input.hit('pl_name', 44, 6, nw + 62, 26, () => this.rename(app, p), 2);
     const sp = SPECIES[p.key], el = ELEMENT[sp.el];
-    const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${p.lv}` }];
+    const list = [{ ic: sp.type, label: JONG[sp.type] }, { ic: sp.el, label: el.name, col: el.light }, { ic: 'seed', label: `${stageName(p)} Lv${lvOf(p)}` }];
     let x = 8;
     for (const r of list) { const w = 22 + g.textW(r.label, 'label'); tagBox(g, x, 40, w, 18); g.img(icon(r.ic), x + 5, 44); g.text(r.label, x + 18, 43, { font: 'label', color: r.col || '#e6f3ff' }); x += w + 4; }
     if (p.form && FORMS[p.form]) { const F = FORMS[p.form], tag = F.name + ' 변이', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#160f20', F.col); g.text(tag, x + 6, 43, { font: 'label', color: F.light }); x += w + 4; }   // 변이 = 변이 색 꼬리표
@@ -149,9 +149,9 @@ export const plant = {
     holo(g, x, y, w, h, st, 16);
     this.growR = [x, y, w, h];   // 처음 안내가 가리킬 자리
     const bw = gi.ready ? 96 : gi.done ? 0 : 92, lx = x + 8, rx = x + w - bw - 6;
-    g.text(gi.ready ? '진화 가능' : gi.done ? '다 자랐어요' : `Lv${p.lv}`, lx, y + 6, { font: 'label', color: gi.ready ? '#ffd890' : P.sub });
+    g.text(gi.ready ? '진화 가능' : gi.done ? '다 자랐어요' : `Lv${lvOf(p)}`, lx, y + 6, { font: 'label', color: gi.ready ? '#ffd890' : P.sub });
     if (!gi.done && !gi.ready) {
-      const tx = lx + g.textW(`Lv${p.lv}`, 'label') + 6, num = `${gi.cur}/${gi.need}`, nw = g.textW(num);
+      const tx = lx + g.textW(`Lv${lvOf(p)}`, 'label') + 6, num = `${gi.cur}/${gi.need}`, nw = g.textW(num);
       tbar(g, tx, y + 11, Math.max(20, rx - 8 - nw - 6 - tx), 4, gi.pct, 'exp');
       g.text(num, rx - 8, y + 7, { color: P.main, align: 'right' });
     }
@@ -436,7 +436,7 @@ export const plant = {
       holo(g, 12, y, W - 24, 34, T.deep, 16);
       g.text(f.name, 20, y + 4, { font: 'label', color: P.main });
       miniStars(g, 22 + g.textW(f.name, 'label'), y + 7, starsOf(f.ivs));
-      g.text(`${stageName(f)} Lv${f.lv} · ${where}`, 20, y + 20, { color: P.dim });
+      g.text(`${stageName(f)} Lv${lvOf(f)} · ${where}`, 20, y + 20, { color: P.dim });
       const full = (ivs[pick] || 0) >= IV_MAX;
       this.btn(app, live, 'mg_' + i, W - 92, y + 5, 76, 24, full ? '이미 최대' : `${STAT_NAME[pick]} +${add}`, { style: 'gold', font: 'label', disabled: full }, () => ask(app, `${eul(f.name)} 거름으로 줄까요?`, `${STAT_NAME[pick]} 개체값 +${add} · ${ga(f.name)} 사라져요`, () => app.act('merge', { id: p.uid, food: f.uid, stat: pick }).then(r => r && app.toast(`${STAT_NAME[pick]} ${r.from} → ${r.to}`)), '거름 주기'));
       y += 38;
@@ -473,7 +473,7 @@ export const plant = {
     const r = await app.act('feed', { id: p.uid, kind, n: 1 });
     if (!r) return;
     const up = r.ups[r.ups.length - 1];
-    if (up) { app.toast(`Lv${up.lv}! 강화 포인트 +${up.pts}`); const box = r.ups.find(u => u.box); if (box) showGot(app, 'Lv6 달성 선물', Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
+    if (up) { app.toast(`Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}`); const box = r.ups.find(u => u.box); if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
   },
   // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
   evolve(app, p) {

@@ -4,8 +4,10 @@ import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey, bigBox, BIG } fro
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
 import { miniStars } from './common.js';
-import { farmSlots, FARM_MAX, SKILLS, STORE_MAX, FORMS } from '../game/catalog.js';
-import { stageKey, stageName, stars, growInfo, fruitOf, slotLv } from '../game/view.js';
+import { farmSlots, FARM_MAX, SKILLS, STORE_MAX, FORMS, SPECIES, JONG } from '../game/catalog.js';
+import { ELEMENT } from '../art/palette.js';
+import { glyphH } from '../core/text.js';
+import { stageKey, stageName, stars, growInfo, fruitOf, slotLv, lvOf } from '../game/view.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
 import { evolveLeague } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
@@ -210,6 +212,7 @@ export const nursery = {
     const f = it.kind === 'plant' ? fruitOf(it.p, app.now()) : null;
     const led = !f ? '#5a6478' : f.have >= f.max ? '#7cf0a0' : f.have > 0 ? '#ffd27a' : '#f0a050';
     g.rect(Fx1 - 5, Fy0 + Math.max(2, Math.floor(fh / 2) - 1), 2, 2, led);
+    if (it.kind === 'plant') this.plate(g, it.p, Fx0, Fy0, Fx1 - Fx0, fh);
     const isSel = this.sel === it.id, isPrev = !isSel && this.prevSel === it.id && t - this.prevT < LIFT_MS;
     if (it.kind === 'plant') {
       const band = Math.max(2, Fy0 - By);
@@ -224,6 +227,28 @@ export const nursery = {
     } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#8ccfff', 0); }
     if (u < -0.4 || u > 2.7) return null;
     return { id: 'nur_' + it.id, x: Fx0, y: sy - 78, w: Fx1 - Fx0, h: Fy1 - sy + 80, fn: () => { if (this.sel !== it.id) { this.prevSel = this.sel; this.prevT = app.t; this.sel = it.id; this.selT = app.t; } } };
+  },
+  // 서랍 앞면 이름표(2026-10-18 사용자 "서랍 앞면을 활용해 이름과 속성"): 속성 아이콘 + 이름 — 앞면이 낮은 먼 줄은 아이콘만, 좁으면 이름을 줄임(오른쪽 = 상태 불빛)
+  plate(g, p, x, y, w, h) {
+    const sp = SPECIES[p.key], ic = sp && icon(sp.el); if (!ic || h < ic.height + 2) return;
+    const iy = y + Math.floor((h - ic.height) / 2), gh = glyphH('label'), max = w - 12 - ic.width - 9;
+    g.img(ic, x + 4, iy);
+    if (h < gh + 3 || max < 24) return;
+    let nm = p.name;
+    if (g.textW(nm, 'label') > max) { while (nm.length > 1 && g.textW(nm + '…', 'label') > max) nm = nm.slice(0, -1); nm += '…'; }
+    g.text(nm, x + 7 + ic.width, y + Math.round((h - gh) / 2), { font: 'label', color: '#26303e' });
+  },
+  // 상세 창 종 · 속성 · 변이 줄(아이콘 + 이름 — 변이는 그 변이 색)
+  kinds(g, p, x, y, xr, P) {
+    const sp = SPECIES[p.key]; if (!sp) return;
+    const el = ELEMENT[sp.el] || {}, F = p.form && FORMS[p.form];
+    const parts = [{ ic: sp.type, t: JONG[sp.type], c: P.sub }, { ic: sp.el, t: el.name, c: el.light || P.sub }];
+    if (F) parts.push({ ic: null, t: F.name + (xr - x > 124 ? ' 변이' : ''), c: F.light });
+    for (const q of parts) {
+      const im = q.ic && icon(q.ic);
+      if (im) { g.img(im, x, y + 1); x += im.width + 2; }
+      g.text(q.t, x, y, { color: q.c }); x += g.textW(q.t) + 7;
+    }
   },
   // 잔디에 심긴 식물(큰 판 그림 — 2026-10-15 "식물이 너무 멀어 좀 땡겨와줘", 숨쉬기·깜빡임 그대로): 흙 줄 위만, 밑동은 잔디 덤불이 덮음
   planted(g, it, sx, sy, band, t) {
@@ -299,10 +324,10 @@ export const nursery = {
       g.text(p.name, 20, PY + 8, { font: 'bold', color: p.shiny ? '#ffe8a8' : P.main });
       miniStars(g, 25 + nw, PY + 10, stars(p));
       const colR = W - 136;   // 왼쪽 칸 오른 끝(오른쪽 = 할 일 단추)
-      g.text(`${stageName(p)} · Lv${p.lv}` + (p.form && FORMS[p.form] ? ` · ${FORMS[p.form].name} 변이` : ''), 20, PY + 25, { color: p.form && FORMS[p.form] ? FORMS[p.form].light : P.sub });
-      if (gi.ready) g.text('진화할 수 있어요!', 20, PY + 41, { font: 'bold', color: '#ffd890' });
-      else if (gi.done) g.text('다 자랐어요', 20, PY + 41, { color: P.sub });
-      else { g.text(`생장 ${gi.cur}/${gi.need}`, 20, PY + 41, { color: P.sub }); tbar(g, 20, PY + 56, colR - 20, 4, gi.pct, 'exp'); }
+      this.kinds(g, p, 20, PY + 25, colR, P);
+      g.text(`${stageName(p)} · Lv${lvOf(p)}`, 20, PY + 39, { color: P.sub });
+      if (gi.ready) g.text('진화할 수 있어요!', 20, PY + 50, { font: 'bold', color: '#ffd890' });
+      else if (!gi.done) { const num = `${gi.cur}/${gi.need}`, nw = g.textW(num); g.text(num, colR, PY + 50, { color: P.sub, align: 'right' }); tbar(g, 20, PY + 55, colR - 26 - nw, 4, gi.pct, 'exp'); }
       g.img(icon('fruit'), 20, PY + 64); g.text(`열매 ${f.have}/${f.max}`, 34, PY + 63, { color: f.have ? P.gold : P.sub });
       if (f.have < f.max) tbar(g, 34 + g.textW(`열매 ${f.have}/${f.max}`) + 6, PY + 68, Math.max(10, colR - (40 + g.textW(`열매 ${f.have}/${f.max}`))), 4, f.gauge, 'exp');
       const bx = W - 128, bw = 56, bh = 26, gap = 4, r1 = PY + 8, r2 = r1 + bh + gap, r3 = r2 + bh + gap, last = s.plants.length < 2;
@@ -335,7 +360,7 @@ export const nursery = {
     if (!r) return;
     const up = r.ups[r.ups.length - 1];
     if (up) {
-      app.toast(`${p.name} Lv${up.lv}! 강화 포인트 +${up.pts}` + (up.harvest ? ' · 열매 칸 +1' : ''));
+      app.toast(`${p.name} Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}` + (up.harvest ? ' · 열매 칸 +1' : ''));
       const box = r.ups.find(u => u.box);
       if (box) showGot(app, 'Lv6 달성 선물', Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요');
     }
