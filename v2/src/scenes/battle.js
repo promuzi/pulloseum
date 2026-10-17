@@ -157,7 +157,7 @@ const FX_MSG = {
   chill: (x, e) => `${ga(x)} 얼어 간다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''), shock: (x, e) => `${ga(x)} 감전됐다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''),
   frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`,
   spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
-  bind: (x, e) => `덩굴이 ${x}의 ${eul(e.skill)} 묶었다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 에너지가 안 찬다`,
+  bind: (x, e) => `덩굴이 ${x}의 ${eul(e.skill)} 묶었다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 햇빛이 안 찬다`,
   gale: x => `${x}에게 강풍이 몰아쳤다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 자세를 못 잡는다`, root: x => `${x}의 뿌리가 묶였다! 교체할 수 없다`,
   weak: x => `${ga(x)} 약해졌다! 공격이 떨어진다`, corrode: x => `${x}의 껍질이 부식됐다! 방어가 떨어진다`,
   // 버프
@@ -378,7 +378,7 @@ export const battle = {
       else if (e.t === 'heal') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${ga(e.name)} 체력을 빨아들였다!`, tone: 'heal' });
       else if (e.t === 'regen') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${e.name}의 체력이 재생된다`, tone: 'heal' });
       else if (e.t === 'reflect') out.push({ kind: 'reflect', ms: 750, ev: e, side: e.to, msg: `가시에 찔렸다! ${nm(e.to)}도 아프다`, tone: 'hit' });
-      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 에너지가 차지 않았다` : `그늘 때문에 ${e.name}의 에너지가 차지 않았다`, tone: 'note' });
+      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 햇빛이 차지 않았다` : `그늘 때문에 ${e.name}의 햇빛이 차지 않았다`, tone: 'note' });
       else if (e.t === 'expire') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
     }
     out.push({ kind: 'end', ms: 450 });
@@ -404,7 +404,7 @@ export const battle = {
     if (st.kind === 'fxnote') this.pop(st.side, st.ev.t === 'immune' ? '면역' : '버팀!', st.ev.t === 'immune' ? 'dim' : null, t, false, -16, st.ev.t === 'immune' ? null : '#8ccfff');
     if (st.kind === 'cure') this.pop(st.side, st.ev.why === 'water' ? '화상 꺼짐' : CURE_FIRE[st.ev.ids[0]] || '풀림', null, t, false, -16, '#8ccfff');
     if (st.kind === 'skipT') this.pop(st.side, SKIP_POP[st.ev.src] || '쉼', null, t, false, -16, (STATUS[st.ev.src] || {}).col || '#c0a8ff');
-    if (st.kind === 'note' && st.side) this.pop(st.side, '에너지 막힘', 'dim', t, false, -16);
+    if (st.kind === 'note' && st.side) this.pop(st.side, '햇빛 막힘', 'dim', t, false, -16);
     if (st.kind === 'faint') this.pop(st.who, '쓰러짐', 'dim', t, false, -16);
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack' || st.kind === 'cast') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }

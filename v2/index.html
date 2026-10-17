@@ -3,8 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#2e222f">
+<meta name="theme-color" content="#05070d">
 <title>풀로세움</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="풀로세움">
+<link rel="apple-touch-icon" href="../assets/v2/app/apple-touch-icon.png">
+<script>
+// 카카오톡 안 브라우저(위아래 창이 남고 전체 화면이 안 됨)로 열면 바깥 브라우저(크롬 · 사파리)로 다시 엶 — 2026-10-17
+(function () { try { var ua = navigator.userAgent || ''; if (/KAKAOTALK/i.test(ua) && !/PulloseumApp/.test(ua)) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); } catch (e) {} })();
+</script>
 <style>
 @font-face{font-family:Pretendard;font-weight:600;font-display:block;src:url('../assets/fonts/sub/Pretendard-SemiBold.woff2') format('woff2');}
 @font-face{font-family:Pretendard;font-weight:700;font-display:block;src:url('../assets/fonts/sub/Pretendard-Bold.woff2') format('woff2');}

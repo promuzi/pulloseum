@@ -36,7 +36,7 @@ export const GUIDES = [
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },   // 안내를 보는 동안 시간 막대 멈춤
     steps: [
       { at: 'sk_*', text: '카드를 누르면 그 기술을 써요. 꾹 누르고 있으면 뒷면에 자세한 설명이 나와요.' },
-      { at: 'fx_me', text: '내 체력과 에너지예요. 에너지는 턴마다 1씩 차고, 카드 왼쪽 위 숫자만큼 써요.' },
+      { at: 'fx_me', text: '내 체력과 햇빛이에요. 햇빛은 턴마다 1씩 차고, 카드 왼쪽 위 숫자만큼 써요.' },
       { at: (app, sc) => sc.timerR, side: 'above', text: '이 막대가 다 줄기 전에 골라요. 시간을 넘기면 이번 턴은 쉬어요.' },
       { at: 'fx_foe', text: '상대 체력판이에요. 체력판을 누르면 양쪽에 걸린 효과를 볼 수 있어요.' },
       { at: 'bt_flag', text: '깃발은 기권이에요. 기권한 판은 진 판으로 남아요.' },
@@ -53,7 +53,7 @@ export const GUIDES = [
     ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
-    steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 에너지를 쓰지 않고, 판마다 쓸 수 있는 횟수가 정해져 있어요(왼쪽 위 숫자). 다 쓰면 그 판엔 못 써요.' }] },
+    steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 햇빛을 쓰지 않고, 판마다 쓸 수 있는 횟수가 정해져 있어요(왼쪽 위 숫자). 다 쓰면 그 판엔 못 써요.' }] },
   { id: 'plant', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub, btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
     steps: [

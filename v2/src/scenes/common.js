@@ -66,7 +66,7 @@ export const STAT_DEF = [
   { k: 'hp', name: '체력', icon: 'heart' }, { k: 'atk', name: '공격', icon: 'sword' },
   { k: 'def', name: '방어', icon: 'shield' }, { k: 'spd', name: '기동', icon: 'speed' },
   { k: 'acc', name: '적중', icon: 'target', suf: '%' }, { k: 'elem', name: '속성', icon: 'sparkle' },
-  { k: 'crit', name: '치명', icon: 'crit', suf: '%' }, { k: 'energy', name: '에너지', icon: 'energy' },
+  { k: 'crit', name: '치명', icon: 'crit', suf: '%' }, { k: 'energy', name: '햇빛', icon: 'energy' },
 ];
 
 // 에너지 칸: 켜진 칸 = 노란 번개, 꺼진 칸 = 어두운 번개

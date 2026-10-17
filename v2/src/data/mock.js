@@ -14,7 +14,7 @@ export const STAGE_NAME = {
   tree: { sprout: '떡잎', juvenile: '묘목', growing: '어린나무', mature: '성목', evolved: '거목' },
 };
 export const CAT_ICON = { attack: 'sword', guard: 'shield', evade: 'speed', buff: 'up', debuff: 'down', heal_hp: 'heal', heal_energy: 'energy', other: 'clock', passive: 'star' };
-export const CAT_NAME = { attack: '공격', guard: '방어', evade: '회피', buff: '버프', debuff: '디버프', heal_hp: '회복', heal_energy: '에너지', other: '기타', passive: '패시브' };
+export const CAT_NAME = { attack: '공격', guard: '방어', evade: '회피', buff: '버프', debuff: '디버프', heal_hp: '회복', heal_energy: '햇빛', other: '기타', passive: '패시브' };
 
 const KEYS = Object.keys(CAT_SPECIES);
 function grow(s, p, stage, lv, rng) {   // 진짜 규칙으로 진화시켜 기술을 피움(촬영용 — 경험치·물건은 뒤에서 덮어씀)

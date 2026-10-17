@@ -144,7 +144,11 @@ export const home = {
     const dx0 = Math.round(mx - (n - 1) * 4.5), DY = DOT_Y + dy;
     this.order(s).forEach((pi, i) => { const x = dx0 + i * 9; g.rect(x - 2, DY - 2, 5, 5, '#2b374b'); g.rect(x - 1, DY - 1, 3, 3, pi === s.active ? '#f0be7d' : s.plants[pi].fav ? '#ff9fb4' : '#8eaed2'); });   // 즐겨찾기 = 분홍 점
     this.battleBlock(app, live);
-    if (live) app.input.hit('home_plant', mx - 40, my - 100, 80, 104, () => this.startFocus(app));
+    // 식물 관리로 가는 누르는 자리(2026-10-17 사용자 "판정 구간을 좀 키우자 — 스텟 부분이랑 의자까지, 아래 버튼과 겹치지 않게"): 식물 + 의자(이름표 3칸 위까지) · 왼쪽 능력치 창
+    if (live) {
+      app.input.hit('home_plant', mx - 44, my - 100, 88, NY - 3 - (my - 100), () => this.startFocus(app));
+      if (this.specsR) { const [sx, sy, sw, sh] = this.specsR; app.input.hit('home_stats', sx, sy, sw, sh, () => this.startFocus(app), 2); }
+    }
     navBar(app, 'home', { badge: { nursery: s.plants.some(q => fruitOf(q, app.now()).have > 0 || growInfo(q).ready) } });
     if (this.editing) this.profileSheet(app);
     if (this.modeSheet) this.modeSheetDraw(app);

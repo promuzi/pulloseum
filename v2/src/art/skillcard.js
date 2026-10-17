@@ -368,7 +368,7 @@ function cardBack(g, w, h, sk, o) {
     y += 4;
     if (o.left === 0) line('이번 판엔 다 썼어요', (FORMS[sk.form] || {}).light || '#ff9a9a', 'bold');
     else if (o.lock) line(LOCK_TEXT[o.lock] || '지금은 못 씀', (STATUS[o.lock] || {}).col || '#ff8a8a', 'bold');
-    else if ((sk.cost || 0) > (o.energy ?? 99)) line(`에너지가 모자람 — 지금 ${o.energy} · 필요 ${sk.cost}`, '#ff9a9a', 'bold');
+    else if ((sk.cost || 0) > (o.energy ?? 99)) line(`햇빛이 모자람 — 지금 ${o.energy} · 필요 ${sk.cost}`, '#ff9a9a', 'bold');
     else line('지금은 못 씀', '#ff9a9a', 'bold');
   }
 }
