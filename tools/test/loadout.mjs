@@ -92,13 +92,14 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   throws(() => setCards(s, s.plants[0].uid, ['m_slash', null]), '변이 아닌 식물에 변이 카드');
   setCards(s, p.uid, ['m_smash', 'm_slash']);
   ok(JSON.stringify(p.cards) === '["m_smash","m_slash"]', '카드 칸 바꾸기(가방에서 끼움)');
-  // 횟수: 칼날 베기(판마다 3번) — 연달아 세 번 쓰고 넷째부터 그 판엔 못 씀 · 쇠망치(1번) — 한 번
+  // 횟수: 칼날 베기(판마다 SKILLS.m_slash.uses번 — 2026-10-17 밸런스로 2) — 그만큼 쓰고 나면 그 판엔 못 씀 · 쇠망치(1번) — 한 번
   const me = unitOf('me', p), foe = unitOf('foe', makePlant(s, { key: 'gaia' }, rng, 0)); foe.hp = foe.max = 99999;
   const B = makeBattle({ me, foe, seed: 3 }), slash = me.kit.find(k => k.id === 'm_slash'), smash = me.kit.find(k => k.id === 'm_smash');
   const okAt = [];
   for (let t = 1; t <= 5; t++) { okAt.push(canUse(B.me, slash)); playTurnVs(B, canUse(B.me, slash) ? slash : 'rest', 'rest'); }
-  ok(JSON.stringify(okAt) === '[true,true,true,false,false]', '판마다 3번 = 세 번 쓰고 끝: ' + JSON.stringify(okAt));
-  ok(slash.cost === 0 && slash.uses === 3 && usesLeft(B.me, slash) === 0, '에너지 안 씀 · 남은 횟수 0');
+  const want = Array.from({ length: 5 }, (_, i) => i < SKILLS.m_slash.uses);
+  ok(JSON.stringify(okAt) === JSON.stringify(want), '판마다 정해진 횟수만큼 쓰고 끝: ' + JSON.stringify(okAt));
+  ok(slash.cost === 0 && slash.uses === SKILLS.m_slash.uses && usesLeft(B.me, slash) === 0, '에너지 안 씀 · 남은 횟수 0');
   ok(smash.uses === 1 && canUse(B.me, smash), '쇠망치 = 한 번(아직 안 씀)');
   playTurnVs(B, smash, 'rest'); ok(!canUse(B.me, smash) && usesLeft(B.me, smash) === 0, '쇠망치 한 번 쓰면 끝');
   const B2 = makeBattle({ me: unitOf('me', p), foe: unitOf('foe', makePlant(s, { key: 'gaia' }, rng, 0)), seed: 4 });

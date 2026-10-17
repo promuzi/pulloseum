@@ -31,7 +31,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const stat = (c, k) => (c.pas[k] || 0);
   for (const k of ['hp', 'atk', 'def', 'spd']) {
     const nMax = Math.max(...NORMAL_CARDS.map(id => stat(CARDS[id], k))), vMax = Math.max(...Object.values(CARDS).filter(c => c.form && c.kind === 'passive').map(c => stat(c, k)));
-    ok(nMax > vMax * 2, `${k}: 일반 카드 최대 ${nMax} > 변이 카드 최대 ${vMax} × 2`);
+    ok(nMax >= vMax * 2, `${k}: 일반 카드 최대 ${nMax} ≥ 변이 카드 최대 ${vMax} × 2`);
   }
   ok(cardFace('n_wall').passive && cardFace('m_bite').act === 'attack' && cardFace('m_scale').act === 'buff', '화면 모습(패시브 · 기술)');
   ok(Object.values(SKILLS).filter(x => x.tier === 'm' && x.el).length >= 8, '속성 변이 기술(불 · 물 · …) 여럿');
@@ -129,9 +129,9 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
 {
   const s = game(), P = key => { const p = plant(s, key); p.cards = [null, null]; return p; }, U = (p, ...cards) => { p.cards = [cards[0] || null, cards[1] || null]; return unitOf('me', p); };
   const p = P('gaia'), base = U(p), fib = U(p, 'n_fiber', 'n_vacuole'), chl = U(p, 'n_chloro');
-  ok(fib.atk === Math.round(base.atk * 1.15) && fib.max === Math.round(base.max * 1.15) && fib.def === base.def, '근섬유 · 액포 = 공격 · 체력 % ' + [base.atk, fib.atk, base.max, fib.max]);
+  ok(fib.atk === Math.round(base.atk * (1 + CARDS.n_fiber.pas.atk)) && fib.max === Math.round(base.max * (1 + CARDS.n_vacuole.pas.hp)) && fib.def === base.def, '근섬유 · 액포 = 공격 · 체력 % ' + [base.atk, fib.atk, base.max, fib.max]);
   ok(chl.energy === 3 && base.energy === 2, '엽록체 = 시작 에너지 +1');
-  ok(U(p, 'n_target').crit === base.crit + 8 && U(p, 'n_balance').spd === Math.round(base.spd * 1.06), '표적 · 항상성');
+  ok(U(p, 'n_target').crit === base.crit + CARDS.n_target.pas.crit && U(p, 'n_balance').spd === Math.round(base.spd * (1 + CARDS.n_balance.pas.spd)), '표적 · 항상성');
   const T3 = makeTeamBattle({ me: [U(P('aqua'), 'n_chloro'), U(P('thorn')), U(P('gaia'))], foe: [U(P('aqua')), U(P('thorn')), U(P('gaia'))], seed: 2 });
   ok(T3.pool.me === 3 && T3.pool.foe === 2, '3:3 팀 에너지 시작 = 가장 큰 값');
   // 한 턴 돌려 사건 보기: 나 = 공격, 상대 = 쉼

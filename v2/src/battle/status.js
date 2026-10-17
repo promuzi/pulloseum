@@ -203,7 +203,8 @@ export function onHit(att, tgt, skill, ctx) {
   const e = E(tgt), ev = ctx.ev;
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
-    const gone = ['frozen', 'chill', 'wet', 'spore', 'bind', 'leech', 'root'].filter(k => e[k]);   // 불이 얼음·냉기·물기·포자 + 덩굴·기생 씨앗·뿌리(식물로 묶은 것)를 태움
+    const own = skill.inflict && skill.inflict.id;   // 그 기술이 거는 효과는 태우지 않음(불씨 포자 = 불 속성인데 포자를 거는 기술 — 2026-10-17 카드 밸런스 시험에서 발견: 제 포자를 태워 1겹을 못 넘었음)
+    const gone = ['frozen', 'chill', 'wet', 'spore', 'bind', 'leech', 'root'].filter(k => e[k] && k !== own);   // 불이 얼음·냉기·물기·포자 + 덩굴·기생 씨앗·뿌리(식물로 묶은 것)를 태움
     if (e.skip && e.skip.src === 'frozen') { delete e.skip; if (!gone.includes('frozen')) gone.unshift('frozen'); }   // 얼음이 녹으면 쉬기도 풀림
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
