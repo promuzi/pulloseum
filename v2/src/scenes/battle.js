@@ -184,6 +184,9 @@ function hpBar(g, x, y, w, h, bar, max, t) {
     g.rect(x + 1 + fw, y + 1, tw - fw, 1, white ? '#ffffff' : S.hi);
   }
   if (fw > 0) { g.rect(x + 1, y + 1, fw, h - 2, c[0]); g.rect(x + 1, y + 1, fw, 1, c[1]); if (h > 4) g.rect(x + 1, y + h - 2, fw, 1, c[2]); }
+  // 칸 선(2026-10-17 사용자 "체력바에도 얇은 칸 선을 그어줄 수 있나?"): 10%마다 가는 세로줄 — 찬 쪽(깎이는 띠 포함) = 짙게, 빈 쪽 = 옅게
+  const lit = x + 1 + Math.max(fw, tw);
+  for (let i = 1; i < 10; i++) { const sx = x + 1 + Math.round((w - 2) * i / 10), on = sx < lit; g.alpha(on ? 0.45 : 0.12, () => g.rect(sx, y + 1, 1, h - 2, on ? '#06140e' : '#ffffff')); }
 }
 
 export const battle = {
