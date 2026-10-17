@@ -79,10 +79,10 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
-export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv }) {
+export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0 }) {
   if (mode === 'swap3') {
     const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv }));
-    return makeTeamBattle({ me, foe, seed });
+    return makeTeamBattle({ me, foe, seed, swapCd });
   }
   return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank, tlv }), seed });
 }
@@ -122,7 +122,7 @@ const unitV = u => ({ id: u.id, key: u.key, name: u.name, el: u.el, jong: u.jong
   hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, used: u.used || null,   // used = 변이 기술을 이번 판에 쓴 횟수
   pas: u.pas || null, cards: u.cards || null });   // 카드(패시브 합 · 끼운 카드 id — 친구 대결에선 상대 것을 감춤, rooms.mjs)
 export function viewOf(B) {
-  if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
+  if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
   return { mode: '1v1', turn: B.turn, over: B.over, me: unitV(B.me), foe: unitV(B.foe) };
 }
 // 화면 쪽: 서버가 보낸 모습으로 판을 세우고(처음) · 턴마다 같은 유닛 객체를 고쳐 씀(교체 연출이 유닛 객체를 붙잡고 있음)
@@ -138,7 +138,7 @@ export function battleFromView(v) {
 export function applyView(B, v) {
   B.turn = v.turn; B.over = v.over;
   if (v.mode === 'swap3') {
-    B.need = v.need; B.act = { ...v.act }; B.pool = { ...v.pool };   // 에너지 = 팀 풀(유닛 energy 는 B.pool 을 읽음)
+    B.need = v.need; B.act = { ...v.act }; B.pool = { ...v.pool }; if (v.cd) B.swapCd = { ...v.cd };   // 에너지 = 팀 풀(유닛 energy 는 B.pool 을 읽음) · 교체까지 남은 턴
     for (const side of ['me', 'foe']) v.team[side].forEach((u, i) => { const t = B.team[side][i]; for (const k of UNIT_KEYS) t[k] = u[k]; });
     B.me = B.team.me[B.act.me]; B.foe = B.team.foe[B.act.foe];
     return;
@@ -150,7 +150,7 @@ const FLIP = { win: 'lose', lose: 'win' };
 export function viewFor(B, side) {
   const v = viewOf(B);
   if (side !== 'b') return v;
-  if (v.mode === 'swap3') return { ...v, over: FLIP[v.over] || v.over, need: SW[v.need] || v.need, act: { me: v.act.foe, foe: v.act.me }, pool: { me: v.pool.foe, foe: v.pool.me }, team: { me: v.team.foe.map(u => ({ ...u, id: 'me' })), foe: v.team.me.map(u => ({ ...u, id: 'foe' })) } };
+  if (v.mode === 'swap3') return { ...v, over: FLIP[v.over] || v.over, need: SW[v.need] || v.need, act: { me: v.act.foe, foe: v.act.me }, pool: { me: v.pool.foe, foe: v.pool.me }, cd: v.cd ? { me: v.cd.foe, foe: v.cd.me } : v.cd, team: { me: v.team.foe.map(u => ({ ...u, id: 'me' })), foe: v.team.me.map(u => ({ ...u, id: 'foe' })) } };
   return { ...v, over: FLIP[v.over] || v.over, me: { ...v.foe, id: 'me' }, foe: { ...v.me, id: 'foe' } };
 }
 export function turnFor(turn, side) {
@@ -164,7 +164,7 @@ export function setupPvp({ seed, a, b, aName, bName }) {
 export const pvpTurn = (B, aSkill, bSkill) => playTurnVs(B, aSkill, bSkill);
 // PvP 3:3(2026-10-16 사용자 "남은 거 다해줘" — 3:3 친구 대결): 양쪽 식물 셋, 수는 두 사람이 고르고 쓰러진 자리도 저마다 직접(B.need = 'me' | 'foe' | 'both')
 export function setupPvp3({ seed, a, b, aName, bName }) {
-  return makeTeamBattle({ me: a.map(p => unitOf('me', p, { trainer: aName })), foe: b.map(p => unitOf('foe', p, { trainer: bName })), seed });
+  return makeTeamBattle({ me: a.map(p => unitOf('me', p, { trainer: aName })), foe: b.map(p => unitOf('foe', p, { trainer: bName })), seed, swapCd: 2 });   // 교체 제한 2턴(2026-10-18)
 }
 // 서버가 받은 수({ kind:'skill', id } · { kind:'switch', to } · { kind:'rest' }) → 판 수(기술 객체)
 const act3 = (u, a) => (a && a.kind === 'skill' ? { kind: 'skill', skill: u.kit.find(k => k.id === a.id) || u.kit[0] } : a && (a.kind === 'switch' || a.kind === 'rest') ? { kind: a.kind, to: a.to } : { kind: 'rest' });

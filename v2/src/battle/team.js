@@ -8,11 +8,13 @@ import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
 import { formMult } from './matchup.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
 
-export function makeTeamBattle({ me, foe, seed = 20261015 }) {
+// swapCd = 스스로 교체한 뒤 다시 교체 못 하는 턴 수(2026-10-18 사용자 "2턴" — 0 = 제한 없음: 이 규칙 전에 시작한 판)
+export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0 }) {
   const start = T => Math.max(2, ...T.map(u => (typeof u.energy === 'number' ? u.energy : 2)));   // 시작 에너지 = 팀에서 가장 큰 값(카드 '엽록체 증식' — 2026-10-17)
   const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: start(me), foe: start(foe) }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
   for (const side of ['me', 'foe']) for (const u of B.team[side]) Object.defineProperty(u, 'energy', { get: () => B.pool[side], set: v => { B.pool[side] = v; }, configurable: true, enumerable: true });
   B.me = me[0]; B.foe = foe[0];
+  B.cdLen = swapCd; B.swapCd = { me: 0, foe: 0 };   // 남은 턴(0 = 바꿀 수 있음)
   return B;
 }
 export const aliveOf = (B, side) => B.team[side].map((u, i) => (u.hp > 0 ? i : -1)).filter(i => i >= 0);
@@ -21,7 +23,7 @@ export const aliveOf = (B, side) => B.team[side].map((u, i) => (u.hp > 0 ? i : -
 const benchScore = (B, i) => { const u = B.team.foe[i], m = B.me; return (elemMult(m.el, u.el) > 1 ? -2 : 0) + (elemMult(u.el, m.el) > 1 ? 1.6 : 0) + u.hp / u.max; };
 function aiSwitch(B, rng) {
   const bench = aliveOf(B, 'foe').filter(i => i !== B.act.foe);
-  if (!bench.length || !canSwitch(B.foe)) return null;
+  if (!bench.length || !canSwitch(B.foe) || (B.swapCd && B.swapCd.foe > 0)) return null;
   const f = B.foe, best = bench.reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a));
   if (elemMult(B.me.el, f.el) > 1 && benchScore(B, best) > 1.1 && rng() < 0.45) return best;   // 상성이 나쁘면 가끔 바꿈
   if (f.hp < f.max * 0.25 && benchScore(B, best) > 0.9 && rng() < 0.25) return best;           // 거의 쓰러질 때도 가끔
@@ -38,7 +40,8 @@ function swapIn(B, side, to, ev, forced = false) {
 }
 
 // 사람의 수 → 이번 턴 기술: 쉬는 차례 = 쉬기, rest = 넘어감(시간 초과 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 3:3만 평타로 바꿨음), 못 쓰는 기술 = 평타
-const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side]) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
+const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side]) && !(B.swapCd && B.swapCd[side] > 0) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
+export const swapWait = (B, side) => (B.swapCd && B.swapCd[side]) || 0;   // 화면: 교체까지 남은 턴
 const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill) ? a.skill : firstOk(u));
 
 // 한 턴: myAct = { kind: 'skill', skill } | { kind: 'switch', to } | { kind: 'rest' }(쉬는 차례 · 시간 초과)
@@ -48,8 +51,8 @@ export function playTurn3(B, myAct, foeAct = null) {
   const foeSw = human ? (okSwitch(B, 'foe', foeAct) ? foeAct.to : null) : aiSwitch(B, B.rng);
   const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
   const meSwitch = okSwitch(B, 'me', myAct);
-  if (meSwitch) swapIn(B, 'me', myAct.to, ev);
-  if (foeSw != null) swapIn(B, 'foe', foeSw, ev);
+  if (meSwitch) { swapIn(B, 'me', myAct.to, ev); if (B.cdLen) B.swapCd.me = B.cdLen + 1; }   // +1 = 이번 턴 끝에 하나 줄어 다음 두 턴이 막힘
+  if (foeSw != null) { swapIn(B, 'foe', foeSw, ev); if (B.cdLen) B.swapCd.foe = B.cdLen + 1; }
   const mySkill = meSwitch ? null : skillOf(B.me, myAct);
   const before = { me: B.me.hp, foe: B.foe.hp };
   if (mySkill) { B.me.energy -= mySkill.cost || 0; useCount(B.me, mySkill); }
@@ -79,6 +82,7 @@ export function playTurn3(B, myAct, foeAct = null) {
     if (B.foe.hp <= 0) swapIn(B, 'foe', aiNext(B), ev, true);
     if (B.me.hp <= 0) B.need = 'me';
   }
+  if (B.swapCd) for (const k of ['me', 'foe']) if (B.swapCd[k] > 0) B.swapCd[k]--;
   const turn = { n: B.turn, mySkill, foeSkill, mySwitch: myAct.kind === 'switch' ? myAct.to : null, foeSwitch: foeSw, before, events: ev };
   B.log.push(turn); B.turn++;
   return turn;

@@ -7,7 +7,7 @@ const artOf = u => (u ? bigKey(u.key, u.stage) : u);
 import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo, UI, UI_ACCENT } from '../art/theme.js';
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
-import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../battle/team.js';
+import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats, swapWait } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, usesLeft } from '../battle/status.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
@@ -877,7 +877,7 @@ export const battle = {
   miscRow(app, y, live, rx0 = null) {
     const { W } = app, B = this.B, v = this.v, side = rx0 != null, sw = side ? W - 8 - rx0 : 0, G = handGeo(W, B.me.kit), ex = G.x0 + (G.per - 1) * (G.CW + G.GX);
     if (this.mode === 'swap3') {
-      const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me);
+      const wait = swapWait(B, 'me'), can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me) && !wait;   // 교체 제한(스스로 바꾸면 2턴 — 2026-10-18)
       this.teamTile(app, 'bt_swap', side ? rx0 : G.x0, side ? y + 8 : y, side ? sw : ex - G.GX - G.x0, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
     }
     if (side) {   // 아래 줄 오른쪽: (3:3 팀 칸) · 감정 — 같은 폭
@@ -896,7 +896,7 @@ export const battle = {
     const { yy } = btnBody(g, x, y, w, h, st, down), cy = yy + Math.floor((h - 2) / 2), acc = UI_ACCENT[UI] || '#f0be7d';
     const hpOf = (side, u) => (u === v.view[side] ? v.hp[side] : u.hp), hpCol = r => (r > 0.5 ? '#5fe08a' : r > 0.2 ? '#f0be7d' : '#ff6a5a');
     let cx = x + Math.max(7, Math.round((w - 100) / 2));   // 속 = 교체 칸 22 + 얼굴 셋(100칸) — 넓은 칸(카드 두 장 폭)이면 가운데로
-    const ic = tinted(bound ? 'lock' : 'ff', st.text), lab = bound ? '묶임' : '교체';   // 왼쪽 칸 = 아이콘 위 · 이름 아래
+    const wait = swapWait(B, 'me'), ic = tinted(bound ? 'lock' : wait ? 'clock' : 'ff', st.text), lab = bound ? '묶임' : wait ? `${wait}턴` : '교체';   // 왼쪽 칸 = 아이콘 위 · 이름 아래(교체 제한 = 시계 · 남은 턴)
     g.img(ic, cx + 11 - Math.floor(ic.width / 2), cy - 12); g.text(lab, cx + 11, cy + 1, { color: st.text, align: 'center' }); cx += 22 + 6;
     B.team.me.forEach((u, i) => {
       const sx = cx + i * 25, sy = cy - 13, on = u === v.view.me, hp = hpOf('me', u), dead = hp <= 0, r = Math.max(0, hp / u.max);
