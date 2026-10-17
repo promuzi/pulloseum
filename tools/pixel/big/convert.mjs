@@ -29,7 +29,7 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'needle' } }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, eyeHold: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'needle' } }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -416,11 +416,13 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
       const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2], C = Math.hypot(A, B), h = hueOf(A, B);
       if (L < (AC.lmin ?? 0.76) || C < (AC.cmin ?? 0) || C > (AC.cmax ?? 9) || (AC.hue && !(h >= AC.hue[0] && h <= AC.hue[1]))) continue;
       const x = i % iw, y = (i - x) / iw, x0 = Math.max(0, x - r), y0 = Math.max(0, y - r), x1 = Math.min(iw, x + r + 1), y1 = Math.min(ih, y + r + 1);
+      // 눈 둘레(눈 타원 + 판 칸 1.5)는 무늬에서 뺌 — 금빛 눈동자가 가시로 잡혀 움직임 장마다 눈 옆 노란 점이 켜졌다 꺼짐(2026-10-17 사용자 "눈 쪽의 노란 점 깜빡거려")
+      if (spx && spx.box) { const [X, Y] = toOut(x + 0.5, y + 0.5).map(Math.floor); if (X >= 0 && Y >= 0 && X < W && Y < H && protect[Y * W + X]) continue; }
       if (box(x0, y0, x1, y1) / ((x1 - x0) * (y1 - y0)) < (AC.ctx ?? 0.62)) { accPx[i] = 1; nA++; }
     }
     if (process.env.ACCENT_LOG) console.log(`${key} 밝은 무늬 원본 점 ${nA}`);
   }
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, accShape: AC ? AC.shape || null : null, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, accShape: AC ? AC.shape || null : null, eyeHold: !!(TUNE[key] || {}).eyeHold, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
   const { cm, ct, am } = rasterize(src);
   // 줄기 재기(재발 방지): 흙 가운데 줄 바로 위에서 위로 6칸 넘게 이어진 열 덩어리 중 몸 무게중심에 가장 가까운 것 — STEM 에 없는데 1.5칸 넘게 비끼면 경고
   if (STEM[okey] == null) {
@@ -434,7 +436,8 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     if (off != null && Math.abs(off) > 1.5) console.log(`⚠ ${okey}: 줄기 가운데가 화분 가운데서 ${off > 0 ? '+' : ''}${off.toFixed(1)}칸 — node tools/pixel/big/stemcheck.mjs ${okey} 로 가운데 선을 보고 convert.mjs STEM 에 옮길 칸 수를 적을 것`);
   }
   // 깜빡임용: 원본에서 찾은 실제 눈동자 자리 → 도트 좌표(가운데 점만) + 눈 영역 → 판 칸(원본 블록의 30% 이상이 눈이면 눈 칸)
-  const eyeC = BLINK || anim ? eyeSrc.map(([ex, ey]) => toOut(ex, ey)) : [];
+  //  --export 도 — 빠져 있어 게임 묶음의 깜빡임 4장이 뜬 눈 그대로였음(모든 종, 2026-10-17 드레이크캑터 눈 검수 중 발견)
+  const eyeC = BLINK || anim || args.includes('--export') ? eyeSrc.map(([ex, ey]) => toOut(ex, ey)) : [];
   const eyeGrid = (eyeMasks || []).map(m => {
     if (!m) return null;
     const cnt = new Map();
@@ -442,6 +445,7 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     const pts = [...cnt].filter(([k, c]) => c >= 0.35 / (s * s) && cm[k] >= 0).map(([k]) => k);
     return pts.length ? { pts, skin: m.skin } : null;
   });
+  if (process.env.EYE_LOG) console.log(key, '눈 칸', eyeGrid.map(g => g ? g.pts.map(k => (k % W) + ',' + Math.floor(k / W)).join(' ') : '-').join(' / '));
   const sp = eyeSpec(key, file);
   const eyeCheek = sp && sp.cheek ? toOut(sp.cheek[0], sp.cheek[1]).map(Math.floor) : null;   // 볼(살결 색을 뜰 판 칸)
   // 눈 반짝임 살리기: 원본 눈 타원 안 가장 밝은 점(L > 0.88, 15칸 이상)의 무게중심 칸이 밝지 않으면, 그 점들의 재질 가장 밝은 단으로 한 칸 찍는다
@@ -625,7 +629,20 @@ export function mixedMaps(cv, fields, isF = null) {
       const fire = isF && ((si >= 0 && cv.cm[si] >= 0 && isF[cv.cm[si]]) || (hr.cm[i] >= 0 && isF[hr.cm[i]]));
       if (seam || fire || si < 0) { cm[i] = hr.cm[i]; ct[i] = hr.ct[i]; if (am && hr.am) am[i] = hr.am[i]; } else { cm[i] = cv.cm[si]; ct[i] = cv.ct[si]; if (am) am[i] = cv.am[si]; }
     }
-    out[f] = { cm, ct, am };
+    // TUNE eyeHold: 눈 둘레(눈 타원 + 1.5칸 = src.protect)는 늘 쉬는 그림을 얼굴 이동(head)만큼 통째로 옮김 — 불 재질 · 이음매 칸이라 장마다 다시 줄이면
+    //  눈 반짝임 칸(convert의 '가장 밝은 점')이 빠졌다 생기며 깜빡거림(드레이크캑터 금빛 눈, 2026-10-17 사용자 "눈 쪽의 노란 점 깜빡거려 계속")
+    const keep = cv.src.eyeHold && cv.src.protect && fields[f].head ? new Uint8Array(W * H) : null;
+    if (keep) {
+      const [hx, hy] = fields[f].head.map(Math.round);
+      for (let j = 0; j < W * H; j++) {
+        if (!cv.src.protect[j] || cv.cm[j] < 0) continue;
+        const x = j % W + hx, y = (j - (j % W)) / W + hy;
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const i = y * W + x;
+        cm[i] = cv.cm[j]; ct[i] = cv.ct[j]; if (am) am[i] = 0; keep[i] = 1;
+      }
+    }
+    out[f] = { cm, ct, am, keep };
   }
   return out;
 }
@@ -806,7 +823,7 @@ function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } =
       cm[i] = maps.cm[i];
       if (am && maps.am) am[i] = maps.am[i];
       if (cm[i] < 0) continue;
-      ct[i] = tone ? tone(cm[i], maps.ct[i], x, y) : maps.ct[i];
+      ct[i] = tone && !(maps.keep && maps.keep[i]) ? tone(cm[i], maps.ct[i], x, y) : maps.ct[i];   // 눈 둘레(eyeHold)는 불 일렁임 단 바꿈도 안 함
       src[i] = srcOf ? srcOf(x, y) : i;
       continue;
     }

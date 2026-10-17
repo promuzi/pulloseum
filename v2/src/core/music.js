@@ -609,10 +609,23 @@ const ARR = {
     if (sect === 'A3') L.fl = P(LEAD3[ci]);
     return L;
   },
+  // 실내악 + 비트(상점): 탐사 실내악 그대로(피치카토 베이스 줄 · 현악 · 플루트 가락) + 대기 곡 북(붐뱁 킥 · 2 · 4박 스네어 · 하이햇)을 곧은 박으로(ckick · csn · chat — 실내악 층과 박이 어긋나지 않게)
+  chamb(q, cur, st, sb, k) {
+    const L = ARR.cham(q, cur, st, sb, k), { pos, ci, brk } = q;
+    if (brk) {   // 브레이크: 첼로 솔로 아래 하이햇만 → 끝 마디는 스네어 채움으로 돌아감
+      L.chat = P(brk === 'b2a' ? '. . . . . . . . x . x . x . x .' : 'x . x . x . x . x . x . x . x .');
+      if (brk !== 'b2a') L.csn = P(D.fill);
+      return L;
+    }
+    L.ckick = P(ci === 3 ? D.kick2 : D.kick1);
+    L.csn = P(pos % 2 ? D.sn2 : D.sn1);
+    L.chat = P(pos % 2 ? D.hat2 : D.hat1);
+    return L;
+  },
 };
 // 이어 붙이기: 가락 층(새로 들어올 땐 기다림) · 새 결로 들어갈 때 차오르는 타악 · 결이 바뀔 때 옛 결이 남기는 꼬리(실내악은 현악 · 홀 울림이 저절로 길게 남음)
 const MELO = ['lead', 'syn', 'vib', 'fl', 'cmel', 'mel', 'fmel'];
-const PERC_IN = ['kick', 'snare', 'hat', 'pkick', 'psn', 'pclap', 'phat'];
+const PERC_IN = ['kick', 'snare', 'hat', 'pkick', 'psn', 'pclap', 'phat', 'ckick', 'csn', 'chat'];
 const TAIL = { jpop: { phat: 'O . . . . . . . . . . . . . . .' } };
 const mixOf = (st, ly) => (st.mix && st.mix[ly] != null ? st.mix[ly] : 1);
 const styleOf = s => (STATES[s] && STATES[s].style) || 'hip';
@@ -702,7 +715,7 @@ const SONGS = {
     },
   },
 };
-// 상태 → 곡 · 결(style: 없음 = 붐뱁 · jpop = 재즈팝 · cham = 몽환적 실내악) · 섞음(층 세기 배수, 0 = 끔) · 변주(var) — 같은 곡 안의 상태끼리는 곡 자리 · 화음이 이어지고 결 · 층만 바뀜
+// 상태 → 곡 · 결(style: 없음 = 붐뱁 · jpop = 재즈팝 · cham = 실내악 · chamb = 실내악 + 비트) · 섞음(층 세기 배수, 0 = 끔) · 변주(var) — 같은 곡 안의 상태끼리는 곡 자리 · 화음이 이어지고 결 · 층만 바뀜
 export const STATES = {
   idle: { song: null },
   title: { song: 'title', wait: true },   // 소리가 풀린 뒤에 처음부터(조율을 놓치지 않게)
@@ -710,6 +723,7 @@ export const STATES = {
   menu: { song: 'home', mix: { lead: 0, pad: 0 }, var: 'menu' },
   farm: { song: 'home', style: 'jpop' },
   space: { song: 'home', style: 'cham' },
+  shop: { song: 'home', style: 'chamb' },   // 상점 = 탐사와 같은 실내악 + 비트(2026-10-17)
   focus: { song: 'home', mix: { kick: 0, snare: 0, hat: 0.45, lead: 0, crk: 0.6 }, pad: true, tone: 2300, var: 'focus' },
   ready: { song: 'ready' },
   battle: { song: 'battle' },
@@ -722,12 +736,13 @@ const LAYER = {
   keys: ['ep', 0.26], lead: ['lead', 0.5], chip: ['chip', 0.5], bell: ['bell', 0.42], pad: ['pad', 0.07], stab: ['stab', 0.26], crk: ['crk', 0.55], fx: ['fx', 0.2],
   mel: ['ep1', 0.2], fmel: ['bell', 0.6],   // 메뉴 건반 홑음 · 식물 관리 종
   pbass: ['bass', 0.3], comp: ['ep', 0.2], syn: ['syn', 0.37], vib: ['vib', 0.2], pkick: ['kick', 0.6], psn: ['snare', 0.5], pclap: ['clap', 0.32], phat: ['hat', 0.2],   // 재즈팝
+  ckick: ['kick', 0.8], csn: ['snare', 0.72], chat: ['hat', 0.32],   // 실내악 + 비트(상점) 북
   pizz: ['pizz', 0.6], harp: ['harp', 0.1], str: ['str', 0.13], cb: ['cb', 0.6], cello: ['cello', 0.22], cmel: ['cello', 0.28], cel: ['cel', 0.14], fl: ['flute', 0.42], timp: ['timp', 0.2],   // 실내악
 };
-const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'timp']);   // 이음 장식 동안 빼는 타악
+const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'timp', 'ckick', 'csn', 'chat']);   // 이음 장식 동안 빼는 타악
 const DK = { X: 1.25, x: 1, o: 0.45, O: 1, r: 0.8, R: 0.75 };   // 북 글자 → 세기
 // 스윙: 붐뱁 = 곡의 swing(16분 뒤 칸이 0.6 자리) · p = 재즈팝(거의 곧게 — 16분 뒤 칸 0.55) · s = 곧게(실내악)
-const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', pizz: 's', harp: 's', str: 's', cello: 's', cmel: 's', cel: 's', cb: 's', fl: 's', timp: 's' };
+const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', pizz: 's', harp: 's', str: 's', cello: 's', cmel: 's', cel: 's', cb: 's', fl: 's', timp: 's', ckick: 's', csn: 's', chat: 's' };
 function swOff(s, ly, p) {
   const w = LSW[ly];
   if (w === 's') return 0;
@@ -756,7 +771,7 @@ const FILLS = {
     if (to === 'jpop') {
       if (left <= 4) C.out({ t, i: 'snare', v: [0, 0.3, 0.24, 0.18, 0.14][left], o: { ghost: left > 1 } });
       if (left === 2 && CH[nx]) CH[nx].forEach((n, j) => C.out({ t: t + j * 0.006, i: 'ep', f: NOTE(n), len: 0.5, v: 0.15 }));
-    } else if (to === 'cham' && RUN[nx] && left <= 4) C.out({ t, i: 'harp', f: NOTE(RUN[nx][4 - left]), len: 0.3, v: 0.16 + 0.03 * (4 - left) });
+    } else if ((to === 'cham' || to === 'chamb') && RUN[nx] && left <= 4) C.out({ t, i: 'harp', f: NOTE(RUN[nx][4 - left]), len: 0.3, v: 0.16 + 0.03 * (4 - left) });
   },
   home(C, f, k, left, t) {   // 거꾸로 심벌이 차오르고 스네어 넷으로 돌아옴(실내악으로 = 북 없이 — 2026-10-17 팀파니 굴림도 뺌)
     if (k === 0) C.out({ t, i: 'rev', len: left * STEP, v: 0.11 });
