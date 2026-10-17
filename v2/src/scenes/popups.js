@@ -288,6 +288,8 @@ export function drawOverlays(app) {
 function holdButton(app) {
   const s = app.state, R = app.router, g = app.g, W = app.W;
   if (!s || !['home', 'nursery', 'plant'].includes(R.name) || R.phase) return;
+  const sc = R.cur || {};
+  if (['pickSheet', 'modeSheet', 'editing', 'focus', 'unfocus', 'peek', 'cardDrag', 'placing'].some(k => sc[k])) return;   // 화면 안 창 · 다가감 · 카드 보기/끌기 중엔 숨김('?'처럼)
   const list = s.plants.filter(p => p.drafts && p.drafts.length), n = list.reduce((a, p) => a + p.drafts.length, 0);
   if (!n) return;
   const cur = s.plants[s.active] || s.plants[0], p = R.name === 'plant' && cur && cur.drafts && cur.drafts.length ? cur : list[0];

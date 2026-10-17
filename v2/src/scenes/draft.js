@@ -18,7 +18,7 @@ import { ask } from './popups.js';
 //  진화면 먼저 연출 → 그 식물의 맨 앞 고르기(p.drafts[0])부터 차례로(기술 고르기 → 패시브 고르기). 확정 = 규칙 draftApply(놓은 배치 그대로) · [보류] = 맨 위 '보류' 단추로 다시.
 const CW = 66, CH = 90, GX = 10, GY = 8, EVO_MS = 1900, IN_MS = 320, HOLD_MS = 320;
 const ease = k => k * k * (3 - 2 * k), clamp01 = v => Math.max(0, Math.min(1, v));
-const plantOf = (s, uid) => (s ? [...s.plants, ...(s.storage || [])].find(x => x.uid === uid) : null);
+const plantOf = (s, uid) => (s ? s.plants.find(x => x.uid === uid) : null);   // 스마트팜 식물만(보관고로 가면 창이 닫힘 — 규칙도 스마트팜 식물만 확정)
 const faceOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p.key).find(b => b.id === id), basic: true } : CARDS[id] ? (isSkillCard(id) ? cardSkillOf(p, id) : cardFace(id)) : { act: 'attack', cats: ['attack'], ...SKILLS[id] });
 const want = d => Math.min(d.pick, d.cands.length);
 const placed = (D, d) => Object.values(D.lay).flat().filter(x => x && d.cands.includes(x)).length;

@@ -428,7 +428,7 @@ export function graft(s, id, scionId) {
   need(i >= 0, '그 접목 가지가 없어요');
   const sk = s.scions[i].skill, why = canGraft(p, sk);
   need(!why, why);
-  need(!known(p).has(sk), '이미 아는 기술이에요');
+  need(!known(p).has(sk) && !(p.drafts || []).some(d => d.kind === 'one' && d.cands.includes(sk)), '이미 아는 기술이에요');   // '하나 고르기'로 기다리는 기술도(가지를 헛되이 쓰지 않게)
   s.scions.splice(i, 1);
   return { skill: sk, to: learnNow(p, sk) };
 }

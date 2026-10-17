@@ -125,6 +125,26 @@ try {
   await E(() => { window.__app.router.set('plant', { tab: 'passive' }); });
   await adv(700);
   ok(await E(() => ['skc_c0', 'skc_c1', 'skc_c2'].every(id => window.__app.input.regions.some(r => r.id === id))), '패시브 탭 = 장착 칸 셋');
+  // ⑤ 최종 검토(2026-10-18): 지운 기본기 이름 · 보관고로 간 식물의 고르기 창 · 화면 안 창 위의 '보류' 단추
+  await E(uid => { const A = window.__app, s = A.state, pl = s.plants.find(x => x.uid === uid); s.items.regress = 3; const i = pl.skills.battle.indexOf('guard'); if (i >= 0) pl.skills.battle[i] = null; pl.skills.store = pl.skills.store.filter(x => x !== 'guard').slice(0, 5); if (!pl.skills.forgot.includes('guard')) pl.skills.forgot.unshift('guard'); A.router.set('plant', { tab: 'skill', sub: 'forgot' }); }, uid);
+  await adv(900);
+  const gi = await E(uid => window.__app.state.plants.find(x => x.uid === uid).skills.forgot.indexOf('guard'), uid);
+  ok(await press('fg_go_' + gi), '지운 기본기 [되돌리기] 누름'); await adv(200);
+  const cmsg = await E(() => window.__app.confirm && window.__app.confirm.msg);
+  ok(cmsg && !cmsg.includes('undefined'), '지운 기본기 이름이 보임: ' + cmsg);
+  await E(() => { window.__app.confirm = null; });
+  await E(async uid => { const m = await import('/v2/src/scenes/draft.js'), A = window.__app, s = A.state, pl = s.plants.find(x => x.uid === uid); pl.drafts = [{ kind: 'one', part: 'skill', st: pl.stage, lv: pl.lv, pick: 1, cands: ['f_ball'] }]; m.openDraft(A, pl); }, uid);
+  await adv(400);
+  ok(await E(() => !!window.__app.draft), '고르기 창 열림(보관고 시험)');
+  await E(uid => { const s = window.__app.state, i = s.plants.findIndex(x => x.uid === uid); s.storage.push(s.plants.splice(i, 1)[0]); s.active = 0; }, uid);
+  await adv(300);
+  ok(await E(() => !window.__app.draft), '식물이 보관고로 가면 고르기 창 닫힘');
+  await E(() => { const A = window.__app, s = A.state; s.plants[0].drafts = [{ kind: 'one', part: 'skill', st: 0, lv: 1, pick: 1, cands: ['f_ball'] }]; s.pending = []; A.router.set('home', {}); });   // 레벨업 상자 창(모달)은 비움
+  await adv(1500);
+  ok(await E(() => window.__app.input.regions.some(r => r.id === 'hold_btn')), "홈 '보류' 단추(창 없을 때)");
+  await E(() => { window.__app.router.cur.pickSheet = true; }); await adv(300);
+  ok(await E(() => !window.__app.input.regions.some(r => r.id === 'hold_btn')), "출전 식물 고르기 창이 열리면 '보류' 단추 숨김");
+  await E(() => { window.__app.router.cur.pickSheet = false; });
   ok(!errs.length, '페이지 오류 없음 ' + errs.join(' | '));
   const le = await E(() => window.__lastError || null); ok(!le, '화면 오류 없음 ' + (le || ''));
 } finally { await b.close(); srv.close(); }

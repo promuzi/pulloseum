@@ -262,5 +262,21 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   }
   ok(all > 0 && cur / all > 0.6 && cur < all, `이번 단계가 대부분 · 앞 단계도 가끔: ${cur}/${all}`);
 }
+// ⑨ 칸이 다 찬 식물에 같은 기술 접목 가지 둘 — 첫 가지가 '하나 고르기'로 기다리는 동안 둘째는 막힘(가지를 헛되이 쓰지 않게 — 최종 검토 2026-10-18)
+{
+  const { graft } = await import('../../v2/src/game/logic.js');
+  const { bloomPool, canGraft, SKILLS } = await import('../../v2/src/game/catalog.js');
+  const s = game(), p = s.plants[0];
+  const known0 = new Set([...p.skills.battle, ...p.skills.store, ...p.skills.forgot]);
+  const sk = bloomPool(p.key, 0).map(x => x.id).find(id => !known0.has(id) && !canGraft(p, id));
+  const filler = Object.keys(SKILLS).filter(id => id !== sk && !known0.has(id)).slice(0, 6 - p.skills.store.length);
+  p.skills.store.push(...filler);
+  ok(sk && p.skills.store.length === 6 && !p.skills.battle.includes(null), '준비: 칸 다 참 · 접목할 기술 ' + sk);
+  s.scions = [{ id: 'sc1', skill: sk }, { id: 'sc2', skill: sk }];
+  const r1 = graft(s, p.uid, 'sc1');
+  ok(r1.to === 'draft' && p.drafts.some(d => d.kind === 'one' && d.cands[0] === sk), '첫 가지 = 하나 고르기');
+  throws(() => graft(s, p.uid, 'sc2'), '같은 기술 둘째 가지 = 막힘(고르기에서 기다리는 중)');
+  ok(s.scions.length === 1 && s.scions[0].id === 'sc2', '둘째 가지는 남음');
+}
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

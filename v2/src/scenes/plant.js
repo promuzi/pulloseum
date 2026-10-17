@@ -374,7 +374,7 @@ export const plant = {
     if (!free) { g.text('칸이 다 찼어요', 14, y, { color: '#ffb0a0' }); y += 20; }
     if (!S.forgot.length) { g.text('지운 기술이 없어요', W / 2, y + 10, { color: P.dim, align: 'center' }); return y + 40; }
     S.forgot.forEach((id, i) => {
-      const sk = skillOf(id);
+      const sk = skOf(p, id);   // 기본기도 지운 기술이 될 수 있음(v8)
       skillCard(app, 'fg_' + i, 14, y, W - 100, 34, sk, false, null);
       this.btn(app, live, 'fg_go_' + i, W - 80, y + 4, 66, 26, '되돌리기', { style: 'gold', font: 'label', disabled: !n || !free }, () => ask(app, `${eul(sk.name)} 되돌릴까요?`, '유전자 회귀 주사 1개를 써요', () => app.act('regress', { id: p.uid, skill: id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${sk.name} — 되돌렸어요`); }), '되돌리기'));
       y += 40;
@@ -387,7 +387,7 @@ export const plant = {
     g.text('접목 가지', 72, y0 + 1, { font: 'value', color: P.main });
     let y = y0 + 28;
     if (!s.scions.length) { g.text('가진 접목 가지가 없어요', W / 2, y + 10, { color: P.dim, align: 'center' }); return y + 40; }
-    const known = new Set([...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot].filter(Boolean));
+    const known = new Set([...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot, ...(p.drafts || []).filter(d => d.kind === 'one').flatMap(d => d.cands)].filter(Boolean));   // '하나 고르기'로 기다리는 기술도
     s.scions.forEach((sc, i) => {
       const sk = skillOf(sc.skill), why = known.has(sc.skill) ? '이미 아는 기술' : canGraft(p, sc.skill);
       skillCard(app, 'gs_' + i, 14, y, W - 100, 34, sk, false, null);
