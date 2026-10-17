@@ -76,7 +76,7 @@ const TIER = { miss: ['빗나감', 'dim', '빗나갔다!'], graze: ['스침', 's
 
 // 체력판: (상대만) 재배사 · 랭크 / 이름 + 속성 / HP 막대 + 숫자 / MP 칸 + 숫자 — 'HP'·'MP' 이름은 왼쪽, 막대·칸은 같은 x에서 시작, 숫자만 오른쪽
 const BOX_W = 140, LBL_W = 19;
-const boxH = mine => (mine ? 46 : 59);
+const boxH = mine => (mine ? 49 : 62);   // 2026-10-17 사용자 "해 아이콘이 상태창 아래로 삐져나옴 — 상태창 크기를 키워볼까?" → 아래 3칸 늘림
 function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
   const { g, t } = app, w = BOX_W, h = boxH(mine), P = T.ptext, fx = bar.fx, S = fx && HURT[fx.kind], age = fx ? t - fx.t0 : 1e9;
   let x = x0, y = y0;
