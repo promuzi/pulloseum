@@ -49,6 +49,11 @@ const HAND_W = 62, HAND_GX = 4, MISC_H = 32, BOT_PAD = 10;
 const isExtra = s => !!s && (s.extra ?? !!s.mut);
 const mutHand = kit => !!(kit && kit.some(isExtra));   // 변이 칸 둘(2026-10-16 사용자 "변이식물의 장점은 변이스킬로 6칸")
 const handRows = kit => (kit && kit.length > 4 ? 2 : 1);
+// 손패 칸 자리(카드 폭 CW · 사이 GX · 한 줄 per장 · 왼쪽 끝 x0 · 전체 폭 w): 셋씩 두 줄(여섯) · 넷 한 줄(옛 판) · 넷 + 아래 줄 둘(옛 변이 판)
+function handGeo(W, kit) {
+  const one = handRows(kit) === 1 || mutHand(kit), CW = one ? HAND_W : CARD_W, GX = one ? HAND_GX : CARD_GX, per = one ? 4 : 3, w = CW * per + GX * (per - 1);
+  return { one, CW, GX, per, w, x0: Math.round((W - w) / 2) };
+}
 // 경기장 자리(2026-10-17 사용자 "하늘쪽 우주가 잘려 있어 — 폰 길이와 상관없이" · "폰이 길어지면 하늘이 아니라 경기장 땅이 넓어지게 — 그래야 적 식물과 적의 상태창이 따로 놀지 않으니"):
 //  내 식물 밑동 = 손패 위 38칸 → 그림 땅(받침 둘 · 바닥 원)을 거기 맞춰 fy만큼 옮김. fy > 0(긴 화면) = 그림 위(하늘 · 관중석 · 벽)는 화면 위 그대로 + 벽 밑 땅을 fy줄 늘임(gap),
 //  fy < 0(짧은 화면) = 그림 위를 잘라 올림(lift). 상대 밑동은 위 띠 밑 FOE_MIN까지만 — 더 짧으면 내 식물만 손패를 따라 더 올라감(myDy · 연출 판도 그만큼 눌러 맞춤)
@@ -733,7 +738,7 @@ export const battle = {
       app.input.hit('fx_foe', 6, AY + 4 + oyT, BOX_W, fh + (foeRows ? 3 + foeRows * (SW_H + 2) : 0), open, 2);
       app.input.hit('fx_me', W - 146, myTop, BOX_W, MY + boxH(true) - myTop, open, 2);
     }
-    const hw = hrows === 1 || mutHand(B.me.kit) ? 4 * HAND_W + 3 * HAND_GX : CARD_W * 3 + CARD_GX * 2, hx = Math.round((W - hw) / 2);
+    const HG = handGeo(W, B.me.kit), hw = HG.w, hx = HG.x0;
     this.drawTimer(app, hx, HY - 8, hw);
     this.hand(app, HY - CARD_Y, live, skipNow);
     if (mutHand(B.me.kit)) this.miscRow(app, HY - CARD_Y + CARD_Y + CARD_H + CARD_GY, live, hx + 2 * (HAND_W + HAND_GX));   // 아래 줄 오른쪽
@@ -749,7 +754,7 @@ export const battle = {
     const { g, W, input } = app, B = this.B, v = this.v, mh = mutHand(B.me.kit), one = handRows(B.me.kit) === 1 || mh;
     const kit = mh ? [...B.me.kit.filter(s => !isExtra(s)), null, null, null, null].slice(0, 4).concat(B.me.kit.filter(isExtra)) : B.me.kit;   // 카드 칸 기술 = 아래 줄 왼쪽 둘
     this.cards = {}; this.useWas = this.useWas || {}; this.shineAt = this.shineAt || {};
-    const CW = one ? HAND_W : CARD_W, GX = one ? HAND_GX : CARD_GX, per = one ? 4 : 3, n = mh ? kit.length : one ? 4 : 6, x0 = Math.round((W - CW * per - GX * (per - 1)) / 2);
+    const { CW, GX, per, x0 } = handGeo(W, B.me.kit), n = mh ? kit.length : one ? 4 : 6;
     for (let i = 0; i < n; i++) {
       const sk = kit[i], x = x0 + (i % per) * (CW + GX), y = PY0 + CARD_Y + Math.floor(i / per) * (CARD_H + CARD_GY), CARD_W = CW;   // 한 줄 넷 = 좁은 카드(그림은 가운데를 잘라 1배 그대로)
       if (!sk) { cardSlot(g, x, y, CARD_W, CARD_H, '빈 칸'); continue; }
@@ -863,22 +868,21 @@ export const battle = {
       for (let i = 0; i < 5; i++) { const x = x0 + i * 7; g.rect(x, 8, 6, 6, T.ink); g.rect(x + 1, 9, 4, 4, i < wins ? T.text.gold : i < wins + losses ? '#ff8a8a' : T.bar.back); }
     }
   },
-  // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 효과 설명 · 감정(친구 대결) · 기권
+  // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 감정 — 손패 카드 칸에 맞춤(2026-10-17 사용자 "감정 버튼을 식물 카드의 폭에 맞추고 우측선이 맞게 ·
+  //  3:3 교체 버튼도 — 아래 버튼이 전투 카드 3장의 폭과 맞게"): 감정 = 맨 오른쪽 카드 한 장 폭 · 3:3 교체 칸 = 그 왼쪽 카드들 폭(왼쪽 끝선 = 손패 왼쪽 끝선)
   miscRow(app, y, live, rx0 = null) {
-    const { W } = app, B = this.B, v = this.v, list = [], gap = 6, side = rx0 != null, sw = side ? W - 8 - rx0 : 0;
+    const { W } = app, B = this.B, v = this.v, side = rx0 != null, sw = side ? W - 8 - rx0 : 0, G = handGeo(W, B.me.kit), ex = G.x0 + (G.per - 1) * (G.CW + G.GX);
     if (this.mode === 'swap3') {
       const can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me);
-      this.teamTile(app, 'bt_swap', side ? rx0 : 8, side ? y + 8 : y, side ? sw : 112, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
+      this.teamTile(app, 'bt_swap', side ? rx0 : G.x0, side ? y + 8 : y, side ? sw : ex - G.GX - G.x0, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
     }
     if (side) {   // 아래 줄 오른쪽: (3:3 팀 칸) · 감정 — 같은 폭
       const ey = this.mode === 'swap3' ? y + 48 : y + 29;
       button(app, 'bt_emote', rx0, ey, sw, 32, '감정', { style: 'night', icon: 'heart', iconTint: true, onTap: live ? () => { this.emoteOpen = true; } : null });
       return;
     }
-    // 감정 = 오른쪽 끝 작은 단추(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
-    list.push({ id: 'bt_emote', label: '감정', icon: 'heart', can: true, fn: () => { this.emoteOpen = true; } });
-    const w = 80;
-    list.forEach((b, i) => button(app, b.id, W - 8 - w - (list.length - 1 - i) * (w + gap), y, w, 32, b.label, { style: 'night', icon: b.icon, iconTint: true, disabled: !b.can, onTap: live && b.can ? b.fn : null }));
+    // 감정 = 맨 오른쪽 카드 밑(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
+    button(app, 'bt_emote', ex, y, G.CW, 32, '감정', { style: 'night', icon: 'heart', iconTint: true, onTap: live ? () => { this.emoteOpen = true; } : null });
   },
   // 3:3 팀 칸 = 교체 단추(2026-10-16 사용자 "3:3에서 남은 수를 표시하는 네모 박스 등은 아래의 교체 칸에 적절한 방식으로 새로 UI 만들어서 붙여놔"):
   //  ⇄(뿌리 묶이면 자물쇠) · 내 식물 셋 얼굴(앞에 선 식물 = 주황 테, 아래 체력 실선, 쓰러짐 = 흐리게 + ✕) | '상대' + 남은 칸 셋(누군지는 안 보임) — 누르면 교체 창
@@ -887,7 +891,7 @@ export const battle = {
     const { g, input } = app, B = this.B, v = this.v, st = T.btn[can ? 'second' : 'off'], down = !!fn && input.isPressed(id);
     const { yy } = btnBody(g, x, y, w, h, st, down), cy = yy + Math.floor((h - 2) / 2), acc = UI_ACCENT[UI] || '#f0be7d';
     const hpOf = (side, u) => (u === v.view[side] ? v.hp[side] : u.hp), hpCol = r => (r > 0.5 ? '#5fe08a' : r > 0.2 ? '#f0be7d' : '#ff6a5a');
-    let cx = x + 7;
+    let cx = x + Math.max(7, Math.round((w - 100) / 2));   // 속 = 교체 칸 22 + 얼굴 셋(100칸) — 넓은 칸(카드 두 장 폭)이면 가운데로
     const ic = tinted(bound ? 'lock' : 'ff', st.text), lab = bound ? '묶임' : '교체';   // 왼쪽 칸 = 아이콘 위 · 이름 아래
     g.img(ic, cx + 11 - Math.floor(ic.width / 2), cy - 12); g.text(lab, cx + 11, cy + 1, { color: st.text, align: 'center' }); cx += 22 + 6;
     B.team.me.forEach((u, i) => {
