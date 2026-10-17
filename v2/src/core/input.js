@@ -21,9 +21,11 @@ export class Input {
     this.down = null;        // {x,y,id}
     this.pressedId = null;   // 눌린 버튼 표시용
     this.queue = [];
+    this.act = -1e9;          // 마지막으로 만진 시각(main.js 장 수 — 만지는 중 · 막 뗀 뒤 = 1초 60장)
     const el = screen.display;
     const now = () => performance.now();
     el.addEventListener('pointerdown', e => {
+      this.act = now();
       unlock();   // 브라우저는 사람이 한 번 눌러야 소리를 냄
       goFull();   // 휴대폰 브라우저: 처음 누를 때 전체 화면(위 주소창 · 아래 버튼 숨김 — 앱은 MainActivity가 따로)
       const p = screen.toLogical(e.clientX, e.clientY); const r = this.hitAt(p.x, p.y);
@@ -31,12 +33,13 @@ export class Input {
       try { el.setPointerCapture(e.pointerId); } catch {}
     });
     el.addEventListener('pointermove', e => {
-      if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
+      if (!this.down) return; this.act = now(); const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
       if (Math.abs(p.y - d.y0) > 4 || Math.abs(p.x - d.x0) > 4) { d.moved = true; this.pressedId = null; }
       d.hist.push({ t: now(), x: p.x, y: p.y }); if (d.hist.length > 6) d.hist.shift();
       if (d.moved) { this.queue.push({ type: 'drag', dx: p.x - d.x, dy: p.y - d.y, x0: d.x0, y0: d.y0 }); d.x = p.x; d.y = p.y; }
     });
     const up = e => {
+      this.act = now();
       unlock();   // 뗄 때만 소리를 허락하는 브라우저(iOS)도 있어 한 번 더
       if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
       const r = this.hitAt(p.x, p.y);
@@ -66,6 +69,8 @@ export class Input {
   claimHold() { if (this.down) this.down.held = true; this.pressedId = null; }
   get holding() { return !!(this.down && this.down.held); }
   get dragging() { return !!(this.down && this.down.moved); }
+  // 누르고 있거나 막 만진 뒤(1.2초 — 끌기를 놓은 뒤 미끄러지는 동안까지)
+  busy(ms = 1200) { return !!this.down || performance.now() - this.act < ms; }
   flush(scene) {
     const q = this.queue; this.queue = [];
     for (const ev of q) {

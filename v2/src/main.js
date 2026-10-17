@@ -72,10 +72,17 @@ function stretchEdges(c, s, W, H, F) {
   if (x1 < DW) c.drawImage(cv, x1 - 1, 0, 1, DH, x1, 0, DW - x1, DH);
   c.restore();
 }
-let running = true, lastErr = 0, timeOff = 0;
+let running = true, lastErr = 0, timeOff = 0, lastDraw = -1e9;
+// 장 수(2026-10-17 사용자 "게임 발열이 심하다는데 확인해봐"): 전엔 화면이 부를 때마다(1초 60장 · 120Hz 폰은 120장) 통째로 다시 그렸다 —
+//  만지는 중 · 막 뗀 뒤 · 장면이 넘어가는 동안 = 1초 60장, 그 밖(숨쉬기 · 반짝임처럼 느린 움직임뿐) = 30장. 움직임은 시각으로 셈하므로 빠르기는 그대로
+//  (식물 그림 움직임은 1초 20장 그림이라 30장이면 다 보임). scene.fast(app) = 그 장면이 지금 60장이 필요하다고 할 때
 function frame(ts) {
   requestAnimationFrame(frame);   // 먼저 다음 장을 예약(그리다 오류가 나도 화면이 멈추지 않게)
-  if (running) frameBody(Math.max(app.t, ts + timeOff));
+  if (!running) return;
+  const cur = router.cur, fast = input.busy() || router.phase || (cur && cur.fast && cur.fast(app));
+  if (ts - lastDraw < (fast ? 1000 / 60 : 1000 / 30) - 3) return;
+  lastDraw = ts;
+  frameBody(Math.max(app.t, ts + timeOff));
 }
 // 시험 도구: 창이 가려져 브라우저가 그림 시계를 멈췄을 때(미리보기 창 등) 시간을 직접 넘기며 그림 — 넘긴 만큼 시계를 앞당겨 둬서 진짜 시계와 섞여도 시간이 거꾸로 가지 않음
 window.__advance = (ms = 600, dt = 33) => { const t0 = Math.max(app.t, performance.now() + timeOff); for (let k = dt; k <= ms; k += dt) frameBody(t0 + k); timeOff = app.t - performance.now(); return { scene: router.name, t: app.t }; };

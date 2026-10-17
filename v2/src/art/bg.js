@@ -10,7 +10,17 @@ export function rng(seed) {
 }
 
 // 별: 1칸 점 + 가끔 십자 반짝이(시간에 따라 깜빡)
+//  발열(2026-10-17 사용자 "게임 발열이 심하다는데"): 장마다 점 수천 개를 찍던 것을 같은 크기 · 씨앗 · 밀도의 별판으로 — 0.1초마다 한 번만 다시 그림(반짝임은 3.8초 주기라 차이 없음)
+const starCache = new Map();
 export function stars(g, x, y, w, h, t, seed = 7, density = 0.012) {
+  if (typeof document === 'undefined' || !Number.isInteger(x) || !Number.isInteger(y)) return starsRaw(g, x, y, w, h, t, seed, density);
+  const key = w + ',' + h + ',' + seed + ',' + density, tq = Math.floor(t / 100);
+  let L = starCache.get(key);
+  if (!L) { if (starCache.size > 24) starCache.clear(); L = layer(w + 2, h + 2); L.tq = null; starCache.set(key, L); }
+  if (L.tq !== tq) { L.g.c.clearRect(0, 0, w + 2, h + 2); starsRaw(L.g, 1, 1, w, h, tq * 100, seed, density); L.tq = tq; }
+  g.c.drawImage(L.cv, x - 1, y - 1);
+}
+function starsRaw(g, x, y, w, h, t, seed, density) {
   const R = rng(seed);
   const n = Math.round(w * h * density);
   for (let i = 0; i < n; i++) {
@@ -25,7 +35,23 @@ export function stars(g, x, y, w, h, t, seed = 7, density = 0.012) {
 }
 
 // 행성: 디더 명암(빛 = 왼쪽 위) + 테두리 빛
+//  발열(2026-10-17): 칸마다 명암을 장마다 다시 셈하던 것을 크기 · 색 · 테 · 경계 점무늬 짝홀마다 한 번 그린 판으로(띠 무늬 행성은 세로 자리를 타서 그대로 그림)
+const planetCache = new Map();
 export function planet(g, cx, cy, r, ramp, opt = {}) {
+  if (opt.bands || typeof document === 'undefined' || !Number.isInteger(cx) || !Number.isInteger(cy)) return planetRaw(g, cx, cy, r, ramp, opt);
+  const hw = opt.ring ? Math.ceil(r * 1.8) + 1 : r + 1, hh = r + 1, par = (cx + cy) & 1;
+  const key = r + ',' + ramp + ',' + (opt.ring ? 1 : 0) + ',' + (opt.ringCol || '') + ',' + par;
+  let L = planetCache.get(key);
+  if (!L) {
+    if (planetCache.size > 64) planetCache.clear();
+    const e = ((hw + hh) & 1) === par ? 0 : 1;   // 판 속 가운데의 짝홀 = 화면 자리의 짝홀(경계 디더 무늬가 같게)
+    L = layer(hw * 2 + 2, hh * 2 + 1); L.ox = hw + e; L.oy = hh;
+    planetRaw(L.g, L.ox, L.oy, r, ramp, opt);
+    planetCache.set(key, L);
+  }
+  g.c.drawImage(L.cv, cx - L.ox, cy - L.oy);
+}
+function planetRaw(g, cx, cy, r, ramp, opt) {
   const P = RAMP[ramp] || RAMP.water;
   for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
     const d2 = dx * dx + dy * dy; if (d2 > r * r) continue;
@@ -52,7 +78,21 @@ export function planet(g, cx, cy, r, ramp, opt = {}) {
 }
 
 // 우주 바탕: 위에서 아래로 짙은 보라→남색 띠 + 성운 디더 + 별
+//  발열(2026-10-17): 띠 + 성운(움직이지 않음 — 성운 점무늬는 화면 자리를 타므로 그 자리 그대로)은 한 번 그린 판, 별은 별판(stars)
+const spaceCache = new Map();
 export function space(g, x, y, w, h, t, seed = 11, density = 0.014) {
+  if (typeof document !== 'undefined' && Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x + w <= 2000 && y + h <= 2000) {
+    const key = x + ',' + y + ',' + w + ',' + h + ',' + seed;
+    let L = spaceCache.get(key);
+    if (!L) { if (spaceCache.size > 12) spaceCache.clear(); L = layer(x + w + 2, y + h + 2); spaceBase(L.g, x, y, w, h, seed); spaceCache.set(key, L); }
+    g.c.drawImage(L.cv, 0, 0);
+    if (density) stars(g, x, y, w, h, t, seed, density);
+    return;
+  }
+  spaceBase(g, x, y, w, h, seed);
+  if (density) stars(g, x, y, w, h, t, seed, density);
+}
+function spaceBase(g, x, y, w, h, seed) {
   g.vgrad(x, y, w, h, ['#1f1828', C.ink, '#3a2a48', C.dusk, '#2e2a4a', C.night]);
   // 성운 얼룩 두 개
   const R = rng(seed + 3);
@@ -66,7 +106,6 @@ export function space(g, x, y, w, h, t, seed = 11, density = 0.014) {
       if (((X * 7 + Y * 13) & 15) < lvl) g.px(X, Y, col);
     }
   }
-  if (density) stars(g, x, y, w, h, t, seed, density);
 }
 // 타이틀 우주 바탕(1배): 성운·별·행성을 한 번 그려 둔다(큰 행성은 칸마다 명암이라 매 장 그리면 무거움)
 const titleCache = new Map();

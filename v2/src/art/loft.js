@@ -156,7 +156,9 @@ export function loftFront(app) {
   if (!S) return;
   const { g, t } = app, k = S.k ?? 1, dt = Math.min(50, Math.max(0, t - (S.ft || t))); S.ft = t;
   // 흐림: 잡음 무늬를 위로 밀어 올리며(초당 약 9칸) 기둥 모양만큼만 옅게
-  const { hz, himg, N } = S, d = himg.data, oy = Math.floor(t / (110 * slow(3))), ox = Math.floor(t / (900 * slow(3)));
+  //  발열(2026-10-17 사용자 "게임 발열이 심하다는데"): 무늬가 한 칸 움직일 때(0.11초 · 0.9초)나 전등 밝기가 바뀔 때만 다시 셈 — 전엔 장마다 칸 수만 개
+  const { hz, himg, N } = S, d = himg.data, oy = Math.floor(t / (110 * slow(3))), ox = Math.floor(t / (900 * slow(3))), hk = oy + ',' + ox + ',' + k;
+  if (S.hzKey !== hk) { S.hzKey = hk;
   for (let y = 0; y < hz.h; y++) for (let x = 0; x < hz.w; x++) {
     const X = hz.x + x, Y = hz.y + y, i = (y * hz.w + x) * 4, ci = S.coneI(X, Y);
     if (ci <= 0.03) { d[i + 3] = 0; continue; }
@@ -164,7 +166,7 @@ export function loftFront(app) {
     const a = Math.max(0, (n - 0.42) * 2.4) * ci * Math.max(0.25, 1 - (Y - 40) / 170) * k * 0.2;
     d[i] = WARM[0]; d[i + 1] = WARM[1]; d[i + 2] = WARM[2]; d[i + 3] = Math.min(255, a * 255) | 0;
   }
-  S.hctx.putImageData(himg, 0, 0);
+  S.hctx.putImageData(himg, 0, 0); }
   g.c.drawImage(S.hcv, hz.x, hz.y);
   // 먼지
   for (const m of S.motes) {
@@ -266,15 +268,16 @@ function beamCanvas() {
 function beamFront(app, a) {
   const { g, t } = app, { I } = beamGeo(), dt = Math.min(50, Math.max(0, t - (S.bft || t))); S.bft = t;
   if (!S.bhz) { const w = 270, h = BEAM.y1 - BEAM.y0 + 1, cv = document.createElement('canvas'); cv.width = w; cv.height = h; S.bhz = { cv, ctx: cv.getContext('2d'), img: cv.getContext('2d').createImageData(w, h), w, h }; }
-  const Z = S.bhz, d = Z.img.data, N = S.N, oy = Math.floor(t / (140 * slow(3))), ox = Math.floor(t / (1100 * slow(3)));
+  const Z = S.bhz, d = Z.img.data, N = S.N, oy = Math.floor(t / (140 * slow(3))), ox = Math.floor(t / (1100 * slow(3))), aq = Math.round(a * 32) / 32, bk = oy + ',' + ox + ',' + aq;
+  if (Z.key !== bk) { Z.key = bk;   // 발열(2026-10-17): 무늬가 한 칸 움직일 때 · 암실 세기가 바뀔 때만 다시 셈
   for (let y = 0; y < Z.h; y++) for (let x = 0; x < Z.w; x++) {
     const Y = BEAM.y0 + y, i = (y * Z.w + x) * 4, bi = I(x, Y);
     if (bi <= 0.04) { d[i + 3] = 0; continue; }
     const n = N[((Y + oy) & 63) * 64 + ((x + ox) & 63)] * 0.6 + N[((Y + (oy >> 1) + 23) & 63) * 64 + ((x - ox + 5) & 63)] * 0.4;
-    const al = Math.max(0, (n - 0.44) * 2.2) * bi * 0.22 * a;
+    const al = Math.max(0, (n - 0.44) * 2.2) * bi * 0.22 * aq;
     d[i] = 255; d[i + 1] = 214; d[i + 2] = 160; d[i + 3] = Math.min(255, al * 255) | 0;
   }
-  Z.ctx.putImageData(Z.img, 0, 0);
+  Z.ctx.putImageData(Z.img, 0, 0); }
   g.c.drawImage(Z.cv, 0, BEAM.y0);
   if (!S.bmotes) {
     const mr = rng(97); S.bmotes = [];

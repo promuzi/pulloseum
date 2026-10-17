@@ -2,6 +2,26 @@
 import { BAYER4 } from '../art/palette.js';
 import { drawText, measure, wrap, lineH } from './text.js';
 
+const VGRAD = new Map();
+function vgradRaw(g, x, y, w, h, cols) {
+  const n = cols.length, band = h / n, Z = Math.max(2, Math.min(10, Math.floor(band / 2)));
+  for (let k = 0; k < n; k++) g.rect(x, Math.round(y + k * band), w, Math.ceil(band) + 1, cols[k]);
+  const c = g.c;
+  for (let k = 1; k < n; k++) {
+    const yy = Math.round(y + k * band);
+    c.fillStyle = cols[k];
+    for (let j = -Z; j < 0; j++) { // 위 띠 안으로 다음 색이 번져 들어감
+      const lvl = Math.round(((j + Z + 1) / (Z + 1)) * 8);
+      const Y = yy + j; for (let i = 0; i < w; i++) { const X = x + i; if (BAYER4[Y & 3][X & 3] < lvl) c.fillRect(X, Y, 1, 1); }
+    }
+    c.fillStyle = cols[k - 1];
+    for (let j = 0; j < Z; j++) {
+      const lvl = Math.round(((Z - j) / (Z + 1)) * 8);
+      const Y = yy + j; for (let i = 0; i < w; i++) { const X = x + i; if (BAYER4[Y & 3][X & 3] < lvl) c.fillRect(X, Y, 1, 1); }
+    }
+  }
+}
+
 export class Gfx {
   constructor(ctx) { this.c = ctx; this.c.imageSmoothingEnabled = false; }
   set ctx(v) { this.c = v; this.c.imageSmoothingEnabled = false; }
@@ -22,24 +42,19 @@ export class Gfx {
     }
   }
   // 세로 그라데이션: 색 띠 사이를 8칸에 걸쳐 점 밀도를 서서히 바꿔 잇는다(줄무늬가 안 보이게)
+  //  발열(2026-10-17 사용자 "게임 발열이 심하다는데"): 장마다 점 수천 개를 찍던 것을 한 번 그려 둔 판으로 — 크기 · 색 · 점무늬 자리(x·y 끝 두 비트)가 같으면 다시 씀
   vgrad(x, y, w, h, cols) {
     const n = cols.length; if (n === 1) return this.rect(x, y, w, h, cols[0]);
-    const band = h / n, Z = Math.max(2, Math.min(10, Math.floor(band / 2)));
-    for (let k = 0; k < n; k++) this.rect(x, Math.round(y + k * band), w, Math.ceil(band) + 1, cols[k]);
-    const c = this.c;
-    for (let k = 1; k < n; k++) {
-      const yy = Math.round(y + k * band);
-      c.fillStyle = cols[k];
-      for (let j = -Z; j < 0; j++) { // 위 띠 안으로 다음 색이 번져 들어감
-        const lvl = Math.round(((j + Z + 1) / (Z + 1)) * 8);
-        const Y = yy + j; for (let i = 0; i < w; i++) { const X = x + i; if (BAYER4[Y & 3][X & 3] < lvl) c.fillRect(X, Y, 1, 1); }
-      }
-      c.fillStyle = cols[k - 1];
-      for (let j = 0; j < Z; j++) {
-        const lvl = Math.round(((Z - j) / (Z + 1)) * 8);
-        const Y = yy + j; for (let i = 0; i < w; i++) { const X = x + i; if (BAYER4[Y & 3][X & 3] < lvl) c.fillRect(X, Y, 1, 1); }
-      }
+    if (typeof document === 'undefined' || !Number.isInteger(x) || !Number.isInteger(y) || w * h > 400000) return vgradRaw(this, x, y, w, h, cols);
+    const px = x & 3, py = y & 3, key = w + ',' + h + ',' + px + ',' + py + ',' + cols.join(',');
+    let cv = VGRAD.get(key);
+    if (!cv) {
+      if (VGRAD.size > 48) VGRAD.clear();
+      cv = document.createElement('canvas'); cv.width = w + 4; cv.height = h + 8;
+      vgradRaw(new Gfx(cv.getContext('2d')), px, py, w, h, cols);
+      VGRAD.set(key, cv);
     }
+    this.c.drawImage(cv, x - px, y - py);
   }
   // 다각형 채움(정수 주사선 — 가장자리 번짐 없음). pts = [[x,y],...]
   poly(pts, col) {
