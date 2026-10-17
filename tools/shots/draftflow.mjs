@@ -86,6 +86,14 @@ try {
   ok(d1 && d1.dk.startsWith('passive') && Array.isArray(d1.lay.cards), '이어서 패시브 고르기 창');
   ok(await press('draft_later'), '보류 누름'); await adv(400);
   ok(await E(() => !window.__app.draft), '보류 뒤 창 닫힘');
+  // 맨 위 '보류 N' 단추(2026-10-18 사용자 "보류를 누르면 상단에 보류 버튼이 생김") — 식물 관리 · 홈에서 누르면 고르기 다시
+  ok(await E(() => window.__app.input.regions.some(r => r.id === 'hold_btn')), "식물 관리에 '보류' 단추");
+  await E(() => { window.__app.router.set('home', {}); }); await adv(1500);
+  ok(await E(() => window.__app.input.regions.some(r => r.id === 'hold_btn')), "홈에 '보류' 단추");
+  ok(await press('hold_btn'), "'보류' 단추 누름"); await adv(400);
+  ok(await E(() => !!(window.__app.draft && window.__app.draft.dk && window.__app.draft.dk.startsWith('passive'))), '보류한 고르기 다시(패시브)');
+  ok(await press('draft_later'), '다시 보류'); await adv(300);
+  await E(() => { window.__app.router.set('plant', { tab: 'skill' }); }); await adv(900);
   // ③ 오래된 고르기(다른 데서 먼저 확정됨) → 창이 조용히 닫힘
   await E(async uid => { const m = await import('/v2/src/scenes/draft.js'), A = window.__app, pl = A.state.plants.find(x => x.uid === uid); m.openDraft(A, pl); }, uid);
   await adv(300);

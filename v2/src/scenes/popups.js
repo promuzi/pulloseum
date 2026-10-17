@@ -17,7 +17,7 @@ import { cardTiny } from '../art/skillcard.js';
 import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 import { drawGuide } from './guide.js';
-import { draftScreen } from './draft.js';
+import { draftScreen, openDraft } from './draft.js';
 
 const ease = k => 1 - (1 - k) ** 3;
 const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; };
@@ -279,5 +279,22 @@ export function drawOverlays(app) {
     const item = s.pending.find(x => !(app.ackedLv && app.ackedLv.has(x.kind === 'season' ? 'season' + x.n : x.level)));
     if (item && (item.kind === 'level' || item.kind === 'season')) return levelChest(app, item);
   }
+  holdButton(app);
   return drawGuide(app);   // 처음 안내 · '?' 단추(다른 겹창이 없을 때)
 }
+// 맨 위 '보류 N'(2026-10-18 사용자 "보류를 누르면 상단에 보류 버튼이 생김"): 고르기가 남은 스마트팜 식물이 있으면 홈 · 스마트팜 · 식물 관리 맨 위에 —
+//  누르면 그 식물의 고르기 화면(식물 관리면 지금 식물 먼저). 자리 = 화면마다 비어 있는 곳(홈 = '?' 왼쪽 · 스마트팜 = 위 띠 아래 왼쪽 · 식물 관리 = '?' 왼쪽, 이름이 길면 정체성 줄 아래).
+//  보관고는 위 줄이 차 있어 안 띄움(보관고 속 식물의 고르기는 안 셈 — 꺼내면 다시)
+function holdButton(app) {
+  const s = app.state, R = app.router, g = app.g, W = app.W;
+  if (!s || !['home', 'nursery', 'plant'].includes(R.name) || R.phase) return;
+  const list = s.plants.filter(p => p.drafts && p.drafts.length), n = list.reduce((a, p) => a + p.drafts.length, 0);
+  if (!n) return;
+  const cur = s.plants[s.active] || s.plants[0], p = R.name === 'plant' && cur && cur.drafts && cur.drafts.length ? cur : list[0];
+  const label = `보류 ${n}`, w = g.textW(label, 'bold') + 28, h = 22;
+  let x = W - 30 - w, y = 92;
+  if (R.name === 'nursery') { x = 4; y = 28; }
+  else if (R.name === 'plant') { y = 7; if (44 + g.textW(cur.name, 'name') + 62 > x - 4) y = 62; }   // 이름 · 별 · 연필과 겹치면 아래로
+  button(app, 'hold_btn', x, y, w, h, label, { style: 'gold', font: 'bold', icon: 'star', iconTint: true, onTap: () => openDraft(app, p) });
+}
+
