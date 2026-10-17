@@ -215,6 +215,7 @@ export function feed(s, id, kind, n = 1) {
     while (p.lv < LV_MAX && p.gxp >= growNeed(p.stage, p.lv)) {
       p.gxp -= growNeed(p.stage, p.lv); p.lv++; p.pts += PTS_PER_LV;
       const r = { lv: p.lv, pts: PTS_PER_LV };
+      if (addDraft(p, 'lv')) r.draft = 1;   // 레벨업마다 새 기술 후보(고르기 — 아래 addDraft)
       if (p.lv === 3) r.harvest = 1;
       if (p.lv === LV_MAX) { r.box = { water: 2, fert: 1, credits: 40 + 30 * p.stage }; give(s, r.box); }
       ups.push(r);
@@ -243,10 +244,34 @@ export function evolve(s, id, rng) {
   p.stage++; p.lv = 1; p.gxp = 0;
   let league = null;
   if (lg) { const T = s.tournament; T.round = ROUNDS[0]; T.wins = 0; T.losses = 0; setLeague(s, lg.to); league = { from: lg.from, to: lg.to, reset: lg.had }; }
-  const have = known(p), pool = bloomPool(p.key, p.stage).filter(x => !have.has(x.id)), n = rng() < 0.4 ? 2 : 1, got = [];
-  for (let i = 0; i < n && pool.length; i++) { const x = pickW(rng, pool); pool.splice(pool.indexOf(x), 1); got.push({ id: x.id, to: learnNow(p, x.id) }); }
+  const got = [], draft = !!addDraft(p, 'evo');   // 진화 = 새 기술 후보에서 고르기(전엔 한두 개를 바로 배움 — 2026-10-18)
   const xp = addXp(s, XP.evolve, rng);
-  return { stage: p.stage, got, xp, league };
+  return { stage: p.stage, got, draft, xp, league };
+}
+// ── 카드 고르기(2026-10-18 사용자 "레벨업할 때마다 후보 여러 장 · 골라서 보관 · 진화 = 2장쯤 · 특정 레벨 · 마지막 진화 = 더" · "보류 가능 · '스킬 정하기'로 다시"):
+//  p.drafts = [{ kind: 'lv' | 'evo', st, lv, pick, cands }] — 후보 = 그 단계에 피는 기술(bloomPool) 중 아직 모르는 것 · 다른 고르기에 이미 나온 것 빼고.
+//  레벨업 = 셋 중 하나 · 단계 끝 레벨(Lv6 · 11 · 16) = 넷 중 둘 · 진화 = 넷 중 둘 · 마지막 진화 = 다섯 중 셋. 후보는 식물 · 단계 · 레벨로 정한 씨앗(화면이 먼저 해도 서버와 같게 — 물 주기는 빨리 반응 일).
+//  고른 기술 → 빈 스킬 칸 · 기본기 자리 · 스킬 보관 · 다 차면 놓을 칸 기다림(learnNow) · 안 고르면(보류) 그대로 남아 식물 관리 '스킬 정하기'에서 다시
+const DRAFT = { lv: { pick: 1, n: 3 }, top: { pick: 2, n: 4 }, evo: { pick: 2, n: 4 }, last: { pick: 3, n: 5 } };
+const seeded = t => { let h = 2166136261; for (const c of t) h = Math.imul(h ^ c.charCodeAt(0), 16777619); let a = h >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; };
+function addDraft(p, kind) {
+  if (!p.skills) return null;
+  const D = kind === 'evo' ? (p.stage >= 2 ? DRAFT.last : DRAFT.evo) : p.lv >= LV_MAX ? DRAFT.top : DRAFT.lv;
+  const rng = seeded(`${p.uid}:${kind}:${p.stage}:${p.lv}`), have = known(p), taken = new Set((p.drafts || []).flatMap(d => d.cands));
+  const pool = bloomPool(p.key, p.stage).filter(x => !have.has(x.id) && !taken.has(x.id)), cands = [];
+  while (cands.length < D.n && pool.length) { const x = pickW(rng, pool); pool.splice(pool.indexOf(x), 1); cands.push(x.id); }
+  if (!cands.length) return null;
+  const d = { kind, st: p.stage, lv: p.lv, pick: Math.min(D.pick, cands.length), cands };
+  (p.drafts = p.drafts || []).push(d);
+  return d;
+}
+export function draftPick(s, id, n, picks) {   // n = 몇째 고르기(0 = 맨 앞) · picks = 고른 기술(정확히 pick 장)
+  const p = getPlant(s, id); normSkills(p);
+  const d = (p.drafts || [])[n]; need(d, '고를 카드가 없어요');
+  const P = [...new Set((Array.isArray(picks) ? picks : []).map(String))];
+  need(P.length === d.pick && P.every(x => d.cands.includes(x)), `${d.pick}장을 골라 주세요`);
+  p.drafts.splice(n, 1);
+  return { got: P.map(x => ({ id: x, to: learnNow(p, x) })) };
 }
 // 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b5)이나 스킬 보관(store — 빈 칸이 있을 때)에 놓고 원래 기술은 '지운 기술'로(기본기 자리였으면 기본기는 그냥 보관), 또는 새 기술을 안 배움(skip — 지운 기술로)
 export function placePending(s, id, skill, target) {

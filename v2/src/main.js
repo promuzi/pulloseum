@@ -33,7 +33,7 @@ let chain = Promise.resolve();
 //  QUICK(난수 · 보상 굴림 없는 일)은 같은 규칙(game/ops.js)으로 이 화면에서 먼저 하고 바로 보여 준 뒤 서버에 보냄.
 //  서버 상태는 줄 선 일이 다 끝났을 때 한 번만 받아 맞춤(중간 답으로 덮으면 뒤에 누른 것이 잠깐 되돌아감) · 서버가 거절하면 다시 받아 맞춤.
 //  그 밖의 일(진화 · 수확 · 탐사 · 구매 …)은 서버 답을 기다림 — 기다리는 동안 화면 맨 위 가는 띠(0.16초 넘으면)
-const QUICK = new Set(['feed', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
+const QUICK = new Set(['feed', 'draftPick', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
 let pendOps = 0, lastSrv = null, stale = false;
 const app = {
   screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0, waiting: 0, waitT: 0,

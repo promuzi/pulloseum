@@ -11,6 +11,7 @@ const idxOf = (s, uid) => s.plants.findIndex(p => p.uid === uid);
 export const OPS = {
   feed: (s, a) => L.feed(s, str(a.id), a.kind === 'fert' ? 'fert' : 'water', int(a.n, 1, 99, 1)),
   evolve: (s, a, c) => L.evolve(s, str(a.id), c.rng),
+  draftPick: (s, a) => L.draftPick(s, str(a.id), int(a.n, 0, 20, 0), Array.isArray(a.picks) ? a.picks.slice(0, 8).map(x => String(x)) : []),   // 카드 고르기(2026-10-18)
   place: (s, a) => L.placePending(s, str(a.id), str(a.skill), str(a.target, 8)),
   swapJoker: (s, a) => L.swapJoker(s, str(a.id), int(a.slot, 0, L.LOADOUT - 1)),
   setCards: (s, a) => L.setCards(s, str(a.id), Array.isArray(a.cards) && a.cards.length === 2 ? a.cards.map(v => (v == null ? null : str(v))) : bad()),   // 카드 칸 둘(2026-10-17)

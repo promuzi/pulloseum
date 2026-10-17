@@ -84,6 +84,35 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   throws(() => placePending(s, id, 'j_ivy', 'store'), '스킬 보관이 다 참');
   ok(p.pend.includes('j_ivy'), '막히면 기다림 그대로');
 }
+// ⑤-1 카드 고르기(2026-10-18): 레벨업 = 셋 중 하나 · 단계 끝 레벨 = 넷 중 둘 · 진화 = 넷 중 둘 · 마지막 진화 = 다섯 중 셋 · 후보는 화면 · 서버가 같게(정한 씨앗) · 보류 = 그대로
+{
+  const { feed, evolve, draftPick } = await import('../../v2/src/game/logic.js');
+  const s = game(), p = s.plants[0], id = p.uid;
+  s.items.water = 999; s.items.fert = 999;
+  const s2 = JSON.parse(JSON.stringify(s));
+  feed(s, id, 'fert', 2); feed(s2, id, 'fert', 2);   // 비료 둘(+50) = Lv2
+  ok(p.lv === 2 && p.drafts && p.drafts.length === 1 && p.drafts[0].kind === 'lv' && p.drafts[0].pick === 1 && p.drafts[0].cands.length >= 1, '레벨업 → 고르기 하나(셋 중 하나): ' + JSON.stringify(p.drafts));
+  ok(JSON.stringify(p.drafts) === JSON.stringify(s2.plants[0].drafts), '같은 상태면 같은 후보(화면 먼저 · 서버 같게)');
+  throws(() => draftPick(s, id, 0, []), '안 고르면 막힘');
+  throws(() => draftPick(s, id, 0, ['f_ball']), '후보 아닌 기술');
+  const c0 = p.drafts[0].cands[0], r = draftPick(s, id, 0, [c0]);
+  ok(!p.drafts.length && r.got[0].id === c0 && [...p.skills.battle, ...p.skills.store].includes(c0), '고른 기술 = 스킬 칸 · 보관으로: ' + JSON.stringify(r.got));
+  while (p.lv < 6) feed(s, id, 'fert', 1);
+  const top = p.drafts.find(d => d.lv === 6);   // 그 단계 기술이 바닥나면 고르기가 안 생김(어린 단계는 기술이 적음)
+  ok(!top || top.pick === Math.min(2, top.cands.length), '단계 끝 레벨 = 넷 중 둘(후보가 있으면): ' + JSON.stringify(p.drafts));
+  const all = p.drafts.flatMap(d => d.cands);
+  ok(new Set(all).size === all.length, '고르기마다 후보가 겹치지 않음');
+  const nDraft = p.drafts.length;
+  evolve(s, id, makeRng(5));
+  const ev = p.drafts[p.drafts.length - 1];
+  ok(p.drafts.length === nDraft + 1 && ev.kind === 'evo' && ev.pick === Math.min(2, ev.cands.length), '진화 = 넷 중 둘(보류한 고르기도 남음): ' + JSON.stringify(ev));
+  p.lv = 6; evolve(s, id, makeRng(6));
+  const last = p.drafts[p.drafts.length - 1];
+  ok(last.kind === 'evo' && last.st === 2 && last.pick === Math.min(3, last.cands.length), '마지막 진화 = 다섯 중 셋: ' + JSON.stringify(last));
+  const n0 = p.drafts.length;
+  runOp(s, 'draftPick', { id, n: n0 - 1, picks: last.cands.slice(0, last.pick) }, { rng: makeRng(1), now: 0 });
+  ok(p.drafts.length === n0 - 1, '서버 일 목록(ops draftPick)');
+}
 // ⑤ 처음 안내 봤음
 {
   const s = game();
