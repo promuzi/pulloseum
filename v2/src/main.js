@@ -17,7 +17,7 @@ import { shotGuide } from './scenes/guide.js';
 import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
-import { tryAutoStart } from './core/sound.js';
+import { tryAutoStart, music } from './core/sound.js';
 
 const screen = new Screen(document.getElementById('screen'));
 screen.resize();
@@ -102,6 +102,7 @@ function frameBody(ts) {
 (async () => {
   // 처음 로딩(2026-10-17 사용자 "처음에 로딩시간 너무 긴데"): 처음 화면 그림만 먼저 → 바로 조율, 글꼴 · 나머지는 조율 · 점화 동안 한꺼번에(전엔 글꼴 다음 묶음 여섯을 하나씩 차례로)
   const toTitle = !q0.get('scene');
+  if (toTitle && !q0.has('mute') && !q0.has('at')) { music('title'); tryAutoStart(); }   // 켜자마자 처음 화면 곡(그림은 조율 2마디 검정 동안 받음 — 2026-10-17 "키자마자 노래가")
   if (toTitle) await Promise.all([loadBg(undefined, FIRST_BG), loadBig(undefined, FIRST_BIG)]);   // 처음 화면 그림만 먼저(글꼴 3.2MB와 통신을 나눠 쓰지 않게 — 글꼴은 그 뒤)
   const fonts = loadFonts().then(resetMetrics);
   if (!toTitle) await fonts;   // 검토 화면은 글자부터(촬영 도구가 바로 그림)

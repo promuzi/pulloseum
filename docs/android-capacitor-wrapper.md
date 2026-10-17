@@ -35,6 +35,7 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 ```
 성공하면 `BUILD SUCCESSFUL`, APK = `C:\dev\pulloseum\android\app\build\outputs\apk\debug\app-debug.apk`.
 - 2026-10-16 첫 빌드 성공(처음엔 Gradle 내려받기 포함 6분 · 디버그 APK 6.2MB · 아이콘 = 페탈로즈 대 아쿠아벌브). ⚠ Git Bash에서 `cmd //c "gradlew.bat …"`는 파일을 못 찾음 → PowerShell에서 `.\gradlew.bat`(또는 `cmd /c ".\gradlew.bat assembleDebug > log 2>&1"`).
+- 2026-10-17 판 1.1(versionCode 2): 전체 화면(`MainActivity` 상태 표시줄 · 탐색 바 숨김 + 카메라 구멍 자리까지 · `adjustMarginsForEdgeToEdge = disable`) — 빌드 19초. 옛 판 위에 그대로 설치(같은 디버그 키).
 - 디버그 APK = 시험용(디버그 키 서명). 플레이 스토어엔 새 업로드 키로 `bundleRelease`(AAB) — 아래 체크리스트.
 
 Android Studio로 하려면 `File > Open`에서 `C:\dev\pulloseum\android`를 열고 `Build > Build Bundle(s) / APK(s) > Build APK(s)`.

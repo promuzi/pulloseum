@@ -25,11 +25,18 @@ export async function loadSprites(base = '../assets/sprites/') {
 // ── 큰 판 식물(96×112, 컨셉 그림을 도트로 변환 — node tools/pixel/big/convert.mjs --export <키…>) ──
 // 종마다 시트 한 장: 대기 64장(눈 뜸) + 깜빡임 4장 × 두 층(under = 화분 뒤와 화분 앞 사이, over = 화분 앞보다 앞·특성 효과) + 정보 json
 export const BIG = {}, POT_BIG = {};
-export const FIRST_BIG = ['gaia'], FIRST_BG = ['home_loft', 'home_loft_dim'];   // 처음 화면에 필요한 것(먼저 받음 — main.js)
+// 처음 화면 대표 식물(2026-10-17 사용자 "이미 로그인 되어 있으면 그 식물을 초반 화면에"): 홈에서 본 내 식물(그림 키 · 화분)을 이 브라우저에 기억 —
+//  로그인 열쇠가 있으면 그 식물, 없으면 바위 선인장(가이아록)
+const HERO_KEY = 'pullo.hero';
+export function heroSaved() { try { if (!localStorage.getItem('pullo.token')) return null; const h = JSON.parse(localStorage.getItem(HERO_KEY) || 'null'); return Array.isArray(h) && typeof h[0] === 'string' && /^[a-z_]+$/.test(h[0]) ? [h[0], typeof h[1] === 'string' && /^pot_[a-z]+$/.test(h[1]) ? h[1] : 'pot_terra'] : null; } catch { return null; } }
+let heroLast = null;
+export function heroRemember(key, pot) { const v = JSON.stringify([key, pot || 'pot_terra']); if (v === heroLast) return; heroLast = v; try { localStorage.setItem(HERO_KEY, v); } catch {} }
+const HERO0 = heroSaved();
+export const FIRST_BIG = HERO0 && HERO0[0] !== 'gaia' ? ['gaia', HERO0[0]] : ['gaia'], FIRST_POTS = HERO0 && HERO0[1] !== 'pot_terra' ? ['pot_terra', HERO0[1]] : ['pot_terra'], FIRST_BG = ['home_loft', 'home_loft_dim'];   // 처음 화면에 필요한 것(먼저 받음 — main.js)
 const bigTried = new Set();
 export async function loadBig(base = '../assets/v2/', only = null) {
   const json = u => fetch(u).then(r => (r.ok ? r.json() : null)).catch(() => null);
-  const keys = (only || [...ROSTER, ...BIG_EXTRA]).filter(k => !bigTried.has(k)), pots = (only ? ['pot_terra'] : POTS).filter(p => !bigTried.has(p));   // 처음엔 테라코타 화분만
+  const keys = (only || [...ROSTER, ...BIG_EXTRA]).filter(k => !bigTried.has(k)), pots = (only ? FIRST_POTS : POTS).filter(p => !bigTried.has(p));   // 처음엔 테라코타(+ 내 식물 화분)만
   keys.forEach(k => bigTried.add(k)); pots.forEach(p => bigTried.add(p));
   await Promise.all([
     ...keys.map(async k => { const [im, meta] = await Promise.all([load(base + 'plants/' + k + '.png'), json(base + 'plants/' + k + '.json')]); if (im && meta) BIG[k] = { sheet: im, white: whiteOf(im), meta }; }),

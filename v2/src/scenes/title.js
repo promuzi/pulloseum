@@ -1,5 +1,5 @@
 import { button } from '../art/ui.js';
-import { drawPortrait, bigKey, BIG, drawBig } from '../art/sprites.js';
+import { drawPortrait, bigKey, BIG, POT_BIG, drawBig, heroSaved } from '../art/sprites.js';
 import { icon } from '../art/icons.js';
 import { ELEMENT } from '../art/palette.js';
 import { ro, wa } from '../core/josa.js';
@@ -29,6 +29,8 @@ const BG0 = '#030409';
 // 로딩 화면(처음 화면)의 의자 = 늘 대표 식물(2026-10-17 사용자 "로딩화면에 그거 너무 안 멋있다는 평 — 간지나는 걸로" → 같은 날 "첫 조명 받는 인트로 식물은 바위 선인장으로" = 가이아록 성체) ·
 //  디스플레이가 켜지며 내 식물로 바뀜(불꽃 용 선인장 안은 새 태생 용족 식물로 돌림)
 const HERO = ['gaia', 'pot_terra'];
+// 로그인한 적 있는 브라우저 = 기억해 둔 내 식물(그림을 받았을 때) — 2026-10-17
+const heroNow = () => { const h = heroSaved(); return h && BIG[h[0]] ? [h[0], POT_BIG[h[1]] ? h[1] : 'pot_terra'] : HERO; };
 const myPlant = app => { const s = app.state, p = s && s.plants && s.plants[s.active]; return p ? [bigKey(p.key, stageKey(p)), p.pot || 'pot_terra'] : ['flower_grass', 'pot_terra']; };
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -178,7 +180,7 @@ export const title = {
     const { g, W, H } = app;
     if (this.mode === 'boot' && !this.checking) this.check(app);
     if (app.pendingEnter && app.assetsReady) { app.pendingEnter = false; enterGame(app); }
-    const own = myPlant(app), [key, pot] = BIG[HERO[0]] ? HERO : own;
+    const own = myPlant(app), H0 = heroNow(), [key, pot] = BIG[H0[0]] ? H0 : own;
     if (this.boot) return drawBoot(this, app, key, pot, () => this.ui(app, 1, false), 0, own);
     const it = this.it();
     // 화면이 검을 때 한 장에 한 가지씩 미리 잼(점화 · 켜짐 순간 멈칫 없게) — 그린 것은 바로 아래에서 검정으로 덮임

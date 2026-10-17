@@ -2,7 +2,7 @@ import { ELEMENT } from '../art/palette.js';
 import { room1, stand1 } from '../art/bg.js';
 import { hud, navBar, button, chip, fmt, rbox, tagBox } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG } from '../art/sprites.js';
+import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG, heroRemember } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
 import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../game/catalog.js';
@@ -93,6 +93,7 @@ export const home = {
     if (this.showT == null) this.showT = t;
     if (this.forceMode) { s.mode = this.forceMode; this.forceMode = null; }
     const p = this.empty ? null : s.plants[s.active], key = p ? bigKey(p.key, stageKey(p)) : null;
+    if (key) heroRemember(key, p.pot);   // 처음 화면에 올릴 내 식물(바뀔 때만 저장)
     const [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), cam = this.camera(app, pc);
     // 식물: 의자 속 투영기에서 아래부터 위로 나타남(바꿀 때마다) — 드러나는 줄에 푸른 빛 한 줄
     const show = this.noReveal ? 1 : Math.min(1, (t - this.showT) / SHOW_MS), reveal = Math.round(my - 100 + (1 - show) * 104);

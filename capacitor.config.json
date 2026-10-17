@@ -9,6 +9,6 @@
   },
   "android": {
     "appendUserAgent": "PulloseumApp/2",
-    "adjustMarginsForEdgeToEdge": "auto"
+    "adjustMarginsForEdgeToEdge": "disable"
   }
 }

@@ -10,9 +10,10 @@
 @font-face{font-family:Pretendard;font-weight:700;font-display:block;src:url('../assets/fonts/sub/Pretendard-Bold.woff2') format('woff2');}
 @font-face{font-family:Pretendard;font-weight:800;font-display:block;src:url('../assets/fonts/sub/Pretendard-ExtraBold.woff2') format('woff2');}
 @font-face{font-family:Pretendard;font-weight:900;font-display:block;src:url('../assets/fonts/sub/Pretendard-Black.woff2') format('woff2');}
-html,body{margin:0;height:100%;background:#1a1420;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
-#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
-#screen{display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
+html,body{margin:0;height:100%;background:#1a1420;overflow:hidden;touch-action:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;touch-action:none;}
+/* 2026-10-17 touch-action:none — 폰에서 끌기를 브라우저가 스크롤로 가로채 끊김(식물 관리 카드 끌기 · 스마트팜 서랍 — 사용자 "끊기듯" · "조금 흔들리다가 말아") */
+#screen{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;}
 </style>
 </head>
 <body>

@@ -35,7 +35,12 @@ export class Input {
       this.down = null; this.pressedId = null;
     };
     el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', () => { this.down = null; this.pressedId = null; });
+    // 브라우저가 터치를 가져가면(스크롤 등) 끌던 것도 놓은 것으로 — 안 그러면 장면이 끄는 중인 채로 멈춤(스마트팜 서랍 · 카드 끌기, 2026-10-17)
+    el.addEventListener('pointercancel', () => {
+      const d = this.down;
+      if (d && d.moved) { const a = d.hist[0], b = d.hist[d.hist.length - 1], dt = Math.max(16, b.t - a.t); this.queue.push({ type: 'release', dx: d.x - d.x0, dy: d.y - d.y0, x0: d.x0, y0: d.y0, vx: (b.x - a.x) / dt * 1000, vy: (b.y - a.y) / dt * 1000 }); }
+      this.down = null; this.pressedId = null;
+    });
   }
   begin() { this.regions = []; this.marks = []; }
   // 그린 자리(꺼진 단추도) — 처음 안내가 가리킬 곳을 찾을 때(누르는 자리는 꺼진 단추엔 없음)
