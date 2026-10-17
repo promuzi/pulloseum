@@ -4,7 +4,7 @@
 //  ⑦ 패시브가 전투에 닿는지(능력치 · 흡수 · 반사 · 독 겹 · 면역 · 비늘 · 재생 · 위력 · 횟수 · 분노 · 소화액 · 균사 · 부생 · 치명 피해 · 3:3 시작 에너지)
 //  ⑧ 얻는 곳(탐사 · 해체 · 상점 꾸러미 · 레벨업) ⑨ 봇 카드 · 다시 돌리기 같은 결과 ⑩ 서버 일 목록(setCards · setSlots)
 //   node tools/test/cards.mjs
-import { newGame, makePlant, syncTimers, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, merge, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
+import { newGame, makePlant, syncTimers, normIvs, stars, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, merge, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
 import { kitOfPlant, unitOf, botPlant, setupBot, replayBot } from '../../v2/src/game/fight.js';
 import { CARDS, CARD_SLOTS, NORMAL_CARDS, formCards, isSkillCard, cardFits, passivesOf, rollCard, cardFace } from '../../v2/src/game/cards.js';
 import { SKILLS, SPECIES, FORM_KEYS, PLANETS, SHOP, levelReward } from '../../v2/src/game/catalog.js';
@@ -249,6 +249,21 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   runOp(s, 'setSlots', { id: p.uid, battle: [...p.skills.battle], cards: [null, 'n_wall'] }, { rng: makeRng(1), now: 0 });
   ok(p.cards[0] === null && p.cards[1] === 'n_wall', 'setSlots');
   throws(() => runOp(s, 'setMut', { id: p.uid, mut: [null, null] }, { rng: makeRng(1), now: 0 }), '옛 setMut 없음');
+}
+// ⑪ 별 되돌리기(2026-10-18): 개체값 넷일 때 별이 다섯 칸 기준으로 줄어든 옛 식물 → 열매 값을 올려 그때 별 · 새 식물은 그대로 · 한 번만
+{
+  const T0 = Date.parse('2026-10-17T12:00:00+09:00'), T1 = Date.parse('2026-10-18T12:00:00+09:00');
+  const old5 = { uid: 'p7', born: T0, ivs: { hp: 9, atk: 8, def: 8, spd: 9 } };   // 넷 합 34 = 옛 5성
+  normIvs(old5); ok(stars(old5) === 5 && old5.ivFix === 1, '옛 5성(열매 칸 없음) → 5성: ' + JSON.stringify(old5.ivs));
+  const old4 = { uid: 'p9', born: T0, ivs: { hp: 7, atk: 6, def: 6, spd: 7, fruit: 0 } };   // 이미 옮겨져 4성 아래로 떨어진 옛 4성(넷 합 26)
+  normIvs(old4); ok(stars(old4) === 4 && old4.ivs.fruit === 5, '옛 4성(옮겨진 뒤) → 4성 · 열매 5: ' + old4.ivs.fruit);
+  const noBorn = { uid: 'p3', ivs: { hp: 10, atk: 10, def: 10, spd: 3, fruit: 1 } };   // 핀 때 기록 없는 옛 세이브
+  normIvs(noBorn); ok(stars(noBorn) === 5, '핀 때 없는 옛 식물도 되돌림');
+  const fresh = { uid: 'p5', born: T1, ivs: { hp: 9, atk: 8, def: 8, spd: 9, fruit: 0 } };   // 새 규칙으로 핀 식물(열매 0 ≠ 옮길 때 값)
+  if (fresh.ivs.fruit === normIvs({ uid: 'p5', ivs: { hp: 0, atk: 0, def: 0, spd: 0 } }).ivs.fruit) fresh.ivs.fruit = 1;
+  normIvs(fresh); ok(fresh.ivs.fruit <= 1 && stars(fresh) === 4, '새 식물은 그대로');
+  const again = { ...old4, ivs: { ...old4.ivs, fruit: 0 } }; normIvs(again); ok(again.ivs.fruit === 0, '한 번만(ivFix)');
+  const s = game(); ok(s.plants[0].ivFix === 1, '새로 핀 식물 = 표시 있음');
 }
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

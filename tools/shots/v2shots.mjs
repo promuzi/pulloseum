@@ -45,6 +45,11 @@ export const SHOTS = [
   ['06_plant_iv', 'plant', { tab: 'iv' }],
   ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],
   ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
+  ['06_draft_evo_0500', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 500 } }], ['06_draft_evo_1150', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1150 } }], ['06_draft_evo_1600', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1600 } }],   // 진화 연출(scenes/draft.js — 2026-10-18)
+  ['06_draft_evo', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: [1], focus: 1 } }],   // 진화 = 넷 중 둘 고르기
+  ['06_draft_evo_end', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: [1], focus: 1, sy: 999 } }],   // 설명 판 끝까지 넘김(글이 판보다 길 때)
+  ['06_draft_lv', 'plant', { tab: 'skill' }, { draft: { n: 3, pick: 1, at: 900 } }],   // 레벨업 = 셋 중 하나
+  ['06_plant_skill_draft', 'plant', { tab: 'skill' }, { plants: [{ drafts: [{ kind: 'lv', st: 1, lv: 3, pick: 1, cands: ['f_ball'] }] }] }],   // 보류한 고르기 = '스킬 정하기' 단추
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
   ['08_battle_reveal_0150', 'battle', { venue: 'colosseum', reveal: '150' }],
@@ -95,6 +100,8 @@ export const SHOTS = [
   ['14_room_in', 'room', { demo: 'in' }],
   ['14_room_in3', 'room', { demo: 'in3' }],   // 3:3 교체전 방(내 팀 셋)
   ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
+  ['12_nursery_got_many', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +90', t0: -9000, sy: 0, got: Array.from({ length: 22 }, (_, i) => i % 2 ? { kind: 'scion', skill: 'f_ball', rar: 3 } : { kind: 'seed', seed: { key: 'flower_grass' }, rar: 2 }) } }],   // 칸이 화면보다 많음 = 칸 줄만 끌어 넘김 · '확인'은 늘 보임(2026-10-18)
+  ['12_nursery_got_many_end', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +90', t0: -9000, sy: 9999, got: Array.from({ length: 22 }, (_, i) => i % 2 ? { kind: 'scion', skill: 'f_ball', rar: 3 } : { kind: 'seed', seed: { key: 'flower_grass' }, rar: 2 }) } }],
   ['12_nursery', 'nursery', {}],
   ['12_nursery_new9', 'nursery', {}, { plants: [{ key: 'gladi_cactus', stage: 2 }, { key: 'hyunmu_cap', stage: 2 }, { key: 'gumiho_bloom', stage: 2 }, { key: 'wizard_bell', stage: 2 }, { key: 'ninja_vine', stage: 2 }, { key: 'diver_vine', stage: 2 }, { key: 'viking_cap', stage: 2 }] }],   // 셋째 아홉(2026-10-17)
   ['12_nursery_new9b', 'nursery', {}, { plants: [{ key: 'jangseung_cactus', stage: 2 }, { key: 'astro_cap', stage: 2 }, { key: 'gladi_cactus', stage: 0 }, { key: 'hyunmu_cap', stage: 1 }, { key: 'gumiho_bloom', stage: 0 }, { key: 'wizard_bell', stage: 1 }, { key: 'ninja_vine', stage: 0 }] }],

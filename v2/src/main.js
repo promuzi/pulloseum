@@ -13,13 +13,17 @@ import { loadShips } from './art/ship.js';
 import { toast as drawToast } from './art/ui.js';
 import { mockState } from './data/mock.js';
 import { SCENES } from './scenes/index.js';
-import { drawOverlays } from './scenes/popups.js';
+import { drawOverlays, gotScroll } from './scenes/popups.js';
+import { draftScroll } from './scenes/draft.js';
 import { shotGuide } from './scenes/guide.js';
 import { net, act as netAct } from './net/api.js';
 import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
 import { tryAutoStart, music } from './core/sound.js';
 import { runOp } from './game/ops.js';
+import { bloomPool } from './game/catalog.js';
+import { bigKey } from './art/sprites.js';
+import { stageKey } from './game/view.js';
 
 const screen = new Screen(document.getElementById('screen'));
 screen.resize();
@@ -107,7 +111,7 @@ let running = true, lastErr = 0, timeOff = 0, lastDraw = -1e9;
 function frame(ts) {
   requestAnimationFrame(frame);   // 먼저 다음 장을 예약(그리다 오류가 나도 화면이 멈추지 않게)
   if (!running) return;
-  const cur = router.cur, fast = input.busy() || router.phase || (cur && cur.fast && cur.fast(app));
+  const cur = router.cur, fast = input.busy() || router.phase || !!app.draft || (cur && cur.fast && cur.fast(app));
   if (ts - lastDraw < (fast ? 1000 / 60 : 1000 / 30) - 3) return;
   lastDraw = ts;
   frameBody(Math.max(app.t, ts + timeOff));
@@ -131,7 +135,7 @@ function frameBody(ts) {
     }
     stretchEdges(g.c, screen.s, screen.W, screen.H, F, screen.oy || 0, screen.ob || 0);
     screen.present();
-    input.flush(app.guide ? null : router.cur);   // 처음 안내가 열린 동안엔 장면 끌기 · 밀기 없음
+    input.flush(app.guide ? null : app.popup && !app.confirm ? gotScroll(app) : app.draft ? draftScroll(app) : router.cur);   // 처음 안내가 열린 동안엔 장면 끌기 · 밀기 없음 · 받은 것 판 = 그 판의 칸 줄 · 카드 고르기 = 설명 판 글을 끎
   } catch (e) {
     if (ts - lastErr > 2000) { lastErr = ts; console.error('화면 오류', router.name, e); window.__lastError = String(e && e.stack || e); }
     try { g.c.restore(); } catch {}
@@ -176,6 +180,13 @@ window.__shot = (name, params = {}, opt = {}) => {
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
+  app.draft = null;
+  if (opt.draft) {   // 카드 고르기 촬영(opt.draft = { evo, at: 연 뒤 ms, n, pick, sel: [몇째 …], focus: 몇째, sy: 설명 판 넘긴 칸 })
+    const D = opt.draft, p = app.state.plants[app.state.active || 0], cands = bloomPool(p.key, Math.max(1, p.stage)).slice(0, D.n || 4).map(x => x.id);
+    p.drafts = [{ kind: D.evo ? 'evo' : 'lv', st: p.stage, lv: p.lv, pick: Math.min(D.pick || 2, cands.length), cands }];
+    app.draft = { uid: p.uid, t0: app.t - (D.at ?? 2600), sel: (D.sel || []).map(i => cands[i]).filter(Boolean), focus: D.focus != null ? cands[D.focus] : null, faces: null, sy: D.sy || 0,
+      evo: D.evo ? { from: bigKey(p.key, stageKey({ stage: Math.max(0, p.stage - 1) })), to: bigKey(p.key, stageKey(p)), pot: p.pot } : null };
+  }
   router.set(name, params);
   input.begin(); input.pressedId = opt.pressed || null;
   router.draw(app);

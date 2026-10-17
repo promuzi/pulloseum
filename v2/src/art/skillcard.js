@@ -378,6 +378,7 @@ function cardBack(g, w, h, sk, o) {
     else if ((sk.cost || 0) > (o.energy ?? 99)) line(`햇빛이 모자람 — 지금 ${o.energy} · 필요 ${sk.cost}`, '#ff9a9a', 'bold');
     else line('지금은 못 씀', '#ff9a9a', 'bold');
   }
+  return y;   // 글 끝(backHeight)
 }
 // 패시브 카드 뒷면(2026-10-17 카드): 이름 · '일반 카드 · 패시브' 꼬리표 · 큰 수(앞면 수치) · 설명 줄 · 누가 쓰나
 function passiveBack(g, w, h, sk) {
@@ -399,6 +400,7 @@ function passiveBack(g, w, h, sk) {
   for (const d of sk.desc || []) for (const ln of wrap(d, 'body', cw)) { g.text(ln, P, y, { color: C.text }); y += 15; }
   y += 6;
   g.text(sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이 식물만 끼워요` : '일반 식물만 끼워요', P, y, { color: C.dim });
+  return y + 15;
 }
 // 작은 카드(보상 칸 · 가방 줄 · 상점 — 그림 대신 카드 모양): (x, y) 왼쪽 위, 20×28 — 테 색 = 카드 색, 가운데 = 카드 아이콘
 export function cardTiny(g, x, y, sk) {
@@ -423,10 +425,23 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock, halved: o.halved, left: o.left });
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   bc.setTransform(k * S, 0, 0, k * S, 0, 0);
-  cardFrame(G2, 0, 0, w, h, sk, false); backBody(G2, 0, 0, w, h);
+  const hb = o.free ? Math.round(BH / S) : h;   // o.free = 뒷면을 카드 비율과 다르게(넓게) — 카드 고르기 화면 설명 판(짧은 기기에서도 글이 들어가게)
+  cardFrame(G2, 0, 0, w, hb, sk, false); backBody(G2, 0, 0, w, hb);
   bc.setTransform(k, 0, 0, k, 0, 0);
+  if (o.bodyH) {   // o.bodyH = 글을 따로 한 장(높이 = 글 전체) — 판보다 길면 부르는 쪽이 테 안쪽에 잘라 끌어 넘김(scenes/draft.js)
+    const body = document.createElement('canvas'); body.width = Math.round(BW * k); body.height = Math.round(o.bodyH * k);
+    const bb = body.getContext('2d'); bb.setTransform(k, 0, 0, k, 0, 0);
+    cardBack(new Gfx(bb), BW, o.bodyH, sk, o);
+    return { front, back, body };
+  }
   cardBack(G2, BW, BH, sk, o);
   return { front, back };
+}
+// 뒷면 글이 폭 w(1배 칸)에서 차지하는 높이(위 · 아래 테 포함) — 설명 판 높이를 글에 맞출 때
+let measureG = null;
+export function backHeight(sk, w, o = {}) {
+  measureG = measureG || new Gfx(document.createElement('canvas').getContext('2d'));
+  return Math.ceil(cardBack(measureG, w, 400, sk, o)) + 14;
 }
 
 // 엎어 둔 카드(공개 전 상대 카드 — 2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고"): 은빛 테 · 남색 바탕 · 안쪽 가는 테 · 가운데 금빛 마름모에 씨앗

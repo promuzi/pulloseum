@@ -46,7 +46,7 @@ export function makePlant(s, seed, rng, now) {
   if (seed.legend) for (const k of IV_KEYS) ivs[k] = Math.max(ivs[k], 7);
   if (seed.trait === 'fruity') ivs.fruit = Math.max(ivs.fruit, 8);   // 옛 열매용 종자
   const p = {
-    uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
+    uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs, ivFix: 1,
     shiny: !!seed.shiny, legend: !!seed.legend, form: seed.form || sp.form || null,
     pts: 0, up: {}, spent: 0, invest: 0, pot: 'pot_terra', born: now,
     skills: { battle: [null, null, null, null, null, null], store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, pend: [],
@@ -569,13 +569,28 @@ export function fuelSync(s, now) {
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
 // 개체값 다섯째 '열매'가 없는 옛 식물: 식물 번호로 정한 값(화면 · 서버가 같게) · 옛 열매용 = 8 이상 · 전설 = 7 이상, 옛 딱지(trait)는 지움
-export function normIvs(p) {
-  if (!p.ivs || p.ivs.fruit != null) return p;
+// 별 되돌리기(2026-10-18 사용자 "이미 유저가 갖고 있던 5성 4성이 된 거 다시 5성으로"): 별 기준이 다섯 칸 합(41 · 31 · 21 · 11)으로 바뀌며 넷일 때 별(33 · 25 · 17 · 9)보다 줄어든 옛 식물 →
+//  열매 값을 그때 별이 되는 만큼만 올림(한 번 — ivFix). 옛 식물 = 다섯째가 들어오기 전에 핀 것(born) · 또는 열매 값이 옮길 때 정한 값 그대로인 것(올리기 전 서버에서 핀 것)
+const IV5_AT = Date.parse('2026-10-18T01:06:00+09:00');
+const stars4 = ivs => { const t = ['hp', 'atk', 'def', 'spd'].reduce((a, k) => a + (ivs[k] || 0), 0); return t >= 33 ? 5 : t >= 25 ? 4 : t >= 17 ? 3 : t >= 9 ? 2 : 1; };
+function fruitOfUid(p) {
   let h = 0; for (const c of String(p.uid)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   let v = h % (IV_MAX + 1);
   if (p.trait === 'fruity') v = Math.max(v, 8);
   if (p.legend) v = Math.max(v, 7);
-  p.ivs.fruit = v; delete p.trait;
+  return v;
+}
+export function normIvs(p) {
+  if (!p.ivs) return p;
+  const moved = p.ivs.fruit == null;
+  if (moved) { p.ivs.fruit = fruitOfUid(p); delete p.trait; }
+  if (!p.ivFix) {
+    if (moved || !(p.born >= IV5_AT) || p.ivs.fruit === fruitOfUid(p)) {
+      const want = stars4(p.ivs);
+      while (starsOf(p.ivs) < want && p.ivs.fruit < IV_MAX) p.ivs.fruit++;
+    }
+    p.ivFix = 1;
+  }
   return p;
 }
 export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { normIvs(p); harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) { normIvs(p); normSkills(p); } normCards(s); seasonSync(s, now); return s; }

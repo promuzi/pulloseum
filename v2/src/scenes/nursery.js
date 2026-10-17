@@ -13,6 +13,7 @@ import { evolveLeague } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
 import { eul } from '../core/josa.js';
 import { sfx } from '../core/sound.js';
+import { openDraft } from './draft.js';
 
 // 양육 = 스마트팜 2판(2026-10-15 사용자):
 //  "계단식으로 만들면 멀리 있는 게 안 보여 — 위아래 드래그하면 멀리 있는 게 앞으로 말려오는 느낌",
@@ -369,8 +370,9 @@ export const nursery = {
     if (up) {
       app.toast(`${p.name} Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}` + (up.harvest ? ' · 열매 칸 +1' : ''));
       const box = r.ups.find(u => u.box);
-      if (box) showGot(app, 'Lv6 달성 선물', Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요');
+      if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요');
     }
+    if (r.ups.some(u => u.draft)) openDraft(app, p);   // 레벨업 = 카드 고르기(받은 것 판이 있으면 그 뒤에)
   },
   // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
   evolve(app, p) {
@@ -379,11 +381,11 @@ export const nursery = {
     return this.doEvolve(app, p);
   },
   async doEvolve(app, p) {
+    const from = bigKey(p.key, stageKey(p)), pot = p.pot;
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
-    const TO = { battle: '전투 칸에', store: '스킬 보관에', joker: '스킬 보관에', pend: '놓을 칸 고르기' };
-    showGot(app, `진화! ${['어린', '자라는', '다 자란'][r.stage]} 단계`, r.got.map(x => ({ kind: 'skill', skill: x.id, to: TO[x.to], rar: SKILLS[x.id] && SKILLS[x.id].tier === 'c3' ? 4 : 3 })), r.got.some(x => x.to === 'pend') ? '칸이 꽉 찼어요 — 식물 관리에서 놓을 칸을 골라요' : '새 기술이 피었어요');
+    openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });   // 진화 연출 → 카드 고르기(scenes/draft.js)
   },
   async harvest(app, p) {
     const r = await app.act('harvest', { id: p.uid });

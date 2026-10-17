@@ -20,6 +20,7 @@ import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL, lvOf } from '../
 import { openForm } from '../core/form.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
 import { eul, ga, eun } from '../core/josa.js';
+import { openDraft } from './draft.js';
 
 // 식물 관리(2026-10-15 사용자 "가운데 식물을 누르면 … 암실 … 식물의 강화와 각종 식물 스킬과 세팅"):
 //  홈이 불을 끄고 다가간 그 카메라 그대로 — 위 = 돌아가기·이름·별·정체성 · 생장(물·비료·진화), 아래 판 = 기술 · 강화 · 개체값 · 설정.
@@ -165,7 +166,7 @@ export const plant = {
     const tw = Math.floor((W - 24) / TABS.length);
     TABS.forEach((tb, i) => {
       holoTab(app, 'pt_' + tb.id, 12 + i * tw, SHEET_Y + 8, tw - 4, 27, tb.label, tb.id === this.tab, live ? () => { this.tab = tb.id; this.sub = null; this.scrollY = 0; } : null, 'value');
-      const dot = (tb.id === 'up' && p.pts > 0) || (tb.id === 'skill' && p.pend && p.pend.length);   // 쓸 포인트 · 놓을 새 기술
+      const dot = (tb.id === 'up' && p.pts > 0) || (tb.id === 'skill' && ((p.pend && p.pend.length) || (p.drafts && p.drafts.length)));   // 쓸 포인트 · 놓을 새 기술 · 고를 카드
       if (dot) { const dx = 12 + i * tw + tw - 10; g.disc(dx, SHEET_Y + 11, 4, '#05070f'); g.disc(dx, SHEET_Y + 11, 3, '#ff7a5a'); }
     });
     const y0 = SHEET_Y + 44, top = y0 - 4, h = H - top;
@@ -203,6 +204,11 @@ export const plant = {
     const pend = p.pend && p.pend[0], C3 = PCARD.cols, x0 = Math.round((W - C3 * PCARD.w - (C3 - 1) * PCARD.gx) / 2), RW = C3 * PCARD.w + (C3 - 1) * PCARD.gx;
     const cx = i => x0 + (i % C3) * (PCARD.w + PCARD.gx), ry = i => Math.floor(i / C3) * (PCARD.h + PCARD.gy), rowsH = n => Math.ceil(Math.max(1, n) / C3) * (PCARD.h + PCARD.gy) - PCARD.gy;
     const head = (t, c, right) => { g.text(t, 14, y, { font: 'value', color: c }); if (right) g.text(right, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' }); y += 18; };
+    const nd = (p.drafts || []).length;
+    if (nd) {   // 보류한 카드 고르기(레벨업 · 진화) — 누르면 어두운 고르기 화면(scenes/draft.js)이 다시
+      this.btn(app, live, 'sk_draft', 14, y, W - 28, 32, `스킬 정하기 ${nd}`, { style: 'gold', font: 'head', icon: 'star', iconTint: true }, () => openDraft(app, p));
+      y += 42;
+    }
     if (pend) {   // 새로 핀 기술(스킬 보관이 다 찼을 때만): 누름 = [장착] · 꾹 = 스킬 칸 · 스킬 보관으로 끌어 놓기 · 안 배우기
       head('새로 핀 기술', '#ffb46a', p.pend.length > 1 ? `${p.pend.length}개 기다림` : null);
       this.card(app, p, live, 'pend', cx(0), y, skillOf(pend), '', null, '#ffb46a');
@@ -502,6 +508,7 @@ export const plant = {
     if (!r) return;
     const up = r.ups[r.ups.length - 1];
     if (up) { app.toast(`Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}`); const box = r.ups.find(u => u.box); if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
+    if (r.ups.some(u => u.draft)) openDraft(app, p);   // 레벨업 = 카드 고르기(받은 것 판이 있으면 그 뒤에)
   },
   // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
   evolve(app, p) {
@@ -509,12 +516,13 @@ export const plant = {
     if (lg && lg.had) return ask(app, `진화하면 ${LEAGUES[lg.to].name}로 바뀌어요`, `${LEAGUES[lg.from].short} 리그 ${lg.T.tier} ${lg.T.round}(${lg.T.wins}승 ${lg.T.losses}패)는 처음부터 다시 해요`, () => this.doEvolve(app, p), '진화');
     return this.doEvolve(app, p);
   },
+  // 진화 = 어두운 화면에서 옛 모습이 깜빡이다 번쩍 → 새 모습 → 바로 카드 고르기(scenes/draft.js — 2026-10-18 사용자 "진화 시 바로 진화 모션 보여 주면서 다음에 반드시 정하고 가야 함")
   async doEvolve(app, p) {
+    const from = bigKey(p.key, stageKey(p)), pot = p.pot;
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
-    const TO = { battle: '전투 칸에', store: '스킬 보관에', joker: '스킬 보관에', pend: '놓을 칸 고르기' };
     this.tab = 'skill'; this.sub = null; this.scrollY = 0;
-    showGot(app, `진화! ${['어린', '자라는', '다 자란'][r.stage]} 단계`, r.got.map(x => ({ kind: 'skill', skill: x.id, to: TO[x.to], rar: SKILLS[x.id] && SKILLS[x.id].tier === 'c3' ? 4 : 3 })), r.got.some(x => x.to === 'pend') ? '칸이 꽉 찼어요 — 아래에서 놓을 칸을 골라요' : '새 기술이 피었어요');
+    openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });
   },
 };

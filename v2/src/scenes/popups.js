@@ -17,6 +17,7 @@ import { cardTiny } from '../art/skillcard.js';
 import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 import { drawGuide } from './guide.js';
+import { draftScreen } from './draft.js';
 
 const ease = k => 1 - (1 - k) ** 3;
 const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; };
@@ -137,9 +138,26 @@ function levelChest(app, item) {
 }
 
 // ── ② 받은 것 판 ──
-export function showGot(app, title, got, sub) { app.popup = { title, got: got || [], sub, t0: app.t }; sfx('coin'); }
+// 같은 물건(돈 · 물 · 비료 …)은 한 칸으로 합침(2026-10-18 사용자 "수확 많이 하면 화면 안 내려가서 고장" — 열매 수십 개가 한 칸씩이라 창이 화면 밖으로 넘쳐 '확인'이 안 보였음)
+const STACK = new Set(['credits', 'gems', 'water', 'fert', 'regress', 'fuel', 'parts']);
+function stackGot(got) {
+  const out = [], at = {};
+  for (const r of got || []) {
+    if (!STACK.has(r.kind)) { out.push(r); continue; }
+    const o = at[r.kind];
+    if (o) { o.n = (o.n || 1) + (r.n || 1); o.rar = Math.max(o.rar || 0, r.rar || 0); }
+    else out.push(at[r.kind] = { ...r, n: r.n || 1 });
+  }
+  return out;
+}
+export function showGot(app, title, got, sub) { app.popup = { title, got: stackGot(got), sub, t0: app.t, sy: 0 }; sfx('coin'); }
+// 칸이 많아 창이 화면보다 길면 칸 줄만 위아래로 끌어 넘김 — 제목 · '확인'은 늘 화면 안(main.js 가 끌기를 여기로)
+export const gotScroll = app => ({ onDrag(dy) { const P = app.popup; if (P) P.sy = Math.max(0, Math.min(P.maxY || 0, (P.sy || 0) - dy)); } });
 function gotPopup(app, P) {
-  const { g, W, H, t, input } = app, n = P.got.length, rows = Math.ceil(n / 2), h = 86 + rows * 52 + (P.sub ? 16 : 0), y = Math.round((H - h) / 2) - 10, x = 14, w = W - 28;
+  const { g, W, H, t, input } = app, n = P.got.length, rows = Math.ceil(n / 2), head = P.sub ? 48 : 34, listH = Math.max(52, rows * 52);
+  const roomH = Math.max(52, Math.floor((H - 40 - head - 52) / 52) * 52), viewH = Math.min(listH, roomH);
+  const h = head + viewH + 52, y = Math.max(12, Math.round((H - h) / 2) - 10), x = 14, w = W - 28;
+  P.maxY = listH - viewH; if (P.sy > P.maxY) P.sy = P.maxY;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('got_block', 0, 0, W, H, () => {});
   const k = ease(Math.min(1, (t - P.t0) / 240));
@@ -147,8 +165,13 @@ function gotPopup(app, P) {
   const yy = y + Math.round((1 - k) * 16), PT = T.ptext;
   g.text(P.title, W / 2, yy + 10, { font: 'head', color: PT.main, align: 'center' });
   if (P.sub) g.text(P.sub, W / 2, yy + 30, { color: PT.sub, align: 'center' });
-  const cw = Math.floor((w - 24 - 8) / 2), gy = yy + (P.sub ? 48 : 34);
-  P.got.forEach((r, i) => { const age = t - P.t0 - 120 - i * 90; if (age < 0) return; gotCell(g, x + 12 + (i % 2) * (cw + 8), gy + Math.floor(i / 2) * 52, cw, r, Math.min(1, age / 160)); });
+  const cw = Math.floor((w - 24 - 8) / 2), gy = yy + head, sy = Math.round(P.sy || 0);
+  g.clip(x + 4, gy - 2, w - 8, viewH + 2, () => P.got.forEach((r, i) => {
+    const age = t - P.t0 - 120 - Math.min(i, 12) * 90, cy = gy + Math.floor(i / 2) * 52 - sy;
+    if (age < 0 || cy + 46 < gy || cy > gy + viewH) return;
+    gotCell(g, x + 12 + (i % 2) * (cw + 8), cy, cw, r, Math.min(1, age / 160));
+  }));
+  if (P.maxY > 0) { const bh = Math.max(16, Math.round(viewH * viewH / listH)), by = gy + Math.round((viewH - bh) * (P.sy || 0) / P.maxY); g.rect(x + w - 6, by, 2, bh, '#4f84bf'); }   // 넘길 수 있다는 막대
   if (!n) g.text('받은 것이 없어요', W / 2, gy + 10, { color: PT.sub, align: 'center' });
   button(app, 'got_ok', W / 2 - 50, yy + h - 42, 100, 30, '확인', { style: 'gold', font: 'head', onTap: () => { app.popup = null; } });
 }
@@ -250,6 +273,7 @@ export function drawOverlays(app) {
   const s = app.state;
   if (app.confirm) return confirmBox(app, app.confirm);
   if (app.popup) return gotPopup(app, app.popup);
+  if (app.draft) return draftScreen(app, app.draft);   // 레벨업 · 진화 카드 고르기(scenes/draft.js)
   if (app.sheet === 'settings') return settingsSheet(app);
   if (s && s.pending && s.pending.length && !NO_CHEST.has(app.router.name) && !app.router.phase) {
     const item = s.pending.find(x => !(app.ackedLv && app.ackedLv.has(x.kind === 'season' ? 'season' + x.n : x.level)));
