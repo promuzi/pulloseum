@@ -64,7 +64,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const s2 = game(), r = plant(s2, 'thorn', { form: 'weapon' }), R0 = r.skills.battle[0];
   r.skills = { battle: [R0, 'basic', 'guard', 'evade'], joker: 'j_spikes', forgot: [], learned: [R0, 'j_spikes'], v4: 1 }; r.cards = ['m_slash', 'm_shot'];
   syncTimers(s2, 0);
-  ok(JSON.stringify(r.skills.battle) === JSON.stringify([R0, 'basic', 'guard', 'evade', 'm_slash', 'm_shot']) && r.skills.joker === 'j_spikes' && JSON.stringify(r.cards) === '[null,null]', 'v4 카드 칸 기술 카드 → 늘어난 두 칸(조커는 그대로): ' + r.skills.battle + ' / ' + r.cards);
+  ok(JSON.stringify(r.skills.battle) === JSON.stringify([R0, 'basic', 'guard', 'evade', 'm_slash', 'm_shot']) && JSON.stringify(r.skills.store) === '["j_spikes"]' && JSON.stringify(r.cards) === '[null,null]', 'v4 카드 칸 기술 카드 → 늘어난 두 칸(조커는 스킬 보관으로): ' + r.skills.battle + ' / ' + r.cards);
   // 기술 카드가 넘침(전투 칸 셋 · 다른 변이) → 가방
   const s3 = game(), w = plant(s3, 'thorn', { form: 'weapon' });
   w.skills.battle = ['m_slash', 'm_shot', 'm_smash', 'basic', 'm_bite', null]; w.cards = [null, null]; s3.cards = {};
@@ -123,7 +123,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const li = d.skills.battle.findIndex(x => x && !BASIC_IDS.includes(x) && !isSkillCard(x)), learned = d.skills.battle[li];
   const nb2 = [...d.skills.battle]; nb2[li] = 'm_voltclaw';
   setSlots(s, d.uid, nb2, d.cards);
-  ok(d.skills.joker === learned && d.skills.battle[li] === 'm_voltclaw', '배운 기술 → 보관 칸');
+  ok(d.skills.store.includes(learned) && d.skills.battle[li] === 'm_voltclaw', '배운 기술 → 스킬 보관');
   // 새로 핀 기술을 카드 자리에 놓으면 카드는 가방으로(지운 기술로 가지 않게)
   d.pend.push('f_rage'); const before = s.cards.m_voltclaw || 0;
   const r = placePending(s, d.uid, 'f_rage', 'b' + li);
@@ -132,7 +132,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const ci = d.skills.battle.findIndex(x => BASIC_IDS.includes(x)); const nb3 = [...d.skills.battle]; nb3[ci] = 'm_voltclaw';
   setSlots(s, d.uid, nb3, d.cards); const v0 = s.cards.m_voltclaw || 0;
   swapJoker(s, d.uid, ci);
-  ok((s.cards.m_voltclaw || 0) === v0 + 1 && d.skills.joker !== 'm_voltclaw', '조커와 바꾸면 카드는 가방(보관 칸 아님)');
+  ok((s.cards.m_voltclaw || 0) === v0 + 1 && !d.skills.store.includes('m_voltclaw'), '보관과 바꾸면 카드는 가방(보관 칸 아님)');
 }
 // ⑥ 식물이 떠나면 카드는 가방으로
 {

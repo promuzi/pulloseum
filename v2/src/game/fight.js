@@ -74,7 +74,7 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
     cards[0] = pa[Math.floor(rng() * pa.length)];
   }
   else { const n = stage === 0 ? (rng() < 0.5 ? 1 : 0) : stage === 1 ? 1 : rng() < 0.6 ? 2 : 1; for (let i = 0; i < n; i++) { let c = rollCard(rng, 'normal'); if (cards.includes(c)) c = null; cards[i] = c; } }
-  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: six.slice(0, 6), joker: null, forgot: [], learned: [], v4: 1, v6: 1 }, shiny: false, legend: false };
+  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: six.slice(0, 6), store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 

@@ -382,7 +382,7 @@ export const nursery = {
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
-    const TO = { battle: '전투 칸에', joker: '조커 칸에', pend: '놓을 칸 고르기' };
+    const TO = { battle: '전투 칸에', store: '스킬 보관에', joker: '스킬 보관에', pend: '놓을 칸 고르기' };
     showGot(app, `진화! ${['어린', '자라는', '다 자란'][r.stage]} 단계`, r.got.map(x => ({ kind: 'skill', skill: x.id, to: TO[x.to], rar: SKILLS[x.id] && SKILLS[x.id].tier === 'c3' ? 4 : 3 })), r.got.some(x => x.to === 'pend') ? '칸이 꽉 찼어요 — 식물 관리에서 놓을 칸을 골라요' : '새 기술이 피었어요');
   },
   async harvest(app, p) {

@@ -28,7 +28,12 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const q = game().plants[0];
   q.skills = { battle: ['u_petal_1', 'j_scent', 'basic', 'guard'], joker: 'j_petals', forgot: [], learned: ['u_petal_1', 'j_scent', 'j_petals'], v4: 1 };
   normSkills(q);
-  ok(JSON.stringify(q.skills.battle) === '["u_petal_1","j_scent","basic","guard","j_petals","evade"]' && q.skills.joker === null, 'v4 → v6 = 조커 · 빠진 기본기: ' + q.skills.battle);
+  ok(JSON.stringify(q.skills.battle) === '["u_petal_1","j_scent","basic","guard","j_petals","evade"]' && q.skills.store.length === 0 && !('joker' in q.skills), 'v4 → v6 = 조커 · 빠진 기본기(보관은 빔): ' + q.skills.battle);
+  // v6 → v7(2026-10-18 보관 여섯): 조커 → 보관 첫 칸 · 놓을 칸을 기다리던 새 기술도 보관으로
+  const w = game().plants[0];
+  w.skills = { battle: ['u_petal_1', 'basic', 'guard', 'evade', 'sun', null], joker: 'j_scent', forgot: [], learned: ['u_petal_1', 'j_scent', 'j_petals'], v4: 1, v6: 1 }; w.pend = ['j_petals'];
+  normSkills(w);
+  ok(w.skills.v7 === 1 && JSON.stringify(w.skills.store) === '["j_scent","j_petals"]' && !w.pend.length && !('joker' in w.skills), 'v7 = 조커 · 기다리던 기술 → 스킬 보관: ' + JSON.stringify(w.skills));
   const kq = kitOfPlant({ ...q, skills: { ...q.skills, battle: ['u_petal_1', 'basic', 'guard', 'evade'], v6: undefined } }).map(k => k.id);
   ok(kq.length === 4, '이어 하는 옛 판(v4 그대로 저장된 식물) = 손패 넷 그대로: ' + kq);
 }
@@ -42,16 +47,18 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
 // ③ setLoadout
 {
   const s = game(), p = s.plants[0], id = p.uid;
-  p.skills.battle = ['u_petal_1', 'basic', 'guard', 'evade', null, null]; p.skills.joker = 'j_scent'; p.skills.v4 = 1; p.skills.v6 = 1;
+  p.skills.battle = ['u_petal_1', 'basic', 'guard', 'evade', null, null]; p.skills.store = ['j_scent']; p.skills.v4 = 1; p.skills.v6 = 1;
   throws(() => setLoadout(s, id, ['basic', 'guard', 'evade', 'u_petal_1']), '칸이 넷(여섯이어야)');
   throws(() => setLoadout(s, id, ['basic', 'basic', 'guard', 'evade', 'u_petal_1', null]), '같은 기술 두 칸');
   throws(() => setLoadout(s, id, ['basic', 'guard', 'evade', 'f_ball', 'u_petal_1', null]), '모르는 기술');
-  throws(() => setLoadout(s, id, ['basic', 'guard', 'evade', null, null, null]), '배운 기술 둘을 다 뺌(보관은 하나)');
+  setLoadout(s, id, ['basic', 'guard', 'evade', null, null, null]);
+  ok(JSON.stringify(p.skills.store) === '["j_scent","u_petal_1"]', '배운 기술 둘 다 보관으로(여섯 칸 — 2026-10-18 · 새로 뺀 것은 뒤에)');
+  p.skills.store = ['j_scent']; p.skills.battle = ['u_petal_1', 'basic', 'guard', 'evade', null, null];
   throws(() => setLoadout(s, id, [null, null, null, null, null, null]), '다 비움');
   setLoadout(s, id, ['j_scent', 'basic', null, 'evade', null, null]);
-  ok(p.skills.joker === 'u_petal_1' && p.skills.battle[0] === 'j_scent' && p.skills.battle[2] === null, '조커 ↔ 전투 칸 · 빈 칸 허용: ' + JSON.stringify(p.skills));
+  ok(JSON.stringify(p.skills.store) === '["u_petal_1"]' && p.skills.battle[0] === 'j_scent' && p.skills.battle[2] === null, '보관 ↔ 전투 칸 · 빈 칸 허용: ' + JSON.stringify(p.skills));
   setLoadout(s, id, ['j_scent', 'u_petal_1', 'guard', 'basic', null, null]);
-  ok(p.skills.joker === null && !p.skills.battle.includes('evade'), '기본기를 빼도 됨(보관에 늘 있음)');
+  ok(p.skills.store.length === 0 && !p.skills.battle.includes('evade'), '기본기를 빼도 됨(보관에 늘 있음)');
   ok(JSON.stringify(kitOfPlant(p).map(k => k.id)) === JSON.stringify(['j_scent', 'u_petal_1', 'guard', 'basic']), '손패 = 바꾼 순서');
   setLoadout(s, id, ['guard', 'j_scent', 'basic', 'u_petal_1', null, 'evade']);
   ok(JSON.stringify(kitOfPlant(p).map(k => k.id)) === JSON.stringify(['guard', 'j_scent', 'basic', 'u_petal_1', 'evade']), '여섯째 칸까지 · 빈 칸은 손패에서 빠짐');
@@ -60,7 +67,7 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
 // ④ 새 기술을 기본기 자리에
 {
   const s = game(), p = s.plants[0], id = p.uid;
-  p.skills.battle = ['u_petal_1', 'basic', 'guard', 'evade', null, null]; p.skills.joker = 'j_scent'; p.skills.v4 = 1; p.skills.v6 = 1; p.skills.forgot = [];
+  p.skills.battle = ['u_petal_1', 'basic', 'guard', 'evade', null, null]; p.skills.store = ['j_scent']; p.skills.v4 = 1; p.skills.v6 = 1; p.skills.forgot = [];
   p.pend = ['j_petals'];
   placePending(s, id, 'j_petals', 'b2');
   ok(p.skills.battle[2] === 'j_petals' && !p.skills.forgot.includes('guard'), '기본기 자리에 놓으면 기본기는 지운 기술로 안 감');
@@ -70,6 +77,12 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   p.pend = ['j_bloom'];
   placePending(s, id, 'j_bloom', 'b5');
   ok(p.skills.battle[5] === 'j_bloom', '여섯째 칸(b5)에도 놓음');
+  p.pend = ['j_vine'];
+  placePending(s, id, 'j_vine', 'store');
+  ok(p.skills.store.includes('j_vine') && !p.pend.length, '스킬 보관에 놓기');
+  p.skills.store = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6']; p.pend = ['j_ivy'];
+  throws(() => placePending(s, id, 'j_ivy', 'store'), '스킬 보관이 다 참');
+  ok(p.pend.includes('j_ivy'), '막히면 기다림 그대로');
 }
 // ⑤ 처음 안내 봤음
 {

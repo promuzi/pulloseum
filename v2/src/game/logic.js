@@ -49,7 +49,7 @@ export function makePlant(s, seed, rng, now) {
     uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
     shiny: !!seed.shiny, legend: !!seed.legend, form: seed.form || sp.form || null,
     pts: 0, up: {}, spent: 0, invest: 0, pot: 'pot_terra', born: now,
-    skills: { battle: [null, null, null, null, null, null], joker: null, forgot: [], learned: [], v4: 1, v6: 1 }, pend: [],
+    skills: { battle: [null, null, null, null, null, null], store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, pend: [],
     hv: { t0: now, have: 0 },
   };
   // 처음 기술 = 어린 개성 기술 + 하급 공통 하나(속성 · 종 중), 남은 전투 칸 = 기본기 셋(여섯째 칸은 비어 있음 — 변이 식물은 그 변이 기술 카드)
@@ -71,7 +71,7 @@ export function makePlant(s, seed, rng, now) {
 // 기술 칸(2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개이며, 기본 스킬은 조커처럼 항상 빼고 넣고 가능(버릴 수 없음)" · "기본스킬 3개도 바꿀 수 있게"
 //  → 2026-10-17 "스킬 4개인 거 재미없어 — 6개 들고 갈 수 있게 · 변이는 6개 중 2개를 변이 스킬 카드로"):
 //  battle = 전투에 들고 가는 여섯(배운 기술 · 기본기 · 변이 식물은 그 변이 기술 카드 MUT_MAX 장까지) · joker = 배운 기술 하나 보관 · 기본기 셋은 늘 앎(지울 수 없음 — 전투 칸에 없으면 보관에 있는 셈)
-export const BASIC_IDS = ['basic', 'guard', 'evade', 'sun'], LOADOUT = 6, MUT_MAX = 2;   // sun = 광합성(햇빛 +2 — 2026-10-18 사용자 "기본으로 주는 것 중에 햇빛 채우는 카드도")
+export const BASIC_IDS = ['basic', 'guard', 'evade', 'sun'], LOADOUT = 6, MUT_MAX = 2, SKILL_STORE = 6;   // SKILL_STORE = 스킬 보관 칸(2026-10-18 한 칸 → 여섯)   // sun = 광합성(햇빛 +2 — 2026-10-18 사용자 "기본으로 주는 것 중에 햇빛 채우는 카드도")
 const isBasic = id => BASIC_IDS.includes(id);
 function fillBasics(p) { const b = p.skills.battle, left = BASIC_IDS.filter(id => !b.includes(id)); for (let i = 0; i < b.length; i++) if (!b[i] && left.length) b[i] = left.shift(); }
 // 옛 세이브 맞추기(한 번씩 — 그 뒤 비운 칸은 그대로):
@@ -97,10 +97,16 @@ export function normSkills(p) {
     while (add.length < 2) add.push(null);
     S.battle = [...b, ...add]; S.v6 = 1;
   }
+  if (!S.v7) {   // 보관 한 칸(조커) → 여섯 칸(2026-10-18): 조커 · 놓을 칸을 기다리던 새 기술을 보관으로(넘치면 기다림 그대로)
+    S.store = [S.joker, ...(Array.isArray(S.store) ? S.store : [])].filter(Boolean).slice(0, SKILL_STORE);
+    delete S.joker; S.v7 = 1;
+    if (Array.isArray(p.pend)) while (p.pend.length && S.store.length < SKILL_STORE) S.store.push(p.pend.shift());
+  }
+  if (!Array.isArray(S.store)) S.store = [];
   return p;
 }
-const known = p => new Set([...p.skills.battle.filter(x => x && !isBasic(x)), p.skills.joker, ...p.skills.forgot, ...p.pend].filter(Boolean));
-// 새 기술 놓기: 빈 전투 칸 → 전투 칸의 기본기 자리(기본기는 보관으로 — 회피 · 방어 · 평타 순) → 빈 조커 칸 → 다 차면 '고르기 대기'(pend — 화면이 무엇을 지울지 물음)
+const known = p => new Set([...p.skills.battle.filter(x => x && !isBasic(x)), ...(p.skills.store || []), ...p.skills.forgot, ...p.pend].filter(Boolean));
+// 새 기술 놓기: 빈 전투 칸 → 전투 칸의 기본기 자리(기본기는 보관으로 — 회피 · 방어 · 평타 순) → 스킬 보관(여섯 칸) → 다 차면 '고르기 대기'(pend — 화면이 무엇을 지울지 물음)
 function learnNow(p, id) {
   normSkills(p);
   const b = p.skills.battle, i = b.indexOf(null);
@@ -108,7 +114,7 @@ function learnNow(p, id) {
   if (i >= 0) { b[i] = id; return 'battle'; }
   const bi = ['evade', 'sun', 'guard', 'basic'].map(x => b.indexOf(x)).find(k => k >= 0);
   if (bi != null && b.filter(x => x && !isBasic(x)).length < LOADOUT - 1) { b[bi] = id; return 'battle'; }   // 기본기를 하나는 남김(배운 기술만 넷이면 보관으로)
-  if (!p.skills.joker) { p.skills.joker = id; return 'joker'; }
+  if (p.skills.store.length < SKILL_STORE) { p.skills.store.push(id); return 'store'; }
   p.pend.push(id); return 'pend';
 }
 export const findPlant = (s, id) => s.plants.find(p => p.uid === id) || null;
@@ -168,16 +174,17 @@ export function setSlots(s, id, battle, cards) {
   need(B.filter(isSkillCard).length <= MUT_MAX, `변이 기술 카드는 전투 칸에 ${MUT_MAX}장까지예요`);
   const all = [...B, ...C].filter(Boolean);
   need(new Set(all).size === all.length, '같은 것을 두 칸에 둘 수 없어요');
-  const learned = new Set([...p.skills.battle, p.skills.joker].filter(x => x && !isBasic(x) && !isSkillCard(x))), plain = B.filter(x => x && !isSkillCard(x));
+  const learned = new Set([...p.skills.battle, ...p.skills.store].filter(x => x && !isBasic(x) && !isSkillCard(x))), plain = B.filter(x => x && !isSkillCard(x));
   for (const x of plain) need(isBasic(x) || learned.has(x), '모르는 기술이에요');
   const left = [...learned].filter(x => !plain.includes(x));
-  need(left.length <= 1, '보관 칸은 하나예요 — 배운 기술은 하나만 뺄 수 있어요');
+  need(left.length <= SKILL_STORE, `스킬 보관은 ${SKILL_STORE}칸이에요 — 더 뺄 수 없어요`);
   need(B.some(Boolean), '전투 칸에 기술이 하나는 있어야 해요');
   const before = tally(cardsOn(p)), after = tally([...B.filter(isSkillCard), ...C]);
   for (const [k, n] of Object.entries(after)) { const add = n - (before[k] || 0); if (add > 0) need((s.cards[k] || 0) >= add, `${CARDS[k].name} 카드가 가방에 없어요`); }
   for (const [k, n] of Object.entries(after)) { const add = n - (before[k] || 0); if (add > 0) { s.cards[k] -= add; if (s.cards[k] <= 0) delete s.cards[k]; } }
   for (const [k, n] of Object.entries(before)) { const back = n - (after[k] || 0); if (back > 0) addCard(s, k, back); }
-  p.skills.battle = B; p.skills.joker = left[0] || null; p.cards = C;
+  const keep = p.skills.store.filter(x => left.includes(x));   // 보관 차례 = 원래 차례 + 새로 뺀 것을 뒤에
+  p.skills.battle = B; p.skills.store = [...keep, ...left.filter(x => !keep.includes(x))]; p.cards = C;
   return {};
 }
 export function setCards(s, id, cards) { const p = getPlant(s, id); normSkills(p); return setSlots(s, id, p.skills.battle, cards); }
@@ -241,32 +248,34 @@ export function evolve(s, id, rng) {
   const xp = addXp(s, XP.evolve, rng);
   return { stage: p.stage, got, xp, league };
 }
-// 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b3)·조커에 놓고 원래 기술은 '지운 기술'로(기본기 자리였으면 기본기는 그냥 보관), 또는 새 기술을 안 배움(skip — 지운 기술로)
+// 꽉 찬 칸 정리: 기다리는 새 기술을 전투 칸(b0~b5)이나 스킬 보관(store — 빈 칸이 있을 때)에 놓고 원래 기술은 '지운 기술'로(기본기 자리였으면 기본기는 그냥 보관), 또는 새 기술을 안 배움(skip — 지운 기술로)
 export function placePending(s, id, skill, target) {
   const p = getPlant(s, id), i = p.pend.indexOf(skill);
   normSkills(p);
   need(i >= 0, '기다리는 기술이 아니에요');
-  const slot = target === 'joker' ? 'joker' : target === 'skip' ? 'skip' : +String(target).replace('b', '');
-  need(slot === 'joker' || slot === 'skip' || (slot >= 0 && slot < LOADOUT), '놓을 칸을 골라 주세요');
+  const slot = target === 'joker' || target === 'store' ? 'store' : target === 'skip' ? 'skip' : +String(target).replace('b', '');   // joker = 옛 화면 이름
+  need(slot === 'store' || slot === 'skip' || (slot >= 0 && slot < LOADOUT), '놓을 칸을 골라 주세요');
+  need(slot !== 'store' || p.skills.store.length < SKILL_STORE, '스킬 보관이 다 찼어요');
   p.pend.splice(i, 1);
   if (slot === 'skip') { p.skills.forgot.push(skill); return { forgot: skill }; }
-  const old = slot === 'joker' ? p.skills.joker : p.skills.battle[slot];
-  if (slot === 'joker') p.skills.joker = skill; else p.skills.battle[slot] = skill;
+  if (slot === 'store') { p.skills.store.push(skill); return { forgot: null }; }
+  const old = p.skills.battle[slot];
+  p.skills.battle[slot] = skill;
   if (isSkillCard(old)) { normCards(s); addCard(s, old); return { forgot: null, card: old }; }   // 태생 변이 전투 칸의 카드 = 가방으로
   if (old && !isBasic(old)) { p.skills.forgot.push(old); return { forgot: old }; }
   return { forgot: null };
 }
-// 전투 칸 넷 정하기(화면이 새 배열을 보냄): 배운 기술 · 기본기 셋 중에서, 같은 것 두 번 없이 · 전투 칸에서 뺀 배운 기술은 조커(보관) 한 칸에만 — 기본기는 빼도 늘 앎
+// 전투 칸 정하기(화면이 새 배열을 보냄): 배운 기술 · 기본기 중에서, 같은 것 두 번 없이 · 전투 칸에서 뺀 배운 기술은 스킬 보관(여섯 칸)으로 — 기본기는 빼도 늘 앎
 export function setLoadout(s, id, list) {
   const p = getPlant(s, id); normCards(s);
   return setSlots(s, id, list, p.cards);   // 카드 칸은 그대로(태생 변이의 전투 칸 카드도 이 규칙으로 — 2026-10-17)
 }
-// 전투 칸 ↔ 조커 자리 바꾸기(옛 화면용 — 기본기 자리면 기본기는 보관으로)
+// 전투 칸 ↔ 스킬 보관 첫 칸 바꾸기(옛 화면용 — 기본기 자리면 기본기는 보관으로)
 export function swapJoker(s, id, slot) {
   const p = getPlant(s, id); normSkills(p);
   const b = p.skills.battle;
   need(slot >= 0 && slot < LOADOUT, '칸을 골라 주세요');
-  const out = b[slot]; b[slot] = p.skills.joker; p.skills.joker = out && !isBasic(out) && !isSkillCard(out) ? out : null;
+  const out = b[slot]; b[slot] = p.skills.store.shift() || null; if (out && !isBasic(out) && !isSkillCard(out)) p.skills.store.unshift(out);
   if (isSkillCard(out)) { normCards(s); addCard(s, out); }   // 카드는 보관 칸이 아니라 가방으로
   return {};
 }
@@ -331,7 +340,7 @@ export function regress(s, id, skill) {
   need((s.items.regress || 0) >= 1, '유전자 회귀 주사가 없어요');
   normSkills(p);
   const b = p.skills.battle;
-  need(b.includes(null) || b.some(isBasic) || !p.skills.joker, '칸이 다 찼어요 — 하나를 비우고 되돌려요');
+  need(b.includes(null) || b.some(isBasic) || p.skills.store.length < SKILL_STORE, '칸이 다 찼어요 — 하나를 비우고 되돌려요');
   s.items.regress--; p.skills.forgot.splice(i, 1);
   return { skill, to: learnNow(p, skill) };
 }
