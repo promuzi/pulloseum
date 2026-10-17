@@ -175,6 +175,7 @@ const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기�
 const needMe = B => B.need === 'me' || B.need === 'both';
 // 시간 막대(같은 날 사용자 "타이머 역할하는 바도 넣어주고. 안 하면 넘어가는 걸로"): 고르는 차례마다 봇 판 30초 · 친구 대결 = 서버 40초, 다 되면 넘어감(쉬기)
 const PICK_MS = 30000, PVP_MS = 40000, SEND_MS = 20000;   // 친구 3:3 쓰러진 자리 고르기 = 20초(서버 rooms.mjs)
+const GONE = /대결 중이 아니/;   // 서버에 그 대결이 없음(rooms.mjs move · forfeit)
 // 전광판 글자색(사건 종류별)
 
 const HURT = {
@@ -204,7 +205,7 @@ export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   // 1초 60장이 필요한 때(main.js 장 수 — 그 밖엔 30장): 기술이 오가는 동안 · 승패가 갈린 뒤 2.5초
   fast(app) { const v = this.v; return !!v && (v.phase === 'play' || (v.phase === 'over' && app.t - v.overT0 < 2500)); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -282,7 +283,7 @@ export const battle = {
   send(app, act, cost) {
     const v = this.v, B = this.B, turn = B.turn;
     v.phase = 'wait'; v.en.me -= cost;
-    const back = e => { if (e) app.toast(e.message); if (v.phase === 'wait') { v.phase = 'pick'; v.picked = null; v.en.me = B.me.energy; this.prompt(app); } };
+    const back = e => { if (e && GONE.test(e.message)) return this.gone(app, null); if (e) app.toast(e.message); if (v.phase === 'wait') { v.phase = 'pick'; v.picked = null; v.en.me = B.me.energy; this.prompt(app); } };
     if (this.net === 'pvp') {
       R.move(act, turn).catch(back);
       return;
@@ -302,6 +303,7 @@ export const battle = {
   onNet(app, type, data) {
     if (!this.B || this.net !== 'pvp') return;
     const v = this.v;
+    if (type === 'room') { if (!this.B.over && (!data || data.phase !== 'battle')) this.gone(app, data); return; }   // 끝난 소식(end)을 못 받았는데 방은 대기 · 방이 없어짐
     if (v.phase === 'play' && (type === 'turn' || type === 'send' || type === 'battle')) { (this.queue = this.queue || []).push({ type, data }); return; }
     if (type === 'foeReady') { v.foeReady = data.turn; return; }   // 이 턴(번호)에 상대가 골랐음 — 연출이 끝나도 남음
     if (type === 'turn') { this.deadline = data.deadline; this.stepMs = data.step === 'send' ? SEND_MS : PVP_MS; v.foeReady = null; this.onResult(app, { turn: data.turn, view: data.view }); return; }
@@ -321,12 +323,19 @@ export const battle = {
       }
     }
   },
+  // 친구 대결이 서버에 없음(서버가 방을 잃음 · 끝난 소식을 놓침 — 2026-10-18 사용자 "'대결 중이 아니에요' 하면서 멈춤"): 멈춘 판에 두지 않고 방으로
+  gone(app, data) {
+    if (this.goneAt != null || (this.B && this.B.over && this.v.phase === 'over')) return;
+    this.goneAt = app.t; this.sheet = null;
+    app.toast(data && data.last ? '대결이 끝났어요 — 방으로 돌아가요' : '대결이 끊겼어요 — 방으로 돌아가요');
+    app.go('room', {}, 'shutter');
+  },
   // 교체(3:3): 내 차례에 고르면 턴을 쓰고, 쓰러진 자리면 공짜(sendIn). 뿌리 묶기면 못 바꿈
   pickSwitch(app, to) {
     const B = this.B, v = this.v;
     if (this.sheet && this.sheet.forced) {
       this.sheet = null;
-      if (this.net === 'pvp') { v.phase = 'wait'; R.move({ kind: 'send', to }, B.turn).catch(e => { app.toast(e.message); if (v.phase === 'wait') { v.phase = 'need'; this.sheet = { forced: true }; } }); return; }   // 상대도 고르면 'send' 알림
+      if (this.net === 'pvp') { v.phase = 'wait'; R.move({ kind: 'send', to }, B.turn).catch(e => { if (GONE.test(e.message)) return this.gone(app, null); app.toast(e.message); if (v.phase === 'wait') { v.phase = 'need'; this.sheet = { forced: true }; } }); return; }   // 상대도 고르면 'send' 알림
       if (this.net) { v.phase = 'wait'; bot.turn(app, this.id, { kind: 'send', to }, B.turn).then(r => this.onResult(app, r)).catch(e => { app.toast(e.message); v.phase = 'need'; this.sheet = { forced: true }; }); return; }
       const e = sendIn(B, to); this.play(app, [this.switchStep(e), { kind: 'end', ms: 300 }]); return;
     }
@@ -338,7 +347,7 @@ export const battle = {
   },
   forfeit(app) {
     ask(app, '기권할까요?', this.net === 'pvp' ? '이 판은 진 것으로 남아요' : '진 판으로 남고 보상이 없어요', () => {
-      if (this.net === 'pvp') { R.forfeit().catch(e => app.toast(e.message)); return; }
+      if (this.net === 'pvp') { R.forfeit().catch(e => (GONE.test(e.message) ? this.gone(app, null) : app.toast(e.message))); return; }
       if (this.net === 'bot') { bot.forfeit(app, this.id).then(r => { this.result = { reward: r.reward }; this.B.over = 'lose'; this.v.phase = 'over'; this.v.overT0 = app.t - 900; this.title(app, false, '기권했다'); }).catch(e => app.toast(e.message)); return; }
       app.go('home', {}, 'shutter');
     }, '기권');

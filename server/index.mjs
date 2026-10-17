@@ -21,7 +21,7 @@ const BODY_MAX = 64 * 1024;
 const { q } = openDb(DB);
 const log = makeLog(q);
 const game = makeGame({ q, log });
-const rooms = makeRooms({ game, log });
+const rooms = makeRooms({ game, log, q });   // q = 방도 저장(서버를 다시 켜도 대결이 이어짐)
 const api = makeApi({ q, game, rooms, log, adminKey: process.env.PULLO_ADMIN_KEY || null, googleClientId: process.env.PULLO_GOOGLE_CLIENT_ID || null });
 const serveStatic = makeStatic(ROOT);
 

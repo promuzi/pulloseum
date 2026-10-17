@@ -17,7 +17,7 @@ export class Hub extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     const { q } = doDb(ctx.storage.sql);
-    const log = makeLog(q), game = makeGame({ q, log }), rooms = makeRooms({ game, log });
+    const log = makeLog(q), game = makeGame({ q, log }), rooms = makeRooms({ game, log, q });   // 방도 이 SQLite 에(본체가 다시 켜져도 대결이 이어짐 — 2026-10-18)
     this.api = makeApi({ q, game, rooms, log, adminKey: env.ADMIN_KEY || null, googleClientId: env.GOOGLE_CLIENT_ID || null });
   }
   async fetch(request) {

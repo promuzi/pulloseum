@@ -1,6 +1,7 @@
 // 저장소 표·문장 — Node 내장 SQLite(server/db.mjs)와 Cloudflare Durable Object SQLite(cf/src/dodb.js)가 같이 씀. 문장 이름 = q.이름(get · all · run)
 //  users(계정) · sessions(로그인 열쇠 해시) · saves(게임 상태 JSON, 할 때마다 저장 = 자동 저장) · battles(봇 판: 씨앗·상대·둔 수) · events(플레이 기록 — 밸런스·패턴 분석용)
 //  coupons(쿠폰 번호 · 보상 JSON · 쓸 수 있는 수(0 = 끝없이) · 쓴 수 · 끝나는 때(0 = 없음)) · coupon_uses(누가 어떤 쿠폰을 받았나 — 계정마다 한 번)
+//  rooms(친구 대결 방 — 방 번호 · 지금 모습 JSON · 마지막으로 바뀐 때)
 export const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, login TEXT UNIQUE NOT NULL, pass TEXT NOT NULL, nickname TEXT NOT NULL, created INTEGER NOT NULL, provider TEXT NOT NULL DEFAULT 'local', last_seen INTEGER NOT NULL DEFAULT 0)",
   'CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)',
@@ -9,6 +10,7 @@ export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, t INTEGER NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL)',
   "CREATE TABLE IF NOT EXISTS coupons (code TEXT PRIMARY KEY, reward TEXT NOT NULL, max_uses INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', created INTEGER NOT NULL)",
   'CREATE TABLE IF NOT EXISTS coupon_uses (code TEXT NOT NULL, user_id INTEGER NOT NULL, t INTEGER NOT NULL, PRIMARY KEY (code, user_id))',
+  'CREATE TABLE IF NOT EXISTS rooms (code TEXT PRIMARY KEY, data TEXT NOT NULL, touched INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id)',
   'CREATE INDEX IF NOT EXISTS coupon_uses_user ON coupon_uses(user_id)',
   'CREATE INDEX IF NOT EXISTS battles_open ON battles(user_id, done)',
@@ -50,6 +52,10 @@ export const STMTS = {
   couponUsed: 'SELECT t FROM coupon_uses WHERE code = ? AND user_id = ?',
   useCoupon: 'INSERT INTO coupon_uses (code, user_id, t) VALUES (?, ?, ?)',
   bumpCoupon: 'UPDATE coupons SET used = used + 1 WHERE code = ?',
+  // 친구 대결 방(2026-10-18): 방마다 지금 모습 JSON(server/rooms.mjs pack) — 서버 본체가 다시 켜져도 대결이 이어지게
+  putRoom: 'INSERT INTO rooms (code, data, touched) VALUES (?, ?, ?) ON CONFLICT(code) DO UPDATE SET data = excluded.data, touched = excluded.touched',
+  delRoom: 'DELETE FROM rooms WHERE code = ?',
+  allRooms: 'SELECT code, data FROM rooms',
   // 보고서용 내보내기(관리 열쇠가 있을 때만 — api.mjs GET /api/admin/export): 계정은 번호 · 만든 때 · 마지막 접속만(아이디 · 비밀번호 · IP 없음)
   exportUsers: 'SELECT id, created, last_seen FROM users',
   exportEvents: 'SELECT user_id, t, kind, data FROM events',

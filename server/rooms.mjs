@@ -1,31 +1,76 @@
 // 친구 대결 방(사용자 2026-10-16 "임의로 방만들기와 초대코드 등 넣어봐 · pvp는 임시로 mvp삼아"):
 //  방 만들기 → 초대 코드 6자 → 친구가 코드로 들어옴 → 저마다 식물 고르고 준비 → 1:1 대결(서버가 두 사람 수를 받아 한 턴씩 풂) → 결과 · 같은 방에서 다시.
-//  방은 서버 메모리에만(서버를 다시 켜면 사라짐 — MVP). 실시간 알림 = 서버 → 화면 한 줄 흐름(text/event-stream).
+//  방은 서버 메모리 + 저장소 표 rooms(바뀔 때마다 적음 — 서버 본체가 다시 켜져도 대결이 이어짐, 아래 '저장'). 실시간 알림 = 기다리는 요청(poll).
 //  턴 시간 40초: 안 고르면 넘어감(쉬기 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 평타로 대신), 두 번 연속이면 진 판. 대결 중 연결이 60초 넘게 끊기면 진 판.
 //  3:3 교체전(같은 날 "남은 거 다해줘" — 설계 docs/superpowers/specs/2026-10-16-v2-pvp-3v3.md): 방장이 방식을 고름, 팀 = 저장된 3:3 팀.
 //   앞 식물이 쓰러지면 그쪽 사람이 다음 식물을 고름(둘 다면 둘 다, 서로 모르게 — 20초 넘으면 살아 있는 첫 식물). 상대 대기석은 나온 식물만 보냄.
 import { randomInt } from 'node:crypto';
-import { setupPvp, pvpTurn, setupPvp3, pvpTurn3, viewFor, turnFor, mirrorEvents } from '../v2/src/game/fight.js';
-import { sendIn, aliveOf } from '../v2/src/battle/team.js';
+import { setupPvp, pvpTurn, setupPvp3, pvpTurn3, viewFor, turnFor, mirrorEvents, makeRng } from '../v2/src/game/fight.js';
+import { sendIn, aliveOf, makeTeamBattle } from '../v2/src/battle/team.js';
 import { STAGES } from '../v2/src/game/catalog.js';
 import { fail } from './game.mjs';
 import { plantLite } from './log.mjs';
 
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 헷갈리는 0·O·1·I 뺌
-const TURN_MS = 40000, SEND_MS = 20000, GRACE_MS = 60000, IDLE_MS = 30 * 60000, MAX_ROOMS = 300, EMOTE_MS = 1500;
+const TURN_MS = 40000, SEND_MS = 20000, GRACE_MS = 60000, IDLE_MS = 30 * 60000, MAX_ROOMS = 300, EMOTE_MS = 1500, RESUME_MS = 15000;
 const OTHER = { a: 'b', b: 'a' }, BASIC = new Set(['basic', 'guard', 'evade']);
 const SIDE = { a: 'me', b: 'foe' };   // 판 안에서 A(방의 첫 사람) = me, B = foe
 const needSides = B => ({ me: ['a'], foe: ['b'], both: ['a', 'b'] })[B.need] || [];
 
-export function makeRooms({ game, log }) {
+export function makeRooms({ game, log, q: db = null }) {
   const rooms = new Map(), byUser = new Map(), subs = new Map();
+
+  // ── 저장(2026-10-18 사용자 "PVP 중인데 갑자기 '대결 중이 아니에요' 하면서 연결 끊기고 멈춤"): 방이 메모리에만 있어 서버 본체가 다시 켜지면
+  //  (올린 뒤 4~5분 · Cloudflare 사정) 하던 대결이 통째로 사라졌음 → 방이 바뀌면 표(rooms)에 지금 모습을 적고(부른 일이 끝날 때 · 시계마다), 켜질 때 다시 읽음.
+  //  판은 유닛을 그대로 적었다가 되살림(체력 · 햇빛 · 효과 · 쓴 횟수 …) — 난수만 새로(앞일만 달라짐). 소식 번호는 켜진 때부터 새로 세어 화면이 지금 모습을 통째로 다시 받음(poll)
+  const dirty = new Set();
+  const save = r => { if (db && r) dirty.add(r.code); };
+  const json = o => JSON.parse(JSON.stringify(o));
+  function packB(B) {
+    if (!B) return null;
+    if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
+    return { mode: '1v1', turn: B.turn, over: B.over, me: json(B.me), foe: json(B.foe) };
+  }
+  function unpackB(o) {
+    if (!o) return null;
+    const seed = randomInt(1, 2 ** 31 - 1);
+    if (o.mode === 'swap3') {
+      const B = makeTeamBattle({ me: o.team.me, foe: o.team.foe, seed, swapCd: o.cdLen || 0 });   // 햇빛 = 팀 풀(유닛 energy 는 B.pool 을 읽음)
+      B.turn = o.turn; B.over = o.over; B.need = o.need; B.act = { ...o.act }; B.pool = { ...o.pool }; B.swapCd = { ...o.swapCd };
+      B.me = B.team.me[B.act.me]; B.foe = B.team.foe[B.act.foe];
+      return B;
+    }
+    return { me: o.me, foe: o.foe, rng: makeRng(seed), turn: o.turn, over: o.over, log: [] };   // battle/model.js makeBattle 과 같은 꼴
+  }
+  // 상대에게 보인 기술 · 식물(Set) = 배열로(1:1 = 기술 id 묶음 하나씩, 3:3 = 식물마다)
+  function pack(r) {
+    const o = { ...r, B: packB(r.B) }, arr = s => [...s];
+    if (r.revealed) o.revealed = Array.isArray(r.revealed.a) ? { t: 3, a: r.revealed.a.map(arr), b: r.revealed.b.map(arr) } : { t: 1, a: arr(r.revealed.a), b: arr(r.revealed.b) };
+    if (r.shown) o.shown = { a: arr(r.shown.a), b: arr(r.shown.b) };
+    return o;
+  }
+  function unpack(o) {
+    const r = { ...o, B: unpackB(o.B) }, set = a => new Set(a);
+    if (o.revealed) r.revealed = o.revealed.t === 3 ? { a: o.revealed.a.map(set), b: o.revealed.b.map(set) } : { a: set(o.revealed.a), b: set(o.revealed.b) };
+    if (o.shown) r.shown = { a: set(o.shown.a), b: set(o.shown.b) };
+    return r;
+  }
+  function flush() {
+    if (!db || !dirty.size) return;
+    for (const c of dirty) {
+      const r = rooms.get(c);
+      try { if (r) db.putRoom.run(c, JSON.stringify(pack(r)), r.touched || 0); else db.delRoom.run(c); } catch (e) { console.error('방 저장 실패', c, e && e.message); }
+    }
+    dirty.clear();
+  }
 
   // ── 알림 ──
   //  기본 = 기다리는 요청(롱 폴링): 화면이 "after 다음 소식"을 묻고, 없으면 서버가 25초까지 붙잡았다가 소식이 생기는 즉시 답함.
   //  (2026-10-16 실측: 클라우드플레어 무료 터널이 열어 둔 흐름(text/event-stream)을 쌓아 둬 알림이 안 옴 → 응답마다 끝이 있는 방식으로)
   //  흐름(SSE)도 남겨 둠(같은 PC·같은 와이파이에선 됨). 사람마다 최근 소식 60개를 번호(seq)와 함께 보관.
   const queues = new Map(), seen = new Map();   // uid → { seq, list, waiters } · uid → 마지막으로 소식을 받아 간 시각
-  const qOf = uid => { let q = queues.get(uid); if (!q) queues.set(uid, q = { seq: 0, list: [], waiters: new Set() }); return q; };
+  //  번호는 소식함을 만든 때(ms)부터 — 다시 켜진 서버의 번호가 옛 번호와 겹치지 않아, 옛 번호로 물으면(base 보다 작음) 지금 모습을 통째로 줌
+  const qOf = uid => { let q = queues.get(uid); if (!q) { const base = Date.now(); queues.set(uid, q = { seq: base, base, list: [], waiters: new Set() }); } return q; };
   function send(uid, type, data) {
     const q = qOf(uid), ev = { seq: ++q.seq, type, data };
     q.list.push(ev); if (q.list.length > 60) q.list.shift();
@@ -48,7 +93,7 @@ export function makeRooms({ game, log }) {
   async function poll(uid, after, req) {
     const q = qOf(uid);
     markSeen(uid);
-    if (!(after >= 0) || (q.list.length && after < q.list[0].seq - 1) || after > q.seq) return { seq: q.seq, events: snapshot(uid) };
+    if (!(after >= q.base) || (q.list.length && after < q.list[0].seq - 1) || after > q.seq) return { seq: q.seq, events: snapshot(uid) };
     let evs = q.list.filter(e => e.seq > after);
     if (!evs.length) {
       await new Promise(res => {
@@ -98,8 +143,8 @@ export function makeRooms({ game, log }) {
     return { code: r.code, host: r.host === uid, phase: r.phase, mode: r.mode, battle: b, last: r.last || null,
       members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, team: m.uid === uid ? m.teamCards : null, team3: !!m.team, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card) · 팀은 나에게만, 팀이 되는지(team3)는 둘 다
   }
-  function broadcastRoom(r) { for (const m of r.members) send(m.uid, 'room', roomView(r, m.uid)); }
-  const touch = (r, now) => { r.touched = now; };
+  function broadcastRoom(r) { save(r); for (const m of r.members) send(m.uid, 'room', roomView(r, m.uid)); }
+  const touch = (r, now) => { r.touched = now; save(r); };
 
   function create(uid, now) {
     if (rooms.size >= MAX_ROOMS) fail('방이 너무 많아요 — 잠시 뒤에 다시 해 주세요');
@@ -128,7 +173,7 @@ export function makeRooms({ game, log }) {
     const r = roomOf(uid); if (!r) return { left: false };
     if (r.phase === 'battle' && sideOf(r, uid)) end(r, OTHER[sideOf(r, uid)], 'left', now);
     r.members = r.members.filter(m => m.uid !== uid); byUser.delete(uid);
-    if (!r.members.length) { rooms.delete(r.code); return { left: true }; }
+    if (!r.members.length) { rooms.delete(r.code); save(r); return { left: true }; }   // 저장된 방도 지움
     if (r.host === uid) r.host = r.members[0].uid;
     for (const m of r.members) m.ready = false;
     touch(r, now); broadcastRoom(r);
@@ -253,6 +298,7 @@ export function makeRooms({ game, log }) {
   }
   function resolve(r, now) {
     const { a, b } = r.moves, B = r.B;
+    save(r);
     for (const [side, mv] of [['a', a], ['b', b]]) { const k = typeof mv === 'string' ? mv : mv.kind === 'skill' ? mv.id : mv.kind; r.picks[side][k] = (r.picks[side][k] || 0) + 1; }
     let turn;
     if (r.mode === 'swap3') {
@@ -273,6 +319,7 @@ export function makeRooms({ game, log }) {
   // 쓰러진 자리 채우기(필요한 쪽이 다 골랐거나 시간이 넘음): A 다음 B 순서로 내보내고 둘에게 함께 알림
   function applySends(r, now) {
     const B = r.B, evs = [];
+    save(r);
     for (const side of ['a', 'b']) if (r.sends[side] != null) evs.push(sendIn(B, r.sends[side], SIDE[side]));
     r.sends = null; r.shown.a.add(B.act.me); r.shown.b.add(B.act.foe);
     r.deadline = now + TURN_MS;
@@ -332,11 +379,30 @@ export function makeRooms({ game, log }) {
             if (quit) end(r, OTHER[quit], 'timeout', now); else resolve(r, now);
           }
         }
-      } else if (now - r.touched > IDLE_MS) { for (const m of r.members) { byUser.delete(m.uid); send(m.uid, 'room', null); } rooms.delete(r.code); }
+      } else if (now - r.touched > IDLE_MS) { for (const m of r.members) { byUser.delete(m.uid); send(m.uid, 'room', null); } rooms.delete(r.code); save(r); }
     }
+    flush();
     for (const [uid, q] of queues) if (!q.waiters.size && !byUser.has(uid) && now - (seen.get(uid) || 0) > 3600e3) { queues.delete(uid); seen.delete(uid); }   // 한 시간 넘게 조용한 사람 소식함 정리
   }, 1000);
   if (clock.unref) clock.unref();   // Node: 이 시계 때문에 꺼지지 않는 일 없게(Cloudflare 엔 없음)
 
-  return { subscribe, poll, create, join, leave, pick, setMode, setTeam, ready, move, forfeit, emote, view, count: () => rooms.size };
+  // 켜질 때: 저장된 방을 다시 세움 — 오래 빈 방은 지우고, 대결 중이면 다시 켜지는 동안 흐른 시간은 셈하지 않음(턴 시간 · 끊김 여유를 새로)
+  function load(now) {
+    let rows = [];
+    try { rows = db.allRooms.all(); } catch (e) { console.error('방 읽기 실패', e && e.message); return; }
+    for (const row of rows) {
+      let r = null;
+      try { r = unpack(JSON.parse(row.data)); } catch (e) { console.error('방 되살리기 실패', row.code, e && e.message); }
+      if (!r || !r.members || !r.members.length || now - (r.touched || 0) > IDLE_MS) { try { db.delRoom.run(row.code); } catch {} continue; }
+      if (r.phase === 'battle' && (!r.B || !r.sides)) Object.assign(r, { phase: 'lobby', B: null, sides: null, moves: {}, sends: null });
+      if (r.phase === 'battle') r.deadline = Math.max(r.deadline || 0, now + RESUME_MS);
+      for (const m of r.members) { m.gone = null; seen.set(m.uid, now); byUser.set(m.uid, r.code); }
+      rooms.set(r.code, r);
+    }
+  }
+  if (db) load(Date.now());
+
+  // 방을 바꾸는 일은 끝날 때 바로 적음(시계도 1초마다 남은 것을 적음)
+  const done = fn => (...a) => { try { return fn(...a); } finally { flush(); } };
+  return { subscribe, poll, create: done(create), join: done(join), leave: done(leave), pick: done(pick), setMode: done(setMode), setTeam: done(setTeam), ready: done(ready), move: done(move), forfeit: done(forfeit), emote, view, count: () => rooms.size, stop: () => clearInterval(clock) };   // stop = 시험(다시 켜기 흉내)
 }
