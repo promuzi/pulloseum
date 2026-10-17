@@ -1,39 +1,60 @@
-(2026-10-17 사용자 "용 처음 모습 뱀 > 이무기 > 용 느낌으로 가능? 처음부터 멋있으면 키웠을 때 강렬함이 약할 거 같아 · 이런 것도 참고해서 만들어줘 다른 것들두" — 오늘 그린 단계 그림 중 어린 모습이 이미 멋있는 10종을 '소박한 시작 → 극적인 완성'으로 다시. 처음 11종(10-15 통과)과 이미 소박하게 시작하는 종(물동이 · 도깨비 · 크라운 · 프로스트벨 · 볼트 · 스톤 · 젤리 · 게일바인)은 그대로.
+(2026-10-17 사용자 "용 처음 모습 뱀 > 이무기 > 용 느낌으로 · 처음부터 멋있으면 키웠을 때 강렬함이 약할 거 같아 · 다른 것들두" → 같은 날 다시 "새로 그린 애들 1 · 2번 진화 애들 다 바꿔줘 — 진화가 아니라 약간 성장한 느낌이야 지금은":
+ 오늘 그린 18종의 어린 · 자람 전부를 '작은 판'이 아니라 '다른 모습의 앞 단계(진화)'로 다시. 처음 11종(10-15 통과)과 게일바인 자람(10-15)은 그대로.
  결과 → stages_raw2/<키>_<단계>.png → `node tools/pixel/big/greycut.mjs … --main` → stages/<키>_<단계>.png. 첫 판(stages_raw/)은 기록으로 남김.)
 
-Task: for each plant creature below, redesign its two earlier growth stages (young and teen). The adult form already exists as the reference image given on its line (open only that reference image for that creature; do not modify it).
+Task: for each plant creature below, redesign its earlier evolution stages (young and teen). The adult form already exists as the reference image given on its line (open only that reference image for that creature; do not modify it).
 
-The most important rule - EVOLUTION MUST FEEL DRAMATIC. The adult is the impressive, powerful form. The young stage must be humble: small, plain, simple, a little cute or awkward, with almost none of the adult's signature parts - like the first form of a monster that evolves (a plain sprout, a little snake, a closed bud). The teen stage is a clear in-between: some signature parts start to appear but are small, partial or unfinished. A player should be surprised and excited when the creature finally reaches its adult form. Keep the same character identity across stages: same species colors, same eye style and face design, so it is clearly the same creature growing up.
+THE MOST IMPORTANT RULE - THESE ARE EVOLUTIONS, NOT GROWTH. The previous attempt failed because the young and teen looked like the adult just smaller and slightly simpler. That is wrong. Think of evolution lines in monster-collecting games, where each stage is a clearly different creature design of the same family:
+- YOUNG = a distinct first form with a DIFFERENT BODY PLAN and silhouette: a seed, a bud, an egg, a button mushroom, a little snake, a coiled sprout, a pebble - small, round, humble, cute or awkward. It must NOT look like a miniature of the adult. Almost none of the adult's signature parts (no hats, crowns, weapons, drums, lanterns, wings, armor, many thorns).
+- TEEN = a clearly different middle form: the body plan is changing toward the adult, and one or two signature parts appear but are small, partial or unfinished. Different proportions from both the young and the adult.
+- ADULT = the reference (the dramatic final form). A player should feel a real transformation at every evolution.
+Keep the family identity: same main colors, same eye style and face design, so it is clearly the same creature line.
 
 Rules for every image:
-- Size: young about 60 to 75 percent of the adult's height in the reference; teen about 80 to 90 percent.
-- Same art style, painterly quality, lighting and face design (eye style) as the reference. Eyes clearly visible.
-- Plain flat light grey background (#d9d9d9) filling the whole image, no gradient, no texture. No flower pot, no soil, no ground shadow, no floating effect lines or particles. The plant's base ends cleanly at the bottom center, where it would enter the soil.
+- Size: young about 55 to 70 percent of the adult's height in the reference; teen about 80 to 90 percent.
+- Same art style, painterly quality and lighting as the reference. Eyes clearly visible.
+- Plain flat light grey background (#d9d9d9) filling the whole image, no gradient, no texture. No flower pot, no soil, no ground shadow, no floating effect lines or particles. The base ends cleanly at the bottom center, where it would enter the soil.
 - Front view from slightly above, body facing front, eyes looking naturally (not staring into the camera).
-- 1254x1254, plant centered horizontally, base at about 88 percent down the canvas. No text, no frame.
+- 1254x1254, centered horizontally, base at about 88 percent down the canvas. No text, no frame.
 
 Save every image as a PNG into C:\dev\pulloseum\tools\pixel\big\concept\stages_raw2\ using exactly the file names given. If the image tool saves files elsewhere, copy them there with those names. If a file with that name already exists, skip it. Do not create, modify or delete any other file, and do not commit. Generate each image only once. Keep going through the whole list; if you must stop early, the files already saved are kept.
 
 Creatures (key - reference image - young design - teen design):
 
-drake_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\drake_cactus.png - drake_cactus_young.png: a small red cactus SNAKE - a slender, plain serpent-shaped cactus rising from the soil in a gentle S-curve, a simple snake head with round eyes, only a few tiny soft spines; no horns, no wings, no legs, no crest. Humble and a bit cute, nothing like a dragon yet. - drake_cactus_teen.png: an IMUGI (the Korean great serpent that has not yet become a dragon) - a longer, thicker serpent cactus body in a bold S-curve, a ridge of spines along its back, two small horn nubs, short whiskers, faint glowing ember cracks between the scales; still NO wings and NO legs.
+drake_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\drake_cactus.png - drake_cactus_young.png: a small red cactus SNAKE - a slender, plain serpent-shaped cactus rising from the soil in a gentle S-curve, a simple snake head with round eyes, only a few tiny soft spines; no horns, no wings, no legs, no crest. - drake_cactus_teen.png: an IMUGI (the Korean great serpent that has not yet become a dragon) - a longer, thicker serpent cactus in a bold S-curve, a ridge of spines along its back, two small horn nubs, short whiskers, faint ember cracks between scales; still NO wings and NO legs.
 
-draco_fruit - C:\dev\pulloseum\tools\pixel\big\concept\cut\draco_fruit.png - draco_fruit_young.png: a small plain closed dragon-fruit bud with a few smooth pink-tipped bracts and a sleepy face; no side pads, no frost crystals, nothing wing-like. - draco_fruit_teen.png: the bud grows taller and its bracts harden into overlapping scale plates; two small side pads appear like folded wing buds; one faint frost wisp.
+draco_fruit - C:\dev\pulloseum\tools\pixel\big\concept\cut\draco_fruit.png - draco_fruit_young.png: a round dragon-fruit shaped like a DRAGON EGG - smooth pale pink-and-teal skin with tightly closed tiny bracts, a sleepy face peeking out; no pads, no frost. - draco_fruit_teen.png: the egg has cracked open at the top; small frosty wing pads and the first scale plates push out of the crack; one faint frost wisp.
 
-fang_trap - C:\dev\pulloseum\tools\pixel\big\concept\cut\fang_trap.png - fang_trap_young.png: a tiny CLOSED flytrap bud - two small rounded leaves pressed shut like a little clam, soft short bristles, an innocent sleepy face; no teeth, no red mouth showing. - fang_trap_teen.png: the trap opens a little showing a pink mouth with short soft bristle-teeth and a cheeky grin; a second small closed trap bud beside it.
+fang_trap - C:\dev\pulloseum\tools\pixel\big\concept\cut\fang_trap.png - fang_trap_young.png: a tiny round CLOSED trap bud like a little clam on a short stem, soft fuzz instead of bristles, an innocent sleepy face; no teeth, no mouth showing. - fang_trap_teen.png: a small open trap mouth with short soft bristle-teeth and a cheeky grin, a second closed bud beside it.
 
-blade_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\blade_vine.png - blade_vine_young.png: a small plain sprout with one round softly glowing ember bud for a head and two soft round leaves; no blades, no sharp edges. - blade_vine_teen.png: a taller vine whose leaves are starting to sharpen into short blade shapes, the ember-bud head now with one small flame.
+blade_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\blade_vine.png - blade_vine_young.png: a small glowing EMBER SEED with one tiny sprout leaf on top and a sleepy face on the seed; no vine body yet. - blade_vine_teen.png: a short vine with two leaves that have turned into small sharp blades, an ember-bud head with one small flame.
 
-toxi_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\toxi_cactus.png - toxi_cactus_young.png: a small plain round green cactus with tiny soft spines and a calm face; no flower, no purple tips, no drops. - toxi_cactus_teen.png: a closed purple flower bud on top, some spines turning purple at the tips, one small poison drop.
+toxi_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\toxi_cactus.png - toxi_cactus_young.png: a small smooth round green cactus BALL with soft hairs instead of spines and a calm face; no flower, no purple. - toxi_cactus_teen.png: short spines grow with purple tips, a closed purple flower bud on top, one small poison drop.
 
-ember_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\ember_cap.png - ember_cap_young.png: a tiny mushroom with a dull orange-brown cap and one faint ember speck, a sleepy face; no flames, no glow. - ember_cap_teen.png: the cap brightens, a few glowing ember spots and short flame frills under the cap.
+ember_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\ember_cap.png - ember_cap_young.png: a tiny charcoal-brown BUTTON mushroom with one faint ember glow under the cap and a sleepy face; no flames, no frills. - ember_cap_teen.png: the cap opens and turns red-orange with a few glowing spots, short flame frills under the cap.
 
-gat_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\gat_cap.png - gat_cap_young.png: a small plain mushroom with a round pale cream cap (no hat yet), a slim stalk and one small leaf. - gat_cap_teen.png: the cap flattens and darkens into a small black brimmed gat shape with short strings, and a small folded leaf like a closed fan.
+gat_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\gat_cap.png - gat_cap_young.png: a tiny plain round cream BUTTON mushroom with one small leaf; no hat. - gat_cap_teen.png: a taller mushroom whose cap has flattened and darkened into a small black brimmed gat with short strings, a small folded leaf like a closed fan.
 
-mask_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\mask_vine.png - mask_vine_young.png: a small vine sprout whose head is a round wooden acorn-like seed with a simple carved smile (not a mask yet), two leaves. - mask_vine_teen.png: the seed head has grown into a half-carved Hahoe mask (one side finished, one side still rough wood), vines start to swing like short sleeves.
+mask_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\mask_vine.png - mask_vine_young.png: a round wooden ACORN-like seed with a simple carved smile and one tiny sprout; no vines yet. - mask_vine_teen.png: vines have sprouted and the seed head has grown into a half-carved Hahoe mask (one side finished, one side rough wood); vines swing like short sleeves.
 
-drum_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\drum_cactus.png - drum_cactus_young.png: a small plain round cactus with one short stubby spine like a drumstick and a curious face; no drums. - drum_cactus_teen.png: holding one small drum against its chest and one drumstick, a few tiny sparks.
+drum_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\drum_cactus.png - drum_cactus_young.png: a tiny round cactus BUD with one stubby spine like a drumstick and a curious face; no arms, no drums. - drum_cactus_teen.png: small arms appear, holding one small drum against its chest and one drumstick, tiny sparks.
 
-lantern_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\lantern_vine.png - lantern_vine_young.png: a frosty sprout - a short curled vine with a tiny closed blue-and-red bud at its tip (not a lantern yet) and a plain round head. - lantern_vine_teen.png: the bud has become a small closed lantern with blue and red panels but no gold frame and no tassel yet.
+lantern_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\lantern_vine.png - lantern_vine_young.png: a tiny frosty SEED-BUD with a sleepy face and one short curled tendril; no lantern, no tall stem. - lantern_vine_teen.png: a curled frosty vine with a small closed blue-and-red bud-lantern at its tip, no gold frame, no tassel.
+
+frost_bell - C:\dev\pulloseum\tools\pixel\big\concept\cut\frost_bell.png - frost_bell_young.png: a tiny frozen SNOWDROP BUD like an ice-covered water drop with a sleepy face and two tiny leaves; no bell shape yet. - frost_bell_teen.png: one small bell flower hanging from a curved stem with frost veins; no extra bells.
+
+volt_vine - C:\dev\pulloseum\tools\pixel\big\concept\cut\volt_vine.png - volt_vine_young.png: a small curled copper-green sprout like a COILED WIRE SPRING, with one tiny dim bulb bud on top and a face on the bud; no big leaves. - volt_vine_teen.png: the coil uncurls into a vine with two leaves and two small glowing bulbs, faint sparks.
+
+stone_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\stone_cap.png - stone_cap_young.png: a round PEBBLE with a sleepy face and a tiny mushroom button cap sprouting from its top. - stone_cap_teen.png: the pebble has become a sturdy stalk and the cap widens into a flat rock slab with moss and one small crystal.
+
+jelly_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\jelly_cap.png - jelly_cap_young.png: a small round JELLY BLOB like a water droplet with a tiny cap nub on top and a cute face; no tentacles. - jelly_cap_teen.png: a small jelly dome cap with three short drippy tentacles.
+
+jar_cactus - C:\dev\pulloseum\tools\pixel\big\concept\cut\jar_cactus.png - jar_cactus_young.png: a small round cactus SEED-POD with a sleepy face and a tiny clay shard resting on top like a little hat; no arms. - jar_cactus_teen.png: small arms appear, holding a small clay cup up over its head (not a big jar yet), no water spilling.
+
+goblin_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\goblin_cap.png - goblin_cap_young.png: a tiny round yellow BUTTON mushroom with one small horn nub and a cheeky face; no arms, no club. - goblin_cap_teen.png: small arms appear holding a short twig stick, the horn has grown a little.
+
+crown_cap - C:\dev\pulloseum\tools\pixel\big\concept\cut\crown_cap.png - crown_cap_young.png: a tiny icy BUTTON mushroom with a single small ice crystal on top and a plain short stalk; no cape. - crown_cap_teen.png: a small tiara of three ice points and a short frosty collar.
+
+vine_wind - C:\dev\pulloseum\tools\pixel\big\concept\vine_wind.png (adult; its teen stage already exists at C:\dev\pulloseum\tools\pixel\big\concept\stages\vine_wind_teen.png - open it too) - vine_wind_young.png only: a tiny curled FIDDLEHEAD sprout (a tight spiral) with a sleepy face and one small lavender ribbon leaf; clearly an earlier form than that teen.
 
 When done (or if you must stop), reply with the list of saved files.
