@@ -13,6 +13,7 @@ td { padding: 6px 6px; border-bottom: 1px solid #1a3150; vertical-align: top; }
 tr.grp td { padding-top: 12px; border-bottom: 1px solid #2a5a8a; font-weight: 800; font-size: 19px; color: #fff; }
 .el { display: inline-block; min-width: 34px; text-align: center; border-radius: 6px; padding: 0 5px; font-size: 14px; font-weight: 800; color: #0b1424; }
 .dim { color: #7f9cc0; } .num { white-space: nowrap; } .nm { font-weight: 800; color: #fff; } .fx { color: #d8ecff; }
+.sp { display: flex; align-items: center; gap: 14px; } .spic { width: 96px; height: 120px; image-rendering: pixelated; flex: none; } .cc { font-size: 16px; font-weight: 600; color: #d8ecff; margin-top: 4px; }
 .tag { display: inline-block; border: 1px solid #3a6a9a; border-radius: 5px; padding: 0 5px; font-size: 13px; color: #b8dcfa; margin-right: 3px; }
 </style></head><body><div id="root"></div>
 <script type="module">
@@ -24,6 +25,8 @@ import { statOf } from '/v2/src/art/skillcard.js';
 import { ELEMENT } from '/v2/src/art/palette.js';
 import { FORM_BEATS, FORM_WEAK, FORM_STRONG, WEAPON_TYPES, SKILL_WEAPON, FORM_K, RESIST_K } from '/v2/src/battle/matchup.js';
 import { CAT_NAME } from '/v2/src/data/mock.js';
+import { CONCEPT, pic, ready } from './concepts.js';
+await ready;
 
 const esc = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const elTag = el => { const E = ELEMENT[el]; return E ? `<span class="el" style="background:${E.light || E.main}">${esc(E.name)}</span>` : '<span class="dim">—</span>'; };
@@ -48,10 +51,16 @@ const cost = sk => (sk.uses ? `판마다 ${sk.uses}번` : `햇빛 ${sk.cost || 0
 const ROWS = 40, sheets = [];
 function table(title, sub, head, rows) {
   const parts = []; let cur = [], n = 0, grp = null;
+  rows.forEach((r, ri) => {   // 묶음(식물 하나)이 장 끝에서 갈리지 않게 — 안 들어가면 다음 장부터
+    if (!r.grp) return;
+    let size = r.h || 1; for (let j = ri + 1; j < rows.length && !rows[j].grp; j++) size += rows[j].h || 1;
+    r.size = size;
+  });
   for (const r of rows) {
+    if (r.grp && n > 0 && n + (r.size || 1) > ROWS && (r.size || 1) <= ROWS) { parts.push(cur); cur = []; n = 0; }
     if (r.grp) grp = r;
-    if (n >= ROWS && !r.grp) { parts.push(cur); cur = grp ? [{ grp: grp.grp + ' <span class="dim">(이어서)</span>' }] : []; n = cur.length; }   // 장이 바뀌면 묶음 이름을 다시
-    cur.push(r); n += 1;
+    if (n >= ROWS && !r.grp) { parts.push(cur); cur = grp ? [{ grp: (grp.short || grp.grp) + ' <span class="dim">(이어서)</span>' }] : []; n = cur.length; }   // 장이 바뀌면 묶음 이름을 다시(그림 없이)
+    cur.push(r); n += r.h || 1;
   }
   if (cur.length) parts.push(cur);
   parts.forEach((rs, i) => {
@@ -70,7 +79,8 @@ table('기본기', '모든 식물이 늘 앎 · 스킬 칸에서 빼도 사라�
   for (const [key, sp] of Object.entries(SPECIES)) {
     const ids = [0, 1, 2].flatMap(st => uniquesOf(key, st).map(id => [st, id])).filter(([, id]) => SKILLS[id]);
     if (!ids.length) continue;
-    rows.push({ grp: `${esc(sp.name)} ${elTag(sp.el)} <span class="dim">${esc(JONG[sp.type] || '')}${sp.form && FORMS[sp.form] ? ` · 태생 ${esc(FORMS[sp.form].name)} 변이` : ''}</span>` });
+    const head = `${esc(sp.name)} ${elTag(sp.el)} <span class="dim">${esc(JONG[sp.type] || '')}${sp.form && FORMS[sp.form] ? ` · 태생 ${esc(FORMS[sp.form].name)} 변이` : ''}</span>`;
+    rows.push({ grp: `<div class="sp"><img class="spic" src="${pic(key)}"><div><div>${head}</div><div class="cc">${esc(CONCEPT[key] || '')}</div></div></div>`, short: head, h: 3 });   // 식물 그림 + 컨셉 한 줄(2026-10-18 사용자 "스킬 이미지에 각 사진과 컨셉")
     for (const [st, id] of ids) { const sk = SKILLS[id]; rows.push({ cells: [`<span class="dim">${STAGE[st]}</span>`, `<span class="nm">${esc(sk.name)}</span>`, elTag(sk.el), cost(sk), `<span class="num">${esc(val(sk))}</span>`, `<span class="fx">${esc(fx(sk))}</span>`] }); }
   }
   table('개성 기술', '식물마다 그 단계에 피는 기술(진화 · 레벨업 고르기 후보)', ['단계', '기술', '속성', '비용', '수치', '효과'], rows);

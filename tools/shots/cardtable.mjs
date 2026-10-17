@@ -19,6 +19,6 @@ try {
   await p.goto(url + `/tools/shots/${page}.html`, { waitUntil: 'load' });
   await p.waitForFunction(() => window.__ready > 0, { timeout: 30000 });
   const els = await p.$$('.sheet');
-  for (let i = 0; i < els.length; i++) await els[i].screenshot({ path: resolve(out, `${String(i + 1).padStart(2, '0')}.png`) });
+  for (let i = 0; i < els.length; i++) { await els[i].screenshot({ path: resolve(out, `${String(i + 1).padStart(2, '0')}.png`) }); console.log(String(i + 1).padStart(2, '0'), await els[i].$eval('h1', h => h.textContent)); }
   console.log(`장 ${els.length} → ${out}`);
 } finally { await br.close(); srv.close(); }
