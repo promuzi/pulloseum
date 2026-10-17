@@ -225,8 +225,9 @@ export const nursery = {
   },
   // 잔디에 심긴 식물(큰 판 그림 — 2026-10-15 "식물이 너무 멀어 좀 땡겨와줘", 숨쉬기·깜빡임 그대로): 흙 줄 위만, 밑동은 잔디 덤불이 덮음
   planted(g, it, sx, sy, band, t) {
-    const ry = Math.max(2, Math.min(7, Math.round(band * 0.24)));
-    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p)), sx, sy, { t, phase: it.i * 700, between: () => grassOval(g, sx, sy, 17, ry, it.seed) })) grassOval(g, sx, sy, 17, ry, it.seed);
+    // 밑동 둘레 잔디 = 얇게(흙 줄 가운데에서 위아래 2칸 + 풀잎) — 전엔 5~7칸 높이로 밑동을 덮어 식물이 덤불 뒤 구덩이에서 나오는 듯(움푹 · 뒤에 놓인 듯) 보였음(2026-10-17)
+    const tuft = () => grassOval(g, sx, sy + 1, 16, 2, it.seed);
+    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p)), sx, sy, { t, phase: it.i * 700, between: tuft })) tuft();
   },
   // 고른 식물: 잔디 마개를 인 화분이 기계 구멍에서 솟음(구멍 = 금속 테 · 어두운 통로 속 고리 · 푸른 불빛, 화분 아래 피스톤과 받침)
   lifted(g, it, sx, sy, band, L, t) {

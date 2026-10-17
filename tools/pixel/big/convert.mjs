@@ -1112,7 +1112,7 @@ if (args.includes('--export') && cvs.length) {
     const okey = cv.outKey || cv.key;   // 단계 묶음은 <키>_<단계>
     writeFileSync(resolve(dir, 'plants', okey + '.png'), sheet.png());
     const r = rigs[k];
-    writeFileSync(resolve(dir, 'plants', okey + '.json'), JSON.stringify({ w: W, h: H, cols: COLS, rows, frames: FR, frameMs: DT * 10, blinkAt: b ?? null, blinkIndex: b != null ? FR : null, base: [BASE_GEO.cx, +BASE_GEO.cy.toFixed(2)], soil: [POT_GEO.cx, +POT_GEO.cy.toFixed(2)], head: [+r.hx.toFixed(1), +r.hy.toFixed(1)], headR: +r.Rh.toFixed(1) }));
+    writeFileSync(resolve(dir, 'plants', okey + '.json'), JSON.stringify({ w: W, h: H, cols: COLS, rows, frames: FR, frameMs: DT * 10, blinkAt: b ?? null, blinkIndex: b != null ? FR : null, base: [BASE_GEO.cx, +BASE_GEO.cy.toFixed(2)], soil: [POT_GEO.cx, +POT_GEO.cy.toFixed(2)], head: [+r.hx.toFixed(1), +r.hy.toFixed(1)], headR: +r.Rh.toFixed(1), sink: SINK[okey] || 0 }));   // sink = 흙에 앉힌 칸(스마트팜은 화분 없이 잔디에 심어 그만큼 다시 올림)
     console.log(`${okey.padEnd(13)} 묶음 → ${resolve(dir, 'plants', okey + '.png')} · ${N}장${b != null ? '(깜빡임 4장 포함)' : ''}`);
   });
 }

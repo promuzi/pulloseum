@@ -175,7 +175,8 @@ function bigFrame(key, m, t) {
 // 잔디에 심긴 큰 판 식물(화분 없이, 양육 스마트팜): (bx, by) = 흙 줄 가운데. 흙 줄 아래는 안 그림 — 뒤 층 → between(잔디 덤불) → 앞 층
 export function drawBigPlanted(g, key, bx, by, opt = {}) {
   const P = BIG[key]; if (!P) return false;
-  const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]), [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
+  //  화분에 앉힌 칸(m.sink — 굵은 밑동이 화분 흙에 묻히게 내린 만큼)은 잔디에선 다시 올림: 안 올리면 밑동이 잘려 움푹 파인 듯 · 뒤에 놓인 듯 보였음(2026-10-17 사용자 "스마트팜에서 불 선인장 밑동이 움푹 파여 있고 뒤에 배치된 것 같아")
+  const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1] - (m.sink || 0)), [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
   const cut = Math.round(by) - y;
   g.clip(x, y, m.w, cut, () => part(g, P.sheet, sx, sy, m.w, m.h, x, y, false));
   if (opt.between) opt.between();
