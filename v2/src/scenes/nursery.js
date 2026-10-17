@@ -225,9 +225,10 @@ export const nursery = {
   },
   // 잔디에 심긴 식물(큰 판 그림 — 2026-10-15 "식물이 너무 멀어 좀 땡겨와줘", 숨쉬기·깜빡임 그대로): 흙 줄 위만, 밑동은 잔디 덤불이 덮음
   planted(g, it, sx, sy, band, t) {
-    // 밑동 둘레 잔디 = 얇게(흙 줄 가운데에서 위아래 2칸 + 풀잎) — 전엔 5~7칸 높이로 밑동을 덮어 식물이 덤불 뒤 구덩이에서 나오는 듯(움푹 · 뒤에 놓인 듯) 보였음(2026-10-17)
+    // 밑동 둘레 = 갈색 흙 자리 + 자갈 + 앞 풀잎(sprites.js drawBigPlanted · art/potgrass.js — 화분과 같은 것, 2026-10-17 "풀도 더 자연스럽게 · 흙이나 자갈 등으로 자연스러운 경계").
+    //  전엔 잔디 덤불 타원(16×2)이 밑동을 덮었음 — 그림이 아직 없을 때만 그 덤불
     const tuft = () => grassOval(g, sx, sy + 1, 16, 2, it.seed);
-    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p)), sx, sy, { t, phase: it.i * 700, between: tuft })) tuft();
+    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p)), sx, sy, { t, phase: it.i * 700 })) tuft();
   },
   // 고른 식물: 잔디 마개를 인 화분이 기계 구멍에서 솟음(구멍 = 금속 테 · 어두운 통로 속 고리 · 푸른 불빛, 화분 아래 피스톤과 받침)
   lifted(g, it, sx, sy, band, L, t) {
@@ -255,7 +256,7 @@ export const nursery = {
     const F = this.plantFx && this.plantFx.id === it.id && this.plantFx.t0 != null ? this.plantFx : null, fa = F ? t - F.t0 : 1e9, GROW = 750;
     const reveal = F ? clamp((fa - 300) / GROW, 0, 1) : 1;
     if (F && fa > 300 && !F.bloom) { F.bloom = true; sfx('bloom'); }
-    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p)), it.p.pot, sx, soilY, { t, phase: it.i * 700, capUnder: true, reveal: ease(reveal), between: () => grassOval(g, sx, soilY - 2, 17, 4, it.seed) });   // 화분 위 잔디 마개(상자 잔디와 같은 색·같은 풀잎 점) — 식물 뒤
+    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p)), it.p.pot, sx, soilY, { t, phase: it.i * 700, reveal: ease(reveal) });   // 화분 풀 · 밑동 흙 자리 = sprites.js(art/potgrass.js — 2026-10-17)
     c.restore();
     if (F) {
       if (fa < 300) { const k = Math.max(0, fa) / 300, yy = Math.round(soilY - 46 + 44 * k * k); g.rect(sx - 2, yy - 2, 4, 5, '#6b4a2a'); g.rect(sx - 1, yy - 3, 2, 1, '#a07848'); g.px(sx + 1, yy - 1, '#c8a070'); }   // 떨어지는 씨앗

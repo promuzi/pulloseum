@@ -1,6 +1,7 @@
 // 그림 파일(48×56 도트) 불러오기. 원본 레시피 = tools/pixel/sprites-data.js, 내보내기 = node tools/pixel/export.mjs
 import { C } from './palette.js';
 import { frameAt } from '../core/motion.js';
+import { capOf, ringOf, bedOf, bareOf, dirtOf } from './potgrass.js';
 
 // 첫 출시 도감 = 1궤도 행성 세 곳의 기본 11종 + 지역 희귀 스포어캡
 export const ROSTER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'frost_drake', 'gladi_cactus', 'jangseung_cactus', 'astro_cap', 'viking_cap', 'hyunmu_cap', 'gumiho_bloom', 'wizard_bell', 'ninja_vine', 'diver_vine'];
@@ -124,6 +125,26 @@ function part(g, im, sx, sy, w, h, x, y, flip, dw = w, dh = h) {
   if (flip) { c.save(); c.translate(x + dw, y); c.scale(-1, 1); c.drawImage(im, sx, sy, w, h, 0, 0, dw, dh); c.restore(); }
   else c.drawImage(im, sx, sy, w, h, x, y, dw, dh);
 }
+// 화분 풀(2026-10-17 사용자 "경기나 대기실에서 화분의 흙이 어색한데 — 스마트 팜처럼 풀로 · 흙이나 자갈 등으로 자연스러운 경계", art/potgrass.js):
+//  화분 뒤 → 풀 마개 → 밑동 흙 자리(식물 뒤) → 식물 under → 앞 풀잎(밑동 앞) → 화분 앞 → over
+function grassBack(g, P, key, back, x, y, fl) {
+  const cap = capOf(back); if (cap) part(g, cap, 0, 0, 96, 112, x, y, fl);
+  const r = P && ringOf(P, key, back); if (r) part(g, r.ring, 0, 0, 96, 112, x, y, fl);
+  return r;
+}
+const grassFront = (g, r, x, y, fl) => { if (r) part(g, r.front, 0, 0, 96, 112, x, y, fl); };
+// 옛 흙 덮기(보랏빛 흙 무늬)를 걷어 낸 시트 + 맞은 순간 흰 판(art/potgrass.js bareOf — 기본 각도 테라코타 뒤 그림을 받은 뒤부터, 그 전엔 원래 시트)
+function bareSet(P) {
+  if (P.bare) return P.bare;
+  const back = POT_BIG.pot_terra && POT_BIG.pot_terra.back, sheet = back && bareOf(P, back);
+  if (!sheet) return { sheet: P.sheet, white: P.white };
+  return (P.bare = { sheet, white: whiteOf(sheet) });
+}
+function dirtSheet(P) {   // 스마트팜 잔디 판: 흙 덮기 띠를 갈색 흙으로
+  if (P.dirt) return P.dirt;
+  const back = POT_BIG.pot_terra && POT_BIG.pot_terra.back, sheet = back && dirtOf(P, back);
+  return sheet ? (P.dirt = sheet) : P.sheet;
+}
 // 화분에 심은 큰 판 식물: (bx, by) = 화분 굽이 바닥에 닿는 점. t = 시각(ms), phase = 숨 엇갈림(ms), flip = 좌우 뒤집기(상대), flash = 맞은 순간 하얗게
 // 게임 단계 → 그림 단계(CHANGELOG 2026-10-15 "게임 6단계와 잇기": 씨앗·새싹·유체 → 어린, 성장체 → 자람, 성체·완숙체 → 성체)
 const STAGE_ART = { seed: 'young', sprout: 'young', juvenile: 'young', growing: 'teen', mature: null, evolved: null };
@@ -140,15 +161,17 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
   by -= vdy;
   if (!P) {   // 빈 화분
     const x = Math.round(bx - 48), y = Math.round(by - 96.55);
-    part(g, pot.back, 0, 0, 96, 112, x, y, false); part(g, pot.front, 0, 0, 96, 112, x, y, false);
+    part(g, pot.back, 0, 0, 96, 112, x, y, false); grassBack(g, null, null, pot.back, x, y, false); part(g, pot.front, 0, 0, 96, 112, x, y, false);
     return !key;
   }
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   let f = frameAt(t, m.frameMs, m.frames);
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
-  const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h, src = opt.flash ? P.white : P.sheet, fl = !!opt.flip;
+  const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h, B = bareSet(P), src = opt.flash ? B.white : B.sheet, fl = !!opt.flip;
   part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
+  const gr = grassBack(g, P, key, pot.back, x, y, fl);
   part(g, src, sx, sy, m.w, m.h, x, y, fl);
+  grassFront(g, gr, x, y, fl);
   part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
   part(g, src, sx, sy + m.rows * m.h, m.w, m.h, x, y, fl);
   return true;
@@ -162,13 +185,13 @@ export function plantLayer(key, potKey, bx, by, opt = {}) {
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - vdy - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   let f = frameAt(t, m.frameMs, m.frames);
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
-  const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
+  const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h, B = bareSet(P);
   if (!layerCv) { layerCv = document.createElement('canvas'); layerCx = layerCv.getContext('2d', { willReadFrequently: true }); }
   if (layerCv.width !== m.w || layerCv.height !== m.h) { layerCv.width = m.w; layerCv.height = m.h; }
   const c = layerCx; c.imageSmoothingEnabled = false; c.clearRect(0, 0, m.w, m.h);
-  c.globalCompositeOperation = 'source-over'; c.drawImage(P.sheet, sx, sy, m.w, m.h, 0, 0, m.w, m.h);
+  c.globalCompositeOperation = 'source-over'; c.drawImage(B.sheet, sx, sy, m.w, m.h, 0, 0, m.w, m.h);
   c.globalCompositeOperation = 'destination-out'; c.drawImage(pot.front, 0, 0, m.w, m.h, 0, 0, m.w, m.h);
-  c.globalCompositeOperation = 'source-over'; c.drawImage(P.sheet, sx, sy + m.rows * m.h, m.w, m.h, 0, 0, m.w, m.h);
+  c.globalCompositeOperation = 'source-over'; c.drawImage(B.sheet, sx, sy + m.rows * m.h, m.w, m.h, 0, 0, m.w, m.h);
   return { img: c.getImageData(0, 0, m.w, m.h), x, y, w: m.w, h: m.h, flip: !!opt.flip };
 }
 // 큰 판 한 장 고르기(숨쉬기 + 깜빡임)
@@ -177,15 +200,18 @@ function bigFrame(key, m, t) {
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
   return [(f % m.cols) * m.w, Math.floor(f / m.cols) * m.h];
 }
-// 잔디에 심긴 큰 판 식물(화분 없이, 양육 스마트팜): (bx, by) = 흙 줄 가운데. 흙 줄 아래는 안 그림 — 뒤 층 → between(잔디 덤불) → 앞 층
+// 잔디에 심긴 큰 판 식물(화분 없이, 양육 스마트팜): (bx, by) = 흙 줄 가운데. 흙 줄 아래는 안 그림 — 밑동 흙 자리(식물 뒤) → 뒤 층 → 앞 풀잎 → between → 앞 층
+//  흙 자리 · 풀잎 = 화분과 같은 것(art/potgrass.js bedOf — 2026-10-17 사용자 "풀도 더 자연스럽게 · 흙이나 자갈 등으로 자연스러운 경계"), 흙 덮기 띠는 갈색 흙으로(dirtOf)
 export function drawBigPlanted(g, key, bx, by, opt = {}) {
   const P = BIG[key]; if (!P) return false;
   //  화분에 앉힌 칸(m.sink — 굵은 밑동이 화분 흙에 묻히게 내린 만큼)은 잔디에선 다시 올림: 안 올리면 밑동이 잘려 움푹 파인 듯 · 뒤에 놓인 듯 보였음(2026-10-17 사용자 "스마트팜에서 불 선인장 밑동이 움푹 파여 있고 뒤에 배치된 것 같아")
   const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1] - (m.sink || 0)), [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
-  const cut = Math.round(by) - y;
-  g.clip(x, y, m.w, cut, () => part(g, P.sheet, sx, sy, m.w, m.h, x, y, false));
+  const cut = Math.round(by) - y, bed = bedOf(P, key), D = dirtSheet(P), ry = y + (m.sink || 0);   // 흙 자리는 흙 줄에(잔디 판은 앉힌 만큼 올려 그리므로 그만큼 내려 그림)
+  if (bed) part(g, bed.ring, 0, 0, 96, 112, x, ry, false);
+  g.clip(x, y, m.w, cut, () => part(g, D, sx, sy, m.w, m.h, x, y, false));
+  if (bed) part(g, bed.front, 0, 0, 96, 112, x, ry, false);
   if (opt.between) opt.between();
-  g.clip(x, y, m.w, cut + 2, () => part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
+  g.clip(x, y, m.w, cut + 2, () => part(g, D, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
   return true;
 }
 // 화분째 큰 판 식물: (bx, by) = 화분 흙 줄 가운데. between = 흙 위 잔디 마개 등 — 식물 뒤에(capUnder — 몸통이 넓은 선인장 · 버섯도 마개에 묻혀 '얹힌' 듯 보이지 않게, 2026-10-16 사용자 "불 선인장이 화분의 중앙이 아닌 다른 곳에")
@@ -195,11 +221,13 @@ export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
   const m = P ? P.meta : { w: 96, h: 112, soil: [48, 75.7] }, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]);
   const rv = opt.reveal == null ? 1 : Math.max(0, Math.min(1, opt.reveal)), cy = y + Math.round(m.soil[1] * (1 - rv)), plant = fn => (rv >= 1 ? fn() : g.clip(x, cy, m.w, m.h, fn));
   part(g, pot.back, 0, 0, 96, 112, x, y, false);
+  const gr = grassBack(g, P, key, pot.back, x, y, false);
   if (opt.between && opt.capUnder) opt.between(x, y);
-  let sx = 0, sy = 0; if (P && rv > 0) { [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))); plant(() => part(g, P.sheet, sx, sy, m.w, m.h, x, y, false)); }
+  let sx = 0, sy = 0; const B = P && bareSet(P); if (P && rv > 0) { [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))); plant(() => part(g, B.sheet, sx, sy, m.w, m.h, x, y, false)); }
+  if (P && rv > 0) grassFront(g, gr, x, y, false);
   if (opt.between && !opt.capUnder) opt.between(x, y);
   part(g, pot.front, 0, 0, 96, 112, x, y, false);
-  if (P && rv > 0) plant(() => part(g, P.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
+  if (P && rv > 0) plant(() => part(g, B.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
   return true;
 }
 // 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),
@@ -210,7 +238,7 @@ export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
   by -= vdy;
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   const f = frameAt(t, m.frameMs, m.frames), sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
-  const src = opt.flash ? P.white : P.sheet, fl = !!opt.flip, soil = m.soil[1], sc = 1 - (opt.sq || 0) * 0.03, qx = opt.qx || 0, qy = opt.qy || 0;
+  const B = bareSet(P), src = opt.flash ? B.white : B.sheet, fl = !!opt.flip, soil = m.soil[1], sc = 1 - (opt.sq || 0) * 0.03, qx = opt.qx || 0, qy = opt.qy || 0;
   const rows = oy => {
     const c = g.c; c.save(); c.imageSmoothingEnabled = false;
     if (fl) { c.translate(x + m.w, y); c.scale(-1, 1); } else c.translate(x, y);
@@ -223,7 +251,9 @@ export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
     c.restore();
   };
   part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
+  const gr = grassBack(g, P, key, pot.back, x, y, fl);
   rows(sy);
+  grassFront(g, gr, x, y, fl);
   part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
   rows(sy + m.rows * m.h);
   return true;

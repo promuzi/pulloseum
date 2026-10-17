@@ -54,6 +54,13 @@ export const TYPE = {
   tree: '목본', flower: '화초', cactus: '다육', vine: '덩굴', mushroom: '버섯',
 };
 
+// 풀 · 흙 · 자갈(2026-10-17 — 스마트팜 잔디 · 화분 풀 마개 · 밑동 흙 자리, art/potgrass.js): 풀 = 스마트팜 잔디 한 벌(어두움 → 밝음 9단 — 2026-10-16부터 쓰던 색)
+//  POT_SOIL = 화분 그림의 흙 색표(pot3d.mjs SOIL — 화분 그림에서 흙 칸을 찾을 때만) · DIRT = 밑동 흙 자리(갈색 — 옛 보랏빛 흙 대신, 어두움 → 밝음) · 자갈 = 회색 단(그늘 → 빛)
+export const GRASS = ['#10261a', '#183a22', '#21502b', '#2c6834', '#3a823e', '#4c9a48', '#62b254', '#86cc66', '#a8e084'];
+export const POT_SOIL = ['#2e222f', '#3e3546', '#4c3e24', '#694f62', '#966c6c'];
+export const DIRT = ['#221a14', '#3b2b1f', '#574130', '#735a40', '#937552'];
+export const GRAVEL = ['#3e3546', '#625565', '#9babb2', '#c7dcd0'];
+
 // 4×4 베이어 행렬 — 디더(점 섞기) 단계용
 export const BAYER4 = [
   [0, 8, 2, 10],

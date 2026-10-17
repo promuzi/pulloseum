@@ -98,6 +98,9 @@ export const SHOTS = [
   ['12_nursery_new9b', 'nursery', {}, { plants: [{ key: 'jangseung_cactus', stage: 2 }, { key: 'astro_cap', stage: 2 }, { key: 'gladi_cactus', stage: 0 }, { key: 'hyunmu_cap', stage: 1 }, { key: 'gumiho_bloom', stage: 0 }, { key: 'wizard_bell', stage: 1 }, { key: 'ninja_vine', stage: 0 }] }],
   ['07_battle_new9', 'battle', { phase: 'pick', venue: 'colosseum', me: 'gladi_cactus', foe: 'astro_cap' }],
   ['07_battle_new9b', 'battle', { phase: 'pick', venue: 'colosseum', me: 'diver_vine', foe: 'viking_cap' }],
+  ['07_battle_astro', 'battle', { phase: 'pick', venue: 'colosseum', me: 'astro_cap', foe: 'wizard_bell' }],   // 화분 풀 · 흙 자리 검토(아스트로캡 흰 밑동 · 마법사 성체 덩치 — 2026-10-17)
+  ['02_home_astro', 'home', {}, { plants: [{ key: 'astro_cap', stage: 2 }] }],
+  ['02_home_wizard', 'home', {}, { plants: [{ key: 'wizard_bell', stage: 2 }] }],
   ['12_nursery_gaia', 'nursery', {}, { plants: [{ key: 'gaia', stage: 2 }, { key: 'gaia', stage: 1 }, { key: 'gaia', stage: 0 }] }],   // 화분 앞 부위(주먹) — 잔디에 심은 세 단계
   ['02_home_gaia', 'home', {}, { plants: [{ key: 'gaia', stage: 2 }] }],
   ['05_plant_gaia', 'plant', { tab: 'skill' }, { plants: [{ key: 'gaia', stage: 2 }] }],
