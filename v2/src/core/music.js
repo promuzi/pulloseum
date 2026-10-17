@@ -495,7 +495,7 @@ const CL3 = ['. . D5 - - - - - C5 - A4 - . . G4 -', 'A4 - - - - - - - . . . . . 
 const CELLO_A = ['F3 - - - - - - - - - - - E3 - - -', 'D3 - - - - - - - - - - - - - - -', 'D3 - - - - - - - Bb2 - - - - - - -', 'C#3 - - - - - - - E3 - - - - - - -'];
 const CELLO_B = ['D3 - - - - - - - F3 - - - A3 - - -', 'Bb3 - - - - - - - A3 - - - F3 - - -', 'G3 - - - - - - - - - - - D3 - - -', 'E3 - - - - - - - C#3 - - - - - - -'];
 //  현악 패드(비올라 · 바이올린 넷 — 9화음 · 6/9): C = 보통 음역(플루트 가락 아래), H = 한 옥타브 위(첼로가 가락일 때 · 처음 부분) · 근음은 콘트라베이스가 따로 길게
-const STR = { Dm9: ['C4', 'E4', 'F4', 'A4'], Bbmaj9: ['C4', 'D4', 'F4', 'G4'], Gm9: ['A3', 'Bb3', 'D4', 'F4'], A7b9: ['Bb3', 'C#4', 'E4', 'G4'] };
+const STR = { Dm9: ['D4', 'F4', 'A4'], Bbmaj9: ['D4', 'F4', 'Bb4'], Gm9: ['D4', 'G4', 'Bb4'], A7b9: ['C#4', 'E4', 'A4'] };   // 2026-10-17 세 음 화음(9 · b9 반음 부딪힘 = "불협화음 같아" → 뺌), 가까운 자리로 이어짐
 const STRH = Object.fromEntries(Object.entries(STR).map(([k, v]) => [k, v.map(n => T8(n, 1))]));
 //  하프(옅게): 처음 부분 · A3 = 마디 첫머리 16분 한 번 훑기 / 쉬기 · A2 · B = 넓게 오르내리는 8분 분산 화음
 const HFLO = ['D3 F3 A3 C4 E4 A4 . . . . . . . . . .', '. . . . . . . . Bb2 . F3 . D4 . . .', 'G2 Bb2 D3 F3 A3 D4 . . . . . . . . . .', '. . . . . . . . A2 . E3 . C#4 . . .'];
@@ -595,24 +595,18 @@ const ARR = {
   },
   // 몽환적 실내악(탐사 · 정비): 현악 패드 + 첼로 + 하프 · 첼레스타(옅게) + 옅은 피치카토, 으뜸 마디 첫 박에 아주 여린 팀파니 — 긴 홀 울림
   cham(q, cur, st, sb, k) {
-    const { first, ci, ch, brk, sect } = q, L = {};
-    if (brk) {   // 브레이크: 대기의 베이스 솔로 가락을 첼로가 한 옥타브 위로 — 현악이 화음을 잡고, 끝 마디는 하프가 딸림화음을 훑어 올라가며 팀파니가 여리게 굴러 으뜸으로
-      L.str = P('C - - - - - - - - - - - - - - -'); L.cb = P(ROOT[ch] + ' - - - - - - - - - - - - - - -');
+    // 2026-10-17 "세션만 클래식 악기로 바꾸고 느낌만": 대기 곡(hip)과 같은 베이스 줄 · 건반 리듬 · 가락 — 베이스 = 피치카토 · 건반 = 현악(세 음) · 가락 = 플루트, 북 없음
+    const { first, ci, brk, sect } = q, L = {};
+    if (brk) {   // 브레이크: 대기의 베이스 솔로를 첼로가 한 옥타브 위로 · 첫 박에 현악 화음 하나
       L.cello = P(T8(brk === 'b1' ? SOLO1 : SOLO2[brk === 'b2a' ? 0 : 1], 1));
-      L.pizz = P(PZR[ch][0] + '^ . . . . . . . . . . . . . . .');
-      if (brk === 'b2a') L.harp = P(HFLO[2]);
-      else { L.harp = P(HSWEEP); L.timp = P('. . . . . . . . . . . . A1_ A1_ A1_ A1_'); }
+      L.str = P('C_ - - . . . . . . . . . . . . .');
       return L;
     }
-    // 2026-10-17 "몽환 요소 줄이고 템포도 유지해": 현악 패드는 보통 음역 하나 · 피치카토가 네 박(근음 · 5음 번갈아)으로 대기 곡과 같은 박을 짚음 ·
-    //  하프는 막 들어온 두 마디(옛 결 박 이어 받기)와 B 부분만 8분 · 첼레스타 · 콘트라베이스 · 마디마다 팀파니는 뺌 · 가락은 한 악기(A2 첼로 · A3 · B 플루트)
-    L.str = P('C - - - - - - - - - - - - - - -');
-    L.pizz = P(PZR[ch][0] + '^ . . . ' + PZR[ch][1] + ' . . . ' + PZR[ch][0] + '_ . . . ' + PZR[ch][1] + '_ . . .');
-    if (sect === 'B' || k < 2) L.harp = P(HARP8[ci]);
-    if (sect === 'A2') L.cmel = P(T8(CL1[ci], -1));   // 첼로가 대기 가락(한 옥타브 아래)
-    else if (sect === 'A3') L.fl = P(CL3[ci]);       // 플루트 혼자
-    else if (sect !== 'B') L.cello = P(CELLO_A[ci]);  // 처음 부분: 첼로 긴 음(받침)
-    if (sect === 'B') L.fl = P((first ? CL1 : CL2)[ci]);
+    L.pizz = P(sect === 'B' ? BASS_B[ci] : BASS_A[ci]);
+    L.str = P(sect === 'B' ? 'C - - - - - - - C_ - - - - - - -' : sect === 'A3' && ci < 3 ? 'C - - - - . . C_ - . . . . . N_ -' : 'C - - - - . . C_ - . C_ - - . . .');
+    if (sect === 'A2') L.fl = P(LEAD1[ci]);
+    if (sect === 'B') L.fl = P(first ? LEAD1[ci] : LEAD2[ci]);
+    if (sect === 'A3') L.fl = P(LEAD3[ci]);
     return L;
   },
 };
@@ -728,7 +722,7 @@ const LAYER = {
   keys: ['ep', 0.26], lead: ['lead', 0.5], chip: ['chip', 0.5], bell: ['bell', 0.42], pad: ['pad', 0.07], stab: ['stab', 0.26], crk: ['crk', 0.55], fx: ['fx', 0.2],
   mel: ['ep1', 0.2], fmel: ['bell', 0.6],   // 메뉴 건반 홑음 · 식물 관리 종
   pbass: ['bass', 0.3], comp: ['ep', 0.2], syn: ['syn', 0.37], vib: ['vib', 0.2], pkick: ['kick', 0.6], psn: ['snare', 0.5], pclap: ['clap', 0.32], phat: ['hat', 0.2],   // 재즈팝
-  pizz: ['pizz', 0.42], harp: ['harp', 0.1], str: ['str', 0.1], cb: ['cb', 0.6], cello: ['cello', 0.22], cmel: ['cello', 0.28], cel: ['cel', 0.14], fl: ['flute', 0.35], timp: ['timp', 0.2],   // 실내악
+  pizz: ['pizz', 0.6], harp: ['harp', 0.1], str: ['str', 0.13], cb: ['cb', 0.6], cello: ['cello', 0.22], cmel: ['cello', 0.28], cel: ['cel', 0.14], fl: ['flute', 0.42], timp: ['timp', 0.2],   // 실내악
 };
 const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'timp']);   // 이음 장식 동안 빼는 타악
 const DK = { X: 1.25, x: 1, o: 0.45, O: 1, r: 0.8, R: 0.75 };   // 북 글자 → 세기
@@ -764,12 +758,10 @@ const FILLS = {
       if (left === 2 && CH[nx]) CH[nx].forEach((n, j) => C.out({ t: t + j * 0.006, i: 'ep', f: NOTE(n), len: 0.5, v: 0.15 }));
     } else if (to === 'cham' && RUN[nx] && left <= 4) C.out({ t, i: 'harp', f: NOTE(RUN[nx][4 - left]), len: 0.3, v: 0.16 + 0.03 * (4 - left) });
   },
-  home(C, f, k, left, t) {   // 거꾸로 심벌이 차오르고 스네어 넷으로 돌아옴(실내악으로 = 여린 팀파니 굴림)
+  home(C, f, k, left, t) {   // 거꾸로 심벌이 차오르고 스네어 넷으로 돌아옴(실내악으로 = 북 없이 — 2026-10-17 팀파니 굴림도 뺌)
     if (k === 0) C.out({ t, i: 'rev', len: left * STEP, v: 0.11 });
     if (left > 4) return;
-    const to = styleOf(f.state);
-    if (to === 'cham') C.out({ t, i: 'timp', f: NOTE('A1'), v: [0, 0.24, 0.2, 0.17, 0.14][left] });
-    else C.out({ t, i: 'snare', v: [0, 0.6, 0.42, 0.3, 0.24][left], o: { ghost: left > 2 } });
+    if (styleOf(f.state) !== 'cham') C.out({ t, i: 'snare', v: [0, 0.6, 0.42, 0.3, 0.24][left], o: { ghost: left > 2 } });
   },
   battle(C, f, k, left, t) {   // 솟음 + 스네어 굴림(마지막 둘은 32분)
     if (k === 0) C.out({ t, i: 'riser', len: left * STEP, v: 0.14 });
