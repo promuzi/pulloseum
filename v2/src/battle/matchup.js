@@ -12,10 +12,10 @@ export const WEAPON_TYPES = {
   blade: { name: '칼', strong: ['grass'], resist: ['earth', 'water'] },           // 덩굴 · 잎을 벰 / 돌에 날이 무뎌짐 · 물은 벨 수 없음
   hammer: { name: '망치', strong: ['ice', 'earth'], resist: ['water'] },          // 얼음을 깸 · 바위를 부숨 / 쳐도 갈라졌다 다시 붙음
   gun: { name: '총', strong: ['fire'], resist: ['wind', 'water'] },               // 불길에 다가가지 않고 멀리서 / 바람에 빗나감 · 물속에선 느려짐
-  flamer: { name: '화염방사', strong: ['ice'], resist: ['wind', 'water'] },       // 얼음을 녹임 / 불길이 되돌아옴 · 불이 꺼짐
+  flamer: { name: '화염방사', strong: [], resist: ['fire', 'water'] },            // 불 속성이 이미 풀 · 빙결 · 바람에 셈(×1.5) / 불 식물은 안 탐 · 물에 꺼짐 — 2026-10-17 사용자 "새로 추가한 무기도 상성을 고민해줘": 빙결 셈(속성과 겹쳐 ×1.875) · 바람 안 듦(불 > 바람과 부딪힘) 뺌
   spear: { name: '번개 창', strong: ['water'], resist: ['grass'] },               // 전기 작살 / 덤불에 창끝이 걸림(번개 무기 = 물에 안 듦 없음)
   rocket: { name: '로켓포', strong: ['earth'], resist: ['water', 'wind'] },       // 폭발이 흙더미 · 바위를 날려 버림 / 물에선 안 터짐 · 바람에 휨(사용자 "광역으로 로켓포")
-  xbow: { name: '석궁', strong: ['wind'], resist: ['water', 'earth'] },           // 무거운 화살이 바람을 뚫음 / 물에 막힘 · 바위에 튕김(사용자 "석궁도")
+  xbow: { name: '석궁', strong: ['wind', 'bolt'], resist: ['water', 'earth'] },   // 무거운 화살이 바람을 뚫음 · 나무 화살이라 감전 걱정 없이 멀리서(번개 = 무기 변이의 천적에 맞설 카드) / 물에 막힘 · 바위에 튕김(사용자 "석궁도")
 };
 // 무기 기술 → 종류(변이 카드 + 태생 무기 식물 블레이드바인의 베기 기술)
 export const SKILL_WEAPON = {

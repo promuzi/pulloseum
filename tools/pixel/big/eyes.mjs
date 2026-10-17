@@ -30,7 +30,7 @@ export const EYES = {
   frost_drake: { box: [[739, 594, 41, 34], [916, 600, 17, 26]], cheek: [830, 610] },   // 2026-10-17 새 종(드라코프루트 다시 그린 안 = cut/frost_drake.png) · 아몬드 눈 둘(오른쪽 = 옆으로 돌아 가늘게)
   // 처음 화면 대표 캐릭터(2026-10-17 사용자가 후보 셋 중 ㄴ '불꽃 용 선인장'을 고름 — concept/title/hero_b.png = cut/title_hero.png)
   // 새 태생 용족 드레이크캑터 — 2026-10-17 사용자 "좀 더 멋있는 용 같았으면" · "참고 사진 없이 아예 새로" → concept/drake/drake_v2.png(글로만 · 머리는 옆으로 · 보이는 눈 하나) → greycut = cut/drake_cactus.png(옛 안 = cut/drake_cactus_v1.png)
-  drake_cactus: { box: [[704, 245, 31, 18]], cheek: [700, 278] },
+  drake_cactus: { box: [[824, 245, 31, 18]], cheek: [820, 278] },   // 2026-10-17 날개 키우며 원화 왼쪽에 120칸 덧댐(wingscale.py pad) → x +120
   // 새 셋(2026-10-17 — concept/new3/<키>.png 회색 배경 → greycut = cut/<키>.png, 1254×1254 격자 확대로 잼)
   gat_cap: { box: [[593, 497, 46, 24], [699, 510, 23, 19]], cheek: [650, 545] },          // 갓 아래 선비 얼굴 · 왼쪽으로 곁눈
   mask_vine: { box: [[620, 353, 57, 34], [765, 414, 36, 31]], closed: true },             // 하회탈의 웃는 초승달 눈 = 원래 감은 눈(깜빡임 없음)

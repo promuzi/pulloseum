@@ -24,12 +24,15 @@ ok(near(formMult(W, U('gaia'), sk('m_slash')), 0.8), '칼 → 대지 안 듦');
 ok(near(formMult(W, U('aqua'), sk('m_smash')), 0.8), '망치 → 물 안 듦');
 ok(near(formMult(W, U('cactus_wind'), sk('m_shot')), 0.8), '총 → 바람 안 듦');
 ok(near(formMult(W, U('cactus_fire'), sk('m_shot')), 1.25), '총 → 불');
-ok(near(formMult(W, U('frost_bell'), sk('m_flamer')), 1.25), '화염방사 → 빙결');
+ok(near(formMult(W, U('frost_bell'), sk('m_flamer')), 1) && near(hitMult(W, U('frost_bell'), sk('m_flamer')), 1.5), '화염방사 → 빙결 = 불 속성만(무기 종류는 안 얹음)');
+ok(near(formMult(W, U('cactus_fire'), sk('m_flamer')), 0.8) && near(formMult(W, U('aqua'), sk('m_flamer')), 0.8), '화염방사 → 불 · 물 안 듦');
+ok(near(hitMult(W, U('cactus_wind'), sk('m_flamer')), 1.5), '화염방사 → 바람 = 불 > 바람 그대로(안 듦과 안 부딪힘)');
 ok(near(formMult(W, U('vine_water'), sk('m_spear')), 1.25), '번개 창 → 물');
 ok(near(hitMult(W, U('vine_water'), sk('m_spear')), 1.5 * 1.25), '번개 창 → 물 = 속성 × 무기');
 ok(near(formMult(W, U('flower_grass'), sk('u_blade_1')), 1.25), '블레이드바인 베기 = 칼');
 ok(near(formMult(W, U('gaia'), sk('m_rocket')), 1.25) && near(formMult(W, U('cactus_wind'), sk('m_rocket')), 0.8), '로켓포 → 대지 · 바람 안 듦');
 ok(near(formMult(W, U('cactus_wind'), sk('m_xbow')), 1.25) && near(formMult(W, U('gaia'), sk('m_xbow')), 0.8), '석궁 → 바람 · 대지 안 듦');
+ok(near(formMult(W, U('spark'), sk('m_xbow')), 1.25), '석궁 → 번개(나무 화살 — 무기 변이가 번개에 맞설 카드)');
 ok(!!CARDS.m_rocket && !!CARDS.m_xbow && SKILLS.m_rocket.area, '로켓포 · 석궁 카드');
 // ③ 맞는 쪽 변이의 약한 속성(늘 — 일반 식물이 쳐도): 포자 ← 불 · 용족 ← 빙결
 ok(near(formMult(U('cactus_fire'), U('ember_cap', 'spore'), sk('f_ember')), 1.25), '불 → 포자 약함');
