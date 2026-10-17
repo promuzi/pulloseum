@@ -29,6 +29,7 @@ ok(near(formMult(W, U('cactus_fire'), sk('m_flamer')), 0.8) && near(formMult(W, 
 ok(near(hitMult(W, U('cactus_wind'), sk('m_flamer')), 1.5), '화염방사 → 바람 = 불 > 바람 그대로(안 듦과 안 부딪힘)');
 ok(near(formMult(W, U('vine_water'), sk('m_spear')), 1.25), '번개 창 → 물');
 ok(near(hitMult(W, U('vine_water'), sk('m_spear')), 1.5 * 1.25), '번개 창 → 물 = 속성 × 무기');
+ok(near(formMult(W, U('flower_grass'), sk('m_spear')), 1) && near(formMult(W, U('gaia'), sk('m_spear')), 0.8), '번개 창 → 풀 중립 · 대지 안 듦(전기가 땅으로 빠짐)');
 ok(near(formMult(W, U('flower_grass'), sk('u_blade_1')), 1.25), '블레이드바인 베기 = 칼');
 ok(near(formMult(W, U('gaia'), sk('m_rocket')), 1.25) && near(formMult(W, U('cactus_wind'), sk('m_rocket')), 0.8), '로켓포 → 대지 · 바람 안 듦');
 ok(near(formMult(W, U('cactus_wind'), sk('m_xbow')), 1.25) && near(formMult(W, U('gaia'), sk('m_xbow')), 0.8), '석궁 → 바람 · 대지 안 듦');
