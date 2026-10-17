@@ -13,7 +13,7 @@ function load(src) { return new Promise(res => { const i = new Image(); i.onload
 
 // 옛 48×56 도트(assets/sprites)는 처음 12종만 · 생장 단계 그림(_young · _teen)도 있는 종만 부름 — 새 종(2026-10-16 프로스트벨 등)은 성체 그림 하나(없는 파일을 부르지 않게)
 // 생장 단계 그림이 있는 종(어린 · 자람 둘 다 — 하나만 있으면 그 단계만 바뀜). 새로 그리면 여기에 더함(2026-10-17)
-export const STAGED_KEYS = [...ROSTER.slice(0, 12), 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine'];
+export const STAGED_KEYS = [...ROSTER.slice(0, 12), 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit'];
 const V1 = ROSTER.slice(0, 12), STAGED = new Set(STAGED_KEYS);
 export async function loadSprites(base = '../assets/sprites/') {
   const keys = [...V1, ...EXTRA, ...POTS];
