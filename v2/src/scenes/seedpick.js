@@ -2,9 +2,9 @@ import { button, rrect } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { holo, T } from '../art/theme.js';
 import { ELEMENT } from '../art/palette.js';
-import { seedArt } from './common.js';
+import { seedArt, miniStars } from './common.js';
 import { SPECIES, IV_KEYS, IV_MAX, STAT_NAME } from '../game/catalog.js';
-import { specialSeed, ivpChance, ivpPity } from '../game/logic.js';
+import { specialSeed, ivpChance, ivpPity, potOf } from '../game/logic.js';
 import { sfx } from '../core/sound.js';
 
 // 종자 거름 고르기(2026-10-18 사용자 "종자가 아이템 창처럼 쭉 나열 · 한 번 누르면 정보 · 꾹 누르면 선택 모드(그땐 한 번만 누르면 선택) · 전체 선택 체크 상자 ·
@@ -50,11 +50,10 @@ export function seedPickScreen(app, D) {
     holo(g, x, y, TW, TH, T.card || T.panel, 12);
     seedArt(g, x + TW / 2, y + 26, sp.el);
     const ei = icon(sp.el); if (ei) g.img(ei, x + 4, y + 4);
-    if (sd.fav) g.text('★', x + 18, y + 2, { font: 'bold', color: '#ffd890' });   // 즐겨찾기
+    if (sd.fav) g.text('♥', x + 18, y + 2, { font: 'bold', color: '#ff9ab0' });   // 즐겨찾기(★는 잠재력)
     if (sd.lock) { g.c.fillStyle = 'rgba(3,6,12,0.35)'; g.c.fillRect(x, y, TW, TH); const li = icon('lockS'); if (li) g.img(li, x + 4, y + TH - 15); }   // 잠금 = 조금 어둡게 + 자물쇠
     if (spc) { const w = g.textW(spc, 'label') + 6; rrect(g, x + TW - w - 2, y + 2, w, 14, 3, spc === '전설' ? '#5a3a10' : spc === '변이' ? '#3a1a48' : '#183a4a'); g.text(spc, x + TW - w + 1, y + 2, { font: 'label', color: spc === '전설' ? '#ffd890' : spc === '변이' ? '#e0b8ff' : '#b8f0ff' }); }
-    const st = Math.min(3, sd.ivk || 0);   // 좋은 개체값 굴림 = ↑(★는 즐겨찾기 — 심은 식물 별과 헷갈리지 않게)
-    g.text(st ? '↑'.repeat(st) : '·', x + TW / 2, y + 44, { font: 'label', color: st ? '#9ff0b0' : '#4f6f90', align: 'center' });
+    miniStars(g, x + Math.round((TW - 39) / 2), y + 45, potOf(sd));   // 잠재력 = 심으면 그 별(2026-10-18)
     g.text(sp.rarity === 'rare' ? '희귀' : '일반', x + TW / 2, y + 56, { font: 'label', color: el.light || '#cfe8f8', align: 'center' });
     if (on) { g.c.fillStyle = 'rgba(255,216,144,0.18)'; g.c.fillRect(x, y, TW, TH); for (const [rx, ry, rw, rh] of [[x - 1, y - 1, TW + 2, 2], [x - 1, y + TH - 1, TW + 2, 2], [x - 1, y - 1, 2, TH + 2], [x + TW - 1, y - 1, 2, TH + 2]]) g.rect(rx, ry, rw, rh, '#ffd890'); rrect(g, x + TW - 15, y + TH - 15, 12, 12, 3, '#ffd890'); g.text('✓', x + TW - 13, y + TH - 16, { font: 'bold', color: '#1a1206' }); }
     D.rects.push({ id: sd.id, x, y });
@@ -89,11 +88,11 @@ function infoBox(app, D, sd, sp) {
   holo(g, x, y, w, h, T.deep || T.panel, 14);
   g.text(`${SPECIAL(sd) ? SPECIAL(sd) + ' ' : ''}${sp.name} 종자`, x + 12, y + 10, { font: 'value', color: '#e6f3ff' });
   g.text(`${el.name || ''} 속성 · ${sp.rarity === 'rare' ? '희귀' : '일반'}`, x + 12, y + 32, { font: 'label', color: el.light || '#8cb6de' });
-  g.text(sd.ivk ? `좋은 개체값이 나오기 쉬움 ${'★'.repeat(Math.min(3, sd.ivk))}` : '개체값은 심을 때 정해져요', x + 12, y + 50, { font: 'label', color: sd.ivk ? '#ffd890' : '#8cb6de' });
+  g.text('잠재력', x + 12, y + 50, { font: 'label', color: '#8cb6de' }); miniStars(g, x + 56, y + 53, potOf(sd)); g.text(`심으면 별 ${potOf(sd)}개`, x + 102, y + 50, { font: 'label', color: '#ffd890' });
   if (SPECIAL(sd)) g.text('심으면 특별한 식물이 나와요', x + 12, y + 68, { font: 'label', color: '#ffb0a0' });
   app.input.hit('sp_info', x, y, w, h, () => { D.info = null; });
   const bw = Math.floor((w - 34) / 2), by = y + h - 40;   // 즐겨찾기 · 잠금(2026-10-18)
-  button(app, 'sp_fav', x + 12, by, bw, 30, sd.fav ? '★ 즐겨찾기 풀기' : '☆ 즐겨찾기', { style: sd.fav ? 'gold' : 'night', font: 'bold', onTap: () => app.act('seedMark', { seed: sd.id, fav: !sd.fav }) });
+  button(app, 'sp_fav', x + 12, by, bw, 30, sd.fav ? '♥ 즐겨찾기 풀기' : '♡ 즐겨찾기', { style: sd.fav ? 'gold' : 'night', font: 'bold', onTap: () => app.act('seedMark', { seed: sd.id, fav: !sd.fav }) });
   button(app, 'sp_lock', x + 22 + bw, by, bw, 30, sd.lock ? '잠금 풀기' : '잠그기', { style: sd.lock ? 'gold' : 'night', font: 'bold', icon: 'lockS', iconTint: true, onTap: () => { if (!sd.lock) D.sel.delete(sd.id); app.act('seedMark', { seed: sd.id, lock: !sd.lock }); } });
 }
 

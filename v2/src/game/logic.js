@@ -41,8 +41,8 @@ export function makePlant(s, seed, rng, now) {
   const sp = SPECIES[seed.key];
   need(sp, '모르는 식물');
   // 개체값: 탐사 종자는 ivk번 더 굴려 가장 좋은 값(행성 생기 + 종자 보관함 — 2026-10-16 사용자 "얻어온 종자의 개체값이 좋을 확률이 증가"), 그 밖은 한 번
-  const roll = () => { let b = 0; for (let i = 0; i <= (seed.ivk || 0); i++) b = Math.max(b, Math.floor(rng() * (IV_MAX + 1))); return b; };
-  const ivs = Object.fromEntries(IV_KEYS.map(k => [k, roll()]));
+  const [lo, hi] = POT_SUM[potOf(seed) - 1], T = lo + Math.floor(rng() * (hi - lo + 1)), ivs = Object.fromEntries(IV_KEYS.map(k => [k, 0]));   // 잠재력 별 구간 안의 합 → 칸마다 무작위로 나눔
+  for (let n = 0; n < T; n++) { const room = IV_KEYS.filter(k => ivs[k] < IV_MAX); ivs[room[Math.floor(rng() * room.length)]]++; }
   if (seed.legend) for (const k of IV_KEYS) ivs[k] = Math.max(ivs[k], 7);
   if (seed.trait === 'fruity') ivs.fruit = Math.max(ivs.fruit, 8);   // 옛 열매용 종자
   const p = {
@@ -597,10 +597,17 @@ export function addSeed(s, sd) {
   if (s.seeds.length >= SEED_MAX && !specialSeed(sd)) { const n = seedPrice(sd); s.wallet.credits += n; return { sold: n }; }
   s.seeds.push(sd); return null;
 }
+// 잠재력(2026-10-18 사용자 "종자 별 1~3 → 식물처럼 별 5성까지 · 잠재력이라 부르자 · 종자가 4성이면 심을 때도 4성 · 그 안의 구성은 랜덤"):
+//  종자 잠재력 1~5(무게 30 · 35 · 22 · 10 · 3, 좋은 굴림 ivk 번 더 굴려 큰 값 · 전설 = 5) → 심으면 개체값 합이 그 별 구간(11 · 21 · 31 · 41 문턱 — starsOf) 안에서 무작위, 칸 나눔도 무작위.
+//  옛 종자(잠재력 없음) = 번호 · 좋은 굴림으로 정한 값(늘 같음)
+const POT_W = [30, 35, 22, 10, 3], POT_SUM = [[5, 10], [11, 20], [21, 30], [31, 40], [41, 50]];
+function rollPot(rng, ivk) { let best = 1; for (let i = 0; i <= ivk; i++) { let r = rng() * 100, k = 0; while (k < 4 && r >= POT_W[k]) { r -= POT_W[k]; k++; } best = Math.max(best, k + 1); } return best; }
+export const potOf = sd => { if (!sd) return 1; if (sd.legend) return 5; if (sd.pot >= 1 && sd.pot <= 5) return sd.pot; let h = 0; for (const c of String(sd.id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; let a = h; return rollPot(() => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; }, sd.ivk || 0); };
 export function seedOf(s, key, rng, o = {}) {
   const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend;
   const sd = { id: uid(s), key, shiny, legend };
-  if (o.ivk > 0) sd.ivk = o.ivk;   // 심을 때 개체값을 이만큼 더 굴림(탐사 종자)
+  if (o.ivk > 0) sd.ivk = o.ivk;   // 좋은 굴림(탐사 종자) — 잠재력을 이만큼 더 굴려 큰 값
+  sd.pot = legend ? 5 : rollPot(rng, o.ivk || 0);   // 잠재력 = 심으면 그 별(2026-10-18)
   // 변이: 변이 고정 종은 늘 그 변이, 탐사 종자(o.mut = 지역 배율)는 가끔 — 버섯 = 포자, 그 밖 = 포식 · 무기 · 독성 · 용족
   if (SPECIES[key].form) sd.form = SPECIES[key].form;
   else if (o.mut > 0 && rng() < MUT_P * o.mut) { const fs = formsFor(key); sd.form = fs[Math.floor(rng() * fs.length)]; }

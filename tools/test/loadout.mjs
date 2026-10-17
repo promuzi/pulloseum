@@ -153,6 +153,7 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   s.cards.m_shot = 1;
   throws(() => setSlots(s, p.uid, (() => { const b = [...p.skills.battle]; b[3] = 'm_shot'; return b; })(), p.cards), '기술 카드는 둘까지');
   // 횟수: 칼날 베기(판마다 SKILLS.m_slash.uses번 — 2026-10-17 밸런스로 2) — 그만큼 쓰고 나면 그 판엔 못 씀 · 쇠망치(1번) — 한 번
+  p.cards = [null, null, null];   // 횟수를 늘리는 패시브가 무작위로 끼면 횟수 시험이 흔들림(2026-10-18 잠재력으로 굴림 차례가 바뀌며 드러남)
   const me = unitOf('me', p), foe = unitOf('foe', makePlant(s, { key: 'gaia' }, rng, 0)); foe.hp = foe.max = 99999;
   const B = makeBattle({ me, foe, seed: 3 }), slash = me.kit.find(k => k.id === 'm_slash'), smash = me.kit.find(k => k.id === 'm_smash');
   const okAt = [];

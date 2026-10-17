@@ -104,5 +104,26 @@ const fill = (s, n, key = 'aqua') => { const rng = makeRng(9); while (s.seeds.le
   runOp(s, 'seedMark', { seed: a.id, fav: true }, { rng: makeRng(1), now: 0 });
   ok(a.fav === true, '서버 일 목록(ops seedMark)');
 }
+// ⑧ 잠재력(2026-10-18 사용자 "종자 별 1~3 → 식물처럼 별 5성까지 · 잠재력 · 종자가 4성이면 심을 때도 4성 · 구성은 랜덤"):
+//  종자 잠재력 1~5(좋은 굴림 ivk = 여러 번 굴려 큰 값) · 심으면 그 별(개체값 합이 그 별 구간 — 칸 나눔은 무작위) · 전설 = 5 · 옛 종자 = 번호로 정한 값
+{
+  const { potOf, makePlant: mp } = await import('../../v2/src/game/logic.js');
+  const { starsOf } = await import('../../v2/src/game/catalog.js');
+  const s = game(), rng = makeRng(13), seen = new Set();
+  let bad = 0, same = 0;
+  for (let i = 0; i < 200; i++) {
+    const sd = seedOf(s, 'aqua', rng, { ivk: i % 3 }), P = potOf(sd); seen.add(P);
+    const p = mp(s, sd, rng, 0); if (starsOf(p.ivs) !== P) bad++;
+    if (i > 0 && JSON.stringify(p.ivs) === same) same = -1e9; same = JSON.stringify(p.ivs);
+  }
+  ok(bad === 0, '심은 식물 별 = 종자 잠재력(어긋남 ' + bad + ')');
+  ok([1, 2, 3, 4, 5].every(n => seen.has(n)), '잠재력 1~5 다 나옴: ' + [...seen]);
+  const lo = Array.from({ length: 300 }, () => potOf(seedOf(s, 'aqua', rng))), hi = Array.from({ length: 300 }, () => potOf(seedOf(s, 'aqua', rng, { ivk: 3 })));
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  ok(avg(hi) > avg(lo) + 0.5, `좋은 굴림이면 잠재력이 높게: ${avg(lo).toFixed(2)} → ${avg(hi).toFixed(2)}`);
+  ok(potOf(seedOf(s, 'aqua', rng, { legend: true })) === 5, '전설 종자 = 잠재력 5');
+  const old = { id: 'old7', key: 'aqua', shiny: false, legend: false };
+  ok(potOf(old) >= 1 && potOf(old) <= 5 && potOf(old) === potOf({ ...old }), '옛 종자 = 번호로 정한 잠재력(늘 같음)');
+}
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

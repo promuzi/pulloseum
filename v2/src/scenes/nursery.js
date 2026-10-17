@@ -223,7 +223,13 @@ export const nursery = {
       if (f.have > 0) {   // 열매 표시 = 식물 꼭대기 바로 위(작은 식물이면 낮게 — 2026-10-16 사용자 "식물이 작으면 열매 표식도 높이에 맞게 좀 낮춰줘") · 고른 식물도 솟은 만큼 같이 올라감(2026-10-17 사용자 "식물 누르면 머리 위 과일이 사라짐" — 전엔 고르면 숨겼음)
         const ic = icon('fruit'), bk = bigKey(it.p.key, stageKey(it.p)), Bm = BIG[bk], bx = bigBox(bk);
         const top = Bm && bx ? sy - Math.round(Bm.meta.soil[1]) + bx[0] - ic.height - 3 : sy - 86;
-        g.img(ic, sx - Math.floor(ic.width / 2), Math.max(sy - 86, top) - lift + (Math.floor(t / 500 + it.i) % 2));
+        // 열매 수만큼 · 가운데가 높은 둥근 호로 · 2배 크기(2026-10-18 사용자 "그 수에 따라 열매 아이콘 수도 늘어나며 배치는 일렬이 아닌 원처럼 약간 곡선 · 아이콘 좀 더 키우되 위치는 그대로")
+        // 반지름 34 원의 위쪽 호 위에 열매 사이 17칸(많으면 전체 폭 66 안으로 좁힘) — 열매가 많을수록 양 끝이 더 처짐
+        const n = f.have, K = 2, iw = ic.width * K, ih = ic.height * K, base = Math.max(sy - 86, top) + ic.height - ih - lift, R = 34, step = (n > 1 ? Math.min(17, 66 / (n - 1)) : 0) / R;
+        for (let j = 0; j < n; j++) {
+          const th = (j - (n - 1) / 2) * step, bob = Math.floor(t / 500 + it.i + j) % 2;
+          g.img(ic, Math.round(sx + R * Math.sin(th) - iw / 2), Math.round(base + R * (1 - Math.cos(th))) + bob, K);
+        }
       }
     } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#8ccfff', 0); }
     if (u < -0.4 || u > 2.7) return null;
