@@ -7,6 +7,9 @@ const str = (v, max = 40) => (typeof v === 'string' && v.length > 0 && v.length 
 const int = (v, lo, hi, def) => { if (v == null && def != null) return def; const n = Number(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : bad(); };
 const opt = (v, f) => (v == null ? null : f(v));
 const idxOf = (s, uid) => s.plants.findIndex(p => p.uid === uid);
+const cell = v => (v == null || v === '' ? null : str(v));
+const cells = (v, n, exact) => (Array.isArray(v) && (exact ? v.length === n : v.length <= n) ? v.map(cell) : bad());   // 칸 배열(길이 · 원소 모양만 — 규칙은 logic)
+const cardsArg = v => (Array.isArray(v) && (v.length === 2 || v.length === 3) ? v.map(cell) : bad());   // 패시브 칸(옛 화면 둘 · 새 화면 셋)
 
 export const OPS = {
   feed: (s, a) => L.feed(s, str(a.id), a.kind === 'fert' ? 'fert' : 'water', int(a.n, 1, 99, 1)),
@@ -14,8 +17,10 @@ export const OPS = {
   draftPick: (s, a) => L.draftPick(s, str(a.id), int(a.n, 0, 20, 0), Array.isArray(a.picks) ? a.picks.slice(0, 8).map(x => String(x)) : []),   // 카드 고르기(2026-10-18)
   place: (s, a) => L.placePending(s, str(a.id), str(a.skill), str(a.target, 8)),
   swapJoker: (s, a) => L.swapJoker(s, str(a.id), int(a.slot, 0, L.LOADOUT - 1)),
-  setCards: (s, a) => L.setCards(s, str(a.id), Array.isArray(a.cards) && a.cards.length === 2 ? a.cards.map(v => (v == null ? null : str(v))) : bad()),   // 카드 칸 둘(2026-10-17)
-  setSlots: (s, a) => L.setSlots(s, str(a.id), Array.isArray(a.battle) && a.battle.length === L.LOADOUT ? a.battle.map(v => (v == null ? null : str(v))) : bad(), Array.isArray(a.cards) && a.cards.length === 2 ? a.cards.map(v => (v == null ? null : str(v))) : bad()),
+  setCards: (s, a) => L.setCards(s, str(a.id), cardsArg(a.cards)),   // 패시브 칸 셋(2026-10-18 — 옛 화면은 둘)
+  setSlots: (s, a) => (Array.isArray(a.store)   // 새 꼴 = 스킬 장착 · 보관 · 패시브 장착 · 패시브 보관 전부(2026-10-18) · 옛 꼴 = 장착 + 패시브 칸
+    ? L.setSlots(s, str(a.id), { battle: cells(a.battle, L.LOADOUT, true), store: cells(a.store, L.SKILL_STORE), cards: cells(a.cards, 3, true), pstore: cells(a.pstore || [], 3) })
+    : L.setSlots(s, str(a.id), cells(a.battle, L.LOADOUT, true), cardsArg(a.cards))),
   setLoadout: (s, a) => L.setLoadout(s, str(a.id), Array.isArray(a.battle) && a.battle.length === L.LOADOUT ? a.battle.map(v => (v == null ? null : str(v))) : bad()),
   upgrade: (s, a) => L.upgrade(s, str(a.id), str(a.stat, 8), int(a.n, 1, 50, 1)),
   resetPoints: (s, a) => L.resetPoints(s, str(a.id)),

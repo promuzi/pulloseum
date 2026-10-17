@@ -55,8 +55,8 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const st = s.storage; const q = makePlant(s, { key: 'aqua', form: 'weapon' }, makeRng(5), 0), Q0 = q.skills.battle[0]; q.cards = undefined;
   q.skills = { battle: [Q0, 'basic', 'guard', 'evade'], joker: null, forgot: [], learned: [Q0], v4: 1, mut: ['m_shot', null] }; st.push(q);
   syncTimers(s, 0);
-  ok(JSON.stringify(p.skills.battle.slice(0, 4)) === JSON.stringify([L0, 'basic', 'guard', 'evade']) && [...p.skills.battle.slice(4)].sort().join() === 'm_bite,m_hunt' && JSON.stringify(p.cards) === '[null,null]' && !('mut' in p.skills), '옛 변이 칸 → 전투 칸 여섯: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
-  ok(q.skills.battle.includes('m_shot') && JSON.stringify(q.cards) === '[null,null]', '보관고 식물도: ' + q.skills.battle);
+  ok(JSON.stringify(p.skills.battle.slice(0, 4)) === JSON.stringify([L0, 'basic', 'guard', 'evade']) && [...p.skills.battle.slice(4)].sort().join() === 'm_bite,m_hunt' && JSON.stringify(p.cards) === '[null,null,null]' && !('mut' in p.skills), '옛 변이 칸 → 전투 칸 여섯: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
+  ok(q.skills.battle.includes('m_shot') && JSON.stringify(q.cards) === '[null,null,null]', '보관고 식물도: ' + q.skills.battle);
   ok(s.cards.m_devour === 1 && s.cards.m_slash === 1 && s.cards.m_smash === 1 && s.cards.n_wall === 1, '나머지 옛 변이 기술 = 가방 카드 · 하던 사람 일반 카드 한 장: ' + bag(s));
   const once = bag(s) + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards); syncTimers(s, 0); syncTimers(s, 5);
   ok(bag(s) + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards) === once, '두 번 옮겨도 그대로');
@@ -64,7 +64,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const s2 = game(), r = plant(s2, 'thorn', { form: 'weapon' }), R0 = r.skills.battle[0];
   r.skills = { battle: [R0, 'basic', 'guard', 'evade'], joker: 'j_spikes', forgot: [], learned: [R0, 'j_spikes'], v4: 1 }; r.cards = ['m_slash', 'm_shot'];
   syncTimers(s2, 0);
-  ok(JSON.stringify(r.skills.battle) === JSON.stringify([R0, 'basic', 'guard', 'evade', 'm_slash', 'm_shot']) && JSON.stringify(r.skills.store) === '["j_spikes"]' && JSON.stringify(r.cards) === '[null,null]', 'v4 카드 칸 기술 카드 → 늘어난 두 칸(조커는 스킬 보관으로): ' + r.skills.battle + ' / ' + r.cards);
+  ok(JSON.stringify(r.skills.battle) === JSON.stringify([R0, 'basic', 'guard', 'evade', 'm_slash', 'm_shot']) && JSON.stringify(r.skills.store) === '["j_spikes","sun"]' && JSON.stringify(r.cards) === '[null,null,null]', 'v4 카드 칸 기술 카드 → 늘어난 두 칸(조커는 스킬 보관으로): ' + r.skills.battle + ' / ' + r.cards);
   // 기술 카드가 넘침(전투 칸 셋 · 다른 변이) → 가방
   const s3 = game(), w = plant(s3, 'thorn', { form: 'weapon' });
   w.skills.battle = ['m_slash', 'm_shot', 'm_smash', 'basic', 'm_bite', null]; w.cards = [null, null]; s3.cards = {};
@@ -264,6 +264,32 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   normIvs(fresh); ok(fresh.ivs.fruit <= 1 && stars(fresh) === 4, '새 식물은 그대로');
   const again = { ...old4, ivs: { ...old4.ivs, fruit: 0 } }; normIvs(again); ok(again.ivs.fruit === 0, '한 번만(ivFix)');
   const s = game(); ok(s.plants[0].ivFix === 1, '새로 핀 식물 = 표시 있음');
+}
+// ⑫ 패시브 장착 셋 + 변이 보관 셋(2026-10-18 사용자 "패시브 3개로 · 보관(변이 패시브만) 3칸") · 변이 기술 카드는 스킬 보관을 같이 씀(빼면 보관 · 보관에서 빼면 가방)
+{
+  const { slotLayout } = await import('../../v2/src/game/logic.js');
+  const s = game(), n = s.plants[0], m = plant(s, 'thorn', { form: 'toxic' });
+  ok(CARD_SLOTS === 3 && n.cards.length === 3 && m.cards.length === 3 && Array.isArray(n.pstore) && Array.isArray(m.pstore), '패시브 칸 셋 · 패시브 보관 배열');
+  const tp = formCards('toxic').filter(id => !isSkillCard(id)), tk = formCards('toxic').filter(isSkillCard);
+  s.cards[tp[1]] = 1; s.cards[tp[2]] = 1; s.cards[tk[3]] = 1; s.cards.n_wall = 2;
+  throws(() => setSlots(s, n.uid, { ...slotLayout(n), cards: [n.cards[0], tp[1], null] }), '일반 식물에 변이 패시브 = 막힘');
+  throws(() => setSlots(s, n.uid, { ...slotLayout(n), pstore: ['n_wall'] }), '일반 식물 패시브 보관 = 막힘');
+  throws(() => setSlots(s, m.uid, { ...slotLayout(m), pstore: ['n_wall'] }), '변이 식물 패시브 보관에 일반 패시브 = 막힘');
+  const b0 = s.cards[tp[1]];
+  setSlots(s, m.uid, { ...slotLayout(m), pstore: [tp[1]] });
+  ok(m.pstore[0] === tp[1] && (s.cards[tp[1]] || 0) === b0 - 1, '변이 패시브 보관에 넣음 = 가방에서 빠짐');
+  setSlots(s, m.uid, { ...slotLayout(m), pstore: [] });
+  ok(!m.pstore.length && s.cards[tp[1]] === b0, '패시브 보관에서 뺌 = 가방으로');
+  const L = slotLayout(m), ci = L.battle.findIndex(isSkillCard), card = L.battle[ci], bag0 = s.cards[card] || 0;
+  const L2 = { ...L, battle: [...L.battle], store: [...L.store, card] }; L2.battle[ci] = null;
+  setSlots(s, m.uid, L2);
+  ok(m.skills.store.includes(card) && (s.cards[card] || 0) === bag0, '변이 기술 카드 해제 = 스킬 보관으로(가방 그대로)');
+  setSlots(s, m.uid, { ...slotLayout(m), store: slotLayout(m).store.filter(x => x !== card) });
+  ok(!m.skills.store.includes(card) && s.cards[card] === bag0 + 1, '스킬 보관의 카드를 뺌 = 가방으로');
+  const L3 = slotLayout(m); setSlots(s, m.uid, { ...L3, store: [...L3.store, tk[3]] });
+  ok(m.skills.store.includes(tk[3]) && !s.cards[tk[3]], '가방 변이 기술 카드 → 스킬 보관(가방에서 빠짐)');
+  const old = plant(s, 'aqua'); old.cards = ['n_wall', null]; delete old.pstore; syncTimers(s, 0);
+  ok(old.cards.length === 3 && Array.isArray(old.pstore), '옛 식물 = 패시브 칸 셋 · 보관 배열');
 }
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

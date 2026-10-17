@@ -7,7 +7,7 @@
 //  수치는 시제품 — 밸런스는 나중에(사용자). 효과 계산 = battle/rules.js · status.js 의 u.pas(전투 유닛에 실린 패시브 합).
 import { SKILLS, FORMS, FORM_KEYS } from './catalog.js';
 
-export const CARD_SLOTS = 2;
+export const CARD_SLOTS = 3, PASS_STORE = 3;   // 패시브 장착 셋 · 패시브 보관 셋(변이 식물의 그 변이 패시브만 — 2026-10-18 사용자 "패시브 3개로 · 보관(변이 패시브만) 3칸", 전엔 장착 둘)
 export const NORMAL_LOOK = { name: '일반', col: '#5fb3d9', light: '#d8f2ff' };   // 일반 카드 색(변이 카드는 그 변이 색)
 // badge = 카드 앞면 오른쪽 위 수치 [글자, 아이콘], desc = 뒷면 설명 줄, rar = 보상 칸 테 색(1 초록 · 2 파랑 · 3 보라), w = 뽑힐 무게(일반 카드끼리)
 const N = (id, name, icon, rar, w, pas, badge, desc) => ({ id, name, icon, rar, w, form: null, kind: 'passive', pas, badge, desc });
