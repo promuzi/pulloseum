@@ -29,7 +29,7 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16 } }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'plus' } }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -420,7 +420,7 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     }
     if (process.env.ACCENT_LOG) console.log(`${key} 밝은 무늬 원본 점 ${nA}`);
   }
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, accShape: AC ? AC.shape || null : null, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
   const { cm, ct, am } = rasterize(src);
   // 줄기 재기(재발 방지): 흙 가운데 줄 바로 위에서 위로 6칸 넘게 이어진 열 덩어리 중 몸 무게중심에 가장 가까운 것 — STEM 에 없는데 1.5칸 넘게 비끼면 경고
   if (STEM[okey] == null) {
@@ -473,6 +473,7 @@ export function rasterize(src, warp = null, prev = null) {
   const { pm, pl, w: iw, h: ih, S, s, matL, eyeId, fill: F0 = 0.5, eyeDark = null, eyeVivid = false, matC = null, acc = null, accMin = 0 } = src, K = src.km || KM, rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
   const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(K), lv = new Float32Array(K), cnE = new Float32Array(K), lvE = new Float32Array(K);
   const cnA = new Float32Array(K), lvA = new Float32Array(K), accMark = acc ? new Uint8Array(W * H) : null;   // 작은 밝은 무늬(TUNE accent) 칸
+  const baseM = acc ? new Int8Array(W * H).fill(-1) : null, baseL = acc ? new Float32Array(W * H) : null, accL = acc ? new Float32Array(W * H) : null;   // 무늬로 바꾸기 전 칸 값(가시 모양 그릴 때 덩어리를 되돌림)
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
     const [dx, dy] = warp ? warp(X, Y) : [0, 0], u = X - dx - P.cx, v = Y - dy - P.cy;
     const x0 = S.cx + (u * rc + v * rs) / s, y0 = S.cy + (-u * rs + v * rc) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;   // 몸 축 바로 세우기(S.rot) 되돌려 원본 자리
@@ -514,12 +515,32 @@ export function rasterize(src, warp = null, prev = null) {
       for (let k = 0; k < K; k++) if (cnE[k] >= 0.15 * fgE && (dm < 0 || matL[k] < matL[dm])) dm = k;
       if (dm >= 0) { m = dm; l = Math.min(lvE[dm] / cnE[dm], eyeDark); } else l = Math.min(l, eyeDark);
     }
+    if (baseM) { baseM[Y * W + X] = m; baseL[Y * W + X] = l; }
     if (acc && !eyeCell && fgA > 0 && fgA >= accMin * fg) {   // 작은 밝은 무늬가 칸의 accMin 넘게 = 그 무늬 재질(밝은 단)
       let am = 0;
       for (let k = 1; k < K; k++) if (cnA[k] > cnA[am]) am = k;
-      m = am; l = Math.max(lvA[am] / cnA[am], LV - 2); accMark[Y * W + X] = 1;
+      m = am; l = Math.max(lvA[am] / cnA[am], LV - 2); accMark[Y * W + X] = 1; accL[Y * W + X] = fgA / fg;
     }
     cm[Y * W + X] = m; cl[Y * W + X] = l;
+  }
+  // 가시 모양(src.accShape = 'plus'): 무늬 덩어리(8이웃으로 이어진 칸)마다 칸 값을 되돌리고, 무늬가 가장 짙은 칸에 도트 가시 '+' — 가운데 = 가장 밝은 단, 팔 = 한 단 아래
+  if (accMark && src.accShape === 'plus') {
+    const seen = new Uint8Array(W * H), at2 = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? -1 : y * W + x), stars = [];
+    for (let i = 0; i < W * H; i++) {
+      if (!accMark[i] || seen[i]) continue;
+      const st = [i], comp = []; seen[i] = 1;
+      while (st.length) { const j = st.pop(); comp.push(j); const x = j % W, y = (j - x) / W; for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const k = at2(x + ox, y + oy); if (k >= 0 && accMark[k] && !seen[k]) { seen[k] = 1; st.push(k); } } }
+      let best = comp[0]; for (const j of comp) if (accL[j] > accL[best]) best = j;
+      stars.push({ c: best, m: cm[best], n: comp.length });
+      for (const j of comp) { cm[j] = baseM[j]; cl[j] = baseL[j]; accMark[j] = 0; }
+    }
+    for (const sr of stars) {
+      const x = sr.c % W, y = (sr.c - x) / W, put = (k, lv) => { if (k >= 0 && cm[k] >= 0) { cm[k] = sr.m; cl[k] = lv; accMark[k] = 1; } };
+      put(sr.c, LV - 1);
+      const arms = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (const [ax, ay] of arms) put(at2(x + ax, y + ay), LV - 3);   // 팔 = 두 단 아래(가운데만 밝게 — 가는 가시)
+      if (sr.n >= 5) { put(at2(x, y - 2), LV - 2); put(at2(x, y + 2), LV - 3); }   // 큰 가시 = 세로 팔 한 칸 더(위 밝게 · 아래 어둡게)
+    }
   }
   // ④ 정리: 외딴 재질 칸(8이웃 중 같은 재질 ≤ 1)은 이웃 다수로 — 단, 아주 어둡거나 밝은 재질(눈·반짝임)은 남김
   const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x;
