@@ -96,4 +96,8 @@ export const EYES = {
   toxi_cactus_teen: { box: [[530, 690, 70, 30], [778, 698, 62, 26]], cheek: [660, 740] },
   draco_fruit_young: { box: [[641, 712, 46, 22], [882, 708, 28, 18]], cheek: [760, 740] },
   draco_fruit_teen: { box: [[645, 723, 46, 22], [870, 720, 30, 20]], cheek: [760, 760] },
+  ember_cap_young: { box: [[540, 805, 50, 22], [735, 820, 48, 20]], cheek: [640, 780] },
+  ember_cap_teen: { box: [[560, 772, 48, 22], [730, 778, 44, 20]], cheek: [645, 750] },
+  drake_cactus_young: { box: [[755, 252, 43, 30]], cheek: [740, 300] },   // 옆모습 · 보이는 눈 하나
+  drake_cactus_teen: { box: [[741, 285, 29, 20]], cheek: [730, 320] },
 };

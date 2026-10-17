@@ -29,7 +29,7 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, fit: 1.05 }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16 } }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -402,8 +402,26 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     const [X, Y] = toOut(ex, ey), RX = rx * s + 1.5, RY = ry * s + 1.5;
     for (let y = Math.floor(Y - RY); y <= Y + RY; y++) for (let x = Math.floor(X - RX); x <= X + RX; x++) if (x >= 0 && y >= 0 && x < W && y < H && ((x + 0.5 - X) / RX) ** 2 + ((y + 0.5 - Y) / RY) ** 2 <= 1) protect[y * W + x] = 1;
   }
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
-  const { cm, ct } = rasterize(src);
+  // 작은 밝은 무늬(TUNE accent): 밝기 · 채도 · 색상 조건에 맞고 둘레(판 칸 2.5개 폭) 평균 밝기가 ctx 아래인 원본 점
+  const AC = (TUNE[key] || {}).accent;
+  let accPx = null;
+  if (AC) {
+    const iw = im.w, ih = im.h, sum = new Float64Array((iw + 1) * (ih + 1)), r = Math.max(4, Math.round(1.25 / s));
+    for (let y = 0; y < ih; y++) { let row = 0; for (let x = 0; x < iw; x++) { const i = y * iw + x; row += isBg[i] ? 1 : lab[i * 3]; sum[(y + 1) * (iw + 1) + x + 1] = sum[y * (iw + 1) + x + 1] + row; } }
+    const box = (x0, y0, x1, y1) => sum[y1 * (iw + 1) + x1] - sum[y0 * (iw + 1) + x1] - sum[y1 * (iw + 1) + x0] + sum[y0 * (iw + 1) + x0];
+    accPx = new Uint8Array(n);
+    let nA = 0;
+    for (let i = 0; i < n; i++) {
+      if (isBg[i]) continue;
+      const L = lab[i * 3], A = lab[i * 3 + 1], B = lab[i * 3 + 2], C = Math.hypot(A, B), h = hueOf(A, B);
+      if (L < (AC.lmin ?? 0.76) || C < (AC.cmin ?? 0) || C > (AC.cmax ?? 9) || (AC.hue && !(h >= AC.hue[0] && h <= AC.hue[1]))) continue;
+      const x = i % iw, y = (i - x) / iw, x0 = Math.max(0, x - r), y0 = Math.max(0, y - r), x1 = Math.min(iw, x + r + 1), y1 = Math.min(ih, y + r + 1);
+      if (box(x0, y0, x1, y1) / ((x1 - x0) * (y1 - y0)) < (AC.ctx ?? 0.62)) { accPx[i] = 1; nA++; }
+    }
+    if (process.env.ACCENT_LOG) console.log(`${key} 밝은 무늬 원본 점 ${nA}`);
+  }
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
+  const { cm, ct, am } = rasterize(src);
   // 줄기 재기(재발 방지): 흙 가운데 줄 바로 위에서 위로 6칸 넘게 이어진 열 덩어리 중 몸 무게중심에 가장 가까운 것 — STEM 에 없는데 1.5칸 넘게 비끼면 경고
   if (STEM[okey] == null) {
     const sy = Math.floor(P.cy) - 1, run = x => { let n = 0; for (let y = sy; y >= 0 && cm[y * W + x] >= 0; y--) n++; return n; };
@@ -443,7 +461,7 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     for (let q = 1; q < K; q++) if (mc[q] > mc[m]) m = q;
     if (matL[cm[k]] < 0.75 || ct[k] < LV - 1) { cm[k] = m; ct[k] = LV - 1; }
   }
-  return { cm, ct, palLab, matL, key, eyes, eyeC, eyeGrid, eyeCheek, s, src };
+  return { cm, ct, am, palLab, matL, key, eyes, eyeC, eyeGrid, eyeCheek, s, src };
 }
 
 // ③ 다수 재질로 줄이기 + ④ 정리 — 원본(재질·단이 정해진 큰 그림)을 판 칸으로.
@@ -452,19 +470,22 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
 // prev = 바로 앞 장 {cm, ct, warp}: 같은 원본 자리가 앞 장에 놓였던 칸과 비교해, 차이가 작으면 앞 장 값을 그대로 둔다(이력 유지)
 //   — 매 장 다시 줄일 때 생기는 '끓음'(테두리·명암 칸이 장마다 뒤바뀌며 자글거림)을 막고, 확실히 움직인 칸만 바뀌게
 export function rasterize(src, warp = null, prev = null) {
-  const { pm, pl, w: iw, h: ih, S, s, matL, eyeId, fill: F0 = 0.5, eyeDark = null, eyeVivid = false, matC = null } = src, K = src.km || KM, rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
+  const { pm, pl, w: iw, h: ih, S, s, matL, eyeId, fill: F0 = 0.5, eyeDark = null, eyeVivid = false, matC = null, acc = null, accMin = 0 } = src, K = src.km || KM, rc = Math.cos(S.rot || 0), rs = Math.sin(S.rot || 0);
   const cm = new Int8Array(W * H).fill(-1), cl = new Float32Array(W * H), cnt = new Float32Array(K), lv = new Float32Array(K), cnE = new Float32Array(K), lvE = new Float32Array(K);
+  const cnA = new Float32Array(K), lvA = new Float32Array(K), accMark = acc ? new Uint8Array(W * H) : null;   // 작은 밝은 무늬(TUNE accent) 칸
   for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
     const [dx, dy] = warp ? warp(X, Y) : [0, 0], u = X - dx - P.cx, v = Y - dy - P.cy;
     const x0 = S.cx + (u * rc + v * rs) / s, y0 = S.cy + (-u * rs + v * rc) / s, x1 = x0 + 1 / s, y1 = y0 + 1 / s;   // 몸 축 바로 세우기(S.rot) 되돌려 원본 자리
     cnt.fill(0); lv.fill(0); cnE.fill(0); lvE.fill(0);
-    let tot = 0, fg = 0, fgE = 0;
+    if (acc) { cnA.fill(0); lvA.fill(0); }
+    let tot = 0, fg = 0, fgE = 0, fgA = 0;
     for (let y = Math.max(0, Math.floor(y0)); y < Math.min(ih, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(iw, Math.ceil(x1)); x++) {
       const i = y * iw + x;
       tot++;
       if (pm[i] < 0) continue;
       fg++;
       if (eyeId && eyeId[i] >= 0) { fgE++; cnE[pm[i]]++; lvE[pm[i]] += pl[i]; } else { cnt[pm[i]]++; lv[pm[i]] += pl[i]; }
+      if (acc && acc[i]) { fgA++; cnA[pm[i]]++; lvA[pm[i]] += pl[i]; }
     }
     // 눈 칸(블록의 30% 이상이 눈 타원): 눈 색끼리만 다수결, 아니면 눈 아닌 칸끼리만 — 속눈썹 그늘이 살결로, 살결이 눈으로 번지지 않게.
     // (반짝임은 convert의 '가장 밝은 점' 한 칸으로만 살린다 — 밝은 재질을 고르는 규칙은 밝은 주황 눈동자를 지워 없앰, 블레이즈블룸 2026-10-15)
@@ -493,6 +514,11 @@ export function rasterize(src, warp = null, prev = null) {
       for (let k = 0; k < K; k++) if (cnE[k] >= 0.15 * fgE && (dm < 0 || matL[k] < matL[dm])) dm = k;
       if (dm >= 0) { m = dm; l = Math.min(lvE[dm] / cnE[dm], eyeDark); } else l = Math.min(l, eyeDark);
     }
+    if (acc && !eyeCell && fgA > 0 && fgA >= accMin * fg) {   // 작은 밝은 무늬가 칸의 accMin 넘게 = 그 무늬 재질(밝은 단)
+      let am = 0;
+      for (let k = 1; k < K; k++) if (cnA[k] > cnA[am]) am = k;
+      m = am; l = Math.max(lvA[am] / cnA[am], LV - 2); accMark[Y * W + X] = 1;
+    }
     cm[Y * W + X] = m; cl[Y * W + X] = l;
   }
   // ④ 정리: 외딴 재질 칸(8이웃 중 같은 재질 ≤ 1)은 이웃 다수로 — 단, 아주 어둡거나 밝은 재질(눈·반짝임)은 남김
@@ -500,7 +526,7 @@ export function rasterize(src, warp = null, prev = null) {
   for (let pass = 0; pass < 2; pass++) {
     const nm = cm.slice(), nl = cl.slice();
     for (let i = 0; i < W * H; i++) {
-      if (cm[i] < 0 || matL[cm[i]] < 0.3 || matL[cm[i]] > 0.9) continue;
+      if (cm[i] < 0 || matL[cm[i]] < 0.3 || matL[cm[i]] > 0.9 || (accMark && accMark[i])) continue;
       const x = i % W, y = (i - x) / W, nb = [];
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (ox || oy) { const j = at(x + ox, y + oy); if (j >= 0 && cm[j] >= 0) nb.push(j); }
       if (nb.filter(j => cm[j] === cm[i]).length > 1 || nb.length < 3) continue;
@@ -519,7 +545,7 @@ export function rasterize(src, warp = null, prev = null) {
   for (let pass = 0; pass < 2; pass++) {
     const nx = ct2.slice();
     for (let i = 0; i < W * H; i++) {
-      if (cm[i] < 0 || matL[cm[i]] < 0.3) continue;
+      if (cm[i] < 0 || matL[cm[i]] < 0.3 || (accMark && accMark[i])) continue;
       const x = i % W, y = (i - x) / W, cnt = new Int8Array(LV);
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (ox || oy) { const j = at(x + ox, y + oy); if (j >= 0 && cm[j] === cm[i]) cnt[ct2[j]]++; }
       if (cnt[ct2[i]] > 1) continue;
@@ -538,7 +564,7 @@ export function rasterize(src, warp = null, prev = null) {
       const st = [i], comp = [], m = cm[i];
       seen[i] = 1;
       while (st.length && comp.length <= 4) { const j = st.pop(), x = j % W; comp.push(j); for (const k of [x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, j - W, j + W]) if (k >= 0 && k < W * H && !seen[k] && cm[k] === m) { seen[k] = 1; st.push(k); } }
-      if (comp.length > 4 || (prot && comp.some(j => prot[j]))) continue;
+      if (comp.length > 4 || (prot && comp.some(j => prot[j])) || (accMark && comp.some(j => accMark[j]))) continue;
       const nbm = new Map();
       let edge = false;   // 배경에 닿음(실루엣 가장자리 — 가시 같은 작은 돌기는 남김)
       for (const j of comp) { const x = j % W; for (const k of [x > 0 ? j - 1 : -1, x < W - 1 ? j + 1 : -1, j - W, j + W]) { if (k < 0 || k >= W * H || cm[k] < 0) { edge = true; continue; } if (cm[k] !== m) nbm.set(cm[k], (nbm.get(cm[k]) || 0) + 1); } }
@@ -549,7 +575,7 @@ export function rasterize(src, warp = null, prev = null) {
     }
   }
   despeck(cm);
-  return { cm, ct: ct2 };
+  return { cm, ct: ct2, am: accMark };
 }
 // 움직임 장마다 지도 만들기(fields = 장마다 {field}) — 두 가지를 섞는다:
 //  ① 반올림한 이동이 둘레와 같은 칸 = 쉬는 그림을 정수 칸만큼 통째로 옮긴 값(무늬가 한 덩어리로 움직여 자글거리지 않음 — 도트 작가가 부위를 1칸씩 옮기는 방식)
@@ -562,7 +588,7 @@ export function mixedMaps(cv, fields, isF = null) {
     const { field } = fields[f], hr = rasterize(cv.src, field, prev);
     prev = { ...hr, warp: field };
     if (!pass) continue;
-    const R = new Int8Array(W * H * 2), cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H);
+    const R = new Int8Array(W * H * 2), cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H), am = cv.am ? new Uint8Array(W * H) : null;
     for (let i = 0; i < W * H; i++) { const [dx, dy] = field(i % W, Math.floor(i / W)); R[i * 2] = Math.round(dx); R[i * 2 + 1] = Math.round(dy); }
     for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
       const i = Y * W + X, rx = R[i * 2], ry = R[i * 2 + 1];
@@ -573,9 +599,9 @@ export function mixedMaps(cv, fields, isF = null) {
       }
       const sx = X - rx, sy = Y - ry, si = sx >= 0 && sy >= 0 && sx < W && sy < H ? sy * W + sx : -1;
       const fire = isF && ((si >= 0 && cv.cm[si] >= 0 && isF[cv.cm[si]]) || (hr.cm[i] >= 0 && isF[hr.cm[i]]));
-      if (seam || fire || si < 0) { cm[i] = hr.cm[i]; ct[i] = hr.ct[i]; } else { cm[i] = cv.cm[si]; ct[i] = cv.ct[si]; }
+      if (seam || fire || si < 0) { cm[i] = hr.cm[i]; ct[i] = hr.ct[i]; if (am && hr.am) am[i] = hr.am[i]; } else { cm[i] = cv.cm[si]; ct[i] = cv.ct[si]; if (am) am[i] = cv.am[si]; }
     }
-    out[f] = { cm, ct };
+    out[f] = { cm, ct, am };
   }
   return out;
 }
@@ -749,11 +775,12 @@ export function paint(cv, { warp = null, maps = null, tone = null, eye = 'open',
 }
 function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } = {}) {
   const { palLab, matL } = cv, out = new Img(W, H);
-  const cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H), src = new Int32Array(W * H).fill(-1);
+  const cm = new Int8Array(W * H).fill(-1), ct = new Int8Array(W * H), src = new Int32Array(W * H).fill(-1), am = (maps ? maps.am : cv.am) ? new Uint8Array(W * H) : null;   // am = 밝은 무늬 칸(TUNE accent)
   for (let i = 0; i < W * H; i++) {
     const x = i % W, y = (i - x) / W;
     if (maps) {
       cm[i] = maps.cm[i];
+      if (am && maps.am) am[i] = maps.am[i];
       if (cm[i] < 0) continue;
       ct[i] = tone ? tone(cm[i], maps.ct[i], x, y) : maps.ct[i];
       src[i] = srcOf ? srcOf(x, y) : i;
@@ -763,6 +790,7 @@ function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } =
     if (sx < 0 || sx >= W || sy < 0 || sy >= H) continue;
     const j = sy * W + sx;
     cm[i] = cv.cm[j]; ct[i] = tone ? tone(cv.cm[j], cv.ct[j], sx, sy) : cv.ct[j]; src[i] = cv.cm[j] >= 0 ? j : -1;
+    if (am && cv.am) am[i] = cv.am[j];
   }
   out.src = src;
   const col = (m, l) => { const [L, A, B] = palLab[m * LV + l]; return fromOklab(L, A, B); };
@@ -777,7 +805,7 @@ function paintBody(cv, { warp = null, maps = null, tone = null, srcOf = null } =
     const empty = nb.map(j => j < 0 || cm[j] < 0);
     let c = col(m, Math.max(0, Math.min(LV - 1, ct[i])));
     if (empty.some(Boolean)) c = empty[2] && y < P.cy ? INK : (empty[2] || empty[3]) ? dark(m, 0.16, ct[i]) : dark(m, 0.06, ct[i]);
-    else if (nb.some(j => cm[j] !== m && matL[cm[j]] - matL[m] > 0.15)) c = dark(m, 0.08, ct[i]);   // 더 밝은 재질과 맞닿은 어두운 쪽 = 경계선
+    else if (nb.some(j => cm[j] !== m && matL[cm[j]] - matL[m] > 0.15 && !(am && am[j]))) c = dark(m, 0.08, ct[i]);   // 더 밝은 재질과 맞닿은 어두운 쪽 = 경계선(밝은 무늬 칸 둘레는 빼서 가시가 검은 테 없이 박힘)
     out.set(x, y, c);
   }
   return out;
