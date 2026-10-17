@@ -118,17 +118,17 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
   g.text(`${Math.ceil(bar.main)}/${u.max}`, right, yy, { font: 'bold', color: S && age < S.hold ? '#ffd090' : P.main, align: 'right' });
   yy += 13;
   sunDisc(g, tx + 6, yy + 5, 3, SUN.ok);   // MP = 햇빛 에너지(2026-10-17 사용자 "상태바의 mp 부분을 해 색으로 해주고 햇빛 에너지 같은 디자인") — 이름 대신 해
-  sunPips(g, bx, yy + 2, en, u.energyMax, 7, t);
-  g.text(`${en}/${u.energyMax}`, right, yy, { font: 'bold', color: '#ffd25a', align: 'right' });
+  sunPips(g, bx, yy + 2, en, u.energyMax, Math.max(4, Math.min(7, Math.floor((right - g.textW(`${u.energyMax}/${u.energyMax}`, 'bold') - 5 - bx) / Math.max(1, u.energyMax)))), t);   // 칸 사이 = 그릇이 커져도 한 줄에(최대 12칸)
+  g.text(`${Math.round(en * 2) / 2}/${u.energyMax}`, right, yy, { font: 'bold', color: '#ffd25a', align: 'right' });
   return h;
 }
 // 햇빛 에너지 칸: 찬 칸 = 금빛(위 밝게 · 아래 주황) + 빛 한 줄기가 찬 칸을 따라 흐름(2.4초마다), 빈 칸 = 짙은 호박색
 function sunPips(g, x, y, cur, max, gap, t) {
   const sweep = ((t || 0) % 2400) / 2400 * (cur + 5) - 2;
   for (let i = 0; i < max; i++) {
-    const on = i < cur, px = x + i * gap, cw = gap - 1;
+    const on = i + 1 <= cur, half = !on && i + 0.5 <= cur, px = x + i * gap, cw = gap - 1;   // 반칸(햇빛 회복 강화 — 2026-10-18) = 칸 왼쪽 반만 금빛
     g.rect(px, y, cw, 7, '#2a1806');
-    if (!on) { g.rect(px + 1, y + 1, cw - 2, 5, '#4a3412'); continue; }
+    if (!on) { g.rect(px + 1, y + 1, cw - 2, 5, '#4a3412'); if (half) { const hw = Math.max(1, Math.floor((cw - 2) / 2)); g.rect(px + 1, y + 1, hw, 5, '#f0901c'); g.rect(px + 1, y + 1, hw, 3, '#ffc83c'); } continue; }
     g.rect(px + 1, y + 1, cw - 2, 5, '#f0901c'); g.rect(px + 1, y + 1, cw - 2, 3, '#ffc83c'); g.rect(px + 1, y + 1, cw - 2, 1, '#ffe98a'); g.px(px + 1, y + 1, '#fffbe0');
     const d = Math.abs(i - sweep); if (d < 1.3) g.alpha(0.8 * (1 - d / 1.3), () => g.rect(px + 1, y + 1, cw - 2, 5, '#fffbe6'));
   }
@@ -365,6 +365,7 @@ export const battle = {
       else if (e.t === 'stance') out.push({ kind: 'stance', ms: 950, who: e.who, skill: sk(e.who), stance: e.kind, active: e.active, msg: `${nm(e.who)}의 ${sk(e.who).name}!` + (e.active ? '' : ' 하지만 먼저라 막을 게 없다'), tone: 'note' });
       else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.id] || ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
+      else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!`, tone: 'hit' });
       else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff; out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
@@ -388,7 +389,8 @@ export const battle = {
     const v = this.v, B = this.B;
     if (!st) return;
     // 글자(가운데 전광판 없음): 기술 이름 = 쓰는 식물 위 리본, 나머지 = 머리 위 한두 낱말(st.msg 문장은 목록·기록용으로만 남김)
-    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms); sfx(st.kind === 'stance' ? 'stance' : 'swing'); }
+    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms); sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing'); }
+    if (st.kind === 'sun') { v.en[st.who] = Math.min(v.view[st.who].energyMax || 8, (v.en[st.who] || 0) + (st.ev.gain || 0)); if (st.ev.gain) this.pop(st.who, `햇빛 +${st.ev.gain}`, null, t, false, -16, '#ffd25a'); }
     if (st.kind === 'first') sfx('first');
     if (st.kind === 'reveal') { sfx('select'); if (st.theirs) sfx('flip', { at: RV_FLIP0 / 1000 }); if (st.first) sfx('first', { at: RV_BADGE / 1000 }); }
     if (st.kind === 'fxnote') sfx('resist');
@@ -510,7 +512,7 @@ export const battle = {
     if (e.tier !== 'hit') this.pop(st.to, label, tone, t, false, e.tier === 'crit' ? -36 : -16);   // 보통 맞힘(정타)은 글자 없이 숫자만
     if (great) this.pop(st.to, '효과 굉장!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);
     else if (e.tier !== 'miss' && e.mult > 1.01) this.pop(st.to, '상성!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);   // 변이 상성(2026-10-17)
-    else if (e.tier !== 'miss' && e.mult && e.mult < 0.99) this.pop(st.to, '안 듦', 'sub', t, false, e.tier === 'crit' ? -52 : -32);   // 무기 안 듦(×0.8) — 다 곱한 값이 1보다 작을 때만('효과 굉장!'과 같이 뜨지 않게 · 2026-10-17)
+    else if (e.tier !== 'miss' && e.mult && e.mult < 0.99) this.pop(st.to, '효과가 미미', 'sub', t, false, e.tier === 'crit' ? -52 : -32);   // 무기 상성 ×0.8(2026-10-18 사용자 "'안 듦' 대신 '효과가 미미'") — 다 곱한 값이 1보다 작을 때만('효과 굉장!'과 같이 뜨지 않게 · 2026-10-17)
     if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
     if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
   },

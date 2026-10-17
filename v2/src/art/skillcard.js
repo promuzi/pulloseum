@@ -44,7 +44,8 @@ export async function loadSkillArt(base = '../assets/v2/skills/') {
   SKILLART_NAMES.forEach((n, i) => { if (got[i]) SKILLART[n] = got[i]; });
   return SKILLART_NAMES.filter(n => !SKILLART[n]);
 }
-const artOf = sk => SKILLART[sk.id] || SKILLART[NAME_ID[sk.name]] || null;
+const ART_ALIAS = { sun: 'g_photo' };   // 기본기 광합성(2026-10-18) = 옛 광합성 그림
+const artOf = sk => SKILLART[sk.id] || SKILLART[ART_ALIAS[sk.id]] || SKILLART[NAME_ID[sk.name]] || null;
 
 // 그림 창의 큰 아이콘: 거는 효과 > 내 버프 > (공격 아닌) 분류 > 속성 > 칼
 function artIcon(sk) {

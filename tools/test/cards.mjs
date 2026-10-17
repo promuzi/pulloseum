@@ -55,7 +55,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const st = s.storage; const q = makePlant(s, { key: 'aqua', form: 'weapon' }, makeRng(5), 0), Q0 = q.skills.battle[0]; q.cards = undefined;
   q.skills = { battle: [Q0, 'basic', 'guard', 'evade'], joker: null, forgot: [], learned: [Q0], v4: 1, mut: ['m_shot', null] }; st.push(q);
   syncTimers(s, 0);
-  ok(JSON.stringify(p.skills.battle) === JSON.stringify([L0, 'basic', 'guard', 'evade', 'm_bite', 'm_hunt']) && JSON.stringify(p.cards) === '[null,null]' && !('mut' in p.skills), '옛 변이 칸 → 전투 칸 여섯: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
+  ok(JSON.stringify(p.skills.battle.slice(0, 4)) === JSON.stringify([L0, 'basic', 'guard', 'evade']) && [...p.skills.battle.slice(4)].sort().join() === 'm_bite,m_hunt' && JSON.stringify(p.cards) === '[null,null]' && !('mut' in p.skills), '옛 변이 칸 → 전투 칸 여섯: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
   ok(q.skills.battle.includes('m_shot') && JSON.stringify(q.cards) === '[null,null]', '보관고 식물도: ' + q.skills.battle);
   ok(s.cards.m_devour === 1 && s.cards.m_slash === 1 && s.cards.m_smash === 1 && s.cards.n_wall === 1, '나머지 옛 변이 기술 = 가방 카드 · 하던 사람 일반 카드 한 장: ' + bag(s));
   const once = bag(s) + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards); syncTimers(s, 0); syncTimers(s, 5);

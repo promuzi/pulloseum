@@ -4,7 +4,7 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
-  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P } from './catalog.js';
+  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps } from './catalog.js';
 import { CARDS, CARD_SLOTS, cardFits, rollCard, formCards, isSkillCard } from './cards.js';
 
 export class Err extends Error {}
@@ -70,7 +70,7 @@ export function makePlant(s, seed, rng, now) {
 // 기술 칸(2026-10-16 사용자 "총 전투에 들고가는 스킬은 4개이며, 기본 스킬은 조커처럼 항상 빼고 넣고 가능(버릴 수 없음)" · "기본스킬 3개도 바꿀 수 있게"
 //  → 2026-10-17 "스킬 4개인 거 재미없어 — 6개 들고 갈 수 있게 · 변이는 6개 중 2개를 변이 스킬 카드로"):
 //  battle = 전투에 들고 가는 여섯(배운 기술 · 기본기 · 변이 식물은 그 변이 기술 카드 MUT_MAX 장까지) · joker = 배운 기술 하나 보관 · 기본기 셋은 늘 앎(지울 수 없음 — 전투 칸에 없으면 보관에 있는 셈)
-export const BASIC_IDS = ['basic', 'guard', 'evade'], LOADOUT = 6, MUT_MAX = 2;
+export const BASIC_IDS = ['basic', 'guard', 'evade', 'sun'], LOADOUT = 6, MUT_MAX = 2;   // sun = 광합성(햇빛 +2 — 2026-10-18 사용자 "기본으로 주는 것 중에 햇빛 채우는 카드도")
 const isBasic = id => BASIC_IDS.includes(id);
 function fillBasics(p) { const b = p.skills.battle, left = BASIC_IDS.filter(id => !b.includes(id)); for (let i = 0; i < b.length; i++) if (!b[i] && left.length) b[i] = left.shift(); }
 // 옛 세이브 맞추기(한 번씩 — 그 뒤 비운 칸은 그대로):
@@ -105,7 +105,7 @@ function learnNow(p, id) {
   const b = p.skills.battle, i = b.indexOf(null);
   if (!p.skills.learned.includes(id)) p.skills.learned.push(id);
   if (i >= 0) { b[i] = id; return 'battle'; }
-  const bi = ['evade', 'guard', 'basic'].map(x => b.indexOf(x)).find(k => k >= 0);
+  const bi = ['evade', 'sun', 'guard', 'basic'].map(x => b.indexOf(x)).find(k => k >= 0);
   if (bi != null && b.filter(x => x && !isBasic(x)).length < LOADOUT - 1) { b[bi] = id; return 'battle'; }   // 기본기를 하나는 남김(배운 기술만 넷이면 보관으로)
   if (!p.skills.joker) { p.skills.joker = id; return 'joker'; }
   p.pend.push(id); return 'pend';
@@ -145,7 +145,7 @@ export function normCards(s) {
       p.cards.forEach((id, i) => {
         if (!isSkillCard(id)) return;
         p.cards[i] = null;
-        const at = S.battle.indexOf(null) >= 0 ? S.battle.indexOf(null) : ['evade', 'guard', 'basic'].map(x => S.battle.indexOf(x)).find(k => k >= 0) ?? -1;
+        const at = S.battle.indexOf(null) >= 0 ? S.battle.indexOf(null) : ['sun', 'evade', 'guard', 'basic'].map(x => S.battle.indexOf(x)).find(k => k >= 0) ?? -1;   // 햇빛 모으기(2026-10-18 새 기본기) 자리부터 — 옛 세이브 칸 배치가 그대로
         if (CARDS[id].form === p.form && n < MUT_MAX && at >= 0 && !S.battle.includes(id)) { S.battle[at] = id; n++; }
         else addCard(s, id);
       });
@@ -188,6 +188,7 @@ export function plantStats(p) {
   return {
     hp: Math.round(b.hp * m * iv('hp')) + up('hp'), atk: Math.round(b.atk * m * iv('atk')) + up('atk'), def: Math.round(b.def * m * iv('def')) + up('def'),
     spd: Math.round(b.spd * iv('spd')) + up('spd'), acc: b.acc + up('acc'), crit: b.crit + up('crit'),
+    sunMax: 8 + sunSteps(p, 'sunMax'), sunRegen: SUN_REGEN[sunSteps(p, 'sunRegen')],   // 햇빛 그릇 · 회복(턴마다 칸 — 2026-10-18)
   };
 }
 export const stars = p => starsOf(p.ivs);
@@ -271,6 +272,16 @@ export function swapJoker(s, id, slot) {
 // 강화: 레벨업 포인트 + 돈(상한 없음 — 몰빵 가능), 리셋 = 돈
 export function upgrade(s, id, stat, n = 1) {
   const p = getPlant(s, id);
+  if (SUN_UP[stat]) {   // 햇빛 그릇 · 회복: n = 단 수(한 단 = 포인트 여럿)
+    const U = SUN_UP[stat], st0 = sunSteps(p, stat), pts = U.pts * n;
+    need(st0 + n <= U.max, `${U.name}은 ${U.max}단까지예요`);
+    need(p.pts >= pts, `강화 포인트가 ${pts}개 필요해요 — 물·비료로 레벨을 올려요`);
+    let cost = 0;
+    for (let i = 0; i < pts; i++) cost += upCost(p.spent + i);
+    need(s.wallet.credits >= cost, `돈이 모자라요(${cost})`);
+    s.wallet.credits -= cost; p.pts -= pts; p.spent += pts; p.up[stat] = (p.up[stat] || 0) + pts; p.invest += cost;
+    return { cost, steps: st0 + n };
+  }
   need(UP_GAIN[stat], '모르는 능력치');
   need(p.pts >= n && n >= 1, '강화 포인트가 모자라요 — 물·비료로 레벨을 올려요');
   let cost = 0;

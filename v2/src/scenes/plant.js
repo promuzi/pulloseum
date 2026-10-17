@@ -12,7 +12,7 @@ import { cardSkillOf } from '../game/fight.js';
 import { fxChip, BUFF_LOOK } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
 import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
-import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS } from '../game/catalog.js';
+import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, evolveLeague } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
@@ -393,6 +393,19 @@ export const plant = {
       this.btn(app, live, 'up_' + k, W - 98, y + 1, 84, 26, `+1 · ${cost}`, { style: 'gold', font: 'label', disabled: !p.pts || s.wallet.credits < cost }, () => app.act('upgrade', { id: p.uid, stat: k, n: 1 }));
       y += 33;
     });
+    // 햇빛 그릇 · 회복(2026-10-18): 한 단 = 포인트 여럿 · 단추 = 한 단 올림(포인트 · 돈)
+    for (const k of ['sunMax', 'sunRegen']) {
+      const U = SUN_UP[k], st0 = sunSteps(p, k), full = st0 >= U.max;
+      let c = 0; for (let i = 0; i < U.pts; i++) c += upCost(p.spent + i);
+      g.rect(14, y - 3, W - 28, 1, '#244e7e');
+      g.img(icon('sun'), 16, y + 8);
+      g.text(U.name, 32, y + 2, { font: 'label', color: P.main });
+      g.text(`${U.pts}포인트씩` + (st0 ? ` · ${st0}단` : ''), 32, y + 17, { color: st0 ? '#8ccfff' : P.dim });
+      const val = k === 'sunMax' ? `${8 + st0}칸` : `턴마다 ${SUN_REGEN[st0]}칸`;
+      g.text(val, W - 106, y + 6, { font: k === 'sunMax' ? 'value' : 'label', color: P.main, align: 'right' });
+      this.btn(app, live, 'up_' + k, W - 98, y + 1, 84, 26, full ? '최대' : `+1단 · ${c}`, { style: 'gold', font: 'label', disabled: full || p.pts < U.pts || s.wallet.credits < c }, () => app.act('upgrade', { id: p.uid, stat: k, n: 1 }));
+      y += 33;
+    }
     return y + 22;
   },
 

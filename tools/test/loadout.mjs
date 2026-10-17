@@ -37,7 +37,7 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const p = game().plants[0];
   ok(p.skills.v6 === 1 && p.skills.battle.length === 6, '새 식물 = 전투 칸 여섯');
   const inBattle = p.skills.battle.filter(Boolean);
-  ok(inBattle.length === 5 && BASIC_IDS.every(id => p.skills.battle.includes(id)) && p.skills.battle[5] === null, '새 식물 = 배운 기술 둘 + 기본기 셋 + 빈 칸: ' + p.skills.battle);
+  ok(inBattle.length === 6 && BASIC_IDS.every(id => p.skills.battle.includes(id)), '새 식물 = 배운 기술 둘 + 기본기 넷(햇빛 모으기 포함 — 2026-10-18): ' + p.skills.battle);
 }
 // ③ setLoadout
 {
@@ -97,7 +97,7 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const s = game(), rng = makeRng(9);
   const p = makePlant(s, { key: 'cactus_fire', form: 'weapon' }, rng, 0); s.plants.push(p);
   const sk0 = p.skills.battle.find(isSkillCard);
-  ok(p.form === 'weapon' && p.cards[0] && !isSkillCard(p.cards[0]) && p.cards[1] === null && sk0 && p.skills.battle[5] === sk0, '변이 종자 → 변이 식물 · 전투 칸 여섯째 = 그 변이 기술 카드 · 카드 칸 = 패시브: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
+  ok(p.form === 'weapon' && p.cards[0] && !isSkillCard(p.cards[0]) && p.cards[1] === null && sk0 && p.skills.battle.includes(sk0), '변이 종자 → 변이 식물 · 전투 칸에 그 변이 기술 카드 · 카드 칸 = 패시브: ' + JSON.stringify(p.skills.battle) + JSON.stringify(p.cards));
   const kit = kitOfPlant(p);
   ok(kit.length === 6 && kit.filter(k => k.mut).length === 1 && kit.every(k => !k.extra), '변이 식물 손패 = 여섯(기술 카드도 그 자리): ' + kit.map(k => k.id));
   s.cards = { m_bite: 1, m_slash: 2, m_smash: 1 };

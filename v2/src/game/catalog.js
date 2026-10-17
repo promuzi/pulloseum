@@ -79,6 +79,12 @@ export const IV_MAX = 10;
 export const UP_GAIN = { hp: 5, atk: 1, def: 1, spd: 1, acc: 1, crit: 1 };   // 강화 포인트 1당
 export const STAT_NAME = { hp: '체력', atk: '공격', def: '방어', spd: '기동', acc: '적중', crit: '치명' };
 export const upCost = spent => 8 + 4 * Math.floor(spent / 4);  // 포인트 쓸 때 돈(너무 비싸지 않게)
+// 햇빛 강화(2026-10-18 사용자 "햇빛의 경우 스탯 강화해서 할 수 있게 — 최대 용량과 회복량, 몇 칸씩?"): 칸 단위라 한 단에 포인트 여럿 · p.up 에는 쓴 포인트(다른 능력치와 같게 — 초기화도 같이)
+//  햇빛 그릇 = 최대 8칸 → 단마다 +1칸(최대 4단 = 12칸, 3포인트씩) · 햇빛 회복 = 턴마다 1칸 → 단마다 반칸 더(사용자 "반칸씩" — 1.5 · 2 · 2.5칸, 4포인트씩)
+//  햇빛은 반칸(0.5) 단위 — 기술 비용은 정수 그대로(가진 햇빛 ≥ 비용이면 씀)
+export const SUN_UP = { sunMax: { name: '햇빛 그릇', pts: 3, max: 4 }, sunRegen: { name: '햇빛 회복', pts: 4, max: 3 } };
+export const SUN_REGEN = [1, 1.5, 2, 2.5];   // 햇빛 회복 단 → 턴마다 차는 칸
+export const sunSteps = (p, k) => Math.min(SUN_UP[k].max, Math.floor(((p.up || {})[k] || 0) / SUN_UP[k].pts));
 export const resetCost = p => 150 + 100 * p.stage;           // 포인트 리셋(돈, 아이템 없음)
 export const starsOf = ivs => { const t = IV_KEYS.reduce((a, k) => a + (ivs[k] || 0), 0); return t >= 33 ? 5 : t >= 25 ? 4 : t >= 17 ? 3 : t >= 9 ? 2 : 1; };
 
@@ -103,7 +109,7 @@ export const SKILLS = Object.fromEntries([
   S('w_rain', '단비', 'water', 'c3', 0, 3, { self: 'regen', also: 'purify' }),
   // 풀
   S('g_leaf', '가시 잎', 'grass', 'c1', 55, 1, { ranged: true, inflict: { id: 'poison', n: 1 } }),
-  S('g_photo', '광합성', 'grass', 'c1', 0, 1, { self: 'regen' }),
+  S('g_photo', '세포합성', 'grass', 'c1', 0, 1, { self: 'regen' }),   // 옛 이름 광합성 → 기본기 sun 이 '광합성'(2026-10-18)
   S('g_whip', '독초 채찍', 'grass', 'c2', 90, 2, { inflict: { id: 'poison', n: 2 } }),
   S('g_venom', '맹독 덩굴', 'grass', 'c3', 115, 4, { inflict: { id: 'poison', n: 3 } }),
   S('g_root', '흡수 뿌리', 'grass', 'c3', 105, 3, { drain: 0.5 }),

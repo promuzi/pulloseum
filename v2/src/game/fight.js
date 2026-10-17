@@ -12,7 +12,7 @@ import { makeRng } from '../battle/rules.js';
 //  v4 표시 없음 = 전투 3칸 + 기본기 셋 늘 · v4 = 전투 넷 + 카드 칸의 기술 카드가 손패 뒤에(extra: true — 화면 아래 줄)
 export function kitOfPlant(p) {
   const S = p.skills, B = basicsOf(p.key), pas = passivesOf(p.cards), sk = id => B.find(b => b.id === id) || (isSkillCard(id) ? cardSkill(p, id, pas, false) : { act: 'attack', cats: ['attack'], ...SKILLS[id], fx: p.key });
-  if (!S.v4) return [...B, ...S.battle.filter(Boolean).map(sk)];
+  if (!S.v4) return [...B.filter(b => b.id !== 'sun'), ...S.battle.filter(Boolean).map(sk)];   // 가장 옛 판 = 기본기 셋 그대로(광합성 모으기 2026-10-18 전 — 이어 하는 판을 다시 돌려도 같게)
   const kit = S.battle.filter(id => id && (isSkillCard(id) ? CARDS[id].form === p.form : SKILLS[id] || B.some(b => b.id === id))).map(sk);
   if (S.v6) return kit.length ? kit : B;
   return [...(kit.length ? kit : B), ...cardKit(p, pas)];
@@ -37,7 +37,7 @@ export function unitOf(id, p, extra = {}) {
   return {
     id, key: p.key, name: p.name, el: sp.el, jong: sp.type, pot: p.pot || 'pot_terra', stage: STAGE_KEY[p.stage], form: p.form || null, shiny: !!p.shiny, legend: !!p.legend,
     hp, max: hp, atk: Math.round(st.atk * k('atk')), def: Math.round(st.def * k('def')), spd: Math.round(st.spd * k('spd')), acc: st.acc, eva: 0, crit: st.crit + (pas.crit || 0),
-    energy: 2 + (pas.energy || 0), energyMax: 8, kit: kitOfPlant(p), eff: {}, pas, cards: (p.cards || []).filter(Boolean), ...extra,
+    energy: 2 + (pas.energy || 0), energyMax: st.sunMax || 8, sunPer: st.sunRegen || 1, kit: kitOfPlant(p), eff: {}, pas, cards: (p.cards || []).filter(Boolean), ...extra,
   };
 }
 // 봇 식물: 내 식물 단계에 맞춰(공정하게) 무작위 식물 · 레벨 · 개체값 · 강화 · 기술

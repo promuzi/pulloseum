@@ -117,6 +117,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       ev.push({ t: 'stance', who: u.id, kind: a.act, id: a.id, active: ok, repeat: rep });
       continue;
     }
+    if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); continue; }   // 광합성(기본기 — 햇빛 +2)
     const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }); };   // 나에게 거는 버프(버프 기술 · 공격 기술 덤)
     if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); continue; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }

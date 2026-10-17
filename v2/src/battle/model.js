@@ -15,6 +15,7 @@ export const BASICS = [
   { id: 'basic', name: '평타', act: 'attack', power: 40, cost: 0, cats: ['attack'], el: null },
   { id: 'guard', name: '방어 자세', act: 'guard', cost: 0, cats: ['guard'], guardMult: 0.4 },
   { id: 'evade', name: '회피 자세', act: 'evade', cost: 0, cats: ['evade'], shift: { miss: 22, graze: 14 } },
+  { id: 'sun', name: '광합성', act: 'sun', cost: 0, gain: 2, cats: ['heal_energy'] },   // 이 턴 대신 햇빛 +2(턴 끝 +1과 따로 — 2026-10-18 사용자 "햇빛 채우는 카드")
 ];
 // 쉬는 차례(얼음·마비·기절)에 고르는 대신 넘기는 행동
 export const REST = { id: 'rest', name: '쉬기', act: 'skip', cost: 0, cats: ['other'] };
@@ -134,7 +135,8 @@ export function aiPick(u, foe, rng) {
   const ok = u.kit.filter(s => canUse(u, s));
   if (!ok.length) return REST;
   const low = u.hp < u.max * 0.4;
-  const w = ok.map(s => (s.act === 'attack' ? Math.max(0.3, 1 + (s.power || 0) / 45 + 2.4 * (hitMult(u, foe, s) - 1) + (newFx(s, foe) ? 0.6 : 0)) : s.act === 'guard' ? (low ? 1.3 : 0.45) : (low ? 1.1 : 0.55)));
+  const poor = (u.energy || 0) <= 1 && u.kit.some(s => (s.cost || 0) >= 2);   // 햇빛이 모자라 큰 기술을 못 씀
+  const w = ok.map(s => (s.act === 'attack' ? Math.max(0.3, 1 + (s.power || 0) / 45 + 2.4 * (hitMult(u, foe, s) - 1) + (newFx(s, foe) ? 0.6 : 0)) : s.act === 'guard' ? (low ? 1.3 : 0.45) : s.act === 'sun' ? (poor && !low ? 0.9 : 0.15) : (low ? 1.1 : 0.55)));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;
   for (; i < w.length - 1; i++) { r -= w[i]; if (r <= 0) break; }
   return ok[i];
@@ -173,7 +175,7 @@ export function playTurnVs(B, mySkill, foeSkill) {
   for (const e of events) if (e.t === 'skip' && e.refund) B[e.who].energy += e.refund;   // 취소된 행동의 에너지 돌려줌
   // 누가 쓰러지면 그 자리에서 판이 끝남(턴 끝 피해 없음) · 같이 쓰러지는 일 없이 먼저 쓰러진 쪽이 짐(2026-10-16 — 전엔 둘 다 쓰러지면 늘 'me' 승리)
   const down = () => B.me.hp <= 0 || B.foe.hp <= 0;
-  if (!down()) closeTurn(res.first === B.foe.id ? [B.foe, B.me] : [B.me, B.foe], T, events, u => { u.energy = Math.min(u.energyMax, u.energy + 1); }, down);
+  if (!down()) closeTurn(res.first === B.foe.id ? [B.foe, B.me] : [B.me, B.foe], T, events, u => { u.energy = Math.min(u.energyMax, u.energy + (u.sunPer || 1)); }, down);   // 턴 끝 햇빛(회복 강화 = 반칸씩 더)
   const fell = events.find(e => e.t === 'faint');
   if (fell) B.over = fell.who === B.foe.id ? 'win' : 'lose';
   const turn = { n: B.turn, mySkill: me, foeSkill, before, events, first: res.first };

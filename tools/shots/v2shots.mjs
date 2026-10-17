@@ -40,6 +40,7 @@ export const SHOTS = [
   ['05_plant_skill_mut', 'plant', { tab: 'skill', act: '1' }],   // 변이 종자 식물(무기 — 전투 칸 여섯 중 기술 카드 · 카드 칸 = 패시브, 2026-10-17)
   ['05_plant_skill_drake', 'plant', { tab: 'skill', act: '6' }],   // 태생 변이(드레이크캑터)
   ['06_plant_up', 'plant', { tab: 'up' }],
+  ['06_plant_up_sun', 'plant', { tab: 'up' }, { plants: [{ up: { hp: 2, sunMax: 6, sunRegen: 4 }, pts: 9 }] }],   // 햇빛 그릇 2단 · 회복 1단(2026-10-18)
   ['06_plant_set', 'plant', { tab: 'set' }],
   ['06_plant_iv', 'plant', { tab: 'iv' }],
   ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],

@@ -1,5 +1,6 @@
 // 풀로세움 v2 — 전부 도트로 다시 그린 판. 저해상도 캔버스 하나에 그리고 정수배로 키워 보여 준다.
 //  진행은 서버가 맡음(로그인 · 일 하나마다 자동 저장 — net/api.js). ?offline=1 이나 ?scene=(촬영·검토 도구)이면 이 브라우저에서 같은 규칙으로 돌림(저장 안 함).
+import './core/canvasfix.js';   // 맨 처음: 코드가 만드는 그림 판 = CPU 판(앱이 뒤로 갔다 와도 내용이 남음 — 2026-10-18)
 import { Screen } from './core/screen.js';
 import { Gfx } from './core/gfx.js';
 import { loadFonts, resetMetrics } from './core/text.js';
