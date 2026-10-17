@@ -78,11 +78,13 @@ export const SHOTS = [
   ['08_battle_hit_cell', 'battle', { phase: 'hit', venue: 'cell' }],
   ['09_result', 'result', { win: true }],
   ['10_explore', 'explore', {}],
+  ['10_explore_map', 'explore', { map: '1' }],   // 지역 판(연료 n/3 · 탐사 보내기 · 연료 1 · 돈 — 2026-10-17)
   ['10_hangar', 'hangar', { model: '1' }],
   ['10_hangar_m2', 'hangar', { model: '2' }],
   ['10_hangar_m3', 'hangar', { model: '3', part: 'harvester' }],
   ['10_hangar_m4', 'hangar', { model: '4', part: 'harvester' }],
   ['10_hangar_choose', 'hangar', {}],
+  ['10_hangar_hull', 'hangar', { model: '1', part: 'hull' }],   // 내구성(글이 가장 긴 부위) — 강화 단추가 글 아래(2026-10-17)
   ['11_shop', 'shop', {}],
   ['14_room_lobby', 'room', { demo: 'lobby' }],
   ['14_room_in', 'room', { demo: 'in' }],

@@ -8,7 +8,7 @@
     "cleartext": false
   },
   "android": {
-    "appendUserAgent": "PulloseumApp/2",
+    "appendUserAgent": "PulloseumApp/3",
     "adjustMarginsForEdgeToEdge": "disable"
   }
 }

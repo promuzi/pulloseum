@@ -130,7 +130,7 @@ export const hangar = {
     // 고른 부위 정보 + 강화
     const pt = PARTS.find(p => p.id === this.sel), lv = this.lv(s, pt.id), atMax = lv >= pt.max, c = probeUpCost(lv);
     const PY = D.y + D.h + 10, st = T.card || T.panel, P = T.ptext, parts = s.items.parts || 0;
-    holo(g, 10, PY, W - 20, 104, st, 13);
+    holo(g, 10, PY, W - 20, 132, st, 13);   // 강화 단추 = 글 아래 한 줄 전체(2026-10-17 사용자 "글자와 강화하기 버튼이 겹침 — 차라리 아래로 빼자")
     g.text(pt.label, 22, PY + 8, { font: 'head', color: P.main });
     g.text(`Lv.${lv}`, 24 + g.textW(pt.label, 'head') + 6, PY + 11, { color: HC.sel });
     g.text(`부품 ${parts}`, W - 22, PY + 10, { color: P.sub, align: 'right' });
@@ -138,6 +138,6 @@ export const hangar = {
     g.text('지금', 22, PY + 50, { color: P.dim }); g.text(VAL[pt.id](lv), 50, PY + 50, { font: 'bold', color: P.main });
     if (!atMax) g.text(`→ ${VAL[pt.id](lv + 1)}`, 50, PY + 64, { font: 'bold', color: '#9ff0b0' });
     const can = !atMax && s.wallet.credits >= c.credits && parts >= c.parts;
-    button(app, 'hg_up', W - 116, PY + 52, 96, 40, atMax ? '끝까지 올림' : '강화', { style: 'gold', font: 'head', disabled: !live || !can, sub: atMax ? '' : `돈 ${c.credits} · 부품 ${c.parts}`, onTap: () => app.act('upgradeProbe', { part: pt.id }).then(r => { if (r) { this.fx = { id: pt.id, t0: app.t }; app.toast(`${pt.label} Lv.${r.lv}`); } }) });
+    button(app, 'hg_up', 20, PY + 84, W - 40, 40, atMax ? '끝까지 올림' : '강화', { style: 'gold', font: 'head', disabled: !live || !can, sub: atMax ? '' : `돈 ${c.credits} · 부품 ${c.parts}`, onTap: () => app.act('upgradeProbe', { part: pt.id }).then(r => { if (r) { this.fx = { id: pt.id, t0: app.t }; app.toast(`${pt.label} Lv.${r.lv}`); } }) });
   },
 };

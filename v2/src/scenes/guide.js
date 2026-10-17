@@ -200,7 +200,7 @@ function helpBtn(app, x, y, fn) {
   if (!pr) g.disc(cx, cy + 1, 8, '#05070f');   // 아래 턱(눌리면 사라짐)
   g.disc(cx, cy, 8, '#05070f'); g.disc(cx, cy, 7, '#4f84bf'); g.disc(cx, cy, 6, '#16406a');
   g.rect(cx - 3, cy - 5, 6, 1, '#2a6aa0');
-  g.text('?', cx, cy - Math.round(glyphH('bold') / 2) - 1, { font: 'bold', color: '#e6f3ff', align: 'center' });
+  g.text('?', cx, cy - Math.round(glyphH('bold') / 2), { font: 'bold', color: '#e6f3ff', align: 'center' });   // 원 가운데(2026-10-17 사용자 "? 도움말 표시가 원 가운데에 있지 않고 좀 위로" — 전엔 1칸 더 올렸음)
   input.mark('gd_help', x, y, 16, 16);
   if (fn) input.hit('gd_help', x, y, 16, 16, fn, 8);
 }

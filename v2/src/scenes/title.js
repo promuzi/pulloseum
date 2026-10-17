@@ -11,7 +11,7 @@ import { STARTERS, SPECIES, JONG, ELEM } from '../game/catalog.js';
 import { STAGE_NAME } from '../data/mock.js';
 import { stageKey } from '../game/view.js';
 import { LOFT_STOOL, enterLoft, loftBack, loftFront, loftBoot, loftNight, loftNightBeam, loftNightFront, loftNightStool, loftNightPlant, loftPrepare } from '../art/loft.js';
-import { soundLocked, introTime, introSkip, bootPlan, musicNow, lampNow, MUSIC_BAR, MUSIC_STEP } from '../core/sound.js';
+import { soundLocked, introTime, bootPlan, musicNow, lampNow, MUSIC_BAR, MUSIC_STEP } from '../core/sound.js';
 
 // 처음 화면(2026-10-16 사용자 "초반 화면을 바꿔줘. 검은 배경에 의자에 내 식물이 올려져 있고. 천장에서 불빛이 지지직 거리면서 켜져.
 //  그리고 터치하면 주변 검은 배경이 밝아지는 느낌으로 대기화면으로 이어지게" · "처음에는 음악단? 조율할때 나는 우우웅하는 소리처럼 검은 배경에서 점점 들리면서
@@ -197,9 +197,9 @@ export const title = {
     // 전등: 지휘자의 전등 칸(촬영이면 점화 뒤 켜짐)
     const k = this.at != null ? (it >= INTRO.ign + 0.45 ? 1 : 0) : it < INTRO.ign - 0.02 ? 0 : lampNow().k;   // 점화 전엔 늘 꺼짐(곡이 막 시작된 첫 몇 장에 켜진 방이 비치지 않게)
     nightRoom(app, key, pot, k);
-    // 조율 · 점화 중에 누르면 건너뜀 → 그 뒤엔(로그인 상태) 어디를 눌러도 켜짐
+    // 단추가 다 뜬 뒤(로그인 상태)에만 어디를 눌러도 켜짐 — 조율(검은 화면) · 점화 중에 누르면 건너뛰던 것을 뺌(2026-10-17 사용자 "검은 화면에서 터치해도 다음으로 넘어감")
     const uiK = clamp01((it - INTRO.ui) / 0.4);
-    app.input.hit('title_tap', 0, 0, W, H, () => { if (it < INTRO.ign) introSkip(); else if (uiK >= 1 && this.mode === 'in') enterGame(app); });
+    app.input.hit('title_tap', 0, 0, W, H, () => { if (uiK >= 1 && this.mode === 'in') enterGame(app); });
     // 로고: '등'에 전광판처럼 깜빡이며 켜짐
     const lk = it - INTRO.logo;
     if (lk >= 0 && (lk > 0.32 || [1, 0, 1, 1, 0, 0, 1][Math.floor(lk / 0.045)])) this.logo(app);

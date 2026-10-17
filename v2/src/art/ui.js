@@ -183,8 +183,13 @@ export function navBar(app, active, opt = {}) {
       const x = x0 + i * sw, on = t.id === active, pressed = input.isPressed('nav_' + t.id);
       if (i) g.rect(x, y + 11, 1, h - 22, N.sep);
       const col = on ? N.on : t.locked ? N.dim : N.icon, ic = tinted(t.icon, col), by = y + 6 + (pressed ? 1 : 0);
-      g.img(ic, x + Math.floor((sw - ic.width) / 2), by);
-      if (t.locked) g.img(tinted('lock', N.dim), x + Math.floor(sw / 2) + 5, by - 2);
+      const ix = x + Math.floor((sw - ic.width) / 2);
+      g.img(ic, ix, by);
+      if (t.locked) {   // 작은 자물쇠를 아이콘 오른쪽 아래에(바탕색 테두리로 떼어 보이게 — 큰 자물쇠는 로켓을 반쯤 가렸음)
+        const lb = tinted('lockS', N.bg), lc = tinted('lockS', N.dim), lx = ix + 11, ly = by + 8;
+        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.img(lb, lx + dx, ly + dy);
+        g.img(lc, lx, ly);
+      }
       g.text(t.label, x + sw / 2, by + 19, { color: col, align: 'center', font: on ? 'bold' : 'body' });
       if (on) { g.rect(x + Math.floor(sw / 2) - 9, y + h - 4, 18, 2, N.on); g.rect(x + Math.floor(sw / 2) - 7, y + h - 2, 14, 1, N.onLo); }
       if (opt.badge && opt.badge[t.id]) { g.disc(x + sw / 2 + 9, by + 1, 3, N.bg); g.disc(x + sw / 2 + 9, by + 1, 2, N.badge); }

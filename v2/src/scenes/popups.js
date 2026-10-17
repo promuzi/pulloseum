@@ -155,7 +155,9 @@ function gotPopup(app, P) {
 
 // ── ③ 예/아니오 ──
 //  opt.face = 식물 얼굴(어떤 식물인지 한눈에) · opt.danger = 되돌릴 수 없는 일(팔기 · 해체 — '예'가 빨강, 창이 뜨고 0.4초는 안 눌림: 같은 자리 두 번 눌러 실수하지 않게)
-export function ask(app, msg, sub, onYes, yes = '네', opt = {}) { app.confirm = { msg, sub, onYes, yes, t0: app.t, face: opt.face || null, danger: !!opt.danger }; }
+export function ask(app, msg, sub, onYes, yes = '네', opt = {}) { app.confirm = { msg, sub, onYes, yes, t0: app.t, face: opt.face || null, danger: !!opt.danger, one: !!opt.one }; }
+// 알림 창(단추 하나 '알겠어요' — 설명만 보여 줄 때, 2026-10-17 연료 캡슐 안내)
+export const tell = (app, msg, sub) => ask(app, msg, sub, null, '알겠어요', { one: true });
 function confirmBox(app, Q) {
   const { g, W, H, input, t } = app, fh = Q.face ? 50 : 0, w = W - 40, h = (Q.sub ? 112 : 94) + fh, x = 20, y = Math.round(H / 2 - h / 2) - 20, PT = T.ptext;
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
@@ -165,6 +167,7 @@ function confirmBox(app, Q) {
   g.text(Q.msg, W / 2, y + 14 + fh, { font: 'bold', color: PT.main, align: 'center' });
   if (Q.sub) g.para ? g.para(Q.sub, x + 14, y + 34 + fh, w - 28, { color: Q.danger ? '#ffb0a0' : PT.sub }) : g.text(Q.sub, W / 2, y + 34 + fh, { color: PT.sub, align: 'center' });
   const bw = Math.floor((w - 36) / 2), armed = !Q.danger || t - Q.t0 > 400;
+  if (Q.one) { button(app, 'cf_yes', x + Math.round((w - bw) / 2), y + h - 42, bw, 30, Q.yes, { style: 'gold', font: 'bold', onTap: () => { app.confirm = null; } }); return; }
   button(app, 'cf_no', x + 12, y + h - 42, bw, 30, '아니요', { style: 'night', font: 'bold', onTap: () => { app.confirm = null; } });
   button(app, 'cf_yes', x + 24 + bw, y + h - 42, bw, 30, Q.yes, { style: Q.danger ? 'red' : 'gold', font: 'bold', disabled: !armed, onTap: () => { const f = Q.onYes; app.confirm = null; f && f(); } });
 }
@@ -186,6 +189,9 @@ function settingsSheet(app) {
   input.hit('st_in', x, y, w, h, () => {});
   holo(g, x, y, w, h, T.card || T.panel, 16);
   g.text('설정', x + 14, y + 12, { font: 'head', color: PT.main });
+  // 앱 판(앱 껍데기가 붙이는 'PulloseumApp/n' — 2 = 1.1, 3 = 1.2 · 휴대폰에 어떤 판이 깔렸는지 보이게, 2026-10-17)
+  const av = (navigator.userAgent.match(/PulloseumApp\/(\d+)/) || [])[1], verTxt = av ? `앱 1.${+av - 1}` : '웹';
+  g.text(verTxt, x + w - 14, y + 15, { color: PT.dim, align: 'right' });
   let yy = y + 42;
   g.text(net.offline ? '오프라인 체험(저장 안 됨)' : u ? `계정: ${u.login}` : '로그인 안 함', x + 14, yy, { font: 'bold', color: PT.main }); yy += 18;
   yy += 12;

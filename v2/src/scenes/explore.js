@@ -10,7 +10,7 @@ import { sfx } from '../core/sound.js';
 import { PLANETS as CAT_PLANETS, ORBIT_LV, FUEL, SPECIES } from '../game/catalog.js';
 import { fuelSync, probeOf, exploreOdds, regionOf } from '../game/logic.js';
 import { left } from '../game/view.js';
-import { showGot } from './popups.js';
+import { showGot, tell } from './popups.js';
 import { planetMap } from '../art/planetmap.js';
 
 // 우주 지도(궤도·각도·색 = 옛 게임 지도). 2026-10-16 사용자 개편: 가운데 = 모선(내 집)에 탐사선이 붙은 그림, 탐사선이 행성에 다녀옴(늘 제자리로).
@@ -52,7 +52,7 @@ const reachR = (o, k = 1.12) => { const lo = ORB[Math.max(1, Math.floor(o))], hi
 
 export const explore = {
   theme: 'night',   // 밤 정원(장소 테마 — 2026-10-15)
-  enter(p = {}) { this.sel = this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.map = null; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
+  enter(p = {}) { this.sel = p.sel || this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.map = p.map ? { id: this.sel, t0: -1e9 } : null; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
   draw(app) {
     const { g, W, H, t, state: s } = app, now = app.now(), P = probeOf(s);
     fuelSync(s, now);
@@ -202,12 +202,11 @@ export const explore = {
     g.text(pl.name, 18, py + 8, { font: 'head', color: PT.main });
     const nx = 18 + g.textW(pl.name, 'head') + 6;
     g.text(Z.name, nx, py + 11, { font: 'bold', color: rLock ? PT.dim : '#ffd890' });
-    const fx0 = W - 18 - FUEL.max * 10;
-    g.img(icon('energy'), fx0 - 13, py + 10);
-    for (let i = 0; i < Math.max(FUEL.max, Math.min(5, fuel)); i++) { const x = fx0 + i * 10; g.rect(x, py + 11, 8, 8, '#0a1c32'); if (i < fuel) { g.rect(x + 1, py + 12, 6, 6, '#ffd84a'); g.rect(x + 1, py + 12, 6, 1, '#fff6c8'); } }
-    this.fuelR = [fx0 - 16, py + 6, W - 18 - fx0 + 20, 18];
+    this.fuelBar(app, s, py, live);
     // ② 사는 식물(그 지역) — 모르는 것은 '?'
-    const sp = [...new Set(Z.pool)], ty = py + 32;
+    const sp0 = [...new Set(Z.pool)], ty = py + 32, kind = { seed: '종자 많음', mixed: '종자 · 자원', resource: '자원 많음' }[Z.kind] || '';
+    const fitN = Math.max(1, Math.floor((W - 18 - g.textW(kind) - 8 - 18 + 4) / 36)), sp = sp0.length > fitN ? sp0.slice(0, fitN - 1) : sp0;   // '종자 많음' 앞까지만(겹침 막기)
+    if (sp.length < sp0.length) g.text(`+${sp0.length - sp.length}`, 18 + sp.length * 36 + 4, ty + 10, { font: 'bold', color: PT.sub });
     sp.forEach((k, i) => {
       const x = 18 + i * 36, known = s.discovered.includes(k);
       g.rect(x, ty, 32, 32, '#0a1c32'); g.rect(x, ty, 32, 1, SPECIES[k].rarity === 'rare' ? '#6fb8ff' : '#2f5c8a');
@@ -215,7 +214,6 @@ export const explore = {
       else g.text('?', x + 16, ty + 9, { font: 'head', color: '#3f6a88', align: 'center' });
     });
     // 종자/자원 · 전설(오른쪽 위아래)
-    const kind = { seed: '종자 많음', mixed: '종자 · 자원', resource: '자원 많음' }[Z.kind] || '';
     g.text(kind, W - 18, ty + 4, { color: Z.kind === 'resource' ? '#f0be7d' : PT.sub, align: 'right' });
     if (pl.legend) g.text('전설', W - 18, ty + 19, { font: 'bold', color: '#ffb04a', align: 'right' });
     // ③ 필수 · 권장 단계(레벨만): 채움 = 밝게 · 필수 모자람 = 빨강 + 자물쇠 · 권장 모자람 = 주황 + !
@@ -235,10 +233,22 @@ export const explore = {
     this.oddsR = [12, y3 - 3, W - 24, 32];
     // ④ 보내기(필수만 채우면 갈 수 있음 — 권장이 모자라도) · 필수가 모자라면 정비실
     const go = live && !lvLock && !far && !rLock && fuel > 0 && s.wallet.credits >= O.cost;
-    const label = lvLock ? `재배사 Lv${needLv}에 열려요` : far ? `연료 탱크 Lv.${O.req.tank} 필요` : rLock ? `탐사 장치 Lv.${O.req.scanner} 필요` : fuel <= 0 ? `연료 캡슐 · ${left(s.fuelT + FUEL.regenMin * 60000 - now)}` : s.wallet.credits < O.cost ? '탐사비가 모자라요' : `탐사 보내기 · ${O.cost}`;
+    const label = lvLock ? `재배사 Lv${needLv}에 열려요` : far ? `연료 탱크 Lv.${O.req.tank} 필요` : rLock ? `탐사 장치 Lv.${O.req.scanner} 필요` : fuel <= 0 ? `연료 캡슐 · ${left(s.fuelT + FUEL.regenMin * 60000 - now)}` : s.wallet.credits < O.cost ? `돈이 모자라요 · 돈 ${O.cost} 필요` : `탐사 보내기 · 연료 1 · 돈 ${O.cost}`;   // 2026-10-17 사용자 "탐사하는 비용 40 이렇게만 써 있어서 이게 돈이 드는 건지 모르겠음"
     const fixTo = far ? 'tank' : rLock ? 'scanner' : weak ? 'hull' : null, bw = fixTo && !lvLock ? W - 36 - 70 : W - 36;
-    button(app, 'ex_go', 18, py + 104, bw, 26, label, { style: 'gold', font: 'bold', icon: go ? 'navExplore' : 'lockS', iconTint: true, disabled: !go, onTap: () => this.go(app, pl, Z.id) });
+    button(app, 'ex_go', 18, py + 104, bw, 26, label, { style: 'gold', font: 'bold', icon: go ? 'navShip' : 'lockS', iconTint: true, disabled: !go, onTap: () => this.go(app, pl, Z.id) });   // 보내기 = 로켓(사용자 "탐사하기 버튼 왼쪽에 검은색 아이콘 같은 거 뭐임?" — 옛 탐사 탭 아이콘이 덩어리로 보였음)
     if (fixTo && !lvLock) button(app, 'ex_fix', W - 18 - 64, py + 104, 64, 26, '정비실', { style: 'night', disabled: !live, onTap: () => { this.map = null; this.morph = { t0: app.t, part: fixTo }; } });
+  },
+  // 연료 캡슐(판 오른쪽 위): '연료 n/3' + 칸 — 누르면 무엇인지 · 언제 차나(2026-10-17 사용자 "탐사 연료에 관한 내 보유량이 안 뜨고 그거에 관한 안내가 없어서 뭔지 모르겠음")
+  fuelBar(app, s, y, live) {
+    const { g, W, input } = app, fuel = s.items.fuel || 0, n = Math.max(FUEL.max, Math.min(5, fuel)), fx0 = W - 18 - n * 10, txt = `연료 ${fuel}/${FUEL.max}`, tw = g.textW(txt, 'bold');
+    g.text(txt, fx0 - 16, y + 9, { font: 'bold', color: fuel ? '#ffe9a0' : '#ff9a8a', align: 'right' });
+    g.img(icon('energy'), fx0 - 13, y + 10);
+    for (let i = 0; i < n; i++) { const x = fx0 + i * 10; g.rect(x, y + 11, 8, 8, '#0a1c32'); if (i < fuel) { g.rect(x + 1, y + 12, 6, 6, '#ffd84a'); g.rect(x + 1, y + 12, 6, 1, '#fff6c8'); } }
+    this.fuelR = [fx0 - 20 - tw, y + 4, W - 18 - fx0 + 24 + tw, 20];
+    if (live) input.hit('ex_fuel', ...this.fuelR, () => {
+      const full = fuel >= FUEL.max, nx = full ? '' : ` · 다음 1개까지 ${left(s.fuelT + FUEL.regenMin * 60000 - Date.now())}`;
+      tell(app, `연료 캡슐 ${fuel}/${FUEL.max}${nx}`, `탐사를 한 번 보낼 때 1개를 써요. ${FUEL.regenMin / 60}시간마다 1개씩 다시 차요(최대 ${FUEL.max}개). 레벨업 상자 · 대결 승리로도 받아요.`);
+    }, 3);
   },
   // 행성 요약(궤도 화면): ① 이름 · 연료 캡슐 ② 그 행성에 사는 식물(모르는 건 '?') · 종자/자원 · 전설 ③ 필수 연료 탱크(또는 재배사 레벨) · 지역 수 · 조사하기
   summary(app, s, P, y) {
@@ -246,18 +256,16 @@ export const explore = {
     const fuel = s.items.fuel || 0, live = !this.warp && !this.morph && !this.map;
     plate(g, 8, y, W - 16, SUM_H);
     g.text(pl.name, 18, y + 8, { font: 'head', color: PT.main });
-    const fx0 = W - 18 - FUEL.max * 10;
-    g.img(icon('energy'), fx0 - 13, y + 10);
-    for (let i = 0; i < Math.max(FUEL.max, Math.min(5, fuel)); i++) { const x = fx0 + i * 10; g.rect(x, y + 11, 8, 8, '#0a1c32'); if (i < fuel) { g.rect(x + 1, y + 12, 6, 6, '#ffd84a'); g.rect(x + 1, y + 12, 6, 1, '#fff6c8'); } }
-    this.fuelR = [fx0 - 16, y + 6, W - 18 - fx0 + 20, 18];
-    const sp = [...new Set(pl.pool)], ty = y + 30;
+    this.fuelBar(app, s, y, live);
+    const sp0 = [...new Set(pl.pool)], ty = y + 30, kind = { seed: '종자 많음', mixed: '종자 · 자원', resource: '자원 많음' }[pl.kind] || '';
+    const fitN = Math.max(1, Math.floor((W - 18 - g.textW(kind) - 8 - 18 + 4) / 32)), sp = sp0.length > fitN ? sp0.slice(0, fitN - 1) : sp0;   // '종자 많음' 앞까지만(겹침 막기)
+    if (sp.length < sp0.length) g.text(`+${sp0.length - sp.length}`, 18 + sp.length * 32 + 4, ty + 8, { font: 'bold', color: PT.sub });
     sp.forEach((k, i) => {
       const x = 18 + i * 32, known = s.discovered.includes(k);
       g.rect(x, ty, 28, 28, '#0a1c32'); g.rect(x, ty, 28, 1, SPECIES[k].rarity === 'rare' ? '#6fb8ff' : '#2f5c8a');
       if (known) g.clip(x + 1, ty + 1, 26, 26, () => drawPortrait(g, k, x + 1, ty + 1, 26, false));
       else g.text('?', x + 14, ty + 7, { font: 'head', color: '#3f6a88', align: 'center' });
     });
-    const kind = { seed: '종자 많음', mixed: '종자 · 자원', resource: '자원 많음' }[pl.kind] || '';
     g.text(kind, W - 18, ty + 2, { color: pl.kind === 'resource' ? '#f0be7d' : PT.sub, align: 'right' });
     if (pl.legend) g.text('전설', W - 18, ty + 16, { font: 'bold', color: '#ffb04a', align: 'right' });
     const by = y + 66;

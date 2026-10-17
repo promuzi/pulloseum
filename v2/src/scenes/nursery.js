@@ -211,13 +211,13 @@ export const nursery = {
     const isSel = this.sel === it.id, isPrev = !isSel && this.prevSel === it.id && t - this.prevT < LIFT_MS;
     if (it.kind === 'plant') {
       const band = Math.max(2, Fy0 - By);
-      if (isSel) this.lifted(g, it, sx, sy, band, Math.round(LIFT * ease(clamp((t - this.selT) / LIFT_MS, 0, 1))), t);
-      else if (isPrev) this.lifted(g, it, sx, sy, band, Math.round(LIFT * (1 - ease(clamp((t - this.prevT) / LIFT_MS, 0, 1)))), t);   // 다른 식물을 고르면 원래 화분은 구멍 속으로 내려감(사용자 "기존의 식물은 화분이 내려가는 모션")
+      const lift = isSel ? Math.round(LIFT * ease(clamp((t - this.selT) / LIFT_MS, 0, 1))) : isPrev ? Math.round(LIFT * (1 - ease(clamp((t - this.prevT) / LIFT_MS, 0, 1)))) : 0;
+      if (isSel || isPrev) this.lifted(g, it, sx, sy, band, lift, t);   // 다른 식물을 고르면 원래 화분은 구멍 속으로 내려감(사용자 "기존의 식물은 화분이 내려가는 모션")
       else this.planted(g, it, sx, sy, band, t);
-      if (f.have > 0 && !isSel) {   // 열매 표시 = 식물 꼭대기 바로 위(작은 식물이면 낮게 — 2026-10-16 사용자 "식물이 작으면 열매 표식도 높이에 맞게 좀 낮춰줘")
+      if (f.have > 0) {   // 열매 표시 = 식물 꼭대기 바로 위(작은 식물이면 낮게 — 2026-10-16 사용자 "식물이 작으면 열매 표식도 높이에 맞게 좀 낮춰줘") · 고른 식물도 솟은 만큼 같이 올라감(2026-10-17 사용자 "식물 누르면 머리 위 과일이 사라짐" — 전엔 고르면 숨겼음)
         const ic = icon('fruit'), bk = bigKey(it.p.key, stageKey(it.p)), Bm = BIG[bk], bx = bigBox(bk);
         const top = Bm && bx ? sy - Math.round(Bm.meta.soil[1]) + bx[0] - ic.height - 3 : sy - 86;
-        g.img(ic, sx - Math.floor(ic.width / 2), Math.max(sy - 86, top) + (Math.floor(t / 500 + it.i) % 2));
+        g.img(ic, sx - Math.floor(ic.width / 2), Math.max(sy - 86, top) - lift + (Math.floor(t / 500 + it.i) % 2));
       }
     } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#8ccfff', 0); }
     if (u < -0.4 || u > 2.7) return null;

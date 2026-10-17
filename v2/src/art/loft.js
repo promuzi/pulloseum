@@ -332,7 +332,8 @@ function nightLayers() {
   const A = mk(), B = mk(), Cs = mk(), u32 = new Uint32Array(W * H), a = A.im.data, b = B.im.data, s = Cs.im.data;
   for (let i = 0; i < W * H; i++) {
     const k = i * 4, x = i % W, y = (i - x) / W, glass = inGlass(x, y), lum = (o[k] * 0.3 + o[k + 1] * 0.59 + o[k + 2] * 0.11) / 255;
-    const st = !glass && inStool(x, y) && lum < 0.72, v = [0, 0, 0];
+    // 의자 = 모양 안에서도 나무 색만(어두운 갈색 · 따뜻한 주황 판) — 모양이 다리보다 넓어 옆 벽(푸른 회색) · 바닥 그늘 · 경계 칸이 같이 떼어져 밝은 테두리로 보였음(2026-10-17 사용자 "시작할 때 의자 부분 누끼가 다 안 따져 있어")
+    const st = !glass && inStool(x, y) && (lum < 0.5 || (lum < 0.72 && o[k] - o[k + 2] > 55)) && o[k] >= o[k + 2], v = [0, 0, 0];
     for (let ch = 0; ch < 3; ch++) {
       const base = glass ? NDARK[ch] : NDARK[ch] + off[k + ch] * NAMB, li = glass ? 0 : st ? o[k + ch] * STOOL_LIT : Math.max(0, o[k + ch] - off[k + ch]) * kp[i];
       a[k + ch] = Math.round(base); b[k + ch] = Math.round(li); v[ch] = Math.min(255, a[k + ch] + b[k + ch]);
