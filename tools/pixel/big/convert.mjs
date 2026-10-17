@@ -829,7 +829,7 @@ if (stages) {
   // 어린 단계 몸집(2026-10-15 사용자 "외형 차이가 적어 아쉬움 — 1단계는 더 줄여도, 무조건 말고 몸체 크기 기준으로(버섯은 덩치가 비슷해 구분 어려움)"):
   //  도트 칸 수(몸 면적)가 성체의 YA배보다 크면 그 비율이 되게 축척을 줄이고, 이미 작으면 그대로
   for (const st of STAGES) {
-    const f = st === 'mature' ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'stages', `${key}_${st}.png`);
+    const f = st === 'mature' ? (existsSync(resolve(here, 'concept', key + '.png')) ? resolve(here, 'concept', key + '.png') : resolve(here, 'concept', 'cut', key + '.png')) : resolve(here, 'concept', 'stages', `${key}_${st}.png`);   // 성체 원본 = 컨셉, 없으면 누끼(2026-10-16~ 새 종)
     const cv = st === 'mature' ? mature : stageCv(key, st, mature, ref, mk);
     if (!cv) continue;
     if (st !== 'mature') { const S2 = cv.src.S; console.log(`${st.padEnd(7)} 기준 (${S2.cx.toFixed(0)}, ${S2.cy.toFixed(0)}) ${S2.ref} · 몸 축 ${(S2.axis || 0).toFixed(1)}°${S2.rot ? ' → 돌려 세움' : ''}`); }

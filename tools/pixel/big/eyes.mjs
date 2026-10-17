@@ -64,4 +64,22 @@ export const EYES = {
   cactus_wind_young: { box: [[598, 492, 37, 53], [727, 502, 32, 53]], cheek: [664, 504] },
   cactus_wind_teen: { box: [[690, 389, 37, 53], [820, 417, 31, 48]], cheek: [758, 434] },
   vine_wind_teen: { box: [[812, 469, 34, 46], [910, 494, 26, 28]], cheek: [852, 534] },
+  // 2026-10-17 생장 단계 둘째 묶음(concept/stages_raw/<키>_<단계>.png 회색 배경 → greycut --main = stages/<키>_<단계>.png)
+  vine_wind_young: { box: [[850, 497, 32, 42], [953, 515, 24, 28]], cheek: [905, 545] },
+  frost_bell_young: { box: [[463, 548, 22, 24], [571, 581, 24, 19]], cheek: [520, 600] },
+  frost_bell_teen: { box: [[442, 509, 20, 23], [536, 542, 26, 14]], cheek: [490, 560] },
+  volt_vine_young: { box: [[687, 561, 60, 31], [841, 535, 24, 40]], cheek: [760, 600] },
+  volt_vine_teen: { box: [[695, 536, 48, 29], [826, 515, 24, 34]], cheek: [760, 570] },
+  stone_cap_young: { box: [[604, 695, 58, 28], [799, 676, 39, 24]], cheek: [700, 720] },
+  stone_cap_teen: { box: [[611, 705, 49, 25], [777, 690, 32, 20]], cheek: [700, 730] },
+  jelly_cap_young: { box: [[570, 738, 45, 46], [741, 713, 34, 49]], cheek: [630, 705] },
+  jelly_cap_teen: { box: [[577, 733, 45, 54], [755, 700, 30, 45]], cheek: [650, 700] },
+  gat_cap_young: { box: [[614, 418, 44, 23], [729, 431, 24, 19]], cheek: [680, 455] },
+  gat_cap_teen: { box: [[612, 498, 48, 26], [726, 513, 24, 17]], cheek: [680, 540] },
+  mask_vine_young: { box: [[598, 410, 40, 22], [735, 405, 36, 22]], closed: true },   // 탈 = 감은 눈
+  mask_vine_teen: { box: [[600, 378, 42, 24], [750, 372, 38, 24]], closed: true },
+  drum_cactus_young: { box: [[651, 502, 69, 63], [890, 580, 36, 42]], cheek: [760, 520] },
+  drum_cactus_teen: { box: [[665, 470, 60, 60], [865, 555, 35, 50]], cheek: [770, 480] },
+  lantern_vine_young: { box: [[616, 441, 42, 22], [723, 386, 14, 36]], cheek: [680, 450] },
+  lantern_vine_teen: { box: [[575, 423, 44, 21], [671, 372, 12, 32]], cheek: [630, 450] },
 };
