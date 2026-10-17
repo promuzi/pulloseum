@@ -31,6 +31,21 @@ for (let y = 0; y < im.h; y++) edge.push(y * im.w, y * im.w + im.w - 1);
 fill(edge, TOL, isBg);
 const seen = new Uint8Array(n);
 for (let i = 0; i < n; i++) if (!isBg[i] && !seen[i] && dist(i) < HOLE) { const reg = fill([i], HOLE, seen); if (reg.length >= 140) for (const j of reg) isBg[j] = 1; }
+// 막힌 구멍 경고(2026-10-17 사용자 "중간 용 꼬리 말린 가운데 부분이 하얀색에 배경이 있어" — 이무기 고리 안 배경이 그늘져 HOLE 허용치 밖이라 남았음):
+//  남은 몸 칸 중 배경과 가까운 색(거리 < 0.05)이 넓게(140칸 이상) 뭉친 곳을 알려 줌 — 배경이면 알려 준 --hole 값으로 다시, 몸(옅은 잎 · 흰 무늬)이면 그대로
+//  지운 배경에 붙은 덩어리(몸 테두리의 옅은 띠)는 뺌 — 칸의 20% 넘게 지운 배경과 맞닿으면 테두리
+const seen2 = new Uint8Array(n), sus = [];
+const nearBg = j => { const x = j % im.w; return (x > 0 && isBg[j - 1]) || (x < im.w - 1 && isBg[j + 1]) || (j >= im.w && isBg[j - im.w]) || (j < n - im.w && isBg[j + im.w]); };
+for (let i = 0; i < n; i++) if (!isBg[i] && !seen2[i] && dist(i) < 0.05) {
+  const reg = fill([i], 0.05, seen2).filter(j => !isBg[j]);
+  if (reg.length < 140 || reg.filter(nearBg).length > reg.length * 0.2) continue;
+  let x0 = im.w, x1 = 0, y0 = im.h, y1 = 0;
+  for (const j of reg) { const x = j % im.w, y = (j / im.w) | 0; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const ds = reg.map(dist).sort((a, b) => a - b);
+  const d9 = ds[Math.floor(ds.length * 0.9)];
+  if (d9 < 0.045) sus.push({ c: reg.length, x0, x1, y0, y1, d9 });   // 옅은 몸 무늬는 0.046~0.05 · 그늘진 배경 구멍은 0.03대(이무기 고리 0.031)
+}
+for (const s of sus.sort((a, b) => b.c - a.c).slice(0, 3)) console.log(`⚠ 막힌 곳에 배경 같은 색 ${s.c}칸 (x ${s.x0}~${s.x1} · y ${s.y0}~${s.y1}) — 배경이면 --hole=${(s.d9 + 0.005).toFixed(3)} 로 다시, 몸(옅은 잎 · 흰 무늬)이면 그대로`);
 if (mainOnly) {   // 이어진 덩어리(네 방향) 중 가장 큰 것만
   const lab = new Int32Array(n).fill(-1), size = [];
   for (let i = 0; i < n; i++) {

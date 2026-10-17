@@ -13,7 +13,7 @@ function load(src) { return new Promise(res => { const i = new Image(); i.onload
 
 // 옛 48×56 도트(assets/sprites)는 처음 12종만 · 생장 단계 그림(_young · _teen)도 있는 종만 부름 — 새 종(2026-10-16 프로스트벨 등)은 성체 그림 하나(없는 파일을 부르지 않게)
 // 생장 단계 그림이 있는 종(어린 · 자람 둘 다 — 하나만 있으면 그 단계만 바뀜). 새로 그리면 여기에 더함(2026-10-17)
-export const STAGED_KEYS = ROSTER.filter(k => k !== 'frost_drake');   // 프로스트드레이크(2026-10-17 새 종)는 어린 · 자람 그림이 오면 넣음   // 2026-10-17 모든 종(29) 어린 · 자람 그림 있음
+export const STAGED_KEYS = ROSTER;   // 2026-10-17 모든 종(30) 어린 · 자람 그림 있음 — 프로스트드레이크 = 알 → 깨어나는 새끼 → 새끼 용(같은 날 받음)
 const V1 = ROSTER.slice(0, 12), STAGED = new Set(STAGED_KEYS);
 export async function loadSprites(base = '../assets/sprites/') {
   const keys = [...V1, ...EXTRA, ...POTS];

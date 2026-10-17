@@ -10,6 +10,7 @@ description: 풀로세움 v2 식물 도트 그림을 만들 때(새 종 추가·
 
 ## 1. 컨셉(코덱스) — 비용: 새로 그리기 장당 5시간 한도 약 1~3%p, 참고 그림을 주고 그리기·편집 장당 약 4~8%p
 - 새 종 = **밝은 단색 회색 배경(#d9d9d9)·화분·흙·그림자 없이, 밑동은 흙 높이에서 깔끔히 끝나게** 요청(2026-10-17부터 — 투명 누끼 요청은 그림 품질이 떨어짐. 예 `concept\new3\NEW3_PROMPT.md`: 정면 몸 + 머리 20° 옆 · 시선 자연스럽게 · 상징 하나를 크게 · 몸에서 떨어진 효과 선 금지 · "Do not open any image file"). 받은 그림 → `node tools/pixel/big/greycut.mjs <원본> concept\cut\<키>.png [--main]`(--main = 몸에서 떨어진 바람 줄 · 물보라 지움 — 줄이면 점가루가 됨). ~~처음부터 누끼(실제 알파)~~(2026-10-15 방식).
+  - ⚠ greycut이 `막힌 곳에 배경 같은 색 … 칸` 경고를 내면 그 칸을 확대해 본다 — 배경(말린 꼬리 · 팔 사이 고리 안, 그늘져 회색이 짙음)이면 알려 준 `--hole=`로 다시, 옅은 꽃잎 · 흰 무늬면 그대로(2026-10-17 사용자 "중간 용 꼬리 말린 가운데 부분이 하얀색에 배경이 있어" — 이무기 고리 안 배경이 기본 허용치 0.012 밖이라 남았음, `--hole=0.035`로 지움).
 - 옛 컨셉(화분 있음)은 그대로 두고, 화분 색 지우기로 밑동이 깨지면 그 종만 **코덱스 편집 누끼**(`concept\CUT_PROMPT*.md` 형식 — "식물은 그대로, 화분·흙·자갈·그림자만 지우고 밑동을 흙 선에서 마감, 위치 이동 금지"). 위치가 그대로라 눈 좌표·흙 기준은 원래 컨셉에서 잰 값을 그대로 쓴다.
 - 실행: `node "C:/dev/codex-plugin-cc/plugins/codex/scripts/codex-companion.mjs" task --write --cwd "C:/dev/pulloseum" --prompt-file "tools/pixel/big/concept/<요청>.md"`(백그라운드). 사용량은 `~\.codex\sessions\...\rollout-*.jsonl`의 token_count(rate_limits)로 전후를 재서 보고.
 
