@@ -152,7 +152,7 @@ export const room = {
         g.clip(px + 1, py + 1, 54, 54, () => drawPortrait(g, c.key, px + 1, py + 1, 54, false));
         g.img(icon(SPECIES[c.key].el), px + 58 - 12, py + 2);
         g.text(c.name, x + cw / 2, py + 60, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#e0f0ff', align: 'center' });
-        g.text(`${STAGES[c.stage]} · Lv${lvOf(c)}`, x + cw / 2, py + 76, { color: '#8cc4ee', align: 'center' });
+        g.text(`${stageName(c)} · Lv${lvOf(c)}`, x + cw / 2, py + 76, { color: '#8cc4ee', align: 'center' });
         button(app, 'rm_pick', x + 10, py + 94, cw - 20, 20, '식물 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.picker = true; else app.toast('준비를 풀고 바꿔요'); } });
       } else {   // 상대 = 비밀(3:3이면 팀이 되는지만)
         const no3 = swap && !m.team3;

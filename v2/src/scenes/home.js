@@ -158,7 +158,7 @@ export const home = {
   specs(app, p, y0) {
     const { g, t } = app, st = T.card || T.panel, P = T.ptext, ps = plantStats(p), gi = growInfo(p);
     const rows = [...STAT_DEF.slice(0, 4).map(d => ({ ic: d.icon, label: d.name, val: ps[d.k] != null ? fmt(ps[d.k]) : '–' })), null,
-      gi.ready ? { ic: 'up', label: '진화!', val: `Lv${gi.shown}`, bar: 1, gold: true } : gi.done ? { ic: 'sun', label: '다 자람', val: `Lv${gi.shown}`, bar: 1 } : { ic: 'sun', label: `Lv${gi.shown}`, val: `${gi.cur}/${gi.need}`, bar: gi.pct }];
+      gi.ready ? { ic: 'up', label: '진화!', val: `Lv${gi.shown}`, bar: 1, gold: true } : gi.done ? { ic: 'sun', label: stageName(p), val: `Lv${gi.shown}`, bar: 1 } : { ic: 'sun', label: `Lv${gi.shown}`, val: `${gi.cur}/${gi.need}`, alt: `${Math.floor(gi.pct * 100)}%`, bar: gi.pct }];   // alt = 둘째 자리 레벨 등으로 안 들어가면 %(2026-10-18 'Lv1454/120' 붙음)
     let y = Math.round(y0), n = 0;
     for (const r of rows) {
       if (!r) { y += CARD.grp - CARD.gap; continue; }
@@ -171,9 +171,9 @@ export const home = {
           const ic = icon(r.ic), lh = g.lineH('value'), ty = r.bar != null ? y + 4 : y + Math.round((h - lh) / 2);
           g.img(ic, x + 6, ty + Math.round((lh - ic.height) / 2));
           // 이름과 값이 안 겹치게: 값이 길면(생장 54/120 등) 작은 글자로
-          const vf = g.textW(r.label, 'label') + g.textW(r.val, 'value') + 6 > CARD.w - 27 ? 'label' : 'value';
+          const room = CARD.w - 27, lw = g.textW(r.label, 'label'), vf = lw + g.textW(r.val, 'value') + 6 > room ? 'label' : 'value', val = r.alt && lw + g.textW(r.val, 'label') + 6 > room ? r.alt : r.val;
           g.text(r.label, x + 21, ty + 1, { font: 'label', color: r.gold ? '#ffd890' : P.sub });
-          g.text(r.val, x + CARD.w - 6, ty + (vf === 'label' ? 1 : 0), { font: vf, color: P.main, align: 'right' });
+          g.text(val, x + CARD.w - 6, ty + (vf === 'label' ? 1 : 0), { font: vf, color: P.main, align: 'right' });
           if (r.bar != null) tbar(g, x + 6, y + h - 9, CARD.w - 12, 4, r.bar, 'exp');
         }
       }

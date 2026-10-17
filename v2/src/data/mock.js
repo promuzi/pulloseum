@@ -6,13 +6,9 @@ import { makeRng } from '../battle/rules.js';
 
 export const SPECIES = CAT_SPECIES;
 // 단계 이름(종마다 — 그림 단계 키 sprout · growing · mature)
-export const STAGE_NAME = {
-  flower: { sprout: '새싹', juvenile: '새잎', growing: '꽃봉오리', mature: '개화', evolved: '만개' },
-  vine: { sprout: '새순', juvenile: '어린덩굴', growing: '덩굴손', mature: '성체덩굴', evolved: '만연덩굴' },
-  cactus: { sprout: '움', juvenile: '어린기둥', growing: '가시몸', mature: '성체선인장', evolved: '꽃선인장' },
-  mushroom: { sprout: '균사', juvenile: '버섯눈', growing: '어린갓', mature: '성숙버섯', evolved: '포자갓' },
-  tree: { sprout: '떡잎', juvenile: '묘목', growing: '어린나무', mature: '성목', evolved: '거목' },
-};
+// 성장 단계 이름(2026-10-18 사용자 결정 — 대기열 16번): 꽃 · 덩굴 · 선인장 = 새싹 → 성장기 → 성체, 버섯만 균사 → 성장기 → 성체(전엔 종류마다 꽃봉오리 · 개화 · 성숙버섯 …)
+const STAGE3 = { sprout: '새싹', juvenile: '새싹', growing: '성장기', mature: '성체', evolved: '성체' };
+export const STAGE_NAME = { flower: STAGE3, vine: STAGE3, cactus: STAGE3, tree: STAGE3, mushroom: { ...STAGE3, sprout: '균사', juvenile: '균사' } };
 export const CAT_ICON = { attack: 'sword', guard: 'shield', evade: 'speed', buff: 'up', debuff: 'down', heal_hp: 'heal', heal_energy: 'energy', other: 'clock', passive: 'star' };
 export const CAT_NAME = { attack: '공격', guard: '방어', evade: '회피', buff: '버프', debuff: '디버프', heal_hp: '회복', heal_energy: '햇빛', other: '기타', passive: '패시브' };
 

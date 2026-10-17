@@ -66,7 +66,7 @@ export const BRANCH = { meadow: '꽃밭 가지', shore: '물가 가지', desert:
 export const STARTERS = ['flower_grass', 'cactus_fire', 'aqua'];
 
 // ── 생장 ──
-export const STAGES = ['어린', '자라는', '다 자란'];
+export const STAGES = ['새싹', '성장기', '성체'];   // 공통 단계 이름(2026-10-18 사용자 결정 — 버섯 첫 단계 '균사'는 view.js stageName)
 export const STAGE_KEY = ['sprout', 'growing', 'mature'];   // 그림 단계(sprites bigKey: sprout→_young, growing→_teen, mature→기본)
 export const STAGE_MUL = [0.8, 0.9, 1];                     // 체력·공격·방어 배율
 export const LV_MAX = 6;
