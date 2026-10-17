@@ -36,7 +36,7 @@ export const ART_W = 58, ART_H = 52;   // 그림 칸(논리 칸) — 코덱스 �
 // ── 스킬 그림(코덱스 원화 → 도트). 없으면 임시 그림 ──
 export const SKILLART = {};
 // 2026-10-16 코덱스: 기본기 셋(모든 식물 공용) + 기술 그림(사용자 "남은 거 다해줘" — 91장 한 번에 요청 → 사용 한도로 두 번에 나눠 받음, 93개 다 있음). 기술이 새로 생기면 그림과 함께 여기에 id를 더함(없는 파일을 부르면 빠진 요청이 됨)
-export const SKILLART_NAMES = ['basic', 'guard', 'evade', 'f_ember', 'f_rage', 'f_ball', 'f_pillar', 'f_storm', 'f_lava', 'w_gun', 'w_pure', 'w_cannon', 'w_tide', 'w_whirl', 'w_rain', 'g_leaf', 'g_photo', 'g_whip', 'g_venom', 'g_root', 'g_bomb', 'e_rock', 'e_hard', 'e_roll', 'e_quake', 'e_slide', 'e_wall', 'a_breeze', 'a_tail', 'a_twist', 'a_typhoon', 'a_vacuum', 'a_jet', 'b_static', 'b_charge', 'b_bolt', 'b_thunder', 'b_surge', 'b_chain', 'i_frost', 'i_shell', 'i_spear', 'i_blizzard', 'i_zero', 'j_scent', 'j_petals', 'j_wrap', 'j_lash', 'j_spines', 'j_needle', 'j_spore', 'j_cloud', 'br_sand', 'br_moss', 'br_bloom', 'br_trap', 'sp_leech', 'sp_root', 'sp_shade', 'sp_acid', 'u_petal_1', 'u_petal_2', 'u_petal_3', 'u_thorn_1', 'u_thorn_2', 'u_thorn_3', 'u_aqua_1', 'u_aqua_2', 'u_aqua_3', 'u_wind_1', 'u_wind_2', 'u_wind_3', 'u_spark_1', 'u_spark_2', 'u_spark_3', 'u_tide_1', 'u_tide_2', 'u_tide_3', 'u_ember_1', 'u_ember_2', 'u_ember_3', 'u_gaia_1', 'u_gaia_2', 'u_gaia_3', 'u_blaze_1', 'u_blaze_2', 'u_blaze_3', 'u_gale_1', 'u_gale_2', 'u_gale_3', 'u_gvine_1', 'u_gvine_2', 'u_gvine_3', 'u_spore_1', 'u_spore_2', 'u_spore_3', 'u_frost_1', 'u_frost_2', 'u_frost_3', 'u_volt_1', 'u_volt_2', 'u_volt_3', 'u_stone_1', 'u_stone_2', 'u_stone_3', 'u_jelly_1', 'u_jelly_2', 'u_jelly_3', 'n_fiber', 'n_wall', 'n_vacuole', 'n_tropism', 'n_target', 'n_chloro', 'n_spine', 'n_balance', 'v_sap', 'v_digest', 'v_jaw', 'v_forge', 'v_ammo', 'v_edge', 'v_venom', 'v_acid', 'v_antidote', 'v_mycel', 'v_spread', 'v_rot', 'v_scale', 'v_regen', 'v_wrath', 'm_bite', 'm_devour', 'm_hunt', 'm_slash', 'm_shot', 'm_smash', 'm_spit', 'm_acid', 'm_miasma', 'm_puff', 'm_sleep', 'm_bloom', 'm_breath', 'm_scale', 'm_roar', 'm_flame', 'm_spear', 'm_burrow', 'm_maw', 'm_bile', 'm_ivy', 'm_gust', 'm_frostclaw', 'm_voltclaw', 'u_fang_1', 'u_fang_2', 'u_fang_3', 'u_blade_1', 'u_blade_2', 'u_blade_3', 'u_toxi_1', 'u_toxi_2', 'u_toxi_3', 'u_draco_1', 'u_draco_2', 'u_draco_3', 'u_emcap_1', 'u_emcap_2', 'u_emcap_3', 'u_drake_1', 'u_drake_2', 'u_drake_3', 'u_fdrake_1', 'u_fdrake_2', 'u_fdrake_3', 'u_gat_1', 'u_gat_2', 'u_gat_3', 'u_tal_1', 'u_tal_2', 'u_tal_3', 'u_drum_1', 'u_drum_2', 'u_drum_3', 'u_lamp_1', 'u_lamp_2', 'u_lamp_3', 'u_jar_1', 'u_jar_2', 'u_jar_3', 'u_dok_1', 'u_dok_2', 'u_dok_3', 'u_crown_1', 'u_crown_2', 'u_crown_3'];
+export const SKILLART_NAMES = ['basic', 'guard', 'evade', 'f_ember', 'f_rage', 'f_ball', 'f_pillar', 'f_storm', 'f_lava', 'w_gun', 'w_pure', 'w_cannon', 'w_tide', 'w_whirl', 'w_rain', 'g_leaf', 'g_photo', 'g_whip', 'g_venom', 'g_root', 'g_bomb', 'e_rock', 'e_hard', 'e_roll', 'e_quake', 'e_slide', 'e_wall', 'a_breeze', 'a_tail', 'a_twist', 'a_typhoon', 'a_vacuum', 'a_jet', 'b_static', 'b_charge', 'b_bolt', 'b_thunder', 'b_surge', 'b_chain', 'i_frost', 'i_shell', 'i_spear', 'i_blizzard', 'i_zero', 'j_scent', 'j_petals', 'j_wrap', 'j_lash', 'j_spines', 'j_needle', 'j_spore', 'j_cloud', 'br_sand', 'br_moss', 'br_bloom', 'br_trap', 'sp_leech', 'sp_root', 'sp_shade', 'sp_acid', 'u_petal_1', 'u_petal_2', 'u_petal_3', 'u_thorn_1', 'u_thorn_2', 'u_thorn_3', 'u_aqua_1', 'u_aqua_2', 'u_aqua_3', 'u_wind_1', 'u_wind_2', 'u_wind_3', 'u_spark_1', 'u_spark_2', 'u_spark_3', 'u_tide_1', 'u_tide_2', 'u_tide_3', 'u_ember_1', 'u_ember_2', 'u_ember_3', 'u_gaia_1', 'u_gaia_2', 'u_gaia_3', 'u_blaze_1', 'u_blaze_2', 'u_blaze_3', 'u_gale_1', 'u_gale_2', 'u_gale_3', 'u_gvine_1', 'u_gvine_2', 'u_gvine_3', 'u_spore_1', 'u_spore_2', 'u_spore_3', 'u_frost_1', 'u_frost_2', 'u_frost_3', 'u_volt_1', 'u_volt_2', 'u_volt_3', 'u_stone_1', 'u_stone_2', 'u_stone_3', 'u_jelly_1', 'u_jelly_2', 'u_jelly_3', 'n_fiber', 'n_wall', 'n_vacuole', 'n_tropism', 'n_target', 'n_chloro', 'n_spine', 'n_balance', 'v_sap', 'v_digest', 'v_jaw', 'v_forge', 'v_ammo', 'v_edge', 'v_venom', 'v_acid', 'v_antidote', 'v_mycel', 'v_spread', 'v_rot', 'v_scale', 'v_regen', 'v_wrath', 'm_bite', 'm_devour', 'm_hunt', 'm_slash', 'm_shot', 'm_smash', 'm_spit', 'm_acid', 'm_miasma', 'm_puff', 'm_sleep', 'm_bloom', 'm_breath', 'm_scale', 'm_roar', 'm_flame', 'm_spear', 'm_burrow', 'm_maw', 'm_bile', 'm_ivy', 'm_gust', 'm_frostclaw', 'm_voltclaw', 'u_fang_1', 'u_fang_2', 'u_fang_3', 'u_blade_1', 'u_blade_2', 'u_blade_3', 'u_toxi_1', 'u_toxi_2', 'u_toxi_3', 'u_draco_1', 'u_draco_2', 'u_draco_3', 'u_emcap_1', 'u_emcap_2', 'u_emcap_3', 'u_drake_1', 'u_drake_2', 'u_drake_3', 'u_fdrake_1', 'u_fdrake_2', 'u_fdrake_3', 'u_gat_1', 'u_gat_2', 'u_gat_3', 'u_tal_1', 'u_tal_2', 'u_tal_3', 'u_drum_1', 'u_drum_2', 'u_drum_3', 'u_lamp_1', 'u_lamp_2', 'u_lamp_3', 'u_jar_1', 'u_jar_2', 'u_jar_3', 'u_dok_1', 'u_dok_2', 'u_dok_3', 'u_crown_1', 'u_crown_2', 'u_crown_3', 'u_draco_2b', 'u_draco_3b', 'u_draco_3c', 'u_fdrake_2b', 'u_fdrake_3b', 'u_fdrake_3c', 'u_petal_2b', 'u_petal_3b', 'u_petal_3c', 'u_thorn_2b', 'u_thorn_3b', 'u_thorn_3c', 'u_aqua_2b', 'u_aqua_3b', 'u_aqua_3c', 'u_wind_2b', 'u_wind_3b', 'u_wind_3c', 'u_spark_2b', 'u_spark_3b', 'u_spark_3c', 'u_tide_2b', 'u_tide_3b', 'u_tide_3c', 'u_ember_2b', 'u_ember_3b', 'u_ember_3c', 'u_gaia_2b', 'u_gaia_3b', 'u_gaia_3c', 'u_blaze_2b', 'u_blaze_3b', 'u_blaze_3c', 'u_gale_2b', 'u_gale_3b', 'u_gale_3c', 'u_gvine_2b', 'u_gvine_3b', 'u_gvine_3c', 'u_spore_2b', 'u_spore_3b', 'u_spore_3c', 'u_frost_2b', 'u_frost_3b', 'u_frost_3c', 'u_volt_2b', 'u_volt_3b', 'u_volt_3c', 'u_stone_2b', 'u_stone_3b', 'u_stone_3c', 'u_jelly_2b', 'u_jelly_3b', 'u_jelly_3c', 'u_fang_2b', 'u_fang_3b', 'u_fang_3c', 'u_blade_2b', 'u_blade_3b', 'u_blade_3c', 'u_toxi_2b', 'u_toxi_3b', 'u_toxi_3c', 'u_emcap_2b', 'u_emcap_3b', 'u_emcap_3c', 'u_drake_2b', 'u_drake_3b', 'u_drake_3c', 'u_gat_2b', 'u_gat_3b', 'u_gat_3c', 'u_tal_2b', 'u_tal_3b', 'u_tal_3c', 'u_drum_2b', 'u_drum_3b', 'u_drum_3c', 'u_lamp_2b', 'u_lamp_3b', 'u_lamp_3c', 'u_jar_2b', 'u_jar_3b', 'u_jar_3c', 'u_dok_2b', 'u_dok_3b', 'u_dok_3c', 'u_crown_2b', 'u_crown_3b', 'u_crown_3c', 'm_flamer', 'm_rocket', 'm_xbow'];
 const NAME_ID = Object.fromEntries(Object.entries(SKILLS).map(([id, s]) => [s.name, id]));   // 시험판 기술(model.js s1·s2)도 이름으로 그림을 찾음
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadSkillArt(base = '../assets/v2/skills/') {
@@ -94,13 +94,45 @@ function placeholderArt(sk) {
 const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
   : sk.passive && sk.look ? [sk.look.col, sk.look.light, hexMix(sk.look.col, C.ink, 0.5)]   // 일반 카드 = 하늘색 테
   : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
+// 모서리를 c칸 비스듬히 자른 네모 채우기(변이 카드 테)
+function cham(g, x, y, w, h, c, col) {
+  for (let i = 0; i < c; i++) { g.rect(x + c - i, y + i, w - 2 * (c - i), 1, col); g.rect(x + c - i, y + h - 1 - i, w - 2 * (c - i), 1, col); }
+  g.rect(x, y + c, w, h - 2 * c, col);
+}
 function cardFrame(g, x, y, w, h, sk, lit) {
-  const [mid, hi, lo] = frameCols(sk, lit);
+  const [mid, hi, lo] = frameCols(sk, lit), F = sk.form && FORMS[sk.form];
+  if (F) {   // 변이 카드(2026-10-17 사용자 "변이스킬이나 그 외 스킬 카드 테두리 차이가 있으면"): 둥근 테 대신 모서리를 자른 각진 갑옷 테 + 비스듬한 빛 · 그늘 + 모서리 징
+    cham(g, x, y, w, h, 6, C.ink);
+    cham(g, x + 1, y + 1, w - 2, h - 2, 5, mid);
+    g.rect(x + 7, y + 1, w - 14, 1, hi); g.rect(x + 1, y + 7, 1, h - 14, hi);
+    g.rect(x + 7, y + h - 2, w - 14, 1, lo); g.rect(x + w - 2, y + 7, 1, h - 14, lo);
+    for (let i = 0; i < 5; i++) { g.px(x + 1 + i, y + 6 - i, hi); g.px(x + w - 2 - i, y + h - 7 + i, lo); }
+    cham(g, x + 3, y + 3, w - 6, h - 6, 3, C.ink);
+    for (const [px, py] of [[x + 6, y + 2], [x + w - 7, y + 2], [x + 6, y + h - 3], [x + w - 7, y + h - 3], [x + 2, y + 6], [x + w - 3, y + 6], [x + 2, y + h - 7], [x + w - 3, y + h - 7]]) g.px(px, py, lit ? '#fff3c8' : F.light);
+    return;
+  }
   rrect(g, x, y, w, h, 5, C.ink);
   rrect(g, x + 1, y + 1, w - 2, h - 2, 4, mid);
   g.rect(x + 4, y + 1, w - 8, 1, hi); g.rect(x + 1, y + 4, 1, h - 8, hi);   // 위·왼 빛
   g.rect(x + 4, y + h - 2, w - 8, 1, lo); g.rect(x + w - 2, y + 4, 1, h - 8, lo);   // 아래·오른 그늘
   rrect(g, x + 3, y + 3, w - 6, h - 6, 2, C.ink);
+}
+// 해(비용 = 햇빛 에너지 — 2026-10-17 사용자 "카드 왼쪽 상단 mp 소모량 숫자가 너무 작아 · 그 아이콘을 해 모양으로"): 먹선 원판 + 빛살 여덟(십자 = 굵게 · 대각선 = 점)
+//  색 = [속, 빛, 그늘] — ok 금빛 · bad(에너지 모자람) 주황빛 빨강 · off(못 씀) 회색. 빛살 끝 = 반지름 r + 3
+export const SUN = { ok: ['#ffb627', '#fff3b8', '#c96a10'], bad: ['#ff6a3a', '#ffd2b8', '#9a2a14'], off: ['#7d8290', '#c3c7d0', '#3e424c'] };
+export function sunDisc(g, cx, cy, r, [fill, hi, lo]) {
+  const R = r + 3, q = Math.round((r + 1) * 0.74);
+  const rays = (col, e) => {   // e = 1(먹선 — 한 칸 두껍게) · 0(속)
+    for (let d = r - 1; d <= R + e; d++) {
+      const hw = (d <= r + 1 ? 1 : 0) + e;
+      g.rect(cx - hw, cy - d, 2 * hw + 1, 1, col); g.rect(cx - hw, cy + d, 2 * hw + 1, 1, col);
+      g.rect(cx - d, cy - hw, 1, 2 * hw + 1, col); g.rect(cx + d, cy - hw, 1, 2 * hw + 1, col);
+    }
+    for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) g.rect(cx + sx * q - (sx < 0 ? 1 : 0) - e, cy + sy * q - (sy < 0 ? 1 : 0) - e, 2 + 2 * e, 2 + 2 * e, col);
+  };
+  rays(C.ink, 1); g.disc(cx, cy, r + 1, C.ink);
+  rays(hexMix(fill, hi, 0.35), 0); g.disc(cx, cy, r, lo); g.disc(cx, cy - 1, r - 1, fill);
+  g.disc(cx - Math.round(r * 0.3), cy - Math.round(r * 0.35), Math.max(1, Math.round(r * 0.4)), hexMix(fill, hi, 0.55));
 }
 // 마름모(비용 보석): (cx, cy) 가운데, r = 반지름
 function diamond(g, cx, cy, r, [fill, hi, lo]) {
@@ -210,8 +242,15 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
   gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
-  g.rect(ax, by, aw, bh, C.band);
-  g.rect(ax, by, aw, 1, hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));
+  const MF = sk.form && FORMS[sk.form], band = MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦
+  g.rect(ax, by, aw, bh, band);
+  g.rect(ax, by, aw, 1, MF ? MF.light : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));
+  if (MF) {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점)
+    const cx = x + (w >> 1), [fm, fh] = frameCols(sk, o.lit);
+    for (const [dy, hw] of [[-1, 7], [0, 7], [1, 7], [2, 7], [3, 6], [4, 4], [5, 2]]) g.rect(cx - hw, y + dy, hw * 2, 1, C.ink);
+    for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
+    g.rect(cx - 1, y + 1, 2, 2, MF.light);
+  }
   const lines = wrap(sk.name, 'bold', aw - 4).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font: 'bold', color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
@@ -223,14 +262,15 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   }
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
-  if (sk.uses) usesDial(g, x + 9, y + 9, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim, gh);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
+  if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
   else if (sk.passive) {   // 패시브 카드: 비용 대신 카드 색 마름모 + 반짝이
     const L = sk.look || {}, ic = icon('sparkle');
     diamond(g, x + 9, y + 9, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
     if (ic) g.img(tinted('sparkle', '#ffffff'), x + 9 - Math.floor(ic.width / 2), y + 9 - Math.floor(ic.height / 2));
-  } else {
-    diamond(g, x + 9, y + 9, 7, dim ? (o.short ? GEM.bad : GEM.off) : GEM.ok);
-    g.text(String(sk.cost || 0), x + 9.5, y + 9 - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+  } else {   // 비용 = 해(햇빛 에너지) + 큰 숫자
+    const vh = glyphH('value');
+    sunDisc(g, x + 10, y + 10, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
+    g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
   statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, gh);
   cardMarks(g, x, y, w, sk, dim);
@@ -262,11 +302,11 @@ function cardMarks(g, x, y, w, sk, dim) {
   if (sk.inflict && (sk.inflict.n || 1) > 1) { const L = STATUS[sk.inflict.id] || {}; tag(g, xr, artB - 14, '×' + sk.inflict.n, dim ? '#a7adb8' : (L.col || '#ffffff'), L.icon); }   // 걸리는 효과 겹 수
 }
 // 충전 다이얼(변이 기술 — 비용 마름모 자리): 변이 색 원 + 기다리는 턴 수 + 위쪽 눈금
-function usesDial(g, cx, cy, n, F, dim, gh) {   // 변이 기술 횟수(변이 색 동그라미 + 숫자)
-  const col = dim ? GEM.off : [F ? F.col : '#8ea3c2', F ? F.light : '#ffffff', C.ink];
-  g.disc(cx, cy, 8, C.ink); g.disc(cx, cy, 7, col[0]); g.disc(cx, cy, 5, hexMix(col[0], C.ink, 0.45));
-  g.rect(cx, cy - 7, 1, 2, col[1]);
-  g.text(String(n), cx + 0.5, cy - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+function usesDial(g, cx, cy, n, F, dim) {   // 변이 기술 횟수(변이 색 동그라미 + 숫자 — 2026-10-17 비용 숫자와 같이 키움)
+  const col = dim ? GEM.off : [F ? F.col : '#8ea3c2', F ? F.light : '#ffffff', C.ink], vh = glyphH('value');
+  g.disc(cx, cy, 9, C.ink); g.disc(cx, cy, 8, col[0]); g.disc(cx, cy, 6, hexMix(col[0], C.ink, 0.45));
+  g.rect(cx, cy - 8, 1, 2, col[1]);
+  g.text(String(n), cx + 0.5, cy - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
 }
 
 // 빈 칸(배운 기술이 셋보다 적을 때 · 꾹 눌러 들어 올린 카드의 자리)
@@ -382,6 +422,20 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   return { front, back };
 }
 
+// 엎어 둔 카드(공개 전 상대 카드 — 2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고"): 은빛 테 · 남색 바탕 · 안쪽 가는 테 · 가운데 금빛 마름모에 씨앗
+export function renderDown(w, h, BW, BH, k) {
+  const S = BW / w, cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k);
+  const c = cv.getContext('2d'), G = new Gfx(c);
+  c.setTransform(k * S, 0, 0, k * S, 0, 0); c.imageSmoothingEnabled = false;
+  cardFrame(G, 0, 0, w, h, {}, false); backBody(G, 0, 0, w, h);
+  rrect(G, 8, 8, w - 16, h - 16, 3, 'rgba(140,207,255,0.22)'); rrect(G, 9, 9, w - 18, h - 18, 2, C.body);
+  for (let i = 0; i < 4; i++) { const [px, py] = [[12, 12], [w - 13, 12], [12, h - 13], [w - 13, h - 13]][i]; G.rect(px, py, 1, 1, C.line); }   // 네 모서리 점
+  const cx = w >> 1, cy = h >> 1;
+  diamond(G, cx, cy, 15, ['#c89a3e', '#ffe7a8', '#6a4a14']);
+  diamond(G, cx, cy, 10, [C.body2, '#2c5a8e', C.ink]);
+  const ic = icon('seed'); if (ic) G.img(tinted('seed', '#ffe7a8'), cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2));
+  return cv;
+}
 // 원근 뒤집기: (cx, cy) = 카드 가운데, w·h = 지금 크기(논리 칸), th = 0(앞) → π(뒤). 세로 조각마다 깊이 z = x·sinθ, 원근 s = f / (f + z)
 export function drawFlip(c, front, back, cx, cy, w, h, th) {
   const cos = Math.cos(th), sin = Math.sin(th), face = cos >= 0 ? front : back, f = 2.6 * w, N = Math.max(12, Math.round(w / 2)), fw = face.width, fh = face.height;

@@ -13,7 +13,7 @@ import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.j
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
-import { cardFront, cardSlot, renderFaces, drawFlip, cardTiny } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, renderDown, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -54,6 +54,10 @@ function layOf(H, rows, merged = false) {
   return { miscY, HY, AH, oy: AH - 348, MY: HY - 12 - boxH(true) };
 }
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이
+// 턴 시작 공개(drawReveal): 카드 나옴 → 상대 카드 뒤집힘 → 선공 · 후공 표 → 머묾 → 각자 식물로 들어감(ms)
+const RV_W = 92, RV_IN = 400, RV_FLIP0 = 400, RV_FLIP = 420, RV_BADGE = 900, RV_LAG = 170, RV_OUT = 380, REVEAL_MS = 2300, REVEAL1_MS = 1400;
+const backOut = q => { const a = 1.70158; return 1 + (a + 1) * (q - 1) ** 3 + a * (q - 1) ** 2; };
+const easeInOut = q => (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
 const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
 // 경기장 그림 둘레 색(맨 윗줄 · 왼쪽 줄의 가운데 칸) — 넓거나 긴 화면에서 그림 밖을 같은 색으로
 const edgeCache = new Map();
@@ -103,10 +107,21 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
   hpBar(g, bx, yy + 3, right - numW - 5 - bx, 7, bar, u.max, t);
   g.text(`${Math.ceil(bar.main)}/${u.max}`, right, yy, { font: 'bold', color: S && age < S.hold ? '#ffd090' : P.main, align: 'right' });
   yy += 13;
-  g.text('MP', tx, yy, { font: 'bold', color: P.sub });
-  tpips(g, bx, yy + 2, en, u.energyMax, 7);
-  g.text(`${en}/${u.energyMax}`, right, yy, { font: 'bold', color: P.main, align: 'right' });
+  sunDisc(g, tx + 6, yy + 5, 3, SUN.ok);   // MP = 햇빛 에너지(2026-10-17 사용자 "상태바의 mp 부분을 해 색으로 해주고 햇빛 에너지 같은 디자인") — 이름 대신 해
+  sunPips(g, bx, yy + 2, en, u.energyMax, 7, t);
+  g.text(`${en}/${u.energyMax}`, right, yy, { font: 'bold', color: '#ffd25a', align: 'right' });
   return h;
+}
+// 햇빛 에너지 칸: 찬 칸 = 금빛(위 밝게 · 아래 주황) + 빛 한 줄기가 찬 칸을 따라 흐름(2.4초마다), 빈 칸 = 짙은 호박색
+function sunPips(g, x, y, cur, max, gap, t) {
+  const sweep = ((t || 0) % 2400) / 2400 * (cur + 5) - 2;
+  for (let i = 0; i < max; i++) {
+    const on = i < cur, px = x + i * gap, cw = gap - 1;
+    g.rect(px, y, cw, 7, '#2a1806');
+    if (!on) { g.rect(px + 1, y + 1, cw - 2, 5, '#4a3412'); continue; }
+    g.rect(px + 1, y + 1, cw - 2, 5, '#f0901c'); g.rect(px + 1, y + 1, cw - 2, 3, '#ffc83c'); g.rect(px + 1, y + 1, cw - 2, 1, '#ffe98a'); g.px(px + 1, y + 1, '#fffbe0');
+    const d = Math.abs(i - sweep); if (d < 1.3) g.alpha(0.8 * (1 - d / 1.3), () => g.rect(px + 1, y + 1, cw - 2, 5, '#fffbe6'));
+  }
 }
 // 효과 창(한 줄에 셋 · 두 줄까지, 넘치면 +n): [아이콘][이름][겹침 수]를 가운데 — 글자는 위아래 같은 간격(실제 글자 높이로), 아이콘은 글자 줄 가운데에
 const SW_W = 45, SW_H = 16, SW_GAP = 2;
@@ -191,6 +206,10 @@ export const battle = {
     else this.prompt(app);
     if (boot && boot.moved) { this.v.phase = 'wait'; this.sheet = null; }
     if (this.shot) this.pick(null, B.me.kit.find(s => s.id === 's1') || B.me.kit[0]);
+    if (!boot && this.p.reveal != null) {   // 검토 촬영(?reveal=ms[&first=me|foe]): 턴 시작 공개의 그 순간에 멈춤
+      const atk = u => u.kit.find(s => s.power > 0 && s.cost > 0) || u.kit[0], st = { kind: 'reveal', ms: REVEAL_MS, mine: atk(B.me), theirs: atk(B.foe), first: this.p.first || 'foe' };
+      Object.assign(this.v, { steps: [st], si: 0, phase: 'play', t0: app.t - +this.p.reveal, picked: st.mine.id }); this.shot = 'reveal';
+    }
   },
   setupLocal(app) {
     const p = this.p, s = app.state;
@@ -318,10 +337,15 @@ export const battle = {
     const B = this.B, nm = id => B[id].name, sk = id => (id === 'me' ? turn.mySkill : turn.foeSkill) || { name: '기술' }, out = [];
     const evs = [...turn.events];
     for (let i = 0; i < evs.length; i++) if (evs[i].t === 'hit') { const j = evs.findIndex((e, k) => k > i && e.t === 'stance' && e.who === evs[i].to && e.active); if (j > i) { evs.splice(i, 0, evs.splice(j, 1)[0]); i++; } }
+    // 턴 시작 공개(2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고 그다음 진행" · "선공 후공도 빠르고 작게 넘어가서 가독성 떨어지는데 확실히 연출"):
+    //  두 사람이 고른 카드 + 선공 · 후공 표 → 그다음 사건. 교체한 쪽은 카드 없음, 카드가 둘일 때만 선공 · 후공 표(옛 '먼저!' 한 마디는 공개가 대신함)
+    const fe = evs.find(e => e.t === 'first'), card = s => (s && s.name && s.name !== '기술' ? s : null), mine = card(turn.mySkill), theirs = card(turn.foeSkill);
+    const reveal = mine || theirs ? { kind: 'reveal', ms: mine && theirs ? REVEAL_MS : REVEAL1_MS, mine, theirs, first: mine && theirs && fe ? fe.who : null } : null;
+    if (reveal) out.push(reveal);
     for (const e of evs) {
       if (e.t === 'switch') out.push(this.switchStep(e));
       else if (e.t === 'faint') out.push({ kind: 'faint', ms: 900, who: e.who, msg: `${ga(e.name)} 쓰러졌다!`, tone: e.who === 'me' ? 'lose' : 'win' });
-      else if (e.t === 'first') out.push({ kind: 'first', ms: 750, who: e.who, msg: `${ga(nm(e.who))} 먼저 움직인다!`, tone: 'note' });
+      else if (e.t === 'first') { if (!(reveal && reveal.first)) out.push({ kind: 'first', ms: 750, who: e.who, msg: `${ga(nm(e.who))} 먼저 움직인다!`, tone: 'note' }); }
       else if (e.t === 'stance') out.push({ kind: 'stance', ms: 950, who: e.who, skill: sk(e.who), stance: e.kind, active: e.active, msg: `${nm(e.who)}의 ${sk(e.who).name}!` + (e.active ? '' : ' 하지만 먼저라 막을 게 없다'), tone: 'note' });
       else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.id] || ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
@@ -350,6 +374,7 @@ export const battle = {
     // 글자(가운데 전광판 없음): 기술 이름 = 쓰는 식물 위 리본, 나머지 = 머리 위 한두 낱말(st.msg 문장은 목록·기록용으로만 남김)
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms); sfx(st.kind === 'stance' ? 'stance' : 'swing'); }
     if (st.kind === 'first') sfx('first');
+    if (st.kind === 'reveal') { sfx('select'); if (st.theirs) sfx('flip', { at: RV_FLIP0 / 1000 }); if (st.first) sfx('first', { at: RV_BADGE / 1000 }); }
     if (st.kind === 'fxnote') sfx('resist');
     if (st.kind === 'cure') sfx('steam');
     if (st.kind === 'skipT') sfx({ frozen: 'frozen', paral: 'shock', stun: 'stun' }[st.ev.src] || 'stun');
@@ -698,6 +723,7 @@ export const battle = {
     this.hand(app, HY - CARD_Y, live, skipNow);
     if (mutHand(B.me.kit)) this.miscRow(app, HY - CARD_Y + CARD_Y + CARD_H + CARD_GY, live, hx + 2 * (HAND_W + HAND_GX));   // 아래 줄 오른쪽
     else this.miscRow(app, HY + hrows * CARD_H + (hrows - 1) * CARD_GY + 8, live);
+    if (st && st.kind === 'reveal') this.drawReveal(app, st);
     if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
     if (this.info2) this.infoSheet(app);
@@ -715,7 +741,7 @@ export const battle = {
       const id = 'sk_' + sk.id, pickNow = v.phase === 'pick', lock = pickNow ? lockOf(B.me, sk) : null, usable = !skipNow && canUse(B.me, sk), can = live && pickNow && usable, lit = v.picked === sk.id;
       const show = pickNow ? usable : true, short = (sk.cost || 0) > B.me.energy;   // 어둡게 = 고르는 차례에 규칙상 못 쓸 때만(넘어가는 연출 중엔 그대로)
       if (pickNow) { if (usable && this.useWas[id] === false) this.shineAt[id] = app.t; this.useWas[id] = usable; }   // 쓸 수 있게 된 순간 = 빛 띠
-      if (this.peek && this.peek.id === id) cardSlot(g, x, y, CARD_W, CARD_H);   // 들어 올린 카드의 자리
+      if ((this.peek && this.peek.id === id) || (lit && v.phase === 'play')) cardSlot(g, x, y, CARD_W, CARD_H);   // 들어 올린 카드의 자리 · 낸 카드(턴 연출 중 — 공개 때 이 자리에서 나감)
       else {
         const hold = input.down && input.down.id === id ? input.holdMs() : 0, rise = hold > 120 ? Math.min(3, Math.round((hold - 120) / 60)) : 0;   // 꾹 누르는 동안 살짝 들림
         const down = can && input.isPressed(id) && !rise, sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
@@ -757,6 +783,49 @@ export const battle = {
     c.save(); c.shadowColor = `rgba(0,0,0,${(0.6 * pos).toFixed(3)})`; c.shadowBlur = 18 * k * pos; c.shadowOffsetY = 10 * k * pos;
     c.fillStyle = `rgba(0,0,0,${(0.25 * pos).toFixed(3)})`; c.fillRect(cx - pw / 2, cy - h / 2 + 3, pw, h - 6); c.restore();
     drawFlip(c, P.faces.front, P.faces.back, cx, cy, w, h, th);
+  },
+  // 턴 시작 공개(buildSteps 'reveal'): 내 카드 = 손패 자리(없으면 내 식물)에서, 상대 카드 = 상대 식물에서 엎어진 채 가운데로 → 상대 카드가 원근 있게 뒤집힘
+  //  → 선공 = 금빛 테 + 큰 '선공' 표(튀어나옴) · 후공 = 작은 표 → 머묾 → 둘 다 각자 식물로 줄어들며 사라짐(그 식물이 기술을 씀)
+  drawReveal(app, st) {
+    const { g, W, t } = app, c = g.c, k = c.getTransform().a || 1, L = this.lay, v = this.v, age = Math.max(0, t - v.t0), ms = st.ms;
+    if (!st.faces || st.faces.k !== k) {
+      const BW = RV_W, BH = Math.round(RV_W * CARD_H / CARD_W), face = s => renderFaces(s, CARD_W, CARD_H, BW, BH, k, { can: true }).front;
+      st.faces = { k, BW, BH, me: st.mine ? face(st.mine) : null, foe: st.theirs ? face(st.theirs) : null, down: st.theirs ? renderDown(CARD_W, CARD_H, BW, BH, k) : null };
+      const ref = st.mine && this.cards && this.cards['sk_' + st.mine.id];
+      st.from = ref ? [ref.x + ref.w / 2, ref.y + ref.h / 2, ref.w / BW] : null;
+    }
+    const F = st.faces, ox = Math.floor((W - 270) / 2), oy = L.oy, both = !!(st.mine && st.theirs), cy = Math.round(LED_CY + oy + 8);
+    const OUT0 = ms - RV_OUT, out = age > OUT0 ? Math.min(1, (age - OUT0) / RV_OUT) ** 2 : 0, bt = age - RV_BADGE;
+    c.fillStyle = `rgba(6,10,18,${(0.55 * Math.min(1, age / 220) * (1 - out)).toFixed(3)})`; c.fillRect(0, AY, W, L.AH);
+    for (const who of ['foe', 'me']) {
+      const sk = who === 'me' ? st.mine : st.theirs; if (!sk) continue;
+      const plant = [(who === 'me' ? PX : EX) + ox, (who === 'me' ? PY - 64 : EY - 56) + oy];   // 식물 몸 가운데쯤
+      const start = who === 'me' && st.from ? st.from : [...plant, 0.3], tx = both ? Math.round(W / 2 + (who === 'me' ? -1 : 1) * (F.BW / 2 + 9)) : Math.round(W / 2);
+      const qi = backOut(Math.min(1, age / RV_IN)), lead = st.first === who, up = lead && bt > 0 ? Math.round(5 * Math.min(1, bt / 160)) : 0;
+      let cx = start[0] + (tx - start[0]) * qi, ccy = start[1] + (cy - start[1]) * qi - up, sc = start[2] + (1 - start[2]) * qi;
+      if (out) { cx += (plant[0] - cx) * out; ccy += (plant[1] - ccy) * out; sc *= 1 - 0.7 * out; }
+      const w = F.BW * sc, h = F.BH * sc, x = Math.round(cx - w / 2), y = Math.round(ccy - h / 2), al = Math.min(1, age / 110) * (1 - out);
+      c.save(); c.globalAlpha = al;
+      if (lead && bt > 0) { const gl = Math.min(1, bt / 200); rrect(g, x - 3, y - 3, Math.round(w) + 6, Math.round(h) + 6, 8, `rgba(255,200,60,${(0.5 * gl).toFixed(3)})`); rrect(g, x - 1, y - 1, Math.round(w) + 2, Math.round(h) + 2, 6, `rgba(255,236,170,${(0.95 * gl).toFixed(3)})`); }
+      else rrect(g, x + 2, y + 4, Math.round(w), Math.round(h), 6, 'rgba(0,0,0,0.4)');
+      if (who === 'foe' && age < RV_FLIP0 + RV_FLIP) drawFlip(c, F.foe, F.down, cx, ccy, w, h, Math.PI * (1 - easeInOut(Math.max(0, (age - RV_FLIP0) / RV_FLIP))));
+      else c.drawImage(who === 'me' ? F.me : F.foe, x, y, w, h);
+      const u = v.view[who];
+      if (u && !out && age > RV_IN) g.text(u.name, Math.round(cx), y + Math.round(h) + 5, { font: 'bold', color: '#e6f3ff', align: 'center', outline: T.ink, outlineW: 2 });   // 누구 카드인지(카드 아래 식물 이름)
+      c.restore();
+      if (st.first && bt > (lead ? 0 : RV_LAG)) { const q = Math.min(1, (bt - (lead ? 0 : RV_LAG)) / 200); this.orderBadge(g, Math.round(cx), y - 15, lead, lead ? 1 + 0.7 * (1 - backOut(q)) : 0.82 + 0.18 * backOut(q), Math.min(1, q * 2) * (1 - out)); }
+    }
+  },
+  // 선공 · 후공 표: 선공 = 금빛 큰 표 · 후공 = 남색 작은 표, (cx, cy) 가운데 · s = 크기 배수(튀어나옴)
+  orderBadge(g, cx, cy, first, s, al) {
+    const c = g.c, txt = first ? '선공' : '후공', font = first ? 'name' : 'value', gh = glyphH(font), w = g.textW(txt, font) + (first ? 24 : 16), h = gh + (first ? 12 : 9);
+    const P = first ? { ring: '#3a2408', fill: '#ffc83c', hi: '#fff4c8', lo: '#b8781c', text: '#3a2408' } : { ring: '#0b1322', fill: '#2a4961', hi: '#6c90a0', lo: '#10243a', text: '#e3e9ef' };
+    c.save(); c.globalAlpha = al; c.translate(cx, cy); c.scale(s, s); c.translate(-cx, -cy);
+    const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
+    rrect(g, x - 1, y - 1, w + 2, h + 2, 6, P.ring); rrect(g, x, y, w, h, 5, P.fill);
+    g.rect(x + 4, y + 1, w - 8, 1, P.hi); g.rect(x + 4, y + h - 2, w - 8, 1, P.lo);
+    g.text(txt, cx, y + Math.round((h - gh) / 2), { font, color: P.text, align: 'center' });
+    c.restore();
   },
   // 위 띠: 턴 · 대회 이름(또는 3:3 · 친구 대결) · 판 점 · (친구 대결) 남은 시간
   topBar(app) {

@@ -43,6 +43,16 @@ export const SHOTS = [
   ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
+  ['08_battle_reveal_0150', 'battle', { venue: 'colosseum', reveal: '150' }],
+  ['08_battle_reveal_0480', 'battle', { venue: 'colosseum', reveal: '480' }],
+  ['08_battle_reveal_0640', 'battle', { venue: 'colosseum', reveal: '640' }],
+  ['08_battle_reveal_1000', 'battle', { venue: 'colosseum', reveal: '1000' }],
+  ['08_battle_reveal_1300', 'battle', { venue: 'colosseum', reveal: '1300' }],
+  ['08_battle_reveal_1900', 'battle', { venue: 'colosseum', reveal: '1900' }],   // 턴 시작 공개(2026-10-17 — 카드 나옴 · 상대 카드 뒤집힘 · 선공 · 후공 · 들어감)
+  ['08_battle_reveal_me_first', 'battle', { venue: 'colosseum', reveal: '1300', first: 'me' }],
+  ['08_battle_cards_mut', 'battle', { phase: 'pick', venue: 'colosseum', energy: '3', mut: 'weapon', mk: 'm_flamer,m_rocket' }],   // 변이 카드 각진 테 · 해 비용 · 햇빛 에너지 칸(2026-10-17)
+  ['08_battle_reveal_mut', 'battle', { venue: 'colosseum', reveal: '1400', mut: 'weapon', mk: 'm_xbow,m_rocket' }],
+  ['08_battle_cards_mut2', 'battle', { phase: 'pick', venue: 'colosseum', energy: '2', me: 'flower_fire', mut: 'predator' }],
   ['07_battle_status', 'battle', { phase: 'pick', venue: 'colosseum', status: '1' }],
   ['07_battle_peek', 'battle', { phase: 'pick', venue: 'colosseum', peek: 's1' }],
   ['07_battle_emote', 'battle', { phase: 'pick', venue: 'colosseum', emote: '1' }],
