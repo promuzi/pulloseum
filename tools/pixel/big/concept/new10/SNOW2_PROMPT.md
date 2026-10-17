@@ -1,0 +1,11 @@
+(2026-10-18 밤 — 스노우발레 첫 그림은 옅은 흰 · 연보라 위에 옅은 색이라 96×112로 줄이면 흰 덩어리가 되고 눈이 사라짐 → 대비를 높여 다시. 같은 캐릭터, 몸 색을 진하게 · 머리와 눈을 크게 · 테두리 그늘을 짙게.)
+
+Task: redraw ONE plant creature in 3 separate images (ADULT, YOUNG, TEEN) for a mobile monster-collecting game. A pixel artist will shrink each to a 96x112 pixel sprite, so it must stay readable when tiny. You may open only these three existing images as the character reference, nothing else: D:\dev\pulloseum\tools\pixel\big\concept\new10\snow_ballet.png, D:\dev\pulloseum\tools\pixel\big\concept\stages_raw2\snow_ballet_young.png, D:\dev\pulloseum\tools\pixel\big\concept\stages_raw2\snow_ballet_teen.png.
+
+Keep the same design (an ice flower ballerina - snowflake-patterned petal tutu, tip-toe root, one leaf arm raised, small icy petal crown; young = closed frosty bud; teen = half-open bud with a short petal skirt), the same pose and camera, but fix readability:
+- Much stronger value contrast: the body, stem and arms in a clear medium-deep blue-violet (not pale), the tutu petals white with clearly darker periwinkle-blue shading and a darker blue edge line, the crown silver-blue.
+- Make the head about 30 percent bigger and the eyes about twice as big (still elegant, half-lidded), with a dark navy upper eyelid line and a clearly darker blue iris, so the eyes survive at pixel size.
+- Darker cool shadows at the edges of every shape so the silhouette reads against a dark background.
+- Everything else as before: view from the front and slightly above (about 25 degrees down), body facing front with the head turned slightly to one side, all parts attached to the body (no floating particles), no flower pot, no soil, no ground shadow, the base ends at a flat soil line at the bottom, plain flat light grey background (#d9d9d9), square image about 1024x1024, no text, no frame.
+
+Save as D:\dev\pulloseum\tools\pixel\big\concept\new10\snow_ballet_v2.png, D:\dev\pulloseum\tools\pixel\big\concept\stages_raw2\snow_ballet_v2_young.png and D:\dev\pulloseum\tools\pixel\big\concept\stages_raw2\snow_ballet_v2_teen.png. If the image tool saves elsewhere, copy them there with those names. Do not create, modify or delete any other file, do not commit. Generate each image only once.

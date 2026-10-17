@@ -10,7 +10,7 @@ import { glyphH } from '../core/text.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, slotLv, lvOf } from '../game/view.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
 import { evolveLeague } from '../game/logic.js';
-import { LEAGUES } from '../game/catalog.js';
+import { LEAGUES, STAT_NAME } from '../game/catalog.js';
 import { eul } from '../core/josa.js';
 import { sfx } from '../core/sound.js';
 import { openDraft } from './draft.js';
@@ -385,6 +385,7 @@ export const nursery = {
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
+    else if (r.ivUp && Object.keys(r.ivUp).length) app.toast('개체값 ' + Object.entries(r.ivUp).map(([k, n]) => `${STAT_NAME[k]} +${n}`).join(' · '));   // 진화 = 개체값 무작위로 오름(2026-10-18)
     openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });   // 진화 연출 → 카드 고르기(scenes/draft.js)
   },
   async harvest(app, p) {

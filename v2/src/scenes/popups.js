@@ -18,6 +18,7 @@ import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 import { drawGuide } from './guide.js';
 import { draftScreen, openDraft } from './draft.js';
+import { seedPickScreen } from './seedpick.js';
 
 const ease = k => 1 - (1 - k) ** 3;
 const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; };
@@ -274,6 +275,7 @@ export function drawOverlays(app) {
   if (app.confirm) { if (app.draft) draftScreen(app, app.draft); return confirmBox(app, app.confirm); }   // 고르기 화면 위의 확인 창(버릴까요?) = 고르기 화면은 그대로 두고 그 위에
   if (app.popup) return gotPopup(app, app.popup);
   if (app.draft) return draftScreen(app, app.draft);   // 레벨업 · 진화 카드 고르기(scenes/draft.js)
+  if (app.seedpick) return seedPickScreen(app, app.seedpick);   // 종자 거름 고르기(scenes/seedpick.js)
   if (app.sheet === 'settings') return settingsSheet(app);
   if (s && s.pending && s.pending.length && !NO_CHEST.has(app.router.name) && !app.router.phase) {
     const item = s.pending.find(x => !(app.ackedLv && app.ackedLv.has(x.kind === 'season' ? 'season' + x.n : x.level)));

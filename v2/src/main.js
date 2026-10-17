@@ -15,6 +15,7 @@ import { mockState } from './data/mock.js';
 import { SCENES } from './scenes/index.js';
 import { drawOverlays, gotScroll } from './scenes/popups.js';
 import { draftScroll, openDraft, draftShot } from './scenes/draft.js';
+import { seedPickDrag } from './scenes/seedpick.js';
 import { CARDS, isSkillCard, cardFits } from './game/cards.js';
 import { shotGuide } from './scenes/guide.js';
 import { net, act as netAct } from './net/api.js';
@@ -38,7 +39,7 @@ let chain = Promise.resolve();
 //  QUICK(난수 · 보상 굴림 없는 일)은 같은 규칙(game/ops.js)으로 이 화면에서 먼저 하고 바로 보여 준 뒤 서버에 보냄.
 //  서버 상태는 줄 선 일이 다 끝났을 때 한 번만 받아 맞춤(중간 답으로 덮으면 뒤에 누른 것이 잠깐 되돌아감) · 서버가 거절하면 다시 받아 맞춤.
 //  그 밖의 일(진화 · 수확 · 탐사 · 구매 …)은 서버 답을 기다림 — 기다리는 동안 화면 맨 위 가는 띠(0.16초 넘으면)
-const QUICK = new Set(['feed', 'draftPick', 'draftApply', 'seedFeed', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
+const QUICK = new Set(['feed', 'draftPick', 'draftApply', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
 let pendOps = 0, lastSrv = null, stale = false;
 const app = {
   screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0, waiting: 0, waitT: 0,
@@ -136,7 +137,7 @@ function frameBody(ts) {
     }
     stretchEdges(g.c, screen.s, screen.W, screen.H, F, screen.oy || 0, screen.ob || 0);
     screen.present();
-    input.flush(app.guide ? null : app.popup && !app.confirm ? gotScroll(app) : app.draft ? draftScroll(app) : router.cur);   // 처음 안내가 열린 동안엔 장면 끌기 · 밀기 없음 · 받은 것 판 = 그 판의 칸 줄 · 카드 고르기 = 설명 판 글을 끎
+    input.flush(app.guide ? null : app.popup && !app.confirm ? gotScroll(app) : app.draft ? draftScroll(app) : app.seedpick ? seedPickDrag(app) : router.cur);   // 처음 안내가 열린 동안엔 장면 끌기 · 밀기 없음 · 받은 것 판 = 그 판의 칸 줄 · 카드 고르기 = 설명 판 글을 끎
   } catch (e) {
     if (ts - lastErr > 2000) { lastErr = ts; console.error('화면 오류', router.name, e); window.__lastError = String(e && e.stack || e); }
     try { g.c.restore(); } catch {}
@@ -181,6 +182,12 @@ window.__shot = (name, params = {}, opt = {}) => {
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
+  app.seedpick = null;
+  if (opt.seedpick) {   // 종자 거름 고르기 촬영(opt.seedpick = { mode, sel: [몇째 …], stage: 'stat', stat, info: 몇째, special: 몇째를 전설로 })
+    const O = opt.seedpick, p = app.state.plants[app.state.active || 0], mine = app.state.seeds.filter(sd => sd.key === p.key);
+    if (O.special != null && mine[O.special]) mine[O.special].legend = true;
+    app.seedpick = { uid: p.uid, sel: new Set((O.sel || []).map(i => mine[i] && mine[i].id).filter(Boolean)), mode: O.mode || 'view', sy: 0, info: O.info != null && mine[O.info] ? mine[O.info].id : null, stage: O.stage || null, stat: O.stat || null };
+  }
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   app.draft = null;
   if (opt.draft) {   // 고르기 화면 촬영(opt.draft = { evo, at: 연 뒤 ms, part: 'skill' | 'passive', n, pick, moves: [[위 줄 몇째, 칸]], sel, arm, peek: 칸 | 't<몇째>', sy })

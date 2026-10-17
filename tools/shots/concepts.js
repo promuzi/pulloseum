@@ -41,6 +41,12 @@ export const CONCEPT = {
   wizard_bell: '마법사 꽃잎 모자 · 별 지팡이',
   ninja_vine: '복면 · 붉은 잎 목도리 · 잎 수리검',
   diver_vine: '물안경 · 주황 테왁 · 망사리',
+  pirate_cactus: '해적 삼각모 · 가시 커틀러스',
+  ranger_vine: '잎 두건 · 덩굴 장궁',
+  miner_cap: '광부 헬멧 · 곡괭이 뿌리',
+  snow_ballet: '눈꽃 튀튀 · 발끝 서기',
+  volcano_cap: '화산 갓 · 용암 줄기',
+  dandel_aero: '민들레 낙하산 · 비행 고글',
 };
 // 게임과 같은 그림(화분 + 풀) — 위 여유(키 큰 식물 머리가 안 잘리게)
 export const ready = loadBig('/assets/v2/');

@@ -85,6 +85,7 @@ export function ambientPlan(cv, rig, amb = {}, FR = 64, seed = 11) {
   if (amb.swirl) plan.swirl = amb.swirl;
   if (amb.spores) plan.spores = amb.spores;
   if (amb.dust) plan.dust = amb.dust;
+  if (amb.lava) plan.lava = amb.lava;
   return plan;
 }
 
@@ -197,6 +198,19 @@ export function ambientFrame(f, plan, im, at, put, b = 0) {
       if (q % 3 === 0 && k < 14) put(Math.floor(x) + 1, Math.floor(y), sp.color || '#fff1a8');
     }
     if (b > 0.85) for (let q = 0; q < 5; q++) { const [sx, sy] = sp.from[q % sp.from.length], o = at([sx + (q - 2) * 4, sy + 1]); put(Math.floor(o[0]), Math.floor(o[1] + (b - 0.85) * 10), sp.color || '#fff1a8'); }
+  }
+  // ── 마그마 방울(2026-10-18 사용자 "화산은 머리에 연기나 마그마 방울이 종종 튀는 느낌"): 분화구에서 위로 튀어 포물선으로 떨어지며 식음(밝은 노랑 → 주황 → 짙은 빨강) ──
+  if (plan.lava) {
+    const lv = plan.lava, every = lv.every || 24;
+    for (let q = 0; q < (lv.n || 2); q++) {
+      const k = ((f - (lv.at ?? 6) - q * Math.floor(every / (lv.n || 2))) % every + every) % every, life = lv.life || 16;
+      if (k >= life) continue;
+      const cyc = Math.floor((f - q * 7) / every), r = rng(plan.seed * 17 + q * 71 + cyc * 131), [sx, sy] = lv.from[q % lv.from.length], o = at([sx, sy]);
+      const vx = (r() - 0.5) * (lv.vx ?? 0.9), vy = -(lv.vy ?? 1.3) * (0.8 + r() * 0.4), x = o[0] + vx * k, y = o[1] + vy * k + 0.11 * k * k;
+      const c = k < life * 0.35 ? lv.hot || '#fff0a0' : k < life * 0.7 ? lv.color || '#ff8a2a' : lv.dim || '#a8341c';
+      put(Math.floor(x), Math.floor(y), c);
+      if (k < 4) put(Math.floor(x), Math.floor(y) + 1, lv.color || '#ff8a2a');   // 막 튈 때 꼬리
+    }
   }
   // ── 먼지: 아주 천천히 떠다니는 흙먼지 + 가끔 돌 부스러기가 떨어져 테에 튐 ──
   if (plan.dust) {

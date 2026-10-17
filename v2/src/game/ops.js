@@ -27,7 +27,7 @@ export const OPS = {
   setLoadout: (s, a) => L.setLoadout(s, str(a.id), Array.isArray(a.battle) && a.battle.length === L.LOADOUT ? a.battle.map(v => (v == null ? null : str(v))) : bad()),
   upgrade: (s, a) => L.upgrade(s, str(a.id), str(a.stat, 8), int(a.n, 1, 50, 1)),
   resetPoints: (s, a) => L.resetPoints(s, str(a.id)),
-  seedFeed: (s, a) => L.seedFeed(s, str(a.id), str(a.stat, 8), Array.isArray(a.seeds) && a.seeds.length <= 60 ? a.seeds.map(v => str(v)) : bad()),   // 종자 거름(2026-10-18 — 식물 통째 거름 merge 는 없앰)
+  seedFeed: (s, a, c) => L.seedFeed(s, str(a.id), str(a.stat, 8), Array.isArray(a.seeds) && a.seeds.length <= 60 ? a.seeds.map(v => str(v)) : bad(), c.rng),   // 확률(난수 — QUICK 아님)   // 종자 거름(2026-10-18 — 식물 통째 거름 merge 는 없앰)
   graft: (s, a) => L.graft(s, str(a.id), str(a.scion)),
   regress: (s, a) => L.regress(s, str(a.id), str(a.skill)),
   rename: (s, a) => L.rename(s, str(a.id), str(a.name, 40)),

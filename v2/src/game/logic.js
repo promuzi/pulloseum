@@ -287,9 +287,11 @@ export function evolve(s, id, rng) {
   p.stage++; p.lv = 1; p.gxp = 0;
   let league = null;
   if (lg) { const T = s.tournament; T.round = ROUNDS[0]; T.wins = 0; T.losses = 0; setLeague(s, lg.to); league = { from: lg.from, to: lg.to, reset: lg.had }; }
+  const ivUp = {};   // 진화 = 개체값이 무작위로 1~3 오름(최대 아닌 칸에 하나씩 — 2026-10-18 사용자 "진화 시 개체값이 범위 내에서 랜덤하게 오르는 것도")
+  for (let n = 1 + Math.floor(rng() * 3); n > 0; n--) { const room = IV_KEYS.filter(k => (p.ivs[k] || 0) < IV_MAX); if (!room.length) break; const k = room[Math.floor(rng() * room.length)]; p.ivs[k] = (p.ivs[k] || 0) + 1; ivUp[k] = (ivUp[k] || 0) + 1; }
   const d1 = addDraft(p, 'evo'), d2 = addDraft(p, 'evo', 'passive'), got = [], draft = !!(d1 || d2);   // 진화 = 새 기술 후보에서 고르기 → 패시브 고르기(전엔 한두 개를 바로 배움 — 2026-10-18)
   const xp = addXp(s, XP.evolve, rng);
-  return { stage: p.stage, got, draft, xp, league };
+  return { stage: p.stage, got, draft, xp, league, ivUp };
 }
 // ── 카드 고르기(2026-10-18 사용자 "레벨업할 때마다 후보 여러 장 · 골라서 보관 · 진화 = 2장쯤 · 특정 레벨 · 마지막 진화 = 더" · "보류 가능 · '스킬 정하기'로 다시"):
 //  p.drafts = [{ kind: 'lv' | 'evo', st, lv, pick, cands }] — 후보 = 그 단계에 피는 기술(bloomPool) 중 아직 모르는 것 · 다른 고르기에 이미 나온 것 빼고.
@@ -407,28 +409,32 @@ export function resetPoints(s, id) {
   return { cost, back };
 }
 // 거름(같은 식물을 먹여 고른 개체값 ↑ — 먹인 개체 별이 높을수록 많이)
-// 종자 거름(2026-10-18 사용자 "같은 식물 종자는 거름으로 · 개체값 상승은 소량 · 랜덤이냐 고르냐" → 추천안 = 고르기 + 높을수록 비싸게, 식물 통째 거름은 없앰):
-//  고른 개체값 칸에 같은 종 종자를 넣으면 게이지(p.ivp)가 참 — 지금 값 0~4 = 종자 셋 · 5~7 = 넷 · 8~9 = 다섯에 +1(남는 건 이월) · 최대면 멈추고 남은 종자는 가방에
-export const ivpCost = v => (v <= 4 ? 3 : v <= 7 ? 4 : 5);
-export function seedFeed(s, id, stat, seedIds) {
+// 종자 거름(2026-10-18 사용자 "같은 식물 종자는 거름으로 · 개체값 상승은 소량" → "무조건 오르는 것보다 확률이면 · 거의 만렙일수록 조금씩 어려워지게"):
+//  고른 개체값에 같은 종 종자를 하나씩 — 종자마다 확률(지금 값 0~4 = 40% · 5~7 = 25% · 8~9 = 12%), 실패가 쌓이면(p.ivp = 연속 실패 수) 4 · 6 · 9번째엔 반드시(운 나쁜 줄 막기) ·
+//  최대면 멈추고 남은 종자는 가방. 난수라 화면이 먼저 하지 않음(서버 결과 그대로)
+export const ivpChance = v => (v <= 4 ? 0.4 : v <= 7 ? 0.25 : 0.12);
+export const ivpPity = v => (v <= 4 ? 4 : v <= 7 ? 6 : 9);
+export function seedFeed(s, id, stat, seedIds, rng) {
   const p = getPlant(s, id); normIvs(p);
   need(IV_KEYS.includes(stat), '올릴 개체값을 골라 주세요');
   need((p.ivs[stat] || 0) < IV_MAX, '이미 최대예요');
+  need(typeof rng === 'function', '잘못된 요청이에요');
   const ids = [...new Set((Array.isArray(seedIds) ? seedIds : []).map(String))], list = ids.map(x => s.seeds.find(sd => sd.id === x));
   need(ids.length && list.every(Boolean), '그 종자가 없어요');
   need(list.every(sd => sd.key === p.key), '같은 식물 종자만 거름이 돼요');
   p.ivp = p.ivp && typeof p.ivp === 'object' ? p.ivp : {};
-  const from = p.ivs[stat] || 0;
-  let used = 0;
+  const from = p.ivs[stat] || 0, tries = [];
   for (const sd of list) {
-    if ((p.ivs[stat] || 0) >= IV_MAX) break;
-    s.seeds.splice(s.seeds.indexOf(sd), 1); used++;
-    p.ivp[stat] = (p.ivp[stat] || 0) + 1;
-    if (p.ivp[stat] >= ivpCost(p.ivs[stat] || 0)) { p.ivp[stat] -= ivpCost(p.ivs[stat] || 0); p.ivs[stat] = (p.ivs[stat] || 0) + 1; }
+    const v = p.ivs[stat] || 0;
+    if (v >= IV_MAX) break;
+    s.seeds.splice(s.seeds.indexOf(sd), 1);
+    const hit = (p.ivp[stat] || 0) + 1 >= ivpPity(v) || rng() < ivpChance(v);
+    if (hit) { p.ivs[stat] = v + 1; p.ivp[stat] = 0; } else p.ivp[stat] = (p.ivp[stat] || 0) + 1;
+    tries.push(hit ? 1 : 0);
   }
-  const to = p.ivs[stat];
+  const to = p.ivs[stat], okN = tries.filter(Boolean).length;
   if (to >= IV_MAX) p.ivp[stat] = 0;
-  return { stat, from, to, used, gauge: p.ivp[stat] || 0, need: to >= IV_MAX ? 0 : ivpCost(to) };
+  return { stat, from, to, used: tries.length, ok: okN, fail: tries.length - okN, tries, fails: p.ivp[stat] || 0, chance: to >= IV_MAX ? 0 : ivpChance(to), pity: to >= IV_MAX ? 0 : ivpPity(to) };
 }
 // 접목(완제품 접목 가지 — 속성·종이 맞아야, 상급은 다 자란 식물만)
 export function graft(s, id, scionId) {

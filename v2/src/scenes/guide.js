@@ -79,11 +79,11 @@ export const GUIDES = [
       { at: 'up_*', text: '강화 포인트는 레벨이 오를 때마다 2개씩 생겨요. 포인트 하나와 돈으로 능력치 하나를 올려요.' },
       { at: 'up_reset', text: '초기화하면 쓴 포인트가 돌아와요. 돈이 들어요.' },
     ] },
-  { id: 'plant_iv2', scene: 'plant', when: (app, sc) => sc.tab === 'iv', btn: app => [app.W - 24, 9],
+  { id: 'plant_iv3', scene: 'plant', when: (app, sc) => sc.tab === 'iv', btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && !sc.out,
     steps: [
       { text: '개체값은 심을 때 정해지는 타고난 힘이에요. 1마다 그 능력치가 1%씩 올라요.' },
-      { at: ['sf_one', 'sf_all'], text: '같은 종 종자를 거름으로 넣으면 고른 개체값 게이지가 차요. 칸이 다 차면 +1 — 값이 높을수록 종자가 더 들어요. 위 원을 눌러 올릴 능력치를 골라요.' },
+      { at: 'sf_open', text: '같은 종 종자를 거름으로 써요. 종자를 꾹 누르면 여러 개를 고를 수 있어요. 종자마다 확률로 오르고, 값이 높을수록 어려워요.' },
     ] },
   { id: 'plant_forgot', scene: 'plant', when: (app, sc) => sc.sub === 'forgot', btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && !sc.out,

@@ -14,13 +14,14 @@ import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/l
 import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
 import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
-import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, SKILL_STORE, evolveLeague, slotLayout, specialSeed, ivpCost } from '../game/logic.js';
+import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, SKILL_STORE, evolveLeague, slotLayout } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
 import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
 import { eul, ga, eun } from '../core/josa.js';
 import { openDraft } from './draft.js';
+import { openSeedPick } from './seedpick.js';
 
 // 식물 관리(2026-10-15 사용자 "가운데 식물을 누르면 … 암실 … 식물의 강화와 각종 식물 스킬과 세팅"):
 //  홈이 불을 끄고 다가간 그 카메라 그대로 — 위 = 돌아가기·이름·별·정체성 · 생장(물·비료·진화), 아래 판 = 기술 · 강화 · 개체값 · 설정.
@@ -443,7 +444,7 @@ export const plant = {
     miniStars(g, 14, y0 + 3, stars(p));
     g.text(`개체값 합 ${ivSum(p)}/${IV_TOTAL}`, 60, y0, { color: P.sub });
     // 종자 거름(2026-10-18 — 식물 통째 거름 대신): 같은 종 종자를 고른 개체값 칸에 넣어 게이지를 채움(지금 값이 높을수록 +1에 종자가 더 듦)
-    const mine = s.seeds.filter(sd => sd.key === p.key), plain = mine.filter(sd => !specialSeed(sd)), spec = mine.filter(specialSeed);
+    const mine = s.seeds.filter(sd => sd.key === p.key);
     const pick = this.ivStat && IV_KEYS.includes(this.ivStat) ? this.ivStat : IV_KEYS.reduce((a, k) => ((ivs[k] || 0) < (ivs[a] || 0) ? k : a), IV_KEYS[0]);
     const cw = Math.floor((W - 28) / IV_KEYS.length), cy = y0 + 46;
     IV_KEYS.forEach((k, i) => {
@@ -459,16 +460,8 @@ export const plant = {
     g.text('종자 거름', 14, y, { font: 'value', color: P.main });
     g.text(`같은 종자 ${mine.length}`, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' });
     y += 22;
-    const v = ivs[pick] || 0, full = v >= IV_MAX, gauge = (p.ivp && p.ivp[pick]) || 0, need = full ? 0 : ivpCost(v);
-    g.text(full ? `${STAT_NAME[pick]} 최대` : `${STAT_NAME[pick]} ${v} → ${v + 1}`, 14, y, { font: 'bold', color: '#ffd890' });
-    for (let i = 0; i < need; i++) { const bx = W - 14 - (need - i) * 14; rrect(g, bx, y + 1, 11, 11, 2, '#06111c'); if (i < gauge) rrect(g, bx + 2, y + 3, 7, 7, 1, '#ffd890'); }   // 게이지 칸 = 다음 +1까지 필요한 종자 수
-    y += 22;
-    const bw = Math.floor((W - 34) / 2), feed = ids => app.act('seedFeed', { id: p.uid, stat: pick, seeds: ids }).then(r => { if (r) app.toast(r.to > r.from ? `${STAT_NAME[pick]} ${r.from} → ${r.to}` : `${STAT_NAME[pick]} 게이지 ${r.gauge}/${r.need}`); });
-    const one = () => { if (plain.length) return feed([plain[0].id]); const sd = spec[0]; ask(app, `${sd.legend ? '전설' : sd.shiny ? '색 변종' : '변이'} 종자를 거름으로 쓸까요?`, '심으면 특별한 식물이 나와요', () => feed([sd.id]), '거름으로'); };
-    this.btn(app, live, 'sf_one', 14, y, bw, 30, '1개 넣기', { style: 'gold', font: 'bold', disabled: full || !mine.length }, one);
-    this.btn(app, live, 'sf_all', 20 + bw, y, bw, 30, `모두 넣기 ${plain.length}`, { style: 'night', font: 'bold', disabled: full || !plain.length }, () => feed(plain.map(sd => sd.id)));   // 전설 · 색 변종 · 변이 종자는 '모두'에서 뺌
-    y += 40;
-    if (!mine.length) { g.text('같은 식물 종자가 없어요', W / 2, y, { color: P.dim, align: 'center' }); y += 24; }
+    this.btn(app, live, 'sf_open', 14, y, W - 28, 32, '종자 고르기', { style: 'gold', font: 'head', disabled: !mine.length }, () => openSeedPick(app, p));   // 목록 · 꾹 = 고르기 · 전체 · 끌어 고르기 → 거름으로 쓰기(scenes/seedpick.js — 2026-10-18)
+    y += 42;
     return y;
   },
 
@@ -516,6 +509,7 @@ export const plant = {
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
+    else if (r.ivUp && Object.keys(r.ivUp).length) app.toast('개체값 ' + Object.entries(r.ivUp).map(([k, n]) => `${STAT_NAME[k]} +${n}`).join(' · '));   // 진화 = 개체값 무작위로 오름(2026-10-18)
     this.tab = 'skill'; this.sub = null; this.scrollY = 0;
     openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });
   },

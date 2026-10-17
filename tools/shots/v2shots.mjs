@@ -45,7 +45,11 @@ export const SHOTS = [
   ['06_plant_up_sun', 'plant', { tab: 'up' }, { plants: [{ up: { hp: 2, sunMax: 6, sunRegen: 4 }, pts: 9 }] }],   // 햇빛 그릇 2단 · 회복 1단(2026-10-18)
   ['06_plant_set', 'plant', { tab: 'set' }],
   ['06_plant_iv', 'plant', { tab: 'iv' }],
-  ['06_plant_iv_seeds', 'plant', { tab: 'iv' }, { seedsLike: 7, plants: [{ ivp: { fruit: 2 } }] }],   // 종자 거름(같은 종 종자 일곱 · 열매 게이지 2/3 — 2026-10-18)
+  ['06_plant_iv_seeds', 'plant', { tab: 'iv' }, { seedsLike: 7, plants: [{ ivp: { fruit: 2 } }] }],
+  ['06_seedpick', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2 } }],   // 종자 거름 고르기(2026-10-18) — 목록
+  ['06_seedpick_info', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2, info: 2 } }],   // 한 번 누름 = 정보
+  ['06_seedpick_sel', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2, mode: 'select', sel: [0, 1, 2, 5, 6] } }],   // 꾹 = 선택 모드
+  ['06_seedpick_stat', 'plant', { tab: 'iv' }, { seedsLike: 14, plants: [{ ivp: { hp: 2 } }], seedpick: { special: 2, mode: 'select', sel: [0, 1, 2, 5, 6], stage: 'stat', stat: 'hp' } }],   // 능력치 고르기 + 특별 종자 주의   // 종자 거름(같은 종 종자 일곱 · 열매 게이지 2/3 — 2026-10-18)
   ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],
   ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
   ['06_draft_evo_0500', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 500 } }], ['06_draft_evo_1150', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1150 } }], ['06_draft_evo_1600', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1600 } }],   // 진화 연출(scenes/draft.js — 2026-10-18)

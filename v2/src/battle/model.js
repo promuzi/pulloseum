@@ -66,6 +66,12 @@ const SKILLS = {
   wizard_bell: [{ id: 's1', name: '별빛 찌릿', power: 55, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '번개 주문', power: 110, cost: 4, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 2 } }],
   ninja_vine: [{ id: 's1', name: '잎 수리검', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '수리검 난무', power: 105, cost: 3, el: 'wind', ranged: true, area: true }],
   diver_vine: [{ id: 's1', name: '물질', power: 55, cost: 1, el: 'water', inflict: { id: 'wet' } }, { id: 's2', name: '파도타기', power: 105, cost: 3, el: 'water', ranged: true, area: true, inflict: { id: 'wet' } }],
+  pirate_cactus: [{ id: 's1', name: '물보라 칼질', power: 60, cost: 1, el: 'water', contact: true, inflict: { id: 'wet' } }, { id: 's2', name: '큰 파도 베기', power: 110, cost: 3, el: 'water', contact: true, inflict: { id: 'taunt' } }],
+  ranger_vine: [{ id: 's1', name: '덩굴 화살', power: 55, cost: 1, el: 'grass', ranged: true, inflict: { id: 'poison', n: 1 } }, { id: 's2', name: '잎새 연사', power: 105, cost: 3, el: 'grass', ranged: true, inflict: { id: 'bind' } }],
+  miner_cap: [{ id: 's1', name: '곡괭이 찍기', power: 60, cost: 1, el: 'earth', contact: true, inflict: { id: 'spore' } }, { id: 's2', name: '광맥 폭파', power: 105, cost: 3, el: 'earth', area: true, inflict: { id: 'stun' } }],
+  snow_ballet: [{ id: 's1', name: '눈꽃 회전', power: 55, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '얼음 피루엣', power: 100, cost: 3, el: 'ice', area: true, inflict: { id: 'chill', n: 2 } }],
+  volcano_cap: [{ id: 's1', name: '불씨 분출', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '화산 폭발', power: 115, cost: 4, el: 'fire', area: true, inflict: { id: 'burn', n: 2 } }],
+  dandel_aero: [{ id: 's1', name: '솜털 바람', power: 50, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '민들레 폭풍', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'weak' } }],
   drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock', n: 2 } }],
 };
 // 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 40 공격 · 방어 자세 · 회피 자세)은
@@ -110,6 +116,12 @@ export const BASIC_NAMES = {
   wizard_bell: ['지팡이 톡', '꽃잎 망토', '순간 이동'],
   ninja_vine: ['덩굴 수도', '잎 방패', '분신 피하기'],
   diver_vine: ['물갈퀴 찰싹', '테왁 붙잡기', '자맥질'],
+  pirate_cactus: ['커틀러스 휘두르기', '삼각모 눌러쓰기', '갑판 구르기'],
+  ranger_vine: ['활 끝 찌르기', '두건 웅크리기', '덤불 숨기'],
+  miner_cap: ['곡괭이 톡', '헬멧 웅크리기', '굴 파고 비키기'],
+  snow_ballet: ['발끝 차기', '꽃잎 오므리기', '회전 비키기'],
+  volcano_cap: ['분화구 박치기', '현무암 웅크리기', '연기 비키기'],
+  dandel_aero: ['솜털 박치기', '고글 내리기', '바람 타고 비키기'],
 };
 export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
 export function kitOf(key) {

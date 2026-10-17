@@ -60,6 +60,12 @@ export const ATTACKS = {
   gumiho_bloom: { kind: 'fireball', move: 'cast', c: ['#ffffff', '#d8eeff', '#ff9a3a', '#8a2416'], status: 'burn' },
   wizard_bell: { kind: 'bolt', move: 'cast', c: ['#ffffff', '#fff4b0', '#ffd84a', '#6a3aa0'], status: 'shock' },
   ninja_vine: { kind: 'blades', move: 'lunge', c: ['#ffffff', '#e8e0fa', '#b0a0e8', '#4c3e90'], status: 'swirl' },
+  pirate_cactus: { kind: 'wave', move: 'lunge', c: ['#f4feff', '#a8e4f8', '#5ab0e0', '#244e88'], status: 'wet' },   // 2026-10-18 새 여섯(기술 그림은 사용자가 기술을 다시 만든 뒤)
+  ranger_vine: { kind: 'blades', move: 'cast', c: ['#f4ffe8', '#bfe89a', '#6aa848', '#2a5a28'], status: 'swirl' },
+  miner_cap: { kind: 'slam', move: 'slam', c: ['#f8e8c0', '#e0b868', '#a07838', '#4a3418'], gem: '#ffb84a', status: 'dust' },
+  snow_ballet: { kind: 'rings', move: 'cast', c: ['#ffffff', '#ecdcff', '#a8b8f0', '#4a4a98'], status: 'swirl' },
+  volcano_cap: { kind: 'spores', move: 'cast', c: ['#fff6c8', '#ffb848', '#e2541e', '#6a1e10'], status: 'burn' },
+  dandel_aero: { kind: 'gale', move: 'cast', c: ['#ffffff', '#fff6c8', '#e8d878', '#8a8a38'], petal: ['#ffffff', '#f0ead0'], status: 'swirl' },
   diver_vine: { kind: 'wave', move: 'lunge', c: ['#f4feff', '#a8e4f8', '#5ab0e0', '#244e88'], status: 'wet' },
 };
 // 개성 기술(catalog.js u_*)마다 제 모습(2026-10-16 사용자 "불가시 난사가 불씨와 스킬 모션·효과가 같다") — 있는 연출(kind)을 그 종 색·성질로 다시 쓴다(새 그림 없음).

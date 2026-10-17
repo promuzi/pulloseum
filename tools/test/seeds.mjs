@@ -37,29 +37,41 @@ const fill = (s, n, key = 'aqua') => { const rng = makeRng(9); while (s.seeds.le
   const s = game(); fill(s, SEED_MAX); s.wallet.credits = 9999;
   throws(() => buy(s, 'seed_common', makeRng(1)), '꽉 차면 종자 꾸러미 못 삼');
 }
-// ④ 종자 거름
+// ④ 종자 거름 — 확률(2026-10-18 사용자 "무조건 오르는 것보다 확률이면 · 거의 만렙일수록 조금씩 어려워지게"): 지금 값 0~4 = 40% · 5~7 = 25% · 8~9 = 12%,
+//  실패가 쌓여 4 · 6 · 9번이면 다음은 반드시(운 나쁜 줄 막기) · 같은 씨앗 = 같은 결과 · 최대면 멈추고 남은 종자는 가방
 {
+  const { ivpChance, ivpPity } = await import('../../v2/src/game/logic.js');
+  ok(ivpChance(0) === 0.4 && ivpChance(4) === 0.4 && ivpChance(5) === 0.25 && ivpChance(7) === 0.25 && ivpChance(8) === 0.12 && ivpChance(9) === 0.12, '확률 = 40 · 25 · 12%');
+  ok(ivpPity(0) === 4 && ivpPity(6) === 6 && ivpPity(9) === 9, '반드시 = 실패 4 · 6 · 9번 뒤');
   const s = game(), p = s.plants[0], rng = makeRng(7), mk = (key = p.key) => { const sd = seedOf(s, key, rng); s.seeds.push(sd); return sd.id; };
-  p.ivs.hp = 2; p.ivp = {};
-  const a = [mk(), mk()];
-  let r = seedFeed(s, p.uid, 'hp', a);
-  ok(p.ivs.hp === 2 && p.ivp.hp === 2 && r.used === 2 && r.need === 3, '종자 둘 = 게이지 2/3: ' + JSON.stringify(r));
-  r = seedFeed(s, p.uid, 'hp', [mk()]);
-  ok(p.ivs.hp === 3 && p.ivp.hp === 0 && r.to === 3, '셋째 = +1(0~4 = 종자 셋)');
-  p.ivs.hp = 5; p.ivp.hp = 0;
-  r = seedFeed(s, p.uid, 'hp', [mk(), mk(), mk()]);
-  ok(p.ivs.hp === 5 && r.need === 4, '5~7 = 종자 넷');
-  p.ivs.hp = 9; p.ivp.hp = 0;
-  const many = [mk(), mk(), mk(), mk(), mk(), mk(), mk()], n0 = s.seeds.length;
-  r = seedFeed(s, p.uid, 'hp', many);
-  ok(p.ivs.hp === IV_MAX && r.used === 5 && s.seeds.length === n0 - 5, '9 → 10 = 종자 다섯 · 남는 종자는 가방에: ' + JSON.stringify(r));
-  throws(() => seedFeed(s, p.uid, 'hp', [mk()]), '최대면 막힘');
-  throws(() => seedFeed(s, p.uid, 'atk', [mk('thorn')]), '다른 식물 종자 = 막힘');
-  throws(() => seedFeed(s, p.uid, 'atk', ['nope']), '없는 종자 = 막힘');
-  throws(() => seedFeed(s, p.uid, 'luck', [mk()]), '모르는 개체값 = 막힘');
-  const before = p.ivs.atk;
-  runOp(s, 'seedFeed', { id: p.uid, stat: 'atk', seeds: [mk(), mk(), mk()] }, { rng: makeRng(1), now: 0 });
-  ok(p.ivs.atk === Math.min(IV_MAX, before + 1) || before >= 5, '서버 일 목록(ops seedFeed)');
+  p.ivs.hp = 0; p.ivp = {};
+  const ids = Array.from({ length: 40 }, () => mk()), s2 = JSON.parse(JSON.stringify(s));
+  const r = seedFeed(s, p.uid, 'hp', ids, makeRng(5)), r2 = seedFeed(s2, p.uid, 'hp', ids, makeRng(5));
+  ok(JSON.stringify(r) === JSON.stringify(r2), '같은 씨앗 = 같은 결과');
+  ok(r.used === 40 && r.to > r.from && r.ok + r.fail === r.used, `종자 40 = 성공 ${r.ok} · 실패 ${r.fail} · ${r.from} → ${r.to}`);
+  let run = 0, worst = 0;
+  for (const t of r.tries) { if (t) run = 0; else worst = Math.max(worst, ++run); }
+  ok(worst < 9, '실패가 반드시 줄을 넘지 않음: 최장 ' + worst);
+  p.ivs.hp = 9; p.ivp = {};
+  const many = Array.from({ length: 30 }, () => mk()), n0 = s.seeds.length, r3 = seedFeed(s, p.uid, 'hp', many, makeRng(9));
+  ok(p.ivs.hp === IV_MAX && r3.used <= 10 && s.seeds.length === n0 - r3.used, '9 → 10 에서 멈춤 · 남은 종자는 가방: 쓴 ' + r3.used);
+  throws(() => seedFeed(s, p.uid, 'hp', [mk()], makeRng(1)), '최대면 막힘');
+  throws(() => seedFeed(s, p.uid, 'atk', [mk('thorn')], makeRng(1)), '다른 식물 종자 = 막힘');
+  throws(() => seedFeed(s, p.uid, 'atk', ['nope'], makeRng(1)), '없는 종자 = 막힘');
+  throws(() => seedFeed(s, p.uid, 'luck', [mk()], makeRng(1)), '모르는 개체값 = 막힘');
+  const a0 = p.ivs.atk;
+  runOp(s, 'seedFeed', { id: p.uid, stat: 'atk', seeds: [mk(), mk(), mk(), mk(), mk(), mk(), mk(), mk(), mk(), mk()] }, { rng: makeRng(1), now: 0 });
+  ok(p.ivs.atk >= a0, '서버 일 목록(ops seedFeed — 난수)');
+}
+// ④-2 진화 = 개체값이 무작위로 1~3 오름(2026-10-18 사용자 "진화 시 개체값이 범위 내에서 랜덤하게 오르는 것도") · 최대 칸엔 안 감
+{
+  const { evolve } = await import('../../v2/src/game/logic.js');
+  const s = game(), p = s.plants[0]; p.lv = 6;
+  const sum = q => Object.values(q.ivs).reduce((a, b) => a + b, 0), b0 = sum(p), r = evolve(s, p.uid, makeRng(3));
+  const up = Object.values(r.ivUp || {}).reduce((a, b) => a + b, 0);
+  ok(up >= 1 && up <= 3 && sum(p) === b0 + up, `진화 개체값 +${up}: ` + JSON.stringify(r.ivUp));
+  const t = game(), q = t.plants[0]; q.lv = 6; for (const k of Object.keys(q.ivs)) q.ivs[k] = IV_MAX;
+  const rq = evolve(t, q.uid, makeRng(3)); ok(!Object.keys(rq.ivUp || {}).length && Object.values(q.ivs).every(v => v === IV_MAX), '다 최대면 안 오름');
 }
 // ⑤ 식물 통째 거름 없음
 {
