@@ -2,8 +2,8 @@
 // 표 = catalog.js. 모든 함수는 state를 그 자리에서 바꾸고 화면에 보여 줄 결과를 돌려줌. 안 되는 일은 Err(사용자에게 보일 한국어 문구)를 던짐.
 import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
-  uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
-  SHINY_P, LEGEND_P, TRAIT_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
+  uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
+  SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps } from './catalog.js';
 import { CARDS, CARD_SLOTS, cardFits, rollCard, formCards, isSkillCard } from './cards.js';
 
@@ -44,9 +44,10 @@ export function makePlant(s, seed, rng, now) {
   const roll = () => { let b = 0; for (let i = 0; i <= (seed.ivk || 0); i++) b = Math.max(b, Math.floor(rng() * (IV_MAX + 1))); return b; };
   const ivs = Object.fromEntries(IV_KEYS.map(k => [k, roll()]));
   if (seed.legend) for (const k of IV_KEYS) ivs[k] = Math.max(ivs[k], 7);
+  if (seed.trait === 'fruity') ivs.fruit = Math.max(ivs.fruit, 8);   // 옛 열매용 종자
   const p = {
     uid: uid(s), key: seed.key, name: (seed.legend ? '전설의 ' : '') + sp.name, stage: 0, lv: 1, gxp: 0, ivs,
-    shiny: !!seed.shiny, legend: !!seed.legend, trait: seed.trait || null, form: seed.form || sp.form || null,
+    shiny: !!seed.shiny, legend: !!seed.legend, form: seed.form || sp.form || null,
     pts: 0, up: {}, spent: 0, invest: 0, pot: 'pot_terra', born: now,
     skills: { battle: [null, null, null, null, null, null], joker: null, forgot: [], learned: [], v4: 1, v6: 1 }, pend: [],
     hv: { t0: now, have: 0 },
@@ -381,13 +382,13 @@ export function fromStorage(s, id, now) {
 
 // ── 수확(시간이 지나면 열매가 맺힘 — 돈·물·비료가 주로, 나머지는 드물게) ──
 export function harvestSync(p, now) {
-  const per = HARVEST.periodMin[p.stage] * MIN, max = harvestMax(p);
+  const per = HARVEST.periodMin[p.stage] * MIN * harvestK(p), max = harvestMax(p);
   if (p.hv.have >= max) { p.hv.t0 = now; return p.hv; }
   const k = Math.floor((now - p.hv.t0) / per);
   if (k > 0) { p.hv.have = Math.min(max, p.hv.have + k); p.hv.t0 = p.hv.have >= max ? now : p.hv.t0 + k * per; }
   return p.hv;
 }
-export const harvestGauge = (p, now) => { harvestSync(p, now); return p.hv.have >= harvestMax(p) ? 1 : (now - p.hv.t0) / (HARVEST.periodMin[p.stage] * MIN); };
+export const harvestGauge = (p, now) => { harvestSync(p, now); return p.hv.have >= harvestMax(p) ? 1 : (now - p.hv.t0) / (HARVEST.periodMin[p.stage] * MIN * harvestK(p)); };
 function rollFruit(s, p, rng) {
   const e = pickW(rng, HARVEST_TABLE), lvK = 1 + 0.15 * p.stage + 0.03 * p.lv;
   if (e.kind === 'credits') return { kind: 'credits', n: Math.round((e.big ? 90 : 25) * lvK), rar: e.rar };
@@ -458,8 +459,8 @@ export function rollSpecies(rng, rarity, pool) {
   return pick(rng, keys.length ? keys : Object.keys(SPECIES));
 }
 export function seedOf(s, key, rng, o = {}) {
-  const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend, t = rng();
-  const sd = { id: uid(s), key, shiny, legend, trait: t < TRAIT_P / 2 ? 'fruity' : t < TRAIT_P ? 'ornamental' : null };
+  const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend;
+  const sd = { id: uid(s), key, shiny, legend };
   if (o.ivk > 0) sd.ivk = o.ivk;   // 심을 때 개체값을 이만큼 더 굴림(탐사 종자)
   // 변이: 변이 고정 종은 늘 그 변이, 탐사 종자(o.mut = 지역 배율)는 가끔 — 버섯 = 포자, 그 밖 = 포식 · 무기 · 독성 · 용족
   if (SPECIES[key].form) sd.form = SPECIES[key].form;
@@ -476,7 +477,7 @@ export function rollScion(rng, p, q) {
 
 // ── 암시장(컨셉) = 판매(무조건 돈, 적게) · 해체(무작위 접목 가지 등 — 많이 키울수록 좋은 것 확률 ↑) ──
 export function sellPrice(p) {
-  const b = SELL_BASE[SPECIES[p.key].rarity] || 40, k = (1 + 0.5 * p.stage) * (p.legend ? 5 : p.shiny || p.trait === 'ornamental' ? 3 : 1);
+  const b = SELL_BASE[SPECIES[p.key].rarity] || 40, k = (1 + 0.5 * p.stage) * (p.legend ? 5 : p.shiny ? 3 : 1);
   return Math.round(b * k + 0.25 * p.invest);
 }
 const takePlant = (s, id) => {
@@ -500,7 +501,7 @@ export function sell(s, id) {
   return { credits: n, name: p.name };
 }
 // 종자 팔기(돈 출처 — 사용자 2026-10-16 "판매-씨앗, 키운 식물, 주운 물건")
-export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1) * (sd.trait ? 1.5 : 1));
+export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1));
 export function sellSeed(s, seedId) {
   const i = s.seeds.findIndex(x => x.id === seedId);
   need(i >= 0, '그 종자가 없어요');
@@ -533,7 +534,17 @@ export function fuelSync(s, now) {
 }
 export const planetOpen = (s, pl) => s.user.level >= ORBIT_LV[pl.orbit];
 // 시간으로 차는 것(연료 · 열매)을 지금 시각으로 맞춤 — 서버가 상태를 돌려주기 전에
-export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) normSkills(p); normCards(s); seasonSync(s, now); return s; }
+// 개체값 다섯째 '열매'가 없는 옛 식물: 식물 번호로 정한 값(화면 · 서버가 같게) · 옛 열매용 = 8 이상 · 전설 = 7 이상, 옛 딱지(trait)는 지움
+export function normIvs(p) {
+  if (!p.ivs || p.ivs.fruit != null) return p;
+  let h = 0; for (const c of String(p.uid)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  let v = h % (IV_MAX + 1);
+  if (p.trait === 'fruity') v = Math.max(v, 8);
+  if (p.legend) v = Math.max(v, 7);
+  p.ivs.fruit = v; delete p.trait;
+  return p;
+}
+export function syncTimers(s, now) { fuelSync(s, now); for (const p of s.plants) { normIvs(p); harvestSync(p, now); normSkills(p); } for (const p of s.storage || []) { normIvs(p); normSkills(p); } normCards(s); seasonSync(s, now); return s; }
 // 탐사선(옛 세이브엔 없음 → 처음 부를 때 1단계로) — 옛 세이브의 내구도(dur)는 이제 안 씀(2026-10-16 없앰)
 export function probeOf(s) {
   if (!s.probe) s.probe = { lv: Object.fromEntries(Object.keys(PROBE).map(k => [k, 1])) };

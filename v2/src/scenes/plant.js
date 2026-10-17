@@ -29,7 +29,7 @@ const SHEET_Y = 258, IN_MS = 320, OUT_MS = 220;
 const PCARD = { w: 66, h: 90, gx: 10, gy: 8, cols: 3 }, HOLD_MS = 320;   // 기술 카드(전투 손패와 같은 앞면 · 같은 셋씩 줄 — 2026-10-17)
 const slotsOf = p => [...p.skills.battle, null, null, null, null, null, null].slice(0, LOADOUT);   // 전투 칸 여섯(옛 판은 normSkills 가 늘림)
 const TABS = [{ id: 'skill', label: '기술' }, { id: 'up', label: '강화' }, { id: 'iv', label: '개체값' }, { id: 'set', label: '설정' }];
-const IV_COL = { hp: '#7cf0a0', atk: '#ff8a6a', def: '#6fb8ff', spd: '#ffd84a' };
+const IV_COL = { hp: '#7cf0a0', atk: '#ff8a6a', def: '#6fb8ff', spd: '#ffd84a', fruit: '#ff9ad0' };
 const ease = k => k * k * (3 - 2 * k);
 const skillOf = id => (id ? { act: 'attack', cats: ['attack'], ...SKILLS[id] } : null);
 const isCardKey = k => !!k && ((k[0] === 'c' && /^c\d$/.test(k)) || k.startsWith('cl:'));   // 카드 칸 · 가방 카드(2026-10-17)
@@ -140,7 +140,7 @@ export const plant = {
     let x = 8;
     for (const r of list) { const w = 22 + g.textW(r.label, 'label'); tagBox(g, x, 40, w, 18); g.img(icon(r.ic), x + 5, 44); g.text(r.label, x + 18, 43, { font: 'label', color: r.col || '#e6f3ff' }); x += w + 4; }
     if (p.form && FORMS[p.form]) { const F = FORMS[p.form], tag = F.name + ' 변이', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#160f20', F.col); g.text(tag, x + 6, 43, { font: 'label', color: F.light }); x += w + 4; }   // 변이 = 변이 색 꼬리표
-    if (p.legend || p.trait) { const tag = p.legend ? '전설' : p.trait === 'fruity' ? '열매용' : '관상용', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#3a2a18', '#f0be7d'); g.text(tag, x + 6, 43, { font: 'label', color: '#ffd890' }); }
+    if (p.legend) { const tag = '전설', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#3a2a18', '#f0be7d'); g.text(tag, x + 6, 43, { font: 'label', color: '#ffd890' }); }
   },
   // 생장 줄(식물 아래 · 판 바로 위 — 2026-10-16 사용자 "비료와 물 주기 등을 다른 곳에 잘 배치해줘", 전엔 오른쪽 위 판이 식물 잎을 가렸음):
   //  왼쪽 = Lv · 생장 막대 · 숫자, 오른쪽 = 물 · 비료(또는 진화하기)
@@ -409,20 +409,20 @@ export const plant = {
     return y + 22;
   },
 
-  // ── 개체값: 원형 게이지 넷 + 거름(같은 식물) ──
+  // ── 개체값: 원형 게이지 다섯(넷 = 능력치 · 열매 = 맺는 속도) + 거름(같은 식물) ──
   drawIv(app, p, y0, live) {
     const { g, W, state: s } = app, P = T.ptext, ivs = p.ivs || {};
     miniStars(g, 14, y0 + 3, stars(p));
     g.text(`개체값 합 ${ivSum(p)}/${IV_TOTAL}`, 60, y0, { color: P.sub });
     const foods = [...s.plants, ...s.storage].filter(x => x.key === p.key && x.uid !== p.uid);
     const pick = this.ivStat && IV_KEYS.includes(this.ivStat) ? this.ivStat : IV_KEYS.reduce((a, k) => ((ivs[k] || 0) < (ivs[a] || 0) ? k : a), IV_KEYS[0]);
-    const cw = Math.floor((W - 28) / 4), cy = y0 + 46;
+    const cw = Math.floor((W - 28) / IV_KEYS.length), cy = y0 + 46;
     IV_KEYS.forEach((k, i) => {
       const cx = 14 + cw * i + Math.floor(cw / 2), on = foods.length && k === pick;
       if (on) g.ellipseRing(cx, cy, 22, 22, '#ffd890', 0);
       ivRing(g, cx, cy, 18, ivs[k] || 0, IV_MAX, IV_COL[k]);
       g.text(STAT_NAME[k], cx, cy + 24, { font: 'label', color: on ? '#ffd890' : P.main, align: 'center' });
-      g.text(`+${ivs[k] || 0}%`, cx, cy + 40, { color: P.sub, align: 'center' });
+      g.text(`+${(ivs[k] || 0) * (k === 'fruit' ? 3 : 1)}%`, cx, cy + 40, { color: P.sub, align: 'center' });   // 열매 = 맺는 속도
       if (foods.length) this.hit(app, live, 'iv_' + k, cx - 24, cy - 24, 48, 74, () => { this.ivStat = k; });
     });
     let y = cy + 64;

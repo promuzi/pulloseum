@@ -74,10 +74,10 @@ export const growNeed = (stage, lv) => 20 + 10 * lv + 30 * stage;   // 다음 �
 export const FEED = { water: 10, fert: 25 };
 export const PTS_PER_LV = 2;                                 // 레벨업마다 강화 포인트
 export const STAT_KEYS = ['hp', 'atk', 'def', 'spd', 'acc', 'crit'];
-export const IV_KEYS = ['hp', 'atk', 'def', 'spd'];          // 개체값(0~10, 1당 +1%) — 원형 게이지
+export const IV_KEYS = ['hp', 'atk', 'def', 'spd', 'fruit'];   // 개체값(0~10) — 넷 = 능력치 1당 +1%, 열매 = 맺는 속도 1당 +3% · 5마다 최대 +1(2026-10-18 관상용 · 열매용 대신) — 원형 게이지
 export const IV_MAX = 10;
 export const UP_GAIN = { hp: 5, atk: 1, def: 1, spd: 1, acc: 1, crit: 1 };   // 강화 포인트 1당
-export const STAT_NAME = { hp: '체력', atk: '공격', def: '방어', spd: '기동', acc: '적중', crit: '치명' };
+export const STAT_NAME = { hp: '체력', atk: '공격', def: '방어', spd: '기동', acc: '적중', crit: '치명', fruit: '열매' };
 export const upCost = spent => 8 + 4 * Math.floor(spent / 4);  // 포인트 쓸 때 돈(너무 비싸지 않게)
 // 햇빛 강화(2026-10-18 사용자 "햇빛의 경우 스탯 강화해서 할 수 있게 — 최대 용량과 회복량, 몇 칸씩?"): 칸 단위라 한 단에 포인트 여럿 · p.up 에는 쓴 포인트(다른 능력치와 같게 — 초기화도 같이)
 //  햇빛 그릇 = 최대 8칸 → 단마다 +1칸(최대 4단 = 12칸, 3포인트씩) · 햇빛 회복 = 턴마다 1칸 → 단마다 반칸 더(사용자 "반칸씩" — 1.5 · 2 · 2.5칸, 4포인트씩)
@@ -86,7 +86,7 @@ export const SUN_UP = { sunMax: { name: '햇빛 그릇', pts: 3, max: 4 }, sunRe
 export const SUN_REGEN = [1, 1.5, 2, 2.5];   // 햇빛 회복 단 → 턴마다 차는 칸
 export const sunSteps = (p, k) => Math.min(SUN_UP[k].max, Math.floor(((p.up || {})[k] || 0) / SUN_UP[k].pts));
 export const resetCost = p => 150 + 100 * p.stage;           // 포인트 리셋(돈, 아이템 없음)
-export const starsOf = ivs => { const t = IV_KEYS.reduce((a, k) => a + (ivs[k] || 0), 0); return t >= 33 ? 5 : t >= 25 ? 4 : t >= 17 ? 3 : t >= 9 ? 2 : 1; };
+export const starsOf = ivs => { const t = IV_KEYS.reduce((a, k) => a + (ivs[k] || 0), 0); return t >= 41 ? 5 : t >= 31 ? 4 : t >= 21 ? 3 : t >= 11 ? 2 : 1; };   // 다섯 칸 합(최대 50) — 넷일 때 33 · 25 · 17 · 9 를 늘림
 
 // ── 기술 ──
 // tier: u = 개성(꽃 기술, 식물 전용) · c1/c2/c3 = 공통(뿌리 기술) 하급·중급·상급 · g = 가지 기술 · s = 변이·특수
@@ -540,7 +540,9 @@ export function levelReward(L) {
 
 // ── 수확(스마트팜) ──
 export const HARVEST = { periodMin: [6, 5, 4], maxBase: [2, 3, 4] };   // 단계별 열매 하나 걸리는 분 · 최대 개수(Lv3부터 +1, 열매용 +1)
-export const harvestMax = p => HARVEST.maxBase[p.stage] + (p.lv >= 3 ? 1 : 0) + (p.trait === 'fruity' ? 1 : 0);
+const fruitIv = p => ((p.ivs && p.ivs.fruit) || 0);
+export const harvestMax = p => HARVEST.maxBase[p.stage] + (p.lv >= 3 ? 1 : 0) + Math.floor(fruitIv(p) / 5);
+export const harvestK = p => 1 - 0.03 * fruitIv(p);   // 열매 하나 걸리는 시간 배수(열매 개체값)
 // 열매 하나 = 보상 한 가지: 돈·물·비료가 주로(92%), 나머지는 드물게
 export const HARVEST_TABLE = [
   { w: 46, kind: 'credits', rar: 0 }, { w: 22, kind: 'water', rar: 1 }, { w: 14, kind: 'fert', rar: 1 }, { w: 10, kind: 'credits', big: true, rar: 2 },
@@ -655,7 +657,7 @@ export const probeUpCost = lv => ({ credits: Math.round(150 * Math.pow(lv, 1.5) 
 export const EXPLORE_COST = { 1: 40, 2: 70, 3: 110, 4: 160 };                     // 탐사 한 번 = 연료 캡슐 1 + 이 돈(사용자 "탐사에는 돈이 필요하고, 잘 아껴 써야") — 탐사로 얻는 돈의 평균은 늘 이보다 적게
 export const ORBIT_LV = { 1: 1, 2: 4, 3: 8, 4: 13 };
 export const FUEL = { max: 3, regenMin: 480 };               // 연료 캡슐: 무료로는 8시간에 1(하루 3) · 그 밖에 레벨업 상자 · 대결 승리 · 보석 상점(사용자 "뽑기 쿠폰처럼" — 돈만으로 무한 탐사 막기)
-export const SHINY_P = 1 / 64, LEGEND_P = 1 / 120, TRAIT_P = 0.12;   // 색 변종 · 전설(전설 행성만) · 관상용/열매용
+export const SHINY_P = 1 / 64, LEGEND_P = 1 / 120;   // 색 변종 · 전설(전설 행성만)
 
 // ── 상점(돈 = 종자·화분, 보석 = 물·비료·회귀 주사 — 사용자 "상점에서는 유료 재화로 구매") ──
 export const SHOP = [

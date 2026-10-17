@@ -338,9 +338,16 @@ export const nursery = {
       }
       button(app, 'nur_one', bx, r2, bw, bh, '수확', { style: 'gold', icon: 'fruit', iconTint: true, disabled: !f.have, onTap: () => this.harvest(app, p) });
       button(app, 'nur_keep', bx + bw + gap, r2, bw, bh, '보관', { style: 'night', icon: 'box', disabled: last, onTap: () => app.act('toStorage', { id: p.uid }).then(r => r && app.toast(`${eul(p.name)} 동면 보관고로 옮겼어요`)) });
-      button(app, 'nur_sell', bx, r3, bw, bh, '팔기', { style: 'night', icon: 'coin', disabled: last, onTap: () => sellAsk(app, p) });
-      button(app, 'nur_cut', bx + bw + gap, r3, bw, bh, '해체', { style: 'night', icon: 'vine', disabled: last, onTap: () => cutAsk(app, p) });
-      button(app, 'nur_care', 20, PY + 80, colR - 24, 18, '식물 관리 ›', { style: 'night', onTap: () => { const i = s.plants.indexOf(p); if (i >= 0 && i !== s.active) { s.active = i; app.act('setActive', { id: p.uid }); } app.go('plant', {}); } });
+      // 아래 줄(2026-10-18 사용자 "팔기 · 해체를 버리기 하나로 — 누르면 팔기 · 해체로 나뉨 · 누르면 확인 창 · 남은 칸 = 거름주기(개체값 화면)")
+      const care = tab => { const i = s.plants.indexOf(p); if (i >= 0 && i !== s.active) { s.active = i; app.act('setActive', { id: p.uid }); } app.go('plant', tab ? { tab } : {}); };
+      if (this.toss === p.uid) {
+        button(app, 'nur_sell', bx, r3, bw, bh, '팔기', { style: 'night', icon: 'coin', disabled: last, onTap: () => { this.toss = null; sellAsk(app, p); } });
+        button(app, 'nur_cut', bx + bw + gap, r3, bw, bh, '해체', { style: 'night', icon: 'vine', disabled: last, onTap: () => { this.toss = null; cutAsk(app, p); } });
+      } else {
+        button(app, 'nur_toss', bx, r3, bw, bh, '버리기', { style: 'night', icon: 'down', disabled: last, onTap: () => { this.toss = p.uid; } });
+        button(app, 'nur_iv', bx + bw + gap, r3, bw, bh, '거름주기', { style: 'night', onTap: () => care('iv') });
+      }
+      button(app, 'nur_care', 20, PY + 80, colR - 24, 18, '식물 관리 ›', { style: 'night', onTap: () => care(null) });
     } else if (it && it.kind === 'empty') {
       g.text('빈 자리', 20, PY + 10, { font: 'bold', color: P.main });
       button(app, 'nur_sow', 20, PY + 36, 110, 30, '종자 심기', { style: 'gold', icon: 'seed', iconTint: true, onTap: () => app.go('bag', { tab: 'seed' }) });

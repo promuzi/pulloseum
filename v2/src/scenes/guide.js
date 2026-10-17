@@ -94,7 +94,7 @@ export const GUIDES = [
     ready: (app, sc) => !sc.plantFx && !sc.dragging,
     steps: [
       { at: 'nur_p*', text: '화분을 눌러 고르고, 위아래로 끌어 계단을 돌려요.' },
-      { at: ['nur_water', 'nur_fert', 'nur_evo', 'nur_one', 'nur_keep', 'nur_sell', 'nur_cut'], text: '고른 식물에 물 · 비료를 주고 익은 열매를 거둬요. 보관 · 팔기 · 해체도 여기서 해요.' },
+      { at: ['nur_water', 'nur_fert', 'nur_evo', 'nur_one', 'nur_keep', 'nur_toss', 'nur_iv', 'nur_sell', 'nur_cut'], text: '고른 식물에 물 · 비료를 주고 익은 열매를 거둬요. 보관 · 거름주기(개체값) · 버리기(팔기 · 해체)도 여기서 해요.' },
       { at: 'har_all', text: '익은 열매는 한 번에 거둘 수 있어요. 열매에선 돈 · 물 · 비료 · 접목 가지가 나와요.' },
       { at: 'nur_store', text: '자리가 모자라면 동면 보관고에 맡겨요. 잠든 식물은 자라지 않고 열매도 맺지 않아요.' },
     ] },

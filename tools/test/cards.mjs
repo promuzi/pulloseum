@@ -73,7 +73,9 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
 }
 // ④ 끼우기 · 빼기 · 자리 바꾸기
 {
-  const s = game(), p = s.plants[0], first = p.cards[0];
+  const s = game(), p = s.plants[0];
+  if (['n_wall', 'n_fiber', 'n_balance'].includes(p.cards[0])) p.cards[0] = 'n_target';   // 처음 카드는 무작위 — 아래에서 가방의 n_wall · n_fiber 와 겹치지 않게
+  const first = p.cards[0];
   s.cards = { n_wall: 2, n_fiber: 1, v_sap: 1, m_bite: 1 };
   setCards(s, p.uid, [first, 'n_wall']);
   ok(p.cards[1] === 'n_wall' && s.cards.n_wall === 1, '가방에서 끼움 → 가방 하나 줄어듦');
@@ -240,6 +242,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
 {
   const s = game(); s.cards = { n_wall: 1 };
   const p = s.plants[0];
+  if (p.cards[0] === 'n_wall') p.cards[0] = 'n_balance';   // 처음 카드는 무작위 — 끼울 n_wall 과 겹치지 않게
   runOp(s, 'setCards', { id: p.uid, cards: [p.cards[0], 'n_wall'] }, { rng: makeRng(1), now: 0 });
   ok(p.cards[1] === 'n_wall', 'setCards');
   throws(() => runOp(s, 'setCards', { id: p.uid, cards: ['n_wall'] }, { rng: makeRng(1), now: 0 }), 'setCards 칸 수');
