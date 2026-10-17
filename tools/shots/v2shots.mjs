@@ -94,6 +94,10 @@ export const SHOTS = [
   ['14_room_in3', 'room', { demo: 'in3' }],   // 3:3 교체전 방(내 팀 셋)
   ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
   ['12_nursery', 'nursery', {}],
+  ['12_nursery_new9', 'nursery', {}, { plants: [{ key: 'gladi_cactus', stage: 2 }, { key: 'hyunmu_cap', stage: 2 }, { key: 'gumiho_bloom', stage: 2 }, { key: 'wizard_bell', stage: 2 }, { key: 'ninja_vine', stage: 2 }, { key: 'diver_vine', stage: 2 }, { key: 'viking_cap', stage: 2 }] }],   // 셋째 아홉(2026-10-17)
+  ['12_nursery_new9b', 'nursery', {}, { plants: [{ key: 'jangseung_cactus', stage: 2 }, { key: 'astro_cap', stage: 2 }, { key: 'gladi_cactus', stage: 0 }, { key: 'hyunmu_cap', stage: 1 }, { key: 'gumiho_bloom', stage: 0 }, { key: 'wizard_bell', stage: 1 }, { key: 'ninja_vine', stage: 0 }] }],
+  ['07_battle_new9', 'battle', { phase: 'pick', venue: 'colosseum', me: 'gladi_cactus', foe: 'astro_cap' }],
+  ['07_battle_new9b', 'battle', { phase: 'pick', venue: 'colosseum', me: 'diver_vine', foe: 'viking_cap' }],
   ['12_nursery_gaia', 'nursery', {}, { plants: [{ key: 'gaia', stage: 2 }, { key: 'gaia', stage: 1 }, { key: 'gaia', stage: 0 }] }],   // 화분 앞 부위(주먹) — 잔디에 심은 세 단계
   ['02_home_gaia', 'home', {}, { plants: [{ key: 'gaia', stage: 2 }] }],
   ['05_plant_gaia', 'plant', { tab: 'skill' }, { plants: [{ key: 'gaia', stage: 2 }] }],

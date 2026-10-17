@@ -51,6 +51,16 @@ export const ATTACKS = {
   jar_cactus: { kind: 'wave', move: 'lunge', c: ['#f4feff', '#a8e4f8', '#5ab0e0', '#244e88'], status: 'wet' },
   goblin_cap: { kind: 'slam', move: 'slam', c: ['#fff6c8', '#ffd84a', '#c87a20', '#5a3410'], gem: '#fff4b0', status: 'shock' },
   crown_cap: { kind: 'spores', move: 'cast', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], status: 'swirl' },
+  // 셋째 아홉(2026-10-17): 검투사 = 칼 · 장승 = 내려찍기 · 우주 버섯 = 공기 방울 · 바이킹 = 뿔 돌격 · 현무 = 물 숨결 · 구미호 = 여우불 · 마법사 = 번개 · 닌자 = 수리검 · 해녀 = 물결
+  gladi_cactus: { kind: 'sword', move: 'lunge', c: ['#fff4d8', '#e8c48a', '#a87444', '#4a3020'], status: 'dust' },
+  jangseung_cactus: { kind: 'slam', move: 'slam', c: ['#f0f8d8', '#a8d070', '#5a8a3a', '#2a4a1e'], gem: '#e8d8a8', status: 'thorn' },
+  astro_cap: { kind: 'bubbles', move: 'cast', c: ['#ffffff', '#e8eefc', '#a8bce8', '#4a5a98'], status: 'swirl' },
+  viking_cap: { kind: 'slam', move: 'slam', c: ['#ffffff', '#dcf6ff', '#8ad6f0', '#2a6688'], gem: '#e8f8ff', status: 'swirl' },
+  hyunmu_cap: { kind: 'breath', move: 'cast', c: ['#f4feff', '#a8e4f8', '#3a90c8', '#1a3e6e'], status: 'wet' },
+  gumiho_bloom: { kind: 'fireball', move: 'cast', c: ['#ffffff', '#d8eeff', '#ff9a3a', '#8a2416'], status: 'burn' },
+  wizard_bell: { kind: 'bolt', move: 'cast', c: ['#ffffff', '#fff4b0', '#ffd84a', '#6a3aa0'], status: 'shock' },
+  ninja_vine: { kind: 'blades', move: 'lunge', c: ['#ffffff', '#e8e0fa', '#b0a0e8', '#4c3e90'], status: 'swirl' },
+  diver_vine: { kind: 'wave', move: 'lunge', c: ['#f4feff', '#a8e4f8', '#5ab0e0', '#244e88'], status: 'wet' },
 };
 // 개성 기술(catalog.js u_*)마다 제 모습(2026-10-16 사용자 "불가시 난사가 불씨와 스킬 모션·효과가 같다") — 있는 연출(kind)을 그 종 색·성질로 다시 쓴다(새 그림 없음).
 //   전투는 ATTACKS[기술 id] → ATTACKS[종] 순으로 찾는다(battle.js). 여기 없는 공격 기술 = 종 연출: 1단 기술, 단 종 연출이 그 이름으로 만들어진 기술
@@ -84,6 +94,16 @@ const UNIQUE = {
   u_jar_3: ['jar_cactus', 'slam'],                                                  // 물동이 내려치기
   u_dok_2: ['goblin_cap', 'spores'],                                                // 도깨비 장난(포자)
   u_crown_3: ['crown_cap', 'gale'],                                                 // 빙왕의 포자(눈보라에 실어)
+  // 셋째 아홉(2026-10-17) — 기술마다 다른 모습
+  u_gladi_2b: ['gladi_cactus', 'slam'], u_gladi_3: ['gladi_cactus', 'slash'], u_gladi_3c: ['gladi_cactus', 'slam'],
+  u_jang_1: ['jangseung_cactus', 'rings'], u_jang_2b: ['jangseung_cactus', 'whip'], u_jang_3c: ['jangseung_cactus', 'wave'],
+  u_astro_2b: ['astro_cap', 'spores'], u_astro_3: ['astro_cap', 'slash'], u_astro_3c: ['astro_cap', 'gale'],
+  u_viking_2b: ['viking_cap', 'slash'], u_viking_3: ['viking_cap', 'wave'],
+  u_hyunmu_1: ['hyunmu_cap', 'whip'], u_hyunmu_2b: ['hyunmu_cap', 'blades'], u_hyunmu_3: ['hyunmu_cap', 'wave'],
+  u_gumiho_2: ['gumiho_bloom', 'rings'], u_gumiho_2b: ['gumiho_bloom', 'whip'], u_gumiho_3: ['gumiho_bloom', 'bloom'], u_gumiho_3c: ['gumiho_bloom', 'breath'],
+  u_wizard_1: ['wizard_bell', 'fireball'], u_wizard_2: ['wizard_bell', 'rings'], u_wizard_3c: ['wizard_bell', 'spores'],
+  u_ninja_2b: ['ninja_vine', 'whip'], u_ninja_3: ['ninja_vine', 'rings'], u_ninja_3c: ['ninja_vine', 'slash'],
+  u_haenyeo_1: ['diver_vine', 'whip'], u_haenyeo_2b: ['diver_vine', 'bubbles'], u_haenyeo_3b: ['diver_vine', 'rings'], u_haenyeo_3c: ['diver_vine', 'bite'],
 };
 const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam' };   // 나머지 = cast(그 연출을 쓰는 종과 같은 몸놀림)
 for (const [id, [sp, kind]] of Object.entries(UNIQUE)) {

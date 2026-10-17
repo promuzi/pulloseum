@@ -7,7 +7,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Img, decodePNG } from './engine.mjs';
 const here = dirname(fileURLToPath(import.meta.url)), repo = resolve(here, '..', '..', '..');
-const KEYS = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'frost_drake'];
+const KEYS = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'frost_drake', 'gladi_cactus', 'jangseung_cactus', 'astro_cap', 'viking_cap', 'hyunmu_cap', 'gumiho_bloom', 'wizard_bell', 'ninja_vine', 'diver_vine'];
 const POTS = ['pot_terra', 'pot_ceramic', 'pot_glass', 'pot_crystal', 'pot_gold'];
 const lum = (r, g, b) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 

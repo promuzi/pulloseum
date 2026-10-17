@@ -29,13 +29,14 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 // 종별 변환 조정: fill = 도트 칸을 채우는 원본 비율 문턱(기본 0.5) — 1칸보다 가는 줄기·깃털 꽃잎이 끊기는 종은 낮춘다
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, frost_drake: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, eyeHold: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'needle' } }, ember_cap: { eyeDark: 0.9 } };   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
+//  soft = 원화를 줄이기 전에 몸 칸끼리 살짝 흐림(원화 칸 반지름) — 한 칸보다 잘게 갈라진 질감이 점으로 튀는 종(softBlur)
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, frost_drake: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, eyeHold: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'needle' } }, ember_cap: { eyeDark: 0.9 }, viking_cap: { soft: 7 }, gumiho_bloom: { soft: 5, eyeDark: 0.5, km: 11 }, astro_cap: { eyeDark: 0.8 } };   // 셋째 아홉(2026-10-17): 서리 털 질감 흐리기 · 가는 여우 눈 · 흰 얼굴의 푸른 눈   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
 //  표에 없는 그림은 변환 때 줄기를 재서 1.5칸 넘게 비끼면 경고한다(아래 convert)
 // 흙에 앉히기(판 칸, + = 아래 · 앞으로) — 밑동이 넓은 몸(아래 SINK 설명 · 2026-10-17)
-const SINK = {flower_grass_young: 1, flower_grass_teen: 1, flower_grass: 1, thorn_young: 2, thorn_teen: 1, thorn: 1, aqua_young: 1, aqua_teen: 1, spark: 1, vine_water_young: 1, vine_water_teen: 1, cactus_fire_young: 2, cactus_fire_teen: 3, cactus_fire: 4, gaia_young: 3, gaia_teen: 4, gaia: 8, flower_fire_young: 1, flower_fire_teen: 1, flower_fire: 2, cactus_wind_young: 2, cactus_wind_teen: 3, cactus_wind: 5, vine_wind_teen: 1, spore_cap_young: 4, spore_cap_teen: 4, spore_cap: 5, frost_bell_young: 1, frost_bell_teen: 1, frost_bell: 1, volt_vine_young: 1, volt_vine_teen: 2, volt_vine: 2, stone_cap_young: 4, stone_cap_teen: 5, stone_cap: 3, jelly_cap_young: 3, jelly_cap_teen: 4, jelly_cap: 4, fang_trap_young: 2, fang_trap_teen: 2, fang_trap: 1, blade_vine_young: 2, blade_vine_teen: 3, blade_vine: 2, toxi_cactus_young: 4, toxi_cactus_teen: 3, toxi_cactus: 3, draco_fruit_young: 3, draco_fruit_teen: 3, draco_fruit: 3, ember_cap_young: 2, ember_cap_teen: 2, ember_cap: 2, drake_cactus_young: 3, drake_cactus_teen: 3, drake_cactus: 3, gat_cap_young: 1, gat_cap_teen: 1, gat_cap: 1, mask_vine_young: 1, mask_vine_teen: 2, mask_vine: 3, drum_cactus_young: 2, drum_cactus_teen: 2, drum_cactus: 3, lantern_vine_young: 1, lantern_vine_teen: 1, lantern_vine: 2, jar_cactus_young: 3, jar_cactus_teen: 3, jar_cactus: 3, goblin_cap_young: 2, goblin_cap_teen: 3, goblin_cap: 3, crown_cap_young: 1, crown_cap_teen: 3, crown_cap: 3, frost_drake_young: 5, frost_drake_teen: 4, frost_drake: 4 };   // 드레이크 · 프로스트드레이크는 말린 꼬리가 테에 걸쳐 덜 앉힘(드레이크 성체 꼬리는 2026-10-17 사용자 "꼬리만 위로" — 원화에서 190칸 올림 = python tools/pixel/big/partmove.py 원화 결과 290 900 435 0 -190) · sinkcalib.mjs 로 잰 값(밑동 반폭 × 흙 타원 납작함 × 0.75, 최대 5)
+const SINK = {flower_grass_young: 1, flower_grass_teen: 1, flower_grass: 1, thorn_young: 2, thorn_teen: 1, thorn: 1, aqua_young: 1, aqua_teen: 1, spark: 1, vine_water_young: 1, vine_water_teen: 1, cactus_fire_young: 2, cactus_fire_teen: 3, cactus_fire: 4, gaia_young: 3, gaia_teen: 4, gaia: 8, flower_fire_young: 1, flower_fire_teen: 1, flower_fire: 2, cactus_wind_young: 2, cactus_wind_teen: 3, cactus_wind: 5, vine_wind_teen: 1, spore_cap_young: 4, spore_cap_teen: 4, spore_cap: 5, frost_bell_young: 1, frost_bell_teen: 1, frost_bell: 1, volt_vine_young: 1, volt_vine_teen: 2, volt_vine: 2, stone_cap_young: 4, stone_cap_teen: 5, stone_cap: 3, jelly_cap_young: 3, jelly_cap_teen: 4, jelly_cap: 4, fang_trap_young: 2, fang_trap_teen: 2, fang_trap: 1, blade_vine_young: 2, blade_vine_teen: 3, blade_vine: 2, toxi_cactus_young: 4, toxi_cactus_teen: 3, toxi_cactus: 3, draco_fruit_young: 3, draco_fruit_teen: 3, draco_fruit: 3, ember_cap_young: 2, ember_cap_teen: 2, ember_cap: 2, drake_cactus_young: 3, drake_cactus_teen: 3, drake_cactus: 3, gat_cap_young: 1, gat_cap_teen: 1, gat_cap: 1, mask_vine_young: 1, mask_vine_teen: 2, mask_vine: 3, drum_cactus_young: 2, drum_cactus_teen: 2, drum_cactus: 3, lantern_vine_young: 1, lantern_vine_teen: 1, lantern_vine: 2, jar_cactus_young: 3, jar_cactus_teen: 3, jar_cactus: 3, goblin_cap_young: 2, goblin_cap_teen: 3, goblin_cap: 3, crown_cap_young: 1, crown_cap_teen: 3, crown_cap: 3, frost_drake_young: 5, frost_drake_teen: 4, frost_drake: 4, gladi_cactus_young: 2, gladi_cactus_teen: 2, gladi_cactus: 3, jangseung_cactus_young: 2, jangseung_cactus_teen: 3, jangseung_cactus: 3, astro_cap_young: 2, astro_cap_teen: 2, astro_cap: 1, viking_cap_young: 3, viking_cap_teen: 4, viking_cap: 5, hyunmu_cap_young: 2, hyunmu_cap_teen: 3, hyunmu_cap: 3, gumiho_bloom_young: 1, gumiho_bloom_teen: 1, gumiho_bloom: 1, wizard_bell_young: 1, wizard_bell_teen: 1, wizard_bell: 1, ninja_vine_young: 1, ninja_vine_teen: 2, ninja_vine: 2, diver_vine_young: 1, diver_vine_teen: 1, diver_vine: 2 };   // 드레이크 · 프로스트드레이크는 말린 꼬리가 테에 걸쳐 덜 앉힘(드레이크 성체 꼬리는 2026-10-17 사용자 "꼬리만 위로" — 원화에서 190칸 올림 = python tools/pixel/big/partmove.py 원화 결과 290 900 435 0 -190) · sinkcalib.mjs 로 잰 값(밑동 반폭 × 흙 타원 납작함 × 0.75, 최대 5)
 // 손으로 더 돌리기(도, + = 시계 반대 방향) — 2026-10-17 사용자 "바위 선인장 반시계 방향으로 각도를 조금만"
 // 시험: SINK_TEST='{"gaia":8}' — 표를 고치지 않고 앉힘 깊이만 바꿔 보기
 const SINK_TEST = process.env.SINK_TEST ? JSON.parse(process.env.SINK_TEST) : {};
@@ -57,6 +58,7 @@ const STEM = {
   stone_cap: -2,   // 2026-10-17 사용자 "돌로 된 버섯은 좀 더 좌측으로"
   drake_cactus_young: 2,   // 2026-10-17 진화 다시(뱀) — stemcheck −2.5칸
   gaia: 0,   // 가운데 몸통(+3칸)이 두 돌주먹에 가려 애매 — 주먹 사이 가운데·무게중심이 이미 가운데라 그대로
+  astro_cap: -2, hyunmu_cap_young: -2,   // 2026-10-17 셋째 아홉 변환 경고 +2.0칸
 };   // 쏜위드: 자람이 덩굴손만 넓게 뻗고 몸통은 어린 단계만 해 작아 보임(사용자 "중간 생장체가 초기보다 작은 느낌") → 어린 줄이고 자람 키움, 성체가 납작한 덤불이라 자람 키 상한을 성체 + 4칸까지   // 가이아록: 바위 덩치가 비슷해 단계 차이가 적어 보임(2026-10-15 사용자 "최종 생장이랑 큰 차이가 없어") → 단계 크기 더 벌림
 // 눈 자리(eyes.mjs): 컨셉·누끼는 종 키로, 생장 단계 그림(concept/stages/<키>_<단계>.png)은 그 파일 이름 키로 따로 잰다 — 단계마다 얼굴 자리가 달라서
 const eyeSpec = (key, file) => (file ? EYES[file.replace(/^.*[\\/]/, '').replace(/\.png$/, '')] : EYES[key]) || null;
@@ -101,6 +103,29 @@ function findEyes(im, lab, isBg, top, bot) {
   return pair;
 }
 
+// 원화 살짝 흐리기(TUNE[키].soft = 원화 칸 반지름): 몸 칸(불투명)끼리만 상자 평균 — 서리 털 · 잔 결처럼 한 칸보다 잘게 갈라진 질감이
+//  줄이면 밝고 어두운 점으로 튀는 종(바이킹캡 서리 수염 · 이끼 망토, 2026-10-17). 바탕(투명)은 안 섞여 가장자리가 번지지 않음
+function softBlur(im, r) {
+  const { w, h, data } = im, n = w * h, op = new Float32Array(n), acc = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  for (let i = 0; i < n; i++) op[i] = data[i * 4 + 3] >= 128 ? 1 : 0;
+  const pass = (src, wsrc, horiz) => {   // 한 방향 상자 합(무게 = 불투명)
+    const out = src.map(() => new Float32Array(n)), wout = new Float32Array(n), L = horiz ? w : h, M = horiz ? h : w;
+    for (let q = 0; q < M; q++) {
+      let sw = 0; const sc = [0, 0, 0];
+      const idx = t => (horiz ? q * w + t : t * w + q);
+      for (let t = -r; t < L + r; t++) {
+        const ta = t + r, tb = t - r - 1;
+        if (ta >= 0 && ta < L) { const j = idx(ta); sw += wsrc[j]; for (let c = 0; c < 3; c++) sc[c] += src[c][j]; }
+        if (tb >= 0 && tb < L) { const j = idx(tb); sw -= wsrc[j]; for (let c = 0; c < 3; c++) sc[c] -= src[c][j]; }
+        if (t >= 0 && t < L) { const j = idx(t); wout[j] = sw; for (let c = 0; c < 3; c++) out[c][j] = sc[c]; }
+      }
+    }
+    return [out, wout];
+  };
+  for (let i = 0; i < n; i++) for (let c = 0; c < 3; c++) acc[c][i] = data[i * 4 + c] * op[i];
+  const [a1, w1] = pass(acc, op, true), [a2, w2] = pass(a1, w1, false);
+  for (let i = 0; i < n; i++) if (op[i] && w2[i] > 0) for (let c = 0; c < 3; c++) data[i * 4 + c] = Math.round(a2[c][i] / w2[i]);
+}
 function labOf(im) {
   const n = im.w * im.h, lab = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
@@ -176,7 +201,9 @@ function bgOf(im, lab) {
 //   화분 없는 그림(생장 단계)만 밑동(맨 아래 3%) 가운데를 쓴다.
 function load(key, file = null) {
   const cutP = resolve(here, 'concept', 'cut', key + '.png'), origP = resolve(here, 'concept', key + '.png'), cut = !!file || existsSync(cutP);
-  const im = decodePNG(readFileSync(file || (cut ? cutP : origP))), n = im.w * im.h, lab = labOf(im);
+  const im = decodePNG(readFileSync(file || (cut ? cutP : origP))), n = im.w * im.h, soft = (TUNE[key] || {}).soft;
+  if (soft) softBlur(im, soft);
+  const lab = labOf(im);
   let isBg = new Uint8Array(n);
   if (cut) for (let i = 0; i < n; i++) isBg[i] = im.data[i * 4 + 3] < 128 ? 1 : 0;
   else isBg = bgOf(im, lab);
@@ -1006,6 +1033,16 @@ async function animKit() {
     drake_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.8, flutter: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 52 },   // 태생 용족 불 선인장: 가시 끝 불 · 날개 살짝
     title_hero: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 44 },   // 처음 화면 대표 캐릭터 = 불꽃 용 선인장(가시 끝 불)
     ember_cap: { bob: 2, squash: 1.4, sway: 0.6, open: 0.6, petal: 0.5, leaf: 0.8, fire: { up: 1.8, side: 0.8 }, blinkAt: 16, amb: { spores: { from: 'cap', n: 6 } } },
+    // 셋째 아홉(2026-10-17)
+    gladi_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 30, amb: { shine: { mat: { cmax: 0.06, lmin: 0.55 }, at: 12, len: 6 } } },   // 청동 투구 · 방패 번뜩
+    jangseung_cactus: { bob: 1, sway: 0.4, open: 0, petal: 0.3, leaf: 0.8, blinkAt: 44 },   // 장승 = 무거운 몸 · 숨 작게
+    astro_cap: { bob: 2, squash: 1.2, sway: 0.7, open: 0.4, petal: 0.5, leaf: 0.8, blinkAt: 20, amb: { shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 10, len: 6 }, wind: { n: 1, y0: 40, y1: 80 } } },   // 유리 헬멧 빛 · 공기 분사
+    viking_cap: { bob: 1.5, squash: 1, sway: 0.5, open: 0.4, petal: 0.5, leaf: 0.8, blinkAt: 38, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 24 } } },   // 얼음 뿔 · 서리 반짝
+    hyunmu_cap: { bob: 1, squash: 0.8, sway: 0.5, open: 0.4, petal: 0.5, leaf: 0.8, flutter: 0.6, blinkAt: 48, amb: { drips: { n: 2, every: 34 }, shine: { mat: { cmax: 0.08, lmin: 0.7 }, at: 16, len: 6 } } },   // 젖은 등껍질 빛 · 물방울
+    gumiho_bloom: { bob: 1.5, sway: 1.1, open: 1, petal: 1.2, leaf: 1.2, flutter: 0.8, fire: { up: 1.6, side: 0.7 }, blinkAt: 24 },   // 꼬리 꽃잎 펄럭 · 여우불
+    wizard_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, electric: true, blinkAt: 32 },   // 별 지팡이 불똥
+    ninja_vine: { bob: 1.5, sway: 1.3, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1.2, blinkAt: 40, amb: { wind: { n: 1, y0: 10, y1: 60 } } },   // 목도리 펄럭
+    diver_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.6, flutter: 1, blinkAt: 28, amb: { drips: { n: 2, every: 36 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 20, len: 6 } } },   // 젖은 잎 · 물안경 빛
   };
   const rigs = cvs.map(cv => idleRig(cv));
   const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);

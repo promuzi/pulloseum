@@ -56,6 +56,15 @@ const SKILLS = {
   jar_cactus: [{ id: 's1', name: '물동이 쏟기', power: 60, cost: 1, el: 'water', inflict: { id: 'wet' } }, { id: 's2', name: '물동이 내려치기', power: 115, cost: 3, el: 'water', area: true, inflict: { id: 'wet' } }],
   goblin_cap: [{ id: 's1', name: '방망이 찌릿', power: 60, cost: 1, el: 'bolt', inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '금 나와라 뚝딱', power: 120, cost: 4, el: 'bolt', inflict: { id: 'shock', n: 2 } }],
   crown_cap: [{ id: 's1', name: '서리 광채', power: 55, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙왕의 포자', power: 100, cost: 3, el: 'ice', ranged: true, area: true, inflict: { id: 'spore', n: 2 } }],
+  gladi_cactus: [{ id: 's1', name: '가시 칼 찌르기', power: 60, cost: 1, el: 'earth', contact: true }, { id: 's2', name: '검투사의 일격', power: 115, cost: 4, el: 'earth', contact: true, inflict: { id: 'corrode' } }],
+  jangseung_cactus: [{ id: 's1', name: '장승 눈빛', power: 55, cost: 1, el: 'grass', ranged: true, inflict: { id: 'weak' } }, { id: 's2', name: '천하대장군', power: 105, cost: 3, el: 'grass', contact: true, inflict: { id: 'taunt' } }],
+  astro_cap: [{ id: 's1', name: '공기 방울', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '궤도 돌진', power: 105, cost: 3, el: 'wind', contact: true, self: 'haste' }],
+  viking_cap: [{ id: 's1', name: '뿔 박치기', power: 60, cost: 1, el: 'ice', contact: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙하 돌격', power: 115, cost: 4, el: 'ice', contact: true, inflict: { id: 'chill', n: 2 } }],
+  hyunmu_cap: [{ id: 's1', name: '물뱀 휘감기', power: 55, cost: 1, el: 'water', inflict: { id: 'bind' } }, { id: 's2', name: '현무의 물결', power: 110, cost: 4, el: 'water', ranged: true, area: true, inflict: { id: 'wet' } }],
+  gumiho_bloom: [{ id: 's1', name: '여우불', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '아홉 꼬리 불', power: 110, cost: 4, el: 'fire', ranged: true, area: true, inflict: { id: 'burn' } }],
+  wizard_bell: [{ id: 's1', name: '별빛 찌릿', power: 55, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '번개 주문', power: 110, cost: 4, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 2 } }],
+  ninja_vine: [{ id: 's1', name: '잎 수리검', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '수리검 난무', power: 105, cost: 3, el: 'wind', ranged: true, area: true }],
+  diver_vine: [{ id: 's1', name: '물질', power: 55, cost: 1, el: 'water', inflict: { id: 'wet' } }, { id: 's2', name: '파도타기', power: 105, cost: 3, el: 'water', ranged: true, area: true, inflict: { id: 'wet' } }],
   drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock', n: 2 } }],
 };
 // 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 40 공격 · 방어 자세 · 회피 자세)은
@@ -91,6 +100,15 @@ export const BASIC_NAMES = {
   jar_cactus: ['동이 박치기', '똬리 웅크리기', '출렁 비키기'],
   goblin_cap: ['방망이 휘두르기', '방망이 막기', '도깨비 걸음'],
   crown_cap: ['왕관 박치기', '망토 두르기', '얼음 미끄럼'],
+  gladi_cactus: ['가시 칼 베기', '방패 들기', '모래 구르기'],
+  jangseung_cactus: ['장승 박치기', '장승 버티기', '솔가지 숨기'],
+  astro_cap: ['헬멧 박치기', '헬멧 웅크리기', '공기 분사 비키기'],
+  viking_cap: ['뿔 들이받기', '망토 두르기', '얼음 미끄럼'],
+  hyunmu_cap: ['물뱀 물기', '등껍질 숨기', '물살 비키기'],
+  gumiho_bloom: ['꼬리 할퀴기', '꼬리 감싸기', '여우 둔갑'],
+  wizard_bell: ['지팡이 톡', '꽃잎 망토', '순간 이동'],
+  ninja_vine: ['덩굴 수도', '잎 방패', '분신 피하기'],
+  diver_vine: ['물갈퀴 찰싹', '테왁 붙잡기', '자맥질'],
 };
 export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
 export function kitOf(key) {
