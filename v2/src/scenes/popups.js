@@ -29,12 +29,12 @@ export const KIND = {
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
   const out = [];
   for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel', 'parts']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
-  if (box.seed && typeof box.seed === 'object') out.push({ kind: 'seed', seed: box.seed, rar: 3 });
+  if (box.seed && typeof box.seed === 'object') out.push({ kind: 'seed', seed: box.seed, rar: 3, sold: box.seedSold });
   if (box.card && CARDS[box.card]) out.push({ kind: 'card', card: box.card, rar: CARDS[box.card].rar });
   return out;
 }
 export function gotLabel(r) {
-  if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; return { name: (r.seed.legend ? '전설 ' : '') + (r.seed.shiny ? '색 변종 ' : '') + (sp ? sp.name : '종자'), n: '종자' }; }
+  if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; return { name: (r.seed.legend ? '전설 ' : '') + (r.seed.shiny ? '색 변종 ' : '') + (sp ? sp.name : '종자'), n: r.sold ? `팔림 +${fmt(r.sold)}` : '종자' }; }   // 가방이 차서 팔림(2026-10-18)
   if (r.kind === 'scion') { const s = SKILLS[r.skill]; return { name: s ? s.name : '접목 가지', n: '접목 · ' + (s ? TIER_NAME[s.tier] : '') }; }
   if (r.kind === 'skill') { const s = SKILLS[r.skill]; return { name: s ? s.name : '새 기술', n: r.to || '새 기술' }; }
   if (r.kind === 'card') { const c = CARDS[r.card]; return { name: c ? c.name : '카드', n: c && c.form ? '변이 카드' : '카드' }; }

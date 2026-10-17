@@ -38,7 +38,7 @@ let chain = Promise.resolve();
 //  QUICK(난수 · 보상 굴림 없는 일)은 같은 규칙(game/ops.js)으로 이 화면에서 먼저 하고 바로 보여 준 뒤 서버에 보냄.
 //  서버 상태는 줄 선 일이 다 끝났을 때 한 번만 받아 맞춤(중간 답으로 덮으면 뒤에 누른 것이 잠깐 되돌아감) · 서버가 거절하면 다시 받아 맞춤.
 //  그 밖의 일(진화 · 수확 · 탐사 · 구매 …)은 서버 답을 기다림 — 기다리는 동안 화면 맨 위 가는 띠(0.16초 넘으면)
-const QUICK = new Set(['feed', 'draftPick', 'draftApply','setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
+const QUICK = new Set(['feed', 'draftPick', 'draftApply', 'seedFeed', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide']);
 let pendOps = 0, lastSrv = null, stale = false;
 const app = {
   screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0, waiting: 0, waitT: 0,
@@ -179,7 +179,8 @@ window.__shot = (name, params = {}, opt = {}) => {
   app.W = F.w; app.H = F.h; app.t = opt.t ?? 1000; app.state = mockState(); app.pxScale = k;
   app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null; app.guide = null; app.guideWait = null; app.noGuide = true;
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
-  if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
+  if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));
+  if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
   app.draft = null;
   if (opt.draft) {   // 고르기 화면 촬영(opt.draft = { evo, at: 연 뒤 ms, part: 'skill' | 'passive', n, pick, moves: [[위 줄 몇째, 칸]], sel, arm, peek: 칸 | 't<몇째>', sy })

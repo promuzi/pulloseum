@@ -8,9 +8,9 @@ import { drawShip, drawMother, drawShipMini, SHIP_SC } from '../art/ship.js';
 import { hangarBack, shipAt } from './hangar.js';
 import { sfx } from '../core/sound.js';
 import { PLANETS as CAT_PLANETS, ORBIT_LV, FUEL, SPECIES } from '../game/catalog.js';
-import { fuelSync, probeOf, exploreOdds, regionOf } from '../game/logic.js';
+import { fuelSync, probeOf, exploreOdds, regionOf, SEED_MAX } from '../game/logic.js';
 import { left } from '../game/view.js';
-import { showGot, tell } from './popups.js';
+import { showGot, tell, ask } from './popups.js';
 import { planetMap } from '../art/planetmap.js';
 
 // 우주 지도(궤도·각도·색 = 옛 게임 지도). 2026-10-16 사용자 개편: 가운데 = 모선(내 집)에 탐사선이 붙은 그림, 탐사선이 행성에 다녀옴(늘 제자리로).
@@ -275,7 +275,8 @@ export const explore = {
     if (regsN > 1) g.text(`지역 ${regsN}곳`, lx, by, { color: PT.dim });
     button(app, 'ex_scan', W - 18 - 88, y + 62, 88, 26, '조사하기', { style: 'gold', font: 'bold', icon: 'navExplore', iconTint: true, disabled: !live, onTap: () => this.openMap(app) });
   },
-  async go(app, P, region) {
+  async go(app, P, region, sure) {
+    if (!sure && app.state && app.state.seeds.length >= SEED_MAX) return ask(app, `종자 가방이 꽉 찼어요(${SEED_MAX})`, '새로 얻는 보통 종자는 바로 팔아 크레딧으로 받아요 · 전설 · 색 변종 · 변이 종자는 그대로 받아요', () => this.go(app, P, region, true), '그래도 가기');   // 2026-10-18 종자 가방 한도
     this.map = null;   // 지도에서 보내면 궤도로 돌아와 출발 연출
     this.warp = { t0: app.t, res: null, P };
     sfx('whoosh');

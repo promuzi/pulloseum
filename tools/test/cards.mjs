@@ -4,7 +4,7 @@
 //  ⑦ 패시브가 전투에 닿는지(능력치 · 흡수 · 반사 · 독 겹 · 면역 · 비늘 · 재생 · 위력 · 횟수 · 분노 · 소화액 · 균사 · 부생 · 치명 피해 · 3:3 시작 에너지)
 //  ⑧ 얻는 곳(탐사 · 해체 · 상점 꾸러미 · 레벨업) ⑨ 봇 카드 · 다시 돌리기 같은 결과 ⑩ 서버 일 목록(setCards · setSlots)
 //   node tools/test/cards.mjs
-import { newGame, makePlant, syncTimers, normIvs, stars, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, merge, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
+import { newGame, makePlant, syncTimers, normIvs, stars, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
 import { kitOfPlant, unitOf, botPlant, setupBot, replayBot } from '../../v2/src/game/fight.js';
 import { CARDS, CARD_SLOTS, NORMAL_CARDS, formCards, isSkillCard, cardFits, passivesOf, rollCard, cardFace } from '../../v2/src/game/cards.js';
 import { SKILLS, SPECIES, FORM_KEYS, PLANETS, SHOP, levelReward } from '../../v2/src/game/catalog.js';
@@ -143,8 +143,8 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   ok(s.cards.n_wall === 1, '팔면 카드는 가방');
   dismantle(s, c.uid, makeRng(4));
   ok(s.cards.n_spine >= 1, '해체해도 카드는 가방');
-  const t = plant(s, 'thorn'), nf = s.cards.n_fiber || 0; merge(s, t.uid, b.uid, 'hp');   // 해체가 카드를 줄 수도 있어 전후로 셈
-  ok(s.cards.n_fiber === nf + 1, '거름이 된 식물 카드도 가방');
+  const nf = s.cards.n_fiber || 0; sell(s, b.uid);   // 식물 통째 거름은 없앰(2026-10-18) — 팔기로 한 번 더
+  ok(s.cards.n_fiber === nf + 1, '판 식물 카드도 가방');
 }
 // ⑦ 패시브가 전투에 닿는지
 {

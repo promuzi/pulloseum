@@ -4,7 +4,7 @@ import { icon } from '../art/icons.js';
 import { T, plate } from '../art/theme.js';
 import { header, seedArt } from './common.js';
 import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft, FORMS } from '../game/catalog.js';
-import { seedPrice, freeSlots, MUT_MAX, SKILL_STORE, slotLayout } from '../game/logic.js';
+import { seedPrice, freeSlots, MUT_MAX, SKILL_STORE, slotLayout, SEED_MAX } from '../game/logic.js';
 import { ask } from './popups.js';
 import { CARDS, PASS_STORE, cardFits, cardFace, isSkillCard } from '../game/cards.js';
 import { cardTiny } from '../art/skillcard.js';
@@ -23,7 +23,7 @@ export const bag = {
     const { g, W, H, t, state: s } = app, P = T.ptext;
     plainBg(g, W, H, t);
     const free = freeSlots(s);
-    header(app, '가방', { right: this.tab === 'seed' ? `스마트팜 빈 자리 ${Math.max(0, free)}` : '' });
+    header(app, '가방', { right: this.tab === 'seed' ? `종자 ${s.seeds.length}/${SEED_MAX} · 빈 자리 ${Math.max(0, free)}` : '' });   // 종자 가방 한도(2026-10-18)
     let x = 10;
     for (const [id, label] of TABS) { const w = g.textW(label, 'label') + 22; holoTab(app, 'tab_' + id, x, 37, w, 21, label, this.tab === id, () => { this.tab = id; this.scroll = 0; this.pickFor = null; }); x += w + 5; }
     const list = this.tab === 'seed' ? s.seeds : this.tab === 'scion' ? s.scions : this.tab === 'card' ? cardList(s) : Object.keys(ITEMS);

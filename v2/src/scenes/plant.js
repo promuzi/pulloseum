@@ -14,7 +14,7 @@ import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/l
 import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
 import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, NORMAL_LOOK, cardFits, cardFace, isSkillCard } from '../game/cards.js';
-import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, SKILL_STORE, evolveLeague, slotLayout } from '../game/logic.js';
+import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, SKILL_STORE, evolveLeague, slotLayout, specialSeed, ivpCost } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
 import { stageKey, stageName, stars, growInfo, ivSum, IV_TOTAL, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
@@ -442,33 +442,33 @@ export const plant = {
     const { g, W, state: s } = app, P = T.ptext, ivs = p.ivs || {};
     miniStars(g, 14, y0 + 3, stars(p));
     g.text(`개체값 합 ${ivSum(p)}/${IV_TOTAL}`, 60, y0, { color: P.sub });
-    const foods = [...s.plants, ...s.storage].filter(x => x.key === p.key && x.uid !== p.uid);
+    // 종자 거름(2026-10-18 — 식물 통째 거름 대신): 같은 종 종자를 고른 개체값 칸에 넣어 게이지를 채움(지금 값이 높을수록 +1에 종자가 더 듦)
+    const mine = s.seeds.filter(sd => sd.key === p.key), plain = mine.filter(sd => !specialSeed(sd)), spec = mine.filter(specialSeed);
     const pick = this.ivStat && IV_KEYS.includes(this.ivStat) ? this.ivStat : IV_KEYS.reduce((a, k) => ((ivs[k] || 0) < (ivs[a] || 0) ? k : a), IV_KEYS[0]);
     const cw = Math.floor((W - 28) / IV_KEYS.length), cy = y0 + 46;
     IV_KEYS.forEach((k, i) => {
-      const cx = 14 + cw * i + Math.floor(cw / 2), on = foods.length && k === pick;
+      const cx = 14 + cw * i + Math.floor(cw / 2), on = k === pick;
       if (on) g.ellipseRing(cx, cy, 22, 22, '#ffd890', 0);
       ivRing(g, cx, cy, 18, ivs[k] || 0, IV_MAX, IV_COL[k]);
       g.text(STAT_NAME[k], cx, cy + 24, { font: 'label', color: on ? '#ffd890' : P.main, align: 'center' });
       g.text(`+${(ivs[k] || 0) * (k === 'fruit' ? 3 : 1)}%`, cx, cy + 40, { color: P.sub, align: 'center' });   // 열매 = 맺는 속도
-      if (foods.length) this.hit(app, live, 'iv_' + k, cx - 24, cy - 24, 48, 74, () => { this.ivStat = k; });
+      this.hit(app, live, 'iv_' + k, cx - 24, cy - 24, 48, 74, () => { this.ivStat = k; });
     });
     let y = cy + 64;
     g.rect(14, y - 6, W - 28, 1, '#244e7e');
-    g.text('거름 주기', 14, y, { font: 'value', color: P.main });
+    g.text('종자 거름', 14, y, { font: 'value', color: P.main });
+    g.text(`같은 종자 ${mine.length}`, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' });
     y += 22;
-    if (!foods.length) { g.text('거름이 될 같은 식물이 없어요', W / 2, y + 4, { color: P.dim, align: 'center' }); return y + 30; }
-    g.text(`올릴 개체값: ${STAT_NAME[pick]}`, 14, y, { color: '#ffd890' }); y += 20;
-    foods.forEach((f, i) => {
-      const add = Math.min(IV_MAX - (ivs[pick] || 0), 1 + Math.floor(starsOf(f.ivs) / 2)), where = s.plants.includes(f) ? '스마트팜' : '보관고';
-      holo(g, 12, y, W - 24, 34, T.deep, 16);
-      g.text(f.name, 20, y + 4, { font: 'label', color: P.main });
-      miniStars(g, 22 + g.textW(f.name, 'label'), y + 7, starsOf(f.ivs));
-      g.text(`${stageName(f)} Lv${lvOf(f)} · ${where}`, 20, y + 20, { color: P.dim });
-      const full = (ivs[pick] || 0) >= IV_MAX;
-      this.btn(app, live, 'mg_' + i, W - 92, y + 5, 76, 24, full ? '이미 최대' : `${STAT_NAME[pick]} +${add}`, { style: 'gold', font: 'label', disabled: full }, () => ask(app, `${eul(f.name)} 거름으로 줄까요?`, `${STAT_NAME[pick]} 개체값 +${add} · ${ga(f.name)} 사라져요`, () => app.act('merge', { id: p.uid, food: f.uid, stat: pick }).then(r => r && app.toast(`${STAT_NAME[pick]} ${r.from} → ${r.to}`)), '거름 주기'));
-      y += 38;
-    });
+    const v = ivs[pick] || 0, full = v >= IV_MAX, gauge = (p.ivp && p.ivp[pick]) || 0, need = full ? 0 : ivpCost(v);
+    g.text(full ? `${STAT_NAME[pick]} 최대` : `${STAT_NAME[pick]} ${v} → ${v + 1}`, 14, y, { font: 'bold', color: '#ffd890' });
+    for (let i = 0; i < need; i++) { const bx = W - 14 - (need - i) * 14; rrect(g, bx, y + 1, 11, 11, 2, '#06111c'); if (i < gauge) rrect(g, bx + 2, y + 3, 7, 7, 1, '#ffd890'); }   // 게이지 칸 = 다음 +1까지 필요한 종자 수
+    y += 22;
+    const bw = Math.floor((W - 34) / 2), feed = ids => app.act('seedFeed', { id: p.uid, stat: pick, seeds: ids }).then(r => { if (r) app.toast(r.to > r.from ? `${STAT_NAME[pick]} ${r.from} → ${r.to}` : `${STAT_NAME[pick]} 게이지 ${r.gauge}/${r.need}`); });
+    const one = () => { if (plain.length) return feed([plain[0].id]); const sd = spec[0]; ask(app, `${sd.legend ? '전설' : sd.shiny ? '색 변종' : '변이'} 종자를 거름으로 쓸까요?`, '심으면 특별한 식물이 나와요', () => feed([sd.id]), '거름으로'); };
+    this.btn(app, live, 'sf_one', 14, y, bw, 30, '1개 넣기', { style: 'gold', font: 'bold', disabled: full || !mine.length }, one);
+    this.btn(app, live, 'sf_all', 20 + bw, y, bw, 30, `모두 넣기 ${plain.length}`, { style: 'night', font: 'bold', disabled: full || !plain.length }, () => feed(plain.map(sd => sd.id)));   // 전설 · 색 변종 · 변이 종자는 '모두'에서 뺌
+    y += 40;
+    if (!mine.length) { g.text('같은 식물 종자가 없어요', W / 2, y, { color: P.dim, align: 'center' }); y += 24; }
     return y;
   },
 

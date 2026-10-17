@@ -45,6 +45,7 @@ export const SHOTS = [
   ['06_plant_up_sun', 'plant', { tab: 'up' }, { plants: [{ up: { hp: 2, sunMax: 6, sunRegen: 4 }, pts: 9 }] }],   // 햇빛 그릇 2단 · 회복 1단(2026-10-18)
   ['06_plant_set', 'plant', { tab: 'set' }],
   ['06_plant_iv', 'plant', { tab: 'iv' }],
+  ['06_plant_iv_seeds', 'plant', { tab: 'iv' }, { seedsLike: 7, plants: [{ ivp: { fruit: 2 } }] }],   // 종자 거름(같은 종 종자 일곱 · 열매 게이지 2/3 — 2026-10-18)
   ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],
   ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
   ['06_draft_evo_0500', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 500 } }], ['06_draft_evo_1150', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1150 } }], ['06_draft_evo_1600', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1600 } }],   // 진화 연출(scenes/draft.js — 2026-10-18)

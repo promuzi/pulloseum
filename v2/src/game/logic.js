@@ -407,20 +407,28 @@ export function resetPoints(s, id) {
   return { cost, back };
 }
 // 거름(같은 식물을 먹여 고른 개체값 ↑ — 먹인 개체 별이 높을수록 많이)
-export function merge(s, id, foodId, stat) {
-  const p = getPlant(s, id);
+// 종자 거름(2026-10-18 사용자 "같은 식물 종자는 거름으로 · 개체값 상승은 소량 · 랜덤이냐 고르냐" → 추천안 = 고르기 + 높을수록 비싸게, 식물 통째 거름은 없앰):
+//  고른 개체값 칸에 같은 종 종자를 넣으면 게이지(p.ivp)가 참 — 지금 값 0~4 = 종자 셋 · 5~7 = 넷 · 8~9 = 다섯에 +1(남는 건 이월) · 최대면 멈추고 남은 종자는 가방에
+export const ivpCost = v => (v <= 4 ? 3 : v <= 7 ? 4 : 5);
+export function seedFeed(s, id, stat, seedIds) {
+  const p = getPlant(s, id); normIvs(p);
   need(IV_KEYS.includes(stat), '올릴 개체값을 골라 주세요');
-  need(id !== foodId, '자기 자신은 거름이 될 수 없어요');
-  let food = s.plants.find(x => x.uid === foodId), from = s.plants;
-  if (!food) { food = s.storage.find(x => x.uid === foodId); from = s.storage; }
-  need(food && food.key === p.key, '같은 식물만 거름이 돼요');
   need((p.ivs[stat] || 0) < IV_MAX, '이미 최대예요');
-  const add = 1 + Math.floor(starsOf(food.ivs) / 2), before = p.ivs[stat] || 0;
-  p.ivs[stat] = Math.min(IV_MAX, before + add);
-  from.splice(from.indexOf(food), 1);
-  normCards(s); releaseCards(s, food);
-  fixActive(s);
-  return { stat, from: before, to: p.ivs[stat] };
+  const ids = [...new Set((Array.isArray(seedIds) ? seedIds : []).map(String))], list = ids.map(x => s.seeds.find(sd => sd.id === x));
+  need(ids.length && list.every(Boolean), '그 종자가 없어요');
+  need(list.every(sd => sd.key === p.key), '같은 식물 종자만 거름이 돼요');
+  p.ivp = p.ivp && typeof p.ivp === 'object' ? p.ivp : {};
+  const from = p.ivs[stat] || 0;
+  let used = 0;
+  for (const sd of list) {
+    if ((p.ivs[stat] || 0) >= IV_MAX) break;
+    s.seeds.splice(s.seeds.indexOf(sd), 1); used++;
+    p.ivp[stat] = (p.ivp[stat] || 0) + 1;
+    if (p.ivp[stat] >= ivpCost(p.ivs[stat] || 0)) { p.ivp[stat] -= ivpCost(p.ivs[stat] || 0); p.ivs[stat] = (p.ivs[stat] || 0) + 1; }
+  }
+  const to = p.ivs[stat];
+  if (to >= IV_MAX) p.ivp[stat] = 0;
+  return { stat, from, to, used, gauge: p.ivp[stat] || 0, need: to >= IV_MAX ? 0 : ivpCost(to) };
 }
 // 접목(완제품 접목 가지 — 속성·종이 맞아야, 상급은 다 자란 식물만)
 export function graft(s, id, scionId) {
@@ -551,20 +559,28 @@ export function couponGive(s, raw, rng) {
   const rw = cleanCoupon(raw), got = [], box = {};
   for (const k of Object.keys(COUPON_N)) if (rw[k]) { box[k] = rw[k]; got.push({ kind: k, n: rw[k], rar: COUPON_RAR[k] }); }
   give(s, box);
-  for (const r of rw.seeds || []) { const sd = seedOf(s, rollSpecies(rng, r), rng); s.seeds.push(sd); got.push({ kind: 'seed', seed: sd, rar: 3 }); }
+  for (const r of rw.seeds || []) { const sd = seedOf(s, rollSpecies(rng, r), rng), x = addSeed(s, sd); got.push({ kind: 'seed', seed: sd, rar: 3, ...(x || {}) }); }
   for (const c of rw.cards || []) { const id = CARDS[c] ? c : rollCard(rng, c, formsOwned(s)); grant(s, { kind: 'card', card: id }); got.push({ kind: 'card', card: id, rar: CARDS[id].rar }); }
   return got;
 }
 function grant(s, r) {
   if (r.kind === 'credits' || r.kind === 'gems') s.wallet[r.kind] += r.n;
   else if (r.kind === 'water' || r.kind === 'fert' || r.kind === 'regress' || r.kind === 'fuel' || r.kind === 'parts') s.items[r.kind] = (s.items[r.kind] || 0) + r.n;
-  else if (r.kind === 'seed') s.seeds.push(r.seed);
+  else if (r.kind === 'seed') { const x = addSeed(s, r.seed); if (x) r.sold = x.sold; }   // 가방이 차서 팔렸으면 받은 것 판에 sold
   else if (r.kind === 'scion') s.scions.push({ id: uid(s), skill: r.skill });
   else if (r.kind === 'card') { normCards(s); addCard(s, r.card); }
 }
 export function rollSpecies(rng, rarity, pool) {
   const keys = (pool || Object.keys(SPECIES)).filter(k => !rarity || SPECIES[k].rarity === rarity);
   return pick(rng, keys.length ? keys : Object.keys(SPECIES));
+}
+// 종자 가방 한도(2026-10-18 사용자 "가방 한도도 만들되 넉넉히 · 꽉 찼을 때 종자 얻는 거 막을 방법"): 꽉 차면 보통 종자는 그 자리에서 종자 값에 팔림(받은 것 판에 sold) ·
+//  전설 · 색 변종 · 변이 종자는 아까우니 넘어도 들어옴. 상점 종자 꾸러미는 꽉 차면 못 삼 · 탐사는 떠나기 전에 화면이 한 번 물음
+export const SEED_MAX = 50;
+export const specialSeed = sd => !!(sd && (sd.legend || sd.shiny || sd.form));
+export function addSeed(s, sd) {
+  if (s.seeds.length >= SEED_MAX && !specialSeed(sd)) { const n = seedPrice(sd); s.wallet.credits += n; return { sold: n }; }
+  s.seeds.push(sd); return null;
 }
 export function seedOf(s, key, rng, o = {}) {
   const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend;
@@ -586,7 +602,7 @@ export function rollScion(rng, p, q) {
 // ── 암시장(컨셉) = 판매(무조건 돈, 적게) · 해체(무작위 접목 가지 등 — 많이 키울수록 좋은 것 확률 ↑) ──
 export function sellPrice(p) {
   const b = SELL_BASE[SPECIES[p.key].rarity] || 40, k = (1 + 0.5 * p.stage) * (p.legend ? 5 : p.shiny ? 3 : 1);
-  return Math.round(b * k + 0.25 * p.invest);
+  return Math.round(b * k + 0.5 * p.invest);   // 들인 것(물 · 비료 · 강화 돈)의 50%(2026-10-18 — 식물 거름을 없애며 25% → 50%)
 }
 const takePlant = (s, id) => {
   let i = s.plants.findIndex(x => x.uid === id);
@@ -619,14 +635,14 @@ export function sellSeed(s, seedId) {
 }
 export function dismantle(s, id, rng) {
   const p = takePlant(s, id), q = Math.min(1, p.invest / 1500 + 0.25 * p.stage + (p.lv - 1) * 0.03), got = [];
-  const n = 1 + p.stage + (p.lv >= 4 ? 1 : 0);
+  const n = 1 + p.stage + (p.lv >= 4 ? 1 : 0) + Math.min(3, Math.floor(p.invest / 600));   // 들인 만큼 더(2026-10-18 — 600마다 한 칸, 셋까지)
   for (let i = 0; i < n; i++) {
     const r = rng();
     if (r < 0.7) got.push({ kind: 'scion', skill: rollScion(rng, p, q), rar: 3 });
     else if (r < 0.8 + 0.05 * q) got.push({ kind: 'regress', n: 1, rar: 4 });
     else got.push({ kind: rng() < 0.5 ? 'water' : 'fert', n: 2, rar: 1 });
   }
-  if (rng() < (p.form ? 0.5 : 0.25)) { const c = rollCard(rng, p.form || 'normal'); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); }   // 카드(2026-10-17)
+  if (rng() < (p.form ? 0.5 : 0.25) + 0.25 * q) { const c = rollCard(rng, p.form || 'normal'); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); }   // 카드(2026-10-17)
   got.push({ kind: 'parts', n: 1 + p.stage + (p.lv >= 4 ? 1 : 0), rar: 1 });   // 부품(2026-10-17) — 해체하면 늘 조금
   for (const r of got) grant(s, r);
   return { got, name: p.name };
@@ -753,6 +769,7 @@ export function buy(s, itemId, rng) {
   const it = SHOP.find(x => x.id === itemId);
   need(it, '없는 물건');
   for (const [k, v] of Object.entries(it.cost)) need(s.wallet[k] >= v, k === 'gems' ? '보석이 모자라요' : '돈이 모자라요');
+  need(!it.give.seed || s.seeds.length < SEED_MAX, `종자 가방이 꽉 찼어요(${SEED_MAX}) — 심거나 팔아요`);
   for (const [k, v] of Object.entries(it.cost)) s.wallet[k] -= v;
   const g = it.give;
   if (g.seed) { const sd = seedOf(s, rollSpecies(rng, g.seed), rng); s.seeds.push(sd); return { seed: sd }; }
@@ -769,7 +786,7 @@ export function addXp(s, n, rng) {
     u.xp -= userNeed(u.level); u.level++;
     const r = levelReward(u.level), box = { ...r };
     give(s, r);
-    if (r.seed) { const sd = seedOf(s, rollSpecies(rng, r.seed), rng); s.seeds.push(sd); box.seed = sd; }
+    if (r.seed) { const sd = seedOf(s, rollSpecies(rng, r.seed), rng), x = addSeed(s, sd); box.seed = sd; if (x) box.seedSold = x.sold; }
     if (r.card) { const c = rollCard(rng, r.card); grant(s, { kind: 'card', card: c }); box.card = c; }
     s.pending.push({ kind: 'level', level: u.level, box, slots: farmSlots(u.level) });
     ups.push(u.level);

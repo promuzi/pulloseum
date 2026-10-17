@@ -546,7 +546,8 @@ export const harvestK = p => 1 - 0.03 * fruitIv(p);   // 열매 하나 걸리는
 // 열매 하나 = 보상 한 가지: 돈·물·비료가 주로(92%), 나머지는 드물게
 export const HARVEST_TABLE = [
   { w: 46, kind: 'credits', rar: 0 }, { w: 22, kind: 'water', rar: 1 }, { w: 14, kind: 'fert', rar: 1 }, { w: 10, kind: 'credits', big: true, rar: 2 },
-  { w: 4, kind: 'seed', rar: 3 }, { w: 2.5, kind: 'scion', rar: 3 }, { w: 1.2, kind: 'regress', rar: 4 }, { w: 0.3, kind: 'gems', rar: 4 }, { w: 6, kind: 'parts', rar: 1 },   // 부품(2026-10-17)
+  { w: 1, kind: 'seed', rar: 3 }, { w: 2.5, kind: 'scion', rar: 3 },   // 종자 4 → 1(2026-10-18 사용자 "열매로 종자 나오는 거 많이 낮추거나 빼자" — 같은 종 종자는 종자 거름 재료라 남김)
+  { w: 1.2, kind: 'regress', rar: 4 }, { w: 0.3, kind: 'gems', rar: 4 }, { w: 6, kind: 'parts', rar: 1 },   // 부품(2026-10-17)
 ];
 
 // ── 탐사(행성 11 — 탐사 화면 지도와 같은 이름) ──
