@@ -1,11 +1,14 @@
 // v2 전투 판 만들기 — 식물(종·스탯) → 전투 유닛, 기술 목록(기본기 셋 + 종 기술), 속성 상성, 상대 고르기.
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
 import { makeRng, resolveTurn } from './rules.js';
+import { formMult } from './matchup.js';
 import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX, useCount } from './status.js';
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
 const WEAK = { fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] };
 export const elemMult = (atkEl, defEl) => (atkEl && (WEAK[defEl] || []).includes(atkEl) ? 1.5 : 1);
+// 한 번 칠 때 배율 = 속성 상성 × 변이 상성(2026-10-17 — 변이끼리 · 변이 ↔ 속성 · 무기 종류)
+export const hitMult = (u, d, s) => elemMult(s && s.el, d.el) * formMult(u, d, s);
 
 // 기본기(누구나·무료): 평타 · 방어 자세(후공일 때만 성립 — 받는 피해 40%) · 회피 자세(선공·후공 모두 — 빗나감 +22·스침 +14칸)
 export const BASICS = [
@@ -98,7 +101,7 @@ export function kitOf(key) {
 // 유닛: id·이름·속성·스탯(rules.js 가 읽는 hp·atk·def·spd·acc·eva·crit) + 에너지·기술 + 상태 효과(eff)
 export function makeUnit(id, sp, o) {
   return {
-    id, key: o.key, name: o.name || sp.name, el: sp.el, jong: sp.type, pot: o.pot || 'pot_terra', stage: o.stage, trainer: o.trainer, rank: o.rank, tlv: o.tlv,
+    id, key: o.key, name: o.name || sp.name, el: sp.el, jong: sp.type, pot: o.pot || 'pot_terra', stage: o.stage, form: o.form || sp.form || null, trainer: o.trainer, rank: o.rank, tlv: o.tlv,
     hp: o.hp, max: o.hp, atk: o.atk, def: o.def, spd: o.spd, acc: 0, eva: 0, crit: o.crit ?? 5,
     energy: 2, energyMax: 8, kit: kitOf(o.key), eff: {},
   };
@@ -113,7 +116,7 @@ export function aiPick(u, foe, rng) {
   const ok = u.kit.filter(s => canUse(u, s));
   if (!ok.length) return REST;
   const low = u.hp < u.max * 0.4;
-  const w = ok.map(s => (s.act === 'attack' ? 1 + (s.power || 0) / 45 + (elemMult(s.el, foe.el) > 1 ? 1.2 : 0) + (newFx(s, foe) ? 0.6 : 0) : s.act === 'guard' ? (low ? 1.3 : 0.45) : (low ? 1.1 : 0.55)));
+  const w = ok.map(s => (s.act === 'attack' ? Math.max(0.3, 1 + (s.power || 0) / 45 + 2.4 * (hitMult(u, foe, s) - 1) + (newFx(s, foe) ? 0.6 : 0)) : s.act === 'guard' ? (low ? 1.3 : 0.45) : (low ? 1.1 : 0.55)));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;
   for (; i < w.length - 1; i++) { r -= w[i]; if (r <= 0) break; }
   return ok[i];
@@ -147,7 +150,7 @@ export function playTurnVs(B, mySkill, foeSkill) {
   B.me.energy -= me.cost || 0; B.foe.energy -= foeSkill.cost || 0;
   useCount(B.me, me); useCount(B.foe, foeSkill);   // 변이 기술 횟수
   B.me.curEl = me.el; B.foe.curEl = foeSkill.el;
-  const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d) => elemMult(u.curEl, d.el), turn: T });
+  const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T });
   const events = res.events.filter(e => !(e.t === 'first' && (me === REST || foeSkill === REST)));   // 한쪽이 쉬면 선공 판정은 보여 주지 않음
   for (const e of events) if (e.t === 'skip' && e.refund) B[e.who].energy += e.refund;   // 취소된 행동의 에너지 돌려줌
   // 누가 쓰러지면 그 자리에서 판이 끝남(턴 끝 피해 없음) · 같이 쓰러지는 일 없이 먼저 쓰러진 쪽이 짐(2026-10-16 — 전엔 둘 다 쓰러지면 늘 'me' 승리)

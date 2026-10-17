@@ -34,7 +34,7 @@ export const cardSkillOf = (p, id) => (isSkillCard(id) && SKILLS[id] ? cardSkill
 export function unitOf(id, p, extra = {}) {
   const st = plantStats(p), sp = SPECIES[p.key], pas = passivesOf(p.cards), k = s => 1 + (pas[s] || 0), hp = Math.round(st.hp * k('hp'));
   return {
-    id, key: p.key, name: p.name, el: sp.el, jong: sp.type, pot: p.pot || 'pot_terra', stage: STAGE_KEY[p.stage], shiny: !!p.shiny, legend: !!p.legend,
+    id, key: p.key, name: p.name, el: sp.el, jong: sp.type, pot: p.pot || 'pot_terra', stage: STAGE_KEY[p.stage], form: p.form || null, shiny: !!p.shiny, legend: !!p.legend,
     hp, max: hp, atk: Math.round(st.atk * k('atk')), def: Math.round(st.def * k('def')), spd: Math.round(st.spd * k('spd')), acc: st.acc, eva: 0, crit: st.crit + (pas.crit || 0),
     energy: 2 + (pas.energy || 0), energyMax: 8, kit: kitOfPlant(p), eff: {}, pas, cards: (p.cards || []).filter(Boolean), ...extra,
   };

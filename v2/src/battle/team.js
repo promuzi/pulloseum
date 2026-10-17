@@ -5,6 +5,7 @@
 //  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
 import { makeRng, resolveTurn } from './rules.js';
 import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
+import { formMult } from './matchup.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
 
 export function makeTeamBattle({ me, foe, seed = 20261015 }) {
@@ -57,7 +58,7 @@ export function playTurn3(B, myAct, foeAct = null) {
   if (mySkill || foeSkill) {
     const idle = { id: 'switch', act: 'other' };
     B.me.curEl = mySkill ? mySkill.el : null; B.foe.curEl = foeSkill ? foeSkill.el : null;
-    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d) => elemMult(u.curEl, d.el), turn: T });
+    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T });
     for (const e of res.events) {
       if (e.t === 'act' && e.id === 'switch') continue;
       if (e.t === 'first' && (!mySkill || !foeSkill || mySkill === REST || foeSkill === REST)) continue;   // 한쪽이 바꾸거나 쉬면 선공 판정은 보여 주지 않음

@@ -348,6 +348,9 @@ export const SKILLS = Object.fromEntries([
   // 속성 변이 기술(2026-10-17 사용자 "변이 카드 수를 늘리자 — 불 속성 공격도 있고 물도 있고 · 다 만들지 말고 어울리는 거와 연결해서"): 변이마다 어울리는 속성 한두 개만
   S('m_flame', '달군 칼날', 'fire', 'm', 50, 0, { form: 'weapon', uses: 2, inflict: { id: 'burn' } }),
   S('m_spear', '번개 창', 'bolt', 'm', 70, 0, { form: 'weapon', uses: 2, ranged: true, inflict: { id: 'shock', n: 1 } }),
+  S('m_rocket', '로켓포', null, 'm', 60, 0, { form: 'weapon', uses: 1, ranged: true, area: true }),   // 2026-10-17 사용자 "무기에 광역으로 로켓포도" — 상대 전부 · 한 번(수치 임시)
+  S('m_xbow', '석궁', null, 'm', 85, 0, { form: 'weapon', uses: 2, ranged: true }),   // 2026-10-17 사용자 "석궁도" — 묵직한 한 발(수치 임시)
+  S('m_flamer', '화염 방사', 'fire', 'm', 50, 0, { form: 'weapon', uses: 2, ranged: true, area: true, inflict: { id: 'burn' } }),   // 2026-10-17 사용자 "화염방사도 넣자" — 무기 종류 화염방사(수치 임시 — 변이 카드는 사용자가 나중에 보고 정함)
   S('m_burrow', '땅굴 습격', 'earth', 'm', 65, 0, { form: 'predator', uses: 2, drain: 0.25 }),
   S('m_maw', '심해 아가리', 'water', 'm', 50, 0, { form: 'predator', uses: 2, drain: 0.25, inflict: { id: 'wet' } }),
   S('m_bile', '독물 쏘기', 'water', 'm', 50, 0, { form: 'toxic', uses: 2, ranged: true, inflict: { id: 'poison', n: 1 } }),

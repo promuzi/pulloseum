@@ -135,13 +135,14 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     //  카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
     const hitDmg = (x, y, sk, el) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
     const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
-    let dmg = Math.round(hitDmg(u, foe, a, o.elemMult ? o.elemMult(u, foe) : 1) * RULES.tierMult[tier] * critK * (guardOn ? 1 - (1 - (d.guardMult ?? 0.5)) * rep : 1));
+    const em = o.elemMult ? o.elemMult(u, foe, a) : 1;   // 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
+    let dmg = Math.round(hitDmg(u, foe, a, em) * RULES.tierMult[tier] * critK * (guardOn ? 1 - (1 - (d.guardMult ?? 0.5)) * rep : 1));
     if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
     let absorb = 0;   // 보호막이 먼저 막음
     if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; if (sh.hp <= 0) delete foe.eff.shield; }
     foe.hp = Math.max(0, foe.hp - dmg);
     foe.st.critTaken = tier === 'crit';
-    ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, absorb, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, list: absorb ? listOf(foe) : undefined });
+    ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, list: absorb ? listOf(foe) : undefined });
     const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
     if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
     const refl = (has(foe, 'thorns') ? FX.thorns.reflect : 0) + ((foe.pas && foe.pas.reflect) || 0);   // 반사 버프 + 가시 줄기(카드)

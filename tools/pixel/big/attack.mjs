@@ -124,7 +124,9 @@ export const WEAPONS = {
   Object.assign(ATTACKS, {
     m_bite: VARIANTS.predator, m_devour: as(VARIANTS.predator, {}), m_burrow: as(VARIANTS.predator, { c: EC.earth, status: 'dust' }), m_maw: as(VARIANTS.predator, { c: EC.water, status: 'wet' }),
     m_slash: WEAPONS.sword_slash, m_shot: WEAPONS.gun_shot, m_smash: WEAPONS.hammer_smash,
-    m_flame: as(WEAPONS.sword_slash, { c: EC.fire, blood: EC.fire, status: 'burn' }), m_spear: as(WEAPONS.spear_thrust, { c: EC.bolt, status: 'shock' }),
+    m_flame: as(WEAPONS.sword_slash, { c: EC.fire, blood: EC.fire, status: 'burn' }), m_spear: as(WEAPONS.spear_thrust, { c: EC.bolt, status: 'shock' }), m_flamer: { kind: 'breath', move: 'cast', c: EC.fire, status: 'burn' },   // 화염 방사 = 불길 뿜기
+    m_rocket: { kind: 'fireball', move: 'shoot', c: ['#fff6c8', '#ffb040', '#d8542a', '#4a3428'], status: 'none' },   // 로켓포 = 쏘아 터짐
+    m_xbow: as(WEAPONS.gun_snipe, { c: ['#f4ecdc', '#c8a878', '#8a6a44', '#3a2a1a'] }),   // 석궁 = 한 발 저격(나무 · 쇠촉 색)
     m_spit: VARIANTS.toxic, m_acid: as(VARIANTS.toxic, {}), m_miasma: as(VARIANTS.toxic, {}), m_bile: as(VARIANTS.toxic, { c: EC.water }), m_ivy: { kind: 'whip', move: 'lunge', c: VARIANTS.toxic.c, status: 'poison' },
     m_puff: VARIANTS.spore, m_sleep: as(VARIANTS.spore, {}), m_gust: as(VARIANTS.spore, { c: EC.wind }),
     m_roar: { kind: 'rings', move: 'cast', c: VARIANTS.dragon.c, status: 'swirl' }, m_frostclaw: { kind: 'slash', move: 'lunge', c: EC.ice, status: 'swirl', petal: [EC.ice[1], EC.ice[2]] }, m_voltclaw: { kind: 'slash', move: 'lunge', c: EC.bolt, status: 'shock', petal: [EC.bolt[1], EC.bolt[2]] },
