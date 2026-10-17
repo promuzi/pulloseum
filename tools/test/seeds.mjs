@@ -3,7 +3,7 @@
 //  ① 열매 종자 무게 ② 가방 한도 · 넘친 보통 종자는 그 자리에서 팔림 · 특별 종자는 넘어도 들어옴 ③ 상점 종자는 꽉 차면 못 삼
 //  ④ 종자 거름(같은 종 · 고른 개체값 게이지 · 높을수록 비쌈 · 최대에서 멈춤) ⑤ 식물 통째 거름 없음 ⑥ 팔기 = 들인 것 50% · 해체 = 들인 만큼 더
 //   node tools/test/seeds.mjs
-import { newGame, makePlant, seedOf, addSeed, couponGive, buy, seedFeed, sell, sellPrice, dismantle, seedPrice, SEED_MAX, Err } from '../../v2/src/game/logic.js';
+import { newGame, makePlant, seedOf, addSeed, couponGive, buy, seedFeed, sell, sellPrice, dismantle, seedPrice, sellSeed, SEED_MAX, Err } from '../../v2/src/game/logic.js';
 import { HARVEST_TABLE, IV_MAX } from '../../v2/src/game/catalog.js';
 import { runOp, OPS } from '../../v2/src/game/ops.js';
 import { makeRng } from '../../v2/src/battle/rules.js';
@@ -85,6 +85,24 @@ const fill = (s, n, key = 'aqua') => { const rng = makeRng(9); while (s.seeds.le
   const cnt = inv => { const t = game(), q = makePlant(t, { key: 'aqua' }, makeRng(2), 0); t.plants.push(q); q.invest = inv; return dismantle(t, q.uid, makeRng(11)).got.length; };
   ok(cnt(3000) >= cnt(0) + 3, `해체 = 들인 만큼 더: ${cnt(0)} → ${cnt(3000)}`);
   sell(s, p.uid);
+}
+// ⑦ 종자 잠금 · 즐겨찾기(2026-10-18 사용자 "종자를 잠그거나 즐겨찾기하는 기능도" — 조사: 잠금 = 팔기 · 강화 재료 · 전체 선택에서 빠짐(Once Human · GrandChase · ASTRA)):
+//  잠금 = 팔기 · 거름 막힘(심기는 됨) · 즐겨찾기 = 표시 · 앞으로(보호는 잠금이 맡음) · 다시 누르면 풀림
+{
+  const { markSeed } = await import('../../v2/src/game/logic.js');
+  const s = game(), p = s.plants[0], rng = makeRng(4), mk = () => { const sd = seedOf(s, p.key, rng); s.seeds.push(sd); return sd; };
+  const a = mk(), b = mk();
+  markSeed(s, a.id, { lock: true }); markSeed(s, b.id, { fav: true });
+  ok(a.lock === true && !a.fav && b.fav === true && !b.lock, '잠금 · 즐겨찾기 따로');
+  throws(() => sellSeed(s, a.id), '잠긴 종자 팔기 = 막힘');
+  throws(() => seedFeed(s, p.uid, 'hp', [a.id], makeRng(1)), '잠긴 종자 거름 = 막힘');
+  sellSeed(s, b.id);
+  ok(!s.seeds.includes(b), '즐겨찾기만은 팔림(보호는 잠금이 맡음)');
+  markSeed(s, a.id, { lock: false });
+  ok(!a.lock, '잠금 풀기');
+  throws(() => markSeed(s, 'nope', { lock: true }), '없는 종자 = 막힘');
+  runOp(s, 'seedMark', { seed: a.id, fav: true }, { rng: makeRng(1), now: 0 });
+  ok(a.fav === true, '서버 일 목록(ops seedMark)');
 }
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

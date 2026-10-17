@@ -422,6 +422,7 @@ export function seedFeed(s, id, stat, seedIds, rng) {
   const ids = [...new Set((Array.isArray(seedIds) ? seedIds : []).map(String))], list = ids.map(x => s.seeds.find(sd => sd.id === x));
   need(ids.length && list.every(Boolean), '그 종자가 없어요');
   need(list.every(sd => sd.key === p.key), '같은 식물 종자만 거름이 돼요');
+  need(list.every(sd => !sd.lock), '잠긴 종자는 거름으로 못 써요');
   p.ivp = p.ivp && typeof p.ivp === 'object' ? p.ivp : {};
   const from = p.ivs[stat] || 0, tries = [];
   for (const sd of list) {
@@ -583,6 +584,14 @@ export function rollSpecies(rng, rarity, pool) {
 // 종자 가방 한도(2026-10-18 사용자 "가방 한도도 만들되 넉넉히 · 꽉 찼을 때 종자 얻는 거 막을 방법"): 꽉 차면 보통 종자는 그 자리에서 종자 값에 팔림(받은 것 판에 sold) ·
 //  전설 · 색 변종 · 변이 종자는 아까우니 넘어도 들어옴. 상점 종자 꾸러미는 꽉 차면 못 삼 · 탐사는 떠나기 전에 화면이 한 번 물음
 export const SEED_MAX = 50;
+// 종자 잠금 · 즐겨찾기(2026-10-18 사용자 "종자를 잠그거나 즐겨찾기하는 기능도" — 조사: 잠금 = 팔기 · 강화 재료 · 전체 선택에서 빠짐):
+//  잠금(sd.lock) = 팔기 · 거름 막힘(심기는 됨) · 즐겨찾기(sd.fav) = 별 표시 · 목록 앞으로(보호는 잠금이 맡음)
+export function markSeed(s, seedId, o = {}) {
+  const sd = s.seeds.find(x => x.id === seedId);
+  need(sd, '그 종자가 없어요');
+  for (const k of ['lock', 'fav']) if (typeof o[k] === 'boolean') { if (o[k]) sd[k] = true; else delete sd[k]; }
+  return { seed: sd.id, lock: !!sd.lock, fav: !!sd.fav };
+}
 export const specialSeed = sd => !!(sd && (sd.legend || sd.shiny || sd.form));
 export function addSeed(s, sd) {
   if (s.seeds.length >= SEED_MAX && !specialSeed(sd)) { const n = seedPrice(sd); s.wallet.credits += n; return { sold: n }; }
@@ -635,6 +644,7 @@ export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 
 export function sellSeed(s, seedId) {
   const i = s.seeds.findIndex(x => x.id === seedId);
   need(i >= 0, '그 종자가 없어요');
+  need(!s.seeds[i].lock, '잠긴 종자예요 — 잠금을 풀고 팔아요');
   const sd = s.seeds.splice(i, 1)[0], n = seedPrice(sd);
   s.wallet.credits += n;
   return { credits: n, key: sd.key };

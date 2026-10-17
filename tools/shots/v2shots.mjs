@@ -48,6 +48,8 @@ export const SHOTS = [
   ['06_plant_iv_seeds', 'plant', { tab: 'iv' }, { seedsLike: 7, plants: [{ ivp: { fruit: 2 } }] }],
   ['06_seedpick', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2 } }],   // 종자 거름 고르기(2026-10-18) — 목록
   ['06_seedpick_info', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2, info: 2 } }],   // 한 번 누름 = 정보
+  ['06_seedpick_mark', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2, fav: [5, 9], lock: [2, 9], mode: 'select', sel: [0, 1] } }],   // 즐겨찾기(앞으로 · ★) · 잠금(자물쇠 · 못 고름)
+  ['06_seedpick_markinfo', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { fav: [5], lock: [5], info: 5 } }],   // 정보 창 = 즐겨찾기 · 잠금 단추
   ['06_seedpick_sel', 'plant', { tab: 'iv' }, { seedsLike: 14, seedpick: { special: 2, mode: 'select', sel: [0, 1, 2, 5, 6] } }],   // 꾹 = 선택 모드
   ['06_seedpick_stat', 'plant', { tab: 'iv' }, { seedsLike: 14, plants: [{ ivp: { hp: 2 } }], seedpick: { special: 2, mode: 'select', sel: [0, 1, 2, 5, 6], stage: 'stat', stat: 'hp' } }],   // 능력치 고르기 + 특별 종자 주의   // 종자 거름(같은 종 종자 일곱 · 열매 게이지 2/3 — 2026-10-18)
   ['06_plant_forgot', 'plant', { tab: 'skill', sub: 'forgot' }],
