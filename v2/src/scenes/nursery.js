@@ -6,7 +6,7 @@ import { plainBg } from '../art/bg.js';
 import { miniStars } from './common.js';
 import { farmSlots, FARM_MAX, SKILLS, STORE_MAX, FORMS, SPECIES, JONG } from '../game/catalog.js';
 import { ELEMENT } from '../art/palette.js';
-import { glyphH } from '../core/text.js';
+import { glyphH, sized } from '../core/text.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, slotLv, lvOf } from '../game/view.js';
 import { ask, showGot, sellAsk, cutAsk } from './popups.js';
 import { evolveLeague } from '../game/logic.js';
@@ -235,15 +235,24 @@ export const nursery = {
     if (u < -0.4 || u > 2.7) return null;
     return { id: 'nur_' + it.id, x: Fx0, y: sy - 78, w: Fx1 - Fx0, h: Fy1 - sy + 80, fn: () => { if (this.sel !== it.id) { this.prevSel = this.sel; this.prevT = app.t; this.sel = it.id; this.selT = app.t; } } };
   },
-  // 서랍 앞면 이름표(2026-10-18 사용자 "서랍 앞면을 활용해 이름과 속성"): 속성 아이콘 + 이름 — 앞면이 낮은 먼 줄은 아이콘만, 좁으면 이름을 줄임(오른쪽 = 상태 불빛)
+  // 서랍 앞면 이름표(2026-10-18 사용자 "서랍 앞면을 활용해 이름과 속성"): 속성 아이콘 + 이름을 한 덩어리로 앞면 가운데(오른쪽 = 상태 불빛 자리 빼고)
+  //  이름이 길거나 앞면이 낮으면(먼 줄 · 3열) 글자를 12 → 7칸까지 줄여 다 넣음(같은 날 사용자 "식물 이름 중앙 정렬 · 글자가 길면 알아서 폰트 줄여서 안에 다 출력")
+  //  7칸에도 안 들어가면 아이콘을 빼고 이름만 → 그래도 안 되면 7칸에서 끝을 줄임
   plate(g, p, x, y, w, h) {
     const sp = SPECIES[p.key], ic = sp && icon(sp.el); if (!ic || h < ic.height + 2) return;
-    const iy = y + Math.floor((h - ic.height) / 2), gh = glyphH('label'), max = w - 12 - ic.width - 9;
-    g.img(ic, x + 4, iy);
-    if (h < gh + 3 || max < 24) return;
-    let nm = p.name;
-    if (g.textW(nm, 'label') > max) { while (nm.length > 1 && g.textW(nm + '…', 'label') > max) nm = nm.slice(0, -1); nm += '…'; }
-    g.text(nm, x + 7 + ic.width, y + Math.round((h - gh) / 2), { font: 'label', color: '#26303e' });
+    const x0 = x + 3, avail = w - 10, nm = p.name || '', GAP = 3;
+    const fit = withIcon => { for (let s = 12; s >= 7; s--) { const k = s === 12 ? 'label' : sized('label', s); if (glyphH(k) <= h - 2 && g.textW(nm, k) <= avail - (withIcon ? ic.width + GAP : 0)) return k; } return null; };
+    let fk = fit(true), showIc = true, txt = nm;
+    if (!fk && (fk = fit(false))) showIc = false;
+    if (!fk) {
+      fk = sized('label', 7); showIc = false;
+      if (glyphH(fk) > h - 2) { g.img(ic, x0 + Math.floor((avail - ic.width) / 2), y + Math.floor((h - ic.height) / 2)); return; }   // 글자가 안 들어갈 만큼 낮은 앞면 = 아이콘만 가운데
+      while (txt.length > 1 && g.textW(txt + '…', fk) > avail) txt = txt.slice(0, -1);
+      txt += '…';
+    }
+    const tw = g.textW(txt, fk), gw = (showIc ? ic.width + GAP : 0) + tw, gx = x0 + Math.round((avail - gw) / 2);
+    if (showIc) g.img(ic, gx, y + Math.floor((h - ic.height) / 2));
+    g.text(txt, gx + (showIc ? ic.width + GAP : 0), y + Math.round((h - glyphH(fk)) / 2), { font: fk, color: '#26303e' });
   },
   // 상세 창 종 · 속성 · 변이 줄(아이콘 + 이름 — 변이는 그 변이 색)
   kinds(g, p, x, y, xr, P) {

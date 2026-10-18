@@ -11,6 +11,8 @@ export const FONT = {
   big:  { weight: 900, size: 30 },
   huge: { weight: 900, size: 46 },
 };
+// 크기만 바꾼 글꼴(같은 굵기) — 좁은 칸에 글자를 줄여 다 넣을 때(2026-10-18 스마트팜 서랍 이름표). 처음 부를 때 FONT 에 '<이름>@<크기>'로 더함
+export function sized(base, size) { const k = `${base}@${size}`; if (!FONT[k]) FONT[k] = { weight: FONT[base].weight, size }; return k; }
 const FAMILY = 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 const css = f => `${f.weight} ${f.size}px ${FAMILY}`;
 const meas = document.createElement('canvas').getContext('2d');
