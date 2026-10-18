@@ -1,6 +1,6 @@
 import { hud, navBar, button, holoTab } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey, bigBox, BIG } from '../art/sprites.js';
+import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
 import { miniStars } from './common.js';
@@ -220,15 +220,16 @@ export const nursery = {
       const lift = isSel ? Math.round(LIFT * ease(clamp((t - this.selT) / LIFT_MS, 0, 1))) : isPrev ? Math.round(LIFT * (1 - ease(clamp((t - this.prevT) / LIFT_MS, 0, 1)))) : 0;
       if (isSel || isPrev) this.lifted(g, it, sx, sy, band, lift, t);   // 다른 식물을 고르면 원래 화분은 구멍 속으로 내려감(사용자 "기존의 식물은 화분이 내려가는 모션")
       else this.planted(g, it, sx, sy, band, t);
-      if (f.have > 0) {   // 열매 표시 = 식물 꼭대기 바로 위(작은 식물이면 낮게 — 2026-10-16 사용자 "식물이 작으면 열매 표식도 높이에 맞게 좀 낮춰줘") · 고른 식물도 솟은 만큼 같이 올라감(2026-10-17 사용자 "식물 누르면 머리 위 과일이 사라짐" — 전엔 고르면 숨겼음)
-        const ic = icon('fruit'), bk = bigKey(it.p.key, stageKey(it.p)), Bm = BIG[bk], bx = bigBox(bk);
-        const top = Bm && bx ? sy - Math.round(Bm.meta.soil[1]) + bx[0] - ic.height - 3 : sy - 86;
-        // 열매 수만큼 · 가운데가 높은 둥근 호로 · 2배 크기(2026-10-18 사용자 "그 수에 따라 열매 아이콘 수도 늘어나며 배치는 일렬이 아닌 원처럼 약간 곡선 · 아이콘 좀 더 키우되 위치는 그대로")
-        // 반지름 34 원의 위쪽 호 위에 열매 사이 17칸(많으면 전체 폭 66 안으로 좁힘) — 열매가 많을수록 양 끝이 더 처짐
-        const n = f.have, K = 2, iw = ic.width * K, ih = ic.height * K, base = Math.max(sy - 86, top) + ic.height - ih - lift, R = 34, step = (n > 1 ? Math.min(17, 66 / (n - 1)) : 0) / R;
+      // 열매 = 잔디에 떨어진 것처럼 밑동 둘레에 맺힌 수만큼(2026-10-18 사용자 "열매 아이콘이 너무 커서 뒷 식물이 가려져 — 잔디에 떨어진 것처럼 배치 · 식물과 이름은 심하게 가리지 말고",
+      //  전엔 머리 위 2배 호라 뒷줄 식물 · 이름표를 덮었음): 잔디 판 원근 타원의 앞쪽 반을 따라 왼쪽 · 오른쪽 번갈아 바깥으로(가운데 = 줄기 · 솟는 화분 자리는 비움),
+      //  열매 밑이 잔디 판 앞 테를 넘지 않게(앞면 이름표를 안 가림) · 고른 식물이 솟아도 열매는 잔디에 그대로 · 크기는 모든 줄 1배
+      if (f.have > 0) {
+        const ic = icon('fruit'), n = f.have, K = 1, iw = ic.width, ih = ic.height;
+        const rx = Math.max(10, (Fx1 - Fx0) / 2 - iw / 2 - 4), ry = band * 0.34, cy = By + band * 0.5, per = Math.ceil(n / 2);
         for (let j = 0; j < n; j++) {
-          const th = (j - (n - 1) / 2) * step, bob = Math.floor(t / 500 + it.i + j) % 2;
-          g.img(ic, Math.round(sx + R * Math.sin(th) - iw / 2), Math.round(base + R * (1 - Math.cos(th))) + bob, K);
+          const side = j % 2 ? 1 : -1, k = j >> 1, phi = Math.PI * (per <= 1 ? 0.24 : 0.16 + (0.34 * k) / (per - 1)), jit = ((it.i * 7 + j * 5) % 3) - 1;
+          const fx = sx + side * rx * Math.sin(phi) + jit, fy = Math.min(Fy0 - 1, cy + ry * Math.cos(phi) + ih * 0.3);
+          g.img(ic, Math.round(fx - iw / 2), Math.round(fy - ih), K);
         }
       }
     } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#8ccfff', 0); }
