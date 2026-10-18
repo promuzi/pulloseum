@@ -1,55 +1,72 @@
 # 풀로세움 (Pulloseum) — 프로젝트 안내
 
-> 다른 PC에서 이 폴더를 Codex로 열면 이 파일을 먼저 읽고 맥락을 파악하세요.
-> **현재 구현 경계·다음 작업은 `C:\dev\pulloseum\docs\master-roadmap.md` §1 첫 문단과 아래 인계 문서의 「최근 세션 맥락」이 우선**입니다. 아래의 단일 `index.html` 구조·로컬 저장 설명은 v1이며, 현재 개발은 `v2/`·`server/`입니다.
-> **이어받기(v2 MVP · 서버, 2026-10-16) = `C:\dev\pulloseum\docs\superpowers\specs\2026-10-16-v2-mvp-design.md`**(§3 = 사용자 검수 대기 중인 결정, §7 = 다음 · 서버 실행 `node server/index.mjs` · 친구용 주소 https://pulloseum.getchat.workers.dev — 코드를 바꾸면 `cf/배포.md`대로 다시 올림). 식물 그림 이어받기 = `C:\dev\pulloseum\docs\superpowers\plans\2026-10-15-v2-plant-motion-fx-overnight.md` 맨 위 「최근 세션 맥락」부터. 컨셉 → 도트 변환 순서·검수 = `.claude/skills/plant-sprite/SKILL.md`.
+> 먼저 [마스터 로드맵](docs/master-roadmap.md)을 읽는다. 현재 개발은 **v2 + 서버**이며 루트 `index.html`은 v1이다.
+> **이어받기 = `C:\dev\pulloseum\docs\superpowers\specs\2026-10-16-v2-mvp-design.md` 맨 위 「최근 세션 맥락」.** 구현·배포·검수 상태와 다음 작업은 그곳에서만 갱신한다.
+> 게임: **https://pulloseum.getchat.workers.dev/v2/** — 새 작업 대화에서 사용자에게 이 주소를 전달한다.
 
-## ★ 개발 방향은 여기부터 (작업 시작 전 반드시 먼저 읽을 것)
-- **마스터 개발 로드맵 → [docs/master-roadmap.md](docs/master-roadmap.md)** — 현재 구현 현황·앞으로의 방향·확정 결정·**모든 하위 문서로 가는 지도**가 한곳에 모인 **유일 허브(SSOT)**. 어떤 기기/AI로 작업하든 이 파일을 먼저 읽고 현황을 파악한다. 세부 수치/설계는 그 안의 "문서 지도"를 타고 하위 문서로 들어간다.
-- ⚠️ **실시간 갱신 의무:** 코드·데이터·기획을 바꾸면 **같은 작업 안에서** 로드맵(또는 해당 하위 문서)의 상태/체크박스/수치를 갱신하고, 결정이 생기면 "결정 로그"에 남기고, **코드와 문서를 함께 커밋·푸시**한다. 놓치는 것 없이 항상 실시간으로. (상세 규약: 로드맵 §6)
-- **별칭:** 사용자가 "마스터 로드맵 / 로드맵 / 마스터 문서" 무엇으로 부르든 전부 `docs/master-roadmap.md`를 뜻한다.
-- **작업 시작 시 `git pull`**(다른 기기/대화창 변경 선반영), 끝나면 `git push`. 새 기기에서 클론했으면 한 번 `git config core.hooksPath .githooks` 실행(코드만 바뀌고 문서 안 바뀐 푸시를 막는 pre-push 훅 활성화).
+미래 우주 배경의 식물 수집·육성·턴제 전투 웹게임. Claude·Codex는 이 파일과 짝 지침을 둘 다 읽는다. 공통 프로젝트 규칙을 바꾸면 두 파일을 함께 갱신한다.
 
-## 한 줄 소개
-미래 우주 배경의 **식물 배틀 콜로세움** 웹게임. 외계 행성을 탐사해 종자를 모으고, 식물을 키워 토너먼트에서 싸운다. (장르: 방치형 + 포켓몬식 턴제 전투 + 수집/육성)
+## 작업 순서
 
-## 실행 방법
-- **가장 간단:** `index.html`을 브라우저로 더블클릭 (외부 의존성 없음 — 데이터가 파일 안에 내장됨)
-- **로컬 서버로 보기:** PowerShell에서
-  `powershell -NoProfile -ExecutionPolicy Bypass -File .claude/serve.ps1 -Port 8765` → `http://localhost:8765`
-- 빌드 과정 없음. 순수 HTML/CSS/JS(바닐라).
+- 시작에 작업 트리 상태를 확인하고 `git pull`. 남의 미커밋 변경은 보존한다. 새 클론은 `git config core.hooksPath .githooks`.
+- 방향·현황·문서 지도는 `C:\dev\pulloseum\docs\master-roadmap.md`가 유일 허브다. 코드·데이터·기획 변경과 같은 작업에서 해당 문서·결정 로그를 갱신하고 함께 커밋·푸시한다. 개발 로그는 `C:\dev\pulloseum\docs\CHANGELOG.md` 맨 위에 추가.
+- 기록된 사용자 결정을 새 설계 권고로 뒤집기 전에는 확인한다. 과거 계획·검수 대기·구현 완료를 구분한다.
+- 커밋 직전 브랜치·diff를 다시 확인한다. 내 파일만 올리고, 같은 파일에 남의 편집이 섞이면 내 변경 부분만 스테이징한다. 전체 `git add -A` 금지.
+- 격리가 필요하면 프로젝트 내부 워크트리를 쓴다. 검증 서버가 어느 작업 트리를 읽는지 확인하고 남의 서버를 종료하지 않는다.
+- 하위 에이전트는 보수적으로 사용한다. 대규모 호출 전에는 사용자에게 확인한다. 한도를 고려해 전체 문서를 반복해서 읽지 말고 필요한 절로 들어간다.
 
-## 구조 (중요)
-- **`index.html`** — 게임 전체가 이 한 파일에 들어 있음. CSS·JS·**게임 데이터 전부 인라인**.
-  - ⚠️ 게임 데이터(행성/지역/종자/특성/아이템/토너먼트)는 `index.html` 안의 `const AlienPlantGameData = ...` 블록에 **내장**돼 있음. 데이터를 고치려면 여기를 수정. (`data/alien-plant-pvp-data.js`는 원본 참고용일 뿐, 게임은 더 이상 읽지 않음. 둘을 같이 고치려면 둘 다 수정)
-- **`data/alien-plant-pvp-data.js`** — 데이터 원본(참고용). `scripts/validate-alien-plant-data.js`로 검증 가능.
-- **`_analysis/pdf_pages/`** — 기획서 PDF를 페이지별 PNG로 변환한 것 (기획 참고용, page_01~09에 내용 있음).
-- **`바탕 화면/풀로세움 기획서.pdf`** — 원본 기획서(이 폴더 밖, 데스크탑).
-- **Godot 관련 파일**(`.godot/`, `*.gd`, `*.tscn`, `scenes/`, `Main.tscn`, `docs/pluloseum_godot_migration_plan.md`, `data/pluloseum_godot_data.json`) — 과거 Godot 이식 시도의 잔재. **이 웹게임과 무관**하니 무시. `.gitignore`로 추적 제외함.
+## 실행·검증·배포
 
-## 구현된 시스템 (기획서 기반)
-- **탐사:** 우주맵(행성 3 / 지역 6), 탐사선 개조(연료·내구·보관함·탐색장치), 행성·지역별 종자 드롭, 탐사선 이동 애니메이션 → 결과 팝업.
-- **종자/보관:** 희귀도·보관환경, 종자 가방(최대치), 변이.
-- **식물 육성:** 생장 단계(씨앗→새싹→유체→성체→완숙체). 전투 승리로 성장 경험치 획득 → 단계별 새 스킬 해금.
-- **스킬/변이형:** 식물은 속성+변이형+생장 단계로 스킬을 얻고, **최대 6개 로드아웃**을 장착해 전투(클래시 로얄식). 포식/무기/독성/포자/발광 등은 **변이형**이며 변이 카드로 강화한다. 잠재특성은 생장 단계에서 나중에 발현될 패시브 분류로 남겨두되 현재 전투에는 반영하지 않음.
-- **전투/토너먼트:** 예선(3판2선) → 16강 → 8강 → 4강 → 결승. 우승 시 랭크 포인트로 **브론즈→실버→…→풀로세움** 승급. 토너먼트명은 생장단계+랭크로 자동 생성(예: "새싹 브론즈 토너먼트").
-- **속성 상성:** 기획서의 약점표 기준(불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불).
-- **하단 헤더(5탭):** 상점 / 탐사 / 식물·전투(중앙) / 모드🔒 / 길드🔒. 모드·길드는 미개발 잠금.
-- **식물 관리 3탭:** 소모품(스탯 강화+탐사 아이템 사용) / 변이형 / 스킬(로드아웃 편집).
+명령은 `C:\dev\pulloseum`에서 실행한다. v2는 HTTP 서버가 필요하며 v1처럼 파일을 더블클릭해서 실행하지 않는다.
 
-## 주의사항
-- **세이브는 브라우저 localStorage에 저장** → PC/브라우저마다 따로. 기기 간 진행도 자동 동기화 안 됨.
-- 코드 수정 후 검증은 미리보기(preview) 도구 또는 위 로컬 서버로.
+```powershell
+node server/index.mjs
+# http://localhost:8790/v2/
+node --test v2/src/battle/rules.test.mjs
+node tools/test/savesafety.mjs
+node tools/test/roomsave.mjs
+node cf/test_cf.mjs
+node cf/pagecheck.mjs https://pulloseum.getchat.workers.dev
+```
 
-## 앞으로 할 만한 것 (백로그)
-- 모드·길드 실제 콘텐츠
-- 상점 가챠 박스(변이 카드/소모품 뽑기)
-- 세이브 내보내기/가져오기(기기 간 이동용)
-- 용족·독초 등 추가 변이형
+- 서버는 내장 SQLite를 지원하는 Node가 필요하다. 각 변경 분야에 맞는 `C:\dev\pulloseum\tools\test\` 시험을 추가로 실행한다. UI는 실제 화면까지 확인한다.
+- 화면 촬영: `node tools/shots/v2shots.mjs --label <이름>`. 짧고 긴 화면은 `--size 270x480`, `--size 270x660`으로 확인. 숨겨진 창은 rAF가 멈출 수 있어 `__advance(ms)` 사용.
+- **Git 푸시만으로 서비스가 갱신되지 않는다.** 배포 절차 = [C:\dev\pulloseum\cf\배포.md](cf/배포.md). 빌드·Cloudflare 시험·업로드·실제 주소 확인을 구분한다.
+- `workers.dev` 하위 주소 **getchat 변경 금지**. 이 기기의 `CLOUDFLARE_API_TOKEN`은 다른 프로젝트용이므로 Wrangler 실행 프로세스에서만 제거하고 기존 OAuth를 사용한다. 로그인 후 기존 pulloseum 배포 목록으로 계정을 확인한다. 서버 본체 교체가 늦을 수 있으니 화면 파일만 보고 서버 배포 성공을 단정하지 않는다.
+- 서비스 내리기는 저장소까지 지우므로 별도 사용자 확인이 필요하다.
 
-## 변경 이력 (개발 로그)
-- 전체 개발 로그는 **[docs/CHANGELOG.md](docs/CHANGELOG.md)** 로 분리됨 (CLAUDE.md와 공유). 과거 맥락이 필요할 때만 열어보세요.
+## 코드 지도와 변경 규칙
 
-## 참고 문서 (필요할 때만)
-- 전투/성장: [docs/battle-mechanics-deep-dive.md](docs/battle-mechanics-deep-dive.md), [docs/battle-growth-guide.md](docs/battle-growth-guide.md) / 종: [docs/species-system-guide.md](docs/species-system-guide.md) / 밸런스: [docs/balance-sheet.md](docs/balance-sheet.md)
-- 토큰 절약: [.claude/prompts/reset-handoff.md](.claude/prompts/reset-handoff.md), [docs/session-chaining-guide.md](docs/session-chaining-guide.md)
+| 대상 | 저장소 루트 아래 경로 |
+|---|---|
+| 시작·화면·입력 | `v2/src/main.js`, `v2/src/scenes/`, `v2/src/core/` |
+| 그림·테마·카드 | `v2/src/art/` |
+| 서버·화면 공용 규칙·데이터 | `v2/src/game/`, `v2/src/battle/` |
+| 요청·PC 서버·대결 방 | `server/api.mjs`, `server/index.mjs`, `server/rooms.mjs` |
+| Cloudflare 앞단·저장 | `cf/src/worker.js`, Durable Object Hub의 SQLite |
+
+- 전투·성장 계산은 순수 함수로: 시드 난수 `rng()`를 쓰고 계산 경로에 DOM·`Math.random()`·`Date.now()`·UI 가변 전역을 넣지 않는다. 연출은 결과만 읽는다. v1 방치 시간은 기존 `gameNow()` 사용.
+- 진행·보상은 서버 권위. 화면 작업은 `ops.js` 목록으로 연결한다. `main.js QUICK`에는 **난수·보상 추첨이 없는 작업만** 넣는다.
+- 전투 계산 변경은 `catalog.js RULES_VER` 증가. 저장 모양 변경은 `logic.js MIGRATIONS`와 `SAVE_VER`, 기술·카드 ID 변경은 `catalog.js RENAMED`와 `SAVE_VER`를 함께 갱신한다. 기존 저장·진행 중인 판의 안전을 검증한다.
+- 방 필드를 추가하면 `rooms.mjs pack/unpack`도 변경하고 방 저장 시험을 한다. 친구 대결 알림은 롱 폴링. 상대의 숨겨진 식물·기술·능력치를 응답이나 UI로 유출하지 않는다.
+- 저장 DB·인증·관리 열쇠(`cf/.admin-key`)·실제 쿠폰 번호는 Git·문서·채팅에 넣지 않는다. PC 저장소와 배포 서버 저장소는 별개다.
+
+## 화면·그림에서 유지할 결정
+
+**해당 분야 수정 전 [v2 개발 참고](docs/v2-development-reference.md)의 관련 절을 읽는다.** 긴 구현 요령과 사용자 교정 원문을 그곳에 옮겼다.
+
+- 그림은 정수 도트, 글자는 고해상도 프리텐다드. 색·창·단추는 공용 팔레트와 `theme.js`의 `T.*`, `holo/plate/tagBox/btnBody`를 사용한다. 현재 창은 하늘색, 강조는 주황.
+- 가로 270칸, 짧은 화면 아래 정렬, 전투는 `tall`. 전투 위치는 `layOf`·`this.at(who)`로 맞추고 길어진 화면은 하늘보다 경기장 땅을 늘린다.
+- 기술 카드 3×2 두 줄·보관 여섯, 패시브 장착 셋(변이 보관 셋). 변경 전 카드 설계와 최신 인계를 확인한다. 아래 단추는 카드 끝선에 정렬하고 같은 줄 단추 크기를 맞춘다.
+- 항상 보이는 부가 설명은 추가하지 않는다. 안내는 처음 안내·물음표, 전투 글자는 짧은 머리 위 표현·기술 리본·승패만. 화면 MP 명칭은 **햇빛**, 내부 `energy` 이름은 유지.
+- 새 화면 그림은 초기 로딩 `FIRST_*`, 글자는 글꼴 부분집합 포함 여부를 확인한다. 정적 그림은 캐시하고 반복 픽셀 계산을 피한다. 전체 화면 요청은 `pointerup`.
+- 식물 제작은 [.claude/skills/plant-sprite/SKILL.md](.claude/skills/plant-sprite/SKILL.md)부터: **컨셉 → 96×112 도트 변환 → 종별 눈·밑동·흙 경계·중앙축 검수**. 종마다 개성을 유지하고 빛나는 틈 눈은 금지. 눈 위치를 직접 확인하지 못한 종은 깜빡임을 켜지 않는다.
+- 그림 이어받기 = [2026-10-15 작업 계획](docs/superpowers/plans/2026-10-15-v2-plant-motion-fx-overnight.md) 맨 위 맥락. 장소·카드·식물 상세는 개발 참고의 해당 절로 들어간다.
+
+## v1 작업과 과거 기록
+
+- v1 작업 전 [축약 전 지침과 분야 색인](docs/history/2026-10-18-guides/README.md)의 해당 부분을 읽는다. 원문 전체를 보존했으며 옛 상태보다 현재 로드맵·사용자 결정이 우선한다.
+- v1 데이터는 `index.html` 내부 `AlienPlantGameData`; 별도 `data/alien-plant-pvp-data.js`는 참고본이다. 종은 `SPECIES_CATALOG`, 기술은 `SKILL_LIB`, 생성기 소유 영역은 생성기를 고친다.
+- 사용자 제공 `index.html`을 통째로 덮어쓰지 않는다. 기반 커밋·이미 적용된 변경부터 확인해 병합한다. 함수는 마지막 재정의가 활성일 수 있으니 줄번호 대신 심볼로 찾는다.
+- 타입·속성 모두 쓰는 `grass` 일괄 치환 금지. 새 v1 카드는 정의뿐 아니라 드롭 풀까지 연결하고, `released:false`의 지역 발견 예외도 확인한다.
+- v1 검증은 `__catalogSelfTest()`의 반환 실패 배열로 판정한다. v1의 localStorage·폰트·옛 화면 규칙을 v2에 적용하지 않는다. Godot 잔재는 현재 웹게임과 무관하다.
