@@ -1,5 +1,5 @@
 import { hud, navBar, button, holoTab } from '../art/ui.js';
-import { icon } from '../art/icons.js';
+import { icon, fruitIcon } from '../art/icons.js';
 import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
@@ -218,20 +218,25 @@ export const nursery = {
     if (it.kind === 'plant') {
       const band = Math.max(2, Fy0 - By);
       const lift = isSel ? Math.round(LIFT * ease(clamp((t - this.selT) / LIFT_MS, 0, 1))) : isPrev ? Math.round(LIFT * (1 - ease(clamp((t - this.prevT) / LIFT_MS, 0, 1)))) : 0;
+      // 열매 = 잔디에 떨어진 것처럼 밑동 둘레에 맺힌 수만큼(2026-10-18 사용자 "열매 아이콘이 너무 커서 뒷 식물이 가려져 — 잔디에 떨어진 것처럼 배치 · 식물과 이름은 심하게 가리지 말고"
+      //  → 같은 날 "아이콘 키워 너무 작다 · 멀리 있는 각도는 소실점 적용 · 본인 화단 안에서도 거리감"):
+      //  크기 = 줄 깊이(앞면 폭에 비례 — 먼 줄 · 3열은 작게) × 화단 안 앞뒤(뒤 끝 0.7 → 앞 끝 1) · 도트로 새로 그린 사과(icons.js fruitIcon — 늘려 그리지 않음)
+      //  자리 = 잔디 판 원근 타원을 따라 왼쪽 · 오른쪽 번갈아 앞 → 옆 → 뒤로(가운데 = 줄기 · 솟는 화분 자리는 비움), 줄기보다 뒤 열매는 식물보다 먼저 그려 가려짐,
+      //  열매 밑이 잔디 판 앞 테를 넘지 않게(앞면 이름표를 안 가림) · 고른 식물이 솟아도 열매는 잔디에 그대로
+      const fr = [];
+      if (f.have > 0) {
+        const n = f.have, S0 = clamp((Fx1 - Fx0) * 0.15, 8, 20), rx = Math.max(10, (Fx1 - Fx0) / 2 - S0 / 2 - 3), ry = band * 0.42, cy = By + band * 0.5, per = Math.ceil(n / 2);
+        for (let j = 0; j < n; j++) {
+          const side = j % 2 ? 1 : -1, k = j >> 1, phi = Math.PI * (per <= 1 ? 0.26 : 0.18 + (0.54 * k) / (per - 1)), jit = ((it.i * 7 + j * 5) % 3) - 1;
+          const fy = Math.min(Fy0 - 1, cy + ry * Math.cos(phi)), d = clamp((fy - By) / band, 0, 1), ic = fruitIcon(S0 * (0.7 + 0.3 * d));
+          fr.push({ ic, x: Math.round(sx + side * rx * Math.sin(phi) + jit - ic.width / 2), y: Math.round(fy - ic.height + 1), back: phi > Math.PI * 0.5 });
+        }
+        fr.sort((a, b) => a.y + a.ic.height - (b.y + b.ic.height));   // 뒤 → 앞
+      }
+      for (const q of fr) if (q.back) g.img(q.ic, q.x, q.y);
       if (isSel || isPrev) this.lifted(g, it, sx, sy, band, lift, t);   // 다른 식물을 고르면 원래 화분은 구멍 속으로 내려감(사용자 "기존의 식물은 화분이 내려가는 모션")
       else this.planted(g, it, sx, sy, band, t);
-      // 열매 = 잔디에 떨어진 것처럼 밑동 둘레에 맺힌 수만큼(2026-10-18 사용자 "열매 아이콘이 너무 커서 뒷 식물이 가려져 — 잔디에 떨어진 것처럼 배치 · 식물과 이름은 심하게 가리지 말고",
-      //  전엔 머리 위 2배 호라 뒷줄 식물 · 이름표를 덮었음): 잔디 판 원근 타원의 앞쪽 반을 따라 왼쪽 · 오른쪽 번갈아 바깥으로(가운데 = 줄기 · 솟는 화분 자리는 비움),
-      //  열매 밑이 잔디 판 앞 테를 넘지 않게(앞면 이름표를 안 가림) · 고른 식물이 솟아도 열매는 잔디에 그대로 · 크기는 모든 줄 1배
-      if (f.have > 0) {
-        const ic = icon('fruit'), n = f.have, K = 1, iw = ic.width, ih = ic.height;
-        const rx = Math.max(10, (Fx1 - Fx0) / 2 - iw / 2 - 4), ry = band * 0.34, cy = By + band * 0.5, per = Math.ceil(n / 2);
-        for (let j = 0; j < n; j++) {
-          const side = j % 2 ? 1 : -1, k = j >> 1, phi = Math.PI * (per <= 1 ? 0.24 : 0.16 + (0.34 * k) / (per - 1)), jit = ((it.i * 7 + j * 5) % 3) - 1;
-          const fx = sx + side * rx * Math.sin(phi) + jit, fy = Math.min(Fy0 - 1, cy + ry * Math.cos(phi) + ih * 0.3);
-          g.img(ic, Math.round(fx - iw / 2), Math.round(fy - ih), K);
-        }
-      }
+      for (const q of fr) if (!q.back) g.img(q.ic, q.x, q.y);
     } else if (isSel) { g.ellipseRing(sx, sy, Math.round((Fx1 - Fx0) * 0.3), Math.max(1, Math.round((Fy0 - By) * 0.3)), '#8ccfff', 0); }
     if (u < -0.4 || u > 2.7) return null;
     return { id: 'nur_' + it.id, x: Fx0, y: sy - 78, w: Fx1 - Fx0, h: Fy1 - sy + 80, fn: () => { if (this.sel !== it.id) { this.prevSel = this.sel; this.prevT = app.t; this.sel = it.id; this.selT = app.t; } } };

@@ -833,6 +833,42 @@ export function icon(name) {
   return c;
 }
 
+// 크기를 고를 수 있는 열매(2026-10-18 사용자 "열매 아이콘 키워 · 멀리 있는 각도는 소실점 · 본인 화단 안에서도 거리감" — 스마트팜 잔디 위 열매를 줄 깊이 · 화단 앞뒤로 크기를 달리):
+//  'fruit' 아이콘과 같은 색(o 테 · r 빨강 · R 그늘 · p 반짝 · w 흰 점 · E/e 꼭지 · G 잎)으로 S칸 폭 사과를 매번 도트로 새로 그림(늘려 그리지 않음 — 칸이 고름)
+//  fruitPix(S) = 글자 줄(시험 · 노드에서도) · fruitIcon(S) = 캔버스(크기마다 한 번)
+export function fruitPix(S) {
+  S = Math.max(7, Math.round(S));
+  const t = Math.max(2, Math.round(S * 0.24)), bh = Math.max(6, Math.round(S * 0.86)), H = t + bh, W = S, rx = S / 2, ry = bh / 2, cx = S / 2, cy = t + ry;
+  const g = Array.from({ length: H }, () => Array(W).fill('.'));
+  const body = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return false; const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry; if (nx * nx + ny * ny > 1) return false; return !(ny < -0.8 && Math.abs(nx) < 0.2); };   // 위 가운데 살짝 오목(사과 꼭지 자리)
+  const hr = Math.max(0.2, 1.2 / S + 0.12);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!body(x, y)) continue;
+    if (!body(x - 1, y) || !body(x + 1, y) || !body(x, y - 1) || !body(x, y + 1)) { g[y][x] = 'o'; continue; }
+    const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, hd = Math.hypot(nx + 0.42, ny + 0.38);
+    g[y][x] = hd < hr ? 'p' : nx * 0.6 + ny * 0.8 > 0.42 ? 'R' : 'r';
+  }
+  if (S >= 13) { const hx = Math.floor(cx - rx * 0.42), hy = Math.floor(cy - ry * 0.38); if (g[hy] && g[hy][hx] === 'p') g[hy][hx] = 'w'; }
+  const sx = Math.floor(cx - 0.5), sw = S >= 18 ? 2 : 1;   // 꼭지(위로) + 오른쪽 잎
+  for (let y = 0; y <= t; y++) for (let k = 0; k < sw; k++) if (g[y][sx + k] === '.' || y === t) g[y][sx + k] = y === 0 ? 'o' : 'E';
+  const lx = cx + S * 0.2, ly = t * 0.55, lrx = Math.max(1.4, S * 0.2), lry = Math.max(0.9, t * 0.5);
+  const leaf = (x, y) => x >= 0 && y >= 0 && x < W && y < H && ((x + 0.5 - lx) / lrx) ** 2 + ((y + 0.5 - ly) / lry) ** 2 <= 1 && x > sx + sw - 1;
+  for (let y = 0; y < t + 1; y++) for (let x = 0; x < W; x++) if (leaf(x, y) && g[y][x] === '.') g[y][x] = !leaf(x, y - 1) || !leaf(x + 1, y) || !leaf(x, y + 1) ? 'e' : 'G';
+  return g.map(r => r.join(''));
+}
+const fruits = new Map();
+export function fruitIcon(S) {
+  S = Math.max(7, Math.round(S));
+  let c = fruits.get(S);
+  if (c) return c;
+  const src = fruitPix(S);
+  c = document.createElement('canvas'); c.width = src[0].length; c.height = src.length;
+  const x = c.getContext('2d');
+  src.forEach((row, j) => { for (let i = 0; i < row.length; i++) { const col = LEGEND[row[i]]; if (col) { x.fillStyle = col; x.fillRect(i, j, 1, 1); } } });
+  fruits.set(S, c);
+  return c;
+}
+
 // 한 번만: 줄 길이 불일치 검사(그림 실수 방지)
 export function checkIcons() {
   const bad = [];
