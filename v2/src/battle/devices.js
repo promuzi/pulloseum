@@ -34,12 +34,15 @@ export function canUseRes(u, s) {
   if (s.hpCost && u.hp <= Math.round(u.max * s.hpCost)) return false;
   return true;
 }
-const foeHas = (f, id) => (id === 'frozen' ? !!(f.eff && (f.eff.frozen || (f.eff.skip && f.eff.skip.src === 'frozen'))) : has(f, id));
-const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf'];
+const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
+const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
-export function dynAct(u, a, foe, rng) {
-  if (!a || !DYN.some(k => a[k])) return a;
+export function dynAct(u, a0, foe, rng) {
+  if (!a0 || !DYN.some(k => a0[k])) return a0;
+  const a = a0.ifFoe && foe && foeHas(foe, a0.ifFoe.has) ? { ...a0, ...a0.ifFoe.then, ifFoeHit: true } : a0;   // 상대 상태에 따라 공격 바꾸기(기절이면 찌르기 한 방)
   const r = resOf(u), o = { ...a };
+  const inf = u.st && u.st.infuse;
+  if (a.tag && inf && inf.tag === a.tag && inf.n > 0) { o.el = inf.el; o.infused = true; }   // 속성 바꾸기(다음 n번)
   let pw = a.power || 0;
   if (a.hitsBy) o.hits = Math.max(1, r[a.hitsBy] || 0);
   if (a.powBy) pw += (r[a.powBy.k] || 0) * a.powBy.per;
@@ -63,6 +66,7 @@ export function payAct(u, a, T, ev) {
   let spent = 0;
   if (a.spend) { const r = resOf(u); spent = a.spend.all ? r[a.spend.k] || 0 : a.spend.n || 1; r[a.spend.k] = Math.max(0, (r[a.spend.k] || 0) - spent); ev.push({ t: 'res', who: u.id, k: a.spend.k, n: r[a.spend.k] }); }
   if (a.allSun) u.energy = 0;
+  if (a.infused && u.st.infuse && --u.st.infuse.n <= 0) delete u.st.infuse;
   if (a.hpCost) { const c = Math.round(u.max * a.hpCost); u.hp = Math.max(1, u.hp - c); ev.push({ t: 'selfCost', who: u.id, name: u.name, dmg: c }); }
   return spent;
 }
@@ -74,6 +78,7 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     if (a.gain.set) resOf(u)[a.gain.k] = Math.min(capOf(u, a.gain.k), n); else addRes(u, a.gain.k, n);
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
+  if (a.infuse) { (u.st ||= {}).infuse = { ...a.infuse }; ev.push({ t: 'infuse', who: u.id, name: u.name, el: a.infuse.el, n: a.infuse.n }); }   // 속성 바꾸기 예약
   if (a.setMode) { u.mode = a.setMode; u.modeK = (SP(u).modes || {})[a.setMode] || null; ev.push({ t: 'mode', who: u.id, mode: a.setMode }); }
   if (!foe || foe.hp <= 0) return;
   const fe = (foe.eff ||= {});

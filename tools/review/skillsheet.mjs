@@ -35,13 +35,15 @@ Object.assign(concept, {   // 주석 · 그림 메모가 없는 종 = 이름과 
 const md = readFileSync(join(repo, 'docs/superpowers/specs/2026-10-18-v2-species-skills.md'), 'utf8').split(/\r?\n/);
 const byName = Object.fromEntries(Object.entries(SPECIES).map(([k, s]) => [s.name, k]));
 byName['쿵지지덕'] = 'drum_cactus';
-const parseSkill = s => { const m = s.trim().match(/^(.+?)\((.*?)\)\s*:\s*(.*)$/); return m ? { name: m[1].trim(), meta: m[2].trim(), desc: m[3].trim() } : { name: s.trim(), meta: '', desc: '' }; };
+const parseSkill = s => { const m = s.trim().match(/^(.*)\(([^()]*)\)\s*:\s*(.*)$/); return m ? { name: m[1].trim(), meta: m[2].trim(), desc: m[3].trim() } : { name: s.trim(), meta: '', desc: '' }; };   // 이름에 괄호가 있어도(검방술(기본)) 마지막 괄호 = 햇빛 · 위력
 const list = [];
 let cur = null;
 for (const l of md) {
   const h = l.match(/^### (\d+)\. (.+)$/);
   if (h) { const parts = h[2].split(' · '); const nm = parts[0].replace(/\(.*$/, '').trim(); cur = { no: +h[1], name: nm, el: parts[1] || '', idea: parts.slice(2).join(' · ').replace(/\(화면 이름.*\)$/, ''), key: byName[nm] || null, innate: '', rows: [] }; list.push(cur); continue; }
   if (!cur) continue;
+  const x = l.match(/^(부제|컨셉|성격):\s*(.*)$/);   // 사용자 설계 종 = 부제 · 컨셉 · 성격 줄
+  if (x) { cur[{ 부제: 'sub', 컨셉: 'idea2', 성격: 'char' }[x[1]]] = x[2]; continue; }
   const t = l.match(/^타고남(\([^)]*\))?:\s*(.*)$/);
   if (t) { cur.innate = (t[1] ? t[1] + ' ' : '') + t[2]; continue; }
   const r = l.match(/^- (어린|자라는|다 자란(?:\(맨몸\))?) · (.*)$/);
@@ -62,7 +64,9 @@ const card = s => `
   <div class="left">${art(s.key)}<div class="no">${s.no}</div></div>
   <div class="right">
     <div class="head"><span class="nm">${esc(s.name)}</span><span class="chip" style="background:${EL[s.el.replace(/\(.*$/, '')] || '#8899aa'}">${esc(s.el)}</span><span class="chip idea">${esc(s.idea)}</span></div>
-    <div class="concept">${esc(concept[s.key] || '')}</div>
+    ${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}
+    <div class="concept">${esc(s.idea2 || concept[s.key] || '')}</div>
+    ${s.char ? `<div class="concept">성격 · ${esc(s.char)}</div>` : ''}
     <div class="innate"><b>타고남</b> ${esc(s.innate)}</div>
     <table>${s.rows.map(r => r.skills.map((k, i) => `<tr>${i === 0 ? `<td class="st" rowspan="${r.skills.length}">${esc(r.stage)}</td>` : ''}<td class="sk">${esc(k.name)}</td><td class="mt">${esc(k.meta)}</td><td class="ds">${esc(k.desc)}</td></tr>`).join('')).join('')}</table>
   </div>
@@ -82,7 +86,8 @@ h1{font-size:30px;margin-bottom:6px}
 .nm{font-size:30px;font-weight:700}
 .chip{font-size:17px;padding:3px 12px;border-radius:999px;color:#101826;font-weight:700}
 .chip.idea{background:#ff9a3c}
-.concept{font-size:18px;color:#b8cce0;margin:8px 0 10px}
+.concept{font-size:18px;color:#b8cce0;margin:6px 0 8px}
+.sub{font-size:20px;color:#ffc27a;margin-top:6px}
 .innate{font-size:18px;background:#22324a;border-left:4px solid #ff9a3c;padding:8px 12px;border-radius:6px;margin-bottom:10px;line-height:1.45}
 table{width:100%;border-collapse:collapse;font-size:17px}
 td{padding:6px 8px;border-top:1px solid #2c3e58;vertical-align:top;line-height:1.4}

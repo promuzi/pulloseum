@@ -157,6 +157,7 @@ function statusWins(g, x, y, list) {
 const FX_MSG = {
   burn: x => `${ga(x)} 화상을 입었다!`, poison: (x, e) => (e.n > 1 ? `${x}에게 독이 ${e.n}겹 쌓였다!` : `${ga(x)} 독에 걸렸다!`), wet: x => `${ga(x)} 흠뻑 젖었다! 둔해지고 적중·방어가 떨어진다`,
   chill: (x, e) => `${ga(x)} 얼어 간다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''), shock: (x, e) => `${ga(x)} 감전됐다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''),
+  flourish: (x, e) => `${ga(x)} 만개했다!` + (e.list && (e.list.find(s => s.id === 'flourish') || {}).n > 1 ? ` (${e.list.find(s => s.id === 'flourish').n}겹)` : ''),
   armor: x => `${x}에게 방어구가 둘러졌다!`, stealth: x => `${ga(x)} 그림자 속으로 숨었다!`, clone: x => `${ga(x)} 분신을 만들었다!`,
   frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`,
   spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
@@ -385,6 +386,7 @@ export const battle = {
       // 공통 장치(devices.js — 2026-10-18): 시한 · 메아리 터짐 · 체력 내기 = 지속 피해처럼 · 버티기 · 햇빛 빼앗기 = 알림
       else if (e.t === 'boom' || e.t === 'selfCost') out.push({ kind: 'tick', ms: 750, ev: { ...e, id: 'burn' }, side: e.who, msg: e.t === 'boom' ? `${e.from || ''} 터졌다! ${nm(e.who)}도 휘말렸다` : `${ga(e.name)} 체력을 바쳤다!`, tone: 'hit' });
       else if (e.t === 'field') out.push({ kind: 'note', ms: 800, side: 'me', msg: e.id ? `${ga((FIELD[e.id] || { name: e.id }).name)} 경기장을 덮었다!` : `${ga((FIELD[e.was] || { name: '경기장 효과' }).name)} 걷혔다`, tone: 'note' });
+      else if (e.t === 'infuse') out.push({ kind: 'note', ms: 750, side: e.who, msg: `${e.name}의 검에 ${e.el === 'fire' ? '불꽃' : '힘'}이 깃들었다!`, tone: 'buff' });
       else if (e.t === 'charge') out.push({ kind: 'note', ms: 750, side: e.who, msg: `${ga(e.name)} 힘을 모은다!`, tone: 'note' });
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, msg: e.t === 'armorBreak' ? `${nm(e.who)}의 방어구가 부서졌다!` : e.id === 'clone' ? `${nm(e.who)}의 분신이 사라졌다!` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜

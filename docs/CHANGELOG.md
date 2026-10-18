@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-10-18 (90) — 페탈로즈 = 장미 기사(사용자 설계 첫 종) · 순서 분기 장치 · `RULES_VER` 5
+- 사용자 설계("후공 선공? 그런건 의미 없다. 오직 검술로 극복할 뿐" — 원안은 [species-skills](superpowers/specs/2026-10-18-v2-species-skills.md) §1에 그대로) → 내 검토 → "다 추천대로 · 만개는 중첩 · 끝까지 · 스펙업 낮게 · 타고남은 고유 패시브 때 · 무기 변이와는 미뤄".
+- 기술 여섯을 같은 id(`u_petal_1 · 2 · 2b · 3 · 3b · 3c` — 저장 · 기술 그림 그대로)에: 검방술(기본) · 검방술(공세) · 기합 · 검방술(오의) · 불타는 의지 · 만개. 수치 = 위 문서.
+- 새 공통 장치: **순서 분기** `onFirst` / `onSecond`(이번 턴 순서로 기술 값이 갈림 — rules.js) · **공격하며 막기 · 피하기** `guardWith` / `evadeWith`(한 장으로 공격 + 그 턴 자세) · **막으면 기절** `onBlock{stun}` · **타마다 다른 연타** `strikes[]`(베기 · 찌르기) · **상대 상태로 공격 바꾸기** `ifFoe{has, then}`(기절 · 얼음 등 쉬는 차례 이름도) · **다음 n번 속성 바꾸기** `infuse{el, n, tag}`(상성도 그 속성) · **만개** `flourish`(공격 · 방어 · 기동 +5% 겹침 4번 · 판 끝까지 · 교체해도 남음).
+- 고침: 상대가 자세를 안 잡았을 때 맞음 사건의 guard · evade 가 false 대신 undefined 로 나오던 것(기존 rules.test 가 잡음).
+- 시험: `devices` 60(페탈로즈 8 포함) · `rules.test` 20 · status · edgecases · matchup · cards · loadout · savesafety · league · roomsave 28 · `server` 51 통과. 종 리그전(8판) 페탈로즈 50.0% → 40.3%(총 피해가 옛 기술보다 낮음 — 밸런스 단계에서) · 쏠림 20. 검토판 PNG 다시 뽑음(부제 · 컨셉 · 성격 줄 · 괄호 든 기술 이름).
+
 ### 2026-10-18 (89) — 종 고유 기술 검토판 PNG(사용자 검토용)
 - 사용자 "md 말고 png로 · 외형 프로필 사진이랑 컨셉 한 줄도 같이". 새 `tools/review/skillsheet.mjs` — [species-skills](superpowers/specs/2026-10-18-v2-species-skills.md)를 읽어 종마다 카드(큰 판 첫 장 그림 · 이름 · 속성 · 개성 · 컨셉 한 줄 · 타고남 · 기술 여섯 표)로 4종씩 12장 → 바탕화면 `풀로세움_고유기술_검토\고유기술_01~12.png`(기본, `--out`으로 바꿈). 컨셉 한 줄 = `catalog.js` 종 주석 → `tools/pixel/big/species/<키>.mjs` 첫 줄 → 없는 11종은 이름 · 설계 메모에서. 기술표 md를 고치면 다시 돌리면 됨.
 

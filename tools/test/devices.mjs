@@ -168,5 +168,38 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   ok(!dv.st.charge && hits(c2.events)[0].id === 'dive' && dv.energy === 3, '다음 차례 = 모은 기술이 나감 · 고른 기술 햇빛 돌려받음');
 }
 
+// ── 페탈로즈 장미 기사(2026-10-18 사용자 설계) — 순서 분기 · 공격하며 막기 · 막으면 기절 · 상대 상태로 공격 바꾸기 · 속성 바꾸기 · 만개 ──
+{
+  const P = SKILLS, knight = o => unit('k', { key: 'flower_grass', ...o }), foeAtk = atk({ id: 'f', power: 60 });
+  // 기본: 먼저 = 찌르기 + 그 턴 방어(상대 공격이 막힘) / 나중 = 막고 반격 + 베기
+  const r1 = resolveTurn(knight({ spd: 99 }), unit('d'), P.u_petal_1, foeAtk, seq([0, 0.5, 0.5]), { turn: 1 });
+  const h1 = hits(r1.events), mine1 = h1.find(h => h.who === 'k'), theirs1 = h1.find(h => h.who === 'd');
+  ok(r1.first === 'k' && mine1 && theirs1 && theirs1.guard, '검방술(기본) 먼저 = 찌르고 상대 공격을 막음');
+  const r2 = resolveTurn(knight({ spd: 1 }), unit('d', { spd: 99 }), P.u_petal_1, foeAtk, seq([0.99, 0.5, 0.5]), { turn: 1 });
+  ok(r2.first === 'd' && hits(r2.events)[0].guard && r2.events.some(e => e.t === 'counter') && hits(r2.events).some(h => h.who === 'k'), '검방술(기본) 나중 = 막고 반격 + 베기');
+  // 공세: 3연타 + 회피
+  const r3 = resolveTurn(knight({ spd: 99 }), unit('d'), P.u_petal_2, foeAtk, seq([0, 0.5]), { turn: 1 });
+  ok(hits(r3.events).filter(h => h.who === 'k').length === 3 && hits(r3.events).find(h => h.who === 'd').evade, '검방술(공세) = 3연타 + 그 턴 회피');
+  // 기합: 먼저 = 철벽 · 나중 = 가속
+  const k1 = knight({ spd: 99 }), k2 = knight({ spd: 1 });
+  resolveTurn(k1, unit('d'), P.u_petal_2b, rest, seq([0, 0.5]), { turn: 1 }); resolveTurn(k2, unit('d', { spd: 99 }), P.u_petal_2b, rest, seq([0.99, 0.5]), { turn: 1 });
+  ok(has(k1, 'wall') && !has(k1, 'haste') && has(k2, 'haste'), '기합 = 먼저 철벽 · 나중 가속');
+  // 오의 나중: 막으면 기절(굴림 0.1 < 40%) → 기절이면 찌르기 한 방(120)
+  const r4 = resolveTurn(knight({ spd: 1 }), unit('d', { spd: 99 }), P.u_petal_3, foeAtk, seq([0.99, 0.5, 0.1, 0.5]), { turn: 1 });
+  const k4 = hits(r4.events).filter(h => h.who === 'k');
+  ok(r4.events.some(e => e.t === 'fx' && e.id === 'stun') && k4.length === 1 && k4[0].dmg > 80, `검방술(오의) 나중 = 막아 기절 → 찌르기 한 방(${k4.map(h => h.dmg)})`);
+  const r5 = resolveTurn(knight({ spd: 99 }), unit('d'), P.u_petal_3, foeAtk, seq([0, 0.5]), { turn: 1 });
+  ok(hits(r5.events).filter(h => h.who === 'k').length === 4, '검방술(오의) 먼저 = 베기 2 · 찌르기 2');
+  // 불타는 의지: 다음 검방술 2번 = 불
+  const kf = knight({ spd: 99 });
+  resolveTurn(kf, unit('d'), P.u_petal_3b, rest, seq([0, 0.5]), { turn: 1 });
+  const fires = [2, 3, 4].map(t => { const d = unit('d', { el: 'grass' }); resolveTurn(kf, d, P.u_petal_1, rest, seq([0, 0.5]), { turn: t }); return kf.curEl; });
+  ok(fires[0] === 'fire' && fires[1] === 'fire' && !kf.st.infuse, `불타는 의지 = 다음 검방술 두 번 불(${fires})`);
+  // 만개: 겹침 4번까지 · 끝까지
+  const kb = knight();
+  for (let t = 1; t <= 6; t++) resolveTurn(kb, unit('d'), P.u_petal_3c, rest, seq([0, 0.5]), { turn: t });
+  ok(kb.eff.flourish.n === 4 && Math.abs(atkK(kb) - 1.2) < 1e-9, '만개 = +5%씩 4번까지');
+}
+
 console.log(`장치 시험 ${pass}/${pass + fails.length}`);
 if (fails.length) { for (const f of fails) console.log('  ✗ ' + f); process.exit(1); }

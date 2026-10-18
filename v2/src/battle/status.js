@@ -42,6 +42,7 @@ export const FX = {
   purified:{ buff: true, turns: 1 },                         // 정화: 나쁜 효과를 다 지우고 다음 턴까지 안 걸림
   // 2026-10-18 바닥 규칙 2단계(species-identity §1): 방어구 = 체력 위 금속 칸(깨질 때까지 · 쌓임 · 교체해도 남음 · 망치에 ×1.5로 깎임 · 지속 피해는 통과)
   //  은신 = 이번 턴 광역 아닌 공격 95% 빗나감 + 기습(공격 ×1.5 · 상대 자세 무시) · 분신 = 2턴 광역 아닌 공격 90% 빗나감(진짜가 맞거나 광역이면 풀림)
+  flourish: { buff: true, keep: true, per: 0.05, max: 4 },   // 만개(페탈로즈): 쓸 때마다 공격 · 방어 · 기동 +5% 겹침(4번까지) · 판 끝까지
   armor:   { buff: true, keep: true, hp: 0.15, cap: 0.5, hammerK: 1.5 },
   stealth: { buff: true, turns: 0, miss: 0.95, ambush: 1.5 },
   clone:   { buff: true, turns: 1, miss: 0.9 },
@@ -51,7 +52,7 @@ export const FX = {
 export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
 const SKIP_IDS = ['stun', 'chill'];
 const TIMED = ['stealth', 'clone', 'shock', 'wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke', 'rage', 'wall', 'haste', 'thorns', 'shield', 'purified'];
-const BUFFS = ['stealth', 'clone', 'armor', 'rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
+const BUFFS = ['flourish', 'stealth', 'clone', 'armor', 'rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
 const DEBUFFS = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'choke'];
 const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode'];
 
@@ -61,7 +62,7 @@ export const has = (u, id) => !!(u && u.eff && u.eff[id]);
 // ── 다른 계산이 읽는 값 ──
 // 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 얼음, 나중에 가속 버프) → 선공 확률과 회피 자세에 같이 들어감
 export function mobK(u) {
-  let k = (u && u.modeK && u.modeK.spd) || 1;   // 모드(공통 장치 D9) 기동 배율
+  let k = ((u && u.modeK && u.modeK.spd) || 1) * flo(u);   // 모드(공통 장치 D9) 기동 배율
   if (has(u, 'wet')) k *= FX.wet.mob;
   if (has(u, 'chill') || has(u, 'frozen')) k *= FX.chill.mob;
   if (has(u, 'haste')) k *= FX.haste.mob;
@@ -73,8 +74,9 @@ export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
-export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1) * (has(u, 'rage') ? FX.rage.atkK : 1) * ((u && u.modeK && u.modeK.atk) || 1);
-export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
+const flo = u => 1 + ((u && u.eff && u.eff.flourish && u.eff.flourish.n) || 0) * FX.flourish.per;   // 만개 겹침
+export const atkK = u => flo(u) * (has(u, 'weak') ? FX.weak.atkK : 1) * (has(u, 'rage') ? FX.rage.atkK : 1) * ((u && u.modeK && u.modeK.atk) || 1);
+export const defK = u => flo(u) * (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
 export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1) * (has(u, 'wall') ? FX.wall.dmgK : 1);
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
@@ -118,7 +120,7 @@ export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.bind &&
 export function listOf(u) {
   const e = (u && u.eff) || {}, out = [];
   if (e.brace) out.push({ id: 'brace' });
-  for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸)
+  for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : k === 'flourish' ? { id: k, n: e.flourish.n } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸)
   if (u && u.st && u.st.nextCrit) out.push({ id: 'focus' });
   if (e.skip) out.push({ id: e.skip.src });
   else if (e.frozen) out.push({ id: 'frozen' });
@@ -211,6 +213,7 @@ export function selfBuff(u, id, ctx) {
   const D = FX[id]; if (!D) return;
   if (id === 'regen') e.regen = { left: D.left };
   else if (id === 'shield') e.shield = { exp: T + D.turns, hp: Math.max(1, Math.round(u.max * D.hp)) };
+  else if (id === 'flourish') e.flourish = { n: Math.min(D.max, ((e.flourish && e.flourish.n) || 0) + 1) };   // 겹침
   else if (id === 'armor') e.armor = { hp: Math.min(Math.round(u.max * D.cap), ((e.armor && e.armor.hp) || 0) + Math.max(1, Math.round(u.max * D.hp))) };   // 쌓임(상한 최대 체력 50%)
   else e[id] = { exp: T + D.turns };
   ctx.ev.push({ t: 'fx', ...base, list: listOf(u) });

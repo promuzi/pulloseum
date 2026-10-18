@@ -5,7 +5,7 @@
 
 import { SKILL_WEAPON } from './matchup.js';
 import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge } from './devices.js';
-import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
+import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -126,10 +126,13 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   if (o.first) first = o.first;
   else { const pr = a => (a && a.early ? 1 : 0) - (a && a.late ? 1 : 0), r = rollFirst(A, B, rng, [pr(actA), pr(actB)]); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance, prio: r.prio || undefined }); }
   const second = first === A ? B : A;
+  // 순서 분기(공통 장치 — 2026-10-18 페탈로즈 검방술): 기술의 onFirst · onSecond 를 이번 턴 순서로 고름
+  const br = (u, a) => (a && (a.onFirst || a.onSecond) ? { ...a, ...(u === first ? a.onFirst : a.onSecond), branch: u === first ? 'first' : 'second' } : a);
+  actA = br(A, actA); actB = br(B, actB);
   const actOf = u => (u === A ? actA : actB);
   for (const u of [first, second]) { const a = actOf(u); if (a && a.stealth && u.hp > 0 && !mustSkip(u)) selfBuff(u, 'stealth', { turn: T, ev }); }   // 은신은 턴 처음에(나중에 움직여도 먼저 오는 공격을 피함)
   // 태세는 이 턴 안에서만 보유. 후공의 태세도 피격 전에 한 번만 알리고, 자기 차례에 다시 켜지 않는다.
-  const guards = new Map([A, B].map(u => [u, actOf(u).act === 'guard' ? (actOf(u).guardHits ?? 1) : 0]));
+  const guards = new Map([A, B].map(u => [u, actOf(u).act === 'guard' || actOf(u).guardWith ? (actOf(u).guardHits ?? 1) : 0]));   // guardWith = 공격하면서 막기(한 장)
   const shown = new Set();
   const stanceOk = (u, kind) => kind === 'guard' ? guards.get(u) > 0 : kind === 'evade';
   const showStance = u => {
@@ -162,17 +165,19 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     //   은신 = 광역 아닌 공격 95% 빗나감 · 분신 = 90%(진짜가 맞거나 광역이면 풀림) · 기습 = 은신한 쪽 공격 ×1.5 + 상대 자세 무시 · 관통 a.pierce = 상대 방어를 그만큼 무시 · 방어구는 보호막 다음에 막음(망치 ×1.5로 깎임)
     const still = !mustSkip(foe) && !skipped.has(foe);
     const ambush = has(u, 'stealth') && !a.area;
-    const evadeOn = !ambush && still && d.act === 'evade' && stanceOk(foe, 'evade');
+    const evadeOn = !ambush && still && (d.act === 'evade' || !!d.evadeWith) && stanceOk(foe, 'evade');   // evadeWith = 공격하면서 피하기
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
     // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓) · 카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
     const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK * (1 - (sk.pierce || 0)) }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
+    if (a.infused) u.curEl = a.el;   // 속성 바꾸기(불타는 의지) — 상성도 그 속성으로
     const em = (o.elemMult ? o.elemMult(u, foe, a) : 1) * fieldEl(o.field, a.el);   // × 경기장 효과(D10)
     //  속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
-    const N = Math.max(1, (a.hits || 1) + fieldHits(o.field, a)), hammer = SKILL_WEAPON[a.id] === 'hammer';
+    const N = Math.max(1, (a.strikes ? a.strikes.length : a.hits || 1) + fieldHits(o.field, a)), hammer = SKILL_WEAPON[a.id] === 'hammer';
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0;
     if (a.area || a.reveal) for (const k of ['stealth', 'clone']) if (has(foe, k)) { delete foe.eff[k]; ev.push({ t: 'reveal', who: foe.id, id: k, list: listOf(foe) }); }   // 광역에 들킴
     for (let i = 0; i < N && foe.hp > 0 && u.hp > 0; i++) {
-      const guardOn = !ambush && still && d.act === 'guard' && stanceOk(foe, 'guard');
+      const ah = a.strikes ? { ...a, ...a.strikes[i % a.strikes.length] } : a;   // 타마다 다른 성질(베기 · 찌르기)
+      const guardOn = !ambush && still && (d.act === 'guard' || !!d.guardWith) && stanceOk(foe, 'guard');
       if (guardOn) showStance(foe);
       const veil = a.area || has(u, 'stealth') ? 0 : has(foe, 'stealth') ? FX.stealth.miss : has(foe, 'clone') ? FX.clone.miss : 0;   // 은신끼리는 서로 보임
       const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
@@ -184,7 +189,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (veil && tier !== 'miss' && has(foe, 'clone')) { delete foe.eff.clone; ev.push({ t: 'reveal', who: foe.id, id: 'clone', list: listOf(foe) }); }   // 진짜를 맞힘
       if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';
       const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
-      dmg = Math.round(hitDmg(u, foe, a, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
+      dmg = Math.round(hitDmg(u, foe, ah, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
       if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
       dmg = Math.round(dmg * takenK(foe));   // 받는 피해 배율(D13 — 체력 가득이면 위엄 등)
       let absorb = 0, ab = null;   // 보호막 → 방어구 순서로 먼저 막음
@@ -203,6 +208,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
         guards.set(foe, guards.get(foe) - 1);
         if (guards.get(foe) === 0) ev.push({ t: 'guardBreak', who: foe.id });
       }
+      if (blocked && d.onBlock && d.onBlock.stun && u.hp > 0 && rng() < d.onBlock.stun) apply(u, 'stun', 1, { turn: T, rng, ev, by: foe });   // 막으면 확률로 기절(방패 때리기)
       if (tier === 'hit' || tier === 'crit') avoided = false;
       const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
       if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
