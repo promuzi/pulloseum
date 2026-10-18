@@ -189,7 +189,7 @@ export const SKILLS = Object.fromEntries([
   S('u_ember_2', '불가시 난사', 'fire', 'u', 75, 2, { ranged: true, inflict: { id: 'burn' }, self: 'thorns' }),
   S('u_ember_3', '불덩이', 'fire', 'u', 120, 4, { ranged: true, inflict: { id: 'burn' } }),
   S('u_gaia_1', '돌 주먹', 'earth', 'u', 75, 1, { inflict: { id: 'taunt' } }),
-  S('u_gaia_2', '바위 갑옷', 'earth', 'u', 0, 2, { self: 'wall', also: 'thorns' }),
+  S('u_gaia_2', '바위 갑옷', 'earth', 'u', 0, 2, { self: 'armor', also: 'thorns' }),
   S('u_gaia_3', '대지 내려치기', 'earth', 'u', 120, 4, { area: true, inflict: { id: 'stun' } }),
   S('u_blaze_1', '불꽃 꽃잎', 'fire', 'u', 55, 1, { ranged: true, inflict: { id: 'burn' } }),
   S('u_blaze_2', '열꽃', 'fire', 'u', 0, 2, { self: 'rage', also: 'haste' }),
@@ -282,7 +282,7 @@ export const SKILLS = Object.fromEntries([
   S('u_volt_3b', '과충전', 'bolt', 'u', 0, 2, { self: 'rage', also: 'focus' }),
   S('u_volt_3c', '번개 그물', 'bolt', 'u', 105, 4, { ranged: true, area: true, inflict: { id: 'shock', n: 2 } }),
   S('u_stone_2b', '돌가루 막', 'earth', 'u', 0, 1, { self: 'shield' }),
-  S('u_stone_3b', '수정 껍데기', 'earth', 'u', 0, 3, { self: 'thorns', also: 'wall' }),
+  S('u_stone_3b', '수정 껍데기', 'earth', 'u', 0, 3, { self: 'armor', also: 'thorns' }),
   S('u_stone_3c', '산사태', 'earth', 'u', 110, 4, { area: true, inflict: { id: 'corrode' } }),
   S('u_jelly_2b', '말랑 회복', 'water', 'u', 0, 2, { self: 'regen', also: 'purify' }),
   S('u_jelly_3b', '찌릿 촉수', 'water', 'u', 85, 2, { contact: true, drain: 0.4 }),
@@ -327,7 +327,7 @@ export const SKILLS = Object.fromEntries([
   S('u_emcap_2', '등불 빛', 'fire', 'u', 85, 2, { ranged: true, inflict: { id: 'burn' } }),
   S('u_emcap_3', '불꽃 포자 구름', 'fire', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'spore', n: 2 } }),
   S('u_drake_1', '용불 가시', 'fire', 'u', 60, 1, { ranged: true, inflict: { id: 'burn' } }),
-  S('u_drake_2', '비늘 갑옷', 'fire', 'u', 0, 2, { self: 'wall', also: 'thorns' }),
+  S('u_drake_2', '비늘 갑옷', 'fire', 'u', 0, 2, { self: 'armor', also: 'thorns' }),
   S('u_drake_3', '화룡의 숨결', 'fire', 'u', 115, 4, { ranged: true, area: true, inflict: { id: 'burn' } }),
   S('u_gat_1', '부채 바람', 'wind', 'u', 55, 1, { ranged: true, inflict: { id: 'gale' } }),
   S('u_gat_2', '갓끈 휘날리기', 'wind', 'u', 0, 2, { self: 'haste', also: 'focus' }),
@@ -337,7 +337,7 @@ export const SKILLS = Object.fromEntries([
   S('u_tal_3', '대지의 탈춤', 'earth', 'u', 115, 4, { area: true, inflict: { id: 'stun' } }),
   S('u_drum_1', '북채 번개', 'bolt', 'u', 60, 1, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('u_drum_2', '천둥 장단', 'bolt', 'u', 0, 2, { self: 'focus', also: 'haste' }),
-  S('u_drum_3', '뇌고 연타', 'bolt', 'u', 120, 4, { ranged: true, area: true, inflict: { id: 'shock', n: 2 } }),
+  S('u_drum_3', '뇌고 연타', 'bolt', 'u', 40, 4, { hits: 3, ranged: true, area: true, inflict: { id: 'shock', n: 2 } }),
   S('u_lamp_1', '초롱 불빛', 'ice', 'u', 60, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('u_lamp_2', '서리 덩굴', 'ice', 'u', 75, 2, { inflict: { id: 'bind' } }),
   S('u_lamp_3', '청사초롱 눈보라', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill', n: 2 } }),
@@ -351,7 +351,7 @@ export const SKILLS = Object.fromEntries([
   S('u_crown_2', '왕의 망토', 'ice', 'u', 0, 2, { self: 'shield', also: 'wall' }),
   S('u_crown_3', '빙왕의 포자', 'ice', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'spore', n: 2 } }),
   // 셋째 아홉 개성(2026-10-17 — 어린 1 · 자라는 2 · 다 자란 3, 수치는 시제품)
-  S('u_gladi_1', '가시 칼 찌르기', 'earth', 'u', 60, 1, { contact: true }),
+  S('u_gladi_1', '가시 칼 찌르기', 'earth', 'u', 60, 1, { contact: true, pierce: 0.3 }),
   S('u_gladi_2', '방패 막기', 'earth', 'u', 0, 2, { self: 'wall', also: 'thorns' }),
   S('u_gladi_2b', '방패 밀치기', 'earth', 'u', 65, 2, { contact: true, inflict: { id: 'weak' } }),
   S('u_gladi_3', '검투사의 일격', 'earth', 'u', 115, 4, { contact: true, inflict: { id: 'corrode' } }),
@@ -366,17 +366,17 @@ export const SKILLS = Object.fromEntries([
   S('u_astro_1', '공기 방울', 'wind', 'u', 55, 1, { ranged: true, inflict: { id: 'gale' } }),
   S('u_astro_2', '분사 추진', 'wind', 'u', 0, 2, { self: 'haste', also: 'focus' }),
   S('u_astro_2b', '무중력 포자', 'wind', 'u', 65, 2, { ranged: true, inflict: { id: 'spore', n: 1 } }),
-  S('u_astro_3', '궤도 돌진', 'wind', 'u', 105, 3, { contact: true, self: 'haste' }),
+  S('u_astro_3', '궤도 돌진', 'wind', 'u', 105, 3, { contact: true, early: true, self: 'haste' }),
   S('u_astro_3b', '헬멧 방어막', 'wind', 'u', 0, 2, { self: 'shield', also: 'purify' }),
   S('u_astro_3c', '우주 폭풍', 'wind', 'u', 130, 5, { ranged: true, area: true, inflict: { id: 'gale' } }),
   S('u_viking_1', '뿔 박치기', 'ice', 'u', 60, 1, { contact: true, inflict: { id: 'chill', n: 1 } }),
   S('u_viking_2', '전사의 함성', 'ice', 'u', 0, 2, { self: 'rage', also: 'haste' }),
-  S('u_viking_2b', '얼음 뿔 찌르기', 'ice', 'u', 80, 2, { contact: true, inflict: { id: 'chill', n: 1 } }),
+  S('u_viking_2b', '얼음 뿔 찌르기', 'ice', 'u', 80, 2, { contact: true, pierce: 0.3, inflict: { id: 'chill', n: 1 } }),
   S('u_viking_3', '빙하 돌격', 'ice', 'u', 115, 4, { contact: true, inflict: { id: 'chill', n: 2 } }),
   S('u_viking_3b', '털 망토', 'ice', 'u', 0, 2, { self: 'wall', also: 'regen' }),
   S('u_viking_3c', '라그나 서리', 'ice', 'u', 140, 5, { contact: true, inflict: { id: 'stun' } }),
   S('u_hyunmu_1', '물뱀 휘감기', 'water', 'u', 55, 1, { inflict: { id: 'bind' } }),
-  S('u_hyunmu_2', '거북 등껍질', 'water', 'u', 0, 2, { self: 'shield', also: 'wall' }),
+  S('u_hyunmu_2', '거북 등껍질', 'water', 'u', 0, 2, { self: 'armor', also: 'wall' }),
   S('u_hyunmu_2b', '물살 꼬리', 'water', 'u', 70, 2, { ranged: true, inflict: { id: 'wet' } }),
   S('u_hyunmu_3', '현무의 물결', 'water', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'wet' } }),
   S('u_hyunmu_3b', '북방의 수호', 'water', 'u', 0, 3, { self: 'regen', also: 'thorns' }),
@@ -394,10 +394,10 @@ export const SKILLS = Object.fromEntries([
   S('u_wizard_3b', '모자 속 비밀', 'bolt', 'u', 0, 2, { self: 'purify', also: 'haste' }),
   S('u_wizard_3c', '봉인 주문', 'bolt', 'u', 120, 5, { ranged: true, inflict: { id: 'stun' } }),
   S('u_ninja_1', '잎 수리검', 'wind', 'u', 55, 1, { ranged: true, inflict: { id: 'gale' } }),
-  S('u_ninja_2', '그림자 걸음', 'wind', 'u', 0, 2, { self: 'haste', also: 'focus' }),
+  S('u_ninja_2', '그림자 분신', 'wind', 'u', 0, 2, { self: 'clone', uses: 1 }),
   S('u_ninja_2b', '덩굴 올가미', 'wind', 'u', 65, 2, { inflict: { id: 'bind' } }),
-  S('u_ninja_3', '수리검 난무', 'wind', 'u', 105, 3, { ranged: true, area: true }),
-  S('u_ninja_3b', '연막', 'wind', 'u', 0, 2, { self: 'shield', also: 'haste' }),
+  S('u_ninja_3', '수리검 난무', 'wind', 'u', 36, 3, { ranged: true, hits: 3 }),
+  S('u_ninja_3b', '그림자 숨기', 'wind', 'u', 70, 2, { stealth: true, late: true, uses: 2 }),
   S('u_ninja_3c', '질풍 베기', 'wind', 'u', 135, 5, { contact: true, inflict: { id: 'weak' } }),
   S('u_haenyeo_1', '물질', 'water', 'u', 55, 1, { inflict: { id: 'wet' } }),
   S('u_haenyeo_2', '숨비소리', 'water', 'u', 0, 2, { self: 'regen', also: 'purify' }),
@@ -411,8 +411,8 @@ export const SKILLS = Object.fromEntries([
   S('u_pirate_3', '큰 파도 베기', 'water', 'u', 110, 3, { contact: true, inflict: { id: 'taunt' } }),
   S('u_ranger_1', '덩굴 화살', 'grass', 'u', 55, 1, { ranged: true, inflict: { id: 'poison', n: 1 } }),
   S('u_ranger_2', '숲의 숨결', 'grass', 'u', 0, 2, { self: 'haste', also: 'focus' }),
-  S('u_ranger_3', '잎새 연사', 'grass', 'u', 105, 3, { ranged: true, inflict: { id: 'bind' } }),
-  S('u_miner_1', '곡괭이 찍기', 'earth', 'u', 60, 1, { contact: true, inflict: { id: 'spore' } }),
+  S('u_ranger_3', '잎새 연사', 'grass', 'u', 27, 3, { hits: 4, ranged: true, inflict: { id: 'bind' } }),
+  S('u_miner_1', '곡괭이 찍기', 'earth', 'u', 60, 1, { contact: true, pierce: 0.3, inflict: { id: 'spore' } }),
   S('u_miner_2', '헬멧 단단히', 'earth', 'u', 0, 2, { self: 'wall', also: 'regen' }),
   S('u_miner_3', '광맥 폭파', 'earth', 'u', 105, 3, { area: true, inflict: { id: 'stun' } }),
   S('u_ballet_1', '눈꽃 회전', 'ice', 'u', 55, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
@@ -426,11 +426,11 @@ export const SKILLS = Object.fromEntries([
   S('u_dandel_3', '민들레 폭풍', 'wind', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'weak' } }),
   // 변이 기술(2026-10-16 사용자 "변이 스킬은 별개로 2칸 — 최대 6칸" · 추천안 "변이마다 정해진 목록에서 언제든 골라 끼움 · 에너지 대신 충전" · "변이식물의 장점은 변이스킬로 6칸"):
   //  tier 'm' · form = 변이형 · 에너지 0 · charge = 쓰고 나서 못 쓰는 턴 수 · 잊기 없음(목록 안에서 언제든 바꿈). 수치는 시제품 — 밸런스는 나중에(사용자)
-  S('m_bite', '물어뜯기', null, 'm', 70, 0, { form: 'predator', uses: 2, drain: 0.4 }),
+  S('m_bite', '물어뜯기', null, 'm', 70, 0, { form: 'predator', uses: 2, pierce: 0.3, drain: 0.4 }),
   S('m_devour', '집어삼키기', null, 'm', 75, 0, { form: 'predator', uses: 1, drain: 0.6 }),
   S('m_hunt', '사냥 본능', null, 'm', 0, 0, { form: 'predator', uses: 3, self: 'focus', also: 'rage' }),
   S('m_slash', '칼날 베기', null, 'm', 80, 0, { form: 'weapon', uses: 2 }),
-  S('m_shot', '가시 탄환', null, 'm', 75, 0, { form: 'weapon', uses: 3, ranged: true }),
+  S('m_shot', '가시 탄환', null, 'm', 27, 0, { form: 'weapon', uses: 3, ranged: true, hits: 3 }),
   S('m_smash', '쇠망치 내려치기', null, 'm', 70, 0, { form: 'weapon', uses: 1, inflict: { id: 'stun' } }),
   S('m_spit', '독 뱉기', null, 'm', 45, 0, { form: 'toxic', uses: 3, ranged: true, inflict: { id: 'poison', n: 1 } }),
   S('m_acid', '부식액', null, 'm', 65, 0, { form: 'toxic', uses: 2, ranged: true, inflict: { id: 'corrode' } }),
@@ -439,13 +439,13 @@ export const SKILLS = Object.fromEntries([
   S('m_sleep', '잠 포자', null, 'm', 45, 0, { form: 'spore', uses: 1, ranged: true, inflict: { id: 'stun' } }),
   S('m_bloom', '포자 만개', null, 'm', 0, 0, { form: 'spore', uses: 1, self: 'regen', also: 'purify' }),
   S('m_breath', '용의 숨결', null, 'm', 80, 0, { form: 'dragon', uses: 2, ranged: true, elOwn: true }),   // 속성 = 그 식물 속성(kitOfPlant)
-  S('m_scale', '비늘 방패', null, 'm', 0, 0, { form: 'dragon', uses: 2, self: 'shield' }),
+  S('m_scale', '비늘 방패', null, 'm', 0, 0, { form: 'dragon', uses: 2, self: 'armor' }),
   S('m_roar', '용의 포효', null, 'm', 70, 0, { form: 'dragon', uses: 2, inflict: { id: 'taunt' } }),
   // 속성 변이 기술(2026-10-17 사용자 "변이 카드 수를 늘리자 — 불 속성 공격도 있고 물도 있고 · 다 만들지 말고 어울리는 거와 연결해서"): 변이마다 어울리는 속성 한두 개만
   S('m_flame', '달군 칼날', 'fire', 'm', 50, 0, { form: 'weapon', uses: 2, inflict: { id: 'burn' } }),
-  S('m_spear', '번개 창', 'bolt', 'm', 70, 0, { form: 'weapon', uses: 2, ranged: true, inflict: { id: 'shock', n: 1 } }),
+  S('m_spear', '번개 창', 'bolt', 'm', 70, 0, { form: 'weapon', uses: 2, pierce: 0.3, ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('m_rocket', '로켓포', null, 'm', 60, 0, { form: 'weapon', uses: 1, ranged: true, area: true }),   // 2026-10-17 사용자 "무기에 광역으로 로켓포도" — 상대 전부 · 한 번(수치 임시)
-  S('m_xbow', '석궁', null, 'm', 85, 0, { form: 'weapon', uses: 2, ranged: true }),   // 2026-10-17 사용자 "석궁도" — 묵직한 한 발(수치 임시)
+  S('m_xbow', '석궁', null, 'm', 85, 0, { form: 'weapon', uses: 2, pierce: 0.3, ranged: true }),   // 2026-10-17 사용자 "석궁도" — 묵직한 한 발(수치 임시)
   S('m_flamer', '화염 방사', 'fire', 'm', 50, 0, { form: 'weapon', uses: 2, ranged: true, area: true, inflict: { id: 'burn' } }),   // 2026-10-17 사용자 "화염방사도 넣자" — 무기 종류 화염방사(수치 임시 — 변이 카드는 사용자가 나중에 보고 정함)
   S('m_burrow', '땅굴 습격', 'earth', 'm', 65, 0, { form: 'predator', uses: 2, drain: 0.25 }),
   S('m_maw', '심해 아가리', 'water', 'm', 50, 0, { form: 'predator', uses: 2, drain: 0.25, inflict: { id: 'wet' } }),
@@ -467,7 +467,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 3;   // 3 = 2026-10-18 방어태세(순서 무관 방어 ×4 · 적중 후 해제)
+export const RULES_VER = 4;   // 4 = 2026-10-18 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(먼저 · 나중)
+//  3 = 2026-10-18 방어태세(순서 무관 방어 ×4 · 적중 후 해제)
 export const RENAMED = { skill: {}, card: {} };
 export const formSkills = form => Object.values(SKILLS).filter(x => x.tier === 'm' && x.form === form).map(x => x.id);
 export const MUT_SLOTS = 2;   // 옛 변이 칸 둘(p.skills.mut) — 2026-10-17부터 카드 칸 둘(game/cards.js)로 옮겨 감(logic.js normCards)

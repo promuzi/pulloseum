@@ -155,6 +155,7 @@ function statusWins(g, x, y, list) {
 const FX_MSG = {
   burn: x => `${ga(x)} 화상을 입었다!`, poison: (x, e) => (e.n > 1 ? `${x}에게 독이 ${e.n}겹 쌓였다!` : `${ga(x)} 독에 걸렸다!`), wet: x => `${ga(x)} 흠뻑 젖었다! 둔해지고 적중·방어가 떨어진다`,
   chill: (x, e) => `${ga(x)} 얼어 간다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''), shock: (x, e) => `${ga(x)} 감전됐다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''),
+  armor: x => `${x}에게 방어구가 둘러졌다!`, stealth: x => `${ga(x)} 그림자 속으로 숨었다!`, clone: x => `${ga(x)} 분신을 만들었다!`,
   frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`,
   spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
   bind: (x, e) => `덩굴이 ${x}의 ${eul(e.skill)} 묶었다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 햇빛이 안 찬다`,
@@ -195,6 +196,7 @@ function hpBar(g, x, y, w, h, bar, max, t) {
     g.rect(x + 1 + fw, y + 1, tw - fw, 1, white ? '#ffffff' : S.hi);
   }
   if (fw > 0) { g.rect(x + 1, y + 1, fw, h - 2, c[0]); g.rect(x + 1, y + 1, fw, 1, c[1]); if (h > 4) g.rect(x + 1, y + h - 2, fw, 1, c[2]); }
+  if (bar.armor > 0) { const aw = Math.max(2, Math.round((w - 2) * Math.min(1, bar.armor / max))), ax = Math.min(x + 1 + fw, x + w - 1 - aw); g.rect(ax, y + 1, aw, h - 2, '#a9b3c3'); g.rect(ax, y + 1, aw, 1, '#eef2f8'); if (h > 4) g.rect(ax, y + h - 2, aw, 1, '#6b7587'); }   // 방어구(2026-10-18) = 금속 칸
   // 칸 선(2026-10-17 사용자 "체력바에도 얇은 칸 선을 그어줄 수 있나?"): 10%마다 가는 세로줄 — 찬 쪽(깎이는 띠 포함) = 짙게, 빈 쪽 = 옅게
   const lit = x + 1 + Math.max(fw, tw);
   for (let i = 1; i < 10; i++) { const sx = x + 1 + Math.round((w - 2) * i / 10), on = sx < lit; g.alpha(on ? 0.45 : 0.12, () => g.rect(sx, y + 1, 1, h - 2, on ? '#06140e' : '#ffffff')); }
@@ -378,7 +380,8 @@ export const battle = {
       else if (e.t === 'first') { if (!(reveal && reveal.first)) out.push({ kind: 'first', ms: 750, who: e.who, msg: `${ga(nm(e.who))} 먼저 움직인다!`, tone: 'note' }); }
       else if (e.t === 'stance') out.push({ kind: 'stance', ms: 950, who: e.who, skill: sk(e.who), stance: e.kind, active: e.active, msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'note' });
       else if (e.t === 'guardBreak') out.push({ kind: 'guardBreak', ms: 250, who: e.who });
-      else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.id] || ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
+      else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, msg: e.t === 'armorBreak' ? `${nm(e.who)}의 방어구가 부서졌다!` : e.id === 'clone' ? `${nm(e.who)}의 분신이 사라졌다!` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
+      else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.id] || ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!`, tone: 'hit' });
@@ -475,6 +478,20 @@ export const battle = {
     this.play(app, this.buildSteps({ mySkill: me.kit[0], foeSkill: foe.kit[0], events }));
   },
   // 검토 판 ?demo=status2: 나머지 효과(덩굴 · 뿌리 · 기생 씨앗 · 빨아들이기 · 약화 · 도발 · 부식 · 그늘 · 강풍) + 버프(분노 · 철벽 · 가속 · 재생 · 반사 · 보호막 · 정화 · 집중)
+  // 검토 판 ?demo=status3(2026-10-18 바닥 규칙 2단계): 방어구(체력 막대 금속 칸) · 분신(양옆 반투명) · 연타 셋이 방어구를 깎음 · 분신 사라짐 · 은신(흐리게)
+  demoStatus3(app) {
+    this.v.demoAt = Infinity;
+    const B = this.B, me = B.me, foe = B.foe, ar = Math.round(me.max * 0.3);
+    const events = [
+      { t: 'fx', who: 'me', to: 'me', id: 'armor', name: me.name, list: [{ id: 'armor', hp: ar }] },
+      { t: 'fx', who: 'foe', to: 'foe', id: 'clone', name: foe.name, list: [{ id: 'clone' }] },
+      ...[1, 2, 3].map(n => ({ t: 'hit', who: 'foe', to: 'me', id: foe.kit[0].id, tier: 'hit', dmg: 0, absorb: 12, ab: 'armor', mult: 1, n, of: 3, list: [{ id: 'armor', hp: ar - 12 * n }] })),
+      { t: 'reveal', who: 'foe', id: 'clone', list: [] },
+      { t: 'fx', who: 'me', to: 'me', id: 'stealth', name: me.name, list: [{ id: 'stealth' }, { id: 'armor', hp: ar - 36 }] },
+    ];
+    B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
+    this.play(app, this.buildSteps({ mySkill: me.kit[0], foeSkill: foe.kit[0], events }));
+  },
   demoStatus2(app) {
     this.v.demoAt = Infinity;
     const B = this.B, me = B.me, foe = B.foe, F = (to, id, o = {}) => ({ t: 'fx', to, id, name: B[to].name, ...o });
@@ -532,7 +549,7 @@ export const battle = {
     else if (e.tier !== 'miss' && e.mult > 1.01) this.pop(st.to, '상성!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);   // 변이 상성(2026-10-17)
     else if (e.tier !== 'miss' && e.mult && e.mult < 0.99) this.pop(st.to, '효과가 미미', 'sub', t, false, e.tier === 'crit' ? -52 : -32);   // 무기 상성 ×0.8(2026-10-18 사용자 "'안 듦' 대신 '효과가 미미'") — 다 곱한 값이 1보다 작을 때만('효과 굉장!'과 같이 뜨지 않게 · 2026-10-17)
     if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
-    if (e.absorb) { this.pop(st.to, `보호막 -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
+    if (e.absorb) { this.pop(st.to, `${e.ab === 'armor' ? '방어구' : '보호막'} -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
   },
   // 식물 밑동 자리(장면 270칸 안): 상대 = 그림 땅을 따라(fy) · 나 = 손패 바로 위(fy + myDy) — 머리 위 글자 · 표는 위 띠 밑까지만
   at(who) { const L = this.lay; return who === 'me' ? [PX, PY + (L ? L.fy + L.myDy : 0)] : [EX, EY + (L ? L.fy : 0)]; },
@@ -594,7 +611,7 @@ export const battle = {
       if (v.autoSkipAt == null) v.autoSkipAt = t + SKIP_AUTO_MS;
       else if (t >= v.autoSkipAt) { v.autoSkipAt = null; this.pick(app, REST); }
     }
-    if (this.p && ['text', 'status', 'status2'].includes(this.p.demo) && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) ({ text: () => this.demoText(app), status: () => this.demoStatus(app), status2: () => this.demoStatus2(app) })[this.p.demo](); }
+    if (this.p && ['text', 'status', 'status2', 'status3'].includes(this.p.demo) && v.phase === 'pick') { if (v.demoAt == null) v.demoAt = t + 600; else if (t >= v.demoAt) ({ text: () => this.demoText(app), status: () => this.demoStatus(app), status2: () => this.demoStatus2(app), status3: () => this.demoStatus3(app) })[this.p.demo](); }
     if (v.phase === 'play') {
       if (v.t0 == null) { v.t0 = t; this.startStep(v.steps[v.si], t, app); }
       let st = v.steps[v.si];
@@ -620,6 +637,7 @@ export const battle = {
     }
     for (const k of ['me', 'foe']) {
       const b = v.bar[k], to = v.hp[k], fx = b.fx;
+      b.armor = ((v.eff[k] || []).find(s => s.id === 'armor') || {}).hp || 0;   // 방어구 남은 양(효과 목록에서)
       if (!fx) { b.main = b.trail = to; continue; }
       const S = HURT[fx.kind], age = t - fx.t0;
       b.main = fx.mainFrom + (to - fx.mainFrom) * Math.min(1, age / S.main);
@@ -675,7 +693,9 @@ export const battle = {
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
       const sw = v.sfx.length || (v.eff[who] || []).some(s => s.id === 'gale') ? swayOf(v.sfx, { [who]: (v.eff[who] || []).map(s => s.id) }, who, t) : 0;
       if (sw) pose = { ...(pose || {}), qx: ((pose && pose.qx) || 0) - sw };
-      drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) });
+      const fxs = v.eff[who] || [], hidden = fxs.some(s => s.id === 'stealth');
+      if (fxs.some(s => s.id === 'clone')) for (const ox of [-20, 20]) g.alpha(0.4, () => drawBigPose(g, artOf(u), u.pot, x + dx + ox, y + dy + 2, { t: t + ox * 37, phase, flip, view, ...(pose || {}) }));   // 분신(2026-10-18)
+      g.alpha(hidden ? 0.35 : 1, () => drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) }));   // 은신 = 흐리게
       if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판

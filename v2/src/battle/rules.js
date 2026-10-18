@@ -3,6 +3,7 @@
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
+import { SKILL_WEAPON } from './matchup.js';
 import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -100,9 +101,11 @@ export function baseDamage(att, def, skill, elemMult = 1) {
 const stOf = u => (u.st ||= { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null });
 // ① 선공: 기동 비율 확률 + 불운 보정(유리한 쪽이든 불리한 쪽이든 '먼저 가기'가 계속 실패하면 확정). 기동 = 젖음·빙결이면 줄어듦
 //  3:3 교체도 이걸로 순서를 정함(team.js — 2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지")
-export function rollFirst(A, B, rng) {
+//  순서 손잡이 pr = [A, B](2026-10-18 — 기술 early = 먼저 +1 · late = 나중 −1): 다르면 높은 쪽이 먼저(굴림 없음) · 둘 다 '나중'이면 두 식물 기동을 바꿔 넣어 빠른 쪽이 나중일 확률이 높게
+export function rollFirst(A, B, rng, pr = [0, 0]) {
   stOf(A); stOf(B);
-  const pA = initiativeChance(effSpd(A), effSpd(B), (A.st.nextInit || 0) - (B.st.nextInit || 0));
+  if (pr[0] !== pr[1]) return { first: pr[0] > pr[1] ? A : B, chance: 1, prio: true };
+  const pA = pr[0] < 0 ? initiativeChance(effSpd(B), effSpd(A), (A.st.nextInit || 0) - (B.st.nextInit || 0)) : initiativeChance(effSpd(A), effSpd(B), (A.st.nextInit || 0) - (B.st.nextInit || 0));
   let first;
   if (A.st.init >= pityLimit(pA) + RULES.initPitySlack) first = A;
   else if (B.st.init >= pityLimit(1 - pA) + RULES.initPitySlack) first = B;
@@ -119,9 +122,10 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const T = o.turn || 0, skipped = new Set();
   let first;
   if (o.first) first = o.first;
-  else { const r = rollFirst(A, B, rng); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance }); }
+  else { const pr = a => (a && a.early ? 1 : 0) - (a && a.late ? 1 : 0), r = rollFirst(A, B, rng, [pr(actA), pr(actB)]); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance, prio: r.prio || undefined }); }
   const second = first === A ? B : A;
   const actOf = u => (u === A ? actA : actB);
+  for (const u of [first, second]) { const a = actOf(u); if (a && a.stealth && u.hp > 0 && !mustSkip(u)) selfBuff(u, 'stealth', { turn: T, ev }); }   // 은신은 턴 처음에(나중에 움직여도 먼저 오는 공격을 피함)
   // 태세는 이 턴 안에서만 보유. 후공의 태세도 피격 전에 한 번만 알리고, 자기 차례에 다시 켜지 않는다.
   const guards = new Map([A, B].map(u => [u, actOf(u).act === 'guard' ? (actOf(u).guardHits ?? 1) : 0]));
   const shown = new Set();
@@ -149,43 +153,58 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); continue; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }
     // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
+    //  2026-10-18 바닥 규칙 2단계(species-identity §1): 연타 a.hits = 타마다 따로 판정(불운 보정 없음 · 효과는 첫 적중 한 번 · 방어태세는 막은 타만큼 줄어듦 · 흡수 · 반사는 타마다)
+    //   은신 = 광역 아닌 공격 95% 빗나감 · 분신 = 90%(진짜가 맞거나 광역이면 풀림) · 기습 = 은신한 쪽 공격 ×1.5 + 상대 자세 무시 · 관통 a.pierce = 상대 방어를 그만큼 무시 · 방어구는 보호막 다음에 막음(망치 ×1.5로 깎임)
     const still = !mustSkip(foe) && !skipped.has(foe);
-    const guardOn = still && d.act === 'guard' && stanceOk(foe, 'guard');
-    const evadeOn = still && d.act === 'evade' && stanceOk(foe, 'evade');
-    if (guardOn) showStance(foe);
+    const ambush = has(u, 'stealth') && !a.area;
+    const evadeOn = !ambush && still && d.act === 'evade' && stanceOk(foe, 'evade');
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
-    const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
-    u.st.nextCrit = 0;
-    const key = foe.id, j = judgeHit(t, u.st.miss[key] || 0, rng);
-    u.st.miss[key] = j.missStreak;
-    let tier = j.tier;
-    if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';
-    // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓)
-    //  카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
-    const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
-    const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
+    // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓) · 카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
+    const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK * (1 - (sk.pierce || 0)) }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
     const em = o.elemMult ? o.elemMult(u, foe, a) : 1;   // 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
-    let dmg = Math.round(hitDmg(u, foe, a, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK);
-    if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
-    let absorb = 0;   // 보호막이 먼저 막음
-    if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; if (sh.hp <= 0) delete foe.eff.shield; }
-    foe.hp = Math.max(0, foe.hp - dmg);
-    foe.st.critTaken = tier === 'crit';
-    ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, list: absorb ? listOf(foe) : undefined });
-    const blocked = guardOn && tier !== 'miss';
-    if (blocked) {
-      guards.set(foe, guards.get(foe) - 1);
-      if (guards.get(foe) === 0) ev.push({ t: 'guardBreak', who: foe.id });
+    const N = Math.max(1, a.hits || 1), hammer = SKILL_WEAPON[a.id] === 'hammer';
+    let landed = false, avoided = evadeOn, blocked = false, dmg = 0;
+    if (a.area) for (const k of ['stealth', 'clone']) if (has(foe, k)) { delete foe.eff[k]; ev.push({ t: 'reveal', who: foe.id, id: k, list: listOf(foe) }); }   // 광역에 들킴
+    for (let i = 0; i < N && foe.hp > 0 && u.hp > 0; i++) {
+      const guardOn = !ambush && still && d.act === 'guard' && stanceOk(foe, 'guard');
+      if (guardOn) showStance(foe);
+      const veil = a.area || has(u, 'stealth') ? 0 : has(foe, 'stealth') ? FX.stealth.miss : has(foe, 'clone') ? FX.clone.miss : 0;   // 은신끼리는 서로 보임
+      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
+      u.st.nextCrit = 0;
+      let tier, forced = false;
+      if (veil && rng() < veil) tier = 'miss';   // 은신 · 분신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로)
+      else if (N > 1) tier = tierOf(t, Math.floor(rng() * 100));   // 연타 = 불운 보정 없음(사용자 "연타에서는 보정을 하지 말자")
+      else { const j = judgeHit(t, u.st.miss[foe.id] || 0, rng); u.st.miss[foe.id] = j.missStreak; tier = j.tier; forced = j.forced; }
+      if (veil && tier !== 'miss' && has(foe, 'clone')) { delete foe.eff.clone; ev.push({ t: 'reveal', who: foe.id, id: 'clone', list: listOf(foe) }); }   // 진짜를 맞힘
+      if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';
+      const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
+      dmg = Math.round(hitDmg(u, foe, a, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
+      if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
+      let absorb = 0, ab = null;   // 보호막 → 방어구 순서로 먼저 막음
+      if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; if (sh.hp <= 0) delete foe.eff.shield; }
+      if (dmg > 0 && foe.eff && foe.eff.armor) {
+        const ar = foe.eff.armor, k = hammer ? FX.armor.hammerK : 1, use = Math.min(ar.hp, dmg * k), took = Math.min(dmg, Math.round(use / k));
+        ar.hp -= use; absorb += took; dmg -= took; ab = 'armor';
+        if (ar.hp <= 0.5) { delete foe.eff.armor; ev.push({ t: 'armorBreak', who: foe.id, list: listOf(foe) }); }
+      }
+      foe.hp = Math.max(0, foe.hp - dmg);
+      foe.st.critTaken = tier === 'crit';
+      ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, ab: ab || undefined, forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, veil: veil ? true : undefined, ambush: ambush || undefined, list: absorb ? listOf(foe) : undefined });
+      blocked = guardOn && tier !== 'miss';
+      if (blocked) {
+        guards.set(foe, guards.get(foe) - 1);
+        if (guards.get(foe) === 0) ev.push({ t: 'guardBreak', who: foe.id });
+      }
+      if (tier === 'hit' || tier === 'crit') avoided = false;
+      const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
+      if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
+      const refl = (has(foe, 'thorns') ? FX.thorns.reflect : 0) + ((foe.pas && foe.pas.reflect) || 0);   // 반사 버프 + 가시 줄기(카드)
+      if (tier !== 'miss' && dmg > 0 && refl > 0 && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * refl)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 반사(가시) — 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
+      // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
+      if (tier !== 'miss' && !landed) { landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
     }
-    const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
-    if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
-    const refl = (has(foe, 'thorns') ? FX.thorns.reflect : 0) + ((foe.pas && foe.pas.reflect) || 0);   // 반사 버프 + 가시 줄기(카드)
-    if (tier !== 'miss' && dmg > 0 && refl > 0 && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * refl)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 반사(가시) — 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
-    // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자)
-    if (tier !== 'miss') onHit(u, foe, a, { turn: T, rng, ev });
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
-    // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침)
-    const avoided = evadeOn && (tier === 'miss' || tier === 'graze');
+    // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
     if (avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {
       const cd = Math.max(1, Math.round(hitDmg(foe, u, { power: d.counter }, 1)));
       u.hp = Math.max(0, u.hp - cd);

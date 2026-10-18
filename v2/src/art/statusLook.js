@@ -20,6 +20,7 @@ export const STATUS = {
   // 버프(2026-10-16 구현 — 속성 짝: 불 분노 · 물 정화 · 풀 재생 · 대지 철벽 · 바람 가속 · 번개 집중 · 빙결 보호막 · 선인장 반사)
   rage: { name: '분노', icon: 'fire', buff: true }, wall: { name: '철벽', icon: 'shield', buff: true }, haste: { name: '가속', icon: 'speed', buff: true },
   regen: { name: '재생', icon: 'heal', buff: true }, thorns: { name: '반사', icon: 'cactus', buff: true }, shield: { name: '보호막', icon: 'ice', buff: true },
+  armor: { name: '방어구', icon: 'gear', buff: true }, stealth: { name: '은신', icon: 'down', buff: true }, clone: { name: '분신', icon: 'sparkle', buff: true },
   purified: { name: '정화', icon: 'water', buff: true }, focus: { name: '집중', icon: 'crit', buff: true },
 };
 // 효과 설명(전투 화면 '효과' 단추 — 한 줄씩)
@@ -29,7 +30,9 @@ export const STATUS_DESC = {
   bind: '기술 하나가 한 턴 묶임', leech: '턴 끝 체력을 상대가 빨아감(3번)', shade: '그 턴 끝 햇빛이 안 참', gale: '적중 ↓', taunt: '방어·회피 자세를 못 씀',
   root: '교체할 수 없음', weak: '공격 ↓', corrode: '방어 ↓', spore: '턴 끝마다 자라 3이면 피어남(피해 + 햇빛 안 참)', brace: '방금 쉬어서 쉬게 하는 효과에 안 걸림',
   rage: '공격 +25%', wall: '받는 피해 −20%', haste: '기동 +30%(먼저 움직이고 잘 피함)', regen: '턴 끝 체력 5% 회복(3번)', thorns: '붙어서 때린 상대에게 피해 30%를 되돌림',
-  shield: '최대 체력 15%만큼 피해를 먼저 막음', purified: '나쁜 효과가 안 걸림(한 턴)', focus: '다음 공격 치명 +25', guard: '방어력 4배(연속 2.5배) · 한 번 맞으면 해제', evade: '회피 자세 — 빗나감 ↑', initReady: '다음 턴 먼저 움직이기 쉬움',
+  shield: '최대 체력 15%만큼 피해를 먼저 막음',
+  armor: '체력 위 금속 칸 — 깨질 때까지 피해를 먼저 막음 · 쌓임(최대 체력 50%까지) · 망치에 약함 · 지속 피해는 못 막음',
+  stealth: '이번 턴 광역이 아닌 공격은 거의 빗나감 · 내 공격은 기습(×1.5, 자세 무시)', clone: '2턴 · 광역이 아닌 공격이 대부분 빗나감 — 진짜가 맞거나 광역이면 풀림', purified: '나쁜 효과가 안 걸림(한 턴)', focus: '다음 공격 치명 +25', guard: '방어력 4배(연속 2.5배) · 한 번 맞으면 해제', evade: '회피 자세 — 빗나감 ↑', initReady: '다음 턴 먼저 움직이기 쉬움',
 };
 export const SW_ON = { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#4f84bf', text: '#e0f0ff', num: '#8ccfff' };
 export const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
@@ -37,7 +40,7 @@ export const swCache = new Map();
 export const swStyle = col => { let s = swCache.get(col); if (!s) swCache.set(col, s = { fill: hexMix(col, '#0a0c18', 0.8), fill2: hexMix(col, '#0a0c18', 0.72), frame: col, frameHi: hexMix(col, '#ffffff', 0.55), frameLo: hexMix(col, '#000000', 0.45), text: hexMix(col, '#ffffff', 0.72), num: hexMix(col, '#ffffff', 0.35) }); return s; };
 
 // 버프 이름(기술 카드의 효과 칩 — 버프 규칙은 아직, 겉모습만): 대표 속성 짝(기술 체계 문서 §3)
-export const BUFF_LOOK = { rage: '분노', purify: '정화', regen: '재생', wall: '철벽', haste: '가속', focus: '집중', shield: '보호막', thorns: '반사' };
+export const BUFF_LOOK = { armor: '방어구', stealth: '은신', clone: '분신', rage: '분노', purify: '정화', regen: '재생', wall: '철벽', haste: '가속', focus: '집중', shield: '보호막', thorns: '반사' };
 // 기술 카드용 작은 효과 칩: [아이콘][이름] — 디버프는 그 색, 버프는 청록. 너비를 돌려줌
 export function fxChip(g, x, y, id, buffName) {
   const D = buffName ? { name: buffName, buff: true } : STATUS[id];

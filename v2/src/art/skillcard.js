@@ -149,13 +149,14 @@ const pct = v => Math.round(v * 100) + '%';
 export function statOf(sk, o = {}) {
   if (!sk) return null;
   if (sk.passive) { const L = sk.look || {}; return sk.badge ? { kind: 'pill', txt: sk.badge[0], icon: null, col: [hexMix(L.col || '#5fb3d9', C.ink, 0.25), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)], label: '효과' } : null; }
-  if (sk.act === 'attack') return sk.power ? { kind: sk.area ? 'bomb' : 'pow', txt: String(sk.area ? Math.round(sk.power * RULES.areaK) : sk.power), label: '위력' } : null;   // 광역 = 확정 명중 대신 위력 areaK배(2026-10-18)   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
+  if (sk.act === 'attack') { if (!sk.power) return null; const pw = sk.area ? Math.round(sk.power * RULES.areaK) : sk.power; return { kind: sk.area ? 'bomb' : 'pow', txt: sk.hits > 1 ? `${pw}×${sk.hits}` : String(pw), label: sk.hits > 1 ? '위력 × 타' : '위력' }; }   // 연타 = 한 타 위력 × 타 수(2026-10-18)   // 광역 = 확정 명중 대신 위력 areaK배(2026-10-18)   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
   const half = !!o.halved, k = half ? RULES.repeatStanceK : 1;   // 바로 전 턴에도 같은 자세 = 효과 절반(rules.js) — 두 번째에만 바뀐 수 · 주황
   if (sk.act === 'guard') return { kind: 'block', txt: '×' + guardDefMult(sk, half), label: '방어력', half };
   if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: Math.round(sk.shift.miss * k) + '%', label: '회피', half } : null;
   for (const b of [sk.self, sk.also]) {   // 버프 기술은 주 효과(self)부터 수가 있는 것 하나
     if (b === 'wall') return { kind: 'block', txt: pct(1 - FX.wall.dmgK), label: '막음' };
     if (b === 'shield') return { kind: 'barrier', txt: pct(FX.shield.hp), label: '보호막' };
+    if (b === 'armor') return { kind: 'barrier', txt: pct(FX.armor.hp), label: '방어구' };
     if (b === 'regen') return { kind: 'heal', txt: pct(FX.regen.heal * FX.regen.left), label: '회복' };
   }
   return null;

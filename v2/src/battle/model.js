@@ -148,7 +148,7 @@ export function aiPick(u, foe, rng) {
   if (!ok.length) return REST;
   const low = u.hp < u.max * 0.4;
   const poor = (u.energy || 0) <= 1 && u.kit.some(s => (s.cost || 0) >= 2);   // 햇빛이 모자라 큰 기술을 못 씀
-  const w = ok.map(s => (s.act === 'attack' ? Math.max(0.3, 1 + (s.power || 0) / 45 + 2.4 * (hitMult(u, foe, s) - 1) + (newFx(s, foe) ? 0.6 : 0)) : s.act === 'guard' ? (low ? 1.3 : 0.45) : s.act === 'sun' ? (poor && !low ? 0.9 : 0.15) : (low ? 1.1 : 0.55)));
+  const w = ok.map(s => (s.act === 'attack' ? Math.max(0.3, 1 + (s.power || 0) * (s.hits || 1) / 45 + 2.4 * (hitMult(u, foe, s) - 1) + (newFx(s, foe) ? 0.6 : 0) + (s.area && (has(foe, 'clone') || has(foe, 'stealth')) ? 1.5 : 0)) : s.act === 'guard' ? (low ? 1.3 : 0.45) : s.act === 'sun' ? (poor && !low ? 0.9 : 0.15) : (low ? 1.1 : 0.55)));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;
   for (; i < w.length - 1; i++) { r -= w[i]; if (r <= 0) break; }
   return ok[i];
