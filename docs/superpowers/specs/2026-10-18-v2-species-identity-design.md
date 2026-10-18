@@ -55,6 +55,7 @@
 | D15 | 확률 결과 | 같은 기술이 여러 결과 중 하나(전투 난수 `rng()` 하나 — 서버 재검증 그대로) | 도깨비 |
 | D16 | 비용 바꾸기 | 햇빛 대신 체력 · 남은 햇빛 전부 | 블레이즈 · 엠버캑터 |
 
+- **구현 현황(2026-10-18, CHANGELOG (87)):** D1 연타 · D3 순서 손잡이 · D4 은신 · 분신 · D8 방어구는 바닥 규칙과 함께 들어감. **공통 장치 1묶음 = `v2/src/battle/devices.js`** — D2 개수 칸(`SPECIES.res` · `resTurn` · 기술 `gain` · `spend` · `need` · `hitsBy` · `powBy`) · D5 `scale` · D6 `delay` · `echo` · D7 `SPECIES.endure` · D9 `setMode` · `needMode` · `lockMode`(`SPECIES.modes`) · D12 `consume` · `bonusIf` · D14 `steal` · `dispel` · `seal` · `reveal` · D15 `luck` · D16 `hpCost` · `allSun`. 지금 기술은 이 칸을 안 써서 게임 동작은 그대로(종 리그전 결과 같음). 시험 `tools/test/devices.mjs` 40. **남음 = D10 경기장 효과 · D11 2턴 기술 · D13 반응(맞을 때) · 개수 칸 화면 표시(체력판 작은 숫자).**
 - 개수 칸 · 표식 · 모드는 **그 식물의 판 상태** — 3:3에서 교체해 나갔다 들어와도 그대로(지금 변이 기술 횟수와 같은 규칙).
 - 종의 규칙 = 타고남(늘 켜짐 · 칸 차지 없음), 그 규칙을 비트는 것 = 그 종만 끼우는 **고유 카드**(패시브 칸 셋 중 하나).
 

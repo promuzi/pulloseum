@@ -13,6 +13,8 @@
 //    기생 씨앗 · 뿌리 묶기(+ 그늘 · 부식)는 속성·종·생장에 묶이지 않는 변이·특수 기술용(식물 기술표에서 뺌, 규칙은 남겨 둠).
 // 턴 세는 법: exp = 마지막으로 영향을 주는 턴 번호(턴 끝에 exp ≤ 지금 턴이면 사라짐) · left = 남은 턴 끝 횟수(지속 피해·빨아들이기).
 
+import { canUseRes, turnDevices } from './devices.js';
+
 export const FX = {
   burn:    { el: 'fire', left: 3, dot: 0.04, keep: true },   // 턴 끝 3번 최대 체력 4% · 그동안 받는 회복 절반
   poison:  { stack: 5, dot: 0.02, keep: true },              // 겹마다 턴 끝 최대 체력 2%
@@ -59,7 +61,7 @@ export const has = (u, id) => !!(u && u.eff && u.eff[id]);
 // ── 다른 계산이 읽는 값 ──
 // 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 얼음, 나중에 가속 버프) → 선공 확률과 회피 자세에 같이 들어감
 export function mobK(u) {
-  let k = 1;
+  let k = (u && u.modeK && u.modeK.spd) || 1;   // 모드(공통 장치 D9) 기동 배율
   if (has(u, 'wet')) k *= FX.wet.mob;
   if (has(u, 'chill') || has(u, 'frozen')) k *= FX.chill.mob;
   if (has(u, 'haste')) k *= FX.haste.mob;
@@ -71,8 +73,8 @@ export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
-export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1) * (has(u, 'rage') ? FX.rage.atkK : 1);
-export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1);
+export const atkK = u => (has(u, 'weak') ? FX.weak.atkK : 1) * (has(u, 'rage') ? FX.rage.atkK : 1) * ((u && u.modeK && u.modeK.atk) || 1);
+export const defK = u => (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
 export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1) * (has(u, 'wall') ? FX.wall.dmgK : 1);
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
@@ -104,6 +106,7 @@ export function useCount(u, s) { if (u && s && s.uses) { u.used = u.used || {}; 
 export function canUse(u, s, energy = u.energy) {
   if (!s || (s.cost || 0) > energy) return false;
   if (usesLeft(u, s) <= 0) return false;
+  if (!canUseRes(u, s)) return false;   // 공통 장치: 개수 · 모드 · 체력 비용(devices.js)
   const e = u.eff || {};
   if (e.bind && e.bind.skill === s.id) return false;
   if (e.taunt && (s.act === 'guard' || s.act === 'evade')) return false;
@@ -275,6 +278,7 @@ export function endTurn(pairs, turn, ev, stop = null) {
     let dec = false;
     for (const k of ['chill']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
     if (dec && u.hp > 0) ev.push({ t: 'expire', who: u.id, ids: [], list: listOf(u) });
+    turnDevices(u, turn, ev);   // 공통 장치: 시한 · 메아리 · 개수 칸 턴마다(devices.js)
     noteFall(u, ev);
   }
 }

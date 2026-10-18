@@ -1,8 +1,9 @@
 // 바닥 규칙 2단계 장치 시험(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §1)
 //  방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이 — node tools/test/devices.mjs
 import { resolveTurn, rollFirst, baseDamage } from '../../v2/src/battle/rules.js';
-import { selfBuff, listOf, has, FX } from '../../v2/src/battle/status.js';
-import { SKILLS } from '../../v2/src/game/catalog.js';
+import { selfBuff, listOf, has, FX, canUse, endTurn, atkK } from '../../v2/src/battle/status.js';
+import { resOf } from '../../v2/src/battle/devices.js';
+import { SKILLS, SPECIES } from '../../v2/src/game/catalog.js';
 
 let pass = 0;
 const fails = [];
@@ -77,6 +78,61 @@ const hits = ev => ev.filter(e => e.t === 'hit');
 }
 // ── 기술 연결 ──
 ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.self === 'clone' && SKILLS.u_hyunmu_2.self === 'armor' && SKILLS.u_gladi_1.pierce === 0.3 && SKILLS.u_astro_3.early, '기술 연결');
+
+// ── 공통 장치(devices.js — 2026-10-18 로드맵 1번) ──
+{
+  SPECIES.__t = { name: '시험', res: { kunai: [5, 5], prep: [0, 3], fed: [0, 3], head: [2, 3], tail: [1, [3, 6, 9]] }, resTurn: { tail: 1 }, endure: 'head', modes: { naked: { atk: 1.5 } } };
+  const T = o => unit('t', { key: '__t', stage: 2, ...o });
+  const go = (a, b, aa, bb, r = seq([0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]), turn = 1) => resolveTurn(a, b, aa, bb, r, { turn });
+  // 개수 칸 · 연타 수 · 내기
+  const u = T(); ok(resOf(u).kunai === 5 && u.resMax.tail === 9, '개수 칸 처음 값 · 단계별 최대');
+  const throwK = atk({ id: 'k1', power: 30, spend: { k: 'kunai', n: 1 } });
+  go(u, unit('d'), throwK, rest); ok(u.res.kunai === 4, '내기 = 하나 줄어듦');
+  u.res.kunai = 3; const r1 = go(u, unit('d'), atk({ id: 'k2', power: 20, hitsBy: 'kunai', spend: { k: 'kunai', all: true } }), rest);
+  ok(hits(r1.events).length === 3 && u.res.kunai === 0 && !canUse(u, throwK, 9), '개수만큼 연타 · 전부 냄 · 0이면 못 씀');
+  // 표식 배율 + 낸 수를 다른 칸에(식사시간 → 식후)
+  const m = T(); resOf(m).prep = 3;
+  const meal = atk({ id: 'meal', power: 90, scale: { k: 'prep', dmg: [0, 0.2, 0.45, 0.8], drain: [0.2, 0.35, 0.5, 0.7] }, spend: { k: 'prep', all: true }, gain: { k: 'fed', n: 'spent', set: true } });
+  const d1 = unit('d'); m.hp = 100; go(m, d1, meal, rest);
+  ok(m.res.prep === 0 && m.res.fed === 3 && m.hp > 100, `표식 셋 = 위력 · 흡수 ↑ → 준비 0 · 식후 3 (체력 ${m.hp})`);
+  // 버티기: 맞은 피해로 쓰러지면 체력 1 · 머리 하나 / 지속 피해로는 못 버팀
+  const h = T({ hp: 5 }); const r2 = go(unit('a', { atk: 200 }), h, atk({ power: 200 }), rest);
+  ok(h.hp === 1 && h.res.head === 1 && r2.events.some(e => e.t === 'endure'), '버티기 = 체력 1 · 머리 −1');
+  // 상태 소비 · 그 상태면 배율
+  const p = unit('d', { eff: { poison: { n: 4, last: 1 } } }); go(unit('a'), p, atk({ power: 10, consume: { id: 'poison', per: 0.05, cap: 0.25 } }), rest);
+  ok(!p.eff.poison && p.hp < 300 - 60 + 5, `독 터뜨리기 = 겹 × 5% 즉시 · 독 지움(체력 ${p.hp})`);
+  const fz = unit('d', { eff: { frozen: {}, skip: { src: 'frozen' } } }), plain = unit('d');
+  go(unit('a'), fz, atk({ power: 60, bonusIf: { id: 'frozen', k: 2, clear: true } }), rest); go(unit('a'), plain, atk({ power: 60, bonusIf: { id: 'frozen', k: 2, clear: true } }), rest);
+  ok(300 - fz.hp > (300 - plain.hp) * 1.4 && !fz.eff.frozen, `얼음이면 ×2(얼음은 받는 피해 −25%라 약 1.5배) · 얼음 깸 (${300 - fz.hp} 대 ${300 - plain.hp})`);
+  // 상대 조작: 햇빛 · 버프 빼앗기 · 버프 날리기 · 봉인
+  const s1 = unit('a', { energy: 1 }), s2 = unit('d', { energy: 3 }); go(s1, s2, atk({ power: 10, steal: 'sun' }), rest);
+  ok(s1.energy === 2 && s2.energy === 2, '햇빛 빼앗기');
+  const b1 = unit('a'), b2 = unit('d', { eff: { rage: { exp: 9 }, wall: { exp: 9 } } }); go(b1, b2, atk({ power: 10, steal: 'buff' }), rest);
+  ok(b1.eff.rage && !b2.eff.rage && b2.eff.wall, '버프 하나 빼앗기');
+  const c2 = unit('d', { eff: { rage: { exp: 9 }, wall: { exp: 9 } } }); go(unit('a'), c2, atk({ power: 10, dispel: 'all' }), rest);
+  ok(!c2.eff.rage && !c2.eff.wall, '버프 전부 날리기');
+  const z = unit('d', { kit: [{ id: 'big', name: '큰 기술' }], st: { lastAct: 'big', lastName: '큰 기술', miss: {}, init: 0 } }); go(unit('a'), z, atk({ power: 10, seal: true }), rest);
+  ok(z.eff.bind && z.eff.bind.skill === 'big', '봉인 = 상대가 지난번 쓴 기술 묶음');
+  // 운: 0배가 나오면 다음은 가장 큰 배율 확정
+  const L = unit('a'), luck = atk({ power: 100, luck: [[0.3, 1.6], [0.55, 1], [0.15, 0]] }), L1 = unit('d'), L2 = unit('d');
+  resolveTurn(L, L1, luck, rest, seq([0, 0.99, 0.5]), { turn: 1 }); resolveTurn(L, L2, luck, rest, seq([0, 0.99, 0.5]), { turn: 2 });
+  ok(L1.hp >= 299 && 300 - L2.hp > 90, `헛방망이(최소 피해 1) 다음 = 금 ×1.6 확정(${L1.hp} → ${L2.hp})`);
+  // 비용: 체력 · 남은 햇빛 전부
+  const hc = unit('a'); go(hc, unit('d'), atk({ power: 90, hpCost: 0.1 }), rest); ok(hc.hp === 270, '체력 10% 냄');
+  const sa = unit('a', { energy: 4 }), sd = unit('d'), sd0 = unit('d'); go(sa, sd, atk({ power: 50, allSun: 30 }), rest); go(unit('a', { energy: 0 }), sd0, atk({ power: 50, allSun: 30 }), rest);
+  ok(sa.energy === 0 && 300 - sd.hp > (300 - sd0.hp) * 2, '남은 햇빛 전부 = 위력 ↑');
+  // 시한 · 메아리(턴 끝 · 교체하면 사라짐)
+  const bomb = unit('d'), bo = unit('a'); go(bo, bomb, { id: 'dyn', act: 'buff', cost: 0, delay: { turns: 2, power: 90, area: true } }, rest, seq([0, 0.5]), 1);
+  const evs = []; endTurn([[bomb, bo]], 2, evs); const hp2 = bomb.hp; endTurn([[bomb, bo]], 3, evs);
+  ok(hp2 === 300 && bomb.hp < 300 && evs.some(e => e.t === 'boom'), '시한 = 2턴 뒤 턴 끝 폭발');
+  const ec = unit('d'); go(unit('a'), ec, atk({ power: 60, echo: 0.5, inflict: { id: 'weak' } }), rest); const ec1 = ec.hp, ee = []; endTurn([[ec, unit('a')]], 2, ee);
+  ok(ec.hp < ec1 && ee.some(e => e.t === 'boom'), '메아리 = 다음 턴 끝 한 번 더');
+  // 모드 · 개수 칸 턴마다
+  const md = T(); go(md, unit('d'), { id: 'brk', act: 'buff', cost: 0, setMode: 'naked' }, rest);
+  ok(md.mode === 'naked' && atkK(md) === 1.5 && !canUse(md, { id: 'x', cost: 0, lockMode: 'naked' }, 9) && canUse(md, { id: 'y', cost: 0, needMode: 'naked' }, 9), '모드 = 능력치 배율 · 잠김 / 그 모드만');
+  const tl = T(); const tev = []; endTurn([[tl, unit('d')]], 1, tev); ok(tl.res.tail === 2, '턴 끝 꼬리 +1');
+  delete SPECIES.__t;
+}
 
 console.log(`장치 시험 ${pass}/${pass + fails.length}`);
 if (fails.length) { for (const f of fails) console.log('  ✗ ' + f); process.exit(1); }

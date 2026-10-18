@@ -4,6 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
+import { dynAct, payAct, afterAct, endureHp } from './devices.js';
 import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -138,19 +139,20 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   };
   // 누가 쓰러지면 그 턴의 남은 행동은 없음(쓰러진 식물을 때리거나 쓰러진 식물이 움직이지 않게 — 2026-10-16 판정 순서 점검)
   for (const [u, foe] of [[first, second], [second, first]]) {
-    const a = actOf(u), d = actOf(foe);
+    const a = dynAct(u, actOf(u), foe, rng), d = actOf(foe);   // 공통 장치: 개수 · 운 · 상대 상태로 정한 그 차례 기술 값(devices.js — 칸이 없으면 그대로)
     if (u.hp <= 0 || foe.hp <= 0) break;
     // 쉬는 차례(얼음·마비·기절): 고른 행동이 취소되고 쓴 에너지는 돌려받음 — 이번 턴 앞에서 걸렸어도 아직 안 움직였으면 여기서 취소
     if (a.act !== 'skip') shockRoll(u, { turn: T, rng, ev });   // 감전 = 자기 차례마다 확률로 마비(걸리면 아래에서 행동 취소)
     if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); continue; }
     if (a.act === 'skip') { skipped.add(u); continue; }
+    const spent = payAct(u, a, T, ev);   // 개수 · 체력 · 햇빛 내기
     if (a.act === 'guard' || a.act === 'evade') {
       showStance(u);
       continue;
     }
     if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); continue; }   // 광합성(기본기 — 햇빛 +2)
     const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }); };   // 나에게 거는 버프(버프 기술 · 공격 기술 덤)
-    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); continue; }
+    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent }); continue; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }
     // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
     //  2026-10-18 바닥 규칙 2단계(species-identity §1): 연타 a.hits = 타마다 따로 판정(불운 보정 없음 · 효과는 첫 적중 한 번 · 방어태세는 막은 타만큼 줄어듦 · 흡수 · 반사는 타마다)
@@ -164,7 +166,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const em = o.elemMult ? o.elemMult(u, foe, a) : 1;   // 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
     const N = Math.max(1, a.hits || 1), hammer = SKILL_WEAPON[a.id] === 'hammer';
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0;
-    if (a.area) for (const k of ['stealth', 'clone']) if (has(foe, k)) { delete foe.eff[k]; ev.push({ t: 'reveal', who: foe.id, id: k, list: listOf(foe) }); }   // 광역에 들킴
+    if (a.area || a.reveal) for (const k of ['stealth', 'clone']) if (has(foe, k)) { delete foe.eff[k]; ev.push({ t: 'reveal', who: foe.id, id: k, list: listOf(foe) }); }   // 광역에 들킴
     for (let i = 0; i < N && foe.hp > 0 && u.hp > 0; i++) {
       const guardOn = !ambush && still && d.act === 'guard' && stanceOk(foe, 'guard');
       if (guardOn) showStance(foe);
@@ -187,7 +189,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
         ar.hp -= use; absorb += took; dmg -= took; ab = 'armor';
         if (ar.hp <= 0.5) { delete foe.eff.armor; ev.push({ t: 'armorBreak', who: foe.id, list: listOf(foe) }); }
       }
-      foe.hp = Math.max(0, foe.hp - dmg);
+      foe.hp = endureHp(foe, foe.hp - dmg, ev);   // 버티기(공통 장치 D7) — 없으면 0에서 멈춤
       foe.st.critTaken = tier === 'crit';
       ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, ab: ab || undefined, forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, veil: veil ? true : undefined, ambush: ambush || undefined, list: absorb ? listOf(foe) : undefined });
       blocked = guardOn && tier !== 'miss';
@@ -204,6 +206,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (tier !== 'miss' && !landed) { landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
     }
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
+    if (u.hp > 0) afterAct(u, a, foe, T, ev, { spent, landed, bonusHit: a.bonusHit });   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
     if (avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {
       const cd = Math.max(1, Math.round(hitDmg(foe, u, { power: d.counter }, 1)));

@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-10-18 (87) — 공통 장치 1묶음(`v2/src/battle/devices.js`) — 게임 동작은 그대로
+- 사용자 "다음 로드맵도 1번까지만" → "1번 이어서 해"(설계 [species-identity](superpowers/specs/2026-10-18-v2-species-identity-design.md) §2). 46종 고유 기술은 사용자 검토 대기라 연결하지 않음 — 칸만 만들어 둠.
+- 새 파일 `battle/devices.js` + 이음 몇 줄(`rules.js`: 차례마다 `dynAct` → 낼 때 `payAct` → 끝나고 `afterAct` · 맞은 피해 `endureHp` / `status.js`: `canUse`에 `canUseRes` · 턴 끝 `turnDevices` · 공격 · 방어 · 기동에 모드 배율).
+- 칸: 개수 칸(`SPECIES.res = { 이름: [처음, 최대 | 단계별] }` · `resTurn` · 기술 `gain` / `spend` / `need` / `hitsBy` / `powBy`) · 표식 배율 `scale` · 시한 `delay` · 메아리 `echo` · 버티기 `SPECIES.endure` · 모드 `setMode` / `needMode` / `lockMode` · 상태 소비 `consume` · `bonusIf` · 조작 `steal` / `dispel` / `seal` / `reveal` · 운 `luck`(0배 다음 = 가장 큰 배율) · 비용 `hpCost` / `allSun`. 전투 화면 알림: 터짐 · 체력 내기 · 버티기 · 햇빛 빼앗기.
+- 지금 기술은 이 칸을 안 써서 `RULES_VER` 그대로(4) · 종 리그전 결과 바뀐 것 없음. 시험 `devices` 40 · `rules.test` 20 · status · edgecases · matchup · cards · loadout · savesafety · league · roomsave 28 · `server` 51 통과. 친구 서버엔 안 올림(동작 변화 없음 — 다음에 올릴 때 같이 감).
+- 남음: 경기장 효과 · 2턴 기술 · 반응(맞을 때) · 개수 칸 화면 표시.
+
 ### 2026-10-18 (86) — 바닥 규칙 2단계 끝: 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(`RULES_VER` 4)
 - 사용자 "3번까지 다 해"(설계 [species-identity](superpowers/specs/2026-10-18-v2-species-identity-design.md) §1). 엔진 = `battle/rules.js`(공격을 타마다 도는 고리로 · `rollFirst` 순서 손잡이) · `status.js`(armor · stealth · clone).
 - **방어구** `armor`: 최대 체력 15%씩 쌓임(상한 50%) · 깨질 때까지 · 보호막 다음에 막음 · 망치 기술은 ×1.5로 깎음 · 지속 피해 통과 · 3:3 교체해도 남음 · 체력 막대 끝 금속 칸 + '방어구 -n' · 부서지면 알림. 연결 = 바위 갑옷(가이아) · 비늘 갑옷(드레이크) · 수정 껍데기(스톤) · 거북 등껍질(현무) · 변이 카드 비늘 방패.
