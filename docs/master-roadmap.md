@@ -64,6 +64,7 @@
 | **[android-capacitor-wrapper.md](android-capacitor-wrapper.md)** | Capacitor 안드로이드 포장·APK 빌드 절차, 네이티브 세이브 | #9 빌드·출시 |
 | **[superpowers/specs/2026-10-16-v2-mvp-design.md](superpowers/specs/2026-10-16-v2-mvp-design.md)** | **v2 MVP(2026-10-16)** — 게임 한 바퀴 · 서버 구조(로그인 · 자동 저장 · 봇 판 서버 진행 · 친구 대결 방) · **내가 정한 미룬 논의(§3, 사용자 검수 대상)** · 화면 고침 · 플레이 기록·보고서 · 시험 · 다음 | **v2 서버·MVP 작업의 진입점** |
 | **[superpowers/specs/2026-10-18-v2-species-identity-design.md](superpowers/specs/2026-10-18-v2-species-identity-design.md)** | **v2 종 개성 · 전투 개편** — 숫자 규칙·방어태세·저장 안전 일부 구현, 방어구·관통·연타·은신·분신 및 종 개성 후속은 미구현. 절별 구현 현황을 확인 | 전투 규칙 · 종 기술 · 랭크 · 저장 옮기기 작업 전 |
+| **[lore/plant-characters.md](lore/plant-characters.md)** | **식물 캐릭터 · 이야기 메모(2026-10-18~)** — 종마다 부제 · 컨셉 · 성격(사용자 글 그대로) · 말투 · 관계 · 외형 메모. 사용자 계획 = 대사 · 식물끼리 관계 등 살아 있는 스토리 | 종 설계를 받을 때마다 같이 갱신 · 스토리 · 대사 작업 전 |
 | **[benchmark-proposals.md](benchmark-proposals.md)** | 유사 게임 분석 + 업데이트 제안 **선택 시트**(방치/리텐션/엔드게임/번식/PvP 등 A~D 택1) | 다음 방향 정할 때·사용자 선택 대기 |
 | **[feature-designs.md](feature-designs.md)** | 위 8대 항목의 **구현 직전 상세 설계**(선택지별 동작·UI·데이터모델·구현방식·난이도) | 항목 확정 후 구현 직전 참조 |
 | **[handoff-next.md](handoff-next.md)** | **🔖 인계 문서** — 기기 바꿔 이어갈 때 가장 먼저 읽기(현황·선택 대기 8항목·재개 절차) | 새 세션/다른 기기 시작 시 |
