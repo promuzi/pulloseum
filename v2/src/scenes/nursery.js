@@ -395,17 +395,13 @@ export const nursery = {
     }
     if (r.ups.some(u => u.draft)) openDraft(app, p);   // 레벨업 = 카드 고르기(받은 것 판이 있으면 그 뒤에)
   },
-  // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
-  evolve(app, p) {
-    const lg = evolveLeague(app.state, p);
-    if (lg && lg.had) return ask(app, `진화하면 ${LEAGUES[lg.to].name}로 바뀌어요`, `${LEAGUES[lg.from].short} 리그 ${lg.T.tier} ${lg.T.round}(${lg.T.wins}승 ${lg.T.losses}패)는 처음부터 다시 해요`, () => this.doEvolve(app, p), '진화');
-    return this.doEvolve(app, p);
-  },
+  // 진화: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 떠나는 리그 기록은 그대로 보관(2026-10-18, 전엔 처음부터라 한 번 물었음)
+  evolve(app, p) { return this.doEvolve(app, p); },
   async doEvolve(app, p) {
     const from = bigKey(p.key, stageKey(p)), pot = p.pot;
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
-    if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
+    if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요` + (r.league.kept ? ` — ${LEAGUES[r.league.from].short} 리그 기록은 그대로` : ''));
     else if (r.ivUp && Object.keys(r.ivUp).length) app.toast('개체값 ' + Object.entries(r.ivUp).map(([k, n]) => `${STAT_NAME[k]} +${n}`).join(' · '));   // 진화 = 개체값 무작위로 오름(2026-10-18)
     openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });   // 진화 연출 → 카드 고르기(scenes/draft.js)
   },

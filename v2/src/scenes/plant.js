@@ -497,18 +497,14 @@ export const plant = {
     if (up) { app.toast(`Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}`); const box = r.ups.find(u => u.box); if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
     if (r.ups.some(u => u.draft)) openDraft(app, p);   // 레벨업 = 카드 고르기(받은 것 판이 있으면 그 뒤에)
   },
-  // 진화 전: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 지금 리그에 진행 중인 판이 있으면 한 번 묻기(처음부터 다시라서)
-  evolve(app, p) {
-    const lg = evolveLeague(app.state, p);
-    if (lg && lg.had) return ask(app, `진화하면 ${LEAGUES[lg.to].name}로 바뀌어요`, `${LEAGUES[lg.from].short} 리그 ${lg.T.tier} ${lg.T.round}(${lg.T.wins}승 ${lg.T.losses}패)는 처음부터 다시 해요`, () => this.doEvolve(app, p), '진화');
-    return this.doEvolve(app, p);
-  },
+  // 진화: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 떠나는 리그 기록은 그대로 보관(2026-10-18, 전엔 처음부터라 한 번 물었음)
+  evolve(app, p) { return this.doEvolve(app, p); },
   // 진화 = 어두운 화면에서 옛 모습이 깜빡이다 번쩍 → 새 모습 → 바로 카드 고르기(scenes/draft.js — 2026-10-18 사용자 "진화 시 바로 진화 모션 보여 주면서 다음에 반드시 정하고 가야 함")
   async doEvolve(app, p) {
     const from = bigKey(p.key, stageKey(p)), pot = p.pot;
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
-    if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요`);
+    if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요` + (r.league.kept ? ` — ${LEAGUES[r.league.from].short} 리그 기록은 그대로` : ''));
     else if (r.ivUp && Object.keys(r.ivUp).length) app.toast('개체값 ' + Object.entries(r.ivUp).map(([k, n]) => `${STAT_NAME[k]} +${n}`).join(' · '));   // 진화 = 개체값 무작위로 오름(2026-10-18)
     this.tab = 'skill'; this.sub = null; this.scrollY = 0;
     openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });

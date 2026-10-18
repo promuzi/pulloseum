@@ -7,7 +7,7 @@
 import { randomInt } from 'node:crypto';
 import { setupPvp, pvpTurn, setupPvp3, pvpTurn3, viewFor, turnFor, mirrorEvents, makeRng } from '../v2/src/game/fight.js';
 import { sendIn, aliveOf, makeTeamBattle } from '../v2/src/battle/team.js';
-import { STAGES } from '../v2/src/game/catalog.js';
+import { STAGES, RULES_VER } from '../v2/src/game/catalog.js';
 import { fail } from './game.mjs';
 import { plantLite } from './log.mjs';
 
@@ -28,8 +28,8 @@ export function makeRooms({ game, log, q: db = null }) {
   const json = o => JSON.parse(JSON.stringify(o));
   function packB(B) {
     if (!B) return null;
-    if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swOrder: !!B.swOrder, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
-    return { mode: '1v1', turn: B.turn, over: B.over, me: json(B.me), foe: json(B.foe) };
+    if (B.mode === 'swap3') return { mode: 'swap3', rv: RULES_VER, turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swOrder: !!B.swOrder, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
+    return { mode: '1v1', rv: RULES_VER, turn: B.turn, over: B.over, me: json(B.me), foe: json(B.foe) };
   }
   function unpackB(o) {
     if (!o) return null;
@@ -392,10 +392,11 @@ export function makeRooms({ game, log, q: db = null }) {
     let rows = [];
     try { rows = db.allRooms.all(); } catch (e) { console.error('방 읽기 실패', e && e.message); return; }
     for (const row of rows) {
-      let r = null;
-      try { r = unpack(JSON.parse(row.data)); } catch (e) { console.error('방 되살리기 실패', row.code, e && e.message); }
+      let r = null, oldRules = false;
+      try { const o = JSON.parse(row.data); oldRules = !!(o.B && (o.B.rv || 1) !== RULES_VER); r = unpack(o); } catch (e) { console.error('방 되살리기 실패', row.code, e && e.message); }
       if (!r || !r.members || !r.members.length || now - (r.touched || 0) > IDLE_MS) { try { db.delRoom.run(row.code); } catch {} continue; }
-      if (r.phase === 'battle' && (!r.B || !r.sides)) Object.assign(r, { phase: 'lobby', B: null, sides: null, moves: {}, sends: null });
+      // 대결 중이던 방: 판이 깨졌거나 전투 계산이 바뀌어 올라왔으면(RULES_VER) 승패 없이 대기실로(2026-10-18 업데이트 안전)
+      if (r.phase === 'battle' && (!r.B || !r.sides || oldRules)) Object.assign(r, { phase: 'lobby', B: null, sides: null, moves: {}, sends: null });
       if (r.phase === 'battle') r.deadline = Math.max(r.deadline || 0, now + RESUME_MS);
       for (const m of r.members) { m.gone = null; seen.set(m.uid, now); byUser.set(m.uid, r.code); }
       rooms.set(r.code, r);

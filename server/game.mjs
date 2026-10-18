@@ -6,7 +6,7 @@ import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
 import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
-import { LEAGUES } from '../v2/src/game/catalog.js';
+import { LEAGUES, RULES_VER } from '../v2/src/game/catalog.js';
 
 export const newRng = () => makeRng(randomInt(1, 2 ** 31 - 1));
 const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
@@ -18,8 +18,23 @@ export function makeGame({ q, log }) {
   const load = uid => {
     const r = q.save.get(uid);
     if (!r) fail('저장된 게임이 없어요');
-    return { s: JSON.parse(r.state), ver: r.version };
+    const s = JSON.parse(r.state);
+    let ver = r.version;
+    if ((s.ver || 0) < L.SAVE_VER) {   // 저장 판 옮기기(2026-10-18 업데이트 안전): 옮기기 직전 원본을 계정마다 최근 3개 보관 → 옮긴 것을 바로 저장(한 번만 보관되게)
+      const t = Date.now();
+      q.addBackup.run(uid, s.ver || 0, t, r.state); q.trimBackups.run(uid, uid);
+      const from = L.migrate(s);
+      q.putSave.run(uid, JSON.stringify(s), t); ver++;
+      log(uid, 'migrate', { from, to: L.SAVE_VER }, t);
+    }
+    return { s, ver };
   };
+  // 규칙 판 번호가 다른 판(전투 계산을 바꿔 올림) = 승패 없이 닫음(진 판 아님 — 2026-10-18 업데이트 안전)
+  const oldRules = spec => (spec.rv || 1) !== RULES_VER;
+  function voidRow(uid, b, now) {
+    q.doneBattle.run(4, now, b.id);
+    log(uid, 'battle.void', { mode: JSON.parse(b.spec).mode, why: 'rules' }, now);
+  }
   const save = (uid, s, now) => { L.syncTimers(s, now); q.putSave.run(uid, JSON.stringify(s), now); };
 
   // ── 새 게임(가입 때) ──
@@ -72,7 +87,8 @@ export function makeGame({ q, log }) {
   function battleStart(uid, now) {
     const open = q.openBattle.get(uid);
     let forfeited = null;
-    if (open && now - open.created < RESUME_MS) {
+    if (open && oldRules(JSON.parse(open.spec))) { voidRow(uid, open, now); forfeited = 'void'; }
+    else if (open && now - open.created < RESUME_MS) {
       // 안 끝난 판 = 이어서 — 단, 그사이 고른 식물이 바뀌었으면(진화 · 다른 식물 · 3:3 팀 · 판 종류) 이어 하지 않고 진 판으로 정리한 뒤 새 판
       //  (2026-10-17 사용자 "진화 막 시킨 후 다음 전투에는 진화전 모습이네" — 판을 시작할 때 저장한 식물 그대로 이어서 열었음)
       const spec = JSON.parse(open.spec), now0 = mineOf(load(uid).s);
@@ -89,7 +105,7 @@ export function makeGame({ q, log }) {
     const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier));
     const T = s.tournament, trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${T.name} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
-    const spec = { seed, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ...(mode === 'swap3' ? { swapCd: 2, swOrder: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
+    const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ...(mode === 'swap3' ? { swapCd: 2, swOrder: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');
     q.addBattle.run(id, uid, mode, JSON.stringify(spec), '[]', now, now);
     log(uid, 'battle.start', { mode, mine: mine.map(plantLite), foes: foes.map(plantLite), tier: T.tier, round: T.round }, now);
@@ -98,6 +114,7 @@ export function makeGame({ q, log }) {
   function battleTurn(uid, id, act, now, turn = null) {
     const b = q.battle.get(String(id || ''), uid);
     if (!b || b.done) fail('끝났거나 없는 판이에요');
+    if (oldRules(JSON.parse(b.spec))) { voidRow(uid, b, now); fail('게임이 업데이트되어 이 판은 승패 없이 끝났어요 — 다시 시작해 주세요'); }
     const spec = JSON.parse(b.spec), acts = JSON.parse(b.acts), B = replayBot(spec, acts);
     // 화면이 아는 턴과 다르면(응답을 못 받고 다시 보냄 등) 수를 넣지 않고 지금 판 모습만 돌려줌 → 화면이 다시 맞춤
     if (turn != null && (turn !== B.turn || (spec.mode === 'swap3' && act && act.kind === 'send' && B.need !== 'me'))) return { resync: true, view: viewOf(B), over: B.over };
@@ -111,6 +128,7 @@ export function makeGame({ q, log }) {
   function battleForfeit(uid, id, now) {
     const b = q.battle.get(String(id || ''), uid);
     if (!b || b.done) fail('끝났거나 없는 판이에요');
+    if (oldRules(JSON.parse(b.spec))) { voidRow(uid, b, now); return { reward: { void: true }, state: load(uid).s }; }   // 옛 규칙 판에서 기권 = 진 판 아님
     return forfeitRow(uid, b, now, 'flag');
   }
 

@@ -20,7 +20,7 @@ export const matching = {
   // 서버에 판을 열어 달라고 함(상대·씨앗은 서버가 정함 — 안 끝난 판이 있으면 그 판을 이어서)
   ask(app) {
     this.asked = true;
-    (app.settle ? app.settle() : Promise.resolve()).then(() => bot.start(app)).then(r => { this.res = r; if (r && r.forfeited) app.toast('식물이 바뀌어서 하던 판은 진 것으로 정리했어요'); }).catch(e => { app.toast(e.message); if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } });
+    (app.settle ? app.settle() : Promise.resolve()).then(() => bot.start(app)).then(r => { this.res = r; if (r && r.forfeited) app.toast(r.forfeited === 'void' ? '게임이 업데이트되어 하던 판은 승패 없이 끝냈어요' : '식물이 바뀌어서 하던 판은 진 것으로 정리했어요'); }).catch(e => { app.toast(e.message); if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } });
   },
   draw(app) {
     const { g, W, H, t } = app;

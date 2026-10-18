@@ -115,7 +115,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       if (u.provider === 'google') { if (String(b.confirm || '').trim() !== '지우기') throw new Err("확인 칸에 '지우기'라고 써 주세요"); }
       else { const row = q.userByLogin.get(u.login); if (!row || !checkPass(String(b.password || ''), row.pass)) throw new Err('비밀번호가 맞지 않아요'); }
       rooms.leave(u.id, now);
-      q.delUserSessions.run(u.id); q.delSave.run(u.id); q.delBattles.run(u.id); q.delEvents.run(u.id); q.delCouponUses.run(u.id); q.delUser.run(u.id);
+      q.delUserSessions.run(u.id); q.delSave.run(u.id); q.delBattles.run(u.id); q.delEvents.run(u.id); q.delCouponUses.run(u.id); q.delBackups.run(u.id); q.delUser.run(u.id);
       return { ok: true };
     },
     'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: pub(u), ...game.state(u.id, now) }; },
@@ -152,6 +152,16 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     'POST /api/room/emote': (req, b, now) => rooms.emote(authed(req, now).id, b.i, now),
     // 플레이 기록 보고서용 내보내기(server/report.mjs --url) — 관리 열쇠가 맞을 때만, 아니면 없는 주소처럼
     'GET /api/admin/export': (req) => { if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요'); return { users: q.exportUsers.all(), events: q.exportEvents.all(), saves: q.exportSaves.all() }; },
+    // 저장 판 옮기기 직전 원본(2026-10-18 업데이트 안전 — game.mjs load): 계정 번호로 목록 · 하나를 골라 그 계정 저장으로 되돌리기(다음 불러오기 때 다시 옮겨짐)
+    'POST /api/admin/backups': (req, b) => { if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요'); return { backups: q.backups.all(+b.uid) }; },
+    'POST /api/admin/restore': (req, b, now) => {
+      if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요');
+      const r = q.backup.get(+b.id, +b.uid);
+      if (!r) throw new HttpErr(404, '그 보관본이 없어요');
+      q.putSave.run(+b.uid, r.state, now);
+      log(+b.uid, 'restore', { id: r.id, ver: r.ver }, now);
+      return { ok: true, ver: r.ver };
+    },
     // 쿠폰 만들기 · 고치기 · 지우기 · 보기(관리 열쇠 — server/coupon.mjs). max = 쓸 수 있는 계정 수(0 = 끝없이) · days = 며칠 동안(0 = 끝없이)
     'POST /api/admin/coupon': (req, b, now) => {
       if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요');

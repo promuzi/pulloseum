@@ -4,7 +4,7 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
-  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps } from './catalog.js';
+  LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED } from './catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, formCards, isSkillCard } from './cards.js';
 
 export class Err extends Error {}
@@ -33,7 +33,34 @@ export function newGame({ nickname, starter }, rng, now) {
   for (let i = 0; i < 2; i++) s.seeds.push(seedOf(s, rollSpecies(rng, 'common'), rng));
   s.plants[0].cards[0] = rollCard(rng, 'normal');   // 처음 식물 = 일반 카드 한 장(카드 칸이 있다는 걸 바로 보게 — 2026-10-17)
   s.league = 'sprout'; leaguesOf(s); seasonSync(s, now);
+  s.ver = SAVE_VER;
   return s;
+}
+// ── 저장 판 번호 · 옮기기(2026-10-18 업데이트 안전 — species-identity 설계 §7) ──
+//  서버가 불러올 때 s.ver < SAVE_VER 이면 원본을 보관한 뒤(server/game.mjs load) 단계를 번호 순서대로 한 번씩. 기능마다 붙은 p.skills.v4~v8 표시는 그대로
+//  (이어 하는 옛 판 다시 계산이 읽음). 앞으로 저장 모양을 바꾸면 MIGRATIONS 에 단계를 더하고 SAVE_VER +1 · id를 바꾸면 catalog.js RENAMED 에 적고 +1.
+export const SAVE_VER = 1;
+const MIGRATIONS = [
+  () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
+];
+export function migrate(s) {
+  const from = s.ver || 0;
+  for (let v = from; v < SAVE_VER; v++) MIGRATIONS[v](s);
+  if (from < SAVE_VER) remapIds(s);
+  s.ver = SAVE_VER;
+  return from;
+}
+// 이름을 바꾼 기술 · 카드를 새 id로(전투 칸 · 보관 · 지운 기술 · 배운 기술 · 패시브 칸 · 패시브 보관 · 가방) — 바꾼 [옛, 새] 목록
+export function remapIds(s) {
+  const out = [], to = (map, id) => (id && map[id] ? (out.push([id, map[id]]), map[id]) : id);
+  const any = id => (RENAMED.card[id] ? to(RENAMED.card, id) : to(RENAMED.skill, id));   // 전투 칸엔 기술 · 기술 카드가 섞임
+  for (const p of [...(s.plants || []), ...(s.storage || [])]) {
+    const S = p.skills;
+    if (S) for (const k of ['battle', 'store', 'forgot', 'learned']) if (Array.isArray(S[k])) S[k] = S[k].map(any);
+    for (const k of ['cards', 'pstore']) if (Array.isArray(p[k])) p[k] = p[k].map(id => to(RENAMED.card, id));
+  }
+  for (const id of Object.keys(s.cards || {})) if (RENAMED.card[id]) { const n = s.cards[id], nid = to(RENAMED.card, id); delete s.cards[id]; s.cards[nid] = (s.cards[nid] || 0) + n; }
+  return out;
 }
 
 // ── 식물 ──
@@ -286,7 +313,7 @@ export function evolve(s, id, rng) {
   const lg = evolveLeague(s, p);
   p.stage++; p.lv = 1; p.gxp = 0;
   let league = null;
-  if (lg) { const T = s.tournament; T.round = ROUNDS[0]; T.wins = 0; T.losses = 0; setLeague(s, lg.to); league = { from: lg.from, to: lg.to, reset: lg.had }; }
+  if (lg) { setLeague(s, lg.to); league = { from: lg.from, to: lg.to, kept: lg.had }; }   // 떠나는 리그 기록은 그대로 보관(2026-10-18 사용자 "추천대로" — 전엔 예선부터)
   const ivUp = {};   // 진화 = 개체값이 무작위로 1~3 오름(최대 아닌 칸에 하나씩 — 2026-10-18 사용자 "진화 시 개체값이 범위 내에서 랜덤하게 오르는 것도")
   for (let n = 1 + Math.floor(rng() * 3); n > 0; n--) { const room = IV_KEYS.filter(k => (p.ivs[k] || 0) < IV_MAX); if (!room.length) break; const k = room[Math.floor(rng() * room.length)]; p.ivs[k] = (p.ivs[k] || 0) + 1; ivUp[k] = (ivUp[k] || 0) + 1; }
   const d1 = addDraft(p, 'evo'), d2 = addDraft(p, 'evo', 'passive'), got = [], draft = !!(d1 || d2);   // 진화 = 새 기술 후보에서 고르기 → 패시브 고르기(전엔 한두 개를 바로 배움 — 2026-10-18)
@@ -884,7 +911,7 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
         }
         else { T.round = ROUNDS[i + 1]; r.parts = (r.parts || 0) + 2; }   // 라운드 통과 = 부품 2
         T.wins = 0; T.losses = 0; r.round = T.round;
-      } else if (T.losses >= 3) { T.wins = 0; T.losses = 0; T.round = ROUNDS[0]; r.reset = true; }
+      } else if (T.losses >= 3) r.reset = loseRound(T);
     }
   }
   give(s, r);
@@ -897,6 +924,13 @@ export function battleForfeit(s, mode) {
   if (mode === 'swap3') { s.swap3.losses++; return { forfeit: true }; }
   const T = s.tournament; T.losses++;
   const r = { forfeit: true };
-  if (T.losses >= 3) { T.wins = 0; T.losses = 0; T.round = ROUNDS[0]; r.reset = true; }
+  if (T.losses >= 3) r.reset = loseRound(T);
   return r;
+}
+// 한 라운드에서 3패(2026-10-18 사용자 "추천대로"): 그 라운드 처음부터(승패만 0) = 'round' · 마스터 이상은 예선부터 = 'qual'
+function loseRound(T) {
+  T.wins = 0; T.losses = 0;
+  if (TIERS.indexOf(T.tier) < TIERS.indexOf('마스터')) return 'round';
+  T.round = ROUNDS[0];
+  return 'qual';
 }

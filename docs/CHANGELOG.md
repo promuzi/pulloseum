@@ -2,6 +2,14 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-10-18 (82) — 업데이트 안전 · 진화해도 리그 기록 보관 · 3패 = 그 라운드 처음부터
+- 사용자 "순서대로 추천대로 고"(설계 = [species-identity](superpowers/specs/2026-10-18-v2-species-identity-design.md) §5 · §6 · §7 1단계). 바닥 규칙 · 종 기술은 아직(한도 때문에 다음 묶음).
+- **저장 판 번호** `logic.js SAVE_VER · migrate · remapIds` + `catalog.js RENAMED`(이름 바꾼 기술 · 카드 → 새 id, 모르는 id는 지우지 않음). 서버가 옛 판 저장을 불러오면 **옮기기 직전 원본을 계정마다 최근 3개 보관**(`save_backups` 표) 뒤 옮겨 저장 · 관리 열쇠 `POST /api/admin/backups {uid}` · `POST /api/admin/restore {uid, id}` · 계정 지우면 같이 지움.
+- **전투 규칙 판 번호** `catalog.js RULES_VER`(봇 판 spec.rv · 친구 방 B.rv): 다른 번호로 시작한 판은 이어 하지 않고 **승패 없이 닫음**(진 판 아님 — 판 시작 · 한 수 · 기권 모두, 친구 방은 대기실로). 화면 안내 '게임이 업데이트되어 …'.
+- **진화해도 떠나는 리그 기록 보관**(2026-10-17 '처음부터'를 바꿈 — 친구 '결승이었는데 무제한으로' 건의 유력 원인) · 진화 전 확인창 없앰 · 알림 '… 리그 기록은 그대로'.
+- **3패 = 그 라운드 처음부터**(승패만 0) · 마스터 이상은 예선부터 · 결과 화면 '3패 — 이 라운드 처음부터'.
+- 시험: 새 `tools/test/savesafety.mjs`(9) · `league.mjs`(새 규칙으로 두 줄 고침) · `server.mjs` 51/51 · edgecases · cards · loadout 통과. `cf/test_cf.mjs`는 이 PC에 wrangler 경로가 없어 못 돌림. **친구 서버엔 아직 안 올림.**
+
 ### 2026-10-18 (81) — 친구 서버에 올림(D 드라이브 PC 첫 배포 · 로그인 도구)
 - 사용자 "작업하고 올려 친구 서버에도" → (70)~(80) 전부 https://pulloseum.getchat.workers.dev 에 올림(버전 136400c6) · `cf/pagecheck.mjs` 준비 됨 · 빠진 그림 0 · 오류 0. 올리기 전 Cloudflare 실행기 시험 50/50(이 PC wrangler 3.114).
 - 이 PC는 Cloudflare 로그인이 없었고 `wrangler login` 이 2분만 기다려 승인 뒤 'localhost 연결 거부' → 새 `cf/login.mjs`(같은 OAuth · 기다림 제한 없음 · 휴대폰 승인은 `--finish "<주소>"`). 절차 = `cf/배포.md`.

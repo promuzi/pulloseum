@@ -40,8 +40,8 @@ ok(old.league === 'sprout' && old.tournament.tier === '골드' && old.leagues.sp
   p.lv = 6; const q2 = evolveLeague(e, p);
   ok(q2 && q2.from === 'sprout' && q2.to === 'growing' && q2.had, '진화 전 = 새싹 → 자람 · 진행 중(1승 1패) 알림');
   const r = evolve(e, p.uid, rng);
-  ok(r.league && r.league.to === 'growing' && r.league.reset && e.league === 'growing', '진화 = 자람 리그로');
-  ok(e.leagues.sprout.round === '예선' && e.leagues.sprout.wins === 0 && e.leagues.sprout.losses === 0 && e.leagues.sprout.tier === '브론즈', '떠난 새싹 리그 = 이번 판 처음부터(단계는 그대로)');
+  ok(r.league && r.league.to === 'growing' && r.league.kept && e.league === 'growing', '진화 = 자람 리그로');
+  ok(e.leagues.sprout.round === '예선' && e.leagues.sprout.wins === 1 && e.leagues.sprout.losses === 1 && e.leagues.sprout.tier === '브론즈', '떠난 새싹 리그 = 기록 그대로 보관(2026-10-18 — 전엔 처음부터)');
   p.lv = 6; const r2 = evolve(e, p.uid, rng);
   ok(r2.league && r2.league.to === 'open' && !r2.league.reset && e.league === 'open', '다 자람 = 무제한 · 진행 없음이면 reset false');
   // 고른 식물이 아니면 리그 그대로
