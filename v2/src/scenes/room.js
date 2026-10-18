@@ -8,6 +8,7 @@ import { net, openStream, room as R, act } from '../net/api.js';
 import { openForm } from '../core/form.js';
 import { SPECIES, STAGES } from '../game/catalog.js';
 import { stageName, lvOf } from '../game/view.js';
+import { openTeamPick } from './teampick.js';
 
 // 친구 대결 방(2026-10-16 사용자 "몇몇 친구랑 할 수 있게 · 임의로 방만들기와 초대코드 등"):
 //  방 만들기 → 6자 코드(전광판) · 코드/링크 복사 → 친구가 코드로 들어옴 → 저마다 식물 고르고 준비 → 둘 다 준비면 셔터가 닫히며 대결.
@@ -41,7 +42,7 @@ const copy = (app, text, msg) => { try { navigator.clipboard.writeText(text).the
 
 export const room = {
   theme: 'colosseum',
-  enter(p = {}) { this.p = p; this.joinTried = false; this.picker = false; this.teamPick = null; this.busy = false; },
+  enter(p = {}) { this.p = p; this.joinTried = false; this.picker = false; this.busy = false; },
   async call(app, fn) {
     if (this.busy) return; this.busy = true;
     try { const v = await fn(); if (v && v.code !== undefined && app.room) app.room.view = v; return v; }
@@ -76,7 +77,6 @@ export const room = {
     if (!v) return this.lobby(app);
     this.inRoom(app, v);
     if (this.picker) this.pickSheet(app);
-    if (this.teamPick) this.teamSheet(app);
   },
   // 방이 없을 때: 설명 · 방 만들기 · 코드로 들어가기
   lobby(app) {
@@ -142,7 +142,7 @@ export const room = {
             g.text(String(k + 1), fx + 3, fy + 1, { font: 'bold', color: '#ffffff', outline: '#05070b', outlineW: 2 });
           });
           g.text(`${tc[0].name} 먼저`, x + cw / 2, py + 46, { font: 'bold', color: '#e0f0ff', align: 'center' });
-          button(app, 'rm_team', x + 10, py + 94, cw - 20, 20, '팀 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.teamPick = []; else app.toast('준비를 풀고 바꿔요'); } });
+          button(app, 'rm_team', x + 10, py + 94, cw - 20, 20, '팀 바꾸기', { style: 'night', onTap: () => { if (!m.ready) this.openTeam(app, tc); else app.toast('준비를 풀고 바꿔요'); } });
         } else {
           g.text('스마트팜에', x + cw / 2, py + 18, { font: 'bold', color: '#ffb0a0', align: 'center' });
           g.text('식물이 셋 있어야 해요', x + cw / 2, py + 36, { font: 'bold', color: '#ffb0a0', align: 'center' });
@@ -195,28 +195,12 @@ export const room = {
       app.input.hit(id, 16, ry, W - 32, 38, () => { this.picker = false; this.call(app, () => R.pick(p.uid)); });
     });
   },
-  // 3:3 팀 고르기: 누른 순서 = 나설 순서(1 · 2 · 3), 다시 누르면 빠짐 → 셋이면 '이 팀으로'(홈의 3:3 팀으로도 저장 — 팀 정의는 하나)
-  teamSheet(app) {
-    const { g, W, H, state: s } = app, sel = this.teamPick, n = s.plants.length, h = 84 + n * 42, y = Math.max(28, H - h - 12);
-    g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
-    app.input.hit('tp_block', 0, 0, W, H, () => { this.teamPick = null; });
-    holo(g, 10, y, W - 20, h, T.card || T.panel, 16);
-    app.input.hit('tp_in', 10, y, W - 20, h, () => {});
-    g.text('3:3 팀 고르기', 22, y + 10, { font: 'head', color: T.ptext.main });
-    s.plants.forEach((p, i) => {
-      const ry = y + 34 + i * 42, id = 'tp_' + i, k = sel.indexOf(p.uid), pr = app.input.isPressed(id);
-      holo(g, 16, ry + (pr ? 1 : 0), W - 32, 38, k >= 0 ? { fill: '#0d2a1c', fill2: '#123622', frame: '#7cf0a0', frameHi: '#d8ffe4', frameLo: '#2a6a44' } : T.deep, 16);
-      g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
-      g.text(p.name, 60, ry + 5, { font: 'bold', color: T.ptext.main });
-      g.text(`${stageName(p)} Lv${lvOf(p)}`, 60, ry + 21, { color: T.ptext.sub });
-      g.img(icon(SPECIES[p.key].el), W - 66, ry + 13);
-      if (k >= 0) { g.rect(W - 46, ry + 9, 20, 20, '#05070b'); g.rect(W - 45, ry + 10, 18, 18, k === 0 ? '#f0be7d' : '#7cf0a0'); g.text(String(k + 1), W - 36, ry + 12, { font: 'bold', color: '#05070b', align: 'center' }); }
-      app.input.hit(id, 16, ry, W - 32, 38, () => { if (k >= 0) sel.splice(k, 1); else if (sel.length < 3) sel.push(p.uid); else app.toast('셋까지 골라요'); });
-    });
-    button(app, 'tp_ok', 16, y + h - 44, W - 32, 32, sel.length === 3 ? '이 팀으로' : `${sel.length}/3 골랐어요`, { style: 'gold', font: 'bold', disabled: sel.length !== 3 || this.busy, onTap: () => this.saveTeam(app, [...sel]) });
+  // 3:3 팀 고르기 = 홈과 같은 창(scenes/teampick.js — 2026-10-18, 전엔 방 전용 목록이라 식물이 많으면 화면 밖으로 넘쳤음) · 처음 고른 셋 = 지금 방 팀(없으면 홈 팀)
+  openTeam(app, tc) {
+    const s = app.state, home = (s.team || []).map(i => s.plants[i] && s.plants[i].uid).filter(Boolean), cur = tc.map(t => t.uid).filter(Boolean);
+    openTeamPick(app, cur.length === 3 ? cur : home, uids => this.saveTeam(app, uids));
   },
   async saveTeam(app, uids) {
-    this.teamPick = null;
     try { await act(app, 'setTeam', { team: uids }); } catch (e) { app.toast(e.message); return; }
     this.call(app, () => R.team(uids));
   },

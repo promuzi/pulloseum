@@ -9,6 +9,7 @@ import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../gam
 import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
+import { openTeamPick } from './teampick.js';
 import { inkOf } from '../core/text.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
 
@@ -311,7 +312,7 @@ export const home = {
         app.input.hit(id, lx, ly + 20, lw, 50, () => { if (s.league !== k) { setLeague(s, k); app.act('setLeague', { league: k }); } this.modeSheet = false; });
       });
     }
-    if (swapOn) {   // 내 팀 셋: 칸을 누르면 팀에 없는 다음 식물로 바뀜
+    if (swapOn) {   // 내 팀 셋: 칸을 누르면 팀 고르기 창(scenes/teampick.js — 2026-10-18, 전엔 팀에 없는 다음 식물로 하나씩 넘어감)
       const ty = y + 34 + MODES.length * 60;
       g.text('내 팀', x + 14, ty + 4, { font: 'label', color: P.sub });
       const team = teamIdx(s);
@@ -320,7 +321,7 @@ export const home = {
         holo(g, tx, yy, 56, 54, T.deep, 16);
         g.clip(tx + 3, yy + 3, 50, 34, () => drawPortrait(g, pl.key, tx + 8, yy + 2, 40, false));
         g.text(pl.name, tx + 28, yy + 38, { color: P.main, align: 'center' });
-        app.input.hit(id, tx, ty, 56, 54, () => { const used = new Set(team), n = s.plants.length; let j = pi; for (let q = 0; q < n; q++) { j = (j + 1) % n; if (!used.has(j)) break; } if (used.has(j)) return; const nt = [...team]; nt[k] = j; s.team = nt; this.teamDirty = true; });
+        app.input.hit(id, tx, ty, 56, 54, () => openTeamPick(app, team.map(i => s.plants[i].uid), uids => { s.team = uids.map(u => s.plants.findIndex(q => q.uid === u)); this.teamDirty = false; app.act('setTeam', { team: uids }); }));
       });
       button(app, 'ms_done', x + w / 2 - 50, ty + 60, 100, 30, '확인', { style: 'gold', font: 'label', onTap: close });
     }

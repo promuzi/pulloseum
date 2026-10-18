@@ -116,6 +116,8 @@ export const SHOTS = [
   ['14_room_lobby', 'room', { demo: 'lobby' }],
   ['14_room_in', 'room', { demo: 'in' }],
   ['14_room_in3', 'room', { demo: 'in3' }],   // 3:3 교체전 방(내 팀 셋)
+  ['14_teampick', 'home', { modes: true, mode: 'swap3' }, { teampick: { sel: [0, 2] } }],   // 3:3 팀 고르기 창(2026-10-18 — 홈 · 친구 방 공용)
+  ['14_teampick_full', 'room', { demo: 'in3' }, { teampick: { sel: [1, 0, 3] } }],
   ['12_nursery_got', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +6', t0: -5000, got: [{ kind: 'credits', n: 31, rar: 0 }, { kind: 'water', n: 2, rar: 1 }, { kind: 'fert', n: 1, rar: 1 }, { kind: 'scion', skill: 'f_ball', rar: 3 }] } }],
   ['12_nursery_got_many', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +90', t0: -9000, sy: 0, got: Array.from({ length: 22 }, (_, i) => i % 2 ? { kind: 'scion', skill: 'f_ball', rar: 3 } : { kind: 'seed', seed: { key: 'flower_grass' }, rar: 2 }) } }],   // 칸이 화면보다 많음 = 칸 줄만 끌어 넘김 · '확인'은 늘 보임(2026-10-18)
   ['12_nursery_got_many_end', 'nursery', {}, { popup: { title: '열매 수확', sub: '경험치 +90', t0: -9000, sy: 9999, got: Array.from({ length: 22 }, (_, i) => i % 2 ? { kind: 'scion', skill: 'f_ball', rar: 3 } : { kind: 'seed', seed: { key: 'flower_grass' }, rar: 2 }) } }],
