@@ -1,0 +1,15 @@
+(node:18340) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/dev/pulloseum/v2/src/art/palette.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\D:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+snow_ballet   변환 완료 · 축척 0.0681 · 기준 밑동 (641, 1020) · 몸 축 -1.4°
+snow_ballet   특성 효과 · twinkle·shine · 광택 칸 852 · 반짝 칸 191
+snow_ballet   묶음 → D:\dev\pulloseum\assets\v2\plants\snow_ballet.png · 68장(깜빡임 4장 포함)
+(node:30316) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/dev/pulloseum/v2/src/art/palette.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\D:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+young   몸 면적 성체의 104% → 축척 ×0.64 → 42%
+snow_ballet   특성 효과 · twinkle·shine · 광택 칸 480 · 반짝 칸 75
+snow_ballet_young 묶음 → D:\dev\pulloseum\assets\v2\plants\snow_ballet_young.png · 68장(깜빡임 4장 포함)
+작은 칸 그림 → D:\dev\pulloseum\assets\v2\small · 검토판 out/conv/small_sheet.png

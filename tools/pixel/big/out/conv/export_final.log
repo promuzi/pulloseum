@@ -1,0 +1,58 @@
+(node:27584) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/dev/pulloseum/v2/src/art/palette.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\D:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+pirate_cactus 변환 완료 · 축척 0.0614 · 기준 밑동 (687, 1131) · 몸 축 -5.1° → -5.1° 돌려 세움
+ranger_vine   변환 완료 · 축척 0.0599 · 기준 밑동 (622, 1159) · 몸 축 0.9°
+miner_cap     변환 완료 · 축척 0.0614 · 기준 밑동 (643, 1128) · 몸 축 -2.3°
+volcano_cap   변환 완료 · 축척 0.0606 · 기준 밑동 (624, 1130) · 몸 축 0.6°
+dandel_aero   변환 완료 · 축척 0.0591 · 기준 밑동 (621, 1174) · 몸 축 -0.7°
+pirate_cactus 특성 효과 · shine·drips · 광택 칸 256 · 물방울 1곳
+ranger_vine   특성 효과 · wind
+miner_cap     특성 효과 · gems·dust · 수정 면 0
+volcano_cap   특성 효과 · spores
+dandel_aero   특성 효과 · wind
+pirate_cactus 묶음 → D:\dev\pulloseum\assets\v2\plants\pirate_cactus.png · 68장(깜빡임 4장 포함)
+ranger_vine   묶음 → D:\dev\pulloseum\assets\v2\plants\ranger_vine.png · 68장(깜빡임 4장 포함)
+miner_cap     묶음 → D:\dev\pulloseum\assets\v2\plants\miner_cap.png · 68장(깜빡임 4장 포함)
+volcano_cap   묶음 → D:\dev\pulloseum\assets\v2\plants\volcano_cap.png · 68장(깜빡임 4장 포함)
+dandel_aero   묶음 → D:\dev\pulloseum\assets\v2\plants\dandel_aero.png · 68장(깜빡임 4장 포함)
+(node:14476) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/dev/pulloseum/v2/src/art/palette.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\D:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+young   몸 면적 성체의 57% → 축척 ×0.86 → 42%
+young   몸 면적 성체의 70% → 축척 ×0.78 → 43%
+young   몸 면적 성체의 52% → 축척 ×0.90 → 42%
+young   몸 면적 성체의 56% → 축척 ×0.86 → 42%
+young   몸 면적 성체의 50% → 축척 ×0.92 → 42%
+pirate_cactus 특성 효과 · shine·drips · 광택 칸 116 · 물방울 0곳
+ranger_vine   특성 효과 · wind
+miner_cap     특성 효과 · gems·dust · 수정 면 0
+volcano_cap   특성 효과 · spores
+dandel_aero   특성 효과 · wind
+pirate_cactus_young 묶음 → D:\dev\pulloseum\assets\v2\plants\pirate_cactus_young.png · 68장(깜빡임 4장 포함)
+ranger_vine_young 묶음 → D:\dev\pulloseum\assets\v2\plants\ranger_vine_young.png · 68장(깜빡임 4장 포함)
+miner_cap_young 묶음 → D:\dev\pulloseum\assets\v2\plants\miner_cap_young.png · 68장(깜빡임 4장 포함)
+volcano_cap_young 묶음 → D:\dev\pulloseum\assets\v2\plants\volcano_cap_young.png · 68장(깜빡임 4장 포함)
+dandel_aero_young 묶음 → D:\dev\pulloseum\assets\v2\plants\dandel_aero_young.png · 68장(깜빡임 4장 포함)
+(node:2392) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/dev/pulloseum/v2/src/art/palette.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\D:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+teen    몸 면적 성체의 83% → 축척 ×0.93 → 72%
+teen    몸 면적 성체의 102% → 축척 ×0.84 → 73%
+teen    몸 면적 성체의 86% → 축척 ×0.91 → 72%
+teen    몸 면적 성체의 91% → 축척 ×0.89 → 72%
+teen    몸 면적 성체의 88% → 축척 ×0.90 → 72%
+pirate_cactus 특성 효과 · shine·drips · 광택 칸 112 · 물방울 1곳
+ranger_vine   특성 효과 · wind
+miner_cap     특성 효과 · gems·dust · 수정 면 0
+volcano_cap   특성 효과 · spores
+dandel_aero   특성 효과 · wind
+pirate_cactus_teen 묶음 → D:\dev\pulloseum\assets\v2\plants\pirate_cactus_teen.png · 68장(깜빡임 4장 포함)
+ranger_vine_teen 묶음 → D:\dev\pulloseum\assets\v2\plants\ranger_vine_teen.png · 68장(깜빡임 4장 포함)
+miner_cap_teen 묶음 → D:\dev\pulloseum\assets\v2\plants\miner_cap_teen.png · 68장(깜빡임 4장 포함)
+volcano_cap_teen 묶음 → D:\dev\pulloseum\assets\v2\plants\volcano_cap_teen.png · 68장(깜빡임 4장 포함)
+dandel_aero_teen 묶음 → D:\dev\pulloseum\assets\v2\plants\dandel_aero_teen.png · 68장(깜빡임 4장 포함)
+작은 칸 그림 → D:\dev\pulloseum\assets\v2\small · 검토판 out/conv/small_sheet.png
