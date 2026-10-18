@@ -1,5 +1,5 @@
 // v2 전투 규칙(순수 계산) — 화면·DOM·시각과 무관, 같은 씨앗이면 같은 결과(서버 재검증 #8). 설계 = docs/superpowers/specs/2026-10-15-v2-battle-rules-design.md
-// 사용자 결정(2026-10-15): 선공은 기동이 빠른 쪽이 '확률로' · 방어는 후공일 때만(선공 방어는 판정이 먼저라 헛됨) · 회피는 선공·후공 모두(같은 날 정정 "회피는 후공도 가능하게") ·
+// 사용자 결정: 선공은 기동이 빠른 쪽이 '확률로' · 방어태세는 순서 무관 방어 ×4, 맞으면 해제(2026-10-18) · 회피는 선공·후공 모두 ·
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
@@ -22,7 +22,11 @@ export const RULES = {
   // 2026-10-18 바닥 규칙 1단계(사용자 "추천대로" — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §1):
   //  방어 = 비율(받는 몫 = defScale ÷ (defScale + 방어), 막는 몫 상한 defCap — 100%에 닿지 않게) · 광역 = 확정 명중(빗나감 · 스침 없음, 치명은 있음) · 위력 areaK배
   defScale: 100, defCap: 0.75, areaK: 0.85,
+  guardDefMult: 4,
 };
+
+// 반복 자세는 추가 방어만 절반. 카드 표시도 같은 배율을 읽는다.
+export const guardDefMult = (skill, repeated = false) => 1 + ((skill.guardDefMult ?? RULES.guardDefMult) - 1) * (repeated ? RULES.repeatStanceK : 1);
 
 // ── 불운 보정 ──
 // 확률 p(0~1)인 일이 ceil(1/p)-1번 연속 실패하면 다음은 확정(메카 core4 pityLimit와 같은 규칙). p가 0이면 보정 없음.
@@ -90,7 +94,7 @@ export function baseDamage(att, def, skill, elemMult = 1) {
 
 // ── 한 턴 해소 ──
 // u = { id, spd, atk, def, acc, eva, crit, hp, st: { miss:{적id:연속}, init:연속, lastStance, critTaken, nextInit, nextCrit }, eff: 상태 효과(status.js) }
-// a = 행동(기술): { act:'attack'|'guard'|'evade'|'skip'|'other', power, area, ranged, contact, guardMult, blockCrit, shift, counter, inflict, ... }
+// a = 행동(기술): { act:'attack'|'guard'|'evade'|'skip'|'other', power, area, ranged, contact, guardDefMult, guardHits, blockCrit, shift, counter, inflict, ... }
 // o = { elemMult, turn } — turn = 턴 번호(상태 효과의 '몇 턴'을 셈)
 // 반환 = { first, events:[…] } — 화면 연출은 events를 순서대로 읽기만 한다
 const stOf = u => (u.st ||= { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null });
@@ -118,8 +122,16 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   else { const r = rollFirst(A, B, rng); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance }); }
   const second = first === A ? B : A;
   const actOf = u => (u === A ? actA : actB);
-  // 자세 성립: 방어 = 후공일 때만(먼저 하면 판정이 끝나 헛됨), 회피 = 순서와 상관없이(선공·후공 모두)
-  const stanceOk = (u, kind) => (kind === 'guard' ? u === second : kind === 'evade');
+  // 태세는 이 턴 안에서만 보유. 후공의 태세도 피격 전에 한 번만 알리고, 자기 차례에 다시 켜지 않는다.
+  const guards = new Map([A, B].map(u => [u, actOf(u).act === 'guard' ? (actOf(u).guardHits ?? 1) : 0]));
+  const shown = new Set();
+  const stanceOk = (u, kind) => kind === 'guard' ? guards.get(u) > 0 : kind === 'evade';
+  const showStance = u => {
+    if (shown.has(u)) return;
+    const a = actOf(u);
+    ev.push({ t: 'stance', who: u.id, kind: a.act, id: a.id, active: stanceOk(u, a.act), repeat: u.st.lastStance === a.act });
+    shown.add(u);
+  };
   // 누가 쓰러지면 그 턴의 남은 행동은 없음(쓰러진 식물을 때리거나 쓰러진 식물이 움직이지 않게 — 2026-10-16 판정 순서 점검)
   for (const [u, foe] of [[first, second], [second, first]]) {
     const a = actOf(u), d = actOf(foe);
@@ -129,8 +141,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); continue; }
     if (a.act === 'skip') { skipped.add(u); continue; }
     if (a.act === 'guard' || a.act === 'evade') {
-      const ok = stanceOk(u, a.act), rep = u.st.lastStance === a.act;
-      ev.push({ t: 'stance', who: u.id, kind: a.act, id: a.id, active: ok, repeat: rep });
+      showStance(u);
       continue;
     }
     if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); continue; }   // 광합성(기본기 — 햇빛 +2)
@@ -141,6 +152,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const still = !mustSkip(foe) && !skipped.has(foe);
     const guardOn = still && d.act === 'guard' && stanceOk(foe, 'guard');
     const evadeOn = still && d.act === 'evade' && stanceOk(foe, 'evade');
+    if (guardOn) showStance(foe);
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
     const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
     u.st.nextCrit = 0;
@@ -150,16 +162,21 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';
     // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓)
     //  카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
-    const hitDmg = (x, y, sk, el) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
+    const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
     const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
     const em = o.elemMult ? o.elemMult(u, foe, a) : 1;   // 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
-    let dmg = Math.round(hitDmg(u, foe, a, em) * RULES.tierMult[tier] * critK * (guardOn ? 1 - (1 - (d.guardMult ?? 0.5)) * rep : 1));
+    let dmg = Math.round(hitDmg(u, foe, a, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK);
     if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
     let absorb = 0;   // 보호막이 먼저 막음
     if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; if (sh.hp <= 0) delete foe.eff.shield; }
     foe.hp = Math.max(0, foe.hp - dmg);
     foe.st.critTaken = tier === 'crit';
     ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, forced: j.forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, list: absorb ? listOf(foe) : undefined });
+    const blocked = guardOn && tier !== 'miss';
+    if (blocked) {
+      guards.set(foe, guards.get(foe) - 1);
+      if (guards.get(foe) === 0) ev.push({ t: 'guardBreak', who: foe.id });
+    }
     const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
     if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
     const refl = (has(foe, 'thorns') ? FX.thorns.reflect : 0) + ((foe.pas && foe.pas.reflect) || 0);   // 반사 버프 + 가시 줄기(카드)
@@ -177,12 +194,12 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (avoided && d.nextCrit) foe.st.nextCrit = d.nextCrit;
     if (avoided && d.nextInit) foe.st.nextInit = d.nextInit;
     if (avoided && d.onAvoid) ev.push({ t: 'status', who: foe.id, to: u.id, status: d.onAvoid, from: d.id });
-    if (guardOn && d.counterPct && foe.hp > 0) { const cd = Math.max(1, Math.round(dmg * d.counterPct)); u.hp = Math.max(0, u.hp - cd); ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id }); }
-    if (guardOn && d.energyOnBlock) ev.push({ t: 'energy', who: foe.id, gain: d.energyOnBlock });
+    if (blocked && dmg > 0 && d.counterPct && foe.hp > 0) { const cd = Math.max(1, Math.round(dmg * d.counterPct)); u.hp = Math.max(0, u.hp - cd); ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id }); }
+    if (blocked && d.energyOnBlock && foe.hp > 0) ev.push({ t: 'energy', who: foe.id, gain: d.energyOnBlock });
     noteFall(foe, ev); noteFall(u, ev);   // 맞은 쪽 먼저(되받아치기 · 반사는 그 뒤에 일어남)
     if (foe.hp <= 0 || u.hp <= 0) {
       // 후공이 잡은 자세(회피 되받아치기로 선공이 쓰러진 경우 등)는 자기 차례가 안 와도 화면에 보이게
-      if (u === first && foe.hp > 0 && (d.act === 'guard' || d.act === 'evade')) ev.push({ t: 'stance', who: foe.id, kind: d.act, id: d.id, active: stanceOk(foe, d.act), repeat: foe.st.lastStance === d.act });
+      if (u === first && foe.hp > 0 && (d.act === 'guard' || d.act === 'evade')) showStance(foe);
       break;
     }
   }

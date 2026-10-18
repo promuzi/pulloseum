@@ -29,7 +29,7 @@ export const STATUS_DESC = {
   bind: '기술 하나가 한 턴 묶임', leech: '턴 끝 체력을 상대가 빨아감(3번)', shade: '그 턴 끝 햇빛이 안 참', gale: '적중 ↓', taunt: '방어·회피 자세를 못 씀',
   root: '교체할 수 없음', weak: '공격 ↓', corrode: '방어 ↓', spore: '턴 끝마다 자라 3이면 피어남(피해 + 햇빛 안 참)', brace: '방금 쉬어서 쉬게 하는 효과에 안 걸림',
   rage: '공격 +25%', wall: '받는 피해 −20%', haste: '기동 +30%(먼저 움직이고 잘 피함)', regen: '턴 끝 체력 5% 회복(3번)', thorns: '붙어서 때린 상대에게 피해 30%를 되돌림',
-  shield: '최대 체력 15%만큼 피해를 먼저 막음', purified: '나쁜 효과가 안 걸림(한 턴)', focus: '다음 공격 치명 +25', guard: '방어 자세 — 받는 피해 ↓', evade: '회피 자세 — 빗나감 ↑', initReady: '다음 턴 먼저 움직이기 쉬움',
+  shield: '최대 체력 15%만큼 피해를 먼저 막음', purified: '나쁜 효과가 안 걸림(한 턴)', focus: '다음 공격 치명 +25', guard: '방어력 4배(연속 2.5배) · 한 번 맞으면 해제', evade: '회피 자세 — 빗나감 ↑', initReady: '다음 턴 먼저 움직이기 쉬움',
 };
 export const SW_ON = { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#4f84bf', text: '#e0f0ff', num: '#8ccfff' };
 export const hexMix = (a, b, k) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };

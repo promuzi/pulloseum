@@ -1,6 +1,7 @@
 # 풀로세움 (Pulloseum) — 프로젝트 안내
 
 > 다른 PC에서 이 폴더를 Codex로 열면 이 파일을 먼저 읽고 맥락을 파악하세요.
+> **현재 구현 경계·다음 작업은 `C:\dev\pulloseum\docs\master-roadmap.md` §1 첫 문단과 아래 인계 문서의 「최근 세션 맥락」이 우선**입니다. 아래의 단일 `index.html` 구조·로컬 저장 설명은 v1이며, 현재 개발은 `v2/`·`server/`입니다.
 > **이어받기(v2 MVP · 서버, 2026-10-16) = `C:\dev\pulloseum\docs\superpowers\specs\2026-10-16-v2-mvp-design.md`**(§3 = 사용자 검수 대기 중인 결정, §7 = 다음 · 서버 실행 `node server/index.mjs` · 친구용 주소 https://pulloseum.getchat.workers.dev — 코드를 바꾸면 `cf/배포.md`대로 다시 올림). 식물 그림 이어받기 = `C:\dev\pulloseum\docs\superpowers\plans\2026-10-15-v2-plant-motion-fx-overnight.md` 맨 위 「최근 세션 맥락」부터. 컨셉 → 도트 변환 순서·검수 = `.claude/skills/plant-sprite/SKILL.md`.
 
 ## ★ 개발 방향은 여기부터 (작업 시작 전 반드시 먼저 읽을 것)

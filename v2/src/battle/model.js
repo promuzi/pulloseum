@@ -10,10 +10,10 @@ export const elemMult = (atkEl, defEl) => (atkEl && (WEAK[defEl] || []).includes
 // 한 번 칠 때 배율 = 속성 상성 × 변이 상성(2026-10-17 — 변이끼리 · 변이 ↔ 속성 · 무기 종류)
 export const hitMult = (u, d, s) => elemMult(s && s.el, d.el) * formMult(u, d, s);
 
-// 기본기(누구나·무료): 평타 · 방어 자세(후공일 때만 성립 — 받는 피해 40%) · 회피 자세(선공·후공 모두 — 빗나감 +22·스침 +14칸)
+// 기본기(누구나·무료): 평타 30 · 방어태세(순서 무관 방어 ×4, 적중 1회 후 해제) · 회피 자세(빗나감 +15·스침 +10칸)
 export const BASICS = [
   { id: 'basic', name: '평타', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null },   // 40 → 30(2026-10-18 방어 비율 공식으로 작은 타가 덜 깎여서)
-  { id: 'guard', name: '방어 자세', act: 'guard', cost: 0, cats: ['guard'], guardMult: 0.4 },
+  { id: 'guard', name: '방어태세', act: 'guard', cost: 0, cats: ['guard'], guardDefMult: 4, guardHits: 1 },
   { id: 'evade', name: '회피 자세', act: 'evade', cost: 0, cats: ['evade'], shift: { miss: 15, graze: 10 } },   // 22 · 14 → 15 · 10(2026-10-18 평균 −35% → −25%, 턴 전체)
   { id: 'sun', name: '광합성', act: 'sun', cost: 0, gain: 2, cats: ['heal_energy'] },   // 이 턴 대신 햇빛 +2(턴 끝 +1과 따로 — 2026-10-18 사용자 "햇빛 채우는 카드")
 ];
@@ -74,7 +74,7 @@ const SKILLS = {
   dandel_aero: [{ id: 's1', name: '솜털 바람', power: 50, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '민들레 폭풍', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'weak' } }],
   drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock', n: 2 } }],
 };
-// 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 40 공격 · 방어 자세 · 회피 자세)은
+// 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 30 공격 · 방어태세 · 회피 자세)은
 //  BASICS 그대로, 이름만 식물마다 [공격, 방어, 회피]. 이름은 임시(사용자가 고칠 수 있음) — 기술 id(basic · guard · evade)는 그대로라 서버·기록·친구 대결과 맞음
 export const BASIC_NAMES = {
   flower_grass: ['잎사귀 치기', '꽃잎 오므리기', '꽃잎 흩날리기'],

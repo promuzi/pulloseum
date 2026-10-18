@@ -15,7 +15,7 @@ import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, hexMix } from './statusLook.js'
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
 import { FX } from '../battle/status.js';
-import { RULES } from '../battle/rules.js';
+import { RULES, guardDefMult } from '../battle/rules.js';
 
 const C = { ink: '#0b1322', body: '#12294a', body2: '#183a62', plate: '#0c1e36', band: '#0c1526', text: '#eef4ff', sub: '#a9cdf0', dim: '#7396bb', line: '#8ccfff', gold: '#ffd890', good: '#ffd890' };
 const GEM = { ok: ['#2d6fe0', '#9fd0ff', '#15347c'], bad: ['#c8392e', '#ff9e8e', '#5c1410'], off: ['#5b616e', '#a7adb8', '#2c3038'] };   // [속, 빛, 그늘]
@@ -26,8 +26,8 @@ const BUFF_KEY = { purify: 'purified' };   // 기술의 self 이름 → 효과 �
 // 기본기 설명(battle/model.js BASICS 규칙 그대로)
 const BASIC_DESC = {
   basic: ['누구나 쓰는 공짜 공격'],
-  guard: ['상대보다 늦게 움직이면', '받는 피해가 40%로 줄어듦', '먼저 움직이면 헛자세'],
-  evade: ['먼저든 늦게든 성립', '상대 공격이 빗나갈 확률 +22', '스칠 확률 +14'],
+  guard: ['순서와 상관없이 방어력 4배', '한 번 맞으면 태세 해제', '연속 사용하면 방어력 2.5배'],
+  evade: ['먼저든 늦게든 성립', '상대 공격이 빗나갈 확률 +15', '스칠 확률 +10'],
 };
 export const LOCK_TEXT = { bind: '덩굴에 묶여 이번 턴 못 씀', taunt: '도발에 넘어가 자세를 못 씀' };
 const LOCK_SHORT = { bind: '묶임', taunt: '도발' };   // 카드 앞면(그림 위)
@@ -144,14 +144,14 @@ function diamond(g, cx, cy, r, [fill, hi, lo]) {
 
 // ── 오른쪽 위 수치 표(2026-10-16 사용자 "방어 공격 회피 등 주요 능력치 아이콘 — %는 %, 고정값이면 그냥 숫자 · 공격은 검 아이콘 위에 숫자 · 방어는 방패 모양에 숫자 · 버프나 디버프 등은 비워 놔") ──
 //  공격 = 검(위력 그대로 — 상대에게 얼마나 들어갈지는 써 보며 상대 방어를 가늠) · 방어 = 방패(막는 몫 %) · 회피 = 빗나감 +% · 보호막 · 회복 = 최대 체력의 %
-//  수는 규칙에서 그대로: 방어 자세 guardMult · 회피 자세 shift.miss(battle/model.js BASICS) · 철벽 · 보호막 · 재생(battle/status.js FX). 분노 · 가속 · 집중 · 반사 · 정화 = 비움
+//  수는 규칙에서 그대로: 방어태세 guardDefMult(방어 배율) · 회피 자세 shift.miss · 철벽 · 보호막 · 재생(FX). 분노 · 가속 · 집중 · 반사 · 정화 = 비움
 const pct = v => Math.round(v * 100) + '%';
 export function statOf(sk, o = {}) {
   if (!sk) return null;
   if (sk.passive) { const L = sk.look || {}; return sk.badge ? { kind: 'pill', txt: sk.badge[0], icon: null, col: [hexMix(L.col || '#5fb3d9', C.ink, 0.25), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)], label: '효과' } : null; }
   if (sk.act === 'attack') return sk.power ? { kind: sk.area ? 'bomb' : 'pow', txt: String(sk.area ? Math.round(sk.power * RULES.areaK) : sk.power), label: '위력' } : null;   // 광역 = 확정 명중 대신 위력 areaK배(2026-10-18)   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
   const half = !!o.halved, k = half ? RULES.repeatStanceK : 1;   // 바로 전 턴에도 같은 자세 = 효과 절반(rules.js) — 두 번째에만 바뀐 수 · 주황
-  if (sk.act === 'guard') return { kind: 'block', txt: pct((1 - (sk.guardMult ?? 0.5)) * k), label: '막음', half };
+  if (sk.act === 'guard') return { kind: 'block', txt: '×' + guardDefMult(sk, half), label: '방어력', half };
   if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: Math.round(sk.shift.miss * k) + '%', label: '회피', half } : null;
   for (const b of [sk.self, sk.also]) {   // 버프 기술은 주 효과(self)부터 수가 있는 것 하나
     if (b === 'wall') return { kind: 'block', txt: pct(1 - FX.wall.dmgK), label: '막음' };

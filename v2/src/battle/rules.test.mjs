@@ -2,12 +2,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeRng, pityLimit, rollPity, pityRate, initiativeChance, hitTable, judgeHit, resolveTurn, RULES } from './rules.js';
+import { BASICS } from './model.js';
 
 // 정해 둔 값을 차례로 내는 난수(순서 판정 시험용)
 const script = vals => { let i = 0; return () => vals[Math.min(i++, vals.length - 1)]; };
 const unit = (id, o = {}) => ({ id, spd: 30, atk: 50, def: 0, acc: 0, eva: 0, crit: 10, hp: 1000, ...o });
 const STRIKE = { id: 'strike', act: 'attack', power: 50, contact: true };
-const GUARD = { id: 'guard', act: 'guard', guardMult: 0.5 };
+const GUARD = { id: 'guard', act: 'guard', guardDefMult: 4, guardHits: 1 };
 const EVADE = { id: 'evade', act: 'evade', shift: { miss: 20, graze: 15 } };
 
 test('불운 보정 상한: 10%면 9번 실패 뒤 확정', () => {
@@ -56,20 +57,21 @@ test('연속 빗나감 보정: 빗나감 70%(적중 30%)면 3번 빗나간 뒤 �
   assert.equal(r.tier, 'hit'); assert.equal(r.forced, true);
 });
 
-test('순서 판정: 선공 공격 → 후공 방어 = 방어 성립(피해 절반)', () => {
-  const A = unit('A'), B = unit('B');
+test('순서 판정: 후공 방어도 방어력 4배로 막고 적중 뒤 해제', () => {
+  const A = unit('A'), B = unit('B', { def: 25 });
   const { events } = resolveTurn(A, B, STRIKE, GUARD, script([0, 0.5]));   // 0 → A 선공, 0.5 → 정타
   const hit = events.find(e => e.t === 'hit');
   assert.equal(events[0].who, 'A'); assert.equal(hit.guard, true);
-  const full = unit('C'), plain = resolveTurn(unit('A2'), full, STRIKE, { act: 'other', id: 'x' }, script([0, 0.5])).events.find(e => e.t === 'hit');
-  assert.equal(hit.dmg, Math.round(plain.dmg * 0.5));
+  assert.equal(hit.dmg, 25);
+  assert.equal(B.def, 25);
+  assert.deepEqual(events.filter(e => e.t === 'stance' || e.t === 'hit' || e.t === 'guardBreak').map(e => e.t), ['stance', 'hit', 'guardBreak']);
 });
 
-test('순서 판정: 선공 방어 → 후공 공격 = 방어 헛됨(판정이 먼저라)', () => {
-  const A = unit('A'), B = unit('B');
+test('순서 판정: 선공 방어도 같은 배율로 막음', () => {
+  const A = unit('A', { def: 25 }), B = unit('B');
   const { events } = resolveTurn(A, B, GUARD, STRIKE, script([0, 0.5]));
   const st = events.find(e => e.t === 'stance'), hit = events.find(e => e.t === 'hit');
-  assert.equal(st.active, false); assert.equal(hit.guard, false);
+  assert.equal(st.active, true); assert.equal(hit.guard, true); assert.equal(hit.dmg, 25);
 });
 
 test('순서 판정: 회피는 선공·후공 모두 성립(표가 옮겨짐)', () => {
@@ -98,12 +100,64 @@ test('흘리기 반격: 회피가 성립하고 빗나감·스침이면 짧게 �
   assert.ok(!ev2.some(e => e.t === 'counter'));
 });
 
-test('같은 자세를 연달아 쓰면 효과 절반', () => {
-  const A = unit('A', { spd: 90 }), B = unit('B', { spd: 20 });   // A가 거의 늘 선공(보정에 안 걸리게)
+test('방어를 연달아 쓰면 추가 방어가 절반(4배 → 2.5배)', () => {
+  const A = unit('A', { spd: 90 }), B = unit('B', { spd: 20, def: 25 });
   resolveTurn(A, B, STRIKE, GUARD, script([0, 0.5]));
   const ev = resolveTurn(A, B, STRIKE, GUARD, script([0, 0.5])).events;
-  const plain = resolveTurn(unit('A2'), unit('C'), STRIKE, { act: 'other', id: 'x' }, script([0, 0.5])).events.find(e => e.t === 'hit');
-  assert.equal(ev.find(e => e.t === 'hit').dmg, Math.round(plain.dmg * 0.75));
+  assert.equal(ev.find(e => e.t === 'hit').dmg, 31);
+});
+
+test('방어는 고정 피해 감소가 아님: 방어 0 · 상한 · 부식', () => {
+  for (const [def, eff, want] of [[0, {}, 50], [1000, {}, 13], [25, { corrode: { turns: 2 } }, 31]]) {
+    const ev = resolveTurn(unit('a'), unit('b', { def, eff }), STRIKE, GUARD, script([0, 0.5])).events;
+    assert.equal(ev.find(e => e.t === 'hit').dmg, want);
+  }
+});
+
+test('빗나감은 방어를 깨거나 막기 보상을 주지 않음', () => {
+  const ev = resolveTurn(unit('a'), unit('b', { def: 25 }), STRIKE, { ...GUARD, counterPct: 0.5, energyOnBlock: 1 }, script([0, 0])).events;
+  assert.equal(ev.find(e => e.t === 'hit').tier, 'miss');
+  assert.equal(ev.some(e => ['guardBreak', 'counter', 'energy'].includes(e.t)), false);
+});
+
+test('스침 · 보호막에 전부 흡수된 적중도 방어를 해제', () => {
+  for (const [roll, eff, want, absorb] of [[0.1, {}, 13, 0], [0.5, { shield: { hp: 100, turns: 3 } }, 0, 25]]) {
+    const ev = resolveTurn(unit('a'), unit('b', { def: 25, eff }), STRIKE, GUARD, script([0, roll])).events;
+    const hit = ev.find(e => e.t === 'hit');
+    assert.equal(hit.dmg, want); assert.equal(hit.absorb, absorb);
+    assert.equal(ev.filter(e => e.t === 'guardBreak').length, 1);
+  }
+});
+
+test('방어는 다음 턴에 남지 않고 원래 방어 수치도 보존', () => {
+  const a = unit('a'), b = unit('b', { def: 25 });
+  resolveTurn(a, b, STRIKE, GUARD, script([0, 0.5]));
+  const hit = resolveTurn(a, b, STRIKE, { act: 'other' }, script([0, 0.5])).events.find(e => e.t === 'hit');
+  assert.equal(hit.guard, false); assert.equal(hit.dmg, 40); assert.equal(b.def, 25);
+});
+
+test('실제 기본기 방어와 여러 타용 태세: 치명 막기 · 타수 잔여', () => {
+  const basic = BASICS.find(s => s.id === 'guard');
+  const ev = resolveTurn(unit('a'), unit('b', { def: 25 }), STRIKE, basic, script([0, 0.99])).events;
+  const hit = ev.find(e => e.t === 'hit');
+  assert.equal(hit.tier, 'hit'); assert.equal(hit.dmg, 25);
+  const two = resolveTurn(unit('c'), unit('d', { def: 25 }), STRIKE, { ...basic, guardHits: 2 }, script([0, 0.5])).events;
+  assert.equal(two.find(e => e.t === 'hit').dmg, 25);
+  assert.equal(two.some(e => e.t === 'guardBreak'), false);
+});
+
+test('쉬는 차례에는 선공·후공 모두 방어태세가 성립하지 않음', () => {
+  for (const order of [0, 0.99]) {
+    const ev = resolveTurn(unit('a'), unit('b', { def: 25, eff: { skip: { src: 'stun' } } }), STRIKE, GUARD, script([order, 0.5]), { turn: 1 }).events;
+    const hit = ev.find(e => e.t === 'hit');
+    assert.equal(hit.guard, false); assert.equal(hit.dmg, 40);
+    assert.equal(ev.some(e => e.t === 'stance' || e.t === 'guardBreak'), false);
+  }
+});
+
+test('막은 뒤 쓰러져도 태세가 다시 켜지거나 행동하지 않음', () => {
+  const ev = resolveTurn(unit('a'), unit('b', { hp: 10, def: 25 }), STRIKE, GUARD, script([0, 0.5])).events;
+  assert.deepEqual(ev.filter(e => ['stance', 'hit', 'guardBreak', 'faint'].includes(e.t)).map(e => e.t), ['stance', 'hit', 'guardBreak', 'faint']);
 });
 
 test('선공: 같은 기동끼리 번갈아 고정되지 않음(한 번 여유) — 1000턴 중 같은 쪽이 연달아 먼저 가는 일이 있어야 함', () => {
