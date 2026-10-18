@@ -28,19 +28,19 @@ export function makeRooms({ game, log, q: db = null }) {
   const json = o => JSON.parse(JSON.stringify(o));
   function packB(B) {
     if (!B) return null;
-    if (B.mode === 'swap3') return { mode: 'swap3', rv: RULES_VER, turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swOrder: !!B.swOrder, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
-    return { mode: '1v1', rv: RULES_VER, turn: B.turn, over: B.over, me: json(B.me), foe: json(B.foe) };
+    if (B.mode === 'swap3') return { mode: 'swap3', rv: RULES_VER, field: B.field || {}, turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swOrder: !!B.swOrder, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
+    return { mode: '1v1', rv: RULES_VER, field: B.field || {}, turn: B.turn, over: B.over, me: json(B.me), foe: json(B.foe) };
   }
   function unpackB(o) {
     if (!o) return null;
     const seed = randomInt(1, 2 ** 31 - 1);
     if (o.mode === 'swap3') {
       const B = makeTeamBattle({ me: o.team.me, foe: o.team.foe, seed, swapCd: o.cdLen || 0, swOrder: !!o.swOrder });   // 햇빛 = 팀 풀(유닛 energy 는 B.pool 을 읽음)
-      B.turn = o.turn; B.over = o.over; B.need = o.need; B.act = { ...o.act }; B.pool = { ...o.pool }; B.swapCd = { ...o.swapCd };
+      B.turn = o.turn; B.over = o.over; B.field = o.field || {}; B.need = o.need; B.act = { ...o.act }; B.pool = { ...o.pool }; B.swapCd = { ...o.swapCd };
       B.me = B.team.me[B.act.me]; B.foe = B.team.foe[B.act.foe];
       return B;
     }
-    return { me: o.me, foe: o.foe, rng: makeRng(seed), turn: o.turn, over: o.over, log: [] };   // battle/model.js makeBattle 과 같은 꼴
+    return { me: o.me, foe: o.foe, rng: makeRng(seed), turn: o.turn, over: o.over, log: [], field: o.field || {} };   // battle/model.js makeBattle 과 같은 꼴
   }
   // 상대에게 보인 기술 · 식물(Set) = 배열로(1:1 = 기술 id 묶음 하나씩, 3:3 = 식물마다)
   function pack(r) {

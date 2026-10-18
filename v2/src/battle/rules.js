@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge } from './devices.js';
 import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -121,6 +121,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const ev = [];
   stOf(A); stOf(B);
   const T = o.turn || 0, skipped = new Set();
+  fieldStart(o.field, T, [A, B], ev);   // 경기장 효과(공통 장치 D10): 끝난 효과 걷기 · 비 = 화상 꺼짐
   let first;
   if (o.first) first = o.first;
   else { const pr = a => (a && a.early ? 1 : 0) - (a && a.late ? 1 : 0), r = rollFirst(A, B, rng, [pr(actA), pr(actB)]); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance, prio: r.prio || undefined }); }
@@ -139,7 +140,9 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   };
   // 누가 쓰러지면 그 턴의 남은 행동은 없음(쓰러진 식물을 때리거나 쓰러진 식물이 움직이지 않게 — 2026-10-16 판정 순서 점검)
   for (const [u, foe] of [[first, second], [second, first]]) {
-    const a = dynAct(u, actOf(u), foe, rng), d = actOf(foe);   // 공통 장치: 개수 · 운 · 상대 상태로 정한 그 차례 기술 값(devices.js — 칸이 없으면 그대로)
+    const ch = u.hp > 0 && foe.hp > 0 ? takeCharge(u) : null;   // 2턴 기술(D11): 모은 기술이 고른 기술 대신 나감(고른 기술 햇빛은 돌려받음)
+    if (ch) u.energy = Math.min(u.energyMax || 8, (u.energy || 0) + (actOf(u).cost || 0));
+    const a = dynAct(u, ch || actOf(u), foe, rng), d = actOf(foe);   // 공통 장치: 개수 · 운 · 상대 상태로 정한 그 차례 기술 값(devices.js — 칸이 없으면 그대로)
     if (u.hp <= 0 || foe.hp <= 0) break;
     // 쉬는 차례(얼음·마비·기절): 고른 행동이 취소되고 쓴 에너지는 돌려받음 — 이번 턴 앞에서 걸렸어도 아직 안 움직였으면 여기서 취소
     if (a.act !== 'skip') shockRoll(u, { turn: T, rng, ev });   // 감전 = 자기 차례마다 확률로 마비(걸리면 아래에서 행동 취소)
@@ -152,7 +155,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     }
     if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); continue; }   // 광합성(기본기 — 햇빛 +2)
     const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }); };   // 나에게 거는 버프(버프 기술 · 공격 기술 덤)
-    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent }); continue; }
+    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); continue; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }
     // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
     //  2026-10-18 바닥 규칙 2단계(species-identity §1): 연타 a.hits = 타마다 따로 판정(불운 보정 없음 · 효과는 첫 적중 한 번 · 방어태세는 막은 타만큼 줄어듦 · 흡수 · 반사는 타마다)
@@ -163,8 +166,9 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
     // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓) · 카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
     const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK * (1 - (sk.pierce || 0)) }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
-    const em = o.elemMult ? o.elemMult(u, foe, a) : 1;   // 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
-    const N = Math.max(1, a.hits || 1), hammer = SKILL_WEAPON[a.id] === 'hammer';
+    const em = (o.elemMult ? o.elemMult(u, foe, a) : 1) * fieldEl(o.field, a.el);   // × 경기장 효과(D10)
+    //  속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
+    const N = Math.max(1, (a.hits || 1) + fieldHits(o.field, a)), hammer = SKILL_WEAPON[a.id] === 'hammer';
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0;
     if (a.area || a.reveal) for (const k of ['stealth', 'clone']) if (has(foe, k)) { delete foe.eff[k]; ev.push({ t: 'reveal', who: foe.id, id: k, list: listOf(foe) }); }   // 광역에 들킴
     for (let i = 0; i < N && foe.hp > 0 && u.hp > 0; i++) {
@@ -182,6 +186,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
       dmg = Math.round(hitDmg(u, foe, a, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
       if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
+      dmg = Math.round(dmg * takenK(foe));   // 받는 피해 배율(D13 — 체력 가득이면 위엄 등)
       let absorb = 0, ab = null;   // 보호막 → 방어구 순서로 먼저 막음
       if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; if (sh.hp <= 0) delete foe.eff.shield; }
       if (dmg > 0 && foe.eff && foe.eff.armor) {
@@ -192,6 +197,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       foe.hp = endureHp(foe, foe.hp - dmg, ev);   // 버티기(공통 장치 D7) — 없으면 0에서 멈춤
       foe.st.critTaken = tier === 'crit';
       ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, ab: ab || undefined, forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, veil: veil ? true : undefined, ambush: ambush || undefined, list: absorb ? listOf(foe) : undefined });
+      if (tier !== 'miss') { const rc = { foe: u, dmg: dmg + absorb, T, ev }; react(foe, 'hit', rc); if (a.contact !== false && !a.ranged && !a.area) react(foe, 'contact', rc); if (tier === 'crit') { react(foe, 'crit', rc); react(u, 'dealCrit', { foe, T, ev }); } if (foe.hp > 0 && foe.hp <= foe.max / 2) react(foe, 'half', rc); }   // 반응(D13)
       blocked = guardOn && tier !== 'miss';
       if (blocked) {
         guards.set(foe, guards.get(foe) - 1);
@@ -200,19 +206,20 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (tier === 'hit' || tier === 'crit') avoided = false;
       const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
       if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
-      const refl = (has(foe, 'thorns') ? FX.thorns.reflect : 0) + ((foe.pas && foe.pas.reflect) || 0);   // 반사 버프 + 가시 줄기(카드)
+      const refl = (has(foe, 'thorns') ? FX.thorns.reflect : 0) + ((foe.pas && foe.pas.reflect) || 0) + reflectAdd(foe);   // 반사 버프 + 가시 줄기(카드) + 쌓인 가시(D13)
       if (tier !== 'miss' && dmg > 0 && refl > 0 && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * refl)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 반사(가시) — 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
       // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
       if (tier !== 'miss' && !landed) { landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
     }
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
-    if (u.hp > 0) afterAct(u, a, foe, T, ev, { spent, landed, bonusHit: a.bonusHit });   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
+    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed, bonusHit: a.bonusHit }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
     if (avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {
       const cd = Math.max(1, Math.round(hitDmg(foe, u, { power: d.counter }, 1)));
       u.hp = Math.max(0, u.hp - cd);
       ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id });
     }
+    if (avoided) react(foe, 'avoid', { foe: u, T, ev });
     if (avoided && d.nextCrit) foe.st.nextCrit = d.nextCrit;
     if (avoided && d.nextInit) foe.st.nextInit = d.nextInit;
     if (avoided && d.onAvoid) ev.push({ t: 'status', who: foe.id, to: u.id, status: d.onAvoid, from: d.id });

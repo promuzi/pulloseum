@@ -2,7 +2,7 @@
 //  방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이 — node tools/test/devices.mjs
 import { resolveTurn, rollFirst, baseDamage } from '../../v2/src/battle/rules.js';
 import { selfBuff, listOf, has, FX, canUse, endTurn, atkK } from '../../v2/src/battle/status.js';
-import { resOf } from '../../v2/src/battle/devices.js';
+import { resOf, resLine } from '../../v2/src/battle/devices.js';
 import { SKILLS, SPECIES } from '../../v2/src/game/catalog.js';
 
 let pass = 0;
@@ -132,6 +132,40 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   ok(md.mode === 'naked' && atkK(md) === 1.5 && !canUse(md, { id: 'x', cost: 0, lockMode: 'naked' }, 9) && canUse(md, { id: 'y', cost: 0, needMode: 'naked' }, 9), '모드 = 능력치 배율 · 잠김 / 그 모드만');
   const tl = T(); const tev = []; endTurn([[tl, unit('d')]], 1, tev); ok(tl.res.tail === 2, '턴 끝 꼬리 +1');
   delete SPECIES.__t;
+}
+// ── 공통 장치 2묶음: 반응 · 받는 피해 배율 · 개수만큼 반사 · 경기장 · 2턴 · 개수 글 ──
+{
+  SPECIES.__r = { name: '반응', res: { thorn: [0, 5, '가시'], water: [0, 999, '물'] }, react: [{ on: 'contact', gain: { k: 'thorn', n: 1 } }, { on: 'hit', store: { k: 'water', pct: 0.3 } }, { on: 'contact', inflict: 'shock' }, { on: 'half', self: 'rage' }, { on: 'crit', nextCrit: 50 }], takenK: [{ when: 'full', k: 0.5 }], thornRes: { k: 'thorn', per: 0.1 } };
+  const R = o => unit('r', { key: '__r', ...o });
+  const r1 = R(), a1 = unit('a'); resolveTurn(a1, r1, atk({ power: 60 }), rest, seq([0, 0.5]), { turn: 1 });
+  ok(r1.res.thorn === 1 && r1.res.water > 0 && a1.eff.shock, `붙어서 맞음 = 가시 +1 · 물 저장 · 때린 쪽 감전 (물 ${r1.res.water})`);
+  const full = R(), part = R({ hp: 299 }); resolveTurn(unit('a'), full, atk({ power: 60, ranged: true }), rest, seq([0, 0.5]), { turn: 1 }); resolveTurn(unit('a'), part, atk({ power: 60, ranged: true }), rest, seq([0, 0.5]), { turn: 1 });
+  ok(300 - full.hp < (299 - part.hp) * 0.6, `체력 가득이면 받는 피해 절반(${300 - full.hp} 대 ${299 - part.hp})`);
+  const th = R(); resolveTurn(unit('a'), th, atk({ power: 10 }), rest, seq([0, 0.5]), { turn: 1 }); th.res.thorn = 5;
+  const at = unit('a'); resolveTurn(at, th, atk({ power: 60 }), rest, seq([0, 0.5]), { turn: 2 });
+  ok(at.hp < 300, `가시 5 = 반사 50%(때린 쪽 체력 ${at.hp})`);
+  const hf = R({ hp: 160 }); resolveTurn(unit('a'), hf, atk({ power: 60, ranged: true }), rest, seq([0, 0.5]), { turn: 1 });
+  ok(hf.eff.rage, '처음 절반 아래 = 분노');
+  ok(resLine(R({ res: { thorn: 2, water: 7 } })) === '가시 2 · 물 7', '개수 글');
+  delete SPECIES.__r;
+  // 경기장: 비 = 물 +25% · 불 −25% · 화상 꺼짐 / 바람길 = 바람 연타 +1타 / 끝나면 걷힘
+  const F = {}, w1 = unit('d'), w0 = unit('d');
+  resolveTurn(unit('a'), unit('d'), { id: 'rain', act: 'buff', cost: 0, field: { id: 'rain', turns: 2 } }, rest, seq([0, 0.5]), { turn: 1, field: F });
+  ok(F.id === 'rain' && F.exp === 2, '비 = 2턴');
+  resolveTurn(unit('a'), w1, atk({ power: 60, el: 'water' }), rest, seq([0, 0.5]), { turn: 2, field: F }); resolveTurn(unit('a'), w0, atk({ power: 60, el: 'water' }), rest, seq([0, 0.5]), { turn: 2 });
+  ok(300 - w1.hp > (300 - w0.hp) * 1.15, `비에 물 기술 ↑(${300 - w1.hp} 대 ${300 - w0.hp})`);
+  const bu = unit('d', { eff: { burn: { left: 3 } } }), fe = resolveTurn(unit('a'), bu, rest, rest, seq([0.5]), { turn: 2, field: F });
+  ok(!bu.eff.burn && fe.events.some(e => e.t === 'cure'), '비 = 화상 꺼짐');
+  const gone = resolveTurn(unit('a'), unit('d'), rest, rest, seq([0.5]), { turn: 3, field: F });
+  ok(!F.id && gone.events.some(e => e.t === 'field' && e.id === null), '끝나면 걷힘');
+  const W = { id: 'wind', exp: 9 }, wr = resolveTurn(unit('a'), unit('d'), atk({ power: 20, hits: 3, el: 'wind' }), rest, seq([0, 0.5]), { turn: 1, field: W });
+  ok(hits(wr.events).length === 4, '바람길 = 바람 연타 +1타');
+  // 2턴: 모으는 턴 은신 → 다음 차례 고른 기술 대신 나감 · 고른 기술 햇빛 돌려받음
+  const dv = unit('a', { energy: 3 }), dd = unit('d');
+  const c1 = resolveTurn(dv, dd, { id: 'dive', name: '자맥질', act: 'buff', cost: 0, charge: { veil: true, release: { power: 80, name: '솟구치기' } } }, atk({ power: 60 }), seq([0, 0.5, 0.5, 0.5]), { turn: 1 });
+  ok(dv.st.charge && c1.events.some(e => e.t === 'charge'), '모으기 = 다음 차례 예약');
+  dv.energy = 1; const c2 = resolveTurn(dv, dd, atk({ id: 'other', power: 10, cost: 2 }), rest, seq([0, 0.5]), { turn: 2 });
+  ok(!dv.st.charge && hits(c2.events)[0].id === 'dive' && dv.energy === 3, '다음 차례 = 모은 기술이 나감 · 고른 기술 햇빛 돌려받음');
 }
 
 console.log(`장치 시험 ${pass}/${pass + fails.length}`);

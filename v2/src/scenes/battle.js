@@ -9,6 +9,7 @@ import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats, swapWait } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, usesLeft } from '../battle/status.js';
+import { resLine, FIELD } from '../battle/devices.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
@@ -112,6 +113,7 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
   const ex = tx + g.textW(u.name, 'bold') + 5, ji = u.jong && icon(u.jong);
   g.img(icon(u.el), ex, yy + 1);
   if (ji) g.img(ji, ex + 13, yy + 1);
+  { const rl = resLine(u); if (rl) g.text(rl, right, yy, { color: P.sub, align: 'right' }); }   // 개수 칸(공통 장치 — 수리검 · 꼬리 …)
   yy += 16;
   g.text('HP', tx, yy, { font: 'bold', color: P.sub });
   hpBar(g, bx, yy + 3, right - numW - 5 - bx, 7, bar, u.max, t);
@@ -382,6 +384,8 @@ export const battle = {
       else if (e.t === 'guardBreak') out.push({ kind: 'guardBreak', ms: 250, who: e.who });
       // 공통 장치(devices.js — 2026-10-18): 시한 · 메아리 터짐 · 체력 내기 = 지속 피해처럼 · 버티기 · 햇빛 빼앗기 = 알림
       else if (e.t === 'boom' || e.t === 'selfCost') out.push({ kind: 'tick', ms: 750, ev: { ...e, id: 'burn' }, side: e.who, msg: e.t === 'boom' ? `${e.from || ''} 터졌다! ${nm(e.who)}도 휘말렸다` : `${ga(e.name)} 체력을 바쳤다!`, tone: 'hit' });
+      else if (e.t === 'field') out.push({ kind: 'note', ms: 800, side: 'me', msg: e.id ? `${ga((FIELD[e.id] || { name: e.id }).name)} 경기장을 덮었다!` : `${ga((FIELD[e.was] || { name: '경기장 효과' }).name)} 걷혔다`, tone: 'note' });
+      else if (e.t === 'charge') out.push({ kind: 'note', ms: 750, side: e.who, msg: `${ga(e.name)} 힘을 모은다!`, tone: 'note' });
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, msg: e.t === 'armorBreak' ? `${nm(e.who)}의 방어구가 부서졌다!` : e.id === 'clone' ? `${nm(e.who)}의 분신이 사라졌다!` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
       else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.id] || ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }

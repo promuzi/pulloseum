@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-10-18 (88) — 공통 장치 2묶음 = 로드맵 1번 끝(반응 · 경기장 · 2턴 · 개수 글) — 게임 동작은 그대로
+- 같은 `battle/devices.js`: **반응** `SPECIES.react`(on = 맞음 · 붙어서 맞음 · 치명 맞음 · 처음 절반 아래 · 내가 피함 · 내가 치명 / 할 일 = 개수 얻기 · 받은 피해 몫 저장 · 때린 쪽에 효과 · 나에게 버프 · 다음 치명) · 받는 피해 배율 `SPECIES.takenK`(체력 가득이면) · 개수만큼 반사 `SPECIES.thornRes`.
+- **경기장 효과** 기술 `field{id, turns}` — 비(물 +25% · 불 −25% · 화상 꺼짐) · 바람길(바람 +20% · 바람 연타 +1타) · 눈보라(빙결 +25% · 불 −25%). 판 `B.field`를 `model.js` · `team.js`가 넘기고 친구 방(`rooms.mjs pack/unpack`)에도 저장. 화면 알림 '비가 경기장을 덮었다!'.
+- **2턴 기술** `charge{veil, release}` — 이번 턴 모으고(veil이면 은신처럼) 다음 차례에 고른 기술 대신 나감 · 고른 기술 햇빛은 돌려받음. 알림 '힘을 모은다!'.
+- **개수 칸 화면 글** — 종 `res`의 셋째 칸 이름(예: '수리검')이 있으면 체력판 이름 줄 오른쪽에 '수리검 3 · 꼬리 5'.
+- 지금 종 · 기술은 이 칸을 안 써서 `RULES_VER` 그대로 · 종 리그전 결과 같음. 시험 `devices` 52 · `rules.test` 20 · status · edgecases · matchup · cards · loadout · savesafety · league · roomsave 28 · `server` 51 통과 · 전투 화면 그려 보기 오류 없음. 친구 서버엔 안 올림(동작 변화 없음).
+
 ### 2026-10-18 (87) — 공통 장치 1묶음(`v2/src/battle/devices.js`) — 게임 동작은 그대로
 - 사용자 "다음 로드맵도 1번까지만" → "1번 이어서 해"(설계 [species-identity](superpowers/specs/2026-10-18-v2-species-identity-design.md) §2). 46종 고유 기술은 사용자 검토 대기라 연결하지 않음 — 칸만 만들어 둠.
 - 새 파일 `battle/devices.js` + 이음 몇 줄(`rules.js`: 차례마다 `dynAct` → 낼 때 `payAct` → 끝나고 `afterAct` · 맞은 피해 `endureHp` / `status.js`: `canUse`에 `canUseRes` · 턴 끝 `turnDevices` · 공격 · 방어 · 기동에 모드 배율).

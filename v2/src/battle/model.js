@@ -182,7 +182,7 @@ export function playTurnVs(B, mySkill, foeSkill) {
   B.me.energy -= me.cost || 0; B.foe.energy -= foeSkill.cost || 0;
   useCount(B.me, me); useCount(B.foe, foeSkill);   // 변이 기술 횟수
   B.me.curEl = me.el; B.foe.curEl = foeSkill.el;
-  const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T });
+  const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, field: B.field || (B.field = {}) });   // field = 경기장 효과(공통 장치)
   const events = res.events.filter(e => !(e.t === 'first' && (me === REST || foeSkill === REST)));   // 한쪽이 쉬면 선공 판정은 보여 주지 않음
   for (const e of events) if (e.t === 'skip' && e.refund) B[e.who].energy += e.refund;   // 취소된 행동의 에너지 돌려줌
   // 누가 쓰러지면 그 자리에서 판이 끝남(턴 끝 피해 없음) · 같이 쓰러지는 일 없이 먼저 쓰러진 쪽이 짐(2026-10-16 — 전엔 둘 다 쓰러지면 늘 'me' 승리)

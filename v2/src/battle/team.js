@@ -73,7 +73,7 @@ export function playTurn3(B, myAct, foeAct = null) {
   if (mySkill || foeSkill) {
     const idle = { id: 'switch', act: 'other' };
     B.me.curEl = mySkill ? mySkill.el : null; B.foe.curEl = foeSkill ? foeSkill.el : null;
-    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, first: order ? B[order] : null });
+    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, field: B.field || (B.field = {}), first: order ? B[order] : null });
     for (const e of res.events) {
       if (e.t === 'act' && e.id === 'switch') continue;
       if (e.t === 'first' && (!mySkill || !foeSkill || mySkill === REST || foeSkill === REST)) continue;   // 한쪽이 바꾸거나 쉬면 선공 판정은 보여 주지 않음

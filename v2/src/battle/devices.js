@@ -8,9 +8,9 @@
 //  D15 운 luck = [[확률, 배율] …](0배가 나오면 다음은 가장 큰 배율 확정) · D16 비용 hpCost(최대 체력 몫) · allSun(남은 햇빛 하나당 위력 +)
 //  D6 시한 delay{turns, power, area}(상대에게 심음 — n턴 뒤 턴 끝 확정 피해) · echo(맞히면 다음 턴 끝 한 번 더, 위력 몫 · 효과 포함) — 교체하면 사라짐
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
-//  남음(다음 묶음): D10 경기장 효과 · D11 2턴 기술 · D13 반응 · 개수 칸 화면 표시
+//  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES } from '../game/catalog.js';
-import { has, listOf, apply, defK } from './status.js';
+import { has, listOf, apply, defK, selfBuff } from './status.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
 const BUFF_IDS = ['stealth', 'clone', 'armor', 'rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
@@ -125,4 +125,54 @@ export function turnDevices(u, turn, ev) {
     }
   }
   if (u.hp > 0) for (const [k, n] of Object.entries(SP(u).resTurn || {})) { const before = resOf(u)[k] || 0; if (addRes(u, k, n) !== before) ev.push({ t: 'res', who: u.id, k, n: u.res[k] }); }
+}
+
+// ── 공통 장치 2묶음(2026-10-18 같은 날) ──
+// D13 반응 SPECIES.react = [{ on, … }] — on: 'hit' 맞음 · 'contact' 붙어서 맞음 · 'crit' 치명 맞음 · 'half' 처음 절반 아래 · 'avoid' 내가 피함 · 'dealCrit' 내가 치명
+//  할 일: gain{k, n} · store{k, pct}(받은 피해 몫을 개수로) · inflict(때린 쪽에 효과 id) · self(나에게 버프 id) · nextCrit(다음 공격 치명 +)
+export function react(u, on, ctx) {
+  const list = SP(u).react;
+  if (!list || u.hp <= 0) return;
+  for (const r of list) {
+    if (r.on !== on) continue;
+    if (on === 'half') { u.st = u.st || {}; if (u.st.halfDone) continue; u.st.halfDone = true; }
+    if (r.gain) addRes(u, r.gain.k, r.gain.n || 1);
+    if (r.store && ctx.dmg > 0) addRes(u, r.store.k, Math.round(ctx.dmg * r.store.pct));
+    if (r.inflict && ctx.foe && ctx.foe.hp > 0) apply(ctx.foe, r.inflict, 1, { turn: ctx.T, rng: () => 0.5, ev: ctx.ev, by: u });
+    if (r.self) selfBuff(u, r.self, { turn: ctx.T, ev: ctx.ev });
+    if (r.nextCrit) { u.st = u.st || {}; u.st.nextCrit = Math.max(u.st.nextCrit || 0, r.nextCrit); }
+    ctx.ev.push({ t: 'react', who: u.id, name: u.name, on, res: u.res ? { ...u.res } : undefined, list: listOf(u) });
+  }
+}
+// 받는 피해 배율 SPECIES.takenK = [{ when: 'full', k }](체력이 가득이면 — 위엄) · 개수만큼 반사 SPECIES.thornRes = { k, per }(가시 쌓기)
+export function takenK(u) { let k = 1; for (const x of SP(u).takenK || []) if (x.when === 'full' && u.hp >= u.max) k *= x.k; return k; }
+export function reflectAdd(u) { const t = SP(u).thornRes; return t ? (resOf(u)[t.k] || 0) * t.per : 0; }
+// D10 경기장 효과(양쪽 모두) — 기술 field{id, turns} · 판 B.field = { id, exp } 를 resolveTurn o.field 로 받음(model · team · rooms 가 넘기고 저장)
+export const FIELD = {
+  rain: { name: '비', el: { water: 1.25, fire: 0.75 }, cure: 'burn' },   // 젤리캡
+  wind: { name: '바람길', el: { wind: 1.2 }, hits: 'wind' },           // 단델에어로 — 바람 연타 +1타
+  snow: { name: '눈보라', el: { ice: 1.25, fire: 0.75 } },              // 프로스트드레이크
+};
+export const fieldEl = (F, el) => (F && F.id && FIELD[F.id] && FIELD[F.id].el[el]) || 1;
+export const fieldHits = (F, a) => (F && F.id && FIELD[F.id] && FIELD[F.id].hits === a.el && (a.hits || 1) > 1 ? 1 : 0);
+export function fieldStart(F, T, units, ev) {   // 턴 처음: 끝난 효과 걷기 · 비 = 화상 꺼짐
+  if (!F || !F.id) return;
+  if (F.exp < T) { ev.push({ t: 'field', id: null, was: F.id }); F.id = null; return; }
+  const D = FIELD[F.id];
+  if (D && D.cure) for (const u of units) if (u.hp > 0 && u.eff && u.eff[D.cure]) { delete u.eff[D.cure]; ev.push({ t: 'cure', to: u.id, name: u.name, id: D.cure, why: 'water', list: listOf(u) }); }
+}
+export function setField(F, a, T, ev) { if (!a || !a.field || !F) return; const n = a.field.turns || 3; F.id = a.field.id; F.exp = T + n - 1; ev.push({ t: 'field', id: F.id, turns: n }); }
+// D11 2턴 기술 charge{veil, release{…}}: 이번 턴 모으고(veil이면 은신처럼 거의 안 맞음 — 잠수 · 영창) 다음 차례에 고른 기술 대신 release 가 나감(고른 기술 햇빛은 돌려받음)
+export function setCharge(u, a, T, ev) {
+  if (!a || !a.charge) return;
+  (u.st ||= {}).charge = { act: 'attack', cats: ['attack'], el: a.el, ...(a.charge.release || {}), id: a.id, name: (a.charge.release && a.charge.release.name) || a.name, cost: 0, charged: true };
+  if (a.charge.veil) selfBuff(u, 'stealth', { turn: T, ev });
+  ev.push({ t: 'charge', who: u.id, name: u.name });
+}
+export function takeCharge(u) { const c = u.st && u.st.charge; if (c) delete u.st.charge; return c || null; }
+// 개수 칸 화면 글(체력판 이름 줄 오른쪽) — 이름은 SPECIES.res[k][2]
+export function resLine(u) {
+  const D = SP(u).res, r = u && u.res;
+  if (!D || !r) return '';
+  return Object.keys(D).filter(k => D[k][2]).map(k => `${D[k][2]} ${r[k] || 0}`).join(' · ');
 }
