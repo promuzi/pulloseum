@@ -8,7 +8,7 @@
 - **전투 규칙 판 번호** `catalog.js RULES_VER`(봇 판 spec.rv · 친구 방 B.rv): 다른 번호로 시작한 판은 이어 하지 않고 **승패 없이 닫음**(진 판 아님 — 판 시작 · 한 수 · 기권 모두, 친구 방은 대기실로). 화면 안내 '게임이 업데이트되어 …'.
 - **진화해도 떠나는 리그 기록 보관**(2026-10-17 '처음부터'를 바꿈 — 친구 '결승이었는데 무제한으로' 건의 유력 원인) · 진화 전 확인창 없앰 · 알림 '… 리그 기록은 그대로'.
 - **3패 = 그 라운드 처음부터**(승패만 0) · 마스터 이상은 예선부터 · 결과 화면 '3패 — 이 라운드 처음부터'.
-- 시험: 새 `tools/test/savesafety.mjs`(9) · `league.mjs`(새 규칙으로 두 줄 고침) · `server.mjs` 51/51 · edgecases · cards · loadout 통과. `cf/test_cf.mjs`는 이 PC에 wrangler 경로가 없어 못 돌림. **친구 서버엔 아직 안 올림.**
+- 시험: 새 `tools/test/savesafety.mjs`(9) · `league.mjs`(새 규칙으로 두 줄 고침) · `server.mjs` 51/51 · edgecases · cards · loadout 통과. `cf/test_cf.mjs` 50/50(`WRANGLER_JS=D:/dev/odapnote/node_modules/wrangler/bin/wrangler.js`). **친구 서버에 올림**(사용자 "ㅇㅇ올려") · `cf/pagecheck.mjs` 준비 됨 · 빠진 그림 0 · 오류 0. 백로그(로드맵 §4.5): 홈 오른쪽 단추 줄 = 공지 팝업 · 리플레이 · 순위표.
 
 ### 2026-10-18 (81) — 친구 서버에 올림(D 드라이브 PC 첫 배포 · 로그인 도구)
 - 사용자 "작업하고 올려 친구 서버에도" → (70)~(80) 전부 https://pulloseum.getchat.workers.dev 에 올림(버전 136400c6) · `cf/pagecheck.mjs` 준비 됨 · 빠진 그림 0 · 오류 0. 올리기 전 Cloudflare 실행기 시험 50/50(이 PC wrangler 3.114).
