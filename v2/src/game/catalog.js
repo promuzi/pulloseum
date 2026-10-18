@@ -167,10 +167,9 @@ export const SKILLS = Object.fromEntries([
   S('sp_shade', '그늘 드리우기', null, 's', 50, 2, { ranged: true, inflict: { id: 'shade' } }),
   S('sp_acid', '부식액', null, 's', 60, 2, { ranged: true, inflict: { id: 'corrode' } }),
   // 개성(꽃 기술) — 식물마다 어린 1 · 자라는 1 · 다 자란 1
-  // 페탈로즈 = 장미 기사(사용자 설계 2026-10-18 — '후공 선공? 그런 건 의미 없다. 오직 검술로 극복할 뿐'): 검방술 = 순서 분기(onFirst · onSecond) + 공격하면서 막기 · 피하기
-  S('u_petal_1', '검방술(기본)', 'grass', 'u', 50, 1, { tag: 'sword', contact: true, onFirst: { pierce: 0.3, guardWith: true, guardHits: 1, guardDefMult: 2 }, onSecond: { power: 40, guardWith: true, guardHits: 1, guardDefMult: 3, counterPct: 0.3 } }),   // 먼저 = 찌르기(관통) + 약한 방어 · 나중 = 강한 방어 · 막으면 반격 + 베기
-  S('u_petal_2', '검방술(공세)', 'grass', 'u', 22, 2, { tag: 'sword', contact: true, hits: 3, onFirst: { evadeWith: true, shift: { miss: 10, graze: 6 } }, onSecond: { evadeWith: true, shift: { miss: 15, graze: 10 }, nextCrit: 50 } }),   // 베기 3연타 + 회피(나중 = 더 잘 피하고 피하면 첫 타 치명 ↑)
-  S('u_petal_3', '검방술(오의)', 'grass', 'u', 28, 4, { tag: 'sword', contact: true, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { self: 'thorns' }, onSecond: { guardWith: true, guardHits: 1, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),   // 먼저 = 베기 2 · 찌르기 2 + 반사 · 나중 = 막으면 40% 기절 → 기절이면 찌르기 한 방
+  S('u_petal_1', '꽃잎 향기', 'grass', 'u', 65, 1, { ranged: true, inflict: { id: 'weak' } }),
+  S('u_petal_2', '장미 가시', 'grass', 'u', 85, 2, { inflict: { id: 'poison', n: 1 } }),
+  S('u_petal_3', '꽃잎 칼날', 'grass', 'u', 115, 3),
   S('u_thorn_1', '가시 채찍', 'grass', 'u', 60, 1, { inflict: { id: 'poison', n: 1 } }),
   S('u_thorn_2', '가시 그물', 'grass', 'u', 80, 2, { inflict: { id: 'bind' } }),
   S('u_thorn_3', '독가시 덤불', 'grass', 'u', 110, 3, { inflict: { id: 'poison', n: 2 } }),
@@ -240,9 +239,9 @@ export const SKILLS = Object.fromEntries([
   S('u_fdrake_3b', '빙룡의 분노', 'ice', 'u', 0, 2, { self: 'rage', also: 'focus' }),
   S('u_fdrake_3c', '빙하 낙하', 'ice', 'u', 140, 5, { inflict: { id: 'chill', n: 2 } }),
   // 나머지 28종 — 자라는 +1 · 다 자란 +2(역할에 맞춰: 2026-10-17 사용자 "이런 식으로 각 외모와 컨셉을 다른 식물에도")
-  S('u_petal_2b', '기합', 'grass', 'u', 0, 1, { onFirst: { self: 'wall' }, onSecond: { self: 'haste' } }),   // 먼저 = 철벽 · 나중 = 가속
-  S('u_petal_3b', '불타는 의지', 'grass', 'u', 0, 1, { infuse: { el: 'fire', n: 2, tag: 'sword' } }),   // 다음 검방술 2번 = 불 속성(화상 없음)
-  S('u_petal_3c', '만개', 'grass', 'u', 0, 2, { self: 'flourish' }),   // 공격 · 방어 · 기동 +5% 겹침(4번까지) · 판 끝까지(사용자 '첫 턴에 무조건 쓰니 중첩 · 끝까지 · 스펙업 낮게')
+  S('u_petal_2b', '홀리는 향기', 'grass', 'u', 45, 2, { ranged: true, area: true, inflict: { id: 'weak' } }),
+  S('u_petal_3b', '장미 덤불', 'grass', 'u', 0, 2, { self: 'thorns', also: 'regen' }),
+  S('u_petal_3c', '붉은 장미 폭풍', 'grass', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'poison', n: 2 } }),
   S('u_thorn_2b', '가시 덫', 'grass', 'u', 60, 2, { inflict: { id: 'root' } }),
   S('u_thorn_3b', '수액 빨기', 'grass', 'u', 75, 2, { drain: 0.4, inflict: { id: 'poison', n: 1 } }),
   S('u_thorn_3c', '가시 감옥', 'grass', 'u', 95, 4, { area: true, inflict: { id: 'bind' } }),
@@ -468,8 +467,7 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 5;   // 5 = 2026-10-18 페탈로즈 장미 기사(순서 분기 · 공격하며 막기 · 막으면 기절 · 속성 바꾸기 · 만개)
-//  4 = 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(먼저 · 나중)
+export const RULES_VER = 4;   // 4 = 2026-10-18 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(먼저 · 나중)
 //  3 = 2026-10-18 방어태세(순서 무관 방어 ×4 · 적중 후 해제)
 export const RENAMED = { skill: {}, card: {} };
 export const formSkills = form => Object.values(SKILLS).filter(x => x.tier === 'm' && x.form === form).map(x => x.id);

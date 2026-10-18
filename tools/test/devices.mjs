@@ -170,7 +170,17 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
 
 // ── 페탈로즈 장미 기사(2026-10-18 사용자 설계) — 순서 분기 · 공격하며 막기 · 막으면 기절 · 상대 상태로 공격 바꾸기 · 속성 바꾸기 · 만개 ──
 {
-  const P = SKILLS, knight = o => unit('k', { key: 'flower_grass', ...o }), foeAtk = atk({ id: 'f', power: 60 });
+  // 설계안을 여기 그대로(2026-10-18 사용자 "되돌려줘 — 새 스킬은 한 번에 적용 · 다듬고 · 밸런스 뒤 올리자" → 게임 표엔 아직 안 넣음, 장치만 시험)
+  const SW = { tag: 'sword', contact: true }, A = (id, power, cost, o) => ({ id, el: 'grass', power, cost, act: power > 0 ? 'attack' : 'buff', ...o });
+  const P = {
+    u_petal_1: A('u_petal_1', 50, 1, { ...SW, onFirst: { pierce: 0.3, guardWith: true, guardHits: 1, guardDefMult: 2 }, onSecond: { power: 40, guardWith: true, guardHits: 1, guardDefMult: 3, counterPct: 0.3 } }),
+    u_petal_2: A('u_petal_2', 22, 2, { ...SW, hits: 3, onFirst: { evadeWith: true, shift: { miss: 10, graze: 6 } }, onSecond: { evadeWith: true, shift: { miss: 15, graze: 10 }, nextCrit: 50 } }),
+    u_petal_2b: A('u_petal_2b', 0, 1, { onFirst: { self: 'wall' }, onSecond: { self: 'haste' } }),
+    u_petal_3: A('u_petal_3', 28, 4, { ...SW, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { self: 'thorns' }, onSecond: { guardWith: true, guardHits: 1, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),
+    u_petal_3b: A('u_petal_3b', 0, 1, { infuse: { el: 'fire', n: 2, tag: 'sword' } }),
+    u_petal_3c: A('u_petal_3c', 0, 2, { self: 'flourish' }),
+  };
+  const knight = o => unit('k', { key: 'flower_grass', ...o }), foeAtk = atk({ id: 'f', power: 60 });
   // 기본: 먼저 = 찌르기 + 그 턴 방어(상대 공격이 막힘) / 나중 = 막고 반격 + 베기
   const r1 = resolveTurn(knight({ spd: 99 }), unit('d'), P.u_petal_1, foeAtk, seq([0, 0.5, 0.5]), { turn: 1 });
   const h1 = hits(r1.events), mine1 = h1.find(h => h.who === 'k'), theirs1 = h1.find(h => h.who === 'd');
