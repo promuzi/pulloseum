@@ -39,7 +39,8 @@ node tools/pixel/big/stemcheck.mjs [키…]               # 게임 묶음(어린
 - `node tools/pixel/big/convert.mjs --stages <키>` → `<키>_stages.png`(위 원화·아래 도트, 같은 축척). 단계 그림 색은 성체 색 분포에 맞춘 뒤 줄인다(기본 `--match=1`, 눈 제외) — 코덱스 단계 그림은 테두리 빛·그늘이 세서 그대로 줄이면 노랑·검정 얼룩.
 
 ## 5. 움직임·효과·공격·변이
-- 대기: `convert.mjs --anim --mp4 <키…>` → `<키>_idle.mp4` + 격자. 종별 설정은 `convert.mjs`의 `FX`(bob·squash·sway·petal·leaf·flutter, `fire`, `electric`, `amb` = `fx.mjs` 효과: shine·gems·twinkle·drips·bubbles·petals·wind·swirl·spores·dust).
+- 대기: `convert.mjs --anim --mp4 <키…>` → `<키>_idle.mp4` + 격자. 종별 설정은 `convert.mjs`의 `FX`(bob·squash·sway·petal·leaf·flutter, `fire`, `electric`, `amb` = `fx.mjs` 효과: shine·gems·twinkle·drips·bubbles·petals(`big` = 세 칸 잎)·wind(식물 뒤로 지나감 · `dir`)·swirl·spores·dust·lava·magic(별 지팡이)·pulse(재질 따라 오르는 전류)).
+  번개는 `electric: true`(아무 끝에서나 — 쓰지 말 것) 대신 객체로 나오는 자리를 정한다: `bolts:[{at,ang,len,f0}]` 소품 끝 벼락 · `zap` 상자 안 몸 위를 가로지르는 지그재그 · `crawl` 윤곽 타고 기기 · `chain` 점 → 점(북 → 북) · `arcs:false`. 자리는 `stagegrid.mjs <키>`(어린 · 자람 · 성체 격자)로 재고, 단계마다 소품 자리가 다르면 `FX['<키>_young'|'<키>_teen']`로 덮어씀.
   종 특성으로 고른다 — 금속·칼날·은빛 = shine, 수정 = gems+twinkle, 물 = drips(+bubbles), 바람 = wind(+petals·swirl), 버섯 = spores, 대지 = dust + 숨 작게, 말랑함 = squash 크게, 덩굴·리본 = petal·leaf 크게.
 - 공격: `convert.mjs --attack --mp4 <키…>` → `attacks_all.mp4`·`attacks_sheet.png`. 종별 기술은 `attack.mjs` `ATTACKS`(kind·move·색·status). 큰 효과는 어두운 테두리 층(o), 입자는 p 층.
   무대 = v2 전투 배치(`stage.mjs`: 나 = 왼쪽 아래, 상대 = 오른쪽 위·좌우 뒤집힘, 바닥 = 화분과 같은 26° 평면). 날아가는 효과는 L → T 방향(`S.D`), 몸에 붙은 출발점은 `S.fx`로 좌우 뒤집기 — 가로로 고정된 오프셋(`L[0] + 12` 같은)을 새로 쓰지 않는다.

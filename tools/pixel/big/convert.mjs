@@ -1004,7 +1004,10 @@ async function animKit() {
     thorn: { bob: 1.5, sway: 0.8, open: 1, petal: 1.1, leaf: 2.2, blinkAt: 40 },
     aqua: { bob: 2, squash: 1.5, sway: 0.8, open: 0.6, petal: 0.6, leaf: 1.0, amb: { bubbles: { mat: { hue: [170, 250], lmin: 0.62, cmin: 0.03 }, n: 3 }, drips: { n: 2, every: 40 }, twinkle: { mat: { hue: [170, 250], lmin: 0.7 }, n: 1, every: 28 } } },
     flower_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.5, leaf: 1.4, blinkAt: 14, amb: { wind: { n: 2, y0: 6, y1: 52 }, petals: { from: 'right', color: '#c9a8f0', edge: '#a888e0', dim: '#8a70c0', vx: 0.95, vy: 0.06, sway: 1, every: 32, life: 26, n: 2 } } },
-    spark: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, electric: true, blinkAt: 50 },
+    // 번개 다섯(2026-10-18 다시 — 사용자 "번개 효과 내는 애들 이펙트가 별로"): 아무 잎 끝 → 빈 곳 벼락을 버리고 종마다 나오는 자리를 정함(판 좌표 = stagegrid.mjs 로 잼)
+    spark: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, blinkAt: 50, electric: { bolts: [{ at: [40, 5], ang: -95, len: 9, f0: 4 }, { at: [81, 51], ang: 20, len: 8, f0: 36 }], arcs: false, crawl: [{ box: [12, 2, 86, 56], at: [14, 24, 46, 56], len: 9 }] } },   // 번개 꽃잎 둘레를 전기가 기어감 + 꽃잎 끝 벼락
+    spark_teen: { electric: { bolts: [{ at: [44, 14], ang: -90, len: 8, f0: 4 }, { at: [77, 35], ang: 15, len: 7, f0: 36 }], arcs: false, crawl: [{ box: [16, 12, 80, 56], at: [14, 46], len: 8 }] } },
+    spark_young: { electric: { bolts: [{ at: [45, 24], ang: -90, len: 6, f0: 4 }], arcs: false, crawl: [{ box: [30, 22, 62, 58], at: [20, 48], len: 7 }] } },
     vine_water: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.6, leaf: 1.6, flutter: 1, blinkAt: 30, amb: { drips: { n: 2, every: 36 } } },
     cactus_fire: { bob: 1, sway: 0.5, open: 0, petal: 0, leaf: 0.6, fire: { up: 2.5, side: 0.9 }, blinkAt: 58 },
     gaia: { bob: 1, squash: 0.6, sway: 0.4, open: 0, petal: 0, leaf: 0.3, blinkAt: 46, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 20 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 2, every: 20 }, dust: { n: 5, pebble: { from: [70, 40], at: 44, floor: 75 } } } },
@@ -1014,7 +1017,9 @@ async function animKit() {
     spore_cap: { bob: 2, squash: 1.5, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, blinkAt: 18, amb: { spores: { from: 'cap', n: 7 } } },
     // 새 종 넷(2026-10-16): 얼음 종꽃 = 서리 반짝 · 매끈한 빛 / 전깃줄 덩굴 = 전기 / 바위 버섯 = 수정 · 먼지 · 숨 작게 / 해파리 버섯 = 말랑 · 물방울 · 거품
     frost_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, blinkAt: 28, amb: { twinkle: { mat: { hue: [190, 260], lmin: 0.75 }, n: 2, every: 24 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 12, len: 6 } } },
-    volt_vine: { bob: 1.5, sway: 1.1, open: 1, petal: 1.4, leaf: 1.8, electric: true, blinkAt: 42 },
+    volt_vine: { bob: 1.5, sway: 1.1, open: 1, petal: 1.4, leaf: 1.8, blinkAt: 42, amb: { pulse: { mat: { hue: [40, 95], cmin: 0.1 }, every: 32, len: 10, at: 0 } }, electric: { bolts: [{ at: [60, 9], ang: -75, len: 9, f0: 10 }, { at: [26, 12], ang: -120, len: 8, f0: 42 }], arcs: false } },   // 감긴 줄기의 호박빛 마디를 타고 전류가 올라가 위 잎끝에서 벼락
+    volt_vine_teen: { electric: { bolts: [{ at: [59, 14], ang: -75, len: 8, f0: 10 }, { at: [29, 17], ang: -120, len: 7, f0: 42 }], arcs: false } },
+    volt_vine_young: { electric: { bolts: [{ at: [36, 27], ang: -110, len: 6, f0: 10 }], arcs: false } },
     stone_cap: { bob: 1, squash: 0.6, sway: 0.3, open: 0, petal: 0, leaf: 0.3, blinkAt: 34, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 16 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 1, every: 26 }, dust: { n: 4 } } },
     jelly_cap: { bob: 2, squash: 2.2, sway: 0.8, open: 0.6, petal: 1.2, leaf: 0.8, blinkAt: 20, amb: { drips: { n: 2, every: 34 }, bubbles: { mat: { hue: [190, 260], lmin: 0.6, cmin: 0.03 }, n: 3 } } },
     // 변이 고정 새 다섯(2026-10-17): 덫 꽃 = 덫이 크게 벌름 · 칼날 덩굴 = 불 + 칼날 번뜩 · 독 선인장 = 독 방울 · 용 과일 선인장 = 서리 반짝 · 불씨 버섯 = 불 + 불씨 포자
@@ -1027,9 +1032,13 @@ async function animKit() {
     mask_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1, blinkAt: 999 },   // 탈춤 소매 덩굴(탈 = 감은 눈 — 깜빡임 없음)
     lantern_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.6, flutter: 0.8, blinkAt: 26 },   // 청사초롱 흔들림
     jar_cactus: { bob: 1, squash: 0.8, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 30, amb: { drips: { n: 2, every: 36 } } },   // 물동이 물방울
-    goblin_cap: { bob: 2, squash: 1.4, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, electric: true, blinkAt: 34 },   // 방망이 번개
+    goblin_cap: { bob: 2, squash: 1.4, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, blinkAt: 34, electric: { bolts: [{ at: [21, 9], ang: -105, len: 9, f0: 4 }], arcs: false, zap: [{ box: [10, 6, 35, 52], at: [12, 30, 44, 56], n: 2 }], crawl: [{ box: [10, 6, 35, 52], at: [22, 50], len: 14 }] } },   // 방망이 번개 = 원화처럼 방망이를 휘감은 지그재그(zap) + 윤곽 타고 기는 전기 + 방망이 끝 벼락
+    goblin_cap_teen: { electric: { bolts: [{ at: [23, 25], ang: -100, len: 7, f0: 4 }], arcs: false, zap: [{ box: [15, 22, 31, 60], at: [14, 36, 52], n: 2, min: 6, max: 12 }], crawl: [{ box: [15, 22, 31, 60], at: [26], len: 10 }] } },
+    goblin_cap_young: { electric: { bolts: [], arcs: false, crawl: [{ box: [24, 28, 72, 44], at: [20, 50], len: 8 }] } },   // 방망이 전 = 갓 위로만 가끔
     crown_cap: { bob: 1.5, squash: 1.2, sway: 0.6, open: 0.4, petal: 0.5, leaf: 0.8, blinkAt: 44 },
-    drum_cactus: { bob: 1.5, squash: 0.8, sway: 0.6, open: 0, petal: 0.4, leaf: 0.6, electric: true, blinkAt: 36 },   // 북 · 북채 번개
+    drum_cactus: { bob: 1.5, squash: 0.8, sway: 0.6, open: 0, petal: 0.4, leaf: 0.6, blinkAt: 36, electric: { bolts: [], arcs: false, chain: [{ pts: [[20, 38], [29, 21], [49, 15], [66, 24], [75, 44]], at: [6, 38] }] } },   // 뇌신의 북 고리: 번개가 북에서 북으로 차례로 튀며 맞은 북이 번쩍 → 끝 북에서 고리, 다음엔 거꾸로
+    drum_cactus_teen: { electric: { bolts: [{ at: [35, 19], ang: -110, len: 6, f0: 22 }, { at: [73, 40], ang: -60, len: 6, f0: 54 }], arcs: false, chain: [{ pts: [[35, 20], [51, 57]], at: [6] }, { pts: [[73, 41], [51, 57]], at: [38] }] } },   // 북채 → 배 북
+    drum_cactus_young: { electric: { bolts: [], arcs: false, chain: [{ pts: [[53, 63]], at: [6, 38] }] } },
     drake_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.8, flutter: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 52 },   // 태생 용족 불 선인장: 가시 끝 불 · 날개 살짝
     title_hero: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, fire: { up: 1.8, side: 0.7 }, blinkAt: 44 },   // 처음 화면 대표 캐릭터 = 불꽃 용 선인장(가시 끝 불)
     ember_cap: { bob: 2, squash: 1.4, sway: 0.6, open: 0.6, petal: 0.5, leaf: 0.8, fire: { up: 1.8, side: 0.8 }, blinkAt: 16, amb: { spores: { from: 'cap', n: 6 } } },
@@ -1040,8 +1049,12 @@ async function animKit() {
     viking_cap: { bob: 1.5, squash: 1, sway: 0.5, open: 0.4, petal: 0.5, leaf: 0.8, blinkAt: 38, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 24 } } },   // 얼음 뿔 · 서리 반짝
     hyunmu_cap: { bob: 1, squash: 0.8, sway: 0.5, open: 0.4, petal: 0.5, leaf: 0.8, flutter: 0.6, blinkAt: 48, amb: { drips: { n: 2, every: 34 }, shine: { mat: { cmax: 0.08, lmin: 0.7 }, at: 16, len: 6 } } },   // 젖은 등껍질 빛 · 물방울
     gumiho_bloom: { bob: 1.5, sway: 1.1, open: 1, petal: 1.2, leaf: 1.2, flutter: 0.8, fire: { up: 1.6, side: 0.7 }, blinkAt: 24 },   // 꼬리 꽃잎 펄럭 · 여우불
-    wizard_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, electric: true, blinkAt: 32 },   // 별 지팡이 불똥
-    ninja_vine: { bob: 1.5, sway: 1.3, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1.2, blinkAt: 40, amb: { wind: { n: 1, y0: 10, y1: 60 } } },   // 목도리 펄럭
+    wizard_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, blinkAt: 32, amb: { magic: { at: [71, 14], n: 6, spread: 14, rise: 0.35, sparks: true }, twinkle: { mat: { hue: [60, 110], cmin: 0.1, lmin: 0.6 }, box: [18, 0, 62, 30], n: 2, every: 20 } } },   // 별 지팡이: 별 맥동 + 전기 불똥 + 떠오르는 별가루 · 모자 별 반짝(벼락은 마법사에 안 맞아 뺌)
+    wizard_bell_teen: { amb: { magic: { at: [32, 20], n: 4, spread: 10, rise: 0.35, sparks: true } } },
+    wizard_bell_young: { amb: { magic: { at: [39, 26], n: 3, spread: 8, rise: 0.35 } } },
+    ninja_vine: { bob: 1.5, sway: 1.3, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1.2, blinkAt: 40, amb: { wind: { n: 3, every: 26, y0: 12, y1: 52, len: 22 }, petals: { from: [[78, 68], [72, 53]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 40, life: 22, n: 2 } } },   // 목도리 펄럭 · 식물 뒤로 지나가는 바람결(목도리 쪽으로) · 오른쪽 잎이 뜯겨 날아감
+    ninja_vine_teen: { amb: { wind: { n: 3, every: 26, y0: 18, y1: 56, len: 20 }, petals: { from: [[67, 62], [62, 50]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 40, life: 22, n: 2 } } },
+    ninja_vine_young: { amb: { wind: { n: 3, every: 26, y0: 30, y1: 60, len: 18 }, petals: { from: [[58, 62]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 44, life: 22, n: 1 } } },
     pirate_cactus: { bob: 1.2, squash: 0.9, sway: 0.6, open: 0.3, petal: 0.8, leaf: 0.8, flutter: 0.8, blinkAt: 26, amb: { shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 14, len: 6 }, drips: { n: 1, every: 40 } } },   // 2026-10-18 해적 · 가시 칼 반짝 · 물방울
     ranger_vine: { bob: 1.4, sway: 1.2, open: 0.5, petal: 1.2, leaf: 1.6, flutter: 1, blinkAt: 34, amb: { wind: { n: 1, y0: 12, y1: 60 } } },   // 숲 궁수 · 잎 망토
     miner_cap: { bob: 1, squash: 0.7, sway: 0.3, open: 0, petal: 0, leaf: 0.3, blinkAt: 22, amb: { gems: { mat: { hue: [25, 55], cmin: 0.25, lmin: 0.55 }, at: 18 }, dust: { n: 4 } } },   // 광부 · 호박 광석 반짝 · 흙먼지
@@ -1050,8 +1063,10 @@ async function animKit() {
     dandel_aero: { bob: 1.8, sway: 1.4, open: 1, petal: 1.6, leaf: 1.6, flutter: 1.3, blinkAt: 12, amb: { petals: { from: [[62, 24], [64, 34], [58, 16]], color: '#ffffff', edge: '#efe8d0', dim: '#cfc6a8', vx: 0.7, vy: -0.22, sway: 1.2, every: 22, life: 34, n: 3 } } },   // 민들레 비행사 · 홀씨가 하나씩 바람에 날아감(2026-10-18 사용자)   // 민들레 비행사 · 리본 목도리
     diver_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.6, flutter: 1, blinkAt: 28, amb: { drips: { n: 2, every: 36 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 20, len: 6 } } },   // 젖은 잎 · 물안경 빛
   };
+  // 단계마다 다른 효과 자리: FX[<키>_young|_teen] 이 있으면 종 값 위에 덮어씀(번개 나오는 방망이 · 북은 단계마다 자리가 다르고 어린 단계엔 없음)
+  const fxOf = cv => cv.outKey && FX[cv.outKey] ? { ...FX[cv.key], ...FX[cv.outKey] } : FX[cv.key] || {};
   const rigs = cvs.map(cv => idleRig(cv));
-  const eplans = cvs.map((cv, k) => (FX[cv.key] || {}).electric ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR }) : null);
+  const eplans = cvs.map((cv, k) => { const e = fxOf(cv).electric; return e ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR, ...(typeof e === 'object' ? e : {}) }) : null; });
   // 특성 효과 자리: 'head' = 머리 오른쪽 위, 'cap' = 갓 아래 가장자리, 'right' = 가장 오른쪽 끝 두 곳, 'holes' = 가장 높은 끝 두 곳 옆
   const { ambientPlan, ambientFrame } = await import('./fx.mjs');
   const resolveFrom = (k, v) => {
@@ -1065,7 +1080,7 @@ async function animKit() {
     return [[r.hx, r.hy]];
   };
   const ambs = cvs.map((cv, k) => {
-    const a = (FX[cv.key] || {}).amb;
+    const a = fxOf(cv).amb;
     if (!a) return null;
     const A = JSON.parse(JSON.stringify(a));
     if (A.petals) A.petals.from = resolveFrom(k, A.petals.from);
@@ -1077,20 +1092,20 @@ async function animKit() {
   });
   // 불 재질 = 가장 밝은 단이 밝고 선명한 주황·노랑인 재질
   const fireMat = cv => cv.matL.map((_, m) => { const c = cv.palLab[m * LV + LV - 1]; return hueOf(c[1], c[2]) > 20 && hueOf(c[1], c[2]) < 100 && Math.hypot(c[1], c[2]) > 0.12 && c[0] > 0.68; });
-  const fires = cvs.map(cv => (FX[cv.key] || {}).fire ? fireRig(cv, fireMat(cv)) : null);
+  const fires = cvs.map(cv => fxOf(cv).fire ? fireRig(cv, fireMat(cv)) : null);
   // 장마다 움직임 장(field) — 몸은 두 장마다, 불은 장마다
   const fieldOf = (k, f) => {
-    const fx = FX[cvs[k].key] || {}, { field: body, head } = idleField(rigs[k], Math.floor(f / 2) * 2 / FR, fx), ff = fires[k] ? fireField(fires[k], f / FR, fx.fire) : null;
+    const fx = fxOf(cvs[k]), { field: body, head } = idleField(rigs[k], Math.floor(f / 2) * 2 / FR, fx), ff = fires[k] ? fireField(fires[k], f / FR, fx.fire) : null;
     const field = ff ? (X, Y) => { const a = body(X, Y), b = ff(Math.max(0, Math.min(W - 1, Math.round(X - a[0]))), Math.max(0, Math.min(H - 1, Math.round(Y - a[1])))); return [a[0] + b[0], a[1] + b[1]]; } : body;
     return { field, head };
   };
   const fieldsAll = cvs.map((_, k) => Array.from({ length: FR }, (_, f) => fieldOf(k, f)));
   const mapsAll = cvs.map((cv, k) => mixedMaps(cv, fieldsAll[k], fires[k] ? fireMat(cv) : null));
   // 깜빡임: blinkAt 장부터 반쯤 → 감음 → 감음 → 반쯤
-  const eyeAt = (k, f) => { const b = (FX[cvs[k].key] || {}).blinkAt; return b == null ? 'open' : f === b + 1 || f === b + 2 ? 'closed' : f === b || f === b + 3 ? 'half' : 'open'; };
+  const eyeAt = (k, f) => { const b = fxOf(cvs[k]).blinkAt; return b == null ? 'open' : f === b + 1 || f === b + 2 ? 'closed' : f === b || f === b + 3 ? 'half' : 'open'; };
   // k번째 종의 f번째 장 재료(96×112): 식물 그림 + 효과 칸
   const partsOf = (k, f, eye = eyeAt(k, f)) => {
-    const cv = cvs[k], rig = rigs[k], fx = FX[cv.key] || {}, sec = f * DT / 100, { field, head } = fieldsAll[k][f];
+    const cv = cvs[k], rig = rigs[k], fx = fxOf(cv), sec = f * DT / 100, { field, head } = fieldsAll[k][f];
     const isF = fires[k] ? fireMat(cv) : null;
     const tone = isF ? (m, l, x, y) => isF[m] ? Math.max(0, Math.min(LV - 1, l + [1, 0, -1, 0][Math.floor(((y / 5 + sec * 5) % 4 + 4) % 4)])) : l : null;
     const maps = mapsAll[k][f];
@@ -1111,7 +1126,7 @@ async function animKit() {
         if (x < 0 || y < 0 || x >= W || y >= H || Math.hypot(x + 0.5 - fl.x, y + 0.5 - fl.y) > fl.r) continue;
         const q = (y * W + x) * 4;
         if (im.data[q + 3] < 128) continue;
-        for (let c = 0; c < 3; c++) im.data[q + c] = Math.round(im.data[q + c] + (255 - im.data[q + c]) * 0.45);
+        for (let c = 0; c < 3; c++) im.data[q + c] = Math.round(im.data[q + c] + ([255, 244, 176][c] - im.data[q + c]) * 0.42);   // 흰색으로 섞으면 회색 얼룩이 됨 → 번개빛(옅은 노랑) 쪽으로
       }
     }
     if (fires[k]) emberFrame(f, fires[k], at, put, { seed: 3 + k });
@@ -1124,7 +1139,7 @@ async function animKit() {
     for (const [x, y, c] of fxPaint) out.set(x, y, c);
     return out;
   };
-  return { FX, FR, DT, pot, rigs, eplans, fires, findTips, eyeAt, partsOf, frameOf };
+  return { FX, fxOf, FR, DT, pot, rigs, eplans, fires, findTips, eyeAt, partsOf, frameOf };
 }
 
 if (anim) {

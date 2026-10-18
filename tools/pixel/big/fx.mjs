@@ -86,6 +86,8 @@ export function ambientPlan(cv, rig, amb = {}, FR = 64, seed = 11) {
   if (amb.spores) plan.spores = amb.spores;
   if (amb.dust) plan.dust = amb.dust;
   if (amb.lava) plan.lava = amb.lava;
+  if (amb.magic) plan.magic = amb.magic;
+  if (amb.pulse) { const cells = cellsOf(cv, matsWhere(cv, amb.pulse.mat || {}), amb.pulse.box), ys = cells.map(c => Math.floor(c / W)); plan.pulse = { ...amb.pulse, cells, set: new Set(cells), yb: Math.max(...ys, 0), yt: Math.min(...ys, H) }; }
   return plan;
 }
 
@@ -161,20 +163,74 @@ export function ambientFrame(f, plan, im, at, put, b = 0) {
       const x = o[0] + (pe.vx ?? 0.2) * k + Math.sin(k * 0.35 + q) * (pe.sway ?? 1.5), y = o[1] + (pe.vy ?? 0.35) * k;
       if (y >= P.cy + 1 && !pe.vx) continue;
       const c = t < 0.7 ? pe.color : pe.dim || pe.color;
+      if (pe.big) {   // 큰 잎(세 칸): 네 장마다 돌아가며 구름(가로 → 사선 → 세로 → 사선)
+        const X = Math.floor(x), Y = Math.floor(y), sh = [[[0, 0], [1, 0], [-1, 0]], [[0, 0], [1, -1], [-1, 1]], [[0, 0], [0, -1], [0, 1]], [[0, 0], [1, 1], [-1, -1]]][Math.floor(k / 2) % 4];
+        sh.forEach(([dx, dy], i) => put(X + dx, Y + dy, i === 1 ? pe.edge || c : c));
+        continue;
+      }
       put(Math.floor(x), Math.floor(y), c);
       if (k % 4 < 2) put(Math.floor(x) + 1, Math.floor(y), pe.edge || c);   // 뒤집히며 넓었다 좁았다
     }
   }
-  // ── 바람결: 옅은 선이 빠르게 지나가며 끝이 말림(saint11 Wind: 빠르게·지그재그·고리, 공기는 입자로 보임) ──
+  // ── 바람결(2026-10-18 다시 — 사용자 "닌자바인 바람 효과가 별로": 전엔 짧은 선이 몸 위를 지나가 얼룩처럼 보였음):
+  //   saint11 Wind = 빠르게 · 물결 · 고리, 공기는 입자로 보임 → 판을 가로지르는 긴 물결 줄(머리 흰색 · 몸 옅은 색 · 꼬리 흐림 · 군데군데 끊김)이
+  //   식물 **뒤로** 지나가고(식물 칸은 안 칠함), 지나는 길 한 곳에서 작은 고리를 한 번 말았다 풀림. dir = 1 이면 왼쪽 → 오른쪽
   if (plan.wind) {
-    const wd = plan.wind, every = wd.every || 20;
-    for (let q = 0; q < (wd.n || 2); q++) {
-      const k = ((f - q * Math.floor(every / (wd.n || 2))) % every + every) % every, life = 9;
+    const wd = plan.wind, n = wd.n || 2, every = wd.every || 30, sp = wd.speed || 7, dir = wd.dir ?? 1, life = Math.ceil((W + 34) / sp);
+    const solid = (x, y) => x < 0 || y < 0 || x >= W || y >= H || im.data[(y * W + x) * 4 + 3] >= 128;
+    for (let q = 0; q < n; q++) {
+      const off = q * Math.floor(every / n) + (wd.at ?? 0), k = ((f - off) % every + every) % every;
       if (k >= life) continue;
-      const cyc = Math.floor((f - q * Math.floor(every / (wd.n || 2))) / every), r = rng(plan.seed * 5 + q * 97 + cyc * 313);
-      const y0 = (wd.y0 ?? 10) + r() * ((wd.y1 ?? 60) - (wd.y0 ?? 10)), head = -8 + k * 13, L = 8 + Math.floor(r() * 6), col = wd.color || '#c9d3f0';
-      for (let s = 0; s < L; s++) { const x = head - s, y = y0 + Math.sin((x + cyc * 7) * 0.25) * 1.2; if (x >= 0 && x < W) put(Math.floor(x), Math.floor(y), s < 2 ? '#eef2ff' : col); }
-      if (k >= 5) for (let a = 0; a < 5; a++) put(Math.floor(head + 1 + Math.cos(a * 1.2) * 2), Math.floor(y0 - 2 + Math.sin(a * 1.2) * 2), col);   // 끝 고리
+      const cyc = Math.floor((f - off) / every), r = rng(plan.seed * 5 + q * 97 + cyc * 313);
+      const y0 = (wd.y0 ?? 10) + r() * ((wd.y1 ?? 60) - (wd.y0 ?? 10)), amp = 0.8 + r() * 1.2, ph = r() * 6.3, L = Math.min(wd.len || 20, 5 + k * 4);
+      const head = dir > 0 ? -4 + k * sp : W + 4 - k * sp, col = wd.color || '#c9d3f0', dim = wd.dim || '#8f9ac0';
+      const yAt = x => y0 + amp * Math.sin(x * 0.11 + ph);
+      for (let s = 0; s < L; s++) {
+        if (s % 7 === 5) continue;
+        const x = Math.floor(head - s * dir), y = Math.floor(yAt(x));
+        if (!solid(x, y)) put(x, y, s < 2 ? '#ffffff' : s < L * 0.65 ? col : dim);
+      }
+      const cx = W * (0.3 + r() * 0.4), past = (head - cx) * dir;
+      if (past > 0 && past < L) {   // 고리: 머리가 지나간 자리에서 위로 말림 — 꼬리가 지나가면 풀림
+        const R = 2.4, oy = yAt(cx) - R;
+        for (let a = 0; a < 8; a++) { if (past > L * 0.6 && a % 2) continue; const ang = Math.PI / 2 + dir * a * 0.8, x = Math.floor(cx + Math.cos(ang) * R * dir), y = Math.floor(oy + Math.sin(ang) * R); if (!solid(x, y)) put(x, y, a < 2 ? '#ffffff' : col); }
+      }
+    }
+  }
+  // ── 전류(2026-10-18 볼트바인): 그 재질 칸을 따라 밝은 띠가 밑에서 위로 훑어 올라감(줄기를 타고 오르는 전기) — 끝나면 위 잎끝 벼락(electric bolts 의 f0 를 맞춤) ──
+  if (plan.pulse && plan.pulse.cells.length) {
+    const pu = plan.pulse, every = pu.every || 32, len = pu.len || 10, k = ((f - (pu.at ?? 0)) % every + every) % every;
+    if (k < len) {
+      const band = pu.yb - (pu.yb - pu.yt) * k / (len - 1);
+      for (let i = 0; i < W * H; i++) {
+        const j = srcIdx[i];
+        if (j < 0 || !pu.set.has(j)) continue;
+        const d = Math.abs(Math.floor(j / W) - band);
+        if (d < 1.2) im.set(i % W, Math.floor(i / W), '#fff6c0');
+        else if (d < 3) lighten(im, i % W, Math.floor(i / W), 0.5);
+      }
+    }
+  }
+  // ── 별빛 마법(2026-10-18 위저드벨 — 번개 속성 마법사): 지팡이 별이 맥동(점 → 십자 → 큰 십자 + 사선 빛살)하며 짧은 전기 불똥 셋,
+  //   별가루가 흔들리며 떠올라 점 ↔ 십자로 반짝이다 보라로 흐려짐 ──
+  if (plan.magic) {
+    const mg = plan.magic, every = mg.every || 32, k = ((f - (mg.at0 ?? 6)) % every + every) % every, o = at(mg.at), X = Math.floor(o[0]), Y = Math.floor(o[1]);
+    if (k < 6) {
+      star(put, o[0], o[1], [0, 1, 2, 2, 1, 0][k]);
+      if (k >= 2 && k <= 4) for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) for (let s = 2; s <= [0, 0, 4, 6, 6][k]; s++) { if (k === 4 && s < 4) continue; put(X + dx * s, Y + dy * s, s <= 3 ? '#fff7d0' : k === 4 ? '#b89ae8' : '#e8d8ff'); }   // 사선 빛살이 뻗었다가 끝만 남고 사라짐
+      if (mg.sparks && k >= 1 && k <= 3) {   // saint11 불똥 세 장: 흰 → 노랑 → 주황, 짧아지며 튐
+        const rs = rng(plan.seed * 23 + Math.floor((f - (mg.at0 ?? 6)) / every));
+        for (let n = 0; n < 3; n++) { const a = -Math.PI / 2 + (rs() - 0.5) * 3.4, d = 2 + k * 1.6; put(Math.floor(o[0] + Math.cos(a) * d), Math.floor(o[1] + Math.sin(a) * d + 0.2 * k * k), k === 1 ? '#ffffff' : k === 2 ? '#ffd84a' : '#f5a83a'); }
+      }
+    }
+    for (let q = 0; q < (mg.n || 4); q++) {
+      const r = rng(plan.seed * 19 + q * 43), life = mg.life || 30, ph = Math.floor(r() * life), kk = ((f + ph) % life + life) % life, cyc = Math.floor((f + ph) / life), r2 = rng(plan.seed + q * 7 + cyc * 389);
+      const sx = mg.at[0] + (r2() - 0.5) * (mg.spread || 10), sy = mg.at[1] + (r2() - 0.3) * 4, p = at([sx, sy]), t = kk / life;
+      const x = p[0] + Math.sin(kk * 0.25 + q * 2) * 1.8, y = p[1] - kk * (mg.rise || 0.45);
+      if (y < 1) continue;
+      const c = t < 0.45 ? '#fff4c0' : t < 0.8 ? mg.color || '#d6b8ff' : mg.dim || '#9a7ad0', X2 = Math.floor(x), Y2 = Math.floor(y);
+      put(X2, Y2, c);
+      if (t < 0.6 && (kk + q) % 6 < 2) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) put(X2 + dx, Y2 + dy, c === '#fff4c0' ? '#f0e0ff' : c);   // 반짝: 십자
     }
   }
   // ── 소용돌이 고리: 구멍 둘레에서 3/4 원이 돌며 떠올라 흩어짐 ──
