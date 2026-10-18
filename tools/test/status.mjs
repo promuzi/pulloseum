@@ -3,7 +3,7 @@
 import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST } from '../../v2/src/battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, RULES_FX } from '../../v2/src/battle/status.js';
+import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX } from '../../v2/src/battle/status.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 
 let fails = 0, n = 0;
@@ -101,10 +101,16 @@ const fixed = v => () => v;
   apply(b, 'chill', 1, ctx(a, 1, []));
   ok(!b.eff.chill && mustSkip(b) && b.eff.frozen, '빙결 3 → 얼음(쉼) · 0으로');
   const c = mk('foe', 'flower_grass');
-  apply(c, 'shock', 1, ctx(a, 1, [])); apply(c, 'shock', 1, ctx(a, 2, []));
-  ok(c.eff.shock.n === 2 && !mustSkip(c), '감전 2 = 아직');
-  apply(c, 'shock', 1, ctx(a, 3, []));
-  ok(!c.eff.shock && c.eff.skip && c.eff.skip.src === 'paral', '감전 3 → 마비(쉼) · 0으로');
+  // 감전 = 확률형(2026-10-18): 걸려도 바로 쉬지 않음 · 자기 차례 굴림이 25%(젖으면 50%) 아래면 마비 → 감전 풀림 · 버팀 중엔 안 굴림
+  apply(c, 'shock', 1, ctx(a, 1, []));
+  ok(c.eff.shock && !mustSkip(c), '감전 = 걸려도 바로 안 쉼');
+  const r = v => ({ turn: 1, rng: () => v, ev: [] });
+  ok(!shockRoll(c, r(0.3)) && c.eff.shock, '감전 굴림 0.3 = 안 걸림(25%)');
+  c.eff.wet = { exp: 9 };
+  ok(shockRoll(c, r(0.4)) && !c.eff.shock && c.eff.skip && c.eff.skip.src === 'paral', '젖으면 50% — 굴림 0.4 = 마비 · 감전 풀림');
+  delete c.eff.wet; delete c.eff.skip; c.eff.brace = { exp: 2 }; apply(c, 'shock', 1, ctx(a, 1, []));
+  ok(!shockRoll(c, r(0)) && c.eff.shock, '버팀(쉰 다음 턴)엔 안 굴림');
+  delete c.eff.brace; delete c.eff.shock;
   const d = mk('foe', 'flower_grass');
   apply(d, 'chill', 1, ctx(a, 1, [])); endTurn([[d, a]], 1, []); endTurn([[d, a]], 2, []); ok(d.eff.chill && d.eff.chill.n === 1, '빙결 1턴 안 쌓임 → 그대로'); endTurn([[d, a]], 3, []);
   ok(d.eff.chill === undefined || d.eff.chill.n < 1, '빙결도 2턴 안 쌓이면 줄어듦');

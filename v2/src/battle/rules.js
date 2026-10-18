@@ -3,7 +3,7 @@
 //  회피는 무조건 피하기가 아니라 빗나감/스침/정타/치명 비율을 바꾸는 것 · 확률 p가 ceil(1/p)-1번 연속 실패하면 다음은 확정(불운 보정) ·
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
-import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, onHit, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
+import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -19,6 +19,9 @@ export const RULES = {
   areaEvadeK: 0.5,                              // 범위 공격은 회피 자세가 옮기는 칸을 절반만
   repeatStanceK: 0.5,                           // 같은 자세를 연달아 쓰면 효과 절반(포켓몬 방어 연속 사용 감쇠에서 — 버티기만 하는 판 막기, 제안값)
   critAfterCritK: 0.5,                          // 치명을 맞은 다음 공격은 치명 칸 절반(연속 치명 불운 줄이기, 제안값)
+  // 2026-10-18 바닥 규칙 1단계(사용자 "추천대로" — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §1):
+  //  방어 = 비율(받는 몫 = defScale ÷ (defScale + 방어), 막는 몫 상한 defCap — 100%에 닿지 않게) · 광역 = 확정 명중(빗나감 · 스침 없음, 치명은 있음) · 위력 areaK배
+  defScale: 100, defCap: 0.75, areaK: 0.85,
 };
 
 // ── 불운 보정 ──
@@ -55,6 +58,7 @@ export function hitTable(att, def, o = {}) {
   let crit = (att.crit || 0) + (o.critAdd || 0);
   if (o.critK != null) crit = Math.floor(crit * o.critK);
   miss = Math.max(0, Math.min(RULES.missMax, miss)); crit = Math.max(0, Math.min(RULES.critMax, crit));
+  if (o.area) return { miss: 0, graze: 0, hit: 100 - crit, crit };   // 광역 = 확정 명중(회피 자세 · 적중 ↓도 안 먹음)
   const sh = o.shift;   // 회피 자세: { miss, graze, critToGraze } — 범위 공격이면 areaEvadeK배
   if (sh) {
     const k = (o.area ? RULES.areaEvadeK : 1) * (o.shiftK ?? 1);
@@ -72,15 +76,16 @@ export function tierOf(t, r100) { return r100 < t.miss ? 'miss' : r100 < t.miss 
 // 판정 + 불운 보정(연속 빗나감 → 정타 확정)
 export function judgeHit(t, missStreak, rng) {
   const p = (100 - t.miss) / 100;
-  if (missStreak >= pityLimit(p)) return { tier: 'hit', forced: true, missStreak: 0 };
+  if (t.miss > 0 && missStreak >= pityLimit(p)) return { tier: 'hit', forced: true, missStreak: 0 };   // 빗나감 칸이 없으면(광역) 보정 없이 굴림 — 치명이 살아 있게
   const tier = tierOf(t, Math.floor(rng() * 100));
   return { tier, forced: false, missStreak: tier === 'miss' ? missStreak + 1 : 0 };
 }
 
-// ── 피해(간단판 — 위력·공격·방어·상성, 방어는 고정 차감 + 하한 25%) ──
+// ── 피해(위력·공격·방어·상성) — 방어 = 비율(2026-10-18, 전엔 고정 차감 + 하한 25%라 작은 타 · 연타가 크게 깎였음) ──
 export function baseDamage(att, def, skill, elemMult = 1) {
   const raw = (skill.power || 0) * (att.atk || 10) / 50 * elemMult;
-  return Math.max(1, Math.max(raw * 0.25, raw - (def.def || 0) * 0.5));
+  const take = Math.max(1 - RULES.defCap, RULES.defScale / (RULES.defScale + Math.max(0, def.def || 0)));
+  return Math.max(1, raw * take * (skill.area ? RULES.areaK : 1));
 }
 
 // ── 한 턴 해소 ──
@@ -120,6 +125,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const a = actOf(u), d = actOf(foe);
     if (u.hp <= 0 || foe.hp <= 0) break;
     // 쉬는 차례(얼음·마비·기절): 고른 행동이 취소되고 쓴 에너지는 돌려받음 — 이번 턴 앞에서 걸렸어도 아직 안 움직였으면 여기서 취소
+    if (a.act !== 'skip') shockRoll(u, { turn: T, rng, ev });   // 감전 = 자기 차례마다 확률로 마비(걸리면 아래에서 행동 취소)
     if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); continue; }
     if (a.act === 'skip') { skipped.add(u); continue; }
     if (a.act === 'guard' || a.act === 'evade') {

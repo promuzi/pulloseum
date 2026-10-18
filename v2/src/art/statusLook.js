@@ -9,7 +9,7 @@ export const STATUS = {
   atkUp: { name: '공격↑', buff: true }, defDown: { name: '방어↓', col: '#ff6a6a' },
   burn: { name: '화상', icon: 'fire', col: '#ff7a3a' }, poison: { name: '독', icon: 'poison', col: '#b866ff', stack: 5 },
   wet: { name: '젖음', icon: 'water', col: '#4f9dff' }, chill: { name: '빙결', icon: 'ice', col: '#c4ecff', stack: 3 },
-  shock: { name: '감전', icon: 'bolt', col: '#ffd84a', stack: 3 }, stun: { name: '기절', icon: 'star', col: '#ff86c8' },
+  shock: { name: '감전', icon: 'bolt', col: '#ffd84a' }, stun: { name: '기절', icon: 'star', col: '#ff86c8' },
   bind: { name: '덩굴', icon: 'vine', col: '#6fd25c' }, spore: { name: '포자', icon: 'mushroom', col: '#8fe0b8', stack: 3 },
   // 쉬는 차례(빙결 3 = 얼음 · 감전 3 = 마비) · 추가 디버프(2026-10-15 사용자 "기생 씨앗·그늘·꽃가루(→ 강풍) 좋아보임, 나머지도 다 넣고") · 버팀(쉬고 난 다음 턴)
   frozen: { name: '얼음', icon: 'ice', col: '#e8f8ff' }, paral: { name: '마비', icon: 'bolt', col: '#ffe680' },
@@ -25,7 +25,7 @@ export const STATUS = {
 // 효과 설명(전투 화면 '효과' 단추 — 한 줄씩)
 export const STATUS_DESC = {
   burn: '턴 끝 체력 4%씩 3번 · 회복이 절반', poison: '턴 끝 체력 2% × 겹침(5겹까지) · 안 걸리면 줄어듦', wet: '기동 · 적중 · 방어 ↓ · 빙결·감전이 더 쌓임',
-  chill: '기동 ↓ · 3이 되면 한 턴 얼음', shock: '3이 되면 한 턴 마비', stun: '다음 차례를 쉼', frozen: '얼어서 한 턴 쉼(받는 피해 ↓)', paral: '몸이 굳어 한 턴 쉼',
+  chill: '기동 ↓ · 3이 되면 한 턴 얼음', shock: '3턴 · 차례마다 25%(젖으면 50%) 마비 — 마비되면 풀림', stun: '다음 차례를 쉼', frozen: '얼어서 한 턴 쉼(받는 피해 ↓)', paral: '몸이 굳어 한 턴 쉼',
   bind: '기술 하나가 한 턴 묶임', leech: '턴 끝 체력을 상대가 빨아감(3번)', shade: '그 턴 끝 햇빛이 안 참', gale: '적중 ↓', taunt: '방어·회피 자세를 못 씀',
   root: '교체할 수 없음', weak: '공격 ↓', corrode: '방어 ↓', spore: '턴 끝마다 자라 3이면 피어남(피해 + 햇빛 안 참)', brace: '방금 쉬어서 쉬게 하는 효과에 안 걸림',
   rage: '공격 +25%', wall: '받는 피해 −20%', haste: '기동 +30%(먼저 움직이고 잘 피함)', regen: '턴 끝 체력 5% 회복(3번)', thorns: '붙어서 때린 상대에게 피해 30%를 되돌림',

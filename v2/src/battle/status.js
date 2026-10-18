@@ -18,7 +18,7 @@ export const FX = {
   poison:  { stack: 5, dot: 0.02, keep: true },              // 겹마다 턴 끝 최대 체력 2%
   wet:     { el: 'water', turns: 2, mob: 0.8, missAdd: 8, defK: 0.85 },   // 종합: 기동성 −20% · 적중 ↓(빗나감 칸 +8) · 방어 −15%
   chill:   { el: 'ice', stack: 3, skip: 'frozen', mob: 0.8 }, // 쌓여 있는 동안 기동성 −20% · 3 = 얼음(한 번 쉼, 그동안 받는 피해 −25%)
-  shock:   { el: 'bolt', stack: 3, skip: 'paral' },           // 3 = 마비(한 번 쉼)
+  shock:   { el: 'bolt', turns: 2, p: 0.25, wetP: 0.5 },     // 2026-10-18 확률형(사용자 "3겹 없애고 화상처럼"): 걸린 턴 + 2턴 · 자기 차례마다 25%(젖으면 50%) 마비 → 풀림 · 다시 걸면 새로
   stun:    { skip: 'stun' },                                  // 바로 한 번 쉼
   bind:    { turns: 1 },                                      // 다음 턴 기술 하나가 묶임
   leech:   { left: 3, drain: 0.025 },                         // 턴 끝 3번 최대 체력 2.5%를 빨아 건너편 앞 식물이 회복
@@ -42,8 +42,8 @@ export const FX = {
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
 export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
-const SKIP_IDS = ['stun', 'chill', 'shock'];
-const TIMED = ['wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke', 'rage', 'wall', 'haste', 'thorns', 'shield', 'purified'];
+const SKIP_IDS = ['stun', 'chill'];
+const TIMED = ['shock', 'wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke', 'rage', 'wall', 'haste', 'thorns', 'shield', 'purified'];
 const BUFFS = ['rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
 const DEBUFFS = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'choke'];
 const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode'];
@@ -149,7 +149,7 @@ export function apply(tgt, id, n, ctx) {
     const p = e.poison ||= { n: 0, last: T };
     p.n = Math.min(D.stack, p.n + n); p.last = T;
     ev.push({ t: 'fx', ...base, n: p.n, list: listOf(tgt) });
-  } else if (id === 'chill' || id === 'shock') {
+  } else if (id === 'chill') {
     const wet = !!e.wet, add = n + (wet ? RULES_FX.wetStackAdd : 0), s = e[id] ||= { n: 0, last: T };
     s.n = Math.min(D.stack, s.n + add); s.last = T;
     ev.push({ t: 'fx', ...base, n: s.n, wet, list: listOf(tgt) });
@@ -173,6 +173,15 @@ export function apply(tgt, id, n, ctx) {
     e[id] = { exp: T + D.turns };
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   }
+}
+// 감전 굴림(자기 행동 차례 — rules.resolveTurn): 마비면 감전이 풀리고 이번 행동 취소(쉬기 · 햇빛 돌려줌) · 쉰 다음 턴(버팀)엔 안 굴림
+export function shockRoll(u, ctx) {
+  const e = u.eff;
+  if (!e || !e.shock || e.skip || e.brace || u.hp <= 0) return false;
+  if (ctx.rng() >= (e.wet ? FX.shock.wetP : FX.shock.p)) return false;
+  delete e.shock;
+  setSkip(u, 'paral', { ...ctx, by: u });
+  return true;
 }
 // 포자가 피어남: 최대 체력 10% 피해 + 그 턴 끝 에너지 +1 없음(숨 막힘) → 0으로
 function bloom(u, turn, ev) {
@@ -258,7 +267,7 @@ export function endTurn(pairs, turn, ev, stop = null) {
       else ev.push({ t: 'grow', who: u.id, name: u.name, n: e.spore.n, list: listOf(u) });
     }
     let dec = false;
-    for (const k of ['chill', 'shock']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
+    for (const k of ['chill']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
     if (dec && u.hp > 0) ev.push({ t: 'expire', who: u.id, ids: [], list: listOf(u) });
     noteFall(u, ev);
   }

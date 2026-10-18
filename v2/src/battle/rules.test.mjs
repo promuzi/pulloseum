@@ -37,7 +37,7 @@ test('선공 확률: 같은 기동 50%, 빠를수록 높지만 92%를 넘지 않
   assert.equal(initiativeChance(20, 90), RULES.initMin);
 });
 
-test('명중 표: 합 100, 회피 자세는 빗나감·스침을 늘리고 치명부터 줄임, 범위 공격은 절반만', () => {
+test('명중 표: 합 100, 회피 자세는 빗나감·스침을 늘리고 치명부터 줄임, 범위 공격은 확정 명중(2026-10-18)', () => {
   const a = unit('a', { crit: 10 }), d = unit('d');
   const t0 = hitTable(a, d);
   assert.deepEqual(t0, { miss: 6, graze: 12, hit: 72, crit: 10 });
@@ -45,7 +45,7 @@ test('명중 표: 합 100, 회피 자세는 빗나감·스침을 늘리고 치�
   assert.equal(t1.miss + t1.graze + t1.hit + t1.crit, 100);
   assert.deepEqual(t1, { miss: 26, graze: 27, hit: 47, crit: 0 });
   const t2 = hitTable(a, d, { shift: EVADE.shift, area: true });
-  assert.deepEqual(t2, { miss: 16, graze: 20, hit: 64, crit: 0 });
+  assert.deepEqual(t2, { miss: 0, graze: 0, hit: 90, crit: 10 });   // 회피 자세여도 빗나감 · 스침 없음, 치명은 그대로
 });
 
 test('연속 빗나감 보정: 빗나감 70%(적중 30%)면 3번 빗나간 뒤 정타 확정', () => {

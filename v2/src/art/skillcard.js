@@ -149,7 +149,7 @@ const pct = v => Math.round(v * 100) + '%';
 export function statOf(sk, o = {}) {
   if (!sk) return null;
   if (sk.passive) { const L = sk.look || {}; return sk.badge ? { kind: 'pill', txt: sk.badge[0], icon: null, col: [hexMix(L.col || '#5fb3d9', C.ink, 0.25), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)], label: '효과' } : null; }
-  if (sk.act === 'attack') return sk.power ? { kind: sk.area ? 'bomb' : 'pow', txt: String(sk.power), label: '위력' } : null;   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
+  if (sk.act === 'attack') return sk.power ? { kind: sk.area ? 'bomb' : 'pow', txt: String(sk.area ? Math.round(sk.power * RULES.areaK) : sk.power), label: '위력' } : null;   // 광역 = 확정 명중 대신 위력 areaK배(2026-10-18)   // 광역 = 폭탄(사용자 "광역은 검 대신 폭탄 아이콘")
   const half = !!o.halved, k = half ? RULES.repeatStanceK : 1;   // 바로 전 턴에도 같은 자세 = 효과 절반(rules.js) — 두 번째에만 바뀐 수 · 주황
   if (sk.act === 'guard') return { kind: 'block', txt: pct((1 - (sk.guardMult ?? 0.5)) * k), label: '막음', half };
   if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: Math.round(sk.shift.miss * k) + '%', label: '회피', half } : null;

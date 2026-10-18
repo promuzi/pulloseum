@@ -12,9 +12,9 @@ export const hitMult = (u, d, s) => elemMult(s && s.el, d.el) * formMult(u, d, s
 
 // 기본기(누구나·무료): 평타 · 방어 자세(후공일 때만 성립 — 받는 피해 40%) · 회피 자세(선공·후공 모두 — 빗나감 +22·스침 +14칸)
 export const BASICS = [
-  { id: 'basic', name: '평타', act: 'attack', power: 40, cost: 0, cats: ['attack'], el: null },
+  { id: 'basic', name: '평타', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null },   // 40 → 30(2026-10-18 방어 비율 공식으로 작은 타가 덜 깎여서)
   { id: 'guard', name: '방어 자세', act: 'guard', cost: 0, cats: ['guard'], guardMult: 0.4 },
-  { id: 'evade', name: '회피 자세', act: 'evade', cost: 0, cats: ['evade'], shift: { miss: 22, graze: 14 } },
+  { id: 'evade', name: '회피 자세', act: 'evade', cost: 0, cats: ['evade'], shift: { miss: 15, graze: 10 } },   // 22 · 14 → 15 · 10(2026-10-18 평균 −35% → −25%, 턴 전체)
   { id: 'sun', name: '광합성', act: 'sun', cost: 0, gain: 2, cats: ['heal_energy'] },   // 이 턴 대신 햇빛 +2(턴 끝 +1과 따로 — 2026-10-18 사용자 "햇빛 채우는 카드")
 ];
 // 쉬는 차례(얼음·마비·기절)에 고르는 대신 넘기는 행동
