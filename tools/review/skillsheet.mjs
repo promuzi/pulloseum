@@ -42,8 +42,8 @@ for (const l of md) {
   const h = l.match(/^### (\d+)\. (.+)$/);
   if (h) { const parts = h[2].split(' · '); const nm = parts[0].replace(/\(.*$/, '').trim(); cur = { no: +h[1], name: nm, el: parts[1] || '', idea: parts.slice(2).join(' · ').replace(/\(화면 이름.*\)$/, ''), key: byName[nm] || null, innate: '', rows: [] }; list.push(cur); continue; }
   if (!cur) continue;
-  const x = l.match(/^(부제|컨셉|성격):\s*(.*)$/);   // 사용자 설계 종 = 부제 · 컨셉 · 성격 줄
-  if (x) { cur[{ 부제: 'sub', 컨셉: 'idea2', 성격: 'char' }[x[1]]] = x[2]; continue; }
+  const x = l.match(/^(부제|한줄|컨셉|성격):\s*(.*)$/);   // 사용자 설계 종 = 부제 · 한줄 · 컨셉 · 성격 줄
+  if (x) { cur[{ 부제: 'sub', 한줄: 'line', 컨셉: 'idea2', 성격: 'char' }[x[1]]] = x[2]; continue; }
   const t = l.match(/^타고남(\([^)]*\))?:\s*(.*)$/);
   if (t) { cur.innate = (t[1] ? t[1] + ' ' : '') + t[2]; continue; }
   const r = l.match(/^- (어린|자라는|다 자란(?:\(맨몸\))?) · (.*)$/);
@@ -65,6 +65,7 @@ const card = s => `
   <div class="right">
     <div class="head"><span class="nm">${esc(s.name)}</span><span class="chip" style="background:${EL[s.el.replace(/\(.*$/, '')] || '#8899aa'}">${esc(s.el)}</span><span class="chip idea">${esc(s.idea)}</span></div>
     ${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}
+    ${s.line ? `<div class="concept">“${esc(s.line)}”</div>` : ''}
     <div class="concept">${esc(s.idea2 || concept[s.key] || '')}</div>
     ${s.char ? `<div class="concept">성격 · ${esc(s.char)}</div>` : ''}
     <div class="innate"><b>타고남</b> ${esc(s.innate)}</div>
