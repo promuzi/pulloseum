@@ -1,20 +1,23 @@
 // 3:3 교체전(2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임 포켓몬처럼 교체 가능하고 — 이름도 팀리그라고는 하지 말자")
-//  양쪽 식물 셋, 한 번에 앞에 선 하나만 싸운다. 내 차례 = 기술 또는 교체 — 교체가 먼저 일어나고 들어온 식물이 상대 기술을 맞는다(포켓몬처럼).
+//  양쪽 식물 셋, 한 번에 앞에 선 하나만 싸운다. 내 차례 = 기술 또는 교체 — 옛 판 = 교체가 먼저 일어나고 들어온 식물이 상대 기술을 맞음(포켓몬처럼),
+//  swOrder 판(2026-10-18~ 새 판) = 교체도 선공 · 후공을 따름: 먼저면 바꾼 뒤 들어온 식물이 맞고, 늦으면 지금 식물이 맞은 뒤 바뀜.
 //  쓰러지면 턴 끝에 다음 식물(나 = 직접 고름·턴을 안 씀, 봇 = 상성을 보고 고름) · 셋 다 쓰러지면 끝. 기력은 팀이 함께 쓴다(시작 2 · 턴마다 +1 · 최대 8).
 //  계산은 1:1과 같은 rules.resolveTurn(같은 씨앗·같은 선택 → 같은 결과, 화면 무관). 화면은 B.me·B.foe(앞에 선 식물)를 읽으면 된다.
 //  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
-import { makeRng, resolveTurn } from './rules.js';
+import { makeRng, resolveTurn, rollFirst } from './rules.js';
 import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
 import { formMult } from './matchup.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
 
 // swapCd = 스스로 교체한 뒤 다시 교체 못 하는 턴 수(2026-10-18 사용자 "2턴" — 0 = 제한 없음: 이 규칙 전에 시작한 판)
-export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0 }) {
+// swOrder = 교체도 선공 · 후공 순서를 따름(2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지" — false = 이 규칙 전에 시작한 판)
+export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0, swOrder = false }) {
   const start = T => Math.max(2, ...T.map(u => (typeof u.energy === 'number' ? u.energy : 2)));   // 시작 에너지 = 팀에서 가장 큰 값(카드 '엽록체 증식' — 2026-10-17)
   const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: start(me), foe: start(foe) }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
   for (const side of ['me', 'foe']) for (const u of B.team[side]) Object.defineProperty(u, 'energy', { get: () => B.pool[side], set: v => { B.pool[side] = v; }, configurable: true, enumerable: true });
   B.me = me[0]; B.foe = foe[0];
   B.cdLen = swapCd; B.swapCd = { me: 0, foe: 0 };   // 남은 턴(0 = 바꿀 수 있음)
+  B.swOrder = !!swOrder;
   return B;
 }
 export const aliveOf = (B, side) => B.team[side].map((u, i) => (u.hp > 0 ? i : -1)).filter(i => i >= 0);
@@ -50,9 +53,18 @@ export function playTurn3(B, myAct, foeAct = null) {
   const T = B.turn, ev = [], human = !!foeAct;
   const foeSw = human ? (okSwitch(B, 'foe', foeAct) ? foeAct.to : null) : aiSwitch(B, B.rng);
   const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
-  const meSwitch = okSwitch(B, 'me', myAct);
-  if (meSwitch) { swapIn(B, 'me', myAct.to, ev); if (B.cdLen) B.swapCd.me = B.cdLen + 1; }   // +1 = 이번 턴 끝에 하나 줄어 다음 두 턴이 막힘
-  if (foeSw != null) { swapIn(B, 'foe', foeSw, ev); if (B.cdLen) B.swapCd.foe = B.cdLen + 1; }
+  const meSwitch = okSwitch(B, 'me', myAct), sw = { me: meSwitch ? myAct.to : null, foe: foeSw };
+  const doSwap = side => { swapIn(B, side, sw[side], ev); if (B.cdLen) B.swapCd[side] = B.cdLen + 1; };   // +1 = 이번 턴 끝에 하나 줄어 다음 두 턴이 막힘
+  // 교체 순서: swOrder 판은 지금 앞에 선 두 식물로 선공을 굴려(기술 턴과 같은 규칙 · 불운 보정) 먼저인 쪽부터 — 교체한 쪽이 늦으면 late(맞은 뒤 바꿈)
+  let order = null, late = null;
+  if (B.swOrder && (sw.me != null || sw.foe != null)) {
+    const r = rollFirst(B.me, B.foe, B.rng);
+    order = r.first === B.me ? 'me' : 'foe';
+    ev.push({ t: 'first', who: order, chance: r.chance, swap: true });
+    const other = order === 'me' ? 'foe' : 'me';
+    if (sw[order] != null) doSwap(order);
+    if (sw[other] != null) { if (sw[order] != null) doSwap(other); else late = other; }   // 둘 다 바꾸면 순서대로 바로, 한쪽만이면 늦은 쪽은 맞은 뒤
+  } else { if (sw.me != null) doSwap('me'); if (sw.foe != null) doSwap('foe'); }
   const mySkill = meSwitch ? null : skillOf(B.me, myAct);
   const before = { me: B.me.hp, foe: B.foe.hp };
   if (mySkill) { B.me.energy -= mySkill.cost || 0; useCount(B.me, mySkill); }
@@ -61,7 +73,7 @@ export function playTurn3(B, myAct, foeAct = null) {
   if (mySkill || foeSkill) {
     const idle = { id: 'switch', act: 'other' };
     B.me.curEl = mySkill ? mySkill.el : null; B.foe.curEl = foeSkill ? foeSkill.el : null;
-    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T });
+    res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, first: order ? B[order] : null });
     for (const e of res.events) {
       if (e.t === 'act' && e.id === 'switch') continue;
       if (e.t === 'first' && (!mySkill || !foeSkill || mySkill === REST || foeSkill === REST)) continue;   // 한쪽이 바꾸거나 쉬면 선공 판정은 보여 주지 않음
@@ -70,10 +82,16 @@ export function playTurn3(B, myAct, foeAct = null) {
       ev.push(e);
     }
   }
+  // 늦은 교체: 맞고도 서 있으면 바꿈 — 그 사이 쓰러졌으면 그대로(쓰러진 자리 채우기로), 쉬는 차례 · 뿌리 묶기가 걸렸으면 못 바꿈(교체 제한도 안 걸림)
+  if (late && aliveOf(B, 'me').length && aliveOf(B, 'foe').length && B[late].hp > 0) {
+    const skipped = res && res.events.some(e => e.t === 'skip' && e.who === late);
+    if (!skipped && canSwitch(B[late])) doSwap(late);
+    else ev.push({ t: 'swapFail', who: late, name: B[late].name, why: skipped ? 'skip' : 'root' });
+  }
   // 쓰러짐 사건은 쓰러진 그 자리에서(rules · 턴 끝) — 한쪽 식물이 다 쓰러지면 그 자리에서 판이 끝나 같이 끝나는 일이 없음(먼저 다 쓰러진 쪽이 짐)
   //  앞 식물 하나만 쓰러졌으면 턴 끝 효과는 남은 식물에 그대로(포켓몬처럼), 턴 끝 피해도 선공 쪽 먼저
   const out = () => !aliveOf(B, 'me').length || !aliveOf(B, 'foe').length;
-  if (!out()) closeTurn(res && res.first === B.foe.id ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(u.energyMax || 8, B.pool[side] + (u.sunPer || 1)); }, out);   // 나와 있는 식물의 햇빛 그릇 · 회복(반칸씩)
+  if (!out()) closeTurn((res ? res.first === B.foe.id : order === 'foe') ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(u.energyMax || 8, B.pool[side] + (u.sunPer || 1)); }, out);   // 나와 있는 식물의 햇빛 그릇 · 회복(반칸씩)
   for (const e of ev) if (e.t === 'faint' && e.idx == null) e.idx = B.act[e.who];
   if (!aliveOf(B, 'foe').length) B.over = 'win';
   else if (!aliveOf(B, 'me').length) B.over = 'lose';
@@ -83,7 +101,7 @@ export function playTurn3(B, myAct, foeAct = null) {
     if (B.me.hp <= 0) B.need = 'me';
   }
   if (B.swapCd) for (const k of ['me', 'foe']) if (B.swapCd[k] > 0) B.swapCd[k]--;
-  const turn = { n: B.turn, mySkill, foeSkill, mySwitch: myAct.kind === 'switch' ? myAct.to : null, foeSwitch: foeSw, before, events: ev };
+  const turn = { n: B.turn, mySkill, foeSkill, mySwitch: sw.me, foeSwitch: foeSw, before, events: ev };
   B.log.push(turn); B.turn++;
   return turn;
 }

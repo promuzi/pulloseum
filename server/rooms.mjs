@@ -28,14 +28,14 @@ export function makeRooms({ game, log, q: db = null }) {
   const json = o => JSON.parse(JSON.stringify(o));
   function packB(B) {
     if (!B) return null;
-    if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
+    if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, cdLen: B.cdLen || 0, swOrder: !!B.swOrder, swapCd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(json), foe: B.team.foe.map(json) } };
     return { mode: '1v1', turn: B.turn, over: B.over, me: json(B.me), foe: json(B.foe) };
   }
   function unpackB(o) {
     if (!o) return null;
     const seed = randomInt(1, 2 ** 31 - 1);
     if (o.mode === 'swap3') {
-      const B = makeTeamBattle({ me: o.team.me, foe: o.team.foe, seed, swapCd: o.cdLen || 0 });   // 햇빛 = 팀 풀(유닛 energy 는 B.pool 을 읽음)
+      const B = makeTeamBattle({ me: o.team.me, foe: o.team.foe, seed, swapCd: o.cdLen || 0, swOrder: !!o.swOrder });   // 햇빛 = 팀 풀(유닛 energy 는 B.pool 을 읽음)
       B.turn = o.turn; B.over = o.over; B.need = o.need; B.act = { ...o.act }; B.pool = { ...o.pool }; B.swapCd = { ...o.swapCd };
       B.me = B.team.me[B.act.me]; B.foe = B.team.foe[B.act.foe];
       return B;
@@ -303,7 +303,8 @@ export function makeRooms({ game, log, q: db = null }) {
     let turn;
     if (r.mode === 'swap3') {
       turn = pvpTurn3(B, a, b);
-      r.shown.a.add(B.act.me); r.shown.b.add(B.act.foe);   // 교체로 나온 식물 공개, 기술은 쓴 식물에(같은 턴에 쓰러져도 판이 자리를 안 바꿈)
+      r.shown.a.add(B.act.me); r.shown.b.add(B.act.foe);   // 교체로 나온 식물 공개
+      if (turn.mySwitch != null) r.shown.a.add(turn.mySwitch); if (turn.foeSwitch != null) r.shown.b.add(turn.foeSwitch);   // 고른 교체 식물도(턴 시작 공개 카드에 얼굴이 나감 — 늦은 교체가 맞고 쓰러져 못 나와도), 기술은 쓴 식물에(같은 턴에 쓰러져도 판이 자리를 안 바꿈)
       if (turn.mySkill && turn.mySkill.id) r.revealed.a[B.act.me].add(turn.mySkill.id);
       if (turn.foeSkill && turn.foeSkill.id) r.revealed.b[B.act.foe].add(turn.foeSkill.id);
     } else {

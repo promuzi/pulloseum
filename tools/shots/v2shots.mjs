@@ -72,6 +72,8 @@ export const SHOTS = [
   ['08_battle_reveal_0640', 'battle', { venue: 'colosseum', reveal: '640' }],
   ['08_battle_reveal_1000', 'battle', { venue: 'colosseum', reveal: '1000' }],
   ['08_battle_reveal_1300', 'battle', { venue: 'colosseum', reveal: '1300' }],
+  ['08_battle_reveal_swap_0480', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', reveal: '480', swap: 'me', first: 'foe' }],   // 교체 카드(2026-10-18) — 내 쪽 교체 · 상대 기술 뒤집힘
+  ['08_battle_reveal_swap_1300', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', reveal: '1300', swap: 'both', first: 'me' }],
   ['08_battle_reveal_1900', 'battle', { venue: 'colosseum', reveal: '1900' }],   // 턴 시작 공개(2026-10-17 — 카드 나옴 · 상대 카드 뒤집힘 · 선공 · 후공 · 들어감)
   ['08_battle_reveal_me_first', 'battle', { venue: 'colosseum', reveal: '1300', first: 'me' }],
   ['08_battle_cards_mut', 'battle', { phase: 'pick', venue: 'colosseum', energy: '3', mut: 'weapon', mk: 'm_flamer,m_rocket' }],   // 변이 카드 각진 테 · 해 비용 · 햇빛 에너지 칸(2026-10-17)

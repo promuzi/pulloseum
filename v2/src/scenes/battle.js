@@ -13,7 +13,7 @@ import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.j
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
-import { cardFront, cardSlot, renderFaces, renderDown, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, renderDown, renderSwapFront, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -225,6 +225,8 @@ export const battle = {
     if (this.shot) this.pick(null, B.me.kit.find(s => s.id === 's1') || B.me.kit[0]);
     if (!boot && this.p.reveal != null) {   // 검토 촬영(?reveal=ms[&first=me|foe]): 턴 시작 공개의 그 순간에 멈춤
       const atk = u => u.kit.find(s => s.power > 0 && s.cost > 0) || u.kit[0], st = { kind: 'reveal', ms: REVEAL_MS, mine: atk(B.me), theirs: atk(B.foe), first: this.p.first || 'foe' };
+      const sw = this.p.swap, swc = who => { const u = B.team[who][1]; return { swap: true, id: 'swap_' + who, name: u.name, unit: u }; };   // 교체 카드 검토(?swap=me|foe|both — 3:3)
+      if (sw && B.team) { if (sw !== 'foe') st.mine = swc('me'); if (sw !== 'me') st.theirs = swc('foe'); }
       Object.assign(this.v, { steps: [st], si: 0, phase: 'play', t0: app.t - +this.p.reveal, picked: st.mine.id }); this.shot = 'reveal';
     }
   },
@@ -235,7 +237,7 @@ export const battle = {
     const mk = (id, k, extra = {}) => { const sp = SPECIES[k]; return makeUnit(id, sp, { key: k, name: sp.name, stage: p.stage || 'mature', ...protoStats(sp), ...extra }); };   // ?stage=sprout|growing = 검토용 단계 그림
     if (this.mode === 'swap3') {
       const keys = s && s.plants && s.plants.length >= 3 ? s.plants.slice(0, 3).map(x => x.key) : ['flower_grass', 'cactus_fire', 'vine_water'];
-      this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 })), seed });
+      this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 })), seed, swapCd: 2, swOrder: true });
     } else {
       const me = p.me && SPECIES[p.me] ? mk('me', p.me) : makeUnit('me', SPECIES.flower_grass, { key: 'flower_grass', name: '페탈로즈', hp: 220, atk: 35, def: 24, spd: 30, crit: 5 });
       const foe = p.foe && SPECIES[p.foe] ? mk('foe', p.foe, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 }) : makeUnit('foe', SPECIES.vine_water, { key: 'vine_water', name: '타이드바인', hp: 240, atk: 32, def: 22, spd: 26, crit: 5, trainer: '코스모싹', rank: '브론즈 2', tlv: 6 });
@@ -363,8 +365,11 @@ export const battle = {
     const evs = [...turn.events];
     for (let i = 0; i < evs.length; i++) if (evs[i].t === 'hit') { const j = evs.findIndex((e, k) => k > i && e.t === 'stance' && e.who === evs[i].to && e.active); if (j > i) { evs.splice(i, 0, evs.splice(j, 1)[0]); i++; } }
     // 턴 시작 공개(2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고 그다음 진행" · "선공 후공도 빠르고 작게 넘어가서 가독성 떨어지는데 확실히 연출"):
-    //  두 사람이 고른 카드 + 선공 · 후공 표 → 그다음 사건. 교체한 쪽은 카드 없음, 카드가 둘일 때만 선공 · 후공 표(옛 '먼저!' 한 마디는 공개가 대신함)
-    const fe = evs.find(e => e.t === 'first'), card = s => (s && s.name && s.name !== '기술' ? s : null), mine = card(turn.mySkill), theirs = card(turn.foeSkill);
+    //  두 사람이 고른 카드 + 선공 · 후공 표 → 그다음 사건. 카드가 둘일 때만 선공 · 후공 표(옛 '먼저!' 한 마디는 공개가 대신함)
+    //  교체한 쪽 = 교체 카드(들어올 식물 얼굴 · 이름 — 2026-10-18 사용자 "교체할 때도 스킬 카드처럼 교체 카드가 뜨면서 뭐로 바뀔지 안내", 전엔 카드 없음)
+    const swapCard = (who, to) => { const u = B.team[who][to]; return { swap: true, id: `swap_${who}${to}`, name: u && !u.hidden ? u.name : '교체', unit: u && !u.hidden ? u : null }; };
+    const fe = evs.find(e => e.t === 'first'), card = s => (s && s.name && s.name !== '기술' ? s : null);
+    const mine = turn.mySwitch != null ? swapCard('me', turn.mySwitch) : card(turn.mySkill), theirs = turn.foeSwitch != null ? swapCard('foe', turn.foeSwitch) : card(turn.foeSkill);
     const reveal = mine || theirs ? { kind: 'reveal', ms: mine && theirs ? REVEAL_MS : REVEAL1_MS, mine, theirs, first: mine && theirs && fe ? fe.who : null } : null;
     if (reveal) out.push(reveal);
     for (const e of evs) {
@@ -388,6 +393,7 @@ export const battle = {
       else if (e.t === 'heal') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${ga(e.name)} 체력을 빨아들였다!`, tone: 'heal' });
       else if (e.t === 'regen') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${e.name}의 체력이 재생된다`, tone: 'heal' });
       else if (e.t === 'reflect') out.push({ kind: 'reflect', ms: 750, ev: e, side: e.to, msg: `가시에 찔렸다! ${nm(e.to)}도 아프다`, tone: 'hit' });
+      else if (e.t === 'swapFail') out.push({ kind: 'swapFail', ms: 800, side: e.who, msg: `${ga(e.name)} 바꾸지 못했다!`, tone: 'note' });   // 늦은 교체가 쉬는 차례 · 뿌리 묶기에 막힘
       else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 햇빛이 차지 않았다` : `그늘 때문에 ${e.name}의 햇빛이 차지 않았다`, tone: 'note' });
       else if (e.t === 'expire') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
     }
@@ -416,6 +422,7 @@ export const battle = {
     if (st.kind === 'cure') this.pop(st.side, st.ev.why === 'water' ? '화상 꺼짐' : CURE_FIRE[st.ev.ids[0]] || '풀림', null, t, false, -16, '#8ccfff');
     if (st.kind === 'skipT') this.pop(st.side, SKIP_POP[st.ev.src] || '쉼', null, t, false, -16, (STATUS[st.ev.src] || {}).col || '#c0a8ff');
     if (st.kind === 'note' && st.side) this.pop(st.side, '햇빛 막힘', 'dim', t, false, -16);
+    if (st.kind === 'swapFail') { sfx('fizzle'); this.pop(st.side, '교체 실패', 'dim', t, false, -16); }
     if (st.kind === 'faint') this.pop(st.who, '쓰러짐', 'dim', t, false, -16);
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack' || st.kind === 'cast') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }
@@ -822,7 +829,7 @@ export const battle = {
   drawReveal(app, st) {
     const { g, W, t } = app, c = g.c, k = c.getTransform().a || 1, L = this.lay, v = this.v, age = Math.max(0, t - v.t0), ms = st.ms;
     if (!st.faces || st.faces.k !== k) {
-      const BW = RV_W, BH = Math.round(RV_W * CARD_H / CARD_W), face = s => renderFaces(s, CARD_W, CARD_H, BW, BH, k, { can: true }).front;
+      const BW = RV_W, BH = Math.round(RV_W * CARD_H / CARD_W), face = s => (s.swap ? renderSwapFront(s.unit, CARD_W, CARD_H, BW, BH, k, (g2, x, y, w) => drawPortrait(g2, artOf(s.unit), x, y, w, false)) : renderFaces(s, CARD_W, CARD_H, BW, BH, k, { can: true }).front);
       st.faces = { k, BW, BH, me: st.mine ? face(st.mine) : null, foe: st.theirs ? face(st.theirs) : null, down: st.theirs ? renderDown(CARD_W, CARD_H, BW, BH, k) : null };
       const ref = st.mine && this.cards && this.cards['sk_' + st.mine.id];
       st.from = ref ? [ref.x + ref.w / 2, ref.y + ref.h / 2, ref.w / BW] : null;

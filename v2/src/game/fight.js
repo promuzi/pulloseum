@@ -79,10 +79,10 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
-export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0 }) {
+export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false }) {
   if (mode === 'swap3') {
     const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv }));
-    return makeTeamBattle({ me, foe, seed, swapCd });
+    return makeTeamBattle({ me, foe, seed, swapCd, swOrder });
   }
   return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank, tlv }), seed });
 }
@@ -164,7 +164,7 @@ export function setupPvp({ seed, a, b, aName, bName }) {
 export const pvpTurn = (B, aSkill, bSkill) => playTurnVs(B, aSkill, bSkill);
 // PvP 3:3(2026-10-16 사용자 "남은 거 다해줘" — 3:3 친구 대결): 양쪽 식물 셋, 수는 두 사람이 고르고 쓰러진 자리도 저마다 직접(B.need = 'me' | 'foe' | 'both')
 export function setupPvp3({ seed, a, b, aName, bName }) {
-  return makeTeamBattle({ me: a.map(p => unitOf('me', p, { trainer: aName })), foe: b.map(p => unitOf('foe', p, { trainer: bName })), seed, swapCd: 2 });   // 교체 제한 2턴(2026-10-18)
+  return makeTeamBattle({ me: a.map(p => unitOf('me', p, { trainer: aName })), foe: b.map(p => unitOf('foe', p, { trainer: bName })), seed, swapCd: 2, swOrder: true });   // 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18)
 }
 // 서버가 받은 수({ kind:'skill', id } · { kind:'switch', to } · { kind:'rest' }) → 판 수(기술 객체)
 const act3 = (u, a) => (a && a.kind === 'skill' ? { kind: 'skill', skill: u.kit.find(k => k.id === a.id) || u.kit[0] } : a && (a.kind === 'switch' || a.kind === 'rest') ? { kind: a.kind, to: a.to } : { kind: 'rest' });

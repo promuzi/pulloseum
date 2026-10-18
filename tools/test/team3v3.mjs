@@ -51,5 +51,29 @@ console.log(`200판: 내 승률 ${w / 2}% · 평균 ${(turns / 200).toFixed(1)}�
   ok(E.act.me === 1 && swapWait(E, 'me') === 0, '쓰러져 채우기 = 제한 없음');
   void guard;
 }
+// 교체 순서(2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지"): swOrder 판 = 먼저면 바꾼 뒤 들어온 식물이 맞음 · 늦으면 지금 식물이 맞고 바뀜 · 늦다가 쓰러지면 교체 없음(제한도 없음)
+{
+  const team = side => (side === 'me' ? ['flower_grass', 'cactus_fire', 'vine_water'] : ['vine_water', 'gaia', 'flower_wind']).map(k => mk(side, k));
+  let early = 0, lateN = 0, lateKo = 0, both = 0, bad = 0;
+  for (let seed = 1; seed <= 400; seed++) {
+    const B = makeTeamBattle({ me: team('me'), foe: team('foe'), seed, swapCd: 2, swOrder: true }), old = B.me, nu = B.team.me[1];
+    if (seed % 5 === 0) old.hp = 3;   // 늦으면 맞고 쓰러지는 경우도
+    const t = playTurn3(B, { kind: 'switch', to: 1 }), ev = t.events;
+    const fe = ev.find(e => e.t === 'first'), si = ev.findIndex(e => e.t === 'switch' && e.who === 'me' && !e.forced), hi = ev.findIndex(e => e.t === 'hit' && e.who === 'foe' && e.to === 'me');
+    if (!fe || !fe.swap) { bad++; continue; }
+    if (t.foeSwitch != null) { both++; if (si < 0 || hi >= 0) bad++; continue; }   // 둘 다 바꾸면 맞는 일 없음
+    if (fe.who === 'me') { early++; if (si < 0 || (hi >= 0 && (hi < si || ev[hi].tgtKey !== nu.key))) bad++; if (old.hp !== (seed % 5 === 0 ? 3 : old.max)) bad++; }
+    else if (old.hp <= 0) { lateKo++; if (si >= 0 || B.act.me !== 0 || swapWait(B, 'me') !== 0 || B.need !== 'me') bad++; }
+    else { lateN++; if (hi >= 0 && (si < hi || ev[hi].tgtKey !== old.key)) bad++; if (si < 0 && !ev.some(e => e.t === 'swapFail')) bad++; if (si >= 0 && nu.hp !== nu.max) bad++; }
+  }
+  ok(!bad, `교체 순서 어긋남 ${bad}번`);
+  ok(early > 20 && lateN > 20 && lateKo > 0, `먼저 바꿈 ${early} · 늦게 바꿈 ${lateN} · 늦다가 쓰러짐 ${lateKo} · 둘 다 ${both} — 경우가 다 나와야 함`);
+  const r1 = JSON.stringify(playTurn3(makeTeamBattle({ me: team('me'), foe: team('foe'), seed: 77, swOrder: true }), { kind: 'switch', to: 2 }).events);
+  const r2 = JSON.stringify(playTurn3(makeTeamBattle({ me: team('me'), foe: team('foe'), seed: 77, swOrder: true }), { kind: 'switch', to: 2 }).events);
+  ok(r1 === r2, '같은 씨앗 → 같은 교체 턴');
+  let firstOld = 0;
+  for (let seed = 1; seed <= 100; seed++) { const B = makeTeamBattle({ me: team('me'), foe: team('foe'), seed }), ev = playTurn3(B, { kind: 'switch', to: 1 }).events, si = ev.findIndex(e => e.t === 'switch' && e.who === 'me'), hi = ev.findIndex(e => e.t === 'hit' && e.to === 'me'); if (si >= 0 && (hi < 0 || si < hi)) firstOld++; }
+  ok(firstOld === 100, `옛 판(swOrder 없음) = 교체가 늘 먼저 (${firstOld}/100)`);
+}
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

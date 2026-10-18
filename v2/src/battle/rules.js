@@ -88,11 +88,11 @@ export function baseDamage(att, def, skill, elemMult = 1) {
 // a = 행동(기술): { act:'attack'|'guard'|'evade'|'skip'|'other', power, area, ranged, contact, guardMult, blockCrit, shift, counter, inflict, ... }
 // o = { elemMult, turn } — turn = 턴 번호(상태 효과의 '몇 턴'을 셈)
 // 반환 = { first, events:[…] } — 화면 연출은 events를 순서대로 읽기만 한다
-export function resolveTurn(A, B, actA, actB, rng, o = {}) {
-  const ev = [], st = u => (u.st ||= { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null });
-  st(A); st(B);
-  const T = o.turn || 0, skipped = new Set();
-  // ① 선공: 기동 비율 확률 + 불운 보정(유리한 쪽이든 불리한 쪽이든 '먼저 가기'가 계속 실패하면 확정). 기동 = 젖음·빙결이면 줄어듦
+const stOf = u => (u.st ||= { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null });
+// ① 선공: 기동 비율 확률 + 불운 보정(유리한 쪽이든 불리한 쪽이든 '먼저 가기'가 계속 실패하면 확정). 기동 = 젖음·빙결이면 줄어듦
+//  3:3 교체도 이걸로 순서를 정함(team.js — 2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지")
+export function rollFirst(A, B, rng) {
+  stOf(A); stOf(B);
   const pA = initiativeChance(effSpd(A), effSpd(B), (A.st.nextInit || 0) - (B.st.nextInit || 0));
   let first;
   if (A.st.init >= pityLimit(pA) + RULES.initPitySlack) first = A;
@@ -101,7 +101,17 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const second = first === A ? B : A;
   first.st.init = 0; second.st.init += 1;
   A.st.nextInit = 0; B.st.nextInit = 0;
-  ev.push({ t: 'first', who: first.id, chance: first === A ? pA : 1 - pA });
+  return { first, chance: first === A ? pA : 1 - pA };
+}
+// o.first = 이미 정한 선공 유닛(교체 턴 — 다시 굴리지 않고 'first' 사건도 안 냄)
+export function resolveTurn(A, B, actA, actB, rng, o = {}) {
+  const ev = [];
+  stOf(A); stOf(B);
+  const T = o.turn || 0, skipped = new Set();
+  let first;
+  if (o.first) first = o.first;
+  else { const r = rollFirst(A, B, rng); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance }); }
+  const second = first === A ? B : A;
   const actOf = u => (u === A ? actA : actB);
   // 자세 성립: 방어 = 후공일 때만(먼저 하면 판정이 끝나 헛됨), 회피 = 순서와 상관없이(선공·후공 모두)
   const stanceOk = (u, kind) => (kind === 'guard' ? u === second : kind === 'evade');

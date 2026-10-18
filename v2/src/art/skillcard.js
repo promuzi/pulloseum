@@ -444,6 +444,29 @@ export function backHeight(sk, w, o = {}) {
   return Math.ceil(cardBack(measureG, w, 400, sk, o)) + 14;
 }
 
+// 교체 카드(3:3 턴 시작 공개 — 2026-10-18 사용자 "교체할 때도 스킬 카드처럼 교체 카드가 뜨면서 뭐로 바뀔지 안내"): 스킬 카드와 같은 틀 ·
+//  그림 칸 = 들어올 식물 얼굴(art(g, x, y, w, h) — 부르는 쪽이 그림, 모르면 물음표) · 이름 띠 = 그 식물 이름 · 왼쪽 위 = 하늘색 원에 엇갈린 두 화살표(비용 자리) · 오른쪽 위 = '교체' 꼬리표 · 속성 배지
+export function renderSwapFront(u, w, h, BW, BH, k, art) {
+  const S = BW / w, cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k);
+  const c = cv.getContext('2d'), g = new Gfx(c), el = u && u.el, ax = 4, ay = 4, aw = w - 8, ah = ART_H;
+  c.setTransform(k * S, 0, 0, k * S, 0, 0); c.imageSmoothingEnabled = false;
+  cardFrame(g, 0, 0, w, h, { el }, false);
+  g.vgrad(ax, ay, aw, ah, ['#1d3554', '#12233c', '#0b1628']);
+  const s = Math.min(aw, ah) - 4, px = ax + Math.floor((aw - s) / 2), py = ay + ah - s;
+  if (!(u && art && art(g, px, py, s, s))) g.text('?', w / 2, ay + Math.round((ah - glyphH('name')) / 2), { font: 'name', color: '#8ccfff', align: 'center' });
+  const by = ay + ah, bh = h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
+  gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
+  c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
+  g.rect(ax, by, aw, bh, C.band); g.rect(ax, by, aw, 1, '#8ccfff');
+  const lines = wrap((u && u.name) || '교체', 'bold', aw - 4).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
+  lines.forEach((ln, i) => g.text(ln, w / 2, ny + i * lh, { font: 'bold', color: C.text, align: 'center' }));
+  if (el && ELEMENT[el]) { const ic = icon(el); if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); } }
+  g.disc(10, 10, 8, C.ink); g.disc(10, 10, 7, '#3d8fd6'); g.disc(10, 10, 6, '#1f5d9c');   // 엇갈린 두 화살표: 위 = 오른쪽 · 아래 = 왼쪽
+  g.rect(6, 7, 7, 1, '#ffffff'); g.rect(11, 6, 1, 3, '#ffffff'); g.px(12, 7, '#ffffff');
+  g.rect(8, 12, 7, 1, '#ffffff'); g.rect(8, 11, 1, 3, '#ffffff'); g.px(7, 12, '#ffffff');
+  tag(g, w - 4, 4, '교체', '#8ccfff');
+  return cv;
+}
 // 엎어 둔 카드(공개 전 상대 카드 — 2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고"): 은빛 테 · 남색 바탕 · 안쪽 가는 테 · 가운데 금빛 마름모에 씨앗
 export function renderDown(w, h, BW, BH, k) {
   const S = BW / w, cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k);
