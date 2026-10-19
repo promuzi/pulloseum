@@ -1,0 +1,16 @@
+{
+  "changedParts": [
+    "xl/worksheets/sheet1.xml",
+    "xl/worksheets/sheet2.xml",
+    "xl/worksheets/sheet3.xml"
+  ],
+  "userChangedCells": 44,
+  "effectRows": 41,
+  "skillRows": 23,
+  "reviewRows": 31,
+  "residualRows": 8,
+  "sourceSha256": "c04b042c08b368c5006cd4478d65144da63451972360901eced29599e73e83c1",
+  "v3Sha256": "d1109d89884fe77438ea7922bf9afbd72e8d27d9e82788ecf5e5e44d9c9a29fd",
+  "unrelatedPackagePartsUnchanged": true,
+  "unclassifiedSheetUnchanged": true
+}
