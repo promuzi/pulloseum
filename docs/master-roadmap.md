@@ -16,7 +16,7 @@
 
 ## 1. 개발 방향 — 상태 한눈에 보기
 
-**현재 작업(v2, 2026-10-19):** 전투 바닥 규칙/공통 장치는 10-18 인계 기준 구현됨(`RULES_VER` 4). **최신 추가 결정은 [은신 통합·회피 후 추가 공격](superpowers/specs/2026-10-19-v2-unified-stealth-design.md)**. 은신 한 종류에 기습/분신 연출별 연결 공격을 둔다. 두 기술은 선공형, 실제 사용 이후 상대 공격을 피한 직후 추가 공격. 후공 사용은 다음 상대 공격까지 기다리고, 다음 턴 선공 공격 시 은신 해제/후공 회피 시 추가 공격+선택 기술. 공통 회피율·해제 조건·타수·위력은 미결. 바탕은 [5차 공통 분류](superpowers/specs/2026-10-19-v2-stat-status-action-framework-design.md)의 능력치별 독립 강화 겹/상태/준비·보호/실행 행동과 틀 밖 목록이며 만개 독립 상태 대체안도 보존. **문서만 변경, 코드/배포 없음.** 다음 = 은신 공통 조건·틀 밖 항목 논의 → 남은 종 원안 검토; 일괄 적용은 별도 '적용해' 뒤. [현행 설계](superpowers/specs/2026-10-18-v2-species-identity-design.md) · [공통 효과](superpowers/specs/2026-10-19-v2-status-environment-review-design.md) · [종 원안/검토](superpowers/specs/2026-10-18-v2-species-skills.md) · [최근 인계](superpowers/specs/2026-10-16-v2-mvp-design.md). 아래 표의 v1 이력과 구별한다.
+**현재 작업(v2, 2026-10-19):** 전투 바닥 규칙/공통 장치는 10-18 인계 기준 구현됨(`RULES_VER` 4). **최신은 [효과 대분류·지속/해제 통합표](superpowers/specs/2026-10-19-v2-effect-taxonomy-table-design.md)**. 사용자 틀 = 체력 제외 능력치 강화/약화는 버프/디버프, 유해·유익 상태, 1회성 준비(명칭 추천), 스킬, 환경, 함정, 소환수. **방어구 → 갑주**. 기존 기타 편입/보류 2묶음(비개체형 가이아 성체·직접 피해 감소)과 새 잔여 1묶음(불타는 의지 2회)을 구별. [은신 통합·회피 직후 추가 공격](superpowers/specs/2026-10-19-v2-unified-stealth-design.md)과 기존 겹별 독립 만료/교체 보존 등은 유지. 새 지속·해제·범위 추천은 미결로 표시. **문서만 변경, 코드/배포 없음.** 다음 = 분류 편입/준비 1회분·정화 범위·면역/의지 논의 → 남은 종 원안 검토; 일괄 적용은 별도 '적용해' 뒤. [현행 설계](superpowers/specs/2026-10-18-v2-species-identity-design.md) · [공통 효과](superpowers/specs/2026-10-19-v2-status-environment-review-design.md) · [종 원안/검토](superpowers/specs/2026-10-18-v2-species-skills.md) · [최근 인계](superpowers/specs/2026-10-16-v2-mvp-design.md). 아래 표의 v1 이력과 구별한다.
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
