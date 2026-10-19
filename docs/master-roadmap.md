@@ -16,7 +16,7 @@
 
 ## 1. 개발 방향 — 상태 한눈에 보기
 
-**현재 작업(v2, 2026-10-19):** 전투 바닥 규칙/공통 장치는 10-18 인계 기준 구현됨(`RULES_VER` 4). **최신은 [능력치 강화·상태이상·행동 효과 재분류 5차](superpowers/specs/2026-10-19-v2-stat-status-action-framework-design.md)**다. 사용자 방향 = 체력 제외 능력치별 강화/겹별 독립 만료·교체 보존, 재생 등 유익·유해 상태, 버프 밖 준비·보호, 정화 같은 실행 행동. 환경/설치물/자원/전투 제한/수치 감소/예방·면역/예약 반응/연계/패시브/제거·복사 대상을 별도 검토 목록으로 추출. 만개는 원안 스킬이며 독립 상태를 공통 강화로 대체하는 안, 스킬 삭제는 미확정. 이전 2턴 통일·무중첩 갱신안을 새 기본값으로 쓰지 않는다. **문서만 변경, 코드/배포 없음.** 다음 = 틀 밖 항목과 소모·제거 범위 논의 → 남은 종 원안 검토; 일괄 적용은 별도 '적용해' 뒤. [현행 설계](superpowers/specs/2026-10-18-v2-species-identity-design.md) · [공통 효과](superpowers/specs/2026-10-19-v2-status-environment-review-design.md) · [종 원안/검토](superpowers/specs/2026-10-18-v2-species-skills.md) · [최근 인계](superpowers/specs/2026-10-16-v2-mvp-design.md). 아래 표의 v1 이력과 구별한다.
+**현재 작업(v2, 2026-10-19):** 전투 바닥 규칙/공통 장치는 10-18 인계 기준 구현됨(`RULES_VER` 4). **최신 추가 결정은 [은신 통합·회피 후 추가 공격](superpowers/specs/2026-10-19-v2-unified-stealth-design.md)**. 은신 한 종류에 기습/분신 연출별 연결 공격을 둔다. 두 기술은 선공형, 실제 사용 이후 상대 공격을 피한 직후 추가 공격. 후공 사용은 다음 상대 공격까지 기다리고, 다음 턴 선공 공격 시 은신 해제/후공 회피 시 추가 공격+선택 기술. 공통 회피율·해제 조건·타수·위력은 미결. 바탕은 [5차 공통 분류](superpowers/specs/2026-10-19-v2-stat-status-action-framework-design.md)의 능력치별 독립 강화 겹/상태/준비·보호/실행 행동과 틀 밖 목록이며 만개 독립 상태 대체안도 보존. **문서만 변경, 코드/배포 없음.** 다음 = 은신 공통 조건·틀 밖 항목 논의 → 남은 종 원안 검토; 일괄 적용은 별도 '적용해' 뒤. [현행 설계](superpowers/specs/2026-10-18-v2-species-identity-design.md) · [공통 효과](superpowers/specs/2026-10-19-v2-status-environment-review-design.md) · [종 원안/검토](superpowers/specs/2026-10-18-v2-species-skills.md) · [최근 인계](superpowers/specs/2026-10-16-v2-mvp-design.md). 아래 표의 v1 이력과 구별한다.
 
 | # | 방향 | 상태 | 다음 한 걸음 | 관련 문서 |
 |---|------|------|-------------|----------|
