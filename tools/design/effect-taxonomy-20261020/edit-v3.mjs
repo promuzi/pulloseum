@@ -9,9 +9,42 @@ const work = path.join(root, 'outputs/01a151d0-9d92-7900-b5be-31a811469c9d/_prev
 const validating=process.argv.includes('--validate');
 const holdInspect=process.argv.includes('--hold-inspect');
 const holding=process.argv.includes('--hold');
-const source = holdInspect ? 'C:/Users/soosa/OneDrive/Desktop/풀로세움_효과와스킬_분류_v3.xlsx' : holding ? path.join(work,'hold-source.xlsx') : validating ? path.join(work,'../풀로세움_효과와스킬_분류_v3.xlsx') : path.join(work, 'v3-source.xlsx');
+const v4=process.argv.includes('--v4');
+const v4Inspect=process.argv.includes('--v4-inspect');
+const source = v4||v4Inspect ? path.join(work,'v4-source.xlsx') : holdInspect ? 'C:/Users/soosa/OneDrive/Desktop/풀로세움_효과와스킬_분류_v3.xlsx' : holding ? path.join(work,'hold-source.xlsx') : validating ? path.join(work,'../풀로세움_효과와스킬_분류_v3.xlsx') : path.join(work, 'v3-source.xlsx');
 const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(source));
-if (holdInspect) {
+if (v4Inspect) {
+  for (const [name,range,label] of [['효과 분류','D29:J36','effects'],['스킬 분류','B8:H14','skills']]) {
+    const image=await workbook.render({sheetName:name,range,scale:1,format:'png'});
+    await fs.writeFile(path.join(work,`v4-before-${label}.png`),new Uint8Array(await image.arrayBuffer()));
+  }
+  console.log('Affected source areas rendered; no workbook mutation.');
+} else if (v4) {
+  const plan=JSON.parse(await fs.readFile(path.join(here,'v4-plan.json'),'utf8'));
+  for (const [name,section] of Object.entries(plan.sheets)) {
+    const target=section.new ? workbook.worksheets.add(name) : workbook.worksheets.getItem(name);
+    const template=workbook.worksheets.getItem(section.template);
+    const col=String.fromCharCode(64+section.cols);
+    if (section.new) {
+      target.getRange(`A1:${col}5`).copyFrom(template.getRange(`A1:${col}5`),'all');
+      target.mergeCells(`A2:${col}2`);
+      target.getRange(`A6:${col}${5+section.rows.length}`).format.wrapText=true;
+      target.getRange(`A6:${col}${5+section.rows.length}`).format.font={name:'Malgun Gothic',size:11};
+    } else {
+      const sourceMerges=plan.sourceMerges[name];
+      for (const merge of sourceMerges) if (parseInt(merge.split(':')[0].replace(/[A-Z]/g,''),10)>=section.start) target.unmergeCells(merge);
+      target.getRange(`A${section.start}:${col}60`).clear({applyTo:'contents'});
+    }
+    target.getRange(`A${section.start}:${col}${section.start+section.rows.length-1}`).values=section.rows.map(r=>r.v);
+    for (const merge of section.merges) target.mergeCells(merge);
+    for (const [address,value] of Object.entries(section.edits)) target.getRange(address).values=[[value]];
+    for (const [r,h] of Object.entries(section.heights)) target.getRange(`A${r}:${col}${r}`).format.rowHeight=h;
+  }
+  workbook.recalculate();
+  console.log((await workbook.inspect({kind:'match',searchTerm:'#REF!|#DIV/0!|#VALUE!|#NAME\\?',options:{useRegex:true,maxResults:10},maxChars:300})).ndjson);
+  await (await SpreadsheetFile.exportXlsx(workbook)).save(path.join(work,'v4-authored.xlsx'));
+  console.log('v4 artifact-authored changes saved.');
+} else if (holdInspect) {
   await fs.copyFile(source,path.join(work,'hold-source.xlsx'));
   const image=await workbook.render({sheetName:'검토 대기',range:'B5:G12',scale:1,format:'png'});
   await fs.writeFile(path.join(work,'hold-before.png'),new Uint8Array(await image.arrayBuffer()));

@@ -1,0 +1,14 @@
+{
+  "sheetRows": {
+    "효과 분류": 41,
+    "스킬 분류": 27,
+    "검토 대기": 24,
+    "미분류·잔여": 11,
+    "공통 처리": 3
+  },
+  "heldRows": 1,
+  "nextQuestion": "기절",
+  "sha256": "febf0dec23e9f69bcdb1777cb169b70b16c95252a8b8dd5dc4735663070968bb",
+  "sourceSha256": "70383ad780b6f48eb0d44439c02a50664b28dc1673b045c06c96b576d5b0e7cf",
+  "unrelatedPackagePartsUnchanged": true
+}
