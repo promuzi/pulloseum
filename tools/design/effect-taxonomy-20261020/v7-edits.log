@@ -1,0 +1,27 @@
+xl/worksheets/sheet1.xml D26
+  - ''
+  + '기절'
+xl/worksheets/sheet1.xml E26
+  - ''
+  + '바로 다음 행동 한 번을 취소한다. 선공에게 맞으면 그 턴 행동이, 후공에게 맞으면 다음 턴 행동이 취소된다.'
+xl/worksheets/sheet1.xml F26
+  - ''
+  + '불가'
+xl/worksheets/sheet1.xml G26
+  - ''
+  + '다음 행동 시 소모'
+xl/worksheets/sheet1.xml H26
+  - ''
+  + '일회성'
+xl/worksheets/sheet1.xml I26
+  - ''
+  + '미결'
+xl/worksheets/sheet1.xml J26
+  - ''
+  + '마비(감전)·얼음(빙결)은 같은 효과의 다른 이름. 면역이 막음. 교체 대기 중 소모 여부 미결'
+xl/worksheets/sheet3.xml E6
+  - '해로운 비데미지 상태 후보'
+  + '해로운 비데미지 상태(효과 분류 26행)'
+xl/worksheets/sheet3.xml F6
+  - '남은 검토: 효과 분류 시트 위치, 망치 무기 변이의 확률·조건·수치·횟수. 매혹은 보류'
+  + '남은 검토: 망치 무기 변이의 확률·조건·수치·횟수, 교체 대기 중 소모. 매혹은 보류'

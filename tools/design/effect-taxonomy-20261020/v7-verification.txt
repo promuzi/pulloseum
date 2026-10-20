@@ -1,0 +1,45 @@
+xml well-formed: 17 parts
+same part list: True
+  changed part: xl/worksheets/sheet1.xml
+  changed part: xl/worksheets/sheet3.xml
+  changed part: xl/sharedStrings.xml
+sheets: True
+[효과 분류] value changes=0 added=['D26', 'E26', 'F26', 'G26', 'H26', 'I26', 'J26'] style diffs=0
+   changed: []
+   merges v4: ['A14:A18', 'A19:A33', 'A2:J2', 'A34:A36', 'A37:A47', 'A4:C4', 'A5:C5', 'A6:C6', 'A7:C7', 'A9:A13', 'B14:B18', 'B19:B30', 'B31:B33', 'B37:B42', 'B43:B47', 'B9:B13', 'C19:C22', 'C23:C25', 'C26:C28', 'C29:C30', 'C32:C33', 'C40:C42', 'D4:J4', 'D5:J5', 'D6:J6', 'D7:J7']
+   merges v5: ['A14:A18', 'A19:A34', 'A2:J2', 'A35:A37', 'A38:A48', 'A4:C4', 'A5:C5', 'A6:C6', 'A7:C7', 'A9:A13', 'B14:B18', 'B19:B31', 'B32:B34', 'B38:B43', 'B44:B48', 'B9:B13', 'C19:C22', 'C23:C26', 'C27:C29', 'C30:C31', 'C33:C34', 'C41:C43', 'D4:J4', 'D5:J5', 'D6:J6', 'D7:J7']
+   height diffs: {26: (None, 52.0)}
+   widths same: True  pane: E39 -> E40 4.0 8.0 / 4.0 8.0
+[스킬 분류] value changes=0 added=[] style diffs=0
+   changed: []
+   merges v4: ['A10:A13', 'A14:A15', 'A16:A20', 'A22:A23', 'A24:A25', 'A26:A28', 'A29:A30', 'A2:H2', 'A33:A34', 'A6:A9']
+   merges v5: ['A10:A13', 'A14:A15', 'A16:A20', 'A22:A23', 'A24:A25', 'A26:A28', 'A29:A30', 'A2:H2', 'A33:A34', 'A6:A9']
+   height diffs: {}
+   widths same: True  pane: D22 -> D22 3.0 5.0 / 3.0 5.0
+[검토 대기] value changes=2 added=[] style diffs=0
+   changed: ['E6', 'F6']
+   merges v4: ['A10:A17', 'A18:A29', 'A2:G2', 'A6:A9']
+   merges v5: ['A10:A17', 'A18:A29', 'A2:G2', 'A6:A9']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
+   dv: [(<MultiCellRange [G6:G29]>, '"보류,유지,통합,삭제,미결,확정"')] -> [(<MultiCellRange [G6:G29]>, '"보류,유지,통합,삭제,미결,확정"')]
+[미분류·잔여] value changes=0 added=[] style diffs=0
+   changed: []
+   merges v4: ['A14:A16', 'A2:F2', 'A6:A7', 'A8:A13']
+   merges v5: ['A14:A16', 'A2:F2', 'A6:A7', 'A8:A13']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
+   dv: [(<MultiCellRange [F6:F16]>, '"보류,유지,통합,삭제"')] -> [(<MultiCellRange [F6:F16]>, '"보류,유지,통합,삭제"')]
+[보류] value changes=0 added=[] style diffs=0
+   changed: []
+   merges v4: ['A2:G2']
+   merges v5: ['A2:G2']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
+   dv: [(<MultiCellRange [G6]>, '"보류,유지,통합,삭제"')] -> [(<MultiCellRange [G6]>, '"보류,유지,통합,삭제"')]
+[공통 처리] value changes=0 added=[] style diffs=0
+   changed: []
+   merges v4: ['A2:G2', 'A6:A8']
+   merges v5: ['A2:G2', 'A6:A8']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
