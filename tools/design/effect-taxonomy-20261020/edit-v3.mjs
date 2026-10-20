@@ -7,9 +7,37 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
 const work = path.join(root, 'outputs/01a151d0-9d92-7900-b5be-31a811469c9d/_previews');
 const validating=process.argv.includes('--validate');
-const source = validating ? path.join(work,'../풀로세움_효과와스킬_분류_v3.xlsx') : path.join(work, 'v3-source.xlsx');
+const holdInspect=process.argv.includes('--hold-inspect');
+const holding=process.argv.includes('--hold');
+const source = holdInspect ? 'C:/Users/soosa/OneDrive/Desktop/풀로세움_효과와스킬_분류_v3.xlsx' : holding ? path.join(work,'hold-source.xlsx') : validating ? path.join(work,'../풀로세움_효과와스킬_분류_v3.xlsx') : path.join(work, 'v3-source.xlsx');
 const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(source));
-if (validating) {
+if (holdInspect) {
+  await fs.copyFile(source,path.join(work,'hold-source.xlsx'));
+  const image=await workbook.render({sheetName:'검토 대기',range:'B5:G12',scale:1,format:'png'});
+  await fs.writeFile(path.join(work,'hold-before.png'),new Uint8Array(await image.arrayBuffer()));
+  console.log('Source snapshot and affected-area preview saved. No edit.');
+} else if (holding) {
+  const review=workbook.worksheets.getItem('검토 대기');
+  const moved=review.getRange('A10:G10').values[0];
+  if (moved[1]!=='모으기') throw new Error('Source row changed; inspect the latest source.');
+  for (const ref of ['A6:A12','A13:A16','A17:A24','A25:A36']) review.unmergeCells(ref);
+  review.getRange('A10:G35').values=review.getRange('A11:G36').values;
+  review.getRange('A36:G36').clear({applyTo:'contents'});
+  for (const ref of ['A6:A11','A12:A15','A16:A23','A24:A35']) review.mergeCells(ref);
+  const hold=workbook.worksheets.add('보류');
+  hold.getRange('A2').copyFrom(review.getRange('A2'),'all');
+  hold.mergeCells('A2:G2');
+  hold.getRange('A2').values=[['보류한 처리와 스킬']];
+  hold.getRange('A5:G5').copyFrom(review.getRange('A5:G5'),'all');
+  hold.getRange('A6:G6').copyFrom(review.getRange('A10:G10'),'all');
+  moved[0]='처리 용어';
+  moved[5]='확정 고유스킬에 필요할 때 재검토';
+  moved[6]='보류';
+  hold.getRange('A6:G6').values=[moved];
+  workbook.recalculate();
+  await (await SpreadsheetFile.exportXlsx(workbook)).save(path.join(work,'hold-authored.xlsx'));
+  console.log('One review item moved to the separate hold sheet; original-package preservation follows.');
+} else if (validating) {
   for (const [sheetName,range,label] of [
     ['효과 분류','A19:J33','states'],
     ['효과 분류','A34:J49','other-effects'],
