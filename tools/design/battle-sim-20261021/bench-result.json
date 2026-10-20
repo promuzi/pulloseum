@@ -1,0 +1,28 @@
+{
+ "species": 45,
+ "plantsMs": 12,
+ "oneVsOne": {
+  "games": 2000,
+  "ms": 335,
+  "perGameMs": 0.168,
+  "gamesPerSec": 5970,
+  "avgTurns": 10.8,
+  "turnCapDraws": 0,
+  "errors": 0,
+  "firstErrors": []
+ },
+ "threeVsThree": {
+  "games": 500,
+  "ms": 404,
+  "perGameMs": 0.808,
+  "gamesPerSec": 1238,
+  "avgTurns": 36.1,
+  "capped": 0,
+  "errors": 0,
+  "firstErrors": []
+ },
+ "invariantViolations": 0,
+ "firstViolations": [],
+ "cloneJsonRoundTripUs": 17.8,
+ "stateBytes": 2083
+}
