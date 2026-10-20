@@ -1,0 +1,60 @@
+xml well-formed: 17 parts
+same part list: True
+  changed part: xl/worksheets/sheet1.xml
+  changed part: xl/worksheets/sheet2.xml
+  changed part: xl/worksheets/sheet3.xml
+  changed part: xl/worksheets/sheet4.xml
+  changed part: xl/sharedStrings.xml
+  changed part: xl/worksheets/sheet6.xml
+sheets: True
+[효과 분류] value changes=59 added=[] style diffs=12
+   changed: ['D4', 'D6', 'A7', 'D7', 'H9', 'H10', 'H11', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19', 'J20', 'H21', 'E22', 'H22', 'E23', 'J23', 'H24', 'C25', 'D25', 'E25', 'H25', 'J25', 'C26', 'D26', 'E26', 'H26', 'J26', 'D27', 'E27', 'H27', 'J27', 'D28', 'E28', 'H28', 'J28', 'H29', 'H30', 'H31', 'H32', 'C33', 'E33', 'H33', 'J33', 'D34', 'H34', 'H35', 'H36', 'H37', 'H38', 'H39', 'J39', 'H40', 'H41', 'H42']
+   style: ('A7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Malgun Gothic', 11.0, True, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'))
+   style: ('B7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('C7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('E7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('F7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('G7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('H7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('I7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('J7', ('Malgun Gothic', 11.0, False, 'FF25333D', None, '00000000', True, 'center', None, None, None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('C25', ('Malgun Gothic', 11.0, True, 'FF25333D', 'solid', 'FFE8EAF4', True, 'center', 'center', None, 'thin', 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'))
+   style: ('C26', ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, None, 'General'), ('Malgun Gothic', 11.0, True, 'FF25333D', 'solid', 'FFE8EAF4', True, 'center', 'center', None, 'thin', 'General'))
+   style: ('C33', ('Malgun Gothic', 11.0, True, 'FF25333D', 'solid', 'FFE8EAF4', True, 'center', 'center', 'thin', None, 'General'), ('Carlito', 11.0, False, None, None, '00000000', None, None, None, None, 'thin', 'General'))
+   merges v4: ['A14:A18', 'A19:A33', 'A2:J2', 'A34:A36', 'A37:A47', 'A4:C4', 'A5:C5', 'A6:C6', 'A9:A13', 'B14:B18', 'B19:B30', 'B31:B33', 'B37:B42', 'B43:B47', 'B9:B13', 'C19:C22', 'C23:C24', 'C25:C28', 'C29:C30', 'C40:C42', 'D4:J4', 'D5:J5', 'D6:J6']
+   merges v5: ['A14:A18', 'A19:A33', 'A2:J2', 'A34:A36', 'A37:A47', 'A4:C4', 'A5:C5', 'A6:C6', 'A7:C7', 'A9:A13', 'B14:B18', 'B19:B30', 'B31:B33', 'B37:B42', 'B43:B47', 'B9:B13', 'C19:C22', 'C23:C25', 'C26:C28', 'C29:C30', 'C32:C33', 'C40:C42', 'D4:J4', 'D5:J5', 'D6:J6', 'D7:J7']
+   height diffs: {7: (17.0, 35.0), 20: (42.0, 52.0), 23: (52.0, 68.0), 25: (52.0, 68.0), 26: (92.0, 52.0), 27: (68.0, 101.0), 28: (42.0, 68.0), 33: (72.0, 85.0)}
+   widths same: True  pane: E39 -> E39 4.0 8.0 / 4.0 8.0
+[스킬 분류] value changes=13 added=[] style diffs=0
+   changed: ['E9', 'E10', 'E11', 'E12', 'E13', 'E21', 'E22', 'E23', 'H24', 'H25', 'C26', 'D26', 'G26']
+   merges v4: ['A10:A13', 'A14:A15', 'A16:A20', 'A22:A23', 'A24:A25', 'A26:A28', 'A29:A30', 'A2:H2', 'A33:A34', 'A6:A9']
+   merges v5: ['A10:A13', 'A14:A15', 'A16:A20', 'A22:A23', 'A24:A25', 'A26:A28', 'A29:A30', 'A2:H2', 'A33:A34', 'A6:A9']
+   height diffs: {24: (68.0, 85.0)}
+   widths same: True  pane: D22 -> D22 3.0 5.0 / 3.0 5.0
+[검토 대기] value changes=27 added=[] style diffs=0
+   changed: ['A6', 'C6', 'F6', 'C14', 'E14', 'F14', 'B17', 'C17', 'D17', 'C18', 'E18', 'F18', 'G18', 'C19', 'F19', 'G19', 'E20', 'E21', 'E22', 'C23', 'C24', 'E24', 'F24', 'C25', 'E25', 'F25', 'E29']
+   merges v4: ['A10:A17', 'A18:A29', 'A2:G2', 'A6:A9']
+   merges v5: ['A10:A17', 'A18:A29', 'A2:G2', 'A6:A9']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
+   dv: [(<MultiCellRange [G6:G29]>, '"보류,유지,통합,삭제,미결,확정"')] -> [(<MultiCellRange [G6:G29]>, '"보류,유지,통합,삭제,미결,확정"')]
+[미분류·잔여] value changes=1 added=[] style diffs=0
+   changed: ['E10']
+   merges v4: ['A14:A16', 'A2:F2', 'A6:A7', 'A8:A13']
+   merges v5: ['A14:A16', 'A2:F2', 'A6:A7', 'A8:A13']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
+   dv: [(<MultiCellRange [F6:F16]>, '"보류,유지,통합,삭제"')] -> [(<MultiCellRange [F6:F16]>, '"보류,유지,통합,삭제"')]
+[보류] value changes=0 added=[] style diffs=0
+   changed: []
+   merges v4: ['A2:G2']
+   merges v5: ['A2:G2']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
+   dv: [(<MultiCellRange [G6]>, '"보류,유지,통합,삭제"')] -> [(<MultiCellRange [G6]>, '"보류,유지,통합,삭제"')]
+[공통 처리] value changes=1 added=[] style diffs=0
+   changed: ['D7']
+   merges v4: ['A2:G2', 'A6:A8']
+   merges v5: ['A2:G2', 'A6:A8']
+   height diffs: {}
+   widths same: True  pane: C6 -> C6 2.0 5.0 / 2.0 5.0
