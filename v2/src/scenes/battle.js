@@ -18,6 +18,41 @@ import { cardFront, cardSlot, renderFaces, renderDown, renderSwapFront, drawFlip
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
+
+// 공격 연출 고르기(2026-10-22 사용자 "게임 이팩트도 다양성을 높이자 지금은 너무 평범해" · "광역이나 단일 등도 차이점을 주거나 하면 좋을 거 같아(나중에 스킬 개편 시 영향을 덜 받는 것 위주로)"):
+//  ① 제 연출이 있는 기술(개성 · 변이 · 무기 — attack.mjs ATTACKS[기술 id]) 그대로 ② 속성 공통 기술(하급 · 중급 · 상급 · 가지 · 특수) = 그 속성 색 + 기술 모양
+//  ③ 제 연출 없는 개성 · 무속성 = 종 연출, 단 광역 · 연타면 종 색으로 모양만 바꿈. 모양은 기술 id가 아니라 성질(광역 area · 연타 hits · 원거리 ranged)만 봄 — 기술을 고쳐도 따라감
+//  (전엔 속성 공통 기술도 그 식물 종 연출 — 장미가 불씨를 써도 잎 베기)
+const EL_SP = { fire: 'cactus_fire', water: 'aqua', grass: 'flower_grass', bolt: 'spark', earth: 'gaia', wind: 'flower_wind', ice: 'frost_bell' };
+const SHAPE = {
+  area: { fire: 'bloom', water: 'wave', grass: 'gale', bolt: 'rings', earth: 'slam', wind: 'gale', ice: 'rings', '-': 'rings' },          // 퍼지는 것 · 바닥을 타는 것
+  multi: { fire: 'blades', water: 'bubbles', grass: 'blades', bolt: 'bolt', earth: 'bubbles', wind: 'blades', ice: 'blades', '-': 'blades' },   // 여러 개
+  ranged: { fire: 'fireball', water: 'bubbles', grass: 'blades', bolt: 'bolt', earth: 'fireball', wind: 'gale', ice: 'fireball', '-': 'fireball' },   // 날아가는 것
+  melee: { fire: 'slash', water: 'whip', grass: 'whip', bolt: 'slash', earth: 'slam', wind: 'slash', ice: 'slash', '-': 'slash' },          // 베기 · 채찍 · 내려치기
+};
+const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam', bite: 'lunge' };
+// 광역 기술 = 맞는 자리 바닥에 넓게 퍼지는 충격파(납작한 고리 둘 · 그 속성 빛 · 점점 옅게) + 맞는 순간 무대가 그 색으로 잠깐 번쩍 — 단일 기술(한 점에 터짐)과 갈림
+function areaWave(g, st, age, [x, y], AY, AH) {
+  const k0 = (age - (st.anim.I + 1) * FRAME_MS) / 560; if (k0 < 0 || k0 > 1.15) return;
+  const E = ELEMENT[st.skill.el] || { light: '#ffffff', main: '#c8d4e4' };
+  if (k0 < 0.12) g.alpha(0.2 * (1 - k0 / 0.12), () => g.rect(0, AY, 270, AH, E.light));
+  for (const [lag, col, w] of [[0, E.light, 2], [0.18, E.main, 1]]) {
+    const k = k0 - lag; if (k < 0 || k > 1) continue;
+    const rx = 14 + 74 * (1 - (1 - k) ** 2), ry = rx * 0.3, n = Math.round(rx * 1.6);
+    g.alpha(1 - k, () => { for (let i = 0; i < n; i++) { if ((i + Math.floor(k * 10)) % 5 === 4) continue; const a = (i / n) * Math.PI * 2; g.rect(Math.round(x + Math.cos(a) * rx), Math.round(y + Math.sin(a) * ry), w, 1, col); } });   // 끊긴 고리(도트)
+  }
+}
+const fxMemo = new Map();
+function attackFx(s, ak) {
+  if (ATTACKS[s.id]) return ATTACKS[s.id];
+  const shape = s.area ? 'area' : (s.hits || 1) > 1 ? 'multi' : s.ranged ? 'ranged' : 'melee';
+  const sp = ATTACKS[s.fx || ak] || ATTACKS.flower_grass, own = !s.el || s.tier === 'u' || s.basic;   // 개성 · 기본기 · 무속성 = 종 색
+  if (own && shape !== 'area' && shape !== 'multi') return sp;
+  const B = own ? sp : ATTACKS[EL_SP[s.el]] || sp, kind = SHAPE[shape][s.el || '-'], key = kind + '|' + (own ? s.fx || ak : s.el);
+  let A = fxMemo.get(key);
+  if (!A) { A = { kind, move: MOVE_OF[kind] || 'cast', c: B.c, status: B.status, petal: B.petal || [B.c[1], B.c[2]], gem: B.gem || B.c[0], ...(B.fizz ? { fizz: B.fizz } : {}) }; fxMemo.set(key, A); }
+  return A;
+}
 import { glyphH, wrap } from '../core/text.js';
 import { battleFromView, applyView } from '../game/fight.js';
 import { bot, net, room as R } from '../net/api.js';
@@ -227,7 +262,7 @@ export const battle = {
     else if (this.mode === 'swap3' && B.need === 'foe') { this.v.phase = 'wait'; this.v.waitSend = true; }   // 친구 대결: 상대가 다음 식물을 고르는 중
     else this.prompt(app);
     if (boot && boot.moved) { this.v.phase = 'wait'; this.sheet = null; }
-    if (this.shot) this.pick(null, B.me.kit.find(s => s.id === 's1') || B.me.kit[0]);
+    if (this.shot) { const U = this.p.use, inKit = U && B.me.kit.find(s => s.id === U); this.pick(null, inKit || (U && SKILLS[U] ? { act: 'attack', cats: ['attack'], ...SKILLS[U], fx: B.me.key, cost: 0 } : null) || B.me.kit.find(s => s.id === 's1') || B.me.kit[0]); }   // ?use = 그 기술로 찍기(연출 검토 — 2026-10-22)
     if (!boot && this.p.reveal != null) {   // 검토 촬영(?reveal=ms[&first=me|foe]): 턴 시작 공개의 그 순간에 멈춤
       const atk = u => u.kit.find(s => s.power > 0 && s.cost > 0) || u.kit[0], st = { kind: 'reveal', ms: REVEAL_MS, mine: atk(B.me), theirs: atk(B.foe), first: this.p.first || 'foe' };
       const sw = this.p.swap, swc = who => { const u = B.team[who][1]; return { swap: true, id: 'swap_' + who, name: u.name, unit: u }; };   // 교체 카드 검토(?swap=me|foe|both — 3:3)
@@ -390,7 +425,7 @@ export const battle = {
       else if (e.t === 'charge') out.push({ kind: 'note', ms: 750, side: e.who, msg: `${ga(e.name)} 힘을 모은다!`, tone: 'note' });
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, msg: e.t === 'armorBreak' ? `${nm(e.who)}의 방어구가 부서졌다!` : e.id === 'clone' ? `${nm(e.who)}의 분신이 사라졌다!` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
-      else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = ATTACKS[s.id] || ATTACKS[s.fx || ak] || ATTACKS.flower_grass; out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
+      else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!`, tone: 'hit' });
@@ -626,7 +661,7 @@ export const battle = {
       let st = v.steps[v.si];
       if (this.shot) {
         const ai = v.steps.findIndex(s => s.kind === 'attack');
-        if (ai >= 0 && v.si !== ai) { for (let i = v.si + 1; i <= ai; i++) this.startStep(v.steps[i], t, app); v.si = ai; v.t0 = t - (v.steps[ai].anim.I + 1) * FRAME_MS; }
+        if (ai >= 0 && v.si !== ai) { for (let i = v.si + 1; i <= ai; i++) this.startStep(v.steps[i], t, app); v.si = ai; v.t0 = t - (v.steps[ai].anim.I + 1) * FRAME_MS - (+(this.p && this.p.hitAt) || 0); }   // ?hitAt = 맞은 뒤 ms
         return;
       }
       while (st && t - v.t0 >= st.ms) {
@@ -736,6 +771,7 @@ export const battle = {
       if (fr) board('mid');
       unit('me', px, py, false, 0);
       if (fr) { board('front'); board('air'); }
+      if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, t - v.t0, st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22)
       if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
       for (const who of ['me', 'foe']) {
         const s = v.stance[who]; if (!s) continue;

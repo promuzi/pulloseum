@@ -76,6 +76,13 @@ export const SHOTS = [
   ['06_draft_lv', 'plant', { tab: 'skill' }, { draft: { n: 3, pick: 1, at: 900 } }],   // 레벨업 = 셋 중 하나
   ['07_battle_colosseum', 'battle', { phase: 'pick', venue: 'colosseum' }],
   ['08_battle_hit_colosseum', 'battle', { phase: 'hit', venue: 'colosseum' }],
+  ['08_fx_area_fire', 'battle', { phase: 'hit', venue: 'colosseum', use: 'f_pillar', hitAt: '200' }],   // 기술 속성 · 모양 연출(2026-10-22)
+  ['08_fx_area_fire0', 'battle', { phase: 'hit', venue: 'colosseum', use: 'f_pillar', hitAt: '0' }],   // 기술 속성 · 모양 연출(2026-10-22)
+  ['08_fx_area_ice', 'battle', { phase: 'hit', venue: 'colosseum', use: 'i_blizzard', hitAt: '220' }],   // 기술 속성 · 모양 연출(2026-10-22)
+  ['08_fx_single_fire', 'battle', { phase: 'hit', venue: 'colosseum', use: 'f_ember', hitAt: '0' }],   // 기술 속성 · 모양 연출(2026-10-22)
+  ['08_fx_single_bolt', 'battle', { phase: 'hit', venue: 'colosseum', use: 'b_bolt', hitAt: '0' }],   // 기술 속성 · 모양 연출(2026-10-22)
+  ['08_fx_area_bolt', 'battle', { phase: 'hit', venue: 'colosseum', use: 'b_thunder', hitAt: '260' }],   // 기술 속성 · 모양 연출(2026-10-22)
+  ['08_fx_melee_earth', 'battle', { phase: 'hit', venue: 'colosseum', use: 'e_quake', hitAt: '0' }],   // 기술 속성 · 모양 연출(2026-10-22)
   ['08_battle_reveal_0150', 'battle', { venue: 'colosseum', reveal: '150' }],
   ['08_battle_reveal_0480', 'battle', { venue: 'colosseum', reveal: '480' }],
   ['08_battle_reveal_0640', 'battle', { venue: 'colosseum', reveal: '640' }],
