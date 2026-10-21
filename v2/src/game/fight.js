@@ -92,12 +92,14 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
-export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false }) {
+// 봇 머리 좋음(0~1, model.js aiPick — 2026-10-22): 대회 단계가 오를수록 · 첫 판(튜토리얼식)은 낮게
+export const aiOfTier = (tier, tut = false) => (tut ? 0.15 : Math.min(0.95, 0.35 + 0.1 * Math.max(0, tier)));
+export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false, ai = 0.5 }) {
   if (mode === 'swap3') {
-    const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv }));
+    const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv, ai }));
     return makeTeamBattle({ me, foe, seed, swapCd, swOrder });
   }
-  return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank, tlv }), seed });
+  return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank, tlv, ai }), seed });
 }
 // 한 수: 1:1 = 기술 id('rest' = 쉬는 차례), 3:3 = { kind: 'skill', id } | { kind: 'switch', to } | { kind: 'rest' } | { kind: 'send', to }(쓰러진 자리 채우기)
 //  잘못된 수는 Err — 서버는 화면이 보낸 수를 이걸로만 판에 넣음(봇 판은 서버가 한 턴씩 풂: 화면은 씨앗을 모르고 결과만 받음)

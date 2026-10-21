@@ -5,7 +5,7 @@
 //  계산은 1:1과 같은 rules.resolveTurn(같은 씨앗·같은 선택 → 같은 결과, 화면 무관). 화면은 B.me·B.foe(앞에 선 식물)를 읽으면 된다.
 //  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
 import { makeRng, resolveTurn, rollFirst } from './rules.js';
-import { elemMult, aiPick, REST, closeTurn, firstOk } from './model.js';
+import { elemMult, aiPick, REST, closeTurn, firstOk, expDamage, threatOf, seenOf, lastOf } from './model.js';
 import { formMult } from './matchup.js';
 import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
 
@@ -22,15 +22,22 @@ export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0, swOrder =
 }
 export const aliveOf = (B, side) => B.team[side].map((u, i) => (u.hp > 0 ? i : -1)).filter(i => i >= 0);
 
-// 봇이 앞에 둘 식물 점수(사람과 같은 정보 — 내 앞 식물의 속성·체력만): 상성이 나쁘면 −, 좋으면 +, 체력이 많을수록 +
-const benchScore = (B, i) => { const u = B.team.foe[i], m = B.me; return (elemMult(m.el, u.el) > 1 ? -2 : 0) + (elemMult(u.el, m.el) > 1 ? 1.6 : 0) + u.hp / u.max; };
+// 봇이 앞에 둘 식물 점수(사람과 같은 정보 — 내 앞 식물의 속성 · 체력 · 이번 판에 쓴 기술): 상대 기술이 잘 들면 −, 내가 잘 들면 +, 체력이 많을수록 +
+//  2026-10-22 사용자 "봇 지능 향상. 교환 등 전투를 전략적으로 하도록": 받을 피해(상대가 쓴 기술 · 햇빛으로 짐작)와 줄 피해까지 봄
+const matchVal = (B, u) => {
+  const m = B.me, give = Math.max(0, ...u.kit.filter(s => s.act === 'attack').map(s => expDamage(u, m, s))) / Math.max(1, m.hp), take = threatOf(m, u, seenOf(B)) / Math.max(1, u.hp);
+  return (elemMult(u.el, m.el) > 1 ? 0.8 : 0) - (elemMult(m.el, u.el) > 1 ? 1.2 : 0) + 0.6 * u.hp / u.max + 0.8 * Math.min(1, give) - 0.8 * Math.min(1.5, take);
+};
+const benchScore = (B, i) => matchVal(B, B.team.foe[i]);
 function aiSwitch(B, rng) {
   const bench = aliveOf(B, 'foe').filter(i => i !== B.act.foe);
   if (!bench.length || !canSwitch(B.foe) || (B.swapCd && B.swapCd.foe > 0)) return null;
-  const f = B.foe, best = bench.reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a));
-  if (elemMult(B.me.el, f.el) > 1 && benchScore(B, best) > 1.1 && rng() < 0.45) return best;   // 상성이 나쁘면 가끔 바꿈
-  if (f.hp < f.max * 0.25 && benchScore(B, best) > 0.9 && rng() < 0.25) return best;           // 거의 쓰러질 때도 가끔
-  return null;
+  const f = B.foe, iq = f.ai ?? 0.5;
+  if (f.kit.some(s => canUse(f, s) && expDamage(f, B.me, s) >= B.me.hp * 0.95)) return null;   // 지금 식물로 이번 턴에 끝낼 수 있으면 그대로
+  const best = bench.reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a)), gain = benchScore(B, best) - matchVal(B, f);
+  const doomed = threatOf(B.me, f, seenOf(B)) >= f.hp;   // 이번 턴 쓰러질 만함 — 들어올 식물이 버틸 만할 때만 바꿈(교체도 한 턴을 씀)
+  const want = gain > 0.9 ? 0.25 + 0.6 * iq : doomed && gain > 0.35 ? 0.15 + 0.45 * iq : 0;
+  return want && rng() < want ? best : null;
 }
 const aiNext = B => aliveOf(B, 'foe').reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a));
 function swapIn(B, side, to, ev, forced = false) {
@@ -52,7 +59,7 @@ const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 
 export function playTurn3(B, myAct, foeAct = null) {
   const T = B.turn, ev = [], human = !!foeAct;
   const foeSw = human ? (okSwitch(B, 'foe', foeAct) ? foeAct.to : null) : aiSwitch(B, B.rng);
-  const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
+  const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });
   const meSwitch = okSwitch(B, 'me', myAct), sw = { me: meSwitch ? myAct.to : null, foe: foeSw };
   const doSwap = side => { swapIn(B, side, sw[side], ev); if (B.cdLen) B.swapCd[side] = B.cdLen + 1; };   // +1 = 이번 턴 끝에 하나 줄어 다음 두 턴이 막힘
   // 교체 순서: swOrder 판은 지금 앞에 선 두 식물로 선공을 굴려(기술 턴과 같은 규칙 · 불운 보정) 먼저인 쪽부터 — 교체한 쪽이 늦으면 late(맞은 뒤 바꿈)

@@ -1,6 +1,6 @@
 // v2 전투 판 만들기 — 식물(종·스탯) → 전투 유닛, 기술 목록(기본기 셋 + 종 기술), 속성 상성, 상대 고르기.
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
-import { makeRng, resolveTurn } from './rules.js';
+import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
 import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX, useCount } from './status.js';
 
@@ -143,16 +143,58 @@ export function makeUnit(id, sp, o) {
 const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack ? true : !has(foe, f.id)); };
 // 못 쓰는 기술을 골랐을 때 대신 = 손패에서 쓸 수 있는 첫 기술, 없으면 넘어감(손패 넷에 기본기가 없으면 기력이 모자랄 수 있음)
 export const firstOk = u => u.kit.find(s => canUse(u, s)) || REST;
-export function aiPick(u, foe, rng) {
+// 봇 머리(2026-10-22 사용자 "봇 지능 향상. 교환 등 전투를 전략적으로 하도록"): 기술마다 점수를 매겨 높은 것을 고름.
+//  기대 피해(위력 · 상성 · 방어 · 맞을 확률) ÷ 상대 남은 체력 · 이번에 끝낼 수 있으면 크게 · 아직 없는 효과 · 은신/분신엔 광역 ·
+//  상대가 이번 턴 나를 쓰러뜨릴 만하면(상대가 쓴 기술 · 상대 햇빛으로 짐작) 방어 · 회피 · 막는 버프 · 햇빛이 모자라면 광합성.
+//  머리 좋음 iq(0~1 — 봇 판을 열 때 대회 단계로 정함, fight.js) 만큼 높은 점수를 고르고, 낮으면 더 무작위(첫 판 · 낮은 단계가 쉬움).
+//  사람과 같은 정보만 씀: 내 손패 · 상대 앞 식물의 보이는 값(속성 · 능력치 · 체력 · 햇빛 · 효과) · 상대가 이번 판에 쓴 기술(ctx.seen).
+const hitChance = (u, foe, s) => {
+  const t = hitTable(u, foe, { area: !!s.area });
+  let p = (t.hit + 1.5 * t.crit + 0.5 * t.graze) / 100;
+  if (!s.area && has(foe, 'stealth')) p *= 0.05; else if (!s.area && has(foe, 'clone')) p *= 0.1;
+  return p;
+};
+export const expDamage = (u, foe, s) => (s && s.act === 'attack' && s.power ? baseDamage(u, foe, s, hitMult(u, foe, s)) * (s.hits || 1) * hitChance(u, foe, s) : 0);
+// 상대가 이번 턴 나에게 줄 만한 피해: 쓴 기술 중 가장 센 것과, 상대 햇빛만큼 센 자기 속성 기술(짐작) 중 큰 쪽
+export function threatOf(foe, u, seen = []) {
+  const guess = { act: 'attack', power: 30 + 12 * Math.min(5, foe.energy || 0), el: foe.el, cost: 0 };
+  return Math.max(expDamage(foe, u, guess), ...seen.filter(s => s && s.act === 'attack' && (s.cost || 0) <= (foe.energy || 0)).map(s => expDamage(foe, u, s)));
+}
+const SHIELDS = ['shield', 'wall', 'armor', 'thorns'];
+function aiScore(u, foe, s, risk, last) {
+  if (s.act === 'attack') {
+    const d = expDamage(u, foe, s), frac = Math.min(1.2, d / Math.max(1, foe.hp));
+    return 2.5 * frac + (d >= foe.hp * 0.95 ? 2.5 : 0) + (newFx(s, foe) ? 0.5 * foe.hp / foe.max : 0) + (s.area && (has(foe, 'clone') || has(foe, 'stealth')) ? 1 : 0) + (s.self ? 0.25 : 0);
+  }
+  const rep = last === s.act ? 0.5 : 1;   // 같은 자세를 연달아 쓰면 효과가 절반(rules repeatStanceK)
+  if (s.act === 'guard') return (risk >= 1 ? 2.2 : 1.4 * risk) * rep;
+  if (s.act === 'evade') return (risk >= 1 ? 1.8 : 1.1 * risk) * rep;
+  if (s.act === 'sun') { const need = Math.max(0, ...u.kit.map(k => k.cost || 0)); return (u.energy || 0) < need && risk < 0.5 ? 1 + 0.2 * (need - (u.energy || 0)) : 0.08; }
+  if (s.act === 'buff') {
+    const b = s.self;
+    if (b && has(u, b)) return 0.1;
+    if (SHIELDS.includes(b)) return 0.4 + 1.2 * Math.min(1, risk);
+    if (b === 'regen') return u.hp < u.max * 0.7 ? 1 : 0.3;
+    if (b === 'haste') return u.spd < foe.spd ? 0.9 : 0.3;
+    if (b === 'focus' || b === 'rage') return 0.6 + (foe.hp > foe.max * 0.5 ? 0.3 : 0);
+    return 0.5;
+  }
+  return 0.3;
+}
+export function aiPick(u, foe, rng, ctx = {}) {
   const ok = u.kit.filter(s => canUse(u, s));
   if (!ok.length) return REST;
-  const low = u.hp < u.max * 0.4;
-  const poor = (u.energy || 0) <= 1 && u.kit.some(s => (s.cost || 0) >= 2);   // 햇빛이 모자라 큰 기술을 못 씀
-  const w = ok.map(s => (s.act === 'attack' ? Math.max(0.3, 1 + (s.power || 0) * (s.hits || 1) / 45 + 2.4 * (hitMult(u, foe, s) - 1) + (newFx(s, foe) ? 0.6 : 0) + (s.area && (has(foe, 'clone') || has(foe, 'stealth')) ? 1.5 : 0)) : s.act === 'guard' ? (low ? 1.3 : 0.45) : s.act === 'sun' ? (poor && !low ? 0.9 : 0.15) : (low ? 1.1 : 0.55)));
+  const iq = ctx.iq ?? u.ai ?? 0.5, risk = threatOf(foe, u, ctx.seen) / Math.max(1, u.hp);
+  const sc = ok.map(s => aiScore(u, foe, s, risk, ctx.last));
+  const top = Math.max(...sc), temp = 0.15 + (1 - iq) * 0.85;
+  const w = sc.map(v => Math.exp((v - top) / temp));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;
   for (; i < w.length - 1; i++) { r -= w[i]; if (r <= 0) break; }
   return ok[i];
 }
+// 판 기록에서: 사람이 이번 판에 쓴 기술(봇이 아는 것) · 봇이 지난 턴에 쓴 수
+export const seenOf = B => B.log.map(t => t.mySkill).filter(s => s && s.act === 'attack');
+export const lastOf = B => { const t = B.log[B.log.length - 1]; return t && t.foeSkill ? t.foeSkill.act : null; };
 
 // 판 차리기: 씨앗 하나로 난수 고정(결정론 — 같은 씨앗·같은 선택이면 같은 결과)
 export function makeBattle({ me, foe, seed = 20261015 }) {
@@ -170,7 +212,7 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false) {
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {
   const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill) ? mySkill : firstOk(B.me);
-  const foeSkill = mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng);
+  const foeSkill = mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });
   return playTurnVs(B, me, foeSkill);
 }
 // 두 쪽이 다 고른 한 턴(PvP — 서버가 두 사람 선택으로 풂, 봇 판도 이걸 씀). 기술은 id 또는 기술 객체

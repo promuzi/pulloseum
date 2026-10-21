@@ -157,8 +157,8 @@ const fixed = v => () => v;
 {
   const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'aqua'), seed: 5 });
   apply(B.foe, 'shade', 1, ctx(B.me, 1, []));
-  const e0 = B.foe.energy, t = playTurn(B, B.me.kit[1]);
-  ok(B.foe.energy <= e0 && t.events.some(e => e.t === 'noEnergy' && e.who === 'foe'), '그늘 = 그 턴 끝 에너지 안 참');
+  const e0 = B.foe.energy, t = playTurn(B, B.me.kit[1]), sun = t.foeSkill && t.foeSkill.act === 'sun' ? t.foeSkill.gain || 0 : 0;   // 봇이 광합성(그 턴 대신 +2)을 고르면 그만큼은 빼고 봄(2026-10-22 봇 머리)
+  ok(B.foe.energy <= e0 + sun && t.events.some(e => e.t === 'noEnergy' && e.who === 'foe'), '그늘 = 그 턴 끝 에너지 안 참');
   ok(!B.foe.eff.shade, '그늘은 한 번 뒤 사라짐');
 }
 {

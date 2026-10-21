@@ -467,7 +467,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 4;   // 4 = 2026-10-18 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(먼저 · 나중)
+export const RULES_VER = 5;   // 5 = 2026-10-22 봇 머리(점수로 고르기 · 교체 판단 · 단계별 머리 좋음 — 봇 판 다시 돌리기가 달라짐)
+//  4 = 2026-10-18 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(먼저 · 나중)
 //  3 = 2026-10-18 방어태세(순서 무관 방어 ×4 · 적중 후 해제)
 export const RENAMED = { skill: {}, card: {} };
 export const formSkills = form => Object.values(SKILLS).filter(x => x.tier === 'm' && x.form === form).map(x => x.id);
