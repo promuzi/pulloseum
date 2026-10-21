@@ -6,7 +6,7 @@ import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
 import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng, unitOf } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
-import { LEAGUES, RULES_VER } from '../v2/src/game/catalog.js';
+import { LEAGUES, RULES_VER, SPECIES } from '../v2/src/game/catalog.js';
 
 export const newRng = () => makeRng(randomInt(1, 2 ** 31 - 1));
 const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
@@ -106,9 +106,11 @@ export function makeGame({ q, log }) {
     if (!mine[0]) fail('싸울 식물이 없어요');
     if (mode === 'tournament') { L.leaguesOf(s); const cap = L.leagueCap(s); if (mine[0].stage > cap) fail(`${LEAGUES[s.league].name}는 ${LEAGUES[s.league].desc} — 리그를 바꾸거나 다른 식물을 내보내 주세요`); }
     if (mode === 'swap3' && mine.length < 3) fail('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요');
-    const seed = randomInt(1, 2 ** 31 - 1), rng = makeRng(randomInt(1, 2 ** 31 - 1)), tier = Math.max(0, TIERS.indexOf(s.tournament.tier));
-    const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier));
-    const T = s.tournament, trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
+    const seed = randomInt(1, 2 ** 31 - 1), rng = makeRng(randomInt(1, 2 ** 31 - 1)), tier = Math.max(0, TIERS.indexOf(s.tournament.tier)), T = s.tournament;
+    // 처음 두 판(새 계정 · 브론즈 예선 · 재배사 Lv2까지) = 튜토리얼식 — 내 속성이 잘 듣는 상대(2026-10-22 사용자 "첫 계정 생성 후 튜토리얼식 전투는 상성이 좋은 애로 배치")
+    const tut = mode === 'tournament' && tier === 0 && T.round === '예선' && (T.wins || 0) + (T.losses || 0) < 2 && (s.user.level || 1) <= 2;
+    const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier, { tier, favorEl: tut && SPECIES[p.key] ? SPECIES[p.key].el : null }));   // 대회 단계가 오를수록 먼 궤도 식물(fight.js ORBIT_CAP)
+    const trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${T.name} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
     const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ...(mode === 'swap3' ? { swapCd: 2, swOrder: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');

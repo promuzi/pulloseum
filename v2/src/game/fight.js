@@ -1,9 +1,9 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
 import { CARDS, passivesOf, isSkillCard, formCards, rollCard } from './cards.js';
 import { plantStats, Err } from './logic.js';
-import { basicsOf, makeBattle, playTurn, playTurnVs, REST } from '../battle/model.js';
+import { basicsOf, makeBattle, playTurn, playTurnVs, REST, elemMult } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
 import { makeRng } from '../battle/rules.js';
 
@@ -42,9 +42,22 @@ export function unitOf(id, p, extra = {}) {
 }
 // 봇 식물: 내 식물 단계에 맞춰(공정하게) 무작위 식물 · 레벨 · 개체값 · 강화 · 기술
 const BOT_NAMES = ['코스모싹', '은하 원예단', '별가루 농부', '혜성 정원사', '궤도 식물원', '달빛 온실'];
-export function botPlant(rng, stage, lvHint = 3, tierBoost = 0) {
-  // 종 고르기: 드문 종은 덜, 변이 고정 종(태생 변이 — 드묾)은 더 드물게(2026-10-17 새 다섯을 넣자 봇 넷 중 하나가 변이가 됨)
-  const keys = Object.keys(SPECIES), wOf = k => (SPECIES[k].form ? 0.2 : SPECIES[k].rarity === 'rare' ? 0.6 : 1), tot = keys.reduce((a, k) => a + wOf(k), 0);
+// 종마다 처음 나오는 궤도(행성 지도 PLANETS) — 2026-10-22 사용자 "식물의 종류는 완전랜덤이 아닌 어려워질 수록 멀리 있는 행성?의 식물이 등장하도록"
+const ORBIT_OF = (() => { const o = {}; for (const p of PLANETS) for (const k of p.pool) o[k] = Math.min(o[k] || 9, p.orbit); return o; })();
+export const orbitOf = k => ORBIT_OF[k] || 2;
+// 대회 단계(0 브론즈 · 1 실버 · 2 골드 · 3 플래티넘 · 4 다이아 · 5 마스터 · 6 풀로세움) → 나올 수 있는 가장 먼 궤도.
+//  가장 먼 궤도 식물이 더 자주(×1.5), 바로 안쪽은 보통, 그보다 가까우면 드물게(×0.4 · ×0.2) — 단계가 오를수록 먼 행성 식물을 만남
+export const ORBIT_CAP = [1, 2, 2, 3, 3, 4, 4];
+const orbitW = (k, cap) => { const o = orbitOf(k); return o > cap ? 0 : o === cap ? 1.5 : o === cap - 1 ? 1 : o === cap - 2 ? 0.4 : 0.2; };
+// 처음 판(튜토리얼식 — 2026-10-22 사용자 "첫 계정 생성 후 튜토리얼식 전투는 상성이 좋은 애로 배치"): 내 속성이 잘 듣고(×1.5) 상대 속성은 나에게 보통인 종만
+export const favorable = (myEl, k) => elemMult(myEl, SPECIES[k].el) > 1 && elemMult(SPECIES[k].el, myEl) === 1;
+export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
+  // 종 고르기: 드문 종은 덜, 변이 고정 종(태생 변이 — 드묾)은 더 드물게(2026-10-17 새 다섯을 넣자 봇 넷 중 하나가 변이가 됨) · 대회 단계만큼 먼 궤도까지(opt.tier)
+  const cap = ORBIT_CAP[Math.max(0, Math.min(ORBIT_CAP.length - 1, opt.tier == null ? tierBoost : opt.tier))];
+  const base = k => (SPECIES[k].form ? 0.2 : SPECIES[k].rarity === 'rare' ? 0.6 : 1) * orbitW(k, cap);
+  let keys = Object.keys(SPECIES).filter(k => base(k) > 0);
+  if (opt.favorEl) { const fav = keys.filter(k => favorable(opt.favorEl, k) && !SPECIES[k].form); if (fav.length) keys = fav; }
+  const wOf = k => base(k), tot = keys.reduce((a, k) => a + wOf(k), 0);
   let r0 = rng() * tot, key = keys[keys.length - 1];
   for (const k of keys) { r0 -= wOf(k); if (r0 <= 0) { key = k; break; } }
   const sp = SPECIES[key];
