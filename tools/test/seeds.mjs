@@ -41,8 +41,8 @@ const fill = (s, n, key = 'aqua') => { const rng = makeRng(9); while (s.seeds.le
 //  실패가 쌓여 4 · 6 · 9번이면 다음은 반드시(운 나쁜 줄 막기) · 같은 씨앗 = 같은 결과 · 최대면 멈추고 남은 종자는 가방
 {
   const { ivpChance, ivpPity } = await import('../../v2/src/game/logic.js');
-  ok(ivpChance(0) === 0.4 && ivpChance(4) === 0.4 && ivpChance(5) === 0.25 && ivpChance(7) === 0.25 && ivpChance(8) === 0.12 && ivpChance(9) === 0.12, '확률 = 40 · 25 · 12%');
-  ok(ivpPity(0) === 4 && ivpPity(6) === 6 && ivpPity(9) === 9, '반드시 = 실패 4 · 6 · 9번 뒤');
+  ok(ivpChance(0) === 0.3 && ivpChance(4) === 0.3 && ivpChance(5) === 0.15 && ivpChance(7) === 0.15 && ivpChance(8) === 0.07 && ivpChance(9) === 0.07, '확률 = 30 · 15 · 7%(2026-10-22 — 옛 40 · 25 · 12%)');
+  ok(ivpPity(0) === 5 && ivpPity(6) === 9 && ivpPity(9) === 15, '반드시 = 실패 5 · 9 · 15번 뒤(옛 4 · 6 · 9)');
   const s = game(), p = s.plants[0], rng = makeRng(7), mk = (key = p.key) => { const sd = seedOf(s, key, rng); s.seeds.push(sd); return sd.id; };
   p.ivs.hp = 0; p.ivp = {};
   const ids = Array.from({ length: 40 }, () => mk()), s2 = JSON.parse(JSON.stringify(s));
@@ -51,10 +51,10 @@ const fill = (s, n, key = 'aqua') => { const rng = makeRng(9); while (s.seeds.le
   ok(r.used === 40 && r.to > r.from && r.ok + r.fail === r.used, `종자 40 = 성공 ${r.ok} · 실패 ${r.fail} · ${r.from} → ${r.to}`);
   let run = 0, worst = 0;
   for (const t of r.tries) { if (t) run = 0; else worst = Math.max(worst, ++run); }
-  ok(worst < 9, '실패가 반드시 줄을 넘지 않음: 최장 ' + worst);
+  ok(worst < 15, '실패가 반드시 줄을 넘지 않음: 최장 ' + worst);
   p.ivs.hp = 9; p.ivp = {};
   const many = Array.from({ length: 30 }, () => mk()), n0 = s.seeds.length, r3 = seedFeed(s, p.uid, 'hp', many, makeRng(9));
-  ok(p.ivs.hp === IV_MAX && r3.used <= 10 && s.seeds.length === n0 - r3.used, '9 → 10 에서 멈춤 · 남은 종자는 가방: 쓴 ' + r3.used);
+  ok(p.ivs.hp === IV_MAX && r3.used <= 15 && s.seeds.length === n0 - r3.used, '9 → 10 에서 멈춤 · 남은 종자는 가방: 쓴 ' + r3.used);
   throws(() => seedFeed(s, p.uid, 'hp', [mk()], makeRng(1)), '최대면 막힘');
   throws(() => seedFeed(s, p.uid, 'atk', [mk('thorn')], makeRng(1)), '다른 식물 종자 = 막힘');
   throws(() => seedFeed(s, p.uid, 'atk', ['nope'], makeRng(1)), '없는 종자 = 막힘');

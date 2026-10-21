@@ -24,7 +24,7 @@ import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
 import { tryAutoStart, music } from './core/sound.js';
 import { runOp } from './game/ops.js';
-import { bloomPool } from './game/catalog.js';
+import { bloomPool, levelReward } from './game/catalog.js';
 import { bigKey } from './art/sprites.js';
 import { stageKey } from './game/view.js';
 
@@ -192,7 +192,7 @@ window.__shot = (name, params = {}, opt = {}) => {
     for (const i of O.lock || []) if (mine[i]) mine[i].lock = true;
     app.seedpick = { uid: p.uid, sel: new Set((O.sel || []).map(i => mine[i] && mine[i].id).filter(Boolean)), mode: O.mode || 'view', sy: 0, info: O.info != null && mine[O.info] ? mine[O.info].id : null, stage: O.stage || null, stat: O.stat || null };
   }
-  if (opt.level) app.state.pending.push({ kind: 'level', level: opt.level, box: { credits: 120 + 60 * opt.level, water: 3 + (opt.level >> 1), fert: 1 + Math.floor(opt.level / 3), gems: opt.level % 3 ? 0 : 10 }, slots: 0 });
+  if (opt.level) { const box = levelReward(opt.level); delete box.seed; delete box.card; app.state.pending.push({ kind: 'level', level: opt.level, box, slots: 0 }); }   // 촬영용 상자(종자 · 카드는 뽑기라 뺌)
   app.draft = null;
   if (opt.draft) {   // 고르기 화면 촬영(opt.draft = { evo, at: 연 뒤 ms, part: 'skill' | 'passive', n, pick, moves: [[위 줄 몇째, 칸]], sel, arm, peek: 칸 | 't<몇째>', sy })
     const D = opt.draft, p = app.state.plants[params.act != null ? +params.act : (app.state.active || 0)], pas = D.part === 'passive';

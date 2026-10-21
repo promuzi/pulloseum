@@ -284,7 +284,8 @@ export function feed(s, id, kind, n = 1) {
     while (p.lv < LV_MAX && p.gxp >= growNeed(p.stage, p.lv)) {
       p.gxp -= growNeed(p.stage, p.lv); p.lv++; p.pts += PTS_PER_LV;
       const r = { lv: p.lv, pts: PTS_PER_LV };
-      if (addDraft(p, 'lv')) r.draft = 1;   // 레벨업마다 새 기술 후보(고르기 — 아래 addDraft)
+      // 새 기술 후보(고르기 — 아래 addDraft)는 단계마다 Lv3 · Lv6에서만(2026-10-22 사용자 "레벨업시 스킬을 주는데 이게 레벨업이 쉽고 카드 얻을 기회나 선택권이 많아서 너무 피로해" — 전엔 레벨업마다)
+      if ((p.lv === 3 || p.lv === LV_MAX) && addDraft(p, 'lv')) r.draft = 1;
       if (p.stage === 2 && p.lv === LV_MAX && addDraft(p, 'lv', 'passive')) r.draft = 1;   // Lv16 = 패시브 고르기(셋째)
       if (p.lv === 3) r.harvest = 1;
       if (p.lv === LV_MAX) { r.box = { water: 2, fert: 1, credits: 40 + 30 * p.stage }; give(s, r.box); }
@@ -314,8 +315,8 @@ export function evolve(s, id, rng) {
   p.stage++; p.lv = 1; p.gxp = 0;
   let league = null;
   if (lg) { setLeague(s, lg.to); league = { from: lg.from, to: lg.to, kept: lg.had }; }   // 떠나는 리그 기록은 그대로 보관(2026-10-18 사용자 "추천대로" — 전엔 예선부터)
-  const ivUp = {};   // 진화 = 개체값이 무작위로 1~3 오름(최대 아닌 칸에 하나씩 — 2026-10-18 사용자 "진화 시 개체값이 범위 내에서 랜덤하게 오르는 것도")
-  for (let n = 1 + Math.floor(rng() * 3); n > 0; n--) { const room = IV_KEYS.filter(k => (p.ivs[k] || 0) < IV_MAX); if (!room.length) break; const k = room[Math.floor(rng() * room.length)]; p.ivs[k] = (p.ivs[k] || 0) + 1; ivUp[k] = (ivUp[k] || 0) + 1; }
+  const ivUp = {};   // 진화 = 개체값이 무작위로 0~2 오름(최대 아닌 칸에 하나씩 — 2026-10-18 사용자 "진화 시 개체값이 범위 내에서 랜덤하게 오르는 것도", 2026-10-22 1~3 → 0~2 "너무 쉬움")
+  for (let n = Math.floor(rng() * 3); n > 0; n--) { const room = IV_KEYS.filter(k => (p.ivs[k] || 0) < IV_MAX); if (!room.length) break; const k = room[Math.floor(rng() * room.length)]; p.ivs[k] = (p.ivs[k] || 0) + 1; ivUp[k] = (ivUp[k] || 0) + 1; }
   const d1 = addDraft(p, 'evo'), d2 = addDraft(p, 'evo', 'passive'), got = [], draft = !!(d1 || d2);   // 진화 = 새 기술 후보에서 고르기 → 패시브 고르기(전엔 한두 개를 바로 배움 — 2026-10-18)
   const xp = addXp(s, XP.evolve, rng);
   return { stage: p.stage, got, draft, xp, league, ivUp };
@@ -439,8 +440,9 @@ export function resetPoints(s, id) {
 // 종자 거름(2026-10-18 사용자 "같은 식물 종자는 거름으로 · 개체값 상승은 소량" → "무조건 오르는 것보다 확률이면 · 거의 만렙일수록 조금씩 어려워지게"):
 //  고른 개체값에 같은 종 종자를 하나씩 — 종자마다 확률(지금 값 0~4 = 40% · 5~7 = 25% · 8~9 = 12%), 실패가 쌓이면(p.ivp = 연속 실패 수) 4 · 6 · 9번째엔 반드시(운 나쁜 줄 막기) ·
 //  최대면 멈추고 남은 종자는 가방. 난수라 화면이 먼저 하지 않음(서버 결과 그대로)
-export const ivpChance = v => (v <= 4 ? 0.4 : v <= 7 ? 0.25 : 0.12);
-export const ivpPity = v => (v <= 4 ? 4 : v <= 7 ? 6 : 9);
+// 종자 거름 한 알이 개체값 +1 될 확률 · 연달아 실패하면 확정(2026-10-22 "너무 쉬움" — 40·25·12% / 4·6·9번 → 30·15·7% / 5·9·15번)
+export const ivpChance = v => (v <= 4 ? 0.3 : v <= 7 ? 0.15 : 0.07);
+export const ivpPity = v => (v <= 4 ? 5 : v <= 7 ? 9 : 15);
 export function seedFeed(s, id, stat, seedIds, rng) {
   const p = getPlant(s, id); normIvs(p);
   need(IV_KEYS.includes(stat), '올릴 개체값을 골라 주세요');
@@ -627,9 +629,10 @@ export function addSeed(s, sd) {
 // 잠재력(2026-10-18 사용자 "종자 별 1~3 → 식물처럼 별 5성까지 · 잠재력이라 부르자 · 종자가 4성이면 심을 때도 4성 · 그 안의 구성은 랜덤"):
 //  종자 잠재력 1~5(무게 30 · 35 · 22 · 10 · 3, 좋은 굴림 ivk 번 더 굴려 큰 값 · 전설 = 5) → 심으면 개체값 합이 그 별 구간(11 · 21 · 31 · 41 문턱 — starsOf) 안에서 무작위, 칸 나눔도 무작위.
 //  옛 종자(잠재력 없음) = 번호 · 좋은 굴림으로 정한 값(늘 같음)
-const POT_W = [30, 35, 22, 10, 3], POT_SUM = [[5, 10], [11, 20], [21, 30], [31, 40], [41, 50]];
-function rollPot(rng, ivk) { let best = 1; for (let i = 0; i <= ivk; i++) { let r = rng() * 100, k = 0; while (k < 4 && r >= POT_W[k]) { r -= POT_W[k]; k++; } best = Math.max(best, k + 1); } return best; }
-export const potOf = sd => { if (!sd) return 1; if (sd.legend) return 5; if (sd.pot >= 1 && sd.pot <= 5) return sd.pot; let h = 0; for (const c of String(sd.id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; let a = h; return rollPot(() => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; }, sd.ivk || 0); };
+//  2026-10-22 "너무 쉬움": 새 종자는 무게 42 · 34 · 17 · 6 · 1(4성 이상 13% → 7%), 좋은 굴림도 두 번에 한 번만 더 굴림(ivk 2 = 한 번 더). 옛 종자의 정해진 값은 옛 무게 그대로(바뀌지 않게)
+const POT_W_OLD = [30, 35, 22, 10, 3], POT_W = [42, 34, 17, 6, 1], POT_SUM = [[5, 10], [11, 20], [21, 30], [31, 40], [41, 50]];
+function rollPot(rng, ivk, W = POT_W, extra = Math.ceil(ivk / 2)) { let best = 1; for (let i = 0; i <= extra; i++) { let r = rng() * 100, k = 0; while (k < 4 && r >= W[k]) { r -= W[k]; k++; } best = Math.max(best, k + 1); } return best; }
+export const potOf = sd => { if (!sd) return 1; if (sd.legend) return 5; if (sd.pot >= 1 && sd.pot <= 5) return sd.pot; let h = 0; for (const c of String(sd.id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; let a = h; return rollPot(() => { a = (a * 1103515245 + 12345) >>> 0; return a / 4294967296; }, sd.ivk || 0, POT_W_OLD, sd.ivk || 0); };
 export function seedOf(s, key, rng, o = {}) {
   const shiny = o.shiny ?? rng() < SHINY_P, legend = !!o.legend;
   const sd = { id: uid(s), key, shiny, legend };
@@ -881,6 +884,12 @@ export function seasonSync(s, now) {
   s.tournament = { ...s.leagues[s.league] };
   s.season = { n, best: Object.fromEntries(LEAGUE_KEYS.map(k => [k, TIERS.indexOf(s.leagues[k].tier)])) };
 }
+// 이긴 판 덤 = 돈 말고 하나까지(2026-10-22 사용자 "승리시 보상이 너무 다양해 … 한 번에 나오는 보상수는 적절히 조율하자" — 전엔 물 · 비료 · 연료 · 부품을 따로 굴려 넷까지)
+function winBonus(r, rng, table) {
+  if (rng() >= 0.75) return;
+  let x = rng() * table.reduce((a, [, w]) => a + w, 0);
+  for (const [k, w] of table) { x -= w; if (x <= 0) { r[k] = k === 'water' ? 1 + (rng() < 0.3 ? 1 : 0) : 1; return; } }
+}
 export const PVP_DAILY = 15;   // 친구 대결 보상은 하루 15판까지(친구끼리 일부러 져 주며 돈·경험치를 쌓지 않게) — 승패 기록은 늘 남음
 export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
   const r = { credits: 0, water: 0, fert: 0 };
@@ -891,15 +900,11 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
     if (short || s.pvp.n >= PVP_DAILY) { r.capped = short ? 'short' : 'daily'; r.xp = { gained: 0, ups: [] }; return r; }   // 너무 짧은 판(3턴 미만) · 하루 한도 = 보상 없음
     s.pvp.n++;
     r.credits = win ? 80 : 30;
-    if (win && rng() < 0.5) r.fuel = 1;
-    if (win && rng() < 0.3) r.parts = 1;
+    if (win) winBonus(r, rng, [['fuel', 55], ['parts', 45]]);
   } else {
     const tier = TIERS.indexOf(s.tournament.tier);
     r.credits = win ? 60 + 15 * tier : 15;
-    if (win && rng() < 0.5) r.water = 1 + (rng() < 0.3 ? 1 : 0);
-    if (win && rng() < 0.2) r.fert = 1;
-    if (win && rng() < 0.25) r.fuel = 1;
-    if (win && rng() < 0.4) r.parts = 1;   // 부품(2026-10-17)
+    if (win) winBonus(r, rng, [['water', 40], ['parts', 30], ['fuel', 18], ['fert', 12]]);   // 부품(2026-10-17)
     if (mode === 'swap3') s.swap3[win ? 'wins' : 'losses']++;
     else {
       const T = s.tournament; T[win ? 'wins' : 'losses']++;

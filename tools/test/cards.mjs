@@ -7,7 +7,7 @@
 import { newGame, makePlant, syncTimers, normIvs, stars, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
 import { kitOfPlant, unitOf, botPlant, setupBot, replayBot } from '../../v2/src/game/fight.js';
 import { CARDS, CARD_SLOTS, NORMAL_CARDS, formCards, isSkillCard, cardFits, passivesOf, rollCard, cardFace } from '../../v2/src/game/cards.js';
-import { SKILLS, SPECIES, FORM_KEYS, PLANETS, SHOP, levelReward } from '../../v2/src/game/catalog.js';
+import { SKILLS, SPECIES, FORM_KEYS, PLANETS, SHOP, levelReward, userNeed } from '../../v2/src/game/catalog.js';
 import { runOp } from '../../v2/src/game/ops.js';
 import { makeRng, resolveTurn } from '../../v2/src/battle/rules.js';
 import { makeBattle, playTurnVs } from '../../v2/src/battle/model.js';
@@ -222,8 +222,10 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   ok(wpn > 20, '가진 변이(무기) 쪽이 자주: ' + wpn + '/60');
   ok(Object.values(s.cards).reduce((a, b) => a + b, 0) === before + 61, '산 카드는 가방에');
   ok(SHOP.some(x => x.id === 'card_basic') && SHOP.some(x => x.id === 'card_mut'), '상점 꾸러미 둘');
-  ok([2, 5, 8].every(L => levelReward(L).card === 'normal') && !levelReward(3).card, '세 레벨마다 일반 카드');
-  const s2 = game(); const c0 = Object.values(s2.cards).reduce((a, b) => a + b, 0); addXp(s2, 100, makeRng(1));   // Lv1 → 2
+  ok([2, 8, 11].every(L => levelReward(L).card === 'normal') && !levelReward(3).card && levelReward(5).seed && !levelReward(5).card, '세 레벨마다 일반 카드(종자가 걸린 레벨은 종자 — 상자 하나에 특별한 것 하나, 2026-10-22)');
+  for (let L = 1; L <= 40; L++) { const r = levelReward(L), n = Object.keys(r).length; if (n > 3) { ok(false, `Lv${L} 상자 보상 ${n}가지: ${JSON.stringify(r)}`); break; } }
+  ok(true, '레벨업 상자 = 많아야 셋(돈 · 자원 하나 · 특별한 것 하나)');
+  const s2 = game(); const c0 = Object.values(s2.cards).reduce((a, b) => a + b, 0); addXp(s2, userNeed(1), makeRng(1));   // Lv1 → 2
   ok(Object.values(s2.cards).reduce((a, b) => a + b, 0) === c0 + 1 && s2.pending.some(x => x.box && x.box.card), '레벨업 상자에 카드');
 }
 // ⑨ 봇 카드 · 다시 돌리기

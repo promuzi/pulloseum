@@ -90,8 +90,10 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const s = game(), p = s.plants[0], id = p.uid;
   s.items.water = 999; s.items.fert = 999;
   const s2 = JSON.parse(JSON.stringify(s));
-  feed(s, id, 'fert', 2); feed(s2, id, 'fert', 2);   // 비료 둘(+50) = Lv2
-  ok(p.lv === 2 && p.drafts && p.drafts.length === 1 && p.drafts[0].kind === 'lv' && p.drafts[0].pick === 1 && p.drafts[0].cands.length >= 1, '레벨업 → 고르기 하나(셋 중 하나): ' + JSON.stringify(p.drafts));
+  feed(s, id, 'fert', 2); feed(s2, id, 'fert', 2);   // 비료 둘(+50) = Lv2 — 고르기는 단계마다 Lv3 · Lv6에서만(2026-10-22)
+  ok(p.lv === 2 && !(p.drafts || []).length, 'Lv2 레벨업엔 고르기 없음(Lv3 · Lv6만): ' + JSON.stringify(p.drafts));
+  feed(s, id, 'fert', 3); feed(s2, id, 'fert', 3);   // 비료 셋 더 = Lv3
+  ok(p.lv === 3 && p.drafts && p.drafts.length === 1 && p.drafts[0].kind === 'lv' && p.drafts[0].pick === 1 && p.drafts[0].cands.length >= 1, 'Lv3 레벨업 → 고르기 하나(셋 중 하나): ' + JSON.stringify(p.drafts));
   ok(JSON.stringify(p.drafts) === JSON.stringify(s2.plants[0].drafts), '같은 상태면 같은 후보(화면 먼저 · 서버 같게)');
   throws(() => draftPick(s, id, 0, []), '안 고르면 막힘');
   throws(() => draftPick(s, id, 0, ['f_ball']), '후보 아닌 기술');
@@ -251,13 +253,13 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const q = game().plants[0], s3 = game(); s3.plants[0] = q; s3.items.fert = 999;
   q.stage = 1; q.lv = 1; q.gxp = 0; q.drafts = [];
   q.skills.forgot.push(...bloomPool(q.key, 1).map(x => x.id));
-  while (q.lv < 2) feed(s3, q.uid, 'fert', 1);
+  while (q.lv < 3) feed(s3, q.uid, 'fert', 1);   // 고르기는 Lv3 · Lv6에서만(2026-10-22)
   const p0 = new Set(bloomPool(q.key, 0).map(x => x.id)), dq = q.drafts.find(x => x.part === 'skill');
   ok(dq && dq.cands.length >= 1 && dq.cands.every(id => p0.has(id)), '이번 단계를 다 알면 앞 단계 기술: ' + JSON.stringify(dq));
   let cur = 0, all = 0;
   for (let i = 0; i < 40; i++) {
     const t = game(), w = t.plants[0]; t.items.fert = 999; w.uid = 'mix' + i; w.stage = 1; w.lv = 1; w.gxp = 0; w.drafts = [];
-    while (w.lv < 2) feed(t, w.uid, 'fert', 1);
+    while (w.lv < 3) feed(t, w.uid, 'fert', 1);
     const p1 = new Set(bloomPool(w.key, 1).map(x => x.id));
     for (const id of (w.drafts.find(x => x.part === 'skill') || { cands: [] }).cands) { all++; if (p1.has(id)) cur++; }
   }

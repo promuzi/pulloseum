@@ -76,7 +76,10 @@ export const STAGES = ['새싹', '성장기', '성체'];   // 공통 단계 이�
 export const STAGE_KEY = ['sprout', 'growing', 'mature'];   // 그림 단계(sprites bigKey: sprout→_young, growing→_teen, mature→기본)
 export const STAGE_MUL = [0.8, 0.9, 1];                     // 체력·공격·방어 배율
 export const LV_MAX = 6;
-export const growNeed = (stage, lv) => 20 + 10 * lv + 30 * stage;   // 다음 레벨까지 생장치(물 +10 · 비료 +25)
+// 다음 레벨까지 생장치(물 +10 · 비료 +25). 단계마다 배수(2026-10-22 사용자 "개체값 레벨업 열매획득 등 너무 쉬움 며칠하면 다 만렙 쪽을 수 있으니 이를 실제 게임처럼 어려움을 주자"):
+//  새싹 ×1.5 · 성장기 ×3 · 성체 ×4 — 처음은 금방, 뒤로 갈수록 오래(한 식물 끝까지 생장치 1200 → 약 3800)
+export const GROW_K = [1.5, 3, 4];
+export const growNeed = (stage, lv) => Math.round((20 + 10 * lv + 30 * stage) * (GROW_K[stage] || 1));
 export const FEED = { water: 10, fert: 25 };
 export const PTS_PER_LV = 2;                                 // 레벨업마다 강화 포인트
 export const STAT_KEYS = ['hp', 'atk', 'def', 'spd', 'acc', 'crit'];
@@ -556,22 +559,26 @@ export const RARITY = ['common', 'uncommon', 'rare', 'epic', 'legend'];
 export const RARITY_COL = ['#e8eef4', '#7cf0a0', '#6fb8ff', '#c48cff', '#ffb04a'];   // 흰 · 초록 · 파랑 · 보라 · 주황(옛 판 5색과 같음)
 
 // ── 재배사 레벨 ──
-export const userNeed = L => 60 + 40 * L;
+export const userNeed = L => 80 + 50 * L + 4 * L * L;   // 다음 재배사 레벨까지(2026-10-22 — 옛 60 + 40L: Lv20까지 약 8700 → 약 2만 900)
 export const XP = { botWin: 30, botLose: 12, pvpWin: 40, pvpLose: 15, explore: 18, harvest: 2, evolve: 25, plant: 5 };
 export const FARM_START = 3, FARM_MAX = 12, STORE_MAX = 120;   // 스마트팜 칸(재배사 레벨로 열림) · 동면 보관고(사용자 "100개 정도 이상")
 export const FARM_LV = [2, 3, 5, 7, 9, 12, 15, 18, 21];        // 이 레벨마다 스마트팜 한 칸
 export const farmSlots = L => Math.min(FARM_MAX, FARM_START + FARM_LV.filter(x => L >= x).length);
-// 레벨업 보상(클래시로얄 왕 레벨처럼 — 상자 하나): 돈 · 물 · 비료 + 가끔 보석 · 회귀 주사 · 종자
+// 레벨업 보상(클래시로얄 왕 레벨처럼 — 상자 하나). 2026-10-22 사용자 "레벨업시 상자나 승리시 보상이 너무 다양해. 다양한 건 좋은데 한 번에 나오는 보상수는 적절히 조율하자":
+//  한 상자 = 돈 + 자원 하나(레벨마다 차례로 물 → 비료 → 부품 → 연료) + 특별한 것 하나까지(종자 > 카드 > 회귀 주사 > 보석 — 그 레벨에 걸린 것 중 앞의 것) = 많아야 셋
 export function levelReward(L) {
-  const r = { credits: 120 + 60 * L, water: 3 + Math.floor(L / 2), fert: 1 + Math.floor(L / 3), gems: L % 3 === 0 ? 10 : 0, fuel: 1 + (L % 5 === 0 ? 1 : 0), parts: 2 + Math.floor(L / 2) };   // 부품(2026-10-17)
-  if (L % 4 === 0) r.regress = 1;
+  const r = { credits: 120 + 60 * L };
+  const main = ['fuel', 'water', 'fert', 'parts'][L % 4];
+  r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'fert' ? 3 + Math.floor(L / 3) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
   if (L % 5 === 0) r.seed = 'rare';
-  if (L % 3 === 2) r.card = 'normal';   // 카드(2026-10-17): 세 레벨마다 일반 카드 한 장(addXp가 뽑음)
+  else if (L % 3 === 2) r.card = 'normal';   // 카드(2026-10-17): 일반 카드 한 장(addXp가 뽑음)
+  else if (L % 4 === 0) r.regress = 1;
+  else if (L % 3 === 0) r.gems = 10;
   return r;
 }
 
 // ── 수확(스마트팜) ──
-export const HARVEST = { periodMin: [6, 5, 4], maxBase: [2, 3, 4] };   // 단계별 열매 하나 걸리는 분 · 최대 개수(Lv3부터 +1, 열매용 +1)
+export const HARVEST = { periodMin: [36, 30, 24], maxBase: [2, 3, 4] };   // 단계별 열매 하나 걸리는 분 · 최대 개수(Lv3부터 +1, 열매 개체값 5마다 +1) — 2026-10-22 6·5·4분 → 36·30·24분(너무 쉬움)
 const fruitIv = p => ((p.ivs && p.ivs.fruit) || 0);
 export const harvestMax = p => HARVEST.maxBase[p.stage] + (p.lv >= 3 ? 1 : 0) + Math.floor(fruitIv(p) / 5);
 export const harvestK = p => 1 - 0.03 * fruitIv(p);   // 열매 하나 걸리는 시간 배수(열매 개체값)
