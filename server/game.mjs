@@ -4,7 +4,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
-import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng } from '../v2/src/game/fight.js';
+import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng, unitOf } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
 import { LEAGUES, RULES_VER } from '../v2/src/game/catalog.js';
 
@@ -31,10 +31,14 @@ export function makeGame({ q, log }) {
   };
   // 규칙 판 번호가 다른 판(전투 계산을 바꿔 올림) = 승패 없이 닫음(진 판 아님 — 2026-10-18 업데이트 안전)
   const oldRules = spec => (spec.rv || 1) !== RULES_VER;
-  function voidRow(uid, b, now) {
+  function voidRow(uid, b, now, why = 'rules') {
     q.doneBattle.run(4, now, b.id);
-    log(uid, 'battle.void', { mode: JSON.parse(b.spec).mode, why: 'rules' }, now);
+    log(uid, 'battle.void', { mode: JSON.parse(b.spec).mode, why }, now);
   }
+  // 전투에 들어가는 모습(능력치 · 손패 · 카드 · 변이 · 단계) — 이름 · 화분 · 색 같은 겉모습은 빼고 견줌.
+  //  2026-10-22 사용자 "여전히 식물 진화 및 스킬 편집후 전투하면 적용 안 되는 경우가 있음": 이어 하기를 식물 번호 · 단계로만 견줘서
+  //  매칭 '취소' 뒤(서버엔 판이 남음) 기술을 고치고 다시 나가면 옛 손패 판이 열렸음 → 전투 유닛 전체로 견줌
+  const buildSig = p => { const u = unitOf('me', p); delete u.name; delete u.pot; delete u.shiny; delete u.legend; return JSON.stringify(u); };
   const save = (uid, s, now) => { L.syncTimers(s, now); q.putSave.run(uid, JSON.stringify(s), now); };
 
   // ── 새 게임(가입 때) ──
@@ -91,10 +95,11 @@ export function makeGame({ q, log }) {
     else if (open && now - open.created < RESUME_MS) {
       // 안 끝난 판 = 이어서 — 단, 그사이 고른 식물이 바뀌었으면(진화 · 다른 식물 · 3:3 팀 · 판 종류) 이어 하지 않고 진 판으로 정리한 뒤 새 판
       //  (2026-10-17 사용자 "진화 막 시킨 후 다음 전투에는 진화전 모습이네" — 판을 시작할 때 저장한 식물 그대로 이어서 열었음)
-      const spec = JSON.parse(open.spec), now0 = mineOf(load(uid).s);
-      const same = now0.mode === spec.mode && now0.mine.length === spec.mine.length && spec.mine.every((p, i) => now0.mine[i].uid === p.uid && now0.mine[i].stage === p.stage);
-      if (same) { const B = replayBot(spec, JSON.parse(open.acts)); return { id: open.id, mode: spec.mode, view: viewOf(B), info: spec.info, resume: true }; }
-      forfeitRow(uid, open, now, 'changed'); forfeited = 'changed';
+      const spec = JSON.parse(open.spec), now0 = mineOf(load(uid).s), acts0 = JSON.parse(open.acts);
+      const same = now0.mode === spec.mode && now0.mine.length === spec.mine.length && spec.mine.every((p, i) => now0.mine[i].uid === p.uid && buildSig(now0.mine[i]) === buildSig(p));
+      if (same) { const B = replayBot(spec, acts0); return { id: open.id, mode: spec.mode, view: viewOf(B), info: spec.info, resume: true }; }
+      if (!acts0.length) voidRow(uid, open, now, 'changed0');   // 수를 하나도 안 둔 판(매칭 취소 · 바로 나감) = 승패 없이 닫음, 알림도 없음
+      else { forfeitRow(uid, open, now, 'changed'); forfeited = 'changed'; }
     } else if (open) forfeitRow(uid, open, now, 'stale');
     const { s } = load(uid);
     const { mode, mine } = mineOf(s);
@@ -125,6 +130,14 @@ export function makeGame({ q, log }) {
     if (B.over) Object.assign(out, finishBattle(uid, b, spec, acts, B, now));
     return out;
   }
+  // 매칭 '취소'(2026-10-22): 수를 하나도 안 둔 판만 승패 없이 닫음 — 둔 판은 기권으로만
+  function battleCancel(uid, id, now) {
+    const b = q.battle.get(String(id || ''), uid);
+    if (!b || b.done) return { cancelled: false };
+    if (JSON.parse(b.acts).length) fail('이미 시작한 판은 기권으로만 끝낼 수 있어요');
+    voidRow(uid, b, now, 'cancel');
+    return { cancelled: true };
+  }
   function battleForfeit(uid, id, now) {
     const b = q.battle.get(String(id || ''), uid);
     if (!b || b.done) fail('끝났거나 없는 판이에요');
@@ -154,7 +167,7 @@ export function makeGame({ q, log }) {
     if (list.length !== 3) list = s.plants.slice(0, 3);
     return list.length === 3 ? { plants: list.map(clone), profile: { ...s.profile }, level: s.user.level } : null;
   }
-  return { create, state, act, coupon, battleStart, battleTurn, battleForfeit, pvpResult, plantOf, teamOf, load };
+  return { create, state, act, coupon, battleStart, battleTurn, battleCancel, battleForfeit, pvpResult, plantOf, teamOf, load };
 }
 
 // 고른 수 세기(1:1 = 기술 id, 3:3 = skill:id · switch · rest · send)

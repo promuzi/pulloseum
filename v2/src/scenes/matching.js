@@ -20,8 +20,15 @@ export const matching = {
   // 서버에 판을 열어 달라고 함(상대·씨앗은 서버가 정함 — 안 끝난 판이 있으면 그 판을 이어서)
   ask(app) {
     this.asked = true;
-    (app.settle ? app.settle() : Promise.resolve()).then(() => bot.start(app)).then(r => { this.res = r; if (r && r.forfeited) app.toast(r.forfeited === 'void' ? '게임이 업데이트되어 하던 판은 승패 없이 끝냈어요' : '식물이 바뀌어서 하던 판은 진 것으로 정리했어요'); }).catch(e => { app.toast(e.message); if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } });
+    (app.settle ? app.settle() : Promise.resolve()).then(() => bot.start(app)).then(r => {
+      this.res = r;
+      if (this.left) return this.drop(app);   // 답이 오기 전에 '취소'를 눌렀음 → 방금 열린 판을 닫음
+      if (r && r.forfeited) app.toast(r.forfeited === 'void' ? '게임이 업데이트되어 하던 판은 승패 없이 끝냈어요' : '식물이 바뀌어서 하던 판은 진 것으로 정리했어요');
+    }).catch(e => { app.toast(e.message); if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } });
   },
+  // 찾는 동안 '취소' = 서버의 판도 닫음(수를 안 둔 판만 — 하던 판을 이어 하는 중이면 그대로 둠)
+  drop(app) { const r = this.res; if (r && r.id && !r.resume) bot.cancel(app, r.id); },
+  cancel(app) { if (this.left) return; this.left = true; this.drop(app); app.go('home', {}, 'shutterOpen'); },
   draw(app) {
     const { g, W, H, t } = app;
     if (this.t0 == null) this.t0 = t;
@@ -57,7 +64,7 @@ export const matching = {
       // 찾는 막대(왕복)
       const bx = x + 24, bw = w - 48, pos = (Math.sin(a / 260) + 1) / 2;
       g.rect(bx, y + 122, bw, 4, '#0e2844'); g.rect(Math.round(bx + pos * (bw - 30)), y + 122, 30, 4, '#4a8edc'); g.rect(Math.round(bx + pos * (bw - 30)) + 4, y + 122, 22, 1, '#8ccfff');
-      button(app, 'mt_cancel', x + w / 2 - 36, y + h - 32, 72, 24, '취소', { style: 'night', onTap: () => { if (!this.left) { this.left = true; app.go('home', {}, 'shutterOpen'); } } });
+      button(app, 'mt_cancel', x + w / 2 - 36, y + h - 32, 72, 24, '취소', { style: 'night', onTap: () => this.cancel(app) });
     } else {
       const fa = t - this.foundT, fk = Math.min(1, fa / 160);
       if (fk < 1) g.c.save(), g.c.globalAlpha = 1 - fk, g.rect(x, y, w, h, '#e0f0ff'), g.c.restore();   // 찾은 순간 화면이 한 번 번쩍

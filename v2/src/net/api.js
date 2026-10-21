@@ -54,6 +54,12 @@ export const bot = {
     if (!net.offline) { const r = await net.req('/api/battle/forfeit', { id }); if (r.state) app.state = r.state; return r; }
     return { reward: battleForfeit(app.state, local ? local.spec.mode : 'tournament') };
   },
+  // 매칭 '취소' — 수를 안 둔 판을 서버에서도 닫음(안 닫으면 기술을 고친 뒤 다시 나갈 때 옛 판이 열렸음 — 2026-10-22)
+  async cancel(app, id) {
+    if (!net.offline) return net.req('/api/battle/cancel', { id }).catch(() => null);
+    local = null;
+    return { cancelled: true };
+  },
 };
 
 // ── 일 하나(양육·탐사·상점…) ──

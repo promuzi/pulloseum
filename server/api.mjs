@@ -138,6 +138,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     'POST /api/act': (req, b, now) => { const u = authed(req, now); return game.act(u.id, String(b.op || ''), b.args || {}, now); },
     'POST /api/battle/start': (req, b, now) => { const u = authed(req, now); return game.battleStart(u.id, now); },
     'POST /api/battle/turn': (req, b, now) => { const u = authed(req, now); return game.battleTurn(u.id, b.id, b.act, now, b.turn == null ? null : +b.turn); },
+    'POST /api/battle/cancel': (req, b, now) => { const u = authed(req, now); return game.battleCancel(u.id, b.id, now); },   // 매칭 취소 — 수를 안 둔 판만(2026-10-22)
     'POST /api/battle/forfeit': (req, b, now) => { const u = authed(req, now); return game.battleForfeit(u.id, b.id, now); },
     'GET /api/room': (req, b, now) => rooms.view(authed(req, now).id),
     'POST /api/room/create': (req, b, now) => rooms.create(authed(req, now).id, now),
