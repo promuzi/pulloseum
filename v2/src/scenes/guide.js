@@ -61,6 +61,7 @@ export const GUIDES = [
       { at: 'pt_*', prep: top, text: '스킬 · 패시브 · 강화 · 개체값 · 설정을 여기서 골라요.' },
       { at: 'skc_b*', prep: top, text: '장착 — 전투에 들고 가는 기술 여섯이에요. 기본기도 여기에 들어가요. 누르면 설명과 [해제]가 나오고, 꾹 눌러 끌면 자리를 바꿔요.' },
       { at: 'skc_s*', prep: top, text: '보관 — 장착하지 않은 기술을 여섯까지 맡겨 둬요. 기본기도 한 칸을 차지해요. 누르면 [장착] → 넣을 장착 칸을 눌러요.' },
+      { at: 'skc_b*', prep: top, text: '카드 테 아래 금빛 보석은 그 종만의 기술, 점 하나는 중급 · 둘은 상급이에요. 점선 테는 패시브, 각진 테는 변이 카드예요.' },
       { at: (app, sc) => sc.growR, prep: top, text: '물 · 비료를 주면 레벨이 올라요. 오를 때마다 강화 포인트가 생기고, 다 자라면 진화해요.' },
       { at: ['sk_forgot', 'sk_graft'], prep: bottom, text: '지운 기술은 회귀 주사로 되돌리고, 접목 가지로는 맞는 기술을 바로 배워요.' },
     ] },
@@ -142,11 +143,11 @@ export const GUIDES = [
       { at: ['hg_tank', 'hg_hull', 'hg_scanner', 'hg_cargo', 'hg_vault'], text: '탐사선 부품 다섯이에요. 눌러 고르고 아래에서 강화해요. 강화에 쓰는 부품은 탐사에서 모여요.' },
       { at: 'hg_model', text: '탐사선 겉모습은 여기서 바꿔요. 성능은 같아요.' },
     ] },
-  { id: 'shop', scene: 'shop', btn: app => [app.W - 24, 48],
+  { id: 'shop2', scene: 'shop', btn: app => [app.W - 24, 48],   // 2026-10-22 카드형 상점 · 카드 꾸러미 — 전에 본 사람도 한 번 더
     steps: [
       { at: ['buy_seed_common', 'buy_seed_rare'], text: '종자 꾸러미는 돈으로 사요. 어떤 식물이 나올지는 열어 봐야 알아요.' },
       { at: ['buy_card_basic', 'buy_card_mut'], text: '카드 꾸러미는 가방에 들어가요. 식물 관리에서 열면 그 식물에 맞는 카드가 나와요.' },
-      { at: ['buy_water10', 'buy_fert5', 'buy_regress1', 'buy_fuel3'], text: '보급품은 보석으로 사요. 물 · 비료는 대결 · 탐사 · 수확에서도 얻어요.' },
+      { at: ['buy_water10', 'buy_fert5', 'buy_regress1', 'buy_fuel3'], text: '보급품은 보석으로 사요. 물 · 비료는 대결 · 탐사 · 수확에서도 얻어요. 아래로 끌면 더 있어요.' },
     ] },
   { id: 'room', scene: 'room', btn: app => [Math.round(app.W / 2 + app.g.textW('친구 대결', 'head') / 2 + 6), 10],
     ready: (app, sc) => !sc.picker && !sc.teamPick,

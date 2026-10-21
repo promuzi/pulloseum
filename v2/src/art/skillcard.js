@@ -93,6 +93,7 @@ function placeholderArt(sk) {
 
 // 테: 먹선 → 속성 색 금속 테 2칸(위·왼 빛 · 아래·오른 그늘) → 안쪽 먹선. 고른 카드 = 금빛 테
 const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
+  : sk.passive && sk.look && sk.lv >= 2 ? (sk.lv >= 3 ? ['#d8a03a', '#fff3c8', '#8a5a1a'] : ['#c8d4e4', '#ffffff', '#5a6a84'])   // 강화 패시브 = +1 은빛 · +2 금빛 테(2026-10-22)
   : sk.passive && sk.look ? [sk.look.col, sk.look.light, hexMix(sk.look.col, C.ink, 0.5)]   // 일반 카드 = 하늘색 테
   : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
 // 모서리를 c칸 비스듬히 자른 네모 채우기(변이 카드 테)
@@ -117,6 +118,23 @@ function cardFrame(g, x, y, w, h, sk, lit) {
   g.rect(x + 4, y + 1, w - 8, 1, hi); g.rect(x + 1, y + 4, 1, h - 8, hi);   // 위·왼 빛
   g.rect(x + 4, y + h - 2, w - 8, 1, lo); g.rect(x + w - 2, y + 4, 1, h - 8, lo);   // 아래·오른 그늘
   rrect(g, x + 3, y + 3, w - 6, h - 6, 2, C.ink);
+  kindMarks(g, x, y, w, h, sk, mid);
+}
+// 종류 · 등급 표시(2026-10-22 사용자 "카드테두리나 이런것도 구분이 잘되는 ui를 고민해보자" — 테 모양 · 색은 그대로, 테 아래 가운데에 보석 · 점만):
+//  패시브 = 테에 점선(우표처럼 — 기술 카드와 갈림) · 개성(그 종만의 기술) = 금빛 보석 · 가지 · 특수 = 청록 보석 · 중급 = 하늘 점 하나 · 상급 = 보라 점 둘 · 하급 · 기본기 = 없음
+//  (변이 카드 = 각진 갑옷 테 · 강화 패시브 = 은빛 · 금빛 테는 frameCols)
+function gem(g, cx, cy, f, hi) {
+  for (let d = -4; d <= 4; d++) { const hw = 4 - Math.abs(d); g.rect(cx - hw, cy + d, hw * 2 + 1, 1, C.ink); }
+  for (let d = -3; d <= 3; d++) { const hw = 3 - Math.abs(d); g.rect(cx - hw, cy + d, hw * 2 + 1, 1, d < 0 ? hi : f); }
+  g.px(cx - 1, cy - 2, '#ffffff'); g.px(cx - 2, cy - 1, '#ffffff');
+}
+const TIER_PIP = { c2: [1, '#8fd3ff'], c3: [2, '#c48cff'] }, TIER_GEM = { u: ['#e0a830', '#fff3c8'], g: ['#2fa3a8', '#bff4f0'], s: ['#2fa3a8', '#bff4f0'] };
+function kindMarks(g, x, y, w, h, sk, mid) {
+  if (sk.passive) { const dc = hexMix(mid, '#ffffff', 0.6); for (let i = x + 7; i < x + w - 7; i += 3) { g.px(i, y + 2, dc); g.px(i, y + h - 3, dc); } for (let j = y + 7; j < y + h - 7; j += 3) { g.px(x + 2, j, dc); g.px(x + w - 3, j, dc); } return; }
+  if (sk.basic) return;
+  const G = TIER_GEM[sk.tier], P = TIER_PIP[sk.tier], cx = x + (w >> 1), cy = y + h - 2;
+  if (G) gem(g, cx, cy, G[0], G[1]);
+  else if (P) { const [n, col] = P, x0 = cx - Math.round((n * 6 - 2) / 2); for (let i = 0; i < n; i++) { const px = x0 + i * 6; g.rect(px - 1, cy - 2, 6, 5, C.ink); g.rect(px, cy - 1, 4, 3, col); g.px(px, cy - 1, '#ffffff'); } }
 }
 // 해(비용 = 햇빛 에너지 — 2026-10-17 사용자 "카드 왼쪽 상단 mp 소모량 숫자가 너무 작아 · 그 아이콘을 해 모양으로"): 먹선 원판 + 빛살 여덟(십자 = 굵게 · 대각선 = 점)
 //  색 = [속, 빛, 그늘] — ok 금빛 · bad(에너지 모자람) 주황빛 빨강 · off(못 씀) 회색. 빛살 끝 = 반지름 r + 3
@@ -246,7 +264,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
   const MF = sk.form && FORMS[sk.form], band = MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦
   g.rect(ax, by, aw, bh, band);
-  g.rect(ax, by, aw, 1, MF ? MF.light : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));
+  g.rect(ax, by, aw, 1, MF ? MF.light : sk.tier === 'u' && !sk.passive ? '#e0a830' : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));   // 개성 기술 = 금빛 줄(2026-10-22)
   if (MF) {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점)
     const cx = x + (w >> 1), [fm, fh] = frameCols(sk, o.lit);
     for (const [dy, hw] of [[-1, 7], [0, 7], [1, 7], [2, 7], [3, 6], [4, 4], [5, 2]]) g.rect(cx - hw, y + dy, hw * 2, 1, C.ink);

@@ -184,7 +184,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   app.seedpick = null; app.teampick = null;
-  if (opt.teampick) { openTeamPick(app, opt.teampick.sel.map(i => app.state.plants[i] && app.state.plants[i].uid), null); app.teampick.sy = opt.teampick.sy || 0; }   // 3:3 팀 고르기 촬영(opt.teampick = { sel: [몇째 …], sy })
+  if (opt.teampick) { openTeamPick(app, opt.teampick.sel.map(i => app.state.plants[i] && app.state.plants[i].uid), null); app.teampick.sy = opt.teampick.sy || 0; app.teampick.lift = opt.teampick.lift ?? null; }   // 3:3 팀 고르기 촬영(opt.teampick = { sel: [몇째 …], sy })
   if (opt.seedpick) {   // 종자 거름 고르기 촬영(opt.seedpick = { mode, sel: [몇째 …], stage: 'stat', stat, info: 몇째, special: 몇째를 전설로 })
     const O = opt.seedpick, p = app.state.plants[app.state.active || 0], mine = app.state.seeds.filter(sd => sd.key === p.key);
     if (O.special != null && mine[O.special]) mine[O.special].legend = true;

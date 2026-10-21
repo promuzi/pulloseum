@@ -1,48 +1,101 @@
 import { plainBg, awning } from '../art/bg.js';
-import { hud, navBar, button } from '../art/ui.js';
+import { hud, navBar, button, rrect } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { T, plate } from '../art/theme.js';
+import { T } from '../art/theme.js';
+import { BAYER4 } from '../art/palette.js';
+import { hexMix } from '../art/statusLook.js';
 import { seedArt } from './common.js';
 import { SHOP, SPECIES } from '../game/catalog.js';
 import { showGot } from './popups.js';
 import { CARDS } from '../game/cards.js';
 import { packTiny } from '../art/skillcard.js';
+import { glyphH } from '../core/text.js';
 
 // 상점(2026-10-16 사용자 "물 비료는 전투 탐사 수확에서 얻고 상점에서는 유료 재화로 구매"):
 //  종자 꾸러미 = 돈, 보급품(물 · 비료 · 회귀 주사 · 연료) = 보석. 식물 팔기 · 해체 = 고른 식물 아래 단추(스마트팜 · 보관고 · 식물 관리 설정).
-const ART = { seed_common: { seed: 'grass' }, seed_rare: { seed: 'bolt', rare: true }, card_basic: { card: 'n_wall' }, card_mut: { card: 'v_scale' }, water10: { ic: 'can' }, fert5: { ic: 'fert' }, regress1: { ic: 'potion' }, fuel3: { ic: 'energy' } };
-const DESC = { seed_common: '흔한 식물', seed_rare: '희귀 식물', card_basic: '일반 식물용', card_mut: '변이 식물용', water10: '생장 +10씩', fert5: '생장 +25씩', regress1: '기술 되돌리기', fuel3: '탐사 3번' };
-const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', card_basic: '일반 카드', card_mut: '변이 카드', water10: '물 10', fert5: '비료 5', regress1: '회귀 주사', fuel3: '연료 3' };
+//  2026-10-22 사용자 "상점 ui도 카드형태로 이쁘게 다듬어봐" — 물건 하나 = 카드 한 장(전투 카드와 같은 결: 먹선 · 금속 테(위 · 왼 빛, 아래 · 오른 그늘) ·
+//  그림 칸(갈래 색 빛이 가운데서 번짐) · 이름 띠 · 값 단추). 갈래 = 종자(초록) · 카드 꾸러미(일반 하늘 · 변이 보라) · 보급품(청록) — 테 색으로 갈림. 넘치면 끌어 넘김
+const SECTIONS = [
+  { title: '종자 꾸러미', ids: ['seed_common', 'seed_rare'] },
+  { title: '카드 꾸러미', ids: ['card_basic', 'card_mut'] },
+  { title: '보급품', ids: ['water10', 'fert5', 'regress1', 'fuel3', 'parts5'] },
+];
+const COL = { seed_common: '#3fae5a', seed_rare: '#e0b040', card_basic: '#5fb3d9', card_mut: '#9a6ae0', water10: '#2fa3a8', fert5: '#2fa3a8', regress1: '#2fa3a8', fuel3: '#2fa3a8', parts5: '#2fa3a8' };
+const ART = { seed_common: { seed: 'grass' }, seed_rare: { seed: 'bolt', rare: true }, card_basic: { pack: 'n' }, card_mut: { pack: 'm' }, water10: { ic: 'can' }, fert5: { ic: 'fert' }, regress1: { ic: 'potion' }, fuel3: { ic: 'energy' }, parts5: { ic: 'gear' } };
+const DESC = { seed_common: '흔한 식물', seed_rare: '희귀 식물', card_basic: '일반 식물용', card_mut: '변이 식물용', water10: '생장 +10씩', fert5: '생장 +25씩', regress1: '기술 되돌리기', fuel3: '탐사 3번', parts5: '탐사선 강화' };
+const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', card_basic: '일반 카드', card_mut: '변이 카드', water10: '물 10', fert5: '비료 5', regress1: '회귀 주사', fuel3: '연료 3', parts5: '부품 5' };
+const TOP = 44, INK = '#0b1322';
+
+// 그림 칸 바탕(갈래 색 빛이 가운데서 번짐 — 디더 네 단, 한 번 굽고 재사용)
+const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const glowMemo = new Map();
+function glow(col, w, h) {
+  const key = col + w + 'x' + h; let cv = glowMemo.get(key); if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const c = cv.getContext('2d'), id = c.createImageData(w, h), d = id.data;
+  const steps = [hexMix(col, '#ffffff', 0.35), col, hexMix(col, INK, 0.45), hexMix(col, INK, 0.7), hexMix(col, INK, 0.85)].map(hexRgb), R = Math.hypot(w / 2, h / 2);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const r = Math.hypot(x + 0.5 - w / 2, y + 0.5 - h * 0.48) / R, tt = Math.max(0, Math.min(steps.length - 1.001, r * 1.25 * (steps.length - 1))), i0 = Math.floor(tt);
+    const rgb = steps[BAYER4[y & 3][x & 3] / 16 < tt - i0 ? i0 + 1 : i0], k = (y * w + x) * 4;
+    d[k] = rgb[0]; d[k + 1] = rgb[1]; d[k + 2] = rgb[2]; d[k + 3] = 255;
+  }
+  c.putImageData(id, 0, 0); glowMemo.set(key, cv); return cv;
+}
+// 카드 테(기술 카드와 같은 결)
+function frame(g, x, y, w, h, col) {
+  const hi = hexMix(col, '#ffffff', 0.45), lo = hexMix(col, INK, 0.5);
+  rrect(g, x, y, w, h, 5, INK); rrect(g, x + 1, y + 1, w - 2, h - 2, 4, col);
+  g.rect(x + 4, y + 1, w - 8, 1, hi); g.rect(x + 1, y + 4, 1, h - 8, hi);
+  g.rect(x + 4, y + h - 2, w - 8, 1, lo); g.rect(x + w - 2, y + 4, 1, h - 8, lo);
+  rrect(g, x + 3, y + 3, w - 6, h - 6, 2, INK);
+}
+// 그림 칸 가운데 물건(2배)
+function art(g, cx, cy, A) {
+  const c = g.c;
+  c.save(); c.translate(cx, cy); c.scale(2, 2);
+  if (A.seed) { seedArt(g, 0, 0, A.seed); if (A.rare) g.img(icon('star'), 4, -11); }
+  else if (A.pack) packTiny(g, -11, -14, A.pack === 'm');
+  else { const ic = icon(A.ic || 'box'); g.img(ic, -Math.round(ic.width / 2), -Math.round(ic.height / 2)); }
+  c.restore();
+}
 
 export const shop = {
   theme: 'ship',   // 함선 장터(장소 테마 — 2026-10-15)
+  enter() { this.scroll = 0; },
+  onDrag(dy, dx, ev) { if (ev.y0 < TOP) return; this.scroll = Math.max(0, Math.min(this.max || 0, (this.scroll || 0) - dy)); },
   draw(app) {
-    const { g, W, H, t, state: s } = app;
+    const { g, W, H, t, state: s } = app, P = T.ptext;
     plainBg(g, W, H, t, 'shop_ship');
     awning(g, 28, W);
     hud(app, s);
-    const cw = Math.floor((W - 16 - 12) / 3), P = T.ptext;
-    // 짧은 화면(560 아래): 카드에서 설명 줄을 빼고 낮춰 암시장 판까지 탭 줄 위에 들어오게
-    const compact = H < 560, CH = compact ? 82 : 100, RS = compact ? 88 : 106;
-    let y = 46;
-    const sections = [['종자 꾸러미', SHOP.filter(x => x.give.seed)], ['보급품', SHOP.filter(x => !x.give.seed)]];
-    for (const [title, items] of sections) {
-      g.text(title, 12, y + 4, { font: 'head', color: T.text.main, shadow: T.ink });
-      y += 24;
-      items.forEach((it, i) => {
-        const col = i % 3, x = 8 + col * (cw + 6), yy = y + Math.floor(i / 3) * RS, A = ART[it.id] || {};
-        plate(g, x, yy, cw, CH);
-        plate(g, x + 7, yy + 7, cw - 14, 36, 'deep');
-        if (A.seed) { seedArt(g, x + cw / 2, yy + 25, A.seed); if (A.rare) g.img(icon('star'), x + cw / 2 + 8, yy + 10); }
-        else if (A.card) packTiny(g, Math.round(x + cw / 2 - 11), yy + 11, A.card !== 'n_wall');   // 카드 꾸러미 = 봉지(2026-10-22 — 꾸러미째 가방에)
-        else { const ic = icon(A.ic || 'box'); g.img(ic, Math.round(x + cw / 2 - ic.width), yy + 25 - ic.height, 2); }
-        g.text(SHORT[it.id] || it.name, x + cw / 2, yy + 48, { font: 'bold', color: P.main, align: 'center' });
-        if (!compact) g.text(DESC[it.id] || '', x + cw / 2, yy + 63, { color: P.sub, align: 'center' });
-        const [cur, n] = Object.entries(it.cost)[0], can = s.wallet[cur] >= n;
-        button(app, 'buy_' + it.id, x + 6, yy + CH - 24, cw - 12, 19, String(n), { style: can ? 'gold' : 'off', icon: cur === 'gems' ? 'gem' : 'coin', disabled: !can, onTap: () => this.buy(app, it) });
-      });
-      y += Math.ceil(items.length / 3) * RS + 4;
-    }
+    const gap = 6, cw = Math.floor((W - 16 - gap * 2) / 3), CH = 118, AH = 60, bottom = H - 50, viewH = bottom - TOP, hits = [];
+    let y = TOP + 4 - Math.round(this.scroll || 0);
+    g.clip(0, TOP, W, viewH, () => {
+      for (const S of SECTIONS) {
+        g.text(S.title, 12, y + 2, { font: 'head', color: T.text.main, shadow: T.ink });
+        y += 24;
+        S.ids.forEach((id, i) => {
+          const it = SHOP.find(x => x.id === id); if (!it) return;
+          const inRow = Math.min(3, S.ids.length - Math.floor(i / 3) * 3), x0 = Math.round((W - inRow * cw - (inRow - 1) * gap) / 2), x = x0 + (i % 3) * (cw + gap), yy = y + Math.floor(i / 3) * (CH + gap), col = COL[id] || '#2fa3a8';
+          rrect(g, x + 1, yy + 3, cw, CH, 5, 'rgba(0,0,0,0.32)');   // 그림자
+          frame(g, x, yy, cw, CH, col);
+          const ax = x + 4, ay = yy + 4, aw = cw - 8;
+          g.c.imageSmoothingEnabled = false; g.c.drawImage(glow(col, aw, AH), ax, ay);
+          art(g, Math.round(x + cw / 2), ay + Math.round(AH / 2) + 1, ART[id] || {});
+          const by = ay + AH;   // 이름 띠
+          g.rect(ax, by, aw, CH - 8 - AH, '#0c1526'); g.rect(ax, by, aw, 1, hexMix(col, '#0c1526', 0.4));
+          g.text(SHORT[id] || it.name, x + cw / 2, by + 4, { font: 'bold', color: P.main, align: 'center' });
+          g.text(DESC[id] || '', x + cw / 2, by + 4 + glyphH('bold') + 3, { font: 'label', color: P.sub, align: 'center' });
+          const [cur, n] = Object.entries(it.cost)[0], can = s.wallet[cur] >= n, bid = 'buy_' + id, bx = x + 6, bty = yy + CH - 25, bw = cw - 12;
+          button(app, bid, bx, bty, bw, 19, String(n), { style: can ? 'gold' : 'off', icon: cur === 'gems' ? 'gem' : 'coin', disabled: !can, onTap: null });
+          hits.push({ id: bid, x: bx, y: bty, w: bw, h: 19, fn: can ? () => this.buy(app, it) : null });
+        });
+        y += Math.ceil(S.ids.length / 3) * (CH + gap) + 6;
+      }
+    });
+    this.max = Math.max(0, y + Math.round(this.scroll || 0) - bottom + 4);
+    for (const h of hits) if (h.fn && h.y >= TOP && h.y + h.h <= bottom) app.input.hit(h.id, h.x, h.y, h.w, h.h, h.fn, 2);   // 보이는 단추만 누름(끌어 넘기는 판)
+    if (this.max > 0) { const bh = Math.max(16, Math.round(viewH * viewH / (viewH + this.max))), bby = TOP + Math.round((viewH - bh) * (this.scroll || 0) / this.max); g.rect(W - 4, bby, 2, bh, '#4f84bf'); }   // 넘김 막대
     navBar(app, 'shop');
   },
   async buy(app, it) {
