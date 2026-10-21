@@ -41,14 +41,22 @@ t('진화로 리그가 바뀌어도 떠나는 리그 기록 보관', () => {
   eq(s.league, 'open', '새 리그'); eq([s.leagues.growing.round, s.leagues.growing.wins, s.leagues.growing.losses], ['결승', 2, 1], '자람 기록');
   eq(r.league && r.league.kept, true, '보관 알림');
 });
-t('3패 = 그 라운드 처음부터 · 마스터 이상은 예선부터', () => {
-  const s = fresh();
-  Object.assign(s.tournament, { tier: '실버', round: '8강', wins: 1, losses: 2 });
-  const a = L.battleReward(s, { mode: 'tournament', win: false, rng: makeRng(3), now: NOW });
-  eq([a.reset, s.tournament.round, s.tournament.wins, s.tournament.losses], ['round', '8강', 0, 0], '실버');
-  Object.assign(s.tournament, { tier: '마스터', round: '4강', wins: 0, losses: 2 });
+t('라운드 실패 = 브론즈 그 라운드 처음부터 · 실버 ~ 다이아 한 라운드 전으로 · 마스터 이상은 예선부터 · 플래티넘부터 7판 4선승(2026-10-22)', () => {
+  const s = fresh(), lose = () => L.battleReward(s, { mode: 'tournament', win: false, rng: makeRng(3), now: NOW }), T = () => s.tournament;
+  Object.assign(T(), { tier: '브론즈', round: '8강', wins: 1, losses: 2 });
+  let a = lose(); eq([a.reset, T().round, T().wins, T().losses, T().bestOf], ['round', '8강', 0, 0, 5], '브론즈');
+  Object.assign(T(), { tier: '실버', round: '8강', wins: 1, losses: 2 });
+  a = lose(); eq([a.reset, T().round, T().wins, T().losses], ['back', '16강', 0, 0], '실버 = 한 라운드 전');
+  Object.assign(T(), { tier: '실버', round: '예선', wins: 0, losses: 2 });
+  a = lose(); eq([a.reset, T().round], ['round', '예선'], '실버 예선 = 그대로 예선');
+  Object.assign(T(), { tier: '플래티넘', round: '4강', wins: 2, losses: 2 });
+  a = lose(); eq([a.reset, T().losses, T().bestOf], [undefined, 3, 7], '플래티넘 3패 = 아직(7판 4선승)');
+  a = lose(); eq([a.reset, T().round], ['back', '8강'], '플래티넘 4패 = 한 라운드 전');
+  Object.assign(T(), { tier: '플래티넘', round: '결승', wins: 3, losses: 0 });
+  a = L.battleReward(s, { mode: 'tournament', win: true, rng: makeRng(3), now: NOW }); eq([a.tierUp, T().tier, T().round, T().bestOf], ['다이아', '다이아', '예선', 7], '4승 = 다음 단계');
+  Object.assign(T(), { tier: '마스터', round: '4강', wins: 0, losses: 3 });
   const b = L.battleForfeit(s, 'tournament');
-  eq([b.reset, s.tournament.round], ['qual', '예선'], '마스터 기권');
+  eq([b.reset, T().round], ['qual', '예선'], '마스터 기권(4패)');
 });
 
 // ── 서버: 옮기기 직전 원본 보관 · 옛 규칙 판 = 승패 없이 닫힘 ──

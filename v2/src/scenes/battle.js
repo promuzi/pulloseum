@@ -913,10 +913,10 @@ export const battle = {
       g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 대결') + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
     } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
     else {
-      const title = I ? I.title : '새싹 브론즈 · 예선', wins = I ? I.wins : 1, losses = I ? I.losses : 0;
-      g.text(title, W / 2 - 18, 6, { color: T.text.main, align: 'center' });
-      const x0 = W / 2 - 18 + Math.ceil(g.textW(title) / 2) + 6;
-      for (let i = 0; i < 5; i++) { const x = x0 + i * 7; g.rect(x, 8, 6, 6, T.ink); g.rect(x + 1, 9, 4, 4, i < wins ? T.text.gold : i < wins + losses ? '#ff8a8a' : T.bar.back); }
+      const title = I ? I.title : '새싹 브론즈 · 예선', wins = I ? I.wins : 1, losses = I ? I.losses : 0, nB = (I && I.bestOf) || 5;   // 7판(플래티넘부터 — 2026-10-22)
+      g.text(title, W / 2 - 18 - (nB - 5) * 3, 6, { color: T.text.main, align: 'center' });
+      const x0 = W / 2 - 18 - (nB - 5) * 3 + Math.ceil(g.textW(title) / 2) + 6;
+      for (let i = 0; i < nB; i++) { const x = x0 + i * 7; g.rect(x, 8, 6, 6, T.ink); g.rect(x + 1, 9, 4, 4, i < wins ? T.text.gold : i < wins + losses ? '#ff8a8a' : T.bar.back); }
     }
   },
   // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 감정 — 손패 카드 칸에 맞춤(2026-10-17 사용자 "감정 버튼을 식물 카드의 폭에 맞추고 우측선이 맞게 ·

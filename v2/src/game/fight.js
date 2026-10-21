@@ -1,7 +1,7 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
 import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
-import { CARDS, passivesOf, isSkillCard, formCards, rollCard } from './cards.js';
+import { CARDS, passivesOf, isSkillCard, formCards, rollCard, baseOf } from './cards.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST, elemMult } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
@@ -51,6 +51,14 @@ export const ORBIT_CAP = [1, 2, 2, 3, 3, 4, 4];
 const orbitW = (k, cap) => { const o = orbitOf(k); return o > cap ? 0 : o === cap ? 1.5 : o === cap - 1 ? 1 : o === cap - 2 ? 0.4 : 0.2; };
 // 처음 판(튜토리얼식 — 2026-10-22 사용자 "첫 계정 생성 후 튜토리얼식 전투는 상성이 좋은 애로 배치"): 내 속성이 잘 듣고(×1.5) 상대 속성은 나에게 보통인 종만
 export const favorable = (myEl, k) => elemMult(myEl, SPECIES[k].el) > 1 && elemMult(SPECIES[k].el, myEl) === 1;
+// 높은 단계 봇 = 강화 카드(+1 · +2 — 2026-10-22 일반 카드 강화와 함께): 골드부터 가끔 +1 · 다이아부터 가끔 +2(브론즈 · 실버는 굴리지 않음 — 낮은 단계 봇은 전과 같음)
+const UP1 = [0, 0, 0.2, 0.3, 0.4, 0.5, 0.6], UP2 = [0, 0, 0, 0, 0.15, 0.25, 0.35];
+function upCard(rng, c, tier) {
+  const t = Math.max(0, Math.min(6, tier | 0)), C = CARDS[c];
+  if (!C || !C.next || !(UP1[t] + UP2[t])) return c;
+  const r = rng();
+  return r < UP2[t] ? CARDS[C.next].next || C.next : r < UP2[t] + UP1[t] ? C.next : c;
+}
 export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   // 종 고르기: 드문 종은 덜, 변이 고정 종(태생 변이 — 드묾)은 더 드물게(2026-10-17 새 다섯을 넣자 봇 넷 중 하나가 변이가 됨) · 대회 단계만큼 먼 궤도까지(opt.tier)
   const cap = ORBIT_CAP[Math.max(0, Math.min(ORBIT_CAP.length - 1, opt.tier == null ? tierBoost : opt.tier))];
@@ -86,14 +94,14 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
     for (let i = 0; i < n && sk.length; i++) { const c = sk.splice(Math.floor(rng() * sk.length), 1)[0]; six[six.lastIndexOf(i ? 'guard' : 'evade')] = c; }
     cards[0] = pa[Math.floor(rng() * pa.length)];
   }
-  else { const n = stage === 0 ? (rng() < 0.5 ? 1 : 0) : stage === 1 ? 1 : rng() < 0.6 ? 2 : 1; for (let i = 0; i < n; i++) { let c = rollCard(rng, 'normal'); if (cards.includes(c)) c = null; cards[i] = c; } }
+  else { const n = stage === 0 ? (rng() < 0.5 ? 1 : 0) : stage === 1 ? 1 : rng() < 0.6 ? 2 : 1; for (let i = 0; i < n; i++) { let c = rollCard(rng, 'normal'); c = cards.some(x => x && baseOf(x) === c) ? null : upCard(rng, c, tierBoost); cards[i] = c; } }
   return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: six.slice(0, 6), store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
-// 봇 머리 좋음(0~1, model.js aiPick — 2026-10-22): 대회 단계가 오를수록 · 첫 판(튜토리얼식)은 낮게
-export const aiOfTier = (tier, tut = false) => (tut ? 0.15 : Math.min(0.95, 0.35 + 0.1 * Math.max(0, tier)));
+// 봇 머리 좋음(0~1, model.js aiPick — 2026-10-22): 대회 단계가 오를수록 · 같은 단계에선 라운드(예선 0 … 결승 4)마다 조금씩 · 첫 판(튜토리얼식)은 낮게
+export const aiOfTier = (tier, tut = false, round = 0) => (tut ? 0.15 : Math.min(0.95, 0.35 + 0.1 * Math.max(0, tier) + 0.02 * Math.max(0, round)));
 export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false, ai = 0.5 }) {
   if (mode === 'swap3') {
     const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv, ai }));

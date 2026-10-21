@@ -6,7 +6,7 @@
 import { newGame, makePlant, setSlots, slotLayout, openPack, cardUp, sellCard, couponGive, evolve, Err } from '../../v2/src/game/logic.js';
 import { CARDS, NORMAL_CARDS, formCards, isSkillCard, baseOf, cardPrice, CARD_UP, rollCard, cardFace } from '../../v2/src/game/cards.js';
 import { LV_MAX } from '../../v2/src/game/catalog.js';
-import { unitOf } from '../../v2/src/game/fight.js';
+import { unitOf, botPlant, aiOfTier } from '../../v2/src/game/fight.js';
 import { runOp } from '../../v2/src/game/ops.js';
 import { makeRng } from '../../v2/src/battle/rules.js';
 let fails = 0, n = 0; const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
@@ -119,6 +119,20 @@ const plant = (s, key, o = {}) => { const p = makePlant(s, { key, ...o }, makeRn
   ok(runOp(s, 'cardUp', { card: 'n_vacuole' }, ctx).to === 'n_vacuole_2', '서버 일: cardUp');
   ok(runOp(s, 'sellCard', { card: 'n_vacuole_2' }, ctx).credits === cardPrice('n_vacuole_2'), '서버 일: sellCard');
   try { runOp(s, 'openPack', { id: p.uid, part: 'skill' }, ctx); ok(false, 'openPack 일반 식물 skill 막혀야 함'); } catch (e) { ok(e instanceof Err, 'ops openPack skill 막힘'); }
+}
+// ⑨ 봇 강화 카드(골드부터 +1 · 다이아부터 +2) · 라운드마다 봇 머리
+{
+  let low = 0, hi1 = 0, hi2 = 0, dup = 0;
+  for (let i = 0; i < 600; i++) {
+    for (const c of botPlant(makeRng(i), 2, 4, i % 2).cards) if (c && CARDS[c].base) low++;
+    const b = botPlant(makeRng(5000 + i), 2, 4, 6), on = b.cards.filter(Boolean);
+    for (const c of on) { if (CARDS[c].lv === 2) hi1++; if (CARDS[c].lv === 3) hi2++; }
+    if (new Set(on.map(baseOf)).size !== on.length) dup++;
+  }
+  ok(!low, '브론즈 · 실버 봇 = 강화 카드 없음: ' + low);
+  ok(hi1 > 50 && hi2 > 30, `풀로세움 봇 = +1 ${hi1} · +2 ${hi2}`);
+  ok(!dup, '봇도 같은 카드 한 장만: ' + dup);
+  ok(aiOfTier(2, false, 4) > aiOfTier(2, false, 0) && aiOfTier(2, false, 0) === aiOfTier(2) && aiOfTier(6, false, 4) <= 0.95 && aiOfTier(0, true, 4) === 0.15, '라운드마다 봇 머리 조금씩 · 첫 판은 그대로');
 }
 console.log(fails ? `카드 꾸러미 · 강화 시험 실패 ${fails}/${n}` : `카드 꾸러미 · 강화 시험 ${n}개 통과`);
 process.exit(fails ? 1 : 0);

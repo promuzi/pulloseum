@@ -41,8 +41,8 @@ export const result = {
     });
     bigTitle(g, win ? '승리' : '패배', W / 2, 30, Object.assign({ font: 'huge' }, win ? { top: '#fbff86', mid: '#f9c22b', low: '#f79617', shadow: '#9e4539' } : { top: '#c7dcd0', mid: '#9babb2', low: '#7f708a', shadow: '#3e3546' }));
     // 진행 알약
-    const I = L.info || {};
-    let pill = pvp ? '친구 대결' + (L.why && WHY[L.why] ? ` · ${WHY[L.why]}` : '') : L.mode === 'swap3' ? '3:3 교체전' : rw.round ? `${rw.round} 진출!` : rw.reset === 'round' ? '3패 — 이 라운드 처음부터' : rw.reset ? '3패 — 예선부터 다시' : rw.forfeit ? '기권' : `${I.round || '예선'}`;
+    const I = L.info || {}, nLose = Math.ceil((I.bestOf || 5) / 2), backTo = (app.state && app.state.tournament && app.state.tournament.round) || '예선';   // 라운드 실패 = 질 만큼(3 · 4패 — 2026-10-22) · 한 라운드 전으로
+    let pill = pvp ? '친구 대결' + (L.why && WHY[L.why] ? ` · ${WHY[L.why]}` : '') : L.mode === 'swap3' ? '3:3 교체전' : rw.round ? `${rw.round} 진출!` : rw.reset === 'round' ? `${nLose}패 — 이 라운드 처음부터` : rw.reset === 'back' ? `${nLose}패 — ${backTo}으로` : rw.reset ? `${nLose}패 — 예선부터 다시` : rw.forfeit ? '기권' : `${I.round || '예선'}`;
     const pw = g.textW(pill, 'bold') + 22;
     // 진행 알약 글자 = 눌린 판(가라앉은 면)의 가운데에(전엔 판보다 위에 떠 보였음 — 2026-10-16 사용자 '예선' 사진 "중앙정렬")
     const pb = btnBody(g, Math.round(W / 2 - pw / 2), 90, pw, 19, rw.round ? T.btn.gold : T.btn.second, true);

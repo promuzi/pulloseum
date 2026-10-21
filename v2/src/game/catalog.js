@@ -681,6 +681,8 @@ export const KIND_NAME = { seed: '종자가 많아요', mixed: '종자 · 자원
 export const LEAGUES = { sprout: { name: '새싹 리그', short: '새싹', cap: 0, desc: '어린 식물만' }, growing: { name: '자람 리그', short: '자람', cap: 1, desc: '자라는 단계까지' }, open: { name: '무제한 리그', short: '무제한', cap: 2, desc: '단계 제한 없음' } };
 export const LEAGUE_KEYS = Object.keys(LEAGUES);
 export const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
+// 한 라운드 판 수(2026-10-22 사용자 "랭크도 너무 빨리 오르는 경향이 있어 시스템 자체를 개편할지 고민해보자"): 브론즈 ~ 골드 = 5판 3선승 · 플래티넘부터 = 7판 4선승(전엔 모두 3선승)
+export const roundBest = tier => (tier >= 3 ? 7 : 5);
 export const SEASON = { days: 14, epoch: Date.UTC(2026, 9, 12, 15) };   // 2026-10-13(화) 0시(한국) 시작, 2주마다
 export const seasonOf = now => 1 + Math.floor((now - SEASON.epoch) / (SEASON.days * 864e5));
 export const seasonEnd = n => SEASON.epoch + n * SEASON.days * 864e5;
