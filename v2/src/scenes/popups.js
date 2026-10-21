@@ -13,7 +13,7 @@ import { net } from '../net/api.js';
 import { sellPrice } from '../game/logic.js';
 import { eul } from '../core/josa.js';
 import { CARDS, cardFace } from '../game/cards.js';
-import { cardTiny } from '../art/skillcard.js';
+import { cardTiny, packTiny } from '../art/skillcard.js';
 import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 import { drawGuide } from './guide.js';
@@ -27,10 +27,11 @@ const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 
 export const KIND = {
   credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'can', name: '물' }, fert: { icon: 'fert', name: '비료' },
   regress: { icon: 'potion', name: '회귀 주사' }, card: { icon: 'star', name: '카드' }, fuel: { icon: 'energy', name: '연료 캡슐' }, parts: { icon: 'gear', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
+  pack_n: { icon: 'star', name: '일반 카드 꾸러미' }, pack_m: { icon: 'star', name: '변이 카드 꾸러미' },   // 2026-10-22 — 식물 관리에서 열기
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
   const out = [];
-  for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel', 'parts']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : 1 });
+  for (const k of ['credits', 'water', 'fert', 'gems', 'regress', 'fuel', 'parts', 'pack_n', 'pack_m']) if (box[k]) out.push({ kind: k, n: box[k], rar: k === 'gems' || k === 'regress' ? 4 : k === 'credits' ? 0 : k === 'pack_m' ? 3 : k === 'pack_n' ? 2 : 1 });
   if (box.seed && typeof box.seed === 'object') out.push({ kind: 'seed', seed: box.seed, rar: 3, sold: box.seedSold });
   if (box.card && CARDS[box.card]) out.push({ kind: 'card', card: box.card, rar: CARDS[box.card].rar });
   return out;
@@ -52,6 +53,7 @@ export function gotCell(g, x, y, w, r, k = 1) {
   rrect(g, sx, sy, S, S, 4, '#06111c'); rrect(g, sx + 1, sy + 1, S - 2, S - 2, 3, '#0f2436'); g.rect(sx + 3, sy + S - 3, S - 6, 1, col);
   if (r.kind === 'seed') { const sp = SPECIES[r.seed.key]; seedArt(g, sx + S / 2, sy + S / 2, sp ? sp.el : 'grass'); }
   else if (r.kind === 'card') cardTiny(g, sx + 8, sy + 4, cardFace(r.card));   // 카드 = 작은 카드 모양
+  else if (r.kind === 'pack_n' || r.kind === 'pack_m') packTiny(g, sx + 7, sy + 4, r.kind === 'pack_m');   // 카드 꾸러미 = 봉지
   else { const ic = icon((KIND[r.kind] || KIND.credits).icon); g.img(ic, Math.round(sx + S / 2 - ic.width), Math.round(sy + S / 2 - ic.height), 2); }
   const tx = sx + S + 7, room = x + w - 6 - tx, nf = g.textW(L.n, 'name') <= room ? 'name' : g.textW(L.n, 'bold') <= room ? 'bold' : 'body';   // 긴 수(접목 · 중급 등)는 작은 글꼴로
   const hn = glyphH(nf), hb = glyphH('body'), top = y + Math.round((h - hn - 3 - hb) / 2);

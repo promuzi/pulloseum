@@ -38,10 +38,10 @@ export function mockState(now = Date.now()) {
   s.seeds = [seedOf(s, 'flower_wind', rng, { shiny: false }), seedOf(s, 'spark', rng, { shiny: true }), seedOf(s, 'gaia', rng, { shiny: false }), seedOf(s, 'spore_cap', rng, { legend: true, shiny: false })];
   s.seeds.push({ ...seedOf(s, 'flower_fire', rng, { shiny: false }), form: 'predator' });   // 변이 종자(검토)
   s.scions = [{ id: 'sc1', skill: rollScion(rng, p0, 0.4) }, { id: 'sc2', skill: 'sp_leech' }];
-  s.cards = { n_fiber: 1, n_vacuole: 2, n_target: 1, n_spine: 1, v_ammo: 1, v_forge: 1, m_flame: 1, m_spear: 1, v_wrath: 1, m_frostclaw: 1, v_sap: 1 };   // 카드 가방(검토)
+  s.cards = { n_fiber: 2, n_vacuole: 2, n_target: 1, n_spine: 1, n_wall_2: 1, n_balance_3: 1, v_ammo: 1, v_forge: 1, m_flame: 1, m_spear: 1, v_wrath: 1, m_frostclaw: 1, v_sap: 1 };   // 카드 가방(검토 — 두 장 = 강화 단추 · +1 · +2, 2026-10-22)
   s.user = { level: 7, xp: 120 };
   s.wallet = { credits: 1240, gems: 32 };
-  s.items = { water: 9, fert: 3, regress: 1, fuel: 3 }; s.fuelT = now - 5 * 60000;
+  s.items = { water: 9, fert: 3, regress: 1, fuel: 3, parts: 4, pack_n: 2, pack_m: 1 }; s.fuelT = now - 5 * 60000;   // 카드 꾸러미(2026-10-22 검토)
   s.team = [0, 1, 2]; s.active = 0;
   s.profile = { name: '재배사', title: '꿈꾸는 원예가', avatar: 'flower_grass', color: 0 };
   s.titles = ['초보 재배사', '꿈꾸는 원예가', '콜로세움 신인', '별빛 수집가'];

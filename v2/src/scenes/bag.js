@@ -6,10 +6,14 @@ import { header, seedArt, miniStars } from './common.js';
 import { SPECIES, SKILLS, JONG, ELEM, TIER_NAME, ITEMS, canGraft, FORMS } from '../game/catalog.js';
 import { seedPrice, freeSlots, MUT_MAX, SKILL_STORE, slotLayout, SEED_MAX, potOf } from '../game/logic.js';
 import { ask } from './popups.js';
-import { CARDS, PASS_STORE, cardFits, cardFace, isSkillCard } from '../game/cards.js';
-import { cardTiny } from '../art/skillcard.js';
+import { CARDS, PASS_STORE, cardFits, cardFace, isSkillCard, baseOf, CARD_UP, cardPrice } from '../game/cards.js';
+import { cardTiny, packTiny } from '../art/skillcard.js';
 import { eul } from '../core/josa.js';
 import { openDraft } from './draft.js';
+import { sfx } from '../core/sound.js';
+
+// 이 카드를 끼운 식물 수(스마트팜 · 보관고 — 가방 줄에 '끼움 n', 2026-10-22 사용자 "식물끼리 공유되는거에 대한 정리가 미흡함")
+const onPlants = (s, id) => [...s.plants, ...(s.storage || [])].reduce((a, p) => a + [...(p.cards || []), ...(p.pstore || []), ...((p.skills && p.skills.battle) || []), ...((p.skills && p.skills.store) || [])].filter(x => x === id).length, 0);
 
 // 가방: 종자(심기 · 팔기) · 접목 가지(맞는 식물에 접목) · 물건(물 · 비료 · 회귀 주사 · 연료)
 const TABS = [['seed', '종자'], ['scion', '접목 가지'], ['card', '카드'], ['item', '물건']];   // 카드 탭(2026-10-17)
@@ -82,20 +86,28 @@ export const bag = {
     const ok = s.plants.some(p => !canGraft(p, sc.skill));
     this.btn(app, hits, 'gr_' + sc.id, W - 66, y + 14, 50, 26, '접목', { style: 'gold', disabled: !ok }, () => { this.pickFor = sc; });
   },
-  // 카드 한 줄: 작은 카드 · 이름 · 일반/변이 · 효과 한 줄 · 장 수 · 끼우기(맞는 식물 고르기)
+  // 카드 한 줄: 작은 카드 · 이름 · 일반/변이 · 효과 한 줄 · 장 수(가방 · 끼운 수) · 위 단추 = 강화(같은 카드 두 장 — 일반 패시브) 또는 팔기 · 아래 = 끼우기(맞는 식물 고르기)
   cardRow(app, id, y, hits) {
-    const { g, W, state: s } = app, P = T.ptext, c = CARDS[id], f = cardFace(id), F = c.form && FORMS[c.form];
+    const { g, W, state: s } = app, P = T.ptext, c = CARDS[id], f = cardFace(id), F = c.form && FORMS[c.form], n = s.cards[id], on = onPlants(s, id);
     plate(g, 8, y, W - 16, 54);
     plate(g, 13, y + 7, 32, 40, 'deep');
     cardTiny(g, 19, y + 13, f);
-    g.text(c.name, 52, y + 6, { font: 'bold', color: F ? F.light : '#d8f2ff' });
-    g.text(`${F ? F.name + ' 변이' : '일반'} · ${c.kind === 'skill' ? '기술' : '패시브'}`, 52, y + 22, { color: P.sub });
+    g.text(c.name, 52, y + 6, { font: 'bold', color: F ? F.light : c.lv >= 3 ? '#ffe8a8' : '#d8f2ff' });
+    g.text(`${F ? F.name + ' 변이' : '일반'} · ${c.kind === 'skill' ? '기술' : '패시브'}${on ? ` · 끼움 ${on}` : ''}`, 52, y + 22, { color: P.sub });
     const sk = c.kind === 'skill' && SKILLS[c.skill], line = c.kind === 'skill' ? `위력 ${sk.power || '–'} · 판마다 ${sk.uses}번` : (c.desc || [])[0] || '';
     let ln = line; const maxW = W - 124; while (g.textW(ln) > maxW && ln.length > 2) ln = ln.slice(0, -1); if (ln !== line) ln = ln.slice(0, -1) + '…';   // 끼우기 단추 앞에서 자름(뒷면 = 식물 관리에서)
     g.text(ln, 52, y + 37, { color: P.dim });
-    g.text('×' + s.cards[id], W - 72, y + 8, { font: 'bold', color: '#ffd890', align: 'right' });
+    g.text('×' + n, W - 72, y + 8, { font: 'bold', color: '#ffd890', align: 'right' });
+    // 중복 카드(2026-10-22): 일반 패시브 = 두 장 → 한 단계 위(+1 · +2) · 강화할 수 없거나 한 장뿐 = 팔기
+    if (c.next && n >= CARD_UP.need) {
+      const cost = CARD_UP.credits[c.lv || 1], nx = CARDS[c.next];
+      this.btn(app, hits, 'cu_' + id, W - 66, y + 3, 50, 20, '강화', { style: 'teal' }, () => ask(app, `${c.name} ${CARD_UP.need}장 → ${nx.name} 한 장`, `${nx.desc[0]} · 돈 ${cost}`, () => app.act('cardUp', { card: id }).then(r => r && (sfx('levelup'), app.toast(`${nx.name}!`))), '강화'));
+    } else {
+      const price = cardPrice(id);
+      this.btn(app, hits, 'cs_' + id, W - 66, y + 3, 50, 20, String(price), { style: 'night', icon: 'coin' }, () => ask(app, `${eul(c.name)} 한 장 팔까요?`, `돈 ${price} 받기`, () => app.act('sellCard', { card: id }).then(r => r && app.toast(`돈 +${r.credits}`)), '팔기'));
+    }
     const ok = s.plants.some(p => !cardFits(p, id));
-    this.btn(app, hits, 'cd_' + id, W - 66, y + 26, 50, 22, '끼우기', { style: 'gold', disabled: !ok }, () => { this.pickFor = { card: id }; });
+    this.btn(app, hits, 'cd_' + id, W - 66, y + 27, 50, 22, '끼우기', { style: 'gold', disabled: !ok }, () => { this.pickFor = { card: id }; });
   },
   // 카드를 끼울 식물 고르기(스마트팜 식물 중 맞는 것): 패시브 = 빈 카드 칸에 · 변이 기술 카드 = 전투 칸(빈 칸 → 회피 · 방어 · 평타 자리, 그 변이 식물만 MUT_MAX 장까지 — 2026-10-17)
   cardSheet(app) {
@@ -108,7 +120,7 @@ export const bag = {
     g.text(`${eul(c.name)} 누구에게?`, 22, y + 10, { font: 'head', color: P.main });
     s.plants.forEach((p, i) => {
       // 넣을 곳(2026-10-18 칸 개편): 기술 카드 = 빈 장착 칸(MUT_MAX 장 안) → 스킬 보관 빈 칸 · 패시브 = 빈 장착 칸 → (그 변이 패시브) 패시브 보관 빈 칸
-      const ry = y + 36 + i * 40, why = cardFits(p, id), L = slotLayout(p), sk = isSkillCard(id), has = [...L.battle, ...L.store, ...L.cards, ...L.pstore].includes(id);
+      const ry = y + 36 + i * 40, why = cardFits(p, id), L = slotLayout(p), sk = isSkillCard(id), has = [...L.battle, ...L.store, ...L.cards, ...L.pstore].some(x => x && baseOf(x) === baseOf(id));   // 강화 카드(+1 · +2)도 같은 카드
       const bi = L.battle.indexOf(null), ci = L.cards.indexOf(null);
       const where = sk ? (bi >= 0 && L.battle.filter(isSkillCard).length < MUT_MAX ? 'b' : L.store.length < SKILL_STORE ? 's' : null) : (ci >= 0 ? 'c' : p.form && CARDS[id].form === p.form && L.pstore.length < PASS_STORE ? 'p' : null);
       const no = why || (has ? '이미 끼웠어요' : !where ? (sk ? '스킬 칸이 차 있어요' : '패시브 칸이 차 있어요') : null);
@@ -123,10 +135,11 @@ export const bag = {
     button(app, 'cs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
   itemRow(app, k, y) {
-    const { g, W, state: s } = app, P = T.ptext, it = ITEMS[k], ic = { water: 'can', fert: 'fert', regress: 'potion', fuel: 'energy' }[k];
+    const { g, W, state: s } = app, P = T.ptext, it = ITEMS[k], ic = { water: 'can', fert: 'fert', regress: 'potion', fuel: 'energy', parts: 'gear' }[k];
     plate(g, 8, y, W - 16, 54);
     plate(g, 13, y + 7, 32, 40, 'deep');
-    const im = icon(ic); g.img(im, 29 - im.width, y + 27 - im.height, 2);
+    if (k === 'pack_n' || k === 'pack_m') packTiny(g, 18, y + 13, k === 'pack_m');   // 카드 꾸러미(2026-10-22 — 식물 관리에서 열기)
+    else { const im = icon(ic || it.icon); g.img(im, 29 - im.width, y + 27 - im.height, 2); }
     g.text(it.name, 52, y + 8, { font: 'bold', color: P.main });
     g.text(it.desc, 52, y + 27, { color: P.sub });
     g.text(String(s.items[k] || 0), W - 22, y + 16, { font: 'head', color: '#ffd890', align: 'right' });

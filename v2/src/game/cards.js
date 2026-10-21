@@ -42,7 +42,33 @@ const LIST = [
 export const CARDS = Object.fromEntries(LIST.map(c => [c.id, c]));
 // 기술 카드 = 변이 기술 하나하나(catalog SKILLS tier 'm' — 새 변이 기술을 더하면 저절로 카드가 됨)
 for (const s of Object.values(SKILLS)) if (s.tier === 'm') CARDS[s.id] = { id: s.id, name: s.name, icon: null, rar: 3, w: 1, form: s.form, kind: 'skill', skill: s.id };
-export const NORMAL_CARDS = Object.keys(CARDS).filter(id => !CARDS[id].form);
+// 강화(2026-10-22 사용자 "패시브 카드의 경우 강화 기능을 고려해보자 밸런스 고려해서" · "중복된 카드는 어떻게 처리할지 고민"):
+//  같은 일반 카드 두 장 + 돈 → 한 단계 위 카드 한 장(+1 · +2까지 — 카드 id 뒤 _2 · _3, 한 장 한 장이 제 단계를 지님). 수치는 +1 ≈ 1.3배 · +2 ≈ 1.6배.
+//  변이 카드는 강화 없음(2026-10-17 사용자 "변이 카드는 강화 없애고 수를 늘리자") · 엽록체 증식(햇빛 +1)은 수를 쪼갤 수 없어 없음 · 남는 카드 = 팔기(cardPrice)
+const UP_PAS = {
+  n_fiber: [{ atk: 0.08 }, { atk: 0.10 }],
+  n_wall: [{ def: 0.20 }, { def: 0.24 }],
+  n_vacuole: [{ hp: 0.10 }, { hp: 0.12 }],
+  n_tropism: [{ spd: 0.6 }, { spd: 0.7 }],
+  n_target: [{ crit: 15 }, { crit: 18 }],
+  n_spine: [{ reflect: 0.2 }, { reflect: 0.25 }],
+  n_balance: [{ hp: 0.04, atk: 0.04, def: 0.04, spd: 0.04 }, { hp: 0.05, atk: 0.05, def: 0.05, spd: 0.05 }],
+};
+export const CARD_UP = { need: 2, credits: { 1: 200, 2: 500 } };   // 강화 한 번 = 같은 카드 두 장 + 돈(지금 단계 → 다음)
+const shown = (k, v) => String(k === 'crit' ? v : Math.round(v * 100));   // 화면에 적힌 수(치명은 그대로 · 나머지는 %)
+for (const [id, steps] of Object.entries(UP_PAS)) {
+  const b = CARDS[id], k = Object.keys(b.pas)[0], from = shown(k, b.pas[k]);
+  b.lv = 1; b.next = id + '_2';
+  steps.forEach((pas, i) => {
+    const lv = i + 2, to = shown(k, pas[k]), sub = t => t.replace(from, to);
+    CARDS[`${id}_${lv}`] = { ...b, id: `${id}_${lv}`, name: `${b.name} +${lv - 1}`, w: 0, base: id, lv, next: lv < 3 ? `${id}_${lv + 1}` : null, pas, badge: [sub(b.badge[0]), b.badge[1]], desc: [sub(b.desc[0]), ...b.desc.slice(1)] };
+  });
+}
+export const baseOf = id => (CARDS[id] && CARDS[id].base) || id;   // 강화 카드 → 처음 카드(한 식물에 같은 카드는 한 장만)
+export const cardLv = id => (CARDS[id] && CARDS[id].lv) || 1;
+// 팔 값(남는 카드): 일반 = 등급 30 · 50 · 80 × 강화(+1 = 3배 · +2 = 8배 — 든 것보다 늘 적게), 변이 카드 = 100
+export const cardPrice = id => { const c = CARDS[id]; if (!c) return 0; if (c.form) return 100; return ({ 1: 30, 2: 50, 3: 80 }[c.rar] || 30) * ({ 1: 1, 2: 3, 3: 8 }[c.lv || 1]); };
+export const NORMAL_CARDS = Object.keys(CARDS).filter(id => !CARDS[id].form && !CARDS[id].base);   // 뽑히는 일반 카드(강화 카드는 강화로만)
 export const formCards = form => Object.keys(CARDS).filter(id => CARDS[id].form === form);
 export const isSkillCard = id => !!(id && CARDS[id] && CARDS[id].kind === 'skill');
 export const cardLook = id => { const c = CARDS[id]; return c && c.form ? FORMS[c.form] : NORMAL_LOOK; };
@@ -69,7 +95,10 @@ export function passivesOf(ids) {
 export function rollCard(rng, kind = 'normal', owned = []) {
   let f = kind;
   if (f === 'mut') { const fs = owned.length && rng() < 0.7 ? owned : FORM_KEYS; f = fs[Math.floor(rng() * fs.length)]; }
-  const ids = f === 'normal' ? NORMAL_CARDS : formCards(f);
+  return rollFrom(rng, f === 'normal' ? NORMAL_CARDS : formCards(f));
+}
+// 목록 안에서 무게대로 하나(꾸러미 열기 — 그 식물에 맞는 카드만 넘김)
+export function rollFrom(rng, ids) {
   const tot = ids.reduce((a, id) => a + CARDS[id].w, 0);
   let r = rng() * tot;
   for (const id of ids) { r -= CARDS[id].w; if (r <= 0) return id; }
@@ -80,5 +109,5 @@ export function cardFace(id) {
   const c = CARDS[id];
   if (!c) return null;
   if (c.kind === 'skill') { const s = SKILLS[c.skill]; return { act: s.power > 0 ? 'attack' : 'buff', cats: [s.power > 0 ? 'attack' : 'buff'], ...s, card: true }; }
-  return { id, name: c.name, act: 'passive', cats: ['passive'], passive: true, form: c.form, look: cardLook(id), icon: c.icon, badge: c.badge, desc: c.desc, card: true };
+  return { id, name: c.name, act: 'passive', cats: ['passive'], passive: true, form: c.form, look: cardLook(id), icon: c.icon, badge: c.badge, desc: c.desc, card: true, lv: c.lv || 1, canUp: !!c.next, artId: c.base || id };
 }

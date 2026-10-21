@@ -43,8 +43,8 @@ try {
   ok(S.items.water === (before.items.water || 0) + 30 && S.items.fert === (before.items.fert || 0) + 15 && S.items.fuel === (before.items.fuel || 0) + 10, '물 · 비료 · 연료 들어감');
   ok(S.seeds.length === before.seeds.length + 2, '종자 둘');
   const cardsN = o => Object.values(o.cards || {}).reduce((a, b) => a + b, 0);
-  ok(cardsN(S) === cardsN(before) + 2, '카드 둘(가방)');
-  ok(Array.isArray(ra.got) && ra.got.length === 9 && ra.got.some(x => x.kind === 'seed' && x.seed) && ra.got.some(x => x.kind === 'card' && x.card), '받은 것 목록(아홉 칸)');
+  ok(cardsN(S) === cardsN(before) && (S.items.pack_n || 0) === (before.items.pack_n || 0) + 1 && (S.items.pack_m || 0) === (before.items.pack_m || 0) + 1, '카드 꾸러미 둘(가방 물건 — 2026-10-22 식물에서 열기)');
+  ok(Array.isArray(ra.got) && ra.got.length === 9 && ra.got.some(x => x.kind === 'seed' && x.seed) && ra.got.some(x => x.kind === 'pack_n') && ra.got.some(x => x.kind === 'pack_m'), '받은 것 목록(아홉 칸)');
   const me = await call(api, 'GET', '/api/me', {}, { tok: ta });
   ok(me.state.wallet.credits === S.wallet.credits, '저장됨(다시 불러도 그대로)');
   ok(/이미 받은/.test((await call(api, 'POST', '/api/coupon', { code: 'FRIEND2026' }, { tok: ta, ip: '5.5.5.1' })).error || ''), '같은 계정 두 번 = 안 됨');

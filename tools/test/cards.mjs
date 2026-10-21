@@ -210,23 +210,21 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
 {
   const s = game(9), rng = makeRng(31); s.user.level = 30; s.wallet.credits = 1e7; s.wallet.gems = 1e5; probeOf(s);
   for (const k of Object.keys(s.probe.lv)) s.probe.lv[k] = 4;
-  let got = 0, mut = 0;
-  for (let i = 0; i < 500; i++) { s.items.fuel = 9; const pl = PLANETS[i % PLANETS.length]; if (pl.orbit > 4) continue; const r = explore(s, pl.id, rng, i * 1e6); for (const g of r.got) if (g.kind === 'card') { got++; if (CARDS[g.card].form) mut++; } }
-  ok(got > 20 && mut > 0 && mut < got, `탐사 카드 ${got}장(변이 ${mut})`);
+  let got = 0, mut = 0;   // 탐사 카드 = 꾸러미(2026-10-22 — 식물에서 열기)
+  for (let i = 0; i < 500; i++) { s.items.fuel = 9; const pl = PLANETS[i % PLANETS.length]; if (pl.orbit > 4) continue; const r = explore(s, pl.id, rng, i * 1e6); for (const g of r.got) if (g.kind === 'pack_n' || g.kind === 'pack_m') { got++; if (g.kind === 'pack_m') mut++; } ok(!r.got.some(g => g.kind === 'card'), '탐사에서 낱장 카드 안 나옴'); }
+  ok(got > 20 && mut > 0 && mut < got, `탐사 카드 꾸러미 ${got}개(변이 ${mut})`);
   let dc = 0; for (let i = 0; i < 80; i++) { const p = plant(s, 'thorn'); const r = dismantle(s, p.uid, makeRng(100 + i)); dc += r.got.filter(g => g.kind === 'card').length; }
-  ok(dc > 5 && dc < 50, '해체 카드(일반 4분의 1쯤) ' + dc + '/80');
-  const before = Object.values(s.cards).reduce((a, b) => a + b, 0);
-  const rb = buy(s, 'card_basic', makeRng(2)); ok(rb.card && !CARDS[rb.card].form, '일반 카드 꾸러미 = 일반 카드');
-  plant(s, 'thorn', { form: 'weapon' });
-  let wpn = 0; for (let i = 0; i < 60; i++) { const r = buy(s, 'card_mut', makeRng(500 + i)); ok(CARDS[r.card].form, '변이 카드 꾸러미 = 변이 카드'); if (CARDS[r.card].form === 'weapon') wpn++; }
-  ok(wpn > 20, '가진 변이(무기) 쪽이 자주: ' + wpn + '/60');
-  ok(Object.values(s.cards).reduce((a, b) => a + b, 0) === before + 61, '산 카드는 가방에');
+  ok(dc > 5 && dc < 50, '해체 카드(일반 4분의 1쯤 — 그 식물의 카드 그대로) ' + dc + '/80');
+  const before = Object.values(s.cards).reduce((a, b) => a + b, 0), pn0 = s.items.pack_n || 0, pm0 = s.items.pack_m || 0;
+  const rb = buy(s, 'card_basic', makeRng(2)); ok(!rb.card && s.items.pack_n === pn0 + 1, '일반 카드 꾸러미 = 꾸러미째 가방에');
+  for (let i = 0; i < 60; i++) buy(s, 'card_mut', makeRng(500 + i));
+  ok(s.items.pack_m === pm0 + 60 && Object.values(s.cards).reduce((a, b) => a + b, 0) === before, '산 꾸러미는 열기 전엔 카드가 아님');
   ok(SHOP.some(x => x.id === 'card_basic') && SHOP.some(x => x.id === 'card_mut'), '상점 꾸러미 둘');
-  ok([2, 8, 11].every(L => levelReward(L).card === 'normal') && !levelReward(3).card && levelReward(5).seed && !levelReward(5).card, '세 레벨마다 일반 카드(종자가 걸린 레벨은 종자 — 상자 하나에 특별한 것 하나, 2026-10-22)');
+  ok([2, 8, 11].every(L => levelReward(L).pack_n === 1) && !levelReward(3).pack_n && levelReward(5).seed && !levelReward(5).pack_n, '세 레벨마다 일반 카드 꾸러미(종자가 걸린 레벨은 종자 — 상자 하나에 특별한 것 하나, 2026-10-22)');
   for (let L = 1; L <= 40; L++) { const r = levelReward(L), n = Object.keys(r).length; if (n > 3) { ok(false, `Lv${L} 상자 보상 ${n}가지: ${JSON.stringify(r)}`); break; } }
   ok(true, '레벨업 상자 = 많아야 셋(돈 · 자원 하나 · 특별한 것 하나)');
   const s2 = game(); const c0 = Object.values(s2.cards).reduce((a, b) => a + b, 0); addXp(s2, userNeed(1), makeRng(1));   // Lv1 → 2
-  ok(Object.values(s2.cards).reduce((a, b) => a + b, 0) === c0 + 1 && s2.pending.some(x => x.box && x.box.card), '레벨업 상자에 카드');
+  ok(Object.values(s2.cards).reduce((a, b) => a + b, 0) === c0 && s2.items.pack_n === 1 && s2.pending.some(x => x.box && x.box.pack_n), '레벨업 상자에 카드 꾸러미');
 }
 // ⑨ 봇 카드 · 다시 돌리기
 {

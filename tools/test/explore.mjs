@@ -50,7 +50,7 @@ for (const lv of [1, 3, 5]) for (const pl of PLANETS) pl.regions.forEach((R, ri)
     const r = explore(s, pl.id, rng, 0, rid);
     if (i === 0) ok(r.region === R.id, `${pl.name} ${R.name}: 결과의 지역 ${r.region}`);
     spent += r.cost; back += s.wallet.credits - (c0 - r.cost); parts += (s.items.parts || 0) - p0;
-    if (r.ok) { okN++; for (const g of r.got) if (g.kind !== 'seed') { slots++; if (g.kind === 'scion' || g.kind === 'regress' || g.kind === 'gems' || g.kind === 'card') gems++; } }
+    if (r.ok) { okN++; for (const g of r.got) if (g.kind !== 'seed') { slots++; if (g.kind === 'scion' || g.kind === 'regress' || g.kind === 'gems' || g.kind === 'card' || g.kind === 'pack_n' || g.kind === 'pack_m') gems++; } }
     for (const g of r.got) if (g.kind === 'seed') { seeds++; keys[g.seed.key] = (keys[g.seed.key] || 0) + 1; if (SPECIES[g.seed.key].rarity === 'rare') rareN++; }
   }
   const tag = `${pl.name} ${R.name} 부위 ${lv}`, rareP = Math.min(1, 0.18 * Z.rare);

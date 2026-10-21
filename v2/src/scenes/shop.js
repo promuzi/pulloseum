@@ -5,8 +5,8 @@ import { T, plate } from '../art/theme.js';
 import { seedArt } from './common.js';
 import { SHOP, SPECIES } from '../game/catalog.js';
 import { showGot } from './popups.js';
-import { CARDS, cardFace } from '../game/cards.js';
-import { cardTiny } from '../art/skillcard.js';
+import { CARDS } from '../game/cards.js';
+import { packTiny } from '../art/skillcard.js';
 
 // 상점(2026-10-16 사용자 "물 비료는 전투 탐사 수확에서 얻고 상점에서는 유료 재화로 구매"):
 //  종자 꾸러미 = 돈, 보급품(물 · 비료 · 회귀 주사 · 연료) = 보석. 식물 팔기 · 해체 = 고른 식물 아래 단추(스마트팜 · 보관고 · 식물 관리 설정).
@@ -34,7 +34,7 @@ export const shop = {
         plate(g, x, yy, cw, CH);
         plate(g, x + 7, yy + 7, cw - 14, 36, 'deep');
         if (A.seed) { seedArt(g, x + cw / 2, yy + 25, A.seed); if (A.rare) g.img(icon('star'), x + cw / 2 + 8, yy + 10); }
-        else if (A.card) { cardTiny(g, Math.round(x + cw / 2 - 16), yy + 11, cardFace(A.card)); cardTiny(g, Math.round(x + cw / 2 - 4), yy + 9, cardFace(A.card)); }   // 카드 꾸러미 = 겹친 카드 두 장
+        else if (A.card) packTiny(g, Math.round(x + cw / 2 - 11), yy + 11, A.card !== 'n_wall');   // 카드 꾸러미 = 봉지(2026-10-22 — 꾸러미째 가방에)
         else { const ic = icon(A.ic || 'box'); g.img(ic, Math.round(x + cw / 2 - ic.width), yy + 25 - ic.height, 2); }
         g.text(SHORT[it.id] || it.name, x + cw / 2, yy + 48, { font: 'bold', color: P.main, align: 'center' });
         if (!compact) g.text(DESC[it.id] || '', x + cw / 2, yy + 63, { color: P.sub, align: 'center' });
@@ -50,6 +50,7 @@ export const shop = {
     if (!r) return;
     if (r.seed) { const sp = SPECIES[r.seed.key]; showGot(app, it.name, [{ kind: 'seed', seed: r.seed, rar: sp.rarity === 'rare' ? 3 : 1 }], '가방에 넣었어요'); }
     else if (r.card) showGot(app, it.name, [{ kind: 'card', card: r.card, rar: (CARDS[r.card] || {}).rar || 1 }], '가방에 넣었어요');
-    else app.toast(Object.entries(r.give).map(([k, n]) => `${{ water: '물', fert: '비료', regress: '회귀 주사', fuel: '연료' }[k] || k} +${n}`).join(' · '));
+    else if (r.give && (r.give.pack_n || r.give.pack_m)) { const k = r.give.pack_m ? 'pack_m' : 'pack_n'; showGot(app, it.name, [{ kind: k, n: r.give[k], rar: k === 'pack_m' ? 3 : 2 }], k === 'pack_m' ? '변이 식물 관리에서 열어요' : '일반 식물 관리에서 열어요'); }   // 꾸러미째 가방에(2026-10-22)
+    else app.toast(Object.entries(r.give).map(([k, n]) => `${{ water: '물', fert: '비료', regress: '회귀 주사', fuel: '연료', parts: '부품' }[k] || k} +${n}`).join(' · '));
   },
 };

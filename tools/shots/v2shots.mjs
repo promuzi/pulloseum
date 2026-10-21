@@ -34,6 +34,8 @@ export const SHOTS = [
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],
   ['03_home_focus', 'home', { focus: true }],
   ['04_bag', 'bag', {}],
+  ['04_bag_card', 'bag', { tab: 'card' }],   // 카드 가방(2026-10-22 — 강화 · 팔기 · 끼움 수)
+  ['04_bag_item', 'bag', { tab: 'item' }],   // 물건(카드 꾸러미)
   ['05_plant_skill', 'plant', { tab: 'skill' }],
   ['05_plant_zoom_150', 'plant', { tab: 'skill', zoomAt: '150' }], ['05_plant_zoom_350', 'plant', { tab: 'skill', zoomAt: '350' }], ['05_plant_zoom_550', 'plant', { tab: 'skill', zoomAt: '550' }],   // 홈에서 다가가며 들어오는 중(판이 같이 올라옴 — 2026-10-17)
   ['05_plant_skill_sel', 'plant', { tab: 'skill', sel: '1' }],
@@ -41,6 +43,8 @@ export const SHOTS = [
   ['05_plant_skill_drake', 'plant', { tab: 'skill', act: '6' }],   // 태생 변이(드레이크캑터)
   ['05_plant_passive', 'plant', { tab: 'passive' }],   // 패시브 탭(일반 식물 — 장착 셋 + 가방, 2026-10-18)
   ['05_plant_passive_mut', 'plant', { tab: 'passive', act: '1' }],   // 패시브 탭(변이 식물 — 장착 셋 · 보관 셋 · 가방)
+  ['05_plant_passive_low', 'plant', { tab: 'passive', sy: '200' }, { plants: [null, null, { cards: ['n_wall_2', 'n_tropism', null] }] }],   // 패시브 탭 아래(가방 · 꾸러미 · 다른 식물 카드 — 2026-10-22)
+  ['05_plant_skill_mut_low', 'plant', { tab: 'skill', act: '1', sy: '420' }],   // 변이 식물 스킬 탭 아래(변이 기술 카드 가방 · 꾸러미 · 다른 식물)
   ['06_plant_up', 'plant', { tab: 'up' }],
   ['06_plant_up_sun', 'plant', { tab: 'up' }, { plants: [{ up: { hp: 2, sunMax: 6, sunRegen: 4 }, pts: 9 }] }],   // 햇빛 그릇 2단 · 회복 1단(2026-10-18)
   ['06_plant_set', 'plant', { tab: 'set' }],

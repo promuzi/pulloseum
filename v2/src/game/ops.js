@@ -50,6 +50,9 @@ export const OPS = {
   explore: (s, a, c) => L.explore(s, str(a.planet), c.rng, c.now, opt(a.region, v => str(v, 24))),   // region 없음 = 첫 지역(옛 화면)
   upgradeProbe: (s, a) => L.upgradeProbe(s, str(a.part, 12)),
   buy: (s, a, c) => L.buy(s, str(a.item), c.rng),
+  openPack: (s, a, c) => L.openPack(s, str(a.id), a.part === 'skill' ? 'skill' : 'passive', c.rng),   // 카드 꾸러미 열기(난수 — QUICK 아님, 2026-10-22)
+  cardUp: (s, a) => L.cardUp(s, str(a.card)),     // 같은 카드 두 장 + 돈 → 한 단계 위
+  sellCard: (s, a) => L.sellCard(s, str(a.card)),
   ack: (s, a) => L.ackPending(s, int(a.n, 1, 50, 1)),
   guide: (s, a) => L.seeGuide(s, str(a.id, 16)),
 };

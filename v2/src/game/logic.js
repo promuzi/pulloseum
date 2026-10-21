@@ -5,7 +5,7 @@ import {
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED } from './catalog.js';
-import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, formCards, isSkillCard } from './cards.js';
+import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, rollFrom, formCards, isSkillCard, NORMAL_CARDS, baseOf, CARD_UP, cardPrice } from './cards.js';
 
 export class Err extends Error {}
 const need = (c, msg) => { if (!c) throw new Err(msg); };
@@ -218,6 +218,8 @@ function applyLayout(s, p, L, X = {}) {
   need(Ps.length <= PASS_STORE, `패시브 보관은 ${PASS_STORE}칸이에요`);
   const all = [...B, ...St, ...C, ...Ps].filter(Boolean);
   need(new Set(all).size === all.length, '같은 것을 두 칸에 둘 수 없어요');
+  const bases = all.filter(x => CARDS[x]).map(baseOf);
+  need(new Set(bases).size === bases.length, '같은 카드는 한 식물에 한 장만 끼워요');   // 강화 카드(+1 · +2)와 처음 카드를 함께 끼우지 못함(2026-10-22)
   need(B.some(Boolean), '장착에 기술이 하나는 있어야 해요');
   for (const x of [...B, ...St]) if (x && CARDS[x]) { need(isSkillCard(x), '패시브 카드는 패시브 칸에 놓아요'); const why = cardFits(p, x); need(!why, why); }
   for (const x of [...C, ...Ps]) if (x) { need(CARDS[x] && !isSkillCard(x), '기술은 스킬 칸에 놓아요'); const why = cardFits(p, x); need(!why, why); }
@@ -335,8 +337,8 @@ function addDraft(p, kind, part = 'skill') {
   const taken = new Set((p.drafts || []).flatMap(d => d.cands)), cands = [];
   let D, pool;
   if (part === 'passive') {
-    const on = new Set([...(p.cards || []), ...(p.pstore || [])]);
-    D = PASS_DRAFT; pool = Object.keys(CARDS).filter(id => !isSkillCard(id) && !cardFits(p, id) && !on.has(id) && !taken.has(id)).map(id => ({ id, w: 1 }));
+    const on = new Set([...(p.cards || []), ...(p.pstore || [])].filter(Boolean).map(baseOf));
+    D = PASS_DRAFT; pool = Object.keys(CARDS).filter(id => !isSkillCard(id) && !CARDS[id].base && !cardFits(p, id) && !on.has(id) && !taken.has(id)).map(id => ({ id, w: 1 }));   // 강화 카드(+1 · +2)는 후보에 안 나옴
   } else {
     const have = known(p), seen = new Set(), fresh = x => !have.has(x.id) && !taken.has(x.id) && !isBasic(x.id) && !seen.has(x.id) && !!seen.add(x.id);
     D = kind === 'evo' ? (p.stage >= 2 ? DRAFT.last : DRAFT.evo) : p.lv >= LV_MAX ? DRAFT.top : DRAFT.lv;
@@ -573,9 +575,10 @@ export function harvestAll(s, rng, now) {
 }
 
 // ── 보상 주기 ──
+const ITEM_KEYS = ['water', 'fert', 'regress', 'fuel', 'parts', 'pack_n', 'pack_m'];   // 카드 꾸러미(일반 · 변이 — 2026-10-22, 식물 관리에서 열면 그 식물에 맞는 카드)
 function give(s, r) {
   for (const k of ['credits', 'gems']) if (r[k]) s.wallet[k] += r[k];
-  for (const k of ['water', 'fert', 'regress', 'fuel', 'parts']) if (r[k]) s.items[k] = (s.items[k] || 0) + r[k];
+  for (const k of ITEM_KEYS) if (r[k]) s.items[k] = (s.items[k] || 0) + r[k];
 }
 // 쿠폰 보상(2026-10-17 사용자 "쿠폰코드 입력해서 상품 주는거 가능? 테스트용으로 나나 친구나 좀 줘보게"):
 //  보상 = { credits, gems, water, fert, regress, fuel, parts(수), seeds: ['common' | 'rare' …], cards: ['normal' | 'mut' | 카드 id …] }
@@ -596,12 +599,15 @@ export function couponGive(s, raw, rng) {
   for (const k of Object.keys(COUPON_N)) if (rw[k]) { box[k] = rw[k]; got.push({ kind: k, n: rw[k], rar: COUPON_RAR[k] }); }
   give(s, box);
   for (const r of rw.seeds || []) { const sd = seedOf(s, rollSpecies(rng, r), rng), x = addSeed(s, sd); got.push({ kind: 'seed', seed: sd, rar: 3, ...(x || {}) }); }
-  for (const c of rw.cards || []) { const id = CARDS[c] ? c : rollCard(rng, c, formsOwned(s)); grant(s, { kind: 'card', card: id }); got.push({ kind: 'card', card: id, rar: CARDS[id].rar }); }
+  for (const c of rw.cards || []) {   // 'normal' · 'mut' = 꾸러미(식물에서 열기 — 2026-10-22) · 카드 id = 그 카드
+    if (CARDS[c]) { grant(s, { kind: 'card', card: c }); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); continue; }
+    const r = { kind: c === 'mut' ? 'pack_m' : 'pack_n', n: 1, rar: c === 'mut' ? 3 : 2 }; grant(s, r); got.push(r);
+  }
   return got;
 }
 function grant(s, r) {
   if (r.kind === 'credits' || r.kind === 'gems') s.wallet[r.kind] += r.n;
-  else if (r.kind === 'water' || r.kind === 'fert' || r.kind === 'regress' || r.kind === 'fuel' || r.kind === 'parts') s.items[r.kind] = (s.items[r.kind] || 0) + r.n;
+  else if (ITEM_KEYS.includes(r.kind)) s.items[r.kind] = (s.items[r.kind] || 0) + r.n;
   else if (r.kind === 'seed') { const x = addSeed(s, r.seed); if (x) r.sold = x.sold; }   // 가방이 차서 팔렸으면 받은 것 판에 sold
   else if (r.kind === 'scion') s.scions.push({ id: uid(s), skill: r.skill });
   else if (r.kind === 'card') { normCards(s); addCard(s, r.card); }
@@ -802,7 +808,7 @@ function rollLoot(pl, q, cost, rng, owned = []) {
   if (x === 'parts') return { kind: 'parts', n: Math.max(1, Math.round((1 + 2 * rng()) * res * rich)), rar: 1 };
   if (x === 'scion') return { kind: 'scion', skill: rollScion(rng, { key: pick(rng, pl.pool) }, Math.min(1, 0.2 + 0.6 * q + 0.1 * (pl.orbit - 1))), rar: 3 };
   if (x === 'regress') return { kind: 'regress', n: 1, rar: 4 };
-  if (x === 'card') { const c = rollCard(rng, rng() < Math.min(0.6, 0.2 * (pl.mut || 1)) ? 'mut' : 'normal', owned); return { kind: 'card', card: c, rar: CARDS[c].rar }; }
+  if (x === 'card') return rng() < Math.min(0.6, 0.2 * (pl.mut || 1)) ? { kind: 'pack_m', n: 1, rar: 3 } : { kind: 'pack_n', n: 1, rar: 2 };   // 카드 = 꾸러미(식물에서 열면 그 식물에 맞는 카드 — 2026-10-22, 전엔 바로 카드 한 장)
   return { kind: 'gems', n: 1 + Math.floor(rng() * 2 + q), rar: 4 };
 }
 // 탐사선 강화: 돈 + 부품(자원형 행성에서 많이)
@@ -826,9 +832,45 @@ export function buy(s, itemId, rng) {
   for (const [k, v] of Object.entries(it.cost)) s.wallet[k] -= v;
   const g = it.give;
   if (g.seed) { const sd = seedOf(s, rollSpecies(rng, g.seed), rng); s.seeds.push(sd); return { seed: sd }; }
-  if (g.card) { const c = rollCard(rng, g.card, formsOwned(s)); grant(s, { kind: 'card', card: c }); return { card: c }; }
-  give(s, g);
+  give(s, g);   // 카드 꾸러미(pack_n · pack_m)도 물건으로 가방에 — 식물 관리에서 열면 그 식물에 맞는 카드(openPack)
   return { give: g };
+}
+
+// ── 카드 꾸러미 · 강화 · 팔기(2026-10-22 사용자 "상점에서 산 것등은 식물 설정에 들어가서 활성화하면 그 식물에 해당하는게 나오는 걸로" · "중복된 카드는 어떻게 처리할지" · "패시브 카드의 경우 강화 기능") ──
+//  꾸러미 열기 = 고른 식물에 맞는 카드 한 장이 가방에: 일반 식물 = 일반 꾸러미 → 일반 카드 · 변이 식물 = 변이 꾸러미 → 그 변이 카드(part 'skill' = 기술 카드 · 'passive' = 패시브 카드 — 연 탭대로)
+export function openPack(s, id, part, rng) {
+  const p = getPlant(s, id), k = p.form ? 'pack_m' : 'pack_n', skill = part === 'skill';
+  need(!skill || p.form, '일반 식물은 패시브 카드만 받아요');
+  need((s.items[k] || 0) >= 1, `${ITEMS[k].name}가 없어요 — 상점에서 사요`);
+  normCards(s);
+  const ids = p.form ? formCards(p.form).filter(c => isSkillCard(c) === skill) : NORMAL_CARDS;
+  need(ids.length, '이 식물에 맞는 카드가 없어요');
+  s.items[k] -= 1;
+  const card = rollFrom(rng, ids);
+  addCard(s, card);
+  return { card, pack: k, left: s.items[k] };
+}
+// 강화 = 가방의 같은 카드 두 장 + 돈 → 한 단계 위 카드 한 장(끼운 카드는 빼고 가방에 있는 것만)
+export function cardUp(s, id) {
+  normCards(s);
+  const c = CARDS[id];
+  need(c && c.next, c && c.form ? '변이 카드는 강화하지 않아요' : '더 강화할 수 없는 카드예요');
+  const n = CARD_UP.need, cost = CARD_UP.credits[c.lv || 1];
+  need((s.cards[id] || 0) >= n, `같은 카드가 가방에 ${n}장 있어야 해요`);
+  need(s.wallet.credits >= cost, '돈이 모자라요');
+  s.wallet.credits -= cost;
+  s.cards[id] -= n; if (s.cards[id] <= 0) delete s.cards[id];
+  addCard(s, c.next);
+  return { from: id, to: c.next, cost };
+}
+// 팔기 = 가방의 카드 한 장 → 돈(남는 카드 · 강화할 수 없는 카드)
+export function sellCard(s, id) {
+  normCards(s);
+  need(CARDS[id] && (s.cards[id] || 0) >= 1, '가방에 그 카드가 없어요');
+  const n = cardPrice(id);
+  s.cards[id] -= 1; if (s.cards[id] <= 0) delete s.cards[id];
+  s.wallet.credits += n;
+  return { credits: n, card: id };
 }
 
 // ── 재배사 경험치 · 레벨업 보상(클래시로얄처럼 상자 — 화면이 pending을 열어 보여 줌) ──
@@ -840,7 +882,6 @@ export function addXp(s, n, rng) {
     const r = levelReward(u.level), box = { ...r };
     give(s, r);
     if (r.seed) { const sd = seedOf(s, rollSpecies(rng, r.seed), rng), x = addSeed(s, sd); box.seed = sd; if (x) box.seedSold = x.sold; }
-    if (r.card) { const c = rollCard(rng, r.card); grant(s, { kind: 'card', card: c }); box.card = c; }
     s.pending.push({ kind: 'level', level: u.level, box, slots: farmSlots(u.level) });
     ups.push(u.level);
   }

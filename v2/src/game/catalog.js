@@ -554,6 +554,8 @@ export const ITEMS = {
   regress: { name: '유전자 회귀 주사', icon: 'potion', desc: '지운 기술 하나를 되돌려요' },
   fuel: { name: '연료 캡슐', icon: 'energy', desc: '탐사 한 번(+ 탐사비)' },
   parts: { name: '부품', icon: 'gear', desc: '탐사선 강화 재료' },
+  pack_n: { name: '일반 카드 꾸러미', icon: 'star', desc: '일반 식물 관리에서 열어요' },   // 2026-10-22 — 산 카드는 꾸러미로 가방에 · 식물에서 열면 그 식물에 맞는 카드
+  pack_m: { name: '변이 카드 꾸러미', icon: 'star', desc: '변이 식물 관리에서 열어요' },
 };
 export const RARITY = ['common', 'uncommon', 'rare', 'epic', 'legend'];
 export const RARITY_COL = ['#e8eef4', '#7cf0a0', '#6fb8ff', '#c48cff', '#ffb04a'];   // 흰 · 초록 · 파랑 · 보라 · 주황(옛 판 5색과 같음)
@@ -571,7 +573,7 @@ export function levelReward(L) {
   const main = ['fuel', 'water', 'fert', 'parts'][L % 4];
   r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'fert' ? 3 + Math.floor(L / 3) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
   if (L % 5 === 0) r.seed = 'rare';
-  else if (L % 3 === 2) r.card = 'normal';   // 카드(2026-10-17): 일반 카드 한 장(addXp가 뽑음)
+  else if (L % 3 === 2) r.pack_n = 1;   // 카드(2026-10-17) → 2026-10-22 일반 카드 꾸러미 하나(식물에서 열기)
   else if (L % 4 === 0) r.regress = 1;
   else if (L % 3 === 0) r.gems = 10;
   return r;
@@ -703,8 +705,8 @@ export const SHINY_P = 1 / 64, LEGEND_P = 1 / 120;   // 색 변종 · 전설(전
 export const SHOP = [
   { id: 'seed_common', name: '일반 종자 꾸러미', cost: { credits: 120 }, give: { seed: 'common' } },
   { id: 'seed_rare', name: '희귀 종자 꾸러미', cost: { credits: 480 }, give: { seed: 'rare' } },
-  { id: 'card_basic', name: '일반 카드 꾸러미', cost: { credits: 300 }, give: { card: 'normal' } },   // 카드(2026-10-17) — 일반 식물용
-  { id: 'card_mut', name: '변이 카드 꾸러미', cost: { gems: 18 }, give: { card: 'mut' } },          // 변이 식물용(가진 변이 쪽이 자주)
+  { id: 'card_basic', name: '일반 카드 꾸러미', cost: { credits: 300 }, give: { pack_n: 1 } },   // 카드(2026-10-17) — 일반 식물용 · 2026-10-22 꾸러미째 가방에(일반 식물 관리에서 열기)
+  { id: 'card_mut', name: '변이 카드 꾸러미', cost: { gems: 18 }, give: { pack_m: 1 } },        // 변이 식물용 — 연 식물의 변이 카드(전엔 사자마자 무작위 변이)
   { id: 'water10', name: '물 10', cost: { gems: 6 }, give: { water: 10 } },
   { id: 'fert5', name: '비료 5', cost: { gems: 8 }, give: { fert: 5 } },
   { id: 'regress1', name: '유전자 회귀 주사', cost: { gems: 15 }, give: { regress: 1 } },

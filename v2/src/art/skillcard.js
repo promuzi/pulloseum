@@ -45,7 +45,7 @@ export async function loadSkillArt(base = '../assets/v2/skills/') {
   return SKILLART_NAMES.filter(n => !SKILLART[n]);
 }
 const ART_ALIAS = { sun: 'g_photo' };   // 기본기 광합성(2026-10-18) = 옛 광합성 그림
-const artOf = sk => SKILLART[sk.id] || SKILLART[ART_ALIAS[sk.id]] || SKILLART[NAME_ID[sk.name]] || null;
+const artOf = sk => SKILLART[sk.id] || SKILLART[sk.artId] || SKILLART[ART_ALIAS[sk.id]] || SKILLART[NAME_ID[sk.name]] || null;   // artId = 강화 카드(+1 · +2)의 처음 카드 그림
 
 // 그림 창의 큰 아이콘: 거는 효과 > 내 버프 > (공격 아닌) 분류 > 속성 > 칼
 function artIcon(sk) {
@@ -268,6 +268,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     const ic = icon(sk.el);
     if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
   }
+  if (sk.passive && sk.lv > 1) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22): 그림 왼쪽 아래
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
   if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
@@ -403,7 +404,14 @@ function passiveBack(g, w, h, sk) {
   g.text(sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이 식물만 끼워요` : '일반 식물만 끼워요', P, y, { color: C.dim });
   return y + 15;
 }
-// 작은 카드(보상 칸 · 가방 줄 · 상점 — 그림 대신 카드 모양): (x, y) 왼쪽 위, 20×28 — 테 색 = 카드 색, 가운데 = 카드 아이콘
+// 강화 꼬리표(+1 = 은빛 · +2 = 금빛): (x, y) 왼쪽 위, 높이 13
+const UP_COL = { 2: ['#5a6a84', '#e6eef8'], 3: ['#b8852e', '#fff3c8'] };
+function upTag(g, x, y, lv, gh) {
+  const txt = '+' + (lv - 1), tw = g.textW(txt, 'bold') + 8, [f, t] = UP_COL[lv] || UP_COL[3];
+  rrect(g, x, y, tw, 13, 3, C.ink); rrect(g, x + 1, y + 1, tw - 2, 11, 2, f);
+  g.text(txt, x + 4, y + Math.round((13 - gh) / 2), { font: 'bold', color: t });
+}
+// 작은 카드(보상 칸 · 가방 줄 · 상점 — 그림 대신 카드 모양): (x, y) 왼쪽 위, 20×28 — 테 색 = 카드 색, 가운데 = 카드 아이콘 · 강화 카드 = 아래 점(+1 하나 · +2 둘)
 export function cardTiny(g, x, y, sk) {
   if (!sk) return;
   const [mid, hi, lo] = frameCols(sk, false), w = 20, h = 28, ic = icon(artIcon(sk));
@@ -411,6 +419,23 @@ export function cardTiny(g, x, y, sk) {
   g.rect(x + 3, y + 1, w - 6, 1, hi); g.rect(x + 3, y + h - 2, w - 6, 1, lo);
   rrect(g, x + 3, y + 3, w - 6, h - 6, 1, hexMix(mid, C.ink, 0.55));
   if (ic) g.img(ic, x + Math.round((w - ic.width) / 2), y + Math.round((h - ic.height) / 2));
+  if (sk.passive && sk.lv > 1) { const n = sk.lv - 1, col = (UP_COL[sk.lv] || UP_COL[3])[1], px0 = x + Math.round(w / 2 - (n * 4 - 1) / 2); for (let i = 0; i < n; i++) { g.rect(px0 + i * 4 - 1, y + h - 7, 5, 4, C.ink); g.rect(px0 + i * 4, y + h - 6, 3, 2, col); } }
+}
+// 카드 꾸러미(2026-10-22 — 상점 · 받은 것 판 · 가방 물건 · 식물 관리 '꾸러미'): 위아래를 톱니로 봉한 은박 봉지 22×28 + 가운데 카드 문장 · 일반 = 하늘 · 변이 = 보라
+const PACK_COL = { n: ['#3f8fc4', '#bfe6ff', '#1f4f7c'], m: ['#8a5ad0', '#e2c8ff', '#45287a'] };
+export function packTiny(g, x, y, mut) {
+  const [mid, hi, lo] = PACK_COL[mut ? 'm' : 'n'], w = 22, h = 28, band = hexMix(mid, hi, 0.35);
+  g.rect(x, y + 1, w, h - 2, C.ink);                                    // 먹선
+  g.rect(x + 1, y + 2, w - 2, h - 4, mid);                              // 몸통
+  g.rect(x + 1, y + 2, w - 2, 3, band); g.rect(x + 1, y + h - 5, w - 2, 3, hexMix(mid, lo, 0.35));   // 봉한 띠(위 · 아래)
+  for (let i = 2; i < w - 2; i += 2) { g.px(x + i, y + 3, hexMix(band, lo, 0.5)); g.px(x + i, y + h - 4, lo); }   // 봉한 자리 주름
+  for (let i = 0; i < w; i += 2) { g.px(x + i, y, C.ink); g.px(x + i + 1, y + h - 1, C.ink); }   // 톱니 끝
+  g.rect(x + 1, y + 5, 1, h - 10, hi); g.rect(x + w - 2, y + 5, 1, h - 10, lo);   // 옆 빛 · 그늘
+  for (let j = 0; j < h - 12; j++) { const sx = x + 4 + (j >> 1); if (sx < x + w - 3) g.px(sx, y + 6 + j, hexMix(mid, hi, 0.55)); }   // 비스듬한 은박 빛
+  const cx = x + 6, cy = y + 8;                                         // 가운데 카드 문장(10×13)
+  rrect(g, cx, cy, 10, 13, 2, C.ink); rrect(g, cx + 1, cy + 1, 8, 11, 1, hexMix(mid, C.ink, 0.45));
+  g.rect(cx + 2, cy + 1, 6, 1, hi);
+  g.rect(cx + 4, cy + 4, 2, 5, hi); g.rect(cx + 3, cy + 5, 4, 3, hi); g.px(cx + 4, cy + 6, '#ffffff'); g.px(cx + 5, cy + 6, '#ffffff');   // 반짝 별
 }
 // 뒷면 바탕(테 안쪽): 위가 한 단 밝은 남색(점 섞어 이음)
 function backBody(g, x, y, w, h) {
