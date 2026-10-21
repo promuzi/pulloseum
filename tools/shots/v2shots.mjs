@@ -29,6 +29,11 @@ export const SHOTS = [
   ['02_home', 'home', {}],
   ['03_home_empty', 'home', { empty: true }],
   ['03_home_profile', 'home', { profile: true }],
+  ['03_home_banner_stars', 'home', {}, { profile: { color: 4, avatar: 'spark' }, level2: 20 }],   // 무늬 배너(2026-10-22)
+  ['03_home_banner_leaf', 'home', {}, { profile: { color: 5, avatar: 'vine_water' }, level2: 20 }],   // 무늬 배너(2026-10-22)
+  ['03_home_banner_wave', 'home', {}, { profile: { color: 6, avatar: 'aqua' }, level2: 20 }],   // 무늬 배너(2026-10-22)
+  ['03_home_banner_circuit', 'home', {}, { profile: { color: 7, avatar: 'cactus_fire' }, level2: 20 }],   // 무늬 배너(2026-10-22)
+  ['03_home_profile_lv20', 'home', { profile: true }, { level2: 20, profile: { color: 6 } }],   // 배너 여덟 다 열림
   ['03_home_modes', 'home', { modes: true }],
   ['03_home_swap3', 'home', { modes: true, mode: 'swap3' }],
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],

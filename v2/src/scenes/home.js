@@ -12,6 +12,8 @@ import { openForm } from '../core/form.js';
 import { openTeamPick } from './teampick.js';
 import { inkOf } from '../core/text.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
+import { BANNERS, bannerPattern, drawAvatar } from '../art/profile.js';
+import { hexMix } from '../art/statusLook.js';
 
 // 홈 그림마다 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
 //  loft = 코덱스 원형 방(2026-10-15 사용자 "코덱스 판이 마음에 들어" — 기본), cell = 흰 쿠션 타일 독방, room = 클로드 원기둥 방, ship = 옛 우주선 방
@@ -46,7 +48,7 @@ const MODES = [
   { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
 ];
 const BANNER = { x: 4, y: 27, w: 262, h: 60 };   // 위 상태 바(x 4~266)와 같은 가장자리 · 높이 2배(2026-10-15 사용자 "배너 높이 2배로 · 배너랑 위의 바 정렬이 안 맞아")
-const BANNER_COL = ['#8ccfff', '#f0be7d', '#9ff0b0', '#c8a8f0'];   // 배너 색(왼쪽 띠·이름 밑줄)
+const BANNER_COL = BANNERS.map(b => b.col);   // 배너 색(왼쪽 띠·이름 밑줄) — 여덟(무늬 넷은 재배사 레벨로 열림, art/profile.js · 2026-10-22)
 const TIER_COL = { 브론즈: '#d89a62', 실버: '#c8d2e0', 골드: '#f0c858', 플래티넘: '#9ff0e0', 다이아: '#a8d0ff', 마스터: '#e0a8ff', 풀로세움: '#ffd890' };
 const ease = k => k * k * (3 - 2 * k);
 // 3:3 내 팀(식물 번호 셋) — 정한 적 없으면 앞에서부터 셋
@@ -330,9 +332,11 @@ export const home = {
   banner(app, x, y, tappable, bw = BANNER.w) {
     const { g, state: s } = app, pf = s.profile || {}, st = T.card || T.panel, P = T.ptext, { h } = BANNER, w = bw, col = BANNER_COL[pf.color || 0];
     holo(g, x, y, w, h, st, 16);   // 꽉 채움(뒤 원뿔 빛이 구멍으로 점점이 비치지 않게)
+    g.clip(x + 2, y + 2, w - 4, h - 4, () => bannerPattern(g, x + 2, y + 2, w - 4, h - 4, pf.color || 0));   // 무늬 배너(별빛 · 잎맥 · 물결 · 회로)
     g.rect(x + 1, y + 2, 3, h - 4, col);
     g.rect(x + 8, y + 4, 52, 52, '#0a1c32'); g.rect(x + 8, y + 4, 52, 1, col); g.rect(x + 8, y + 55, 52, 1, col);
-    g.clip(x + 9, y + 5, 50, 50, () => drawWhole(g, pf.avatar || 'flower_grass', x + 9, y + 5, 50));   // 대표 식물 전체
+    const av = pf.avatar || 'flower_grass', mine = (s.plants || []).find(p => p.key === av);
+    if (!drawAvatar(g, av, x + 9, y + 5, 50, col, (mine && mine.pot) || 'pot_terra')) g.clip(x + 9, y + 5, 50, 50, () => drawWhole(g, av, x + 9, y + 5, 50));   // 대표 식물 = 화분째 + 배너 색 방(그림이 오기 전엔 옛 그림)
     const rx = x + w - 80, nx = x + 68;   // 오른쪽 랭크 칸(80) — 왼쪽 이름·칭호 칸이 좁은 배너(설정 창)에서도 잘리지 않게
     g.clip(nx, y + 4, rx - nx - 4, 48, () => {
       g.text(pf.name || '재배사', nx, y + 10, { font: 'name', color: P.main });
@@ -362,7 +366,7 @@ export const home = {
     s.plants.slice(0, 6).forEach((p, i) => {
       const px = x + 12 + i * 37, on = pf.avatar === p.key;
       g.rect(px, yy, 32, 32, on ? BANNER_COL[pf.color || 0] : '#3f6a88'); g.rect(px + 1, yy + 1, 30, 30, '#0a1c32');
-      g.clip(px + 2, yy + 2, 28, 28, () => drawWhole(g, bigKey(p.key, stageKey(p)), px + 2, yy + 2, 28));   // 고를 식물 = 지금 단계 그림 전체
+      if (!drawAvatar(g, p.key, px + 2, yy + 2, 28, BANNER_COL[pf.color || 0], p.pot || 'pot_terra')) g.clip(px + 2, yy + 2, 28, 28, () => drawWhole(g, bigKey(p.key, stageKey(p)), px + 2, yy + 2, 28));   // 고를 식물 = 아이콘 그대로(화분째)
       app.input.hit('pf_av' + i, px, yy, 32, 32, () => { if (pf.avatar !== p.key) { pf.avatar = p.key; app.act('setProfile', { avatar: p.key }); } });
     });
     yy += 44; g.text('칭호', x + 12, yy, { color: P.sub }); yy += 16;
@@ -370,8 +374,14 @@ export const home = {
       const bx = x + 12 + (i % 2) * ((w - 30) / 2 + 6), by = yy + Math.floor(i / 2) * 28, bw = (w - 30) / 2, on = pf.title === tt;
       button(app, 'pf_t' + i, Math.round(bx), by, Math.round(bw), 22, tt, { style: on ? 'teal' : 'night', onTap: () => { if (pf.title !== tt) { pf.title = tt; app.act('setProfile', { title: tt }); } } });
     });
-    yy += 64; g.text('배너 색', x + 12, yy, { color: P.sub }); yy += 16;
-    BANNER_COL.forEach((c, i) => { const bx = x + 12 + i * 30, on = (pf.color || 0) === i; g.rect(bx, yy, 24, 18, on ? '#ffffff' : '#0a1c32'); g.rect(bx + 2, yy + 2, 20, 14, c); app.input.hit('pf_c' + i, bx, yy, 24, 18, () => { if ((pf.color || 0) !== i) { pf.color = i; app.act('setProfile', { color: i }); } }, 2); });
+    yy += 64; g.text('배너', x + 12, yy, { color: P.sub }); yy += 16;
+    BANNERS.forEach((B, i) => {   // 배너 여덟: 색 넷 + 무늬 넷(잠김 = 자물쇠 · 누르면 열리는 레벨)
+      const bx = x + 12 + i * 27, on = (pf.color || 0) === i, lock = ((s.user && s.user.level) || 1) < B.lv;
+      g.rect(bx, yy, 23, 18, on ? '#ffffff' : '#0a1c32'); g.rect(bx + 2, yy + 2, 19, 14, lock ? hexMix(B.col, '#0a1c32', 0.7) : B.col);
+      g.clip(bx + 2, yy + 2, 19, 14, () => bannerPattern(g, bx + 2, yy + 2, 19, 14, i, lock ? 0.3 : 0.75));
+      if (lock) g.img(icon('lockS'), bx + 7, yy + 5);
+      app.input.hit('pf_c' + i, bx, yy, 23, 18, () => { if (lock) return app.toast(`${B.name} 배너는 재배사 Lv${B.lv}에 열려요`); if ((pf.color || 0) !== i) { pf.color = i; app.act('setProfile', { color: i }); } }, 2);
+    });
     button(app, 'pf_done', x + w / 2 - 50, y + h - 40, 100, 30, '완료', { style: 'gold', font: 'head', onTap: () => { this.editing = false; } });
   }
 };

@@ -1,6 +1,7 @@
 import { button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawPortrait } from '../art/sprites.js';
+import { bannerOf, drawAvatar } from '../art/profile.js';
 import { T, holo } from '../art/theme.js';
 import { drawShutterClosed, GUN } from '../core/router.js';
 import { ledBoard, ledText, LED } from '../art/led.js';
@@ -121,9 +122,9 @@ export const room = {
         return;
       }
       // 프로필 줄: 배너 색 테의 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
-      const bc = ['#8ccfff', '#f0be7d', '#9ff0b0', '#c8a8f0'][m.color || 0];
+      const bc = bannerOf(m.color || 0).col;   // 배너 여덟(2026-10-22 art/profile.js)
       g.rect(x + 8, cy + 8, 30, 30, bc); g.rect(x + 9, cy + 9, 28, 28, '#0a1c32');
-      if (m.avatar) g.clip(x + 9, cy + 9, 28, 28, () => drawPortrait(g, m.avatar, x + 9, cy + 9, 28, false));
+      if (m.avatar && !drawAvatar(g, m.avatar, x + 9, cy + 9, 28, bc)) g.clip(x + 9, cy + 9, 28, 28, () => drawPortrait(g, m.avatar, x + 9, cy + 9, 28, false));   // 아이콘 = 화분째(홈 배너와 같은 그림)
       let nm = m.name; while (g.textW(nm, 'bold') > cw - 50 && nm.length > 2) nm = nm.slice(0, -1);
       g.text(nm, x + 44, cy + 9, { font: 'bold', color: '#ffffff' });
       g.text(`재배사 Lv${m.level || 1}`, x + 44, cy + 25, { color: '#ffd890' });

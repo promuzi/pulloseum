@@ -182,6 +182,8 @@ window.__shot = (name, params = {}, opt = {}) => {
   app.popup = opt.popup || null; app.confirm = null; app.sheet = opt.sheet || null; app.chest = null; app.guide = null; app.guideWait = null; app.noGuide = true;
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));
+  if (opt.profile) Object.assign(app.state.profile, opt.profile);   // 배너 · 대표 식물 촬영(2026-10-22)
+  if (opt.level2) app.state.user.level = opt.level2;
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   app.seedpick = null; app.teampick = null;
   if (opt.teampick) { openTeamPick(app, opt.teampick.sel.map(i => app.state.plants[i] && app.state.plants[i].uid), null); app.teampick.sy = opt.teampick.sy || 0; app.teampick.lift = opt.teampick.lift ?? null; }   // 3:3 팀 고르기 촬영(opt.teampick = { sel: [몇째 …], sy })

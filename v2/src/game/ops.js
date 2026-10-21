@@ -36,7 +36,7 @@ export const OPS = {
   setTeam: (s, a) => L.setTeam(s, Array.isArray(a.team) && a.team.length === 3 ? a.team.map(u => idxOf(s, str(u))) : bad()),
   setMode: (s, a) => L.setMode(s, str(a.mode, 16)),
   setLeague: (s, a) => L.setLeague(s, str(a.league, 12)),
-  setProfile: (s, a) => L.setProfile(s, { name: opt(a.name, v => str(v, 40)), title: opt(a.title, v => str(v, 40)), avatar: opt(a.avatar, v => str(v, 40)), color: opt(a.color, v => int(v, 0, 3)) }),
+  setProfile: (s, a) => L.setProfile(s, { name: opt(a.name, v => str(v, 40)), title: opt(a.title, v => str(v, 40)), avatar: opt(a.avatar, v => str(v, 40)), color: opt(a.color, v => int(v, 0, 7)) }),
   plantSeed: (s, a, c) => L.plantSeed(s, str(a.seed), c.rng, c.now),
   sellSeed: (s, a) => L.sellSeed(s, str(a.seed)),
   seedMark: (s, a) => L.markSeed(s, str(a.seed), { lock: typeof a.lock === 'boolean' ? a.lock : undefined, fav: typeof a.fav === 'boolean' ? a.fav : undefined }),   // 종자 잠금 · 즐겨찾기(2026-10-18)

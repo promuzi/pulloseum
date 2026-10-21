@@ -4,7 +4,7 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
-  LEAGUES, LEAGUE_KEYS, TIERS, roundBest, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED } from './catalog.js';
+  LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED } from './catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, rollFrom, formCards, isSkillCard, NORMAL_CARDS, baseOf, CARD_UP, cardPrice } from './cards.js';
 
 export class Err extends Error {}
@@ -501,7 +501,7 @@ export function setProfile(s, o) {
   if (o.name != null) { const v = String(o.name).trim().slice(0, 12); need(v, '이름을 써 주세요'); pf.name = v; }
   if (o.title != null) { need(s.titles.includes(o.title), '없는 칭호'); pf.title = o.title; }
   if (o.avatar != null) { need(s.discovered.includes(o.avatar), '만난 식물만 대표로'); pf.avatar = o.avatar; }
-  if (o.color != null) pf.color = Math.max(0, Math.min(3, o.color | 0));
+  if (o.color != null) { const i = o.color | 0; need(i >= 0 && i < BANNER_LV.length, '없는 배너'); need((s.user.level || 1) >= BANNER_LV[i], `재배사 Lv${BANNER_LV[i]}에 열려요`); pf.color = i; }   // 배너 여덟(2026-10-22)
   return {};
 }
 const fixActive = s => { s.active = Math.max(0, Math.min(s.active, s.plants.length - 1)); s.team = (s.team || []).filter(i => i < s.plants.length); };
