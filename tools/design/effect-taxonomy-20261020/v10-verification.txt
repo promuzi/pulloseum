@@ -1,0 +1,8 @@
+﻿효과 분류: 17 cells changed, heights ['22', '26', '27', '38', '6']
+스킬 분류: 8 cells changed, heights ['29']
+검토 대기: 8 cells changed, heights []
+미분류·잔여: 12 cells changed, heights []
+보류: 0 cells changed, heights []
+공통 처리: 0 cells changed, heights []
+style ids per cell and other parts checked
+PROBLEMS: none
