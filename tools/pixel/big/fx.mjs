@@ -88,7 +88,72 @@ export function ambientPlan(cv, rig, amb = {}, FR = 64, seed = 11) {
   if (amb.lava) plan.lava = amb.lava;
   if (amb.magic) plan.magic = amb.magic;
   if (amb.pulse) { const cells = cellsOf(cv, matsWhere(cv, amb.pulse.mat || {}), amb.pulse.box), ys = cells.map(c => Math.floor(c / W)); plan.pulse = { ...amb.pulse, cells, set: new Set(cells), yb: Math.max(...ys, 0), yt: Math.min(...ys, H) }; }
+  if (amb.flow) plan.flow = flowPlan(cv, rig, amb.flow, seed);
+  if (amb.orbit) plan.orbit = orbitPlan(cv, rig, amb.orbit);
   return plan;
+}
+
+// 그림에 그려진 바람결 · 리본 · 번개 무늬(2026-10-22 사용자 "식물 외형 디자인에 이미 바람효과나 번개효과가 같이 그려진 경우 이를 활용해서 자연스럽게 식물의 움직임을 반영해줘 —
+//  지금은 예시로 바람형태의 디자인이 움직이지 않고 식물 주변에서 꿀렁이기만해"): 그 재질 칸을 이어진 줄(덩어리)마다 나눠 줄을 따라 거리를 잰다 —
+//  from 'end' = 바람이 오는 쪽 끝부터(dir 1 = 왼쪽 끝) · 'root' = 몸에 붙은 데부터(안 붙은 줄은 'end') · 'head' = 얼굴에서 바깥으로(곧은 거리).
+//  흐름 = 밝은 머리가 줄을 따라 지나가고 뒤로 옅은 꼬리(바람이 그 줄을 타고 흐르는 것처럼) · wave = 붙은 쪽은 그대로, 끝으로 갈수록 줄에 수직으로 물결치며 펄럭(motion.mjs ribbon)
+const nb8 = j => { const x = j % W, y = (j - x) / W, out = []; for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { if (!ox && !oy) continue; const X = x + ox, Y = y + oy; if (X >= 0 && Y >= 0 && X < W && Y < H) out.push(Y * W + X); } return out; };
+function flowPlan(cv, rig, fl, seed) {
+  const cells = cellsOf(cv, matsWhere(cv, fl.mat || {}), fl.box), set = new Set(cells);
+  const comp = new Int32Array(W * H).fill(-1), d = new Float32Array(W * H).fill(-1), comps = [], dir = fl.dir ?? 1;
+  for (const c0 of cells) {
+    if (comp[c0] !== -1) continue;
+    const id = comps.length, list = [c0];
+    comp[c0] = id;
+    for (let q = 0; q < list.length; q++) for (const k of nb8(list[q])) if (set.has(k) && comp[k] === -1) { comp[k] = id; list.push(k); }
+    if (list.length < (fl.min || 6)) { for (const k of list) comp[k] = -2; continue; }
+    let src = null;
+    if (fl.from === 'root') { src = list.filter(j => nb8(j).some(k => cv.cm[k] >= 0 && !set.has(k))); if (!src.length) src = null; }
+    if (fl.from !== 'head' && !src) { let best = list[0]; for (const j of list) if ((j % W) * dir < (best % W) * dir) best = j; src = [best]; }   // 바람 오는 쪽 끝
+    if (src) {
+      for (const s of src) d[s] = 0;
+      const qu = [...src];
+      for (let q = 0; q < qu.length; q++) { const j = qu[q]; for (const k of nb8(j)) if (comp[k] === id && d[k] < 0) { d[k] = d[j] + 1; qu.push(k); } }
+    } else for (const j of list) d[j] = Math.hypot(j % W + 0.5 - rig.hx, Math.floor(j / W) + 0.5 - rig.hy);
+    let lo = Infinity, hi = 0;
+    for (const j of list) { lo = Math.min(lo, d[j]); hi = Math.max(hi, d[j]); }
+    if (!src) for (const j of list) d[j] -= lo;
+    comps.push({ id, n: list.length, maxD: src ? hi : hi - lo, ph: Math.floor(rng(seed * 29 + id * 31)() * (fl.every || 32)) });
+  }
+  return { ...fl, d, comp, comps, cells: cells.filter(j => comp[j] >= 0).length };
+}
+// 리본 물결(motion.mjs idleField 가 읽음): 줄 칸마다 거리 · 줄에 수직인 방향 · 그 줄의 길이 — 둘레 빈칸 2칸까지 넓힘(그림이 빈칸으로 움직여 나갈 수 있게)
+export function ribbonOf(fl) {
+  if (!fl || !fl.wave) return null;
+  const d = new Float32Array(W * H).fill(-1), nx = new Float32Array(W * H), ny = new Float32Array(W * H), m = new Float32Array(W * H);
+  const gxy = j => {   // 줄을 따라 거리가 느는 쪽(같은 줄 안 5×5 평균)
+    const x0 = j % W, y0 = (j - x0) / W, c = fl.comp[j];
+    let gx = 0, gy = 0;
+    for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) { const X = x0 + ox, Y = y0 + oy, k = Y * W + X; if ((ox || oy) && X >= 0 && Y >= 0 && X < W && Y < H && fl.comp[k] === c) { const w = (fl.d[k] - fl.d[j]) / (ox * ox + oy * oy); gx += w * ox; gy += w * oy; } }
+    const L = Math.hypot(gx, gy) || 1; return [gx / L, gy / L];
+  };
+  const qu = [];
+  for (let j = 0; j < W * H; j++) {
+    if (fl.comp[j] < 0) continue;
+    const [gx, gy] = gxy(j); d[j] = fl.d[j]; nx[j] = -gy; ny[j] = gx; m[j] = fl.comps[fl.comp[j]].maxD; qu.push(j);
+  }
+  const step = new Int8Array(W * H);
+  for (let q = 0; q < qu.length; q++) { const j = qu[q]; if (step[j] >= 2) continue; for (const k of nb8(j)) if (d[k] < 0) { d[k] = d[j]; nx[k] = nx[j]; ny[k] = ny[j]; m[k] = m[j]; step[k] = step[j] + 1; qu.push(k); } }
+  return { d, nx, ny, m, amp: fl.wave, k: fl.waveK ?? 0.35, freq: fl.waveF ?? 2 };
+}
+// 감도는 바람(2026-10-22 사용자 "바람 식물의 효과?가 그냥 실같은게 빠르게 지나가는데 그런거 말고 식물 주변에 바람이 도는것 같은게 좋아보여"):
+//  몸 둘레 납작한 타원(화분과 같은 내려다본 각도) 둘~셋 — 높이 ys(몸 키의 몇 할 · 1.5보다 크면 판 칸) · 그 높이 몸 폭 + 여유(rx) · 납작함 flat
+function orbitPlan(cv, rig, O) {
+  const span = rig.yA - rig.yTop;
+  const rings = (O.ys || [0.35, 0.68]).map((v, q) => {
+    const y = v <= 1.5 ? rig.yTop + span * v : v, Y = Math.round(y);
+    let l = W, r = -1;
+    for (let yy = Y - 5; yy <= Y + 5; yy++) for (let x = 0; x < W; x++) if (yy >= 0 && yy < H && cv.cm[yy * W + x] >= 0) { if (x < l) l = x; if (x > r) r = x; }
+    const cx = r >= 0 ? (l + r + 1) / 2 : rig.ax, half = r >= 0 ? (r - l + 1) / 2 : 14;
+    const rx = Math.min(Math.min(cx, W - cx) - 2, (O.rx ? [].concat(O.rx)[q % [].concat(O.rx).length] : half + (O.pad ?? 5)));
+    return { cx, cy: y, rx, ry: Math.max(2.5, rx * (O.flat ?? 0.26)) };
+  });
+  return { ...O, rings };
 }
 
 // f번째 장: im = 식물 층(색 바꾸기), at(p) = 쉬는 자리 p의 이 장 자리, put(x, y, 색) = 화분 위 입자, b = 이 장의 날숨 정도(0~1)
@@ -279,6 +344,49 @@ export function ambientFrame(f, plan, im, at, put, b = 0) {
       const k = ((f - (du.pebble.at ?? 40)) % FR + FR) % FR, [sx, sy] = du.pebble.from, o = at([sx, sy]);
       if (k < 14) { const yy = o[1] + 0.12 * k * k; put(Math.floor(o[0] + k * 0.15), Math.floor(Math.min(yy, du.pebble.floor ?? P.cy)), du.pebble.color || '#9a7a52'); }
     }
+  }
+  flowFrame(f, plan, im, at, put);
+}
+// 그려진 무늬 흐름 · 감도는 바람 — ambientFrame 끝에서(식물 칸 색 · 입자)
+export function flowFrame(f, plan, im, at, put) {
+  const srcIdx = im.src;
+  if (plan.flow && plan.flow.comps.length) {
+    const fl = plan.flow, every = fl.every || 32, len = fl.len || 12, trail = fl.trail || 5, head = fl.head || '#ffffff', band = fl.comps.map(() => NaN);
+    fl.comps.forEach((c, q) => { const k = ((f - (fl.sync ? 0 : c.ph) - (fl.at ?? 0)) % every + every) % every; if (k < len) band[q] = -2 + (c.maxD + 4) * k / (len - 1); });
+    const cr = fl.crackle ? rng(plan.seed * 41 + f * 7) : null;
+    for (let i = 0; i < W * H; i++) {
+      const j = srcIdx[i]; if (j < 0) continue;
+      const c = fl.comp[j]; if (c < 0) continue;
+      const x = i % W, y = (i - x) / W, D = band[c];
+      if (fl.dim) { const k4 = i * 4; for (let ch = 0; ch < 3; ch++) im.data[k4 + ch] = Math.round(im.data[k4 + ch] * (1 - fl.dim)); }   // 바탕을 살짝 눌러 흐르는 머리가 또렷이
+      if (Number.isNaN(D)) continue;
+      const dd = fl.d[j] - D;
+      if (dd > -0.9 && dd < 0.9) { if (!cr || cr() < 0.75) im.set(x, y, cr && cr() < 0.3 ? fl.head2 || '#fff6c0' : head); }   // 머리(번개면 군데군데 끊겨 지직)
+      else if (dd <= -0.9 && dd > -trail) lighten(im, x, y, (fl.glow ?? 0.6) * (1 + dd / trail));   // 꼬리
+      else if (fl.ahead && dd >= 0.9 && dd < 2.4) lighten(im, x, y, fl.ahead);   // 머리 앞 옅은 빛
+    }
+  }
+  if (plan.orbit) {
+    const O = plan.orbit, FR = plan.FR, len = O.len || 2.3, dir = O.dir ?? 1, col = O.color || '#e4ebfa', dim = O.dim || '#a2acd0';
+    const solid = (x, y) => x < 0 || y < 0 || x >= W || y >= H || im.data[(y * W + x) * 4 + 3] >= 128;
+    const draw = (x, y, c, front) => { if (front || !solid(x, y)) put(x, y, c); };   // 뒤쪽 반(타원 위쪽) = 식물 뒤로 · 앞쪽 반 = 식물 앞으로
+    O.rings.forEach((R, q) => {
+      const loops = [].concat(O.loops || 1)[q % [].concat(O.loops || 1).length], c0 = at([R.cx, R.cy]);
+      const th0 = q * 2.1 + (O.at ?? 0) + dir * 2 * Math.PI * loops * f / FR, steps = Math.ceil(len * R.rx * 1.15);
+      for (let s = 0; s <= steps; s++) {
+        const u = s / steps, th = th0 - dir * len * u;   // 머리 → 꼬리
+        const front = Math.sin(th) > 0;
+        if (s % 9 === 6 || (u > 0.82 && s % 2) || (front && u > 0.1 && s % 4 === 3)) continue;   // 군데군데 끊김 · 꼬리 흐림 · 앞쪽 반은 더 성기게(몸 앞을 가로지르는 줄이 실처럼 보이지 않게)
+        const wob = Math.sin(th * 2 + f * 0.18 + q * 1.7) * 0.9 + (O.rise || 0) * u;   // 바람결 출렁(꼬리는 조금 처짐)
+        const x = Math.floor(c0[0] + Math.cos(th) * R.rx), y = Math.floor(c0[1] + Math.sin(th) * R.ry + wob);
+        draw(x, y, u < 0.06 ? '#ffffff' : u < (front ? 0.3 : 0.55) ? col : dim, front);
+        if (u < 0.3 && front && O.thick) draw(x, y + 1, dim, front);   // 앞쪽 머리 = 두 칸(가까워 굵게)
+      }
+      if (O.leaf && q === 0) {   // 바람에 실려 함께 도는 잎 · 꽃잎 하나(머리보다 조금 뒤)
+        const th = th0 - dir * len * 0.35, x = Math.floor(c0[0] + Math.cos(th) * R.rx), y = Math.floor(c0[1] + Math.sin(th) * R.ry) - 1, front = Math.sin(th) > 0, flip = Math.floor(f / 3) % 2;
+        draw(x, y, O.leaf.color, front); draw(x + (flip ? 1 : -1), y, O.leaf.edge || O.leaf.color, front); if (!flip) draw(x, y - 1, O.leaf.edge || O.leaf.color, front);
+      }
+    });
   }
 }
 // 반짝 별: 0 = 점, 1 = 작은 십자, 2 = 큰 십자(가운데 흰색)

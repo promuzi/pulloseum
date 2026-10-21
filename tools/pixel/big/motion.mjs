@@ -60,7 +60,7 @@ export function idleRig(cv) {
 //    밑에서 끝으로 번지는 물결로 펄럭이고(끝일수록 크게·늦게), 꽃잎마다 박자가 다르다
 // 값은 소수 칸 — 장마다 큰 원본에서 다시 줄이므로(rasterize) 정수 반올림 이음매가 없다. 얼굴만 정수 칸으로 통째로 옮겨 눈·입 모양이 흔들리지 않게 한다.
 // t = 한 바퀴(0~1) 안 시각. 돌려주는 field(X, Y) → [dx, dy] = 판 칸 (X, Y)에 올 그림이 원래 판 자리에서 움직인 양, head = 얼굴 이동(정수)
-export function idleField(rig, t, { bob = 2, squash = 1, open = 1, sway = 1, petal = 1, leaf = 1.2, breaths = 2, flutter = 2 } = {}) {
+export function idleField(rig, t, { bob = 2, squash = 1, open = 1, sway = 1, petal = 1, leaf = 1.2, breaths = 2, flutter = 2 } = {}) {   // rig.ribbon(있으면) = 그려진 리본 물결
   const { yA, ax, hx, hy, Rh, Rf } = rig;
   const breath = u => (1 - Math.cos(2 * Math.PI * breaths * u)) / 2;   // 0 = 들숨(위), 1 = 날숨(아래) — 끝에서 머물고 가운데서 빠름
   const lean = u => Math.sin(2 * Math.PI * u);
@@ -84,6 +84,12 @@ export function idleField(rig, t, { bob = 2, squash = 1, open = 1, sway = 1, pet
       const u = Math.abs(px - ax), side = Math.sign(px - ax) || 1;
       dy += wl * leaf * sm(3, 14, u) * Math.min(1, u / 18) * Math.sin(2 * Math.PI * flutter * t - 0.22 * u + (side > 0 ? 0 : 2.2));
       dx += wl * side * open * breath(t - 0.05 * sm(4, 20, u)) * sm(4, 12, u);
+    }
+    // 그려진 리본 · 바람결(2026-10-22 fx.mjs flow.wave — rig.ribbon): 붙은 쪽은 그대로, 줄을 따라 끝으로 번지는 물결(줄에 수직 · 끝일수록 크게)
+    const RB = rig.ribbon, ri = Y * W + X;
+    if (RB && X >= 0 && Y >= 0 && X < W && Y < H && RB.d[ri] >= 0) {
+      const dd = RB.d[ri], s = RB.amp * sm(1, 6, dd) * Math.min(1, dd / Math.max(6, RB.m[ri])) * Math.sin(2 * Math.PI * RB.freq * t - RB.k * dd);
+      dx += RB.nx[ri] * s; dy += RB.ny[ri] * s;
     }
     return [dx * wa, dy * wa];
   };

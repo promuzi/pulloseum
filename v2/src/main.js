@@ -198,7 +198,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   app.draft = null;
   if (opt.draft) {   // 고르기 화면 촬영(opt.draft = { evo, at: 연 뒤 ms, part: 'skill' | 'passive', n, pick, moves: [[위 줄 몇째, 칸]], sel, arm, peek: 칸 | 't<몇째>', sy })
     const D = opt.draft, p = app.state.plants[params.act != null ? +params.act : (app.state.active || 0)], pas = D.part === 'passive';
-    const pool = pas ? Object.keys(CARDS).filter(id => !isSkillCard(id) && !cardFits(p, id) && !(p.cards || []).includes(id)) : bloomPool(p.key, Math.max(1, p.stage)).map(x => x.id);
+    const pool = pas ? Object.keys(CARDS).filter(id => !isSkillCard(id) && !CARDS[id].base && !cardFits(p, id) && !(p.cards || []).includes(id)) : bloomPool(p.key, Math.max(1, p.stage)).map(x => x.id);
     const cands = pool.slice(0, D.n || (pas ? 3 : 4));
     p.drafts = [{ kind: D.evo ? 'evo' : 'lv', part: pas ? 'passive' : 'skill', st: p.stage, lv: p.lv, pick: Math.min(D.pick || (pas ? 1 : 2), cands.length), cands }];
     openDraft(app, p, D.evo ? { from: bigKey(p.key, stageKey({ stage: Math.max(0, p.stage - 1) })), to: bigKey(p.key, stageKey(p)), pot: p.pot } : null);

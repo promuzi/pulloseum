@@ -27,6 +27,10 @@ export const SHOTS = [
   ['02_home_chest_open', 'home', {}, { level: 6, chestOpen: 4000 }],
   ['02_home_settings', 'home', {}, { sheet: 'settings' }],
   ['02_home', 'home', {}],
+  ['02_home_vine_wind_1000', 'home', {}, { plants: [{ key: 'vine_wind', stage: 2 }], t: 1000 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
+  ['02_home_vine_wind_1600', 'home', {}, { plants: [{ key: 'vine_wind', stage: 2 }], t: 1600 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
+  ['02_home_cactus_wind_1000', 'home', {}, { plants: [{ key: 'cactus_wind', stage: 2 }], t: 1000 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
+  ['02_home_cactus_wind_1600', 'home', {}, { plants: [{ key: 'cactus_wind', stage: 2 }], t: 1600 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
   ['03_home_empty', 'home', { empty: true }],
   ['03_home_profile', 'home', { profile: true }],
   ['03_home_banner_stars', 'home', {}, { profile: { color: 4, avatar: 'spark' }, level2: 20 }],   // 무늬 배너(2026-10-22)

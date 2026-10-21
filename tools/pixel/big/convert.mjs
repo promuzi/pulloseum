@@ -1003,17 +1003,17 @@ async function animKit() {
     flower_grass: { bob: 2, sway: 1, open: 1, petal: 0.6, leaf: 1.2, blinkAt: 22, amb: { shine: { mat: LEAF, box: [10, 0, 38, 44], at: 6, len: 6 }, petals: { from: 'head', color: '#f08aa0', edge: '#d8607a', dim: '#b04a62', vx: 0.12, vy: 0.32, every: 64, at: 34, life: 40 } } },
     thorn: { bob: 1.5, sway: 0.8, open: 1, petal: 1.1, leaf: 2.2, blinkAt: 40 },
     aqua: { bob: 2, squash: 1.5, sway: 0.8, open: 0.6, petal: 0.6, leaf: 1.0, amb: { bubbles: { mat: { hue: [170, 250], lmin: 0.62, cmin: 0.03 }, n: 3 }, drips: { n: 2, every: 40 }, twinkle: { mat: { hue: [170, 250], lmin: 0.7 }, n: 1, every: 28 } } },
-    flower_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.5, leaf: 1.4, blinkAt: 14, amb: { wind: { n: 2, y0: 6, y1: 52 }, petals: { from: 'right', color: '#c9a8f0', edge: '#a888e0', dim: '#8a70c0', vx: 0.95, vy: 0.06, sway: 1, every: 32, life: 26, n: 2 } } },
+    flower_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.5, leaf: 1.4, blinkAt: 14, amb: { orbit: { ys: [0.3, 0.6], loops: [1, 2], len: 2.2, color: '#ece4fc', dim: '#ab98d8', leaf: { color: '#c9a8f0', edge: '#a888e0' } }, flow: { mat: { hue: [270, 345], cmin: 0.06 }, from: 'head', every: 32, len: 14, trail: 7, glow: 0.4, head: '#f6f0ff', min: 8 }, petals: { from: 'right', color: '#c9a8f0', edge: '#a888e0', dim: '#8a70c0', vx: 0.95, vy: 0.06, sway: 1, every: 32, life: 26, n: 2 } } },
     // 번개 다섯(2026-10-18 다시 — 사용자 "번개 효과 내는 애들 이펙트가 별로"): 아무 잎 끝 → 빈 곳 벼락을 버리고 종마다 나오는 자리를 정함(판 좌표 = stagegrid.mjs 로 잼)
-    spark: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, blinkAt: 50, electric: { bolts: [{ at: [40, 5], ang: -95, len: 9, f0: 4 }, { at: [81, 51], ang: 20, len: 8, f0: 36 }], arcs: false, crawl: [{ box: [12, 2, 86, 56], at: [14, 24, 46, 56], len: 9 }] } },   // 번개 꽃잎 둘레를 전기가 기어감 + 꽃잎 끝 벼락
+    spark: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, blinkAt: 50, amb: { flow: { mat: { hue: [70, 125], cmin: 0.1, lmin: 0.6 }, from: 'head', every: 32, len: 9, trail: 4, glow: 0.5, crackle: true, at: 20, min: 8 } }, electric: { bolts: [{ at: [40, 5], ang: -95, len: 9, f0: 4 }, { at: [81, 51], ang: 20, len: 8, f0: 36 }], arcs: false, crawl: [{ box: [12, 2, 86, 56], at: [14, 24, 46, 56], len: 9 }] } },   // 번개 꽃잎 둘레를 전기가 기어감 + 꽃잎 끝 벼락
     spark_teen: { electric: { bolts: [{ at: [44, 14], ang: -90, len: 8, f0: 4 }, { at: [77, 35], ang: 15, len: 7, f0: 36 }], arcs: false, crawl: [{ box: [16, 12, 80, 56], at: [14, 46], len: 8 }] } },
     spark_young: { electric: { bolts: [{ at: [45, 24], ang: -90, len: 6, f0: 4 }], arcs: false, crawl: [{ box: [30, 22, 62, 58], at: [20, 48], len: 7 }] } },
     vine_water: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.6, leaf: 1.6, flutter: 1, blinkAt: 30, amb: { drips: { n: 2, every: 36 } } },
     cactus_fire: { bob: 1, sway: 0.5, open: 0, petal: 0, leaf: 0.6, fire: { up: 2.5, side: 0.9 }, blinkAt: 58 },
     gaia: { bob: 1, squash: 0.6, sway: 0.4, open: 0, petal: 0, leaf: 0.3, blinkAt: 46, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 20 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 2, every: 20 }, dust: { n: 5, pebble: { from: [70, 40], at: 44, floor: 75 } } } },
     flower_fire: { bob: 2, sway: 1, open: 1, petal: 0.8, leaf: 1.2, fire: { up: 2, side: 0.8 }, blinkAt: 26 },
-    cactus_wind: { bob: 1, sway: 0.6, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 10, amb: { wind: { n: 2, y0: 8, y1: 50 }, swirl: { at: 'holes', every: 24 } } },
-    vine_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.6, leaf: 1.9, blinkAt: 36, amb: { shine: { mat: { cmax: 0.05, lmin: 0.62 }, at: 18, len: 6 }, wind: { n: 1, y0: 10, y1: 60 } } },
+    cactus_wind: { bob: 1, sway: 0.6, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 10, amb: { orbit: { ys: [0.28, 0.6], loops: [1, 2], len: 2.4, color: '#eef2fc', dim: '#aab4d8' }, flow: { mat: { cmax: 0.05, lmin: 0.8 }, from: 'end', dir: 1, every: 20, len: 9, trail: 6, dim: 0.14, glow: 0.75, ahead: 0.25 }, swirl: { at: 'holes', every: 24 } } },   // 2026-10-22: 그려진 흰 바람줄이 줄 따라 흐르고 · 관 둘레를 바람이 돎
+    vine_wind: { bob: 1.5, sway: 1.3, open: 1, petal: 1.0, leaf: 1.2, blinkAt: 36, amb: { shine: { mat: { cmax: 0.05, lmin: 0.62 }, at: 18, len: 6 }, orbit: { ys: [0.35, 0.7], loops: [1, 2], len: 2.2, color: '#ece4fc', dim: '#ab98d8' }, flow: { mat: { hue: [270, 345], cmin: 0.05 }, from: 'root', every: 32, len: 16, trail: 7, glow: 0.38, head: '#f6f0ff', wave: 1.4, waveK: 0.3, waveF: 2, min: 10 } } },   // 2026-10-22: 보라 바람 리본이 끝으로 물결치며 흐름(전엔 몸과 같이 꿀렁) · 둘레 도는 바람
     spore_cap: { bob: 2, squash: 1.5, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, blinkAt: 18, amb: { spores: { from: 'cap', n: 7 } } },
     // 새 종 넷(2026-10-16): 얼음 종꽃 = 서리 반짝 · 매끈한 빛 / 전깃줄 덩굴 = 전기 / 바위 버섯 = 수정 · 먼지 · 숨 작게 / 해파리 버섯 = 말랑 · 물방울 · 거품
     frost_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, blinkAt: 28, amb: { twinkle: { mat: { hue: [190, 260], lmin: 0.75 }, n: 2, every: 24 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 12, len: 6 } } },
@@ -1028,7 +1028,7 @@ async function animKit() {
     toxi_cactus: { bob: 1, sway: 0.5, open: 0, petal: 0.4, leaf: 0.6, blinkAt: 48, amb: { drips: { n: 2, every: 30 } } },
     draco_fruit: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 32, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 22 }, shine: { mat: { cmax: 0.06, lmin: 0.8 }, at: 14, len: 6 } } },
     frost_drake: { bob: 1, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, flutter: 0.6, blinkAt: 40, amb: { twinkle: { mat: { hue: [170, 250], lmin: 0.72 }, n: 2, every: 22 }, shine: { mat: { cmax: 0.06, lmin: 0.8 }, at: 14, len: 6 } } },   // 2026-10-17 새 태생 용족(파란 얼음 용 — 날개 살짝 · 서리 반짝)
-    gat_cap: { bob: 1.5, squash: 0.8, sway: 0.9, open: 0.4, petal: 1.2, leaf: 1.4, flutter: 1, blinkAt: 22, amb: { wind: { n: 2, y0: 20, y1: 70 } } },   // 갓끈 · 부채 바람
+    gat_cap: { bob: 1.5, squash: 0.8, sway: 0.9, open: 0.4, petal: 1.2, leaf: 1.4, flutter: 1, blinkAt: 22, amb: { orbit: { ys: [0.42], loops: [1], len: 2.4, color: '#e8ecf6', dim: '#a0a8c4', rise: 1 } } },   // 갓끈 · 부채 바람 — 2026-10-22 지나가는 바람결 → 갓 둘레를 도는 바람
     mask_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1, blinkAt: 999 },   // 탈춤 소매 덩굴(탈 = 감은 눈 — 깜빡임 없음)
     lantern_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.6, flutter: 0.8, blinkAt: 26 },   // 청사초롱 흔들림
     jar_cactus: { bob: 1, squash: 0.8, sway: 0.5, open: 0, petal: 0.3, leaf: 0.6, blinkAt: 30, amb: { drips: { n: 2, every: 36 } } },   // 물동이 물방울
@@ -1052,15 +1052,15 @@ async function animKit() {
     wizard_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, blinkAt: 32, amb: { magic: { at: [71, 14], n: 6, spread: 14, rise: 0.35, sparks: true }, twinkle: { mat: { hue: [60, 110], cmin: 0.1, lmin: 0.6 }, box: [18, 0, 62, 30], n: 2, every: 20 } } },   // 별 지팡이: 별 맥동 + 전기 불똥 + 떠오르는 별가루 · 모자 별 반짝(벼락은 마법사에 안 맞아 뺌)
     wizard_bell_teen: { amb: { magic: { at: [32, 20], n: 4, spread: 10, rise: 0.35, sparks: true } } },
     wizard_bell_young: { amb: { magic: { at: [39, 26], n: 3, spread: 8, rise: 0.35 } } },
-    ninja_vine: { bob: 1.5, sway: 1.3, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1.2, blinkAt: 40, amb: { wind: { n: 3, every: 26, y0: 12, y1: 52, len: 22 }, petals: { from: [[78, 68], [72, 53]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 40, life: 22, n: 2 } } },   // 목도리 펄럭 · 식물 뒤로 지나가는 바람결(목도리 쪽으로) · 오른쪽 잎이 뜯겨 날아감
-    ninja_vine_teen: { amb: { wind: { n: 3, every: 26, y0: 18, y1: 56, len: 20 }, petals: { from: [[67, 62], [62, 50]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 40, life: 22, n: 2 } } },
-    ninja_vine_young: { amb: { wind: { n: 3, every: 26, y0: 30, y1: 60, len: 18 }, petals: { from: [[58, 62]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 44, life: 22, n: 1 } } },
+    ninja_vine: { bob: 1.5, sway: 1.3, open: 0.6, petal: 1.4, leaf: 1.8, flutter: 1.2, blinkAt: 40, amb: { orbit: { ys: [0.32, 0.62], loops: [1, 2], len: 2.3, color: '#e6f0d8', dim: '#9cae86' }, petals: { from: [[78, 68], [72, 53]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 40, life: 22, n: 2 } } },   // 목도리 펄럭 · 식물 뒤로 지나가는 바람결(목도리 쪽으로) · 오른쪽 잎이 뜯겨 날아감
+    ninja_vine_teen: { amb: { orbit: { ys: [0.34, 0.64], loops: [1, 2], len: 2.3, color: '#e6f0d8', dim: '#9cae86' }, petals: { from: [[67, 62], [62, 50]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 40, life: 22, n: 2 } } },
+    ninja_vine_young: { amb: { orbit: { ys: [0.45], loops: [2], len: 2.2, color: '#e6f0d8', dim: '#9cae86' }, petals: { from: [[58, 62]], big: true, color: '#9cbf3e', edge: '#6f8f2a', dim: '#56702a', vx: 1.4, vy: 0.05, sway: 1.2, every: 44, life: 22, n: 1 } } },
     pirate_cactus: { bob: 1.2, squash: 0.9, sway: 0.6, open: 0.3, petal: 0.8, leaf: 0.8, flutter: 0.8, blinkAt: 26, amb: { shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 14, len: 6 }, drips: { n: 1, every: 40 } } },   // 2026-10-18 해적 · 가시 칼 반짝 · 물방울
     ranger_vine: { bob: 1.4, sway: 1.2, open: 0.5, petal: 1.2, leaf: 1.6, flutter: 1, blinkAt: 34, amb: { wind: { n: 1, y0: 12, y1: 60 } } },   // 숲 궁수 · 잎 망토
     miner_cap: { bob: 1, squash: 0.7, sway: 0.3, open: 0, petal: 0, leaf: 0.3, blinkAt: 22, amb: { gems: { mat: { hue: [25, 55], cmin: 0.25, lmin: 0.55 }, at: 18 }, dust: { n: 4 } } },   // 광부 · 호박 광석 반짝 · 흙먼지
     snow_ballet: { bob: 1.6, sway: 1.1, open: 0.9, petal: 1.2, leaf: 1.2, blinkAt: 30, amb: { twinkle: { mat: { hue: [190, 280], lmin: 0.75 }, n: 2, every: 22 }, shine: { mat: { cmax: 0.05, lmin: 0.82 }, at: 10, len: 6 } } },   // 얼음 발레리나
     volcano_cap: { bob: 1.6, squash: 1.2, sway: 0.5, open: 0.4, petal: 0.4, leaf: 0.6, blinkAt: 18, amb: { spores: { from: [[54, 11], [52, 12]], n: 5, spread: 4, color: '#c8c0b8', dim: '#8a8480' }, lava: { from: [[53, 12], [56, 13]], n: 2, every: 26 } } },   // 화산 갓 · 분화구 연기(회색) · 마그마 방울이 가끔 튐(2026-10-18 사용자)   // 화산 갓 · 분화구 불
-    dandel_aero: { bob: 1.8, sway: 1.4, open: 1, petal: 1.6, leaf: 1.6, flutter: 1.3, blinkAt: 12, amb: { petals: { from: [[62, 24], [64, 34], [58, 16]], color: '#ffffff', edge: '#efe8d0', dim: '#cfc6a8', vx: 0.7, vy: -0.22, sway: 1.2, every: 22, life: 34, n: 3 } } },   // 민들레 비행사 · 홀씨가 하나씩 바람에 날아감(2026-10-18 사용자)   // 민들레 비행사 · 리본 목도리
+    dandel_aero: { bob: 1.8, sway: 1.4, open: 1, petal: 1.6, leaf: 1.6, flutter: 1.3, blinkAt: 12, amb: { orbit: { ys: [0.5], loops: [1], len: 2.0, color: '#fbf7ea', dim: '#cfc6a8' }, petals: { from: [[62, 24], [64, 34], [58, 16]], color: '#ffffff', edge: '#efe8d0', dim: '#cfc6a8', vx: 0.7, vy: -0.22, sway: 1.2, every: 22, life: 34, n: 3 } } },   // 민들레 비행사 · 홀씨가 하나씩 바람에 날아감(2026-10-18 사용자)   // 민들레 비행사 · 리본 목도리
     diver_vine: { bob: 1.5, sway: 1.2, open: 0.6, petal: 1.4, leaf: 1.6, flutter: 1, blinkAt: 28, amb: { drips: { n: 2, every: 36 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 20, len: 6 } } },   // 젖은 잎 · 물안경 빛
   };
   // 단계마다 다른 효과 자리: FX[<키>_young|_teen] 이 있으면 종 값 위에 덮어씀(번개 나오는 방망이 · 북은 단계마다 자리가 다르고 어린 단계엔 없음)
@@ -1068,7 +1068,7 @@ async function animKit() {
   const rigs = cvs.map(cv => idleRig(cv));
   const eplans = cvs.map((cv, k) => { const e = fxOf(cv).electric; return e ? electricPlan(rigs[k], findTips(cv, rigs[k]), { frames: FR, ...(typeof e === 'object' ? e : {}) }) : null; });
   // 특성 효과 자리: 'head' = 머리 오른쪽 위, 'cap' = 갓 아래 가장자리, 'right' = 가장 오른쪽 끝 두 곳, 'holes' = 가장 높은 끝 두 곳 옆
-  const { ambientPlan, ambientFrame } = await import('./fx.mjs');
+  const { ambientPlan, ambientFrame, ribbonOf } = await import('./fx.mjs');
   const resolveFrom = (k, v) => {
     const r = rigs[k];
     if (Array.isArray(v)) return v;
@@ -1087,7 +1087,8 @@ async function animKit() {
     if (A.spores) A.spores.from = resolveFrom(k, A.spores.from);
     if (A.swirl) A.swirl.at = resolveFrom(k, A.swirl.at);
     const pl = ambientPlan(cv, rigs[k], A, FR, 11 + k);
-    console.log(`${cv.key.padEnd(13)} 특성 효과 · ${Object.keys(A).join('·')}${pl.shine ? ' · 광택 칸 ' + pl.shine.map(s => s.set.size).join('/') : ''}${pl.gems ? ` · 수정 면 ${pl.gems.facets.length}` : ''}${pl.bubbles ? ` · 거품 칸 ${pl.bubbles.cells.length}` : ''}${pl.drips ? ` · 물방울 ${pl.drips.tips.length}곳` : ''}${pl.twinkle ? ` · 반짝 칸 ${pl.twinkle.cells.length}` : ''}`);
+    if (pl.flow) rigs[k].ribbon = ribbonOf(pl.flow);   // 그려진 리본 물결(2026-10-22)
+    console.log(`${cv.key.padEnd(13)} 특성 효과 · ${Object.keys(A).join('·')}${pl.flow ? ` · 흐르는 무늬 ${pl.flow.cells}칸 ${pl.flow.comps.length}줄` : ''}${pl.orbit ? ` · 도는 바람 ${pl.orbit.rings.map(r => `(${r.cx.toFixed(0)},${r.cy.toFixed(0)} ±${r.rx.toFixed(0)})`).join(' ')}` : ''}${pl.shine ? ' · 광택 칸 ' + pl.shine.map(s => s.set.size).join('/') : ''}${pl.gems ? ` · 수정 면 ${pl.gems.facets.length}` : ''}${pl.bubbles ? ` · 거품 칸 ${pl.bubbles.cells.length}` : ''}${pl.drips ? ` · 물방울 ${pl.drips.tips.length}곳` : ''}${pl.twinkle ? ` · 반짝 칸 ${pl.twinkle.cells.length}` : ''}`);
     return pl;
   });
   // 불 재질 = 가장 밝은 단이 밝고 선명한 주황·노랑인 재질
