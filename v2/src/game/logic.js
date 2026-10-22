@@ -525,6 +525,7 @@ export function setProfile(s, o) {
   if (o.title != null) { need(s.titles.includes(o.title), '없는 칭호'); pf.title = o.title; }
   if (o.avatar != null) { need(s.discovered.includes(o.avatar), '만난 식물만 대표로'); pf.avatar = o.avatar; }
   if (o.color != null) { const i = o.color | 0; need(i >= 0 && i < BANNER_LV.length, '없는 배너'); need((s.user.level || 1) >= BANNER_LV[i], `재배사 Lv${BANNER_LV[i]}에 열려요`); pf.color = i; }   // 배너 여덟(2026-10-22)
+  if (o.rankHide != null) pf.rankHide = !!o.rankHide;   // 순위표에 이름 숨김(2026-10-22 — 기본 = 보임)
   return {};
 }
 const fixActive = s => { s.active = Math.max(0, Math.min(s.active, s.plants.length - 1)); s.team = (s.team || []).filter(i => i < s.plants.length); };
@@ -1005,6 +1006,7 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
       if (T.wins >= nW) {   // 이번 라운드 통과 → 다음 라운드(결승 통과 = 다음 단계 대회)
         const i = ROUNDS.indexOf(T.round);
         if (i >= ROUNDS.length - 1) {
+          if (tier >= TIERS.length - 1) T.stars = (T.stars || 0) + 1;   // 풀로세움 별: 맨 위 단계에서 결승을 넘을 때마다 하나(순위표 — 2026-10-22, 시즌이 바뀌면 단계와 함께 처음부터)
           T.tier = TIERS[Math.min(TIERS.length - 1, tier + 1)]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.round = ROUNDS[0]; T.bestOf = roundBest(TIERS.indexOf(T.tier)); r.credits += 300; r.parts = (r.parts || 0) + 5; r.tierUp = T.tier;
           leaguesOf(s); if (s.season) s.season.best[s.league] = Math.max(s.season.best[s.league] || 0, TIERS.indexOf(T.tier));   // 시즌 최고 기록
         }

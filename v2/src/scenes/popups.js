@@ -18,6 +18,7 @@ import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
 import { drawGuide } from './guide.js';
 import { draftScreen, openDraft } from './draft.js';
+import { noticeSheet } from './notice.js';
 import { seedPickScreen } from './seedpick.js';
 import { teamPickScreen } from './teampick.js';
 
@@ -231,7 +232,7 @@ export function cutAsk(app, p, after) {
 
 // ── ④ 설정 ──
 function settingsSheet(app) {
-  const { g, W, H, input } = app, u = app.user, online = !net.offline && !!u, x = 14, w = W - 28, h = online ? 330 : 290, y = 70, PT = T.ptext;
+  const { g, W, H, input } = app, u = app.user, online = !net.offline && !!u, x = 14, w = W - 28, h = online ? 370 : 290, y = 70, PT = T.ptext;   // 온라인 = 순위표 이름 한 줄 더(2026-10-22)
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('st_block', 0, 0, W, H, () => { app.sheet = null; });
   input.hit('st_in', x, y, w, h, () => {});
@@ -251,6 +252,8 @@ function settingsSheet(app) {
   const half = Math.floor((w - 28 - 8) / 2);
   button(app, 'st_sfx', x + 14, yy, half, 30, SOUND.sfx ? '효과음 켬' : '효과음 끔', { style: SOUND.sfx ? 'night' : 'off', icon: 'sparkle', iconTint: true, onTap: () => setSfxOn(!SOUND.sfx) });
   button(app, 'st_music', x + 14 + half + 8, yy, half, 30, SOUND.music ? '음악 켬' : '음악 끔', { style: SOUND.music ? 'night' : 'off', icon: 'heart', iconTint: true, onTap: () => setMusicOn(!SOUND.music) }); yy += 40;
+  // 순위표에 이름 보이기(2026-10-22 — 로드맵 '이름 공개 여부 설정', 기본 = 보임 · 숨기면 '익명 재배사')
+  if (online && app.state && app.state.profile) { const hide = !!app.state.profile.rankHide; button(app, 'st_rank', x + 14, yy, w - 28, 30, hide ? '순위표에 이름 숨김' : '순위표에 이름 보임', { style: hide ? 'off' : 'night', icon: 'trophy', iconTint: true, onTap: () => app.act('setProfile', { rankHide: !hide }) }); yy += 40; }
   if (!net.offline && u) button(app, 'st_out', x + 14, yy, w - 28, 30, '로그아웃', { style: 'red', onTap: () => { app.sheet = null; ask(app, '로그아웃할까요?', u.provider === 'google' ? "다시 들어올 땐 '구글로 계속하기'를 누르면 돼요" : '다시 들어올 땐 아이디·비밀번호가 필요해요', () => app.logout()); } });
   yy += 40;
   if (!net.offline && u) button(app, 'st_del', x + 14, yy, half, 30, '계정 지우기', { style: 'off', onTap: () => { app.sheet = null; deleteForm(app); } });
@@ -302,6 +305,7 @@ export function drawOverlays(app) {
   if (app.seedpick) return seedPickScreen(app, app.seedpick);   // 종자 거름 고르기(scenes/seedpick.js)
   if (app.teampick) return teamPickScreen(app, app.teampick);   // 3:3 팀 고르기(scenes/teampick.js — 홈 · 친구 방)
   if (app.sheet === 'settings') return settingsSheet(app);
+  if (app.sheet === 'notice') return noticeSheet(app);   // 공지(scenes/notice.js — 2026-10-22)
   if (s && s.pending && s.pending.length && !NO_CHEST.has(app.router.name) && !app.router.phase) {
     const item = s.pending.find(x => !(app.ackedLv && app.ackedLv.has(x.kind === 'season' ? 'season' + x.n : x.level)));
     if (item && (item.kind === 'level' || item.kind === 'season')) return levelChest(app, item);

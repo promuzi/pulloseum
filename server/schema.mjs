@@ -12,6 +12,7 @@ export const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS coupon_uses (code TEXT NOT NULL, user_id INTEGER NOT NULL, t INTEGER NOT NULL, PRIMARY KEY (code, user_id))',
   'CREATE TABLE IF NOT EXISTS rooms (code TEXT PRIMARY KEY, data TEXT NOT NULL, touched INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS save_backups (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, ver INTEGER NOT NULL, t INTEGER NOT NULL, state TEXT NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS notices (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, body TEXT NOT NULL, created INTEGER NOT NULL)',   // 공지(2026-10-22 — 관리 열쇠로 올림 · 화면은 새 공지가 있으면 열 때 한 번)
   'CREATE INDEX IF NOT EXISTS save_backups_user ON save_backups(user_id, id)',
   'CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id)',
   'CREATE INDEX IF NOT EXISTS coupon_uses_user ON coupon_uses(user_id)',
@@ -64,6 +65,12 @@ export const STMTS = {
   putRoom: 'INSERT INTO rooms (code, data, touched) VALUES (?, ?, ?) ON CONFLICT(code) DO UPDATE SET data = excluded.data, touched = excluded.touched',
   delRoom: 'DELETE FROM rooms WHERE code = ?',
   allRooms: 'SELECT code, data FROM rooms',
+  // 공지(2026-10-22): 올리기 · 지우기 = 관리 열쇠(api.mjs POST /api/admin/notice — server/notice.mjs), 보기 = 누구나 최근 열 개
+  addNotice: 'INSERT INTO notices (title, body, created) VALUES (?, ?, ?)',
+  notices: 'SELECT id, title, body, created FROM notices ORDER BY id DESC LIMIT 10',
+  delNotice: 'DELETE FROM notices WHERE id = ?',
+  // 순위표(2026-10-22): 계정 별명 + 저장(리그 기록 · 대표 식물 · 이름 숨김) — api.mjs 가 1분마다 다시 셈
+  rankSaves: 'SELECT u.id AS id, u.nickname AS nickname, s.state AS state FROM users u JOIN saves s ON s.user_id = u.id',
   // 보고서용 내보내기(관리 열쇠가 있을 때만 — api.mjs GET /api/admin/export): 계정은 번호 · 만든 때 · 마지막 접속만(아이디 · 비밀번호 · IP 없음)
   exportUsers: 'SELECT id, created, last_seen FROM users',
   exportEvents: 'SELECT user_id, t, kind, data FROM events',

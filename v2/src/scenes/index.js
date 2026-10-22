@@ -17,6 +17,7 @@ import { storage } from './storage.js';
 import { matching } from './matching.js';
 import { hangar } from './hangar.js';
 import { room } from './room.js';
+import { ranks } from './ranks.js';
 import { cardFront } from '../art/skillcard.js';
 import { drawPortrait, BIG } from '../art/sprites.js';
 import { SPECIES } from '../game/catalog.js';
@@ -109,4 +110,4 @@ const fxlab = {
   },
 };
 
-export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, icons, cardlab, portraitlab, fxlab };
+export const SCENES = { title, starter, room, home, battle, result, bag, plant, explore, shop, nursery, storage, matching, hangar, dex, ranks, icons, cardlab, portraitlab, fxlab };

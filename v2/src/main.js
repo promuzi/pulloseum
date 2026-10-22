@@ -186,6 +186,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   setUi(opt.ui || UI_DEFAULT); holoFx.on = !!opt.holoFx;   // 정지 촬영엔 창 띠리릭 끔(opt.holoFx 로 켬)
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));
   if (opt.profile) Object.assign(app.state.profile, opt.profile);   // 배너 · 대표 식물 촬영(2026-10-22)
+  app.shotOnline = !!opt.online; app.noticeChecked = true; if (opt.notices) { app.notices = opt.notices; app.sheet = 'notice'; }   // 온라인 단추(순위 · 공지) · 공지 창 촬영(2026-10-22)
   if (opt.level2) app.state.user.level = opt.level2;
   if (opt.seedsAdd) opt.seedsAdd.forEach((o, i) => app.state.seeds.push({ id: 'shot_sa' + i, ...o }));   // 종자 가방 카드 · 정렬 촬영(2026-10-22 — 여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금)
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)

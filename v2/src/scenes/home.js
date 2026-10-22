@@ -13,6 +13,8 @@ import { openTeamPick } from './teampick.js';
 import { inkOf } from '../core/text.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
 import { BANNERS, BANNER_ORDER, bannerOf, bannerInk, bannerPanel, avatarFrame, drawAvatar } from '../art/profile.js';
+import { net } from '../net/api.js';
+import { checkNotices, openNotices, hasNewNotice } from './notice.js';
 
 // 홈 그림마다 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
 //  loft = 코덱스 원형 방(2026-10-15 사용자 "코덱스 판이 마음에 들어" — 기본), cell = 흰 쿠션 타일 독방, room = 클로드 원기둥 방, ship = 옛 우주선 방
@@ -23,6 +25,9 @@ export const HOME_PEDESTAL = { room: [135, 262], cell: [135, 262], ship: [135, 2
 //  정체성(타입·속성·단계)은 이름 아래 작은 꼬리표, 전투 종류·대회 현황은 출전 단추 왼쪽 카드(누르면 종류 고르기).
 const CARD = { x: 6, w: 92, h: 25, gap: 4, grp: 8, growH: 31 };
 const SIDE = { w: 50, h: 50, gap: 7 };
+// 오른쪽 기둥 단추 [id, 아이콘, 글자, 누르면, 빨간 점] — 순위 · 공지는 온라인에서만(2026-10-22)
+const SIDE_BTNS = app => [['home_bag', 'navBag', '가방', () => app.go('bag')], ['home_dex', 'navBook', '도감', () => app.go('dex')],
+  ...(net.offline && !app.shotOnline ? [] : [['home_rank', 'navRank', '순위', () => app.go('ranks')], ['home_notice', 'navNotice', '공지', () => openNotices(app), hasNewNotice(app)]])];   // shotOnline = 촬영
 const NAME_Y = 404, TAG_Y = 433, DOT_Y = 458, BATTLE_Y = 467, BATTLE_H = 54;
 // 짧은 화면(높이 480~599 — 휴대폰 브라우저는 주소 줄 때문에 거의 다 이쪽): 배너 아래 전부(방 그림 · 식물 · 옆 창 · 이름표 · 전투 줄)를 같이 올려 아래 줄이 탭 줄 위에 붙게. 방 그림 윗부분(천장)이 배너 뒤로 잘림
 export const homeDy = app => Math.min(0, app.H - 600);
@@ -128,7 +133,8 @@ export const home = {
       return;
     }
     // 옆 창 두 줄: 세로 가운데 = 식물 가운데(이름표 위·배너 아래로 넘지 않게) · 오른쪽 = 가방 · 도감(관리 단추는 뺌 — 식물을 누르면 식물 관리, 2026-10-16 사용자)
-    const LH = 4 * CARD.h + 3 * CARD.gap + CARD.grp + CARD.growH, RH = 2 * SIDE.h + SIDE.gap;
+    const NB = SIDE_BTNS(app).length, LH = 4 * CARD.h + 3 * CARD.gap + CARD.grp + CARD.growH, RH = NB * SIDE.h + (NB - 1) * SIDE.gap;
+    if (live) checkNotices(app);   // 새 공지가 있으면 처음 한 번(scenes/notice.js)
     const fit = h0 => Math.max(BANNER.y + BANNER.h + 8, Math.min(NY - 6 - h0, this.colCy - h0 / 2));
     this.specs(app, p, fit(LH));
     this.sideButtons(app, fit(RH), live);
@@ -182,13 +188,15 @@ export const home = {
     }
     this.specsR = [CARD.x, Math.round(y0), CARD.w, y - CARD.gap - Math.round(y0)];   // 처음 안내가 가리킬 자리
   },
-  // 오른쪽 큰 단추: 가방 · 도감(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에)
+  // 오른쪽 큰 단추: 가방 · 도감 · 순위 · 공지(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에)
+  //  위에서부터 차곡차곡(2026-10-18 사용자 "대기실 식물 우측에 차곡차곡 쌓아 줘" — 한 기둥 = 같은 크기) · 새 공지가 있으면 공지 단추에 빨간 점
   sideButtons(app, y0, live) {
     const { g, W } = app, x = W - 6 - SIDE.w, st = T.btn.second;
-    [['home_bag', 'navBag', '가방', () => app.go('bag')], ['home_dex', 'navBook', '도감', () => app.go('dex')]].forEach(([id, ic, label, go], i) => {
+    SIDE_BTNS(app).forEach(([id, ic, label, go, dot], i) => {
       const y = Math.round(y0) + i * (SIDE.h + SIDE.gap), { yy, inner } = btnBody(g, x, y, SIDE.w, SIDE.h, st, app.input.isPressed(id)), im = icon(ic);
       g.img(im, x + Math.floor((SIDE.w - im.width * 2) / 2), yy + 3 + Math.floor((30 - im.height * 2) / 2), 2);   // 2배 도트 아이콘
       g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: st.text, align: 'center' });
+      if (dot) { g.rect(x + SIDE.w - 9, y + 3, 6, 6, '#2e222f'); g.rect(x + SIDE.w - 8, y + 4, 4, 4, '#ff5a5a'); }
       if (live) app.input.hit(id, x, y, SIDE.w, SIDE.h, go, 3);
     });
   },

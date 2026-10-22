@@ -201,6 +201,18 @@ try {
   ok(r3.room && r3.room.phase === 'lobby' && r3.room.mode === 'swap3' && r3.room.last && r3.room.last.mode === 'swap3', '3:3 끝 → 같은 방 · 방식 그대로');
   await call('/api/room/leave', {}, B.token); await call('/api/room/leave', {}, A.token);
   la3.stop(); lb3.stop();
+  // ── 공지 · 순위표(2026-10-22) ──
+  const nt = await call('/api/notices');
+  ok(nt.status === 200 && Array.isArray(nt.notices), '공지 보기 = 누구나');
+  ok((await call('/api/admin/notice', { title: 'x', body: 'y' })).status === 404, '공지 올리기 = 관리 열쇠 없으면 없는 주소');
+  const rk = await call('/api/ranks', null, A.token), rkOpen = await call('/api/ranks?league=open', null, A.token);
+  ok(rk.status === 200 && rk.league === 'sprout' && Array.isArray(rk.top) && rkOpen.league === 'open' && (await call('/api/ranks')).status === 401, `순위표 = 로그인한 계정 · 리그마다(새싹 ${rk.total}명)`);
+  const meRow = rk.top.find(r => r.me);
+  if (meRow) {
+    await call('/api/act', { op: 'setProfile', args: { rankHide: true } }, A.token);
+    await sleep(10);
+    ok(rk.top.every(r => !('id' in r)) && meRow.name, '순위표에 계정 번호는 안 나감 · 이름 보임(기본)');
+  } else ok(rk.top.every(r => !('id' in r)), '순위표에 계정 번호는 안 나감');
   // ── 로그아웃 ──
   await call('/api/logout', {}, L1.token);
   ok((await call('/api/me', null, L1.token)).status === 401, '로그아웃한 열쇠는 못 씀');

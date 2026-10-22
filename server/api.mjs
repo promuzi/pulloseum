@@ -3,8 +3,8 @@
 //  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드 · 기다리는 요청)
 import { hashPass, checkPass, newSession, userOfToken, endSession, allowTry, LOGIN_RE } from './auth.mjs';
 import { timingSafeEqual } from 'node:crypto';
-import { Err, cleanCoupon, SAVE_VER } from '../v2/src/game/logic.js';
-import { STARTERS } from '../v2/src/game/catalog.js';
+import { Err, cleanCoupon, SAVE_VER, ROUNDS } from '../v2/src/game/logic.js';
+import { STARTERS, LEAGUES, LEAGUE_KEYS, TIERS, seasonOf } from '../v2/src/game/catalog.js';
 
 export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
 
@@ -55,6 +55,27 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     rate('u' + u.id, now);
     q.seen.run(now, u.id);
     return u;
+  }
+  // 순위표(2026-10-22 — 로드맵 '시즌 · 리그별 순위(단계 · 풀로세움 별 수) + 이름 공개 여부'): 저장마다 리그 기록을 읽어 1분 동안 같은 표를 씀
+  //  순서 = 단계 → 풀로세움 별(맨 위 단계에서 결승을 넘을 때마다 하나) → 라운드 → 이번 라운드 이긴 판. 이번 시즌 기록만 · 한 판도 안 한 기록(브론즈 예선 0승 0패)은 뺌
+  //  이름 = 프로필 이름(별명) — 프로필에서 '순위표에 이름 숨김'이면 이름 없이(화면이 '익명 재배사')
+  let rankCache = null;
+  function rankRows(now) {
+    if (rankCache && now - rankCache.t < 60000) return rankCache.rows;
+    const rows = [];
+    for (const r of q.rankSaves.all()) {
+      let s; try { s = JSON.parse(r.state); } catch { continue; }
+      if (!s || !s.tournament) continue;
+      const pf = s.profile || {}, L = {};
+      for (const k of LEAGUE_KEYS) {
+        const T = k === (s.league || 'sprout') ? s.tournament : (s.leagues || {})[k];
+        if (!T || (T.tier === TIERS[0] && T.round === ROUNDS[0] && !T.wins && !T.losses && !T.stars)) continue;
+        L[k] = { tier: Math.max(0, TIERS.indexOf(T.tier)), round: Math.max(0, ROUNDS.indexOf(T.round)), stars: T.stars || 0, wins: T.wins || 0 };
+      }
+      rows.push({ id: r.id, name: pf.rankHide ? null : String(pf.name || r.nickname || '').slice(0, 12), avatar: pf.avatar || null, level: (s.user && s.user.level) || 1, season: s.season ? s.season.n : 0, L });
+    }
+    rankCache = { t: now, rows };
+    return rows;
   }
 
   const API = {
@@ -119,6 +140,16 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       return { ok: true };
     },
     'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: pub(u), ...game.state(u.id, now) }; },
+    // 공지(누구나 — 로그인 전 처음 화면에서도): 최근 열 개, 새것부터
+    'GET /api/notices': () => ({ notices: q.notices.all() }),
+    // 순위표(로그인한 계정): ?league=sprout|growing|open — 위 50명 + 내 자리
+    'GET /api/ranks': (req, b, now) => {
+      const u = authed(req, now), lg = LEAGUES[req.query.get('league')] ? req.query.get('league') : 'sprout', n = seasonOf(now);
+      const key = r => r.L[lg], list = rankRows(now).filter(r => r.season === n && key(r));
+      list.sort((a, c) => key(c).tier - key(a).tier || key(c).stars - key(a).stars || key(c).round - key(a).round || key(c).wins - key(a).wins || a.id - c.id);
+      const mi = list.findIndex(r => r.id === u.id);
+      return { league: lg, season: n, total: list.length, top: list.slice(0, 50).map((r, i) => ({ rank: i + 1, me: r.id === u.id, name: r.name, avatar: r.avatar, level: r.level, ...key(r) })), mine: mi >= 0 ? { rank: mi + 1, ...key(list[mi]) } : null };
+    },
     // 쿠폰 받기(2026-10-17 사용자 "쿠폰코드 입력해서 상품 주는거"): 계정마다 한 번 · 다 쓰인 · 기간 지난 쿠폰은 안 됨 · 틀린 번호를 마구 넣지 못하게 10분에 12번까지
     'POST /api/coupon': (req, b, now) => {
       const u = authed(req, now);
@@ -174,6 +205,15 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       const max = Math.max(0, Math.floor(+b.max || 0)), expires = +b.days > 0 ? now + Math.round(+b.days * 864e5) : 0;
       q.putCoupon.run(code, JSON.stringify(reward), max, expires, String(b.note || '').slice(0, 60), now);
       return { ok: true, coupon: { code, reward, max, expires } };
+    },
+    // 공지 올리기 · 지우기(관리 열쇠 — server/notice.mjs): { title, body } = 새 공지 · { delete: 번호 } = 지움
+    'POST /api/admin/notice': (req, b, now) => {
+      if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요');
+      if (b.delete) { q.delNotice.run(+b.delete); return { ok: true, deleted: +b.delete }; }
+      const title = String(b.title || '').trim().slice(0, 40), body = String(b.body || '').trim().slice(0, 1200);
+      if (!title || !body) throw new Err('제목과 내용을 써 주세요');
+      const r = q.addNotice.run(title, body, now);
+      return { ok: true, id: Number(r.lastInsertRowid) };
     },
     'GET /api/admin/coupons': (req) => {
       if (!isAdmin(req)) throw new HttpErr(404, '없는 주소예요');
