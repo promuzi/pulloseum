@@ -3,6 +3,7 @@ import { icon, fruitIcon } from '../art/icons.js';
 import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
 import { plainBg } from '../art/bg.js';
+import { hourNow, dayAt, dayLight, tintHex, drawSky, tintedBg } from '../art/daylight.js';
 import { miniStars } from './common.js';
 import { farmSlots, FARM_MAX, SKILLS, STORE_MAX, FORMS, SPECIES, JONG } from '../game/catalog.js';
 import { ELEMENT } from '../art/palette.js';
@@ -26,17 +27,27 @@ import { openDraft } from './draft.js';
 const LIFT = 36, LIFT_MS = 480, PITCH = 110;                       // 솟는 높이(칸, 화분 밑 피스톤이 보이게) · 시간 · 끌기 한 줄 = 110칸
 const BOX = { 2: { w: 5.2, gap: 6.4 }, 3: { w: 3.7, gap: 4.25 } };  // 상자 가로·열 간격(세계 단위)
 const BD = 2.7, BH = 0.95;                                          // 상자 깊이 · 높이
-const GR = ['#10261a', '#183a22', '#21502b', '#2c6834', '#3a823e', '#4c9a48', '#62b254', '#86cc66', '#a8e084'];   // 잔디 한 벌(상자 윗면 · 심은 자리 덤불 · 화분 마개)
-const CER = { ink: '#252d3c', lo: '#8f99ad', mid: '#d6dce5', hi: '#eef2f6', top: '#fbfcfd', side: '#aeb8c8', lid: '#bcc5d2', lidLo: '#9aa4b6' };
-const MET = { tread: '#222a36', groove: '#191f29', noseHi: '#8794aa', riser: '#12171f', cleat: '#1b212b', led: '#2a6f94' };
+let GR = ['#10261a', '#183a22', '#21502b', '#2c6834', '#3a823e', '#4c9a48', '#62b254', '#86cc66', '#a8e084'];   // 잔디 한 벌(상자 윗면 · 심은 자리 덤불 · 화분 마개)
+let CER = { ink: '#252d3c', lo: '#8f99ad', mid: '#d6dce5', hi: '#eef2f6', top: '#fbfcfd', side: '#aeb8c8', lid: '#bcc5d2', lidLo: '#9aa4b6' };
+let MET = { tread: '#222a36', groove: '#191f29', noseHi: '#8794aa', riser: '#12171f', cleat: '#1b212b', led: '#2a6f94' };
 const SORTS = [['plant', '심은 순'], ['star', '별 순'], ['fruit', '열매 순'], ['name', '이름 순']];
 const hnum = str => { let h = 7; for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) | 0; return h >>> 0; };
 const ease = k => 1 - (1 - k) ** 3;
 const ease2 = k => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-// 스마트팜 빛(식물 노멀맵 조명 — art/plantlight.js, 2026-10-22 사용자 "스마트팜 등 다양하게"): 뚫린 천장의 하늘빛이 바로 위에서(식물마다 제 머리 위 — 선반 어디서나 같은 방향)
-const SKY_C = [0.9, 0.96, 1];
-const farmLight = (x, y, id) => ({ amb: 0.88, lights: [{ x, y: y - 300, z: 150, r: 420, c: SKY_C, I: 0.62 }], id });
+// 스마트팜 빛(식물 노멀맵 조명 — art/plantlight.js, 2026-10-22 사용자 "스마트팜 등 다양하게"): 천장 창으로 드는 해 · 달 빛 — 시각마다 방향 · 색이 바뀜(art/daylight.js),
+//  해 · 달은 멀리서 오는 빛이라 식물마다 같은 방향
+const farmLight = (x, y, id) => dayLight(nursery.day || dayAt(12), x, y, id);
+// 방 물들임: 계단 · 상자 · 잔디 · 구멍 쇠붙이 색 한 벌을 그 시각 빛으로(불빛 칸 = 계단 숨은 빛줄 · 구멍 푸른 불 · 상자 상태 불빛은 스스로 빛나 그대로)
+const GR0 = GR, MET0 = MET, CER0 = CER;
+let tint = [1, 1, 1];
+const tc = hex => tintHex(hex, tint);
+function setTint(t) {
+  tint = t;
+  GR = GR0.map(tc);
+  MET = Object.fromEntries(Object.entries(MET0).map(([k, v]) => [k, k === 'led' ? v : tc(v)]));
+  CER = Object.fromEntries(Object.entries(CER0).map(([k, v]) => [k, tc(v)]));
+}
 const hsh = (a, b, c) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(c, 1442695041); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // 잔디 한 줄(왼쪽 x0 ~ 오른쪽 x1, 위 → 아래 k 0~1): 앞쪽일수록 밝고, 상자 자리에 붙은 풀잎 점(움직여도 무늬가 상자를 따라감)
@@ -58,6 +69,7 @@ export const nursery = {
   theme: 'loft',
   enter(p = {}) {
     this.scroll = 0; this.vel = 0; this.dragging = false; this.sel = null; this.selT = -1e9; this.prevSel = null; this.prevT = -1e9; this.mods = new Map(); this.lastT = null; this.cols = +p.cols || this.cols || 2; this.sortI = this.sortI || 0; this.order = null;   // ?cols=3 = 3열로 열기(검토용)
+    this.hourOver = p.hour ?? null;   // ?hour=18.5 = 그 시각으로 보기(검토 · 촬영 — 없으면 이 기기 시계)
     // 종자를 심고 오면(가방 → 심기): 그 자리로 굴려 고르고 화분이 솟은 뒤 씨앗이 떨어져 싹이 자라 나옴(2026-10-16 사용자 "심으면 식물 팜 원래 창으로 나와서 심긴 거 확인" · "종자 심을 때 연출")
     this.plantFx = p.planted ? { id: 'p' + p.planted, t0: null, seen: false } : null;
   },
@@ -101,7 +113,10 @@ export const nursery = {
     const M = BGMETA.nursery_lift, bg = BGIMG.nursery_lift;
     // 짧은 화면(480~599): 계단 그림 · 상자를 같이 올림(뒷줄은 위 줄 뒤로 — 끌어서 봄) · 아래 판도 같은 만큼 올라감
     const dy = Math.min(0, H - 600);
-    if (bg) g.img(bg, 0, dy); else plainBg(g, W, H, t);
+    // 하루(art/daylight.js — 2026-10-22 사용자 "현실 시간에 따라 아침 낮 노을 밤"): 방 · 계단 · 상자는 그 시각 빛으로 물들이고 천장 창은 그 시각 하늘, 식물은 해 · 달 빛
+    const D = this.day = dayAt(hourNow(this.hourOver)), tk = D.tint.map(v => v.toFixed(3)).join(',');
+    if (this.tintKey !== tk) { this.tintKey = tk; setTint(D.tint); }
+    if (bg) { g.img(tintedBg(bg, D.tint), 0, dy); drawSky(g, bg, D, t, 0, dy); } else plainBg(g, W, H, t);
     if (!M) { hud(app, s); navBar(app, 'nursery'); return; }
     const dt = this.lastT == null ? 0 : clamp((t - this.lastT) / 1000, 0, 0.05); this.lastT = t;   // 시간이 거꾸로 가도(촬영 도구 등) 0
     const C = this.cols, mx = this.maxScroll(s);
@@ -261,7 +276,9 @@ export const nursery = {
     }
     const tw = g.textW(txt, fk), gw = (showIc ? ic.width + GAP : 0) + tw, gx = x0 + Math.round((avail - gw) / 2);
     if (showIc) g.img(ic, gx, y + Math.floor((h - ic.height) / 2));
-    g.text(txt, gx + (showIc ? ic.width + GAP : 0), y + Math.round((h - glyphH(fk)) / 2), { font: fk, color: '#26303e' });
+    // 글자 = 어두워진 앞면(해 질 녘 · 밤)에선 밝게 — 물들인 앞면 밝기로 고름
+    const dim = 0.299 * tint[0] + 0.587 * tint[1] + 0.114 * tint[2] < 0.62;
+    g.text(txt, gx + (showIc ? ic.width + GAP : 0), y + Math.round((h - glyphH(fk)) / 2), { font: fk, color: dim ? '#e8f0ff' : '#26303e' });
   },
   // 상세 창 종 · 속성 · 변이 줄(아이콘 + 이름 — 변이는 그 변이 색)
   kinds(g, p, x, y, xr, P) {
@@ -286,19 +303,19 @@ export const nursery = {
   lifted(g, it, sx, sy, band, L, t) {
     const rx = 21, ry = Math.max(3, Math.min(9, Math.round(band * 0.3))), c = g.c;
     // 구멍(금속 테 → 안쪽 벽 → 깊은 바닥) + 안쪽 고리 두 겹 · 테 볼트 · 안쪽 푸른 불빛
-    g.ellipse(sx, sy, rx + 2, ry + 1, '#4a5568');
-    g.ellipse(sx, sy, rx + 1, ry + 1, '#7a879e');
-    g.ellipse(sx, sy, rx, ry, '#2e3646');
-    g.ellipse(sx, sy + 1, rx - 1, Math.max(1, ry - 1), '#141a24');
-    g.ellipseRing(sx, sy + 1, rx - 3, Math.max(1, ry - 1), '#2a3342', 0);
-    g.ellipse(sx, sy + 1, Math.max(2, rx - 6), Math.max(1, ry - 2), '#080b10');
-    for (const [dx, dy] of [[-rx - 1, 0], [rx + 1, 0], [-Math.round(rx * 0.6), ry], [Math.round(rx * 0.6), ry]]) g.px(sx + dx, sy + dy, '#c2cad8');
-    for (const dx of [-9, -3, 3, 9]) g.px(sx + dx, sy - Math.max(1, ry - 1) + 1, '#4a8edc');
+    g.ellipse(sx, sy, rx + 2, ry + 1, tc('#4a5568'));
+    g.ellipse(sx, sy, rx + 1, ry + 1, tc('#7a879e'));
+    g.ellipse(sx, sy, rx, ry, tc('#2e3646'));
+    g.ellipse(sx, sy + 1, rx - 1, Math.max(1, ry - 1), tc('#141a24'));
+    g.ellipseRing(sx, sy + 1, rx - 3, Math.max(1, ry - 1), tc('#2a3342'), 0);
+    g.ellipse(sx, sy + 1, Math.max(2, rx - 6), Math.max(1, ry - 2), tc('#080b10'));
+    for (const [dx, dy] of [[-rx - 1, 0], [rx + 1, 0], [-Math.round(rx * 0.6), ry], [Math.round(rx * 0.6), ry]]) g.px(sx + dx, sy + dy, tc('#c2cad8'));
+    for (const dx of [-9, -3, 3, 9]) g.px(sx + dx, sy - Math.max(1, ry - 1) + 1, '#4a8edc');   // 푸른 불빛 = 스스로 빛남(물들이지 않음)
     const soilY = sy - L, potFoot = soilY + 21;   // 화분 흙 줄 · 굽(큰 판: 흙 75.7 → 굽 96.55)
     if (potFoot < sy) {   // 피스톤: 굵은 금속 막대(마디 하나) + 화분 받침 원판(테 밝게)
-      g.rect(sx - 3, potFoot, 7, sy - potFoot + 2, '#4a5568'); g.rect(sx - 2, potFoot, 1, sy - potFoot + 2, '#8a97ae'); g.rect(sx + 3, potFoot, 1, sy - potFoot + 2, '#2e3646');
-      const mid = Math.round((potFoot + sy) / 2); g.rect(sx - 4, mid, 9, 1, '#2e3646'); g.rect(sx - 4, mid - 1, 9, 1, '#7a879e');
-      g.ellipse(sx, potFoot, 13, 3, '#3a4458'); g.ellipse(sx, potFoot - 1, 12, 2, '#8a97ae');
+      g.rect(sx - 3, potFoot, 7, sy - potFoot + 2, tc('#4a5568')); g.rect(sx - 2, potFoot, 1, sy - potFoot + 2, tc('#8a97ae')); g.rect(sx + 3, potFoot, 1, sy - potFoot + 2, tc('#2e3646'));
+      const mid = Math.round((potFoot + sy) / 2); g.rect(sx - 4, mid, 9, 1, tc('#2e3646')); g.rect(sx - 4, mid - 1, 9, 1, tc('#7a879e'));
+      g.ellipse(sx, potFoot, 13, 3, tc('#3a4458')); g.ellipse(sx, potFoot - 1, 12, 2, tc('#8a97ae'));
     }
     // 화분(아직 구멍 속인 아래쪽은 앞 잔디에 가려짐: 구멍 가운데 줄 위 + 구멍 안만 보임)
     c.save(); c.beginPath(); c.rect(0, 0, 400, sy);
