@@ -371,9 +371,12 @@ export function flowFrame(f, plan, im, at, put) {
   //  두께는 줄기마다 숨 쉬듯 굵어졌다 가늘어짐(thick). 길 = 고리가 시소처럼 기울었다 돌아옴(tilt) + 둘레를 따라 흐르는 물결(wave · waveK번) + 고리 전체 오르내림 +
   //  줄기마다 머리가 높은 비스듬함(lift) → 위아래로 꿀렁. 앞쪽 반 = 식물 앞(식물 위에선 식물 색과 섞어 비치게 — 가운데 줄 진하게, 가장자리 옅게),
   //  뒤쪽 반 = 식물 뒤. 주기는 모두 한 바퀴(FR장)의 정수배라 이음매 없음. 전엔 납작한 타원 한 줄 + 식물 위에선 가운데 줄만이라 '일자로 빙빙'
+  //  같은 날 사용자 '바람은 좀더 꿀렁하게 웨이브를 타는 느낌을 줘. 바람처럼 한바퀴(롤로코스터처럼) 돌거나':
+  //   길 = 고리에 고정된 언덕 셋(wave 3.4칸 · waveK 3 · waveM 0 — 언덕은 그대로, 바람 줄기가 언덕을 타고 오르내림) +
+  //   마지막 고리 앞쪽(들어오는 쪽)에 롤러코스터 고리 하나(roll — 앞으로 가다 위로 솟아 거꾸로 넘어 내려와 다시 앞으로: 길에 늘어진 사이클로이드 x = aφ + r·sin φ, 위로 r(1 − cos φ))
   if (plan.orbit) {
     const O = plan.orbit, FR = plan.FR, dir = O.dir ?? 1, col = O.color || '#e4ebfa', dim = O.dim || '#a2acd0', hi = O.hi || '#ffffff';
-    const tau = 2 * Math.PI * f / FR, A = O.wave ?? 2, K = O.waveK ?? 2, M = O.waveM ?? 3, TW = O.thick ?? 3, NG = O.gusts ?? 2, GL = O.glen ?? (O.len ? O.len * 0.55 : 1.3), TL = O.tilt ?? 0.11, LIFT = O.lift ?? 4 + 2 * (O.rise || 0);
+    const tau = 2 * Math.PI * f / FR, A = O.wave ?? 3.4, K = O.waveK ?? 3, M = O.waveM ?? 0, TW = O.thick ?? 3, NG = O.gusts ?? 2, GL = O.glen ?? (O.len ? O.len * 0.55 : 1.3), TL = O.tilt ?? 0.06, LIFT = O.lift ?? 2 + (O.rise || 0);
     const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
     const hex = c => '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
     const solid = (x, y) => im.data[(y * W + x) * 4 + 3] >= 128;
@@ -387,10 +390,18 @@ export function flowFrame(f, plan, im, at, put) {
     O.rings.forEach((R, q) => {
       const loops = [].concat(O.loops || 1)[q % [].concat(O.loops || 1).length], c0 = at([R.cx, R.cy]), ph = q * 2.4;
       const tilt = TL * Math.sin(tau + ph), bob = 1.5 * Math.sin(tau + ph + 1.3);
-      const P = (th, u) => [c0[0] + Math.cos(th) * R.rx, c0[1] + Math.sin(th) * R.ry + tilt * Math.cos(th) * R.rx + bob + A * Math.sin(K * th - dir * M * tau + ph) - LIFT * (0.5 - u)];
+      // 롤러코스터 고리: 가운데 각 at · 반지름 r칸 · 각 너비 ±w(그 안에서 φ 0 → 2π). T = 그 자리 나아가는 방향, N = 그에 수직인 위쪽
+      const RL = O.roll === false || q !== O.rings.length - 1 ? null : { at: Math.PI / 2 - dir * 0.8, r: 4.5, w: 0.42, ...(O.roll || {}) };
+      let TX = 0, TY = 0, NX = 0, NY = 0;
+      if (RL) { TX = -dir * Math.sin(RL.at) * R.rx; TY = dir * Math.cos(RL.at) * R.ry; const l = Math.hypot(TX, TY) || 1; TX /= l; TY /= l; NX = -TY; NY = TX; if (NY > 0) { NX = -NX; NY = -NY; } }
+      const P = (th, u) => {
+        let x = c0[0] + Math.cos(th) * R.rx, y = c0[1] + Math.sin(th) * R.ry + tilt * Math.cos(th) * R.rx + bob + A * Math.sin(K * th - dir * M * tau + ph) - LIFT * (0.5 - u);
+        if (RL) { const d = ((th - RL.at) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI; if (Math.abs(d) < RL.w) { const fi = (dir > 0 ? d + RL.w : RL.w - d) / (2 * RL.w) * 2 * Math.PI; x += RL.r * (Math.sin(fi) * TX + (1 - Math.cos(fi)) * NX); y += RL.r * (Math.sin(fi) * TY + (1 - Math.cos(fi)) * NY); } }
+        return [x, y];
+      };
       for (let gi = 0; gi < NG; gi++) {
         const th0 = q * 2.1 + (O.at ?? 0) + dir * loops * tau - dir * gi * 2 * Math.PI / NG, Wt = TW * (0.66 + 0.34 * Math.sin(2 * tau + ph + gi * 2.2));
-        const steps = Math.ceil(GL * Math.max(R.rx, R.ry) * 1.7);
+        const steps = Math.ceil(GL * Math.max(R.rx, R.ry) * 2.2);
         let prev = P(th0 + dir * 0.04, 0);
         for (let s = 0; s <= steps; s++) {
           const u = s / steps, th = th0 - dir * GL * u, p = P(th, u), front = Math.sin(th) > 0;
