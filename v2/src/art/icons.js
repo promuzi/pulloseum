@@ -826,11 +826,17 @@ const built = new Map();
 export const ICONART = {}, ICONBIG = {}, ICONNAV = {};
 const NAV_ICONS = ['navShop', 'navExplore', 'navHome', 'navNursery', 'navShip', 'navBag', 'navBook'];
 const ART_ICONS = ['gear', 'coin', 'gem', 'energy', 'lock', 'fire', 'water', 'grass', 'earth', 'wind', 'bolt', 'ice', 'flower', 'cactus', 'vine', 'mushroom', 'heart', 'sword', 'shield', 'speed', 'target', 'sparkle', 'crit',
-  'st_burn', 'st_poison', 'st_wet', 'st_chill', 'st_shock', 'st_stun', 'st_bind', 'st_spore', 'st_gale', 'st_shade', 'st_taunt', 'st_weak', 'st_corrode', 'st_frozen', 'st_paral', 'st_leech', 'st_root', 'st_atkUp',
+  'st_stun', 'st_spore', 'st_frozen', 'st_paral', 'st_leech', 'st_root',
+  // 효과 아이콘 = 효과 · 스킬 분류 엑셀 v10의 효과(2026-10-22 — 짝 표 docs/superpowers/specs/2026-10-22-v2-effect-icons.md) · 환경 · 설치형 · 소환수
+  'fx_burn', 'fx_poison', 'fx_bleed', 'fx_shock', 'fx_chill', 'fx_wet', 'fx_shade', 'fx_seal', 'fx_taunt', 'fx_regen', 'fx_will', 'fx_immune', 'fx_aim', 'fx_stealth', 'fx_barrier', 'fx_evade', 'fx_reflect', 'fx_armor',
+  'env_gale', 'env_inferno', 'env_fortress', 'env_sandcastle', 'env_sandstorm', 'env_healcastle', 'env_hellfort', 'env_walkcastle', 'trap_thorn', 'summon_guard',
   'can', 'fert', 'potion', 'fuel', 'parts'];
 const EXTRA = ['chest_body', 'chest_lid', 'planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen', 'planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel', 'planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen'];
 const SMALL_KEEP = new Set(['potion', 'parts', 'energy', 'shield', 'speed', 'vine']);   // 11칸 검토(2026-10-22): 해 빛살이 사라짐 · 방패가 점 · 날개 신발이 뭉개짐 · 덩굴이 가늘어짐 · 주사기 · 부품
-const ALIAS = { st_burn: 'fire', st_poison: 'poison', st_wet: 'water', st_chill: 'ice', st_shock: 'bolt', st_stun: 'star', st_bind: 'vine', st_spore: 'mushroom', st_gale: 'wind', st_shade: 'shade', st_taunt: 'target', st_weak: 'down', st_corrode: 'potion', st_frozen: 'ice', st_paral: 'bolt', st_leech: 'seed', st_root: 'tree', st_atkUp: 'sword', fuel: 'energy', parts: 'gear' };
+const ALIAS = { st_stun: 'star', st_spore: 'mushroom', st_frozen: 'ice', st_paral: 'bolt', st_leech: 'seed', st_root: 'tree', fuel: 'energy', parts: 'gear',
+  fx_burn: 'fire', fx_poison: 'poison', fx_bleed: 'heart', fx_shock: 'bolt', fx_chill: 'ice', fx_wet: 'water', fx_shade: 'shade', fx_seal: 'lock', fx_taunt: 'target', fx_regen: 'heal', fx_will: 'star', fx_immune: 'lock',
+  fx_aim: 'crit', fx_stealth: 'down', fx_barrier: 'ice', fx_evade: 'speed', fx_reflect: 'cactus', fx_armor: 'gear', env_gale: 'wind', env_inferno: 'fire', env_fortress: 'shield', env_sandcastle: 'earth', env_sandstorm: 'wind',
+  env_healcastle: 'heal', env_hellfort: 'fire', env_walkcastle: 'earth', trap_thorn: 'cactus', summon_guard: 'shield' };
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadIconArt(base = '../assets/v2/icons/') {
   const list = [...NAV_ICONS.flatMap(n => [n, n + '_b', n + '_n']), ...ART_ICONS.flatMap(n => [n, n + '_b']), ...EXTRA], got = await Promise.all(list.map(n => loadImg(base + n + '.png'))), by = {};
@@ -844,10 +850,35 @@ export async function loadIconArt(base = '../assets/v2/icons/') {
   built.clear();   // 손그림으로 먼저 구운 것(색 입힌 것 포함)을 비워 새 그림으로
   return list.filter(n => !by[n]);
 }
+// 능력치 강화 · 약화(효과 · 스킬 분류 엑셀 v10 — 활력 · 억셈 · 가속 · 예리 · 집중 / 쇠약 · 시듦 · 둔화 · 무딤 · 교란, 2026-10-22 사용자 "아이콘은 엑셀 … 기준으로"):
+//  fx_<능력치>_up|down = 능력치 아이콘 + 오른쪽 아래 화살표(강화 = 초록 위 · 약화 = 빨강 아래) — 같은 능력치의 강화 · 약화가 짝으로 읽히고 속성 · 상태 아이콘과 안 겹침
+//  fx_all_up = 여러 능력치를 한꺼번에 올림(지금 게임의 만개 — 엑셀은 활력 · 억셈 · 가속을 따로 검) = 큰 초록 화살표
+const FX_STAT = { atk: 'sword', def: 'shield', spd: 'speed', crit: 'crit', acc: 'target' };
+const ARROW = {
+  s: ['...o...', '..oAo..', '.oaAAo.', 'oAAAAAo', 'ooooooo'],
+  b: ['.....o.....', '....oAo....', '...oaAAo...', '..oaAAAAo..', '.oAAAAAAAo.', 'oAAAAAAAAAo', 'ooooooooooo'],
+  all: ['.....o.....', '....oAo....', '...oaAAo...', '..oaAAAAo..', '.oaAAAAAAo.', 'oooAAAAAooo', '..oAAAAAo..', '..oAAAAAo..', '..oAAAAAo..', '..ooooooo..'],
+};
+function fxStat(stat, up) {
+  const paint = (cv, rows, ox, oy, flip, k = 1) => {
+    const x = cv.getContext('2d'), P = up ? { o: '#2e222f', A: '#4fd36a', a: '#b8f5c4' } : { o: '#2e222f', A: '#ff5050', a: '#ffb0a8' };
+    rows.forEach((row, j) => { const r = flip ? rows[rows.length - 1 - j] : row; for (let i = 0; i < r.length; i++) { const col = P[r[i]]; if (col) { x.fillStyle = col; x.fillRect(ox + i * k, oy + j * k, k, k); } } });
+  };
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  if (stat === 'all') { const c = mk(11, 10); paint(c, ARROW.all, 0, 0, false); c.big = mk(22, 20); paint(c.big, ARROW.all, 0, 0, false, 2); return c; }
+  const base = icon(FX_STAT[stat]), w = base.naturalWidth || base.width, h = base.naturalHeight || base.height, c = mk(Math.max(w, 9), Math.max(h, 9));
+  c.getContext('2d').drawImage(base, 0, 0);
+  paint(c, ARROW.s, c.width - 7, c.height - 5, !up);
+  const B = ICONBIG[FX_STAT[stat]];
+  if (B) { const bw = B.naturalWidth || B.width, bh = B.naturalHeight || B.height; c.big = mk(bw, bh); c.big.getContext('2d').drawImage(B, 0, 0); paint(c.big, ARROW.b, bw - 11, bh - 7, !up); }
+  return c;
+}
 export function icon(name) {
   const a = ICONART[name]; if (a) return a;
   let c = built.get(name);
   if (c) return c;
+  const fm = /^fx_(atk|def|spd|crit|acc|all)_(up|down)$/.exec(name);
+  if (fm) { c = fxStat(fm[1], fm[2] === 'up'); built.set(name, c); return c; }
   const src = ICON_SRC[name];
   if (!src) return ALIAS[name] ? icon(ALIAS[name]) : null;
   const h = src.length, w = Math.max(...src.map(r => r.length));

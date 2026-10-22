@@ -223,6 +223,7 @@ export const SHOTS = [
   ['20_guide_dex_0', 'dex', {}, { guide: 0 }],
   ['98_cardlab', 'cardlab', {}],   // 카드 추가 표시 검토판
   ['99_icons', 'icons', {}],
+  ['99_fxlab', 'fxlab', {}, { H: 790 }],   // 효과 아이콘 검토판(엑셀 v10 효과 이름 — 2026-10-22)
 ];
 
 const { srv, url } = await serve(repo);

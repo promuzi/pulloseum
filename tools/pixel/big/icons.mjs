@@ -2,6 +2,7 @@
 //   node tools/pixel/big/icons.mjs [이름…]   → assets/v2/icons/ + 검토판 out/icons/sheet.png
 //   아이콘 = 손그림과 같은 크기(<이름>.png — 11칸 · 하단 탭 15칸) + 두 배(<이름>_b.png — 그림을 2배로 그리던 자리에 저절로) · 하단 탭은 띠용 22칸(<이름>_n.png)
 //   물건 그림에서 뽑는 아이콘(물뿌리개 can · 비료 fert · 회귀 주사 potion · 연료 fuel · 부품 parts) = concept/items/cut/item_*.png
+//   효과 아이콘(fx_* · env_* · trap_* · summon_*) = concept/icons3/ — 효과 · 스킬 분류 엑셀 기준(짝 표 docs/superpowers/specs/2026-10-22-v2-effect-icons.md)
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,11 +13,18 @@ const here = dirname(fileURLToPath(import.meta.url)), repo = resolve(here, '..',
 const SHEETS = {
   icons_01: ['navShop', 'navExplore', 'navHome', 'navNursery'], icons_02: ['navShip', 'navBag', 'navBook', 'gear'], icons_03: ['coin', 'gem', 'energy', 'lock'],
   icons_04: ['fire', 'water', 'grass', 'earth'], icons_05: ['wind', 'bolt', 'ice', 'flower'], icons_06: ['cactus', 'vine', 'mushroom', 'heart'],
-  icons_07: ['sword', 'shield', 'speed', 'target'], icons_08: ['sparkle', 'crit', 'st_burn', 'st_poison'], icons_09: ['st_wet', 'st_chill', 'st_shock', 'st_stun'],
-  icons_10: ['st_bind', 'st_spore', 'st_gale', 'st_shade'], icons_11: ['st_taunt', 'st_weak', 'st_corrode', 'st_frozen'], icons_12: ['st_paral', 'st_leech', 'st_root', 'st_atkUp'],
+  // 08~12 의 비운 칸(null) = 엑셀 효과 아이콘(fx_*)으로 바뀐 옛 상태 그림(화상 · 독 · 젖음 · 빙결 · 감전 · 덩굴 · 강풍 · 그늘 · 도발 · 약화 · 부식 · 공격↑ — 2026-10-22, 원화는 기록으로 둠)
+  icons_07: ['sword', 'shield', 'speed', 'target'], icons_08: ['sparkle', 'crit', null, null], icons_09: [null, null, null, 'st_stun'],
+  icons_10: [null, 'st_spore', null, null], icons_11: [null, null, null, 'st_frozen'], icons_12: ['st_paral', 'st_leech', 'st_root', null],
+  // 효과 · 스킬 분류 엑셀 v10 기준 효과 아이콘(concept/icons3/FX_PROMPT.md — 2026-10-22 사용자 "아이콘은 엑셀 … 기준으로")
+  fx_01: ['fx_burn', 'fx_poison', 'fx_bleed', 'fx_shock'], fx_02: ['fx_chill', 'fx_wet', 'fx_shade', 'fx_seal'], fx_03: ['fx_taunt', 'fx_regen', 'fx_will', 'fx_immune'],
+  fx_04: ['fx_aim', 'fx_stealth', 'fx_barrier', 'fx_evade'], fx_05: ['fx_reflect', 'fx_armor', 'env_gale', 'env_inferno'],
+  fx_06: ['env_fortress', 'env_sandcastle', 'env_sandstorm', 'env_healcastle'], fx_07: ['env_hellfort', 'env_walkcastle', 'trap_thorn', 'summon_guard'],
   icons_13: ['chest_body', null], icons_17: ['chest_closed', null],   // 상자: 열린 몸통(13 왼쪽) · 닫힌 상자(17 — 13 오른쪽 뚜껑은 몸통과 각도가 달라 안 씀)
   planets_14: ['planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen'], planets_15: ['planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel'], planets_16: ['planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen', null],
 };
+// 조각이 떨어져 있는 그림 = 누끼에서 가장 큰 덩어리만 남기지 않음(--main 빼기): 조준 틀 넷 + 점 · 회피 잔상 줄 · 출혈 자국 + 방울 · 감전 고리 안 잎 · 젖음 방울 · 독 거품
+const PARTS = new Set(['fx_aim', 'fx_evade', 'fx_bleed', 'fx_shock', 'fx_wet', 'fx_poison', 'env_gale', 'trap_thorn']);
 const FROM_ITEM = { can: 'item_water', fert: 'item_fert', potion: 'item_regress', fuel: 'item_fuel', parts: 'item_parts' };
 const NAV = new Set(['navShop', 'navExplore', 'navHome', 'navNursery', 'navShip', 'navBag', 'navBook']);
 const PLANET_D = { ex_ermias: 15, ex_calisto: 15, ex_seraphin: 15, ex_kairen: 15, ex_mirdin: 15, ex_volkar: 15, ex_veloc: 17, ex_aztel: 17, ex_octavis: 17, ex_nereidon: 19, ex_tiamen: 19 };   // 궤도 반지름 RAD(7 · 7 · 8 · 9) × 2 + 1
@@ -28,21 +36,23 @@ function outs(n) {
   return [[n, 11, 11, 'center'], [n + '_b', 22, 22, 'center']];
 }
 const only = process.argv.slice(2);
-mkdirSync(resolve(CON, 'split'), { recursive: true }); mkdirSync(resolve(CON, 'cut'), { recursive: true }); mkdirSync(resolve(repo, 'assets', 'v2', 'icons'), { recursive: true }); mkdirSync(resolve(here, 'out', 'icons'), { recursive: true });
+const dirOf = sheet => sheet.startsWith('fx_') ? resolve(here, 'concept', 'icons3') : CON;   // 판이 있는 폴더(엑셀 효과 아이콘 = icons3)
+for (const D of [CON, dirOf('fx_')]) { mkdirSync(resolve(D, 'split'), { recursive: true }); mkdirSync(resolve(D, 'cut'), { recursive: true }); }
+mkdirSync(resolve(repo, 'assets', 'v2', 'icons'), { recursive: true }); mkdirSync(resolve(here, 'out', 'icons'), { recursive: true });
 const run = (script, args) => execFileSync(process.execPath, [resolve(here, script), ...args], { stdio: ['ignore', 'pipe', 'inherit'] }).toString().trim();
 const want = n => !only.length || only.includes(n);
 const made = [];
 // 1) 판 자르기
 for (const [sheet, names] of Object.entries(SHEETS)) {
-  const f = resolve(CON, sheet + '.png'); if (!existsSync(f)) continue;
+  const DIR = dirOf(sheet), f = resolve(DIR, sheet + '.png'); if (!existsSync(f)) continue;
   const im = decodePNG(readFileSync(f)), two = names.length === 2, cw = im.w >> 1, ch = two ? im.h : im.h >> 1;
   names.forEach((n, q) => {
     if (!n || !want(n)) return;
     const ox = (q % 2) * cw, oy = two ? 0 : (q >> 1) * ch, d = new Uint8Array(cw * ch * 4);
     for (let y = 0; y < ch; y++) d.set(im.data.subarray(((oy + y) * im.w + ox) * 4, ((oy + y) * im.w + ox + cw) * 4), y * cw * 4);
-    const sp = resolve(CON, 'split', n + '.png'), cp = resolve(CON, 'cut', n + '.png');
+    const sp = resolve(DIR, 'split', n + '.png'), cp = resolve(DIR, 'cut', n + '.png');
     writeFileSync(sp, encodePNG(cw, ch, d));
-    run('greycut.mjs', [sp, cp, '--main']);
+    run('greycut.mjs', [sp, cp, ...(PARTS.has(n) ? [] : ['--main'])]);
     for (const [fn, w, h, al] of outs(n)) { console.log(run('itemconv.mjs', [cp, resolve(repo, 'assets', 'v2', 'icons', fn + '.png'), '--w=' + w, '--h=' + h, '--align=' + al, ...(w <= 15 ? ['--colors=10'] : [])])); made.push(fn); }
   });
 }
