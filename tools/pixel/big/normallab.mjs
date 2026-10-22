@@ -1,7 +1,7 @@
 // 노멀맵 조명 시험(2026-10-22 사용자 "이것처럼 다른 식물들도 적용할 수 있나? 앰버캑터 얘도 자신의 불에 빛 영향을 받고 그랬음 좋겠는데
 //  각 공격과 피격 등이나 여러가지로. 적용가능한 곳 알아보고 조사해 · 사양이 많이 필요한지도") — 게임에는 아직 안 넣음, 조사용
 //   node tools/pixel/big/normallab.mjs [--sec=4]  → out/normal/light_lab.mp4 · light_lab_still.png · <키>_normal.png · 걸린 시간
-//  노멀맵 = 그림에서 바로 만듦(다른 그림 · 내려받기 없음): 실루엣 안쪽까지의 거리로 '부푼 높이'(작은 둥글림 + 큰 둥글림) + 밝기의 잔 결 조금
+//  노멀맵 = 그림에서 바로 만듦(다른 그림 · 내려받기 없음): 실루엣 안을 막처럼 부풀린 높이 + 밝기의 잔 결 조금(normalmap.mjs)
 //   — 밝기만으로 높이를 잡으면 그려 둔 그늘이 '골'로 읽힘(sprite-ai.art 비교 글), 그래서 모양(실루엣) 위주
 //  빛 = 그려 둔 명암은 두고 그 위에 빛 색을 곱함(원래 그림에 그늘이 그려져 있어 '진짜 다시 칠하기'는 안 맞음) · 빛 단계는 몇 개로 끊어 도트 느낌 유지
 //  윗줄(엠버캑터): 원본 | 밤 + 자기 불빛 | 색 변종 A(파란 불 → 파란 빛) | 피격(번개 번쩍 → 불덩이가 날아와 터짐)
@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { decodePNG, encodePNG, Img } from './engine.mjs';
 import { writeMP4 } from './video.mjs';
 import { toLch, recolorData, eyeKeep } from '../../../v2/src/art/shinyColor.js';
+import { normalsOf as nmOf, shade } from './normalmap.mjs';
 import { soilish } from '../../../v2/src/art/potgrass.js';
 import { SHINY_RULES } from '../../../v2/src/art/shinyRules.js';
 const here = dirname(fileURLToPath(import.meta.url)), repo = resolve(here, '..', '..', '..'), OUT = resolve(here, 'out', 'normal');
@@ -33,31 +34,8 @@ function frameOf(S, f) {
   }
   return o;
 }
-// 노멀맵: 거리 변환(체스판 3-4) → 둥글림 높이 + 밝기 잔 결 → 기울기
-function normalsOf(rgba) {
-  const INF = 1e9, d = new Float32Array(N);
-  for (let i = 0; i < N; i++) d[i] = rgba[i * 4 + 3] ? INF : 0;
-  const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : d[y * W + x]);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (!d[i]) continue; d[i] = Math.min(d[i], at(x - 1, y) + 3, at(x, y - 1) + 3, at(x - 1, y - 1) + 4, at(x + 1, y - 1) + 4); }
-  for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) { const i = y * W + x; if (!d[i]) continue; d[i] = Math.min(d[i], at(x + 1, y) + 3, at(x, y + 1) + 3, at(x + 1, y + 1) + 4, at(x - 1, y + 1) + 4); }
-  const bev = (dd, R) => { const t = Math.min(1, dd / R); return Math.sqrt(1 - (1 - t) * (1 - t)); };
-  const lum = new Float32Array(N), h0 = new Float32Array(N);
-  for (let i = 0; i < N; i++) if (rgba[i * 4 + 3]) lum[i] = toLch(rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2])[0];
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x; if (!rgba[i * 4 + 3]) continue;
-    let s = 0, n = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if (X < 0 || Y < 0 || X >= W || Y >= H || !rgba[(Y * W + X) * 4 + 3]) continue; s += lum[Y * W + X]; n++; }
-    const dd = d[i] / 3;
-    h0[i] = 2.5 * bev(dd, 3) + 9 * bev(dd, 16) + 2 * (lum[i] - s / n);
-  }
-  const hgt = new Float32Array(N);   // 한 번 흐리게(계단 줄이기)
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let s = 0, n = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; s += h0[Y * W + X]; n++; } hgt[y * W + x] = rgba[(y * W + x) * 4 + 3] ? s / n : 0; }
-  const nm = new Float32Array(N * 3), g = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : hgt[y * W + x]);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x, dx = (g(x + 1, y) - g(x - 1, y)) / 2, dy = (g(x, y + 1) - g(x, y - 1)) / 2, l = Math.hypot(dx, dy, 1);
-    nm[i * 3] = -dx / l; nm[i * 3 + 1] = -dy / l; nm[i * 3 + 2] = 1 / l;
-  }
-  return nm;
-}
+// 노멀맵 · 빛 입히기 = tools/pixel/big/normalmap.mjs(막 부풀리기 높이 · 바이어 섞음 — 거리 둥글림은 빛 · 그림자가 직선으로 끊겼음)
+const normalsOf = rgba => nmOf(rgba, W, H), lit = (rgba, nm, emit, lights, amb) => shade(rgba, nm, emit, lights, amb, W, H);
 // 빛나는 칸(제 빛은 안 받음)과 빛 자리: 엠버캑터 = 불꽃(머리 · 양팔) · 초롱바인 = 등불 천 · 그 밖 = 없음
 function lightSpots(key, rgba) {
   const emit = new Uint8Array(N), spots = [];
@@ -78,25 +56,6 @@ function lightSpots(key, rgba) {
   }
   for (const [k, [sx, sy, n]] of acc) if (n >= 3) spots.push({ k, x: sx / n, y: sy / n, n });
   return { emit, spots, box: [l, t, r, b] };
-}
-// 빛 입히기: out = 원래 × (어둠 + 곱빛) + 아주 조금 더하기 — 빛은 단계로 끊음(도트 느낌)
-const STEPS = 6;
-function lit(rgba, nm, emit, lights, amb) {
-  const o = new Uint8ClampedArray(rgba);
-  for (let i = 0; i < N; i++) {
-    if (!rgba[i * 4 + 3] || (emit && emit[i])) continue;
-    const x = i % W, y = (i / W) | 0, nx = nm[i * 3], ny = nm[i * 3 + 1], nz = nm[i * 3 + 2];
-    let lr = 0, lg = 0, lb = 0;
-    for (const Lt of lights) {
-      const vx = Lt.x - x, vy = Lt.y - y, vz = Lt.z, dl = Math.hypot(vx, vy, vz), ndl = Math.max(0, (nx * vx + ny * vy + nz * vz) / dl);
-      const k = Lt.I * ndl / (1 + (dl / Lt.r) ** 2);
-      lr += Lt.c[0] * k; lg += Lt.c[1] * k; lb += Lt.c[2] * k;
-    }
-    const q = v => Math.round(Math.min(1.5, v) * STEPS) / STEPS;
-    lr = q(lr); lg = q(lg); lb = q(lb);
-    o[i * 4] = rgba[i * 4] * (amb + 1.2 * lr) + 22 * lr; o[i * 4 + 1] = rgba[i * 4 + 1] * (amb + 1.2 * lg) + 22 * lg; o[i * 4 + 2] = rgba[i * 4 + 2] * (amb + 1.2 * lb) + 22 * lb;
-  }
-  return o;
 }
 const hashf = n => { let h = Math.imul(n | 0, 374761393); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const flick = t => 0.82 + 0.12 * Math.sin(t * 9.1) + 0.08 * (hashf(Math.floor(t * 14)) - 0.5) * 2;
