@@ -366,25 +366,47 @@ export function flowFrame(f, plan, im, at, put) {
       else if (fl.ahead && dd >= 0.9 && dd < 2.4) lighten(im, x, y, fl.ahead);   // 머리 앞 옅은 빛
     }
   }
+  // 감도는 바람(2026-10-23 사용자 '바람효과가 어색해 너무 일자로 빙빙돌아. 바람처럼 두께감이 변하면서 위아래로 꿀렁거리는 자연스러운 형태를 고안해봐'):
+  //  고리 하나 = 서로 반대편에서 쫓아 도는 바람 줄기 둘(gusts). 줄기 = 머리(가늘고 흼) → 몸(초승달처럼 가운데가 굵고 가운데 밝은 줄) → 꼬리(가늘어지다 점으로 흩어짐),
+  //  두께는 줄기마다 숨 쉬듯 굵어졌다 가늘어짐(thick). 길 = 고리가 시소처럼 기울었다 돌아옴(tilt) + 둘레를 따라 흐르는 물결(wave · waveK번) + 고리 전체 오르내림 +
+  //  줄기마다 머리가 높은 비스듬함(lift) → 위아래로 꿀렁. 앞쪽 반 = 식물 앞(식물 위에선 식물 색과 섞어 비치게 — 가운데 줄 진하게, 가장자리 옅게),
+  //  뒤쪽 반 = 식물 뒤. 주기는 모두 한 바퀴(FR장)의 정수배라 이음매 없음. 전엔 납작한 타원 한 줄 + 식물 위에선 가운데 줄만이라 '일자로 빙빙'
   if (plan.orbit) {
-    const O = plan.orbit, FR = plan.FR, len = O.len || 2.3, dir = O.dir ?? 1, col = O.color || '#e4ebfa', dim = O.dim || '#a2acd0';
-    const solid = (x, y) => x < 0 || y < 0 || x >= W || y >= H || im.data[(y * W + x) * 4 + 3] >= 128;
-    const draw = (x, y, c, front) => { if (front || !solid(x, y)) put(x, y, c); };   // 뒤쪽 반(타원 위쪽) = 식물 뒤로 · 앞쪽 반 = 식물 앞으로
+    const O = plan.orbit, FR = plan.FR, dir = O.dir ?? 1, col = O.color || '#e4ebfa', dim = O.dim || '#a2acd0', hi = O.hi || '#ffffff';
+    const tau = 2 * Math.PI * f / FR, A = O.wave ?? 2, K = O.waveK ?? 2, M = O.waveM ?? 3, TW = O.thick ?? 3, NG = O.gusts ?? 2, GL = O.glen ?? (O.len ? O.len * 0.55 : 1.3), TL = O.tilt ?? 0.11, LIFT = O.lift ?? 4 + 2 * (O.rise || 0);
+    const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const hex = c => '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+    const solid = (x, y) => im.data[(y * W + x) * 4 + 3] >= 128;
+    const draw = (x, y, c, front, k = 1) => {   // 식물 밖 = 그대로 · 식물 위 = 앞이면 식물 색과 k만큼 섞음, 뒤면 건너뜀
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      if (!solid(x, y)) return put(x, y, c);
+      if (!front) return;
+      const i = (y * W + x) * 4, a = rgb(c);
+      put(x, y, hex([0, 1, 2].map(ch => im.data[i + ch] + (a[ch] - im.data[i + ch]) * k)));
+    };
     O.rings.forEach((R, q) => {
-      const loops = [].concat(O.loops || 1)[q % [].concat(O.loops || 1).length], c0 = at([R.cx, R.cy]);
-      const th0 = q * 2.1 + (O.at ?? 0) + dir * 2 * Math.PI * loops * f / FR, steps = Math.ceil(len * R.rx * 1.15);
-      for (let s = 0; s <= steps; s++) {
-        const u = s / steps, th = th0 - dir * len * u;   // 머리 → 꼬리
-        const front = Math.sin(th) > 0;
-        if (s % 9 === 6 || (u > 0.82 && s % 2) || (front && u > 0.1 && s % 4 === 3)) continue;   // 군데군데 끊김 · 꼬리 흐림 · 앞쪽 반은 더 성기게(몸 앞을 가로지르는 줄이 실처럼 보이지 않게)
-        const wob = Math.sin(th * 2 + f * 0.18 + q * 1.7) * 0.9 + (O.rise || 0) * u;   // 바람결 출렁(꼬리는 조금 처짐)
-        const x = Math.floor(c0[0] + Math.cos(th) * R.rx), y = Math.floor(c0[1] + Math.sin(th) * R.ry + wob);
-        draw(x, y, u < 0.06 ? '#ffffff' : u < (front ? 0.3 : 0.55) ? col : dim, front);
-        if (u < 0.3 && front && O.thick) draw(x, y + 1, dim, front);   // 앞쪽 머리 = 두 칸(가까워 굵게)
-      }
-      if (O.leaf && q === 0) {   // 바람에 실려 함께 도는 잎 · 꽃잎 하나(머리보다 조금 뒤)
-        const th = th0 - dir * len * 0.35, x = Math.floor(c0[0] + Math.cos(th) * R.rx), y = Math.floor(c0[1] + Math.sin(th) * R.ry) - 1, front = Math.sin(th) > 0, flip = Math.floor(f / 3) % 2;
-        draw(x, y, O.leaf.color, front); draw(x + (flip ? 1 : -1), y, O.leaf.edge || O.leaf.color, front); if (!flip) draw(x, y - 1, O.leaf.edge || O.leaf.color, front);
+      const loops = [].concat(O.loops || 1)[q % [].concat(O.loops || 1).length], c0 = at([R.cx, R.cy]), ph = q * 2.4;
+      const tilt = TL * Math.sin(tau + ph), bob = 1.5 * Math.sin(tau + ph + 1.3);
+      const P = (th, u) => [c0[0] + Math.cos(th) * R.rx, c0[1] + Math.sin(th) * R.ry + tilt * Math.cos(th) * R.rx + bob + A * Math.sin(K * th - dir * M * tau + ph) - LIFT * (0.5 - u)];
+      for (let gi = 0; gi < NG; gi++) {
+        const th0 = q * 2.1 + (O.at ?? 0) + dir * loops * tau - dir * gi * 2 * Math.PI / NG, Wt = TW * (0.66 + 0.34 * Math.sin(2 * tau + ph + gi * 2.2));
+        const steps = Math.ceil(GL * Math.max(R.rx, R.ry) * 1.7);
+        let prev = P(th0 + dir * 0.04, 0);
+        for (let s = 0; s <= steps; s++) {
+          const u = s / steps, th = th0 - dir * GL * u, p = P(th, u), front = Math.sin(th) > 0;
+          let tx = p[0] - prev[0], ty = p[1] - prev[1]; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl; prev = p;
+          if (u > 0.8 && s % 2) continue;   // 꼬리 = 점으로 흩어짐
+          const w = Math.max(1, Math.round(Wt * Math.sin(Math.PI * Math.pow(u, 0.7)))), nx = -ty, ny = tx;   // 초승달: 머리 · 꼬리 한 칸, 앞쪽 1/3 이 가장 굵음
+          for (let i = 0; i < w; i++) {
+            const o = i - (w - 1) / 2, x = Math.round(p[0] + nx * o), y = Math.round(p[1] + ny * o), core = Math.abs(o) < 0.6, edge = w >= 2 && (i === 0 || i === w - 1);
+            const c = u < 0.1 ? hi : u > 0.72 ? dim : core ? (w >= 3 ? hi : col) : edge ? dim : col;
+            draw(x, y, c, front, u > 0.72 ? 0.4 : core ? 0.75 : 0.45);
+          }
+        }
+        if (O.leaf && q === 0 && gi === 0) {   // 바람에 실려 함께 도는 잎 · 꽃잎 하나(머리보다 조금 뒤 · 줄기의 물결을 탐)
+          const th = th0 - dir * GL * 0.35, pl = P(th, 0.35), x = Math.round(pl[0]), y = Math.round(pl[1]) - 2, front = Math.sin(th) > 0, flip = Math.floor(f / 3) % 2;
+          draw(x, y, O.leaf.color, front); draw(x + (flip ? 1 : -1), y, O.leaf.edge || O.leaf.color, front); if (!flip) draw(x, y - 1, O.leaf.edge || O.leaf.color, front);
+        }
       }
     });
   }
