@@ -211,7 +211,13 @@ window.__shot = (name, params = {}, opt = {}) => {
   input.begin(); input.pressedId = opt.pressed || null;
   router.draw(app);
   if (opt.guide != null) shotGuide(app, +opt.guide);   // 처음 안내 촬영(opt.guide = 몇 번째 장)
-  if (opt.overlay !== false) { if (opt.chestOpen) { drawOverlays(app); if (app.chest) app.chest.open = app.t - (opt.chestOpen || 3000); } drawOverlays(app); }
+  if (opt.overlay !== false) {
+    if (opt.chestOpen != null || opt.chestAge != null) {   // 상자 상태를 그리기 전에 정함(전엔 한 번 그려 만든 뒤 다시 그려 어두운 막이 두 번 덮였음 — 2026-10-23 상자 영상) · chestAge = 상자가 뜬 지 · chestOpen = 연 지(ms)
+      const item = app.state.pending.find(x => x.kind === 'level' || x.kind === 'season');
+      if (item) app.chest = { item, t0: app.t - (opt.chestAge ?? 1000), open: opt.chestOpen != null ? app.t - opt.chestOpen : null };
+    }
+    drawOverlays(app);
+  }
   if (opt.toast) drawToast(app, opt.toast);
   stretchEdges(cx, k, W, H, F);
   input.pressedId = null; app.g.ctx = realG; app.pxScale = 0;

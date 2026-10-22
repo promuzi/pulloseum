@@ -25,7 +25,7 @@ export const SHOTS = [
   ['01_title_dark', 'title', { at: '5.75' }],              // 전등 점화 중(전등이 켜질 때만 의자 · 식물이 보임)
   ['01_title_boot', 'title', { at: '12', bootu: '0.5' }],  // 디스플레이 켜짐 중간
   ['01_starter', 'starter', {}],
-  ['02_home_chest', 'home', {}, { level: 6 }],
+  ['02_home_chest', 'home', {}, { level: 6, chestAge: 1000 }],
   ['02_home_chest_open', 'home', {}, { level: 6, chestOpen: 4000 }],
   ['02_home_chest_mid', 'home', {}, { level: 6, chestOpen: 110 }],   // 뚜껑이 들리는 중간(코덱스 상자 — 2026-10-23)
   ['02_home_settings', 'home', {}, { sheet: 'settings' }],
