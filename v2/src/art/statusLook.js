@@ -6,17 +6,18 @@ import { rbox } from './ui.js';
 export const STATUS = {
   guard: { name: '방어', icon: 'shield', buff: true }, evade: { name: '회피', icon: 'speed', buff: true },
   critReady: { name: '치명', icon: 'crit', buff: true }, initReady: { name: '선공', icon: 'ff', buff: true },
-  atkUp: { name: '공격↑', buff: true }, defDown: { name: '방어↓', col: '#ff6a6a' },
-  burn: { name: '화상', icon: 'fire', col: '#ff7a3a' }, poison: { name: '독', icon: 'poison', col: '#b866ff', stack: 5 },
-  wet: { name: '젖음', icon: 'water', col: '#4f9dff' }, chill: { name: '빙결', icon: 'ice', col: '#c4ecff', stack: 3 },
-  shock: { name: '감전', icon: 'bolt', col: '#ffd84a' }, stun: { name: '기절', icon: 'star', col: '#ff86c8' },
-  bind: { name: '덩굴', icon: 'vine', col: '#6fd25c' }, spore: { name: '포자', icon: 'mushroom', col: '#8fe0b8', stack: 3 },
+  // 상태 아이콘 = 전용 그림 st_*(2026-10-23 코덱스 — 전엔 속성 · 종류 아이콘을 빌려 씀, 그림이 없으면 art/icons.js ALIAS 의 옛 아이콘)
+  atkUp: { name: '공격↑', icon: 'st_atkUp', buff: true }, defDown: { name: '방어↓', col: '#ff6a6a' },
+  burn: { name: '화상', icon: 'st_burn', col: '#ff7a3a' }, poison: { name: '독', icon: 'st_poison', col: '#b866ff', stack: 5 },
+  wet: { name: '젖음', icon: 'st_wet', col: '#4f9dff' }, chill: { name: '빙결', icon: 'st_chill', col: '#c4ecff', stack: 3 },
+  shock: { name: '감전', icon: 'st_shock', col: '#ffd84a' }, stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' },
+  bind: { name: '덩굴', icon: 'st_bind', col: '#6fd25c' }, spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 3 },
   // 쉬는 차례(빙결 3 = 얼음 · 감전 3 = 마비) · 추가 디버프(2026-10-15 사용자 "기생 씨앗·그늘·꽃가루(→ 강풍) 좋아보임, 나머지도 다 넣고") · 버팀(쉬고 난 다음 턴)
-  frozen: { name: '얼음', icon: 'ice', col: '#e8f8ff' }, paral: { name: '마비', icon: 'bolt', col: '#ffe680' },
-  leech: { name: '기생', icon: 'seed', col: '#c8e04a' }, shade: { name: '그늘', icon: 'shade', col: '#a0a3c8' },
-  gale: { name: '강풍', icon: 'wind', col: '#c0a8ff' }, taunt: { name: '도발', icon: 'target', col: '#ff5a5a' },
-  root: { name: '뿌리', icon: 'tree', col: '#c08a5a' }, weak: { name: '약화', icon: 'down', col: '#ff8a8a' },
-  corrode: { name: '부식', icon: 'potion', col: '#b9a04a' }, brace: { name: '버팀', icon: 'lock', buff: true },
+  frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' },
+  leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' }, shade: { name: '그늘', icon: 'st_shade', col: '#a0a3c8' },
+  gale: { name: '강풍', icon: 'st_gale', col: '#c0a8ff' }, taunt: { name: '도발', icon: 'st_taunt', col: '#ff5a5a' },
+  root: { name: '뿌리', icon: 'st_root', col: '#c08a5a' }, weak: { name: '약화', icon: 'st_weak', col: '#ff8a8a' },
+  corrode: { name: '부식', icon: 'st_corrode', col: '#b9a04a' }, brace: { name: '버팀', icon: 'lock', buff: true },
   // 버프(2026-10-16 구현 — 속성 짝: 불 분노 · 물 정화 · 풀 재생 · 대지 철벽 · 바람 가속 · 번개 집중 · 빙결 보호막 · 선인장 반사)
   rage: { name: '분노', icon: 'fire', buff: true }, wall: { name: '철벽', icon: 'shield', buff: true }, haste: { name: '가속', icon: 'speed', buff: true },
   regen: { name: '재생', icon: 'heal', buff: true }, thorns: { name: '반사', icon: 'cactus', buff: true }, shield: { name: '보호막', icon: 'ice', buff: true },

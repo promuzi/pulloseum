@@ -53,16 +53,16 @@ export const result = {
     if (rw.xp && rw.xp.gained) cards.push(['star', '+' + rw.xp.gained, '경험치', P.accent]);
     if (rw.water) cards.push(['can', '+' + rw.water, '물', P.accent]);
     if (rw.fert) cards.push(['fert', '+' + rw.fert, '비료', P.accent]);
-    if (rw.fuel) cards.push(['energy', '+' + rw.fuel, '연료', P.accent]);   // 연료 · 부품(2026-10-17 — 연료는 받아도 안 보였음)
-    if (rw.parts) cards.push(['gear', '+' + rw.parts, '부품', P.accent]);
+    if (rw.fuel) cards.push(['fuel', '+' + rw.fuel, '연료', P.accent]);   // 연료 · 부품(2026-10-17 — 연료는 받아도 안 보였음)
+    if (rw.parts) cards.push(['parts', '+' + rw.parts, '부품', P.accent]);
     //  넷 넘으면 두 줄(폭 270에 칸 여섯이 안 들어감) — 두 줄이면 판을 조금 올림
     const per = cards.length > 4 ? Math.ceil(cards.length / 2) : cards.length, rowsN = cards.length ? Math.ceil(cards.length / per) : 0, cw = per > 3 ? 60 : 78, gap = 6, y = 318 + Math.round(dy * 2 / 3) - (rowsN > 1 ? 34 : 0);
     cards.forEach(([ic, v, label, col], i) => {
       const r = Math.floor(i / per), inRow = Math.min(per, cards.length - r * per), x0 = Math.round((W - cw * inRow - gap * (inRow - 1)) / 2), x = x0 + (i % per) * (cw + gap), yy = y + r * 70;
       plate(g, x, yy, cw, 64);
-      g.img(icon(ic), x + cw / 2 - 5, yy + 9);
-      g.text(v, x + cw / 2, yy + 24, { font: 'head', color: col, align: 'center' });
-      g.text(label, x + cw / 2, yy + 44, { color: P.sub, align: 'center' });
+      const im = icon(ic); g.img(im, Math.round(x + cw / 2 - im.width), yy + 4, 2);   // 2배 = 코덱스 22칸 그림(2026-10-23 — 칸에 비해 아이콘이 작았음)
+      g.text(v, x + cw / 2, yy + 27, { font: 'head', color: col, align: 'center' });
+      g.text(label, x + cw / 2, yy + 46, { color: P.sub, align: 'center' });
     });
     let ty = y + (cards.length ? rowsN * 70 + 6 : 8);
     if (!cards.length) { g.text(rw.capped === 'short' ? '3턴 안에 끝난 판은 보상이 없어요' : rw.capped === 'daily' ? '오늘 대결 보상은 다 받았어요(15판)' : rw.forfeit ? '기권한 판은 보상이 없어요' : '보상 없음', W / 2, ty + 20, { color: T.text.sub, align: 'center' }); ty += 40; }

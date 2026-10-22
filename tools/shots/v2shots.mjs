@@ -27,6 +27,7 @@ export const SHOTS = [
   ['01_starter', 'starter', {}],
   ['02_home_chest', 'home', {}, { level: 6 }],
   ['02_home_chest_open', 'home', {}, { level: 6, chestOpen: 4000 }],
+  ['02_home_chest_mid', 'home', {}, { level: 6, chestOpen: 110 }],   // 뚜껑이 들리는 중간(코덱스 상자 — 2026-10-23)
   ['02_home_settings', 'home', {}, { sheet: 'settings' }],
   ['02_home', 'home', {}],
   ['02_home_vine_wind_1000', 'home', {}, { plants: [{ key: 'vine_wind', stage: 2 }], t: 1000 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
@@ -133,6 +134,9 @@ export const SHOTS = [
   ['09_result', 'result', { win: true }],
   ['09_result_full', 'result', { win: true, full: '1' }],   // 보상 칸 여섯(두 줄 — 연료 · 부품, 2026-10-17)
   ['10_explore', 'explore', {}],
+  ['10_explore_zoom1', 'explore', { map: '1', mapAt: '250' }],   // 행성을 눌러 지도로 다가가는 중간(코덱스 행성 그림 → 지도, 2026-10-23)
+  ['10_explore_zoom2', 'explore', { map: '1', mapAt: '450' }],
+  ['10_explore_zoom3', 'explore', { map: '1', mapAt: '650' }],
   ['10_explore_map', 'explore', { map: '1' }],   // 지역 판(연료 n/3 · 탐사 보내기 · 연료 1 · 돈 — 2026-10-17)
   ['10_hangar', 'hangar', { model: '1' }],
   ['10_hangar_m2', 'hangar', { model: '2' }],
@@ -229,6 +233,7 @@ try {
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   p.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errs.push(m.text()); });
+  p.on('response', r => { if (r.status() >= 400) errs.push(r.status() + ' ' + r.url()); });   // 404 가 어느 파일인지(콘솔 글엔 주소가 없음)
   await p.goto(url + '/v2/index.html', { waitUntil: 'load' });
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
   const ready = await p.evaluate(() => window.__ready);

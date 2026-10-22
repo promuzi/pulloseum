@@ -1,7 +1,7 @@
 // UI 부품(전부 도트). 창·버튼·막대·칩·탭·상단 정보줄·하단 탭.
 // 색·모양은 장소 테마(theme.js: 우주선 · 온실 · 밤 정원)를 따른다 — 화면마다 라우터가 setTheme 한 뒤 그린다.
 import { ELEMENT } from './palette.js';
-import { icon, tinted } from './icons.js';
+import { icon, tinted, ICONNAV } from './icons.js';
 import { T, THEMES, plate, msgBox, btnBody, tbar, holo, UI, UI_ACCENT } from './theme.js';
 import { userNeed } from '../game/catalog.js';
 
@@ -184,15 +184,16 @@ export function navBar(app, active, opt = {}) {
     NAV.forEach((t, i) => {
       const x = x0 + i * sw, on = t.id === active, pressed = input.isPressed('nav_' + t.id);
       if (i) g.rect(x, y + 11, 1, h - 22, N.sep);
-      const col = on ? N.on : t.locked ? N.dim : N.icon, ic = tinted(t.icon, col), by = y + 6 + (pressed ? 1 : 0);
-      const ix = x + Math.floor((sw - ic.width) / 2);
-      g.img(ic, ix, by);
+      const col = on ? N.on : t.locked ? N.dim : N.icon, art = ICONNAV[t.icon], by = y + (art ? 3 : 6) + (pressed ? 1 : 0);
+      // 코덱스 탭 아이콘(22칸 · 제 색 — 2026-10-23 사용자 "전부해봐"): 고른 탭 = 그대로 밝게, 다른 탭 = 흐리게, 잠긴 탭 = 더 흐리게(그림이 없으면 옛 한 빛깔 아이콘)
+      const ic = art || tinted(t.icon, col), ix = x + Math.floor((sw - ic.width) / 2);
+      if (art) g.alpha(on ? 1 : t.locked ? 0.3 : 0.58, () => g.img(art, ix, by)); else g.img(ic, ix, by);
       if (t.locked) {   // 작은 자물쇠를 아이콘 오른쪽 아래에(바탕색 테두리로 떼어 보이게 — 큰 자물쇠는 로켓을 반쯤 가렸음)
-        const lb = tinted('lockS', N.bg), lc = tinted('lockS', N.dim), lx = ix + 11, ly = by + 8;
+        const lb = tinted('lockS', N.bg), lc = tinted('lockS', N.dim), lx = ix + (art ? 15 : 11), ly = by + (art ? 13 : 8);
         for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.img(lb, lx + dx, ly + dy);
         g.img(lc, lx, ly);
       }
-      g.text(t.label, x + sw / 2, by + 19, { color: col, align: 'center', font: on ? 'bold' : 'body' });
+      g.text(t.label, x + sw / 2, by + (art ? 23 : 19), { color: col, align: 'center', font: on ? 'bold' : 'body' });
       if (on) { g.rect(x + Math.floor(sw / 2) - 9, y + h - 4, 18, 2, N.on); g.rect(x + Math.floor(sw / 2) - 7, y + h - 2, 14, 1, N.onLo); }
       if (opt.badge && opt.badge[t.id]) { g.disc(x + sw / 2 + 9, by + 1, 3, N.bg); g.disc(x + sw / 2 + 9, by + 1, 2, N.badge); }
       input.hit('nav_' + t.id, x, y, sw, h, () => {

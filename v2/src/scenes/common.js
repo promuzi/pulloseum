@@ -1,6 +1,6 @@
 // 화면 공용 조각: 무대 층(2배 도트), 머리줄, 큰 제목, 씨앗 그림, 스탯 정의
 import { C, RAMP, ELEMENT, BAYER4 } from '../art/palette.js';
-import { icon, tinted } from '../art/icons.js';
+import { icon, tinted, ICONART } from '../art/icons.js';
 import { rbox, button, rrect } from '../art/ui.js';
 import { hexMix } from '../art/statusLook.js';
 import { seedSprite, seedEl, itemArt } from '../art/items.js';
@@ -132,12 +132,12 @@ export function energyPips(g, x, y, cur, max, gap = 12) {
 }
 const dim = new Map();
 export function dimIcon(name) {
-  let c = dim.get(name); if (c) return c;
+  const dk = name + (ICONART[name] ? '*' : ''); let c = dim.get(dk); if (c) return c;   // 코덱스 아이콘이 오면 새로 구움(2026-10-23)
   const b = icon(name); c = document.createElement('canvas'); c.width = b.width; c.height = b.height;
   const x = c.getContext('2d'); x.drawImage(b, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height), p = d.data;
   for (let i = 0; i < p.length; i += 4) { if (!p[i + 3]) continue; const ink = p[i] === 0x2e && p[i + 1] === 0x22; if (!ink) { p[i] = 0x48; p[i + 1] = 0x4a; p[i + 2] = 0x77; } }
-  x.putImageData(d, 0, 0); dim.set(name, c); return c;
+  x.putImageData(d, 0, 0); dim.set(dk, c); return c;
 }
 
 // 별(개체값 합으로 1~5 — 등급 대신, 2026-10-16 사용자 "등급 대신 개체값 수치 혹은 별의 수"): 작은 별 n개(빈 별 포함 max개). 폭을 돌려줌

@@ -2,7 +2,7 @@
 //  ① 재배사 레벨업 상자(사용자 2026-10-16 "레벨업하면 클래시로얄처럼 보상을") — 상자가 통통 → 누르면 뚜껑이 열리며 빛 → 보상이 하나씩 튀어나옴 → 확인
 //  ② 받은 것 판(수확 · 탐사 · 해체) ③ 예/아니오 ④ 설정(계정 · 로그아웃 · 주소 복사)
 import { C, RAMP } from '../art/palette.js';
-import { icon } from '../art/icons.js';
+import { icon, ICONART } from '../art/icons.js';
 import { button, fmt, rrect } from '../art/ui.js';
 import { glyphH } from '../core/text.js';
 import { T, holo } from '../art/theme.js';
@@ -26,7 +26,7 @@ const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 
 // 보상 한 칸의 아이콘 · 이름 · 수
 export const KIND = {
   credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'can', name: '물' }, fert: { icon: 'fert', name: '비료' },
-  regress: { icon: 'potion', name: '회귀 주사' }, card: { icon: 'star', name: '카드' }, fuel: { icon: 'energy', name: '연료 캡슐' }, parts: { icon: 'gear', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
+  regress: { icon: 'potion', name: '회귀 주사' }, card: { icon: 'star', name: '카드' }, fuel: { icon: 'fuel', name: '연료 캡슐' }, parts: { icon: 'parts', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
   pack_n: { icon: 'star', name: '일반 카드 꾸러미' }, pack_m: { icon: 'star', name: '변이 카드 꾸러미' },   // 2026-10-22 — 식물 관리에서 열기
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록
@@ -67,7 +67,26 @@ export function gotCell(g, x, y, w, r, k = 1) {
 // 보급 상자(2026-10-16 사용자 "선물 상자는 목함 대신, 첨단 상자 느낌으로" — 장소 톤 '투박한 레트로 우주선'에 맞춰):
 //  건메탈 몸통(골판 · 양옆 범퍼와 볼트) · 바닥 경고 줄무늬 · 가운데 잠금 모듈(닫힘 = 주황 불 깜빡 · 열림 = 초록) · 몸통을 가로지르는 청록 빛줄,
 //  뚜껑 = 모서리 깎은 금속 판 — 열리면 위로 들리며 뒤로 젖혀지고 안에서 청록 빛이 새어 나옴
+// 코덱스 상자 칸마다 위 · 아래 끝(닫혔을 때 반짝 훑음이 비스듬한 상자 밖으로 안 나가게)
+function crateSpan(B, L) {
+  if (B.span) return B.span;
+  const w = B.width, h = B.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.drawImage(B, 0, 0); x.drawImage(L, 0, 0);
+  const d = x.getImageData(0, 0, w, h).data, top = new Int16Array(w).fill(-1), bot = new Int16Array(w).fill(-1);
+  for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (d[(j * w + i) * 4 + 3] > 127) { if (top[i] < 0) top[i] = j; bot[i] = j; }
+  return (B.span = { top, bot });
+}
 function chestArt(g, cx, by, open, t) {   // 상자(가로 64): by = 바닥. open 0~1 = 뚜껑이 열린 정도
+  const B = ICONART.chest_body, L = ICONART.chest_lid;
+  if (B && L) {   // 코덱스 상자(2026-10-23 사용자 "전부해봐"): 몸통 = 열린 상자 그림 · 뚜껑 = 닫힌 상자 그림의 이음매 위(같은 틀 64×54) — 뚜껑이 위로 들리며 틈 사이로 청록 빛 · 닫혔을 땐 빛이 가끔 훑음
+    const bx = Math.round(cx - B.width / 2), top = by - B.height, up = Math.round(open * 20), ly = top - up;
+    g.alpha(0.55, () => g.ellipse(bx + 32, by - 6, 31, 7, '#05070f'));   // 그림자(바닥이 비스듬해 가로 막대 대신 타원)
+    g.img(B, bx, top);
+    if (open > 0) { const a = Math.min(1, open * 1.6); g.alpha(0.45 * a, () => g.rect(bx + 12, ly + 14, 40, top + 20 - (ly + 14), '#62c4ec')); g.alpha(0.6 * a, () => g.rect(bx + 16, top + 16, 32, 2, '#c8f4ff')); }
+    g.img(L, bx, ly);
+    if (!open) { const sh = Math.floor(t / 120) % 14; if (sh < 3) { const S = crateSpan(B, L); g.alpha(0.18, () => { for (let k = 0; k < 2; k++) { const xx = 8 + sh * 16 + k; if (S.top[xx] >= 0) g.rect(bx + xx, top + S.top[xx] + 2, 1, S.bot[xx] - S.top[xx] - 3, '#ffffff'); } }); } }
+    return;
+  }
   const W = 64, H = 32, x = Math.round(cx - W / 2), y = by - H, M = ['#14181f', '#232a35', '#323a47', '#4a5362', '#6c7688', '#a2abba'], CY = ['#1e4a6a', '#2f7aa0', '#62c4ec', '#c8f4ff'];
   g.rect(x - 3, by - 1, W + 6, 3, '#05070f');   // 그림자
   // 몸통

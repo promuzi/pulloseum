@@ -820,15 +820,41 @@ export const ICON_SRC = {
 };
 
 const built = new Map();
+// 코덱스 아이콘(2026-10-23 사용자 "전부해봐" — 손그림 아이콘을 코덱스 디자인 도트로, tools/pixel/big/icons.mjs → assets/v2/icons/):
+//  <이름>.png = 손그림과 같은 크기(1배 자리 — icon() 이 손그림 대신 돌려줌) · <이름>_b.png = 두 배(g.img 배율 2 자리에 저절로 — gfx.js) · 하단 탭 = <이름>_n.png 22칸
+//  SMALL_KEEP = 11칸으로 줄이면 뭉개져 1배 자리엔 손그림을 그대로 쓰는 것(2배 자리만 새 그림) · ALIAS = 새 이름의 그림이 아직 없을 때 쓸 손그림
+export const ICONART = {}, ICONBIG = {}, ICONNAV = {};
+const NAV_ICONS = ['navShop', 'navExplore', 'navHome', 'navNursery', 'navShip', 'navBag', 'navBook'];
+const ART_ICONS = ['gear', 'coin', 'gem', 'energy', 'lock', 'fire', 'water', 'grass', 'earth', 'wind', 'bolt', 'ice', 'flower', 'cactus', 'vine', 'mushroom', 'heart', 'sword', 'shield', 'speed', 'target', 'sparkle', 'crit',
+  'st_burn', 'st_poison', 'st_wet', 'st_chill', 'st_shock', 'st_stun', 'st_bind', 'st_spore', 'st_gale', 'st_shade', 'st_taunt', 'st_weak', 'st_corrode', 'st_frozen', 'st_paral', 'st_leech', 'st_root', 'st_atkUp',
+  'can', 'fert', 'potion', 'fuel', 'parts'];
+const EXTRA = ['chest_body', 'chest_lid', 'planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen', 'planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel', 'planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen'];
+const SMALL_KEEP = new Set(['potion', 'parts', 'energy', 'shield', 'speed', 'vine']);   // 11칸 검토(2026-10-23): 해 빛살이 사라짐 · 방패가 점 · 날개 신발이 뭉개짐 · 덩굴이 가늘어짐 · 주사기 · 부품
+const ALIAS = { st_burn: 'fire', st_poison: 'poison', st_wet: 'water', st_chill: 'ice', st_shock: 'bolt', st_stun: 'star', st_bind: 'vine', st_spore: 'mushroom', st_gale: 'wind', st_shade: 'shade', st_taunt: 'target', st_weak: 'down', st_corrode: 'potion', st_frozen: 'ice', st_paral: 'bolt', st_leech: 'seed', st_root: 'tree', st_atkUp: 'sword', fuel: 'energy', parts: 'gear' };
+const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+export async function loadIconArt(base = '../assets/v2/icons/') {
+  const list = [...NAV_ICONS.flatMap(n => [n, n + '_b', n + '_n']), ...ART_ICONS.flatMap(n => [n, n + '_b']), ...EXTRA], got = await Promise.all(list.map(n => loadImg(base + n + '.png'))), by = {};
+  list.forEach((n, i) => { if (got[i]) by[n] = got[i]; });
+  for (const n of [...NAV_ICONS, ...ART_ICONS]) {
+    if (by[n + '_b']) ICONBIG[n] = by[n + '_b'];
+    if (by[n] && !SMALL_KEEP.has(n)) { ICONART[n] = by[n]; if (ICONBIG[n]) ICONART[n].big = ICONBIG[n]; }
+    if (by[n + '_n']) ICONNAV[n] = by[n + '_n'];
+  }
+  for (const n of EXTRA) if (by[n]) ICONART[n] = by[n];
+  built.clear();   // 손그림으로 먼저 구운 것(색 입힌 것 포함)을 비워 새 그림으로
+  return list.filter(n => !by[n]);
+}
 export function icon(name) {
+  const a = ICONART[name]; if (a) return a;
   let c = built.get(name);
   if (c) return c;
   const src = ICON_SRC[name];
-  if (!src) return null;
+  if (!src) return ALIAS[name] ? icon(ALIAS[name]) : null;
   const h = src.length, w = Math.max(...src.map(r => r.length));
   c = document.createElement('canvas'); c.width = w; c.height = h;
   const x = c.getContext('2d');
   src.forEach((row, j) => { for (let i = 0; i < row.length; i++) { const col = LEGEND[row[i]]; if (col) { x.fillStyle = col; x.fillRect(i, j, 1, 1); } } });
+  if (ICONBIG[name]) c.big = ICONBIG[name];   // 1배는 손그림 · 2배 자리는 새 그림(SMALL_KEEP)
   built.set(name, c);
   return c;
 }

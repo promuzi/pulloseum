@@ -5,7 +5,7 @@ import { sfx } from '../core/sound.js';
 import { icon, tinted } from '../art/icons.js';
 import { bigKey } from '../art/sprites.js';
 import { T, btnBody, tbar, holo } from '../art/theme.js';
-import { STAT_DEF, miniStars, ivRing } from './common.js';
+import { STAT_DEF, miniStars, ivRing, drawItemArt } from './common.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { basicsOf } from '../battle/model.js';
 import { cardSkillOf } from '../game/fight.js';
@@ -260,7 +260,7 @@ export const plant = {
     if (!n) return y + 18;
     const txt = `꾸러미 ${n}`, bw = g.textW(txt, 'label') + 36, bx = W - 14 - bw;
     this.btn(app, live, 'pk_open', bx, y - 2, bw, 22, txt, { style: 'gold' }, () => this.openPack(app, p, part));
-    packTiny(g, bx - 8, y - 5, k === 'pack_m');   // 단추 왼쪽 끝에 걸친 봉지(글자는 단추 가운데)
+    if (!drawItemArt(g, k, bx - 1, y + 9, true)) packTiny(g, bx - 8, y - 5, k === 'pack_m');   // 단추 왼쪽 끝에 걸친 봉지(글자는 단추 가운데) — 상점과 같은 꾸러미 그림(2026-10-23)
     return y + 26;
   },
   async openPack(app, p, part) {

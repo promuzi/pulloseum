@@ -1,7 +1,7 @@
 import { C } from '../art/palette.js';
 import { space, planet } from '../art/bg.js';
 import { hud, navBar, button } from '../art/ui.js';
-import { icon, tinted } from '../art/icons.js';
+import { icon, tinted, ICONART } from '../art/icons.js';
 import { BGIMG, drawPortrait } from '../art/sprites.js';
 import { T, plate } from '../art/theme.js';
 import { drawShip, drawMother, drawShipMini, SHIP_SC } from '../art/ship.js';
@@ -52,7 +52,7 @@ const reachR = (o, k = 1.12) => { const lo = ORB[Math.max(1, Math.floor(o))], hi
 
 export const explore = {
   theme: 'night',   // 밤 정원(장소 테마 — 2026-10-15)
-  enter(p = {}) { this.sel = p.sel || this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.map = p.map ? { id: this.sel, t0: -1e9 } : null; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
+  enter(p = {}) { this.sel = p.sel || this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.map = p.map ? { id: this.sel, t0: -1e9, at: p.mapAt != null ? +p.mapAt : null } : null; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
   draw(app) {
     const { g, W, H, t, state: s } = app, now = app.now(), P = probeOf(s);
     fuelSync(s, now);
@@ -81,8 +81,9 @@ export const explore = {
       const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit], locked = !lvOpen(p.orbit), far = !reach(p.orbit);
       const x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry), r = RAD[p.orbit];
       this.pp[p.id] = [x, y, r];
-      g.disc(x, y, r + 1, C.ink);
-      planet(g, x, y, r, p.ramp, { ring: p.ring, ringCol: C.mute });
+      const pa = ICONART['planet_' + p.id];   // 코덱스 행성 그림(2026-10-23 사용자 "전부해봐" — 행성마다 다른 겉모습) · 없으면 옛 무늬 행성
+      if (pa) g.img(pa, Math.round(x - pa.width / 2), Math.round(y - pa.height / 2));
+      else { g.disc(x, y, r + 1, C.ink); planet(g, x, y, r, p.ramp, { ring: p.ring, ringCol: C.mute }); }
       if (locked || far) { g.dither(x - r - 1, y - r - 1, r * 2 + 3, r * 2 + 3, C.ink, far && !locked ? 7 : 9); g.img(icon('lockS'), x - 3, y - 3); }
       const above = y < cy, ly = above ? y - r - 16 : y + r + 5;
       if (labA > 0) g.alpha(labA, () => {
@@ -108,6 +109,7 @@ export const explore = {
   // 행성 지도(2026-10-16 사용자 "지역도 지도가 아니라 그냥 버튼이야"): 행성이 제자리에서 커지며 지도 → 지역 핀을 눌러 고름(잠긴 곳 = 구역이 어둡고 자물쇠) · '‹ 궤도' = 닫기
   mapDraw(app, s, P) {
     const { g, W, t } = app, M0 = this.map, pl = PLANETS.find(p => p.id === M0.id);
+    if (M0.at != null) { M0.t0 = t - M0.at; M0.at = null; }   // 찍기용: 연 지 at ms 된 모습(확대되는 중간 — 2026-10-23)
     if (!pl) { this.map = null; return; }
     const u = this.mapU(t);   // 열린 정도 0 → 1(시간)
     if (M0.close != null && u <= 0) { this.map = null; return; }
@@ -141,14 +143,15 @@ export const explore = {
     if (comp.width !== S) { comp.width = S; comp.height = S; }
     const q = comp.getContext('2d'), fm = band(0.22, 0.68, k);
     q.imageSmoothingEnabled = false; q.globalCompositeOperation = 'source-over'; q.globalAlpha = 1; q.clearRect(0, 0, S, S);
-    if (fm < 1) q.drawImage(M.plain, 0, 0);
+    const pa = ICONART['planet_' + pl.id];   // 코덱스 행성 그림이 있으면 궤도 모습 = 그 그림을 키운 것(옛 무늬 행성으로 바뀌었다 지도로 가지 않게)
+    if (fm < 1) { if (pa) { const f = S / (2 * RAD[pl.orbit] + 1), w = Math.round(pa.width * f), h = Math.round(pa.height * f); q.drawImage(pa, Math.round((S - w) / 2), Math.round((S - h) / 2), w, h); } else q.drawImage(M.plain, 0, 0); }
     if (fm > 0) { q.globalAlpha = fm; q.drawImage(M.cv, 0, 0); }
     regs.forEach((Rg, i) => { if (P.lv.scanner < Rg.need) { q.globalAlpha = 0.55 * fm; q.drawImage(M.masks[i], 0, 0); } });   // 잠긴 대륙 = 어둡게
     if (zi >= 0 && fm > 0.5) { q.globalAlpha = fm * (Math.floor(t / 420) % 2 ? 1 : 0.55); q.drawImage(M.edges[zi], 0, 0); }   // 고른 대륙 = 해안선 금빛(깜빡)
     const ca = k < 0.45 ? 0.95 * band(0.05, 0.45, k) : 0.32 + 0.63 * (1 - band(0.45, 0.92, k));   // 대기에 들어가며 짙어졌다 걷힘
     q.globalCompositeOperation = 'source-atop';
     q.globalAlpha = ca; q.drawImage(M.clouds, Math.floor(t / 150) % S, 0, S, S, 0, 0, S, S);   // 구름 = 천천히 흐름
-    q.globalAlpha = 1; q.drawImage(M.night, 0, 0);
+    q.globalAlpha = pa ? fm : 1; q.drawImage(M.night, 0, 0);   // 밤 그늘 = 지도 쪽 모습(코덱스 그림은 제 그늘이 있음)
     q.globalCompositeOperation = 'source-over';
     const dx = Math.round(x - rr), dy = Math.round(y - rr), ds = Math.round(rr * 2 + 1);
     c.imageSmoothingEnabled = false;
@@ -242,7 +245,7 @@ export const explore = {
   fuelBar(app, s, y, live) {
     const { g, W, input } = app, fuel = s.items.fuel || 0, n = Math.max(FUEL.max, Math.min(5, fuel)), fx0 = W - 18 - n * 10, txt = `연료 ${fuel}/${FUEL.max}`, tw = g.textW(txt, 'bold');
     g.text(txt, fx0 - 16, y + 9, { font: 'bold', color: fuel ? '#ffe9a0' : '#ff9a8a', align: 'right' });
-    g.img(icon('energy'), fx0 - 13, y + 10);
+    g.img(icon('fuel'), fx0 - 13, y + 10);   // 연료 캡슐 그림(2026-10-23 — 전엔 햇빛과 같은 번개 아이콘)
     for (let i = 0; i < n; i++) { const x = fx0 + i * 10; g.rect(x, y + 11, 8, 8, '#0a1c32'); if (i < fuel) { g.rect(x + 1, y + 12, 6, 6, '#ffd84a'); g.rect(x + 1, y + 12, 6, 1, '#fff6c8'); } }
     this.fuelR = [fx0 - 20 - tw, y + 4, W - 18 - fx0 + 24 + tw, 20];
     if (live) input.hit('ex_fuel', ...this.fuelR, () => {

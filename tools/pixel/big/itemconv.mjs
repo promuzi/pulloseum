@@ -16,6 +16,7 @@ const hex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math
 let bx0 = SW, by0 = SH, bx1 = -1, by1 = -1;
 for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) if (S[(y * SW + x) * 4 + 3] >= 128) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
 if (bx1 < 0) { console.log('불투명 칸 없음'); process.exit(1); }
+if (opt('box')) [bx0, by0, bx1, by1] = opt('box').split(',').map(Number);   // --box=x0,y0,x1,y1 = 자를 둘레를 정함(여러 그림을 같은 틀에 맞출 때 — 상자 몸통 · 닫힌 상자)
 const bw = bx1 - bx0 + 1, bh = by1 - by0 + 1, s = Math.min(W / bw, H / bh), ow = Math.max(1, Math.round(bw * s)), oh = Math.max(1, Math.round(bh * s));
 const ox = Math.floor((W - ow) / 2), oy = ALIGN === 'bottom' ? H - oh : Math.floor((H - oh) / 2);
 // 2) 팔레트(OKLab k-평균) — 불투명 칸 표본
