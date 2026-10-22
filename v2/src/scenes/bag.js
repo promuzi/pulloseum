@@ -319,7 +319,7 @@ export const bag = {
     button(app, 'cs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
   itemRow(app, k, y) {
-    const { g, W, state: s } = app, P = T.ptext, it = ITEMS[k], ic = { water: 'can', fert: 'fert', regress: 'potion', fuel: 'fuel', parts: 'parts' }[k];
+    const { g, W, state: s } = app, P = T.ptext, it = ITEMS[k], ic = { water: 'can', fert: 'fert', regress: 'potion', nutr: 'potion', fuel: 'fuel', parts: 'parts' }[k];
     plate(g, 8, y, W - 16, 54);
     plate(g, 13, y + 7, 32, 40, 'deep');
     if (drawItemArt(g, k, 29, y + 27, true)) {}   // 코덱스 물건 그림(28칸 — 상점과 같은 그림, 2026-10-22)

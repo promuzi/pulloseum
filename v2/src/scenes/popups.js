@@ -27,7 +27,7 @@ const back = k => { const c = 1.7; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 
 // 보상 한 칸의 아이콘 · 이름 · 수
 export const KIND = {
   credits: { icon: 'coin', name: '돈' }, gems: { icon: 'gem', name: '보석' }, water: { icon: 'can', name: '물' }, fert: { icon: 'fert', name: '비료' },
-  regress: { icon: 'potion', name: '회귀 주사' }, card: { icon: 'star', name: '카드' }, fuel: { icon: 'fuel', name: '연료 캡슐' }, parts: { icon: 'parts', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
+  regress: { icon: 'potion', name: '회귀 주사' }, nutr: { icon: 'potion', name: '영양제' }, card: { icon: 'star', name: '카드' }, fuel: { icon: 'fuel', name: '연료 캡슐' }, parts: { icon: 'parts', name: '부품' }, seed: { icon: 'seed', name: '종자' }, scion: { icon: 'vine', name: '접목 가지' }, skill: { icon: 'sparkle', name: '새 기술' },
   pack_n: { icon: 'star', name: '일반 카드 꾸러미' }, pack_m: { icon: 'star', name: '변이 카드 꾸러미' },   // 2026-10-22 — 식물 관리에서 열기
 };
 export function rewardList(box) {   // 레벨업 상자 → 보상 칸 목록

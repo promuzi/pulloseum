@@ -12,7 +12,7 @@ import { cardSkillOf } from '../game/fight.js';
 import { fxChip, BUFF_LOOK } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
 import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
-import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps, ITEMS } from '../game/catalog.js';
+import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, NUTR_CAP, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps, ITEMS } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, NORMAL_LOOK, cardFits, cardFace, isSkillCard, cardPrice } from '../game/cards.js';
 import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, SKILL_STORE, evolveLeague, slotLayout } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
@@ -480,6 +480,14 @@ export const plant = {
     g.text(`같은 종자 ${mine.length}`, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' });
     y += 22;
     this.btn(app, live, 'sf_open', 14, y, W - 28, 32, '종자 고르기', { style: 'gold', font: 'head', disabled: !mine.length }, () => openSeedPick(app, p));   // 목록 · 꾹 = 고르기 · 전체 · 끌어 고르기 → 거름으로 쓰기(scenes/seedpick.js — 2026-10-18)
+    y += 42;
+    // 영양제(2026-10-22 사용자 "개체값 올리는 영양제 아직 없는 건가"): 위에서 고른 개체값 +1 — NUTR_CAP(8)까지, 그 위는 종자 거름(확률)으로
+    const nN = s.items.nutr || 0, cur = ivs[pick] || 0, top = cur >= NUTR_CAP;
+    g.rect(14, y - 6, W - 28, 1, '#244e7e');
+    g.text('영양제', 14, y, { font: 'value', color: P.main });
+    g.text(`가진 것 ${nN} · ${NUTR_CAP}까지`, W - 14, y + 1, { font: 'label', color: P.sub, align: 'right' });
+    y += 22;
+    this.btn(app, live, 'nu_use', 14, y, W - 28, 32, top ? `${STAT_NAME[pick]} ${NUTR_CAP} 위는 종자 거름으로` : `${STAT_NAME[pick]} +1`, { style: 'gold', font: 'head', disabled: !nN || top }, () => app.act('nutrient', { id: p.uid, stat: pick }).then(r => { if (r) app.toast(`${STAT_NAME[r.stat]} ${r.from} → ${r.to}`); }));
     y += 42;
     return y;
   },

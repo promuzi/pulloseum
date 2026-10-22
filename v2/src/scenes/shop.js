@@ -17,12 +17,12 @@ import { glyphH } from '../core/text.js';
 const SECTIONS = [
   { title: '종자 꾸러미', ids: ['seed_common', 'seed_rare'] },
   { title: '카드 꾸러미', ids: ['card_basic', 'card_mut'] },
-  { title: '보급품', ids: ['water10', 'fert5', 'regress1', 'fuel3', 'parts5'] },
+  { title: '보급품', ids: ['water10', 'fert5', 'regress1', 'nutr1', 'fuel3', 'parts5'] },
 ];
-const COL = { seed_common: '#3fae5a', seed_rare: '#e0b040', card_basic: '#5fb3d9', card_mut: '#9a6ae0', water10: '#2fa3a8', fert5: '#2fa3a8', regress1: '#2fa3a8', fuel3: '#2fa3a8', parts5: '#2fa3a8' };
-const ART = { seed_common: { seed: 'grass' }, seed_rare: { seed: 'bolt', rare: true }, card_basic: { pack: 'n' }, card_mut: { pack: 'm' }, water10: { ic: 'can' }, fert5: { ic: 'fert' }, regress1: { ic: 'potion' }, fuel3: { ic: 'energy' }, parts5: { ic: 'gear' } };
-const DESC = { seed_common: '흔한 식물', seed_rare: '희귀 식물', card_basic: '일반 식물용', card_mut: '변이 식물용', water10: '생장 +10씩', fert5: '생장 +25씩', regress1: '기술 되돌리기', fuel3: '탐사 3번', parts5: '탐사선 강화' };
-const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', card_basic: '일반 카드', card_mut: '변이 카드', water10: '물 10', fert5: '비료 5', regress1: '회귀 주사', fuel3: '연료 3', parts5: '부품 5' };
+const COL = { seed_common: '#3fae5a', seed_rare: '#e0b040', card_basic: '#5fb3d9', card_mut: '#9a6ae0', water10: '#2fa3a8', fert5: '#2fa3a8', regress1: '#2fa3a8', nutr1: '#2fa3a8', fuel3: '#2fa3a8', parts5: '#2fa3a8' };
+const ART = { seed_common: { seed: 'grass' }, seed_rare: { seed: 'bolt', rare: true }, card_basic: { pack: 'n' }, card_mut: { pack: 'm' }, water10: { ic: 'can' }, fert5: { ic: 'fert' }, regress1: { ic: 'potion' }, nutr1: { ic: 'potion' }, fuel3: { ic: 'energy' }, parts5: { ic: 'gear' } };
+const DESC = { seed_common: '흔한 식물', seed_rare: '희귀 식물', card_basic: '일반 식물용', card_mut: '변이 식물용', water10: '생장 +10씩', fert5: '생장 +25씩', regress1: '기술 되돌리기', nutr1: '개체값 +1', fuel3: '탐사 3번', parts5: '탐사선 강화' };
+const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', card_basic: '일반 카드', card_mut: '변이 카드', water10: '물 10', fert5: '비료 5', regress1: '회귀 주사', nutr1: '영양제', fuel3: '연료 3', parts5: '부품 5' };
 const TOP = 44;   // 카드 테 · 그림 칸 바탕 = common.js cardBox · glowArt(종자 가방과 같이 씀)
 
 // 그림 칸 가운데 물건(2배)
@@ -81,6 +81,6 @@ export const shop = {
     if (r.seed) { const sp = SPECIES[r.seed.key]; showGot(app, it.name, [{ kind: 'seed', seed: r.seed, rar: sp.rarity === 'rare' ? 3 : 1 }], '가방에 넣었어요'); }
     else if (r.card) showGot(app, it.name, [{ kind: 'card', card: r.card, rar: (CARDS[r.card] || {}).rar || 1 }], '가방에 넣었어요');
     else if (r.give && (r.give.pack_n || r.give.pack_m)) { const k = r.give.pack_m ? 'pack_m' : 'pack_n'; showGot(app, it.name, [{ kind: k, n: r.give[k], rar: k === 'pack_m' ? 3 : 2 }], k === 'pack_m' ? '변이 식물 관리에서 열어요' : '일반 식물 관리에서 열어요'); }   // 꾸러미째 가방에(2026-10-22)
-    else app.toast(Object.entries(r.give).map(([k, n]) => `${{ water: '물', fert: '비료', regress: '회귀 주사', fuel: '연료', parts: '부품' }[k] || k} +${n}`).join(' · '));
+    else app.toast(Object.entries(r.give).map(([k, n]) => `${{ water: '물', fert: '비료', regress: '회귀 주사', nutr: '영양제', fuel: '연료', parts: '부품' }[k] || k} +${n}`).join(' · '));
   },
 };

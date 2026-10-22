@@ -556,7 +556,11 @@ export const ITEMS = {
   parts: { name: '부품', icon: 'gear', desc: '탐사선 강화 재료' },
   pack_n: { name: '일반 카드 꾸러미', icon: 'star', desc: '일반 식물 관리에서 열어요' },   // 2026-10-22 — 산 카드는 꾸러미로 가방에 · 식물에서 열면 그 식물에 맞는 카드
   pack_m: { name: '변이 카드 꾸러미', icon: 'star', desc: '변이 식물 관리에서 열어요' },
+  nutr: { name: '영양제', icon: 'potion', desc: '고른 개체값 +1(8까지 — 9 · 10은 종자 거름으로)' },   // 2026-10-22 사용자 "개체값 올리는 영양제 아직 없는 건가"
 };
+// 영양제(2026-10-22): 고른 개체값 하나를 반드시 +1 — 단 NUTR_CAP 까지(9 · 10은 확률인 종자 거름으로만 — 돈으로 끝까지 채우지 못하게)
+//  얻는 곳 = 상점(보석 20) · 재배사 레벨 10마다 상자에 하나
+export const NUTR_CAP = 8;
 export const RARITY = ['common', 'uncommon', 'rare', 'epic', 'legend'];
 export const RARITY_COL = ['#e8eef4', '#7cf0a0', '#6fb8ff', '#c48cff', '#ffb04a'];   // 흰 · 초록 · 파랑 · 보라 · 주황(옛 판 5색과 같음)
 
@@ -572,6 +576,7 @@ export function levelReward(L) {
   const r = { credits: 120 + 60 * L };
   const main = ['fuel', 'water', 'fert', 'parts'][L % 4];
   r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'fert' ? 3 + Math.floor(L / 3) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
+  if (L % 10 === 0) r.nutr = 1;   // 영양제(2026-10-22) — 레벨 10마다
   if (L % 5 === 0) r.seed = 'rare';
   else if (L % 3 === 2) r.pack_n = 1;   // 카드(2026-10-17) → 2026-10-22 일반 카드 꾸러미 하나(식물에서 열기)
   else if (L % 4 === 0) r.regress = 1;
@@ -714,6 +719,7 @@ export const SHOP = [
   { id: 'water10', name: '물 10', cost: { gems: 6 }, give: { water: 10 } },
   { id: 'fert5', name: '비료 5', cost: { gems: 8 }, give: { fert: 5 } },
   { id: 'regress1', name: '유전자 회귀 주사', cost: { gems: 15 }, give: { regress: 1 } },
+  { id: 'nutr1', name: '영양제', cost: { gems: 20 }, give: { nutr: 1 } },   // 개체값 +1(8까지 — 2026-10-22)
   { id: 'fuel3', name: '연료 캡슐 3', cost: { gems: 5 }, give: { fuel: 3 } },
   { id: 'parts5', name: '탐사선 부품 5', cost: { credits: 350 }, give: { parts: 5 } },   // 부품(2026-10-17)
 ];

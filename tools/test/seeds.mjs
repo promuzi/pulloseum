@@ -63,6 +63,23 @@ const fill = (s, n, key = 'aqua') => { const rng = makeRng(9); while (s.seeds.le
   runOp(s, 'seedFeed', { id: p.uid, stat: 'atk', seeds: [mk(), mk(), mk(), mk(), mk(), mk(), mk(), mk(), mk(), mk()] }, { rng: makeRng(1), now: 0 });
   ok(p.ivs.atk >= a0, '서버 일 목록(ops seedFeed — 난수)');
 }
+// ④-1 영양제(2026-10-22 사용자 "개체값 올리는 영양제 아직 없는 건가"): 반드시 +1 · 8까지(9 · 10은 종자 거름) · 없으면 막힘 · 상점 보석 20 · 레벨 10마다 상자
+{
+  const { nutrient } = await import('../../v2/src/game/logic.js');
+  const { NUTR_CAP, levelReward, SHOP } = await import('../../v2/src/game/catalog.js');
+  const s = game(), p = s.plants[0];
+  p.ivs.def = 3; s.items.nutr = 0;
+  throws(() => nutrient(s, p.uid, 'def'), '영양제가 없으면 막힘');
+  s.items.nutr = 10;
+  const r = nutrient(s, p.uid, 'def');
+  ok(r.from === 3 && r.to === 4 && p.ivs.def === 4 && s.items.nutr === 9, '영양제 = 반드시 +1');
+  p.ivs.def = NUTR_CAP;
+  throws(() => nutrient(s, p.uid, 'def'), `${NUTR_CAP} 위는 영양제로 못 올림`);
+  throws(() => nutrient(s, p.uid, 'luck'), '모르는 개체값 = 막힘');
+  runOp(s, 'nutrient', { id: p.uid, stat: 'spd' }, { now: 0 });
+  ok(s.items.nutr === 8, '서버 일 목록(ops nutrient — 난수 없음)');
+  ok(SHOP.some(x => x.give.nutr === 1 && x.cost.gems === 20) && levelReward(10).nutr === 1 && !levelReward(9).nutr, '얻는 곳 = 상점 보석 20 · 레벨 10마다');
+}
 // ④-2 진화 = 개체값이 무작위로 1~3 오름(2026-10-18 사용자 "진화 시 개체값이 범위 내에서 랜덤하게 오르는 것도") · 최대 칸엔 안 감
 {
   const { evolve } = await import('../../v2/src/game/logic.js');

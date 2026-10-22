@@ -1,7 +1,7 @@
 // 풀로세움 v2 게임 규칙(서버·화면 공용, 순수 함수 — 시각 now·난수 rng를 밖에서 받음). 서버가 이 규칙으로만 진행을 바꿈(치트 방지 — 2026-06-26 서버 권위 설계).
 // 표 = catalog.js. 모든 함수는 state를 그 자리에서 바꾸고 화면에 보여 줄 결과를 돌려줌. 안 되는 일은 Err(사용자에게 보일 한국어 문구)를 던짐.
 import {
-  SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
+  SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, NUTR_CAP, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED } from './catalog.js';
@@ -453,6 +453,16 @@ export function resetPoints(s, id) {
 //  고른 개체값에 같은 종 종자를 하나씩 — 종자마다 확률(지금 값 0~4 = 40% · 5~7 = 25% · 8~9 = 12%), 실패가 쌓이면(p.ivp = 연속 실패 수) 4 · 6 · 9번째엔 반드시(운 나쁜 줄 막기) ·
 //  최대면 멈추고 남은 종자는 가방. 난수라 화면이 먼저 하지 않음(서버 결과 그대로)
 // 종자 거름 한 알이 개체값 +1 될 확률 · 연달아 실패하면 확정(2026-10-22 "너무 쉬움" — 40·25·12% / 4·6·9번 → 30·15·7% / 5·9·15번)
+// 영양제(2026-10-22 사용자 "개체값 올리는 영양제 아직 없는 건가"): 고른 개체값을 반드시 +1 · NUTR_CAP(8)까지 — 9 · 10은 종자 거름(확률)으로만. 난수 없음
+export function nutrient(s, id, stat) {
+  const p = getPlant(s, id); normIvs(p);
+  need(IV_KEYS.includes(stat), '올릴 개체값을 골라 주세요');
+  need((s.items.nutr || 0) >= 1, '영양제가 없어요 — 상점에서 사요');
+  const from = p.ivs[stat] || 0;
+  need(from < NUTR_CAP, from >= IV_MAX ? '이미 최대예요' : `영양제로는 ${NUTR_CAP}까지예요 — 그 위는 종자 거름으로`);
+  s.items.nutr--; p.ivs[stat] = from + 1;
+  return { stat, from, to: from + 1, left: s.items.nutr };
+}
 export const ivpChance = v => (v <= 4 ? 0.3 : v <= 7 ? 0.15 : 0.07);
 export const ivpPity = v => (v <= 4 ? 5 : v <= 7 ? 9 : 15);
 export function seedFeed(s, id, stat, seedIds, rng) {
@@ -599,7 +609,7 @@ export function harvestAll(s, rng, now) {
 }
 
 // ── 보상 주기 ──
-const ITEM_KEYS = ['water', 'fert', 'regress', 'fuel', 'parts', 'pack_n', 'pack_m'];   // 카드 꾸러미(일반 · 변이 — 2026-10-22, 식물 관리에서 열면 그 식물에 맞는 카드)
+const ITEM_KEYS = ['water', 'fert', 'regress', 'fuel', 'parts', 'pack_n', 'pack_m', 'nutr'];   // nutr = 영양제(2026-10-22)   // 카드 꾸러미(일반 · 변이 — 2026-10-22, 식물 관리에서 열면 그 식물에 맞는 카드)
 function give(s, r) {
   for (const k of ['credits', 'gems']) if (r[k]) s.wallet[k] += r[k];
   for (const k of ITEM_KEYS) if (r[k]) s.items[k] = (s.items[k] || 0) + r[k];
