@@ -295,7 +295,7 @@ export const battle = {
     const mk = (id, k, extra = {}) => { const sp = SPECIES[k]; return makeUnit(id, sp, { key: k, name: sp.name, stage: p.stage || 'mature', ...protoStats(sp), ...extra }); };   // ?stage=sprout|growing = 검토용 단계 그림
     if (this.mode === 'swap3') {
       const keys = s && s.plants && s.plants.length >= 3 ? s.plants.slice(0, 3).map(x => x.key) : ['flower_grass', 'cactus_fire', 'vine_water'];
-      this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 })), seed, swapCd: 2, swOrder: true });
+      this.B = makeTeamBattle({ me: keys.map(k => mk('me', k)), foe: FOE3.map(k => mk('foe', k, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 })), seed, swapCd: 2, swOrder: true, ownSun: true });
     } else {
       const me = p.me && SPECIES[p.me] ? mk('me', p.me) : makeUnit('me', SPECIES.flower_grass, { key: 'flower_grass', name: '페탈로즈', hp: 220, atk: 35, def: 24, spd: 30, crit: 5 });
       const foe = p.foe && SPECIES[p.foe] ? mk('foe', p.foe, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 }) : makeUnit('foe', SPECIES.vine_water, { key: 'vine_water', name: '타이드바인', hp: 240, atk: 32, def: 22, spd: 26, crit: 5, trainer: '코스모싹', rank: '브론즈 2', tlv: 6 });
@@ -1064,6 +1064,7 @@ export const battle = {
       tbar(g, x + 54, yy + 24, 110, 6, u.hp / u.max, 'hp');
       g.text(`${Math.ceil(u.hp)}/${u.max}`, x + 170, yy + 21, { color: S.text });
       if (on || dead) g.text(dead ? '쓰러짐' : '싸우는 중', x + w - 18, yy + 5, { color: dead ? T.text.dim : '#8ccfff', align: 'right' });   // 쓰러진 자리를 채울 땐 앞 식물도 '쓰러짐'
+      if (B.ownSun && !dead) sunPips(g, x + w - 18 - (u.energyMax || 8) * 5, yy + 24, u.energy, u.energyMax || 8, 5, 0);   // 햇빛 식물마다 따로(2026-10-22) — 대기석 식물은 그대로라 누가 햇빛을 모았는지 보임
       if (can) input.hit(id, x + 8, ry, w - 16, 44, () => this.pickSwitch(app, i));
     });
     if (!forced) button(app, 'sw_close', x + w / 2 - 50, y + h - 36, 100, 28, '닫기', { style: 'night', onTap: () => { this.sheet = null; } });

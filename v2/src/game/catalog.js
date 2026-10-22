@@ -703,7 +703,7 @@ export const probeUpCost = lv => ({ credits: Math.round(150 * Math.pow(lv, 1.5) 
 export const EXPLORE_COST = { 1: 40, 2: 70, 3: 110, 4: 160 };                     // 탐사 한 번 = 연료 캡슐 1 + 이 돈(사용자 "탐사에는 돈이 필요하고, 잘 아껴 써야") — 탐사로 얻는 돈의 평균은 늘 이보다 적게
 export const ORBIT_LV = { 1: 1, 2: 4, 3: 8, 4: 13 };
 export const FUEL = { max: 3, regenMin: 480 };               // 연료 캡슐: 무료로는 8시간에 1(하루 3) · 그 밖에 레벨업 상자 · 대결 승리 · 보석 상점(사용자 "뽑기 쿠폰처럼" — 돈만으로 무한 탐사 막기)
-export const SHINY_P = 1 / 64, LEGEND_P = 1 / 120;   // 색 변종 · 전설(전설 행성만)
+export const SHINY_P = 1 / 1000, LEGEND_P = 1 / 120;   // 색 변종 · 전설(전설 행성만) — 색 변종 1/64 → 1/1000(종자 천 개에 하나꼴, 2026-10-22 사용자 "색변종은 진짜 희귀하게 해줘")
 
 // ── 상점(돈 = 종자·화분, 보석 = 물·비료·회귀 주사 — 사용자 "상점에서는 유료 재화로 구매") ──
 export const SHOP = [

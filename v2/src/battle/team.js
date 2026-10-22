@@ -1,7 +1,7 @@
 // 3:3 교체전(2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임 포켓몬처럼 교체 가능하고 — 이름도 팀리그라고는 하지 말자")
 //  양쪽 식물 셋, 한 번에 앞에 선 하나만 싸운다. 내 차례 = 기술 또는 교체 — 옛 판 = 교체가 먼저 일어나고 들어온 식물이 상대 기술을 맞음(포켓몬처럼),
 //  swOrder 판(2026-10-18~ 새 판) = 교체도 선공 · 후공을 따름: 먼저면 바꾼 뒤 들어온 식물이 맞고, 늦으면 지금 식물이 맞은 뒤 바뀜.
-//  쓰러지면 턴 끝에 다음 식물(나 = 직접 고름·턴을 안 씀, 봇 = 상성을 보고 고름) · 셋 다 쓰러지면 끝. 기력은 팀이 함께 쓴다(시작 2 · 턴마다 +1 · 최대 8).
+//  쓰러지면 턴 끝에 다음 식물(나 = 직접 고름·턴을 안 씀, 봇 = 상성을 보고 고름) · 셋 다 쓰러지면 끝. 햇빛(기력)은 식물마다 따로 — 나와 있는 식물만 참(ownSun · 2026-10-22~ 새 판, 옛 판은 팀이 함께 씀 · 시작 2 · 턴마다 +1 · 최대 8).
 //  계산은 1:1과 같은 rules.resolveTurn(같은 씨앗·같은 선택 → 같은 결과, 화면 무관). 화면은 B.me·B.foe(앞에 선 식물)를 읽으면 된다.
 //  상태 효과(status.js): 교체로 나가면 독·화상만 따라감 · 뿌리 묶기면 교체 못 함 · 쉬는 차례(얼음·마비·기절)엔 교체도 못 함(사용자 2026-10-15) · 에너지 회복은 앞 식물이 그늘이면 안 참.
 import { makeRng, resolveTurn, rollFirst } from './rules.js';
@@ -11,13 +11,16 @@ import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './
 
 // swapCd = 스스로 교체한 뒤 다시 교체 못 하는 턴 수(2026-10-18 사용자 "2턴" — 0 = 제한 없음: 이 규칙 전에 시작한 판)
 // swOrder = 교체도 선공 · 후공 순서를 따름(2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지" — false = 이 규칙 전에 시작한 판)
-export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0, swOrder = false }) {
+// ownSun = 햇빛을 식물마다 따로 — 앞에 나와 있는 식물만 턴 끝에 참, 대기석에선 그대로(2026-10-18 사용자 결정 "추천대로", 2026-10-22 넣음).
+//  false = 이 규칙 전에 시작한 판(팀이 햇빛 하나를 같이 씀 — 이어 하는 옛 판은 그대로라 RULES_VER 는 안 올림)
+export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0, swOrder = false, ownSun = false }) {
   const start = T => Math.max(2, ...T.map(u => (typeof u.energy === 'number' ? u.energy : 2)));   // 시작 에너지 = 팀에서 가장 큰 값(카드 '엽록체 증식' — 2026-10-17)
   const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: start(me), foe: start(foe) }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
-  for (const side of ['me', 'foe']) for (const u of B.team[side]) Object.defineProperty(u, 'energy', { get: () => B.pool[side], set: v => { B.pool[side] = v; }, configurable: true, enumerable: true });
+  if (ownSun) for (const side of ['me', 'foe']) for (const u of B.team[side]) { if (typeof u.energy !== 'number') u.energy = 2; }   // 식물마다 제 햇빛(새 판 = 유닛을 만들 때 정한 시작 값 — 카드 '엽록체 증식'도 그 식물만 · 이어 하는 판 = 저장된 값 그대로)
+  else for (const side of ['me', 'foe']) for (const u of B.team[side]) Object.defineProperty(u, 'energy', { get: () => B.pool[side], set: v => { B.pool[side] = v; }, configurable: true, enumerable: true });
   B.me = me[0]; B.foe = foe[0];
   B.cdLen = swapCd; B.swapCd = { me: 0, foe: 0 };   // 남은 턴(0 = 바꿀 수 있음)
-  B.swOrder = !!swOrder;
+  B.swOrder = !!swOrder; B.ownSun = !!ownSun;
   return B;
 }
 export const aliveOf = (B, side) => B.team[side].map((u, i) => (u.hp > 0 ? i : -1)).filter(i => i >= 0);
@@ -98,7 +101,8 @@ export function playTurn3(B, myAct, foeAct = null) {
   // 쓰러짐 사건은 쓰러진 그 자리에서(rules · 턴 끝) — 한쪽 식물이 다 쓰러지면 그 자리에서 판이 끝나 같이 끝나는 일이 없음(먼저 다 쓰러진 쪽이 짐)
   //  앞 식물 하나만 쓰러졌으면 턴 끝 효과는 남은 식물에 그대로(포켓몬처럼), 턴 끝 피해도 선공 쪽 먼저
   const out = () => !aliveOf(B, 'me').length || !aliveOf(B, 'foe').length;
-  if (!out()) closeTurn((res ? res.first === B.foe.id : order === 'foe') ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(u.energyMax || 8, B.pool[side] + (u.sunPer || 1)); }, out);   // 나와 있는 식물의 햇빛 그릇 · 회복(반칸씩)
+  //  햇빛은 나와 있는 식물만 참: 식물마다 따로(ownSun)면 그 식물의 햇빛 · 옛 판은 팀 햇빛
+  if (!out()) closeTurn((res ? res.first === B.foe.id : order === 'foe') ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { if (B.ownSun) { u.energy = Math.min(u.energyMax || 8, u.energy + (u.sunPer || 1)); return; } const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(u.energyMax || 8, B.pool[side] + (u.sunPer || 1)); }, out);   // 나와 있는 식물의 햇빛 그릇 · 회복(반칸씩)
   for (const e of ev) if (e.t === 'faint' && e.idx == null) e.idx = B.act[e.who];
   if (!aliveOf(B, 'foe').length) B.over = 'win';
   else if (!aliveOf(B, 'me').length) B.over = 'lose';

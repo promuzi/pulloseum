@@ -75,5 +75,20 @@ console.log(`200판: 내 승률 ${w / 2}% · 평균 ${(turns / 200).toFixed(1)}�
   for (let seed = 1; seed <= 100; seed++) { const B = makeTeamBattle({ me: team('me'), foe: team('foe'), seed }), ev = playTurn3(B, { kind: 'switch', to: 1 }).events, si = ev.findIndex(e => e.t === 'switch' && e.who === 'me'), hi = ev.findIndex(e => e.t === 'hit' && e.to === 'me'); if (si >= 0 && (hi < 0 || si < hi)) firstOld++; }
   ok(firstOld === 100, `옛 판(swOrder 없음) = 교체가 늘 먼저 (${firstOld}/100)`);
 }
+
+// 햇빛 식물마다 따로(ownSun — 2026-10-22, 사용자 결정 2026-10-18 "추천대로"): 나와 있는 식물만 턴 끝에 참 · 대기석은 그대로 · 쓴 만큼 그 식물만 줄어듦 · 옛 판(ownSun 없음)은 팀 햇빛 그대로
+{
+  const B = makeTeamBattle({ me: ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe: ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k)), seed: 11, ownSun: true });
+  ok(B.ownSun && B.team.me.every(u => u.energy === 2), '식물마다 시작 햇빛 2');
+  playTurn3(B, { kind: 'rest' });
+  ok(B.team.me[0].energy === 3 && B.team.me[1].energy === 2 && B.team.me[2].energy === 2, '나와 있는 식물만 참(대기석 그대로)');
+  if (!B.over && B.need !== 'me') playTurn3(B, { kind: 'switch', to: 1 });
+  ok(B.act.me === 1 || B.need === 'me', '교체');
+  if (B.act.me === 1) ok(B.team.me[0].energy === 3 && B.team.me[1].energy === 3, '들어간 식물은 그대로 · 들어온 식물이 참');
+  const B0 = makeTeamBattle({ me: ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe: ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k)), seed: 11 });
+  playTurn3(B0, { kind: 'rest' });
+  ok(!B0.ownSun && B0.team.me.every(u => u.energy === B0.pool.me), '옛 판 = 팀 햇빛 하나');
+  console.log(`햇빛 식물마다 따로: 쉰 뒤 ${B.team.me.map(u => u.energy).join('·')} (옛 판 팀 햇빛 ${B0.pool.me})`);
+}
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

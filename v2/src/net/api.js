@@ -40,7 +40,7 @@ export const bot = {
     if (mode === 'swap3' && mine.length < 3) throw new NetErr('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요', 400);
     const T = s.tournament, foes = mine.map(p => botPlant(rng, p.stage, p.lv, Math.max(0, TIERS.indexOf(T.tier))));
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${T.name} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
-    const spec = { seed: (Math.random() * 2 ** 31) | 0, mode, ...(mode === 'swap3' ? { swapCd: 2 } : {}), mine: JSON.parse(JSON.stringify(mine)), foes, trainer: botTrainer(rng), rank: `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv: Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4)), info };
+    const spec = { seed: (Math.random() * 2 ** 31) | 0, mode, ...(mode === 'swap3' ? { swapCd: 2, ownSun: true } : {}), mine: JSON.parse(JSON.stringify(mine)), foes, trainer: botTrainer(rng), rank: `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv: Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4)), info };
     local = { spec, B: setupBot(spec) };
     return { id: 'local', mode, view: viewOf(local.B), info };
   },
