@@ -11,6 +11,7 @@ import { shinyKey } from './shiny.js';
 
 export const LIGHT = { on: true, budget: 5, spent: 0, win: 0, made: 0, lit: 0 };
 try { if (new URLSearchParams(location.search).get('light') === '0' || localStorage.getItem('pullo.light') === '0') LIGHT.on = false; } catch {}   // ?light=0 = 끔(성능 비교 · 문제 생길 때)
+try { globalThis.__light = LIGHT; } catch {}   // 촬영 · 성능 도구가 예산을 바꾸거나 셈을 읽음(tools/shots/lightclip.mjs)
 const W = 96, H = 112, N = W * H;
 const speciesOf = k => k.replace(/~.*$/, '').replace(/_(young|teen)$/, '');
 export const hasSelfLight = key => !!LIGHT_RULES[speciesOf(key)];
