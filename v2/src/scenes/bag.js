@@ -40,7 +40,7 @@ const seedT = (id, t) => t + ([...String(id)].reduce((a, ch) => (a * 31 + ch.cha
 const lerp = (a, b, k) => a + (b - a) * k;
 export function sortSeeds(s, how) {
   const at = new Map(s.seeds.map((sd, i) => [sd.id, i])), nm = sd => (s.discovered.includes(sd.key) ? SPECIES[sd.key].name : null), rare = sd => (SPECIES[sd.key].rarity === 'rare' ? 1 : 0), newer = (a, b) => at.get(b.id) - at.get(a.id);
-  const byName = (a, b) => (nm(a) == null) - (nm(b) == null) || (nm(a) || '').localeCompare(nm(b) || '', 'ko');   // 처음 보는 식물 = 뒤로
+  const byName = (a, b) => (nm(a) == null) - (nm(b) == null) || (nm(a) || '').localeCompare(nm(b) || '', 'ko');   // 모르는 식물(???) = 뒤로
   const by = { new: newer,
     rare: (a, b) => specialOf(b) - specialOf(a) || rare(b) - rare(a) || potOf(b) - potOf(a) || newer(a, b),
     pot: (a, b) => potOf(b) - potOf(a) || specialOf(b) - specialOf(a) || newer(a, b),
@@ -176,7 +176,7 @@ export const bag = {
     if (tag) gem(g, x + CW / 2, y + 2, tag.col);
     const by = ay + AH;   // 이름 띠
     g.rect(ax, by, aw, CH - 8 - AH, '#0c1526'); g.rect(ax, by, aw, 1, hexMix(col, '#0c1526', 0.4));
-    const name = known ? sp.name : '처음 보는 식물';
+    const name = known ? sp.name : '???';   // 모르는 식물(2026-10-23 사용자 "처음보는식물 대신 ???라고 표기해줘")
     g.text(name, x + CW / 2, by + 3, { font: g.textW(name, 'bold') <= aw - 4 ? 'bold' : 'label', color: sd.legend ? '#ffb04a' : sd.shiny ? '#ffe8a8' : P.main, align: 'center' });
     miniStars(g, Math.round(x + (CW - 39) / 2), by + 19, potOf(sd));   // 잠재력 = 심으면 그 별(2026-10-18)
     const ln = tag ? tag.label : `${JONG[sp.type]} · ${sp.rarity === 'rare' ? '희귀' : '흔함'}`, lw = 10 + g.textW(ln, 'label'), lx = Math.round(x + (CW - lw) / 2);
@@ -204,7 +204,7 @@ export const bag = {
     c.fillStyle = `rgba(6,10,18,${(0.78 * e).toFixed(3)})`; c.fillRect(0, 0, W, H);
     app.input.hit('zm_block', 0, 0, W, H, () => this.closeZoom(app));
     const BW = 214, BH = 324, BA = 124, bx = Math.round((W - BW) / 2), byy = Math.max(16, Math.round((H - BH) / 2) - 8);
-    const [fx, fy, fw, fh] = Z.from, rx = Math.round(lerp(fx, bx, e)), ry = Math.round(lerp(fy, byy, e)), rw = Math.round(lerp(fw, BW, e)), rh = Math.round(lerp(fh, BH, e)), aH = Math.round(lerp(AH, BA, e)), kk = e > 0.66 ? 3 : e > 0.33 ? 2 : 1;
+    const [fx, fy, fw, fh] = Z.from, rx = Math.round(lerp(fx, bx, e)), ry = Math.round(lerp(fy, byy, e)), rw = Math.round(lerp(fw, BW, e)), rh = Math.round(lerp(fh, BH, e)), aH = Math.round(lerp(AH, BA, e)), kk = e > 0.5 ? 2 : 1;
     cardBox(g, rx, ry, rw, rh, col);
     c.imageSmoothingEnabled = false; c.drawImage(glowArt(E.main, rw - 8, aH), rx + 4, ry + 4);
     g.clip(rx + 4, ry + 4, rw - 8, aH, () => drawSeed(g, rx + rw / 2, ry + 4 + aH / 2 + 2 * kk, sd.key, { k: kk, pot, shiny: sd.shiny, t: seedT(sd.id, t) }));
@@ -217,7 +217,7 @@ export const bag = {
     const by = ay + BA;   // 아래 띠
     g.rect(ax, by, aw, BH - 8 - BA, '#0c1526'); g.rect(ax, by, aw, 1, hexMix(col, '#0c1526', 0.4));
     const cx = bx + BW / 2; let yy = by + 6;
-    g.text(`${sd.legend ? '전설의 ' : ''}${known ? sp.name : '처음 보는 식물'} 종자`, cx, yy, { font: 'head', color: sd.legend ? '#ffb04a' : sd.shiny ? '#ffe8a8' : P.main, align: 'center' }); yy += 23;
+    g.text(`${sd.legend ? '전설의 ' : ''}${known ? sp.name : '???'} 종자`, cx, yy, { font: 'head', color: sd.legend ? '#ffb04a' : sd.shiny ? '#ffe8a8' : P.main, align: 'center' }); yy += 23;
     if (tag) { g.text(tag.label, cx, yy, { font: 'label', color: hexMix(tag.col, '#ffffff', 0.45), align: 'center' }); yy += 14; }
     g.text(`${E.name} 속성 · ${JONG[sp.type]} · ${sp.rarity === 'rare' ? '희귀' : '흔함'}`, cx, yy, { font: 'label', color: E.light || P.sub, align: 'center' }); yy += 17;
     c.save(); c.translate(Math.round(cx - 39), yy); c.scale(2, 2); miniStars(g, 0, 0, pot); c.restore(); yy += 19;   // 별(2배)
@@ -227,7 +227,7 @@ export const bag = {
     rrect(g, gx, yy, ps, ps, 4, '#06111c');
     g.clip(gx + 1, yy + 1, ps - 2, ps - 2, () => { if (known) drawPortrait(g, sd.key, gx + 1, yy + 1, ps - 2, false); else shadowPortrait(g, sd.key, gx + 1, yy + 1, ps - 2); });
     g.text(lab, gx + ps + 8, yy + 2, { font: 'label', color: P.sub }); g.text(nm, gx + ps + 8, yy + 15, { font: 'bold', color: known ? P.main : P.dim });
-    const b1 = byy + BH - 64, b2 = byy + BH - 32, hw = Math.floor((BW - 26) / 2), price = seedPrice(sd), name = (known ? sp.name : '처음 보는 식물') + ' 종자';
+    const b1 = byy + BH - 64, b2 = byy + BH - 32, hw = Math.floor((BW - 26) / 2), price = seedPrice(sd), name = (known ? sp.name : '???') + ' 종자';
     button(app, 'zm_plant', bx + 10, b1, hw, 28, '심기', { style: 'teal', font: 'bold', disabled: free <= 0, onTap: () => app.act('plantSeed', { seed: sd.id }).then(r => { if (r) { this.zoom = null; const i = app.state.plants.findIndex(p => p.uid === r.plant); if (i >= 0) { app.state.active = i; app.act('setActive', { id: r.plant }); } app.go('nursery', { planted: r.plant }); } }) });   // 심으면 스마트팜으로 — 그 자리로 굴러가 씨앗이 떨어져 싹이 남
     button(app, 'zm_sell', bx + 16 + hw, b1, hw, 28, sd.lock ? '잠김' : String(price), { style: 'night', font: 'bold', icon: sd.lock ? 'lockS' : 'coin', disabled: !!sd.lock, onTap: () => ask(app, `${eul(name)} 팔까요?`, `돈 ${price} 받기`, () => app.act('sellSeed', { seed: sd.id }).then(r => { if (r) { app.toast(`돈 +${r.credits}`); this.zoom = null; } }), '팔기') });
     button(app, 'zm_fav', bx + 10, b2, hw, 24, sd.fav ? '♥ 즐겨찾기 풀기' : '♡ 즐겨찾기', { style: sd.fav ? 'gold' : 'night', font: 'label', onTap: () => app.act('seedMark', { seed: sd.id, fav: !sd.fav }) });

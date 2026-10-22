@@ -48,7 +48,7 @@ export function seedPickScreen(app, D) {
     const x = x0 + (i % COLS) * (TW + GX), y = GY0 + Math.floor(i / COLS) * (TH + GY) - Math.round(D.sy), on = D.sel.has(sd.id), spc = SPECIAL(sd);
     if (y + TH < GY0 || y > GY1) return;
     holo(g, x, y, TW, TH, T.card || T.panel, 12);
-    drawSeed(g, x + TW / 2, y + 24, sd.key, { pot: potOf(sd), shiny: sd.shiny, t: app.t + (i % 7) * 230 });   // 종마다 다른 종자 + 별 효과(2026-10-23)
+    drawSeed(g, x + TW / 2, y + 24, sd.key, { pot: potOf(sd), shiny: sd.shiny, small: true, t: app.t + (i % 7) * 230 });   // 종마다 다른 종자 + 별 효과(2026-10-23)
     const ei = icon(sp.el); if (ei) g.img(ei, x + 4, y + 4);
     if (sd.fav) g.text('♥', x + 18, y + 2, { font: 'bold', color: '#ff9ab0' });   // 즐겨찾기(★는 잠재력)
     if (sd.lock) { g.c.fillStyle = 'rgba(3,6,12,0.35)'; g.c.fillRect(x, y, TW, TH); const li = icon('lockS'); if (li) g.img(li, x + 4, y + TH - 15); }   // 잠금 = 조금 어둡게 + 자물쇠

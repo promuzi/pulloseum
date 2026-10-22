@@ -51,7 +51,7 @@ export function gotCell(g, x, y, w, r, k = 1) {
   // 왼쪽 = 아이콘 칸(짙은 네모 + 등급 색 테 — 게임 보상 칸처럼), 오른쪽 = 수(크게) 위 · 이름 아래, 글 묶음은 칸 세로 가운데(2026-10-16 사용자 '+240 돈' 사진 "글자와 아이콘 배치")
   const S = 36, sx = x + 5, sy = y + Math.round((h - S) / 2);
   rrect(g, sx, sy, S, S, 4, '#06111c'); rrect(g, sx + 1, sy + 1, S - 2, S - 2, 3, '#0f2436'); g.rect(sx + 3, sy + S - 3, S - 6, 1, col);
-  if (r.kind === 'seed') drawSeed(g, sx + S / 2, sy + S / 2, SPECIES[r.seed.key] ? r.seed.key : 'grass', { pot: potOf(r.seed), shiny: r.seed.shiny });   // 종마다 다른 종자 + 별 빛무리(2026-10-23)
+  if (r.kind === 'seed') drawSeed(g, sx + S / 2, sy + S / 2, SPECIES[r.seed.key] ? r.seed.key : 'grass', { pot: potOf(r.seed), shiny: r.seed.shiny, small: true });   // 종마다 다른 종자 + 별 빛무리(2026-10-23)
   else if (r.kind === 'card') cardTiny(g, sx + 8, sy + 4, cardFace(r.card));   // 카드 = 작은 카드 모양
   else if (drawItemArt(g, r.kind, sx + S / 2, sy + S / 2, true)) {}   // 물 · 비료 · 회귀 주사 · 연료 · 부품 · 카드 꾸러미 = 상점과 같은 물건 그림(2026-10-23)
   else if (r.kind === 'pack_n' || r.kind === 'pack_m') packTiny(g, sx + 7, sy + 4, r.kind === 'pack_m');   // 카드 꾸러미 = 봉지

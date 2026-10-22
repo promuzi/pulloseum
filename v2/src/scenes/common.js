@@ -82,7 +82,7 @@ function glowRings(col, R, a) {   // 계단 세 겹 빛무리(도트 결 — 부
 let shineCv = null;
 function spark(g, x, y, u, col, big) { g.rect(x - u, y, u * 3, u, col); g.rect(x, y - u, u, u * 3, col); if (big) { g.rect(x - 2 * u, y, u, u, col); g.rect(x + 2 * u, y, u, u, col); g.rect(x, y - 2 * u, u, u, col); g.rect(x, y + 2 * u, u, u, col); } g.rect(x, y, u, u, '#ffffff'); }
 export function drawSeed(g, cx, cy, key, o = {}) {   // key = 종(종마다 다른 종자 — 없으면 그 속성 종자) 또는 속성
-  const el = seedEl(key), k = Math.max(1, Math.round(o.k || 1)), pot = Math.max(1, Math.min(5, o.pot || 1)), t = o.t || 0, spr = seedSprite(key, !!o.shiny), c = g.c, E = ELEMENT[el] || ELEMENT.grass;
+  const el = seedEl(key), k = Math.max(1, Math.round(o.k || 1)), pot = Math.max(1, Math.min(5, o.pot || 1)), t = o.t || 0, spr = seedSprite(key, !!o.shiny, !!o.small), c = g.c, E = ELEMENT[el] || ELEMENT.grass;   // small = 28×32(좁은 칸)
   const w = spr ? spr.width : 14, h = spr ? spr.height : 18, X = Math.round(cx - (w * k) / 2), Y = Math.round(cy - (h * k) / 2);
   c.imageSmoothingEnabled = false;
   if (pot >= 3) {   // 빛무리(천천히 숨 쉬듯)

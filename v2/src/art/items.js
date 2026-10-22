@@ -10,7 +10,7 @@ export const ITEM_KEYS = ['seed_common', 'seed_rare', 'card_basic', 'card_mut', 
 // 상점 물건 · 가방 물건 → 그림 이름
 export const ITEM_OF = { seed_common: 'seed_common', seed_rare: 'seed_rare', card_basic: 'card_basic', card_mut: 'card_mut', water10: 'water', fert5: 'fert', regress1: 'regress', fuel3: 'fuel', parts5: 'parts',
   water: 'water', fert: 'fert', regress: 'regress', fuel: 'fuel', parts: 'parts', pack_n: 'card_basic', pack_m: 'card_mut' };
-const NAMES = [...SEED_ELS.map(e => 'seed_' + e), ...Object.keys(SPECIES).map(k => 'seed_' + k), ...ITEM_KEYS.flatMap(k => ['item_' + k, 'item_' + k + '_s'])];
+const NAMES = [...[...SEED_ELS, ...Object.keys(SPECIES)].flatMap(k => ['seed_' + k, 'seed_' + k + '_s']), ...ITEM_KEYS.flatMap(k => ['item_' + k, 'item_' + k + '_s'])];   // 종자 = 큰 40×46 + 작은 _s 28×32
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadItemArt(base = '../assets/v2/items/') {
   const got = await Promise.all(NAMES.map(n => load(base + n + '.png')));
@@ -27,10 +27,10 @@ const SHINY_HUE = { fire: 35, water: -40, grass: -70, earth: 170, wind: 60, bolt
 const shinyMemo = new Map();
 function rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; if (mx === mn) return [0, 0, l]; const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); let h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h * 60, s, l]; }
 function hsl2rgb(h, s, l) { h = ((h % 360) + 360) % 360 / 360; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; return [f(h + 1 / 3), f(h), f(h - 1 / 3)].map(v => Math.round(v * 255)); }
-export function seedSprite(key, shiny = false) {   // key = 종(없으면 그 속성 종자) 또는 속성
-  const el = seedEl(key), im = ITEMART['seed_' + key] || ITEMART['seed_' + el] || ITEMART.seed_grass; if (!im) return null;
+export function seedSprite(key, shiny = false, small = false) {   // key = 종(없으면 그 속성 종자) 또는 속성 · small = 28×32(종자 거름 칸 · 받은 것 칸)
+  const el = seedEl(key), sf = small ? '_s' : '', im = ITEMART['seed_' + key + sf] || ITEMART['seed_' + el + sf] || ITEMART['seed_grass' + sf]; if (!im) return null;
   if (!shiny) return im;
-  let cv = shinyMemo.get(key); if (cv) return cv;
+  const mk = key + sf; let cv = shinyMemo.get(mk); if (cv) return cv;
   cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
   const c = cv.getContext('2d'); c.drawImage(im, 0, 0);
   const id = c.getImageData(0, 0, cv.width, cv.height), d = id.data, dh = SHINY_HUE[el] ?? 120;
@@ -39,5 +39,5 @@ export function seedSprite(key, shiny = false) {   // key = 종(없으면 그 �
     const [h, s, l] = rgb2hsl(d[i], d[i + 1], d[i + 2]); if (l < 0.16) continue;
     const [r, g, b] = hsl2rgb(h + dh, Math.min(1, s * 1.08), Math.min(0.96, l * 1.04)); d[i] = r; d[i + 1] = g; d[i + 2] = b;
   }
-  c.putImageData(id, 0, 0); shinyMemo.set(key, cv); return cv;   // 그림이 나중에 오면(대신 그림 → 종 그림) 새로 구워야 해서 loadItemArt 가 비움
+  c.putImageData(id, 0, 0); shinyMemo.set(mk, cv); return cv;   // 그림이 나중에 오면(대신 그림 → 종 그림) 새로 구워야 해서 loadItemArt 가 비움
 }

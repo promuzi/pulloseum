@@ -36,7 +36,9 @@ const made = [];
 for (const n of list) {
   if (!existsSync(src(n))) continue;
   run('greycut.mjs', [src(n), cut(n), '--main']);
-  if (n.startsWith('seed_')) { console.log(run('itemconv.mjs', [cut(n), dst(n), '--w=28', '--h=32', '--align=bottom'])); made.push(n); }
+  if (n.startsWith('seed_')) {   // 큰 40×46(가방 카드 · 펼친 창 — 2026-10-23 사용자 "아이콘 배경에 비해 종자 크기가 작아 키워줘") + 작은 28×32(종자 거름 칸 · 받은 것 칸)
+    console.log(run('itemconv.mjs', [cut(n), dst(n), '--w=40', '--h=46', '--align=bottom'])); console.log(run('itemconv.mjs', [cut(n), dst(n + '_s'), '--w=28', '--h=32', '--align=bottom'])); made.push(n, n + '_s');
+  }
   else { console.log(run('itemconv.mjs', [cut(n), dst(n), '--w=44', '--h=44'])); console.log(run('itemconv.mjs', [cut(n), dst(n + '_s'), '--w=28', '--h=28'])); made.push(n, n + '_s'); }
 }
 // 검토판: 4배 · 어두운 카드 바탕 위에(게임 칸과 비슷하게)
