@@ -26,10 +26,13 @@ export function fromLch(L, C, H) {
 export const inHue = (h, [h0, h1]) => (h0 <= h1 ? h >= h0 && h <= h1 : h >= h0 || h <= h1);
 const midOf = ([h0, h1]) => (h0 + ((h1 - h0 + 360) % 360) / 2) % 360;
 // 한 색 바꾸기(바뀌지 않으면 null) — 아주 어두운 칸(테두리 · 눈동자)은 그대로
-export function shinyColor(r, g, b, rule) {
+//  bits = 위치 조건(box)이 있는 띠마다 이 칸이 그 안이면 1(띠 번호 자리) · null = 위치를 모름 → box 띠는 건너뜀
+export function shinyColor(r, g, b, rule, bits = null) {
   const [L, C, H] = toLch(r, g, b);
   if (L < 0.24) return null;
-  for (const t of rule) {
+  for (let k = 0; k < rule.length; k++) {
+    const t = rule[k];
+    if (t.box) { if (bits == null) continue; const inside = (bits >> k) & 1; if (t.out ? inside : !inside) continue; }
     const [l0, l1] = t.l || [0.24, 1.01];
     if (L < l0 || L > l1) continue;
     if (t.tint) {
@@ -37,14 +40,17 @@ export function shinyColor(r, g, b, rule) {
       const k = Math.min(1, (L - l0) / 0.15) * Math.min(1, (l1 - L) / 0.06 + 0.35);   // 띠 끝은 살살(흰 반짝임은 덜 물듦)
       return fromLch(L + (t.dl || 0), Math.max(C, t.tint[1] * k), t.tint[0]);
     }
-    if (C < (t.c ?? 0.04) || !inHue(H, t.h)) continue;
+    if (C < (t.c ?? 0.04) || (t.cx != null && C > t.cx) || !inHue(H, t.h)) continue;   // cx = 최대 채도(진한 색은 빼기 — 초롱바인 등불 천)
     const d = ((H - midOf(t.h) + 540) % 360) - 180;   // 띠 가운데에서 떨어진 색상(−180~180)
     return fromLch(L + (t.dl || 0), C * (t.ck ?? 1), (t.to + d * (t.hs ?? 1) + 720) % 360);   // hs = 색상 퍼짐 배수(0.3 = 띠 안 색을 목표 색 가까이로 모음 — 단풍처럼 고르게)
   }
   return null;
 }
 // 그림 칸 바꾸기(제자리) — keep = 그대로 둘 색(눈) · skip(r, g, b) = 그대로 둘 색인지(흙 덮기 무늬 — 화분 · 잔디 처리가 흙 색으로 찾음) · 같은 색은 한 번만 계산
-export function recolorData(data, rule, keep = null, skip = null) {
+//  geom = { W: 그림 폭, w, h, cols, rows } — 띠에 box([x0, y0, x1, y1] = 그 장 식물 둘레 안 비율, out = 그 밖)가 있으면 장마다 식물 둘레를 재서 그 안에만
+//  (마이너캡 갓처럼 몸통과 색이 같아 색으로는 못 가르는 부분 — 숨쉬기로 움직여도 장마다 다시 재므로 따라감, 2026-10-22)
+export function recolorData(data, rule, keep = null, skip = null, geom = null) {
+  if (geom && rule.some(t => t.box)) return recolorBoxed(data, rule, keep, skip, geom);
   const memo = new Map();
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 8) continue;
@@ -53,6 +59,27 @@ export function recolorData(data, rule, keep = null, skip = null) {
     let v = memo.get(key);
     if (v === undefined) { v = skip && skip(data[i], data[i + 1], data[i + 2]) ? null : shinyColor(data[i], data[i + 1], data[i + 2], rule); memo.set(key, v); }
     if (v) { data[i] = v[0]; data[i + 1] = v[1]; data[i + 2] = v[2]; }
+  }
+}
+function recolorBoxed(data, rule, keep, skip, { W, w, h, cols, rows }) {
+  const memo = new Map(), at = (ox, oy, L, x, y) => ((oy + L * rows * h + y) * W + ox + x) * 4;
+  for (let c = 0; c < cols * rows; c++) {
+    const ox = (c % cols) * w, oy = Math.floor(c / cols) * h;
+    let l = w, t = h, r = -1, b = -1;   // 이 장(앞뒤 두 층)의 식물 둘레
+    for (const L of [0, 1]) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (data[at(ox, oy, L, x, y) + 3] >= 128) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y; }
+    if (r < 0) continue;
+    for (const L of [0, 1]) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = at(ox, oy, L, x, y); if (data[i + 3] < 8) continue;
+      const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+      if (keep && keep.has(key)) continue;
+      const fx = (x - l) / Math.max(1, r - l), fy = (y - t) / Math.max(1, b - t);
+      let bits = 0;
+      for (let k = 0; k < rule.length; k++) { const B = rule[k].box; if (B && fx >= B[0] && fx <= B[2] && fy >= B[1] && fy <= B[3]) bits |= 1 << k; }
+      const mk = key * 64 + bits;
+      let v = memo.get(mk);
+      if (v === undefined) { v = skip && skip(data[i], data[i + 1], data[i + 2]) ? null : shinyColor(data[i], data[i + 1], data[i + 2], rule, bits); memo.set(mk, v); }
+      if (v) { data[i] = v[0]; data[i + 1] = v[1]; data[i + 2] = v[2]; }
+    }
   }
 }
 // 눈 색: 깜빡임 장(blinkIndex~+3)과 같은 자세 대기 장(blinkAt~+3)에서 달라지는 칸 = 눈 — 그 색들 중 눈에서 주로 쓰이는 것(눈 밖보다 눈 안에 더 많음)

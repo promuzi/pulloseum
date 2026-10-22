@@ -24,6 +24,18 @@ recolorData(d, [{ h: [0, 40], to: 262 }], new Set([(200 << 16) | (40 << 8) | 50]
 t('보통 칸은 바뀜', d[0] !== 220 || d[2] !== 60);
 t('눈 색 그대로', d[4] === 200 && d[5] === 40 && d[6] === 50);
 t('흙 색 그대로', d[8] === 210 && d[9] === 45 && d[10] === 55);
+// 5-2) 위치 조건(box): 4×4 한 장(두 층) — 위 절반 빨강만 바뀌고 아래 절반 빨강은 그대로 · out 은 반대
+{
+  const mk = () => { const d = new Uint8Array(4 * 8 * 4); for (let i = 0; i < 32; i++) d.set([220, 50, 60, i < 16 ? 255 : 0], i * 4); return d; };   // 위 4줄 = 뒤 층(빨강) · 아래 4줄 = 앞 층(비어 있음)
+  const g = { W: 4, w: 4, h: 4, cols: 1, rows: 1 }, d1 = mk(), d2 = mk();
+  recolorData(d1, [{ h: [0, 40], to: 262, box: [0, 0, 1, 0.4] }], null, null, g);
+  recolorData(d2, [{ h: [0, 40], to: 262, box: [0, 0, 1, 0.4], out: true }], null, null, g);
+  t('box 안(맨 윗줄)만 바뀜', d1[0] !== 220 && d1[12 * 4] === 220);
+  t('out = box 밖(맨 아랫줄)만 바뀜', d2[0] === 220 && d2[12 * 4] !== 220);
+  const d3 = new Uint8Array([220, 50, 60, 255]);
+  recolorData(d3, [{ h: [0, 40], to: 262, box: [0, 0, 1, 1] }]);
+  t('칸 정보가 없으면 box 띠는 건너뜀', d3[0] === 220);
+}
 // 6) 45종 규칙: 후보 A · B · C 가 있고 고른 것이 그중 하나 · 띠 모양
 const roster = eval(readFileSync(new URL('../../v2/src/art/sprites.js', import.meta.url), 'utf8').match(/export const ROSTER = (\[[^\]]*\])/)[1]);
 const missing = roster.filter(k => !SHINY_RULES[k]);
