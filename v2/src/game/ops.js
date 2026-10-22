@@ -53,6 +53,7 @@ export const OPS = {
   openPack: (s, a, c) => L.openPack(s, str(a.id), a.part === 'skill' ? 'skill' : 'passive', c.rng),   // 카드 꾸러미 열기(난수 — QUICK 아님, 2026-10-22)
   cardUp: (s, a) => L.cardUp(s, str(a.card)),     // 같은 카드 두 장 + 돈 → 한 단계 위
   sellCard: (s, a) => L.sellCard(s, str(a.card)),
+  discardCard: (s, a) => L.discardCard(s, str(a.id), str(a.card)),   // 식물 보관의 카드 버리기(귀속 — 2026-10-22)
   ack: (s, a) => L.ackPending(s, int(a.n, 1, 50, 1)),
   guide: (s, a) => L.seeGuide(s, str(a.id, 16)),
 };

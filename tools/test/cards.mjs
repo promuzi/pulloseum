@@ -4,9 +4,9 @@
 //  ⑦ 패시브가 전투에 닿는지(능력치 · 흡수 · 반사 · 독 겹 · 면역 · 비늘 · 재생 · 위력 · 횟수 · 분노 · 소화액 · 균사 · 부생 · 치명 피해 · 3:3 시작 에너지)
 //  ⑧ 얻는 곳(탐사 · 해체 · 상점 꾸러미 · 레벨업) ⑨ 봇 카드 · 다시 돌리기 같은 결과 ⑩ 서버 일 목록(setCards · setSlots)
 //   node tools/test/cards.mjs
-import { newGame, makePlant, syncTimers, normIvs, stars, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, explore, buy, addXp, probeOf, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
+import { newGame, makePlant, syncTimers, normIvs, stars, setCards, setSlots, setLoadout, placePending, swapJoker, sell, dismantle, explore, buy, addXp, probeOf, discardCard, Err, BASIC_IDS, MUT_MAX } from '../../v2/src/game/logic.js';
 import { kitOfPlant, unitOf, botPlant, setupBot, replayBot } from '../../v2/src/game/fight.js';
-import { CARDS, CARD_SLOTS, NORMAL_CARDS, formCards, isSkillCard, cardFits, passivesOf, rollCard, cardFace } from '../../v2/src/game/cards.js';
+import { CARDS, CARD_SLOTS, NORMAL_CARDS, formCards, isSkillCard, cardFits, passivesOf, rollCard, cardFace, cardPrice } from '../../v2/src/game/cards.js';
 import { SKILLS, SPECIES, FORM_KEYS, PLANETS, SHOP, levelReward, userNeed } from '../../v2/src/game/catalog.js';
 import { runOp } from '../../v2/src/game/ops.js';
 import { makeRng, resolveTurn } from '../../v2/src/battle/rules.js';
@@ -82,7 +82,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   setCards(s, p.uid, ['n_wall', first]);
   ok(p.cards[0] === 'n_wall' && p.cards[1] === first && s.cards.n_wall === 1, '자리 바꿈 = 가방 그대로');
   setCards(s, p.uid, ['n_wall', null]);
-  ok(p.cards[1] === null && (s.cards[first] || 0) >= 1, '빼면 가방으로: ' + bag(s));
+  ok(p.cards[1] === null && p.pstore.includes(first) && !s.cards[first], '빼면 이 식물 패시브 보관으로(귀속 — 2026-10-22): ' + bag(s) + ' / ' + p.pstore);
   throws(() => setCards(s, p.uid, ['v_sap', null]), '일반 식물에 변이 카드');
   throws(() => setCards(s, p.uid, ['m_bite', null]), '일반 식물에 변이 기술 카드');
   throws(() => setCards(s, p.uid, ['n_wall', 'n_wall']), '같은 카드 두 칸');
@@ -94,7 +94,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   throws(() => setCards(s, m.uid, ['m_bite', null]), '변이 기술 카드는 카드 칸에 못 넣음(전투 칸으로)');
   const before = { ...s.cards }, m0 = [...m.cards];
   setCards(s, m.uid, ['v_sap', m0[1]]);
-  ok(m.cards[0] === 'v_sap' && s.cards[m0[0]] === (before[m0[0]] || 0) + 1 && !s.cards.v_sap, '변이 패시브 바꿔 끼움(있던 건 가방으로)');
+  ok(m.cards[0] === 'v_sap' && m.pstore.includes(m0[0]) && (s.cards[m0[0]] || 0) === (before[m0[0]] || 0) && !s.cards.v_sap, '변이 패시브 바꿔 끼움(있던 건 이 식물 보관으로 — 귀속)');
   ok(cardFits(p, 'n_wall') === null && cardFits(m, 'n_wall') && cardFits(m, 'm_bite') === null && cardFits(m, 'm_slash'), 'cardFits');
 }
 // ⑤ 변이 식물 전투 칸(태생이든 변이 종자든 — 2026-10-17 "변이는 6개 중 2개를 변이 스킬 카드로")
@@ -115,36 +115,37 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   throws(() => setSlots(s, n.uid, put(n, 'm_scale'), n.cards), `기술 카드는 ${MUT_MAX}장까지`);
   throws(() => setSlots(s, d.uid, (() => { const x = [...d.skills.battle]; x[x.findIndex(v => BASIC_IDS.includes(v))] = 'm_bite'; return x; })(), d.cards), '다른 변이 카드는 전투 칸에도 안 됨');
   throws(() => setSlots(s, d.uid, (() => { const x = [...d.skills.battle]; x[x.findIndex(v => BASIC_IDS.includes(v))] = 'v_scale'; return x; })(), d.cards), '패시브 카드는 전투 칸에 못 넣음');
-  // 전투 칸 카드를 빼면 가방으로(자리는 기본기)
+  // 전투 칸 카드를 빼면 이 식물 스킬 보관으로(귀속 — 자리는 기본기)
   const back = [...d.skills.battle]; back[bi] = BASIC_IDS.find(x => !back.includes(x));
   setLoadout(s, d.uid, back);
-  ok(s.cards.m_frostclaw === 1 && !d.skills.battle.includes('m_frostclaw'), '전투 칸 카드 빼기 → 가방');
+  ok(!s.cards.m_frostclaw && d.skills.store.includes('m_frostclaw') && !d.skills.battle.includes('m_frostclaw'), '전투 칸 카드 빼기 → 스킬 보관(귀속)');
   // 배운 기술 자리에 카드 → 배운 기술은 보관(조커) 칸
   const li = d.skills.battle.findIndex(x => x && !BASIC_IDS.includes(x) && !isSkillCard(x)), learned = d.skills.battle[li];
   const nb2 = [...d.skills.battle]; nb2[li] = 'm_voltclaw';
   setSlots(s, d.uid, nb2, d.cards);
   ok(d.skills.store.includes(learned) && d.skills.battle[li] === 'm_voltclaw', '배운 기술 → 스킬 보관');
-  // 새로 핀 기술을 카드 자리에 놓으면 카드는 가방으로(지운 기술로 가지 않게)
+  // 새로 핀 기술을 카드 자리에 놓으면 카드는 스킬 보관으로(귀속 — 지운 기술로 가지 않게)
   d.pend.push('f_rage'); const before = s.cards.m_voltclaw || 0;
   const r = placePending(s, d.uid, 'f_rage', 'b' + li);
-  ok(r.card === 'm_voltclaw' && s.cards.m_voltclaw === before + 1 && !d.skills.forgot.includes('m_voltclaw'), '새 기술 → 카드는 가방으로');
-  // 조커와 바꿀 때 카드는 가방으로
+  ok(r.card === 'm_voltclaw' && (s.cards.m_voltclaw || 0) === before && (d.skills.store.includes('m_voltclaw') || r.to === 'sold') && !d.skills.forgot.includes('m_voltclaw'), '새 기술 → 카드는 스킬 보관(귀속): ' + r.to);
+  // 보관 첫 칸과 바꿀 때 카드도 보관으로(귀속)
   const ci = d.skills.battle.findIndex(x => BASIC_IDS.includes(x)); const nb3 = [...d.skills.battle]; nb3[ci] = 'm_voltclaw';
   setSlots(s, d.uid, nb3, d.cards); const v0 = s.cards.m_voltclaw || 0;
   swapJoker(s, d.uid, ci);
-  ok((s.cards.m_voltclaw || 0) === v0 + 1 && !d.skills.store.includes('m_voltclaw'), '보관과 바꾸면 카드는 가방(보관 칸 아님)');
+  ok((s.cards.m_voltclaw || 0) === v0 && d.skills.store.includes('m_voltclaw'), '보관과 바꾸면 카드는 스킬 보관(귀속 — 가방 아님)');
 }
-// ⑥ 식물이 떠나면 카드는 가방으로
+// ⑥ 식물이 떠나면 끼운 카드는 팔 값(귀속 — 2026-10-22, 전엔 가방으로)
 {
   const s = game(), a = plant(s, 'thorn'), b = plant(s, 'thorn'), c = plant(s, 'aqua');
+  for (const x of [a, b, c]) { x.cards = [null, null, null]; x.pstore = []; }   // 처음 핀 카드는 비우고(무작위)
   s.cards = { n_wall: 1, n_fiber: 1, n_spine: 1 };
   setCards(s, a.uid, ['n_wall', null]); setCards(s, b.uid, ['n_fiber', null]); setCards(s, c.uid, ['n_spine', null]);
-  sell(s, a.uid);
-  ok(s.cards.n_wall === 1, '팔면 카드는 가방');
-  dismantle(s, c.uid, makeRng(4));
-  ok(s.cards.n_spine >= 1, '해체해도 카드는 가방');
-  const nf = s.cards.n_fiber || 0; sell(s, b.uid);   // 식물 통째 거름은 없앰(2026-10-18) — 팔기로 한 번 더
-  ok(s.cards.n_fiber === nf + 1, '판 식물 카드도 가방');
+  const c0 = s.wallet.credits, ra = sell(s, a.uid);
+  ok(!s.cards.n_wall && ra.cards === cardPrice('n_wall') && s.wallet.credits === c0 + ra.credits, '팔면 끼운 카드는 팔 값(가방으로 안 감): ' + JSON.stringify(ra));
+  const c1 = s.wallet.credits, rd = dismantle(s, c.uid, makeRng(4));
+  ok(!s.cards.n_spine && rd.got.some(g => g.kind === 'credits' && g.n === cardPrice('n_spine')) && s.wallet.credits >= c1 + cardPrice('n_spine'), '해체해도 끼운 카드는 팔 값');
+  const nf = s.cards.n_fiber || 0; sell(s, b.uid);
+  ok((s.cards.n_fiber || 0) === nf, '판 식물 카드는 가방에 안 돌아옴');
 }
 // ⑦ 패시브가 전투에 닿는지
 {
@@ -265,7 +266,8 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const again = { ...old4, ivs: { ...old4.ivs, fruit: 0 } }; normIvs(again); ok(again.ivs.fruit === 0, '한 번만(ivFix)');
   const s = game(); ok(s.plants[0].ivFix === 1, '새로 핀 식물 = 표시 있음');
 }
-// ⑫ 패시브 장착 셋 + 변이 보관 셋(2026-10-18 사용자 "패시브 3개로 · 보관(변이 패시브만) 3칸") · 변이 기술 카드는 스킬 보관을 같이 씀(빼면 보관 · 보관에서 빼면 가방)
+// ⑫ 패시브 장착 셋 + 보관 셋(2026-10-18 사용자 "패시브 3개로 · 보관(변이 패시브만) 3칸" → 2026-10-22 카드 귀속으로 모든 식물) · 변이 기술 카드는 스킬 보관을 같이 씀 ·
+//  끼운 카드는 그 식물에 귀속(가방 · 다른 식물로 못 감) — 보관에서 버리기 = 팔 값
 {
   const { slotLayout } = await import('../../v2/src/game/logic.js');
   const s = game(), n = s.plants[0], m = plant(s, 'thorn', { form: 'toxic' });
@@ -273,19 +275,26 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const tp = formCards('toxic').filter(id => !isSkillCard(id)), tk = formCards('toxic').filter(isSkillCard);
   s.cards[tp[1]] = 1; s.cards[tp[2]] = 1; s.cards[tk[3]] = 1; s.cards.n_wall = 2;
   throws(() => setSlots(s, n.uid, { ...slotLayout(n), cards: [n.cards[0], tp[1], null] }), '일반 식물에 변이 패시브 = 막힘');
-  throws(() => setSlots(s, n.uid, { ...slotLayout(n), pstore: ['n_wall'] }), '일반 식물 패시브 보관 = 막힘');
+  setSlots(s, n.uid, { ...slotLayout(n), pstore: ['n_wall'] });
+  ok(n.pstore[0] === 'n_wall' && s.cards.n_wall === 1, '일반 식물도 패시브 보관 셋(귀속 — 뺀 카드가 갈 곳)');
   throws(() => setSlots(s, m.uid, { ...slotLayout(m), pstore: ['n_wall'] }), '변이 식물 패시브 보관에 일반 패시브 = 막힘');
   const b0 = s.cards[tp[1]];
   setSlots(s, m.uid, { ...slotLayout(m), pstore: [tp[1]] });
   ok(m.pstore[0] === tp[1] && (s.cards[tp[1]] || 0) === b0 - 1, '변이 패시브 보관에 넣음 = 가방에서 빠짐');
-  setSlots(s, m.uid, { ...slotLayout(m), pstore: [] });
-  ok(!m.pstore.length && s.cards[tp[1]] === b0, '패시브 보관에서 뺌 = 가방으로');
+  throws(() => setSlots(s, m.uid, { ...slotLayout(m), pstore: [] }), '패시브 보관에서 가방으로 = 막힘(귀속)');
+  ok(m.pstore[0] === tp[1] && (s.cards[tp[1]] || 0) === b0 - 1, '막히면 그대로');
   const L = slotLayout(m), ci = L.battle.findIndex(isSkillCard), card = L.battle[ci], bag0 = s.cards[card] || 0;
   const L2 = { ...L, battle: [...L.battle], store: [...L.store, card] }; L2.battle[ci] = null;
   setSlots(s, m.uid, L2);
   ok(m.skills.store.includes(card) && (s.cards[card] || 0) === bag0, '변이 기술 카드 해제 = 스킬 보관으로(가방 그대로)');
-  setSlots(s, m.uid, { ...slotLayout(m), store: slotLayout(m).store.filter(x => x !== card) });
-  ok(!m.skills.store.includes(card) && s.cards[card] === bag0 + 1, '스킬 보관의 카드를 뺌 = 가방으로');
+  throws(() => setSlots(s, m.uid, { ...slotLayout(m), store: slotLayout(m).store.filter(x => x !== card) }), '스킬 보관의 카드를 가방으로 = 막힘(귀속)');
+  const cr0 = s.wallet.credits, dr = discardCard(s, m.uid, card);
+  ok(!m.skills.store.includes(card) && (s.cards[card] || 0) === bag0 && s.wallet.credits === cr0 + cardPrice(card) && dr.credits === cardPrice(card), '보관의 카드 버리기 = 팔 값(가방엔 안 감)');
+  throws(() => discardCard(s, m.uid, m.cards.find(Boolean) || 'v_sap'), '장착한 카드는 바로 못 버림(먼저 해제)');
+  const cr1 = s.wallet.credits; discardCard(s, n.uid, 'n_wall'); ok(!n.pstore.includes('n_wall') && s.wallet.credits === cr1 + cardPrice('n_wall'), '일반 식물 보관도 버리기');
+  // 다른 식물로 옮기기 = 가방을 거쳐야 하는데 가방으로 못 감 → 다른 식물 배치에 넣으면 '가방에 없어요'
+  const n2 = plant(s, 'thorn'); n2.cards = [null, null, null]; n2.pstore = []; const pass = m.pstore[0];
+  throws(() => setSlots(s, n2.uid, { ...slotLayout(n2), cards: [pass, null, null] }), '다른 식물에 끼운 카드는 못 가져옴');
   const L3 = slotLayout(m); setSlots(s, m.uid, { ...L3, store: [...L3.store, tk[3]] });
   ok(m.skills.store.includes(tk[3]) && !s.cards[tk[3]], '가방 변이 기술 카드 → 스킬 보관(가방에서 빠짐)');
   const old = plant(s, 'aqua'); old.cards = ['n_wall', null]; delete old.pstore; syncTimers(s, 0);

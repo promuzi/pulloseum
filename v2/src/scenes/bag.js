@@ -12,7 +12,7 @@ import { eul } from '../core/josa.js';
 import { openDraft } from './draft.js';
 import { sfx } from '../core/sound.js';
 
-// 이 카드를 끼운 식물 수(스마트팜 · 보관고 — 가방 줄에 '끼움 n', 2026-10-22 사용자 "식물끼리 공유되는거에 대한 정리가 미흡함")
+// 이 카드를 끼운 식물 수(스마트팜 · 보관고 — 가방 줄에 '끼움 n', 2026-10-22). 끼운 카드는 그 식물에 귀속(다른 식물 · 가방으로 못 감)
 const onPlants = (s, id) => [...s.plants, ...(s.storage || [])].reduce((a, p) => a + [...(p.cards || []), ...(p.pstore || []), ...((p.skills && p.skills.battle) || []), ...((p.skills && p.skills.store) || [])].filter(x => x === id).length, 0);
 
 // 가방: 종자(심기 · 팔기) · 접목 가지(맞는 식물에 접목) · 물건(물 · 비료 · 회귀 주사 · 연료)
@@ -122,15 +122,15 @@ export const bag = {
       // 넣을 곳(2026-10-18 칸 개편): 기술 카드 = 빈 장착 칸(MUT_MAX 장 안) → 스킬 보관 빈 칸 · 패시브 = 빈 장착 칸 → (그 변이 패시브) 패시브 보관 빈 칸
       const ry = y + 36 + i * 40, why = cardFits(p, id), L = slotLayout(p), sk = isSkillCard(id), has = [...L.battle, ...L.store, ...L.cards, ...L.pstore].some(x => x && baseOf(x) === baseOf(id));   // 강화 카드(+1 · +2)도 같은 카드
       const bi = L.battle.indexOf(null), ci = L.cards.indexOf(null);
-      const where = sk ? (bi >= 0 && L.battle.filter(isSkillCard).length < MUT_MAX ? 'b' : L.store.length < SKILL_STORE ? 's' : null) : (ci >= 0 ? 'c' : p.form && CARDS[id].form === p.form && L.pstore.length < PASS_STORE ? 'p' : null);
+      const where = sk ? (bi >= 0 && L.battle.filter(isSkillCard).length < MUT_MAX ? 'b' : L.store.length < SKILL_STORE ? 's' : null) : (ci >= 0 ? 'c' : L.pstore.length < PASS_STORE ? 'p' : null);   // 패시브 보관 = 모든 식물(2026-10-22)
       const no = why || (has ? '이미 끼웠어요' : !where ? (sk ? '스킬 칸이 차 있어요' : '패시브 칸이 차 있어요') : null);
       g.text(p.name, 22, ry + 6, { font: 'bold', color: no ? T.text.dim : P.main });
       g.text(no || (where === 'b' || where === 'c' ? '장착에 끼워요' : '보관에 넣어요'), 22, ry + 22, { color: no ? '#ffb0a0' : '#9ff0b0' });
       const done = r => { if (r) { this.pickFor = null; app.toast(`${p.name}에게 넣었어요`); } };
-      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: () => {
+      button(app, 'cp_' + i, W - 84, ry + 6, 60, 26, '끼우기', { style: 'gold', disabled: !!no, onTap: () => ask(app, `${eul(c.name)} ${p.name}에게 끼울까요?`, '끼운 카드는 이 식물에 귀속돼요 — 다른 식물로 옮기거나 가방에 되돌릴 수 없어요', () => {   // 귀속(2026-10-22) = 되돌릴 수 없어 한 번 묻기
         if (where === 'b') L.battle[bi] = id; else if (where === 's') L.store.push(id); else if (where === 'c') L.cards[ci] = id; else L.pstore.push(id);
         app.act('setSlots', { id: p.uid, ...L }).then(done);
-      } });
+      }, '끼우기') });
     });
     button(app, 'cs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },

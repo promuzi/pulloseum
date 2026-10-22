@@ -150,7 +150,7 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   throws(() => setSlots(s, p.uid, (() => { const b = [...p.skills.battle]; b[4] = 'm_bite'; return b; })(), p.cards), '다른 변이 기술 카드');
   throws(() => setSlots(s, s.plants[0].uid, (() => { const b = [...s.plants[0].skills.battle]; b[5] = 'm_slash'; return b; })(), s.plants[0].cards), '변이 아닌 식물에 기술 카드');
   setSlots(s, p.uid, (() => { const b = [...p.skills.battle]; b[4] = 'm_smash'; b[5] = 'm_slash'; return b; })(), p.cards);
-  ok(p.skills.battle[4] === 'm_smash' && p.skills.battle[5] === 'm_slash' && s.cards[sk0] >= 1, '전투 칸에 기술 카드 둘(있던 건 가방으로)');
+  ok(p.skills.battle[4] === 'm_smash' && p.skills.battle[5] === 'm_slash' && p.skills.store.includes(sk0) && !s.cards[sk0], '전투 칸에 기술 카드 둘(있던 건 스킬 보관 — 귀속)');
   throws(() => setSlots(s, p.uid, (() => { const b = [...p.skills.battle]; b[3] = 'm_slash'; return b; })(), p.cards), '같은 카드 두 칸');
   s.cards.m_shot = 1;
   throws(() => setSlots(s, p.uid, (() => { const b = [...p.skills.battle]; b[3] = 'm_shot'; return b; })(), p.cards), '기술 카드는 둘까지');

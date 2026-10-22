@@ -2,7 +2,7 @@ import { cardFront, cardSlot, renderFaces, backHeight } from '../art/skillcard.j
 import { button } from '../art/ui.js';
 import { drawBig } from '../art/sprites.js';
 import { SKILLS } from '../game/catalog.js';
-import { CARDS, CARD_SLOTS, PASS_STORE, cardFace, isSkillCard } from '../game/cards.js';
+import { CARDS, CARD_SLOTS, PASS_STORE, cardFace, isSkillCard, cardPrice } from '../game/cards.js';
 import { slotLayout, LOADOUT, SKILL_STORE, MUT_MAX, BASIC_IDS } from '../game/logic.js';
 import { cardSkillOf } from '../game/fight.js';
 import { basicsOf } from '../battle/model.js';
@@ -23,7 +23,7 @@ const faceOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p
 const want = d => Math.min(d.pick, d.cands.length);
 const placed = (D, d) => Object.values(D.lay).flat().filter(x => x && d.cands.includes(x)).length;
 // 칸 묶음: 기술 고르기 = 장착 b0~b5 · 보관 s0~s5 / 패시브 고르기 = 장착 c0~c2 · (변이 식물) 보관 p0~p2
-const groupsOf = (d, p) => (d.part === 'passive' ? [['c', CARD_SLOTS, '장착'], ...(p.form ? [['p', PASS_STORE, '보관']] : [])] : [['b', LOADOUT, '장착'], ['s', SKILL_STORE, '보관']]);
+const groupsOf = (d, p) => (d.part === 'passive' ? [['c', CARD_SLOTS, '장착'], ['p', PASS_STORE, '보관']] : [['b', LOADOUT, '장착'], ['s', SKILL_STORE, '보관']]);   // 패시브 보관 = 모든 식물(2026-10-22 귀속)
 const rowOf = (D, r) => (r === 'b' ? D.lay.battle : r === 's' ? D.lay.store : r === 'c' ? D.lay.cards : D.lay.pstore);
 const idIn = (D, key) => rowOf(D, key[0])[+key.slice(1)] || null;
 const nameOf = (p, id) => (faceOf(p, id) || {}).name || id;
@@ -51,7 +51,7 @@ export function placeCard(app, D, ti, key) {
   if (!d || !id) return null;
   const r = key[0], i = +key.slice(1), row = rowOf(D, r), compact = r === 's' || r === 'p', old = row[i] || null;
   if (d.cands.includes(id) && placed(D, d) >= want(d)) return `${want(d)}장까지예요`;
-  if (r === 'p' && !(p.form && CARDS[id] && CARDS[id].form === p.form)) return '패시브 보관엔 그 변이 패시브만 넣어요';
+  if (r === 'p' && !(CARDS[id] && !isSkillCard(id))) return '패시브 보관엔 패시브 카드만 넣어요';
   if (r === 'b' && isSkillCard(id) && !isSkillCard(old) && D.lay.battle.filter(isSkillCard).length >= MUT_MAX) return `변이 기술 카드는 장착에 ${MUT_MAX}장까지예요`;
   D.hist.push(JSON.stringify({ top: D.top, lay: D.lay }));
   D.top.splice(ti, 1);
@@ -113,7 +113,7 @@ export function draftScreen(app, D) {
   let y = SY0 - Math.round(D.sy || 0);
   g.clip(0, SY0 - 4, W, SY1 - SY0 + 4, () => {
     for (const [r, cnt, name] of groupsOf(d, p)) {
-      const row = rowOf(D, r), aimRow = D.arm && D.top[D.sel] && (r !== 'p' || (CARDS[D.top[D.sel]] && CARDS[D.top[D.sel]].form === p.form));
+      const row = rowOf(D, r), aimRow = D.arm && D.top[D.sel] && (r !== 'p' || (CARDS[D.top[D.sel]] && !isSkillCard(D.top[D.sel])));
       g.text(name, 14, y, { font: 'value', color: r === 'b' || r === 'c' ? '#e6f3ff' : '#ffd890' });
       g.text(`${row.filter(Boolean).length}/${cnt}`, W - 14, y + 1, { font: 'label', color: '#8cb6de', align: 'right' });
       y += 18;
@@ -150,7 +150,7 @@ export function draftScreen(app, D) {
   if (D.peek && !D.peek.keep && !input.down) D.peek = null;
   if (D.peek) drawPeek(app, D, p);
 }
-// 확정: 위 줄에 기존 카드가 남았으면 버린다고 먼저 묻기(기술 = 지운 기술 · 카드 = 가방)
+// 확정: 위 줄에 기존 카드가 남았으면 버린다고 먼저 묻기(기술 = 지운 기술 · 끼웠던 카드 = 귀속이라 팔 값만큼 돈 — 2026-10-22)
 function confirm(app, D, p, d) {
   const drop = D.top.filter(x => !d.cands.includes(x)), cards = drop.filter(x => CARDS[x]), plain = drop.filter(x => !CARDS[x]);
   const go = () => {
@@ -165,7 +165,7 @@ function confirm(app, D, p, d) {
   };
   if (!drop.length) return go();
   const names = drop.map(x => nameOf(p, x)), msg = `${names.slice(0, -1).map(x => x + ' · ').join('')}${eul(names[names.length - 1])} 버릴까요?`;
-  const sub = [plain.length ? '기술은 지운 기술로 가요(회귀 주사로 되찾음)' : '', cards.length ? '카드는 가방으로 가요' : ''].filter(Boolean).join(' · ');
+  const sub = [plain.length ? '기술은 지운 기술로 가요(회귀 주사로 되찾음)' : '', cards.length ? `끼웠던 카드는 팔려요(돈 +${cards.reduce((a, x) => a + cardPrice(x), 0)})` : ''].filter(Boolean).join(' · ');
   ask(app, msg, sub, go, '확정');
 }
 // 처음 한 번만 보이는 짧은 안내(이 겹창 위에선 처음 안내 판이 안 뜸) — 확정 · 보류하면 봤음

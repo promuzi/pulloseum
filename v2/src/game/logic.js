@@ -157,8 +157,9 @@ export const findPlant = (s, id) => s.plants.find(p => p.uid === id) || null;
 const addCard = (s, id, n = 1) => { s.cards[id] = (s.cards[id] || 0) + n; };
 const tally = list => { const o = {}; for (const x of list) if (x) o[x] = (o[x] || 0) + 1; return o; };
 const cardsOn = p => [...(p.cards || []), ...(p.pstore || []), ...((p.skills && p.skills.battle) || []).filter(isSkillCard), ...((p.skills && p.skills.store) || []).filter(isSkillCard)].filter(Boolean);
-// 식물이 떠날 때(팔기 · 해체 · 거름) 끼운 카드는 가방으로
-const releaseCards = (s, p) => { for (const id of cardsOn(p)) if (CARDS[id]) addCard(s, id); };
+// 식물이 떠날 때(팔기 · 해체): 끼운 카드는 그 식물에 귀속(2026-10-22 사용자 '다른 식물에 끼운 카드는 못 바꿔 고정인걸로하자 패시브나 스킬 전부 식물 귀속') →
+//  가방으로 돌아가지 않고 카드마다 팔 값(cards.js cardPrice)만큼 돈으로 — 전엔 가방으로 돌아감
+const releaseCards = (s, p) => { let n = 0; for (const id of cardsOn(p)) if (CARDS[id]) n += cardPrice(id); s.wallet.credits += n; return n; };
 export const formsOwned = s => [...new Set([...s.plants, ...(s.storage || [])].map(p => p.form).filter(Boolean))];
 const OLD_MUT = { predator: ['m_bite', 'm_devour', 'm_hunt'], weapon: ['m_slash', 'm_shot', 'm_smash'], toxic: ['m_spit', 'm_acid', 'm_miasma'], spore: ['m_puff', 'm_sleep', 'm_bloom'], dragon: ['m_breath', 'm_scale', 'm_roar'] };
 // 옛 세이브 맞추기: 카드 칸 · 가방 · 옛 변이 칸 둘(p.skills.mut — 2026-10-16) → 카드 칸(끼워 둔 기술은 그대로, 그 변이의 나머지 옛 기술은 카드로 가방에 — 잃는 것 없게)
@@ -168,7 +169,7 @@ export function normCards(s) {
     if (!Array.isArray(p.cards)) p.cards = [null, null];
     while (p.cards.length < CARD_SLOTS) p.cards.push(null);
     if (!Array.isArray(p.pstore)) p.pstore = [];
-    if (!p.form && p.pstore.length) { for (const id of p.pstore) addCard(s, id); p.pstore = []; }   // 패시브 보관 = 변이 식물만
+    if (p.pstore.some(id => !CARDS[id] || isSkillCard(id) || cardFits(p, id))) p.pstore = p.pstore.filter(id => { if (CARDS[id] && !isSkillCard(id) && !cardFits(p, id)) return true; if (CARDS[id]) addCard(s, id); return false; });   // 패시브 보관 = 모든 식물(2026-10-22) — 이 식물에 안 맞는 카드만 가방으로
     if (p.skills && !p.skills.v8) normSkills(p);
     const S = p.skills;
     if (S && Array.isArray(S.mut)) {
@@ -210,7 +211,8 @@ const cellOf = x => (x == null || x === '' ? null : String(x));
 // 새 배치 검사 + 넣기(setSlots · draftApply 공용 — 2026-10-18 스킬 · 패시브 칸 개편):
 //  스킬 칸(장착 · 보관) = 기본 기술(배운 기술 · 기본기) · 그 변이 기술 카드(장착엔 MUT_MAX 장까지) / 패시브 칸 = 맞는 패시브(cardFits) · 패시브 보관 = 변이 식물의 그 변이 패시브만 ·
 //  한 식물에 같은 것 두 칸 없이 · 장착에 하나는. 카드 = 물건(새로 들어오면 가방에서 빠지고 빠지면 가방으로). 기본 기술이 빠지면 X.drop 일 때만(고르기 화면 — 지운 기술로)
-//  X = { plain: 새로 들어와도 되는 기술(고르기 후보), fresh: 가방을 거치지 않고 새로 생기는 카드(패시브 고르기 후보), drop }
+//  X = { plain: 새로 들어와도 되는 기술(고르기 후보), fresh: 가방을 거치지 않고 새로 생기는 카드(패시브 고르기 후보), drop, sell }
+//  카드 귀속(2026-10-22): 가방 → 식물은 됨 · 식물에서 빠지는 카드는 막음(이 식물 안 장착 ↔ 보관만) — X.sell(고르기 확정에서 위 줄에 남긴 카드)이면 팔 값만큼 돈
 function applyLayout(s, p, L, X = {}) {
   const B = L.battle, St = L.store.filter(Boolean), C = L.cards, Ps = L.pstore.filter(Boolean);
   need(B.length === LOADOUT && C.length === CARD_SLOTS, '칸 수가 맞지 않아요');
@@ -223,7 +225,6 @@ function applyLayout(s, p, L, X = {}) {
   need(B.some(Boolean), '장착에 기술이 하나는 있어야 해요');
   for (const x of [...B, ...St]) if (x && CARDS[x]) { need(isSkillCard(x), '패시브 카드는 패시브 칸에 놓아요'); const why = cardFits(p, x); need(!why, why); }
   for (const x of [...C, ...Ps]) if (x) { need(CARDS[x] && !isSkillCard(x), '기술은 스킬 칸에 놓아요'); const why = cardFits(p, x); need(!why, why); }
-  for (const x of Ps) need(p.form && CARDS[x].form === p.form, '패시브 보관엔 그 변이 패시브만 넣어요');
   need(B.filter(isSkillCard).length <= MUT_MAX, `변이 기술 카드는 장착에 ${MUT_MAX}장까지예요`);
   const before = new Set([...p.skills.battle, ...p.skills.store].filter(x => x && !CARDS[x])), after = [...B, ...St].filter(x => x && !CARDS[x]), may = new Set(X.plain || []);
   for (const x of after) need(before.has(x) || may.has(x), '모르는 기술이에요');
@@ -234,14 +235,18 @@ function applyLayout(s, p, L, X = {}) {
   for (const k of Object.keys(cA)) if (need2(k) > 0) need((s.cards[k] || 0) >= need2(k), `${CARDS[k].name} 카드가 가방에 없어요`);
   for (const k of Object.keys(cA)) { const n = need2(k); if (n > 0) { s.cards[k] -= n; if (s.cards[k] <= 0) delete s.cards[k]; } }
   const back = [];
-  for (const [k, n] of Object.entries(cB)) { const b = n - (cA[k] || 0); if (b > 0) { addCard(s, k, b); back.push(k); } }
+  for (const [k, n] of Object.entries(cB)) { const b = n - (cA[k] || 0); if (b > 0) for (let q = 0; q < b; q++) back.push(k); }
+  need(!back.length || X.sell, '끼운 카드는 이 식물에 귀속돼요 — 보관으로 옮기거나 보관에서 버려요');
+  let sold = 0;
+  for (const k of back) sold += cardPrice(k);
+  s.wallet.credits += sold;
   for (const x of dropped) if (!p.skills.forgot.includes(x)) p.skills.forgot.push(x);
   for (const x of after) if (!isBasic(x) && !p.skills.learned.includes(x)) p.skills.learned.push(x);
   p.skills.battle = B.map(cellOf); p.skills.store = St; p.cards = C.map(cellOf); p.pstore = Ps;
-  return { dropped, back };
+  return { dropped, back, sold };
 }
 // 탭에서 옮기기(화면이 네 칸 전부를 보냄 — 끼우기 · 빼기 · 자리 바꾸기 · 가방 ↔ 칸). 기본 기술은 버리지 못함(고르기 화면에서만).
-//  옛 꼴 setSlots(s, id, battle, cards) — 옛 화면용: 보관 = 원래 보관에서 새 장착에 든 것을 빼고 장착에서 빠진 기본 기술을 뒤에(빠진 카드는 옛날처럼 가방) · 카드 칸 둘이면 셋째 칸 그대로 · 패시브 보관 그대로
+//  옛 꼴 setSlots(s, id, battle, cards) — 옛 화면용: 보관 = 원래 보관에서 새 장착에 든 것을 빼고 장착에서 빠진 기술 · 기술 카드를 뒤에 · 빠진 패시브는 패시브 보관 끝(귀속 — 2026-10-22) · 카드 칸 둘이면 셋째 칸 그대로
 export function setSlots(s, id, a, b) {
   const p = getPlant(s, id); normSkills(p); normCards(s);
   let L;
@@ -249,8 +254,9 @@ export function setSlots(s, id, a, b) {
     need(a.length === LOADOUT, '장착 칸은 여섯이에요');
     need(Array.isArray(b) && (b.length === 2 || b.length === CARD_SLOTS), '패시브 칸 수가 맞지 않아요');
     const B = a.map(cellOf), C = [...b.map(cellOf), ...slotLayout(p).cards.slice(b.length)];
-    const St = [...p.skills.store.filter(x => !B.includes(x)), ...p.skills.battle.filter(x => x && !CARDS[x] && !B.includes(x) && !p.skills.store.includes(x))];
-    L = { battle: B, store: St, cards: C, pstore: [...(p.pstore || [])] };
+    const St = [...p.skills.store.filter(x => !B.includes(x)), ...p.skills.battle.filter(x => x && !B.includes(x) && !p.skills.store.includes(x))];   // 빠진 기술 카드도 스킬 보관(귀속 — 2026-10-22)
+    const Ps = [...(p.pstore || []).filter(x => !C.includes(x)), ...(p.cards || []).filter(x => x && !C.includes(x) && !(p.pstore || []).includes(x))];   // 빠진 패시브 = 패시브 보관
+    L = { battle: B, store: St, cards: C, pstore: Ps };
   } else {
     need(a && typeof a === 'object' && [a.battle, a.store, a.cards].every(Array.isArray), '잘못된 요청이에요');
     L = { battle: a.battle.map(cellOf), store: a.store.map(cellOf), cards: a.cards.map(cellOf), pstore: (Array.isArray(a.pstore) ? a.pstore : []).map(cellOf) };
@@ -363,9 +369,9 @@ export function draftApply(s, id, n, layout) {
   const L = pas ? { ...cur, cards: arr(layout.cards), pstore: arr(layout.pstore || []) } : { ...cur, battle: arr(layout.battle), store: arr(layout.store) };
   const placed = (pas ? [...L.cards, ...L.pstore] : [...L.battle, ...L.store]).filter(x => x && d.cands.includes(x)), want = Math.min(d.pick, d.cands.length);
   need(placed.length === want, `${want}장을 골라 놓아요`);
-  const r = applyLayout(s, p, L, pas ? { fresh: placed } : { plain: placed, drop: true });
+  const r = applyLayout(s, p, L, pas ? { fresh: placed, sell: true } : { plain: placed, drop: true, sell: true });
   p.drafts.splice(n, 1);
-  return { got: placed, dropped: [...r.dropped, ...r.back] };
+  return { got: placed, dropped: [...r.dropped, ...r.back], sold: r.sold };
 }
 // 옛 화면용(고른 기술만 보냄): 빈 장착 → 보관 순으로 — 칸이 모자라면 막음(새 화면에서 놓을 칸 · 버릴 것을 정함)
 export function draftPick(s, id, n, picks) {   // n = 몇째 고르기(0 = 맨 앞) · picks = 고른 기술(정확히 pick 장)
@@ -391,7 +397,10 @@ export function placePending(s, id, skill, target) {
   if (slot === 'store') { p.skills.store.push(skill); return { forgot: null }; }
   const old = p.skills.battle[slot];
   p.skills.battle[slot] = skill;
-  if (isSkillCard(old)) { normCards(s); addCard(s, old); return { forgot: null, card: old }; }   // 태생 변이 전투 칸의 카드 = 가방으로
+  if (isSkillCard(old)) {   // 전투 칸의 카드 = 이 식물 스킬 보관(귀속 — 2026-10-22, 전엔 가방), 보관이 차면 팔 값만큼 돈
+    if (p.skills.store.length < SKILL_STORE) { p.skills.store.push(old); return { forgot: null, card: old, to: 'store' }; }
+    const n = cardPrice(old); s.wallet.credits += n; return { forgot: null, card: old, to: 'sold', credits: n };
+  }
   if (old && isBasic(old)) { stashPlain(p, old); return { forgot: p.skills.forgot.includes(old) ? old : null }; }   // 기본기도 칸 안(v8) — 보관 → 없으면 지운 기술
   if (old) { p.skills.forgot.push(old); return { forgot: old }; }
   return { forgot: null };
@@ -406,8 +415,7 @@ export function swapJoker(s, id, slot) {
   const p = getPlant(s, id); normSkills(p);
   const b = p.skills.battle;
   need(slot >= 0 && slot < LOADOUT, '칸을 골라 주세요');
-  const out = b[slot]; b[slot] = p.skills.store.shift() || null; if (out && !isSkillCard(out)) p.skills.store.unshift(out);   // 기본기도 보관으로(v8)
-  if (isSkillCard(out)) { normCards(s); addCard(s, out); }   // 카드는 보관 칸이 아니라 가방으로
+  const out = b[slot]; b[slot] = p.skills.store.shift() || null; if (out) p.skills.store.unshift(out);   // 기본기 · 카드도 보관으로(카드 = 귀속 — 2026-10-22, 전엔 가방)
   return {};
 }
 // 강화: 레벨업 포인트 + 돈(상한 없음 — 몰빵 가능), 리셋 = 돈
@@ -665,9 +673,9 @@ export function sellPrice(p) {
 const takePlant = (s, id) => {
   let i = s.plants.findIndex(x => x.uid === id);
   normCards(s);
-  if (i >= 0) { need(s.plants.length > 1, '스마트팜에 하나는 남겨 둬요'); const p = s.plants.splice(i, 1)[0]; fixActive(s); releaseCards(s, p); return p; }
+  if (i >= 0) { need(s.plants.length > 1, '스마트팜에 하나는 남겨 둬요'); const p = s.plants.splice(i, 1)[0]; fixActive(s); p.cardCredits = releaseCards(s, p); return p; }
   i = s.storage.findIndex(x => x.uid === id); need(i >= 0, '그 식물이 없어요');
-  const p = s.storage.splice(i, 1)[0]; releaseCards(s, p); return p;
+  const p = s.storage.splice(i, 1)[0]; p.cardCredits = releaseCards(s, p); return p;
 };
 // 처음 안내 봤음(화면 이름 — 화면이 처음 열릴 때 한 번만 뜨게, 기기를 바꿔도). 이름 모양 · 개수 제한
 export function seeGuide(s, id) {
@@ -680,7 +688,7 @@ export function seeGuide(s, id) {
 export function sell(s, id) {
   const p = takePlant(s, id), n = sellPrice(p);
   s.wallet.credits += n;
-  return { credits: n, name: p.name };
+  return { credits: n + (p.cardCredits || 0), cards: p.cardCredits || 0, name: p.name };   // 끼운 카드 팔 값은 takePlant 에서 이미 더함
 }
 // 종자 팔기(돈 출처 — 사용자 2026-10-16 "판매-씨앗, 키운 식물, 주운 물건")
 export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1));
@@ -704,6 +712,7 @@ export function dismantle(s, id, rng) {
   if (rng() < (p.form ? 0.5 : 0.25) + 0.25 * q) { const c = rollCard(rng, p.form || 'normal'); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); }   // 카드(2026-10-17)
   got.push({ kind: 'parts', n: 1 + p.stage + (p.lv >= 4 ? 1 : 0), rar: 1 });   // 부품(2026-10-17) — 해체하면 늘 조금
   for (const r of got) grant(s, r);
+  if (p.cardCredits) got.push({ kind: 'credits', n: p.cardCredits, rar: 0 });   // 끼웠던 카드 = 팔 값(돈은 takePlant 에서 이미 더함)
   return { got, name: p.name };
 }
 
@@ -862,6 +871,17 @@ export function cardUp(s, id) {
   s.cards[id] -= n; if (s.cards[id] <= 0) delete s.cards[id];
   addCard(s, c.next);
   return { from: id, to: c.next, cost };
+}
+// 버리기 = 식물 보관(스킬 보관 · 패시브 보관)의 카드 한 장 → 팔 값만큼 돈(귀속이라 가방으로는 못 감 — 2026-10-22)
+export function discardCard(s, id, card) {
+  const p = getPlant(s, id); normSkills(p); normCards(s);
+  need(CARDS[card], '카드가 아니에요');
+  const st = p.skills.store.indexOf(card), ps = (p.pstore || []).indexOf(card);
+  need(st >= 0 || ps >= 0, '보관에 있는 카드만 버려요 — 장착한 카드는 먼저 해제해요');
+  if (st >= 0) p.skills.store.splice(st, 1); else p.pstore.splice(ps, 1);
+  const n = cardPrice(card);
+  s.wallet.credits += n;
+  return { credits: n, card };
 }
 // 팔기 = 가방의 카드 한 장 → 돈(남는 카드 · 강화할 수 없는 카드)
 export function sellCard(s, id) {

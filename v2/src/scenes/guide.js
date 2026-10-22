@@ -65,13 +65,12 @@ export const GUIDES = [
       { at: (app, sc) => sc.growR, prep: top, text: '물 · 비료를 주면 레벨이 올라요. 오를 때마다 강화 포인트가 생기고, 다 자라면 진화해요.' },
       { at: ['sk_forgot', 'sk_graft'], prep: bottom, text: '지운 기술은 회귀 주사로 되돌리고, 접목 가지로는 맞는 기술을 바로 배워요.' },
     ] },
-  { id: 'plant_card4', scene: 'plant', when: (app, sc) => sc.tab === 'passive' && !sc.sub, btn: app => [app.W - 24, 9],   // 2026-10-22 꾸러미 · 다른 식물 카드 — 전에 본 사람도 한 번 더
+  { id: 'plant_card5', scene: 'plant', when: (app, sc) => sc.tab === 'passive' && !sc.sub, btn: app => [app.W - 24, 9],   // 2026-10-22 꾸러미 · 카드 귀속 — 전에 본 사람도 한 번 더
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
     steps: [
-      { at: ['skc_c0', 'skc_c1', 'skc_c2'], prep: top, text: '패시브 장착 셋이에요. 일반 식물은 능력치를 올리는 일반 카드를, 변이 식물은 그 변이 패시브 카드를 넣어요. 변이 식물은 아래 보관 셋에 변이 패시브를 맡겨 둘 수 있어요.' },
-      { at: 'skc_cl*', prep: bottom, text: '가방 — 이 식물에 맞는 카드예요. 누르면 [장착], 장착된 카드를 누르면 [해제]예요. 같은 카드는 한 식물에 한 장만 들어가요.' },
+      { at: ['skc_c0', 'skc_c1', 'skc_c2'], prep: top, text: '패시브 장착 셋이에요. 일반 식물은 능력치를 올리는 일반 카드를, 변이 식물은 그 변이 패시브 카드를 넣어요. 아래 보관 셋에 맡겨 둘 수 있어요.' },
+      { at: 'skc_cl*', prep: bottom, text: '가방 — 이 식물에 맞는 카드예요. 끼운 카드는 이 식물에 귀속돼서 다른 식물이나 가방으로 못 옮겨요. 해제하면 보관으로 가고, 보관에서 [버리기]하면 돈이 돼요.' },
       { at: ['pk_open', 'skc_cl*'], prep: bottom, text: '상점 · 탐사 · 레벨업에서 얻은 카드 꾸러미는 가방 줄 오른쪽 [꾸러미]로 열어요. 이 식물에 맞는 카드가 나와요.' },
-      { at: 'skc_ot*', prep: bottom, text: '다른 식물에 끼운 카드는 맨 아래에 따로 보여요. 누르면 [가져오기] — 그 식물에서 빠지고 이 식물에 들어가요.' },
     ] },
   { id: 'plant_mutcard', scene: 'plant', when: (app, sc) => sc.tab === 'skill' && !sc.sub && mutOf(app), btn: app => [app.W - 24, 9],
     ready: (app, sc) => sc.t0 != null && app.t - sc.t0 > 700 && !sc.out && !sc.peek && !sc.cardDrag,
@@ -112,10 +111,10 @@ export const GUIDES = [
       { at: 'plant_*', text: '종자를 심으면 스마트팜에서 자라요. 개체값은 심을 때 정해져요.' },
       { at: 'bag_explore', text: '종자는 탐사에서 가장 많이 얻어요.' },
     ] },
-  { id: 'bag_card2', scene: 'bag', when: (app, sc) => sc.tab === 'card', btn: hdrBtn,   // 2026-10-22 강화 · 팔기
+  { id: 'bag_card3', scene: 'bag', when: (app, sc) => sc.tab === 'card', btn: hdrBtn,   // 2026-10-22 강화 · 팔기 · 귀속
     ready: (app, sc) => !sc.pickFor,
     steps: [
-      { at: 'cd_*', text: '카드는 식물에 끼워요. 한 장은 한 식물에만 들어가고, 빼면 가방으로 돌아와요. 일반 카드는 일반 식물에, 변이 카드는 그 변이 식물에만 맞아요.' },
+      { at: 'cd_*', text: '카드는 식물에 끼워요. 끼운 카드는 그 식물에 귀속돼서 다른 식물로 못 옮겨요. 일반 카드는 일반 식물에, 변이 카드는 그 변이 식물에만 맞아요.' },
       { at: 'cu_*', text: '같은 일반 카드 두 장과 돈으로 한 단계 위 카드(+1 · +2)를 만들어요.' },
       { at: 'cs_*', text: '남는 카드나 강화할 수 없는 카드는 팔아요.' },
     ] },

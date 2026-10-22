@@ -12,7 +12,7 @@ import { SPECIES, SKILLS, RARITY_COL, ORBIT_LV, PLANETS, farmSlots, TIER_NAME, T
 import { net } from '../net/api.js';
 import { sellPrice } from '../game/logic.js';
 import { eul } from '../core/josa.js';
-import { CARDS, cardFace } from '../game/cards.js';
+import { CARDS, cardFace, cardPrice } from '../game/cards.js';
 import { cardTiny, packTiny } from '../art/skillcard.js';
 import { openForm } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
@@ -200,12 +200,13 @@ function confirmBox(app, Q) {
 }
 
 // 고른 식물 팔기 · 해체(2026-10-16 사용자 "암시장 빼고 식물 선택하며 그 아래에 팔기 해체하기로 버튼 — 팝업으로 실수하지 않게"): 스마트팜 · 보관고 · 식물 관리 설정이 같이 씀
+const cardsValue = p => [...(p.cards || []), ...(p.pstore || []), ...((p.skills && p.skills.battle) || []), ...((p.skills && p.skills.store) || [])].reduce((a, id) => a + (id && CARDS[id] ? cardPrice(id) : 0), 0);   // 끼운 카드 = 팔 값(귀속 — 2026-10-22)
 export function sellAsk(app, p, after) {
-  const price = sellPrice(p);
-  ask(app, `${eul(p.name)} 팔까요?`, `돈 ${price} · 되돌릴 수 없어요`, () => app.act('sell', { id: p.uid }).then(r => { if (r) { app.toast(`돈 +${r.credits}`); if (after) after(); } }), '팔기', { face: p.key, danger: true });
+  const price = sellPrice(p) + cardsValue(p);
+  ask(app, `${eul(p.name)} 팔까요?`, `돈 ${price}${cardsValue(p) ? '(끼운 카드 포함)' : ''} · 되돌릴 수 없어요`, () => app.act('sell', { id: p.uid }).then(r => { if (r) { app.toast(`돈 +${r.credits}`); if (after) after(); } }), '팔기', { face: p.key, danger: true });
 }
 export function cutAsk(app, p, after) {
-  ask(app, `${eul(p.name)} 해체할까요?`, '접목 가지 · 회귀 주사 같은 물건이 나와요 · 되돌릴 수 없어요', () => app.act('dismantle', { id: p.uid }).then(r => { if (r) { showGot(app, `${p.name} 해체`, r.got); if (after) after(); } }), '해체', { face: p.key, danger: true });
+  ask(app, `${eul(p.name)} 해체할까요?`, `접목 가지 · 회귀 주사 같은 물건이 나와요${cardsValue(p) ? ` · 끼운 카드는 돈 ${cardsValue(p)}` : ''} · 되돌릴 수 없어요`, () => app.act('dismantle', { id: p.uid }).then(r => { if (r) { showGot(app, `${p.name} 해체`, r.got); if (after) after(); } }), '해체', { face: p.key, danger: true });
 }
 
 // ── ④ 설정 ──

@@ -3,7 +3,7 @@
 //  ① 표(강화 카드 +1 · +2 — 일반 패시브만, 엽록체 · 변이 카드 없음) ② 꾸러미 열기(그 식물에 맞는 카드) ③ 강화 ④ 팔기
 //  ⑤ 한 식물에 같은 카드 한 장(강화 카드 포함) ⑥ 전투에 닿는지 ⑦ 패시브 고르기 후보 ⑧ 쿠폰 · 서버 일 목록
 //   node tools/test/cardup.mjs
-import { newGame, makePlant, setSlots, slotLayout, openPack, cardUp, sellCard, couponGive, evolve, Err } from '../../v2/src/game/logic.js';
+import { newGame, makePlant, setSlots, slotLayout, openPack, cardUp, sellCard, couponGive, evolve, draftApply, Err } from '../../v2/src/game/logic.js';
 import { CARDS, NORMAL_CARDS, formCards, isSkillCard, baseOf, cardPrice, CARD_UP, rollCard, cardFace } from '../../v2/src/game/cards.js';
 import { LV_MAX } from '../../v2/src/game/catalog.js';
 import { unitOf, botPlant, aiOfTier } from '../../v2/src/game/fight.js';
@@ -63,8 +63,7 @@ const plant = (s, key, o = {}) => { const p = makePlant(s, { key, ...o }, makeRn
   s.wallet.credits = 600; cardUp(s, 'n_fiber_2');
   ok(s.cards.n_fiber_3 === 1 && !s.cards.n_fiber_2 && s.wallet.credits === 100, '+1 두 장 → +2(다 쓰면 가방에서 사라짐)');
   // 끼운 카드는 재료가 아님
-  const t = game(), q = t.plants[0]; t.cards = { n_wall: 1 }; t.wallet.credits = 1000; const L = slotLayout(q); L.cards = ['n_wall', null, null];
-  if (q.cards[0] && q.cards[0] !== 'n_wall') t.cards[q.cards[0]] = (t.cards[q.cards[0]] || 0);
+  const t = game(), q = t.plants[0]; q.cards = [null, null, null]; q.pstore = []; t.cards = { n_wall: 1 }; t.wallet.credits = 1000; const L = slotLayout(q); L.cards = ['n_wall', null, null];
   setSlots(t, q.uid, L);
   throws(() => cardUp(t, 'n_wall'), '끼운 카드 + 가방 0장', '2장');
 }
@@ -78,14 +77,18 @@ const plant = (s, key, o = {}) => { const p = makePlant(s, { key, ...o }, makeRn
 }
 // ⑤ 한 식물에 같은 카드 한 장(강화 카드도 같은 카드)
 {
-  const s = game(), p = s.plants[0]; s.cards = { n_fiber: 1, n_fiber_2: 1, n_wall_2: 1 };
-  const L = slotLayout(p), first = L.cards[0]; L.cards = ['n_fiber', 'n_fiber_2', null];
+  const s = game(), p = s.plants[0]; p.cards = [null, null, null]; p.pstore = []; s.cards = { n_fiber: 1, n_fiber_2: 1, n_wall_2: 1 };
+  const L = slotLayout(p); L.cards = ['n_fiber', 'n_fiber_2', null];
   throws(() => setSlots(s, p.uid, L), '처음 카드 + 강화 카드 함께', '한 장만');
   const L2 = slotLayout(p); L2.cards = ['n_fiber_2', 'n_wall_2', null];
   setSlots(s, p.uid, L2);
-  ok(p.cards[0] === 'n_fiber_2' && p.cards[1] === 'n_wall_2' && s.cards.n_fiber === 1 && (!first || s.cards[first] >= 1), '다른 카드끼리는 강화 카드도 끼움 · 뺀 카드는 가방으로');
-  const L3 = slotLayout(p); L3.cards = ['n_fiber', 'n_wall_2', null]; setSlots(s, p.uid, L3);
-  ok(p.cards[0] === 'n_fiber' && s.cards.n_fiber_2 === 1, '+1 → 처음 카드로 바꿔 끼우기(바꾼 칸)');
+  ok(p.cards[0] === 'n_fiber_2' && p.cards[1] === 'n_wall_2' && s.cards.n_fiber === 1, '다른 카드끼리는 강화 카드도 끼움');
+  const L3 = slotLayout(p); L3.cards = ['n_fiber', 'n_wall_2', null];
+  throws(() => setSlots(s, p.uid, L3), '+1 을 빼서 가방으로 = 막힘(귀속)', '귀속');
+  const L4 = slotLayout(p); L4.cards = [null, 'n_wall_2', null]; L4.pstore = ['n_fiber_2']; setSlots(s, p.uid, L4);
+  ok(!p.cards[0] && p.pstore.includes('n_fiber_2') && !s.cards.n_fiber_2, '해제 = 이 식물 보관으로');
+  const L5 = slotLayout(p); L5.cards = ['n_fiber', 'n_wall_2', null];
+  throws(() => setSlots(s, p.uid, L5), '보관에 +1 이 있으면 처음 카드도 못 끼움(한 식물에 같은 카드 한 장)', '한 장만');
 }
 // ⑥ 전투에 닿는지
 {
@@ -133,6 +136,20 @@ const plant = (s, key, o = {}) => { const p = makePlant(s, { key, ...o }, makeRn
   ok(hi1 > 50 && hi2 > 30, `풀로세움 봇 = +1 ${hi1} · +2 ${hi2}`);
   ok(!dup, '봇도 같은 카드 한 장만: ' + dup);
   ok(aiOfTier(2, false, 4) > aiOfTier(2, false, 0) && aiOfTier(2, false, 0) === aiOfTier(2) && aiOfTier(6, false, 4) <= 0.95 && aiOfTier(0, true, 4) === 0.15, '라운드마다 봇 머리 조금씩 · 첫 판은 그대로');
+}
+// ⑩ 고르기 확정에서 위 줄에 남긴 끼웠던 카드 = 팔 값(귀속 — 가방으로 안 감)
+{
+  let done = 0;
+  for (let sd = 30; sd < 60 && !done; sd++) {
+    const s = game(sd), p = s.plants[0]; p.cards = ['n_wall', null, null]; p.pstore = []; p.lv = LV_MAX;
+    evolve(s, p.uid, makeRng(sd));
+    const di = (p.drafts || []).findIndex(d => d.part === 'passive'); if (di < 0) continue;
+    const d = p.drafts[di], pick = d.cands.find(x => x !== 'n_wall'); if (!pick) continue;
+    const c0 = s.wallet.credits, r = draftApply(s, p.uid, di, { cards: [pick, null, null], pstore: [] });
+    ok(r.sold === cardPrice('n_wall') && s.wallet.credits === c0 + cardPrice('n_wall') && !s.cards.n_wall && p.cards[0] === pick, '고르기에서 뺀 끼웠던 카드 = 팔 값(가방 아님): ' + JSON.stringify(r));
+    done = 1;
+  }
+  ok(done, '패시브 고르기 시험 판 찾음');
 }
 console.log(fails ? `카드 꾸러미 · 강화 시험 실패 ${fails}/${n}` : `카드 꾸러미 · 강화 시험 ${n}개 통과`);
 process.exit(fails ? 1 : 0);
