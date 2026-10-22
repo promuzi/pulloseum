@@ -41,7 +41,7 @@ try {
   });
   console.log(`화면 ${Math.round(412 * DPR)}×${Math.round(915 * DPR)} · CPU 늦춤 ×${CPU} · 장면마다 ${SEC}초`);
   for (const [name, q] of SCENES) {
-    await p.goto(url + '/v2/index.html?' + q + '&mute&noguide', { waitUntil: 'load' });
+    await p.goto(url + '/v2/index.html?' + q + '&mute&noguide' + (get('q') ? '&' + get('q') : ''), { waitUntil: 'load' });   // --q light=0 = 식물 빛 끔(비교용)
     await p.waitForFunction(() => window.__ready, { timeout: 30000 });
     await new Promise(r => setTimeout(r, 800));
     const info = await p.evaluate(() => { const c = document.getElementById('screen'); return { cw: c.width, ch: c.height, W: window.__app.screen.W, H: window.__app.screen.H, s: window.__app.screen.s }; });

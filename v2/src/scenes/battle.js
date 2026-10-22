@@ -43,6 +43,24 @@ function areaWave(g, st, age, [x, y], AY, AH) {
   }
 }
 const fxMemo = new Map();
+// 상태이상 빛(식물 노멀맵 조명 — 2026-10-22): (x, y) = 화분 굽 · 화상 = 흙 언저리에서 일렁이는 불빛 · 감전 · 마비 = 가끔 몸 둘레가 번쩍 ·
+//  빙결 · 얼음 = 위에서 내리는 찬 빛 · 독 = 밑에서 보랏빛. 걸린 순간(효과 연출)엔 더 셈. 깜빡임은 80ms 마디로만 바뀜(장마다 다시 칠하는 일을 줄임)
+const NIGHT_AMB = [0.82, 0.82, 0.94];   // 밤 경기장(바닥 · 관중석이 보랏빛으로 밝은 편이라 식물만 너무 어두우면 떠 보임)
+const hash1 = n => { let h = Math.imul(n | 0, 374761393); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+function statusLights(v, who, x, y, t) {
+  const ids = new Set((v.eff[who] || []).map(s => s.id)), out = [], ph = who === 'me' ? 0 : 1.7, tq = Math.floor(t / 80) * 80;
+  const burst = (...kinds) => { let a = 0; for (const e of v.sfx) if (e.who === who && kinds.includes(e.kind)) a = Math.max(a, 1 - (t - e.t0) / 900); return Math.max(0, a); };
+  const fl = 0.8 + 0.15 * Math.sin(tq / 70 + ph) + 0.1 * Math.sin(tq / 37 + ph * 2);
+  const burn = (ids.has('burn') ? 0.45 : 0) + 1.1 * burst('ignite', 'burn');
+  if (burn > 0) out.push({ x, y: y - 26, z: 10, r: 38, c: [1, 0.55, 0.2], I: burn * fl });
+  const zap = Math.max(ids.has('shock') || ids.has('paral') ? 0.3 : 0, burst('shock', 'paral')), s = Math.floor(t / 120);
+  if (zap > 0 && hash1(s * 2 + (who === 'me' ? 0 : 7)) > 1 - zap) out.push({ x: x + (hash1(s * 3 + 1) - 0.5) * 30, y: y - 40 - hash1(s * 7) * 30, z: 16, r: 44, c: [1, 0.95, 0.62], I: 1.2 });
+  const cold = (ids.has('chill') || ids.has('frozen') ? 0.4 : 0) + 0.8 * burst('chill', 'frozen');
+  if (cold > 0) out.push({ x, y: y - 70, z: 30, r: 60, c: [0.62, 0.86, 1], I: cold });
+  const tox = (ids.has('poison') ? 0.32 : 0) + 0.6 * burst('poison');
+  if (tox > 0) out.push({ x, y: y - 14, z: 6, r: 30, c: [0.78, 0.45, 1], I: tox * (0.85 + 0.15 * Math.sin(tq / 300 + ph)) });
+  return out;
+}
 function attackFx(s, ak) {
   if (ATTACKS[s.id]) return ATTACKS[s.id];
   const shape = s.area ? 'area' : (s.hits || 1) > 1 ? 'multi' : s.ranged ? 'ranged' : 'melee';
@@ -719,28 +737,32 @@ export const battle = {
       fr = st.anim.frame(f); prepareBoards(fr, st.uid + ':' + f);
       if (f >= st.anim.I && !st.applied) this.applyHit(st, t);
     }
+    // 식물 빛(노멀맵 조명 — art/plantlight.js, 2026-10-22 사용자 "상태이상, 각 스킬의 공격 … 다양하게"): 밤 경기장 어둠 · 공격 효과 빛(연출 판 좌표 → 화면) · 상태이상 빛
+    const night = T.key === 'night', ftop = AY + Lay.fy, fcut = EY - AY, fk = Lay.myDy ? (PY - EY + Lay.myDy) / (PY - EY) : 1;
+    const glow = fr ? fr.glow.map(q => ({ ...q, y: ftop + (Lay.myDy && q.y > fcut ? fcut + (q.y - fcut) * fk : q.y) })) : [];
+    const lightOf = (who, x, y) => ({ amb: night ? NIGHT_AMB : 1, self: night ? 1 : 0.35, id: who, lights: glow.concat(statusLights(v, who, x, y, t)) });
     const unit = (who, x, y, flip, phase) => {
-      const view = who === 'foe' ? 'far' : null;
+      const view = who === 'foe' ? 'far' : null, light = lightOf(who, x, y);
       if (st && st.kind === 'switch' && st.who === who) {
         const k = (t - v.t0) / st.ms;
-        if (k < 0.45) { if (st.fromU) { const q = k / 0.45; g.alpha(1 - q, () => drawBig(g, artOf(st.fromU), st.fromU.pot, x, y + Math.round(q * 8), { t, flip, view })); } return; }
+        if (k < 0.45) { if (st.fromU) { const q = k / 0.45; g.alpha(1 - q, () => drawBig(g, artOf(st.fromU), st.fromU.pot, x, y + Math.round(q * 8), { t, flip, view, light })); } return; }
         const q = Math.min(1, (k - 0.45) / 0.4), top = y - 112, rv = Math.round(top + (1 - q) * 116);
-        g.clip(0, rv, W, 140, () => drawBig(g, artOf(st.toU), st.toU.pot, x, y, { t, flip, view }));
+        g.clip(0, rv, W, 140, () => drawBig(g, artOf(st.toU), st.toU.pot, x, y, { t, flip, view, light }));
         if (q < 1) { g.rect(x - 26, rv, 52, 1, '#8ccfff'); g.rect(x - 18, rv - 1, 36, 1, '#e6f3ff'); }
         return;
       }
       const u = v.view[who];
       if (v.gone[who]) return;
-      if (st && st.kind === 'faint' && st.who === who) { const k = Math.min(1, (t - v.t0) / 700); g.alpha(1 - k, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      if (st && st.kind === 'faint' && st.who === who) { const k = Math.min(1, (t - v.t0) / 700); g.alpha(1 - k, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
       let pose = null, flash = false, dx = 0, dy = 0;
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
-      if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view })); return; }
+      if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
       const sw = v.sfx.length || (v.eff[who] || []).some(s => s.id === 'gale') ? swayOf(v.sfx, { [who]: (v.eff[who] || []).map(s => s.id) }, who, t) : 0;
       if (sw) pose = { ...(pose || {}), qx: ((pose && pose.qx) || 0) - sw };
       const fxs = v.eff[who] || [], hidden = fxs.some(s => s.id === 'stealth');
-      if (fxs.some(s => s.id === 'clone')) for (const ox of [-20, 20]) g.alpha(0.4, () => drawBigPose(g, artOf(u), u.pot, x + dx + ox, y + dy + 2, { t: t + ox * 37, phase, flip, view, ...(pose || {}) }));   // 분신(2026-10-18)
-      g.alpha(hidden ? 0.35 : 1, () => drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}) }));   // 은신 = 흐리게
+      if (fxs.some(s => s.id === 'clone')) for (const ox of [-20, 20]) g.alpha(0.4, () => drawBigPose(g, artOf(u), u.pot, x + dx + ox, y + dy + 2, { t: t + ox * 37, phase, flip, view, ...(pose || {}), light: { ...light, id: who + ox } }));   // 분신(2026-10-18)
+      g.alpha(hidden ? 0.35 : 1, () => drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}), light }));   // 은신 = 흐리게
       if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판

@@ -130,25 +130,15 @@ export function loftBack(app) {
   return k;
 }
 
-// 식물(전등에 맞춰 어두워지거나 밝아짐): 화분+식물을 따로 그린 뒤 그 칸에만 색을 덮음
+// 위 전등 빛(식물 노멀맵 조명 — art/plantlight.js, 2026-10-22 사용자 "게임 시작과 대기실의 윗 조명"): 전등은 의자 위 천장(의자에서 326칸 위)
+//  전엔 화분+식물 칸에 위가 따뜻한 띠를 덮었음 → 이제 면 방향대로 위를 향한 면(머리 · 잎 윗면 · 화분 테)이 밝고 아래는 어두움
+const LAMP_C = [1, 0.86, 0.64];
+const lampLight = (bx, by, I) => ({ x: bx, y: by - 326, z: 110, r: 360, c: LAMP_C, I });
+// 식물(전등에 맞춰 어두워지거나 밝아짐): k = 전등 세기(깜빡임 · 'o' 잠깐 더 밝게) · dk = 암실(방은 어둡고 전등 빛만)
 export function loftPlant(app, key, pot, bx, by) {
-  const { g, t } = app, k = S ? S.k ?? 1 : 1;
-  const dk = S ? S.darkA || 0 : 0;
-  if (!S || (k === 1 && dk <= 0)) return drawBig(g, key, pot, bx, by, { t, flat: true });   // flat = 의자 각도(12°) 화분
-  if (!S.plantCv) { S.plantCv = document.createElement('canvas'); S.plantCv.width = 140; S.plantCv.height = 140; }
-  const c = S.plantCv.getContext('2d'); c.imageSmoothingEnabled = false;
-  c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, 140, 140);
-  drawBig({ c }, key, pot, 70, 124, { t, flat: true });
-  c.globalCompositeOperation = 'source-atop';
-  if (k !== 1) { c.fillStyle = k < 1 ? `rgba(10,14,30,${((1 - k) * 0.42).toFixed(3)})` : `rgba(255,200,130,${((k - 1) * 0.6).toFixed(3)})`; c.fillRect(0, 0, 140, 140); }
-  if (dk > 0) {   // 암실: 위 전등 빛을 받아 위쪽이 따뜻하게 밝아지고 화분 아래로 갈수록 원래 색
-    const gr = c.createLinearGradient(0, 24, 0, 124);
-    gr.addColorStop(0, `rgba(255,214,150,${(0.34 * dk).toFixed(3)})`); gr.addColorStop(0.55, `rgba(255,196,120,${(0.16 * dk).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,196,120,0)');
-    c.fillStyle = gr; c.fillRect(0, 0, 140, 140);
-  }
-  c.globalCompositeOperation = 'source-over';
-  g.c.drawImage(S.plantCv, Math.round(bx) - 70, Math.round(by) - 124);
-  return true;
+  const { g, t } = app, k = S ? S.k ?? 1 : 1, dk = S ? S.darkA || 0 : 0;
+  const amb = (0.68 + 0.18 * Math.min(1, k)) * (1 - 0.55 * dk);
+  return drawBig(g, key, pot, bx, by, { t, flat: true, light: { amb, lights: [lampLight(bx, by, (0.75 + 0.35 * dk) * k)], self: 0.35 + 0.65 * dk, id: 'loft' } });   // flat = 의자 각도(12°) 화분
 }
 
 // 빛기둥 흐림 + 먼지(식물 앞에 그림)
@@ -394,24 +384,11 @@ export function loftNightBeam(app, a) { if (ensure() && a > 0) app.g.alpha(Math.
 export function loftNightFront(app, a) { if (ensure() && a > 0) beamFront(app, Math.min(1, a)); }
 // 불 꺼진 의자(투영기의 푸른 빛만)
 export function loftNightStool(app, a) { if (ensure() && a > 0) app.g.alpha(Math.min(1, a), () => app.g.c.drawImage(nightLayers().stool, 0, 0)); }
-// 처음 화면의 식물: dark = 짙게 덮음 · cool = 투영기의 푸른 기운 · warm = 위 전등에서 받는 따뜻한 빛(암실과 같은 셈)
-export function loftNightPlant(app, key, pot, bx, by, { dark = 0, warm = 0, cool = 0 } = {}) {
-  const { g, t } = app;
-  if (!ensure()) return drawBig(g, key, pot, bx, by, { t, flat: true });
-  if (!S.nplantCv) { S.nplantCv = document.createElement('canvas'); S.nplantCv.width = 140; S.nplantCv.height = 140; }
-  const c = S.nplantCv.getContext('2d'); c.imageSmoothingEnabled = false;
-  c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, 140, 140);
-  drawBig({ c }, key, pot, 70, 124, { t, flat: true });
-  c.globalCompositeOperation = 'source-atop';
-  if (dark > 0) { c.fillStyle = `rgba(4,6,14,${Math.min(1, dark).toFixed(3)})`; c.fillRect(0, 0, 140, 140); }
-  if (cool > 0) { c.fillStyle = `rgba(90,150,230,${(0.2 * cool).toFixed(3)})`; c.fillRect(0, 0, 140, 140); }
-  if (warm > 0) {
-    const gr = c.createLinearGradient(0, 24, 0, 124), w = Math.min(1.2, warm);
-    gr.addColorStop(0, `rgba(255,214,150,${(0.34 * w).toFixed(3)})`); gr.addColorStop(0.55, `rgba(255,196,120,${(0.16 * w).toFixed(3)})`); gr.addColorStop(1, 'rgba(255,196,120,0)');
-    c.fillStyle = gr; c.fillRect(0, 0, 140, 140);
-  }
-  c.globalCompositeOperation = 'source-over';
-  g.c.drawImage(S.nplantCv, Math.round(bx) - 70, Math.round(by) - 124);
+// 처음 화면의 식물(꺼진 방 — 위 전등 빛만 받음): warm = 전등 세기(점화 · 깜빡임 · 식물을 바꾼 순간 한 번 더 밝게) · dark = 더 어둡게
+//  스스로 빛나는 종(불 · 번개 · 수정 …)은 어둠 속에서 제 빛이 또렷이 보임
+export function loftNightPlant(app, key, pot, bx, by, { dark = 0, warm = 0 } = {}) {
+  const { g, t } = app, w = Math.min(1.7, warm);
+  drawBig(g, key, pot, bx, by, { t, flat: true, light: { amb: 0.42 * (1 - Math.min(1, dark)), lights: [lampLight(bx, by, 1.25 * w)], self: 1, id: 'night' } });
 }
 
 // ── 디스플레이 켜짐(같은 날 "디스플레이 화면이 켜지는 듯한 요소 — LED 하나하나 켜지는 그런거. 그걸 대기실의 공간감(원형 벽과 바닥 등)을 분리해서 자연스레") ──

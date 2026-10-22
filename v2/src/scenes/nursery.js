@@ -34,6 +34,9 @@ const hnum = str => { let h = 7; for (const ch of String(str)) h = (h * 31 + ch.
 const ease = k => 1 - (1 - k) ** 3;
 const ease2 = k => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// 스마트팜 빛(식물 노멀맵 조명 — art/plantlight.js, 2026-10-22 사용자 "스마트팜 등 다양하게"): 뚫린 천장의 하늘빛이 바로 위에서(식물마다 제 머리 위 — 선반 어디서나 같은 방향)
+const SKY_C = [0.9, 0.96, 1];
+const farmLight = (x, y, id) => ({ amb: 0.88, lights: [{ x, y: y - 300, z: 150, r: 420, c: SKY_C, I: 0.62 }], id });
 const hsh = (a, b, c) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(c, 1442695041); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // 잔디 한 줄(왼쪽 x0 ~ 오른쪽 x1, 위 → 아래 k 0~1): 앞쪽일수록 밝고, 상자 자리에 붙은 풀잎 점(움직여도 무늬가 상자를 따라감)
@@ -277,7 +280,7 @@ export const nursery = {
     // 밑동 둘레 = 갈색 흙 자리 + 자갈 + 앞 풀잎(sprites.js drawBigPlanted · art/potgrass.js — 화분과 같은 것, 2026-10-17 "풀도 더 자연스럽게 · 흙이나 자갈 등으로 자연스러운 경계").
     //  전엔 잔디 덤불 타원(16×2)이 밑동을 덮었음 — 그림이 아직 없을 때만 그 덤불
     const tuft = () => grassOval(g, sx, sy + 1, 16, 2, it.seed);
-    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p), it.p.shiny), sx, sy, { t, phase: it.i * 700 })) tuft();
+    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p), it.p.shiny), sx, sy, { t, phase: it.i * 700, light: farmLight(sx, sy, 'farm' + it.i) })) tuft();
   },
   // 고른 식물: 잔디 마개를 인 화분이 기계 구멍에서 솟음(구멍 = 금속 테 · 어두운 통로 속 고리 · 푸른 불빛, 화분 아래 피스톤과 받침)
   lifted(g, it, sx, sy, band, L, t) {
@@ -305,7 +308,9 @@ export const nursery = {
     const F = this.plantFx && this.plantFx.id === it.id && this.plantFx.t0 != null ? this.plantFx : null, fa = F ? t - F.t0 : 1e9, GROW = 750;
     const reveal = F ? clamp((fa - 300) / GROW, 0, 1) : 1;
     if (F && fa > 300 && !F.bloom) { F.bloom = true; sfx('bloom'); }
-    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p), it.p.shiny), it.p.pot, sx, soilY, { t, phase: it.i * 700, reveal: ease(reveal) });   // 화분 풀 · 밑동 흙 자리 = sprites.js(art/potgrass.js — 2026-10-17)
+    // 빛 = 천장 빛 + 구멍 속 푸른 불빛이 화분을 아래에서 비춤(솟는 동안 — 2026-10-22 식물 조명)
+    const up = { x: sx, y: sy + 2, z: 4, r: 26, c: [0.42, 0.66, 1], I: 0.75 * clamp((sy - (soilY + 21)) / 30 + 0.4, 0, 1) }, fl = farmLight(sx, soilY + 21, 'lift' + it.i);
+    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p), it.p.shiny), it.p.pot, sx, soilY, { t, phase: it.i * 700, reveal: ease(reveal), light: { ...fl, lights: [...fl.lights, up] } });   // 화분 풀 · 밑동 흙 자리 = sprites.js(art/potgrass.js — 2026-10-17)
     c.restore();
     if (F) {
       if (fa < 300) { const k = Math.max(0, fa) / 300, yy = Math.round(soilY - 46 + 44 * k * k); g.rect(sx - 2, yy - 2, 4, 5, '#6b4a2a'); g.rect(sx - 1, yy - 3, 2, 1, '#a07848'); g.px(sx + 1, yy - 1, '#c8a070'); }   // 떨어지는 씨앗

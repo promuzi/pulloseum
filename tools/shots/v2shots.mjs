@@ -240,7 +240,7 @@ try {
   p.on('pageerror', e => errs.push(e.message));
   p.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errs.push(m.text()); });
   p.on('response', r => { if (r.status() >= 400) errs.push(r.status() + ' ' + r.url()); });   // 404 가 어느 파일인지(콘솔 글엔 주소가 없음)
-  await p.goto(url + '/v2/index.html', { waitUntil: 'load' });
+  await p.goto(url + '/v2/index.html' + (args.q ? '?' + args.q : ''), { waitUntil: 'load' });   // --q light=0 = 식물 빛 끔(전후 비교)
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
   const ready = await p.evaluate(() => window.__ready);
   if (ready.missing.length || ready.bad.length) console.log('경고', JSON.stringify(ready));

@@ -3,6 +3,7 @@ import { C } from './palette.js';
 import { frameAt } from '../core/motion.js';
 import { capOf, ringOf, bedOf, bareOf, dirtOf } from './potgrass.js';
 import { shinyCanvas, shinyKey } from './shiny.js';
+import { litPlant, litStatic } from './plantlight.js';
 
 // 첫 출시 도감 = 1궤도 행성 세 곳의 기본 11종 + 지역 희귀 스포어캡
 export const ROSTER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'frost_drake', 'gladi_cactus', 'jangseung_cactus', 'astro_cap', 'viking_cap', 'hyunmu_cap', 'gumiho_bloom', 'wizard_bell', 'ninja_vine', 'diver_vine', 'pirate_cactus', 'ranger_vine', 'miner_cap', 'volcano_cap', 'dandel_aero', 'snow_ballet'];   // 2026-10-18 새 여섯
@@ -151,7 +152,16 @@ function grassBack(g, P, key, back, x, y, fl) {
   const r = P && ringOf(P, key, back); if (r) part(g, r.ring, 0, 0, 96, 112, x, y, fl);
   return r;
 }
-const grassFront = (g, r, x, y, fl) => { if (r) part(g, r.front, 0, 0, 96, 112, x, y, fl); };
+// 빛(art/plantlight.js — 2026-10-22 사용자 "게임 시작과 대기실의 윗 조명, 스마트팜 …"): opt.light 가 어둡거나 장면 빛이 있으면 화분 · 풀 마개 · 흙 자리 · 앞 풀잎에도 같은 빛
+//  반환 [화분 뒤, 풀 마개, 흙 자리, 앞 풀잎, 화분 앞](없는 칸은 null) — 빛이 없으면 원래 판 그대로
+function potSet(P, key, pot, potId, x, y, fl, light) {
+  const cap = capOf(pot.back), r = P && ringOf(P, key, pot.back), ims = [pot.back, cap || null, r ? r.ring : null, r ? r.front : null, pot.front];
+  const L = light && litStatic(potId + '|' + key + '|' + (fl ? 1 : 0) + '|' + (light.id || ''), ims.filter(Boolean), x, y, fl, light);
+  if (!L) return ims;
+  let k = 0; return ims.map(im => (im ? L[k++] : null));
+}
+const baseOf = key => { const sk = shinyKey(key); return sk ? BIG[sk[0]] : null; };   // 색 변종의 원래 그림(빛나는 칸을 같은 자리에서 찾음)
+const potIdOf = (potKey, opt) => (potKey || 'pot_terra') + (opt.view || (opt.flat ? 'flat' : ''));
 // 옛 흙 덮기(보랏빛 흙 무늬)를 걷어 낸 시트 + 맞은 순간 흰 판(art/potgrass.js bareOf — 기본 각도 테라코타 뒤 그림을 받은 뒤부터, 그 전엔 원래 시트)
 function bareSet(P) {
   if (P.bare) return P.bare;
@@ -187,12 +197,16 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
   let f = frameAt(t, m.frameMs, m.frames);
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
   const sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h, B = bareSet(P), src = opt.flash ? B.white : B.sheet, fl = !!opt.flip;
-  part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
-  const gr = grassBack(g, P, key, pot.back, x, y, fl);
-  part(g, src, sx, sy, m.w, m.h, x, y, fl);
-  grassFront(g, gr, x, y, fl);
-  part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
-  part(g, src, sx, sy + m.rows * m.h, m.w, m.h, x, y, fl);
+  const lit = !opt.flash && litPlant(key, P, B.sheet, f, x, y, fl, opt.light, baseOf(key));   // 빛 입힌 판(under = 0 줄 · over = 112 줄) 또는 원래 판
+  const [im, ux, uy, oy] = lit ? [lit.cv, 0, 0, m.h] : [src, sx, sy, sy + m.rows * m.h];
+  const [pb, cap, ring, gf, pf] = potSet(P, key, pot, potIdOf(potKey, opt), x, y, fl, opt.light);
+  part(g, pb, 0, 0, m.w, m.h, x, y, fl);
+  if (cap) part(g, cap, 0, 0, 96, 112, x, y, fl);
+  if (ring) part(g, ring, 0, 0, 96, 112, x, y, fl);
+  part(g, im, ux, uy, m.w, m.h, x, y, fl);
+  if (gf) part(g, gf, 0, 0, 96, 112, x, y, fl);
+  part(g, pf, 0, 0, m.w, m.h, x, y, fl);
+  part(g, im, ux, oy, m.w, m.h, x, y, fl);
   return true;
 }
 // 지금 장에서 '보이는 식물 칸'만(화분 앞판에 가린 칸은 뺌, 뒤집기 전 그림 좌표) — 상태 효과(타들어감 · 물들임)를 화분 말고 식물에만 입힐 때
@@ -217,20 +231,22 @@ export function plantLayer(key, potKey, bx, by, opt = {}) {
 function bigFrame(key, m, t) {
   let f = frameAt(t, m.frameMs, m.frames);
   if (m.blinkIndex != null && f >= m.blinkAt && f < m.blinkAt + 4 && blinkLoop(key, Math.floor(t / (m.frames * m.frameMs)))) f = m.blinkIndex + f - m.blinkAt;
-  return [(f % m.cols) * m.w, Math.floor(f / m.cols) * m.h];
+  return [(f % m.cols) * m.w, Math.floor(f / m.cols) * m.h, f];
 }
 // 잔디에 심긴 큰 판 식물(화분 없이, 양육 스마트팜): (bx, by) = 흙 줄 가운데. 흙 줄 아래는 안 그림 — 밑동 흙 자리(식물 뒤) → 뒤 층 → 앞 풀잎 → between → 앞 층
 //  흙 자리 · 풀잎 = 화분과 같은 것(art/potgrass.js bedOf — 2026-10-17 사용자 "풀도 더 자연스럽게 · 흙이나 자갈 등으로 자연스러운 경계"), 흙 덮기 띠는 갈색 흙으로(dirtOf)
 export function drawBigPlanted(g, key, bx, by, opt = {}) {
   const P = bigOf(key); if (!P) return false;
   //  화분에 앉힌 칸(m.sink — 굵은 밑동이 화분 흙에 묻히게 내린 만큼)은 잔디에선 다시 올림: 안 올리면 밑동이 잘려 움푹 파인 듯 · 뒤에 놓인 듯 보였음(2026-10-17 사용자 "스마트팜에서 불 선인장 밑동이 움푹 파여 있고 뒤에 배치된 것 같아")
-  const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1] - (m.sink || 0)), [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
+  const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1] - (m.sink || 0)), [sx, sy, f] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
   const cut = Math.round(by) - y, bed = bedOf(P, key), D = dirtSheet(P), ry = y + (m.sink || 0);   // 흙 자리는 흙 줄에(잔디 판은 앉힌 만큼 올려 그리므로 그만큼 내려 그림)
-  if (bed) part(g, bed.ring, 0, 0, 96, 112, x, ry, false);
-  g.clip(x, y, m.w, cut, () => part(g, D, sx, sy, m.w, m.h, x, y, false));
-  if (bed) part(g, bed.front, 0, 0, 96, 112, x, ry, false);
+  const lit = litPlant(key, P, D, f, x, y, false, opt.light, baseOf(key)), [im, ux, uy, oy] = lit ? [lit.cv, 0, 0, m.h] : [D, sx, sy, sy + m.rows * m.h];
+  const bl = bed && opt.light && litStatic('bed|' + key + '|' + (opt.light.id || ''), [bed.ring, bed.front], x, ry, false, opt.light);
+  if (bed) part(g, bl ? bl[0] : bed.ring, 0, 0, 96, 112, x, ry, false);
+  g.clip(x, y, m.w, cut, () => part(g, im, ux, uy, m.w, m.h, x, y, false));
+  if (bed) part(g, bl ? bl[1] : bed.front, 0, 0, 96, 112, x, ry, false);
   if (opt.between) opt.between();
-  g.clip(x, y, m.w, cut + 2, () => part(g, D, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
+  g.clip(x, y, m.w, cut + 2, () => part(g, im, ux, oy, m.w, m.h, x, y, false));
   return true;
 }
 // 화분째 큰 판 식물: (bx, by) = 화분 흙 줄 가운데. between = 흙 위 잔디 마개 등 — 식물 뒤에(capUnder — 몸통이 넓은 선인장 · 버섯도 마개에 묻혀 '얹힌' 듯 보이지 않게, 2026-10-16 사용자 "불 선인장이 화분의 중앙이 아닌 다른 곳에")
@@ -239,14 +255,21 @@ export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
   const P = bigOf(key), pot = POT_BIG[potKey] || POT_BIG.pot_terra; if (!pot) return false;
   const m = P ? P.meta : { w: 96, h: 112, soil: [48, 75.7] }, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]);
   const rv = opt.reveal == null ? 1 : Math.max(0, Math.min(1, opt.reveal)), cy = y + Math.round(m.soil[1] * (1 - rv)), plant = fn => (rv >= 1 ? fn() : g.clip(x, cy, m.w, m.h, fn));
-  part(g, pot.back, 0, 0, 96, 112, x, y, false);
-  const gr = grassBack(g, P, key, pot.back, x, y, false);
+  const [pb, cap, ring, gf, pf] = potSet(P, key, pot, potKey || 'pot_terra', x, y, false, opt.light);
+  part(g, pb, 0, 0, 96, 112, x, y, false);
+  if (cap) part(g, cap, 0, 0, 96, 112, x, y, false);
+  if (ring) part(g, ring, 0, 0, 96, 112, x, y, false);
   if (opt.between && opt.capUnder) opt.between(x, y);
-  let sx = 0, sy = 0; const B = P && bareSet(P); if (P && rv > 0) { [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))); plant(() => part(g, B.sheet, sx, sy, m.w, m.h, x, y, false)); }
-  if (P && rv > 0) grassFront(g, gr, x, y, false);
+  let im = null, ux = 0, uy = 0, oy = 0; const B = P && bareSet(P);
+  if (P && rv > 0) {
+    const [sx, sy, f] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0))), lit = litPlant(key, P, B.sheet, f, x, y, false, opt.light, baseOf(key));
+    [im, ux, uy, oy] = lit ? [lit.cv, 0, 0, m.h] : [B.sheet, sx, sy, sy + m.rows * m.h];
+    plant(() => part(g, im, ux, uy, m.w, m.h, x, y, false));
+  }
+  if (P && rv > 0 && gf) part(g, gf, 0, 0, 96, 112, x, y, false);
   if (opt.between && !opt.capUnder) opt.between(x, y);
-  part(g, pot.front, 0, 0, 96, 112, x, y, false);
-  if (P && rv > 0) plant(() => part(g, B.sheet, sx, sy + m.rows * m.h, m.w, m.h, x, y, false));
+  part(g, pf, 0, 0, 96, 112, x, y, false);
+  if (P && rv > 0) plant(() => part(g, im, ux, oy, m.w, m.h, x, y, false));
   return true;
 }
 // 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),
@@ -258,6 +281,8 @@ export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   const f = frameAt(t, m.frameMs, m.frames), sx = (f % m.cols) * m.w, sy = Math.floor(f / m.cols) * m.h;
   const B = bareSet(P), src = opt.flash ? B.white : B.sheet, fl = !!opt.flip, soil = m.soil[1], sc = 1 - (opt.sq || 0) * 0.03, qx = opt.qx || 0, qy = opt.qy || 0;
+  const lit = !opt.flash && litPlant(key, P, B.sheet, f, x, y, fl, opt.light, baseOf(key));
+  const [im, ux, uy, oy0] = lit ? [lit.cv, 0, 0, m.h] : [src, sx, sy, sy + m.rows * m.h];
   const rows = oy => {
     const c = g.c; c.save(); c.imageSmoothingEnabled = false;
     if (fl) { c.translate(x + m.w, y); c.scale(-1, 1); } else c.translate(x, y);
@@ -265,16 +290,18 @@ export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
       const ys = yd >= soil ? yd : Math.round(soil - (soil - yd) / sc);
       if (ys < 0 || ys >= m.h) continue;
       const w = Math.max(0, Math.min(1, (soil - ys) / soil));
-      c.drawImage(src, sx, oy + ys, m.w, 1, Math.round(qx * w), yd + Math.round(qy * w), m.w, 1);
+      c.drawImage(im, ux, oy + ys, m.w, 1, Math.round(qx * w), yd + Math.round(qy * w), m.w, 1);
     }
     c.restore();
   };
-  part(g, pot.back, 0, 0, m.w, m.h, x, y, fl);
-  const gr = grassBack(g, P, key, pot.back, x, y, fl);
-  rows(sy);
-  grassFront(g, gr, x, y, fl);
-  part(g, pot.front, 0, 0, m.w, m.h, x, y, fl);
-  rows(sy + m.rows * m.h);
+  const [pb, cap, ring, gf, pf] = potSet(P, key, pot, potIdOf(potKey, opt), x, y, fl, opt.light);
+  part(g, pb, 0, 0, m.w, m.h, x, y, fl);
+  if (cap) part(g, cap, 0, 0, 96, 112, x, y, fl);
+  if (ring) part(g, ring, 0, 0, 96, 112, x, y, fl);
+  rows(uy);
+  if (gf) part(g, gf, 0, 0, 96, 112, x, y, fl);
+  part(g, pf, 0, 0, m.w, m.h, x, y, fl);
+  rows(oy0);
   return true;
 }
 

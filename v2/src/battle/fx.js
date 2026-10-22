@@ -60,11 +60,35 @@ export function makeAttack(A, atkKey, tgtKey, rev, seed = 7) {
       const lay = newLayers();
       skillFx(lay.P, A, fz, L, T, G, seed, S);
       statusFx(lay.P, A, f, T, G, tops.map(([x, y]) => [x + (tM ? tp.kb : -tp.kb), y + tqy - tp.hop]), L, seed + 2);
-      const out = { lay, atkPose: { qx: pose.qx, qy: pose.qy, sq: pose.sq }, tgtPose: { qx: -tp.kb, qy: tqy, sq: tp.kb ? 0.6 : 0 }, flash: tp.flash, shake: tp.shake, hop: tp.hop, cam: cameraShake(f, A, I) };
+      const out = { lay, atkPose: { qx: pose.qx, qy: pose.qy, sq: pose.sq }, tgtPose: { qx: -tp.kb, qy: tqy, sq: tp.kb ? 0.6 : 0 }, flash: tp.flash, shake: tp.shake, hop: tp.hop, cam: cameraShake(f, A, I), glow: glowOf(lay, A) };
       cache.set(f, out);
       return out;
     },
   };
+}
+
+// 공격 효과의 빛(식물 노멀맵 조명 — 2026-10-22 사용자 "각 스킬의 공격 … 다양하게 적용"): 불 · 번개 · 총구 · 숨결처럼 빛나는 기술만,
+//  효과 칸 중 밝은 칸을 24칸 격자로 묶어 빛 자리(무대 좌표) — 불덩이가 날아가면 빛도 같이 움직이고 터지면 크게 번쩍
+const GLOW_ST = { burn: 1, shock: 1.15 }, GLOW_KIND = { fireball: 1, bolt: 1.15, breath: 0.8, w_shot: 0.9, w_burst: 0.9, w_snipe: 0.9 };
+const RGB = new Map();
+const rgbOf = hex => { let v = RGB.get(hex); if (!v) { const n = parseInt(hex.slice(1, 7), 16); v = [(n >> 16) & 255, (n >> 8) & 255, n & 255]; RGB.set(hex, v); } return v; };
+function glowOf(lay, A) {
+  const k = GLOW_ST[A.status] || GLOW_KIND[A.kind] || 0; if (!k) return [];
+  const acc = new Map();
+  const add = m => {
+    for (const [i, c] of m) {
+      if (typeof c !== 'string') continue;
+      const [r, g, b] = rgbOf(c); if (0.2126 * r + 0.7152 * g + 0.0722 * b < 115) continue;
+      const x = i % SW, y = (i - x) / SW, id = ((y / 24) | 0) * 64 + ((x / 24) | 0);
+      let a = acc.get(id); if (!a) acc.set(id, (a = { x: 0, y: 0, n: 0, r: 0, g: 0, b: 0 }));
+      a.x += x; a.y += y; a.n++; a.r += r; a.g += g; a.b += b;
+    }
+  };
+  add(lay.o); add(lay.p); lay.u.forEach(add); lay.s.forEach(add);
+  return [...acc.values()].filter(a => a.n >= 3).sort((p, q) => q.n - p.n).slice(0, 4).map(a => {
+    const mx = Math.max(a.r, a.g, a.b, 1);
+    return { x: a.x / a.n, y: a.y / a.n, z: 14, r: 46, c: [a.r / mx, a.g / mx, a.b / mx], I: k * Math.min(1.8, 0.35 + Math.sqrt(a.n) * 0.12) };
+  });
 }
 
 // 칸 지도 → 그림판(ImageData 한 번에) → 무대 위치에 붙임. 그림판은 층마다 따로 두고 장이 바뀔 때만 다시 칠한다.
