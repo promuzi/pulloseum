@@ -3,7 +3,7 @@
 //  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드 · 기다리는 요청)
 import { hashPass, checkPass, newSession, userOfToken, endSession, allowTry, LOGIN_RE } from './auth.mjs';
 import { timingSafeEqual } from 'node:crypto';
-import { Err, cleanCoupon } from '../v2/src/game/logic.js';
+import { Err, cleanCoupon, SAVE_VER } from '../v2/src/game/logic.js';
 import { STARTERS } from '../v2/src/game/catalog.js';
 
 export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
@@ -59,7 +59,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
 
   const API = {
     'GET /api/health': () => ({ ok: true, rooms: rooms.count() }),
-    'GET /api/config': () => ({ google: GID || null }),
+    'GET /api/config': () => ({ google: GID || null, save: SAVE_VER }),   // save = 저장 판 번호 — 올린 뒤 본체가 새 코드로 바뀌었는지 보는 곳(2026-10-22)
     // 구글: 있는 계정이면 로그인, 처음이면 { need: 'register' } → 화면이 처음 식물을 고르게 한 뒤 starter와 함께 다시
     'POST /api/google': async (req, b, now) => {
       if (!allowTry('g' + req.ip, now)) throw new HttpErr(429, '시도가 너무 많아요 — 10분 뒤에 다시 해 주세요');
