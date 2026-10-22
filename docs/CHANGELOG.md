@@ -5,7 +5,7 @@
 ### 2026-10-23 (193) — 친구 서버에 올림(밤샘 묶음 181~192 · 카드 귀속)
 
 - 사용자 ‘안전 점검대로 친구 서버에 올려’. 순서: 전체 시험 통과 → 친구 서버 저장 다시 백업(`server/data/backup/prod-export-20261022-1027.json`, 깃 밖) + 새 코드로 계정마다 미리 돌려 보기 = 문제 없음(5계정) → 되돌리기 판 적음 `f4b9fc9b`(2026-10-18) → `cf/build.mjs`(파일 829개 · 13.8MB) → `wrangler deploy` **Success · Current Version ID `4c2dabdd-468c-44fc-97c1-0d676a984bf3`**.
-- 확인: `cf/pagecheck.mjs` 준비 됨 · 빠진 그림 0 · 오류 0 · 실패 요청 0, 화면 파일 새 코드(`SAVE_VER = 2` · 상점 봉지 · 버리기). 서버 본체 = 새 주소 `/api/battle/cancel`이 404 → 401(로그인 요구)로 바뀌면 새 코드.
+- 확인: `cf/pagecheck.mjs` 준비 됨 · 빠진 그림 0 · 오류 0 · 실패 요청 0, 화면 파일 새 코드(`SAVE_VER = 2` · 상점 봉지 · 버리기). 서버 본체 = 올린 뒤 320초 안에 새 코드(새 주소 `/api/battle/cancel` 404 → 401) · 관리 내보내기 200 · 그때까지 들어온 계정 없음(저장 판 번호 0 · 1 그대로 — 들어오면 2로 옮기며 원본 보관).
 - 되돌리기(문제가 생기면): `cf` 창에서 토큰 환경변수를 지우고 `node C:\dev\homocarbo\node_modules\wrangler\bin\wrangler.js rollback f4b9fc9b-0645-4dc5-97bf-284b2a50f9b3`(코드만 — 저장은 그대로) · 계정 저장 되돌리기 = 관리 주소 `POST /api/admin/backups` → `restore`(올린 뒤 처음 불러올 때 계정마다 원본 보관).
 
 ### 2026-10-23 (192) — 올리기 전 안전 점검: 실제 저장으로 미리 돌려 보기 · 저장 판 번호 2(올린 뒤 원본 자동 보관)
