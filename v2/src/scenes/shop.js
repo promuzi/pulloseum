@@ -2,9 +2,8 @@ import { plainBg, awning } from '../art/bg.js';
 import { hud, navBar, button, rrect } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { T } from '../art/theme.js';
-import { BAYER4 } from '../art/palette.js';
 import { hexMix } from '../art/statusLook.js';
-import { seedArt } from './common.js';
+import { seedArt, cardBox, glowArt } from './common.js';
 import { SHOP, SPECIES } from '../game/catalog.js';
 import { showGot } from './popups.js';
 import { CARDS } from '../game/cards.js';
@@ -24,31 +23,8 @@ const COL = { seed_common: '#3fae5a', seed_rare: '#e0b040', card_basic: '#5fb3d9
 const ART = { seed_common: { seed: 'grass' }, seed_rare: { seed: 'bolt', rare: true }, card_basic: { pack: 'n' }, card_mut: { pack: 'm' }, water10: { ic: 'can' }, fert5: { ic: 'fert' }, regress1: { ic: 'potion' }, fuel3: { ic: 'energy' }, parts5: { ic: 'gear' } };
 const DESC = { seed_common: '흔한 식물', seed_rare: '희귀 식물', card_basic: '일반 식물용', card_mut: '변이 식물용', water10: '생장 +10씩', fert5: '생장 +25씩', regress1: '기술 되돌리기', fuel3: '탐사 3번', parts5: '탐사선 강화' };
 const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', card_basic: '일반 카드', card_mut: '변이 카드', water10: '물 10', fert5: '비료 5', regress1: '회귀 주사', fuel3: '연료 3', parts5: '부품 5' };
-const TOP = 44, INK = '#0b1322';
+const TOP = 44;   // 카드 테 · 그림 칸 바탕 = common.js cardBox · glowArt(종자 가방과 같이 씀)
 
-// 그림 칸 바탕(갈래 색 빛이 가운데서 번짐 — 디더 네 단, 한 번 굽고 재사용)
-const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
-const glowMemo = new Map();
-function glow(col, w, h) {
-  const key = col + w + 'x' + h; let cv = glowMemo.get(key); if (cv) return cv;
-  cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-  const c = cv.getContext('2d'), id = c.createImageData(w, h), d = id.data;
-  const steps = [hexMix(col, '#ffffff', 0.35), col, hexMix(col, INK, 0.45), hexMix(col, INK, 0.7), hexMix(col, INK, 0.85)].map(hexRgb), R = Math.hypot(w / 2, h / 2);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const r = Math.hypot(x + 0.5 - w / 2, y + 0.5 - h * 0.48) / R, tt = Math.max(0, Math.min(steps.length - 1.001, r * 1.25 * (steps.length - 1))), i0 = Math.floor(tt);
-    const rgb = steps[BAYER4[y & 3][x & 3] / 16 < tt - i0 ? i0 + 1 : i0], k = (y * w + x) * 4;
-    d[k] = rgb[0]; d[k + 1] = rgb[1]; d[k + 2] = rgb[2]; d[k + 3] = 255;
-  }
-  c.putImageData(id, 0, 0); glowMemo.set(key, cv); return cv;
-}
-// 카드 테(기술 카드와 같은 결)
-function frame(g, x, y, w, h, col) {
-  const hi = hexMix(col, '#ffffff', 0.45), lo = hexMix(col, INK, 0.5);
-  rrect(g, x, y, w, h, 5, INK); rrect(g, x + 1, y + 1, w - 2, h - 2, 4, col);
-  g.rect(x + 4, y + 1, w - 8, 1, hi); g.rect(x + 1, y + 4, 1, h - 8, hi);
-  g.rect(x + 4, y + h - 2, w - 8, 1, lo); g.rect(x + w - 2, y + 4, 1, h - 8, lo);
-  rrect(g, x + 3, y + 3, w - 6, h - 6, 2, INK);
-}
 // 그림 칸 가운데 물건(2배)
 function art(g, cx, cy, A) {
   const c = g.c;
@@ -78,9 +54,9 @@ export const shop = {
           const it = SHOP.find(x => x.id === id); if (!it) return;
           const inRow = Math.min(3, S.ids.length - Math.floor(i / 3) * 3), x0 = Math.round((W - inRow * cw - (inRow - 1) * gap) / 2), x = x0 + (i % 3) * (cw + gap), yy = y + Math.floor(i / 3) * (CH + gap), col = COL[id] || '#2fa3a8';
           rrect(g, x + 1, yy + 3, cw, CH, 5, 'rgba(0,0,0,0.32)');   // 그림자
-          frame(g, x, yy, cw, CH, col);
+          cardBox(g, x, yy, cw, CH, col);
           const ax = x + 4, ay = yy + 4, aw = cw - 8;
-          g.c.imageSmoothingEnabled = false; g.c.drawImage(glow(col, aw, AH), ax, ay);
+          g.c.imageSmoothingEnabled = false; g.c.drawImage(glowArt(col, aw, AH), ax, ay);
           art(g, Math.round(x + cw / 2), ay + Math.round(AH / 2) + 1, ART[id] || {});
           const by = ay + AH;   // 이름 띠
           g.rect(ax, by, aw, CH - 8 - AH, '#0c1526'); g.rect(ax, by, aw, 1, hexMix(col, '#0c1526', 0.4));

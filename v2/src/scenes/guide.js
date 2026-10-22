@@ -105,10 +105,11 @@ export const GUIDES = [
     ready: (app, sc) => !sc.dragging,
     steps: [{ at: 'cap_0', text: '잠든 식물들이에요. 캡슐을 누르면 깨우기 · 팔기 · 해체를 할 수 있어요.' }] },
   { id: 'bag', scene: 'bag', when: (app, sc) => sc.tab === 'seed', btn: hdrBtn,
-    ready: (app, sc) => !sc.pickFor,
+    ready: (app, sc) => !sc.pickFor && !sc.info,
     steps: [
       { at: 'tab_*', text: '종자 · 접목 가지 · 카드 · 물건을 나눠서 봐요.' },
-      { at: 'plant_*', text: '종자를 심으면 스마트팜에서 자라요. 개체값은 심을 때 정해져요.' },
+      { at: 'srt_*', text: '종자는 최신 · 희귀 · 별 · 속성 · 이름 순으로 늘어놓을 수 있어요. 즐겨찾기한 종자는 늘 맨 앞이에요.' },   // 2026-10-23 종자 카드 · 정렬
+      { at: 'plant_*', text: '종자를 심으면 스마트팜에서 자라요. 별은 심었을 때 식물의 별이에요. 카드를 누르면 즐겨찾기 · 잠금을 해요.' },
       { at: 'bag_explore', text: '종자는 탐사에서 가장 많이 얻어요.' },
     ] },
   { id: 'bag_card3', scene: 'bag', when: (app, sc) => sc.tab === 'card', btn: hdrBtn,   // 2026-10-22 강화 · 팔기 · 귀속

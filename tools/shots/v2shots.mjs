@@ -18,6 +18,8 @@ const SIZE = args.size ? String(args.size).split('x').map(Number) : null;
 const out = resolve(here, 'out', label); mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 
+// 종자 가방 촬영용 종자 일곱(여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금 — 2026-10-23)
+const SEEDS_MIX = [{ key: 'spark', pot: 4, fav: true }, { key: 'gaia', pot: 2 }, { key: 'aqua', pot: 3, shiny: true }, { key: 'cactus_fire', pot: 5, legend: true }, { key: 'vine_wind', pot: 3, form: 'predator' }, { key: 'flower_grass', pot: 1, lock: true }, { key: 'spore_cap', pot: 2 }];
 export const SHOTS = [
   ['01_title', 'title', { at: '12' }],                     // 처음 화면(전등 켜진 뒤 — at = 처음 화면 곡 초)
   ['01_title_dark', 'title', { at: '5.75' }],              // 전등 점화 중(전등이 켜질 때만 의자 · 식물이 보임)
@@ -33,16 +35,19 @@ export const SHOTS = [
   ['02_home_cactus_wind_1600', 'home', {}, { plants: [{ key: 'cactus_wind', stage: 2 }], t: 1600 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
   ['03_home_empty', 'home', { empty: true }],
   ['03_home_profile', 'home', { profile: true }],
-  ['03_home_banner_stars', 'home', {}, { profile: { color: 4, avatar: 'spark' }, level2: 20 }],   // 무늬 배너(2026-10-22)
-  ['03_home_banner_leaf', 'home', {}, { profile: { color: 5, avatar: 'vine_water' }, level2: 20 }],   // 무늬 배너(2026-10-22)
-  ['03_home_banner_wave', 'home', {}, { profile: { color: 6, avatar: 'aqua' }, level2: 20 }],   // 무늬 배너(2026-10-22)
-  ['03_home_banner_circuit', 'home', {}, { profile: { color: 7, avatar: 'cactus_fire' }, level2: 20 }],   // 무늬 배너(2026-10-22)
-  ['03_home_profile_lv20', 'home', { profile: true }, { level2: 20, profile: { color: 6 } }],   // 배너 여덟 다 열림
+  // 배너 열둘 = 프로필 창 디자인(2026-10-23 사용자 "홀로그램창의 디자인을 배너라고 말한거야") — 번호 = s.profile.color
+  ...['sky', 'sunset', 'sprout', 'lavender', 'stars', 'leaf', 'wave', 'circuit', 'aurora', 'nebula', 'gold', 'arena'].map((k, i) => ['03_home_banner_' + k, 'home', {}, { profile: { color: i, avatar: ['flower_grass', 'cactus_fire', 'vine_water', 'flower_wind', 'spark', 'vine_water', 'aqua', 'cactus_fire', 'flower_wind', 'spore_cap', 'gaia', 'flower_grass'][i] }, level2: 30, t: 700 }]),
+  ['03_home_profile_lv30', 'home', { profile: true }, { level2: 30, profile: { color: 4 } }],   // 배너 열둘 다 열림(작은 창 미리보기 칸)
+  ['03_home_profile_lv5', 'home', { profile: true }, { level2: 5, profile: { color: 1 } }],   // 잠긴 배너
   ['03_home_modes', 'home', { modes: true }],
   ['03_home_swap3', 'home', { modes: true, mode: 'swap3' }],
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],
   ['03_home_focus', 'home', { focus: true }],
-  ['04_bag', 'bag', {}],
+  ['04_bag', 'bag', {}, { seedsAdd: SEEDS_MIX }],   // 종자 = 카드 셋씩 줄 · 정렬 줄(2026-10-23)
+  ['04_bag_sort_rare', 'bag', { sort: 'rare' }, { seedsAdd: SEEDS_MIX }],
+  ['04_bag_sort_pot', 'bag', { sort: 'pot' }, { seedsAdd: SEEDS_MIX }],
+  ['04_bag_info', 'bag', { info: true }, { seedsAdd: SEEDS_MIX }],   // 카드를 누른 정보 창(즐겨찾기 · 잠금)
+  ['04_bag_short', 'bag', {}, { seedsAdd: SEEDS_MIX, W: 270, H: 480 }],
   ['04_bag_card', 'bag', { tab: 'card' }],   // 카드 가방(2026-10-22 — 강화 · 팔기 · 끼움 수)
   ['04_bag_item', 'bag', { tab: 'item' }],   // 물건(카드 꾸러미)
   ['05_plant_skill', 'plant', { tab: 'skill' }],
@@ -195,6 +200,7 @@ export const SHOTS = [
   ['20_guide_bag_0', 'bag', {}, { guide: 0 }],
   ['20_guide_bag_1', 'bag', {}, { guide: 1 }],
   ['20_guide_bag_2', 'bag', {}, { guide: 2 }],
+  ['20_guide_bag_3', 'bag', {}, { guide: 3 }],
   ['20_guide_explore_0', 'explore', {}, { guide: 0 }],
   ['20_guide_explore_1', 'explore', {}, { guide: 1 }],
   ['20_guide_explore_2', 'explore', {}, { guide: 2 }],

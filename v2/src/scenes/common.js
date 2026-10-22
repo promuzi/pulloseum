@@ -1,7 +1,8 @@
 // 화면 공용 조각: 무대 층(2배 도트), 머리줄, 큰 제목, 씨앗 그림, 스탯 정의
-import { C, RAMP, ELEMENT } from '../art/palette.js';
+import { C, RAMP, ELEMENT, BAYER4 } from '../art/palette.js';
 import { icon, tinted } from '../art/icons.js';
-import { rbox, button } from '../art/ui.js';
+import { rbox, button, rrect } from '../art/ui.js';
+import { hexMix } from '../art/statusLook.js';
 import { T, btnBody } from '../art/theme.js';
 import { drawTitle } from '../core/text.js';
 import { layer } from '../core/gfx.js';
@@ -133,4 +134,27 @@ export function gradeBadge(g, x, y, grade) {
 }
 
 export function elemColor(el) { return (ELEMENT[el] || ELEMENT.grass).main; }
+
+// 물건 카드(상점 · 종자 가방 — 2026-10-22 상점에서 옮김): 카드 테(전투 카드와 같은 결: 먹선 · 금속 테(위 · 왼 빛, 아래 · 오른 그늘) · 안쪽 먹선) · 그림 칸 바탕(갈래 색 빛이 가운데서 번짐)
+const CARD_INK = '#0b1322';
+export function cardBox(g, x, y, w, h, col) {
+  const hi = hexMix(col, '#ffffff', 0.45), lo = hexMix(col, CARD_INK, 0.5);
+  rrect(g, x, y, w, h, 5, CARD_INK); rrect(g, x + 1, y + 1, w - 2, h - 2, 4, col);
+  g.rect(x + 4, y + 1, w - 8, 1, hi); g.rect(x + 1, y + 4, 1, h - 8, hi);
+  g.rect(x + 4, y + h - 2, w - 8, 1, lo); g.rect(x + w - 2, y + 4, 1, h - 8, lo);
+  rrect(g, x + 3, y + 3, w - 6, h - 6, 2, CARD_INK);
+}
+const glowMemo = new Map(), hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+export function glowArt(col, w, h) {   // 디더 네 단 · 한 번 굽고 재사용
+  const key = col + w + 'x' + h; let cv = glowMemo.get(key); if (cv) return cv;
+  cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const c = cv.getContext('2d'), id = c.createImageData(w, h), d = id.data;
+  const steps = [hexMix(col, '#ffffff', 0.35), col, hexMix(col, CARD_INK, 0.45), hexMix(col, CARD_INK, 0.7), hexMix(col, CARD_INK, 0.85)].map(hexRgb), R = Math.hypot(w / 2, h / 2);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const r = Math.hypot(x + 0.5 - w / 2, y + 0.5 - h * 0.48) / R, tt = Math.max(0, Math.min(steps.length - 1.001, r * 1.25 * (steps.length - 1))), i0 = Math.floor(tt);
+    const rgb = steps[BAYER4[y & 3][x & 3] / 16 < tt - i0 ? i0 + 1 : i0], k = (y * w + x) * 4;
+    d[k] = rgb[0]; d[k + 1] = rgb[1]; d[k + 2] = rgb[2]; d[k + 3] = 255;
+  }
+  c.putImageData(id, 0, 0); glowMemo.set(key, cv); return cv;
+}
 export { button };
