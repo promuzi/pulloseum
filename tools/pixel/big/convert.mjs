@@ -30,7 +30,7 @@ const hueOf = (A, B) => (Math.atan2(B, A) * 180 / Math.PI + 360) % 360;
 //  eyeVivid = 눈 칸을 눈 안에서 15% 넘게 차지하는 재질 중 가장 채도 높은 것으로 — 노란 눈동자가 크림빛 얼굴과 같은 무리로 묶여 선만 남는 종(볼트바인, 2026-10-16)
 //  eyeDark = 눈 칸을 그 재질의 어두운 단(값 이하)으로 — 몸과 눈이 같은 색 계열이라 줄이면 눈이 몸 색에 묻히는 종(프로스트벨: 얼음빛 종에 푸른 눈, 2026-10-16)
 //  soft = 원화를 줄이기 전에 몸 칸끼리 살짝 흐림(원화 칸 반지름) — 한 칸보다 잘게 갈라진 질감이 점으로 튀는 종(softBlur)
-const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, pirate_cactus: { eyeDark: 0.5 }, ranger_vine: { soft: 5, fill: 0.4 }, snow_ballet: { eyeDark: 0.5, fill: 0.4 }, dandel_aero: { eyeDark: 0.4 }, volt_vine: { km: 11, eyeVivid: true }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, frost_drake: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, eyeHold: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'needle' } }, ember_cap: { eyeDark: 0.9 }, viking_cap: { soft: 7 }, gumiho_bloom: { soft: 5, eyeDark: 0.5, km: 11 }, astro_cap: { eyeDark: 0.8 }, wizard_bell: { fit: 1.06, teenArea: 0.55, youngArea: 0.32 } };   // 셋째 아홉(2026-10-17): 서리 털 질감 흐리기 · 가는 여우 눈 · 흰 얼굴의 푸른 눈 · 마법사(사용자 "덩치 커지면 좋을 듯 — 중간체보다 머리나 몸통이 작은 느낌": 자람의 큰 종 머리가 성체 얼굴보다 커 보임 → 성체 ×1.06, 자람 55% · 어린 32%)   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
+const TUNE = { flower_wind: { fill: 0.3 }, gaia: { youngArea: 0.34, teenArea: 0.58 }, thorn: { youngArea: 0.3, teenMinArea: 0.7, teenCapAdd: 6 }, vine_water: { potClean: true }, frost_bell: { eyeDark: 0.6 }, pirate_cactus: { eyeDark: 0.5 }, ranger_vine: { soft: 5, fill: 0.4 }, snow_ballet: { eyeDark: 0.5, fill: 0.4 }, dandel_aero: { eyeDark: 0.4 }, volt_vine: { km: 11, eyeVivid: true, eyeGleam: false }, jelly_cap: { eyeDark: 1.4 }, fang_trap: { eyeDark: 0.8 }, blade_vine: { eyeDark: 0.8, fit: 1.2 }, toxi_cactus: { eyeDark: 0.9 }, draco_fruit: { eyeDark: 0.8 }, frost_drake: { eyeDark: 0.8 }, title_hero: { eyeVivid: true }, drake_cactus: { eyeVivid: true, eyeHold: true, fit: 1.05, accent: { lmin: 0.76, hue: [60, 105], cmin: 0.05, ctx: 0.62, min: 0.16, shape: 'needle' } }, ember_cap: { eyeDark: 0.9 }, viking_cap: { soft: 7 }, gumiho_bloom: { soft: 5, eyeDark: 0.5, km: 11 }, astro_cap: { eyeDark: 0.8 }, wizard_bell: { fit: 1.06, teenArea: 0.55, youngArea: 0.32 } };   // 셋째 아홉(2026-10-17): 서리 털 질감 흐리기 · 가는 여우 눈 · 흰 얼굴의 푸른 눈 · 마법사(사용자 "덩치 커지면 좋을 듯 — 중간체보다 머리나 몸통이 작은 느낌": 자람의 큰 종 머리가 성체 얼굴보다 커 보임 → 성체 ×1.06, 자람 55% · 어린 32%)   // 변이 고정 새 다섯(2026-10-17): 눈이 가늘어 줄이면 살결에 묻힘 → 눈 칸을 어둡게
 // 줄기 시작점 = 화분 가운데(2026-10-15 사용자 "식물의 줄기 시작점이 화분의 중앙에 오게 해줘. 애매한 것은 임시로 중앙에 선을 그어서 중앙에 배치"):
 //  흙 타원 가운데로 놓으면 컨셉 그림에서 줄기가 화분 가운데서 비껴 그려진 만큼 그대로 비껴 남는다(타이드바인 +5칸 — 대기실 12° 화분은 흙 띠가 얇아 밑동이 가려져 더 쏠려 보임).
 //  판 칸 단위로 통째로 옮긴다(그림은 한 칸도 안 바뀜) — 값 = 옮길 칸(− 왼쪽). 정한 법: node tools/pixel/big/stemcheck.mjs 가운데 선 판에서 흙 바로 위 줄기(여러 줄기·밑동이 가려진 종은 밑동 덩어리 가운데)를 선에 맞춤.
@@ -471,7 +471,7 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
     }
     if (process.env.ACCENT_LOG) console.log(`${key} 밝은 무늬 원본 점 ${nA}`);
   }
-  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, accShape: AC ? AC.shape || null : null, eyeHold: !!(TUNE[key] || {}).eyeHold, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null };
+  const src = { pm, pl, w: im.w, h: im.h, S: { ...S }, s, matL, eyeId, protect, km: K, acc: accPx, accMin: AC ? AC.min ?? 0.18 : 0, accShape: AC ? AC.shape || null : null, eyeHold: !!(TUNE[key] || {}).eyeHold, matC: mat.cent.map(c => Math.hypot(c[1], c[2])), eyeVivid: !!(TUNE[key] || {}).eyeVivid, fill: (TUNE[key] || {}).fill ?? 0.5, eyeDark: (TUNE[key] || {}).eyeDark ?? null, eyeProbe: (() => { const a = args.find(a2 => a2.startsWith('--eyeprobe=')); return a ? a.slice(11).split(',').map(Number) : null; })() };
   const { cm, ct, am } = rasterize(src);
   // 줄기 재기(재발 방지): 흙 가운데 줄 바로 위에서 위로 6칸 넘게 이어진 열 덩어리 중 몸 무게중심에 가장 가까운 것 — STEM 에 없는데 1.5칸 넘게 비끼면 경고
   if (STEM[okey] == null) {
@@ -499,7 +499,8 @@ export function convert(key, { file = null, scale = null, fit = (TUNE[key] || {}
   const eyeCheek = sp && sp.cheek ? toOut(sp.cheek[0], sp.cheek[1]).map(Math.floor) : null;   // 볼(살결 색을 뜰 판 칸)
   // 눈 반짝임 살리기: 원본 눈 타원 안 가장 밝은 점(L > 0.88, 15칸 이상)의 무게중심 칸이 밝지 않으면, 그 점들의 재질 가장 밝은 단으로 한 칸 찍는다
   // — 작은 눈이 줄면서 반짝임이 빠지면 속눈썹 선만 남아 입·초승달처럼 읽힘(윈드페탈, 2026-10-15)
-  if (sp && sp.box && !sp.closed) for (const [ex, ey, rx, ry] of sp.box) {
+  // eyeGleam: false(TUNE) = 이 규칙 끔 — 비스듬한 눈은 타원 구석의 밝은 살결까지 '밝은 점'으로 잡혀, 하나뿐인 금색 눈동자 칸을 살결 색으로 덮는다(볼트바인 오른눈, 2026-10-22)
+  if (sp && sp.box && !sp.closed && (TUNE[key] || {}).eyeGleam !== false) for (const [ex, ey, rx, ry] of sp.box) {
     let sx = 0, sy = 0, n2 = 0;
     const mc = new Float32Array(K);
     for (let y = Math.floor(ey - ry); y <= ey + ry; y++) for (let x = Math.floor(ex - rx); x <= ex + rx; x++) {
@@ -560,6 +561,10 @@ export function rasterize(src, warp = null, prev = null) {
     // 눈 칸(블록의 30% 이상이 눈 타원): 눈 색끼리만 다수결, 아니면 눈 아닌 칸끼리만 — 속눈썹 그늘이 살결로, 살결이 눈으로 번지지 않게.
     // (반짝임은 convert의 '가장 밝은 점' 한 칸으로만 살린다 — 밝은 재질을 고르는 규칙은 밝은 주황 눈동자를 지워 없앰, 블레이즈블룸 2026-10-15)
     const eyeCell = fgE >= 0.3 * fg && fgE > 0;
+    if (src.eyeProbe && X === src.eyeProbe[0] && Y === src.eyeProbe[1]) {   // 검토용(--eyeprobe=x,y): 그 칸의 눈·몸 재질 구성
+      console.log(`눈칸 (${X},${Y}) 전체 ${tot} · 몸 ${fg} · 눈 ${fgE} · 눈 칸? ${eyeCell}`);
+      for (let k = 0; k < K; k++) if (cnE[k] || cnt[k]) console.log(`  재질 ${k} 밝기 ${matL[k].toFixed(2)} 채도 ${matC ? matC[k].toFixed(3) : '-'} · 눈 ${cnE[k]} · 몸 ${cnt[k]}`);
+    }
     if (eyeCell) { cnt.set(cnE); lv.set(lvE); }
     else if (fgE > 0 && fg - fgE === 0) { cnt.set(cnE); lv.set(lvE); }
     let pi = -1;   // 앞 장에서 같은 원본 자리였던 칸
@@ -590,6 +595,7 @@ export function rasterize(src, warp = null, prev = null) {
       for (let k = 1; k < K; k++) if (cnA[k] > cnA[am]) am = k;
       m = am; l = Math.max(lvA[am] / cnA[am], LV - 2); accMark[Y * W + X] = 1; accL[Y * W + X] = fgA / fg;
     }
+    if (src.eyeProbe && X === src.eyeProbe[0] && Y === src.eyeProbe[1]) console.log(`  → 할당 재질 ${m} 단 ${l.toFixed ? l.toFixed(2) : l}`);
     cm[Y * W + X] = m; cl[Y * W + X] = l;
   }
   // 가시 모양(src.accShape — TUNE accent.shape): 무늬 덩어리(8이웃으로 이어진 칸)마다 칸 값을 되돌리고, 무늬가 가장 짙은 칸에 도트 가시 — 가운데 = 가장 밝은 단, 팔 = 두 단 아래
@@ -619,7 +625,7 @@ export function rasterize(src, warp = null, prev = null) {
   for (let pass = 0; pass < 2; pass++) {
     const nm = cm.slice(), nl = cl.slice();
     for (let i = 0; i < W * H; i++) {
-      if (cm[i] < 0 || matL[cm[i]] < 0.3 || matL[cm[i]] > 0.9 || (accMark && accMark[i])) continue;
+      if (cm[i] < 0 || matL[cm[i]] < 0.3 || matL[cm[i]] > 0.9 || (accMark && accMark[i]) || (src.protect && src.protect[i])) continue;   // 눈 둘레(protect)는 외딴 칸 정리에서도 남김 — 한 칸뿐인 눈동자가 이웃 살결로 바뀜(볼트바인 오른눈, 2026-10-22)
       const x = i % W, y = (i - x) / W, nb = [];
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (ox || oy) { const j = at(x + ox, y + oy); if (j >= 0 && cm[j] >= 0) nb.push(j); }
       if (nb.filter(j => cm[j] === cm[i]).length > 1 || nb.length < 3) continue;
@@ -1017,9 +1023,9 @@ async function animKit() {
     spore_cap: { bob: 2, squash: 1.5, sway: 0.7, open: 0.6, petal: 0.5, leaf: 0.8, blinkAt: 18, amb: { spores: { from: 'cap', n: 7 } } },
     // 새 종 넷(2026-10-16): 얼음 종꽃 = 서리 반짝 · 매끈한 빛 / 전깃줄 덩굴 = 전기 / 바위 버섯 = 수정 · 먼지 · 숨 작게 / 해파리 버섯 = 말랑 · 물방울 · 거품
     frost_bell: { bob: 1.5, sway: 1, open: 0.8, petal: 1, leaf: 1.2, blinkAt: 28, amb: { twinkle: { mat: { hue: [190, 260], lmin: 0.75 }, n: 2, every: 24 }, shine: { mat: { cmax: 0.05, lmin: 0.8 }, at: 12, len: 6 } } },
-    volt_vine: { bob: 1.5, sway: 1.1, open: 1, petal: 1.4, leaf: 1.8, blinkAt: 42, amb: { pulse: { mat: { hue: [40, 95], cmin: 0.1 }, every: 32, len: 10, at: 0 } }, electric: { bolts: [{ at: [60, 9], ang: -75, len: 9, f0: 10 }, { at: [26, 12], ang: -120, len: 8, f0: 42 }], arcs: false } },   // 감긴 줄기의 호박빛 마디를 타고 전류가 올라가 위 잎끝에서 벼락
-    volt_vine_teen: { electric: { bolts: [{ at: [59, 14], ang: -75, len: 8, f0: 10 }, { at: [29, 17], ang: -120, len: 7, f0: 42 }], arcs: false } },
-    volt_vine_young: { electric: { bolts: [{ at: [36, 27], ang: -110, len: 6, f0: 10 }], arcs: false } },
+    volt_vine: { bob: 1.5, sway: 1.1, open: 1, petal: 1.4, leaf: 1.8, blinkAt: 42, amb: { pulse: { mat: { hue: [40, 95], cmin: 0.1 }, every: 32, len: 10, at: 0 }, twinkle: { mat: { hue: [55, 105], cmin: 0.1, lmin: 0.75 }, n: 2, every: 20 } }, electric: { bolts: [{ at: [60, 9], ang: -75, len: 9, f0: 10 }, { at: [26, 12], ang: -120, len: 8, f0: 42 }], arcs: false, chain: [{ pts: [[41, 75], [55, 67], [54, 55], [62, 45], [35, 36]], at: [12, 44] }] } },   // 감긴 전선의 호박빛 마디를 타고 전류가 올라가 위 잎끝에서 벼락 + 구체에서 구체로 튀는 번개(맞은 구체 번쩍, 2026-10-22 사용자 "동그란 번개 구체를 강조")
+    volt_vine_teen: { electric: { bolts: [{ at: [59, 14], ang: -75, len: 8, f0: 10 }, { at: [29, 17], ang: -120, len: 7, f0: 42 }], arcs: false, chain: [{ pts: [[49, 75], [53, 63], [48, 55], [39, 44]], at: [12, 44] }] } },
+    volt_vine_young: { electric: { bolts: [{ at: [36, 27], ang: -110, len: 6, f0: 10 }], arcs: false, chain: [{ pts: [[36, 48]], at: [20] }] } },
     stone_cap: { bob: 1, squash: 0.6, sway: 0.3, open: 0, petal: 0, leaf: 0.3, blinkAt: 34, amb: { gems: { mat: { hue: [150, 235], cmin: 0.06 }, at: 16 }, twinkle: { mat: { hue: [150, 235], cmin: 0.06 }, n: 1, every: 26 }, dust: { n: 4 } } },
     jelly_cap: { bob: 2, squash: 2.2, sway: 0.8, open: 0.6, petal: 1.2, leaf: 0.8, blinkAt: 20, amb: { drips: { n: 2, every: 34 }, bubbles: { mat: { hue: [190, 260], lmin: 0.6, cmin: 0.03 }, n: 3 } } },
     // 변이 고정 새 다섯(2026-10-17): 덫 꽃 = 덫이 크게 벌름 · 칼날 덩굴 = 불 + 칼날 번뜩 · 독 선인장 = 독 방울 · 용 과일 선인장 = 서리 반짝 · 불씨 버섯 = 불 + 불씨 포자
@@ -1370,7 +1376,7 @@ if (BLINK) {
     writeFileSync(resolve(here, 'out', 'conv', cv.key + '_blink_face.gif'), encodeGIF(zoom(faces, Z10, '#323353'), { delay: seq.map(s => s[1]) }));
     if (MP4) (await import('./video.mjs')).writeMP4(resolve(here, 'out', 'conv', cv.key + '_blink_face.mp4'), zoom(faces, 20, '#323353'), { delay: seq.map(s => s[1]), loops: 6 });
     const geo = eyeGeometry(paint(cv), cv);
-    console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 칸 ${(cv.eyeGrid || []).map(g => g ? g.pts.length : 0).join('·')}`);
+    console.log(`깜빡임 확인 → ${cv.key}_blink.png · _blink_face.png · 얼굴 기울기 ${geo.length ? (geo[0].th * 180 / Math.PI).toFixed(1) : '-'}° · 눈 칸 ${(cv.eyeGrid || []).map(g => g ? g.pts.length : 0).join('·')} · 눈 가운데 ${cv.eyeC.map(e => `${e[0].toFixed(0)},${e[1].toFixed(0)}`).join(' / ')} · 얼굴 틀 (${X0},${Y0})`);
   }
   if (allFaces.length > 1) {
     const sheet = new Img(allFaces[0].w, allFaces.reduce((s, f) => s + f.h, 0), '#2e222f');
