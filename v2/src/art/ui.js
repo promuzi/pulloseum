@@ -54,7 +54,7 @@ export function button(app, id, x, y, w, h, label, opt = {}) {
   if (label) g.text(label, cx, ty, { font, color: st.text });
   if (opt.sub) g.text(opt.sub, x + w / 2, ty + lh + 1, { color: st.sub || st.text, align: 'center' });
   input.mark(id, x, y, w, h);
-  if (!opt.disabled && opt.onTap) input.hit(id, x, y, w, h, opt.onTap, opt.pad ?? 4);
+  if (!opt.disabled && opt.onTap) input.hit(id, x, y, w, h, opt.onTap, opt.pad ?? 4, !!opt.now);   // now = 손을 뗀 그 순간 바로(창 열기 — core/input.js)
 }
 
 // 막대(체력·경험치). ratio 0~1. kind: 'hp'(색 단계) | 'exp' | 'gold' | 'energy'

@@ -237,7 +237,7 @@ export const title = {
     if (this.mode === 'out') {
       button(app, 'title_login', bx, y0, bw, 34, '로그인', { style: 'night', font: 'head', onTap: on(() => loginForm(app, this)) });
       button(app, 'title_new', bx, y0 + 44, bw, 34, '새로 시작하기', { style: 'gold', font: 'head', onTap: on(() => registerForm(app, this)) });
-      if (app.googleId) button(app, 'title_google', bx, y0 + 88, bw, 34, '구글로 계속하기', { style: 'night', font: 'bold', onTap: on(() => googleLogin(app, this)) });
+      if (app.googleId) button(app, 'title_google', bx, y0 + 88, bw, 34, '구글로 계속하기', { style: 'night', font: 'bold', now: true, onTap: on(() => googleLogin(app, this)) });   // now = 뗀 그 순간 창 열기(아이폰 사파리)
       if (app.invite) g.text(`초대받은 방 ${app.invite}`, W / 2, y0 + (app.googleId ? 130 : 86), { color: '#ffe8a8', align: 'center', outline: T.ink });
       return;
     }
