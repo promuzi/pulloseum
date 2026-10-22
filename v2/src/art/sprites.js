@@ -2,6 +2,7 @@
 import { C } from './palette.js';
 import { frameAt } from '../core/motion.js';
 import { capOf, ringOf, bedOf, bareOf, dirtOf } from './potgrass.js';
+import { shinyCanvas, shinyKey } from './shiny.js';
 
 // 첫 출시 도감 = 1궤도 행성 세 곳의 기본 11종 + 지역 희귀 스포어캡
 export const ROSTER = ['flower_grass', 'thorn', 'aqua', 'flower_wind', 'spark', 'vine_water', 'cactus_fire', 'gaia', 'flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap', 'frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap', 'fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit', 'ember_cap', 'drake_cactus', 'gat_cap', 'mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus', 'goblin_cap', 'crown_cap', 'frost_drake', 'gladi_cactus', 'jangseung_cactus', 'astro_cap', 'viking_cap', 'hyunmu_cap', 'gumiho_bloom', 'wizard_bell', 'ninja_vine', 'diver_vine', 'pirate_cactus', 'ranger_vine', 'miner_cap', 'volcano_cap', 'dandel_aero', 'snow_ballet'];   // 2026-10-18 새 여섯
@@ -29,11 +30,11 @@ export const BIG = {}, POT_BIG = {};
 // 처음 화면 대표 식물(2026-10-17 사용자 "이미 로그인 되어 있으면 그 식물을 초반 화면에"): 홈에서 본 내 식물(그림 키 · 화분)을 이 브라우저에 기억 —
 //  로그인 열쇠가 있으면 그 식물, 없으면 바위 선인장(가이아록)
 const HERO_KEY = 'pullo.hero';
-export function heroSaved() { try { if (!localStorage.getItem('pullo.token')) return null; const h = JSON.parse(localStorage.getItem(HERO_KEY) || 'null'); return Array.isArray(h) && typeof h[0] === 'string' && /^[a-z_]+$/.test(h[0]) ? [h[0], typeof h[1] === 'string' && /^pot_[a-z]+$/.test(h[1]) ? h[1] : 'pot_terra'] : null; } catch { return null; } }
+export function heroSaved() { try { if (!localStorage.getItem('pullo.token')) return null; const h = JSON.parse(localStorage.getItem(HERO_KEY) || 'null'); return Array.isArray(h) && typeof h[0] === 'string' && /^[a-z_]+(~s[A-C]?)?$/.test(h[0]) ? [h[0], typeof h[1] === 'string' && /^pot_[a-z]+$/.test(h[1]) ? h[1] : 'pot_terra'] : null; } catch { return null; } }   // ~s = 색 변종(2026-10-22)
 let heroLast = null;
 export function heroRemember(key, pot) { const v = JSON.stringify([key, pot || 'pot_terra']); if (v === heroLast) return; heroLast = v; try { localStorage.setItem(HERO_KEY, v); } catch {} }
-const HERO0 = heroSaved();
-export const FIRST_BIG = HERO0 && HERO0[0] !== 'gaia' ? ['gaia', HERO0[0]] : ['gaia'], FIRST_POTS = HERO0 && HERO0[1] !== 'pot_terra' ? ['pot_terra', HERO0[1]] : ['pot_terra'], FIRST_BG = ['home_loft', 'home_loft_dim'];   // 처음 화면에 필요한 것(먼저 받음 — main.js)
+const HERO0 = heroSaved(), HERO0K = HERO0 && HERO0[0].replace(/~s.*$/, '');   // 받을 그림 = 색 변종 꼬리를 뗀 원래 그림
+export const FIRST_BIG = HERO0K && HERO0K !== 'gaia' ? ['gaia', HERO0K] : ['gaia'], FIRST_POTS = HERO0 && HERO0[1] !== 'pot_terra' ? ['pot_terra', HERO0[1]] : ['pot_terra'], FIRST_BG = ['home_loft', 'home_loft_dim'];   // 처음 화면에 필요한 것(먼저 받음 — main.js)
 const bigTried = new Set();
 export async function loadBig(base = '../assets/v2/', only = null) {
   const json = u => fetch(u).then(r => (r.ok ? r.json() : null)).catch(() => null);
@@ -49,6 +50,14 @@ export async function loadBig(base = '../assets/v2/', only = null) {
   ]);
   return [...ROSTER.filter(k => !BIG[k]), ...BIG_EXTRA.filter(k => !BIG[k]), ...POTS.filter(p => !POT_BIG[p])];
 }
+// 큰 판 그림 하나(색 변종 키 '~s…'는 원래 그림의 색을 바꿔 처음 쓸 때 만듦 — art/shiny.js · 2026-10-22). 큰 판을 읽는 곳은 BIG[키] 대신 이걸로
+export function bigOf(key) {
+  const P = BIG[key]; if (P) return P;
+  const sk = shinyKey(key), base = sk && BIG[sk[0]];
+  if (!base) return undefined;
+  const sheet = shinyCanvas(base.sheet, sk[0], sk[1], base.meta);
+  return (BIG[key] = sheet ? { sheet, white: base.white, meta: base.meta } : base);
+}
 // ── 작은 칸 그림(양육·도감·상점, 2026-10-15): 큰 판 대기 첫 장을 도트 규칙대로 절반(48×56) — tools/pixel/big/small.mjs → assets/v2/small/ ──
 //  식물 = 위 under · 아래 over(48×112), 화분 = 위 뒤 · 아래 앞(48×112). 그리는 순서는 큰 판과 같음(화분 뒤 → under → 화분 앞 → over)
 export const SMALL = {}, SMALL_POT = {};
@@ -59,9 +68,19 @@ export async function loadSmall(base = '../assets/v2/small/') {
   ]);
   return [...ROSTER.filter(k => !SMALL[k]), ...POTS.filter(p => !SMALL_POT[p])];
 }
+// 색 변종 작은 그림이 다 됐나(아직이면 굽는 쪽이 저장하지 않고 다음에 다시)
+export const smallReady = key => !shinyKey(key) || !!SMALL[key];
+// 작은 그림 하나(색 변종 키는 그 종 큰 판에서 찾은 눈 색을 두고 색을 바꿈 — 큰 판이 아직 없으면 원래 그림을 잠깐 씀)
+export function smallOf(key) {
+  const S = SMALL[key]; if (S) return S;
+  const sk = shinyKey(key), base = sk && SMALL[sk[0]];
+  if (!base) return undefined;
+  const big = bigOf(key); if (!big || !big.sheet.eye) return base;
+  return (SMALL[key] = shinyCanvas(base, sk[0], sk[1], null, big.sheet.eye) || base);
+}
 // (x, y) = 48×56 칸의 왼쪽 위. bob = 식물만 위로 n칸(숨쉬기)
 export function drawSmall(g, key, potKey, x, y, opt = {}) {
-  const pl = SMALL[key], pt = SMALL_POT[potKey] || SMALL_POT.pot_terra, b = opt.bob || 0, c = g.c;
+  const pl = smallOf(key), pt = SMALL_POT[potKey] || SMALL_POT.pot_terra, b = opt.bob || 0, c = g.c;
   if (!pt) return false;
   c.imageSmoothingEnabled = false;
   c.drawImage(pt, 0, 0, 48, 56, x, y, 48, 56);
@@ -74,7 +93,7 @@ export function drawSmall(g, key, potKey, x, y, opt = {}) {
 const smallCache = new Map();
 export function smallCanvas(key, potKey = 'pot_terra') {
   const id = key + '|' + potKey; let cv = smallCache.get(id);
-  if (!cv) { cv = document.createElement('canvas'); cv.width = 48; cv.height = 56; drawSmall({ c: cv.getContext('2d') }, key, potKey, 0, 0); smallCache.set(id, cv); }
+  if (!cv) { cv = document.createElement('canvas'); cv.width = 48; cv.height = 56; drawSmall({ c: cv.getContext('2d') }, key, potKey, 0, 0); if (smallReady(key)) smallCache.set(id, cv); }
   return cv;
 }
 
@@ -94,7 +113,7 @@ export async function loadBg(base = '../assets/v2/bg/', only = null) {
 // src = 그림에서 잘라 올 칸. 기본(2026-10-16 사용자 "식물 정사각형 사진이 이상한 곳을 찍고 있어" — 전엔 늘 1:1이라 작은 칸엔 머리 한 귀퉁이만):
 //  44칸 이하 = 2배로 잘라 반으로 줄임(얼굴 전체 + 몸 위쪽, 칸이 고르게) · 그보다 큰 칸 = 1:1
 export function drawPortrait(g, key, x, y, s, flip = false, src = null) {
-  const P = BIG[key]; if (!P) return false;
+  const P = bigOf(key); if (!P) return false;
   const m = P.meta, hx = Math.round(m.head[0]), hy = Math.round(m.head[1]);
   if (src == null) src = s * 2 <= Math.min(m.w, 88) ? s * 2 : s;
   let sy = Math.max(0, Math.min(m.h - src, hy - Math.floor(src / 2) + 3));
@@ -109,7 +128,7 @@ export function drawPortrait(g, key, x, y, s, flip = false, src = null) {
 }
 // 식물 전체(머리만이 아니라 — 2026-10-16 사용자 "프로필 설정에서 보이는 식물이 머리만 찍혀있어"): 칠한 범위를 정사각으로 감싸 s칸에 맞춤(그림 칸 밖은 안 읽음)
 export function drawWhole(g, key, x, y, s, flip = false) {
-  const P = BIG[key], b = P && bigBox(key); if (!b) return drawPortrait(g, key, x, y, s, flip);
+  const P = bigOf(key), b = P && bigBox(key); if (!b) return drawPortrait(g, key, x, y, s, flip);
   const m = P.meta, [t, bt, l, r] = b, side = Math.max(bt - t + 1, r - l + 1) + 4, cx = (l + r + 1) / 2, cy = (t + bt + 1) / 2;
   const w = Math.min(m.w, side), h = Math.min(m.h, side), sx = Math.round(Math.max(0, Math.min(m.w - w, cx - w / 2))), sy = Math.round(Math.max(0, Math.min(m.h - h, cy - h / 2)));
   const k = s / side, dw = Math.round(w * k), dh = Math.round(h * k), dx = x + Math.round((s - dw) / 2), dy = y + Math.round((s - dh) / 2);
@@ -148,7 +167,7 @@ function dirtSheet(P) {   // 스마트팜 잔디 판: 흙 덮기 띠를 갈색 �
 // 화분에 심은 큰 판 식물: (bx, by) = 화분 굽이 바닥에 닿는 점. t = 시각(ms), phase = 숨 엇갈림(ms), flip = 좌우 뒤집기(상대), flash = 맞은 순간 하얗게
 // 게임 단계 → 그림 단계(CHANGELOG 2026-10-15 "게임 6단계와 잇기": 씨앗·새싹·유체 → 어린, 성장체 → 자람, 성체·완숙체 → 성체)
 const STAGE_ART = { seed: 'young', sprout: 'young', juvenile: 'young', growing: 'teen', mature: null, evolved: null };
-export function bigKey(key, stage) { const st = STAGE_ART[stage]; return st && BIG[key + '_' + st] ? key + '_' + st : key; }
+export function bigKey(key, stage, shiny = false) { const st = STAGE_ART[stage], k = st && BIG[key + '_' + st] ? key + '_' + st : key; return shiny ? k + '~s' : k; }   // shiny = 색 변종 그림(2026-10-22)
 // 화분 각도(opt.view 또는 옛 opt.flat): 덜 내려다본 판은 굽이 그만큼 아래라 판을 올려 굽을 같은 바닥점에 둔다
 const VIEW_DY = { flat: 2, far: 1 };
 function potView(potKey, opt) {
@@ -156,7 +175,7 @@ function potView(potKey, opt) {
   return alt ? [alt, VIEW_DY[v]] : [POT_BIG[potKey] || POT_BIG.pot_terra, 0];
 }
 export function drawBig(g, key, potKey, bx, by, opt = {}) {
-  const P = BIG[key], [pot, vdy] = potView(potKey, opt);
+  const P = bigOf(key), [pot, vdy] = potView(potKey, opt);
   if (!pot) return false;
   by -= vdy;
   if (!P) {   // 빈 화분
@@ -180,7 +199,7 @@ export function drawBig(g, key, potKey, bx, by, opt = {}) {
 //  반환 { img: ImageData(w×h), x, y(화면 왼쪽 위), w, h, flip } — drawBig 과 같은 자리 · 같은 장(깜빡임 포함)
 let layerCv = null, layerCx = null;
 export function plantLayer(key, potKey, bx, by, opt = {}) {
-  const P = BIG[key], [pot, vdy] = potView(potKey, opt);
+  const P = bigOf(key), [pot, vdy] = potView(potKey, opt);
   if (!P || !pot) return null;
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - vdy - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
   let f = frameAt(t, m.frameMs, m.frames);
@@ -203,7 +222,7 @@ function bigFrame(key, m, t) {
 // 잔디에 심긴 큰 판 식물(화분 없이, 양육 스마트팜): (bx, by) = 흙 줄 가운데. 흙 줄 아래는 안 그림 — 밑동 흙 자리(식물 뒤) → 뒤 층 → 앞 풀잎 → between → 앞 층
 //  흙 자리 · 풀잎 = 화분과 같은 것(art/potgrass.js bedOf — 2026-10-17 사용자 "풀도 더 자연스럽게 · 흙이나 자갈 등으로 자연스러운 경계"), 흙 덮기 띠는 갈색 흙으로(dirtOf)
 export function drawBigPlanted(g, key, bx, by, opt = {}) {
-  const P = BIG[key]; if (!P) return false;
+  const P = bigOf(key); if (!P) return false;
   //  화분에 앉힌 칸(m.sink — 굵은 밑동이 화분 흙에 묻히게 내린 만큼)은 잔디에선 다시 올림: 안 올리면 밑동이 잘려 움푹 파인 듯 · 뒤에 놓인 듯 보였음(2026-10-17 사용자 "스마트팜에서 불 선인장 밑동이 움푹 파여 있고 뒤에 배치된 것 같아")
   const m = P.meta, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1] - (m.sink || 0)), [sx, sy] = bigFrame(key, m, Math.max(0, (opt.t || 0) + (opt.phase || 0)));
   const cut = Math.round(by) - y, bed = bedOf(P, key), D = dirtSheet(P), ry = y + (m.sink || 0);   // 흙 자리는 흙 줄에(잔디 판은 앉힌 만큼 올려 그리므로 그만큼 내려 그림)
@@ -217,7 +236,7 @@ export function drawBigPlanted(g, key, bx, by, opt = {}) {
 // 화분째 큰 판 식물: (bx, by) = 화분 흙 줄 가운데. between = 흙 위 잔디 마개 등 — 식물 뒤에(capUnder — 몸통이 넓은 선인장 · 버섯도 마개에 묻혀 '얹힌' 듯 보이지 않게, 2026-10-16 사용자 "불 선인장이 화분의 중앙이 아닌 다른 곳에")
 //  reveal(0~1) = 흙에서 위로 자라 나오는 만큼(심기 연출)
 export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
-  const P = BIG[key], pot = POT_BIG[potKey] || POT_BIG.pot_terra; if (!pot) return false;
+  const P = bigOf(key), pot = POT_BIG[potKey] || POT_BIG.pot_terra; if (!pot) return false;
   const m = P ? P.meta : { w: 96, h: 112, soil: [48, 75.7] }, x = Math.round(bx - m.soil[0]), y = Math.round(by - m.soil[1]);
   const rv = opt.reveal == null ? 1 : Math.max(0, Math.min(1, opt.reveal)), cy = y + Math.round(m.soil[1] * (1 - rv)), plant = fn => (rv >= 1 ? fn() : g.clip(x, cy, m.w, m.h, fn));
   part(g, pot.back, 0, 0, 96, 112, x, y, false);
@@ -233,7 +252,7 @@ export function drawBigPotted(g, key, potKey, bx, by, opt = {}) {
 // 몸놀림을 준 큰 판 식물(전투 공격·피격): 흙 위 몸만 기울인다 — 흙 높이 0 → 맨 위 1만큼 (qx, qy)칸(그림 좌표, 뒤집기 전),
 //  sq = 눌림(+ = 흙 줄 기준 세로로 줄어듦, − = 늘어남). 화분은 그대로라 밑동은 흙에 박힌 채(영상 굽기 attackField 의 근사).
 export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
-  const P = BIG[key], [pot, vdy] = potView(potKey, opt);
+  const P = bigOf(key), [pot, vdy] = potView(potKey, opt);
   if (!P || !pot || (!opt.qx && !opt.qy && !opt.sq)) return drawBig(g, key, potKey, bx, by, opt);
   by -= vdy;
   const m = P.meta, x = Math.round(bx - m.base[0]), y = Math.round(by - m.base[1]), t = Math.max(0, (opt.t || 0) + (opt.phase || 0));
@@ -277,7 +296,7 @@ export const SPRITE = { W: SP_W, H: SP_H };
 const boxCache = new Map();
 export function bigBox(key) {
   if (boxCache.has(key)) return boxCache.get(key);
-  const P = BIG[key]; if (!P) return null;
+  const P = bigOf(key); if (!P) return null;
   const m = P.meta, c = document.createElement('canvas'); c.width = m.w; c.height = m.h;
   const x = c.getContext('2d'); x.drawImage(P.sheet, 0, 0, m.w, m.h, 0, 0, m.w, m.h); x.drawImage(P.sheet, 0, m.rows * m.h, m.w, m.h, 0, 0, m.w, m.h);
   const d = x.getImageData(0, 0, m.w, m.h).data;

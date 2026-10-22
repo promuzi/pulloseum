@@ -5,7 +5,7 @@
 //  먼지: 빛기둥 안에서만 보이는 작은 점 — 기둥 가운데일수록·전등이 밝을수록 밝고, 저마다 다른 박자로 떠다니다 가끔 빛을 받아 반짝.
 //  흐림: 빛기둥 안 아주 옅은 따뜻한 안개가 천천히 피어오름(감기는 잡음 무늬를 위로 밀어 올림).
 //  창: sky.js 우주 — 들어올 때마다 다음 풍경, 오래 머물면 디더로 다음 풍경. 유리 위로 이어지는 원뿔 빛 띠 + 옅은 반사.
-import { BGIMG, BGMETA, BIG, drawBig, bigBox } from './sprites.js';
+import { BGIMG, BGMETA, bigOf, drawBig, bigBox } from './sprites.js';
 import { MOTION, slow } from '../core/motion.js';
 import { lampSound, lampNow } from '../core/sound.js';
 import { makeSky, renderSky, blendSky, SKY_KINDS, rng } from './sky.js';
@@ -315,7 +315,7 @@ export const loftZoom = (app, want) => { const s = app.pxScale || (app.screen &&
 
 // 의자 위 식물(12° 화분 판)의 칠해진 범위 가운데 높이(방 좌표) — 홈 옆 창 줄을 여기에 맞추고, 식물 관리 카메라도 여기를 기준으로 다가감
 export function loftPlantCy(key) {
-  const my = LOFT_STOOL[1], P = key && BIG[key], box = key && bigBox(key);
+  const my = LOFT_STOOL[1], P = key && bigOf(key), box = key && bigBox(key);
   if (!P || !box) return my - 22;   // 빈 화분: 화분 몸 가운데쯤
   return (Math.round(my - 2 - P.meta.base[1]) + box[0] + my) / 2;
 }

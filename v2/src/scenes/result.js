@@ -36,7 +36,7 @@ export const result = {
       g.rect(0, SH - 30, W, 30, T.bg2);
       padV(g, cx, cy, 52, true);
       const me = L.me || { key: 'flower_grass', pot: 'pot_terra' };
-      drawBig(g, bigKey(me.key, me.stage || 'mature'), me.pot || 'pot_terra', cx, cy, { t: win ? t : 0 });
+      drawBig(g, bigKey(me.key, me.stage || 'mature', me.shiny), me.pot || 'pot_terra', cx, cy, { t: win ? t : 0 });
       if (win) for (let i = 0; i < 12; i++) { const a = t / 700 + i * 0.52, r = 64 + (i % 3) * 14; g.rect(Math.round(cx + Math.cos(a) * r), Math.round(cy - 64 + Math.sin(a) * r * 0.7), 2, 2, i % 2 ? T.text.gold : '#ffffff'); }
     });
     bigTitle(g, win ? '승리' : '패배', W / 2, 30, Object.assign({ font: 'huge' }, win ? { top: '#fbff86', mid: '#f9c22b', low: '#f79617', shadow: '#9e4539' } : { top: '#c7dcd0', mid: '#9babb2', low: '#7f708a', shadow: '#3e3546' }));

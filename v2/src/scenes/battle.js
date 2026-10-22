@@ -3,7 +3,7 @@ import { arenaLife } from '../art/arenaLife.js';
 import { icon, tinted } from '../art/icons.js';
 import { drawBig, drawBigPose, drawPortrait, BGIMG, bigKey } from '../art/sprites.js';
 // 그림 키 = 그 식물 단계 그림(어린 · 자람 · 다 자람) — 2026-10-17 전엔 종 키로만 그려 늘 다 자란 모습이었음
-const artOf = u => (u ? bigKey(u.key, u.stage) : u);
+const artOf = u => (u ? bigKey(u.key, u.stage, u.shiny) : u);
 import { T, plate, btnBody, tbar, tpips, padV, venueOf, holo, UI, UI_ACCENT } from '../art/theme.js';
 import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST } from '../battle/model.js';
@@ -281,6 +281,7 @@ export const battle = {
     } else {
       const me = p.me && SPECIES[p.me] ? mk('me', p.me) : makeUnit('me', SPECIES.flower_grass, { key: 'flower_grass', name: '페탈로즈', hp: 220, atk: 35, def: 24, spd: 30, crit: 5 });
       const foe = p.foe && SPECIES[p.foe] ? mk('foe', p.foe, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 }) : makeUnit('foe', SPECIES.vine_water, { key: 'vine_water', name: '타이드바인', hp: 240, atk: 32, def: 22, spd: 26, crit: 5, trainer: '코스모싹', rank: '브론즈 2', tlv: 6 });
+      if (p.shiny) me.shiny = true;   // 검토 촬영: 내 식물을 색 변종으로(2026-10-22 — 실제 판은 서버 유닛에 shiny 가 실려 옴)
       this.B = makeBattle({ me, foe, seed });
     }
     const B = this.B;
@@ -676,7 +677,7 @@ export const battle = {
     } else if (v.phase === 'over' && !v.leaving && !(this.p && this.p.demo) && t - v.overT0 > 1700) {
       v.leaving = true;
       const me = (this.B.team ? this.B.team.me[0] : this.B.me) || this.B.me, foe = this.B.foe;
-      app.lastResult = { win: this.B.over === 'win', mode: this.net === 'pvp' ? 'pvp' : this.mode === 'swap3' ? 'swap3' : 'tournament', reward: this.result ? this.result.reward : null, info: this.info, me: { key: me.key, pot: me.pot, stage: me.stage, el: me.el }, foe: { el: foe.el }, why: this.end ? this.end.why : 'ko' };
+      app.lastResult = { win: this.B.over === 'win', mode: this.net === 'pvp' ? 'pvp' : this.mode === 'swap3' ? 'swap3' : 'tournament', reward: this.result ? this.result.reward : null, info: this.info, me: { key: me.key, pot: me.pot, stage: me.stage, el: me.el, shiny: !!me.shiny }, foe: { el: foe.el }, why: this.end ? this.end.why : 'ko' };
       app.go('result', { win: this.B.over === 'win', venue: T.key }, 'shutter');
     }
     for (const k of ['me', 'foe']) {

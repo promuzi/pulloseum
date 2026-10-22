@@ -1,6 +1,6 @@
 import { hud, navBar, button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
-import { smallCanvas } from '../art/sprites.js';
+import { smallCanvas, smallReady } from '../art/sprites.js';
 import { T, holo, btnBody } from '../art/theme.js';
 import { miniStars } from './common.js';
 import { STORE_MAX } from '../game/catalog.js';
@@ -29,7 +29,7 @@ function coldPlant(key, pot) {
   const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(smallCanvas(key, pot), 0, 0);
   c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(70,170,210,0.42)'; c.fillRect(0, 0, 48, 56);
   c.fillStyle = 'rgba(4,12,24,0.28)'; c.fillRect(0, 0, 48, 56);
-  coldCache.set(id, cv); return cv;
+  if (smallReady(key)) coldCache.set(id, cv); return cv;
 }
 
 export const storage = {
@@ -89,7 +89,7 @@ export const storage = {
       for (let i = ins; i < gw - ins; i++) { const X = gx + i, Y = gy + j, k = clamp(f > (B4[Y & 3][X & 3] + 0.5) / 16 ? base + 1 : base, 0, GLOW.length - 1); g.px(X, Y, GLOW[k]); }
     }
     if (on) {
-      const cv = coldPlant(item.p.key, item.p.pot || 'pot_terra');
+      const cv = coldPlant(item.p.key + (item.p.shiny ? '~s' : ''), item.p.pot || 'pot_terra');
       g.c.imageSmoothingEnabled = false; g.c.drawImage(cv, 0, 0, 48, 56, gx + Math.floor((gw - 48) / 2), gy + gh - 52, 48, 56);
       // 서리 알갱이: 아래에서 천천히 떠올라 위에서 사라짐
       for (let k = 0; k < 4; k++) { const s2 = (idx * 7 + k * 13) % 23, per = 3600 + s2 * 120, a = ((t + s2 * 397) % per) / per, px2 = gx + 3 + ((s2 * 5 + k * 9) % (gw - 6)), py2 = Math.round(gy + gh - 4 - a * (gh - 8)); if (py2 > gy + 2) g.px(px2, py2, a < 0.75 ? '#bff4ff' : '#5ab4c4'); }

@@ -49,7 +49,7 @@ export function teamPickScreen(app, D) {
     if (p) {
       const sp = SPECIES[p.key], ec = (ELEMENT[sp && sp.el] || {}).main || '#3a5a7a', ps = 48, px = sx + Math.floor((sw - ps) / 2), py = yy + 17;
       g.rect(px, py, ps, ps, hexMix(ec, '#0a1c32', 0.72)); g.rect(px, py + ps - 10, ps, 10, hexMix(ec, '#0a1c32', 0.55));   // 속성 색 바탕(아래 띠 = 바닥)
-      g.clip(px, py, ps, ps, () => drawPortrait(g, bigKey(p.key, stageKey(p)), px, py, ps, false, 80));   // 아래 목록과 같은 틀(식물 전체가 보이게)
+      g.clip(px, py, ps, ps, () => drawPortrait(g, bigKey(p.key, stageKey(p), p.shiny), px, py, ps, false, 80));   // 아래 목록과 같은 틀(식물 전체가 보이게)
       const fk = fitFont(g, p.name, 'bold', sw - 8, 8);
       g.text(p.name, sx + sw / 2, yy + 68 + Math.round((glyphH('bold') - glyphH(fk)) / 2), { font: fk, color: p.shiny ? '#ffe8a8' : P.main, align: 'center' });
       const lv = `Lv${lvOf(p)}`, ic = sp && icon(sp.el), lw = g.textW(lv, 'label') + (ic ? 12 : 0), lx = Math.round(sx + (sw - lw) / 2);
@@ -81,7 +81,7 @@ export function teamPickScreen(app, D) {
     const id = 'tk_' + q.uid, pr = input.isPressed(id), cy = cy0 + (pr ? 1 : 0);
     holo(g, cx, cy, cw, chh, k >= 0 ? ON : T.deep, 16);
     g.rect(cx + 5, cy + 5, 40, 40, '#0a1c32');
-    g.clip(cx + 5, cy + 5, 40, 40, () => drawPortrait(g, bigKey(q.key, stageKey(q)), cx + 5, cy + 5, 40, false));
+    g.clip(cx + 5, cy + 5, 40, 40, () => drawPortrait(g, bigKey(q.key, stageKey(q), q.shiny), cx + 5, cy + 5, 40, false));
     const nx = cx + 50, room = cw - 50 - 20;
     const fk = fitFont(g, q.name, 'bold', room, 8);   // 긴 이름 = 글자를 줄여 다 넣음(서랍 이름표와 같이 — 8칸에도 넘치면 끝을 줄임)
     let nm = q.name; while (nm.length > 1 && g.textW(nm + '…', fk) > room && g.textW(q.name, fk) > room) nm = nm.slice(0, -1);

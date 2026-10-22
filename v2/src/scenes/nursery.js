@@ -277,7 +277,7 @@ export const nursery = {
     // 밑동 둘레 = 갈색 흙 자리 + 자갈 + 앞 풀잎(sprites.js drawBigPlanted · art/potgrass.js — 화분과 같은 것, 2026-10-17 "풀도 더 자연스럽게 · 흙이나 자갈 등으로 자연스러운 경계").
     //  전엔 잔디 덤불 타원(16×2)이 밑동을 덮었음 — 그림이 아직 없을 때만 그 덤불
     const tuft = () => grassOval(g, sx, sy + 1, 16, 2, it.seed);
-    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p)), sx, sy, { t, phase: it.i * 700 })) tuft();
+    if (!drawBigPlanted(g, bigKey(it.p.key, stageKey(it.p), it.p.shiny), sx, sy, { t, phase: it.i * 700 })) tuft();
   },
   // 고른 식물: 잔디 마개를 인 화분이 기계 구멍에서 솟음(구멍 = 금속 테 · 어두운 통로 속 고리 · 푸른 불빛, 화분 아래 피스톤과 받침)
   lifted(g, it, sx, sy, band, L, t) {
@@ -305,7 +305,7 @@ export const nursery = {
     const F = this.plantFx && this.plantFx.id === it.id && this.plantFx.t0 != null ? this.plantFx : null, fa = F ? t - F.t0 : 1e9, GROW = 750;
     const reveal = F ? clamp((fa - 300) / GROW, 0, 1) : 1;
     if (F && fa > 300 && !F.bloom) { F.bloom = true; sfx('bloom'); }
-    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p)), it.p.pot, sx, soilY, { t, phase: it.i * 700, reveal: ease(reveal) });   // 화분 풀 · 밑동 흙 자리 = sprites.js(art/potgrass.js — 2026-10-17)
+    drawBigPotted(g, bigKey(it.p.key, stageKey(it.p), it.p.shiny), it.p.pot, sx, soilY, { t, phase: it.i * 700, reveal: ease(reveal) });   // 화분 풀 · 밑동 흙 자리 = sprites.js(art/potgrass.js — 2026-10-17)
     c.restore();
     if (F) {
       if (fa < 300) { const k = Math.max(0, fa) / 300, yy = Math.round(soilY - 46 + 44 * k * k); g.rect(sx - 2, yy - 2, 4, 5, '#6b4a2a'); g.rect(sx - 1, yy - 3, 2, 1, '#a07848'); g.px(sx + 1, yy - 1, '#c8a070'); }   // 떨어지는 씨앗
@@ -398,12 +398,12 @@ export const nursery = {
   // 진화: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 떠나는 리그 기록은 그대로 보관(2026-10-18, 전엔 처음부터라 한 번 물었음)
   evolve(app, p) { return this.doEvolve(app, p); },
   async doEvolve(app, p) {
-    const from = bigKey(p.key, stageKey(p)), pot = p.pot;
+    const from = bigKey(p.key, stageKey(p), p.shiny), pot = p.pot;
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요` + (r.league.kept ? ` — ${LEAGUES[r.league.from].short} 리그 기록은 그대로` : ''));
     else if (r.ivUp && Object.keys(r.ivUp).length) app.toast('개체값 ' + Object.entries(r.ivUp).map(([k, n]) => `${STAT_NAME[k]} +${n}`).join(' · '));   // 진화 = 개체값 무작위로 오름(2026-10-18)
-    openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });   // 진화 연출 → 카드 고르기(scenes/draft.js)
+    openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage }), p.shiny), pot });   // 진화 연출 → 카드 고르기(scenes/draft.js)
   },
   async harvest(app, p) {
     const r = await app.act('harvest', { id: p.uid });

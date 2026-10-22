@@ -6,7 +6,7 @@
 //   번호 = s.profile.color(옛 여덟 0~7 그대로 + 새 넷 8~11) · 열리는 레벨 = catalog.js BANNER_LV · 움직임은 장(phase)마다 한 번 굽고 재사용
 import { Gfx } from '../core/gfx.js';
 import { BAYER4 } from './palette.js';
-import { BIG, POT_BIG, drawBig } from './sprites.js';
+import { bigOf, POT_BIG, drawBig } from './sprites.js';
 import { BANNER_LV } from '../game/catalog.js';
 import { T, holo } from './theme.js';
 
@@ -273,7 +273,7 @@ export function avatarFrame(g, x, y, s, i) {
 const avMemo = new Map();
 function avatarCanvas(key, potKey, glow, dark) {
   const id = key + '|' + potKey + '|' + glow + '|' + dark; if (avMemo.has(id)) return avMemo.get(id);
-  if (!BIG[key] || !POT_BIG[potKey]) return null;   // 그림이 아직 안 옴(굽지 않음 — 다음에 다시)
+  if (!bigOf(key) || !POT_BIG[potKey]) return null;   // 그림이 아직 안 옴(굽지 않음 — 다음에 다시)
   const a = document.createElement('canvas'); a.width = 128; a.height = 150;
   const ga = new Gfx(a.getContext('2d'));
   if (!drawBig(ga, key, potKey, 64, 140, { t: 0 })) return null;

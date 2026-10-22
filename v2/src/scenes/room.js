@@ -87,7 +87,7 @@ export const room = {
     const p = s.plants[s.active] || s.plants[0];
     if (p) {
       g.rect(W / 2 - 33, y + 44, 66, 66, '#4a8edc'); g.rect(W / 2 - 32, y + 45, 64, 64, '#0a1c32');
-      g.clip(W / 2 - 31, y + 46, 62, 62, () => drawPortrait(g, p.key, W / 2 - 31, y + 46, 62, false));
+      g.clip(W / 2 - 31, y + 46, 62, 62, () => drawPortrait(g, p.key + (p.shiny ? '~s' : ''), W / 2 - 31, y + 46, 62, false));
       g.text(`나갈 식물: ${p.name}`, W / 2, y + 120, { font: 'bold', color: P.main, align: 'center' });
       g.text(`${stageName(p)} Lv${lvOf(p)}`, W / 2, y + 138, { color: P.sub, align: 'center' });
     }
@@ -140,7 +140,7 @@ export const room = {
           tc.forEach((t, k) => {
             const fx = x + 6 + k * 36, fy = py + 4;
             g.rect(fx - 1, fy - 1, 36, 36, k === 0 ? '#f0be7d' : '#4a8edc'); g.rect(fx, fy, 34, 34, '#0a1c32');
-            g.clip(fx + 1, fy + 1, 32, 32, () => drawPortrait(g, t.key, fx + 1, fy + 1, 32, false));
+            g.clip(fx + 1, fy + 1, 32, 32, () => drawPortrait(g, t.key + (t.shiny ? '~s' : ''), fx + 1, fy + 1, 32, false));
             g.text(String(k + 1), fx + 3, fy + 1, { font: 'bold', color: '#ffffff', outline: '#05070b', outlineW: 2 });
           });
           g.text(`${tc[0].name} 먼저`, x + cw / 2, py + 46, { font: 'bold', color: '#e0f0ff', align: 'center' });
@@ -151,7 +151,7 @@ export const room = {
         }
       } else if (m.me && c && !swap) {
         g.rect(px - 1, py - 1, 58, 58, '#4a8edc'); g.rect(px, py, 56, 56, '#0a1c32');
-        g.clip(px + 1, py + 1, 54, 54, () => drawPortrait(g, c.key, px + 1, py + 1, 54, false));
+        g.clip(px + 1, py + 1, 54, 54, () => drawPortrait(g, c.key + (c.shiny ? '~s' : ''), px + 1, py + 1, 54, false));
         g.img(icon(SPECIES[c.key].el), px + 58 - 12, py + 2);
         g.text(c.name, x + cw / 2, py + 60, { font: 'bold', color: c.shiny ? '#ffe8a8' : '#e0f0ff', align: 'center' });
         g.text(`${stageName(c)} · Lv${lvOf(c)}`, x + cw / 2, py + 76, { color: '#8cc4ee', align: 'center' });
@@ -190,7 +190,7 @@ export const room = {
     s.plants.forEach((p, i) => {
       const ry = y + 36 + i * 42, id = 'pk_' + i, pr = app.input.isPressed(id);
       holo(g, 16, ry + (pr ? 1 : 0), W - 32, 38, T.deep, 16);
-      g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key, 23, ry + 5, 28, false));
+      g.rect(22, ry + 4, 30, 30, '#0a1c32'); g.clip(23, ry + 5, 28, 28, () => drawPortrait(g, p.key + (p.shiny ? '~s' : ''), 23, ry + 5, 28, false));
       g.text(p.name, 60, ry + 5, { font: 'bold', color: T.ptext.main });
       g.text(`${stageName(p)} Lv${lvOf(p)}`, 60, ry + 21, { color: T.ptext.sub });
       g.img(icon(SPECIES[p.key].el), W - 40, ry + 13);

@@ -3,7 +3,7 @@
 // 좌표·깊이 규칙은 tools/pixel/big/stage.mjs·pot3d.mjs·convert.mjs --attack 과 같다(값을 바꾸면 함께).
 // 그리는 순서: 무대 → 바닥 층(f) → 먼 화분 뒤 효과 → 먼 식물 → 사이 효과 → 가까운 식물 → 앞 효과 → 공중(o 테두리·p 입자) → 화면 흔들림(장 전체)
 import { FRA, impactAt, attackerPose, targetPose, cameraShake, skillFx, statusFx } from '../../../tools/pixel/big/attack.mjs';
-import { BIG } from '../art/sprites.js';
+import { bigOf } from '../art/sprites.js';
 
 export const SW = 270, SH = 348, K = 0.4384, FRAME_MS = 50;
 export const SPOTS = { near: [80, 282], far: [186, 156] };   // 받침 가운데 = 화분 굽이 바닥에 닿는 점(무대 좌표)
@@ -17,7 +17,7 @@ const spriteAt = b => [Math.round(b[0] - BASE.cx), Math.round(b[1] - BASE.cy)];
 const topCache = new Map();
 function headTops(key) {
   if (topCache.has(key)) return topCache.get(key);
-  const P = BIG[key]; if (!P) return [[40, 20], [48, 20], [56, 20]];
+  const P = bigOf(key); if (!P) return [[40, 20], [48, 20], [56, 20]];
   const m = P.meta, c = document.createElement('canvas'); c.width = m.w; c.height = m.h;
   const x = c.getContext('2d'); x.drawImage(P.sheet, 0, 0, m.w, m.h, 0, 0, m.w, m.h);
   const d = x.getImageData(0, 0, m.w, m.h).data;
@@ -40,7 +40,7 @@ function newLayers() {
 // 공격 한 번: A = 기술 연출(attack.mjs ATTACKS·VARIANTS·WEAPONS 항목), atkKey·tgtKey = 종 키, rev = 상대 → 나
 export function makeAttack(A, atkKey, tgtKey, rev, seed = 7) {
   const atk = rev ? SPOTS.far : SPOTS.near, tgt = rev ? SPOTS.near : SPOTS.far, aM = rev, tM = !rev;
-  const ma = BIG[atkKey]?.meta, mt = BIG[tgtKey]?.meta;
+  const ma = bigOf(atkKey)?.meta, mt = bigOf(tgtKey)?.meta;
   const ra = { hx: ma ? ma.head[0] : 48, hy: ma ? ma.head[1] : 30, Rh: ma ? ma.headR : 15 }, rt = { hx: mt ? mt.head[0] : 48, hy: mt ? mt.head[1] : 30 };
   const [AXs, AYs] = spriteAt(atk), [TXs, TYs] = spriteAt(tgt), dirY = Math.sign(tgt[1] - atk[1]);
   const hxOf = (r, M) => (M ? 96 - 1 - r.hx : r.hx);

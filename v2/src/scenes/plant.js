@@ -94,7 +94,7 @@ export const plant = {
     if (this.forceAct != null) { if (s.plants[this.forceAct]) s.active = this.forceAct; this.forceAct = null; }
     const p = s.plants[s.active] || s.plants[0];
     if (!p) { app.go('home'); return; }
-    const key = bigKey(p.key, stageKey(p)), [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), F = focusOf(app), SY = plantSheetY(app);
+    const key = bigKey(p.key, stageKey(p), p.shiny), [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), F = focusOf(app), SY = plantSheetY(app);
     this.app = app;
     if (this.t0 == null) this.t0 = t - (this.zoomAt || 0);
     const zk = this.zoomIn ? ease(Math.min(1, (t - this.t0) / ZOOM_MS)) : 1, Zw = loftZoom(app, F.want), sy0 = pc + homeDy(app);   // 다가감(홈 camera 와 같은 길)
@@ -520,12 +520,12 @@ export const plant = {
   evolve(app, p) { return this.doEvolve(app, p); },
   // 진화 = 어두운 화면에서 옛 모습이 깜빡이다 번쩍 → 새 모습 → 바로 카드 고르기(scenes/draft.js — 2026-10-18 사용자 "진화 시 바로 진화 모션 보여 주면서 다음에 반드시 정하고 가야 함")
   async doEvolve(app, p) {
-    const from = bigKey(p.key, stageKey(p)), pot = p.pot;
+    const from = bigKey(p.key, stageKey(p), p.shiny), pot = p.pot;
     const r = await app.act('evolve', { id: p.uid });
     if (!r) return;
     if (r.league) app.toast(`${LEAGUES[r.league.to].name}로 바꿨어요` + (r.league.kept ? ` — ${LEAGUES[r.league.from].short} 리그 기록은 그대로` : ''));
     else if (r.ivUp && Object.keys(r.ivUp).length) app.toast('개체값 ' + Object.entries(r.ivUp).map(([k, n]) => `${STAT_NAME[k]} +${n}`).join(' · '));   // 진화 = 개체값 무작위로 오름(2026-10-18)
     this.tab = 'skill'; this.sub = null; this.scrollY = 0;
-    openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage })), pot });
+    openDraft(app, p, { from, to: bigKey(p.key, stageKey({ stage: r.stage }), p.shiny), pot });
   },
 };

@@ -225,7 +225,7 @@ export const bag = {
     // 자라면: 다 자란 식물 얼굴(모르는 식물 = 짙은 그림자 · 이름 ?)
     const ps = 30, lab = '자라면', nm = known ? sp.name : '???', gw = ps + 8 + Math.max(g.textW(lab, 'label'), g.textW(nm, 'bold')), gx = Math.round(cx - gw / 2);
     rrect(g, gx, yy, ps, ps, 4, '#06111c');
-    g.clip(gx + 1, yy + 1, ps - 2, ps - 2, () => { if (known) drawPortrait(g, sd.key, gx + 1, yy + 1, ps - 2, false); else shadowPortrait(g, sd.key, gx + 1, yy + 1, ps - 2); });
+    g.clip(gx + 1, yy + 1, ps - 2, ps - 2, () => { if (known) drawPortrait(g, sd.key + (sd.shiny ? '~s' : ''), gx + 1, yy + 1, ps - 2, false); else shadowPortrait(g, sd.key, gx + 1, yy + 1, ps - 2); });
     g.text(lab, gx + ps + 8, yy + 2, { font: 'label', color: P.sub }); g.text(nm, gx + ps + 8, yy + 15, { font: 'bold', color: known ? P.main : P.dim });
     const b1 = byy + BH - 64, b2 = byy + BH - 32, hw = Math.floor((BW - 26) / 2), price = seedPrice(sd), name = (known ? sp.name : '???') + ' 종자';
     button(app, 'zm_plant', bx + 10, b1, hw, 28, '심기', { style: 'teal', font: 'bold', disabled: free <= 0, onTap: () => app.act('plantSeed', { seed: sd.id }).then(r => { if (r) { this.zoom = null; const i = app.state.plants.findIndex(p => p.uid === r.plant); if (i >= 0) { app.state.active = i; app.act('setActive', { id: r.plant }); } app.go('nursery', { planted: r.plant }); } }) });   // 심으면 스마트팜으로 — 그 자리로 굴러가 씨앗이 떨어져 싹이 남

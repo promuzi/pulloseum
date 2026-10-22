@@ -21,6 +21,8 @@ function vnoise(x, y, sx, sy, seed) {
 }
 const hex = s => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
 const SOIL_RGB = POT_SOIL.map(hex), DIRT_RGB = DIRT.map(hex);
+// 흙 덮기 무늬 색인지(화분 흙 색 × 1 · 0.84 · 0.68 — stripCover 와 같은 셈) — 색 변종(art/shiny.js)이 이 색은 안 바꿈(그래야 흙 덮기를 그대로 찾음)
+export const soilish = (r, g, b) => SOIL_RGB.some(([R, G, B]) => [1, 0.84, 0.68].some(f => Math.abs(r - Math.round(R * f)) <= 2 && Math.abs(g - Math.round(G * f)) <= 2 && Math.abs(b - Math.round(B * f)) <= 2));
 let tmpC = null;
 function pixelsOf(im, sx = 0, sy = 0) {   // 그림(또는 시트의 한 칸 96×112)의 RGBA
   if (!tmpC) tmpC = document.createElement('canvas');

@@ -99,7 +99,7 @@ export const home = {
     const { g, W, t, state: s } = app;
     if (this.showT == null) this.showT = t;
     if (this.forceMode) { s.mode = this.forceMode; this.forceMode = null; }
-    const p = this.empty ? null : s.plants[s.active], key = p ? bigKey(p.key, stageKey(p)) : null;
+    const p = this.empty ? null : s.plants[s.active], key = p ? bigKey(p.key, stageKey(p), p.shiny) : null;
     if (key) heroRemember(key, p.pot);   // 처음 화면에 올릴 내 식물(바뀔 때만 저장)
     const [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), cam = this.camera(app, pc);
     // 식물: 의자 속 투영기에서 아래부터 위로 나타남(바꿀 때마다) — 드러나는 줄에 푸른 빛 한 줄
@@ -228,7 +228,7 @@ export const home = {
       g.text('방 만들기 · 코드 넣기', x + 7, y + 21, { color: P.sub });
       g.text(`${PV.wins}승 ${PV.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
     } else if (swap) {   // 3:3 = 내 팀 셋 얼굴 + 교체전 승패
-      teamOf(s).forEach((pl, i) => { if (!pl) return; const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1c32'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key, fx + 1, y + 21, 17, false)); });
+      teamOf(s).forEach((pl, i) => { if (!pl) return; const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1c32'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key + (pl.shiny ? '~s' : ''), fx + 1, y + 21, 17, false)); });
       g.text(`${SW.wins}승 ${SW.losses}패`, x + w - 7, y + 39, { font: 'label', color: P.main, align: 'right' });
     } else {
       g.text(`${TR.name} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
@@ -261,7 +261,7 @@ export const home = {
       const q = s.plants[pi], on = pi === s.active, cx = x + 8 + (i % cols) * (cw + gap), id = 'pk_' + q.uid, pr = app.input.isPressed(id), cy = y + 40 + Math.floor(i / cols) * (chh + gap) + (pr ? 1 : 0);
       holo(g, cx, cy, cw, chh, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
       g.rect(cx + 5, cy + 5, 40, 40, '#0a1c32');
-      g.clip(cx + 5, cy + 5, 40, 40, () => drawPortrait(g, bigKey(q.key, stageKey(q)), cx + 5, cy + 5, 40, false));
+      g.clip(cx + 5, cy + 5, 40, 40, () => drawPortrait(g, bigKey(q.key, stageKey(q), q.shiny), cx + 5, cy + 5, 40, false));
       const nx = cx + 50, room = cw - 50 - 22;
       let nm = q.name; while (nm.length > 1 && g.textW(nm, 'bold') > room) nm = nm.slice(0, -1);
       g.text(nm === q.name ? nm : nm.slice(0, -1) + '…', nx, cy + 7, { font: 'bold', color: q.shiny ? '#ffe8a8' : P.main });
@@ -319,7 +319,7 @@ export const home = {
       team.forEach((pi, k) => {
         const tx = x + 60 + k * 60, pl = s.plants[pi], id = 'ms_team' + k, pr = app.input.isPressed(id), yy = ty + (pr ? 1 : 0);
         holo(g, tx, yy, 56, 54, T.deep, 16);
-        g.clip(tx + 3, yy + 3, 50, 34, () => drawPortrait(g, pl.key, tx + 8, yy + 2, 40, false));
+        g.clip(tx + 3, yy + 3, 50, 34, () => drawPortrait(g, pl.key + (pl.shiny ? '~s' : ''), tx + 8, yy + 2, 40, false));
         g.text(pl.name, tx + 28, yy + 38, { color: P.main, align: 'center' });
         app.input.hit(id, tx, ty, 56, 54, () => openTeamPick(app, team.map(i => s.plants[i].uid), uids => { s.team = uids.map(u => s.plants.findIndex(q => q.uid === u)); this.teamDirty = false; app.act('setTeam', { team: uids }); }));
       });
@@ -332,8 +332,8 @@ export const home = {
     const { g, t, state: s } = app, pf = s.profile || {}, bi = pf.color || 0, P = bannerInk(bi) || T.ptext, { h } = BANNER, w = bw;
     bannerPanel(g, x, y, w, h, bi, t);
     avatarFrame(g, x + 9, y + 5, 50, bi);
-    const av = pf.avatar || 'flower_grass', mine = (s.plants || []).find(p => p.key === av);
-    if (!drawAvatar(g, av, x + 9, y + 5, 50, bi, (mine && mine.pot) || 'pot_terra')) g.clip(x + 9, y + 5, 50, 50, () => drawWhole(g, av, x + 9, y + 5, 50));   // 대표 식물 = 화분째 + 배너 빛 방(그림이 오기 전엔 옛 그림)
+    const av = pf.avatar || 'flower_grass', mine = (s.plants || []).find(p => p.key === av), avk = av + (mine && mine.shiny ? '~s' : '');   // 대표 식물이 색 변종이면 그 그림(2026-10-22)
+    if (!drawAvatar(g, avk, x + 9, y + 5, 50, bi, (mine && mine.pot) || 'pot_terra')) g.clip(x + 9, y + 5, 50, 50, () => drawWhole(g, avk, x + 9, y + 5, 50));   // 대표 식물 = 화분째 + 배너 빛 방(그림이 오기 전엔 옛 그림)
     const rx = x + w - 80, nx = x + 68;   // 오른쪽 랭크 칸(80) — 왼쪽 이름·칭호 칸이 좁은 배너(설정 창)에서도 잘리지 않게
     g.clip(nx, y + 4, rx - nx - 4, 48, () => {
       g.text(pf.name || '재배사', nx, y + 10, { font: 'name', color: P.main });
@@ -364,7 +364,7 @@ export const home = {
     s.plants.slice(0, 6).forEach((p, i) => {
       const px = x + 12 + i * 37, on = pf.avatar === p.key;
       g.rect(px, yy, 32, 32, on ? bannerOf(bi).col : '#3f6a88'); g.rect(px + 1, yy + 1, 30, 30, bannerOf(bi).dark);
-      if (!drawAvatar(g, p.key, px + 2, yy + 2, 28, bi, p.pot || 'pot_terra')) g.clip(px + 2, yy + 2, 28, 28, () => drawWhole(g, bigKey(p.key, stageKey(p)), px + 2, yy + 2, 28));   // 고를 식물 = 아이콘 그대로(화분째)
+      if (!drawAvatar(g, p.key + (p.shiny ? '~s' : ''), px + 2, yy + 2, 28, bi, p.pot || 'pot_terra')) g.clip(px + 2, yy + 2, 28, 28, () => drawWhole(g, bigKey(p.key, stageKey(p), p.shiny), px + 2, yy + 2, 28));   // 고를 식물 = 아이콘 그대로(화분째)
       app.input.hit('pf_av' + i, px, yy, 32, 32, () => { if (pf.avatar !== p.key) { pf.avatar = p.key; app.act('setProfile', { avatar: p.key }); } });
     });
     yy += 44; g.text('칭호', x + 12, yy, { color: P.sub }); yy += 16;

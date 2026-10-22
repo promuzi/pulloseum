@@ -28,6 +28,7 @@ import { runOp } from './game/ops.js';
 import { bloomPool, levelReward } from './game/catalog.js';
 import { bigKey } from './art/sprites.js';
 import { stageKey } from './game/view.js';
+import { shinyBoard } from './scenes/shinyboard.js';
 
 const screen = new Screen(document.getElementById('screen'));
 screen.resize();
@@ -173,6 +174,7 @@ function frameBody(ts) {
 })();
 
 // 촬영: 정해진 논리 크기·배율로 한 장면을 오프스크린 캔버스에 그려 PNG 주소로 돌려준다(도구 tools/shots/v2shots.mjs)
+window.__shinyBoard = shinyBoard;   // 색 변종 검토판(개발용 — tools/shots/shinyboard.mjs)
 window.__shot = (name, params = {}, opt = {}) => {
   running = false; net.offline = true;
   const W = opt.W || 270, H = opt.H || 600, k = opt.scale || 3, F = frameOf(W, H, !!(router.scenes[name] && router.scenes[name].tall));
