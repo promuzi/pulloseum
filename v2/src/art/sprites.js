@@ -30,7 +30,7 @@ export const BIG = {}, POT_BIG = {};
 // 처음 화면 대표 식물(2026-10-17 사용자 "이미 로그인 되어 있으면 그 식물을 초반 화면에"): 홈에서 본 내 식물(그림 키 · 화분)을 이 브라우저에 기억 —
 //  로그인 열쇠가 있으면 그 식물, 없으면 바위 선인장(가이아록)
 const HERO_KEY = 'pullo.hero';
-export function heroSaved() { try { if (!localStorage.getItem('pullo.token')) return null; const h = JSON.parse(localStorage.getItem(HERO_KEY) || 'null'); return Array.isArray(h) && typeof h[0] === 'string' && /^[a-z_]+(~s[A-C]?)?$/.test(h[0]) ? [h[0], typeof h[1] === 'string' && /^pot_[a-z]+$/.test(h[1]) ? h[1] : 'pot_terra'] : null; } catch { return null; } }   // ~s = 색 변종(2026-10-22)
+export function heroSaved() { try { if (!localStorage.getItem('pullo.token')) return null; const h = JSON.parse(localStorage.getItem(HERO_KEY) || 'null'); return Array.isArray(h) && typeof h[0] === 'string' && /^[a-z_]+(~s[A-D]?)?$/.test(h[0]) ? [h[0], typeof h[1] === 'string' && /^pot_[a-z]+$/.test(h[1]) ? h[1] : 'pot_terra'] : null; } catch { return null; } }   // ~s = 색 변종(2026-10-22)
 let heroLast = null;
 export function heroRemember(key, pot) { const v = JSON.stringify([key, pot || 'pot_terra']); if (v === heroLast) return; heroLast = v; try { localStorage.setItem(HERO_KEY, v); } catch {} }
 const HERO0 = heroSaved(), HERO0K = HERO0 && HERO0[0].replace(/~s.*$/, '');   // 받을 그림 = 색 변종 꼬리를 뗀 원래 그림

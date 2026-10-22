@@ -34,7 +34,7 @@ function hits(t, L, C, H) {
 }
 // w = 바뀌는 정도(1 = 다 · 0.5 = 원래 색과 반반 — part.fade 의 옅어지는 칸)
 function paint(t, L, C, H, dl, w = 1) {
-  let L2 = L + dl, C2, H2;
+  let L2 = (t.lk != null ? 1 - (1 - L) * t.lk : L) + dl, C2, H2;   // lk = 흰색 쪽으로 밝기 모으기(1 − (1 − L) × lk — 하얀 불: 명암 차는 줄이되 순서는 그대로)
   if (t.tint) {
     const [l0, l1] = t.l || [0.24, 1.01], k = Math.max(0, Math.min(1, (L - l0) / 0.15) * Math.min(1, (l1 - L) / 0.06 + 0.35));   // 띠 끝은 살살(흰 반짝임은 덜 물듦)
     C2 = Math.max(C, t.tint[1] * k); H2 = t.tint[0];

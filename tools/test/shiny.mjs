@@ -63,8 +63,8 @@ const missing = roster.filter(k => !SHINY_RULES[k]);
 t('모든 종에 규칙(' + missing.join(' ') + ')', !missing.length);
 let shape = true;
 for (const [k, R] of Object.entries(SHINY_RULES)) {
-  if (!['A', 'B', 'C'].includes(R.pick)) shape = false;
-  for (const S of [R, R.young, R.teen]) if (S) for (const v of ['A', 'B', 'C']) for (const b of S[v] || []) if (b.tint ? !(Array.isArray(b.tint) && b.tint.length === 2) : !(Array.isArray(b.h) && b.h.length === 2 && typeof b.to === 'number')) { shape = false; console.log('모양 틀림', k, v, JSON.stringify(b)); }
+  if (!['A', 'B', 'C', 'D'].includes(R.pick) || !R[R.pick]) shape = false;
+  for (const S of [R, R.young, R.teen, R.small]) if (S) for (const v of ['A', 'B', 'C', 'D']) for (const b of S[v] || []) if (b.tint ? !(Array.isArray(b.tint) && b.tint.length === 2) : !(Array.isArray(b.h) && b.h.length === 2 && typeof b.to === 'number')) { shape = false; console.log('모양 틀림', k, v, JSON.stringify(b)); }
 }
 t('규칙 모양(단계 규칙 포함)', shape);
 // 7) 단계 규칙: 어린 그림 키는 그 단계 후보를, 없는 후보 · 종은 성체 후보를

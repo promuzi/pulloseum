@@ -48,7 +48,9 @@ const flameTeen = (to, o = {}) => [b(45, 115, to, { l: [0.6, 1.01], c: 0.1, hs: 
 //   작은 그림(절반) = 머리 불꽃과 배 빛이 붙어 버림 → 노란 속불 덩어리(머리) + 위 · 옆 붉은 혀끝 + 팔 끝 불꽃
 const flameSmall = (to, o = {}) => [b(45, 115, to, { l: [0.6, 1.01], c: 0.1, hs: 0.4, part: { at: [[0, 0, 1, 0.36]], min: 0.3, air: 0.8, up: 3, gh: [10, 115], gl: [0.3, 1.01], gc: 0.12 }, ...o }),
   armFlame(to, o, [[0, 0, 0.18, 1], [0.82, 0, 1, 1]]), ember(to, o)];
-const fire3 = (f, A, B, C) => ({ A: f(...A), B: f(...B), C: f(...C) }), FIRE = [[250, { ck: 0.8 }], [92, { ck: 1, dl: 0.15 }], [300, { ck: 0.8 }]];   // 파란 · 노란 · 보라 불꽃(B 하얗게 단 불은 갈색으로 보여 노랑으로 — 2026-10-22 사용자 "갈색불 > 노란불로 바꿔줘")
+//   파란 · 노란 · 보라 · 하얀 불꽃(B 하얗게 단 불은 갈색으로 보여 노랑으로 — 2026-10-22 사용자 "갈색불 > 노란불로 바꿔줘",
+//    D = 하얀 불 — 사용자 "하얀불 버전도 만들어봐 얘는 4개인걸로하자": 밝기를 흰색 쪽으로 모으고(lk) 채도는 거의 빼 아주 옅은 푸른 기만)
+const fire4 = (f, ...V) => Object.fromEntries(['A', 'B', 'C', 'D'].map((v, i) => [v, f(...V[i])])), FIRE = [[250, { ck: 0.8 }], [92, { ck: 1, dl: 0.15 }], [300, { ck: 0.8 }], [250, { ck: 0.06, lk: 0.4 }]];
 //  드레이크캑터 배 = 가장 큰 덩어리 하나(몸 · 날개의 노란 가시 무늬는 작은 덩어리라 빠짐)
 const belly = (to, o = {}) => b(35, 100, to, { l: [0.5, 1.01], c: 0.08, part: { big: 1 }, ...o });
 //  글라디캑터 투구 깃 = 위쪽 가장 큰 빨강 덩어리 + 바깥 테두리 한 칸(짙은 빨강 줄)
@@ -69,7 +71,7 @@ const HAND = {
   flower_wind: { A: [b(275, 340, 235)], B: [b(275, 340, 350, { ck: 0.55, dl: 0.08 })], C: [b(275, 340, 90, { dl: 0.17 })] },   // 파랑 · 벚꽃 분홍 · 금빛 꽃잎
   spark: { A: [b(75, 115, 255, { ck: 0.45, l: [0.6, 1.01] })], B: [b(75, 115, 350, { ck: 0.9, l: [0.6, 1.01] })], C: [b(75, 115, 48, { l: [0.6, 1.01] })] },   // 은빛 · 분홍 · 노을 주황 별꽃
   vine_water: { A: [b(95, 182, 88, { hs: 0.3, dl: 0.04 })], B: [b(95, 182, 40, { hs: 0.3 })], C: [b(195, 265, 250, { ck: 0.2, dl: 0.15 })] },   // 단풍 금빛 · 호박색 잎 · 진주빛 물방울
-  cactus_fire: { ...fire3(flame, ...FIRE), young: fire3(flameYoung, ...FIRE), teen: fire3(flameTeen, ...FIRE), small: fire3(flameSmall, ...FIRE) },   // 머리 · 팔 끝 불꽃만(몸 · 가운데 빛은 그대로 — 가운데까지 바꾸면 얼룩처럼 보였음) — 파란 · 하얗게 단 · 보라 불꽃
+  cactus_fire: { ...fire4(flame, ...FIRE), young: fire4(flameYoung, ...FIRE), teen: fire4(flameTeen, ...FIRE), small: fire4(flameSmall, ...FIRE) },   // 머리 · 팔 끝 불꽃만(몸 · 가운데 빛은 그대로 — 가운데까지 바꾸면 얼룩처럼 보였음) — 후보 넷: 파란 · 노란 · 보라 · 하얀 불꽃
   gaia: { A: [b(160, 220, 300, { c: 0.04 })], B: [b(160, 220, 355, { c: 0.04 })], C: [b(160, 220, 88, { c: 0.04, dl: 0.12 })] },   // 머리 위 결정만 — 자수정 · 루비 · 황수정(바위 · 이끼는 그대로)
   flower_fire: { A: [b(5, 45, 262)], B: [b(5, 45, 305)], C: [b(5, 45, 92, { dl: 0.17 })] },   // 파란 · 보라 · 금빛 불꽃 백합
   cactus_wind: { A: [leaf(168, { ck: 0.7 })], B: [leaf(88, { dl: 0.06 })], C: [leaf(330, { ck: 0.55 })] },   // 푸른빛 · 금빛 · 자줏빛 선인장(흐리게)
@@ -150,7 +152,7 @@ function candidates(key) {
     else { A = [band(leaf, FOLIAGE[0])]; B = [band(leaf, FOLIAGE[1])]; C = [band(leaf, FOLIAGE[2])]; }
   }
   const info = cl.map(c => `${c.foliage ? '잎' : '특징'} ${c.h.map(Math.round).join('~')}° ${Math.round(c.share * 100)}%`).join(' · ') + (greyShare >= 0.3 ? ` · 흰 몸 ${Math.round(greyShare * 100)}%` : ''), H = HAND[key] || {};
-  return { A: H.A || A, B: H.B || B, C: H.C || C, young: H.young, teen: H.teen, small: H.small, info: info + (HAND[key] ? ' · 손 규칙 ' + Object.keys(H).join(' ') : '') };
+  return { A: H.A || A, B: H.B || B, C: H.C || C, D: H.D, young: H.young, teen: H.teen, small: H.small, info: info + (HAND[key] ? ' · 손 규칙 ' + Object.keys(H).join(' ') : '') };
 }
 const fmtBand = t => '{ ' + Object.entries(t).map(([k, v]) => k + ': ' + JSON.stringify(Array.isArray(v) ? v.map(x => (typeof x === 'number' ? r2(x) : x)) : typeof v === 'number' ? r2(v) : v)).join(', ') + ' }';
 const args = process.argv.slice(2), cmd = args[0], force = args.includes('--force'), pick = args.filter(a => !a.startsWith('--')).slice(1);
@@ -159,7 +161,7 @@ let old = {};
 if (existsSync(OUT)) { const t = readFileSync(OUT, 'utf8').match(/export const SHINY_RULES = (\{[\s\S]*?\n\});/); if (t) old = eval('(' + t[1] + ')'); }
 const lines = [];
 // 후보 셋(+ 단계 규칙 young · teen 이 있으면 그 단계 후보) 한 줄로
-const fmtSet = s => ['A', 'B', 'C'].filter(v => s[v]).map(v => `${v}: [${s[v].map(fmtBand).join(', ')}]`).join(', ');
+const fmtSet = s => ['A', 'B', 'C', 'D'].filter(v => s[v]).map(v => `${v}: [${s[v].map(fmtBand).join(', ')}]`).join(', ');
 const fmtSp = (p, s) => `{ pick: '${p}', ${fmtSet(s)}${['young', 'teen', 'small'].filter(st => s[st]).map(st => `, ${st}: { ${fmtSet(s[st])} }`).join('')} }`;
 for (const key of roster) {
   if (old[key] && !(force && (!pick.length || pick.includes(key)))) { lines.push(`  ${key}: ${fmtSp(old[key].pick, old[key])},`); continue; }
