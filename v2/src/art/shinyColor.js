@@ -71,7 +71,7 @@ function shinyLch(L, C, H, rule, bits, force, fade) {
 //   box: [x0, y0, x1, y1] = 그 장 식물 둘레 안 비율의 네모 안(out = 밖)만 — 네모 가장자리가 같은 색 덩어리를 일자로 자를 수 있음(볼케이노캡 갓 바위처럼 경계가 색으로 나뉠 때만)
 //   part: 띠 색에 드는 칸의 이어진 덩어리(8방향)를 통째로 고름 — 일자로 잘리지 않음(2026-10-22 사용자 "불 안쪽 부분(직선으로 짤림)" · "모자의 그림자 같은 부위(직선)도 … 얼굴까지 변했다")
 //     at: [[x0, y0, x1, y1], …] 무게중심이 그 안(out = 모두 밖)인 덩어리 · min: 가장 큰 덩어리의 몇 배 이상(가시 · 반점 빼기) · big: 큰 순 몇 개 · air: 둘레가 이만큼 빈 칸이면(떠다니는 불티) 늘 고름
-//     grow: 고른 덩어리에서 몇 칸 넓힘 — gh(색상 범위) · gl(밝기 범위) · gc(최소 채도)에 드는 이웃만(불꽃 · 깃의 바깥 테두리) · up: 그다음 위 · 옆으로만 몇 칸 더 · gdl = 넓힌 칸 밝기 더하기(기본 dl)
+//     grow: 고른 덩어리에서 몇 칸 넓힘 — gh(색상 범위) · gl(밝기 범위) · gc(최소 채도)에 드는 이웃만(불꽃 · 깃의 바깥 테두리) · up: 그다음 위 · 옆으로만 몇 칸 더 · rise: 그다음 위로만(대각선 포함) · gdl = 넓힌 칸 밝기 더하기(기본 dl)
 //     g: [[h0, h1, l0, l1, 최소 채도], …] = 넓힘 조건 여러 개 · fill: 같은 꼴 — 고른 칸에 이어진 그 색은 끝까지(갓 위 넓은 흰빛)
 //     at: [] = 자리로는 안 고름(air 로 떠다니는 것만) · fade: 고른 칸 아래로 몇 칸 점점 옅게(같은 넓힘 조건)
 //     taper: 고른 부위의 위에서 이 비율까지는 다 바꾸고 그 아래는 밑동으로 갈수록 원래 색(몸 안에서 솟은 어린 불꽃 — 밑동이 일자로 잘려 보이지 않게)
@@ -152,8 +152,17 @@ function recolorParts(data, rule, keep, skip, { W, w, h, cols, rows }) {
       const keepId = new Uint8Array(comps.length); for (const p of kept) keepId[p.id] = 1;
       let front = [];
       for (let s = 0; s < N; s++) if (lab[s] >= 0 && keepId[lab[s]]) { mask[s] = 1; front.push(s); }
-      for (let g = 0; g < (P.grow || 0) + (P.up || 0); g++) {   // 둘레로 넓히기(조건에 드는 이웃만) — 그다음 up 칸은 위 · 옆으로만(불꽃 혀끝 — 아래 몸으로는 안 번짐)
-        const next = [], dy1 = g < (P.grow || 0) ? 1 : 0;
+      if (P.fill) {   // 고른 칸에 이어진 fill 색은 끝까지(갓 위 넓은 흰빛 — 몇 칸 넓힘으로는 가운데가 남음, 얼굴 흰빛은 안 이어져 빠짐 · 자람 불꽃의 주황 밑동) — 넓힘보다 먼저(채운 곳 둘레도 넓힘)
+        const st = front.slice();
+        while (st.length) { const s = st.pop(), x = s % w, y = (s / w) | 0;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue; const q = Y * w + X;
+            if (!mask[q] && any(q, fill)) { mask[q] = 2; st.push(q); front.push(q); }
+          } }
+      }
+      const G = P.grow || 0, U = G + (P.up || 0);
+      for (let g = 0; g < U + (P.rise || 0); g++) {   // 둘레로 넓히기(조건에 드는 이웃만) — 그다음 up 칸은 위 · 옆으로만(불꽃 혀끝 — 아래 몸으로는 안 번짐) · rise 칸은 위로만(팔 끝 불꽃 — 옆 팔로 안 번짐)
+        const next = [], dy1 = g < G ? 1 : g < U ? 0 : -1;
         for (const s of front) { const x = s % w, y = (s / w) | 0;
           for (let dy = -1; dy <= dy1; dy++) for (let dx = -1; dx <= 1; dx++) {
             const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue; const q = Y * w + X;
@@ -161,18 +170,16 @@ function recolorParts(data, rule, keep, skip, { W, w, h, cols, rows }) {
           } }
         front = next;
       }
-      if (P.fill) {   // 고른 칸에 이어진 fill 색은 끝까지(갓 위 넓은 흰빛 — 몇 칸 넓힘으로는 가운데가 남음, 얼굴 흰빛은 안 이어져 빠짐)
-        const st = []; for (let s = 0; s < N; s++) if (mask[s]) st.push(s);
-        while (st.length) { const s = st.pop(), x = s % w, y = (s / w) | 0;
-          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-            const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue; const q = Y * w + X;
-            if (!mask[q] && any(q, fill)) { mask[q] = 2; st.push(q); }
-          } }
-      }
-      if (P.taper != null) {   // 위 → 밑동으로 옅게(2 + 단계 — 단계 16 이상 = 그대로)
-        let y0 = h, y1 = -1; for (let s = 0; s < N; s++) if (mask[s]) { const y = (s / w) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-        const cut = y0 + (y1 - y0) * P.taper, span = Math.max(1, y1 + 1 - cut);
-        for (let s = 0; s < N; s++) if (mask[s]) { const y = (s / w) | 0; if (y <= cut) continue; const lev = Math.round(16 * (y - cut) / span); mask[s] = lev >= 16 ? 0 : lev < 1 ? mask[s] : 2 + lev; }
+      if (P.taper != null) {   // 위 → 밑동으로 옅게(2 + 단계 — 단계 16 이상 = 그대로) · 이어진 부위마다 따로(양팔 불꽃처럼 높이가 다른 것 — 전체 높이로 재면 한쪽만 옅어졌음)
+        lab.fill(-1); const reg = [];
+        for (let s0 = 0; s0 < N; s0++) {
+          if (!mask[s0] || lab[s0] >= 0) continue;
+          let sp = 0, y0 = h, y1 = -1; const id = reg.length; stk[sp++] = s0; lab[s0] = id;
+          while (sp) { const j = stk[--sp], x = j % w, y = (j / w) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y;
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue; const q = Y * w + X; if (mask[q] && lab[q] < 0) { lab[q] = id; stk[sp++] = q; } } }
+          const cut = y0 + (y1 - y0) * P.taper; reg.push([cut, Math.max(1, y1 + 1 - cut)]);
+        }
+        for (let s = 0; s < N; s++) if (mask[s]) { const y = (s / w) | 0, [cut, span] = reg[lab[s]]; if (y <= cut) continue; const lev = Math.round(16 * (y - cut) / span); mask[s] = lev >= 16 ? 0 : lev < 1 ? mask[s] : 2 + lev; }
       }
       if (P.fade) {   // 아래로 옅어지는 칸(2 + 단계)
         let fr = []; for (let s = 0; s < N; s++) if (mask[s]) fr.push(s);
