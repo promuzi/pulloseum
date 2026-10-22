@@ -5,12 +5,15 @@ import { SHINY_RULES } from './shinyRules.js';
 import { recolorData, eyeKeep } from './shinyColor.js';
 import { soilish } from './potgrass.js';
 export const speciesOf = key => String(key).replace(/~s.*$/, '').replace(/_(young|teen)$/, '');
-export const shinyRule = (key, v) => { const S = SHINY_RULES[speciesOf(key)]; return S ? S[v || S.pick] || null : null; };
+const stageOf = key => (String(key).replace(/~s.*$/, '').match(/_(young|teen)$/) || [])[1];
+// 생장 단계 그림(어린 · 자람)은 그 단계 규칙이 있으면 그것(몸에 묻힌 어린 불꽃처럼 부위 모양이 달라 성체 규칙이 안 맞는 종 — 2026-10-22)
+//  stage = 'small' 이면 작은 그림 규칙(절반으로 줄여 불꽃 · 배 빛이 붙어 버린 그림)
+export const shinyRule = (key, v, stage = null) => { const S = SHINY_RULES[speciesOf(key)]; if (!S) return null; const p = v || S.pick, T = S[stage || stageOf(key)]; return (T && T[p]) || S[p] || null; };
 // 그림 키를 [원래 키, 후보] 로(색 변종이 아니면 null)
 export function shinyKey(key) { const i = typeof key === 'string' ? key.indexOf('~s') : -1; return i < 0 ? null : [key.slice(0, i), key.slice(i + 2) || null]; }
 // img = 시트(meta 가 있으면 깜빡임 장으로 눈 색을 찾음) 또는 작은 그림(eye = 그 종 시트에서 찾은 눈 색 · 48×56 두 층)
 export function shinyCanvas(img, key, v, meta = null, eye = null) {
-  const rule = shinyRule(key, v); if (!rule) return null;
+  const rule = shinyRule(key, v, meta ? null : 'small'); if (!rule) return null;
   const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, c = document.createElement('canvas'); c.width = w; c.height = h;
   const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0);
   const d = x.getImageData(0, 0, w, h), keep = eye || (meta ? eyeKeep(d.data, w, meta) : null);
