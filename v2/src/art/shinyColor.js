@@ -1,7 +1,7 @@
 // 색 변종(이로치) 색 바꾸기 — 게임(art/sprites.js)과 검토 도구(tools/pixel/big/shiny.mjs)가 같이 쓰는 순수 함수(2026-10-22 사용자 "색 변종 그림부터 해줘",
 //  결정 2026-10-18 "그림 색을 진짜로 바꿈 — 자연스럽고 이쁘게 · 포켓몬 이로치 참고" · 주된 몸 색만 바꾸고 눈 · 화분은 그대로 · 종마다 보여 드리고 고름)
 //  색은 OKLCH(사람 눈에 고른 밝기 · 채도 · 색상)로 다룸: 규칙의 색 무리(색상 범위)에 드는 칸만 색상을 돌리고 밝기 · 명암 차이는 그대로 → 그림 결이 안 깨짐
-//  규칙 = 띠 목록 [{ h: [h0, h1], to: 목표 색상(띠 가운데가 여기로), ck: 채도 배수, dl: 밝기 더하기, l: [최소, 최대], c: 최소 채도 }
+//  규칙 = 띠 목록 [{ h: [h0, h1], to: 목표 색상(띠 가운데가 여기로), ck: 채도 배수, dl: 밝기 더하기, hs: 색상 퍼짐 배수(기본 1), l: [최소, 최대], c: 최소 채도 }
 //                  | { tint: [색상, 채도], l: [최소, 최대], c: 최대 채도 } (흰 · 회색 몸에 색을 입힘)]
 const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
 const gam = v => { const u = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(0, v) ** (1 / 2.4) - 0.055; return Math.max(0, Math.min(255, Math.round(u * 255))); };
@@ -38,8 +38,8 @@ export function shinyColor(r, g, b, rule) {
       return fromLch(L + (t.dl || 0), Math.max(C, t.tint[1] * k), t.tint[0]);
     }
     if (C < (t.c ?? 0.04) || !inHue(H, t.h)) continue;
-    const dh = t.to - midOf(t.h);
-    return fromLch(L + (t.dl || 0), C * (t.ck ?? 1), (H + dh + 360) % 360);
+    const d = ((H - midOf(t.h) + 540) % 360) - 180;   // 띠 가운데에서 떨어진 색상(−180~180)
+    return fromLch(L + (t.dl || 0), C * (t.ck ?? 1), (t.to + d * (t.hs ?? 1) + 720) % 360);   // hs = 색상 퍼짐 배수(0.3 = 띠 안 색을 목표 색 가까이로 모음 — 단풍처럼 고르게)
   }
   return null;
 }
