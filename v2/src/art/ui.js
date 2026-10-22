@@ -185,7 +185,7 @@ export function navBar(app, active, opt = {}) {
       const x = x0 + i * sw, on = t.id === active, pressed = input.isPressed('nav_' + t.id);
       if (i) g.rect(x, y + 11, 1, h - 22, N.sep);
       const col = on ? N.on : t.locked ? N.dim : N.icon, art = ICONNAV[t.icon], by = y + (art ? 3 : 6) + (pressed ? 1 : 0);
-      // 코덱스 탭 아이콘(22칸 · 제 색 — 2026-10-23 사용자 "전부해봐"): 고른 탭 = 그대로 밝게, 다른 탭 = 흐리게, 잠긴 탭 = 더 흐리게(그림이 없으면 옛 한 빛깔 아이콘)
+      // 코덱스 탭 아이콘(22칸 · 제 색 — 2026-10-22 사용자 "전부해봐"): 고른 탭 = 그대로 밝게, 다른 탭 = 흐리게, 잠긴 탭 = 더 흐리게(그림이 없으면 옛 한 빛깔 아이콘)
       const ic = art || tinted(t.icon, col), ix = x + Math.floor((sw - ic.width) / 2);
       if (art) g.alpha(on ? 1 : t.locked ? 0.3 : 0.58, () => g.img(art, ix, by)); else g.img(ic, ix, by);
       if (t.locked) {   // 작은 자물쇠를 아이콘 오른쪽 아래에(바탕색 테두리로 떼어 보이게 — 큰 자물쇠는 로켓을 반쯤 가렸음)

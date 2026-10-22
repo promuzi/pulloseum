@@ -8,7 +8,7 @@ import { Input } from './core/input.js';
 import { Router } from './core/router.js';
 import { loadSprites, loadBig, loadBg, loadSmall, FIRST_BIG, FIRST_BG } from './art/sprites.js';
 import { loadSkillArt } from './art/skillcard.js';
-import { loadItemArt } from './art/items.js';   // 종자 · 상점 물건 그림(2026-10-23)
+import { loadItemArt } from './art/items.js';   // 종자 · 상점 물건 그림(2026-10-22)
 import { checkIcons, loadIconArt } from './art/icons.js';
 import { loadShips } from './art/ship.js';
 import { toast as drawToast } from './art/ui.js';
@@ -185,7 +185,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   if (opt.plants) opt.plants.forEach((o, i) => o && app.state.plants[i] && Object.assign(app.state.plants[i], o));
   if (opt.profile) Object.assign(app.state.profile, opt.profile);   // 배너 · 대표 식물 촬영(2026-10-22)
   if (opt.level2) app.state.user.level = opt.level2;
-  if (opt.seedsAdd) opt.seedsAdd.forEach((o, i) => app.state.seeds.push({ id: 'shot_sa' + i, ...o }));   // 종자 가방 카드 · 정렬 촬영(2026-10-23 — 여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금)
+  if (opt.seedsAdd) opt.seedsAdd.forEach((o, i) => app.state.seeds.push({ id: 'shot_sa' + i, ...o }));   // 종자 가방 카드 · 정렬 촬영(2026-10-22 — 여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금)
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   app.seedpick = null; app.teampick = null;
   if (opt.teampick) { openTeamPick(app, opt.teampick.sel.map(i => app.state.plants[i] && app.state.plants[i].uid), null); app.teampick.sy = opt.teampick.sy || 0; app.teampick.lift = opt.teampick.lift ?? null; }   // 3:3 팀 고르기 촬영(opt.teampick = { sel: [몇째 …], sy })
@@ -212,7 +212,7 @@ window.__shot = (name, params = {}, opt = {}) => {
   router.draw(app);
   if (opt.guide != null) shotGuide(app, +opt.guide);   // 처음 안내 촬영(opt.guide = 몇 번째 장)
   if (opt.overlay !== false) {
-    if (opt.chestOpen != null || opt.chestAge != null) {   // 상자 상태를 그리기 전에 정함(전엔 한 번 그려 만든 뒤 다시 그려 어두운 막이 두 번 덮였음 — 2026-10-23 상자 영상) · chestAge = 상자가 뜬 지 · chestOpen = 연 지(ms)
+    if (opt.chestOpen != null || opt.chestAge != null) {   // 상자 상태를 그리기 전에 정함(전엔 한 번 그려 만든 뒤 다시 그려 어두운 막이 두 번 덮였음 — 2026-10-22 상자 영상) · chestAge = 상자가 뜬 지 · chestOpen = 연 지(ms)
       const item = app.state.pending.find(x => x.kind === 'level' || x.kind === 'season');
       if (item) app.chest = { item, t0: app.t - (opt.chestAge ?? 1000), open: opt.chestOpen != null ? app.t - opt.chestOpen : null };
     }

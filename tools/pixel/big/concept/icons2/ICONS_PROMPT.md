@@ -1,4 +1,4 @@
-(2026-10-23 사용자 "전부해봐" — 클로드가 추천한 아이콘 일곱 묶음 전부: 하단 탭 · 홈 큰 단추 · 돈 · 보석 · 속성 일곱 · 종류 넷 · 능력치 여덟 · 전투 상태 스물 · 레벨업 상자(몸통 + 뚜껑) · 탐사 행성 열하나. 아이콘은 아주 작게(11 · 22칸) 쓰여 한 장에 넷(2×2) — 클로드가 칸을 잘라 누끼 · 도트. 한 장씩 한 번만. 코덱스는 디자인만.)
+(2026-10-22 사용자 "전부해봐" — 클로드가 추천한 아이콘 일곱 묶음 전부: 하단 탭 · 홈 큰 단추 · 돈 · 보석 · 속성 일곱 · 종류 넷 · 능력치 여덟 · 전투 상태 스물 · 레벨업 상자(몸통 + 뚜껑) · 탐사 행성 열하나. 아이콘은 아주 작게(11 · 22칸) 쓰여 한 장에 넷(2×2) — 클로드가 칸을 잘라 누끼 · 도트. 한 장씩 한 번만. 코덱스는 디자인만.)
 
 Task: generate 16 images of game art for a cozy retro-futuristic pixel-art mobile game about plant creatures raised and battled on a spaceship. A pixel artist will cut every object out and shrink it a lot (most icons end up 11 to 22 pixels wide, planets about 16 pixels), so every object must read instantly at that size.
 

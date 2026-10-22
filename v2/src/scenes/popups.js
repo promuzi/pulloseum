@@ -51,9 +51,9 @@ export function gotCell(g, x, y, w, r, k = 1) {
   // 왼쪽 = 아이콘 칸(짙은 네모 + 등급 색 테 — 게임 보상 칸처럼), 오른쪽 = 수(크게) 위 · 이름 아래, 글 묶음은 칸 세로 가운데(2026-10-16 사용자 '+240 돈' 사진 "글자와 아이콘 배치")
   const S = 36, sx = x + 5, sy = y + Math.round((h - S) / 2);
   rrect(g, sx, sy, S, S, 4, '#06111c'); rrect(g, sx + 1, sy + 1, S - 2, S - 2, 3, '#0f2436'); g.rect(sx + 3, sy + S - 3, S - 6, 1, col);
-  if (r.kind === 'seed') drawSeed(g, sx + S / 2, sy + S / 2, SPECIES[r.seed.key] ? r.seed.key : 'grass', { pot: potOf(r.seed), shiny: r.seed.shiny, small: true });   // 종마다 다른 종자 + 별 빛무리(2026-10-23)
+  if (r.kind === 'seed') drawSeed(g, sx + S / 2, sy + S / 2, SPECIES[r.seed.key] ? r.seed.key : 'grass', { pot: potOf(r.seed), shiny: r.seed.shiny, small: true });   // 종마다 다른 종자 + 별 빛무리(2026-10-22)
   else if (r.kind === 'card') cardTiny(g, sx + 8, sy + 4, cardFace(r.card));   // 카드 = 작은 카드 모양
-  else if (drawItemArt(g, r.kind, sx + S / 2, sy + S / 2, true)) {}   // 물 · 비료 · 회귀 주사 · 연료 · 부품 · 카드 꾸러미 = 상점과 같은 물건 그림(2026-10-23)
+  else if (drawItemArt(g, r.kind, sx + S / 2, sy + S / 2, true)) {}   // 물 · 비료 · 회귀 주사 · 연료 · 부품 · 카드 꾸러미 = 상점과 같은 물건 그림(2026-10-22)
   else if (r.kind === 'pack_n' || r.kind === 'pack_m') packTiny(g, sx + 7, sy + 4, r.kind === 'pack_m');   // 카드 꾸러미 = 봉지
   else { const ic = icon((KIND[r.kind] || KIND.credits).icon); g.img(ic, Math.round(sx + S / 2 - ic.width), Math.round(sy + S / 2 - ic.height), 2); }
   const tx = sx + S + 7, room = x + w - 6 - tx, nf = g.textW(L.n, 'name') <= room ? 'name' : g.textW(L.n, 'bold') <= room ? 'bold' : 'body';   // 긴 수(접목 · 중급 등)는 작은 글꼴로
@@ -78,7 +78,7 @@ function crateSpan(B, L) {
 }
 function chestArt(g, cx, by, open, t) {   // 상자(가로 64): by = 바닥. open 0~1 = 뚜껑이 열린 정도
   const B = ICONART.chest_body, L = ICONART.chest_lid;
-  if (B && L) {   // 코덱스 상자(2026-10-23 사용자 "전부해봐"): 몸통 = 열린 상자 그림 · 뚜껑 = 닫힌 상자 그림의 이음매 위(같은 틀 64×54) — 뚜껑이 위로 들리며 틈 사이로 청록 빛 · 닫혔을 땐 빛이 가끔 훑음
+  if (B && L) {   // 코덱스 상자(2026-10-22 사용자 "전부해봐"): 몸통 = 열린 상자 그림 · 뚜껑 = 닫힌 상자 그림의 이음매 위(같은 틀 64×54) — 뚜껑이 위로 들리며 틈 사이로 청록 빛 · 닫혔을 땐 빛이 가끔 훑음
     const bx = Math.round(cx - B.width / 2), top = by - B.height, up = Math.round(open * 20), ly = top - up;
     g.alpha(0.55, () => g.ellipse(bx + 32, by - 6, 31, 7, '#05070f'));   // 그림자(바닥이 비스듬해 가로 막대 대신 타원)
     g.img(B, bx, top);

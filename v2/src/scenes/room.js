@@ -121,7 +121,7 @@ export const room = {
         g.text('기다리는 중' + '.'.repeat(1 + Math.floor(t / 400) % 3), x + cw / 2, cy + 78, { font: 'bold', color: '#8cc4ee', align: 'center' });
         return;
       }
-      // 프로필 줄 = 그 사람의 배너 창(2026-10-23 — 배너 = 프로필 창 디자인, art/profile.js) 위에 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
+      // 프로필 줄 = 그 사람의 배너 창(2026-10-22 — 배너 = 프로필 창 디자인, art/profile.js) 위에 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
       const bi = m.color || 0, ink = bannerInk(bi);
       bannerPanel(g, x + 4, cy + 4, cw - 8, 52, bi, t);
       avatarFrame(g, x + 9, cy + 9, 28, bi);

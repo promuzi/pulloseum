@@ -6,7 +6,7 @@ import { rbox } from './ui.js';
 export const STATUS = {
   guard: { name: '방어', icon: 'shield', buff: true }, evade: { name: '회피', icon: 'speed', buff: true },
   critReady: { name: '치명', icon: 'crit', buff: true }, initReady: { name: '선공', icon: 'ff', buff: true },
-  // 상태 아이콘 = 전용 그림 st_*(2026-10-23 코덱스 — 전엔 속성 · 종류 아이콘을 빌려 씀, 그림이 없으면 art/icons.js ALIAS 의 옛 아이콘)
+  // 상태 아이콘 = 전용 그림 st_*(2026-10-22 코덱스 — 전엔 속성 · 종류 아이콘을 빌려 씀, 그림이 없으면 art/icons.js ALIAS 의 옛 아이콘)
   atkUp: { name: '공격↑', icon: 'st_atkUp', buff: true }, defDown: { name: '방어↓', col: '#ff6a6a' },
   burn: { name: '화상', icon: 'st_burn', col: '#ff7a3a' }, poison: { name: '독', icon: 'st_poison', col: '#b866ff', stack: 5 },
   wet: { name: '젖음', icon: 'st_wet', col: '#4f9dff' }, chill: { name: '빙결', icon: 'st_chill', col: '#c4ecff', stack: 3 },

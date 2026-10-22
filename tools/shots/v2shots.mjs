@@ -18,7 +18,7 @@ const SIZE = args.size ? String(args.size).split('x').map(Number) : null;
 const out = resolve(here, 'out', label); mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 
-// 종자 가방 촬영용 종자 일곱(여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금 — 2026-10-23)
+// 종자 가방 촬영용 종자 일곱(여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금 — 2026-10-22)
 const SEEDS_MIX = [{ key: 'spark', pot: 4, fav: true }, { key: 'gaia', pot: 2 }, { key: 'aqua', pot: 3, shiny: true }, { key: 'cactus_fire', pot: 5, legend: true }, { key: 'vine_wind', pot: 3, form: 'predator' }, { key: 'flower_grass', pot: 1, lock: true }, { key: 'spore_cap', pot: 2 }];
 export const SHOTS = [
   ['01_title', 'title', { at: '12' }],                     // 처음 화면(전등 켜진 뒤 — at = 처음 화면 곡 초)
@@ -27,7 +27,7 @@ export const SHOTS = [
   ['01_starter', 'starter', {}],
   ['02_home_chest', 'home', {}, { level: 6, chestAge: 1000 }],
   ['02_home_chest_open', 'home', {}, { level: 6, chestOpen: 4000 }],
-  ['02_home_chest_mid', 'home', {}, { level: 6, chestOpen: 110 }],   // 뚜껑이 들리는 중간(코덱스 상자 — 2026-10-23)
+  ['02_home_chest_mid', 'home', {}, { level: 6, chestOpen: 110 }],   // 뚜껑이 들리는 중간(코덱스 상자 — 2026-10-22)
   ['02_home_settings', 'home', {}, { sheet: 'settings' }],
   ['02_home', 'home', {}],
   ['02_home_vine_wind_1000', 'home', {}, { plants: [{ key: 'vine_wind', stage: 2 }], t: 1000 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
@@ -36,7 +36,7 @@ export const SHOTS = [
   ['02_home_cactus_wind_1600', 'home', {}, { plants: [{ key: 'cactus_wind', stage: 2 }], t: 1600 }],   // 바람 · 번개 무늬 흐름 · 도는 바람(2026-10-22)
   ['03_home_empty', 'home', { empty: true }],
   ['03_home_profile', 'home', { profile: true }],
-  // 배너 열둘 = 프로필 창 디자인(2026-10-23 사용자 "홀로그램창의 디자인을 배너라고 말한거야") — 번호 = s.profile.color
+  // 배너 열둘 = 프로필 창 디자인(2026-10-22 사용자 "홀로그램창의 디자인을 배너라고 말한거야") — 번호 = s.profile.color
   ...['sky', 'sunset', 'sprout', 'lavender', 'stars', 'leaf', 'wave', 'circuit', 'aurora', 'nebula', 'gold', 'arena'].map((k, i) => ['03_home_banner_' + k, 'home', {}, { profile: { color: i, avatar: ['flower_grass', 'cactus_fire', 'vine_water', 'flower_wind', 'spark', 'vine_water', 'aqua', 'cactus_fire', 'flower_wind', 'spore_cap', 'gaia', 'flower_grass'][i] }, level2: 30, t: 700 }]),
   ['03_home_profile_lv30', 'home', { profile: true }, { level2: 30, profile: { color: 4 } }],   // 배너 열둘 다 열림(작은 창 미리보기 칸)
   ['03_home_profile_lv5', 'home', { profile: true }, { level2: 5, profile: { color: 1 } }],   // 잠긴 배너
@@ -44,10 +44,10 @@ export const SHOTS = [
   ['03_home_swap3', 'home', { modes: true, mode: 'swap3' }],
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],
   ['03_home_focus', 'home', { focus: true }],
-  ['04_bag', 'bag', {}, { seedsAdd: SEEDS_MIX }],   // 종자 = 카드 셋씩 줄 · 정렬 줄(2026-10-23)
+  ['04_bag', 'bag', {}, { seedsAdd: SEEDS_MIX }],   // 종자 = 카드 셋씩 줄 · 정렬 줄(2026-10-22)
   ['04_bag_sort_rare', 'bag', { sort: 'rare' }, { seedsAdd: SEEDS_MIX }],
   ['04_bag_sort_pot', 'bag', { sort: 'pot' }, { seedsAdd: SEEDS_MIX }],
-  ['04_bag_info', 'bag', { info: true }, { seedsAdd: SEEDS_MIX }],   // 카드를 누름 = 커지며 펼쳐진 상세 창(심기 · 팔기 · 즐겨찾기 · 잠금 — 2026-10-23)
+  ['04_bag_info', 'bag', { info: true }, { seedsAdd: SEEDS_MIX }],   // 카드를 누름 = 커지며 펼쳐진 상세 창(심기 · 팔기 · 즐겨찾기 · 잠금 — 2026-10-22)
   ['04_bag_select', 'bag', { select: 4 }, { seedsAdd: SEEDS_MIX }],   // 꾹 = 고르기 모드(고른 카드 금빛 · 팔기 n)
   ['04_bag_sellask', 'bag', { select: 6, sellAsk: true, sort: 'rare' }, { seedsAdd: SEEDS_MIX }],   // 여러 개 팔기 확인(특별 종자 섞임 → 특별 빼고)
   ['04_bag_got', 'shop', {}, { popup: { title: '받았어요', t0: -5000, got: [{ kind: 'seed', seed: { key: 'gumiho_bloom', pot: 5 }, rar: 3 }, { kind: 'seed', seed: { key: 'aqua', pot: 3, shiny: true }, rar: 2 }, { kind: 'water', n: 10, rar: 1 }, { kind: 'fert', n: 5, rar: 1 }, { kind: 'regress', n: 1, rar: 4 }, { kind: 'pack_m', n: 1, rar: 3 }] } }],   // 받은 것 칸 = 종자(종마다 · 별 빛무리) · 물건 그림
@@ -134,7 +134,7 @@ export const SHOTS = [
   ['09_result', 'result', { win: true }],
   ['09_result_full', 'result', { win: true, full: '1' }],   // 보상 칸 여섯(두 줄 — 연료 · 부품, 2026-10-17)
   ['10_explore', 'explore', {}],
-  ['10_explore_zoom1', 'explore', { map: '1', mapAt: '250' }],   // 행성을 눌러 지도로 다가가는 중간(코덱스 행성 그림 → 지도, 2026-10-23)
+  ['10_explore_zoom1', 'explore', { map: '1', mapAt: '250' }],   // 행성을 눌러 지도로 다가가는 중간(코덱스 행성 그림 → 지도, 2026-10-22)
   ['10_explore_zoom2', 'explore', { map: '1', mapAt: '450' }],
   ['10_explore_zoom3', 'explore', { map: '1', mapAt: '650' }],
   ['10_explore_map', 'explore', { map: '1' }],   // 지역 판(연료 n/3 · 탐사 보내기 · 연료 1 · 돈 — 2026-10-17)

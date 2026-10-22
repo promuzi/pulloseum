@@ -42,7 +42,7 @@ export function newGame({ nickname, starter }, rng, now) {
 export const SAVE_VER = 2;
 const MIGRATIONS = [
   () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
-  () => {},   // 1 → 2(2026-10-23 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
+  () => {},   // 1 → 2(2026-10-22 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
 ];
 export function migrate(s) {
   const from = s.ver || 0;
@@ -692,7 +692,7 @@ export function sell(s, id) {
   return { credits: n + (p.cardCredits || 0), cards: p.cardCredits || 0, name: p.name };   // 끼운 카드 팔 값은 takePlant 에서 이미 더함
 }
 // 종자 팔기(돈 출처 — 사용자 2026-10-16 "판매-씨앗, 키운 식물, 주운 물건")
-// 종자 값: 별(잠재력)이 높을수록 비싸게(2026-10-23 사용자 "종자의 경우 별 수에 따라서 효과나 차이점?을 넣으면 좋겠는데 이건 너가 고민해서" — 별 하나마다 +25%,
+// 종자 값: 별(잠재력)이 높을수록 비싸게(2026-10-22 사용자 "종자의 경우 별 수에 따라서 효과나 차이점?을 넣으면 좋겠는데 이건 너가 고민해서" — 별 하나마다 +25%,
 //  별 다섯 = 두 배 · 전설은 늘 별 다섯이라 따로 곱하지 않음)
 export const seedStarMul = sd => (sd.legend ? 1 : 1 + 0.25 * (potOf(sd) - 1));
 export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1) * seedStarMul(sd));
@@ -704,7 +704,7 @@ export function sellSeed(s, seedId) {
   s.wallet.credits += n;
   return { credits: n, key: sd.key };
 }
-// 여러 종자 한 번에 팔기(2026-10-23 가방 꾹 = 고르기 모드): 잠긴 종자 · 없는 종자는 건너뜀, 하나도 못 팔면 막힘
+// 여러 종자 한 번에 팔기(2026-10-22 가방 꾹 = 고르기 모드): 잠긴 종자 · 없는 종자는 건너뜀, 하나도 못 팔면 막힘
 export function sellSeeds(s, ids) {
   need(Array.isArray(ids) && ids.length > 0, '팔 종자를 골라 주세요');
   let credits = 0, n = 0;

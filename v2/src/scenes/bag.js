@@ -23,7 +23,7 @@ const onPlants = (s, id) => [...s.plants, ...(s.storage || [])].reduce((a, p) =>
 const TABS = [['seed', '종자'], ['scion', '접목 가지'], ['card', '카드'], ['item', '물건']];   // 카드 탭(2026-10-17)
 const cardList = s => Object.keys(s.cards || {}).filter(id => s.cards[id] > 0 && CARDS[id]).sort((a, b) => (CARDS[a].form || '').localeCompare(CARDS[b].form || '') || CARDS[b].rar - CARDS[a].rar);
 const ROW = 60, TOP = 64;
-// 종자 = 카드 한 장(2026-10-23 사용자 "종자 가방의 ui도 종자가 카드형태로 나오게 해줘. 정렬기능도 넣고"): 상점 카드와 같은 결(common.js cardBox · glowArt), 셋씩 줄.
+// 종자 = 카드 한 장(2026-10-22 사용자 "종자 가방의 ui도 종자가 카드형태로 나오게 해줘. 정렬기능도 넣고"): 상점 카드와 같은 결(common.js cardBox · glowArt), 셋씩 줄.
 //  같은 날 사용자 "종자에서 전설이나 색변종이나 이런게 식물의 아이콘을 가리지 않게 적용하는 법을 고안해봐 · 심기랑 판매칸은 식물을 선택해야 뜨는걸로.
 //  식물을 누르면 확대되어서 상세 정보를 볼 수 있게 · 얘도 꾹눌러 선택모드로 바껴서 판매할 수 있게해줘":
 //   카드 = 그림 칸(속성 빛 + 종자 그림(코덱스 도트 — 종마다 다름) · 별 효과 · 구석 = 속성 · 즐겨찾기 · 잠금) + 아래 띠(이름 · 별 · 종 · 희귀) — 단추 없음
@@ -176,7 +176,7 @@ export const bag = {
     if (tag) gem(g, x + CW / 2, y + 2, tag.col);
     const by = ay + AH;   // 이름 띠
     g.rect(ax, by, aw, CH - 8 - AH, '#0c1526'); g.rect(ax, by, aw, 1, hexMix(col, '#0c1526', 0.4));
-    const name = known ? sp.name : '???';   // 모르는 식물(2026-10-23 사용자 "처음보는식물 대신 ???라고 표기해줘")
+    const name = known ? sp.name : '???';   // 모르는 식물(2026-10-22 사용자 "처음보는식물 대신 ???라고 표기해줘")
     g.text(name, x + CW / 2, by + 3, { font: g.textW(name, 'bold') <= aw - 4 ? 'bold' : 'label', color: sd.legend ? '#ffb04a' : sd.shiny ? '#ffe8a8' : P.main, align: 'center' });
     miniStars(g, Math.round(x + (CW - 39) / 2), by + 19, potOf(sd));   // 잠재력 = 심으면 그 별(2026-10-18)
     const ln = tag ? tag.label : `${JONG[sp.type]} · ${sp.rarity === 'rare' ? '희귀' : '흔함'}`, lw = 10 + g.textW(ln, 'label'), lx = Math.round(x + (CW - lw) / 2);
@@ -322,7 +322,7 @@ export const bag = {
     const { g, W, state: s } = app, P = T.ptext, it = ITEMS[k], ic = { water: 'can', fert: 'fert', regress: 'potion', fuel: 'fuel', parts: 'parts' }[k];
     plate(g, 8, y, W - 16, 54);
     plate(g, 13, y + 7, 32, 40, 'deep');
-    if (drawItemArt(g, k, 29, y + 27, true)) {}   // 코덱스 물건 그림(28칸 — 상점과 같은 그림, 2026-10-23)
+    if (drawItemArt(g, k, 29, y + 27, true)) {}   // 코덱스 물건 그림(28칸 — 상점과 같은 그림, 2026-10-22)
     else if (k === 'pack_n' || k === 'pack_m') packTiny(g, 18, y + 13, k === 'pack_m');   // 카드 꾸러미(2026-10-22 — 식물 관리에서 열기)
     else { const im = icon(ic || it.icon); g.img(im, 29 - im.width, y + 27 - im.height, 2); }
     g.text(it.name, 52, y + 8, { font: 'bold', color: P.main });

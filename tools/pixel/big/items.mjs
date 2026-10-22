@@ -9,7 +9,7 @@ import { decodePNG, encodePNG } from './engine.mjs';
 const here = dirname(fileURLToPath(import.meta.url)), repo = resolve(here, '..', '..', '..');
 const SEEDS = ['fire', 'water', 'grass', 'earth', 'wind', 'bolt', 'ice'].map(e => 'seed_' + e);
 const ITEMS = ['seed_common', 'seed_rare', 'card_basic', 'card_mut', 'water', 'fert', 'regress', 'fuel', 'parts'].map(k => 'item_' + k);
-// 종마다 다른 종자(2026-10-23 사용자 "종자도 식물별로 다 다르게해줘"): 코덱스가 한 장에 넷씩(2×2 — 왼위 · 오른위 · 왼아래 · 오른아래) 그린 seeds_NN.png 를 칸마다 잘라 seed_<종>.png 로
+// 종마다 다른 종자(2026-10-22 사용자 "종자도 식물별로 다 다르게해줘"): 코덱스가 한 장에 넷씩(2×2 — 왼위 · 오른위 · 왼아래 · 오른아래) 그린 seeds_NN.png 를 칸마다 잘라 seed_<종>.png 로
 //  (요청서 concept/items/SEEDS_PROMPT.md 와 같은 차례 — 마지막 seeds_12 는 한 장에 하나)
 const SHEETS = [['flower_grass', 'thorn', 'aqua', 'flower_wind'], ['spark', 'vine_water', 'cactus_fire', 'gaia'], ['flower_fire', 'cactus_wind', 'vine_wind', 'spore_cap'], ['frost_bell', 'volt_vine', 'stone_cap', 'jelly_cap'],
   ['fang_trap', 'blade_vine', 'toxi_cactus', 'draco_fruit'], ['ember_cap', 'drake_cactus', 'frost_drake', 'gat_cap'], ['mask_vine', 'drum_cactus', 'lantern_vine', 'jar_cactus'], ['goblin_cap', 'crown_cap', 'gladi_cactus', 'jangseung_cactus'],
@@ -36,7 +36,7 @@ const made = [];
 for (const n of list) {
   if (!existsSync(src(n))) continue;
   run('greycut.mjs', [src(n), cut(n), '--main']);
-  if (n.startsWith('seed_')) {   // 큰 40×46(가방 카드 · 펼친 창 — 2026-10-23 사용자 "아이콘 배경에 비해 종자 크기가 작아 키워줘") + 작은 28×32(종자 거름 칸 · 받은 것 칸)
+  if (n.startsWith('seed_')) {   // 큰 40×46(가방 카드 · 펼친 창 — 2026-10-22 사용자 "아이콘 배경에 비해 종자 크기가 작아 키워줘") + 작은 28×32(종자 거름 칸 · 받은 것 칸)
     console.log(run('itemconv.mjs', [cut(n), dst(n), '--w=40', '--h=46', '--align=bottom'])); console.log(run('itemconv.mjs', [cut(n), dst(n + '_s'), '--w=28', '--h=32', '--align=bottom'])); made.push(n, n + '_s');
   }
   else { console.log(run('itemconv.mjs', [cut(n), dst(n), '--w=44', '--h=44'])); console.log(run('itemconv.mjs', [cut(n), dst(n + '_s'), '--w=28', '--h=28'])); made.push(n, n + '_s'); }

@@ -60,7 +60,7 @@ export const result = {
     cards.forEach(([ic, v, label, col], i) => {
       const r = Math.floor(i / per), inRow = Math.min(per, cards.length - r * per), x0 = Math.round((W - cw * inRow - gap * (inRow - 1)) / 2), x = x0 + (i % per) * (cw + gap), yy = y + r * 70;
       plate(g, x, yy, cw, 64);
-      const im = icon(ic); g.img(im, Math.round(x + cw / 2 - im.width), yy + 4, 2);   // 2배 = 코덱스 22칸 그림(2026-10-23 — 칸에 비해 아이콘이 작았음)
+      const im = icon(ic); g.img(im, Math.round(x + cw / 2 - im.width), yy + 4, 2);   // 2배 = 코덱스 22칸 그림(2026-10-22 — 칸에 비해 아이콘이 작았음)
       g.text(v, x + cw / 2, yy + 27, { font: 'head', color: col, align: 'center' });
       g.text(label, x + cw / 2, yy + 46, { color: P.sub, align: 'center' });
     });

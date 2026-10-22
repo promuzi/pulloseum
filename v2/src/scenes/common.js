@@ -64,7 +64,7 @@ export function seedArt(g, cx, cy, el, opt = {}) {
   g.rect(cx, cy - ry - 2, 1, 2, C.ink); g.px(cx + 1, cy - ry - 3, C.green3); g.px(cx + 2, cy - ry - 3, C.green);
 }
 
-// 종자 그리기(2026-10-23 — 코덱스 원화 도트 art/items.js + 별에 따른 효과, 사용자 "종자의 경우 별 수에 따라서 효과나 차이점?을 넣으면 좋겠는데 이건 너가 고민해서"):
+// 종자 그리기(2026-10-22 — 코덱스 원화 도트 art/items.js + 별에 따른 효과, 사용자 "종자의 경우 별 수에 따라서 효과나 차이점?을 넣으면 좋겠는데 이건 너가 고민해서"):
 //  (cx, cy) = 가운데 · k = 배율(정수) · pot = 별(잠재력) · shiny = 색 변종(껍질 색이 바뀜) · t = 시계(ms) — 그림이 아직 없으면 옛 타원 씨앗
 //  ★1 그대로 · ★2 가끔 반짝 한 점 · ★3 은은한 빛무리(속성 색) · ★4 더 밝은 빛무리 + 도는 반짝이 둘 · ★5 금빛 빛무리 + 도는 반짝이 + 위로 오르는 빛가루 + 껍질을 쓸고 지나가는 금빛
 const glowMemo2 = new Map();
@@ -132,7 +132,7 @@ export function energyPips(g, x, y, cur, max, gap = 12) {
 }
 const dim = new Map();
 export function dimIcon(name) {
-  const dk = name + (ICONART[name] ? '*' : ''); let c = dim.get(dk); if (c) return c;   // 코덱스 아이콘이 오면 새로 구움(2026-10-23)
+  const dk = name + (ICONART[name] ? '*' : ''); let c = dim.get(dk); if (c) return c;   // 코덱스 아이콘이 오면 새로 구움(2026-10-22)
   const b = icon(name); c = document.createElement('canvas'); c.width = b.width; c.height = b.height;
   const x = c.getContext('2d'); x.drawImage(b, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height), p = d.data;

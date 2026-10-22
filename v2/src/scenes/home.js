@@ -326,7 +326,7 @@ export const home = {
       button(app, 'ms_done', x + w / 2 - 50, ty + 60, 100, 30, '확인', { style: 'gold', font: 'label', onTap: close });
     }
   },
-  // 프로필 배너(높이 60): 배너 = 이 창 자체의 디자인(바탕 · 무늬 · 테 · 움직임 · 글자 색 — art/profile.js, 2026-10-23 사용자 "홀로그램창의 디자인을 배너라고 말한거야") ·
+  // 프로필 배너(높이 60): 배너 = 이 창 자체의 디자인(바탕 · 무늬 · 테 · 움직임 · 글자 색 — art/profile.js, 2026-10-22 사용자 "홀로그램창의 디자인을 배너라고 말한거야") ·
   //  대표 식물 아이콘(50칸, 배너 테 · 빛) · 이름(16)·칭호 · 오른쪽 랭크(색)·점수·막대 · 연필
   banner(app, x, y, tappable, bw = BANNER.w) {
     const { g, t, state: s } = app, pf = s.profile || {}, bi = pf.color || 0, P = bannerInk(bi) || T.ptext, { h } = BANNER, w = bw;

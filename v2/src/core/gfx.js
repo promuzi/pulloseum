@@ -107,7 +107,7 @@ export class Gfx {
   // 그림 붙이기(정수배 확대만). flip=true면 좌우 반전
   img(im, x, y, scale = 1, flip = false) {
     if (!im) return;
-    if (scale === 2 && im.big) { im = im.big; scale = 1; }   // 두 배 자리 = 더 선명한 두 배 그림(코덱스 아이콘 — art/icons.js, 2026-10-23)
+    if (scale === 2 && im.big) { im = im.big; scale = 1; }   // 두 배 자리 = 더 선명한 두 배 그림(코덱스 아이콘 — art/icons.js, 2026-10-22)
     const w = (im.naturalWidth || im.width), h = (im.naturalHeight || im.height);
     const c = this.c; c.imageSmoothingEnabled = false;
     if (flip) { c.save(); c.translate((x | 0) + w * scale, y | 0); c.scale(-1, 1); c.drawImage(im, 0, 0, w * scale, h * scale); c.restore(); }

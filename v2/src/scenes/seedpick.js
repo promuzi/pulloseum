@@ -48,12 +48,12 @@ export function seedPickScreen(app, D) {
     const x = x0 + (i % COLS) * (TW + GX), y = GY0 + Math.floor(i / COLS) * (TH + GY) - Math.round(D.sy), on = D.sel.has(sd.id), spc = SPECIAL(sd);
     if (y + TH < GY0 || y > GY1) return;
     holo(g, x, y, TW, TH, T.card || T.panel, 12);
-    drawSeed(g, x + TW / 2, y + 24, sd.key, { pot: potOf(sd), shiny: sd.shiny, small: true, t: app.t + (i % 7) * 230 });   // 종마다 다른 종자 + 별 효과(2026-10-23)
+    drawSeed(g, x + TW / 2, y + 24, sd.key, { pot: potOf(sd), shiny: sd.shiny, small: true, t: app.t + (i % 7) * 230 });   // 종마다 다른 종자 + 별 효과(2026-10-22)
     const ei = icon(sp.el); if (ei) g.img(ei, x + 4, y + 4);
     if (sd.fav) g.text('♥', x + 18, y + 2, { font: 'bold', color: '#ff9ab0' });   // 즐겨찾기(★는 잠재력)
     if (sd.lock) { g.c.fillStyle = 'rgba(3,6,12,0.35)'; g.c.fillRect(x, y, TW, TH); const li = icon('lockS'); if (li) g.img(li, x + 4, y + TH - 15); }   // 잠금 = 조금 어둡게 + 자물쇠
     miniStars(g, x + Math.round((TW - 39) / 2), y + 45, potOf(sd));   // 잠재력 = 심으면 그 별(2026-10-18)
-    // 특별(전설 · 색 변종 · 변이) = 그림 위 꼬리표 대신 아래 줄에 그 색으로(2026-10-23 사용자 "전설이나 색변종이나 이런게 식물의 아이콘을 가리지 않게")
+    // 특별(전설 · 색 변종 · 변이) = 그림 위 꼬리표 대신 아래 줄에 그 색으로(2026-10-22 사용자 "전설이나 색변종이나 이런게 식물의 아이콘을 가리지 않게")
     g.text(spc || (sp.rarity === 'rare' ? '희귀' : '일반'), x + TW / 2, y + 56, { font: 'label', color: spc ? (spc === '전설' ? '#ffd890' : spc === '변이' ? '#e0b8ff' : '#b8f0ff') : el.light || '#cfe8f8', align: 'center' });
     if (on) { g.c.fillStyle = 'rgba(255,216,144,0.18)'; g.c.fillRect(x, y, TW, TH); for (const [rx, ry, rw, rh] of [[x - 1, y - 1, TW + 2, 2], [x - 1, y + TH - 1, TW + 2, 2], [x - 1, y - 1, 2, TH + 2], [x + TW - 1, y - 1, 2, TH + 2]]) g.rect(rx, ry, rw, rh, '#ffd890'); rrect(g, x + TW - 15, y + TH - 15, 12, 12, 3, '#ffd890'); g.text('✓', x + TW - 13, y + TH - 16, { font: 'bold', color: '#1a1206' }); }
     D.rects.push({ id: sd.id, x, y });

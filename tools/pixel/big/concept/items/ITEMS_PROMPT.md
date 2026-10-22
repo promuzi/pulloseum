@@ -1,4 +1,4 @@
-(2026-10-23 사용자 "코덱스로 종자디자인과 상점의 아이템 디자인도 받아서 만들어줘 … 코덱스는 디자인만". 종자 = 속성 일곱(같은 크기 · 같은 결, 속성마다 다른 껍질), 상점 물건 = 아홉(종자 꾸러미 둘 · 카드 꾸러미 둘 · 보급품 다섯). 별 수에 따른 효과 · 색 변종 색은 클로드가 코드로 얹음 — 그림엔 넣지 않음. 회색 배경 → greycut.mjs 누끼 → 작은 도트(종자 약 30칸 · 물건 약 40칸)로 줄임. 한 장씩 한 번만 그림.)
+(2026-10-22 사용자 "코덱스로 종자디자인과 상점의 아이템 디자인도 받아서 만들어줘 … 코덱스는 디자인만". 종자 = 속성 일곱(같은 크기 · 같은 결, 속성마다 다른 껍질), 상점 물건 = 아홉(종자 꾸러미 둘 · 카드 꾸러미 둘 · 보급품 다섯). 별 수에 따른 효과 · 색 변종 색은 클로드가 코드로 얹음 — 그림엔 넣지 않음. 회색 배경 → greycut.mjs 누끼 → 작은 도트(종자 약 30칸 · 물건 약 40칸)로 줄임. 한 장씩 한 번만 그림.)
 
 Task: generate 16 game item illustrations, one PNG per line below, for a cozy retro-futuristic pixel-art mobile game about plant creatures raised and battled on a spaceship. A pixel artist will shrink every image to a small inventory icon (about 30 to 40 pixels), so each one must read instantly at that size.
 

@@ -1,4 +1,4 @@
-(2026-10-23 사용자 "종자도 식물별로 다 다르게해줘" — 마흔다섯 종마다 다른 종자. 종자는 아주 작게(28×32칸) 쓰여 한 장에 넷씩(2×2) 그리게 함 → 클로드가 칸을 잘라 누끼 · 도트(tools/pixel/big/items.mjs --seeds). 모양 = 종류(꽃 · 선인장 · 덩굴 · 버섯), 색 = 속성, 상징 하나 = 그 식물. 얼굴 · 눈 없음. 별 효과 · 색 변종은 클로드가 코드로. 한 장씩 한 번만.)
+(2026-10-22 사용자 "종자도 식물별로 다 다르게해줘" — 마흔다섯 종마다 다른 종자. 종자는 아주 작게(28×32칸) 쓰여 한 장에 넷씩(2×2) 그리게 함 → 클로드가 칸을 잘라 누끼 · 도트(tools/pixel/big/items.mjs --seeds). 모양 = 종류(꽃 · 선인장 · 덩굴 · 버섯), 색 = 속성, 상징 하나 = 그 식물. 얼굴 · 눈 없음. 별 효과 · 색 변종은 클로드가 코드로. 한 장씩 한 번만.)
 
 Task: generate 12 images of magical plant seeds for a cozy retro-futuristic pixel-art mobile game about plant creatures. Each seed belongs to one plant creature and must hint at it with ONE simple signature motif. A pixel artist will cut each seed out and shrink it to about 28x32 pixels, so every seed must read instantly at that size.
 

@@ -27,7 +27,7 @@ const TOP = 44;   // 카드 테 · 그림 칸 바탕 = common.js cardBox · glow
 
 // 그림 칸 가운데 물건(2배)
 function art(g, cx, cy, A, id) {
-  if (drawItemArt(g, id, cx, cy)) return;   // 코덱스 물건 그림(44칸 도트 — art/items.js, 2026-10-23 사용자 "상점의 아이템 디자인도 받아서") · 그림이 오기 전엔 옛 아이콘
+  if (drawItemArt(g, id, cx, cy)) return;   // 코덱스 물건 그림(44칸 도트 — art/items.js, 2026-10-22 사용자 "상점의 아이템 디자인도 받아서") · 그림이 오기 전엔 옛 아이콘
   const c = g.c;
   c.save(); c.translate(cx, cy); c.scale(2, 2);
   if (A.seed) { seedArt(g, 0, 0, A.seed); if (A.rare) g.img(icon('star'), 4, -11); }

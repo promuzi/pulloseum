@@ -1,4 +1,4 @@
-// 아이콘 · 레벨업 상자 · 탐사 행성(2026-10-23 사용자 "전부해봐"): 코덱스 원화(concept/icons2/ — 한 장에 넷 · 상자는 둘) → 칸 자르기 → 누끼(greycut) → 작은 도트(itemconv)
+// 아이콘 · 레벨업 상자 · 탐사 행성(2026-10-22 사용자 "전부해봐"): 코덱스 원화(concept/icons2/ — 한 장에 넷 · 상자는 둘) → 칸 자르기 → 누끼(greycut) → 작은 도트(itemconv)
 //   node tools/pixel/big/icons.mjs [이름…]   → assets/v2/icons/ + 검토판 out/icons/sheet.png
 //   아이콘 = 손그림과 같은 크기(<이름>.png — 11칸 · 하단 탭 15칸) + 두 배(<이름>_b.png — 그림을 2배로 그리던 자리에 저절로) · 하단 탭은 띠용 22칸(<이름>_n.png)
 //   물건 그림에서 뽑는 아이콘(물뿌리개 can · 비료 fert · 회귀 주사 potion · 연료 fuel · 부품 parts) = concept/items/cut/item_*.png

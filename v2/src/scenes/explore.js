@@ -81,7 +81,7 @@ export const explore = {
       const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit], locked = !lvOpen(p.orbit), far = !reach(p.orbit);
       const x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry), r = RAD[p.orbit];
       this.pp[p.id] = [x, y, r];
-      const pa = ICONART['planet_' + p.id];   // 코덱스 행성 그림(2026-10-23 사용자 "전부해봐" — 행성마다 다른 겉모습) · 없으면 옛 무늬 행성
+      const pa = ICONART['planet_' + p.id];   // 코덱스 행성 그림(2026-10-22 사용자 "전부해봐" — 행성마다 다른 겉모습) · 없으면 옛 무늬 행성
       if (pa) g.img(pa, Math.round(x - pa.width / 2), Math.round(y - pa.height / 2));
       else { g.disc(x, y, r + 1, C.ink); planet(g, x, y, r, p.ramp, { ring: p.ring, ringCol: C.mute }); }
       if (locked || far) { g.dither(x - r - 1, y - r - 1, r * 2 + 3, r * 2 + 3, C.ink, far && !locked ? 7 : 9); g.img(icon('lockS'), x - 3, y - 3); }
@@ -109,7 +109,7 @@ export const explore = {
   // 행성 지도(2026-10-16 사용자 "지역도 지도가 아니라 그냥 버튼이야"): 행성이 제자리에서 커지며 지도 → 지역 핀을 눌러 고름(잠긴 곳 = 구역이 어둡고 자물쇠) · '‹ 궤도' = 닫기
   mapDraw(app, s, P) {
     const { g, W, t } = app, M0 = this.map, pl = PLANETS.find(p => p.id === M0.id);
-    if (M0.at != null) { M0.t0 = t - M0.at; M0.at = null; }   // 찍기용: 연 지 at ms 된 모습(확대되는 중간 — 2026-10-23)
+    if (M0.at != null) { M0.t0 = t - M0.at; M0.at = null; }   // 찍기용: 연 지 at ms 된 모습(확대되는 중간 — 2026-10-22)
     if (!pl) { this.map = null; return; }
     const u = this.mapU(t);   // 열린 정도 0 → 1(시간)
     if (M0.close != null && u <= 0) { this.map = null; return; }
@@ -245,7 +245,7 @@ export const explore = {
   fuelBar(app, s, y, live) {
     const { g, W, input } = app, fuel = s.items.fuel || 0, n = Math.max(FUEL.max, Math.min(5, fuel)), fx0 = W - 18 - n * 10, txt = `연료 ${fuel}/${FUEL.max}`, tw = g.textW(txt, 'bold');
     g.text(txt, fx0 - 16, y + 9, { font: 'bold', color: fuel ? '#ffe9a0' : '#ff9a8a', align: 'right' });
-    g.img(icon('fuel'), fx0 - 13, y + 10);   // 연료 캡슐 그림(2026-10-23 — 전엔 햇빛과 같은 번개 아이콘)
+    g.img(icon('fuel'), fx0 - 13, y + 10);   // 연료 캡슐 그림(2026-10-22 — 전엔 햇빛과 같은 번개 아이콘)
     for (let i = 0; i < n; i++) { const x = fx0 + i * 10; g.rect(x, y + 11, 8, 8, '#0a1c32'); if (i < fuel) { g.rect(x + 1, y + 12, 6, 6, '#ffd84a'); g.rect(x + 1, y + 12, 6, 1, '#fff6c8'); } }
     this.fuelR = [fx0 - 20 - tw, y + 4, W - 18 - fx0 + 24 + tw, 20];
     if (live) input.hit('ex_fuel', ...this.fuelR, () => {
