@@ -28,7 +28,8 @@ export const OPS = {
   upgrade: (s, a) => L.upgrade(s, str(a.id), str(a.stat, 8), int(a.n, 1, 50, 1)),
   resetPoints: (s, a) => L.resetPoints(s, str(a.id)),
   seedFeed: (s, a, c) => L.seedFeed(s, str(a.id), str(a.stat, 8), Array.isArray(a.seeds) && a.seeds.length <= 60 ? a.seeds.map(v => str(v)) : bad(), c.rng),   // 확률(난수 — QUICK 아님)   // 종자 거름(2026-10-18 — 식물 통째 거름 merge 는 없앰)
-  graft: (s, a) => L.graft(s, str(a.id), str(a.scion)),
+  graft: (s, a) => L.graft(s, str(a.id), str(a.scion)),   // 접목 = 카드 고르기를 맨 앞에(확정 = draftApply · 보류 = graftHold — 2026-10-22)
+  graftHold: (s, a) => L.graftHold(s, str(a.id)),
   regress: (s, a) => L.regress(s, str(a.id), str(a.skill)),
   rename: (s, a) => L.rename(s, str(a.id), str(a.name, 40)),
   setActive: (s, a) => L.setActive(s, idxOf(s, str(a.id))),

@@ -78,6 +78,7 @@ export const SHOTS = [
   ['06_plant_graft', 'plant', { tab: 'skill', sub: 'graft' }],
   ['06_draft_evo_0500', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 500 } }], ['06_draft_evo_1150', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1150 } }], ['06_draft_evo_1600', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 1600 } }],   // 진화 연출(scenes/draft.js — 2026-10-18)
   ['06_draft_evo', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800 } }],   // 새 고르기 화면(2026-10-18): 위 = 얻은 카드 · 아래 = 장착 · 보관
+  ['06_draft_graft', 'plant', { tab: 'skill' }, { draft: { kind: 'graft', n: 1, pick: 1, at: 2800 } }],   // 접목 = 카드 한 장 고르기(2026-10-22 — 보류하면 가지가 돌아감)
   ['06_draft_evo_sel', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: 1 } }],   // 카드 고름 = [장착]
   ['06_draft_evo_arm', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: 1, arm: 1 } }],   // [장착] = 놓을 칸이 숨 쉼
   ['06_draft_evo_placed', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, moves: [[1, 'b0']] } }],   // 바꿈 = 원래 것은 위 줄 · 둘 다 빛남

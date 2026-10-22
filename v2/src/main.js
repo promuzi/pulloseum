@@ -42,7 +42,7 @@ let chain = Promise.resolve();
 //  QUICK(난수 · 보상 굴림 없는 일)은 같은 규칙(game/ops.js)으로 이 화면에서 먼저 하고 바로 보여 준 뒤 서버에 보냄.
 //  서버 상태는 줄 선 일이 다 끝났을 때 한 번만 받아 맞춤(중간 답으로 덮으면 뒤에 누른 것이 잠깐 되돌아감) · 서버가 거절하면 다시 받아 맞춤.
 //  그 밖의 일(진화 · 수확 · 탐사 · 구매 …)은 서버 답을 기다림 — 기다리는 동안 화면 맨 위 가는 띠(0.16초 넘으면)
-const QUICK = new Set(['feed', 'draftPick', 'draftApply', 'seedMark', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide', 'cardUp', 'sellCard', 'discardCard']);
+const QUICK = new Set(['feed', 'draftPick', 'draftApply', 'graft', 'graftHold', 'seedMark', 'setActive', 'setFav', 'setMode', 'setLeague', 'setTeam', 'setProfile', 'upgrade', 'resetPoints', 'rename', 'swapJoker', 'setSlots', 'setCards', 'setLoadout', 'ack', 'guide', 'cardUp', 'sellCard', 'discardCard']);
 let pendOps = 0, lastSrv = null, stale = false;
 const app = {
   screen, g, input, router, W: screen.W, H: screen.H, t: 0, state: null, user: null, toastMsg: null, toastT: 0, waiting: 0, waitT: 0,
@@ -204,7 +204,7 @@ window.__shot = (name, params = {}, opt = {}) => {
     const D = opt.draft, p = app.state.plants[params.act != null ? +params.act : (app.state.active || 0)], pas = D.part === 'passive';
     const pool = pas ? Object.keys(CARDS).filter(id => !isSkillCard(id) && !CARDS[id].base && !cardFits(p, id) && !(p.cards || []).includes(id)) : bloomPool(p.key, Math.max(1, p.stage)).map(x => x.id);
     const cands = pool.slice(0, D.n || (pas ? 3 : 4));
-    p.drafts = [{ kind: D.evo ? 'evo' : 'lv', part: pas ? 'passive' : 'skill', st: p.stage, lv: p.lv, pick: Math.min(D.pick || (pas ? 1 : 2), cands.length), cands }];
+    p.drafts = [{ kind: D.kind || (D.evo ? 'evo' : 'lv'), part: pas ? 'passive' : 'skill', st: p.stage, lv: p.lv, pick: Math.min(D.pick || (pas ? 1 : 2), cands.length), cands }];   // kind 'graft' = 접목 고르기 촬영
     openDraft(app, p, D.evo ? { from: bigKey(p.key, stageKey({ stage: Math.max(0, p.stage - 1) })), to: bigKey(p.key, stageKey(p)), pot: p.pot } : null);
     app.draft.t0 = app.t - (D.at ?? 2600);
     if ((D.at ?? 2600) > 2000 || !D.evo) draftShot(app, D);

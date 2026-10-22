@@ -479,14 +479,27 @@ export function seedFeed(s, id, stat, seedIds, rng) {
   return { stat, from, to, used: tries.length, ok: okN, fail: tries.length - okN, tries, fails: p.ivp[stat] || 0, chance: to >= IV_MAX ? 0 : ivpChance(to), pity: to >= IV_MAX ? 0 : ivpPity(to) };
 }
 // 접목(완제품 접목 가지 — 속성·종이 맞아야, 상급은 다 자란 식물만)
+//  카드 고르기로(2026-10-18 사용자 "접목하기 할 때 스킬 배워서 교체할 때처럼 · 보류하면 다시 접목 가지로", 2026-10-22 넣음):
+//   접목 = 그 기술 카드 한 장짜리 고르기를 맨 앞에(어두운 화면에서 놓을 칸 고르기 · 바꾸기) — 가지는 고르기에 맡겨 둠(목록에서 빠짐)
+//   확정(draftApply) = 가지를 씀 · 보류(graftHold) = 가지가 접목 가지 목록으로 돌아감(안 씀)
 export function graft(s, id, scionId) {
   const p = getPlant(s, id), i = s.scions.findIndex(x => x.id === scionId);
   need(i >= 0, '그 접목 가지가 없어요');
   const sk = s.scions[i].skill, why = canGraft(p, sk);
   need(!why, why);
-  need(!known(p).has(sk) && !(p.drafts || []).some(d => d.kind === 'one' && d.cands.includes(sk)), '이미 아는 기술이에요');   // '하나 고르기'로 기다리는 기술도(가지를 헛되이 쓰지 않게)
-  s.scions.splice(i, 1);
-  return { skill: sk, to: learnNow(p, sk) };
+  need(!known(p).has(sk) && !(p.drafts || []).some(d => d.cands.includes(sk)), '이미 아는 기술이에요');   // 고르기로 기다리는 기술도(가지를 헛되이 쓰지 않게)
+  normSkills(p);
+  const [sc] = s.scions.splice(i, 1);
+  (p.drafts = p.drafts || []).unshift({ kind: 'graft', part: 'skill', st: p.stage, lv: p.lv, pick: 1, cands: [sk], scion: sc });
+  return { skill: sk, to: 'draft' };
+}
+// 접목 보류: 그 식물의 접목 고르기를 닫고 가지를 목록으로 돌려놓음
+export function graftHold(s, id) {
+  const p = getPlant(s, id), n = (p.drafts || []).findIndex(d => d.kind === 'graft');
+  need(n >= 0, '보류할 접목이 없어요');
+  const [d] = p.drafts.splice(n, 1);
+  if (d.scion) s.scions.push(d.scion);
+  return { scion: d.scion ? d.scion.id : null };
 }
 // 유전자 회귀 주사(완제품): 지운 기술 하나를 되돌림
 export function regress(s, id, skill) {

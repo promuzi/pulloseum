@@ -84,7 +84,7 @@ export function draftScreen(app, D) {
   const kk = clamp01((H - 480) / 120), L = (lo, hi) => Math.round(lo + (hi - lo) * kk);   // 짧은 기기(480~599) = 위 간격을 좁힘
   const pas = d.part === 'passive', N = want(d), got = placed(D, d);
   // 제목 · 몇 장 고르기
-  const title = d.kind === 'evo' ? '진화' : d.kind === 'one' ? '새 기술' : `Lv${lvOf({ stage: d.st, lv: d.lv })}`;
+  const title = d.kind === 'evo' ? '진화' : d.kind === 'graft' ? '접목' : d.kind === 'one' ? '새 기술' : `Lv${lvOf({ stage: d.st, lv: d.lv })}`;
   g.alpha(a, () => {
     g.text(title, W / 2, L(6, 14), { font: 'big', color: '#ffd890', align: 'center', outline: '#05070b', outlineW: 3 });
     g.text(`${pas ? '새 패시브' : '새 기술'} ${N}장 고르기 · ${got}/${N}`, W / 2, L(36, 48), { font: 'label', color: got === N ? '#ffd890' : '#d8ecff', align: 'center' });
@@ -139,7 +139,9 @@ export function draftScreen(app, D) {
   // 단추 줄: 되돌리기 · 보류 · 확정
   const by = H - 50, bw = Math.floor((W - 24 - 12) / 3);
   button(app, 'draft_undo', 12, by, bw, 34, '되돌리기', { style: 'night', font: 'head', disabled: !D.hist.length, onTap: live ? () => { undo(D); sfx('select'); } : null });
-  button(app, 'draft_later', 18 + bw, by, bw, 34, '보류', { style: 'night', font: 'head', onTap: live ? () => { seen(app); app.draft = null; app.toast('맨 위 보류 단추로 다시 골라요'); } : null });
+  //  접목 보류 = 가지를 접목 가지 목록으로 돌려놓고 닫음(2026-10-18 사용자 "보류하면 다시 접목 가지로") · 그 밖 = 맨 위 '보류' 단추로 다시
+  const later = d.kind === 'graft' ? () => { seen(app); app.draft = null; app.act('graftHold', { id: p.uid }).then(r => { if (r) app.toast('접목 가지를 그대로 두었어요'); }); } : () => { seen(app); app.draft = null; app.toast('맨 위 보류 단추로 다시 골라요'); };
+  button(app, 'draft_later', 18 + bw, by, bw, 34, '보류', { style: 'night', font: 'head', onTap: live ? later : null });
   button(app, 'draft_ok', 24 + bw * 2, by, bw, 34, '확정', { style: 'gold', font: 'head', disabled: got !== N || D.busy, onTap: live ? () => confirm(app, D, p, d) : null });
   // 꾹 = 그 카드 뒷면(떼면 닫힘)
   const dn = input.down;
