@@ -39,6 +39,7 @@ export const OPS = {
   setProfile: (s, a) => L.setProfile(s, { name: opt(a.name, v => str(v, 40)), title: opt(a.title, v => str(v, 40)), avatar: opt(a.avatar, v => str(v, 40)), color: opt(a.color, v => int(v, 0, 7)) }),
   plantSeed: (s, a, c) => L.plantSeed(s, str(a.seed), c.rng, c.now),
   sellSeed: (s, a) => L.sellSeed(s, str(a.seed)),
+  sellSeeds: (s, a) => L.sellSeeds(s, Array.isArray(a.seeds) ? a.seeds.slice(0, 80).map(v => str(v)) : []),   // 가방 고르기 모드(2026-10-23) — map(str) 은 칸 번호가 길이 한도로 들어가 안 됨
   seedMark: (s, a) => L.markSeed(s, str(a.seed), { lock: typeof a.lock === 'boolean' ? a.lock : undefined, fav: typeof a.fav === 'boolean' ? a.fav : undefined }),   // 종자 잠금 · 즐겨찾기(2026-10-18)
   toStorage: (s, a, c) => L.toStorage(s, str(a.id), c.now),
   setShip: (s, a) => L.setShip(s, int(a.model, 1, 9)),

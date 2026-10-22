@@ -46,7 +46,10 @@ export const SHOTS = [
   ['04_bag', 'bag', {}, { seedsAdd: SEEDS_MIX }],   // 종자 = 카드 셋씩 줄 · 정렬 줄(2026-10-23)
   ['04_bag_sort_rare', 'bag', { sort: 'rare' }, { seedsAdd: SEEDS_MIX }],
   ['04_bag_sort_pot', 'bag', { sort: 'pot' }, { seedsAdd: SEEDS_MIX }],
-  ['04_bag_info', 'bag', { info: true }, { seedsAdd: SEEDS_MIX }],   // 카드를 누른 정보 창(즐겨찾기 · 잠금)
+  ['04_bag_info', 'bag', { info: true }, { seedsAdd: SEEDS_MIX }],   // 카드를 누름 = 커지며 펼쳐진 상세 창(심기 · 팔기 · 즐겨찾기 · 잠금 — 2026-10-23)
+  ['04_bag_select', 'bag', { select: 4 }, { seedsAdd: SEEDS_MIX }],   // 꾹 = 고르기 모드(고른 카드 금빛 · 팔기 n)
+  ['04_bag_sellask', 'bag', { select: 6, sellAsk: true, sort: 'rare' }, { seedsAdd: SEEDS_MIX }],   // 여러 개 팔기 확인(특별 종자 섞임 → 특별 빼고)
+  ['04_bag_got', 'shop', {}, { popup: { title: '받았어요', t0: -5000, got: [{ kind: 'seed', seed: { key: 'gumiho_bloom', pot: 5 }, rar: 3 }, { kind: 'seed', seed: { key: 'aqua', pot: 3, shiny: true }, rar: 2 }, { kind: 'water', n: 10, rar: 1 }, { kind: 'fert', n: 5, rar: 1 }, { kind: 'regress', n: 1, rar: 4 }, { kind: 'pack_m', n: 1, rar: 3 }] } }],   // 받은 것 칸 = 종자(종마다 · 별 빛무리) · 물건 그림
   ['04_bag_short', 'bag', {}, { seedsAdd: SEEDS_MIX, W: 270, H: 480 }],
   ['04_bag_card', 'bag', { tab: 'card' }],   // 카드 가방(2026-10-22 — 강화 · 팔기 · 끼움 수)
   ['04_bag_item', 'bag', { tab: 'item' }],   // 물건(카드 꾸러미)

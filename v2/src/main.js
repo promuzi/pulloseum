@@ -8,6 +8,7 @@ import { Input } from './core/input.js';
 import { Router } from './core/router.js';
 import { loadSprites, loadBig, loadBg, loadSmall, FIRST_BIG, FIRST_BG } from './art/sprites.js';
 import { loadSkillArt } from './art/skillcard.js';
+import { loadItemArt } from './art/items.js';   // 종자 · 상점 물건 그림(2026-10-23)
 import { checkIcons } from './art/icons.js';
 import { loadShips } from './art/ship.js';
 import { toast as drawToast } from './art/ui.js';
@@ -152,8 +153,8 @@ function frameBody(ts) {
   if (toTitle) await Promise.all([loadBg(undefined, FIRST_BG), loadBig(undefined, FIRST_BIG)]);   // 처음 화면 그림만 먼저(글꼴 3.2MB와 통신을 나눠 쓰지 않게 — 글꼴은 그 뒤)
   const fonts = loadFonts().then(resetMetrics);
   if (!toTitle) await fonts;   // 검토 화면은 글자부터(촬영 도구가 바로 그림)
-  const rest = Promise.all([loadSprites(), loadBig(), loadBg(), loadSmall(), loadShips(), loadSkillArt(), fonts]).then(([a, b, c, d, e, f]) => {
-    const missing = [...a, ...b.map(k => 'v2/' + k), ...c.map(k => 'bg/' + k), ...d.map(k => 'small/' + k), ...e.map(k => 'ships/' + k), ...f.map(k => 'skills/' + k)], bad = checkIcons();
+  const rest = Promise.all([loadSprites(), loadBig(), loadBg(), loadSmall(), loadShips(), loadSkillArt(), fonts, loadItemArt()]).then(([a, b, c, d, e, f, , h]) => {
+    const missing = [...a, ...b.map(k => 'v2/' + k), ...c.map(k => 'bg/' + k), ...d.map(k => 'small/' + k), ...e.map(k => 'ships/' + k), ...f.map(k => 'skills/' + k), ...h.map(k => 'items/' + k)], bad = checkIcons();
     if (missing.length) console.warn('빠진 그림', missing);
     if (bad.length) console.warn('아이콘 오류', bad);
     app.assetsReady = true;

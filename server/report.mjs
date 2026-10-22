@@ -131,7 +131,7 @@ for (const { s } of saves) for (const p of [...s.plants, ...s.storage]) {
 }
 const upAll = Object.values(upSum).reduce((a, b) => a + b, 0);
 w(`- 강화 포인트 쓴 곳: ${Object.entries(upSum).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${STAT_NAME[k] || k} ${pct(n, upAll)}`).join(' · ') || '–'} · 한 능력치 몰빵 식물 ${pct(focused, plantsUp)} (${focused}/${plantsUp})`);
-w(`- 포인트 초기화 ${ops.resetPoints || 0} · 거름 ${ops.merge || 0} · 접목 ${ops.graft || 0} · 회귀 주사 ${ops.regress || 0} · 판매 ${ops.sell || 0} · 해체 ${ops.dismantle || 0} · 종자 판매 ${ops.sellSeed || 0}`);
+w(`- 포인트 초기화 ${ops.resetPoints || 0} · 거름 ${ops.merge || 0} · 접목 ${ops.graft || 0} · 회귀 주사 ${ops.regress || 0} · 판매 ${ops.sell || 0} · 해체 ${ops.dismantle || 0} · 종자 판매 ${(ops.sellSeed || 0) + (ops.sellSeeds || 0)}`);
 w('');
 
 // ── 6. 경제(돈·보석·물·비료가 어디서 들고 어디로 나갔나) ──

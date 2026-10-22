@@ -692,7 +692,10 @@ export function sell(s, id) {
   return { credits: n + (p.cardCredits || 0), cards: p.cardCredits || 0, name: p.name };   // 끼운 카드 팔 값은 takePlant 에서 이미 더함
 }
 // 종자 팔기(돈 출처 — 사용자 2026-10-16 "판매-씨앗, 키운 식물, 주운 물건")
-export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1));
+// 종자 값: 별(잠재력)이 높을수록 비싸게(2026-10-23 사용자 "종자의 경우 별 수에 따라서 효과나 차이점?을 넣으면 좋겠는데 이건 너가 고민해서" — 별 하나마다 +25%,
+//  별 다섯 = 두 배 · 전설은 늘 별 다섯이라 따로 곱하지 않음)
+export const seedStarMul = sd => (sd.legend ? 1 : 1 + 0.25 * (potOf(sd) - 1));
+export const seedPrice = sd => Math.round((SELL_BASE[SPECIES[sd.key].rarity] || 40) * 0.5 * (sd.legend ? 8 : sd.shiny ? 4 : 1) * seedStarMul(sd));
 export function sellSeed(s, seedId) {
   const i = s.seeds.findIndex(x => x.id === seedId);
   need(i >= 0, '그 종자가 없어요');
@@ -700,6 +703,19 @@ export function sellSeed(s, seedId) {
   const sd = s.seeds.splice(i, 1)[0], n = seedPrice(sd);
   s.wallet.credits += n;
   return { credits: n, key: sd.key };
+}
+// 여러 종자 한 번에 팔기(2026-10-23 가방 꾹 = 고르기 모드): 잠긴 종자 · 없는 종자는 건너뜀, 하나도 못 팔면 막힘
+export function sellSeeds(s, ids) {
+  need(Array.isArray(ids) && ids.length > 0, '팔 종자를 골라 주세요');
+  let credits = 0, n = 0;
+  for (const id of new Set(ids)) {
+    const i = s.seeds.findIndex(x => x.id === id);
+    if (i < 0 || s.seeds[i].lock) continue;
+    credits += seedPrice(s.seeds.splice(i, 1)[0]); n++;
+  }
+  need(n > 0, '팔 수 있는 종자가 없어요');
+  s.wallet.credits += credits;
+  return { credits, n };
 }
 export function dismantle(s, id, rng) {
   const p = takePlant(s, id), q = Math.min(1, p.invest / 1500 + 0.25 * p.stage + (p.lv - 1) * 0.03), got = [];

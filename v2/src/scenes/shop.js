@@ -3,7 +3,7 @@ import { hud, navBar, button, rrect } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { T } from '../art/theme.js';
 import { hexMix } from '../art/statusLook.js';
-import { seedArt, cardBox, glowArt } from './common.js';
+import { seedArt, cardBox, glowArt, drawItemArt } from './common.js';
 import { SHOP, SPECIES } from '../game/catalog.js';
 import { showGot } from './popups.js';
 import { CARDS } from '../game/cards.js';
@@ -26,7 +26,8 @@ const SHORT = { seed_common: '일반 종자', seed_rare: '희귀 종자', card_b
 const TOP = 44;   // 카드 테 · 그림 칸 바탕 = common.js cardBox · glowArt(종자 가방과 같이 씀)
 
 // 그림 칸 가운데 물건(2배)
-function art(g, cx, cy, A) {
+function art(g, cx, cy, A, id) {
+  if (drawItemArt(g, id, cx, cy)) return;   // 코덱스 물건 그림(44칸 도트 — art/items.js, 2026-10-23 사용자 "상점의 아이템 디자인도 받아서") · 그림이 오기 전엔 옛 아이콘
   const c = g.c;
   c.save(); c.translate(cx, cy); c.scale(2, 2);
   if (A.seed) { seedArt(g, 0, 0, A.seed); if (A.rare) g.img(icon('star'), 4, -11); }
@@ -57,7 +58,7 @@ export const shop = {
           cardBox(g, x, yy, cw, CH, col);
           const ax = x + 4, ay = yy + 4, aw = cw - 8;
           g.c.imageSmoothingEnabled = false; g.c.drawImage(glowArt(col, aw, AH), ax, ay);
-          art(g, Math.round(x + cw / 2), ay + Math.round(AH / 2) + 1, ART[id] || {});
+          art(g, Math.round(x + cw / 2), ay + Math.round(AH / 2) + 1, ART[id] || {}, id);
           const by = ay + AH;   // 이름 띠
           g.rect(ax, by, aw, CH - 8 - AH, '#0c1526'); g.rect(ax, by, aw, 1, hexMix(col, '#0c1526', 0.4));
           g.text(SHORT[id] || it.name, x + cw / 2, by + 4, { font: 'bold', color: P.main, align: 'center' });
