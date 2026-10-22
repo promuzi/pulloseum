@@ -682,7 +682,7 @@ export const LEAGUES = { sprout: { name: '새싹 리그', short: '새싹', cap: 
 export const LEAGUE_KEYS = Object.keys(LEAGUES);
 export const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
 // 프로필 배너가 열리는 재배사 레벨(2026-10-22 — 색 넷은 처음부터 · 무늬 넷(별빛 · 잎맥 · 물결 · 회로)은 Lv5 · 10 · 15 · 20, 그림은 art/profile.js)
-export const BANNER_LV = [1, 1, 1, 1, 5, 10, 15, 20];
+export const BANNER_LV = [1, 1, 1, 1, 5, 10, 15, 20, 3, 8, 25, 30];   // 배너 열둘(번호 = s.profile.color · 2026-10-23 새 넷: 오로라 3 · 성운 8 · 황금 25 · 풀로세움 30 — art/profile.js)
 // 한 라운드 판 수(2026-10-22 사용자 "랭크도 너무 빨리 오르는 경향이 있어 시스템 자체를 개편할지 고민해보자"): 브론즈 ~ 골드 = 5판 3선승 · 플래티넘부터 = 7판 4선승(전엔 모두 3선승)
 export const roundBest = tier => (tier >= 3 ? 7 : 5);
 export const SEASON = { days: 14, epoch: Date.UTC(2026, 9, 12, 15) };   // 2026-10-13(화) 0시(한국) 시작, 2주마다

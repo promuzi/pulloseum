@@ -1,7 +1,7 @@
 import { button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawPortrait } from '../art/sprites.js';
-import { bannerOf, drawAvatar } from '../art/profile.js';
+import { bannerInk, bannerPanel, avatarFrame, drawAvatar } from '../art/profile.js';
 import { T, holo } from '../art/theme.js';
 import { drawShutterClosed, GUN } from '../core/router.js';
 import { ledBoard, ledText, LED } from '../art/led.js';
@@ -121,15 +121,16 @@ export const room = {
         g.text('기다리는 중' + '.'.repeat(1 + Math.floor(t / 400) % 3), x + cw / 2, cy + 78, { font: 'bold', color: '#8cc4ee', align: 'center' });
         return;
       }
-      // 프로필 줄: 배너 색 테의 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
-      const bc = bannerOf(m.color || 0).col;   // 배너 여덟(2026-10-22 art/profile.js)
-      g.rect(x + 8, cy + 8, 30, 30, bc); g.rect(x + 9, cy + 9, 28, 28, '#0a1c32');
-      if (m.avatar && !drawAvatar(g, m.avatar, x + 9, cy + 9, 28, bc)) g.clip(x + 9, cy + 9, 28, 28, () => drawPortrait(g, m.avatar, x + 9, cy + 9, 28, false));   // 아이콘 = 화분째(홈 배너와 같은 그림)
+      // 프로필 줄 = 그 사람의 배너 창(2026-10-23 — 배너 = 프로필 창 디자인, art/profile.js) 위에 얼굴(대표 식물) · 이름 · 재배사 Lv · 칭호
+      const bi = m.color || 0, ink = bannerInk(bi);
+      bannerPanel(g, x + 4, cy + 4, cw - 8, 52, bi, t);
+      avatarFrame(g, x + 9, cy + 9, 28, bi);
+      if (m.avatar && !drawAvatar(g, m.avatar, x + 9, cy + 9, 28, bi)) g.clip(x + 9, cy + 9, 28, 28, () => drawPortrait(g, m.avatar, x + 9, cy + 9, 28, false));   // 아이콘 = 화분째(홈 배너와 같은 그림)
       let nm = m.name; while (g.textW(nm, 'bold') > cw - 50 && nm.length > 2) nm = nm.slice(0, -1);
-      g.text(nm, x + 44, cy + 9, { font: 'bold', color: '#ffffff' });
+      g.text(nm, x + 44, cy + 9, { font: 'bold', color: ink ? ink.main : '#ffffff' });
       g.text(`재배사 Lv${m.level || 1}`, x + 44, cy + 25, { color: '#ffd890' });
       let tt = m.title || ''; while (g.textW(tt) > cw - 16 && tt.length > 2) tt = tt.slice(0, -1);
-      g.text(tt, x + cw / 2, cy + 44, { color: '#8cc4ee', align: 'center' });
+      g.text(tt, x + cw / 2, cy + 41, { color: ink ? ink.sub : '#8cc4ee', align: 'center' });
       if (m.me) g.text('(나)', x + cw - 8, cy + 9, { color: '#8ccfff', align: 'right' });
       // 가운데: 내 식물(나만 보임) / 상대 = 비밀. 3:3 = 내 팀 셋(1번 = 먼저 나감, 주황 테)
       const px = x + cw / 2 - 28, py = cy + 62, c = m.card;
