@@ -13,13 +13,13 @@ const repo = resolve(here, '..', '..'), OUT = resolve(here, 'out', 'rankclip'); 
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const T = (tier, pts, round, extra = {}) => ({ tier, name: `새싹 ${tier}`, pts, round, wins: 0, losses: 0, bestOf: ['플래티넘', '다이아', '마스터', '풀로세움'].includes(tier) ? 7 : 5, ...extra });
 const CLIPS = [
-  { ms: 3300, still: 1700, tour: T('골드', 115, '4강'), result: { reward: { credits: 390, parts: 7, xp: { gained: 30 }, round: '4강', rankPts: 25, rank: { from: { tier: '골드', pts: 90 }, to: { tier: '골드', pts: 115 } } }, info: { round: '8강', bestOf: 5 } } },
-  { ms: 3900, still: 2000, tour: T('플래티넘', 25, '예선'), result: { reward: { credits: 405, parts: 7, xp: { gained: 30 }, champ: true, round: '예선', rankPts: 45, rank: { from: { tier: '골드', pts: 380 }, to: { tier: '플래티넘', pts: 25 } } }, info: { round: '결승', bestOf: 5 } } },
-  { ms: 3000, still: 1000, tour: T('실버', 95, '예선'), result: { win: false, reward: { credits: 15, xp: { gained: 10 }, reset: 'cup', rankPts: -10, rank: { from: { tier: '실버', pts: 105 }, to: { tier: '실버', pts: 95 } } }, info: { round: '예선', bestOf: 5 } } },
-  { ms: 2600, still: 1900, tour: T('실버', 240, '결승'), result: { reward: { credits: 90, parts: 2, xp: { gained: 30 }, round: '결승', rankPts: 30, rank: { from: { tier: '실버', pts: 210 }, to: { tier: '실버', pts: 240 } } }, info: { round: '4강', bestOf: 5 } } },
+  { ms: 3600, still: 1950, tour: T('골드', 115, '4강'), result: { reward: { credits: 390, parts: 7, xp: { gained: 30 }, round: '4강', rankPts: 25, rank: { from: { tier: '골드', pts: 90 }, to: { tier: '골드', pts: 115 } } }, info: { round: '8강', bestOf: 5 } } },
+  { ms: 5900, still: 3300, tour: T('플래티넘', 25, '예선'), result: { reward: { credits: 405, parts: 7, xp: { gained: 30 }, champ: true, round: '예선', rankPts: 45, rank: { from: { tier: '골드', pts: 380 }, to: { tier: '플래티넘', pts: 25 } } }, info: { round: '결승', bestOf: 5 } } },
+  { ms: 3000, still: 1300, tour: T('실버', 95, '예선'), result: { win: false, reward: { credits: 15, xp: { gained: 10 }, reset: 'cup', rankPts: -10, rank: { from: { tier: '실버', pts: 105 }, to: { tier: '실버', pts: 95 } } }, info: { round: '예선', bestOf: 5 } } },
+  { ms: 5200, still: 3200, tour: T('풀로세움', 0, '예선', { stars: 0 }), result: { reward: { credits: 525, parts: 7, xp: { gained: 30 }, champ: true, round: '예선', rankPts: 45, rank: { from: { tier: '마스터', pts: 390 }, to: { tier: '풀로세움', pts: 0, stars: 0 } } }, info: { round: '결승', bestOf: 7 } } },
   { ms: 2600, still: 1500, tour: T('풀로세움', 0, '예선', { stars: 3 }), result: { reward: { credits: 150, parts: 2, xp: { gained: 30 }, champ: true, round: '예선', rank: { from: { tier: '풀로세움', pts: 0, stars: 2 }, to: { tier: '풀로세움', pts: 0, stars: 3 } } }, info: { round: '결승', bestOf: 7 } } },
 ];
-const S = 2, STEP = 40, CROP = [0, 70, 270, 490];   // 논리 칸(알약 ~ 점수 판 — 아래 단추는 뺌)
+const S = 2, STEP = 40, CROP = [0, 0, 270, 490];   // 논리 칸(제목 ~ 점수 판 — 아래 단추는 뺌 · 단계 승급 모션이 화면 가운데라 위까지)
 const { srv, url } = await serve(repo);
 const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
 try {

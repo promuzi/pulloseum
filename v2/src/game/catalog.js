@@ -697,8 +697,9 @@ export const roundBest = tier => (tier >= 3 ? 7 : 5);
 export const ROUND_PTS = [0, 0, 25, 30, 45], LOSE_PTS = [10, 5, 0, 0, 0], DIV_PTS = 100, DIVS = 4, DIV_REWARD = { credits: 300, parts: 5 };
 export const isTopTier = tier => TIERS.indexOf(tier) >= TIERS.length - 1;
 export const divOf = T => DIVS - Math.min(DIVS - 1, Math.floor(Math.max(0, (T && T.pts) || 0) / DIV_PTS));   // 4(처음) → 1
-export const rankOf = T => (isTopTier(T.tier) ? T.tier : `${T.tier} ${divOf(T)}`);   // '브론즈 4' · 맨 위 = '풀로세움'
-export const tourName = T => (isTopTier(T.tier) ? T.name : `${T.name} ${divOf(T)}`);   // '새싹 브론즈 4'
+export const ROMAN = ['', 'I', 'II', 'III', 'IV'];   // 칸 = 로마 숫자로 보임(2026-10-23 사용자 "로마숫자가 멋있을 거 같아" — 엠블럼 아래 숫자 판 · 글자 모두)
+export const rankOf = T => (isTopTier(T.tier) ? T.tier : `${T.tier} ${ROMAN[divOf(T)]}`);   // '브론즈 IV' · 맨 위 = '풀로세움'
+export const tourName = T => (isTopTier(T.tier) ? T.name : `${T.name} ${ROMAN[divOf(T)]}`);   // '새싹 브론즈 IV'
 export const SEASON = { days: 14, epoch: Date.UTC(2026, 9, 12, 15) };   // 2026-10-13(화) 0시(한국) 시작, 2주마다
 export const seasonOf = now => 1 + Math.floor((now - SEASON.epoch) / (SEASON.days * 864e5));
 export const seasonEnd = n => SEASON.epoch + n * SEASON.days * 864e5;

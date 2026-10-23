@@ -9,13 +9,13 @@ const s = newGame({ nickname: '시험', starter: 'flower_grass' }, rng, t0);
 ok(s.league === 'sprout' && s.tournament.name === '새싹 브론즈' && s.season && s.season.n === seasonOf(t0), '새 계정 = 새싹 리그 · 이번 시즌');
 ok(leagueCap(s) === 0, '새싹 = 어린 식물만');
 // 칸(2026-10-23): 우승 한 번(라운드 다섯 × 3승) = 8강 25 + 4강 30 + 우승 45 = 100점 = 브론즈 4 → 3 · 네 번(400점)이면 실버 4
-ok(rankOf(s.tournament) === '브론즈 4' && tourName(s.tournament) === '새싹 브론즈 4', '처음 = 브론즈 4');
+ok(rankOf(s.tournament) === '브론즈 IV' && tourName(s.tournament) === '새싹 브론즈 IV', '처음 = 브론즈 IV(칸은 로마 숫자)');
 ok([0, 99, 100, 199, 200, 300, 399].map(p => divOf({ pts: p })).join() === '4,4,3,3,2,1,1' && rankOf({ tier: '풀로세움', pts: 0 }) === '풀로세움', '칸 = 100점마다 4 → 1 · 맨 위는 칸 없음');
 let r1;
 for (let i = 0; i < 15; i++) r1 = battleReward(s, { mode: 'tournament', win: true, rng, now: t0 });
-ok(s.tournament.tier === '브론즈' && s.tournament.pts === 100 && s.tournament.round === '예선' && r1.champ && r1.divUp === '브론즈 3', '우승 한 번 = 100점 = 브론즈 3: ' + rankOf(s.tournament));
+ok(s.tournament.tier === '브론즈' && s.tournament.pts === 100 && s.tournament.round === '예선' && r1.champ && r1.divUp === '브론즈 III','우승 한 번 = 100점 = 브론즈 3: ' + rankOf(s.tournament));
 for (let i = 0; i < 45; i++) battleReward(s, { mode: 'tournament', win: true, rng, now: t0 });
-ok(s.tournament.tier === '실버' && s.tournament.name === '새싹 실버' && s.tournament.pts === 0 && rankOf(s.tournament) === '실버 4', '우승 네 번 = 400점 → 새싹 실버 4: ' + rankOf(s.tournament));
+ok(s.tournament.tier === '실버' && s.tournament.name === '새싹 실버' && s.tournament.pts === 0 && rankOf(s.tournament) === '실버 IV','우승 네 번 = 400점 → 새싹 실버 4: ' + rankOf(s.tournament));
 ok(s.season.best.sprout === 1, '시즌 최고 기록(새싹 = 실버)');
 // 리그 바꾸기: 자람은 따로 브론즈부터, 돌아오면 새싹 실버 그대로
 setLeague(s, 'growing');

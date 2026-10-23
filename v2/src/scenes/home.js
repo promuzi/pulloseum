@@ -10,11 +10,12 @@ import { plantStats, leaguesOf, leagueCap, setLeague, winsNeed } from '../game/l
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { openTeamPick } from './teampick.js';
-import { inkOf } from '../core/text.js';
+import { inkOf, sized } from '../core/text.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy, enterLoft } from '../art/loft.js';
 import { BANNERS, BANNER_ORDER, bannerOf, bannerInk, bannerPanel, avatarFrame, drawAvatar } from '../art/profile.js';
 import { net } from '../net/api.js';
 import { checkNotices, openNotices, hasNewNotice } from './notice.js';
+import { TIER_COL } from './rankfx.js';
 
 // 홈 그림마다 받침 윗면 가운데 = 화분 굽이 닿는 점(그림을 바꾸면 다시 잼)
 //  loft = 코덱스 원형 방(2026-10-15 사용자 "코덱스 판이 마음에 들어" — 기본), cell = 흰 쿠션 타일 독방, room = 클로드 원기둥 방, ship = 옛 우주선 방
@@ -52,7 +53,6 @@ const MODES = [
   { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
 ];
 const BANNER = { x: 4, y: 27, w: 262, h: 60 };   // 위 상태 바(x 4~266)와 같은 가장자리 · 높이 2배(2026-10-15 사용자 "배너 높이 2배로 · 배너랑 위의 바 정렬이 안 맞아")
-const TIER_COL = { 브론즈: '#d89a62', 실버: '#c8d2e0', 골드: '#f0c858', 플래티넘: '#9ff0e0', 다이아: '#a8d0ff', 마스터: '#e0a8ff', 풀로세움: '#ffd890' };
 const ease = k => k * k * (3 - 2 * k);
 // 3:3 내 팀(식물 번호 셋) — 정한 적 없으면 앞에서부터 셋
 const teamIdx = s => (s.team && s.team.length === 3 && s.team.every(i => i < s.plants.length) ? s.team : s.plants.slice(0, 3).map((_, i) => i));
@@ -349,7 +349,8 @@ export const home = {
       g.text(pf.title || '', nx, y + 34, { font: 'label', color: P.sub });
     });
     const TT = s.tournament || { tier: '브론즈', round: '예선', wins: 0, losses: 0, pts: 0 }, tier = TT.tier;   // 오른쪽 = 대회 단계 · 칸 · 이번 라운드 · 막대 = 다음 칸까지 점수(맨 위 단계 = 이번 라운드 승)
-    g.text(rankOf(TT), rx, y + 9, { font: 'value', color: TIER_COL[tier] || P.main });
+    const rk = rankOf(TT);   // '플래티넘 III'처럼 길면 한 단계 작은 글자(연필과 안 겹치게 — 로마 숫자 칸, 2026-10-23)
+    g.text(rk, rx, y + 9, { font: g.textW(rk, 'value') > 58 ? sized('value', 12) : 'value', color: TIER_COL[tier] || P.main });
     g.img(icon('pencil'), x + w - 19, y + 9);
     g.text(`${TT.round} ${TT.wins}승 ${TT.losses}패`, rx, y + 27, { font: 'label', color: P.sub });
     tbar(g, rx, y + 45, w - (rx - x) - 9, 5, isTopTier(tier) ? Math.min(1, TT.wins / winsNeed(TT)) : ((TT.pts || 0) % DIV_PTS) / DIV_PTS, 'exp');

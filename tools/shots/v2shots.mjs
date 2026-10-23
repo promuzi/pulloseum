@@ -144,7 +144,7 @@ export const SHOTS = [
   ['09_result_champ', 'result', {}, { tour: { tier: '골드', name: '새싹 골드', pts: 310, round: '예선', wins: 0, losses: 0 }, result: { reward: { credits: 405, parts: 7, xp: { gained: 30 }, champ: true, round: '예선', rankPts: 45, divUp: '골드 1' }, info: { round: '결승', bestOf: 5 } } }],   // 우승 +45 · 칸 오름(2026-10-23)
   ['09_result_round', 'result', {}, { tour: { tier: '골드', name: '새싹 골드', pts: 175, round: '4강', wins: 0, losses: 0 }, result: { reward: { credits: 90, parts: 2, water: 1, xp: { gained: 30 }, round: '4강', rankPts: 25 }, info: { round: '8강', bestOf: 5 } } }],   // 8강 통과 +25
   ['09_result_cupend', 'result', {}, { tour: { tier: '실버', name: '새싹 실버', pts: 95, round: '예선', wins: 0, losses: 0 }, result: { win: false, reward: { credits: 15, xp: { gained: 10 }, reset: 'cup', rankPts: -10, divDown: '실버 4' }, info: { round: '예선', bestOf: 5 } } }],   // 예선 탈락 −10 · 칸 내려감
-  ['07_battle_title_long', 'battle', { phase: 'pick', venue: 'colosseum', title: '무제한 플래티넘 4 · 4강', nB: '7', w: '3', l: '2' }],   // 가장 긴 대회 제목 + 7판 칸(3승 2패)
+  ['07_battle_title_long', 'battle', { phase: 'pick', venue: 'colosseum', title: '무제한 플래티넘 III · 4강', nB: '7', w: '3', l: '2' }],   // 가장 긴 대회 제목(로마 숫자 칸) + 7판 칸(3승 2패)
   ['10_explore', 'explore', {}],
   ['10_explore_zoom1', 'explore', { map: '1', mapAt: '250' }],   // 행성을 눌러 지도로 다가가는 중간(코덱스 행성 그림 → 지도, 2026-10-22)
   ['10_explore_zoom2', 'explore', { map: '1', mapAt: '450' }],

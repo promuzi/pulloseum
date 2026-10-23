@@ -3,7 +3,7 @@ import { button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawBig, bigKey, BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody, padV, venueOf } from '../art/theme.js';
-import { rankGauge } from './rankfx.js';
+import { rankGauge, rankCeremony } from './rankfx.js';
 import { bigTitle } from './common.js';
 import { closeStream } from './room.js';
 import { room as R } from '../net/api.js';
@@ -14,7 +14,7 @@ import { glyphH } from '../core/text.js';
 const WHY = { forfeit: '기권', timeout: '시간 넘김', left: '상대가 나감', ko: '' };
 export const result = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament && app.state.tournament.tier); },
-  enter(p) { this.venue = p.venue || null; this.p = p; this.t0 = null; },
+  enter(p) { this.venue = p.venue || null; this.p = p; this.t0 = null; this.cerSkip = null; },
   draw(app) {
     if (this.t0 == null) this.t0 = app.t;   // 점수 막대 연출 = 결과가 뜬 뒤 시각(촬영 = p.at)
     const { g, W, H, t } = app, L = app.lastResult || { win: this.p.win !== 'false' && this.p.win !== false, mode: 'tournament', reward: this.p.full ? { credits: 360, water: 2, fert: 1, fuel: 1, parts: 3, xp: { gained: 30 } } : { credits: 60, water: 1, xp: { gained: 30 } }, me: { key: 'flower_grass', pot: 'pot_terra' } };
@@ -71,10 +71,11 @@ export const result = {
     const lv = rw.xp && rw.xp.ups && rw.xp.ups.length ? rw.xp.ups[rw.xp.ups.length - 1] : 0;
     if (lv) { g.text(`재배사 Lv${lv}!`, W / 2, ty, { font: 'bold', color: '#ffd890', align: 'center' }); ty += 18; }
     // 대회 점수 막대(scenes/rankfx.js — 점수 알갱이가 알약에서 날아와 차오름 · 칸 오름/내려감 연출): 판 앞뒤 자리(rw.rank)가 없으면(옛 서버 · 촬영) 지금 자리 그대로
-    const T0 = app.state && app.state.tournament;
-    if (!pvp && L.mode !== 'swap3' && T0) {
-      const R = rw.rank || { from: T0, to: T0 }, room = H - 118 - ty, line = room >= 58 ? `${T0.round} · ${T0.wins}승 ${T0.losses}패` : '';
-      ty += 4 + rankGauge(app, R, this.p.at != null ? +this.p.at : app.t - this.t0, { x: 18, y: Math.min(ty + 4, H - 118 - (line ? 58 : 44)), w: W - 36, src: { x: Math.round(W / 2 + pw / 2 - 22), y: 99 }, line });
+    const T0 = app.state && app.state.tournament, at = this.p.at != null ? +this.p.at : app.t - this.t0, skipAt = this.p.skip != null ? +this.p.skip : this.cerSkip;
+    const RK = !pvp && L.mode !== 'swap3' && T0 ? rw.rank || { from: T0, to: T0 } : null;   // (R = 친구 방 — 이름 겹치지 않게)
+    if (RK) {
+      const room = H - 118 - ty, line = room >= 58 ? `${T0.round} · ${T0.wins}승 ${T0.losses}패` : '';
+      ty += 4 + rankGauge(app, RK, at, { x: 18, y: Math.min(ty + 4, H - 118 - (line ? 58 : 44)), w: W - 36, src: { x: Math.round(W / 2 + pw / 2 - 22), y: 99 }, line, skipAt });
     }
     // 다음 할 일
     if (pvp) {
@@ -84,5 +85,7 @@ export const result = {
       button(app, 'res_again', 25, H - 114, W - 50, 32, '한 판 더', { style: 'gold', font: 'head', icon: 'sword', iconTint: true, onTap: () => app.go('matching', { mode: L.mode }, 'shutterClose') });
       button(app, 'res_home', 25, H - 74, W - 50, 32, '홈으로', { style: 'teal', onTap: () => app.go('home', {}, 'shutter') });
     }
+    // 단계 승급 모션(화면 가득 — rankfx.js): 도는 동안은 아무 데나 누르면 넘김(아래 단추가 눌리지 않게 맨 위 칸)
+    if (RK && rankCeremony(app, RK, at, { skipAt })) app.input.hit('res_cer', 0, 0, W, H, () => { if (this.cerSkip == null) this.cerSkip = at; });
   },
 };

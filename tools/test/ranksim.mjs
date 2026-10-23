@@ -2,13 +2,13 @@
 //  이길 확률만 어림(단계별 85% → 52% — 봇 세기 실측 전 가정). 2026-10-23 칸 100점 · 단계 400점
 //   node tools/test/ranksim.mjs
 import { newGame, battleReward, seasonSync } from '../../v2/src/game/logic.js';
-import { TIERS, DIVS, SEASON, seasonEnd, divOf, rankOf } from '../../v2/src/game/catalog.js';
+import { TIERS, DIVS, SEASON, seasonEnd, divOf, rankOf, ROMAN } from '../../v2/src/game/catalog.js';
 import { makeRng } from '../../v2/src/battle/rules.js';
 
 const P = [0.85, 0.75, 0.68, 0.62, 0.58, 0.55, 0.52];
 const TOP = TIERS.length - 1, t0 = SEASON.epoch + 864e5;
 const step = T => { const t = TIERS.indexOf(T.tier); return t >= TOP ? TOP * DIVS : t * DIVS + (DIVS - divOf(T)); };   // 0 = 브론즈 4 … 24 = 풀로세움
-const label = d => (d >= TOP * DIVS ? TIERS[TOP] : `${TIERS[Math.floor(d / DIVS)]} ${DIVS - (d % DIVS)}`);
+const label = d => (d >= TOP * DIVS ? TIERS[TOP] : `${TIERS[Math.floor(d / DIVS)]} ${ROMAN[DIVS - (d % DIVS)]}`);
 const play = (s, rnd, scale) => { const t = TIERS.indexOf(s.tournament.tier); battleReward(s, { mode: 'tournament', win: rnd() < Math.min(0.97, P[t] * scale), rng: rnd, now: t0 }); };
 
 // 시즌 없이 풀로세움까지: 판 수 + 칸마다 처음 닿은 판

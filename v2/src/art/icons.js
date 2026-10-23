@@ -866,7 +866,9 @@ const ART_ICONS = ['gear', 'coin', 'gem', 'energy', 'lock', 'fire', 'water', 'gr
   'fx_burn', 'fx_poison', 'fx_bleed', 'fx_shock', 'fx_chill', 'fx_wet', 'fx_shade', 'fx_seal', 'fx_taunt', 'fx_regen', 'fx_will', 'fx_immune', 'fx_aim', 'fx_stealth', 'fx_barrier', 'fx_evade', 'fx_reflect', 'fx_armor',
   'env_gale', 'env_inferno', 'env_fortress', 'env_sandcastle', 'env_sandstorm', 'env_healcastle', 'env_hellfort', 'env_walkcastle', 'trap_thorn', 'summon_guard',
   'can', 'fert', 'potion', 'fuel', 'parts'];
-const EXTRA = ['chest_body', 'chest_lid', 'planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen', 'planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel', 'planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen'];
+const EXTRA = ['chest_body', 'chest_lid', 'planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen', 'planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel', 'planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen',
+  // 대회 단계 엠블럼(2026-10-23 — tools/pixel/big/emblems.mjs): l 96칸(단계 승급 모션) · m 48칸(칸 승급) · s 24칸(점수 판 · 순위표) — scenes/rankfx.js emblem()
+  ...['bronze', 'silver', 'gold', 'plat', 'diamond', 'master', 'pullo'].flatMap(k => ['l', 'm', 's'].map(z => `emblem_${k}_${z}`))];
 const SMALL_KEEP = new Set(['potion', 'parts', 'energy', 'shield', 'speed', 'vine']);   // 11칸 검토(2026-10-22): 해 빛살이 사라짐 · 방패가 점 · 날개 신발이 뭉개짐 · 덩굴이 가늘어짐 · 주사기 · 부품
 const ALIAS = { st_stun: 'star', st_spore: 'mushroom', st_frozen: 'ice', st_paral: 'bolt', st_leech: 'seed', st_root: 'tree', fuel: 'energy', parts: 'gear',
   fx_burn: 'fire', fx_poison: 'poison', fx_bleed: 'heart', fx_shock: 'bolt', fx_chill: 'ice', fx_wet: 'water', fx_shade: 'shade', fx_seal: 'lock', fx_taunt: 'target', fx_regen: 'heal', fx_will: 'star', fx_immune: 'lock',

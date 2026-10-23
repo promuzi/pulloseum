@@ -4,16 +4,17 @@ import { plainBg } from '../art/bg.js';
 import { T, plate, btnBody } from '../art/theme.js';
 import { header } from './common.js';
 import { drawPortrait } from '../art/sprites.js';
-import { LEAGUES, LEAGUE_KEYS, TIERS, DIV_PTS, divOf } from '../game/catalog.js';
+import { LEAGUES, LEAGUE_KEYS, TIERS, DIV_PTS, divOf, ROMAN } from '../game/catalog.js';
 import { ROUNDS } from '../game/logic.js';
 import { net } from '../net/api.js';
+import { emblem, TIER_COL } from './rankfx.js';
 
 const TOP = 38, TAB_H = 26, ROW = 36, GAP = 4;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const MEDAL = ['#ffd24a', '#d8e2ee', '#e09a5a'];
 //  오른쪽 두 줄 = 단계 · 칸(맨 위 = 풀로세움 ★별) / 그 칸 점수 · 지금 라운드
 const top = r => r.tier >= TIERS.length - 1;
-const standing = r => (top(r) ? `${TIERS[TIERS.length - 1]}${r.stars ? ` ★${r.stars}` : ''}` : `${TIERS[r.tier] || TIERS[0]} ${divOf(r)}`);
+const standing = r => (top(r) ? `${TIERS[TIERS.length - 1]}${r.stars ? ` ★${r.stars}` : ''}` : `${TIERS[r.tier] || TIERS[0]} ${ROMAN[divOf(r)]}`);
 const standing2 = r => (top(r) ? ROUNDS[r.round] || ROUNDS[0] : `${(r.pts || 0) % DIV_PTS}점 · ${ROUNDS[r.round] || ROUNDS[0]}`);
 export const ranks = {
   theme: 'ship',
@@ -66,9 +67,12 @@ export const ranks = {
     const rc = r.rank <= 3 ? MEDAL[r.rank - 1] : P.sub;
     g.text(String(r.rank), x + 22, y + 10, { font: 'head', color: rc, align: 'center' });
     if (r.avatar) g.clip(x + 40, y + 3, 30, 30, () => drawPortrait(g, r.avatar, x + 40, y + 3, 30, false));
-    g.text(r.name || '익명 재배사', x + 76, y + 5, { font: 'bold', color: r.name ? P.main : P.dim });
-    g.text(`Lv${r.level || 1}`, x + 76, y + 20, { color: P.sub });
-    g.text(standing(r), x + w - 10, y + 5, { font: 'bold', color: top(r) ? '#ffd890' : P.main, align: 'right' });
+    g.clip(x + 76, y, w - 76 - 100, ROW, () => {   // 이름은 엠블럼 칸 앞까지(긴 이름 잘림)
+      g.text(r.name || '익명 재배사', x + 76, y + 5, { font: 'bold', color: r.name ? P.main : P.dim });
+      g.text(`Lv${r.level || 1}`, x + 76, y + 20, { color: P.sub });
+    });
+    emblem(g, Math.max(0, Math.min(TIERS.length - 1, r.tier || 0)), 's', x + w - 87, y + ROW / 2);   // 단계 엠블럼(2026-10-23)
+    g.text(standing(r), x + w - 10, y + 5, { font: 'bold', color: top(r) ? '#ffd890' : TIER_COL[TIERS[r.tier]] || P.main, align: 'right' });
     g.text(standing2(r), x + w - 10, y + 20, { color: P.sub, align: 'right' });
   },
 };

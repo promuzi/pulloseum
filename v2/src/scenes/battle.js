@@ -983,7 +983,7 @@ export const battle = {
       g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 대결') + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
     } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
     else {
-      const title = I ? I.title : (this.p.title || '새싹 브론즈 4 · 예선'), wins = I ? I.wins : this.p.w != null ? +this.p.w : 1, losses = I ? I.losses : this.p.l != null ? +this.p.l : 0, nB = (I && I.bestOf) || +this.p.nB || 5;   // 7판(플래티넘부터 — 2026-10-22) · 촬영 = p.title · p.nB · p.w · p.l
+      const title = I ? I.title : (this.p.title || '새싹 브론즈 IV · 예선'), wins = I ? I.wins : this.p.w != null ? +this.p.w : 1, losses = I ? I.losses : this.p.l != null ? +this.p.l : 0, nB = (I && I.bestOf) || +this.p.nB || 5;   // 7판(플래티넘부터 — 2026-10-22) · 촬영 = p.title · p.nB · p.w · p.l
       //  제목 = 턴 상자(28~66) 바로 옆에 왼쪽 정렬(2026-10-23 사용자 "1턴 옆의 글자를 왼쪽 정렬로 리그를 당겨") · 판 네모 = 크게 · 이긴 판 금색 ✓ · 진 판 빨강 ✕
       //  (같은 날 "네모박스의 승/패 기록은 좀더 키우고 확실하게") · 오른쪽 물음표 단추까지 안 들어가면 제목 글자를 한 단계씩 줄임
       const PS = nB > 5 ? 8 : 9, dots = nB * (PS + 2) - 2, L0 = 72, R0 = W - 26;
