@@ -172,10 +172,10 @@ export function statOf(sk, o = {}) {
   if (sk.act === 'guard') return { kind: 'block', txt: '×' + guardDefMult(sk, half), label: '방어력', half };
   if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: Math.round(sk.shift.miss * k) + '%', label: '회피', half } : null;
   for (const b of [sk.self, sk.also]) {   // 버프 기술은 주 효과(self)부터 수가 있는 것 하나
-    if (b === 'wall') return { kind: 'block', txt: pct(1 - FX.wall.dmgK), label: '막음' };
+    if (b === 'wall' || b === 'defUp') return { kind: 'block', txt: '+' + pct(FX.defUp.v), label: '방어' };   // 억셈(옛 철벽) = 방어 +%
     if (b === 'shield') return { kind: 'barrier', txt: pct(FX.shield.hp), label: '보호막' };
     if (b === 'armor') return { kind: 'barrier', txt: pct(FX.armor.hp), label: '방어구' };
-    if (b === 'regen') return { kind: 'heal', txt: pct(FX.regen.heal * FX.regen.left), label: '회복' };
+    if (b === 'regen') return { kind: 'heal', txt: pct(FX.regen.heal * FX.regen.turns), label: '회복' };
   }
   return null;
 }

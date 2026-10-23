@@ -74,7 +74,7 @@ const fixed = v => () => v;
   while (b.eff.burn && t < 9) { endTurn([[b, a]], t, []); hits++; t++; }
   ok(hits === 3 && hp0 - b.hp === 3 * Math.round(b.max * 0.04), '화상 = 턴 끝 3번, 4%씩');
   apply(b, 'burn', 1, ctx(a, 5, [])); endTurn([[b, a]], 5, []); apply(b, 'burn', 1, ctx(a, 6, []));
-  ok(b.eff.burn.left === 3, '다시 걸리면 처음 길이로');
+  ok(b.eff.burn.exp === 8, '다시 걸면 남은 턴과 새 기간 중 긴 쪽(5턴에 걸고 6턴에 다시 = 8턴까지)');
   const ev = []; onHit(mk('me', 'aqua'), b, sk(mk('me', 'aqua'), 's1'), { turn: 6, rng: makeRng(1), ev });
   ok(!b.eff.burn && ev.some(e => e.t === 'cure' && e.why === 'water') && b.eff.wet, '물에 맞으면 화상 꺼짐(젖음은 걸림)');
 }
@@ -99,7 +99,7 @@ const fixed = v => () => v;
   ok(b.eff.chill.n === 2, '젖은 상대 = 빙결 하나 더');
   ok(Math.abs(effSpd(b) - s0 * 0.8 * 0.8) < 1e-9, '빙결 = 기동성 −20%(쌓인 수와 무관)');
   apply(b, 'chill', 1, ctx(a, 1, []));
-  ok(!b.eff.chill && mustSkip(b) && b.eff.frozen, '빙결 3 → 얼음(쉼) · 0으로');
+  ok(!b.eff.chill && mustSkip(b) && b.eff.skip.src === 'frozen' && !b.eff.frozen, '빙결 3 → 얼음(기절의 다른 이름 · 쉼) · 0으로');
   const c = mk('foe', 'flower_grass');
   // 감전 = 확률형(2026-10-18): 걸려도 바로 쉬지 않음 · 자기 차례 굴림이 25%(젖으면 50%) 아래면 마비 → 감전 풀림 · 버팀 중엔 안 굴림
   apply(c, 'shock', 1, ctx(a, 1, []));
@@ -118,7 +118,7 @@ const fixed = v => () => v;
   apply(f, 'wet', 1, ctx(a, 1, [])); apply(f, 'chill', 2, ctx(a, 1, []));
   ok(mustSkip(f), '젖음 + 칼바람(2) = 바로 얼음');
   const fe = []; onHit(mk('me', 'cactus_fire'), f, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
-  ok(!f.eff.wet && !f.eff.frozen && !mustSkip(f) && f.eff.burn, '불에 맞으면 얼음·젖음 녹고 화상');
+  ok(!f.eff.wet && mustSkip(f) && f.eff.burn, '불에 맞으면 젖음이 마르고 화상 — 이미 걸린 얼음(기절)은 안 풀림(엑셀 v10 기절 제거 불가)');
 }
 // ── 6. 쉬는 시점 · 에너지 돌려받음 · 버팀 ──
 { // 선공이 기절시킴 → 후공의 이번 행동 취소 + 에너지 환불
@@ -150,16 +150,18 @@ const fixed = v => () => v;
   const ev = []; endTurn([[b, a]], 1, ev);
   const d = ev.find(e => e.t === 'drain');
   ok(d && d.dmg === Math.round(b.max * 0.025) && a.hp === 100 + d.dmg, '기생 씨앗 = 2.5% 빨아 건너편 회복');
-  apply(a, 'burn', 1, ctx(b, 2, [])); const hpA = a.hp; endTurn([[b, a]], 2, []);
-  ok(a.hp - hpA === Math.round(Math.round(b.max * 0.025) * 0.5), '화상이면 회복 절반');
-  endTurn([[b, a]], 3, []); ok(!b.eff.leech, '기생 씨앗 3번 뒤 사라짐');
+  apply(a, 'burn', 1, ctx(b, 2, [])); let hpA = a.hp; endTurn([[b, a]], 2, []);
+  ok(a.hp - hpA === Math.round(b.max * 0.025), '화상이어도 기생 회복은 그대로(회복 방해는 출혈만 — 엑셀 v10)');
+  delete a.eff.burn; apply(a, 'bleed', 1, ctx(b, 3, [])); hpA = a.hp; endTurn([[b, a]], 3, []);
+  ok(a.hp - hpA === Math.round(Math.round(b.max * 0.025) * 0.5), '출혈이면 회복 절반');
+  ok(!b.eff.leech, '기생 씨앗 = 지금 3턴(1턴에 걸면 3턴 끝까지)');
 }
 {
   const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'aqua'), seed: 5 });
   apply(B.foe, 'shade', 1, ctx(B.me, 1, []));
   const e0 = B.foe.energy, t = playTurn(B, B.me.kit[1]), sun = t.foeSkill && t.foeSkill.act === 'sun' ? t.foeSkill.gain || 0 : 0;   // 봇이 광합성(그 턴 대신 +2)을 고르면 그만큼은 빼고 봄(2026-10-22 봇 머리)
   ok(B.foe.energy <= e0 + sun && t.events.some(e => e.t === 'noEnergy' && e.who === 'foe'), '그늘 = 그 턴 끝 에너지 안 참');
-  ok(!B.foe.eff.shade, '그늘은 한 번 뒤 사라짐');
+  ok(!B.foe.eff.dark && !B.foe.eff.shade, '그늘(암실 1턴)은 그 턴 끝 한 번 막고 사라짐');
 }
 {
   const a = mk('me', 'flower_grass'), b = mk('foe', 'gaia');
@@ -246,10 +248,10 @@ const fixed = v => () => v;
   ok(!g.eff.regen, '재생은 3번 뒤 끝');
   const g2 = mk('me', 'gaia'); g2.hp = 10; sb(g2, 'regen'); apply(g2, 'shade', 1, ctx(x, 1, []));
   const ev2 = []; endTurn([[g2, x]], 1, ev2);
-  ok(!ev2.some(e => e.t === 'regen'), '그늘이면 재생 멈춤');
+  ok(ev2.some(e => e.t === 'regen'), '그늘이어도 재생은 그대로(엑셀 v10 — 재생 멈춤 없앰)');
   const g3 = mk('me', 'gaia'); g3.hp = Math.round(g3.max / 2); sb(g3, 'regen'); apply(g3, 'burn', 1, ctx(x, 1, []));
   const ev3 = []; endTurn([[g3, x]], 1, ev3);
-  ok((ev3.find(e => e.t === 'regen') || {}).heal === Math.round(g3.max * 0.05 * 0.5), '화상이면 재생 절반');
+  ok((ev3.find(e => e.t === 'regen') || {}).heal === Math.round(g3.max * 0.05), '화상이어도 재생 그대로(회복 방해는 출혈만)');
   const th = mk('foe', 'aqua'); sb(th, 'thorns');
   const att = mk('me', 'gaia'), hp0 = att.hp;
   const evT = resolveTurn(att, th, att.kit[0], REST, fixed(0.5), { turn: 1 }).events;
@@ -277,6 +279,52 @@ const fixed = v => () => v;
   const u2 = mk('me', 'gaia');
   resolveTurn(u2, mk('foe', 'aqua'), { ...u2.kit[0], also: 'haste' }, REST, fixed(0.5), { turn: 1 });
   ok(u2.eff.spdUp, '공격 기술의 덤 버프(가속 한 겹)');
+}
+// ── 9-4. 상태이상 다시 맞춤(엑셀 v10 효과 분류 19~34행) ──
+{
+  const x = mk('me', 'aqua');
+  // 출혈: 턴 끝 3% · 지금 3턴 · 받는 회복 절반
+  const bl = mk('foe', 'gaia'); apply(bl, 'bleed', 1, ctx(x, 1, []));
+  let n0 = 0, hp0 = bl.hp; for (let t = 1; t <= 5; t++) { const ev = []; endTurn([[bl, x]], t, ev); n0 += ev.filter(e => e.t === 'tick' && e.id === 'bleed').length; }
+  ok(n0 === 3 && hp0 - bl.hp === 3 * Math.round(bl.max * 0.03) && !bl.eff.bleed, '출혈 = 턴 끝 3%씩 3번(지금 3턴)');
+  const br = mk('foe', 'gaia'); br.hp = Math.round(br.max / 2); selfBuff(br, 'regen', { turn: 1, ev: [] }); apply(br, 'bleed', 1, ctx(x, 1, []));
+  const evB = []; endTurn([[br, x]], 1, evB);
+  ok((evB.find(e => e.t === 'regen') || {}).heal === Math.round(br.max * 0.05 * 0.5), '출혈이면 재생 절반');
+  // 감전: 턴 끝 약한 피해 2%
+  const sh = mk('foe', 'gaia'); apply(sh, 'shock', 1, ctx(x, 1, []));
+  const evS = [], h1 = sh.hp; endTurn([[sh, x]], 1, evS);
+  ok(evS.some(e => e.t === 'tick' && e.id === 'shock') && h1 - sh.hp === Math.round(sh.max * 0.02), '감전 = 턴 끝 최대 체력 2% 피해');
+  // 암실: 기술마다 N턴 · 걸린 턴 끝부터 N번 막음 · 다시 걸면 긴 쪽
+  const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'aqua'), seed: 5 });
+  apply(B.foe, 'dark', 1, ctx(B.me, 1, []), { turns: 3 });
+  const blocked = [];
+  for (let i = 0; i < 4; i++) { const t = playTurn(B, B.me.kit[0]); blocked.push(t.events.some(e => e.t === 'noEnergy' && e.who === 'foe')); }
+  ok(blocked.join() === 'true,true,true,false', `암실 3턴 = 걸린 턴 끝부터 세 번 막음(${blocked})`);
+  const dk = mk('foe', 'aqua'); apply(dk, 'dark', 1, ctx(x, 1, []), { turns: 3 }); apply(dk, 'dark', 1, ctx(x, 2, []), { turns: 1 });
+  ok(dk.eff.dark && dk.eff.dark.exp === 3, '암실 3턴(3턴까지)에 1턴을 다시 걸어도 줄지 않음(긴 쪽)');
+  // 얼음(빙결 3) = 기절의 다른 이름 — 받는 피해가 줄지 않음
+  const plain = resolveTurn(mk('me', 'gaia'), mk('foe', 'flower_grass'), mk('me', 'gaia').kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').dmg;
+  const fz = mk('foe', 'flower_grass'); apply(fz, 'chill', 3, ctx(x, 1, []));
+  const hz = resolveTurn(mk('me', 'gaia'), fz, mk('me', 'gaia').kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').dmg;
+  ok(hz === plain, `얼음은 받는 피해가 그대로(${plain} → ${hz})`);
+  // 기생: 처음 건 식물이 회복 · 건 식물이 쓰러지면 끝
+  const lc = mk('me', 'vine_water'), lt = mk('foe', 'gaia'), other = mk('me', 'aqua');
+  lc.slot = 'me0'; other.slot = 'me1'; lt.slot = 'foe0';
+  lc.hp = 50; other.hp = 50; apply(lt, 'leech', 1, ctx(lc, 1, []));
+  endTurn([[lt, other]], 1, [], null, [lc, lt, other]);
+  ok(lc.hp > 50 && other.hp === 50, '기생 = 처음 건 식물이 회복(맞은편 다른 식물이 아님)');
+  lc.hp = 0; const hpL = lt.hp, evL = []; endTurn([[lt, other]], 2, evL, null, [lc, lt, other]);
+  ok(!lt.eff.leech && lt.hp === hpL, '건 식물이 쓰러지면 기생도 끝(피해 없음)');
+  // 화상: 기술마다 기간 · 다시 걸면 긴 쪽
+  const bu = mk('foe', 'gaia'); apply(bu, 'burn', 1, ctx(x, 1, []), { turns: 5 }); apply(bu, 'burn', 1, ctx(x, 2, []));
+  ok(bu.eff.burn && bu.eff.burn.exp === 5, '화상 5턴(5턴까지)에 3턴을 다시 걸어도 줄지 않음');
+  // 정화 = 해로운 상태이상만(능력치 디버프 · 강풍 · 기절은 남음)
+  const pu = mk('foe', 'gaia'); for (const id of ['burn', 'poison', 'bleed', 'shock', 'wet', 'leech']) apply(pu, id, 1, ctx(x, 1, []));
+  apply(pu, 'atkDown', 1, ctx(x, 1, [])); apply(pu, 'gale', 1, ctx(x, 1, [])); apply(pu, 'stun', 1, ctx(x, 1, []));
+  selfBuff(pu, 'purify', { turn: 1, ev: [] });
+  ok(!['burn', 'poison', 'bleed', 'shock', 'wet', 'leech'].some(k => pu.eff[k]) && pu.eff.atkDown && pu.eff.gale && mustSkip(pu), '정화 = 해로운 상태이상만 지움(쇠약 · 강풍 · 기절은 남음)');
+  const pd = mk('foe', 'gaia'); selfBuff(pd, 'purify', { turn: 1, ev: [] }); apply(pd, 'atkDown', 1, ctx(x, 1, []));
+  ok(pd.eff.atkDown, '정화 보호 중에도 능력치 디버프는 걸림(보호는 상태이상만)');
 }
 // ── 9-3. 능력치 겹(엑셀 v10 효과 분류 9~18행): 겹마다 지금 5턴 · 따로 만료 · 교체해도 남음 · 정화로 안 지워짐 ──
 {

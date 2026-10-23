@@ -16,15 +16,18 @@
 import { canUseRes, turnDevices } from './devices.js';
 
 export const FX = {
-  burn:    { el: 'fire', left: 3, dot: 0.04, keep: true },   // 턴 끝 3번 최대 체력 4% · 그동안 받는 회복 절반
+  // 해로운 상태이상(2026-10-23 엑셀 v10 효과 분류 19~31행): 기간 = 지금 N턴(걸린 턴 = 1턴째 · 만료 exp = T + N − 1 · 기술마다 o.turns 로 바꿈) ·
+  //  다시 걸면 남은 턴과 새 기간 중 긴 쪽(now) · 교체해도 남음 · 정화로 지워짐(HARM)
+  burn:    { el: 'fire', turns: 3, dot: 0.04, now: true, keep: true },   // 화상: 턴 끝 최대 체력 4% · 회복은 막지 않음(회복 방해는 출혈) · 물에 맞으면 꺼짐
   poison:  { stack: 5, dot: 0.02, keep: true },              // 겹마다 턴 끝 최대 체력 2%
-  wet:     { el: 'water', turns: 2, mob: 0.8, missAdd: 8, defK: 0.85 },   // 종합: 기동성 −20% · 적중 ↓(빗나감 칸 +8) · 방어 −15%
-  chill:   { el: 'ice', stack: 3, skip: 'frozen', mob: 0.8 }, // 쌓여 있는 동안 기동성 −20% · 3 = 얼음(한 번 쉼, 그동안 받는 피해 −25%)
-  shock:   { el: 'bolt', turns: 2, p: 0.25, wetP: 0.5 },     // 2026-10-18 확률형(사용자 "3겹 없애고 화상처럼"): 걸린 턴 + 2턴 · 자기 차례마다 25%(젖으면 50%) 마비 → 풀림 · 다시 걸면 새로
+  bleed:   { turns: 3, dot: 0.03, healK: 0.5, now: true },   // 출혈: 턴 끝 3% + 받는 회복 절반(거는 기술은 종 기술 때)
+  wet:     { el: 'water', turns: 3, mob: 0.8, missAdd: 8, defK: 0.85, now: true },   // 종합: 기동성 −20% · 적중 ↓(빗나감 칸 +8) · 방어 −15%
+  chill:   { el: 'ice', stack: 3, skip: 'frozen', mob: 0.8 }, // 쌓여 있는 동안 기동성 −20%(엑셀에 언급 없음 — 지금 동작) · 3 = 얼음(기절의 다른 이름 · 받는 피해 감소 없음)
+  shock:   { el: 'bolt', turns: 3, dot: 0.02, p: 0.25, wetP: 0.5, now: true },   // 감전: 턴 끝 약한 피해 2% · 자기 차례마다 25%(젖으면 50%) 마비 → 감전 사라짐
   stun:    { skip: 'stun' },                                  // 바로 한 번 쉼
   bind:    { turns: 1 },                                      // 다음 턴 기술 하나가 묶임
-  leech:   { left: 3, drain: 0.025 },                         // 턴 끝 3번 최대 체력 2.5%를 빨아 건너편 앞 식물이 회복
-  shade:   { turns: 0 },                                      // 이번 턴 끝 에너지 +1이 안 들어옴
+  leech:   { turns: 3, drain: 0.025, now: true },             // 기생: 턴 끝 2.5%를 빨아 처음 건 식물(by = slot)이 회복 · 건 식물이 쓰러지면 끝
+  dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
   gale:    { turns: 2, missAdd: 12 },                         // 강풍(바람 속성): 적중 ↓(내 공격 빗나감 칸 +12) — 사용자 "강풍이라고 바꾸자"
   taunt:   { turns: 1 },                                      // 다음 턴 방어·회피 자세 못 씀
   root:    { turns: 2 },                                      // 교체 못 함(3:3)
@@ -38,7 +41,7 @@ export const FX = {
   atkDown: { stat: 'atk', sign: -1, v: 0.15, turns: 5 }, defDown: { stat: 'def', sign: -1, v: 0.25, turns: 5 }, spdDown: { stat: 'spd', sign: -1, v: 0.2, turns: 5 },
   critDown: { stat: 'crit', sign: -1, v: 10, turns: 5 }, accDown: { stat: 'acc', sign: -1, v: 8, turns: 5 },
   // 버프(2026-10-16 — 기술 체계 문서 §3 짝: 불 분노 · 물 정화 · 풀 재생 · 대지 철벽 · 바람 가속 · 번개 집중 · 빙결 보호막 · 선인장 반사). 겹치지 않고 다시 걸면 새로
-  regen:   { buff: true, left: 3, heal: 0.05 },              // 재생: 턴 끝 3번 최대 체력 5% 회복(화상이면 절반, 그늘이면 멈춤)
+  regen:   { buff: true, turns: 3, heal: 0.05, now: true },  // 재생: 지금 3턴 · 턴 끝 최대 체력 5% 회복(출혈이면 절반 · 그늘로 멈추지 않음)
   thorns:  { buff: true, turns: 2, reflect: 0.3 },           // 반사: 붙어서 때린 상대에게 받은 피해 30%(멀리서 · 범위는 안 됨)
   shield:  { buff: true, turns: 3, hp: 0.15 },               // 보호막: 최대 체력 15%만큼 먼저 막음
   purified:{ buff: true, turns: 1 },                         // 정화: 나쁜 효과를 다 지우고 다음 턴까지 안 걸림
@@ -51,16 +54,19 @@ export const FX = {
   focus:   { buff: true },                                   // 집중: 다음 공격 치명 +25(u.st.nextCrit — 회피 성공 보상 '치명 준비'와 같은 칸)                                      // (포자가 피어 숨이 막힘 — 그 턴 끝 에너지 +1 없음, 창에는 안 보임)
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
-export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
+export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const SKIP_IDS = ['stun', 'chill'];
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['stealth', 'clone', 'shock', 'wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'brace', 'choke', 'thorns', 'shield', 'purified'];
+const TIMED = ['stealth', 'clone', 'burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'bind', 'gale', 'taunt', 'root', 'brace', 'choke', 'thorns', 'shield', 'purified'];
 const BUFFS = ['stealth', 'clone', 'armor', ...UPS, 'regen', 'thorns', 'shield', 'purified'];
-const DEBUFFS = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'choke'];   // 정화가 지우는 것(능력치 디버프는 못 지움)
-const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', ...DOWNS];
-// 옛 효과 이름 → 엑셀 v10 이름(기술 표를 다 옮길 때까지 — 2026-10-23 계획 Task 8에서 지움)
-export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown' };
+// 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 정화 보호는 이것과 기절을 막음
+const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'dark', 'taunt', 'root', 'choke'];
+const GUARDED = [...HARM, 'stun'];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'dark', 'gale', 'taunt', 'root', ...DOWNS];
+// 옛 효과 이름 → 엑셀 v10 이름(기술 표를 다 옮길 때까지 — 2026-10-23 계획 Task 8에서 지움) · 그늘 = 암실(이름 · 연출만 그늘)
+export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown', shade: 'dark' };
+const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[OLD[id] || id]);
@@ -79,7 +85,7 @@ export const critAddOf = u => statSum(u, 'crit');
 export function mobK(u) {
   let k = ((u && u.modeK && u.modeK.spd) || 1) * statK(u, 'spd');   // 모드(공통 장치 D9) 기동 배율
   if (has(u, 'wet')) k *= FX.wet.mob;
-  if (has(u, 'chill') || has(u, 'frozen')) k *= FX.chill.mob;
+  if (has(u, 'chill')) k *= FX.chill.mob;
   return k;
 }
 export const effSpd = u => (u.spd || 1) * mobK(u);
@@ -90,12 +96,11 @@ export function evadeK(def, att) {
 }
 export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1);
 export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
-export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1);
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) - statSum(u, 'acc');
-export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
+export const healK = u => (has(u, 'bleed') ? FX.bleed.healK : 1);   // 받는 회복 배율 — 회복 방해는 출혈만(화상은 순수 지속 피해)
 // 카드 패시브(2026-10-17 — game/cards.js, 전투 유닛 u.pas): 공격 배율(용의 분노 = 내 체력 절반 아래 · 공생 균사 = 상대 나쁜 효과 수) · 피해 배율(소화액 = 상대 체력 30% 아래 · 강산 = 독 걸린 상대 · 강철 비늘 = 받는 피해 ↓)
-export const debuffCount = u => { const e = (u && u.eff) || {}; return DEBUFFS.filter(k => e[k]).length + DOWNS.filter(k => e[k]).length + (e.skip || e.frozen ? 1 : 0); };   // 나쁜 효과 종류 수(능력치 디버프는 종류마다 하나)
+export const debuffCount = u => { const e = (u && u.eff) || {}; return HARM.filter(k => e[k]).length + DOWNS.filter(k => e[k]).length + (e.skip ? 1 : 0); };   // 나쁜 효과 종류 수(능력치 디버프는 종류마다 하나)
 export function pasAtkK(u, foe) {
   const p = u && u.pas; if (!p) return 1;
   let k = 1;
@@ -112,7 +117,7 @@ export function pasDmgK(att, def) {
   return k;
 }
 export const mustSkip = u => has(u, 'skip');
-export const noEnergy = u => has(u, 'shade') || has(u, 'choke');
+export const noEnergy = u => has(u, 'dark') || has(u, 'choke');   // 암실(그늘) · 숨막힘 = 그 턴 끝 자연 햇빛이 안 참
 export const canSwitch = u => !has(u, 'root') && !has(u, 'skip');   // 뿌리 묶기 · 쉬는 차례(얼음·마비·기절)면 교체 못 함
 // 고를 수 있는 기술: 에너지 · 덩굴로 묶인 칸 · 도발(자세 금지)
 // 변이 기술 = 판마다 정해진 횟수(2026-10-17 사용자 "변이는 충전이 아닌 고정된 횟수를 갖고 있어. 다 쓰면 못씀 그 판은"): u.used[기술 id] = 이번 판에 쓴 횟수
@@ -137,8 +142,7 @@ export function listOf(u) {
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수
   if (u && u.st && u.st.nextCrit) out.push({ id: 'focus' });
   if (e.skip) out.push({ id: e.skip.src });
-  else if (e.frozen) out.push({ id: 'frozen' });
-  for (const k of ORDER) if (e[k]) out.push(e[k].n ? { id: k, n: e[k].n } : { id: k });
+  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 암실 = 그 기술의 이름(그늘)으로
   return out;
 }
 
@@ -146,7 +150,6 @@ export function listOf(u) {
 function setSkip(tgt, src, ctx) {
   const e = E(tgt);
   e.skip = { src };
-  if (src === 'frozen') e.frozen = {};
   ctx.ev.push({ t: 'fx', who: ctx.by.id, to: tgt.id, name: tgt.name, id: src, list: listOf(tgt) });
 }
 // 쉬는 차례가 오면: 고른 행동 취소(쓴 에너지는 부르는 쪽이 refund 만큼 돌려줌) → 다음 턴까지 버팀
@@ -166,10 +169,10 @@ function addStat(u, id, T, o = {}) {
   s.n = s.s.length;
 }
 export function apply(tgt, id0, n, ctx, o = {}) {
-  const id = OLD[id0] || id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id };
+  const id = OLD[id0] || id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, look = o.look || (id0 !== id && id === 'dark' ? id0 : null), base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: look || id };
   if (!D || tgt.hp <= 0) return;
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
-  if (!D.buff && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 중엔 나쁜 효과가 안 걸림
+  if (GUARDED.includes(id) && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 보호 중엔 해로운 상태이상 · 기절이 안 걸림(능력치 디버프는 걸림)
   if (tgt.pas && tgt.pas.immune && tgt.pas.immune.includes(id)) { ev.push({ t: 'immune', ...base, card: true }); return; }   // 카드(해독 체질)
   const by = ctx.by && ctx.by.pas;
   if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
@@ -194,8 +197,11 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (sp.n >= D.stack) bloom(tgt, T, ev);
   } else if (id === 'stun') {
     setSkip(tgt, 'stun', ctx);
-  } else if (id === 'burn' || id === 'leech') {
-    e[id] = { left: D.left };
+  } else if (D.now) {   // 지금 N턴(화상 · 출혈 · 감전 · 젖음 · 암실 · 기생): 다시 걸면 긴 쪽
+    const exp = Math.max((e[id] && e[id].exp) || 0, nowExp(T, o.turns ?? D.turns));
+    e[id] = { ...(e[id] || {}), exp };
+    if (id === 'leech') e.leech.by = (ctx.by && (ctx.by.slot || ctx.by.id)) || null;   // 회복은 처음 건 식물(다시 걸면 새로 건 식물)
+    if (id === 'dark' && look) e.dark.look = look;
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   } else if (id === 'bind') {   // 다음 턴에 쓸 수 있을 종 기술 중 하나(못 쓰는 칸·기본기가 묶이면 효과가 거의 없으니까 — 없으면 쓸 수 있는 아무 기술)
     const en = Math.min(tgt.energyMax || 8, (tgt.energy || 0) + 1), ok = tgt.kit.filter(s => (s.cost || 0) <= en), own = ok.filter(s => s.id[0] === 's'), cands = own.length ? own : ok;
@@ -230,13 +236,13 @@ export function selfBuff(u, id0, ctx, o = {}) {
   if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'focus') { u.st = u.st || { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null }; u.st.nextCrit = Math.max(u.st.nextCrit || 0, 25); ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'purify') {
-    const gone = DEBUFFS.filter(k => e[k]);
+    const gone = HARM.filter(k => e[k]);   // 해로운 상태이상 한 종류 = 그 모든 겹(엑셀 v10) · 능력치 디버프 · 환경 · 기절은 남음
     for (const k of gone) delete e[k];
     e.purified = { exp: T + FX.purified.turns };
     ctx.ev.push({ t: 'fx', ...base, id: 'purified', ids: gone, list: listOf(u) }); return;
   }
   const D = FX[id]; if (!D) return;
-  if (id === 'regen') e.regen = { left: D.left };
+  if (id === 'regen') e.regen = { exp: Math.max((e.regen && e.regen.exp) || 0, nowExp(T, o.turns ?? D.turns)) };   // 지금 3턴 · 다시 걸면 긴 쪽
   else if (id === 'shield') e.shield = { exp: T + D.turns, hp: Math.max(1, Math.round(u.max * D.hp)) };
   else if (id === 'armor') e.armor = { hp: Math.min(Math.round(u.max * D.cap), ((e.armor && e.armor.hp) || 0) + Math.max(1, Math.round(u.max * D.hp))) };   // 쌓임(상한 최대 체력 50%)
   else e[id] = { exp: T + D.turns };
@@ -249,8 +255,7 @@ export function onHit(att, tgt, skill, ctx) {
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
     const own = skill.inflict && skill.inflict.id;   // 그 기술이 거는 효과는 태우지 않음(불씨 포자 = 불 속성인데 포자를 거는 기술 — 2026-10-17 카드 밸런스 시험에서 발견: 제 포자를 태워 1겹을 못 넘었음)
-    const gone = ['frozen', 'chill', 'wet', 'spore', 'bind', 'leech', 'root'].filter(k => e[k] && k !== own);   // 불이 얼음·냉기·물기·포자 + 덩굴·기생 씨앗·뿌리(식물로 묶은 것)를 태움
-    if (e.skip && e.skip.src === 'frozen') { delete e.skip; if (!gone.includes('frozen')) gone.unshift('frozen'); }   // 얼음이 녹으면 쉬기도 풀림
+    const gone = ['chill', 'wet', 'spore', 'bind', 'leech', 'root'].filter(k => e[k] && k !== own);   // 불이 냉기·물기·포자 + 덩굴·기생 씨앗·뿌리(식물로 묶은 것)를 태움 · 이미 걸린 얼음(기절)은 안 풀림(엑셀 v10 — 기절 제거 불가)
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }
@@ -261,19 +266,22 @@ export function onHit(att, tgt, skill, ctx) {
 export function noteFall(u, ev) { if (u && u.hp <= 0 && !ev.some(e => e.t === 'faint' && e.who === u.id)) ev.push({ t: 'faint', who: u.id, name: u.name, key: u.key }); }
 
 // ── 턴 끝 ──
-// pairs = [[유닛, 건너편 앞 식물], …]: 화상·독 피해, 기생 씨앗(빨아서 건너편 회복), 빙결·감전·독 줄어듦
+// pairs = [[유닛, 건너편 앞 식물], …]: 화상 · 독 · 출혈 · 감전 피해, 기생 씨앗(빨아서 건 식물 회복), 빙결 · 독 줄어듦
 //  순서 = 이번 턴 선공 쪽 먼저(누가 늘 먼저가 아니게) · stop() 이 참이 되면 거기서 멈춤(1:1 = 누가 쓰러지면, 3:3 = 한쪽 식물이 다 쓰러지면 판이 끝나서)
-export function endTurn(pairs, turn, ev, stop = null) {
+//  all = 판의 모든 유닛(기생을 건 식물 찾기 — u.slot) · 지금 N턴 효과는 피해 · 회복 뒤 그 턴이 마지막이면 사라짐
+const dotTick = (u, id, turn, ev) => {
+  const e = u.eff, d = Math.max(1, Math.round(u.max * FX[id].dot));
+  u.hp = Math.max(0, u.hp - d);
+  if (e[id].exp <= turn) delete e[id];
+  ev.push({ t: 'tick', who: u.id, name: u.name, id, dmg: d, list: listOf(u) });
+};
+export function endTurn(pairs, turn, ev, stop = null, all = []) {
+  const find = slot => slot && (all.find(x => x && (x.slot || x.id) === slot) || pairs.flat().find(x => x && (x.slot || x.id) === slot));
   for (const [u, opp] of pairs) {
     if (stop && stop()) break;
     const e = u.eff;
     if (!e || u.hp <= 0) continue;
-    if (e.burn) {
-      const d = Math.max(1, Math.round(u.max * FX.burn.dot));
-      u.hp = Math.max(0, u.hp - d);
-      if (--e.burn.left <= 0) delete e.burn;
-      ev.push({ t: 'tick', who: u.id, name: u.name, id: 'burn', dmg: d, list: listOf(u) });
-    }
+    if (e.burn) dotTick(u, 'burn', turn, ev);
     if (e.poison && u.hp > 0) {
       const d = Math.max(1, Math.round(u.max * FX.poison.dot * e.poison.n));
       u.hp = Math.max(0, u.hp - d);
@@ -281,17 +289,23 @@ export function endTurn(pairs, turn, ev, stop = null) {
       if (turn - e.poison.last >= RULES_FX.decayAfter && --e.poison.n <= 0) delete e.poison;   // 2턴 넘게 안 걸리면 1겹씩
       ev.push({ t: 'tick', who: u.id, name: u.name, id: 'poison', n, dmg: d, list: listOf(u) });
     }
-    if (e.leech && u.hp > 0) {
-      const take = Math.min(u.hp, Math.max(1, Math.round(u.max * FX.leech.drain)));
-      u.hp -= take;
-      let heal = 0;
-      if (opp && opp.hp > 0) { const before = opp.hp; opp.hp = Math.min(opp.max, opp.hp + Math.round(take * healK(opp))); heal = opp.hp - before; }
-      if (--e.leech.left <= 0) delete e.leech;
-      ev.push({ t: 'drain', who: u.id, name: u.name, to: opp ? opp.id : null, toName: opp ? opp.name : '', dmg: take, heal, list: listOf(u), list2: opp ? listOf(opp) : null });
+    if (e.bleed && u.hp > 0) dotTick(u, 'bleed', turn, ev);
+    if (e.shock && u.hp > 0) dotTick(u, 'shock', turn, ev);
+    if (e.leech && u.hp > 0) {   // 기생: 처음 건 식물이 회복 · 건 식물이 쓰러졌으면 피해 · 회복 모두 끝(엑셀 v10) · 교체 뒤 연결은 보류 — 지금은 건 식물이 살아 있으면 어디 있든 회복
+      const by = find(e.leech.by);
+      if (by && by.hp <= 0) { delete e.leech; ev.push({ t: 'expire', who: u.id, ids: ['leech'], list: listOf(u) }); }
+      else {
+        const take = Math.min(u.hp, Math.max(1, Math.round(u.max * FX.leech.drain)));
+        u.hp -= take;
+        let heal = 0;
+        if (by) { const before = by.hp; by.hp = Math.min(by.max, by.hp + Math.round(take * healK(by))); heal = by.hp - before; }
+        if (e.leech.exp <= turn) delete e.leech;
+        ev.push({ t: 'drain', who: u.id, name: u.name, to: by ? by.id : null, toName: by ? by.name : '', dmg: take, heal, list: listOf(u), list2: by ? listOf(by) : null });
+      }
     }
-    if (e.regen && u.hp > 0) {   // 재생: 그늘이면 멈춤(햇빛이 없음), 화상이면 절반
-      if (!e.shade) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
-      if (--e.regen.left <= 0) { delete e.regen; ev.push({ t: 'expire', who: u.id, ids: ['regen'], list: listOf(u) }); }
+    if (e.regen && u.hp > 0) {   // 재생: 출혈이면 절반(그늘로 멈추지 않음 — 엑셀 v10)
+      const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) });
+      if (e.regen.exp <= turn) { delete e.regen; ev.push({ t: 'expire', who: u.id, ids: ['regen'], list: listOf(u) }); }
     }
     if (u.pas && u.hp > 0 && u.hp < u.max && (u.pas.regen || (u.pas.rot && opp))) {   // 카드: 재생 비늘(최대 체력 %) · 부생 회복(상대 나쁜 효과 하나당 %) — 화상이면 절반
       const r = (u.pas.regen || 0) + (u.pas.rot && opp ? u.pas.rot * debuffCount(opp) : 0);
@@ -316,7 +330,6 @@ export function expire(u, turn, ev) {
   const gone = [];
   for (const k of TIMED) if (e[k] && e[k].exp <= turn) { delete e[k]; gone.push(k); }
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
-  if (e.frozen && !e.skip && e.skipDone === turn) { delete e.frozen; gone.push('frozen'); }
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
 // 3:3 교체로 나갈 때: 독·화상만 남음

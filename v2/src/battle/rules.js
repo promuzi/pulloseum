@@ -5,7 +5,7 @@
 
 import { SKILL_WEAPON } from './matchup.js';
 import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge } from './devices.js';
-import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, critAddOf, mustSkip, consumeSkip, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
+import { effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -168,7 +168,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const evadeOn = !ambush && still && (d.act === 'evade' || !!d.evadeWith) && stanceOk(foe, 'evade');   // evadeWith = 공격하면서 피하기
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
     // 피해: 약화(공격 ↓) · 부식(방어 ↓) · 얼음(받는 피해 ↓) · 카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
-    const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK * (1 - (sk.pierce || 0)) }, sk, el) * dmgTakenK(y) * pasDmgK(x, y);
+    const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK * (1 - (sk.pierce || 0)) }, sk, el) * pasDmgK(x, y);
     if (a.infused) u.curEl = a.el;   // 속성 바꾸기(불타는 의지) — 상성도 그 속성으로
     const em = (o.elemMult ? o.elemMult(u, foe, a) : 1) * fieldEl(o.field, a.el);   // × 경기장 효과(D10)
     //  속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
