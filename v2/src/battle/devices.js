@@ -131,7 +131,7 @@ export function turnDevices(u, turn, ev) {
 
 // ── 공통 장치 2묶음(2026-10-18 같은 날) ──
 // D13 반응 SPECIES.react = [{ on, … }] — on: 'hit' 맞음 · 'contact' 붙어서 맞음 · 'crit' 치명 맞음 · 'half' 처음 절반 아래 · 'avoid' 내가 피함 · 'dealCrit' 내가 치명
-//  할 일: gain{k, n} · store{k, pct}(받은 피해 몫을 개수로) · inflict(때린 쪽에 효과 id) · self(나에게 버프 id) · nextCrit(다음 공격 치명 +)
+//  할 일: gain{k, n} · store{k, pct}(받은 피해 몫을 개수로) · inflict(때린 쪽에 효과 id) · self(나에게 버프 id) · nextCrit(조준 — 다음 공격 기술 치명 +)
 export function react(u, on, ctx) {
   const list = SP(u).react;
   if (!list || u.hp <= 0) return;
@@ -142,7 +142,7 @@ export function react(u, on, ctx) {
     if (r.store && ctx.dmg > 0) addRes(u, r.store.k, Math.round(ctx.dmg * r.store.pct));
     if (r.inflict && ctx.foe && ctx.foe.hp > 0) apply(ctx.foe, r.inflict, 1, { turn: ctx.T, rng: () => 0.5, ev: ctx.ev, by: u });
     if (r.self) selfBuff(u, r.self, { turn: ctx.T, ev: ctx.ev });
-    if (r.nextCrit) { u.st = u.st || {}; u.st.nextCrit = Math.max(u.st.nextCrit || 0, r.nextCrit); }
+    if (r.nextCrit) { const e = (u.eff ||= {}); e.aim = { k: Math.max((e.aim && e.aim.k) || 0, r.nextCrit) }; }   // 치명 준비 = 조준
     ctx.ev.push({ t: 'react', who: u.id, name: u.name, on, res: u.res ? { ...u.res } : undefined, list: listOf(u) });
   }
 }
