@@ -130,6 +130,7 @@ export const SHOTS = [
   ['07_battle_volt', 'battle', { phase: 'pick', venue: 'colosseum', me: 'volt_vine', foe: 'aqua', energy: '3' }],   // 종 고유 v2(볼트바인 구슬 칸 — 햇빛 바 끝 보라)
   ['07_battle_stone', 'battle', { phase: 'pick', venue: 'colosseum', me: 'stone_cap', foe: 'aqua', energy: '8' }],   // 종 고유 v2(스톤캡 동굴)
   ['07_battle_gvine', 'battle', { phase: 'pick', venue: 'colosseum', me: 'vine_wind', foe: 'aqua', energy: '8', pre: 'me:evs3' }],   // 종 고유 v2(게일바인)
+  ...[['cactus_wind', 'gale'], ['vine_wind', 'gvine'], ['stone_cap', 'stone'], ['spore_cap', 'spore'], ['volt_vine', 'volt']].flatMap(([k, u]) => ['1', '2', '2b', '3', '3b', '3c'].map(n => ['09_peek_' + u + '_' + n, 'battle', { phase: 'pick', venue: 'colosseum', me: k, foe: 'aqua', energy: '8', hand: 'u_' + u + '_' + n, peek: 'u_' + u + '_' + n }])),   // 종 고유 v2 카드 뒷면 30장(2026-10-24)
   ['07_battle_skip', 'battle', { phase: 'pick', venue: 'colosseum', pre: 'me:stun;foe:atkDown,defDown' }],
   ['07_battle_bind', 'battle', { phase: 'pick', venue: 'colosseum', energy: '4', pre: 'me:seal,taunt' }],
   ['07_battle_root3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pre: 'me:root,poison2;foe:chill2' }],

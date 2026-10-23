@@ -390,6 +390,7 @@ export const battle = {
     } else {
       const me = p.me && SPECIES[p.me] ? mk('me', p.me) : makeUnit('me', SPECIES.flower_grass, { key: 'flower_grass', name: '페탈로즈', hp: 220, atk: 35, def: 24, spd: 30, crit: 5 });
       const foe = p.foe && SPECIES[p.foe] ? mk('foe', p.foe, { trainer: '코스모싹', rank: '브론즈 2', tlv: 6 }) : makeUnit('foe', SPECIES.vine_water, { key: 'vine_water', name: '타이드바인', hp: 240, atk: 32, def: 22, spd: 26, crit: 5, trainer: '코스모싹', rank: '브론즈 2', tlv: 6 });
+      if (p.hand) { const ids = String(p.hand).split(","); me.kit.sort((a, b) => (ids.includes(b.id) ? 1 : 0) - (ids.includes(a.id) ? 1 : 0)); }   // 검토 촬영(?hand=기술 id,…): 그 기술을 손패 앞으로
       if (p.shiny) me.shiny = true;   // 검토 촬영: 내 식물을 색 변종으로(2026-10-22 — 실제 판은 서버 유닛에 shiny 가 실려 옴)
       this.B = makeBattle({ me, foe, seed });
     }
