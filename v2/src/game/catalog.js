@@ -575,8 +575,8 @@ export const farmSlots = L => Math.min(FARM_MAX, FARM_START + FARM_LV.filter(x =
 export function levelReward(L) {
   const r = { credits: 120 + 60 * L };
   const main = ['fuel', 'water', 'fert', 'parts'][L % 4];
-  r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'fert' ? 3 + Math.floor(L / 3) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
-  if (L % 10 === 0) r.nutr = 1;   // 영양제(2026-10-22) — 레벨 10마다
+  if (L % 10 === 0) r.nutr = 1;   // 영양제(2026-10-22) — 레벨 10마다, 그 레벨은 기본 물건 대신(상자 보상 세 가지까지 — 2026-10-22 사용자 "한 번에 나오는 보상수는 적절히 조율")
+  else r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'fert' ? 3 + Math.floor(L / 3) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
   if (L % 5 === 0) r.seed = 'rare';
   else if (L % 3 === 2) r.pack_n = 1;   // 카드(2026-10-17) → 2026-10-22 일반 카드 꾸러미 하나(식물에서 열기)
   else if (L % 4 === 0) r.regress = 1;
