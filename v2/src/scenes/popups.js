@@ -147,7 +147,7 @@ function levelChest(app, item) {
   const extra = [];
   if (slotsUp > 0) extra.push(`스마트팜 칸 +${slotsUp} (이제 ${farmSlots(item.level)}칸)`);
   if (orbit) extra.push(`${orbit[0]}궤도가 열렸어요 — ${PLANETS.filter(p => p.orbit === +orbit[0]).map(p => p.name).join(' · ')}`);
-  if (season) { extra.push(LEAGUE_KEYS.map(k => `${LEAGUES[k].short} ${TIERS[(item.best || {})[k] || 0]}`).join(' · ')); if (item.title) extra.push(`칭호: ${item.title}`); extra.push('새 시즌 — 리그마다 두 단계 내려가 예선부터'); }
+  if (season) { extra.push(LEAGUE_KEYS.map(k => `${LEAGUES[k].short} ${TIERS[(item.best || {})[k] || 0]}`).join(' · ')); if (item.title) extra.push(`칭호: ${item.title}`); extra.push('새 시즌 — 골드 IV 위로 올라간 점수는 절반만 남고 예선부터'); }   // 시즌 넘김(2026-10-23 — logic.js seasonCarry)
   list.forEach((r, i) => {
     const age = t - o.open - 280 - i * 230; if (age < 0) return;
     const k = Math.min(1, age / 260), e = back(k), tx = x0 + (i % 2) * (cw + gap), ty = LC.gridY + Math.floor(i / 2) * 52;

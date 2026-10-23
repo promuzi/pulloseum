@@ -5,7 +5,7 @@ import {
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED,
-  ROUND_PTS, LOSE_PTS, DIV_PTS, DIVS, DIV_REWARD, isTopTier, rankOf } from './catalog.js';
+  ROUND_PTS, LOSE_PTS, DIV_PTS, DIVS, DIV_REWARD, TIER_PTS, GUARD_CUPS, SEASON_FLOOR, isTopTier, rankOf } from './catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, rollFrom, formCards, isSkillCard, NORMAL_CARDS, baseOf, CARD_UP, cardPrice } from './cards.js';
 
 export class Err extends Error {}
@@ -45,7 +45,9 @@ const MIGRATIONS = [
   () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
   () => {},   // 1 → 2(2026-10-22 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
   () => {},   // 2 → 3(2026-10-22 낮 묶음 — 종자 값 별 배수 · 종자 여러 개 팔기 · 배너 열둘 · 그림): 모양은 그대로 · 올린 뒤 처음 불러올 때 원본 보관용
-  () => {},   // 3 → 4(2026-10-23 묶음 — 대회 점수 · 칸 · 엠블럼 · 색 변종 1/1000 · 3:3 햇빛 · 접목 카드 · 공지 · 순위표 · 영양제): 모양 그대로(대회 점수 T.pts 는 원래 있던 칸 → 모두 IV칸 0점부터) · 원본 보관용
+  // 3 → 4(2026-10-23 묶음 — 대회 점수 · 칸 · 강등 · 엠블럼 · 색 변종 1/1000 · 3:3 햇빛 · 접목 카드 · 공지 · 순위표 · 영양제): 대회 점수 T.pts 는 원래 있던 칸(모두 IV칸 0점부터) ·
+  //  풀로세움 별(전엔 우승 수) → 점수(별 하나 = 100점 — 이제 별은 점수에서 셈) · 원본 보관용
+  s => { for (const T of [s.tournament, ...Object.values(s.leagues || {})]) if (T && isTopTier(T.tier) && T.stars > 0 && !T.pts) T.pts = T.stars * DIV_PTS; },
 ];
 export function migrate(s) {
   const from = s.ver || 0;
@@ -974,7 +976,13 @@ export function setLeague(s, lg) {
   s.league = lg; s.tournament = { ...s.leagues[lg] };
   return { league: lg };
 }
-// 시즌 넘김(상태를 맞출 때마다): 지난 시즌 최고 단계로 상자 · 칭호 → 모든 리그 두 단계 내려가 예선부터
+// 시즌 넘김 자리(2026-10-23 사용자 추천안 승인 — 예전 클래시 로얄식): 골드 IV 0점(SEASON_FLOOR) 위로 올라간 점수의 절반만 남김 · 그 아래는 칸 · 점수까지 그대로 · 높을수록 많이 내려가도 순서는 그대로
+export function seasonCarry(T) {
+  const top = TIERS.length - 1, t = Math.max(0, TIERS.indexOf(T.tier)), v = t * TIER_PTS + Math.max(0, T.pts || 0);
+  const nv = v > SEASON_FLOOR ? SEASON_FLOOR + Math.floor((v - SEASON_FLOOR) / 2) : v, nt = Math.min(top, Math.floor(nv / TIER_PTS));
+  return { tier: TIERS[nt], pts: nv - nt * TIER_PTS };
+}
+// 시즌 넘김(상태를 맞출 때마다): 지난 시즌 최고 단계로 상자 · 칭호 → 리그마다 seasonCarry 자리에서 예선부터(전엔 모두 두 단계 내려감)
 export function seasonSync(s, now) {
   leaguesOf(s);
   const n = seasonOf(now);
@@ -987,7 +995,7 @@ export function seasonSync(s, now) {
   const title = top >= 2 ? `${TIERS[top]} 재배사` : null;
   if (title && !s.titles.includes(title)) s.titles.push(title);
   s.pending.push({ kind: 'season', n: s.season.n, best: { ...best }, box, title });
-  for (const k of LEAGUE_KEYS) { const t0 = Math.max(0, TIERS.indexOf(s.leagues[k].tier) - 2); s.leagues[k] = freshT(k, TIERS[t0]); }
+  for (const k of LEAGUE_KEYS) { const c = seasonCarry(s.leagues[k]); s.leagues[k] = { ...freshT(k, c.tier), pts: c.pts, stars: isTopTier(c.tier) ? Math.floor(c.pts / DIV_PTS) : 0 }; }
   s.tournament = { ...s.leagues[s.league] };
   s.season = { n, best: Object.fromEntries(LEAGUE_KEYS.map(k => [k, TIERS.indexOf(s.leagues[k].tier)])) };
 }
@@ -1017,11 +1025,11 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
       const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(tier); const nW = winsNeed(T); T[win ? 'wins' : 'losses']++;
       if (T.wins >= nW) {   // 이번 라운드 통과 → 다음 라운드 · 결승 통과 = 우승(그 대회 끝 → 다음 대회 예선부터)
         const i = Math.max(0, ROUNDS.indexOf(T.round));
-        if (i >= ROUNDS.length - 1) { r.champ = true; T.round = ROUNDS[0]; if (tier >= TIERS.length - 1) T.stars = (T.stars || 0) + 1; }   // 풀로세움 별: 맨 위 단계에서 우승할 때마다 하나(순위표 — 2026-10-22, 시즌이 바뀌면 단계와 함께 처음부터)
+        if (i >= ROUNDS.length - 1) { r.champ = true; T.round = ROUNDS[0]; if (T.guard > 0) T.guard--; }   // 우승 = 그 대회 끝(승급 보호 한 번 씀 — 단계를 올린 대회는 addRankPts 가 다시 채움)
         else T.round = ROUNDS[i + 1];
         T.wins = 0; T.losses = 0; r.round = T.round; r.parts = (r.parts || 0) + 2;   // 라운드 통과 = 부품 2
         addRankPts(s, T, ROUND_PTS[i], r);
-      } else if (T.losses >= nW) r.reset = loseRound(T, r);
+      } else if (T.losses >= nW) r.reset = loseRound(s, T, r);
       r.rank = { from, to: rankNow(T) };   // 결과 화면 점수 막대 연출(scenes/rankfx.js)
     }
   }
@@ -1035,33 +1043,41 @@ export function battleForfeit(s, mode) {
   if (mode === 'swap3') { s.swap3.losses++; return { forfeit: true }; }
   const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(Math.max(0, TIERS.indexOf(T.tier))); T.losses++;
   const r = { forfeit: true };
-  if (T.losses >= winsNeed(T)) r.reset = loseRound(T, r);
+  if (T.losses >= winsNeed(T)) r.reset = loseRound(s, T, r);
   r.rank = { from, to: rankNow(T) };
   return r;
 }
-const rankNow = T => ({ tier: T.tier, pts: T.pts || 0, stars: T.stars || 0 });   // 판 앞뒤 대회 자리(점수 막대 연출)
-// 대회 점수 더하기(라운드 통과 · 우승 — catalog.js ROUND_PTS): 칸(100점)을 넘을 때마다 칸 보상 · 칸 넷(400점)이면 다음 단계, 남는 점수는 넘어가고 대회는 이어서
-//  (다음 라운드부터 새 단계 상대 · 판 수) · 맨 위 단계(풀로세움)는 점수 없음(우승마다 별). r.rankPts = 얻은 점수 · r.divUp = 오른 칸('브론즈 3') · r.tierUp = 오른 단계
+const rankNow = T => ({ tier: T.tier, pts: T.pts || 0, stars: T.stars || 0, guard: T.guard || 0 });   // 판 앞뒤 대회 자리(점수 막대 연출)
+const linOf = T => Math.max(0, TIERS.indexOf(T.tier)) * TIER_PTS + (T.pts || 0);   // 브론즈 IV 0점 = 0부터 이어 센 자리(풀로세움 = 2400 + 점수)
+// 대회 점수 더하기(라운드 통과 · 우승 — catalog.js ROUND_PTS): 100점을 넘을 때마다 보상(칸 · 맨 위는 별) · 칸 넷(400점)이면 다음 단계, 남는 점수는 넘어가고 대회는 이어서
+//  (다음 라운드부터 새 단계 상대 · 판 수) · 단계가 오르면 승급 보호 GUARD_CUPS번(대회 중에 올랐으면 그 대회는 빼고 셈) · 풀로세움은 위가 없고 별 = 100점마다 하나
+//  r.rankPts = 얻은 점수 · r.divUp = 오른 칸('브론즈 III' · 맨 위 = '풀로세움') · r.tierUp = 오른 단계 · r.starUp = 별 수(맨 위)
 function addRankPts(s, T, n, r) {
-  if (!n || isTopTier(T.tier)) return;
+  if (!n) return;
   const p0 = T.pts || 0, ups = Math.floor((p0 + n) / DIV_PTS) - Math.floor(p0 / DIV_PTS);
   T.pts = p0 + n; r.rankPts = (r.rankPts || 0) + n;
   if (ups > 0) { r.credits += DIV_REWARD.credits * ups; r.parts = (r.parts || 0) + DIV_REWARD.parts * ups; }
-  while (T.pts >= DIV_PTS * DIVS && !isTopTier(T.tier)) {
-    T.pts -= DIV_PTS * DIVS; T.tier = TIERS[TIERS.indexOf(T.tier) + 1]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.bestOf = roundBest(TIERS.indexOf(T.tier)); r.tierUp = T.tier;
+  while (T.pts >= TIER_PTS && !isTopTier(T.tier)) {
+    T.pts -= TIER_PTS; T.tier = TIERS[TIERS.indexOf(T.tier) + 1]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.bestOf = roundBest(TIERS.indexOf(T.tier)); r.tierUp = T.tier;
+    T.guard = GUARD_CUPS + (T.round !== ROUNDS[0] ? 1 : 0);
     leaguesOf(s); if (s.season) s.season.best[s.league] = Math.max(s.season.best[s.league] || 0, TIERS.indexOf(T.tier));   // 시즌 최고 기록
   }
-  if (isTopTier(T.tier)) T.pts = 0;
+  if (isTopTier(T.tier)) { T.stars = Math.floor(T.pts / DIV_PTS); if (ups > 0) r.starUp = T.stars; }
   if (ups > 0) r.divUp = rankOf(T);
 }
 // 라운드 실패(그 라운드에서 질 만큼 짐) = 그 대회 끝 → 다음 대회는 예선부터 = 'cup'(2026-10-23 사용자 안 C — 전엔 브론즈 그 라운드 처음부터 · 실버 ~ 다이아 한 라운드 전 ·
-//  마스터 이상 예선부터). 예선 탈락 −10 · 16강 탈락 −5 · 8강부터 감점 없음 · 점수는 그 단계 바닥(0) 아래로 안 내려감 = 칸은 내려가도 단계는 시즌 안에 그대로 · 풀로세움은 점수 없음
-function loseRound(T, r) {
-  const i = Math.max(0, ROUNDS.indexOf(T.round)), lose = isTopTier(T.tier) ? 0 : LOSE_PTS[i] || 0, p0 = T.pts || 0;
+//  마스터 이상 예선부터). 예선 탈락 −10 · 16강 탈락 −5 · 8강부터 감점 없음(풀로세움도 같음). 0점 아래로 가면 아래 단계 I칸(단계 강등 · 풀로세움 → 마스터 I) —
+//  단, 브론즈 IV 0점이 바닥 · 승급 보호가 남아 있으면 그 단계 0점에서 멈춤(보호는 대회가 끝날 때마다 하나씩 씀). r.divDown = 내려간 칸 · r.tierDown = 내려간 단계
+function loseRound(s, T, r) {
+  const i = Math.max(0, ROUNDS.indexOf(T.round)), lose = LOSE_PTS[i] || 0, guarded = (T.guard || 0) > 0, v0 = linOf(T);
   T.wins = 0; T.losses = 0; T.round = ROUNDS[0];
-  if (lose && p0 > 0) {
-    T.pts = Math.max(0, p0 - lose); r.rankPts = T.pts - p0;
-    if (Math.floor(T.pts / DIV_PTS) < Math.floor(p0 / DIV_PTS)) r.divDown = rankOf(T);
-  }
+  if (guarded) T.guard--;
+  if (!lose) return 'cup';
+  let t = Math.max(0, TIERS.indexOf(T.tier)), p = (T.pts || 0) - lose;
+  if (p < 0 && (t === 0 || guarded)) p = 0;
+  if (p < 0) { t--; p += TIER_PTS; T.tier = TIERS[t]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.bestOf = roundBest(t); T.guard = 0; r.tierDown = T.tier; }
+  T.pts = p; T.stars = isTopTier(T.tier) ? Math.floor(p / DIV_PTS) : 0;
+  const v1 = linOf(T);
+  if (v1 !== v0) { r.rankPts = v1 - v0; if (Math.floor(v1 / DIV_PTS) < Math.floor(v0 / DIV_PTS)) r.divDown = rankOf(T); }
   return 'cup';
 }

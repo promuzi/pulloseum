@@ -15,7 +15,7 @@ const MEDAL = ['#ffd24a', '#d8e2ee', '#e09a5a'];
 //  오른쪽 두 줄 = 단계 · 칸(맨 위 = 풀로세움 ★별) / 그 칸 점수 · 지금 라운드
 const top = r => r.tier >= TIERS.length - 1;
 const standing = r => (top(r) ? `${TIERS[TIERS.length - 1]}${r.stars ? ` ★${r.stars}` : ''}` : `${TIERS[r.tier] || TIERS[0]} ${ROMAN[divOf(r)]}`);
-const standing2 = r => (top(r) ? ROUNDS[r.round] || ROUNDS[0] : `${(r.pts || 0) % DIV_PTS}점 · ${ROUNDS[r.round] || ROUNDS[0]}`);
+const standing2 = r => `${(r.pts || 0) % DIV_PTS}점 · ${ROUNDS[r.round] || ROUNDS[0]}`;   // 풀로세움도 다음 별까지 점수(2026-10-23 점수제)
 export const ranks = {
   theme: 'ship',
   tall: true,

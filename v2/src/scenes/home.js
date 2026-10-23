@@ -5,8 +5,8 @@ import { icon } from '../art/icons.js';
 import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG, heroRemember } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
-import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd, rankOf, tourName, isTopTier, DIV_PTS } from '../game/catalog.js';
-import { plantStats, leaguesOf, leagueCap, setLeague, winsNeed } from '../game/logic.js';
+import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd, rankOf, tourName, isTopTier, starOf, DIV_PTS } from '../game/catalog.js';
+import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { openTeamPick } from './teampick.js';
@@ -353,8 +353,8 @@ export const home = {
     g.text(rk, rx, y + 9, { font: g.textW(rk, 'value') > 58 ? sized('value', 12) : 'value', color: TIER_COL[tier] || P.main });
     g.img(icon('pencil'), x + w - 19, y + 9);
     //  둘째 줄 = 고른 리그 · 칸 점수(2026-10-23 사용자 "새싹 리그면 프로필도 새싹으로 해줘" — 라운드 승패는 아래 대회 카드에 그대로)
-    g.text(`${(LEAGUES[s.league] || LEAGUES.sprout).short} · ${isTopTier(tier) ? `★${TT.stars || 0}` : `${(TT.pts || 0) % DIV_PTS}점`}`, rx, y + 27, { font: 'label', color: P.sub });
-    tbar(g, rx, y + 45, w - (rx - x) - 9, 5, isTopTier(tier) ? Math.min(1, TT.wins / winsNeed(TT)) : ((TT.pts || 0) % DIV_PTS) / DIV_PTS, 'exp');
+    g.text(`${(LEAGUES[s.league] || LEAGUES.sprout).short} · ${isTopTier(tier) ? `★${starOf(TT)}` : `${(TT.pts || 0) % DIV_PTS}점`}`, rx, y + 27, { font: 'label', color: P.sub });
+    tbar(g, rx, y + 45, w - (rx - x) - 9, 5, ((TT.pts || 0) % DIV_PTS) / DIV_PTS, 'exp');   // 다음 칸(맨 위 = 다음 별)까지
     if (tappable) app.input.hit('home_profile', x, y, w, h, () => { this.editing = true; }, 2);
   },
   // 프로필 설정 창: 미리보기 배너 · 이름 바꾸기 · 대표 식물 · 칭호 · 배너 색 · 완료

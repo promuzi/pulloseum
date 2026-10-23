@@ -30,7 +30,7 @@ seasonSync(s, t1);
 const box = s.pending.find(x => x.kind === 'season');
 ok(box && box.n === n0 && box.best.sprout === 1 && box.best.open === 2 && s.wallet.credits > credits0, '시즌 마감 상자(지난 시즌 · 리그마다 최고)');
 ok(box && box.title === '골드 재배사' && s.titles.includes('골드 재배사'), '골드부터 칭호');
-ok(s.season.n === n0 + 1 && s.tournament.tier === '브론즈' && s.leagues.open.tier === '브론즈' && s.tournament.round === '예선' && s.tournament.pts === 0, '새 시즌 = 두 단계 내려가 4칸 예선부터(실버 → 브론즈 · 골드 → 브론즈)');
+ok(s.season.n === n0 + 1 && s.tournament.tier === '실버' && s.leagues.open.tier === '골드' && s.tournament.round === '예선' && s.tournament.pts === 0, '새 시즌 = 골드 IV 위로 올라간 점수의 절반만 남기고 예선부터(실버 IV · 골드 IV 0점은 그대로 — 2026-10-23)');
 seasonSync(s, t1 + 60e3);
 ok(s.pending.filter(x => x.kind === 'season').length === 1, '같은 시즌엔 상자 한 번만');
 ackPending(s, 9);

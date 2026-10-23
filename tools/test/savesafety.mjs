@@ -47,29 +47,44 @@ t('라운드 실패 = 그 대회 끝(예선부터) · 예선 탈락 −10 · 16�
   let a = lose(); eq([a.reset, T().round, T().wins, T().losses, T().bestOf, T().pts, a.rankPts], ['cup', '예선', 0, 0, 5, 30, undefined], '브론즈 8강 탈락 = 대회 끝 · 감점 없음');
   Object.assign(T(), { tier: '실버', round: '예선', wins: 0, losses: 2, pts: 105 });
   a = lose(); eq([a.reset, T().pts, a.rankPts, a.divDown], ['cup', 95, -10, '실버 IV'], '예선 탈락 −10 · 칸 내려감(실버 III → IV)');
-  Object.assign(T(), { tier: '실버', round: '16강', wins: 1, losses: 2, pts: 3 });
-  a = lose(); eq([T().tier, T().pts, a.rankPts], ['실버', 0, -3], '16강 탈락 −5 · 바닥 0(단계는 그대로)');
   Object.assign(T(), { tier: '브론즈', round: '16강', wins: 1, losses: 2, pts: 102 });
   a = lose(); eq([T().tier, T().pts, a.divDown], ['브론즈', 97, '브론즈 IV'], '브론즈도 같은 단계 안에선 칸 내려감(브론즈 III → IV, 2026-10-23 사용자 확인)');
-  Object.assign(T(), { tier: '실버', round: '예선', wins: 0, losses: 2, pts: 0 });
-  a = lose(); eq([T().tier, T().pts, a.rankPts], ['실버', 0, undefined], '0점에서 예선 탈락 = 그대로');
+  Object.assign(T(), { tier: '브론즈', round: '예선', wins: 0, losses: 2, pts: 4 });
+  a = lose(); eq([T().tier, T().pts, a.rankPts, a.tierDown], ['브론즈', 0, -4, undefined], '브론즈 IV 0점이 바닥');
   Object.assign(T(), { tier: '플래티넘', round: '4강', wins: 2, losses: 2, pts: 0 });
   a = lose(); eq([a.reset, T().losses, T().bestOf], [undefined, 3, 7], '플래티넘 3패 = 아직(7판 4선승)');
   a = lose(); eq([a.reset, T().round], ['cup', '예선'], '플래티넘 4패 = 대회 끝');
-  Object.assign(T(), { tier: '골드', round: '8강', wins: 2, losses: 0, pts: 390 });
-  a = win(); eq([a.rankPts, a.tierUp, a.divUp, T().tier, T().pts, T().round, T().bestOf], [25, '플래티넘', '플래티넘 IV', '플래티넘', 15, '4강', 7], '8강 통과로 단계가 오르면 대회는 이어서(4강 · 새 단계 판 수)');
-  Object.assign(T(), { tier: '플래티넘', round: '결승', wins: 3, losses: 0, pts: 390 });
-  a = win(); eq([a.champ, a.rankPts, a.tierUp, a.divUp, T().tier, T().pts, T().round, T().bestOf, a.credits], [true, 45, '다이아', '다이아 IV', '다이아', 35, '예선', 7, 105 + 300], '우승 +45 = 400점 넘어 다음 단계(남는 35점 넘어감) · 칸 보상 크레딧 300');
-  Object.assign(T(), { tier: '마스터', round: '4강', wins: 0, losses: 3, pts: 50 });
-  const b = L.battleForfeit(s, 'tournament');
-  eq([b.reset, T().round, T().pts], ['cup', '예선', 50], '마스터 4강 기권(4패) = 대회 끝 · 감점 없음');
-  Object.assign(T(), { tier: '마스터', round: '예선', wins: 0, losses: 3, pts: 50 });
+});
+t('단계 강등 · 승급 보호 · 풀로세움 점수제(2026-10-23 사용자 추천안 승인)', () => {
+  const s = fresh(), lose = () => L.battleReward(s, { mode: 'tournament', win: false, rng: makeRng(3), now: NOW }), win = () => L.battleReward(s, { mode: 'tournament', win: true, rng: makeRng(3), now: NOW }), T = () => s.tournament;
+  Object.assign(T(), { tier: '실버', round: '예선', wins: 0, losses: 2, pts: 3, guard: 0 });
+  let a = lose(); eq([T().tier, T().pts, a.rankPts, a.tierDown, a.divDown, T().bestOf, T().name], ['브론즈', 393, -10, '브론즈', '브론즈 I', 5, '새싹 브론즈'], '실버 IV 3점 예선 탈락 = 브론즈 I 93점(단계 강등)');
+  Object.assign(T(), { tier: '실버', round: '16강', wins: 1, losses: 2, pts: 2, guard: 2 });
+  a = lose(); eq([T().tier, T().pts, T().guard, a.tierDown], ['실버', 0, 1, undefined], '승급 보호가 남으면 그 단계 0점에서 멈춤 · 보호 하나 씀');
+  Object.assign(T(), { tier: '골드', round: '8강', wins: 2, losses: 0, pts: 390, guard: 0 });
+  a = win(); eq([a.rankPts, a.tierUp, a.divUp, T().tier, T().pts, T().round, T().bestOf, T().guard], [25, '플래티넘', '플래티넘 IV', '플래티넘', 15, '4강', 7, 4], '8강 통과로 단계가 오르면 대회는 이어서 · 보호 3 + 이 대회');
+  for (let i = 0; i < 4; i++) { Object.assign(T(), { round: '8강', wins: 0, losses: 3 }); lose(); }
+  eq([T().tier, T().guard], ['플래티넘', 0], '대회 넷이 끝나면 보호 다 씀(8강 탈락 = 감점 없음)');
+  Object.assign(T(), { round: '예선', wins: 0, losses: 3, pts: 6 });
+  a = lose(); eq([T().tier, T().pts, a.tierDown, a.divDown], ['골드', 396, '골드', '골드 I'], '보호가 끝나면 플래티넘 IV 6점 → 골드 I 96점');
+  Object.assign(T(), { tier: '플래티넘', round: '결승', wins: 3, losses: 0, pts: 390, guard: 0 });
+  a = win(); eq([a.champ, a.rankPts, a.tierUp, a.divUp, T().tier, T().pts, T().round, T().bestOf, T().guard, a.credits], [true, 45, '다이아', '다이아 IV', '다이아', 35, '예선', 7, 3, 105 + 300], '우승으로 단계가 오르면 보호 3(대회가 이미 끝남) · 칸 보상 크레딧 300');
+  Object.assign(T(), { tier: '마스터', round: '예선', wins: 0, losses: 3, pts: 50, guard: 0 });
   const c = L.battleForfeit(s, 'tournament');
   eq([c.reset, T().pts, c.rankPts], ['cup', 40, -10], '마스터 예선 기권 = −10');
-  Object.assign(T(), { tier: '풀로세움', round: '결승', wins: 3, losses: 0, pts: 0, stars: 0 });
-  a = win(); eq([a.champ, T().stars, T().pts, a.rankPts, T().tier], [true, 1, 0, undefined, '풀로세움'], '풀로세움 우승 = 별 하나(점수 없음)');
-  Object.assign(T(), { tier: '풀로세움', round: '예선', wins: 0, losses: 3 });
-  a = lose(); eq([a.reset, T().pts, a.rankPts], ['cup', 0, undefined], '풀로세움 예선 탈락 = 감점 없음');
+  Object.assign(T(), { tier: '마스터', round: '결승', wins: 3, losses: 0, pts: 390, guard: 0 });
+  a = win(); eq([a.tierUp, T().tier, T().pts, T().stars, T().guard], ['풀로세움', '풀로세움', 35, 0, 3], '마스터 I 우승 = 풀로세움 35점(남는 점수 넘어감)');
+  Object.assign(T(), { tier: '풀로세움', round: '결승', wins: 3, losses: 0, pts: 80, guard: 0 });
+  a = win(); eq([a.champ, a.rankPts, T().pts, T().stars, a.starUp, a.divUp, a.credits], [true, 45, 125, 1, 1, '풀로세움', 150 + 300], '풀로세움 우승 +45 = 100점 넘어 별 하나(별 보상 = 칸 보상)');
+  Object.assign(T(), { tier: '풀로세움', round: '예선', wins: 0, losses: 3, pts: 105, guard: 0 });
+  a = lose(); eq([T().tier, T().pts, T().stars, a.rankPts, a.divDown], ['풀로세움', 95, 0, -10, '풀로세움'], '풀로세움도 감점 · 별이 줄 수 있음');
+  Object.assign(T(), { tier: '풀로세움', round: '16강', wins: 1, losses: 3, pts: 2, guard: 0 });
+  a = lose(); eq([T().tier, T().pts, a.tierDown, a.divDown, T().bestOf], ['마스터', 397, '마스터', '마스터 I', 7], '풀로세움 0점 아래 = 마스터 I');
+});
+t('시즌 넘김 = 골드 IV 위로 올라간 점수의 절반만 남김(2026-10-23)', () => {
+  const C = (tier, pts) => { const r = L.seasonCarry({ tier, pts }); return `${r.tier} ${r.pts}`; };
+  eq([C('브론즈', 250), C('실버', 399), C('골드', 0), C('골드', 300), C('플래티넘', 0), C('다이아', 0), C('마스터', 300), C('풀로세움', 0), C('풀로세움', 300)],
+    ['브론즈 250', '실버 399', '골드 0', '골드 150', '골드 200', '플래티넘 0', '플래티넘 350', '다이아 0', '다이아 150'], '절반 남김(높을수록 많이 · 순서 그대로)');
 });
 
 // ── 서버: 옮기기 직전 원본 보관 · 옛 규칙 판 = 승패 없이 닫힘 ──

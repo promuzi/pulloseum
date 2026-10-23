@@ -1,7 +1,7 @@
 // 결과 화면 대회 점수 막대(2026-10-23 사용자 "각 리그의 승급과 강등, 점수에 관해 직관적으로 와닿게 효과 … 클로얄의 경우 승리후 트로피가 게이지바에 들어가면서
 //  늘어나는 연출"): 얻은 점수 = 금빛 알갱이가 '+25점' 알약에서 날아와 막대 끝에 닿을 때마다 막대가 차오르고 숫자가 오름 · 칸(100점)을 넘으면 막대가 꽉 차 번쩍인 뒤
 //  엠블럼이 판 위로 떠올라 칸 숫자가 넘어가며 '승급!' · 잃은 점수 = 붉은 알갱이가 막대 끝에서 떨어져 나가며 줄고, 칸이 내려가면 엠블럼이 어두워지며 '강등' ·
-//  맨 위 단계(풀로세움) = 우승마다 별 하나가 날아와 별 수가 늘어남.
+//  맨 위 단계(풀로세움) = 위가 없는 점수 · 100점마다 별(별이 오르내리면 별 수가 넘어감) · 단계 강등(같은 날 추천안 승인) = 옛 엠블럼이 어두워지며 흔들리다 아래 단계 엠블럼으로.
 // 승급 모션(같은 날 사용자 "승급시 모션도 줘. 롤처럼 엠블럼도 좋고"): 단계가 오르면 화면 가득 — 옛 엠블럼이 빛을 모아 떨다 번쩍 → 새 엠블럼이 떨어져 박히며
 //  빛살 · 파문 · 조각 + 단계 이름(rankCeremony, 누르면 넘김). 엠블럼 = 코덱스 디자인 도트(assets/v2/icons/emblem_<단계>_<s|m|l>.png — 24 · 48 · 96칸, 없으면 방패 휘장)
 // 그리기만 함(상태 없음) — 같은 at(결과가 뜬 뒤 ms) · skipAt(넘긴 때)이면 같은 그림(촬영 · 영상)
@@ -20,30 +20,32 @@ const easeOut = x => 1 - (1 - x) * (1 - x);
 const easeBack = x => { const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
 const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 const tierIx = R => Math.max(0, Math.min(TOP, TIERS.indexOf(R.tier)));
-const lin = R => (tierIx(R) >= TOP ? TOP * TIER_PTS : tierIx(R) * TIER_PTS + Math.max(0, Math.min(TIER_PTS - 1, R.pts || 0)));   // 브론즈 4 0점 = 0 … 풀로세움 = 2400
+const lin = R => (tierIx(R) >= TOP ? TOP * TIER_PTS + Math.max(0, R.pts || 0) : tierIx(R) * TIER_PTS + Math.max(0, Math.min(TIER_PTS - 1, R.pts || 0)));   // 브론즈 IV 0점 = 0 … 풀로세움 0점 = 2400(위가 없음)
 const bez = (a, c, b, u) => (1 - u) * (1 - u) * a + 2 * (1 - u) * u * c + u * u * b;
 function shade(hex, k) { const n = parseInt(hex.slice(1), 16), f = c => Math.round(k > 0 ? c + (255 - c) * k : c * (1 + k)); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; }
 
-// 막대 위치 → 단계 · 칸(4 → 1, 맨 위 = 0) · 칸 안 점수
+// 막대 위치 → 단계 · 칸(4 → 1, 맨 위 = 0) · 별(맨 위) · 칸(별) 안 점수
 function view(v) {
   const t = Math.min(TOP, Math.floor(v / TIER_PTS + 1e-9));
-  if (t >= TOP) return { tier: TOP, div: 0, pts: 0, frac: 1 };
+  if (t >= TOP) { const q = v - TOP * TIER_PTS, st = Math.floor(q / DIV_PTS + 1e-9), p = q - st * DIV_PTS; return { tier: TOP, div: 0, star: st, pts: p, frac: p / DIV_PTS }; }
   const inT = v - t * TIER_PTS, d = Math.min(DIVS - 1, Math.floor(inT / DIV_PTS + 1e-9)), p = inT - d * DIV_PTS;
-  return { tier: t, div: DIVS - d, pts: p, frac: p / DIV_PTS };
+  return { tier: t, div: DIVS - d, star: 0, pts: p, frac: p / DIV_PTS };
 }
 const evAt = (P, k) => START + k * STAGGER + (P.d > 0 ? FLIGHT : 0);   // 알갱이 k 가 막대에 닿는(+) · 막대를 떠나는(−) 때(멈춤 전)
 function valueAt(P, t) { let s = 0; for (let k = 0; k < P.n; k++) s += clamp01((t - evAt(P, k)) / EASE); return P.a + P.share * s; }
 // 알갱이 수 · 몫 · 넘는 칸 경계(많아야 하나 — 한 판에 +45 · −10까지)와 그때 · 멈춤(단계 승급 = 모션 동안, 넘기면 짧게)
 function plan(R, skipAt = null) {
-  const a = lin(R.from), b = lin(R.to), d = b - a, P = { a, b, d, n: 0, share: 0, cross: null, hold: 0, star: (R.to.stars || 0) > (R.from.stars || 0) };
+  const a = lin(R.from), b = lin(R.to), d = b - a, P = { a, b, d, n: 0, share: 0, cross: null, hold: 0 };
   if (!d) return P;
   P.n = Math.max(3, Math.min(9, Math.round(Math.abs(d) / 5))); P.share = d / P.n;
   const bd = d > 0 ? (Math.floor(a / DIV_PTS) + 1) * DIV_PTS : Math.floor(a / DIV_PTS) * DIV_PTS;
   if (d > 0 ? b >= bd : b < bd) {   // 넘는 때 = 막대가 경계에 닿는 때(알갱이 몫이 겹쳐 차므로 반으로 나눠 찾음)
     let lo = START, hi = evAt(P, P.n - 1) + EASE;
     for (let i = 0; i < 32; i++) { const mid = (lo + hi) / 2; if (d > 0 ? valueAt(P, mid) >= bd : valueAt(P, mid) <= bd) hi = mid; else lo = mid; }
-    P.cross = { at: hi, v: bd, tier: d > 0 && bd % TIER_PTS === 0 };
-    P.hold = P.cross.tier ? CER : HOLD;
+    //  넘는 경계: 단계 승급(풀로세움으로 오르는 것까지) · 칸 · 별(풀로세움 안) · 단계 강등(풀로세움 → 마스터 포함)
+    const topV = TOP * TIER_PTS, kind = d > 0 ? (bd <= topV && bd % TIER_PTS === 0 ? 'tierUp' : bd > topV ? 'starUp' : 'divUp') : (bd > topV ? 'starDown' : bd % TIER_PTS === 0 ? 'tierDown' : 'divDown');
+    P.cross = { at: hi, v: bd, kind, tier: kind === 'tierUp' };
+    P.hold = P.cross.tier ? CER : kind === 'tierDown' ? HOLD + 300 : HOLD;
     if (P.cross.tier && skipAt != null && skipAt >= P.cross.at) P.hold = Math.max(SWAP + 150, Math.min(CER, skipAt - P.cross.at + 300));
   }
   return P;
@@ -149,17 +151,16 @@ export function rankGauge(app, R, at, { x, y, w, src, line = '', skipAt = null }
   // 단계 · 칸 이름(바뀐 직후 잠깐 흰색 · 내려가면 붉게) + 오른쪽 점수(맨 위 = 별 수)
   const flashW = divX && up && dC >= 0 && dC < 160, flashR = divX && !up && dC >= 0 && dC < 320;
   const lw = g.text(top ? TIERS[TOP] : `${TIERS[V.tier]} ${ROMAN[V.div]}`, bx0 + shake, y + 6, { font: 'bold', color: flashW ? '#ffffff' : flashR ? '#ff8a7a' : TIER_COL[TIERS[V.tier]] || T.ptext.main });
-  if (top) {
-    const sArr = START + FLIGHT + 120, stars = P.star && at < sArr ? R.from.stars || 0 : R.to.stars || 0, sx = x + w - 8;
-    if (P.star && at >= sArr && at < sArr + 520) g.alpha(0.6 * (1 - (at - sArr) / 520), () => g.disc(sx - 10, y + 11, 6 + Math.round(12 * (at - sArr) / 520), GOLD[1]));
-    g.text(`★ ${stars}`, sx, y + 6, { font: 'bold', color: '#ffd890', align: 'right' });
-  } else {
-    const tw = g.text(`/${DIV_PTS}`, x + w - 8, y + 6, { font: 'bold', color: T.ptext.dim, align: 'right' });
-    g.text(String(Math.floor(V.pts + 1e-6)), x + w - 8 - tw - 1, y + 6, { font: 'bold', color: T.ptext.main, align: 'right' });
-  }
-  // 막대: 테 · 바탕 · 금빛 채움(맨 위 단계 = 꽉 참) · 25점마다 눈금 · 지나가는 반짝임
+  //  오른쪽 = 칸(별) 안 점수 '45/100' · 맨 위면 앞에 별 수 · 승급 보호가 남았으면 방패와 남은 대회 수
+  let rx = x + w - 8;
+  rx -= g.text(`/${DIV_PTS}`, rx, y + 6, { font: 'bold', color: T.ptext.dim, align: 'right' }) + 1;
+  rx -= g.text(String(Math.floor(V.pts + 1e-6)), rx, y + 6, { font: 'bold', color: T.ptext.main, align: 'right' }) + 6;
+  if (top) rx -= g.text(`★${V.star}`, rx, y + 6, { font: 'bold', color: '#ffd890', align: 'right' }) + 6;
+  const guard = R.to.guard || 0;
+  if (guard > 0 && !(C && C.tier && at < C.at + P.hold)) { const sh = icon('shield'); rx -= g.text(String(guard), rx, y + 6, { font: 'bold', color: '#9fd8ff', align: 'right' }) + 2; if (sh) g.img(sh, rx - (sh.naturalWidth || sh.width), y + 6); }
+  // 막대: 테 · 바탕 · 금빛 채움 · 25점마다 눈금 · 지나가는 반짝임
   g.rect(bx0 - 1, by0 - 1, bw + 2, bh + 2, INK); g.rect(bx0, by0, bw, bh, '#18243c');
-  const fw = Math.round(bw * (top ? 1 : V.frac));
+  const fw = Math.round(bw * V.frac);
   if (fw > 0) {
     g.rect(bx0, by0, fw, bh, GOLD[0]); g.rect(bx0, by0, fw, 2, GOLD[1]); g.rect(bx0, by0 + bh - 2, fw, 2, GOLD[2]);
     const sh = ((at / 1800) % 1.4) * bw - 10; if (sh > -4 && sh < fw) g.alpha(0.35, () => g.rect(bx0 + Math.max(0, Math.round(sh)), by0, Math.min(4, fw - Math.max(0, Math.round(sh))), bh, '#ffffff'));
@@ -189,38 +190,47 @@ export function rankGauge(app, R, at, { x, y, w, src, line = '', skipAt = null }
     if (up) {
       burst(g, cx, cy, dC, 16, [col, '#ffffff', GOLD[0]], 11, 90, 700);
       if (dC < 800) { const k = dC / 800; g.alpha(1 - k, () => arrow(g, cx, y + 2 - Math.round(10 * k), true, GOLD[1])); }
-      if (dC < 1300) { const k = dC / 1300; g.alpha(fade(k), () => g.text('승급!', tx, y + 6 - Math.round(4 * Math.min(1, k * 4)), { font: 'bold', color: '#ffe27a', outline: '#3a2406', outlineW: 3 })); }
+      if (dC < 1300) { const k = dC / 1300; g.alpha(fade(k), () => g.text(C.kind === 'starUp' ? '★ +1' : '승급!', tx, y + 6 - Math.round(4 * Math.min(1, k * 4)), { font: 'bold', color: '#ffe27a', outline: '#3a2406', outlineW: 3 })); }
     } else {   // 엠블럼에서 붉은 조각이 아래로 떨어짐 · ▼ · '강등'
       if (dC < 650) for (let i = 0; i < 6; i++) { const s = dC / 1000; g.alpha(1 - dC / 650, () => g.rect(Math.round(cx - 5 + i * 2 + (hash(i + 9) - 0.5) * 34 * s), Math.round(cy + 8 + 30 * s + 160 * s * s), 2, 2, i % 2 ? RED[0] : '#5a1a18')); }
       if (dC < 800) { const k = dC / 800; g.alpha(1 - k, () => arrow(g, cx, y + 34 + Math.round(8 * k), false, RED[0])); }
-      if (dC < 1300) { const k = dC / 1300; g.alpha(fade(k), () => g.text('강등', tx, y + 6 + Math.round(3 * Math.min(1, k * 4)), { font: 'bold', color: '#ff8a7a', outline: '#3a0c0a', outlineW: 3 })); }
+      if (dC < 1300) { const k = dC / 1300; g.alpha(fade(k), () => g.text(C.kind === 'starDown' ? '★ −1' : '강등', tx, y + 6 + Math.round(3 * Math.min(1, k * 4)), { font: 'bold', color: '#ff8a7a', outline: '#3a0c0a', outlineW: 3 })); }
     }
     divPop(g, P, V, at, x + Math.round(w / 2), y - 40);
-  }
-  // 맨 위 단계 우승 = 별 하나가 날아와 별 수에 들어감
-  if (top && P.star && src) {
-    const p = (at - START) / (FLIGHT + 120), ex = x + w - 20, ey = y + 11;
-    if (p >= 0 && p < 1) { const u = p * p; g.text('★', bez(src.x, src.x + 40, ex, u), bez(src.y, (src.y + ey) / 2, ey, u) - 6, { font: 'head', color: '#ffe27a', outline: '#3a2406', outlineW: 3, align: 'center' }); }
-    burst(g, ex + 10, ey, at - START - FLIGHT - 120, 14, [GOLD[1], '#ffffff', GOLD[0]], 3, 80, 700);
   }
   if (line) g.text(line, x + w / 2, y + 44, { color: T.ptext.sub, align: 'center' });
   return line ? 58 : 44;
 }
-// 칸 승급 · 강등 모션(판 위, 1.5초): 48칸 엠블럼이 떨어져 나타나 빛 띠가 지나가고(강등 = 어두워짐) 아래 '골드 4 → 3' 숫자가 넘어감 → 막대 쪽으로 가라앉으며 사라짐
+// 별 판(풀로세움 — 엠블럼 아래 '★ 3', flip = { from, f, up } 이면 숫자가 넘어감)
+function starPlate(g, cx, y, n, flip = null) {
+  const s = `★ ${n}`, s0 = flip ? `★ ${flip.from}` : '', w = Math.max(g.textW(s, 'bold'), s0 ? g.textW(s0, 'bold') : 0) + 12, h = 15, x = Math.round(cx - w / 2);
+  g.rect(x, y, w, h, INK); g.rect(x + 1, y + 1, w - 2, h - 2, '#c8901e'); g.rect(x + 2, y + 2, w - 4, h - 4, '#18213a');
+  const o = { font: 'bold', color: '#ffd24a', align: 'center' };
+  if (!flip || flip.f >= 1) { g.text(s, cx, y + 2, o); return; }
+  const sgn = flip.up ? -1 : 1, d = Math.round(10 * flip.f);
+  g.clip(x + 2, y + 2, w - 4, h - 4, () => { g.text(s0, cx, y + 2 + sgn * d, o); g.text(s, cx, y + 2 - sgn * (10 - d), o); });
+}
+// 칸 · 별 · 단계 강등 모션(판 위, 1.5초): 48칸 엠블럼이 떨어져 나타나 빛 띠가 지나가고(내림 = 어두워짐) 아래 숫자 판(로마 숫자 · 풀로세움은 별)이 넘어감 → 막대 쪽으로 가라앉으며 사라짐
+//  단계 강등 = 옛 엠블럼이 어두워지며 흔들리다 아래 단계 엠블럼으로 바뀜(IV → 아래 단계 I)
 function divPop(g, P, V, at, px, py) {
-  const C = P.cross, up = P.d > 0, t = at - C.at, A = -60, B = 1500;
+  const C = P.cross, up = P.d > 0, t = at - C.at, A = -60, B = C.kind === 'tierDown' ? 1800 : 1500;
   if (t < A || t >= B) return;
   const appear = clamp01((t - A) / 220), leave = clamp01((B - t) / 300), a = Math.min(appear, leave), dy = Math.round(-12 * (1 - easeOut(appear)) + 18 * (1 - leave));
-  const oldV = view(up ? C.v - 1e-6 : C.v), newV = view(up ? C.v : C.v - 1e-6), col = TIER_COL[TIERS[V.tier]] || GOLD[0];
+  const oldV = view(up ? C.v - 1e-6 : C.v), newV = view(up ? C.v : C.v - 1e-6), star = C.kind === 'starUp' || C.kind === 'starDown', tierDn = C.kind === 'tierDown';
+  const sw = tierDn ? SWAP + 420 : SWAP, tier = tierDn ? (t < sw ? oldV.tier : newV.tier) : V.tier, col = TIER_COL[TIERS[tier]] || GOLD[0];   // 단계 강등은 옛 엠블럼을 조금 더 오래(어두워지며 흔들림)
   g.alpha(0.82 * a, () => { g.rect(px - 44, py - 41 + dy, 88, 82, '#0a1220'); g.rect(px - 45, py - 40 + dy, 90, 80, '#0a1220'); });
   if (up && t >= SWAP && t < SWAP + 700) g.alpha(0.5 * a * (1 - (t - SWAP) / 700), () => g.disc(px, py - 12 + dy, 18 + Math.round(16 * (t - SWAP) / 700), col));
-  const fx = up ? { white: t >= SWAP && t < SWAP + 160 ? 0.8 * (1 - (t - SWAP) / 160) : 0, shine: t > SWAP + 200 && t < SWAP + 650 ? (t - SWAP - 200) / 450 : -1 } : { dark: t >= SWAP ? 0.45 * clamp01(1 - (t - SWAP - 600) / 500) : 0 };
-  const ce = py - 12 + dy;
+  const fx = up ? { white: t >= SWAP && t < SWAP + 160 ? 0.8 * (1 - (t - SWAP) / 160) : 0, shine: t > SWAP + 200 && t < SWAP + 650 ? (t - SWAP - 200) / 450 : -1 }
+    : tierDn ? { dark: t < sw ? 0.7 * clamp01((t - A) / (sw - A)) : 0.55 * clamp01(1 - (t - sw) / 700) }
+    : { dark: t >= SWAP ? 0.45 * clamp01(1 - (t - SWAP - 600) / 500) : 0 };
+  const ce = py - 12 + dy, sh = tierDn && t < sw ? Math.round(Math.sin(t / 16) * 3 * clamp01((t - A) / (sw - A))) : 0, f = clamp01((t - sw) / 240);
   g.alpha(a, () => {
-    const { h } = emblem(g, V.tier, 'm', px, ce, fx), pt = Math.round(ce + h / 2 - 3);
-    numeralPlate(g, px, pt, newV.div, 1, { from: oldV.div, f: clamp01((t - SWAP) / 240), up });   // 칸 숫자 넘김(오름 = 옛 숫자가 위로 빠지고 새 숫자가 아래에서 · 내림 = 거꾸로)
-    g.text(TIERS[V.tier], px, pt + 15, { font: 'bold', color: col, align: 'center' });
+    const { h } = emblem(g, tier, 'm', px + sh, ce, fx), pt = Math.round(ce + h / 2 - 3);
+    if (star) starPlate(g, px, pt, newV.star, { from: oldV.star, f, up });
+    else numeralPlate(g, px, pt, newV.div, 1, { from: oldV.div, f, up });   // 칸 숫자 넘김(오름 = 옛 숫자가 위로 빠지고 새 숫자가 아래에서 · 내림 = 거꾸로)
+    g.text(TIERS[tier], px, pt + 15, { font: 'bold', color: col, align: 'center' });
   });
+  if (tierDn && t >= sw && t < sw + 650) for (let i = 0; i < 8; i++) { const s = (t - sw) / 1000; g.alpha(1 - (t - sw) / 650, () => g.rect(Math.round(px - 8 + i * 2 + (hash(i + 21) - 0.5) * 40 * s), Math.round(ce + 10 + 30 * s + 160 * s * s), 2, 2, i % 2 ? RED[0] : '#5a1a18')); }
 }
 
 // 단계 승급 모션(화면 가득, 3초 · 누르면 넘김): 어두워짐 → 옛 엠블럼에 빛이 모이며 떨림 → 번쩍 → 새 엠블럼이 떨어져 박힘(파문 · 조각 · 빛살) → 빛 띠 → 단계 이름 · '승급!' → 사라짐

@@ -692,10 +692,15 @@ export const BANNER_LV = [1, 1, 1, 1, 5, 10, 15, 20, 3, 8, 25, 30];   // 배너 
 export const roundBest = tier => (tier >= 3 ? 7 : 5);
 // 대회 점수 · 칸(2026-10-23 사용자 안 C + "결승을 이기는 점수가 모여야 4>3으로" · "랭크전이니깐 어쩔 수 없는걸로해"):
 //  라운드 통과 = 예선 · 16강 0 · 8강 +25 · 4강 +30 · 우승 +45, 라운드에서 지면 그 대회 끝(다음은 예선부터) · 예선 탈락 −10 · 16강 탈락 −5 · 8강부터는 감점 없음
-//  칸 = 단계마다 넷(브론즈 4 → 1) · 칸 하나 100점(우승 한 번어치) · 칸 넷(400점)이면 다음 단계(남는 점수 넘어감) · 점수는 그 단계 바닥(0) 아래로 안 내려감(칸은 내려가도 단계는 시즌 안에 그대로)
-//  칸이 오를 때마다 보상(전 단계 승급 보상 그대로) · 맨 위(풀로세움)는 칸 · 점수 없이 우승마다 별
+//  칸 = 단계마다 넷(브론즈 IV → I) · 칸 하나 100점(우승 한 번어치) · 칸 넷(400점)이면 다음 단계(남는 점수 넘어감) · 강등 · 보호 · 시즌 넘김은 아래 하락 규칙
+//  칸(맨 위는 별)이 오를 때마다 보상(전 단계 승급 보상 그대로)
 export const ROUND_PTS = [0, 0, 25, 30, 45], LOSE_PTS = [10, 5, 0, 0, 0], DIV_PTS = 100, DIVS = 4, DIV_REWARD = { credits: 300, parts: 5 };
+export const TIER_PTS = DIV_PTS * DIVS;
+// 하락 규칙(2026-10-23 사용자 "추천안대로 넣어줘"): 시즌 중 단계 강등(IV칸 0점에서 감점되면 아래 단계 I칸 · 브론즈 IV 0점이 바닥) · 단계가 오른 뒤 대회 GUARD_CUPS번은 그 단계 아래로 안 떨어짐 ·
+//  풀로세움도 점수제(위가 없음 · 100점마다 별 하나 · 0점 아래면 마스터 I) · 시즌 끝 = 골드 IV(SEASON_FLOOR) 위로 올라간 점수의 절반만 남김(그 아래는 칸 · 점수까지 그대로)
+export const GUARD_CUPS = 3, SEASON_FLOOR = 2 * TIER_PTS;
 export const isTopTier = tier => TIERS.indexOf(tier) >= TIERS.length - 1;
+export const starOf = T => (T && isTopTier(T.tier) ? Math.floor(Math.max(0, T.pts || 0) / DIV_PTS) : 0);   // 풀로세움 별 = 100점마다 하나
 export const divOf = T => DIVS - Math.min(DIVS - 1, Math.floor(Math.max(0, (T && T.pts) || 0) / DIV_PTS));   // 4(처음) → 1
 export const ROMAN = ['', 'I', 'II', 'III', 'IV'];   // 칸 = 로마 숫자로 보임(2026-10-23 사용자 "로마숫자가 멋있을 거 같아" — 엠블럼 아래 숫자 판 · 글자 모두)
 export const rankOf = T => (isTopTier(T.tier) ? T.tier : `${T.tier} ${ROMAN[divOf(T)]}`);   // '브론즈 IV' · 맨 위 = '풀로세움'
