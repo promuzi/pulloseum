@@ -61,16 +61,18 @@ export function initiativeChance(spdA, spdB, bonusA = 0) {
 export function hitTable(att, def, o = {}) {
   let miss = RULES.baseMiss + (def.eva || 0) - (att.acc || 0) + (o.missAdd || 0);
   let graze = RULES.baseGraze + (o.grazeAdd || 0);
-  let crit = (att.crit || 0) + (o.critAdd || 0);
+  let crit = (att.crit || 0) + (o.critAdd || 0) + (o.aim || 0);
   if (o.critK != null) crit = Math.floor(crit * o.critK);
   miss = Math.max(0, Math.min(RULES.missMax, miss)); crit = Math.max(0, Math.min(RULES.critMax, crit));
+  if (o.aim) miss = 0;   // 조준(2026-10-23 재정의) = 빗나감 칸 없음 · 치명 칸 증가 · 회피가 옮기는 칸은 스침으로(아래)
   const sh = o.shift;   // 회피 자세: { miss, graze, critToGraze }
   if (sh) {
     const k = o.shiftK ?? 1;
     const dm = Math.round((sh.miss || 0) * k), dg = Math.round((sh.graze || 0) * k);
     if (sh.critToGraze) { const c = Math.round(crit * sh.critToGraze * k); crit -= c; graze += c; }
     crit -= Math.min(crit, dm + dg);   // 옮긴 만큼 치명부터 줄고, 모자란 몫은 정타가 줄어든다(정타 = 나머지)
-    miss = Math.min(RULES.missMax, miss + dm); graze += dg;
+    if (o.aim) graze += dm + dg;   // 조준 vs 회피 = 중간에서 만나기(사용자 확정 — 빗나감 대신 스침)
+    else { miss = Math.min(RULES.missMax, miss + dm); graze += dg; }
   }
   const total = miss + graze + crit;
   if (total > 100) { const over = total - 100; const g = Math.min(graze, over); graze -= g; crit -= Math.min(crit, over - g); }
@@ -220,7 +222,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     //  한 타로 깨질 때 남는 피해는 안 넘어감 · 보호막(주인)이 소환수보다 먼저 막음 · 소환수에겐 자세 · 은신이 없음
     const sums = () => (foe.summons || []).filter(s => s.hp > 0);
     const hitSum = (s, ah, i) => {
-      const k = foe.summons.indexOf(s), t = hitTable(u, s, { area: !!a.area, critAdd: aimK + critAddOf(u), missAdd: missAddOf(u) }), tier = tierOf(t, Math.floor(rng() * 100));
+      const k = foe.summons.indexOf(s), t = hitTable(u, s, { area: !!a.area, aim: aimK, critAdd: critAddOf(u), missAdd: missAddOf(u) }), tier = tierOf(t, Math.floor(rng() * 100));
       let dm = Math.round(hitDmg(u, s, ah, em) * RULES.tierMult[tier] * (ambush ? FX.stealth.ambush : 1)), absorb = 0;
       if (dm > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dm); sh.hp -= absorb; dm -= absorb; shieldHit = true; }
       dm = Math.min(dm, s.hp); s.hp -= dm;
@@ -238,9 +240,9 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const guardOn = !ambush && still && guards.has(foe);
       if (guardOn) showStance(foe, 'guard');
       const veil = a.area ? 0 : has(foe, 'stealth') ? FX.stealth.miss : 0;   // 은신 = 광역 아닌 공격 95% 빗나감(내가 숨어 있어도)
-      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: aimK + critAddOf(u), missAdd: missAddOf(u) });
+      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, aim: aimK, critAdd: critAddOf(u), missAdd: missAddOf(u) });
       let tier, forced = false;
-      if (veil && rng() < veil) tier = 'miss';   // 은신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로)
+      if (veil && rng() < veil) tier = aimK ? 'graze' : 'miss';   // 은신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로) · 조준이면 스침으로 맞아 드러남
       else if (N > 1) tier = tierOf(t, Math.floor(rng() * 100));   // 연타 = 불운 보정 없음(사용자 "연타에서는 보정을 하지 말자")
       else { const j = judgeHit(t, u.st.miss[foe.id] || 0, rng); u.st.miss[foe.id] = j.missStreak; tier = j.tier; forced = j.forced; }
       if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';   // 치명 방어

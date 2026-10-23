@@ -216,6 +216,15 @@ test('조준(옛 집중): 다음 공격 기술 한 번의 모든 타 치명 +25 
   resolveTurn(R, unit('b'), STRIKE, { act: 'other' }, script([0, 0.5]));
   assert.ok(!has(R, 'aim'));
 });
+test('조준(2026-10-23 재정의): 결과표를 옮김 — 빗나감 칸 없음 · 치명 +25 · 회피 자세가 옮기는 칸은 빗나감 대신 스침 · 은신 상대도 맞아 은신이 풀림', () => {
+  const a = unit('a', { crit: 10 }), d = unit('d');
+  assert.deepEqual(hitTable(a, d, { aim: 25 }), { miss: 0, graze: 12, hit: 53, crit: 35 });
+  assert.deepEqual(hitTable(a, d, { aim: 25, shift: EVADE.shift }), { miss: 0, graze: 47, hit: 53, crit: 0 });   // 중간에서 만나기(사용자 확정)
+  const F = unit('f', { eff: { stealth: { look: 'stealth', link: null } } }), A = unit('a');
+  selfBuff(A, 'aim', { turn: 1, ev: [] });
+  const h = resolveTurn(A, F, STRIKE, { act: 'other' }, script([0, 0, 0.5, 0.5])).events.find(e => e.t === 'hit');
+  assert.equal(h.tier, 'graze'); assert.ok(!has(F, 'stealth'));
+});
 test('범위 공격은 은신을 가리지 못함 · 맞으면 은신이 풀림', () => {
   const F = unit('f', { eff: { stealth: { look: 'stealth', link: null } } });
   const ev = resolveTurn(unit('a'), F, { ...STRIKE, area: true }, { act: 'other' }, script([0, 0.5])).events;
