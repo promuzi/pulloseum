@@ -867,7 +867,7 @@ const ART_ICONS = ['gear', 'coin', 'gem', 'energy', 'lock', 'fire', 'water', 'gr
   // 효과 아이콘 = 효과 · 스킬 분류 엑셀 v10의 효과(2026-10-22 — 짝 표 docs/superpowers/specs/2026-10-22-v2-effect-icons.md) · 환경 · 설치형 · 소환수
   'fx_burn', 'fx_poison', 'fx_bleed', 'fx_shock', 'fx_chill', 'fx_wet', 'fx_shade', 'fx_seal', 'fx_taunt', 'fx_regen', 'fx_will', 'fx_immune', 'fx_aim', 'fx_stealth', 'fx_barrier', 'fx_evade', 'fx_reflect', 'fx_armor',
   'env_gale', 'env_inferno', 'env_fortress', 'env_sandcastle', 'env_sandstorm', 'env_healcastle', 'env_hellfort', 'env_walkcastle', 'trap_thorn', 'summon_guard',
-  'env_storm', 'res_reso', 'res_evstack', 'fx_counter',   // 종 고유 v2 첫 묶음(2026-10-24): 폭풍 · 공명 셈 · 피한 스택 · 반격
+  'env_storm', 'res_reso', 'res_evstack', 'fx_counter', 'env_cave', 'sum_sleep', 'sum_baby', 'sum_adult',   // 종 고유 v2 첫 묶음(2026-10-24): 폭풍 · 공명 셈 · 피한 스택 · 반격
   'can', 'fert', 'potion', 'fuel', 'parts'];
 const EXTRA = ['chest_body', 'chest_lid', 'planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen', 'planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel', 'planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen',
   // 대회 단계 엠블럼(2026-10-23 — tools/pixel/big/emblems.mjs): l 96칸(단계 승급 모션) · m 48칸(칸 승급) · s 24칸(점수 판 · 순위표) — scenes/rankfx.js emblem()
@@ -876,7 +876,7 @@ const SMALL_KEEP = new Set(['potion', 'parts', 'energy', 'shield', 'speed', 'vin
 const ALIAS = { st_stun: 'star', st_spore: 'mushroom', st_frozen: 'ice', st_paral: 'bolt', st_leech: 'seed', st_root: 'tree', fuel: 'energy', parts: 'gear',
   fx_burn: 'fire', fx_poison: 'poison', fx_bleed: 'heart', fx_shock: 'bolt', fx_chill: 'ice', fx_wet: 'water', fx_shade: 'shade', fx_seal: 'lock', fx_taunt: 'target', fx_regen: 'heal', fx_will: 'star', fx_immune: 'lock',
   fx_aim: 'crit', fx_stealth: 'down', fx_barrier: 'ice', fx_evade: 'speed', fx_reflect: 'cactus', fx_armor: 'gear', env_gale: 'wind', env_inferno: 'fire', env_fortress: 'shield', env_sandcastle: 'earth', env_sandstorm: 'wind',
-  env_healcastle: 'heal', env_hellfort: 'fire', env_walkcastle: 'earth', trap_thorn: 'cactus', summon_guard: 'shield', env_storm: 'wind', res_reso: 'cactus', res_evstack: 'speed', fx_counter: 'sword' };
+  env_healcastle: 'heal', env_hellfort: 'fire', env_walkcastle: 'earth', trap_thorn: 'cactus', summon_guard: 'shield', env_storm: 'wind', res_reso: 'cactus', res_evstack: 'speed', fx_counter: 'sword', env_cave: 'earth', sum_sleep: 'mushroom', sum_baby: 'mushroom', sum_adult: 'mushroom' };
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadIconArt(base = '../assets/v2/icons/') {
   const list = [...NAV_ICONS.flatMap(n => [n, n + '_b', n + '_n']), ...ART_ICONS.flatMap(n => [n, n + '_b', ...(MID(n) ? [n + '_m'] : [])]), ...EXTRA], got = await Promise.all(list.map(n => loadImg(base + n + '.png'))), by = {};
