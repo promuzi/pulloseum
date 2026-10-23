@@ -55,7 +55,7 @@ const STEM = {
   spark_young: 1, spark: -1, vine_water_young: -3, vine_water: -5, cactus_fire: -2, flower_fire_young: -1, cactus_wind_teen: -2, cactus_wind: -5,
   vine_wind_teen: -1, vine_wind: -4,
   blade_vine: 2,   // 2026-10-17 변환 경고 −2.0칸
-  stone_cap: -2,   // 2026-10-17 사용자 "돌로 된 버섯은 좀 더 좌측으로"
+  stone_cap: -4,   // 2026-10-17 사용자 "돌로 된 버섯은 좀 더 좌측으로" → 2026-10-23 "성체 몸이 화분 우측에 있다 좀만 왼쪽으로"(−2 → −4)
   drake_cactus_young: 2,   // 2026-10-17 진화 다시(뱀) — stemcheck −2.5칸
   gaia: 0,   // 가운데 몸통(+3칸)이 두 돌주먹에 가려 애매 — 주먹 사이 가운데·무게중심이 이미 가운데라 그대로
   astro_cap: -2, hyunmu_cap_young: -2, ranger_vine_teen: 3,   // 2026-10-17 셋째 아홉 변환 경고 +2.0칸
