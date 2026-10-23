@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-10-24 (241) — 새 기술 그림 열둘 · 효과 아이콘 넷(코덱스)
+
+- 사용자 ‘새 스킬이랑 기타 추가된 거 코덱스로 다시 그려서 추가해줘’.
+- 코덱스 원화(한 번씩만): 게일캑터 · 게일바인 기술 12장 = `tools/pixel/big/concept/skill/v2/`(지시 `SPECIES_V2_GALE_PROMPT.md` — 옛 개성 기술 원화는 `concept/skill/`에 그대로) → `skillart.py`로 `assets/v2/skills/<id>.png`(같은 id라 등록 그대로) · 효과 아이콘 시트 `concept/icons3/fx_08.png`(지시 `FX8_PROMPT.md` — 폭풍 · 공명 셈 · 피한 스택 · 반격) → `icons.mjs` → `assets/v2/icons/`.
+- 화면: 환경 띠 폭풍 = 새 아이콘 · 체력판 이름 줄 개수 칸 = 아이콘 + 수(공명 · 스택 — `devices.js RES_ICON`, 없으면 글). 검토 촬영 `?pre=foe:storm;me:reso2` · `me:evs3`(검토용 토큰 더함).
+- 반격 아이콘(`fx_counter`)은 만들어 두기만 함(띠 글 ‘공명’ · ‘반격’은 글 그대로).
+
 ### 2026-10-23 (240) — 종 고유 기술 첫 묶음: 게일캑터 · 게일바인(친구 서버 전)
 
 - 사용자 ‘ㅇㅇ지금 진행해’(조준 → 게일캑터 · 게일바인 · 친구 서버엔 아직 안 올림). 설계 = [종 기술 표](superpowers/specs/2026-10-18-v2-species-skills.md) 10 · 11번 절(사용자와 짠 것 그대로).

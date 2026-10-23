@@ -10,7 +10,7 @@ import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST, randomOk } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats, swapWait } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, usesLeft } from '../battle/status.js';
-import { resLine, FIELD } from '../battle/devices.js';
+import { resLine, FIELD, RES_ICON } from '../battle/devices.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
@@ -215,10 +215,12 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false) { 
     if (!compact) yy += 13;
   }
   // 이름 줄 = 이름(왼쪽) · 정체 꼬리표 [속성 | 종 | 변이](오른쪽 끝 — idTag) · 개수 칸(공통 장치 — 수리검 · 꼬리 …)은 꼬리표 왼쪽 · 넘치면 이름을 작게
-  const tw = idTag(null, 0, 0, u), rl = resLine(u), rw = rl ? g.textW(rl) + 4 : 0, room = right - tx - tw - rw - 4, nf = g.textW(u.name, 'bold') <= room ? 'bold' : sized('bold', 10);
+  const rk = u.res ? Object.keys(RES_ICON).find(k => k in u.res) : null, ri = rk ? icon(RES_ICON[rk]) : null;   // 공명 · 스택 = 아이콘 + 수(2026-10-24 코덱스)
+  const tw = idTag(null, 0, 0, u), rl = ri ? String(u.res[rk] || 0) : resLine(u), rw = rl ? g.textW(rl) + 4 + (ri ? 13 : 0) : 0, room = right - tx - tw - rw - 4, nf = g.textW(u.name, 'bold') <= room ? 'bold' : sized('bold', 10);
   g.text(u.name, tx, yy, { font: nf, color: u.shiny ? '#ffe8a8' : P.main });
   idTag(g, right + 2, yy, u);
   if (rl) g.text(rl, right + 2 - tw - 4, yy, { color: P.sub, align: 'right' });
+  if (rl && ri) g.img(ri, right + 2 - tw - 4 - g.textW(rl) - 13, yy + 1);
   yy += 16;
   g.text('HP', tx, yy, { font: 'bold', color: P.sub });
   hpBar(g, bx, yy + 3, right - numW - 5 - bx, 7, bar, u.max, t);
@@ -401,7 +403,13 @@ export const battle = {
     }
     if (p.pre) for (const part of String(p.pre).split(';')) {   // 효과 미리 걸기(검토·영상용)
       const [who, ids] = part.split(':'), u = B[who], by = B[who === 'me' ? 'foe' : 'me'];
-      if (u && ids) for (const tok of ids.split(',')) { const m = tok.match(/^([a-zA-Z]+)(\d*)$/); if (m) applyFx(u, m[1], +(m[2] || 1), { turn: 1, rng: () => 0.5, ev: [], by }); }
+      if (u && ids) for (const tok of ids.split(',')) {
+        const m = tok.match(/^([a-zA-Z]+)(\d*)$/), c = { turn: 1, rng: () => 0.5, ev: [], by };
+        if (!m) continue;
+        if (m[1] === 'storm') { applyFx(u, 'gale', 1, c); if (u.eff.gale) (u.eff.gale.add ||= []).push('storm'); }   // 폭풍(강풍 + 폭풍 공명)
+        else if (m[1] === 'reso' || m[1] === 'evs') (u.res ||= {})[m[1]] = +(m[2] || 0);   // 개수 칸(공명 · 스택)
+        else applyFx(u, m[1], +(m[2] || 1), c);
+      }
     }
     if (p.energy) { B.me.energy = +p.energy; B.foe.energy = +p.energy; }
     if (p.dead && B.team) for (const tok of String(p.dead).split(',')) { const m = tok.match(/^(me|foe)(\d)$/), u = m && B.team[m[1]][+m[2]]; if (u) u.hp = 0; }   // 쓰러진 팀원 미리(검토·촬영 — 예 dead=me2,foe1)

@@ -173,6 +173,8 @@ export function setCharge(u, a, T, ev) {
   ev.push({ t: 'charge', who: u.id, name: u.name });
 }
 export function takeCharge(u) { const c = u.st && u.st.charge; if (c) delete u.st.charge; return c || null; }
+// 개수 칸 아이콘(2026-10-24 코덱스 — 있으면 글 대신 아이콘 + 수)
+export const RES_ICON = { reso: 'res_reso', evs: 'res_evstack' };
 // 개수 칸 화면 글(체력판 이름 줄 오른쪽) — 이름은 SPECIES.res[k][2]
 export function resLine(u) {
   const D = SP(u).res, r = u && u.res;

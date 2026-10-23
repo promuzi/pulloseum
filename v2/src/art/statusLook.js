@@ -25,7 +25,7 @@ export const STATUS = {
   stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' }, frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' },
   seal: { name: '봉인', icon: 'fx_seal', col: '#6fd25c' }, root: { name: '속박', icon: 'st_root', col: '#c08a5a' }, taunt: { name: '도발', icon: 'fx_taunt', col: '#ff5a5a' },
   spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 99 }, leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' },
-  gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true }, storm: { name: '폭풍', icon: 'env_gale', col: '#9a7bff', env: true },   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
+  gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true }, storm: { name: '폭풍', icon: 'env_storm', col: '#9a7bff', env: true },   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
   // 이로운 상태이상 · 준비 효과 · 갑주
   regen: { name: '재생', icon: 'fx_regen', buff: true }, will: { name: '의지', icon: 'fx_will', buff: true }, immune: { name: '면역', icon: 'fx_immune', buff: true },
   aim: { name: '조준', icon: 'fx_aim', buff: true }, stealth: { name: '은신', icon: 'fx_stealth', buff: true }, clone: { name: '분신', icon: 'fx_stealth', buff: true },

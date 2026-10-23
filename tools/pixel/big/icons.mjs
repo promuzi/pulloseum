@@ -21,11 +21,12 @@ const SHEETS = {
   fx_01: ['fx_burn', 'fx_poison', 'fx_bleed', 'fx_shock'], fx_02: ['fx_chill', 'fx_wet', 'fx_shade', 'fx_seal'], fx_03: ['fx_taunt', 'fx_regen', 'fx_will', 'fx_immune'],
   fx_04: ['fx_aim', 'fx_stealth', 'fx_barrier', 'fx_evade'], fx_05: ['fx_reflect', 'fx_armor', 'env_gale', 'env_inferno'],
   fx_06: ['env_fortress', 'env_sandcastle', 'env_sandstorm', 'env_healcastle'], fx_07: ['env_hellfort', 'env_walkcastle', 'trap_thorn', 'summon_guard'],
+  fx_08: ['env_storm', 'res_reso', 'res_evstack', 'fx_counter'],   // 종 고유 v2 첫 묶음(2026-10-24 — concept/icons3/FX8_PROMPT.md): 폭풍 · 공명 셈 · 피한 스택 · 반격
   icons_13: ['chest_body', null], icons_17: ['chest_closed', null],   // 상자: 열린 몸통(13 왼쪽) · 닫힌 상자(17 — 13 오른쪽 뚜껑은 몸통과 각도가 달라 안 씀)
   planets_14: ['planet_ex_ermias', 'planet_ex_calisto', 'planet_ex_seraphin', 'planet_ex_kairen'], planets_15: ['planet_ex_mirdin', 'planet_ex_volkar', 'planet_ex_veloc', 'planet_ex_aztel'], planets_16: ['planet_ex_octavis', 'planet_ex_nereidon', 'planet_ex_tiamen', null],
 };
 // 조각이 떨어져 있는 그림 = 누끼에서 가장 큰 덩어리만 남기지 않음(--main 빼기): 조준 틀 넷 + 점 · 회피 잔상 줄 · 출혈 자국 + 방울 · 감전 고리 안 잎 · 젖음 방울 · 독 거품
-const PARTS = new Set(['fx_aim', 'fx_evade', 'fx_bleed', 'fx_shock', 'fx_wet', 'fx_poison', 'env_gale', 'trap_thorn']);
+const PARTS = new Set(['fx_aim', 'fx_evade', 'fx_bleed', 'fx_shock', 'fx_wet', 'fx_poison', 'env_gale', 'trap_thorn', 'env_storm', 'res_reso', 'res_evstack', 'fx_counter']);
 const FROM_ITEM = { can: 'item_water', fert: 'item_fert', potion: 'item_regress', fuel: 'item_fuel', parts: 'item_parts' };
 const NAV = new Set(['navShop', 'navExplore', 'navHome', 'navNursery', 'navShip', 'navBag', 'navBook']);
 const PLANET_D = { ex_ermias: 15, ex_calisto: 15, ex_seraphin: 15, ex_kairen: 15, ex_mirdin: 15, ex_volkar: 15, ex_veloc: 17, ex_aztel: 17, ex_octavis: 17, ex_nereidon: 19, ex_tiamen: 19 };   // 궤도 반지름 RAD(7 · 7 · 8 · 9) × 2 + 1
