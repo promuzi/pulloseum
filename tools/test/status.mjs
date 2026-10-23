@@ -185,14 +185,16 @@ const fixed = v => () => v;
   const t1 = resolveTurn(p, mk('foe', 'aqua'), sk(p, 's1'), REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
   ok(t1.miss === t0.miss + 12, '강풍 = 빗나감 칸 +12');
 }
-// ── 8. 3:3: 교체하면 독·화상만 · 뿌리 묶기면 교체 못 함 ──
+// ── 8. 3:3: 교체해도 상태이상 · 능력치 겹은 남음(준비 효과만 사라짐 — 엑셀 v10) · 속박이면 교체 못 함 ──
 {
   const me = ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe = ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k));
   const B = makeTeamBattle({ me, foe, seed: 9 });
   apply(B.me, 'poison', 1, ctx(B.foe, 1, [])); apply(B.me, 'burn', 1, ctx(B.foe, 1, [])); apply(B.me, 'wet', 1, ctx(B.foe, 1, [])); apply(B.me, 'leech', 1, ctx(B.foe, 1, []));
+  selfBuff(B.me, 'aim', { turn: 1, ev: [] }); selfBuff(B.me, 'shield', { turn: 1, ev: [] }); selfBuff(B.me, 'stealth', { turn: 1, ev: [] }, {});
   const out = B.me;
   playTurn3(B, { kind: 'switch', to: 1 });
-  ok(B.me !== out && out.eff.poison && out.eff.burn && !out.eff.wet && !out.eff.leech, '교체로 나가면 독·화상만 남음');
+  ok(B.me !== out && out.eff.poison && out.eff.burn && out.eff.wet && out.eff.leech, '교체로 나가도 상태이상은 남음(엑셀 v10 — 교체 시 유지 · 턴 진행)');
+  ok(!out.eff.aim && !out.eff.shield && !out.eff.stealth, '준비 효과(조준 · 보호막 · 은신)는 교체로 사라짐');
   apply(B.me, 'root', 1, ctx(B.foe, B.turn - 1, []));   // 앞 턴에 걸린 속박 = 이번 턴 교체 막음(다음 1턴)
   const cur = B.me; playTurn3(B, { kind: 'switch', to: 2 });
   ok(B.me === cur || B.me.hp <= 0, '뿌리 묶기면 교체 안 됨');
@@ -424,6 +426,36 @@ const fixed = v => () => v;
   { const w = mk('foe', 'flower_grass'); selfBuff(w, 'will', { turn: 1, ev: [] });
     const ev = []; for (const id of ['seal', 'root', 'taunt']) apply(w, id, 1, { turn: 1, rng: () => 0, ev, by: x });
     ok(!w.eff.seal && !w.eff.root && !w.eff.taunt && ev.filter(e => e.t === 'resist' && e.why === 'will').length === 3, '의지 = 봉인 · 속박 · 도발도 확률로 막음'); }
+}
+// ── 9-7. 강풍 환경 · 대기석 진행(엑셀 v10 38행 · 검토 대기 B10) ──
+{
+  const team = (seed = 31) => { const me = ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe = ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k)); return makeTeamBattle({ me, foe, seed, ownSun: true }); };
+  // 강풍: 켠 편의 상대 쪽 앞 식물 공격 빗나감 +12 · 지금 2턴 · 교체하면 새 앞 식물로 · 켜져 있는 동안 다시 켜도 안 늘어남
+  { const B = team(), x = B.foe; apply(B.me, 'gale', 1, ctx(x, 1, []));
+    const t1 = resolveTurn(B.me, mk('foe', 'aqua'), B.me.kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
+    const t0 = resolveTurn(mk('me', 'flower_grass'), mk('foe', 'aqua'), mk('me', 'flower_grass').kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
+    ok(t1.miss === t0.miss + 12 && B.me.eff.gale.env, '강풍 = 그 쪽 앞 식물 공격 빗나감 +12(환경)');
+    apply(B.me, 'gale', 1, ctx(x, 2, []));
+    ok(B.me.eff.gale.exp === 2, '켜져 있는 동안 같은 편이 다시 켜도 기간이 안 늘어남');
+    const out = B.me; playTurn3(B, { kind: 'switch', to: 1 });
+    ok(!out.eff.gale && B.me.eff.gale, '교체하면 강풍은 새 앞 식물에게(대기석 제외)');
+    expire(B.me, 2, []); ok(!B.me.eff.gale, '지금 2턴 = 1턴에 켜면 2턴 끝에 꺼짐'); }
+  // 대기석: 화상 · 독이 턴 끝마다 깎이고 재생은 차고 포자가 핌 · 능력치 겹 시간도 감
+  { const B = team(); const bench = B.team.me[1];
+    apply(bench, 'poison', 1, ctx(B.foe, 1, [])); selfBuff(bench, 'atkUp', { turn: 1, ev: [] }); apply(bench, 'spore', 1, ctx(B.foe, 1, []), { delay: 0 });   // 대기석 = 엠버캑터(불 — 화상 면역이라 독)
+    const h0 = bench.hp, t = playTurn3(B, { kind: 'skill', skill: B.me.kit[0] });
+    ok(bench.hp < h0 && t.events.some(e => e.t === 'tick' && e.bench && e.idx === 1) && t.events.some(e => e.t === 'bloom' && e.bench), '대기석에서도 독 피해 · 포자가 핌(사건에 bench 표시)');
+    for (let i = 0; i < 5 && !B.over; i++) playTurn3(B, { kind: 'skill', skill: B.me.kit[0] });
+    ok(!bench.eff.atkUp && !bench.eff.poison, '대기석에서도 시간이 가 활력이 끝나고 독이 줄어 사라짐'); }
+  { const B = team(); const bench = B.team.me[2]; bench.hp = 1; apply(bench, 'poison', 3, ctx(B.foe, 1, []));
+    const front = B.me, t = playTurn3(B, { kind: 'skill', skill: B.me.kit[0] });
+    const f = t.events.find(e => e.t === 'faint' && e.bench);
+    ok(bench.hp === 0 && f && f.idx === 2 && B.me === front && front.hp > 0 && !B.over, '대기석에서 쓰러져도 앞 식물은 그대로(쓰러짐 사건 = bench)'); }
+  // 기생: 건 식물이 대기석에 있어도 회복(교체 뒤 연결은 보류 — 지금 동작)
+  { const B = team(); const caster = B.team.foe[0]; caster.hp = 50; apply(B.me, 'leech', 1, ctx(caster, 1, []));
+    B.foe = B.team.foe[1]; B.act.foe = 1;
+    const t = playTurn3(B, { kind: 'skill', skill: B.me.kit[0] }, { kind: 'skill', skill: B.foe.kit[0] });
+    ok(caster.hp > 50 && t.events.some(e => e.t === 'drain' && e.heal > 0), '기생 = 건 식물이 대기석에 있어도 회복'); }
 }
 // ── 9-3. 능력치 겹(엑셀 v10 효과 분류 9~18행): 겹마다 지금 5턴 · 따로 만료 · 교체해도 남음 · 정화로 안 지워짐 ──
 {

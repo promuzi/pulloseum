@@ -2,7 +2,7 @@
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
 import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
-import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX, OLD, useCount } from './status.js';
+import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, OLD, useCount } from './status.js';
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
 const WEAK = { fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] };
@@ -231,12 +231,22 @@ export function makeBattle({ me, foe, seed = 20261015 }) {
 }
 // 턴 끝 공통(1:1·3:3): 화상·독·기생 씨앗 → 에너지 +1(그늘이면 안 참, gain 으로 넘김) → 정한 턴이 지난 효과 사라짐
 //  pair = [선공, 후공](턴 끝 피해도 선공 쪽 먼저 — 늘 'me'가 먼저면 같이 쓰러질 때 한쪽만 늘 짐) · stop() 이 참이면 거기서 끝(판이 끝남)
-export function closeTurn(pair, turn, ev, gain, stop = () => false) {
-  const [a, b] = pair;
-  endTurn([[a, b], [b, a]], turn, ev, stop);
+//  bench = [{ u, idx }] 대기석 식물(3:3 — 엑셀 v10 '대기 중에도 피해 · 회복 · 포자 발동 · 시간 진행': 사건에 bench · idx) · all = 판의 모든 유닛(기생을 건 식물 찾기)
+export function closeTurn(pair, turn, ev, gain, stop = () => false, bench = [], all = []) {
+  const [a, b] = pair, every = all.length ? all : pair;
+  endTurn([[a, b], [b, a]], turn, ev, stop, every);
+  if (stop()) return;
+  for (const u of pair) summonTurn(u, turn, ev);
+  for (const { u, idx } of bench) {
+    if (stop()) break;
+    const evB = []; endTurn([[u, null]], turn, evB, stop, every);
+    for (const e of evB) { e.bench = true; e.idx = idx; }
+    ev.push(...evB);
+  }
   if (stop()) return;
   for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: u.eff.dark.look || 'dark' }); else gain(u); }
   for (const u of pair) expire(u, turn, ev);
+  for (const { u, idx } of bench) { if (u.hp <= 0) continue; const evB = []; expire(u, turn, evB); for (const e of evB) { e.bench = true; e.idx = idx; } ev.push(...evB); }
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {

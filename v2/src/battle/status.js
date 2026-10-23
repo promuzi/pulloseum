@@ -29,7 +29,8 @@ export const FX = {
   seal:    { turns: 1, next: true },                          // 봉인(옛 덩굴): 다음 턴에 쓸 수 있을 기술(기본기 포함) 하나를 무작위로 막음 — 막는 개수는 밸런스(지금 1)
   leech:   { turns: 3, drain: 0.025, now: true },             // 기생: 턴 끝 2.5%를 빨아 처음 건 식물(by = slot)이 회복 · 건 식물이 쓰러지면 끝
   dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
-  gale:    { turns: 2, missAdd: 12 },                         // 강풍(바람 속성): 적중 ↓(내 공격 빗나감 칸 +12) — 사용자 "강풍이라고 바꾸자"
+  // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
+  gale:    { env: true, turns: 2, missAdd: 12 },              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
   taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
   // 포자(엑셀 v10 30행) = 따로 쌓이는 지연 효과: 걸 때마다 하나씩 붙어 각자 셈(상한 없음) · 지연 N턴(기술마다 — 옛 1겹 기술 = 2턴 · 2겹 = 1턴) ·
@@ -69,6 +70,9 @@ const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'sea
 // 옛 효과 이름 → 엑셀 v10 이름(기술 표를 다 옮길 때까지 — 2026-10-23 계획 Task 8에서 지움) · 그늘 = 암실(이름 · 연출만 그늘)
 export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown', shade: 'dark', bind: 'seal', focus: 'aim', clone: 'stealth' };
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
+const ENV = Object.keys(FX).filter(k => FX[k].env);
+// 교체로 나갈 때 지우는 것(엑셀 v10 — 상태이상 · 능력치 겹 · 갑주는 남고 시간이 감): 준비 효과(조준 · 은신 · 보호막) · 속박 한 번 표시 · 면역(스스로 바꾸면 그게 행동) · 정화 보호 · 환경(다음 앞 식물로 옮김)
+const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', 'purified', ...ENV];
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[OLD[id] || id]);
@@ -218,6 +222,10 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (id === 'leech') e.leech.by = (ctx.by && (ctx.by.slot || ctx.by.id)) || null;   // 회복은 처음 건 식물(다시 걸면 새로 건 식물)
     if (id === 'dark' && look) e.dark.look = look;
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
+  } else if (D.env) {   // 전장 환경(강풍): 그 쪽 앞 식물에 · 이미 불고 있으면 다시 켜지지 않음(기간도 안 늘어남)
+    if (e[id]) { ev.push({ t: 'resist', ...base, why: 'env', list: listOf(tgt) }); return; }
+    e[id] = { env: true, exp: nowExp(T, o.turns ?? D.turns), by: ctx.by.id };
+    ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   } else if (D.next) {   // 제한 셋(봉인 · 속박 · 도발): 다음 1턴
     if (e.will && ctx.rng && ctx.rng() < FX.will.p) { ev.push({ t: 'resist', ...base, why: 'will', list: listOf(tgt) }); return; }
     if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
@@ -325,7 +333,7 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
         let heal = 0;
         if (by) { const before = by.hp; by.hp = Math.min(by.max, by.hp + Math.round(take * healK(by))); heal = by.hp - before; }
         if (e.leech.exp <= turn) delete e.leech;
-        ev.push({ t: 'drain', who: u.id, name: u.name, to: by ? by.id : null, toName: by ? by.name : '', dmg: take, heal, list: listOf(u), list2: by ? listOf(by) : null });
+        ev.push({ t: 'drain', who: u.id, name: u.name, to: by ? by.id : null, toSlot: by ? by.slot : null, toName: by ? by.name : '', dmg: take, heal, list: listOf(u), list2: by ? listOf(by) : null });
       }
     }
     if (e.regen && u.hp > 0) {   // 재생: 출혈이면 절반(그늘로 멈추지 않음 — 엑셀 v10)
@@ -358,9 +366,21 @@ export function expire(u, turn, ev) {
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
-// 3:3 교체로 나갈 때: 독·화상만 남음
+// 3:3 교체로 나갈 때: 준비 효과 · 환경 등만 지움(DROP) — 나머지는 남아 대기석에서도 턴마다 진행(model.closeTurn) · 소환수는 주인이 나가면 사라짐
 export function clearOnSwitch(u) {
   const e = u.eff;
-  if (!e) return;
-  for (const k of Object.keys(e)) if (!(FX[k] && (FX[k].keep || FX[k].stat))) delete e[k];   // 능력치 겹은 남음(엑셀 v10 — 교체 시 유지 · 턴 진행)
+  if (e) for (const k of DROP) delete e[k];
+  delete u.summons;
+}
+// 교체 때 환경을 다음 앞 식물로(환경은 그 쪽 진영의 것 — 2026-10-21 게일캑터 '교체해도 강풍이 끝날 때까지 남고 그때 앞에 선 식물에게')
+export function moveEnv(from, to) {
+  if (!from || !to || from === to || !from.eff) return;
+  for (const k of ENV) if (from.eff[k]) { (to.eff ||= {})[k] = from.eff[k]; delete from.eff[k]; }
+}
+// 소환수 턴 끝(지속 피해 · 회복 · 시간): 주인 사건으로 내보냄(sum = 몇째) · 깨지면 summonBreak(쓰러짐 아님)
+export function summonTurn(owner, turn, ev) {
+  const L = owner && owner.summons;
+  if (!L || !L.length) return;
+  L.forEach((s, i) => { if (s.hp <= 0) return; const e2 = []; endTurn([[s, null]], turn, e2); expire(s, turn, e2); for (const x of e2) if (x.t !== 'faint') ev.push({ ...x, who: owner.id, sum: i }); });
+  for (let i = L.length - 1; i >= 0; i--) if (L[i].hp <= 0) { const s = L.splice(i, 1)[0]; ev.push({ t: 'summonBreak', who: owner.id, i, name: s.name }); }
 }

@@ -248,3 +248,29 @@ test('은신 중 내가 공격하면 은신이 풀리고 이어 공격은 없음
   assert.ok(!has(R, 'stealth'));
 });
 
+// ── 소환수 받기(엑셀 v10 50행 + 2026-10-21~22 확정) ──
+const pup = (hp = 40) => ({ name: '새끼', hp, max: hp, def: 0, eva: 0, eff: {}, st: { miss: {}, critTaken: false } });
+test('소환수: 단일 공격은 앞 소환수가 맞고 남는 피해는 주인에게 안 감', () => {
+  const D = unit('d', { summons: [pup(20)] });
+  const ev = resolveTurn(unit('a'), D, STRIKE, { act: 'other' }, script([0, 0.5])).events;
+  assert.equal(D.hp, 1000); assert.equal(D.summons.length, 0); assert.ok(ev.some(e => e.t === 'summonBreak'));
+  assert.ok(!ev.some(e => e.t === 'faint'));
+});
+test('소환수: 연타는 소환수가 깨진 뒤 남은 타를 주인이 맞음', () => {
+  const D = unit('d', { summons: [pup(30)] });
+  const hs = resolveTurn(unit('a'), D, MULTI, { act: 'other' }, script([0, 0.5, 0.5, 0.5])).events.filter(e => e.t === 'hit');
+  assert.equal(hs[0].sum, 0); assert.equal(hs[1].sum, undefined); assert.equal(D.hp, 1000 - 60);
+});
+test('소환수: 광역은 소환수와 주인 모두 · 효과도 맞은 쪽에', () => {
+  const D = unit('d', { summons: [pup(100)] });
+  const AREA = { ...STRIKE, area: true, inflict: { id: 'burn' } };
+  const hs = resolveTurn(unit('a'), D, AREA, { act: 'other' }, script([0, 0.5, 0.5])).events.filter(e => e.t === 'hit');
+  assert.equal(hs.length, 2); assert.ok(D.hp < 1000 && D.summons[0].hp < 100);
+  assert.ok(D.eff.burn && D.summons[0].eff.burn);
+});
+test('소환수: 보호막이 소환수보다 먼저 막음', () => {
+  const D = unit('d', { summons: [pup(100)], eff: { shield: { hp: 30 } } });
+  const h = resolveTurn(unit('a'), D, STRIKE, { act: 'other' }, script([0, 0.5])).events.find(e => e.t === 'hit');
+  assert.equal(h.sum, 0); assert.equal(h.absorb, 30); assert.equal(D.summons[0].hp, 80); assert.ok(!D.eff.shield);
+});
+

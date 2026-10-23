@@ -214,9 +214,26 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const hid = has(foe, 'stealth') && !has(u, 'stealth');   // 이 공격 앞에서 숨어 있었나(은신끼리는 서로 보임)
     const aimK = (u.eff && u.eff.aim && u.eff.aim.k) || 0;
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0, shieldHit = false;
+    const hitSet = new Set();   // 효과는 맞은 대상마다 첫 적중 한 번
+    // 소환수(엑셀 v10 50행 + 2026-10-21~22): 주인을 노린 공격은 앞 소환수부터 대신 맞음(피해 · 디버프 · 상태이상) · 연타는 깨진 뒤 남은 타를 주인이 · 광역은 모두 ·
+    //  한 타로 깨질 때 남는 피해는 안 넘어감 · 보호막(주인)이 소환수보다 먼저 막음 · 소환수에겐 자세 · 은신이 없음
+    const sums = () => (foe.summons || []).filter(s => s.hp > 0);
+    const hitSum = (s, ah, i) => {
+      const k = foe.summons.indexOf(s), t = hitTable(u, s, { area: !!a.area, critAdd: aimK + critAddOf(u), missAdd: missAddOf(u) }), tier = tierOf(t, Math.floor(rng() * 100));
+      let dm = Math.round(hitDmg(u, s, ah, em) * RULES.tierMult[tier] * (ambush ? FX.stealth.ambush : 1)), absorb = 0;
+      if (dm > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dm); sh.hp -= absorb; dm -= absorb; shieldHit = true; }
+      dm = Math.min(dm, s.hp); s.hp -= dm;
+      ev.push({ t: 'hit', who: u.id, to: foe.id, sum: k, id: a.id, tier, dmg: dm, mult: em, absorb, ab: absorb ? 'shield' : undefined, table: t, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, link: L.link ? { id: a.id, name: a.name } : undefined });
+      if (tier === 'hit' || tier === 'crit') avoided = false;
+      if (tier !== 'miss' && !hitSet.has(s)) { hitSet.add(s); landed = true; onHit(u, s, a, { turn: T, rng, ev }); }
+      if (s.hp <= 0) { foe.summons.splice(k, 1); ev.push({ t: 'summonBreak', who: foe.id, i: k, name: s.name }); }
+    };
     if (a.reveal && has(foe, 'stealth')) { delete foe.eff.stealth; ev.push({ t: 'reveal', who: foe.id, id: 'stealth', list: listOf(foe) }); }   // 드러내기(장치 D14)
     for (let i = 0; i < N && foe.hp > 0 && u.hp > 0; i++) {
       const ah = a.strikes ? { ...a, ...a.strikes[i % a.strikes.length] } : a;   // 타마다 다른 성질(베기 · 찌르기)
+      const ss = sums();
+      if (ss.length && !a.area) { hitSum(ss[0], ah, i); continue; }   // 단일 = 앞 소환수가 대신 맞음
+      if (ss.length) for (const s of ss) hitSum(s, ah, i);           // 광역 = 소환수도 모두 맞고 주인도 맞음
       const guardOn = !ambush && still && guards.has(foe);
       if (guardOn) showStance(foe, 'guard');
       const veil = a.area || has(u, 'stealth') ? 0 : has(foe, 'stealth') ? FX.stealth.miss : 0;   // 은신 = 광역 아닌 공격 95% 빗나감
@@ -252,7 +269,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const refl = ((foe.pas && foe.pas.reflect) || 0) + reflectAdd(foe);   // 가시 줄기(카드) + 쌓인 가시(D13) = 붙어서 맞을 때마다(패시브 — 분류 밖 규칙)
       if (tier !== 'miss' && dmg > 0 && refl > 0 && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * refl)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
       // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
-      if (tier !== 'miss' && !landed) { landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
+      if (tier !== 'miss' && !hitSet.has(foe)) { hitSet.add(foe); landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
     }
     if (shieldHit && foe.eff && foe.eff.shield) { delete foe.eff.shield; ev.push({ t: 'expire', who: foe.id, ids: ['shield'], list: listOf(foe) }); }   // 보호막 = 막은 공격 기술이 끝나면 잔량 제거
     if (u.eff && u.eff.aim) delete u.eff.aim;   // 조준 = 공격 기술 한 번에 소비(맞든 빗나가든)

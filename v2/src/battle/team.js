@@ -7,7 +7,7 @@
 import { makeRng, resolveTurn, rollFirst } from './rules.js';
 import { elemMult, aiPick, REST, closeTurn, firstOk, expDamage, threatOf, seenOf, lastOf } from './model.js';
 import { formMult } from './matchup.js';
-import { canUse, canSwitch, mustSkip, clearOnSwitch, listOf, useCount } from './status.js';
+import { canUse, canSwitch, mustSkip, clearOnSwitch, moveEnv, listOf, useCount } from './status.js';
 
 // swapCd = 스스로 교체한 뒤 다시 교체 못 하는 턴 수(2026-10-18 사용자 "2턴" — 0 = 제한 없음: 이 규칙 전에 시작한 판)
 // swOrder = 교체도 선공 · 후공 순서를 따름(2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지" — false = 이 규칙 전에 시작한 판)
@@ -18,6 +18,7 @@ export function makeTeamBattle({ me, foe, seed = 20261015, swapCd = 0, swOrder =
   const B = { mode: 'swap3', team: { me, foe }, act: { me: 0, foe: 0 }, pool: { me: start(me), foe: start(foe) }, rng: makeRng(seed), turn: 1, over: null, log: [], need: null };
   if (ownSun) for (const side of ['me', 'foe']) for (const u of B.team[side]) { if (typeof u.energy !== 'number') u.energy = 2; }   // 식물마다 제 햇빛(새 판 = 유닛을 만들 때 정한 시작 값 — 카드 '엽록체 증식'도 그 식물만 · 이어 하는 판 = 저장된 값 그대로)
   else for (const side of ['me', 'foe']) for (const u of B.team[side]) Object.defineProperty(u, 'energy', { get: () => B.pool[side], set: v => { B.pool[side] = v; }, configurable: true, enumerable: true });
+  me.forEach((u, i) => { u.slot = 'me' + i; }); foe.forEach((u, i) => { u.slot = 'foe' + i; });   // 유닛 이름표(기생을 건 식물 찾기 — 같은 편 셋의 id는 모두 'me' · 'foe')
   B.me = me[0]; B.foe = foe[0];
   B.cdLen = swapCd; B.swapCd = { me: 0, foe: 0 };   // 남은 턴(0 = 바꿀 수 있음)
   B.swOrder = !!swOrder; B.ownSun = !!ownSun;
@@ -44,8 +45,9 @@ function aiSwitch(B, rng) {
 }
 const aiNext = B => aliveOf(B, 'foe').reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a));
 function swapIn(B, side, to, ev, forced = false) {
-  const from = B.act[side];
-  clearOnSwitch(B.team[side][from]);
+  const from = B.act[side], prev = B.team[side][from];
+  moveEnv(prev, B.team[side][to]);   // 환경(강풍 등)은 그 쪽 진영 것 — 새 앞 식물에게
+  clearOnSwitch(prev);
   B.act[side] = to; B[side] = B.team[side][to];
   const e = { t: 'switch', who: side, from, to, hp: B[side].hp, forced, list: listOf(B[side]) };
   ev.push(e);
@@ -102,8 +104,10 @@ export function playTurn3(B, myAct, foeAct = null) {
   //  앞 식물 하나만 쓰러졌으면 턴 끝 효과는 남은 식물에 그대로(포켓몬처럼), 턴 끝 피해도 선공 쪽 먼저
   const out = () => !aliveOf(B, 'me').length || !aliveOf(B, 'foe').length;
   //  햇빛은 나와 있는 식물만 참: 식물마다 따로(ownSun)면 그 식물의 햇빛 · 옛 판은 팀 햇빛
-  if (!out()) closeTurn((res ? res.first === B.foe.id : order === 'foe') ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { if (B.ownSun) { u.energy = Math.min(u.energyMax || 8, u.energy + (u.sunPer || 1)); return; } const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(u.energyMax || 8, B.pool[side] + (u.sunPer || 1)); }, out);   // 나와 있는 식물의 햇빛 그릇 · 회복(반칸씩)
+  const firstSide = (res ? res.first === B.foe.id : order === 'foe') ? 'foe' : 'me', bench = [firstSide, firstSide === 'me' ? 'foe' : 'me'].flatMap(side => B.team[side].map((u, idx) => ({ u, idx })).filter(x => x.idx !== B.act[side] && x.u.hp > 0));
+  if (!out()) closeTurn(firstSide === 'foe' ? [B.foe, B.me] : [B.me, B.foe], T, ev, u => { if (B.ownSun) { u.energy = Math.min(u.energyMax || 8, u.energy + (u.sunPer || 1)); return; } const side = u === B.me ? 'me' : 'foe'; B.pool[side] = Math.min(u.energyMax || 8, B.pool[side] + (u.sunPer || 1)); }, out, bench, [...B.team.me, ...B.team.foe]);   // 나와 있는 식물의 햇빛 그릇 · 회복(반칸씩) · 대기석도 턴 끝 진행
   for (const e of ev) if (e.t === 'faint' && e.idx == null) e.idx = B.act[e.who];
+  for (const e of ev) if (e.t === 'drain' && e.toSlot && B[e.to] && B[e.to].slot !== e.toSlot) e.toBench = true;   // 기생 회복이 대기석의 건 식물에게(화면은 앞 식물 체력을 건드리지 않음)
   if (!aliveOf(B, 'foe').length) B.over = 'win';
   else if (!aliveOf(B, 'me').length) B.over = 'lose';
   else if (human) { const m = B.me.hp <= 0, f = B.foe.hp <= 0; B.need = m && f ? 'both' : m ? 'me' : f ? 'foe' : null; }

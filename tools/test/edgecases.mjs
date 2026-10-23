@@ -28,6 +28,7 @@ function trace(evs, hp, tag) {
   const down = [];   // 쓰러진 차례(side)
   const isDown = s => hp[s] != null && hp[s] <= 0;
   for (const e of evs) {
+    if (e.bench || e.sum != null) continue;   // 대기석 식물 · 소환수 사건(엑셀 v10 — 대기석도 턴 끝 진행)은 앞 식물 체력과 따로
     if (e.t === 'switch') { hp[e.who] = e.hp; continue; }
     if (e.t === 'faint') { if (!isDown(e.who)) flag('faint_alive', `${tag} 살아 있는데 쓰러짐 사건 ${e.who}`); continue; }
     const actor = e.t === 'hit' || e.t === 'stance' || e.t === 'cast' || e.t === 'act' ? e.who : null;
