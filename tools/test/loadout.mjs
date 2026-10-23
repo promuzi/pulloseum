@@ -90,9 +90,9 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   const s = game(), p = s.plants[0], id = p.uid;
   s.items.water = 999; s.items.fert = 999;
   const s2 = JSON.parse(JSON.stringify(s));
-  feed(s, id, 'fert', 2); feed(s2, id, 'fert', 2);   // 비료 둘(+50) = Lv2 — 고르기는 단계마다 Lv3 · Lv6에서만(2026-10-22)
+  feed(s, id, 'fert', 4); feed(s2, id, 'fert', 4);   // 비료 넷(+100) = Lv2(생장 90 — 2026-10-23 두 배) — 고르기는 단계마다 Lv3 · Lv6에서만(2026-10-22)
   ok(p.lv === 2 && !(p.drafts || []).length, 'Lv2 레벨업엔 고르기 없음(Lv3 · Lv6만): ' + JSON.stringify(p.drafts));
-  feed(s, id, 'fert', 3); feed(s2, id, 'fert', 3);   // 비료 셋 더 = Lv3
+  feed(s, id, 'fert', 5); feed(s2, id, 'fert', 5);   // 비료 다섯 더(남은 10 + 125 ≥ 120) = Lv3
   ok(p.lv === 3 && p.drafts && p.drafts.length === 1 && p.drafts[0].kind === 'lv' && p.drafts[0].pick === 1 && p.drafts[0].cands.length >= 1, 'Lv3 레벨업 → 고르기 하나(셋 중 하나): ' + JSON.stringify(p.drafts));
   ok(JSON.stringify(p.drafts) === JSON.stringify(s2.plants[0].drafts), '같은 상태면 같은 후보(화면 먼저 · 서버 같게)');
   throws(() => draftPick(s, id, 0, []), '안 고르면 막힘');

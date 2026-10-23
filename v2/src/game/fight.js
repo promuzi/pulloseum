@@ -1,6 +1,6 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, SUN_UP, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
 import { CARDS, passivesOf, isSkillCard, formCards, rollCard, baseOf } from './cards.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST, elemMult } from '../battle/model.js';
@@ -59,6 +59,37 @@ function upCard(rng, c, tier) {
   const r = rng();
   return r < UP2[t] ? CARDS[C.next].next || C.next : r < UP2[t] + UP1[t] ? C.next : c;
 }
+// 대회 봇 몸(2026-10-23 사용자 "티어별로 레벨을 조정하고 … 레벨업을 어렵게 하고 상대 봇들도 그 레벨을 상정하고 높게"): 내 식물에 맞추지 않음 —
+//  리그의 가장 높은 성장 단계(새싹 = 어린 · 자람 = 자람 · 무제한 = 성체) · 그 안의 레벨은 대회 단계로(브론즈 1~2 … 마스터 · 풀로세움 6) · 개체값 바닥도 단계로(+0~3)
+export const BOT_LV = [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 6], [6, 6]], IV_FLOOR = [0, 1, 2, 4, 5, 7, 8];
+export function botBody(rng, cap, tier) { const t = Math.max(0, Math.min(6, tier | 0)), [a, b] = BOT_LV[t]; return { stage: cap, lv: a + Math.floor(rng() * (b - a + 1)) }; }
+// 수 읽기(model.js searchPick — 같은 날 사용자 "실력자체를 올릴 수 없나?"): 기술마다 판을 끝까지 해 보는 수 — 브론즈 = 안 함(빠른 머리 aiOfTier) · 실버 4 … 풀로세움 24
+export const SEARCH = [0, 4, 8, 12, 16, 20, 24];
+export const searchOfTier = (tier, tut = false) => (tut ? 0 : SEARCH[Math.max(0, Math.min(6, tier | 0))]);
+// 컨셉 스펙(같은 날 사용자 "스펙도 각 컨셉에 맞게 배치하고"): 강화 포인트 반은 공격 · 체력, 반은 종 역할(catalog.js ROLES) 비중 — 햇빛 그릇 · 회복은 단 단위(SUN_UP)
+//  (같은 날 실측: 역할대로만 나누면 공격이 줄어 봇이 약해짐 — 마스터에서 내 승률 29% → 37%, 반반이면 29% 그대로 · 기술을 값으로 골라 담는 것도 나을 게 없어 기술은 옛 방식 그대로)
+//  낮은 단계 봇은 일부를 아무렇게나(브론즈 60% · 실버 40% · 골드 20% — 서툰 봇)
+const ROLE_BUILD = {
+  tank: { hp: 4, def: 4, atk: 1 }, ltank: { hp: 3, def: 2, atk: 2, spd: 1 }, atk: { atk: 5, hp: 2, spd: 1, crit: 1 }, fast: { spd: 4, atk: 3, hp: 1 },
+  sup: { hp: 3, def: 2, sunRegen: 2 }, dis: { spd: 3, hp: 2, def: 1, sunMax: 1 }, ctr: { def: 3, hp: 3, atk: 1 }, dot: { hp: 3, def: 2, sunMax: 1 }, drain: { atk: 3, hp: 3, def: 1 },
+};
+const MESSY = [0.6, 0.4, 0.2, 0, 0, 0, 0];
+function alloc(up, W, pts) {   // 비중 W 대로 pts 포인트(햇빛은 단 단위 먼저)
+  let left = pts;
+  const tot = Object.values(W).reduce((a, b) => a + b, 0);
+  for (const k of ['sunMax', 'sunRegen']) if (W[k]) { const U = SUN_UP[k], steps = Math.min(U.max - Math.floor((up[k] || 0) / U.pts), Math.floor((left * W[k]) / tot / U.pts)); if (steps > 0) { up[k] = (up[k] || 0) + steps * U.pts; left -= steps * U.pts; } }
+  const plain = Object.entries(W).filter(([k]) => k !== 'sunMax' && k !== 'sunRegen'), pt = plain.reduce((a, [, w]) => a + w, 0);
+  let given = 0;
+  plain.forEach(([k, w], i) => { const n = i === plain.length - 1 ? left - given : Math.round((left * w) / pt); if (n > 0) { up[k] = (up[k] || 0) + n; given += n; } });
+  return up;
+}
+function conceptUp(rng, role, pts, tier) {
+  const up = {}, messy = Math.round(pts * MESSY[Math.max(0, Math.min(6, tier | 0))]), pref = ['atk', 'hp', 'def', 'spd'];
+  for (let i = 0; i < messy; i++) { const k = pref[Math.floor(rng() * 4)]; up[k] = (up[k] || 0) + 1; }
+  const rest = pts - messy, half = Math.floor(rest / 2);
+  alloc(up, { atk: 1, hp: 1 }, half);
+  return alloc(up, ROLE_BUILD[role] || { atk: 2, hp: 2, def: 1, spd: 1 }, rest - half);
+}
 export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   // 종 고르기: 드문 종은 덜, 변이 고정 종(태생 변이 — 드묾)은 더 드물게(2026-10-17 새 다섯을 넣자 봇 넷 중 하나가 변이가 됨) · 대회 단계만큼 먼 궤도까지(opt.tier)
   const cap = ORBIT_CAP[Math.max(0, Math.min(ORBIT_CAP.length - 1, opt.tier == null ? tierBoost : opt.tier))];
@@ -68,12 +99,13 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   const wOf = k => base(k), tot = keys.reduce((a, k) => a + wOf(k), 0);
   let r0 = rng() * tot, key = keys[keys.length - 1];
   for (const k of keys) { r0 -= wOf(k); if (r0 <= 0) { key = k; break; } }
-  const sp = SPECIES[key];
-  const lv = Math.max(1, Math.min(6, lvHint + Math.floor(rng() * 3) - 1));
-  const ivs = Object.fromEntries(IV_KEYS.map(k => [k, Math.min(IV_MAX, Math.floor(rng() * 9) + tierBoost)]));
-  const pts = (stage * 5 + lv - 1) * 2, up = {};
-  const pref = ['atk', 'hp', 'def', 'spd'];
-  for (let i = 0; i < pts; i++) { const k = pref[Math.floor(rng() * (rng() < 0.6 ? 2 : 4))]; up[k] = (up[k] || 0) + 1; }
+  const sp = SPECIES[key], t = Math.max(0, Math.min(6, tierBoost | 0));
+  const lv = opt.lvExact ? Math.max(1, Math.min(6, lvHint)) : Math.max(1, Math.min(6, lvHint + Math.floor(rng() * 3) - 1));   // 대회 봇 = 단계별 레벨 그대로(botBody)
+  const ivs = Object.fromEntries(IV_KEYS.map(k => [k, Math.min(IV_MAX, opt.ivFloor ? IV_FLOOR[t] + Math.floor(rng() * 4) : Math.floor(rng() * 9) + tierBoost)]));
+  const pts = (stage * 5 + lv - 1) * 2;
+  let up = {};
+  if (opt.concept) up = conceptUp(rng, sp.role, pts, t);
+  else { const pref = ['atk', 'hp', 'def', 'spd']; for (let i = 0; i < pts; i++) { const k = pref[Math.floor(rng() * (rng() < 0.6 ? 2 : 4))]; up[k] = (up[k] || 0) + 1; } }
   const battle = [uniqueOf(key, 0)];
   for (let st = 0; st <= stage && battle.length < 3; st++) {
     const pool = bloomPool(key, st).filter(x => !battle.includes(x.id));
@@ -102,12 +134,12 @@ export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)]
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
 // 봇 머리 좋음(0~1, model.js aiPick — 2026-10-22): 대회 단계가 오를수록 · 같은 단계에선 라운드(예선 0 … 결승 4)마다 조금씩 · 첫 판(튜토리얼식)은 낮게
 export const aiOfTier = (tier, tut = false, round = 0) => (tut ? 0.15 : Math.min(0.95, 0.35 + 0.1 * Math.max(0, tier) + 0.02 * Math.max(0, round)));
-export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false, ownSun = false, ai = 0.5 }) {
+export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false, ownSun = false, ai = 0.5, search = 0 }) {
   if (mode === 'swap3') {
     const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv, ai }));
     return makeTeamBattle({ me, foe, seed, swapCd, swOrder, ownSun });   // ownSun = 햇빛 식물마다 따로(2026-10-22~ 새 판 — 옛 판 spec 엔 없음 = 팀 햇빛 그대로)
   }
-  return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank, tlv, ai }), seed });
+  return makeBattle({ me: unitOf('me', mine[0]), foe: unitOf('foe', foes[0], { trainer, rank, tlv, ai, search }), seed });   // search = 수 읽기(옛 판 spec 엔 없음 = 빠른 머리 그대로)
 }
 // 한 수: 1:1 = 기술 id('rest' = 쉬는 차례), 3:3 = { kind: 'skill', id } | { kind: 'switch', to } | { kind: 'rest' } | { kind: 'send', to }(쓰러진 자리 채우기)
 //  잘못된 수는 Err — 서버는 화면이 보낸 수를 이걸로만 판에 넣음(봇 판은 서버가 한 턴씩 풂: 화면은 씨앗을 모르고 결과만 받음)

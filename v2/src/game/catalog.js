@@ -78,7 +78,8 @@ export const STAGE_MUL = [0.8, 0.9, 1];                     // 체력·공격·�
 export const LV_MAX = 6;
 // 다음 레벨까지 생장치(물 +10 · 비료 +25). 단계마다 배수(2026-10-22 사용자 "개체값 레벨업 열매획득 등 너무 쉬움 며칠하면 다 만렙 쪽을 수 있으니 이를 실제 게임처럼 어려움을 주자"):
 //  새싹 ×1.5 · 성장기 ×3 · 성체 ×4 — 처음은 금방, 뒤로 갈수록 오래(한 식물 끝까지 생장치 1200 → 약 3800)
-export const GROW_K = [1.5, 3, 4];
+//  → 2026-10-23 두 배(사용자 "여전히 식물을 많이 키우면 애들 레벨업이 쉬움 레벨업을 어렵게") — 한 식물 끝까지 약 7600 · 스마트팜 물 · 비료 하루 상한(FARM_DAY)과 함께
+export const GROW_K = [3, 6, 8];
 export const growNeed = (stage, lv) => Math.round((20 + 10 * lv + 30 * stage) * (GROW_K[stage] || 1));
 export const FEED = { water: 10, fert: 25 };
 export const PTS_PER_LV = 2;                                 // 레벨업마다 강화 포인트
@@ -585,6 +586,7 @@ export function levelReward(L) {
 }
 
 // ── 수확(스마트팜) ──
+export const FARM_DAY = { water: 30, fert: 12 };   // 스마트팜 열매에서 나오는 물 · 비료 하루(한국 날짜) 상한 — 넘은 열매는 돈(2026-10-23 · 식물이 많아도 성장 재료는 일정하게)
 export const HARVEST = { periodMin: [36, 30, 24], maxBase: [2, 3, 4] };   // 단계별 열매 하나 걸리는 분 · 최대 개수(Lv3부터 +1, 열매 개체값 5마다 +1) — 2026-10-22 6·5·4분 → 36·30·24분(너무 쉬움)
 const fruitIv = p => ((p.ivs && p.ivs.fruit) || 0);
 export const harvestMax = p => HARVEST.maxBase[p.stage] + (p.lv >= 3 ? 1 : 0) + Math.floor(fruitIv(p) / 5);

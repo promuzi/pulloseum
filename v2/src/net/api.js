@@ -3,8 +3,8 @@
 import { runOp } from '../game/ops.js';
 import { battleReward, battleForfeit, syncTimers } from '../game/logic.js';
 import { makeRng } from '../battle/rules.js';
-import { setupBot, botStep, viewOf, botPlant, botTrainer } from '../game/fight.js';
-import { TIERS, tourName } from '../game/catalog.js';
+import { setupBot, botStep, viewOf, botPlant, botTrainer, botBody, aiOfTier, searchOfTier } from '../game/fight.js';
+import { TIERS, LEAGUES, tourName } from '../game/catalog.js';
 
 const KEY = 'pullo.token';
 const store = {
@@ -38,9 +38,10 @@ export const bot = {
     const s = app.state, mode = s.mode === 'swap3' ? 'swap3' : 'tournament', rng = makeRng((Math.random() * 2 ** 31) | 0);
     const mine = mode === 'swap3' ? s.team.map(i => s.plants[i]).filter(Boolean) : [s.plants[s.active]];
     if (mode === 'swap3' && mine.length < 3) throw new NetErr('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요', 400);
-    const T = s.tournament, foes = mine.map(p => botPlant(rng, p.stage, p.lv, Math.max(0, TIERS.indexOf(T.tier))));
+    const T = s.tournament, tier = Math.max(0, TIERS.indexOf(T.tier)), tour = mode === 'tournament', cap = (LEAGUES[s.league] || LEAGUES.sprout).cap;   // 서버(server/game.mjs battleStart)와 같은 봇(튜토리얼식 첫 판만 뺌)
+    const foes = mine.map(p => { const body = tour ? botBody(rng, cap, tier) : { stage: p.stage, lv: p.lv }; return botPlant(rng, body.stage, body.lv, tier, { tier, concept: true, ivFloor: tour, lvExact: tour }); });
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
-    const spec = { seed: (Math.random() * 2 ** 31) | 0, mode, ...(mode === 'swap3' ? { swapCd: 2, ownSun: true } : {}), mine: JSON.parse(JSON.stringify(mine)), foes, trainer: botTrainer(rng), rank: `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv: Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4)), info };
+    const spec = { seed: (Math.random() * 2 ** 31) | 0, mode, ...(mode === 'swap3' ? { swapCd: 2, ownSun: true } : {}), mine: JSON.parse(JSON.stringify(mine)), foes, trainer: botTrainer(rng), rank: `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv: Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4)), info, ai: aiOfTier(tier), search: tour ? searchOfTier(tier) : 0 };
     local = { spec, B: setupBot(spec) };
     return { id: 'local', mode, view: viewOf(local.B), info };
   },

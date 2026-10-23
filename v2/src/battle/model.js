@@ -195,6 +195,32 @@ export function aiPick(u, foe, rng, ctx = {}) {
 // 판 기록에서: 사람이 이번 판에 쓴 기술(봇이 아는 것) · 봇이 지난 턴에 쓴 수
 export const seenOf = B => B.log.map(t => t.mySkill).filter(s => s && s.act === 'attack');
 export const lastOf = B => { const t = B.log[B.log.length - 1]; return t && t.foeSkill ? t.foeSkill.act : null; };
+// 수 읽기 머리(2026-10-23 사용자 "실력자체를 올릴 수 없나?"): 봇이 쓸 수 있는 기술마다 지금 판을 복제해 n번 빠르게 끝까지(최대 12턴 — 넘으면 남은 체력 비율로)
+//  해 보고 평균 결과가 가장 좋은 수를 고름. 사람 쪽은 지금까지 이 판에서 본 기술 + 기본기만 안다고 보고(사람과 같은 정보) 두 쪽 다 빠른 머리(aiPick)로 둠.
+//  판의 난수(B.rng)는 건드리지 않고 턴 · 체력 · 햇빛으로 만든 씨앗만 써서 같은 판 · 같은 턴이면 늘 같은 답(서버가 판을 다시 세워도 같음)
+const BASIC_IDS = new Set(BASICS.map(s => s.id));
+export function searchPick(B, n) {
+  const u = B.foe, ok = u.kit.filter(s => canUse(u, s));
+  if (!ok.length) return REST;
+  if (ok.length === 1) return ok[0];
+  const known = new Set([...BASIC_IDS, ...B.log.map(t => t.mySkill && t.mySkill.id).filter(Boolean)]);
+  const seed0 = (B.turn * 7919 + Math.round(B.me.hp) * 131 + Math.round(B.foe.hp) * 31 + (B.me.energy | 0) * 7 + (B.foe.energy | 0)) >>> 0;
+  let best = ok[0], bestV = -1;
+  ok.forEach((cand, ci) => {
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      const C = structuredClone({ me: B.me, foe: B.foe, turn: B.turn, over: null, log: [], field: B.field || {} });
+      const mine = C.me.kit.filter(s => known.has(s.id)); if (mine.length) C.me.kit = mine;
+      C.rng = makeRng(seed0 + ci * 1009 + i * 97 + 1);
+      const r = C.rng;
+      playTurnVs(C, aiPick(C.me, C.foe, r, { iq: 0.7 }), cand);
+      for (let d = 0; d < 12 && !C.over; d++) playTurnVs(C, aiPick(C.me, C.foe, r, { iq: 0.7 }), aiPick(C.foe, C.me, r, { iq: 0.8 }));
+      sum += C.over === 'lose' ? 1 : C.over === 'win' ? 0 : 0.5 + 0.5 * (C.foe.hp / C.foe.max - C.me.hp / C.me.max);   // 'lose' = 사람이 짐 = 봇이 이김
+    }
+    if (sum / n > bestV) { bestV = sum / n; best = cand; }
+  });
+  return best;
+}
 
 // 판 차리기: 씨앗 하나로 난수 고정(결정론 — 같은 씨앗·같은 선택이면 같은 결과)
 export function makeBattle({ me, foe, seed = 20261015 }) {
@@ -212,7 +238,7 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false) {
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {
   const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill) ? mySkill : firstOk(B.me);
-  const foeSkill = mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });
+  const foeSkill = mustSkip(B.foe) ? REST : B.foe.search > 0 ? searchPick(B, B.foe.search) : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });   // 수 읽기 봇(대회 — fight.js SEARCH)
   return playTurnVs(B, me, foeSkill);
 }
 // 두 쪽이 다 고른 한 턴(PvP — 서버가 두 사람 선택으로 풂, 봇 판도 이걸 씀). 기술은 id 또는 기술 객체

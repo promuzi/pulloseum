@@ -60,8 +60,8 @@ try {
   ok((await call('/api/me', null, 'nope')).status === 401, '잘못된 열쇠 = 401');
   // ── 양육(자동 저장) ──
   const pid = A.state.plants[0].uid;
-  const f = await call('/api/act', { op: 'feed', args: { id: pid, kind: 'water', n: 5 } }, A.token);   // 새싹 Lv1 → 2 = 생장 45(2026-10-22 ×1.5)
-  ok(f.status === 200 && f.state.plants[0].lv === 2 && f.state.items.water === 1, '물 5번 → Lv2 · 물 1 남음');
+  const f = await call('/api/act', { op: 'feed', args: { id: pid, kind: 'water', n: 9 } }, A.token);   // 새싹 Lv1 → 2 = 생장 90(2026-10-23 ×3) · 처음 물 10
+  ok(f.status === 200 && f.state.plants[0].lv === 2 && f.state.items.water === 1, '물 9번 → Lv2 · 물 1 남음');
   const again = await call('/api/me', null, L1.token);
   ok(again.state.plants[0].lv === 2, '다른 열쇠(다른 기기)로 봐도 저장돼 있음');
   const ev = await call('/api/act', { op: 'evolve', args: { id: pid } }, A.token);

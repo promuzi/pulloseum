@@ -2,7 +2,7 @@
 // 표 = catalog.js. 모든 함수는 state를 그 자리에서 바꾸고 화면에 보여 줄 결과를 돌려줌. 안 되는 일은 Err(사용자에게 보일 한국어 문구)를 던짐.
 import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, NUTR_CAP, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
-  uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
+  uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, FARM_DAY, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED,
   ROUND_PTS, LOSE_PTS, DIV_PTS, DIVS, DIV_REWARD, TIER_PTS, GUARD_CUPS, SEASON_FLOOR, isTopTier, rankOf } from './catalog.js';
@@ -24,7 +24,7 @@ export function newGame({ nickname, starter }, rng, now) {
     profile: { name: nickname, title: '초보 재배사', avatar: starter, color: 0 },
     titles: ['초보 재배사'],
     wallet: { credits: 200, gems: 20 },
-    items: { water: 6, fert: 2, regress: 0, fuel: FUEL.max, parts: 6 }, fuelT: now,   // 부품 6 = 첫 강화 두 번(2026-10-17)
+    items: { water: 10, fert: 2, regress: 0, fuel: FUEL.max, parts: 6 }, fuelT: now,   // 부품 6 = 첫 강화 두 번(2026-10-17) · 물 6 → 10(2026-10-23 생장치 두 배 — 처음엔 물만 줘도 한 번 레벨업: 물 9번 = Lv2)
     scions: [], seeds: [], plants: [], storage: [], active: 0, team: [], mode: 'tournament',
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 },
     swap3: { wins: 0, losses: 0 }, pvp: { wins: 0, losses: 0 },
@@ -592,6 +592,18 @@ function rollFruit(s, p, rng) {
   if (e.kind === 'parts') return { kind: 'parts', n: 1 + (rng() < 0.3 ? 1 : 0), rar: e.rar };
   return { kind: 'gems', n: 3, rar: e.rar };
 }
+// 스마트팜 물 · 비료 하루 상한(2026-10-23 사용자 "식물을 많이 키우면 애들 레벨업이 쉬움 레벨업을 어렵게"): 열매에서 나오는 물 · 비료는 하루(한국 날짜)
+//  catalog.js FARM_DAY 까지 · 넘은 열매는 돈 30 — 식물이 많아도 성장 재료는 일정(전투 · 탐사 · 상점 보상은 그대로)
+function farmCap(s, got, now) {
+  const day = Math.floor((now + 9 * 3600e3) / 864e5);
+  if (!s.farmDay || s.farmDay.day !== day) s.farmDay = { day, water: 0, fert: 0 };
+  for (let i = 0; i < got.length; i++) {
+    const r = got[i]; if (r.kind !== 'water' && r.kind !== 'fert') continue;
+    const room = FARM_DAY[r.kind] - s.farmDay[r.kind];
+    if (room <= 0) { got[i] = { kind: 'credits', n: 30, rar: 0 }; continue; }
+    const n = Math.min(r.n, room); s.farmDay[r.kind] += n; if (n < r.n) got[i] = { ...r, n };
+  }
+}
 export function harvest(s, id, rng, now) {
   const p = getPlant(s, id);
   harvestSync(p, now);
@@ -599,6 +611,7 @@ export function harvest(s, id, rng, now) {
   const got = [];
   for (let i = 0; i < p.hv.have; i++) got.push(rollFruit(s, p, rng));
   p.hv.have = 0; p.hv.t0 = now;
+  farmCap(s, got, now);
   for (const r of got) grant(s, r);
   const xp = addXp(s, XP.harvest * got.length, rng);
   return { got, xp };
@@ -607,6 +620,7 @@ export function harvestAll(s, rng, now) {
   const got = [];
   for (const p of s.plants) { harvestSync(p, now); for (let i = 0; i < p.hv.have; i++) got.push(rollFruit(s, p, rng)); if (p.hv.have) { p.hv.have = 0; p.hv.t0 = now; } }
   need(got.length, '아직 맺힌 열매가 없어요');
+  farmCap(s, got, now);
   for (const r of got) grant(s, r);
   const xp = addXp(s, XP.harvest * got.length, rng);
   return { got, xp };

@@ -4,7 +4,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
-import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng, unitOf, aiOfTier } from '../v2/src/game/fight.js';
+import { setupBot, replayBot, botStep, botPlant, botTrainer, botBody, viewOf, makeRng, unitOf, aiOfTier, searchOfTier } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
 import { LEAGUES, RULES_VER, SPECIES, tourName } from '../v2/src/game/catalog.js';
 
@@ -15,6 +15,9 @@ const clone = o => JSON.parse(JSON.stringify(o));
 export const fail = msg => { throw new L.Err(msg); };
 
 export function makeGame({ q, log }) {
+  // 판 기억(2026-10-23): 수 읽기 봇(fight.js SEARCH)은 수마다 속으로 판을 여러 번 해 봐서, 턴마다 판을 처음부터 다시 세우면 뒤 턴일수록 무거움 →
+  //  본체가 켜져 있는 동안 둔 판을 들고 있다가 다음 수에 그대로 씀(둔 수 개수가 맞을 때만 · 본체가 다시 켜지면 한 번 다시 세움) · 300판까지
+  const live = new Map();
   const load = uid => {
     const r = q.save.get(uid);
     if (!r) fail('저장된 게임이 없어요');
@@ -109,10 +112,12 @@ export function makeGame({ q, log }) {
     const seed = randomInt(1, 2 ** 31 - 1), rng = makeRng(randomInt(1, 2 ** 31 - 1)), tier = Math.max(0, TIERS.indexOf(s.tournament.tier)), T = s.tournament;
     // 처음 두 판(새 계정 · 브론즈 예선 · 재배사 Lv2까지) = 튜토리얼식 — 내 속성이 잘 듣는 상대(2026-10-22 사용자 "첫 계정 생성 후 튜토리얼식 전투는 상성이 좋은 애로 배치")
     const tut = mode === 'tournament' && tier === 0 && T.round === '예선' && (T.wins || 0) + (T.losses || 0) < 2 && (s.user.level || 1) <= 2;
-    const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier, { tier, favorEl: tut && SPECIES[p.key] ? SPECIES[p.key].el : null }));   // 대회 단계가 오를수록 먼 궤도 식물(fight.js ORBIT_CAP)
+    //  봇 = 대회 단계가 오를수록 먼 궤도 식물(fight.js ORBIT_CAP) · 종 역할에 맞는 스펙 · 대회(튜토리얼 빼고)는 내 식물이 아니라 리그 가장 높은 성장 단계 + 단계별 레벨 · 개체값 바닥(2026-10-23 botBody)
+    const tour = mode === 'tournament' && !tut, cap = mode === 'tournament' ? L.leagueCap(s) : 0;
+    const foes = mine.map(p => { const body = tour ? botBody(rng, cap, tier) : { stage: p.stage, lv: p.lv }; return botPlant(rng, body.stage, body.lv, tier, { tier, favorEl: tut && SPECIES[p.key] ? SPECIES[p.key].el : null, concept: true, ivFloor: tour, lvExact: tour }); });
     const trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
-    const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ai: aiOfTier(tier, tut, mode === 'tournament' ? Math.max(0, L.ROUNDS.indexOf(T.round)) : 0), ...(mode === 'swap3' ? { swapCd: 2, swOrder: true, ownSun: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
+    const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ai: aiOfTier(tier, tut, mode === 'tournament' ? Math.max(0, L.ROUNDS.indexOf(T.round)) : 0), search: mode === 'tournament' ? searchOfTier(tier, tut) : 0, ...(mode === 'swap3' ? { swapCd: 2, swOrder: true, ownSun: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');
     q.addBattle.run(id, uid, mode, JSON.stringify(spec), '[]', now, now);
     log(uid, 'battle.start', { mode, mine: mine.map(plantLite), foes: foes.map(plantLite), tier: T.tier, round: T.round }, now);
@@ -122,12 +127,13 @@ export function makeGame({ q, log }) {
     const b = q.battle.get(String(id || ''), uid);
     if (!b || b.done) fail('끝났거나 없는 판이에요');
     if (oldRules(JSON.parse(b.spec))) { voidRow(uid, b, now); fail('게임이 업데이트되어 이 판은 승패 없이 끝났어요 — 다시 시작해 주세요'); }
-    const spec = JSON.parse(b.spec), acts = JSON.parse(b.acts), B = replayBot(spec, acts);
+    const spec = JSON.parse(b.spec), acts = JSON.parse(b.acts), c = live.get(b.id), B = c && c.n === acts.length ? c.B : replayBot(spec, acts);
     // 화면이 아는 턴과 다르면(응답을 못 받고 다시 보냄 등) 수를 넣지 않고 지금 판 모습만 돌려줌 → 화면이 다시 맞춤
     if (turn != null && (turn !== B.turn || (spec.mode === 'swap3' && act && act.kind === 'send' && B.need !== 'me'))) return { resync: true, view: viewOf(B), over: B.over };
     const step = botStep(B, spec.mode, act);
     acts.push(act);
     q.putActs.run(JSON.stringify(acts), now, b.id);
+    if (B.over) live.delete(b.id); else { live.set(b.id, { n: acts.length, B }); if (live.size > 300) live.delete(live.keys().next().value); }
     const out = { turn: step.turn || null, send: step.send || null, view: viewOf(B), over: B.over };
     if (B.over) Object.assign(out, finishBattle(uid, b, spec, acts, B, now));
     return out;
