@@ -107,8 +107,8 @@ test('방어를 연달아 쓰면 추가 방어가 절반(4배 → 2.5배)', () =
   assert.equal(ev.find(e => e.t === 'hit').dmg, 31);
 });
 
-test('방어는 고정 피해 감소가 아님: 방어 0 · 상한 · 부식', () => {
-  for (const [def, eff, want] of [[0, {}, 50], [1000, {}, 13], [25, { corrode: { turns: 2 } }, 31]]) {
+test('방어는 고정 피해 감소가 아님: 방어 0 · 상한 · 시듦(방어 −25% 한 겹)', () => {
+  for (const [def, eff, want] of [[0, {}, 50], [1000, {}, 13], [25, { defDown: { n: 1, s: [{ v: 0.25, exp: 9 }] } }, 29]]) {
     const ev = resolveTurn(unit('a'), unit('b', { def, eff }), STRIKE, GUARD, script([0, 0.5])).events;
     assert.equal(ev.find(e => e.t === 'hit').dmg, want);
   }

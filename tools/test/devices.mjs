@@ -47,7 +47,7 @@ const hits = ev => ev.filter(e => e.t === 'hit');
   const r = resolveTurn(A, D, atk({ power: 20, hits: 3, inflict: { id: 'weak' } }), rest, seq([0, 0.5]), { turn: 1 });
   const hs = hits(r.events);
   ok(hs.length === 3 && hs[2].n === 3 && hs[2].of === 3, `연타 = 타마다 사건(${hs.length})`);
-  ok(r.events.filter(e => e.t === 'fx' && e.id === 'weak').length === 1, '효과는 첫 적중 한 번');
+  ok(r.events.filter(e => e.t === 'fx' && e.id === 'atkDown').length === 1, '효과는 첫 적중 한 번');
   // 연타는 불운 보정 없음: 계속 빗나감 굴림이면 끝까지 빗나감
   const B2 = unit('d'), r2 = resolveTurn(unit('a'), B2, atk({ power: 20, hits: 4 }), { id: 'evade', act: 'evade', cost: 0, shift: { miss: 15, graze: 10 } }, seq([0, 0.01]), { turn: 1 });
   ok(hits(r2.events).every(h => h.tier === 'miss') && B2.hp === 300, '연타 = 불운 보정 없음(넷 다 빗나갈 수 있음)');
@@ -145,7 +145,7 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   const at = unit('a'); resolveTurn(at, th, atk({ power: 60 }), rest, seq([0, 0.5]), { turn: 2 });
   ok(at.hp < 300, `가시 5 = 반사 50%(때린 쪽 체력 ${at.hp})`);
   const hf = R({ hp: 160 }); resolveTurn(unit('a'), hf, atk({ power: 60, ranged: true }), rest, seq([0, 0.5]), { turn: 1 });
-  ok(hf.eff.rage, '처음 절반 아래 = 분노');
+  ok(hf.eff.atkUp, '처음 절반 아래 = 분노(활력 한 겹)');
   ok(resLine(R({ res: { thorn: 2, water: 7 } })) === '가시 2 · 물 7', '개수 글');
   delete SPECIES.__r;
   // 경기장: 비 = 물 +25% · 불 −25% · 화상 꺼짐 / 바람길 = 바람 연타 +1타 / 끝나면 걷힘
@@ -205,10 +205,10 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   resolveTurn(kf, unit('d'), P.u_petal_3b, rest, seq([0, 0.5]), { turn: 1 });
   const fires = [2, 3, 4].map(t => { const d = unit('d', { el: 'grass' }); resolveTurn(kf, d, P.u_petal_1, rest, seq([0, 0.5]), { turn: t }); return kf.curEl; });
   ok(fires[0] === 'fire' && fires[1] === 'fire' && !kf.st.infuse, `불타는 의지 = 다음 검방술 두 번 불(${fires})`);
-  // 만개: 겹침 4번까지 · 끝까지
+  // 만개(2026-10-23 엑셀 v10 — 독립 상태 없이 공통 강화로): 쓸 때마다 활력 · 억셈 · 가속 +5% 한 겹씩(상한 없음 · 겹마다 지금 5턴)
   const kb = knight();
   for (let t = 1; t <= 6; t++) resolveTurn(kb, unit('d'), P.u_petal_3c, rest, seq([0, 0.5]), { turn: t });
-  ok(kb.eff.flourish.n === 4 && Math.abs(atkK(kb) - 1.2) < 1e-9, '만개 = +5%씩 4번까지');
+  ok(kb.eff.atkUp.n === 6 && kb.eff.defUp.n === 6 && kb.eff.spdUp.n === 6 && Math.abs(atkK(kb) - 1.3) < 1e-9 && !kb.eff.flourish, '만개 = 활력 · 억셈 · 가속 +5% 한 겹씩');
 }
 
 console.log(`장치 시험 ${pass}/${pass + fails.length}`);

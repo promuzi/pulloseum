@@ -3,7 +3,7 @@
 import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST } from '../../v2/src/battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX } from '../../v2/src/battle/status.js';
+import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX, atkK } from '../../v2/src/battle/status.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 
 let fails = 0, n = 0;
@@ -273,10 +273,36 @@ const fixed = v => () => v;
   ok(tc1.crit > tc0.crit && !f.st.nextCrit, '집중은 한 번 쓰면 사라짐');
   const bs = { id: 'x_rage', name: '불타오르기', el: 'fire', act: 'buff', self: 'rage', cost: 0, cats: ['buff'] };
   const u = mk('me', 'gaia'), evB = resolveTurn(u, mk('foe', 'aqua'), bs, REST, fixed(0.5), { turn: 1 }).events;
-  ok(evB.some(e => e.t === 'cast') && u.eff.rage, '버프 기술 = 나에게 걸림');
+  ok(evB.some(e => e.t === 'cast') && u.eff.atkUp, '버프 기술 = 나에게 걸림(분노 → 활력 한 겹)');
   const u2 = mk('me', 'gaia');
   resolveTurn(u2, mk('foe', 'aqua'), { ...u2.kit[0], also: 'haste' }, REST, fixed(0.5), { turn: 1 });
-  ok(u2.eff.haste, '공격 기술의 덤 버프');
+  ok(u2.eff.spdUp, '공격 기술의 덤 버프(가속 한 겹)');
+}
+// ── 9-3. 능력치 겹(엑셀 v10 효과 분류 9~18행): 겹마다 지금 5턴 · 따로 만료 · 교체해도 남음 · 정화로 안 지워짐 ──
+{
+  const sb = (u, id, t = 1) => selfBuff(u, id, { turn: t, ev: [] });
+  const hitOf = (x, y, s = x.kit[0]) => resolveTurn(x, y, s, REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit');
+  const x = mk('foe', 'aqua');
+  const u = mk('me', 'gaia'); sb(u, 'atkUp'); const one = hitOf(u, mk('foe', 'aqua')).dmg;
+  sb(u, 'atkUp'); const two = hitOf(u, mk('foe', 'aqua')).dmg;
+  ok(u.eff.atkUp && u.eff.atkUp.n === 2 && two > one, `활력 두 겹 = 한 겹보다 셈(${one} → ${two})`);
+  const w = mk('me', 'gaia'); sb(w, 'atkUp', 1); sb(w, 'atkUp', 3);
+  expire(w, 4, []); ok(w.eff.atkUp && w.eff.atkUp.n === 2, '1턴에 건 겹은 4턴 끝엔 남음(지금 5턴)');
+  expire(w, 5, []); ok(w.eff.atkUp && w.eff.atkUp.n === 1, '1턴에 건 겹은 5턴 끝에 사라지고 3턴에 건 겹은 남음');
+  expire(w, 7, []); ok(!w.eff.atkUp, '3턴에 건 겹은 7턴 끝에 사라짐');
+  const d = mk('foe', 'aqua'); apply(d, 'atkDown', 1, ctx(u, 1, [])); sb(d, 'purify');
+  ok(d.eff.atkDown && d.eff.atkDown.n === 1, '쇠약은 정화로 안 지워짐(디버프 제거 불가)');
+  const r = mk('me', 'gaia'); sb(r, 'rage'); ok(r.eff.atkUp && !r.eff.rage, '옛 이름 분노 = 활력 한 겹');
+  const lo = mk('me', 'gaia'); for (let i = 0; i < 7; i++) apply(lo, 'atkDown', 1, ctx(x, 1, []));
+  ok(atkK(lo) >= 0.2 && atkK(lo) < 0.3, `쇠약 일곱 겹이어도 공격 배율 0.2 아래로 안 감(${atkK(lo).toFixed(2)})`);
+  const c0 = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).table, cu = mk('me', 'gaia'); sb(cu, 'critUp');
+  ok(hitOf(cu, mk('foe', 'aqua')).table.crit === c0.crit + 10, '예리 한 겹 = 치명 +10');
+  const au = mk('me', 'gaia'); apply(au, 'accDown', 1, ctx(x, 1, []));
+  ok(hitOf(au, mk('foe', 'aqua')).table.miss === c0.miss + 8, '교란 한 겹 = 내 공격 빗나감 +8');
+  const me = ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe = ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k));
+  const B = makeTeamBattle({ me, foe, seed: 9 }); sb(B.me, 'atkUp', B.turn); const out = B.me;
+  playTurn3(B, { kind: 'switch', to: 1 });
+  ok(B.me !== out && out.eff.atkUp && out.eff.atkUp.n === 1, '교체로 나가도 활력 남음');
 }
 // ── 9. 같은 씨앗 → 같은 결과 ──
 const runPair = (k1, k2, seed, off = false) => {

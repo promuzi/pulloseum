@@ -2,7 +2,7 @@
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
 import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
-import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX, useCount } from './status.js';
+import { canUse, mustSkip, noEnergy, endTurn, expire, has, FX, OLD, useCount } from './status.js';
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
 const WEAK = { fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] };
@@ -140,7 +140,7 @@ export function makeUnit(id, sp, o) {
 
 // 상대 고르기(봇 — 사람과 같은 정보만 씀): 쓸 수 있는 기술 중 가중 추첨. 위력·상성이 좋으면 자주, 체력이 낮으면 방어·회피를 조금 더,
 //  상대에게 아직 없는 효과(같은 속성 면역이 아니면)를 거는 기술은 조금 더.
-const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack ? true : !has(foe, f.id)); };
+const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[OLD[f.id] || f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack || D.stat ? true : !has(foe, f.id)); };   // 쌓이는 것(독 · 빙결 · 포자 · 능력치 겹)은 늘 새로
 // 못 쓰는 기술을 골랐을 때 대신 = 손패에서 쓸 수 있는 첫 기술, 없으면 넘어감(손패 넷에 기본기가 없으면 기력이 모자랄 수 있음)
 export const firstOk = u => u.kit.find(s => canUse(u, s)) || REST;
 // 봇 머리(2026-10-22 사용자 "봇 지능 향상. 교환 등 전투를 전략적으로 하도록"): 기술마다 점수를 매겨 높은 것을 고름.

@@ -28,44 +28,58 @@ export const FX = {
   gale:    { turns: 2, missAdd: 12 },                         // 강풍(바람 속성): 적중 ↓(내 공격 빗나감 칸 +12) — 사용자 "강풍이라고 바꾸자"
   taunt:   { turns: 1 },                                      // 다음 턴 방어·회피 자세 못 씀
   root:    { turns: 2 },                                      // 교체 못 함(3:3)
-  weak:    { turns: 2, atkK: 0.8 },                           // 공격 −20%
-  corrode: { turns: 2, defK: 0.6 },                           // 방어 −40%
   spore:   { jong: 'mushroom', stack: 3, bloom: 0.08 },      // 버섯 종 전용: 붙은 다음 턴부터 턴 끝마다 1씩 자라 3이면 피어남(최대 체력 8% 피해 + 그 턴 에너지 안 참) → 0 · 불에 맞으면 탐
   choke:   { turns: 0 },
+  // 능력치 버프 · 디버프(2026-10-23 엑셀 v10 효과 분류 9~18행 — 활력 · 억셈 · 가속 · 예리 · 집중 / 쇠약 · 시듦 · 둔화 · 무딤 · 교란):
+  //  거는 만큼 겹이 쌓이고 겹마다 지금 5턴(걸린 턴 = 1턴째)이 따로 감 · 교체해도 남고 대기석에서도 시간이 감 · 정화로 안 지워짐(반대 효과로 메움) ·
+  //  한 겹 값 v(기술마다 바꿀 수 있음 — o.v) = 공격 · 방어 · 기동은 배율에 더함(%), 치명 · 정확도는 판정표 칸에 더함 — 수치는 밸런스 전 임시(계획 문서 표)
+  atkUp:   { stat: 'atk', sign: 1, v: 0.2, turns: 5 },  defUp:   { stat: 'def', sign: 1, v: 0.5, turns: 5 },  spdUp:   { stat: 'spd', sign: 1, v: 0.2, turns: 5 },
+  critUp:  { stat: 'crit', sign: 1, v: 10, turns: 5 },  accUp:   { stat: 'acc', sign: 1, v: 8, turns: 5 },
+  atkDown: { stat: 'atk', sign: -1, v: 0.15, turns: 5 }, defDown: { stat: 'def', sign: -1, v: 0.25, turns: 5 }, spdDown: { stat: 'spd', sign: -1, v: 0.2, turns: 5 },
+  critDown: { stat: 'crit', sign: -1, v: 10, turns: 5 }, accDown: { stat: 'acc', sign: -1, v: 8, turns: 5 },
   // 버프(2026-10-16 — 기술 체계 문서 §3 짝: 불 분노 · 물 정화 · 풀 재생 · 대지 철벽 · 바람 가속 · 번개 집중 · 빙결 보호막 · 선인장 반사). 겹치지 않고 다시 걸면 새로
-  rage:    { buff: true, turns: 3, atkK: 1.25 },             // 분노: 공격 +25%
-  wall:    { buff: true, turns: 2, dmgK: 0.8 },              // 철벽: 받는 피해 −20%
-  haste:   { buff: true, turns: 2, mob: 1.3 },               // 가속: 기동성 +30%(선공 · 회피)
   regen:   { buff: true, left: 3, heal: 0.05 },              // 재생: 턴 끝 3번 최대 체력 5% 회복(화상이면 절반, 그늘이면 멈춤)
   thorns:  { buff: true, turns: 2, reflect: 0.3 },           // 반사: 붙어서 때린 상대에게 받은 피해 30%(멀리서 · 범위는 안 됨)
   shield:  { buff: true, turns: 3, hp: 0.15 },               // 보호막: 최대 체력 15%만큼 먼저 막음
   purified:{ buff: true, turns: 1 },                         // 정화: 나쁜 효과를 다 지우고 다음 턴까지 안 걸림
   // 2026-10-18 바닥 규칙 2단계(species-identity §1): 방어구 = 체력 위 금속 칸(깨질 때까지 · 쌓임 · 교체해도 남음 · 망치에 ×1.5로 깎임 · 지속 피해는 통과)
   //  은신 = 이번 턴 광역 아닌 공격 95% 빗나감 + 기습(공격 ×1.5 · 상대 자세 무시) · 분신 = 2턴 광역 아닌 공격 90% 빗나감(진짜가 맞거나 광역이면 풀림)
-  flourish: { buff: true, keep: true, per: 0.05, max: 4 },   // 만개(페탈로즈): 쓸 때마다 공격 · 방어 · 기동 +5% 겹침(4번까지) · 판 끝까지
+  flourish: { buff: true, adds: { atkUp: 0.05, defUp: 0.05, spdUp: 0.05 } },   // 만개(페탈로즈 원안 '모든 스탯 증가' — 2026-10-19 '독립 상태 없이 공통 강화로'): 쓸 때마다 활력 · 억셈 · 가속 +5% 한 겹씩
   armor:   { buff: true, keep: true, hp: 0.15, cap: 0.5, hammerK: 1.5 },
   stealth: { buff: true, turns: 0, miss: 0.95, ambush: 1.5 },
   clone:   { buff: true, turns: 1, miss: 0.9 },
   focus:   { buff: true },                                   // 집중: 다음 공격 치명 +25(u.st.nextCrit — 회피 성공 보상 '치명 준비'와 같은 칸)                                      // (포자가 피어 숨이 막힘 — 그 턴 끝 에너지 +1 없음, 창에는 안 보임)
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
-export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3 };
+export const RULES_FX = { frozenDmgK: 0.75, burnHealK: 0.5, decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const SKIP_IDS = ['stun', 'chill'];
-const TIMED = ['stealth', 'clone', 'shock', 'wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'brace', 'choke', 'rage', 'wall', 'haste', 'thorns', 'shield', 'purified'];
-const BUFFS = ['flourish', 'stealth', 'clone', 'armor', 'rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
-const DEBUFFS = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode', 'choke'];
-const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'weak', 'corrode'];
+const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
+const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
+const TIMED = ['stealth', 'clone', 'shock', 'wet', 'bind', 'shade', 'gale', 'taunt', 'root', 'brace', 'choke', 'thorns', 'shield', 'purified'];
+const BUFFS = ['stealth', 'clone', 'armor', ...UPS, 'regen', 'thorns', 'shield', 'purified'];
+const DEBUFFS = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', 'choke'];   // 정화가 지우는 것(능력치 디버프는 못 지움)
+const ORDER = ['burn', 'poison', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'shade', 'gale', 'taunt', 'root', ...DOWNS];
+// 옛 효과 이름 → 엑셀 v10 이름(기술 표를 다 옮길 때까지 — 2026-10-23 계획 Task 8에서 지움)
+export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown' };
 
 const E = u => (u.eff ||= {});
-export const has = (u, id) => !!(u && u.eff && u.eff[id]);
+export const has = (u, id) => !!(u && u.eff && u.eff[OLD[id] || id]);
+// 능력치 겹 합(올림 − 내림): 공격 · 방어 · 기동 = 배율에 더할 몫, 치명 · 정확도 = 판정표 칸
+export function statSum(u, stat) {
+  const e = u && u.eff; if (!e) return 0;
+  let t = 0;
+  for (const k of STATS) if (FX[k].stat === stat && e[k]) for (const s of e[k].s) t += FX[k].sign * s.v;
+  return t;
+}
+const statK = (u, stat) => Math.max(RULES_FX.statFloor, 1 + statSum(u, stat));   // 겹 상한이 아직 없어 음수만 막음(0.2 아래로 안 감)
+export const critAddOf = u => statSum(u, 'crit');
 
 // ── 다른 계산이 읽는 값 ──
-// 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 얼음, 나중에 가속 버프) → 선공 확률과 회피 자세에 같이 들어감
+// 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 가속 · 둔화) → 선공 확률과 회피 자세에 같이 들어감
 export function mobK(u) {
-  let k = ((u && u.modeK && u.modeK.spd) || 1) * flo(u);   // 모드(공통 장치 D9) 기동 배율
+  let k = ((u && u.modeK && u.modeK.spd) || 1) * statK(u, 'spd');   // 모드(공통 장치 D9) 기동 배율
   if (has(u, 'wet')) k *= FX.wet.mob;
   if (has(u, 'chill') || has(u, 'frozen')) k *= FX.chill.mob;
-  if (has(u, 'haste')) k *= FX.haste.mob;
   return k;
 }
 export const effSpd = u => (u.spd || 1) * mobK(u);
@@ -74,14 +88,14 @@ export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
-const flo = u => 1 + ((u && u.eff && u.eff.flourish && u.eff.flourish.n) || 0) * FX.flourish.per;   // 만개 겹침
-export const atkK = u => flo(u) * (has(u, 'weak') ? FX.weak.atkK : 1) * (has(u, 'rage') ? FX.rage.atkK : 1) * ((u && u.modeK && u.modeK.atk) || 1);
-export const defK = u => flo(u) * (has(u, 'corrode') ? FX.corrode.defK : 1) * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
-export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1) * (has(u, 'wall') ? FX.wall.dmgK : 1);
-export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0);
+export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1);
+export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
+export const dmgTakenK = u => (has(u, 'frozen') ? RULES_FX.frozenDmgK : 1);
+// 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
+export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) - statSum(u, 'acc');
 export const healK = u => (has(u, 'burn') ? RULES_FX.burnHealK : 1);
 // 카드 패시브(2026-10-17 — game/cards.js, 전투 유닛 u.pas): 공격 배율(용의 분노 = 내 체력 절반 아래 · 공생 균사 = 상대 나쁜 효과 수) · 피해 배율(소화액 = 상대 체력 30% 아래 · 강산 = 독 걸린 상대 · 강철 비늘 = 받는 피해 ↓)
-export const debuffCount = u => { const e = (u && u.eff) || {}; return DEBUFFS.filter(k => e[k]).length + (e.skip || e.frozen ? 1 : 0); };
+export const debuffCount = u => { const e = (u && u.eff) || {}; return DEBUFFS.filter(k => e[k]).length + DOWNS.filter(k => e[k]).length + (e.skip || e.frozen ? 1 : 0); };   // 나쁜 효과 종류 수(능력치 디버프는 종류마다 하나)
 export function pasAtkK(u, foe) {
   const p = u && u.pas; if (!p) return 1;
   let k = 1;
@@ -120,7 +134,7 @@ export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.bind &&
 export function listOf(u) {
   const e = (u && u.eff) || {}, out = [];
   if (e.brace) out.push({ id: 'brace' });
-  for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : k === 'flourish' ? { id: k, n: e.flourish.n } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸)
+  for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수
   if (u && u.st && u.st.nextCrit) out.push({ id: 'focus' });
   if (e.skip) out.push({ id: e.skip.src });
   else if (e.frozen) out.push({ id: 'frozen' });
@@ -145,8 +159,14 @@ export function consumeSkip(u, turn, ev, refund = 0) {
 
 // ── 걸기 ──
 // ctx = { turn, rng, ev, by(건 쪽 유닛) }
-export function apply(tgt, id, n, ctx) {
-  const D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id };
+// 능력치 겹 하나 더하기(겹마다 제 만료 — 지금 N턴 = 걸린 턴 T부터 → exp = T + N − 1)
+function addStat(u, id, T, o = {}) {
+  const D = FX[id], s = (E(u)[id] ||= { n: 0, s: [] });
+  s.s.push({ v: o.v ?? D.v, exp: T + (o.turns ?? D.turns) - 1 });
+  s.n = s.s.length;
+}
+export function apply(tgt, id0, n, ctx, o = {}) {
+  const id = OLD[id0] || id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id };
   if (!D || tgt.hp <= 0) return;
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
   if (!D.buff && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 중엔 나쁜 효과가 안 걸림
@@ -155,7 +175,10 @@ export function apply(tgt, id, n, ctx) {
   if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
   if (by && id === 'spore' && by.sporeAdd) n += by.sporeAdd;      // 카드(포자 번식)
   if (SKIP_IDS.includes(id) && (e.brace || e.skip)) { ev.push({ t: 'resist', ...base, why: e.brace ? 'brace' : 'skip' }); return; }
-  if (id === 'poison') {
+  if (D.stat) {
+    for (let i = 0; i < (n || 1); i++) addStat(tgt, id, T, o);
+    ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(tgt) });
+  } else if (id === 'poison') {
     const p = e.poison ||= { n: 0, last: T };
     p.n = Math.min(D.stack, p.n + n); p.last = T;
     ev.push({ t: 'fx', ...base, n: p.n, list: listOf(tgt) });
@@ -201,8 +224,10 @@ function bloom(u, turn, ev) {
   ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, list: listOf(u) });
 }
 // 나에게 버프 걸기(버프 기술 또는 공격 기술의 덤)
-export function selfBuff(u, id, ctx) {
-  const e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
+export function selfBuff(u, id0, ctx, o = {}) {
+  const id = OLD[id0] || id0, e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
+  if (FX[id] && FX[id].stat) { addStat(u, id, T, o); ctx.ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(u) }); return; }
+  if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'focus') { u.st = u.st || { miss: {}, init: 0, critTaken: false, nextInit: 0, nextCrit: 0, lastStance: null }; u.st.nextCrit = Math.max(u.st.nextCrit || 0, 25); ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'purify') {
     const gone = DEBUFFS.filter(k => e[k]);
@@ -213,7 +238,6 @@ export function selfBuff(u, id, ctx) {
   const D = FX[id]; if (!D) return;
   if (id === 'regen') e.regen = { left: D.left };
   else if (id === 'shield') e.shield = { exp: T + D.turns, hp: Math.max(1, Math.round(u.max * D.hp)) };
-  else if (id === 'flourish') e.flourish = { n: Math.min(D.max, ((e.flourish && e.flourish.n) || 0) + 1) };   // 겹침
   else if (id === 'armor') e.armor = { hp: Math.min(Math.round(u.max * D.cap), ((e.armor && e.armor.hp) || 0) + Math.max(1, Math.round(u.max * D.hp))) };   // 쌓임(상한 최대 체력 50%)
   else e[id] = { exp: T + D.turns };
   ctx.ev.push({ t: 'fx', ...base, list: listOf(u) });
@@ -291,6 +315,7 @@ export function expire(u, turn, ev) {
   if (!e) return;
   const gone = [];
   for (const k of TIMED) if (e[k] && e[k].exp <= turn) { delete e[k]; gone.push(k); }
+  for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
   if (e.frozen && !e.skip && e.skipDone === turn) { delete e.frozen; gone.push('frozen'); }
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
@@ -298,5 +323,5 @@ export function expire(u, turn, ev) {
 export function clearOnSwitch(u) {
   const e = u.eff;
   if (!e) return;
-  for (const k of Object.keys(e)) if (!(FX[k] && FX[k].keep)) delete e[k];
+  for (const k of Object.keys(e)) if (!(FX[k] && (FX[k].keep || FX[k].stat))) delete e[k];   // 능력치 겹은 남음(엑셀 v10 — 교체 시 유지 · 턴 진행)
 }

@@ -201,7 +201,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   // 분노 · 소화액 · 균사 · 치명 피해
   const wr = { hp: 40, max: 100, pas: { wrath: 0.25 } }; ok(pasAtkK(wr, null) === 1.25 && pasAtkK({ ...wr, hp: 60 }, null) === 1, '용의 분노 = 체력 절반 아래만');
   ok(pasDmgK({ pas: { exec: 0.3 } }, { hp: 20, max: 100 }) === 1.3 && pasDmgK({ pas: { exec: 0.3 } }, { hp: 50, max: 100 }) === 1, '소화액 = 30% 아래 상대만');
-  ok(Math.abs(pasAtkK({ hp: 1, max: 1, pas: { mycel: 0.06 } }, { eff: { wet: {}, weak: {}, poison: { n: 2 } } }) - 1.18) < 1e-9, '공생 균사 = 상대 나쁜 효과 셋 → +18%');
+  ok(Math.abs(pasAtkK({ hp: 1, max: 1, pas: { mycel: 0.06 } }, { eff: { wet: {}, atkDown: { n: 1, s: [{ v: 0.15, exp: 9 }] }, poison: { n: 2 } } }) - 1.18) < 1e-9, '공생 균사 = 상대 나쁜 효과 셋 → +18%');
   ok(Math.abs(pasDmgK({ pas: { acid: 0.15 } }, { hp: 9, max: 10, eff: { poison: { n: 1 } } }) - 1.15) < 1e-9, '강산 분비 = 독 걸린 상대 +15%');
   const crit = (pas, seed) => { const me = tough(U(P('gaia'))); me.crit = 50; me.pas = pas; const foe = tough(unitOf('foe', P('aqua'))); const B = makeBattle({ me, foe, seed }); const t = playTurnVs(B, atk, 'rest'); return t.events.find(e => e.t === 'hit'); };
   let hits = 0; for (let sd = 1; sd < 60 && !hits; sd++) { const a = crit({}, sd), b = crit({ critDmg: 0.25 }, sd); if (a.tier === 'crit' && b.tier === 'crit') { hits++; ok(b.dmg > a.dmg, `예리한 날 = 치명 피해 ↑ ${b.dmg} > ${a.dmg}`); } }

@@ -5,7 +5,7 @@
 
 import { SKILL_WEAPON } from './matchup.js';
 import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge } from './devices.js';
-import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, mustSkip, consumeSkip, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
+import { effSpd, evadeK, atkK, defK, dmgTakenK, missAddOf, critAddOf, mustSkip, consumeSkip, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -180,7 +180,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const guardOn = !ambush && still && (d.act === 'guard' || !!d.guardWith) && stanceOk(foe, 'guard');
       if (guardOn) showStance(foe);
       const veil = a.area || has(u, 'stealth') ? 0 : has(foe, 'stealth') ? FX.stealth.miss : has(foe, 'clone') ? FX.clone.miss : 0;   // 은신끼리는 서로 보임
-      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: u.st.nextCrit || 0, missAdd: missAddOf(u) });
+      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: (u.st.nextCrit || 0) + critAddOf(u), missAdd: missAddOf(u) });
       u.st.nextCrit = 0;
       let tier, forced = false;
       if (veil && rng() < veil) tier = 'miss';   // 은신 · 분신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로)
