@@ -3,8 +3,9 @@
 //  긴 화면(gap줄 더) = 같은 땅을 더 높은 자리에서 내려다본 원근 — 벽 밑 FL0줄부터 아래를 세로로 s배(내 받침이 손패 위에 오게) 늘임.
 //  ① 빛(부드러운 바탕) = 원을 지운 그림을 흐려서 세로로 매끈하게 늘임(가로줄 없음)
 //  ② 모래 알갱이 = 원래 알갱이(그림 − 바탕)를 줄마다 근처 다른 줄 · 가로로 밀어서 가져옴(같은 줄이 겹쳐 늘어나 보이지 않게)
-//  ③ 가운데 원 = tools/pixel/big/arena_ring.py 와 같은 땅 원(두 받침 깊이 가운데)을 늘인 원근으로 다시 그림 — 늘 두 식물 사이 가운데
-//  gap = 0 이면 그림 그대로(보통 화면 = 그린 그대로)
+//  ③ 가운데 원 = 그림의 원 모양 그대로(타원 — 같은 날 사용자 "원을 타원형으로 전처럼 해줘. 위치만 중앙에 잘 잡아달라는 의미였어")를
+//     두 받침 사이 같은 비율 자리로만 내림(그림에서 상대 받침 ~ 원 가운데 ~ 내 받침 비율 그대로)
+//  gap = 0(세로 578칸 이하 — 늘일 땅 없음)이면 그림 그대로
 const YH = -148, F = 981, CX = 135, FOE_Y = 156, ME_Y = 282, HALF = [112, 56], FL0 = 150;
 const Zf = F / (FOE_Y - YH), Zm = F / (ME_Y - YH), Zc = (Zf + Zm) / 2;
 const hash = n => (Math.imul(n ^ 0x9e3779b9, 2654435761) >>> 0) / 4294967296;
@@ -75,8 +76,9 @@ export function colosseumFloor(bg, gap) {
       d[o + 3] = 255;
     }
   }
-  // 가운데 원: 같은 땅 원을 늘인 원근으로(그림 줄 y → 화면 줄 FL0 + (y − FL0)·s) — 선 = 그 자리 색 × 원 선 어둡기 · 아래 칸 옅은 그늘
-  for (const h of HALF) for (const [x, y] of ringPath(h * Zc / F, yo => FL0 + (yo - FL0) * s)) {
+  // 가운데 원: 그림의 원 그대로를 dy줄 내림(원 가운데 = 상대 받침 + (그림의 원 가운데 − 상대 받침) × 받침 사이 늘어난 배율) — 선 = 그 자리 색 × 원 선 어둡기 · 아래 칸 옅은 그늘
+  const outer = ringPath(HALF[0] * Zc / F, y => y), ys = outer.map(p => p[1]), ringC = (Math.min(...ys) + Math.max(...ys)) / 2, dy = Math.round((ringC - FOE_Y) * gap / (ME_Y - FOE_Y));
+  for (const h of HALF) for (const [x, y] of ringPath(h * Zc / F, yo => yo + dy)) {
     if (x < 0 || x >= W || y < FL0 || y >= OH) continue;
     const o = (y * W + x) * 4; for (let k = 0; k < 3; k++) d[o + k] = Math.round(d[o + k] * K[k]);
     if (y + 1 < OH) { const u = ((y + 1) * W + x) * 4; for (let k = 0; k < 3; k++) d[u + k] = Math.round(d[u + k] * 0.94); }
