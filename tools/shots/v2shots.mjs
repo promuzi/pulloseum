@@ -41,6 +41,9 @@ export const SHOTS = [
   ['03_home_profile_lv30', 'home', { profile: true }, { level2: 30, profile: { color: 4 } }],   // 배너 열둘 다 열림(작은 창 미리보기 칸)
   ['03_home_profile_lv5', 'home', { profile: true }, { level2: 5, profile: { color: 1 } }],   // 잠긴 배너
   ['03_home_modes', 'home', { modes: true }],
+  ['03_home_rank', 'home', {}, { tour: { tier: '플래티넘', name: '새싹 플래티넘', pts: 245, round: '4강', wins: 2, losses: 1, bestOf: 7 } }],   // 배너 = 단계 · 칸 · 다음 칸까지 막대(2026-10-23)
+  ['03_home_modes_rank', 'home', { modes: true }, { tour: { tier: '플래티넘', name: '새싹 플래티넘', pts: 245, round: '4강', wins: 2, losses: 1, bestOf: 7 } }],
+  ['03_home_rank_long', 'home', {}, { tour: { tier: '플래티넘', name: '무제한 플래티넘', pts: 30, round: '4강', wins: 3, losses: 3, bestOf: 7 } }],   // 가장 긴 리그 · 단계 이름 + 7판 칸 가득
   ['03_home_swap3', 'home', { modes: true, mode: 'swap3' }],
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],
   ['03_home_focus', 'home', { focus: true }],
@@ -82,7 +85,7 @@ export const SHOTS = [
   // 대기실 오른쪽 단추 넷(가방 · 도감 · 순위 · 공지 — 새 공지 빨간 점) · 공지 창 · 순위표(2026-10-22)
   ['03_home_side4', 'home', {}, { online: true }],
   ['15_notice', 'home', {}, { online: true, notices: [{ id: 2, title: '식물 빛이 생겼어요', body: '불 · 번개 · 수정처럼 스스로 빛나는 식물이 제 빛을 비춰요.\n스마트팜은 이제 아침 · 낮 · 노을 · 밤이 바뀌어요.', created: 1792670000000 }, { id: 1, title: '3:3 햇빛이 식물마다 따로', body: '대기석에 있는 동안은 햇빛이 차지 않아요.', created: 1792600000000 }] }],
-  ['15_ranks', 'ranks', { mock: { league: 'sprout', season: 3, total: 6, top: [{ rank: 1, name: '코스모싹', avatar: 'gaia', level: 12, tier: 6, round: 0, stars: 2 }, { rank: 2, name: '밤하늘', avatar: 'cactus_fire', level: 9, tier: 3, round: 3 }, { rank: 3, name: null, avatar: 'spark', level: 8, tier: 2, round: 4 }, { rank: 4, me: true, name: '재배사', avatar: 'flower_grass', level: 7, tier: 2, round: 1 }, { rank: 5, name: '초록손', avatar: 'aqua', level: 5, tier: 1, round: 2 }, { rank: 6, name: '선인장왕', avatar: 'drake_cactus', level: 4, tier: 0, round: 3 }], mine: { rank: 4, tier: 2, round: 1, stars: 0 } } }, {}],
+  ['15_ranks', 'ranks', { mock: { league: 'sprout', season: 3, total: 6, top: [{ rank: 1, name: '코스모싹', avatar: 'gaia', level: 12, tier: 6, pts: 0, round: 0, stars: 2 }, { rank: 2, name: '밤하늘', avatar: 'cactus_fire', level: 9, tier: 3, pts: 255, round: 3 }, { rank: 3, name: null, avatar: 'spark', level: 8, tier: 2, pts: 330, round: 4 }, { rank: 4, me: true, name: '재배사', avatar: 'flower_grass', level: 7, tier: 2, pts: 140, round: 1 }, { rank: 5, name: '초록손', avatar: 'aqua', level: 5, tier: 1, pts: 75, round: 2 }, { rank: 6, name: '선인장왕', avatar: 'drake_cactus', level: 4, tier: 0, pts: 20, round: 3 }], mine: { rank: 4, tier: 2, pts: 140, round: 1, stars: 0 } } }, {}],
   ['06_draft_evo_sel', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: 1 } }],   // 카드 고름 = [장착]
   ['06_draft_evo_arm', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, sel: 1, arm: 1 } }],   // [장착] = 놓을 칸이 숨 쉼
   ['06_draft_evo_placed', 'plant', { tab: 'skill' }, { draft: { evo: 1, at: 2800, moves: [[1, 'b0']] } }],   // 바꿈 = 원래 것은 위 줄 · 둘 다 빛남
@@ -138,6 +141,10 @@ export const SHOTS = [
   ['08_battle_hit_cell', 'battle', { phase: 'hit', venue: 'cell' }],
   ['09_result', 'result', { win: true }],
   ['09_result_full', 'result', { win: true, full: '1' }],   // 보상 칸 여섯(두 줄 — 연료 · 부품, 2026-10-17)
+  ['09_result_champ', 'result', {}, { tour: { tier: '골드', name: '새싹 골드', pts: 310, round: '예선', wins: 0, losses: 0 }, result: { reward: { credits: 405, parts: 7, xp: { gained: 30 }, champ: true, round: '예선', rankPts: 45, divUp: '골드 1' }, info: { round: '결승', bestOf: 5 } } }],   // 우승 +45 · 칸 오름(2026-10-23)
+  ['09_result_round', 'result', {}, { tour: { tier: '골드', name: '새싹 골드', pts: 175, round: '4강', wins: 0, losses: 0 }, result: { reward: { credits: 90, parts: 2, water: 1, xp: { gained: 30 }, round: '4강', rankPts: 25 }, info: { round: '8강', bestOf: 5 } } }],   // 8강 통과 +25
+  ['09_result_cupend', 'result', {}, { tour: { tier: '실버', name: '새싹 실버', pts: 95, round: '예선', wins: 0, losses: 0 }, result: { win: false, reward: { credits: 15, xp: { gained: 10 }, reset: 'cup', rankPts: -10, divDown: '실버 4' }, info: { round: '예선', bestOf: 5 } } }],   // 예선 탈락 −10 · 칸 내려감
+  ['07_battle_title_long', 'battle', { phase: 'pick', venue: 'colosseum', title: '무제한 플래티넘 4 · 4강', nB: '7', w: '3', l: '2' }],   // 가장 긴 대회 제목 + 7판 칸(3승 2패)
   ['10_explore', 'explore', {}],
   ['10_explore_zoom1', 'explore', { map: '1', mapAt: '250' }],   // 행성을 눌러 지도로 다가가는 중간(코덱스 행성 그림 → 지도, 2026-10-22)
   ['10_explore_zoom2', 'explore', { map: '1', mapAt: '450' }],

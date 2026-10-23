@@ -5,8 +5,8 @@ import { icon } from '../art/icons.js';
 import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG, heroRemember } from '../art/sprites.js';
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
-import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd } from '../game/catalog.js';
-import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
+import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd, rankOf, tourName, isTopTier, DIV_PTS } from '../game/catalog.js';
+import { plantStats, leaguesOf, leagueCap, setLeague, winsNeed } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { openTeamPick } from './teampick.js';
@@ -239,8 +239,9 @@ export const home = {
       teamOf(s).forEach((pl, i) => { if (!pl) return; const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1c32'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key + (pl.shiny ? '~s' : ''), fx + 1, y + 21, 17, false)); });
       g.text(`${SW.wins}승 ${SW.losses}패`, x + w - 7, y + 39, { font: 'label', color: P.main, align: 'right' });
     } else {
-      g.text(`${TR.name} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
-      for (let i = 0; i < TR.bestOf; i++) { const c = i < TR.wins ? '#ffd890' : i < TR.wins + TR.losses ? '#ff8a8a' : '#244066'; g.rect(x + 7 + i * 10, y + 40, 8, 6, '#0a1c32'); g.rect(x + 8 + i * 10, y + 41, 6, 4, c); }
+      g.text(`${tourName(TR)} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
+      const st = TR.bestOf > 5 ? 9 : 10;   // 7판 라운드는 칸을 좁혀 오른쪽 승패 글자와 안 겹치게(2026-10-23)
+      for (let i = 0; i < TR.bestOf; i++) { const c = i < TR.wins ? '#ffd890' : i < TR.wins + TR.losses ? '#ff8a8a' : '#244066'; g.rect(x + 7 + i * st, y + 40, st - 2, 6, '#0a1c32'); g.rect(x + 8 + i * st, y + 41, st - 4, 4, c); }
       g.text(`${TR.wins}승 ${TR.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
     }
     if (live) app.input.hit('home_mode', x, BATTLE_Y, w, h, () => { this.modeSheet = true; }, 2);
@@ -315,7 +316,7 @@ export const home = {
         const lx = x + 8 + i * (lw + 4), on = s.league === k, rec = on ? s.tournament : lgs[k], id = 'ms_lg_' + k, pr = app.input.isPressed(id), yy = ly + 20 + (pr ? 1 : 0);
         holo(g, lx, yy, lw, 50, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
         g.text(LEAGUES[k].short, lx + lw / 2, yy + 5, { font: 'label', color: on ? '#ffe8c8' : P.main, align: 'center' });
-        g.text(rec.tier, lx + lw / 2, yy + 20, { font: 'bold', color: TIER_COL[rec.tier] || P.main, align: 'center' });
+        g.text(rankOf(rec), lx + lw / 2, yy + 20, { font: 'bold', color: TIER_COL[rec.tier] || P.main, align: 'center' });
         g.text(LEAGUES[k].desc, lx + lw / 2, yy + 34, { color: P.dim, align: 'center' });
         app.input.hit(id, lx, ly + 20, lw, 50, () => { if (s.league !== k) { setLeague(s, k); app.act('setLeague', { league: k }); } this.modeSheet = false; });
       });
@@ -347,11 +348,11 @@ export const home = {
       g.text(pf.name || '재배사', nx, y + 10, { font: 'name', color: P.main });
       g.text(pf.title || '', nx, y + 34, { font: 'label', color: P.sub });
     });
-    const TT = s.tournament || { tier: '브론즈', round: '예선', wins: 0, losses: 0 }, tier = TT.tier;   // 오른쪽 = 대회 단계 · 이번 라운드(3승이면 통과)
-    g.text(tier, rx, y + 9, { font: 'value', color: TIER_COL[tier] || P.main });
+    const TT = s.tournament || { tier: '브론즈', round: '예선', wins: 0, losses: 0, pts: 0 }, tier = TT.tier;   // 오른쪽 = 대회 단계 · 칸 · 이번 라운드 · 막대 = 다음 칸까지 점수(맨 위 단계 = 이번 라운드 승)
+    g.text(rankOf(TT), rx, y + 9, { font: 'value', color: TIER_COL[tier] || P.main });
     g.img(icon('pencil'), x + w - 19, y + 9);
     g.text(`${TT.round} ${TT.wins}승 ${TT.losses}패`, rx, y + 27, { font: 'label', color: P.sub });
-    tbar(g, rx, y + 45, w - (rx - x) - 9, 5, Math.min(1, TT.wins / 3), 'exp');
+    tbar(g, rx, y + 45, w - (rx - x) - 9, 5, isTopTier(tier) ? Math.min(1, TT.wins / winsNeed(TT)) : ((TT.pts || 0) % DIV_PTS) / DIV_PTS, 'exp');
     if (tappable) app.input.hit('home_profile', x, y, w, h, () => { this.editing = true; }, 2);
   },
   // 프로필 설정 창: 미리보기 배너 · 이름 바꾸기 · 대표 식물 · 칭호 · 배너 색 · 완료

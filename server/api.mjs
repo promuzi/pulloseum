@@ -57,7 +57,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     return u;
   }
   // 순위표(2026-10-22 — 로드맵 '시즌 · 리그별 순위(단계 · 풀로세움 별 수) + 이름 공개 여부'): 저장마다 리그 기록을 읽어 1분 동안 같은 표를 씀
-  //  순서 = 단계 → 풀로세움 별(맨 위 단계에서 결승을 넘을 때마다 하나) → 라운드 → 이번 라운드 이긴 판. 이번 시즌 기록만 · 한 판도 안 한 기록(브론즈 예선 0승 0패)은 뺌
+  //  순서 = 단계 → 풀로세움 별(맨 위 단계에서 우승할 때마다 하나) → 대회 점수(칸 · 2026-10-23) → 라운드 → 이번 라운드 이긴 판. 이번 시즌 기록만 · 한 판도 안 한 기록(브론즈 예선 0승 0패 0점)은 뺌
   //  이름 = 프로필 이름(별명) — 프로필에서 '순위표에 이름 숨김'이면 이름 없이(화면이 '익명 재배사')
   let rankCache = null;
   function rankRows(now) {
@@ -69,8 +69,8 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       const pf = s.profile || {}, L = {};
       for (const k of LEAGUE_KEYS) {
         const T = k === (s.league || 'sprout') ? s.tournament : (s.leagues || {})[k];
-        if (!T || (T.tier === TIERS[0] && T.round === ROUNDS[0] && !T.wins && !T.losses && !T.stars)) continue;
-        L[k] = { tier: Math.max(0, TIERS.indexOf(T.tier)), round: Math.max(0, ROUNDS.indexOf(T.round)), stars: T.stars || 0, wins: T.wins || 0 };
+        if (!T || (T.tier === TIERS[0] && T.round === ROUNDS[0] && !T.wins && !T.losses && !T.stars && !T.pts)) continue;
+        L[k] = { tier: Math.max(0, TIERS.indexOf(T.tier)), pts: T.pts || 0, round: Math.max(0, ROUNDS.indexOf(T.round)), stars: T.stars || 0, wins: T.wins || 0 };
       }
       rows.push({ id: r.id, name: pf.rankHide ? null : String(pf.name || r.nickname || '').slice(0, 12), avatar: pf.avatar || null, level: (s.user && s.user.level) || 1, season: s.season ? s.season.n : 0, L });
     }
@@ -146,7 +146,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     'GET /api/ranks': (req, b, now) => {
       const u = authed(req, now), lg = LEAGUES[req.query.get('league')] ? req.query.get('league') : 'sprout', n = seasonOf(now);
       const key = r => r.L[lg], list = rankRows(now).filter(r => r.season === n && key(r));
-      list.sort((a, c) => key(c).tier - key(a).tier || key(c).stars - key(a).stars || key(c).round - key(a).round || key(c).wins - key(a).wins || a.id - c.id);
+      list.sort((a, c) => key(c).tier - key(a).tier || key(c).stars - key(a).stars || key(c).pts - key(a).pts || key(c).round - key(a).round || key(c).wins - key(a).wins || a.id - c.id);
       const mi = list.findIndex(r => r.id === u.id);
       return { league: lg, season: n, total: list.length, top: list.slice(0, 50).map((r, i) => ({ rank: i + 1, me: r.id === u.id, name: r.name, avatar: r.avatar, level: r.level, ...key(r) })), mine: mi >= 0 ? { rank: mi + 1, ...key(list[mi]) } : null };
     },

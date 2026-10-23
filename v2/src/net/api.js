@@ -4,6 +4,7 @@ import { runOp } from '../game/ops.js';
 import { battleReward, battleForfeit, syncTimers } from '../game/logic.js';
 import { makeRng } from '../battle/rules.js';
 import { setupBot, botStep, viewOf, botPlant, botTrainer } from '../game/fight.js';
+import { TIERS, tourName } from '../game/catalog.js';
 
 const KEY = 'pullo.token';
 const store = {
@@ -30,7 +31,6 @@ export const net = {
 };
 
 // ── 봇 판(서버가 한 턴씩 — 오프라인이면 이 브라우저에서) ──
-const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
 let local = null;   // 오프라인 판 { spec, B }
 export const bot = {
   async start(app) {
@@ -39,7 +39,7 @@ export const bot = {
     const mine = mode === 'swap3' ? s.team.map(i => s.plants[i]).filter(Boolean) : [s.plants[s.active]];
     if (mode === 'swap3' && mine.length < 3) throw new NetErr('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요', 400);
     const T = s.tournament, foes = mine.map(p => botPlant(rng, p.stage, p.lv, Math.max(0, TIERS.indexOf(T.tier))));
-    const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${T.name} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
+    const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
     const spec = { seed: (Math.random() * 2 ** 31) | 0, mode, ...(mode === 'swap3' ? { swapCd: 2, ownSun: true } : {}), mine: JSON.parse(JSON.stringify(mine)), foes, trainer: botTrainer(rng), rank: `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv: Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4)), info };
     local = { spec, B: setupBot(spec) };
     return { id: 'local', mode, view: viewOf(local.B), info };

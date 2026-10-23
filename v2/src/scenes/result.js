@@ -3,18 +3,20 @@ import { button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawBig, bigKey, BGIMG } from '../art/sprites.js';
 import { T, plate, btnBody, padV, venueOf } from '../art/theme.js';
+import { rankGauge } from './rankfx.js';
 import { bigTitle } from './common.js';
 import { closeStream } from './room.js';
 import { room as R } from '../net/api.js';
 import { glyphH } from '../core/text.js';
 
-// 경기 결과: 승패 · 대회 진행(라운드 통과 · 3패면 처음부터) · 보상 카드(돈 · 재배사 경험치 · 물 · 비료) · 다음 할 일
+// 경기 결과: 승패 · 대회 진행(라운드 통과 · 우승 · 지면 대회 끝 + 대회 점수) · 보상 카드(돈 · 재배사 경험치 · 물 · 비료) · 대회 점수 막대(칸 오름/내려감 연출) · 다음 할 일
 //  app.lastResult = { win, mode('tournament'|'swap3'|'pvp'), reward, info, me:{key,pot,stage,el}, foe:{el}, why }
 const WHY = { forfeit: '기권', timeout: '시간 넘김', left: '상대가 나감', ko: '' };
 export const result = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament && app.state.tournament.tier); },
-  enter(p) { this.venue = p.venue || null; this.p = p; },
+  enter(p) { this.venue = p.venue || null; this.p = p; this.t0 = null; },
   draw(app) {
+    if (this.t0 == null) this.t0 = app.t;   // 점수 막대 연출 = 결과가 뜬 뒤 시각(촬영 = p.at)
     const { g, W, H, t } = app, L = app.lastResult || { win: this.p.win !== 'false' && this.p.win !== false, mode: 'tournament', reward: this.p.full ? { credits: 360, water: 2, fert: 1, fuel: 1, parts: 3, xp: { gained: 30 } } : { credits: 60, water: 1, xp: { gained: 30 } }, me: { key: 'flower_grass', pot: 'pot_terra' } };
     const win = !!L.win, rw = L.reward || {}, P = T.ptext, pvp = L.mode === 'pvp';
     g.rect(0, 0, W, H, T.bg2);
@@ -41,8 +43,8 @@ export const result = {
     });
     bigTitle(g, win ? '승리' : '패배', W / 2, 30, Object.assign({ font: 'huge' }, win ? { top: '#fbff86', mid: '#f9c22b', low: '#f79617', shadow: '#9e4539' } : { top: '#c7dcd0', mid: '#9babb2', low: '#7f708a', shadow: '#3e3546' }));
     // 진행 알약
-    const I = L.info || {}, nLose = Math.ceil((I.bestOf || 5) / 2), backTo = (app.state && app.state.tournament && app.state.tournament.round) || '예선';   // 라운드 실패 = 질 만큼(3 · 4패 — 2026-10-22) · 한 라운드 전으로
-    let pill = pvp ? '친구 대결' + (L.why && WHY[L.why] ? ` · ${WHY[L.why]}` : '') : L.mode === 'swap3' ? '3:3 교체전' : rw.round ? `${rw.round} 진출!` : rw.reset === 'round' ? `${nLose}패 — 이 라운드 처음부터` : rw.reset === 'back' ? `${nLose}패 — ${backTo}으로` : rw.reset ? `${nLose}패 — 예선부터 다시` : rw.forfeit ? '기권' : `${I.round || '예선'}`;
+    const I = L.info || {}, nLose = Math.ceil((I.bestOf || 5) / 2), rp = rw.rankPts || 0, rpT = rp > 0 ? ` +${rp}점` : rp < 0 ? ` ${rp}점` : '';   // 라운드 실패 = 질 만큼(3 · 4패 — 2026-10-22) = 그 대회 끝(2026-10-23)
+    let pill = pvp ? '친구 대결' + (L.why && WHY[L.why] ? ` · ${WHY[L.why]}` : '') : L.mode === 'swap3' ? '3:3 교체전' : rw.champ ? `우승!${rpT}` : rw.round ? `${rw.round} 진출!${rpT}` : rw.reset ? `${nLose}패 — 대회 끝${rpT}` : rw.forfeit ? '기권' : `${I.round || '예선'}`;
     const pw = g.textW(pill, 'bold') + 22;
     // 진행 알약 글자 = 눌린 판(가라앉은 면)의 가운데에(전엔 판보다 위에 떠 보였음 — 2026-10-16 사용자 '예선' 사진 "중앙정렬")
     const pb = btnBody(g, Math.round(W / 2 - pw / 2), 90, pw, 19, rw.round ? T.btn.gold : T.btn.second, true);
@@ -68,7 +70,12 @@ export const result = {
     if (!cards.length) { g.text(rw.capped === 'short' ? '3턴 안에 끝난 판은 보상이 없어요' : rw.capped === 'daily' ? '오늘 대결 보상은 다 받았어요(15판)' : rw.forfeit ? '기권한 판은 보상이 없어요' : '보상 없음', W / 2, ty + 20, { color: T.text.sub, align: 'center' }); ty += 40; }
     const lv = rw.xp && rw.xp.ups && rw.xp.ups.length ? rw.xp.ups[rw.xp.ups.length - 1] : 0;
     if (lv) { g.text(`재배사 Lv${lv}!`, W / 2, ty, { font: 'bold', color: '#ffd890', align: 'center' }); ty += 18; }
-    if (!pvp && L.mode !== 'swap3' && I.round && !rw.forfeit) { const T0 = app.state && app.state.tournament; if (T0) { g.text(`${T0.name} · ${T0.round} ${T0.wins}승 ${T0.losses}패`, W / 2, ty, { color: T.text.main, align: 'center' }); ty += 18; } }
+    // 대회 점수 막대(scenes/rankfx.js — 점수 알갱이가 알약에서 날아와 차오름 · 칸 오름/내려감 연출): 판 앞뒤 자리(rw.rank)가 없으면(옛 서버 · 촬영) 지금 자리 그대로
+    const T0 = app.state && app.state.tournament;
+    if (!pvp && L.mode !== 'swap3' && T0) {
+      const R = rw.rank || { from: T0, to: T0 }, room = H - 118 - ty, line = room >= 58 ? `${T0.round} · ${T0.wins}승 ${T0.losses}패` : '';
+      ty += 4 + rankGauge(app, R, this.p.at != null ? +this.p.at : app.t - this.t0, { x: 18, y: Math.min(ty + 4, H - 118 - (line ? 58 : 44)), w: W - 36, src: { x: Math.round(W / 2 + pw / 2 - 22), y: 99 }, line });
+    }
     // 다음 할 일
     if (pvp) {
       button(app, 'res_room', 25, H - 114, W - 50, 32, '방으로(다시 하기)', { style: 'teal', font: 'head', onTap: () => app.go('room', {}, 'shutter') });

@@ -188,6 +188,8 @@ window.__shot = (name, params = {}, opt = {}) => {
   if (opt.profile) Object.assign(app.state.profile, opt.profile);   // 배너 · 대표 식물 촬영(2026-10-22)
   app.shotOnline = !!opt.online; app.noticeChecked = true; if (opt.notices) { app.notices = opt.notices; app.sheet = 'notice'; }   // 온라인 단추(순위 · 공지) · 공지 창 촬영(2026-10-22)
   if (opt.level2) app.state.user.level = opt.level2;
+  if (opt.tour) Object.assign(app.state.tournament, opt.tour);   // 대회 기록 촬영(단계 · 칸 점수 · 라운드 — 2026-10-23)
+  app.lastResult = opt.result ? { win: true, mode: 'tournament', me: { key: 'flower_grass', pot: 'pot_terra' }, ...opt.result } : null;   // 결과 화면 촬영(점수 · 승급 · 대회 끝)
   if (opt.seedsAdd) opt.seedsAdd.forEach((o, i) => app.state.seeds.push({ id: 'shot_sa' + i, ...o }));   // 종자 가방 카드 · 정렬 촬영(2026-10-22 — 여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금)
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   app.seedpick = null; app.teampick = null;

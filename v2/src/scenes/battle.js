@@ -71,7 +71,7 @@ function attackFx(s, ak) {
   if (!A) { A = { kind, move: MOVE_OF[kind] || 'cast', c: B.c, status: B.status, petal: B.petal || [B.c[1], B.c[2]], gem: B.gem || B.c[0], ...(B.fizz ? { fizz: B.fizz } : {}) }; fxMemo.set(key, A); }
   return A;
 }
-import { glyphH, wrap } from '../core/text.js';
+import { glyphH, wrap, sized } from '../core/text.js';
 import { battleFromView, applyView } from '../game/fight.js';
 import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
@@ -89,6 +89,17 @@ import { TFX, setTfx, popLife, wordSlot, drawPops as tfxPops, drawRibbon as tfxR
 // 화면(2026-10-16 사용자): 안내 문구 = 가운데 전광판 없이 식물 머리 위 짧은 글자·리본(아래 '전투 글자 연출') · 기술 = 카드 여섯 장 · 아래 줄 = 기타 단추(교체 · 효과 · 감정), 기권 = 위 띠 왼쪽 작은 깃발
 //  체력판 = 'HP'·'MP' 이름 왼쪽, 막대·칸 왼쪽 맞춤, 숫자만 오른쪽 · 효과 창 = 글자·아이콘 같은 줄, 위아래 같은 간격.
 const PANEL_H = 228, AY = 24;
+// 라운드 판 네모(위 띠 — 2026-10-23): 이긴 판 = 금색 바탕 + 굵은 ✓ · 진 판 = 빨강 바탕 + 흰 ✕ · 남은 판 = 어두운 칸 + 밝은 테. s = 한 변(8 · 9)
+const CHECK = { 7: [[5, 1], [4, 2], [5, 2], [1, 3], [3, 3], [4, 3], [1, 4], [2, 4], [3, 4], [2, 5]], 6: [[4, 1], [1, 2], [3, 2], [4, 2], [1, 3], [2, 3], [3, 3], [2, 4]] };
+function roundPip(g, x, y, s, kind) {
+  const i = s - 2, ix = x + 1, iy = y + 1;
+  g.rect(x, y, s, s, '#06090f');
+  if (kind === 'none') { g.rect(ix, iy, i, i, '#3a5478'); g.rect(ix + 1, iy + 1, i - 2, i - 2, '#162238'); return; }
+  const win = kind === 'win';
+  g.rect(ix, iy, i, i, win ? '#ffd24a' : '#e2483e'); g.rect(ix, iy, i, 1, win ? '#fff2a8' : '#ff8a80'); g.rect(ix, iy + i - 1, i, 1, win ? '#c8901e' : '#a02a26');
+  if (win) for (const [cx, cy] of CHECK[i] || CHECK[7]) g.rect(ix + cx, iy + cy, 1, 1, '#4a2c06');
+  else for (let k = 1; k < i - 1; k++) { g.rect(ix + k, iy + k, 1, 1, '#fff4f0'); g.rect(ix + i - 1 - k, iy + k, 1, 1, '#fff4f0'); }
+}
 // 손패(2026-10-16 사용자 "스킬도 세로로 긴 카드 — 꾹 누르면 뒷면으로 가까이 앞으로 가져오는 느낌" → "카드가 너무 커, 기본 평타·방어·회피도 그렇게 하지 마"):
 //  여섯 장 모두 같은 카드(위 줄 = 기본기 셋 · 아래 줄 = 배운 기술 셋), 66×88(3:4)
 //  (같은 날 "카드 디자인이 너무 별로 — 자료 참고해서" → art/skillcard.js 다시: 그림이 주인공 · 속성 금속 테 · 파란 비용 마름모 · 주황 위력 알약 · 그림자 · 고르면 금빛으로 떠오름)
@@ -972,10 +983,15 @@ export const battle = {
       g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 대결') + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
     } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
     else {
-      const title = I ? I.title : '새싹 브론즈 · 예선', wins = I ? I.wins : 1, losses = I ? I.losses : 0, nB = (I && I.bestOf) || 5;   // 7판(플래티넘부터 — 2026-10-22)
-      g.text(title, W / 2 - 18 - (nB - 5) * 3, 6, { color: T.text.main, align: 'center' });
-      const x0 = W / 2 - 18 - (nB - 5) * 3 + Math.ceil(g.textW(title) / 2) + 6;
-      for (let i = 0; i < nB; i++) { const x = x0 + i * 7; g.rect(x, 8, 6, 6, T.ink); g.rect(x + 1, 9, 4, 4, i < wins ? T.text.gold : i < wins + losses ? '#ff8a8a' : T.bar.back); }
+      const title = I ? I.title : (this.p.title || '새싹 브론즈 4 · 예선'), wins = I ? I.wins : this.p.w != null ? +this.p.w : 1, losses = I ? I.losses : this.p.l != null ? +this.p.l : 0, nB = (I && I.bestOf) || +this.p.nB || 5;   // 7판(플래티넘부터 — 2026-10-22) · 촬영 = p.title · p.nB · p.w · p.l
+      //  제목 = 턴 상자(28~66) 바로 옆에 왼쪽 정렬(2026-10-23 사용자 "1턴 옆의 글자를 왼쪽 정렬로 리그를 당겨") · 판 네모 = 크게 · 이긴 판 금색 ✓ · 진 판 빨강 ✕
+      //  (같은 날 "네모박스의 승/패 기록은 좀더 키우고 확실하게") · 오른쪽 물음표 단추까지 안 들어가면 제목 글자를 한 단계씩 줄임
+      const PS = nB > 5 ? 8 : 9, dots = nB * (PS + 2) - 2, L0 = 72, R0 = W - 26;
+      let f = 'body', tw = g.textW(title, f);
+      for (let z = 10; L0 + tw + 6 + dots > R0 && z >= 8; z--) { f = sized('body', z); tw = g.textW(title, f); }
+      g.text(title, L0, f === 'body' ? 6 : 7, { font: f, color: T.text.main });
+      const x0 = L0 + Math.ceil(tw) + 6, py = Math.floor((AY - 2 - PS) / 2);
+      for (let i = 0; i < nB; i++) roundPip(g, x0 + i * (PS + 2), py, PS, i < wins ? 'win' : i < wins + losses ? 'lose' : 'none');
     }
   },
   // 기타 단추 줄(2026-10-16 사용자 "빈 아래 칸에 각종 기타 버튼"): 교체(3:3) · 감정 — 손패 카드 칸에 맞춤(2026-10-17 사용자 "감정 버튼을 식물 카드의 폭에 맞추고 우측선이 맞게 ·

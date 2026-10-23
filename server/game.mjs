@@ -6,7 +6,7 @@ import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
 import { setupBot, replayBot, botStep, botPlant, botTrainer, viewOf, makeRng, unitOf, aiOfTier } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
-import { LEAGUES, RULES_VER, SPECIES } from '../v2/src/game/catalog.js';
+import { LEAGUES, RULES_VER, SPECIES, tourName } from '../v2/src/game/catalog.js';
 
 export const newRng = () => makeRng(randomInt(1, 2 ** 31 - 1));
 const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
@@ -111,7 +111,7 @@ export function makeGame({ q, log }) {
     const tut = mode === 'tournament' && tier === 0 && T.round === '예선' && (T.wins || 0) + (T.losses || 0) < 2 && (s.user.level || 1) <= 2;
     const foes = mine.map(p => botPlant(rng, p.stage, p.lv, tier, { tier, favorEl: tut && SPECIES[p.key] ? SPECIES[p.key].el : null }));   // 대회 단계가 오를수록 먼 궤도 식물(fight.js ORBIT_CAP)
     const trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
-    const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${T.name} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
+    const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
     const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ai: aiOfTier(tier, tut, mode === 'tournament' ? Math.max(0, L.ROUNDS.indexOf(T.round)) : 0), ...(mode === 'swap3' ? { swapCd: 2, swOrder: true, ownSun: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');
     q.addBattle.run(id, uid, mode, JSON.stringify(spec), '[]', now, now);

@@ -690,6 +690,15 @@ export const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이�
 export const BANNER_LV = [1, 1, 1, 1, 5, 10, 15, 20, 3, 8, 25, 30];   // 배너 열둘(번호 = s.profile.color · 2026-10-22 새 넷: 오로라 3 · 성운 8 · 황금 25 · 풀로세움 30 — art/profile.js)
 // 한 라운드 판 수(2026-10-22 사용자 "랭크도 너무 빨리 오르는 경향이 있어 시스템 자체를 개편할지 고민해보자"): 브론즈 ~ 골드 = 5판 3선승 · 플래티넘부터 = 7판 4선승(전엔 모두 3선승)
 export const roundBest = tier => (tier >= 3 ? 7 : 5);
+// 대회 점수 · 칸(2026-10-23 사용자 안 C + "결승을 이기는 점수가 모여야 4>3으로" · "랭크전이니깐 어쩔 수 없는걸로해"):
+//  라운드 통과 = 예선 · 16강 0 · 8강 +25 · 4강 +30 · 우승 +45, 라운드에서 지면 그 대회 끝(다음은 예선부터) · 예선 탈락 −10 · 16강 탈락 −5 · 8강부터는 감점 없음
+//  칸 = 단계마다 넷(브론즈 4 → 1) · 칸 하나 100점(우승 한 번어치) · 칸 넷(400점)이면 다음 단계(남는 점수 넘어감) · 점수는 그 단계 바닥(0) 아래로 안 내려감(칸은 내려가도 단계는 시즌 안에 그대로)
+//  칸이 오를 때마다 보상(전 단계 승급 보상 그대로) · 맨 위(풀로세움)는 칸 · 점수 없이 우승마다 별
+export const ROUND_PTS = [0, 0, 25, 30, 45], LOSE_PTS = [10, 5, 0, 0, 0], DIV_PTS = 100, DIVS = 4, DIV_REWARD = { credits: 300, parts: 5 };
+export const isTopTier = tier => TIERS.indexOf(tier) >= TIERS.length - 1;
+export const divOf = T => DIVS - Math.min(DIVS - 1, Math.floor(Math.max(0, (T && T.pts) || 0) / DIV_PTS));   // 4(처음) → 1
+export const rankOf = T => (isTopTier(T.tier) ? T.tier : `${T.tier} ${divOf(T)}`);   // '브론즈 4' · 맨 위 = '풀로세움'
+export const tourName = T => (isTopTier(T.tier) ? T.name : `${T.name} ${divOf(T)}`);   // '새싹 브론즈 4'
 export const SEASON = { days: 14, epoch: Date.UTC(2026, 9, 12, 15) };   // 2026-10-13(화) 0시(한국) 시작, 2주마다
 export const seasonOf = now => 1 + Math.floor((now - SEASON.epoch) / (SEASON.days * 864e5));
 export const seasonEnd = n => SEASON.epoch + n * SEASON.days * 864e5;

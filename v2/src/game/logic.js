@@ -4,7 +4,8 @@ import {
   SPECIES, SKILLS, STAGES, LV_MAX, growNeed, FEED, PTS_PER_LV, IV_KEYS, IV_MAX, NUTR_CAP, UP_GAIN, STAGE_MUL, upCost, resetCost, starsOf,
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
-  LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED } from './catalog.js';
+  LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED,
+  ROUND_PTS, LOSE_PTS, DIV_PTS, DIVS, DIV_REWARD, isTopTier, rankOf } from './catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, rollFrom, formCards, isSkillCard, NORMAL_CARDS, baseOf, CARD_UP, cardPrice } from './cards.js';
 
 export class Err extends Error {}
@@ -1012,17 +1013,15 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
     if (win) winBonus(r, rng, [['water', 40], ['parts', 30], ['fuel', 18], ['fert', 12]]);   // 부품(2026-10-17)
     if (mode === 'swap3') s.swap3[win ? 'wins' : 'losses']++;
     else {
-      const T = s.tournament; T.bestOf = roundBest(tier); const nW = winsNeed(T); T[win ? 'wins' : 'losses']++;
-      if (T.wins >= nW) {   // 이번 라운드 통과 → 다음 라운드(결승 통과 = 다음 단계 대회)
-        const i = ROUNDS.indexOf(T.round);
-        if (i >= ROUNDS.length - 1) {
-          if (tier >= TIERS.length - 1) T.stars = (T.stars || 0) + 1;   // 풀로세움 별: 맨 위 단계에서 결승을 넘을 때마다 하나(순위표 — 2026-10-22, 시즌이 바뀌면 단계와 함께 처음부터)
-          T.tier = TIERS[Math.min(TIERS.length - 1, tier + 1)]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.round = ROUNDS[0]; T.bestOf = roundBest(TIERS.indexOf(T.tier)); r.credits += 300; r.parts = (r.parts || 0) + 5; r.tierUp = T.tier;
-          leaguesOf(s); if (s.season) s.season.best[s.league] = Math.max(s.season.best[s.league] || 0, TIERS.indexOf(T.tier));   // 시즌 최고 기록
-        }
-        else { T.round = ROUNDS[i + 1]; r.parts = (r.parts || 0) + 2; }   // 라운드 통과 = 부품 2
-        T.wins = 0; T.losses = 0; r.round = T.round;
-      } else if (T.losses >= nW) r.reset = loseRound(T);
+      const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(tier); const nW = winsNeed(T); T[win ? 'wins' : 'losses']++;
+      if (T.wins >= nW) {   // 이번 라운드 통과 → 다음 라운드 · 결승 통과 = 우승(그 대회 끝 → 다음 대회 예선부터)
+        const i = Math.max(0, ROUNDS.indexOf(T.round));
+        if (i >= ROUNDS.length - 1) { r.champ = true; T.round = ROUNDS[0]; if (tier >= TIERS.length - 1) T.stars = (T.stars || 0) + 1; }   // 풀로세움 별: 맨 위 단계에서 우승할 때마다 하나(순위표 — 2026-10-22, 시즌이 바뀌면 단계와 함께 처음부터)
+        else T.round = ROUNDS[i + 1];
+        T.wins = 0; T.losses = 0; r.round = T.round; r.parts = (r.parts || 0) + 2;   // 라운드 통과 = 부품 2
+        addRankPts(s, T, ROUND_PTS[i], r);
+      } else if (T.losses >= nW) r.reset = loseRound(T, r);
+      r.rank = { from, to: rankNow(T) };   // 결과 화면 점수 막대 연출(scenes/rankfx.js)
     }
   }
   give(s, r);
@@ -1033,17 +1032,35 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
 export function battleForfeit(s, mode) {
   if (mode === 'pvp') { s.pvp.losses++; return { forfeit: true }; }
   if (mode === 'swap3') { s.swap3.losses++; return { forfeit: true }; }
-  const T = s.tournament; T.bestOf = roundBest(Math.max(0, TIERS.indexOf(T.tier))); T.losses++;
+  const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(Math.max(0, TIERS.indexOf(T.tier))); T.losses++;
   const r = { forfeit: true };
-  if (T.losses >= winsNeed(T)) r.reset = loseRound(T);
+  if (T.losses >= winsNeed(T)) r.reset = loseRound(T, r);
+  r.rank = { from, to: rankNow(T) };
   return r;
 }
-// 라운드 실패(그 라운드에서 질 만큼 짐): 브론즈 = 그 라운드 처음부터(승패만 0) = 'round' · 실버 ~ 다이아 = 한 라운드 전으로 = 'back'(예선이면 'round') ·
-//  마스터 이상 = 예선부터 = 'qual'. 2026-10-18 사용자 "추천대로"(그 라운드 처음부터) → 2026-10-22 "랭크도 너무 빨리 오르는" — 실버부터 한 라운드 뒤로
-function loseRound(T) {
-  T.wins = 0; T.losses = 0;
-  const t = TIERS.indexOf(T.tier), i = ROUNDS.indexOf(T.round);
-  if (t >= TIERS.indexOf('마스터')) { T.round = ROUNDS[0]; return 'qual'; }
-  if (t >= 1 && i > 0) { T.round = ROUNDS[i - 1]; return 'back'; }
-  return 'round';
+const rankNow = T => ({ tier: T.tier, pts: T.pts || 0, stars: T.stars || 0 });   // 판 앞뒤 대회 자리(점수 막대 연출)
+// 대회 점수 더하기(라운드 통과 · 우승 — catalog.js ROUND_PTS): 칸(100점)을 넘을 때마다 칸 보상 · 칸 넷(400점)이면 다음 단계, 남는 점수는 넘어가고 대회는 이어서
+//  (다음 라운드부터 새 단계 상대 · 판 수) · 맨 위 단계(풀로세움)는 점수 없음(우승마다 별). r.rankPts = 얻은 점수 · r.divUp = 오른 칸('브론즈 3') · r.tierUp = 오른 단계
+function addRankPts(s, T, n, r) {
+  if (!n || isTopTier(T.tier)) return;
+  const p0 = T.pts || 0, ups = Math.floor((p0 + n) / DIV_PTS) - Math.floor(p0 / DIV_PTS);
+  T.pts = p0 + n; r.rankPts = (r.rankPts || 0) + n;
+  if (ups > 0) { r.credits += DIV_REWARD.credits * ups; r.parts = (r.parts || 0) + DIV_REWARD.parts * ups; }
+  while (T.pts >= DIV_PTS * DIVS && !isTopTier(T.tier)) {
+    T.pts -= DIV_PTS * DIVS; T.tier = TIERS[TIERS.indexOf(T.tier) + 1]; T.name = `${LEAGUES[s.league || 'sprout'].short} ${T.tier}`; T.bestOf = roundBest(TIERS.indexOf(T.tier)); r.tierUp = T.tier;
+    leaguesOf(s); if (s.season) s.season.best[s.league] = Math.max(s.season.best[s.league] || 0, TIERS.indexOf(T.tier));   // 시즌 최고 기록
+  }
+  if (isTopTier(T.tier)) T.pts = 0;
+  if (ups > 0) r.divUp = rankOf(T);
+}
+// 라운드 실패(그 라운드에서 질 만큼 짐) = 그 대회 끝 → 다음 대회는 예선부터 = 'cup'(2026-10-23 사용자 안 C — 전엔 브론즈 그 라운드 처음부터 · 실버 ~ 다이아 한 라운드 전 ·
+//  마스터 이상 예선부터). 예선 탈락 −10 · 16강 탈락 −5 · 8강부터 감점 없음 · 점수는 그 단계 바닥(0) 아래로 안 내려감 = 칸은 내려가도 단계는 시즌 안에 그대로 · 풀로세움은 점수 없음
+function loseRound(T, r) {
+  const i = Math.max(0, ROUNDS.indexOf(T.round)), lose = isTopTier(T.tier) ? 0 : LOSE_PTS[i] || 0, p0 = T.pts || 0;
+  T.wins = 0; T.losses = 0; T.round = ROUNDS[0];
+  if (lose && p0 > 0) {
+    T.pts = Math.max(0, p0 - lose); r.rankPts = T.pts - p0;
+    if (Math.floor(T.pts / DIV_PTS) < Math.floor(p0 / DIV_PTS)) r.divDown = rankOf(T);
+  }
+  return 'cup';
 }
