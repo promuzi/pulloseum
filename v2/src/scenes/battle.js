@@ -1,6 +1,6 @@
 import { arena1 } from '../art/bg.js';
 import { arenaLife } from '../art/arenaLife.js';
-import { icon, tinted } from '../art/icons.js';
+import { icon, iconMid, tinted } from '../art/icons.js';
 import { drawBig, drawBigPose, drawPortrait, BGIMG, bigKey } from '../art/sprites.js';
 // 그림 키 = 그 식물 단계 그림(어린 · 자람 · 다 자람) — 2026-10-17 전엔 종 키로만 그려 늘 다 자란 모습이었음
 const artOf = u => (u ? bigKey(u.key, u.stage, u.shiny) : u);
@@ -201,22 +201,31 @@ function sunPips(g, x, y, cur, max, gap, t) {
     const d = Math.abs(i - sweep); if (d < 1.3) g.alpha(0.8 * (1 - d / 1.3), () => g.rect(px + 1, y + 1, cw - 2, 5, '#fffbe6'));
   }
 }
-// 효과 창(한 줄에 셋 · 두 줄까지, 넘치면 +n): [아이콘][이름][겹침 수]를 가운데 — 글자는 위아래 같은 간격(실제 글자 높이로), 아이콘은 글자 줄 가운데에
-const SW_W = 45, SW_H = 16, SW_GAP = 2;
+// 효과 창(한 줄에 셋 · 두 줄까지, 넘치면 +n): [아이콘][이름][겹침 수]를 가운데 — 글자는 위아래 같은 간격(실제 글자 높이로), 아이콘은 창 가운데에
+//  아이콘 18칸 · 창 20칸(2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어" — 11칸 · 16칸이던 것): 이름이 있으면 겹 수는 아이콘 오른쪽 아래, 이름이 길어 안 들어가면 11칸
+const SW_W = 45, SW_H = 20, SW_GAP = 2;
 function statusWins(g, x, y, list) {
-  const shown = list.length > 6 ? [...list.slice(0, 5), { more: list.length - 5 }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2;
+  const shown = list.length > 6 ? [...list.slice(0, 5), { more: list.length - 5 }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2, bf = sized('bold', 9);
   shown.forEach((st, i) => {
     const c = i % 3, X = x + c * (SW_W + SW_GAP), w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W, Y = y + Math.floor(i / 3) * (SW_H + 2);
     if (st.more) { holo(g, X, Y, w, SW_H, SW_ON, 16); g.text(`+${st.more}`, X + (w >> 1), Y + ty, { font: 'bold', color: SW_ON.text, align: 'center' }); return; }
     const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a');
     holo(g, X, Y, w, SW_H, S, 16);
-    const named = st.t == null, nw = named ? g.textW(D.name) : -2, num = D.stack && st.n ? String(Math.min(st.n, D.stack)) + (st.t != null ? '·' + st.t : '') : null, rest = nw + (num ? 2 + g.textW(num) : 0);   // 포자 = 아이콘 + 개수 · 가장 빨리 피기까지 남은 턴(엑셀 v10 — 이름 없이)
-    const ic = D.icon && (rest + 11 <= w - 4 || !named) ? icon(D.icon) : null, gap = ic && rest + 12 > w - 4 ? 11 : 12;
-    const cw = (ic ? gap : 0) + rest;
+    const named = st.t == null, nw = named ? g.textW(D.name) : -2, num = D.stack && st.n ? String(Math.min(st.n, D.stack)) + (st.t != null ? '·' + st.t : '') : null;   // 포자 = 아이콘 + 개수 · 가장 빨리 피기까지 남은 턴(엑셀 v10 — 이름 없이)
+    const tail = badge => nw + (num && !badge ? 2 + g.textW(num) : 0), big = D.icon ? iconMid(D.icon) : null;   // tail = 아이콘 뒤 글자 폭(badge = 겹 수를 아이콘 위에)
+    let ic = null, badge = false;
+    if (big && big.width + 2 + tail(named && !!num) <= w - 4) { ic = big; badge = named && !!num; }
+    else if (D.icon && (tail(false) + 11 <= w - 4 || !named)) ic = icon(D.icon);
+    const rest = tail(badge), gap = !ic ? 0 : ic === big ? ic.width + 2 : rest + 12 > w - 4 ? 11 : 12, cw = gap + rest;
     let cx = X + Math.max(2, (w - cw) >> 1);
-    if (ic) { g.img(ic, cx, Y + Math.round((SW_H - ic.height) / 2)); cx += gap; }
+    if (ic) {
+      const iy = Y + Math.round((SW_H - ic.height) / 2);
+      g.img(ic, cx, iy);
+      if (badge) g.text(num, cx + ic.width + 1, iy, { font: bf, color: S.num, align: 'right', outline: '#0b1220', outlineW: 2 });   // 오른쪽 위(오른쪽 아래 = 능력치 화살표 자리)
+      cx += gap;
+    }
     if (named) g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
-    if (num) g.text(num, cx, Y + ty, { color: S.num });
+    if (num && !badge) g.text(num, cx, Y + ty, { color: S.num });
   });
 }
 // 전투 사건 문구(이름 = 그 사건 때의 식물)
@@ -1099,7 +1108,7 @@ export const battle = {
     const { g, W, H, input } = app, P = T.ptext, rows = [];
     for (const side of ['foe', 'me']) for (const st of this.statuses(side)) rows.push({ side, st });
     const mine = ((this.v.view.me && this.v.view.me.cards) || []).filter(id => CARDS[id] && CARDS[id].kind === 'passive');   // 내 카드 패시브(2026-10-17 — 상대 카드는 친구 대결에서 안 보임)
-    const h = Math.min(H - 60, 74 + Math.max(1, rows.length) * 30 + (mine.length ? 34 : 0)), y = Math.round((H - h) / 2), x = 10, w = W - 20;
+    const RH = SW_H + 14, h = Math.min(H - 60, 74 + Math.max(1, rows.length) * RH + (mine.length ? 34 : 0)), y = Math.round((H - h) / 2), x = 10, w = W - 20;   // 한 줄 = 효과 창 + 설명
     g.c.fillStyle = 'rgba(6,10,18,0.7)'; g.c.fillRect(0, 0, W, H);
     input.hit('in_block', 0, 0, W, H, () => { this.info2 = false; });
     holo(g, x, y, w, h, T.card || T.panel, 16);
@@ -1110,9 +1119,9 @@ export const battle = {
       if (yy > y + h - 60) break;
       const D = STATUS[st.id] || { name: st.id }, who = this.v.view[side];
       statusWins(g, x + 10, yy, [st]);
-      g.text(`${who ? who.name : ''}${side === 'me' ? '(나)' : ''}`, x + 60, yy + 1, { color: P.sub });
-      g.text(STATUS_DESC[st.id] || '', x + 10, yy + 17, { color: P.main });
-      yy += 30;
+      g.text(`${who ? who.name : ''}${side === 'me' ? '(나)' : ''}`, x + 60, yy + Math.round((SW_H - glyphH('body')) / 2), { color: P.sub });
+      g.text(STATUS_DESC[st.id] || '', x + 10, yy + SW_H + 1, { color: P.main });
+      yy += RH;
     }
     if (mine.length && yy <= y + h - 70) {   // 내 카드: 작은 카드 + 이름
       let cx = x + 10;

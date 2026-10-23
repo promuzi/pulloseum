@@ -1,6 +1,7 @@
 // 상태 효과 겉모습(이름 · 아이콘 · 색) — 전투 화면 효과 창(battle.js statusWins)과 식물 관리 기술 카드(plant.js)가 같이 씀.
 // 2026-10-15 사용자: "디버프 별로 색을 다르게", 이로운 효과 = 청록 홀로그램 하나로, 해로운 효과 = 효과마다 제 색, 숫자 = 쌓인 수만(stack).
-import { icon } from './icons.js';
+import { icon, iconMid } from './icons.js';
+import { glyphH } from '../core/text.js';
 import { rbox } from './ui.js';
 
 // 아이콘 = 효과 · 스킬 분류 엑셀 v10의 효과(2026-10-22 사용자 "아이콘 비슷한게 있는데 … 분노같은 경우 · 엑셀로 작업중인 변경될 예정인걸 기준으로"):
@@ -54,12 +55,12 @@ export const swStyle = col => { let s = swCache.get(col); if (!s) swCache.set(co
 // 나에게 거는 효과 이름(식물 관리 기술 줄의 작은 칩 — 엑셀 v10 이름)
 export const BUFF_LOOK = { flourish: '만개', armor: '갑주', stealth: '은신', purify: '정화', regen: '재생', will: '의지', atkUp: '활력', defUp: '억셈', spdUp: '가속', critUp: '예리', accUp: '집중', aim: '조준', shield: '보호막' };
 // 기술 카드용 작은 효과 칩: [아이콘][이름] — 디버프는 그 색, 버프는 청록. 너비를 돌려줌
-export function fxChip(g, x, y, id, buffName) {
+export function fxChip(g, x, y, id, buffName, big = false) {   // big = 18칸 아이콘 · 20칸 칩(기술 카드 뒷면 — 2026-10-23 "상태이상 아이콘이 … 너무 작아져서")
   const D = buffName ? { name: buffName, buff: true } : STATUS[id];
   if (!D) return 0;
-  const S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a'), ic = D.icon ? icon(D.icon) : null, w = (ic ? 13 : 4) + g.textW(D.name) + 5;
-  rbox(g, x, y, w, 15, 4, S.fill, S.frame);
-  if (ic) g.img(ic, x + 2, y + 2);
-  g.text(D.name, x + (ic ? 14 : 5), y + 2, { color: S.text });
+  const S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a'), ic = D.icon ? (big && iconMid(D.icon)) || icon(D.icon) : null, h = big ? 20 : 15, tx = ic ? 3 + ic.width : 5, w = tx - 1 + g.textW(D.name) + 5;
+  rbox(g, x, y, w, h, 4, S.fill, S.frame);
+  if (ic) g.img(ic, x + 2, y + Math.round((h - ic.height) / 2));
+  g.text(D.name, x + tx, y + (big ? Math.round((h - glyphH('body')) / 2) : 2), { color: S.text });
   return w;
 }

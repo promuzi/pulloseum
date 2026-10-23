@@ -1,5 +1,5 @@
 import { C } from '../art/palette.js';
-import { ICON_SRC, icon } from '../art/icons.js';
+import { ICON_SRC, icon, iconMid } from '../art/icons.js';
 import { holo } from '../art/theme.js';
 import { SW_ON, swStyle } from '../art/statusLook.js';
 import { glyphH } from '../core/text.js';
@@ -98,12 +98,12 @@ const fxlab = {
     for (const [head, list, kind] of FXLAB) {
       g.text(head, 8, y, { font: 'bold', color: '#8ccfff' }); y += 15;
       list.forEach(([name, ic, col], i) => {
-        const c = i % 2, X = 8 + c * 131, S = kind === true ? SW_ON : swStyle(col || kind), w = Math.max(48, g.textW(name) + 19), im = icon(ic);
-        holo(g, X, y, w, 16, S, 16);
-        if (im) g.img(im, X + 3, y + Math.round((16 - im.height) / 2));
-        g.text(name, X + 16, y + Math.round((16 - gh) / 2), { color: S.text });
-        if (im) g.img(im, X + w + 6, y - 3, 2);
-        if (c === 1 || i === list.length - 1) y += 24;
+        const c = i % 2, X = 8 + c * 131, S = kind === true ? SW_ON : swStyle(col || kind), im = icon(ic), sm = iconMid(ic) || im, iw = sm ? sm.width + 2 : 0, w = Math.max(48, g.textW(name) + iw + 8);   // 효과 창과 같은 20칸 창 · 18칸 아이콘
+        holo(g, X, y, w, 20, S, 16);
+        if (sm) g.img(sm, X + 3, y + Math.round((20 - sm.height) / 2));
+        g.text(name, X + 3 + iw, y + Math.round((20 - gh) / 2), { color: S.text });
+        if (im) g.img(im, X + w + 6, y - 1, 2);
+        if (c === 1 || i === list.length - 1) y += 26;
       });
       y += 4;
     }

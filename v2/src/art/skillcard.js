@@ -378,9 +378,9 @@ function cardBack(g, w, h, sk, o) {
   if (sk.reflect) fx.push({ id: 'reflect', to: '이번 턴' });   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타)
   for (const f of fx) {
     y += 2;
-    const cwid = fxChip(g, P, y, STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id);
-    g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, y + 2, { color: C.sub });
-    y += 19;
+    const cwid = fxChip(g, P, y, STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id, true);
+    g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, y + Math.round((20 - glyphH('body')) / 2), { color: C.sub });
+    y += 24;
     if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
   }
   if (sk.link) line(`피하면 바로 이어 공격 — 위력 ${sk.link.hits > 1 ? `${sk.link.power}×${sk.link.hits}` : sk.link.power}${sk.link.ambush ? ' · 기습(×1.5 · 자세 무시)' : ''}`, '#9fd8ff');

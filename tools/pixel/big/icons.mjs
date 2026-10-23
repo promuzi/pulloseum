@@ -3,6 +3,7 @@
 //   아이콘 = 손그림과 같은 크기(<이름>.png — 11칸 · 하단 탭 15칸) + 두 배(<이름>_b.png — 그림을 2배로 그리던 자리에 저절로) · 하단 탭은 띠용 22칸(<이름>_n.png)
 //   물건 그림에서 뽑는 아이콘(물뿌리개 can · 비료 fert · 회귀 주사 potion · 연료 fuel · 부품 parts) = concept/items/cut/item_*.png
 //   효과 아이콘(fx_* · env_* · trap_* · summon_*) = concept/icons3/ — 효과 · 스킬 분류 엑셀 기준(짝 표 docs/superpowers/specs/2026-10-22-v2-effect-icons.md)
+//   효과 창 · 효과 칩 아이콘 = 18칸(<이름>_m.png — 2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어": 11칸은 원화가 뭉개짐) — 효과 · 상태 · 능력치 바탕(검 · 방패 · 신발 · 치명 · 과녁)만
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,8 +34,10 @@ function outs(n) {
   if (n.startsWith('chest_')) return [];   // 상자는 아래 1-2)에서 같은 틀로
   if (n.startsWith('planet_')) { const d = PLANET_D[n.slice(7)] || 15; return n === 'planet_ex_nereidon' ? [[n, 35, d, 'center']] : [[n, d, d, 'center']]; }
   if (NAV.has(n)) return [[n, 15, 15, 'center'], [n + '_b', 30, 30, 'center'], [n + '_n', 22, 22, 'center']];
-  return [[n, 11, 11, 'center'], [n + '_b', 22, 22, 'center']];
+  return [[n, 11, 11, 'center'], [n + '_b', 22, 22, 'center'], ...(MID(n) ? [[n + '_m', 18, 18, 'center']] : [])];
 }
+// 18칸 효과 창 아이콘을 만드는 그림(art/icons.js MID 와 같은 목록)
+function MID(n) { return /^(fx_|st_|env_|trap_|summon_)/.test(n) || ['sword', 'shield', 'speed', 'crit', 'target'].includes(n); }
 const only = process.argv.slice(2);
 const dirOf = sheet => sheet.startsWith('fx_') ? resolve(here, 'concept', 'icons3') : CON;   // 판이 있는 폴더(엑셀 효과 아이콘 = icons3)
 for (const D of [CON, dirOf('fx_')]) { mkdirSync(resolve(D, 'split'), { recursive: true }); mkdirSync(resolve(D, 'cut'), { recursive: true }); }

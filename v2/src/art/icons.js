@@ -858,7 +858,9 @@ const built = new Map();
 // 코덱스 아이콘(2026-10-22 사용자 "전부해봐" — 손그림 아이콘을 코덱스 디자인 도트로, tools/pixel/big/icons.mjs → assets/v2/icons/):
 //  <이름>.png = 손그림과 같은 크기(1배 자리 — icon() 이 손그림 대신 돌려줌) · <이름>_b.png = 두 배(g.img 배율 2 자리에 저절로 — gfx.js) · 하단 탭 = <이름>_n.png 22칸
 //  SMALL_KEEP = 11칸으로 줄이면 뭉개져 1배 자리엔 손그림을 그대로 쓰는 것(2배 자리만 새 그림) · ALIAS = 새 이름의 그림이 아직 없을 때 쓸 손그림
-export const ICONART = {}, ICONBIG = {}, ICONNAV = {};
+//  <이름>_m.png = 18칸(효과 창 · 효과 칩 — iconMid, 2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어") — MID 목록만
+export const ICONART = {}, ICONBIG = {}, ICONNAV = {}, ICONMID = {};
+const MID = n => /^(fx_|st_|env_|trap_|summon_)/.test(n) || ['sword', 'shield', 'speed', 'crit', 'target'].includes(n);   // tools/pixel/big/icons.mjs MID 와 같은 목록
 const NAV_ICONS = ['navShop', 'navExplore', 'navHome', 'navNursery', 'navShip', 'navBag', 'navBook'];
 const ART_ICONS = ['gear', 'coin', 'gem', 'energy', 'lock', 'fire', 'water', 'grass', 'earth', 'wind', 'bolt', 'ice', 'flower', 'cactus', 'vine', 'mushroom', 'heart', 'sword', 'shield', 'speed', 'target', 'sparkle', 'crit',
   'st_stun', 'st_spore', 'st_frozen', 'st_paral', 'st_leech', 'st_root',
@@ -876,12 +878,13 @@ const ALIAS = { st_stun: 'star', st_spore: 'mushroom', st_frozen: 'ice', st_para
   env_healcastle: 'heal', env_hellfort: 'fire', env_walkcastle: 'earth', trap_thorn: 'cactus', summon_guard: 'shield' };
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadIconArt(base = '../assets/v2/icons/') {
-  const list = [...NAV_ICONS.flatMap(n => [n, n + '_b', n + '_n']), ...ART_ICONS.flatMap(n => [n, n + '_b']), ...EXTRA], got = await Promise.all(list.map(n => loadImg(base + n + '.png'))), by = {};
+  const list = [...NAV_ICONS.flatMap(n => [n, n + '_b', n + '_n']), ...ART_ICONS.flatMap(n => [n, n + '_b', ...(MID(n) ? [n + '_m'] : [])]), ...EXTRA], got = await Promise.all(list.map(n => loadImg(base + n + '.png'))), by = {};
   list.forEach((n, i) => { if (got[i]) by[n] = got[i]; });
   for (const n of [...NAV_ICONS, ...ART_ICONS]) {
     if (by[n + '_b']) ICONBIG[n] = by[n + '_b'];
     if (by[n] && !SMALL_KEEP.has(n)) { ICONART[n] = by[n]; if (ICONBIG[n]) ICONART[n].big = ICONBIG[n]; }
     if (by[n + '_n']) ICONNAV[n] = by[n + '_n'];
+    if (by[n + '_m']) ICONMID[n] = by[n + '_m'];
   }
   for (const n of EXTRA) if (by[n]) ICONART[n] = by[n];
   built.clear();   // 손그림으로 먼저 구운 것(색 입힌 것 포함)을 비워 새 그림으로
@@ -894,7 +897,10 @@ const FX_STAT = { atk: 'sword', def: 'shield', spd: 'speed', crit: 'crit', acc: 
 const ARROW = {
   s: ['...o...', '..oAo..', '.oaAAo.', 'oAAAAAo', 'ooooooo'],
   b: ['.....o.....', '....oAo....', '...oaAAo...', '..oaAAAAo..', '.oAAAAAAAo.', 'oAAAAAAAAAo', 'ooooooooooo'],
+  m: ['....o....', '...oAo...', '..oaAAo..', '.oaAAAAo.', 'oAAAAAAAo', 'ooooooooo'],   // 18칸 효과 창
   all: ['.....o.....', '....oAo....', '...oaAAo...', '..oaAAAAo..', '.oaAAAAAAo.', 'oooAAAAAooo', '..oAAAAAo..', '..oAAAAAo..', '..oAAAAAo..', '..ooooooo..'],
+  allm: ['.......o.......', '......oAo......', '.....oaAAo.....', '....oaAAAAo....', '...oaAAAAAAo...', '..oaAAAAAAAAo..', '.oaAAAAAAAAAAo.', 'oooooAAAAAooooo',
+    '....oAAAAAo....', '....oAAAAAo....', '....oAAAAAo....', '....oAAAAAo....', '....oAAAAAo....', '....ooooooo....'],
 };
 function fxStat(stat, up) {
   const paint = (cv, rows, ox, oy, flip, k = 1) => {
@@ -902,13 +908,21 @@ function fxStat(stat, up) {
     rows.forEach((row, j) => { const r = flip ? rows[rows.length - 1 - j] : row; for (let i = 0; i < r.length; i++) { const col = P[r[i]]; if (col) { x.fillStyle = col; x.fillRect(ox + i * k, oy + j * k, k, k); } } });
   };
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
-  if (stat === 'all') { const c = mk(11, 10); paint(c, ARROW.all, 0, 0, false); c.big = mk(22, 20); paint(c.big, ARROW.all, 0, 0, false, 2); return c; }
+  if (stat === 'all') { const c = mk(11, 10); paint(c, ARROW.all, 0, 0, false); c.big = mk(22, 20); paint(c.big, ARROW.all, 0, 0, false, 2); c.mid = mk(18, 18); paint(c.mid, ARROW.allm, 1, 2, false); return c; }
   const base = icon(FX_STAT[stat]), w = base.naturalWidth || base.width, h = base.naturalHeight || base.height, c = mk(Math.max(w, 9), Math.max(h, 9));
   c.getContext('2d').drawImage(base, 0, 0);
   paint(c, ARROW.s, c.width - 7, c.height - 5, !up);
   const B = ICONBIG[FX_STAT[stat]];
   if (B) { const bw = B.naturalWidth || B.width, bh = B.naturalHeight || B.height; c.big = mk(bw, bh); c.big.getContext('2d').drawImage(B, 0, 0); paint(c.big, ARROW.b, bw - 11, bh - 7, !up); }
+  const M = ICONMID[FX_STAT[stat]];
+  if (M) { const mw = M.naturalWidth || M.width, mh = M.naturalHeight || M.height; c.mid = mk(mw, mh); c.mid.getContext('2d').drawImage(M, 0, 0); paint(c.mid, ARROW.m, mw - 9, mh - 6, !up); }
   return c;
+}
+// 효과 창 · 효과 칩 크기(18칸) — 그림이 없으면 null(부르는 쪽이 11칸 icon 으로)
+export function iconMid(name) {
+  if (ICONMID[name]) return ICONMID[name];
+  if (/^fx_(atk|def|spd|crit|acc|all)_(up|down)$/.test(name)) { const c = icon(name); return (c && c.mid) || null; }
+  return null;
 }
 export function icon(name) {
   const a = ICONART[name]; if (a) return a;
