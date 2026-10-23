@@ -49,7 +49,6 @@ export const FX = {
   // 준비 효과(엑셀 v10 35~37행) = 일회성 · 교체 시 제거 · 기간 없음
   shield:  { buff: true, hp: 0.15 },                          // 보호막: 최대 체력 15% — 상대 공격 기술 한 번의 모든 타를 남은 양까지 막고 그 기술이 끝나면 잔량 제거 · 빗나감 · 상태이상 피해엔 남음
   aim:     { buff: true, k: 25 },                             // 조준(옛 집중): 다음 공격 기술 한 번의 모든 타 치명 +25 → 그 기술이 끝나면 소비 · 쉬면 풀림
-  purified:{ buff: true, turns: 1 },                         // 정화: 나쁜 효과를 다 지우고 다음 턴까지 안 걸림
   will:    { buff: true, turns: 3, p: 0.5, now: true },      // 의지(엑셀 v10 33행): 기절(마비 · 얼음) · 봉인 · 속박 · 도발을 확률로 막음 — 막으면 빙결은 0으로, 감전은 사라짐(확률은 밸런스 전 임시)
   // 2026-10-18 바닥 규칙 2단계(species-identity §1): 방어구 = 체력 위 금속 칸(깨질 때까지 · 쌓임 · 교체해도 남음 · 망치에 ×1.5로 깎임 · 지속 피해는 통과)
   //  은신 = 이번 턴 광역 아닌 공격 95% 빗나감 + 기습(공격 ×1.5 · 상대 자세 무시) · 분신 = 2턴 광역 아닌 공격 90% 빗나감(진짜가 맞거나 광역이면 풀림)
@@ -61,18 +60,17 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'purified', 'will'];
-const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim', 'purified'];
-// 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 정화 보호는 이것과 기절을 막음
+const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will'];
+const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim'];
+// 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const GUARDED = [...HARM, 'stun'];
 const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
 const ENV = Object.keys(FX).filter(k => FX[k].env);
 // 교체로 나갈 때 지우는 것(엑셀 v10 — 상태이상 · 능력치 겹 · 갑주는 남고 시간이 감): 준비 효과(조준 · 은신 · 보호막) · 속박 한 번 표시 · 면역(스스로 바꾸면 그게 행동) · 정화 보호 · 환경(다음 앞 식물로 옮김)
-const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', 'purified', ...ENV];
+const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', ...ENV];
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[id]);
@@ -148,7 +146,7 @@ export function listOf(u) {
   if (e.immune) out.push({ id: 'immune' });
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
-  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
+  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k, exp: e[k].exp } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
   return out;
 }
 
@@ -194,7 +192,6 @@ export function apply(tgt, id0, n, ctx, o = {}) {
   const id = id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, look = o.look || null, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: look || id };   // look = 같은 효과의 다른 이름(암실 → 그늘)
   if (!D || tgt.hp <= 0) return;
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
-  if (GUARDED.includes(id) && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 보호 중엔 해로운 상태이상 · 기절이 안 걸림(능력치 디버프는 걸림)
   if (tgt.pas && tgt.pas.immune && tgt.pas.immune.includes(id)) { ev.push({ t: 'immune', ...base, card: true }); return; }   // 카드(해독 체질)
   const by = ctx.by && ctx.by.pas;
   if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
@@ -268,8 +265,7 @@ export function selfBuff(u, id0, ctx, o = {}) {
   if (id === 'purify') {
     const gone = HARM.filter(k => e[k]);   // 해로운 상태이상 한 종류 = 그 모든 겹(엑셀 v10) · 능력치 디버프 · 환경 · 기절은 남음
     for (const k of gone) delete e[k];
-    e.purified = { exp: T + FX.purified.turns };
-    ctx.ev.push({ t: 'fx', ...base, id: 'purified', ids: gone, list: listOf(u) }); return;
+    ctx.ev.push({ t: 'fx', ...base, id: 'purified', ids: gone, list: listOf(u) }); return;   // 'purified' = 씻어 내는 연출 · 글자(보호 칸은 없음)
   }
   const D = FX[id]; if (!D) return;
   if (id === 'regen') e.regen = { exp: Math.max((e.regen && e.regen.exp) || 0, nowExp(T, o.turns ?? D.turns)) };   // 지금 3턴 · 다시 걸면 긴 쪽

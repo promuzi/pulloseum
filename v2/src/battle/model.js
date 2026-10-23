@@ -145,6 +145,8 @@ export function makeUnit(id, sp, o) {
 const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack || D.stat ? true : !has(foe, f.id)); };   // 쌓이는 것(독 · 빙결 · 포자 · 능력치 겹)은 늘 새로
 // 못 쓰는 기술을 골랐을 때 대신 = 손패에서 쓸 수 있는 첫 기술, 없으면 넘어감(손패 넷에 기본기가 없으면 기력이 모자랄 수 있음)
 export const firstOk = u => u.kit.find(s => canUse(u, s)) || BLOCKED;
+// 시간 초과(2026-10-23 사용자 '시간초과 하면 랜덤으로 스킬써짐'): 지금 쓸 수 있는 기술 중 하나를 무작위로 · 없으면 막혀 쉼 — rnd = 0~1 난수(화면 Math.random · 서버 crypto)
+export const randomOk = (u, rnd) => { const ok = u.kit.filter(s => canUse(u, s)); return ok.length ? ok[Math.min(ok.length - 1, Math.floor(rnd() * ok.length))] : BLOCKED; };
 // 봇 머리(2026-10-22 사용자 "봇 지능 향상. 교환 등 전투를 전략적으로 하도록"): 기술마다 점수를 매겨 높은 것을 고름.
 //  기대 피해(위력 · 상성 · 방어 · 맞을 확률) ÷ 상대 남은 체력 · 이번에 끝낼 수 있으면 크게 · 아직 없는 효과 · 은신/분신엔 광역 ·
 //  상대가 이번 턴 나를 쓰러뜨릴 만하면(상대가 쓴 기술 · 상대 햇빛으로 짐작) 방어 · 회피 · 막는 버프 · 햇빛이 모자라면 광합성.

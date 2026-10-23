@@ -7,6 +7,7 @@ import { apply, onHit, endTurn, expire, listOf, canUse, canSwitch, effSpd, mustS
 import { SPECIES } from '../../v2/src/data/mock.js';
 import { SKILLS as CSK, RULES_VER } from '../../v2/src/game/catalog.js';
 import * as ST from '../../v2/src/battle/status.js';
+import * as MODEL from '../../v2/src/battle/model.js';
 const { FX } = ST, OLD_ = ST.OLD;
 
 let fails = 0, n = 0;
@@ -287,9 +288,9 @@ const fixed = v => () => v;
   ok(hS.absorb === Math.min(cap, plain) && hS.dmg === plain - hS.absorb, '보호막이 먼저 막음');
   const p = mk('me', 'gaia'); apply(p, 'poison', 1, ctx(x, 1, [])); apply(p, 'wet', 1, ctx(x, 1, []));
   sb(p, 'purify');
-  ok(!p.eff.poison && !p.eff.wet && p.eff.purified, '정화 = 나쁜 효과 다 지움');
+  ok(!p.eff.poison && !p.eff.wet && !p.eff.purified, '정화 = 나쁜 효과 다 지움 · 보호 칸 없음');
   const evR = []; apply(p, 'burn', 1, ctx(x, 2, evR));
-  ok(!p.eff.burn && evR.some(e => e.t === 'resist'), '정화 중엔 안 걸림');
+  ok(p.eff.burn && !evR.some(e => e.t === 'resist'), '정화 뒤 보호 없음 — 바로 다시 걸림(2026-10-23 사용자 \'보호 없애\')');
   const f = mk('me', 'gaia'); sb(f, 'aim');
   ok(f.eff.aim && f.eff.aim.k === 25 && listOf(f).some(o => o.id === 'aim'), '조준(옛 집중) = 다음 공격 치명 +25');
   const tc0 = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).table, tc1 = hitOf(f, mk('foe', 'aqua')).table;
@@ -385,6 +386,18 @@ const fixed = v => () => v;
   { const z = mk('me', 'gaia'), v = mk('foe', 'flower_grass');
     const r = resolveTurn(z, v, HIT, BLOCKED, fixed(0.5), { turn: 1 });
     ok(r.events.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'blocked') && v.eff.immune, '다 막혀 쉬면 다음 턴 면역'); }
+}
+// ── 9-5b. 환경 남은 턴 · 시간 초과(2026-10-23 사용자 — 환경 띠에 남은 턴 · '시간초과 하면 랜덤으로 스킬써짐') ──
+{
+  const x = mk('me', 'gaia'), g1 = mk('foe', 'flower_grass');
+  apply(g1, 'gale', 1, ctx(x, 3, []));
+  const gl = listOf(g1).find(s => s.id === 'gale');
+  ok(gl && gl.exp === 4, `환경(강풍)은 목록에 끝나는 턴을 실음 — 화면이 남은 턴을 셈(${gl && gl.exp})`);
+  const r = typeof MODEL.randomOk === 'function' ? MODEL.randomOk : null, u = mk('me', 'flower_grass'); u.energy = 0;
+  const seen = new Set(); if (r) for (let i = 0; i < 40; i++) seen.add(r(u, () => i / 40).id);
+  ok(r && [...seen].every(id => canUse(u, sk(u, id))) && seen.size > 1, `시간 초과 = 쓸 수 있는 기술 중 무작위(${[...seen].join(',')})`);
+  const none = mk('me', 'flower_grass'); none.energy = 0; none.kit = none.kit.filter(s => (s.cost || 0) > 0);
+  ok(r && r(none, () => 0) === BLOCKED, '쓸 수 있는 기술이 없으면 막혀 쉼');
 }
 // ── 9-6. 제한 — 봉인 · 속박 · 도발(엑셀 v10 효과 분류 27~29행) ──
 {

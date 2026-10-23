@@ -25,7 +25,7 @@ export const STATUS = {
   stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' }, frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' },
   seal: { name: '봉인', icon: 'fx_seal', col: '#6fd25c' }, root: { name: '속박', icon: 'st_root', col: '#c08a5a' }, taunt: { name: '도발', icon: 'fx_taunt', col: '#ff5a5a' },
   spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 99 }, leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' },
-  gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff' },
+  gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true },   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
   // 이로운 상태이상 · 준비 효과 · 갑주
   regen: { name: '재생', icon: 'fx_regen', buff: true }, will: { name: '의지', icon: 'fx_will', buff: true }, immune: { name: '면역', icon: 'fx_immune', buff: true },
   aim: { name: '조준', icon: 'fx_aim', buff: true }, stealth: { name: '은신', icon: 'fx_stealth', buff: true }, clone: { name: '분신', icon: 'fx_stealth', buff: true },
@@ -43,7 +43,7 @@ export const STATUS_DESC = {
   spore: '하나씩 따로 셈 · 피면 하나마다 체력 8%', leech: '턴 끝 체력을 건 식물이 빨아감 · 3턴', gale: '강풍 — 이쪽 공격이 잘 빗나감',
   regen: '턴 끝 체력 5% 회복 · 3턴', will: '기절 · 봉인 · 속박 · 도발을 막을 때가 있음 · 3턴', immune: '방금 쉬어서 다음 행동까지 기절하지 않음',
   aim: '다음 공격 기술의 모든 타 치명 +25', stealth: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림', clone: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림',
-  shield: '상대 공격 기술 한 번을 최대 체력 15%만큼 먼저 막음', purified: '해로운 상태이상이 안 걸림(한 턴)', flourish: '활력 · 억셈 · 가속 +5%씩 한 겹',
+  shield: '상대 공격 기술 한 번을 최대 체력 15%만큼 먼저 막음', purified: '내게 걸린 해로운 상태이상을 모두 지움(능력치 약화 · 기절은 못 지움)', flourish: '활력 · 억셈 · 가속 +5%씩 한 겹',
   armor: '체력 위 금속 칸 — 깨질 때까지 피해를 먼저 막음 · 쌓임(최대 체력 50%까지) · 망치에 약함 · 지속 피해는 못 막음',
   guard: '방어력 4배(연속 2.5배) · 그 턴 모든 공격', evade: '회피 자세 — 빗나감 ↑', reflect: '그 턴 처음 맞은 공격 피해의 30%를 되돌림', initReady: '다음 턴 먼저 움직이기 쉬움',
 };

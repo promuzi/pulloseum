@@ -7,6 +7,7 @@
 import { randomInt } from 'node:crypto';
 import { setupPvp, pvpTurn, setupPvp3, pvpTurn3, viewFor, turnFor, mirrorEvents, makeRng } from '../v2/src/game/fight.js';
 import { sendIn, aliveOf, makeTeamBattle } from '../v2/src/battle/team.js';
+import { randomOk } from '../v2/src/battle/model.js';
 import { STAGES, RULES_VER } from '../v2/src/game/catalog.js';
 import { fail } from './game.mjs';
 import { plantLite } from './log.mjs';
@@ -375,7 +376,11 @@ export function makeRooms({ game, log, q: db = null }) {
             applySends(r, now);
           } else {
             const late = ['a', 'b'].filter(sd => !r.moves[sd]);
-            for (const sd of late) { r.timeouts[sd]++; r.moves[sd] = r.mode === 'swap3' ? { kind: 'rest' } : 'rest'; }   // 시간 초과 = 넘어감
+            for (const sd of late) {   // 시간 초과 = 지금 쓸 수 있는 기술 중 무작위(2026-10-23 사용자 '시간초과 하면 랜덤으로 스킬써짐') · 하나도 없으면 넘어감
+              r.timeouts[sd]++;
+              const u = r.mode === 'swap3' ? r.B[SIDE[sd]] : sd === 'a' ? r.B.me : r.B.foe, s = randomOk(u, () => randomInt(1 << 30) / (1 << 30));
+              r.moves[sd] = r.mode === 'swap3' ? (s.blocked ? { kind: 'rest' } : { kind: 'skill', id: s.id }) : s.blocked ? 'rest' : s.id;
+            }
             const quit = late.find(sd => r.timeouts[sd] >= 2);
             if (quit) end(r, OTHER[quit], 'timeout', now); else resolve(r, now);
           }
