@@ -225,10 +225,10 @@ function sunPips(g, x, y, cur, max, gap, t) {
 //  포자 = 이름 + 개수(아이콘 오른쪽 위) + 가장 빨리 피기까지 남은 턴(아이콘 오른쪽 아래) — 같은 날 사용자 "포자도 이름 붙여줘"
 //  정렬 = 같은 날 사용자 "아이콘은 왼쪽 정렬. 글자는 우측정렬해줘. 독같은 경우 너무 가운데에 몰린 느낌" → "글자를 우측 정렬말고, 아이콘을 제외한 영역 내에서 중앙 정렬로하자"
 const SW_W = 45, SW_H = 20, SW_GAP = 2;
-function statusWins(g, x, y, list, rows = 2) {   // rows = 보일 줄 수(넘치면 마지막 칸 = +n)
+function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 줄 수(넘치면 마지막 칸 = +n) · up = 줄이 위로 쌓임(y = 첫 줄 — 내 효과 창: 체력판 바로 위 줄부터, 2026-10-23 사용자 "내 체력바에 가까운 쪽이 먼저차고 한 줄 벗어나면 바깥으로")
   const cap = rows * 3, shown = list.length > cap ? [...list.slice(0, cap - 1), { more: list.length - (cap - 1) }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2, bf = sized('bold', 9);
   shown.forEach((st, i) => {
-    const c = i % 3, X = x + c * (SW_W + SW_GAP), w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W, Y = y + Math.floor(i / 3) * (SW_H + 2);
+    const c = i % 3, X = x + c * (SW_W + SW_GAP), w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W, Y = y + (up ? -1 : 1) * Math.floor(i / 3) * (SW_H + 2);
     if (st.more) { holo(g, X, Y, w, SW_H, SW_ON, 16); g.text(`+${st.more}`, X + (w >> 1), Y + ty, { font: 'bold', color: SW_ON.text, align: 'center' }); return; }
     const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a');
     holo(g, X, Y, w, SW_H, S, 16);
@@ -918,7 +918,7 @@ export const battle = {
     infoBox(app, W - 146, myY, v.view.me, v.bar.me, v.en.me, true);
     if (mEnv.length) envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn);
     const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
-    if (rows) statusWins(g, W - 146, myY - 3 - rows * (SW_H + 2) + 2, mine, myRows);
+    if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     // 효과 설명 = 체력판 · 효과 창을 누르면(2026-10-16 사용자 "맨 아래 효과 버튼은 뭐야? 이거 필요한 거야?" → 아래 단추를 빼고 효과가 보이는 그 자리에서)
