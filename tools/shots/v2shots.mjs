@@ -41,8 +41,8 @@ export const SHOTS = [
   ['03_home_profile_lv30', 'home', { profile: true }, { level2: 30, profile: { color: 4 } }],   // 배너 열둘 다 열림(작은 창 미리보기 칸)
   ['03_home_profile_lv5', 'home', { profile: true }, { level2: 5, profile: { color: 1 } }],   // 잠긴 배너
   ['03_home_modes', 'home', { modes: true }],
-  ['03_home_rank', 'home', {}, { tour: { tier: '플래티넘', name: '새싹 플래티넘', pts: 245, round: '4강', wins: 2, losses: 1, bestOf: 7 } }],   // 배너 = 단계 · 칸 · 다음 칸까지 막대(2026-10-23)
-  ['03_home_modes_rank', 'home', { modes: true }, { tour: { tier: '플래티넘', name: '새싹 플래티넘', pts: 245, round: '4강', wins: 2, losses: 1, bestOf: 7 } }],
+  ['03_home_rank', 'home', {}, { tour: { tier: '플래티넘', name: '무제한 플래티넘', pts: 245, round: '4강', wins: 2, losses: 1, bestOf: 7 } }],   // 배너 = 단계 · 칸 · 다음 칸까지 막대(2026-10-23)
+  ['03_home_modes_rank', 'home', { modes: true }, { tour: { tier: '플래티넘', name: '무제한 플래티넘', pts: 245, round: '4강', wins: 2, losses: 1, bestOf: 7 } }],
   ['03_home_rank_long', 'home', {}, { tour: { tier: '플래티넘', name: '무제한 플래티넘', pts: 30, round: '4강', wins: 3, losses: 3, bestOf: 7 } }],   // 가장 긴 리그 · 단계 이름 + 7판 칸 가득
   ['03_home_swap3', 'home', { modes: true, mode: 'swap3' }],
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],

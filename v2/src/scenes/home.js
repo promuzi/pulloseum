@@ -348,11 +348,12 @@ export const home = {
       g.text(pf.name || '재배사', nx, y + 10, { font: 'name', color: P.main });
       g.text(pf.title || '', nx, y + 34, { font: 'label', color: P.sub });
     });
-    const TT = s.tournament || { tier: '브론즈', round: '예선', wins: 0, losses: 0, pts: 0 }, tier = TT.tier;   // 오른쪽 = 대회 단계 · 칸 · 이번 라운드 · 막대 = 다음 칸까지 점수(맨 위 단계 = 이번 라운드 승)
+    const TT = s.tournament || { tier: '브론즈', round: '예선', wins: 0, losses: 0, pts: 0 }, tier = TT.tier;   // 오른쪽 = 대회 단계 · 칸 / 리그 · 칸 점수 / 막대 = 다음 칸까지(맨 위 단계 = 별 · 이번 라운드 승)
     const rk = rankOf(TT);   // '플래티넘 III'처럼 길면 한 단계 작은 글자(연필과 안 겹치게 — 로마 숫자 칸, 2026-10-23)
     g.text(rk, rx, y + 9, { font: g.textW(rk, 'value') > 58 ? sized('value', 12) : 'value', color: TIER_COL[tier] || P.main });
     g.img(icon('pencil'), x + w - 19, y + 9);
-    g.text(`${TT.round} ${TT.wins}승 ${TT.losses}패`, rx, y + 27, { font: 'label', color: P.sub });
+    //  둘째 줄 = 고른 리그 · 칸 점수(2026-10-23 사용자 "새싹 리그면 프로필도 새싹으로 해줘" — 라운드 승패는 아래 대회 카드에 그대로)
+    g.text(`${(LEAGUES[s.league] || LEAGUES.sprout).short} · ${isTopTier(tier) ? `★${TT.stars || 0}` : `${(TT.pts || 0) % DIV_PTS}점`}`, rx, y + 27, { font: 'label', color: P.sub });
     tbar(g, rx, y + 45, w - (rx - x) - 9, 5, isTopTier(tier) ? Math.min(1, TT.wins / winsNeed(TT)) : ((TT.pts || 0) % DIV_PTS) / DIV_PTS, 'exp');
     if (tappable) app.input.hit('home_profile', x, y, w, h, () => { this.editing = true; }, 2);
   },
