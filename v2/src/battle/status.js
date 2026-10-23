@@ -13,7 +13,7 @@
 //    기생 씨앗 · 뿌리 묶기(+ 그늘 · 부식)는 속성·종·생장에 묶이지 않는 변이·특수 기술용(식물 기술표에서 뺌, 규칙은 남겨 둠).
 // 턴 세는 법: exp = 마지막으로 영향을 주는 턴 번호(턴 끝에 exp ≤ 지금 턴이면 사라짐) · left = 남은 턴 끝 횟수(지속 피해·빨아들이기).
 
-import { canUseRes, turnDevices } from './devices.js';
+import { canUseRes, turnDevices, galeTurn } from './devices.js';
 
 export const FX = {
   // 해로운 상태이상(2026-10-23 엑셀 v10 효과 분류 19~31행): 기간 = 지금 N턴(걸린 턴 = 1턴째 · 만료 exp = T + N − 1 · 기술마다 o.turns 로 바꿈) ·
@@ -98,10 +98,13 @@ export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
-export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1);
+export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1) * (stormOn(u) ? 1 - FX.atkDown.v : 1);
 export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
-export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) - statSum(u, 'acc');
+export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) + (stormOn(u) ? FX.accDown.v : 0) - statSum(u, 'acc');
+// 강풍에 덧붙은 공명(게일캑터 — 폭풍 · 치유 · 뇌전): 강풍 안에 들어 있어 강풍과 함께 끝나고 교체 때 같이 옮겨 감 · 폭풍 = 교란 · 쇠약 한 겹 몫(폭풍 동안만 · 쌓이지 않음)
+export const galeAdds = u => (u && u.eff && u.eff.gale && u.eff.gale.add) || [];
+const stormOn = u => galeAdds(u).includes('storm');
 export const healK = u => (has(u, 'bleed') ? FX.bleed.healK : 1);   // 받는 회복 배율 — 회복 방해는 출혈만(화상은 순수 지속 피해)
 // 카드 패시브(2026-10-17 — game/cards.js, 전투 유닛 u.pas): 공격 배율(용의 분노 = 내 체력 절반 아래 · 공생 균사 = 상대 나쁜 효과 수) · 피해 배율(소화액 = 상대 체력 30% 아래 · 강산 = 독 걸린 상대 · 강철 비늘 = 받는 피해 ↓)
 export const debuffCount = u => { const e = (u && u.eff) || {}; return HARM.filter(k => e[k]).length + DOWNS.filter(k => e[k]).length + (e.skip ? 1 : 0); };   // 나쁜 효과 종류 수(능력치 디버프는 종류마다 하나)
@@ -129,8 +132,9 @@ export const canSwitch = (u, T = Infinity) => { const e = (u && u.eff) || {}; re
 //  (3:3도 그 식물의 판 — 교체해 들어갔다 나와도 그대로) · 횟수 없는 기술 = 끝없음
 export const usesLeft = (u, s) => (s && s.uses ? Math.max(0, s.uses - ((u && u.used && u.used[s.id]) || 0)) : Infinity);
 export function useCount(u, s) { if (u && s && s.uses) { u.used = u.used || {}; u.used[s.id] = (u.used[s.id] || 0) + 1; } }
-export function canUse(u, s, energy = u.energy) {
+export function canUse(u, s, energy = u.energy, foe = null) {
   if (!s || (s.cost || 0) > energy) return false;
+  if (s.galeAdd && !(foe && has(foe, 'gale') && !galeAdds(foe).includes(s.galeAdd))) return false;   // 공명 = 상대 쪽 강풍이 불 때만 · 같은 공명은 한 번
   if (usesLeft(u, s) <= 0) return false;
   if (!canUseRes(u, s)) return false;   // 공통 장치: 개수 · 모드 · 체력 비용(devices.js)
   const e = u.eff || {};
@@ -146,7 +150,7 @@ export function listOf(u) {
   if (e.immune) out.push({ id: 'immune' });
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
-  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k, exp: e[k].exp } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
+  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
   return out;
 }
 
@@ -259,7 +263,7 @@ export function selfBuff(u, id0, ctx, o = {}) {
   if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'aim') { e.aim = { k: Math.max((e.aim && e.aim.k) || 0, o.aimK || FX.aim.k) }; ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'stealth') {   // o = 그 기술(이어 공격 link · 연출 look)
-    e.stealth = { look: o.look === 'clone' ? 'clone' : 'stealth', link: o.link ? { ...o.link, id: o.id, name: o.name, el: o.link.el !== undefined ? o.link.el : o.el || null } : null };
+    e.stealth = { look: o.look === 'clone' ? 'clone' : 'stealth', reflect: !!o.pierceReflect, link: o.link ? { ...o.link, id: o.id, name: o.name, el: o.link.el !== undefined ? o.link.el : o.el || null } : null };
     ctx.ev.push({ t: 'fx', ...base, id: e.stealth.look, list: listOf(u) }); return;
   }
   if (id === 'purify') {
@@ -348,6 +352,7 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
     let dec = false;
     for (const k of ['chill']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
     if (dec && u.hp > 0) ev.push({ t: 'expire', who: u.id, ids: [], list: listOf(u) });
+    galeTurn(u, opp, turn, ev);   // 강풍 공명(폭풍 피해 · 감전 · 우리 편 회복) · 게일캑터 공명 셈(devices.js)
     turnDevices(u, turn, ev);   // 공통 장치: 시한 · 메아리 · 개수 칸 턴마다(devices.js)
     noteFall(u, ev);
   }

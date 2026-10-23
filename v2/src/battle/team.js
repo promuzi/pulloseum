@@ -57,14 +57,14 @@ function swapIn(B, side, to, ev, forced = false) {
 // 사람의 수 → 이번 턴 기술: 쉬는 차례 = 쉬기, rest = 넘어감(시간 초과 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 3:3만 평타로 바꿨음), 못 쓰는 기술 = 평타
 const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side], B.turn) && !(B.swapCd && B.swapCd[side] > 0) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
 export const swapWait = (B, side) => (B.swapCd && B.swapCd[side]) || 0;   // 화면: 교체까지 남은 턴
-const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill) ? a.skill : firstOk(u));
+const skillOf = (u, a, f) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill, u.energy, f) ? a.skill : firstOk(u));
 
 // 한 턴: myAct = { kind: 'skill', skill } | { kind: 'switch', to } | { kind: 'rest' }(쉬는 차례 · 시간 초과)
 //  foeAct = 친구 대결(사람)의 수 — 없으면 봇이 고름. 친구 대결은 쓰러진 자리를 저마다 직접 채움(턴 끝 B.need = 'me' | 'foe' | 'both')
 export function playTurn3(B, myAct, foeAct = null) {
   const T = B.turn, ev = [], human = !!foeAct;
   const foeSw = human ? (okSwitch(B, 'foe', foeAct) ? foeAct.to : null) : aiSwitch(B, B.rng);
-  const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });
+  const foeSkill = foeSw != null ? null : human ? skillOf(B.foe, foeAct, B.me) : mustSkip(B.foe) ? REST : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });
   const meSwitch = okSwitch(B, 'me', myAct), sw = { me: meSwitch ? myAct.to : null, foe: foeSw };
   const doSwap = side => { swapIn(B, side, sw[side], ev); if (B.cdLen) B.swapCd[side] = B.cdLen + 1; };   // +1 = 이번 턴 끝에 하나 줄어 다음 두 턴이 막힘
   // 교체 순서: swOrder 판은 지금 앞에 선 두 식물로 선공을 굴려(기술 턴과 같은 규칙 · 불운 보정) 먼저인 쪽부터 — 교체한 쪽이 늦으면 late(맞은 뒤 바꿈)
@@ -77,7 +77,7 @@ export function playTurn3(B, myAct, foeAct = null) {
     if (sw[order] != null) doSwap(order);
     if (sw[other] != null) { if (sw[order] != null) doSwap(other); else late = other; }   // 둘 다 바꾸면 순서대로 바로, 한쪽만이면 늦은 쪽은 맞은 뒤
   } else { if (sw.me != null) doSwap('me'); if (sw.foe != null) doSwap('foe'); }
-  const mySkill = meSwitch ? null : skillOf(B.me, myAct);
+  const mySkill = meSwitch ? null : skillOf(B.me, myAct, B.foe);
   const before = { me: B.me.hp, foe: B.foe.hp };
   if (mySkill) { B.me.energy -= mySkill.cost || 0; useCount(B.me, mySkill); }
   if (foeSkill) { B.foe.energy -= foeSkill.cost || 0; useCount(B.foe, foeSkill); }

@@ -343,6 +343,7 @@ export function cardSlot(g, x, y, w, h, label = '') {
   if (label) g.text(label, x + w / 2, y + Math.round(h / 2) - 6, { color: C.dim, align: 'center' });
 }
 
+const GALE_ADD_TEXT = { storm: '상대 쪽 강풍이 불 때만 · 남은 강풍이 폭풍으로(턴 끝 피해 · 교란 · 쇠약)', heal: '상대 쪽 강풍이 불 때만 · 강풍 동안 우리 편 턴 끝 회복', shock: '상대 쪽 강풍이 불 때만 · 강풍 동안 상대 턴 끝 감전' };
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
   if (sk.passive) return passiveBack(g, w, h, sk);
@@ -374,6 +375,7 @@ function cardBack(g, w, h, sk, o) {
   if (st && st.half) line(`바로 전 턴에도 같은 자세 — 효과 절반`, '#ffd890');
   const fx = [];
   if (sk.inflict) fx.push({ id: sk.inflict.look || sk.inflict.id, n: sk.inflict.n || 1, to: '상대에게', delay: sk.inflict.delay });
+  for (const h of sk.hex || []) fx.push({ id: h.id, n: h.n || 1, to: h.turns ? `상대 쪽 · ${h.turns}턴` : '상대에게' });   // 피해 없이 거는 기술(종 고유 v2)
   for (const b of [sk.self, sk.also]) if (b) fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), to: '나에게' });
   if (sk.reflect) fx.push({ id: 'reflect', to: '이번 턴' });   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타)
   for (const f of fx) {
@@ -383,6 +385,11 @@ function cardBack(g, w, h, sk, o) {
     y += 24;
     if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
   }
+  if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd], '#c0a8ff');
+  if (sk.critIfDodged) line('나중에 움직임 · 먼저 친 상대가 나를 빗나갔으면 확정 치명 · 내가 먼저면 치명 없음', '#9fd8ff');
+  if (sk.bare) line(`이번 턴 상대 공격을 빗나감 · 스침 없이 다 맞고 받는 피해 −${Math.round((1 - sk.bare) * 100)}%`, '#9fd8ff');
+  if (sk.sure) line('반드시 맞음 · 방어태세 · 회피 자세 · 은신 무시 · 먼저 움직이면 확정 치명', '#9fd8ff');
+  if (sk.pierceReflect) line('은신이 뚫리면 처음 맞은 피해 일부를 되돌림', '#9fd8ff');
   if (sk.link) line(`피하면 바로 이어 공격 — 위력 ${sk.link.hits > 1 ? `${sk.link.power}×${sk.link.hits}` : sk.link.power}${sk.link.ambush ? ' · 기습(×1.5 · 자세 무시)' : ''}`, '#9fd8ff');
   // 지금 상대에게의 상성(공격 기술)
   if (o.foe && sk.act === 'attack') {

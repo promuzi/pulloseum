@@ -2,6 +2,7 @@
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
 import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
+import { SKILLS as CAT_SKILLS, SPECIES_V2, uniquesOf } from '../game/catalog.js';
 import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount } from './status.js';
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
@@ -127,6 +128,7 @@ export const BASIC_NAMES = {
 };
 export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
 export function kitOf(key) {
+  if (SPECIES_V2.has(key)) return [...basicsOf(key), ...[0, 1, 2].flatMap(st => uniquesOf(key, st)).map(id => ({ ...CAT_SKILLS[id], fx: key }))];   // 종 고유 v2 = 세 단계 고유 기술 여섯(검토 화면 · 시험 유닛)
   const own = (SKILLS[key] || SKILLS.flower_grass).map(s => ({ act: 'attack', cats: ['attack'], ...s, fx: key }));
   return [...basicsOf(key), ...own];
 }
@@ -173,7 +175,13 @@ function aiScore(u, foe, s, risk, last) {
   const rep = last === s.act ? 0.5 : 1;   // 같은 자세를 연달아 쓰면 효과가 절반(rules repeatStanceK)
   if (s.act === 'guard') return (risk >= 1 ? 2.2 : 1.4 * risk) * rep;
   if (s.act === 'evade') return (risk >= 1 ? 1.8 : 1.1 * risk) * rep;
+  if (s.act === 'hex') {   // 피해 없이 거는 기술(종 고유 v2): 새로 걸리는 것이 많을수록 · 공명(강풍에 덧붙임)은 쓸 수 있을 때 높게
+    if (s.galeAdd) return 1.0;
+    const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length;
+    return fresh ? 0.55 + 0.35 * fresh : 0.15;
+  }
   if (s.act === 'sun') { const need = Math.max(0, ...u.kit.map(k => k.cost || 0)); return (u.energy || 0) < need && risk < 0.5 ? 1 + 0.2 * (need - (u.energy || 0)) : 0.08; }
+  if (s.act === 'buff' && s.bare) return ((u.res && u.res.evs) || 0) >= 2 ? 0.5 + Math.min(1, risk) : 0.1;   // 방심하기 = 쌓아 둔 스택을 쓸 때
   if (s.act === 'buff') {
     const b = s.self, stack = b && FX[b] && FX[b].stat;   // 능력치 겹은 다시 걸어도 쌓임(조금 덜 쳐 줌)
     if (b && has(u, b) && !stack) return 0.1;
@@ -188,7 +196,7 @@ function aiScore(u, foe, s, risk, last) {
   return 0.3;
 }
 export function aiPick(u, foe, rng, ctx = {}) {
-  const ok = u.kit.filter(s => canUse(u, s));
+  const ok = u.kit.filter(s => canUse(u, s, u.energy, foe));
   if (!ok.length) return BLOCKED;
   const iq = ctx.iq ?? u.ai ?? 0.5, risk = threatOf(foe, u, ctx.seen) / Math.max(1, u.hp);
   const sc = ok.map(s => aiScore(u, foe, s, risk, ctx.last));
@@ -206,7 +214,7 @@ export const lastOf = B => { const t = B.log[B.log.length - 1]; return t && t.fo
 //  판의 난수(B.rng)는 건드리지 않고 턴 · 체력 · 햇빛으로 만든 씨앗만 써서 같은 판 · 같은 턴이면 늘 같은 답(서버가 판을 다시 세워도 같음)
 const BASIC_IDS = new Set(BASICS.map(s => s.id));
 export function searchPick(B, n) {
-  const u = B.foe, ok = u.kit.filter(s => canUse(u, s));
+  const u = B.foe, ok = u.kit.filter(s => canUse(u, s, u.energy, B.me));
   if (!ok.length) return BLOCKED;
   if (ok.length === 1) return ok[0];
   const known = new Set([...BASIC_IDS, ...B.log.map(t => t.mySkill && t.mySkill.id).filter(Boolean)]);
@@ -254,15 +262,15 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false, bench = [], 
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
 export function playTurn(B, mySkill) {
-  const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill) ? mySkill : firstOk(B.me);
+  const me = mustSkip(B.me) ? REST : canUse(B.me, mySkill, B.me.energy, B.foe) ? mySkill : firstOk(B.me);
   const foeSkill = mustSkip(B.foe) ? REST : B.foe.search > 0 ? searchPick(B, B.foe.search) : aiPick(B.foe, B.me, B.rng, { seen: seenOf(B), last: lastOf(B) });   // 수 읽기 봇(대회 — fight.js SEARCH)
   return playTurnVs(B, me, foeSkill);
 }
 // 두 쪽이 다 고른 한 턴(PvP — 서버가 두 사람 선택으로 풂, 봇 판도 이걸 씀). 기술은 id 또는 기술 객체
 export function playTurnVs(B, mySkill, foeSkill) {
-  const T = B.turn, pickOf = (u, s) => { if (s === 'rest' || s === REST) return REST; const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k) ? k : firstOk(u); };   // 'rest' = 넘어감(시간 초과)
-  const me = pickOf(B.me, mySkill);
-  foeSkill = pickOf(B.foe, foeSkill);
+  const T = B.turn, pickOf = (u, s, f) => { if (s === 'rest' || s === REST) return REST; const k = typeof s === 'string' ? u.kit.find(x => x.id === s) : s; return mustSkip(u) ? REST : k && canUse(u, k, u.energy, f) ? k : firstOk(u); };   // 'rest' = 넘어감(시간 초과)
+  const me = pickOf(B.me, mySkill, B.foe);
+  foeSkill = pickOf(B.foe, foeSkill, B.me);
   const before = { me: B.me.hp, foe: B.foe.hp };
   B.me.energy -= me.cost || 0; B.foe.energy -= foeSkill.cost || 0;
   useCount(B.me, me); useCount(B.foe, foeSkill);   // 변이 기술 횟수

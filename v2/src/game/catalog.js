@@ -459,6 +459,35 @@ export const SKILLS = Object.fromEntries([
   S('m_frostclaw', '서리 발톱', 'ice', 'm', 70, 0, { form: 'dragon', uses: 2, inflict: { id: 'chill', n: 1 } }),
   S('m_voltclaw', '뇌룡 발톱', 'bolt', 'm', 70, 0, { form: 'dragon', uses: 2, inflict: { id: 'shock', n: 1 } }),
 ].map(s => [s.id, s]));
+// ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
+//  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
+//  hex = 피해 없이 상대에게 거는 기술(명중 판정 없음 — 사용자 확인 대기) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind']);
+const V2 = {
+  cactus_wind: {   // 10. 게일캑터 — 방해 디버프 기술 · 강풍이 부는 턴 끝마다 공명 +1, 3이면 무속성 확정 치명(치명 방어엔 정타)
+    sp: { res: { reso: [0, 3, '공명'] }, reso: { k: 'reso', at: 3, power: 45, count: ['gale', 'accDown', 'critDown', 'seal'] } },
+    skills: [
+      S('u_gale_1', '시작의 공명', 'wind', 'u', 0, 1, { act: 'hex', cats: ['debuff'], hex: [{ id: 'gale', turns: 3 }, { id: 'atkDown' }] }),
+      S('u_gale_2', '길 잃은 주파수', 'wind', 'u', 0, 2, { act: 'hex', cats: ['debuff'], hex: [{ id: 'accDown' }, { id: 'critDown' }] }),
+      S('u_gale_2b', '환각의 주파수', 'wind', 'u', 0, 2, { self: 'stealth', early: true, link: { power: 60, el: 'wind' }, pierceReflect: true, uses: 2 }),
+      S('u_gale_3', '폭풍 공명', 'wind', 'u', 0, 3, { act: 'hex', cats: ['debuff'], galeAdd: 'storm' }),
+      S('u_gale_3b', '치유 공명', 'wind', 'u', 0, 2, { act: 'hex', cats: ['heal_hp'], galeAdd: 'heal' }),
+      S('u_gale_3c', '뇌전 공명', 'wind', 'u', 0, 2, { act: 'hex', cats: ['debuff'], galeAdd: 'shock' }),
+    ],
+  },
+  vine_wind: {   // 11. 게일바인 — 피하면 스택(상한 5) · 맞으면 스택을 다 써서 반격(3 이상 출혈) · 선공하면 활력
+    sp: { res: { evs: [0, 5, '스택'] }, evStack: { k: 'evs', per: 10, bleedAt: 3 }, firstUp: 'atkUp' },
+    skills: [
+      S('u_gvine_1', '그건 내 잔상인데?', 'wind', 'u', 0, 3, { self: 'stealth', early: true, link: { power: 20, ambush: true, el: 'wind' } }),
+      S('u_gvine_2', '이딴게.. 공격?', 'wind', 'u', 0, 2, { act: 'hex', cats: ['debuff'], hex: [{ id: 'taunt' }, { id: 'accDown' }] }),
+      S('u_gvine_2b', '휙- 푹찍', 'wind', 'u', 70, 2, { late: true, critIfDodged: true }),
+      S('u_gvine_3', '방심하기', 'wind', 'u', 0, 1, { bare: 0.6 }),
+      S('u_gvine_3b', '빠르지? 열받지?', 'wind', 'u', 24, 3, { hits: 3, inflict: { id: 'gale', turns: 3 } }),
+      S('u_gvine_3c', '피해?', 'wind', 'u', 80, 4, { early: true, sure: true }),
+    ],
+  },
+};
+for (const [k, v] of Object.entries(V2)) if (SPECIES_V2.has(k)) { Object.assign(SPECIES[k], v.sp); for (const s of v.skills) SKILLS[s.id] = s; }
 // 변이형(변이 연출 설계 2026-10-15: 포식 = 진홍 · 무기 = 강철 · 독성 = 보라 · 포자 = 금빛 · 용족 = 청록) — 포자는 버섯 전용. 일반(무변이) = null
 export const FORMS = {
   predator: { name: '포식', col: '#e8344a', light: '#ffd0d6' },
@@ -471,7 +500,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 10;   // 10 = 2026-10-23 조준 재정의(빗나감 칸 없음 · 치명 +25 · 회피가 옮기는 칸은 스침으로 — 사용자)
+export const RULES_VER = 11;   // 11 = 2026-10-23 종 고유 기술 v2 첫 묶음(게일캑터 · 게일바인 — 피해 없이 거는 기술 · 공명 · 스택 반격 · 반드시 맞음 · 방심하기)
+//  10 = 2026-10-23 조준 재정의(빗나감 칸 없음 · 치명 +25 · 회피가 옮기는 칸은 스침으로 — 사용자)
 //  9 = 2026-10-23 광역 = 빗나감 · 스침 절반 → 정타(치명 그대로 — 사용자)
 //  8 = 2026-10-23 정화 뒤 보호 없앰(사용자 '보호 없애')
 //  7 = 2026-10-23 사용자 교정(은신끼리도 서로 안 보임 · 봉인은 못 쓸 기술도 뽑음 · 불에 맞으면 얼음도 녹음)

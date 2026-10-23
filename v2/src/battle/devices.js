@@ -10,7 +10,8 @@
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES } from '../game/catalog.js';
-import { has, listOf, apply, defK, selfBuff } from './status.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX } from './status.js';
+import { baseDamage, RULES } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
 const BUFF_IDS = ['regen', 'will'];   // 빼앗기 · 날리기(엑셀 v10 회수) = 이로운 상태이상만 — 능력치 겹 · 준비 효과 · 환경 · 면역은 대상 아님
@@ -177,4 +178,73 @@ export function resLine(u) {
   const D = SP(u).res, r = u && u.res;
   if (!D || !r) return '';
   return Object.keys(D).filter(k => D[k][2]).map(k => `${D[k][2]} ${r[k] || 0}`).join(' · ');
+}
+
+// ── 종 고유 기술 v2(2026-10-23 — 사용자 설계 docs/superpowers/specs/2026-10-18-v2-species-skills.md) ──
+export const STORM = { dot: 0.06 };   // 폭풍 턴 끝 피해(최대 체력 몫 — 밸런스 전)
+const frontSum = f => (f.summons || []).find(s => s.hp > 0) || null;
+// 피해 없이 상대에게 거는 기술(hex): 상태 · 디버프는 앞 소환수가 대신 받음(소환수 공통 규칙) · 강풍(환경)은 그 쪽 앞 식물 · galeAdd = 상대 쪽 강풍에 덧붙임
+export function hexAct(u, foe, a, ctx) {
+  if (!foe || foe.hp <= 0) return;
+  const sum = frontSum(foe);
+  for (const h of a.hex || []) apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
+  if (a.galeAdd && has(foe, 'gale')) {
+    const g = foe.eff.gale; g.add = [...(g.add || []), a.galeAdd];
+    ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: a.galeAdd === 'storm' ? 'storm' : 'gale', add: a.galeAdd, list: listOf(foe) });
+  }
+}
+// 게일캑터 공명(SPECIES.reso): 방해 디버프(count)가 들어간 기술 한 번 = +1(둘이 들어가도 1) · 상대 쪽 강풍 · 폭풍이 부는 턴 끝 = +1 ·
+//  at 이 되면 무속성 확정 치명 추가 공격(위력 power — 약하게) 뒤 0부터. 치명 확률 감소는 안 통하고 치명 방어(그 턴 방어태세)엔 막혀 정타
+export function resoAfter(u, foe, ev, n0, T, guarded) {
+  const R = SP(u).reso;
+  if (!R || u.hp <= 0 || !foe || foe.hp <= 0) return;
+  for (let i = n0; i < ev.length; i++) { const e = ev[i]; if (e.t === 'fx' && e.who === u.id && e.to !== u.id && !e.add && R.count.includes(e.id)) return resoAdd(u, foe, T, ev, guarded); }
+}
+function resoAdd(u, foe, T, ev, guarded) {
+  const R = SP(u).reso, r = resOf(u);
+  r[R.k] = (r[R.k] || 0) + 1;
+  if (r[R.k] < R.at) { ev.push({ t: 'res', who: u.id, k: R.k, n: r[R.k] }); return; }
+  r[R.k] = 0; ev.push({ t: 'res', who: u.id, k: R.k, n: 0 });
+  sideHit(u, foe, R.power, guarded ? 'hit' : 'crit', ev, { from: 'reso', label: '공명' });
+}
+// 패시브 추가 공격(무속성 · 결과표 없음): 앞 소환수부터 · 보호막이 먼저 막음 → 맞은 대상
+function sideHit(u, foe, power, tier, ev, tag) {
+  const tgt = frontSum(foe) || foe;
+  let dmg = Math.max(1, Math.round(baseDamage({ atk: u.atk * atkK(u) }, { def: tgt.def * defK(tgt) }, { power }, 1) * RULES.tierMult[tier])), absorb = 0;
+  if (foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; if (sh.hp <= 0) delete foe.eff.shield; }   // 보호막은 소환수보다 먼저
+  tgt.hp = Math.max(0, tgt.hp - dmg);
+  const k = tgt === foe ? undefined : foe.summons.indexOf(tgt);
+  ev.push({ t: 'counter', who: u.id, to: foe.id, sum: k, dmg, absorb, tier, ...tag, list: listOf(foe) });
+  if (k !== undefined && tgt.hp <= 0) { foe.summons.splice(k, 1); ev.push({ t: 'summonBreak', who: foe.id, i: k, name: tgt.name }); }
+  noteFall(foe, ev);   // 쓰러짐 사건(먼저 쓰러진 쪽이 짐)
+  return tgt;
+}
+// 게일바인 스택(SPECIES.evStack): 상대 공격이 나를 빗나간 타마다 +1(상한 = res 최대) · 맞으면(정타 · 치명 — 자세 무관) 그 공격이 끝난 뒤
+//  전부 써서 반격(스택 하나당 위력 per · bleedAt 이상이면 출혈) · 스침은 쌓이지도 터지지도 않음 · 선공하면 firstUp 한 겹
+export function evStackAdd(u, ev) {
+  const D = SP(u).evStack;
+  if (!D || u.hp <= 0) return;
+  const before = resOf(u)[D.k] || 0;
+  if (addRes(u, D.k, 1) !== before) ev.push({ t: 'res', who: u.id, k: D.k, n: u.res[D.k] });
+}
+export function evCounter(u, foe, T, ev, rng) {
+  const D = SP(u).evStack;
+  if (!D || u.hp <= 0 || !foe || foe.hp <= 0) return;
+  const r = resOf(u), n = r[D.k] || 0;
+  if (!n) return;
+  r[D.k] = 0; ev.push({ t: 'res', who: u.id, k: D.k, n: 0 });
+  const tgt = sideHit(u, foe, D.per * n, 'hit', ev, { from: 'stack', label: '반격', n });
+  if (n >= D.bleedAt && tgt.hp > 0) apply(tgt, 'bleed', 1, { turn: T, rng, ev, by: u });
+}
+export function firstUp(u, T, ev) { const b = SP(u).firstUp; if (b && u.hp > 0) selfBuff(u, b, { turn: T, ev }); }
+// 턴 끝(status.endTurn — [나, 건너편 앞 식물]): 내 쪽 강풍의 폭풍 피해 · 감전 / 건너편 강풍의 치유(우리 편 회복) · 공명 셈
+export function galeTurn(u, opp, turn, ev) {
+  if (!u || u.hp <= 0) return;
+  const g = u.eff && u.eff.gale, add = (g && g.add) || [];
+  if (add.includes('storm')) { const d = Math.max(1, Math.round(u.max * STORM.dot)); u.hp = Math.max(0, u.hp - d); ev.push({ t: 'tick', who: u.id, name: u.name, id: 'storm', dmg: d, list: listOf(u) }); }
+  if (add.includes('shock') && u.hp > 0) apply(u, 'shock', 1, { turn, rng: () => 0.5, ev, by: { id: g.by } });
+  const og = opp && opp.hp > 0 && opp.eff && opp.eff.gale;
+  if (!og || u.hp <= 0) return;
+  if ((og.add || []).includes('heal') && u.hp < u.max) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
+  if (SP(u).reso) resoAdd(u, opp, turn, ev, !!(opp.st && opp.st.guardT === turn));
 }

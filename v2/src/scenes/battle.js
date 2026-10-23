@@ -420,7 +420,7 @@ export const battle = {
     const B = this.B, v = this.v;
     if (v.phase !== 'pick') return;
     const rest = mustSkip(B.me) || sk === REST;   // REST = 쉬는 차례 · 다 막혀 쉼(시간 초과는 쓸 수 있는 기술 중 무작위 — tick)
-    if (rest) sk = REST; else if (!sk || !canUse(B.me, sk)) return;
+    if (rest) sk = REST; else if (!sk || !canUse(B.me, sk, B.me.energy, B.foe)) return;
     v.picked = sk.id; v.autoSkipAt = null;
     v.eff = { me: listOf(B.me), foe: listOf(B.foe) };   // 이번 턴 시작 모습(계산이 끝나면 B의 효과는 이미 턴 끝 상태)
     if (this.net) return this.send(app, this.mode === 'swap3' ? (rest ? { kind: 'rest' } : { kind: 'skill', id: sk.id }) : (rest ? 'rest' : sk.id), sk.cost || 0);
@@ -537,7 +537,7 @@ export const battle = {
       else if (e.t === 'hit') { const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
-      else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!`, tone: 'hit' });
+      else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 ${e.label || '되받아치기'}!`, tone: 'hit' });
       else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff; out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
       else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: (RESIST_MSG[e.why] || RESIST_MSG.skip)(e.name), tone: 'buff' });
@@ -571,7 +571,7 @@ export const battle = {
     if (st.kind === 'note' && st.side) sfx('fizzle');
     if (st.kind === 'faint') sfx('faint');
     if (st.kind === 'counter') sfx('hit');
-    if (st.kind === 'counter') this.ribbon(st.who, '되받아치기', null, t, st.ms);
+    if (st.kind === 'counter') this.ribbon(st.who, st.ev.label || '되받아치기', null, t, st.ms);
     if (st.kind === 'switch') this.ribbon(st.who, st.toU.name, st.toU.el, t, st.ms);
     if (st.kind === 'first') this.pop(st.who, '먼저!', null, t, false, -16, '#8ccfff');
     if (st.kind === 'stance' && !st.active) this.pop(st.who, '헛자세', 'dim', t, false, -16);
@@ -970,7 +970,7 @@ export const battle = {
     for (let i = 0; i < n; i++) {
       const sk = kit[i], x = x0 + (i % per) * (CW + GX), y = PY0 + CARD_Y + Math.floor(i / per) * (CARD_H + CARD_GY), CARD_W = CW;   // 한 줄 넷 = 좁은 카드(그림은 가운데를 잘라 1배 그대로)
       if (!sk) { cardSlot(g, x, y, CARD_W, CARD_H, '빈 칸'); continue; }
-      const id = 'sk_' + sk.id, pickNow = v.phase === 'pick', lock = pickNow ? lockOf(B.me, sk) : null, usable = !skipNow && canUse(B.me, sk), can = live && pickNow && usable, lit = v.picked === sk.id;
+      const id = 'sk_' + sk.id, pickNow = v.phase === 'pick', lock = pickNow ? lockOf(B.me, sk) : null, usable = !skipNow && canUse(B.me, sk, B.me.energy, B.foe), can = live && pickNow && usable, lit = v.picked === sk.id;
       const show = pickNow ? usable : true, short = (sk.cost || 0) > B.me.energy;   // 어둡게 = 고르는 차례에 규칙상 못 쓸 때만(넘어가는 연출 중엔 그대로)
       if (pickNow) { if (usable && this.useWas[id] === false) this.shineAt[id] = app.t; this.useWas[id] = usable; }   // 쓸 수 있게 된 순간 = 빛 띠
       if ((this.peek && this.peek.id === id) || (lit && v.phase === 'play')) cardSlot(g, x, y, CARD_W, CARD_H);   // 들어 올린 카드의 자리 · 낸 카드(턴 연출 중 — 공개 때 이 자리에서 나감)
