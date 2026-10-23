@@ -69,7 +69,7 @@ export function payAct(u, a, T, ev) {
   let spent = 0;
   if (a.spend) { const r = resOf(u); spent = a.spend.all ? r[a.spend.k] || 0 : a.spend.n || 1; r[a.spend.k] = Math.max(0, (r[a.spend.k] || 0) - spent); ev.push({ t: 'res', who: u.id, k: a.spend.k, n: r[a.spend.k] }); }
   if (a.allSun) u.energy = 0;
-  if ((a.orbDump || a.orbBlast || a.orbAbsorb || a.orbTrap) && u.orb) { u.st.orbSpent = u.orb.n; u.st.orbFull = u.orb.n === u.orb.max; if (a.orbTrap) u.orb.trap += u.orb.n; u.orb.n = 0; ev.push({ t: 'res', who: u.id, k: 'orb', n: 0 }); }   // 구슬 전부 쓰기(속박 = 덫으로)
+  if ((a.orbDump || a.orbBlast || a.orbAbsorb || a.orbTrap) && u.orb) { u.st.orbSpent = u.orb.n; u.st.orbFull = u.orb.n === u.orb.max; if (a.orbTrap && u.orb.n) { u.orb.trap += u.orb.n; const t = ((u.eff ||= {}).orbTrap ||= { env: true, n: 0, back: 0, by: u.id, atk: u.atk }); t.n += u.orb.n; } u.orb.n = 0; ev.push({ t: 'res', who: u.id, k: 'orb', n: 0 }); }   // 구슬 전부 쓰기(속박 = 덫으로)
   if (a.infused && u.st.infuse && --u.st.infuse.n <= 0) delete u.st.infuse;
   if (a.hpCost) { const c = Math.round(u.max * a.hpCost); u.hp = Math.max(1, u.hp - c); ev.push({ t: 'selfCost', who: u.id, name: u.name, dmg: c }); }
   return spent;
@@ -340,11 +340,17 @@ export function orbInit(u, T) {
 export function orbStart(u, T) {
   if (!u || u.hp <= 0 || !SP(u).orbs) return;
   orbInit(u, T); (u.st ||= {});
+  const t = u.eff && u.eff.orbTrap;
+  if (t && t.by === u.id) { u.orb.n = Math.min(u.orb.max, u.orb.n + t.back); t.back = 0; u.orb.trap = t.n; if (!t.n) delete u.eff.orbTrap; }   // 돌아오면 대기석에 있는 동안 터진 만큼 구슬을 받음
   if (T % 2 === 1) u.orb.n = u.orb.max - u.orb.trap;
 }
-// 구슬 속박 덫: 상대가 맞힐 때마다 하나 터짐 = 낮은 피해 + 봉인(다음 1턴) · 터진 구슬은 바에 돌아옴
+// 봉인 구슬 덫(내 쪽 지형 — 2026-10-24 사용자 '덫은 원래 지형에 남는거잖아 … 덫은 식물이 죽어도 유지'): 내 쪽 앞 식물(u)이 맞을 때마다 하나 터짐 = 낮은 피해 + 봉인(다음 1턴)
+//  터진 구슬은 볼트바인에게 — 앞에 있으면 바로, 대기석이면 돌아올 때(orbStart) · 위력은 덫을 깐 볼트바인의 공격으로
 export function orbTrapBurst(u, foe, T, ev, rng) {
-  u.orb.trap -= 1; u.orb.n = Math.min(u.orb.max, u.orb.n + 1);
-  sideHit(u, foe, ORB.trap, 'hit', ev, { from: 'trap', label: '구슬 덫' });
+  const t = u.eff.orbTrap;
+  t.n -= 1;
+  if (t.by === u.id && u.orb) { u.orb.n = Math.min(u.orb.max, u.orb.n + 1); u.orb.trap = t.n; } else t.back += 1;
+  sideHit({ id: u.id, atk: t.atk || u.atk, eff: {} }, foe, ORB.trap, 'hit', ev, { from: 'trap', label: '봉인 구슬' });
   if (foe.hp > 0) apply(foe, 'seal', 1, { turn: T, rng, ev, by: u });
+  if (t.n <= 0 && !t.back) delete u.eff.orbTrap;
 }

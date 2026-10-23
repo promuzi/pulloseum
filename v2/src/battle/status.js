@@ -31,6 +31,7 @@ export const FX = {
   dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
   gale:    { env: true, turns: 2, missAdd: 12 },
+  orbTrap: { env: true },   // 봉인 구슬 덫(볼트바인 — 내 쪽 지형: 교체 · 쓰러져도 남고 내 쪽 앞 식물이 맞을 때마다 하나씩 터짐 · devices.orbTrapBurst)
   cave:    { env: true },   // 동굴(스톤캡 타고남 — 스톤캡이 나와 있는 동안 상대 쪽 · 기간 없음 · devices.caveSync 가 깔고 걷음)              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
   taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
@@ -65,7 +66,7 @@ const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal'
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -170,7 +171,7 @@ export function listOf(u) {
   if (e.immune) out.push({ id: 'immune' });
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
-  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp ?? null, add: k === 'cave' ? e.cave.add : undefined } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
+  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp ?? null, add: k === 'cave' ? e.cave.add : undefined, n: k === 'orbTrap' ? e.orbTrap.n : undefined } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
   return out;
 }
 

@@ -514,7 +514,7 @@ const V2 = {
       S('u_volt_1', '수호 구슬', 'bolt', 'u', 0, 1, { cats: ['guard'], orbGuard: true }),
       S('u_volt_2', '전격 구슬', 'bolt', 'u', 25, 1, { orbDump: true }),
       S('u_volt_2b', '구슬 회수', 'bolt', 'u', 0, 2, { cats: ['buff'], orbRefill: true }),
-      S('u_volt_3', '구슬 속박', 'grass', 'u', 0, 2, { cats: ['debuff'], orbTrap: true }),
+      S('u_volt_3', '봉인 구슬', 'grass', 'u', 0, 2, { cats: ['debuff'], orbTrap: true }),
       S('u_volt_3b', '뇌격구', 'bolt', 'u', 25, 1, { area: true, orbBlast: true, inflict: { id: 'burn' } }),
       S('u_volt_3c', '구슬흡수', 'bolt', 'u', 0, 1, { cats: ['heal_hp'], orbAbsorb: true }),
     ],
@@ -533,7 +533,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 13;   // 13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
+export const RULES_VER = 14;   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
+//  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
 //  11 = 2026-10-23 종 고유 기술 v2 첫 묶음(게일캑터 · 게일바인 — 피해 없이 거는 기술 · 공명 · 스택 반격 · 반드시 맞음 · 방심하기)
 //  10 = 2026-10-23 조준 재정의(빗나감 칸 없음 · 치명 +25 · 회피가 옮기는 칸은 스침으로 — 사용자)

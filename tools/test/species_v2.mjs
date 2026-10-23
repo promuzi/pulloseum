@@ -3,8 +3,8 @@
 import { makeUnit } from '../../v2/src/battle/model.js';
 import { protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy } from '../../v2/src/battle/status.js';
-import { orbInit } from '../../v2/src/battle/devices.js';
+import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch } from '../../v2/src/battle/status.js';
+import { orbInit, orbStart } from '../../v2/src/battle/devices.js';
 import { BASICS } from '../../v2/src/battle/model.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 import { SKILLS, SPECIES_V2 } from '../../v2/src/game/catalog.js';
@@ -229,6 +229,21 @@ ok(SPECIES_V2.has('volt_vine'), '볼트바인 v2 켜짐');
   ok(ev5.some(e => e.t === 'counter' && e.from === 'trap') && f5.eff.seal && v5.orb.trap === 4, '상대가 맞히면 덫 하나가 터져 피해 + 봉인 · 구슬 돌아옴');
   turn(v5, f5, OTHER, OTHER, 3);
   ok(v5.orb.n === 1, '안 터진 덫 구슬은 충전에서 빠짐(5 − 덫 4)');
+  ok(SKILLS.u_volt_3.name === '봉인 구슬', '이름 = 봉인 구슬(2026-10-24 사용자)');
+  { // 덫 = 지형(사용자 2026-10-24): 내 쪽에 남아 교체 · 쓰러져도 유지 · 다른 식물이 맞아도 터짐 · 터진 구슬은 볼트바인이 돌아올 때 받음
+    const vv = mk('me', 'volt_vine', { stage: 2 }), mate = mk('me2', 'aqua'), ff = mk('foe', 'gaia'); orbInit(vv, 1);
+    turn(vv, ff, SKILLS.u_volt_3, OTHER, 1);
+    ok(vv.eff.orbTrap && vv.eff.orbTrap.n === 5, '덫 다섯이 내 쪽 지형으로');
+    moveEnv(vv, mate); clearOnSwitch(vv);
+    ok(mate.eff.orbTrap && mate.eff.orbTrap.n === 5, '교체해도 덫은 남음(새 앞 식물 쪽)');
+    const evm = turn(mate, ff, OTHER, ONE, 2, () => 0.5);
+    ok(evm.some(e => e.t === 'counter' && e.from === 'trap') && ff.eff.seal && mate.eff.orbTrap.n === 4 && mate.eff.orbTrap.back === 1, '다른 식물이 맞아도 덫이 터짐 · 구슬은 볼트바인 몫으로 쌓임');
+    ok(vv.orb.n === 0 && vv.orb.trap === 5, '대기석의 볼트바인은 마지막 구슬 수 그대로');
+    moveEnv(mate, vv); orbStart(vv, 4);
+    ok(vv.orb.n === 1 && vv.orb.trap === 4, '돌아오면 터진 만큼 구슬을 받고 남은 덫은 그대로');
+    mate.hp = 0; const mate2 = mk('me3', 'aqua'); moveEnv(vv, mate2);
+    ok(mate2.eff.orbTrap && mate2.eff.orbTrap.n === 4, '식물이 쓰러져도 덫은 남음');
+  }
   const v6 = mk('me', 'volt_vine', { stage: 2 }), f6 = mk('foe', 'aqua'); orbInit(v6, 1);
   const ev6 = turn(v6, f6, SKILLS.u_volt_3b, OTHER, 1, () => 0.5);
   ok(SKILLS.u_volt_3b.area && ev6.some(e => e.t === 'hit' && e.who === 'me' && e.tier !== 'miss') && has(f6, 'burn') && v6.orb.n === 0, '뇌격구 = 광역 번개 + 화상 · 구슬 전부');
