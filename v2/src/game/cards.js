@@ -33,7 +33,7 @@ const LIST = [
   V('v_acid', 'toxic', '강산 분비', 'down', { acid: 0.15 }, ['+15%', 'poison'], ['독에 걸린 상대에게 주는 피해 +15%']),
   V('v_antidote', 'toxic', '해독 체질', 'check', { immune: ['poison'], hp: 0.03 }, ['+3%', 'heart'], ['독에 걸리지 않아요', '체력 +3%']),
   V('v_mycel', 'spore', '공생 균사', 'mushroom', { mycel: 0.1 }, ['+10%', 'sword'], ['상대에게 걸린 나쁜 효과 하나마다 공격 +10%(넷까지)']),
-  V('v_spread', 'spore', '포자 번식', 'sparkle', { sporeAdd: 1 }, ['+1', 'mushroom'], ['포자를 걸 때 1겹 더']),
+  V('v_spread', 'spore', '포자 번식', 'sparkle', { sporeAdd: 1 }, ['−1', 'mushroom'], ['포자를 걸 때 한 턴 빨리 피어요']),   // 2026-10-23 엑셀 v10 — 포자 = 지연 효과(전엔 1겹 더)
   V('v_rot', 'spore', '부생 회복', 'heal', { rot: 0.02 }, ['2%', 'heal'], ['턴 끝마다 상대에게 걸린 나쁜 효과 하나당 최대 체력 2% 회복']),
   V('v_scale', 'dragon', '강철 비늘', 'shield', { guard: 0.07, def: 0.03 }, ['7%', 'shield'], ['받는 피해 −7%', '방어 +3%']),
   V('v_regen', 'dragon', '재생 비늘', 'heal', { regen: 0.01 }, ['1%', 'heal'], ['턴 끝마다 최대 체력 1% 회복']),

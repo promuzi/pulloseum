@@ -235,7 +235,7 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false) {
   const [a, b] = pair;
   endTurn([[a, b], [b, a]], turn, ev, stop);
   if (stop()) return;
-  for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: has(u, 'choke') ? 'spore' : 'shade' }); else gain(u); }
+  for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: u.eff.dark.look || 'dark' }); else gain(u); }
   for (const u of pair) expire(u, turn, ev);
 }
 // 한 턴: 내 기술 → 상대 고르기 → 에너지 쓰기 → rules.resolveTurn → 턴 끝 효과 → 사건 목록. 쉬는 차례면 고른 기술 대신 '쉬기'.
