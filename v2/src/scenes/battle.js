@@ -1,5 +1,6 @@
 import { arena1 } from '../art/bg.js';
 import { arenaLife } from '../art/arenaLife.js';
+import { colosseumFloor } from '../art/arenaFloor.js';
 import { icon, iconMid, tinted } from '../art/icons.js';
 import { drawBig, drawBigPose, drawPortrait, BGIMG, bigKey } from '../art/sprites.js';
 // 그림 키 = 그 식물 단계 그림(어린 · 자람 · 다 자람) — 2026-10-17 전엔 종 키로만 그려 늘 다 자란 모습이었음
@@ -135,14 +136,14 @@ function layOf(H, rows, merged = false) {
 // 경기장 그림 + 늘인 땅(gap줄, 한 번 만든 판은 다시 씀) — 2026-10-23 사용자 "높이가 높아지면 땅의 연장이 이상해져" · "가운데 원은 중간에 있어야해":
 //  ① 가운데 원(바닥 무늬)이 늘 두 식물 가운데 = 늘일 줄을 원 바로 위 · 바로 아래에 반씩(ARENA_RING = 그림의 원 맨 위 · 맨 아래 줄, 잰 값) · 원이 없는 경기장(감방)은 벽 밑에 한 번에
 //  ② 이어 붙이는 땅 = 넣는 자리 옆 EXT_P줄 띠를 거울처럼 접어(접힌 자리 같은 줄 두 번 없이) — 한 줄씩 아무거나 고르던 것은 줄무늬가 생겼음
-//  ③ 모래 바닥(jitter)만 접힐 때마다 가로로 ±4칸 밈(끝은 반대편으로 감음 — 같은 결이 세로로 줄지어 보이지 않게, 판 · 줄 무늬 바닥은 선이 어긋나 보여 안 밈)
-const EXT_P = 14, ARENA_RING = { colosseum: [173, 255], ship: [167, 265], garden: [177, 275], night: [160, 266], retro: [174, 276] };
+//  콜로세움(흙바닥)은 원근째 다시 그림 — art/arenaFloor.js colosseumFloor(같은 날 사용자 "흙바닥의 경우 직선 가로줄이 보이는데 원형의 소점?에 맞게 … 다른 맵은 냅둬")
+const EXT_P = 14, ARENA_RING = { ship: [167, 265], garden: [177, 275], night: [160, 266], retro: [174, 276] };
 const artCache = new WeakMap();
 function arenaArt(bg, key, gap) {
   let m = artCache.get(bg); if (!m) artCache.set(bg, (m = new Map()));
   let cv = m.get(gap); if (cv) return cv;
   cv = document.createElement('canvas'); cv.width = bg.width; cv.height = bg.height + gap;
-  const c = cv.getContext('2d'), W0 = bg.width, split = ARENA_SPLIT[key] || 150, ring = ARENA_RING[key], jitter = key === 'colosseum', per = 2 * EXT_P - 2;
+  const c = cv.getContext('2d'), W0 = bg.width, split = ARENA_SPLIT[key] || 150, ring = ARENA_RING[key], per = 2 * EXT_P - 2;
   c.imageSmoothingEnabled = false;
   // 넣을 자리 [그림 줄, 줄 수, 띠 방향(-1 = 위쪽 띠 · 1 = 아래쪽 띠)]
   const ins = ring && gap ? [[Math.max(split + EXT_P, ring[0] - 2), Math.ceil(gap / 2), -1], [ring[1] + 2, Math.floor(gap / 2), 1]] : [[split, gap, 1]];
@@ -151,9 +152,7 @@ function arenaArt(bg, key, gap) {
     c.drawImage(bg, 0, sy, W0, at - sy, 0, dy, W0, at - sy); dy += at - sy; sy = at;
     for (let j = 0; j < n; j++) {
       const q = (j + 1) % per, o = q < EXT_P ? q : per - q, r = dir < 0 ? at - 1 - o : at + o;
-      const dx = !jitter || j < EXT_P ? 0 : ((Math.imul(Math.floor(j / (EXT_P - 1)) + 7 + at, 2654435761) >>> 0) % 9) - 4;
-      c.drawImage(bg, 0, r, W0, 1, dx, dy + j, W0, 1);
-      if (dx) c.drawImage(bg, dx > 0 ? W0 - dx : 0, r, Math.abs(dx), 1, dx > 0 ? 0 : W0 + dx, dy + j, Math.abs(dx), 1);
+      c.drawImage(bg, 0, r, W0, 1, 0, dy + j, W0, 1);
     }
     dy += n;
   }
@@ -838,7 +837,7 @@ export const battle = {
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
     //  그림 270×348 = 위(하늘 · 관중석 · 벽)는 화면 위에 붙이고 길면 벽 밑 땅을 늘임 · 짧으면 위를 잘라 올림(layOf) · 넓은 화면 = 가운데 + 양옆을 그림 가장자리 한 줄로 이음
     const bg = BGIMG['arena_' + T.key], ox = Math.floor((W - 270) / 2), [ex, ey] = this.at('foe'), [px, py] = this.at('me');
-    const art = bg ? arenaArt(bg, T.key, Lay.gap) : null, ay = AY + Lay.lift;   // ay = 그림 맨 윗줄 자리
+    const art = bg ? (T.key === 'colosseum' ? colosseumFloor(bg, Lay.gap) : arenaArt(bg, T.key, Lay.gap)) : null, ay = AY + Lay.lift;   // ay = 그림 맨 윗줄 자리
     g.clip(0, AY, W, AH, () => {
       const c = g.c;
       c.imageSmoothingEnabled = false;
