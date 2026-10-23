@@ -5,6 +5,9 @@ import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../../v2
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
 import { apply, onHit, endTurn, expire, listOf, canUse, canSwitch, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX, atkK } from '../../v2/src/battle/status.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
+import { SKILLS as CSK, RULES_VER } from '../../v2/src/game/catalog.js';
+import * as ST from '../../v2/src/battle/status.js';
+const { FX } = ST, OLD_ = ST.OLD;
 
 let fails = 0, n = 0;
 const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
@@ -157,14 +160,14 @@ const fixed = v => () => v;
 }
 {
   const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'aqua'), seed: 5 });
-  apply(B.foe, 'shade', 1, ctx(B.me, 1, []));
+  apply(B.foe, 'dark', 1, ctx(B.me, 1, []), { look: 'shade' });   // 그늘 드리우기 = 암실 1턴(이름 · 연출 그늘)
   const e0 = B.foe.energy, t = playTurn(B, B.me.kit[1]), sun = t.foeSkill && t.foeSkill.act === 'sun' ? t.foeSkill.gain || 0 : 0;   // 봇이 광합성(그 턴 대신 +2)을 고르면 그만큼은 빼고 봄(2026-10-22 봇 머리)
   ok(B.foe.energy <= e0 + sun && t.events.some(e => e.t === 'noEnergy' && e.who === 'foe'), '그늘 = 그 턴 끝 에너지 안 참');
   ok(!B.foe.eff.dark && !B.foe.eff.shade, '그늘(암실 1턴)은 그 턴 끝 한 번 막고 사라짐');
 }
 {
   const a = mk('me', 'flower_grass'), b = mk('foe', 'gaia');
-  b.energy = 4; apply(b, 'bind', 1, ctx(a, 1, []));
+  b.energy = 4; apply(b, 'seal', 1, ctx(a, 1, []));
   const locked = b.eff.seal && b.kit.find(s => s.id === b.eff.seal.skill);
   ok(locked && !canUse(b, locked) && (locked.cost || 0) <= 5, '봉인(옛 덩굴) = 다음 턴에 쓸 수 있을 기술 하나를 막음');
   expire(b, 1, []); ok(b.eff.seal, '걸린 턴 끝엔 남음'); expire(b, 2, []); ok(!b.eff.seal, '다음 턴 끝에 풀림');
@@ -175,10 +178,10 @@ const fixed = v => () => v;
   const a = mk('me', 'gaia'), b = mk('foe', 'aqua'), base = { ...a }, b0 = { ...b };
   const dmg = (x, y) => { const xx = mk('me', x.key), yy = mk('foe', y.key); Object.assign(xx.eff, x.eff); Object.assign(yy.eff, y.eff); const r = resolveTurn(xx, yy, xx.kit[0], REST, fixed(0.5), { turn: 1 }); return (r.events.find(e => e.t === 'hit') || {}).dmg; };
   const plain = dmg(a, b);
-  apply(a, 'weak', 1, ctx(b, 1, []));
+  apply(a, 'atkDown', 1, ctx(b, 1, []));
   const weak = dmg(a, b);
   ok(weak < plain, `약화 = 공격 ↓ (${plain} → ${weak})`);
-  a.eff = {}; apply(b, 'corrode', 1, ctx(a, 1, []));
+  a.eff = {}; apply(b, 'defDown', 1, ctx(a, 1, []));
   ok(dmg(a, b) > plain, '부식 = 방어 ↓');
   const p = mk('me', 'gaia'); apply(p, 'gale', 1, ctx(b, 1, []));
   const t0 = resolveTurn(mk('me', 'gaia'), mk('foe', 'aqua'), sk(p, 's1'), REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
@@ -248,13 +251,13 @@ const fixed = v => () => v;
   const sb = (u, id, t = 1, ev = []) => selfBuff(u, id, { turn: t, ev });
   const hitOf = (x, y, s = x.kit[0]) => resolveTurn(x, y, s, REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit');
   const plain = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).dmg;
-  const r = mk('me', 'gaia'); sb(r, 'rage');
+  const r = mk('me', 'gaia'); sb(r, 'atkUp');
   const rd = hitOf(r, mk('foe', 'aqua')).dmg;
   ok(rd > plain, `분노 = 주는 피해 ↑ (${plain} → ${rd})`);
-  const w = mk('foe', 'aqua'); sb(w, 'wall');
+  const w = mk('foe', 'aqua'); sb(w, 'defUp');
   const wd = hitOf(mk('me', 'gaia'), w).dmg;
   ok(wd < plain, `철벽 = 받는 피해 ↓ (${plain} → ${wd})`);
-  const h = mk('me', 'gaia'), s0 = effSpd(h); sb(h, 'haste');
+  const h = mk('me', 'gaia'), s0 = effSpd(h); sb(h, 'spdUp');
   ok(effSpd(h) > s0, '가속 = 기동성 ↑');
   const x = mk('foe', 'aqua');
   const g = mk('me', 'gaia'); g.hp = Math.round(g.max / 2); sb(g, 'regen');
@@ -263,7 +266,7 @@ const fixed = v => () => v;
   ok(rg && rg.heal === Math.round(g.max * 0.05), '재생 = 턴 끝 5% 회복');
   endTurn([[g, x]], 2, []); endTurn([[g, x]], 3, []);
   ok(!g.eff.regen, '재생은 3번 뒤 끝');
-  const g2 = mk('me', 'gaia'); g2.hp = 10; sb(g2, 'regen'); apply(g2, 'shade', 1, ctx(x, 1, []));
+  const g2 = mk('me', 'gaia'); g2.hp = 10; sb(g2, 'regen'); apply(g2, 'dark', 1, ctx(x, 1, []), { look: 'shade' });
   const ev2 = []; endTurn([[g2, x]], 1, ev2);
   ok(ev2.some(e => e.t === 'regen'), '그늘이어도 재생은 그대로(엑셀 v10 — 재생 멈춤 없앰)');
   const g3 = mk('me', 'gaia'); g3.hp = Math.round(g3.max / 2); sb(g3, 'regen'); apply(g3, 'burn', 1, ctx(x, 1, []));
@@ -287,15 +290,15 @@ const fixed = v => () => v;
   ok(!p.eff.poison && !p.eff.wet && p.eff.purified, '정화 = 나쁜 효과 다 지움');
   const evR = []; apply(p, 'burn', 1, ctx(x, 2, evR));
   ok(!p.eff.burn && evR.some(e => e.t === 'resist'), '정화 중엔 안 걸림');
-  const f = mk('me', 'gaia'); sb(f, 'focus');
+  const f = mk('me', 'gaia'); sb(f, 'aim');
   ok(f.eff.aim && f.eff.aim.k === 25 && listOf(f).some(o => o.id === 'aim'), '조준(옛 집중) = 다음 공격 치명 +25');
   const tc0 = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).table, tc1 = hitOf(f, mk('foe', 'aqua')).table;
   ok(tc1.crit > tc0.crit && !f.eff.aim, '조준은 공격 기술 한 번에 쓰이고 사라짐');
-  const bs = { id: 'x_rage', name: '불타오르기', el: 'fire', act: 'buff', self: 'rage', cost: 0, cats: ['buff'] };
+  const bs = { id: 'x_rage', name: '불타오르기', el: 'fire', act: 'buff', self: 'atkUp', cost: 0, cats: ['buff'] };
   const u = mk('me', 'gaia'), evB = resolveTurn(u, mk('foe', 'aqua'), bs, REST, fixed(0.5), { turn: 1 }).events;
   ok(evB.some(e => e.t === 'cast') && u.eff.atkUp, '버프 기술 = 나에게 걸림(분노 → 활력 한 겹)');
   const u2 = mk('me', 'gaia');
-  resolveTurn(u2, mk('foe', 'aqua'), { ...u2.kit[0], also: 'haste' }, REST, fixed(0.5), { turn: 1 });
+  resolveTurn(u2, mk('foe', 'aqua'), { ...u2.kit[0], also: 'spdUp' }, REST, fixed(0.5), { turn: 1 });
   ok(u2.eff.spdUp, '공격 기술의 덤 버프(가속 한 겹)');
 }
 // ── 9-4. 상태이상 다시 맞춤(엑셀 v10 효과 분류 19~34행) ──
@@ -471,7 +474,6 @@ const fixed = v => () => v;
   expire(w, 7, []); ok(!w.eff.atkUp, '3턴에 건 겹은 7턴 끝에 사라짐');
   const d = mk('foe', 'aqua'); apply(d, 'atkDown', 1, ctx(u, 1, [])); sb(d, 'purify');
   ok(d.eff.atkDown && d.eff.atkDown.n === 1, '쇠약은 정화로 안 지워짐(디버프 제거 불가)');
-  const r = mk('me', 'gaia'); sb(r, 'rage'); ok(r.eff.atkUp && !r.eff.rage, '옛 이름 분노 = 활력 한 겹');
   const lo = mk('me', 'gaia'); for (let i = 0; i < 7; i++) apply(lo, 'atkDown', 1, ctx(x, 1, []));
   ok(atkK(lo) >= 0.2 && atkK(lo) < 0.3, `쇠약 일곱 겹이어도 공격 배율 0.2 아래로 안 감(${atkK(lo).toFixed(2)})`);
   const c0 = hitOf(mk('me', 'gaia'), mk('foe', 'aqua')).table, cu = mk('me', 'gaia'); sb(cu, 'critUp');
@@ -482,6 +484,21 @@ const fixed = v => () => v;
   const B = makeTeamBattle({ me, foe, seed: 9 }); sb(B.me, 'atkUp', B.turn); const out = B.me;
   playTurn3(B, { kind: 'switch', to: 1 });
   ok(B.me !== out && out.eff.atkUp && out.eff.atkUp.n === 1, '교체로 나가도 활력 남음');
+}
+// ── 9-8. 기술 표 옮기기 검사(2026-10-23 계획 Task 8): 모든 기술의 효과 이름이 엑셀 v10 효과 표(FX)에 있고 옛 이름이 없음 · RULES_VER 6 ──
+{
+  const SELF_OK = new Set(['purify', 'flourish', 'stealth', 'aim']);
+  const OLDS = ['rage', 'wall', 'haste', 'focus', 'thorns', 'clone', 'weak', 'corrode', 'bind', 'shade'];
+  const all = [...Object.values(CSK), ...Object.keys(SPECIES).flatMap(k => kitOf(k))];
+  const badSelf = all.filter(s => [s.self, s.also].some(b => b && !(FX[b] || SELF_OK.has(b))));
+  const badInf = all.filter(s => s.inflict && !FX[s.inflict.id]);
+  const old = all.filter(s => [s.self, s.also, s.inflict && s.inflict.id].some(b => OLDS.includes(b)) || s.stealth === true);
+  ok(!badSelf.length && !badInf.length, `기술 효과가 모두 효과 표에 있음(나에게 ${badSelf.map(s => s.id)} · 상대에게 ${badInf.map(s => s.id)})`);
+  ok(!old.length, `옛 효과 이름이 남은 기술 없음(${old.map(s => s.id)})`);
+  ok(all.filter(s => s.inflict && s.inflict.id === 'spore').every(s => s.inflict.delay >= 1 && s.inflict.n == null), '포자 기술 = 지연 턴(delay)으로');
+  ok(CSK.u_ninja_2.self === 'stealth' && CSK.u_ninja_2.look === 'clone' && CSK.u_ninja_2.link && CSK.u_ninja_2.link.hits === 3 && CSK.u_ninja_3b.self === 'stealth' && CSK.u_ninja_3b.link.ambush && CSK.u_ninja_3b.act === 'buff', '닌자바인 은신 기술 둘 = 공통 은신 + 이어 공격(연타 · 기습)');
+  ok(RULES_VER === 6, `RULES_VER = 6(${RULES_VER})`);
+  ok(!OLD_ || !Object.keys(OLD_).length, '옛 이름 바꿈표를 비움');
 }
 // ── 9. 같은 씨앗 → 같은 결과 ──
 const runPair = (k1, k2, seed, off = false) => {

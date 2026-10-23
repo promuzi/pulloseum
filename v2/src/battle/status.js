@@ -67,15 +67,15 @@ const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim', 'pu
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
 const GUARDED = [...HARM, 'stun'];
 const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'taunt', 'root', ...DOWNS];
-// 옛 효과 이름 → 엑셀 v10 이름(기술 표를 다 옮길 때까지 — 2026-10-23 계획 Task 8에서 지움) · 그늘 = 암실(이름 · 연출만 그늘)
-export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown', shade: 'dark', bind: 'seal', focus: 'aim', clone: 'stealth' };
+// 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
+export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
 const ENV = Object.keys(FX).filter(k => FX[k].env);
 // 교체로 나갈 때 지우는 것(엑셀 v10 — 상태이상 · 능력치 겹 · 갑주는 남고 시간이 감): 준비 효과(조준 · 은신 · 보호막) · 속박 한 번 표시 · 면역(스스로 바꾸면 그게 행동) · 정화 보호 · 환경(다음 앞 식물로 옮김)
 const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', 'purified', ...ENV];
 
 const E = u => (u.eff ||= {});
-export const has = (u, id) => !!(u && u.eff && u.eff[OLD[id] || id]);
+export const has = (u, id) => !!(u && u.eff && u.eff[id]);
 // 능력치 겹 합(올림 − 내림): 공격 · 방어 · 기동 = 배율에 더할 몫, 치명 · 정확도 = 판정표 칸
 export function statSum(u, stat) {
   const e = u && u.eff; if (!e) return 0;
@@ -191,7 +191,7 @@ function addStat(u, id, T, o = {}) {
   s.n = s.s.length;
 }
 export function apply(tgt, id0, n, ctx, o = {}) {
-  const id = OLD[id0] || id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, look = o.look || (id0 !== id && id === 'dark' ? id0 : null), base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: look || id };
+  const id = id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, look = o.look || null, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: look || id };   // look = 같은 효과의 다른 이름(암실 → 그늘)
   if (!D || tgt.hp <= 0) return;
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
   if (GUARDED.includes(id) && e.purified) { ev.push({ t: 'resist', ...base, why: 'purify' }); return; }   // 정화 보호 중엔 해로운 상태이상 · 기절이 안 걸림(능력치 디버프는 걸림)
@@ -259,12 +259,12 @@ export function shockRoll(u, ctx) {
 }
 // 나에게 버프 걸기(버프 기술 또는 공격 기술의 덤)
 export function selfBuff(u, id0, ctx, o = {}) {
-  const id = OLD[id0] || id0, e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
+  const id = id0, e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
   if (FX[id] && FX[id].stat) { addStat(u, id, T, o); ctx.ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(u) }); return; }
   if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'aim') { e.aim = { k: Math.max((e.aim && e.aim.k) || 0, o.aimK || FX.aim.k) }; ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'stealth') {   // o = 그 기술(이어 공격 link · 연출 look)
-    e.stealth = { look: id0 === 'clone' || o.look === 'clone' ? 'clone' : 'stealth', link: o.link ? { ...o.link, id: o.id, name: o.name, el: o.link.el !== undefined ? o.link.el : o.el || null } : null };
+    e.stealth = { look: o.look === 'clone' ? 'clone' : 'stealth', link: o.link ? { ...o.link, id: o.id, name: o.name, el: o.link.el !== undefined ? o.link.el : o.el || null } : null };
     ctx.ev.push({ t: 'fx', ...base, id: e.stealth.look, list: listOf(u) }); return;
   }
   if (id === 'purify') {

@@ -4,12 +4,12 @@
 import { botPlant, unitOf } from '../../v2/src/game/fight.js';
 import { makeBattle, playTurnVs, aiPick, seenOf, lastOf, hitMult, REST } from '../../v2/src/battle/model.js';
 import { makeTeamBattle, playTurn3, aliveOf } from '../../v2/src/battle/team.js';
-import { canUse, has, FX, OLD, mustSkip } from '../../v2/src/battle/status.js';
+import { canUse, has, FX, mustSkip } from '../../v2/src/battle/status.js';
 import { makeRng } from '../../v2/src/battle/rules.js';
 
 const N = +(process.argv[2] || 300);
 // 옛 머리(2026-10-18까지의 aiPick 그대로)
-const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[OLD[f.id] || f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack ? true : !has(foe, f.id)); };
+const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack ? true : !has(foe, f.id)); };
 function oldPick(u, foe, rng) {
   const ok = u.kit.filter(s => canUse(u, s));
   if (!ok.length) return REST;

@@ -44,7 +44,7 @@ const hits = ev => ev.filter(e => e.t === 'hit');
 // ── 연타 ──
 {
   const A = unit('a'), D = unit('d');
-  const r = resolveTurn(A, D, atk({ power: 20, hits: 3, inflict: { id: 'weak' } }), rest, seq([0, 0.5]), { turn: 1 });
+  const r = resolveTurn(A, D, atk({ power: 20, hits: 3, inflict: { id: 'atkDown' } }), rest, seq([0, 0.5]), { turn: 1 });
   const hs = hits(r.events);
   ok(hs.length === 3 && hs[2].n === 3 && hs[2].of === 3, `연타 = 타마다 사건(${hs.length})`);
   ok(r.events.filter(e => e.t === 'fx' && e.id === 'atkDown').length === 1, '효과는 첫 적중 한 번');
@@ -69,14 +69,14 @@ const hits = ev => ev.filter(e => e.t === 'hit');
   ok(ar.events.some(e => e.t === 'reveal' && e.id === 'stealth') && hits(ar.events).every(h => !h.link), '광역에 맞으면 은신이 풀리고 이어 공격 없음');
   ok(rollFirst(unit('a', { spd: 80 }), unit('b', { spd: 10 }), () => 0.5, [-1, -1]).first.id === 'b', '둘 다 나중 = 빠른 쪽이 나중일 확률 높음');
   ok(rollFirst(unit('a', { spd: 1 }), unit('b', { spd: 99 }), () => 0.99, [1, 0]).first.id === 'a', '먼저(early) = 무조건 선공');
-  const C = unit('c'); selfBuff(C, 'clone', { turn: 1, ev: [] });
+  const C = unit('c'); selfBuff(C, 'stealth', { turn: 1, ev: [] }, { look: 'clone' });
   ok(has(C, 'stealth') && C.eff.stealth.look === 'clone' && !C.eff.clone, '분신 = 은신(연출만 분신)');
   const c2 = resolveTurn(unit('a'), C, atk(), rest, seq([0, 0.97, 0.5]), { turn: 1 });
   ok(hits(c2.events)[0].tier !== 'miss' && !has(C, 'stealth'), '맞히면 은신(분신) 풀림');
   ok(FX.stealth.miss === 0.95 && !FX.clone, '수치(공통 은신 95%)');
 }
 // ── 기술 연결 ──
-ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.self === 'clone' && SKILLS.u_hyunmu_2.self === 'armor' && SKILLS.u_gladi_1.pierce === 0.3 && SKILLS.u_astro_3.early, '기술 연결');
+ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.self === 'stealth' && SKILLS.u_ninja_2.self === 'stealth' && SKILLS.u_hyunmu_2.self === 'armor' && SKILLS.u_gladi_1.pierce === 0.3 && SKILLS.u_astro_3.early, '기술 연결');
 
 // ── 공통 장치(devices.js — 2026-10-18 로드맵 1번) ──
 {
@@ -106,10 +106,10 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   // 상대 조작: 햇빛 · 버프 빼앗기 · 버프 날리기 · 봉인
   const s1 = unit('a', { energy: 1 }), s2 = unit('d', { energy: 3 }); go(s1, s2, atk({ power: 10, steal: 'sun' }), rest);
   ok(s1.energy === 2 && s2.energy === 2, '햇빛 빼앗기');
-  const b1 = unit('a'), b2 = unit('d', { eff: { rage: { exp: 9 }, wall: { exp: 9 } } }); go(b1, b2, atk({ power: 10, steal: 'buff' }), rest);
-  ok(b1.eff.rage && !b2.eff.rage && b2.eff.wall, '버프 하나 빼앗기');
-  const c2 = unit('d', { eff: { rage: { exp: 9 }, wall: { exp: 9 } } }); go(unit('a'), c2, atk({ power: 10, dispel: 'all' }), rest);
-  ok(!c2.eff.rage && !c2.eff.wall, '버프 전부 날리기');
+  const b1 = unit('a'), b2 = unit('d', { eff: { regen: { exp: 9 }, will: { exp: 9 }, atkUp: { n: 1, s: [{ v: 0.2, exp: 9 }] } } }); go(b1, b2, atk({ power: 10, steal: 'buff' }), rest);
+  ok(b1.eff.regen && !b2.eff.regen && b2.eff.will && b2.eff.atkUp, '이로운 상태이상 하나 빼앗기(능력치 겹은 대상 아님 — 엑셀 v10 회수)');
+  const c2 = unit('d', { eff: { regen: { exp: 9 }, will: { exp: 9 }, atkUp: { n: 1, s: [{ v: 0.2, exp: 9 }] } } }); go(unit('a'), c2, atk({ power: 10, dispel: 'all' }), rest);
+  ok(!c2.eff.regen && !c2.eff.will && c2.eff.atkUp, '이로운 상태이상 전부 날리기(능력치 겹은 남음)');
   const z = unit('d', { kit: [{ id: 'big', name: '큰 기술' }], st: { lastAct: 'big', lastName: '큰 기술', miss: {}, init: 0 } }); go(unit('a'), z, atk({ power: 10, seal: true }), rest);
   ok(z.eff.seal && z.eff.seal.skill === 'big' && z.eff.seal.exp === 2, '봉인 장치 = 엑셀 v10 봉인(무작위 기술 하나 · 다음 1턴 — 옛 직전 기술 2턴 폐기)');
   // 운: 0배가 나오면 다음은 가장 큰 배율 확정
@@ -124,7 +124,7 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   const bomb = unit('d'), bo = unit('a'); go(bo, bomb, { id: 'dyn', act: 'buff', cost: 0, delay: { turns: 2, power: 90, area: true } }, rest, seq([0, 0.5]), 1);
   const evs = []; endTurn([[bomb, bo]], 2, evs); const hp2 = bomb.hp; endTurn([[bomb, bo]], 3, evs);
   ok(hp2 === 300 && bomb.hp < 300 && evs.some(e => e.t === 'boom'), '시한 = 2턴 뒤 턴 끝 폭발');
-  const ec = unit('d'); go(unit('a'), ec, atk({ power: 60, echo: 0.5, inflict: { id: 'weak' } }), rest); const ec1 = ec.hp, ee = []; endTurn([[ec, unit('a')]], 2, ee);
+  const ec = unit('d'); go(unit('a'), ec, atk({ power: 60, echo: 0.5, inflict: { id: 'atkDown' } }), rest); const ec1 = ec.hp, ee = []; endTurn([[ec, unit('a')]], 2, ee);
   ok(ec.hp < ec1 && ee.some(e => e.t === 'boom'), '메아리 = 다음 턴 끝 한 번 더');
   // 모드 · 개수 칸 턴마다
   const md = T(); go(md, unit('d'), { id: 'brk', act: 'buff', cost: 0, setMode: 'naked' }, rest);
@@ -134,7 +134,7 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
 }
 // ── 공통 장치 2묶음: 반응 · 받는 피해 배율 · 개수만큼 반사 · 경기장 · 2턴 · 개수 글 ──
 {
-  SPECIES.__r = { name: '반응', res: { thorn: [0, 5, '가시'], water: [0, 999, '물'] }, react: [{ on: 'contact', gain: { k: 'thorn', n: 1 } }, { on: 'hit', store: { k: 'water', pct: 0.3 } }, { on: 'contact', inflict: 'shock' }, { on: 'half', self: 'rage' }, { on: 'crit', nextCrit: 50 }], takenK: [{ when: 'full', k: 0.5 }], thornRes: { k: 'thorn', per: 0.1 } };
+  SPECIES.__r = { name: '반응', res: { thorn: [0, 5, '가시'], water: [0, 999, '물'] }, react: [{ on: 'contact', gain: { k: 'thorn', n: 1 } }, { on: 'hit', store: { k: 'water', pct: 0.3 } }, { on: 'contact', inflict: 'shock' }, { on: 'half', self: 'atkUp' }, { on: 'crit', nextCrit: 50 }], takenK: [{ when: 'full', k: 0.5 }], thornRes: { k: 'thorn', per: 0.1 } };
   const R = o => unit('r', { key: '__r', ...o });
   const r1 = R(), a1 = unit('a'); resolveTurn(a1, r1, atk({ power: 60 }), rest, seq([0, 0.5]), { turn: 1 });
   ok(r1.res.thorn === 1 && r1.res.water > 0 && a1.eff.shock, `붙어서 맞음 = 가시 +1 · 물 저장 · 때린 쪽 감전 (물 ${r1.res.water})`);
@@ -174,8 +174,8 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   const P = {
     u_petal_1: A('u_petal_1', 50, 1, { ...SW, onFirst: { pierce: 0.3, guardWith: true, guardHits: 1, guardDefMult: 2 }, onSecond: { power: 40, guardWith: true, guardHits: 1, guardDefMult: 3, counterPct: 0.3 } }),
     u_petal_2: A('u_petal_2', 22, 2, { ...SW, hits: 3, onFirst: { evadeWith: true, shift: { miss: 10, graze: 6 } }, onSecond: { evadeWith: true, shift: { miss: 15, graze: 10 }, nextCrit: 50 } }),
-    u_petal_2b: A('u_petal_2b', 0, 1, { onFirst: { self: 'wall' }, onSecond: { self: 'haste' } }),
-    u_petal_3: A('u_petal_3', 28, 4, { ...SW, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { self: 'thorns' }, onSecond: { guardWith: true, guardHits: 1, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),
+    u_petal_2b: A('u_petal_2b', 0, 1, { onFirst: { self: 'defUp' }, onSecond: { self: 'spdUp' } }),
+    u_petal_3: A('u_petal_3', 28, 4, { ...SW, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { reflect: true }, onSecond: { guardWith: true, guardHits: 1, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),
     u_petal_3b: A('u_petal_3b', 0, 1, { infuse: { el: 'fire', n: 2, tag: 'sword' } }),
     u_petal_3c: A('u_petal_3c', 0, 2, { self: 'flourish' }),
   };
@@ -192,7 +192,7 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   // 기합: 먼저 = 철벽 · 나중 = 가속
   const k1 = knight({ spd: 99 }), k2 = knight({ spd: 1 });
   resolveTurn(k1, unit('d'), P.u_petal_2b, rest, seq([0, 0.5]), { turn: 1 }); resolveTurn(k2, unit('d', { spd: 99 }), P.u_petal_2b, rest, seq([0.99, 0.5]), { turn: 1 });
-  ok(has(k1, 'wall') && !has(k1, 'haste') && has(k2, 'haste'), '기합 = 먼저 철벽 · 나중 가속');
+  ok(has(k1, 'defUp') && !has(k1, 'spdUp') && has(k2, 'spdUp'), '기합 = 먼저 억셈(옛 철벽) · 나중 가속');
   // 오의 나중: 막으면 기절(굴림 0.1 < 40%) → 기절이면 찌르기 한 방(120)
   const r4 = resolveTurn(knight({ spd: 1 }), unit('d', { spd: 99 }), P.u_petal_3, foeAtk, seq([0.99, 0.5, 0.1, 0.5]), { turn: 1 });
   const k4 = hits(r4.events).filter(h => h.who === 'k');

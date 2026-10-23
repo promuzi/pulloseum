@@ -13,7 +13,7 @@ import { SPECIES } from '../game/catalog.js';
 import { has, listOf, apply, defK, selfBuff } from './status.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
-const BUFF_IDS = ['stealth', 'clone', 'armor', 'rage', 'wall', 'haste', 'regen', 'thorns', 'shield', 'purified'];
+const BUFF_IDS = ['regen', 'will', 'purified'];   // 빼앗기 · 날리기(엑셀 v10 회수) = 이로운 상태이상만 — 능력치 겹 · 준비 효과 · 환경 · 면역은 대상 아님
 export function resOf(u) {
   if (!u.res) {
     u.res = {}; u.resMax = {};

@@ -119,7 +119,7 @@ export function rollFirst(A, B, rng, pr = [0, 0]) {
 // 2026-10-23 엑셀 v10(계획 Task 6): 방어 = 그 턴 모든 타 · 반사 = 그 턴 처음 맞는 한 타(멀리 · 광역도) · 보호막 = 상대 공격 기술 한 번 뒤 잔량 제거 ·
 //  조준 = 다음 공격 기술 한 번의 모든 타 · 은신 = 기술을 실제로 쓸 때 시작(광역 아닌 공격 95% 빗나감) → 맞거나 · 내가 공격하거나 · 쉬면 풀림 · 다 피하면 바로 이어 공격 ·
 //  범위 = 확정 명중 없음(회피 자세 효과 절반 · 은신은 못 가림)
-const isReflect = a => !!(a && (a.reflect || a.self === 'thorns' || a.also === 'thorns'));   // 'thorns' = 옛 반사 버프 이름(기술 표를 옮길 때까지)
+const isReflect = a => !!(a && a.reflect);   // 반사 자세(기술의 reflect 표시)
 export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const ev = [];
   stOf(A); stOf(B);
@@ -165,7 +165,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       return 'acted';
     }
     if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); return 'acted'; }   // 광합성(기본기 — 햇빛 +2)
-    const selfAll = () => { for (const b of [a.self, a.also]) if (b && b !== 'thorns') selfBuff(u, b, { turn: T, ev }, a); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
+    const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }, a); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
     if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); if (isReflect(a)) showStance(u, 'reflect'); selfAll(); afterAct(u, a, foe, T, ev, { spent, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); return 'acted'; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); return 'acted'; }
     const r = strike(u, foe, a);
