@@ -72,7 +72,7 @@ function attackFx(s, ak) {
   if (!A) { A = { kind, move: MOVE_OF[kind] || 'cast', c: B.c, status: B.status, petal: B.petal || [B.c[1], B.c[2]], gem: B.gem || B.c[0], ...(B.fizz ? { fizz: B.fizz } : {}) }; fxMemo.set(key, A); }
   return A;
 }
-import { glyphH, wrap, sized } from '../core/text.js';
+import { glyphH, wrap, sized, measure } from '../core/text.js';
 import { battleFromView, applyView } from '../game/fight.js';
 import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
@@ -170,6 +170,27 @@ const TIER = { miss: ['빗나감', 'dim', '빗나갔다!'], graze: ['스침', 's
 
 // 체력판: (상대만) 재배사 · 랭크 / 이름 + 속성 / HP 막대 + 숫자 / MP 칸 + 숫자 — 'HP'·'MP' 이름은 왼쪽, 막대·칸은 같은 x에서 시작, 숫자만 오른쪽
 const BOX_W = 140, LBL_W = 19;
+// 정체 꼬리표(2026-10-23 사용자 "속성과 식물 종+변이까지 아이콘을 단순 나열하지 않고 잘 정리해줘"): 한 묶음 [속성 | 종 | 변이] —
+//  속성 칸 = 속성 색 바탕 + 속성 아이콘 · 종 칸 = 종 아이콘 · 변이 칸(변이 식물만) = 변이 색 바탕 + 변이 이름(포식 · 무기 · 독성 · 포자 · 용족)
+//  x = 오른쪽 끝(right) 또는 왼쪽 끝 · 그린 폭을 돌려줌(w만 재려면 g = null)
+const TAG_H = 13;
+function idTag(g, x, y, u, right = true) {
+  const E = ELEMENT[u.el], F = u.form && FORMS[u.form], fw = F ? measure(F.name, sized('bold', 9)) + 6 : 0, w = 13 + 1 + 13 + (F ? 1 + fw : 0) + 2;
+  if (!g) return w;
+  const x0 = right ? x - w : x, ei = icon(u.el), ji = u.jong && icon(u.jong);
+  rrect(g, x0, y, w, TAG_H, 3, '#2c4466');
+  rrect(g, x0 + 1, y + 1, w - 2, TAG_H - 2, 2, '#0d1828');
+  if (E) rrect(g, x0 + 1, y + 1, 13, TAG_H - 2, 2, hexMix(E.dark || E.main, '#0d1828', 0.55));   // 속성 칸 = 속성 색
+  if (ei) g.img(ei, x0 + 2, y + 1);
+  g.rect(x0 + 14, y + 2, 1, TAG_H - 4, '#2c4466');
+  if (ji) g.img(ji, x0 + 16, y + 1);
+  if (F) {
+    g.rect(x0 + 28, y + 2, 1, TAG_H - 4, '#2c4466');
+    rrect(g, x0 + 29, y + 1, fw, TAG_H - 2, 2, hexMix(F.col, '#0d1828', 0.45));   // 변이 칸 = 변이 색
+    g.text(F.name, x0 + 29 + fw / 2, y + (TAG_H - glyphH(sized('bold', 9))) / 2, { font: sized('bold', 9), color: F.light, align: 'center' });
+  }
+  return w;
+}
 const PLANT_TOP = 94, POT_BOTTOM = 14;   // 식물 그림 맨 위 = 밑동 − 94칸쯤(96×112 판) · 상대 화분 · 받침 아래 끝 = 밑동 + 14
 const boxH = mine => (mine ? 49 : 62);   // 2026-10-17 사용자 "해 아이콘이 상태창 아래로 삐져나옴 — 상태창 크기를 키워볼까?" → 아래 3칸 늘림
 function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false) {   // compact = 상대 체력판 맨 윗줄(재배사)을 접음(짧은 화면 — 3:3 남은 식물 칸은 이름 줄 오른쪽으로)
@@ -193,12 +214,11 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false) { 
     });
     if (!compact) yy += 13;
   }
-  g.text(u.name, tx, yy, { font: 'bold', color: u.shiny ? '#ffe8a8' : P.main });
-  // 이름 옆 = 속성 + 종(꽃 · 덩굴 · 선인장 · 버섯 · 나무) 아이콘(같은 날 사용자 "속성 옆에 어떤 종인지 아이콘 그림 형태로")
-  const ex = tx + g.textW(u.name, 'bold') + 5, ji = u.jong && icon(u.jong);
-  g.img(icon(u.el), ex, yy + 1);
-  if (ji) g.img(ji, ex + 13, yy + 1);
-  { const rl = resLine(u); if (rl) g.text(rl, right, yy, { color: P.sub, align: 'right' }); }   // 개수 칸(공통 장치 — 수리검 · 꼬리 …)
+  // 이름 줄 = 이름(왼쪽) · 정체 꼬리표 [속성 | 종 | 변이](오른쪽 끝 — idTag) · 개수 칸(공통 장치 — 수리검 · 꼬리 …)은 꼬리표 왼쪽 · 넘치면 이름을 작게
+  const tw = idTag(null, 0, 0, u), rl = resLine(u), rw = rl ? g.textW(rl) + 4 : 0, room = right - tx - tw - rw - 4, nf = g.textW(u.name, 'bold') <= room ? 'bold' : sized('bold', 10);
+  g.text(u.name, tx, yy, { font: nf, color: u.shiny ? '#ffe8a8' : P.main });
+  idTag(g, right + 2, yy, u);
+  if (rl) g.text(rl, right + 2 - tw - 4, yy, { color: P.sub, align: 'right' });
   yy += 16;
   g.text('HP', tx, yy, { font: 'bold', color: P.sub });
   hpBar(g, bx, yy + 3, right - numW - 5 - bx, 7, bar, u.max, t);
@@ -376,6 +396,7 @@ export const battle = {
     if (p.mut && FORMS[p.mut]) {   // 검토: 변이 손패(?mut=predator 등 · &used=1 = 첫 변이 기술을 한 번 씀) — 변이 기술 카드 = 손패 여섯 중 끝 칸(기본기 자리)
       const ms = (p.mk ? String(p.mk).split(',').filter(id => SKILLS[id]) : formSkills(p.mut).slice(0, 2)).slice(0, 2).map(id => ({ ...SKILLS[id], mut: true, extra: false, ...(SKILLS[id].elOwn ? { el: B.me.el } : {}) }));   // &mk=기술,기술 = 그 변이 기술로(연출 검토)
       B.me.kit.splice(Math.max(0, B.me.kit.length - ms.length), ms.length, ...ms);
+      B.me.form = p.mut;   // 정체 꼬리표의 변이 칸도 보이게
       if (p.used) B.me.used = { [ms[0].id]: +p.used };
     }
     if (p.pre) for (const part of String(p.pre).split(';')) {   // 효과 미리 걸기(검토·영상용)
@@ -1152,7 +1173,7 @@ export const battle = {
       plate(g, x + 13, yy + 4, 34, 34, 'deep');
       g.clip(x + 15, yy + 6, 30, 30, () => drawPortrait(g, artOf(u), x + 14, yy + 5, 32, false));
       g.text(u.name, x + 54, yy + 5, { font: 'bold', color: S.text });
-      g.img(icon(u.el), x + 54 + g.textW(u.name, 'bold') + 5, yy + 6);
+      idTag(g, x + 54 + g.textW(u.name, 'bold') + 5, yy + 4, u, false);   // 정체 꼬리표(속성 | 종 | 변이)
       tbar(g, x + 54, yy + 24, 110, 6, u.hp / u.max, 'hp');
       g.text(`${Math.ceil(u.hp)}/${u.max}`, x + 170, yy + 21, { color: S.text });
       if (on || dead) g.text(dead ? '쓰러짐' : '싸우는 중', x + w - 18, yy + 5, { color: dead ? T.text.dim : '#8ccfff', align: 'right' });   // 쓰러진 자리를 채울 땐 앞 식물도 '쓰러짐'
