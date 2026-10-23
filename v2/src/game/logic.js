@@ -40,7 +40,7 @@ export function newGame({ nickname, starter }, rng, now) {
 // ── 저장 판 번호 · 옮기기(2026-10-18 업데이트 안전 — species-identity 설계 §7) ──
 //  서버가 불러올 때 s.ver < SAVE_VER 이면 원본을 보관한 뒤(server/game.mjs load) 단계를 번호 순서대로 한 번씩. 기능마다 붙은 p.skills.v4~v8 표시는 그대로
 //  (이어 하는 옛 판 다시 계산이 읽음). 앞으로 저장 모양을 바꾸면 MIGRATIONS 에 단계를 더하고 SAVE_VER +1 · id를 바꾸면 catalog.js RENAMED 에 적고 +1.
-export const SAVE_VER = 4;
+export const SAVE_VER = 5;
 const MIGRATIONS = [
   () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
   () => {},   // 1 → 2(2026-10-22 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
@@ -48,6 +48,7 @@ const MIGRATIONS = [
   // 3 → 4(2026-10-23 묶음 — 대회 점수 · 칸 · 강등 · 엠블럼 · 색 변종 1/1000 · 3:3 햇빛 · 접목 카드 · 공지 · 순위표 · 영양제): 대회 점수 T.pts 는 원래 있던 칸(모두 IV칸 0점부터) ·
   //  풀로세움 별(전엔 우승 수) → 점수(별 하나 = 100점 — 이제 별은 점수에서 셈) · 원본 보관용
   s => { for (const T of [s.tournament, ...Object.values(s.leagues || {})]) if (T && isTopTier(T.tier) && T.stars > 0 && !T.pts) T.pts = T.stars * DIV_PTS; },
+  () => {},   // 4 → 5(2026-10-23 묶음 — 엑셀 v10 공통 효과 · RULES_VER 9 · 효과 창 · 환경 띠 · 땅 · 꼬리표): 모양은 그대로(기술 · 카드 id 그대로) · 올린 뒤 처음 불러올 때 원본 보관용
 ];
 export function migrate(s) {
   const from = s.ver || 0;
