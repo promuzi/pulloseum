@@ -18,7 +18,7 @@ export const RULES = {
   initPitySlack: 1,                             // 선공 불운 보정은 한 번 더 여유 — 없으면 같은 기동(50%)끼리 '1번 밀리면 확정'이라 선공이 번갈아 고정돼 다음 선공이 읽힘
   baseMiss: 6, baseGraze: 12, missMax: 70, critMax: 50,
   tierMult: { miss: 0, graze: 0.5, hit: 1, crit: 1.5 },
-  areaEvadeK: 0.5,                              // 범위 공격은 회피 자세가 옮기는 칸을 절반만
+  areaMissK: 0.5,                               // 범위 공격 = 빗나감 · 스침을 이만큼으로 줄이고 준 만큼 정타(치명 그대로 — 2026-10-23 사용자 · 줄이는 양은 임시)
   repeatStanceK: 0.5,                           // 같은 자세를 연달아 쓰면 효과 절반(포켓몬 방어 연속 사용 감쇠에서 — 버티기만 하는 판 막기, 제안값)
   critAfterCritK: 0.5,                          // 치명을 맞은 다음 공격은 치명 칸 절반(연속 치명 불운 줄이기, 제안값)
   // 2026-10-18 바닥 규칙 1단계(사용자 "추천대로" — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §1):
@@ -64,9 +64,9 @@ export function hitTable(att, def, o = {}) {
   let crit = (att.crit || 0) + (o.critAdd || 0);
   if (o.critK != null) crit = Math.floor(crit * o.critK);
   miss = Math.max(0, Math.min(RULES.missMax, miss)); crit = Math.max(0, Math.min(RULES.critMax, crit));
-  const sh = o.shift;   // 회피 자세: { miss, graze, critToGraze } — 범위 공격이면 areaEvadeK배(엑셀 v10 — 범위는 확정 명중 없이 회피 자세 · 기동에 단일보다 잘 맞음)
+  const sh = o.shift;   // 회피 자세: { miss, graze, critToGraze }
   if (sh) {
-    const k = (o.area ? RULES.areaEvadeK : 1) * (o.shiftK ?? 1);
+    const k = o.shiftK ?? 1;
     const dm = Math.round((sh.miss || 0) * k), dg = Math.round((sh.graze || 0) * k);
     if (sh.critToGraze) { const c = Math.round(crit * sh.critToGraze * k); crit -= c; graze += c; }
     crit -= Math.min(crit, dm + dg);   // 옮긴 만큼 치명부터 줄고, 모자란 몫은 정타가 줄어든다(정타 = 나머지)
@@ -74,6 +74,7 @@ export function hitTable(att, def, o = {}) {
   }
   const total = miss + graze + crit;
   if (total > 100) { const over = total - 100; const g = Math.min(graze, over); graze -= g; crit -= Math.min(crit, over - g); }
+  if (o.area) { miss = Math.round(miss * RULES.areaMissK); graze = Math.round(graze * RULES.areaMissK); }   // 범위(2026-10-23 사용자 '빗나감과 스침을 줄이고 정타만 높이는 — 치명타도 그대로'): 확정 명중 없이 잘 맞음
   const hit = 100 - miss - graze - crit;
   return { miss, graze, hit, crit };
 }

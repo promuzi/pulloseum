@@ -128,18 +128,36 @@ const FOE_MIN = 114, ARENA_SPLIT = { colosseum: 150, ship: 156, garden: 156, nig
 function layOf(H, rows, merged = false) {
   const miscY = merged ? null : H - BOT_PAD - MISC_H, HY = (merged ? H - BOT_PAD : miscY - 8) - rows * CARD_H - (rows - 1) * CARD_GY, AH = HY - AY + 28;
   const want = HY - 38 - PY, fy = Math.max(FOE_MIN - EY, want), myDy = want - fy;
-  return { miscY, HY, AH, fy, gap: Math.max(0, fy), lift: Math.min(0, fy), myDy, led: Math.round((EY + PY - 100) / 2 + fy + myDy / 2), MY: HY - 12 - boxH(true) };
+  // 2026-10-23 사용자 "상대 식물은 위로 정렬해야할 거 같아. 환경도 위에 정렬": 긴 화면에서도 상대 식물 · 상대 체력판은 위에 그대로(foeDy = 0) — 늘인 땅(gap)은 상대와 나 사이로 · 내 식물은 늘 손패 위(meDy)
+  const foeDy = Math.min(0, fy), meDy = want;
+  return { miscY, HY, AH, fy, gap: Math.max(0, fy), lift: Math.min(0, fy), myDy, foeDy, meDy, led: Math.round((EY + foeDy + PY + meDy - 100) / 2), MY: HY - 12 - boxH(true) };
 }
-// 경기장 그림 + 벽 밑 늘인 땅(gap줄 — 바로 밑 땅 10여 줄에서 섞어 뽑음, 한 번 만든 판은 다시 씀)
+// 경기장 그림 + 늘인 땅(gap줄, 한 번 만든 판은 다시 씀) — 2026-10-23 사용자 "높이가 높아지면 땅의 연장이 이상해져" · "가운데 원은 중간에 있어야해":
+//  ① 가운데 원(바닥 무늬)이 늘 두 식물 가운데 = 늘일 줄을 원 바로 위 · 바로 아래에 반씩(ARENA_RING = 그림의 원 맨 위 · 맨 아래 줄, 잰 값) · 원이 없는 경기장(감방)은 벽 밑에 한 번에
+//  ② 이어 붙이는 땅 = 넣는 자리 옆 EXT_P줄 띠를 거울처럼 접어(접힌 자리 같은 줄 두 번 없이) — 한 줄씩 아무거나 고르던 것은 줄무늬가 생겼음
+//  ③ 모래 바닥(jitter)만 접힐 때마다 가로로 ±4칸 밈(끝은 반대편으로 감음 — 같은 결이 세로로 줄지어 보이지 않게, 판 · 줄 무늬 바닥은 선이 어긋나 보여 안 밈)
+const EXT_P = 14, ARENA_RING = { colosseum: [173, 255], ship: [167, 265], garden: [177, 275], night: [160, 266], retro: [174, 276] };
 const artCache = new WeakMap();
-function arenaArt(bg, split, gap) {
+function arenaArt(bg, key, gap) {
   let m = artCache.get(bg); if (!m) artCache.set(bg, (m = new Map()));
   let cv = m.get(gap); if (cv) return cv;
   cv = document.createElement('canvas'); cv.width = bg.width; cv.height = bg.height + gap;
-  const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
-  c.drawImage(bg, 0, 0, bg.width, split, 0, 0, bg.width, split);
-  for (let j = 0; j < gap; j++) c.drawImage(bg, 0, split + ((Math.imul(j + 17, 2654435761) >>> 0) % 12), bg.width, 1, 0, split + j, bg.width, 1);
-  c.drawImage(bg, 0, split, bg.width, bg.height - split, 0, split + gap, bg.width, bg.height - split);
+  const c = cv.getContext('2d'), W0 = bg.width, split = ARENA_SPLIT[key] || 150, ring = ARENA_RING[key], jitter = key === 'colosseum', per = 2 * EXT_P - 2;
+  c.imageSmoothingEnabled = false;
+  // 넣을 자리 [그림 줄, 줄 수, 띠 방향(-1 = 위쪽 띠 · 1 = 아래쪽 띠)]
+  const ins = ring && gap ? [[Math.max(split + EXT_P, ring[0] - 2), Math.ceil(gap / 2), -1], [ring[1] + 2, Math.floor(gap / 2), 1]] : [[split, gap, 1]];
+  let sy = 0, dy = 0;
+  for (const [at, n, dir] of ins) {
+    c.drawImage(bg, 0, sy, W0, at - sy, 0, dy, W0, at - sy); dy += at - sy; sy = at;
+    for (let j = 0; j < n; j++) {
+      const q = (j + 1) % per, o = q < EXT_P ? q : per - q, r = dir < 0 ? at - 1 - o : at + o;
+      const dx = !jitter || j < EXT_P ? 0 : ((Math.imul(Math.floor(j / (EXT_P - 1)) + 7 + at, 2654435761) >>> 0) % 9) - 4;
+      c.drawImage(bg, 0, r, W0, 1, dx, dy + j, W0, 1);
+      if (dx) c.drawImage(bg, dx > 0 ? W0 - dx : 0, r, Math.abs(dx), 1, dx > 0 ? 0 : W0 + dx, dy + j, Math.abs(dx), 1);
+    }
+    dy += n;
+  }
+  c.drawImage(bg, 0, sy, W0, bg.height - sy, 0, dy, W0, bg.height - sy);
   if (m.size > 6) m.clear();
   m.set(gap, cv); return cv;
 }
@@ -153,9 +171,10 @@ const TIER = { miss: ['빗나감', 'dim', '빗나갔다!'], graze: ['스침', 's
 
 // 체력판: (상대만) 재배사 · 랭크 / 이름 + 속성 / HP 막대 + 숫자 / MP 칸 + 숫자 — 'HP'·'MP' 이름은 왼쪽, 막대·칸은 같은 x에서 시작, 숫자만 오른쪽
 const BOX_W = 140, LBL_W = 19;
+const PLANT_TOP = 94, POT_BOTTOM = 14;   // 식물 그림 맨 위 = 밑동 − 94칸쯤(96×112 판) · 상대 화분 · 받침 아래 끝 = 밑동 + 14
 const boxH = mine => (mine ? 49 : 62);   // 2026-10-17 사용자 "해 아이콘이 상태창 아래로 삐져나옴 — 상태창 크기를 키워볼까?" → 아래 3칸 늘림
-function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
-  const { g, t } = app, w = BOX_W, h = boxH(mine), P = T.ptext, fx = bar.fx, S = fx && HURT[fx.kind], age = fx ? t - fx.t0 : 1e9;
+function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false) {   // compact = 상대 체력판 맨 윗줄(재배사)을 접음(짧은 화면 — 3:3 남은 식물 칸은 이름 줄 오른쪽으로)
+  const { g, t } = app, w = BOX_W, h = boxH(mine || compact), P = T.ptext, fx = bar.fx, S = fx && HURT[fx.kind], age = fx ? t - fx.t0 : 1e9;
   let x = x0, y = y0;
   if (S && S.shake && age < S.shakeMs) { const a = Math.max(1, Math.round(S.shake * (1 - age / S.shakeMs))); x += (Math.floor(age / 40) % 2 ? 1 : -1) * a; y += Math.floor(age / 60) % 2 ? Math.ceil(a / 2) : 0; }
   plate(g, x, y, w, h);
@@ -164,7 +183,8 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
   const tx = x + 8, bx = tx + LBL_W, right = x + w - 8, numW = g.textW(`${u.max}/${u.max}`, 'bold');
   // 상대 줄 = 재배사 이름 · 재배사 레벨만(2026-10-16 사용자 "상대 상태창 위 글자 대신 적의 이름과 레벨만 — 맨 위에 리그가 나와 있으니 중복")
   if (!mine) {
-    const lv = u.tlv ? `Lv ${u.tlv}` : (u.rank || '').replace(/^재배사\s*/, ''); g.text(lv ? `${u.trainer || '상대'} · ${lv}` : u.trainer || '상대', tx, yy, { color: P.sub });
+    const lv = u.tlv ? `Lv ${u.tlv}` : (u.rank || '').replace(/^재배사\s*/, '');
+    if (!compact) g.text(lv ? `${u.trainer || '상대'} · ${lv}` : u.trainer || '상대', tx, yy, { color: P.sub });
     if (team) team.forEach((m, i) => {   // 3:3 상대 남은 식물 칸(오른쪽 끝): 남음 = 주황 · 지금 선 식물 = 밝은 테 · 쓰러짐 = 어둡게 + ✕
       const px = right - (team.length - i) * 9 + 2, py = yy + 2;
       g.rect(px, py, 7, 7, m.on && !m.dead ? '#ffd2c4' : '#08111e');
@@ -172,7 +192,7 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null) {
       if (m.dead) for (const [dx, dy] of [[2, 2], [4, 4], [4, 2], [2, 4], [3, 3]]) g.px(px + dx, py + dy, '#5a6a82');
       else g.rect(px + 2, py + 2, 2, 1, '#ffd2c4');
     });
-    yy += 13;
+    if (!compact) yy += 13;
   }
   g.text(u.name, tx, yy, { font: 'bold', color: u.shiny ? '#ffe8a8' : P.main });
   // 이름 옆 = 속성 + 종(꽃 · 덩굴 · 선인장 · 버섯 · 나무) 아이콘(같은 날 사용자 "속성 옆에 어떤 종인지 아이콘 그림 형태로")
@@ -206,8 +226,8 @@ function sunPips(g, x, y, cur, max, gap, t) {
 //  포자 = 이름 + 개수(아이콘 오른쪽 위) + 가장 빨리 피기까지 남은 턴(아이콘 오른쪽 아래) — 같은 날 사용자 "포자도 이름 붙여줘"
 //  정렬 = 같은 날 사용자 "아이콘은 왼쪽 정렬. 글자는 우측정렬해줘. 독같은 경우 너무 가운데에 몰린 느낌" → "글자를 우측 정렬말고, 아이콘을 제외한 영역 내에서 중앙 정렬로하자"
 const SW_W = 45, SW_H = 20, SW_GAP = 2;
-function statusWins(g, x, y, list) {
-  const shown = list.length > 6 ? [...list.slice(0, 5), { more: list.length - 5 }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2, bf = sized('bold', 9);
+function statusWins(g, x, y, list, rows = 2) {   // rows = 보일 줄 수(넘치면 마지막 칸 = +n)
+  const cap = rows * 3, shown = list.length > cap ? [...list.slice(0, cap - 1), { more: list.length - (cap - 1) }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2, bf = sized('bold', 9);
   shown.forEach((st, i) => {
     const c = i % 3, X = x + c * (SW_W + SW_GAP), w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W, Y = y + Math.floor(i / 3) * (SW_H + 2);
     if (st.more) { holo(g, X, Y, w, SW_H, SW_ON, 16); g.text(`+${st.more}`, X + (w >> 1), Y + ty, { font: 'bold', color: SW_ON.text, align: 'center' }); return; }
@@ -361,7 +381,7 @@ export const battle = {
     }
     if (p.pre) for (const part of String(p.pre).split(';')) {   // 효과 미리 걸기(검토·영상용)
       const [who, ids] = part.split(':'), u = B[who], by = B[who === 'me' ? 'foe' : 'me'];
-      if (u && ids) for (const tok of ids.split(',')) { const m = tok.match(/^([a-z]+)(\d*)$/); if (m) applyFx(u, m[1], +(m[2] || 1), { turn: 1, rng: () => 0.5, ev: [], by }); }
+      if (u && ids) for (const tok of ids.split(',')) { const m = tok.match(/^([a-zA-Z]+)(\d*)$/); if (m) applyFx(u, m[1], +(m[2] || 1), { turn: 1, rng: () => 0.5, ev: [], by }); }
     }
     if (p.energy) { B.me.energy = +p.energy; B.foe.energy = +p.energy; }
     if (p.dead && B.team) for (const tok of String(p.dead).split(',')) { const m = tok.match(/^(me|foe)(\d)$/), u = m && B.team[m[1]][+m[2]]; if (u) u.hp = 0; }   // 쓰러진 팀원 미리(검토·촬영 — 예 dead=me2,foe1)
@@ -665,7 +685,7 @@ export const battle = {
     if (e.absorb) { this.pop(st.to, `${e.ab === 'armor' ? '방어구' : '보호막'} -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
   },
   // 식물 밑동 자리(장면 270칸 안): 상대 = 그림 땅을 따라(fy) · 나 = 손패 바로 위(fy + myDy) — 머리 위 글자 · 표는 위 띠 밑까지만
-  at(who) { const L = this.lay; return who === 'me' ? [PX, PY + (L ? L.fy + L.myDy : 0)] : [EX, EY + (L ? L.fy : 0)]; },
+  at(who) { const L = this.lay; return who === 'me' ? [PX, PY + (L ? L.meDy : 0)] : [EX, EY + (L ? L.foeDy : 0)]; },
   above(who, d) { const [x, y] = this.at(who); return [x, Math.max(AY + 2, y - d)]; },
   // ex = { share: 그 한 방이 깎은(채운) 체력 몫, kill: 결정타 } — 글자 연출 ㉠~㉣이 크기·강조에 씀(지금 연출은 안 씀)
   pop(who, text, tone, t, big = false, dy = 0, col = null, size = null, ex = null) {
@@ -788,8 +808,8 @@ export const battle = {
       if (f >= st.anim.I && !st.applied) this.applyHit(st, t);
     }
     // 식물 빛(노멀맵 조명 — art/plantlight.js, 2026-10-22 사용자 "상태이상, 각 스킬의 공격 … 다양하게"): 밤 경기장 어둠 · 공격 효과 빛(연출 판 좌표 → 화면) · 상태이상 빛
-    const night = T.key === 'night', ftop = AY + Lay.fy, fcut = EY - AY, fk = Lay.myDy ? (PY - EY + Lay.myDy) / (PY - EY) : 1;
-    const glow = fr ? fr.glow.map(q => ({ ...q, y: ftop + (Lay.myDy && q.y > fcut ? fcut + (q.y - fcut) * fk : q.y) })) : [];
+    const night = T.key === 'night', ftop = AY + Lay.foeDy, fcut = EY - AY, fdd = Lay.meDy - Lay.foeDy, fk = fdd ? (PY - EY + fdd) / (PY - EY) : 1;   // 연출 판: 상대 받침까지는 그대로 · 그 아래는 내 받침에 맞춰 늘이거나 누름
+    const glow = fr ? fr.glow.map(q => ({ ...q, y: ftop + (fdd && q.y > fcut ? fcut + (q.y - fcut) * fk : q.y) })) : [];
     const lightOf = (who, x, y) => ({ amb: night ? NIGHT_AMB : 1, self: night ? 1 : 0.35, id: who, lights: glow.concat(statusLights(v, who, x, y, t)) });
     const unit = (who, x, y, flip, phase) => {
       const view = who === 'foe' ? 'far' : null, light = lightOf(who, x, y);
@@ -818,7 +838,7 @@ export const battle = {
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
     //  그림 270×348 = 위(하늘 · 관중석 · 벽)는 화면 위에 붙이고 길면 벽 밑 땅을 늘임 · 짧으면 위를 잘라 올림(layOf) · 넓은 화면 = 가운데 + 양옆을 그림 가장자리 한 줄로 이음
     const bg = BGIMG['arena_' + T.key], ox = Math.floor((W - 270) / 2), [ex, ey] = this.at('foe'), [px, py] = this.at('me');
-    const art = bg ? arenaArt(bg, ARENA_SPLIT[T.key] || 150, Lay.gap) : null, ay = AY + Lay.lift;   // ay = 그림 맨 윗줄 자리
+    const art = bg ? arenaArt(bg, T.key, Lay.gap) : null, ay = AY + Lay.lift;   // ay = 그림 맨 윗줄 자리
     g.clip(0, AY, W, AH, () => {
       const c = g.c;
       c.imageSmoothingEnabled = false;
@@ -833,9 +853,9 @@ export const battle = {
       padV(g, px, py, 42, true);
       // 연출 판(공격 장마다 그린 270×348 — 받침 자리 기준): 땅을 따라 fy, 아주 짧은 화면은 상대 줄 아래를 눌러 내 식물 자리에 맞춤
       const board = n => {
-        const b = boardCanvas(n), top = AY + Lay.fy;
-        if (!Lay.myDy) return c.drawImage(b, 0, top);
-        const cut = EY - AY, k = (PY - EY + Lay.myDy) / (PY - EY);
+        const b = boardCanvas(n), top = AY + Lay.foeDy, dd = Lay.meDy - Lay.foeDy;
+        if (!dd) return c.drawImage(b, 0, top);
+        const cut = EY - AY, k = (PY - EY + dd) / (PY - EY);
         c.drawImage(b, 0, 0, b.width, cut, 0, top, b.width, cut);
         c.drawImage(b, 0, cut, b.width, b.height - cut, 0, top + cut, b.width, Math.round((b.height - cut) * k));
       };
@@ -869,7 +889,7 @@ export const battle = {
     });
     // 아래(2026-10-16 사용자 "아래 스킬바의 배경이 별로야. 배경을 없애고 카드만 나열되는 느낌" + "스킬바와 식물/상태바의 거리가 너무 멀어 땡겨줘"):
     //  판 배경 없이 경기장 바닥 끝 줄을 아래로 늘여 잇고, 손패 자리부터 아래로 갈수록 어둡게 → 카드는 내 체력판 바로 아래부터
-    const MY = Lay.MY, HY = Lay.HY, hrows = handRows(B.me.kit), oyT = Lay.gap;   // HY = 손패 맨 위 · oyT = 늘인 땅만큼 상대 체력판도 상대 식물을 따라 내림
+    const MY = Lay.MY, HY = Lay.HY, hrows = handRows(B.me.kit);   // HY = 손패 맨 위 · 상대 체력판은 늘 맨 위(2026-10-23 사용자 '상대 식물은 위로 정렬')
     if (art) { g.c.imageSmoothingEnabled = false; g.c.drawImage(art, 0, Math.max(0, Math.min(art.height - 1, AY + AH - ay - 1)), art.width, 1, 0, AY + AH, W, H - AY - AH); }
     else g.rect(0, AY + AH, W, H - AY - AH, '#0b0d1a');
     const shade = g.c.createLinearGradient(0, HY - 16, 0, H);
@@ -879,11 +899,17 @@ export const battle = {
     // 체력판(3:3 남은 식물은 아래 교체 칸에)
     // 3:3 상대 남은 식물 = 상대 체력판 윗줄 끝 작은 칸 셋(2026-10-16 사용자 "상대의 교체 카드는 상대의 상태창 이름 옆에 간단한 아이콘으로") — 누군지는 안 보임
     const foeTeam = this.mode === 'swap3' && B.team ? B.team.foe.map(u => ({ dead: (u === v.view.foe ? v.hp.foe : u.hp) <= 0, on: u === v.view.foe })) : null;
-    // 환경 띠(위 = 상대 쪽 · 아래 = 내 쪽): 상대 띠 = 상대 체력판 바로 위(자리가 모자라면 체력판을 띠만큼 내림) · 내 띠 = 내 체력판과 손패 사이(체력판을 띠만큼 올림)
-    const fEnv = this.envs('foe'), mEnv = this.envs('me'), foeY = AY + 4 + oyT + (fEnv.length ? Math.max(0, ENV_H + 2 - oyT) : 0), myY = MY - (mEnv.length ? ENV_H + 2 : 0);
-    if (fEnv.length) envBand(g, 6, foeY - ENV_H - 2, W - 12, fEnv, v.turn);
-    const fh = infoBox(app, 6, foeY, v.view.foe, v.bar.foe, v.en.foe, false, foeTeam), theirs = this.statuses('foe');
-    statusWins(g, 6, foeY + fh + 3, theirs);
+    // 환경 띠(위 = 상대 쪽 · 아래 = 내 쪽 — 체력판과 같은 폭이라 식물을 안 가림): 상대 띠 = 맨 위(그 밑에 상대 체력판) · 내 띠 = 내 체력판과 손패 사이(체력판을 띠만큼 올림)
+    // 효과 창 줄 수(2026-10-23 사용자 "폭이 넓은 폰은 과하게 효과와 창 때문에 식물이 다 가려지고 서로겹치는데"): 상대 효과 창은 내 식물 머리 위까지 · 내 효과 창은 상대 화분 아래부터 —
+    //  들어가는 만큼만(1~2줄, 넘치면 +n · 눌러서 다 봄) · 상대 쪽이 한 줄도 안 들어가면 상대 체력판 맨 윗줄(재배사)을 접음
+    const fEnv = this.envs('foe'), mEnv = this.envs('me'), foeY = AY + 4 + (fEnv.length ? ENV_H + 2 : 0), myY = MY - (mEnv.length ? ENV_H + 2 : 0);
+    const headY = this.at('me')[1] - PLANT_TOP, potY = this.at('foe')[1] + POT_BOTTOM, theirs = this.statuses('foe');
+    const rowsFit = top => Math.min(2, Math.floor((headY - top + 2) / (SW_H + 2)));
+    let foeCompact = false, foeRows = rowsFit(foeY + boxH(false) + 3);
+    if (foeRows < 1 && theirs.length) { foeCompact = true; foeRows = Math.max(1, rowsFit(foeY + boxH(true) + 3)); }
+    if (fEnv.length) envBand(g, 6, foeY - ENV_H - 2, BOX_W, fEnv, v.turn);
+    const fh = infoBox(app, 6, foeY, v.view.foe, v.bar.foe, v.en.foe, false, foeTeam, foeCompact);
+    statusWins(g, 6, foeY + fh + 3, theirs, Math.max(1, foeRows));
     if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = foeY + 4; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
       const sec = this.deadline ? Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)) : null, label = '상대가 다음 식물을 고르는 중' + (sec != null ? ` · ${sec}` : ''), w = g.textW(label) + 16, x = Math.round((W - w) / 2), y = Lay.led - 8;
@@ -891,18 +917,18 @@ export const battle = {
       g.text(label, W / 2, y + (18 - glyphH('body')) / 2, { color: '#e0f0ff', align: 'center' });
     }
     infoBox(app, W - 146, myY, v.view.me, v.bar.me, v.en.me, true);
-    if (mEnv.length) envBand(g, 6, myY + boxH(true) + 2, W - 12, mEnv, v.turn);
-    const mine = this.statuses('me'), rows = Math.ceil(Math.min(6, mine.length) / 3);
-    if (rows) statusWins(g, W - 146, myY - 3 - rows * (SW_H + 2) + 2, mine);
+    if (mEnv.length) envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn);
+    const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
+    if (rows) statusWins(g, W - 146, myY - 3 - rows * (SW_H + 2) + 2, mine, myRows);
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     // 효과 설명 = 체력판 · 효과 창을 누르면(2026-10-16 사용자 "맨 아래 효과 버튼은 뭐야? 이거 필요한 거야?" → 아래 단추를 빼고 효과가 보이는 그 자리에서)
     if (live) {
-      const foeRows = Math.ceil(Math.min(6, theirs.length) / 3), myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY, open = () => { this.info2 = true; };
-      app.input.hit('fx_foe', 6, foeY, BOX_W, fh + (foeRows ? 3 + foeRows * (SW_H + 2) : 0), open, 2);
+      const fRows = Math.min(Math.max(1, foeRows), Math.ceil(Math.min(6, theirs.length) / 3)), myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY, open = () => { this.info2 = true; };
+      app.input.hit('fx_foe', 6, foeY, BOX_W, fh + (fRows ? 3 + fRows * (SW_H + 2) : 0), open, 2);
       app.input.hit('fx_me', W - 146, myTop, BOX_W, myY + boxH(true) - myTop, open, 2);
-      if (fEnv.length) app.input.hit('env_foe', 6, foeY - ENV_H - 2, W - 12, ENV_H, open, 2);   // 환경 띠를 눌러도 같은 설명 창
-      if (mEnv.length) app.input.hit('env_me', 6, myY + boxH(true) + 2, W - 12, ENV_H, open, 2);
+      if (fEnv.length) app.input.hit('env_foe', 6, foeY - ENV_H - 2, BOX_W, ENV_H, open, 2);   // 환경 띠를 눌러도 같은 설명 창
+      if (mEnv.length) app.input.hit('env_me', W - 146, myY + boxH(true) + 2, BOX_W, ENV_H, open, 2);
     }
     const HG = handGeo(W, B.me.kit), hw = HG.w, hx = HG.x0;
     this.drawTimer(app, hx, HY - 8, hw);
