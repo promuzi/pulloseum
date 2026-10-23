@@ -121,7 +121,7 @@ const fixed = v => () => v;
   apply(f, 'wet', 1, ctx(a, 1, [])); apply(f, 'chill', 2, ctx(a, 1, []));
   ok(mustSkip(f), '젖음 + 칼바람(2) = 바로 얼음');
   const fe = []; onHit(mk('me', 'cactus_fire'), f, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
-  ok(!f.eff.wet && mustSkip(f) && f.eff.burn, '불에 맞으면 젖음이 마르고 화상 — 이미 걸린 얼음(기절)은 안 풀림(엑셀 v10 기절 제거 불가)');
+  ok(!f.eff.wet && !mustSkip(f) && f.eff.burn && fe.some(e => e.t === 'cure' && e.ids.includes('frozen')), '불에 맞으면 젖음이 마르고 얼음(기절)도 녹음 · 화상(2026-10-21 기록: 얼음 · 빙결 · 젖음 · 포자 · 기생은 불에 풀림)');
 }
 // ── 6. 쉬는 시점 · 에너지 돌려받음 · 버팀 ──
 { // 선공이 기절시킴 → 후공의 이번 행동 취소 + 에너지 환불
@@ -392,6 +392,9 @@ const fixed = v => () => v;
   // 봉인: 기본기도 무작위로 고름 · 다음 턴 그 기술 못 씀 · 불에 안 풀림
   const s1 = mk('foe', 'flower_grass'); s1.energy = 0; apply(s1, 'seal', 1, { turn: 1, rng: () => 0, ev: [], by: x });
   ok(s1.eff.seal && s1.eff.seal.skill === 'basic' && !canUse(s1, sk(s1, 'basic')), '봉인은 기본기(평타)도 막을 수 있음');
+  { const s2 = mk('foe', 'flower_grass'); s2.energy = 0;   // 2026-10-23 사용자 '봉인걸때 못쓸 기술도 뽑힐 수 있게 해' — 햇빛이 모자라 못 쓸 기술도 손패 전체에서 무작위로
+    const i = s2.kit.findIndex(s => (s.cost || 0) > 2); apply(s2, 'seal', 1, { turn: 1, rng: () => (i + 0.5) / s2.kit.length, ev: [], by: x });
+    ok(i >= 0 && s2.eff.seal && s2.eff.seal.skill === s2.kit[i].id, `봉인은 햇빛이 모자라 못 쓸 기술도 뽑힘(${i >= 0 ? s2.kit[i].name : '없음'})`); }
   const fe = []; onHit(mk('me', 'cactus_fire'), s1, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
   ok(s1.eff.seal, '불에 맞아도 봉인은 안 풀림');
   // 속박: 다음 1턴 교체 금지 · 불에 안 풀림 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만
@@ -497,7 +500,7 @@ const fixed = v => () => v;
   ok(!old.length, `옛 효과 이름이 남은 기술 없음(${old.map(s => s.id)})`);
   ok(all.filter(s => s.inflict && s.inflict.id === 'spore').every(s => s.inflict.delay >= 1 && s.inflict.n == null), '포자 기술 = 지연 턴(delay)으로');
   ok(CSK.u_ninja_2.self === 'stealth' && CSK.u_ninja_2.look === 'clone' && CSK.u_ninja_2.link && CSK.u_ninja_2.link.hits === 3 && CSK.u_ninja_3b.self === 'stealth' && CSK.u_ninja_3b.link.ambush && CSK.u_ninja_3b.act === 'buff', '닌자바인 은신 기술 둘 = 공통 은신 + 이어 공격(연타 · 기습)');
-  ok(RULES_VER === 6, `RULES_VER = 6(${RULES_VER})`);
+  ok(RULES_VER >= 7, `RULES_VER 7 이상(엑셀 v10 · 10-23 사용자 교정 — 지금 ${RULES_VER})`);
   // 기술에 적힌 효과 값(지연 · 기간 · 이름)이 실제로 걸 때 쓰임
   const hitWith = inf => { const a = mk('me', 'gaia'), b = mk('foe', 'aqua'); resolveTurn(a, b, { ...a.kit[0], inflict: inf }, REST, fixed(0.5), { turn: 1 }); return b; };
   const sp1 = hitWith({ id: 'spore', delay: 1 }), dk = hitWith({ id: 'dark', turns: 1, look: 'shade' }), gl = hitWith({ id: 'gale', turns: 3 });

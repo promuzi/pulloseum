@@ -211,7 +211,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.infused) u.curEl = a.el;   // 속성 바꾸기(불타는 의지) — 상성도 그 속성으로
     const em = (o.elemMult ? o.elemMult(u, foe, a) : 1) * fieldEl(o.field, a.el);   // × 경기장 효과(D10) · 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
     const N = Math.max(1, (a.strikes ? a.strikes.length : a.hits || 1) + fieldHits(o.field, a)), hammer = SKILL_WEAPON[a.id] === 'hammer';
-    const hid = has(foe, 'stealth') && !has(u, 'stealth');   // 이 공격 앞에서 숨어 있었나(은신끼리는 서로 보임)
+    const hid = has(foe, 'stealth');   // 이 공격 앞에서 숨어 있었나(은신끼리도 서로 안 보임 — 2026-10-23 사용자)
     const aimK = (u.eff && u.eff.aim && u.eff.aim.k) || 0;
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0, shieldHit = false;
     const hitSet = new Set();   // 효과는 맞은 대상마다 첫 적중 한 번
@@ -236,7 +236,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (ss.length) for (const s of ss) hitSum(s, ah, i);           // 광역 = 소환수도 모두 맞고 주인도 맞음
       const guardOn = !ambush && still && guards.has(foe);
       if (guardOn) showStance(foe, 'guard');
-      const veil = a.area || has(u, 'stealth') ? 0 : has(foe, 'stealth') ? FX.stealth.miss : 0;   // 은신 = 광역 아닌 공격 95% 빗나감
+      const veil = a.area ? 0 : has(foe, 'stealth') ? FX.stealth.miss : 0;   // 은신 = 광역 아닌 공격 95% 빗나감(내가 숨어 있어도)
       const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, critAdd: aimK + critAddOf(u), missAdd: missAddOf(u) });
       let tier, forced = false;
       if (veil && rng() < veil) tier = 'miss';   // 은신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로)

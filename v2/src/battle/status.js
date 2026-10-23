@@ -26,7 +26,7 @@ export const FX = {
   shock:   { el: 'bolt', turns: 3, dot: 0.02, p: 0.25, wetP: 0.5, now: true },   // 감전: 턴 끝 약한 피해 2% · 자기 차례마다 25%(젖으면 50%) 마비 → 감전 사라짐
   stun:    { skip: 'stun' },                                  // 바로 한 번 쉼
   // 제한(엑셀 v10 27~29행) = 다음 1턴(걸린 턴은 빼고 다음 턴 선택을 막음 · from = T + 1) · 그 턴에 쉬어도 끝 · 불에 안 풀림 · 의지가 확률로 막음
-  seal:    { turns: 1, next: true },                          // 봉인(옛 덩굴): 다음 턴에 쓸 수 있을 기술(기본기 포함) 하나를 무작위로 막음 — 막는 개수는 밸런스(지금 1)
+  seal:    { turns: 1, next: true },                          // 봉인(옛 덩굴): 손패 기술(기본기 · 못 쓸 기술 포함) 하나를 무작위로 골라 다음 턴에 막음 — 막는 개수는 밸런스(지금 1)
   leech:   { turns: 3, drain: 0.025, now: true },             // 기생: 턴 끝 2.5%를 빨아 처음 건 식물(by = slot)이 회복 · 건 식물이 쓰러지면 끝
   dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
@@ -231,10 +231,8 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
     if (id === 'root' && e.rooted) { ev.push({ t: 'resist', ...base, why: 'once', list: listOf(tgt) }); return; }   // 교체로 나갔다 들어오기 전까지 한 번만
     const at = { from: T + 1, exp: T + (o.turns ?? D.turns) };
-    if (id === 'seal') {   // 다음 턴에 쓸 수 있을 기술(기본기 포함 — 엑셀 v10) 중 하나를 무작위로 · 없으면 손패 아무거나
-      const en = Math.min(tgt.energyMax || 8, (tgt.energy || 0) + (tgt.sunPer || 1)), kit = tgt.kit || [];
-      const cands = kit.filter(s => (s.cost || 0) <= en && usesLeft(tgt, s) > 0 && canUseRes(tgt, s));
-      const pick = cands[Math.floor((ctx.rng ? ctx.rng() : 0) * cands.length)] || kit[0];
+    if (id === 'seal') {   // 손패 전체에서 하나를 무작위로 — 기본기도(2026-10-21) · 햇빛이 모자라거나 횟수를 다 써 못 쓸 기술도(2026-10-23 사용자 '봉인걸때 못쓸 기술도 뽑힐 수 있게 해')
+      const kit = tgt.kit || [], pick = kit[Math.floor((ctx.rng ? ctx.rng() : 0) * kit.length)];
       if (!pick) return;
       e.seal = { ...at, skill: pick.id, skillName: pick.name };
       ev.push({ t: 'fx', ...base, skill: pick.name, list: listOf(tgt) });
@@ -288,7 +286,8 @@ export function onHit(att, tgt, skill, ctx) {
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
     const own = skill.inflict && skill.inflict.id;   // 그 기술이 거는 효과는 태우지 않음(불씨 포자 = 불 속성인데 포자를 거는 기술 — 2026-10-17 카드 밸런스 시험에서 발견: 제 포자를 태워 1겹을 못 넘었음)
-    const gone = ['chill', 'wet', 'spore', 'leech'].filter(k => e[k] && k !== own);   // 불이 냉기 · 물기 · 포자 · 기생 씨앗을 태움 · 봉인 · 속박은 안 풀림 · 이미 걸린 얼음(기절)도 안 풀림(엑셀 v10)
+    const gone = ['chill', 'wet', 'spore', 'leech'].filter(k => e[k] && k !== own);   // 불이 냉기 · 물기 · 포자 · 기생 씨앗을 태움 · 봉인 · 속박은 안 풀림(2026-10-21)
+    if (e.skip && e.skip.src === 'frozen') { delete e.skip; gone.unshift('frozen'); }   // 얼음(기절의 다른 이름)도 녹아 쉬기가 풀림 — 2026-10-21 기록 '얼음 · 빙결 · 젖음 · 포자 · 기생이 불에 풀리는 지금 규칙은 그대로'
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }

@@ -247,6 +247,12 @@ test('은신 중 내가 공격하면 은신이 풀리고 이어 공격은 없음
   resolveTurn(R, unit('f'), STRIKE, { act: 'other' }, script([0, 0.5]));
   assert.ok(!has(R, 'stealth'));
 });
+test('은신끼리도 서로 안 보임(2026-10-23 사용자): 내가 숨어 있어도 숨은 상대에게 단일 공격은 가려짐 · 피하면 이어 공격', () => {
+  const S = unit('s', { eff: { stealth: { look: 'stealth', link: { power: 40 } } } }), F = unit('f', { eff: { stealth: { look: 'stealth', link: null } } });
+  const hs = resolveTurn(S, F, { act: 'other', id: 'wait' }, STRIKE, script([0.99, 0.5, 0.5])).events.filter(e => e.t === 'hit');
+  assert.equal(hs[0].who, 'f'); assert.equal(hs[0].tier, 'miss'); assert.ok(hs[0].veil);
+  assert.ok(hs[1] && hs[1].link && hs[1].who === 's');
+});
 
 // ── 소환수 받기(엑셀 v10 50행 + 2026-10-21~22 확정) ──
 const pup = (hp = 40) => ({ name: '새끼', hp, max: hp, def: 0, eva: 0, eff: {}, st: { miss: {}, critTaken: false } });

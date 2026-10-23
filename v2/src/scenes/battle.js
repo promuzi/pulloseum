@@ -202,7 +202,8 @@ function sunPips(g, x, y, cur, max, gap, t) {
   }
 }
 // 효과 창(한 줄에 셋 · 두 줄까지, 넘치면 +n): 아이콘 = 왼쪽 끝 · 글자([이름][겹침 수]) = 아이콘을 뺀 자리의 가운데 — 글자는 위아래 같은 간격(실제 글자 높이로), 아이콘은 창 위아래 가운데
-//  아이콘 18칸 · 창 20칸(2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어" — 11칸 · 16칸이던 것): 이름이 있으면 겹 수는 아이콘 오른쪽 위, 이름이 길어 안 들어가면 11칸 · 그래도 안 되면 글자만 가운데
+//  아이콘 18칸 · 창 20칸(2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어" — 11칸 · 16칸이던 것): 겹 수는 아이콘 오른쪽 위, 이름이 길어 안 들어가면 11칸 · 그래도 안 되면 글자만 가운데
+//  포자 = 이름 + 개수(아이콘 오른쪽 위) + 가장 빨리 피기까지 남은 턴(아이콘 오른쪽 아래) — 같은 날 사용자 "포자도 이름 붙여줘"
 //  정렬 = 같은 날 사용자 "아이콘은 왼쪽 정렬. 글자는 우측정렬해줘. 독같은 경우 너무 가운데에 몰린 느낌" → "글자를 우측 정렬말고, 아이콘을 제외한 영역 내에서 중앙 정렬로하자"
 const SW_W = 45, SW_H = 20, SW_GAP = 2;
 function statusWins(g, x, y, list) {
@@ -212,21 +213,20 @@ function statusWins(g, x, y, list) {
     if (st.more) { holo(g, X, Y, w, SW_H, SW_ON, 16); g.text(`+${st.more}`, X + (w >> 1), Y + ty, { font: 'bold', color: SW_ON.text, align: 'center' }); return; }
     const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a');
     holo(g, X, Y, w, SW_H, S, 16);
-    const named = st.t == null, nw = named ? g.textW(D.name) : -2, num = D.stack && st.n ? String(Math.min(st.n, D.stack)) + (st.t != null ? '·' + st.t : '') : null;   // 포자 = 아이콘 + 개수 · 가장 빨리 피기까지 남은 턴(엑셀 v10 — 이름 없이)
-    const tail = badge => nw + (num && !badge ? 2 + g.textW(num) : 0), big = D.icon ? iconMid(D.icon) : null;   // tail = 아이콘 뒤 글자 폭(badge = 겹 수를 아이콘 위에)
-    let ic = null, badge = false;
-    if (big && big.width + 2 + tail(named && !!num) <= w - 4) { ic = big; badge = named && !!num; }
-    else if (D.icon && (tail(false) + 11 <= w - 4 || !named)) ic = icon(D.icon);
-    const rest = tail(badge);
+    const nw = g.textW(D.name), num = D.stack && st.n ? String(Math.min(st.n, D.stack)) : null, tt = st.t != null ? String(st.t) : null;   // tt = 포자의 가장 빨리 피기까지 남은 턴
+    const big = D.icon ? iconMid(D.icon) : null, badge = !!big && big.width + 2 + nw <= w - 4;   // 18칸 아이콘이 들어가면 숫자는 아이콘 위에
+    const tail = badge || !num ? '' : num + (tt ? '·' + tt : ''), rest = nw + (tail ? 2 + g.textW(tail) : 0);   // 18칸이 안 들어가면 숫자는 이름 뒤
+    const ic = badge ? big : D.icon && rest + 11 <= w - 4 ? icon(D.icon) : null;
     if (ic) {
-      const ix = X + 2, iy = Y + Math.round((SW_H - ic.height) / 2);
+      const ix = X + 2, iy = Y + Math.round((SW_H - ic.height) / 2), num0 = { font: bf, align: 'right', outline: '#0b1220', outlineW: 2 };
       g.img(ic, ix, iy);
-      if (badge) g.text(num, ix + ic.width + 1, iy, { font: bf, color: S.num, align: 'right', outline: '#0b1220', outlineW: 2 });   // 오른쪽 위(오른쪽 아래 = 능력치 화살표 자리)
+      if (badge && num) g.text(num, ix + ic.width + 1, iy, { ...num0, color: S.num });   // 오른쪽 위(오른쪽 아래 = 능력치 화살표 자리)
+      if (badge && tt) g.text(tt, ix + ic.width + 1, iy + ic.height - glyphH(bf) - 1, { ...num0, color: '#ffe08a' });   // 포자: 오른쪽 아래 = 남은 턴
     }
     const tl = ic ? X + 3 + ic.width : X, tr = ic ? X + w - 2 : X + w;   // 글자 자리 = 아이콘을 뺀 나머지(아이콘이 없으면 창 전체)
     let cx = tl + Math.max(ic ? 0 : 2, (tr - tl - rest) >> 1);
-    if (named) g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
-    if (num && !badge) g.text(num, cx, Y + ty, { color: S.num });
+    g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
+    if (tail) g.text(tail, cx, Y + ty, { color: S.num });
   });
 }
 // 전투 사건 문구(이름 = 그 사건 때의 식물)
