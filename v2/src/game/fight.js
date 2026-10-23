@@ -175,13 +175,13 @@ export function replayBot(spec, acts) {
 // 화면에 보낼 판 모습(유닛 값 그대로 — 화면은 이걸로 자기 판을 고쳐 씀)
 const unitV = u => ({ id: u.id, key: u.key, name: u.name, el: u.el, jong: u.jong, pot: u.pot, stage: u.stage, shiny: !!u.shiny, legend: !!u.legend, trainer: u.trainer, rank: u.rank, tlv: u.tlv,
   hp: u.hp, max: u.max, atk: u.atk, def: u.def, spd: u.spd, acc: u.acc, eva: u.eva, crit: u.crit, energy: u.energy, energyMax: u.energyMax, kit: u.kit, eff: u.eff, st: u.st || null, used: u.used || null,   // used = 변이 기술을 이번 판에 쓴 횟수
-  pas: u.pas || null, cards: u.cards || null });   // 카드(패시브 합 · 끼운 카드 id — 친구 대결에선 상대 것을 감춤, rooms.mjs)
+  pas: u.pas || null, cards: u.cards || null, res: u.res || null, resMax: u.resMax || null, summons: u.summons || null, orb: u.orb || null });   // 종 고유 v2: 개수 칸 · 소환수 · 구슬   // 카드(패시브 합 · 끼운 카드 id — 친구 대결에선 상대 것을 감춤, rooms.mjs)
 export function viewOf(B) {
   if (B.mode === 'swap3') return { mode: 'swap3', turn: B.turn, over: B.over, need: B.need, act: { ...B.act }, pool: { ...B.pool }, ownSun: !!B.ownSun, cd: { ...(B.swapCd || { me: 0, foe: 0 }) }, team: { me: B.team.me.map(unitV), foe: B.team.foe.map(unitV) } };
   return { mode: '1v1', turn: B.turn, over: B.over, me: unitV(B.me), foe: unitV(B.foe) };
 }
 // 화면 쪽: 서버가 보낸 모습으로 판을 세우고(처음) · 턴마다 같은 유닛 객체를 고쳐 씀(교체 연출이 유닛 객체를 붙잡고 있음)
-const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'used', 'pas', 'cards', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
+const UNIT_KEYS = ['hp', 'max', 'atk', 'def', 'spd', 'acc', 'eva', 'crit', 'energyMax', 'kit', 'eff', 'st', 'used', 'pas', 'cards', 'res', 'resMax', 'summons', 'orb', 'name', 'key', 'el', 'jong', 'pot', 'stage', 'shiny', 'legend', 'trainer', 'rank', 'tlv'];
 export function battleFromView(v) {
   if (v.mode === 'swap3') {
     const B = makeTeamBattle({ me: v.team.me.map(u => ({ ...u })), foe: v.team.foe.map(u => ({ ...u })), seed: 1, ownSun: !!v.ownSun });

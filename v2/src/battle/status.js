@@ -110,6 +110,11 @@ export const CAVE = { spd: 0.1, gravel: { spd: 0.1, acc: 8 }, collapse: { spd: 0
 // 소환수(스포어캡): 한꺼번에 최대 셋 · 잠든 포자 · 새끼 = 주인 능력치 30% · 성체 버섯 50% · 평타 위력 30 · 포자회귀 포자 수(잠든 1 · 새끼 2 · 성체 버섯 3) — 수치는 밸런스 전
 export const SUMMON = { max: 3, pct: 0.1, adultPct: 0.2, power: 30, burst: { sleep: 1, baby: 2, adult: 3 } };
 const sumsOf = u => ((u && u.summons) || []).filter(x => x.hp > 0);
+// 볼트바인 구슬(햇빛 바 끝 칸): 칸 수 새싹 1 · 성장기 3 · 성체 5 · 기본 햇빛 칸 −2 · 발사 = 구슬 하나당 위력 15 · 수호 = 하나당 최대 체력 6% 막음 · 전격 구슬 한 타 25 · 뇌격구 = 구슬 하나당 25 · 덫 한 번 15 + 봉인 · 흡수 = 하나당 5% — 수치는 밸런스 전
+export const ORB = { slots: [1, 3, 5], baseCut: 2, fire: 8, guard: 0.06, blast: 25, trap: 15, absorb: 0.05 };
+const orbFree = u => (u && u.orb ? u.orb.n : 0);
+// 햇빛 내기: 기본 칸부터, 모자라면 구슬 햇빛
+export function payEnergy(u, cost) { if (!u || !cost) return; const b = Math.min(Math.max(0, u.energy || 0), cost); u.energy = (u.energy || 0) - b; if (cost > b && u.orb) u.orb.n = Math.max(0, u.orb.n - (cost - b)); }
 export const caveAdds = u => (u && u.eff && u.eff.cave && u.eff.cave.add) || [];
 export const galeAdds = u => (u && u.eff && u.eff.gale && u.eff.gale.add) || [];
 const stormOn = u => galeAdds(u).includes('storm');
@@ -141,7 +146,9 @@ export const canSwitch = (u, T = Infinity) => { const e = (u && u.eff) || {}; re
 export const usesLeft = (u, s) => (s && s.uses ? Math.max(0, s.uses - ((u && u.used && u.used[s.id]) || 0)) : Infinity);
 export function useCount(u, s) { if (u && s && s.uses) { u.used = u.used || {}; u.used[s.id] = (u.used[s.id] || 0) + 1; } }
 export function canUse(u, s, energy = u.energy, foe = null) {
-  if (!s || (s.cost || 0) > energy) return false;
+  if (!s || (s.cost || 0) > energy + orbFree(u)) return false;   // 볼트바인 = 구슬 햇빛까지
+  if ((s.orbGuard || s.orbDump || s.orbBlast || s.orbAbsorb || s.orbTrap) && !orbFree(u)) return false;
+  if (s.orbRefill && !(u.orb && u.orb.max - u.orb.trap - u.orb.n > 0)) return false;
   if (s.galeAdd && !(foe && has(foe, 'gale') && !galeAdds(foe).includes(s.galeAdd))) return false;   // 공명 = 상대 쪽 강풍이 불 때만 · 같은 공명은 한 번
   if (s.summon && sumsOf(u).length >= SUMMON.max) return false;   // 소환수 셋이면 못 부름
   if (s.volley && !sumsOf(u).some(x => x.stage !== 'sleep')) return false;   // 일제 포자 = 깨어난 소환수가 있을 때

@@ -227,8 +227,10 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false) { 
   g.text(`${Math.ceil(bar.main)}/${u.max}`, right, yy, { font: 'bold', color: S && age < S.hold ? '#ffd090' : P.main, align: 'right' });
   yy += 13;
   sunDisc(g, tx + 6, yy + 5, 3, SUN.ok);   // MP = 햇빛 에너지(2026-10-17 사용자 "상태바의 mp 부분을 해 색으로 해주고 햇빛 에너지 같은 디자인") — 이름 대신 해
-  sunPips(g, bx, yy + 2, en, u.energyMax, Math.max(4, Math.min(7, Math.floor((right - g.textW(`${u.energyMax}/${u.energyMax}`, 'bold') - 5 - bx) / Math.max(1, u.energyMax)))), t);   // 칸 사이 = 그릇이 커져도 한 줄에(최대 12칸)
-  g.text(`${Math.round(en * 2) / 2}/${u.energyMax}`, right, yy, { font: 'bold', color: '#ffd25a', align: 'right' });
+  const om = u.orb ? u.orb.max : 0, tot = u.energyMax + om, step = Math.max(4, Math.min(7, Math.floor((right - g.textW(`${tot}/${tot}`, 'bold') - 5 - bx) / Math.max(1, tot))));
+  sunPips(g, bx, yy + 2, en, u.energyMax, step, t);   // 칸 사이 = 그릇이 커져도 한 줄에(최대 12칸)
+  for (let i = 0; i < om; i++) { const px = bx + (u.energyMax + i) * step, on = i < u.orb.n, tr = i >= om - u.orb.trap; g.rect(px, yy + 2, step - 1, 7, '#120a26'); g.rect(px + 1, yy + 3, step - 3, 5, on ? '#b48cff' : tr ? '#5f8f3a' : '#2e2350'); if (on) g.rect(px + 1, yy + 3, step - 3, 2, '#e6d4ff'); }   // 볼트바인 구슬 칸(보라 = 남은 구슬 · 초록 = 덫)
+  g.text(`${Math.round(en * 2) / 2}${om ? `+${u.orb.n}` : ''}/${u.energyMax}`, right, yy, { font: 'bold', color: '#ffd25a', align: 'right' });
   return h;
 }
 // 햇빛 에너지 칸: 찬 칸 = 금빛(위 밝게 · 아래 주황) + 빛 한 줄기가 찬 칸을 따라 흐름(2.4초마다), 빈 칸 = 짙은 호박색

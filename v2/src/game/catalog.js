@@ -462,7 +462,7 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine']);
 const V2 = {
   cactus_wind: {   // 10. 게일캑터 — 방해 디버프 기술 · 강풍이 부는 턴 끝마다 공명 +1, 3이면 무속성 확정 치명(치명 방어엔 정타)
     sp: { res: { reso: [0, 3, '공명'] }, reso: { k: 'reso', at: 3, power: 45, count: ['gale', 'accDown', 'critDown', 'seal'] } },
@@ -508,6 +508,17 @@ const V2 = {
       S('u_spore_3c', '커져라!', 'grass', 'u', 0, 2, { cats: ['buff'], grow: true }),
     ],
   },
+  volt_vine: {   // 14. 볼트바인 — 몸속 뇌전구: 햇빛 바 끝 구슬 칸(새싹 1 · 성장기 3 · 성체 5 · 기본 칸은 작게) · 기술 햇빛은 구슬까지 끌어 씀 · 홀수 턴 시작에 가득 · 짝수 턴 끝에 남은 만큼 발사
+    sp: { orbs: true },
+    skills: [
+      S('u_volt_1', '수호 구슬', 'bolt', 'u', 0, 1, { cats: ['guard'], orbGuard: true }),
+      S('u_volt_2', '전격 구슬', 'bolt', 'u', 25, 1, { orbDump: true }),
+      S('u_volt_2b', '구슬 회수', 'bolt', 'u', 0, 2, { cats: ['buff'], orbRefill: true }),
+      S('u_volt_3', '구슬 속박', 'grass', 'u', 0, 2, { cats: ['debuff'], orbTrap: true }),
+      S('u_volt_3b', '뇌격구', 'bolt', 'u', 25, 1, { area: true, orbBlast: true, inflict: { id: 'burn' } }),
+      S('u_volt_3c', '구슬흡수', 'bolt', 'u', 0, 1, { cats: ['heal_hp'], orbAbsorb: true }),
+    ],
+  },
 };
 for (const [k, v] of Object.entries(V2)) if (SPECIES_V2.has(k)) { Object.assign(SPECIES[k], v.sp); for (const s of v.skills) SKILLS[s.id] = s; }
 // 변이형(변이 연출 설계 2026-10-15: 포식 = 진홍 · 무기 = 강철 · 독성 = 보라 · 포자 = 금빛 · 용족 = 청록) — 포자는 버섯 전용. 일반(무변이) = null
@@ -522,7 +533,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 12;   // 12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
+export const RULES_VER = 13;   // 13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
+//  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
 //  11 = 2026-10-23 종 고유 기술 v2 첫 묶음(게일캑터 · 게일바인 — 피해 없이 거는 기술 · 공명 · 스택 반격 · 반드시 맞음 · 방심하기)
 //  10 = 2026-10-23 조준 재정의(빗나감 칸 없음 · 치명 +25 · 회피가 옮기는 칸은 스침으로 — 사용자)
 //  9 = 2026-10-23 광역 = 빗나감 · 스침 절반 → 정타(치명 그대로 — 사용자)

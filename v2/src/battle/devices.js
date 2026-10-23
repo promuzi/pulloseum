@@ -9,8 +9,8 @@
 //  D6 시한 delay{turns, power, area}(상대에게 심음 — n턴 뒤 턴 끝 확정 피해) · echo(맞히면 다음 턴 끝 한 번 더, 위력 몫 · 효과 포함) — 교체하면 사라짐
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
-import { SPECIES } from '../game/catalog.js';
-import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON } from './status.js';
+import { SPECIES, STAGE_KEY } from '../game/catalog.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB } from './status.js';
 import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
@@ -36,7 +36,7 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag'];
+const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
 export function dynAct(u, a0, foe, rng) {
   if (!a0 || !DYN.some(k => a0[k])) return a0;
@@ -46,6 +46,8 @@ export function dynAct(u, a0, foe, rng) {
   if (a.tag && inf && inf.tag === a.tag && inf.n > 0) { o.el = inf.el; o.infused = true; }   // 속성 바꾸기(다음 n번)
   let pw = a.power || 0;
   if (a.hitsBy) o.hits = Math.max(1, r[a.hitsBy] || 0);
+  if (a.orbDump && u.orb) o.hits = Math.max(1, u.orb.n);   // 전격 구슬 = 남은 구슬만큼 연타
+  if (a.orbBlast && u.orb) pw = ORB.blast * Math.max(1, u.orb.n);   // 뇌격구 = 구슬 하나당 위력
   if (a.powBy) pw += (r[a.powBy.k] || 0) * a.powBy.per;
   if (a.allSun) pw += (u.energy || 0) * a.allSun;
   if (a.scale) { const c = Math.min(a.scale.dmg.length - 1, r[a.scale.k] || 0); pw *= 1 + a.scale.dmg[c]; if (a.scale.drain) o.drain = (a.drain || 0) + a.scale.drain[c]; o.scaleN = c; }
@@ -67,6 +69,7 @@ export function payAct(u, a, T, ev) {
   let spent = 0;
   if (a.spend) { const r = resOf(u); spent = a.spend.all ? r[a.spend.k] || 0 : a.spend.n || 1; r[a.spend.k] = Math.max(0, (r[a.spend.k] || 0) - spent); ev.push({ t: 'res', who: u.id, k: a.spend.k, n: r[a.spend.k] }); }
   if (a.allSun) u.energy = 0;
+  if ((a.orbDump || a.orbBlast || a.orbAbsorb || a.orbTrap) && u.orb) { u.st.orbSpent = u.orb.n; u.st.orbFull = u.orb.n === u.orb.max; if (a.orbTrap) u.orb.trap += u.orb.n; u.orb.n = 0; ev.push({ t: 'res', who: u.id, k: 'orb', n: 0 }); }   // 구슬 전부 쓰기(속박 = 덫으로)
   if (a.infused && u.st.infuse && --u.st.infuse.n <= 0) delete u.st.infuse;
   if (a.hpCost) { const c = Math.round(u.max * a.hpCost); u.hp = Math.max(1, u.hp - c); ev.push({ t: 'selfCost', who: u.id, name: u.name, dmg: c }); }
   return spent;
@@ -80,6 +83,8 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.moss) mossAct(u, foe, ev);   // 이끼덮기
+  if (a.orbRefill && u.orb) u.orb.n = u.orb.max - u.orb.trap;   // 구슬 회수
+  if (a.orbAbsorb && u.hp > 0) { const n = u.st.orbSpent || 0, before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * ORB.absorb * n * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); if (u.st.orbFull) selfBuff(u, 'purify', { turn: T, ev }); }   // 구슬흡수(가득이면 전부 정화)
   if (a.summon) summonAdd(u, T, ev);   // 포자 배양
   if (a.sporeWall && u.eff && u.eff.shield) u.eff.shield.spore = true;   // 포자벽
   if (a.volley) for (const s of liveSums(u).filter(x => x.stage !== 'sleep')) summonHit(u, s, foe, ev, x.rng || (() => 0.5));   // 일제 포자
@@ -252,6 +257,7 @@ export function galeTurn(u, opp, turn, ev) {
   const g = u.eff && u.eff.gale, add = (g && g.add) || [];
   if (add.includes('storm')) { const d = Math.max(1, Math.round(u.max * STORM.dot)); u.hp = Math.max(0, u.hp - d); ev.push({ t: 'tick', who: u.id, name: u.name, id: 'storm', dmg: d, list: listOf(u) }); }
   if (add.includes('shock') && u.hp > 0) apply(u, 'shock', 1, { turn, rng: () => 0.5, ev, by: { id: g.by } });
+  if (u.orb && u.orb.n > 0 && turn % 2 === 0 && opp && opp.hp > 0) { const n = u.orb.n; u.orb.n = 0; sideHit(u, opp, ORB.fire * n, 'hit', ev, { from: 'orb', label: '구슬 발사', n }); }   // 볼트바인: 짝수 턴 끝에 남은 구슬 발사
   const cv = u.eff && u.eff.cave;
   if (cv && (cv.add || []).includes('lava') && u.hp > 0) apply(u, 'burn', 1, { turn, rng: () => 0.5, ev, by: { id: cv.by } });   // 용암지대 = 턴 끝마다 화상(유지)
   const og = opp && opp.hp > 0 && opp.eff && opp.eff.gale;
@@ -324,4 +330,21 @@ function burstAct(u, foe, ctx) {
   if (!foe || foe.hp <= 0) return;
   const tgt = frontSum(foe) || foe;
   for (let i = 0; i < n; i++) apply(tgt, 'spore', 1, { ...ctx, by: u });
+}
+
+// 볼트바인 구슬(SPECIES.orbs · 수치 status.js ORB): 처음 보면 칸을 만들고 기본 햇빛 칸을 줄임 · 홀수 턴 시작에 가득(덫에 나간 것 빼고)
+export function orbInit(u, T) {
+  if (!u || !SP(u).orbs) return;
+  if (!u.orb) { const si = typeof u.stage === 'number' ? u.stage : Math.max(0, STAGE_KEY.indexOf(u.stage)), m = ORB.slots[Math.min(2, si)]; u.orb = { max: m, n: m, trap: 0 }; u.energyMax = Math.max(2, (u.energyMax || 8) - ORB.baseCut); u.energy = Math.min(u.energy || 0, u.energyMax); }
+}
+export function orbStart(u, T) {
+  if (!u || u.hp <= 0 || !SP(u).orbs) return;
+  orbInit(u, T); (u.st ||= {});
+  if (T % 2 === 1) u.orb.n = u.orb.max - u.orb.trap;
+}
+// 구슬 속박 덫: 상대가 맞힐 때마다 하나 터짐 = 낮은 피해 + 봉인(다음 1턴) · 터진 구슬은 바에 돌아옴
+export function orbTrapBurst(u, foe, T, ev, rng) {
+  u.orb.trap -= 1; u.orb.n = Math.min(u.orb.max, u.orb.n + 1);
+  sideHit(u, foe, ORB.trap, 'hit', ev, { from: 'trap', label: '구슬 덫' });
+  if (foe.hp > 0) apply(foe, 'seal', 1, { turn: T, rng, ev, by: u });
 }

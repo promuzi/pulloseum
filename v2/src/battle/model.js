@@ -3,8 +3,8 @@
 import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
 import { SKILLS as CAT_SKILLS, SPECIES_V2, uniquesOf } from '../game/catalog.js';
-import { caveSync } from './devices.js';
-import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount } from './status.js';
+import { caveSync, orbInit } from './devices.js';
+import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy } from './status.js';
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
 const WEAK = { fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] };
@@ -183,6 +183,10 @@ function aiScore(u, foe, s, risk, last) {
     return fresh ? 0.55 + 0.35 * fresh : 0.15;
   }
   if (s.act === 'sun') { const need = Math.max(0, ...u.kit.map(k => k.cost || 0)); return (u.energy || 0) < need && risk < 0.5 ? 1 + 0.2 * (need - (u.energy || 0)) : 0.08; }
+  if (s.orbGuard) return u.orb && u.orb.n ? (risk >= 1 ? 1.7 : 1.1 * risk) : 0;   // 볼트바인 구슬 기술
+  if (s.orbRefill) { const o = u.orb; return o && o.max - o.trap - o.n >= 2 ? 0.8 : 0.05; }
+  if (s.orbTrap) return u.orb && u.orb.n >= 2 ? 0.6 + 0.4 * Math.min(1, risk) : 0.05;
+  if (s.orbAbsorb) { const o = u.orb; return o && o.n ? (u.hp < u.max * 0.6 ? 0.5 + 0.12 * o.n : 0.1) : 0; }
   if (s.summon || s.volley || s.grow) { const L = (u.summons || []).filter(x => x.hp > 0), aw = L.filter(x => x.stage !== 'sleep').length; return s.summon ? 1.1 - 0.25 * L.length : s.volley ? 0.45 * aw : 0.3 + 0.3 * L.filter(x => x.stage === 'baby').length; }   // 소환수(스포어캡)
   if (s.moss) { const n = ((foe.eff && foe.eff.cave && foe.eff.cave.add) || []).length; return n && u.hp < u.max * 0.75 ? 0.4 + 0.35 * n : 0.05; }   // 이끼덮기 = 설치물이 있고 다쳤을 때
   if (s.act === 'buff' && s.bare) return ((u.res && u.res.evs) || 0) >= 2 ? 0.5 + Math.min(1, risk) : 0.1;   // 방심하기 = 쌓아 둔 스택을 쓸 때
@@ -243,7 +247,7 @@ export function searchPick(B, n) {
 // 판 차리기: 씨앗 하나로 난수 고정(결정론 — 같은 씨앗·같은 선택이면 같은 결과)
 export function makeBattle({ me, foe, seed = 20261015 }) {
   me.solo = foe.solo = true; me.slot = 'me'; foe.slot = 'foe';
-  caveSync(me, foe, []);   // 스톤캡 동굴은 처음부터 보이게   // 1:1 표시(속박 → 봉인) · 유닛 이름표(기생을 건 식물 찾기)
+  caveSync(me, foe, []); orbInit(me, 1); orbInit(foe, 1);   // 스톤캡 동굴 · 볼트바인 구슬은 처음부터 보이게   // 1:1 표시(속박 → 봉인) · 유닛 이름표(기생을 건 식물 찾기)
   return { me, foe, rng: makeRng(seed), turn: 1, over: null, log: [] };
 }
 // 턴 끝 공통(1:1·3:3): 화상·독·기생 씨앗 → 에너지 +1(그늘이면 안 참, gain 으로 넘김) → 정한 턴이 지난 효과 사라짐
@@ -277,7 +281,7 @@ export function playTurnVs(B, mySkill, foeSkill) {
   const me = pickOf(B.me, mySkill, B.foe);
   foeSkill = pickOf(B.foe, foeSkill, B.me);
   const before = { me: B.me.hp, foe: B.foe.hp };
-  B.me.energy -= me.cost || 0; B.foe.energy -= foeSkill.cost || 0;
+  payEnergy(B.me, me.cost || 0); payEnergy(B.foe, foeSkill.cost || 0);   // 기본 칸부터 · 모자라면 구슬(볼트바인)
   useCount(B.me, me); useCount(B.foe, foeSkill);   // 변이 기술 횟수
   B.me.curEl = me.el; B.foe.curEl = foeSkill.el;
   const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, field: B.field || (B.field = {}) });   // field = 경기장 효과(공통 장치)

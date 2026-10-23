@@ -7,7 +7,7 @@
 import { makeRng, resolveTurn, rollFirst } from './rules.js';
 import { elemMult, aiPick, REST, closeTurn, firstOk, expDamage, threatOf, seenOf, lastOf } from './model.js';
 import { formMult } from './matchup.js';
-import { canUse, canSwitch, mustSkip, clearOnSwitch, moveEnv, listOf, useCount } from './status.js';
+import { canUse, canSwitch, mustSkip, clearOnSwitch, moveEnv, listOf, useCount, payEnergy } from './status.js';
 
 // swapCd = 스스로 교체한 뒤 다시 교체 못 하는 턴 수(2026-10-18 사용자 "2턴" — 0 = 제한 없음: 이 규칙 전에 시작한 판)
 // swOrder = 교체도 선공 · 후공 순서를 따름(2026-10-18 사용자 "선공후공에 따라 맞고 바뀔지 바뀌고 맞을지" — false = 이 규칙 전에 시작한 판)
@@ -79,8 +79,8 @@ export function playTurn3(B, myAct, foeAct = null) {
   } else { if (sw.me != null) doSwap('me'); if (sw.foe != null) doSwap('foe'); }
   const mySkill = meSwitch ? null : skillOf(B.me, myAct, B.foe);
   const before = { me: B.me.hp, foe: B.foe.hp };
-  if (mySkill) { B.me.energy -= mySkill.cost || 0; useCount(B.me, mySkill); }
-  if (foeSkill) { B.foe.energy -= foeSkill.cost || 0; useCount(B.foe, foeSkill); }
+  if (mySkill) { payEnergy(B.me, mySkill.cost || 0); useCount(B.me, mySkill); }
+  if (foeSkill) { payEnergy(B.foe, foeSkill.cost || 0); useCount(B.foe, foeSkill); }
   let res = null;
   if (mySkill || foeSkill) {
     const idle = { id: 'switch', act: 'other', idle: true };   // 바꾼 쪽(이번 턴 행동 = 교체) — 들어온 식물의 면역은 끝내지 않음
