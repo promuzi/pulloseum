@@ -2,6 +2,13 @@
 
 > CLAUDE.md에서 분리한 전체 개발 로그. 최신 작업이 맨 위. 과거 맥락이 필요할 때만 읽으세요.
 
+### 2026-10-23 (238) — 친구 서버에 올림(228~237 묶음 · 판 f18d0a62)
+
+- 사용자 ‘작업 끝나면 친구 서버에 올리고 마무리스킬까지 써줘’.
+- 올리기 전: `node tools/test/prodcheck.mjs --url https://pulloseum.getchat.workers.dev` = 문제 없음(계정 5 · 봇 판 4 끝까지, 백업 `server/data/backup/prod-export-20261023-1812.json` — 깃 밖) · `SAVE_VER` 4 → 5(모양 그대로 — 올린 뒤 처음 불러올 때 계정마다 원본 보관) · 표준 묶음 27개 · `test_cf` 54/54.
+- 올림: `node cf/build.mjs`(모듈 82개 · 1,182파일) → wrangler `Success` · `Current Version ID: f18d0a62-2957-4057-bc1b-aa5b03e03293`. 화면 점검(`cf/pagecheck.mjs`) = 빠진 그림 0 · 오류 0 · 실패 요청 0. 본체는 바로 새 코드(`/api/config` `save` 5).
+- 되돌리기: 코드 = `wrangler rollback 90aa2aec-8da6-4ae0-8c11-06311b3a4a6e` · 저장 = 계정마다 처음 불러올 때 보관된 원본(`POST /api/admin/restore`). `RULES_VER` 5 → 9라 진행 중이던 봇 판 · 친구 대결은 승패 없이 닫힘. 공지는 올리지 않음.
+
 ### 2026-10-23 (237) — 정체 꼬리표 [속성 | 종 | 변이]
 
 - 사용자 ‘속성과 식물 종+변이까지 아이콘을 단순 나열하지 않고 잘 정리해줘’.
