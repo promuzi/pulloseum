@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart } from './devices.js';
 import { effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -129,6 +129,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const ev = [];
   stOf(A); stOf(B);
   const T = o.turn || 0, skipped = new Set();
+  caveSync(A, B, ev);   // 스톤캡 동굴: 앞에 나와 있으면 상대 쪽에 깔고, 나가면 걷음
+  summonStart(A, B, T, ev, rng); summonStart(B, A, T, ev, rng);   // 스포어캡 소환수: 잠든 포자가 깨어나고 깨어난 것은 평타
   fieldStart(o.field, T, [A, B], ev);   // 경기장 효과(공통 장치 D10): 끝난 효과 걷기 · 비 = 화상 꺼짐
   let first;
   if (o.first) first = o.first;
@@ -178,7 +180,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.act === 'hex') { ev.push({ t: 'cast', who: u.id, id: a.id }); hexAct(u, foe, a, { turn: T, rng, ev }); afterAct(u, a, foe, T, ev, { spent, rng }); return 'acted'; }   // 피해 없이 상대에게 거는 기술(종 고유 v2)
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); return 'acted'; }
     const r = strike(u, foe, a);
-    if (r.hard) evCounter(foe, u, T, ev, rng);   // 게일바인: 맞으면 그 공격이 끝난 뒤 스택을 다 써서 반격
+    if (r.hard) evCounter(foe, u, T, ev, rng);
+    if (a.caveAdd && u.hp > 0) caveAddAct(u, foe, a, ev);   // 지반붕괴 = 공격 + 동굴에 설치   // 게일바인: 맞으면 그 공격이 끝난 뒤 스택을 다 써서 반격
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
     if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed: r.landed, bonusHit: a.bonusHit, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
@@ -221,7 +224,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.infused) u.curEl = a.el;   // 속성 바꾸기(불타는 의지) — 상성도 그 속성으로
     const em = (o.elemMult ? o.elemMult(u, foe, a) : 1) * fieldEl(o.field, a.el);   // × 경기장 효과(D10) · 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
     const N = Math.max(1, (a.strikes ? a.strikes.length : a.hits || 1) + fieldHits(o.field, a)), hammer = SKILL_WEAPON[a.id] === 'hammer';
-    const hid = has(foe, 'stealth');   // 이 공격 앞에서 숨어 있었나(은신끼리도 서로 안 보임 — 2026-10-23 사용자)
+    const hid = has(foe, 'stealth'), spw = !!(foe.eff && foe.eff.shield && foe.eff.shield.spore);   // 포자벽 = 막으면 때린 상대에게 포자   // 이 공격 앞에서 숨어 있었나(은신끼리도 서로 안 보임 — 2026-10-23 사용자)
     const aimK = (u.eff && u.eff.aim && u.eff.aim.k) || 0;
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0, shieldHit = false, hard = false, allMiss = true, tries = 0;
     const hitSet = new Set();   // 효과는 맞은 대상마다 첫 적중 한 번
@@ -231,7 +234,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const hitSum = (s, ah, i) => {
       const k = foe.summons.indexOf(s), t = hitTable(u, s, { area: !!a.area, aim: aimK, critAdd: critAddOf(u), missAdd: missAddOf(u) }), tier = tierOf(t, Math.floor(rng() * 100));
       let dm = Math.round(hitDmg(u, s, ah, em) * RULES.tierMult[tier] * (ambush ? FX.stealth.ambush : 1)), absorb = 0;
-      if (dm > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dm); sh.hp -= absorb; dm -= absorb; shieldHit = true; }
+      if (dm > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dm); sh.hp -= absorb; dm -= absorb; shieldHit = true; }
       dm = Math.min(dm, s.hp); s.hp -= dm;
       ev.push({ t: 'hit', who: u.id, to: foe.id, sum: k, id: a.id, tier, dmg: dm, mult: em, absorb, ab: absorb ? 'shield' : undefined, table: t, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, link: L.link ? { id: a.id, name: a.name } : undefined });
       if (tier === 'hit' || tier === 'crit') avoided = false;
@@ -254,13 +257,13 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       else if (N > 1) tier = tierOf(t, Math.floor(rng() * 100));   // 연타 = 불운 보정 없음(사용자 "연타에서는 보정을 하지 말자")
       else { const j = judgeHit(t, u.st.miss[foe.id] || 0, rng); u.st.miss[foe.id] = j.missStreak; tier = j.tier; forced = j.forced; }
       if ((a.critIfDodged && u !== first && u.st.dodgedT === T) || (sure && u === first)) tier = 'crit';   // 확정 치명(휙- 푹찍 = 먼저 친 상대가 빗나간 뒤 · 피해? = 선공) — 치명 방어엔 막힘
-      if (guardOn && tier === 'crit' && d.blockCrit !== false) tier = 'hit';   // 치명 방어
+      if ((guardOn || (sure && !ambush && still && guards.has(foe))) && tier === 'crit' && d.blockCrit !== false) tier = 'hit';   // 치명 방어 · 피해?도 방어태세엔 치명이 막힘(2026-10-24 사용자 — 막는 힘 ×4는 그대로 무시)
       const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
       dmg = Math.round(hitDmg(u, foe, ah, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
       if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
       dmg = Math.round(dmg * takenK(foe) * (bare || 1));   // 받는 피해 배율(D13 — 체력 가득이면 위엄 등)
       let absorb = 0, ab = null;   // 보호막 → 방어구 순서로 먼저 막음
-      if (dmg > 0 && foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; shieldHit = true; }
+      if (dmg > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; shieldHit = true; }
       if (dmg > 0 && foe.eff && foe.eff.armor) {
         const ar = foe.eff.armor, k = hammer ? FX.armor.hammerK : 1, use = Math.min(ar.hp, dmg * k), took = Math.min(dmg, Math.round(use / k));
         ar.hp -= use; absorb += took; dmg -= took; ab = 'armor';
@@ -287,6 +290,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
       if (tier !== 'miss' && !hitSet.has(foe)) { hitSet.add(foe); landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
     }
+    if (spw && shieldHit && u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe });
     if (shieldHit && foe.eff && foe.eff.shield) { delete foe.eff.shield; ev.push({ t: 'expire', who: foe.id, ids: ['shield'], list: listOf(foe) }); }   // 보호막 = 막은 공격 기술이 끝나면 잔량 제거
     if (tries && allMiss) foe.st.dodgedT = T;   // 이 공격을 다 피함(스침은 빗나감 아님) — 휙- 푹찍
     if (u.eff && u.eff.aim) delete u.eff.aim;   // 조준 = 공격 기술 한 번에 소비(맞든 빗나가든)

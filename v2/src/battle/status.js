@@ -30,7 +30,8 @@ export const FX = {
   leech:   { turns: 3, drain: 0.025, now: true },             // 기생: 턴 끝 2.5%를 빨아 처음 건 식물(by = slot)이 회복 · 건 식물이 쓰러지면 끝
   dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
-  gale:    { env: true, turns: 2, missAdd: 12 },              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
+  gale:    { env: true, turns: 2, missAdd: 12 },
+  cave:    { env: true },   // 동굴(스톤캡 타고남 — 스톤캡이 나와 있는 동안 상대 쪽 · 기간 없음 · devices.caveSync 가 깔고 걷음)              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
   taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
   // 포자(엑셀 v10 30행) = 따로 쌓이는 지연 효과: 걸 때마다 하나씩 붙어 각자 셈(상한 없음) · 지연 N턴(기술마다 — 옛 1겹 기술 = 2턴 · 2겹 = 1턴) ·
@@ -64,7 +65,7 @@ const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal'
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -90,6 +91,7 @@ export function mobK(u) {
   let k = ((u && u.modeK && u.modeK.spd) || 1) * statK(u, 'spd');   // 모드(공통 장치 D9) 기동 배율
   if (has(u, 'wet')) k *= FX.wet.mob;
   if (has(u, 'chill')) k *= FX.chill.mob;
+  if (has(u, 'cave')) k *= Math.max(0.2, 1 - CAVE.spd - caveAdds(u).reduce((s, x) => s + (CAVE[x] && CAVE[x].spd || 0), 0));   // 동굴 기동 하락(자갈밭 · 지반붕괴가 더함)
   return k;
 }
 export const effSpd = u => (u.spd || 1) * mobK(u);
@@ -101,8 +103,14 @@ export function evadeK(def, att) {
 export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1) * (stormOn(u) ? 1 - FX.atkDown.v : 1);
 export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
-export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) + (stormOn(u) ? FX.accDown.v : 0) - statSum(u, 'acc');
+export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) + (stormOn(u) ? FX.accDown.v : 0) + (caveAdds(u).includes('gravel') ? CAVE.gravel.acc : 0) - statSum(u, 'acc');
 // 강풍에 덧붙은 공명(게일캑터 — 폭풍 · 치유 · 뇌전): 강풍 안에 들어 있어 강풍과 함께 끝나고 교체 때 같이 옮겨 감 · 폭풍 = 교란 · 쇠약 한 겹 몫(폭풍 동안만 · 쌓이지 않음)
+// 동굴(스톤캡): 기본 기동 −10% · 자갈밭 기동 −10% + 적중 −8 · 지반붕괴 기동 −10% · 이끼덮기 = 설치물 하나당 최대 체력 10% 회복 · 용암지대 = 턴 끝 화상(devices.galeTurn) — 수치는 밸런스 전
+export const CAVE = { spd: 0.1, gravel: { spd: 0.1, acc: 8 }, collapse: { spd: 0.1 }, mossHeal: 0.1 };
+// 소환수(스포어캡): 한꺼번에 최대 셋 · 잠든 포자 · 새끼 = 주인 능력치 30% · 성체 버섯 50% · 평타 위력 30 · 포자회귀 포자 수(잠든 1 · 새끼 2 · 성체 버섯 3) — 수치는 밸런스 전
+export const SUMMON = { max: 3, pct: 0.1, adultPct: 0.2, power: 30, burst: { sleep: 1, baby: 2, adult: 3 } };
+const sumsOf = u => ((u && u.summons) || []).filter(x => x.hp > 0);
+export const caveAdds = u => (u && u.eff && u.eff.cave && u.eff.cave.add) || [];
 export const galeAdds = u => (u && u.eff && u.eff.gale && u.eff.gale.add) || [];
 const stormOn = u => galeAdds(u).includes('storm');
 export const healK = u => (has(u, 'bleed') ? FX.bleed.healK : 1);   // 받는 회복 배율 — 회복 방해는 출혈만(화상은 순수 지속 피해)
@@ -135,6 +143,11 @@ export function useCount(u, s) { if (u && s && s.uses) { u.used = u.used || {}; 
 export function canUse(u, s, energy = u.energy, foe = null) {
   if (!s || (s.cost || 0) > energy) return false;
   if (s.galeAdd && !(foe && has(foe, 'gale') && !galeAdds(foe).includes(s.galeAdd))) return false;   // 공명 = 상대 쪽 강풍이 불 때만 · 같은 공명은 한 번
+  if (s.summon && sumsOf(u).length >= SUMMON.max) return false;   // 소환수 셋이면 못 부름
+  if (s.volley && !sumsOf(u).some(x => x.stage !== 'sleep')) return false;   // 일제 포자 = 깨어난 소환수가 있을 때
+  if (s.grow && !sumsOf(u).some(x => x.stage === 'baby')) return false;   // 커져라! = 새끼가 있을 때
+  if (s.burst && !sumsOf(u).length) return false;   // 포자회귀 = 소환수가 있을 때
+  if (s.caveAdd && s.act === 'hex' && !(foe && has(foe, 'cave') && !caveAdds(foe).includes(s.caveAdd))) return false;   // 설치 = 동굴이 있을 때 · 같은 설치는 한 번(지반붕괴는 공격이라 늘 씀)
   if (usesLeft(u, s) <= 0) return false;
   if (!canUseRes(u, s)) return false;   // 공통 장치: 개수 · 모드 · 체력 비용(devices.js)
   const e = u.eff || {};
@@ -150,7 +163,7 @@ export function listOf(u) {
   if (e.immune) out.push({ id: 'immune' });
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
-  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
+  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp ?? null, add: k === 'cave' ? e.cave.add : undefined } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
   return out;
 }
 
@@ -291,7 +304,7 @@ export function onHit(att, tgt, skill, ctx) {
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }
-  if (skill.inflict) apply(tgt, skill.inflict.id, skill.inflict.n || 1, { ...ctx, by: att }, skill.inflict);   // 기술에 적힌 값(지연 delay · 기간 turns · 이름 look · 한 겹 v)
+  if (skill.inflict && !(skill.inflict.p != null && (ctx.rng ? ctx.rng() : 1) >= skill.inflict.p)) apply(tgt, skill.inflict.id, skill.inflict.n || 1, { ...ctx, by: att }, skill.inflict);   // 기술에 적힌 값(지연 delay · 기간 turns · 이름 look · 한 겹 v)
 }
 
 // 쓰러짐 사건(2026-10-16 — 판정 순서 점검 tools/test/edgecases.mjs): 체력이 0이 된 그 자리에서 한 번만. 먼저 쓰러진 쪽이 진다(model·team이 첫 쓰러짐으로 승패)

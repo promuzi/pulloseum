@@ -462,7 +462,7 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap']);
 const V2 = {
   cactus_wind: {   // 10. 게일캑터 — 방해 디버프 기술 · 강풍이 부는 턴 끝마다 공명 +1, 3이면 무속성 확정 치명(치명 방어엔 정타)
     sp: { res: { reso: [0, 3, '공명'] }, reso: { k: 'reso', at: 3, power: 45, count: ['gale', 'accDown', 'critDown', 'seal'] } },
@@ -486,6 +486,28 @@ const V2 = {
       S('u_gvine_3c', '피해?', 'wind', 'u', 80, 4, { early: true, sure: true }),
     ],
   },
+  stone_cap: {   // 15. 스톤캡 — 동굴의 주인: 나와 있는 동안 상대 쪽에 동굴(개인 환경 · 기동 하락) · 기술이 동굴에 설치물을 더함(스톤캡이 나가면 설치물째 걷힘)
+    sp: { cave: true },
+    skills: [
+      S('u_stone_1', '낙석', 'earth', 'u', 60, 1, { inflict: { id: 'stun', p: 0.15 } }),
+      S('u_stone_2', '자갈밭', 'earth', 'u', 0, 2, { act: 'hex', cats: ['debuff'], caveAdd: 'gravel' }),
+      S('u_stone_2b', '석순', 'earth', 'u', 80, 2, { noShield: true }),
+      S('u_stone_3', '용암지대', 'fire', 'u', 0, 3, { act: 'hex', cats: ['debuff'], caveAdd: 'lava' }),
+      S('u_stone_3b', '지반붕괴', 'earth', 'u', 70, 3, { area: true, inflict: { id: 'stun', p: 0.25 }, caveAdd: 'collapse' }),
+      S('u_stone_3c', '이끼덮기', 'grass', 'u', 0, 2, { cats: ['heal_hp'], moss: true }),
+    ],
+  },
+  spore_cap: {   // 12. 스포어캡 — 소환수 = 잠든 포자 → 다음 턴 시작에 깨어나 새끼(턴 시작마다 평타) · 주인 대신 맞음 · 능력치 = 주인의 %(status.js SUMMON)
+    sp: { summon: true },
+    skills: [
+      S('u_spore_1', '포자 배양', 'grass', 'u', 0, 2, { cats: ['buff'], summon: true }),
+      S('u_spore_2', '포자벽', 'grass', 'u', 0, 2, { self: 'shield', sporeWall: true }),
+      S('u_spore_2b', '일제 포자', 'grass', 'u', 0, 1, { cats: ['attack'], volley: true }),
+      S('u_spore_3', '포자회귀', 'grass', 'u', 0, 3, { act: 'hex', cats: ['debuff'], burst: true }),
+      S('u_spore_3b', '포자작!', 'bolt', 'u', 40, 1, { inflict: { id: 'spore', delay: 2 } }),
+      S('u_spore_3c', '커져라!', 'grass', 'u', 0, 2, { cats: ['buff'], grow: true }),
+    ],
+  },
 };
 for (const [k, v] of Object.entries(V2)) if (SPECIES_V2.has(k)) { Object.assign(SPECIES[k], v.sp); for (const s of v.skills) SKILLS[s.id] = s; }
 // 변이형(변이 연출 설계 2026-10-15: 포식 = 진홍 · 무기 = 강철 · 독성 = 보라 · 포자 = 금빛 · 용족 = 청록) — 포자는 버섯 전용. 일반(무변이) = null
@@ -500,7 +522,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 11;   // 11 = 2026-10-23 종 고유 기술 v2 첫 묶음(게일캑터 · 게일바인 — 피해 없이 거는 기술 · 공명 · 스택 반격 · 반드시 맞음 · 방심하기)
+export const RULES_VER = 12;   // 12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
+//  11 = 2026-10-23 종 고유 기술 v2 첫 묶음(게일캑터 · 게일바인 — 피해 없이 거는 기술 · 공명 · 스택 반격 · 반드시 맞음 · 방심하기)
 //  10 = 2026-10-23 조준 재정의(빗나감 칸 없음 · 치명 +25 · 회피가 옮기는 칸은 스침으로 — 사용자)
 //  9 = 2026-10-23 광역 = 빗나감 · 스침 절반 → 정타(치명 그대로 — 사용자)
 //  8 = 2026-10-23 정화 뒤 보호 없앰(사용자 '보호 없애')

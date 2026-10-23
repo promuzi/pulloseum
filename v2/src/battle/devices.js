@@ -10,8 +10,8 @@
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES } from '../game/catalog.js';
-import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX } from './status.js';
-import { baseDamage, RULES } from './rules.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON } from './status.js';
+import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
 const BUFF_IDS = ['regen', 'will'];   // 빼앗기 · 날리기(엑셀 v10 회수) = 이로운 상태이상만 — 능력치 겹 · 준비 효과 · 환경 · 면역은 대상 아님
@@ -79,6 +79,11 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     if (a.gain.set) resOf(u)[a.gain.k] = Math.min(capOf(u, a.gain.k), n); else addRes(u, a.gain.k, n);
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
+  if (a.moss) mossAct(u, foe, ev);   // 이끼덮기
+  if (a.summon) summonAdd(u, T, ev);   // 포자 배양
+  if (a.sporeWall && u.eff && u.eff.shield) u.eff.shield.spore = true;   // 포자벽
+  if (a.volley) for (const s of liveSums(u).filter(x => x.stage !== 'sleep')) summonHit(u, s, foe, ev, x.rng || (() => 0.5));   // 일제 포자
+  if (a.grow) growSums(u, ev);   // 커져라!
   if (a.infuse) { (u.st ||= {}).infuse = { ...a.infuse }; ev.push({ t: 'infuse', who: u.id, name: u.name, el: a.infuse.el, n: a.infuse.n }); }   // 속성 바꾸기 예약
   if (a.setMode) { u.mode = a.setMode; u.modeK = (SP(u).modes || {})[a.setMode] || null; ev.push({ t: 'mode', who: u.id, mode: a.setMode }); }
   if (!foe || foe.hp <= 0) return;
@@ -190,6 +195,8 @@ export function hexAct(u, foe, a, ctx) {
   if (!foe || foe.hp <= 0) return;
   const sum = frontSum(foe);
   for (const h of a.hex || []) apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
+  if (a.caveAdd) caveAddAct(u, foe, a, ctx.ev);
+  if (a.burst) burstAct(u, foe, ctx);
   if (a.galeAdd && has(foe, 'gale')) {
     const g = foe.eff.gale; g.add = [...(g.add || []), a.galeAdd];
     ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: a.galeAdd === 'storm' ? 'storm' : 'gale', add: a.galeAdd, list: listOf(foe) });
@@ -245,8 +252,76 @@ export function galeTurn(u, opp, turn, ev) {
   const g = u.eff && u.eff.gale, add = (g && g.add) || [];
   if (add.includes('storm')) { const d = Math.max(1, Math.round(u.max * STORM.dot)); u.hp = Math.max(0, u.hp - d); ev.push({ t: 'tick', who: u.id, name: u.name, id: 'storm', dmg: d, list: listOf(u) }); }
   if (add.includes('shock') && u.hp > 0) apply(u, 'shock', 1, { turn, rng: () => 0.5, ev, by: { id: g.by } });
+  const cv = u.eff && u.eff.cave;
+  if (cv && (cv.add || []).includes('lava') && u.hp > 0) apply(u, 'burn', 1, { turn, rng: () => 0.5, ev, by: { id: cv.by } });   // 용암지대 = 턴 끝마다 화상(유지)
   const og = opp && opp.hp > 0 && opp.eff && opp.eff.gale;
   if (!og || u.hp <= 0) return;
   if ((og.add || []).includes('heal') && u.hp < u.max) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
   if (SP(u).reso) resoAdd(u, opp, turn, ev, !!(opp.st && opp.st.guardT === turn));
+}
+
+// 스톤캡 동굴(SPECIES.cave): 앞에 나와 있는 동안 상대 쪽 앞 식물에 동굴(환경 — 상대가 교체해도 새로 나온 식물에게) · 스톤캡이 나가거나 쓰러지면 설치물째 걷힘
+export function caveSync(A, B, ev) {
+  for (const [x, y] of [[A, B], [B, A]]) {
+    if (!y || y.hp <= 0) continue;
+    const want = !!(x && SP(x).cave && x.hp > 0), c = y.eff && y.eff.cave;
+    if (want && !(c && c.by === x.id)) { (y.eff ||= {}).cave = { env: true, by: x.id, add: [] }; ev.push({ t: 'fx', who: x.id, to: y.id, name: y.name, id: 'cave', list: listOf(y) }); }
+    else if (!want && c) { delete y.eff.cave; ev.push({ t: 'expire', who: y.id, ids: ['cave'], list: listOf(y) }); }
+  }
+}
+// 동굴에 설치(자갈밭 · 용암지대 · 지반붕괴 — 같은 것은 한 번) · 이끼덮기 = 설치물을 모두 걷고 하나당 최대 체력 몫 회복(동굴은 남음)
+export function caveAddAct(u, foe, a, ev) {
+  const c = foe && foe.eff && foe.eff.cave;
+  if (!c || foe.hp <= 0 || c.add.includes(a.caveAdd)) return;
+  c.add.push(a.caveAdd);
+  ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: 'cave', add: a.caveAdd, list: listOf(foe) });
+}
+export function mossAct(u, foe, ev) {
+  const c = foe && foe.eff && foe.eff.cave, n = c ? c.add.length : 0;
+  if (!n) return;
+  c.add = [];
+  ev.push({ t: 'expire', who: foe.id, ids: ['cave'], list: listOf(foe) });
+  const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * CAVE.mossHeal * n * healK(u)));
+  ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) });
+}
+
+// 스포어캡 소환수(SPECIES.summon · 수치 status.js SUMMON): 포자 배양 = 잠든 포자(주인 능력치 %) → 소환한 다음 턴 시작에 살아 있으면 새끼 → 깨어난 턴부터 턴 시작마다 평타(무속성)
+//  커져라! = 새끼가 성체 버섯(더 큰 %) · 체력은 남은 비율 그대로 · 포자회귀 = 모두 터뜨려 상대에게 포자 · 주인이 교체되면 사라짐(status.clearOnSwitch)
+const liveSums = u => (u.summons || []).filter(s => s.hp > 0);
+const SUM_NAME = { sleep: '잠든 포자', baby: '새끼', adult: '성체 버섯' };
+function sumStats(u, stage) { const k = stage === 'adult' ? SUMMON.adultPct : SUMMON.pct; return { max: Math.max(1, Math.round(u.max * k)), atk: Math.max(1, Math.round(u.atk * k)), def: Math.max(1, Math.round(u.def * k)) }; }
+export function summonAdd(u, T, ev) {
+  if (liveSums(u).length >= SUMMON.max) return;
+  const st = sumStats(u, 'sleep');
+  (u.summons ||= []).push({ id: `${u.id}_s${(u.sumN = (u.sumN || 0) + 1)}`, name: SUM_NAME.sleep, stage: 'sleep', born: T, key: u.key, el: u.el, jong: u.jong, hp: st.max, ...st, spd: u.spd, acc: 0, eva: 0, crit: 0, eff: {} });
+  ev.push({ t: 'summon', who: u.id, name: SUM_NAME.sleep, n: liveSums(u).length });
+}
+function summonHit(u, s, foe, ev, rng) {
+  if (!foe || foe.hp <= 0 || s.hp <= 0) return;
+  const tgt = frontSum(foe) || foe, veil = tgt === foe && has(foe, 'stealth');
+  const tier = veil && rng() < FX.stealth.miss ? 'miss' : tierOf(hitTable(s, tgt, {}), Math.floor(rng() * 100));
+  if (tier === 'miss') return;
+  if (veil) { delete foe.eff.stealth; ev.push({ t: 'reveal', who: foe.id, id: 'stealth', list: listOf(foe) }); }
+  sideHit(s, foe, SUMMON.power, tier, ev, { who: u.id, from: 'summon', label: s.name });
+}
+export function summonStart(u, foe, T, ev, rng) {
+  if (!u || u.hp <= 0 || !u.summons) return;
+  for (const s of liveSums(u)) if (s.stage === 'sleep' && s.born < T) { s.stage = 'baby'; s.name = SUM_NAME.baby; ev.push({ t: 'summonWake', who: u.id, name: s.name }); }
+  for (const s of liveSums(u)) if (s.stage !== 'sleep') summonHit(u, s, foe, ev, rng);
+}
+function growSums(u, ev) {
+  for (const s of liveSums(u)) {
+    if (s.stage !== 'baby') continue;
+    const r = s.hp / s.max, st = sumStats(u, 'adult');
+    Object.assign(s, st, { stage: 'adult', name: SUM_NAME.adult, hp: Math.max(1, Math.round(st.max * r)) });
+  }
+  ev.push({ t: 'summonGrow', who: u.id });
+}
+function burstAct(u, foe, ctx) {
+  const L = liveSums(u), n = L.reduce((t, s) => t + (SUMMON.burst[s.stage] || 1), 0);
+  L.forEach(() => ctx.ev.push({ t: 'summonBreak', who: u.id, i: 0, name: SUM_NAME.sleep }));
+  u.summons = [];
+  if (!foe || foe.hp <= 0) return;
+  const tgt = frontSum(foe) || foe;
+  for (let i = 0; i < n; i++) apply(tgt, 'spore', 1, { ...ctx, by: u });
 }

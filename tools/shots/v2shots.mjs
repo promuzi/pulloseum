@@ -126,6 +126,8 @@ export const SHOTS = [
   ['07_battle_info', 'battle', { phase: 'pick', venue: 'colosseum', status: '1', info: '1' }],
   ['07_battle_fx', 'battle', { phase: 'pick', venue: 'colosseum', me: 'flower_fire', foe: 'gaia', pre: 'foe:burn,poison3,wet,chill2,shock1,leech;me:dark,gale' }],   // 2026-10-23 엑셀 v10 이름(그늘 = 암실)
   ['07_battle_gale', 'battle', { phase: 'pick', venue: 'colosseum', me: 'cactus_wind', foe: 'aqua', energy: '8', pre: 'foe:storm;me:reso2' }],   // 종 고유 v2(2026-10-23 게일캑터 — 공명 기술은 상대 쪽 강풍이 불 때만)
+  ['07_battle_spore', 'battle', { phase: 'pick', venue: 'colosseum', me: 'spore_cap', foe: 'aqua', energy: '8', pre: 'me:sum1,kid2' }],   // 종 고유 v2(스포어캡 소환수)
+  ['07_battle_stone', 'battle', { phase: 'pick', venue: 'colosseum', me: 'stone_cap', foe: 'aqua', energy: '8' }],   // 종 고유 v2(스톤캡 동굴)
   ['07_battle_gvine', 'battle', { phase: 'pick', venue: 'colosseum', me: 'vine_wind', foe: 'aqua', energy: '8', pre: 'me:evs3' }],   // 종 고유 v2(게일바인)
   ['07_battle_skip', 'battle', { phase: 'pick', venue: 'colosseum', pre: 'me:stun;foe:atkDown,defDown' }],
   ['07_battle_bind', 'battle', { phase: 'pick', venue: 'colosseum', energy: '4', pre: 'me:seal,taunt' }],

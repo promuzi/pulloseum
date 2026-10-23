@@ -3,7 +3,7 @@
 import { makeUnit } from '../../v2/src/battle/model.js';
 import { protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { endTurn, expire, canUse, has, missAddOf, atkK } from '../../v2/src/battle/status.js';
+import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd } from '../../v2/src/battle/status.js';
 import { BASICS } from '../../v2/src/battle/model.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 import { SKILLS, SPECIES_V2 } from '../../v2/src/game/catalog.js';
@@ -122,6 +122,9 @@ ok(SPECIES_V2.has('vine_wind'), '게일바인 v2 켜짐');
   const g2 = mk('me', 'vine_wind', { spd: 99 }), f2 = mk('foe', 'aqua', { spd: 1, eff: { stealth: { look: 'stealth', link: null } } });
   const h2 = turn(g2, f2, SKILLS.u_gvine_3c, OTHER, 1, () => 0).find(e => e.t === 'hit' && e.who === 'me');
   ok(h2 && h2.tier === 'crit' && !has(f2, 'stealth'), '은신도 찾아내 맞힘');
+  const g5 = mk('me', 'vine_wind', { spd: 99 }), f5 = mk('foe', 'aqua', { spd: 1 });
+  const h5 = turn(g5, f5, SKILLS.u_gvine_3c, B('guard'), 1, () => 0).find(e => e.t === 'hit' && e.who === 'me');
+  ok(h5 && h5.tier === 'hit', '피해?의 확정 치명은 방어태세에 막혀 보통 타격(2026-10-24 사용자)');
   const g3 = mk('me', 'vine_wind'), f3 = mk('foe', 'aqua');
   const ev3 = turn(g3, f3, SKILLS.u_gvine_3b, OTHER, 1);
   ok(ev3.filter(e => e.t === 'hit' && e.who === 'me').length === 3 && has(f3, 'gale'), '빠르지? 열받지? = 3타 + 상대 쪽 강풍');
@@ -129,6 +132,67 @@ ok(SPECIES_V2.has('vine_wind'), '게일바인 v2 켜짐');
   turn(g4, f4, SKILLS.u_gvine_2, OTHER, 1);
   ok(f4.eff.taunt && f4.eff.accDown, '이딴게.. 공격? = 도발 + 교란');
   ok(!SKILLS.u_gvine_1.uses && SKILLS.u_gvine_1.self === 'stealth' && SKILLS.u_gvine_1.link.ambush, '그건 내 잔상인데? = 횟수 제한 없는 은신 · 피하면 기습');
+}
+// ── 15. 스톤캡 ──
+ok(SPECIES_V2.has('stone_cap'), '스톤캡 v2 켜짐');
+{
+  const s = mk('me', 'stone_cap'), f = mk('foe', 'aqua'), sp0 = effSpd(f);
+  turn(s, f, OTHER, OTHER, 1);
+  ok(has(f, 'cave') && effSpd(f) < sp0, '스톤캡이 나와 있으면 상대 쪽에 동굴 — 기동 하락');
+  const m0 = missAddOf(f), sp1 = effSpd(f);
+  turn(s, f, SKILLS.u_stone_2, OTHER, 2);
+  ok(effSpd(f) < sp1 && missAddOf(f) > m0, '자갈밭 = 기동 · 적중 더 떨어짐');
+  ok(!canUse(s, SKILLS.u_stone_2, 8, f), '같은 설치는 한 번');
+  turn(s, f, SKILLS.u_stone_3, OTHER, 3);
+  ok(has(f, 'burn'), '용암지대 = 턴 끝마다 상대에게 화상');
+  const sp2 = effSpd(f);
+  turn(s, f, SKILLS.u_stone_3b, OTHER, 4);
+  ok(effSpd(f) < sp2, '지반붕괴 = 기동 더 떨어짐(설치)');
+  s.hp = Math.round(s.max * 0.5); const h0 = s.hp;
+  turn(s, f, SKILLS.u_stone_3c, OTHER, 5);
+  ok(s.hp > h0 && f.eff.cave && !(f.eff.cave.add || []).length && Math.abs(effSpd(f) - sp1) < 1e-9, '이끼덮기 = 설치물 걷고 그 수만큼 회복 · 동굴(기동 하락)은 남음');
+  const t = mk('foe', 'aqua'); turn(mk('me', 'aqua'), t, OTHER, OTHER, 1);
+  ok(!has(t, 'cave'), '스톤캡이 아니면 동굴 없음');
+  const s2 = mk('me', 'stone_cap'), f2 = mk('foe', 'aqua', { eff: { shield: { hp: 999 } } });
+  const h2 = turn(s2, f2, SKILLS.u_stone_2b, OTHER, 1).find(e => e.t === 'hit' && e.who === 'me');
+  ok(h2 && h2.dmg > 0 && !h2.absorb, '석순 = 보호막 무시');
+  ok(SKILLS.u_stone_1.inflict.id === 'stun' && SKILLS.u_stone_1.inflict.p < 0.5, '낙석 = 낮은 확률 기절');
+}
+// ── 12. 스포어캡 ──
+ok(SPECIES_V2.has('spore_cap'), '스포어캡 v2 켜짐');
+{
+  const ONE = { id: 'one', name: '한 방', act: 'attack', power: 60, cost: 0, cats: ['attack'], el: 'water' };
+  const s = mk('me', 'spore_cap'), f = mk('foe', 'aqua');
+  turn(s, f, SKILLS.u_spore_1, OTHER, 1);
+  ok(s.summons && s.summons.length === 1 && s.summons[0].stage === 'sleep' && s.summons[0].hp > 0, '포자 배양 = 잠든 포자 하나(체력 있음)');
+  ok(!canUse(s, SKILLS.u_spore_2b, 8, f), '깨어난 소환수가 없으면 일제 포자 못 씀');
+  const fh = f.hp, ev = turn(s, f, OTHER, OTHER, 2);
+  ok(s.summons[0].stage === 'baby' && ev.some(e => e.t === 'counter' && e.from === 'summon') && f.hp < fh, '다음 턴 시작에 깨어나 새끼 · 그 턴부터 평타');
+  const sh0 = s.summons[0].hp, oh0 = s.hp;
+  turn(s, f, OTHER, ONE, 3, () => 0.5);
+  ok(s.summons.length === 0 || s.summons[0].hp < sh0, '상대 공격은 앞 소환수가 대신 맞음');
+  ok(s.hp === oh0, '주인은 안 맞음(한 타로 깨져도 남는 피해는 안 넘어감)');
+  const s2 = mk('me', 'spore_cap'), f2 = mk('foe', 'aqua');
+  for (let i = 1; i <= 4; i++) turn(s2, f2, SKILLS.u_spore_1, OTHER, i);
+  ok(s2.summons.length === 3, '소환수는 한꺼번에 최대 셋');
+  ok(canUse(s2, SKILLS.u_spore_2b, 8, f2), '깨어난 새끼가 있으면 일제 포자');
+  const n0 = turn(s2, f2, SKILLS.u_spore_2b, OTHER, 5).filter(e => e.t === 'counter' && e.from === 'summon').length;
+  ok(n0 >= 5, `일제 포자 = 턴 시작 평타 + 지금 한 번 더 (${n0}번)`);
+  const before = s2.summons.map(x => x.hp / x.max), atk0 = s2.summons[0].atk;
+  turn(s2, f2, SKILLS.u_spore_3c, OTHER, 6);
+  ok(s2.summons.every(x => x.stage === 'adult') && s2.summons[0].atk > atk0, '커져라! = 깨어난 새끼가 성체 버섯 · 능력치 오름');
+  ok(s2.summons.every((x, i) => Math.abs(x.hp / x.max - before[i]) < 0.05 || x.hp / x.max <= before[i]), '체력은 남은 비율 그대로');
+  turn(s2, f2, SKILLS.u_spore_3, OTHER, 7);
+  ok(!s2.summons || !s2.summons.length, '포자회귀 = 소환수를 모두 터뜨림');
+  ok(f2.eff.spore && f2.eff.spore.n >= 6, `소환수마다 상대에게 포자(성체 버섯 셋 = ${f2.eff.spore && f2.eff.spore.n})`);
+  const s3 = mk('me', 'spore_cap'), f3 = mk('foe', 'aqua');
+  turn(s3, f3, SKILLS.u_spore_2, OTHER, 1);
+  ok(s3.eff.shield && s3.eff.shield.spore, '포자벽 = 보호막');
+  turn(s3, f3, OTHER, ONE, 2, () => 0.5);
+  ok(f3.eff.spore, '포자벽이 막으면 때린 상대에게 포자 하나');
+  const s4 = mk('me', 'spore_cap'), f4 = mk('foe', 'aqua');
+  const h4 = turn(s4, f4, SKILLS.u_spore_3b, OTHER, 1, () => 0.5).find(e => e.t === 'hit' && e.who === 'me');
+  ok(SKILLS.u_spore_3b.el === 'bolt' && h4 && h4.tier !== 'miss' && f4.eff.spore, '포자작! = 번개 평타 + 포자');
 }
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

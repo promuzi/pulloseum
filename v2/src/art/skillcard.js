@@ -343,6 +343,8 @@ export function cardSlot(g, x, y, w, h, label = '') {
   if (label) g.text(label, x + w / 2, y + Math.round(h / 2) - 6, { color: C.dim, align: 'center' });
 }
 
+const SUM_TEXT = [['summon', '잠든 포자 하나 — 다음 턴 시작에 깨어나 새끼(턴 시작마다 평타) · 나 대신 맞음 · 최대 셋'], ['sporeWall', '보호막이 막으면 때린 상대에게 포자 하나'], ['volley', '깨어난 새끼 · 성체 버섯이 모두 지금 평타 한 번 더'], ['burst', '소환수를 모두 터뜨려 상대에게 포자(잠든 포자 1 · 새끼 2 · 성체 버섯 3)'], ['grow', '새끼가 모두 성체 버섯으로(능력치 오름 · 체력 비율 그대로)']];
+const CAVE_ADD_TEXT = { gravel: '동굴에 자갈밭 — 상대 기동 · 적중이 더 떨어짐(스톤캡이 나가면 걷힘)', lava: '동굴에 용암 — 턴 끝마다 상대에게 화상(스톤캡이 나가면 걷힘)', collapse: '동굴에 무너진 땅 — 상대 기동이 더 떨어짐(스톤캡이 나가면 걷힘)' };
 const GALE_ADD_TEXT = { storm: '상대 쪽 강풍이 불 때만 · 남은 강풍이 폭풍으로(턴 끝 피해 · 교란 · 쇠약)', heal: '상대 쪽 강풍이 불 때만 · 강풍 동안 우리 편 턴 끝 회복', shock: '상대 쪽 강풍이 불 때만 · 강풍 동안 상대 턴 끝 감전' };
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
@@ -386,6 +388,11 @@ function cardBack(g, w, h, sk, o) {
     if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
   }
   if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd], '#c0a8ff');
+  if (sk.caveAdd) line(CAVE_ADD_TEXT[sk.caveAdd], '#d9b27a');
+  if (SUM_TEXT.find(([k]) => sk[k])) line(SUM_TEXT.find(([k]) => sk[k])[1], '#b8e07a');
+  if (sk.moss) line('동굴 설치물을 모두 걷고 하나당 체력 10% 회복(동굴은 남음)', '#9ff0b0');
+  if (sk.noShield) line('보호막을 무시하고 들어감', '#9fd8ff');
+  if (sk.inflict && sk.inflict.p != null) line(`${Math.round(sk.inflict.p * 100)}% 확률로 걸림`, C.sub);
   if (sk.critIfDodged) line('나중에 움직임 · 먼저 친 상대가 나를 빗나갔으면 확정 치명 · 내가 먼저면 치명 없음', '#9fd8ff');
   if (sk.bare) line(`이번 턴 상대 공격을 빗나감 · 스침 없이 다 맞고 받는 피해 −${Math.round((1 - sk.bare) * 100)}%`, '#9fd8ff');
   if (sk.sure) line('반드시 맞음 · 방어태세 · 회피 자세 · 은신 무시 · 먼저 움직이면 확정 치명', '#9fd8ff');

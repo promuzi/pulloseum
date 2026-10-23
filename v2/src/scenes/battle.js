@@ -10,7 +10,7 @@ import { CAT_ICON, CAT_NAME, SPECIES } from '../data/mock.js';
 import { makeUnit, makeBattle, playTurn, elemMult, REST, randomOk } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats, swapWait } from '../battle/team.js';
 import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, usesLeft } from '../battle/status.js';
-import { resLine, FIELD, RES_ICON } from '../battle/devices.js';
+import { resLine, FIELD, RES_ICON, summonAdd } from '../battle/devices.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
@@ -408,6 +408,7 @@ export const battle = {
         if (!m) continue;
         if (m[1] === 'storm') { applyFx(u, 'gale', 1, c); if (u.eff.gale) (u.eff.gale.add ||= []).push('storm'); }   // 폭풍(강풍 + 폭풍 공명)
         else if (m[1] === 'reso' || m[1] === 'evs') (u.res ||= {})[m[1]] = +(m[2] || 0);   // 개수 칸(공명 · 스택)
+        else if (m[1] === 'sum' || m[1] === 'kid') for (let i = 0; i < +(m[2] || 1); i++) { summonAdd(u, 0, []); if (m[1] === 'kid') { const s = u.summons[u.summons.length - 1]; s.stage = 'baby'; s.name = '새끼'; } }   // 소환수(스포어캡 — 잠든 포자 · 새끼)
         else applyFx(u, m[1], +(m[2] || 1), c);
       }
     }
@@ -891,6 +892,11 @@ export const battle = {
       unit('foe', ex, ey, true, 1600);
       if (fr) board('mid');
       unit('me', px, py, false, 0);
+      for (const [who, x0, y0, dir] of [['foe', ex + 36, ey, 1], ['me', px - 47, py, -1]]) ((this.B[who] && this.B[who].summons) || []).filter(s => s.hp > 0).forEach((s, i) => {   // 소환수(스포어캡): 식물 옆 작은 버섯 + 체력 줄
+        const ic = icon(s.stage === 'sleep' ? 'st_spore' : 'mushroom'), x = x0 + dir * i * 14, y = y0 - 14;
+        if (ic) g.img(ic, x, y);
+        g.rect(x - 1, y + 13, 14, 2, '#1a1a1a'); g.rect(x - 1, y + 13, Math.max(1, Math.round(14 * s.hp / s.max)), 2, s.stage === 'sleep' ? '#9fb0c8' : '#7be08a');
+      });
       if (fr) { board('front'); board('air'); }
       if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, t - v.t0, st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22)
       if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
