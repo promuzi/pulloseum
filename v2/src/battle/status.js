@@ -292,7 +292,7 @@ export function onHit(att, tgt, skill, ctx) {
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }
-  if (skill.inflict) apply(tgt, skill.inflict.id, skill.inflict.n || 1, { ...ctx, by: att });
+  if (skill.inflict) apply(tgt, skill.inflict.id, skill.inflict.n || 1, { ...ctx, by: att }, skill.inflict);   // 기술에 적힌 값(지연 delay · 기간 turns · 이름 look · 한 겹 v)
 }
 
 // 쓰러짐 사건(2026-10-16 — 판정 순서 점검 tools/test/edgecases.mjs): 체력이 0이 된 그 자리에서 한 번만. 먼저 쓰러진 쪽이 진다(model·team이 첫 쓰러짐으로 승패)

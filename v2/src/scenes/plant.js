@@ -38,7 +38,7 @@ const skillOf = id => (id ? { act: 'attack', cats: ['attack'], ...SKILLS[id] } :
 const skOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p.key).find(b => b.id === id), basic: true } : isSkillCard(id) ? cardSkillOf(p, id) : skillOf(id));   // 기술 카드 = 전투에서 쓰는 모습(숨결 속성 · 단조 위력)
 const cardGrid = W => { const C3 = PCARD.cols, x0 = Math.round((W - C3 * PCARD.w - (C3 - 1) * PCARD.gx) / 2); return { x0, RW: C3 * PCARD.w + (C3 - 1) * PCARD.gx, cx: i => x0 + (i % C3) * (PCARD.w + PCARD.gx), ry: i => Math.floor(i / C3) * (PCARD.h + PCARD.gy), rowsH: n => Math.ceil(Math.max(1, n) / C3) * (PCARD.h + PCARD.gy) - PCARD.gy }; };   // 카드 셋씩 줄(가운데)
 const faceOn = (p, id) => (isSkillCard(id) ? cardSkillOf(p, id) : cardFace(id));   // 카드 칸에 끼운 카드
-const fxOf = sk => (sk.inflict ? { id: sk.inflict.id } : sk.self ? { buff: BUFF_LOOK[sk.self] || sk.self } : null);
+const fxOf = sk => (sk.inflict ? { id: sk.inflict.look || sk.inflict.id } : sk.self ? { buff: BUFF_LOOK[sk.self] || sk.self } : sk.reflect ? { id: 'reflect' } : null);   // 엑셀 v10 이름(암실 기술은 그 이름 — 그늘)
 
 // 기술 카드: 이름 · 속성 / 분류 · 효과 칩 · 비용. 조커 칸 = 금빛 테, 고른 칸 = 청록 테, 새 기술 = 주황 테
 function skillCard(app, id, x, y, w, h, sk, sel, onTap, frame = null, emptyLabel = '빈 칸') {

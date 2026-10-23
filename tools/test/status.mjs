@@ -498,6 +498,12 @@ const fixed = v => () => v;
   ok(all.filter(s => s.inflict && s.inflict.id === 'spore').every(s => s.inflict.delay >= 1 && s.inflict.n == null), '포자 기술 = 지연 턴(delay)으로');
   ok(CSK.u_ninja_2.self === 'stealth' && CSK.u_ninja_2.look === 'clone' && CSK.u_ninja_2.link && CSK.u_ninja_2.link.hits === 3 && CSK.u_ninja_3b.self === 'stealth' && CSK.u_ninja_3b.link.ambush && CSK.u_ninja_3b.act === 'buff', '닌자바인 은신 기술 둘 = 공통 은신 + 이어 공격(연타 · 기습)');
   ok(RULES_VER === 6, `RULES_VER = 6(${RULES_VER})`);
+  // 기술에 적힌 효과 값(지연 · 기간 · 이름)이 실제로 걸 때 쓰임
+  const hitWith = inf => { const a = mk('me', 'gaia'), b = mk('foe', 'aqua'); resolveTurn(a, b, { ...a.kit[0], inflict: inf }, REST, fixed(0.5), { turn: 1 }); return b; };
+  const sp1 = hitWith({ id: 'spore', delay: 1 }), dk = hitWith({ id: 'dark', turns: 1, look: 'shade' }), gl = hitWith({ id: 'gale', turns: 3 });
+  ok(sp1.eff.spore && sp1.eff.spore.left[0] === 2, `기술의 포자 지연 1턴이 걸 때 쓰임(${sp1.eff.spore && sp1.eff.spore.left})`);
+  ok(listOf(dk).some(x => x.id === 'shade'), '기술의 암실 이름(그늘)이 걸 때 쓰임');
+  ok(gl.eff.gale && gl.eff.gale.exp === 3, `기술의 강풍 기간 3턴이 걸 때 쓰임(${gl.eff.gale && gl.eff.gale.exp})`);
   ok(!OLD_ || !Object.keys(OLD_).length, '옛 이름 바꿈표를 비움');
 }
 // ── 9. 같은 씨앗 → 같은 결과 ──

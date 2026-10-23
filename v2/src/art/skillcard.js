@@ -26,11 +26,11 @@ const BUFF_KEY = { purify: 'purified' };   // 기술의 self 이름 → 효과 �
 // 기본기 설명(battle/model.js BASICS 규칙 그대로)
 const BASIC_DESC = {
   basic: ['누구나 쓰는 공짜 공격'],
-  guard: ['순서와 상관없이 방어력 4배', '한 번 맞으면 태세 해제', '연속 사용하면 방어력 2.5배'],
+  guard: ['순서와 상관없이 방어력 4배', '그 턴 모든 공격을 막음', '연속 사용하면 방어력 2.5배'],
   evade: ['먼저든 늦게든 성립', '상대 공격이 빗나갈 확률 +15', '스칠 확률 +10'],
 };
-export const LOCK_TEXT = { bind: '덩굴에 묶여 이번 턴 못 씀', taunt: '도발에 넘어가 자세를 못 씀' };
-const LOCK_SHORT = { bind: '묶임', taunt: '도발' };   // 카드 앞면(그림 위)
+export const LOCK_TEXT = { seal: '봉인되어 이번 턴 못 씀', taunt: '도발에 넘어가 공격 기술만 씀' };
+const LOCK_SHORT = { seal: '봉인', taunt: '도발' };   // 카드 앞면(그림 위)
 export const ART_W = 58, ART_H = 52;   // 그림 칸(논리 칸) — 코덱스 그림은 tools/pixel/big/bgconv.mjs --fit --w=58 --h=52 로 줄여 assets/v2/skills/<기술 id>.png
 
 // ── 스킬 그림(코덱스 원화 → 도트). 없으면 임시 그림 ──
@@ -172,7 +172,7 @@ export function statOf(sk, o = {}) {
   if (sk.act === 'guard') return { kind: 'block', txt: '×' + guardDefMult(sk, half), label: '방어력', half };
   if (sk.act === 'evade') return sk.shift && sk.shift.miss ? { kind: 'dodge', txt: Math.round(sk.shift.miss * k) + '%', label: '회피', half } : null;
   for (const b of [sk.self, sk.also]) {   // 버프 기술은 주 효과(self)부터 수가 있는 것 하나
-    if (b === 'wall' || b === 'defUp') return { kind: 'block', txt: '+' + pct(FX.defUp.v), label: '방어' };   // 억셈(옛 철벽) = 방어 +%
+    if (b === 'defUp') return { kind: 'block', txt: '+' + pct(FX.defUp.v), label: '방어' };   // 억셈 = 방어 +%
     if (b === 'shield') return { kind: 'barrier', txt: pct(FX.shield.hp), label: '보호막' };
     if (b === 'armor') return { kind: 'barrier', txt: pct(FX.armor.hp), label: '방어구' };
     if (b === 'regen') return { kind: 'heal', txt: pct(FX.regen.heal * FX.regen.turns), label: '회복' };
@@ -373,16 +373,17 @@ function cardBack(g, w, h, sk, o) {
   if (sk.drain) line(`때린 피해의 ${Math.round(sk.drain * 100)}%만큼 회복`, '#9ff0b0');
   if (st && st.half) line(`바로 전 턴에도 같은 자세 — 효과 절반`, '#ffd890');
   const fx = [];
-  if (sk.inflict) fx.push({ id: sk.inflict.id, n: sk.inflict.n || 1, to: '상대에게' });
-  if (sk.self) fx.push({ id: BUFF_KEY[sk.self] || sk.self, buff: BUFF_LOOK[sk.self], to: '나에게' });
-  if (sk.also) fx.push({ id: BUFF_KEY[sk.also] || sk.also, buff: BUFF_LOOK[sk.also], to: '나에게' });
+  if (sk.inflict) fx.push({ id: sk.inflict.look || sk.inflict.id, n: sk.inflict.n || 1, to: '상대에게', delay: sk.inflict.delay });
+  for (const b of [sk.self, sk.also]) if (b) fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), to: '나에게' });
+  if (sk.reflect) fx.push({ id: 'reflect', to: '이번 턴' });   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타)
   for (const f of fx) {
     y += 2;
-    const cwid = fxChip(g, P, y, f.buff ? null : f.id, f.buff);
-    g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : ''), P + cwid + 6, y + 2, { color: C.sub });
+    const cwid = fxChip(g, P, y, STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id);
+    g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, y + 2, { color: C.sub });
     y += 19;
     if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
   }
+  if (sk.link) line(`피하면 바로 이어 공격 — 위력 ${sk.link.hits > 1 ? `${sk.link.power}×${sk.link.hits}` : sk.link.power}${sk.link.ambush ? ' · 기습(×1.5 · 자세 무시)' : ''}`, '#9fd8ff');
   // 지금 상대에게의 상성(공격 기술)
   if (o.foe && sk.act === 'attack') {
     y += 4; g.rect(P, y, cw, 1, hexMix(C.line, C.ink, 0.6)); y += 8;

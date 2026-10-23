@@ -13,9 +13,11 @@ export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, par
   rage: 900, wall: 800, haste: 750, regen: 900, heal: 700, thorns: 850, thornsHit: 450, shield: 950, shieldHit: 400, purified: 900, focus: 800 };
 // 사건 → 연출: 걸릴 때(fx) · 턴 끝 피해(tick) · 피어남(bloom) · 쉬는 차례(skip: 얼음 · 마비 · 기절) · 풀림(cure = 김)
 //  화상: 걸릴 때 = ignite(불이 확 붙어 일렁이다 잦아듦 + 타닥), 턴 끝 피해 = burn(불꽃이 잠깐 다시 솟음 + 타닥)
+// 2026-10-23 엑셀 v10 이름 → 있던 연출(활력 = 분노 불꽃 · 억셈 = 철벽 · 가속 · 쇠약 = 약화 · 시듦 = 부식 · 봉인 = 덩굴 · 암실 · 그늘 = 그늘 · 조준 = 집중 · 출혈 = 약화 붉은 빛)
 export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore',
-  bind: 'bind', root: 'root', leech: 'leech', weak: 'weak', taunt: 'taunt', corrode: 'corrode', shade: 'shade', gale: 'gale',
-  rage: 'rage', wall: 'wall', haste: 'haste', regen: 'regen', thorns: 'thorns', shield: 'shield', purified: 'purified', focus: 'focus' };
+  seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale', bleed: 'weak',
+  atkDown: 'weak', defDown: 'corrode', spdDown: 'weak', critDown: 'weak', accDown: 'weak',
+  atkUp: 'rage', defUp: 'wall', spdUp: 'haste', critUp: 'focus', accUp: 'focus', flourish: 'haste', regen: 'regen', will: 'purified', shield: 'shield', purified: 'purified', aim: 'focus' };
 export function sfxAdd(list, who, kind, t, o = null) { if (!SFX_LIFE[kind]) return null; const e = { who, kind, t0: t, id: (list.n = (list.n || 0) + 1), ...(o || {}) }; list.push(e); return e; }
 // 화상 타닥 시각(ms, 불똥이 터지는 때) — 소리를 같은 때에 내려고
 export const popTimes = e => (POPS[e.kind === 'ignite' ? 'ignite' : 'burn'] || []).map((ms, k) => ms + Math.round((hash(e.id, k + 40) - 0.5) * 40));

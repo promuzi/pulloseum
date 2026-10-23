@@ -76,11 +76,13 @@ import { battleFromView, applyView } from '../game/fight.js';
 import { bot, net, room as R } from '../net/api.js';
 import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
-import { ga, eul } from '../core/josa.js';
+import { ga, eul, eun, ro } from '../core/josa.js';
 import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
-const FX_SOUND = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', bind: 'bind', root: 'root', leech: 'leech', weak: 'weak', taunt: 'taunt', corrode: 'corrode', shade: 'shade', gale: 'gale', rage: 'rage', wall: 'wall', haste: 'haste', regen: 'regen', thorns: 'thorns', shield: 'shield', purified: 'purify', focus: 'focus' };
+const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale',
+  atkDown: 'weak', defDown: 'corrode', spdDown: 'weak', critDown: 'weak', accDown: 'weak', atkUp: 'rage', defUp: 'wall', spdUp: 'haste', critUp: 'focus', accUp: 'focus', flourish: 'haste',
+  regen: 'regen', will: 'purify', shield: 'shield', purified: 'purify', aim: 'focus' };   // 2026-10-23 엑셀 v10 이름(소리는 있던 것)
 const crackles = e => { if (e) for (const ms of popTimes(e)) sfx('crackle', { at: ms / 1000 }); };
 import { TFX, setTfx, popLife, wordSlot, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
 
@@ -208,12 +210,12 @@ function statusWins(g, x, y, list) {
     if (st.more) { holo(g, X, Y, w, SW_H, SW_ON, 16); g.text(`+${st.more}`, X + (w >> 1), Y + ty, { font: 'bold', color: SW_ON.text, align: 'center' }); return; }
     const D = STATUS[st.id] || { name: st.name || st.id, icon: 'sparkle', buff: !!st.buff }, S = D.buff ? SW_ON : swStyle(D.col || '#ff6a6a');
     holo(g, X, Y, w, SW_H, S, 16);
-    const nw = g.textW(D.name), num = D.stack && st.n ? String(Math.min(st.n, D.stack)) : null, rest = nw + (num ? 2 + g.textW(num) : 0);
-    const ic = D.icon && rest + 11 <= w - 4 ? icon(D.icon) : null, gap = ic && rest + 12 > w - 4 ? 11 : 12;
+    const named = st.t == null, nw = named ? g.textW(D.name) : -2, num = D.stack && st.n ? String(Math.min(st.n, D.stack)) + (st.t != null ? '·' + st.t : '') : null, rest = nw + (num ? 2 + g.textW(num) : 0);   // 포자 = 아이콘 + 개수 · 가장 빨리 피기까지 남은 턴(엑셀 v10 — 이름 없이)
+    const ic = D.icon && (rest + 11 <= w - 4 || !named) ? icon(D.icon) : null, gap = ic && rest + 12 > w - 4 ? 11 : 12;
     const cw = (ic ? gap : 0) + rest;
     let cx = X + Math.max(2, (w - cw) >> 1);
     if (ic) { g.img(ic, cx, Y + Math.round((SW_H - ic.height) / 2)); cx += gap; }
-    g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
+    if (named) g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
     if (num) g.text(num, cx, Y + ty, { color: S.num });
   });
 }
@@ -222,23 +224,28 @@ const FX_MSG = {
   burn: x => `${ga(x)} 화상을 입었다!`, poison: (x, e) => (e.n > 1 ? `${x}에게 독이 ${e.n}겹 쌓였다!` : `${ga(x)} 독에 걸렸다!`), wet: x => `${ga(x)} 흠뻑 젖었다! 둔해지고 적중·방어가 떨어진다`,
   chill: (x, e) => `${ga(x)} 얼어 간다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''), shock: (x, e) => `${ga(x)} 감전됐다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''),
   flourish: (x, e) => `${ga(x)} 만개했다!` + (e.list && (e.list.find(s => s.id === 'flourish') || {}).n > 1 ? ` (${e.list.find(s => s.id === 'flourish').n}겹)` : ''),
-  armor: x => `${x}에게 방어구가 둘러졌다!`, stealth: x => `${ga(x)} 그림자 속으로 숨었다!`, clone: x => `${ga(x)} 분신을 만들었다!`,
+  armor: x => `${x}에게 갑주가 둘러졌다!`, stealth: x => `${ga(x)} 그림자 속으로 숨었다!`, clone: x => `${ga(x)} 분신을 만들었다!`,
   frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`,
   spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
-  bind: (x, e) => `덩굴이 ${x}의 ${eul(e.skill)} 묶었다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 햇빛이 안 찬다`,
-  gale: x => `${x}에게 강풍이 몰아쳤다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 자세를 못 잡는다`, root: x => `${x}의 뿌리가 묶였다! 교체할 수 없다`,
-  weak: x => `${ga(x)} 약해졌다! 공격이 떨어진다`, corrode: x => `${x}의 껍질이 부식됐다! 방어가 떨어진다`,
-  // 버프
-  rage: x => `${x}의 공격이 불타오른다!`, wall: x => `${ga(x)} 단단해졌다! 받는 피해가 준다`, haste: x => `${x}의 몸이 가벼워졌다!`, regen: x => `${x}에게 재생이 깃들었다!`,
-  thorns: x => `${x}에게 가시가 돋았다!`, shield: x => `${x}에게 보호막이 생겼다!`, purified: (x, e) => (e.ids && e.ids.length ? `${x}의 나쁜 효과가 씻겨 나갔다!` : `${x}의 몸이 맑아졌다!`), focus: x => `${ga(x)} 정신을 집중한다! 다음 공격 치명 ↑`,
+  seal: (x, e) => `${x}의 ${eul(e.skill)} 봉인했다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 햇빛이 안 찬다`, dark: x => `${x}의 햇빛이 가려졌다!`,
+  gale: x => `${x} 쪽에 강풍이 몰아친다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 다음 턴엔 공격만 한다`, root: x => `${x}의 발이 묶였다! 다음 턴 교체할 수 없다`,
+  bleed: x => `${x}에게 상처가 났다! 피가 흐른다`,
+  // 능력치 겹(겹 수가 둘 이상이면 함께)
+  ...Object.fromEntries([['atkDown', '공격이 떨어진다'], ['defDown', '방어가 떨어진다'], ['spdDown', '몸이 둔해졌다'], ['critDown', '날이 무뎌졌다'], ['accDown', '눈앞이 흐려졌다'],
+    ['atkUp', '힘이 솟는다'], ['defUp', '몸이 단단해졌다'], ['spdUp', '몸이 가벼워졌다'], ['critUp', '날이 예리해졌다'], ['accUp', '정신을 집중한다']].map(([k, m]) => [k, (x, e) => `${x}의 ${m}!` + (e.n > 1 ? ` (${e.n}겹)` : '')])),
+  regen: x => `${x}에게 재생이 깃들었다!`, will: x => `${ga(x)} 의지를 다진다!`,
+  shield: x => `${x}에게 보호막이 생겼다!`, purified: (x, e) => (e.ids && e.ids.length ? `${x}의 나쁜 효과가 씻겨 나갔다!` : `${x}의 몸이 맑아졌다!`), aim: x => `${ga(x)} 겨눈다! 다음 공격 치명 ↑`,
 };
-const CURE_FIRE = { frozen: '얼음이 녹았다', chill: '냉기가 녹았다', wet: '몸이 말랐다', spore: '포자가 탔다', bind: '덩굴이 탔다', leech: '기생 씨앗이 탔다', root: '뿌리가 풀렸다' };
-const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서' };
-const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서' }, SKIP_AUTO_MS = 1100;
+const CURE_FIRE = { chill: '냉기가 녹았다', wet: '몸이 말랐다', spore: '포자가 탔다', leech: '기생 씨앗이 탔다' };
+const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서', blocked: '쓸 기술이 없어' };
+const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서', blocked: '쓸 기술이 없어서' }, SKIP_AUTO_MS = 1100;
+// 막힘 사건(resist)의 까닭 → 머리 위 한 마디 · 문장(2026-10-23 엑셀 v10: 면역 · 의지 · 속박 한 번 · 강풍 켜져 있음 · 정화 보호 · 이미 쉬는 중)
+const RESIST_POP = { immune: '면역!', will: '의지!', once: '안 묶임', env: '이미 강풍', purify: '버팀!', skip: '버팀!' };
+const RESIST_MSG = { immune: x => `${ga(x)} 방금 쉬어서 기절하지 않는다`, will: x => `${ga(x)} 의지로 버텼다!`, once: x => `${eun(x)} 이미 한 번 묶였다`, env: () => '이미 강풍이 불고 있다', purify: x => `${ga(x)} 정화 덕분에 버텼다!`, skip: x => `${eun(x)} 이미 쉬는 중이다` };
 // 전투 글자 연출(2026-10-16 사용자 "가운데 문구가 이상해. 네모난 배경색에 무엇을 할까? 이것도 어색해. 일일이 이런 문구 넣지 마" → "출력 문구 목록 정리 — 효과·폰트·연출"):
 //  가운데 네모 전광판을 없애고 글자는 식물 머리 위에서만 짧게 — 기술 이름 = 리본, 피해 = 큰 숫자(치명 = 더 크게 · 흔들림), 판정·효과 = 한두 낱말, 승패 = 가운데 큰 글자(네모 없이).
 //  목록·글꼴·움직임 = docs/superpowers/specs/2026-10-16-v2-battle-text-direction.md
-const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기절해서 쉼' };
+const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기절해서 쉼', blocked: '막혀서 쉼' };
 // 3:3 쓰러진 자리: 봇 판 = 늘 'me', 친구 대결 = 'me' · 'foe' · 'both'(둘 다 고름 — 서버 rooms.mjs)
 const needMe = B => B.need === 'me' || B.need === 'both';
 // 시간 막대(같은 날 사용자 "타이머 역할하는 바도 넣어주고. 안 하면 넘어가는 걸로"): 고르는 차례마다 봇 판 30초 · 친구 대결 = 서버 40초, 다 되면 넘어감(쉬기)
@@ -443,6 +450,8 @@ export const battle = {
     const reveal = mine || theirs ? { kind: 'reveal', ms: mine && theirs ? REVEAL_MS : REVEAL1_MS, mine, theirs, first: mine && theirs && fe ? fe.who : null } : null;
     if (reveal) out.push(reveal);
     for (const e of evs) {
+      // 대기석 식물(엑셀 v10 — 대기 중에도 턴 끝 진행) · 소환수 사건: 앞 식물 연출 없이(대기석 아이콘 · 체력은 턴 끝 모습으로), 쓰러짐만 글로
+      if (e.bench || e.sum != null || e.t === 'summonBreak') { if (e.t === 'faint' && e.bench) out.push({ kind: 'note', ms: 700, msg: `대기석의 ${ga(e.name)} 쓰러졌다`, tone: 'note' }); continue; }
       if (e.t === 'switch') out.push(this.switchStep(e));
       else if (e.t === 'faint') out.push({ kind: 'faint', ms: 900, who: e.who, msg: `${ga(e.name)} 쓰러졌다!`, tone: e.who === 'me' ? 'lose' : 'win' });
       else if (e.t === 'first') { if (!(reveal && reveal.first)) out.push({ kind: 'first', ms: 750, who: e.who, msg: `${ga(nm(e.who))} 먼저 움직인다!`, tone: 'note' }); }
@@ -454,25 +463,25 @@ export const battle = {
       else if (e.t === 'infuse') out.push({ kind: 'note', ms: 750, side: e.who, msg: `${e.name}의 검에 ${e.el === 'fire' ? '불꽃' : '힘'}이 깃들었다!`, tone: 'buff' });
       else if (e.t === 'charge') out.push({ kind: 'note', ms: 750, side: e.who, msg: `${ga(e.name)} 힘을 모은다!`, tone: 'note' });
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
-      else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, msg: e.t === 'armorBreak' ? `${nm(e.who)}의 방어구가 부서졌다!` : e.id === 'clone' ? `${nm(e.who)}의 분신이 사라졌다!` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
-      else if (e.t === 'hit') { const s = sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
+      else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
+      else if (e.t === 'hit') { const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 되받아치기!`, tone: 'hit' });
       else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff; out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
-      else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: e.why === 'purify' ? `${ga(e.name)} 정화 덕분에 버텼다!` : `${ga(e.name)} 버텼다! 방금 쉬어서 다시 쉬지 않는다`, tone: 'buff' });
+      else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: (RESIST_MSG[e.why] || RESIST_MSG.skip)(e.name), tone: 'buff' });
       else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.slice(0, 2).map(k => CURE_FIRE[k] || k).join(' · ')}!`, tone: 'note' });
-      else if (e.t === 'bloom') out.push({ kind: 'bloom', ms: 900, ev: e, side: e.who, msg: `${e.name}의 포자가 피어났다! 숨이 막힌다`, tone: STATUS.spore.col });
+      else if (e.t === 'bloom') out.push({ kind: 'bloom', ms: 900, ev: e, side: e.who, msg: e.k > 1 ? `${e.name}의 포자 ${e.k}개가 피어났다!` : `${e.name}의 포자가 피어났다!`, tone: STATUS.spore.col });
       else if (e.t === 'grow') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
       else if (e.t === 'skip') out.push({ kind: 'skipT', ms: 900, ev: e, side: e.who, msg: `${ga(e.name)} ${SKIP_WHY[e.src] || ''} 움직일 수 없다!`, tone: 'skip' });
-      else if (e.t === 'tick') out.push({ kind: 'tick', ms: 750, ev: e, side: e.who, msg: `${ga(e.name)} ${e.id === 'burn' ? '화상' : '독'}으로 아파한다!`, tone: STATUS[e.id].col });
+      else if (e.t === 'tick') out.push({ kind: 'tick', ms: 750, ev: e, side: e.who, msg: `${ga(e.name)} ${ro((STATUS[e.id] || { name: e.id }).name)} 아파한다!`, tone: (STATUS[e.id] || {}).col || '#ff8a8a' });
       else if (e.t === 'drain') out.push({ kind: 'drain', ms: 950, ev: e, side: e.who, msg: `기생 씨앗이 ${e.name}의 체력을 빨아들인다!`, tone: STATUS.leech.col });
       else if (e.t === 'heal') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${ga(e.name)} 체력을 빨아들였다!`, tone: 'heal' });
       else if (e.t === 'regen') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${e.name}의 체력이 재생된다`, tone: 'heal' });
       else if (e.t === 'reflect') out.push({ kind: 'reflect', ms: 750, ev: e, side: e.to, msg: `가시에 찔렸다! ${nm(e.to)}도 아프다`, tone: 'hit' });
       else if (e.t === 'swapFail') out.push({ kind: 'swapFail', ms: 800, side: e.who, msg: `${ga(e.name)} 바꾸지 못했다!`, tone: 'note' });   // 늦은 교체가 쉬는 차례 · 뿌리 묶기에 막힘
-      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.why === 'spore' ? `포자 때문에 숨이 막혀 ${e.name}의 햇빛이 차지 않았다` : `그늘 때문에 ${e.name}의 햇빛이 차지 않았다`, tone: 'note' });
+      else if (e.t === 'noEnergy') out.push({ kind: 'note', ms: 700, side: e.who, msg: `${(STATUS[e.why] || STATUS.dark).name} 때문에 ${e.name}의 햇빛이 차지 않았다`, tone: 'note' });
       else if (e.t === 'expire') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
     }
     out.push({ kind: 'end', ms: 450 });
@@ -496,10 +505,10 @@ export const battle = {
     if (st.kind === 'switch') this.ribbon(st.who, st.toU.name, st.toU.el, t, st.ms);
     if (st.kind === 'first') this.pop(st.who, '먼저!', null, t, false, -16, '#8ccfff');
     if (st.kind === 'stance' && !st.active) this.pop(st.who, '헛자세', 'dim', t, false, -16);
-    if (st.kind === 'fxnote') this.pop(st.side, st.ev.t === 'immune' ? '면역' : '버팀!', st.ev.t === 'immune' ? 'dim' : null, t, false, -16, st.ev.t === 'immune' ? null : '#8ccfff');
+    if (st.kind === 'fxnote') this.pop(st.side, st.ev.t === 'immune' ? '안 통함' : RESIST_POP[st.ev.why] || '버팀!', st.ev.t === 'immune' ? 'dim' : null, t, false, -16, st.ev.t === 'immune' ? null : '#8ccfff');   // immune 사건 = 같은 속성 · 카드라 안 걸림(면역 상태와 다름)
     if (st.kind === 'cure') this.pop(st.side, st.ev.why === 'water' ? '화상 꺼짐' : CURE_FIRE[st.ev.ids[0]] || '풀림', null, t, false, -16, '#8ccfff');
     if (st.kind === 'skipT') this.pop(st.side, SKIP_POP[st.ev.src] || '쉼', null, t, false, -16, (STATUS[st.ev.src] || {}).col || '#c0a8ff');
-    if (st.kind === 'note' && st.side) this.pop(st.side, '햇빛 막힘', 'dim', t, false, -16);
+    if (st.kind === 'note' && st.side) this.pop(st.side, st.popText || '햇빛 막힘', 'dim', t, false, -16);
     if (st.kind === 'swapFail') { sfx('fizzle'); this.pop(st.side, '교체 실패', 'dim', t, false, -16); }
     if (st.kind === 'faint') this.pop(st.who, '쓰러짐', 'dim', t, false, -16);
     const last = B.log[B.log.length - 1];
@@ -515,18 +524,18 @@ export const battle = {
     if (st.kind === 'bloom') { this.hurt(st.side, st.ev.dmg, 'hit', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.spore.col, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.side, '포자!', null, t, false, -16, STATUS.spore.col); }
     if (st.kind === 'drain') {
       this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS.leech.col, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 });
-      if (st.ev.to && st.ev.heal > 0) { this.heal(st.ev.to, st.ev.heal); this.pop(st.ev.to, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.ev.to, st.ev.heal)); }
-      if (st.ev.to && st.ev.list2) v.eff[st.ev.to] = st.ev.list2;
+      if (st.ev.to && st.ev.heal > 0 && !st.ev.toBench) { this.heal(st.ev.to, st.ev.heal); this.pop(st.ev.to, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.ev.to, st.ev.heal)); }   // 건 식물이 대기석이면 앞 식물 체력은 그대로
+      if (st.ev.to && st.ev.list2 && !st.ev.toBench) v.eff[st.ev.to] = st.ev.list2;
     }
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
     if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
     if (st.kind === 'tick') { const se = sfxAdd(v.sfx, st.side, st.ev.id, t); if (st.ev.id === 'burn') crackles(se); else sfx('poison'); }
-    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: st.ev.id === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
+    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: SFX_OF_FX[st.ev.id] === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
     if (st.kind === 'drain') { sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to }); sfx('drain'); }
     if (st.kind === 'heal') { sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t); sfx(st.ev.t === 'regen' ? 'regen' : 'heal'); }
     if (st.kind === 'reflect') { sfxAdd(v.sfx, st.ev.who, 'thornsHit', t); sfx('thorns'); }
     if (st.kind === 'bloom') { sfxAdd(v.sfx, st.side, 'bloom', t); sfx('bloom'); }
-    if (st.kind === 'skipT') sfxAdd(v.sfx, st.side, { frozen: 'frozen', paral: 'paral', stun: 'stun' }[st.ev.src], t);
+    if (st.kind === 'skipT' && st.ev.src !== 'blocked') sfxAdd(v.sfx, st.side, { frozen: 'frozen', paral: 'paral', stun: 'stun' }[st.ev.src], t);
     if (st.kind === 'cure') sfxAdd(v.sfx, st.side, 'steam', t);
     if (st.kind === 'end') v.en = { me: B.me.energy, foe: B.foe.energy };
   },
@@ -543,7 +552,7 @@ export const battle = {
       { t: 'fx', to: 'foe', id: 'wet', name: foe.name },
       { t: 'fx', to: 'me', id: 'stun', name: me.name },
       { t: 'fx', to: 'foe', id: 'spore', n: 2, name: foe.name },
-      { t: 'bloom', who: 'foe', dmg: bl, name: foe.name },
+      { t: 'bloom', who: 'foe', dmg: bl, k: 1, name: foe.name },
       { t: 'skip', who: 'me', src: 'frozen', name: me.name },
       { t: 'cure', to: 'foe', name: foe.name, id: 'burn', why: 'water' },
     ];
@@ -551,8 +560,8 @@ export const battle = {
     B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
     this.play(app, this.buildSteps({ mySkill: me.kit[0], foeSkill: foe.kit[0], events }));
   },
-  // 검토 판 ?demo=status2: 나머지 효과(덩굴 · 뿌리 · 기생 씨앗 · 빨아들이기 · 약화 · 도발 · 부식 · 그늘 · 강풍) + 버프(분노 · 철벽 · 가속 · 재생 · 반사 · 보호막 · 정화 · 집중)
-  // 검토 판 ?demo=status3(2026-10-18 바닥 규칙 2단계): 방어구(체력 막대 금속 칸) · 분신(양옆 반투명) · 연타 셋이 방어구를 깎음 · 분신 사라짐 · 은신(흐리게)
+  // 검토 판 ?demo=status2: 나머지 효과(봉인 · 속박 · 기생 씨앗 · 빨아들이기 · 쇠약 · 도발 · 시듦 · 그늘 · 강풍 · 출혈) + 이로운 효과(활력 · 억셈 · 가속 · 재생 · 반사 · 보호막 · 정화 · 조준 · 의지)
+  // 검토 판 ?demo=status3(2026-10-18 바닥 규칙 2단계): 갑주(체력 막대 금속 칸) · 분신(은신 연출 — 양옆 반투명) · 연타 셋이 갑주를 깎음 · 분신 사라짐 · 은신(흐리게)
   demoStatus3(app) {
     this.v.demoAt = Infinity;
     const B = this.B, me = B.me, foe = B.foe, ar = Math.round(me.max * 0.3);
@@ -560,7 +569,7 @@ export const battle = {
       { t: 'fx', who: 'me', to: 'me', id: 'armor', name: me.name, list: [{ id: 'armor', hp: ar }] },
       { t: 'fx', who: 'foe', to: 'foe', id: 'clone', name: foe.name, list: [{ id: 'clone' }] },
       ...[1, 2, 3].map(n => ({ t: 'hit', who: 'foe', to: 'me', id: foe.kit[0].id, tier: 'hit', dmg: 0, absorb: 12, ab: 'armor', mult: 1, n, of: 3, list: [{ id: 'armor', hp: ar - 12 * n }] })),
-      { t: 'reveal', who: 'foe', id: 'clone', list: [] },
+      { t: 'reveal', who: 'foe', id: 'stealth', list: [] },
       { t: 'fx', who: 'me', to: 'me', id: 'stealth', name: me.name, list: [{ id: 'stealth' }, { id: 'armor', hp: ar - 36 }] },
     ];
     B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
@@ -570,11 +579,11 @@ export const battle = {
     this.v.demoAt = Infinity;
     const B = this.B, me = B.me, foe = B.foe, F = (to, id, o = {}) => ({ t: 'fx', to, id, name: B[to].name, ...o });
     const events = [
-      F('foe', 'bind', { skill: '파도 덮치기' }), F('foe', 'root'), F('foe', 'leech'),
+      F('foe', 'seal', { skill: '파도 덮치기' }), F('foe', 'root'), F('foe', 'leech'),
       { t: 'drain', who: 'foe', name: foe.name, to: 'me', toName: me.name, dmg: 6, heal: 6 },
-      F('me', 'weak'), F('me', 'taunt'), F('foe', 'corrode'), F('foe', 'shade'), F('foe', 'gale'),
-      F('me', 'rage'), F('me', 'wall'), F('me', 'haste'), F('me', 'regen'), { t: 'regen', who: 'me', name: me.name, heal: 9 },
-      F('me', 'thorns'), { t: 'reflect', who: 'me', to: 'foe', dmg: 5 }, F('me', 'shield'), F('me', 'purified'), F('me', 'focus'),
+      F('me', 'atkDown'), F('me', 'taunt'), F('foe', 'defDown'), F('foe', 'shade'), F('foe', 'gale'), F('foe', 'bleed'),
+      F('me', 'atkUp'), F('me', 'defUp'), F('me', 'spdUp'), F('me', 'regen'), { t: 'regen', who: 'me', name: me.name, heal: 9 },
+      { t: 'reflect', who: 'me', to: 'foe', dmg: 5 }, F('me', 'shield'), F('me', 'purified'), F('me', 'aim'), F('me', 'will'),
     ];
     foe.hp -= 11;
     B.log.push({ mySkill: me.kit[0], foeSkill: foe.kit[0] });
@@ -811,7 +820,7 @@ export const battle = {
         const s = v.stance[who]; if (!s) continue;
         const [x, y] = this.above(who, 118);
         btnBody(g, x - 12, y, 24, 20, s.active ? T.btn.gold : T.btn.off, true);
-        const ic = s.kind === 'guard' ? 'shield' : 'speed';
+        const ic = s.kind === 'guard' ? 'shield' : s.kind === 'reflect' ? 'fx_reflect' : 'speed';   // 반사 = 그 턴 처음 맞는 한 타(엑셀 v10)
         g.img(s.active ? icon(ic) : tinted(ic, T.btn.off.text), x - 5, y + 5);
       }
       c.restore();
@@ -1055,10 +1064,10 @@ export const battle = {
   },
   statuses(side) {
     const v = this.v, u = v.view[side], out = [], sv = v.stance[side];
-    if (sv && sv.active) out.push({ id: sv.kind === 'guard' ? 'guard' : 'evade' });
+    if (sv && sv.active) out.push({ id: sv.kind === 'guard' ? 'guard' : sv.kind === 'reflect' ? 'reflect' : 'evade' });
     if (u && u.st && u.st.nextInit) out.push({ id: 'initReady' });
     for (const x of (v.eff && v.eff[side]) || []) out.push(x);
-    if (this.p && this.p.status) out.push(...(side === 'me' ? [{ id: 'guard' }, { id: 'focus' }, { id: 'rage' }, { id: 'stun' }] : [{ id: 'burn' }, { id: 'poison', n: 2 }, { id: 'wet' }, { id: 'chill', n: 2 }, { id: 'shock', n: 1 }, { id: 'bind' }]));
+    if (this.p && this.p.status) out.push(...(side === 'me' ? [{ id: 'guard' }, { id: 'aim' }, { id: 'atkUp', n: 2 }, { id: 'stun' }] : [{ id: 'burn' }, { id: 'poison', n: 2 }, { id: 'wet' }, { id: 'chill', n: 2 }, { id: 'spore', n: 3, t: 1 }, { id: 'seal' }]));
     return out.sort((a, b) => ((STATUS[b.id] || {}).buff ? 1 : 0) - ((STATUS[a.id] || {}).buff ? 1 : 0));
   },
   // 교체 창: 내 식물 셋 — 앞에 선 식물·쓰러진 식물은 못 고름, 쓰러진 자리를 채울 땐 닫기 없음
