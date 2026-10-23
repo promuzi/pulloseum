@@ -471,7 +471,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 7;   // 7 = 2026-10-23 사용자 교정(은신끼리도 서로 안 보임 · 봉인은 못 쓸 기술도 뽑음 · 불에 맞으면 얼음도 녹음)
+export const RULES_VER = 8;   // 8 = 2026-10-23 정화 뒤 보호 없앰(사용자 '보호 없애')
+//  7 = 2026-10-23 사용자 교정(은신끼리도 서로 안 보임 · 봉인은 못 쓸 기술도 뽑음 · 불에 맞으면 얼음도 녹음)
 //  6 = 2026-10-23 엑셀 v10 공통 효과(능력치 겹 · 상태이상 · 면역 · 제한 · 포자 · 방어 · 반사 · 보호막 · 조준 · 은신 · 범위 · 강풍 · 대기석 진행 — 계획 docs/superpowers/plans/2026-10-23-v2-effects-v10-apply.md)
 //  5 = 2026-10-22 봇 머리(점수로 고르기 · 교체 판단 · 단계별 머리 좋음 — 봇 판 다시 돌리기가 달라짐)
 //  4 = 2026-10-18 방어구 · 관통 · 연타 · 은신 · 분신 · 순서 손잡이(먼저 · 나중)
