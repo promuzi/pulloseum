@@ -201,8 +201,9 @@ function sunPips(g, x, y, cur, max, gap, t) {
     const d = Math.abs(i - sweep); if (d < 1.3) g.alpha(0.8 * (1 - d / 1.3), () => g.rect(px + 1, y + 1, cw - 2, 5, '#fffbe6'));
   }
 }
-// 효과 창(한 줄에 셋 · 두 줄까지, 넘치면 +n): [아이콘][이름][겹침 수]를 가운데 — 글자는 위아래 같은 간격(실제 글자 높이로), 아이콘은 창 가운데에
-//  아이콘 18칸 · 창 20칸(2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어" — 11칸 · 16칸이던 것): 이름이 있으면 겹 수는 아이콘 오른쪽 아래, 이름이 길어 안 들어가면 11칸
+// 효과 창(한 줄에 셋 · 두 줄까지, 넘치면 +n): 아이콘 = 왼쪽 끝 · 글자([이름][겹침 수]) = 오른쪽 끝 — 글자는 위아래 같은 간격(실제 글자 높이로), 아이콘은 창 위아래 가운데
+//  아이콘 18칸 · 창 20칸(2026-10-23 사용자 "상태이상 아이콘이 픽셀화 하면서 너무 작아져서 알아보기 힘들어" — 11칸 · 16칸이던 것): 이름이 있으면 겹 수는 아이콘 오른쪽 위, 이름이 길어 안 들어가면 11칸 · 그래도 안 되면 글자만 가운데
+//  왼쪽 · 오른쪽 정렬 = 같은 날 사용자 "아이콘은 왼쪽 정렬. 글자는 우측정렬해줘. 독같은 경우 너무 가운데에 몰린 느낌"
 const SW_W = 45, SW_H = 20, SW_GAP = 2;
 function statusWins(g, x, y, list) {
   const shown = list.length > 6 ? [...list.slice(0, 5), { more: list.length - 5 }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2, bf = sized('bold', 9);
@@ -216,14 +217,13 @@ function statusWins(g, x, y, list) {
     let ic = null, badge = false;
     if (big && big.width + 2 + tail(named && !!num) <= w - 4) { ic = big; badge = named && !!num; }
     else if (D.icon && (tail(false) + 11 <= w - 4 || !named)) ic = icon(D.icon);
-    const rest = tail(badge), gap = !ic ? 0 : ic === big ? ic.width + 2 : rest + 12 > w - 4 ? 11 : 12, cw = gap + rest;
-    let cx = X + Math.max(2, (w - cw) >> 1);
+    const rest = tail(badge);
     if (ic) {
-      const iy = Y + Math.round((SW_H - ic.height) / 2);
-      g.img(ic, cx, iy);
-      if (badge) g.text(num, cx + ic.width + 1, iy, { font: bf, color: S.num, align: 'right', outline: '#0b1220', outlineW: 2 });   // 오른쪽 위(오른쪽 아래 = 능력치 화살표 자리)
-      cx += gap;
+      const ix = X + 2, iy = Y + Math.round((SW_H - ic.height) / 2);
+      g.img(ic, ix, iy);
+      if (badge) g.text(num, ix + ic.width + 1, iy, { font: bf, color: S.num, align: 'right', outline: '#0b1220', outlineW: 2 });   // 오른쪽 위(오른쪽 아래 = 능력치 화살표 자리)
     }
+    let cx = ic ? X + w - 3 - rest : X + Math.max(2, (w - rest) >> 1);
     if (named) g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
     if (num && !badge) g.text(num, cx, Y + ty, { color: S.num });
   });

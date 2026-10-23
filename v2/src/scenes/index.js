@@ -98,10 +98,10 @@ const fxlab = {
     for (const [head, list, kind] of FXLAB) {
       g.text(head, 8, y, { font: 'bold', color: '#8ccfff' }); y += 15;
       list.forEach(([name, ic, col], i) => {
-        const c = i % 2, X = 8 + c * 131, S = kind === true ? SW_ON : swStyle(col || kind), im = icon(ic), sm = iconMid(ic) || im, iw = sm ? sm.width + 2 : 0, w = Math.max(48, g.textW(name) + iw + 8);   // 효과 창과 같은 20칸 창 · 18칸 아이콘
+        const c = i % 2, X = 8 + c * 131, S = kind === true ? SW_ON : swStyle(col || kind), im = icon(ic), sm = iconMid(ic) || im, iw = sm ? sm.width + 2 : 0, w = Math.max(48, g.textW(name) + iw + 8);   // 효과 창과 같은 20칸 창 · 18칸 아이콘 왼쪽 끝 · 글자 오른쪽 끝
         holo(g, X, y, w, 20, S, 16);
-        if (sm) g.img(sm, X + 3, y + Math.round((20 - sm.height) / 2));
-        g.text(name, X + 3 + iw, y + Math.round((20 - gh) / 2), { color: S.text });
+        if (sm) g.img(sm, X + 2, y + Math.round((20 - sm.height) / 2));
+        g.text(name, X + w - 3, y + Math.round((20 - gh) / 2), { color: S.text, align: 'right' });
         if (im) g.img(im, X + w + 6, y - 1, 2);
         if (c === 1 || i === list.length - 1) y += 26;
       });
