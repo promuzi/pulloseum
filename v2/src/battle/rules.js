@@ -164,7 +164,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     }
     if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); return 'acted'; }   // 광합성(기본기 — 햇빛 +2)
     const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }); };   // 나에게 거는 버프(버프 기술 · 공격 기술 덤)
-    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); return 'acted'; }
+    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); return 'acted'; }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); return 'acted'; }
     // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
     //  2026-10-18 바닥 규칙 2단계(species-identity §1): 연타 a.hits = 타마다 따로 판정(불운 보정 없음 · 효과는 첫 적중 한 번 · 방어태세는 막은 타만큼 줄어듦 · 흡수 · 반사는 타마다)
@@ -224,7 +224,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (tier !== 'miss' && !landed) { landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
     }
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
-    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed, bonusHit: a.bonusHit }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
+    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed, bonusHit: a.bonusHit, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
     if (avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {
       const cd = Math.max(1, Math.round(hitDmg(foe, u, { power: d.counter }, 1)));

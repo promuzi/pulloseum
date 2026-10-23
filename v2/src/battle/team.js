@@ -34,7 +34,7 @@ const matchVal = (B, u) => {
 const benchScore = (B, i) => matchVal(B, B.team.foe[i]);
 function aiSwitch(B, rng) {
   const bench = aliveOf(B, 'foe').filter(i => i !== B.act.foe);
-  if (!bench.length || !canSwitch(B.foe) || (B.swapCd && B.swapCd.foe > 0)) return null;
+  if (!bench.length || !canSwitch(B.foe, B.turn) || (B.swapCd && B.swapCd.foe > 0)) return null;
   const f = B.foe, iq = f.ai ?? 0.5;
   if (f.kit.some(s => canUse(f, s) && expDamage(f, B.me, s) >= B.me.hp * 0.95)) return null;   // 지금 식물로 이번 턴에 끝낼 수 있으면 그대로
   const best = bench.reduce((a, b) => (benchScore(B, b) > benchScore(B, a) ? b : a)), gain = benchScore(B, best) - matchVal(B, f);
@@ -53,7 +53,7 @@ function swapIn(B, side, to, ev, forced = false) {
 }
 
 // 사람의 수 → 이번 턴 기술: 쉬는 차례 = 쉬기, rest = 넘어감(시간 초과 — 2026-10-16 사용자 "안 하면 넘어가는 걸로", 전엔 3:3만 평타로 바꿨음), 못 쓰는 기술 = 평타
-const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side]) && !(B.swapCd && B.swapCd[side] > 0) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
+const okSwitch = (B, side, a) => a.kind === 'switch' && canSwitch(B[side], B.turn) && !(B.swapCd && B.swapCd[side] > 0) && B.team[side][a.to] && B.team[side][a.to].hp > 0 && a.to !== B.act[side];
 export const swapWait = (B, side) => (B.swapCd && B.swapCd[side]) || 0;   // 화면: 교체까지 남은 턴
 const skillOf = (u, a) => (mustSkip(u) || a.kind === 'rest' ? REST : a.kind === 'skill' && canUse(u, a.skill) ? a.skill : firstOk(u));
 
@@ -95,7 +95,7 @@ export function playTurn3(B, myAct, foeAct = null) {
   // 늦은 교체: 맞고도 서 있으면 바꿈 — 그 사이 쓰러졌으면 그대로(쓰러진 자리 채우기로), 쉬는 차례 · 뿌리 묶기가 걸렸으면 못 바꿈(교체 제한도 안 걸림)
   if (late && aliveOf(B, 'me').length && aliveOf(B, 'foe').length && B[late].hp > 0) {
     const skipped = res && res.events.some(e => e.t === 'skip' && e.who === late);
-    if (!skipped && canSwitch(B[late])) doSwap(late);
+    if (!skipped && canSwitch(B[late], B.turn)) doSwap(late);   // 이번 턴에 걸린 속박 · 도발은 다음 턴부터라 이미 고른 교체는 됨
     else ev.push({ t: 'swapFail', who: late, name: B[late].name, why: skipped ? 'skip' : 'root' });
   }
   // 쓰러짐 사건은 쓰러진 그 자리에서(rules · 턴 끝) — 한쪽 식물이 다 쓰러지면 그 자리에서 판이 끝나 같이 끝나는 일이 없음(먼저 다 쓰러진 쪽이 짐)

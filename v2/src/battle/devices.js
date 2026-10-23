@@ -4,7 +4,7 @@
 //     기술 gain{k, n | 'spent', set} · spend{k, n | all} · need{k, n} · hitsBy(타 수 = 그 개수) · powBy{k, per}(개수 하나당 위력 +)
 //  D5 표식 배율 scale{k, dmg[], drain[]} · D7 버티기 SPECIES.endure = 개수 칸 이름(맞은 피해만 — 지속 피해로는 못 버팀)
 //  D12 상태 소비 consume{id, per, cap}(겹 × 최대 체력 몫 즉시 피해 · 지움) · bonusIf{id, k, clear}(그 상태면 위력 ×k)
-//  D14 상대 조작 steal('sun' | 'buff') · dispel(n | 'all') · seal(상대가 지난번 쓴 기술 2턴 묶음) · reveal(은신 · 분신 걷기 — rules.js)
+//  D14 상대 조작 steal('sun' | 'buff') · dispel(n | 'all') · seal(봉인 걸기 — 무작위 기술 하나 · 다음 1턴) · reveal(은신 · 분신 걷기 — rules.js)
 //  D15 운 luck = [[확률, 배율] …](0배가 나오면 다음은 가장 큰 배율 확정) · D16 비용 hpCost(최대 체력 몫) · allSun(남은 햇빛 하나당 위력 +)
 //  D6 시한 delay{turns, power, area}(상대에게 심음 — n턴 뒤 턴 끝 확정 피해) · echo(맞히면 다음 턴 끝 한 번 더, 위력 몫 · 효과 포함) — 교체하면 사라짐
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
@@ -100,10 +100,7 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     for (const k of take) { if (a.steal === 'buff') (u.eff ||= {})[k] = { ...fe[k], ...(fe[k].exp != null ? { exp: Math.max(T + 1, fe[k].exp) } : {}) }; delete fe[k]; }
     if (take.length) { ev.push({ t: 'expire', who: foe.id, ids: take, list: listOf(foe) }); if (a.steal === 'buff') ev.push({ t: 'fx', who: u.id, to: u.id, id: take[0], name: u.name, list: listOf(u) }); }
   }
-  if (a.seal && foe.hp > 0 && foe.st && foe.st.lastAct && (foe.kit || []).some(s => s.id === foe.st.lastAct)) {
-    fe.bind = { exp: T + 2, skill: foe.st.lastAct, skillName: foe.st.lastName || '' };
-    ev.push({ t: 'fx', who: u.id, to: foe.id, id: 'bind', name: foe.name, skill: foe.st.lastName || '', list: listOf(foe) });
-  }
+  if (a.seal && foe.hp > 0) apply(foe, 'seal', 1, { turn: T, rng: x.rng, ev, by: u });   // 봉인 = 엑셀 v10 봉인(무작위 기술 하나 · 다음 1턴 — 옛 '직전 기술 2턴'은 폐기)
 }
 // 버티기(D7): 맞은 피해로 쓰러질 때 그 개수가 남아 있으면 체력 1 · 하나 잃음
 export function endureHp(u, hp, ev) {

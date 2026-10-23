@@ -25,12 +25,13 @@ export const FX = {
   chill:   { el: 'ice', stack: 3, skip: 'frozen', mob: 0.8 }, // 쌓여 있는 동안 기동성 −20%(엑셀에 언급 없음 — 지금 동작) · 3 = 얼음(기절의 다른 이름 · 받는 피해 감소 없음)
   shock:   { el: 'bolt', turns: 3, dot: 0.02, p: 0.25, wetP: 0.5, now: true },   // 감전: 턴 끝 약한 피해 2% · 자기 차례마다 25%(젖으면 50%) 마비 → 감전 사라짐
   stun:    { skip: 'stun' },                                  // 바로 한 번 쉼
-  bind:    { turns: 1 },                                      // 다음 턴 기술 하나가 묶임
+  // 제한(엑셀 v10 27~29행) = 다음 1턴(걸린 턴은 빼고 다음 턴 선택을 막음 · from = T + 1) · 그 턴에 쉬어도 끝 · 불에 안 풀림 · 의지가 확률로 막음
+  seal:    { turns: 1, next: true },                          // 봉인(옛 덩굴): 다음 턴에 쓸 수 있을 기술(기본기 포함) 하나를 무작위로 막음 — 막는 개수는 밸런스(지금 1)
   leech:   { turns: 3, drain: 0.025, now: true },             // 기생: 턴 끝 2.5%를 빨아 처음 건 식물(by = slot)이 회복 · 건 식물이 쓰러지면 끝
   dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
   gale:    { turns: 2, missAdd: 12 },                         // 강풍(바람 속성): 적중 ↓(내 공격 빗나감 칸 +12) — 사용자 "강풍이라고 바꾸자"
-  taunt:   { turns: 1 },                                      // 다음 턴 방어·회피 자세 못 씀
-  root:    { turns: 2 },                                      // 교체 못 함(3:3)
+  taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
+  root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
   spore:   { jong: 'mushroom', stack: 3, bloom: 0.08 },      // 버섯 종 전용: 붙은 다음 턴부터 턴 끝마다 1씩 자라 3이면 피어남(최대 체력 8% 피해 + 그 턴 에너지 안 참) → 0 · 불에 맞으면 탐
   choke:   { turns: 0 },
   // 능력치 버프 · 디버프(2026-10-23 엑셀 v10 효과 분류 9~18행 — 활력 · 억셈 · 가속 · 예리 · 집중 / 쇠약 · 시듦 · 둔화 · 무딤 · 교란):
@@ -58,14 +59,14 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['stealth', 'clone', 'burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'bind', 'gale', 'taunt', 'root', 'choke', 'thorns', 'shield', 'purified', 'will'];
+const TIMED = ['stealth', 'clone', 'burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'choke', 'thorns', 'shield', 'purified', 'will'];
 const BUFFS = ['stealth', 'clone', 'armor', ...UPS, 'regen', 'will', 'thorns', 'shield', 'purified'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 정화 보호는 이것과 기절을 막음
-const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'dark', 'taunt', 'root', 'choke'];
+const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root', 'choke'];
 const GUARDED = [...HARM, 'stun'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'dark', 'gale', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 → 엑셀 v10 이름(기술 표를 다 옮길 때까지 — 2026-10-23 계획 Task 8에서 지움) · 그늘 = 암실(이름 · 연출만 그늘)
-export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown', shade: 'dark' };
+export const OLD = { rage: 'atkUp', wall: 'defUp', haste: 'spdUp', weak: 'atkDown', corrode: 'defDown', shade: 'dark', bind: 'seal' };
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
 
 const E = u => (u.eff ||= {});
@@ -118,7 +119,8 @@ export function pasDmgK(att, def) {
 }
 export const mustSkip = u => has(u, 'skip');
 export const noEnergy = u => has(u, 'dark') || has(u, 'choke');   // 암실(그늘) · 숨막힘 = 그 턴 끝 자연 햇빛이 안 참
-export const canSwitch = u => !has(u, 'root') && !has(u, 'skip');   // 뿌리 묶기 · 쉬는 차례(얼음·마비·기절)면 교체 못 함
+// 교체할 수 있나: 쉬는 차례(기절 · 마비 · 얼음) · 속박 · 도발(다음 1턴 — from ≤ 턴 T)이면 못 함. T를 안 주면 걸려 있기만 해도 막음(화면)
+export const canSwitch = (u, T = Infinity) => { const e = (u && u.eff) || {}; return !e.skip && !(e.root && e.root.from <= T) && !(e.taunt && e.taunt.from <= T); };
 // 고를 수 있는 기술: 에너지 · 덩굴로 묶인 칸 · 도발(자세 금지)
 // 변이 기술 = 판마다 정해진 횟수(2026-10-17 사용자 "변이는 충전이 아닌 고정된 횟수를 갖고 있어. 다 쓰면 못씀 그 판은"): u.used[기술 id] = 이번 판에 쓴 횟수
 //  (3:3도 그 식물의 판 — 교체해 들어갔다 나와도 그대로) · 횟수 없는 기술 = 끝없음
@@ -129,11 +131,11 @@ export function canUse(u, s, energy = u.energy) {
   if (usesLeft(u, s) <= 0) return false;
   if (!canUseRes(u, s)) return false;   // 공통 장치: 개수 · 모드 · 체력 비용(devices.js)
   const e = u.eff || {};
-  if (e.bind && e.bind.skill === s.id) return false;
-  if (e.taunt && (s.act === 'guard' || s.act === 'evade')) return false;
+  if (e.seal && e.seal.skill === s.id) return false;
+  if (e.taunt && s.act !== 'attack') return false;   // 도발 = 대표 분류가 공격인 기술만(공격 + 버프 · 회복도 됨)
   return true;
 }
-export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.bind && e.bind.skill === s.id ? 'bind' : e.taunt && (s.act === 'guard' || s.act === 'evade') ? 'taunt' : null; };
+export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.seal && e.seal.skill === s.id ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : null; };
 
 // 창에 보일 목록(이로운 것 먼저 · 숫자 = 쌓인 수만)
 export function listOf(u) {
@@ -215,11 +217,23 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (id === 'leech') e.leech.by = (ctx.by && (ctx.by.slot || ctx.by.id)) || null;   // 회복은 처음 건 식물(다시 걸면 새로 건 식물)
     if (id === 'dark' && look) e.dark.look = look;
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
-  } else if (id === 'bind') {   // 다음 턴에 쓸 수 있을 종 기술 중 하나(못 쓰는 칸·기본기가 묶이면 효과가 거의 없으니까 — 없으면 쓸 수 있는 아무 기술)
-    const en = Math.min(tgt.energyMax || 8, (tgt.energy || 0) + 1), ok = tgt.kit.filter(s => (s.cost || 0) <= en), own = ok.filter(s => s.id[0] === 's'), cands = own.length ? own : ok;
-    const pick = cands[Math.floor(ctx.rng() * cands.length)] || tgt.kit[0];
-    e.bind = { exp: T + D.turns, skill: pick.id, skillName: pick.name };
-    ev.push({ t: 'fx', ...base, skill: pick.name, list: listOf(tgt) });
+  } else if (D.next) {   // 제한 셋(봉인 · 속박 · 도발): 다음 1턴
+    if (e.will && ctx.rng && ctx.rng() < FX.will.p) { ev.push({ t: 'resist', ...base, why: 'will', list: listOf(tgt) }); return; }
+    if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
+    if (id === 'root' && e.rooted) { ev.push({ t: 'resist', ...base, why: 'once', list: listOf(tgt) }); return; }   // 교체로 나갔다 들어오기 전까지 한 번만
+    const at = { from: T + 1, exp: T + (o.turns ?? D.turns) };
+    if (id === 'seal') {   // 다음 턴에 쓸 수 있을 기술(기본기 포함 — 엑셀 v10) 중 하나를 무작위로 · 없으면 손패 아무거나
+      const en = Math.min(tgt.energyMax || 8, (tgt.energy || 0) + (tgt.sunPer || 1)), kit = tgt.kit || [];
+      const cands = kit.filter(s => (s.cost || 0) <= en && usesLeft(tgt, s) > 0 && canUseRes(tgt, s));
+      const pick = cands[Math.floor((ctx.rng ? ctx.rng() : 0) * cands.length)] || kit[0];
+      if (!pick) return;
+      e.seal = { ...at, skill: pick.id, skillName: pick.name };
+      ev.push({ t: 'fx', ...base, skill: pick.name, list: listOf(tgt) });
+      return;
+    }
+    e[id] = at;
+    if (id === 'root') e.rooted = true;
+    ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   } else {
     e[id] = { exp: T + D.turns };
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
@@ -268,7 +282,7 @@ export function onHit(att, tgt, skill, ctx) {
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
     const own = skill.inflict && skill.inflict.id;   // 그 기술이 거는 효과는 태우지 않음(불씨 포자 = 불 속성인데 포자를 거는 기술 — 2026-10-17 카드 밸런스 시험에서 발견: 제 포자를 태워 1겹을 못 넘었음)
-    const gone = ['chill', 'wet', 'spore', 'bind', 'leech', 'root'].filter(k => e[k] && k !== own);   // 불이 냉기·물기·포자 + 덩굴·기생 씨앗·뿌리(식물로 묶은 것)를 태움 · 이미 걸린 얼음(기절)은 안 풀림(엑셀 v10 — 기절 제거 불가)
+    const gone = ['chill', 'wet', 'spore', 'leech'].filter(k => e[k] && k !== own);   // 불이 냉기 · 물기 · 포자 · 기생 씨앗을 태움 · 봉인 · 속박은 안 풀림 · 이미 걸린 얼음(기절)도 안 풀림(엑셀 v10)
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }

@@ -226,6 +226,7 @@ export function searchPick(B, n) {
 
 // 판 차리기: 씨앗 하나로 난수 고정(결정론 — 같은 씨앗·같은 선택이면 같은 결과)
 export function makeBattle({ me, foe, seed = 20261015 }) {
+  me.solo = foe.solo = true; me.slot = 'me'; foe.slot = 'foe';   // 1:1 표시(속박 → 봉인) · 유닛 이름표(기생을 건 식물 찾기)
   return { me, foe, rng: makeRng(seed), turn: 1, over: null, log: [] };
 }
 // 턴 끝 공통(1:1·3:3): 화상·독·기생 씨앗 → 에너지 +1(그늘이면 안 참, gain 으로 넘김) → 정한 턴이 지난 효과 사라짐

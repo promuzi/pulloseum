@@ -112,7 +112,7 @@ ok(SKILLS.u_ninja_3.hits === 3 && SKILLS.u_ninja_3b.stealth && SKILLS.u_ninja_2.
   const c2 = unit('d', { eff: { rage: { exp: 9 }, wall: { exp: 9 } } }); go(unit('a'), c2, atk({ power: 10, dispel: 'all' }), rest);
   ok(!c2.eff.rage && !c2.eff.wall, '버프 전부 날리기');
   const z = unit('d', { kit: [{ id: 'big', name: '큰 기술' }], st: { lastAct: 'big', lastName: '큰 기술', miss: {}, init: 0 } }); go(unit('a'), z, atk({ power: 10, seal: true }), rest);
-  ok(z.eff.bind && z.eff.bind.skill === 'big', '봉인 = 상대가 지난번 쓴 기술 묶음');
+  ok(z.eff.seal && z.eff.seal.skill === 'big' && z.eff.seal.exp === 2, '봉인 장치 = 엑셀 v10 봉인(무작위 기술 하나 · 다음 1턴 — 옛 직전 기술 2턴 폐기)');
   // 운: 0배가 나오면 다음은 가장 큰 배율 확정
   const L = unit('a'), luck = atk({ power: 100, luck: [[0.3, 1.6], [0.55, 1], [0.15, 0]] }), L1 = unit('d'), L2 = unit('d');
   resolveTurn(L, L1, luck, rest, seq([0, 0.99, 0.5]), { turn: 1 }); resolveTurn(L, L2, luck, rest, seq([0, 0.99, 0.5]), { turn: 2 });

@@ -1,9 +1,9 @@
 // 상태 효과 시험(화면 없이): 규칙 하나하나 + 같은 씨앗 → 같은 결과 + 12종 1:1 돌려 보기(효과 있음/없음 비교)
 //   node tools/test/status.mjs [--games 40]
-import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST, BLOCKED } from '../../v2/src/battle/model.js';
+import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST, BLOCKED, firstOk } from '../../v2/src/battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX, atkK } from '../../v2/src/battle/status.js';
+import { apply, onHit, endTurn, expire, listOf, canUse, canSwitch, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX, atkK } from '../../v2/src/battle/status.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 
 let fails = 0, n = 0;
@@ -165,9 +165,9 @@ const fixed = v => () => v;
 {
   const a = mk('me', 'flower_grass'), b = mk('foe', 'gaia');
   b.energy = 4; apply(b, 'bind', 1, ctx(a, 1, []));
-  const locked = b.kit.find(s => s.id === b.eff.bind.skill);
-  ok(locked && !canUse(b, locked) && (locked.cost || 0) <= 5, '덩굴 = 다음 턴에 쓸 수 있을 기술 하나 묶음');
-  expire(b, 1, []); ok(b.eff.bind, '걸린 턴 끝엔 남음'); expire(b, 2, []); ok(!b.eff.bind, '다음 턴 끝에 풀림');
+  const locked = b.eff.seal && b.kit.find(s => s.id === b.eff.seal.skill);
+  ok(locked && !canUse(b, locked) && (locked.cost || 0) <= 5, '봉인(옛 덩굴) = 다음 턴에 쓸 수 있을 기술 하나를 막음');
+  expire(b, 1, []); ok(b.eff.seal, '걸린 턴 끝엔 남음'); expire(b, 2, []); ok(!b.eff.seal, '다음 턴 끝에 풀림');
   apply(b, 'taunt', 1, ctx(a, 3, []));
   ok(!canUse(b, sk(b, 'guard')) && !canUse(b, sk(b, 'evade')) && canUse(b, b.kit[0]), '도발 = 방어·회피 자세 못 씀');
 }
@@ -193,7 +193,7 @@ const fixed = v => () => v;
   const out = B.me;
   playTurn3(B, { kind: 'switch', to: 1 });
   ok(B.me !== out && out.eff.poison && out.eff.burn && !out.eff.wet && !out.eff.leech, '교체로 나가면 독·화상만 남음');
-  apply(B.me, 'root', 1, ctx(B.foe, B.turn, []));
+  apply(B.me, 'root', 1, ctx(B.foe, B.turn - 1, []));   // 앞 턴에 걸린 속박 = 이번 턴 교체 막음(다음 1턴)
   const cur = B.me; playTurn3(B, { kind: 'switch', to: 2 });
   ok(B.me === cur || B.me.hp <= 0, '뿌리 묶기면 교체 안 됨');
 }
@@ -363,6 +363,50 @@ const fixed = v => () => v;
   { const z = mk('me', 'gaia'), v = mk('foe', 'flower_grass');
     const r = resolveTurn(z, v, HIT, BLOCKED, fixed(0.5), { turn: 1 });
     ok(r.events.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'blocked') && v.eff.immune, '다 막혀 쉬면 다음 턴 면역'); }
+}
+// ── 9-6. 제한 — 봉인 · 속박 · 도발(엑셀 v10 효과 분류 27~29행) ──
+{
+  const x = mk('me', 'gaia');
+  // 봉인: 기본기도 무작위로 고름 · 다음 턴 그 기술 못 씀 · 불에 안 풀림
+  const s1 = mk('foe', 'flower_grass'); s1.energy = 0; apply(s1, 'seal', 1, { turn: 1, rng: () => 0, ev: [], by: x });
+  ok(s1.eff.seal && s1.eff.seal.skill === 'basic' && !canUse(s1, sk(s1, 'basic')), '봉인은 기본기(평타)도 막을 수 있음');
+  const fe = []; onHit(mk('me', 'cactus_fire'), s1, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
+  ok(s1.eff.seal, '불에 맞아도 봉인은 안 풀림');
+  // 속박: 다음 1턴 교체 금지 · 불에 안 풀림 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만
+  const team = () => { const me = ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe = ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k)); return makeTeamBattle({ me, foe, seed: 21, swOrder: true }); };
+  { const B = team(); apply(B.me, 'root', 1, ctx(B.foe, B.turn, []));
+    ok(canSwitch(B.me, B.turn) && !canSwitch(B.me, B.turn + 1), '속박은 걸린 턴이 아니라 다음 턴 교체를 막음');
+    onHit(mk('foe', 'cactus_fire'), B.me, sk(mk('foe', 'cactus_fire'), 's1'), { turn: B.turn, rng: makeRng(1), ev: [] });
+    ok(B.me.eff.root, '불에 맞아도 속박은 안 풀림');
+    expire(B.me, B.turn + 1, []); ok(!B.me.eff.root, '다음 턴 끝에 풀림');
+    const ev = []; apply(B.me, 'root', 1, ctx(B.foe, B.turn + 2, ev));
+    ok(!B.me.eff.root && ev.some(e => e.t === 'resist' && e.why === 'once'), '풀린 뒤 다시 걸어도 안 걸림(교체 전까지 한 번)'); }
+  { const B = team(); B.me.spd = 1; B.foe.spd = 99;
+    const ROOT = { id: 'grab', name: '붙잡기', act: 'attack', power: 1, cost: 0, cats: ['attack'], inflict: { id: 'root' } };
+    const cur = B.me; playTurn3(B, { kind: 'switch', to: 1 }, { kind: 'skill', skill: ROOT });
+    ok(B.me !== cur, '속박이 걸린 그 턴의 늦은 교체는 됨(이미 고른 교체)'); }
+  { const B = team(); const u = B.me; apply(u, 'root', 1, ctx(B.foe, 1, [])); expire(u, 2, []);
+    playTurn3(B, { kind: 'switch', to: 1 }); playTurn3(B, { kind: 'switch', to: 0 });
+    apply(u, 'root', 1, ctx(B.foe, B.turn, []));
+    ok(B.me === u && u.eff.root, '교체로 나갔다 들어오면 다시 걸림'); }
+  // 1:1에서 속박 → 봉인으로
+  { const Bt = makeBattle({ me: mk('me', 'gaia'), foe: mk('foe', 'flower_grass'), seed: 3 });
+    apply(Bt.foe, 'root', 1, { turn: 1, rng: () => 0, ev: [], by: Bt.me });
+    ok(!Bt.foe.eff.root && Bt.foe.eff.seal, '1:1에서는 속박 대신 봉인(다음 1턴)'); }
+  // 도발: 다음 1턴 공격 기술만 · 교체 금지
+  { const t = mk('foe', 'flower_grass'); t.energy = 8; apply(t, 'taunt', 1, ctx(x, 1, []));
+    const buff = { id: 'bf', act: 'buff', cost: 0, self: 'atkUp' }, atkBuff = { id: 'ab', act: 'attack', power: 10, cost: 0, self: 'atkUp' };
+    ok(!canUse(t, buff) && !canUse(t, sk(t, 'sun')) && canUse(t, atkBuff) && canUse(t, sk(t, 's2')), '도발 = 공격 기술만(공격 + 버프는 됨 · 버프 · 광합성은 못 씀)');
+    ok(canSwitch(t, 1) && !canSwitch(t, 2), '도발은 다음 턴 교체도 막음'); }
+  // 도발 + 햇빛 0 + 평타 봉인 = 쓸 게 없어 쉼 → 다음 턴 면역
+  { const t = mk('foe', 'flower_grass'); t.energy = 0; apply(t, 'taunt', 1, ctx(x, 1, [])); apply(t, 'seal', 1, { turn: 1, rng: () => 0, ev: [], by: x });
+    ok(firstOk(t) === BLOCKED, '도발 중 햇빛이 없고 평타도 봉인되면 쓸 행동이 없음');
+    const r = resolveTurn(x, t, x.kit[0], firstOk(t), fixed(0.5), { turn: 2 });
+    ok(r.events.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'blocked') && t.eff.immune, '그 턴 쉬고 다음 턴 면역'); }
+  // 의지가 제한 셋을 막음(굴림 0)
+  { const w = mk('foe', 'flower_grass'); selfBuff(w, 'will', { turn: 1, ev: [] });
+    const ev = []; for (const id of ['seal', 'root', 'taunt']) apply(w, id, 1, { turn: 1, rng: () => 0, ev, by: x });
+    ok(!w.eff.seal && !w.eff.root && !w.eff.taunt && ev.filter(e => e.t === 'resist' && e.why === 'will').length === 3, '의지 = 봉인 · 속박 · 도발도 확률로 막음'); }
 }
 // ── 9-3. 능력치 겹(엑셀 v10 효과 분류 9~18행): 겹마다 지금 5턴 · 따로 만료 · 교체해도 남음 · 정화로 안 지워짐 ──
 {
