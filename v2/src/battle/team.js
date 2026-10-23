@@ -81,12 +81,12 @@ export function playTurn3(B, myAct, foeAct = null) {
   if (foeSkill) { B.foe.energy -= foeSkill.cost || 0; useCount(B.foe, foeSkill); }
   let res = null;
   if (mySkill || foeSkill) {
-    const idle = { id: 'switch', act: 'other' };
+    const idle = { id: 'switch', act: 'other', idle: true };   // 바꾼 쪽(이번 턴 행동 = 교체) — 들어온 식물의 면역은 끝내지 않음
     B.me.curEl = mySkill ? mySkill.el : null; B.foe.curEl = foeSkill ? foeSkill.el : null;
     res = resolveTurn(B.me, B.foe, mySkill || idle, foeSkill || idle, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, field: B.field || (B.field = {}), first: order ? B[order] : null });
     for (const e of res.events) {
       if (e.t === 'act' && e.id === 'switch') continue;
-      if (e.t === 'first' && (!mySkill || !foeSkill || mySkill === REST || foeSkill === REST)) continue;   // 한쪽이 바꾸거나 쉬면 선공 판정은 보여 주지 않음
+      if (e.t === 'first' && (!mySkill || !foeSkill || mySkill.act === 'skip' || foeSkill.act === 'skip')) continue;   // 한쪽이 바꾸거나 쉬면 선공 판정은 보여 주지 않음
       if (e.t === 'hit' || e.t === 'counter') { e.atkKey = B[e.who].key; e.tgtKey = B[e.to].key; e.tgtEl = B[e.to].el; }   // 같은 턴에 쓰러져 바뀌어도 맞은 식물을 알게
       if (e.t === 'skip' && e.refund) B[e.who].energy += e.refund;   // 취소된 행동의 에너지 돌려줌(팀 에너지)
       ev.push(e);

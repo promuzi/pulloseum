@@ -1,6 +1,6 @@
 // 상태 효과 시험(화면 없이): 규칙 하나하나 + 같은 씨앗 → 같은 결과 + 12종 1:1 돌려 보기(효과 있음/없음 비교)
 //   node tools/test/status.mjs [--games 40]
-import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST } from '../../v2/src/battle/model.js';
+import { makeUnit, makeBattle, playTurn, aiPick, kitOf, REST, BLOCKED } from '../../v2/src/battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn, aliveOf, protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
 import { apply, onHit, endTurn, expire, listOf, canUse, effSpd, mustSkip, clearOnSwitch, selfBuff, shockRoll, RULES_FX, atkK } from '../../v2/src/battle/status.js';
@@ -108,9 +108,9 @@ const fixed = v => () => v;
   ok(!shockRoll(c, r(0.3)) && c.eff.shock, '감전 굴림 0.3 = 안 걸림(25%)');
   c.eff.wet = { exp: 9 };
   ok(shockRoll(c, r(0.4)) && !c.eff.shock && c.eff.skip && c.eff.skip.src === 'paral', '젖으면 50% — 굴림 0.4 = 마비 · 감전 풀림');
-  delete c.eff.wet; delete c.eff.skip; c.eff.brace = { exp: 2 }; apply(c, 'shock', 1, ctx(a, 1, []));
-  ok(!shockRoll(c, r(0)) && c.eff.shock, '버팀(쉰 다음 턴)엔 안 굴림');
-  delete c.eff.brace; delete c.eff.shock;
+  delete c.eff.wet; delete c.eff.skip; c.eff.immune = {}; apply(c, 'shock', 1, ctx(a, 1, []));
+  ok(!shockRoll(c, r(0)) && !c.eff.shock && !mustSkip(c), '면역(쉰 뒤) 중에도 굴리고, 걸리면 쉬지 않고 감전만 사라짐(엑셀 v10)');
+  delete c.eff.immune; delete c.eff.shock;
   const d = mk('foe', 'flower_grass');
   apply(d, 'chill', 1, ctx(a, 1, [])); endTurn([[d, a]], 1, []); endTurn([[d, a]], 2, []); ok(d.eff.chill && d.eff.chill.n === 1, '빙결 1턴 안 쌓임 → 그대로'); endTurn([[d, a]], 3, []);
   ok(d.eff.chill === undefined || d.eff.chill.n < 1, '빙결도 2턴 안 쌓이면 줄어듦');
@@ -128,11 +128,10 @@ const fixed = v => () => v;
   const sk1 = r.events.find(e => e.t === 'skip');
   ok(sk1 && sk1.who === 'foe' && sk1.refund === foeS.cost, '선공이 기절 → 후공 이번 행동 취소, 쓴 에너지 돌려받음');
   ok(!r.events.some(e => e.t === 'hit' && e.who === 'foe'), '취소된 쪽은 공격 안 함');
-  ok(B.foe.eff.brace, '쉬고 나면 버팀');
+  ok(B.foe.eff.immune && !B.foe.eff.brace, '쉬고 나면 면역(옛 버팀)');
   const ev = []; apply(B.foe, 'stun', 1, ctx(B.me, 1, ev));
-  ok(!mustSkip(B.foe) && ev.some(e => e.t === 'resist'), '버팀 중에는 기절 안 걸림');
-  expire(B.foe, 1, []); ok(B.foe.eff.brace, '버팀은 다음 턴까지');
-  expire(B.foe, 2, []); ok(!B.foe.eff.brace, '그다음 턴 끝에 사라짐');
+  ok(!mustSkip(B.foe) && ev.some(e => e.t === 'resist' && e.why === 'immune') && B.foe.eff.immune, '면역 중에는 기절 안 걸리고 면역도 남음');
+  expire(B.foe, 1, []); expire(B.foe, 2, []); ok(B.foe.eff.immune, '면역은 턴으로 끝나지 않음(다음 행동 한 번을 마쳐야 끝)');
 }
 { // 후공이 기절시킴 → 선공은 이미 움직였으니 다음 턴 쉼
   const me = mk('me', 'flower_grass', { spd: 99 }), foe = mk('foe', 'gaia', { spd: 1 });
@@ -325,6 +324,45 @@ const fixed = v => () => v;
   ok(!['burn', 'poison', 'bleed', 'shock', 'wet', 'leech'].some(k => pu.eff[k]) && pu.eff.atkDown && pu.eff.gale && mustSkip(pu), '정화 = 해로운 상태이상만 지움(쇠약 · 강풍 · 기절은 남음)');
   const pd = mk('foe', 'gaia'); selfBuff(pd, 'purify', { turn: 1, ev: [] }); apply(pd, 'atkDown', 1, ctx(x, 1, []));
   ok(pd.eff.atkDown, '정화 보호 중에도 능력치 디버프는 걸림(보호는 상태이상만)');
+}
+// ── 9-5. 기절 · 면역 · 의지(엑셀 v10 효과 분류 26 · 33 · 34행) ──
+{
+  const ZAP = { id: 'zap', name: '찌릿', act: 'attack', power: 1, cost: 0, cats: ['attack'], inflict: { id: 'stun' } };
+  const HIT = { id: 'hit', name: '치기', act: 'attack', power: 1, cost: 0, cats: ['attack'] };
+  // 매 턴 기절을 받아도 '한 번 쉬고 한 번 행동' — 거는 쪽이 선공이든 후공이든
+  for (const [first, label] of [[true, '거는 쪽 선공'], [false, '거는 쪽 후공']]) {
+    const z = mk('me', 'gaia', { spd: first ? 99 : 1 }), v = mk('foe', 'flower_grass', { spd: first ? 1 : 99 });
+    let rests = 0;
+    for (let t = 1; t <= 6; t++) { const r = resolveTurn(z, v, ZAP, mustSkip(v) ? REST : HIT, fixed(0.5), { turn: t }); if (r.events.some(e => e.t === 'skip' && e.who === 'foe')) rests++; expire(z, t, []); expire(v, t, []); }
+    ok(rests === 3, `매 턴 기절이 와도 6턴에 3번만 쉼(${label} · ${rests}번)`);
+  }
+  // 면역 = 쉰 뒤 다음 행동 한 번까지: 그 행동을 마치면 끝 → 같은 턴 뒤에 오는 기절은 걸림
+  { const z = mk('me', 'gaia', { spd: 1 }), v = mk('foe', 'flower_grass', { spd: 99 });
+    v.eff.immune = {};
+    const r = resolveTurn(z, v, ZAP, HIT, fixed(0.5), { turn: 1 });
+    ok(r.events.some(e => e.t === 'hit' && e.who === 'foe') && mustSkip(v) && !v.eff.immune, '면역은 내 행동을 마치면 끝 · 그 뒤 같은 턴 기절은 걸림'); }
+  // 면역 중 빙결은 쌓이고 가득 차면 쉬지 않고 0으로
+  { const v = mk('foe', 'flower_grass'), x = mk('me', 'gaia'); v.eff.immune = {};
+    apply(v, 'chill', 2, ctx(x, 1, [])); ok(v.eff.chill && v.eff.chill.n === 2, '면역 중에도 빙결은 쌓임');
+    const ev = []; apply(v, 'chill', 1, ctx(x, 1, ev));
+    ok(!mustSkip(v) && !v.eff.chill && ev.some(e => e.t === 'resist' && e.why === 'immune'), '면역 중 빙결이 가득 차면 쉬지 않고 0으로'); }
+  // 면역 중 감전: 굴림이 걸리면 쉬지 않고 감전만 사라짐 · 안 걸리면 감전 남음
+  { const v = mk('foe', 'flower_grass'), x = mk('me', 'gaia'); v.eff.immune = {}; apply(v, 'shock', 1, ctx(x, 1, []));
+    ok(!shockRoll(v, { turn: 1, rng: () => 0.9, ev: [] }) && v.eff.shock, '면역 중 감전 굴림이 안 걸리면 감전 남음');
+    const ev = []; ok(!shockRoll(v, { turn: 1, rng: () => 0, ev }) && !v.eff.shock && !mustSkip(v) && ev.some(e => e.t === 'resist' && e.why === 'immune'), '면역 중 마비가 터지면 막고 감전은 사라짐'); }
+  // 의지: 기절을 확률로 막음(굴림 0 = 막음) · 막으면 감전 사라짐
+  { const v = mk('foe', 'flower_grass'), x = mk('me', 'gaia'); selfBuff(v, 'will', { turn: 1, ev: [] });
+    ok(v.eff.will && v.eff.will.exp === 3, '의지 = 지금 3턴');
+    const ev = []; apply(v, 'stun', 1, { turn: 1, rng: () => 0, ev, by: x });
+    ok(!mustSkip(v) && ev.some(e => e.t === 'resist' && e.why === 'will'), '의지가 기절을 막음');
+    const ev2 = []; apply(v, 'stun', 1, { turn: 1, rng: () => 0.99, ev: ev2, by: x });
+    ok(mustSkip(v), '의지 굴림이 안 되면 기절');
+    const w = mk('foe', 'flower_grass'); selfBuff(w, 'will', { turn: 1, ev: [] }); apply(w, 'shock', 1, ctx(x, 1, []));
+    ok(!shockRoll(w, { turn: 1, rng: () => 0, ev: [] }) && !w.eff.shock && !mustSkip(w), '의지가 마비를 막으면 감전도 사라짐'); }
+  // 쓸 수 있는 행동이 없어 쉬면(BLOCKED) 다음 턴 면역
+  { const z = mk('me', 'gaia'), v = mk('foe', 'flower_grass');
+    const r = resolveTurn(z, v, HIT, BLOCKED, fixed(0.5), { turn: 1 });
+    ok(r.events.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'blocked') && v.eff.immune, '다 막혀 쉬면 다음 턴 면역'); }
 }
 // ── 9-3. 능력치 겹(엑셀 v10 효과 분류 9~18행): 겹마다 지금 5턴 · 따로 만료 · 교체해도 남음 · 정화로 안 지워짐 ──
 {

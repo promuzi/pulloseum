@@ -5,7 +5,7 @@
 
 import { SKILL_WEAPON } from './matchup.js';
 import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge } from './devices.js';
-import { effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
+import { effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -142,24 +142,30 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     shown.add(u);
   };
   // 누가 쓰러지면 그 턴의 남은 행동은 없음(쓰러진 식물을 때리거나 쓰러진 식물이 움직이지 않게 — 2026-10-16 판정 순서 점검)
+  //  한 식물의 차례 = act(u, foe) → 'rest'(쉰 차례 · 다 막혀 쉼 — 면역이 생김) · 'end'(누가 쓰러져 그 턴 끝) · 그 밖 = 제 행동을 마침 → 면역 끝(엑셀 v10)
   for (const [u, foe] of [[first, second], [second, first]]) {
+    const r = act(u, foe);
+    if (r !== 'rest' && r !== 'gone' && !actOf(u).idle) endAct(u, ev);
+    if (r === 'end' || r === 'gone') break;
+  }
+  function act(u, foe) {
     const ch = u.hp > 0 && foe.hp > 0 ? takeCharge(u) : null;   // 2턴 기술(D11): 모은 기술이 고른 기술 대신 나감(고른 기술 햇빛은 돌려받음)
     if (ch) u.energy = Math.min(u.energyMax || 8, (u.energy || 0) + (actOf(u).cost || 0));
     const a = dynAct(u, ch || actOf(u), foe, rng), d = actOf(foe);   // 공통 장치: 개수 · 운 · 상대 상태로 정한 그 차례 기술 값(devices.js — 칸이 없으면 그대로)
-    if (u.hp <= 0 || foe.hp <= 0) break;
+    if (u.hp <= 0 || foe.hp <= 0) return 'gone';
     // 쉬는 차례(얼음·마비·기절): 고른 행동이 취소되고 쓴 에너지는 돌려받음 — 이번 턴 앞에서 걸렸어도 아직 안 움직였으면 여기서 취소
     if (a.act !== 'skip') shockRoll(u, { turn: T, rng, ev });   // 감전 = 자기 차례마다 확률로 마비(걸리면 아래에서 행동 취소)
-    if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); continue; }
-    if (a.act === 'skip') { skipped.add(u); continue; }
+    if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); return 'rest'; }
+    if (a.act === 'skip') { skipped.add(u); if (a.blocked) { blockedRest(u, T, ev); return 'rest'; } return 'pass'; }   // 다 막혀 쉼 = 다음 턴 면역 · 시간 초과로 넘어감 = 그냥 지나감
     const spent = payAct(u, a, T, ev);   // 개수 · 체력 · 햇빛 내기
     if (a.act === 'guard' || a.act === 'evade') {
       showStance(u);
-      continue;
+      return 'acted';
     }
-    if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); continue; }   // 광합성(기본기 — 햇빛 +2)
+    if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); return 'acted'; }   // 광합성(기본기 — 햇빛 +2)
     const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }); };   // 나에게 거는 버프(버프 기술 · 공격 기술 덤)
-    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); continue; }
-    if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); continue; }
+    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); selfAll(); afterAct(u, a, foe, T, ev, { spent }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); return 'acted'; }
+    if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); return 'acted'; }
     // 공격: 상대 자세가 이 공격에 걸리는지(쉬는 중이면 자세도 못 잡음)
     //  2026-10-18 바닥 규칙 2단계(species-identity §1): 연타 a.hits = 타마다 따로 판정(불운 보정 없음 · 효과는 첫 적중 한 번 · 방어태세는 막은 타만큼 줄어듦 · 흡수 · 반사는 타마다)
     //   은신 = 광역 아닌 공격 95% 빗나감 · 분신 = 90%(진짜가 맞거나 광역이면 풀림) · 기습 = 은신한 쪽 공격 ×1.5 + 상대 자세 무시 · 관통 a.pierce = 상대 방어를 그만큼 무시 · 방어구는 보호막 다음에 막음(망치 ×1.5로 깎임)
@@ -235,8 +241,9 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (foe.hp <= 0 || u.hp <= 0) {
       // 후공이 잡은 자세(회피 되받아치기로 선공이 쓰러진 경우 등)는 자기 차례가 안 와도 화면에 보이게
       if (u === first && foe.hp > 0 && (d.act === 'guard' || d.act === 'evade')) showStance(foe);
-      break;
+      return 'end';
     }
+    return 'acted';
   }
   for (const u of [A, B]) { const a = actOf(u); u.st.lastStance = !skipped.has(u) && (a.act === 'guard' || a.act === 'evade') ? a.act : null; }
   return { first: first.id, events: ev };

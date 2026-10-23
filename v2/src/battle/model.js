@@ -19,6 +19,8 @@ export const BASICS = [
 ];
 // 쉬는 차례(얼음·마비·기절)에 고르는 대신 넘기는 행동
 export const REST = { id: 'rest', name: '쉬기', act: 'skip', cost: 0, cats: ['other'] };
+// 쓸 수 있는 행동이 하나도 없어 쉼(봉인 · 도발 · 햇빛 부족 — 엑셀 v10 '다 막히면 쉼, 쉰 다음 턴 면역'): 시간 초과로 넘어가는 REST와 달리 다음 턴 면역
+export const BLOCKED = { ...REST, blocked: true };
 // 종 기술(시제품 값): 1 = 가벼운 속성기(1 에너지), 2 = 대표 기술(3 에너지·영상 굽기의 종별 공격 연출)
 // 상태 효과(inflict, 2026-10-15 사용자 "효과 있는 건 위력 감소 — 다만 센 컨셉이면 비용을 올리자"):
 //  위력을 깎는 폭 = 효과 값만큼: 지속 피해·쌓여서 쉬게 하는 것 −10~15, 젖음·덩굴·부식·도발처럼 약한 것 −5~10. 센 컨셉(낙뢰·불덩이·대지 내려치기)은 위력 그대로 비용 3 → 4.
@@ -142,7 +144,7 @@ export function makeUnit(id, sp, o) {
 //  상대에게 아직 없는 효과(같은 속성 면역이 아니면)를 거는 기술은 조금 더.
 const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[OLD[f.id] || f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack || D.stat ? true : !has(foe, f.id)); };   // 쌓이는 것(독 · 빙결 · 포자 · 능력치 겹)은 늘 새로
 // 못 쓰는 기술을 골랐을 때 대신 = 손패에서 쓸 수 있는 첫 기술, 없으면 넘어감(손패 넷에 기본기가 없으면 기력이 모자랄 수 있음)
-export const firstOk = u => u.kit.find(s => canUse(u, s)) || REST;
+export const firstOk = u => u.kit.find(s => canUse(u, s)) || BLOCKED;
 // 봇 머리(2026-10-22 사용자 "봇 지능 향상. 교환 등 전투를 전략적으로 하도록"): 기술마다 점수를 매겨 높은 것을 고름.
 //  기대 피해(위력 · 상성 · 방어 · 맞을 확률) ÷ 상대 남은 체력 · 이번에 끝낼 수 있으면 크게 · 아직 없는 효과 · 은신/분신엔 광역 ·
 //  상대가 이번 턴 나를 쓰러뜨릴 만하면(상대가 쓴 기술 · 상대 햇빛으로 짐작) 방어 · 회피 · 막는 버프 · 햇빛이 모자라면 광합성.
@@ -183,7 +185,7 @@ function aiScore(u, foe, s, risk, last) {
 }
 export function aiPick(u, foe, rng, ctx = {}) {
   const ok = u.kit.filter(s => canUse(u, s));
-  if (!ok.length) return REST;
+  if (!ok.length) return BLOCKED;
   const iq = ctx.iq ?? u.ai ?? 0.5, risk = threatOf(foe, u, ctx.seen) / Math.max(1, u.hp);
   const sc = ok.map(s => aiScore(u, foe, s, risk, ctx.last));
   const top = Math.max(...sc), temp = 0.15 + (1 - iq) * 0.85;
@@ -201,7 +203,7 @@ export const lastOf = B => { const t = B.log[B.log.length - 1]; return t && t.fo
 const BASIC_IDS = new Set(BASICS.map(s => s.id));
 export function searchPick(B, n) {
   const u = B.foe, ok = u.kit.filter(s => canUse(u, s));
-  if (!ok.length) return REST;
+  if (!ok.length) return BLOCKED;
   if (ok.length === 1) return ok[0];
   const known = new Set([...BASIC_IDS, ...B.log.map(t => t.mySkill && t.mySkill.id).filter(Boolean)]);
   const seed0 = (B.turn * 7919 + Math.round(B.me.hp) * 131 + Math.round(B.foe.hp) * 31 + (B.me.energy | 0) * 7 + (B.foe.energy | 0)) >>> 0;
@@ -251,7 +253,7 @@ export function playTurnVs(B, mySkill, foeSkill) {
   useCount(B.me, me); useCount(B.foe, foeSkill);   // 변이 기술 횟수
   B.me.curEl = me.el; B.foe.curEl = foeSkill.el;
   const res = resolveTurn(B.me, B.foe, me, foeSkill, B.rng, { elemMult: (u, d, a) => elemMult(u.curEl, d.el) * formMult(u, d, a), turn: T, field: B.field || (B.field = {}) });   // field = 경기장 효과(공통 장치)
-  const events = res.events.filter(e => !(e.t === 'first' && (me === REST || foeSkill === REST)));   // 한쪽이 쉬면 선공 판정은 보여 주지 않음
+  const events = res.events.filter(e => !(e.t === 'first' && (me.act === 'skip' || foeSkill.act === 'skip')));   // 한쪽이 쉬면 선공 판정은 보여 주지 않음
   for (const e of events) if (e.t === 'skip' && e.refund) B[e.who].energy += e.refund;   // 취소된 행동의 에너지 돌려줌
   // 누가 쓰러지면 그 자리에서 판이 끝남(턴 끝 피해 없음) · 같이 쓰러지는 일 없이 먼저 쓰러진 쪽이 짐(2026-10-16 — 전엔 둘 다 쓰러지면 늘 'me' 승리)
   const down = () => B.me.hp <= 0 || B.foe.hp <= 0;

@@ -45,6 +45,7 @@ export const FX = {
   thorns:  { buff: true, turns: 2, reflect: 0.3 },           // 반사: 붙어서 때린 상대에게 받은 피해 30%(멀리서 · 범위는 안 됨)
   shield:  { buff: true, turns: 3, hp: 0.15 },               // 보호막: 최대 체력 15%만큼 먼저 막음
   purified:{ buff: true, turns: 1 },                         // 정화: 나쁜 효과를 다 지우고 다음 턴까지 안 걸림
+  will:    { buff: true, turns: 3, p: 0.5, now: true },      // 의지(엑셀 v10 33행): 기절(마비 · 얼음) · 봉인 · 속박 · 도발을 확률로 막음 — 막으면 빙결은 0으로, 감전은 사라짐(확률은 밸런스 전 임시)
   // 2026-10-18 바닥 규칙 2단계(species-identity §1): 방어구 = 체력 위 금속 칸(깨질 때까지 · 쌓임 · 교체해도 남음 · 망치에 ×1.5로 깎임 · 지속 피해는 통과)
   //  은신 = 이번 턴 광역 아닌 공격 95% 빗나감 + 기습(공격 ×1.5 · 상대 자세 무시) · 분신 = 2턴 광역 아닌 공격 90% 빗나감(진짜가 맞거나 광역이면 풀림)
   flourish: { buff: true, adds: { atkUp: 0.05, defUp: 0.05, spdUp: 0.05 } },   // 만개(페탈로즈 원안 '모든 스탯 증가' — 2026-10-19 '독립 상태 없이 공통 강화로'): 쓸 때마다 활력 · 억셈 · 가속 +5% 한 겹씩
@@ -54,12 +55,11 @@ export const FX = {
   focus:   { buff: true },                                   // 집중: 다음 공격 치명 +25(u.st.nextCrit — 회피 성공 보상 '치명 준비'와 같은 칸)                                      // (포자가 피어 숨이 막힘 — 그 턴 끝 에너지 +1 없음, 창에는 안 보임)
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
-export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, brace: true, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
-const SKIP_IDS = ['stun', 'chill'];
+export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['stealth', 'clone', 'burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'bind', 'gale', 'taunt', 'root', 'brace', 'choke', 'thorns', 'shield', 'purified'];
-const BUFFS = ['stealth', 'clone', 'armor', ...UPS, 'regen', 'thorns', 'shield', 'purified'];
+const TIMED = ['stealth', 'clone', 'burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'bind', 'gale', 'taunt', 'root', 'choke', 'thorns', 'shield', 'purified', 'will'];
+const BUFFS = ['stealth', 'clone', 'armor', ...UPS, 'regen', 'will', 'thorns', 'shield', 'purified'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 정화 보호는 이것과 기절을 막음
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'bind', 'leech', 'dark', 'taunt', 'root', 'choke'];
 const GUARDED = [...HARM, 'stun'];
@@ -138,7 +138,7 @@ export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.bind &&
 // 창에 보일 목록(이로운 것 먼저 · 숫자 = 쌓인 수만)
 export function listOf(u) {
   const e = (u && u.eff) || {}, out = [];
-  if (e.brace) out.push({ id: 'brace' });
+  if (e.immune) out.push({ id: 'immune' });
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수
   if (u && u.st && u.st.nextCrit) out.push({ id: 'focus' });
   if (e.skip) out.push({ id: e.skip.src });
@@ -146,18 +146,31 @@ export function listOf(u) {
   return out;
 }
 
-// ── 쉬기 ──
+// ── 쉬기(기절 — 엑셀 v10 대표 태그 · 마비 · 얼음은 이름 · 연출만) ──
+// 걸리면 참 · 이미 쉬는 차례 · 면역 · 의지(확률)에 막히면 거짓(막힌 까닭 = resist 사건)
 function setSkip(tgt, src, ctx) {
-  const e = E(tgt);
+  const e = E(tgt), base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: src };
+  const why = e.skip ? 'skip' : e.immune ? 'immune' : e.will && ctx.rng && ctx.rng() < FX.will.p ? 'will' : null;
+  if (why) { ctx.ev.push({ t: 'resist', ...base, why, list: listOf(tgt) }); return false; }
   e.skip = { src };
-  ctx.ev.push({ t: 'fx', who: ctx.by.id, to: tgt.id, name: tgt.name, id: src, list: listOf(tgt) });
+  ctx.ev.push({ t: 'fx', ...base, list: listOf(tgt) });
+  return true;
 }
-// 쉬는 차례가 오면: 고른 행동 취소(쓴 에너지는 부르는 쪽이 refund 만큼 돌려줌) → 다음 턴까지 버팀
+// 쉬는 차례가 오면: 고른 행동 취소(쓴 에너지는 부르는 쪽이 refund 만큼 돌려줌) → 면역(다음 행동 한 번을 기절 없이 — 그 행동을 마치면 끝)
 export function consumeSkip(u, turn, ev, refund = 0) {
   const e = E(u), src = e.skip.src;
   delete e.skip; e.skipDone = turn;
-  if (RULES_FX.brace) e.brace = { exp: turn + 1 };
+  e.immune = {};
   ev.push({ t: 'skip', who: u.id, name: u.name, src, refund, list: listOf(u) });
+}
+// 쓸 수 있는 행동이 하나도 없어 쉼(model.js BLOCKED): 기절로 쉰 것처럼 다음 턴 면역(기절 표시는 없음)
+export function blockedRest(u, turn, ev) {
+  E(u).immune = {};
+  ev.push({ t: 'skip', who: u.id, name: u.name, src: 'blocked', refund: 0, list: listOf(u) });
+}
+// 그 식물이 제 행동을 마침(rules.resolveTurn — 쉰 차례 · 다 막혀 쉰 차례는 빼고): 면역 끝
+export function endAct(u, ev) {
+  if (u && u.eff && u.eff.immune) { delete u.eff.immune; ev.push({ t: 'expire', who: u.id, ids: ['immune'], list: listOf(u) }); }
 }
 
 // ── 걸기 ──
@@ -177,7 +190,6 @@ export function apply(tgt, id0, n, ctx, o = {}) {
   const by = ctx.by && ctx.by.pas;
   if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
   if (by && id === 'spore' && by.sporeAdd) n += by.sporeAdd;      // 카드(포자 번식)
-  if (SKIP_IDS.includes(id) && (e.brace || e.skip)) { ev.push({ t: 'resist', ...base, why: e.brace ? 'brace' : 'skip' }); return; }
   if (D.stat) {
     for (let i = 0; i < (n || 1); i++) addStat(tgt, id, T, o);
     ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(tgt) });
@@ -189,7 +201,7 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     const wet = !!e.wet, add = n + (wet ? RULES_FX.wetStackAdd : 0), s = e[id] ||= { n: 0, last: T };
     s.n = Math.min(D.stack, s.n + add); s.last = T;
     ev.push({ t: 'fx', ...base, n: s.n, wet, list: listOf(tgt) });
-    if (s.n >= D.stack) { delete e[id]; setSkip(tgt, D.skip, ctx); }   // 3이 되면 한 번 쉬고 0으로
+    if (s.n >= D.stack) { delete e[id]; setSkip(tgt, D.skip, ctx); }   // 3이 되면 한 번 쉬고 0으로 — 면역 · 의지 · 이미 쉬는 중이면 쉬지 않고 0으로
   } else if (id === 'spore') {
     const sp = e.spore ||= { n: 0, last: T };
     sp.n = Math.min(D.stack, sp.n + n); sp.last = T;
@@ -213,14 +225,14 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   }
 }
-// 감전 굴림(자기 행동 차례 — rules.resolveTurn): 마비면 감전이 풀리고 이번 행동 취소(쉬기 · 햇빛 돌려줌) · 쉰 다음 턴(버팀)엔 안 굴림
+// 감전 굴림(자기 행동 차례 — rules.resolveTurn): 마비면 감전이 사라지고 이번 행동 취소(쉬기 · 햇빛 돌려줌) · 이미 쉬는 차례엔 안 굴림 ·
+//  면역 중에도 굴림(엑셀 v10) — 면역 · 의지가 막으면 쉬지 않고 감전만 사라짐
 export function shockRoll(u, ctx) {
   const e = u.eff;
-  if (!e || !e.shock || e.skip || e.brace || u.hp <= 0) return false;
+  if (!e || !e.shock || e.skip || u.hp <= 0) return false;
   if (ctx.rng() >= (e.wet ? FX.shock.wetP : FX.shock.p)) return false;
   delete e.shock;
-  setSkip(u, 'paral', { ...ctx, by: u });
-  return true;
+  return setSkip(u, 'paral', { ...ctx, by: u });
 }
 // 포자가 피어남: 최대 체력 10% 피해 + 그 턴 끝 에너지 +1 없음(숨 막힘) → 0으로
 function bloom(u, turn, ev) {
@@ -245,6 +257,7 @@ export function selfBuff(u, id0, ctx, o = {}) {
   if (id === 'regen') e.regen = { exp: Math.max((e.regen && e.regen.exp) || 0, nowExp(T, o.turns ?? D.turns)) };   // 지금 3턴 · 다시 걸면 긴 쪽
   else if (id === 'shield') e.shield = { exp: T + D.turns, hp: Math.max(1, Math.round(u.max * D.hp)) };
   else if (id === 'armor') e.armor = { hp: Math.min(Math.round(u.max * D.cap), ((e.armor && e.armor.hp) || 0) + Math.max(1, Math.round(u.max * D.hp))) };   // 쌓임(상한 최대 체력 50%)
+  else if (D.now) e[id] = { exp: Math.max((e[id] && e[id].exp) || 0, nowExp(T, o.turns ?? D.turns)) };   // 지금 N턴(의지 등) · 다시 걸면 긴 쪽
   else e[id] = { exp: T + D.turns };
   ctx.ev.push({ t: 'fx', ...base, list: listOf(u) });
 }
