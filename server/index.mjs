@@ -50,6 +50,7 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/api/')) {
       const out = await api.handle(apiReq(req, path, req.method === 'POST' ? await readBody(req) : {}));
       if (res.destroyed || res.writableEnded) return;
+      if (out.cookie) res.setHeader('set-cookie', out.cookie);   // 로그인 유지 쿠키
       return json(res, out.status, out.body);
     }
     if ((req.method === 'GET' || req.method === 'HEAD') && await serveStatic(req, res, path)) return;

@@ -38,6 +38,7 @@ export const STMTS = {
   addSession: 'INSERT INTO sessions (token, user_id, expires) VALUES (?, ?, ?)',
   session: 'SELECT * FROM sessions WHERE token = ?',
   delSession: 'DELETE FROM sessions WHERE token = ?',
+  touchSession: 'UPDATE sessions SET expires = ? WHERE token = ?',
   purgeSessions: 'DELETE FROM sessions WHERE expires < ?',
   save: 'SELECT * FROM saves WHERE user_id = ?',
   // 저장 판 옮기기 직전 원본(2026-10-18 업데이트 안전 — game.mjs load): 계정마다 최근 3개 · 되돌리기 = 관리 열쇠(api.mjs POST /api/admin/restore)

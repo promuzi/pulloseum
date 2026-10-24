@@ -29,6 +29,11 @@ export function userOfToken(q, token, now) {
   return q.userById.get(s.user_id) || null;
 }
 export const endSession = (q, token) => { if (token) q.delSession.run(tokHash(token)); };
+// 쓸 때마다 30일 늘림(2026-10-24 — 자주 들어오는 사람이 30일마다 다시 로그인하지 않게)
+export const touchSession = (q, token, now) => { if (token) q.touchSession.run(now + SESSION_DAYS * DAY, tokHash(token)); };
+// 로그인 유지 쿠키(2026-10-24 사용자 '아이폰에서 게임들어가면 매번 로그인해야한다는데'): 아이폰 사파리는 스크립트가 쓴 저장(localStorage)을 7일 안 쓰면 지우고
+//  개인 정보 보호 · 일부 앱 안 브라우저에선 아예 못 씀 → 서버가 내려 주는 HttpOnly 쿠키(30일)로도 알아봄. v = 열쇠(빈 글 = 지우기)
+export const sessionCookie = v => v ? `pullo_t=${encodeURIComponent(v)}; Max-Age=${SESSION_DAYS * 86400}; Path=/; HttpOnly; Secure; SameSite=Lax` : 'pullo_t=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax';
 
 // 로그인 시도 제한(IP마다 10분에 12번)
 const tries = new Map();

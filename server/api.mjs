@@ -1,7 +1,7 @@
 // 서버 길(주소 → 할 일) — Node(server/index.mjs)와 Cloudflare(cf/src/worker.js)가 같이 씀. 들어오고 나가는 꼴만 플랫폼이 맞춰 줌.
 //  req = { method, path, query: URLSearchParams, header(이름), ip, body(객체), onClose(fn) } → { status, body } (기다리는 요청은 Promise) · API 주소가 아니면 null
 //  하는 일: 계정(아이디·비밀번호 → 로그인 열쇠) · 자동 저장(일 하나마다) · 봇 판(서버가 한 턴씩) · 친구 대결 방(초대 코드 · 기다리는 요청)
-import { hashPass, checkPass, newSession, userOfToken, endSession, allowTry, LOGIN_RE } from './auth.mjs';
+import { hashPass, checkPass, newSession, userOfToken, endSession, touchSession, sessionCookie, allowTry, LOGIN_RE } from './auth.mjs';
 import { timingSafeEqual } from 'node:crypto';
 import { Err, cleanCoupon, SAVE_VER, ROUNDS } from '../v2/src/game/logic.js';
 import { STARTERS, LEAGUES, LEAGUE_KEYS, TIERS, seasonOf } from '../v2/src/game/catalog.js';
@@ -46,7 +46,8 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     for (const [k, r] of hits) if (now - r.t0 > 60000) hits.delete(k);
     q.purgeSessions.run(now); q.purgeBattles.run(now - 7 * 864e5);
   }
-  const tokenOf = req => { const h = req.header('authorization') || ''; return h.startsWith('Bearer ') ? h.slice(7).trim() : null; };
+  const cookieTok = req => { const m = /(?:^|;\s*)pullo_t=([^;]+)/.exec(req.header('cookie') || ''); try { return m ? decodeURIComponent(m[1]) : null; } catch { return null; } };
+  const tokenOf = req => { const h = req.header('authorization') || ''; return h.startsWith('Bearer ') ? h.slice(7).trim() : cookieTok(req); };   // 열쇠 = Bearer → 없으면 로그인 유지 쿠키
   const cleanNick = v => String(v || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 12);
   const couponCode = v => { const c = String(v || '').toUpperCase().replace(/[\s-]/g, ''); return /^[A-Z0-9]{4,24}$/.test(c) ? c : ''; };   // 쿠폰 번호 = 영문 · 숫자 4~24자(띄어쓰기 · 붙임표 · 대소문자 무시)
   function authed(req, now) {
@@ -140,7 +141,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       q.delUserSessions.run(u.id); q.delSave.run(u.id); q.delBattles.run(u.id); q.delEvents.run(u.id); q.delCouponUses.run(u.id); q.delBackups.run(u.id); q.delUser.run(u.id);
       return { ok: true };
     },
-    'GET /api/me': (req, b, now) => { const u = authed(req, now); return { user: pub(u), ...game.state(u.id, now) }; },
+    'GET /api/me': (req, b, now) => { const u = authed(req, now), tok = tokenOf(req); touchSession(q, tok, now); return { user: pub(u), ...game.state(u.id, now), token: tok }; },   // 열쇠를 돌려줌 = 쿠키로만 들어온 화면이 다시 저장
     // 공지(누구나 — 로그인 전 처음 화면에서도): 최근 열 개, 새것부터
     'GET /api/notices': () => ({ notices: q.notices.all() }),
     // 순위표(로그인한 계정): ?league=sprout|growing|open — 위 50명 + 내 자리
@@ -222,6 +223,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     },
   };
 
+  const COOKIE_SET = new Set(['/api/register', '/api/login', '/api/google', '/api/me']), COOKIE_CLEAR = new Set(['/api/logout', '/api/account/delete']);
   async function handle(req) {
     const now = Date.now();
     if (!req.path.startsWith('/api/')) return null;
@@ -235,7 +237,8 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       const h = API[req.method + ' ' + req.path];
       if (!h) throw new HttpErr(404, '없는 주소예요');
       const out = await h(req, req.body || {}, now);   // 구글 확인처럼 밖에 묻는 길은 기다림
-      return { status: 200, body: { ...out, now: Date.now() } };
+      const cookie = COOKIE_SET.has(req.path) && out && out.token ? sessionCookie(out.token) : COOKIE_CLEAR.has(req.path) ? sessionCookie('') : null;   // 로그인 유지 쿠키(auth.mjs)
+      return { status: 200, body: { ...out, now: Date.now() }, cookie };
     } catch (e) {
       if (e instanceof Err) return { status: 400, body: { error: e.message } };
       if (e instanceof HttpErr) return { status: e.code, body: { error: e.message } };

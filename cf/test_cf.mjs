@@ -37,6 +37,8 @@ try {
   console.log(`정적 파일: /v2/ ${page.status} · / → ${root.status} ${root.headers.get('location') || ''}`);
   const t = spawnSync(process.execPath, [join(ROOT, 'tools', 'test', 'server.mjs'), '--base', BASE], { cwd: ROOT, encoding: 'utf8' });
   process.stdout.write(t.stdout); if (t.stderr) process.stdout.write(t.stderr);
+  const ck = spawnSync(process.execPath, [join(ROOT, 'tools', 'test', 'cookie_login.mjs'), '--base', BASE], { cwd: ROOT, encoding: 'utf8' });   // 로그인 유지 쿠키(2026-10-24 — Worker가 set-cookie 를 내려 주는지)
+  process.stdout.write(ck.stdout);
   // 쿠폰(2026-10-17): Cloudflare 저장소(Durable Object SQLite)에서도 만들기 · 받기 · 두 번 막기
   const J = async (path, body, h = {}) => { const r = await fetch(BASE + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', ...h }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, ...(await r.json().catch(() => ({}))) }; };
   const mk = await J('/api/admin/coupon', { code: 'CFTEST1', reward: { credits: 77, seeds: ['common'] }, max: 1 }, { 'x-admin-key': LOCAL_KEY });
@@ -45,7 +47,7 @@ try {
   const r1 = await J('/api/coupon', { code: 'cftest1' }, auth), r2 = await J('/api/coupon', { code: 'CFTEST1' }, auth);
   const cpOk = mk.ok && rg.token && r1.status === 200 && r1.got && r1.got.length === 2 && r1.state.wallet.credits === rg.state.wallet.credits + 77 && r2.status === 400;
   console.log(cpOk ? '쿠폰(Cloudflare 저장소) 통과' : `쿠폰 실패: ${JSON.stringify({ mk, r1: r1.status, r2: r2.status, e: r1.error || r2.error })}`);
-  code = t.status === 0 && page.status === 200 && root.status === 302 && cpOk ? 0 : 1;
+  code = t.status === 0 && ck.status === 0 && page.status === 200 && root.status === 302 && cpOk ? 0 : 1;
 } catch (e) { console.error(e.message); }
 finally {
   try { execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' }); } catch { child.kill(); }

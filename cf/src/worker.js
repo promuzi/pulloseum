@@ -33,6 +33,7 @@ export class Hub extends DurableObject {
     let path = url.pathname;
     try { path = decodeURIComponent(path); } catch {}
     const out = await this.api.handle({ method: request.method, path, query: url.searchParams, header: n => request.headers.get(n), ip: request.headers.get('cf-connecting-ip') || 'cf', body, onClose: f => closers.push(f) });
+    if (out && out.cookie) { const r = json(out.status, out.body); r.headers.append('set-cookie', out.cookie); return r; }   // 로그인 유지 쿠키
     return out ? json(out.status, out.body) : json(404, { error: '없는 주소예요' });
   }
 }

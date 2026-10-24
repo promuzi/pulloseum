@@ -183,9 +183,9 @@ export const title = {
     this.checking = true;
     if (app.googleId === undefined && (net.offline || (inApp() && !nativeGoogle()))) app.googleId = null;   // 옛 앱(구글 플러그인 없음) = 단추 숨김
     if (app.googleId === undefined) net.req('/api/config').then(c => { app.googleId = c.google || null; if (app.googleId && !inApp()) loadGis().catch(() => {}); }).catch(() => { app.googleId = null; });
-    if (!net.token) { this.mode = 'out'; return; }
-    try { const r = await net.req('/api/me'); app.user = r.user; app.state = r.state; this.mode = 'in'; }
-    catch (e) { this.mode = e.status === 0 ? 'down' : 'out'; this.err = e.status === 0 ? e.message : null; }
+    // 열쇠가 없어도 /api/me 를 물어봄 — 서버의 로그인 유지 쿠키로 알아보면 열쇠를 돌려받아 다시 저장(2026-10-24 사용자 '아이폰에서 게임들어가면 매번 로그인해야한다는데')
+    try { const r = await net.req('/api/me'); if (r.token) net.setToken(r.token); app.user = r.user; app.state = r.state; this.mode = 'in'; }
+    catch (e) { this.mode = e.status === 0 && net.token ? 'down' : 'out'; this.err = e.status === 0 && net.token ? e.message : null; }
   },
   // 처음 화면 곡 시각(초) — 촬영(?at=)이면 그 값
   it() { return this.at != null ? this.at : introTime(); },
