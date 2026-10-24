@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(resolve(here, '..', 'tools', 'shots', 'package.json'));
 const puppeteer = require('puppeteer-core');
 const BASE = (process.argv[2] || 'http://127.0.0.1:8799').replace(/\/$/, '');
-const KNOWN = /favicon\.ico$|vine_wind_young\.(json|png)$/;   // 원래 없는 것(브라우저 기본 아이콘 · 게일바인 어린 단계 그림) — 넘어감
+const KNOWN = /favicon\.ico$|vine_wind_young\.(json|png)$|\/api\/me$/;   // 원래 없는 것(브라우저 기본 아이콘 · 게일바인 어린 단계 그림) · 처음 화면의 로그인 확인(로그인 안 한 새 브라우저 = 401 — 2026-10-24 로그인 유지 쿠키부터 늘 물어봄) — 넘어감
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
 let code = 1;
