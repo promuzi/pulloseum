@@ -15,7 +15,7 @@ import { eul } from '../core/josa.js';
 import { CARDS, cardFace, cardPrice } from '../game/cards.js';
 import { cardTiny, packTiny } from '../art/skillcard.js';
 import { openForm } from '../core/form.js';
-import { sfx, SOUND, setSfxOn, setMusicOn } from '../core/sound.js';
+import { sfx, SOUND, setSfxOn, setMusicOn, setSfxLevel, setMusicLevel } from '../core/sound.js';
 import { drawGuide } from './guide.js';
 import { draftScreen, openDraft } from './draft.js';
 import { noticeSheet } from './notice.js';
@@ -232,7 +232,7 @@ export function cutAsk(app, p, after) {
 
 // ── ④ 설정 ──
 function settingsSheet(app) {
-  const { g, W, H, input } = app, u = app.user, online = !net.offline && !!u, x = 14, w = W - 28, h = online ? 370 : 290, y = 70, PT = T.ptext;   // 온라인 = 순위표 이름 한 줄 더(2026-10-22)
+  const { g, W, H, input } = app, u = app.user, online = !net.offline && !!u, x = 14, w = W - 28, h = online ? 410 : 330, y = 70, PT = T.ptext;   // 온라인 = 순위표 이름 한 줄 더(2026-10-22)
   g.c.fillStyle = 'rgba(4,7,14,0.72)'; g.c.fillRect(0, 0, W, H);
   input.hit('st_block', 0, 0, W, H, () => { app.sheet = null; });
   input.hit('st_in', x, y, w, h, () => {});
@@ -250,8 +250,21 @@ function settingsSheet(app) {
   } }); yy += 40;
   if (online) { button(app, 'st_coupon', x + 14, yy, w - 28, 30, '쿠폰 입력', { style: 'night', icon: 'box', onTap: () => { app.sheet = null; couponForm(app); } }); yy += 40; }
   const half = Math.floor((w - 28 - 8) / 2);
-  button(app, 'st_sfx', x + 14, yy, half, 30, SOUND.sfx ? '효과음 켬' : '효과음 끔', { style: SOUND.sfx ? 'night' : 'off', icon: 'sparkle', iconTint: true, onTap: () => setSfxOn(!SOUND.sfx) });
-  button(app, 'st_music', x + 14 + half + 8, yy, half, 30, SOUND.music ? '음악 켬' : '음악 끔', { style: SOUND.music ? 'night' : 'off', icon: 'heart', iconTint: true, onTap: () => setMusicOn(!SOUND.music) }); yy += 40;
+  // 음량 두 줄(2026-10-24 사용자 '배경음악과 효과음의 소리도 설정창에서 조절'): 이름 단추 = 끔/켬 · 칸 열 개 = 누른 칸까지 · 오른쪽 %
+  const volRow = (id, label, icon, lv, set, on) => {
+    const lw = 92, pw = 34, bx = x + 14 + lw + 6, sw = Math.floor((w - 28 - lw - 6 - pw) / 10);
+    button(app, id, x + 14, yy, lw, 30, label, { style: lv ? 'night' : 'off', icon, iconTint: true, onTap: () => on(!lv) });
+    for (let i = 0; i < 10; i++) {
+      const sx = bx + i * sw, lit = i < lv;
+      g.rect(sx, yy + 9, sw - 2, 12, lit ? '#ffc83c' : 'rgba(140,207,255,0.16)');
+      if (lit) g.rect(sx, yy + 9, sw - 2, 3, '#ffe98a');
+      input.hit(id + '_' + i, sx, yy, sw, 30, () => set(i + 1));
+    }
+    g.text(lv ? `${lv * 10}%` : '끔', x + w - 14, yy + 8, { font: 'bold', color: lv ? PT.main : PT.dim, align: 'right' });
+    yy += 40;
+  };
+  volRow('st_music', '배경음악', 'heart', SOUND.musicLv, setMusicLevel, setMusicOn);
+  volRow('st_sfx', '효과음', 'sparkle', SOUND.sfxLv, setSfxLevel, setSfxOn);
   // 순위표에 이름 보이기(2026-10-22 — 로드맵 '이름 공개 여부 설정', 기본 = 보임 · 숨기면 '익명 재배사')
   if (online && app.state && app.state.profile) { const hide = !!app.state.profile.rankHide; button(app, 'st_rank', x + 14, yy, w - 28, 30, hide ? '순위표에 이름 숨김' : '순위표에 이름 보임', { style: hide ? 'off' : 'night', icon: 'trophy', iconTint: true, onTap: () => app.act('setProfile', { rankHide: !hide }) }); yy += 40; }
   if (!net.offline && u) button(app, 'st_out', x + 14, yy, w - 28, 30, '로그아웃', { style: 'red', onTap: () => { app.sheet = null; ask(app, '로그아웃할까요?', u.provider === 'google' ? "다시 들어올 땐 '구글로 계속하기'를 누르면 돼요" : '다시 들어올 땐 아이디·비밀번호가 필요해요', () => app.logout()); } });

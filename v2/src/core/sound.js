@@ -7,22 +7,29 @@
 //  설정(효과음 · 음악 켬/끔)은 이 브라우저에 저장.
 import { Conductor, buildGraph, play as playMusic, STEP, BAR } from './music.js';
 const PREF_KEY = 'pullo.sound';
-export const SOUND = { sfx: true, music: true, sfxVol: 0.8, musicVol: 0.42 };
-try { const p = JSON.parse(localStorage.getItem(PREF_KEY) || 'null'); if (p) Object.assign(SOUND, p); } catch {}
-const save = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify({ sfx: SOUND.sfx, music: SOUND.music })); } catch {} };
+// 음량 = 설정창 0~10칸(2026-10-24 사용자 '게임 소리가 작아 … 배경음악과 효과음의 소리도 설정창에서 조절할 수 있게'): 버스 세기 = 최대 × (칸/10)² — 귀에 고르게
+//  기본 = 배경음악 7칸 · 효과음 8칸(전 기본 세기 0.42 · 0.8 그대로 — 둘 사이 균형 유지) · 0칸 = 끔 · 옛 저장(켬/끔)은 끔이면 0칸으로
+export const SOUND = { sfx: true, music: true, sfxLv: 8, musicLv: 7, sfxVol: 0.8, musicVol: 0.42 };
+const VOL_MAX = { sfx: 1.25, music: 0.86 };
+const derive = () => { SOUND.sfx = SOUND.sfxLv > 0; SOUND.music = SOUND.musicLv > 0; SOUND.sfxVol = VOL_MAX.sfx * (SOUND.sfxLv / 10) ** 2; SOUND.musicVol = VOL_MAX.music * (SOUND.musicLv / 10) ** 2; };
+try { const p = JSON.parse(localStorage.getItem(PREF_KEY) || 'null'); if (p) { if (p.sfxLv != null) SOUND.sfxLv = p.sfxLv; else if (p.sfx === false) SOUND.sfxLv = 0; if (p.musicLv != null) SOUND.musicLv = p.musicLv; else if (p.music === false) SOUND.musicLv = 0; } } catch {}
+derive();
+const save = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify({ sfxLv: SOUND.sfxLv, musicLv: SOUND.musicLv })); } catch {} };
 
-let ctx = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null, unlocked = false;
+let ctx = null, master = null, limiter = null, sfxBus = null, musicBus = null, noiseBuf = null, unlocked = false;
 const PW = {};   // 펄스 파형(폭 12.5% · 25%)
 function makeNoise(ac) { const n = ac.sampleRate, b = ac.createBuffer(1, n, n), d = b.getChannelData(0); let s = 1; for (let i = 0; i < n; i++) { s = (s * 16807) % 2147483647; d[i] = (s / 2147483647) * 2 - 1; } return b; }
 function makePW(ac, into) { for (const [k, duty] of [['pulse12', 0.125], ['pulse25', 0.25]]) { const N = 32, re = new Float32Array(N), im = new Float32Array(N); for (let h = 1; h < N; h++) im[h] = (2 / (h * Math.PI)) * Math.sin(h * Math.PI * duty); into[k] = ac.createPeriodicWave(re, im); } return into; }
+// 전체 크기(2026-10-24): 처음 화면 음악이 평균 −18 dBFS · 최고 −7.7 dBFS로 다른 게임보다 6 dB쯤 작았음 → 전체 ×1.9(+5.6 dB) · 리미터 −2 dBFS(봉우리만 누름)
+const MASTER = 1.9;
 function init() {
   if (ctx) return ctx;
   const AC = globalThis.AudioContext || globalThis.webkitAudioContext; if (!AC) return null;
   // 소리 처리 여유 = 'balanced'(휴대폰에서 화면 계산이 몰릴 때 소리가 끊기는 일을 줄임 — 화면 동기는 음악 시계가 출력 지연을 빼서 그대로, 2026-10-17 사용자 "여전히 종종 음악이 지지직")
   try { ctx = new AC({ latencyHint: 'balanced' }); } catch { ctx = new AC(); }
-  master = ctx.createGain(); master.gain.value = 1;
+  master = ctx.createGain(); master.gain.value = MASTER;
   // 넘침 막기(리미터): 음악 · 효과음이 겹쳐 1을 넘으면 찢어지는 소리 → 봉우리만 눌러 줌
-  const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.15;
+  const lim = limiter = ctx.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 3; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12;
   master.connect(lim); lim.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.gain.value = SOUND.sfx ? SOUND.sfxVol : 0; sfxBus.connect(master);
   musicBus = ctx.createGain(); musicBus.gain.value = SOUND.music ? SOUND.musicVol : 0; musicBus.connect(master);
@@ -51,10 +58,15 @@ export function tryAutoStart() {
   if (ctx.state === 'running') return unlock();
   ctx.resume().then(() => { if (ctx.state === 'running' && !unlocked) unlock(); }, () => {});
 }
+// 소리 크기 재기(개발용 — 브라우저 콘솔에서 이 모듈을 import 해 씀): 최종 출력(리미터 뒤)에 분석기를 붙여 돌려줌
+export function meterTap() { if (!limiter) return null; const an = ctx.createAnalyser(); an.fftSize = 2048; limiter.connect(an); return an; }
 // 소리가 아직 막혀 있음(처음 화면이 '눌러서 시작' 작은 표시를 띄움)
 export const soundLocked = () => !unlocked && !REC;
-export function setSfxOn(on) { SOUND.sfx = !!on; save(); if (sfxBus) sfxBus.gain.setTargetAtTime(on ? SOUND.sfxVol : 0, ctx.currentTime, 0.05); }
-export function setMusicOn(on) { SOUND.music = !!on; save(); if (musicBus) musicBus.gain.setTargetAtTime(on ? SOUND.musicVol : 0, ctx.currentTime, 0.1); }
+const prevLv = { sfx: 8, music: 7 };   // 끔(0칸)에서 다시 켤 때 돌아갈 칸
+export function setSfxLevel(lv) { lv = Math.max(0, Math.min(10, Math.round(lv))); if (!lv && SOUND.sfxLv) prevLv.sfx = SOUND.sfxLv; SOUND.sfxLv = lv; derive(); save(); if (sfxBus) sfxBus.gain.setTargetAtTime(SOUND.sfxVol, ctx.currentTime, 0.05); }
+export function setMusicLevel(lv) { lv = Math.max(0, Math.min(10, Math.round(lv))); if (!lv && SOUND.musicLv) prevLv.music = SOUND.musicLv; SOUND.musicLv = lv; derive(); save(); if (musicBus) musicBus.gain.setTargetAtTime(SOUND.musicVol, ctx.currentTime, 0.1); }
+export function setSfxOn(on) { setSfxLevel(on ? (SOUND.sfxLv || prevLv.sfx) : 0); }
+export function setMusicOn(on) { setMusicLevel(on ? (SOUND.musicLv || prevLv.music) : 0); }
 
 // ── 효과음 한 겹: { w 파형, f [시작 Hz, 끝 Hz], d 길이(초), a 어택, v 세기, at 지연, flt [종류, Hz, Q], vib [Hz, 반음 폭], rv 높낮이 흔들림 } ──
 const NOTE = n => { const m = /^([A-G])(#|b)?(-?\d)$/.exec(n); if (!m) return 440; const i = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (+m[3] - 4) * 12; return 440 * 2 ** (i / 12); };
