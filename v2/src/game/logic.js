@@ -5,7 +5,7 @@ import {
   uniqueOf, uniquesOf, bloomPool, canGraft, userNeed, XP, farmSlots, levelReward, HARVEST, harvestMax, harvestK, HARVEST_TABLE, FARM_DAY, PLANETS, ORBIT_LV, FUEL,
   SHINY_P, LEGEND_P, SHOP, SELL_BASE, STARTERS, ITEMS, STORE_MAX, PROBE, probeUpCost, EXPLORE_COST,
   LEAGUES, LEAGUE_KEYS, TIERS, roundBest, BANNER_LV, seasonOf, seasonReward, FORM_KEYS, MUT_P, SUN_UP, SUN_REGEN, sunSteps, RENAMED,
-  ROUND_PTS, LOSE_PTS, DIV_PTS, DIVS, DIV_REWARD, TIER_PTS, GUARD_CUPS, SEASON_FLOOR, isTopTier, rankOf } from './catalog.js';
+  ROUND_PTS, LOSE_PTS, DIV_PTS, DIVS, DIV_REWARD, TIER_PTS, GUARD_CUPS, SEASON_FLOOR, isTopTier, rankOf, SPECIES_V2 } from './catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, cardFits, rollCard, rollFrom, formCards, isSkillCard, NORMAL_CARDS, baseOf, CARD_UP, cardPrice } from './cards.js';
 
 export class Err extends Error {}
@@ -40,7 +40,7 @@ export function newGame({ nickname, starter }, rng, now) {
 // ── 저장 판 번호 · 옮기기(2026-10-18 업데이트 안전 — species-identity 설계 §7) ──
 //  서버가 불러올 때 s.ver < SAVE_VER 이면 원본을 보관한 뒤(server/game.mjs load) 단계를 번호 순서대로 한 번씩. 기능마다 붙은 p.skills.v4~v8 표시는 그대로
 //  (이어 하는 옛 판 다시 계산이 읽음). 앞으로 저장 모양을 바꾸면 MIGRATIONS 에 단계를 더하고 SAVE_VER +1 · id를 바꾸면 catalog.js RENAMED 에 적고 +1.
-export const SAVE_VER = 5;
+export const SAVE_VER = 6;
 const MIGRATIONS = [
   () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
   () => {},   // 1 → 2(2026-10-22 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
@@ -49,6 +49,9 @@ const MIGRATIONS = [
   //  풀로세움 별(전엔 우승 수) → 점수(별 하나 = 100점 — 이제 별은 점수에서 셈) · 원본 보관용
   s => { for (const T of [s.tournament, ...Object.values(s.leagues || {})]) if (T && isTopTier(T.tier) && T.stars > 0 && !T.pts) T.pts = T.stars * DIV_PTS; },
   () => {},   // 4 → 5(2026-10-23 묶음 — 엑셀 v10 공통 효과 · RULES_VER 9 · 효과 창 · 환경 띠 · 땅 · 꼬리표): 모양은 그대로(기술 · 카드 id 그대로) · 올린 뒤 처음 불러올 때 원본 보관용
+  // 5 → 6(2026-10-24 종 고유 기술 v2 — 사용자 '스킬 보류칸에 신 스킬을 다 올리고 그 중 4개를 적용할 수 있게'): 이미 가진 v2 종 식물에게 그 단계까지의 고유 기술을 모두 —
+  //  빈 장착 칸 → 스킬 보관 → 다 차면 놓을 칸 고르기(learnNow) · 이미 아는 것(장착 · 보관 · 지운 · 고르는 중)은 건너뜀
+  s => { for (const p of s.plants || []) if (p && SPECIES_V2.has(p.key) && p.skills) { normSkills(p); for (let st = 0; st <= Math.min(2, p.stage || 0); st++) for (const id of uniquesOf(p.key, st)) if (!known(p).has(id) && !(p.drafts || []).some(d => d.cands.includes(id))) learnNow(p, id); } },
 ];
 export function migrate(s) {
   const from = s.ver || 0;
