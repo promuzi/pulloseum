@@ -249,9 +249,11 @@ export const SHOTS = [
   ['05_plant_shiny', 'plant', { tab: 'skill' }, { plants: [{ shiny: true }] }],   // 효과 아이콘 검토판(엑셀 v10 효과 이름 — 2026-10-22)
 ];
 
-const { srv, url } = await serve(repo);
-const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
-try {
+// 다른 도구가 SHOTS 만 가져다 쓸 때는(tools/shots/centercheck.mjs) 촬영하지 않음
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const { srv, url } = isMain ? await serve(repo) : {};
+const b = isMain ? await puppeteer.launch({ executablePath: CHROME, headless: 'new' }) : null;
+if (isMain) try {
   const p = await b.newPage();
   await p.setViewport({ width: 400, height: 860, deviceScaleFactor: 1 });
   const errs = [];

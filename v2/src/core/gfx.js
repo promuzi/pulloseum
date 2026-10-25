@@ -1,6 +1,6 @@
 // 도트 그리기 도구. 좌표는 전부 정수로 내린다 — 반 칸 위치가 생기면 도트가 어긋난다.
 import { BAYER4 } from '../art/palette.js';
-import { drawText, measure, wrap, lineH } from './text.js';
+import { drawText, measure, wrap, lineH, inkMidY } from './text.js';
 
 const VGRAD = new Map();
 function vgradRaw(g, x, y, w, h, cols) {
@@ -121,6 +121,9 @@ export class Gfx {
     this.img(t, x, y, scale);
   }
   text(str, x, y, opt) { return drawText(this.c, str, x, y, opt); }
+  // 상자 속 한 줄: 글자 잉크 가운데를 cy 에(opt.font 기준) — 아이콘은 imgMid
+  textMid(str, x, cy, opt = {}) { return drawText(this.c, str, x, inkMidY(str, opt.font || 'body', cy), opt); }
+  imgMid(im, x, cy, scale = 1) { if (im) this.img(im, x, Math.round(cy - ((im.naturalHeight || im.height) * scale) / 2), scale); }
   textW(str, font) { return measure(String(str), font); }
   lineH(font) { return lineH(font); }
   // 여러 줄 글자. 반환 = 쓴 높이

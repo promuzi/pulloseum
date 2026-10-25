@@ -27,8 +27,8 @@ export function header(app, title, opt = {}) {
   g.rect(0, 28, W, 1, T.panel.frameLo); g.rect(0, 29, W, 1, T.ink);
   if (opt.back !== false) {
     const pressed = app.input.isPressed('hdr_back');
-    btnBody(g, 6, 5, 24, 20, T.btn.second, pressed);
-    g.img(tinted('back', T.btn.second.text), 13, 11 + (pressed ? 1 : 0));
+    const bk = btnBody(g, 6, 5, 24, 20, T.btn.second, pressed);
+    g.imgMid(tinted('back', T.btn.second.text), 13, bk.top + bk.inner / 2);   // 판 가운데(2026-10-25)
     app.input.hit('hdr_back', 6, 5, 24, 20, () => app.go(opt.backTo || 'home'), 6);
   }
   g.text(title, opt.back === false ? 12 : 37, 8, { font: 'head', color: T.text.main, shadow: T.ink });

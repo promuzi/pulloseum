@@ -122,9 +122,10 @@ export const hangar = {
       for (let i = 0; i <= n; i += 2) g.px(Math.round(ax + (ex - ax) * i / n), Math.round(ay + (ey - ay) * i / n), on ? HC.sel : '#3f7f9a');
       g.rect(ax - 1, ay - 1, 3, 3, on ? HC.sel : HC.line);
       holo(g, bx, by, bw, bh, on ? { fill: '#3a2a18', fill2: '#5a3e20', frame: HC.sel, frameHi: '#ffe8c8', frameLo: '#a8743a' } : (T.card || T.panel), 12);
-      g.text(pt.label, bx + 6, by + 3, { font: 'label', color: on ? '#ffe8c8' : '#e6f3ff' });
-      g.text(`Lv.${lv}`, bx + bw - 6, by + 4, { color: on ? HC.sel : '#8ccfff', align: 'right' });
-      for (let i = 0; i < pt.max; i++) g.rect(bx + 6 + i * 8, by + 21, 6, 3, i < lv ? (on ? HC.sel : '#8ccfff') : '#1e3a50');
+      // 이름 줄 + 점 줄 = 판 가운데(2026-10-25 상자 속 가운데 점검 — 위 3 · 아래 6 → 4 · 5칸)
+      g.text(pt.label, bx + 6, by + 4, { font: 'label', color: on ? '#ffe8c8' : '#e6f3ff' });
+      g.text(`Lv.${lv}`, bx + bw - 6, by + 5, { color: on ? HC.sel : '#8ccfff', align: 'right' });
+      for (let i = 0; i < pt.max; i++) g.rect(bx + 6 + i * 8, by + 22, 6, 3, i < lv ? (on ? HC.sel : '#8ccfff') : '#1e3a50');
       if (live) { app.input.hit('hg_' + pt.id, bx, by, bw, bh, () => { this.sel = pt.id; }, 2); app.input.hit('hg_part_' + pt.id, ax - 14, ay - 14, 28, 28, () => { this.sel = pt.id; }); }
     }
     // 고른 부위 정보 + 강화

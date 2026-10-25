@@ -42,8 +42,8 @@ export const ranks = {
     // 리그 탭(같은 크기 · 가장자리)
     const tw = Math.floor((W - 16 - 8) / LEAGUE_KEYS.length);
     LEAGUE_KEYS.forEach((k, i) => {
-      const x = 8 + i * (tw + 4), on = k === this.lg, id = 'rk_' + k, S = on ? T.btn.gold : T.btn.second, { yy } = btnBody(g, x, TOP, tw, TAB_H, S, app.input.isPressed(id));
-      g.text(LEAGUES[k].name, x + tw / 2, yy + 6, { font: 'bold', color: S.text, align: 'center' });
+      const x = 8 + i * (tw + 4), on = k === this.lg, id = 'rk_' + k, S = on ? T.btn.gold : T.btn.second, { top, inner } = btnBody(g, x, TOP, tw, TAB_H, S, app.input.isPressed(id));
+      g.textMid(LEAGUES[k].name, x + tw / 2, top + inner / 2, { font: 'bold', color: S.text, align: 'center' });
       if (!on) app.input.hit(id, x, TOP, tw, TAB_H, () => { this.lg = k; this.scroll = 0; this.load(); }, 3);
     });
     const y0 = TOP + TAB_H + 8, D = this.data;

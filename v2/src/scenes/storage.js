@@ -113,16 +113,16 @@ export const storage = {
     hud(app, s);
     // 뒤로(양육) · 제목 · 정렬
     const bid = 'sto_back', bpr = app.input.isPressed(bid);
-    btnBody(g, 8, 32, 46, 19, T.btn.second, bpr);
-    g.text('‹ 양육', 31, 35 + (bpr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
+    const bb = btnBody(g, 8, 32, 46, 19, T.btn.second, bpr);
+    g.textMid('‹ 양육', 31, bb.top + bb.inner / 2, { color: T.btn.second.text, align: 'center' });   // 판 가운데(2026-10-25)
     app.input.hit(bid, 8, 32, 46, 19, () => app.go('nursery'), 3);
     g.text('동면 보관고', 62, 33, { font: 'head', color: '#eef7ff' });
     const cnt = `${(s.storage || []).length}/${total}`;
     g.text(cnt, 62 + g.textW('동면 보관고', 'head') + 6, 36, { color: '#8eaed2' });
     this.capX = 62 + g.textW('동면 보관고', 'head') + 6 + g.textW(cnt) + 5;   // 처음 안내 '?' 자리
     const sid = 'sto_sort', spr = app.input.isPressed(sid);
-    btnBody(g, W - 74, 32, 66, 19, T.btn.second, spr);
-    g.text('정렬 · ' + SORTS[this.sortI][1], W - 41, 35 + (spr ? 1 : 0), { color: T.btn.second.text, align: 'center' });
+    const sb = btnBody(g, W - 74, 32, 66, 19, T.btn.second, spr);
+    g.textMid('정렬 · ' + SORTS[this.sortI][1], W - 41, sb.top + sb.inner / 2, { color: T.btn.second.text, align: 'center' });
     app.input.hit(sid, W - 74, 32, 66, 19, () => { this.sortI = (this.sortI + 1) % SORTS.length; }, 3);
     // 고른 캡슐 정보
     const it = list.find(x => x.p.uid === this.sel), PY = botOf(app) + 8;

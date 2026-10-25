@@ -8,6 +8,7 @@ import { userNeed } from '../game/catalog.js';
 // 모서리가 r칸 둥근 사각형(채움). r 칸짜리 도트 원 모서리.
 export function rrect(g, x, y, w, h, r, col) {
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (globalThis.__boxAudit) globalThis.__boxAudit(g.c, x, y, w, h);   // 상자 속 가운데 점검(tools/shots/centercheck.mjs)만 켬 — 평소엔 없음
   for (let j = 0; j < h; j++) {
     let inset = 0;
     const dy = j < r ? r - j - 0.5 : (j >= h - r ? j - (h - r) + 0.5 : 0);
@@ -49,9 +50,9 @@ export function button(app, id, x, y, w, h, label, opt = {}) {
   const total = (ic ? ic.width + (label ? 3 : 0) : 0) + tw;
   let cx = Math.round(x + (w - total) / 2);
   const lh = g.lineH(font), sh = opt.sub ? g.lineH('body') + 1 : 0;   // sub = 아래 작은 둘째 줄(대회 상황 등)
-  const ty = top + Math.round((inner - lh - sh) / 2);
-  if (ic) { g.img(ic, cx, ty + Math.round((lh - ic.height) / 2)); cx += ic.width + 3; }
-  if (label) g.text(label, cx, ty, { font, color: st.text });
+  const ty = top + Math.round((inner - lh - sh) / 2), cy = top + inner / 2;   // 한 줄 = 아이콘 · 글자 잉크를 판 가운데(cy)에 따로 맞춤(반 칸 반올림이 두 번 겹쳐 1칸 내려가던 것 — 2026-10-25)
+  if (ic) { if (opt.sub) g.img(ic, cx, ty + Math.round((lh - ic.height) / 2)); else g.imgMid(ic, cx, cy); cx += ic.width + 3; }
+  if (label) { if (opt.sub) g.text(label, cx, ty, { font, color: st.text }); else g.textMid(label, cx, cy, { font, color: st.text }); }
   if (opt.sub) g.text(opt.sub, x + w / 2, ty + lh + 1, { color: st.sub || st.text, align: 'center' });
   input.mark(id, x, y, w, h);
   if (!opt.disabled && opt.onTap) input.hit(id, x, y, w, h, opt.onTap, opt.pad ?? 4, !!opt.now);   // now = 손을 뗀 그 순간 바로(창 열기 — core/input.js)
@@ -95,7 +96,7 @@ export function holoTab(app, id, x, y, w, h, label, on, onTap, font = 'label') {
   holo(g, x, yy, w, h, on ? TAB_ON : TAB_OFF, 16);
   if (UI === 'holo') { if (on) { g.rect(x + 3, yy + h, w - 6, 1, '#8ccfff'); g.rect(x + Math.round(w / 2) - 7, yy + h + 1, 14, 1, '#e6f3ff'); } }   // 옛 홀로그램: 아래 빛 줄
   else if (on) g.rect(x + Math.round(w / 2) - Math.min(9, (w >> 2)), yy + h - 3, Math.min(18, w >> 1), 2, acc);   // 고른 탭 = 글자 아래 짧은 강조 줄(한 가지 색)
-  g.text(label, x + w / 2, yy + Math.round((h - g.lineH(font)) / 2) - (on && UI !== 'holo' ? 1 : 0), { font, color: on ? '#ffffff' : UI === 'holo' ? '#86acd6' : '#8e9cb0', align: 'center' });
+  g.textMid(label, x + w / 2, yy + h / 2, { font, color: on ? '#ffffff' : UI === 'holo' ? '#86acd6' : '#8e9cb0', align: 'center' });
   input.mark(id, x, y, w, h);
   if (onTap) input.hit(id, x, y, w, h, onTap, 3);
 }
@@ -128,21 +129,21 @@ export function hud(app, st) {
   const y = 6;
   if (T.hudPlain) return hudPlain(app, s);
   pill(g, 4, y, 92, 18);
-  g.text('Lv', 9, y + 4, { color: T.text.accent });
-  g.text(String(s.level), 25, y + 4, { font: 'bold', color: T.text.main });
+  g.textMid('Lv', 9, y + 9, { color: T.text.accent });
+  g.textMid(String(s.level), 25, y + 9, { font: 'bold', color: T.text.main });
   bar(g, 38, y + 6, 52, 7, s.exp / s.expMax, 'exp');
   const gx = W - 22;   // 설정(보이는 판 18×18, 터치 여유 4)
   pill(g, gx, y, 18, 18);
-  g.img(icon('gear'), gx + 4, y + 4);
+  g.imgMid(icon('gear'), gx + 4, y + 9);
   app.input.hit('hud_gear', gx, y, 18, 18, () => app.openSettings && app.openSettings(), 6);
   const gemTxt = fmt(s.gems), gw = g.textW(gemTxt) + 24, gemX = gx - 4 - gw;
   pill(g, gemX, y, gw, 18);
-  g.img(icon('gem'), gemX + 5, y + 4);
-  g.text(gemTxt, gemX + 19, y + 4, { color: T.text.accent });
+  g.imgMid(icon('gem'), gemX + 5, y + 9);   // 알약 가운데(y + 9)에 아이콘 · 숫자 잉크(2026-10-25 — 전엔 +4 고정이라 아래로 1칸)
+  g.textMid(gemTxt, gemX + 19, y + 9, { color: T.text.accent });
   const cTxt = fmt(s.credits), cw = g.textW(cTxt) + 24, cX = gemX - 4 - cw;
   pill(g, cX, y, cw, 18);
-  g.img(icon('coin'), cX + 5, y + 4);
-  g.text(cTxt, cX + 19, y + 4, { color: T.text.gold });
+  g.imgMid(icon('coin'), cX + 5, y + 9);
+  g.textMid(cTxt, cX + 19, y + 9, { color: T.text.gold });
 }
 
 // 상단 상태 바(2026-10-15 사용자 "기존 초기 UI인 상단 레벨·크레딧 등 보고 바를 만들고" — 옛 메인 화면의 칸 나눈 띠):

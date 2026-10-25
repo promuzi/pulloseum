@@ -7,7 +7,6 @@ import { rankGauge, rankCeremony } from './rankfx.js';
 import { bigTitle } from './common.js';
 import { closeStream } from './room.js';
 import { room as R } from '../net/api.js';
-import { glyphH } from '../core/text.js';
 
 // 경기 결과: 승패 · 대회 진행(라운드 통과 · 우승 · 지면 대회 끝 + 대회 점수) · 보상 카드(돈 · 재배사 경험치 · 물 · 비료) · 대회 점수 막대(칸 오름/내려감 연출) · 다음 할 일
 //  app.lastResult = { win, mode('tournament'|'swap3'|'pvp'), reward, info, me:{key,pot,stage,el}, foe:{el}, why }
@@ -48,7 +47,7 @@ export const result = {
     const pw = g.textW(pill, 'bold') + 22;
     // 진행 알약 글자 = 눌린 판(가라앉은 면)의 가운데에(전엔 판보다 위에 떠 보였음 — 2026-10-16 사용자 '예선' 사진 "중앙정렬")
     const pb = btnBody(g, Math.round(W / 2 - pw / 2), 90, pw, 19, rw.round ? T.btn.gold : T.btn.second, true);
-    g.text(pill, W / 2, pb.top + Math.round((pb.inner - glyphH('bold')) / 2), { color: (rw.round ? T.btn.gold : T.btn.second).text, align: 'center', font: 'bold' });
+    g.textMid(pill, W / 2, pb.top + pb.inner / 2, { color: (rw.round ? T.btn.gold : T.btn.second).text, align: 'center', font: 'bold' });
     // 보상 카드
     const cards = [];
     if (rw.credits) cards.push(['coin', '+' + rw.credits, '돈', P.gold]);

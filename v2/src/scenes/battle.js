@@ -1082,11 +1082,11 @@ export const battle = {
     g.rect(0, 0, W, AY, T.bg2); g.rect(0, AY - 2, W, 1, T.panel.frameLo); g.rect(0, AY - 1, W, 1, T.ink);
     // 기권 = 왼쪽 위 작은 깃발(2026-10-16 사용자 "기권은 상단 좌측에 작게 — 실수로 누를 수 없게"): 흐린 작은 단추 · 터치 여유 없음 · 누르면 확인 창
     const live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek, canFlag = v.phase !== 'over', fdown = canFlag && app.input.isPressed('bt_flag');
-    btnBody(g, 4, 3, 20, 18, T.btn.off, fdown);
-    g.img(tinted('flag', canFlag ? '#c9d6e8' : '#5a6a80'), 9, 7 + (fdown ? 1 : 0));
+    const fb = btnBody(g, 4, 3, 20, 18, T.btn.off, fdown);
+    g.imgMid(tinted('flag', canFlag ? '#c9d6e8' : '#5a6a80'), 9, fb.top + fb.inner / 2);   // 판 가운데(2026-10-25 상자 속 가운데 — 눌림은 btnBody 가 내림)
     if (live && canFlag) app.input.hit('bt_flag', 4, 3, 20, 18, () => this.forfeit(app), 0);
-    btnBody(g, 28, 3, 38, 18, T.btn.second, true);
-    g.text(`${v.turn}턴`, 47, 6, { font: 'bold', color: T.btn.second.text, align: 'center' });
+    const tb = btnBody(g, 28, 3, 38, 18, T.btn.second, true);
+    g.textMid(`${v.turn}턴`, 47, tb.top + tb.inner / 2, { font: 'bold', color: T.btn.second.text, align: 'center' });
     if (this.net === 'pvp') {
       g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 대결') + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
     } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
@@ -1237,8 +1237,8 @@ export const battle = {
     const ew = Math.floor((w - 24 - 18) / 4);
     EMOJI.forEach((k, j) => {
       const i = PHRASES.length + j, bx = x + 12 + (j % 4) * (ew + 6), by = y + 36 + Math.floor(j / 4) * 46, id = 'em_' + i, down = !cool && input.isPressed(id);
-      const { yy } = btnBody(g, bx, by, ew, 42, cool ? T.btn.off : T.btn.second, down);
-      g.alpha(cool ? 0.45 : 1, () => drawEmoji(g, k, bx + Math.round((ew - 30) / 2), yy + 5, 2));
+      const { top, inner } = btnBody(g, bx, by, ew, 42, cool ? T.btn.off : T.btn.second, down);
+      g.alpha(cool ? 0.45 : 1, () => drawEmoji(g, k, bx + Math.round((ew - 30) / 2), Math.round(top + inner / 2 - 15), 2));   // 판 가운데(2026-10-25)
       if (!cool) input.hit(id, bx, by, ew, 42, () => this.sendEmote(app, i), 1);
     });
     const pw = Math.floor((w - 24 - 12) / 3);

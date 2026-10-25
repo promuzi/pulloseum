@@ -18,7 +18,7 @@ const css = f => `${f.weight} ${f.size}px ${FAMILY}`;
 const meas = document.createElement('canvas').getContext('2d');
 
 // 글꼴이 늦게 오면(처음 화면은 글꼴을 기다리지 않음) 대신 글꼴로 잰 높이를 버리고 다시 잼
-export function resetMetrics() { for (const f of Object.values(FONT)) delete f.m; }
+export function resetMetrics() { for (const f of Object.values(FONT)) delete f.m; INKMID.clear(); }
 // 글자 윗선(한글 기준)까지의 높이를 한 번만 잰다
 function metrics(f) {
   if (f.m) return f.m;
@@ -38,6 +38,22 @@ export function inkOf(str, fontKey = 'body') {
   const f = FONT[fontKey], m0 = metrics(f); meas.font = css(f);
   const m = meas.measureText(String(str));
   return { asc: m.actualBoundingBoxAscent || f.size * 0.72, desc: m.actualBoundingBoxDescent || 0, dx: ((m.actualBoundingBoxRight || m.width) - (m.actualBoundingBoxLeft || 0)) / 2 - m.width / 2, top: m0.asc };   // dx = 잉크 가운데가 글자 폭 가운데보다 오른쪽으로 얼마나
+}
+// 그 글자의 잉크 가운데가 cy 에 오도록 drawText 의 y(글자 윗선)를 돌려줌 — 상자 속 한 줄 글자(단추 · 탭 · 알약 · 배지)
+//  2026-10-25 사용자 "글자랑 아이콘이 상자안에서 중앙보다 조금 더 위에 있는 느낌 · 항상 이런 문제" — 줄 높이(lineH)는 '한글가힣'의 ㅎ · ㄹ 받침까지 재서
+//  받침이 얕은 글자('닫기' · '종자')는 잉크가 줄 상자 위쪽에 붙어 1칸 높아 보였음(tools/shots/centercheck.mjs 실측) → 글자마다 실제 잉크로 가운데
+const INKMID = new Map();
+export function inkMidY(str, fontKey, cy) {
+  str = String(str); const k = fontKey + '|' + str;
+  let off = INKMID.get(k);
+  if (off == null) {
+    const f = FONT[fontKey] || FONT.body, m0 = metrics(f); meas.font = css(f);
+    const m = meas.measureText(str), a = m.actualBoundingBoxAscent, d = m.actualBoundingBoxDescent;
+    off = a == null || d == null || a + d <= 0 ? -m0.h / 2 : (a - d) / 2 - m0.asc;   // 기준선 = cy + (잉크 위 − 잉크 아래)/2 → 윗선 = 기준선 − asc
+    if (INKMID.size > 4000) INKMID.clear();
+    INKMID.set(k, off);
+  }
+  return Math.round(cy + off);
 }
 // 글자 상자(올림 없는 실제 높이) — 작은 창 속 글자를 위아래 같은 간격으로 놓을 때
 export function glyphH(fontKey = 'body') { const f = FONT[fontKey]; metrics(f); meas.font = css(f); const m = meas.measureText('한글가힣'); return (m.actualBoundingBoxAscent || f.size * 0.86) + (m.actualBoundingBoxDescent || f.size * 0.1); }

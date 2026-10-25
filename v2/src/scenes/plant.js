@@ -294,7 +294,7 @@ export const plant = {
   countTag(app, x, y, n) {
     const { g } = app, txt = '×' + n, tw = g.textW(txt, 'label') + 6, tx = x + PCARD.w - tw - 4, ty = y + 4 + 52 - 15;   // 그림 칸 오른쪽 아래(이름 띠를 가리지 않게)
     rrect(g, tx, ty, tw, 13, 3, 'rgba(6,10,20,0.88)');
-    g.text(txt, tx + 3, ty, { font: 'label', color: '#ffd890' });
+    g.textMid(txt, tx + 3, ty + 6.5, { font: 'label', color: '#ffd890' });
   },
   // 칸 이름 → 그 칸의 카드 · 기술 id
   idAt(p, k) {

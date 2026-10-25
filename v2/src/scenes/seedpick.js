@@ -55,7 +55,7 @@ export function seedPickScreen(app, D) {
     miniStars(g, x + Math.round((TW - 39) / 2), y + 45, potOf(sd));   // 잠재력 = 심으면 그 별(2026-10-18)
     // 특별(전설 · 색 변종 · 변이) = 그림 위 꼬리표 대신 아래 줄에 그 색으로(2026-10-22 사용자 "전설이나 색변종이나 이런게 식물의 아이콘을 가리지 않게")
     g.text(spc || (sp.rarity === 'rare' ? '희귀' : '일반'), x + TW / 2, y + 56, { font: 'label', color: spc ? (spc === '전설' ? '#ffd890' : spc === '변이' ? '#e0b8ff' : '#b8f0ff') : el.light || '#cfe8f8', align: 'center' });
-    if (on) { g.c.fillStyle = 'rgba(255,216,144,0.18)'; g.c.fillRect(x, y, TW, TH); for (const [rx, ry, rw, rh] of [[x - 1, y - 1, TW + 2, 2], [x - 1, y + TH - 1, TW + 2, 2], [x - 1, y - 1, 2, TH + 2], [x + TW - 1, y - 1, 2, TH + 2]]) g.rect(rx, ry, rw, rh, '#ffd890'); rrect(g, x + TW - 15, y + TH - 15, 12, 12, 3, '#ffd890'); g.text('✓', x + TW - 13, y + TH - 16, { font: 'bold', color: '#1a1206' }); }
+    if (on) { g.c.fillStyle = 'rgba(255,216,144,0.18)'; g.c.fillRect(x, y, TW, TH); for (const [rx, ry, rw, rh] of [[x - 1, y - 1, TW + 2, 2], [x - 1, y + TH - 1, TW + 2, 2], [x - 1, y - 1, 2, TH + 2], [x + TW - 1, y - 1, 2, TH + 2]]) g.rect(rx, ry, rw, rh, '#ffd890'); rrect(g, x + TW - 15, y + TH - 15, 12, 12, 3, '#ffd890'); g.textMid('✓', x + TW - 13, y + TH - 15 + 6, { font: 'bold', color: '#1a1206' }); }
     D.rects.push({ id: sd.id, x, y });
     const hy = Math.max(y, GY0), hh = Math.min(y + TH, GY1) - hy;
     if (!D.stage && hh > 6) input.hit('sp_t' + i, x, hy, TW, hh, () => {
@@ -108,9 +108,9 @@ function statBox(app, D, p, list) {
     const ry = y + 52 + i * 34, v = p.ivs[k] || 0, full = v >= IV_MAX, on = D.stat === k, fails = (p.ivp && p.ivp[k]) || 0;
     rrect(g, x + 10, ry, w - 20, 30, 5, on ? '#3a2c10' : '#0d1f30');
     if (on) for (const [rx, rw] of [[x + 10, w - 20]]) { g.rect(rx, ry, rw, 2, '#ffd890'); g.rect(rx, ry + 28, rw, 2, '#ffd890'); }
-    g.text(STAT_NAME[k], x + 20, ry + 8, { font: 'bold', color: full ? '#4f6f90' : on ? '#ffd890' : '#e6f3ff' });
-    g.text(`${v}/${IV_MAX}`, x + 80, ry + 8, { font: 'label', color: '#cfe8f8' });
-    g.text(full ? '최대' : `${Math.round(ivpChance(v) * 100)}% · 반드시 ${fails}/${ivpPity(v)}`, x + w - 20, ry + 8, { font: 'label', color: full ? '#4f6f90' : '#9ff0b0', align: 'right' });
+    g.textMid(STAT_NAME[k], x + 20, ry + 15, { font: 'bold', color: full ? '#4f6f90' : on ? '#ffd890' : '#e6f3ff' });
+    g.textMid(`${v}/${IV_MAX}`, x + 80, ry + 15, { font: 'label', color: '#cfe8f8' });
+    g.textMid(full ? '최대' : `${Math.round(ivpChance(v) * 100)}% · 반드시 ${fails}/${ivpPity(v)}`, x + w - 20, ry + 15, { font: 'label', color: full ? '#4f6f90' : '#9ff0b0', align: 'right' });
     if (!full) input.hit('sp_s_' + k, x + 10, ry, w - 20, 30, () => { D.stat = k; sfx('select'); });
   });
   let yy = y + 52 + IV_KEYS.length * 34 + 4;

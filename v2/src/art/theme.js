@@ -277,7 +277,7 @@ export function holoCanvas(w, h, s, dens = 10) {
     cv = document.createElement('canvas'); cv.width = Math.max(1, w); cv.height = Math.max(1, h);
     const c = cv.getContext('2d'), id = c.createImageData(cv.width, cv.height), d = id.data;
     panelPixels(w, h, s, (x, y, rgb, a) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const i = (y * w + x) * 4; d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = a; });
-    c.putImageData(id, 0, 0); holoCache.set(key, cv); return cv;
+    c.putImageData(id, 0, 0); cv.__holo = true; holoCache.set(key, cv); return cv;
   }
   cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const c = cv.getContext('2d'), id = c.createImageData(w, h), d = id.data;
@@ -292,7 +292,7 @@ export function holoCanvas(w, h, s, dens = 10) {
   }
   const L = Math.min(5, Math.floor(Math.min(w, h) / 4));
   for (const [cx, cy, dx, dy] of [[0, 0, 1, 1], [w - 1, 0, -1, 1], [0, h - 1, 1, -1], [w - 1, h - 1, -1, -1]]) for (let k = 0; k < L; k++) { put(cx + dx * k, cy, s.frameHi); put(cx, cy + dy * k, s.frameHi); }
-  c.putImageData(id, 0, 0); holoCache.set(key, cv); return cv;
+  c.putImageData(id, 0, 0); cv.__holo = true; holoCache.set(key, cv); return cv;
 }
 // 홀로그램 결(2026-10-16 사용자 "연한 세로줄이 띠리릭 올라오는" — 화면 아래에서 한꺼번에 올라오던 첫 판은 "너무 대충 … 화면 맨 아래에서 위로 구불구불한 줄 올리는 거잖아,
 //  소스 등 기법 찾아서 제대로"). 홀로그램 셰이더의 층 나누기를 따름 — shaders.com hologram(투사 결 · 위로 흐르는 주사선 · 새로 고침 띠 · 가장자리 빛),
@@ -346,6 +346,7 @@ export const venueOf = tierName => VENUE_OF_TIER[TIER_KEY[tierName] || tierName]
 // 모서리를 c칸 깎은 사각형(채움)
 export function cham(g, x, y, w, h, c, col) {
   x |= 0; y |= 0; w |= 0; h |= 0;
+  if (globalThis.__boxAudit) globalThis.__boxAudit(g.c, x, y, w, h);   // 상자 속 가운데 점검(tools/shots/centercheck.mjs)만 켬 — 평소엔 없음
   for (let j = 0; j < h; j++) { const ins = j < c ? c - j : j >= h - c ? j - (h - c) + 1 : 0; g.rect(x + ins, y + j, w - ins * 2, 1, col); }
 }
 const fillShape = (g, x, y, w, h, r, col) => (T.shape === 'round' ? rrect(g, x, y, w, h, r, col) : cham(g, x, y, w, h, r, col));
@@ -512,6 +513,7 @@ export function btnBody(g, x, y, w, h, st, down = false) {
 // 체력·경험 막대(테마 색, 체력은 반 이하 노랑·5분의 1 이하 빨강)
 export function tbar(g, x, y, w, h, ratio, kind = 'hp') {
   ratio = Math.max(0, Math.min(1, ratio));
+  if (globalThis.__boxAudit) globalThis.__boxAudit(g.c, x, y, w, h, 'bar');   // 점검: 막대 = 상자 속 내용(tools/shots/centercheck.mjs)
   const B = T.bar, c = kind === 'hp' ? (ratio <= 0.2 ? B.low : ratio <= 0.5 ? B.mid : B.hp) : (B[kind] || B.exp);
   g.rect(x, y, w, h, T.ink); g.rect(x + 1, y + 1, w - 2, h - 2, B.back);
   const fw = Math.round((w - 2) * ratio);

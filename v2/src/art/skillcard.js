@@ -340,7 +340,7 @@ function usesDial(g, cx, cy, n, F, dim) {   // 변이 기술 횟수(변이 색 �
 export function cardSlot(g, x, y, w, h, label = '') {
   rrect(g, x, y, w, h, 5, 'rgba(140,207,255,0.16)');
   rrect(g, x + 1, y + 1, w - 2, h - 2, 4, 'rgba(8,14,26,0.55)');
-  if (label) g.text(label, x + w / 2, y + Math.round(h / 2) - 6, { color: C.dim, align: 'center' });
+  if (label) g.textMid(label, x + w / 2, y + h / 2, { color: C.dim, align: 'center' });
 }
 
 const ORB_TEXT = [['orbGuard', '이번 턴 구슬이 상대 공격 한 번의 모든 타를 막음(하나당 체력 6%) · 막은 만큼만 구슬이 깎임'], ['orbDump', '남은 구슬을 지금 전부 연타로(구슬 하나 = 한 타)'], ['orbRefill', '빈 구슬 칸을 바로 채움(덫에 나간 것 빼고)'], ['orbTrap', '남은 구슬을 모두 내 쪽 덫으로(교체 · 쓰러져도 남음) — 내 쪽이 맞으면 하나씩 터져 피해 + 봉인'], ['orbBlast', '구슬 전부 · 하나당 위력 25'], ['orbAbsorb', '구슬 전부 흡수해 하나당 체력 5% 회복 · 가득일 때 쓰면 나쁜 효과 전부 정화']];

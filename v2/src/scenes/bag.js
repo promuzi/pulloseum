@@ -186,7 +186,7 @@ export const bag = {
       else if (on) {
         c.fillStyle = 'rgba(255,216,144,0.16)'; c.fillRect(x, y, CW, CH);
         for (const [rx, ry, rw, rh] of [[x - 1, y - 1, CW + 2, 2], [x - 1, y + CH - 1, CW + 2, 2], [x - 1, y - 1, 2, CH + 2], [x + CW - 1, y - 1, 2, CH + 2]]) g.rect(rx, ry, rw, rh, '#ffd890');
-        rrect(g, x + CW - 17, y + AH - 10, 13, 13, 3, '#ffd890'); g.text('✓', x + CW - 15, y + AH - 11, { font: 'bold', color: '#1a1206' });
+        rrect(g, x + CW - 17, y + AH - 10, 13, 13, 3, '#ffd890'); g.textMid('✓', x + CW - 15, y + AH - 10 + 6.5, { font: 'bold', color: '#1a1206' });
       }
     }
     hits.push({ id: 'sd_' + sd.id, x, y, w: CW, h: CH, fn: () => (selMode ? this.pick(app, sd.id) : this.openZoom(app, sd.id, x, y)) });

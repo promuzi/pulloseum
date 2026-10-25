@@ -208,9 +208,9 @@ export const home = {
         g.img(im, x + Math.floor((SIDE.w - im.width * 2) / 2), yy + 4 + Math.floor((30 - im.height * 2) / 2), 2);
         g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: s.text, align: 'center' });
       } else {   // 아이콘 + 글자 한 줄(가운데)
-        const lw = g.textW(label, 'label'), cw = im.width + 4 + lw, cx = x + Math.round((SIDE.w - cw) / 2), lh = g.lineH('label');
-        g.img(im, cx, top + Math.round((inner - im.height) / 2));   // 가운데 = 판 윗변(top) 기준(yy 기준이면 1칸 위로 감)
-        g.text(label, cx + im.width + 4, top + Math.round((inner - lh) / 2), { font: 'label', color: s.text });
+        const lw = g.textW(label, 'label'), cw = im.width + 4 + lw, cx = x + Math.round((SIDE.w - cw) / 2);
+        g.imgMid(im, cx, top + inner / 2 + (ic === 'navNotice' ? 1 : 0));   // 가운데 = 판 윗변(top) 기준 · 공지 말풍선은 꼬리가 아래로 나와 몸통이 위로 보여 1칸 내림(2026-10-25 사용자 '공지 아이콘은 좀 더 내려줘')
+        g.textMid(label, cx + im.width + 4, top + inner / 2, { font: 'label', color: s.text });
       }
       if (dot) { g.rect(x + SIDE.w - 8, y + 2, 6, 6, '#2e222f'); g.rect(x + SIDE.w - 7, y + 3, 4, 4, '#ff5a5a'); }
       if (live) app.input.hit(id, x - 6, y - 2, SIDE.w + 6, h + 4, go, 3);
