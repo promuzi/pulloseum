@@ -199,7 +199,7 @@ export const home = {
     const { g, W } = app, x = W - 6 - SIDE.w, rows = sideRows(), st = T.btn.second, s = st;
     SIDE_BTNS(app).forEach(([id, ic, label, go, dot], i) => {
       const [ry, h] = rows[i], y = Math.round(y0) + ry, big = i === 0, down = app.input.isPressed(id);
-      const { yy, inner } = btnBody(g, x, y, SIDE.w, h, s, down), im = icon(ic);
+      const { yy, top, inner } = btnBody(g, x, y, SIDE.w, h, s, down), im = icon(ic);
       if (big) {   // 가방: 테만 진한 주황(판 색 그대로 — 모서리 한 칸은 비움) · 2배 아이콘 위 · 글자 아래
         const hh = h - (down ? 1 : 0), w = SIDE.w, L = Math.max(3, Math.min(8, Math.round(w / 7)));
         g.rect(x + 1, yy, w - 2, 1, BAG_RIM.edge); g.rect(x + 1, yy + hh - 1, w - 2, 1, BAG_RIM.edge);
@@ -209,8 +209,8 @@ export const home = {
         g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: s.text, align: 'center' });
       } else {   // 아이콘 + 글자 한 줄(가운데)
         const lw = g.textW(label, 'label'), cw = im.width + 4 + lw, cx = x + Math.round((SIDE.w - cw) / 2), lh = g.lineH('label');
-        g.img(im, cx, yy + Math.round((inner - im.height) / 2));
-        g.text(label, cx + im.width + 4, yy + Math.round((inner - lh) / 2), { font: 'label', color: s.text });
+        g.img(im, cx, top + Math.round((inner - im.height) / 2));   // 가운데 = 판 윗변(top) 기준(yy 기준이면 1칸 위로 감)
+        g.text(label, cx + im.width + 4, top + Math.round((inner - lh) / 2), { font: 'label', color: s.text });
       }
       if (dot) { g.rect(x + SIDE.w - 8, y + 2, 6, 6, '#2e222f'); g.rect(x + SIDE.w - 7, y + 3, 4, 4, '#ff5a5a'); }
       if (live) app.input.hit(id, x - 6, y - 2, SIDE.w + 6, h + 4, go, 3);

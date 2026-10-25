@@ -42,14 +42,14 @@ export function button(app, id, x, y, w, h, label, opt = {}) {
   const { g, input } = app;
   const st = T.btn[opt.disabled ? 'off' : (STYLE[opt.style || 'teal'] || 'primary')];
   const down = input.isPressed(id) && !opt.disabled;
-  const { yy, inner } = btnBody(g, x, y, w, h, st, down);
+  const { top, inner } = btnBody(g, x, y, w, h, st, down);
   const ic = opt.icon && (opt.disabled || opt.iconTint ? tinted(opt.icon, st.text) : icon(opt.icon));   // iconTint = 글자색 한 가지(코덱스 시안의 진한 갈색 아이콘)
   const font = opt.font || 'body';
   const tw = label ? g.textW(label, font) : 0;
   const total = (ic ? ic.width + (label ? 3 : 0) : 0) + tw;
   let cx = Math.round(x + (w - total) / 2);
   const lh = g.lineH(font), sh = opt.sub ? g.lineH('body') + 1 : 0;   // sub = 아래 작은 둘째 줄(대회 상황 등)
-  const ty = yy + 1 + Math.round((inner - lh - sh) / 2);
+  const ty = top + Math.round((inner - lh - sh) / 2);
   if (ic) { g.img(ic, cx, ty + Math.round((lh - ic.height) / 2)); cx += ic.width + 3; }
   if (label) g.text(label, cx, ty, { font, color: st.text });
   if (opt.sub) g.text(opt.sub, x + w / 2, ty + lh + 1, { color: st.sub || st.text, align: 'center' });

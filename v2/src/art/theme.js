@@ -442,13 +442,15 @@ export function msgBox(g, x, y, w, h) {
 }
 
 // 단추 몸통(글자·아이콘은 ui.button이 얹음). down = 눌림(1칸 내려가고 아래 턱이 사라짐)
+//  돌려줌 = { yy: 겉 테 윗줄, top: 판 윗변, inner: 판 높이 } — 속 내용은 top 기준으로 가운데(top + (inner − 높이) / 2).
+//  yy 로 가운데를 잡으면 1칸 위로 감(2026-10-25 사용자 "글자랑 아이콘이 상자안에서 중앙보다 조금 더 위에 있는 느낌 · 항상 이런 문제" — ui.button 만 +1 로 맞고 다른 곳은 빠뜨렸음)
 export function btnBody(g, x, y, w, h, st, down = false) {
   const yy = y + (down ? 1 : 0), hh = h - (down ? 1 : 0), lip = down ? 0 : 2;
   if (T.holo && st.holo) {   // 창과 같은 판 단추(눌리면 1칸 내려가고 더 밝게) — 새 겉모습에선 아래 그늘 한 줄로 '누르는 것'임을 보임
     const live = st !== T.btn.off, fillB = UI === 'holo' ? (down ? st.fill2 : st.fill) : down ? st.hi : live ? st.fill2 : st.fill;   // 새 겉모습: 누를 수 있는 단추 = 한 단 밝은 유리, 눌림 = 더 밝게
     holo(g, x, yy, w, hh, { fill: fillB, fill2: st.fill2, frame: st.hi, frameHi: st.hi2, frameLo: st.lo }, down ? 13 : 10);
     if (UI !== 'holo' && !down && w > 8) { g.c.fillStyle = 'rgba(0,0,0,0.38)'; g.c.fillRect(x + 3, yy + hh, w - 6, 1); }
-    return { yy, inner: hh - 2 };
+    return { yy, inner: hh - 2, top: yy + 1 };
   }
   if (T.holo && st.solid && st.notch) {   // 코덱스 시안의 주황 단추: 모서리 2칸 꺾임 + 아래 그늘 띠 + 위 빛 줄
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
@@ -456,7 +458,7 @@ export function btnBody(g, x, y, w, h, st, down = false) {
     cham(g, x + 1, yk + 1, w - 2, hk - 2, 2, st.lo);
     cham(g, x + 1, yk + 1, w - 2, hk - 2 - lp, 2, st.fill);
     g.rect(x + 4, yk + 2, w - 8, 1, st.hi2); g.rect(x + 3, yk + 3, w - 6, 1, st.hi);
-    return { yy: yk, inner: hk - 2 - lp };
+    return { yy: yk, inner: hk - 2 - lp, top: yk + 1 };
   }
   if (T.holo && st.solid) {   // 흰 세라믹 단추(큰 단추 하나): 둥근 몸 + 위 빛 + 아래 두툼한 턱
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
@@ -464,7 +466,7 @@ export function btnBody(g, x, y, w, h, st, down = false) {
     rrect(g, x + 1, yk + 1, w - 2, hk - 2, 5, st.lo);
     rrect(g, x + 1, yk + 1, w - 2, hk - 2 - lp, 5, st.fill);
     g.rect(x + 6, yk + 2, w - 12, 1, st.hi2); g.rect(x + 4, yk + 3, w - 8, 1, st.hi);
-    return { yy: yk, inner: hk - 2 - lp };
+    return { yy: yk, inner: hk - 2 - lp, top: yk + 1 };
   }
   if (T.key === 'cell') {   // 쿠션 타일 단추: 두툼한 아래 턱 3칸(눌리면 1칸), 위 둥근 빛
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
@@ -473,7 +475,7 @@ export function btnBody(g, x, y, w, h, st, down = false) {
     rrect(g, x + 1, yk + 1, w - 2, hk - 2 - lp, 4, st.hi);
     rrect(g, x + 2, yk + 3, w - 4, hk - 5 - lp, 3, st.fill);
     g.rect(x + 5, yk + 2, w - 10, 1, st.hi2);
-    return { yy: yk, inner: hk - 2 - lp };
+    return { yy: yk, inner: hk - 2 - lp, top: yk + 1 };
   }
   if (T.key === 'retro') {   // 투박한 건반: 두꺼운 아래 턱(3칸) · 위·왼 밝은 비탈 2칸 · 아래·오른 그늘
     const lp = down ? 1 : 3, yk = y + (down ? 2 : 0), hk = h - (down ? 2 : 0);
@@ -482,7 +484,7 @@ export function btnBody(g, x, y, w, h, st, down = false) {
     g.rect(x + 1, yk + 1, w - 2, hk - 2 - lp, st.fill);
     g.rect(x + 2, yk + 1, w - 4, 1, st.hi2); g.rect(x + 2, yk + 2, w - 4, 1, st.hi); g.rect(x + 1, yk + 2, 1, hk - 4 - lp, st.hi); g.rect(x + 2, yk + 3, 1, hk - 6 - lp, st.hi);
     g.rect(x + w - 2, yk + 2, 1, hk - 4 - lp, st.lo);
-    return { yy: yk, inner: hk - 2 - lp };
+    return { yy: yk, inner: hk - 2 - lp, top: yk + 1 };
   }
   if (T.key === 'ship') {
     cham(g, x, yy, w, hh, 3, T.ink);
@@ -504,7 +506,7 @@ export function btnBody(g, x, y, w, h, st, down = false) {
     rrect(g, x + 2, yy + 2, w - 4, hh - 4 - lip, 3, st.fill);
     g.rect(x + 5, yy + 2, w - 10, 1, st.hi2); g.rect(x + 4, yy + 3, w - 8, 1, st.hi);
   }
-  return { yy, inner: hh - 2 - lip };
+  return { yy, inner: hh - 2 - lip, top: yy + 1 };
 }
 
 // 체력·경험 막대(테마 색, 체력은 반 이하 노랑·5분의 1 이하 빨강)
