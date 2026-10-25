@@ -3,9 +3,8 @@ import { room1, stand1 } from '../art/bg.js';
 import { hud, navBar, button, chip, fmt, rbox, tagBox } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG, heroRemember } from '../art/sprites.js';
-import { T, plate, btnBody, tbar, holo, UI, UI_ACCENT } from '../art/theme.js';
+import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
-import { hexMix } from '../art/statusLook.js';
 import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd, rankOf, tourName, isTopTier, starOf, DIV_PTS } from '../game/catalog.js';
 import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
@@ -29,7 +28,9 @@ const CARD = { x: 6, w: 92, h: 25, gap: 4, grp: 8, growH: 31 };
 // 오른쪽 기둥(2026-10-25 사용자 "식물 우측 버튼들(가방 랭크 도감 등)의 크기가 너무 커 적절히 줄여주고 왼쪽 스펙패널과 정렬 … 가방 버튼의 경우 중요한 버튼이니깐 적당히 차별점을"):
 //  왼쪽 능력치 판과 같은 줄 — 가방 = 위 두 줄 높이 · 큰 아이콘 · 강조색 테 / 도감 · 순위 = 셋째 · 넷째 줄 / 공지 = 새잎 막대 줄. 작은 단추 = 아이콘 + 글자 한 줄(왼쪽 판과 같은 꼴)
 const SIDE = { w: 56 };
-const sideRows = () => { const s = CARD.h + CARD.gap; return [[0, CARD.h * 2 + CARD.gap], [2 * s, CARD.h], [3 * s, CARD.h], [4 * s - CARD.gap + CARD.grp, CARD.growH]]; };
+//  (같은 날 사용자 "공지 버튼만 높이가 큰 거 같아" → 공지도 25칸, 윗변 = 새잎 막대 판 윗변 · "가방은 배경색은 동일하게 하고 테두리만 조금 더 진하게" → 판은 다른 단추와 같고 테만 진한 주황)
+const sideRows = () => { const s = CARD.h + CARD.gap; return [[0, CARD.h * 2 + CARD.gap], [2 * s, CARD.h], [3 * s, CARD.h], [4 * s - CARD.gap + CARD.grp, CARD.h]]; };
+const BAG_RIM = { edge: '#ee9440', hi: '#ffd49a' };   // 가방 테(가장자리 1칸) · 오른쪽 위 꺾쇠
 // 오른쪽 기둥 단추 [id, 아이콘, 글자, 누르면, 빨간 점] — 순위 · 공지는 온라인에서만(2026-10-22)
 const SIDE_BTNS = app => [['home_bag', 'navBag', '가방', () => app.go('bag')], ['home_dex', 'navBook', '도감', () => app.go('dex')],
   ...(net.offline && !app.shotOnline ? [] : [['home_rank', 'navRank', '순위', () => app.go('ranks')], ['home_notice', 'navNotice', '공지', () => openNotices(app), hasNewNotice(app)]])];   // shotOnline = 촬영
@@ -195,14 +196,17 @@ export const home = {
   // 오른쪽 단추: 가방 · 도감 · 순위 · 공지(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에) · 새 공지가 있으면 공지 단추에 빨간 점
   //  줄 자리 = sideRows(왼쪽 능력치 판과 같은 높이) · 누르는 자리는 줄 사이 틈과 왼쪽으로 조금 더(보이는 크기는 그대로)
   sideButtons(app, y0, live) {
-    const { g, W } = app, x = W - 6 - SIDE.w, rows = sideRows(), st = T.btn.second, acc = UI_ACCENT[UI] || '#f0be7d';
-    const bag = { ...st, fill: hexMix(st.fill, acc, 0.14), fill2: hexMix(st.fill2 || st.fill, acc, 0.2), hi: acc, hi2: '#ffe8c8', lo: '#8a5a32' };   // 가방 = 강조색 테 + 판에 강조색 조금(출전 단추의 주황 채움과는 다르게)
+    const { g, W } = app, x = W - 6 - SIDE.w, rows = sideRows(), st = T.btn.second, s = st;
     SIDE_BTNS(app).forEach(([id, ic, label, go, dot], i) => {
-      const [ry, h] = rows[i], y = Math.round(y0) + ry, big = i === 0, s = big ? bag : st;
-      const { yy, inner } = btnBody(g, x, y, SIDE.w, h, s, app.input.isPressed(id)), im = icon(ic);
-      if (big) {   // 2배 아이콘 위 · 글자 아래
+      const [ry, h] = rows[i], y = Math.round(y0) + ry, big = i === 0, down = app.input.isPressed(id);
+      const { yy, inner } = btnBody(g, x, y, SIDE.w, h, s, down), im = icon(ic);
+      if (big) {   // 가방: 테만 진한 주황(판 색 그대로 — 모서리 한 칸은 비움) · 2배 아이콘 위 · 글자 아래
+        const hh = h - (down ? 1 : 0), w = SIDE.w, L = Math.max(3, Math.min(8, Math.round(w / 7)));
+        g.rect(x + 1, yy, w - 2, 1, BAG_RIM.edge); g.rect(x + 1, yy + hh - 1, w - 2, 1, BAG_RIM.edge);
+        g.rect(x, yy + 1, 1, hh - 2, BAG_RIM.edge); g.rect(x + w - 1, yy + 1, 1, hh - 2, BAG_RIM.edge);
+        g.rect(x + w - L, yy, L, 1, BAG_RIM.hi); g.rect(x + w - 1, yy, 1, 3, BAG_RIM.hi);
         g.img(im, x + Math.floor((SIDE.w - im.width * 2) / 2), yy + 4 + Math.floor((30 - im.height * 2) / 2), 2);
-        g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: '#ffe8c8', align: 'center' });
+        g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: s.text, align: 'center' });
       } else {   // 아이콘 + 글자 한 줄(가운데)
         const lw = g.textW(label, 'label'), cw = im.width + 4 + lw, cx = x + Math.round((SIDE.w - cw) / 2), lh = g.lineH('label');
         g.img(im, cx, yy + Math.round((inner - im.height) / 2));
