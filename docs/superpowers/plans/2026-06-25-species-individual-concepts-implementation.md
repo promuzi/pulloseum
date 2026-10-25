@@ -1,5 +1,7 @@
 # 개체 고유화 구현 계획 (개체 + 고유 스킬 + 외형 액센트)
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [docs/superpowers/specs/2026-06-24-species-individual-concepts-design.md](../specs/2026-06-24-species-individual-concepts-design.md)에 확정된 **175 개체**(비버섯 base 28 + 변이 140 + 버섯 base 7)에 **개체당 고유 스킬 3개(성장체/성체/완숙체)** 와 **변이형 자동 외형 액센트 시스템**을 `index.html`에 반영한다.

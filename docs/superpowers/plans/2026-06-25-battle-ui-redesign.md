@@ -1,5 +1,7 @@
 # 전투 UI 개편 구현 플랜 (2026-06-25)
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development 또는 superpowers:executing-plans 로 태스크별 실행. 체크박스(`- [ ]`)로 추적.
 
 **Goal:** 전투 화면을 포켓몬식 고정 레이아웃(식물 상단·스킬 하단 고정) + 간결 판정 연출(상단 흐림, 상성 한 줄, 동시 효과, 순간형 상태 VFX, 카드 앞면 3단 + 꾹→뒤집기)로 개편한다.

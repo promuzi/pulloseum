@@ -1,5 +1,7 @@
 # 포자 변이 재정의 + 이중 변이 버섯 — 설계 (✅ 구현 완료 2026-06-26)
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > 작성 2026-06-26. **✅ 구현 완료** — 계획 [plans/2026-06-26-dual-variant-mushrooms.md](../plans/2026-06-26-dual-variant-mushrooms.md), 28종 추가·엔진 2함수 확장·분포·외형 1차. 셀프테스트 0 fail.
 > 관련: [변이형·카드 재설계](2026-06-24-mutation-forms-cards-redesign-design.md) · [변이 개체 정체성](2026-06-26-variant-individual-identity-design.md) · [버섯 타입 설계](2026-06-24-mushroom-type-design.md)
 

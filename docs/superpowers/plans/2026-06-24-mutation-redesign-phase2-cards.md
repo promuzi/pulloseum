@@ -1,5 +1,7 @@
 # 변이 재설계 — 플랜 2: 카드 콘텐츠 Implementation Plan
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > 🟡 **진행 중:** 슬라이스 2-A ✅ 완료(`2781c98` 엔진 fixed+스탯코어 base · `776f60a` 공통 스탯 코어 4종, `__catalogSelfTest()` 0 fail). 2-B(버프/디버프·무등급)·2-C(변이형별)는 플랜3(전투/UI) 연동 필요 → 후속.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans. 셀프테스트 TDD(`window.__test`+`__catalogSelfTest()`). preview `pullosseum`(정적 → `location.reload()` 후 검증).

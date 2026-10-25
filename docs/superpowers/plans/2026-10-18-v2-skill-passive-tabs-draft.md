@@ -1,5 +1,7 @@
 # v2 스킬 · 패시브 탭 분리 + 새 고르기 화면 Implementation Plan
 
+> **문서 상태(2026-10-25 정리) — 끝난 계획(기록).** 스킬 · 패시브 탭 · 고르기 화면(2026-10-18 구현, CHANGELOG 69). 지금 상태 = [마스터 로드맵](../../master-roadmap.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 기본기도 칸을 차지하는 스킬 장착 6 · 보관 6, 패시브 장착 3 · (변이) 보관 3, 탭 분리, 그리고 '얻은 카드 위 · 내 칸 아래 · [장착] → 칸 누르기 · 되돌리기 · 꾹 = 뒷면' 고르기 화면 + 맨 위 '보류' 단추.

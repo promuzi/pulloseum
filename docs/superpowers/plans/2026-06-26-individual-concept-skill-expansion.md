@@ -1,5 +1,7 @@
 # 개체 컨셉 + 단계별 스킬 대규모 확장 — 구현 계획
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > ✅ **실행 현황(2026-06-26):** P0 엔진 5종 + 컨셉 인프라 완료. 콘텐츠 = 전 175 개체 컨셉 스킬 보유(40 손작업 + 660 생성기 `scripts/gen-concept-skills.js`). preview 실전투로 신규 엔진 5종 전수 동작 확인(에너지 흡수·출혈 회복감소·무기 속성부여·독 증폭·브레스 충전/발동). 큐레이션 1차=생성기 네이밍 정리(단계별 이름 distinct). `__catalogSelfTest()` 0 fail. 잔여=깊은 개체별 큐레이션(`ARCHETYPE_OVERRIDES`/`CONCEPT_OVERRIDES`)·버섯/광신 자해화상 등 선택 후속.

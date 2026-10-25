@@ -1,5 +1,7 @@
 # 식물·화분 도트 분리 & 등급별 픽셀 화분 Implementation Plan
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 식물과 화분을 항상 별개 레이어로 분리하고, 화분을 등급별로 다른 "나무 도트" 픽셀아트로 통일하여 메인화면·양육·빈 화분이 같은 자산을 쓰게 한다.

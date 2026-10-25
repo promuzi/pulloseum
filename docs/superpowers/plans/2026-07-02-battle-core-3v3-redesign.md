@@ -1,5 +1,7 @@
 # 전투 코어 3v3 재설계 구현 계획 (팀·심리전·손패·두 리그)
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 1v1 고정 전투를 "팀3·교체 심리전·덱8/손패4·에너지 커브·두 리그(1v1/3v3 랭크 분리)"로 재설계한다. 스펙 = [2026-07-02-battle-core-3v3-redesign-design.md](../specs/2026-07-02-battle-core-3v3-redesign-design.md).

@@ -1,5 +1,7 @@
 # 개체 카탈로그 시스템 Implementation Plan
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 자동 생성 종 격자를 "수정·확장이 편한 수작업 개체 카탈로그(`SPECIES_CATALOG`) + 스킬 정의 분리(`SKILL_LIB`)" 구조로 전환하고, 초본형 타입을 버섯형으로 교체한다(초본형은 레거시 보존).

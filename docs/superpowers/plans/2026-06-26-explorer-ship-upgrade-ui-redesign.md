@@ -1,5 +1,7 @@
 # 탐사선 개조실 UI 재설계 — 구현 계획
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **진행 상황(2026-06-26):** ✅ Task 1(부품 시스템 제거) 완료·검증(self-test 112/0)·커밋 `3587676`. ⬜ Task 2~5 대기. 작업 브랜치 `feat/ship-ui-redesign`(워크트리 `C:\dev\pulloseum-ship`).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

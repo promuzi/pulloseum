@@ -1,5 +1,7 @@
 # 양육/열매 시스템(#2) 구현 계획
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (권장) 또는 superpowers:executing-plans 로 task 단위 실행. 각 step은 체크박스(`- [ ]`)로 추적.
 
 **Goal:** 기존 일일카운터/스킬박스 양육을 **시간 게이지 + 감쇠형 물·비료 버프 + 5색 희귀도 열매 + 공통 개봉 연출**로 개편한다.

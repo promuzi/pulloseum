@@ -1,5 +1,7 @@
 # 전투 결정론 시드 + 시간 시드 도입 (서버 준비 씨앗) Implementation Plan
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](../../master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](../../전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > ✅ **구현 완료(2026-06-26).** Task 1~3 전부 적용·커밋. 검증 = `__catalogSelfTest()` 0 fail(rng 재현성·시뮬 Math.random 0 가드·gameNow 단일지점 가드 포함) + 실전투 스모크(적/내 HP가 rng 데미지로 변동, 콘솔 에러 0) + 양육 `nurseryTick(p, gameNow())` 동작 확인. 커밋: `f0f6d58`(T1 인프라+시드+gameNow) · `aac704d`(T2 시뮬 난수 14개 rng 치환) · `3d61dfb`(T3 nurseryTick 8콜러 gameNow). **남은 큰 작업(sim/render 분리·보상 서버이전·세이브 분리)은 의도적 범위 밖 — 서버 착수 시.**
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.

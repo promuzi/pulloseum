@@ -37,7 +37,7 @@ while read local_ref local_sha remote_ref remote_sha; do
   echo "⚠️  index.html(게임 코드)이 바뀌었는데 문서가 갱신되지 않았습니다."
   echo ""
   echo "   변경을 마스터 로드맵/하위 문서에 반영하고 함께 커밋하세요:"
-  echo "     • docs/master-roadmap.md  (현황·체크박스·결정 로그)"
+  echo "     • docs/master-roadmap.md (지금 상태) · docs/결정-로그.md (결정, 맨 아래)"
   echo "     • 수치 변경이면 docs/balance-sheet.md 등 해당 하위 문서"
   echo ""
   echo "   의도적으로 건너뛰려면:  git push --no-verify"

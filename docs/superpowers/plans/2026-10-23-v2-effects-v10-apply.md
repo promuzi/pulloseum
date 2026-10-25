@@ -1,5 +1,7 @@
 # 엑셀 v10 공통 효과 → 전투 계산 적용 Implementation Plan
 
+> **문서 상태(2026-10-25 정리) — 끝난 계획(기록).** 엑셀 v10 공통 효과를 전투에 넣기(2026-10-23 — CHANGELOG 228 · 238, 친구 서버에 올림). 지금 상태 = [마스터 로드맵](../../master-roadmap.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 이 저장소에서는 하위 에이전트를 쓰지 않는다(사용자 지시) — superpowers:executing-plans 로 한 세션이 직접 한다.
 
 **Goal:** 효과 · 스킬 분류 엑셀 v10과 v10 뒤 확정을 전투 계산(`v2/src/battle/`)에 넣고, 지금 46종 기술 · 기본기 · 변이 기술이 쓰는 옛 효과를 새 효과로 옮긴다(친구 서버 올리기는 사용자 허락 뒤).

@@ -1,5 +1,7 @@
 # 🌿 풀로세움 — 식물 · 스킬 · 스탯 밸런스 시트
 
+> **문서 상태(2026-10-25 정리) — 과거 기록 · v1(옛 `index.html`, 2026-06 ~ 09).** 지금 개발 중인 v2(`v2/` + `server/`)와 규칙 · 화면 · 수치가 다르다. 지금 상태 = [마스터 로드맵](master-roadmap.md) · 지금 규칙 = [전투 규칙(지금)](전투-규칙-지금.md). v1을 고치거나 지난 과정을 볼 때만 참고.
+
 > **용도:** 식물/스킬/스탯/전투 시스템을 한눈에 보고 밸런스를 검토·수정하기 위한 마스터 문서.
 > 표를 보고 "이 스킬 위력 올려", "이 종 너무 약해" 같은 식으로 지시하면 `index.html` 해당 위치를 고칩니다.
 > 모든 데이터는 `index.html` 안에 인라인으로 들어 있습니다. (참고: [battle-mechanics-deep-dive.md](battle-mechanics-deep-dive.md), [species-system-guide.md](species-system-guide.md))
