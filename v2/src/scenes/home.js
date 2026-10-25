@@ -3,8 +3,9 @@ import { room1, stand1 } from '../art/bg.js';
 import { hud, navBar, button, chip, fmt, rbox, tagBox } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG, heroRemember } from '../art/sprites.js';
-import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
+import { T, plate, btnBody, tbar, holo, UI, UI_ACCENT } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
+import { hexMix } from '../art/statusLook.js';
 import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd, rankOf, tourName, isTopTier, starOf, DIV_PTS } from '../game/catalog.js';
 import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
@@ -25,7 +26,10 @@ export const HOME_PEDESTAL = { room: [135, 262], cell: [135, 262], ship: [135, 2
 //  왼쪽 = 능력치 창 넷 + 새잎 막대 창, 오른쪽 = 큰 단추 셋(가방·도감·관리) — 두 줄 모두 세로 가운데를 식물(화분 포함) 가운데에 맞춤(식물마다 다시 재고 부드럽게 따라감).
 //  정체성(타입·속성·단계)은 이름 아래 작은 꼬리표, 전투 종류·대회 현황은 출전 단추 왼쪽 카드(누르면 종류 고르기).
 const CARD = { x: 6, w: 92, h: 25, gap: 4, grp: 8, growH: 31 };
-const SIDE = { w: 50, h: 50, gap: 7 };
+// 오른쪽 기둥(2026-10-25 사용자 "식물 우측 버튼들(가방 랭크 도감 등)의 크기가 너무 커 적절히 줄여주고 왼쪽 스펙패널과 정렬 … 가방 버튼의 경우 중요한 버튼이니깐 적당히 차별점을"):
+//  왼쪽 능력치 판과 같은 줄 — 가방 = 위 두 줄 높이 · 큰 아이콘 · 강조색 테 / 도감 · 순위 = 셋째 · 넷째 줄 / 공지 = 새잎 막대 줄. 작은 단추 = 아이콘 + 글자 한 줄(왼쪽 판과 같은 꼴)
+const SIDE = { w: 56 };
+const sideRows = () => { const s = CARD.h + CARD.gap; return [[0, CARD.h * 2 + CARD.gap], [2 * s, CARD.h], [3 * s, CARD.h], [4 * s - CARD.gap + CARD.grp, CARD.growH]]; };
 // 오른쪽 기둥 단추 [id, 아이콘, 글자, 누르면, 빨간 점] — 순위 · 공지는 온라인에서만(2026-10-22)
 const SIDE_BTNS = app => [['home_bag', 'navBag', '가방', () => app.go('bag')], ['home_dex', 'navBook', '도감', () => app.go('dex')],
   ...(net.offline && !app.shotOnline ? [] : [['home_rank', 'navRank', '순위', () => app.go('ranks')], ['home_notice', 'navNotice', '공지', () => openNotices(app), hasNewNotice(app)]])];   // shotOnline = 촬영
@@ -133,11 +137,11 @@ export const home = {
       return;
     }
     // 옆 창 두 줄: 세로 가운데 = 식물 가운데(이름표 위·배너 아래로 넘지 않게) · 오른쪽 = 가방 · 도감(관리 단추는 뺌 — 식물을 누르면 식물 관리, 2026-10-16 사용자)
-    const NB = SIDE_BTNS(app).length, LH = 4 * CARD.h + 3 * CARD.gap + CARD.grp + CARD.growH, RH = NB * SIDE.h + (NB - 1) * SIDE.gap;
+    const LH = 4 * CARD.h + 3 * CARD.gap + CARD.grp + CARD.growH;
     if (live) checkNotices(app);   // 새 공지가 있으면 처음 한 번(scenes/notice.js)
-    const fit = h0 => Math.max(BANNER.y + BANNER.h + 8, Math.min(NY - 6 - h0, this.colCy - h0 / 2));
-    this.specs(app, p, fit(LH));
-    this.sideButtons(app, fit(RH), live);
+    const fit = h0 => Math.max(BANNER.y + BANNER.h + 8, Math.min(NY - 6 - h0, this.colCy - h0 / 2)), colY = fit(LH);   // 오른쪽 기둥도 같은 윗줄(줄마다 맞춤)
+    this.specs(app, p, colY);
+    this.sideButtons(app, colY, live);
     // 이름표 + 넘기기 화살표 · 정체성 꼬리표 · 몇 번째 식물 점
     const [nx, nw] = this.namePlate(app, p, mx), n = s.plants.length;
     if (live && n > 1) app.input.hit('home_name', nx, NY, nw, 24, () => { this.pickSheet = true; }, 3);   // 이름표 = 출전 식물 고르기 창
@@ -188,16 +192,24 @@ export const home = {
     }
     this.specsR = [CARD.x, Math.round(y0), CARD.w, y - CARD.gap - Math.round(y0)];   // 처음 안내가 가리킬 자리
   },
-  // 오른쪽 큰 단추: 가방 · 도감 · 순위 · 공지(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에)
-  //  위에서부터 차곡차곡(2026-10-18 사용자 "대기실 식물 우측에 차곡차곡 쌓아 줘" — 한 기둥 = 같은 크기) · 새 공지가 있으면 공지 단추에 빨간 점
+  // 오른쪽 단추: 가방 · 도감 · 순위 · 공지(식물 관리 = 식물을 누르면 — 쓸 포인트 · 새 기술 점은 이름표에) · 새 공지가 있으면 공지 단추에 빨간 점
+  //  줄 자리 = sideRows(왼쪽 능력치 판과 같은 높이) · 누르는 자리는 줄 사이 틈과 왼쪽으로 조금 더(보이는 크기는 그대로)
   sideButtons(app, y0, live) {
-    const { g, W } = app, x = W - 6 - SIDE.w, st = T.btn.second;
+    const { g, W } = app, x = W - 6 - SIDE.w, rows = sideRows(), st = T.btn.second, acc = UI_ACCENT[UI] || '#f0be7d';
+    const bag = { ...st, fill: hexMix(st.fill, acc, 0.14), fill2: hexMix(st.fill2 || st.fill, acc, 0.2), hi: acc, hi2: '#ffe8c8', lo: '#8a5a32' };   // 가방 = 강조색 테 + 판에 강조색 조금(출전 단추의 주황 채움과는 다르게)
     SIDE_BTNS(app).forEach(([id, ic, label, go, dot], i) => {
-      const y = Math.round(y0) + i * (SIDE.h + SIDE.gap), { yy, inner } = btnBody(g, x, y, SIDE.w, SIDE.h, st, app.input.isPressed(id)), im = icon(ic);
-      g.img(im, x + Math.floor((SIDE.w - im.width * 2) / 2), yy + 3 + Math.floor((30 - im.height * 2) / 2), 2);   // 2배 도트 아이콘
-      g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: st.text, align: 'center' });
-      if (dot) { g.rect(x + SIDE.w - 9, y + 3, 6, 6, '#2e222f'); g.rect(x + SIDE.w - 8, y + 4, 4, 4, '#ff5a5a'); }
-      if (live) app.input.hit(id, x, y, SIDE.w, SIDE.h, go, 3);
+      const [ry, h] = rows[i], y = Math.round(y0) + ry, big = i === 0, s = big ? bag : st;
+      const { yy, inner } = btnBody(g, x, y, SIDE.w, h, s, app.input.isPressed(id)), im = icon(ic);
+      if (big) {   // 2배 아이콘 위 · 글자 아래
+        g.img(im, x + Math.floor((SIDE.w - im.width * 2) / 2), yy + 4 + Math.floor((30 - im.height * 2) / 2), 2);
+        g.text(label, x + SIDE.w / 2, yy + inner - 15, { font: 'label', color: '#ffe8c8', align: 'center' });
+      } else {   // 아이콘 + 글자 한 줄(가운데)
+        const lw = g.textW(label, 'label'), cw = im.width + 4 + lw, cx = x + Math.round((SIDE.w - cw) / 2), lh = g.lineH('label');
+        g.img(im, cx, yy + Math.round((inner - im.height) / 2));
+        g.text(label, cx + im.width + 4, yy + Math.round((inner - lh) / 2), { font: 'label', color: s.text });
+      }
+      if (dot) { g.rect(x + SIDE.w - 8, y + 2, 6, 6, '#2e222f'); g.rect(x + SIDE.w - 7, y + 3, 4, 4, '#ff5a5a'); }
+      if (live) app.input.hit(id, x - 6, y - 2, SIDE.w + 6, h + 4, go, 3);
     });
   },
   // 이름표(꽉 찬 판 — 반투명 점무늬 위 글자가 깨져 보였음) → [x, 폭]
