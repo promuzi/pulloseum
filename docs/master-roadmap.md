@@ -4,7 +4,7 @@
 > **갱신 규칙:** 상태가 바뀌면 이 문서의 그 줄을 **고쳐 쓴다**(덧붙여 쌓지 않음). 끝난 일은 여기서 지우고 개발 로그 · 결정 로그에 남긴다. 세션을 마칠 때 §2의 해당 줄기를 고치고, 바뀌기 전 맥락은 [세션 인계 기록](history/세션-인계-기록.md) 맨 아래에 붙인다.
 > 별칭: "마스터 로드맵" = "로드맵" = "마스터 문서" = 이 파일. 상위 안내 = [CLAUDE.md](../CLAUDE.md) · [AGENTS.md](../AGENTS.md) · [copilot](../.github/copilot-instructions.md).
 
-- **최종 갱신:** 2026-10-26 (톡시캑터 설계 인계 · 고유 패시브 없음)
+- **최종 갱신:** 2026-10-26 (톡시캑터 설계 인계 · 고유 패시브 없음 · 남은 검토 자료 보관)
 - **게임(v2):** https://pulloseum.getchat.workers.dev/v2/ (친구용 고정 주소) · PC = `node server/index.mjs` → http://localhost:8790/v2/
 - **옛 판(v1):** 루트 `index.html` — GitHub Pages https://promuzi.github.io/pulloseum/ 에 그대로 있음. 옛 판에 '새 판으로' 안내를 넣을지 · 내릴지는 사용자 결정 대기(공개 페이지). 루트 `README.md`도 v1 기준 소개다.
 
