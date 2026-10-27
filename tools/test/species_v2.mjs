@@ -330,5 +330,21 @@ ok(SPECIES_V2.has('frost_bell'), '프로스트벨 v2 켜짐');
   b.energy = 2; const ev2 = turn(b, f, B('sun'), OTHER, 3);
   ok(ev2.some(e => e.t === 'echo') && Math.abs(b.energy - 4.5) < 1e-9, `광합성 + 메아리 0.5 (지금 ${b.energy})`);
 }
+// ── 1. 페탈로즈(2026-10-29 밤샘 — 장치 시험 devices.mjs 의 설계를 게임 표로) ──
+ok(SPECIES_V2.has('flower_grass'), '페탈로즈 v2 켜짐');
+{
+  const ATK = { id: 'f', name: '때리기', act: 'attack', power: 60, cost: 0, cats: ['attack'], el: null };
+  const k = mk('me', 'flower_grass', { spd: 999 }), d = mk('foe', 'aqua', { spd: 1 });
+  const ev = turn(k, d, SKILLS.u_petal_1, ATK, 1, () => 0.5);
+  const mine = ev.find(e => e.t === 'hit' && e.who === 'me'), theirs = ev.find(e => e.t === 'hit' && e.who === 'foe');
+  ok(mine && theirs && theirs.guard, '검방술(기본) 먼저 = 찌르고 그 턴 상대 공격을 막음');
+  const k2 = mk('me', 'flower_grass', { spd: 1 }), d2 = mk('foe', 'aqua', { spd: 999 });
+  const ev2 = turn(k2, d2, SKILLS.u_petal_1, { ...ATK, hits: 2, power: 30 }, 1, () => 0.5);
+  ok(ev2.filter(e => e.t === 'hit' && e.who === 'foe').every(e => e.guard) && ev2.some(e => e.t === 'counter'), '검방술(기본) 나중 = 그 턴 모든 타를 막고 반격(10-28 맞춤)');
+  const kb = mk('me', 'flower_grass');
+  turn(kb, mk('foe', 'aqua'), SKILLS.u_petal_3c, OTHER, 1);
+  ok(kb.eff.atkUp && kb.eff.defUp && kb.eff.spdUp, '만개 = 활력 · 억셈 · 가속 한 겹씩');
+  ok(SKILLS.u_petal_2b.onFirst.self === 'defUp' && SKILLS.u_petal_2b.onSecond.self === 'spdUp', '기합 = 먼저 억셈(옛 철벽) · 나중 가속');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

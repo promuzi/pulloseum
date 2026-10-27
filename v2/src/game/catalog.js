@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass']);
 const V2 = {
+  flower_grass: {   // 1. 페탈로즈 — 검방술(순서 분기): 먼저/나중에 따라 같은 기술이 다르게 · 2026-10-18 설계(장치 시험 tools/test/devices.mjs 그대로) · 10-28 지금 규칙 대조(막기 = 그 턴 모든 타 · 철벽 → 억셈 · 만개 = 공통 강화 겹)
+    sp: {},
+    skills: [
+      S('u_petal_1', '검방술(기본)', 'grass', 'u', 58, 1, { tag: 'sword', contact: true, onFirst: { pierce: 0.3, guardWith: true, guardDefMult: 2 }, onSecond: { power: 48, guardWith: true, guardDefMult: 3, counterPct: 0.3 } }),   // 위력 50 · 40 → 58 · 48(2026-10-29 리그전 39% → 맞춤, 임시)
+      S('u_petal_2', '검방술(공세)', 'grass', 'u', 22, 2, { tag: 'sword', contact: true, hits: 3, onFirst: { evadeWith: true, shift: { miss: 10, graze: 6 } }, onSecond: { evadeWith: true, shift: { miss: 15, graze: 10 }, nextCrit: 50 } }),
+      S('u_petal_2b', '기합', 'grass', 'u', 0, 1, { onFirst: { self: 'defUp' }, onSecond: { self: 'spdUp' } }),
+      S('u_petal_3', '검방술(오의)', 'grass', 'u', 28, 4, { tag: 'sword', contact: true, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { reflect: true }, onSecond: { guardWith: true, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),
+      S('u_petal_3b', '불타는 의지', 'grass', 'u', 0, 1, { infuse: { el: 'fire', n: 2, tag: 'sword' } }),
+      S('u_petal_3c', '만개', 'grass', 'u', 0, 2, { self: 'flourish' }),
+    ],
+  },
   frost_bell: {   // 13. 프로스트벨 — 아침 · 밤(필드 환경 3턴 · 하나만 · 덧씌우기 불가 · 프로스트벨이 나가면 사라짐) 동안 모든 기술이 같은 차례에 메아리(아침 25% · 밤 50% 임시) · 밤 = 양쪽 앞 식물 자연 햇빛 안 참(교체로 들어와도)
     sp: { bell: { morning: 0.25, night: 0.5 } },
     skills: [
@@ -544,7 +555,7 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 15;   // 15 = 2026-10-29 프로스트벨 고유 기술(아침 · 밤 필드 환경 · 메아리) · 봉인 하나 더(메아리)
+export const RULES_VER = 15;   // 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
 // 14 이전:   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
 //  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
