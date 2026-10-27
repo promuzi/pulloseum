@@ -298,7 +298,7 @@ const FX_MSG = {
   chill: (x, e) => `${ga(x)} 얼어 간다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''), shock: (x, e) => `${ga(x)} 감전됐다!` + (e.wet ? ' 젖어 있어서 더 쌓였다!' : ''),
   flourish: (x, e) => `${ga(x)} 만개했다!` + (e.list && (e.list.find(s => s.id === 'flourish') || {}).n > 1 ? ` (${e.list.find(s => s.id === 'flourish').n}겹)` : ''),
   armor: x => `${x}에게 갑주가 둘러졌다!`, stealth: x => `${ga(x)} 그림자 속으로 숨었다!`, clone: x => `${ga(x)} 분신을 만들었다!`,
-  frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`,
+  frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`, charm: x => `${ga(x)} 춤에 매혹됐다!`,
   spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
   seal: (x, e) => `${x}의 ${eul(e.skill)} 봉인했다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 햇빛이 안 찬다`, dark: x => `${x}의 햇빛이 가려졌다!`,
   gale: x => `${x} 쪽에 강풍이 몰아친다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 다음 턴엔 공격만 한다`, root: x => `${x}의 발이 묶였다! 다음 턴 교체할 수 없다`,
@@ -310,15 +310,15 @@ const FX_MSG = {
   shield: x => `${x}에게 보호막이 생겼다!`, purified: (x, e) => (e.ids && e.ids.length ? `${x}의 나쁜 효과가 씻겨 나갔다!` : `${x}의 몸이 맑아졌다!`), aim: x => `${ga(x)} 겨눈다! 다음 공격 치명 ↑`,
 };
 const CURE_FIRE = { chill: '냉기가 녹았다', wet: '몸이 말랐다', spore: '포자가 탔다', leech: '기생 씨앗이 탔다' };
-const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서', blocked: '쓸 기술이 없어' };
-const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서', blocked: '쓸 기술이 없어서' }, SKIP_AUTO_MS = 1100;
+const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서', charm: '매혹되어', blocked: '쓸 기술이 없어' };
+const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서', charm: '매혹되어서', blocked: '쓸 기술이 없어서' }, SKIP_AUTO_MS = 1100;
 // 막힘 사건(resist)의 까닭 → 머리 위 한 마디 · 문장(2026-10-23 엑셀 v10: 면역 · 의지 · 속박 한 번 · 강풍 켜져 있음 · 정화 보호 · 이미 쉬는 중)
 const RESIST_POP = { immune: '면역!', will: '의지!', once: '안 묶임', env: '이미 강풍', purify: '버팀!', skip: '버팀!' };
 const RESIST_MSG = { immune: x => `${ga(x)} 방금 쉬어서 기절하지 않는다`, will: x => `${ga(x)} 의지로 버텼다!`, once: x => `${eun(x)} 이미 한 번 묶였다`, env: () => '이미 강풍이 불고 있다', purify: x => `${ga(x)} 정화 덕분에 버텼다!`, skip: x => `${eun(x)} 이미 쉬는 중이다` };
 // 전투 글자 연출(2026-10-16 사용자 "가운데 문구가 이상해. 네모난 배경색에 무엇을 할까? 이것도 어색해. 일일이 이런 문구 넣지 마" → "출력 문구 목록 정리 — 효과·폰트·연출"):
 //  가운데 네모 전광판을 없애고 글자는 식물 머리 위에서만 짧게 — 기술 이름 = 리본, 피해 = 큰 숫자(치명 = 더 크게 · 흔들림), 판정·효과 = 한두 낱말, 승패 = 가운데 큰 글자(네모 없이).
 //  목록·글꼴·움직임 = docs/superpowers/specs/2026-10-16-v2-battle-text-direction.md
-const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기절해서 쉼', blocked: '막혀서 쉼' };
+const SKIP_POP = { frozen: '얼어서 쉼', paral: '굳어서 쉼', stun: '기절해서 쉼', charm: '매혹되어 쉼', blocked: '막혀서 쉼' };
 // 3:3 쓰러진 자리: 봇 판 = 늘 'me', 친구 대결 = 'me' · 'foe' · 'both'(둘 다 고름 — 서버 rooms.mjs)
 const needMe = B => B.need === 'me' || B.need === 'both';
 // 시간 막대(같은 날 사용자 "타이머 역할하는 바도 넣어주고. 안 하면 넘어가는 걸로"): 고르는 차례마다 봇 판 30초 · 친구 대결 = 서버 40초, 다 되면 넘어감(쉬기)
@@ -548,6 +548,7 @@ export const battle = {
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
       else if (e.t === 'hit') { const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
+      else if (e.t === 'execute') out.push({ kind: 'echo', ms: 700, side: e.to, pop: '처형', msg: `${ga(e.name)} 처형됐다!`, tone: 'hit' });   // 윈드페탈 처형의 춤
       else if (e.t === 'echo') out.push({ kind: 'echo', ms: 450, side: e.who, msg: `메아리가 울린다!`, tone: 'buff' });   // 프로스트벨 메아리(같은 차례에 한 번 더)
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 ${e.label || '되받아치기'}!`, tone: 'hit' });
@@ -593,7 +594,7 @@ export const battle = {
     if (st.kind === 'skipT') this.pop(st.side, SKIP_POP[st.ev.src] || '쉼', null, t, false, -16, (STATUS[st.ev.src] || {}).col || '#c0a8ff');
     if (st.kind === 'note' && st.side) this.pop(st.side, st.popText || '햇빛 막힘', 'dim', t, false, -16);
     if (st.kind === 'swapFail') { sfx('fizzle'); this.pop(st.side, '교체 실패', 'dim', t, false, -16); }
-    if (st.kind === 'echo') { sfx('select'); this.pop(st.side, '메아리', null, t, false, -16, '#c4ecff'); }
+    if (st.kind === 'echo') { sfx('select'); this.pop(st.side, st.pop || '메아리', null, t, false, -16, st.pop ? '#ff8a8a' : '#c4ecff'); }
     if (st.kind === 'faint') this.pop(st.who, '쓰러짐', 'dim', t, false, -16);
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack' || st.kind === 'cast') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }

@@ -22,7 +22,7 @@ export const STATUS = {
   burn: { name: '화상', icon: 'fx_burn', col: '#ff7a3a' }, poison: { name: '독', icon: 'fx_poison', col: '#b866ff', stack: 5 }, bleed: { name: '출혈', icon: 'fx_bleed', col: '#ff5a6e' },
   shock: { name: '감전', icon: 'fx_shock', col: '#ffd84a' }, chill: { name: '빙결', icon: 'fx_chill', col: '#c4ecff', stack: 3 }, wet: { name: '젖음', icon: 'fx_wet', col: '#4f9dff' },
   dark: { name: '암실', icon: 'fx_shade', col: '#a0a3c8' }, shade: { name: '그늘', icon: 'fx_shade', col: '#a0a3c8' },
-  stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' }, frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' },
+  stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' }, charm: { name: '매혹', icon: 'st_stun', col: '#ff9ad8' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' }, frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' },
   seal: { name: '봉인', icon: 'fx_seal', col: '#6fd25c' }, root: { name: '속박', icon: 'st_root', col: '#c08a5a' }, taunt: { name: '도발', icon: 'fx_taunt', col: '#ff5a5a' },
   spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 99 }, leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' },
   gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true }, storm: { name: '폭풍', icon: 'env_storm', col: '#9a7bff', env: true }, orbTrap: { name: '봉인 구슬', icon: 'fx_seal', col: '#c9a8ff', env: true }, cave: { name: '동굴', icon: 'env_cave', col: '#d9b27a', env: true },

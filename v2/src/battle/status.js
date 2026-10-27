@@ -215,7 +215,8 @@ export function endAct(u, ev) {
 // 능력치 겹 하나 더하기(겹마다 제 만료 — 지금 N턴 = 걸린 턴 T부터 → exp = T + N − 1)
 function addStat(u, id, T, o = {}) {
   const D = FX[id], s = (E(u)[id] ||= { n: 0, s: [] });
-  s.s.push({ v: o.v ?? D.v, exp: T + (o.turns ?? D.turns) - 1 });
+  if (o.tag && o.cap && s.s.filter(x => x.tag === o.tag).length >= o.cap) return;   // 같은 기술에서 온 겹의 상한(칼춤 +5% 여섯 겹 = +30%)
+  s.s.push({ v: o.v ?? D.v, exp: T + (o.turns ?? D.turns) - 1, ...(o.tag ? { tag: o.tag } : {}) });
   s.n = s.s.length;
 }
 export function apply(tgt, id0, n, ctx, o = {}) {
@@ -242,7 +243,7 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     sp.left.push(delay + 1); sp.n = sp.left.length;
     ev.push({ t: 'fx', ...base, n: sp.n, list: listOf(tgt) });
   } else if (id === 'stun') {
-    setSkip(tgt, 'stun', ctx);
+    setSkip(tgt, look || 'stun', ctx);   // 기절의 다른 이름(매혹 = charm — 이름 · 연출만, 2026-10-28)
   } else if (D.now) {   // 지금 N턴(화상 · 출혈 · 감전 · 젖음 · 암실 · 기생): 다시 걸면 긴 쪽
     const exp = Math.max((e[id] && e[id].exp) || 0, nowExp(T, o.turns ?? D.turns));
     e[id] = { ...(e[id] || {}), exp };
@@ -324,7 +325,7 @@ export function onHit(att, tgt, skill, ctx) {
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }
-  if (skill.inflict && !(skill.inflict.p != null && (ctx.rng ? ctx.rng() : 1) >= skill.inflict.p)) apply(tgt, skill.inflict.id, skill.inflict.n || 1, { ...ctx, by: att }, skill.inflict);   // 기술에 적힌 값(지연 delay · 기간 turns · 이름 look · 한 겹 v)
+  for (const f of [skill.inflict, ...(skill.inflicts || [])]) if (f && !(f.p != null && (ctx.rng ? ctx.rng() : 1) >= f.p)) apply(tgt, f.id, f.n || 1, { ...ctx, by: att }, f);   // 기술에 적힌 값(지연 delay · 기간 turns · 이름 look) · inflicts = 덤 효과 여럿(윈드페탈 매혹 = 기절(매혹) + 쇠약 — 2026-10-29) · 한 겹 v)
 }
 
 // 쓰러짐 사건(2026-10-16 — 판정 순서 점검 tools/test/edgecases.mjs): 체력이 0이 된 그 자리에서 한 번만. 먼저 쓰러진 쪽이 진다(model·team이 첫 쓰러짐으로 승패)

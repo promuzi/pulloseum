@@ -346,5 +346,32 @@ ok(SPECIES_V2.has('flower_grass'), '페탈로즈 v2 켜짐');
   ok(kb.eff.atkUp && kb.eff.defUp && kb.eff.spdUp, '만개 = 활력 · 억셈 · 가속 한 겹씩');
   ok(SKILLS.u_petal_2b.onFirst.self === 'defUp' && SKILLS.u_petal_2b.onSecond.self === 'spdUp', '기합 = 먼저 억셈(옛 철벽) · 나중 가속');
 }
+// ── 4. 윈드페탈(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('flower_wind'), '윈드페탈 v2 켜짐');
+{
+  const ATK = { id: 'f', name: '쏘기', act: 'attack', power: 60, cost: 0, cats: ['attack'], el: null, ranged: true };
+  const w = mk('me', 'flower_wind', { spd: 999 }), d = mk('foe', 'aqua', { spd: 1 });
+  const ev = turn(w, d, SKILLS.u_wind_2, ATK, 1, () => 0.01);   // 굴림이 낮음 = 빗나감 칸
+  ok(ev.some(e => e.t === 'stance' && e.who === 'me' && e.kind === 'evade') && ev.some(e => e.t === 'counter' && e.who === 'me'), '환희의 춤 먼저 = 회피 자세 · 피하면 멀리서 온 공격에도 바람 반격');
+  const w2 = mk('me', 'flower_wind', { spd: 1 }), d2 = mk('foe', 'aqua', { spd: 999 });
+  const ev2 = turn(w2, d2, SKILLS.u_wind_2, { ...ATK, ranged: false }, 1, () => 0.5);
+  ok(ev2.some(e => e.t === 'reflect' && e.who === 'me') && has(w2, 'spdUp'), '환희의 춤 나중 = 그 턴 반사 + 가속');
+  const w3 = mk('me', 'flower_wind'), w4 = mk('me', 'flower_wind');
+  w4.hp = Math.round(w4.max * 0.3);
+  const p3 = turn(w3, mk('foe', 'aqua'), SKILLS.u_wind_2b, OTHER, 1, () => 0.5).find(e => e.t === 'hit' && e.who === 'me').dmg;
+  const p4 = turn(w4, mk('foe', 'aqua'), SKILLS.u_wind_2b, OTHER, 1, () => 0.5).find(e => e.t === 'hit' && e.who === 'me').dmg;
+  ok(p4 > p3 * 2, `피의 춤 = 잃은 체력만큼 셈(${p3} → ${p4})`);
+  const w5 = mk('me', 'flower_wind'), d5 = mk('foe', 'aqua');
+  turn(w5, d5, SKILLS.u_wind_3, OTHER, 1, () => 0.5); turn(w5, d5, SKILLS.u_wind_3, OTHER, 2, () => 0.5);
+  ok(w5.eff.atkUp && w5.eff.atkUp.n === 6, `칼춤 = 맞힌 타마다 활력 +5% · 여섯 겹 상한(지금 ${w5.eff.atkUp && w5.eff.atkUp.n})`);
+  const w6 = mk('me', 'flower_wind', { spd: 999 }), d6 = mk('foe', 'aqua', { spd: 1 });
+  const ev6 = turn(w6, d6, SKILLS.u_wind_3b, ATK, 1, () => 0.1);
+  ok(ev6.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'charm') && d6.eff.atkDown, '매혹 먼저 = 이번 행동 취소(매혹 = 기절 이름) + 쇠약');
+  const w7 = mk('me', 'flower_wind'), d7 = mk('foe', 'aqua');
+  d7.hp = Math.round(d7.max * 0.25);
+  const ev7 = turn(w7, d7, SKILLS.u_wind_3c, OTHER, 1, () => 0.5);
+  ok(ev7.some(e => e.t === 'execute') && d7.hp === 0, '처형의 춤 = 맞힌 뒤 20% 미만이면 처형');
+  ok(SKILLS.u_wind_3c.late, '처형의 춤 = 무조건 나중');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind']);
 const V2 = {
+  flower_wind: {   // 4. 윈드페탈 — 춤(회피 · 동시 일격) · 2026-10-18 설계 · 10-28 대조(회피 = 지금 회피 자세 · 칼춤 겹마다 5턴 · 매혹 = 기절 이름만 · '멀리' 구분 없음)
+    sp: {},
+    skills: [
+      S('u_wind_1', '바람의 춤', 'wind', 'u', 74, 1, { self: 'spdUp' }),   // 위력 55 → 74(2026-10-29 리그전 28% → 맞춤, 임시)
+      S('u_wind_2', '환희의 춤', 'wind', 'u', 0, 2, { onFirst: { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, counter: 60, counterAll: true }, onSecond: { reflect: true, self: 'spdUp' } }),
+      S('u_wind_2b', '피의 춤', 'wind', 'u', 40, 2, { lostHp: 1.2 }),
+      S('u_wind_3', '칼춤', 'wind', 'u', 22, 3, { hits: 4, perHit: { id: 'atkUp', v: 0.05, tag: 'kal', cap: 6 } }),
+      S('u_wind_3b', '매혹', 'wind', 'u', 30, 2, { onFirst: { inflicts: [{ id: 'stun', p: 0.35, look: 'charm' }, { id: 'atkDown' }] }, onSecond: { inflicts: [{ id: 'stun', p: 0.35, look: 'charm' }, { id: 'defDown' }] } }),
+      S('u_wind_3c', '처형의 춤', 'wind', 'u', 90, 4, { late: true, execute: 0.2 }),
+    ],
+  },
   flower_grass: {   // 1. 페탈로즈 — 검방술(순서 분기): 먼저/나중에 따라 같은 기술이 다르게 · 2026-10-18 설계(장치 시험 tools/test/devices.mjs 그대로) · 10-28 지금 규칙 대조(막기 = 그 턴 모든 타 · 철벽 → 억셈 · 만개 = 공통 강화 겹)
     sp: {},
     skills: [

@@ -36,7 +36,7 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast'];
+const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
 export function dynAct(u, a0, foe, rng) {
   if (!a0 || !DYN.some(k => a0[k])) return a0;
@@ -50,6 +50,7 @@ export function dynAct(u, a0, foe, rng) {
   if (a.orbBlast && u.orb) pw = ORB.blast * Math.max(1, u.orb.n);   // 뇌격구 = 구슬 하나당 위력
   if (a.powBy) pw += (r[a.powBy.k] || 0) * a.powBy.per;
   if (a.allSun) pw += (u.energy || 0) * a.allSun;
+  if (a.lostHp) pw += Math.max(0, 1 - u.hp / u.max) * 100 * a.lostHp;   // 잃은 체력 1%당 위력 +(윈드페탈 피의 춤)
   if (a.scale) { const c = Math.min(a.scale.dmg.length - 1, r[a.scale.k] || 0); pw *= 1 + a.scale.dmg[c]; if (a.scale.drain) o.drain = (a.drain || 0) + a.scale.drain[c]; o.scaleN = c; }
   if (a.bonusIf && foe && foeHas(foe, a.bonusIf.id)) { pw *= a.bonusIf.k; o.bonusHit = true; }
   if (a.luck) {
@@ -97,6 +98,10 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
   const fe = (foe.eff ||= {});
   if (a.delay) (fe.timers ||= []).push({ at: T + a.delay.turns, raw: a.delay.power * (u.atk || 10) / 50, area: !!a.delay.area, by: u.id, name: a.name });
   if (!x.landed) return;
+  if (a.execute && foe.hp > 0 && foe.hp < foe.max * a.execute) {   // 처형(윈드페탈 처형의 춤): 맞혔을 때 상대 체력이 기준 미만이면 쓰러뜨림 · 그 턴 버티기(죽은 줄 알았나?)엔 막힘
+    if (foe.st && foe.st.endureT === T) ev.push({ t: 'resist', who: u.id, to: foe.id, name: foe.name, id: 'execute', why: 'endure', list: listOf(foe) });
+    else { foe.hp = 0; ev.push({ t: 'execute', who: u.id, to: foe.id, name: foe.name }); }
+  }
   if (a.echo) (fe.timers ||= []).push({ at: T + 1, raw: (a.power || 0) * (u.atk || 10) / 50 * a.echo, area: !!a.area, by: u.id, name: a.name, inflict: a.inflict || null });
   if (a.consume && fe[a.consume.id]) {
     const n = fe[a.consume.id].n || 1, d = Math.max(1, Math.round(foe.max * Math.min(a.consume.cap || 1, a.consume.per * n)));

@@ -204,7 +204,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
     if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed: r.landed, bonusHit: a.bonusHit, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
-    if (r.avoided && d.counter && a.contact !== false && !a.area && !a.ranged && foe.hp > 0) {
+    if (r.avoided && d.counter && (d.counterAll || (a.contact !== false && !a.ranged)) && !a.area && foe.hp > 0) {   // counterAll = 멀리서 온 공격도(윈드페탈 환희의 춤 — 원거리 구분 폐지)
       const cd = Math.max(1, Math.round(r.hitDmg(foe, u, { power: d.counter }, 1)));
       u.hp = Math.max(0, u.hp - cd);
       ev.push({ t: 'counter', who: foe.id, to: u.id, dmg: cd, from: d.id });
@@ -319,6 +319,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (tier !== 'miss' && dmg > 0 && refl > 0 && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * refl)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
       // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
       if (tier !== 'miss' && !hitSet.has(foe)) { hitSet.add(foe); landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
+      if (tier !== 'miss' && a.perHit && u.hp > 0) selfBuff(u, a.perHit.id, { turn: T, ev }, a.perHit);   // 맞힌 타마다 나에게(칼춤 = 활력 +5% · 같은 기술 겹 상한)
     }
     if (og) { foe.orb.n = Math.max(0, foe.orb.n - Math.ceil(og.used / Math.max(1, Math.round(foe.max * ORB.guard)))); foe.st.orbGuardT = T; }   // 막은 만큼만 구슬이 깎임
     if (spw && shieldHit && u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe });
