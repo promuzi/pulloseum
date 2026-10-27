@@ -58,7 +58,7 @@ node cf/pagecheck.mjs https://pulloseum.getchat.workers.dev
 - 진행·보상은 서버 권위. 화면 작업은 `ops.js` 목록으로 연결한다. `main.js QUICK`에는 **난수·보상 추첨이 없는 작업만** 넣는다.
 - 전투 계산 변경은 `catalog.js RULES_VER` 증가. 저장 모양 변경은 `logic.js MIGRATIONS`와 `SAVE_VER`, 기술·카드 ID 변경은 `catalog.js RENAMED`와 `SAVE_VER`를 함께 갱신한다. 기존 저장·진행 중인 판의 안전을 검증한다.
 - 방 필드를 추가하면 `rooms.mjs pack/unpack`도 변경하고 방 저장 시험을 한다. 친구 대결 알림은 롱 폴링. 상대의 숨겨진 식물·기술·능력치를 응답이나 UI로 유출하지 않는다.
-- **종 고유 기술(사용자 설계) 넣기:** `catalog.js` `SPECIES_V2` · `V2` 표에서 켠 종만 옛 개성 기술 자리(같은 id)를 바꿔 끼움 · 장치는 `battle/devices.js` · 시험 `tools/test/species_v2.mjs` · 승률 `tools/test/specbalance.mjs --games 48`(40~60%, 임시 수치만 조정) · 그림은 코덱스(`tools/pixel/big/concept/skill/SPECIES_V2_*_PROMPT.md` 꼴). 유닛에 새 칸을 만들면 화면에 보내는 `game/fight.js` `unitV` · `UNIT_KEYS`에도 더한다(2026-10-24 빠뜨려 소환수 · 구슬이 화면에 안 갈 뻔함). 실제 식물 단계는 글자(`sprout` · `growing` · `mature`)다.
+- **종 고유 기술(사용자 설계) 넣기:** `catalog.js` `SPECIES_V2` · `V2` 표에서 켠 종만 옛 개성 기술 자리(같은 id)를 바꿔 끼움 · 장치는 `battle/devices.js` · 시험 `tools/test/species_v2.mjs` · 승률 `tools/test/specbalance.mjs --games 48`(40~60%, 임시 수치만 조정) · 그림은 코덱스(`tools/pixel/big/concept/skill/SPECIES_V2_*_PROMPT.md` 꼴). 유닛에 새 칸을 만들면 화면에 보내는 `game/fight.js` `unitV` · `UNIT_KEYS`에도 더한다(2026-10-24 빠뜨려 소환수 · 구슬이 화면에 안 갈 뻔함). 실제 식물 단계는 글자(`sprout` · `growing` · `mature`)다. 종을 켜면 옛 기술(s1 · s2)을 쓰던 시험이 깨진다 → 공통 효과 시험은 `model.legacyKitOf`, 켠 뒤엔 `tools/test/edgecases.mjs`까지 전체 시험(2026-10-29 — 버티기 · 처형의 체력 사건 어긋남이 여기서 잡힘). 리그전은 진화 고르기를 안 끝내 새싹 손패로 잰다(`--full` = 진화 손패).
 - 저장 DB·인증·관리 열쇠(`cf/.admin-key`)·실제 쿠폰 번호는 Git·문서·채팅에 넣지 않는다. PC 저장소와 배포 서버 저장소는 별개다.
 
 ## 화면·그림에서 유지할 결정
