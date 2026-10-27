@@ -462,8 +462,20 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua']);
 const V2 = {
+  aqua: {   // 3. 아쿠아벌브 — 업보(버프 · 디버프 활용 힐러) · 2026-10-18 설계(기술 일곱 허용) · 10-28 대조(치유의 물 · 청산 = 상태이상만 · 윤회 = 능력치 겹까지 지우는 예외 · 정죄 = 쇠약 + 시듦 · 참회 = 가속 + 억셈 · 조화 = 상태이상만 베낌)
+    sp: {},
+    skills: [
+      S('u_aqua_1', '치유의 물', 'water', 'u', 0, 1, { cats: ['heal_hp'], cleanseHeal: { base: 0.24, per: 0.06 } }),   // 기본 회복 4% → 24%(2026-10-29 리그전 19% → 맞춤, 임시)
+      S('u_aqua_2', '정죄', 'water', 'u', 30, 2, { inflicts: [{ id: 'atkDown' }, { id: 'defDown' }] }),
+      S('u_aqua_2b', '청산', 'water', 'u', 0, 2, { act: 'hex', cats: ['attack'], settle: { per: 0.06, cap: 5 } }),
+      S('u_aqua_3', '윤회', 'water', 'u', 0, 1, { act: 'hex', cats: ['debuff'], cycle: true }),
+      S('u_aqua_3b', '번뇌', 'bolt', 'u', 60, 3, { inflict: { id: 'wet' } }),
+      S('u_aqua_3c', '참회', 'water', 'u', 0, 2, { self: 'spdUp', also: 'defUp' }),
+      S('u_aqua_3d', '조화', 'water', 'u', 0, 2, { act: 'hex', cats: ['debuff'], uses: 1, onFirst: { harmony: 'toFoe' }, onSecond: { harmony: 'toMe' } }),
+    ],
+  },
   flower_wind: {   // 4. 윈드페탈 — 춤(회피 · 동시 일격) · 2026-10-18 설계 · 10-28 대조(회피 = 지금 회피 자세 · 칼춤 겹마다 5턴 · 매혹 = 기절 이름만 · '멀리' 구분 없음)
     sp: {},
     skills: [
@@ -627,6 +639,7 @@ export const UNI_EXTRA = {
   ninja_vine: { 1: ['u_ninja_2b'], 2: ['u_ninja_3b', 'u_ninja_3c'] },
   diver_vine: { 1: ['u_haenyeo_2b'], 2: ['u_haenyeo_3b', 'u_haenyeo_3c'] },
 };
+if (SPECIES_V2.has('aqua')) UNI_EXTRA.aqua[2] = [...UNI_EXTRA.aqua[2], 'u_aqua_3d'];   // 아쿠아벌브 기술 일곱(2026-10-18 사용자 허용) — 성체에 조화
 export const uniquesOf = (key, stage) => [uniqueOf(key, stage), ...(((UNI_EXTRA[key] || {})[stage]) || [])];
 export const TIER_NAME = { u: '개성', c1: '하급', c2: '중급', c3: '상급', g: '가지', s: '특수', m: '변이' };
 const tierAt = stage => ['c1', 'c2', 'c3'][stage];

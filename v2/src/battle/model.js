@@ -4,7 +4,8 @@ import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
 import { SKILLS as CAT_SKILLS, SPECIES_V2, uniquesOf } from '../game/catalog.js';
 import { caveSync, orbInit } from './devices.js';
-import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy } from './status.js';
+import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy, HARM_IDS } from './status.js';
+const STAT_UPS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign > 0), STAT_DOWNS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign < 0);
 
 // 상성: WEAK[맞는 쪽 속성] = 그 속성이 약한 공격 속성(기획서 약점표 — 불←물·대지 / 물←풀·빙결·번개 / 풀←불·바람·번개 / 번개←대지·빙결 / 대지←풀·물 / 빙결←불·대지 / 바람←대지·불)
 const WEAK = { fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] };
@@ -178,6 +179,9 @@ function aiScore(u, foe, s, risk, last) {
   if (s.act === 'evade') return (risk >= 1 ? 1.8 : 1.1 * risk) * rep;
   if (s.act === 'hex') {   // 피해 없이 거는 기술(종 고유 v2): 새로 걸리는 것이 많을수록 · 공명(강풍에 덧붙임)은 쓸 수 있을 때 높게
     if (s.galeAdd || s.caveAdd) return 1.0;
+    if (s.settle) { const k = HARM_IDS.filter(x => has(foe, x)).length; return k ? 0.3 + 0.45 * Math.min(5, k) : 0.02; }   // 청산 = 상대 상태이상 종류가 많을 때
+    if (s.cycle) { const up = z => STAT_UPS.filter(x => has(z, x)).length, bad = z => HARM_IDS.filter(x => has(z, x)).length + STAT_DOWNS.filter(x => has(z, x)).length, v = up(foe) + bad(u) - up(u) - bad(foe); return v > 0 ? 0.3 + 0.3 * v : 0.03; }   // 윤회 = 지우면 내가 이득일 때
+    if (s.harmony) return 0.2;
     if (s.burst) return 0.25 + 0.2 * ((u.summons || []).filter(x => x.hp > 0).length);
     const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length;
     return fresh ? 0.55 + 0.35 * fresh : 0.15;
@@ -190,6 +194,7 @@ function aiScore(u, foe, s, risk, last) {
   if (s.summon || s.volley || s.grow) { const L = (u.summons || []).filter(x => x.hp > 0), aw = L.filter(x => x.stage !== 'sleep').length; return s.summon ? 1.1 - 0.25 * L.length : s.volley ? 0.45 * aw : 0.3 + 0.3 * L.filter(x => x.stage === 'baby').length; }   // 소환수(스포어캡)
   if (s.moss) { const n = ((foe.eff && foe.eff.cave && foe.eff.cave.add) || []).length; return n && u.hp < u.max * 0.75 ? 0.4 + 0.35 * n : 0.05; }   // 이끼덮기 = 설치물이 있고 다쳤을 때
   if (s.bell) return s.bell === 'night' ? ((u.energy || 0) >= 4 ? 1.0 : 0.3) : 0.9 + (u.energy >= 3 ? 0.2 : 0);   // 프로스트벨 아침 · 밤(켜 두면 3턴 메아리 — 밤은 햇빛을 모아 두고)
+  if (s.cleanseHeal) { const bad = HARM_IDS.filter(k => has(u, k)).length; return (u.hp < u.max * 0.6 ? 0.8 : 0.15) + 0.35 * bad; }   // 치유의 물 = 다쳤거나 상태이상이 있을 때
   if (s.healPct) { const bad = ['burn', 'poison', 'bleed', 'shock', 'wet', 'leech', 'spore', 'seal', 'dark'].filter(k => has(u, k)).length; return (u.hp < u.max * 0.6 ? 1.1 : u.hp < u.max * 0.85 ? 0.45 : 0.1) + 0.25 * bad; }   // 바로 회복 + 정화(청아함의 물결)
   if (s.act === 'buff' && s.bare) return ((u.res && u.res.evs) || 0) >= 2 ? 0.5 + Math.min(1, risk) : 0.1;   // 방심하기 = 쌓아 둔 스택을 쓸 때
   if (s.act === 'buff') {

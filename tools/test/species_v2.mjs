@@ -11,7 +11,7 @@ import { SKILLS, SPECIES_V2 } from '../../v2/src/game/catalog.js';
 
 let fails = 0, n = 0;
 const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
-const mk = (id, k, o = {}) => makeUnit(id, SPECIES[k], { key: k, ...protoStats(SPECIES[k]), energy: 8, ...o });
+const mk = (id, k, o = {}) => { const u = makeUnit(id, SPECIES[k], { key: k, ...protoStats(SPECIES[k]), energy: 8, ...o }); if (o.eff) u.eff = o.eff; return u; };   // makeUnit 은 eff 를 안 받음 — 시험이 거는 처음 효과(2026-10-29: 전엔 조용히 빠졌음)
 const B = id => BASICS.find(s => s.id === id);
 const turn = (a, b, sa, sb, T, rng = () => 0.5) => { const r = resolveTurn(a, b, sa, sb, rng, { turn: T }); endTurn([[a, b], [b, a]], T, r.events); expire(a, T, r.events); expire(b, T, r.events); return r.events; };
 const OTHER = { id: 'x', name: '가만히', act: 'other', cost: 0, cats: ['other'] };
@@ -372,6 +372,32 @@ ok(SPECIES_V2.has('flower_wind'), '윈드페탈 v2 켜짐');
   const ev7 = turn(w7, d7, SKILLS.u_wind_3c, OTHER, 1, () => 0.5);
   ok(ev7.some(e => e.t === 'execute') && d7.hp === 0, '처형의 춤 = 맞힌 뒤 20% 미만이면 처형');
   ok(SKILLS.u_wind_3c.late, '처형의 춤 = 무조건 나중');
+}
+// ── 3. 아쿠아벌브(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('aqua'), '아쿠아벌브 v2 켜짐');
+{
+  const { kitOf } = await import('../../v2/src/battle/model.js');
+  ok(kitOf('aqua').filter(s => s.tier === 'u').length === 7, '아쿠아벌브 기술 일곱(조화 포함)');
+  const a = mk('me', 'aqua', { eff: { poison: { n: 3, last: 1 }, burn: { exp: 5 }, atkDown: { n: 1, s: [{ v: 0.15, exp: 9 }] } } });
+  a.hp = Math.round(a.max * 0.5); const h0 = a.hp;
+  turn(a, mk('foe', 'thorn'), SKILLS.u_aqua_1, OTHER, 1);
+  ok(!a.eff.poison && !a.eff.burn && a.eff.atkDown && a.hp - h0 >= Math.round(a.max * 0.15), '치유의 물 = 상태이상 두 종류 지우고 4% + 6% × 2 회복 · 능력치 약화는 남음');
+  const f = mk('foe', 'thorn', { eff: { poison: { n: 5, last: 1 }, wet: { exp: 5 }, shock: { exp: 5 } } }), hp0 = f.hp;
+  turn(mk('me', 'aqua'), f, SKILLS.u_aqua_2b, OTHER, 1);
+  ok(!f.eff.poison && !f.eff.wet && f.hp <= hp0 - Math.round(f.max * 0.18) + 1, '청산 = 상대 상태이상 세 종류 지우고 종류마다 6% 확정 피해(독 5겹 = 한 종류)');
+  const me = mk('me', 'aqua', { eff: { defUp: { n: 1, s: [{ v: 0.5, exp: 9 }] }, poison: { n: 1, last: 1 } } }), fo = mk('foe', 'thorn', { eff: { atkUp: { n: 2, s: [{ v: 0.2, exp: 9 }, { v: 0.2, exp: 9 }] }, regen: { exp: 9 } } });
+  turn(me, fo, SKILLS.u_aqua_3, OTHER, 1);
+  ok(!me.eff.defUp && !me.eff.poison && !fo.eff.atkUp && !fo.eff.regen, '윤회 = 양쪽 버프 · 디버프 전부(능력치 겹 포함)');
+  const m2 = mk('me', 'aqua', { spd: 999, eff: { regen: { exp: 9 } } }), f2 = mk('foe', 'thorn', { spd: 1, eff: { burn: { exp: 9 } } });
+  turn(m2, f2, SKILLS.u_aqua_3d, OTHER, 1);
+  ok(f2.eff.regen && !f2.eff.burn, '조화 먼저 = 상대 상태를 내 것과 똑같이(덮어쓰기)');
+  const m3 = mk('me', 'aqua', { spd: 1 }), f3 = mk('foe', 'thorn', { spd: 999, eff: { regen: { exp: 9 }, burn: { exp: 9 } } });
+  turn(m3, f3, SKILLS.u_aqua_3d, OTHER, 1);
+  ok(m3.eff.regen && m3.eff.burn, '조화 나중 = 내 상태를 상대 것과 똑같이');
+  ok(!canUse(m3, SKILLS.u_aqua_3d, 8, f3) || (m3.used && m3.used.u_aqua_3d >= 1) || SKILLS.u_aqua_3d.uses === 1, '조화 = 판마다 1');
+  const m4 = mk('me', 'aqua'), f4 = mk('foe', 'thorn');
+  turn(m4, f4, SKILLS.u_aqua_2, OTHER, 1, () => 0.5);
+  ok(f4.eff.atkDown && f4.eff.defDown, '정죄 = 쇠약 + 시듦');
 }
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

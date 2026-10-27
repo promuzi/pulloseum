@@ -10,7 +10,7 @@
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES, STAGE_KEY } from '../game/catalog.js';
-import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB } from './status.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, WIPE_ALL, wipeEff } from './status.js';
 import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
@@ -84,6 +84,12 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.cleanseHeal && u.hp > 0) {   // 치유의 물(아쿠아벌브): 내 해로운 상태이상을 모두 지우고 기본 + 지운 종류 하나당 회복(능력치 약화는 못 지움 — 2026-10-28 '상태이상만')
+    const gone = wipeEff(u, HARM_IDS), before = u.hp;
+    if (gone.length) ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'purified', ids: gone, list: listOf(u) });
+    u.hp = Math.min(u.max, u.hp + Math.round(u.max * (a.cleanseHeal.base + a.cleanseHeal.per * gone.length) * (x.healK ?? 1) * healK(u)));
+    ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) });
+  }
   if (a.healPct && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * a.healPct * (x.healK ?? 1) * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 바로 회복(최대 체력 몫 — 청아함의 물결 · 메아리면 그 몫만큼 더)
   if (a.moss) mossAct(u, foe, ev);   // 이끼덮기
   if (a.orbRefill && u.orb) u.orb.n = u.orb.max - u.orb.trap;   // 구슬 회수
@@ -209,6 +215,18 @@ export function hexAct(u, foe, a, ctx) {
   for (const h of a.hex || []) apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
   if (a.caveAdd) caveAddAct(u, foe, a, ctx.ev);
   if (a.burst) burstAct(u, foe, ctx);
+  if (a.settle) {   // 청산(아쿠아벌브): 상대 해로운 상태이상을 종류째 지우고 종류 하나당 최대 체력 몫 확정 피해(상한 종류 수 — 독 5겹 = 하나)
+    const gone = wipeEff(foe, HARM_IDS), k = Math.min(a.settle.cap, gone.length);
+    if (gone.length) ctx.ev.push({ t: 'expire', who: foe.id, ids: gone, list: listOf(foe) });
+    if (k) { const d = Math.max(1, Math.round(foe.max * a.settle.per * k)); foe.hp = Math.max(0, foe.hp - d); ctx.ev.push({ t: 'tick', who: foe.id, name: foe.name, id: 'settle', n: k, dmg: d, burst: true, list: listOf(foe) }); noteFall(foe, ctx.ev); }
+  }
+  if (a.cycle) for (const z of [u, foe]) { const gone = wipeEff(z, WIPE_ALL); if (gone.length) ctx.ev.push({ t: 'expire', who: z.id, ids: gone, list: listOf(z) }); }   // 윤회: 양쪽 버프 · 디버프 전부(능력치 겹 포함 — 예외 기술)
+  if (a.harmony) {   // 조화: 먼저 = 상대 상태를 내 것과 똑같이 · 나중 = 내 상태를 상대 것과 똑같이(덮어쓰기 · 이로운 · 해로운 상태이상만 · 같은 속성 면역은 그대로)
+    const [src, dst] = a.harmony === 'toFoe' ? [u, foe] : [foe, u], keys = [...HARM_IDS, ...GOOD_IDS];
+    wipeEff(dst, keys);
+    for (const k of keys) { const D = FX[k] || {}; if (src.eff && src.eff[k] && !((D.el && dst.el === D.el) || (D.jong && dst.jong === D.jong))) (dst.eff ||= {})[k] = structuredClone(src.eff[k]); }
+    ctx.ev.push({ t: 'fx', who: u.id, to: dst.id, name: dst.name, id: 'harmony', list: listOf(dst) });
+  }
   if (a.galeAdd && has(foe, 'gale')) {
     const g = foe.eff.gale; g.add = [...(g.add || []), a.galeAdd];
     ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: a.galeAdd === 'storm' ? 'storm' : 'gale', add: a.galeAdd, list: listOf(foe) });

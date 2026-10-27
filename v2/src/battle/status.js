@@ -75,6 +75,10 @@ const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
 const ENV = Object.keys(FX).filter(k => FX[k].env);
 // 교체로 나갈 때 지우는 것(엑셀 v10 — 상태이상 · 능력치 겹 · 갑주는 남고 시간이 감): 준비 효과(조준 · 은신 · 보호막) · 속박 한 번 표시 · 면역(스스로 바꾸면 그게 행동) · 정화 보호 · 환경(다음 앞 식물로 옮김)
 const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', ...ENV];
+// 아쿠아벌브(2026-10-29): 해로운 상태이상 목록 · 이로운 상태이상(조화가 베끼는 것) · 지우기(윤회 = 버프 · 디버프 전부 — 능력치 겹 포함 예외 기술, 2026-10-28 사용자)
+export const HARM_IDS = HARM, GOOD_IDS = ['regen', 'will'];
+export function wipeEff(u, keys) { const e = u.eff || {}, gone = keys.filter(k => e[k]); for (const k of gone) delete e[k]; return gone; }
+export const WIPE_ALL = [...new Set([...HARM, ...STATS, ...BUFFS])];
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[id]);
