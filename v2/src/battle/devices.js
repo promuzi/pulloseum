@@ -86,6 +86,8 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.revive) { (u.eff ||= {}).revive = { cost: a.revive }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'revive', list: listOf(u) }); }   // 부활잉 걸어 두기
+  if (a.bounce) { (u.eff ||= {}).bounce = { exp: T + 1 }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'bounce', list: listOf(u) }); }   // 너꺼잉: 걸자마자 · 안 쓰이면 다음 턴 끝까지
   if (a.trapSet) {   // 덫 설치(쏜위드): 우리 편 지형(설치형 — 교체해도 남음 · 팀 합계 상한) · 덫을 깐 식물의 공격력으로 터짐
     const t = ((u.eff ||= {}).thornTrap ||= { env: true, n: 0, by: u.id, atk: u.atk });
     if (t.n < a.trapSet.max) { t.n += 1; t.atk = Math.max(t.atk || 0, u.atk); }
@@ -140,6 +142,12 @@ export function endureHp(u, hp, ev, T) {
     u.st.endureDone = true; u.st.fakeLock = T + 1;
     ev.push({ t: 'endure', who: u.id, name: u.name, fake: true });
     return Math.max(1, Math.round(u.max * (u.st.endureHp || 0.15)));
+  }
+  if (T != null && u.eff && u.eff.revive) {   // 부활잉(젤리캡): 미리 걸어 둔 준비 효과 — 쓰러질 공격을 받으면 체력 가득으로 · 대가 = 공격 · 방어 1턴째 크게 → 2턴째 중간 → 3턴째 회복
+    const R = u.eff.revive; delete u.eff.revive;
+    for (const [id, v, turns] of R.cost || []) apply(u, id, 1, { turn: T, rng: () => 0.5, ev, by: u }, { v, turns });
+    ev.push({ t: 'endure', who: u.id, name: u.name, revive: true });
+    return u.max;
   }
   const k = SP(u).endure, r = k ? resOf(u) : null;
   if (!k || !(r[k] > 0)) return 0;

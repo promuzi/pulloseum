@@ -430,5 +430,27 @@ ok(SPECIES_V2.has('thorn'), '쏜위드 v2 켜짐');
   turn(t6, f6, SKILLS.u_thorn_3b, OTHER, 1, () => 0.5);
   ok(!canUse(f6, f6.kit.find(k => k.id === 'm1'), 8, t6) && !canUse(f6, f6.kit.find(k => k.id === 'm2'), 8, t6) && canUse(f6, B('basic'), 8, t6), '무기는 집에 놓고 왔나? = 횟수 제한 기술 전부 다음 1턴 봉인');
 }
+// ── 16. 젤리캡(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('jelly_cap'), '젤리캡 v2 켜짐');
+{
+  const ATK = { id: 'f', name: '때리기', act: 'attack', power: 60, cost: 0, cats: ['attack'], el: null };
+  const j = mk('me', 'jelly_cap'), f = mk('foe', 'thorn');
+  const ev = turn(j, f, SKILLS.u_jelly_1, ATK, 1, () => 0.5);
+  ok(ev.some(e => e.t === 'reflect' && e.who === 'me') && has(f, 'shock'), '말랑잉 = 반사 · 터지면 감전');
+  const j2 = mk('me', 'jelly_cap', { stage: 1 }), f2 = mk('foe', 'thorn');
+  turn(j2, f2, SKILLS.u_jelly_2, ATK, 1, () => 0.5);
+  ok(f2.eff.poison && f2.eff.poison.n === 2, `톡씽 = 공격 독 1 + 반사 터지면 독 하나 더(지금 ${f2.eff.poison && f2.eff.poison.n})`);
+  const j3 = mk('me', 'jelly_cap', { stage: 1, spd: 1 }), f3 = mk('foe', 'thorn', { spd: 999 });
+  turn(j3, f3, SKILLS.u_jelly_2b, B('evade'), 1, () => 0.01);
+  ok(f3.eff.seal && (f3.eff.seal.more || []).length >= 1, '미역잉 = 피한 타마다 봉인 하나씩(다른 기술로)');
+  const j4 = mk('me', 'jelly_cap', { stage: 2 }), f4 = mk('foe', 'thorn');
+  turn(j4, f4, SKILLS.u_jelly_3, OTHER, 1);
+  const ev4 = turn(j4, f4, OTHER, { ...ATK, power: 9999 }, 2, () => 0.5);
+  ok(j4.hp === j4.max && ev4.some(e => e.t === 'endure' && e.revive) && j4.eff.atkDown && j4.eff.defDown, '부활잉 = 쓰러질 공격에 체력 가득 부활 + 공격 · 방어 하락');
+  const j5 = mk('me', 'jelly_cap', { stage: 2 }), f5 = mk('foe', 'thorn');
+  turn(j5, f5, SKILLS.u_jelly_3c, OTHER, 1);
+  turn(j5, f5, OTHER, { ...ATK, inflicts: [{ id: 'poison', n: 2 }, { id: 'atkDown' }] }, 2, () => 0.5);
+  ok(!j5.eff.poison && !j5.eff.atkDown && f5.eff.poison && f5.eff.atkDown && !j5.eff.bounce, '너꺼잉 = 상대 기술 한 번이 거는 것 전부를 튕김 → 쓰이면 끝');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

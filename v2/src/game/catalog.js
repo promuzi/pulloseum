@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap']);
 const V2 = {
+  jelly_cap: {   // 16. 젤리캡 — 물속 해파리 · 반사 특화(기술마다 맛이 다른 반사) · 2026-10-23 설계 · 타고남 없음
+    sp: {},
+    skills: [
+      S('u_jelly_1', '말랑잉', 'water', 'u', 0, 1, { reflect: true, reflectInflict: { id: 'shock' } }),
+      S('u_jelly_2', '톡씽', 'water', 'u', 60, 2, { inflict: { id: 'poison', n: 1 }, reflect: true, reflectInflict: { id: 'poison', n: 1 } }),
+      S('u_jelly_2b', '미역잉', 'grass', 'u', 25, 2, { hits: 3, dodgeSeal: true }),
+      S('u_jelly_3', '부활잉', 'water', 'u', 0, 2, { uses: 1, revive: [['atkDown', 0.3, 2], ['atkDown', 0.2, 1], ['defDown', 0.4, 2], ['defDown', 0.3, 1]] }),
+      S('u_jelly_3b', '응싱', 'water', 'u', 0, 2, { self: 'stealth', pierceReflect: 0.6 }),
+      S('u_jelly_3c', '너꺼잉', 'water', 'u', 0, 1, { bounce: true }),
+    ],
+  },
   thorn: {   // 2. 쏜위드 — 덫 · 시간차(게릴라 용병) · 2026-10-18 설계 · 10-28 확정(덫 = 설치형 · 죽은 줄 알았나? 발동하면 다음 턴 잠김 · 무기는 = 횟수 제한 기술 전부 다음 1턴 봉인 · 폭발 = 팀 덫 전부)
     sp: {},
     skills: [

@@ -65,8 +65,8 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night'];
-const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim'];
+const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night', 'bounce'];
+const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim', 'revive', 'bounce'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
 const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'morning', 'night', 'taunt', 'root', ...DOWNS];
@@ -75,7 +75,7 @@ export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
 const ENV = Object.keys(FX).filter(k => FX[k].env);
 // 교체로 나갈 때 지우는 것(엑셀 v10 — 상태이상 · 능력치 겹 · 갑주는 남고 시간이 감): 준비 효과(조준 · 은신 · 보호막) · 속박 한 번 표시 · 면역(스스로 바꾸면 그게 행동) · 정화 보호 · 환경(다음 앞 식물로 옮김)
-const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', ...ENV];
+const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', 'revive', 'bounce', ...ENV];
 // 아쿠아벌브(2026-10-29): 해로운 상태이상 목록 · 이로운 상태이상(조화가 베끼는 것) · 지우기(윤회 = 버프 · 디버프 전부 — 능력치 겹 포함 예외 기술, 2026-10-28 사용자)
 export const HARM_IDS = HARM, GOOD_IDS = ['regen', 'will'];
 export function wipeEff(u, keys) { const e = u.eff || {}, gone = keys.filter(k => e[k]); for (const k of gone) delete e[k]; return gone; }
@@ -229,6 +229,10 @@ function addStat(u, id, T, o = {}) {
 export function apply(tgt, id0, n, ctx, o = {}) {
   const id = id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, look = o.look || null, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: look || id };   // look = 같은 효과의 다른 이름(암실 → 그늘)
   if (!D || tgt.hp <= 0) return;
+  if (e.bounce && ctx.by && ctx.by.id !== tgt.id && ctx.by.hp > 0 && !ctx.bounced && (HARM.includes(id) || DOWNS.includes(id) || id === 'stun')) {   // 너꺼잉(젤리캡): 걸리려는 상태를 건 쪽에게 튕김 — 그 기술 한 번이 거는 것 전부(끝나면 rules 가 걷음)
+    e.bounce.used = true; ev.push({ t: 'fx', ...base, id: 'bounce', bounced: id, list: listOf(tgt) });
+    return apply(ctx.by, id0, n, { ...ctx, by: tgt, bounced: true }, o);
+  }
   if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
   if (tgt.pas && tgt.pas.immune && tgt.pas.immune.includes(id)) { ev.push({ t: 'immune', ...base, card: true }); return; }   // 카드(해독 체질)
   const by = ctx.by && ctx.by.pas;
@@ -311,7 +315,7 @@ export function selfBuff(u, id0, ctx, o = {}) {
   if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'aim') { e.aim = { k: Math.max((e.aim && e.aim.k) || 0, o.aimK || FX.aim.k) }; ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'stealth') {   // o = 그 기술(이어 공격 link · 연출 look)
-    e.stealth = { look: o.look === 'clone' ? 'clone' : 'stealth', reflect: !!o.pierceReflect, link: o.link ? { ...o.link, id: o.id, name: o.name, el: o.link.el !== undefined ? o.link.el : o.el || null } : null };
+    e.stealth = { look: o.look === 'clone' ? 'clone' : 'stealth', reflect: o.pierceReflect || false, link: o.link ? { ...o.link, id: o.id, name: o.name, el: o.link.el !== undefined ? o.link.el : o.el || null } : null };
     ctx.ev.push({ t: 'fx', ...base, id: e.stealth.look, list: listOf(u) }); return;
   }
   if (id === 'purify') {

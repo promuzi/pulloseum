@@ -158,6 +158,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   //  한 식물의 차례 = act(u, foe) → 'rest'(쉰 차례 · 다 막혀 쉼 — 면역이 생김) · 'end'(누가 쓰러져 그 턴 끝) · 그 밖 = 제 행동을 마침 → 면역 끝(엑셀 v10)
   for (const [u, foe] of [[first, second], [second, first]]) {
     const n0 = ev.length, r = act(u, foe);
+    if (foe.eff && foe.eff.bounce && foe.eff.bounce.used) { delete foe.eff.bounce; ev.push({ t: 'expire', who: foe.id, ids: ['bounce'], list: listOf(foe) }); }   // 너꺼잉 = 상대 기술 한 번에 쓰임
     if (r === 'acted' || r === 'end') resoAfter(u, foe, ev, n0, T, guards.has(foe));   // 게일캑터: 방해 디버프가 들어간 기술이면 공명 +1
     if (r !== 'rest' && r !== 'gone' && !actOf(u).idle) endAct(u, ev);
     if (r === 'end' || r === 'gone' || foe.hp <= 0 || u.hp <= 0) break;   // 공명 추가 공격으로 쓰러져도 그 턴 끝
@@ -307,7 +308,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, ab: ab || undefined, forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, veil: veil ? true : undefined, ambush: ambush || undefined, link: L.link ? { id: a.id, name: a.name } : undefined, list: absorb ? listOf(foe) : undefined });
       if (tier !== 'miss' && has(foe, 'stealth')) {
         const pr = foe.eff.stealth.reflect; delete foe.eff.stealth; ev.push({ t: 'reveal', who: foe.id, id: 'stealth', list: listOf(foe) });
-        if (pr && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round((dmg + absorb) * FX.reflect.k)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 환각의 주파수: 뚫리면 처음 맞은 한 타 반사
+        if (pr && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round((dmg + absorb) * (pr === true ? FX.reflect.k : pr))); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 환각의 주파수 · 응싱: 뚫리면 처음 맞은 한 타 반사(응싱 = 크게)
       }   // 맞으면 은신이 풀림(회피 실패 — 스침 포함)
       if (tier !== 'miss') { const rc = { foe: u, dmg: dmg + absorb, T, ev }; react(foe, 'hit', rc); if (a.contact !== false && !a.ranged && !a.area) react(foe, 'contact', rc); if (tier === 'crit') { react(foe, 'crit', rc); react(u, 'dealCrit', { foe, T, ev }); } if (foe.hp > 0 && foe.hp <= foe.max / 2) react(foe, 'half', rc); }   // 반응(D13)
       blocked = guardOn && tier !== 'miss';
@@ -317,7 +318,11 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
       if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
       // 반사 자세(엑셀 v10 방어 스킬): 그 턴 처음 맞은 한 타의 피해 몫을 되돌림(멀리 · 광역도) — 빗나감은 소모하지 않음
-      if (tier !== 'miss' && still && reflects.has(foe) && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) { reflects.delete(foe); showStance(foe, 'reflect'); const rd = Math.max(1, Math.round((dmg + absorb) * FX.reflect.k)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }
+      if (tier !== 'miss' && still && reflects.has(foe) && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) {
+        reflects.delete(foe); showStance(foe, 'reflect'); const rd = Math.max(1, Math.round((dmg + absorb) * FX.reflect.k)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd });
+        if (d.reflectInflict && u.hp > 0) apply(u, d.reflectInflict.id, d.reflectInflict.n || 1, { turn: T, rng, ev, by: foe }, d.reflectInflict);   // 젤리캡: 반사가 터지면 그 상대에게(말랑잉 = 감전 · 톡씽 = 독)
+      }
+      if (tier === 'miss' && evadeOn && a.dodgeSeal && foe.hp > 0) apply(foe, 'seal', 1, { turn: T, rng, ev, by: u }, { extra: !!(foe.eff && foe.eff.seal && foe.eff.seal.from === T + 1) });   // 미역잉: 상대가 회피로 피한 타마다 봉인 하나(다른 기술로)
       const refl = ((foe.pas && foe.pas.reflect) || 0) + reflectAdd(foe);   // 가시 줄기(카드) + 쌓인 가시(D13) = 붙어서 맞을 때마다(패시브 — 분류 밖 규칙)
       if (tier !== 'miss' && dmg > 0 && refl > 0 && a.contact !== false && !a.ranged && !a.area && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round(dmg * refl)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 쓰러진 식물의 가시는 찌르지 않음(같이 쓰러짐 막기)
       // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
