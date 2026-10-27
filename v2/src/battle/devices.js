@@ -28,7 +28,7 @@ function addRes(u, k, n) { const r = resOf(u); r[k] = Math.max(0, Math.min(capOf
 export function canUseRes(u, s) {
   if (!s) return true;
   const r = s.spend || s.need ? resOf(u) : null;
-  if (s.spend && (r[s.spend.k] || 0) < (s.spend.all ? 1 : s.spend.n || 1)) return false;
+  if (s.spend && !s.spend.zeroOk && (r[s.spend.k] || 0) < (s.spend.all ? 1 : s.spend.n || 1)) return false;   // zeroOk = 0개여도 씀(식사시간 0~3)
   if (s.need && (r[s.need.k] || 0) < (s.need.n || 1)) return false;
   if (s.needMode && u.mode !== s.needMode) return false;
   if (s.lockMode && u.mode === s.lockMode) return false;
@@ -36,15 +36,19 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom'];
+const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
 export function dynAct(u, a0, foe, rng) {
-  if (!a0 || !DYN.some(k => a0[k])) return a0;
-  const a = a0.ifFoe && foe && foeHas(foe, a0.ifFoe.has) ? { ...a0, ...a0.ifFoe.then, ifFoeHit: true } : a0;   // 상대 상태에 따라 공격 바꾸기(기절이면 찌르기 한 방)
+  const boost = a0 && a0.tier === 'm' && u.st && u.st.formBoost ? u.st.formBoost.k : 0;   // 팽트랩 입맛 다시기 = 내 변이 기술 +20%(2턴)
+  if (!a0 || (!DYN.some(k => a0[k]) && !boost)) return a0;
+  const a1 = a0.ifRes && (resOf(u)[a0.ifRes.k] || 0) >= a0.ifRes.at ? { ...a0, ...a0.ifRes.then, ifResHit: true } : a0;   // 내 개수에 따라 기술 바꾸기(팽트랩 깨물기 → 준비 3이면 한입)
+  const a = a1.ifFoe && foe && foeHas(foe, a1.ifFoe.has) ? { ...a1, ...a1.ifFoe.then, ifFoeHit: true } : a1;   // 상대 상태에 따라 공격 바꾸기(기절이면 찌르기 한 방)
   const r = resOf(u), o = { ...a };
+  if (boost) o.power = Math.round((a.power || 0) * (1 + boost));
+  if (!DYN.some(k => a0[k])) return o;
   const inf = u.st && u.st.infuse;
   if (a.tag && inf && inf.tag === a.tag && inf.n > 0) { o.el = inf.el; o.infused = true; }   // 속성 바꾸기(다음 n번)
-  let pw = a.power || 0;
+  let pw = (a.power || 0) * (1 + boost);
   if (a.hitsBy) o.hits = Math.max(1, r[a.hitsBy] || 0);
   if (a.orbDump && u.orb) o.hits = Math.max(1, u.orb.n);   // 전격 구슬 = 남은 구슬만큼 연타
   if (a.orbBlast && u.orb) pw = ORB.blast * Math.max(1, u.orb.n);   // 뇌격구 = 구슬 하나당 위력
@@ -86,6 +90,8 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.formBoost) { (u.st ||= {}).formBoost = { k: a.formBoost, exp: T + 1 }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'formBoost', list: listOf(u) }); }   // 입맛 다시기: 이번 · 다음 턴 변이 기술 +
+  if (a.mealMark) (u.st ||= {}).meal = { n: x.spent || 0, T, ready: false };   // 식사시간: 먹은 준비 수 → 바로 다음 턴 맛평가
   if (a.revive) { (u.eff ||= {}).revive = { cost: a.revive }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'revive', list: listOf(u) }); }   // 부활잉 걸어 두기
   if (a.bounce) { (u.eff ||= {}).bounce = { exp: T + 1 }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'bounce', list: listOf(u) }); }   // 너꺼잉: 걸자마자 · 안 쓰이면 다음 턴 끝까지
   if (a.trapSet) {   // 덫 설치(쏜위드): 우리 편 지형(설치형 — 교체해도 남음 · 팀 합계 상한) · 덫을 깐 식물의 공격력으로 터짐
@@ -235,6 +241,10 @@ export function hexAct(u, foe, a, ctx) {
   for (const h of a.hex || []) apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
   if (a.caveAdd) caveAddAct(u, foe, a, ctx.ev);
   if (a.burst) burstAct(u, foe, ctx);
+  if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인
+    const n = u.st.meal.n, tgt = frontSum(foe) || foe; delete u.st.meal;
+    for (const [i, id] of [[1, 'atkDown'], [2, 'defDown'], [3, 'seal']]) if (n >= i) apply(tgt, id, 1, { ...ctx, by: u });
+  }
   if (a.settle) {   // 청산(아쿠아벌브): 상대 해로운 상태이상을 종류째 지우고 종류 하나당 최대 체력 몫 확정 피해(상한 종류 수 — 독 5겹 = 하나)
     const gone = wipeEff(foe, HARM_IDS), k = Math.min(a.settle.cap, gone.length);
     if (gone.length) ctx.ev.push({ t: 'expire', who: foe.id, ids: gone, list: listOf(foe) });

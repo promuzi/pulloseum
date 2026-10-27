@@ -168,6 +168,7 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (s.bell && u.st && u.st.bell) return false;   // 아침 · 밤 = 하나만 켜짐 · 덧씌우기 불가(꺼진 갱신 차례에만)
   if (s.trapBoom && !(u.eff && u.eff.thornTrap && u.eff.thornTrap.n > 0)) return false;   // 폭발은 예술이지 = 덫이 하나 이상일 때
   if (s.fakeDeath && u.st && u.st.fakeLock) return false;   // 죽은 줄 알았나? = 버팀이 발동한 다음 턴엔 잠김
+  if (s.taste && !(u.st && u.st.meal && u.st.meal.ready)) return false;   // 맛평가 = 식사시간 바로 다음 턴에만
   const e = u.eff || {};
   if (sealed(e, s.id)) return false;
   if (e.taunt && s.act !== 'attack') return false;   // 도발 = 대표 분류가 공격인 기술만(공격 + 버프 · 회복도 됨)
@@ -418,6 +419,8 @@ export function expire(u, turn, ev) {
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
   if (u.st && u.st.bell && u.st.bell.exp <= turn) delete u.st.bell;   // 프로스트벨 아침 · 밤 3턴이 끝남 → 다음 턴부터 다시 켤 수 있음
   if (u.st && u.st.fakeLock && u.st.fakeLock <= turn) delete u.st.fakeLock;   // 죽은 줄 알았나? 잠김은 다음 한 턴
+  if (u.st && u.st.formBoost && u.st.formBoost.exp <= turn) delete u.st.formBoost;   // 입맛 다시기 2턴
+  if (u.st && u.st.meal) { if (u.st.meal.ready) delete u.st.meal; else if (u.st.meal.T === turn) u.st.meal.ready = true; }   // 식사시간 → 다음 한 턴만 맛평가
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
 // 3:3 교체로 나갈 때: 준비 효과 · 환경 등만 지움(DROP) — 나머지는 남아 대기석에서도 턴마다 진행(model.closeTurn) · 소환수는 주인이 나가면 사라짐

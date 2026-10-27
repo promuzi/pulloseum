@@ -452,5 +452,25 @@ ok(SPECIES_V2.has('jelly_cap'), '젤리캡 v2 켜짐');
   turn(j5, f5, OTHER, { ...ATK, inflicts: [{ id: 'poison', n: 2 }, { id: 'atkDown' }] }, 2, () => 0.5);
   ok(!j5.eff.poison && !j5.eff.atkDown && f5.eff.poison && f5.eff.atkDown && !j5.eff.bounce, '너꺼잉 = 상대 기술 한 번이 거는 것 전부를 튕김 → 쓰이면 끝');
 }
+// ── 17. 팽트랩(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('fang_trap') && SPECIES.fang_trap && (SKILLS.u_fang_1.el === 'grass'), '팽트랩 v2 켜짐 · 풀 기술');
+{
+  const p = mk('me', 'fang_trap', { stage: 2 }), f = mk('foe', 'aqua'); p.hp = Math.round(p.max * 0.4);
+  for (let t = 1; t <= 3; t++) turn(p, f, SKILLS.u_fang_1, OTHER, t, () => 0.5);
+  ok(p.res && p.res.prep === 3 && f.eff.defDown, '깨물기 = 방어 하락 + 준비 +1(최대 3)');
+  const ev = turn(p, f, SKILLS.u_fang_1, OTHER, 4, () => 0.5);
+  ok(p.res.prep === 0 && ev.some(e => e.t === 'heal' && e.who === 'me'), '준비 3이면 한입 = 준비를 다 먹고 흡수 공격');
+  p.res.prep = 2;
+  const evm = turn(p, f, SKILLS.u_fang_3, OTHER, 5, () => 0.5);
+  ok(p.res.prep === 0 && p.st.meal && p.st.meal.n === 2 && evm.some(e => e.t === 'heal'), '식사시간 = 준비 전부 먹고 위력 · 흡수 증가');
+  ok(canUse(p, SKILLS.u_fang_3b, 8, f), '식사시간 다음 턴 = 맛평가 씀');
+  const f6 = mk('foe', 'aqua');   // 앞 상대는 다섯 대를 맞아 쓰러졌을 수 있음
+  turn(p, f6, SKILLS.u_fang_3b, OTHER, 6);
+  ok(f6.eff.atkDown && f6.eff.defDown && !f6.eff.seal, '맛평가(먹은 준비 2) = 쇠약 + 시듦(봉인은 3부터)');
+  ok(!canUse(p, SKILLS.u_fang_3b, 8, f), '그 뒤엔 맛평가 못 씀');
+  const q = mk('me', 'fang_trap', { stage: 1 }), g = mk('foe', 'aqua');
+  turn(q, g, SKILLS.u_fang_2, OTHER, 1);
+  ok(g.eff.atkDown && q.st.formBoost && q.res.prep === 1, '입맛 다시기 = 상대 쇠약 + 변이 기술 +20% + 준비 +1');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

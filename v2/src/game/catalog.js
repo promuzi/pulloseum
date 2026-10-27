@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap']);
 const V2 = {
+  fang_trap: {   // 17. 팽트랩 — 식사시간 · 맛평가(태생 포식) · 2026-10-23 설계 · 속성 풀(10-23 대지에서 바뀜 — 켤 때 함께) · 타고남 = 준비 기술마다 준비 +1(최대 3)
+    sp: { el: 'grass', res: { prep: [0, 3, '준비'] } },
+    skills: [
+      S('u_fang_1', '깨물기', 'grass', 'u', 60, 1, { inflict: { id: 'defDown' }, gain: { k: 'prep', n: 1 }, ifRes: { k: 'prep', at: 3, then: { name: '한입', power: 100, drain: 0.5, inflict: null, gain: null, spend: { k: 'prep', all: true } } } }),
+      S('u_fang_2', '입맛 다시기', 'grass', 'u', 0, 1, { act: 'hex', cats: ['debuff'], hex: [{ id: 'atkDown' }], formBoost: 0.2, gain: { k: 'prep', n: 1 } }),
+      S('u_fang_2b', '소화액', 'grass', 'u', 55, 2, { inflicts: [{ id: 'poison', n: 1 }, { id: 'defDown' }], gain: { k: 'prep', n: 1 } }),
+      S('u_fang_3', '식사시간', 'grass', 'u', 70, 2, { spend: { k: 'prep', all: true, zeroOk: true }, scale: { k: 'prep', dmg: [0, 0.3, 0.6, 0.9], drain: [0.1, 0.25, 0.4, 0.55] }, mealMark: true }),
+      S('u_fang_3b', '맛평가', 'grass', 'u', 0, 1, { act: 'hex', cats: ['debuff'], taste: true }),
+      S('u_fang_3c', '익혀먹기', 'fire', 'u', 75, 2, { inflict: { id: 'burn' }, gain: { k: 'prep', n: 1 } }),
+    ],
+  },
   jelly_cap: {   // 16. 젤리캡 — 물속 해파리 · 반사 특화(기술마다 맛이 다른 반사) · 2026-10-23 설계 · 타고남 없음
     sp: {},
     skills: [
