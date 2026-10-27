@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus']);
 const V2 = {
+  toxi_cactus: {   // 19. 톡시캑터 — 상대 독 겹 활용(태생 독성) · 2026-10-26 설계 · 10-28 세부 확정 · 고유 패시브 없음
+    sp: {},
+    skills: [
+      S('u_toxi_1', '독 주머니 폭발', 'grass', 'u', 40, 1, { consume: { id: 'poison', per: 0.05, cap: 0.25 } }),
+      S('u_toxi_2', '신경독', 'grass', 'u', 60, 2, { inflicts: [{ id: 'poison', n: 1 }, { id: 'shock' }] }),
+      S('u_toxi_2b', '독안개', 'grass', 'u', 0, 2, { act: 'hex', cats: ['debuff'], miasma: { turns: 3, n: 1 } }),
+      S('u_toxi_3', '만천화우', 'grass', 'u', 20, 3, { area: true, hits: 4, perHitInflict: { id: 'poison', n: 1 }, bleedAt: 5 }),
+      S('u_toxi_3b', '좋은 거 주입', 'grass', 'u', 0, 2, { cats: ['buff'], inject: { seal: 3, hp: 0.2, turns: 5 } }),
+      S('u_toxi_3c', '독점사', 'grass', 'u', 22, 2, { onFirst: { hits: 3, perHitInflict: { id: 'poison', n: 1 } }, onSecond: { power: 55, area: true, inflict: { id: 'poison', n: 1 } } }),
+    ],
+  },
   fang_trap: {   // 17. 팽트랩 — 식사시간 · 맛평가(태생 포식) · 2026-10-23 설계 · 속성 풀(10-23 대지에서 바뀜 — 켤 때 함께) · 타고남 = 준비 기술마다 준비 +1(최대 3)
     sp: { el: 'grass', res: { prep: [0, 3, '준비'] } },
     skills: [

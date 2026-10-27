@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart } from './devices.js';
 import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -130,6 +130,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   stOf(A); stOf(B);
   const T = o.turn || 0, skipped = new Set();
   caveSync(A, B, ev);   // 스톤캡 동굴: 앞에 나와 있으면 상대 쪽에 깔고, 나가면 걷음
+  miasmaStart(A, B, T, ev);   // 톡시캑터 독안개: 켠 다음 턴부터 턴 시작에 독
   bellSync(A, B, T, ev);   // 프로스트벨 아침 · 밤(필드): 켠 프로스트벨이 앞에 있으면 양쪽 앞 식물에, 나갔거나 끝났으면 걷음
   summonStart(A, B, T, ev, rng); summonStart(B, A, T, ev, rng);
   orbStart(A, T); orbStart(B, T);   // 볼트바인 구슬: 홀수 턴 시작에 가득(덫에 나간 것 빼고)   // 스포어캡 소환수: 잠든 포자가 깨어나고 깨어난 것은 평타
@@ -328,6 +329,10 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       // 상태 효과: 빗나감이면 안 걸림(방어 자세로 막아도 걸림, 치명이라고 더 걸리지 않음 — 2026-10-15 사용자) · 연타는 첫 적중 한 번
       if (tier !== 'miss' && !hitSet.has(foe)) { hitSet.add(foe); landed = true; onHit(u, foe, a, { turn: T, rng, ev }); }
       if (tier !== 'miss' && a.perHit && u.hp > 0) selfBuff(u, a.perHit.id, { turn: T, ev }, a.perHit);   // 맞힌 타마다 나에게(칼춤 = 활력 +5% · 같은 기술 겹 상한)
+      if (tier !== 'miss' && a.perHitInflict && foe.hp > 0) {   // 맞힌 타마다 상대에게(톡시캑터 만천화우 · 독점사 연타 = 타마다 독) · 독이 bleedAt 겹이면 그 타에 출혈(그 타의 독까지 반영)
+        apply(foe, a.perHitInflict.id, a.perHitInflict.n || 1, { turn: T, rng, ev, by: u }, a.perHitInflict);
+        if (a.bleedAt && foe.eff && foe.eff.poison && foe.eff.poison.n >= a.bleedAt) apply(foe, 'bleed', 1, { turn: T, rng, ev, by: u });
+      }
     }
     if (og) { foe.orb.n = Math.max(0, foe.orb.n - Math.ceil(og.used / Math.max(1, Math.round(foe.max * ORB.guard)))); foe.st.orbGuardT = T; }   // 막은 만큼만 구슬이 깎임
     if (spw && shieldHit && u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe });

@@ -90,6 +90,13 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.inject) {   // 좋은 거 주입(톡시캑터): 내 독 거는 기술 3턴 봉인(다음 턴부터) + 최대 체력 · 공격 · 방어 · 기동 5턴 강화(최대 체력이 오르면 현재 체력도 — 2026-10-28)
+    const st = (u.st ||= {}); st.selfSeal = { from: T + 1, exp: T + a.inject.seal };
+    if (st.hpBuff) { u.max -= st.hpBuff.add; u.hp = Math.min(u.hp, u.max); }
+    const add = Math.round(u.max * a.inject.hp); st.hpBuff = { add, exp: T + a.inject.turns - 1 }; u.max += add; u.hp += add;
+    for (const id of ['atkUp', 'defUp', 'spdUp']) selfBuff(u, id, { turn: T, ev });
+    ev.push({ t: 'regen', who: u.id, name: u.name, heal: add, list: listOf(u) });
+  }
   if (a.formBoost) { (u.st ||= {}).formBoost = { k: a.formBoost, exp: T + 1 }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'formBoost', list: listOf(u) }); }   // 입맛 다시기: 이번 · 다음 턴 변이 기술 +
   if (a.mealMark) (u.st ||= {}).meal = { n: x.spent || 0, T, ready: false };   // 식사시간: 먹은 준비 수 → 바로 다음 턴 맛평가
   if (a.revive) { (u.eff ||= {}).revive = { cost: a.revive }; ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'revive', list: listOf(u) }); }   // 부활잉 걸어 두기
@@ -241,6 +248,10 @@ export function hexAct(u, foe, a, ctx) {
   for (const h of a.hex || []) apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
   if (a.caveAdd) caveAddAct(u, foe, a, ctx.ev);
   if (a.burst) burstAct(u, foe, ctx);
+  if (a.miasma) {   // 독안개(톡시캑터): 상대 쪽 필드 — 켤 때 바로 독 한 번 · 다음 두 턴은 턴 시작에(rules miasmaStart) · 켜져 있으면 다시 안 켜짐
+    const fe = (foe.eff ||= {});
+    if (!fe.miasma) { fe.miasma = { env: true, exp: ctx.turn + a.miasma.turns - 1, by: u.id, n: a.miasma.n, T0: ctx.turn }; apply(foe, 'poison', a.miasma.n, { ...ctx, by: u }); ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: 'miasma', list: listOf(foe) }); }
+  }
   if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인
     const n = u.st.meal.n, tgt = frontSum(foe) || foe; delete u.st.meal;
     for (const [i, id] of [[1, 'atkDown'], [2, 'defDown'], [3, 'seal']]) if (n >= i) apply(tgt, id, 1, { ...ctx, by: u });
@@ -410,6 +421,10 @@ export function echoAct(a, k) {
   return { ...a, power: a.power ? Math.max(1, Math.round(a.power * k)) : a.power, inflict, echoK: k, bell: undefined };
 }
 
+// 독안개 턴 시작(켠 턴 다음부터 기간 안): 그 쪽 앞 식물에게 독
+export function miasmaStart(A, B, T, ev) {
+  for (const z of [A, B]) { const m = z && z.hp > 0 && z.eff && z.eff.miasma; if (m && m.exp >= T && m.T0 !== T) apply(z, 'poison', m.n || 1, { turn: T, rng: () => 0.5, ev, by: { id: m.by } }); }
+}
 // 쏜위드 덫(2026-10-18 설계 · 10-28 설치형 확정): 우리 편 공격이 빗나가거나 스치면 한 행동에 하나 터짐 = 확정으로 맞는 피해(위력 THORN.power) + 독 1
 export const THORN = { power: 90 };   // 45 → 90(2026-10-29 리그전 29% → 맞춤, 임시)
 export function thornBurst(u, foe, T, ev, rng) {

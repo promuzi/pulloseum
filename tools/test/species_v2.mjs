@@ -472,5 +472,37 @@ ok(SPECIES_V2.has('fang_trap') && SPECIES.fang_trap && (SKILLS.u_fang_1.el === '
   turn(q, g, SKILLS.u_fang_2, OTHER, 1);
   ok(g.eff.atkDown && q.st.formBoost && q.res.prep === 1, '입맛 다시기 = 상대 쇠약 + 변이 기술 +20% + 준비 +1');
 }
+// ── 19. 톡시캑터(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('toxi_cactus'), '톡시캑터 v2 켜짐');
+{
+  const t = mk('me', 'toxi_cactus'), f = mk('foe', 'aqua', { eff: { poison: { n: 4, last: 1 } } }), h0 = f.hp;
+  const ev = turn(t, f, SKILLS.u_toxi_1, OTHER, 1, () => 0.5);
+  ok(!f.eff.poison && ev.some(e => e.t === 'tick' && e.burst && e.id === 'poison'), '독 주머니 폭발 = 상대 독 전부 소모 · 겹 비례 추가 피해');
+  const t2 = mk('me', 'toxi_cactus', { stage: 1 }), f2 = mk('foe', 'aqua'), f2b = mk('foe2', 'thorn');
+  turn(t2, f2, SKILLS.u_toxi_2b, OTHER, 1);
+  ok(f2.eff.miasma && f2.eff.poison && f2.eff.poison.n === 1, '독안개 = 상대 쪽 · 켜는 순간 독 한 번');
+  ok(!canUse(t2, SKILLS.u_toxi_2b, 8, f2), '독안개 켜져 있으면 다시 못 켬');
+  turn(t2, f2, OTHER, OTHER, 2);
+  ok(f2.eff.poison.n === 2, '다음 턴 시작에 독 한 번 더');
+  moveEnv(f2, f2b); clearOnSwitch(f2);
+  turn(t2, f2b, OTHER, OTHER, 3);
+  ok(f2b.eff.poison && f2b.eff.poison.n === 1, '교체로 들어온 상대도 독안개(필드)');
+  turn(t2, f2b, OTHER, OTHER, 4);
+  ok(!f2b.eff.miasma, '3턴(켠 턴 포함) 뒤 끝');
+  const t3 = mk('me', 'toxi_cactus', { stage: 2 }), f3 = mk('foe', 'aqua', { eff: { poison: { n: 3, last: 1 } } });
+  turn(t3, f3, SKILLS.u_toxi_3, OTHER, 1, () => 0.5);
+  ok(f3.eff.poison && f3.eff.poison.n === 5 && f3.eff.bleed, '만천화우 = 맞힌 타마다 독 · 5겹이 되면 출혈(독 소모 없음)');
+  const t4 = mk('me', 'toxi_cactus', { stage: 2 }), f4 = mk('foe', 'aqua'), m0 = t4.max, hp0 = t4.hp;
+  turn(t4, f4, SKILLS.u_toxi_3b, OTHER, 1);
+  ok(t4.max > m0 && t4.hp - hp0 === t4.max - m0 && t4.eff.atkUp && t4.eff.defUp && t4.eff.spdUp, '좋은 거 주입 = 최대 체력 오르면 현재 체력도 + 공격 · 방어 · 기동');
+  ok(!canUse(t4, SKILLS.u_toxi_3, 8, f4) && !canUse(t4, SKILLS.u_toxi_3c, 8, f4) && canUse(t4, SKILLS.u_toxi_1, 8, f4), '내 독 거는 기술 봉인(독 주머니 폭발은 됨 — 범위는 밸런스 때)');
+  for (let T = 2; T <= 5; T++) turn(t4, f4, OTHER, OTHER, T);
+  ok(t4.max === m0 && t4.hp <= t4.max, '5턴 뒤 최대 체력 돌아옴 · 넘치면 최대로');
+  const t5 = mk('me', 'toxi_cactus', { stage: 2, spd: 999 }), f5 = mk('foe', 'aqua', { spd: 1 });
+  turn(t5, f5, SKILLS.u_toxi_3c, OTHER, 1, () => 0.5);
+  const t6 = mk('me', 'toxi_cactus', { stage: 2, spd: 1 }), f6 = mk('foe', 'aqua', { spd: 999 });
+  const ev6 = turn(t6, f6, SKILLS.u_toxi_3c, { id: 'f', name: '때리기', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null }, 1, () => 0.5);
+  ok(f5.eff.poison && f5.eff.poison.n === 3 && ev6.some(e => e.t === 'hit' && e.who === 'me' && e.area), '독점사 = 선공 연타(타마다 독) · 후공 광역');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

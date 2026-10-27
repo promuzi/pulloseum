@@ -182,6 +182,7 @@ function aiScore(u, foe, s, risk, last) {
     if (s.settle) { const k = HARM_IDS.filter(x => has(foe, x)).length; return k ? 0.3 + 0.45 * Math.min(5, k) : 0.02; }   // 청산 = 상대 상태이상 종류가 많을 때
     if (s.cycle) { const up = z => STAT_UPS.filter(x => has(z, x)).length, bad = z => HARM_IDS.filter(x => has(z, x)).length + STAT_DOWNS.filter(x => has(z, x)).length, v = up(foe) + bad(u) - up(u) - bad(foe); return v > 0 ? 0.3 + 0.3 * v : 0.03; }   // 윤회 = 지우면 내가 이득일 때
     if (s.harmony) return 0.2;
+    if (s.miasma) return 0.95;   // 독안개(켜져 있으면 canUse 가 막음)
     if (s.burst) return 0.25 + 0.2 * ((u.summons || []).filter(x => x.hp > 0).length);
     const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length;
     return fresh ? 0.55 + 0.35 * fresh : 0.15;

@@ -32,6 +32,7 @@ export const FX = {
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
   gale:    { env: true, turns: 2, missAdd: 12 },
   orbTrap: { env: true },   // 봉인 구슬 덫(볼트바인 — 내 쪽 지형: 교체 · 쓰러져도 남고 내 쪽 앞 식물이 맞을 때마다 하나씩 터짐 · devices.orbTrapBurst)
+  miasma: { env: true },   // 톡시캑터 독안개(상대 쪽 필드 3턴 · 켤 때 한 번 + 다음 두 턴 시작에 독 · 교체로 들어와도 · 톡시캑터가 나가도 남음 — 2026-10-28)
   thornTrap: { env: true },   // 쏜위드 덫(우리 편 지형 · 설치형: 교체 · 쓰러져도 남고 우리 편 공격이 빗나가거나 스치면 하나씩 터짐 · devices.thornBurst)
   morning: { env: true },   // 아침(프로스트벨 — 필드: 양쪽 앞 식물 · 프로스트벨이 나가면 사라짐 · devices.bellSync 가 깔고 걷음 · 메아리만)
   night:   { env: true },   // 밤(프로스트벨 — 필드: 양쪽 앞 식물 자연 햇빛이 안 참 · 교체로 들어와도 · 메아리 더 셈)
@@ -65,11 +66,11 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night', 'bounce'];
+const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night', 'bounce', 'miasma'];
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim', 'revive', 'bounce'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'morning', 'night', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'miasma', 'morning', 'night', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -169,11 +170,15 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (s.trapBoom && !(u.eff && u.eff.thornTrap && u.eff.thornTrap.n > 0)) return false;   // 폭발은 예술이지 = 덫이 하나 이상일 때
   if (s.fakeDeath && u.st && u.st.fakeLock) return false;   // 죽은 줄 알았나? = 버팀이 발동한 다음 턴엔 잠김
   if (s.taste && !(u.st && u.st.meal && u.st.meal.ready)) return false;   // 맛평가 = 식사시간 바로 다음 턴에만
+  if (s.miasma && foe && has(foe, 'miasma')) return false;   // 독안개 = 켜져 있는 동안 다시 안 켜짐(환경 공통)
+  if (u.st && u.st.selfSeal && poisonGiver(s)) return false;   // 좋은 거 주입 = 내 독 거는 기술 3턴 봉인(범위 = 거는 기술만 — 소모 기술 포함 여부는 밸런스 때, 2026-10-26 사용자 보류)
   const e = u.eff || {};
   if (sealed(e, s.id)) return false;
   if (e.taunt && s.act !== 'attack') return false;   // 도발 = 대표 분류가 공격인 기술만(공격 + 버프 · 회복도 됨)
   return true;
 }
+// 독을 거는 기술인가(좋은 거 주입 봉인 대상): 덤 효과 · 타마다 · 순서 갈래 · 독안개
+export const poisonGiver = s => !!s && [s, s.onFirst, s.onSecond].some(x => x && ((x.inflict && x.inflict.id === 'poison') || (x.inflicts || []).some(f => f.id === 'poison') || (x.perHitInflict && x.perHitInflict.id === 'poison') || x.miasma));
 export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return sealed(e, s.id) ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : null; };
 // 봉인된 기술인가: 처음 뽑힌 하나(skill) + 메아리로 더 막힌 것(more — 프로스트벨 정적을 유지하세요)
 function sealed(e, id) { return !!(e.seal && (e.seal.skill === id || (e.seal.more || []).includes(id))); }
@@ -420,6 +425,8 @@ export function expire(u, turn, ev) {
   if (u.st && u.st.bell && u.st.bell.exp <= turn) delete u.st.bell;   // 프로스트벨 아침 · 밤 3턴이 끝남 → 다음 턴부터 다시 켤 수 있음
   if (u.st && u.st.fakeLock && u.st.fakeLock <= turn) delete u.st.fakeLock;   // 죽은 줄 알았나? 잠김은 다음 한 턴
   if (u.st && u.st.formBoost && u.st.formBoost.exp <= turn) delete u.st.formBoost;   // 입맛 다시기 2턴
+  if (u.st && u.st.selfSeal && u.st.selfSeal.exp <= turn) delete u.st.selfSeal;   // 좋은 거 주입 봉인 3턴(다음 턴부터)
+  if (u.st && u.st.hpBuff && u.st.hpBuff.exp <= turn) { u.max -= u.st.hpBuff.add; u.hp = Math.min(u.hp, u.max); delete u.st.hpBuff; }   // 최대 체력 버프 끝: 현재 체력 그대로 · 최대보다 많으면 최대로(2026-10-28 고정 규칙)
   if (u.st && u.st.meal) { if (u.st.meal.ready) delete u.st.meal; else if (u.st.meal.T === turn) u.st.meal.ready = true; }   // 식사시간 → 다음 한 턴만 맛평가
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
