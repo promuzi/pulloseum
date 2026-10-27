@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart, fruitOnUse } from './devices.js';
 import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -175,6 +175,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.act === 'skip') { skipped.add(u); if (a.blocked) { blockedRest(u, T, ev); return 'rest'; } return 'pass'; }   // 다 막혀 쉼 = 다음 턴 면역 · 시간 초과로 넘어감 = 그냥 지나감
     const spent = payAct(u, a, T, ev);   // 개수 · 체력 · 햇빛 내기
     const ek = echoK(u, T);   // 프로스트벨 메아리 몫(아침 · 밤이 켜진 동안 — 이번 기술이 켜는 것이면 0)
+    fruitOnUse(u, a, ev);   // 드라코프루트: 빙결 효과 기술을 쓰면 비용을 낸 뒤 남은 햇빛 하나가 열매로(연타 · 적중과 무관)
     if (u === first) firstUp(u, T, ev);   // 게일바인: 선공하면 활력 한 겹
     if (a.act === 'guard' || a.act === 'evade') {
       showStance(u);
@@ -185,7 +186,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (ek) { const e1 = u.energy; u.energy = Math.min(u.energyMax || 8, e1 + (a.gain || 2) * ek); ev.push({ t: 'echo', who: u.id, id: a.id, k: ek }); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e1, echo: true }); }
       return 'acted';
     }
-    const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }, a); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
+    const selfAll = () => { for (const b of [a.self, a.also, ...(a.selfMore || [])]) if (b) selfBuff(u, b, { turn: T, ev }, a); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
     // 메아리 덤(나에게): 능력치 겹은 그 몫의 값 · 보호막은 그 몫만큼 더 · 정화는 한 번 더 · 기간만 있는 효과는 그대로(긴 쪽이라 바뀌지 않음)
     const selfEcho = ea => { for (const b of [ea.self, ea.also]) { if (!b) continue; if (FX[b] && FX[b].stat) selfBuff(u, b, { turn: T, ev }, { v: FX[b].v * ea.echoK }); else if (b === 'shield' && u.eff && u.eff.shield) u.eff.shield.hp += Math.max(1, Math.round(u.max * FX.shield.hp * ea.echoK)); else if (b === 'purify') selfBuff(u, b, { turn: T, ev }, ea); } };
     if (a.act === 'buff') {
@@ -307,6 +308,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       foe.hp = endureHp(foe, foe.hp - dmg, ev, T);   // 버티기(공통 장치 D7 · 죽은 줄 알았나?) — 없으면 0에서 멈춤
       foe.st.critTaken = tier === 'crit';
       ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, ab: ab || undefined, forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, veil: veil ? true : undefined, ambush: ambush || undefined, link: L.link ? { id: a.id, name: a.name } : undefined, list: absorb ? listOf(foe) : undefined });
+      if (foe.st && foe.st.pendEv) { for (const x of foe.st.pendEv) ev.push({ ...x, hp: foe.hp, list: listOf(foe) }); delete foe.st.pendEv; }   // 버티기 · 죽은 줄 알았나? · 부활잉 = 맞은 사건 뒤에 '일어남'(그 뒤 체력 hp — 화면 · 점검이 체력을 맞춤)
       if (tier !== 'miss' && has(foe, 'stealth')) {
         const pr = foe.eff.stealth.reflect; delete foe.eff.stealth; ev.push({ t: 'reveal', who: foe.id, id: 'stealth', list: listOf(foe) });
         if (pr && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round((dmg + absorb) * (pr === true ? FX.reflect.k : pr))); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 환각의 주파수 · 응싱: 뚫리면 처음 맞은 한 타 반사(응싱 = 크게)

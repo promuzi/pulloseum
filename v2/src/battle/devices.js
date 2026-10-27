@@ -10,7 +10,7 @@
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES, STAGE_KEY } from '../game/catalog.js';
-import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, WIPE_ALL, wipeEff } from './status.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, WIPE_ALL, wipeEff, givesFx, FRUIT } from './status.js';
 import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
@@ -36,7 +36,7 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes'];
+const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes', 'fruitUse'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
 export function dynAct(u, a0, foe, rng) {
   const boost = a0 && a0.tier === 'm' && u.st && u.st.formBoost ? u.st.formBoost.k : 0;   // 팽트랩 입맛 다시기 = 내 변이 기술 +20%(2턴)
@@ -56,6 +56,11 @@ export function dynAct(u, a0, foe, rng) {
   if (a.allSun) pw += (u.energy || 0) * a.allSun;
   if (a.lostHp) pw += Math.max(0, 1 - u.hp / u.max) * 100 * a.lostHp;   // 잃은 체력 1%당 위력 +(윈드페탈 피의 춤)
   if (a.trapBoom) pw += ((u.eff && u.eff.thornTrap && u.eff.thornTrap.n) || 0) * a.trapBoom;   // 폭발은 예술이지 = 팀에 깔린 덫 하나당 위력 +
+  if (a.fruitUse) {   // 드라코프루트: 가진 열매 수로 — 빙결 브레스 = 열매 수만큼 빙결 · 열매 던지기 = 열매 수만큼 타(타마다 빙결)
+    const fn = (u.eff && u.eff.fruit && u.eff.fruit.n) || 0; o.fruitN = fn;
+    if (a.fruitUse === 'breath') o.inflict = { id: 'chill', n: Math.max(1, fn) };
+    if (a.fruitUse === 'throw') o.hits = Math.max(1, fn);
+  }
   if (a.scale) { const c = Math.min(a.scale.dmg.length - 1, r[a.scale.k] || 0); pw *= 1 + a.scale.dmg[c]; if (a.scale.drain) o.drain = (a.drain || 0) + a.scale.drain[c]; o.scaleN = c; }
   if (a.bonusIf && foe && foeHas(foe, a.bonusIf.id)) { pw *= a.bonusIf.k; o.bonusHit = true; }
   if (a.luck) {
@@ -77,6 +82,11 @@ export function payAct(u, a, T, ev) {
   if (a.allSun) u.energy = 0;
   if ((a.orbDump || a.orbBlast || a.orbAbsorb || a.orbTrap) && u.orb) { u.st.orbSpent = u.orb.n; u.st.orbFull = u.orb.n === u.orb.max; if (a.orbTrap && u.orb.n) { u.orb.trap += u.orb.n; const t = ((u.eff ||= {}).orbTrap ||= { env: true, n: 0, back: 0, by: u.id, atk: u.atk }); t.n += u.orb.n; } u.orb.n = 0; ev.push({ t: 'res', who: u.id, k: 'orb', n: 0 }); }   // 구슬 전부 쓰기(속박 = 덫으로)
   if (a.infused && u.st.infuse && --u.st.infuse.n <= 0) delete u.st.infuse;
+  if (a.fruitUse && u.eff && u.eff.fruit) {   // 열매 전부 소모 → 소모한 하나당 쓸 수 있는 햇빛 하나로 돌아옴 · 열매 방어도 사라짐(2026-10-26)
+    const n = u.eff.fruit.n; delete u.eff.fruit; u.st.fruitAte = n;
+    u.energyMax = (u.energyMax || 8) + n; u.energy = Math.min(u.energyMax, (u.energy || 0) + n);
+    ev.push({ t: 'fruit', who: u.id, name: u.name, n: 0, ate: n, list: listOf(u) });
+  }
   if (a.trapBoom && u.eff && u.eff.thornTrap) { delete u.eff.thornTrap; ev.push({ t: 'expire', who: u.id, ids: ['thornTrap'], list: listOf(u) }); }   // 덫 전부 터뜨림
   if (a.hpCost) { const c = Math.round(u.max * a.hpCost); u.hp = Math.max(1, u.hp - c); ev.push({ t: 'selfCost', who: u.id, name: u.name, dmg: c }); }
   return spent;
@@ -90,10 +100,19 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.fruitCondense) { fruitAdd(u, ev); if (u.st.fruitGot) u.energy = Math.min(u.energyMax, (u.energy || 0) + 1); }   // 냉기 응축: 햇빛 하나를 열매로 → 햇빛 하나 보충(칸이 가득이면 못 받음 — A안 · 2026-10-26)
+  if (a.fruitUse === 'eat' && u.hp > 0) {   // 열매 먹기: 먹은 열매 하나당 회복 + 상태이상 한 종류(무작위 · 같은 확률 · 중복 없음 — 부분 정화 규칙)
+    const n = u.st.fruitAte || 0, before = u.hp, rr = x.rng || (() => 0.5);
+    u.hp = Math.min(u.max, u.hp + Math.round(u.max * FRUIT.eat * n * healK(u)));
+    ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) });
+    const L = HARM_IDS.filter(k => u.eff && u.eff[k]), gone = [];
+    while (gone.length < n && L.length) gone.push(L.splice(Math.floor(rr() * L.length), 1)[0]);
+    wipeEff(u, gone); if (gone.length) ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'purified', ids: gone, list: listOf(u) });
+  }
   if (a.inject) {   // 좋은 거 주입(톡시캑터): 내 독 거는 기술 3턴 봉인(다음 턴부터) + 최대 체력 · 공격 · 방어 · 기동 5턴 강화(최대 체력이 오르면 현재 체력도 — 2026-10-28)
     const st = (u.st ||= {}); st.selfSeal = { from: T + 1, exp: T + a.inject.seal };
-    if (st.hpBuff) { u.max -= st.hpBuff.add; u.hp = Math.min(u.hp, u.max); }
-    const add = Math.round(u.max * a.inject.hp); st.hpBuff = { add, exp: T + a.inject.turns - 1 }; u.max += add; u.hp += add;
+    const add = st.hpBuff ? 0 : Math.round(u.max * a.inject.hp);   // 이미 오른 최대 체력은 다시 쓰면 기간만 새로(긴 쪽 — 겹쳐 오르지 않음)
+    st.hpBuff = { add: (st.hpBuff ? st.hpBuff.add : 0) + add, exp: T + a.inject.turns - 1 }; u.max += add; u.hp += add;
     for (const id of ['atkUp', 'defUp', 'spdUp']) selfBuff(u, id, { turn: T, ev });
     ev.push({ t: 'regen', who: u.id, name: u.name, heal: add, list: listOf(u) });
   }
@@ -128,7 +147,7 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
   if (!x.landed) return;
   if (a.execute && foe.hp > 0 && foe.hp < foe.max * a.execute) {   // 처형(윈드페탈 처형의 춤): 맞혔을 때 상대 체력이 기준 미만이면 쓰러뜨림 · 그 턴 버티기(죽은 줄 알았나?)엔 막힘
     if (foe.st && foe.st.endureT === T) ev.push({ t: 'resist', who: u.id, to: foe.id, name: foe.name, id: 'execute', why: 'endure', list: listOf(foe) });
-    else { foe.hp = 0; ev.push({ t: 'execute', who: u.id, to: foe.id, name: foe.name }); }
+    else { const d = foe.hp; foe.hp = 0; ev.push({ t: 'execute', who: u.id, to: foe.id, name: foe.name }); ev.push({ t: 'tick', who: foe.id, name: foe.name, id: 'execute', dmg: d, burst: true, list: listOf(foe) }); }   // 남은 체력만큼 피해 사건(화면 · 점검이 체력을 맞춤)
   }
   if (a.echo) (fe.timers ||= []).push({ at: T + 1, raw: (a.power || 0) * (u.atk || 10) / 50 * a.echo, area: !!a.area, by: u.id, name: a.name, inflict: a.inflict || null });
   if (a.consume && fe[a.consume.id]) {
@@ -153,19 +172,19 @@ export function endureHp(u, hp, ev, T) {
   if (hp > 0) return hp;
   if (T != null && u.st && u.st.endureT === T && !u.st.endureDone) {   // 죽은 줄 알았나?(쏜위드): 이번 턴 쓰러질 공격을 받으면 최대 체력 몫으로 일어남 → 다음 턴 이 기술 잠김(봉인처럼 · 발동 안 하면 안 잠김 — 2026-10-28 사용자)
     u.st.endureDone = true; u.st.fakeLock = T + 1;
-    ev.push({ t: 'endure', who: u.id, name: u.name, fake: true });
+    (u.st.pendEv ||= []).push({ t: 'endure', who: u.id, name: u.name, fake: true });
     return Math.max(1, Math.round(u.max * (u.st.endureHp || 0.15)));
   }
   if (T != null && u.eff && u.eff.revive) {   // 부활잉(젤리캡): 미리 걸어 둔 준비 효과 — 쓰러질 공격을 받으면 체력 가득으로 · 대가 = 공격 · 방어 1턴째 크게 → 2턴째 중간 → 3턴째 회복
     const R = u.eff.revive; delete u.eff.revive;
     for (const [id, v, turns] of R.cost || []) apply(u, id, 1, { turn: T, rng: () => 0.5, ev, by: u }, { v, turns });
-    ev.push({ t: 'endure', who: u.id, name: u.name, revive: true });
+    ((u.st ||= {}).pendEv ||= []).push({ t: 'endure', who: u.id, name: u.name, revive: true });
     return u.max;
   }
   const k = SP(u).endure, r = k ? resOf(u) : null;
   if (!k || !(r[k] > 0)) return 0;
   r[k] -= 1;
-  ev.push({ t: 'endure', who: u.id, name: u.name, k, n: r[k] });
+  ((u.st ||= {}).pendEv ||= []).push({ t: 'endure', who: u.id, name: u.name, k, n: r[k] });
   return 1;
 }
 // 턴 끝(status.js endTurn): 시한 · 메아리 터짐 → 개수 칸 턴마다 +
@@ -421,6 +440,15 @@ export function echoAct(a, k) {
   return { ...a, power: a.power ? Math.max(1, Math.round(a.power * k)) : a.power, inflict, echoK: k, bell: undefined };
 }
 
+// 드라코프루트 빙결열매(SPECIES.fruits): 비용을 낸 뒤 남은 햇빛 하나를 얼려 열매로(햇빛 칸 = 그릇이 하나 줄어듦 · 남은 햇빛이 없으면 안 생김)
+export function fruitAdd(u, ev) {
+  (u.st ||= {}).fruitGot = false;
+  if ((u.energy || 0) < 1) return;
+  u.energy -= 1; u.energyMax = (u.energyMax || 8) - 1; const f = ((u.eff ||= {}).fruit ||= { n: 0 }); f.n += 1; u.st.fruitGot = true;
+  ev.push({ t: 'fruit', who: u.id, name: u.name, n: f.n, list: listOf(u) });
+}
+// 빙결 효과가 있는 기술을 쓰면(연타 · 적중과 무관) 열매 하나 — 열매를 쓰는 기술은 안 쌓음 · 냉기 응축은 따로
+export function fruitOnUse(u, a, ev) { if (SP(u).fruits && a && !a.fruitUse && !a.fruitCondense && givesFx(a, 'chill')) fruitAdd(u, ev); }
 // 독안개 턴 시작(켠 턴 다음부터 기간 안): 그 쪽 앞 식물에게 독
 export function miasmaStart(A, B, T, ev) {
   for (const z of [A, B]) { const m = z && z.hp > 0 && z.eff && z.eff.miasma; if (m && m.exp >= T && m.T0 !== T) apply(z, 'poison', m.n || 1, { turn: T, rng: () => 0.5, ev, by: { id: m.by } }); }

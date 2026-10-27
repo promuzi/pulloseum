@@ -110,7 +110,8 @@ export function evadeK(def, att) {
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
 export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1) * (stormOn(u) ? 1 - FX.atkDown.v : 1);
-export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1);
+export const FRUIT = { def: 0.2, eat: 0.08 };   // 드라코프루트 빙결열매: 하나당 방어 +20% · 열매 먹기 하나당 회복 8%(임시 — 밸런스 때)
+export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1) * (1 + ((u && u.eff && u.eff.fruit && u.eff.fruit.n) || 0) * FRUIT.def);
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) + (stormOn(u) ? FX.accDown.v : 0) + (caveAdds(u).includes('gravel') ? CAVE.gravel.acc : 0) - statSum(u, 'acc');
 // 강풍에 덧붙은 공명(게일캑터 — 폭풍 · 치유 · 뇌전): 강풍 안에 들어 있어 강풍과 함께 끝나고 교체 때 같이 옮겨 감 · 폭풍 = 교란 · 쇠약 한 겹 몫(폭풍 동안만 · 쌓이지 않음)
@@ -171,6 +172,7 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (s.fakeDeath && u.st && u.st.fakeLock) return false;   // 죽은 줄 알았나? = 버팀이 발동한 다음 턴엔 잠김
   if (s.taste && !(u.st && u.st.meal && u.st.meal.ready)) return false;   // 맛평가 = 식사시간 바로 다음 턴에만
   if (s.miasma && foe && has(foe, 'miasma')) return false;   // 독안개 = 켜져 있는 동안 다시 안 켜짐(환경 공통)
+  if (s.fruitUse && !(u.eff && u.eff.fruit && u.eff.fruit.n > 0)) return false;   // 드라코프루트 열매 먹기 · 빙결 브레스 · 열매 던지기 = 열매가 있을 때
   if (u.st && u.st.selfSeal && poisonGiver(s)) return false;   // 좋은 거 주입 = 내 독 거는 기술 3턴 봉인(범위 = 거는 기술만 — 소모 기술 포함 여부는 밸런스 때, 2026-10-26 사용자 보류)
   const e = u.eff || {};
   if (sealed(e, s.id)) return false;
@@ -178,7 +180,8 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   return true;
 }
 // 독을 거는 기술인가(좋은 거 주입 봉인 대상): 덤 효과 · 타마다 · 순서 갈래 · 독안개
-export const poisonGiver = s => !!s && [s, s.onFirst, s.onSecond].some(x => x && ((x.inflict && x.inflict.id === 'poison') || (x.inflicts || []).some(f => f.id === 'poison') || (x.perHitInflict && x.perHitInflict.id === 'poison') || x.miasma));
+export const givesFx = (s, id) => !!s && [s, s.onFirst, s.onSecond].some(x => x && ((x.inflict && x.inflict.id === id) || (x.inflicts || []).some(f => f.id === id) || (x.perHitInflict && x.perHitInflict.id === id) || (x.hex || []).some(h => h.id === id)));
+export const poisonGiver = s => givesFx(s, 'poison') || !!(s && s.miasma);
 export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return sealed(e, s.id) ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : null; };
 // 봉인된 기술인가: 처음 뽑힌 하나(skill) + 메아리로 더 막힌 것(more — 프로스트벨 정적을 유지하세요)
 function sealed(e, id) { return !!(e.seal && (e.seal.skill === id || (e.seal.more || []).includes(id))); }
@@ -187,6 +190,7 @@ function sealed(e, id) { return !!(e.seal && (e.seal.skill === id || (e.seal.mor
 export function listOf(u) {
   const e = (u && u.eff) || {}, out = [];
   if (e.immune) out.push({ id: 'immune' });
+  if (e.fruit) out.push({ id: 'fruit', n: e.fruit.n });   // 드라코프루트 빙결열매(햇빛 칸을 차지 · 지울 수 없음)
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
   for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp ?? null, add: k === 'cave' ? e.cave.add : undefined, n: k === 'orbTrap' || k === 'thornTrap' ? e[k].n : undefined } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
@@ -426,7 +430,7 @@ export function expire(u, turn, ev) {
   if (u.st && u.st.fakeLock && u.st.fakeLock <= turn) delete u.st.fakeLock;   // 죽은 줄 알았나? 잠김은 다음 한 턴
   if (u.st && u.st.formBoost && u.st.formBoost.exp <= turn) delete u.st.formBoost;   // 입맛 다시기 2턴
   if (u.st && u.st.selfSeal && u.st.selfSeal.exp <= turn) delete u.st.selfSeal;   // 좋은 거 주입 봉인 3턴(다음 턴부터)
-  if (u.st && u.st.hpBuff && u.st.hpBuff.exp <= turn) { u.max -= u.st.hpBuff.add; u.hp = Math.min(u.hp, u.max); delete u.st.hpBuff; }   // 최대 체력 버프 끝: 현재 체력 그대로 · 최대보다 많으면 최대로(2026-10-28 고정 규칙)
+  if (u.st && u.st.hpBuff && u.st.hpBuff.exp <= turn) { u.max -= u.st.hpBuff.add; const cut = Math.max(0, u.hp - u.max); u.hp -= cut; delete u.st.hpBuff; if (cut) ev.push({ t: 'tick', who: u.id, name: u.name, id: 'hpBuffEnd', dmg: cut, list: listOf(u) }); }   // 최대 체력 버프 끝: 현재 체력 그대로 · 최대보다 많으면 최대로(2026-10-28 고정 규칙)
   if (u.st && u.st.meal) { if (u.st.meal.ready) delete u.st.meal; else if (u.st.meal.T === turn) u.st.meal.ready = true; }   // 식사시간 → 다음 한 턴만 맛평가
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }

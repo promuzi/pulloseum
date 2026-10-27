@@ -504,5 +504,33 @@ ok(SPECIES_V2.has('toxi_cactus'), '톡시캑터 v2 켜짐');
   const ev6 = turn(t6, f6, SKILLS.u_toxi_3c, { id: 'f', name: '때리기', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null }, 1, () => 0.5);
   ok(f5.eff.poison && f5.eff.poison.n === 3 && ev6.some(e => e.t === 'hit' && e.who === 'me' && e.area), '독점사 = 선공 연타(타마다 독) · 후공 광역');
 }
+// ── 20. 드라코프루트(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('draco_fruit'), '드라코프루트 v2 켜짐');
+{
+  const ICE = { id: 'i', name: '서리', act: 'attack', power: 55, cost: 2, el: 'ice', cats: ['attack'], inflict: { id: 'chill', n: 1 } };
+  const d = mk('me', 'draco_fruit', { stage: 2 }), f = mk('foe', 'thorn'); d.energy = 3;
+  payEnergy(d, 2); turn(d, f, ICE, OTHER, 1, () => 0.5);
+  ok(d.eff.fruit && d.eff.fruit.n === 1 && d.energyMax === 7, '빙결 기술 = 남은 햇빛 하나가 열매(햇빛 칸 하나 줄어듦)');
+  const d2 = mk('me', 'draco_fruit', { stage: 2 }), f2 = mk('foe', 'thorn'); d2.energy = 2;
+  payEnergy(d2, 2); turn(d2, f2, ICE, OTHER, 1, () => 0.5);
+  ok(!d2.eff.fruit, '남은 햇빛이 없으면 열매 안 생김');
+  const d3 = mk('me', 'draco_fruit'), f3 = mk('foe', 'thorn'); d3.energy = 3;
+  payEnergy(d3, 1); turn(d3, f3, SKILLS.u_draco_1, OTHER, 1);
+  ok(d3.eff.fruit.n === 1 && d3.energy === 2 && d3.energyMax === 7, '냉기 응축 = 햇빛 하나를 열매로 + 하나 보충(A안)');
+  const def0 = mk('me', 'draco_fruit'), { defK } = await import('../../v2/src/battle/status.js');
+  ok(defK(d3) > defK(def0), '열매 하나당 방어 ↑');
+  d3.eff.fruit.n = 3; d3.energyMax = 5; d3.eff.poison = { n: 2, last: 1 }; d3.eff.burn = { exp: 9 }; d3.hp = Math.round(d3.max * 0.5);
+  const h0 = d3.hp, e0 = d3.energy;
+  turn(d3, f3, SKILLS.u_draco_2, OTHER, 2, () => 0.5);
+  ok(!d3.eff.fruit && d3.energyMax === 8 && d3.energy === Math.min(8, e0 + 3) && d3.hp > h0 && !d3.eff.poison && !d3.eff.burn, '열매 먹기 = 전부 먹고 햇빛 복귀 · 회복 · 열매 수만큼 정화');
+  ok(!canUse(d3, SKILLS.u_draco_2, 8, f3) && !canUse(d3, SKILLS.u_draco_3, 8, f3), '열매가 없으면 소모 기술 못 씀');
+  const d4 = mk('me', 'draco_fruit', { stage: 2 }), f4 = mk('foe', 'thorn');
+  d4.eff.fruit = { n: 3 }; d4.energyMax = 5;
+  const ev4 = turn(d4, f4, SKILLS.u_draco_3c, OTHER, 1, () => 0.5);
+  ok(ev4.filter(e => e.t === 'hit' && e.who === 'me').length === 3 && !d4.eff.fruit && ev4.some(e => e.t === 'fx' && e.id === 'frozen'), '열매 던지기 = 열매 수만큼 타 · 타마다 빙결(3 = 얼음) · 열매 안 쌓음');
+  const d5 = mk('me', 'draco_fruit', { stage: 1 });
+  turn(d5, mk('foe', 'thorn'), SKILLS.u_draco_2b, OTHER, 1);
+  ok(d5.eff.atkUp && d5.eff.spdUp && d5.eff.defDown, '알 깨기 = 활력 · 가속 + 시듦(평범한 버프 · 디버프)');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

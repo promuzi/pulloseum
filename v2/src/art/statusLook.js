@@ -32,6 +32,8 @@ export const STATUS = {
   regen: { name: '재생', icon: 'fx_regen', buff: true }, will: { name: '의지', icon: 'fx_will', buff: true }, immune: { name: '면역', icon: 'fx_immune', buff: true },
   aim: { name: '조준', icon: 'fx_aim', buff: true }, stealth: { name: '은신', icon: 'fx_stealth', buff: true }, clone: { name: '분신', icon: 'fx_stealth', buff: true },
   shield: { name: '보호막', icon: 'fx_barrier', buff: true }, armor: { name: '갑주', icon: 'fx_armor', buff: true },
+  fruit: { name: '빙결열매', icon: 'fruit', buff: true, stack: 99 },
+  execute: { name: '처형', icon: 'sword', col: '#ff5a5a' }, hpBuffEnd: { name: '주입 반동', icon: 'heart', col: '#b866ff' }, settle: { name: '청산', icon: 'fx_will', col: '#4f9dff' },   // 피해 사건 이름(처형의 춤 · 청산)   // 드라코프루트(그림 임시)
   revive: { name: '부활', icon: 'heart', buff: true }, bounce: { name: '튕김', icon: 'fx_reflect', buff: true },   // 젤리캡 부활잉 · 너꺼잉(그림 임시)
   purified: { name: '정화', icon: 'fx_will', buff: true }, flourish: { name: '만개', icon: 'fx_all_up', buff: true },
 };
@@ -44,6 +46,7 @@ export const STATUS_DESC = {
   dark: '턴 끝 햇빛이 안 참', shade: '그 턴 끝 햇빛이 안 참', stun: '다음 차례를 쉼', paral: '몸이 굳어 한 번 쉼', frozen: '얼어서 한 번 쉼',
   seal: '다음 턴에 기술 하나를 못 씀', root: '다음 턴에 교체할 수 없음', taunt: '다음 턴엔 공격 기술만 · 교체 못 함',
   spore: '하나씩 따로 셈 · 피면 하나마다 체력 8%', leech: '턴 끝 체력을 건 식물이 빨아감 · 3턴', gale: '강풍 — 이쪽 공격이 잘 빗나감', storm: '폭풍 — 강풍 그대로 + 교란 · 쇠약 · 턴 끝 피해', cave: '동굴 — 기동이 떨어짐(스톤캡이 나가면 걷힘)', orbTrap: '봉인 구슬 덫 — 내 쪽이 맞을 때마다 하나씩 터져 피해 + 봉인(교체 · 쓰러져도 남음)',
+  fruit: '햇빛 칸 하나를 얼린 열매 — 하나당 방어 ↑ · 비용으로 못 씀 · 먹거나 던지면 햇빛으로 돌아옴(지울 수 없음)',
   revive: '쓰러질 공격을 받으면 체력 가득으로 부활 — 대신 공격 · 방어가 잠시 크게 떨어짐', bounce: '상대 기술 한 번이 거는 나쁜 효과를 그대로 튕겨 돌려줌 · 다음 턴 끝까지',
   thornTrap: '덫 — 우리 편 공격이 빗나가거나 스치면 하나씩 터져 피해 + 독(교체해도 남음)',
   morning: '아침 — 프로스트벨의 기술이 메아리로 한 번 더(프로스트벨이 나가면 사라짐)', night: '밤 — 양쪽 다 턴 끝 햇빛이 안 참 · 프로스트벨의 메아리가 더 셈(프로스트벨이 나가면 사라짐)',

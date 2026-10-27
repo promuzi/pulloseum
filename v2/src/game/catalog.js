@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus', 'draco_fruit']);
 const V2 = {
+  draco_fruit: {   // 20. 드라코프루트 — 빙결열매(햇빛 칸을 얼려 쌓는 방어 · 소모하면 햇빛으로 돌아옴) · 2026-10-26~28 설계 · 고유 패시브 없음(열매 규칙이 그 자리)
+    sp: { fruits: true },
+    skills: [
+      S('u_draco_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true }),
+      S('u_draco_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
+      S('u_draco_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'] }),
+      S('u_draco_3', '빙결 브레스', 'ice', 'u', 60, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),
+      S('u_draco_3b', '빙결 폭풍', 'wind', 'u', 70, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),
+      S('u_draco_3c', '열매 던지기', null, 'u', 35, 0, { fruitUse: 'throw', hits: 1, perHitInflict: { id: 'chill', n: 1 } }),
+    ],
+  },
   toxi_cactus: {   // 19. 톡시캑터 — 상대 독 겹 활용(태생 독성) · 2026-10-26 설계 · 10-28 세부 확정 · 고유 패시브 없음
     sp: {},
     skills: [

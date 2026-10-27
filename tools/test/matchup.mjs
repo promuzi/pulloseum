@@ -37,7 +37,7 @@ ok(near(formMult(W, U('spark'), sk('m_xbow')), 1.25), '석궁 → 번개(나무 
 ok(!!CARDS.m_rocket && !!CARDS.m_xbow && SKILLS.m_rocket.area, '로켓포 · 석궁 카드');
 // ③ 맞는 쪽 변이의 약한 속성(늘 — 일반 식물이 쳐도): 포자 ← 불 · 용족 ← 빙결
 ok(near(formMult(U('cactus_fire'), U('ember_cap', 'spore'), sk('f_ember')), 1.25), '불 → 포자 약함');
-ok(near(formMult(U('frost_bell'), U('drake_cactus', 'dragon'), sk('u_frost_1')), 1.25), '빙결 → 용족 약함');
+ok(near(formMult(U('frost_bell'), U('drake_cactus', 'dragon'), sk('i_frost')), 1.25), '빙결 → 용족 약함');   // u_frost_1 은 2026-10-29부터 아침이에요(피해 없음)
 ok(near(formMult(U('frost_bell'), U('drake_cactus', 'dragon'), sk('basic') || { power: 40, el: null }), 1), '속성 없는 기본기 = 그대로');
 // ④ 치는 쪽: 변이 기술일 때만 — 용족(태생) 개성 기술 → 불 ×1.25, 같은 식물의 공통 기술은 그대로
 const D = U('drake_cactus', 'dragon');

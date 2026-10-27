@@ -30,6 +30,7 @@ function trace(evs, hp, tag) {
   for (const e of evs) {
     if (e.bench || e.sum != null) continue;   // 대기석 식물 · 소환수 사건(엑셀 v10 — 대기석도 턴 끝 진행)은 앞 식물 체력과 따로
     if (e.t === 'switch') { hp[e.who] = e.hp; continue; }
+    if (e.t === 'endure' && e.hp != null && e.who in hp) { hp[e.who] = e.hp; const i = down.indexOf(e.who); if (i >= 0) down.splice(i, 1); continue; }   // 버티기 · 부활(2026-10-29) = 맞은 뒤 그 체력으로 일어남
     if (e.t === 'faint') { if (!isDown(e.who)) flag('faint_alive', `${tag} 살아 있는데 쓰러짐 사건 ${e.who}`); continue; }
     const actor = e.t === 'hit' || e.t === 'stance' || e.t === 'cast' || e.t === 'act' ? e.who : null;
     if (actor && isDown(actor)) flag('dead_acts', `${tag} 쓰러진 ${actor} 가 ${e.t}`);

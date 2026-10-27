@@ -12,7 +12,7 @@ const { FX } = ST, OLD_ = ST.OLD;
 
 let fails = 0, n = 0;
 const ok = (c, m) => { n++; if (!c) { fails++; console.log('실패:', m); } };
-const mk = (id, k, o = {}) => makeUnit(id, SPECIES[k], { key: k, ...protoStats(SPECIES[k]), ...o });
+const mk = (id, k, o = {}) => { const u = makeUnit(id, SPECIES[k], { key: k, ...protoStats(SPECIES[k]), ...o }); u.kit = MODEL.legacyKitOf(k); return u; };   // 공통 효과 시험 = 옛 종 기술(s1 · s2)로(2026-10-29 — 고유 기술 v2를 켠 종이 늘어서)
 const ctx = (by, turn = 1, ev = []) => ({ turn, rng: makeRng(1), ev, by });
 const sk = (u, id) => u.kit.find(s => s.id === id);
 // 판정을 고정하는 굴림: 0 → 표의 맨 앞(빗나감), 0.999 → 맨 뒤(치명)
@@ -37,7 +37,7 @@ const fixed = v => () => v;
   ok(hit && hit.guard && b.eff.burn, '방어 자세로 막아도 걸림');
 }
 { // 치명이어도 1겹(독)
-  const a = mk('me', 'thorn'), b = mk('foe', 'aqua');
+  const a = mk('me', 'ranger_vine'), b = mk('foe', 'aqua');   // 쏜위드는 2026-10-29 고유 기술 v2 — 옛 독 기술(s1)이 있는 종으로
   a.crit = 50;
   resolveTurn(a, b, sk(a, 's1'), b.kit[0], fixed(0.999), { turn: 1 });
   ok(b.eff.poison && b.eff.poison.n === 1, '치명이어도 독 1겹');
@@ -54,7 +54,7 @@ const fixed = v => () => v;
 }
 // ── 3. 독: 5겹까지 · 2턴 넘게 안 걸리면 턴마다 1겹씩 ──
 {
-  const a = mk('me', 'thorn'), b = mk('foe', 'aqua');
+  const a = mk('me', 'ranger_vine'), b = mk('foe', 'aqua');   // 쏜위드는 2026-10-29 고유 기술 v2 — 옛 독 기술(s1)이 있는 종으로
   for (let t = 1; t <= 7; t++) apply(b, 'poison', 1, ctx(a, t, []));
   ok(b.eff.poison.n === 5, '독 5겹이 끝');
   const hp0 = b.hp, ev = [];
@@ -79,7 +79,7 @@ const fixed = v => () => v;
   ok(hits === 3 && hp0 - b.hp === 3 * Math.round(b.max * 0.04), '화상 = 턴 끝 3번, 4%씩');
   apply(b, 'burn', 1, ctx(a, 5, [])); endTurn([[b, a]], 5, []); apply(b, 'burn', 1, ctx(a, 6, []));
   ok(b.eff.burn.exp === 8, '다시 걸면 남은 턴과 새 기간 중 긴 쪽(5턴에 걸고 6턴에 다시 = 8턴까지)');
-  const ev = []; onHit(mk('me', 'aqua'), b, sk(mk('me', 'aqua'), 's1'), { turn: 6, rng: makeRng(1), ev });
+  const ev = []; onHit(mk('me', 'diver_vine'), b, sk(mk('me', 'diver_vine'), 's1'), { turn: 6, rng: makeRng(1), ev });   // 아쿠아벌브는 2026-10-29 v2 — 옛 물 기술(s1)이 있는 종으로
   ok(!b.eff.burn && ev.some(e => e.t === 'cure' && e.why === 'water') && b.eff.wet, '물에 맞으면 화상 꺼짐(젖음은 걸림)');
 }
 // ── 5. 젖음·빙결·감전 ──

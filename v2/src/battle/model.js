@@ -129,6 +129,8 @@ export const BASIC_NAMES = {
   dandel_aero: ['솜털 박치기', '고글 내리기', '바람 타고 비키기'],
 };
 export const basicsOf = key => { const n = BASIC_NAMES[key]; return BASICS.map((b, i) => ({ ...b, name: (n && n[i]) || b.name, fx: b.act === 'attack' ? key : null })); };
+// 옛 종 기술(s1 · s2) 손패 — 고유 기술 v2를 켠 종도 공통 효과 시험(tools/test/status.mjs)이 옛 기술로 돌 수 있게(2026-10-29)
+export const legacyKitOf = key => [...basicsOf(key), ...(SKILLS[key] || SKILLS.flower_grass).map(s => ({ act: 'attack', cats: ['attack'], ...s, fx: key }))];
 export function kitOf(key) {
   if (SPECIES_V2.has(key)) return [...basicsOf(key), ...[0, 1, 2].flatMap(st => uniquesOf(key, st)).map(id => ({ ...CAT_SKILLS[id], fx: key }))];   // 종 고유 v2 = 세 단계 고유 기술 여섯(검토 화면 · 시험 유닛)
   const own = (SKILLS[key] || SKILLS.flower_grass).map(s => ({ act: 'attack', cats: ['attack'], ...s, fx: key }));
@@ -275,7 +277,7 @@ export function closeTurn(pair, turn, ev, gain, stop = () => false, bench = [], 
     ev.push(...evB);
   }
   if (stop()) return;
-  for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: u.eff.dark.look || 'dark' }); else gain(u); }
+  for (const u of pair) { if (u.hp <= 0) continue; if (noEnergy(u)) ev.push({ t: 'noEnergy', who: u.id, name: u.name, why: (u.eff.dark && u.eff.dark.look) || (u.eff.night ? 'night' : 'dark') }); else gain(u); }   // 밤(프로스트벨 필드)도
   for (const u of pair) expire(u, turn, ev);
   for (const { u, idx } of bench) { if (u.hp <= 0) continue; const evB = []; expire(u, turn, evB); for (const e of evB) { e.bench = true; e.idx = idx; } ev.push(...evB); }
 }
