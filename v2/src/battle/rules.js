@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst } from './devices.js';
 import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -144,6 +144,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const actOf = u => (u === A ? actA : actB);
   // 자세는 이 턴 안에서만(순서 무관 — 후공의 자세도 먼저 오는 공격에 걸림): 방어(guard · guardWith) = 모든 타 · 반사 = 처음 맞는 한 타 · 회피 = 모든 타(타마다 판정)
   const guards = new Set([A, B].filter(u => actOf(u).act === 'guard' || actOf(u).guardWith));
+  for (const u of [A, B]) if (actOf(u).fakeDeath) { stOf(u).endureT = T; u.st.endureDone = false; u.st.endureHp = actOf(u).fakeDeath; }   // 죽은 줄 알았나?(쏜위드) = 그 턴 버티기(순서 무관 — 후공이어도 먼저 오는 공격에)
   for (const g of guards) stOf(g).guardT = T;   // 이 턴 방어태세(치명 방어 — 턴 끝에 터지는 확정 치명도 막음)
   const reflects = new Set([A, B].filter(u => isReflect(actOf(u))));
   const shown = new Set();
@@ -199,6 +200,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); return 'acted'; }
     const r = strike(u, foe, a);
     if (r.hard) evCounter(foe, u, T, ev, rng);
+    if (r.mg && u.hp > 0 && u.eff && u.eff.thornTrap && u.eff.thornTrap.n > 0) thornBurst(u, foe, T, ev, rng);   // 쏜위드 덫(우리 편 지형): 빗나가거나 스치면 한 행동에 하나
     if (a.caveAdd && u.hp > 0) caveAddAct(u, foe, a, ev);
     if (r.landed && u.hp > 0 && foe.eff && foe.eff.orbTrap && foe.eff.orbTrap.n > 0) orbTrapBurst(foe, u, T, ev, rng);   // 봉인 구슬 덫(내 쪽 지형) = 맞히면 하나가 터짐   // 지반붕괴 = 공격 + 동굴에 설치   // 게일바인: 맞으면 그 공격이 끝난 뒤 스택을 다 써서 반격
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
@@ -256,6 +258,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const hid = has(foe, 'stealth'), spw = !!(foe.eff && foe.eff.shield && foe.eff.shield.spore);   // 포자벽 = 막으면 때린 상대에게 포자   // 이 공격 앞에서 숨어 있었나(은신끼리도 서로 안 보임 — 2026-10-23 사용자)
     const aimK = (u.eff && u.eff.aim && u.eff.aim.k) || 0;
     let landed = false, avoided = evadeOn, blocked = false, dmg = 0, shieldHit = false, hard = false, allMiss = true, tries = 0;
+    const evN = ev.length;
     const hitSet = new Set();   // 효과는 맞은 대상마다 첫 적중 한 번
     // 소환수(엑셀 v10 50행 + 2026-10-21~22): 주인을 노린 공격은 앞 소환수부터 대신 맞음(피해 · 디버프 · 상태이상) · 연타는 깨진 뒤 남은 타를 주인이 · 광역은 모두 ·
     //  한 타로 깨질 때 남는 피해는 안 넘어감 · 보호막(주인)이 소환수보다 먼저 막음 · 소환수에겐 자세 · 은신이 없음
@@ -299,7 +302,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
         ar.hp -= use; absorb += took; dmg -= took; ab = 'armor';
         if (ar.hp <= 0.5) { delete foe.eff.armor; ev.push({ t: 'armorBreak', who: foe.id, list: listOf(foe) }); }
       }
-      foe.hp = endureHp(foe, foe.hp - dmg, ev);   // 버티기(공통 장치 D7) — 없으면 0에서 멈춤
+      foe.hp = endureHp(foe, foe.hp - dmg, ev, T);   // 버티기(공통 장치 D7 · 죽은 줄 알았나?) — 없으면 0에서 멈춤
       foe.st.critTaken = tier === 'crit';
       ev.push({ t: 'hit', who: u.id, to: foe.id, id: a.id, tier, dmg, mult: em, absorb, ab: ab || undefined, forced, table: t, guard: guardOn, evade: evadeOn, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, veil: veil ? true : undefined, ambush: ambush || undefined, link: L.link ? { id: a.id, name: a.name } : undefined, list: absorb ? listOf(foe) : undefined });
       if (tier !== 'miss' && has(foe, 'stealth')) {
@@ -325,9 +328,10 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (spw && shieldHit && u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe });
     if (shieldHit && foe.eff && foe.eff.shield) { delete foe.eff.shield; ev.push({ t: 'expire', who: foe.id, ids: ['shield'], list: listOf(foe) }); }   // 보호막 = 막은 공격 기술이 끝나면 잔량 제거
     if (tries && allMiss) foe.st.dodgedT = T;   // 이 공격을 다 피함(스침은 빗나감 아님) — 휙- 푹찍
+    const mg = ev.slice(evN).some(e => e.t === 'hit' && e.who === u.id && (e.tier === 'miss' || e.tier === 'graze'));   // 쏜위드 덫: 이 공격에 빗나가거나 스친 타가 있었나
     if (u.eff && u.eff.aim) delete u.eff.aim;   // 조준 = 공격 기술 한 번에 소비(맞든 빗나가든)
     if (!L.link && has(u, 'stealth')) { delete u.eff.stealth; ev.push({ t: 'reveal', who: u.id, id: 'stealth', mine: true, list: listOf(u) }); }   // 내가 공격하면 은신이 풀림(이어 공격 없음)
-    return { landed, avoided, blocked, dmg, hid, hitDmg, hard };
+    return { landed, avoided, blocked, dmg, hid, hitDmg, hard, mg };
   }
   for (const u of [A, B]) { const a = actOf(u); u.st.lastStance = !skipped.has(u) && (a.act === 'guard' || a.act === 'evade') ? a.act : null; }
   return { first: first.id, events: ev };

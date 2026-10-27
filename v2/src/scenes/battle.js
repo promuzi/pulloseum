@@ -313,7 +313,7 @@ const CURE_FIRE = { chill: '냉기가 녹았다', wet: '몸이 말랐다', spore
 const SKIP_WHY = { frozen: '얼어서', paral: '몸이 굳어서', stun: '기절해서', charm: '매혹되어', blocked: '쓸 기술이 없어' };
 const SKIP_STATE = { frozen: '얼어 있어서', paral: '몸이 굳어서', stun: '기절해 있어서', charm: '매혹되어서', blocked: '쓸 기술이 없어서' }, SKIP_AUTO_MS = 1100;
 // 막힘 사건(resist)의 까닭 → 머리 위 한 마디 · 문장(2026-10-23 엑셀 v10: 면역 · 의지 · 속박 한 번 · 강풍 켜져 있음 · 정화 보호 · 이미 쉬는 중)
-const RESIST_POP = { immune: '면역!', will: '의지!', once: '안 묶임', env: '이미 강풍', purify: '버팀!', skip: '버팀!' };
+const RESIST_POP = { immune: '면역!', will: '의지!', once: '안 묶임', env: '이미 강풍', purify: '버팀!', skip: '버팀!', none: '헛것', endure: '버팀!' };
 const RESIST_MSG = { immune: x => `${ga(x)} 방금 쉬어서 기절하지 않는다`, will: x => `${ga(x)} 의지로 버텼다!`, once: x => `${eun(x)} 이미 한 번 묶였다`, env: () => '이미 강풍이 불고 있다', purify: x => `${ga(x)} 정화 덕분에 버텼다!`, skip: x => `${eun(x)} 이미 쉬는 중이다` };
 // 전투 글자 연출(2026-10-16 사용자 "가운데 문구가 이상해. 네모난 배경색에 무엇을 할까? 이것도 어색해. 일일이 이런 문구 넣지 마" → "출력 문구 목록 정리 — 효과·폰트·연출"):
 //  가운데 네모 전광판을 없애고 글자는 식물 머리 위에서만 짧게 — 기술 이름 = 리본, 피해 = 큰 숫자(치명 = 더 크게 · 흔들림), 판정·효과 = 한두 낱말, 승패 = 가운데 큰 글자(네모 없이).

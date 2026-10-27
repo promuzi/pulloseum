@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn']);
 const V2 = {
+  thorn: {   // 2. 쏜위드 — 덫 · 시간차(게릴라 용병) · 2026-10-18 설계 · 10-28 확정(덫 = 설치형 · 죽은 줄 알았나? 발동하면 다음 턴 잠김 · 무기는 = 횟수 제한 기술 전부 다음 1턴 봉인 · 폭발 = 팀 덫 전부)
+    sp: {},
+    skills: [
+      S('u_thorn_1', '덫 설치', 'grass', 'u', 0, 1, { cats: ['debuff'], trapSet: { max: 2 } }),
+      S('u_thorn_2', '기습', 'grass', 'u', 0, 2, { self: 'stealth', early: true, link: { power: 100, ambush: true, el: 'grass' } }),
+      S('u_thorn_2b', '교란', 'grass', 'u', 40, 1, { inflicts: [{ id: 'accDown' }, { id: 'spdDown' }] }),
+      S('u_thorn_3', '죽은 줄 알았나?', 'grass', 'u', 0, 1, { cats: ['guard'], fakeDeath: 0.15, uses: 3 }),
+      S('u_thorn_3b', '무기는 집에 놓고 왔나?', 'grass', 'u', 40, 1, { inflict: { id: 'seal', usesOnly: true } }),
+      S('u_thorn_3c', '폭발은 예술이지', 'fire', 'u', 50, 3, { area: true, trapBoom: 45, inflict: { id: 'burn' } }),
+    ],
+  },
   aqua: {   // 3. 아쿠아벌브 — 업보(버프 · 디버프 활용 힐러) · 2026-10-18 설계(기술 일곱 허용) · 10-28 대조(치유의 물 · 청산 = 상태이상만 · 윤회 = 능력치 겹까지 지우는 예외 · 정죄 = 쇠약 + 시듦 · 참회 = 가속 + 억셈 · 조화 = 상태이상만 베낌)
     sp: {},
     skills: [

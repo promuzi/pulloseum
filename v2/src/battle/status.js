@@ -32,6 +32,7 @@ export const FX = {
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
   gale:    { env: true, turns: 2, missAdd: 12 },
   orbTrap: { env: true },   // 봉인 구슬 덫(볼트바인 — 내 쪽 지형: 교체 · 쓰러져도 남고 내 쪽 앞 식물이 맞을 때마다 하나씩 터짐 · devices.orbTrapBurst)
+  thornTrap: { env: true },   // 쏜위드 덫(우리 편 지형 · 설치형: 교체 · 쓰러져도 남고 우리 편 공격이 빗나가거나 스치면 하나씩 터짐 · devices.thornBurst)
   morning: { env: true },   // 아침(프로스트벨 — 필드: 양쪽 앞 식물 · 프로스트벨이 나가면 사라짐 · devices.bellSync 가 깔고 걷음 · 메아리만)
   night:   { env: true },   // 밤(프로스트벨 — 필드: 양쪽 앞 식물 자연 햇빛이 안 참 · 교체로 들어와도 · 메아리 더 셈)
   cave:    { env: true },   // 동굴(스톤캡 타고남 — 스톤캡이 나와 있는 동안 상대 쪽 · 기간 없음 · devices.caveSync 가 깔고 걷음)              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
@@ -68,7 +69,7 @@ const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal'
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'morning', 'night', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'morning', 'night', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -165,6 +166,8 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (usesLeft(u, s) <= 0) return false;
   if (!canUseRes(u, s)) return false;   // 공통 장치: 개수 · 모드 · 체력 비용(devices.js)
   if (s.bell && u.st && u.st.bell) return false;   // 아침 · 밤 = 하나만 켜짐 · 덧씌우기 불가(꺼진 갱신 차례에만)
+  if (s.trapBoom && !(u.eff && u.eff.thornTrap && u.eff.thornTrap.n > 0)) return false;   // 폭발은 예술이지 = 덫이 하나 이상일 때
+  if (s.fakeDeath && u.st && u.st.fakeLock) return false;   // 죽은 줄 알았나? = 버팀이 발동한 다음 턴엔 잠김
   const e = u.eff || {};
   if (sealed(e, s.id)) return false;
   if (e.taunt && s.act !== 'attack') return false;   // 도발 = 대표 분류가 공격인 기술만(공격 + 버프 · 회복도 됨)
@@ -180,7 +183,7 @@ export function listOf(u) {
   if (e.immune) out.push({ id: 'immune' });
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
-  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp ?? null, add: k === 'cave' ? e.cave.add : undefined, n: k === 'orbTrap' ? e.orbTrap.n : undefined } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
+  for (const k of ORDER) if (e[k]) out.push(k === 'dark' ? { id: e.dark.look || 'dark' } : k === 'spore' ? { id: k, n: e.spore.n, t: Math.min(...e.spore.left) } : ENV.includes(k) ? { id: k === 'gale' && (e.gale.add || []).includes('storm') ? 'storm' : k, exp: e[k].exp ?? null, add: k === 'cave' ? e.cave.add : undefined, n: k === 'orbTrap' || k === 'thornTrap' ? e[k].n : undefined } : e[k].n ? { id: k, n: e[k].n } : { id: k });   // 환경 = 끝나는 턴(화면 환경 띠가 남은 턴을 셈)   // 암실 = 그 기술의 이름(그늘)으로 · 포자 = 개수 + 가장 빨리 피기까지 남은 턴 끝 수
   return out;
 }
 
@@ -263,6 +266,13 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
     if (id === 'root' && e.rooted) { ev.push({ t: 'resist', ...base, why: 'once', list: listOf(tgt) }); return; }   // 교체로 나갔다 들어오기 전까지 한 번만
     const at = { from: T + 1, exp: T + (o.turns ?? D.turns) };
+    if (id === 'seal' && o.usesOnly) {   // 무기는 집에 놓고 왔나?(쏜위드): 횟수 제한 기술 전부를 다음 1턴(없으면 헛것 — 대체 효과 없음, 2026-10-28 사용자)
+      const L = (tgt.kit || []).filter(k => k.uses);
+      if (!L.length) { ev.push({ t: 'resist', ...base, why: 'none', list: listOf(tgt) }); return; }
+      e.seal = { ...at, skill: L[0].id, skillName: L[0].name, more: L.slice(1).map(k => k.id) };
+      ev.push({ t: 'fx', ...base, skill: L.map(k => k.name).join(' · '), list: listOf(tgt) });
+      return;
+    }
     if (id === 'seal' && o.extra && e.seal && e.seal.from === at.from) {   // 메아리 봉인(프로스트벨): 같은 턴 걸린 봉인에 다른 기술 하나 더
       const left = (tgt.kit || []).filter(k => !sealed(e, k.id)), pick = left[Math.floor((ctx.rng ? ctx.rng() : 0) * left.length)];
       if (!pick) return;
@@ -403,6 +413,7 @@ export function expire(u, turn, ev) {
   for (const k of TIMED) if (e[k] && e[k].exp <= turn) { delete e[k]; gone.push(k); }
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
   if (u.st && u.st.bell && u.st.bell.exp <= turn) delete u.st.bell;   // 프로스트벨 아침 · 밤 3턴이 끝남 → 다음 턴부터 다시 켤 수 있음
+  if (u.st && u.st.fakeLock && u.st.fakeLock <= turn) delete u.st.fakeLock;   // 죽은 줄 알았나? 잠김은 다음 한 턴
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
 // 3:3 교체로 나갈 때: 준비 효과 · 환경 등만 지움(DROP) — 나머지는 남아 대기석에서도 턴마다 진행(model.closeTurn) · 소환수는 주인이 나가면 사라짐

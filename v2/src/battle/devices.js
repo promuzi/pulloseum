@@ -36,7 +36,7 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp'];
+const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
 export function dynAct(u, a0, foe, rng) {
   if (!a0 || !DYN.some(k => a0[k])) return a0;
@@ -51,6 +51,7 @@ export function dynAct(u, a0, foe, rng) {
   if (a.powBy) pw += (r[a.powBy.k] || 0) * a.powBy.per;
   if (a.allSun) pw += (u.energy || 0) * a.allSun;
   if (a.lostHp) pw += Math.max(0, 1 - u.hp / u.max) * 100 * a.lostHp;   // 잃은 체력 1%당 위력 +(윈드페탈 피의 춤)
+  if (a.trapBoom) pw += ((u.eff && u.eff.thornTrap && u.eff.thornTrap.n) || 0) * a.trapBoom;   // 폭발은 예술이지 = 팀에 깔린 덫 하나당 위력 +
   if (a.scale) { const c = Math.min(a.scale.dmg.length - 1, r[a.scale.k] || 0); pw *= 1 + a.scale.dmg[c]; if (a.scale.drain) o.drain = (a.drain || 0) + a.scale.drain[c]; o.scaleN = c; }
   if (a.bonusIf && foe && foeHas(foe, a.bonusIf.id)) { pw *= a.bonusIf.k; o.bonusHit = true; }
   if (a.luck) {
@@ -72,6 +73,7 @@ export function payAct(u, a, T, ev) {
   if (a.allSun) u.energy = 0;
   if ((a.orbDump || a.orbBlast || a.orbAbsorb || a.orbTrap) && u.orb) { u.st.orbSpent = u.orb.n; u.st.orbFull = u.orb.n === u.orb.max; if (a.orbTrap && u.orb.n) { u.orb.trap += u.orb.n; const t = ((u.eff ||= {}).orbTrap ||= { env: true, n: 0, back: 0, by: u.id, atk: u.atk }); t.n += u.orb.n; } u.orb.n = 0; ev.push({ t: 'res', who: u.id, k: 'orb', n: 0 }); }   // 구슬 전부 쓰기(속박 = 덫으로)
   if (a.infused && u.st.infuse && --u.st.infuse.n <= 0) delete u.st.infuse;
+  if (a.trapBoom && u.eff && u.eff.thornTrap) { delete u.eff.thornTrap; ev.push({ t: 'expire', who: u.id, ids: ['thornTrap'], list: listOf(u) }); }   // 덫 전부 터뜨림
   if (a.hpCost) { const c = Math.round(u.max * a.hpCost); u.hp = Math.max(1, u.hp - c); ev.push({ t: 'selfCost', who: u.id, name: u.name, dmg: c }); }
   return spent;
 }
@@ -84,6 +86,11 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.trapSet) {   // 덫 설치(쏜위드): 우리 편 지형(설치형 — 교체해도 남음 · 팀 합계 상한) · 덫을 깐 식물의 공격력으로 터짐
+    const t = ((u.eff ||= {}).thornTrap ||= { env: true, n: 0, by: u.id, atk: u.atk });
+    if (t.n < a.trapSet.max) { t.n += 1; t.atk = Math.max(t.atk || 0, u.atk); }
+    ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'thornTrap', n: t.n, list: listOf(u) });
+  }
   if (a.cleanseHeal && u.hp > 0) {   // 치유의 물(아쿠아벌브): 내 해로운 상태이상을 모두 지우고 기본 + 지운 종류 하나당 회복(능력치 약화는 못 지움 — 2026-10-28 '상태이상만')
     const gone = wipeEff(u, HARM_IDS), before = u.hp;
     if (gone.length) ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'purified', ids: gone, list: listOf(u) });
@@ -127,8 +134,13 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
   if (a.seal && foe.hp > 0) apply(foe, 'seal', 1, { turn: T, rng: x.rng, ev, by: u });   // 봉인 = 엑셀 v10 봉인(무작위 기술 하나 · 다음 1턴 — 옛 '직전 기술 2턴'은 폐기)
 }
 // 버티기(D7): 맞은 피해로 쓰러질 때 그 개수가 남아 있으면 체력 1 · 하나 잃음
-export function endureHp(u, hp, ev) {
+export function endureHp(u, hp, ev, T) {
   if (hp > 0) return hp;
+  if (T != null && u.st && u.st.endureT === T && !u.st.endureDone) {   // 죽은 줄 알았나?(쏜위드): 이번 턴 쓰러질 공격을 받으면 최대 체력 몫으로 일어남 → 다음 턴 이 기술 잠김(봉인처럼 · 발동 안 하면 안 잠김 — 2026-10-28 사용자)
+    u.st.endureDone = true; u.st.fakeLock = T + 1;
+    ev.push({ t: 'endure', who: u.id, name: u.name, fake: true });
+    return Math.max(1, Math.round(u.max * (u.st.endureHp || 0.15)));
+  }
   const k = SP(u).endure, r = k ? resOf(u) : null;
   if (!k || !(r[k] > 0)) return 0;
   r[k] -= 1;
@@ -378,6 +390,17 @@ export function echoAct(a, k) {
   const inf = a.inflict, D = inf && FX[inf.id];
   const inflict = !inf ? inf : inf.id === 'chill' || inf.id === 'poison' ? { ...inf, n: 1 } : D && D.stat ? { ...inf, v: (inf.v ?? D.v) * k } : inf.id === 'seal' ? { ...inf, extra: true } : inf;
   return { ...a, power: a.power ? Math.max(1, Math.round(a.power * k)) : a.power, inflict, echoK: k, bell: undefined };
+}
+
+// 쏜위드 덫(2026-10-18 설계 · 10-28 설치형 확정): 우리 편 공격이 빗나가거나 스치면 한 행동에 하나 터짐 = 확정으로 맞는 피해(위력 THORN.power) + 독 1
+export const THORN = { power: 90 };   // 45 → 90(2026-10-29 리그전 29% → 맞춤, 임시)
+export function thornBurst(u, foe, T, ev, rng) {
+  const t = u.eff && u.eff.thornTrap;
+  if (!t || t.n <= 0 || !foe || foe.hp <= 0) return;
+  t.n -= 1;
+  const tgt = sideHit({ id: u.id, atk: t.atk || u.atk, eff: {} }, foe, THORN.power, 'hit', ev, { from: 'trap', label: '덫' });
+  if (tgt.hp > 0) apply(tgt, 'poison', 1, { turn: T, rng, ev, by: u });
+  if (t.n <= 0) { delete u.eff.thornTrap; ev.push({ t: 'expire', who: u.id, ids: ['thornTrap'], list: listOf(u) }); }
 }
 
 // 볼트바인 구슬(SPECIES.orbs · 수치 status.js ORB): 처음 보면 칸을 만들고 기본 햇빛 칸을 줄임 · 홀수 턴 시작에 가득(덫에 나간 것 빼고)

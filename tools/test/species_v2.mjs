@@ -399,5 +399,36 @@ ok(SPECIES_V2.has('aqua'), '아쿠아벌브 v2 켜짐');
   turn(m4, f4, SKILLS.u_aqua_2, OTHER, 1, () => 0.5);
   ok(f4.eff.atkDown && f4.eff.defDown, '정죄 = 쇠약 + 시듦');
 }
+// ── 2. 쏜위드(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('thorn'), '쏜위드 v2 켜짐');
+{
+  const t = mk('me', 'thorn'), f = mk('foe', 'aqua');
+  turn(t, f, SKILLS.u_thorn_1, OTHER, 1); turn(t, f, SKILLS.u_thorn_1, OTHER, 2); turn(t, f, SKILLS.u_thorn_1, OTHER, 3);
+  ok(t.eff.thornTrap && t.eff.thornTrap.n === 2, '덫 설치 = 최대 둘');
+  const hp0 = f.hp, ev = turn(t, f, B('basic'), OTHER, 4, () => 0.01);   // 굴림이 낮음 = 빗나감
+  ok(ev.some(e => e.t === 'counter' && e.from === 'trap') && f.eff.poison && t.eff.thornTrap.n === 1 && f.hp < hp0, '빗나가면 덫 하나가 터짐 = 피해 + 독(한 행동에 하나)');
+  const m = mk('me2', 'aqua'); moveEnv(t, m); clearOnSwitch(t);
+  const ev2 = turn(m, f, B('basic'), OTHER, 5, () => 0.01);
+  ok(ev2.some(e => e.t === 'counter' && e.from === 'trap'), '교체로 들어온 아군이 빗나가도 덫이 터짐(설치형)');
+  const t3 = mk('me', 'thorn', { stage: 2 }), f3 = mk('foe', 'aqua');
+  ok(!canUse(t3, SKILLS.u_thorn_3c, 8, f3), '폭발은 예술이지 = 덫이 없으면 못 씀');
+  turn(t3, f3, SKILLS.u_thorn_1, OTHER, 1); turn(t3, f3, SKILLS.u_thorn_1, OTHER, 2);
+  const ev3 = turn(t3, f3, SKILLS.u_thorn_3c, OTHER, 3, () => 0.5);
+  ok(!t3.eff.thornTrap && has(f3, 'burn') && ev3.some(e => e.t === 'hit' && e.who === 'me' && e.area), '폭발 = 덫 전부 · 광역 불 + 화상');
+  const ATK = { id: 'f', name: '큰 한 방', act: 'attack', power: 999, cost: 0, cats: ['attack'], el: null };
+  const t4 = mk('me', 'thorn', { stage: 2, spd: 1 }), f4 = mk('foe', 'aqua', { spd: 999 });
+  const ev4 = turn(t4, f4, SKILLS.u_thorn_3, ATK, 1, () => 0.5);
+  ok(t4.hp === Math.round(t4.max * 0.15) && ev4.some(e => e.t === 'endure' && e.fake), '죽은 줄 알았나? = 나중이어도 그 턴 쓰러질 공격을 버티고 15%로 일어남');
+  ok(!canUse(t4, SKILLS.u_thorn_3, 8, f4), '발동한 다음 턴엔 잠김');
+  turn(t4, f4, OTHER, OTHER, 2);
+  ok(canUse(t4, SKILLS.u_thorn_3, 8, f4), '그 다음 턴엔 다시 씀');
+  const t5 = mk('me', 'thorn', { stage: 2 }), f5 = mk('foe', 'aqua');
+  turn(t5, f5, SKILLS.u_thorn_3, OTHER, 1);
+  ok(canUse(t5, SKILLS.u_thorn_3, 8, f5), '안 쓰러졌으면(발동 안 함) 안 잠김');
+  const t6 = mk('me', 'thorn', { stage: 2 }), f6 = mk('foe', 'aqua');
+  f6.kit = [...f6.kit, { id: 'm1', name: '무기 하나', act: 'attack', power: 50, cost: 0, uses: 2, cats: ['attack'] }, { id: 'm2', name: '무기 둘', act: 'attack', power: 50, cost: 0, uses: 1, cats: ['attack'] }];
+  turn(t6, f6, SKILLS.u_thorn_3b, OTHER, 1, () => 0.5);
+  ok(!canUse(f6, f6.kit.find(k => k.id === 'm1'), 8, t6) && !canUse(f6, f6.kit.find(k => k.id === 'm2'), 8, t6) && canUse(f6, B('basic'), 8, t6), '무기는 집에 놓고 왔나? = 횟수 제한 기술 전부 다음 1턴 봉인');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

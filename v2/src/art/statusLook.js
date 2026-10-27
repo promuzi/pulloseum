@@ -26,6 +26,7 @@ export const STATUS = {
   seal: { name: '봉인', icon: 'fx_seal', col: '#6fd25c' }, root: { name: '속박', icon: 'st_root', col: '#c08a5a' }, taunt: { name: '도발', icon: 'fx_taunt', col: '#ff5a5a' },
   spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 99 }, leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' },
   gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true }, storm: { name: '폭풍', icon: 'env_storm', col: '#9a7bff', env: true }, orbTrap: { name: '봉인 구슬', icon: 'fx_seal', col: '#c9a8ff', env: true }, cave: { name: '동굴', icon: 'env_cave', col: '#d9b27a', env: true },
+  thornTrap: { name: '덫', icon: 'target', col: '#9fd36a', env: true },
   morning: { name: '아침', icon: 'sun', col: '#ffd27a', env: true }, night: { name: '밤', icon: 'shade', col: '#8a8fd8', env: true },   // 프로스트벨 필드 환경(그림은 임시 — 코덱스 아이콘 대기)   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
   // 이로운 상태이상 · 준비 효과 · 갑주
   regen: { name: '재생', icon: 'fx_regen', buff: true }, will: { name: '의지', icon: 'fx_will', buff: true }, immune: { name: '면역', icon: 'fx_immune', buff: true },
@@ -42,6 +43,7 @@ export const STATUS_DESC = {
   dark: '턴 끝 햇빛이 안 참', shade: '그 턴 끝 햇빛이 안 참', stun: '다음 차례를 쉼', paral: '몸이 굳어 한 번 쉼', frozen: '얼어서 한 번 쉼',
   seal: '다음 턴에 기술 하나를 못 씀', root: '다음 턴에 교체할 수 없음', taunt: '다음 턴엔 공격 기술만 · 교체 못 함',
   spore: '하나씩 따로 셈 · 피면 하나마다 체력 8%', leech: '턴 끝 체력을 건 식물이 빨아감 · 3턴', gale: '강풍 — 이쪽 공격이 잘 빗나감', storm: '폭풍 — 강풍 그대로 + 교란 · 쇠약 · 턴 끝 피해', cave: '동굴 — 기동이 떨어짐(스톤캡이 나가면 걷힘)', orbTrap: '봉인 구슬 덫 — 내 쪽이 맞을 때마다 하나씩 터져 피해 + 봉인(교체 · 쓰러져도 남음)',
+  thornTrap: '덫 — 우리 편 공격이 빗나가거나 스치면 하나씩 터져 피해 + 독(교체해도 남음)',
   morning: '아침 — 프로스트벨의 기술이 메아리로 한 번 더(프로스트벨이 나가면 사라짐)', night: '밤 — 양쪽 다 턴 끝 햇빛이 안 참 · 프로스트벨의 메아리가 더 셈(프로스트벨이 나가면 사라짐)',
   regen: '턴 끝 체력 5% 회복 · 3턴', will: '기절 · 봉인 · 속박 · 도발을 막을 때가 있음 · 3턴', immune: '방금 쉬어서 다음 행동까지 기절하지 않음',
   aim: '다음 공격 기술의 모든 타 빗나감 없음 · 치명 +25 · 상대가 피하면 스침', stealth: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림', clone: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림',
