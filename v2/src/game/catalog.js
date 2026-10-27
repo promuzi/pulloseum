@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell']);
 const V2 = {
+  frost_bell: {   // 13. 프로스트벨 — 아침 · 밤(필드 환경 3턴 · 하나만 · 덧씌우기 불가 · 프로스트벨이 나가면 사라짐) 동안 모든 기술이 같은 차례에 메아리(아침 25% · 밤 50% 임시) · 밤 = 양쪽 앞 식물 자연 햇빛 안 참(교체로 들어와도)
+    sp: { bell: { morning: 0.25, night: 0.5 } },
+    skills: [
+      S('u_frost_1', '아침이에요.', 'ice', 'u', 0, 1, { bell: 'morning' }),
+      S('u_frost_2', '깨트려드리죠.', 'ice', 'u', 80, 2, { inflict: { id: 'chill', n: 1 }, bonusIf: { id: 'frozen', k: 2, clear: true } }),
+      S('u_frost_2b', '정적을 유지하세요.', 'wind', 'u', 60, 2, { inflict: { id: 'seal' } }),
+      S('u_frost_3', '이제 밤이군요.', 'ice', 'u', 0, 2, { bell: 'night' }),
+      S('u_frost_3b', '청아함의 물결.', 'ice', 'u', 0, 2, { cats: ['heal_hp'], self: 'purify', healPct: 0.2 }),
+      S('u_frost_3c', '예로부터 매가 약이었죠.', null, 'u', 40, 3, { area: true, hits: 3 }),
+    ],
+  },
   cactus_wind: {   // 10. 게일캑터 — 방해 디버프 기술 · 강풍이 부는 턴 끝마다 공명 +1, 3이면 무속성 확정 치명(치명 방어엔 정타)
     sp: { res: { reso: [0, 3, '공명'] }, reso: { k: 'reso', at: 3, power: 45, count: ['gale', 'accDown', 'critDown', 'seal'] } },
     skills: [
@@ -533,7 +544,8 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 14;   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
+export const RULES_VER = 15;   // 15 = 2026-10-29 프로스트벨 고유 기술(아침 · 밤 필드 환경 · 메아리) · 봉인 하나 더(메아리)
+// 14 이전:   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
 //  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
 //  11 = 2026-10-23 종 고유 기술 v2 첫 묶음(게일캑터 · 게일바인 — 피해 없이 거는 기술 · 공명 · 스택 반격 · 반드시 맞음 · 방심하기)

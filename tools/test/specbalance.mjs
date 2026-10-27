@@ -6,9 +6,10 @@
 import { newGame, makePlant, evolve, upgrade } from '../../v2/src/game/logic.js';
 import { unitOf, makeRng } from '../../v2/src/game/fight.js';
 import { makeBattle, playTurn, aiPick } from '../../v2/src/battle/model.js';
-import { SPECIES, ROLES, JONG, ELEM } from '../../v2/src/game/catalog.js';
+import { SPECIES, ROLES, JONG, ELEM, SKILLS } from '../../v2/src/game/catalog.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? +process.argv[i + 1] : d; };
+const FULL = process.argv.includes('--full'), BASIC = new Set(['basic', 'guard', 'evade', 'sun']);
 const games = arg('--games', 16), STAGE = arg('--stage', 2), LV = arg('--lv', 4);
 const keys = Object.keys(SPECIES);
 function plantOf(key, seed) {
@@ -20,7 +21,21 @@ function plantOf(key, seed) {
   p.lv = LV; p.pts = (STAGE * 5 + LV - 1) * 2;
   const order = ['hp', 'atk', 'def', 'spd']; let i = 0; while (p.pts > 0) upgrade(s, p.uid, order[i++ % 4], 1);
   p.cards = [null, null];
+  if (FULL) fullHand(p);
   return p;
+}
+// --full(2026-10-29 밤샘): 진화 고르기를 사람처럼 마저 골라 전투 칸을 채움 — 기본은 고르기가 안 끝나 새싹 때 손패(개성 1 + 하급 1 + 기본기)만으로 싸움.
+//  고르기마다 그 종 개성 기술 먼저 · 다음은 위력 높은 것 · 전투 칸 = 고른 기술 넷(개성 먼저) + 평타 · 방어태세
+function fullHand(p) {
+  const got = [...(p.skills.battle || []).filter(id => id && SKILLS[id] && !BASIC.has(id))];
+  for (const d of p.drafts || []) {
+    if (d.part === 'passive') continue;
+    const c = [...d.cands].filter(id => SKILLS[id]).sort((a, b) => (SKILLS[b].tier === 'u') - (SKILLS[a].tier === 'u') || (SKILLS[b].power || 0) - (SKILLS[a].power || 0));
+    got.push(...c.slice(0, d.pick));
+  }
+  p.drafts = [];
+  const hand = [...new Set(got)].sort((a, b) => (SKILLS[b].tier === 'u') - (SKILLS[a].tier === 'u')).slice(0, 4);
+  p.skills.battle = [...hand, 'basic', 'guard', null, null].slice(0, 6);
 }
 function fight(a, b, seed) {
   const B = makeBattle({ me: unitOf('me', a), foe: unitOf('foe', b), seed }), pick = makeRng(seed * 13 + 5);

@@ -548,6 +548,7 @@ export const battle = {
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
       else if (e.t === 'hit') { const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
+      else if (e.t === 'echo') out.push({ kind: 'echo', ms: 450, side: e.who, msg: `메아리가 울린다!`, tone: 'buff' });   // 프로스트벨 메아리(같은 차례에 한 번 더)
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 ${e.label || '되받아치기'}!`, tone: 'hit' });
       else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff; out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }
@@ -592,6 +593,7 @@ export const battle = {
     if (st.kind === 'skipT') this.pop(st.side, SKIP_POP[st.ev.src] || '쉼', null, t, false, -16, (STATUS[st.ev.src] || {}).col || '#c0a8ff');
     if (st.kind === 'note' && st.side) this.pop(st.side, st.popText || '햇빛 막힘', 'dim', t, false, -16);
     if (st.kind === 'swapFail') { sfx('fizzle'); this.pop(st.side, '교체 실패', 'dim', t, false, -16); }
+    if (st.kind === 'echo') { sfx('select'); this.pop(st.side, '메아리', null, t, false, -16, '#c4ecff'); }
     if (st.kind === 'faint') this.pop(st.who, '쓰러짐', 'dim', t, false, -16);
     const last = B.log[B.log.length - 1];
     if ((st.kind === 'stance' || st.kind === 'attack' || st.kind === 'cast') && st.who === 'foe' && !v.foePaid && last && last.foeSkill) { v.en.foe -= last.foeSkill.cost || 0; v.foePaid = true; }

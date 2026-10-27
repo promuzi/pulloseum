@@ -189,6 +189,8 @@ function aiScore(u, foe, s, risk, last) {
   if (s.orbAbsorb) { const o = u.orb; return o && o.n ? (u.hp < u.max * 0.6 ? 0.5 + 0.12 * o.n : 0.1) : 0; }
   if (s.summon || s.volley || s.grow) { const L = (u.summons || []).filter(x => x.hp > 0), aw = L.filter(x => x.stage !== 'sleep').length; return s.summon ? 1.1 - 0.25 * L.length : s.volley ? 0.45 * aw : 0.3 + 0.3 * L.filter(x => x.stage === 'baby').length; }   // 소환수(스포어캡)
   if (s.moss) { const n = ((foe.eff && foe.eff.cave && foe.eff.cave.add) || []).length; return n && u.hp < u.max * 0.75 ? 0.4 + 0.35 * n : 0.05; }   // 이끼덮기 = 설치물이 있고 다쳤을 때
+  if (s.bell) return s.bell === 'night' ? ((u.energy || 0) >= 4 ? 1.0 : 0.3) : 0.9 + (u.energy >= 3 ? 0.2 : 0);   // 프로스트벨 아침 · 밤(켜 두면 3턴 메아리 — 밤은 햇빛을 모아 두고)
+  if (s.healPct) { const bad = ['burn', 'poison', 'bleed', 'shock', 'wet', 'leech', 'spore', 'seal', 'dark'].filter(k => has(u, k)).length; return (u.hp < u.max * 0.6 ? 1.1 : u.hp < u.max * 0.85 ? 0.45 : 0.1) + 0.25 * bad; }   // 바로 회복 + 정화(청아함의 물결)
   if (s.act === 'buff' && s.bare) return ((u.res && u.res.evs) || 0) >= 2 ? 0.5 + Math.min(1, risk) : 0.1;   // 방심하기 = 쌓아 둔 스택을 쓸 때
   if (s.act === 'buff') {
     const b = s.self, stack = b && FX[b] && FX[b].stat;   // 능력치 겹은 다시 걸어도 쌓임(조금 덜 쳐 줌)

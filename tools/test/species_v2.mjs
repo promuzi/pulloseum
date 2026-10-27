@@ -252,5 +252,83 @@ ok(SPECIES_V2.has('volt_vine'), '볼트바인 v2 켜짐');
   turn(v7, f7, SKILLS.u_volt_3c, OTHER, 1);
   ok(v7.hp > h7 && !v7.eff.poison && v7.orb.n === 0, '구슬흡수 = 구슬만큼 회복 · 가득이면 전부 정화');
 }
+// ── 13. 프로스트벨(2026-10-29 밤샘) ──
+ok(SPECIES_V2.has('frost_bell'), '프로스트벨 v2 켜짐');
+{ // 아침이에요. = 필드 아침 3턴(양쪽 앞 식물) · 켜져 있는 동안 다시 못 켬 · 끝나면 다시
+  const b = mk('me', 'frost_bell'), f = mk('foe', 'aqua');
+  turn(b, f, SKILLS.u_frost_1, OTHER, 1);
+  ok(has(b, 'morning') && has(f, 'morning'), '아침 = 양쪽 앞 식물에(필드)');
+  ok(!canUse(b, SKILLS.u_frost_1, 8, f) && !canUse(b, SKILLS.u_frost_3, 8, f), '아침 중엔 아침 · 밤 둘 다 못 켬(덧씌우기 불가)');
+  turn(b, f, OTHER, OTHER, 2); turn(b, f, OTHER, OTHER, 3);
+  ok(!has(b, 'morning') && !has(f, 'morning') && canUse(b, SKILLS.u_frost_3, 8, f), '3턴(켠 턴 포함)이 끝나면 꺼지고 다시 켤 수 있음');
+}
+{ // 메아리: 아침 중 공격 = 같은 차례에 한 번 더(위력 25%) · 빙결은 한 겹 그대로
+  const b = mk('me', 'frost_bell', { stage: 1 }), f = mk('foe', 'aqua');
+  turn(b, f, SKILLS.u_frost_1, OTHER, 1);
+  const ev = turn(b, f, SKILLS.u_frost_2, OTHER, 2, () => 0.5);
+  const hits = ev.filter(e => e.t === 'hit' && e.who === 'me');
+  ok(ev.some(e => e.t === 'echo' && e.who === 'me') && hits.length === 2, `아침 중 공격 = 메아리로 두 번(타 ${hits.length})`);
+  ok(hits[1].dmg < hits[0].dmg, '메아리 타는 더 약함');
+  ok(f.eff.chill && f.eff.chill.n === 2, `빙결 = 첫 타 1 + 메아리 1 (지금 ${f.eff.chill && f.eff.chill.n})`);
+}
+{ // 깨트려드리죠. = 상대 빙결 2겹이면 첫 타가 얼리고 메아리 타가 깨기(위력 ×2 · 얼음 풀림 · 면역 없음)
+  const b = mk('me', 'frost_bell', { stage: 1 }), f = mk('foe', 'aqua');
+  turn(b, f, SKILLS.u_frost_1, OTHER, 1);
+  f.eff.chill = { n: 2, last: 2 };
+  const ev = turn(b, f, SKILLS.u_frost_2, OTHER, 2, () => 0.5);
+  const hits = ev.filter(e => e.t === 'hit' && e.who === 'me');
+  ok(ev.some(e => e.t === 'fx' && e.to === 'foe' && e.id === 'frozen') && !f.eff.skip && !f.eff.immune, '얼리고 → 메아리 타가 깨서 쉼 · 면역 없음');
+  ok(hits.length === 2 && hits[1].dmg > 0, '깨기 타가 들어감');
+}
+{ // 정적을 유지하세요. = 봉인 하나 · 아침이면 메아리로 다른 기술 하나 더
+  const b = mk('me', 'frost_bell', { stage: 1 }), f = mk('foe', 'aqua');
+  turn(b, f, SKILLS.u_frost_1, OTHER, 1);
+  let x = 0.1; const rng = () => { x = (x + 0.37) % 1; return x; };
+  turn(b, f, SKILLS.u_frost_2b, OTHER, 2, rng);
+  ok(f.eff.seal && f.eff.seal.more && f.eff.seal.more.length === 1 && f.eff.seal.more[0] !== f.eff.seal.skill, '메아리 봉인 = 다른 기술 하나 더');
+  const locked = f.kit.filter(s => !canUse(f, s, 8, b)).map(s => s.id);
+  ok(locked.includes(f.eff.seal.skill) && locked.includes(f.eff.seal.more[0]), '두 기술 모두 못 씀');
+}
+{ // 이제 밤이군요. = 양쪽 앞 식물 햇빛 안 참 · 교체로 들어온 식물도 · 프로스트벨이 나가면 사라짐
+  const b = mk('me', 'frost_bell', { stage: 2 }), f = mk('foe', 'aqua'), f2 = mk('foe2', 'thorn');
+  turn(b, f, SKILLS.u_frost_3, OTHER, 1);
+  ok(has(b, 'night') && has(f, 'night'), '밤 = 양쪽 앞 식물에');
+  const { noEnergy } = await import('../../v2/src/battle/status.js');
+  ok(noEnergy(b) && noEnergy(f), '밤엔 양쪽 다 턴 끝 햇빛이 안 참');
+  moveEnv(f, f2); clearOnSwitch(f);
+  turn(b, f2, OTHER, OTHER, 2);
+  ok(has(f2, 'night') && noEnergy(f2), '교체로 들어온 상대 식물도 밤');
+  const m = mk('me2', 'aqua');
+  moveEnv(b, m); clearOnSwitch(b);
+  turn(m, f2, OTHER, OTHER, 3);
+  ok(!has(m, 'night') && !has(f2, 'night') && !b.st.bell, '프로스트벨이 나가면 밤이 사라짐');
+}
+{ // 밤 메아리가 아침보다 셈 · 청아함의 물결 = 정화 + 회복(메아리면 더) · 예로부터 = 무속성 3연타 광역, 메아리면 6타
+  const mor = mk('me', 'frost_bell', { stage: 2 }), nig = mk('me', 'frost_bell', { stage: 2 }), f1 = mk('foe', 'aqua'), f2 = mk('foe', 'aqua');
+  turn(mor, f1, SKILLS.u_frost_1, OTHER, 1); turn(nig, f2, SKILLS.u_frost_3, OTHER, 1);
+  const e1 = turn(mor, f1, SKILLS.u_frost_3c, OTHER, 2, () => 0.5), e2 = turn(nig, f2, SKILLS.u_frost_3c, OTHER, 2, () => 0.5);
+  const h1 = e1.filter(e => e.t === 'hit' && e.who === 'me'), h2 = e2.filter(e => e.t === 'hit' && e.who === 'me');
+  ok(h1.length === 6 && h2.length === 6, `예로부터 = 3연타 + 메아리 3타 (아침 ${h1.length} · 밤 ${h2.length})`);
+  ok(h2[3].dmg > h1[3].dmg, '밤 메아리 타가 아침보다 셈');
+  ok(SKILLS.u_frost_3c.el === null && SKILLS.u_frost_3c.area, '예로부터 = 무속성 광역');
+  const c = mk('me', 'frost_bell', { stage: 2, eff: { poison: { n: 2, last: 1 }, burn: { exp: 5 } } }), f3 = mk('foe', 'aqua');
+  c.hp = Math.round(c.max * 0.4); const h0 = c.hp;
+  turn(c, f3, SKILLS.u_frost_3b, OTHER, 1);
+  const healed = c.hp - h0;
+  ok(healed > 0 && !c.eff.poison && !c.eff.burn, '청아함의 물결 = 정화 + 회복');
+  const c2 = mk('me', 'frost_bell', { stage: 2 }), f4 = mk('foe', 'aqua');
+  turn(c2, f4, SKILLS.u_frost_1, OTHER, 1);
+  c2.hp = Math.round(c2.max * 0.4); const h2b = c2.hp;
+  turn(c2, f4, SKILLS.u_frost_3b, OTHER, 2);
+  ok(c2.hp - h2b > healed, '아침 중이면 회복이 메아리 몫만큼 더');
+}
+{ // 메아리는 방어태세 · 회피 자세엔 없음 · 광합성은 +0.5
+  const b = mk('me', 'frost_bell'), f = mk('foe', 'aqua');
+  turn(b, f, SKILLS.u_frost_1, OTHER, 1);
+  const ev = turn(b, f, B('guard'), OTHER, 2);
+  ok(!ev.some(e => e.t === 'echo'), '방어태세엔 메아리 없음');
+  b.energy = 2; const ev2 = turn(b, f, B('sun'), OTHER, 3);
+  ok(ev2.some(e => e.t === 'echo') && Math.abs(b.energy - 4.5) < 1e-9, `광합성 + 메아리 0.5 (지금 ${b.energy})`);
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

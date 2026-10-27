@@ -82,6 +82,8 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
     if (a.gain.set) resOf(u)[a.gain.k] = Math.min(capOf(u, a.gain.k), n); else addRes(u, a.gain.k, n);
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
   }
+  if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
+  if (a.healPct && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * a.healPct * (x.healK ?? 1) * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 바로 회복(최대 체력 몫 — 청아함의 물결 · 메아리면 그 몫만큼 더)
   if (a.moss) mossAct(u, foe, ev);   // 이끼덮기
   if (a.orbRefill && u.orb) u.orb.n = u.orb.max - u.orb.trap;   // 구슬 회수
   if (a.orbAbsorb && u.hp > 0) { const n = u.st.orbSpent || 0, before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * ORB.absorb * n * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); if (u.st.orbFull) selfBuff(u, 'purify', { turn: T, ev }); }   // 구슬흡수(가득이면 전부 정화)
@@ -330,6 +332,29 @@ function burstAct(u, foe, ctx) {
   if (!foe || foe.hp <= 0) return;
   const tgt = frontSum(foe) || foe;
   for (let i = 0; i < n; i++) apply(tgt, 'spore', 1, { ...ctx, by: u });
+}
+
+// 프로스트벨 아침 · 밤(SPECIES.bell = { 아침: 메아리 몫, 밤: 메아리 몫 } · 2026-10-23 설계 · 10-28 교체 · 필드 확정):
+//  켜 둔 프로스트벨이 앞에 있고 3턴 안이면 양쪽 앞 식물에 그 환경(필드 — 교체로 들어온 식물도) · 프로스트벨이 나가거나 끝나면 걷음
+export function bellSync(A, B, T, ev) {
+  const owner = {};
+  for (const x of [A, B]) if (x && x.hp > 0 && SP(x).bell && x.st && x.st.bell && x.st.bell.exp >= T && !owner[x.st.bell.kind]) owner[x.st.bell.kind] = x;
+  for (const z of [A, B]) {
+    if (!z || z.hp <= 0) continue;
+    for (const k of ['morning', 'night']) {
+      const c = z.eff && z.eff[k], x = owner[k];
+      if (x && !(c && c.by === x.id)) { (z.eff ||= {})[k] = { env: true, by: x.id, exp: x.st.bell.exp }; ev.push({ t: 'fx', who: x.id, to: z.id, name: z.name, id: k, list: listOf(z) }); }
+      else if (!x && c) { delete z.eff[k]; ev.push({ t: 'expire', who: z.id, ids: [k], list: listOf(z) }); }
+    }
+  }
+}
+// 메아리 몫(아침 · 밤이 켜진 동안 · 0 = 없음)
+export const echoK = (u, T) => { const b = SP(u).bell, s = u && u.st && u.st.bell; return b && s && s.exp >= T ? b[s.kind] || 0 : 0; };
+// 메아리 한 번의 기술 값: 위력 · 능력치 겹 값 · 회복은 몫만큼 · 빙결 · 독은 한 겹 그대로 · 봉인은 다른 기술 하나 더 · 기간만 있는 효과는 그대로(긴 쪽)
+export function echoAct(a, k) {
+  const inf = a.inflict, D = inf && FX[inf.id];
+  const inflict = !inf ? inf : inf.id === 'chill' || inf.id === 'poison' ? { ...inf, n: 1 } : D && D.stat ? { ...inf, v: (inf.v ?? D.v) * k } : inf.id === 'seal' ? { ...inf, extra: true } : inf;
+  return { ...a, power: a.power ? Math.max(1, Math.round(a.power * k)) : a.power, inflict, echoK: k, bell: undefined };
 }
 
 // 볼트바인 구슬(SPECIES.orbs · 수치 status.js ORB): 처음 보면 칸을 만들고 기본 햇빛 칸을 줄임 · 홀수 턴 시작에 가득(덫에 나간 것 빼고)

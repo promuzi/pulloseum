@@ -32,6 +32,8 @@ export const FX = {
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
   gale:    { env: true, turns: 2, missAdd: 12 },
   orbTrap: { env: true },   // 봉인 구슬 덫(볼트바인 — 내 쪽 지형: 교체 · 쓰러져도 남고 내 쪽 앞 식물이 맞을 때마다 하나씩 터짐 · devices.orbTrapBurst)
+  morning: { env: true },   // 아침(프로스트벨 — 필드: 양쪽 앞 식물 · 프로스트벨이 나가면 사라짐 · devices.bellSync 가 깔고 걷음 · 메아리만)
+  night:   { env: true },   // 밤(프로스트벨 — 필드: 양쪽 앞 식물 자연 햇빛이 안 참 · 교체로 들어와도 · 메아리 더 셈)
   cave:    { env: true },   // 동굴(스톤캡 타고남 — 스톤캡이 나와 있는 동안 상대 쪽 · 기간 없음 · devices.caveSync 가 깔고 걷음)              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
   taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
@@ -62,11 +64,11 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will'];
+const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night'];
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'morning', 'night', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -138,7 +140,7 @@ export function pasDmgK(att, def) {
   return k;
 }
 export const mustSkip = u => has(u, 'skip');
-export const noEnergy = u => has(u, 'dark');   // 암실(그늘) = 그 턴 끝 자연 햇빛이 안 참
+export const noEnergy = u => has(u, 'dark') || has(u, 'night');   // 암실(그늘) · 밤(프로스트벨 필드) = 그 턴 끝 자연 햇빛이 안 참
 // 교체할 수 있나: 쉬는 차례(기절 · 마비 · 얼음) · 속박 · 도발(다음 1턴 — from ≤ 턴 T)이면 못 함. T를 안 주면 걸려 있기만 해도 막음(화면)
 export const canSwitch = (u, T = Infinity) => { const e = (u && u.eff) || {}; return !e.skip && !(e.root && e.root.from <= T) && !(e.taunt && e.taunt.from <= T); };
 // 고를 수 있는 기술: 에너지 · 덩굴로 묶인 칸 · 도발(자세 금지)
@@ -158,12 +160,15 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (s.caveAdd && s.act === 'hex' && !(foe && has(foe, 'cave') && !caveAdds(foe).includes(s.caveAdd))) return false;   // 설치 = 동굴이 있을 때 · 같은 설치는 한 번(지반붕괴는 공격이라 늘 씀)
   if (usesLeft(u, s) <= 0) return false;
   if (!canUseRes(u, s)) return false;   // 공통 장치: 개수 · 모드 · 체력 비용(devices.js)
+  if (s.bell && u.st && u.st.bell) return false;   // 아침 · 밤 = 하나만 켜짐 · 덧씌우기 불가(꺼진 갱신 차례에만)
   const e = u.eff || {};
-  if (e.seal && e.seal.skill === s.id) return false;
+  if (sealed(e, s.id)) return false;
   if (e.taunt && s.act !== 'attack') return false;   // 도발 = 대표 분류가 공격인 기술만(공격 + 버프 · 회복도 됨)
   return true;
 }
-export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return e.seal && e.seal.skill === s.id ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : null; };
+export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return sealed(e, s.id) ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : null; };
+// 봉인된 기술인가: 처음 뽑힌 하나(skill) + 메아리로 더 막힌 것(more — 프로스트벨 정적을 유지하세요)
+function sealed(e, id) { return !!(e.seal && (e.seal.skill === id || (e.seal.more || []).includes(id))); }
 
 // 창에 보일 목록(이로운 것 먼저 · 숫자 = 쌓인 수만)
 export function listOf(u) {
@@ -253,6 +258,13 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
     if (id === 'root' && e.rooted) { ev.push({ t: 'resist', ...base, why: 'once', list: listOf(tgt) }); return; }   // 교체로 나갔다 들어오기 전까지 한 번만
     const at = { from: T + 1, exp: T + (o.turns ?? D.turns) };
+    if (id === 'seal' && o.extra && e.seal && e.seal.from === at.from) {   // 메아리 봉인(프로스트벨): 같은 턴 걸린 봉인에 다른 기술 하나 더
+      const left = (tgt.kit || []).filter(k => !sealed(e, k.id)), pick = left[Math.floor((ctx.rng ? ctx.rng() : 0) * left.length)];
+      if (!pick) return;
+      (e.seal.more ||= []).push(pick.id);
+      ev.push({ t: 'fx', ...base, skill: pick.name, list: listOf(tgt) });
+      return;
+    }
     if (id === 'seal') {   // 손패 전체에서 하나를 무작위로 — 기본기도(2026-10-21) · 햇빛이 모자라거나 횟수를 다 써 못 쓸 기술도(2026-10-23 사용자 '봉인걸때 못쓸 기술도 뽑힐 수 있게 해')
       const kit = tgt.kit || [], pick = kit[Math.floor((ctx.rng ? ctx.rng() : 0) * kit.length)];
       if (!pick) return;
@@ -385,6 +397,7 @@ export function expire(u, turn, ev) {
   const gone = [];
   for (const k of TIMED) if (e[k] && e[k].exp <= turn) { delete e[k]; gone.push(k); }
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
+  if (u.st && u.st.bell && u.st.bell.exp <= turn) delete u.st.bell;   // 프로스트벨 아침 · 밤 3턴이 끝남 → 다음 턴부터 다시 켤 수 있음
   if (gone.length) ev.push({ t: 'expire', who: u.id, ids: gone, list: listOf(u) });
 }
 // 3:3 교체로 나갈 때: 준비 효과 · 환경 등만 지움(DROP) — 나머지는 남아 대기석에서도 턴마다 진행(model.closeTurn) · 소환수는 주인이 나가면 사라짐
@@ -392,6 +405,7 @@ export function clearOnSwitch(u) {
   const e = u.eff;
   if (e) for (const k of DROP) delete e[k];
   delete u.summons;
+  if (u.st) delete u.st.bell;   // 프로스트벨이 나가면 아침 · 밤이 사라짐(2026-10-28 사용자) — 필드 표시는 다음 턴 처음 devices.bellSync 가 걷음
 }
 // 교체 때 환경을 다음 앞 식물로(환경은 그 쪽 진영의 것 — 2026-10-21 게일캑터 '교체해도 강풍이 끝날 때까지 남고 그때 앞에 선 식물에게')
 export function moveEnv(from, to) {

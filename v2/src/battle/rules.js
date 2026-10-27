@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct } from './devices.js';
 import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -130,6 +130,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   stOf(A); stOf(B);
   const T = o.turn || 0, skipped = new Set();
   caveSync(A, B, ev);   // 스톤캡 동굴: 앞에 나와 있으면 상대 쪽에 깔고, 나가면 걷음
+  bellSync(A, B, T, ev);   // 프로스트벨 아침 · 밤(필드): 켠 프로스트벨이 앞에 있으면 양쪽 앞 식물에, 나갔거나 끝났으면 걷음
   summonStart(A, B, T, ev, rng); summonStart(B, A, T, ev, rng);
   orbStart(A, T); orbStart(B, T);   // 볼트바인 구슬: 홀수 턴 시작에 가득(덫에 나간 것 빼고)   // 스포어캡 소환수: 잠든 포자가 깨어나고 깨어난 것은 평타
   fieldStart(o.field, T, [A, B], ev);   // 경기장 효과(공통 장치 D10): 끝난 효과 걷기 · 비 = 화상 꺼짐
@@ -170,15 +171,31 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (mustSkip(u)) { consumeSkip(u, T, ev, a.act === 'skip' ? 0 : a.cost || 0); skipped.add(u); return 'rest'; }
     if (a.act === 'skip') { skipped.add(u); if (a.blocked) { blockedRest(u, T, ev); return 'rest'; } return 'pass'; }   // 다 막혀 쉼 = 다음 턴 면역 · 시간 초과로 넘어감 = 그냥 지나감
     const spent = payAct(u, a, T, ev);   // 개수 · 체력 · 햇빛 내기
+    const ek = echoK(u, T);   // 프로스트벨 메아리 몫(아침 · 밤이 켜진 동안 — 이번 기술이 켜는 것이면 0)
     if (u === first) firstUp(u, T, ev);   // 게일바인: 선공하면 활력 한 겹
     if (a.act === 'guard' || a.act === 'evade') {
       showStance(u);
       return 'acted';
     }
-    if (a.act === 'sun') { const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); return 'acted'; }   // 광합성(기본기 — 햇빛 +2)
+    if (a.act === 'sun') {   // 광합성(기본기 — 햇빛 +2) · 메아리면 그 몫만큼 더(아침 = +0.5)
+      const e0 = u.energy || 0; u.energy = Math.min(u.energyMax || 8, e0 + (a.gain || 2)); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 });
+      if (ek) { const e1 = u.energy; u.energy = Math.min(u.energyMax || 8, e1 + (a.gain || 2) * ek); ev.push({ t: 'echo', who: u.id, id: a.id, k: ek }); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e1, echo: true }); }
+      return 'acted';
+    }
     const selfAll = () => { for (const b of [a.self, a.also]) if (b) selfBuff(u, b, { turn: T, ev }, a); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
-    if (a.act === 'buff') { ev.push({ t: 'cast', who: u.id, id: a.id }); if (isReflect(a)) showStance(u, 'reflect'); selfAll(); afterAct(u, a, foe, T, ev, { spent, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); return 'acted'; }
-    if (a.act === 'hex') { ev.push({ t: 'cast', who: u.id, id: a.id }); hexAct(u, foe, a, { turn: T, rng, ev }); afterAct(u, a, foe, T, ev, { spent, rng }); return 'acted'; }   // 피해 없이 상대에게 거는 기술(종 고유 v2)
+    // 메아리 덤(나에게): 능력치 겹은 그 몫의 값 · 보호막은 그 몫만큼 더 · 정화는 한 번 더 · 기간만 있는 효과는 그대로(긴 쪽이라 바뀌지 않음)
+    const selfEcho = ea => { for (const b of [ea.self, ea.also]) { if (!b) continue; if (FX[b] && FX[b].stat) selfBuff(u, b, { turn: T, ev }, { v: FX[b].v * ea.echoK }); else if (b === 'shield' && u.eff && u.eff.shield) u.eff.shield.hp += Math.max(1, Math.round(u.max * FX.shield.hp * ea.echoK)); else if (b === 'purify') selfBuff(u, b, { turn: T, ev }, ea); } };
+    if (a.act === 'buff') {
+      ev.push({ t: 'cast', who: u.id, id: a.id }); if (isReflect(a)) showStance(u, 'reflect'); selfAll(); afterAct(u, a, foe, T, ev, { spent, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev);
+      if (a.bell) bellSync(A, B, T, ev);   // 아침 · 밤을 켬 → 바로 필드에
+      if (ek && !isReflect(a)) { const ea = echoAct(a, ek); ev.push({ t: 'echo', who: u.id, id: a.id, k: ek }); selfEcho(ea); afterAct(u, ea, foe, T, ev, { spent: 0, rng, healK: ek }); }
+      return 'acted';
+    }
+    if (a.act === 'hex') {   // 피해 없이 상대에게 거는 기술(종 고유 v2)
+      ev.push({ t: 'cast', who: u.id, id: a.id }); hexAct(u, foe, a, { turn: T, rng, ev }); afterAct(u, a, foe, T, ev, { spent, rng });
+      if (ek && foe.hp > 0) { ev.push({ t: 'echo', who: u.id, id: a.id, k: ek }); hexAct(u, foe, { ...a, hex: (a.hex || []).map(h => echoAct({ inflict: h }, ek).inflict), caveAdd: null, burst: false, galeAdd: null }, { turn: T, rng, ev }); }
+      return 'acted';
+    }
     if (a.act !== 'attack') { ev.push({ t: 'act', who: u.id, id: a.id }); return 'acted'; }
     const r = strike(u, foe, a);
     if (r.hard) evCounter(foe, u, T, ev, rng);
@@ -205,6 +222,15 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       foe.curEl = L.el;
       strike(foe, u, { act: 'attack', cats: ['attack'], contact: true, ...L, id: L.id, name: L.name, el: L.el }, { link: true });
       foe.curEl = el0;
+    }
+    // 메아리(프로스트벨 — 2026-10-22 사용자 '선공에 공격하면 바로 그다음에 또 들어가는 거야'): 같은 차례에 기술 전체를 한 번 더(연타면 다 끝난 뒤) ·
+    //  위력 = 몫만큼 · 따로 맞히기 판정 · 그 순간 상대 상태로 다시 정함(깨트려드리죠 = 첫 타로 얼었으면 메아리 타가 깨기)
+    if (ek && foe.hp > 0 && u.hp > 0) {
+      ev.push({ t: 'echo', who: u.id, id: a.id, k: ek });
+      const ea = dynAct(u, echoAct(ch || actOf(u), ek), foe, rng), r2 = strike(u, foe, ea);
+      if (r2.hard) evCounter(foe, u, T, ev, rng);
+      if (r2.landed && u.hp > 0 && foe.eff && foe.eff.orbTrap && foe.eff.orbTrap.n > 0) orbTrapBurst(foe, u, T, ev, rng);
+      if (u.hp > 0) { selfEcho(ea); afterAct(u, ea, foe, T, ev, { spent: 0, landed: r2.landed, bonusHit: ea.bonusHit, rng, healK: ek }); }
     }
     noteFall(foe, ev); noteFall(u, ev);   // 맞은 쪽 먼저(되받아치기 · 반사는 그 뒤에 일어남)
     if (foe.hp <= 0 || u.hp <= 0) {
