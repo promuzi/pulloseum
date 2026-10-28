@@ -80,7 +80,7 @@ import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubb
 import { ga, eul, eun, ro } from '../core/josa.js';
 import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
 import { fieldGround, fieldAir, ARRIVE_MS } from '../art/fieldfx.js';   // 환경을 경기장에(2026-10-29 ㉠)
-import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡)
+import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX, fxIdsOf } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡) · 공개 카드 효과 아이콘(㉥ 시안)
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
 const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale',
@@ -251,7 +251,13 @@ function sunPips(g, x, y, cur, max, gap, t) {
 //  포자 = 이름 + 개수(아이콘 오른쪽 위) + 가장 빨리 피기까지 남은 턴(아이콘 오른쪽 아래) — 같은 날 사용자 "포자도 이름 붙여줘"
 //  정렬 = 같은 날 사용자 "아이콘은 왼쪽 정렬. 글자는 우측정렬해줘. 독같은 경우 너무 가운데에 몰린 느낌" → "글자를 우측 정렬말고, 아이콘을 제외한 영역 내에서 중앙 정렬로하자"
 const SW_W = 45, SW_H = 20, SW_GAP = 2;
-function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 줄 수(넘치면 마지막 칸 = +n) · up = 줄이 위로 쌓임(y = 첫 줄 — 내 효과 창: 체력판 바로 위 줄부터, 2026-10-23 사용자 "내 체력바에 가까운 쪽이 먼저차고 한 줄 벗어나면 바깥으로")
+// ㉤ 처음 보는 효과 = 칸 · 띠 오른쪽 위에 깜빡이는 작은 점(2026-10-29 — 누르면 설명이 나온다는 표시가 없었음) · 효과 설명 창을 한 번 열면 그때 보이던 효과는 '봤음'(이 기기 localStorage)
+const SEEN_KEY = 'pullo.seenfx';
+let SEEN = null;
+const seenFx = () => { if (!SEEN) { SEEN = new Set(); try { for (const id of JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')) SEEN.add(id); } catch {} } return SEEN; };
+const markFx = ids => { const S = seenFx(); let ch = false; for (const id of ids) if (id && !S.has(id)) { S.add(id); ch = true; } if (ch) try { localStorage.setItem(SEEN_KEY, JSON.stringify([...S])); } catch {} };
+function newDot(g, x, y, t) { g.rect(x - 1, y - 1, 5, 5, '#0b1220'); g.rect(x, y, 3, 3, Math.floor(t / 400) % 2 ? '#c96a10' : '#ffb627'); }
+function statusWins(g, x, y, list, rows = 2, up = false, t = null) {   // t = 지금 시각(주면 처음 보는 효과에 점)   // rows = 보일 줄 수(넘치면 마지막 칸 = +n) · up = 줄이 위로 쌓임(y = 첫 줄 — 내 효과 창: 체력판 바로 위 줄부터, 2026-10-23 사용자 "내 체력바에 가까운 쪽이 먼저차고 한 줄 벗어나면 바깥으로")
   const cap = rows * 3, shown = list.length > cap ? [...list.slice(0, cap - 1), { more: list.length - (cap - 1) }] : list, gh = glyphH('body'), ty = (SW_H - gh) / 2, bf = sized('bold', 9);
   shown.forEach((st, i) => {
     const c = i % 3, X = x + c * (SW_W + SW_GAP), w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W, Y = y + (up ? -1 : 1) * Math.floor(i / 3) * (SW_H + 2);
@@ -272,6 +278,7 @@ function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 �
     let cx = tl + Math.max(ic ? 0 : 2, (tr - tl - rest) >> 1);
     g.text(D.name, cx, Y + ty, { color: S.text }); cx += nw + 2;
     if (tail) g.text(tail, cx, Y + ty, { color: S.num });
+    if (t != null && !seenFx().has(st.id)) newDot(g, X + w - 4, Y + 1, t);
   });
 }
 // 환경 띠(2026-10-23 사용자 "환경 상태는 다른 UI로 다른 위치에" → "ㄷ으로 하자. 다만 상대환경은 위에. 내 환경은 스킬창과 체력바 사이 거기에" · "쉽게 위는 적. 아래는 나"):
@@ -280,7 +287,7 @@ const ENV_H = 20;
 // 효과 조각(2026-10-29 ㉢ — 사용자 "이게 뭐가 어떻게 되는지 파악되기 전에 슥슥 지나가"): 걸린 식물 머리 위(환경 = 그 땅)에 [아이콘 이름] 조각이 톡 → 잠깐 머묾 → 효과 창 칸(환경 = 띠)으로 날아가 꽂힘(그때 칸이 생기며 반짝)
 //  효과 걸림 단계 0.85초 → 1초(환경 1.15초 — 땅이 먼저 바뀐 뒤 띠로) · 같은 식물에 잇따라 걸리면 둘째부터 0.7초(앞 조각이 날아가는 동안 다음 조각이 톡 — 무릎 꿇어라 셋이 3초 → 2.4초)
 const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480;
-function envBand(g, x, y, w, list, turn) {
+function envBand(g, x, y, w, list, turn, t = null) {   // t = 지금 시각(주면 처음 보는 환경이 있을 때 띠 오른쪽 위에 점)
   const ty = y + (ENV_H - glyphH('body')) / 2, items = list.map(st => {
     const D = STATUS[st.id] || { name: st.id }, ic = D.icon ? iconMid(D.icon) || icon(D.icon) : null, left = st.exp != null ? `${Math.max(1, st.exp - turn + 1)}턴` : '';
     return { D, ic, left, w: (ic ? ic.width + 3 : 0) + g.textW(D.name) + (left ? 4 + g.textW(left, 'bold') : 0) };
@@ -295,6 +302,7 @@ function envBand(g, x, y, w, list, turn) {
     if (it.left) { g.text(it.left, cx, ty, { font: 'bold', color: it.D.col || '#c0a8ff' }); cx += g.textW(it.left, 'bold'); }
     cx += 10;
   }
+  if (t != null && list.some(st => !seenFx().has(st.id))) newDot(g, x + bw - 5, y + 2, t);
   return bw;
 }
 // 전투 사건 문구(이름 = 그 사건 때의 식물)
@@ -850,6 +858,8 @@ export const battle = {
     const B = this.B, v = this.v;
     v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn;
     for (const k of v.tok || []) k.done = true; v.cast = null; v.effSeq = {};   // 턴 끝 = 판의 효과 목록을 그대로(아래) — 날아가던 조각은 끝냄
+    const lt = B.log && B.log[B.log.length - 1];   // ㉥ 시안: 상대가 방금 쓴 카드(쉼 · 교체한 턴은 그 전 카드를 그대로)
+    if (lt && lt.foeSkill && lt.foeSkill.act !== 'skip' && lt.foeSkill.name && lt.foeSkill.name !== '기술' && lt.foeSwitch == null) v.foeLast = lt.foeSkill;
     // 판이 끝나면 쓰러짐 연출로 이미 사라진 식물은 그대로 둠(2026-10-16 사용자 "승리 문구 뜨면서 사라졌던 식물이 다시 나와서 사라지는 효과")
     if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = B.over ? Object.fromEntries(['me', 'foe'].filter(s => v.gone[s] && B[s].hp <= 0).map(s => [s, true])) : {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
     if (B.over) {
@@ -988,9 +998,15 @@ export const battle = {
     const rowsFit = top => Math.min(2, Math.floor((headY - top + 2) / (SW_H + 2)));
     let foeCompact = false, foeRows = rowsFit(foeY + boxH(false) + 3);
     if (foeRows < 1 && theirs.length) { foeCompact = true; foeRows = Math.max(1, rowsFit(foeY + boxH(true) + 3)); }
-    if (fEnv.length && fOff > 1) g.alpha(Math.min(1, fOff / (ENV_H + 2)), () => envBand(g, 6, foeY - ENV_H - 2, BOX_W, fEnv, v.turn));
+    if (fEnv.length && fOff > 1) g.alpha(Math.min(1, fOff / (ENV_H + 2)), () => envBand(g, 6, foeY - ENV_H - 2, BOX_W, fEnv, v.turn, t));
     const fh = infoBox(app, 6, foeY, v.view.foe, v.bar.foe, v.en.foe, false, foeTeam, foeCompact);
-    statusWins(g, 6, foeY + fh + 3, theirs, Math.max(1, foeRows));
+    statusWins(g, 6, foeY + fh + 3, theirs, Math.max(1, foeRows), false, t);
+    this.foeCardR = null;
+    if (v.foeLast && v.phase === 'pick') {   // ㉥ 시안: 상대가 방금 쓴 카드(오른쪽 위) — 고르는 동안 눌러 크게 · 뒷면 설명(공개 2.3초엔 못 읽으니)
+      const x = W - 28, y = AY + 6;
+      rrect(g, x - 2, y - 2, 24, 32, 4, 'rgba(8,13,26,0.6)'); cardTiny(g, x, y, v.foeLast);
+      this.foeCardR = [x, y, 20, 28];
+    }
     this.geo = { foe: { x: 6, y: foeY + fh + 3, up: false, band: [6, AY + 4], bandNow: [6, foeY - ENV_H - 2], list: theirs }, me: null };   // 효과 조각이 꽂힐 자리(drawTokens · 반짝)
     if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = foeY + 4; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
@@ -999,16 +1015,17 @@ export const battle = {
       g.text(label, W / 2, y + (18 - glyphH('body')) / 2, { color: '#e0f0ff', align: 'center' });
     }
     infoBox(app, W - 146, myY, v.view.me, v.bar.me, v.en.me, true);
-    if (mEnv.length && mOff > 1) g.alpha(Math.min(1, mOff / (ENV_H + 2)), () => envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn));
+    if (mEnv.length && mOff > 1) g.alpha(Math.min(1, mOff / (ENV_H + 2)), () => envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn, t));
     const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
-    if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
+    if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true, t);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
     this.geo.me = { x: W - 146, y: myY - 3 - SW_H, up: true, band: [W - 146, MY + boxH(true) - ENV_H], bandNow: [W - 146, myY + boxH(true) + 2], list: mine };
     this.drawFlash(app);   // 꽂힌 칸 · 띠 반짝(㉢)
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     // 효과 설명 = 체력판 · 효과 창을 누르면(2026-10-16 사용자 "맨 아래 효과 버튼은 뭐야? 이거 필요한 거야?" → 아래 단추를 빼고 효과가 보이는 그 자리에서)
     if (live) {
-      const fRows = Math.min(Math.max(1, foeRows), Math.ceil(Math.min(6, theirs.length) / 3)), myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY, open = () => { this.info2 = true; };
+      const fRows = Math.min(Math.max(1, foeRows), Math.ceil(Math.min(6, theirs.length) / 3)), myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY, open = () => { this.info2 = true; markFx([...theirs, ...mine, ...fEnv, ...mEnv].map(s => s.id)); };   // 설명 창을 열면 보이던 효과 = 봤음(점이 꺼짐)
+      if (this.foeCardR) { const R = this.foeCardR; app.input.hit('foe_last', R[0] - 3, R[1] - 3, R[2] + 6, R[3] + 6, () => this.openFoeCard(app), 3); }
       app.input.hit('fx_foe', 6, foeY, BOX_W, fh + (fRows ? 3 + fRows * (SW_H + 2) : 0), open, 2);
       app.input.hit('fx_me', W - 146, myTop, BOX_W, myY + boxH(true) - myTop, open, 2);
       if (fEnv.length) app.input.hit('env_foe', 6, foeY - ENV_H - 2, BOX_W, ENV_H, open, 2);   // 환경 띠를 눌러도 같은 설명 창
@@ -1065,16 +1082,25 @@ export const battle = {
     this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
     app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
   },
+  // ㉥ 시안: 상대가 방금 쓴 카드(오른쪽 위 작은 카드)를 누르면 가운데로 와서 뒤집혀 뒷면(설명) · 아무 데나 누르면 제자리로
+  openFoeCard(app) {
+    const sk = this.v.foeLast, R = this.foeCardR;
+    if (!sk || !R) return;
+    sfx('flip');
+    const { W } = app, k = app.g.c.getTransform().a || 1, me = this.v.view.me, BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
+    const o = { can: true, foe: me ? { name: me.name, el: me.el } : null, mult: sk.act === 'attack' && sk.el && me ? elemMult(sk.el, me.el) : 1 };   // 상대 카드의 '상대' = 나
+    this.peek = { id: 'foe_last', sk, from: { x: R[0], y: R[1], w: R[2], h: R[3] }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t, tap: true };
+  },
   // 꺼내 본 카드: 잡고 있으면 화면 가운데로 다가오며(살짝 떠오름 · 그림자) 원근 있게 뒤집혀 뒷면, 손을 떼면 다시 뒤집혀 제자리로
   drawPeek(app) {
     const { g, W, H, input, t } = app, P = this.peek, c = g.c, k = c.getTransform().a || 1, dt = Math.min(50, Math.max(0, t - P.last));
     P.last = t;
-    const holding = P.pin || input.holding;
+    const holding = P.tap ? !P.closing : P.pin || input.holding;   // P.tap = 눌러서 연 카드(상대가 방금 쓴 카드 — 아무 데나 다시 누르면 닫힘)
     if (!P.pin) P.p = holding ? Math.min(1, P.p + dt / PEEK_OPEN) : Math.max(0, P.p - dt / PEEK_CLOSE);
     if (!holding && P.p <= 0) { this.peek = null; return; }
     const q = P.p, pos = 1 - (1 - q) ** 3, th = Math.PI * (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
     c.fillStyle = `rgba(6,10,18,${(0.62 * pos).toFixed(3)})`; c.fillRect(0, 0, W, H);
-    input.hit('peek_block', 0, 0, W, H, null);
+    input.hit('peek_block', 0, 0, W, H, P.tap && P.p > 0.6 ? () => { P.closing = true; } : null);
     const F = P.from, fx = F.x + F.w / 2, fy = F.y + F.h / 2, tx = W / 2, ty = Math.round((AY + (this.lay ? this.lay.HY : H - PANEL_H)) / 2) + 4;
     const cx = fx + (tx - fx) * pos, cy = fy + (ty - fy) * pos - Math.sin(pos * Math.PI) * 14, w = F.w + (P.BW - F.w) * pos, h = F.h + (P.BH - F.h) * pos;
     const pw = Math.max(2, w * Math.abs(Math.cos(th)));   // 그림자 = 지금 보이는 폭만큼, 다가올수록 크게 번짐
@@ -1094,7 +1120,7 @@ export const battle = {
     }
     const F = st.faces, ox = Math.floor((W - 270) / 2), both = !!(st.mine && st.theirs), cy = Math.round(L.led + 8);
     const OUT0 = ms - RV_OUT, out = age > OUT0 ? Math.min(1, (age - OUT0) / RV_OUT) ** 2 : 0, bt = age - RV_BADGE;
-    c.fillStyle = `rgba(6,10,18,${(0.55 * Math.min(1, age / 220) * (1 - out)).toFixed(3)})`; c.fillRect(0, AY, W, L.AH);
+    c.fillStyle = `rgba(6,10,18,${(0.55 * Math.min(1, age / 220) * (1 - out)).toFixed(3)})`; c.fillRect(0, AY, W, app.H - AY);   // 경기장 아래 끝까지만 덮으면 손패 카드 윗부분에 회색 경계선이 생김(2026-10-29 사용자 '카드 선택 후 선공판정시 이 부분에 회색 선') → 손패까지
     for (const who of ['foe', 'me']) {
       const sk = who === 'me' ? st.mine : st.theirs; if (!sk) continue;
       const [bx, by] = this.at(who), plant = [bx + ox, by - (who === 'me' ? 64 : 56)];   // 식물 몸 가운데쯤
@@ -1108,11 +1134,23 @@ export const battle = {
       else rrect(g, x + 2, y + 4, Math.round(w), Math.round(h), 6, 'rgba(0,0,0,0.4)');
       if (who === 'foe' && age < RV_FLIP0 + RV_FLIP) drawFlip(c, F.foe, F.down, cx, ccy, w, h, Math.PI * (1 - easeInOut(Math.max(0, (age - RV_FLIP0) / RV_FLIP))));
       else c.drawImage(who === 'me' ? F.me : F.foe, x, y, w, h);
+      if (!(who === 'foe' && age < RV_FLIP0 + RV_FLIP)) this.revealFx(g, sk, x, y, w, h);   // ㉥ 시안: 거는 효과 아이콘(앞면일 때)
       const u = v.view[who];
       if (u && !out && age > RV_IN) g.text(u.name, Math.round(cx), y + Math.round(h) + 5, { font: 'bold', color: '#e6f3ff', align: 'center', outline: T.ink, outlineW: 2 });   // 누구 카드인지(카드 아래 식물 이름)
       c.restore();
       if (st.first && bt > (lead ? 0 : RV_LAG)) { const q = Math.min(1, (bt - (lead ? 0 : RV_LAG)) / 200); this.orderBadge(g, Math.round(cx), y - 15, lead, lead ? 1 + 0.7 * (1 - backOut(q)) : 0.82 + 0.18 * backOut(q), Math.min(1, q * 2) * (1 - out)); }
     }
+  },
+  // ㉥ 시안(2026-10-29 사용자 '상대카드도 설명이 많아지면 읽을 시간이 부족할 거 같은데'): 공개 카드 그림 칸 아래쪽에 그 기술이 거는 효과 아이콘(최대 셋) — 글 대신 한눈에
+  //  손패 카드의 위력 칸은 그대로(2026-10-16 사용자 '버프·디버프는 비워') · 공개 카드에만
+  revealFx(g, sk, x, y, w, h) {
+    const ics = fxIdsOf(sk).map(id => iconMid(STATUS[id].icon) || icon(STATUS[id].icon)).filter(Boolean);
+    if (!ics.length) return;
+    const s = w / RV_W, iw = 18, gap = 2, pw = ics.length * iw + (ics.length - 1) * gap + 8, ph = iw + 6, c = g.c;
+    c.save(); c.translate(x + w / 2, y + h * 0.62); c.scale(s, s);
+    rrect(g, Math.round(-pw / 2) - 1, Math.round(-ph / 2) - 1, pw + 2, ph + 2, 6, T.ink); rrect(g, Math.round(-pw / 2), Math.round(-ph / 2), pw, ph, 5, 'rgba(14,22,40,0.92)');
+    ics.forEach((ic, i) => g.img(ic, Math.round(-pw / 2 + 4 + i * (iw + gap) + (iw - ic.width) / 2), Math.round(-ic.height / 2)));
+    c.restore();
   },
   // 선공 · 후공 표: 선공 = 금빛 큰 표 · 후공 = 남색 작은 표, (cx, cy) 가운데 · s = 크기 배수(튀어나옴)
   orderBadge(g, cx, cy, first, s, al) {

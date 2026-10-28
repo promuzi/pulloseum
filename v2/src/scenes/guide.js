@@ -41,6 +41,16 @@ export const GUIDES = [
       { at: 'fx_foe', text: '상대 체력판이에요. 체력판을 누르면 양쪽에 걸린 효과를 볼 수 있어요.' },
       { at: 'bt_flag', text: '깃발은 기권이에요. 기권한 판은 진 판으로 남아요.' },
     ] },
+  // 2026-10-29 사용자 '보통 꾹눌러야 설명이 나오는 경우 선택해서 못 읽어보지 않나?' → 손패는 한 번에 쓰기 그대로(사용자 'ㄴ으로') + 효과가 처음 생긴 판에 한 번 더 알려 줌(전에 'battle'을 본 사람도)
+  { id: 'battle_fx', scene: 'battle', when: (app, sc) => !!(sc.v && sc.geo && ((sc.geo.foe && sc.geo.foe.list.length) || (sc.geo.me && sc.geo.me.list.length) || sc.envs('foe').length || sc.envs('me').length)), btn: app => [app.W - 21, 4],
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
+    auto: (app, sc) => sc.net !== 'pvp',
+    pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
+    steps: [
+      { at: ['fx_foe', 'env_foe'], text: '효과 칸이나 환경 띠를 누르면 무슨 효과인지, 몇 턴 남았는지 나와요. 처음 보는 효과엔 작은 점이 떠요.' },
+      { at: 'foe_last', text: '상대가 방금 쓴 카드예요. 누르면 크게 뒤집어서 설명을 읽을 수 있어요.' },
+      { at: 'sk_*', text: '내 카드도 꾹 누르고 있으면 뒷면에 설명이 나와요. 손을 떼면 기술은 나가지 않아요.' },
+    ] },
   { id: 'battle3', scene: 'battle', when: (app, sc) => sc.mode === 'swap3', btn: app => [app.W - 21, 4],
     ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',

@@ -50,6 +50,16 @@ export function castShake(C, t) { const age = t - C.t0; return (C.kind === 'fiel
 // 상대에게 거는 것(curse)이 닿는 순간 맞는 쪽 움찔(1~2칸)
 export const curseHit = C => (C && C.kind === 'curse' ? REL + 520 : null);
 export function targetKick(C, t) { const h = curseHit(C); if (h == null) return 0; const k = t - C.t0 - h; return k >= 0 && k < 150 ? (Math.floor(k / 50) % 2 ? 1 : -2) : 0; }
+// ㉥ 시안(2026-10-29 사용자 '상대카드도 설명이 많아지면 읽을 시간이 부족할 거 같은데' → 글 대신 아이콘): 이 기술이 거는 효과(상태 id · 아이콘이 있는 것만 · 최대 셋)
+//  환경 · 거는 것(hex · inflict · inflicts) · 나에게(self · also · 첫째/둘째 쓸 때 덤)
+export function fxIdsOf(s) {
+  if (!s || s.swap) return [];
+  const out = [], add = id => { if (id && STATUS[id] && STATUS[id].icon && !out.includes(id)) out.push(id); };
+  add(ENV_OF(s));
+  for (const h of s.hex || []) add(h.id);
+  for (const o of [s, s.onFirst, s.onSecond]) if (o) { if (o.inflict) add(o.inflict.id); for (const f of o.inflicts || []) add(f.id); add(o.self); add(o.also); }
+  return out.slice(0, 3);
+}
 // 효과음: 모으기 · 터뜨림(종류마다)
 export const CAST_SFX = { self: 'release', curse: 'whoosh', field: 'slam', bell: 'purify', ward: 'slam', summon: 'spore' };
 
