@@ -110,7 +110,7 @@ export function evadeK(def, att) {
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
 export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1) * (stormOn(u) ? 1 - FX.atkDown.v : 1);
-export const FRUIT = { def: 0.2, eat: 0.08 };   // 드라코프루트 빙결열매: 하나당 방어 +20% · 열매 먹기 하나당 회복 8%(임시 — 밸런스 때)
+export const FRUIT = { def: 0.2, eat: 0.12 };   // 드라코프루트 빙결열매: 하나당 방어 +20% · 열매 먹기 하나당 회복 12%(8% → 12% 2026-10-29 성체 기준 · 빙결 폭풍 100과 함께 45.3%)
 export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1) * (1 + ((u && u.eff && u.eff.fruit && u.eff.fruit.n) || 0) * FRUIT.def);
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) + (stormOn(u) ? FX.accDown.v : 0) + (caveAdds(u).includes('gravel') ? CAVE.gravel.acc : 0) - statSum(u, 'acc');

@@ -471,7 +471,7 @@ const V2 = {
       S('u_draco_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
       S('u_draco_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'] }),
       S('u_draco_3', '빙결 브레스', 'ice', 'u', 60, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),
-      S('u_draco_3b', '빙결 폭풍', 'wind', 'u', 70, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),
+      S('u_draco_3b', '빙결 폭풍', 'wind', 'u', 100, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),   // 위력 70 → 100(2026-10-29 성체 기준 16.8% → 맞춤, 사용자 '단순 수치는 너 추천대로 해')
       S('u_draco_3c', '열매 던지기', null, 'u', 35, 0, { fruitUse: 'throw', hits: 1, perHitInflict: { id: 'chill', n: 1 } }),
     ],
   },
@@ -523,7 +523,7 @@ const V2 = {
     sp: {},
     skills: [
       S('u_aqua_1', '치유의 물', 'water', 'u', 0, 1, { cats: ['heal_hp'], cleanseHeal: { base: 0.24, per: 0.06 } }),   // 기본 회복 4% → 24%(2026-10-29 리그전 19% → 맞춤, 임시)
-      S('u_aqua_2', '정죄', 'water', 'u', 30, 2, { inflicts: [{ id: 'atkDown' }, { id: 'defDown' }] }),
+      S('u_aqua_2', '정죄', 'water', 'u', 50, 2, { inflicts: [{ id: 'atkDown' }, { id: 'defDown' }] }),   // 위력 30 → 50(2026-10-29 성체 기준)
       S('u_aqua_2b', '청산', 'water', 'u', 0, 2, { act: 'hex', cats: ['attack'], settle: { per: 0.06, cap: 5 } }),
       S('u_aqua_3', '윤회', 'water', 'u', 0, 1, { act: 'hex', cats: ['debuff'], cycle: true }),
       S('u_aqua_3b', '번뇌', 'bolt', 'u', 60, 3, { inflict: { id: 'wet' } }),
@@ -545,10 +545,10 @@ const V2 = {
   flower_grass: {   // 1. 페탈로즈 — 검방술(순서 분기): 먼저/나중에 따라 같은 기술이 다르게 · 2026-10-18 설계(장치 시험 tools/test/devices.mjs 그대로) · 10-28 지금 규칙 대조(막기 = 그 턴 모든 타 · 철벽 → 억셈 · 만개 = 공통 강화 겹)
     sp: {},
     skills: [
-      S('u_petal_1', '검방술(기본)', 'grass', 'u', 58, 1, { tag: 'sword', contact: true, onFirst: { pierce: 0.3, guardWith: true, guardDefMult: 2 }, onSecond: { power: 48, guardWith: true, guardDefMult: 3, counterPct: 0.3 } }),   // 위력 50 · 40 → 58 · 48(2026-10-29 리그전 39% → 맞춤, 임시)
+      S('u_petal_1', '검방술(기본)', 'grass', 'u', 50, 1, { tag: 'sword', contact: true, onFirst: { pierce: 0.3, guardWith: true, guardDefMult: 2 }, onSecond: { power: 40, guardWith: true, guardDefMult: 3, counterPct: 0.3 } }),   // 위력 50 · 40(2026-10-29 새싹 손패에 맞춰 58 · 48로 올렸다가 성체 기준으로 되돌림)
       S('u_petal_2', '검방술(공세)', 'grass', 'u', 22, 2, { tag: 'sword', contact: true, hits: 3, onFirst: { evadeWith: true, shift: { miss: 10, graze: 6 } }, onSecond: { evadeWith: true, shift: { miss: 15, graze: 10 }, nextCrit: 50 } }),
       S('u_petal_2b', '기합', 'grass', 'u', 0, 1, { onFirst: { self: 'defUp' }, onSecond: { self: 'spdUp' } }),
-      S('u_petal_3', '검방술(오의)', 'grass', 'u', 28, 4, { tag: 'sword', contact: true, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { reflect: true }, onSecond: { guardWith: true, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),
+      S('u_petal_3', '검방술(오의)', 'grass', 'u', 40, 4, { tag: 'sword', contact: true, strikes: [{}, {}, { pierce: 0.3 }, { pierce: 0.3 }], onFirst: { reflect: true }, onSecond: { guardWith: true, guardDefMult: 2, onBlock: { stun: 0.4 }, ifFoe: { has: 'stun', then: { power: 120, strikes: null, hits: 1, pierce: 0.5 } } } }),   // 타당 위력 28 → 40(2026-10-29 성체 기준)
       S('u_petal_3b', '불타는 의지', 'grass', 'u', 0, 1, { infuse: { el: 'fire', n: 2, tag: 'sword' } }),
       S('u_petal_3c', '만개', 'grass', 'u', 0, 2, { self: 'flourish' }),
     ],
@@ -561,11 +561,11 @@ const V2 = {
       S('u_frost_2b', '정적을 유지하세요.', 'wind', 'u', 60, 2, { inflict: { id: 'seal' } }),
       S('u_frost_3', '이제 밤이군요.', 'ice', 'u', 0, 2, { bell: 'night' }),
       S('u_frost_3b', '청아함의 물결.', 'ice', 'u', 0, 2, { cats: ['heal_hp'], self: 'purify', healPct: 0.2 }),
-      S('u_frost_3c', '예로부터 매가 약이었죠.', null, 'u', 40, 3, { area: true, hits: 3 }),
+      S('u_frost_3c', '예로부터 매가 약이었죠.', null, 'u', 55, 3, { area: true, hits: 3 }),   // 타당 위력 40 → 55(2026-10-29 성체 기준)
     ],
   },
   cactus_wind: {   // 10. 게일캑터 — 방해 디버프 기술 · 강풍이 부는 턴 끝마다 공명 +1, 3이면 무속성 확정 치명(치명 방어엔 정타)
-    sp: { res: { reso: [0, 3, '공명'] }, reso: { k: 'reso', at: 3, power: 45, count: ['gale', 'accDown', 'critDown', 'seal'] } },
+    sp: { res: { reso: [0, 3, '공명'] }, reso: { k: 'reso', at: 3, power: 55, count: ['gale', 'accDown', 'critDown', 'seal'] } },
     skills: [
       S('u_gale_1', '시작의 공명', 'wind', 'u', 0, 1, { act: 'hex', cats: ['debuff'], hex: [{ id: 'gale', turns: 3 }, { id: 'atkDown' }] }),
       S('u_gale_2', '길 잃은 주파수', 'wind', 'u', 0, 2, { act: 'hex', cats: ['debuff'], hex: [{ id: 'accDown' }, { id: 'critDown' }] }),
@@ -582,7 +582,7 @@ const V2 = {
       S('u_gvine_2', '이딴게.. 공격?', 'wind', 'u', 0, 2, { act: 'hex', cats: ['debuff'], hex: [{ id: 'taunt' }, { id: 'accDown' }] }),
       S('u_gvine_2b', '휙- 푹찍', 'wind', 'u', 70, 2, { late: true, critIfDodged: true }),
       S('u_gvine_3', '방심하기', 'wind', 'u', 0, 1, { bare: 0.6 }),
-      S('u_gvine_3b', '빠르지? 열받지?', 'wind', 'u', 24, 3, { hits: 3, inflict: { id: 'gale', turns: 3 } }),
+      S('u_gvine_3b', '빠르지? 열받지?', 'wind', 'u', 36, 3, { hits: 3, inflict: { id: 'gale', turns: 3 } }),   // 타당 위력 24 → 36(2026-10-29 성체 기준)
       S('u_gvine_3c', '피해?', 'wind', 'u', 80, 4, { early: true, sure: true }),
     ],
   },
@@ -591,7 +591,7 @@ const V2 = {
     skills: [
       S('u_stone_1', '낙석', 'earth', 'u', 60, 1, { inflict: { id: 'stun', p: 0.15 } }),
       S('u_stone_2', '자갈밭', 'earth', 'u', 0, 2, { act: 'hex', cats: ['debuff'], caveAdd: 'gravel' }),
-      S('u_stone_2b', '석순', 'earth', 'u', 80, 2, { noShield: true }),
+      S('u_stone_2b', '석순', 'earth', 'u', 90, 2, { noShield: true }),   // 위력 80 → 90(2026-10-29 성체 기준 — 다른 종이 세져 39.6%로)
       S('u_stone_3', '용암지대', 'fire', 'u', 0, 3, { act: 'hex', cats: ['debuff'], caveAdd: 'lava' }),
       S('u_stone_3b', '지반붕괴', 'earth', 'u', 70, 3, { area: true, inflict: { id: 'stun', p: 0.25 }, caveAdd: 'collapse' }),
       S('u_stone_3c', '이끼덮기', 'grass', 'u', 0, 2, { cats: ['heal_hp'], moss: true }),
@@ -612,7 +612,7 @@ const V2 = {
     sp: { orbs: true },
     skills: [
       S('u_volt_1', '수호 구슬', 'bolt', 'u', 0, 1, { cats: ['guard'], orbGuard: true }),
-      S('u_volt_2', '전격 구슬', 'bolt', 'u', 25, 1, { orbDump: true }),
+      S('u_volt_2', '전격 구슬', 'bolt', 'u', 30, 1, { orbDump: true }),   // 한 타 위력 25 → 30(2026-10-29 성체 기준)
       S('u_volt_2b', '구슬 회수', 'bolt', 'u', 0, 2, { cats: ['buff'], orbRefill: true }),
       S('u_volt_3', '봉인 구슬', 'grass', 'u', 0, 2, { cats: ['debuff'], orbTrap: true }),
       S('u_volt_3b', '뇌격구', 'bolt', 'u', 25, 1, { area: true, orbBlast: true, inflict: { id: 'burn' } }),
