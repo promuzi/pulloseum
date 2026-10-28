@@ -66,10 +66,10 @@ export function drawCast(g, C, t, P) {
   const r = age - REL;
   if (r < 0) return;
   if (C.kind === 'self') {   // 빛기둥: 발밑에서 위로 솟았다 사라짐 + 반짝이가 기둥을 타고 오름
-    const rise = oQ(cl(r / 140)), fade = 1 - cl((r - 380) / 360), H = 116 * rise;
-    box(g, x - 9, y - H, 18, H, col, 0.22 * fade); box(g, x - 4, y - H, 8, H, col, 0.45 * fade); box(g, x - 1, y - H, 2, H, '#ffffff', 0.8 * fade);
-    ring(g, x, y, 22 + r / 30, (22 + r / 30) * 0.36, col, 0.7 * fade);
-    for (let k = 0; k < 8; k++) { const b = r - k * 55, u = cl(b / 520); if (b < 0 || u >= 1) continue; dot(g, x + (hash(k, 9) - 0.5) * 22, y - 8 - u * 100, k % 2 ? '#ffffff' : col, (1 - u) * fade, 2); }
+    const rise = oQ(cl(r / 140)), fade = 1 - cl((r - 380) / 360), H = 120 * rise;   // 2026-10-29 녹화: 가운데 흰 줄만 보여 기둥을 넓힘
+    box(g, x - 14, y - H, 28, H, col, 0.2 * fade); box(g, x - 7, y - H, 14, H, col, 0.42 * fade); box(g, x - 2, y - H, 4, H, '#ffffff', 0.85 * fade);
+    ring(g, x, y, 24 + r / 26, (24 + r / 26) * 0.36, col, 0.8 * fade); ring(g, x, y + 1, 22 + r / 26, (22 + r / 26) * 0.36, '#ffffff', 0.5 * fade);
+    for (let k = 0; k < 8; k++) { const b = r - k * 55, u = cl(b / 520); if (b < 0 || u >= 1) continue; dot(g, x + (hash(k, 9) - 0.5) * 28 - 1, y - 8 - u * 104, k % 2 ? '#ffffff' : col, (1 - u) * fade, 3); }
   } else if (C.kind === 'curse') {   // 문양 구슬: 몸 가운데 → 대상 가운데로 휘어 날아가 터짐(마름모 문양이 돌며 꼬리)
     const fly = cl((r - 40) / 480), hit = curseHit(C) - REL;
     const pos = u => { const sx = x, sy = cy, ex = tx, ey = ty - 46, mx = (sx + ex) / 2, my = Math.min(sy, ey) - 38; return [(1 - u) ** 2 * sx + 2 * (1 - u) * u * mx + u * u * ex, (1 - u) ** 2 * sy + 2 * (1 - u) * u * my + u * u * ey]; };
@@ -106,14 +106,17 @@ export function drawCast(g, C, t, P) {
     }
   } else if (C.kind === 'bell') {   // 종소리: 머리 높이에서 고리 셋이 차례로 크게 퍼짐(경기장 전체)
     for (let k = 0; k < 3; k++) { const b = r - k * 170, u = cl(b / 640); if (b < 0 || u >= 1) continue; const R = 8 + 120 * oQ(u); ring(g, x, y - 70, R, R * 0.55, col, 1 - u); ring(g, x, y - 70, R + 1, (R + 1) * 0.55, col, (1 - u) * 0.7); ring(g, x, y - 70, R - 2, (R - 2) * 0.55, '#ffffff', (1 - u) * 0.6); }
-  } else if (C.kind === 'ward') {   // 설치: 내 받침 둘레에 고리 둘이 번지고 흙이 튐
-    for (let k = 0; k < 2; k++) { const b = r - k * 150, u = cl(b / 520); if (b < 0 || u >= 1) continue; const R = 14 + 54 * oQ(u); ring(g, x, y, R, R * 0.36, col, 1 - u); }
-    for (let d = 0; d < 10; d++) { const u = cl(r / 420), a = (d / 10) * Math.PI * 2; if (u >= 1) break; dot(g, x + Math.cos(a) * 30 * oQ(u), y + Math.sin(a) * 10 * oQ(u) - Math.sin(Math.PI * u) * 10, '#cdb48a', 1 - u, 1); }
-  } else if (C.kind === 'summon') {   // 소환: 포자 알갱이 셋이 내 옆 자리로 톡톡
+  } else if (C.kind === 'ward') {   // 설치: 내 받침 둘레에 굵은 고리 둘이 번지고 흙 · 빛 알갱이가 튐(2026-10-29 녹화: 1칸 고리 · 흙은 폰에서 거의 안 보여 굵게)
+    for (let k = 0; k < 2; k++) { const b = r - k * 150, u = cl(b / 560); if (b < 0 || u >= 1) continue; const R = 16 + 60 * oQ(u); ring(g, x, y, R, R * 0.36, col, 1 - u); ring(g, x, y + 1, R - 1, (R - 1) * 0.36, col, 0.8 * (1 - u)); ring(g, x, y - 1, R - 3, (R - 3) * 0.36, '#ffffff', 0.6 * (1 - u)); }
+    for (let d = 0; d < 14; d++) { const u = cl(r / 480), a = (d / 14) * Math.PI * 2 + 0.2; if (u >= 1) break; dot(g, x + Math.cos(a) * 36 * oQ(u) - 1, y + Math.sin(a) * 12 * oQ(u) - Math.sin(Math.PI * u) * 14, d % 3 ? '#cdb48a' : col, 1 - u, 2); }
+  } else if (C.kind === 'summon') {   // 소환: 포자 알갱이 셋이 내 옆 자리로 톡톡 떨어지고 떨어진 자리에 작은 고리(2026-10-29 녹화: 3칸 알갱이는 폰에서 점이라 2배)
     for (let k = 0; k < 3; k++) {
-      const b = r - k * 110, u = cl(b / 460); if (b < 0 || u >= 1) continue;
-      const ex = x + (C.who === 'me' ? -1 : 1) * (26 + k * 14), ey = y - 12, mx = (x + ex) / 2, my = cy - 30, px = (1 - u) ** 2 * x + 2 * (1 - u) * u * mx + u * u * ex, py = (1 - u) ** 2 * cy + 2 * (1 - u) * u * my + u * u * ey;
-      dot(g, px - 1, py - 1, col, 1, 3); dot(g, px, py, '#ffffff', 1);
+      const b = r - k * 110; if (b < 0) continue;
+      const ex = x + (C.who === 'me' ? -1 : 1) * (28 + k * 16), ey = y - 6 + k * 3;
+      if (b < 460) {
+        const u = b / 460, mx = (x + ex) / 2, my = cy - 34, px = Math.round((1 - u) ** 2 * x + 2 * (1 - u) * u * mx + u * u * ex), py = Math.round((1 - u) ** 2 * cy + 2 * (1 - u) * u * my + u * u * ey);
+        g.disc(px, py, 5, '#3a2a10'); g.disc(px, py, 4, col); dot(g, px - 2, py - 2, '#ffffff', 1, 2);
+      } else if (b < 760) { const u = (b - 460) / 300; ring(g, ex, ey, 6 + 12 * oQ(u), (6 + 12 * oQ(u)) * 0.4, col, 1 - u); ring(g, ex, ey, 4 + 9 * oQ(u), (4 + 9 * oQ(u)) * 0.4, '#ffffff', 0.7 * (1 - u)); }
     }
   }
 }
