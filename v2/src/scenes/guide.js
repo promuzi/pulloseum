@@ -31,28 +31,28 @@ export const GUIDES = [
       { at: 'gd_help', text: '처음 보는 화면엔 이렇게 안내가 떠요. 다시 보려면 이 ? 를 누르세요.' },
     ] },
   { id: 'battle', scene: 'battle', btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',   // 친구 대결은 시간이 서버에서 흐름 — 저절로는 봇 판에서만(? 는 언제나)
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },   // 안내를 보는 동안 시간 막대 멈춤
     steps: [
       { at: 'sk_*', text: '카드를 누르면 그 기술을 써요. 꾹 누르고 있으면 뒷면에 자세한 설명이 나와요.' },
       { at: 'fx_me', text: '내 체력과 햇빛이에요. 햇빛은 턴마다 1씩 차고, 카드 왼쪽 위 숫자만큼 써요.' },
       { at: (app, sc) => sc.timerR, side: 'above', text: '이 막대가 다 줄기 전에 골라요. 시간을 넘기면 이번 턴은 쉬어요.' },
-      { at: 'fx_foe', text: '상대 체력판이에요. 체력판을 누르면 양쪽에 걸린 효과를 볼 수 있어요.' },
+      { at: 'fx_foe', text: '상대 체력판이에요. 체력바 밑에 효과 표시가 생기면 눌러서 무슨 효과인지 볼 수 있어요.' },
       { at: 'bt_flag', text: '깃발은 기권이에요. 기권한 판은 진 판으로 남아요.' },
     ] },
   // 2026-10-29 사용자 '보통 꾹눌러야 설명이 나오는 경우 선택해서 못 읽어보지 않나?' → 손패는 한 번에 쓰기 그대로(사용자 'ㄴ으로') + 효과가 처음 생긴 판에 한 번 더 알려 줌(전에 'battle'을 본 사람도)
   { id: 'battle_fx', scene: 'battle', when: (app, sc) => !!(sc.v && sc.geo && ((sc.geo.foe && sc.geo.foe.list.length) || (sc.geo.me && sc.geo.me.list.length) || sc.envs('foe').length || sc.envs('me').length)), btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [
-      { at: ['fx_foe', 'env_foe'], text: '효과 칸이나 환경 띠를 누르면 무슨 효과인지, 몇 턴 남았는지 나와요.' },
-      { at: 'foe_last', text: '상대가 쓴 카드가 위에서부터 최근 순으로 쌓여요. 누르면 크게 뒤집어서 설명을 읽을 수 있어요.' },
+      { at: (app, sc) => sc.fxTarget && sc.fxTarget(), text: '이 효과 표시를 누르면 그 식물에 걸린 효과가 무엇인지, 몇 턴 남았는지 나와요.' },   // 2026-10-29 사용자 '체력바 하단에 있는 표시를 누르는거였어' — 상대 체력바 밑 칸 먼저(없으면 내 칸 · 환경 띠)
+      { at: 'foe_pile', text: '상대가 쓴 카드는 오른쪽 위에 쌓여요. 누르면 펼쳐서 지금까지 쓴 카드를 다 볼 수 있어요.' },
       { at: 'sk_*', text: '내 카드도 꾹 누르고 있으면 뒷면에 설명이 나와요. 손을 떼면 기술은 나가지 않아요.' },
     ] },
   { id: 'battle3', scene: 'battle', when: (app, sc) => sc.mode === 'swap3', btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [
@@ -60,7 +60,7 @@ export const GUIDES = [
       { at: 'fx_foe', text: '상대 이름 옆 칸은 상대에게 남은 식물이에요.' },
     ] },
   { id: 'battle_mut', scene: 'battle', when: (app, sc) => !!(sc.B && sc.B.me && sc.B.me.kit && sc.B.me.kit.some(k => k.mut)), btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 햇빛을 쓰지 않고, 판마다 쓸 수 있는 횟수가 정해져 있어요(왼쪽 위 숫자). 다 쓰면 그 판엔 못 써요.' }] },

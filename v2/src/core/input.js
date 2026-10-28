@@ -48,7 +48,7 @@ export class Input {
       if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
       const r = this.hitAt(p.x, p.y);
       // now 영역(구글 로그인 창 등)은 다음 그림 장까지 미루지 않고 이 뗀 순간에 바로 — 아이폰 사파리는 사람이 누른 그 순간(이벤트 안)에 연 창만 허락함(2026-10-22, 전엔 다음 장에서 열어 막혔음)
-      if (!d.moved && !d.held && r && r.id === d.id) { if (r.now && r.fn) { tapSound(r.id); r.fn(); } else this.queue.push({ type: 'tap', region: r }); this.flash = { id: r.id, t: now() }; }
+      if (!d.moved && !d.held && r && r.id === d.id) { if (r.now && r.fn) { if (!r.quiet) tapSound(r.id); r.fn(); } else this.queue.push({ type: 'tap', region: r }); this.flash = { id: r.id, t: now() }; }
       if (d.moved) {
         const a = d.hist[0], b = d.hist[d.hist.length - 1], dt = Math.max(16, b.t - a.t);
         this.queue.push({ type: 'release', dx: p.x - d.x0, dy: p.y - d.y0, x0: d.x0, y0: d.y0, vx: (b.x - a.x) / dt * 1000, vy: (b.y - a.y) / dt * 1000 });
@@ -66,8 +66,8 @@ export class Input {
   begin() { this.regions = []; this.marks = []; }
   // 그린 자리(꺼진 단추도) — 처음 안내가 가리킬 곳을 찾을 때(누르는 자리는 꺼진 단추엔 없음)
   mark(id, x, y, w, h) { this.marks.push({ id, x, y, w, h }); }
-  // 영역 등록. pad = 보이는 크기보다 넓은 투명 터치 여유
-  hit(id, x, y, w, h, fn, pad = 0, now = false) { this.regions.push({ id, x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2, fn, now }); }
+  // 영역 등록. pad = 보이는 크기보다 넓은 투명 터치 여유 · quiet = 누름 소리(tap) 없음 — 제 소리를 내는 영역(전투 손패 카드)
+  hit(id, x, y, w, h, fn, pad = 0, now = false, quiet = false) { this.regions.push({ id, x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2, fn, now, quiet }); }
   hitAt(x, y) { for (let i = this.regions.length - 1; i >= 0; i--) { const r = this.regions[i]; if (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h) return r; } return null; }
   isPressed(id) { return this.pressedId === id || (!!this.flash && this.flash.id === id && performance.now() - this.flash.t < 160); }   // 누른 뒤 0.16초는 눌린 모양(2026-10-17)
   holdMs() { const d = this.down; return d && !d.moved && !d.held ? performance.now() - d.t0 : 0; }
@@ -79,7 +79,7 @@ export class Input {
   flush(scene) {
     const q = this.queue; this.queue = [];
     for (const ev of q) {
-      if (ev.type === 'tap' && ev.region.fn) { tapSound(ev.region.id); ev.region.fn(); }
+      if (ev.type === 'tap' && ev.region.fn) { if (!ev.region.quiet) tapSound(ev.region.id); ev.region.fn(); }
       else if (ev.type === 'drag' && scene && scene.onDrag) scene.onDrag(ev.dy, ev.dx, ev);
       else if (ev.type === 'release' && scene && scene.onRelease) scene.onRelease(ev);
     }

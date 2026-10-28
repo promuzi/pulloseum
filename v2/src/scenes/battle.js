@@ -15,7 +15,7 @@ import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.j
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
-import { cardFront, cardSlot, renderFaces, renderDown, renderSwapFront, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -283,7 +283,15 @@ function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 �
 const ENV_H = 20;
 // 효과 조각(2026-10-29 ㉢ — 사용자 "이게 뭐가 어떻게 되는지 파악되기 전에 슥슥 지나가"): 걸린 식물 머리 위(환경 = 그 땅)에 [아이콘 이름] 조각이 톡 → 잠깐 머묾 → 효과 창 칸(환경 = 띠)으로 날아가 꽂힘(그때 칸이 생기며 반짝)
 //  효과 걸림 단계 0.85초 → 1초(환경 1.15초 — 땅이 먼저 바뀐 뒤 띠로) · 같은 식물에 잇따라 걸리면 둘째부터 0.7초(앞 조각이 날아가는 동안 다음 조각이 톡 — 무릎 꿇어라 셋이 3초 → 2.4초)
-const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, FOE_HIST = 4;   // FOE_HIST = 상대가 쓴 카드 기록 장 수(㉥)
+const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, FOE_HIST = 40;   // FOE_HIST = 상대가 쓴 카드 기록 장 수(판 전체 — 넉넉히 마흔)
+// 상대 카드 더미(오른쪽 위) · 펼쳐 보기: 새 카드가 날아와 앉는 시간 · 펼칠 때 한 장이 자리 잡는 시간 · 장 사이 시차 · 다시 모일 때 · 더미 카드 크기(손패 카드를 줄인 그림) · 밑 카드 비낌
+const PILE_IN = 440, SPREAD_IN = 300, SPREAD_STAG = 28, SPREAD_OUT = 220, PILE_W = 28, PILE_H = 38, PILE_OFF = [[0, 0], [-2, 3], [2, 5], [-1, 7]];
+const pileTilt = turn => (((turn * 37) % 9) - 4) * 0.03;   // 밑 카드 기울기(카드마다 정해짐 — 새 카드가 앉아도 밑 카드는 안 돌아감)
+// 쓸 수 있는 손패 카드 둘레 빛(손맛 — 2026-10-29): 카드 밖 3칸에 하늘빛을 계단처럼(도트) — 바깥 칸부터 겹쳐 칠해 안쪽 칸일수록 진함(카드 바로 밖 ≈ 0.75 · 둘째 ≈ 0.42 ·셋째 ≈ 0.18) ·
+//  안쪽은 카드가 덮음 · a = 세기 0~1(숨 쉬듯 오르내림 · 누르면 1) — 그림자 번짐(shadowBlur)은 1칸 줄 그리기라 거의 안 보였음
+function cardGlow(g, x, y, w, h, a, col = '#8fe0ff') {
+  for (const [d, k] of [[3, 0.18], [2, 0.29], [1, 0.57]]) g.alpha(a * k, () => rrect(g, x - d, y - d, w + d * 2, h + d * 2, 5 + d, col));
+}
 function envBand(g, x, y, w, list, turn) {
   const ty = y + (ENV_H - glyphH('body')) / 2, items = list.map(st => {
     const D = STATUS[st.id] || { name: st.id }, ic = D.icon ? iconMid(D.icon) || icon(D.icon) : null, left = st.exp != null ? `${Math.max(1, st.exp - turn + 1)}턴` : '';
@@ -363,7 +371,7 @@ export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   // 1초 60장이 필요한 때(main.js 장 수 — 그 밖엔 30장): 기술이 오가는 동안 · 승패가 갈린 뒤 2.5초
   fast(app) { const v = this.v; return !!v && (v.phase === 'play' || (v.phase === 'over' && app.t - v.overT0 < 2500)); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.lift = {}; this.denyAt = null; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -854,10 +862,10 @@ export const battle = {
     const B = this.B, v = this.v;
     v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn;
     for (const k of v.tok || []) k.done = true; v.cast = null; v.effSeq = {};   // 턴 끝 = 판의 효과 목록을 그대로(아래) — 날아가던 조각은 끝냄
-    const lt = B.log && B.log[B.log.length - 1];   // ㉥ 시안: 상대가 방금 쓴 카드(쉼 · 교체한 턴은 그 전 카드를 그대로)
+    const lt = B.log && B.log[B.log.length - 1];   // 상대가 이번 턴에 쓴 카드(쉼 · 교체한 턴은 더미에 안 쌓임)
     if (lt && lt.foeSkill && lt.foeSkill.act !== 'skip' && lt.foeSkill.name && lt.foeSkill.name !== '기술' && lt.foeSwitch == null) {
       v.foeLast = lt.foeSkill;
-      (v.foeHist ||= []).unshift({ sk: lt.foeSkill, turn: B.turn - 1, t0: app.t }); v.foeHist.length = Math.min(v.foeHist.length, FOE_HIST);   // 상대가 쓴 카드 기록(최근 FOE_HIST장 · 맨 위 = 방금)
+      (v.foeHist ||= []).unshift({ sk: lt.foeSkill, turn: B.turn - 1, t0: app.t, u: B.foe }); v.foeHist.length = Math.min(v.foeHist.length, FOE_HIST);   // 상대 카드 더미(맨 앞 = 방금 · u = 쓴 식물 — 3:3에서 누가 썼는지)
     }
     // 판이 끝나면 쓰러짐 연출로 이미 사라진 식물은 그대로 둠(2026-10-16 사용자 "승리 문구 뜨면서 사라졌던 식물이 다시 나와서 사라지는 효과")
     if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = B.over ? Object.fromEntries(['me', 'foe'].filter(s => v.gone[s] && B[s].hp <= 0).map(s => [s, true])) : {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
@@ -1000,21 +1008,11 @@ export const battle = {
     if (fEnv.length && fOff > 1) g.alpha(Math.min(1, fOff / (ENV_H + 2)), () => envBand(g, 6, foeY - ENV_H - 2, BOX_W, fEnv, v.turn));
     const fh = infoBox(app, 6, foeY, v.view.foe, v.bar.foe, v.en.foe, false, foeTeam, foeCompact);
     statusWins(g, 6, foeY + fh + 3, theirs, Math.max(1, foeRows));
-    this.foeCardR = null; this.foeHistR = [];
-    const hist = v.phase === 'pick' ? v.foeHist || [] : [];
-    if (hist.length) {   // ㉥ 시안: 상대가 쓴 카드 기록(오른쪽 위 세로 줄 · 맨 위 = 방금 — 2026-10-29 사용자 '상대가 전에 쓴 카드를 읽어보게 하는 건 어때?' · 하스스톤 지난 수 기록처럼) — 고르는 동안 눌러 크게 · 뒷면 설명
-      const x = W - 28, y0 = AY + 6, gap = 33, k = Math.min(1, Math.max(0, (t - hist[0].t0) / 320)), ke = 1 - (1 - k) ** 3;   // 새 카드가 들어오면 아래 카드들이 한 칸씩 밀려 내려감
-      rrect(g, x - 3, y0 - 3, 26, (hist.length - 1) * gap + 34, 5, 'rgba(8,13,26,0.55)');
-      hist.forEach((h, i) => {
-        const y = Math.round(i ? y0 + (i - 1 + ke) * gap : y0 - (1 - ke) * 8);
-        g.alpha(i ? 0.78 : ke, () => {
-          if (!i) { rrect(g, x - 2, y - 2, 24, 32, 5, '#ff9aa8'); rrect(g, x - 1, y - 1, 22, 30, 4, '#0b1322'); }   // 방금 쓴 카드 = 상대 색 테
-          cardTiny(g, x, y, h.sk);
-        });
-        this.foeHistR[i] = [x, y, 20, 28];
-      });
-      this.foeCardR = this.foeHistR[0];
-    }
+    const fRows = Math.min(Math.max(1, foeRows), Math.ceil(Math.min(6, theirs.length) / 3));
+    // 효과 표시 = 체력바 밑 효과 칸(2026-10-29 사용자 '상태이상은 우측상단에 따로 누르는게 아니고 체력바 하단에 있는 표시를 누르는거였어') — 누르는 동안 살짝 밝아짐 · 처음 안내가 가리킬 자리(fxTarget)
+    if (app.input.isPressed('fx_foe')) g.alpha(0.13, () => rrect(g, 6, foeY, BOX_W, fh + (fRows ? 3 + fRows * (SW_H + 2) - 2 : 0), 4, '#ffffff'));
+    this.fxR = { foe: fRows ? [6, foeY + fh + 3, BOX_W, fRows * (SW_H + 2) - 2] : null, envFoe: fEnv.length ? [6, foeY - ENV_H - 2, BOX_W, ENV_H] : null };
+    this.pileR = (v.foeHist || []).length ? this.drawPile(app, v.foeHist, t) : null;   // 상대 카드 더미(오른쪽 위)
     this.geo = { foe: { x: 6, y: foeY + fh + 3, up: false, band: [6, AY + 4], bandNow: [6, foeY - ENV_H - 2], list: theirs }, me: null };   // 효과 조각이 꽂힐 자리(drawTokens · 반짝)
     if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = foeY + 4; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
@@ -1026,14 +1024,17 @@ export const battle = {
     if (mEnv.length && mOff > 1) g.alpha(Math.min(1, mOff / (ENV_H + 2)), () => envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn));
     const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
     if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
+    const myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY;
+    if (app.input.isPressed('fx_me')) g.alpha(0.13, () => rrect(g, W - 146, myTop, BOX_W, myY + boxH(true) - myTop, 4, '#ffffff'));
+    this.fxR.me = rows ? [W - 146, myTop, BOX_W, myY - 3 - myTop] : null; this.fxR.envMe = mEnv.length ? [W - 146, myY + boxH(true) + 2, BOX_W, ENV_H] : null;
     this.geo.me = { x: W - 146, y: myY - 3 - SW_H, up: true, band: [W - 146, MY + boxH(true) - ENV_H], bandNow: [W - 146, myY + boxH(true) + 2], list: mine };
     this.drawFlash(app);   // 꽂힌 칸 · 띠 반짝(㉢)
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
-    const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
+    const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek && !this.spread;
     // 효과 설명 = 체력판 · 효과 창을 누르면(2026-10-16 사용자 "맨 아래 효과 버튼은 뭐야? 이거 필요한 거야?" → 아래 단추를 빼고 효과가 보이는 그 자리에서)
     if (live) {
-      const fRows = Math.min(Math.max(1, foeRows), Math.ceil(Math.min(6, theirs.length) / 3)), myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY, open = side => () => { this.info2 = side; this.infoScroll = 0; this.infoT0 = app.t; };   // 누른 쪽 식물 것만(2026-10-29 사용자 '내걸 누르면 내거만. 상대걸 누르면 상대것만')
-      (this.foeHistR || []).forEach((R, i) => app.input.hit(i ? 'foe_h' + i : 'foe_last', R[0] - 3, R[1] - 2, R[2] + 6, R[3] + 4, () => this.openFoeCard(app, i), 3));
+      const open = side => () => { this.info2 = side; this.infoScroll = 0; this.infoT0 = app.t; };   // 누른 쪽 식물 것만(2026-10-29 사용자 '내걸 누르면 내거만. 상대걸 누르면 상대것만')
+      if (this.pileR && v.phase === 'pick') app.input.hit('foe_pile', ...this.pileR, () => this.openSpread(app), 3);   // 상대 카드 더미 → 펼쳐 보기(고르는 동안)
       app.input.hit('fx_foe', 6, foeY, BOX_W, fh + (fRows ? 3 + fRows * (SW_H + 2) : 0), open('foe'), 2);
       app.input.hit('fx_me', W - 146, myTop, BOX_W, myY + boxH(true) - myTop, open('me'), 2);
       if (fEnv.length) app.input.hit('env_foe', 6, foeY - ENV_H - 2, BOX_W, ENV_H, open('foe'), 2);   // 환경 띠를 눌러도 그 쪽 설명 창
@@ -1046,6 +1047,7 @@ export const battle = {
     else this.miscRow(app, HY + hrows * CARD_H + (hrows - 1) * CARD_GY + 8, live);
     this.drawTokens(app);   // 효과 조각(㉢) — 손패 위로도 날아가니 맨 위에
     if (st && st.kind === 'reveal') this.drawReveal(app, st);
+    if (this.spread) this.drawSpread(app);   // 펼친 상대 카드 — 그 위에 누른 카드가 크게 뒤집힘(drawPeek)
     if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
     if (this.info2) this.infoSheet(app);
@@ -1055,7 +1057,8 @@ export const battle = {
   hand(app, PY0, live, skipNow) {
     const { g, W, input } = app, B = this.B, v = this.v, mh = mutHand(B.me.kit), one = handRows(B.me.kit) === 1 || mh;
     const kit = mh ? [...B.me.kit.filter(s => !isExtra(s)), null, null, null, null].slice(0, 4).concat(B.me.kit.filter(isExtra)) : B.me.kit;   // 카드 칸 기술 = 아래 줄 왼쪽 둘
-    this.cards = {}; this.useWas = this.useWas || {}; this.shineAt = this.shineAt || {};
+    this.cards = {}; this.useWas = this.useWas || {}; this.shineAt = this.shineAt || {}; this.lift = this.lift || {};
+    const hdt = Math.min(50, Math.max(0, app.t - (this.handT ?? app.t))); this.handT = app.t;   // 들림 부드럽게(장 사이 시간)
     const { CW, GX, per, x0 } = handGeo(W, B.me.kit), n = mh ? kit.length : one ? 4 : 6;
     for (let i = 0; i < n; i++) {
       const sk = kit[i], x = x0 + (i % per) * (CW + GX), y = PY0 + CARD_Y + Math.floor(i / per) * (CARD_H + CARD_GY), CARD_W = CW;   // 한 줄 넷 = 좁은 카드(그림은 가운데를 잘라 1배 그대로)
@@ -1065,14 +1068,20 @@ export const battle = {
       if (pickNow) { if (usable && this.useWas[id] === false) this.shineAt[id] = app.t; this.useWas[id] = usable; }   // 쓸 수 있게 된 순간 = 빛 띠
       if ((this.peek && this.peek.id === id) || (lit && v.phase === 'play')) cardSlot(g, x, y, CARD_W, CARD_H);   // 들어 올린 카드의 자리 · 낸 카드(턴 연출 중 — 공개 때 이 자리에서 나감)
       else {
-        const hold = input.down && input.down.id === id ? input.holdMs() : 0, rise = hold > 120 ? Math.min(3, Math.round((hold - 120) / 60)) : 0;   // 꾹 누르는 동안 살짝 들림
-        const down = can && input.isPressed(id) && !rise, sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
-        rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, lit ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.32)');   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
+        // 손맛(2026-10-29 사용자 '3번은 좋아보인다' — 쓸 수 있는 카드는 테두리가 은은하게 빛나고, 누를 때 카드가 들리며 소리가 나요):
+        //  쓸 수 있는 카드 = 둘레 하늘빛이 천천히 숨 쉼(카드마다 조금씩 어긋나 물결) · 누르는 순간 0.1초 남짓에 5칸 들림 + 들림 소리(그림자는 자리에 남아 높이가 보임) · 떼면 '고름' 소리
+        //  못 쓰는 카드 = 들리지 않고 1칸 눌림 · 떼면 좌우로 짧게 떨림 + 막힘 소리 · 꾹(0.32초) 누르면 어느 카드든 뒷면
+        const pressed = !!(input.down && input.down.id === id && !input.down.moved), lv0 = this.lift[id] || 0, lv = this.lift[id] = lv0 + ((pressed && can ? 1 : 0) - lv0) * (1 - Math.exp(-hdt / 40));
+        if (pressed && can && this.liftT !== input.down.t0) { this.liftT = input.down.t0; sfx('lift'); }
+        const da = this.denyAt && this.denyAt.id === id ? app.t - this.denyAt.t : 1e9, shake = da < 240 ? Math.round(Math.sin(da / 240 * Math.PI * 4) * 2 * (1 - da / 240)) : 0;
+        const cy = y - (lit ? 5 : Math.round(lv * 5)) + (pressed && !can ? 1 : 0), sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
+        rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, `rgba(0,0,0,${(lit ? 0.45 : 0.32 + 0.14 * lv).toFixed(3)})`);   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
+        if (can) cardGlow(g, x, cy, CARD_W, CARD_H, Math.min(1, 0.5 + 0.22 * Math.sin((app.t / 1800 + i * 0.13) * Math.PI * 2) + 0.5 * lv));
         const left = sk.uses ? usesLeft(B.me, sk) : null, halved = !!(B.me.st && B.me.st.lastStance && B.me.st.lastStance === sk.act);
         const cd = sk.inferno && B.me.st && B.me.st.infernoLock ? Math.max(1, B.me.st.infernoLock.until - (B.turn || 1) + 1) : null;   // 지옥전개 재사용 대기 = 다시 쓸 수 있을 때까지 남은 턴(지옥이 켜진 동안 포함)
-        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, left, halved, cd, shine: sh != null && sh < 1 ? sh : null });
+        cardFront(g, x + shake, cy, CARD_W, CARD_H, sk, { can: show, short, lit, lock, left, halved, cd, shine: sh != null && sh < 1 ? sh : null });
       }
-      if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => { sfx('select'); this.pick(app, sk); } : () => sfx('deny'), 2);
+      if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => { sfx('select'); this.pick(app, sk); } : () => { sfx('deny'); this.denyAt = { id, t: app.t }; }, 2, false, true);   // quiet = 누름 소리 대신 카드 제 소리
       this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock, left: sk.uses ? usesLeft(B.me, sk) : null, halved: !!(B.me.st && B.me.st.lastStance === sk.act) };
     }
     const d = input.down;
@@ -1090,14 +1099,107 @@ export const battle = {
     this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
     app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
   },
-  // ㉥ 시안: 상대가 쓴 카드 기록(오른쪽 위 작은 카드 i번째)을 누르면 가운데로 와서 뒤집혀 뒷면(설명) · 위에 'N턴' · 아무 데나 누르면 제자리로
-  openFoeCard(app, i = 0) {
-    const H0 = (this.v.foeHist || [])[i], sk = H0 ? H0.sk : this.v.foeLast, R = (this.foeHistR || [])[i] || this.foeCardR;
-    if (!sk || !R) return;
+  // 펼친 상대 카드(drawSpread) i번째를 누르면 가운데로 와서 뒤집혀 뒷면(설명) · 위에 '상대 · N턴'(3:3 = 쓴 식물 이름도) · 아무 데나 누르면 펼친 자리로
+  openFoeCard(app, i, R) {
+    const H0 = (this.v.foeHist || [])[i]; if (!H0 || !R) return;
     sfx('flip');
-    const { W } = app, k = app.g.c.getTransform().a || 1, me = this.v.view.me, BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
+    const { W } = app, sk = H0.sk, k = app.g.c.getTransform().a || 1, me = this.v.view.me, BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
     const o = { can: true, foe: me ? { name: me.name, el: me.el } : null, mult: sk.act === 'attack' && sk.el && me ? elemMult(sk.el, me.el) : 1 };   // 상대 카드의 '상대' = 나
-    this.peek = { id: 'foe_last', sk, from: { x: R[0], y: R[1], w: R[2], h: R[3] }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t, tap: true, turn: H0 ? H0.turn : null };
+    this.peek = { id: 'foe_card', hi: i, sk, from: { x: R[0], y: R[1], w: R[2], h: R[3] }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t, tap: true, turn: H0.turn, who: this.mode === 'swap3' && H0.u ? H0.u.name : null };
+  },
+  // 상대 카드 더미(2026-10-29 사용자 '이전에 쓴 카드를 우측 상단에 겹친 카드더미처럼 싸이게 하고 누르면 쭉 볼 수 있게 하자'): 오른쪽 위 —
+  //  맨 위 = 방금 쓴 카드(손패 카드를 줄인 그림 · 상대 색 테 · 반듯) · 그 밑에 전에 쓴 카드가 셋까지 저마다 조금씩 기울어 비껴 쌓임 · 왼쪽 아래 = 장 수
+  //  새 카드 = 상대 식물에서 크게 돌며 날아와 더미 위에 톡 앉음(앞 카드는 한 칸 밑으로 내려앉으며 제 기울기로) → 돌려주는 값 = 누를 자리 [x, y, w, h]
+  drawPile(app, hist, t) {
+    const { g, W } = app, c = g.c, k = c.getTransform().a || 1, x = W - 8 - PILE_W, y = AY + 5, top = hist[0], n = hist.length, age = t - top.t0, q = Math.min(1, Math.max(0, age / PILE_IN)), e = 1 - (1 - q) ** 3, fly = q < 1;
+    const card = (h, cx, cy, ang, s, dark, rim) => {   // 줄인 카드 한 장: 가운데 (cx, cy) · 기울기 · 크기 배수 · 그늘 · 테 색
+      c.save(); c.translate(cx, cy); if (ang) c.rotate(ang); if (s !== 1) c.scale(s, s);
+      rrect(g, -PILE_W / 2 + 1, -PILE_H / 2 + 2, PILE_W, PILE_H, 4, 'rgba(0,0,0,0.38)');
+      if (rim) rrect(g, -PILE_W / 2 - 1, -PILE_H / 2 - 1, PILE_W + 2, PILE_H + 2, 5, rim);
+      c.imageSmoothingEnabled = true; c.drawImage(this.spreadFace(h, k), -PILE_W / 2, -PILE_H / 2, PILE_W, PILE_H);
+      if (dark) g.alpha(dark, () => rrect(g, -PILE_W / 2, -PILE_H / 2, PILE_W, PILE_H, 3, '#060a14'));
+      c.restore();
+    };
+    const mx = x + PILE_W / 2, my = y + PILE_H / 2;
+    for (let d = Math.min(3, n - 1); d >= 1; d--) {   // 밑 카드(깊은 것부터 · 날아오는 동안엔 한 칸 깊이로 내려앉는 중 — 바로 밑 카드는 반듯 → 제 기울기)
+      const a = PILE_OFF[d], b = PILE_OFF[d - 1], s = fly ? e : 1, ang = pileTilt(hist[d].turn) * (d === 1 && fly ? e : 1);
+      card(hist[d], mx + b[0] + (a[0] - b[0]) * s, my + b[1] + (a[1] - b[1]) * s, ang, 1, 0.12 + 0.12 * d, null);
+    }
+    if (fly) {   // 상대 식물 → 더미: 크게 시작해 돌며 줄어듦 · 살짝 위로 휨
+      const [ex, ey] = this.at('foe'), fx = ex + Math.floor((W - 270) / 2), fy = ey - 56;
+      c.save(); c.globalAlpha = Math.min(1, age / 90);
+      card(top, fx + (mx - fx) * e, fy + (my - fy) * e - Math.sin(e * Math.PI) * 16, (1 - e) * -0.6, 2 - e, 0, '#ff9aa8');
+      c.restore();
+    } else {
+      if (!top.landed) { top.landed = true; sfx('pileIn'); }
+      const la = age - PILE_IN, bob = la < 140 ? Math.sin(la / 140 * Math.PI) : 0;   // 앉을 때 1칸 톡
+      card(top, mx, my - bob, 0, 1, 0, '#ff9aa8');
+      if (la < 300) g.alpha(0.85 * (1 - la / 300), () => { const X = x - 2, Y = Math.round(y - bob) - 2; g.rect(X, Y, PILE_W + 4, 1, '#fff0f3'); g.rect(X, Y + PILE_H + 3, PILE_W + 4, 1, '#fff0f3'); g.rect(X, Y, 1, PILE_H + 4, '#fff0f3'); g.rect(X + PILE_W + 3, Y, 1, PILE_H + 4, '#fff0f3'); });   // 앉은 순간 테가 반짝
+    }
+    const cnt = fly ? n - 1 : n;
+    if (cnt > 0) {   // 장 수(왼쪽 아래 작은 알약)
+      const bf = sized('bold', 9), num = String(cnt), bw = Math.max(11, g.textW(num, bf) + 6), bx = x - 5, by = y + PILE_H - 9;
+      rrect(g, bx - 1, by - 1, bw + 2, 13, 4, INFO_C.ink); rrect(g, bx, by, bw, 11, 3, '#3a1a26');
+      g.text(num, bx + bw / 2, by + Math.round((11 - glyphH(bf)) / 2), { font: bf, color: '#ffc2cc', align: 'center' });
+    }
+    return [x - 6, y - 3, PILE_W + 12, PILE_H + 12];
+  },
+  // 펼쳐 보기: 더미를 누르면 카드가 더미에서 한 장씩 튀어나와 세 칸씩 펼쳐짐(최근 = 왼쪽 위 · 카드 밑 = 쓴 턴) → 누르면 크게 뒤집어 설명(openFoeCard) ·
+  //  닫기 · 빈 곳 = 더미로 다시 모임 · 넘치면 끌어서 넘김(onDrag) · 고르는 차례가 끝나면(시간 초과) 저절로 접힘
+  openSpread(app) {
+    if (this.spread || !(this.v.foeHist || []).length) return;
+    sfx('spread'); this.spread = { t0: app.t, scroll: 0, max: 0 };
+  },
+  closeSpread(app) {
+    const S = this.spread; if (!S || S.closing) return;
+    sfx('gather'); S.closing = true; S.tc = app.t;
+  },
+  spreadFace(h, k) { if (!h.face || h.faceK !== k) { h.face = renderFront(h.sk, CARD_W, CARD_H, k, { can: true }); h.faceK = k; } return h.face; },   // 펼친 카드 앞면(기기 화소로 한 번)
+  drawSpread(app) {
+    const { g, W, H, input, t } = app, c = g.c, S = this.spread, v = this.v, hist = v.foeHist || [], n = hist.length, k = c.getTransform().a || 1, C = INFO_C, PINK = '#ff9aa8';
+    if (!S.closing && (v.phase !== 'pick' || !n)) this.closeSpread(app);
+    const COLS = 3, GX = 10, RH = CARD_H + 26, x0 = Math.round((W - (COLS * CARD_W + (COLS - 1) * GX)) / 2), headY = AY + 8, viewY = headY + 32, FOOT = 50, viewH = H - viewY - FOOT;
+    S.max = Math.max(0, Math.ceil(n / COLS) * RH - 8 - viewH); S.scroll = Math.max(0, Math.min(S.max, S.scroll || 0));
+    const op = S.closing ? 1 - Math.min(1, (t - S.tc) / SPREAD_OUT) : Math.min(1, (t - S.t0) / 160);
+    if (S.closing && op <= 0) { this.spread = null; return; }
+    c.fillStyle = `rgba(6,10,18,${(0.8 * op).toFixed(3)})`; c.fillRect(0, 0, W, H);
+    input.hit('sp_block', 0, 0, W, H, () => this.closeSpread(app));
+    g.alpha(op, () => {   // 머리: 분홍 알약 '상대가 쓴 카드 n장'
+      const label = `상대가 쓴 카드 ${n}장`, lw = g.textW(label, 'bold') + 22, lx = Math.round((W - lw) / 2);
+      rrect(g, lx - 1, headY - 1, lw + 2, 22, 7, C.ink); rrect(g, lx, headY, lw, 20, 6, '#3a1a26'); g.rect(lx + 6, headY, lw - 12, 1, PINK);
+      g.text(label, W / 2, headY + Math.round((20 - glyphH('bold')) / 2), { font: 'bold', color: '#ffd6dc', align: 'center' });
+    });
+    const P = this.pileR ? [this.pileR[0] + 6 + PILE_W / 2, this.pileR[1] + 3 + PILE_H / 2] : [W - 8 - PILE_W / 2, AY + 5 + PILE_H / 2], s0 = PILE_W / CARD_W, bh = glyphH('bold');
+    const cards = [];
+    for (let i = 0; i < n; i++) {
+      const sx = x0 + (i % COLS) * (CARD_W + GX), sy = viewY + Math.floor(i / COLS) * RH - S.scroll;
+      if (sy + CARD_H + 22 < viewY - 6 || sy > viewY + viewH + 6) continue;   // 넘겨서 안 보이는 줄
+      const q = S.closing ? Math.min(1, Math.max(0, (t - S.tc - Math.min(i, 8) * 8) / (SPREAD_OUT - 70))) : Math.min(1, Math.max(0, (t - S.t0 - Math.min(i, 11) * SPREAD_STAG) / SPREAD_IN));
+      cards.push({ i, h: hist[i], sx, sy, q, e: S.closing ? 1 - q * q : backOut(q), still: !S.closing && q >= 1 });
+    }
+    const one = ({ i, h, sx, sy, q, e, still }) => {
+      if (this.peek && this.peek.hi === i) { cardSlot(g, sx, sy, CARD_W, CARD_H); return; }   // 크게 꺼낸 카드의 자리
+      const cx = P[0] + (sx + CARD_W / 2 - P[0]) * e, cy = P[1] + (sy + CARD_H / 2 - P[1]) * e, s = s0 + (1 - s0) * e, w = CARD_W * s, hh = CARD_H * s, x = Math.round(cx - w / 2), y = Math.round(cy - hh / 2);
+      const tagA = (S.closing ? 1 - q : Math.min(1, Math.max(0, (q - 0.7) / 0.3))) * op;
+      if (!i && tagA > 0) g.alpha(tagA, () => { rrect(g, x - 3, y - 3, Math.round(w) + 6, Math.round(hh) + 6, 8, 'rgba(255,154,168,0.28)'); rrect(g, x - 2, y - 2, Math.round(w) + 4, Math.round(hh) + 4, 7, 'rgba(255,154,168,0.7)'); });   // 방금 쓴 카드 = 분홍 테
+      rrect(g, x + 2, y + 4, Math.round(w), Math.round(hh), 6, `rgba(0,0,0,${(0.42 * op).toFixed(3)})`);
+      c.drawImage(this.spreadFace(h, k), x, y, w, hh);
+      if (tagA > 0) g.alpha(tagA, () => {   // 쓴 턴(카드 밑) · 3:3 = 쓴 식물 얼굴도
+        const label = i ? `${h.turn}턴` : `방금 · ${h.turn}턴`, face = this.mode === 'swap3' && h.u ? 15 : 0, lw = g.textW(label, 'bold') + 12 + face, lx = Math.round(sx + (CARD_W - lw) / 2), ly = sy + CARD_H + 6;
+        rrect(g, lx - 1, ly - 1, lw + 2, 17, 6, C.ink); rrect(g, lx, ly, lw, 15, 5, i ? C.band : '#3a1a26');
+        if (face) { c.save(); c.beginPath(); c.rect(lx + 2, ly + 1, 13, 13); c.clip(); drawPortrait(g, artOf(h.u), lx + 2, ly + 1, 13, true); c.restore(); }
+        g.text(label, lx + face + (lw - face) / 2, ly + Math.round((15 - bh) / 2), { font: 'bold', color: i ? C.sub : PINK, align: 'center' });
+      });
+      if (still) { const y0 = Math.max(sy, viewY - 6), y1 = Math.min(sy + CARD_H, viewY + viewH + 6); if (y1 > y0) input.hit('sp_' + i, sx, y0, CARD_W, y1 - y0, () => this.openFoeCard(app, i, [sx, sy, CARD_W, CARD_H]), 2); }
+    };
+    c.save(); c.beginPath(); c.rect(0, viewY - 6, W, viewH + 12); c.clip();   // 자리 잡은 카드 = 보는 칸 안만
+    for (const k2 of cards) if (k2.still) one(k2);
+    c.restore();
+    for (const k2 of cards) if (!k2.still) one(k2);   // 날아가는 카드 = 칸 밖으로도(더미 ↔ 자리)
+    if (S.max > 0 && !S.closing) { const bar = Math.max(16, viewH * viewH / (viewH + S.max)), by = viewY + (viewH - bar) * (S.scroll / S.max); g.alpha(op, () => rrect(g, W - 6, Math.round(by), 3, Math.round(bar), 1, hexMix(C.line, C.ink, 0.4))); }
+    c.save(); c.globalAlpha = op;
+    button(app, 'sp_close', W / 2 - 50, H - FOOT + 12, 100, 28, '닫기', { style: 'night', onTap: () => this.closeSpread(app) });
+    c.restore();
   },
   // 꺼내 본 카드: 잡고 있으면 화면 가운데로 다가오며(살짝 떠오름 · 그림자) 원근 있게 뒤집혀 뒷면, 손을 떼면 다시 뒤집혀 제자리로
   drawPeek(app) {
@@ -1116,7 +1218,7 @@ export const battle = {
     c.fillStyle = `rgba(0,0,0,${(0.25 * pos).toFixed(3)})`; c.fillRect(cx - pw / 2, cy - h / 2 + 3, pw, h - 6); c.restore();
     drawFlip(c, P.faces.front, P.faces.back, cx, cy, w, h, th);
     if (P.turn != null && pos > 0.6) {   // 상대 카드 기록: 언제 쓴 카드인지(카드 위 작은 표)
-      const label = `상대 · ${P.turn}턴`, lw = g.textW(label, 'bold') + 14, ly = Math.round(cy - h / 2 - 22);
+      const label = P.who ? `상대 ${P.who} · ${P.turn}턴` : `상대 · ${P.turn}턴`, lw = g.textW(label, 'bold') + 14, ly = Math.round(cy - h / 2 - 22);
       g.alpha(Math.min(1, (pos - 0.6) / 0.3), () => { rrect(g, Math.round(cx - lw / 2) - 1, ly - 1, lw + 2, 18, 6, '#0b1322'); rrect(g, Math.round(cx - lw / 2), ly, lw, 16, 5, '#3a1a26'); g.text(label, cx, ly + Math.round((16 - glyphH('bold')) / 2), { font: 'bold', color: '#ff9aa8', align: 'center' }); });
     }
   },
@@ -1260,6 +1362,7 @@ export const battle = {
     if (Math.random() < 0.45 && BOT_REPLY[i] != null) this.localEmotes.push({ i: BOT_REPLY[i], me: false, t: now + 900 + Math.random() * 700 });   // 봇이 가끔 대답
     this.localEmotes = this.localEmotes.filter(x => now - x.t < EMOTE_LIFE * 2);
   },
+  fxTarget() { const R = this.fxR || {}; return R.foe || R.me || R.envFoe || R.envMe || null; },   // 처음 안내가 가리킬 효과 표시(상대 체력바 밑 칸 먼저)
   statuses(side) {
     const v = this.v, u = v.view[side], out = [], sv = v.stance[side];
     if (sv && sv.active) out.push({ id: sv.kind === 'guard' ? 'guard' : sv.kind === 'reflect' ? 'reflect' : 'evade' });
@@ -1435,7 +1538,11 @@ export const battle = {
     button(app, 'in_close', W / 2 - 50, y + h - 37, 100, 28, '닫기', { style: 'night', onTap: () => { this.info2 = false; } });
     c.restore();   // 떠오름(globalAlpha · translate)
   },
-  onDrag(dy) { if (this.info2) this.infoScroll = Math.max(0, Math.min(this.infoMax || 0, (this.infoScroll || 0) - dy)); },   // 효과 설명 창이 넘칠 때 끌어서 넘김
+  onDrag(dy) {   // 넘칠 때 끌어서 넘김: 펼친 상대 카드(크게 꺼내 보는 중엔 그대로) · 효과 설명 창
+    const S = this.spread;
+    if (S && !S.closing && !this.peek) S.scroll = Math.max(0, Math.min(S.max || 0, (S.scroll || 0) - dy));
+    else if (this.info2) this.infoScroll = Math.max(0, Math.min(this.infoMax || 0, (this.infoScroll || 0) - dy));
+  },
   // 감정 고르는 판(클래시 로얄식): 위 = 이모지 4×2, 아래 = 대사 3×2, 오른쪽 위 = 상대 감정 끄기. 보낸 뒤 3초는 못 보냄
   emoteSheet(app) {
     const { g, W, H, input } = app, P = T.ptext, x = 8, w = W - 16, h = 182, y = H - h - 46, cool = performance.now() - this.emoteT < EMOTE_CD;

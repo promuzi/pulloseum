@@ -506,6 +506,13 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   cardBack(G2, BW, BH, sk, o);
   return { front, back };
 }
+// 손패 크기 앞면 한 장만(기기 화소 k) — 상대 카드 더미를 펼쳐 볼 때(scenes/battle.js drawSpread · 뒷면은 누를 때 renderFaces로 따로)
+export function renderFront(sk, w, h, k, o = {}) {
+  const cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
+  const c = cv.getContext('2d'); c.setTransform(k, 0, 0, k, 0, 0);
+  cardFront(new Gfx(c), 0, 0, w, h, sk, o);
+  return cv;
+}
 // 뒷면 글이 폭 w(1배 칸)에서 차지하는 높이(위 · 아래 테 포함) — 설명 판 높이를 글에 맞출 때
 let measureG = null;
 export function backHeight(sk, w, o = {}) {
