@@ -53,14 +53,19 @@ let n = 0, battles = 0, finished = 0, backups = 0;
 const NOW = Date.now();
 for (const r of saves) {
   const uid = r.user_id; n++;
-  let before, gift = 0;
+  let before, gift = 0, box = null;
   try { const s0 = JSON.parse(r.state); before = tally(s0); gift = s0.cardsV ? 0 : 1; } catch (e) { bad(uid, '원본 읽기', e); continue; }   // 카드가 생기기 전 계정 = 처음 불러올 때 일반 카드 한 장(normCards — 원래 동작)
+  try {   // 시즌이 넘어간 계정 = 불러올 때 지난 시즌 상자(seasonSync — 원래 동작, 2026-10-29 시즌 1 → 2에 돈 · 보석이 '바뀜'으로 잡혀 넣음): 원본에 시즌 넘김만 해 본 값과 같으면 정상
+    const s1 = JSON.parse(r.state); L.seasonSync(s1, NOW); const t1 = tally(s1);
+    if (t1.credits !== before.credits || t1.gems !== before.gems) box = t1;
+  } catch { box = null; }
   let s;
   try { s = game.state(uid, NOW).state; } catch (e) { bad(uid, '불러오기', e); continue; }
   if (q.backups.all(uid).length) backups++;
   const after = tally(s);
   for (const k of ['plants', 'storage', 'seeds', 'scions', 'cards', 'credits', 'gems', 'level']) {
     if (k === 'cards' && after.cards === before.cards + gift && gift) { note(uid, '옛 계정 일반 카드 한 장 선물', `${before.cards} → ${after.cards}`); continue; }
+    if ((k === 'credits' || k === 'gems') && box && after[k] === box[k] && before[k] !== after[k]) { note(uid, `지난 시즌 상자(${k})`, `+${after[k] - before[k]}`); continue; }
     if (before[k] !== after[k]) bad(uid, `개수 바뀜(${k})`, `${before[k]} → ${after[k]}`);
   }
   if (s.ver !== L.SAVE_VER) bad(uid, '판 번호', s.ver);
