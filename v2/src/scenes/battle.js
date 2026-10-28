@@ -1357,20 +1357,23 @@ export const battle = {
     const { g, W, H, input } = app, P = T.ptext, rows = [];
     for (const side of ['foe', 'me']) { for (const st of this.statuses(side)) rows.push({ side, st }); for (const st of this.envs(side)) rows.push({ side, st, env: true }); }
     const mine = ((this.v.view.me && this.v.view.me.cards) || []).filter(id => CARDS[id] && CARDS[id].kind === 'passive');   // 내 카드 패시브(2026-10-17 — 상대 카드는 친구 대결에서 안 보임)
-    const RH = SW_H + 14, h = Math.min(H - 60, 74 + Math.max(1, rows.length) * RH + (mine.length ? 34 : 0)), y = Math.round((H - h) / 2), x = 10, w = W - 20;   // 한 줄 = 효과 창 + 설명
+    const x = 10, w = W - 20;
+    for (const r of rows) r.lines = wrap(STATUS_DESC[r.st.id] || '', 'body', w - 20);   // 설명이 길면 줄바꿈(2026-10-29 — 아침 설명이 창 오른쪽 밖으로 잘렸음)
+    const rowH = r => SW_H + 14 + (Math.max(1, r.lines.length) - 1) * 15, h = Math.min(H - 60, 74 + (rows.length ? rows.reduce((s, r) => s + rowH(r), 0) : SW_H + 14) + (mine.length ? 34 : 0)), y = Math.round((H - h) / 2);   // 한 줄 = 효과 창 + 설명
     g.c.fillStyle = 'rgba(6,10,18,0.7)'; g.c.fillRect(0, 0, W, H);
     input.hit('in_block', 0, 0, W, H, () => { this.info2 = false; });
     holo(g, x, y, w, h, T.card || T.panel, 16);
     g.text('걸린 효과', x + 12, y + 10, { font: 'head', color: P.main });
     let yy = y + 36;
     if (!rows.length) g.text('걸린 효과 없음', W / 2, yy + 6, { color: P.sub, align: 'center' });
-    for (const { side, st, env } of rows) {
+    for (const r of rows) {
+      const { side, st, env } = r;
       if (yy > y + h - 60) break;
       const D = STATUS[st.id] || { name: st.id }, who = this.v.view[side];
       const cw = env ? envBand(g, x + 10, yy, 0, [st], this.v.turn) : (statusWins(g, x + 10, yy, [st]), SW_W);
       g.text(env ? (side === 'me' ? '내 쪽 환경' : '상대 쪽 환경') : `${who ? who.name : ''}${side === 'me' ? '(나)' : ''}`, x + 15 + cw, yy + Math.round((SW_H - glyphH('body')) / 2), { color: P.sub });
-      g.text(STATUS_DESC[st.id] || '', x + 10, yy + SW_H + 1, { color: P.main });
-      yy += RH;
+      r.lines.forEach((ln, i) => g.text(ln, x + 10, yy + SW_H + 1 + i * 15, { color: P.main }));
+      yy += rowH(r);
     }
     if (mine.length && yy <= y + h - 70) {   // 내 카드: 작은 카드 + 이름
       let cx = x + 10;
