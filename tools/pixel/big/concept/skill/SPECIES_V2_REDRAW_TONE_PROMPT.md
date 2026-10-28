@@ -1,3 +1,5 @@
+문서 상태: 반려(2026-10-29 사용자 "톤이 달라아직도 이제는 너무 실사같아 이전에는 게임스킬 아이콘 같았는데" — 잔무늬 · 작은 알갱이 · 사실적인 빛이 많아 실사풍). 결과 = v2/rejected_1029_real/(기록) · 세 번째 = SPECIES_V2_REDRAW_ICON_PROMPT.md(같은 기술의 원래 그림을 그림체 견본으로).
+
 (2026-10-29 사용자 "비슷하던 여섯 종 36장만 기존 그림 톤 그대로 다시 그려줘. 기술마다 중심 대상만 다르게. 샘플 두세 장 먼저 보여줘" — 첫 다시 그리기(SPECIES_V2_REDRAW_PROMPT.md, 결과 v2/rejected_1029/)는 단색 배경 · 작은 물건 하나라 '기존스킬과 톤이 다르잖아'로 반려. 중심 대상(기술마다 다른 모양)은 그대로 두고 그리는 방식만 기존 그림(굵은 테 · 진한 광택 · 크게 가까이 · 배경에 분위기)에 맞춤. 이어서 사용자 '드라곤프루트는 괜찮아 프로스트벨이랑. 만약 아직 안 만들었으면 그대로 써' → 프로스트벨 · 드라코프루트는 옛 그림 그대로, 다시 그리는 건 윈드페탈 · 젤리캡 · 팽트랩 · 쏜위드 24장(RUN 1의 프로스트벨 자물쇠는 이미 시작돼 톤 확인용으로만). 샘플 확인 뒤 사용자 '쏜위드, 젤리캡, 윈드패탈만 바꿔. 팽트랩의 입맛다시기만 혓바닥 나오는 그런 느낌으로' → 팽트랩은 입맛 다시기(u_fang_2) 한 장만 · RUN 2 = 열일곱 장. 결과는 v2/redraw_1029/ — 사용자가 고르면 v2/로 옮기고 → `python tools/pixel/big/skillart.py tools/pixel/big/concept/skill/v2/<id>.png assets/v2/skills/<id>.png 0.5 0.5 1.0`.)
 
 Task: generate skill illustrations for a mobile game whose creatures are plants. They are shown small on battle cards (about 58x52 pixels after downscaling), next to many existing skill illustrations, and they must look like they belong to the same set.
