@@ -48,7 +48,7 @@ export const GUIDES = [
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [
       { at: ['fx_foe', 'env_foe'], text: '효과 칸이나 환경 띠를 누르면 무슨 효과인지, 몇 턴 남았는지 나와요.' },
-      { at: 'foe_last', text: '상대가 방금 쓴 카드예요. 누르면 크게 뒤집어서 설명을 읽을 수 있어요.' },
+      { at: 'foe_last', text: '상대가 쓴 카드가 위에서부터 최근 순으로 쌓여요. 누르면 크게 뒤집어서 설명을 읽을 수 있어요.' },
       { at: 'sk_*', text: '내 카드도 꾹 누르고 있으면 뒷면에 설명이 나와요. 손을 떼면 기술은 나가지 않아요.' },
     ] },
   { id: 'battle3', scene: 'battle', when: (app, sc) => sc.mode === 'swap3', btn: app => [app.W - 21, 4],
