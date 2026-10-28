@@ -158,8 +158,36 @@ export const WEAPONS = {
     m_roar: { kind: 'rings', move: 'cast', c: VARIANTS.dragon.c, status: 'swirl' }, m_frostclaw: { kind: 'slash', move: 'lunge', c: EC.ice, status: 'swirl', petal: [EC.ice[1], EC.ice[2]] }, m_voltclaw: { kind: 'slash', move: 'lunge', c: EC.bolt, status: 'shock', petal: [EC.bolt[1], EC.bolt[2]] },
   });
 }
+// 종 고유 v2 공격 기술마다 제 모습(2026-10-29 밤샘 — 사용자 '각 스킬별 특수한 건 모션 만들고 …'): 옛 개성 기술 자리(같은 id)에 남은 옛 연출(위 UNIQUE)이
+//  새 기술과 어긋나던 것(낙석 = 포자 구름 · 깨물기 = 채찍 · 빙결 브레스 = 고리 · 처형의 춤 = 고리 · 칼춤 = 숨결 · 폭발은 예술이지 = 풀색 물기둥 · ..력일섬! = 불색 · 번뇌 = 물색 꽃 등)을
+//  기술 이름 · 하는 일에 맞춰 다시 짝지음 — 색 = 그 기술 속성(속성 없으면 종 · 주제 색) · 새 모양 넷 = 낙석 rockfall · 얼음 깨짐 shatter · 폭발 blast · 바늘비 rain(skillFx)
+{
+  const EC = { fire: ATTACKS.cactus_fire.c, water: ATTACKS.aqua.c, earth: ATTACKS.gaia.c, bolt: ATTACKS.spark.c, ice: ATTACKS.frost_bell.c, wind: ATTACKS.flower_wind.c, grass: ATTACKS.flower_grass.c };
+  const ST = { fire: 'burn', water: 'wet', earth: 'dust', bolt: 'shock', ice: 'swirl', wind: 'swirl', grass: 'thorn' };
+  const BLOOD = WEAPONS.sword_slash.blood, PETAL4 = ['#fff0f6', '#f6a0b4', '#d8607a', '#6a1e44'], PINK = ['#fff0f8', '#ffb8dc', '#e8609e', '#5e1a3e'], WOODC = ['#f0d0a0', '#c8945a', '#8a5a30', '#3e2a18'];
+  const TOX = ATTACKS.toxi_cactus.c, ACID = ['#f4ffd0', '#c8f070', '#7ab830', '#2e4a14'], WEED = ['#e8f4c0', '#8ab060', '#4a7a3a', '#1e3420'], DUSK = ['#f0e8ff', '#c8b0f0', '#6a4aa0', '#24143a'], FRUIT = ATTACKS.draco_fruit.c;
+  const MV = { slash: 'lunge', whip: 'lunge', blades: 'lunge', bite: 'lunge', sword: 'lunge', slam: 'slam' };
+  const cOf = col => (typeof col === 'string' ? EC[col] : col), stOf = col => (typeof col === 'string' ? ST[col] : 'none');
+  const mk = (kind, col, o = {}) => { const c = cOf(col); return { kind, move: MV[kind] || 'cast', c, status: stOf(col), ...((kind === 'slash' || kind === 'gale') && { petal: [c[1], c[2]] }), ...(kind === 'slam' && { gem: c[0] }), ...o }; };
+  const wp = (name, col, o = {}) => ({ ...WEAPONS[name], c: cOf(col), ...(WEAPONS[name].blood && { blood: cOf(col) }), status: stOf(col), ...o });
+  Object.assign(ATTACKS, {
+    u_gvine_2b: wp('sword_thrust', 'wind'), u_gvine_3b: mk('blades', 'wind'), u_gvine_3c: mk('slash', 'wind'),                         // 휙- 푹찍 = 찌르기 · 빠르지? = 칼날 셋 · 피해? = 베기
+    u_stone_1: mk('rockfall', 'earth'), u_stone_2b: mk('slam', 'earth'), u_stone_3b: mk('slam', 'earth'),                              // 낙석 · 석순 · 지반붕괴 = 땅이 갈라져 돌가시
+    u_spore_3b: mk('spores', 'bolt'), u_volt_2: mk('bubbles', 'bolt'), u_volt_3b: mk('bolt', 'bolt'),                                   // 포자작! = 전기 포자 · 전격 구슬 = 구슬 셋 · 뇌격구 = 벼락
+    u_frost_2: mk('shatter', 'ice'), u_frost_2b: mk('rings', 'wind'), u_frost_3c: mk('whip', WOODC, { status: 'dust' }),                 // 깨트려드리죠 = 얼음 깨짐 · 정적을 = 종소리 고리 · 매 = 나무 회초리
+    u_petal_1: mk('sword', 'grass'), u_petal_2: mk('slash', 'grass', { petal: [PETAL4[1], PETAL4[2]] }), u_petal_3: wp('sword_slash', 'grass', { blood: PETAL4, status: 'thorn' }),   // 검방술 = 검 · 꽃잎 베기 · 큰 초승달(꽃잎)
+    u_wind_1: mk('gale', 'wind'), u_wind_2b: mk('slash', BLOOD, { status: 'bleed' }), u_wind_3: mk('blades', 'wind'), u_wind_3b: mk('bloom', PINK, { status: 'swirl' }), u_wind_3c: wp('scythe_reap', DUSK),   // 춤 다섯 · 처형 = 낫
+    u_aqua_2: mk('wave', 'water'), u_aqua_3b: mk('bolt', 'bolt'),                                                                       // 정죄 = 물기둥 · 번뇌 = 번개
+    u_thorn_2b: mk('gale', 'grass'), u_thorn_3b: mk('whip', 'grass'), u_thorn_3c: mk('blast', 'fire'),                                 // 교란 = 가시 돌풍 · 무기는? = 가시 채찍 · 폭발은 예술이지 = 덫 폭발
+    u_jelly_2: mk('whip', 'water'), u_jelly_2b: mk('whip', WEED, { status: 'thorn' }),                                                  // 톡씽 = 촉수 · 미역잉 = 미역 채찍
+    u_fang_1: mk('bite', ATTACKS.fang_trap.c, { status: 'thorn' }), u_fang_2b: mk('poison', ACID, { fizz: '#f0ff90', status: 'poison' }), u_fang_3: mk('bite', VARIANTS.predator.c, { status: 'drain' }), u_fang_3c: mk('bite', 'fire'),   // 깨물기 · 소화액 · 식사시간 · 익혀먹기
+    u_toxi_1: mk('poison', TOX, { fizz: '#b8f070', status: 'poison' }), u_toxi_2: mk('bubbles', TOX, { status: 'poison' }), u_toxi_3: mk('rain', TOX, { fizz: '#b8f070', status: 'poison' }), u_toxi_3c: mk('blades', TOX, { status: 'poison' }),   // 독 주머니 · 신경독 방울 · 만천화우 = 바늘비 · 독점사
+    u_draco_3: mk('breath', 'ice'), u_draco_3b: mk('gale', 'ice'), u_draco_3c: mk('bubbles', FRUIT, { status: 'swirl' }),               // 빙결 브레스 = 숨결 · 빙결 폭풍 = 눈보라 · 열매 던지기
+    u_blade_2: mk('blades', 'fire'), u_blade_3b: wp('sword_slash', 'bolt'), u_blade_3c: mk('bloom', BLOOD, { status: 'bleed' }),        // 칼날 잎 · ..력일섬! = 번개 베기 · 피의 축제
+  });
+}
 export const GROUND = new Set(['slam', 'wave']);   // 바닥을 타고 가는 기술
-export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18,
+export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18, rockfall: 16, shatter: 16, blast: 17, rain: 17,
   w_slash: 15, w_thrust: 14, w_chop: 19, w_sweep: 16, w_shot: 15, w_burst: 15, w_snipe: 18, w_smash: 19, w_spear: 15, w_flurry: 16, w_bind: 17, w_reap: 16, w_bash: 15 })[A.kind] || 18;
 
 // 공격하는 쪽 몸놀림(앞 = 상대 쪽, 그림 좌표 qx+): 0~5 대기, 6~11 준비(점점), 12 멈춤, 13~14 동작, 15 넘침, 16~23 복귀
@@ -749,6 +777,56 @@ export function skillFx(P, A, f, L, T, G, seed = 1, S = { D: [1, 0], fx: 1 }) {
       if (t >= 0 && t < dur) { const u = t / dur, x = sx + (T[0] - sx) * u, y = L[1] + (T[1] - L[1]) * u - Math.sin(Math.PI * u) * 14; disc(P.o, x, y, 4.2, c[2]); disc(P.o, x - 0.6, y - 0.8, 2.6, c[1]); P.o(Math.floor(x) - 2, Math.floor(y) - 2, c[0]); }
       if (k >= 0 && k < 3) { disc(P.o, T[0], T[1], 6 - k, c[2]); disc(P.o, T[0], T[1], 3.5 - k, c[1]); }
       if (k >= 0 && k < 12) particles(P.p, burstParticles(seed, T[0], T[1], 12, 2, [c[1], c[2], c[3]], { g: 0.18, life: 12, up: 0.8, size: 2 }), k);
+      break;
+    }
+    // ── 종 고유 v2 새 모양 넷(2026-10-29 밤샘 — 사용자 '각 스킬별 특수한 건 모션 만들고'): 예고(어디에 떨어질지 · 무엇이 터질지) → 맞음 → 넘침 세 박자 ──
+    case 'rockfall': {   // 낙석: 대상 머리 위에서 돌가루가 먼저 부스스 떨어지고(예고) → 큰 바위 셋이 차례로 떨어져 머리에 부딪힘(흰 별빛 · 바위가 깨짐) → 부스러기 · 흙먼지
+      [[0, 0, 9], [4, -13, 6.5], [8, 12, 7.5]].forEach(([d, dx, r], q) => {
+        const t0 = I - 7 + d, land = I + d, x = T[0] + dx * 0.7, y1 = T[1] + (q ? 6 : 0);
+        if (f >= t0 - 6 && f < t0 + 2) for (let s = 0; s < 3; s++) { const yy = y1 - 74 + ((f - t0 + 6) * 4 + s * 9) % 26; P.p(Math.floor(x - 3 + s * 3), Math.floor(yy), s % 2 ? c[2] : c[1]); }   // 돌가루(예고)
+        if (f >= t0 && f < land) { const u = (f - t0) / (land - t0), y = y1 - 74 * (1 - u * u); for (let s = 1; s <= 5; s++) { P.p(Math.floor(x - 2), Math.floor(y - r - s * 3), c[1]); P.p(Math.floor(x + 2), Math.floor(y - r - s * 3 - 1), c[2]); }
+          disc(P.o, x, y, r, c[2]); disc(P.o, x - r * 0.3, y - r * 0.3, r * 0.55, c[1]); disc(P.o, x - r * 0.45, y - r * 0.45, r * 0.22, c[0]); line(P.o, [x + r * 0.1, y - r * 0.1], [x + r * 0.55, y + r * 0.45], c[3]); }   // 떨어지는 바위(빛 받은 면 · 금)
+        const kk = f - land;
+        if (kk >= 0 && kk < 3) { disc(P.o, x, y1, r + 3 - kk * 2, kk ? c[1] : c[0]); starBurst(P.o, x, y1, r + 2, r + 13, 10, c[0], c[1], q); }
+        if (kk >= 1 && kk < 6) for (let s = 0; s < 4; s++) { const an = s * 1.57 + q, d2 = r * 0.4 + kk * 2.2; rockShard(P.o, [x + Math.cos(an) * d2, y1 + Math.sin(an) * d2 + kk * kk * 0.4], [x + Math.cos(an) * (d2 + 5), y1 + Math.sin(an) * (d2 + 5) + kk * kk * 0.4], 2.4, c, 0, seed + q * 5 + s); }   // 바위가 깨진 조각
+        if (kk >= 0 && kk < 12) particles(P.p, burstParticles(seed + q * 7, x, y1, 12, 2.6, [c[1], c[2], c[3]], { g: 0.26, life: 12, up: 0.8, size: 2 }), kk);
+        if (kk >= 2 && kk < 11) dustPuff(P.p, x, y1 + 6, 4 + kk * 0.9, kk / 11, kk > 7);
+      });
+      break;
+    }
+    case 'shatter': {   // 얼음 깨짐: 얼음 조각 여섯이 대상 둘레로 모여 큰 수정이 됨(예고) → 맞는 장에 하얗게 번쩍 → 날카로운 파편 열둘이 사방으로 + 서리 고리
+      for (let q = 0; q < 6; q++) {
+        const a = q * 1.0472 - 1.57, t = f - (I - 9); if (t < 0 || t >= 10) continue;
+        const u = ease(Math.min(1, t / 8)), R = 34 * (1 - u) + 7, x = T[0] + Math.cos(a) * R, y = T[1] + Math.sin(a) * R * 0.85;
+        rockShard(P.o, [x - Math.cos(a) * 7, y - Math.sin(a) * 7], [x + Math.cos(a) * 5, y + Math.sin(a) * 5], 4, c, 0, seed + q);
+        if (t >= 8) disc(P.o, T[0], T[1], 6 + (t - 8) * 2, c[1]);   // 모여 수정
+      }
+      if (k >= 0 && k < 3) { disc(P.o, T[0], T[1], 14 - k * 3, k ? c[1] : c[0]); disc(P.o, T[0], T[1], 7 - k * 2, c[0]); starBurst(P.o, T[0], T[1], 10, 24 - k * 2, 12, c[0], c[1], 0.3); }
+      if (k >= 1 && k < 11) for (let q = 0; q < 12; q++) { const a = q * 0.5236 + 0.26, d = 8 + (k - 1) * 3.8, x = T[0] + Math.cos(a) * d, y = T[1] + Math.sin(a) * d * 0.9 + (k - 1) ** 2 * 0.15; if (k < 8 || q % 2) rockShard(P.o, [x, y], [x + Math.cos(a) * 6, y + Math.sin(a) * 6], 2.2, c, 0, seed + 20 + q); }
+      if (k >= 2 && k < 10) ringPx(P.p, T[0], T[1], 14 + k * 2.6, k < 6 ? c[0] : c[2], a => Math.floor(a * 4 + k) % 3 !== 0, 0.85, 2);
+      if (k >= 2 && k < 12) particles(P.p, burstParticles(seed + 41, T[0], T[1], 14, 2.2, [c[0], c[1], c[2]], { g: 0.05, life: 11, size: 2 }), k - 2);
+      break;
+    }
+    case 'blast': {   // 폭발(덫이 터짐): 대상 발밑 붉은 점이 깜빡이며 빨라짐(예고) → 큰 폭발 둘(대상 · 옆) → 파편 · 연기 · 바닥 그을음
+      const B = S.B0 || [T[0], T[1] + 44];
+      if (f >= I - 9 && f < I) { const on = (I - f) > 5 ? f % 3 === 0 : f % 2 === 0; if (on) for (const [dx, dy] of [[-12, 0], [11, 2], [0, 5]]) { disc(P.o, B[0] + dx, B[1] + dy - 2, 2.5, '#ff3a2a'); P.o(B[0] + dx, B[1] + dy - 3, '#ffe0c0'); } }
+      if (k >= 0 && k <= 8) explosion(P, T[0], T[1] + 6, k, c, seed);
+      if (k >= 2 && k <= 10) explosion(P, T[0] + 16 * fx, T[1] + 16, k - 2, c, seed + 3);
+      if (k >= 1 && k < 13) particles(P.p, burstParticles(seed + 9, T[0], T[1] + 8, 18, 3.2, [c[0], c[1], c[2], c[3]], { g: 0.16, life: 12, up: 1, size: 2 }), k - 1);
+      if (k >= 3 && k < 20) for (let yy = -5; yy <= 5; yy++) for (let xx = -18; xx <= 18; xx++) if ((xx / 18) ** 2 + (yy / 5) ** 2 <= 1 && (xx + yy + k) % 3 === 0) P.f(Math.floor(B[0] + xx), Math.floor(B[1] + yy), '#2a1a14');   // 그을음
+      break;
+    }
+    case 'rain': {   // 바늘비(만천화우): 대상 위 하늘에 바늘이 촘촘히 맺혀 반짝임(예고) → 사선으로 쏟아져 대상 둘레에 꽂힘(작은 튐 · 독빛) · 맞는 동안 고리
+      const r1 = rng(seed + 31);
+      for (let q = 0; q < 28; q++) {
+        const ox = (r1() - 0.5) * 56, oy = (r1() - 0.5) * 30, start = I - 6 + Math.floor(r1() * 9), dur = 4;
+        const sx = T[0] + ox - 24 * fx, sy = T[1] - 66 + oy * 0.3, ex = T[0] + ox * 0.6, ey = T[1] + oy * 0.6, t = f - start;
+        if (t < -7) continue;
+        if (t < 0) { if ((f + q) % 2 === 0) { P.o(Math.floor(sx), Math.floor(sy), c[1]); P.o(Math.floor(sx), Math.floor(sy) + 1, c[2]); } continue; }   // 맺힘(예고)
+        if (t < dur) { const u = (t + 1) / dur, x = sx + (ex - sx) * u, y = sy + (ey - sy) * u, L0 = Math.hypot(ex - sx, ey - sy) || 1, nx = (ex - sx) / L0, ny = (ey - sy) / L0; line(P.o, [x - nx * 9, y - ny * 9], [x, y], c[1], 2); P.o(Math.floor(x), Math.floor(y), c[0]); P.o(Math.floor(x), Math.floor(y) + 1, c[0]); }
+        else if (t < dur + 4) { const kk = t - dur; P.p(Math.floor(ex - 1 - kk), Math.floor(ey - kk), c[1]); P.p(Math.floor(ex + 1 + kk), Math.floor(ey - kk), c[1]); if (A.fizz && kk < 2) P.p(Math.floor(ex), Math.floor(ey - 2 - kk), A.fizz); }
+      }
+      if (k >= 0 && k < 10 && k % 3 === 0) ringPx(P.p, T[0], T[1], 14 + k, c[2], a => Math.floor(a * 5) % 2 === 0, 0.7, 2);
       break;
     }
     case 'breath': {   // 용족 숨결(자기 속성 — 여기선 풀): 입에서 대상까지 넓어지는 원뿔 입자 + 맞는 곳 소용돌이
