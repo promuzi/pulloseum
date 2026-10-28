@@ -63,10 +63,51 @@ export function fxIdsOf(s) {
 // 효과음: 모으기 · 터뜨림(종류마다)
 export const CAST_SFX = { self: 'release', curse: 'whoosh', field: 'slam', bell: 'purify', ward: 'slam', summon: 'spore' };
 
-// 그리기(경기장 판 좌표): C = { who, other, kind, col, t0 } · P = { me: [x, 받침 y], foe: [...] }
+// ── 특수 시전(2026-10-29 밤샘 — 사용자 '각 스킬별 특수한 건 모션 만들고'): 공용 모양 위에 그 기술만의 장면을 덧그림(예고 → 터짐 → 결과가 몸에 남음 — auras.js 지속 표시로 이어짐) ──
+//  부활잉 = 금빛 고리가 내려와 머리 위에 앉음 · 죽은 줄 알았나? = 혼이 빠져나갔다 쑥 돌아옴 · 냉기 응축 = 얼음 조각이 모여 열매가 맺힘 · 열매 먹기 = 열매를 한입에 · 알 깨기 = 알이 금 가며 깨져 기운이 솟음
+export const castSpecial = s => (!s ? null : s.revive ? 'revive' : s.fakeDeath ? 'ghost' : s.fruitCondense ? 'condense' : s.fruitUse === 'eat' ? 'eat' : s.selfMore ? 'egg' : null);
+const GHOST = ['..xxxx..', '.xwwwwx.', 'xwbwwbwx', 'xwwwwwwx', 'xwwwwwwx', 'xwwwwwwx', 'xwxwwxwx', '.x.xx.x.'], EGG = ['..xxx..', '.xwwwx.', 'xwwbwwx', 'xwwwwwx', 'xbwwwbx', 'xwwwwwx', '.xwwwx.', '..xxx..'];
+const FRUIT = ['..g..', '.xxx.', 'xwlbx', 'xllbx', 'xbbbx', '.xxx.'], PLUS = ['.p.', 'ppp', '.p.'];
+function pix(g, x, y, rows, pal, a = 1, s = 2) { const w = rows[0].length * s, h = rows.length * s; rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') dot(g, x - w / 2 + i * s, y - h / 2 + j * s, pal[ch], a, s); })); }
+function special(g, C, age, x, y, cy) {
+  const side = C.who === 'me' ? 1 : -1, head = cy - 40;
+  if (C.sp === 'revive') {   // 금빛 고리가 위에서 내려와 머리 위에 앉고 · 금빛 십자가 몸 둘레에서 떠오름
+    const u = oQ(cl((age - 160) / 520)), fade = 1 - cl((age - 1050) / 250), hy = head - 46 + 40 * u;
+    if (age > 160) { ring(g, x, hy, 15, 4, '#ffd84a', fade); ring(g, x, hy + 1, 13, 3, '#fff4c0', 0.8 * fade); ring(g, x, hy - 1, 17, 5, '#b8862a', 0.5 * fade); }
+    for (let k = 0; k < 6; k++) { const b = age - 420 - k * 90, q = cl(b / 600); if (b < 0 || q >= 1) continue; pix(g, x + (k % 2 ? 1 : -1) * (14 + (k % 3) * 8), y - 10 - q * 60, PLUS, { p: k % 2 ? '#ffd84a' : '#fff4c0' }, Math.sin(Math.PI * q), 2); }
+  } else if (C.sp === 'ghost') {   // 혼(흰 유령)이 몸에서 빠져나와 위로 떠올라 흔들리다 · 쑥 돌아옴(돌아올 때 흰 고리)
+    const out = oQ(cl((age - 140) / 420)), back = cl((age - 820) / 160), hy = cy - 4 - 44 * out * (1 - back), wob = Math.sin(age / 70) * 3 * (1 - back);
+    if (age > 140 && back < 1) pix(g, x + wob, hy, GHOST, { x: '#4a4a66', w: '#e8eef8', b: '#1a1424' }, 0.85 * (1 - back * 0.5), 2);
+    if (back >= 1 && age < 1150) { const q = cl((age - 980) / 170); ring(g, x, cy, 8 + 26 * q, (8 + 26 * q) * 0.7, '#ffffff', 1 - q); }
+  } else if (C.sp === 'condense') {   // 얼음 조각 여덟이 돌며 내 옆 한 점으로 모여 → 열매가 톡 맺힘(반짝 고리)
+    const fx = x + side * 30, fy = cy - 8, u = cl((age - 140) / 560);
+    if (u < 1) for (let k = 0; k < 8; k++) { const a = k * 0.785 + u * 4, R = 34 * (1 - ioQ(u)) + 2; dot(g, fx + Math.cos(a) * R - 1, fy + Math.sin(a) * R * 0.8 - 1, k % 2 ? '#ffffff' : '#8ad6f0', 0.4 + 0.6 * u, 3); }
+    if (age >= 700) { const q = cl((age - 700) / 260), fade = 1 - cl((age - 1100) / 200); pix(g, fx, fy, FRUIT, { g: '#6fd25c', x: '#1a1424', w: '#ffffff', l: '#bfefff', b: '#4a9ad8' }, fade, 2); ring(g, fx, fy, 6 + 16 * q, (6 + 16 * q) * 0.8, '#dcf6ff', 1 - q); }
+  } else if (C.sp === 'eat') {   // 옆에 열매가 맺혀 → 머리로 휙 날아가 한입(흰 고리) → 초록 십자가 떠오름(회복)
+    const fx = x + side * 30, fy = cy - 8;
+    if (age >= 140 && age < 700) { const u = cl((age - 460) / 240), px = fx + (x - fx) * ioQ(u), py = fy + (head - fy) * ioQ(u) - Math.sin(Math.PI * u) * 16, sc = age < 300 ? 1 : 2; pix(g, px, py, FRUIT, { g: '#6fd25c', x: '#1a1424', w: '#ffffff', l: '#bfefff', b: '#4a9ad8' }, 1, sc); }
+    if (age >= 700 && age < 1000) { const q = cl((age - 700) / 300); ring(g, x, head, 6 + 20 * q, (6 + 20 * q) * 0.7, '#ffffff', 1 - q); }
+    for (let k = 0; k < 5; k++) { const b = age - 760 - k * 80, q = cl(b / 480); if (b < 0 || q >= 1) continue; pix(g, x + (k - 2) * 9, head + 6 - q * 34, PLUS, { p: '#7ef0a0' }, Math.sin(Math.PI * q), 2); }
+  } else if (C.sp === 'egg') {   // 머리 위에 알이 톡 생겨 흔들리다 · 금이 가며(번개 금) 두 쪽으로 깨지고 조각이 튐 → 주황 기운이 솟음(공격 · 기동 ↑)
+    const ex = x, ey = head - 18, born = cl((age - 140) / 160);
+    if (age >= 140 && age < 560) { const wob = age > 300 ? Math.sin(age / 30) * 2 : 0; pix(g, ex + wob, ey, EGG, { x: '#1a1424', w: '#f4f8ff', b: '#8ad6f0' }, born, 3); if (age > 420) for (const [dx, dy] of [[-4, -2], [-2, 0], [0, -2], [2, 0], [4, -2]]) dot(g, ex + wob + dx, ey + dy, '#1a1424', 1, 2); }
+    if (age >= 560 && age < 1100) { const q = cl((age - 560) / 420); for (const s of [-1, 1]) pix(g, ex + s * (4 + 26 * oQ(q)), ey + 30 * q * q - 6 * Math.sin(Math.PI * q), s < 0 ? EGG.slice(0, 4) : EGG.slice(4), { x: '#1a1424', w: '#f4f8ff', b: '#8ad6f0' }, 1 - q, 3);
+      for (let k = 0; k < 8; k++) { const a = k * 0.785, d = 6 + 30 * oQ(q); dot(g, ex + Math.cos(a) * d, ey + Math.sin(a) * d * 0.8, k % 2 ? '#ffffff' : '#dcf6ff', 1 - q, 2); } }
+    for (let k = 0; k < 6; k++) { const b = age - 640 - k * 60, q = cl(b / 520); if (b < 0 || q >= 1) continue; dot(g, x + (k - 2.5) * 7, y - 10 - q * 70, k % 2 ? '#ffb040' : '#ff6a3a', Math.sin(Math.PI * q), 3); }
+  }
+}
+// 메아리(프로스트벨 — 같은 차례에 한 번 더 울림 · 'echo' 단계 0.45초): 머리 높이에서 종소리 고리 둘이 빠르게 퍼지고 · 음 조각 셋이 떠오름
+export function drawEcho(g, age, at) {
+  if (!at || age < 0 || age > 600) return;
+  const [x, y] = at, hy = y - 70;
+  for (let k = 0; k < 2; k++) { const b = age - k * 120, u = cl(b / 380); if (b < 0 || u >= 1) continue; const R = 8 + 52 * oQ(u); ring(g, x, hy, R, R * 0.55, '#c4ecff', 1 - u); ring(g, x, hy, R + 1, (R + 1) * 0.55, '#ffffff', 0.6 * (1 - u)); ring(g, x, hy, R - 2, (R - 2) * 0.55, '#6ab0e0', 0.5 * (1 - u)); }
+  for (let k = 0; k < 3; k++) { const b = age - 60 - k * 90, q = cl(b / 420); if (b < 0 || q >= 1) continue; const nx = x + (k - 1) * 16 + Math.sin(q * 6 + k) * 3, ny = hy - 6 - q * 28; dot(g, nx, ny, '#ffffff', Math.sin(Math.PI * q), 3); dot(g, nx + 2, ny - 6, '#c4ecff', Math.sin(Math.PI * q), 1); dot(g, nx + 2, ny - 5, '#c4ecff', Math.sin(Math.PI * q), 1); dot(g, nx + 2, ny - 4, '#c4ecff', Math.sin(Math.PI * q), 1); }
+}
+// 그리기(경기장 판 좌표): C = { who, other, kind, col, t0, sp } · P = { me: [x, 받침 y], foe: [...] }
 export function drawCast(g, C, t, P) {
   const age = t - C.t0; if (age < 0 || age > CAST_MS) return;
   const [x, y] = P[C.who], [tx, ty] = P[C.other], col = C.col, cy = y - 46;
+  if (C.sp) special(g, C, age, x, y, cy);
   // 모으기: 빛 알갱이 열둘이 둘레에서 몸 가운데로 모임 + 발밑 고리
   if (age >= PREP[0] && age < REL + 60) {
     const u = cl((age - PREP[0]) / (REL - PREP[0]));

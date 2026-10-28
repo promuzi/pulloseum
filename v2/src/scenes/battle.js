@@ -81,7 +81,7 @@ import { ga, eul, eun, ro } from '../core/josa.js';
 import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
 import { fieldGround, fieldAir, ARRIVE_MS } from '../art/fieldfx.js';   // 환경을 경기장에(2026-10-29 ㉠)
 import { drawAuras, plantBox } from '../art/auras.js';   // 걸려 있는 동안 식물 몸에 계속 보이는 표시(2026-10-29 밤샘)
-import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX, fxIdsOf } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡) · 공개 카드 효과 아이콘(㉥ 시안)
+import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX, fxIdsOf, castSpecial, drawEcho } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡) · 공개 카드 효과 아이콘(㉥ 시안)
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
 const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale',
@@ -610,7 +610,7 @@ export const battle = {
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms); sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing'); }
     if (st.kind === 'cast' && st.skill) {   // 보조 기술 시전(㉡ castfx.js): 종류마다 다른 모양 · 터뜨리는 순간 소리
       const kind = castKind(st.skill);
-      v.cast = { who: st.who, other: st.who === 'me' ? 'foe' : 'me', kind, col: castColor(st.skill, kind), t0: t };
+      v.cast = { who: st.who, other: st.who === 'me' ? 'foe' : 'me', kind, col: castColor(st.skill, kind), t0: t, sp: castSpecial(st.skill) };   // sp = 그 기술만의 장면(부활 · 혼 · 열매 · 알 — 밤샘)
       sfx(CAST_SFX[kind] || 'release', { at: 0.46 });
     }
     if (st.kind === 'sun') { v.en[st.who] = Math.min(v.view[st.who].energyMax || 8, (v.en[st.who] || 0) + (st.ev.gain || 0)); if (st.ev.gain) this.pop(st.who, `햇빛 +${st.ev.gain}`, null, t, false, -16, '#ffd25a'); }
@@ -964,6 +964,7 @@ export const battle = {
       if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
       fieldAir(g, fenv, v.arrive, t, FP, [-ox, AY, W, AH], 64);   // ㉠ 식물 위에 겹치는 환경(불티 · 안개 결 · 먹구름 · 아침 빛 · 밤 어둠) + 깔리는 순간
       if (st && st.kind === 'cast' && v.cast) drawCast(g, v.cast, t, FP);   // ㉡ 시전(빛기둥 · 문양 구슬 · 땅 물결 · 종소리 · 설치 · 소환)
+      else if (st && st.kind === 'echo' && !st.pop) drawEcho(g, t - v.t0, FP[st.side]);   // 메아리 = 종소리 고리 · 음 조각(처형 알림은 글자만)
       for (const who of ['me', 'foe']) {
         const s = v.stance[who]; if (!s) continue;
         const [x, y] = this.above(who, 118);

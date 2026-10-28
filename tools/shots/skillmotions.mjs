@@ -11,7 +11,7 @@ const { serve } = await import(U('tools/shots/static-server.mjs'));
 const { decodePNG } = await import(U('tools/pixel/big/engine.mjs'));
 const { writeMP4 } = await import(U('tools/pixel/big/video.mjs'));
 const out = process.argv[2], list = process.argv[3].split(',').map(s => { const [a, pre] = s.split('@'); return [...a.split(':'), pre || null]; }), mp4 = process.argv.includes('--mp4');
-const foeKey = (process.argv.find(a => a.startsWith('--foe=')) || '--foe=aqua').slice(6);
+const foeKey = (process.argv.find(a => a.startsWith('--foe=')) || '--foe=aqua').slice(6), KIND = (process.argv.find(a => a.startsWith('--kind=')) || '--kind=attack').slice(7);   // --kind=cast = 보조 기술 시전 단계
 mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const { srv, url } = await serve(repo);
@@ -34,16 +34,16 @@ try {
     }, sp, id, foeKey, pre);
     let shotN = 0, rec = 0, info = null;
     for (let i = 0; i < 400; i++) {
-      const r = await p.evaluate((id, want) => {
+      const r = await p.evaluate((id, want, KIND) => {
         const a = window.__app, sc = a.router.cur, V = window.__vid;
         V.t += 50; a.t = V.t; a.input.begin();
         if (!V.picked && sc.v && sc.v.phase === 'pick' && a.t > 1600) { const sk = sc.B.me.kit.find(k => k.id === id); if (sk) { sc.pick(a, sk); V.picked = true; } else { V.picked = 'none'; } }
         a.router.draw(a);
-        const st = sc.v && sc.v.phase === 'play' ? sc.v.steps[sc.v.si] : null, mine = st && st.kind === 'attack' && st.who === 'me';
-        if (mine && V.at == null) V.at = { t: a.t, I: st.anim.I, skill: st.skill.name, kind: st.anim.A ? st.anim.A.kind : null };
+        const st = sc.v && sc.v.phase === 'play' ? sc.v.steps[sc.v.si] : null, mine = st && st.kind === KIND && st.who === 'me';
+        if (mine && V.at == null) V.at = { t: a.t, I: st.anim ? st.anim.I : 12, skill: st.skill.name, kind: st.anim && st.anim.A ? st.anim.A.kind : (sc.v.cast && (sc.v.cast.sp || sc.v.cast.kind)) };
         const age = V.at ? a.t - V.at.t : -1;
         return { phase: sc.v ? sc.v.phase : 'gone', picked: V.picked, mine, age, at: V.at, url: want || (V.at && age >= 0 && age < 2600) ? V.cv.toDataURL('image/png') : null, n: (sc.v && sc.v.steps || []).map(s => s.kind + (s.who ? ':' + s.who : '')).join(' ') };
-      }, id, mp4 && rec > 0);
+      }, id, mp4 && rec > 0, KIND);
       if (r.picked === 'none') { report.push(`${id}: 손패에 없음`); break; }
       if (r.at) info = r.at;
       if (r.url && r.age >= 0) {
