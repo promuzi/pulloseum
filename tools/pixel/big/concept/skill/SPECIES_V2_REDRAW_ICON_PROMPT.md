@@ -1,3 +1,5 @@
+문서 상태: 적용(2026-10-29 · CHANGELOG 325 — 샘플 세 장에 사용자 '이 그림체로 그려' → 19장 모두 v2/로 옮겨 변환). 기술 그림을 다시 그릴 때 이 요청서를 견본으로 쓴다.
+
 (2026-10-29 사용자 "톤이 달라아직도 이제는 너무 실사같아 이전에는 게임스킬 아이콘 같았는데" — 두 번째 다시 그리기(SPECIES_V2_REDRAW_TONE_PROMPT.md, 결과 v2/rejected_1029_real/)는 잔무늬 · 작은 알갱이 · 사실적인 빛이 많아 실사풍으로 반려. 첫 번째(v2/rejected_1029/)는 단색 배경 스티커풍으로 반려. 목표 = 원래 그림의 게임 스킬 아이콘 그림체(굵은 테 · 단순한 셀 명암 3~4단 · 큰 광택 한두 개 · 크고 단순한 효과 몇 개). 그림체 견본 = 같은 기술의 원래 그림(v2/<id>.png). 대상 = 쏜위드 · 젤리캡 · 윈드페탈 여섯 장씩 + 팽트랩 입맛 다시기(사용자 '쏜위드, 젤리캡, 윈드패탈만 바꿔. 팽트랩의 입맛다시기만 혓바닥 나오는 그런 느낌으로'). 샘플 세 장 먼저 → 사용자 확인 → 나머지. 결과는 v2/redraw_1029/ — 사용자가 고르면 v2/로 옮기고 → `python tools/pixel/big/skillart.py tools/pixel/big/concept/skill/v2/<id>.png assets/v2/skills/<id>.png 0.5 0.5 1.0`.)
 
 Task: generate skill illustrations for a mobile game whose creatures are plants. They are shown small on battle cards (about 58x52 pixels after downscaling), next to many existing skill illustrations, and they must look like they belong to the same set.
