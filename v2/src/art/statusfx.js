@@ -17,7 +17,10 @@ export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, par
 export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore',
   seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale', bleed: 'weak',
   atkDown: 'weak', defDown: 'corrode', spdDown: 'weak', critDown: 'weak', accDown: 'weak',
-  atkUp: 'rage', defUp: 'wall', spdUp: 'haste', critUp: 'focus', accUp: 'focus', flourish: 'haste', regen: 'regen', will: 'purified', shield: 'shield', purified: 'purified', aim: 'focus' };
+  atkUp: 'rage', defUp: 'wall', spdUp: 'haste', critUp: 'focus', accUp: 'focus', flourish: 'haste', regen: 'regen', will: 'purified', shield: 'shield', purified: 'purified', aim: 'focus',
+  // 종 고유 v2 새 효과(2026-10-29 ㉢ — 전엔 머리 위 낱말뿐): 가까운 연출을 빌려 씀 — 지옥 = 불붙음 · 독안개 = 독 · 빙결열매 = 서리 · 부활 = 회복 빛 · 튕김 = 막 · 매혹 = 기절 별 · 덫 = 가시 · 봉인 구슬 = 묶임 · 동굴 · 갑주 = 돌판 · 폭풍 = 바람 · 은신 · 밤 = 그늘 · 아침 · 면역 = 정화 빛
+  inferno: 'ignite', miasma: 'poison', fruit: 'chill', revive: 'regen', bounce: 'shield', charm: 'stun', thornTrap: 'thorns', orbTrap: 'bind', cave: 'wall', armor: 'wall', storm: 'gale',
+  stealth: 'shade', night: 'shade', morning: 'purified', immune: 'purified' };
 export function sfxAdd(list, who, kind, t, o = null) { if (!SFX_LIFE[kind]) return null; const e = { who, kind, t0: t, id: (list.n = (list.n || 0) + 1), ...(o || {}) }; list.push(e); return e; }
 // 화상 타닥 시각(ms, 불똥이 터지는 때) — 소리를 같은 때에 내려고
 export const popTimes = e => (POPS[e.kind === 'ignite' ? 'ignite' : 'burn'] || []).map((ms, k) => ms + Math.round((hash(e.id, k + 40) - 0.5) * 40));

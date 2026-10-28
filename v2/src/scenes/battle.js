@@ -79,6 +79,8 @@ import { ask } from './popups.js';
 import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubble } from '../art/emotes.js';
 import { ga, eul, eun, ro } from '../core/josa.js';
 import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
+import { fieldGround, fieldAir, ARRIVE_MS } from '../art/fieldfx.js';   // 환경을 경기장에(2026-10-29 ㉠)
+import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡)
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
 const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale',
@@ -275,6 +277,9 @@ function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 �
 // 환경 띠(2026-10-23 사용자 "환경 상태는 다른 UI로 다른 위치에" → "ㄷ으로 하자. 다만 상대환경은 위에. 내 환경은 스킬창과 체력바 사이 거기에" · "쉽게 위는 적. 아래는 나"):
 //  효과 창과 다른 모양 = 어두운 띠 + 윗줄만 환경 색 · [아이콘 18칸][이름][남은 N턴]을 왼쪽부터 · w = 0이면 글자 폭만큼(효과 설명 창) · 그린 폭을 돌려줌
 const ENV_H = 20;
+// 효과 조각(2026-10-29 ㉢ — 사용자 "이게 뭐가 어떻게 되는지 파악되기 전에 슥슥 지나가"): 걸린 식물 머리 위(환경 = 그 땅)에 [아이콘 이름] 조각이 톡 → 잠깐 머묾 → 효과 창 칸(환경 = 띠)으로 날아가 꽂힘(그때 칸이 생기며 반짝)
+//  효과 걸림 단계 0.85초 → 1초(환경 1.15초 — 땅이 먼저 바뀐 뒤 띠로) · 같은 식물에 잇따라 걸리면 둘째부터 0.7초(앞 조각이 날아가는 동안 다음 조각이 톡 — 무릎 꿇어라 셋이 3초 → 2.4초)
+const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480;
 function envBand(g, x, y, w, list, turn) {
   const ty = y + (ENV_H - glyphH('body')) / 2, items = list.map(st => {
     const D = STATUS[st.id] || { name: st.id }, ic = D.icon ? iconMid(D.icon) || icon(D.icon) : null, left = st.exp != null ? `${Math.max(1, st.exp - turn + 1)}턴` : '';
@@ -365,7 +370,7 @@ export const battle = {
       app.battleBoot = null;
     } else this.setupLocal(app);
     const B = this.B;
-    this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, led: null, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: B.turn, picked: null, uid: 0, eff: { me: listOf(B.me), foe: listOf(B.foe) }, foeReady: false, sfx: [] };
+    this.v = { hp: { me: B.me.hp, foe: B.foe.hp }, bar: { me: { main: B.me.hp, trail: B.me.hp, fx: null }, foe: { main: B.foe.hp, trail: B.foe.hp, fx: null } }, en: { me: B.me.energy, foe: B.foe.energy }, view: { me: B.me, foe: B.foe }, gone: {}, led: null, phase: 'pick', steps: [], si: 0, t0: null, pops: [], stance: {}, turn: B.turn, picked: null, uid: 0, eff: { me: listOf(B.me), foe: listOf(B.foe) }, foeReady: false, sfx: [], arrive: [], tok: [], flash: [], effSeq: {}, cast: null, envSlide: {} };   // arrive = 환경이 깔리는 중 · tok = 날아가 꽂히는 효과 조각 · flash = 꽂힌 칩 반짝 · cast = 보조 기술 시전(2026-10-29 ㉠~㉢)
     if (B.over) { this.v.phase = 'over'; this.v.overT0 = app.t; }
     else if (this.mode === 'swap3' && needMe(B)) { this.v.phase = 'need'; this.sheet = { forced: true }; }
     else if (this.mode === 'swap3' && B.need === 'foe') { this.v.phase = 'wait'; this.v.waitSend = true; }   // 친구 대결: 상대가 다음 식물을 고르는 중
@@ -525,8 +530,17 @@ export const battle = {
   },
   buildSteps(turn) {
     const B = this.B, nm = id => B[id].name, sk = id => (id === 'me' ? turn.mySkill : turn.foeSkill) || { name: '기술' }, out = [];
-    const evs = [...turn.events];
-    for (let i = 0; i < evs.length; i++) if (evs[i].t === 'hit') { const j = evs.findIndex((e, k) => k > i && e.t === 'stance' && e.who === evs[i].to && e.active); if (j > i) { evs.splice(i, 0, evs.splice(j, 1)[0]); i++; } }
+    const evs0 = [...turn.events];
+    for (let i = 0; i < evs0.length; i++) if (evs0[i].t === 'hit') { const j = evs0.findIndex((e, k) => k > i && e.t === 'stance' && e.who === evs0[i].to && e.active); if (j > i) { evs0.splice(i, 0, evs0.splice(j, 1)[0]); i++; } }
+    // 연타 사이의 효과 알림은 그 공격의 마지막 타 뒤로 모음(2026-10-29 ㉢ — 칼날 잎 1타 → '출혈' 알림 → 2타 · 3타로 연타가 끊겨 보였음) · 상대가 쓰러지는 등 연타가 끊기면 그 자리에서 내보냄
+    const evs = [], held = [];
+    let open = false;
+    for (const e of evs0) {
+      if (e.t === 'hit' && e.of > 1) { evs.push(e); open = e.n < e.of; if (!open) evs.push(...held.splice(0)); continue; }
+      if (open && (e.t === 'fx' || e.t === 'immune' || e.t === 'resist')) { held.push(e); continue; }
+      evs.push(...held.splice(0)); open = false; evs.push(e);
+    }
+    evs.push(...held.splice(0));
     // 턴 시작 공개(2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고 그다음 진행" · "선공 후공도 빠르고 작게 넘어가서 가독성 떨어지는데 확실히 연출"):
     //  두 사람이 고른 카드 + 선공 · 후공 표 → 그다음 사건. 카드가 둘일 때만 선공 · 후공 표(옛 '먼저!' 한 마디는 공개가 대신함)
     //  교체한 쪽 = 교체 카드(들어올 식물 얼굴 · 이름 — 2026-10-18 사용자 "교체할 때도 스킬 카드처럼 교체 카드가 뜨면서 뭐로 바뀔지 안내", 전엔 카드 없음)
@@ -552,12 +566,12 @@ export const battle = {
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
       else if (e.t === 'hit') { const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
-      else if (e.t === 'cast') out.push({ kind: 'cast', ms: 650, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
+      else if (e.t === 'cast') out.push({ kind: 'cast', ms: CAST_MS, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });   // 0.65초 → 1.3초(모으기 → 터뜨림 → 결과 — castfx.js)
       else if (e.t === 'execute') out.push({ kind: 'echo', ms: 700, side: e.to, pop: '처형', msg: `${ga(e.name)} 처형됐다!`, tone: 'hit' });   // 윈드페탈 처형의 춤
       else if (e.t === 'echo') out.push({ kind: 'echo', ms: 450, side: e.who, msg: `메아리가 울린다!`, tone: 'buff' });   // 프로스트벨 메아리(같은 차례에 한 번 더)
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 ${e.label || '되받아치기'}!`, tone: 'hit' });
-      else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff; out.push({ kind: 'fx', ms: 850, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }
+      else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff, pv = out[out.length - 1], follow = pv && pv.kind === 'fx' && pv.side === e.to && !(STATUS[pv.ev.id] || {}).env; out.push({ kind: 'fx', ms: D && D.env ? ENVFX_MS : follow ? FX2_MS : FX_MS, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }   // 효과 조각이 머리 위에서 칩 자리로 날아가 꽂힘(㉢) · 환경 = 땅이 바뀐 뒤 띠로
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
       else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: (RESIST_MSG[e.why] || RESIST_MSG.skip)(e.name), tone: 'buff' });
       else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.slice(0, 2).map(k => CURE_FIRE[k] || k).join(' · ')}!`, tone: 'note' });
@@ -581,6 +595,11 @@ export const battle = {
     if (!st) return;
     // 글자(가운데 전광판 없음): 기술 이름 = 쓰는 식물 위 리본, 나머지 = 머리 위 한두 낱말(st.msg 문장은 목록·기록용으로만 남김)
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms); sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing'); }
+    if (st.kind === 'cast' && st.skill) {   // 보조 기술 시전(㉡ castfx.js): 종류마다 다른 모양 · 터뜨리는 순간 소리
+      const kind = castKind(st.skill);
+      v.cast = { who: st.who, other: st.who === 'me' ? 'foe' : 'me', kind, col: castColor(st.skill, kind), t0: t };
+      sfx(CAST_SFX[kind] || 'release', { at: 0.46 });
+    }
     if (st.kind === 'sun') { v.en[st.who] = Math.min(v.view[st.who].energyMax || 8, (v.en[st.who] || 0) + (st.ev.gain || 0)); if (st.ev.gain) this.pop(st.who, `햇빛 +${st.ev.gain}`, null, t, false, -16, '#ffd25a'); }
     if (st.kind === 'first') sfx('first');
     if (st.kind === 'reveal') { sfx('select'); if (st.theirs) sfx('flip', { at: RV_FLIP0 / 1000 }); if (st.first) sfx('first', { at: RV_BADGE / 1000 }); }
@@ -606,8 +625,15 @@ export const battle = {
     if (st.kind === 'stance') v.stance[st.who] = { kind: st.stance, active: st.active };
     if (st.kind === 'guardBreak') v.stance[st.who] = null;
     if (st.kind === 'counter') { this.hurt(st.to, st.ev.dmg, 'hit', t); this.pop(st.to, `-${st.ev.dmg}`, 'bad', t, false, 0, null, null, { ...this.amt(st.to, st.ev.dmg), kill: v.hp[st.to] <= 0 }); }
-    if (st.ev && st.ev.list && st.side) v.eff[st.side] = st.ev.list;
-    if (st.kind === 'fx') { const S = STATUS[st.ev.id]; if (S) this.pop(st.side, S.name + (S.stack && st.ev.n ? ' ' + st.ev.n : '') + '!', null, t, false, -16, S.buff ? '#8ccfff' : S.col || '#8ccfff'); }
+    if (st.ev && st.ev.list && st.side && st.kind !== 'fx') { v.eff[st.side] = st.ev.list; v.effSeq[st.side] = v.si; }   // 효과 걸림은 조각이 꽂힐 때 바뀜(landTokens)
+    if (st.kind === 'fx') {   // ㉢ 효과 조각(전엔 머리 위 낱말 '쇠약 1!' 0.85초) · ㉠ 환경 = 그 땅이 먼저 바뀜(fieldfx 깔림) → 조각이 땅에서 띠로
+      const S = STATUS[st.ev.id] || {}, env = !!S.env;
+      // 아침의 다른 쪽(켠 프로스트벨이 아닌 편) = 하는 일이 없음 → 연출 · 시간 없이 목록만(전엔 이 쪽에도 금빛 번쩍 · 정화 반짝이가 한 번 더 나와 1.15초 늘어짐 — 2026-10-29 녹화)
+      if (st.ev.id === 'morning' && st.ev.who && v.view[st.side] && st.ev.who !== v.view[st.side].id) { st.ms = 0; st.quiet = true; }
+      if (env && !st.quiet) v.arrive.push({ who: st.side, id: st.ev.id, n: st.ev.n, t0: t });
+      if (S.name && !st.quiet) v.tok.push({ side: st.side, id: st.ev.id, n: st.ev.n, env, t0: t + (env ? 260 : 0), list: st.ev.list, seq: v.si });
+      else if (st.ev.list) { v.eff[st.side] = st.ev.list; v.effSeq[st.side] = v.si; }
+    }
     if (st.kind === 'skipT' && st.side === 'me' && st.ev.refund) v.en.me += st.ev.refund;
     if (st.kind === 'skipT' && st.side === 'foe' && st.ev.refund) v.en.foe += st.ev.refund;
     if (st.kind === 'tick') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, null, t, true, 0, STATUS[st.ev.id].col, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); }
@@ -620,7 +646,7 @@ export const battle = {
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
     if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
     if (st.kind === 'tick') { const se = sfxAdd(v.sfx, st.side, st.ev.id, t); if (st.ev.id === 'burn') crackles(se); else sfx('poison'); }
-    if (st.kind === 'fx' && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: SFX_OF_FX[st.ev.id] === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
+    if (st.kind === 'fx' && !st.quiet && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: SFX_OF_FX[st.ev.id] === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
     if (st.kind === 'drain') { sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to }); sfx('drain'); }
     if (st.kind === 'heal') { sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t); sfx(st.ev.t === 'regen' ? 'regen' : 'heal'); }
     if (st.kind === 'reflect') { sfxAdd(v.sfx, st.ev.who, 'thornsHit', t); sfx('thorns'); }
@@ -823,6 +849,7 @@ export const battle = {
   finishTurn(app) {
     const B = this.B, v = this.v;
     v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn;
+    for (const k of v.tok || []) k.done = true; v.cast = null; v.effSeq = {};   // 턴 끝 = 판의 효과 목록을 그대로(아래) — 날아가던 조각은 끝냄
     // 판이 끝나면 쓰러짐 연출로 이미 사라진 식물은 그대로 둠(2026-10-16 사용자 "승리 문구 뜨면서 사라졌던 식물이 다시 나와서 사라지는 효과")
     if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = B.over ? Object.fromEntries(['me', 'foe'].filter(s => v.gone[s] && B[s].hp <= 0).map(s => [s, true])) : {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
     if (B.over) {
@@ -838,6 +865,7 @@ export const battle = {
     const { g, W, H, t } = app;
     if (!this.B) this.setup(app);
     this.tick(app);
+    this.landTokens(t);   // 효과 조각이 칸에 닿은 때 목록 바꿈(㉢)
     const B = this.B, v = this.v, Lay = this.lay = layOf(H, handRows(B.me.kit), mutHand(B.me.kit)), AH = Lay.AH;
     g.rect(0, 0, W, H, T.ink);
     const st = v.phase === 'play' ? v.steps[v.si] : null;
@@ -866,6 +894,7 @@ export const battle = {
       if (st && st.kind === 'faint' && st.who === who) { const k = Math.min(1, (t - v.t0) / 700); g.alpha(1 - k, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
       let pose = null, flash = false, dx = 0, dy = 0;
       if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
+      if (st && st.kind === 'cast' && v.cast) { if (who === v.cast.who) { const cp = castPose(v.cast, t); pose = { qx: cp.qx, qy: cp.qy, sq: cp.sq }; flash = flash || cp.flash; } else if (who === v.cast.other) dx += targetKick(v.cast, t); }   // 시전 몸놀림(모으며 웅크림 → 터뜨림) · 거는 것이 닿으면 움찔
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
       const sw = v.sfx.length || (v.eff[who] || []).some(s => s.id === 'gale') ? swayOf(v.sfx, { [who]: (v.eff[who] || []).map(s => s.id) }, who, t) : 0;
@@ -887,8 +916,11 @@ export const battle = {
       c.save(); c.translate(ox, 0);
       c.save();
       if (fr) c.translate(fr.cam[0], fr.cam[1]);
+      else if (st && st.kind === 'cast' && v.cast) { const [sx, sy] = castShake(v.cast, t); if (sx || sy) c.translate(sx, sy); }   // 땅을 치는 환경 · 설치 기술만 1칸
       if (art) { c.drawImage(art, 0, ay); if (T.key === 'colosseum') arenaLife(g, bg, 0, ay, t); }
       else arena1(g, 0, AY, 270, 348, t);
+      const FP = { me: [px, py], foe: [ex, ey] }, fenv = this.fieldEnvs(t);
+      fieldGround(g, fenv, v.arrive, t, FP);   // ㉠ 환경이 깔린 쪽 땅(지옥 = 그을린 땅 · 갈라진 틈 · 불꽃, 독안개 = 보라 안개 …) — 받침 아래
       padV(g, ex, ey, 36, false, FAR_K);
       padV(g, px, py, 42, true);
       // 연출 판(공격 장마다 그린 270×348 — 받침 자리 기준): 땅을 따라 fy, 아주 짧은 화면은 상대 줄 아래를 눌러 내 식물 자리에 맞춤
@@ -911,6 +943,8 @@ export const battle = {
       if (fr) { board('front'); board('air'); }
       if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, t - v.t0, st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22)
       if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
+      fieldAir(g, fenv, v.arrive, t, FP, [-ox, AY, W, AH], 64);   // ㉠ 식물 위에 겹치는 환경(불티 · 안개 결 · 먹구름 · 아침 빛 · 밤 어둠) + 깔리는 순간
+      if (st && st.kind === 'cast' && v.cast) drawCast(g, v.cast, t, FP);   // ㉡ 시전(빛기둥 · 문양 구슬 · 땅 물결 · 종소리 · 설치 · 소환)
       for (const who of ['me', 'foe']) {
         const s = v.stance[who]; if (!s) continue;
         const [x, y] = this.above(who, 118);
@@ -947,14 +981,17 @@ export const battle = {
     // 환경 띠(위 = 상대 쪽 · 아래 = 내 쪽 — 체력판과 같은 폭이라 식물을 안 가림): 상대 띠 = 맨 위(그 밑에 상대 체력판) · 내 띠 = 내 체력판과 손패 사이(체력판을 띠만큼 올림)
     // 효과 창 줄 수(2026-10-23 사용자 "폭이 넓은 폰은 과하게 효과와 창 때문에 식물이 다 가려지고 서로겹치는데"): 상대 효과 창은 내 식물 머리 위까지 · 내 효과 창은 상대 화분 아래부터 —
     //  들어가는 만큼만(1~2줄, 넘치면 +n · 눌러서 다 봄) · 상대 쪽이 한 줄도 안 들어가면 상대 체력판 맨 윗줄(재배사)을 접음
-    const fEnv = this.envs('foe'), mEnv = this.envs('me'), foeY = AY + 4 + (fEnv.length ? ENV_H + 2 : 0), myY = MY - (mEnv.length ? ENV_H + 2 : 0);
+    // 띠가 생기거나 걷힐 때 체력판이 0.28초에 걸쳐 밀림(2026-10-29 — 전엔 한 장에 툭 바뀌어 '어느새 체력바 아래에 올라와 있고')
+    const fEnv = this.envs('foe'), mEnv = this.envs('me'), fOff = this.slide('foe', fEnv.length ? ENV_H + 2 : 0, t), mOff = this.slide('me', mEnv.length ? ENV_H + 2 : 0, t);
+    const foeY = AY + 4 + Math.round(fOff), myY = MY - Math.round(mOff);
     const headY = this.at('me')[1] - PLANT_TOP, potY = this.at('foe')[1] + POT_BOTTOM, theirs = this.statuses('foe');
     const rowsFit = top => Math.min(2, Math.floor((headY - top + 2) / (SW_H + 2)));
     let foeCompact = false, foeRows = rowsFit(foeY + boxH(false) + 3);
     if (foeRows < 1 && theirs.length) { foeCompact = true; foeRows = Math.max(1, rowsFit(foeY + boxH(true) + 3)); }
-    if (fEnv.length) envBand(g, 6, foeY - ENV_H - 2, BOX_W, fEnv, v.turn);
+    if (fEnv.length && fOff > 1) g.alpha(Math.min(1, fOff / (ENV_H + 2)), () => envBand(g, 6, foeY - ENV_H - 2, BOX_W, fEnv, v.turn));
     const fh = infoBox(app, 6, foeY, v.view.foe, v.bar.foe, v.en.foe, false, foeTeam, foeCompact);
     statusWins(g, 6, foeY + fh + 3, theirs, Math.max(1, foeRows));
+    this.geo = { foe: { x: 6, y: foeY + fh + 3, up: false, band: [6, AY + 4], bandNow: [6, foeY - ENV_H - 2], list: theirs }, me: null };   // 효과 조각이 꽂힐 자리(drawTokens · 반짝)
     if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = foeY + 4; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
       const sec = this.deadline ? Math.max(0, Math.ceil((this.deadline - net.now()) / 1000)) : null, label = '상대가 다음 식물을 고르는 중' + (sec != null ? ` · ${sec}` : ''), w = g.textW(label) + 16, x = Math.round((W - w) / 2), y = Lay.led - 8;
@@ -962,9 +999,11 @@ export const battle = {
       g.text(label, W / 2, y + (18 - glyphH('body')) / 2, { color: '#e0f0ff', align: 'center' });
     }
     infoBox(app, W - 146, myY, v.view.me, v.bar.me, v.en.me, true);
-    if (mEnv.length) envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn);
+    if (mEnv.length && mOff > 1) g.alpha(Math.min(1, mOff / (ENV_H + 2)), () => envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn));
     const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
     if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
+    this.geo.me = { x: W - 146, y: myY - 3 - SW_H, up: true, band: [W - 146, MY + boxH(true) - ENV_H], bandNow: [W - 146, myY + boxH(true) + 2], list: mine };
+    this.drawFlash(app);   // 꽂힌 칸 · 띠 반짝(㉢)
     // 손패: 카드 여섯 장(판 배경 없음) → 기타 단추 줄. 시간 막대 = 카드 묶음 바로 위, 카드 폭만큼
     const skipNow = v.phase === 'pick' && mustSkip(B.me), live = !app.confirm && !this.sheet && !this.info2 && !this.emoteOpen && !this.peek;
     // 효과 설명 = 체력판 · 효과 창을 누르면(2026-10-16 사용자 "맨 아래 효과 버튼은 뭐야? 이거 필요한 거야?" → 아래 단추를 빼고 효과가 보이는 그 자리에서)
@@ -980,6 +1019,7 @@ export const battle = {
     this.hand(app, HY - CARD_Y, live, skipNow);
     if (mutHand(B.me.kit)) this.miscRow(app, HY - CARD_Y + CARD_Y + CARD_H + CARD_GY, live, hx + 2 * (HAND_W + HAND_GX));   // 아래 줄 오른쪽
     else this.miscRow(app, HY + hrows * CARD_H + (hrows - 1) * CARD_GY + 8, live);
+    this.drawTokens(app);   // 효과 조각(㉢) — 손패 위로도 날아가니 맨 위에
     if (st && st.kind === 'reveal') this.drawReveal(app, st);
     if (this.peek) this.drawPeek(app);
     if (this.sheet) this.swapSheet(app);
@@ -1180,9 +1220,75 @@ export const battle = {
   },
   // 그 편에 켜진 환경(강풍 등 — 환경 띠 · 효과 설명 창) · 검토 촬영(?status=1)은 양쪽 강풍
   envs(side) {
-    const v = this.v, out = ((v.eff && v.eff[side]) || []).filter(x => (STATUS[x.id] || {}).env);
+    const v = this.v, me = v.view[side], out = ((v.eff && v.eff[side]) || []).filter(x => (STATUS[x.id] || {}).env && !(x.id === 'morning' && x.by && me && x.by !== me.id));   // 아침 띠 = 켠 프로스트벨 쪽만(2026-10-29 — 다른 쪽엔 하는 일이 없는데 띠가 생겨 내게 걸린 것처럼 보였음)
     if (this.p && this.p.status) out.push({ id: 'gale', exp: v.turn + 1 });
     return out;
+  },
+  // 경기장에 그릴 환경(㉠ fieldfx): 띠와 달리 아침도 양쪽 · 지금 깔리는 중인 것(조각이 아직 안 꽂힘)도
+  fieldEnvs(t) {
+    const v = this.v, out = {};
+    for (const side of ['me', 'foe']) {
+      const list = ((v.eff && v.eff[side]) || []).filter(x => (STATUS[x.id] || {}).env);
+      for (const a of v.arrive) if ((a.who === side || a.id === 'morning' || a.id === 'night') && t - a.t0 >= 0 && t - a.t0 < 2600 && !list.some(x => x.id === a.id)) list.push({ id: a.id, n: a.n });
+      out[side] = list;
+    }
+    v.arrive = v.arrive.filter(a => t - a.t0 < 4000);
+    return out;
+  },
+  // 환경 띠가 생기거나 걷힐 때 체력판이 미끄러지는 값(0 ↔ ENV_H + 2)
+  slide(side, to, t) {
+    const S = this.v.envSlide || (this.v.envSlide = {}), at = s => s.from + (s.to - s.from) * (1 - (1 - Math.min(1, (t - s.t0) / 280)) ** 3);
+    let s = S[side];
+    if (!s) s = S[side] = { from: to, to, t0: t };
+    if (s.to !== to) { s.from = at(s); s.to = to; s.t0 = t; }
+    return at(s);
+  },
+  // 효과 창 칸 자리(statusWins 와 같은 배치) — i번째 칸 [x, y, 폭]
+  chipRect(side, i) {
+    const G = this.geo && this.geo[side]; if (!G) return null;
+    const c = i % 3, w = c === 2 ? BOX_W - 2 * (SW_W + SW_GAP) : SW_W;
+    return [G.x + c * (SW_W + SW_GAP), G.y + (G.up ? -1 : 1) * Math.floor(i / 3) * (SW_H + 2), w];
+  },
+  // 조각이 꽂히는 때: 그 편 효과 목록을 그 사건 때 것으로(더 뒤 단계가 이미 바꿨으면 그대로) · 칸 반짝 · 딸깍
+  landTokens(t) {
+    const v = this.v;
+    for (const k of v.tok) {
+      if (k.done || t - k.t0 < TOK_FLY[1]) continue;
+      k.done = true;
+      if (k.list && k.seq > (v.effSeq[k.side] ?? -1)) { v.eff[k.side] = k.list; v.effSeq[k.side] = k.seq; }
+      v.flash.push({ side: k.side, id: k.id, env: k.env, t0: t });
+      sfx('land');
+    }
+    v.tok = v.tok.filter(k => !k.done || t - k.t0 < 2000);
+    v.flash = v.flash.filter(f => t - f.t0 < FLASH_MS);
+  },
+  // 효과 조각: [아이콘 이름](환경 = 띠 모양) — 머리 위(환경 = 그 땅)에서 톡 → 머묾 → 칸 · 띠 자리로 휘어 날아감
+  drawTokens(app) {
+    const { g, t, W } = app, v = this.v, ox = Math.floor((W - 270) / 2);
+    for (const k of v.tok) {
+      const age = t - k.t0; if (k.done || age < 0) continue;
+      const G = this.geo && this.geo[k.side]; if (!G) continue;
+      if (!k.from) { const [x, y] = k.env ? this.at(k.side) : this.above(k.side, 92); k.from = [ox + x - (k.env ? 30 : SW_W >> 1), y - (k.env ? 12 : 4)]; }
+      let to;
+      if (k.env) to = G.band;
+      else { const i = Math.min(5, ((x => (x < 0 ? G.list.length : x))(G.list.findIndex(s => s.id === k.id)))), r = this.chipRect(k.side, i); to = r ? [r[0], r[1]] : k.from; }
+      const pop = Math.min(1, age / TOK_POP), u = Math.max(0, Math.min(1, (age - TOK_FLY[0]) / (TOK_FLY[1] - TOK_FLY[0]))), e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
+      const y0 = k.from[1] - 6 * pop, x = Math.round(k.from[0] + (to[0] - k.from[0]) * e), y = Math.round(y0 + (to[1] - y0) * e - Math.sin(Math.PI * e) * 16);   // 톡 6칸 솟음 → 위로 휘며 칸 자리로
+      g.alpha(Math.min(1, age / 90), () => (k.env ? envBand(g, x, y, 0, [{ id: k.id, exp: null }], v.turn) : statusWins(g, x, y, [{ id: k.id, n: k.n }], 1)));
+    }
+  },
+  // 꽂힌 칸 · 띠가 흰 테로 한 번 반짝(0.48초)
+  drawFlash(app) {
+    const { g, t } = app, v = this.v;
+    for (const f of v.flash) {
+      const k = (t - f.t0) / FLASH_MS, G = this.geo && this.geo[f.side]; if (!G || k >= 1) continue;
+      let r;
+      if (f.env) r = [G.bandNow[0], G.bandNow[1], BOX_W, ENV_H];   // 띠가 미끄러져 들어오는 동안 그 자리를 따라감
+      else { const i = G.list.findIndex(s => s.id === f.id); if (i < 0 || i > 5) continue; const c = this.chipRect(f.side, i); r = [c[0], c[1], c[2], SW_H]; }
+      const grow = Math.round(k * 3);
+      g.alpha((1 - k) * 0.95, () => { g.frame(r[0] - 1 - grow, r[1] - 1 - grow, r[2] + 2 + grow * 2, r[3] + 2 + grow * 2, '#ffffff'); });
+      g.alpha((1 - k) * 0.35, () => g.rect(r[0], r[1], r[2], r[3], '#ffffff'));
+    }
   },
   // 교체 창: 내 식물 셋 — 앞에 선 식물·쓰러진 식물은 못 고름, 쓰러진 자리를 채울 땐 닫기 없음
   swapSheet(app) {

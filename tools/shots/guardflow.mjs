@@ -30,13 +30,14 @@ try {
     const steps = scene.buildSteps({ mySkill: attack, foeSkill: guard, events });
     scene.startStep(steps.find(s => s.kind === 'stance'), app.t, app);
     const active = scene.v.stance.foe?.active;
-    scene.startStep(steps.find(s => s.kind === 'guardBreak'), app.t + 1000, app);
-    return { normal: statOf(guard), repeat: statOf(guard, { halved: true }), active, cleared: scene.v.stance.foe === null, kinds: steps.filter(s => ['stance', 'attack', 'guardBreak'].includes(s.kind)).map(s => s.kind) };
+    scene.startStep(steps.find(s => s.kind === 'attack'), app.t + 1000, app);
+    // 방어는 그 턴 내내(엑셀 v10 — 맞아도 안 풀림 · 규칙에서 guardBreak 사건이 사라짐) → 맞은 뒤에도 자세가 남고 턴 끝(finishTurn)에 지워짐
+    return { normal: statOf(guard), repeat: statOf(guard, { halved: true }), active, held: scene.v.stance.foe?.active, kinds: steps.filter(s => ['stance', 'attack', 'guardBreak'].includes(s.kind)).map(s => s.kind) };
   });
   assert.equal(result.normal.txt, '×4'); assert.equal(result.normal.label, '방어력');
   assert.equal(result.repeat.txt, '×2.5');
-  assert.deepEqual(result.kinds, ['stance', 'attack', 'guardBreak']);
-  assert.equal(result.active, true); assert.equal(result.cleared, true);
+  assert.deepEqual(result.kinds, ['stance', 'attack']);
+  assert.equal(result.active, true); assert.equal(result.held, true);
   mkdirSync(out, { recursive: true });
   for (const [name, params] of [['front', {}], ['back', { peek: 'guard', peekP: '1' }]]) {
     const data = await page.evaluate(params => window.__shot('battle', { phase: 'pick', venue: 'colosseum', ...params }, { scale: 3 }), params);
