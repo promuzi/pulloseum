@@ -4,6 +4,11 @@
 
 > 여기는 **v2(2026-10-14 전면 도트 재제작 ~)** 기록이다. 그 전 v1 시절(2026-06-15 ~ 09-11, 옛 `index.html`)은 [history/CHANGELOG-v1.md](history/CHANGELOG-v1.md)로 옮겼다(2026-10-25).
 
+### 2026-10-29 (326) — 친구 서버에 올림(322 ~ 325 전투 연출 · 기술 그림 · 은시잉 · 판 09ffd6e5)
+
+- 사용자 'ㄱㄱ'(친구 서버에 올릴지 물음에 — 안전 점검부터). `prodcheck` 문제 없음(계정 5 · 봇 판 4개 끝까지 · 옛 카드 선물 · 지난 시즌 상자 · 리그 조건 = (정상)) · `test_cf` 54/54 · 쿠키 8 · 쿠폰 통과 · wrangler `Success`(파일 98개 새로 · 1138개 그대로) · `Current Version ID: 09ffd6e5-e1ba-431c-970e-c3789f1bc823` · `/api/config`의 `save` 8(저장 판 그대로) · 새 파일(`fieldfx.js` · `castfx.js` · 기술 그림) 해시가 로컬과 같음 · `catalog.js`에 은시잉 · `pagecheck` 준비 됨 · 빠진 그림 0 · 오류 0.
+- 규칙 · 저장 판 그대로(`RULES_VER` 16 · `SAVE_VER` 8 — 진행 중인 판은 닫히지 않음). 되돌리기: `wrangler rollback 655060e8-7d5a-4a84-b50c-d84a8129e06d`. 공지 없음.
+
 ### 2026-10-29 (325) — 기술 그림 19장 원래 그림체로 다시(쏜위드 · 젤리캡 · 윈드페탈 여섯씩 + 팽트랩 입맛 다시기 · 친구 서버 전)
 
 - 세 번째 샘플(원래 그림을 그림체 견본으로) 세 장에 사용자 '이 그림체로 그려' → 나머지 16장을 같은 요청서(`concept/skill/SPECIES_V2_REDRAW_ICON_PROMPT.md` RUN 2)로 → `concept/skill/v2/<id>.png`(옛 원화는 git 기록) → `skillart.py … 0.5 0.5 1.0` → `assets/v2/skills/`.
