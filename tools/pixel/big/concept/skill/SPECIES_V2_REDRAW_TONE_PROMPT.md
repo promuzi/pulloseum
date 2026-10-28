@@ -1,4 +1,4 @@
-(2026-10-29 사용자 "비슷하던 여섯 종 36장만 기존 그림 톤 그대로 다시 그려줘. 기술마다 중심 대상만 다르게. 샘플 두세 장 먼저 보여줘" — 첫 다시 그리기(SPECIES_V2_REDRAW_PROMPT.md, 결과 v2/rejected_1029/)는 단색 배경 · 작은 물건 하나라 '기존스킬과 톤이 다르잖아'로 반려. 중심 대상(기술마다 다른 모양)은 그대로 두고 그리는 방식만 기존 그림(굵은 테 · 진한 광택 · 크게 가까이 · 배경에 분위기)에 맞춤. 이어서 사용자 '드라곤프루트는 괜찮아 프로스트벨이랑. 만약 아직 안 만들었으면 그대로 써' → 프로스트벨 · 드라코프루트는 옛 그림 그대로, 다시 그리는 건 윈드페탈 · 젤리캡 · 팽트랩 · 쏜위드 24장(RUN 1의 프로스트벨 자물쇠는 이미 시작돼 톤 확인용으로만). 결과는 v2/redraw_1029/ — 사용자가 고르면 v2/로 옮기고 → `python tools/pixel/big/skillart.py tools/pixel/big/concept/skill/v2/<id>.png assets/v2/skills/<id>.png 0.5 0.5 1.0`.)
+(2026-10-29 사용자 "비슷하던 여섯 종 36장만 기존 그림 톤 그대로 다시 그려줘. 기술마다 중심 대상만 다르게. 샘플 두세 장 먼저 보여줘" — 첫 다시 그리기(SPECIES_V2_REDRAW_PROMPT.md, 결과 v2/rejected_1029/)는 단색 배경 · 작은 물건 하나라 '기존스킬과 톤이 다르잖아'로 반려. 중심 대상(기술마다 다른 모양)은 그대로 두고 그리는 방식만 기존 그림(굵은 테 · 진한 광택 · 크게 가까이 · 배경에 분위기)에 맞춤. 이어서 사용자 '드라곤프루트는 괜찮아 프로스트벨이랑. 만약 아직 안 만들었으면 그대로 써' → 프로스트벨 · 드라코프루트는 옛 그림 그대로, 다시 그리는 건 윈드페탈 · 젤리캡 · 팽트랩 · 쏜위드 24장(RUN 1의 프로스트벨 자물쇠는 이미 시작돼 톤 확인용으로만). 샘플 확인 뒤 사용자 '쏜위드, 젤리캡, 윈드패탈만 바꿔. 팽트랩의 입맛다시기만 혓바닥 나오는 그런 느낌으로' → 팽트랩은 입맛 다시기(u_fang_2) 한 장만 · RUN 2 = 열일곱 장. 결과는 v2/redraw_1029/ — 사용자가 고르면 v2/로 옮기고 → `python tools/pixel/big/skillart.py tools/pixel/big/concept/skill/v2/<id>.png assets/v2/skills/<id>.png 0.5 0.5 1.0`.)
 
 Task: generate skill illustrations for a mobile game whose creatures are plants. They are shown small on battle cards (about 58x52 pixels after downscaling), next to many existing skill illustrations, and they must look like they belong to the same set.
 
@@ -34,12 +34,7 @@ u_jelly_2b.png - grass - CROSSED RIBBONS: three wavy green seaweed ribbons cross
 u_jelly_3b.png - water - GHOST: a nearly invisible translucent jelly silhouette shimmering like a mirage, only a faint glowing edge, bubbles drifting through it
 u_jelly_3c.png - water - U-TURN ARROW: one big thick orange arrow making a U-turn, bouncing back off a small round blue jelly shield with an impact flash
 
-u_fang_1.png - grass - CLOSED JAW (the only Fangtrap image with the plant's jaw): a green venus flytrap jaw snapped shut from the side, teeth interlocked, a bite flash
-u_fang_2.png - grass - TONGUE: one big pink tongue licking, a large clear drool drop falling from it
-u_fang_2b.png - grass - ACID POOL: a round bubbling pool of glowing green-purple acid, big bubbles popping, seen from slightly above
-u_fang_3.png - grass - PLATE: a big round white plate seen at an angle with a leaf fork and a leaf knife crossed on it, a shine on the rim
-u_fang_3b.png - grass - STARS: three big golden stars in an arch like a rating badge, the middle one biggest, light rays behind
-u_fang_3c.png - fire - SKEWER: one long skewer of green leaf pieces roasting over tall orange flames
+u_fang_2.png - grass - TONGUE OUT: a green venus flytrap mouth with one big glossy pink tongue sticking far out and licking its lips, a large drool drop falling - the tongue is the hero of the image
 
 u_thorn_1.png - grass - BEAR TRAP: an open jaw-shaped trap made of thorny brambles lying on the ground, pale thorns as teeth
 u_thorn_2.png - grass - BURST FROM HOLE: a thorny vine fist bursting up out of a dark hole in the ground, chunks of dirt flying

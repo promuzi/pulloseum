@@ -314,7 +314,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (foe.st && foe.st.pendEv) { for (const x of foe.st.pendEv) ev.push({ ...x, hp: foe.hp, list: listOf(foe) }); delete foe.st.pendEv; }   // 버티기 · 죽은 줄 알았나? · 부활잉 = 맞은 사건 뒤에 '일어남'(그 뒤 체력 hp — 화면 · 점검이 체력을 맞춤)
       if (tier !== 'miss' && has(foe, 'stealth')) {
         const pr = foe.eff.stealth.reflect; delete foe.eff.stealth; ev.push({ t: 'reveal', who: foe.id, id: 'stealth', list: listOf(foe) });
-        if (pr && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round((dmg + absorb) * (pr === true ? FX.reflect.k : pr))); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 환각의 주파수 · 응싱: 뚫리면 처음 맞은 한 타 반사(응싱 = 크게)
+        if (pr && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) { const rd = Math.max(1, Math.round((dmg + absorb) * (pr === true ? FX.reflect.k : pr))); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd }); }   // 환각의 주파수 · 은시잉: 뚫리면 처음 맞은 한 타 반사(은시잉 = 크게)
       }   // 맞으면 은신이 풀림(회피 실패 — 스침 포함)
       if (tier !== 'miss') { const rc = { foe: u, dmg: dmg + absorb, T, ev }; react(foe, 'hit', rc); if (a.contact !== false && !a.ranged && !a.area) react(foe, 'contact', rc); if (tier === 'crit') { react(foe, 'crit', rc); react(u, 'dealCrit', { foe, T, ev }); } if (foe.hp > 0 && foe.hp <= foe.max / 2) react(foe, 'half', rc); }   // 반응(D13)
       blocked = guardOn && tier !== 'miss';

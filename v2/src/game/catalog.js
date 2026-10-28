@@ -515,7 +515,7 @@ const V2 = {
       S('u_jelly_2', '톡씽', 'water', 'u', 60, 2, { inflict: { id: 'poison', n: 1 }, reflect: true, reflectInflict: { id: 'poison', n: 1 } }),
       S('u_jelly_2b', '미역잉', 'grass', 'u', 25, 2, { hits: 3, dodgeSeal: true }),
       S('u_jelly_3', '부활잉', 'water', 'u', 0, 2, { uses: 1, revive: [['atkDown', 0.3, 2], ['atkDown', 0.2, 1], ['defDown', 0.4, 2], ['defDown', 0.3, 1]] }),
-      S('u_jelly_3b', '응싱', 'water', 'u', 0, 2, { self: 'stealth', pierceReflect: 0.6 }),
+      S('u_jelly_3b', '은시잉', 'water', 'u', 0, 2, { self: 'stealth', pierceReflect: 0.6 }),
       S('u_jelly_3c', '너꺼잉', 'water', 'u', 0, 1, { bounce: true }),
     ],
   },
