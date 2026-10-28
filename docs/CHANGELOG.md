@@ -4,6 +4,11 @@
 
 > 여기는 **v2(2026-10-14 전면 도트 재제작 ~)** 기록이다. 그 전 v1 시절(2026-06-15 ~ 09-11, 옛 `index.html`)은 [history/CHANGELOG-v1.md](history/CHANGELOG-v1.md)로 옮겼다(2026-10-25).
 
+### 2026-10-29 (319) — 친구 서버에 올림(318 그림 묶음 · 판 b8fe87ce)
+
+- 사용자 '그림 묶음도 친구 서버에 올려줘(안전 점검부터)'. `prodcheck` 문제 없음(지난 시즌 상자 · 옛 카드 선물 = (정상)) · `test_cf` 54/54(첫 실행은 요약 없이 끝나 다시 돌림) · wrangler `Success` · `Current Version ID: b8fe87ce-006e-4267-84ea-8e2efbe31ecf`(파일 92개 새로 · 1142개 그대로) · `pagecheck` 준비 됨 · 빠진 그림 0 · 오류 0 · 새 그림 주소(`u_aqua_3d` · `env_night_m` · `res_prep`) 200.
+- 규칙 · 저장 판 그대로(`RULES_VER` 15 · `SAVE_VER` 7 — 진행 중인 판은 닫히지 않음). 되돌리기: `wrangler rollback 50084241-6135-49fd-8e99-7088082a9c02`. 공지 없음.
+
 ### 2026-10-29 (318) — 아홉 종 새 기술 그림 55장 · 새 효과 아이콘 11개(코덱스 · 친구 서버 전)
 
 - 사용자 '새 기술 그림·환경 아이콘을 코덱스로 그려줘'. 지시서 = `tools/pixel/big/concept/skill/SPECIES_V2_PETAL_THORN_AQUA_PROMPT.md` · `…_WIND_FROST_JELLY_PROMPT.md` · `…_FANG_TOXI_DRACO_PROMPT.md`(기술마다 한 번씩 · 기존 v2 그림체에 맞춤) · `concept/icons3/FX10_PROMPT.md`(아이콘판 fx_10 ~ fx_12). 앱 내장 `codex.exe exec` 네 번(14:39 ~ 15:29).
