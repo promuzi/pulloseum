@@ -130,6 +130,16 @@ export const SHOTS = [
   ['07_battle_volt', 'battle', { phase: 'pick', venue: 'colosseum', me: 'volt_vine', foe: 'aqua', energy: '3' }],   // 종 고유 v2(볼트바인 구슬 칸 — 햇빛 바 끝 보라)
   ['07_battle_stone', 'battle', { phase: 'pick', venue: 'colosseum', me: 'stone_cap', foe: 'aqua', energy: '8' }],   // 종 고유 v2(스톤캡 동굴)
   ['07_battle_gvine', 'battle', { phase: 'pick', venue: 'colosseum', me: 'vine_wind', foe: 'aqua', energy: '8', pre: 'me:evs3' }],   // 종 고유 v2(게일바인)
+  // 종 고유 v2 아홉 종(2026-10-29 — 코덱스 기술 그림 · 효과 아이콘 fx_10 ~ fx_12)
+  ['07_battle_petal', 'battle', { phase: 'pick', venue: 'colosseum', me: 'flower_grass', foe: 'aqua', energy: '8', pre: 'foe:charm' }],
+  ['07_battle_thorn', 'battle', { phase: 'pick', venue: 'colosseum', me: 'thorn', foe: 'aqua', energy: '8', pre: 'me:thornTrap2' }],
+  ['07_battle_aqua', 'battle', { phase: 'pick', venue: 'colosseum', me: 'aqua', foe: 'thorn', energy: '8' }],
+  ['07_battle_wind', 'battle', { phase: 'pick', venue: 'colosseum', me: 'flower_wind', foe: 'aqua', energy: '8' }],
+  ['07_battle_frost', 'battle', { phase: 'pick', venue: 'colosseum', me: 'frost_bell', foe: 'aqua', energy: '8', pre: 'me:night' }],
+  ['07_battle_jelly', 'battle', { phase: 'pick', venue: 'colosseum', me: 'jelly_cap', foe: 'aqua', energy: '8', pre: 'me:revive,bounce' }],
+  ['07_battle_fang', 'battle', { phase: 'pick', venue: 'colosseum', me: 'fang_trap', foe: 'aqua', energy: '8', pre: 'me:prep2' }],
+  ['07_battle_toxi', 'battle', { phase: 'pick', venue: 'colosseum', me: 'toxi_cactus', foe: 'aqua', energy: '8', pre: 'foe:miasma' }],
+  ['07_battle_draco', 'battle', { phase: 'pick', venue: 'colosseum', me: 'draco_fruit', foe: 'aqua', energy: '8', pre: 'me:fruit2' }],
   ...[['cactus_wind', 'gale'], ['vine_wind', 'gvine'], ['stone_cap', 'stone'], ['spore_cap', 'spore'], ['volt_vine', 'volt']].flatMap(([k, u]) => ['1', '2', '2b', '3', '3b', '3c'].map(n => ['09_peek_' + u + '_' + n, 'battle', { phase: 'pick', venue: 'colosseum', me: k, foe: 'aqua', energy: '8', hand: 'u_' + u + '_' + n, peek: 'u_' + u + '_' + n }])),   // 종 고유 v2 카드 뒷면 30장(2026-10-24)
   ['07_battle_skip', 'battle', { phase: 'pick', venue: 'colosseum', pre: 'me:stun;foe:atkDown,defDown' }],
   ['07_battle_bind', 'battle', { phase: 'pick', venue: 'colosseum', energy: '4', pre: 'me:seal,taunt' }],

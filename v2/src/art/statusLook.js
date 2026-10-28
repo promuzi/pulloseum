@@ -22,19 +22,19 @@ export const STATUS = {
   burn: { name: '화상', icon: 'fx_burn', col: '#ff7a3a' }, poison: { name: '독', icon: 'fx_poison', col: '#b866ff', stack: 5 }, bleed: { name: '출혈', icon: 'fx_bleed', col: '#ff5a6e' },
   shock: { name: '감전', icon: 'fx_shock', col: '#ffd84a' }, chill: { name: '빙결', icon: 'fx_chill', col: '#c4ecff', stack: 3 }, wet: { name: '젖음', icon: 'fx_wet', col: '#4f9dff' },
   dark: { name: '암실', icon: 'fx_shade', col: '#a0a3c8' }, shade: { name: '그늘', icon: 'fx_shade', col: '#a0a3c8' },
-  stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' }, charm: { name: '매혹', icon: 'st_stun', col: '#ff9ad8' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' }, frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' },
+  stun: { name: '기절', icon: 'st_stun', col: '#ff86c8' }, charm: { name: '매혹', icon: 'fx_charm', col: '#ff9ad8' }, paral: { name: '마비', icon: 'st_paral', col: '#ffe680' }, frozen: { name: '얼음', icon: 'st_frozen', col: '#e8f8ff' },
   seal: { name: '봉인', icon: 'fx_seal', col: '#6fd25c' }, root: { name: '속박', icon: 'st_root', col: '#c08a5a' }, taunt: { name: '도발', icon: 'fx_taunt', col: '#ff5a5a' },
   spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 99 }, leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' },
   gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true }, storm: { name: '폭풍', icon: 'env_storm', col: '#9a7bff', env: true }, orbTrap: { name: '봉인 구슬', icon: 'fx_seal', col: '#c9a8ff', env: true }, cave: { name: '동굴', icon: 'env_cave', col: '#d9b27a', env: true },
-  thornTrap: { name: '덫', icon: 'target', col: '#9fd36a', env: true },
-  morning: { name: '아침', icon: 'sun', col: '#ffd27a', env: true }, night: { name: '밤', icon: 'shade', col: '#8a8fd8', env: true },   // 프로스트벨 필드 환경(그림은 임시 — 코덱스 아이콘 대기)   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
+  thornTrap: { name: '덫', icon: 'trap_thorn', col: '#9fd36a', env: true }, miasma: { name: '독안개', icon: 'env_miasma', col: '#b866ff', env: true },
+  morning: { name: '아침', icon: 'env_morning', col: '#ffd27a', env: true }, night: { name: '밤', icon: 'env_night', col: '#8a8fd8', env: true },   // 프로스트벨 필드 환경(아이콘 2026-10-29 코덱스 fx_10)   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
   // 이로운 상태이상 · 준비 효과 · 갑주
   regen: { name: '재생', icon: 'fx_regen', buff: true }, will: { name: '의지', icon: 'fx_will', buff: true }, immune: { name: '면역', icon: 'fx_immune', buff: true },
   aim: { name: '조준', icon: 'fx_aim', buff: true }, stealth: { name: '은신', icon: 'fx_stealth', buff: true }, clone: { name: '분신', icon: 'fx_stealth', buff: true },
   shield: { name: '보호막', icon: 'fx_barrier', buff: true }, armor: { name: '갑주', icon: 'fx_armor', buff: true },
-  fruit: { name: '빙결열매', icon: 'fruit', buff: true, stack: 99 },
-  execute: { name: '처형', icon: 'sword', col: '#ff5a5a' }, hpBuffEnd: { name: '주입 반동', icon: 'heart', col: '#b866ff' }, settle: { name: '청산', icon: 'fx_will', col: '#4f9dff' },   // 피해 사건 이름(처형의 춤 · 청산)   // 드라코프루트(그림 임시)
-  revive: { name: '부활', icon: 'heart', buff: true }, bounce: { name: '튕김', icon: 'fx_reflect', buff: true },   // 젤리캡 부활잉 · 너꺼잉(그림 임시)
+  fruit: { name: '빙결열매', icon: 'fx_fruit', buff: true, stack: 99 },
+  execute: { name: '처형', icon: 'fx_execute', col: '#ff5a5a' }, hpBuffEnd: { name: '주입 반동', icon: 'fx_inject', col: '#b866ff' }, settle: { name: '청산', icon: 'fx_settle', col: '#4f9dff' },   // 피해 사건 이름(처형의 춤 · 청산)
+  revive: { name: '부활', icon: 'fx_revive', buff: true }, bounce: { name: '튕김', icon: 'fx_bounce', buff: true },   // 젤리캡 부활잉 · 너꺼잉(아이콘 2026-10-29 코덱스 fx_10 ~ fx_12)
   purified: { name: '정화', icon: 'fx_will', buff: true }, flourish: { name: '만개', icon: 'fx_all_up', buff: true },
 };
 // 효과 설명(전투 화면 '효과' 단추 · 기술 카드 뒷면 — 한 줄씩)
@@ -48,7 +48,7 @@ export const STATUS_DESC = {
   spore: '하나씩 따로 셈 · 피면 하나마다 체력 8%', leech: '턴 끝 체력을 건 식물이 빨아감 · 3턴', gale: '강풍 — 이쪽 공격이 잘 빗나감', storm: '폭풍 — 강풍 그대로 + 교란 · 쇠약 · 턴 끝 피해', cave: '동굴 — 기동이 떨어짐(스톤캡이 나가면 걷힘)', orbTrap: '봉인 구슬 덫 — 내 쪽이 맞을 때마다 하나씩 터져 피해 + 봉인(교체 · 쓰러져도 남음)',
   fruit: '햇빛 칸 하나를 얼린 열매 — 하나당 방어 ↑ · 비용으로 못 씀 · 먹거나 던지면 햇빛으로 돌아옴(지울 수 없음)',
   revive: '쓰러질 공격을 받으면 체력 가득으로 부활 — 대신 공격 · 방어가 잠시 크게 떨어짐', bounce: '상대 기술 한 번이 거는 나쁜 효과를 그대로 튕겨 돌려줌 · 다음 턴 끝까지',
-  thornTrap: '덫 — 우리 편 공격이 빗나가거나 스치면 하나씩 터져 피해 + 독(교체해도 남음)',
+  thornTrap: '덫 — 우리 편 공격이 빗나가거나 스치면 하나씩 터져 피해 + 독(교체해도 남음)', miasma: '독안개 — 켤 때와 다음 두 턴 시작에 이쪽 앞 식물에 독(교체로 들어와도)',
   morning: '아침 — 프로스트벨의 기술이 메아리로 한 번 더(프로스트벨이 나가면 사라짐)', night: '밤 — 양쪽 다 턴 끝 햇빛이 안 참 · 프로스트벨의 메아리가 더 셈(프로스트벨이 나가면 사라짐)',
   regen: '턴 끝 체력 5% 회복 · 3턴', will: '기절 · 봉인 · 속박 · 도발을 막을 때가 있음 · 3턴', immune: '방금 쉬어서 다음 행동까지 기절하지 않음',
   aim: '다음 공격 기술의 모든 타 빗나감 없음 · 치명 +25 · 상대가 피하면 스침', stealth: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림', clone: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림',

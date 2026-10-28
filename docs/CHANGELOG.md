@@ -4,6 +4,14 @@
 
 > 여기는 **v2(2026-10-14 전면 도트 재제작 ~)** 기록이다. 그 전 v1 시절(2026-06-15 ~ 09-11, 옛 `index.html`)은 [history/CHANGELOG-v1.md](history/CHANGELOG-v1.md)로 옮겼다(2026-10-25).
 
+### 2026-10-29 (318) — 아홉 종 새 기술 그림 55장 · 새 효과 아이콘 11개(코덱스 · 친구 서버 전)
+
+- 사용자 '새 기술 그림·환경 아이콘을 코덱스로 그려줘'. 지시서 = `tools/pixel/big/concept/skill/SPECIES_V2_PETAL_THORN_AQUA_PROMPT.md` · `…_WIND_FROST_JELLY_PROMPT.md` · `…_FANG_TOXI_DRACO_PROMPT.md`(기술마다 한 번씩 · 기존 v2 그림체에 맞춤) · `concept/icons3/FX10_PROMPT.md`(아이콘판 fx_10 ~ fx_12). 앱 내장 `codex.exe exec` 네 번(14:39 ~ 15:29).
+- 기술 그림: 원화 `concept/skill/v2/<id>.png` → `skillart.py` → `assets/v2/skills/<id>.png`(58×52). 페탈로즈 · 쏜위드 · 아쿠아벌브(조화 `u_aqua_3d` 새로 — `skillcard.js SKILLART_NAMES`) · 윈드페탈 · 프로스트벨 · 젤리캡 · 팽트랩 · 톡시캑터 · 드라코프루트. 옛 같은 id 그림을 바꿈.
+- 효과 아이콘(`icons.mjs` 시트 fx_10 ~ fx_12 → `assets/v2/icons/`): 아침 `env_morning` · 밤 `env_night` · 독안개 `env_miasma` · 빙결열매 `fx_fruit` · 부활 `fx_revive` · 튕김 `fx_bounce` · 매혹 `fx_charm` · 처형 `fx_execute` · 청산 `fx_settle` · 주입 반동 `fx_inject` · 팽트랩 준비 `res_prep`(이름 옆 개수 — `devices.RES_ICON`). 쏜위드 덫은 이미 있던 `trap_thorn`으로. 짝 표 = `docs/superpowers/specs/2026-10-22-v2-effect-icons.md`.
+- 고친 것: 독안개가 `STATUS`에 없어 환경 띠에 영어 `miasma`가 뜰 상태였음 → 이름 '독안개' · 아이콘 · 설명.
+- 화면 확인: 촬영 `07_battle_petal` ~ `07_battle_draco`(아홉 종 · `v2shots.mjs`) — 카드에 새 그림 · 환경 띠 '밤 3턴' · '독안개' · 덫 · 준비 개수 · 빙결열매. 촬영용 효과 미리 걸기가 환경을 기간 없이 걸어 'NaN턴'이 뜨던 것 고침(게임은 원래 정상).
+
 ### 2026-10-29 (317) — 친구 서버에 올림(304~316 · 판 50084241)
 
 - 사용자 '친구 서버에 올려줘(cf/배포.md 안전 점검부터)'. 올라간 것 = 밤샘 아홉 종(1 · 2 · 3 · 4 · 13 · 16 · 17 · 19 · 20번) 고유 기술 · 봇 손질 · 성체 기준 수치(스포어캡 · 게일캑터 · 게일바인 · 스톤캡 · 볼트바인 포함). `RULES_VER` 15(진행 중이던 봇 판 · 친구 대결은 승패 없이 닫힘) · `SAVE_VER` 7.

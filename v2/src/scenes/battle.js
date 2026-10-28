@@ -410,7 +410,10 @@ export const battle = {
         const m = tok.match(/^([a-zA-Z]+)(\d*)$/), c = { turn: 1, rng: () => 0.5, ev: [], by };
         if (!m) continue;
         if (m[1] === 'storm') { applyFx(u, 'gale', 1, c); if (u.eff.gale) (u.eff.gale.add ||= []).push('storm'); }   // 폭풍(강풍 + 폭풍 공명)
-        else if (m[1] === 'reso' || m[1] === 'evs') (u.res ||= {})[m[1]] = +(m[2] || 0);   // 개수 칸(공명 · 스택)
+        else if (m[1] === 'reso' || m[1] === 'evs' || m[1] === 'prep') (u.res ||= {})[m[1]] = +(m[2] || 0);   // 개수 칸(공명 · 스택 · 팽트랩 준비)
+        else if (m[1] === 'fruit') (u.eff ||= {}).fruit = { n: +(m[2] || 1) };   // 드라코프루트 빙결열매(2026-10-29 촬영)
+        else if (m[1] === 'thornTrap') (u.eff ||= {}).thornTrap = { env: true, n: +(m[2] || 1), by: by.id, atk: by.atk };   // 덫(기간 없음 — 게임과 같게)
+        else if (['miasma', 'morning', 'night'].includes(m[1])) (u.eff ||= {})[m[1]] = { env: true, by: by.id, exp: +(m[2] || 3) };   // 필드 환경(m[2] = 끝나는 턴 — applyFx 로 걸면 기간이 비어 'NaN턴')
         else if (m[1] === 'sum' || m[1] === 'kid') for (let i = 0; i < +(m[2] || 1); i++) { summonAdd(u, 0, []); if (m[1] === 'kid') { const s = u.summons[u.summons.length - 1]; s.stage = 'baby'; s.name = '새끼'; } }   // 소환수(스포어캡 — 잠든 포자 · 새끼)
         else applyFx(u, m[1], +(m[2] || 1), c);
       }
