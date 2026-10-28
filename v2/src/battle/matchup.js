@@ -17,10 +17,9 @@ export const WEAPON_TYPES = {
   rocket: { name: '로켓포', strong: ['earth'], resist: ['water', 'wind'] },       // 폭발이 흙더미 · 바위를 날려 버림 / 물에선 안 터짐 · 바람에 휨(사용자 "광역으로 로켓포")
   xbow: { name: '석궁', strong: ['wind', 'bolt'], resist: ['water', 'earth'] },   // 무거운 화살이 바람을 뚫음 · 나무 화살이라 감전 걱정 없이 멀리서(번개 = 무기 변이의 천적에 맞설 카드) / 물에 막힘 · 바위에 튕김(사용자 "석궁도")
 };
-// 무기 기술 → 종류(변이 카드 + 태생 무기 식물 블레이드바인 · 글라디캑터의 무기 기술)
+// 무기 기술 → 종류(변이 카드 + 태생 무기 식물 글라디캑터의 무기 기술 — 블레이드바인은 2026-10-29 무기 변이 고정을 뺌)
 export const SKILL_WEAPON = {
   m_slash: 'blade', m_flame: 'blade', m_shot: 'gun', m_smash: 'hammer', m_flamer: 'flamer', m_spear: 'spear', m_rocket: 'rocket', m_xbow: 'xbow',
-  u_blade_1: 'blade', u_blade_2: 'blade', u_blade_3: 'blade', u_blade_3b: 'blade', u_blade_3c: 'blade',
   u_gladi_1: 'blade', u_gladi_2b: 'hammer', u_gladi_3: 'blade', u_gladi_3c: 'blade',   // 글라디캑터(태생 무기 — 가시 칼 · 선인장 방패 밀치기)
 };
 // 변이 기술 = 변이 카드 기술(tier m) · 태생 변이 식물의 개성 기술(그 변이 것)

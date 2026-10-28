@@ -532,5 +532,69 @@ ok(SPECIES_V2.has('draco_fruit'), '드라코프루트 v2 켜짐');
   turn(d5, mk('foe', 'thorn'), SKILLS.u_draco_2b, OTHER, 1);
   ok(d5.eff.atkUp && d5.eff.spdUp && d5.eff.defDown, '알 깨기 = 활력 · 가속 + 시듦(평범한 버프 · 디버프)');
 }
+// ── 18. 블레이드바인(화면 이름 싹둑마마 — 2026-10-29) ──
+ok(SPECIES_V2.has('blade_vine'), '블레이드바인 v2 켜짐');
+{ // 지옥전개 = 상대 쪽 지옥 3턴 · 화상 없는 상대도 턴 끝 화상 피해 · 이미 화상이면 한 번만 · 못 덮어씀 · 재사용 대기 2턴
+  const b = mk('me', 'blade_vine'), f = mk('foe', 'aqua');
+  const ev = turn(b, f, SKILLS.u_blade_1, OTHER, 1);
+  ok(has(f, 'inferno') && f.eff.inferno.exp === 3, '지옥전개 = 상대 쪽 지옥 3턴(켠 턴 포함)');
+  const t1 = ev.filter(e => e.t === 'tick' && e.who === 'foe' && e.id === 'burn');
+  ok(t1.length === 1 && t1[0].hell && t1[0].dmg === Math.round(f.max * 0.04), '화상이 없어도 턴 끝 화상 피해 한 번(4%)');
+  ok(!has(f, 'burn'), '진짜 화상은 안 걸림(정화 · 상태 종류 대상 아님)');
+  ok(!canUse(b, SKILLS.u_blade_1, 8, f), '지옥이 켜져 있으면 다시 못 엶');
+  f.eff.burn = { exp: 9 };
+  const ev2 = turn(b, f, OTHER, OTHER, 2);
+  ok(ev2.filter(e => e.t === 'tick' && e.who === 'foe' && e.id === 'burn').length === 1, '이미 화상이면 피해 한 번만(두 번 안 받음)');
+  delete f.eff.burn;
+  turn(b, f, OTHER, OTHER, 3);
+  ok(!has(f, 'inferno'), '3턴 뒤 지옥 끝');
+  ok(!canUse(b, SKILLS.u_blade_1, 8, f), '끝난 뒤 재사용 대기(4턴째)');
+  turn(b, f, OTHER, OTHER, 4);
+  ok(!canUse(b, SKILLS.u_blade_1, 8, f), '재사용 대기 2턴째(5턴째)');
+  turn(b, f, OTHER, OTHER, 5);
+  ok(canUse(b, SKILLS.u_blade_1, 8, f), '6턴째부터 다시 엶(지옥 3 + 대기 2)');
+}
+{ // 불 속성 상대 = 푸른 화상(지옥 동안 면역을 넘음) · 연 식물이 나가도 남음 · 교체로 들어온 상대도
+  const b = mk('me', 'blade_vine'), f = mk('foe', 'flower_fire');
+  const ev = turn(b, f, SKILLS.u_blade_1, OTHER, 1);
+  const t = ev.find(e => e.t === 'tick' && e.who === 'foe');
+  ok(t && t.blue && t.dmg > 0, '불 속성도 지옥에선 푸른 화상 피해');
+  clearOnSwitch(b);
+  ok(has(f, 'inferno'), '블레이드바인이 나가도 지옥은 상대 쪽에 남음');
+  const f2 = mk('foe2', 'thorn'); moveEnv(f, f2);
+  ok(has(f2, 'inferno'), '교체로 들어온 상대도 지옥(필드)');
+}
+{ // 지옥의 여왕 = 맞은편에 지옥이 있으면 기동 · 치명 ↑ · 없으면 꺼짐
+  const b = mk('me', 'blade_vine'), f = mk('foe', 'aqua'), s0 = effSpd(b);
+  turn(b, f, SKILLS.u_blade_1, OTHER, 1);
+  turn(b, f, OTHER, OTHER, 2);
+  ok(b.st.queen && effSpd(b) > s0, '지옥 동안 여왕 = 기동 ↑');
+  turn(b, f, OTHER, OTHER, 3); turn(b, f, OTHER, OTHER, 4);
+  ok(!b.st.queen && Math.abs(effSpd(b) - s0) < 1e-9, '지옥이 끝나면 여왕도 꺼짐');
+}
+{ // 칼날 잎 = 3타 · 치명이 터진 타마다 출혈 / 치명적 무희 = 회피 자세 + 예리 / 무릎 꿇어라 = 쇠약 + 둔화 + 봉인 · 피해 없음
+  const b = mk('me', 'blade_vine', { stage: 1 }), f = mk('foe', 'aqua');
+  const ev = turn(b, f, SKILLS.u_blade_2, OTHER, 1, () => 0.99);   // 굴림이 높으면 치명 칸
+  const hits = ev.filter(e => e.t === 'hit' && e.who === 'me');
+  ok(hits.length === 3, '칼날 잎 = 3타');
+  ok(hits.every(h => h.tier === 'crit') && has(f, 'bleed'), '치명이 터지면 출혈');
+  const b2 = mk('me', 'blade_vine', { stage: 1 });
+  turn(b2, mk('foe', 'aqua'), SKILLS.u_blade_2b, OTHER, 1);
+  ok(b2.eff.critUp, '치명적 무희 = 예리');
+  const b3 = mk('me', 'blade_vine', { stage: 2 }), f3 = mk('foe', 'aqua'), h0 = f3.hp;
+  turn(b3, f3, SKILLS.u_blade_3, OTHER, 1);
+  ok(f3.eff.atkDown && f3.eff.spdDown && f3.eff.seal && f3.hp === h0, '무릎 꿇어라 = 쇠약 + 둔화 + 봉인 · 피해 없음');
+}
+{ // ..력일섬! = 내가 빠를수록 위력 ↑ · 번개 · 감전 없음 / 피의 축제 = 치명이 터지면 회복
+  const b = mk('me', 'blade_vine', { stage: 2 }), f = mk('foe', 'aqua'), f2 = mk('foe', 'aqua');
+  b.spd = f.spd; const e1 = turn(b, f, SKILLS.u_blade_3b, OTHER, 1, () => 0.5);
+  b.spd = f2.spd * 2; const e2 = turn(b, f2, SKILLS.u_blade_3b, OTHER, 1, () => 0.5);
+  const d1 = e1.find(e => e.t === 'hit' && e.who === 'me').dmg, d2 = e2.find(e => e.t === 'hit' && e.who === 'me').dmg;
+  ok(d2 > d1 * 1.5, `..력일섬! 기동 2배면 위력 크게 ↑ (${d1} → ${d2})`);
+  ok(!has(f2, 'shock'), '일섬 = 감전 없음');
+  const b4 = mk('me', 'blade_vine', { stage: 2 }); b4.hp = Math.round(b4.max / 2); const hb = b4.hp;
+  const e4 = turn(b4, mk('foe', 'aqua'), SKILLS.u_blade_3c, OTHER, 1, () => 0.99);
+  ok(e4.some(e => e.t === 'hit' && e.who === 'me' && e.tier === 'crit') && b4.hp > hb, '피의 축제 = 치명이면 회복');
+}
 console.log(fails ? `실패 ${fails} / ${n}` : `모두 통과 (${n})`);
 process.exit(fails ? 1 : 0);

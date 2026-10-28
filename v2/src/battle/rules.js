@@ -4,7 +4,7 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart, fruitOnUse } from './devices.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart, fruitOnUse, queenSync } from './devices.js';
 import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
@@ -131,6 +131,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   const T = o.turn || 0, skipped = new Set();
   caveSync(A, B, ev);   // 스톤캡 동굴: 앞에 나와 있으면 상대 쪽에 깔고, 나가면 걷음
   miasmaStart(A, B, T, ev);   // 톡시캑터 독안개: 켠 다음 턴부터 턴 시작에 독
+  queenSync(A, B);   // 블레이드바인 지옥의 여왕: 맞은편에 지옥이 있으면 기동 · 치명 ↑
   bellSync(A, B, T, ev);   // 프로스트벨 아침 · 밤(필드): 켠 프로스트벨이 앞에 있으면 양쪽 앞 식물에, 나갔거나 끝났으면 걷음
   summonStart(A, B, T, ev, rng); summonStart(B, A, T, ev, rng);
   orbStart(A, T); orbStart(B, T);   // 볼트바인 구슬: 홀수 턴 시작에 가득(덫에 나간 것 빼고)   // 스포어캡 소환수: 잠든 포자가 깨어나고 깨어난 것은 평타
@@ -159,6 +160,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   //  한 식물의 차례 = act(u, foe) → 'rest'(쉰 차례 · 다 막혀 쉼 — 면역이 생김) · 'end'(누가 쓰러져 그 턴 끝) · 그 밖 = 제 행동을 마침 → 면역 끝(엑셀 v10)
   for (const [u, foe] of [[first, second], [second, first]]) {
     const n0 = ev.length, r = act(u, foe);
+    queenSync(A, B);   // 지옥전개를 막 켰으면 다음 행동부터 여왕 버프
     if (foe.eff && foe.eff.bounce && foe.eff.bounce.used) { delete foe.eff.bounce; ev.push({ t: 'expire', who: foe.id, ids: ['bounce'], list: listOf(foe) }); }   // 너꺼잉 = 상대 기술 한 번에 쓰임
     if (r === 'acted' || r === 'end') resoAfter(u, foe, ev, n0, T, guards.has(foe));   // 게일캑터: 방해 디버프가 들어간 기술이면 공명 +1
     if (r !== 'rest' && r !== 'gone' && !actOf(u).idle) endAct(u, ev);
@@ -179,6 +181,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (u === first) firstUp(u, T, ev);   // 게일바인: 선공하면 활력 한 겹
     if (a.act === 'guard' || a.act === 'evade') {
       showStance(u);
+      if (a.self) selfBuff(u, a.self, { turn: T, ev }, a);   // 자세 + 덤 버프(블레이드바인 치명적 무희 = 회피 자세 + 예리)
       return 'acted';
     }
     if (a.act === 'sun') {   // 광합성(기본기 — 햇빛 +2) · 메아리면 그 몫만큼 더(아침 = +0.5)
@@ -286,7 +289,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const guardOn = !ambush && !sure && still && guards.has(foe);
       if (guardOn) showStance(foe, 'guard');
       const veil = a.area || bare ? 0 : has(foe, 'stealth') ? FX.stealth.miss : 0;   // 은신 = 광역 아닌 공격 95% 빗나감(내가 숨어 있어도)
-      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, sure: sure || !!bare, noCrit: a.critIfDodged && u === first, aim: aimK, critAdd: critAddOf(u), missAdd: missAddOf(u) });
+      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, sure: sure || !!bare, noCrit: a.critIfDodged && u === first, aim: aimK, critAdd: critAddOf(u) + (a.critPlus || 0), missAdd: missAddOf(u) });   // critPlus = 치명 칸이 높은 기술(블레이드바인 칼날 잎)
       let tier, forced = false;
       if (veil && rng() < veil) tier = aimK ? 'graze' : 'miss';   // 은신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로) · 조준이면 스침으로 맞아 드러남
       else if (N > 1) tier = tierOf(t, Math.floor(rng() * 100));   // 연타 = 불운 보정 없음(사용자 "연타에서는 보정을 하지 말자")
@@ -335,6 +338,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
         apply(foe, a.perHitInflict.id, a.perHitInflict.n || 1, { turn: T, rng, ev, by: u }, a.perHitInflict);
         if (a.bleedAt && foe.eff && foe.eff.poison && foe.eff.poison.n >= a.bleedAt) apply(foe, 'bleed', 1, { turn: T, rng, ev, by: u });
       }
+      if (tier === 'crit' && a.critInflict && foe.hp > 0) apply(foe, a.critInflict.id, a.critInflict.n || 1, { turn: T, rng, ev, by: u }, a.critInflict);   // 치명이 터진 타마다 상대에게(블레이드바인 칼날 잎 = 출혈)
+      if (tier === 'crit' && a.critHeal && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * a.critHeal * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 치명이 터진 대상마다 내 회복(피의 축제)
     }
     if (og) { foe.orb.n = Math.max(0, foe.orb.n - Math.ceil(og.used / Math.max(1, Math.round(foe.max * ORB.guard)))); foe.st.orbGuardT = T; }   // 막은 만큼만 구슬이 깎임
     if (spw && shieldHit && u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe });

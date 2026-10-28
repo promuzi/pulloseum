@@ -413,7 +413,8 @@ export const battle = {
         else if (m[1] === 'reso' || m[1] === 'evs' || m[1] === 'prep') (u.res ||= {})[m[1]] = +(m[2] || 0);   // 개수 칸(공명 · 스택 · 팽트랩 준비)
         else if (m[1] === 'fruit') (u.eff ||= {}).fruit = { n: +(m[2] || 1) };   // 드라코프루트 빙결열매(2026-10-29 촬영)
         else if (m[1] === 'thornTrap') (u.eff ||= {}).thornTrap = { env: true, n: +(m[2] || 1), by: by.id, atk: by.atk };   // 덫(기간 없음 — 게임과 같게)
-        else if (['miasma', 'morning', 'night'].includes(m[1])) (u.eff ||= {})[m[1]] = { env: true, by: by.id, exp: +(m[2] || 3) };   // 필드 환경(m[2] = 끝나는 턴 — applyFx 로 걸면 기간이 비어 'NaN턴')
+        else if (m[1] === 'cdlock') (u.st ||= {}).infernoLock = { until: +(m[2] || 3) };   // 지옥전개 재사용 대기(촬영 — 끝나는 턴)
+        else if (['miasma', 'morning', 'night', 'inferno'].includes(m[1])) (u.eff ||= {})[m[1]] = { env: true, by: by.id, exp: +(m[2] || 3) };   // 필드 환경(m[2] = 끝나는 턴 — applyFx 로 걸면 기간이 비어 'NaN턴')
         else if (m[1] === 'sum' || m[1] === 'kid') for (let i = 0; i < +(m[2] || 1); i++) { summonAdd(u, 0, []); if (m[1] === 'kid') { const s = u.summons[u.summons.length - 1]; s.stage = 'baby'; s.name = '새끼'; } }   // 소환수(스포어캡 — 잠든 포자 · 새끼)
         else applyFx(u, m[1], +(m[2] || 1), c);
       }
@@ -563,7 +564,7 @@ export const battle = {
       else if (e.t === 'bloom') out.push({ kind: 'bloom', ms: 900, ev: e, side: e.who, msg: e.k > 1 ? `${e.name}의 포자 ${e.k}개가 피어났다!` : `${e.name}의 포자가 피어났다!`, tone: STATUS.spore.col });
       else if (e.t === 'grow') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
       else if (e.t === 'skip') out.push({ kind: 'skipT', ms: 900, ev: e, side: e.who, msg: `${ga(e.name)} ${SKIP_WHY[e.src] || ''} 움직일 수 없다!`, tone: 'skip' });
-      else if (e.t === 'tick') out.push({ kind: 'tick', ms: 750, ev: e, side: e.who, msg: `${ga(e.name)} ${ro((STATUS[e.id] || { name: e.id }).name)} 아파한다!`, tone: (STATUS[e.id] || {}).col || '#ff8a8a' });
+      else if (e.t === 'tick') { const D = (e.hell && STATUS[e.blue ? 'blueBurn' : 'inferno']) || STATUS[e.id] || { name: e.id }; out.push({ kind: 'tick', ms: 750, ev: e, side: e.who, msg: `${ga(e.name)} ${ro(D.name)} 아파한다!`, tone: D.col || '#ff8a8a' }); }   // 지옥 화상(e.hell) = '지옥' · 불 속성은 푸른 화상(파란 글자)
       else if (e.t === 'drain') out.push({ kind: 'drain', ms: 950, ev: e, side: e.who, msg: `기생 씨앗이 ${e.name}의 체력을 빨아들인다!`, tone: STATUS.leech.col });
       else if (e.t === 'heal') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${ga(e.name)} 체력을 빨아들였다!`, tone: 'heal' });
       else if (e.t === 'regen') out.push({ kind: 'heal', ms: 650, ev: e, side: e.who, msg: `${e.name}의 체력이 재생된다`, tone: 'heal' });
@@ -1003,7 +1004,8 @@ export const battle = {
         const down = can && input.isPressed(id) && !rise, sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
         rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, lit ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.32)');   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
         const left = sk.uses ? usesLeft(B.me, sk) : null, halved = !!(B.me.st && B.me.st.lastStance && B.me.st.lastStance === sk.act);
-        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, left, halved, shine: sh != null && sh < 1 ? sh : null });
+        const cd = sk.inferno && B.me.st && B.me.st.infernoLock ? Math.max(1, B.me.st.infernoLock.until - (B.turn || 1) + 1) : null;   // 지옥전개 재사용 대기 = 다시 쓸 수 있을 때까지 남은 턴(지옥이 켜진 동안 포함)
+        cardFront(g, x, y + (lit ? -5 : down ? 1 : 0) - rise, CARD_W, CARD_H, sk, { can: show, short, lit, lock, left, halved, cd, shine: sh != null && sh < 1 ? sh : null });
       }
       if (live) input.hit(id, x, y, CARD_W, CARD_H, can ? () => { sfx('select'); this.pick(app, sk); } : () => sfx('deny'), 2);
       this.cards[id] = { sk, x, y, w: CARD_W, h: CARD_H, can: show, short, lock, left: sk.uses ? usesLeft(B.me, sk) : null, halved: !!(B.me.st && B.me.st.lastStance === sk.act) };

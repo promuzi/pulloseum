@@ -196,6 +196,10 @@ function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
     if (s.harmony) return 0.2 * R;
     if (s.miasma) return R * (0.6 + 0.2 * after(3));   // 독안개(켜져 있으면 canUse 가 막음) = 세 턴 독
     if (s.burst) return 0.25 + 0.2 * ((u.summons || []).filter(x => x.hp > 0).length);
+    if (s.inferno) {   // 지옥전개 = 상대가 화상이 아니면 3턴 화상 피해 + 지옥의 여왕(블레이드바인)이면 그동안 기동 · 치명
+      const dot = has(foe, 'burn') ? 0 : 2.5 * FX.burn.dot * Math.min(3, H + 1) * foe.max / Math.max(1, foe.hp), q = (SPECIES[u.key] || {}).queen;
+      return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);
+    }
     const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length;
     return fresh ? 0.55 + 0.35 * fresh : 0.15;   // 거는 것 자체가 피해 줄기인 종(게일캑터 공명 · 게일바인)이 있어 공격 점수에 견주지 않음
   }

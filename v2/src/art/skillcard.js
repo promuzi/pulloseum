@@ -289,7 +289,8 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   if (sk.passive && sk.lv > 1) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22): 그림 왼쪽 아래
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
-  if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
+  if (o.cd) cdDial(g, x + 10, y + 10, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
+  else if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
   else if (sk.passive) {   // 패시브 카드: 비용 대신 카드 색 마름모 + 반짝이
     const L = sk.look || {}, ic = icon('sparkle');
     diamond(g, x + 9, y + 9, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
@@ -334,6 +335,13 @@ function usesDial(g, cx, cy, n, F, dim) {   // 변이 기술 횟수(변이 색 �
   g.disc(cx, cy, 9, C.ink); g.disc(cx, cy, 8, col[0]); g.disc(cx, cy, 6, hexMix(col[0], C.ink, 0.45));
   g.rect(cx, cy - 8, 1, 2, col[1]);
   g.text(String(n), cx + 0.5, cy - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+}
+
+function cdDial(g, cx, cy, n) {   // 재사용 대기: 어두운 동그라미 + 위아래 모래시계 테 + 남은 턴
+  const vh = glyphH('value');
+  g.disc(cx, cy, 9, C.ink); g.disc(cx, cy, 8, '#3a4258'); g.disc(cx, cy, 6, '#252b3c');
+  g.rect(cx - 4, cy - 8, 9, 2, '#c9b07a'); g.rect(cx - 4, cy + 7, 9, 2, '#c9b07a');
+  g.text(String(n), cx + 0.5, cy - Math.round(vh / 2), { font: 'value', color: '#ffe3a0', align: 'center', outline: C.ink, outlineW: 2 });
 }
 
 // 빈 칸(배운 기술이 셋보다 적을 때 · 꾹 눌러 들어 올린 카드의 자리)

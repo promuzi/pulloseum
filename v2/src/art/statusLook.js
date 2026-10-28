@@ -27,6 +27,7 @@ export const STATUS = {
   spore: { name: '포자', icon: 'st_spore', col: '#8fe0b8', stack: 99 }, leech: { name: '기생', icon: 'st_leech', col: '#c8e04a' },
   gale: { name: '강풍', icon: 'env_gale', col: '#c0a8ff', env: true }, storm: { name: '폭풍', icon: 'env_storm', col: '#9a7bff', env: true }, orbTrap: { name: '봉인 구슬', icon: 'fx_seal', col: '#c9a8ff', env: true }, cave: { name: '동굴', icon: 'env_cave', col: '#d9b27a', env: true },
   thornTrap: { name: '덫', icon: 'trap_thorn', col: '#9fd36a', env: true }, miasma: { name: '독안개', icon: 'env_miasma', col: '#b866ff', env: true },
+  inferno: { name: '지옥', icon: 'env_inferno', col: '#ff6a3a', env: true }, blueBurn: { name: '푸른 화상', icon: 'env_inferno', col: '#6fb8ff' },   // 지옥전개(블레이드바인 · 블레이즈블룸 — 2026-10-29) · 불 속성이 지옥에서 받는 화상 피해 이름
   morning: { name: '아침', icon: 'env_morning', col: '#ffd27a', env: true }, night: { name: '밤', icon: 'env_night', col: '#8a8fd8', env: true },   // 프로스트벨 필드 환경(아이콘 2026-10-29 코덱스 fx_10)   // env = 효과 창이 아니라 환경 띠(battle.js envBand)
   // 이로운 상태이상 · 준비 효과 · 갑주
   regen: { name: '재생', icon: 'fx_regen', buff: true }, will: { name: '의지', icon: 'fx_will', buff: true }, immune: { name: '면역', icon: 'fx_immune', buff: true },
@@ -49,6 +50,7 @@ export const STATUS_DESC = {
   fruit: '햇빛 칸 하나를 얼린 열매 — 하나당 방어 ↑ · 비용으로 못 씀 · 먹거나 던지면 햇빛으로 돌아옴(지울 수 없음)',
   revive: '쓰러질 공격을 받으면 체력 가득으로 부활 — 대신 공격 · 방어가 잠시 크게 떨어짐', bounce: '상대 기술 한 번이 거는 나쁜 효과를 그대로 튕겨 돌려줌 · 다음 턴 끝까지',
   thornTrap: '덫 — 우리 편 공격이 빗나가거나 스치면 하나씩 터져 피해 + 독(교체해도 남음)', miasma: '독안개 — 켤 때와 다음 두 턴 시작에 이쪽 앞 식물에 독(교체로 들어와도)',
+  inferno: '지옥 — 화상이 없어도 턴 끝 화상 피해(불 속성도 푸른 화상) · 정화로 못 끔 · 연 식물이 나가도 남음',
   morning: '아침 — 프로스트벨의 기술이 메아리로 한 번 더(프로스트벨이 나가면 사라짐)', night: '밤 — 양쪽 다 턴 끝 햇빛이 안 참 · 프로스트벨의 메아리가 더 셈(프로스트벨이 나가면 사라짐)',
   regen: '턴 끝 체력 5% 회복 · 3턴', will: '기절 · 봉인 · 속박 · 도발을 막을 때가 있음 · 3턴', immune: '방금 쉬어서 다음 행동까지 기절하지 않음',
   aim: '다음 공격 기술의 모든 타 빗나감 없음 · 치명 +25 · 상대가 피하면 스침', stealth: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림', clone: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림',

@@ -31,7 +31,7 @@ export const SPECIES = {
   jelly_cap: { name: '젤리캡', type: 'mushroom', el: 'water', rarity: 'rare', branch: 'shore', role: 'sup', tilt: { hp: 1.1 } },
   // 2026-10-16 새 다섯 = 변이 고정(사용자 승인 "변이 특화 식물" + "다른 식물들도 계속 늘리자") — 빈 칸(종×속성)을 채움, 드묾
   fang_trap: { name: '팽트랩', type: 'flower', el: 'earth', rarity: 'rare', branch: 'meadow', form: 'predator', role: 'drain', tilt: { hp: 1.06, def: 0.96 } },
-  blade_vine: { name: '블레이드바인', type: 'vine', el: 'fire', rarity: 'rare', branch: 'shade', form: 'weapon', role: 'atk', tilt: { atk: 1.12, hp: 0.93, def: 0.93 } },
+  blade_vine: { name: '싹둑마마', type: 'flower', el: 'fire', rarity: 'rare', branch: 'shade', role: 'fast', tilt: { spd: 1.12, atk: 1.05, hp: 0.93 } },   // 2026-10-29 종 고유 v2 적용 = 화면 이름 임시 싹둑마마(사용자) · 종류 덩굴 → 꽃 · 무기 변이 고정 뺌(이미 가진 무기 변이 식물 · 종자는 자연 변이로 그대로) · 역할 공격형 → 속공형(10-23 결정)
   toxi_cactus: { name: '톡시캑터', type: 'cactus', el: 'grass', rarity: 'rare', branch: 'desert', form: 'toxic', role: 'ctr', tilt: { def: 1.12, spd: 0.95 } },
   draco_fruit: { name: '드라코프루트', type: 'cactus', el: 'ice', rarity: 'rare', branch: 'desert', role: 'tank', tilt: { hp: 1.15, def: 1.15, atk: 0.85, spd: 0.9 } },   // 탱커(사용자 "드라코프루트는 탱커로")   // 2026-10-17 사용자 "나로 하자" — 용 변이 고정 뺌(서리 용과 선인장 = 보통 식물), 용은 프로스트드레이크
   ember_cap: { name: '엠버캡', type: 'mushroom', el: 'fire', rarity: 'rare', branch: 'shade', form: 'spore', role: 'dis', tilt: { spd: 1.08 } },
@@ -462,8 +462,19 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus', 'draco_fruit']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus', 'draco_fruit', 'blade_vine']);
 const V2 = {
+  blade_vine: {   // 18. 블레이드바인(화면 이름 = 임시 싹둑마마 — 2026-10-29 사용자) — 지옥의 여왕 · 치명타 위주 기동성 딜러 · 2026-10-23 설계 · 지옥 환경 규칙 2026-10-29 확정 · 수치는 클로드 임시(리그전)
+    sp: { queen: { spd: 0.15, crit: 15 } },   // 타고남 지옥의 여왕: 맞은편에 지옥이 있는 동안 기동 +15% · 치명 칸 +15(작게 — devices.queenSync)
+    skills: [
+      S('u_blade_1', '지옥전개', 'fire', 'u', 0, 2, { act: 'hex', cats: ['debuff'], inferno: { turns: 3, cd: 2 } }),   // 상대 쪽 지옥 3턴 · 횟수 제한 없음 · 꺼진 뒤 재사용 대기 2턴(블레이즈블룸은 한 판 1회)
+      S('u_blade_2', '칼날 잎', 'fire', 'u', 35, 2, { contact: true, hits: 3, critPlus: 15, critInflict: { id: 'bleed' } }),   // 타당 위력 35(리그전 38.1% → 45.6%, 임시) · 연타 · 타마다 치명 판정(치명 칸 높게) · 치명이면 출혈 — 속성 = 종 속성(불, 기록에 없어 임시)
+      S('u_blade_2b', '치명적 무희', 'fire', 'u', 0, 1, { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, self: 'critUp' }),   // 회피 자세 + 예리
+      S('u_blade_3', '무릎 꿇어라', 'fire', 'u', 0, 3, { act: 'hex', cats: ['debuff'], hex: [{ id: 'atkDown' }, { id: 'spdDown' }, { id: 'seal' }] }),   // 쇠약 + 둔화(5턴) + 봉인(다음 1턴) · 피해 없음
+      S('u_blade_3b', '..력일섬!', 'bolt', 'u', 70, 2, { contact: true, spdGap: 1 }),   // 나와 상대의 기동 차이(내가 빠른 만큼)로 위력 ↑ · 번개 · 감전 없음
+      S('u_blade_3c', '피의 축제', 'fire', 'u', 75, 3, { area: true, critHeal: 0.12 }),   // 광역 단타(그 턴 한 번) · 치명이 터진 대상마다 내 체력 12% 회복
+    ],
+  },
   draco_fruit: {   // 20. 드라코프루트 — 빙결열매(햇빛 칸을 얼려 쌓는 방어 · 소모하면 햇빛으로 돌아옴) · 2026-10-26~28 설계 · 고유 패시브 없음(열매 규칙이 그 자리)
     sp: { fruits: true },
     skills: [
@@ -633,7 +644,7 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 15;   // 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
+export const RULES_VER = 16;   // 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
 // 14 이전:   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
 //  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘

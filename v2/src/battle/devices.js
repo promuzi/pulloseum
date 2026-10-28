@@ -10,7 +10,7 @@
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES, STAGE_KEY } from '../game/catalog.js';
-import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, WIPE_ALL, wipeEff, givesFx, FRUIT } from './status.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, WIPE_ALL, wipeEff, givesFx, FRUIT, effSpd } from './status.js';
 import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
@@ -36,7 +36,7 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-export const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes', 'fruitUse'];
+export const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes', 'fruitUse', 'spdGap'];
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
 export function dynAct(u, a0, foe, rng) {
   const boost = a0 && a0.tier === 'm' && u.st && u.st.formBoost ? u.st.formBoost.k : 0;   // 팽트랩 입맛 다시기 = 내 변이 기술 +20%(2턴)
@@ -55,6 +55,7 @@ export function dynAct(u, a0, foe, rng) {
   if (a.powBy) pw += (r[a.powBy.k] || 0) * a.powBy.per;
   if (a.allSun) pw += (u.energy || 0) * a.allSun;
   if (a.lostHp) pw += Math.max(0, 1 - u.hp / u.max) * 100 * a.lostHp;   // 잃은 체력 1%당 위력 +(윈드페탈 피의 춤)
+  if (a.spdGap && foe) pw *= 1 + a.spdGap * Math.min(1, Math.max(0, effSpd(u) / Math.max(1, effSpd(foe)) - 1));   // ..력일섬!(블레이드바인): 내가 빠른 만큼(기동 비율 − 1, 최대 2배까지) 위력 ↑
   if (a.trapBoom) pw += ((u.eff && u.eff.thornTrap && u.eff.thornTrap.n) || 0) * a.trapBoom;   // 폭발은 예술이지 = 팀에 깔린 덫 하나당 위력 +
   if (a.fruitUse) {   // 드라코프루트: 가진 열매 수로 — 빙결 브레스 = 열매 수만큼 빙결 · 열매 던지기 = 열매 수만큼 타(타마다 빙결)
     const fn = (u.eff && u.eff.fruit && u.eff.fruit.n) || 0; o.fruitN = fn;
@@ -271,6 +272,12 @@ export function hexAct(u, foe, a, ctx) {
     const fe = (foe.eff ||= {});
     if (!fe.miasma) { fe.miasma = { env: true, exp: ctx.turn + a.miasma.turns - 1, by: u.id, n: a.miasma.n, T0: ctx.turn }; apply(foe, 'poison', a.miasma.n, { ...ctx, by: u }); ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: 'miasma', list: listOf(foe) }); }
   }
+  if (a.inferno && !(foe.eff && foe.eff.inferno)) {   // 지옥전개: 상대 쪽 필드 3턴(켠 턴 포함) · 블레이드바인 = 꺼진 뒤 재사용 대기 cd 턴(대기석에서도 셈)
+    const exp = ctx.turn + a.inferno.turns - 1;
+    (foe.eff ||= {}).inferno = { env: true, exp, by: u.id, T0: ctx.turn };
+    if (a.inferno.cd) (u.st ||= {}).infernoLock = { until: exp + a.inferno.cd };
+    ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: 'inferno', list: listOf(foe) });
+  }
   if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인
     const n = u.st.meal.n, tgt = frontSum(foe) || foe; delete u.st.meal;
     for (const [i, id] of [[1, 'atkDown'], [2, 'defDown'], [3, 'seal']]) if (n >= i) apply(tgt, id, 1, { ...ctx, by: u });
@@ -419,6 +426,14 @@ function burstAct(u, foe, ctx) {
 
 // 프로스트벨 아침 · 밤(SPECIES.bell = { 아침: 메아리 몫, 밤: 메아리 몫 } · 2026-10-23 설계 · 10-28 교체 · 필드 확정):
 //  켜 둔 프로스트벨이 앞에 있고 3턴 안이면 양쪽 앞 식물에 그 환경(필드 — 교체로 들어온 식물도) · 프로스트벨이 나가거나 끝나면 걷음
+// 지옥의 여왕(블레이드바인 타고남): 맞은편 앞 식물에 지옥이 깔려 있는 동안(내가 연 지옥이든 같은 편 블레이즈블룸 지옥이든) 내 기동 · 치명 ↑ — 턴 처음 · 행동마다 맞춤(status.mobK · critAddOf 가 읽음)
+export function queenSync(A, B) {
+  for (const [x, y] of [[A, B], [B, A]]) {
+    const q = x && SP(x).queen;
+    if (!q) continue;
+    if (x.hp > 0 && y && y.eff && y.eff.inferno) (x.st ||= {}).queen = q; else if (x.st) delete x.st.queen;
+  }
+}
 export function bellSync(A, B, T, ev) {
   const owner = {};
   for (const x of [A, B]) if (x && x.hp > 0 && SP(x).bell && x.st && x.st.bell && x.st.bell.exp >= T && !owner[x.st.bell.kind]) owner[x.st.bell.kind] = x;

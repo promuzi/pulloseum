@@ -32,6 +32,7 @@ export const FX = {
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
   gale:    { env: true, turns: 2, missAdd: 12 },
   orbTrap: { env: true },   // 봉인 구슬 덫(볼트바인 — 내 쪽 지형: 교체 · 쓰러져도 남고 내 쪽 앞 식물이 맞을 때마다 하나씩 터짐 · devices.orbTrapBurst)
+  inferno: { env: true },   // 지옥(지옥전개 — 블레이드바인 · 블레이즈블룸, 2026-10-29 사용자 확정): 상대 쪽 필드 3턴 · 화상이 없어도 턴 끝 화상 피해(불 속성도 = 푸른 화상) · 정화로 못 끔 · 연 식물이 나가도 남음 · 다시 못 덮어씀
   miasma: { env: true },   // 톡시캑터 독안개(상대 쪽 필드 3턴 · 켤 때 한 번 + 다음 두 턴 시작에 독 · 교체로 들어와도 · 톡시캑터가 나가도 남음 — 2026-10-28)
   thornTrap: { env: true },   // 쏜위드 덫(우리 편 지형 · 설치형: 교체 · 쓰러져도 남고 우리 편 공격이 빗나가거나 스치면 하나씩 터짐 · devices.thornBurst)
   morning: { env: true },   // 아침(프로스트벨 — 필드: 양쪽 앞 식물 · 프로스트벨이 나가면 사라짐 · devices.bellSync 가 깔고 걷음 · 메아리만)
@@ -66,11 +67,11 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night', 'bounce', 'miasma'];
+const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night', 'bounce', 'miasma', 'inferno'];
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim', 'revive', 'bounce'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
 const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'miasma', 'morning', 'night', 'taunt', 'root', ...DOWNS];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'miasma', 'inferno', 'morning', 'night', 'taunt', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -84,6 +85,8 @@ export const WIPE_ALL = [...new Set([...HARM, ...STATS, ...BUFFS])];
 
 const E = u => (u.eff ||= {});
 export const has = (u, id) => !!(u && u.eff && u.eff[id]);
+// 화상 판정(지옥 = 화상이 없어도 화상 상태로 취급 — 2026-10-29): 화상을 조건으로 보는 기술(블레이즈블룸 연계 등)은 이것으로 · 정화 대상 · 상태 종류 수에는 지옥을 넣지 않음
+export const burning = u => has(u, 'burn') || has(u, 'inferno');
 // 능력치 겹 합(올림 − 내림): 공격 · 방어 · 기동 = 배율에 더할 몫, 치명 · 정확도 = 판정표 칸
 export function statSum(u, stat) {
   const e = u && u.eff; if (!e) return 0;
@@ -92,12 +95,13 @@ export function statSum(u, stat) {
   return t;
 }
 const statK = (u, stat) => Math.max(RULES_FX.statFloor, 1 + statSum(u, stat));   // 겹 상한이 아직 없어 음수만 막음(0.2 아래로 안 감)
-export const critAddOf = u => statSum(u, 'crit');
+export const critAddOf = u => statSum(u, 'crit') + ((u && u.st && u.st.queen && u.st.queen.crit) || 0);   // + 지옥의 여왕(블레이드바인 — 지옥 동안 치명 칸 · devices.queenSync)
 
 // ── 다른 계산이 읽는 값 ──
 // 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 가속 · 둔화) → 선공 확률과 회피 자세에 같이 들어감
 export function mobK(u) {
   let k = ((u && u.modeK && u.modeK.spd) || 1) * statK(u, 'spd');   // 모드(공통 장치 D9) 기동 배율
+  if (u && u.st && u.st.queen) k *= 1 + (u.st.queen.spd || 0);   // 지옥의 여왕(블레이드바인 — 지옥 동안 기동 ↑)
   if (has(u, 'wet')) k *= FX.wet.mob;
   if (has(u, 'chill')) k *= FX.chill.mob;
   if (has(u, 'cave')) k *= Math.max(0.2, 1 - CAVE.spd - caveAdds(u).reduce((s, x) => s + (CAVE[x] && CAVE[x].spd || 0), 0));   // 동굴 기동 하락(자갈밭 · 지반붕괴가 더함)
@@ -173,6 +177,7 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (s.fakeDeath && u.st && u.st.fakeLock) return false;   // 죽은 줄 알았나? = 버팀이 발동한 다음 턴엔 잠김
   if (s.taste && !(u.st && u.st.meal && u.st.meal.ready)) return false;   // 맛평가 = 식사시간 바로 다음 턴에만
   if (s.miasma && foe && has(foe, 'miasma')) return false;   // 독안개 = 켜져 있는 동안 다시 안 켜짐(환경 공통)
+  if (s.inferno && ((foe && has(foe, 'inferno')) || (u.st && u.st.infernoLock))) return false;   // 지옥전개 = 상대 쪽에 지옥이 있으면 못 덮어씀 · 블레이드바인은 꺼진 뒤 재사용 대기(infernoLock)
   if (s.fruitUse && !(u.eff && u.eff.fruit && u.eff.fruit.n > 0)) return false;   // 드라코프루트 열매 먹기 · 빙결 브레스 · 열매 던지기 = 열매가 있을 때
   if (u.st && u.st.selfSeal && poisonGiver(s)) return false;   // 좋은 거 주입 = 내 독 거는 기술 3턴 봉인(범위 = 거는 기술만 — 소모 기술 포함 여부는 밸런스 때, 2026-10-26 사용자 보류)
   const e = u.eff || {};
@@ -377,6 +382,10 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
     const e = u.eff;
     if (!e || u.hp <= 0) continue;
     if (e.burn) dotTick(u, 'burn', turn, ev);
+    else if (e.inferno && u.hp > 0) {   // 지옥 = 화상이 없어도 화상 피해 한 번(이미 화상이면 화상만 — 두 번 안 받음) · 불 속성도(푸른 화상) · 지옥이 끝나는 건 expire(TIMED)
+      const d = Math.max(1, Math.round(u.max * FX.burn.dot)); u.hp = Math.max(0, u.hp - d);
+      ev.push({ t: 'tick', who: u.id, name: u.name, id: 'burn', hell: true, blue: u.el === 'fire' || undefined, dmg: d, list: listOf(u) });
+    }
     if (e.poison && u.hp > 0) {
       const d = Math.max(1, Math.round(u.max * FX.poison.dot * e.poison.n));
       u.hp = Math.max(0, u.hp - d);
@@ -429,6 +438,7 @@ export function expire(u, turn, ev) {
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
   if (u.st && u.st.bell && u.st.bell.exp <= turn) delete u.st.bell;   // 프로스트벨 아침 · 밤 3턴이 끝남 → 다음 턴부터 다시 켤 수 있음
   if (u.st && u.st.fakeLock && u.st.fakeLock <= turn) delete u.st.fakeLock;   // 죽은 줄 알았나? 잠김은 다음 한 턴
+  if (u.st && u.st.infernoLock && u.st.infernoLock.until <= turn) delete u.st.infernoLock;   // 블레이드바인 지옥전개 = 지옥이 끝난 뒤 재사용 대기 2턴(대기석에서도 셈)
   if (u.st && u.st.formBoost && u.st.formBoost.exp <= turn) delete u.st.formBoost;   // 입맛 다시기 2턴
   if (u.st && u.st.selfSeal && u.st.selfSeal.exp <= turn) delete u.st.selfSeal;   // 좋은 거 주입 봉인 3턴(다음 턴부터)
   if (u.st && u.st.hpBuff && u.st.hpBuff.exp <= turn) { u.max -= u.st.hpBuff.add; const cut = Math.max(0, u.hp - u.max); u.hp -= cut; delete u.st.hpBuff; if (cut) ev.push({ t: 'tick', who: u.id, name: u.name, id: 'hpBuffEnd', dmg: cut, list: listOf(u) }); }   // 최대 체력 버프 끝: 현재 체력 그대로 · 최대보다 많으면 최대로(2026-10-28 고정 규칙)

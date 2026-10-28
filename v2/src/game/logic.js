@@ -40,7 +40,7 @@ export function newGame({ nickname, starter }, rng, now) {
 // ── 저장 판 번호 · 옮기기(2026-10-18 업데이트 안전 — species-identity 설계 §7) ──
 //  서버가 불러올 때 s.ver < SAVE_VER 이면 원본을 보관한 뒤(server/game.mjs load) 단계를 번호 순서대로 한 번씩. 기능마다 붙은 p.skills.v4~v8 표시는 그대로
 //  (이어 하는 옛 판 다시 계산이 읽음). 앞으로 저장 모양을 바꾸면 MIGRATIONS 에 단계를 더하고 SAVE_VER +1 · id를 바꾸면 catalog.js RENAMED 에 적고 +1.
-export const SAVE_VER = 7;
+export const SAVE_VER = 8;
 const MIGRATIONS = [
   () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
   () => {},   // 1 → 2(2026-10-22 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
@@ -53,6 +53,8 @@ const MIGRATIONS = [
   //  빈 장착 칸 → 스킬 보관 → 다 차면 놓을 칸 고르기(learnNow) · 이미 아는 것(장착 · 보관 · 지운 · 고르는 중)은 건너뜀
   s => { for (const p of s.plants || []) if (p && SPECIES_V2.has(p.key) && p.skills) { normSkills(p); for (let st = 0; st <= Math.min(2, p.stage || 0); st++) for (const id of uniquesOf(p.key, st)) if (!known(p).has(id) && !(p.drafts || []).some(d => d.cands.includes(id))) learnNow(p, id); } },
   // 6 → 7(2026-10-29 밤샘 — 프로스트벨 고유 기술 켬): 5 → 6과 같은 일을 새로 켠 종에게(이미 아는 기술은 건너뛰니 다시 돌려도 같음)
+  s => MIGRATIONS[5](s),
+  // 7 → 8(2026-10-29 — 블레이드바인(화면 이름 싹둑마마) 고유 기술 켬): 5 → 6과 같은 일 · 이미 가진 무기 변이 식물 · 종자는 자연 변이로 그대로 둠(변이 카드 · 칸을 잃지 않게)
   s => MIGRATIONS[5](s),
 ];
 export function migrate(s) {
