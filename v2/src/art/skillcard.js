@@ -91,8 +91,30 @@ function placeholderArt(sk) {
   tempArt.set(key, cv); return cv;
 }
 
+// ── 카드 테 시안(2026-10-29 밤샘 — 사용자 '각 스킬카드별로 테두리를 설계해서 가독성을 확실히 주고 싶어. 어떤식으로 묶을지 분석해서 정리하고 설계해봐') ──
+//  주소 ?frame=a|b 로만 켬(기본 = 지금 그대로 — 사용자가 고르기 전) · 설계 = docs/superpowers/specs/2026-10-29-v2-card-frame-design.md
+//  하는 일 다섯 묶음(frameKind): atk 공격 · stance 자세(방어 · 회피 · 반사) · self 강화 · 회복 · 햇빛(나에게) · hex 방해(상대에게) · field 환경(판에 깔림 — 지옥 · 아침/밤 · 독안개 · 동굴 · 강풍 공명 · 덫)
+//  ㉠ a = 테는 속성 색 그대로 + 이름 띠가 하는 일 색 · ㉡ b = 테 + 이름 띠가 하는 일 색(속성은 그림 색 · 배지 — 추천) · 버린 안(테 색만 · 위 가운데 문장 · 테 모양)은 설계 문서 4절
+let FRAME_STYLE = '0';
+try { FRAME_STYLE = (new URLSearchParams(location.search).get('frame') || '0').toLowerCase(); } catch {}
+export const setFrameStyle = s => { FRAME_STYLE = s || '0'; };
+export const frameStyle = () => FRAME_STYLE;
+const FIELD_KEYS = ['inferno', 'bell', 'miasma', 'caveAdd', 'galeAdd', 'trapSet'];
+export function frameKind(sk) {
+  if (!sk || sk.passive) return null;
+  const c0 = (sk.cats && sk.cats[0]) || '', act = sk.act || 'attack';
+  if (act === 'attack') return 'atk';
+  if (FIELD_KEYS.some(k => sk[k])) return 'field';
+  if (act === 'guard' || act === 'evade' || c0 === 'guard' || c0 === 'evade' || sk.reflect) return 'stance';
+  if (act === 'hex' || c0 === 'debuff') return 'hex';
+  return 'self';
+}
+export const KIND_NAME = { atk: '공격', stance: '자세', self: '강화 · 회복', hex: '방해', field: '환경' };
+export const KIND_BAND = { atk: '#5a2014', stance: '#1c3654', self: '#1a4626', hex: '#3c1a5e', field: '#523a12' };   // 이름 띠(하는 일 색을 짙게 — 흰 글자가 읽히게)
+export const KIND_COL = { atk: ['#e0643a', '#ffb48a', '#7a2a14'], stance: ['#6a8cb4', '#d4e4f6', '#2a3c58'], self: ['#4aa85a', '#bff0a8', '#1e4a28'], hex: ['#9a5ad0', '#e4c8ff', '#3a1a5a'], field: ['#c8963a', '#ffe2a4', '#5a3a14'] };
 // 테: 먹선 → 속성 색 금속 테 2칸(위·왼 빛 · 아래·오른 그늘) → 안쪽 먹선. 고른 카드 = 금빛 테
-const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
+const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : FRAME_STYLE === 'b' && frameKind(sk) ? KIND_COL[frameKind(sk)]   // 시안 ㉡ = 하는 일 색 테
+  : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
   : sk.passive && sk.look && sk.lv >= 2 ? (sk.lv >= 3 ? ['#d8a03a', '#fff3c8', '#8a5a1a'] : ['#c8d4e4', '#ffffff', '#5a6a84'])   // 강화 패시브 = +1 은빛 · +2 금빛 테(2026-10-22)
   : sk.passive && sk.look ? [sk.look.col, sk.look.light, hexMix(sk.look.col, C.ink, 0.5)]   // 일반 카드 = 하늘색 테
   : sk.el ? [elOf(sk).main, hexMix(elOf(sk).light, '#ffffff', 0.3), elOf(sk).dark] : ['#9fb0c8', '#e6eef8', '#4c5a70']);
@@ -259,12 +281,12 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   { const im = artOf(sk) || placeholderArt(sk), sw = Math.min(aw, im.width);   // 좁은 카드(손패 한 줄 넷)는 그림 가운데를 잘라 1배 그대로(줄이면 도트가 뭉개짐)
     c.drawImage(im, Math.floor((im.width - sw) / 2), 0, sw, im.height, ax + Math.floor((aw - sw) / 2), ay, sw, ah); }
   // 이름 띠: 그림 아래 열 칸을 짙게 덮으며 이어지고, 위에 테 색 가는 줄
-  const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
-  gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
+  const MF = sk.form && FORMS[sk.form], KB = (FRAME_STYLE === 'a' || FRAME_STYLE === 'b') && frameKind(sk), band = KB ? KIND_BAND[KB] : MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦 · 시안 ㉠ ㉡ = 이름 띠가 하는 일 색
+  const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by), [br, bg, bb] = hexRgb(KB ? band : '#0c1526');
+  gr.addColorStop(0, `rgba(${br},${bg},${bb},0)`); gr.addColorStop(1, `rgba(${br},${bg},${bb},0.92)`);
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
-  const MF = sk.form && FORMS[sk.form], band = MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦
   g.rect(ax, by, aw, bh, band);
-  g.rect(ax, by, aw, 1, MF ? MF.light : sk.tier === 'u' && !sk.passive ? '#e0a830' : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));   // 개성 기술 = 금빛 줄(2026-10-22)
+  g.rect(ax, by, aw, 1, KB ? KIND_COL[KB][1] : MF ? MF.light : sk.tier === 'u' && !sk.passive ? '#e0a830' : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));   // 개성 기술 = 금빛 줄(2026-10-22)
   if (MF) {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점)
     const cx = x + (w >> 1), [fm, fh] = frameCols(sk, o.lit);
     for (const [dy, hw] of [[-1, 7], [0, 7], [1, 7], [2, 7], [3, 6], [4, 4], [5, 2]]) g.rect(cx - hw, y + dy, hw * 2, 1, C.ink);
