@@ -1,4 +1,4 @@
-(2026-10-29 사용자 "비슷하던 여섯 종 36장만 기존 그림 톤 그대로 다시 그려줘. 기술마다 중심 대상만 다르게. 샘플 두세 장 먼저 보여줘" — 첫 다시 그리기(SPECIES_V2_REDRAW_PROMPT.md, 결과 v2/rejected_1029/)는 단색 배경 · 작은 물건 하나라 '기존스킬과 톤이 다르잖아'로 반려. 중심 대상(기술마다 다른 모양)은 그대로 두고 그리는 방식만 기존 그림(굵은 테 · 진한 광택 · 크게 가까이 · 배경에 분위기)에 맞춤. 결과는 v2/redraw_1029/ — 사용자가 고르면 v2/로 옮기고 → `python tools/pixel/big/skillart.py tools/pixel/big/concept/skill/v2/<id>.png assets/v2/skills/<id>.png 0.5 0.5 1.0`.)
+(2026-10-29 사용자 "비슷하던 여섯 종 36장만 기존 그림 톤 그대로 다시 그려줘. 기술마다 중심 대상만 다르게. 샘플 두세 장 먼저 보여줘" — 첫 다시 그리기(SPECIES_V2_REDRAW_PROMPT.md, 결과 v2/rejected_1029/)는 단색 배경 · 작은 물건 하나라 '기존스킬과 톤이 다르잖아'로 반려. 중심 대상(기술마다 다른 모양)은 그대로 두고 그리는 방식만 기존 그림(굵은 테 · 진한 광택 · 크게 가까이 · 배경에 분위기)에 맞춤. 이어서 사용자 '드라곤프루트는 괜찮아 프로스트벨이랑. 만약 아직 안 만들었으면 그대로 써' → 프로스트벨 · 드라코프루트는 옛 그림 그대로, 다시 그리는 건 윈드페탈 · 젤리캡 · 팽트랩 · 쏜위드 24장(RUN 1의 프로스트벨 자물쇠는 이미 시작돼 톤 확인용으로만). 결과는 v2/redraw_1029/ — 사용자가 고르면 v2/로 옮기고 → `python tools/pixel/big/skillart.py tools/pixel/big/concept/skill/v2/<id>.png assets/v2/skills/<id>.png 0.5 0.5 1.0`.)
 
 Task: generate skill illustrations for a mobile game whose creatures are plants. They are shown small on battle cards (about 58x52 pixels after downscaling), next to many existing skill illustrations, and they must look like they belong to the same set.
 
@@ -34,12 +34,6 @@ u_jelly_2b.png - grass - CROSSED RIBBONS: three wavy green seaweed ribbons cross
 u_jelly_3b.png - water - GHOST: a nearly invisible translucent jelly silhouette shimmering like a mirage, only a faint glowing edge, bubbles drifting through it
 u_jelly_3c.png - water - U-TURN ARROW: one big thick orange arrow making a U-turn, bouncing back off a small round blue jelly shield with an impact flash
 
-u_frost_1.png - ice - RISING SUN: a big golden sun rising over a pale ice horizon, long sun rays, a tiny bell silhouette in front
-u_frost_2.png - ice - SHATTERING CUBE: one ice cube breaking apart into big sharp shards flying outward, frost dust
-u_frost_3.png - ice - CRESCENT MOON: a big pale-yellow crescent moon with three shining stars in a dark teal night sky
-u_frost_3b.png - ice - RIPPLES: concentric clear water ripples spreading in a round flower-like pattern, a white sparkle in the middle
-u_frost_3c.png - neutral - THREE CANES: three thin frosted switches / canes fanned out like a hand fan, three white swoosh arcs
-
 u_fang_1.png - grass - CLOSED JAW (the only Fangtrap image with the plant's jaw): a green venus flytrap jaw snapped shut from the side, teeth interlocked, a bite flash
 u_fang_2.png - grass - TONGUE: one big pink tongue licking, a large clear drool drop falling from it
 u_fang_2b.png - grass - ACID POOL: a round bubbling pool of glowing green-purple acid, big bubbles popping, seen from slightly above
@@ -53,10 +47,3 @@ u_thorn_2b.png - grass - DIZZY SPIRAL: a big swirling spiral of green leaves wit
 u_thorn_3.png - grass - GRAVESTONE: a rounded grey stone like a gravestone, one thorny tendril secretly sneaking out from behind it
 u_thorn_3b.png - grass - BROKEN SWORD: a leaf-blade sword snapped in two pieces, wrapped by a thorny chain
 u_thorn_3c.png - fire - EXPLOSION: one big round orange-red explosion burst with dark thorn shrapnel flying outward
-
-u_draco_1.png - ice - SNOW VORTEX: a swirling white snow vortex with one round glossy icy-blue berry forming in its center
-u_draco_2.png - ice - BITTEN BERRY: one big round glossy icy-blue berry (smooth like a blueberry, not leafy) with a large crescent bite mark, a green glow around it
-u_draco_2b.png - ice - CRACKED EGG: one big white-blue egg with a zig-zag crack across it, bright light shining out of the crack
-u_draco_3.png - ice - FROST CONE (the only Dracofruit image with the creature): a leafy blue-green dragon-shaped plant head on the left breathing a wide white-blue cone of frost to the right
-u_draco_3b.png - wind - ICE TORNADO: a tornado funnel full of sharp ice shards with small yellow lightning sparks
-u_draco_3c.png - neutral - FLYING BERRIES: three round glossy icy-blue berries flying in a curved arc with motion lines, the front one bursting into frost
