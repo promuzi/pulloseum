@@ -80,6 +80,7 @@ import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubb
 import { ga, eul, eun, ro } from '../core/josa.js';
 import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
 import { fieldGround, fieldAir, ARRIVE_MS } from '../art/fieldfx.js';   // 환경을 경기장에(2026-10-29 ㉠)
+import { drawAuras, plantBox } from '../art/auras.js';   // 걸려 있는 동안 식물 몸에 계속 보이는 표시(2026-10-29 밤샘)
 import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX, fxIdsOf } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡) · 공개 카드 효과 아이콘(㉥ 시안)
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
@@ -371,7 +372,7 @@ export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   // 1초 60장이 필요한 때(main.js 장 수 — 그 밖엔 30장): 기술이 오가는 동안 · 승패가 갈린 뒤 2.5초
   fast(app) { const v = this.v; return !!v && (v.phase === 'play' || (v.phase === 'over' && app.t - v.overT0 < 2500)); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.lift = {}; this.denyAt = null; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.lift = {}; this.denyAt = null; this.clk = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -916,10 +917,11 @@ export const battle = {
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
       const sw = v.sfx.length || (v.eff[who] || []).some(s => s.id === 'gale') ? swayOf(v.sfx, { [who]: (v.eff[who] || []).map(s => s.id) }, who, t) : 0;
       if (sw) pose = { ...(pose || {}), qx: ((pose && pose.qx) || 0) - sw };
-      const fxs = v.eff[who] || [], hidden = fxs.some(s => s.id === 'stealth');
-      if (fxs.some(s => s.id === 'clone')) for (const ox of [-20, 20]) g.alpha(0.4, () => drawBigPose(g, artOf(u), u.pot, x + dx + ox, y + dy + 2, { t: t + ox * 37, phase, flip, view, ...(pose || {}), light: { ...light, id: who + ox } }));   // 분신(2026-10-18)
-      g.alpha(hidden ? 0.35 : 1, () => drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t, phase, flip, flash, view, ...(pose || {}), light }));   // 은신 = 흐리게
-      if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t, phase });
+      const fxs = v.eff[who] || [], hidden = fxs.some(s => s.id === 'stealth'), pt = this.plantClock(who, t, fxs);   // pt = 식물 움직임 시계(빙결 = 멈춤 · 마비 = 느릿느릿)
+      if (fxs.some(s => s.id === 'clone')) for (const ox of [-20, 20]) g.alpha(0.4, () => drawBigPose(g, artOf(u), u.pot, x + dx + ox, y + dy + 2, { t: pt + ox * 37, phase, flip, view, ...(pose || {}), light: { ...light, id: who + ox } }));   // 분신(2026-10-18)
+      g.alpha(hidden ? 0.35 : 1, () => drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t: pt, phase, flip, flash, view, ...(pose || {}), light }));   // 은신 = 흐리게
+      if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t: pt, phase });
+      if (!hidden && fxs.length) drawAuras(g, fxs, plantBox(artOf(u), x + dx, y + dy, flip), t);   // 걸려 있는 효과를 몸에서 바로(불티 · 거품 · 얼음 · 별 · 꺾쇠 …)
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
     //  그림 270×348 = 위(하늘 · 관중석 · 벽)는 화면 위에 붙이고 길면 벽 밑 땅을 늘임 · 짧으면 위를 잘라 올림(layOf) · 넓은 화면 = 가운데 + 양옆을 그림 가장자리 한 줄로 이음
@@ -1363,6 +1365,12 @@ export const battle = {
     this.localEmotes = this.localEmotes.filter(x => now - x.t < EMOTE_LIFE * 2);
   },
   fxTarget() { const R = this.fxR || {}; return R.foe || R.me || R.envFoe || R.envMe || null; },   // 처음 안내가 가리킬 효과 표시(상대 체력바 밑 칸 먼저)
+  // 식물 움직임 시계(2026-10-29 밤샘): 빙결 = 멈춤(얼어붙음) · 마비 = 0.4배로 느릿느릿(포켓몬 5세대 마비처럼) · 나머지 = 그대로 흐름 — 효과가 풀리면 멈춘 자리부터 이어 감
+  plantClock(who, t, fxs) {
+    const C = (this.clk ||= {}), k = (C[who] ||= { t, last: t }), dt = Math.max(0, Math.min(100, t - k.last));
+    k.last = t; k.t += dt * (fxs.some(s => s.id === 'frozen') ? 0 : fxs.some(s => s.id === 'paral') ? 0.4 : 1);
+    return k.t;
+  },
   statuses(side) {
     const v = this.v, u = v.view[side], out = [], sv = v.stance[side];
     if (sv && sv.active) out.push({ id: sv.kind === 'guard' ? 'guard' : sv.kind === 'reflect' ? 'reflect' : 'evade' });
