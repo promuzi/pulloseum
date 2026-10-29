@@ -7,11 +7,11 @@
 //  뒷면 = 같은 테 + 상세(등급 · 분류 · 사거리 · 위력 · 비용 · 걸리는 효과와 설명 · 지금 상대에게의 상성 · 못 쓰는 까닭)
 //  꾹 누르기(battle.js) = 카드가 화면 가운데로 다가오며 커지고 원근 있게 뒤집힘 — 2D 캔버스라 세로 조각마다 깊이만큼 높이·간격을 줄여 3D 뒤집기를 흉내(drawFlip)
 import { Gfx } from '../core/gfx.js';
-import { wrap, wrapName, glyphH, sized } from '../core/text.js';
+import { wrap, wrapName, glyphH, sized, measure } from '../core/text.js';
 import { icon, tinted } from './icons.js';
 import { ELEMENT, BAYER4 } from './palette.js';
 import { rrect } from './ui.js';
-import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, hexMix } from './statusLook.js';
+import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, fxChipW, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
 import { FX, FRUIT } from '../battle/status.js';
@@ -381,33 +381,80 @@ function mechLines(sk) {
   if (sk.gain && sk.gain.k === 'prep' && sk.gain.n) L.push([`준비 +${sk.gain.n}`, B]);
   return L;
 }
+// 뒷면 글 줄 나누기(2026-10-29 사용자 '뒷장은 나쁘지 않아 … 디자인을 좀 더 다듬어 … 정렬 등 신경써서' — 337장 점검: 줄 머리 '·' 22곳 · 외톨이 끝줄 61곳 · 넘침 6장):
+//  띄어쓰기마다 '여기서 끊으면 얼마나 어색한가'를 매기고 문단 전체에서 가장 덜 어색한 끊음을 고름(TeX 줄 나누기를 줄인 것) —
+//  ① 줄 수가 가장 적게(뒷면 높이) ② 줄 머리 '·' '—' ')' '%' · 줄 끝 '(' 금지 ③ '+' '×' '=' 뒤 · 숫자 앞 · 괄호 안 · 붙여 읽는 두 낱말('방어 자세' · '다음 턴' · '최대 체력') 사이는 되도록 안 끊음
+//  ④ '·' '—' 뒤가 가장 좋은 자리 ⑤ 줄 길이를 고르게 · 끝줄이 아주 짧으면(외톨이) 벌점
+const GLUE_HEAD = new Set(['최대', '상대', '받은', '지속', '다음', '이번', '우리', '내', '한', '두', '세', '턴', '그', '못', '안']);
+const GLUE_TAIL = new Set(['자세', '턴', '번', '겹', '개', '타', '종', '편', '쪽']);
+function breakCost(a, b, inParen) {   // a = 줄 끝 낱말 · b = 다음 줄 첫 낱말
+  if (/^[·—)%,.×]/.test(b) || /\($/.test(a)) return 1e6;
+  if (/[·—]$/.test(a)) return 0;
+  if (/면$/.test(a)) return 20;   // '먼저 움직이면 · 막으면 · 피하면' 뒤 = 조건이 끝나는 자리
+  if (a === '+' || a === '×' || a === '=') return 400;
+  if (/^[0-9×+−\-↓↑]/.test(b)) return 300;
+  if (inParen) return 200;
+  if (GLUE_HEAD.has(a) || GLUE_TAIL.has(b) || /^(자세|턴|속성)/.test(b)) return 150;
+  if (/[0-9%]$/.test(a) && /^[가-힣]/.test(b)) return 120;   // '30% 무시' · '40% 확률로'
+  return 60;
+}
+function wrapBack(str, font, maxW) {
+  const out = [];
+  for (const para of String(str).split('\n')) {
+    const T = para.split(' ').filter(Boolean), n = T.length, par = [];
+    if (!n) { out.push(''); continue; }
+    let open = 0;
+    for (let k = 0; k < n; k++) { par[k] = open > 0; open += (T[k].match(/\(/g) || []).length - (T[k].match(/\)/g) || []).length; }   // par[k] = T[k] 앞 띄어쓰기가 괄호 안
+    const f = [0], from = [0];
+    for (let j = 1; j <= n; j++) {
+      f[j] = Infinity;
+      for (let i = j - 1; i >= 0; i--) {
+        const w = measure(T.slice(i, j).join(' '), font);
+        if (w > maxW && j - i > 1) break;   // 더 앞에서 시작하면 더 길어짐(한 낱말이 폭보다 길면 그 줄만 허용 — 아래에서 글자 단위로)
+        const last = j === n, slack = Math.max(0, maxW - w) / maxW;
+        const cost = f[i] + 2000 + (last ? (i > 0 && w < maxW * 0.28 ? 500 : 0) : slack * slack * 600 + breakCost(T[j - 1], T[j], par[j]));
+        if (cost < f[j]) { f[j] = cost; from[j] = i; }
+      }
+    }
+    const L = [];
+    for (let j = n; j > 0; j = from[j]) L.unshift(T.slice(from[j], j).join(' '));
+    for (const l of L) { if (measure(l, font) <= maxW) out.push(l); else out.push(...wrap(l, font, maxW)); }
+  }
+  return out;
+}
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
   if (sk.passive) return passiveBack(g, w, h, sk);
   const E = elOf(sk), P = 14, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';
   const wm = icon(artIcon(sk));   // 아래쪽 옅은 문양(앞면 그림의 아이콘)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(artIcon(sk), E.light), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
-  let y = 16;
-  const ei = sk.el && icon(sk.el);
-  g.text(sk.name, P, y, { font: 'head', color: C.text });
+  // 글이 뒷면보다 길 때(renderFaces가 재 보고 차례로 고름): o.small = 설명 한 칸 작게(10칸) → o.tight = 수 칸 · 효과 칩을 낮게 · 칸 사이를 좁게 → o.tiny = 거기에 설명을 9칸으로
+  const SM = o.small, TN = o.tight || o.tiny;
+  let y = 16;   // 머리(이름 · 꼬리표 · 줄)는 글 크기와 상관없이 늘 같은 자리 — 카드마다 머리가 들쭉날쭉하지 않게
+  const ei = sk.el && icon(sk.el), nmax = cw - (ei ? 22 : 0);
+  let nf = 'head'; for (const s of [13, 12]) { if (measure(sk.name, nf) <= nmax) break; nf = sized('head', s); }   // 긴 이름 = 속성 원에 안 닿게 글자를 줄이고, 그래도 길면 두 줄('예로부터 매가 약이었죠.')
+  const NL = measure(sk.name, nf) <= nmax ? [sk.name] : wrapName(sk.name, nf, nmax), NH = glyphH(nf) + 3;
+  NL.forEach((ln, i) => g.text(ln, P, y + Math.round((glyphH('head') - glyphH(nf)) / 2) + i * NH, { font: nf, color: C.text }));
   if (ei) { g.disc(w - P - 7, y + 7, 9, C.ink); g.disc(w - P - 7, y + 7, 8, E.dark); g.img(ei, w - P - 12, y + 2); }
-  y += 22;
+  y += 22 + (NL.length - 1) * NH;
   const tags = [sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이` : TIER_NAME[sk.tier], CAT_NAME[cat], sk.act === 'attack' ? (sk.ranged ? '원거리' : '근접') : null, sk.area ? '광역' : null, sk.el ? `${E.name} 속성` : null].filter(Boolean);
-  for (const ln of wrap(tags.join(' · '), 'body', cw)) { g.text(ln, P, y, { color: C.sub }); y += 14; }
+  for (const ln of wrapBack(tags.join(' · '), 'body', cw)) { g.text(ln, P, y, { color: C.sub }); y += 14; }
   y += 4; g.rect(P, y, cw, 1, hexMix(E.main, C.ink, 0.35)); y += 9;
   // 큰 수: 앞면 오른쪽 위 수치(위력 · 막음 · 회피 · 보호막 · 회복 — 없으면 위력 —) · 비용
+  //  칸 높이 · 글꼴 = 보통 34 · 작은 글자 32 · 아주 작은 글자 26(이름표 9칸 · 수 13칸 — 바위 갑옷 · 비늘 갑옷처럼 효과 설명이 아주 긴 카드)
+  const BX = TN ? 26 : SM ? 32 : 34, LY = TN ? 3 : SM ? 4 : 5, LF = TN ? sized('body', 9) : 'body', VF = TN ? 'value' : 'name', VD = TN ? 9 : 10, ID = TN ? 10 : 13;
   const st = statOf(sk, o), bw = Math.floor((cw - 8) / 2), box = (bx, label, val, ic) => {
-    rrect(g, bx, y, bw, 34, 4, C.ink); rrect(g, bx + 1, y + 1, bw - 2, 32, 3, C.plate);
-    g.text(label, bx + 8, y + 5, { color: C.dim });
-    if (ic) g.img(icon(ic), bx + 8, y + 18);
-    g.text(val, bx + (ic ? 22 : 8), y + 15, { font: 'name', color: C.text });
+    rrect(g, bx, y, bw, BX, 4, C.ink); rrect(g, bx + 1, y + 1, bw - 2, BX - 2, 3, C.plate);
+    g.text(label, bx + 8, y + LY, { font: LF, color: C.dim });
+    if (ic) g.img(icon(ic), bx + 8, y + LY + ID);
+    g.text(val, bx + (ic ? 22 : 8), y + LY + VD, { font: VF, color: val === '—' ? C.dim : C.text });
   };
   box(P, st ? st.label : '위력', st ? st.txt : '—', st ? BADGE[st.kind].icon : null);
   if (sk.uses) box(P + bw + 8, '판마다', o.left != null ? `${o.left} / ${sk.uses}번` : `${sk.uses}번`, null); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
-  y += 44;
-  // 설명 줄: 기본기 → 규칙 문장, 효과 → 칩 + 누구에게 + 한 줄 설명
-  const SM = o.small, BODY = SM ? sized('body', 10) : 'body', LH = SM ? 13 : 15;   // o.small = 글이 뒷면보다 길 때(renderFaces가 재 보고 정함) — 설명만 한 칸 작게
-  const line = (txt, col = C.text, font = 'body') => { const f = font === 'body' ? BODY : font; for (const ln of wrap(txt, f, cw)) { g.text(ln, P, y, { font: f, color: col }); y += LH; } };
+  y += BX + (TN ? 5 : SM ? 8 : 10);
+  // 설명 줄: 기본기 → 규칙 문장, 효과 → 칩 + 누구에게 + 한 줄 설명 · 한 문장(덩이)마다 끝에 조금 띄움(문장 경계가 보이게)
+  const BODY = o.tiny ? sized('body', 9) : SM ? sized('body', 10) : 'body', LH = o.tiny ? 12 : SM ? 13 : 15, GAP = TN ? 0 : SM ? 1 : 3;
+  const line = (txt, col = C.text, font = 'body') => { const f = font === 'body' ? BODY : font; for (const ln of wrapBack(txt, f, cw)) { g.text(ln, P, y, { font: f, color: col }); y += LH; } y += GAP; };
   if (BASIC_DESC[sk.id]) for (const ln of BASIC_DESC[sk.id]) line(ln);
   if (sk.drain) line(`때린 피해의 ${Math.round(sk.drain * 100)}%만큼 회복`, '#9ff0b0');
   if (st && st.half) line(`바로 전 턴에도 같은 자세 — 효과 절반`, '#ffd890');
@@ -426,18 +473,21 @@ function cardBack(g, w, h, sk, o) {
   for (const h of sk.hex || []) fx.push({ id: h.id, n: h.n || 1, to: h.turns ? `상대 쪽 · ${h.turns}턴` : '상대에게' });   // 피해 없이 거는 기술(종 고유 v2)
   for (const b of [sk.self, sk.also]) if (b) fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), to: '나에게' });
   if (sk.reflect) fx.push({ id: 'reflect', to: '이번 턴' });   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타)
-  const chip = (f, x) => fxChip(g, x, y, STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id, true);
-  if (fx.length === 2 && fx[0].to === fx[1].to && !fx.some(f => f.n > 1 || f.delay != null)) {   // 효과 둘 · 같은 대상 = 칩 둘을 한 줄에 · 설명은 '이름: …'(2026-10-29 — 신경독 · 소화액 같은 카드가 뒷면 아래로 넘쳤음)
-    y += 2;
-    const w1 = chip(fx[0], P), w2 = chip(fx[1], P + w1 + 4);
-    if (w1 + w2 + 10 + g.textW(fx[0].to) <= cw) g.text(fx[0].to, P + w1 + w2 + 10, y + Math.round((20 - glyphH('body')) / 2), { color: C.sub });   // 자리가 모자라면 대상 글은 뺌(공격이 거는 효과 = 상대에게)
-    y += SM ? 22 : 24;
+  // 칩 = 20칸(아주 작은 글자일 땐 15칸) · 대상 글은 칩 가운데 높이
+  const BIG = !TN, CH = BIG ? 20 : 15, look = f => [STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id];
+  const chip = (f, x) => fxChip(g, x, y, ...look(f), BIG), toY = () => y + Math.round((CH - glyphH('body')) / 2);
+  const same = fx.length >= 2 && fx.every(f => f.to === fx[0].to && !(f.n > 1) && f.delay == null), rowW = fx.reduce((s, f) => s + fxChipW(g, ...look(f), BIG), 0) + 4 * (fx.length - 1);
+  if (same && rowW <= cw) {   // 효과 여럿 · 같은 대상 = 칩을 한 줄에 · 설명은 '이름: …'(2026-10-29 — 신경독 · 소화액이 뒷면 아래로 넘쳤음 → 둘, 무릎 꿇어라 → 셋도)
+    y += TN ? 1 : 2;
+    let x = P; for (const f of fx) x += chip(f, x) + 4;
+    if (rowW + 6 + g.textW(fx[0].to) <= cw) g.text(fx[0].to, P + rowW + 6, toY(), { color: C.sub });   // 자리가 모자라면 대상 글은 뺌(공격이 거는 효과 = 상대에게)
+    y += CH + (SM ? 2 : 4);
     for (const f of fx) if (STATUS_DESC[f.id]) line(`${fxName(f.id)}: ${STATUS_DESC[f.id]}`);
   } else for (const f of fx) {
-    y += 2;
+    y += TN ? 1 : 2;
     const cwid = chip(f, P);
-    g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, y + Math.round((20 - glyphH('body')) / 2), { color: C.sub });
-    y += SM ? 22 : 24;
+    g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, toY(), { color: C.sub });
+    y += CH + (SM ? 2 : 4);
     if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
   }
   if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd], '#c0a8ff');
@@ -548,7 +598,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
     cardBack(new Gfx(bb), BW, o.bodyH, sk, o);
     return { front, back, body };
   }
-  cardBack(G2, BW, BH, sk, backHeight(sk, BW, o) > BH ? { ...o, small: true } : o);
+  cardBack(G2, BW, BH, sk, [o, { ...o, small: true }, { ...o, small: true, tight: true }].find(q => backHeight(sk, BW, q) <= BH) || { ...o, small: true, tiny: true });
   return { front, back };
 }
 // 손패 크기 앞면 한 장만(기기 화소 k) — 상대 카드 더미를 펼쳐 볼 때(scenes/battle.js drawSpread · 뒷면은 누를 때 renderFaces로 따로)

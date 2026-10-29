@@ -75,3 +75,10 @@ export function fxChip(g, x, y, id, buffName, big = false) {   // big = 18칸 �
   g.text(D.name, x + tx, y + (big ? Math.round((h - glyphH('body')) / 2) : 2), { color: S.text });
   return w;
 }
+// 칩 너비만(그리지 않고) — 칩 여럿을 한 줄에 놓을 수 있는지 잴 때(기술 카드 뒷면)
+export function fxChipW(g, id, buffName, big = false) {
+  const D = buffName ? { name: buffName, buff: true } : STATUS[id];
+  if (!D) return 0;
+  const ic = D.icon ? (big && iconMid(D.icon)) || icon(D.icon) : null;
+  return (ic ? 3 + ic.width : 5) - 1 + g.textW(D.name) + 5;
+}
