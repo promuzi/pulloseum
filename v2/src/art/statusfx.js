@@ -409,17 +409,7 @@ function thorns(g, L, S, e, age, hit) {
     for (let d = 1; d <= len; d++) { const [sx, sy] = scr(L, Math.round(x + (dx / m) * d), Math.round(y + (dy / m) * d)); dot(g, sx, sy, d === len ? (hit ? '#ffffff' : '#fff0b0') : d >= len - 1 ? '#ffd27a' : '#a8743a', 1); }
   }
 }
-// 보호막: 몸을 감싸는 물방울 막이 톡 생기고 빛 띠가 한 바퀴(막는 순간 = 흰빛 번쩍)
-function shield(g, L, S, e, age, hit) {
-  const life = SFX_LIFE[hit ? 'shieldHit' : 'shield'], sc = hit ? 1 : kf(age, [[0, 0.6], [140, 1.06, oQ], [220, 1]]), f = hit ? 1 - age / life : fadeIO(age, life, 1, 300);
-  const [cx, cy] = scr(L, Math.round((S.x0 + S.x1) / 2), Math.round((S.y0 + S.y1) / 2)), rx = ((S.x1 - S.x0) / 2 + 5) * sc, ry = ((S.y1 - S.y0) / 2 + 5) * sc, c = g.c;
-  c.save(); c.globalAlpha *= 0.13 * f; c.fillStyle = '#8fd8ff'; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.restore();
-  const n = Math.round((rx + ry) * 2.2), band = (age / 700) * Math.PI * 2;
-  for (let k = 0; k < n; k++) {
-    const an = (k / n) * Math.PI * 2, x = Math.round(cx + Math.cos(an) * rx), y = Math.round(cy + Math.sin(an) * ry), hl = Math.cos(an - band) > 0.85;
-    dot(g, x, y, hit ? '#ffffff' : hl ? '#ffffff' : '#9ff0ff', f * (hit ? 1 : hl ? 1 : 0.75));
-  }
-}
+// 보호막(· 튕김)이 걸리는 순간 · 막는 순간의 막 = auras.js 둘레 원(2026-10-29 — 늘 보이는 원이 톡 커지며 생기고 막을 때 번쩍) · 여기선 소리 자리만(SFX_LIFE)
 // 정화: 흰빛으로 한 번 씻기고 반짝이 고리가 발밑에서 머리로 오름
 function purify(g, L, S, e, age) {
   const life = SFX_LIFE.purified, a = 0.45 * cl(1 - age / 260);
@@ -444,6 +434,7 @@ export function drawSfx(g, list, who, t, p) {
     if (e.who !== who) continue;
     if ((e.kind === 'burn' || e.kind === 'ignite') && e !== fire) continue;
     const age = t - e.t0; if (age < 0 || age >= SFX_LIFE[e.kind]) continue;
+    if (e.kind === 'shield' || e.kind === 'shieldHit') continue;   // 막 = auras.js 둘레 원
     if (!L) { L = plantLayer(p.key, p.pot, p.bx, p.by, { t: p.t, phase: p.phase, flip: p.flip, view: p.view }); if (!L) return; S = scan(L); if (!S.op.length) return; N = noiseOf(p.key, L.w, L.h); }
     if (e.kind === 'burn' || e.kind === 'ignite') burn(g, L, S, e, age, e.kind === 'ignite');
     else if (e.kind === 'poison') poison(g, L, S, e, age, N);
@@ -466,7 +457,6 @@ export function drawSfx(g, list, who, t, p) {
     else if (e.kind === 'haste') haste(g, L, S, e, age);
     else if (e.kind === 'regen' || e.kind === 'heal') regen(g, L, S, e, age, e.kind === 'heal');
     else if (e.kind === 'thorns' || e.kind === 'thornsHit') thorns(g, L, S, e, age, e.kind === 'thornsHit');
-    else if (e.kind === 'shield' || e.kind === 'shieldHit') shield(g, L, S, e, age, e.kind === 'shieldHit');
     else if (e.kind === 'purified') purify(g, L, S, e, age);
     else if (e.kind === 'focus') focus(g, L, S, e, age);
   }

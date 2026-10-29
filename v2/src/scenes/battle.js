@@ -80,7 +80,7 @@ import { PHRASES, EMOJI, EMOJI_NAME, EMOTE_LIFE, BOT_REPLY, drawEmoji, emoteBubb
 import { ga, eul, eun, ro } from '../core/josa.js';
 import { SFX_OF_FX, sfxAdd, sfxAlive, drawSfx, drawSfxMap, swayOf, popTimes } from '../art/statusfx.js';
 import { fieldGround, fieldAir, ARRIVE_MS } from '../art/fieldfx.js';   // 환경을 경기장에(2026-10-29 ㉠)
-import { drawAuras, plantBox } from '../art/auras.js';   // 걸려 있는 동안 식물 몸에 계속 보이는 표시(2026-10-29 밤샘)
+import { drawAuras, plantBox, drawBarriers, barrierBox, barrierKinds, barrierHit } from '../art/auras.js';   // 걸려 있는 동안 식물 몸에 계속 보이는 표시(2026-10-29 밤샘)
 import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX, fxIdsOf, castSpecial, drawEcho } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡) · 공개 카드 효과 아이콘(㉥ 시안)
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
@@ -372,7 +372,7 @@ export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   // 1초 60장이 필요한 때(main.js 장 수 — 그 밖엔 30장): 기술이 오가는 동안 · 승패가 갈린 뒤 2.5초
   fast(app) { const v = this.v; return !!v && (v.phase === 'play' || (v.phase === 'over' && app.t - v.overT0 < 2500)); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.lift = {}; this.denyAt = null; this.clk = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.lift = {}; this.denyAt = null; this.clk = {}; this.bars = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -662,7 +662,8 @@ export const battle = {
     if (st.kind === 'fx' && !st.quiet && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: SFX_OF_FX[st.ev.id] === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
     if (st.kind === 'drain') { sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to }); sfx('drain'); }
     if (st.kind === 'heal') { sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t); sfx(st.ev.t === 'regen' ? 'regen' : 'heal'); }
-    if (st.kind === 'reflect') { sfxAdd(v.sfx, st.ev.who, 'thornsHit', t); sfx('thorns'); }
+    if (st.kind === 'reflect') { sfxAdd(v.sfx, st.ev.who, 'thornsHit', t); sfx('thorns'); barrierHit(this.bars, st.ev.who, 'reflect', t); }
+    if (st.kind === 'fx' && st.ev.id === 'bounce' && st.ev.bounced) barrierHit(this.bars, st.side, 'bounce', t);   // 너꺼잉 막이 나쁜 효과를 튕김 = 막 번쩍
     if (st.kind === 'bloom') { sfxAdd(v.sfx, st.side, 'bloom', t); sfx('bloom'); }
     if (st.kind === 'skipT' && st.ev.src !== 'blocked') sfxAdd(v.sfx, st.side, { frozen: 'frozen', paral: 'paral', stun: 'stun' }[st.ev.src], t);
     if (st.kind === 'cure') sfxAdd(v.sfx, st.side, 'steam', t);
@@ -760,8 +761,8 @@ export const battle = {
     if (great) this.pop(st.to, '효과 굉장!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);
     else if (e.tier !== 'miss' && e.mult > 1.01) this.pop(st.to, '상성!', 'gold', t, false, e.tier === 'crit' ? -52 : -32);   // 변이 상성(2026-10-17)
     else if (e.tier !== 'miss' && e.mult && e.mult < 0.99) this.pop(st.to, '효과가 미미', 'sub', t, false, e.tier === 'crit' ? -52 : -32);   // 무기 상성 ×0.8(2026-10-18 사용자 "'안 듦' 대신 '효과가 미미'") — 다 곱한 값이 1보다 작을 때만('효과 굉장!'과 같이 뜨지 않게 · 2026-10-17)
-    if (e.guard) this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff');
-    if (e.absorb) { this.pop(st.to, `${e.ab === 'armor' ? '방어구' : '보호막'} -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; sfxAdd(v.sfx, st.to, 'shieldHit', t); sfx('shieldHit'); }
+    if (e.guard) { this.pop(st.to, '막음', null, t, false, great ? -48 : -32, '#8ccfff'); barrierHit(this.bars, st.to, 'guard', t); }
+    if (e.absorb) { this.pop(st.to, `${e.ab === 'armor' ? '방어구' : '보호막'} -${e.absorb}`, null, t, false, -30, '#8ccfff'); if (e.list) v.eff[st.to] = e.list; barrierHit(this.bars, st.to, e.ab === 'armor' ? 'armor' : 'shield', t); sfx('shieldHit'); }   // 막은 막이 번쩍(auras.js 둘레 원)
   },
   // 식물 밑동 자리(장면 270칸 안): 상대 = 그림 땅을 따라(fy) · 나 = 손패 바로 위(fy + myDy) — 머리 위 글자 · 표는 위 띠 밑까지만
   at(who) { const L = this.lay; return who === 'me' ? [PX, PY + (L ? L.meDy : 0)] : [EX, EY + (L ? L.foeDy : 0)]; },
@@ -921,6 +922,8 @@ export const battle = {
       if (fxs.some(s => s.id === 'clone')) for (const ox of [-20, 20]) g.alpha(0.4, () => drawBigPose(g, artOf(u), u.pot, x + dx + ox, y + dy + 2, { t: pt + ox * 37, phase, flip, view, ...(pose || {}), light: { ...light, id: who + ox } }));   // 분신(2026-10-18)
       g.alpha(hidden ? 0.35 : 1, () => drawBigPose(g, artOf(u), u.pot, x + dx, y + dy, { t: pt, phase, flip, flash, view, ...(pose || {}), light }));   // 은신 = 흐리게
       if (v.sfx.length) drawSfx(g, v.sfx, who, t, { key: artOf(u), pot: u.pot, bx: x + dx, by: y + dy, flip, view, t: pt, phase });
+      // 막는 효과 = 화분까지 감싸는 원(보호막 · 갑주 · 튕김 · 이 턴 방어 · 반사 — 2026-10-29 사용자 '원형으로') · 방어 반달은 상대 쪽을 향함
+      if (!hidden) drawBarriers(g, (this.bars ||= {}), who, barrierKinds(fxs, v.stance[who]), barrierBox(artOf(u), x + dx, y + dy, flip), t, artOf(u) + ':' + (u.name || ''), who === 'me' ? Math.atan2(ey - py, ex - px) : Math.atan2(py - ey, px - ex));
       if (!hidden && fxs.length) drawAuras(g, fxs, plantBox(artOf(u), x + dx, y + dy, flip), t);   // 걸려 있는 효과를 몸에서 바로(불티 · 거품 · 얼음 · 별 · 꺾쇠 …)
     };
     // 무대(1배 도트): 경기장 그림 → 받침 → 효과 층 → 상대 → 나 → 자세 표시 · 숫자 · 전광판
