@@ -7,7 +7,7 @@
 //  뒷면 = 같은 테 + 상세(등급 · 분류 · 사거리 · 위력 · 비용 · 걸리는 효과와 설명 · 지금 상대에게의 상성 · 못 쓰는 까닭)
 //  꾹 누르기(battle.js) = 카드가 화면 가운데로 다가오며 커지고 원근 있게 뒤집힘 — 2D 캔버스라 세로 조각마다 깊이만큼 높이·간격을 줄여 3D 뒤집기를 흉내(drawFlip)
 import { Gfx } from '../core/gfx.js';
-import { wrap, glyphH } from '../core/text.js';
+import { wrap, wrapName, glyphH, sized } from '../core/text.js';
 import { icon, tinted } from './icons.js';
 import { ELEMENT, BAYER4 } from './palette.js';
 import { rrect } from './ui.js';
@@ -250,6 +250,15 @@ function statBadge(g, xr, cy, st, dim, gh) {
   }
 }
 
+// 카드 이름 두 줄(2026-10-29 사용자 '검방술의 경우 )가 아랫줄로 밀림'): wrapName으로 끊고, 띄어쓰기가 있는 이름이 두 줄에 안 들어가 단어 가운데서 끊기면
+//  글자를 한 칸씩 줄여 다시(11 → 10 → 9 — '예로부터 매가 약이었죠.'). 셋 다 안 되면 11칸 글자 사이 끊기 그대로
+function nameLines(name, maxW) {
+  for (const sz of [11, 10, 9]) {
+    const font = sz === 11 ? 'bold' : sized('bold', sz), lines = wrapName(name, font, maxW);
+    if (lines.length <= 2 && !lines.split) return { lines, font, lh: sz + 1 };
+  }
+  return { lines: wrapName(name, 'bold', maxW).slice(0, 2), font: 'bold', lh: 12 };
+}
 // 앞면(손패 크기 w×h, 논리 칸 — 지금 66×90). o = { can(쓸 수 있나), short(에너지가 모자라나), lit(고름), lock, shine(0~1 빛 띠) }
 export function cardFront(g, x, y, w, h, sk, o = {}) {
   x |= 0; y |= 0;
@@ -271,8 +280,8 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
   }
-  const lines = wrap(sk.name, 'bold', aw - 4).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
-  lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font: 'bold', color: C.text, align: 'center' }));
+  const { lines, font, lh } = nameLines(sk.name, aw - 4), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
+  lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
     const p = o.shine, bx = ax - 16 + p * (aw + 32);
     c.save(); c.beginPath(); c.rect(ax, ay, aw, h - 8); c.clip();
@@ -534,8 +543,8 @@ export function renderSwapFront(u, w, h, BW, BH, k, art) {
   gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
   g.rect(ax, by, aw, bh, C.band); g.rect(ax, by, aw, 1, '#8ccfff');
-  const lines = wrap((u && u.name) || '교체', 'bold', aw - 4).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
-  lines.forEach((ln, i) => g.text(ln, w / 2, ny + i * lh, { font: 'bold', color: C.text, align: 'center' }));
+  const { lines, font, lh } = nameLines((u && u.name) || '교체', aw - 4), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
+  lines.forEach((ln, i) => g.text(ln, w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (el && ELEMENT[el]) { const ic = icon(el); if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); } }
   g.disc(10, 10, 8, C.ink); g.disc(10, 10, 7, '#3d8fd6'); g.disc(10, 10, 6, '#1f5d9c');   // 엇갈린 두 화살표: 위 = 오른쪽 · 아래 = 왼쪽
   g.rect(6, 7, 7, 1, '#ffffff'); g.rect(11, 6, 1, 3, '#ffffff'); g.px(12, 7, '#ffffff');

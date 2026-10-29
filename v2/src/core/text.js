@@ -75,6 +75,8 @@ export function drawText(ctx, str, x, y, opt = {}) {
 }
 
 // 줄바꿈: 띄어쓰기에서 먼저 끊고, 한 단어가 너무 길면 글자 단위로
+// 줄 맨 앞에 오면 안 되는 닫는 부호 · 줄 맨 끝에 오면 안 되는 여는 부호(2026-10-29 사용자 '검방술의 경우 )가 아랫줄로 밀림')
+const CLOSE = new Set([...')]}」』.,!?~…·:;%']), OPEN = new Set([...'([{「『']);
 export function wrap(str, fontKey, maxW) {
   const out = [];
   for (const para of String(str).split('\n')) {
@@ -85,11 +87,34 @@ export function wrap(str, fontKey, maxW) {
       if (line) out.push(line);
       if (measure(word, fontKey) <= maxW) { line = word; continue; }
       line = '';
-      for (const ch of word) { if (measure(line + ch, fontKey) > maxW) { out.push(line); line = ch; } else line += ch; }
+      for (const ch of word) {
+        if (measure(line + ch, fontKey) <= maxW) { line += ch; continue; }
+        if (CLOSE.has(ch) && line.length > 1) { out.push(line.slice(0, -1)); line = line.slice(-1) + ch; }   // 닫는 부호는 앞 글자와 함께 내려감
+        else { out.push(line); line = ch; }
+      }
     }
     out.push(line);
   }
   return out;
+}
+// 짧은 이름(카드 이름 등) 두 줄 나누기 — 줄 끝 마침표 · 물음표 · 닫는 괄호는 hang칸까지 넘쳐도 그 줄에 둠(매달린 부호):
+//  ① 띄어쓰기에서 두 줄이 되면 지금까지처럼 앞 줄을 채움 ② 아니면 여는 괄호 앞 > 글자 사이에서 두 줄을 고르게 — 닫는 부호가 줄 맨 앞 · 여는 부호가 줄 맨 끝에 오지 않게
+//  ('검방술(기본' + ')' → '검방술' + '(기본)' · '깨트려드리' + '죠.' → '깨트려' + '드리죠.'). 돌려준 줄 묶음의 split = 띄어쓰기가 있는 이름을 단어 가운데서 끊음(부르는 쪽이 글자를 줄여 다시)
+export function wrapName(str, fontKey, maxW, hang = 4) {
+  const s = String(str), fits = t => { const m = measure(t, fontKey); return m <= maxW || (CLOSE.has(t[t.length - 1]) && m <= maxW + hang); };
+  if (fits(s)) return [s];
+  const words = s.split(' ');
+  for (let k = words.length - 1; k >= 1; k--) { const a = words.slice(0, k).join(' '); if (!fits(a)) continue; const b = words.slice(k).join(' '); if (fits(b)) return [a, b]; break; }
+  const ch = Array.from(s); let best = null;
+  for (let i = 1; i < ch.length; i++) {
+    const a = ch.slice(0, i).join('').trimEnd(), b = ch.slice(i).join('').trimStart();
+    if (!a || !b || CLOSE.has(b[0]) || OPEN.has(a[a.length - 1]) || !fits(a) || !fits(b)) continue;
+    const cls = ch[i] === '(' ? 0 : 1, sc = cls * 1000 + Math.max(measure(a, fontKey), measure(b, fontKey));
+    if (!best || sc < best[0]) best = [sc, a, b, cls];
+  }
+  const L = best ? [best[1], best[2]] : wrap(s, fontKey, maxW);
+  L.split = !best || (best[3] === 1 && s.includes(' '));
+  return L;
 }
 
 // 큰 제목: 위·가운데·아래 3단 색 띠 그라데이션 + 외곽선 + 아래 그림자
