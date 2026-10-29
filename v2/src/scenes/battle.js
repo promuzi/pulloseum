@@ -15,7 +15,7 @@ import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.j
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
-import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, cardTiny, sunDisc, SUN, cardShadow, cardHalo } from '../art/skillcard.js';
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -1081,8 +1081,8 @@ export const battle = {
         if (pressed && can && this.liftT !== input.down.t0) { this.liftT = input.down.t0; sfx('lift'); }
         const da = this.denyAt && this.denyAt.id === id ? app.t - this.denyAt.t : 1e9, shake = da < 240 ? Math.round(Math.sin(da / 240 * Math.PI * 4) * 2 * (1 - da / 240)) : 0;
         const cy = y - (lit ? 5 : Math.round(lv * 5)) + (pressed && !can ? 1 : 0), sh = this.shineAt[id] != null ? (app.t - this.shineAt[id]) / SHINE_MS : null;
-        rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, `rgba(0,0,0,${(lit ? 0.45 : 0.32 + 0.14 * lv).toFixed(3)})`);   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
-        if (can) cardGlow(g, x, cy, CARD_W, CARD_H, Math.min(1, 0.5 + 0.22 * Math.sin((app.t / 1800 + i * 0.13) * Math.PI * 2) + 0.5 * lv));
+        { const sc = `rgba(0,0,0,${(lit ? 0.45 : 0.32 + 0.14 * lv).toFixed(3)})`; if (!cardShadow(g, x + 1, y + 3, CARD_W, CARD_H, sk, sc)) rrect(g, x + 1, y + 3, CARD_W, CARD_H, 5, sc); }   // 그림자(카드가 떠오르면 자리에 남아 높이가 보임)
+        if (can) { const ga = Math.min(1, 0.5 + 0.22 * Math.sin((app.t / 1800 + i * 0.13) * Math.PI * 2) + 0.5 * lv); if (!cardHalo(g, x, cy, CARD_W, CARD_H, sk, ga)) cardGlow(g, x, cy, CARD_W, CARD_H, ga); }
         const left = sk.uses ? usesLeft(B.me, sk) : null, halved = !!(B.me.st && B.me.st.lastStance && B.me.st.lastStance === sk.act);
         const cd = sk.inferno && B.me.st && B.me.st.infernoLock ? Math.max(1, B.me.st.infernoLock.until - (B.turn || 1) + 1) : null;   // 지옥전개 재사용 대기 = 다시 쓸 수 있을 때까지 남은 턴(지옥이 켜진 동안 포함)
         cardFront(g, x + shake, cy, CARD_W, CARD_H, sk, { can: show, short, lit, lock, left, halved, cd, shine: sh != null && sh < 1 ? sh : null });

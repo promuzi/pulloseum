@@ -1,6 +1,6 @@
 // 카드 테 시안 비교판(2026-10-29 밤샘 — 설계 = docs/superpowers/specs/2026-10-29-v2-card-frame-design.md): 하는 일 다섯 묶음마다 견본 카드를 실제 앞면 그림(renderFront)으로
 //  시안마다 한 판(줄 = 묶음 · 칸 = 견본) + 손패 여섯 장 비교 한 줄 → <출력 폴더>/frames_<시안>.png · hand_compare.png
-// node tools/shots/cardframes.mjs <출력 폴더> [시안들 = 0,a,b]
+// node tools/shots/cardframes.mjs <출력 폴더> [시안들 = 0,c] — 0 = 지금 · c = 테 모양 + 재질(2026-10-29 오전 · 이름 띠 색 시안 a · b는 버림)
 import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -9,7 +9,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'), U = p
 const require = createRequire(resolve(repo, 'tools/shots/package.json'));
 const puppeteer = require('puppeteer-core');
 const { serve } = await import(U('tools/shots/static-server.mjs'));
-const out = process.argv[2], styles = (process.argv[3] || '0,a,b').split(',');
+const out = process.argv[2], styles = (process.argv[3] || '0,c').split(',');
 mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const { srv, url } = await serve(repo);

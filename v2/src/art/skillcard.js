@@ -16,6 +16,7 @@ import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
 import { FX } from '../battle/status.js';
 import { RULES, guardDefMult } from '../battle/rules.js';
+import { MAT, LAYOUT, shapePath, innerSpan, ringCanvas, haloCanvas } from './cardshape.js';
 
 const C = { ink: '#0b1322', body: '#12294a', body2: '#183a62', plate: '#0c1e36', band: '#0c1526', text: '#eef4ff', sub: '#a9cdf0', dim: '#7396bb', line: '#8ccfff', gold: '#ffd890', good: '#ffd890' };
 const GEM = { ok: ['#2d6fe0', '#9fd0ff', '#15347c'], bad: ['#c8392e', '#ff9e8e', '#5c1410'], off: ['#5b616e', '#a7adb8', '#2c3038'] };   // [속, 빛, 그늘]
@@ -94,7 +95,7 @@ function placeholderArt(sk) {
 // ── 카드 테 시안(2026-10-29 밤샘 — 사용자 '각 스킬카드별로 테두리를 설계해서 가독성을 확실히 주고 싶어. 어떤식으로 묶을지 분석해서 정리하고 설계해봐') ──
 //  주소 ?frame=a|b 로만 켬(기본 = 지금 그대로 — 사용자가 고르기 전) · 설계 = docs/superpowers/specs/2026-10-29-v2-card-frame-design.md
 //  하는 일 다섯 묶음(frameKind): atk 공격 · stance 자세(방어 · 회피 · 반사) · self 강화 · 회복 · 햇빛(나에게) · hex 방해(상대에게) · field 환경(판에 깔림 — 지옥 · 아침/밤 · 독안개 · 동굴 · 강풍 공명 · 덫)
-//  ㉠ a = 테는 속성 색 그대로 + 이름 띠가 하는 일 색 · ㉡ b = 테 + 이름 띠가 하는 일 색(속성은 그림 색 · 배지 — 추천) · 버린 안(테 색만 · 위 가운데 문장 · 테 모양)은 설계 문서 4절
+//  ㉢ c = 하는 일마다 테 모양 + 재질(cardshape.js — 공격 칼끝 · 자세 방패 강철 · 강화 덩굴 · 방해 가시 · 환경 두루마리). 옛 ㉠ ㉡(이름 띠 색)은 2026-10-29 사용자 '글자 배경색으로 차이주는 건 별로야'로 버림
 let FRAME_STYLE = '0';
 try { FRAME_STYLE = (new URLSearchParams(location.search).get('frame') || '0').toLowerCase(); } catch {}
 export const setFrameStyle = s => { FRAME_STYLE = s || '0'; };
@@ -110,10 +111,14 @@ export function frameKind(sk) {
   return 'self';
 }
 export const KIND_NAME = { atk: '공격', stance: '자세', self: '강화 · 회복', hex: '방해', field: '환경' };
-export const KIND_BAND = { atk: '#5a2014', stance: '#1c3654', self: '#1a4626', hex: '#3c1a5e', field: '#523a12' };   // 이름 띠(하는 일 색을 짙게 — 흰 글자가 읽히게)
-export const KIND_COL = { atk: ['#e0643a', '#ffb48a', '#7a2a14'], stance: ['#6a8cb4', '#d4e4f6', '#2a3c58'], self: ['#4aa85a', '#bff0a8', '#1e4a28'], hex: ['#9a5ad0', '#e4c8ff', '#3a1a5a'], field: ['#c8963a', '#ffe2a4', '#5a3a14'] };
+// 시안 ㉢이 켜졌고 기술 카드면 그 묶음(교체 · 엎어 둔 카드 · 패시브는 지금 테)
+const shapeKind = sk => (FRAME_STYLE === 'c' && sk && (sk.id || sk.name) && !sk.passive ? frameKind(sk) : null);
+// 손패 그림자 · 쓸 수 있을 때 둘레 빛을 테 모양대로(battle.js — 시안 ㉢이 아니면 false를 돌려 부르는 쪽이 지금처럼 네모로)
+export function cardShadow(g, x, y, w, h, sk, col) { const K = shapeKind(sk); if (!K) return false; const c = g.c; c.save(); c.translate(x, y); c.fillStyle = col; c.fill(shapePath(K, w, h, false)); c.restore(); return true; }
+export function cardHalo(g, x, y, w, h, sk, a, col = '#8fe0ff') { const K = shapeKind(sk); if (!K) return false; g.alpha(a, () => g.c.drawImage(haloCanvas(K, w, h, col), x - 3, y - 3)); return true; }
+const frameMat = (sk, lit) => { const F = sk.form && FORMS[sk.form]; return lit ? MAT.lit : F ? [F.col, F.light, hexMix(F.col, C.ink, 0.5), F.light] : MAT[shapeKind(sk)]; };   // 고른 카드 = 금 · 변이 = 변이 색
 // 테: 먹선 → 속성 색 금속 테 2칸(위·왼 빛 · 아래·오른 그늘) → 안쪽 먹선. 고른 카드 = 금빛 테
-const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e'] : FRAME_STYLE === 'b' && frameKind(sk) ? KIND_COL[frameKind(sk)]   // 시안 ㉡ = 하는 일 색 테
+const frameCols = (sk, lit) => (lit ? ['#ffd890', '#fff3c8', '#b8852e']
   : sk.form && FORMS[sk.form] ? [FORMS[sk.form].col, FORMS[sk.form].light, hexMix(FORMS[sk.form].col, C.ink, 0.5)]   // 변이 기술 = 변이 색 테
   : sk.passive && sk.look && sk.lv >= 2 ? (sk.lv >= 3 ? ['#d8a03a', '#fff3c8', '#8a5a1a'] : ['#c8d4e4', '#ffffff', '#5a6a84'])   // 강화 패시브 = +1 은빛 · +2 금빛 테(2026-10-22)
   : sk.passive && sk.look ? [sk.look.col, sk.look.light, hexMix(sk.look.col, C.ink, 0.5)]   // 일반 카드 = 하늘색 테
@@ -124,6 +129,12 @@ function cham(g, x, y, w, h, c, col) {
   g.rect(x, y + c, w, h - 2 * c, col);
 }
 function cardFrame(g, x, y, w, h, sk, lit) {
+  const SK = shapeKind(sk);
+  if (SK) {   // 시안 ㉢: 바깥 모양 안을 짙게 채우고 그 묶음의 테(모양 · 재질) + 등급 보석
+    const c = g.c; c.save(); c.translate(x, y); c.fillStyle = C.band; c.fill(shapePath(SK, w, h, false)); c.restore();
+    c.drawImage(ringCanvas(SK, w, h, frameMat(sk, lit)), x, y); kindMarks(g, x, y, w, h, sk, MAT[SK][0]);
+    return;
+  }
   const [mid, hi, lo] = frameCols(sk, lit), F = sk.form && FORMS[sk.form];
   if (F) {   // 변이 카드(2026-10-17 사용자 "변이스킬이나 그 외 스킬 카드 테두리 차이가 있으면"): 둥근 테 대신 모서리를 자른 각진 갑옷 테 + 비스듬한 빛 · 그늘 + 모서리 징
     cham(g, x, y, w, h, 6, C.ink);
@@ -275,25 +286,30 @@ function statBadge(g, xr, cy, st, dim, gh) {
 // 앞면(손패 크기 w×h, 논리 칸 — 지금 66×90). o = { can(쓸 수 있나), short(에너지가 모자라나), lit(고름), lock, shine(0~1 빛 띠) }
 export function cardFront(g, x, y, w, h, sk, o = {}) {
   x |= 0; y |= 0;
-  const c = g.c, ax = x + 4, ay = y + 4, aw = w - 8, ah = ART_H, dim = o.can === false;
+  const SK = shapeKind(sk), Lo = SK && LAYOUT[SK];   // 시안 ㉢ = 묶음마다 테 모양 · 재질(그림 칸 높이 · 이름 띠 끝도 모양에 맞춤)
+  const c = g.c, ax = x + 4, ay = y + (Lo ? Lo.ay : 4), aw = w - 8, ah = Lo ? Lo.ah : ART_H, dim = o.can === false;
   cardFrame(g, x, y, w, h, sk, o.lit);
   c.imageSmoothingEnabled = false;
-  { const im = artOf(sk) || placeholderArt(sk), sw = Math.min(aw, im.width);   // 좁은 카드(손패 한 줄 넷)는 그림 가운데를 잘라 1배 그대로(줄이면 도트가 뭉개짐)
-    c.drawImage(im, Math.floor((im.width - sw) / 2), 0, sw, im.height, ax + Math.floor((aw - sw) / 2), ay, sw, ah); }
+  if (SK) { c.save(); c.translate(x, y); c.clip(shapePath(SK, w, h, true)); c.translate(-x, -y); }   // 그림 · 이름 띠는 테 안쪽 모양대로 자름(테는 아래에서 다시 덮음)
+  { const im = artOf(sk) || placeholderArt(sk), sw = Math.min(aw, im.width), sh = SK ? Math.min(im.height, ah) : im.height;   // 좁은 카드(손패 한 줄 넷)는 그림 가운데를 잘라 1배 그대로(줄이면 도트가 뭉개짐) · 그림 칸이 낮은 테는 아래를 자름
+    c.drawImage(im, Math.floor((im.width - sw) / 2), 0, sw, sh, ax + Math.floor((aw - sw) / 2), ay, sw, SK ? sh : ah); }
   // 이름 띠: 그림 아래 열 칸을 짙게 덮으며 이어지고, 위에 테 색 가는 줄
-  const MF = sk.form && FORMS[sk.form], KB = (FRAME_STYLE === 'a' || FRAME_STYLE === 'b') && frameKind(sk), band = KB ? KIND_BAND[KB] : MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦 · 시안 ㉠ ㉡ = 이름 띠가 하는 일 색
-  const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by), [br, bg, bb] = hexRgb(KB ? band : '#0c1526');
-  gr.addColorStop(0, `rgba(${br},${bg},${bb},0)`); gr.addColorStop(1, `rgba(${br},${bg},${bb},0.92)`);
+  const MF = sk.form && FORMS[sk.form], band = MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦
+  const by = ay + ah, bh = y + h - (Lo ? Lo.be : 4) - by, gr = c.createLinearGradient(0, by - 12, 0, by);
+  gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
   g.rect(ax, by, aw, bh, band);
-  g.rect(ax, by, aw, 1, KB ? KIND_COL[KB][1] : MF ? MF.light : sk.tier === 'u' && !sk.passive ? '#e0a830' : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));   // 개성 기술 = 금빛 줄(2026-10-22)
-  if (MF) {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점)
-    const cx = x + (w >> 1), [fm, fh] = frameCols(sk, o.lit);
+  g.rect(ax, by, aw, 1, MF ? MF.light : sk.tier === 'u' && !sk.passive ? '#e0a830' : hexMix(SK ? frameMat(sk, o.lit)[0] : frameCols(sk, o.lit)[0], C.band, 0.45));   // 개성 기술 = 금빛 줄(2026-10-22)
+  const flag = () => {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점)
+    const cx = x + (w >> 1), [fm, fh] = SK ? frameMat(sk, o.lit) : frameCols(sk, o.lit);
     for (const [dy, hw] of [[-1, 7], [0, 7], [1, 7], [2, 7], [3, 6], [4, 4], [5, 2]]) g.rect(cx - hw, y + dy, hw * 2, 1, C.ink);
     for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
-  }
-  const lines = wrap(sk.name, 'bold', aw - 4).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
+  };
+  if (MF && !SK) flag();
+  let nw = aw - 4;   // 이름 줄 바꿈 폭 = 글이 놓일 줄들에서 테 안쪽이 가장 좁은 곳(가시 · 두루마리는 몸이 좁음)
+  if (SK) for (let j = by - y + 2; j <= by - y + bh - 3; j++) { const s = innerSpan(SK, w, h, j); if (s) nw = Math.min(nw, s[1] - s[0] - 1); }
+  const lines = wrap(sk.name, 'bold', nw).slice(0, 2), lh = 12, gh = glyphH('bold'), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font: 'bold', color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
     const p = o.shine, bx = ax - 16 + p * (aw + 32);
@@ -304,12 +320,18 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   }
   // 속성 배지(2026-10-18 사용자 "카드가 어떤 속성인지 모르겠어" → 안 ①): 그림 왼쪽 아래 둥근 판 + 속성 아이콘(식물 이름 옆과 같은 그림) · 테 = 그 속성 색 —
   //  속성 없는 기본기(평타 · 방어 · 회피 · 광합성)와 패시브는 없음. 지금 상대에게 잘 듣는지는 뒷면(꾹)에 이미 있음
-  if (sk.el && !sk.passive && ELEMENT[sk.el]) {
-    const ic = icon(sk.el);
-    if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
-  }
+  const elBadge = () => { if (!(sk.el && !sk.passive && ELEMENT[sk.el])) return;
+    const ic = icon(sk.el), s = SK && innerSpan(SK, w, h, by - y - 8), cx = s ? x + Math.max(12, s[0] + 8) : ax + 8, cy = by - 8;   // 테 안쪽이 좁은 모양은 배지를 안으로
+    if (ic) { g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
+  };
+  if (!SK) elBadge();
   if (sk.passive && sk.lv > 1) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22): 그림 왼쪽 아래
-  if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
+  if (dim) { if (SK) { c.fillStyle = 'rgba(6,10,20,0.55)'; c.fillRect(x, y, w, h); } else rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)'); }
+  if (SK) {   // 시안 ㉢: 안쪽 자르기를 풀고 테(모양 · 재질)를 그림 위에 다시 · 등급 보석 · 변이 깃발 · 속성 배지
+    c.restore(); c.drawImage(ringCanvas(SK, w, h, frameMat(sk, o.lit)), x, y); kindMarks(g, x, y, w, h, sk, MAT[SK][0]);
+    if (MF) flag();
+    g.alpha(dim ? 0.45 : 1, elBadge);
+  }
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
   if (o.cd) cdDial(g, x + 10, y + 10, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
   else if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
@@ -503,9 +525,12 @@ export function packTiny(g, x, y, mut) {
   g.rect(cx + 4, cy + 4, 2, 5, hi); g.rect(cx + 3, cy + 5, 4, 3, hi); g.px(cx + 4, cy + 6, '#ffffff'); g.px(cx + 5, cy + 6, '#ffffff');   // 반짝 별
 }
 // 뒷면 바탕(테 안쪽): 위가 한 단 밝은 남색(점 섞어 이음)
-function backBody(g, x, y, w, h) {
+function backBody(g, x, y, w, h, sk) {
+  const SK = shapeKind(sk), c = g.c;
+  if (SK) { c.save(); c.translate(x, y); c.clip(shapePath(SK, w, h, true)); c.translate(-x, -y); }   // 시안 ㉢: 뒷면 바탕도 테 안쪽 모양대로 → 테를 다시 덮음(뒤집을 때 앞뒤 모양이 같게)
   rrect(g, x + 4, y + 4, w - 8, h - 8, 1, C.body);
   g.vgrad(x + 4, y + 4, w - 8, h - 8, [C.body2, C.body, C.body]);
+  if (SK) { c.restore(); c.drawImage(ringCanvas(SK, w, h, frameMat(sk, false)), x, y); kindMarks(g, x, y, w, h, sk, MAT[SK][0]); }
 }
 
 // 꾹 눌러 볼 큰 카드 두 장(앞 · 뒤)을 기기 화소로 미리 그림: 앞면 = 손패 그림 그대로 S배(테·도트·글자가 함께 커짐), 뒷면 = 같은 테를 S배 + 상세는 1배 글자
@@ -517,7 +542,9 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   bc.setTransform(k * S, 0, 0, k * S, 0, 0);
   const hb = o.free ? Math.round(BH / S) : h;   // o.free = 뒷면을 카드 비율과 다르게(넓게) — 카드 고르기 화면 설명 판(짧은 기기에서도 글이 들어가게)
-  cardFrame(G2, 0, 0, w, hb, sk, false); backBody(G2, 0, 0, w, hb);
+  cardFrame(G2, 0, 0, w, hb, sk, false); backBody(G2, 0, 0, w, hb, sk);
+  const SKb = !o.bodyH && shapeKind(sk);
+  if (SKb) { bc.save(); bc.clip(shapePath(SKb, w, hb, true)); }   // 시안 ㉢: 뒷면 글도 테 안쪽 모양에서 자르고(방패 끝 · 두루마리 막대 위로 안 넘치게) 테를 다시 덮음
   bc.setTransform(k, 0, 0, k, 0, 0);
   if (o.bodyH) {   // o.bodyH = 글을 따로 한 장(높이 = 글 전체) — 판보다 길면 부르는 쪽이 테 안쪽에 잘라 끌어 넘김(scenes/draft.js)
     const body = document.createElement('canvas'); body.width = Math.round(BW * k); body.height = Math.round(o.bodyH * k);
@@ -526,6 +553,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
     return { front, back, body };
   }
   cardBack(G2, BW, BH, sk, o);
+  if (SKb) { bc.restore(); bc.setTransform(k * S, 0, 0, k * S, 0, 0); bc.drawImage(ringCanvas(SKb, w, hb, frameMat(sk, false)), 0, 0); kindMarks(G2, 0, 0, w, hb, sk, MAT[SKb][0]); }
   return { front, back };
 }
 // 손패 크기 앞면 한 장만(기기 화소 k) — 상대 카드 더미를 펼쳐 볼 때(scenes/battle.js drawSpread · 뒷면은 누를 때 renderFaces로 따로)
