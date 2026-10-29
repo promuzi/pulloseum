@@ -65,11 +65,19 @@ export const CAST_SFX = { self: 'release', curse: 'whoosh', field: 'slam', bell:
 
 // ── 특수 시전(2026-10-29 밤샘 — 사용자 '각 스킬별 특수한 건 모션 만들고'): 공용 모양 위에 그 기술만의 장면을 덧그림(예고 → 터짐 → 결과가 몸에 남음 — auras.js 지속 표시로 이어짐) ──
 //  부활잉 = 금빛 고리가 내려와 머리 위에 앉음 · 죽은 줄 알았나? = 혼이 빠져나갔다 쑥 돌아옴 · 냉기 응축 = 얼음 조각이 모여 열매가 맺힘 · 열매 먹기 = 열매를 한입에 · 알 깨기 = 알이 금 가며 깨져 기운이 솟음
-export const castSpecial = s => (!s ? null : s.revive ? 'revive' : s.fakeDeath ? 'ghost' : s.fruitCondense ? 'condense' : s.fruitUse === 'eat' ? 'eat' : s.selfMore ? 'egg' : s.taste ? 'taste' : s.inject ? 'inject' : s.cycle ? 'cycle' : s.bounce ? 'bounce' : null);
+export const castSpecial = s => (!s ? null : s.revive ? 'revive' : s.fakeDeath ? 'ghost' : s.fruitCondense ? 'condense' : s.fruitUse === 'eat' ? 'eat' : s.selfMore ? 'egg' : s.taste ? 'taste' : s.inject ? 'inject' : s.cycle ? 'cycle' : s.bounce ? 'bounce'
+  : s.settle ? 'settle' : s.onFirst && s.onFirst.harmony ? 'harmony' : s.self === 'stealth' && typeof s.pierceReflect === 'number' ? 'melt' : s.self === 'stealth' && s.link && s.pierceReflect ? 'freq'
+  : s.onFirst && s.onFirst.self && s.onSecond && s.onSecond.self ? 'shout' : s.cleanseHeal ? 'rain' : s.infuse ? 'infuse' : null);
+//  (2026-10-29 오후 — 사용자 '나머지 3개 진행하자') 청산 = 물결이 상대를 쓸고 지나가며 상태이상 색 구슬을 뽑아 터뜨림 · 조화 = 두 식물 사이를 빛줄기 둘이 엇갈려 꼬이며 이음
+//  은시잉 = 말랑한 몸에서 물결 고리가 퍼지고 물방울이 떨어지며 흐려짐 · 환각의 주파수 = 음파 줄이 몸을 위아래로 훑고 양옆으로 ))) · 기합 = 머리 위 큰 '!' + 빛살
+//  치유의 물 = 물방울이 떨어져 튀고 초록 십자 · 불타는 의지 = 머리 위 칼을 불길이 감싸다 몸으로 쑥
 //  맛평가 = 긴 혀가 상대 쪽으로 쭉 뻗어 핥고 돌아옴 · 좋은 거 주입 = 주사기가 위에서 꽂혀 보라 약이 들어감 · 윤회 = 물 고리 둘이 엇갈려 돌며 상대를 감쌈 · 너꺼잉 = 말랑한 막이 출렁이며 부풀었다 줄어듦
 const GHOST = ['..xxxx..', '.xwwwwx.', 'xwbwwbwx', 'xwwwwwwx', 'xwwwwwwx', 'xwwwwwwx', 'xwxwwxwx', '.x.xx.x.'], EGG = ['..xxx..', '.xwwwx.', 'xwwbwwx', 'xwwwwwx', 'xbwwwbx', 'xwwwwwx', '.xwwwx.', '..xxx..'];
 const FRUIT = ['..g..', '.xxx.', 'xwlbx', 'xllbx', 'xbbbx', '.xxx.'], PLUS = ['.p.', 'ppp', '.p.'];
 function pix(g, x, y, rows, pal, a = 1, s = 2) { const w = rows[0].length * s, h = rows.length * s; rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') dot(g, x - w / 2 + i * s, y - h / 2 + j * s, pal[ch], a, s); })); }
+function pixO(g, x, y, rows, pal, a = 1, s = 2) { const ink = Object.fromEntries(Object.keys(pal).map(k => [k, '#1a1424'])); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) pix(g, x + dx, y + dy, rows, ink, a * 0.9, s); pix(g, x, y, rows, pal, a, s); }   // 둘레 먹선 1칸
+const DROP = ['..x..', '.xbx.', '.xbx.', 'xbbbx', 'xbwbx', 'xbbbx', '.xxx.'], BANG = ['yy', 'yy', 'yw', 'yy', 'yy', '..', 'yy', 'yy'];
+const SWORD = ['..x..', '.xlx.', '.xlx.', '.xsx.', '.xsx.', '.xsx.', '.xsx.', 'xgggx', '..b..', '..b..', '.xgx.'];
 function special(g, C, age, x, y, cy, tx, ty) {
   const side = C.who === 'me' ? 1 : -1, head = cy - 40;
   if (C.sp === 'revive') {   // 금빛 고리가 위에서 내려와 머리 위에 앉고 · 금빛 십자가 몸 둘레에서 떠오름
@@ -112,6 +120,36 @@ function special(g, C, age, x, y, cy, tx, ty) {
   } else if (C.sp === 'bounce') {   // 너꺼잉: 말랑한 막이 몸을 감싸며 출렁(가로세로가 번갈아 늘었다 줄었다) · 테두리에 빛
     const u = cl((age - 400) / 820), wob = Math.sin(u * Math.PI * 4) * (1 - u), rx = 30 * (1 + 0.18 * wob), ry = 40 * (1 - 0.18 * wob), fade = 1 - cl((age - 1100) / 200);
     if (age > 400) { ring(g, x, cy - 4, rx, ry, '#8ad8ff', 0.85 * fade); ring(g, x, cy - 4, rx - 2, ry - 2, '#ffffff', 0.5 * fade); ring(g, x, cy - 4, rx + 2, ry + 2, '#2a6aa8', 0.6 * fade); }
+  } else if (C.sp === 'settle' && tx != null) {   // 청산: 물결 띠가 상대를 쓸고 지나감 → 걸린 상태이상(색 구슬)이 뽑혀 올라가 흰 빛으로 터짐
+    const ey = ty - 46, u = cl((age - 420) / 420), wx = tx - side * 46 + side * 92 * ioQ(u), fade = 1 - cl((age - 1100) / 200), COLS = ['#b866e8', '#ff6a3a', '#ff4a5a', '#ffd84a'];
+    if (age > 420 && u < 1) { box(g, wx - 6, ey - 38, 12, 76, '#8fd3ff', 0.45); box(g, wx - 2, ey - 38, 4, 76, '#ffffff', 0.75); for (let k = 0; k < 6; k++) dot(g, wx - side * (9 + k * 3), ey - 30 + k * 12, '#bfefff', 0.7, 3); }
+    for (let k = 0; k < 4; k++) { const b = age - 640 - k * 70, q = cl(b / 420); if (b < 0) continue; const ox = tx + (k - 1.5) * 13, oy = ey + 8 - q * 56;
+      if (q < 0.85) { dot(g, ox - 4, oy - 4, '#1a1424', fade, 8); dot(g, ox - 3, oy - 3, COLS[k], fade, 6); dot(g, ox - 2, oy - 3, '#ffffff', fade, 2); }
+      else { const p = (q - 0.85) / 0.15; for (let a = 0; a < 6; a++) dot(g, ox + Math.cos(a * 1.05) * 9 * p - 1, oy + Math.sin(a * 1.05) * 9 * p - 1, '#ffffff', 1 - p, 3); } }
+  } else if (C.sp === 'harmony' && tx != null) {   // 조화: 두 식물 사이를 하늘 · 흰 빛줄기가 엇갈려 꼬이며 이어지고 → 양쪽에 고리
+    const u = cl((age - 420) / 480), fade = 1 - cl((age - 1080) / 220), ex = tx, ey = ty - 46, n = 44;
+    for (let k = 0; k < 2; k++) for (let i = 0; i <= n * u; i++) { const v = i / n, px = x + (ex - x) * v, py = cy + (ey - cy) * v - Math.sin(Math.PI * v) * 26 + Math.sin(v * Math.PI * 4 + k * Math.PI + age / 120) * 7; dot(g, px - 1, py - 1, k ? '#ffffff' : '#8fd3ff', fade * 0.9, 3); }
+    if (age > 900) { const q = cl((age - 900) / 300); for (const [px, py] of [[x, cy], [ex, ey]]) { ring(g, px, py, 8 + 22 * q, (8 + 22 * q) * 0.75, '#dcf6ff', 1 - q); ring(g, px, py, 7 + 22 * q, (7 + 22 * q) * 0.75, '#8fd3ff', 0.6 * (1 - q)); } }
+  } else if (C.sp === 'melt') {   // 은시잉: 말랑한 몸에서 물결 고리 셋이 퍼지고 물방울이 톡톡 떨어짐 → 흐려짐(은신 — 지속 표시는 흐린 몸)
+    for (let k = 0; k < 3; k++) { const b = age - 420 - k * 140, q = cl(b / 520); if (b < 0 || q >= 1) continue; const R = 6 + 42 * oQ(q); ring(g, x, cy + 6, R, R * 0.6, '#8ad8ff', 1 - q); ring(g, x, cy + 6, R + 1, (R + 1) * 0.6, '#ffffff', 0.55 * (1 - q)); ring(g, x, cy + 6, R - 1, (R - 1) * 0.6, '#2a6aa8', 0.5 * (1 - q)); }
+    for (let k = 0; k < 5; k++) { const b = age - 500 - k * 90, q = cl(b / 380); if (b < 0 || q >= 1) continue; pix(g, x + (k - 2) * 12, cy - 30 + q * 50, DROP, { x: '#1a1424', b: '#4a9ad8', w: '#bfefff' }, 1 - q * 0.6, 2); }
+  } else if (C.sp === 'freq') {   // 환각의 주파수: 몸을 가로지르는 음파 줄 셋이 위아래로 훑고 · 양옆으로 ))) 퍼짐 → 모습이 흔들리며 사라짐(은신)
+    const fade = 1 - cl((age - 1050) / 220);
+    if (age > 420) for (let k = 0; k < 3; k++) { const yy = cy - 36 + (((age - 420) / 4 + k * 26) % 80); for (let i = -26; i <= 26; i += 2) dot(g, x + i - 1, yy + Math.sin(i / 4 + age / 60 + k) * 3 - 1, k === 1 ? '#ffffff' : '#c8a8ff', 0.8 * fade, 3); }
+    for (let k = 0; k < 3; k++) { const b = age - 460 - k * 150, q = cl(b / 480); if (b < 0 || q >= 1) continue; const R = 16 + 42 * q; for (const s of [-1, 1]) for (let a = -0.6; a <= 0.61; a += 0.12) dot(g, x + s * Math.cos(a) * R - 1, cy + Math.sin(a) * R - 1, '#a884f3', 1 - q, 3); }
+  } else if (C.sp === 'shout') {   // 기합: 머리 옆에 큰 '!' 가 톡 튀어나오고 · 머리에서 굵은 빛살 여덟이 확 뻗음 + 둥근 충격 고리
+    const pop = oQ(cl((age - 420) / 120)), fade = 1 - cl((age - 1000) / 220);
+    if (age > 420) pixO(g, x + side * 28, head + 6 - 6 * pop, BANG, { y: '#ffd84a', w: '#fff4c0' }, fade, 3);   // 머리 옆(위는 기술 이름 띠 자리)
+    if (age > 460 && age < 900) { const q = cl((age - 460) / 360); for (let k = 0; k < 8; k++) { const a = k * 0.785 + 0.39; for (let d = 0; d < 3; d++) dot(g, x + Math.cos(a) * (14 + q * 28 + d * 3) - 1, head + 6 + Math.sin(a) * (14 + q * 28 + d * 3) * 0.8 - 1, '#fff4c0', 1 - q, 3); } ring(g, x, head + 6, 10 + 30 * q, (10 + 30 * q) * 0.8, '#ffd84a', 1 - q); }
+  } else if (C.sp === 'rain') {   // 치유의 물: 머리 위에서 물방울 여섯이 떨어져 몸에 닿으면 물결로 튐 → 초록 십자가 떠오름(회복)
+    for (let k = 0; k < 6; k++) { const b = age - 300 - k * 60, q = cl(b / 360); if (b < 0) continue; const px = x + (hash(k, 3) - 0.5) * 40;
+      if (q < 1) pix(g, px, head - 50 + q * 60, DROP, { x: '#1a1424', b: '#4a9ad8', w: '#bfefff' }, 1, 2); else { const p = cl((b - 360) / 220); if (p < 1) ring(g, px, head + 10, 3 + 11 * p, (3 + 11 * p) * 0.5, '#bfefff', 1 - p); } }
+    for (let k = 0; k < 5; k++) { const b = age - 780 - k * 70, q = cl(b / 440); if (b < 0 || q >= 1) continue; pix(g, x + (k - 2) * 9, head + 10 - q * 30, PLUS, { p: '#7ef0a0' }, Math.sin(Math.PI * q), 2); }
+  } else if (C.sp === 'infuse') {   // 불타는 의지: 머리 위에 칼이 나타나 불길이 감싸고(불티가 타오름) → 칼이 몸으로 쑥 들어감(불 고리)
+    const born = cl((age - 200) / 200), dive = ioQ(cl((age - 760) / 220)), sx = x + side * 28 * (1 - dive), sy = head - 4 + dive * 34;   // 머리 옆에서 몸으로(위는 기술 이름 띠 자리)
+    if (age > 200 && age < 980) { pixO(g, sx, sy, SWORD, { x: '#1a1424', l: '#ffffff', s: '#c8d4e4', g: '#ffd84a', b: '#8a5a24' }, born, 2);
+      for (let k = 0; k < 9; k++) { const q = ((age / 300) + hash(k, 9)) % 1, fx = sx + (hash(k, 4) - 0.5) * 18, fy = sy + 12 - q * 30; dot(g, fx - 1, fy - 1, q < 0.5 ? '#ffb040' : '#ff6a3a', born * Math.sin(Math.PI * q), 3); } }
+    if (age > 980 && age < 1250) { const q = cl((age - 980) / 270); ring(g, x, cy, 8 + 26 * q, (8 + 26 * q) * 0.75, '#ff8a3a', 1 - q); ring(g, x, cy, 6 + 26 * q, (6 + 26 * q) * 0.75, '#ffd84a', 0.6 * (1 - q)); }
   }
 }
 // 메아리(프로스트벨 — 같은 차례에 한 번 더 울림 · 'echo' 단계 0.45초): 머리 높이에서 종소리 고리 둘이 빠르게 퍼지고 · 음 조각 셋이 떠오름
@@ -124,8 +162,12 @@ export function drawEcho(g, age, at) {
 // 그리기(경기장 판 좌표): C = { who, other, kind, col, t0, sp } · P = { me: [x, 받침 y], foe: [...] }
 export function drawCast(g, C, t, P) {
   const age = t - C.t0; if (age < 0 || age > CAST_MS) return;
-  const [x, y] = P[C.who], [tx, ty] = P[C.other], col = C.col, cy = y - 46;
-  if (C.sp) special(g, C, age, x, y, cy, tx, ty);
+  const [x, y] = P[C.who], [tx, ty] = P[C.other], cy = y - 46;
+  castBase(g, C, age, x, y, cy, tx, ty);
+  if (C.sp) special(g, C, age, x, y, cy, tx, ty);   // 그 기술만의 장면은 공용 모양(빛기둥 · 구슬) 위에 — 아래에 그리면 칼 · '!'가 빛기둥에 가렸음(2026-10-29)
+}
+function castBase(g, C, age, x, y, cy, tx, ty) {
+  const col = C.col;
   // 모으기: 빛 알갱이 열둘이 둘레에서 몸 가운데로 모임 + 발밑 고리
   if (age >= PREP[0] && age < REL + 60) {
     const u = cl((age - PREP[0]) / (REL - PREP[0]));
