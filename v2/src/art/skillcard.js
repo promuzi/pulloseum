@@ -14,7 +14,7 @@ import { rrect } from './ui.js';
 import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
-import { FX } from '../battle/status.js';
+import { FX, FRUIT } from '../battle/status.js';
 import { RULES, guardDefMult } from '../battle/rules.js';
 
 const C = { ink: '#0b1322', body: '#12294a', body2: '#183a62', plate: '#0c1e36', band: '#0c1526', text: '#eef4ff', sub: '#a9cdf0', dim: '#7396bb', line: '#8ccfff', gold: '#ffd890', good: '#ffd890' };
@@ -324,6 +324,63 @@ const ORB_TEXT = [['orbGuard', '이번 턴 구슬이 상대 공격 한 번의 �
 const SUM_TEXT = [['summon', '잠든 포자 하나 — 다음 턴 시작에 깨어나 새끼(턴 시작마다 평타) · 나 대신 맞음 · 최대 셋'], ['sporeWall', '보호막이 막으면 때린 상대에게 포자 하나'], ['volley', '깨어난 새끼 · 성체 버섯이 모두 지금 평타 한 번 더'], ['burst', '소환수를 모두 터뜨려 상대에게 포자(잠든 포자 1 · 새끼 2 · 성체 버섯 3)'], ['grow', '새끼가 모두 성체 버섯으로(능력치 오름 · 체력 비율 그대로)']];
 const CAVE_ADD_TEXT = { gravel: '동굴에 자갈밭 — 상대 기동 · 적중 더 하락', lava: '동굴에 용암 — 턴 끝마다 상대 화상', collapse: '동굴이 무너짐 — 상대 기동 더 하락' };
 const GALE_ADD_TEXT = { storm: '상대 쪽 강풍이 불 때만 · 남은 강풍이 폭풍으로(턴 끝 피해 · 교란 · 쇠약)', heal: '상대 쪽 강풍이 불 때만 · 강풍 동안 우리 편 턴 끝 회복', shock: '상대 쪽 강풍이 불 때만 · 강풍 동안 상대 턴 끝 감전' };
+// 고유 장치 설명(2026-10-29 사용자 '나머지 3개 진행하자' — 뒷면 설명이 빈 개성 기술 41개): 기술 칸 값으로 문장을 만듦(값이 바뀌면 문장도 따라 바뀜)
+//  먼저/나중 갈래(onFirst · onSecond — 이번 턴 순서로 고름, rules.js br) = '먼저 움직이면 … / 나중이면 …' 두 줄
+const PCT = v => Math.round(v * 100);
+const fxName = id => (STATUS[id] || {}).name || BUFF_LOOK[id] || id;
+function branchText(o) {
+  if (!o) return '';
+  const t = [];
+  if (o.power != null) t.push(`위력 ${o.power}`);
+  if (o.hits > 1) t.push(`${o.hits}연타`);
+  if (o.area) t.push('광역');
+  if (o.pierce) t.push(`방어 ${PCT(o.pierce)}% 무시`);
+  if (o.guardWith) t.push(`방어 자세 ×${o.guardDefMult || RULES.guardDefMult}`);
+  if (o.counterPct) t.push(`막으면 받은 피해 ${PCT(o.counterPct)}% 되받아침`);
+  if (o.onBlock && o.onBlock.stun) t.push(`막으면 ${PCT(o.onBlock.stun)}% 확률로 기절`);
+  if (o.evadeWith || o.act === 'evade') t.push(`회피 자세(빗나감 +${o.shift ? o.shift.miss : 0})`);
+  if (o.counter) t.push(`피하면 반격 ${o.counter}${o.counterAll ? '(멀리서 온 것도)' : ''}`);
+  if (o.nextCrit) t.push(`피하면 다음 공격 치명 +${o.nextCrit}`);
+  if (o.reflect) t.push('반사 자세');
+  if (o.self) t.push(`나에게 ${fxName(o.self)}`);
+  if (o.inflict) t.push(`상대에게 ${fxName(o.inflict.look || o.inflict.id)}`);
+  if (o.inflicts) t.push('상대에게 ' + o.inflicts.map(f => fxName(f.look || f.id) + (f.p != null ? `(${PCT(f.p)}%)` : '')).join(' + '));
+  if (o.perHitInflict) t.push(`맞힌 타마다 ${fxName(o.perHitInflict.id)}`);
+  if (o.ifFoe) { const th = o.ifFoe.then || {}; t.push(`상대가 ${fxName(o.ifFoe.has)}이면 한 방 ${th.power}${th.pierce ? `(방어 ${PCT(th.pierce)}% 무시)` : ''}`); }
+  if (o.harmony) t.push(o.harmony === 'toFoe' ? '상대 상태이상을 내 것과 똑같이' : '내 상태이상을 상대 것과 똑같이');
+  return t.join(' · ');
+}
+function mechLines(sk) {
+  const L = [], A = '#9fd8ff', H = '#9ff0b0', X = '#c9a8ff', B = '#ffe3a0';
+  if (sk.onFirst || sk.onSecond) { L.push(['먼저 움직이면 ' + branchText(sk.onFirst), B]); L.push(['나중이면 ' + branchText(sk.onSecond), B]); }
+  if (sk.late) L.push(['나중에 움직임', A]);
+  if (sk.pierce) L.push([`상대 방어 ${PCT(sk.pierce)}% 무시`, A]);
+  if (sk.strikes) { const at = sk.strikes.map((x, i) => (x.pierce ? i + 1 : 0)).filter(Boolean); if (at.length) L.push([`${at.join(' · ')}타째는 방어 ${PCT(sk.strikes[at[0] - 1].pierce)}% 무시`, A]); }
+  if (sk.critPlus) L.push([`치명 +${sk.critPlus}`, A]);
+  if (sk.critHeal) L.push([`치명이 터질 때마다 체력 ${PCT(sk.critHeal)}% 회복`, H]);
+  if (sk.lostHp) L.push([`내가 잃은 체력 1%당 위력 +${sk.lostHp}`, A]);
+  if (sk.spdGap) L.push([`내가 상대보다 빠른 만큼 위력 ↑(최대 ${1 + sk.spdGap}배)`, A]);
+  if (sk.execute) L.push([`맞혔을 때 상대 체력이 ${PCT(sk.execute)}% 미만이면 쓰러뜨림('죽은 줄 알았나?'로 버티면 막힘)`, A]);
+  if (sk.dodgeSeal) L.push(['상대가 회피 자세로 피하면 봉인', X]);
+  if (sk.bleedAt) L.push([`상대 독이 ${sk.bleedAt}겹이면 그 타에 출혈`, X]);
+  if (sk.consume) L.push([`상대 ${fxName(sk.consume.id)}을 터뜨림 — 겹 하나당 최대 체력 ${PCT(sk.consume.per)}% 피해(최대 ${PCT(sk.consume.cap || 1)}%) · ${fxName(sk.consume.id)} 지움`, X]);
+  if (sk.perHit) L.push([`맞힌 타마다 나에게 ${fxName(sk.perHit.id)} +${PCT(sk.perHit.v)}%(이 기술로 ${sk.perHit.cap}겹까지)`, A]);
+  if (sk.fakeDeath) L.push([`이번 턴 쓰러질 공격을 받으면 체력 ${PCT(sk.fakeDeath)}%로 버팀 · 버티고 나면 다음 턴엔 못 씀`, H]);
+  if (sk.cleanseHeal) L.push([`내 해로운 상태이상을 모두 지우고 체력 ${PCT(sk.cleanseHeal.base)}% + 지운 종류 하나당 ${PCT(sk.cleanseHeal.per)}% 회복(능력치 약화는 못 지움)`, H]);
+  if (sk.cycle) L.push(['양쪽에 걸린 이로운 · 해로운 효과를 모두 지움(능력치 겹 포함)', X]);
+  if (sk.settle) L.push([`상대 해로운 상태이상을 종류째 지우고 종류 하나당 최대 체력 ${PCT(sk.settle.per)}% 피해(최대 ${sk.settle.cap}종)`, X]);
+  if (sk.infuse) L.push([`다음 칼 기술 ${sk.infuse.n}번이 ${(ELEMENT[sk.infuse.el] || {}).name || sk.infuse.el} 속성으로`, A]);
+  if (sk.inject) L.push([`최대 체력 +${PCT(sk.inject.hp)}%(${sk.inject.turns}턴) · 나에게 활력 · 억셈 · 가속 · 내 독 거는 기술이 다음 턴부터 ${sk.inject.seal}턴 봉인`, H]);
+  if (sk.inferno && sk.inferno.cd) L.push([`끝나고 ${sk.inferno.cd}턴 뒤에 다시 씀`, X]);
+  if (sk.fruitCondense) L.push(['햇빛 하나가 열매로 · 햇빛 +1', A]);
+  if (sk.fruitUse === 'eat') L.push([`열매를 모두 먹음 — 하나당 체력 ${PCT(FRUIT.eat)}% 회복 · 상태이상 한 종류씩 지움 · 먹은 열매는 햇빛으로 돌아옴 · 열매가 없으면 못 씀`, H]);
+  if (sk.fruitUse === 'throw') L.push(['열매를 모두 던짐 — 하나당 한 타 · 햇빛으로 돌아옴 · 열매가 없으면 못 씀', A]);
+  if (sk.scale && sk.scale.k === 'prep') L.push([`준비를 모두 먹음 — 먹은 준비 0 · 1 · 2 · 3개 = 피해 +${sk.scale.dmg.map(PCT).join(' · ')}%` + (sk.scale.drain ? ` · 흡수 ${sk.scale.drain.map(PCT).join(' · ')}%` : ''), A]);
+  if (sk.mealMark) L.push(['다음 턴에 맛평가를 쓸 수 있음', X]);
+  if (sk.taste) L.push(['식사시간 바로 다음 턴에만 — 먹은 준비 1 = 쇠약 · 2 = 쇠약 + 시듦 · 3 = 쇠약 + 시듦 + 봉인', X]);
+  if (sk.gain && sk.gain.k === 'prep' && sk.gain.n) L.push([`준비 +${sk.gain.n}`, B]);
+  return L;
+}
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
   if (sk.passive) return passiveBack(g, w, h, sk);
@@ -349,20 +406,38 @@ function cardBack(g, w, h, sk, o) {
   if (sk.uses) box(P + bw + 8, '판마다', o.left != null ? `${o.left} / ${sk.uses}번` : `${sk.uses}번`, null); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
   y += 44;
   // 설명 줄: 기본기 → 규칙 문장, 효과 → 칩 + 누구에게 + 한 줄 설명
-  const line = (txt, col = C.text, font = 'body') => { for (const ln of wrap(txt, font, cw)) { g.text(ln, P, y, { font, color: col }); y += 15; } };
+  const SM = o.small, BODY = SM ? sized('body', 10) : 'body', LH = SM ? 13 : 15;   // o.small = 글이 뒷면보다 길 때(renderFaces가 재 보고 정함) — 설명만 한 칸 작게
+  const line = (txt, col = C.text, font = 'body') => { const f = font === 'body' ? BODY : font; for (const ln of wrap(txt, f, cw)) { g.text(ln, P, y, { font: f, color: col }); y += LH; } };
   if (BASIC_DESC[sk.id]) for (const ln of BASIC_DESC[sk.id]) line(ln);
   if (sk.drain) line(`때린 피해의 ${Math.round(sk.drain * 100)}%만큼 회복`, '#9ff0b0');
   if (st && st.half) line(`바로 전 턴에도 같은 자세 — 효과 절반`, '#ffd890');
   const fx = [];
   if (sk.inflict) fx.push({ id: sk.inflict.look || sk.inflict.id, n: sk.inflict.n || 1, to: '상대에게', delay: sk.inflict.delay });
+  for (const f of sk.inflicts || []) fx.push({ id: f.look || f.id, n: f.n || 1, to: f.p != null ? `상대에게 · ${Math.round(f.p * 100)}% 확률` : '상대에게' });   // 여러 효과(2026-10-29 — 전엔 뒷면이 이 칸을 안 읽어 비었음)
+  if (sk.perHitInflict) fx.push({ id: sk.perHitInflict.id, n: sk.perHitInflict.n || 1, to: '맞힌 타마다' });
+  if (sk.critInflict) fx.push({ id: sk.critInflict.id, n: sk.critInflict.n || 1, to: '치명 타마다' });
+  if (sk.trapSet) fx.push({ id: 'thornTrap', to: `우리 쪽 · 최대 ${sk.trapSet.max}개` });
+  if (sk.revive) fx.push({ id: 'revive', to: '나에게' });
+  if (sk.bounce) fx.push({ id: 'bounce', to: '나에게' });
+  if (sk.miasma) fx.push({ id: 'miasma', to: `상대 쪽 · ${sk.miasma.turns}턴` });
+  if (sk.inferno) fx.push({ id: 'inferno', to: `상대 쪽 · ${sk.inferno.turns}턴` });
+  if (sk.bell) fx.push({ id: sk.bell, to: '양쪽 · 3턴' });
+  if (sk.fruitCondense) fx.push({ id: 'fruit', to: '나에게' });
   for (const h of sk.hex || []) fx.push({ id: h.id, n: h.n || 1, to: h.turns ? `상대 쪽 · ${h.turns}턴` : '상대에게' });   // 피해 없이 거는 기술(종 고유 v2)
   for (const b of [sk.self, sk.also]) if (b) fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), to: '나에게' });
   if (sk.reflect) fx.push({ id: 'reflect', to: '이번 턴' });   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타)
-  for (const f of fx) {
+  const chip = (f, x) => fxChip(g, x, y, STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id, true);
+  if (fx.length === 2 && fx[0].to === fx[1].to && !fx.some(f => f.n > 1 || f.delay != null)) {   // 효과 둘 · 같은 대상 = 칩 둘을 한 줄에 · 설명은 '이름: …'(2026-10-29 — 신경독 · 소화액 같은 카드가 뒷면 아래로 넘쳤음)
     y += 2;
-    const cwid = fxChip(g, P, y, STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id, true);
+    const w1 = chip(fx[0], P), w2 = chip(fx[1], P + w1 + 4);
+    if (w1 + w2 + 10 + g.textW(fx[0].to) <= cw) g.text(fx[0].to, P + w1 + w2 + 10, y + Math.round((20 - glyphH('body')) / 2), { color: C.sub });   // 자리가 모자라면 대상 글은 뺌(공격이 거는 효과 = 상대에게)
+    y += SM ? 22 : 24;
+    for (const f of fx) if (STATUS_DESC[f.id]) line(`${fxName(f.id)}: ${STATUS_DESC[f.id]}`);
+  } else for (const f of fx) {
+    y += 2;
+    const cwid = chip(f, P);
     g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, y + Math.round((20 - glyphH('body')) / 2), { color: C.sub });
-    y += 24;
+    y += SM ? 22 : 24;
     if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
   }
   if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd], '#c0a8ff');
@@ -376,6 +451,7 @@ function cardBack(g, w, h, sk, o) {
   if (sk.bare) line(`이번 턴 상대 공격을 빗나감 · 스침 없이 다 맞고 받는 피해 −${Math.round((1 - sk.bare) * 100)}%`, '#9fd8ff');
   if (sk.sure) line('반드시 맞음 · 방어태세 · 회피 자세 · 은신 무시 · 먼저 움직이면 확정 치명', '#9fd8ff');
   if (sk.pierceReflect) line('뚫리면 첫 타 일부 반사', '#9fd8ff');
+  for (const [t, col] of mechLines(sk)) line(t, col);   // 고유 장치 설명(2026-10-29 — 뒷면이 비던 개성 기술 41개)
   if (sk.link) line(`이어 공격 위력 ${sk.link.hits > 1 ? `${sk.link.power}×${sk.link.hits}` : sk.link.power}${sk.link.ambush ? ' · 기습 ×1.5 · 자세 무시' : ''}`, '#9fd8ff');   // 은신 설명에 '피하면 바로 이어 공격'이 이미 있어 수치만(2026-10-24 — 카드 밖으로 넘침)
   // 지금 상대에게의 상성(공격 기술)
   if (o.foe && sk.act === 'attack') {
@@ -472,7 +548,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
     cardBack(new Gfx(bb), BW, o.bodyH, sk, o);
     return { front, back, body };
   }
-  cardBack(G2, BW, BH, sk, o);
+  cardBack(G2, BW, BH, sk, backHeight(sk, BW, o) > BH ? { ...o, small: true } : o);
   return { front, back };
 }
 // 손패 크기 앞면 한 장만(기기 화소 k) — 상대 카드 더미를 펼쳐 볼 때(scenes/battle.js drawSpread · 뒷면은 누를 때 renderFaces로 따로)
