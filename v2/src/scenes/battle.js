@@ -92,7 +92,7 @@ import { TFX, setTfx, popLife, wordSlot, drawPops as tfxPops, drawRibbon as tfxR
 // 기술을 쓸 때 그 카드(2026-10-29 사용자 '스킬 쓰면 간단하게 식물 위로 글자만 삑 올라오는데 이게 스킬인지 상태이상인지 구분이 안 돼 … 분석 조사 등으로 해봐' — 이름 띠가 효과 조각과 같은
 //  '식물 위 어두운 작은 상자'라 헷갈림 → 시안 넷 ㉠ 띠 끝 작은 카드 · ㉡ 머리 위 카드 뒤집기 · ㉢ 그림 띠 · ㉣ 옆에 큰 카드 중 사용자 'ㄹ으로 하고 나왔던 그 카드가 그대로 더미 맨 위로 쌓이게해줘'):
 //  식물 옆에 큰 카드(상대 = 오른쪽 끝에서 미끄러져 들어옴 · 나 = 손패 그 카드 자리에서 올라옴) + 이름 띠는 카드 밑 · 그 식물의 차례(걸린 효과까지)가 끝나면
-//  상대 카드 = 그 자리 · 그 크기에서 날아가 더미 맨 위에 앉음 · 내 카드 = 손패 그 자리로 돌아가며 사라짐(drawCue · foeToPile · drawPile)
+//  그 카드가 그 자리 · 그 크기에서 날아가 더미 맨 위에 앉음 — 처음엔 상대 카드만 → 같은 날 '1번으로 ㄱㄱ' = 내 카드도 같은 더미에(쪽 색 테 = 나 하늘 · 상대 분홍)(drawCue · toPile · drawPile)
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
 //   선공 판정 → (자세) → 공격 연출(attack.mjs 장마다) → 맞는 장에 판정·피해 → 되받아치기 → 턴 끝 효과·기력 +1 → 다음 턴 / 승패
@@ -288,10 +288,11 @@ function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 �
 const ENV_H = 20;
 // 효과 조각(2026-10-29 ㉢ — 사용자 "이게 뭐가 어떻게 되는지 파악되기 전에 슥슥 지나가"): 걸린 식물 머리 위(환경 = 그 땅)에 [아이콘 이름] 조각이 톡 → 잠깐 머묾 → 효과 창 칸(환경 = 띠)으로 날아가 꽂힘(그때 칸이 생기며 반짝)
 //  효과 걸림 단계 0.85초 → 1초(환경 1.15초 — 땅이 먼저 바뀐 뒤 띠로) · 같은 식물에 잇따라 걸리면 둘째부터 0.7초(앞 조각이 날아가는 동안 다음 조각이 톡 — 무릎 꿇어라 셋이 3초 → 2.4초)
-const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, FOE_HIST = 40;   // FOE_HIST = 상대가 쓴 카드 기록 장 수(판 전체 — 넉넉히 마흔)
+const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, HIST_MAX = 80;   // HIST_MAX = 쓴 카드 기록 장 수(판 전체 · 양쪽 — 넉넉히 여든)
 // 상대 카드 더미(오른쪽 위) · 펼쳐 보기: 새 카드가 날아와 앉는 시간 · 펼칠 때 한 장이 자리 잡는 시간 · 장 사이 시차 · 다시 모일 때 · 더미 카드 크기(손패 카드를 줄인 그림) · 밑 카드 비낌
 const PILE_IN = 560, SPREAD_IN = 300, SPREAD_STAG = 28, SPREAD_OUT = 220, PILE_W = 28, PILE_H = 38, PILE_OFF = [[0, 0], [-2, 3], [2, 5], [-1, 7]];
 const pileTilt = turn => (((turn * 37) % 9) - 4) * 0.03;   // 밑 카드 기울기(카드마다 정해짐 — 새 카드가 앉아도 밑 카드는 안 돌아감)
+const SIDE_RIM = { me: '#8ccfff', foe: '#ff9aa8' }, SIDE_BG = { me: '#16304a', foe: '#3a1a26' }, SIDE_TXT = { me: '#d6ecff', foe: '#ffd6dc' };   // 쓴 카드 더미 · 펼쳐 보기 쪽 색(나 하늘 · 상대 분홍 — 효과 창과 같은 색)
 const ACT_KINDS = new Set(['attack', 'cast', 'stance', 'sun', 'counter', 'switch']);   // 한 식물의 차례가 시작되는 단계(상대 카드를 더미로 보낼 때를 고름)
 const PILE_POP = 140, CUE_OUT = 340;   // 더미로 가는 카드: 식물 머리에서 떠오름(PILE_POP) → 한 번 휘어 날아가 더미에 앉음(PILE_IN까지) · 시안 ㉡ ㉣ 내 카드가 사라지는 시간
 // 쓸 수 있는 손패 카드 둘레 빛(손맛 — 2026-10-29): 카드 밖 3칸에 하늘빛을 계단처럼(도트) — 바깥 칸부터 겹쳐 칠해 안쪽 칸일수록 진함(카드 바로 밖 ≈ 0.75 · 둘째 ≈ 0.42 ·셋째 ≈ 0.18) ·
@@ -615,10 +616,11 @@ export const battle = {
     // 글자(가운데 전광판 없음): 기술 이름 = 쓰는 식물 위 리본, 나머지 = 머리 위 한두 낱말(st.msg 문장은 목록·기록용으로만 남김)
     // 상대가 쓴 카드 = 그 기술(과 걸린 효과)이 다 끝나면 곧바로 더미로(2026-10-29 사용자 '카드더미는 괜찮은데 사용 후 더미로 가는 연출 줘' — 전엔 턴이 다 끝난 뒤에야
     //  식물에서 날아가 방금 쓴 카드와 이어지지 않았음): 다음 차례(내 기술 · 턴 끝 효과 · 끝)가 시작될 때
-    if (v.foeAct && !v.foeAct.piled && ((st.who === 'me' && ACT_KINDS.has(st.kind)) || st.kind === 'tick' || st.kind === 'end')) this.foeToPile(t);
-    if (st.who === 'foe' && ACT_KINDS.has(st.kind) && !v.foeAct) v.foeAct = { t0: t };
-    // 시안 ㉡ ㉣ 기술 카드: 그 식물의 차례 동안 떠 있음 → 다른 식물의 차례 · 턴 끝 효과 · 끝이 시작되면 내 카드는 아래로 사라짐(상대 카드는 위 foeToPile이 그 자리에서 더미로) · 메아리 = 같은 카드가 한 번 더 톡
-    if (v.cue) for (const w of ['me', 'foe']) { const q = v.cue[w]; if (q && !q.tOut && (st.kind === 'tick' || st.kind === 'end' || (ACT_KINDS.has(st.kind) && st.who && st.who !== w))) q.tOut = t; }
+    //  → 사용자 '1번으로 ㄱㄱ'(같은 날 — 내 카드도 같은 더미에): 양쪽 다 그 식물의 차례가 끝나면 쓴 카드가 더미 맨 위로(toPile)
+    for (const w of ['me', 'foe']) { const A = v.act && v.act[w]; if (A && !A.piled && ((ACT_KINDS.has(st.kind) && st.who && st.who !== w) || st.kind === 'tick' || st.kind === 'end')) this.toPile(w, t); }
+    if (ACT_KINDS.has(st.kind) && (st.who === 'me' || st.who === 'foe') && !(v.act ||= {})[st.who]) v.act[st.who] = { t0: t };
+    // 기술 카드(식물 옆 큰 카드): 그 식물의 차례 동안 떠 있음 → 차례가 끝나면 위 toPile이 그 자리에서 더미로 · 더미에 못 가는 카드(교체 · 쉼)는 손패 자리로 돌아감 · 메아리 = 같은 카드가 한 번 더 톡
+    if (v.cue) for (const w of ['me', 'foe']) { const q = v.cue[w]; if (q && !q.tOut && !q.handOff && (st.kind === 'tick' || st.kind === 'end' || (ACT_KINDS.has(st.kind) && st.who && st.who !== w))) q.tOut = t; }
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { const q = (v.cue ||= {})[st.who]; if (q && !q.tOut && q.sk === st.skill) q.pulse = t; else v.cue[st.who] = { who: st.who, sk: st.skill, t0: t }; }
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms, st.skill); sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing'); }
     if (st.kind === 'cast' && st.skill) {   // 보조 기술 시전(㉡ castfx.js): 종류마다 다른 모양 · 터뜨리는 순간 소리
@@ -795,20 +797,25 @@ export const battle = {
   // 기술 이름 리본: 쓰는 식물 머리 위 속성 색 둥근 띠 + 흰 굵은 글자, 옆에서 미끄러져 들어와 그 단계 끝에 사라짐
   ribbon(who, text, el, t, ms, sk = null) { this.v.ribbon = { who, text, el, t0: t, ms: Math.max(500, ms || 0), sk }; },
   // 상대가 이번 턴에 쓴 카드 → 더미(쉼 · 교체한 턴은 안 쌓임): 맨 앞 = 방금 · u = 쓴 식물(3:3에서 누가 썼는지) · 한 턴에 한 번
-  foeToPile(t) {
-    const v = this.v, B = this.B, lt = B.log && B.log[B.log.length - 1];
-    if (v.foeAct) v.foeAct.piled = true;
-    if (!lt || v.piledLog === lt || !lt.foeSkill || lt.foeSkill.act === 'skip' || !lt.foeSkill.name || lt.foeSkill.name === '기술' || lt.foeSwitch != null) return;
-    v.piledLog = lt; v.foeLast = lt.foeSkill;
-    const q = v.cue && v.cue.foe, from = q && !q.tOut && !q.gone && q.pose ? { ...q.pose } : null;   // 시안 ㉡ ㉣ = 떠 있던 기술 카드가 그 자리에서 날아감
-    if (from) q.handed = true;
-    (v.foeHist ||= []).unshift({ sk: lt.foeSkill, turn: B.turn - 1, t0: t, u: B.foe, from }); v.foeHist.length = Math.min(v.foeHist.length, FOE_HIST);
-    sfx('flip');   // 카드가 떠오르는 소리(앉을 땐 pileIn)
+  //  양쪽(2026-10-29 '1번으로 ㄱㄱ'): who = 누가 썼나(더미 · 펼쳐 보기 테 색 = 나 하늘 · 상대 분홍) · 쪽마다 한 턴에 한 장 · 앞 카드가 아직 날아가는 중이면 앉은 뒤에(t0를 미룸 — 그동안 옆 카드는 그 자리에)
+  toPile(who, t) {
+    const v = this.v, B = this.B, lt = B.log && B.log[B.log.length - 1], A = v.act && v.act[who];
+    if (A) A.piled = true;
+    const sk = lt && (who === 'me' ? lt.mySkill : lt.foeSkill), sw = lt && (who === 'me' ? lt.mySwitch : lt.foeSwitch);
+    if (!lt || (v.piled ||= {})[who] === lt || !sk || sk.act === 'skip' || !sk.name || sk.name === '기술' || sw != null) return;
+    v.piled[who] = lt;
+    const top = (v.cardHist || [])[0], t0 = top && t - top.t0 < PILE_IN ? top.t0 + PILE_IN : t;
+    const q = v.cue && v.cue[who], from = q && !q.tOut && !q.gone && q.pose ? { ...q.pose } : null;   // 옆에 떠 있던 그 카드가 그 자리 · 그 크기에서 날아감
+    const E = { sk, who, turn: B.turn - 1, t0, u: B[who], from };
+    if (from) q.handOff = E;
+    (v.cardHist ||= []).unshift(E); v.cardHist.length = Math.min(v.cardHist.length, HIST_MAX);
+    sfx('flip', { at: Math.max(0, (t0 - t) / 1000) });   // 카드가 떠오르는 소리(앉을 땐 pileIn)
   },
   cardFace(sk, k) { const F = (this.faces ||= {}), key = sk.id + '@' + k; return F[key] || (F[key] = renderFront(sk, CARD_W, CARD_H, k, { can: true })); },   // 손패와 같은 카드 앞면(기기 화소로 한 번)
   // 기술 카드 한 장(경기장 좌표 · 40칸): 들어옴(상대 = 오른쪽 끝에서 미끄러져 더미 아래로 · 나 = 손패 그 카드 자리에서 올라옴) → 떠 있음(살랑 · 메아리 = 톡) →
-  //  나감(상대 = foeToPile이 이 자세를 받아 그대로 더미 맨 위로 · 내 카드 = 손패 그 자리로 돌아가며 사라짐) · 더미로 날아갈 자세(q.pose = 화면 좌표 · 더미 카드 배수)와 이름 띠 자리(q.band)를 남김
+  //  나감(toPile이 이 자세를 받아 그대로 더미 맨 위로 — 앞 카드가 날아가는 중이면 그 자리에서 기다렸다가 · 더미에 못 가는 카드 = 손패 그 자리로 돌아가며 사라짐) · 더미로 날아갈 자세(q.pose = 화면 좌표 · 더미 카드 배수)와 이름 띠 자리(q.band)를 남김
   drawCue(app, q, t) {
+    if (q.handOff && t >= q.handOff.t0) { q.handed = true; return; }   // 이제 더미 쪽(drawPile)이 그림
     const { g, W } = app, c = g.c, k = c.getTransform().a || 1, ox = Math.floor((W - 270) / 2), foe = q.who === 'foe', age = t - q.t0;
     const w = 40, h = Math.round((w * CARD_H) / CARD_W), [px, py] = this.at(q.who), tx = foe ? Math.min(266 - w / 2, px + 52) : px + 74, ty = foe ? Math.max(AY + 5 + PILE_H + 8 + h / 2, py - 96) : py - 92;
     const ref = !foe && this.cards && this.cards['sk_' + q.sk.id], home = ref ? [ref.x + ref.w / 2 - ox, ref.y + ref.h / 2, ref.w / w] : null;   // 내 카드의 손패 자리(경기장 좌표 · 크기 배수)
@@ -824,6 +831,7 @@ export const battle = {
     }
     const cw = w * s, ch = h * s;
     q.pose = { x: x + ox, y, s: cw / PILE_W, ang }; q.band = [x, y + ch / 2 - 4];
+    if (q.handOff) q.handOff.from = { ...q.pose };   // 기다리는 동안 날아갈 자세를 따라 고침
     c.save(); c.globalAlpha *= al; c.translate(x, y); if (ang) c.rotate(ang);
     rrect(g, -cw / 2 + 1, -ch / 2 + 2, cw, ch, 4, 'rgba(0,0,0,0.35)'); rrect(g, -cw / 2 - 1, -ch / 2 - 1, cw + 2, ch + 2, 4, T.ink);
     c.imageSmoothingEnabled = true; c.drawImage(this.cardFace(q.sk, k), -cw / 2, -ch / 2, cw, ch);
@@ -912,8 +920,8 @@ export const battle = {
     const B = this.B, v = this.v;
     v.hp = { me: B.me.hp, foe: B.foe.hp }; v.en = { me: B.me.energy, foe: B.foe.energy }; v.stance = {}; v.foePaid = false; v.turn = B.turn;
     for (const k of v.tok || []) k.done = true; v.cast = null; v.effSeq = {};   // 턴 끝 = 판의 효과 목록을 그대로(아래) — 날아가던 조각은 끝냄
-    if (!(v.foeAct && v.foeAct.piled)) this.foeToPile(app.t);   // 아직 더미로 안 간 상대 카드(차례 단계 없이 끝난 턴)
-    v.foeAct = null; v.cue = null;
+    for (const w of ['me', 'foe']) if (!(v.act && v.act[w] && v.act[w].piled)) this.toPile(w, app.t);   // 아직 더미로 안 간 카드(차례 단계 없이 끝난 턴)
+    v.act = null; v.cue = null;
     // 판이 끝나면 쓰러짐 연출로 이미 사라진 식물은 그대로 둠(2026-10-16 사용자 "승리 문구 뜨면서 사라졌던 식물이 다시 나와서 사라지는 효과")
     if (!B.need) { v.view = { me: B.me, foe: B.foe }; v.gone = B.over ? Object.fromEntries(['me', 'foe'].filter(s => v.gone[s] && B[s].hp <= 0).map(s => [s, true])) : {}; v.eff = { me: listOf(B.me), foe: listOf(B.foe) }; }
     if (B.over) {
@@ -1068,7 +1076,7 @@ export const battle = {
     // 효과 표시 = 체력바 밑 효과 칸(2026-10-29 사용자 '상태이상은 우측상단에 따로 누르는게 아니고 체력바 하단에 있는 표시를 누르는거였어') — 누르는 동안 살짝 밝아짐 · 처음 안내가 가리킬 자리(fxTarget)
     if (app.input.isPressed('fx_foe')) g.alpha(0.13, () => rrect(g, 6, foeY, BOX_W, fh + (fRows ? 3 + fRows * (SW_H + 2) - 2 : 0), 4, '#ffffff'));
     this.fxR = { foe: fRows ? [6, foeY + fh + 3, BOX_W, fRows * (SW_H + 2) - 2] : null, envFoe: fEnv.length ? [6, foeY - ENV_H - 2, BOX_W, ENV_H] : null };
-    this.pileR = (v.foeHist || []).length ? this.drawPile(app, v.foeHist, t) : null;   // 상대 카드 더미(오른쪽 위)
+    this.pileR = (v.cardHist || []).length ? this.drawPile(app, v.cardHist, t) : null;   // 쓴 카드 더미(오른쪽 위 · 양쪽)
     this.geo = { foe: { x: 6, y: foeY + fh + 3, up: false, band: [6, AY + 4], bandNow: [6, foeY - ENV_H - 2], list: theirs }, me: null };   // 효과 조각이 꽂힐 자리(drawTokens · 반짝)
     if (this.net === 'pvp' && v.foeReady === B.turn && v.phase !== 'play' && !v.waitSend) { const x = 6 + BOX_W + 4, y = foeY + 4; holo(g, x, y, 34, 16, { fill: '#13385e', fill2: '#17446e', frame: '#9ff0b0', frameHi: '#e6f3ff', frameLo: '#2a6a44' }, 16); g.text('고름', x + 17, y + (16 - glyphH('body')) / 2, { color: '#d8ffe4', align: 'center' }); }
     if (this.net === 'pvp' && v.waitSend && v.phase === 'wait') {   // 3:3: 상대 식물이 쓰러져 상대가 다음 식물을 고르는 중(남은 초)
@@ -1155,19 +1163,21 @@ export const battle = {
     this.peek = { id, sk, from: { x: ref.x, y: ref.y, w: ref.w, h: ref.h }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t };
     app.g.rect(ref.x - 1, ref.y - 4, ref.w + 2, ref.h + 6, T.bg2); cardSlot(app.g, ref.x, ref.y, ref.w, ref.h);   // 이번 그림부터 손패 자리는 빈 자리
   },
-  // 펼친 상대 카드(drawSpread) i번째를 누르면 가운데로 와서 뒤집혀 뒷면(설명) · 위에 '상대 · N턴'(3:3 = 쓴 식물 이름도) · 아무 데나 누르면 펼친 자리로
+  // 펼친 카드(drawSpread) i번째를 누르면 가운데로 와서 뒤집혀 뒷면(설명) · 위에 '나 · N턴' / '상대 · N턴'(3:3 = 쓴 식물 이름도 · 쪽 색) · 아무 데나 누르면 펼친 자리로
+  //  뒷면의 상성 줄 = 그 카드를 맞는 쪽(상대 카드 → 내 식물 · 내 카드 → 상대 식물)
   openFoeCard(app, i, R) {
-    const H0 = (this.v.foeHist || [])[i]; if (!H0 || !R) return;
+    const H0 = (this.v.cardHist || [])[i]; if (!H0 || !R) return;
     sfx('flip');
-    const { W } = app, sk = H0.sk, k = app.g.c.getTransform().a || 1, me = this.v.view.me, BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
-    const o = { can: true, foe: me ? { name: me.name, el: me.el } : null, mult: sk.act === 'attack' && sk.el && me ? elemMult(sk.el, me.el) : 1 };   // 상대 카드의 '상대' = 나
-    this.peek = { id: 'foe_card', hi: i, sk, from: { x: R[0], y: R[1], w: R[2], h: R[3] }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t, tap: true, turn: H0.turn, who: this.mode === 'swap3' && H0.u ? H0.u.name : null };
+    const { W } = app, sk = H0.sk, side = H0.who || 'foe', k = app.g.c.getTransform().a || 1, tg = this.v.view[side === 'me' ? 'foe' : 'me'], BW = Math.min(W - 100, 160), BH = Math.round(BW * CARD_H / CARD_W);
+    const o = { can: true, foe: tg ? { name: tg.name, el: tg.el } : null, mult: sk.act === 'attack' && sk.el && tg ? elemMult(sk.el, tg.el) : 1 };
+    this.peek = { id: 'foe_card', hi: i, sk, from: { x: R[0], y: R[1], w: R[2], h: R[3] }, BW, BH, faces: renderFaces(sk, CARD_W, CARD_H, BW, BH, k, o), p: 0, last: app.t, tap: true, turn: H0.turn, side, who: this.mode === 'swap3' && H0.u ? H0.u.name : null };
   },
-  // 상대 카드 더미(2026-10-29 사용자 '이전에 쓴 카드를 우측 상단에 겹친 카드더미처럼 싸이게 하고 누르면 쭉 볼 수 있게 하자'): 오른쪽 위 —
-  //  맨 위 = 방금 쓴 카드(손패 카드를 줄인 그림 · 상대 색 테 · 반듯) · 그 밑에 전에 쓴 카드가 셋까지 저마다 조금씩 기울어 비껴 쌓임 · 왼쪽 아래 = 장 수
-  //  새 카드 = 상대 식물에서 크게 돌며 날아와 더미 위에 톡 앉음(앞 카드는 한 칸 밑으로 내려앉으며 제 기울기로) → 돌려주는 값 = 누를 자리 [x, y, w, h]
-  drawPile(app, hist, t) {
-    const { g, W } = app, c = g.c, k = c.getTransform().a || 1, x = W - 8 - PILE_W, y = AY + 5, top = hist[0], n = hist.length, age = t - top.t0, fly = age < PILE_IN;
+  // 쓴 카드 더미(2026-10-29 사용자 '이전에 쓴 카드를 우측 상단에 겹친 카드더미처럼 싸이게 하고 누르면 쭉 볼 수 있게 하자' — 처음엔 상대 카드만 → 같은 날 '1번으로 ㄱㄱ' = 내 카드도): 오른쪽 위 —
+  //  맨 위 = 방금 쓴 카드(손패 카드를 줄인 그림 · 쪽 색 테 = 나 하늘 · 상대 분홍 · 반듯) · 그 밑에 전에 쓴 카드가 셋까지 저마다 조금씩 기울어 비껴 쌓임 · 왼쪽 아래 = 장 수
+  //  새 카드 = 쓴 식물 옆 카드(없으면 그 식물 머리)에서 날아와 더미 위에 톡 앉음(앞 카드는 한 칸 밑으로 내려앉으며 제 기울기로) · 아직 차례가 안 온 카드(t0 뒤)는 빼고 그림 → 돌려주는 값 = 누를 자리 [x, y, w, h]
+  drawPile(app, all, t) {
+    const hist = all.filter(h => h.t0 <= t); if (!hist.length) return null;
+    const { g, W } = app, c = g.c, k = c.getTransform().a || 1, x = W - 8 - PILE_W, y = AY + 5, top = hist[0], n = hist.length, age = t - top.t0, fly = age < PILE_IN, rim = SIDE_RIM[top.who || 'foe'];
     const from = top.from, FLY0 = from ? 0 : PILE_POP, u = Math.max(0, Math.min(1, (age - FLY0) / (PILE_IN - FLY0))), e = u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;   // e = 날아간 정도(떠오르는 동안 0 · 처음 · 끝이 느림)
     const card = (h, cx, cy, ang, s, dark, rim) => {   // 줄인 카드 한 장: 가운데 (cx, cy) · 기울기 · 크기 배수 · 그늘 · 테 색
       c.save(); c.translate(cx, cy); if (ang) c.rotate(ang); if (s !== 1) c.scale(s, s);
@@ -1182,34 +1192,34 @@ export const battle = {
       const a = PILE_OFF[d], b = PILE_OFF[d - 1], s = fly ? e : 1, ang = pileTilt(hist[d].turn) * (d === 1 && fly ? e : 1);
       card(hist[d], mx + b[0] + (a[0] - b[0]) * s, my + b[1] + (a[1] - b[1]) * s, ang, 1, 0.12 + 0.12 * d, null);
     }
-    if (fly) {   // 상대 카드 → 더미(2026-10-29 사용자 '카드 더미로 이동하는 모션이 어색해' — 전엔 2.2배로 크게 튀어나와 기울어진 채 머물다 잔상 셋을 끌고 날아감):
-      //  식물 머리에서 1.5배로 떠오름(0.14초) → 한 번 완만하게 휘어 더미로(0.42초 · 처음 · 끝이 느림) · 크기 1.5 → 1 · 날아가는 동안만 살짝 기울었다 반듯하게 앉음 · 잔상 없음
-      //  시안 ㉡ ㉣ = 떠 있던 기술 카드가 그 자리 · 그 크기 · 그 기울기에서 바로 날아감(top.from)
-      const [ex, ey] = this.at('foe'), x0 = from ? from.x : ex + Math.floor((W - 270) / 2), y0 = from ? from.y : ey - 70, s0 = from ? from.s : 1.5, a0 = from ? from.ang : 0;
+    if (fly) {   // 쓴 카드 → 더미(2026-10-29 사용자 '카드 더미로 이동하는 모션이 어색해' — 전엔 2.2배로 크게 튀어나와 기울어진 채 머물다 잔상 셋을 끌고 날아감):
+      //  식물 옆에 떠 있던 기술 카드가 그 자리 · 그 크기 · 그 기울기에서 한 번 완만하게 휘어 더미로(처음 · 끝이 느림 · 날아가는 동안만 살짝 기울었다 반듯하게 앉음 · 잔상 없음)
+      //  옆 카드가 없던 카드(top.from 없음) = 쓴 식물 머리에서 1.5배로 떠오른 뒤(0.14초) 같은 길로
+      const [ex, ey] = this.at(top.who || 'foe'), x0 = from ? from.x : ex + Math.floor((W - 270) / 2), y0 = from ? from.y : ey - 70, s0 = from ? from.s : 1.5, a0 = from ? from.ang : 0;
       const qx = x0 + (mx - x0) * 0.35, qy = Math.min(y0, my) - 24;   // 휨 기준점(둘 사이 위쪽)
       const bx = (1 - e) ** 2 * x0 + 2 * (1 - e) * e * qx + e * e * mx, by = (1 - e) ** 2 * y0 + 2 * (1 - e) * e * qy + e * e * my;
       const rise = from ? 0 : 1 - Math.min(1, age / PILE_POP), pop = from ? 1 : 0.45 + 0.55 * backOut(Math.min(1, age / PILE_POP));
       c.save(); c.globalAlpha = from ? 1 : Math.min(1, age / 90);
-      card(top, bx, by + 10 * rise, a0 * (1 - e) + 0.16 * Math.sin(Math.PI * e), (s0 + (1 - s0) * e) * pop, 0, '#ff9aa8');
+      card(top, bx, by + 10 * rise, a0 * (1 - e) + 0.16 * Math.sin(Math.PI * e), (s0 + (1 - s0) * e) * pop, 0, rim);
       c.restore();
     } else {
       if (!top.landed) { top.landed = true; sfx('pileIn'); }
-      const la = age - PILE_IN, bob = la < 140 ? Math.sin(la / 140 * Math.PI) : 0, settle = la < 160 ? 1 + 0.08 * (1 - la / 160) ** 2 : 1;   // 앉을 때 1칸 톡 · 살짝 커졌다 제자리
-      card(top, mx, my - bob, 0, settle, 0, '#ff9aa8');
-      if (la < 300) g.alpha(0.85 * (1 - la / 300), () => { const X = x - 2, Y = Math.round(y - bob) - 2; g.rect(X, Y, PILE_W + 4, 1, '#fff0f3'); g.rect(X, Y + PILE_H + 3, PILE_W + 4, 1, '#fff0f3'); g.rect(X, Y, 1, PILE_H + 4, '#fff0f3'); g.rect(X + PILE_W + 3, Y, 1, PILE_H + 4, '#fff0f3'); });   // 앉은 순간 테가 반짝
+      const la = age - PILE_IN, bob = la < 140 ? Math.sin(la / 140 * Math.PI) : 0, settle = la < 160 ? 1 + 0.08 * (1 - la / 160) ** 2 : 1, hi = hexMix(rim, '#ffffff', 0.85);   // 앉을 때 1칸 톡 · 살짝 커졌다 제자리
+      card(top, mx, my - bob, 0, settle, 0, rim);
+      if (la < 300) g.alpha(0.85 * (1 - la / 300), () => { const X = x - 2, Y = Math.round(y - bob) - 2; g.rect(X, Y, PILE_W + 4, 1, hi); g.rect(X, Y + PILE_H + 3, PILE_W + 4, 1, hi); g.rect(X, Y, 1, PILE_H + 4, hi); g.rect(X + PILE_W + 3, Y, 1, PILE_H + 4, hi); });   // 앉은 순간 테가 반짝
     }
     const cnt = fly ? n - 1 : n;
-    if (cnt > 0) {   // 장 수(왼쪽 아래 작은 알약)
+    if (cnt > 0) {   // 장 수(왼쪽 아래 작은 알약 — 양쪽 카드라 쪽 색 없이)
       const bf = sized('bold', 9), num = String(cnt), bw = Math.max(11, g.textW(num, bf) + 6), bx = x - 5, by = y + PILE_H - 9;
-      rrect(g, bx - 1, by - 1, bw + 2, 13, 4, INFO_C.ink); rrect(g, bx, by, bw, 11, 3, '#3a1a26');
-      g.text(num, bx + bw / 2, by + Math.round((11 - glyphH(bf)) / 2), { font: bf, color: '#ffc2cc', align: 'center' });
+      rrect(g, bx - 1, by - 1, bw + 2, 13, 4, INFO_C.ink); rrect(g, bx, by, bw, 11, 3, '#22324a');
+      g.text(num, bx + bw / 2, by + Math.round((11 - glyphH(bf)) / 2), { font: bf, color: '#d6e4fa', align: 'center' });
     }
     return [x - 6, y - 3, PILE_W + 12, PILE_H + 12];
   },
   // 펼쳐 보기: 더미를 누르면 카드가 더미에서 한 장씩 튀어나와 세 칸씩 펼쳐짐(최근 = 왼쪽 위 · 카드 밑 = 쓴 턴) → 누르면 크게 뒤집어 설명(openFoeCard) ·
   //  닫기 · 빈 곳 = 더미로 다시 모임 · 넘치면 끌어서 넘김(onDrag) · 고르는 차례가 끝나면(시간 초과) 저절로 접힘
   openSpread(app) {
-    if (this.spread || !(this.v.foeHist || []).length) return;
+    if (this.spread || !(this.v.cardHist || []).length) return;
     sfx('spread'); this.spread = { t0: app.t, scroll: 0, max: 0 };
   },
   closeSpread(app) {
@@ -1218,7 +1228,7 @@ export const battle = {
   },
   spreadFace(h, k) { if (!h.face || h.faceK !== k) { h.face = renderFront(h.sk, CARD_W, CARD_H, k, { can: true }); h.faceK = k; } return h.face; },   // 펼친 카드 앞면(기기 화소로 한 번)
   drawSpread(app) {
-    const { g, W, H, input, t } = app, c = g.c, S = this.spread, v = this.v, hist = v.foeHist || [], n = hist.length, k = c.getTransform().a || 1, C = INFO_C, PINK = '#ff9aa8';
+    const { g, W, H, input, t } = app, c = g.c, S = this.spread, v = this.v, hist = v.cardHist || [], n = hist.length, k = c.getTransform().a || 1, C = INFO_C;
     if (!S.closing && (v.phase !== 'pick' || !n)) this.closeSpread(app);
     const COLS = 3, GX = 10, RH = CARD_H + 26, x0 = Math.round((W - (COLS * CARD_W + (COLS - 1) * GX)) / 2), headY = AY + 8, viewY = headY + 32, FOOT = 50, viewH = H - viewY - FOOT;
     S.max = Math.max(0, Math.ceil(n / COLS) * RH - 8 - viewH); S.scroll = Math.max(0, Math.min(S.max, S.scroll || 0));
@@ -1226,10 +1236,10 @@ export const battle = {
     if (S.closing && op <= 0) { this.spread = null; return; }
     c.fillStyle = `rgba(6,10,18,${(0.8 * op).toFixed(3)})`; c.fillRect(0, 0, W, H);
     input.hit('sp_block', 0, 0, W, H, () => this.closeSpread(app));
-    g.alpha(op, () => {   // 머리: 분홍 알약 '상대가 쓴 카드 n장'
-      const label = `상대가 쓴 카드 ${n}장`, lw = g.textW(label, 'bold') + 22, lx = Math.round((W - lw) / 2);
-      rrect(g, lx - 1, headY - 1, lw + 2, 22, 7, C.ink); rrect(g, lx, headY, lw, 20, 6, '#3a1a26'); g.rect(lx + 6, headY, lw - 12, 1, PINK);
-      g.text(label, W / 2, headY + Math.round((20 - glyphH('bold')) / 2), { font: 'bold', color: '#ffd6dc', align: 'center' });
+    g.alpha(op, () => {   // 머리: '쓴 카드 n장 · 나 a · 상대 b'(양쪽 — 2026-10-29 '1번으로 ㄱㄱ')
+      const mine = hist.filter(h => h.who === 'me').length, label = `쓴 카드 ${n}장 · 나 ${mine} · 상대 ${n - mine}`, lw = g.textW(label, 'bold') + 22, lx = Math.round((W - lw) / 2);
+      rrect(g, lx - 1, headY - 1, lw + 2, 22, 7, C.ink); rrect(g, lx, headY, lw, 20, 6, '#22324a'); g.rect(lx + 6, headY, lw - 12, 1, '#9fc4ec');
+      g.text(label, W / 2, headY + Math.round((20 - glyphH('bold')) / 2), { font: 'bold', color: '#e6f0ff', align: 'center' });
     });
     const P = this.pileR ? [this.pileR[0] + 6 + PILE_W / 2, this.pileR[1] + 3 + PILE_H / 2] : [W - 8 - PILE_W / 2, AY + 5 + PILE_H / 2], s0 = PILE_W / CARD_W, bh = glyphH('bold');
     const cards = [];
@@ -1242,15 +1252,16 @@ export const battle = {
     const one = ({ i, h, sx, sy, q, e, still }) => {
       if (this.peek && this.peek.hi === i) { cardSlot(g, sx, sy, CARD_W, CARD_H); return; }   // 크게 꺼낸 카드의 자리
       const cx = P[0] + (sx + CARD_W / 2 - P[0]) * e, cy = P[1] + (sy + CARD_H / 2 - P[1]) * e, s = s0 + (1 - s0) * e, w = CARD_W * s, hh = CARD_H * s, x = Math.round(cx - w / 2), y = Math.round(cy - hh / 2);
-      const tagA = (S.closing ? 1 - q : Math.min(1, Math.max(0, (q - 0.7) / 0.3))) * op;
-      if (!i && tagA > 0) g.alpha(tagA, () => { rrect(g, x - 3, y - 3, Math.round(w) + 6, Math.round(hh) + 6, 8, 'rgba(255,154,168,0.28)'); rrect(g, x - 2, y - 2, Math.round(w) + 4, Math.round(hh) + 4, 7, 'rgba(255,154,168,0.7)'); });   // 방금 쓴 카드 = 분홍 테
+      const tagA = (S.closing ? 1 - q : Math.min(1, Math.max(0, (q - 0.7) / 0.3))) * op, side = h.who || 'foe', rimC = SIDE_RIM[side];
+      if (!i && tagA > 0) g.alpha(tagA, () => { rrect(g, x - 3, y - 3, Math.round(w) + 6, Math.round(hh) + 6, 8, hexMix(rimC, '#060a14', 0.7)); rrect(g, x - 2, y - 2, Math.round(w) + 4, Math.round(hh) + 4, 7, rimC); });   // 방금 쓴 카드 = 쪽 색 굵은 테
       rrect(g, x + 2, y + 4, Math.round(w), Math.round(hh), 6, `rgba(0,0,0,${(0.42 * op).toFixed(3)})`);
+      if (i && tagA > 0) g.alpha(tagA, () => rrect(g, x - 1, y - 1, Math.round(w) + 2, Math.round(hh) + 2, 6, rimC));   // 누구 카드 = 쪽 색 가는 테(나 하늘 · 상대 분홍)
       c.drawImage(this.spreadFace(h, k), x, y, w, hh);
-      if (tagA > 0) g.alpha(tagA, () => {   // 쓴 턴(카드 밑) · 3:3 = 쓴 식물 얼굴도
-        const label = i ? `${h.turn}턴` : `방금 · ${h.turn}턴`, face = this.mode === 'swap3' && h.u ? 15 : 0, lw = g.textW(label, 'bold') + 12 + face, lx = Math.round(sx + (CARD_W - lw) / 2), ly = sy + CARD_H + 6;
-        rrect(g, lx - 1, ly - 1, lw + 2, 17, 6, C.ink); rrect(g, lx, ly, lw, 15, 5, i ? C.band : '#3a1a26');
+      if (tagA > 0) g.alpha(tagA, () => {   // 누구 · 쓴 턴(카드 밑) · 3:3 = 쓴 식물 얼굴도
+        const label = `${side === 'me' ? '나' : '상대'} · ${h.turn}턴`, face = this.mode === 'swap3' && h.u ? 15 : 0, lw = g.textW(label, 'bold') + 12 + face, lx = Math.round(sx + (CARD_W - lw) / 2), ly = sy + CARD_H + 6;
+        rrect(g, lx - 1, ly - 1, lw + 2, 17, 6, C.ink); rrect(g, lx, ly, lw, 15, 5, SIDE_BG[side]);
         if (face) { c.save(); c.beginPath(); c.rect(lx + 2, ly + 1, 13, 13); c.clip(); drawPortrait(g, artOf(h.u), lx + 2, ly + 1, 13, true); c.restore(); }
-        g.text(label, lx + face + (lw - face) / 2, ly + Math.round((15 - bh) / 2), { font: 'bold', color: i ? C.sub : PINK, align: 'center' });
+        g.text(label, lx + face + (lw - face) / 2, ly + Math.round((15 - bh) / 2), { font: 'bold', color: i ? SIDE_TXT[side] : rimC, align: 'center' });
       });
       if (still) { const y0 = Math.max(sy, viewY - 6), y1 = Math.min(sy + CARD_H, viewY + viewH + 6); if (y1 > y0) input.hit('sp_' + i, sx, y0, CARD_W, y1 - y0, () => this.openFoeCard(app, i, [sx, sy, CARD_W, CARD_H]), 2); }
     };
@@ -1279,9 +1290,9 @@ export const battle = {
     c.save(); c.shadowColor = `rgba(0,0,0,${(0.6 * pos).toFixed(3)})`; c.shadowBlur = 18 * k * pos; c.shadowOffsetY = 10 * k * pos;
     c.fillStyle = `rgba(0,0,0,${(0.25 * pos).toFixed(3)})`; c.fillRect(cx - pw / 2, cy - h / 2 + 3, pw, h - 6); c.restore();
     drawFlip(c, P.faces.front, P.faces.back, cx, cy, w, h, th);
-    if (P.turn != null && pos > 0.6) {   // 상대 카드 기록: 언제 쓴 카드인지(카드 위 작은 표)
-      const label = P.who ? `상대 ${P.who} · ${P.turn}턴` : `상대 · ${P.turn}턴`, lw = g.textW(label, 'bold') + 14, ly = Math.round(cy - h / 2 - 22);
-      g.alpha(Math.min(1, (pos - 0.6) / 0.3), () => { rrect(g, Math.round(cx - lw / 2) - 1, ly - 1, lw + 2, 18, 6, '#0b1322'); rrect(g, Math.round(cx - lw / 2), ly, lw, 16, 5, '#3a1a26'); g.text(label, cx, ly + Math.round((16 - glyphH('bold')) / 2), { font: 'bold', color: '#ff9aa8', align: 'center' }); });
+    if (P.turn != null && pos > 0.6) {   // 쓴 카드 기록: 누가 · 언제 쓴 카드인지(카드 위 작은 표 · 쪽 색)
+      const side = P.side || 'foe', label = `${side === 'me' ? '나' : '상대'}${P.who ? ' ' + P.who : ''} · ${P.turn}턴`, lw = g.textW(label, 'bold') + 14, ly = Math.round(cy - h / 2 - 22);
+      g.alpha(Math.min(1, (pos - 0.6) / 0.3), () => { rrect(g, Math.round(cx - lw / 2) - 1, ly - 1, lw + 2, 18, 6, '#0b1322'); rrect(g, Math.round(cx - lw / 2), ly, lw, 16, 5, SIDE_BG[side]); g.text(label, cx, ly + Math.round((16 - glyphH('bold')) / 2), { font: 'bold', color: SIDE_RIM[side], align: 'center' }); });
     }
   },
   // 턴 시작 공개(buildSteps 'reveal'): 내 카드 = 손패 자리(없으면 내 식물)에서, 상대 카드 = 상대 식물에서 엎어진 채 가운데로 → 상대 카드가 원근 있게 뒤집힘

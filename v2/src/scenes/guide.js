@@ -48,7 +48,7 @@ export const GUIDES = [
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [
       { at: (app, sc) => sc.fxTarget && sc.fxTarget(), text: '이 효과 표시를 누르면 그 식물에 걸린 효과가 무엇인지, 몇 턴 남았는지 나와요.' },   // 2026-10-29 사용자 '체력바 하단에 있는 표시를 누르는거였어' — 상대 체력바 밑 칸 먼저(없으면 내 칸 · 환경 띠)
-      { at: 'foe_pile', text: '상대가 쓴 카드는 오른쪽 위에 쌓여요. 누르면 펼쳐서 지금까지 쓴 카드를 다 볼 수 있어요.' },
+      { at: 'foe_pile', text: '나와 상대가 쓴 카드는 오른쪽 위에 쌓여요(하늘 테 = 나 · 분홍 테 = 상대). 누르면 펼쳐서 지금까지 쓴 카드를 다 볼 수 있어요.' },
       { at: 'sk_*', text: '내 카드도 꾹 누르고 있으면 뒷면에 설명이 나와요. 손을 떼면 기술은 나가지 않아요.' },
     ] },
   { id: 'battle3', scene: 'battle', when: (app, sc) => sc.mode === 'swap3', btn: app => [app.W - 21, 4],
