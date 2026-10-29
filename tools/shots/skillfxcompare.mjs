@@ -1,9 +1,10 @@
-// 기술 카드 뜨는 방식 시안 비교 촬영(2026-10-29 CHANGELOG 354 · 355): 같은 전투(씨앗 고정)를 시안마다 한 창씩 똑같이 진행해 한 화면에 나란히 → MP4 + 원하는 순간 PNG
-//  --modes = 쉼표로 시안(''= 지금 · card ㉠ · flip ㉡ · strip ㉢ · side ㉣ — battle.js SKILLFX) · --cols = 한 줄 칸 수 · --scale = 칸 크기(2배 화면 기준)
+// 전투 한 토막 촬영(2026-10-29 CHANGELOG 354 ~ 356): 같은 전투(씨앗 고정 · 싹둑마마 대 프로스트벨)를 진행해 MP4 + 원하는 순간 PNG — 기술 카드 · 카드 더미 연출을 볼 때
+//  기술 카드 뜨는 방식 시안 넷(㉠ ~ ㉣)을 나란히 견줄 때 만든 도구 — 사용자가 ㉣ 옆에 큰 카드로 정해(356) 시안 줄은 게임에서 지움. 지금은 한 칸(--modes 없음)으로 씀
+//  --modes = 쉼표로 주소 ?skillfx= 값(지금은 게임이 안 읽음 — 나중에 시안을 다시 견줄 때 그 이름으로 되살림) · --cols = 한 줄 칸 수 · --scale = 칸 크기(2배 화면 기준)
 //  --crop = 2배 화면에서 자를 위 · 아래(기본 40,720 = 경기장 + 체력판) · --loops = 영상 되풀이 · --step = 한 장에 넘기는 ms(25 = 반 빠르기)
-// node tools/shots/skillfxcompare.mjs <출력 폴더> <시작ms> <끝ms> [찍을 ms,…] [--modes=card,flip,strip,side --cols=2 --scale=0.75]
-//  예: node tools/shots/skillfxcompare.mjs tools/shots/out/skillfx 3900 18300 6800,14100 --modes=card,flip,strip,side
-//      (프로스트벨 아침이에요. → 싹둑마마 무릎 꿇어라 → 깨트려드리죠. · 상대 카드가 더미로 가는 모습 포함)
+// node tools/shots/skillfxcompare.mjs <출력 폴더> <시작ms> <끝ms> [찍을 ms,…] [--crop=40,720 --step=50 --loops=1]
+//  예: node tools/shots/skillfxcompare.mjs tools/shots/out/cardpile 3900 21800 6800,21300
+//      (프로스트벨 아침이에요. → 싹둑마마 무릎 꿇어라(상대 카드가 더미로) → 깨트려드리죠. · 메아리 → 지옥전개(두 번째 카드가 더미 맨 위로))
 import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
@@ -15,7 +16,7 @@ const { serve } = await import(U('tools/shots/static-server.mjs'));
 const { writeMP4Files } = await import(U('tools/pixel/big/video.mjs'));
 const arg = (k, d) => { const a = process.argv.find(s => s.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const out = resolve(process.argv[2]), T0 = +process.argv[3], T1 = +process.argv[4], SNAPS = (process.argv[5] || '').split(',').filter(s => /^\d+$/.test(s)).map(Number);
-const STEP = +arg('step', 50), MODES = arg('modes', ',card').split(','), COLS = +arg('cols', Math.min(2, MODES.length)), SC = +arg('scale', MODES.length > 2 ? 0.75 : 1), [C0, C1] = arg('crop', '40,720').split(',').map(Number), LOOPS = +arg('loops', 1);
+const STEP = +arg('step', 50), MODES = arg('modes', '').split(','), COLS = +arg('cols', Math.min(2, MODES.length)), SC = +arg('scale', MODES.length > 2 ? 0.75 : 1), [C0, C1] = arg('crop', '40,720').split(',').map(Number), LOOPS = +arg('loops', 1);
 const LABEL = { '': '지금', card: '㉠ 띠 끝 작은 카드', flip: '㉡ 머리 위 카드 뒤집기', strip: '㉢ 그림 띠', side: '㉣ 옆에 큰 카드' };
 const CW = Math.round(540 * SC), LH = MODES.length > 1 ? Math.round(30 * SC) + 4 : 0, CH = Math.round((C1 - C0) * SC) + LH, GAP = 8, ROWS = Math.ceil(MODES.length / COLS);
 const GW = (COLS * CW + (COLS - 1) * GAP + 1) & ~1, GH = (ROWS * CH + (ROWS - 1) * GAP + 1) & ~1;

@@ -89,12 +89,10 @@ const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shoc
   regen: 'regen', will: 'purify', shield: 'shield', purified: 'purify', aim: 'focus' };   // 2026-10-23 엑셀 v10 이름(소리는 있던 것)
 const crackles = e => { if (e) for (const ms of popTimes(e)) sfx('crackle', { at: ms / 1000 }); };
 import { TFX, setTfx, popLife, wordSlot, drawPops as tfxPops, drawRibbon as tfxRibbon, drawTitle as tfxTitle } from '../art/textfx.js';
-// 기술 · 상태 이상 구분 시안(2026-10-29 사용자 '스킬 쓰면 간단하게 식물 위로 글자만 삑 올라오는데 이게 스킬인지 상태이상인지 구분이 안 돼 … 분석 조사 등으로 해봐'):
-//  기본 = 지금(어두운 이름 띠 — 효과 조각과 같은 '식물 위 어두운 작은 상자'라 헷갈림) · ?skillfx=card ㉠ = 이름 띠 바깥쪽 끝에 그 기술 카드(손패와 같은 그림) + 띠를 속성 색으로 밝게 · 글자 한 칸 크게
-//  → 사용자 '스킬 카드 뜨는 것도 다양한 방식을 고려해봐'(같은 날): ?skillfx=flip ㉡ = 머리 위에서 카드가 뒷면 → 앞면으로 뒤집힘(이름 띠는 카드 밑) · ?skillfx=strip ㉢ = 이름 띠 바탕이 그 기술 그림 ·
-//   ?skillfx=side ㉣ = 식물 옆에 큰 카드(상대 = 오른쪽 끝에서 미끄러져 들어옴 · 나 = 손패 자리에서 올라옴). ㉡ ㉣ 카드는 그 식물의 차례가 끝날 때까지 떠 있다가 상대 카드 = 그 자리에서 더미로 · 내 카드 = 아래로 사라짐
-const SKILLFX = { key: '' }, CUE_KEYS = new Set(['flip', 'side']);
-try { SKILLFX.key = new URLSearchParams(location.search).get('skillfx') || ''; Object.defineProperty(window, '__skillfx', { get: () => SKILLFX.key, set: k => { SKILLFX.key = k || ''; }, configurable: true }); } catch {}
+// 기술을 쓸 때 그 카드(2026-10-29 사용자 '스킬 쓰면 간단하게 식물 위로 글자만 삑 올라오는데 이게 스킬인지 상태이상인지 구분이 안 돼 … 분석 조사 등으로 해봐' — 이름 띠가 효과 조각과 같은
+//  '식물 위 어두운 작은 상자'라 헷갈림 → 시안 넷 ㉠ 띠 끝 작은 카드 · ㉡ 머리 위 카드 뒤집기 · ㉢ 그림 띠 · ㉣ 옆에 큰 카드 중 사용자 'ㄹ으로 하고 나왔던 그 카드가 그대로 더미 맨 위로 쌓이게해줘'):
+//  식물 옆에 큰 카드(상대 = 오른쪽 끝에서 미끄러져 들어옴 · 나 = 손패 그 카드 자리에서 올라옴) + 이름 띠는 카드 밑 · 그 식물의 차례(걸린 효과까지)가 끝나면
+//  상대 카드 = 그 자리 · 그 크기에서 날아가 더미 맨 위에 앉음 · 내 카드 = 손패 그 자리로 돌아가며 사라짐(drawCue · foeToPile · drawPile)
 
 // v2 전투: 기술 고르기 → (봇 판 = 서버가 상대를 고르고 한 턴을 풂 · 친구 대결 = 두 사람 수가 모이면 서버가 풂 · 시험판 = 이 브라우저 rules.js) → 사건을 차례로 보여 줌
 //   선공 판정 → (자세) → 공격 연출(attack.mjs 장마다) → 맞는 장에 판정·피해 → 되받아치기 → 턴 끝 효과·기력 +1 → 다음 턴 / 승패
@@ -295,7 +293,7 @@ const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320
 const PILE_IN = 560, SPREAD_IN = 300, SPREAD_STAG = 28, SPREAD_OUT = 220, PILE_W = 28, PILE_H = 38, PILE_OFF = [[0, 0], [-2, 3], [2, 5], [-1, 7]];
 const pileTilt = turn => (((turn * 37) % 9) - 4) * 0.03;   // 밑 카드 기울기(카드마다 정해짐 — 새 카드가 앉아도 밑 카드는 안 돌아감)
 const ACT_KINDS = new Set(['attack', 'cast', 'stance', 'sun', 'counter', 'switch']);   // 한 식물의 차례가 시작되는 단계(상대 카드를 더미로 보낼 때를 고름)
-const PILE_POP = 140, CUE_OUT = 260;   // 더미로 가는 카드: 식물 머리에서 떠오름(PILE_POP) → 한 번 휘어 날아가 더미에 앉음(PILE_IN까지) · 시안 ㉡ ㉣ 내 카드가 사라지는 시간
+const PILE_POP = 140, CUE_OUT = 340;   // 더미로 가는 카드: 식물 머리에서 떠오름(PILE_POP) → 한 번 휘어 날아가 더미에 앉음(PILE_IN까지) · 시안 ㉡ ㉣ 내 카드가 사라지는 시간
 // 쓸 수 있는 손패 카드 둘레 빛(손맛 — 2026-10-29): 카드 밖 3칸에 하늘빛을 계단처럼(도트) — 바깥 칸부터 겹쳐 칠해 안쪽 칸일수록 진함(카드 바로 밖 ≈ 0.75 · 둘째 ≈ 0.42 ·셋째 ≈ 0.18) ·
 //  안쪽은 카드가 덮음 · a = 세기 0~1(숨 쉬듯 오르내림 · 누르면 1) — 그림자 번짐(shadowBlur)은 1칸 줄 그리기라 거의 안 보였음
 function cardGlow(g, x, y, w, h, a, col = '#8fe0ff') {
@@ -621,7 +619,7 @@ export const battle = {
     if (st.who === 'foe' && ACT_KINDS.has(st.kind) && !v.foeAct) v.foeAct = { t0: t };
     // 시안 ㉡ ㉣ 기술 카드: 그 식물의 차례 동안 떠 있음 → 다른 식물의 차례 · 턴 끝 효과 · 끝이 시작되면 내 카드는 아래로 사라짐(상대 카드는 위 foeToPile이 그 자리에서 더미로) · 메아리 = 같은 카드가 한 번 더 톡
     if (v.cue) for (const w of ['me', 'foe']) { const q = v.cue[w]; if (q && !q.tOut && (st.kind === 'tick' || st.kind === 'end' || (ACT_KINDS.has(st.kind) && st.who && st.who !== w))) q.tOut = t; }
-    if (CUE_KEYS.has(SKILLFX.key) && (st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { const q = (v.cue ||= {})[st.who]; if (q && !q.tOut && q.sk === st.skill) q.pulse = t; else v.cue[st.who] = { who: st.who, sk: st.skill, t0: t }; }
+    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { const q = (v.cue ||= {})[st.who]; if (q && !q.tOut && q.sk === st.skill) q.pulse = t; else v.cue[st.who] = { who: st.who, sk: st.skill, t0: t }; }
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms, st.skill); sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing'); }
     if (st.kind === 'cast' && st.skill) {   // 보조 기술 시전(㉡ castfx.js): 종류마다 다른 모양 · 터뜨리는 순간 소리
       const kind = castKind(st.skill);
@@ -808,36 +806,27 @@ export const battle = {
     sfx('flip');   // 카드가 떠오르는 소리(앉을 땐 pileIn)
   },
   cardFace(sk, k) { const F = (this.faces ||= {}), key = sk.id + '@' + k; return F[key] || (F[key] = renderFront(sk, CARD_W, CARD_H, k, { can: true })); },   // 손패와 같은 카드 앞면(기기 화소로 한 번)
-  downFace(k) { const D = (this.downs ||= {}); return D[k] || (D[k] = renderDown(CARD_W, CARD_H, CARD_W, CARD_H, k)); },   // 카드 뒷면(엎어 둔 카드)
-  // 시안 ㉡ ㉣ 기술 카드 한 장(경기장 좌표): 들어옴 → 떠 있음(살랑 · 메아리 = 톡) → 나감(내 카드 = 아래로 · 작아지며 사라짐) · 더미로 날아갈 자세(q.pose = 화면 좌표 · 더미 카드 배수)와 이름 띠 자리(q.band)를 남김
-  //  ㉡ flip = 머리 위(띠 바로 위)에서 엎어진 카드가 떠올라 뒤집힘(30칸) · ㉣ side = 식물 옆 큰 카드(40칸 — 상대 = 오른쪽 끝에서 미끄러져 들어와 더미 아래 · 나 = 손패 그 카드 자리에서 올라옴)
+  // 기술 카드 한 장(경기장 좌표 · 40칸): 들어옴(상대 = 오른쪽 끝에서 미끄러져 더미 아래로 · 나 = 손패 그 카드 자리에서 올라옴) → 떠 있음(살랑 · 메아리 = 톡) →
+  //  나감(상대 = foeToPile이 이 자세를 받아 그대로 더미 맨 위로 · 내 카드 = 손패 그 자리로 돌아가며 사라짐) · 더미로 날아갈 자세(q.pose = 화면 좌표 · 더미 카드 배수)와 이름 띠 자리(q.band)를 남김
   drawCue(app, q, t) {
-    const { g, W } = app, c = g.c, k = c.getTransform().a || 1, ox = Math.floor((W - 270) / 2), side = SKILLFX.key === 'side', foe = q.who === 'foe', age = t - q.t0;
-    const w = side ? 40 : 30, h = Math.round((w * CARD_H) / CARD_W), [px, py] = this.at(q.who);
-    let tx, ty;
-    if (side) { tx = foe ? Math.min(266 - w / 2, px + 52) : px + 74; ty = foe ? Math.max(AY + 5 + PILE_H + 8 + h / 2, py - 96) : py - 92; }
-    else { const [ax, ay] = this.above(q.who, foe ? 118 : 126); tx = ax; ty = Math.max(AY + 3 + h / 2, ay - h / 2 + 2); }
-    let x = tx, y = ty, s = 1, ang = 0, al = 1, th = 0;
-    if (side) {
-      const e = backOut(Math.min(1, age / 300)), ref = !foe && this.cards && this.cards['sk_' + q.sk.id];
-      const [sx, sy, ss] = foe ? [270 + w, ty - 10, 1] : ref ? [ref.x + ref.w / 2 - ox, ref.y + ref.h / 2, ref.w / w] : [-w, ty, 1];
-      x = sx + (tx - sx) * e; y = sy + (ty - sy) * e; s = ss + (1 - ss) * e; ang = (foe ? 0.06 : -0.06) + (foe ? 0.2 : -0.2) * (1 - e); al = Math.min(1, age / 90);
-    } else {
-      const p = Math.min(1, age / 130); s = 0.55 + 0.45 * backOut(p); y = ty + 12 * (1 - p); al = p;
-      th = age < 130 ? Math.PI : age < 380 ? Math.PI * (1 - easeInOut((age - 130) / 250)) : 0;
+    const { g, W } = app, c = g.c, k = c.getTransform().a || 1, ox = Math.floor((W - 270) / 2), foe = q.who === 'foe', age = t - q.t0;
+    const w = 40, h = Math.round((w * CARD_H) / CARD_W), [px, py] = this.at(q.who), tx = foe ? Math.min(266 - w / 2, px + 52) : px + 74, ty = foe ? Math.max(AY + 5 + PILE_H + 8 + h / 2, py - 96) : py - 92;
+    const ref = !foe && this.cards && this.cards['sk_' + q.sk.id], home = ref ? [ref.x + ref.w / 2 - ox, ref.y + ref.h / 2, ref.w / w] : null;   // 내 카드의 손패 자리(경기장 좌표 · 크기 배수)
+    const e = backOut(Math.min(1, age / 300)), [sx, sy, ss] = foe ? [270 + w, ty - 10, 1] : home || [-w, ty, 1];
+    let x = sx + (tx - sx) * e, y = sy + (ty - sy) * e, s = ss + (1 - ss) * e, ang = (foe ? 0.06 : -0.06) + (foe ? 0.2 : -0.2) * (1 - e), al = Math.min(1, age / 90);
+    if (age > 420) y += Math.sin((age - 420) / 380) * 1.2;   // 떠 있는 동안 살랑
+    if (q.pulse && t - q.pulse < 240) s *= 1 + 0.14 * Math.sin((Math.PI * (t - q.pulse)) / 240);   // 메아리 = 같은 카드가 한 번 더 톡
+    if (q.tOut) {   // 내 카드 = 손패 그 자리로 돌아가며 끝에서 흐려짐(자리를 모르면 아래로 작아지며)
+      const o = Math.min(1, (t - q.tOut) / CUE_OUT), eo = o * o * (3 - 2 * o);
+      if (home) { x += (home[0] - x) * eo; y += (home[1] - y) * eo; s += (home[2] - s) * eo; ang *= 1 - eo; al *= 1 - Math.max(0, (o - 0.6) / 0.4); }
+      else { y += 20 * o * o; s *= 1 - 0.3 * o; al *= 1 - o; }
+      if (o >= 1) { q.gone = true; return; }
     }
-    if (age > 420) y += Math.sin((age - 420) / 380) * 1.2;
-    if (q.pulse && t - q.pulse < 240) s *= 1 + 0.14 * Math.sin((Math.PI * (t - q.pulse)) / 240);
-    if (q.tOut) { const o = Math.min(1, (t - q.tOut) / CUE_OUT); y += 20 * o * o; s *= 1 - 0.3 * o; al *= 1 - o; if (o >= 1) { q.gone = true; return; } }
     const cw = w * s, ch = h * s;
     q.pose = { x: x + ox, y, s: cw / PILE_W, ang }; q.band = [x, y + ch / 2 - 4];
-    c.save(); c.globalAlpha *= al;
-    if (th > 0.02) drawFlip(c, this.cardFace(q.sk, k), this.downFace(k), x, y, cw, ch, th);
-    else {
-      c.translate(x, y); if (ang) c.rotate(ang);
-      rrect(g, -cw / 2 + 1, -ch / 2 + 2, cw, ch, 4, 'rgba(0,0,0,0.35)'); rrect(g, -cw / 2 - 1, -ch / 2 - 1, cw + 2, ch + 2, 4, T.ink);
-      c.imageSmoothingEnabled = true; c.drawImage(this.cardFace(q.sk, k), -cw / 2, -ch / 2, cw, ch);
-    }
+    c.save(); c.globalAlpha *= al; c.translate(x, y); if (ang) c.rotate(ang);
+    rrect(g, -cw / 2 + 1, -ch / 2 + 2, cw, ch, 4, 'rgba(0,0,0,0.35)'); rrect(g, -cw / 2 - 1, -ch / 2 - 1, cw + 2, ch + 2, 4, T.ink);
+    c.imageSmoothingEnabled = true; c.drawImage(this.cardFace(q.sk, k), -cw / 2, -ch / 2, cw, ch);
     c.restore();
   },
   drawRibbon(app) {
@@ -1034,13 +1023,11 @@ export const battle = {
       c.restore();
       if (TFX.key !== 'now') {   // 글자 연출 ㉠~㉣(?tfx=a|b|c|d) — art/textfx.js
         tfxPops(g, v.pops, t, v.ribbon);
-        if (v.cue) for (const w of ['foe', 'me']) { const q = v.cue[w]; if (q && !q.handed && !q.gone) this.drawCue(app, q, t); }   // 시안 ㉡ ㉣ 기술 카드(이름 띠보다 먼저 — 띠가 카드 아랫단에 붙음)
-        if (v.ribbon) {
-          const R = v.ribbon, k = g.c.getTransform().a || 1, q = v.cue && v.cue[R.who], under = !!(q && q.sk === R.sk && q.band && !q.handed && !q.gone);
-          const [rx, ry] = under ? q.band : this.above(R.who, R.who === 'me' ? 126 : 118);
-          R.face = SKILLFX.key === 'card' && R.sk ? this.cardFace(R.sk, k) : null; R.art = SKILLFX.key === 'strip' && R.sk ? this.cardFace(R.sk, k) : null; R.clamp = under;
-          R.minX = R.who === 'foe' ? 6 + BOX_W + 4 - ox : 6;
-          tfxRibbon(g, R, t, rx, (R.face || R.art) && R.who === 'foe' ? Math.max(ry, AY + 5 + PILE_H + 8) : ry, R.who === 'me' ? -1 : 1);   // 시안 ㉠ ㉢ 상대 띠 → 오른쪽 위 카드 더미에 안 닿게 조금 내림
+        if (v.cue) for (const w of ['foe', 'me']) { const q = v.cue[w]; if (q && !q.handed && !q.gone) this.drawCue(app, q, t); }   // 기술 카드(이름 띠보다 먼저 — 띠가 카드 아랫단에 붙음)
+        if (v.ribbon) {   // 기술 이름 띠 = 그 카드 밑(카드가 없는 띠 — 되받아치기 · 교체 = 머리 위 그대로)
+          const R = v.ribbon, q = v.cue && v.cue[R.who], under = !!(q && q.sk === R.sk && q.band && !q.handed && !q.gone), [rx, ry] = under ? q.band : this.above(R.who, R.who === 'me' ? 126 : 118);
+          R.clamp = under; R.minX = R.who === 'foe' ? 6 + BOX_W + 4 - ox : 6;
+          tfxRibbon(g, R, t, rx, ry, R.who === 'me' ? -1 : 1);
         }
         tfxTitle(g, v.title, t, 135, Lay.led - 30 + Math.round(glyphH('huge') / 2));
       } else for (const p of v.pops) {   // 떠오르는 글자: 처음 0.14초 톡 튀어 오르고 1.1초 동안 올라가며 사라짐 · 치명 = 큰 금빛 숫자 + 흔들림
