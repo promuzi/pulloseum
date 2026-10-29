@@ -172,105 +172,29 @@ export function statOf(sk, o = {}) {
   }
   return null;
 }
-const STEEL = ['#9fb0c8', '#e6eef8', '#4c5a70'];   // [속, 빛, 그늘] 검날(바탕 카드 테와 같은 쇠)
-const BADGE = {
-  pow: { icon: 'sword' }, block: { icon: 'shield' },
+const BADGE = {   // [속, 빛, 그늘] — 빛 = 연타 ×N 글자색
+  pow: { icon: 'sword', col: ['#b83a22', '#ffb08a', '#5a1a10'] }, block: { icon: 'shield', col: ['#56677e', '#d8e2ee', '#2c3646'] },
   bomb: { icon: 'bomb', col: POW },                                       // 광역 공격 = 폭탄 + 주황(공격 쪽 색)
-  dodge: { icon: 'speed', col: ['#0b8a8f', '#30e1b9', '#0b5e65'] },     // 청록(회피 아이콘 결)
-  barrier: { icon: 'ice', col: ['#4d9be6', '#8fd3ff', '#4d65b4'] },     // 하늘색(보호막 = 효과 칩과 같은 얼음 결정)
+  dodge: { icon: 'evade', col: ['#0b8a8f', '#30e1b9', '#0b5e65'] },     // 회피 = 잎이 흰 바람 줄을 달고 휙 비켜 감(icons.js evade — 전 = 빨리 감기 꺾쇠)
+  barrier: { icon: 'fx_barrier', col: ['#4d9be6', '#8fd3ff', '#4d65b4'] },  // 보호막 = 새싹을 감싼 물방울 막(효과 칩과 같은 그림 — tools/pixel/big/fx_barrier_bubble.py · 전 = 얼음 눈꽃 · 전투의 둥근 막과 같은 뜻)
   heal: { icon: 'heal', col: ['#239063', '#91db69', '#165a4c'] },       // 초록
 };
-// 표 모양 굽기(한 번 굽고 재사용): inside(i, j) = 속 칸 → col 색 · 속에 네 방향으로 닿은 바깥 칸 = 먹선(모서리는 저절로 둥글게)
-const baked = new Map();
-function bake(key, W, H, inside, col) {
-  let cv = baked.get(key); if (cv) return cv;
-  cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const c = cv.getContext('2d'), id = c.createImageData(W, H), d = id.data, ink = hexRgb(C.ink);
-  const at = (i, j) => i >= 0 && j >= 0 && i < W && j < H && inside(i, j);
-  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-    const rgb = at(i, j) ? hexRgb(col(i, j, at)) : at(i - 1, j) || at(i + 1, j) || at(i, j - 1) || at(i, j + 1) ? ink : null;
-    if (!rgb) continue;
-    const k = (j * W + i) * 4; d[k] = rgb[0]; d[k + 1] = rgb[1]; d[k + 2] = rgb[2]; d[k + 3] = 255;
-  }
-  c.putImageData(id, 0, 0); baked.set(key, cv); return cv;
-}
-const edge3 = ([m, hi, lo], i, j, at) => (!at(i, j - 1) ? hi : !at(i, j + 1) ? lo : m);   // 위 가장자리 = 빛 · 아래 = 그늘
-// 검(손잡이는 카드 안쪽 · 칼끝은 모서리): 자루 끝 3 · 손잡이 3 · 코등이 3 · 날 bl(숫자 칸) · 칼끝 5, 높이 17 = 비용 마름모와 같음
-function swordCv(bl, dim) {
-  const W = bl + 16, cy = 8, t0 = 10 + bl, S = dim ? GEM.off : STEEL, P = dim ? GEM.off : POW;
-  const part = i => (i < 1 ? '' : i < 4 ? 'pommel' : i < 7 ? 'grip' : i < 10 ? 'guard' : i < t0 ? 'blade' : i < t0 + 5 ? 'tip' : '');
-  const half = i => ({ pommel: 2, grip: 1, guard: 7, blade: 5, tip: t0 + 4 - i }[part(i)] ?? -1);
-  const inside = (i, j) => Math.abs(j - cy) <= half(i) && !(part(i) === 'pommel' && i !== 2 && Math.abs(j - cy) === 2);
-  const col = (i, j, at) => {
-    const p = part(i);
-    if (p === 'blade' || p === 'tip') return edge3(S, i, j, at);
-    if (p === 'guard') return i === 7 ? P[1] : i === 9 ? P[2] : edge3(P, i, j, at);
-    if (p === 'grip') return j === cy - 1 ? hexMix(P[2], P[0], 0.45) : P[2];
-    return i === 1 && j <= cy ? P[1] : edge3(P, i, j, at);
-  };
-  return bake(`pow|${bl}|${dim ? 1 : 0}`, W, 17, inside, col);
-}
-// 방패(위는 평평 · 아래는 뾰족): 너비 sw(짝수 — 끝이 두 칸), 속 20줄 = 위 12줄 곧게(숫자 칸) → 아래 8줄 좁아짐(끝 = 카드 y+22, 묶임·도발 꼬리표 바로 위)
-//  짙은 쇠 바탕(바탕 카드의 밝은 쇠 테와 갈림) + 밝은 테두리(위·왼 빛 · 아래·오른 그늘), 오른쪽 반은 한 단 어둡게
 const WARM = ['#8a5a24', '#ffd890', '#a8743a'];   // 절반이 된 자세(주황 — 바뀐 걸 알게)
-function shieldCv(sw, dim, warm) {
-  const F = dim ? GEM.off : warm ? WARM : [NONE.dark, NONE.light, NONE.main], mid = sw / 2;
-  const inset = r => (r === 0 ? 1 : r < 12 ? 0 : Math.round((mid - 1) * ((r - 11) / 8) ** 1.5));
-  const inside = (i, j) => j >= 1 && j <= 20 && i >= 1 + inset(j - 1) && i <= sw - inset(j - 1);
-  const col = (i, j, at) => (!at(i, j - 1) || !at(i - 1, j) ? F[1] : !at(i, j + 1) || !at(i + 1, j) ? F[2] : i <= mid ? F[0] : hexMix(F[0], C.ink, 0.3));
-  return bake(`block|${sw}|${dim ? 1 : 0}|${warm ? 1 : 0}`, sw + 2, 22, inside, col);
-}
-const num = (g, txt, cx, cy, gh) => g.text(txt, cx, cy - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
-// ── 오른쪽 위 수치 시안(2026-10-29 사용자 '우측 상단과 좌측상단의 아이콘도 함 봐보자. 숫자 써있는 그거') — 주소 ?badge=a|b로만(기본 = 지금 그대로) ──
-//  지금 = 검(가로 · 날 위 숫자) · 방패 · 알약(아이콘이 왼쪽에 걸침) · 폭탄 + 알약 넷이 섞이고, '35×3' · '+50%'처럼 긴 수는 그림을 넓게 가리며 왼쪽 해에 닿을 만큼 길어짐
-//  ㉠ a = 한 모양 꼬리표(종류 색 바탕 + 안쪽 왼쪽 아이콘 + 숫자 · 연타 ×N은 작게) · ㉡ b = 바탕 없이 아이콘 + 큰 숫자(먹선 2칸 — 그림을 덜 가림)
-//  (동전 — 해와 같은 크기 동그라미에 숫자 — 도 그려 봤지만 '106' · '+50%' · '15%'가 동그라미 밖으로 넘치고 아이콘이 안 보여 버림)
-let BADGE_STYLE = '0';
-try { BADGE_STYLE = (new URLSearchParams(location.search).get('badge') || '0').toLowerCase(); } catch {}
-export const setBadgeStyle = s => { BADGE_STYLE = s || '0'; };
-const BTYPE = { pow: { icon: 'sword', col: ['#b83a22', '#ffb08a', '#5a1a10'] }, bomb: { icon: 'bomb', col: POW }, block: { icon: 'shield', col: ['#56677e', '#d8e2ee', '#2c3646'] }, dodge: BADGE.dodge, barrier: BADGE.barrier, heal: BADGE.heal };
+// 오른쪽 위 수치(내용 = 2026-10-16 사용자 '%는 %, 고정값이면 그냥 숫자 · 공격은 검 · 방어는 방패 · 버프나 디버프 등은 비워 놔' 그대로):
+//  모양 = 2026-10-29 사용자가 고른 시안 ㉡ '바탕 없이' — 종류 아이콘(먹선 1칸) + 큰 숫자(먹선 3칸)만, 연타 ×N은 작게. 왼쪽 해에 닿을 만큼 길면 글자를 한 칸씩 줄임(maxW)
+//  전 = 검(가로 · 날 위 숫자 · 끝이 화살표처럼 뾰족) · 방패 · 알약 · 폭탄 + 알약 네 모양이 섞이고 '35×3' · '+50%'가 그림을 넓게 가렸음. 버린 시안 = 한 모양 꼬리표 ㉠ · 동전(결정 로그)
 const splitHits = txt => { const m = /^(.+?)(×\d+)$/.exec(txt); return m && !txt.startsWith('×') ? [m[1], m[2]] : [txt, null]; };   // '35×3' → ['35', '×3'] · 방어 '×4'는 그대로
-function badgeLook(st, dim) { const T = BTYPE[st.kind] || { icon: st.icon, col: st.col }; return { ic: T.icon || null, col: dim ? GEM.off : st.half ? WARM : st.col || T.col || GEM.off }; }
-function tagBadge(g, xr, cy, st, dim, maxW) {   // ㉠ — 왼쪽 해에 닿을 만큼 길면 글자를 한 칸씩 줄임(maxW)
-  const { ic, col: [f, hi, lo] } = badgeLook(st, dim), [main, sub] = splitHits(st.txt), SUB = sized('bold', 9), im = ic && icon(ic), iw = im ? im.width + 2 : 0, sw = sub ? g.textW(sub, SUB) + 1 : 0;
-  const font = ['bold', sized('bold', 10), sized('bold', 9)].find(k => 3 + iw + g.textW(main, k) + sw + 4 <= maxW) || sized('bold', 9);
-  const mw = g.textW(main, font), w = 3 + iw + mw + sw + 4, x = Math.round(xr - w), y = cy - 7, gh = glyphH(font);
-  rrect(g, x, y, w, 15, 4, C.ink); rrect(g, x + 1, y + 1, w - 2, 13, 3, hexMix(f, C.ink, 0.3));
-  g.rect(x + 3, y + 1, w - 6, 1, hi); g.rect(x + 3, y + 13, w - 6, 1, lo);
-  if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, x + 3, cy - Math.floor(im.height / 2)));
-  g.text(main, x + 3 + iw, cy - Math.round(gh / 2), { font, color: '#ffffff', outline: C.ink, outlineW: 2 });
-  if (sub) g.text(sub, x + 3 + iw + mw + 1, cy - Math.round(gh / 2) + 2, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
-}
-function bareBadge(g, xr, cy, st, dim, maxW) {   // ㉡ — 왼쪽 해에 닿을 만큼 길면 글자를 한 칸씩 줄임(maxW)
-  const { ic, col: [, hi] } = badgeLook(st, dim), [main, sub] = splitHits(st.txt), SUB = sized('bold', 9), im = ic && icon(ic), sw = sub ? g.textW(sub, SUB) + 1 : 0, iw = im ? im.width + 1 : 0;
-  const font = ['value', 'bold', sized('bold', 10)].find(k => 1 + g.textW(k === 'value' ? main : main, k) + sw + iw <= maxW) || sized('bold', 10), gh = glyphH(font);
-  const mw = g.textW(main, font), x = Math.round(xr - 1 - mw - sw - iw);
-  if (im) g.alpha(dim ? 0.55 : 1, () => { const L = Math.floor(im.height / 2); g.c.save(); g.c.shadowColor = C.ink; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.img(tinted(ic, C.ink), x + dx, cy - L + dy); g.c.restore(); g.img(im, x, cy - L); });   // 아이콘 둘레 먹선 1칸
-  g.text(main, x + iw, cy - Math.round(gh / 2), { font, color: '#ffffff', outline: C.ink, outlineW: 3 });
-  if (sub) g.text(sub, x + iw + mw + 1, cy - Math.round(gh / 2) + 4, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
-}
-// xr = 오른쪽 끝(이 칸 앞까지), cy = 가운데 줄(비용 숫자와 같은 줄)
-function statBadge(g, xr, cy, st, dim, gh, maxW = 42) {
+// xr = 오른쪽 끝(이 칸 앞까지), cy = 가운데 줄(비용 숫자와 같은 줄), maxW = 왼쪽 해 오른쪽 끝까지 너비
+function statBadge(g, xr, cy, st, dim, maxW = 42) {
   if (!st) return;
-  if (BADGE_STYLE === 'a') return tagBadge(g, xr, cy, st, dim, maxW);
-  if (BADGE_STYLE === 'b') return bareBadge(g, xr, cy, st, dim, maxW);
-  const c = g.c, tw = g.textW(st.txt, 'bold');
-  c.imageSmoothingEnabled = false;
-  if (st.kind === 'pow') {   // 검 날 위에 위력
-    const bl = Math.max(12, tw + 2), cv = swordCv(bl, dim), sx = xr - cv.width;
-    c.drawImage(cv, sx, cy - 8);
-    num(g, st.txt, sx + 10 + bl / 2, cy, gh);
-  } else if (st.kind === 'block') {   // 방패 속에 막는 몫
-    const sw = Math.max(16, tw + 8) & ~1, cv = shieldCv(sw, dim, st.half), sx = xr - cv.width;
-    c.drawImage(cv, sx, cy - 8);
-    num(g, st.txt, sx + cv.width / 2, cy, gh);
-  } else {   // 광역(폭탄) · 회피 · 보호막 · 회복 = 아이콘 + 알약(아이콘이 알약 왼쪽 끝에 걸침)
-    const B = BADGE[st.kind] || { icon: st.icon, col: st.col }, pw = tw + 9, px = xr - pw, py = cy - 7, [f, h, l] = dim ? GEM.off : st.half ? WARM : st.col || B.col, ic = B.icon ? icon(B.icon) : null;   // pill = 카드 수치(색을 st 가 줌 · 아이콘 없음 — 그림에 이미 있음)
-    rrect(g, px, py, pw, 14, 5, C.ink); rrect(g, px + 1, py + 1, pw - 2, 12, 4, f);
-    g.rect(px + 4, py + 2, pw - 8, 1, h); g.rect(px + 4, py + 11, pw - 8, 1, l);
-    if (ic) g.alpha(dim ? 0.55 : 1, () => g.img(ic, px - 8, cy - 5));
-    num(g, st.txt, px + 3 + (pw - 3) / 2, cy, gh);
-  }
+  const B = BADGE[st.kind] || { icon: st.icon, col: st.col }, hi = (dim ? GEM.off : st.half ? WARM : st.col || B.col || GEM.off)[1];
+  const [main, sub] = splitHits(st.txt), SUB = sized('bold', 9), ic = B.icon || null, im = ic && icon(ic), sw = sub ? g.textW(sub, SUB) + 1 : 0, iw = im ? im.width + 1 : 0;
+  const font = ['value', 'bold', sized('bold', 10)].find(k => 1 + g.textW(main, k) + sw + iw <= maxW) || sized('bold', 10), gh = glyphH(font);
+  const mw = g.textW(main, font), x = Math.round(xr - 1 - mw - sw - iw);
+  g.c.imageSmoothingEnabled = false;
+  if (im) g.alpha(dim ? 0.55 : 1, () => { const L = Math.floor(im.height / 2); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.img(tinted(ic, C.ink), x + dx, cy - L + dy); g.img(im, x, cy - L); });   // 아이콘 둘레 먹선 1칸
+  g.text(main, x + iw, cy - Math.round(gh / 2), { font, color: dim ? '#c3c7d0' : '#ffffff', outline: C.ink, outlineW: 3 });
+  if (sub) g.text(sub, x + iw + mw + 1, cy - Math.round(gh / 2) + 4, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
 }
 
 // 카드 이름 두 줄(2026-10-29 사용자 '검방술의 경우 )가 아랫줄로 밀림'): wrapName으로 끊고, 띄어쓰기가 있는 이름이 두 줄에 안 들어가 단어 가운데서 끊기면
@@ -332,7 +256,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     sunDisc(g, x + 10, y + 10, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
     g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
-  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, gh, w - 24);   // w - 24 = 왼쪽 해(비용) 오른쪽 끝까지
+  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, w - 24);   // w - 24 = 왼쪽 해(비용) 오른쪽 끝까지
   cardMarks(g, x, y, w, sk, dim);
   if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
     const txt = '다 씀', tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);

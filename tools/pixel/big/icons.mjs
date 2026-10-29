@@ -19,7 +19,7 @@ const SHEETS = {
   icons_10: [null, 'st_spore', null, null], icons_11: [null, null, null, 'st_frozen'], icons_12: ['st_paral', 'st_leech', 'st_root', null],
   // 효과 · 스킬 분류 엑셀 v10 기준 효과 아이콘(concept/icons3/FX_PROMPT.md — 2026-10-22 사용자 "아이콘은 엑셀 … 기준으로")
   fx_01: ['fx_burn', 'fx_poison', 'fx_bleed', 'fx_shock'], fx_02: ['fx_chill', 'fx_wet', 'fx_shade', 'fx_seal'], fx_03: ['fx_taunt', 'fx_regen', 'fx_will', 'fx_immune'],
-  fx_04: ['fx_aim', 'fx_stealth', 'fx_barrier', 'fx_evade'], fx_05: ['fx_reflect', 'fx_armor', 'env_gale', 'env_inferno'],
+  fx_04: ['fx_aim', 'fx_stealth', null, 'fx_evade'], fx_05: ['fx_reflect', 'fx_armor', 'env_gale', 'env_inferno'],
   fx_06: ['env_fortress', 'env_sandcastle', 'env_sandstorm', 'env_healcastle'], fx_07: ['env_hellfort', 'env_walkcastle', 'trap_thorn', 'summon_guard'],
   fx_08: ['env_storm', 'res_reso', 'res_evstack', 'fx_counter'],
   fx_10: ['env_morning', 'env_night', 'env_miasma', 'fx_fruit'], fx_11: ['fx_revive', 'fx_bounce', 'fx_charm', 'fx_execute'], fx_12: ['fx_settle', 'fx_inject', 'res_prep', null],   // 2026-10-29 아홉 종(concept/icons3/FX10_PROMPT.md)
@@ -42,6 +42,7 @@ function outs(n) {
 // 18칸 효과 창 아이콘을 만드는 그림(art/icons.js MID 와 같은 목록)
 function MID(n) { return /^(fx_|st_|env_|trap_|summon_)/.test(n) || ['sword', 'shield', 'speed', 'crit', 'target'].includes(n); }
 const only = process.argv.slice(2);
+// fx_barrier(보호막) = 원화 결정 대신 '새싹을 감싼 물방울 막' 손그림(2026-10-29 사용자 '보호막도 아이콘이 뭘 말하려는지 모르겠음') — 만드는 곳 tools/pixel/big/fx_barrier_bubble.py · 여기선 다시 뽑지 않음
 const dirOf = sheet => sheet.startsWith('fx_') ? resolve(here, 'concept', 'icons3') : CON;   // 판이 있는 폴더(엑셀 효과 아이콘 = icons3)
 for (const D of [CON, dirOf('fx_')]) { mkdirSync(resolve(D, 'split'), { recursive: true }); mkdirSync(resolve(D, 'cut'), { recursive: true }); }
 mkdirSync(resolve(repo, 'assets', 'v2', 'icons'), { recursive: true }); mkdirSync(resolve(here, 'out', 'icons'), { recursive: true });
