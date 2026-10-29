@@ -60,7 +60,7 @@ try {
   ok(Math.abs(left1 - left0) < 120, `전투: 안내 동안 시간 멈춤(흐른 시간 ${Math.round(left1 - left0)}ms)`);
 
   // ③ 다른 화면들: 저절로 뜨고 장 수가 맞음
-  for (const [scene, id] of [['plant', 'plant3'], ['nursery', 'nursery'], ['explore', 'explore'], ['shop', 'shop'], ['bag', 'bag'], ['storage', 'storage'], ['dex', 'dex']]) {
+  for (const [scene, id] of [['plant', 'plant3'], ['nursery', 'nursery'], ['explore', 'explore'], ['shop', 'shop2'], ['bag', 'bag'], ['storage', 'storage'], ['dex', 'dex']]) {
     await open(scene); await run(2200);
     s = await st();
     ok(s.open && s.ids.includes(id) && s.n > 0, `${scene}: 저절로 뜸(${s.n}장)`);

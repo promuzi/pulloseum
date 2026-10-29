@@ -1471,10 +1471,12 @@ export const battle = {
       g.clip(x + 15, yy + 6, 30, 30, () => drawPortrait(g, artOf(u), x + 14, yy + 5, 32, false));
       g.text(u.name, x + 54, yy + 5, { font: 'bold', color: S.text });
       idTag(g, x + 54 + g.textW(u.name, 'bold') + 5, yy + 4, u, false);   // 정체 꼬리표(속성 | 종 | 변이)
-      tbar(g, x + 54, yy + 24, 110, 6, u.hp / u.max, 'hp');
-      g.text(`${Math.ceil(u.hp)}/${u.max}`, x + 170, yy + 21, { color: S.text });
+      // 체력 막대 · 숫자 · 햇빛 칸 한 줄: 막대 길이를 남는 자리에 맞춤(2026-10-29 — 숫자가 '1008/1008'처럼 길면 햇빛 칸을 덮었음)
+      const pw = B.ownSun && !dead ? (u.energyMax || 8) * 5 : 0, px = x + w - 18 - pw, ht = `${Math.ceil(u.hp)}/${u.max}`, htw = g.textW(ht), bw = Math.max(36, Math.min(110, (pw ? px - 8 : x + w - 18) - htw - 6 - (x + 54)));
+      tbar(g, x + 54, yy + 24, bw, 6, u.hp / u.max, 'hp');
+      g.text(ht, x + 54 + bw + 6, yy + 21, { color: S.text });
       if (on || dead) g.text(dead ? '쓰러짐' : '싸우는 중', x + w - 18, yy + 5, { color: dead ? T.text.dim : '#8ccfff', align: 'right' });   // 쓰러진 자리를 채울 땐 앞 식물도 '쓰러짐'
-      if (B.ownSun && !dead) sunPips(g, x + w - 18 - (u.energyMax || 8) * 5, yy + 24, u.energy, u.energyMax || 8, 5, 0);   // 햇빛 식물마다 따로(2026-10-22) — 대기석 식물은 그대로라 누가 햇빛을 모았는지 보임
+      if (pw) sunPips(g, px, yy + 24, u.energy, u.energyMax || 8, 5, 0);   // 햇빛 식물마다 따로(2026-10-22) — 대기석 식물은 그대로라 누가 햇빛을 모았는지 보임
       if (can) input.hit(id, x + 8, ry, w - 16, 44, () => this.pickSwitch(app, i));
     });
     if (!forced) button(app, 'sw_close', x + w / 2 - 50, y + h - 36, 100, 28, '닫기', { style: 'night', onTap: () => { this.sheet = null; } });
