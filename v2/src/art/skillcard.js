@@ -245,8 +245,9 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   if (sk.passive && sk.lv > 1) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22): 그림 왼쪽 아래
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
-  if (o.cd) cdDial(g, x + 10, y + 10, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
-  else if (sk.uses) usesDial(g, x + 10, y + 10, o.left != null ? o.left : sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
+  let leftR = 20;   // 왼쪽 위 표시의 오른쪽 끝(카드 왼쪽에서 몇 칸) — 오른쪽 위 수치가 여기까지 비켜 섬
+  if (o.cd) leftR = cdDial(g, x, y, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
+  else if (sk.uses) leftR = usesDial(g, x, y, o.left != null ? o.left : sk.uses, sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
   else if (sk.passive) {   // 패시브 카드: 비용 대신 카드 색 마름모 + 반짝이
     const L = sk.look || {}, ic = icon('sparkle');
     diamond(g, x + 9, y + 9, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
@@ -256,12 +257,17 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     sunDisc(g, x + 10, y + 10, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
     g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
-  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, w - 24);   // w - 24 = 왼쪽 해(비용) 오른쪽 끝까지
+  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, w - 4 - leftR);   // 왼쪽 위 표시(해 · 보석 띠 · 모래시계) 오른쪽 끝 + 2칸까지
   cardMarks(g, x, y, w, sk, dim);
   if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
     const txt = '다 씀', tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);
     rrect(g, lx - 5, ly, tw + 10, 17, 4, 'rgba(6,10,20,0.88)');
     g.text(txt, lx, ly + Math.round((17 - gh) / 2), { font: 'bold', color: (FORMS[sk.form] || {}).light || '#ffffff' });
+  }
+  if (o.cd) {   // 재사용 대기: 그림 가운데 = 'N턴 뒤'(다시 쓸 수 있을 때까지 — '다 씀' · '봉인'과 같은 자리)
+    const txt = `${o.cd}턴 뒤`, tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);
+    rrect(g, lx - 5, ly, tw + 10, 17, 4, 'rgba(6,10,20,0.88)');
+    g.text(txt, lx, ly + Math.round((17 - gh) / 2), { font: 'bold', color: '#ffe3a0' });
   }
   if (dim && o.lock) {   // 묶임 · 도발: 그림 가운데에 짧게(자세한 까닭은 뒷면)
     const L = STATUS[o.lock] || {}, li = L.icon && icon(L.icon), txt = LOCK_SHORT[o.lock] || '', tw = g.textW(txt, 'bold') + (li ? 14 : 0), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 15) / 2);
@@ -285,19 +291,26 @@ function cardMarks(g, x, y, w, sk, dim) {
   if (sk.drain && sk.act === 'attack') { const im = icon('heal'); rrect(g, xr - 13, y + 18, 13, 13, 3, 'rgba(6,10,20,0.86)'); if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, xr - 11, y + 19)); }   // 흡수(때린 만큼 회복)
   if (sk.inflict && (sk.inflict.n || 1) > 1) { const L = STATUS[sk.inflict.id] || {}; tag(g, xr, artB - 14, '×' + sk.inflict.n, dim ? '#a7adb8' : (L.col || '#ffffff'), L.icon); }   // 걸리는 효과 겹 수
 }
-// 충전 다이얼(변이 기술 — 비용 마름모 자리): 변이 색 원 + 기다리는 턴 수 + 위쪽 눈금
-function usesDial(g, cx, cy, n, F, dim) {   // 변이 기술 횟수(변이 색 동그라미 + 숫자 — 2026-10-17 비용 숫자와 같이 키움)
-  const col = dim ? GEM.off : [F ? F.col : '#8ea3c2', F ? F.light : '#ffffff', C.ink], vh = glyphH('value');
-  g.disc(cx, cy, 9, C.ink); g.disc(cx, cy, 8, col[0]); g.disc(cx, cy, 6, hexMix(col[0], C.ink, 0.45));
-  g.rect(cx, cy - 8, 1, 2, col[1]);
-  g.text(String(n), cx + 0.5, cy - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+// 비용 자리의 다른 표시 둘(2026-10-29 사용자 '햇빛대신 빨간원이랑 검은 원은 뭐임?' → '두개도 다듬어봐' — 숫자 동그라미가 햇빛 비용처럼 읽혀 뜻을 몰랐음):
+//  변이 기술 = 판마다 쓸 수 있는 횟수 → 변이 색 띠에 보석 칸(남은 칸 = 밝은 보석 · 쓴 칸 = 빈 홈) · 재사용 대기 = 또렷한 모래시계 + 남은 턴(+ 못 쓰는 동안 그림 가운데 'N턴 뒤')
+const GEM7 = ['...a...', '..aba..', '.abbba.', 'abbbbba', '.abbba.', '..aba..', '...a...'];
+function usesDial(g, x0, y0, n, max, F, dim) {   // (x0, y0) = 카드 왼쪽 위 · n = 남은 횟수 · max = 판마다 횟수(1~3) → 오른쪽 끝(카드 왼쪽에서 몇 칸)
+  const m = Math.max(1, Math.min(max || 1, 4)), w = m * 8 + 4, x = x0 + 2, y = y0 + 4, base = dim ? GEM.off[0] : F ? F.col : '#8ea3c2', light = dim ? GEM.off[1] : F ? F.light : '#ffffff';
+  rrect(g, x, y, w, 13, 4, C.ink); rrect(g, x + 1, y + 1, w - 2, 11, 3, hexMix(base, C.ink, 0.3)); g.rect(x + 3, y + 1, w - 6, 1, hexMix(base, '#ffffff', 0.35));
+  for (let k = 0; k < m; k++) {
+    const gx = x + 3 + k * 8, gy = y + 3, on = k < n;
+    GEM7.forEach((r, j) => { for (let i = 0; i < 7; i++) if (r[i] !== '.') g.px(gx + i, gy + j, r[i] === 'a' ? C.ink : on ? (j < 3 ? '#ffffff' : light) : hexMix(base, C.ink, 0.7)); });   // 남은 칸 = 밝은 보석(위 반 흰빛) · 쓴 칸 = 빈 홈
+  }
+  return 2 + w;
 }
-
-function cdDial(g, cx, cy, n) {   // 재사용 대기: 어두운 동그라미 + 위아래 모래시계 테 + 남은 턴
-  const vh = glyphH('value');
-  g.disc(cx, cy, 9, C.ink); g.disc(cx, cy, 8, '#3a4258'); g.disc(cx, cy, 6, '#252b3c');
-  g.rect(cx - 4, cy - 8, 9, 2, '#c9b07a'); g.rect(cx - 4, cy + 7, 9, 2, '#c9b07a');
-  g.text(String(n), cx + 0.5, cy - Math.round(vh / 2), { font: 'value', color: '#ffe3a0', align: 'center', outline: C.ink, outlineW: 2 });
+const HOUR = ['ooooooo', 'oyyyyyo', 'ooooooo', '.olXlo.', '..oXo..', '...o...', '..olo..', '.oXXXo.', 'ooooooo', 'oyyyyyo', 'ooooooo'];   // 모래시계: 금 테 위아래 · 위 모래가 아래로
+const HOUR_COL = { o: '#2e222f', y: '#f9c22b', X: '#fbb954', l: '#c7dcd0' };
+function cdDial(g, x0, y0, n) {   // 재사용 대기: 어두운 띠 + 모래시계 + 남은 턴
+  const vh = glyphH('value'), tw = g.textW(String(n), 'value'), w = 3 + 7 + 2 + tw + 4, x = x0 + 2, y = y0 + 3;
+  rrect(g, x, y, w, 15, 4, C.ink); rrect(g, x + 1, y + 1, w - 2, 13, 3, '#2c3346'); g.rect(x + 3, y + 1, w - 6, 1, '#4a5470');
+  HOUR.forEach((r, j) => { for (let i = 0; i < 7; i++) { const ch = r[i]; if (ch !== '.') g.px(x + 3 + i, y + 2 + j, HOUR_COL[ch]); } });
+  g.text(String(n), x + 12, y + 7.5 - Math.round(vh / 2), { font: 'value', color: '#ffe3a0', outline: C.ink, outlineW: 2 });
+  return 2 + w;
 }
 
 // 빈 칸(배운 기술이 셋보다 적을 때 · 꾹 눌러 들어 올린 카드의 자리)
