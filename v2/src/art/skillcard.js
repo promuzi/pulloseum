@@ -120,21 +120,14 @@ function cardFrame(g, x, y, w, h, sk, lit) {
   rrect(g, x + 3, y + 3, w - 6, h - 6, 2, C.ink);
   kindMarks(g, x, y, w, h, sk, mid);
 }
-// 종류 · 등급 표시(2026-10-22 사용자 "카드테두리나 이런것도 구분이 잘되는 ui를 고민해보자" — 테 모양 · 색은 그대로, 테 아래 가운데에 보석 · 점만):
-//  패시브 = 테에 점선(우표처럼 — 기술 카드와 갈림) · 개성(그 종만의 기술) = 금빛 보석 · 가지 · 특수 = 청록 보석 · 중급 = 하늘 점 하나 · 상급 = 보라 점 둘 · 하급 · 기본기 = 없음
+// 패시브 카드 = 테에 점선(우표처럼 — 기술 카드와 갈림, 2026-10-22). 테 아래 가운데 등급 보석 · 점(개성 금 · 가지 · 특수 청록 · 중급 하늘 점 · 상급 보라 점 둘)은
+//  2026-10-29 사용자 '아래 표시가 직관적이지 않아' → '빼자'로 지움 — 등급은 꾹 눌러 보는 뒷면 첫 줄 글(예: '개성 · 공격 · 근접 · 불 속성')로
 //  (변이 카드 = 각진 갑옷 테 · 강화 패시브 = 은빛 · 금빛 테는 frameCols)
-function gem(g, cx, cy, f, hi) {
-  for (let d = -4; d <= 4; d++) { const hw = 4 - Math.abs(d); g.rect(cx - hw, cy + d, hw * 2 + 1, 1, C.ink); }
-  for (let d = -3; d <= 3; d++) { const hw = 3 - Math.abs(d); g.rect(cx - hw, cy + d, hw * 2 + 1, 1, d < 0 ? hi : f); }
-  g.px(cx - 1, cy - 2, '#ffffff'); g.px(cx - 2, cy - 1, '#ffffff');
-}
-const TIER_PIP = { c2: [1, '#8fd3ff'], c3: [2, '#c48cff'] }, TIER_GEM = { u: ['#e0a830', '#fff3c8'], g: ['#2fa3a8', '#bff4f0'], s: ['#2fa3a8', '#bff4f0'] };
 function kindMarks(g, x, y, w, h, sk, mid) {
-  if (sk.passive) { const dc = hexMix(mid, '#ffffff', 0.6); for (let i = x + 7; i < x + w - 7; i += 3) { g.px(i, y + 2, dc); g.px(i, y + h - 3, dc); } for (let j = y + 7; j < y + h - 7; j += 3) { g.px(x + 2, j, dc); g.px(x + w - 3, j, dc); } return; }
-  if (sk.basic) return;
-  const G = TIER_GEM[sk.tier], P = TIER_PIP[sk.tier], cx = x + (w >> 1), cy = y + h - 2;
-  if (G) gem(g, cx, cy, G[0], G[1]);
-  else if (P) { const [n, col] = P, x0 = cx - Math.round((n * 6 - 2) / 2); for (let i = 0; i < n; i++) { const px = x0 + i * 6; g.rect(px - 1, cy - 2, 6, 5, C.ink); g.rect(px, cy - 1, 4, 3, col); g.px(px, cy - 1, '#ffffff'); } }
+  if (!sk.passive) return;
+  const dc = hexMix(mid, '#ffffff', 0.6);
+  for (let i = x + 7; i < x + w - 7; i += 3) { g.px(i, y + 2, dc); g.px(i, y + h - 3, dc); }
+  for (let j = y + 7; j < y + h - 7; j += 3) { g.px(x + 2, j, dc); g.px(x + w - 3, j, dc); }
 }
 // 해(비용 = 햇빛 에너지 — 2026-10-17 사용자 "카드 왼쪽 상단 mp 소모량 숫자가 너무 작아 · 그 아이콘을 해 모양으로"): 먹선 원판 + 빛살 여덟(십자 = 굵게 · 대각선 = 점)
 //  색 = [속, 빛, 그늘] — ok 금빛 · bad(에너지 모자람) 주황빛 빨강 · off(못 씀) 회색. 빛살 끝 = 반지름 r + 3
@@ -228,9 +221,39 @@ function shieldCv(sw, dim, warm) {
   return bake(`block|${sw}|${dim ? 1 : 0}|${warm ? 1 : 0}`, sw + 2, 22, inside, col);
 }
 const num = (g, txt, cx, cy, gh) => g.text(txt, cx, cy - Math.round(gh / 2), { font: 'bold', color: '#ffffff', align: 'center', outline: C.ink, outlineW: 2 });
+// ── 오른쪽 위 수치 시안(2026-10-29 사용자 '우측 상단과 좌측상단의 아이콘도 함 봐보자. 숫자 써있는 그거') — 주소 ?badge=a|b로만(기본 = 지금 그대로) ──
+//  지금 = 검(가로 · 날 위 숫자) · 방패 · 알약(아이콘이 왼쪽에 걸침) · 폭탄 + 알약 넷이 섞이고, '35×3' · '+50%'처럼 긴 수는 그림을 넓게 가리며 왼쪽 해에 닿을 만큼 길어짐
+//  ㉠ a = 한 모양 꼬리표(종류 색 바탕 + 안쪽 왼쪽 아이콘 + 숫자 · 연타 ×N은 작게) · ㉡ b = 바탕 없이 아이콘 + 큰 숫자(먹선 2칸 — 그림을 덜 가림)
+//  (동전 — 해와 같은 크기 동그라미에 숫자 — 도 그려 봤지만 '106' · '+50%' · '15%'가 동그라미 밖으로 넘치고 아이콘이 안 보여 버림)
+let BADGE_STYLE = '0';
+try { BADGE_STYLE = (new URLSearchParams(location.search).get('badge') || '0').toLowerCase(); } catch {}
+export const setBadgeStyle = s => { BADGE_STYLE = s || '0'; };
+const BTYPE = { pow: { icon: 'sword', col: ['#b83a22', '#ffb08a', '#5a1a10'] }, bomb: { icon: 'bomb', col: POW }, block: { icon: 'shield', col: ['#56677e', '#d8e2ee', '#2c3646'] }, dodge: BADGE.dodge, barrier: BADGE.barrier, heal: BADGE.heal };
+const splitHits = txt => { const m = /^(.+?)(×\d+)$/.exec(txt); return m && !txt.startsWith('×') ? [m[1], m[2]] : [txt, null]; };   // '35×3' → ['35', '×3'] · 방어 '×4'는 그대로
+function badgeLook(st, dim) { const T = BTYPE[st.kind] || { icon: st.icon, col: st.col }; return { ic: T.icon || null, col: dim ? GEM.off : st.half ? WARM : st.col || T.col || GEM.off }; }
+function tagBadge(g, xr, cy, st, dim, maxW) {   // ㉠ — 왼쪽 해에 닿을 만큼 길면 글자를 한 칸씩 줄임(maxW)
+  const { ic, col: [f, hi, lo] } = badgeLook(st, dim), [main, sub] = splitHits(st.txt), SUB = sized('bold', 9), im = ic && icon(ic), iw = im ? im.width + 2 : 0, sw = sub ? g.textW(sub, SUB) + 1 : 0;
+  const font = ['bold', sized('bold', 10), sized('bold', 9)].find(k => 3 + iw + g.textW(main, k) + sw + 4 <= maxW) || sized('bold', 9);
+  const mw = g.textW(main, font), w = 3 + iw + mw + sw + 4, x = Math.round(xr - w), y = cy - 7, gh = glyphH(font);
+  rrect(g, x, y, w, 15, 4, C.ink); rrect(g, x + 1, y + 1, w - 2, 13, 3, hexMix(f, C.ink, 0.3));
+  g.rect(x + 3, y + 1, w - 6, 1, hi); g.rect(x + 3, y + 13, w - 6, 1, lo);
+  if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, x + 3, cy - Math.floor(im.height / 2)));
+  g.text(main, x + 3 + iw, cy - Math.round(gh / 2), { font, color: '#ffffff', outline: C.ink, outlineW: 2 });
+  if (sub) g.text(sub, x + 3 + iw + mw + 1, cy - Math.round(gh / 2) + 2, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
+}
+function bareBadge(g, xr, cy, st, dim, maxW) {   // ㉡ — 왼쪽 해에 닿을 만큼 길면 글자를 한 칸씩 줄임(maxW)
+  const { ic, col: [, hi] } = badgeLook(st, dim), [main, sub] = splitHits(st.txt), SUB = sized('bold', 9), im = ic && icon(ic), sw = sub ? g.textW(sub, SUB) + 1 : 0, iw = im ? im.width + 1 : 0;
+  const font = ['value', 'bold', sized('bold', 10)].find(k => 1 + g.textW(k === 'value' ? main : main, k) + sw + iw <= maxW) || sized('bold', 10), gh = glyphH(font);
+  const mw = g.textW(main, font), x = Math.round(xr - 1 - mw - sw - iw);
+  if (im) g.alpha(dim ? 0.55 : 1, () => { const L = Math.floor(im.height / 2); g.c.save(); g.c.shadowColor = C.ink; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.img(tinted(ic, C.ink), x + dx, cy - L + dy); g.c.restore(); g.img(im, x, cy - L); });   // 아이콘 둘레 먹선 1칸
+  g.text(main, x + iw, cy - Math.round(gh / 2), { font, color: '#ffffff', outline: C.ink, outlineW: 3 });
+  if (sub) g.text(sub, x + iw + mw + 1, cy - Math.round(gh / 2) + 4, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
+}
 // xr = 오른쪽 끝(이 칸 앞까지), cy = 가운데 줄(비용 숫자와 같은 줄)
-function statBadge(g, xr, cy, st, dim, gh) {
+function statBadge(g, xr, cy, st, dim, gh, maxW = 42) {
   if (!st) return;
+  if (BADGE_STYLE === 'a') return tagBadge(g, xr, cy, st, dim, maxW);
+  if (BADGE_STYLE === 'b') return bareBadge(g, xr, cy, st, dim, maxW);
   const c = g.c, tw = g.textW(st.txt, 'bold');
   c.imageSmoothingEnabled = false;
   if (st.kind === 'pow') {   // 검 날 위에 위력
@@ -309,7 +332,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     sunDisc(g, x + 10, y + 10, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
     g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
-  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, gh);
+  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, gh, w - 24);   // w - 24 = 왼쪽 해(비용) 오른쪽 끝까지
   cardMarks(g, x, y, w, sk, dim);
   if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
     const txt = '다 씀', tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);
