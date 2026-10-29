@@ -405,19 +405,29 @@ const D = {
   },
   ribbon(g, R, age, cx, cy, side, K) {   // 가운데서 펼쳐지는 띠(주사선 · 속성 빛) + 글자가 한 자씩
     //  R.face = 기술 · 상태 구분 시안 ㉠(battle.js ?skillfx=card): 띠 왼쪽 끝에 그 기술 카드(손패와 같은 앞면) · 띠 = 속성 색으로 밝게 · 글자 한 칸 크게 — 어두운 효과 조각과 모양 · 색 · 크기가 다르게
-    const c = g.c, E = ELEMENT[R.el] || DEF_E, F = R.face, font = F ? 'value' : 'bold', CW = F ? 22 : 0, w = measure(R.text, font) + 18 + (F ? CW - 6 : 0), h = F ? 20 : 17, out = R.ms - age;
+    //  R.art = 시안 ㉢(?skillfx=strip): 띠 바탕 = 그 기술 그림(카드 앞면 그림 칸 가운데를 가로로 잘라 덮음) · 테 = 속성 색 · 글자 한 칸 크게
+    //  R.clamp = 시안 ㉡ ㉣(띠가 카드 밑에 붙음): 띠가 체력판(R.minX)과 경기장 밖으로 안 나가게
+    const c = g.c, E = ELEMENT[R.el] || DEF_E, F = R.face, A = R.art, font = F || A ? 'value' : 'bold', CW = F ? 22 : 0, w = measure(R.text, font) + (A ? 26 : 18) + (F ? CW - 6 : 0), h = F ? 20 : A ? 24 : 17, out = R.ms - age;
     const open = out < 140 ? oC(cl(out / 140)) : oC(cl(age / 140)); if (open <= 0.01) return;
     //  카드 = 바깥쪽 끝(내 식물 = 왼쪽 · 상대 = 오른쪽 — 상대 띠 왼쪽은 상대 체력판에 가려짐) · 띠 + 카드가 체력판(R.minX)과 경기장 밖으로 안 나가게
     if (F) cx = Math.max((R.minX ?? 6) + w / 2 + (side < 0 ? CW / 2 - 4 : 0), Math.min(264 - w / 2 - (side > 0 ? CW / 2 - 4 : 0), cx));
+    else if (A || R.clamp) cx = Math.max((R.minX ?? 6) + w / 2, Math.min(264 - w / 2, cx));
     const ww = Math.max(2, w * open), x = -ww / 2, y = -h / 2;
     c.save(); c.translate(cx, cy + h / 2);
     c.shadowColor = E.main; c.shadowBlur = 8 * K; rr(c, x, y, ww, h, 6); c.fillStyle = INK; c.fill(); c.shadowBlur = 0;
-    rr(c, x + 1, y + 1, ww - 2, h - 2, 5); c.fillStyle = F ? hexMix(E.main, INK, 0.38) : hexMix(E.dark, INK, 0.2); c.fill();
-    c.save(); c.clip(); c.fillStyle = F ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'; for (let yy = y + 1; yy < y + h - 1; yy += 2) c.fillRect(x, yy, ww, 1); c.restore();
-    c.fillStyle = E.light; c.fillRect(x + 6, y + 1, Math.max(0, ww - 12), 1);
+    rr(c, x + 1, y + 1, ww - 2, h - 2, 5); c.fillStyle = F ? hexMix(E.main, INK, 0.38) : A ? INK : hexMix(E.dark, INK, 0.2); c.fill();
+    if (A) {
+      const k = A.width / 66, aw = 58 * k, ah = Math.min(52 * k, (aw * (h - 2)) / Math.max(1, ww - 2)), sy = 4 * k + (52 * k - ah) / 2;
+      c.save(); rr(c, x + 1, y + 1, ww - 2, h - 2, 5); c.clip(); c.imageSmoothingEnabled = false; c.drawImage(A, 4 * k, sy, aw, ah, x + 1, y + 1, ww - 2, h - 2);
+      const gr = c.createLinearGradient(x, 0, x + ww, 0); gr.addColorStop(0, 'rgba(8,12,22,0.32)'); gr.addColorStop(1, 'rgba(8,12,22,0.08)'); c.fillStyle = gr; c.fillRect(x, y, ww, h); c.restore();
+      c.lineWidth = 2; c.strokeStyle = E.main; rr(c, x + 1, y + 1, ww - 2, h - 2, 5); c.stroke();
+    } else {
+      c.save(); c.clip(); c.fillStyle = F ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)'; for (let yy = y + 1; yy < y + h - 1; yy += 2) c.fillRect(x, yy, ww, 1); c.restore();
+      c.fillStyle = E.light; c.fillRect(x + 6, y + 1, Math.max(0, ww - 12), 1);
+    }
     const { L } = spell(R.text, font), tx = F ? (side > 0 ? -1 : 1) * (CW - 6) / 2 : 0;
     c.save(); c.beginPath(); c.rect(x, y, ww, h); c.clip();
-    L.forEach((l, i) => { const a = age - 120 - i * 28; if (a < 0) return; drawText(c, l.ch, l.cx + tx, y + (h - glyphH(font)) / 2 + 4 * (1 - oQ(cl(a / 120))), { font, color: rgba('#ffffff', cl(a / 80)), align: 'center', outline: rgba(INK, cl(a / 80)), outlineW: F ? 2.5 : 2 }); });
+    L.forEach((l, i) => { const a = age - 120 - i * 28; if (a < 0) return; drawText(c, l.ch, l.cx + tx, y + (h - glyphH(font)) / 2 + 4 * (1 - oQ(cl(a / 120))), { font, color: rgba('#ffffff', cl(a / 80)), align: 'center', outline: rgba(INK, cl(a / 80)), outlineW: F || A ? 2.5 : 2 }); });
     c.restore();
     if (F) {   // 카드: 띠 왼쪽 끝에 조금 기울여 · 띠보다 위아래로 삐져나옴 · 띠가 펼쳐질 때 톡(1.18배까지) · 띠와 함께 접힘
       const ch = Math.round(CW * F.height / F.width), s = kf(age, [[0, 0], [90, 1.18, oQ], [170, 1, oQ]]) * (out < 140 ? oC(cl(out / 140)) : 1);
