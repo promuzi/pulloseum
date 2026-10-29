@@ -27,7 +27,7 @@ import { openSeedPick } from './seedpick.js';
 //  홈이 불을 끄고 다가간 그 카메라 그대로 — 위 = 돌아가기·이름·별·정체성 · 생장(물·비료·진화), 아래 판 = 기술 · 강화 · 개체값 · 설정.
 //  기술(2026-10-16 사용자 "기억 = 전투 칸만큼 + 조커 하나 보관" → 2026-10-17 전투 칸 여섯 · 셋씩 두 줄): 전투 칸 · 보관(기본기 · 조커 1칸) · 카드 칸 둘 · 새로 핀 기술(칸이 차면 놓을 칸 고르기) · 지운 기술(회귀 주사) · 접목.
 //  강화 = 레벨업 포인트 + 돈(상한 없음, 초기화 = 돈) · 개체값 = 원형 게이지 + 거름(같은 식물) · 설정 = 이름 · 보관 · 암시장(판매·해체).
-const SHEET_Y = 258, IN_MS = 320, OUT_MS = 220;
+const SHEET_Y = 258, IN_MS = 320, OUT_MS = 460;   // OUT_MS = 판 내려감 + 카메라 물러남(같이 — 2026-10-29, 전 220 = 판만)
 const PCARD = { w: 66, h: 90, gx: 10, gy: 8, cols: 3 }, HOLD_MS = 320;   // 기술 카드(전투 손패와 같은 앞면 · 같은 셋씩 줄 — 2026-10-17)
 const slotsOf = p => [...p.skills.battle, null, null, null, null, null, null].slice(0, LOADOUT);   // 전투 칸 여섯(옛 판은 normSkills 가 늘림)
 const TABS = [{ id: 'skill', label: '스킬' }, { id: 'passive', label: '패시브' }, { id: 'up', label: '강화' }, { id: 'iv', label: '개체값' }, { id: 'set', label: '설정' }];   // 스킬 · 패시브 아예 나눔(2026-10-18 사용자 "다른 항목에서 선택하게 분리해 줘 아예")
@@ -97,15 +97,20 @@ export const plant = {
     const key = bigKey(p.key, stageKey(p), p.shiny), [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), F = focusOf(app), SY = plantSheetY(app);
     this.app = app;
     if (this.t0 == null) this.t0 = t - (this.zoomAt || 0);
-    const zk = this.zoomIn ? ease(Math.min(1, (t - this.t0) / ZOOM_MS)) : 1, Zw = loftZoom(app, F.want), sy0 = pc + homeDy(app);   // 다가감(홈 camera 와 같은 길)
+    // 나감(2026-10-29 사용자 '여러 창이 … 동시에 올라오지 않고 따로 노는 느낌 · 창 내려갈 때도 마찬가지'): 전엔 판이 0.22초에 사라진 뒤 홈에서 카메라가 0.5초 물러나고 불이 켜졌음 →
+    //  판 내려감 · 위 글자 올라감 · 카메라 물러남을 같은 박자로(OUT_MS) 여기서 끝내고, 홈은 불 켜짐 · 창 나타남만 이어 감(camDone)
+    const eo = this.out != null ? ease(Math.min(1, (t - this.out) / OUT_MS)) : 0;
+    const zk = (this.zoomIn ? ease(Math.min(1, (t - this.t0) / ZOOM_MS)) : 1) * (1 - eo), Zw = loftZoom(app, F.want), sy0 = pc + homeDy(app);   // 다가감(홈 camera 와 같은 길) · 나갈 땐 거꾸로
     loftView(app, { dark: 1, z: 1 + (Zw - 1) * zk, px: mx, py: pc, sx: mx + (F.sx - mx) * zk, sy: sy0 + (F.sy - sy0) * zk, plant: () => loftPlant(app, key, p.pot, mx, my) });
-    // 들어옴 = 위 글자가 나타나고 아래 판이 올라옴(다가가며 들어오면 다가감과 같이 — 판이 조금 앞서 아래 검은 칸을 가림), 나감 = 거꾸로 → 홈(불 켜짐)
+    // 들어옴 = 위 글자가 위에서 살짝 내려오며 나타나고, 생장 줄 + 아래 판이 한 덩이로 올라옴(다가가며 들어오면 다가감과 같이 — 판이 조금 앞서 아래 검은 칸을 가림) · 나감 = 거꾸로 → 홈(불 켜짐)
+    //  (전엔 생장 줄이 제자리에서 서서히 나타나고 판만 밑에서 올라와 둘 사이가 벌어져 보였음)
     let k = ease(Math.min(1, (t - this.t0) / (this.zoomIn ? ZOOM_MS * 0.8 : IN_MS)));
-    if (this.out != null) { const o = Math.min(1, (t - this.out) / OUT_MS); k = Math.min(k, 1 - ease(o)); if (o >= 1 && !this.gone) { this.gone = true; app.go('home', { from: 'plant' }, 'cut'); } }
+    if (this.out != null) { k = Math.min(k, 1 - eo); if (eo >= 1 && !this.gone) { this.gone = true; app.go('home', { from: 'plant', camDone: true }, 'cut'); } }
     const live = k >= 1 && this.out == null && !app.popup && !app.confirm;
-    g.alpha(k, () => { this.top(app, p, live); this.growStrip(app, p, live, SY - 30); });
-    const sy = Math.round(SY + (1 - k) * (H - SY + 4));
+    g.alpha(k, () => { g.c.save(); g.c.translate(0, Math.round((1 - k) * -14)); this.top(app, p, live); g.c.restore(); });
+    const sy = Math.round(SY + (1 - k) * (H - SY + 38));   // 생장 줄(판 위 30칸)까지 화면 밖에서
     g.c.save(); g.c.translate(0, sy - SY);
+    this.growStrip(app, p, live, SY - 30);
     this.sheet(app, p, live, SY);
     g.c.restore();
     // 기술 카드: 끄는 카드(손가락 따라 · 떠 있음) · 꾹 눌러 꺼내 보기

@@ -69,7 +69,7 @@ export const home = {
   enter(p) {
     this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.pickSheet = !!p.pick; this.forceMode = p.mode || null;   // ?mode=swap3 = 그 전투 종류로(촬영용)
     this.focus = p.focus ? { t0: 0, hold: true } : null;   // ?focus=1 = 다 어두워진 장(촬영용)
-    this.unfocus = p.from === 'plant' ? { t0: null } : null;   // 식물 관리에서 돌아오면 거꾸로(카메라가 물러나고 불이 켜짐)
+    this.unfocus = p.from === 'plant' ? { t0: null, skip: p.camDone ? 1 - ZOOM_AT : 0 } : null;   // 식물 관리에서 돌아오면 거꾸로(카메라가 물러나고 불이 켜짐) · camDone = 식물 관리가 판과 함께 카메라를 이미 물렸음 → 불 켜짐 · 창만(2026-10-29)
     this.bootIn = p.from === 'boot' ? { t0: null } : null;     // 처음 화면에서 디스플레이가 켜지며 들어옴 = 식물은 이미 의자 위(투영 다시 안 함) · 옆 창 · 글자만 서서히
     this.noReveal = !!this.bootIn;
     this.colCy = null;
@@ -99,7 +99,7 @@ export const home = {
     const t = app.t, F = focusOf(app), Z = loftZoom(app, F.want), pc = pc0 + homeDy(app);   // pc = 화면에서 식물 가운데(짧은 화면은 올라감)
     let f = 0;
     if (this.focus) f = this.focus.hold ? 1 : Math.min(1, (t - this.focus.t0) / FOCUS.ms);
-    else if (this.unfocus) { if (this.unfocus.t0 == null) this.unfocus.t0 = t; f = 1 - Math.min(1, (t - this.unfocus.t0) / FOCUS.back); if (f <= 0) this.unfocus = null; }
+    else if (this.unfocus) { if (this.unfocus.t0 == null) this.unfocus.t0 = t - (this.unfocus.skip || 0) * FOCUS.back; f = 1 - Math.min(1, (t - this.unfocus.t0) / FOCUS.back); if (f <= 0) this.unfocus = null; }
     // 카메라가 다가가기 시작하는 순간(f 0.38 — 글자는 이미 사라지고 방은 어두움) 식물 관리로 넘김: 남은 다가감과 아래 판 올라옴을 같이(2026-10-17 사용자 "아래 창 올라오는 게 느려서 화면 아래의 검은 게 보여 — 동시에 올라올 수 있게")
     if (this.focus && !this.focus.hold && f >= ZOOM_AT && !this.focus.gone) { this.focus.gone = true; app.go('plant', { focus: true, zoom: true }, 'cut'); }
     const mv = ease(Math.max(0, Math.min(1, (f - 0.38) / 0.62)));
