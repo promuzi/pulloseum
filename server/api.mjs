@@ -7,6 +7,8 @@ import { Err, cleanCoupon, SAVE_VER, ROUNDS } from '../v2/src/game/logic.js';
 import { STARTERS, LEAGUES, LEAGUE_KEYS, TIERS, seasonOf } from '../v2/src/game/catalog.js';
 
 export class HttpErr extends Error { constructor(code, msg) { super(msg); this.code = code; } }
+// 가입 = 만 14세 이상 확인(age14: true) 필수 — 2026-10-30 출시 점검 17번(화면 = title.js 체크 칸)
+const AGE_ERR = '만 14세 이상만 가입할 수 있어요';
 
 // adminKey = 관리 열쇠(Cloudflare 비밀값 ADMIN_KEY · PC 환경변수 PULLO_ADMIN_KEY) — 없으면 관리 주소는 아예 없음(404)
 // googleClientId = 구글 로그인 클라이언트 ID(공개값 — Cloudflare 변수 GOOGLE_CLIENT_ID · PC PULLO_GOOGLE_CLIENT_ID) — 없으면 구글 단추를 안 보임
@@ -91,6 +93,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       const starter = String(b.starter || ''), nick = cleanNick(b.nickname || who.name) || '재배사';
       if (!starter) return { need: 'register', name: cleanNick(who.name) };
       if (!STARTERS.includes(starter)) throw new Err('처음 식물을 골라 주세요');
+      if (b.age14 !== true) throw new Err(AGE_ERR);
       const day = Math.floor(now / 864e5), k = req.ip + ':' + day, n = regs.get(k) || 0;
       if (n >= 10) throw new HttpErr(429, '오늘은 더 만들 수 없어요');
       const r = q.addUser.run(login, '!google', nick, now), uid = Number(r.lastInsertRowid);
@@ -107,6 +110,7 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
       if (pw.length < 6 || pw.length > 72) throw new Err('비밀번호는 6~72자예요');
       if (!nick) throw new Err('별명을 써 주세요');
       if (!STARTERS.includes(starter)) throw new Err('처음 식물을 골라 주세요');
+      if (b.age14 !== true) throw new Err(AGE_ERR);
       if (q.userByLogin.get(login)) throw new Err('이미 있는 아이디예요');
       const r = q.addUser.run(login, hashPass(pw), nick, now), uid = Number(r.lastInsertRowid);
       regs.set(k, n + 1);

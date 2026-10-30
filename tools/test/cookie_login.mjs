@@ -21,7 +21,7 @@ async function call(path, body, headers = {}) {
 try {
   for (let i = 0; i < 60; i++) { try { await fetch(BASE + '/api/config'); break; } catch { await sleep(200); } }
   const login = 'ck' + Math.floor(Math.random() * 1e6);
-  const reg = await call('/api/register', { login, password: 'pw123456', nickname: '쿠키', starter: 'flower_grass' });
+  const reg = await call('/api/register', { age14: true, login, password: 'pw123456', nickname: '쿠키', starter: 'flower_grass' });
   ok(reg.status === 200 && reg.body.token, '가입');
   ok(/pullo_t=[^;]+/.test(reg.cookie) && /HttpOnly/i.test(reg.cookie) && /Max-Age=2592000/.test(reg.cookie) && /SameSite=Lax/i.test(reg.cookie), `가입하면 로그인 쿠키(30일 · HttpOnly) — ${reg.cookie}`);
   const ck = (reg.cookie.match(/pullo_t=[^;]+/) || [''])[0];

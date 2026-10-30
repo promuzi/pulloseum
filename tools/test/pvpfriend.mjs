@@ -14,7 +14,7 @@ async function call(path, body) {
   return j;
 }
 try { token = (await call('/api/login', { login: LOGIN, password: PW })).token; }
-catch { token = (await call('/api/register', { login: LOGIN, password: PW, nickname: '가짜 친구', starter: 'cactus_fire' })).token; }
+catch { token = (await call('/api/register', { age14: true, login: LOGIN, password: PW, nickname: '가짜 친구', starter: 'cactus_fire' })).token; }
 console.log('들어감', LOGIN);
 { const me = await call('/api/me'); for (const sd of me.state.seeds.slice(0, Math.max(0, 3 - me.state.plants.length))) await call('/api/act', { op: 'plantSeed', args: { seed: sd.id } }); }   // 3:3이면 식물 셋(처음 종자 둘을 심음)
 await call('/api/room/join', { code: CODE });

@@ -43,7 +43,7 @@ async function call(path, body, token) {
 try {
   for (let i = 0; i < 50; i++) { try { const r = await fetch(BASE + '/api/health'); if (r.ok) break; } catch {} await sleep(100); }
   for (const [login, starter] of [['dana', 'cactus_fire'], ['erin', 'aqua'], ['finn', 'flower_grass']]) {
-    const A = await call('/api/register', { login, password: 'secret1', nickname: login, starter });
+    const A = await call('/api/register', { age14: true, login, password: 'secret1', nickname: login, starter });
     ok(A.status === 200, '가입 ' + login);
     const el = SPECIES[starter].el;
     for (let k = 0; k < 2; k++) {

@@ -31,7 +31,7 @@ try {
   const list = await call(api, 'GET', '/api/admin/coupons', {}, { key: KEY });
   ok(list.coupons.length === 1 && list.coupons[0].used === 0 && list.coupons[0].max_uses === 2, '보기');
   // 계정 셋
-  const reg = async (login, ip) => (await call(api, 'POST', '/api/register', { login, password: 'secret12', nickname: login, starter: STARTERS[0] }, { ip })).token;
+  const reg = async (login, ip) => (await call(api, 'POST', '/api/register', { age14: true, login, password: 'secret12', nickname: login, starter: STARTERS[0] }, { ip })).token;
   const ta = await reg('coupa', '5.5.5.1'), tb = await reg('coupb', '5.5.5.2'), tc = await reg('coupc', '5.5.5.3');
   ok(ta && tb && tc, '계정 셋');
   ok((await call(api, 'POST', '/api/coupon', { code: 'FRIEND2026' })).status === 401, '로그인 안 하면 못 받음');

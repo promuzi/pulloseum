@@ -16,11 +16,21 @@ const CSS = `
 .pf-ok{background:#f0be7d;color:#2a1a08}
 .pf-cancel{background:#1f3a52;color:#d4e9ff}
 .pf-btns button:disabled{opacity:.5}
+.pf-box label.pf-check{display:flex;align-items:center;gap:10px;margin:14px 0 0;color:#e6f3ff;font-size:15px;font-weight:700;cursor:pointer}
+.pf-box label.pf-check input{width:22px;height:22px;margin:0;flex:none;accent-color:#f0be7d;-webkit-appearance:checkbox;appearance:auto}
+.pf-link{display:inline-block;margin:10px 0 0;padding:0;background:none;border:0;color:#8ccfff;font:700 13px Pretendard,"Malgun Gothic",sans-serif;text-decoration:underline;cursor:pointer}
 .pf-alt{display:block;margin:12px auto 0;background:none;border:0;color:#8ccfff;font:700 13px Pretendard,"Malgun Gothic",sans-serif;text-decoration:underline;cursor:pointer}
 `;
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
-// opt: { title, note, fields: [{ id, label, type, value, max, hint, auto, mode }], ok, cancel, alt: { label, fn }, onSubmit: async vals => 오류 문구 | null }
+// 개인정보처리방침 열기: 앱 웹뷰에선 같은 창, 브라우저에선 새 탭(누른 그 순간 불러야 아이폰 사파리가 막지 않음)
+export function openPrivacy() {
+  const url = location.origin + '/v2/privacy';   // Cloudflare가 privacy.html → privacy로 넘김
+  if (/PulloseumApp/.test(navigator.userAgent)) location.href = url; else window.open(url, '_blank', 'noopener');
+}
+
+// opt: { title, note, fields: [{ id, label, type, value, max, hint, auto, mode }], link: { label, fn }, ok, cancel, alt: { label, fn }, onSubmit: async vals => 오류 문구 | null }
+//  type 'check' = 체크 칸 한 줄(값 = true/false) — 가입 때 만 14세 확인(2026-10-30 출시 점검 17번)
 export function openForm(app, opt) {
   closeForm();
   if (!document.getElementById('pf-css')) { const st = el('style'); st.id = 'pf-css'; st.textContent = CSS; document.head.appendChild(st); }
@@ -31,6 +41,12 @@ export function openForm(app, opt) {
   if (opt.note) box.appendChild(el('p', 'pf-note', opt.note));
   const inputs = {};
   for (const f of opt.fields || []) {
+    if (f.type === 'check') {
+      const lab = el('label', 'pf-check'), inp = el('input');
+      inp.type = 'checkbox'; inp.name = f.id; inp.checked = !!f.value; inp.id = 'pf-' + f.id;
+      lab.appendChild(inp); lab.appendChild(document.createTextNode(f.label)); box.appendChild(lab);
+      inputs[f.id] = inp; continue;
+    }
     const lab = el('label', null, f.label), inp = el('input');
     inp.type = f.type || 'text'; inp.name = f.id; inp.value = f.value || ''; if (f.max) inp.maxLength = f.max;
     inp.autocomplete = f.auto || 'off'; inp.autocapitalize = 'none'; inp.spellcheck = false; if (f.mode) inp.inputMode = f.mode;
@@ -39,6 +55,7 @@ export function openForm(app, opt) {
     if (f.hint) box.appendChild(el('div', 'pf-hint', f.hint));
     inputs[f.id] = inp;
   }
+  if (opt.link) { const a = el('button', 'pf-link', opt.link.label); a.type = 'button'; a.onclick = opt.link.fn; box.appendChild(a); }
   const err = el('p', 'pf-err'); err.setAttribute('role', 'alert'); box.appendChild(err);
   const row = el('div', 'pf-btns'), cancel = el('button', 'pf-cancel', opt.cancel || '취소'), ok = el('button', 'pf-ok', opt.ok || '확인');
   cancel.type = 'button'; ok.type = 'submit';
@@ -48,7 +65,7 @@ export function openForm(app, opt) {
   cancel.onclick = () => { closeForm(); if (opt.onCancel) opt.onCancel(); };
   box.onsubmit = async e => {
     e.preventDefault();
-    const vals = Object.fromEntries(Object.entries(inputs).map(([k, v]) => [k, v.value]));
+    const vals = Object.fromEntries(Object.entries(inputs).map(([k, v]) => [k, v.type === 'checkbox' ? v.checked : v.value]));
     ok.disabled = cancel.disabled = true; err.textContent = '';
     let msg = null;
     try { msg = await opt.onSubmit(vals); } catch (x) { msg = x.message || '문제가 생겼어요'; }
@@ -58,7 +75,7 @@ export function openForm(app, opt) {
   wrap.addEventListener('pointerdown', e => { if (e.target === wrap && opt.cancel !== false) { closeForm(); if (opt.onCancel) opt.onCancel(); } });
   wrap.appendChild(box); document.body.appendChild(wrap);
   cur = { wrap, box, app };
-  const first = Object.values(inputs)[0];
+  const first = Object.values(inputs).find(i => i.type !== 'checkbox');
   if (first) setTimeout(() => { try { first.focus(); } catch {} }, 60);
   return cur;
 }

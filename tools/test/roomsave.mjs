@@ -22,7 +22,7 @@ const restart = () => { rooms.stop(); rooms = makeRooms({ game, log, q }); api =
 const poll = (tok, after) => call('GET', '/api/room/poll', { after: String(after) }, tok);
 const lastOf = (evs, type) => [...evs].reverse().find(e => e.type === type);
 try {
-  const reg = async (login, starter, ip) => (await call('POST', '/api/register', { login, password: 'secret12', nickname: login, starter }, null, ip)).token;
+  const reg = async (login, starter, ip) => (await call('POST', '/api/register', { age14: true, login, password: 'secret12', nickname: login, starter }, null, ip)).token;
   const A = await reg('rsa', 'flower_grass', '7.7.7.1'), B = await reg('rsb', 'cactus_fire', '7.7.7.2');
   ok(A && B, '계정 둘');
   // ── 1:1 ──

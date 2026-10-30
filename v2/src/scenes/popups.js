@@ -14,7 +14,7 @@ import { sellPrice, potOf } from '../game/logic.js';
 import { eul } from '../core/josa.js';
 import { CARDS, cardFace, cardPrice } from '../game/cards.js';
 import { cardTiny, packTiny } from '../art/skillcard.js';
-import { openForm } from '../core/form.js';
+import { openForm, openPrivacy } from '../core/form.js';
 import { sfx, SOUND, setSfxOn, setMusicOn, setSfxLevel, setMusicLevel } from '../core/sound.js';
 import { drawGuide } from './guide.js';
 import { draftScreen, openDraft } from './draft.js';
@@ -271,10 +271,7 @@ function settingsSheet(app) {
   yy += 40;
   if (!net.offline && u) button(app, 'st_del', x + 14, yy, half, 30, '계정 지우기', { style: 'night', onTap: () => { app.sheet = null; deleteForm(app); } });
   // 개인정보처리방침(플레이 정책 — 앱 안에서도 볼 수 있어야 함). 앱 웹뷰에선 같은 창, 브라우저에선 새 탭
-  button(app, 'st_priv', x + 14 + half + 8, yy, half, 30, '개인정보처리방침', { style: 'night', now: true, onTap: () => {   // now = 뗀 그 순간 새 탭(아이폰 사파리가 막지 않게)
-    const url = location.origin + '/v2/privacy';   // Cloudflare가 privacy.html → privacy로 넘김
-    if (/PulloseumApp/.test(navigator.userAgent)) location.href = url; else window.open(url, '_blank', 'noopener');
-  } });
+  button(app, 'st_priv', x + 14 + half + 8, yy, half, 30, '개인정보처리방침', { style: 'night', now: true, onTap: openPrivacy });   // now = 뗀 그 순간 새 탭(아이폰 사파리가 막지 않게)
   button(app, 'st_close', x + 14, y + h - 42, w - 28, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { app.sheet = null; } });
 }
 

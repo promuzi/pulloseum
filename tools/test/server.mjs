@@ -43,13 +43,15 @@ function listen(token) {
 try {
   for (let i = 0; i < 50; i++) { try { const r = await fetch(BASE + '/api/health'); if (r.ok) break; } catch {} await sleep(100); }
   // ── 가입 · 로그인 ──
-  const bad = await call('/api/register', { login: 'A', password: '123', nickname: '', starter: 'x' });
+  const bad = await call('/api/register', { age14: true, login: 'A', password: '123', nickname: '', starter: 'x' });
   ok(bad.status === 400 && /아이디/.test(bad.error), '잘못된 가입은 막힘: ' + bad.error);
-  const A = await call('/api/register', { login: 'alice', password: 'secret1', nickname: '앨리스', starter: 'flower_grass' });
+  const noAge = await call('/api/register', { login: 'kid', password: 'secret1', nickname: '꼬마', starter: 'flower_grass' });
+  ok(noAge.status === 400 && /14세/.test(noAge.error), '만 14세 확인 없으면 가입 막힘: ' + noAge.error);
+  const A = await call('/api/register', { age14: true, login: 'alice', password: 'secret1', nickname: '앨리스', starter: 'flower_grass' });
   ok(A.status === 200 && A.token && A.state.plants.length === 1, '가입 → 열쇠 + 처음 식물');
-  const dup = await call('/api/register', { login: 'alice', password: 'secret1', nickname: 'x', starter: 'aqua' });
+  const dup = await call('/api/register', { age14: true, login: 'alice', password: 'secret1', nickname: 'x', starter: 'aqua' });
   ok(dup.status === 400 && /이미/.test(dup.error), '같은 아이디 막힘');
-  const B = await call('/api/register', { login: 'bob', password: 'secret2', nickname: '밥', starter: 'cactus_fire' });
+  const B = await call('/api/register', { age14: true, login: 'bob', password: 'secret2', nickname: '밥', starter: 'cactus_fire' });
   ok(B.status === 200, '두 번째 가입');
   const wrong = await call('/api/login', { login: 'alice', password: 'nope' });
   ok(wrong.status === 400, '틀린 비밀번호 막힘');

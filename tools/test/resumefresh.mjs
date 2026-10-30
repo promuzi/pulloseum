@@ -23,7 +23,7 @@ const kitIds = v => (v.me || v.team.me[0]).kit.map(k => k.id);
 
 try {
   for (let i = 0; i < 50; i++) { try { const r = await fetch(BASE + '/api/health'); if (r.ok) break; } catch {} await sleep(100); }
-  const A = await call('/api/register', { login: 'carol', password: 'secret1', nickname: '캐럴', starter: 'flower_grass' });
+  const A = await call('/api/register', { age14: true, login: 'carol', password: 'secret1', nickname: '캐럴', starter: 'flower_grass' });
   ok(A.status === 200, '가입');
   const tok = A.token, pid = A.state.plants[0].uid;
   const losses = async () => (await call('/api/me', null, tok)).state.tournament.losses;

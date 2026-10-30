@@ -42,7 +42,7 @@ try {
   // 쿠폰(2026-10-17): Cloudflare 저장소(Durable Object SQLite)에서도 만들기 · 받기 · 두 번 막기
   const J = async (path, body, h = {}) => { const r = await fetch(BASE + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', ...h }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, ...(await r.json().catch(() => ({}))) }; };
   const mk = await J('/api/admin/coupon', { code: 'CFTEST1', reward: { credits: 77, seeds: ['common'] }, max: 1 }, { 'x-admin-key': LOCAL_KEY });
-  const rg = await J('/api/register', { login: 'cfcoupon', password: 'secret12', nickname: '쿠폰', starter: 'flower_grass' });
+  const rg = await J('/api/register', { age14: true, login: 'cfcoupon', password: 'secret12', nickname: '쿠폰', starter: 'flower_grass' });
   const auth = { authorization: 'Bearer ' + rg.token };
   const r1 = await J('/api/coupon', { code: 'cftest1' }, auth), r2 = await J('/api/coupon', { code: 'CFTEST1' }, auth);
   const cpOk = mk.ok && rg.token && r1.status === 200 && r1.got && r1.got.length === 2 && r1.state.wallet.credits === rg.state.wallet.credits + 77 && r2.status === 400;

@@ -28,7 +28,7 @@ async function call(path, body, token) {
 }
 try {
   for (let i = 0; i < 60; i++) { try { if ((await fetch(BASE + '/api/health')).ok) break; } catch {} await sleep(100); }
-  const A = await call('/api/register', { login: 'shot_a3', password: 'shot-a3-pw', nickname: '앨리스', starter: 'flower_grass' });
+  const A = await call('/api/register', { age14: true, login: 'shot_a3', password: 'shot-a3-pw', nickname: '앨리스', starter: 'flower_grass' });
   for (const sd of A.state.seeds.slice(0, 2)) await call('/api/act', { op: 'plantSeed', args: { seed: sd.id } }, A.token);
   browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
   const p = await browser.newPage(), errs = [];

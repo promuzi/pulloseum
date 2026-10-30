@@ -45,7 +45,9 @@ try {
   ok((await call(api, 'POST', '/api/google', { token: 'bad' })).status === 400, '무효 토큰 거절');
   const first = await call(api, 'POST', '/api/google', { token: 'good' });
   ok(first.status === 200 && first.need === 'register' && first.name === '구글이' && !first.token, '처음 = 식물 고르기 요청(이름 제안)');
-  const reg = await call(api, 'POST', '/api/google', { token: 'good', starter: 'aqua', nickname: '물방울' });
+  const noAge = await call(api, 'POST', '/api/google', { token: 'good', starter: 'aqua', nickname: '물방울' });
+  ok(noAge.status === 400 && /14세/.test(noAge.error) && !q.userByLogin.get('g:1001'), '만 14세 확인 없으면 계정 안 만듦');
+  const reg = await call(api, 'POST', '/api/google', { token: 'good', starter: 'aqua', nickname: '물방울', age14: true });
   ok(reg.status === 200 && reg.token && reg.user.login === '구글 계정' && reg.user.nickname === '물방울' && reg.state.plants[0].key === 'aqua', '계정 만들기(구글 sub는 안 보냄)');
   const row = q.userByLogin.get('g:1001');
   ok(row && row.provider === 'google' && row.pass === '!google', '저장: login g:<sub> · provider google · 비밀번호 없음');
@@ -66,7 +68,7 @@ try {
     const r = await api.handle({ method: 'POST', path, query: new URLSearchParams(), header: k => (k === 'authorization' ? 'Bearer ' + token : null), ip: '9.9.9.9', body, onClose: () => {} });
     return { status: r.status, ...r.body };
   };
-  const loc = await call(api, 'POST', '/api/register', { login: 'leafy', password: 'secret1', nickname: '잎새', starter: 'aqua' }, '9.9.9.9');
+  const loc = await call(api, 'POST', '/api/register', { age14: true, login: 'leafy', password: 'secret1', nickname: '잎새', starter: 'aqua' }, '9.9.9.9');
   ok(loc.status === 200 && loc.user.provider === 'local', '아이디 계정 만들기(provider local)');
   ok((await callT('/api/account/delete', { password: 'wrong!!' }, loc.token)).status === 400, '비밀번호가 틀리면 안 지움');
   ok(!!q.userByLogin.get('leafy'), '틀린 뒤 계정 그대로');

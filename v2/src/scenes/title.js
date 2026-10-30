@@ -6,7 +6,7 @@ import { ro, wa } from '../core/josa.js';
 import { T, holo } from '../art/theme.js';
 import { bigTitle } from './common.js';
 import { net } from '../net/api.js';
-import { openForm } from '../core/form.js';
+import { openForm, openPrivacy } from '../core/form.js';
 import { STARTERS, SPECIES, JONG, ELEM } from '../game/catalog.js';
 import { STAGE_NAME } from '../data/mock.js';
 import { stageKey } from '../game/view.js';
@@ -68,7 +68,7 @@ export function googleLogin(app, sc) {
     if (!app.googleId) { app.toast('구글 로그인을 준비하는 중이에요 — 잠시 뒤 다시 눌러 주세요'); return; }
     NG.signIn({ serverClientId: app.googleId }).then(async r => {
       const out = await net.req('/api/google', { idToken: r.idToken });
-      if (out.need === 'register') { app.reg = { googleId: r.idToken, nickname: out.name || r.name || '' }; app.go('starter', {}, 'dither'); return; }
+      if (out.need === 'register') { googleAgeForm(app, { googleId: r.idToken, nickname: out.name || r.name || '' }); return; }
       await signed(app, out); if (sc) sc.mode = 'in';
       enterGame(app);
     }).catch(e => { const m = String((e && e.message) || e || ''); app.toast(/CANCEL|그만뒀/.test(m + ((e && e.code) || '')) ? '구글 로그인을 그만뒀어요' : m || '구글 로그인을 하지 못했어요'); });
@@ -80,7 +80,7 @@ export function googleLogin(app, sc) {
     if (!r || !r.access_token) { app.toast('구글 로그인을 그만뒀어요'); return; }
     try {
       const out = await net.req('/api/google', { token: r.access_token });
-      if (out.need === 'register') { app.reg = { google: r.access_token, nickname: out.name || '' }; app.go('starter', {}, 'dither'); return; }
+      if (out.need === 'register') { googleAgeForm(app, { google: r.access_token, nickname: out.name || '' }); return; }
       await signed(app, out); if (sc) sc.mode = 'in';
       enterGame(app);
     } catch (e) { app.toast(e.message); }
@@ -101,6 +101,22 @@ export function loginForm(app, sc) {
     },
   });
 }
+// 만 14세 확인(2026-10-30 출시 점검 17번 — 처리방침 9절 '만 14세 미만 대상 아님'): 아이디 가입 창 · 구글 첫 가입 둘 다, 서버도 age14를 봄
+const AGE_LABEL = '만 14세 이상이에요', AGE_ERR = '만 14세 이상만 가입할 수 있어요';
+function googleAgeForm(app, reg) {
+  openForm(app, {
+    title: '구글로 새로 시작하기',
+    fields: [{ id: 'age', type: 'check', label: AGE_LABEL }],
+    link: { label: '개인정보처리방침 보기', fn: openPrivacy },
+    ok: '다음 — 식물 고르기',
+    onSubmit: async v => {
+      if (!v.age) return AGE_ERR;
+      app.reg = { ...reg, age14: true };
+      app.go('starter', {}, 'dither');
+      return null;
+    },
+  });
+}
 export function registerForm(app, sc, keep = {}) {
   openForm(app, {
     title: '새로 시작하기', note: '다른 기기에서도 이어 하려면 아이디와 비밀번호를 기억해 두세요',
@@ -109,7 +125,9 @@ export function registerForm(app, sc, keep = {}) {
       { id: 'pw', label: '비밀번호', type: 'password', auto: 'new-password', max: 72, hint: '6자 이상' },
       { id: 'pw2', label: '비밀번호 한 번 더', type: 'password', auto: 'new-password', max: 72 },
       { id: 'nick', label: '별명', auto: 'nickname', max: 12, value: keep.nick || '', hint: '게임에서 보일 이름(12자까지)' },
+      { id: 'age', type: 'check', label: AGE_LABEL },
     ],
+    link: { label: '개인정보처리방침 보기', fn: openPrivacy },
     ok: '다음 — 식물 고르기', alt: { label: '이미 계정이 있어요 — 로그인', fn: () => loginForm(app, sc) },
     onSubmit: async v => {
       const login = v.login.trim().toLowerCase(), nick = v.nick.trim();
@@ -117,8 +135,9 @@ export function registerForm(app, sc, keep = {}) {
       if (v.pw.length < 6) return '비밀번호는 6자 이상이에요';
       if (v.pw !== v.pw2) return '비밀번호 두 칸이 달라요';
       if (!nick) return '별명을 써 주세요';
+      if (!v.age) return AGE_ERR;
       try { await net.req('/api/check', { login }); } catch (e) { return e.message; }
-      app.reg = { login, password: v.pw, nickname: nick };
+      app.reg = { login, password: v.pw, nickname: nick, age14: true };
       app.go('starter', {}, 'dither');
       return null;
     },
@@ -316,7 +335,7 @@ export const starter = {
     if (!r) { app.go('title'); return; }
     this.busy = true;
     try {
-      const out = r.google ? await net.req('/api/google', { token: r.google, starter: key, nickname: r.nickname }) : r.googleId ? await net.req('/api/google', { idToken: r.googleId, starter: key, nickname: r.nickname }) : await net.req('/api/register', { ...r, starter: key });
+      const out = r.google ? await net.req('/api/google', { token: r.google, starter: key, nickname: r.nickname, age14: r.age14 }) : r.googleId ? await net.req('/api/google', { idToken: r.googleId, starter: key, nickname: r.nickname, age14: r.age14 }) : await net.req('/api/register', { ...r, starter: key });
       net.setToken(out.token); app.user = out.user; app.state = out.state; app.reg = null;
       app.toast(`${wa(SPECIES[key].name)} 함께 시작해요!`);
       enterGame(app);
