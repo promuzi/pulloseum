@@ -570,7 +570,7 @@ const V2 = {
       S('u_aqua_2', '정죄', 'water', 'u', 50, 2, { inflicts: [{ id: 'atkDown' }, { id: 'defDown' }] }),   // 위력 30 → 50(2026-10-29 성체 기준)
       S('u_aqua_2b', '청산', 'water', 'u', 0, 2, { act: 'hex', cats: ['attack'], settle: { per: 0.06, cap: 5 } }),
       S('u_aqua_3', '윤회', 'water', 'u', 0, 1, { act: 'hex', cats: ['debuff'], cycle: true }),
-      S('u_aqua_3b', '번뇌', 'bolt', 'u', 60, 3, { inflict: { id: 'wet' } }),
+      S('u_aqua_3b', '번뇌', 'bolt', 'u', 80, 3, { inflict: { id: 'wet' } }),   // 60 → 80(2026-11-04 밤샘 리그전 38% → 46%, 임시)
       S('u_aqua_3c', '참회', 'water', 'u', 0, 2, { self: 'spdUp', also: 'defUp' }),
       S('u_aqua_3d', '조화', 'water', 'u', 0, 2, { act: 'hex', cats: ['debuff'], uses: 1, onFirst: { harmony: 'toFoe' }, onSecond: { harmony: 'toMe' } }),
     ],
