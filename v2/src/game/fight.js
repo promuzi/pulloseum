@@ -96,6 +96,9 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   const base = k => (SPECIES[k].form ? 0.2 : SPECIES[k].rarity === 'rare' ? 0.6 : 1) * orbitW(k, cap);
   let keys = Object.keys(SPECIES).filter(k => base(k) > 0);
   if (opt.favorEl) { const fav = keys.filter(k => favorable(opt.favorEl, k) && !SPECIES[k].form); if (fav.length) keys = fav; }
+  // 3:3 봇 팀(botTeam): 이미 뽑은 식물과 속성이 겹치지 않게 · 같은 종 없이 · 역할도 되도록 섞이게(후보가 남을 때만 좁힘)
+  if (opt.avoidEl && opt.avoidEl.length) { const k2 = keys.filter(k => !opt.avoidEl.includes(SPECIES[k].el) && !(opt.avoidKey || []).includes(k)); if (k2.length) keys = k2; }
+  if (opt.avoidRole && opt.avoidRole.length) { const k3 = keys.filter(k => !opt.avoidRole.includes(SPECIES[k].role)); if (k3.length) keys = k3; }
   const wOf = k => base(k), tot = keys.reduce((a, k) => a + wOf(k), 0);
   let r0 = rng() * tot, key = keys[keys.length - 1];
   for (const k of keys) { r0 -= wOf(k); if (r0 <= 0) { key = k; break; } }
@@ -130,6 +133,13 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: six.slice(0, 6), store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
+// 봇 팀(2026-11-04 사용자 '3ㄷ3에서 봇의 식물 조합 같은 속성 2 3개씩 들고가는 거 막자. 그럴싸한 조합을 챙기게 하건'): 내 식물마다 몸(단계 · 레벨)을 정하는 bodyOf(p) 로 하나씩 —
+//  앞서 뽑은 식물들의 속성 · 종 · 역할을 피해서(1:1은 하나라 그대로)
+export function botTeam(rng, mine, bodyOf, opt) {
+  const out = [];
+  for (const p of mine) { const b = bodyOf(p); out.push(botPlant(rng, b.stage, b.lv, opt.tierBoost, { ...opt, avoidEl: out.map(x => SPECIES[x.key].el), avoidRole: out.map(x => SPECIES[x.key].role), avoidKey: out.map(x => x.key) })); }
+  return out;
+}
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
 // 봇 머리 좋음(0~1, model.js aiPick — 2026-10-22): 대회 단계가 오를수록 · 같은 단계에선 라운드(예선 0 … 결승 4)마다 조금씩 · 첫 판(튜토리얼식)은 낮게

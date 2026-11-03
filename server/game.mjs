@@ -4,7 +4,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import * as L from '../v2/src/game/logic.js';
 import { runOp } from '../v2/src/game/ops.js';
-import { setupBot, replayBot, botStep, botPlant, botTrainer, botBody, viewOf, makeRng, unitOf, aiOfTier, searchOfTier } from '../v2/src/game/fight.js';
+import { setupBot, replayBot, botStep, botPlant, botTeam, botTrainer, botBody, viewOf, makeRng, unitOf, aiOfTier, searchOfTier } from '../v2/src/game/fight.js';
 import { econ, diff, plantLite, plantRef, slimArgs } from './log.mjs';
 import { LEAGUES, RULES_VER, SPECIES, tourName } from '../v2/src/game/catalog.js';
 
@@ -114,7 +114,7 @@ export function makeGame({ q, log }) {
     const tut = mode === 'tournament' && tier === 0 && T.round === '예선' && (T.wins || 0) + (T.losses || 0) < 2 && (s.user.level || 1) <= 2;
     //  봇 = 대회 단계가 오를수록 먼 궤도 식물(fight.js ORBIT_CAP) · 종 역할에 맞는 스펙 · 대회(튜토리얼 빼고)는 내 식물이 아니라 리그 가장 높은 성장 단계 + 단계별 레벨 · 개체값 바닥(2026-10-23 botBody)
     const tour = mode === 'tournament' && !tut, cap = mode === 'tournament' ? L.leagueCap(s) : 0;
-    const foes = mine.map(p => { const body = tour ? botBody(rng, cap, tier) : { stage: p.stage, lv: p.lv }; return botPlant(rng, body.stage, body.lv, tier, { tier, favorEl: tut && SPECIES[p.key] ? SPECIES[p.key].el : null, concept: true, ivFloor: tour, lvExact: tour }); });
+    const foes = botTeam(rng, mine, p => (tour ? botBody(rng, cap, tier) : { stage: p.stage, lv: p.lv }), { tierBoost: tier, tier, favorEl: tut && SPECIES[mine[0].key] ? SPECIES[mine[0].key].el : null, concept: true, ivFloor: tour, lvExact: tour });   // 3:3 = 속성 · 역할이 겹치지 않는 팀(2026-11-04)
     const trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
     const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
     const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ai: aiOfTier(tier, tut, mode === 'tournament' ? Math.max(0, L.ROUNDS.indexOf(T.round)) : 0), search: mode === 'tournament' ? searchOfTier(tier, tut) : 0, ...(mode === 'swap3' ? { swapCd: 2, swOrder: true, ownSun: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
