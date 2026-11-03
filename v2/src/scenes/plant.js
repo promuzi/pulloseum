@@ -34,6 +34,8 @@ const TABS = [{ id: 'skill', label: '스킬' }, { id: 'passive', label: '패시�
 const IV_COL = { hp: '#7cf0a0', atk: '#ff8a6a', def: '#6fb8ff', spd: '#ffd84a', fruit: '#ff9ad0' };
 const ease = k => k * k * (3 - 2 * k);
 const skillOf = id => (id ? { act: 'attack', cats: ['attack'], ...SKILLS[id] } : null);
+// 이 식물이 지금 접목할 수 있는 가지(이미 아는 기술 · '하나 고르기'로 기다리는 기술 · 속성 · 종 · 단계가 안 맞는 것 빼고) — [{ sc, i(가방 순서) }]
+const graftFit = (p, s) => { const known = new Set([...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot, ...(p.drafts || []).filter(d => d.kind === 'one').flatMap(d => d.cands)].filter(Boolean)); return s.scions.map((sc, i) => ({ sc, i })).filter(({ sc }) => !known.has(sc.skill) && !canGraft(p, sc.skill)); };
 // 기본기도 카드로(전투 칸에 넣고 뺌 — 2026-10-16 사용자 "기본스킬 3개도 바꿀 수 있게")
 const skOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p.key).find(b => b.id === id), basic: true } : isSkillCard(id) ? cardSkillOf(p, id) : skillOf(id));   // 기술 카드 = 전투에서 쓰는 모습(숨결 속성 · 단조 위력)
 const cardGrid = W => { const C3 = PCARD.cols, x0 = Math.round((W - C3 * PCARD.w - (C3 - 1) * PCARD.gx) / 2); return { x0, RW: C3 * PCARD.w + (C3 - 1) * PCARD.gx, cx: i => x0 + (i % C3) * (PCARD.w + PCARD.gx), ry: i => Math.floor(i / C3) * (PCARD.h + PCARD.gy), rowsH: n => Math.ceil(Math.max(1, n) / C3) * (PCARD.h + PCARD.gy) - PCARD.gy }; };   // 카드 셋씩 줄(가운데)
@@ -230,7 +232,7 @@ export const plant = {
     y += 6;
     const bw = Math.floor((W - 34) / 2);
     this.btn(app, live, 'sk_forgot', 14, y, bw, 30, `지운 기술 ${S.forgot.length}`, { style: 'night', icon: 'potion' }, () => { this.sub = 'forgot'; this.scrollY = 0; });
-    this.btn(app, live, 'sk_graft', 20 + bw, y, bw, 30, `접목 가지 ${s.scions.length}`, { style: 'night', icon: 'vine' }, () => { this.sub = 'graft'; this.scrollY = 0; });
+    this.btn(app, live, 'sk_graft', 20 + bw, y, bw, 30, `접목 가지 ${graftFit(p, s).length}`, { style: 'night', icon: 'vine' }, () => { this.sub = 'graft'; this.scrollY = 0; });   // 이 식물이 배울 수 있는 가지 수(2026-11-04)
     return y + 40;
   },
   drawPassive(app, p, y0, live) {
@@ -411,17 +413,16 @@ export const plant = {
     this.btn(app, live, 'gf_back', 12, y0 - 2, 52, 22, '‹ 스킬', { style: 'night' }, () => { this.sub = null; this.scrollY = 0; });
     g.text('접목 가지', 72, y0 + 1, { font: 'value', color: P.main });
     let y = y0 + 28;
-    if (!s.scions.length) { g.text('가진 접목 가지가 없어요', W / 2, y + 10, { color: P.dim, align: 'center' }); return y + 40; }
-    const known = new Set([...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot, ...(p.drafts || []).filter(d => d.kind === 'one').flatMap(d => d.cands)].filter(Boolean));   // '하나 고르기'로 기다리는 기술도
-    s.scions.forEach((sc, i) => {
-      const sk = skillOf(sc.skill), why = known.has(sc.skill) ? '이미 아는 기술' : canGraft(p, sc.skill);
+    // 이 식물이 배울 수 있는 가지만(2026-11-04 사용자 '접목 시스템 바꾸자. 지금은 모든 접목 스킬이 모든 식물에게 다 떠서 가독성 떨어짐') — 못 배우는 가지는 숨기고 개수만
+    const fit = graftFit(p, s), hidden = s.scions.length - fit.length;
+    if (!fit.length) { g.text(s.scions.length ? '이 식물이 배울 수 있는 접목 가지가 없어요' : '가진 접목 가지가 없어요', W / 2, y + 10, { color: P.dim, align: 'center' }); if (hidden) g.text(`다른 식물용 가지 ${hidden}개`, W / 2, y + 28, { color: P.dim, align: 'center' }); return y + 48; }
+    fit.forEach(({ sc, i }) => {
+      const sk = skillOf(sc.skill);
       skillCard(app, 'gs_' + i, 14, y, W - 100, 34, sk, false, null);
-      if (why) g.text(why, W - 47, y + 12, { color: '#ffb0a0', align: 'center' });
-      else {
-        this.btn(app, live, 'gs_go_' + i, W - 80, y + 4, 66, 26, '접목', { style: 'gold', font: 'label' }, () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${eul(sk.name)} 배웠어요`); }));
-      }
+      this.btn(app, live, 'gs_go_' + i, W - 80, y + 4, 66, 26, '접목', { style: 'gold', font: 'label' }, () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${eul(sk.name)} 배웠어요`); }));
       y += 40;
     });
+    if (hidden) { g.text(`다른 식물용 가지 ${hidden}개는 숨김`, W / 2, y + 4, { color: P.dim, align: 'center' }); y += 22; }
     return y;
   },
 
