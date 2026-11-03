@@ -182,7 +182,10 @@ export const WEAPONS = {
     u_jelly_2: mk('whip', 'water'), u_jelly_2b: mk('whip', WEED, { status: 'thorn' }),                                                  // 톡씽 = 촉수 · 미역잉 = 미역 채찍
     u_fang_1: mk('bite', ATTACKS.fang_trap.c, { status: 'thorn' }), u_fang_2b: mk('poison', ACID, { fizz: '#f0ff90', status: 'poison' }), u_fang_3: mk('bite', VARIANTS.predator.c, { status: 'drain' }), u_fang_3c: mk('bite', 'fire'),   // 깨물기 · 소화액 · 식사시간 · 익혀먹기
     u_toxi_1: mk('poison', TOX, { fizz: '#b8f070', status: 'poison' }), u_toxi_2: mk('bubbles', TOX, { status: 'poison' }), u_toxi_3: mk('rain', TOX, { fizz: '#b8f070', status: 'poison' }), u_toxi_3c: mk('blades', TOX, { status: 'poison' }),   // 독 주머니 · 신경독 방울 · 만천화우 = 바늘비 · 독점사
-    u_draco_3: mk('breath', 'ice'), u_draco_3b: mk('gale', 'ice'), u_draco_3c: mk('bubbles', FRUIT, { status: 'swirl' }),               // 빙결 브레스 = 숨결 · 빙결 폭풍 = 눈보라 · 열매 던지기
+    u_fdrake_3: mk('breath', 'ice'), u_fdrake_3b: mk('gale', 'ice'), u_fdrake_3c: mk('bubbles', FRUIT, { status: 'swirl' }),            // 프로스트드레이크(빙결열매 — 2026-11-04 드라코프루트에서 옮김): 빙결 브레스 = 숨결 · 빙결 폭풍 = 눈보라 · 열매 던지기
+    u_draco_1: mk('slash', 'ice'), u_draco_2: mk('breath', 'ice'), u_draco_2b: mk('bolt', 'bolt'), u_draco_3b: mk('breath', 'ice'),     // 드라코프루트 새 설계(11-04): 용이될 상 후공 = 얼음 베기 · 용 흉내내기 = 작은 숨결 · 용과 먹기(용) = 번개 · 브레스 따라하기
+    u_emcap_3c: mk('fireball', 'fire'),                                                                                                  // 엠버캡 집중 포화 = 불덩이 연사
+    u_drake_1: mk('slash', VARIANTS.dragon.c), u_drake_2b: mk('gale', 'wind'), u_drake_3: mk('breath', 'fire'), u_drake_3c: mk('bite', VARIANTS.dragon.c, { status: 'bleed' }),   // 드레이크캑터: 용발톱 = 발톱 베기(무속성) · 용날개 = 바람 · 브레스 방출 = 불 숨결 · 용의 이빨 = 물기(출혈)
     u_blade_2: mk('blades', 'fire'), u_blade_3b: wp('sword_slash', 'bolt'), u_blade_3c: mk('bloom', BLOOD, { status: 'bleed' }),        // 칼날 잎 · ..력일섬! = 번개 베기 · 피의 축제
   });
 }

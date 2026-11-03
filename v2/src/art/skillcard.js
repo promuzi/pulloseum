@@ -351,6 +351,22 @@ function branchText(o) {
   if (o.perHitInflict) t.push(`맞힌 타마다 ${fxName(o.perHitInflict.id)}`);
   if (o.ifFoe) { const th = o.ifFoe.then || {}; t.push(`상대가 ${fxName(o.ifFoe.has)}이면 한 방 ${th.power}${th.pierce ? `(방어 ${PCT(th.pierce)}% 무시)` : ''}`); }
   if (o.harmony) t.push(o.harmony === 'toFoe' ? '상대 상태이상을 내 것과 똑같이' : '내 상태이상을 상대 것과 똑같이');
+  if (o.el === null && o.gain) t.push('속성 없음');   // 드라코프루트 용 흉내내기 선공 = 무속성
+  if (o.forceCrit) t.push('맞으면 치명');
+  if (o.selfAim) t.push('조준(빗나감 없음 · 치명 +25)');
+  if (o.gain && o.gain.k === 'dragon') t.push(`용 스택 +${o.gain.n || 1}`);
+  return t.join(' · ');
+}
+// 드라코프루트 '용이면'(ifDragon) 줄 — 속성 · 공격 · 내게 거는 것
+function dragonText(o) {
+  const t = [];
+  if (o.el && ELEMENT[o.el]) t.push(`${ELEMENT[o.el].name} 속성`);
+  if (o.power) t.push(`위력 ${o.power}`);
+  if (o.hits > 1) t.push(`${o.hits}연타`);
+  if (o.area) t.push('광역');
+  const me = [o.self, o.also, ...(o.selfMore || [])].filter(Boolean);
+  if (me.length) t.push('나에게 ' + me.map(fxName).join(' · '));
+  if (o.inflict) t.push(`상대에게 ${fxName(o.inflict.id)}`);
   return t.join(' · ');
 }
 function mechLines(sk) {
@@ -363,7 +379,22 @@ function mechLines(sk) {
   if (sk.critHeal) L.push([`치명이 터질 때마다 체력 ${PCT(sk.critHeal)}% 회복`, H]);
   if (sk.lostHp) L.push([`내가 잃은 체력 1%당 위력 +${sk.lostHp}`, A]);
   if (sk.spdGap) L.push([`내가 상대보다 빠른 만큼 위력 ↑(최대 ${1 + sk.spdGap}배)`, A]);
-  if (sk.execute) L.push([`맞혔을 때 상대 체력이 ${PCT(sk.execute)}% 미만이면 쓰러뜨림('죽은 줄 알았나?'로 버티면 막힘)`, A]);
+  if (sk.execute) L.push([sk.sureExec ? `상대 체력이 ${PCT(sk.execute)}% 미만이면 빗나가도 쓰러뜨림 · 맞혀서 그 아래가 돼도('죽은 줄 알았나?'로 버티면 막힘)` : `맞혔을 때 상대 체력이 ${PCT(sk.execute)}% 미만이면 쓰러뜨림('죽은 줄 알았나?'로 버티면 막힘)`, A]);
+  if (sk.dragonLock) L.push(['용이 되면 늘 \'나중이면\' 쪽', B]);
+  if (sk.ifDragon) L.push(['용이면 ' + dragonText(sk.ifDragon), B]);
+  if (sk.dragonTry) L.push([`용 스택 0 ~ 4개 = 바로 용이 될 확률 ${sk.dragonTry.map(PCT).join(' · ')}% · 실패하면 스택 0 · 용이면 못 씀`, B]);
+  if (sk.harvest) L.push([`바로 앞 상대의 포자를 모두 거둠 — 하나당 체력 ${PCT(sk.harvest.per)}% 회복 · 상대에게 화상(포악이면 화상 대신 나에게 억셈)`, H]);
+  if (sk.toggle) L.push(['포악 ↔ 온순 켜고 끄기 — 포악이면 내 포자가 필 때 회복 대신 활력 · 포자수확은 억셈', B]);
+  if (sk.warmShield) L.push(['이 막을 깨는 공격 → 때린 상대에게 화상 + 포자', X]);
+  if (sk.summon === 'ember') L.push(['잠든 불씨를 부름 — 한 턴 나 대신 맞고, 깨어나면 턴 시작마다 불 공격 + 화상', A]);
+  if (sk.sumVolley) L.push([`맞힌 타마다 포자 · 깨어난 소환수도 함께 불 ${sk.sumVolley.hits}연타 + 화상`, A]);
+  if (sk.accBy) L.push([`용의 심장 하나당 빗나감 −${sk.accBy.per}`, A]);
+  if (sk.critBy) L.push([`용의 심장 하나당 치명 +${sk.critBy.per}`, A]);
+  if (sk.spdBy) L.push([`용의 심장 하나당 나에게 가속 +${PCT(sk.spdBy.per)}%`, A]);
+  if (sk.powTbl) L.push([`위력 = 용의 심장 0 ~ 5개: ${sk.powTbl.tbl.join(' · ')} · 화상 확률 = 하나당 ${PCT(sk.burnBy ? sk.burnBy.p : 0)}%`, A]);
+  if (sk.heartArmor) L.push([`갑주 = 최대 체력 ${PCT(sk.heartArmor.base)}% + 용의 심장 하나당 ${PCT(sk.heartArmor.per)}%`, H]);
+  if (sk.heartCleanse) L.push(['용의 심장 하나당 내 해로운 상태이상 · 능력치 약화 한 종류씩 지움', H]);
+  if (sk.powTbl || sk.heartCleanse) L.push(['불 기술 — 쓰고 나면 용의 심장을 모두 씀', X]);
   if (sk.dodgeSeal) L.push(['상대가 회피 자세로 피하면 봉인', X]);
   if (sk.bleedAt) L.push([`상대 독이 ${sk.bleedAt}겹이면 그 타에 출혈`, X]);
   if (sk.consume) L.push([`상대 ${fxName(sk.consume.id)}을 터뜨림 — 겹 하나당 최대 체력 ${PCT(sk.consume.per)}% 피해(최대 ${PCT(sk.consume.cap || 1)}%) · ${fxName(sk.consume.id)} 지움`, X]);
