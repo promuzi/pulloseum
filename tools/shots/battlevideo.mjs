@@ -23,20 +23,21 @@ try {
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(url + `/v2/index.html?scene=title`, { waitUntil: 'load' });
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
-  await p.evaluate((venue, seed) => {
+  await p.evaluate((venue, seed, extra) => {
     const a = window.__app;
+    if (window.__pause) window.__pause(true);   // 원래 화면 갱신을 멈춤 — 안 멈추면 그 갱신이 바꿔 끼운 캔버스에 가운데 맞춤 이동을 장마다 쌓아 화면이 오른쪽으로 밀림(2026-11-04)
     window.__vid = { cv: document.createElement('canvas'), n: 0 };
     const V = window.__vid; V.cv.width = 270; V.cv.height = 600;
     V.ctx = V.cv.getContext('2d'); V.ctx.imageSmoothingEnabled = false;
     V.real = a.g.ctx; a.g.ctx = V.ctx; a.W = 270; a.H = 600;
-    a.router.set('battle', { venue, seed: String(seed) });
-  }, venue, seed);
+    a.router.set('battle', { venue, seed: String(seed), ...extra });
+  }, venue, seed, Object.fromEntries(['me', 'foe', 'hand'].filter(k => args[k]).map(k => [k, String(args[k])])));   // --me 키 --foe 키 --hand 기술,기술(2026-11-04 — 새 종 영상)
   const N = Math.round(sec * 20);
   for (let i = 0; i < N; i++) {
     const r = await p.evaluate((i, picks) => {
       const a = window.__app, sc = a.router.cur, V = window.__vid;
       a.t = 1000 + i * 50; a.input.begin();
-      if (a.router.name === 'battle' && sc.v.phase === 'pick') {
+      if (a.router.name === 'battle' && sc.v && sc.v.phase === 'pick') {
         const want = picks[V.n % picks.length], B = sc.B;
         const sk = B.me.kit.find(k => k.id === want && (k.cost || 0) <= B.me.energy) || B.me.kit.find(k => k.id === 'basic');
         if (!V.waitUntil) V.waitUntil = a.t + 900;   // 고르기 전에 잠깐 멈춰 화면을 보여 줌
@@ -50,6 +51,7 @@ try {
   }
   if (errs.length) console.log('페이지 오류:', errs.join(' | '));
 } finally { await b.close(); srv.close(); }
+if (args.dump) { const { writeFileSync: wf } = await import('node:fs'), dd = resolve(outDir, `battle_${venue}_${seed}_frames`); mkdirSync(dd, { recursive: true }); for (let i = 0; i < frames.length; i += +args.dump) wf(resolve(dd, `f${String(i).padStart(4, '0')}.png`), frames[i].png()); console.log('장면 →', dd); }   // --dump N = N장마다 PNG(영상 검수용)
 const out = resolve(outDir, `battle_${venue}_${seed}.mp4`);
 writeMP4(out, frames, { delay: 5, loops: 1, fps: 20, zoom: +(args.zoom || 2) });
 console.log('장', frames.length);

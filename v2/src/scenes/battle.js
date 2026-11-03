@@ -569,6 +569,7 @@ export const battle = {
     const mine = turn.mySwitch != null ? swapCard('me', turn.mySwitch) : card(turn.mySkill), theirs = turn.foeSwitch != null ? swapCard('foe', turn.foeSwitch) : card(turn.foeSkill);
     const reveal = mine || theirs ? { kind: 'reveal', ms: mine && theirs ? REVEAL_MS : REVEAL1_MS, mine, theirs, first: mine && theirs && fe ? fe.who : null } : null;
     if (reveal) out.push(reveal);
+    const more = new Set(evs.filter((e, i) => e.t === 'hit' && e.of > 1 && evs[i + 1] && evs[i + 1].t === 'hit' && evs[i + 1].who === e.who && evs[i + 1].n === e.n + 1));   // 바로 다음 타가 이어지는 연타
     for (const e of evs) {
       // 대기석 식물(엑셀 v10 — 대기 중에도 턴 끝 진행) · 소환수 사건: 앞 식물 연출 없이(대기석 아이콘 · 체력은 턴 끝 모습으로), 쓰러짐만 글로
       if (e.bench || e.sum != null || e.t === 'summonBreak') { if (e.t === 'faint' && e.bench) out.push({ kind: 'note', ms: 700, msg: `대기석의 ${ga(e.name)} 쓰러졌다`, tone: 'note' }); continue; }
@@ -587,8 +588,9 @@ export const battle = {
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
       else if (e.t === 'hit') {
         const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak), anim = makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length);
-        // 연타 둘째 타부터 = 맞기 4칸 앞에서 시작해 맞은 뒤 4칸만(2026-11-04 사용자 '연타 연출 속도감이 너무 없고 느려 … 빠르게 파바박') — 전엔 타마다 0.72초 되풀이
-        const skip = e.n > 1 ? Math.max(0, anim.I - 4) : 0, ms = e.n > 1 ? (Math.min(FRA, anim.I + 4) - skip) * FRAME_MS : FRA * FRAME_MS;
+        // 연타 둘째 타부터 = 맞기 4칸 앞에서 시작(2026-11-04 사용자 '연타 연출 속도감이 너무 없고 느려 … 빠르게 파바박') · 다음 타가 이어지면 맞은 뒤 4칸에서 끊고
+        //  마지막 타만 끝 동작까지(전엔 첫 타가 끝 동작 1.4초를 다 돌아 첫 타 → 둘째 타가 1.6초 벌어졌음 — 영상 검수)
+        const skip = e.n > 1 ? Math.max(0, anim.I - 4) : 0, end = more.has(e) ? Math.min(FRA, anim.I + 4) : FRA, ms = (end - skip) * FRAME_MS;
         out.push({ kind: 'attack', ms, skip, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim, msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' });
       }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: CAST_MS, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });   // 0.65초 → 1.3초(모으기 → 터뜨림 → 결과 — castfx.js)
@@ -1021,7 +1023,7 @@ export const battle = {
         g.rect(x - 1, y + 13, 14, 2, '#1a1a1a'); g.rect(x - 1, y + 13, Math.max(1, Math.round(14 * s.hp / s.max)), 2, s.stage === 'sleep' ? '#9fb0c8' : '#7be08a');
       });
       if (fr) { board('front'); board('air'); }
-      if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, t - v.t0, st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22)
+      if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, t - v.t0 + (st.skip || 0) * FRAME_MS, st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22) · 연타 둘째 타부터는 건너뛴 앞부분만큼 당겨 맞는 순간에 맞춤
       if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
       fieldAir(g, fenv, v.arrive, t, FP, [-ox, AY, W, AH], 64);   // ㉠ 식물 위에 겹치는 환경(불티 · 안개 결 · 먹구름 · 아침 빛 · 밤 어둠) + 깔리는 순간
       if (st && st.kind === 'cast' && v.cast) drawCast(g, v.cast, t, FP);   // ㉡ 시전(빛기둥 · 문양 구슬 · 땅 물결 · 종소리 · 설치 · 소환)
