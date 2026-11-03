@@ -481,19 +481,19 @@ const V2 = {
       S('u_fdrake_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true }),
       S('u_fdrake_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
       S('u_fdrake_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'] }),
-      S('u_fdrake_3', '빙결 브레스', 'ice', 'u', 60, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),
-      S('u_fdrake_3b', '빙결 폭풍', 'wind', 'u', 100, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),   // 위력 70 → 100(2026-10-29 성체 기준 16.8% → 맞춤, 사용자 '단순 수치는 너 추천대로 해')
+      S('u_fdrake_3', '빙결 브레스', 'ice', 'u', 75, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),   // 60 → 75(2026-11-04 — 태생 용족 능력치 ×0.94로 리그전 33% → 46%, 임시)
+      S('u_fdrake_3b', '빙결 폭풍', 'wind', 'u', 115, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),   // 위력 70 → 100(2026-10-29 성체 기준 16.8% → 맞춤, 사용자 '단순 수치는 너 추천대로 해') → 115(11-04 프로스트드레이크로 옮기며)
       S('u_fdrake_3c', '열매 던지기', null, 'u', 35, 0, { fruitUse: 'throw', hits: 1, perHitInflict: { id: 'chill', n: 1 } }),
     ],
   },
   draco_fruit: {   // 20. 드라코프루트 — 용이 되고 싶어(2026-11-03 사용자 새 설계 · 11-04 넣음): 선공 갈래로 용 스택(5칸이 차면 용 — 판 끝까지 · 모든 능력치 한 겹 영구) · 용이 되면 스택 쌓던 기술은 후공 쪽만 · 수치는 클로드 임시(리그전)
     sp: { res: { dragon: [0, 5, '용 스택'] }, dragonAt: 5 },
     skills: [
-      S('u_draco_1', '내가 용이될 상이요?', 'ice', 'u', 55, 1, { dragonLock: true, onFirst: { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, gain: { k: 'dragon', n: 1 } }, onSecond: { forceCrit: true } }),   // 선공 = 용 스택 + 회피 자세 · 후공 = 치명 확정 단일 빙결 공격
-      S('u_draco_2', '용 흉내내기', 'ice', 'u', 50, 2, { area: true, dragonLock: true, onFirst: { el: null, gain: { k: 'dragon', n: 1 } }, onSecond: { selfAim: true } }),   // 선공 = 용 스택 + 광역 무속성 · 후공 = 조준이 걸린 광역 빙결
+      S('u_draco_1', '내가 용이될 상이요?', 'ice', 'u', 70, 1, { dragonLock: true, onFirst: { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, gain: { k: 'dragon', n: 2 } }, onSecond: { forceCrit: true } }),   // 선공 = 용 스택 + 회피 자세 · 후공 = 치명 확정 단일 빙결 공격 · 스택 +2 · 위력 70(리그전 24% → 45%, 임시)
+      S('u_draco_2', '용 흉내내기', 'ice', 'u', 60, 2, { area: true, dragonLock: true, onFirst: { el: null, gain: { k: 'dragon', n: 2 } }, onSecond: { selfAim: true } }),   // 선공 = 용 스택 + 광역 무속성 · 후공 = 조준이 걸린 광역 빙결
       S('u_draco_2b', '용과 먹기', 'ice', 'u', 0, 2, { cats: ['heal_hp'], healPct: 0.2, self: 'purify', ifDragon: { act: 'attack', cats: ['attack'], el: 'bolt', power: 30, hits: 3, area: true, healPct: 0, self: null } }),   // 용이 아닐 때 = 회복 + 정화 · 용 = 번개 광역 연타
-      S('u_draco_3', '용의 자격', 'ice', 'u', 0, 2, { cats: ['buff'], dragonTry: [0, 0.1, 0.25, 0.45, 0.7] }),   // 스택 수에 따라 확률로 바로 용 · 실패하면 스택 0(확률 = 클로드 임시)
-      S('u_draco_3b', '브레스 따라하기', 'ice', 'u', 70, 3, { area: true, ifDragon: { el: 'fire', power: 95, inflict: { id: 'burn' } } }),   // 용이 아닐 때 = 광역 빙결 · 용 = 불 광역 + 화상
+      S('u_draco_3', '용의 자격', 'ice', 'u', 0, 2, { cats: ['buff'], dragonTry: [0, 0.2, 0.4, 0.6, 0.8] }),   // 스택 수에 따라 확률로 바로 용 · 실패하면 스택 0(확률 = 클로드 임시)
+      S('u_draco_3b', '브레스 따라하기', 'ice', 'u', 85, 3, { area: true, ifDragon: { el: 'fire', power: 110, inflict: { id: 'burn' } } }),   // 용이 아닐 때 = 광역 빙결 · 용 = 불 광역 + 화상
       S('u_draco_3c', '용가시', 'ice', 'u', 0, 2, { act: 'guard', cats: ['guard'], reflect: true, reflectInflict: { id: 'poison', n: 1 }, ifDragon: { act: 'buff', cats: ['buff'], self: 'defUp', also: 'atkUp', selfMore: ['spdUp'] } }),   // 용이 아닐 때 = 방어 자세 + 반사(반사가 터지면 독) · 용 = 반사 + 억셈 · 활력 · 가속
     ],
   },
@@ -505,7 +505,7 @@ const V2 = {
       S('u_emcap_2b', '포자수확', 'fire', 'u', 0, 2, { act: 'hex', cats: ['heal_hp'], harvest: { per: 0.07 } }),   // 바로 앞 상대의 포자를 전부 거둬 개수만큼 회복 + 화상 · 포악이면 회복 + 억셈
       S('u_emcap_3', '포악', 'fire', 'u', 0, 1, { cats: ['buff'], toggle: 'rage', alt: { name: '온순' } }),   // 켜고 끄기(포악 ↔ 온순 — 카드 이름이 바뀜)
       S('u_emcap_3b', '불씨 포자', 'fire', 'u', 0, 2, { cats: ['buff'], summon: 'ember' }),   // 잠든 불씨로 한 턴 대신 맞고 깨어나면 턴 시작마다 불 공격 + 화상
-      S('u_emcap_3c', '집중 포화', 'fire', 'u', 30, 3, { hits: 3, perHitInflict: { id: 'spore' }, sumVolley: { hits: 3, power: 22, el: 'fire', inflict: { id: 'burn' } } }),   // 본체 불 3타(맞은 타마다 포자) + 깨어난 소환수도 불 3타 + 화상
+      S('u_emcap_3c', '집중 포화', 'fire', 'u', 26, 3, { hits: 3, perHitInflict: { id: 'spore' }, sumVolley: { hits: 3, power: 22, el: 'fire', inflict: { id: 'burn' } } }),   // 본체 불 3타(맞은 타마다 포자) + 깨어난 소환수도 불 3타 + 화상
     ],
   },
   drake_cactus: {   // 22. 드레이크캑터 — 폭딜과 엄청난 방어기(태생 용족) · 2026-11-03 설계 · 11-04 답 · 넣음: 타고남 용의 심장 = 불 기술을 안 쓴 턴 끝마다 스택 +1(최대 5) · 스택이 있는 동안 스택 수만큼 공격력 ↑(턴이 지나도 안 꺼짐) · 불 기술을 쓰면 그 기술까지 친 뒤 스택을 전부 씀 · 수치는 클로드 임시(리그전)
@@ -516,7 +516,7 @@ const V2 = {
       S('u_drake_2b', '용날개', 'wind', 'u', 50, 2, { area: true, spdBy: { k: 'heart', per: 0.05 } }),   // 바람 광역 · 스택 하나당 가속 +5%(한 겹)
       S('u_drake_3', '브레스 방출', 'fire', 'u', 10, 0, { area: true, powTbl: { k: 'heart', tbl: [10, 15, 30, 55, 100, 180] }, burnBy: { k: 'heart', p: 0.2 } }),   // 햇빛 0 · 스택이 늘수록 기하급수(하나마다 약 1.8배) · 화상 확률 = 스택 하나당 20%(0~1스택 공짜 화상 막기 — 클로드 추천)
       S('u_drake_3b', '몸 태우기', 'fire', 'u', 0, 1, { cats: ['heal_hp'], heartCleanse: true }),   // 스택을 전부 써서 하나당 내 디버프(능력치 겹 포함 — 예외) · 상태이상 한 종류씩 지움
-      S('u_drake_3c', '용의 이빨', null, 'u', 70, 2, { contact: true, pierce: 0.3, inflict: { id: 'bleed' }, critBy: { k: 'heart', per: 8 } }),   // 무속성 찌르기(방어 30% 무시) · 출혈 · 스택 하나당 치명 칸 +8
+      S('u_drake_3c', '용의 이빨', null, 'u', 60, 2, { contact: true, pierce: 0.3, inflict: { id: 'bleed' }, critBy: { k: 'heart', per: 8 } }),   // 무속성 찌르기(방어 30% 무시) · 출혈 · 스택 하나당 치명 칸 +8
     ],
   },
   toxi_cactus: {   // 19. 톡시캑터 — 상대 독 겹 활용(태생 독성) · 2026-10-26 설계 · 10-28 세부 확정 · 고유 패시브 없음
