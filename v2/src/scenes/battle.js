@@ -288,7 +288,7 @@ function statusWins(g, x, y, list, rows = 2, up = false) {   // rows = 보일 �
 const ENV_H = 20;
 // 효과 조각(2026-10-29 ㉢ — 사용자 "이게 뭐가 어떻게 되는지 파악되기 전에 슥슥 지나가"): 걸린 식물 머리 위(환경 = 그 땅)에 [아이콘 이름] 조각이 톡 → 잠깐 머묾 → 효과 창 칸(환경 = 띠)으로 날아가 꽂힘(그때 칸이 생기며 반짝)
 //  효과 걸림 단계 0.85초 → 1초(환경 1.15초 — 땅이 먼저 바뀐 뒤 띠로) · 같은 식물에 잇따라 걸리면 둘째부터 0.7초(앞 조각이 날아가는 동안 다음 조각이 톡 — 무릎 꿇어라 셋이 3초 → 2.4초)
-const FX_MS = 1000, FX2_MS = 700, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, HIST_MAX = 80;   // HIST_MAX = 쓴 카드 기록 장 수(판 전체 · 양쪽 — 넉넉히 여든)
+const FX_MS = 1000, FX2_MS = 700, FX_FAST_MS = 380, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, HIST_MAX = 80;   // HIST_MAX = 쓴 카드 기록 장 수(판 전체 · 양쪽 — 넉넉히 여든)
 // 상대 카드 더미(오른쪽 위) · 펼쳐 보기: 새 카드가 날아와 앉는 시간 · 펼칠 때 한 장이 자리 잡는 시간 · 장 사이 시차 · 다시 모일 때 · 더미 카드 크기(손패 카드를 줄인 그림) · 밑 카드 비낌
 const PILE_IN = 560, SPREAD_IN = 300, SPREAD_STAG = 28, SPREAD_OUT = 220, PILE_W = 28, PILE_H = 38, PILE_OFF = [[0, 0], [-2, 3], [2, 5], [-1, 7]];
 const pileTilt = turn => (((turn * 37) % 9) - 4) * 0.03;   // 밑 카드 기울기(카드마다 정해짐 — 새 카드가 앉아도 밑 카드는 안 돌아감)
@@ -556,7 +556,7 @@ export const battle = {
     const evs = [], held = [];
     let open = false;
     for (const e of evs0) {
-      if (e.t === 'hit' && e.of > 1) { evs.push(e); open = e.n < e.of; if (!open) evs.push(...held.splice(0)); continue; }
+      if (e.t === 'hit' && e.of > 1) { evs.push(e); open = e.n < e.of; if (!open) evs.push(...held.splice(0).map(x => ({ ...x, fast: true }))); continue; }   // 연타 뒤에 모은 효과 = 짧게 몰아서(2026-11-04 '회피나 방어, 상태이상은 동시에 빠르게')
       if (open && (e.t === 'fx' || e.t === 'immune' || e.t === 'resist')) { held.push(e); continue; }
       evs.push(...held.splice(0)); open = false; evs.push(e);
     }
@@ -585,13 +585,18 @@ export const battle = {
       else if (e.t === 'endure' && e.hp != null) out.push({ kind: 'heal', ms: 750, ev: { ...e, heal: e.hp }, side: e.who, msg: e.revive ? `${ga(e.name)} 되살아났다!` : `${ga(e.name)} 버텼다!`, tone: 'heal' });   // 맞아 0이 된 뒤 일어남(그 체력만큼 채움)
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
-      else if (e.t === 'hit') { const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak); out.push({ kind: 'attack', ms: (e.n > 1 ? 0.6 : 1) * FRA * FRAME_MS, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim: makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length), msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' }); }
+      else if (e.t === 'hit') {
+        const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak), anim = makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length);
+        // 연타 둘째 타부터 = 맞기 4칸 앞에서 시작해 맞은 뒤 4칸만(2026-11-04 사용자 '연타 연출 속도감이 너무 없고 느려 … 빠르게 파바박') — 전엔 타마다 0.72초 되풀이
+        const skip = e.n > 1 ? Math.max(0, anim.I - 4) : 0, ms = e.n > 1 ? (Math.min(FRA, anim.I + 4) - skip) * FRAME_MS : FRA * FRAME_MS;
+        out.push({ kind: 'attack', ms, skip, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim, msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' });
+      }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: CAST_MS, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });   // 0.65초 → 1.3초(모으기 → 터뜨림 → 결과 — castfx.js)
       else if (e.t === 'execute') out.push({ kind: 'echo', ms: 700, side: e.to, pop: '처형', msg: `${ga(e.name)} 처형됐다!`, tone: 'hit' });   // 윈드페탈 처형의 춤
       else if (e.t === 'echo') out.push({ kind: 'echo', ms: 450, side: e.who, msg: `메아리가 울린다!`, tone: 'buff' });   // 프로스트벨 메아리(같은 차례에 한 번 더)
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 ${e.label || '되받아치기'}!`, tone: 'hit' });
-      else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff, pv = out[out.length - 1], follow = pv && pv.kind === 'fx' && pv.side === e.to && !(STATUS[pv.ev.id] || {}).env; out.push({ kind: 'fx', ms: D && D.env ? ENVFX_MS : follow ? FX2_MS : FX_MS, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }   // 효과 조각이 머리 위에서 칩 자리로 날아가 꽂힘(㉢) · 환경 = 땅이 바뀐 뒤 띠로
+      else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff, pv = out[out.length - 1], follow = pv && pv.kind === 'fx' && pv.side === e.to && !(STATUS[pv.ev.id] || {}).env; out.push({ kind: 'fx', ms: e.fast && !(D && D.env) ? FX_FAST_MS : D && D.env ? ENVFX_MS : follow ? FX2_MS : FX_MS, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }   // 효과 조각이 머리 위에서 칩 자리로 날아가 꽂힘(㉢) · 환경 = 땅이 바뀐 뒤 띠로
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
       else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: (RESIST_MSG[e.why] || RESIST_MSG.skip)(e.name), tone: 'buff' });
       else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.slice(0, 2).map(k => CURE_FIRE[k] || k).join(' · ')}!`, tone: 'note' });
@@ -943,7 +948,7 @@ export const battle = {
     const st = v.phase === 'play' ? v.steps[v.si] : null;
     let fr = null;
     if (st && st.kind === 'attack') {
-      const f = Math.max(0, Math.min(FRA - 1, Math.floor((t - v.t0) / FRAME_MS)));
+      const f = Math.max(0, Math.min(FRA - 1, (st.skip || 0) + Math.floor((t - v.t0) / FRAME_MS)));   // skip = 연타 둘째 타부터 앞부분을 건너뜀
       fr = st.anim.frame(f); prepareBoards(fr, st.uid + ':' + f);
       if (f >= st.anim.I && !st.applied) this.applyHit(st, t);
     }
