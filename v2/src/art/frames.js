@@ -52,18 +52,16 @@ function recolor(img, el) {
   return c;
 }
 const flip = (src, fx, fy) => { const c = canvas(src.width, src.height), x = c.getContext('2d'); x.translate(fx ? src.width : 0, fy ? src.height : 0); x.scale(fx ? -1 : 1, fy ? -1 : 1); x.drawImage(src, 0, 0); return c; };
-// 이어 붙일 팔 조각 길이: 조각 바로 앞 줄과 조각 끝 줄이 가장 비슷한 길이(그래야 되풀이해도 이음매가 덜 보임)
-function period(d, T, along, span) {
-  let best = 8, bd = Infinity;
-  for (let P = 5; P <= 12; P++) {
-    let s = 0;
-    for (let q = 0; q <= span; q++) {
-      const a = along ? ((q * T) + (T - P - 1)) * 4 : (((T - P - 1) * T) + q) * 4, b = along ? ((q * T) + (T - 1)) * 4 : (((T - 1) * T) + q) * 4;
-      for (let k = 0; k < 4; k++) s += Math.abs(d[a + k] - d[b + k]);
-    }
-    if (s < bd) { bd = s; best = P; }
+// 이어 붙일 팔 조각 길이 = 모서리 장식이 끝난 뒤 곧은 팔 부분 전체(팔 두께보다 불투명 칸이 많은 줄 = 장식) — 이어 붙일 때 하나 걸러 뒤집어(거울) 이음매가 안 보이게
+function straight(d, T, along, span) {
+  let n = 0;
+  for (let i = T - 1; i >= 0; i--) {
+    let deep = 0;   // 팔 두께 밖(안쪽)으로 나온 불투명 칸
+    for (let q = span + 1; q < T; q++) { const k = along ? ((q * T) + i) * 4 : ((i * T) + q) * 4; if (d[k + 3] > 0) deep++; }
+    if (deep > 0) break;
+    n++;
   }
-  return best;
+  return Math.max(4, Math.min(T - 2, n));
 }
 function build(key) {
   if (BUILT.has(key)) return BUILT.get(key);
@@ -74,9 +72,11 @@ function build(key) {
   let ay = 0, ax = 0;   // 팔 두께(위 팔 = 오른쪽 끝 세로줄의 마지막 불투명 줄 · 왼 팔 = 아래 끝 가로줄의 마지막 불투명 칸)
   for (let y = 0; y < T; y++) if (d[((y * T) + T - 1) * 4 + 3] > 0) ay = y;
   for (let x = 0; x < T; x++) if (d[(((T - 1) * T) + x) * 4 + 3] > 0) ax = x;
-  const P = period(d, T, true, ay), Q = period(d, T, false, ax);
-  const top = canvas(P, ay + 1); top.getContext('2d').drawImage(base, T - P, 0, P, ay + 1, 0, 0, P, ay + 1);
-  const left = canvas(ax + 1, Q); left.getContext('2d').drawImage(base, 0, T - Q, ax + 1, Q, 0, 0, ax + 1, Q);
+  const P = straight(d, T, true, ay), Q = straight(d, T, false, ax);
+  const top0 = canvas(P, ay + 1); top0.getContext('2d').drawImage(base, T - P, 0, P, ay + 1, 0, 0, P, ay + 1);
+  const left0 = canvas(ax + 1, Q); left0.getContext('2d').drawImage(base, 0, T - Q, ax + 1, Q, 0, 0, ax + 1, Q);
+  const pair = (a, horiz) => { const b = flip(a, horiz, !horiz), c = canvas(horiz ? a.width * 2 : a.width, horiz ? a.height : a.height * 2), x = c.getContext('2d'); x.drawImage(a, 0, 0); x.drawImage(b, horiz ? a.width : 0, horiz ? 0 : a.height); return c; };   // 조각 + 거울 조각 = 이음매 없는 한 마디
+  const top = pair(top0, true), left = pair(left0, false);
   const F = { T, ay, ax, tl: base, tr: flip(base, true, false), bl: flip(base, false, true), br: flip(base, true, true), top, bottom: flip(top, false, true), left, right: flip(left, true, false) };
   BUILT.set(key, F);
   return F;
@@ -99,7 +99,7 @@ export function drawFrameArt(g, x, y, w, h, sk, lit) {
   c.imageSmoothingEnabled = false;
   edges(c, x, y, w, h, F);
   c.drawImage(F.tl, x, y); c.drawImage(F.tr, x + w - F.T, y); c.drawImage(F.bl, x, y + h - F.T); c.drawImage(F.br, x + w - F.T, y + h - F.T);
-  if (sk.tier === 'u' && RAW.crest_unique) { const cr = RAW.crest_unique; c.drawImage(cr, Math.round(x + (w - cr.width) / 2), y - 1); }   // 고유 표식 = 위 가운데 별
+  if (sk.tier === 'u' && RAW.crest_unique) { const cr = RAW.crest_unique; c.drawImage(cr, Math.round(x + (w - cr.width) / 2), y - 2); }   // 고유 표식 = 위 가운데 별(테에 걸쳐 — 비용 해 · 수치 사이 빈 곳)
   if (lit) { g.rect(x + 3, y, w - 6, 1, '#ffd890'); g.rect(x + 3, y + h - 1, w - 6, 1, '#ffd890'); g.rect(x, y + 3, 1, h - 6, '#ffd890'); g.rect(x + w - 1, y + 3, 1, h - 6, '#ffd890'); }
   c.imageSmoothingEnabled = sm;
   return true;

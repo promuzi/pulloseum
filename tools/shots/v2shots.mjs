@@ -251,6 +251,7 @@ export const SHOTS = [
   ['20_guide_room_2', 'room', {'demo':'lobby'}, { guide: 2 }],
   ['20_guide_dex_0', 'dex', {}, { guide: 0 }],
   ['98_cardlab', 'cardlab', {}],   // 카드 추가 표시 검토판
+  ['98_framelab', 'framelab', {}],   // 기술 묶음 테두리 검토판(2026-11-04 — 속성 · 종 · 고유)
   ['99_icons', 'icons', {}],
   ['99_fxlab', 'fxlab', {}, { H: 860 }],   // 2026-10-23 효과 창 20칸(18칸 아이콘)으로 길어짐
   // 색 변종(2026-10-22 — 지금 고른 후보 · 원래 첫째 식물을 색 변종으로)

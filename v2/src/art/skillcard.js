@@ -229,8 +229,8 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
   }
-  drawFrameArt(g, x, y, w, h, sk, o.lit);   // 묶음 테(속성 · 종 · 고유 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
-  const { lines, font, lh } = nameLines(sk.name, aw - 4), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
+  const art = drawFrameArt(g, x, y, w, h, sk, o.lit);   // 묶음 테(속성 · 종 · 고유 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
+  const { lines, font, lh } = nameLines(sk.name, aw - (art ? 8 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);   // 묶음 테는 두꺼워 이름 폭을 2칸씩 더 줄임
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
     const p = o.shine, bx = ax - 16 + p * (aw + 32);
