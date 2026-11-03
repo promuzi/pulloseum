@@ -411,7 +411,8 @@ export const nursery = {
     if (!r) return;
     const up = r.ups[r.ups.length - 1];
     if (up) {
-      app.toast(`${p.name} Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}` + (up.harvest ? ' · 열매 칸 +1' : ''));
+      const nw = r.ups.filter(u => u.learn && u.learn.to !== 'draft').map(u => (SKILLS[u.learn.id] || {}).name).filter(Boolean);   // 레벨업마다 받은 기술(2026-11-04 ㉡)
+      app.toast(`${p.name} Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}` + (up.harvest ? ' · 열매 칸 +1' : '') + (nw.length ? ` · 새 기술 ${nw.join(' · ')}` : ''));
       const box = r.ups.find(u => u.box);
       if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요');
     }

@@ -526,7 +526,8 @@ export const plant = {
     const r = await app.act('feed', { id: p.uid, kind, n: 1 });
     if (!r) return;
     const up = r.ups[r.ups.length - 1];
-    if (up) { app.toast(`Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}`); const box = r.ups.find(u => u.box); if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
+    const nw = r.ups.filter(u => u.learn && u.learn.to !== 'draft').map(u => (SKILLS[u.learn.id] || {}).name).filter(Boolean);   // 레벨업마다 받은 기술(2026-11-04 ㉡)
+    if (up) { app.toast(`Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}` + (nw.length ? ` · 새 기술 ${nw.join(' · ')}` : '')); const box = r.ups.find(u => u.box); if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }
     if (r.ups.some(u => u.draft)) openDraft(app, p);   // 레벨업 = 카드 고르기(받은 것 판이 있으면 그 뒤에)
   },
   // 진화: 고른 식물이 지금 리그 단계를 넘게 되면 그 단계 리그로 바뀜 — 떠나는 리그 기록은 그대로 보관(2026-10-18, 전엔 처음부터라 한 번 물었음)

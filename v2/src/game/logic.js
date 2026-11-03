@@ -307,7 +307,8 @@ export function feed(s, id, kind, n = 1) {
       p.gxp -= growNeed(p.stage, p.lv); p.lv++; p.pts += PTS_PER_LV;
       const r = { lv: p.lv, pts: PTS_PER_LV };
       // 새 기술 후보(고르기 — 아래 addDraft)는 단계마다 Lv3 · Lv6에서만(2026-10-22 사용자 "레벨업시 스킬을 주는데 이게 레벨업이 쉽고 카드 얻을 기회나 선택권이 많아서 너무 피로해" — 전엔 레벨업마다)
-      if ((p.lv === 3 || p.lv === LV_MAX) && addDraft(p, 'lv')) r.draft = 1;
+      const got = levelLearn(p);   // → 2026-11-04 사용자 '3번은 ㄴ으로하자': 레벨업마다 기술 한 장을 그냥 받음(고르기 없음 · 배울 기술이 남아 있을 때만) · 진화 때만 2장 중 1장
+      if (got) { r.learn = got; if (got.to === 'draft') r.draft = 1; }
       if (p.stage === 2 && p.lv === LV_MAX && addDraft(p, 'lv', 'passive')) r.draft = 1;   // Lv16 = 패시브 고르기(셋째)
       if (p.lv === 3) r.harvest = 1;
       if (p.lv === LV_MAX) { r.box = { water: 2, fert: 1, credits: 40 + 30 * p.stage }; give(s, r.box); }
@@ -349,7 +350,19 @@ export function evolve(s, id, rng) {
 //  안 고르면(보류) 그대로 남아 맨 위 '보류' 단추로 다시. 확정 = draftApply(고르기 화면이 놓은 배치 그대로 — 2026-10-18).
 //  기술 후보(사용자 "(나) — 예전 것도 배울 기회, 우선은 최신 것"): 이번 단계 것 무게 그대로 + 앞 단계 것 무게 OLD_W.
 //  패시브 고르기(part 'passive' — 2026-10-18 "스킬과 패시브 획득 시 각각 순서대로 창"): 첫 진화 · 둘째 진화 · Lv16 = 셋 중 하나(장착 칸 셋과 같은 수), 그 식물이 끼울 수 있고 칸에 없는 패시브
-const DRAFT = { lv: { pick: 1, n: 3 }, top: { pick: 2, n: 4 }, evo: { pick: 2, n: 4 }, last: { pick: 3, n: 5 } }, PASS_DRAFT = { pick: 1, n: 3 }, OLD_W = 0.25;
+//  → 2026-11-04 사용자 '레벨업시 얻는 스킬의 선택지가 너무 많아서 어지러움' → '3번은 ㄴ으로하자'(㉡): 레벨업 = 고르기 없이 한 장(levelLearn) · 진화 = 2장 중 1장(성체 진화도) · lv · top 은 옛 판 고르기용으로만 남김
+const DRAFT = { lv: { pick: 1, n: 3 }, top: { pick: 2, n: 4 }, evo: { pick: 1, n: 2 }, last: { pick: 1, n: 2 } }, PASS_DRAFT = { pick: 1, n: 3 }, OLD_W = 0.25;
+// 레벨업 한 장: 고르기 후보와 같은 무게(이번 단계 그대로 · 앞 단계 OLD_W)로 하나 · 씨앗 = 식물 · 단계 · 레벨(화면이 먼저 해도 서버와 같게) → 놓기는 learnNow(빈 칸 → 보관 → 다 차면 놓을 칸 고르기)
+function levelLearn(p) {
+  if (!p.skills) return null;
+  normSkills(p);
+  const have = known(p), taken = new Set((p.drafts || []).flatMap(d => d.cands)), seen = new Set(), fresh = x => !have.has(x.id) && !taken.has(x.id) && !isBasic(x.id) && !seen.has(x.id) && !!seen.add(x.id);
+  const pool = bloomPool(p.key, p.stage).filter(fresh);
+  for (let st = p.stage - 1; st >= 0; st--) pool.push(...bloomPool(p.key, st).filter(fresh).map(x => ({ ...x, w: x.w * OLD_W })));
+  if (!pool.length) return null;
+  const id = pickW(seeded(`${p.uid}:learn:${p.stage}:${p.lv}`), pool).id;
+  return { id, to: learnNow(p, id) };
+}
 const seeded = t => { let h = 2166136261; for (const c of t) h = Math.imul(h ^ c.charCodeAt(0), 16777619); let a = h >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; };
 function addDraft(p, kind, part = 'skill') {
   if (!p.skills) return null;

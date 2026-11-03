@@ -84,33 +84,30 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   throws(() => placePending(s, id, 'j_ivy', 'store'), '스킬 보관이 다 참');
   ok(p.pend.includes('j_ivy'), '막히면 기다림 그대로');
 }
-// ⑤-1 카드 고르기(2026-10-18): 레벨업 = 셋 중 하나 · 단계 끝 레벨 = 넷 중 둘 · 진화 = 넷 중 둘 · 마지막 진화 = 다섯 중 셋 · 후보는 화면 · 서버가 같게(정한 씨앗) · 보류 = 그대로
+// ⑤-1 기술 얻기(2026-11-04 사용자 '3번은 ㄴ으로하자' — ㉡): 레벨업 = 고르기 없이 한 장(배울 기술이 남아 있을 때만) · 진화 = 2장 중 1장(성체 진화도) · 받는 기술은 화면 · 서버가 같게(정한 씨앗)
 {
   const { feed, evolve, draftPick } = await import('../../v2/src/game/logic.js');
   const s = game(), p = s.plants[0], id = p.uid;
   s.items.water = 999; s.items.fert = 999;
-  const s2 = JSON.parse(JSON.stringify(s));
-  feed(s, id, 'fert', 4); feed(s2, id, 'fert', 4);   // 비료 넷(+100) = Lv2(생장 90 — 2026-10-23 두 배) — 고르기는 단계마다 Lv3 · Lv6에서만(2026-10-22)
-  ok(p.lv === 2 && !(p.drafts || []).length, 'Lv2 레벨업엔 고르기 없음(Lv3 · Lv6만): ' + JSON.stringify(p.drafts));
-  feed(s, id, 'fert', 5); feed(s2, id, 'fert', 5);   // 비료 다섯 더(남은 10 + 125 ≥ 120) = Lv3
-  ok(p.lv === 3 && p.drafts && p.drafts.length === 1 && p.drafts[0].kind === 'lv' && p.drafts[0].pick === 1 && p.drafts[0].cands.length >= 1, 'Lv3 레벨업 → 고르기 하나(셋 중 하나): ' + JSON.stringify(p.drafts));
-  ok(JSON.stringify(p.drafts) === JSON.stringify(s2.plants[0].drafts), '같은 상태면 같은 후보(화면 먼저 · 서버 같게)');
-  throws(() => draftPick(s, id, 0, []), '안 고르면 막힘');
-  throws(() => draftPick(s, id, 0, ['f_ball']), '후보 아닌 기술');
-  const c0 = p.drafts[0].cands[0], r = draftPick(s, id, 0, [c0]);
-  ok(!p.drafts.length && r.got[0].id === c0 && [...p.skills.battle, ...p.skills.store].includes(c0), '고른 기술 = 스킬 칸 · 보관으로: ' + JSON.stringify(r.got));
+  const s2 = JSON.parse(JSON.stringify(s)), k0 = [...p.skills.battle, ...p.skills.store].filter(Boolean).length;
+  const r1 = feed(s, id, 'fert', 4); feed(s2, id, 'fert', 4);   // 비료 넷(+100) = Lv2(생장 90 — 2026-10-23 두 배)
+  const l1 = r1.ups[0] && r1.ups[0].learn;
+  ok(p.lv === 2 && !(p.drafts || []).length && l1 && [...p.skills.battle, ...p.skills.store].includes(l1.id), 'Lv2 레벨업 = 고르기 없이 기술 한 장: ' + JSON.stringify(r1.ups));
+  ok(JSON.stringify(p.skills) === JSON.stringify(s2.plants[0].skills), '같은 상태면 같은 기술(화면 먼저 · 서버 같게)');
   while (p.lv < 6) feed(s, id, 'fert', 1);
-  const top = p.drafts.find(d => d.lv === 6);   // 그 단계 기술이 바닥나면 고르기가 안 생김(어린 단계는 기술이 적음)
-  ok(!top || top.pick === Math.min(2, top.cands.length), '단계 끝 레벨 = 넷 중 둘(후보가 있으면): ' + JSON.stringify(p.drafts));
-  const all = p.drafts.flatMap(d => d.cands);
-  ok(new Set(all).size === all.length, '고르기마다 후보가 겹치지 않음');
-  const nDraft = p.drafts.length;
+  ok(!(p.drafts || []).some(d => d.part !== 'passive'), '레벨업으로는 고르기가 안 생김: ' + JSON.stringify(p.drafts));
+  ok([...p.skills.battle, ...p.skills.store].filter(Boolean).length > k0 + 1, '레벨업마다 기술이 늘어남(배울 기술이 남아 있는 동안)');
+  const nDraft = (p.drafts || []).length;
   evolve(s, id, makeRng(5));
   const skillOnly = () => p.drafts.filter(d => d.part !== 'passive'), ev = skillOnly().pop();   // 진화 = 기술 고르기 + 패시브 고르기(2026-10-18)
-  ok(p.drafts.length === nDraft + 2 && ev.kind === 'evo' && ev.pick === Math.min(2, ev.cands.length), '진화 = 넷 중 둘(보류한 고르기도 남음): ' + JSON.stringify(ev));
+  ok(p.drafts.length === nDraft + 2 && ev.kind === 'evo' && ev.pick === 1 && ev.cands.length <= 2, '진화 = 2장 중 1장: ' + JSON.stringify(ev));
+  throws(() => draftPick(s, id, p.drafts.indexOf(ev), []), '안 고르면 막힘');
+  throws(() => draftPick(s, id, p.drafts.indexOf(ev), ['f_ball']), '후보 아닌 기술');
+  const c0 = ev.cands[0], r = draftPick(s, id, p.drafts.indexOf(ev), [c0]);
+  ok(r.got[0].id === c0 && [...p.skills.battle, ...p.skills.store].includes(c0), '고른 기술 = 스킬 칸 · 보관으로: ' + JSON.stringify(r.got));
   p.lv = 6; evolve(s, id, makeRng(6));
   const last = skillOnly().pop();
-  ok(last.kind === 'evo' && last.st === 2 && last.pick === Math.min(3, last.cands.length), '마지막 진화 = 다섯 중 셋: ' + JSON.stringify(last));
+  ok(last.kind === 'evo' && last.st === 2 && last.pick === 1 && last.cands.length <= 2, '성체 진화도 2장 중 1장: ' + JSON.stringify(last));
   const n0 = p.drafts.length;
   runOp(s, 'draftPick', { id, n: p.drafts.indexOf(last), picks: last.cands.slice(0, last.pick) }, { rng: makeRng(1), now: 0 });
   ok(p.drafts.length === n0 - 1, '서버 일 목록(ops draftPick)');
@@ -249,19 +246,18 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   p.lv = 6; evolve(s, p.uid, makeRng(2)); p.drafts = [];
   while (p.lv < 6) feed(s, p.uid, 'fert', 1);
   ok(p.drafts.some(x => x.part === 'passive' && x.st === 2 && x.lv === 6), 'Lv16 = 패시브 고르기: ' + JSON.stringify(p.drafts.map(x => x.part + x.lv)));
-  // 후보 섞기: 이번 단계 기술을 다 알면 앞 단계 기술이 나옴 · 여럿 보면 이번 단계가 대부분
+  // 레벨업 한 장 섞기(2026-11-04 ㉡): 이번 단계 기술을 다 알면 앞 단계 기술이 나옴 · 여럿 보면 이번 단계가 대부분
   const q = game().plants[0], s3 = game(); s3.plants[0] = q; s3.items.fert = 999;
   q.stage = 1; q.lv = 1; q.gxp = 0; q.drafts = [];
   q.skills.forgot.push(...bloomPool(q.key, 1).map(x => x.id));
-  while (q.lv < 3) feed(s3, q.uid, 'fert', 1);   // 고르기는 Lv3 · Lv6에서만(2026-10-22)
-  const p0 = new Set(bloomPool(q.key, 0).map(x => x.id)), dq = q.drafts.find(x => x.part === 'skill');
-  ok(dq && dq.cands.length >= 1 && dq.cands.every(id => p0.has(id)), '이번 단계를 다 알면 앞 단계 기술: ' + JSON.stringify(dq));
+  const got3 = []; while (q.lv < 3) got3.push(...feed(s3, q.uid, 'fert', 1).ups.map(u => u.learn).filter(Boolean));
+  const p0 = new Set(bloomPool(q.key, 0).map(x => x.id));
+  ok(got3.length >= 1 && got3.every(g => p0.has(g.id)), '이번 단계를 다 알면 앞 단계 기술: ' + JSON.stringify(got3));
   let cur = 0, all = 0;
   for (let i = 0; i < 40; i++) {
     const t = game(), w = t.plants[0]; t.items.fert = 999; w.uid = 'mix' + i; w.stage = 1; w.lv = 1; w.gxp = 0; w.drafts = [];
-    while (w.lv < 3) feed(t, w.uid, 'fert', 1);
     const p1 = new Set(bloomPool(w.key, 1).map(x => x.id));
-    for (const id of (w.drafts.find(x => x.part === 'skill') || { cands: [] }).cands) { all++; if (p1.has(id)) cur++; }
+    while (w.lv < 3) for (const g of feed(t, w.uid, 'fert', 1).ups.map(u => u.learn).filter(Boolean)) { all++; if (p1.has(g.id)) cur++; }
   }
   ok(all > 0 && cur / all > 0.6 && cur < all, `이번 단계가 대부분 · 앞 단계도 가끔: ${cur}/${all}`);
 }
