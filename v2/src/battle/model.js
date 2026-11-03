@@ -3,7 +3,7 @@
 import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
 import { formMult } from './matchup.js';
 import { SKILLS as CAT_SKILLS, SPECIES, SPECIES_V2, uniquesOf } from '../game/catalog.js';
-import { caveSync, orbInit, dynAct, echoK, DYN } from './devices.js';
+import { caveSync, orbInit, dynAct, echoK, DYN, liveSkill } from './devices.js';
 import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy, HARM_IDS, FRUIT } from './status.js';
 const STAT_UPS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign > 0), STAT_DOWNS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign < 0);
 
@@ -176,7 +176,10 @@ const SHIELDS = ['shield', 'defUp', 'armor'];
 // 공격 점수 = 2.5 × (기대 피해 ÷ 상대 남은 체력) + 끝내기 · 새 효과 · 은신엔 광역 · 덤 버프. 메아리(아침 · 밤)면 그만큼 더 맞힘
 function atkScore(u, foe, s, d0) {
   const d = (d0 ?? expDamage(u, foe, s)) * (1 + echoK(u, 0)), frac = Math.min(1.2, d / Math.max(1, foe.hp));
-  return 2.5 * frac + (d >= foe.hp * 0.95 ? 2.5 : 0) + (newFx(s, foe) ? 0.5 * foe.hp / foe.max : 0) + (s.area && has(foe, 'stealth') ? 1 : 0) + (s.self ? 0.25 : 0);
+  const awake = s.sumVolley ? (u.summons || []).filter(x => x.hp > 0 && x.stage !== 'sleep').length : 0;   // 엠버캡 집중 포화 = 깨어난 소환수도 함께 침
+  const heal = s.critHeal ? healScore(u, s.critHeal * (s.hits || 1) * Math.min(0.5, ((u.crit || 0) + (s.critPlus || 0)) / 100)) : 0;   // 싹둑마마 피의 축제 = 치명마다 회복
+  if (s.execute && foe.hp > 0 && foe.hp < foe.max * s.execute) return 5;   // 처형의 춤 = 기준 아래면 처형(sureExec면 빗나가도)
+  return 2.5 * frac + (d >= foe.hp * 0.95 ? 2.5 : 0) + (newFx(s, foe) ? 0.5 * foe.hp / foe.max : 0) + (s.area && has(foe, 'stealth') ? 1 : 0) + (s.self ? 0.25 : 0) + 0.2 * awake + heal;
 }
 // 회복 점수 = 공격과 같은 잣대(2.5 × 되찾는 체력 ÷ 지금 체력)를 조금 덜(판을 끝내 주지 않음) — 빈 체력보다 더 차는 몫은 안 셈
 const healScore = (u, pct) => 2.5 * 0.8 * Math.min(pct, Math.max(0, 1 - u.hp / u.max)) * u.max / Math.max(1, u.hp);
@@ -194,6 +197,7 @@ function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
     if (s.settle) { const k = HARM_IDS.filter(x => has(foe, x)).length; return k ? 0.3 + 0.45 * Math.min(5, k) : 0.02; }   // 청산 = 상대 상태이상 종류가 많을 때
     if (s.cycle) { const up = z => STAT_UPS.filter(x => has(z, x)).length, bad = z => HARM_IDS.filter(x => has(z, x)).length + STAT_DOWNS.filter(x => has(z, x)).length, v = up(foe) + bad(u) - up(u) - bad(foe); return v > 0 ? R * (0.4 + 0.3 * v) : 0.03; }   // 윤회 = 지우면 내가 이득일 때
     if (s.harmony) return 0.2 * R;
+    if (s.harvest) { const n = (foe.eff && foe.eff.spore && foe.eff.spore.n) || 0; return n ? healScore(u, s.harvest.per * n) + 0.15 * n + (u.mode === 'rage' ? 0.2 * R : 0.25) : 0.1; }   // 엠버캡 포자수확 = 상대에게 포자가 많고 내가 다쳤을 때
     if (s.miasma) return R * (0.6 + 0.2 * after(3));   // 독안개(켜져 있으면 canUse 가 막음) = 세 턴 독
     if (s.burst) return 0.25 + 0.2 * ((u.summons || []).filter(x => x.hp > 0).length);
     if (s.inferno) {   // 지옥전개 = 상대가 화상이 아니면 3턴 화상 피해 + 지옥의 여왕(블레이드바인)이면 그동안 기동 · 치명
@@ -204,6 +208,10 @@ function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
     return fresh ? 0.55 + 0.35 * fresh : 0.15;   // 거는 것 자체가 피해 줄기인 종(게일캑터 공명 · 게일바인)이 있어 공격 점수에 견주지 않음
   }
   if (s.act === 'sun') { const need = Math.max(0, ...u.kit.map(k => k.cost || 0)); return (u.energy || 0) < need && risk < 0.5 ? 1 + 0.2 * (need - (u.energy || 0)) : 0.08; }
+  if (s.toggle) { const on = u.mode === s.toggle; return on ? (u.hp < u.max * 0.4 ? 0.6 : 0.03) : (u.hp > u.max * 0.55 ? 0.45 * R + 0.15 : 0.04); }   // 엠버캡 포악 ↔ 온순 = 체력이 넉넉하면 포악(포자가 피면 활력) · 위태로우면 온순(회복)
+  if (s.dragonTry) { const n = (u.res && u.res.dragon) || 0, p = s.dragonTry[Math.min(s.dragonTry.length - 1, n)] || 0; return p >= 0.45 ? R * (0.4 + 1.4 * p) : 0.03; }   // 드라코프루트 용의 자격 = 확률이 높을 때만
+  if (s.heartArmor) { const n = (u.res && u.res.heart) || 0, cur = (u.eff && u.eff.armor && u.eff.armor.hp) || 0; return cur >= u.max * 0.45 ? 0.03 : 2.5 * Math.min((s.heartArmor.base + s.heartArmor.per * n) * u.max, Math.max(0.15, rk) * u.hp) / Math.max(1, u.hp) * 0.8 + 0.05; }   // 드레이크캑터 용갑 강화 = 스택이 많을수록 · 갑주가 가득이면 안 씀
+  if (s.heartCleanse) { const n = (u.res && u.res.heart) || 0, bad = [...HARM_IDS, ...STAT_DOWNS].filter(k => has(u, k)).length; return n && bad ? 0.3 * R * Math.min(n, bad) + 0.15 : 0.02; }   // 드레이크캑터 몸 태우기 = 나쁜 효과가 있고 스택이 있을 때
   if (s.orbGuard) return u.orb && u.orb.n ? (risk >= 1 ? 1.7 : 1.1 * risk) : 0;   // 볼트바인 구슬 기술
   if (s.orbRefill) { const o = u.orb; return o && o.max - o.trap - o.n >= 2 ? R * 1.1 : 0.05; }
   if (s.orbTrap) return u.orb && u.orb.n >= 2 ? R * (0.6 + 0.6 * Math.min(1, risk)) : 0.05;
@@ -258,9 +266,10 @@ export function aiPick(u, foe, rng, ctx = {}) {
   const ok = u.kit.filter(s => canUse(u, s, u.energy, foe));
   if (!ok.length) return BLOCKED;
   const iq = ctx.iq ?? u.ai ?? 0.5, risk = threatOf(foe, u, ctx.seen) / Math.max(1, u.hp);
-  const atk = ok.filter(s => s.act === 'attack'), dm = atk.map(s => expDamage(u, foe, s)), A0 = new Map(atk.map((s, i) => [s, atkScore(u, foe, s, dm[i])]));
+  const lv = ok.map(s => liveSkill(u, s));   // 지금 모습으로 셈(드라코프루트가 용이면 용 쪽 기술) — 고르는 건 원래 카드
+  const atk = lv.filter(s => s.act === 'attack'), dm = atk.map(s => expDamage(u, foe, s)), A0 = new Map(atk.map((s, i) => [s, atkScore(u, foe, s, dm[i])]));
   const A = atk.length ? Math.max(...A0.values()) : 0, D = atk.length ? Math.max(...dm) : 0, H = D > 0 ? Math.max(1, Math.min(6, foe.hp / D)) : 4;   // A = 지금 가장 좋은 공격 점수 · H = 가장 센 공격으로 끝낼 때까지 남은 턴
-  const sc = ok.map(s => aiScore(u, foe, s, risk, ctx.last, A, H, ctx.seen || [], A0));
+  const sc = lv.map(s => aiScore(u, foe, s, risk, ctx.last, A, H, ctx.seen || [], A0));
   const top = Math.max(...sc), temp = 0.15 + (1 - iq) * 0.85;
   const w = sc.map(v => Math.exp((v - top) / temp));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;

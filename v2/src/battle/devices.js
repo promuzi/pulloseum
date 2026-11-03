@@ -10,7 +10,7 @@
 //  D9 모드 setMode · needMode · lockMode(SPECIES.modes[이름] = { atk, def, spd } 배율)
 //  2묶음(아래): D13 반응 · 받는 피해 배율 · 개수만큼 반사 / D10 경기장 효과 / D11 2턴 기술 / 개수 칸 화면 글
 import { SPECIES, STAGE_KEY } from '../game/catalog.js';
-import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, WIPE_ALL, wipeEff, givesFx, FRUIT, effSpd } from './status.js';
+import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, DOWN_IDS, WIPE_ALL, wipeEff, givesFx, FRUIT, effSpd, statSum } from './status.js';
 import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
@@ -36,9 +36,17 @@ export function canUseRes(u, s) {
   return true;
 }
 const foeHas = (f, id) => has(f, id) || !!(f.eff && f.eff.skip && f.eff.skip.src === id);   // 쉬는 차례(얼음 · 마비 · 기절)도 그 이름으로
-export const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes', 'fruitUse', 'spdGap'];
+export const DYN = ['hitsBy', 'powBy', 'scale', 'allSun', 'luck', 'bonusIf', 'ifFoe', 'tag', 'orbDump', 'orbBlast', 'lostHp', 'trapBoom', 'ifRes', 'fruitUse', 'spdGap', 'ifDragon', 'accBy', 'powTbl', 'burnBy', 'critBy'];
+// 지금 모습의 기술(화면 카드 · 봇): 엠버캡 포악이면 '온순' 카드 · 드라코프루트가 용이면 용 쪽 기술(ifDragon) — 판 상태를 바꾸지 않음
+export function liveSkill(u, s) {
+  if (!s) return s;
+  if (s.toggle && u && u.mode === s.toggle && s.alt) s = { ...s, ...s.alt };
+  if (s.ifDragon && u && u.st && u.st.dragon) s = { ...s, ...s.ifDragon, dragonHit: true };
+  return s;
+}
 // 자기 차례에 기술 값을 정함(개수 · 운 · 상대 상태) — 바뀌는 칸이 없으면 그 기술 그대로(복사도 안 함)
-export function dynAct(u, a0, foe, rng) {
+export function dynAct(u, a00, foe, rng) {
+  const a0 = a00 && a00.ifDragon ? liveSkill(u, a00) : a00;   // 드라코프루트: 용이면 용 쪽 기술(용과 먹기 · 브레스 따라하기 · 용가시)
   const boost = a0 && a0.tier === 'm' && u.st && u.st.formBoost ? u.st.formBoost.k : 0;   // 팽트랩 입맛 다시기 = 내 변이 기술 +20%(2턴)
   if (!a0 || (!DYN.some(k => a0[k]) && !boost)) return a0;
   const a1 = a0.ifRes && (resOf(u)[a0.ifRes.k] || 0) >= a0.ifRes.at ? { ...a0, ...a0.ifRes.then, ifResHit: true } : a0;   // 내 개수에 따라 기술 바꾸기(팽트랩 깨물기 → 준비 3이면 한입)
@@ -63,6 +71,11 @@ export function dynAct(u, a0, foe, rng) {
     if (a.fruitUse === 'throw') o.hits = Math.max(1, fn);
   }
   if (a.scale) { const c = Math.min(a.scale.dmg.length - 1, r[a.scale.k] || 0); pw *= 1 + a.scale.dmg[c]; if (a.scale.drain) o.drain = (a.drain || 0) + a.scale.drain[c]; o.scaleN = c; }
+  // 드레이크캑터 용의 심장 스택으로(2026-11-03 사용자 설계): 용발톱 = 적중 ↑ · 용의 이빨 = 치명 ↑ · 브레스 방출 = 위력 표(스택이 늘수록 기하급수) + 화상 확률
+  if (a.accBy) o.accPlus = (a.accPlus || 0) + (r[a.accBy.k] || 0) * a.accBy.per;
+  if (a.critBy) o.critPlus = (a.critPlus || 0) + (r[a.critBy.k] || 0) * a.critBy.per;
+  if (a.powTbl) { const T = a.powTbl.tbl; pw = T[Math.min(T.length - 1, r[a.powTbl.k] || 0)] * (1 + boost); o.heartN = r[a.powTbl.k] || 0; }
+  if (a.burnBy) o.inflict = { id: 'burn', p: Math.min(1, (r[a.burnBy.k] || 0) * a.burnBy.p) };
   if (a.bonusIf && foe && foeHas(foe, a.bonusIf.id)) { pw *= a.bonusIf.k; o.bonusHit = true; }
   if (a.luck) {
     const st = u.st || (u.st = {}), top = Math.max(...a.luck.map(x => x[1]));
@@ -78,6 +91,7 @@ export function dynAct(u, a0, foe, rng) {
 export function payAct(u, a, T, ev) {
   if (!a) return 0;
   u.st = u.st || {}; u.st.lastAct = a.id; u.st.lastName = a.name;
+  if (SP(u).heart && a.el === 'fire') u.st.fireT = T;   // 드레이크캑터: 이번 턴 불 기술을 씀 → 턴 끝에 용의 심장이 안 쌓임(turnDevices)
   let spent = 0;
   if (a.spend) { const r = resOf(u); spent = a.spend.all ? r[a.spend.k] || 0 : a.spend.n || 1; r[a.spend.k] = Math.max(0, (r[a.spend.k] || 0) - spent); ev.push({ t: 'res', who: u.id, k: a.spend.k, n: r[a.spend.k] }); }
   if (a.allSun) u.energy = 0;
@@ -95,11 +109,33 @@ export function payAct(u, a, T, ev) {
 // 행동이 끝난 뒤: 얻기 · 모드 · 시한(맞히든 아니든) / 메아리 · 소비 · 조작(맞혔을 때만 — x.landed)
 export function afterAct(u, a, foe, T, ev, x = {}) {
   if (!a) return;
+  const hk = SP(u).heart, heartN = hk ? resOf(u)[hk] || 0 : 0;   // 드레이크캑터 용의 심장(이 기술을 쓸 때의 스택)
   if (a.gain) {
     const n = a.gain.n === 'spent' ? x.spent || 0 : a.gain.n || 1;
     if (a.gain.set) resOf(u)[a.gain.k] = Math.min(capOf(u, a.gain.k), n); else addRes(u, a.gain.k, n);
     ev.push({ t: 'res', who: u.id, k: a.gain.k, n: resOf(u)[a.gain.k] });
+    const D = SP(u).dragonAt;
+    if (D && (resOf(u).dragon || 0) >= D) becomeDragon(u, ev);   // 드라코프루트: 용 스택이 끝까지 차면 용
   }
+  if (a.dragonTry && !(u.st && u.st.dragon)) {   // 드라코프루트 용의 자격: 스택 수에 따른 확률로 바로 용 · 실패하면 스택 0
+    const r = resOf(u), n = r.dragon || 0, p = a.dragonTry[Math.min(a.dragonTry.length - 1, n)] || 0, rr = x.rng || (() => 0.5);
+    if (n > 0 && rr() < p) { r.dragon = SP(u).dragonAt || 5; ev.push({ t: 'res', who: u.id, k: 'dragon', n: r.dragon }); becomeDragon(u, ev); }
+    else { r.dragon = 0; ev.push({ t: 'res', who: u.id, k: 'dragon', n: 0 }); ev.push({ t: 'dragonFail', who: u.id, name: u.name }); }
+  }
+  if (a.toggle) { u.mode = u.mode === a.toggle ? null : a.toggle; u.modeK = null; ev.push({ t: 'mode', who: u.id, name: u.name, mode: u.mode, list: listOf(u) }); }   // 엠버캡 포악 ↔ 온순(켜고 끄기 · 끌 때까지)
+  if (a.warmShield && u.eff && u.eff.shield) u.eff.shield.warm = true;   // 엠버캡 따끈 이불: 이 막을 깨는 공격 → 때린 상대에게 화상 + 포자(rules.strike)
+  if (a.heartArmor && u.hp > 0) {   // 드레이크캑터 용갑 강화: 갑주 = 최대 체력 몫(기본 + 스택 하나당) · 쌓임 · 상한은 공통 갑주(50%)
+    const e = (u.eff ||= {}), add = Math.max(1, Math.round(u.max * (a.heartArmor.base + a.heartArmor.per * heartN)));
+    e.armor = { hp: Math.min(Math.round(u.max * FX.armor.cap), ((e.armor && e.armor.hp) || 0) + add) };
+    ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'armor', list: listOf(u) });
+  }
+  if (a.spdBy && u.hp > 0) { const n = resOf(u)[a.spdBy.k] || 0; if (n) selfBuff(u, 'spdUp', { turn: T, ev }, { v: a.spdBy.per * n }); }   // 드레이크캑터 용날개: 스택 하나당 가속 몫(한 겹)
+  if (a.heartCleanse && u.hp > 0 && heartN) {   // 드레이크캑터 몸 태우기: 스택 하나당 내 해로운 상태이상 · 능력치 디버프 한 종류(무작위 · 같은 확률 · 중복 없음) — 능력치 겹도 지우는 예외(2026-11-04)
+    const L = [...HARM_IDS, ...DOWN_IDS].filter(k => u.eff && u.eff[k]), gone = [], rr = x.rng || (() => 0.5);
+    while (gone.length < heartN && L.length) gone.push(L.splice(Math.floor(rr() * L.length), 1)[0]);
+    wipeEff(u, gone); if (gone.length) ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'purified', ids: gone, list: listOf(u) });
+  }
+  if (hk && a.el === 'fire' && heartN) { resOf(u)[hk] = 0; ev.push({ t: 'res', who: u.id, k: hk, n: 0 }); }   // 불 기술(어떤 것이든)을 쓰면 그 기술까지 친 뒤 용의 심장을 전부 씀
   if (a.bell) { (u.st ||= {}).bell = { kind: a.bell, exp: T + 2 }; ev.push({ t: 'bell', who: u.id, name: u.name, kind: a.bell, turns: 3 }); }   // 프로스트벨 아침 · 밤 = 지금 3턴(켠 턴 포함) — 필드 표시는 rules 가 bellSync 로
   if (a.fruitCondense) { fruitAdd(u, ev); if (u.st.fruitGot) u.energy = Math.min(u.energyMax, (u.energy || 0) + 1); }   // 냉기 응축: 햇빛 하나를 열매로 → 햇빛 하나 보충(칸이 가득이면 못 받음 — A안 · 2026-10-26)
   if (a.fruitUse === 'eat' && u.hp > 0) {   // 열매 먹기: 먹은 열매 하나당 회복 + 상태이상 한 종류(무작위 · 같은 확률 · 중복 없음 — 부분 정화 규칙)
@@ -136,16 +172,17 @@ export function afterAct(u, a, foe, T, ev, x = {}) {
   if (a.moss) mossAct(u, foe, ev);   // 이끼덮기
   if (a.orbRefill && u.orb) u.orb.n = u.orb.max - u.orb.trap;   // 구슬 회수
   if (a.orbAbsorb && u.hp > 0) { const n = u.st.orbSpent || 0, before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * ORB.absorb * n * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); if (u.st.orbFull) selfBuff(u, 'purify', { turn: T, ev }); }   // 구슬흡수(가득이면 전부 정화)
-  if (a.summon) summonAdd(u, T, ev);   // 포자 배양
+  if (a.summon) summonAdd(u, T, ev, a.summon === true ? 'spore' : a.summon);   // 포자 배양 · 불씨 포자(엠버캡)
   if (a.sporeWall && u.eff && u.eff.shield) u.eff.shield.spore = true;   // 포자벽
-  if (a.volley) for (const s of liveSums(u).filter(x => x.stage !== 'sleep')) summonHit(u, s, foe, ev, x.rng || (() => 0.5));   // 일제 포자
+  if (a.volley) for (const s of liveSums(u).filter(x => x.stage !== 'sleep')) summonHit(u, s, foe, ev, x.rng || (() => 0.5), { T, emOf: x.emOf });   // 일제 포자
+  if (a.sumVolley) for (const s of liveSums(u).filter(z => z.stage !== 'sleep')) for (let i = 0; i < (a.sumVolley.hits || 1); i++) summonHit(u, s, foe, ev, x.rng || (() => 0.5), { T, emOf: x.emOf, power: a.sumVolley.power, el: a.sumVolley.el, inflict: a.sumVolley.inflict });   // 엠버캡 집중 포화: 깨어난 소환수도 함께 불 연타 + 화상
   if (a.grow) growSums(u, ev);   // 커져라!
   if (a.infuse) { (u.st ||= {}).infuse = { ...a.infuse }; ev.push({ t: 'infuse', who: u.id, name: u.name, el: a.infuse.el, n: a.infuse.n }); }   // 속성 바꾸기 예약
   if (a.setMode) { u.mode = a.setMode; u.modeK = (SP(u).modes || {})[a.setMode] || null; ev.push({ t: 'mode', who: u.id, mode: a.setMode }); }
   if (!foe || foe.hp <= 0) return;
   const fe = (foe.eff ||= {});
   if (a.delay) (fe.timers ||= []).push({ at: T + a.delay.turns, raw: a.delay.power * (u.atk || 10) / 50, area: !!a.delay.area, by: u.id, name: a.name });
-  if (!x.landed) return;
+  if (!x.landed && !(a.sureExec && a.execute && foe.hp > 0 && foe.hp < foe.max * a.execute)) return;   // sureExec = 행동할 때 이미 기준 아래면 빗나가도(회피 · 은신) 처형(2026-11-04 사용자 'ㄱ과 ㄴ을 합쳐')
   if (a.execute && foe.hp > 0 && foe.hp < foe.max * a.execute) {   // 처형(윈드페탈 처형의 춤): 맞혔을 때 상대 체력이 기준 미만이면 쓰러뜨림 · 그 턴 버티기(죽은 줄 알았나?)엔 막힘
     if (foe.st && foe.st.endureT === T) ev.push({ t: 'resist', who: u.id, to: foe.id, name: foe.name, id: 'execute', why: 'endure', list: listOf(foe) });
     else { const d = foe.hp; foe.hp = 0; ev.push({ t: 'execute', who: u.id, to: foe.id, name: foe.name }); ev.push({ t: 'tick', who: foe.id, name: foe.name, id: 'execute', dmg: d, burst: true, list: listOf(foe) }); }   // 남은 체력만큼 피해 사건(화면 · 점검이 체력을 맞춤)
@@ -189,7 +226,7 @@ export function endureHp(u, hp, ev, T) {
   return 1;
 }
 // 턴 끝(status.js endTurn): 시한 · 메아리 터짐 → 개수 칸 턴마다 +
-export function turnDevices(u, turn, ev) {
+export function turnDevices(u, turn, ev, opp = null) {
   const e = u.eff;
   if (e && e.timers && u.hp > 0) {
     const now = e.timers.filter(t => t.at <= turn);
@@ -204,6 +241,22 @@ export function turnDevices(u, turn, ev) {
     }
   }
   if (u.hp > 0) for (const [k, n] of Object.entries(SP(u).resTurn || {})) { const before = resOf(u)[k] || 0; if (addRes(u, k, n) !== before) ev.push({ t: 'res', who: u.id, k, n: u.res[k] }); }
+  const hk = SP(u).heart;   // 드레이크캑터 용의 심장: 앞에 나와 있는 턴(opp = 맞은편)에 불 기술을 안 썼으면 +1(최대 5 · 대기석에선 안 쌓임 — 클로드가 읽은 뜻)
+  if (hk && opp && u.hp > 0 && !(u.st && u.st.fireT === turn)) { const before = resOf(u)[hk] || 0; if (addRes(u, hk, 1) !== before) ev.push({ t: 'res', who: u.id, k: hk, n: u.res[hk] }); }
+}
+// 드라코프루트 용이 됨(판 끝까지): 모든 능력치 한 겹씩(status.statSum) · 스택을 쌓던 기술은 후공 쪽만(rules 순서 분기 dragonLock)
+function becomeDragon(u, ev) {
+  if (u.st && u.st.dragon) return;
+  (u.st ||= {}).dragon = true;
+  ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'dragon', list: listOf(u) });
+}
+// 엠버캡 타고남(2026-10-30 사용자 '포자가 터지면 회복' · 10-31 '포악이면 공격력 버프'): 내가 건 포자가 n개 피면 회복(같은 턴 둘째부터 절반 몫 — 자주 터지면 덜) · 포악이면 활력 n겹(이 타고남 겹 상한 cap)
+export function sporeBloomed(o, n, T, ev) {
+  const H = SP(o).sporeHeal;
+  if (!H || o.hp <= 0 || n <= 0) return;
+  if (o.mode === 'rage') { for (let i = 0; i < n; i++) selfBuff(o, 'atkUp', { turn: T, ev }, { tag: 'emcap', cap: H.cap }); return; }
+  const before = o.hp; o.hp = Math.min(o.max, o.hp + Math.round(o.max * (H.heal + H.more * (n - 1)) * healK(o)));
+  if (o.hp > before) ev.push({ t: 'regen', who: o.id, name: o.name, heal: o.hp - before, list: listOf(o) });
 }
 
 // ── 공통 장치 2묶음(2026-10-18 같은 날) ──
@@ -264,8 +317,17 @@ const frontSum = f => (f.summons || []).find(s => s.hp > 0) || null;
 // 피해 없이 상대에게 거는 기술(hex): 상태 · 디버프는 앞 소환수가 대신 받음(소환수 공통 규칙) · 강풍(환경)은 그 쪽 앞 식물 · galeAdd = 상대 쪽 강풍에 덧붙임
 export function hexAct(u, foe, a, ctx) {
   if (!foe || foe.hp <= 0) return;
-  const sum = frontSum(foe);
-  for (const h of a.hex || []) apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
+  const sum = frontSum(foe), all = a.area ? [foe, ...liveSums(foe)] : null;   // 광역 = 앞 식물 + 소환수 모두(엠버캡 불티나네)
+  for (const h of a.hex || []) {
+    if (all && h.id !== 'gale') for (const z of all) apply(z, h.id, h.n || 1, { ...ctx, by: u }, h);
+    else apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
+  }
+  if (a.harvest) {   // 엠버캡 포자수확(2026-10-31 사용자): 바로 앞 상대에게 붙은 포자를 전부 거둬 개수만큼 회복 + 그 상대에게 화상 · 포악이면 회복 + 억셈(거둔 포자는 안 핌)
+    const sp = foe.eff && foe.eff.spore, n = sp ? sp.n : 0;
+    if (n) { delete foe.eff.spore; ctx.ev.push({ t: 'expire', who: foe.id, ids: ['spore'], list: listOf(foe) }); }
+    if (n && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * a.harvest.per * n * healK(u))); ctx.ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
+    if (u.mode === 'rage') selfBuff(u, 'defUp', { turn: ctx.turn, ev: ctx.ev }); else apply(foe, 'burn', 1, { ...ctx, by: u });
+  }
   if (a.caveAdd) caveAddAct(u, foe, a, ctx.ev);
   if (a.burst) burstAct(u, foe, ctx);
   if (a.miasma) {   // 독안개(톡시캑터): 상대 쪽 필드 — 켤 때 바로 독 한 번 · 다음 두 턴은 턴 시작에(rules miasmaStart) · 켜져 있으면 다시 안 켜짐
@@ -314,9 +376,9 @@ function resoAdd(u, foe, T, ev, guarded) {
   sideHit(u, foe, R.power, guarded ? 'hit' : 'crit', ev, { from: 'reso', label: '공명' });
 }
 // 패시브 추가 공격(무속성 · 결과표 없음): 앞 소환수부터 · 보호막이 먼저 막음 → 맞은 대상
-function sideHit(u, foe, power, tier, ev, tag) {
-  const tgt = frontSum(foe) || foe;
-  let dmg = Math.max(1, Math.round(baseDamage({ atk: u.atk * atkK(u) }, { def: tgt.def * defK(tgt) }, { power }, 1) * RULES.tierMult[tier])), absorb = 0;
+function sideHit(u, foe, power, tier, ev, tag, em = 1) {   // em = 속성 배율(엠버캡 불씨 소환수 — 불)
+  const tgt = frontSum(foe) || foe, share = tgt !== foe && tgt.share ? Math.max(0.2, 1 + statSum(foe, 'def')) : 1;   // 스펙 공유 소환수 = 주인의 방어 겹도
+  let dmg = Math.max(1, Math.round(baseDamage({ atk: u.atk * atkK(u) }, { def: tgt.def * defK(tgt) * share }, { power }, em) * RULES.tierMult[tier])), absorb = 0;
   if (foe.eff && foe.eff.shield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; if (sh.hp <= 0) delete foe.eff.shield; }   // 보호막은 소환수보다 먼저
   tgt.hp = Math.max(0, tgt.hp - dmg);
   const k = tgt === foe ? undefined : foe.summons.indexOf(tgt);
@@ -386,30 +448,37 @@ export function mossAct(u, foe, ev) {
 // 스포어캡 소환수(SPECIES.summon · 수치 status.js SUMMON): 포자 배양 = 잠든 포자(주인 능력치 %) → 소환한 다음 턴 시작에 살아 있으면 새끼 → 깨어난 턴부터 턴 시작마다 평타(무속성)
 //  커져라! = 새끼가 성체 버섯(더 큰 %) · 체력은 남은 비율 그대로 · 포자회귀 = 모두 터뜨려 상대에게 포자 · 주인이 교체되면 사라짐(status.clearOnSwitch)
 const liveSums = u => (u.summons || []).filter(s => s.hp > 0);
-const SUM_NAME = { sleep: '잠든 포자', baby: '새끼', adult: '성체 버섯' };
+// 소환수 종류: 포자(스포어캡 포자 배양 — 잠든 포자 → 새끼 → 성체 버섯 · 무속성 평타) · 불씨(엠버캡 불씨 포자 — 잠든 불씨 → 깨어난 불씨 · 불 공격 + 화상, 2026-11-04 이름은 클로드 임시)
+const SUM_KIND = { spore: { sleep: '잠든 포자', baby: '새끼', adult: '성체 버섯' }, ember: { sleep: '잠든 불씨', baby: '깨어난 불씨', adult: '깨어난 불씨', el: 'fire', inflict: { id: 'burn' } } };
+const SUM_NAME = SUM_KIND.spore, kindOf = s => SUM_KIND[(s && s.kind) || 'spore'] || SUM_KIND.spore;
 function sumStats(u, stage) { const k = stage === 'adult' ? SUMMON.adultPct : SUMMON.pct; return { max: Math.max(1, Math.round(u.max * k)), atk: Math.max(1, Math.round(u.atk * k)), def: Math.max(1, Math.round(u.def * k)) }; }
-export function summonAdd(u, T, ev) {
+export function summonAdd(u, T, ev, kind = 'spore') {
   if (liveSums(u).length >= SUMMON.max) return;
-  const st = sumStats(u, 'sleep');
-  (u.summons ||= []).push({ id: `${u.id}_s${(u.sumN = (u.sumN || 0) + 1)}`, name: SUM_NAME.sleep, stage: 'sleep', born: T, key: u.key, el: u.el, jong: u.jong, hp: st.max, ...st, spd: u.spd, acc: 0, eva: 0, crit: 0, eff: {} });
-  ev.push({ t: 'summon', who: u.id, name: SUM_NAME.sleep, n: liveSums(u).length });
+  const st = sumStats(u, 'sleep'), K = SUM_KIND[kind] || SUM_NAME;
+  (u.summons ||= []).push({ id: `${u.id}_s${(u.sumN = (u.sumN || 0) + 1)}`, name: K.sleep, kind, stage: 'sleep', born: T, key: u.key, el: u.el, jong: u.jong, hp: st.max, ...st, spd: u.spd, acc: 0, eva: 0, crit: 0, eff: {}, share: true });   // share = 스펙을 주인에게서 받음 → 주인 능력치 겹을 따라감(2026-10-31 사용자 '스펙 공유되는 애들만')
+  ev.push({ t: 'summon', who: u.id, name: K.sleep, kind, n: liveSums(u).length });
 }
-function summonHit(u, s, foe, ev, rng) {
-  if (!foe || foe.hp <= 0 || s.hp <= 0) return;
-  const tgt = frontSum(foe) || foe, veil = tgt === foe && has(foe, 'stealth');
-  const tier = veil && rng() < FX.stealth.miss ? 'miss' : tierOf(hitTable(s, tgt, {}), Math.floor(rng() * 100));
-  if (tier === 'miss') return;
+// 소환수 한 번 공격(o = { power, el, inflict, emOf, T }): 주인의 공격 · 적중 · 치명 겹을 따라감(주인 → 소환수 한쪽만) · 불씨 = 불(속성 배율) + 맞으면 화상
+function summonHit(u, s, foe, ev, rng, o = {}) {
+  if (!foe || foe.hp <= 0 || s.hp <= 0) return null;
+  const tgt = frontSum(foe) || foe, veil = tgt === foe && has(foe, 'stealth'), K = kindOf(s);
+  const sa = s.share ? { ...s, atk: s.atk * Math.max(0.2, 1 + statSum(u, 'atk')), acc: (s.acc || 0) + statSum(u, 'acc'), crit: (s.crit || 0) + statSum(u, 'crit') } : s;
+  const tier = veil && rng() < FX.stealth.miss ? 'miss' : tierOf(hitTable(sa, tgt, {}), Math.floor(rng() * 100));
+  if (tier === 'miss') return null;
   if (veil) { delete foe.eff.stealth; ev.push({ t: 'reveal', who: foe.id, id: 'stealth', list: listOf(foe) }); }
-  sideHit(s, foe, SUMMON.power, tier, ev, { who: u.id, from: 'summon', label: s.name });
+  const el = o.el || K.el || null, em = el && o.emOf ? o.emOf(el, tgt) : 1, inf = o.inflict || K.inflict;
+  const hit = sideHit(sa, foe, o.power || SUMMON.power, tier, ev, { who: u.id, from: 'summon', label: s.name, el: el || undefined }, em);
+  if (inf && hit && hit.hp > 0) apply(hit, inf.id, inf.n || 1, { turn: o.T, rng, ev, by: u }, inf);
+  return hit;
 }
-export function summonStart(u, foe, T, ev, rng) {
+export function summonStart(u, foe, T, ev, rng, emOf = null) {
   if (!u || u.hp <= 0 || !u.summons) return;
-  for (const s of liveSums(u)) if (s.stage === 'sleep' && s.born < T) { s.stage = 'baby'; s.name = SUM_NAME.baby; ev.push({ t: 'summonWake', who: u.id, name: s.name }); }
-  for (const s of liveSums(u)) if (s.stage !== 'sleep') summonHit(u, s, foe, ev, rng);
+  for (const s of liveSums(u)) if (s.stage === 'sleep' && s.born < T) { s.stage = 'baby'; s.name = kindOf(s).baby; ev.push({ t: 'summonWake', who: u.id, name: s.name }); }
+  for (const s of liveSums(u)) if (s.stage !== 'sleep') summonHit(u, s, foe, ev, rng, { T, emOf });
 }
 function growSums(u, ev) {
   for (const s of liveSums(u)) {
-    if (s.stage !== 'baby') continue;
+    if (s.stage !== 'baby' || (s.kind && s.kind !== 'spore')) continue;
     const r = s.hp / s.max, st = sumStats(u, 'adult');
     Object.assign(s, st, { stage: 'adult', name: SUM_NAME.adult, hp: Math.max(1, Math.round(st.max * r)) });
   }

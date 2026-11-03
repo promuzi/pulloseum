@@ -4,8 +4,8 @@
 //  범위 공격은 회피가 어렵다(대신 비용·위력 대가) · 평타·방어 자세·회피 자세는 기본기, 특수 기술은 그 변주.
 
 import { SKILL_WEAPON } from './matchup.js';
-import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart, fruitOnUse, queenSync } from './devices.js';
-import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX } from './status.js';
+import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart, fruitOnUse, queenSync, liveSkill } from './devices.js';
+import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX, statSum } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -133,7 +133,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   miasmaStart(A, B, T, ev);   // 톡시캑터 독안개: 켠 다음 턴부터 턴 시작에 독
   queenSync(A, B);   // 블레이드바인 지옥의 여왕: 맞은편에 지옥이 있으면 기동 · 치명 ↑
   bellSync(A, B, T, ev);   // 프로스트벨 아침 · 밤(필드): 켠 프로스트벨이 앞에 있으면 양쪽 앞 식물에, 나갔거나 끝났으면 걷음
-  summonStart(A, B, T, ev, rng); summonStart(B, A, T, ev, rng);
+  const emOf = (el, d) => (o.elemMult ? o.elemMult({ curEl: el, form: null, key: null }, d, { el, power: 1, id: 'summon' }) : 1);   // 소환수 · 덤 공격의 속성 배율(엠버캡 불씨 = 불)
+  summonStart(A, B, T, ev, rng, emOf); summonStart(B, A, T, ev, rng, emOf);
   orbStart(A, T); orbStart(B, T);   // 볼트바인 구슬: 홀수 턴 시작에 가득(덫에 나간 것 빼고)   // 스포어캡 소환수: 잠든 포자가 깨어나고 깨어난 것은 평타
   fieldStart(o.field, T, [A, B], ev);   // 경기장 효과(공통 장치 D10): 끝난 효과 걷기 · 비 = 화상 꺼짐
   let first;
@@ -141,7 +142,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   else { const pr = a => (a && a.early ? 1 : 0) - (a && a.late ? 1 : 0), r = rollFirst(A, B, rng, [pr(actA), pr(actB)]); first = r.first; ev.push({ t: 'first', who: first.id, chance: r.chance, prio: r.prio || undefined }); }
   const second = first === A ? B : A;
   // 순서 분기(공통 장치 — 2026-10-18 페탈로즈 검방술): 기술의 onFirst · onSecond 를 이번 턴 순서로 고름
-  const br = (u, a) => (a && (a.onFirst || a.onSecond) ? { ...a, ...(u === first ? a.onFirst : a.onSecond), branch: u === first ? 'first' : 'second' } : a);
+  const br = (u, a0) => { const a = a0 && a0.ifDragon ? liveSkill(u, a0) : a0; if (!(a && (a.onFirst || a.onSecond))) return a; const fst = u === first && !(a.dragonLock && u.st && u.st.dragon); return { ...a, ...(fst ? a.onFirst : a.onSecond), branch: fst ? 'first' : 'second' }; };   // dragonLock = 드라코프루트가 용이면 후공 쪽만(2026-11-03 사용자)
   actA = br(A, actA); actB = br(B, actB);
   const actOf = u => (u === A ? actA : actB);
   // 자세는 이 턴 안에서만(순서 무관 — 후공의 자세도 먼저 오는 공격에 걸림): 방어(guard · guardWith) = 모든 타 · 반사 = 처음 맞는 한 타 · 회피 = 모든 타(타마다 판정)
@@ -182,6 +183,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.act === 'guard' || a.act === 'evade') {
       showStance(u);
       if (a.self) selfBuff(u, a.self, { turn: T, ev }, a);   // 자세 + 덤 버프(블레이드바인 치명적 무희 = 회피 자세 + 예리)
+      if (a.gain) afterAct(u, a, foe, T, ev, { spent, rng });   // 자세 + 개수 얻기(드라코프루트 내가 용이될 상이요? 선공 = 용 스택)
       return 'acted';
     }
     if (a.act === 'sun') {   // 광합성(기본기 — 햇빛 +2) · 메아리면 그 몫만큼 더(아침 = +0.5)
@@ -210,7 +212,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.caveAdd && u.hp > 0) caveAddAct(u, foe, a, ev);
     if (r.landed && u.hp > 0 && foe.eff && foe.eff.orbTrap && foe.eff.orbTrap.n > 0) orbTrapBurst(foe, u, T, ev, rng);   // 봉인 구슬 덫(내 쪽 지형) = 맞히면 하나가 터짐   // 지반붕괴 = 공격 + 동굴에 설치   // 게일바인: 맞으면 그 공격이 끝난 뒤 스택을 다 써서 반격
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
-    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed: r.landed, bonusHit: a.bonusHit, rng }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
+    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed: r.landed, bonusHit: a.bonusHit, rng, emOf }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
     if (r.avoided && d.counter && (d.counterAll || (a.contact !== false && !a.ranged)) && !a.area && foe.hp > 0) {   // counterAll = 멀리서 온 공격도(윈드페탈 환희의 춤 — 원거리 구분 폐지)
       const cd = Math.max(1, Math.round(r.hitDmg(foe, u, { power: d.counter }, 1)));
@@ -262,17 +264,18 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const N = Math.max(1, (a.strikes ? a.strikes.length : a.hits || 1) + fieldHits(o.field, a)), hammer = SKILL_WEAPON[a.id] === 'hammer';
     const og = still && d.orbGuard && foe.orb && foe.orb.n > 0 && foe.st.orbGuardT !== T ? { cap: foe.orb.n * Math.round(foe.max * ORB.guard), used: 0 } : null;   // 수호 구슬 = 이 공격 기술 한 번의 모든 타를 구슬이 막음
     const hid = has(foe, 'stealth'), spw = !!(foe.eff && foe.eff.shield && foe.eff.shield.spore);   // 포자벽 = 막으면 때린 상대에게 포자   // 이 공격 앞에서 숨어 있었나(은신끼리도 서로 안 보임 — 2026-10-23 사용자)
-    const aimK = (u.eff && u.eff.aim && u.eff.aim.k) || 0;
-    let landed = false, avoided = evadeOn, blocked = false, dmg = 0, shieldHit = false, hard = false, allMiss = true, tries = 0;
+    const aimK = Math.max((u.eff && u.eff.aim && u.eff.aim.k) || 0, a.selfAim ? FX.aim.k : 0);   // selfAim = 이 공격에 조준이 걸림(드라코프루트 용 흉내내기 후공)
+    let landed = false, avoided = evadeOn, blocked = false, dmg = 0, shieldHit = false, hard = false, allMiss = true, tries = 0, warmBroke = false;   // warmBroke = 엠버캡 따끈 이불을 이 공격이 깸
     const evN = ev.length;
     const hitSet = new Set();   // 효과는 맞은 대상마다 첫 적중 한 번
     // 소환수(엑셀 v10 50행 + 2026-10-21~22): 주인을 노린 공격은 앞 소환수부터 대신 맞음(피해 · 디버프 · 상태이상) · 연타는 깨진 뒤 남은 타를 주인이 · 광역은 모두 ·
     //  한 타로 깨질 때 남는 피해는 안 넘어감 · 보호막(주인)이 소환수보다 먼저 막음 · 소환수에겐 자세 · 은신이 없음
     const sums = () => (foe.summons || []).filter(s => s.hp > 0);
     const hitSum = (s, ah, i) => {
-      const k = foe.summons.indexOf(s), t = hitTable(u, s, { area: !!a.area, aim: aimK, critAdd: critAddOf(u), missAdd: missAddOf(u) }), tier = tierOf(t, Math.floor(rng() * 100));
-      let dm = Math.round(hitDmg(u, s, ah, em) * RULES.tierMult[tier] * (ambush ? FX.stealth.ambush : 1)), absorb = 0;
-      if (dm > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dm); sh.hp -= absorb; dm -= absorb; shieldHit = true; }
+      const k = foe.summons.indexOf(s), t = hitTable(u, s, { area: !!a.area, aim: aimK, critAdd: critAddOf(u) + (a.critPlus || 0), missAdd: missAddOf(u) - (a.accPlus || 0) }), tier = tierOf(t, Math.floor(rng() * 100));
+      const sd = s.share ? { ...s, def: s.def * Math.max(0.2, 1 + statSum(foe, 'def')) } : s;   // 스펙 공유 소환수 = 주인의 방어 겹도 따라감(2026-10-31 사용자)
+      let dm = Math.round(hitDmg(u, sd, ah, em) * RULES.tierMult[tier] * (ambush ? FX.stealth.ambush : 1)), absorb = 0;
+      if (dm > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dm); sh.hp -= absorb; dm -= absorb; shieldHit = true; if (sh.warm && absorb > 0 && sh.hp <= 0) warmBroke = true; }
       dm = Math.min(dm, s.hp); s.hp -= dm;
       ev.push({ t: 'hit', who: u.id, to: foe.id, sum: k, id: a.id, tier, dmg: dm, mult: em, absorb, ab: absorb ? 'shield' : undefined, table: t, area: !!a.area, n: N > 1 ? i + 1 : undefined, of: N > 1 ? N : undefined, link: L.link ? { id: a.id, name: a.name } : undefined });
       if (tier === 'hit' || tier === 'crit') avoided = false;
@@ -289,12 +292,12 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const guardOn = !ambush && !sure && still && guards.has(foe);
       if (guardOn) showStance(foe, 'guard');
       const veil = a.area || bare ? 0 : has(foe, 'stealth') ? FX.stealth.miss : 0;   // 은신 = 광역 아닌 공격 95% 빗나감(내가 숨어 있어도)
-      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, sure: sure || !!bare, noCrit: a.critIfDodged && u === first, aim: aimK, critAdd: critAddOf(u) + (a.critPlus || 0), missAdd: missAddOf(u) });   // critPlus = 치명 칸이 높은 기술(블레이드바인 칼날 잎)
+      const t = hitTable(u, foe, { area: !!a.area, shift: evadeOn ? d.shift : null, shiftK: rep * evadeK(foe, u), critK: foe.st.critTaken ? RULES.critAfterCritK : null, sure: sure || !!bare, noCrit: a.critIfDodged && u === first, aim: aimK, critAdd: critAddOf(u) + (a.critPlus || 0), missAdd: missAddOf(u) - (a.accPlus || 0) });   // critPlus = 치명 칸이 높은 기술(블레이드바인 칼날 잎 · 피의 축제 · 드레이크캑터 용의 이빨) · accPlus = 적중이 오른 기술(용발톱)
       let tier, forced = false;
       if (veil && rng() < veil) tier = aimK ? 'graze' : 'miss';   // 은신에 빗나감(판정표 빗나감 상한 70% 밖에서 따로) · 조준이면 스침으로 맞아 드러남
       else if (N > 1) tier = tierOf(t, Math.floor(rng() * 100));   // 연타 = 불운 보정 없음(사용자 "연타에서는 보정을 하지 말자")
       else { const j = judgeHit(t, u.st.miss[foe.id] || 0, rng); u.st.miss[foe.id] = j.missStreak; tier = j.tier; forced = j.forced; }
-      if ((a.critIfDodged && u !== first && u.st.dodgedT === T) || (sure && u === first)) tier = 'crit';   // 확정 치명(휙- 푹찍 = 먼저 친 상대가 빗나간 뒤 · 피해? = 선공) — 치명 방어엔 막힘
+      if ((a.critIfDodged && u !== first && u.st.dodgedT === T) || (sure && u === first) || (a.forceCrit && tier !== 'miss')) tier = 'crit';   // 확정 치명(휙- 푹찍 = 먼저 친 상대가 빗나간 뒤 · 피해? = 선공 · 드라코프루트 내가 용이될 상이요? 후공 = 맞으면 치명) — 치명 방어엔 막힘
       if ((guardOn || (sure && !ambush && still && guards.has(foe))) && tier === 'crit' && d.blockCrit !== false) tier = 'hit';   // 치명 방어 · 피해?도 방어태세엔 치명이 막힘(2026-10-24 사용자 — 막는 힘 ×4는 그대로 무시)
       const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
       dmg = Math.round(hitDmg(u, foe, ah, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
@@ -302,7 +305,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       dmg = Math.round(dmg * takenK(foe) * (bare || 1));   // 받는 피해 배율(D13 — 체력 가득이면 위엄 등)
       let absorb = 0, ab = null;
       if (og && dmg > 0 && og.cap > 0) { const k = Math.min(og.cap, dmg); og.cap -= k; og.used += k; dmg -= k; absorb += k; ab = 'orb'; }   // 보호막 → 방어구 순서로 먼저 막음
-      if (dmg > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; shieldHit = true; }
+      if (dmg > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; shieldHit = true; if (sh.warm && absorb > 0 && sh.hp <= 0) warmBroke = true; }
       if (dmg > 0 && foe.eff && foe.eff.armor) {
         const ar = foe.eff.armor, k = hammer ? FX.armor.hammerK : 1, use = Math.min(ar.hp, dmg * k), took = Math.min(dmg, Math.round(use / k));
         ar.hp -= use; absorb += took; dmg -= took; ab = 'armor';
@@ -343,6 +346,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     }
     if (og) { foe.orb.n = Math.max(0, foe.orb.n - Math.ceil(og.used / Math.max(1, Math.round(foe.max * ORB.guard)))); foe.st.orbGuardT = T; }   // 막은 만큼만 구슬이 깎임
     if (spw && shieldHit && u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe });
+    if (warmBroke && u.hp > 0) { apply(u, 'burn', 1, { turn: T, rng, ev, by: foe }); if (u.hp > 0) apply(u, 'spore', 1, { turn: T, rng, ev, by: foe }); }   // 엠버캡 따끈 이불: 이 공격이 막을 깨면 때린 쪽에게 화상 + 포자(2026-10-31 사용자 · 같은 속성 · 버섯은 면역)
     if (shieldHit && foe.eff && foe.eff.shield) { delete foe.eff.shield; ev.push({ t: 'expire', who: foe.id, ids: ['shield'], list: listOf(foe) }); }   // 보호막 = 막은 공격 기술이 끝나면 잔량 제거
     if (tries && allMiss) foe.st.dodgedT = T;   // 이 공격을 다 피함(스침은 빗나감 아님) — 휙- 푹찍
     const mg = ev.slice(evN).some(e => e.t === 'hit' && e.who === u.id && (e.tier === 'miss' || e.tier === 'graze'));   // 쏜위드 덫: 이 공격에 빗나가거나 스친 타가 있었나

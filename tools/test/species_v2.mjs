@@ -372,6 +372,10 @@ ok(SPECIES_V2.has('flower_wind'), '윈드페탈 v2 켜짐');
   const ev7 = turn(w7, d7, SKILLS.u_wind_3c, OTHER, 1, () => 0.5);
   ok(ev7.some(e => e.t === 'execute') && d7.hp === 0, '처형의 춤 = 맞힌 뒤 20% 미만이면 처형');
   ok(SKILLS.u_wind_3c.late, '처형의 춤 = 무조건 나중');
+  const w8 = mk('me', 'flower_wind', { stage: 2 }), d8 = mk('foe', 'aqua');   // 2026-11-04 사용자 'ㄱ과 ㄴ을 합쳐': 행동할 때 이미 기준 아래면 빗나가도(회피) 처형
+  d8.hp = Math.round(d8.max * 0.15);
+  const ev8 = turn(w8, d8, SKILLS.u_wind_3c, B('evade'), 1, () => 0.01);
+  ok(ev8.some(e => e.t === 'hit' && e.who === 'me' && e.tier === 'miss') && ev8.some(e => e.t === 'execute') && d8.hp === 0, '처형의 춤 = 기준 아래면 회피에 빗나가도 처형');
 }
 // ── 3. 아쿠아벌브(2026-10-29 밤샘) ──
 ok(SPECIES_V2.has('aqua'), '아쿠아벌브 v2 켜짐');
@@ -504,33 +508,150 @@ ok(SPECIES_V2.has('toxi_cactus'), '톡시캑터 v2 켜짐');
   const ev6 = turn(t6, f6, SKILLS.u_toxi_3c, { id: 'f', name: '때리기', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null }, 1, () => 0.5);
   ok(f5.eff.poison && f5.eff.poison.n === 3 && ev6.some(e => e.t === 'hit' && e.who === 'me' && e.area), '독점사 = 선공 연타(타마다 독) · 후공 광역');
 }
-// ── 20. 드라코프루트(2026-10-29 밤샘) ──
-ok(SPECIES_V2.has('draco_fruit'), '드라코프루트 v2 켜짐');
+// ── 23. 프로스트드레이크 = 빙결열매(2026-10-29 밤샘에 드라코프루트로 넣음 → 2026-11-04 사용자 바로잡음으로 옮김) ──
+ok(SPECIES_V2.has('frost_drake'), '프로스트드레이크 v2 켜짐');
 {
   const ICE = { id: 'i', name: '서리', act: 'attack', power: 55, cost: 2, el: 'ice', cats: ['attack'], inflict: { id: 'chill', n: 1 } };
-  const d = mk('me', 'draco_fruit', { stage: 2 }), f = mk('foe', 'thorn'); d.energy = 3;
+  const d = mk('me', 'frost_drake', { stage: 2 }), f = mk('foe', 'thorn'); d.energy = 3;
   payEnergy(d, 2); turn(d, f, ICE, OTHER, 1, () => 0.5);
   ok(d.eff.fruit && d.eff.fruit.n === 1 && d.energyMax === 7, '빙결 기술 = 남은 햇빛 하나가 열매(햇빛 칸 하나 줄어듦)');
-  const d2 = mk('me', 'draco_fruit', { stage: 2 }), f2 = mk('foe', 'thorn'); d2.energy = 2;
+  const d2 = mk('me', 'frost_drake', { stage: 2 }), f2 = mk('foe', 'thorn'); d2.energy = 2;
   payEnergy(d2, 2); turn(d2, f2, ICE, OTHER, 1, () => 0.5);
   ok(!d2.eff.fruit, '남은 햇빛이 없으면 열매 안 생김');
-  const d3 = mk('me', 'draco_fruit'), f3 = mk('foe', 'thorn'); d3.energy = 3;
-  payEnergy(d3, 1); turn(d3, f3, SKILLS.u_draco_1, OTHER, 1);
+  const d3 = mk('me', 'frost_drake'), f3 = mk('foe', 'thorn'); d3.energy = 3;
+  payEnergy(d3, 1); turn(d3, f3, SKILLS.u_fdrake_1, OTHER, 1);
   ok(d3.eff.fruit.n === 1 && d3.energy === 2 && d3.energyMax === 7, '냉기 응축 = 햇빛 하나를 열매로 + 하나 보충(A안)');
-  const def0 = mk('me', 'draco_fruit'), { defK } = await import('../../v2/src/battle/status.js');
+  const def0 = mk('me', 'frost_drake'), { defK } = await import('../../v2/src/battle/status.js');
   ok(defK(d3) > defK(def0), '열매 하나당 방어 ↑');
   d3.eff.fruit.n = 3; d3.energyMax = 5; d3.eff.poison = { n: 2, last: 1 }; d3.eff.burn = { exp: 9 }; d3.hp = Math.round(d3.max * 0.5);
   const h0 = d3.hp, e0 = d3.energy;
-  turn(d3, f3, SKILLS.u_draco_2, OTHER, 2, () => 0.5);
+  turn(d3, f3, SKILLS.u_fdrake_2, OTHER, 2, () => 0.5);
   ok(!d3.eff.fruit && d3.energyMax === 8 && d3.energy === Math.min(8, e0 + 3) && d3.hp > h0 && !d3.eff.poison && !d3.eff.burn, '열매 먹기 = 전부 먹고 햇빛 복귀 · 회복 · 열매 수만큼 정화');
-  ok(!canUse(d3, SKILLS.u_draco_2, 8, f3) && !canUse(d3, SKILLS.u_draco_3, 8, f3), '열매가 없으면 소모 기술 못 씀');
-  const d4 = mk('me', 'draco_fruit', { stage: 2 }), f4 = mk('foe', 'thorn');
+  ok(!canUse(d3, SKILLS.u_fdrake_2, 8, f3) && !canUse(d3, SKILLS.u_fdrake_3, 8, f3), '열매가 없으면 소모 기술 못 씀');
+  const d4 = mk('me', 'frost_drake', { stage: 2 }), f4 = mk('foe', 'thorn');
   d4.eff.fruit = { n: 3 }; d4.energyMax = 5;
-  const ev4 = turn(d4, f4, SKILLS.u_draco_3c, OTHER, 1, () => 0.5);
+  const ev4 = turn(d4, f4, SKILLS.u_fdrake_3c, OTHER, 1, () => 0.5);
   ok(ev4.filter(e => e.t === 'hit' && e.who === 'me').length === 3 && !d4.eff.fruit && ev4.some(e => e.t === 'fx' && e.id === 'frozen'), '열매 던지기 = 열매 수만큼 타 · 타마다 빙결(3 = 얼음) · 열매 안 쌓음');
-  const d5 = mk('me', 'draco_fruit', { stage: 1 });
-  turn(d5, mk('foe', 'thorn'), SKILLS.u_draco_2b, OTHER, 1);
+  const d5 = mk('me', 'frost_drake', { stage: 1 });
+  turn(d5, mk('foe', 'thorn'), SKILLS.u_fdrake_2b, OTHER, 1);
   ok(d5.eff.atkUp && d5.eff.spdUp && d5.eff.defDown, '알 깨기 = 활력 · 가속 + 시듦(평범한 버프 · 디버프)');
+  ok(SPECIES.draco_fruit && !(SPECIES.frost_drake.form !== 'dragon'), '프로스트드레이크는 태생 용족 그대로');
+}
+// ── 20. 드라코프루트 = 용이 되고 싶어(2026-11-03 사용자 새 설계 · 11-04 넣음) ──
+ok(SPECIES_V2.has('draco_fruit'), '드라코프루트 v2 켜짐');
+{
+  const HIT = { id: 'f', name: '때리기', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null, contact: true };
+  const d = mk('me', 'draco_fruit', { spd: 999 }), f = mk('foe', 'aqua', { spd: 1 });
+  turn(d, f, SKILLS.u_draco_1, OTHER, 1);
+  ok(d.res && d.res.dragon === 1, `내가 용이될 상이요? 선공 = 회피 자세 + 용 스택 +1 (${d.res && d.res.dragon})`);
+  const d2 = mk('me', 'draco_fruit', { spd: 1 }), f2 = mk('foe', 'aqua', { spd: 999 });
+  const h2 = turn(d2, f2, SKILLS.u_draco_1, HIT, 1, () => 0.5).find(e => e.t === 'hit' && e.who === 'me');
+  ok(h2 && h2.tier === 'crit', '후공 = 맞으면 치명 확정 빙결 공격');
+  const d3 = mk('me', 'draco_fruit', { spd: 999 }), f3 = mk('foe', 'aqua', { spd: 1 }), a0 = atkK(d3);
+  for (let i = 1; i <= 5; i++) turn(d3, f3, SKILLS.u_draco_1, OTHER, i);
+  ok(d3.st.dragon, '용 스택 5칸 = 용');
+  ok(atkK(d3) > a0, '용 = 공격 한 겹 ↑(판 끝까지)');
+  ok(turn(d3, f3, SKILLS.u_draco_1, OTHER, 6).some(e => e.t === 'hit' && e.who === 'me'), '용이면 선공이어도 후공 쪽(공격)');
+  const d5 = mk('me', 'draco_fruit', { stage: 1 }); d5.hp = Math.round(d5.max / 2); d5.eff.burn = { exp: 9 }; const h5 = d5.hp;
+  turn(d5, mk('foe', 'aqua'), SKILLS.u_draco_2b, OTHER, 1);
+  ok(d5.hp > h5 && !has(d5, 'burn'), '용과 먹기(용 아님) = 회복 + 정화');
+  const h6 = turn(d3, f3, SKILLS.u_draco_2b, OTHER, 7, () => 0.5).filter(e => e.t === 'hit' && e.who === 'me');
+  ok(h6.length === 3 && h6.every(h => h.area), '용과 먹기(용) = 번개 광역 3타');
+  const d7 = mk('me', 'draco_fruit', { stage: 2 }); d7.res = { dragon: 4 }; d7.resMax = { dragon: 5 };
+  turn(d7, mk('foe', 'aqua'), SKILLS.u_draco_3, OTHER, 1, () => 0.1);
+  ok(d7.st.dragon, '용의 자격 = 확률이 맞으면 바로 용');
+  const d8 = mk('me', 'draco_fruit', { stage: 2 }); d8.res = { dragon: 1 }; d8.resMax = { dragon: 5 };
+  turn(d8, mk('foe', 'aqua'), SKILLS.u_draco_3, OTHER, 1, () => 0.99);
+  ok(!d8.st.dragon && d8.res.dragon === 0, '용의 자격 실패 = 스택 0');
+  ok(!canUse(d7, SKILLS.u_draco_3, 8, null), '용이면 용의 자격 못 씀');
+  const f9 = mk('foe', 'aqua'); f9.eff.chill = { n: 1, last: 8 };
+  turn(d3, f9, SKILLS.u_draco_3b, OTHER, 8, () => 0.5);
+  ok(has(f9, 'burn') && has(f9, 'chill'), '브레스 따라하기(용) = 불 + 화상 · 빙결은 불에 안 녹음(11-03)');
+  const d10 = mk('me', 'draco_fruit', { stage: 2 }), f10 = mk('foe', 'aqua');
+  turn(d10, f10, SKILLS.u_draco_3c, HIT, 1, () => 0.5);
+  ok(has(f10, 'poison'), '용가시(용 아님) = 방어 자세 + 반사가 터지면 상대에게 독');
+}
+// ── 21. 엠버캡(2026-11-01 설계 · 11-04 넣음) · 포자 공통 규칙(붙인 턴 포함 3번째 턴 끝에 핌 · 불에 안 탐) ──
+ok(SPECIES_V2.has('ember_cap'), '엠버캡 v2 켜짐');
+{
+  const e = mk('me', 'ember_cap'), f = mk('foe', 'aqua'), h0 = f.hp;
+  turn(e, f, SKILLS.u_emcap_1, OTHER, 1);
+  ok(has(f, 'spore') && has(f, 'burn') && f.eff.spore.left[0] === 2, '불티나네 = 포자 + 화상(위력 없음) · 포자는 붙인 턴 끝에 하나 줄어 2');
+  turn(e, f, OTHER, OTHER, 2);
+  e.hp = Math.round(e.max / 2); const he = e.hp;
+  const ev3 = turn(e, f, OTHER, OTHER, 3);
+  ok(ev3.some(x => x.t === 'bloom' && x.who === 'foe'), '포자 = 붙인 턴 포함 3번째 턴 끝에 핌');
+  ok(e.hp > he, '타고남 = 내가 건 포자가 피면 회복');
+  const g = mk('foe', 'aqua'); g.eff.spore = { n: 1, left: [3], who: ['x'], v: [0.08] }; g.eff.chill = { n: 1, last: 1 };
+  turn(mk('me', 'flower_fire'), g, { id: 'fb', name: '불', act: 'attack', power: 40, cost: 0, cats: ['attack'], el: 'fire' }, OTHER, 1, () => 0.5);
+  ok(has(g, 'spore') && has(g, 'chill'), '불 공격은 포자 · 빙결을 안 태움(10-31 · 11-03)');
+}
+{
+  const e = mk('me', 'ember_cap', { stage: 1, spd: 999 }), f = mk('foe', 'aqua', { spd: 1 });
+  turn(e, f, SKILLS.u_emcap_2, { id: 'b', name: '세게', act: 'attack', power: 300, cost: 0, cats: ['attack'], el: null }, 1, () => 0.5);
+  ok(has(f, 'burn') && has(f, 'spore'), '따끈 이불을 깨면 때린 쪽에게 화상 + 포자');
+  const e2 = mk('me', 'ember_cap', { stage: 1, spd: 999 }), f2 = mk('foe', 'aqua', { spd: 1 });
+  turn(e2, f2, SKILLS.u_emcap_2, { id: 'w', name: '살짝', act: 'attack', power: 3, cost: 0, cats: ['attack'], el: null }, 1, () => 0.5);
+  ok(!has(f2, 'burn') && !has(f2, 'spore'), '막이 안 깨지면 아무 일 없음');
+  const e3 = mk('me', 'ember_cap', { stage: 1 }), f3 = mk('foe', 'aqua');
+  f3.eff.spore = { n: 2, left: [2, 3], who: ['me', 'me'], v: [0.08, 0.08] }; e3.hp = Math.round(e3.max / 2); const h3 = e3.hp;
+  turn(e3, f3, SKILLS.u_emcap_2b, OTHER, 1);
+  ok(!has(f3, 'spore') && e3.hp > h3 && has(f3, 'burn'), '포자수확 = 포자를 전부 거둬 회복 + 화상');
+}
+{
+  const e = mk('me', 'ember_cap', { stage: 2 }), f = mk('foe', 'aqua');
+  turn(e, f, SKILLS.u_emcap_3, OTHER, 1);
+  ok(e.mode === 'rage', '포악 = 포악 상태(카드는 온순으로)');
+  f.eff.spore = { n: 1, left: [1], who: ['me'], v: [0.08] };
+  turn(e, f, OTHER, OTHER, 2);
+  ok(e.eff.atkUp && e.eff.atkUp.n === 1, '포악이면 포자가 필 때 회복 대신 활력');
+  f.eff.spore = { n: 1, left: [3], who: ['me'], v: [0.08] };
+  turn(e, f, SKILLS.u_emcap_2b, OTHER, 3);
+  ok(e.eff.defUp && !has(f, 'burn'), '포악이면 포자수확 = 회복 + 억셈(화상 대신)');
+  turn(e, f, SKILLS.u_emcap_3, OTHER, 4);
+  ok(!e.mode, '온순 = 되돌아옴');
+  const e2 = mk('me', 'ember_cap', { stage: 2 }), f2 = mk('foe', 'aqua');
+  turn(e2, f2, SKILLS.u_emcap_3b, OTHER, 1);
+  ok(e2.summons && e2.summons[0].kind === 'ember' && e2.summons[0].stage === 'sleep', '불씨 포자 = 잠든 불씨');
+  const ev2 = turn(e2, f2, OTHER, OTHER, 2);
+  ok(ev2.some(x => x.t === 'counter' && x.from === 'summon') && has(f2, 'burn'), '깨어나면 턴 시작마다 불 공격 + 화상');
+  const n0 = turn(e2, f2, SKILLS.u_emcap_3c, OTHER, 3, () => 0.5);
+  ok(n0.filter(x => x.t === 'hit' && x.who === 'me').length === 3 && f2.eff.spore && f2.eff.spore.n === 3, '집중 포화 = 본체 3타 · 맞은 타마다 포자');
+  ok(n0.filter(x => x.t === 'counter' && x.from === 'summon').length >= 4, '집중 포화 = 깨어난 소환수도 함께 연타(턴 시작 + 3타)');
+  const s1 = mk('me', 'ember_cap', { stage: 2 }), t1 = mk('foe', 'stone_cap');
+  turn(s1, t1, SKILLS.u_emcap_3b, OTHER, 1);
+  const d0 = turn(s1, t1, OTHER, OTHER, 2, () => 0.5).find(x => x.t === 'counter' && x.from === 'summon');
+  const s2 = mk('me', 'ember_cap', { stage: 2 }), t2 = mk('foe', 'stone_cap');
+  turn(s2, t2, SKILLS.u_emcap_3b, OTHER, 1); s2.eff.atkUp = { n: 2, s: [{ v: 0.2, exp: 9 }, { v: 0.2, exp: 9 }] };
+  const d1 = turn(s2, t2, OTHER, OTHER, 2, () => 0.5).find(x => x.t === 'counter' && x.from === 'summon');
+  ok(d0 && d1 && d1.dmg > d0.dmg, `소환수 = 주인의 활력을 따라감(${d0 && d0.dmg} → ${d1 && d1.dmg})`);
+}
+// ── 22. 드레이크캑터(2026-11-03 설계 · 11-04 답 · 넣음) ──
+ok(SPECIES_V2.has('drake_cactus'), '드레이크캑터 v2 켜짐');
+{
+  const d = mk('me', 'drake_cactus'), f = mk('foe', 'aqua'), a0 = atkK(d);
+  turn(d, f, OTHER, OTHER, 1); turn(d, f, OTHER, OTHER, 2);
+  ok(d.res && d.res.heart === 2, `불 기술을 안 쓴 턴마다 용의 심장 +1 (${d.res && d.res.heart})`);
+  ok(atkK(d) > a0, '용의 심장이 있는 동안 공격 ↑(고정 버프)');
+  for (let i = 3; i <= 8; i++) turn(d, f, OTHER, OTHER, i);
+  ok(d.res.heart === 5, '용의 심장 상한 5');
+  const d2 = mk('me', 'drake_cactus', { stage: 2 }), f2 = mk('foe', 'aqua'); d2.res = { heart: 5 }; d2.resMax = { heart: 5 };
+  const big = turn(d2, f2, SKILLS.u_drake_3, OTHER, 1, () => 0.5).find(x => x.t === 'hit' && x.who === 'me');
+  const d3 = mk('me', 'drake_cactus', { stage: 2 }), f3 = mk('foe', 'aqua'); d3.res = { heart: 1 }; d3.resMax = { heart: 5 };
+  const small = turn(d3, f3, SKILLS.u_drake_3, OTHER, 1, () => 0.5).find(x => x.t === 'hit' && x.who === 'me');
+  ok(big && small && big.dmg > small.dmg * 8, `브레스 방출 = 스택이 많을수록 기하급수(1스택 ${small && small.dmg} → 5스택 ${big && big.dmg})`);
+  ok(d2.res.heart === 0 && has(f2, 'burn'), '불 기술을 쓰면 스택을 다 씀 · 5스택 브레스 = 화상');
+  const d4 = mk('me', 'drake_cactus', { stage: 2 }); d4.res = { heart: 2 }; d4.resMax = { heart: 5 };
+  d4.eff.poison = { n: 1, last: 1 }; d4.eff.atkDown = { n: 1, s: [{ v: 0.15, exp: 9 }] }; d4.eff.bleed = { exp: 9 };
+  turn(d4, mk('foe', 'aqua'), SKILLS.u_drake_3b, OTHER, 1, () => 0.5);
+  const left = ['poison', 'atkDown', 'bleed'].filter(k => has(d4, k)).length;
+  ok(left === 1 && d4.res.heart === 0, `몸 태우기 = 스택 하나당 한 종류(능력치 디버프 포함) · 스택 다 씀(남은 ${left})`);
+  const d5 = mk('me', 'drake_cactus', { stage: 1 }); d5.res = { heart: 4 }; d5.resMax = { heart: 5 };
+  turn(d5, mk('foe', 'aqua'), SKILLS.u_drake_2, OTHER, 1);
+  ok(d5.eff.armor && d5.eff.armor.hp === Math.round(d5.max * (0.08 + 0.05 * 4)) && d5.res.heart === 5, '용갑 강화 = 갑주(기본 + 스택 비례) · 불이 아니라 스택이 남음');
+  const d6 = mk('me', 'drake_cactus', { stage: 2 }), f6 = mk('foe', 'aqua'); d6.res = { heart: 5 }; d6.resMax = { heart: 5 };
+  const h6 = turn(d6, f6, SKILLS.u_drake_3c, OTHER, 1, () => 0.6).find(x => x.t === 'hit' && x.who === 'me');
+  ok(h6 && h6.tier === 'crit' && has(f6, 'bleed') && d6.res.heart === 5, '용의 이빨 = 스택만큼 치명 ↑ · 출혈 · 무속성이라 스택 그대로');
 }
 // ── 18. 블레이드바인(화면 이름 싹둑마마 — 2026-10-29) ──
 ok(SPECIES_V2.has('blade_vine'), '블레이드바인 v2 켜짐');

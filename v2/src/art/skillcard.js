@@ -11,6 +11,7 @@ import { wrap, wrapName, glyphH, sized, measure } from '../core/text.js';
 import { icon, tinted } from './icons.js';
 import { ELEMENT, BAYER4 } from './palette.js';
 import { rrect } from './ui.js';
+import { hasFrame, drawFrameArt } from './frames.js';
 import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, fxChipW, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
@@ -101,7 +102,8 @@ function cham(g, x, y, w, h, c, col) {
   for (let i = 0; i < c; i++) { g.rect(x + c - i, y + i, w - 2 * (c - i), 1, col); g.rect(x + c - i, y + h - 1 - i, w - 2 * (c - i), 1, col); }
   g.rect(x, y + c, w, h - 2 * c, col);
 }
-function cardFrame(g, x, y, w, h, sk, lit) {
+function cardFrame(g, x, y, w, h, sk, lit, art = false) {
+  if (art && hasFrame(sk)) { rrect(g, x, y, w, h, 5, C.ink); return; }   // 묶음 테(frames.js — 2026-11-04): 바탕 먹선만 깔고 테는 그림 · 이름 띠 위에(drawFrameArt)
   const [mid, hi, lo] = frameCols(sk, lit), F = sk.form && FORMS[sk.form];
   if (F) {   // 변이 카드(2026-10-17 사용자 "변이스킬이나 그 외 스킬 카드 테두리 차이가 있으면"): 둥근 테 대신 모서리를 자른 각진 갑옷 테 + 비스듬한 빛 · 그늘 + 모서리 징
     cham(g, x, y, w, h, 6, C.ink);
@@ -210,7 +212,7 @@ function nameLines(name, maxW) {
 export function cardFront(g, x, y, w, h, sk, o = {}) {
   x |= 0; y |= 0;
   const c = g.c, ax = x + 4, ay = y + 4, aw = w - 8, ah = ART_H, dim = o.can === false;
-  cardFrame(g, x, y, w, h, sk, o.lit);
+  cardFrame(g, x, y, w, h, sk, o.lit, true);
   c.imageSmoothingEnabled = false;
   { const im = artOf(sk) || placeholderArt(sk), sw = Math.min(aw, im.width);   // 좁은 카드(손패 한 줄 넷)는 그림 가운데를 잘라 1배 그대로(줄이면 도트가 뭉개짐)
     c.drawImage(im, Math.floor((im.width - sw) / 2), 0, sw, im.height, ax + Math.floor((aw - sw) / 2), ay, sw, ah); }
@@ -227,6 +229,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
   }
+  drawFrameArt(g, x, y, w, h, sk, o.lit);   // 묶음 테(속성 · 종 · 고유 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
   const { lines, font, lh } = nameLines(sk.name, aw - 4), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
@@ -590,7 +593,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   bc.setTransform(k * S, 0, 0, k * S, 0, 0);
   const hb = o.free ? Math.round(BH / S) : h;   // o.free = 뒷면을 카드 비율과 다르게(넓게) — 카드 고르기 화면 설명 판(짧은 기기에서도 글이 들어가게)
-  cardFrame(G2, 0, 0, w, hb, sk, false); backBody(G2, 0, 0, w, hb);
+  cardFrame(G2, 0, 0, w, hb, sk, false, true); backBody(G2, 0, 0, w, hb); drawFrameArt(G2, 0, 0, w, hb, sk, false);   // 뒷면도 앞면과 같은 묶음 테
   bc.setTransform(k, 0, 0, k, 0, 0);
   if (o.bodyH) {   // o.bodyH = 글을 따로 한 장(높이 = 글 전체) — 판보다 길면 부르는 쪽이 테 안쪽에 잘라 끌어 넘김(scenes/draft.js)
     const body = document.createElement('canvas'); body.width = Math.round(BW * k); body.height = Math.round(o.bodyH * k);

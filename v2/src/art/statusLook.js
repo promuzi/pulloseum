@@ -37,6 +37,7 @@ export const STATUS = {
   execute: { name: '처형', icon: 'fx_execute', col: '#ff5a5a' }, hpBuffEnd: { name: '주입 반동', icon: 'fx_inject', col: '#b866ff' }, settle: { name: '청산', icon: 'fx_settle', col: '#4f9dff' },   // 피해 사건 이름(처형의 춤 · 청산)
   revive: { name: '부활', icon: 'fx_revive', buff: true }, bounce: { name: '튕김', icon: 'fx_bounce', buff: true },   // 젤리캡 부활잉 · 너꺼잉(아이콘 2026-10-29 코덱스 fx_10 ~ fx_12)
   purified: { name: '정화', icon: 'fx_will', buff: true }, flourish: { name: '만개', icon: 'fx_all_up', buff: true },
+  dragon: { name: '용', icon: 'fx_all_up', buff: true }, rage: { name: '포악', icon: 'fx_atk_up', buff: true },   // 드라코프루트 용 · 엠버캡 포악(2026-11-04 — 새 아이콘 전 임시로 있는 그림)
 };
 // 효과 설명(전투 화면 '효과' 단추 · 기술 카드 뒷면 — 한 줄씩)
 export const STATUS_DESC = {
@@ -46,7 +47,7 @@ export const STATUS_DESC = {
   shock: '턴 끝 체력 2% · 3턴 · 차례마다 25%(젖으면 50%) 마비 — 마비되면 사라짐', chill: '기동 ↓ · 3이 되면 얼음(한 번 쉼)', wet: '기동 · 적중 · 방어 ↓ · 빙결 · 감전이 더 쌓임',
   dark: '턴 끝 햇빛이 안 참', shade: '그 턴 끝 햇빛이 안 참', stun: '다음 차례를 쉼', paral: '몸이 굳어 한 번 쉼', frozen: '얼어서 한 번 쉼',
   seal: '다음 턴에 기술 하나를 못 씀', root: '다음 턴에 교체할 수 없음', taunt: '다음 턴엔 공격 기술만 · 교체 못 함',
-  spore: '하나씩 따로 셈 · 피면 하나마다 체력 8%', leech: '턴 끝 체력을 건 식물이 빨아감 · 3턴', gale: '강풍 — 이쪽 공격이 잘 빗나감', storm: '폭풍 — 강풍 그대로 + 교란 · 쇠약 · 턴 끝 피해', cave: '동굴 — 기동이 떨어짐(스톤캡이 나가면 걷힘)', orbTrap: '봉인 구슬 덫 — 내 쪽이 맞을 때마다 하나씩 터져 피해 + 봉인(교체 · 쓰러져도 남음)',
+  spore: '하나씩 따로 붙어 붙인 턴 포함 3번째 턴 끝에 핌 · 하나마다 체력 8%', leech: '턴 끝 체력을 건 식물이 빨아감 · 3턴', gale: '강풍 — 이쪽 공격이 잘 빗나감', storm: '폭풍 — 강풍 그대로 + 교란 · 쇠약 · 턴 끝 피해', cave: '동굴 — 기동이 떨어짐(스톤캡이 나가면 걷힘)', orbTrap: '봉인 구슬 덫 — 내 쪽이 맞을 때마다 하나씩 터져 피해 + 봉인(교체 · 쓰러져도 남음)',
   fruit: '햇빛 칸 하나를 얼린 열매 — 하나당 방어 ↑ · 비용으로 못 씀 · 먹거나 던지면 햇빛으로 돌아옴(지울 수 없음)',
   revive: '쓰러질 공격을 받으면 체력 가득으로 부활 — 대신 공격 · 방어가 잠시 크게 떨어짐', bounce: '상대 기술 한 번이 거는 나쁜 효과를 그대로 튕겨 돌려줌 · 다음 턴 끝까지',
   thornTrap: '덫 — 우리 편 공격이 빗나가거나 스치면 하나씩 터져 피해 + 독(교체해도 남음)', miasma: '독안개 — 켤 때와 다음 두 턴 시작에 이쪽 앞 식물에 독(교체로 들어와도)',
@@ -56,6 +57,7 @@ export const STATUS_DESC = {
   aim: '다음 공격 기술의 모든 타 빗나감 없음 · 치명 +25 · 상대가 피하면 스침', stealth: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림', clone: '광역이 아닌 공격을 거의 피함 · 피하면 바로 이어 공격 · 맞거나 공격하면 풀림',
   shield: '상대 공격 기술 한 번을 최대 체력 15%만큼 먼저 막음', purified: '내게 걸린 해로운 상태이상을 모두 지움(능력치 약화 · 기절은 못 지움)', flourish: '활력 · 억셈 · 가속 +5%씩 한 겹',
   armor: '체력 위 금속 칸 — 깨질 때까지 피해를 먼저 막음 · 쌓임(최대 체력 50%까지) · 망치에 약함 · 지속 피해는 못 막음',
+  dragon: '용이 됨 — 모든 능력치 한 겹씩 판 끝까지 ↑ · 스택을 쌓던 기술은 후공 쪽만 나감', rage: '포악 — 내가 건 포자가 피면 회복 대신 활력 · 포자수확은 화상 대신 억셈',
   guard: '방어력 4배(연속 2.5배) · 그 턴 모든 공격', evade: '회피 자세 — 빗나감 ↑', reflect: '그 턴 처음 맞은 공격 피해의 30%를 되돌림', initReady: '다음 턴 먼저 움직이기 쉬움',
 };
 export const SW_ON = { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#4f84bf', text: '#e0f0ff', num: '#8ccfff' };

@@ -13,7 +13,7 @@
 //    기생 씨앗 · 뿌리 묶기(+ 그늘 · 부식)는 속성·종·생장에 묶이지 않는 변이·특수 기술용(식물 기술표에서 뺌, 규칙은 남겨 둠).
 // 턴 세는 법: exp = 마지막으로 영향을 주는 턴 번호(턴 끝에 exp ≤ 지금 턴이면 사라짐) · left = 남은 턴 끝 횟수(지속 피해·빨아들이기).
 
-import { canUseRes, turnDevices, galeTurn } from './devices.js';
+import { canUseRes, turnDevices, galeTurn, sporeBloomed } from './devices.js';
 
 export const FX = {
   // 해로운 상태이상(2026-10-23 엑셀 v10 효과 분류 19~31행): 기간 = 지금 N턴(걸린 턴 = 1턴째 · 만료 exp = T + N − 1 · 기술마다 o.turns 로 바꿈) ·
@@ -42,7 +42,8 @@ export const FX = {
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
   // 포자(엑셀 v10 30행) = 따로 쌓이는 지연 효과: 걸 때마다 하나씩 붙어 각자 셈(상한 없음) · 지연 N턴(기술마다 — 옛 1겹 기술 = 2턴 · 2겹 = 1턴) ·
   //  걸린 다음 턴부터 세어 N턴째 턴 끝에 핌 → 하나에 최대 체력 8%(같은 턴 여럿이면 더함) · 기본은 피해만(암실 · 흡혈은 특수 포자 기술에만) · 버섯은 안 걸림 · 불에 다 탐
-  spore:   { jong: 'mushroom', delay: 2, bloom: 0.08 },
+  //  → 2026-10-31 사용자 '포자는 여러개 붙이고 반드시 붙인턴 포함 3번째 턴에 터지는 걸로 하자'(2026-11-04 넣음): 어떤 기술로 붙였든 붙인 턴 끝 = 1 · 3번째 턴 끝에 핌(left 3 — 기술의 지연 값은 안 씀) · 불에 안 탐(10-31)
+  spore:   { jong: 'mushroom', left: 3, bloom: 0.08, plus: 0.03 },   // plus = 카드 포자 번식(sporeAdd) 하나당 핀 포자 피해 +3%p(2026-11-04 클로드 임시 — 옛 '한 턴 빨리'는 '반드시 3번째 턴'과 안 맞음)
   // 능력치 버프 · 디버프(2026-10-23 엑셀 v10 효과 분류 9~18행 — 활력 · 억셈 · 가속 · 예리 · 집중 / 쇠약 · 시듦 · 둔화 · 무딤 · 교란):
   //  거는 만큼 겹이 쌓이고 겹마다 지금 5턴(걸린 턴 = 1턴째)이 따로 감 · 교체해도 남고 대기석에서도 시간이 감 · 정화로 안 지워짐(반대 효과로 메움) ·
   //  한 겹 값 v(기술마다 바꿀 수 있음 — o.v) = 공격 · 방어 · 기동은 배율에 더함(%), 치명 · 정확도는 판정표 칸에 더함 — 수치는 밸런스 전 임시(계획 문서 표)
@@ -79,7 +80,7 @@ const ENV = Object.keys(FX).filter(k => FX[k].env);
 // 교체로 나갈 때 지우는 것(엑셀 v10 — 상태이상 · 능력치 겹 · 갑주는 남고 시간이 감): 준비 효과(조준 · 은신 · 보호막) · 속박 한 번 표시 · 면역(스스로 바꾸면 그게 행동) · 정화 보호 · 환경(다음 앞 식물로 옮김)
 const DROP = ['aim', 'stealth', 'shield', 'rooted', 'immune', 'revive', 'bounce', ...ENV];
 // 아쿠아벌브(2026-10-29): 해로운 상태이상 목록 · 이로운 상태이상(조화가 베끼는 것) · 지우기(윤회 = 버프 · 디버프 전부 — 능력치 겹 포함 예외 기술, 2026-10-28 사용자)
-export const HARM_IDS = HARM, GOOD_IDS = ['regen', 'will'];
+export const HARM_IDS = HARM, GOOD_IDS = ['regen', 'will'], DOWN_IDS = DOWNS;
 export function wipeEff(u, keys) { const e = u.eff || {}, gone = keys.filter(k => e[k]); for (const k of gone) delete e[k]; return gone; }
 export const WIPE_ALL = [...new Set([...HARM, ...STATS, ...BUFFS])];
 
@@ -89,11 +90,12 @@ export const has = (u, id) => !!(u && u.eff && u.eff[id]);
 export const burning = u => has(u, 'burn') || has(u, 'inferno');
 // 능력치 겹 합(올림 − 내림): 공격 · 방어 · 기동 = 배율에 더할 몫, 치명 · 정확도 = 판정표 칸
 export function statSum(u, stat) {
-  const e = u && u.eff; if (!e) return 0;
-  let t = 0;
+  let t = u && u.st && u.st.dragon ? DRAGON_UP[stat] || 0 : 0;   // 드라코프루트 용(2026-11-03 사용자 '용이 되면 모든 스탯 영구 한 칸 상승') = 능력치마다 버프 한 겹 몫 · 판 끝까지 · 지우는 기술에도 안 지워짐
+  const e = u && u.eff; if (!e) return t;
   for (const k of STATS) if (FX[k].stat === stat && e[k]) for (const s of e[k].s) t += FX[k].sign * s.v;
   return t;
 }
+const DRAGON_UP = { atk: FX.atkUp.v, def: FX.defUp.v, spd: FX.spdUp.v, crit: FX.critUp.v, acc: FX.accUp.v };
 const statK = (u, stat) => Math.max(RULES_FX.statFloor, 1 + statSum(u, stat));   // 겹 상한이 아직 없어 음수만 막음(0.2 아래로 안 감)
 export const critAddOf = u => statSum(u, 'crit') + ((u && u.st && u.st.queen && u.st.queen.crit) || 0);   // + 지옥의 여왕(블레이드바인 — 지옥 동안 치명 칸 · devices.queenSync)
 
@@ -113,7 +115,9 @@ export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
   return Math.max(RULES_FX.evadeLo, Math.min(RULES_FX.evadeHi, r ** RULES_FX.evadePow));
 }
-export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1) * (stormOn(u) ? 1 - FX.atkDown.v : 1);
+export const atkK = u => statK(u, 'atk') * ((u && u.modeK && u.modeK.atk) || 1) * (stormOn(u) ? 1 - FX.atkDown.v : 1) * (u && u.res && u.res.heart ? 1 + HEART.atk * u.res.heart : 1);
+// 드레이크캑터 용의 심장(2026-11-04 사용자 '고정 버프로 남음. 스택이 사라지기 전까지 사라지지 않음'): 스택이 있는 동안 스택 하나당 공격 +8%(클로드 임시) — 불 기술을 쓰면 그 기술까지 친 뒤 스택이 다 빠짐(devices.afterAct)
+export const HEART = { atk: 0.08 };
 export const FRUIT = { def: 0.2, eat: 0.12 };   // 드라코프루트 빙결열매: 하나당 방어 +20% · 열매 먹기 하나당 회복 12%(8% → 12% 2026-10-29 성체 기준 · 빙결 폭풍 100과 함께 45.3%)
 export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * ((u && u.modeK && u.modeK.def) || 1) * (1 + ((u && u.eff && u.eff.fruit && u.eff.fruit.n) || 0) * FRUIT.def);
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
@@ -178,7 +182,8 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   if (s.taste && !(u.st && u.st.meal && u.st.meal.ready)) return false;   // 맛평가 = 식사시간 바로 다음 턴에만
   if (s.miasma && foe && has(foe, 'miasma')) return false;   // 독안개 = 켜져 있는 동안 다시 안 켜짐(환경 공통)
   if (s.inferno && ((foe && has(foe, 'inferno')) || (u.st && u.st.infernoLock))) return false;   // 지옥전개 = 상대 쪽에 지옥이 있으면 못 덮어씀 · 블레이드바인은 꺼진 뒤 재사용 대기(infernoLock)
-  if (s.fruitUse && !(u.eff && u.eff.fruit && u.eff.fruit.n > 0)) return false;   // 드라코프루트 열매 먹기 · 빙결 브레스 · 열매 던지기 = 열매가 있을 때
+  if (s.fruitUse && !(u.eff && u.eff.fruit && u.eff.fruit.n > 0)) return false;   // 프로스트드레이크(설계 땐 드라코프루트) 열매 먹기 · 빙결 브레스 · 열매 던지기 = 열매가 있을 때
+  if (s.dragonTry && u.st && u.st.dragon) return false;   // 드라코프루트 용의 자격 = 아직 용이 아닐 때만
   if (u.st && u.st.selfSeal && poisonGiver(s)) return false;   // 좋은 거 주입 = 내 독 거는 기술 3턴 봉인(범위 = 거는 기술만 — 소모 기술 포함 여부는 밸런스 때, 2026-10-26 사용자 보류)
   const e = u.eff || {};
   if (sealed(e, s.id)) return false;
@@ -196,6 +201,8 @@ function sealed(e, id) { return !!(e.seal && (e.seal.skill === id || (e.seal.mor
 export function listOf(u) {
   const e = (u && u.eff) || {}, out = [];
   if (e.immune) out.push({ id: 'immune' });
+  if (u && u.st && u.st.dragon) out.push({ id: 'dragon' });   // 드라코프루트 용(판 끝까지)
+  if (u && u.mode === 'rage') out.push({ id: 'rage' });   // 엠버캡 포악(끌 때까지)
   if (e.fruit) out.push({ id: 'fruit', n: e.fruit.n });   // 드라코프루트 빙결열매(햇빛 칸을 차지 · 지울 수 없음)
   for (const k of BUFFS) if (e[k]) out.push(k === 'armor' ? { id: k, hp: Math.round(e.armor.hp) } : e[k].s ? { id: k, n: e[k].n } : k === 'stealth' ? { id: e.stealth.look === 'clone' ? 'clone' : 'stealth' } : { id: k });   // 방어구 = 남은 양(체력 막대 금속 칸) · 능력치 겹 = 겹 수 · 은신 = 연출 이름(분신)
   if (e.skip) out.push({ id: e.skip.src });
@@ -265,9 +272,10 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     s.n = Math.min(D.stack, s.n + add); s.last = T;
     ev.push({ t: 'fx', ...base, n: s.n, wet, list: listOf(tgt) });
     if (s.n >= D.stack) { delete e[id]; setSkip(tgt, D.skip, ctx); }   // 3이 되면 한 번 쉬고 0으로 — 면역 · 의지 · 이미 쉬는 중이면 쉬지 않고 0으로
-  } else if (id === 'spore') {   // 하나 더 붙음(앞당기지 않음) · left = 피기까지 남은 턴 끝 수(지연 N → N + 1: 걸린 턴 끝도 셈) · 카드 포자 번식 = 지연 −1
-    const delay = Math.max(0, (o.delay ?? (n >= 2 ? 1 : D.delay)) - ((by && by.sporeAdd) || 0)), sp = e.spore ||= { n: 0, left: [] };
-    sp.left.push(delay + 1); sp.n = sp.left.length;
+  } else if (id === 'spore') {   // 하나 더 붙음(앞당기지 않음) · left = 피기까지 남은 턴 끝 수(늘 3 — 붙인 턴 포함 3번째 턴 끝) · who = 건 식물(엠버캡 타고남) · v = 필 때 피해 몫(카드 포자 번식이면 더)
+    const sp = e.spore ||= { n: 0, left: [], who: [], v: [] };
+    sp.who ||= []; sp.v ||= [];
+    sp.left.push(D.left); sp.who.push((ctx.by && (ctx.by.slot || ctx.by.id)) || null); sp.v.push(D.bloom + ((by && by.sporeAdd) || 0) * D.plus); sp.n = sp.left.length;
     ev.push({ t: 'fx', ...base, n: sp.n, list: listOf(tgt) });
   } else if (id === 'stun') {
     setSkip(tgt, look || 'stun', ctx);   // 기절의 다른 이름(매혹 = charm — 이름 · 연출만, 2026-10-28)
@@ -353,9 +361,8 @@ export function onHit(att, tgt, skill, ctx) {
   const e = E(tgt), ev = ctx.ev;
   if (skill.el === 'water' && e.burn) { delete e.burn; ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: 'burn', why: 'water', list: listOf(tgt) }); }
   if (skill.el === 'fire') {
-    const own = skill.inflict && skill.inflict.id;   // 그 기술이 거는 효과는 태우지 않음(불씨 포자 = 불 속성인데 포자를 거는 기술 — 2026-10-17 카드 밸런스 시험에서 발견: 제 포자를 태워 1겹을 못 넘었음)
-    const gone = ['chill', 'wet', 'spore', 'leech'].filter(k => e[k] && k !== own);   // 불이 냉기 · 물기 · 포자 · 기생 씨앗을 태움 · 봉인 · 속박은 안 풀림(2026-10-21)
-    if (e.skip && e.skip.src === 'frozen') { delete e.skip; gone.unshift('frozen'); }   // 얼음(기절의 다른 이름)도 녹아 쉬기가 풀림 — 2026-10-21 기록 '얼음 · 빙결 · 젖음 · 포자 · 기생이 불에 풀리는 지금 규칙은 그대로'
+    const own = skill.inflict && skill.inflict.id;   // 그 기술이 거는 효과는 태우지 않음
+    const gone = ['wet', 'leech'].filter(k => e[k] && k !== own);   // 불이 물기 · 기생 씨앗을 태움 · 봉인 · 속박은 안 풀림(2026-10-21) · 포자는 안 탐(2026-10-31 사용자 '포자가 불에 타는 거 없애자') · 빙결 · 얼음도 안 녹음(2026-11-03 사용자 '빙결 때 불 쏘면 사라진다는 거 폐지' — 얼음까지는 클로드가 읽은 뜻)
     for (const k of gone) delete e[k];
     if (gone.length) ev.push({ t: 'cure', to: tgt.id, name: tgt.name, id: gone[0], ids: gone, why: 'fire', list: listOf(tgt) });
   }
@@ -415,17 +422,22 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
       const r = (u.pas.regen || 0) + (u.pas.rot && opp ? u.pas.rot * debuffCount(opp) : 0);
       if (r > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.max(1, Math.round(u.max * r * healK(u)))); if (u.hp > before) ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, card: true, list: listOf(u) }); }
     }
-    if (e.spore && u.hp > 0) {   // 포자: 턴 끝마다 하나씩 줄어 0이 된 것만 핌(피해를 더해 한 번) · 나머지는 그대로
-      const left = e.spore.left.map(x => x - 1), k = left.filter(x => x <= 0).length;
-      e.spore.left = left.filter(x => x > 0); e.spore.n = e.spore.left.length;
-      if (!e.spore.n) delete e.spore;
-      if (k) { const d = k * Math.max(1, Math.round(u.max * FX.spore.bloom)); u.hp = Math.max(0, u.hp - d); ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, k, list: listOf(u) }); }
+    if (e.spore && u.hp > 0) {   // 포자: 턴 끝마다 하나씩 줄어 0이 된 것만 핌(피해를 더해 한 번) · 나머지는 그대로 · 핀 포자를 건 식물에게 알림(엠버캡 타고남 — devices.sporeBloomed)
+      const sp = e.spore, left = sp.left.map(x => x - 1), keep = left.map(x => x > 0), owners = {};
+      let k = 0, d = 0;
+      left.forEach((x, i) => { if (keep[i]) return; k++; d += Math.max(1, Math.round(u.max * ((sp.v && sp.v[i]) || FX.spore.bloom))); const w = sp.who && sp.who[i]; if (w) owners[w] = (owners[w] || 0) + 1; });
+      sp.left = left.filter((x, i) => keep[i]); if (sp.who) sp.who = sp.who.filter((x, i) => keep[i]); if (sp.v) sp.v = sp.v.filter((x, i) => keep[i]); sp.n = sp.left.length;
+      if (!sp.n) delete e.spore;
+      if (k) {
+        u.hp = Math.max(0, u.hp - d); ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, k, list: listOf(u) });
+        for (const [w, n] of Object.entries(owners)) { const o = find(w); if (o && o !== u && o.hp > 0) sporeBloomed(o, n, turn, ev); }
+      }
     }
     let dec = false;
     for (const k of ['chill']) if (e[k] && turn - e[k].last >= RULES_FX.decayAfter) { dec = true; if (--e[k].n <= 0) delete e[k]; }
     if (dec && u.hp > 0) ev.push({ t: 'expire', who: u.id, ids: [], list: listOf(u) });
     galeTurn(u, opp, turn, ev);   // 강풍 공명(폭풍 피해 · 감전 · 우리 편 회복) · 게일캑터 공명 셈(devices.js)
-    turnDevices(u, turn, ev);   // 공통 장치: 시한 · 메아리 · 개수 칸 턴마다(devices.js)
+    turnDevices(u, turn, ev, opp);   // 공통 장치: 시한 · 메아리 · 개수 칸 턴마다(devices.js) · opp = 맞은편(앞에 나와 있을 때만 — 대기석 · 소환수는 null)
     noteFall(u, ev);
   }
 }

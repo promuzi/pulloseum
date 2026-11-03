@@ -33,10 +33,10 @@ export const SPECIES = {
   fang_trap: { name: '팽트랩', type: 'flower', el: 'earth', rarity: 'rare', branch: 'meadow', form: 'predator', role: 'drain', tilt: { hp: 1.06, def: 0.96 } },
   blade_vine: { name: '싹둑마마', type: 'flower', el: 'fire', rarity: 'rare', branch: 'shade', role: 'fast', tilt: { spd: 1.12, atk: 1.05, hp: 0.93 } },   // 2026-10-29 종 고유 v2 적용 = 화면 이름 임시 싹둑마마(사용자) · 종류 덩굴 → 꽃 · 무기 변이 고정 뺌(이미 가진 무기 변이 식물 · 종자는 자연 변이로 그대로) · 역할 공격형 → 속공형(10-23 결정)
   toxi_cactus: { name: '톡시캑터', type: 'cactus', el: 'grass', rarity: 'rare', branch: 'desert', form: 'toxic', role: 'ctr', tilt: { def: 1.12, spd: 0.95 } },
-  draco_fruit: { name: '드라코프루트', type: 'cactus', el: 'ice', rarity: 'rare', branch: 'desert', role: 'tank', tilt: { hp: 1.15, def: 1.15, atk: 0.85, spd: 0.9 } },   // 탱커(사용자 "드라코프루트는 탱커로")   // 2026-10-17 사용자 "나로 하자" — 용 변이 고정 뺌(서리 용과 선인장 = 보통 식물), 용은 프로스트드레이크
+  draco_fruit: { name: '드라코프루트', type: 'cactus', el: 'ice', rarity: 'rare', branch: 'desert', role: 'atk', tilt: { atk: 1.12, hp: 0.93, def: 0.93 } },   // 2026-11-04 프로스트드레이크와 기울기 맞바꿈(사용자 '추천대로' — 방어 중심 빙결열매 설계가 프로스트드레이크 것) · 옛 탱커(10-17 '드라코프루트는 탱커로')   // 2026-10-17 사용자 "나로 하자" — 용 변이 고정 뺌(서리 용과 선인장 = 보통 식물), 용은 프로스트드레이크
   ember_cap: { name: '엠버캡', type: 'mushroom', el: 'fire', rarity: 'rare', branch: 'shade', form: 'spore', role: 'dis', tilt: { spd: 1.08 } },
   drake_cactus: { name: '드레이크캑터', type: 'cactus', el: 'fire', rarity: 'rare', branch: 'desert', form: 'dragon', role: 'atk', tilt: { atk: 1.12, hp: 0.93, def: 0.93 } },
-  frost_drake: { name: '프로스트드레이크', type: 'cactus', el: 'ice', rarity: 'rare', branch: 'desert', form: 'dragon', role: 'atk', tilt: { atk: 1.12, hp: 0.93, def: 0.93 } },   // 2026-10-17 사용자 "얘도 귀엽네" → "나로 하자": 드라코프루트를 용답게 다시 그린 안(비늘 몸 · 날개 · 뿔)을 새 종으로 — 태생 용족
+  frost_drake: { name: '프로스트드레이크', type: 'cactus', el: 'ice', rarity: 'rare', branch: 'desert', form: 'dragon', role: 'tank', tilt: { hp: 1.15, def: 1.15, atk: 0.85, spd: 0.9 } },   // 2026-11-04 드라코프루트와 기울기 맞바꿈(빙결열매 = 방어 중심 · 사용자 '추천대로')   // 2026-10-17 사용자 "얘도 귀엽네" → "나로 하자": 드라코프루트를 용답게 다시 그린 안(비늘 몸 · 날개 · 뿔)을 새 종으로 — 태생 용족
   // 2026-10-17 새 셋(사용자 "식물이라는 컨셉 때문에 디자인이 비슷해져 — 갓을 쓴 형태 등 상징적인 걸 강조") = 빈 칸(버섯 × 바람 · 덩굴 × 대지 · 선인장 × 번개), 일반 식물(카드 = 일반 카드)
   gat_cap: { name: '갓캡', type: 'mushroom', el: 'wind', rarity: 'common', branch: 'meadow', role: 'dis', tilt: { spd: 1.1, atk: 1.1 } },      // 버섯 갓 = 선비의 갓 · 갓끈 · 잎 부채
   mask_vine: { name: '탈바인', type: 'vine', el: 'earth', rarity: 'common', branch: 'desert', role: 'dis', tilt: { spd: 1.08 } },     // 하회탈 얼굴 · 탈춤 소매 덩굴
@@ -462,7 +462,7 @@ export const SKILLS = Object.fromEntries([
 // ── 종 고유 기술 v2(사용자와 짠 설계 — docs/superpowers/specs/2026-10-18-v2-species-skills.md 각 종 절) ──
 //  켠 종(SPECIES_V2)만 옛 개성 기술 자리(같은 id라 저장 그대로)를 바꿔 끼우고 타고남을 붙임 · 빼면 옛 기술. 수치는 종 리그전 밸런스 전 제안값
 //  hex = 피해 없이 상대에게 거는 기술(빗나가지 않음 — 2026-10-24 사용자 확정 · 공격에 붙은 방해는 적중해야 걸림) · galeAdd = 상대 쪽 강풍에 덧붙임(강풍이 불 때만 · 같은 것은 한 번)
-export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus', 'draco_fruit', 'blade_vine']);
+export const SPECIES_V2 = new Set(['cactus_wind', 'vine_wind', 'stone_cap', 'spore_cap', 'volt_vine', 'frost_bell', 'flower_grass', 'flower_wind', 'aqua', 'thorn', 'jelly_cap', 'fang_trap', 'toxi_cactus', 'draco_fruit', 'blade_vine', 'frost_drake', 'ember_cap', 'drake_cactus']);
 const V2 = {
   blade_vine: {   // 18. 블레이드바인(화면 이름 = 임시 싹둑마마 — 2026-10-29 사용자) — 지옥의 여왕 · 치명타 위주 기동성 딜러 · 2026-10-23 설계 · 지옥 환경 규칙 2026-10-29 확정 · 수치는 클로드 임시(리그전)
     sp: { queen: { spd: 0.15, crit: 15 } },   // 타고남 지옥의 여왕: 맞은편에 지옥이 있는 동안 기동 +15% · 치명 칸 +15(작게 — devices.queenSync)
@@ -472,18 +472,51 @@ const V2 = {
       S('u_blade_2b', '치명적 무희', 'fire', 'u', 0, 1, { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, self: 'critUp' }),   // 회피 자세 + 예리
       S('u_blade_3', '무릎 꿇어라', 'fire', 'u', 0, 3, { act: 'hex', cats: ['debuff'], hex: [{ id: 'atkDown' }, { id: 'spdDown' }, { id: 'seal' }] }),   // 쇠약 + 둔화(5턴) + 봉인(다음 1턴) · 피해 없음
       S('u_blade_3b', '..력일섬!', 'bolt', 'u', 70, 2, { contact: true, spdGap: 1 }),   // 나와 상대의 기동 차이(내가 빠른 만큼)로 위력 ↑ · 번개 · 감전 없음
-      S('u_blade_3c', '피의 축제', 'fire', 'u', 75, 3, { area: true, critHeal: 0.12 }),   // 광역 단타(그 턴 한 번) · 치명이 터진 대상마다 내 체력 12% 회복
+      S('u_blade_3c', '피의 축제', 'fire', 'u', 30, 3, { area: true, hits: 3, critPlus: 25, critHeal: 0.12 }),   // 광역 3타 · 이 기술 치명 칸 +25 · 치명이 터진 타마다 내 체력 12% 회복(2026-11-04 사용자 '추천대로' — 리그전 50.7% · 한 번에 회복 평균 8%)
     ],
   },
-  draco_fruit: {   // 20. 드라코프루트 — 빙결열매(햇빛 칸을 얼려 쌓는 방어 · 소모하면 햇빛으로 돌아옴) · 2026-10-26~28 설계 · 고유 패시브 없음(열매 규칙이 그 자리)
+  frost_drake: {   // 23. 프로스트드레이크 — 빙결열매(햇빛 칸을 얼려 쌓는 방어 · 소모하면 햇빛으로 돌아옴) · 2026-10-26~28 설계(처음엔 드라코프루트 이름으로 적음 — 사용자 11-03 바로잡음 · 11-04 옮김) · 고유 패시브 없음(열매 규칙이 그 자리)
     sp: { fruits: true },
     skills: [
-      S('u_draco_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true }),
-      S('u_draco_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
-      S('u_draco_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'] }),
-      S('u_draco_3', '빙결 브레스', 'ice', 'u', 60, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),
-      S('u_draco_3b', '빙결 폭풍', 'wind', 'u', 100, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),   // 위력 70 → 100(2026-10-29 성체 기준 16.8% → 맞춤, 사용자 '단순 수치는 너 추천대로 해')
-      S('u_draco_3c', '열매 던지기', null, 'u', 35, 0, { fruitUse: 'throw', hits: 1, perHitInflict: { id: 'chill', n: 1 } }),
+      S('u_fdrake_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true }),
+      S('u_fdrake_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
+      S('u_fdrake_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'] }),
+      S('u_fdrake_3', '빙결 브레스', 'ice', 'u', 60, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),
+      S('u_fdrake_3b', '빙결 폭풍', 'wind', 'u', 100, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),   // 위력 70 → 100(2026-10-29 성체 기준 16.8% → 맞춤, 사용자 '단순 수치는 너 추천대로 해')
+      S('u_fdrake_3c', '열매 던지기', null, 'u', 35, 0, { fruitUse: 'throw', hits: 1, perHitInflict: { id: 'chill', n: 1 } }),
+    ],
+  },
+  draco_fruit: {   // 20. 드라코프루트 — 용이 되고 싶어(2026-11-03 사용자 새 설계 · 11-04 넣음): 선공 갈래로 용 스택(5칸이 차면 용 — 판 끝까지 · 모든 능력치 한 겹 영구) · 용이 되면 스택 쌓던 기술은 후공 쪽만 · 수치는 클로드 임시(리그전)
+    sp: { res: { dragon: [0, 5, '용 스택'] }, dragonAt: 5 },
+    skills: [
+      S('u_draco_1', '내가 용이될 상이요?', 'ice', 'u', 55, 1, { dragonLock: true, onFirst: { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, gain: { k: 'dragon', n: 1 } }, onSecond: { forceCrit: true } }),   // 선공 = 용 스택 + 회피 자세 · 후공 = 치명 확정 단일 빙결 공격
+      S('u_draco_2', '용 흉내내기', 'ice', 'u', 50, 2, { area: true, dragonLock: true, onFirst: { el: null, gain: { k: 'dragon', n: 1 } }, onSecond: { selfAim: true } }),   // 선공 = 용 스택 + 광역 무속성 · 후공 = 조준이 걸린 광역 빙결
+      S('u_draco_2b', '용과 먹기', 'ice', 'u', 0, 2, { cats: ['heal_hp'], healPct: 0.2, self: 'purify', ifDragon: { act: 'attack', cats: ['attack'], el: 'bolt', power: 30, hits: 3, area: true, healPct: 0, self: null } }),   // 용이 아닐 때 = 회복 + 정화 · 용 = 번개 광역 연타
+      S('u_draco_3', '용의 자격', 'ice', 'u', 0, 2, { cats: ['buff'], dragonTry: [0, 0.1, 0.25, 0.45, 0.7] }),   // 스택 수에 따라 확률로 바로 용 · 실패하면 스택 0(확률 = 클로드 임시)
+      S('u_draco_3b', '브레스 따라하기', 'ice', 'u', 70, 3, { area: true, ifDragon: { el: 'fire', power: 95, inflict: { id: 'burn' } } }),   // 용이 아닐 때 = 광역 빙결 · 용 = 불 광역 + 화상
+      S('u_draco_3c', '용가시', 'ice', 'u', 0, 2, { act: 'guard', cats: ['guard'], reflect: true, reflectInflict: { id: 'poison', n: 1 }, ifDragon: { act: 'buff', cats: ['buff'], self: 'defUp', also: 'atkUp', selfMore: ['spdUp'] } }),   // 용이 아닐 때 = 방어 자세 + 반사(반사가 터지면 독) · 용 = 반사 + 억셈 · 활력 · 가속
+    ],
+  },
+  ember_cap: {   // 21. 엠버캡 — 포자 공격 · 방어 회복형(태생 포자) · 2026-11-01 설계 · 11-04 넣음: 타고남 = 내가 건 포자가 피면 회복(같은 턴 여럿이면 둘째부터 절반) · 포악이면 회복 대신 활력(이 타고남 겹 상한 4) · 수치는 클로드 임시(리그전)
+    sp: { sporeHeal: { heal: 0.06, more: 0.03, cap: 4 } },
+    skills: [
+      S('u_emcap_1', '불티나네', 'fire', 'u', 0, 1, { act: 'hex', cats: ['debuff'], area: true, hex: [{ id: 'spore' }, { id: 'burn' }] }),   // 불포자를 흩뿌림 · 광역 · 위력 없음(꼭 걸림)
+      S('u_emcap_2', '따끈 이불', 'fire', 'u', 0, 2, { self: 'shield', warmShield: true }),   // 공통 보호막 + 그 공격이 막을 깨면 때린 상대에게 화상 + 포자
+      S('u_emcap_2b', '포자수확', 'fire', 'u', 0, 2, { act: 'hex', cats: ['heal_hp'], harvest: { per: 0.07 } }),   // 바로 앞 상대의 포자를 전부 거둬 개수만큼 회복 + 화상 · 포악이면 회복 + 억셈
+      S('u_emcap_3', '포악', 'fire', 'u', 0, 1, { cats: ['buff'], toggle: 'rage', alt: { name: '온순' } }),   // 켜고 끄기(포악 ↔ 온순 — 카드 이름이 바뀜)
+      S('u_emcap_3b', '불씨 포자', 'fire', 'u', 0, 2, { cats: ['buff'], summon: 'ember' }),   // 잠든 불씨로 한 턴 대신 맞고 깨어나면 턴 시작마다 불 공격 + 화상
+      S('u_emcap_3c', '집중 포화', 'fire', 'u', 30, 3, { hits: 3, perHitInflict: { id: 'spore' }, sumVolley: { hits: 3, power: 22, el: 'fire', inflict: { id: 'burn' } } }),   // 본체 불 3타(맞은 타마다 포자) + 깨어난 소환수도 불 3타 + 화상
+    ],
+  },
+  drake_cactus: {   // 22. 드레이크캑터 — 폭딜과 엄청난 방어기(태생 용족) · 2026-11-03 설계 · 11-04 답 · 넣음: 타고남 용의 심장 = 불 기술을 안 쓴 턴 끝마다 스택 +1(최대 5) · 스택이 있는 동안 스택 수만큼 공격력 ↑(턴이 지나도 안 꺼짐) · 불 기술을 쓰면 그 기술까지 친 뒤 스택을 전부 씀 · 수치는 클로드 임시(리그전)
+    sp: { res: { heart: [0, 5, '용의 심장'] }, heart: 'heart' },
+    skills: [
+      S('u_drake_1', '용발톱', null, 'u', 55, 1, { contact: true, accBy: { k: 'heart', per: 6 } }),   // 무속성 · 스택 하나당 빗나감 칸 −6
+      S('u_drake_2', '용갑 강화', null, 'u', 0, 2, { cats: ['guard'], heartArmor: { base: 0.08, per: 0.05 } }),   // 갑주(최대 체력 8% + 스택 하나당 5% · 상한 50%) — 속성 없음(불이 아니라 스택을 안 씀)
+      S('u_drake_2b', '용날개', 'wind', 'u', 50, 2, { area: true, spdBy: { k: 'heart', per: 0.05 } }),   // 바람 광역 · 스택 하나당 가속 +5%(한 겹)
+      S('u_drake_3', '브레스 방출', 'fire', 'u', 10, 0, { area: true, powTbl: { k: 'heart', tbl: [10, 15, 30, 55, 100, 180] }, burnBy: { k: 'heart', p: 0.2 } }),   // 햇빛 0 · 스택이 늘수록 기하급수(하나마다 약 1.8배) · 화상 확률 = 스택 하나당 20%(0~1스택 공짜 화상 막기 — 클로드 추천)
+      S('u_drake_3b', '몸 태우기', 'fire', 'u', 0, 1, { cats: ['heal_hp'], heartCleanse: true }),   // 스택을 전부 써서 하나당 내 디버프(능력치 겹 포함 — 예외) · 상태이상 한 종류씩 지움
+      S('u_drake_3c', '용의 이빨', null, 'u', 70, 2, { contact: true, pierce: 0.3, inflict: { id: 'bleed' }, critBy: { k: 'heart', per: 8 } }),   // 무속성 찌르기(방어 30% 무시) · 출혈 · 스택 하나당 치명 칸 +8
     ],
   },
   toxi_cactus: {   // 19. 톡시캑터 — 상대 독 겹 활용(태생 독성) · 2026-10-26 설계 · 10-28 세부 확정 · 고유 패시브 없음
@@ -550,7 +583,7 @@ const V2 = {
       S('u_wind_2b', '피의 춤', 'wind', 'u', 40, 2, { lostHp: 1.2 }),
       S('u_wind_3', '칼춤', 'wind', 'u', 22, 3, { hits: 4, perHit: { id: 'atkUp', v: 0.05, tag: 'kal', cap: 6 } }),
       S('u_wind_3b', '매혹', 'wind', 'u', 30, 2, { onFirst: { inflicts: [{ id: 'stun', p: 0.35, look: 'charm' }, { id: 'atkDown' }] }, onSecond: { inflicts: [{ id: 'stun', p: 0.35, look: 'charm' }, { id: 'defDown' }] } }),
-      S('u_wind_3c', '처형의 춤', 'wind', 'u', 90, 4, { late: true, execute: 0.2 }),
+      S('u_wind_3c', '처형의 춤', 'wind', 'u', 40, 2, { late: true, execute: 0.2, sureExec: true }),   // 2026-11-04 사용자 'ㄱ과 ㄴ을 합쳐' — 위력 · 햇빛 낮춤(90 · 4 → 40 · 2 임시) + 행동할 때 상대 체력이 20% 아래면 회피 · 방어 · 은신 무시하고 처형(버티기엔 막힘)
     ],
   },
   flower_grass: {   // 1. 페탈로즈 — 검방술(순서 분기): 먼저/나중에 따라 같은 기술이 다르게 · 2026-10-18 설계(장치 시험 tools/test/devices.mjs 그대로) · 10-28 지금 규칙 대조(막기 = 그 턴 모든 타 · 철벽 → 억셈 · 만개 = 공통 강화 겹)
@@ -644,7 +677,7 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 16;   // 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
+export const RULES_VER = 17;   // 17 = 2026-11-04 밤샘(친구 서버 전) — 엠버캡 · 드레이크캑터 · 드라코프루트 새 설계 · 프로스트드레이크 빙결열매(옮김) · 피의 축제 3타 · 처형의 춤 무조건 처형 · 포자 = 붙인 턴 포함 3번째 턴 · 불이 포자 · 빙결 · 얼음을 안 녹임 · 소환수가 주인 능력치 겹을 따라감 · 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
 // 14 이전:   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
 //  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘

@@ -122,7 +122,7 @@ const fixed = v => () => v;
   apply(f, 'wet', 1, ctx(a, 1, [])); apply(f, 'chill', 2, ctx(a, 1, []));
   ok(mustSkip(f), '젖음 + 칼바람(2) = 바로 얼음');
   const fe = []; onHit(mk('me', 'cactus_fire'), f, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
-  ok(!f.eff.wet && !mustSkip(f) && f.eff.burn && fe.some(e => e.t === 'cure' && e.ids.includes('frozen')), '불에 맞으면 젖음이 마르고 얼음(기절)도 녹음 · 화상(2026-10-21 기록: 얼음 · 빙결 · 젖음 · 포자 · 기생은 불에 풀림)');
+  ok(!f.eff.wet && mustSkip(f) && f.eff.burn && fe.some(e => e.t === 'cure' && e.ids.includes('wet')) && !fe.some(e => e.t === 'cure' && e.ids.includes('frozen')), '불에 맞으면 젖음만 마름 · 얼음(기절) · 빙결은 안 녹음(2026-11-03 사용자 \'빙결 때 불 쏘면 사라진다는 거 폐지\') · 화상');
 }
 // ── 6. 쉬는 시점 · 에너지 돌려받음 · 버팀 ──
 { // 선공이 기절시킴 → 후공의 이번 행동 취소 + 에너지 환불
@@ -229,21 +229,21 @@ const fixed = v => () => v;
   ok(!c2.eff.spore && h4 - c2.hp === Math.round(c2.max * 0.08), '4턴 끝 남은 하나 핌');
   // 같은 턴에 둘 = 피해를 더한 사건 하나 · 숨막힘(햇빛 막힘) 없음
   const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'gaia'), seed: 4 });
-  apply(B.foe, 'spore', 2, ctx(B.me, 1, [])); apply(B.foe, 'spore', 2, ctx(B.me, 1, []));   // 옛 2겹 기술 = 지연 1턴
-  playTurn(B, B.me.kit[1]);
+  apply(B.foe, 'spore', 2, ctx(B.me, 1, [])); apply(B.foe, 'spore', 2, ctx(B.me, 1, []));   // 같은 턴에 둘(2026-10-31부터 지연 값과 상관없이 붙인 턴 포함 3번째 턴 끝)
+  playTurn(B, B.me.kit[1]); playTurn(B, B.me.kit[1]);
   const hb = B.foe.hp, tt = playTurn(B, B.me.kit[1]), bl = tt.events.find(e => e.t === 'bloom');
   ok(bl && bl.k === 2 && bl.dmg === 2 * Math.round(B.foe.max * 0.08), `같은 턴 둘 = 피해를 더해 한 번(${bl && bl.dmg})`);
   ok(!tt.events.some(e => e.t === 'noEnergy' && e.who === 'foe'), '기본 포자는 피어도 햇빛을 막지 않음(암실은 특수 포자만)');
-  // 카드 포자 번식 = 걸 때 지연 1턴 줄임(지연 1 기술 → 그 턴 끝에 핌)
+  // 카드 포자 번식(2026-11-04 클로드 임시 — '반드시 3번째 턴'과 맞춤) = 내가 건 포자가 필 때 피해 8% → 11%
   const pa = mk('me', 'spore_cap'); pa.pas = { sporeAdd: 1 };
-  const pb = mk('foe', 'gaia'), hpb = pb.hp; apply(pb, 'spore', 2, ctx(pa, 1, [])); endTurn([[pb, pa]], 1, []);
-  ok(!pb.eff.spore && hpb - pb.hp === Math.round(pb.max * 0.08), '포자 번식 카드 = 지연 1턴 줄임');
+  const pb = mk('foe', 'gaia'), hpb = pb.hp; apply(pb, 'spore', 1, ctx(pa, 1, [])); endTurn([[pb, pa]], 1, []); endTurn([[pb, pa]], 2, []); endTurn([[pb, pa]], 3, []);
+  ok(!pb.eff.spore && hpb - pb.hp === Math.round(pb.max * 0.11), `포자 번식 카드 = 필 때 피해 11%(${hpb - pb.hp})`);
   // 정화 = 포자 모두 지움
   const pu = mk('foe', 'gaia'); apply(pu, 'spore', 1, ctx(a, 1, [])); apply(pu, 'spore', 1, ctx(a, 1, [])); selfBuff(pu, 'purify', { turn: 1, ev: [] });
   ok(!pu.eff.spore, '정화 = 포자 모두 지움');
   const c = mk('foe', 'flower_grass'); apply(c, 'spore', 1, ctx(a, 1, []));
   const fe = []; onHit(mk('me', 'cactus_fire'), c, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
-  ok(!c.eff.spore && fe.some(e => e.t === 'cure' && e.ids.includes('spore')), '불에 맞으면 포자가 탐');
+  ok(c.eff.spore && !fe.some(e => e.t === 'cure' && (e.ids || []).includes('spore')), '불에 맞아도 포자는 안 탐(2026-10-31 사용자 \'포자가 불에 타는 거 없애자\')');
   const m = mk('foe', 'spore_cap'), me2 = []; apply(m, 'spore', 1, ctx(a, 1, me2));
   ok(!m.eff.spore && me2.some(e => e.t === 'immune'), '버섯은 포자에 안 걸림');
 }
@@ -461,7 +461,7 @@ const fixed = v => () => v;
     expire(B.me, 2, []); ok(!B.me.eff.gale, '지금 2턴 = 1턴에 켜면 2턴 끝에 꺼짐'); }
   // 대기석: 화상 · 독이 턴 끝마다 깎이고 재생은 차고 포자가 핌 · 능력치 겹 시간도 감
   { const B = team(); const bench = B.team.me[1];
-    apply(bench, 'poison', 1, ctx(B.foe, 1, [])); selfBuff(bench, 'atkUp', { turn: 1, ev: [] }); apply(bench, 'spore', 1, ctx(B.foe, 1, []), { delay: 0 });   // 대기석 = 엠버캑터(불 — 화상 면역이라 독)
+    apply(bench, 'poison', 1, ctx(B.foe, 1, [])); selfBuff(bench, 'atkUp', { turn: 1, ev: [] }); apply(bench, 'spore', 1, ctx(B.foe, 1, [])); bench.eff.spore.left = [1];   // 대기석 = 엠버캑터(불 — 화상 면역이라 독) · 포자는 이번 턴 끝에 피게 맞춰 둠
     const h0 = bench.hp, t = playTurn3(B, { kind: 'skill', skill: B.me.kit[0] });
     ok(bench.hp < h0 && t.events.some(e => e.t === 'tick' && e.bench && e.idx === 1) && t.events.some(e => e.t === 'bloom' && e.bench), '대기석에서도 독 피해 · 포자가 핌(사건에 bench 표시)');
     for (let i = 0; i < 5 && !B.over; i++) playTurn3(B, { kind: 'skill', skill: B.me.kit[0] });
@@ -517,7 +517,7 @@ const fixed = v => () => v;
   // 기술에 적힌 효과 값(지연 · 기간 · 이름)이 실제로 걸 때 쓰임
   const hitWith = inf => { const a = mk('me', 'gaia'), b = mk('foe', 'aqua'); resolveTurn(a, b, { ...a.kit[0], inflict: inf }, REST, fixed(0.5), { turn: 1 }); return b; };
   const sp1 = hitWith({ id: 'spore', delay: 1 }), dk = hitWith({ id: 'dark', turns: 1, look: 'shade' }), gl = hitWith({ id: 'gale', turns: 3 });
-  ok(sp1.eff.spore && sp1.eff.spore.left[0] === 2, `기술의 포자 지연 1턴이 걸 때 쓰임(${sp1.eff.spore && sp1.eff.spore.left})`);
+  ok(sp1.eff.spore && sp1.eff.spore.left[0] === 3, `포자 = 기술의 지연 값과 상관없이 붙인 턴 포함 3번째 턴 끝(left 3 — 2026-10-31 사용자 · 지금 ${sp1.eff.spore && sp1.eff.spore.left})`);
   ok(listOf(dk).some(x => x.id === 'shade'), '기술의 암실 이름(그늘)이 걸 때 쓰임');
   ok(gl.eff.gale && gl.eff.gale.exp === 3, `기술의 강풍 기간 3턴이 걸 때 쓰임(${gl.eff.gale && gl.eff.gale.exp})`);
   ok(!OLD_ || !Object.keys(OLD_).length, '옛 이름 바꿈표를 비움');
