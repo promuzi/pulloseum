@@ -1,20 +1,24 @@
 // 기술 카드 테두리(2026-11-04 사용자 '스킬 테두리 고안해보자 / 속성/종/속성+종/고유스킬 로 분류 … 색깔만 바꾸기보단 덩쿨이면 테두리를 덩쿨이 꼬인것처럼 …
 //  불속성+덩쿨이면 불 덩쿨로. 고유스킬이면 따로 표식을 해주자. 불속성 식물에 번개타입이라고 번개테두리를 주면 헷갈림' → '코덱스한테 테두리 그림 받아서 카드에 적용해볼래?'
-//  → 같은 날 아침 '테두리는 속성정보까지 담으니깐 종류가 너무 많아진 느낌이야 / 테두리는 종만 담는걸로 할까? 속성은 속성 마크랑 아이콘 색으로도 알 수 있으니깐'):
-//  테두리 = 그 기술을 배우는 종(꽃 · 덩굴 · 선인장 · 버섯) — 기술의 공격 속성이 아님(싹둑마마 ..력일섬! = 번개 공격이어도 싹둑마마 종 테)
-//   종 공통 = 종 모서리(ty_* · 제 색) · 고유 = 그 식물의 종 모서리(제 색) + 고유 표식(별)
-//   속성 공통 · 가지 · 특수 · 기본기 · 변이 · 패시브 카드 = 지금 테 그대로(skillcard.js 둥근 테) · 속성은 그림 왼쪽 아래 속성 배지로
-//   버린 안(밤샘 365) = 속성 공통 = 속성 모서리(el_* 일곱) · 고유 = 종 모서리를 그 식물 속성 색으로 다시 칠함 — 그림 파일은 assets/v2/frames에 남김
-//  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md) → greycut 누끼 → itemconv 30칸 10색 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
+//  → 같은 날 아침 '테두리는 종만 담는걸로 할까?'(370 = 종 테만) → '없는 6개를 어떤 기준으로 묶어서 … 일단 속성은 필요해지긴하네 보니깐 / 기본기도 전용으로 필요해보이고'
+//  → '반대로 하자. 테두리는 속성이 우선. 그다음에 속성이 없는 걸 종 테두리고 … 기본테는 코덱스에게'(379):
+//  테두리 = 그 기술의 속성(el_* 일곱 — 속성 공통 · 가지 · 속성 있는 고유) → 속성이 없으면 종(ty_* 넷 — 종 공통 · 속성 없는 고유는 그 식물의 종)
+//   → 속성도 종도 없으면 기본 테(basic — 기본기 넷 · 특수 넷) · 위 가운데 표식 = 고유 별(crest_unique) · 특수 보석(crest_special)
+//   변이 · 패시브 카드 = 지금 테 그대로(skillcard.js — 변이 = 각진 테 · 패시브 = 점선 테)
+//   바람 · 빙결 모서리는 게임 속성 색(보라 · 청록)으로 다시 칠함(코덱스 그림은 민트 · 하늘이라 바람이 빙결처럼 보임)
+//   버린 안 = 밤샘 365(고유 = 종 모서리를 그 식물 속성 색으로 다시 칠함 — 4종 × 7속성) · 370(종만 · 속성 공통은 둥근 테)
+//  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md · 기본 테와 보석은 v2 — FRAME_BASIC_PROMPT.md) → greycut 누끼 → itemconv 30칸 10색 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
 //   (같은 날 '테두리가 픽셀이 작아서 자글자글하고 그래. 입체감을 줘서 좀 튀어나와도 되고, 픽셀을 좀 올리거나 크기를 키워줘' → 24칸 14색에서 키움 · 빛 · 그늘 · 그림자)
 //   그리기 = 모서리를 네 귀퉁이에 뒤집어 놓고 사이 변은 팔 끝 조각을 이어 붙임(이음매가 덜 보이는 길이를 고름) → 카드 크기마다 한 장으로 합쳐 둠(composed)
 //   입체감 = 왼쪽 위에서 오는 빛: 먹선 안쪽 한 칸을 왼쪽 위 면은 밝게 · 오른쪽 아래 면은 어둡게 + 테 모양 그림자를 오른쪽 · 아래로 2칸 밀어 카드 그림 위에 깖
 //   모서리 원본 = itemconv 30칸 10색 → 외톨이 한 칸 지움(tools/pixel/big/frameclean.py) · 15칸을 두 배로 키운 안은 꽃 · 덩굴 모양이 뭉개져 버림
 //   (카드 밖으로 튀어나오게는 안 함 — 꾹 눌러 보는 큰 카드 · 더미 펼침은 카드 크기 캔버스에 그려 바깥이 잘림)
+import { ELEMENT } from './palette.js';
 import { SPECIES, uniqueOf } from '../game/catalog.js';
 
-export const FRAME_NAMES = ['ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'crest_unique'];
+export const FRAME_NAMES = ['el_fire', 'el_water', 'el_grass', 'el_earth', 'el_wind', 'el_bolt', 'el_ice', 'ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'basic', 'crest_unique', 'crest_special'];
 const RAW = {}, BUILT = new Map();
+const RECOLOR_EL = { el_wind: 'wind', el_ice: 'ice' };   // 코덱스 색(민트 · 하늘)이 게임 속성 색(바람 보라 · 빙결 청록)과 달라 다시 칠함
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadFrames(base = '../assets/v2/frames/') {
   const got = await Promise.all(FRAME_NAMES.map(n => load(base + n + '.png')));
@@ -25,15 +29,37 @@ export async function loadFrames(base = '../assets/v2/frames/') {
 // 고유 기술 → 그 식물 키(기술 id 'u_<줄임>_…'의 줄임 → 종)
 const OWNER = (() => { const m = {}; for (const k of Object.keys(SPECIES)) { const c = uniqueOf(k, 0).split('_')[1]; if (c && !m[c]) m[c] = k; } return m; })();
 const ownerOf = sk => (sk.fx && SPECIES[sk.fx] ? sk.fx : OWNER[String(sk.id || '').split('_')[1]]) || null;
-// 그 기술의 테 이름(없으면 지금 테): 'ty_종'
+// 그 기술의 테 이름(없으면 지금 테): 'el_속성' → 'ty_종' → 'basic'(기본기 · 특수 · 쉬기)
 export function frameKey(sk) {
-  if (!sk || sk.passive || sk.form || !sk.tier) return null;
-  if (sk.tier === 'u') { const sp = SPECIES[ownerOf(sk)]; return sp && sp.type ? `ty_${sp.type}` : null; }
-  if (sk.tier === 'c1' || sk.tier === 'c2' || sk.tier === 'c3') return sk.jong ? `ty_${sk.jong}` : null;
-  return null;
+  if (!sk || sk.passive || sk.form) return null;
+  if (sk.el) return ELEMENT[sk.el] ? `el_${sk.el}` : null;
+  if (sk.tier === 'u') { const sp = SPECIES[ownerOf(sk)]; return sp && sp.type ? `ty_${sp.type}` : 'basic'; }
+  return sk.jong ? `ty_${sk.jong}` : 'basic';
 }
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const flip = (src, fx, fy) => { const c = canvas(src.width, src.height), x = c.getContext('2d'); x.translate(fx ? src.width : 0, fy ? src.height : 0); x.scale(fx ? -1 : 1, fy ? -1 : 1); x.drawImage(src, 0, 0); return c; };
+const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const lum = (r, g, b) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+// 밝기대로 속성 색 계단에 옮겨 칠함(먹선 = 아주 어두운 칸은 그대로)
+function recolor(img, el) {
+  const E = ELEMENT[el], c = canvas(img.width, img.height), x = c.getContext('2d');
+  x.drawImage(img, 0, 0);
+  if (!E) return c;
+  const id = x.getImageData(0, 0, c.width, c.height), d = id.data, ink = 0.16;
+  const [dk, mn, lt] = [hexRgb(E.dark), hexRgb(E.main), hexRgb(E.light)], ramp = [mix(dk, [11, 19, 34], 0.35), dk, mix(dk, mn, 0.5), mn, mix(mn, lt, 0.5), lt, mix(lt, [255, 255, 255], 0.55)];
+  let lo = 1, hi = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 0) { const L = lum(d[i], d[i + 1], d[i + 2]); if (L >= ink) { lo = Math.min(lo, L); hi = Math.max(hi, L); } }
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    const L = lum(d[i], d[i + 1], d[i + 2]);
+    if (L < ink) continue;
+    const t = hi > lo ? (L - lo) / (hi - lo) : 0.5, c3 = ramp[Math.min(ramp.length - 1, Math.round(t * (ramp.length - 1)))];
+    d[i] = c3[0]; d[i + 1] = c3[1]; d[i + 2] = c3[2];
+  }
+  x.putImageData(id, 0, 0);
+  return c;
+}
 // 이어 붙일 팔 조각 길이 = 모서리 장식이 끝난 뒤 곧은 팔 부분 전체(팔 두께보다 불투명 칸이 많은 줄 = 장식) — 이어 붙일 때 하나 걸러 뒤집어(거울) 이음매가 안 보이게
 const CAP = 3;   // 모서리 그림 팔 끝의 마감(먹선 · 끝 그늘 · 가늘어지는 끝) 칸 수
 function straight(d, T, along, span) {
@@ -50,7 +76,8 @@ function build(key) {
   if (BUILT.has(key)) return BUILT.get(key);
   const img = RAW[key];
   if (!img) { BUILT.set(key, null); return null; }
-  const base = canvas(img.width, img.height); base.getContext('2d').drawImage(img, 0, 0);
+  const base = RECOLOR_EL[key] ? recolor(img, RECOLOR_EL[key]) : canvas(img.width, img.height);
+  if (!RECOLOR_EL[key]) base.getContext('2d').drawImage(img, 0, 0);
   const T = base.width, d = base.getContext('2d').getImageData(0, 0, T, T).data;
   // 팔 두께 = 끝 8칸 안에서 위 팔의 가장 아래 불투명 줄 · 왼 팔의 가장 오른쪽 불투명 칸(전엔 맨 끝 한 줄만 봐서 끝이 가늘어지는 덩굴 위 팔을 1칸으로 잼)
   let ay = 0, ax = 0;
@@ -114,7 +141,8 @@ export function drawFrameArt(g, x, y, w, h, sk, lit) {
   const c = g.c, sm = c.imageSmoothingEnabled;
   c.imageSmoothingEnabled = false;
   c.drawImage(im, x, y);
-  if (sk.tier === 'u' && RAW.crest_unique) { const cr = RAW.crest_unique; c.drawImage(cr, Math.round(x + (w - cr.width) / 2), y - 2); }   // 고유 표식 = 위 가운데 별(테에 걸쳐 — 비용 해 · 수치 사이 빈 곳)
+  const cr = sk.tier === 'u' ? RAW.crest_unique : sk.tier === 's' ? RAW.crest_special : null;   // 위 가운데 표식(테에 걸쳐 — 비용 해 · 수치 사이 빈 곳): 고유 = 별 · 특수 = 보석
+  if (cr) c.drawImage(cr, Math.round(x + (w - cr.width) / 2), y - 2);
   if (lit) { g.rect(x + 3, y, w - 6, 1, '#ffd890'); g.rect(x + 3, y + h - 1, w - 6, 1, '#ffd890'); g.rect(x, y + 3, 1, h - 6, '#ffd890'); g.rect(x + w - 1, y + 3, 1, h - 6, '#ffd890'); }
   c.imageSmoothingEnabled = sm;
   return true;
