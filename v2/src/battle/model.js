@@ -1,14 +1,15 @@
 // v2 전투 판 만들기 — 식물(종·스탯) → 전투 유닛, 기술 목록(기본기 셋 + 종 기술), 속성 상성, 상대 고르기.
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
-import { makeRng, resolveTurn, baseDamage, hitTable } from './rules.js';
+import { makeRng, resolveTurn, baseDamage, hitTable, initiativeChance, guardDefMult, RULES } from './rules.js';
 import { formMult } from './matchup.js';
 import { SKILLS as CAT_SKILLS, SPECIES, SPECIES_V2, uniquesOf } from '../game/catalog.js';
-import { caveSync, orbInit, dynAct, echoK, DYN, liveSkill } from './devices.js';
-import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy, HARM_IDS, FRUIT } from './status.js';
+import { caveSync, orbInit, dynAct, echoK, DYN, liveSkill, sporeDmg } from './devices.js';
+import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy, HARM_IDS, FRUIT, RULES_FX, defK, atkK, evadeK, effSpd, usesLeft, givesFx } from './status.js';
 const STAT_UPS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign > 0), STAT_DOWNS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign < 0);
 
 // 상성 = battle/elem.js(2026-11-04 옮김 — 포자 시간차 공격도 씀)
 import { elemMult } from './elem.js';
+import { PLAYBOOK } from './playbook.js';
 export { elemMult };
 // 한 번 칠 때 배율 = 속성 상성 × 변이 상성(2026-10-17 — 변이끼리 · 변이 ↔ 속성 · 무기 종류)
 export const hitMult = (u, d, s) => elemMult(s && s.el, d.el) * formMult(u, d, s);
@@ -146,24 +147,34 @@ export function makeUnit(id, sp, o) {
   };
 }
 
-// 상대 고르기(봇 — 사람과 같은 정보만 씀): 쓸 수 있는 기술 중 가중 추첨. 위력·상성이 좋으면 자주, 체력이 낮으면 방어·회피를 조금 더,
-//  상대에게 아직 없는 효과(같은 속성 면역이 아니면)를 거는 기술은 조금 더.
-const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack || D.stat ? true : !has(foe, f.id)); };   // 쌓이는 것(독 · 빙결 · 포자 · 능력치 겹)은 늘 새로
 // 못 쓰는 기술을 골랐을 때 대신 = 손패에서 쓸 수 있는 첫 기술, 없으면 넘어감(손패 넷에 기본기가 없으면 기력이 모자랄 수 있음)
 export const firstOk = u => u.kit.find(s => canUse(u, s)) || BLOCKED;
 // 시간 초과(2026-10-23 사용자 '시간초과 하면 랜덤으로 스킬써짐'): 지금 쓸 수 있는 기술 중 하나를 무작위로 · 없으면 막혀 쉼 — rnd = 0~1 난수(화면 Math.random · 서버 crypto)
 export const randomOk = (u, rnd) => { const ok = u.kit.filter(s => canUse(u, s)); return ok.length ? ok[Math.min(ok.length - 1, Math.floor(rnd() * ok.length))] : BLOCKED; };
 // 봇 머리(2026-10-22 사용자 "봇 지능 향상. 교환 등 전투를 전략적으로 하도록"): 기술마다 점수를 매겨 높은 것을 고름.
-//  기대 피해(위력 · 상성 · 방어 · 맞을 확률) ÷ 상대 남은 체력 · 이번에 끝낼 수 있으면 크게 · 아직 없는 효과 · 은신/분신엔 광역 ·
+//  기대 피해(위력 · 상성 · 방어 · 맞을 확률) ÷ 상대 남은 체력 · 이번에 끝낼 수 있으면 크게 · 은신/분신엔 광역 ·
 //  상대가 이번 턴 나를 쓰러뜨릴 만하면(상대가 쓴 기술 · 상대 햇빛으로 짐작) 방어 · 회피 · 막는 버프 · 햇빛이 모자라면 광합성.
 //  머리 좋음 iq(0~1 — 봇 판을 열 때 대회 단계로 정함, fight.js) 만큼 높은 점수를 고르고, 낮으면 더 무작위(첫 판 · 낮은 단계가 쉬움).
 //  사람과 같은 정보만 씀: 내 손패 · 상대 앞 식물의 보이는 값(속성 · 능력치 · 체력 · 햇빛 · 효과) · 상대가 이번 판에 쓴 기술(ctx.seen).
+// 봇 시스템(2026-11-04 사용자 '봇 또한 이 고유 스킬 조합과 각각 버프 디버프, 상태이상의 연계와 활용을 잘 하며, 햇빛의 여유분을 고려하여 큰 비용, 적은 비용을 적절히 사용하도록 해줘.
+//  체력의 상황에 따라, 상대의 속성에 따라도 조합하며, 자신의 스탯을 기준으로 어떤 전략을 취할지도' — 설계 docs/superpowers/specs/2026-11-04-bot-system-design.md):
+//  ① 효과 값 fxVal = 거는 효과마다 이번 판에 주는 몫(지속 피해 · 쉬게 함 · 능력치 내림 · 연계 — 공격과 같은 잣대: 2.5 × 상대 남은 체력 몫)
+//  ② 방어태세 · 회피 자세 = 내 방어 · 기동으로 실제 막는 몫(방어가 높으면 방어태세 · 빠르면 회피 자세가 더 막음)
+//  ③ 먼저 · 나중 갈래가 있는 기술 = 선공 확률로 두 갈래 점수를 섞음
+//  ④ 다음 턴 내다보기 nextBest = 이번 수가 남기는 햇빛 · 개수 칸 · 열린 기술(식사시간 → 맛평가) · 상대 상태(빙결 겹 · 독 겹 · 남은 체력)로 다음 턴에 쓸 가장 좋은 수를 LOOK 만큼 더함
 const hitChance = (u, foe, s) => {
   const t = hitTable(u, foe, { area: !!s.area });
   let p = (t.hit + 1.5 * t.crit + 0.5 * t.graze) / 100;
   if (!s.area && has(foe, 'stealth')) p *= 0.05;   // 은신(분신 = 연출만) = 광역 아닌 공격 95% 빗나감
   return p;
 };
+// 덤 효과가 걸릴 확률 = 빗나가지만 않으면(스침도 걸림)
+const landChance = (u, foe, s) => { const t = hitTable(u, foe, { area: !!s.area }); let p = 1 - t.miss / 100; if (!s.area && has(foe, 'stealth')) p *= 0.05; return Math.max(0, p); };
+// 머리 손잡이(2026-11-04 — 기능마다 켜고 끄며 시뮬레이션으로 고름: node tools/test/botsys.mjs brain --set 이름=값,…) — 기본값 = 그 재기에서 이긴 조합
+//  fx = 효과 값(1) · 옛 '새 효과면 덤'(0) / fxK = 효과 값 배율 / stance = 방어태세 · 회피 자세를 내 방어 · 기동으로(1) · 옛 고정값(0) / branch = 먼저 · 나중 갈래 섞기 /
+//  look = 다음 턴 내다보기 무게 / deep = 그 뒤 두 턴을 햇빛만 따져 더 봄 / pot = 모아 둔 개수(준비 · 용의 심장 · 열매 · 덫)의 값 무게 / sunOld = 광합성을 옛 규칙(가장 비싼 기술까지 모으기)으로 / rDmg = 버프 · 효과 잣대 R을 피해 몫으로 / drain = 흡수 회복 값 / selfK = 공격 덤 버프 값 배율
+export const BRAIN = { fx: 1, fxK: 2, stance: 1, branch: 1, look: 0.3, deep: 0, pot: 0.6, sunOld: 1, rDmg: 1, drain: 1, selfK: 0.8 };
+const newFx = (s, foe) => { const f = s.inflict; if (!f) return false; const D = FX[f.id]; return !!D && !(D.el && D.el === foe.el) && !(D.jong && D.jong === foe.jong) && (D.stack || D.stat ? true : !has(foe, f.id)); };   // 옛 덤: 쌓이는 것(독 · 빙결 · 포자 · 능력치 겹)은 늘 새로
 // 그 차례 실제 값으로 본 기술(2026-10-29 봇 손질): 열매 · 덫 · 잃은 체력 · 준비 개수 · 상대 상태 보너스 · 속성 바꾸기(dynAct) — 판 상태는 건드리지 않게 복사본으로 · 운은 가운데 값
 const peekAct = (u, s, foe) => (s && s.act === 'attack' && (DYN.some(k => s[k]) || (u.st && u.st.formBoost)) ? dynAct({ ...u, st: { ...(u.st || {}) }, res: u.res ? { ...u.res } : undefined }, s, foe, () => 0.5) || s : s);
 export const expDamage = (u, foe, s0) => { const s = peekAct(u, s0, foe); return s && s.act === 'attack' && s.power ? baseDamage(u, foe, s, hitMult(u, foe, s)) * (s.strikes ? s.strikes.length : s.hits || 1) * hitChance(u, foe, s) : 0; };
@@ -172,27 +183,124 @@ export function threatOf(foe, u, seen = []) {
   const guess = { act: 'attack', power: 30 + 12 * Math.min(5, foe.energy || 0), el: foe.el, cost: 0 };
   return Math.max(expDamage(foe, u, guess), ...seen.filter(s => s && s.act === 'attack' && (s.cost || 0) <= (foe.energy || 0)).map(s => expDamage(foe, u, s)));
 }
-const SHIELDS = ['shield', 'defUp', 'armor'];
-// 공격 점수 = 2.5 × (기대 피해 ÷ 상대 남은 체력) + 끝내기 · 새 효과 · 은신엔 광역 · 덤 버프. 메아리(아침 · 밤)면 그만큼 더 맞힘
-function atkScore(u, foe, s, d0) {
-  const d = (d0 ?? expDamage(u, foe, s)) * (1 + echoK(u, 0)), frac = Math.min(1.2, d / Math.max(1, foe.hp));
+const hpPart = (d, hp) => 2.5 * Math.min(1.2, d / Math.max(1, hp)) + (d >= hp * 0.95 ? 2.5 : 0);   // 공격 점수의 피해 몫 = 2.5 × 상대 남은 체력 몫 + 끝내기
+// 회복 점수 = 공격과 같은 잣대(2.5 × 되찾는 체력 ÷ 지금 체력)를 조금 덜(판을 끝내 주지 않음) — 빈 체력보다 더 차는 몫은 안 셈
+const healScore = (u, pct) => 2.5 * 0.8 * Math.min(pct, Math.max(0, 1 - u.hp / u.max)) * u.max / Math.max(1, u.hp);
+
+// ① 효과 값
+const defGain = (foe, k) => { const D = Math.max(0, (foe.def || 0) * defK(foe)); return (100 + D) / (100 + D * (1 - k)) - 1; };   // 상대 방어가 k만큼 내려가면 내 피해가 몇 몫 느나(받는 몫 = 100 ÷ (100 + 방어))
+const USE = new WeakMap();
+function useOf(u) {   // 내 손패가 받아 쓰는 연계: 독 겹 소모 · 얼음 깨기 · 감전 · 빙결 · 강풍 공명 · 상태 종류 청산 · 변이 기술
+  const kit = u.kit || [];
+  let k = USE.get(kit); if (k) return k;
+  k = { poison: kit.some(s => s.consume && s.consume.id === 'poison'), frozen: kit.some(s => s.bonusIf && s.bonusIf.id === 'frozen'), shock: kit.some(s => givesFx(s, 'shock')), chill: kit.some(s => givesFx(s, 'chill')), gale: !!(SPECIES[u.key] || {}).reso || kit.some(s => s.galeAdd), mut: kit.some(s => s.tier === 'm') };
+  USE.set(kit, k);
+  return k;
+}
+function fxVal(u, foe, f, C) {
+  const D = FX[f.id];
+  if (!D || !foe || foe.hp <= 0) return 0;
+  if ((D.el && D.el === foe.el) || (D.jong && D.jong === foe.jong)) return 0;   // 같은 속성 · 버섯 포자 = 안 걸림
+  const H = C.H, R = C.R, thr = Math.min(1.2, C.risk), life = foe.max / Math.max(1, foe.hp), T = n => Math.max(0, Math.min(n, H)), K = C.useK, n = f.n || 1;
+  const deny = 2.5 * thr * 0.7 + 0.25 * R;   // 상대 행동 한 번을 막음(그 피해를 안 받고 한 턴을 범)
+  const cur = id => (foe.eff && foe.eff[id] && foe.eff[id].n) || 0;
+  let v;
+  switch (f.id) {
+    case 'burn': v = has(foe, 'burn') ? 0.3 * 2.5 * D.dot * life : 2.5 * D.dot * T(f.turns || D.turns) * life; break;
+    case 'poison': { const add = Math.max(0, Math.min(D.stack, cur('poison') + n) - cur('poison')); v = 2.5 * D.dot * add * T(4) * life + (K.poison ? 0.12 * R * add : 0); break; }
+    case 'bleed': v = 2.5 * D.dot * T(f.turns || D.turns) * life + 0.08 * R; break;
+    case 'shock': v = (has(foe, 'shock') ? 0.3 : 1) * 2.5 * D.dot * T(D.turns) * life + (has(foe, 'wet') ? D.wetP : D.p) * deny * Math.min(1.5, T(D.turns) * 0.5); break;
+    case 'chill': { const m = n + (has(foe, 'wet') ? RULES_FX.wetStackAdd : 0); v = cur('chill') + m >= D.stack ? 0.9 * deny + (K.frozen ? 0.6 * R : 0) : 0.4 * deny * m / D.stack + 0.05 * R; break; }   // 3겹 = 얼음(한 번 쉼)
+    case 'stun': v = deny; break;
+    case 'seal': v = 0.25 * R; break;
+    case 'taunt': v = 0.08 * R; break;
+    case 'root': v = u.solo ? 0.25 * R : 0.06 * R; break;   // 1:1에선 봉인으로
+    case 'wet': v = has(foe, 'wet') ? 0.05 * R : R * defGain(foe, 1 - D.defK) * T(D.turns) + 2.5 * thr * D.missAdd / 100 * T(D.turns) * 0.5 + (K.shock || K.chill ? 0.15 * R : 0); break;
+    case 'gale': v = has(foe, 'gale') ? 0.05 * R : 2.5 * thr * D.missAdd / 100 * T(f.turns || D.turns) * 0.6 + (K.gale ? 0.35 * R : 0); break;
+    case 'spore': v = n * (H >= 2 ? 2.5 * sporeDmg(foe, D.power, (u.atk || 10) * atkK(u), u.el) / Math.max(1, foe.hp) : 0.1 * R); break;   // 하나 = 붙인 턴 포함 3번째 턴 끝 위력 35
+    case 'atkDown': v = 2.5 * thr * D.v * T(D.turns) * 0.5; break;
+    case 'defDown': v = R * defGain(foe, D.v) * T(D.turns - 1); break;
+    case 'spdDown': v = 0.05 * R * T(D.turns); break;
+    case 'accDown': v = 2.5 * thr * D.v / 100 * T(D.turns) * 0.6; break;
+    case 'critDown': v = 2.5 * thr * D.v / 200 * T(D.turns) * 0.6; break;
+    case 'leech': v = 2.5 * D.drain * T(D.turns) * (life + 0.5 * u.max / Math.max(1, u.hp)); break;
+    case 'dark': v = 0.2 * R * (f.turns || D.turns); break;
+    default: v = 0.1 * R;
+  }
+  return Math.max(0, v) * (f.p ?? 1);
+}
+// 이 기술이 상대에게 거는 효과(덤 · 여럿 · 타마다 · 치명마다 · 피해 없이)
+function fxList(u, s) {
+  const L = [];
+  if (s.inflict) L.push(s.inflict);
+  for (const f of s.inflicts || []) L.push(f);
+  if (s.perHitInflict) L.push({ ...s.perHitInflict, n: (s.perHitInflict.n || 1) * (s.strikes ? s.strikes.length : s.hits || 1) });
+  if (s.critInflict) L.push({ ...s.critInflict, p: Math.min(1, ((u.crit || 5) + (s.critPlus || 0)) / 100 * (s.hits || 1)) });
+  if (s.act === 'hex') for (const h of s.hex || []) L.push(h);
+  return L;
+}
+const fxSum = (u, foe, s, C) => fxList(u, s).reduce((t, f) => t + fxVal(u, foe, f, C), 0);
+
+// ② 방어태세 · 회피 자세(받는 몫 = 100 ÷ (100 + 방어) — 방어태세는 방어 ×4 · 같은 자세를 잇달아 쓰면 더하는 몫 절반 · 회피 자세는 내 기동 ÷ 상대 기동만큼)
+const guardRed = (u, s, rep) => { const D = Math.max(1, (u.def || 0) * defK(u)); return 1 - (100 + D) / (100 + D * guardDefMult(s, rep)); };
+const evadeRed = (u, foe, s, rep) => { const sh = s.shift || { miss: 15, graze: 10 }; return Math.min(0.6, (sh.miss + 0.5 * sh.graze) / 100 * evadeK(u, foe) * (rep ? RULES.repeatStanceK : 1)); };
+function stanceRed(u, foe, s, last) {
+  if (s.act === 'guard' || s.guardWith) return guardRed(u, s, last === 'guard');
+  if (s.act === 'evade' || s.evadeWith) return evadeRed(u, foe, s, last === 'evade');
+  return 0;
+}
+function stanceVal(u, foe, s, C, k = 1) {
+  const red = stanceRed(u, foe, s, C.last), take = Math.min(1.2, C.risk) * u.hp;
+  const live = C.risk >= 1 && take * (1 - red) < u.hp ? (s.act === 'evade' || s.evadeWith ? 0.6 : 1.2) : 0;   // 막으면 이번 턴을 버팀(회피는 확률이라 덜)
+  return k * (2.5 * 0.85 * take * red / Math.max(1, u.hp) + live);
+}
+// 나에게 거는 버프 값(공격 덤 · 버프 기술 · 자세 덤 같은 잣대)
+function buffVal(u, foe, sides, C, down = 0) {
+  const R = C.R, H = C.H, rk = Math.min(1.2, C.risk), after = n => Math.max(0, Math.min(n, H - 1));
+  let v = 0;
+  for (const b of sides) {
+    const stack = FX[b] && FX[b].stat, again = has(u, b);
+    if (again && !stack) continue;
+    const k = again ? 0.35 : 1;
+    if (b === 'shield' || b === 'armor') v += 2.5 * Math.min(0.15 * u.max, C.risk * u.hp) / Math.max(1, u.hp) * k;   // 막는 것 = 위협만큼(보호막 15%)
+    else if (b === 'defUp') v += 2.5 * rk * 0.3 * Math.min(4, H) * 0.5 * k;
+    else if (b === 'stealth') v += 2.5 * rk * 0.95 + 0.4 * R;   // 은신 = 이번 턴 피하고 다음 공격 기습
+    else if (b === 'regen') v += healScore(u, 0.15);
+    else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
+    else if (b === 'atkUp') v += R * FX.atkUp.v * after(5) * k;
+    else if (b === 'critUp') v += R * FX.critUp.v / 200 * after(5) * k;   // 예리 = 치명 칸 +10(치명 ×1.5)
+    else if (b === 'aim') v += R * 0.35;
+    else if (b === 'flourish') v += R * 0.05 * after(5) * 2 + 2.5 * rk * 0.05;
+    else if (b === 'purify') v += 0.2 * R * HARM_IDS.filter(x => has(u, x)).length;
+    else v += 0.3 * R * k;
+  }
+  return Math.max(0.03, v - 0.15 * R * down);
+}
+// 공격 점수 = 2.5 × (기대 피해 ÷ 상대 남은 체력) + 끝내기 · 거는 효과 값 · 흡수 회복 · 덤 버프 · 은신엔 광역. 메아리(아침 · 밤)면 그만큼 더 맞힘
+function atkScore(u, foe, s, C, d0 = null) {
+  const a = peekAct(u, s, foe), d = (d0 ?? expDamage(u, foe, s)) * (1 + echoK(u, 0));
   const awake = s.sumVolley ? (u.summons || []).filter(x => x.hp > 0 && x.stage !== 'sleep').length : 0;   // 엠버캡 집중 포화 = 깨어난 소환수도 함께 침
   const heal = s.critHeal ? healScore(u, s.critHeal * (s.hits || 1) * Math.min(0.5, ((u.crit || 0) + (s.critPlus || 0)) / 100)) : 0;   // 싹둑마마 피의 축제 = 치명마다 회복
   if (s.execute && foe.hp > 0 && foe.hp < foe.max * s.execute) return 5;   // 처형의 춤 = 기준 아래면 처형(sureExec면 빗나가도)
-  return 2.5 * frac + (d >= foe.hp * 0.95 ? 2.5 : 0) + (newFx(s, foe) ? 0.5 * foe.hp / foe.max : 0) + (s.area && has(foe, 'stealth') ? 1 : 0) + (s.self ? 0.25 : 0) + 0.2 * awake + heal;
+  const fx = BRAIN.fx ? BRAIN.fxK * fxSum(u, foe, a, C) * landChance(u, foe, a) : newFx(a, foe) ? 0.5 * foe.hp / foe.max : 0;
+  const drain = BRAIN.drain && a.drain ? healScore(u, d * a.drain / Math.max(1, u.max)) : 0;   // 흡수(준 피해의 몇 몫을 회복)
+  const self = a.self ? (BRAIN.fx ? BRAIN.selfK * buffVal(u, foe, [a.self, a.also].filter(Boolean), C) : 0.25) : 0;
+  return hpPart(d, foe.hp) + fx + (a.area && has(foe, 'stealth') ? 1 : 0) + self + 0.2 * awake + heal + drain;
 }
-// 회복 점수 = 공격과 같은 잣대(2.5 × 되찾는 체력 ÷ 지금 체력)를 조금 덜(판을 끝내 주지 않음) — 빈 체력보다 더 차는 몫은 안 셈
-const healScore = (u, pct) => 2.5 * 0.8 * Math.min(pct, Math.max(0, 1 - u.hp / u.max)) * u.max / Math.max(1, u.hp);
 // 보조 기술 점수(2026-10-29 사용자 '봇부터 고치고' — 성체 개성 기술 전부 손패에서 드라코프루트 = 냉기 응축만 80% · 젤리캡 = 말랑잉 · 너꺼잉 93% ·
 //  페탈로즈 = 기합 · 불타는 의지 57% · 프로스트벨 아침 31%): 전엔 고정값(0.5~1)이라 공격 점수(보통 0.3 안팎)를 늘 이겨 보조만 되풀이했다.
-//  이제 '지금 가장 좋은 공격 점수 A'와 '상대를 끝낼 때까지 남은 턴 H'로 값을 매김 — 공격을 n턴 x만큼 세게 = A × x × (H − 1 과 n 중 작은 쪽), 막기 = 위협 × 줄이는 몫.
-function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
-  if (s.act === 'attack') return A0 && A0.has(s) ? A0.get(s) : atkScore(u, foe, s);
-  const R = Math.max(0.25, A), after = n => Math.max(0, Math.min(n, H - 1)), rk = Math.min(1.2, risk);
-  const rep = last === s.act ? 0.5 : 1;   // 같은 자세를 연달아 쓰면 효과가 절반(rules repeatStanceK)
-  if (s.act === 'guard') return (risk >= 1 ? 2.2 : 1.4 * risk) * rep;
-  if (s.act === 'evade') return (risk >= 1 ? 1.8 : 1.1 * risk) * rep;
-  if (s.act === 'hex') {   // 피해 없이 거는 기술(종 고유 v2): 새로 걸리는 것이 많을수록 · 공명(강풍에 덧붙임)은 쓸 수 있을 때 높게
+//  이제 '지금 가장 좋은 공격의 피해 몫 R'과 '상대를 끝낼 때까지 남은 턴 H'로 값을 매김 — 공격을 n턴 x만큼 세게 = R × x × (H − 1 과 n 중 작은 쪽), 막기 = 위협 × 줄이는 몫.
+function aiScore(u, foe, s, C) {
+  if (s.act === 'attack') return (C.A0 && C.A0.has(s) ? C.A0.get(s) : atkScore(u, foe, s, C)) + (s.guardWith || s.evadeWith ? stanceVal(u, foe, s, C, 0.8) : 0);   // 검방술 = 공격 + 막기 · 피하기
+  const R = C.R, H = C.H, risk = C.risk, after = n => Math.max(0, Math.min(n, H - 1)), rk = Math.min(1.2, risk);
+  if (s.act === 'guard' || s.act === 'evade') {   // 자세 + 덤(용가시 반사 · 치명적 무희 예리)
+    if (!BRAIN.stance) { const rep = C.last === s.act ? 0.5 : 1; return (s.act === 'guard' ? (risk >= 1 ? 2.2 : 1.4 * risk) : (risk >= 1 ? 1.8 : 1.1 * risk)) * rep; }   // 옛 고정값
+    let v = stanceVal(u, foe, s, C);
+    if (s.reflect) v += 2.5 * rk * FX.reflect.k * 0.5 * u.hp / Math.max(1, foe.hp) * 0.6 + (s.reflectInflict ? 0.5 * fxVal(u, foe, s.reflectInflict, C) : 0);
+    if (s.self) v += buffVal(u, foe, [s.self], C);
+    return v;
+  }
+  if (s.act === 'hex') {   // 피해 없이 거는 기술(종 고유 v2): 거는 효과 값 · 공명(강풍에 덧붙임)은 쓸 수 있을 때 높게
     if (s.galeAdd || s.caveAdd) return 1.0;
     if (s.settle) { const k = HARM_IDS.filter(x => has(foe, x)).length; return k ? 0.3 + 0.45 * Math.min(5, k) : 0.02; }   // 청산 = 상대 상태이상 종류가 많을 때
     if (s.cycle) { const up = z => STAT_UPS.filter(x => has(z, x)).length, bad = z => HARM_IDS.filter(x => has(z, x)).length + STAT_DOWNS.filter(x => has(z, x)).length, v = up(foe) + bad(u) - up(u) - bad(foe); return v > 0 ? R * (0.4 + 0.3 * v) : 0.03; }   // 윤회 = 지우면 내가 이득일 때
@@ -204,10 +312,11 @@ function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
       const dot = has(foe, 'burn') ? 0 : 2.5 * FX.burn.dot * Math.min(3, H + 1) * foe.max / Math.max(1, foe.hp), q = (SPECIES[u.key] || {}).queen;
       return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);
     }
-    const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length;
-    return fresh ? 0.55 + 0.35 * fresh : 0.15;   // 거는 것 자체가 피해 줄기인 종(게일캑터 공명 · 게일바인)이 있어 공격 점수에 견주지 않음
+    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0; return [['atkDown', 1], ['defDown', 2], ['seal', 3]].reduce((t, [id, at]) => t + (n >= at ? fxVal(u, foe, { id }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인
+    if (!BRAIN.fx) { const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length; return fresh ? 0.55 + 0.35 * fresh : 0.15; }   // 옛 값
+    return BRAIN.fxK * fxSum(u, foe, s, C) + (s.formBoost && C.useK.mut ? 0.25 * R : 0) + 0.02;   // 입맛 다시기 = 이번 · 다음 턴 내 변이 기술 +20%
   }
-  if (s.act === 'sun') { const need = Math.max(0, ...u.kit.map(k => k.cost || 0)); return (u.energy || 0) < need && risk < 0.5 ? 1 + 0.2 * (need - (u.energy || 0)) : 0.08; }
+  if (s.act === 'sun') { if (C.look && !BRAIN.sunOld) return 0.05; const need = Math.max(0, ...u.kit.map(k => k.cost || 0)); return (u.energy || 0) < need && risk < 0.5 ? 1 + 0.2 * (need - (u.energy || 0)) : 0.08; }   // 내다보기가 켜져 있으면 광합성 값은 다음 턴에 쓸 수 있게 되는 기술로 셈
   if (s.toggle) { const on = u.mode === s.toggle; return on ? (u.hp < u.max * 0.4 ? 0.6 : 0.03) : (u.hp > u.max * 0.55 ? 0.45 * R + 0.15 : 0.04); }   // 엠버캡 포악 ↔ 온순 = 체력이 넉넉하면 포악(포자가 피면 활력) · 위태로우면 온순(회복)
   if (s.dragonTry) { const n = (u.res && u.res.dragon) || 0, p = s.dragonTry[Math.min(s.dragonTry.length - 1, n)] || 0; return p >= 0.45 ? R * (0.4 + 1.4 * p) : 0.03; }   // 드라코프루트 용의 자격 = 확률이 높을 때만
   if (s.heartArmor) { const n = (u.res && u.res.heart) || 0, cur = (u.eff && u.eff.armor && u.eff.armor.hp) || 0; return cur >= u.max * 0.45 ? 0.03 : 2.5 * Math.min((s.heartArmor.base + s.heartArmor.per * n) * u.max, Math.max(0.15, rk) * u.hp) / Math.max(1, u.hp) * 0.8 + 0.05; }   // 드레이크캑터 용갑 강화 = 스택이 많을수록 · 갑주가 가득이면 안 씀
@@ -232,7 +341,7 @@ function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
   }
   if (s.fruitUse === 'eat') { const fn = (u.eff && u.eff.fruit && u.eff.fruit.n) || 0; return fn ? healScore(u, FRUIT.eat * fn) : 0; }   // 열매 먹기
   if (s.revive) return u.eff && u.eff.revive ? 0.02 : risk >= 0.8 ? 1.6 : risk >= 0.5 ? 0.6 : 0.05;   // 부활잉 = 쓰러질 만할 때 미리
-  if (s.bounce) { const k = seen.some(x => x && (x.inflict || x.inflicts)); return k ? R * (0.4 + 0.4 * Math.min(1, risk)) : 0.05; }   // 너꺼잉 = 상대가 효과 거는 기술을 쓴 적 있을 때
+  if (s.bounce) { const k = (C.seen || []).some(x => x && (x.inflict || x.inflicts)); return k ? R * (0.4 + 0.4 * Math.min(1, risk)) : 0.05; }   // 너꺼잉 = 상대가 효과 거는 기술을 쓴 적 있을 때
   if (s.inject) return u.st && u.st.hpBuff ? 0.05 : R * (0.2 * 3 * after(5) / 5 + 0.3) + healScore(u, 0.2) * 0.5;   // 좋은 거 주입 = 공격 · 방어 · 기동 + 최대 체력 5턴
   if (s.infuse) {   // 불타는 의지(페탈로즈) = 같은 꼬리표 기술 n번을 다른 속성으로 — 바뀐 속성이 이득일 때만
     const sw = u.kit.filter(x => x.act === 'attack' && x.tag === s.infuse.tag), gain = sw.length ? Math.max(...sw.map(x => expDamage(u, foe, { ...x, el: s.infuse.el }) - expDamage(u, foe, x))) : 0;
@@ -240,36 +349,169 @@ function aiScore(u, foe, s, risk, last, A = 0.3, H = 4, seen = [], A0 = null) {
   }
   if (s.act === 'buff' && s.bare) return ((u.res && u.res.evs) || 0) >= 2 ? 0.5 + Math.min(1, risk) : 0.1;   // 방심하기 = 쌓아 둔 스택을 쓸 때
   if (s.act === 'buff') {
-    const sides = [s.self, s.also, ...((s.onFirst && s.onFirst.self) ? [s.onFirst.self] : [])].filter(Boolean), down = (s.selfMore || []).length;
-    if (!sides.length && s.reflect) return (2.5 * rk * FX.reflect.k * u.hp / Math.max(1, foe.hp) * 0.6 + (s.reflectInflict ? 0.3 * R : 0)) * (last === 'buff' ? 0.6 : 1);   // 반사 자세(말랑잉) = 맞은 한 타의 30%를 되돌림
-    let v = 0;
-    for (const b of sides) {
-      const stack = FX[b] && FX[b].stat, again = has(u, b);
-      if (again && !stack) continue;
-      const k = again ? 0.35 : 1;
-      if (b === 'shield' || b === 'armor') v += 2.5 * Math.min(0.15 * u.max, risk * u.hp) / Math.max(1, u.hp) * k;   // 막는 것 = 위협만큼(보호막 15%)
-      else if (b === 'defUp') v += 2.5 * rk * 0.3 * Math.min(4, H) * 0.5 * k;
-      else if (b === 'stealth') v += 2.5 * rk * 0.95 + 0.4 * R;   // 은신 = 이번 턴 피하고 다음 공격 기습
-      else if (b === 'regen') v += healScore(u, 0.15);
-      else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
-      else if (b === 'atkUp') v += R * FX.atkUp.v * after(5) * k;
-      else if (b === 'aim') v += R * 0.35;
-      else if (b === 'flourish') v += R * 0.05 * after(5) * 2 + 2.5 * rk * 0.05;
-      else if (b === 'purify') v += 0.2 * R * HARM_IDS.filter(x => has(u, x)).length;
-      else v += 0.3 * R * k;
-    }
-    return Math.max(0.03, v - 0.15 * R * down);
+    const sides = [s.self, s.also].filter(Boolean), down = (s.selfMore || []).length;
+    if (!sides.length && s.reflect) return (2.5 * rk * FX.reflect.k * u.hp / Math.max(1, foe.hp) * 0.6 + (s.reflectInflict ? 0.3 * R : 0)) * (C.last === 'buff' ? 0.6 : 1);   // 반사 자세(말랑잉) = 맞은 한 타의 30%를 되돌림
+    return buffVal(u, foe, sides, C, down);
   }
   return 0.4 * R;
+}
+// ③ 먼저 · 나중 갈래: 선공 확률로 두 갈래 점수를 섞음(먼저 움직이는 기술 = 거의 먼저 · 나중 기술 = 거의 나중)
+const firstP = (u, foe, s) => (s.early ? 0.92 : s.late ? 0.08 : initiativeChance(effSpd(u), effSpd(foe)));
+function scoreOf(u, foe, s0, C) {
+  const s = liveSkill(u, s0);   // 지금 모습으로 셈(드라코프루트가 용이면 용 쪽 기술) — 고르는 건 원래 카드
+  if (!BRAIN.branch || (!s.onFirst && !s.onSecond)) return aiScore(u, foe, s, C);
+  const p = firstP(u, foe, s);
+  return p * aiScore(u, foe, s.onFirst ? { ...s, ...s.onFirst } : s, C) + (1 - p) * aiScore(u, foe, s.onSecond ? { ...s, ...s.onSecond } : s, C);
+}
+// ④ 다음 턴 내다보기 — 이번 수 뒤 내 모습 · 상대 모습을 어림으로 만들어(판 상태는 안 건드림) 다음 턴에 쓸 수 있는 가장 좋은 수의 점수(무게 = BRAIN.look)
+const DEP_KEYS = [...DYN, 'taste', 'consume', 'settle', 'execute', 'harvest', 'heartArmor', 'heartCleanse', 'fruitCondense', 'dragonTry', 'trapSet', 'revive', 'bounce', 'cycle', 'moss', 'orbGuard', 'orbRefill', 'orbTrap', 'orbAbsorb', 'summon', 'volley', 'grow', 'burst', 'toggle', 'inferno', 'miasma', 'bell', 'healPct', 'cleanseHeal', 'inject', 'critHeal', 'sumVolley', 'onFirst', 'onSecond', 'guardWith', 'evadeWith'];
+const DEP = new WeakMap();
+const depOf = s => { let d = DEP.get(s); if (d == null) { d = s.act === 'sun' || s.act === 'guard' || s.act === 'evade' || ['regen', 'shield', 'armor', 'defUp'].includes(s.self) || DEP_KEYS.some(k => s[k]); DEP.set(s, d); } return d; };   // 내 개수 · 체력 · 햇빛이나 상대 상태를 읽는 기술 = 다음 턴 모습으로 다시 셈
+const resNow = u => (u.res ? { ...u.res } : Object.fromEntries(Object.entries((SPECIES[u.key] || {}).res || {}).map(([k, v]) => [k, v[0]])));
+const capNow = (u, k) => { if (u.resMax && u.resMax[k] != null) return u.resMax[k]; const m = (((SPECIES[u.key] || {}).res || {})[k] || [])[1]; return Array.isArray(m) ? m[Math.min(m.length - 1, STAGE_I[u.stage] ?? 2)] : m ?? 99; };
+const STAGE_I = { sprout: 0, growing: 1, mature: 2 };
+const healNow = (u, a) => Math.round(u.max * ((a.healPct || 0) + (a.cleanseHeal ? a.cleanseHeal.base + a.cleanseHeal.per * HARM_IDS.filter(k => has(u, k)).length : 0) + (a.self === 'regen' || a.also === 'regen' ? FX.regen.heal : 0)));
+function afterMe(u, foe, s, C) {
+  const a = s.ifRes && (resNow(u)[s.ifRes.k] || 0) >= s.ifRes.at ? { ...s, ...s.ifRes.then } : s;   // 깨물기 → 준비 3이면 한입
+  const res = resNow(u), st = { ...(u.st || {}) }, eff = { ...(u.eff || {}) };
+  delete eff.seal; delete eff.taunt; delete eff.skip;   // 이번 턴 막힘은 다음 턴엔 풀림(새로 걸릴 것은 모름)
+  let spent = 0;
+  if (a.spend) { spent = a.spend.all ? res[a.spend.k] || 0 : a.spend.n || 1; res[a.spend.k] = Math.max(0, (res[a.spend.k] || 0) - spent); }
+  if (a.gain && a.gain.k) res[a.gain.k] = Math.min(capNow(u, a.gain.k), (res[a.gain.k] || 0) + (a.gain.n === 'spent' ? spent : a.gain.n || 1));
+  const hk = (SPECIES[u.key] || {}).heart; if (hk) res[hk] = a.el === 'fire' ? 0 : Math.min(capNow(u, hk), (res[hk] || 0) + 1);   // 드레이크캑터 용의 심장 = 불 기술을 안 쓴 턴 끝마다 +1
+  delete st.meal; if (a.mealMark) st.meal = { n: spent, ready: true };   // 식사시간 → 바로 다음 턴 맛평가
+  if (a.fruitCondense) eff.fruit = { n: ((eff.fruit && eff.fruit.n) || 0) + 1 };
+  if (a.fruitUse) delete eff.fruit;
+  if (a.trapSet) eff.thornTrap = { ...(eff.thornTrap || { env: true }), n: Math.min(a.trapSet.max, ((eff.thornTrap && eff.thornTrap.n) || 0) + 1) };
+  if (a.trapBoom) delete eff.thornTrap;
+  for (const b of [a.self, a.also].filter(Boolean)) eff[b] = FX[b] && FX[b].stat ? { s: [...((eff[b] && eff[b].s) || []), { v: FX[b].v }] } : eff[b] || { v: 1 };
+  const reg = noEnergy(u) ? 0 : u.sunPer || 1, energy = Math.min(u.energyMax || 8, Math.max(0, (u.energy || 0) - (a.cost || 0)) + (a.act === 'sun' ? a.gain || 2 : 0) + reg);
+  const hp = Math.max(1, Math.min(u.max, u.hp - C.risk * u.hp * 0.7 * (1 - stanceRed(u, foe, a, C.last)) + healNow(u, a)));
+  return { ...u, hp, energy, res, st, eff };
+}
+function afterFoe(u, foe, s, C) {
+  const a = peekAct(u, s, foe), d = s.act === 'attack' ? (C.dmg.has(s) ? C.dmg.get(s) : expDamage(u, foe, s)) * (1 + echoK(u, 0)) : 0, eff = { ...(foe.eff || {}) };
+  if (landChance(u, foe, a) >= 0.5) for (const f of fxList(u, a)) {
+    const D = FX[f.id];
+    if (!D || (D.el && D.el === foe.el) || (D.jong && D.jong === foe.jong)) continue;
+    if (D.stack) {
+      const n = Math.min(D.stack, ((eff[f.id] && eff[f.id].n) || 0) + (f.n || 1) + (f.id === 'chill' && has(foe, 'wet') ? RULES_FX.wetStackAdd : 0));
+      if (f.id === 'chill' && n >= D.stack) { delete eff.chill; eff.frozen = { v: 1 }; } else eff[f.id] = { ...(eff[f.id] || {}), n };
+    } else if (D.stat) eff[f.id] = { s: [...((eff[f.id] && eff[f.id].s) || []), { v: D.v }] };   // 능력치 겹 = 겹 목록(statSum)
+    else if (!eff[f.id]) eff[f.id] = { v: 1 };
+  }
+  if (a.consume) delete eff[a.consume.id];
+  return { ...foe, hp: Math.max(1, foe.hp - d), eff };
+}
+const statOf = (u, foe, t0, C) => { if (!C.stat.has(t0)) C.stat.set(t0, scoreOf(u, foe, t0, C)); return C.stat.get(t0); };
+// 모아 둔 개수의 값(pot — 2026-11-04 팽트랩 식사시간을 준비 0 · 1에서 써 버려 맛평가를 못 씀): 개수 칸(준비 · 용의 심장 · 용 스택 · 스택) · 열매 · 덫을 쓰는 기술이
+//  지금 개수로 쓸 때와 0개로 쓸 때의 점수 차이 = 쌓아 둔 몫. 이번 수가 개수를 늘리면 그만큼 더하고, 다 써 버리면 그만큼 뺌(쓰는 기술 자체 점수엔 이미 들어 있음)
+function stocksOf(u) {
+  const o = {};
+  if (u.res) for (const [k, v] of Object.entries(u.res)) o['res:' + k] = v || 0;
+  else for (const [k, v] of Object.entries((SPECIES[u.key] || {}).res || {})) o['res:' + k] = v[0] || 0;
+  if ((SPECIES[u.key] || {}).fruits) o.fruit = (u.eff && u.eff.fruit && u.eff.fruit.n) || 0;
+  if (u.kit.some(s => s.trapBoom)) o.trap = (u.eff && u.eff.thornTrap && u.eff.thornTrap.n) || 0;
+  return o;
+}
+const withStock = (u, key, n) => key.startsWith('res:') ? { ...u, res: { ...resNow(u), [key.slice(4)]: n } } : key === 'fruit' ? { ...u, eff: { ...(u.eff || {}), fruit: n ? { n } : undefined } } : { ...u, eff: { ...(u.eff || {}), thornTrap: n ? { env: true, n } : undefined } };
+const PAY = new WeakMap();
+function payoffsOf(u, key) {   // 그 개수를 쓰거나 읽는 기술
+  let m = PAY.get(u.kit); if (!m) PAY.set(u.kit, m = {});
+  if (m[key]) return m[key];
+  const k = key.slice(4), hk = (SPECIES[u.key] || {}).heart;
+  return (m[key] = u.kit.filter(s => key === 'fruit' ? s.fruitUse : key === 'trap' ? s.trapBoom : (s.spend && s.spend.k === k) || (s.scale && s.scale.k === k) || (s.ifRes && s.ifRes.k === k) || [s.powTbl, s.critBy, s.accBy, s.spdBy].some(x => x && x.k === k) || (s.bare && k === 'evs') || (s.dragonTry && k === 'dragon') || ((s.heartArmor || s.heartCleanse) && k === hk)));
+}
+function potOf(u, foe, key, n, C) {
+  if (!n) return 0;
+  const memo = C.potMemo || (C.potMemo = {}), id = key + ':' + n;
+  if (memo[id] != null) return memo[id];
+  let best = 0;
+  for (const p of payoffsOf(u, key)) { const v = scoreOf(withStock(u, key, n), foe, p, C) - scoreOf(withStock(u, key, 0), foe, p, C); if (v > best) best = v; }
+  return (memo[id] = best);
+}
+function potGain(u, foe, u2, C) {
+  const a = stocksOf(u), b = stocksOf(u2);
+  let g = 0;
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) if ((b[key] || 0) > (a[key] || 0) && payoffsOf(u, key).length) g += potOf(u, foe, key, b[key] || 0, C) - potOf(u, foe, key, a[key] || 0, C);   // 늘릴 때만 더함(다 쓰는 쪽은 그 기술 점수에 이미 들어 있음 — 가득 찬 뒤 쓰는 것을 막지 않게)
+  return g;
+}
+// 그 뒤 두 턴(deep): 지금 모습의 점수로 햇빛만 따져 가장 좋은 차례 — 광합성으로 모아 큰 기술을 쓰는 길도 봄(V[h][e] = h턴 동안 햇빛 e로 얻는 점수)
+function deepTable(u, foe, C) {
+  const g = BRAIN.deep, reg = noEnergy(u) ? 0 : u.sunPer || 1, top = u.energyMax || 8, kit = u.kit.filter(t => !t.uses || usesLeft(u, t) > 0);
+  let V = Array.from({ length: top + 1 }, () => 0);
+  for (let h = 0; h < 2; h++) {
+    const W = V.map((_, e) => {
+      let best = 0;
+      for (const t of kit) { if ((t.cost || 0) > e) continue; const e2 = Math.min(top, e - (t.cost || 0) + (t.act === 'sun' ? t.gain || 2 : 0) + reg), v = (t.act === 'sun' ? 0 : Math.max(0, statOf(u, foe, t, C))) + g * V[Math.floor(e2)]; if (v > best) best = v; }
+      return best;
+    });
+    V = W;
+  }
+  return e => V[Math.max(0, Math.min(top, Math.floor(e)))];
+}
+function nextBest(u, foe, s0, C) {
+  const s = liveSkill(u, s0), u2 = afterMe(u, foe, s, C), f2 = afterFoe(u, foe, s, C);
+  const C2 = { ...C, risk: C.risk * u.hp / Math.max(1, u2.hp), last: s.act, A0: null };
+  const reg = noEnergy(u) ? 0 : u.sunPer || 1, top = u.energyMax || 8;
+  let best = 0;
+  for (const t0 of u.kit) {
+    if (t0 === s0 && s0.uses && usesLeft(u, s0) <= 1) continue;   // 이번에 마지막 횟수
+    const t = liveSkill(u2, t0);
+    if (!canUse(u2, t, u2.energy, f2)) continue;
+    let v;
+    if (depOf(t) || t !== liveSkill(u, t0)) v = scoreOf(u2, f2, t0, C2);
+    else {
+      v = statOf(u, foe, t0, C);
+      if (t.act === 'attack') { if (!C.dmg.has(t)) C.dmg.set(t, expDamage(u, foe, t)); const d = C.dmg.get(t) * (1 + echoK(u, 0)); v += hpPart(d, f2.hp) - hpPart(d, foe.hp); }   // 상대가 덜 남으면 끝내기 쉬움
+    }
+    if (C.deep) v += BRAIN.deep * C.deep(Math.min(top, Math.max(0, u2.energy - (t.cost || 0)) + (t.act === 'sun' ? t.gain || 2 : 0) + reg));
+    if (v > best) best = v;
+  }
+  return BRAIN.look * best + (BRAIN.pot ? BRAIN.pot * potGain(u, foe, u2, C) : 0);
+}
+function brainCtx(u, foe, ok, ctx) {
+  const seen = ctx.seen || [], risk = threatOf(foe, u, seen) / Math.max(1, u.hp);
+  const lv = ok.map(s => liveSkill(u, s)), atk = lv.filter(s => s.act === 'attack'), dm = atk.map(s => expDamage(u, foe, s));
+  const D = atk.length ? Math.max(...dm) : 0;
+  const C = { risk, last: ctx.last, seen, R: Math.max(0.25, 2.5 * Math.min(1.2, D / Math.max(1, foe.hp))), H: D > 0 ? Math.max(1, Math.min(6, foe.hp / D)) : 4, useK: useOf(u), look: ctx.look !== false && BRAIN.look > 0, stat: new Map(), dmg: new Map(atk.map((s, i) => [s, dm[i]])) };   // R = 지금 가장 좋은 공격의 피해 몫 · H = 그 공격으로 끝낼 때까지 남은 턴
+  C.A0 = new Map(atk.map((s, i) => [s, atkScore(u, foe, s, C, dm[i])]));
+  if (!BRAIN.rDmg && C.A0.size) C.R = Math.max(0.25, ...C.A0.values());   // 옛 잣대 = 가장 좋은 공격 점수
+  if (C.look && BRAIN.deep > 0) C.deep = deepTable(u, foe, C);
+  return C;
+}
+// 종마다 쓰는 패턴(battle/playbook.js — 시뮬레이션으로 승률이 오른 것만): 조건이 맞으면 그 기술 점수에 b
+const nOf = (o, id) => (o && o.eff && o.eff[id] && (o.eff[id].n || 1)) || 0;
+export function ruleOk(w, u, foe) {
+  switch (w.k) {
+    case 'res': return ((u.res && u.res[w.r]) || 0) >= w.n;
+    case 'meal': return !!(u.st && u.st.meal && u.st.meal.ready && u.st.meal.n >= w.n);
+    case 'fxn': return nOf(foe, w.r) >= w.n;
+    case 'fx': return w.r === 'frozen' ? !!(foe.eff && (foe.eff.frozen || (foe.eff.skip && foe.eff.skip.src === 'frozen'))) : has(foe, w.r);
+    case 'nofx': return !has(foe, w.r);
+    case 'harm': return HARM_IDS.filter(x => has(foe, x)).length >= w.n;
+    case 'fruit': return nOf(u, 'fruit') >= w.n;
+    case 'trap': return ((u.eff && u.eff.thornTrap && u.eff.thornTrap.n) || 0) >= w.n;
+    case 'foelow': return foe.hp < foe.max * w.x;
+    case 'melow': return u.hp < u.max * w.x;
+    case 'nobell': return !(u.st && u.st.bell);
+    case 'sum': return ((u.summons || []).filter(x => x.hp > 0).length) < w.n;
+    case 'always': return true;
+    default: return false;
+  }
+}
+export const playBonus = (u, foe, s, book = PLAYBOOK) => { const L = book[u.key]; if (!L) return 0; let b = 0; for (const r of L) if (r.id === s.id && ruleOk(r.when, u, foe)) b += r.b; return b; };
+// 점수 들여다보기(시험 · 도구용 — tools/test/botsys.mjs): 쓸 수 있는 기술마다 지금 점수 · 다음 턴 몫
+export function aiScores(u, foe, ctx = {}) {
+  const ok = u.kit.filter(s => canUse(u, s, u.energy, foe)), C = brainCtx(u, foe, ok, ctx);
+  return ok.map(s => ({ id: s.id, name: s.name, now: scoreOf(u, foe, s, C), next: C.look ? nextBest(u, foe, s, C) : 0 }));
 }
 export function aiPick(u, foe, rng, ctx = {}) {
   const ok = u.kit.filter(s => canUse(u, s, u.energy, foe));
   if (!ok.length) return BLOCKED;
-  const iq = ctx.iq ?? u.ai ?? 0.5, risk = threatOf(foe, u, ctx.seen) / Math.max(1, u.hp);
-  const lv = ok.map(s => liveSkill(u, s));   // 지금 모습으로 셈(드라코프루트가 용이면 용 쪽 기술) — 고르는 건 원래 카드
-  const atk = lv.filter(s => s.act === 'attack'), dm = atk.map(s => expDamage(u, foe, s)), A0 = new Map(atk.map((s, i) => [s, atkScore(u, foe, s, dm[i])]));
-  const A = atk.length ? Math.max(...A0.values()) : 0, D = atk.length ? Math.max(...dm) : 0, H = D > 0 ? Math.max(1, Math.min(6, foe.hp / D)) : 4;   // A = 지금 가장 좋은 공격 점수 · H = 가장 센 공격으로 끝낼 때까지 남은 턴
-  const sc = lv.map(s => aiScore(u, foe, s, risk, ctx.last, A, H, ctx.seen || [], A0));
+  const iq = ctx.iq ?? u.ai ?? 0.5, C = brainCtx(u, foe, ok, ctx);
+  const pk = Math.max(0, Math.min(1, (iq - 0.3) / 0.6));   // 종마다 패턴은 머리 좋음만큼(브론즈 0.35 = 거의 안 씀 · 풀로세움 0.95 = 다) — 낮은 단계 봇은 서툴게
+  const sc = ok.map(s => scoreOf(u, foe, s, C) + (C.look ? nextBest(u, foe, s, C) : 0) + pk * playBonus(u, foe, s, ctx.book || PLAYBOOK));
   const top = Math.max(...sc), temp = 0.15 + (1 - iq) * 0.85;
   const w = sc.map(v => Math.exp((v - top) / temp));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;
@@ -297,8 +539,8 @@ export function searchPick(B, n) {
       const mine = C.me.kit.filter(s => known.has(s.id)); if (mine.length) C.me.kit = mine;
       C.rng = makeRng(seed0 + ci * 1009 + i * 97 + 1);
       const r = C.rng;
-      playTurnVs(C, aiPick(C.me, C.foe, r, { iq: 0.7 }), cand);
-      for (let d = 0; d < 12 && !C.over; d++) playTurnVs(C, aiPick(C.me, C.foe, r, { iq: 0.7 }), aiPick(C.foe, C.me, r, { iq: 0.8 }));
+      playTurnVs(C, aiPick(C.me, C.foe, r, { iq: 0.7, look: false }), cand);
+      for (let d = 0; d < 12 && !C.over; d++) playTurnVs(C, aiPick(C.me, C.foe, r, { iq: 0.7, look: false }), aiPick(C.foe, C.me, r, { iq: 0.8, look: false }));
       sum += C.over === 'lose' ? 1 : C.over === 'win' ? 0 : 0.5 + 0.5 * (C.foe.hp / C.foe.max - C.me.hp / C.me.max);   // 'lose' = 사람이 짐 = 봇이 이김
     }
     if (sum / n > bestV) { bestV = sum / n; best = cand; }

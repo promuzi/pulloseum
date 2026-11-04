@@ -1,11 +1,12 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, SUN_UP, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, SUN_UP, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
 import { CARDS, passivesOf, isSkillCard, formCards, rollCard, baseOf } from './cards.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST, elemMult } from '../battle/model.js';
 import { makeTeamBattle, playTurn3, sendIn } from '../battle/team.js';
 import { makeRng } from '../battle/rules.js';
+import { buildDeck, teamScore } from './botdeck.js';
 
 // 손패 = 전투 칸 여섯(배운 기술 · 기본기 · 변이 기술 카드 섞어서 — 2026-10-17 사용자 "6개 들고 갈 수 있게 · 변이는 6개 중 2개를 변이 스킬 카드로"), 순서 그대로.
 //  옛 판은 그때 손패 그대로 — 이어 하는 판 · 다시 돌리기(서버가 판을 시작할 때 식물을 통째로 저장)가 같은 결과가 나오게:
@@ -74,6 +75,8 @@ const ROLE_BUILD = {
   sup: { hp: 3, def: 2, sunRegen: 2 }, dis: { spd: 3, hp: 2, def: 1, sunMax: 1 }, ctr: { def: 3, hp: 3, atk: 1 }, dot: { hp: 3, def: 2, sunMax: 1 }, drain: { atk: 3, hp: 3, def: 1 },
 };
 const MESSY = [0.6, 0.4, 0.2, 0, 0, 0, 0];
+// 손패 솜씨(2026-11-04 봇 시스템): 대회 단계마다 손패 여섯 중 짠 대로 두는 몫(브론즈 반 · 실버 65% · 골드 80% · 플래티넘 90% · 다이아부터 모두) — 나머지는 배울 수 있는 아무 카드
+const DECK_Q = [0.5, 0.65, 0.8, 0.9, 1, 1, 1];
 function alloc(up, W, pts) {   // 비중 W 대로 pts 포인트(햇빛은 단 단위 먼저)
   let left = pts;
   const tot = Object.values(W).reduce((a, b) => a + b, 0);
@@ -96,6 +99,7 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   const base = k => (SPECIES[k].form ? 0.2 : SPECIES[k].rarity === 'rare' ? 0.6 : 1) * orbitW(k, cap);
   let keys = Object.keys(SPECIES).filter(k => base(k) > 0);
   if (opt.favorEl) { const fav = keys.filter(k => favorable(opt.favorEl, k) && !SPECIES[k].form); if (fav.length) keys = fav; }
+  if (opt.key && SPECIES[opt.key]) keys = [opt.key];   // 종을 정해 만들기(시험 · 도구 — tools/test/botsys.mjs)
   // 3:3 봇 팀(botTeam): 이미 뽑은 식물과 속성이 겹치지 않게 · 같은 종 없이 · 역할도 되도록 섞이게(후보가 남을 때만 좁힘)
   if (opt.avoidEl && opt.avoidEl.length) { const k2 = keys.filter(k => !opt.avoidEl.includes(SPECIES[k].el) && !(opt.avoidKey || []).includes(k)); if (k2.length) keys = k2; }
   if (opt.avoidRole && opt.avoidRole.length) { const k3 = keys.filter(k => !opt.avoidRole.includes(SPECIES[k].role)); if (k3.length) keys = k3; }
@@ -109,36 +113,32 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   let up = {};
   if (opt.concept) up = conceptUp(rng, sp.role, pts, t);
   else { const pref = ['atk', 'hp', 'def', 'spd']; for (let i = 0; i < pts; i++) { const k = pref[Math.floor(rng() * (rng() < 0.6 ? 2 : 4))]; up[k] = (up[k] || 0) + 1; } }
-  const battle = [uniqueOf(key, 0)];
-  for (let st = 0; st <= stage && battle.length < 3; st++) {
-    const pool = bloomPool(key, st).filter(x => !battle.includes(x.id));
-    const us = uniquesOf(key, st).filter(id => !battle.includes(id));
-    if (st > 0 && us.length && rng() < 0.7) battle.push(us[Math.floor(rng() * us.length)]);   // 그 단계 개성 중 하나(2026-10-17 단계마다 여럿)
-    else if (pool.length) battle.push(pool[Math.floor(rng() * pool.length)].id);
-  }
-  // 봇 손패 여섯 = 배운 기술(셋까지) + 평타 · 방어 · 회피(사람과 같은 여섯 칸 — 2026-10-17)
-  const six = [...battle, 'basic', 'guard', 'evade'];
-  while (six.length < 6) six.push(null);
   // 변이 봇(자라는 단계부터 가끔): 버섯 = 포자 · 그 밖 = 포식 · 무기 · 독성 · 용족 중
   let form = sp.form || null;
   if (!form && stage >= 1 && rng() < 0.08 + 0.02 * tierBoost) { const fs = sp.type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'); form = fs[Math.floor(rng() * fs.length)]; }
-  // 카드(2026-10-17 — 사람과 같은 칸): 변이 봇 = 그 변이 기술 카드 한두 장(전투 칸의 회피 · 방어 자리) + 그 변이 패시브 하나, 일반 봇 = 단계만큼(어린 0~1 · 자람 1 · 다 자람 1~2) 일반 카드
+  // 손패 여섯(2026-11-04 봇 시스템 — game/botdeck.js · 전엔 배운 기술 셋 + 평타 · 방어 · 회피라 성체 기술을 하나도 안 들고 감): 컨셉(연계 · 공격 · 버티기 · 방해 · 속성) ·
+  //  어울리는 방어패 한 장 · 연계 묶음 · 햇빛 곡선 · 변이 봇은 그 변이 기술 카드 한두 장 · 낮은 단계 · 첫 판은 몇 장을 아무렇게나(DECK_Q)
+  const deck = buildDeck(rng, { key, stage, form, p: { up }, q: opt.favorEl ? 0.4 : DECK_Q[t], mutN: form ? (stage >= 2 && rng() < 0.5 ? 2 : 1) : 0 });
+  const six = deck.ids.slice(0, 6);
+  while (six.length < 6) six.push(null);
+  // 카드(2026-10-17 — 사람과 같은 칸): 변이 봇 = 그 변이 패시브 하나(기술 카드는 손패 여섯에), 일반 봇 = 단계만큼(어린 0~1 · 자람 1 · 다 자람 1~2) 일반 카드
   const cards = [null, null];
-  if (form) {
-    const fc = formCards(form), sk = fc.filter(isSkillCard), pa = fc.filter(x => !isSkillCard(x)), n = stage >= 2 && rng() < 0.5 ? 2 : 1;
-    for (let i = 0; i < n && sk.length; i++) { const c = sk.splice(Math.floor(rng() * sk.length), 1)[0]; six[six.lastIndexOf(i ? 'guard' : 'evade')] = c; }
-    cards[0] = pa[Math.floor(rng() * pa.length)];
-  }
+  if (form) { const pa = formCards(form).filter(x => !isSkillCard(x)); cards[0] = pa[Math.floor(rng() * pa.length)]; }
   else { const n = stage === 0 ? (rng() < 0.5 ? 1 : 0) : stage === 1 ? 1 : rng() < 0.6 ? 2 : 1; for (let i = 0; i < n; i++) { let c = rollCard(rng, 'normal'); c = cards.some(x => x && baseOf(x) === c) ? null : upCard(rng, c, tierBoost); cards[i] = c; } }
-  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, skills: { battle: six.slice(0, 6), store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, shiny: false, legend: false };
+  return { uid: 'bot', key, name: sp.name, stage, lv, ivs, up, pts: 0, pot: 'pot_terra', form, cards, con: deck.con, skills: { battle: six.slice(0, 6), store: [], forgot: [], learned: [], v4: 1, v6: 1, v7: 1 }, shiny: false, legend: false };
 }
 export const botTrainer = rng => BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
 // 봇 팀(2026-11-04 사용자 '3ㄷ3에서 봇의 식물 조합 같은 속성 2 3개씩 들고가는 거 막자. 그럴싸한 조합을 챙기게 하건'): 내 식물마다 몸(단계 · 레벨)을 정하는 bodyOf(p) 로 하나씩 —
 //  앞서 뽑은 식물들의 속성 · 종 · 역할을 피해서(1:1은 하나라 그대로)
+//  2026-11-04 봇 시스템(사용자 '3:3에서는 식물 조합까지 고려해서'): 팀을 여럿 뽑아 팀 값(botdeck.js teamScore — 약점이 겹치지 않음 · 공격 속성이 여러 속성을 침 · 역할이 섞임)이
+//  가장 좋은 것을 고름. 낮은 단계는 덜 고름(브론즈 · 실버 = 둘 중 · 골드부터 여섯 중)
 export function botTeam(rng, mine, bodyOf, opt) {
-  const out = [];
-  for (const p of mine) { const b = bodyOf(p); out.push(botPlant(rng, b.stage, b.lv, opt.tierBoost, { ...opt, avoidEl: out.map(x => SPECIES[x.key].el), avoidRole: out.map(x => SPECIES[x.key].role), avoidKey: out.map(x => x.key) })); }
-  return out;
+  const one = () => { const out = []; for (const p of mine) { const b = bodyOf(p); out.push(botPlant(rng, b.stage, b.lv, opt.tierBoost, { ...opt, avoidEl: out.map(x => SPECIES[x.key].el), avoidRole: out.map(x => SPECIES[x.key].role), avoidKey: out.map(x => x.key) })); } return out; };
+  if (mine.length < 2) return one();
+  const K = (opt.tierBoost | 0) >= 2 ? 6 : 2;
+  let best = null, bv = -Infinity;
+  for (let i = 0; i < K; i++) { const t = one(), v = teamScore(t.map(x => x.key)) + rng() * 0.3; if (v > bv) { bv = v; best = t; } }
+  return best;
 }
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋

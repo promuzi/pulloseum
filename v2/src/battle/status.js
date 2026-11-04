@@ -434,7 +434,7 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
       if (!sp.n) delete e.spore;
       if (k) {
         u.hp = Math.max(0, u.hp - d); ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, k, list: listOf(u) });
-        for (const [w, n] of Object.entries(owners)) { const o = find(w); if (o && o !== u && o.hp > 0) sporeBloomed(o, n, turn, ev); }
+        for (const [w, n] of Object.entries(owners)) { const o = find(w); if (!o || o === u || o.hp <= 0) continue; const evS = []; sporeBloomed(o, n, turn, evS); if (o !== opp && !pairs.flat().includes(o)) for (const x of evS) x.bench = true; ev.push(...evS); }   // 건 식물이 대기석이면 그 사건도 대기석 것(앞 식물 id 와 같아 화면이 앞 식물에 붙이지 않게)
       }
     }
     let dec = false;

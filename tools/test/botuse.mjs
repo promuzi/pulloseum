@@ -5,13 +5,14 @@
 //   node tools/test/botuse.mjs [--games 4] [--key fang_trap] [--tier 6] [--stage 2] [--log 2]
 import { newGame, makePlant, evolve, upgrade } from '../../v2/src/game/logic.js';
 import { unitOf, makeRng, botPlant } from '../../v2/src/game/fight.js';
-import { makeBattle, playTurnVs, aiPick, REST } from '../../v2/src/battle/model.js';
+import { makeBattle, playTurnVs, aiPick, REST, BRAIN } from '../../v2/src/battle/model.js';
 import { canUse, mustSkip } from '../../v2/src/battle/status.js';
 import { SPECIES, SKILLS, uniquesOf } from '../../v2/src/game/catalog.js';
 
 const argv = process.argv, arg = (k, d) => { const i = argv.indexOf(k); return i > 0 ? argv[i + 1] : d; };
 const games = +arg('--games', 4), TIER = +arg('--tier', 6), STAGE = +arg('--stage', 2), LV = 6, ONLY = arg('--key', null), LOGN = +arg('--log', 0);
 const keys = Object.keys(SPECIES), shown = ONLY ? [ONLY] : keys;
+for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) { const [k, v] = kv.split('='); BRAIN[k] = +v; }   // 머리 손잡이(model.js BRAIN)
 const uniOf = k => { const u = []; for (let st = 0; st <= STAGE; st++) u.push(...uniquesOf(k, st).filter(id => SKILLS[id])); return [...new Set(u)]; };
 const pct = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : '-');
 
