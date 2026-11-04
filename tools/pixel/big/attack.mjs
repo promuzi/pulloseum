@@ -663,7 +663,7 @@ function weaponFx(P, A, f, L, T, G, seed, S) {
 // 기술 효과(공격 → 대상). L = 공격 쪽 머리, T = 대상 머리, G = 대상 흙 높이(무대 y),
 // S = 무대: D(L→T 단위), fx(상대가 오른쪽이면 +1), K, A0·B0(공격·대상 화분 굽 가운데), S0·E0(바닥 길 출발·도착), phiE(도착 각), rf(굽 반지름)
 export function skillFx(P, A, f, L, T, G, seed = 1, S = { D: [1, 0], fx: 1 }) {
-  if (A.kind.startsWith('w_')) return weaponFx(P, A, f, L, T, G, seed, S);
+  if (A.kind.startsWith('w_')) { weaponFx(P, A, f, L, T, G, seed, S); if (S.hit !== 'miss') { const tier = S.hit || 'hit'; impactBurst(P, T[0], T[1], f - impactAt(A), A.c, (tier === 'graze' ? 0.7 : tier === 'crit' ? 1.45 : S.big ? 1.2 : 1) * 0.9, seed, tier === 'crit'); } return; }   // 무기도 맞는 순간 터짐(조금 작게)
   const I = impactAt(A), c = A.c, k = f - I, fx = S.fx, D = S.D;
   switch (A.kind) {
     case 'slash': {   // 장미 칼날 잎 베기: 초승달(흰 속·연두 겉) → 꽉 찬 베기 → 조각 → 흩어짐 + 꽃잎 터짐

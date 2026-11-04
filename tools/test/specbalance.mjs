@@ -23,8 +23,12 @@ function plantOf(key, seed) {
   p.cards = [null, null];
   if (FULL) fullHand(p);
   if (UNIH) uniHand(p, key);
+  if (DECK) { p.drafts = []; const ids = buildDeck(makeRng(seed * 7 + 3), { key, stage: STAGE, form: p.form || null, mutN: p.form ? 1 : 0, p: { up: p.up } }).ids; p.skills.battle = [...ids, null, null, null, null, null, null].slice(0, 6); }
   return p;
 }
+// --deck(2026-11-05 밤샘 '밸런스도 각 생장에 따라 각각 따로'): 손패 = 봇 손패 짜기(game/botdeck.js — 그 단계 카드 몫 · 컨셉 무게)로 판마다 새로 — 단계마다 실제로 들고 갈 만한 손패끼리
+import { buildDeck } from '../../v2/src/game/botdeck.js';
+const DECK = process.argv.includes('--deck');
 // --uni(2026-10-29 사용자 '성체 기준으로 테스트 해봤어?'): 성체까지 피는 그 종 개성 기술을 전부 손에 — 남는 칸은 평타 · 방어태세 · 회피 자세 · 광합성 순
 function uniHand(p, key) {
   const u = []; for (let st = 0; st <= STAGE; st++) u.push(...uniquesOf(key, st).filter(id => SKILLS[id]));
@@ -73,3 +77,4 @@ for (const { k, r } of rows) {
 // 가장 기운 짝 다섯
 const lop = Object.entries(pair).map(([k, r]) => ({ k, d: Math.abs(r - 0.5), r })).sort((a, b) => b.d - a.d).slice(0, 5);
 console.log('가장 기운 짝: ' + lop.map(({ k, r }) => { const [a, b] = k.split('>'); return `${SPECIES[a].name} 대 ${SPECIES[b].name} ${(100 * r).toFixed(0)}%`; }).join(' · '));
+{ const i = process.argv.indexOf('--json'); if (i > 0) { const { writeFileSync } = await import('node:fs'); writeFileSync(process.argv[i + 1], JSON.stringify({ stage: STAGE, lv: LV, games, deck: DECK, rows: rows.map(({ k, r }) => ({ k, name: SPECIES[k].name, r: +r.toFixed(4) })) }, null, 1)); } }
