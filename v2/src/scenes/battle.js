@@ -34,13 +34,7 @@ const SHAPE = {
   melee: { fire: 'slash', water: 'whip', grass: 'whip', bolt: 'slash', earth: 'slam', wind: 'slash', ice: 'slash', '-': 'slash' },          // 베기 · 채찍 · 내려치기
 };
 const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam', bite: 'lunge' };
-const STRIKE_F = 13;   // 공격하는 쪽이 앞으로 나가는 첫 장(attack.mjs attackerPose — 12 멈춤 → 13~14 동작) = 휘두름 소리
-// 맞는 순간 멈춤(2026-11-04 미리 보기 — 사용자 '3번은 보여줘 보고 결정할게' · 켜기 = ?hitstop=1, 정하기 전엔 꺼 둠): 맞는 장(impactAt)에서 때리는 쪽 · 맞는 쪽 둘 다 몇 장 멈춤
-//  보통 2장(0.1초) · 치명타 3장 · 연타는 타마다 1장 · 빗나감 0 — 멈춘 동안 맞는 쪽만 좌우 1칸 떨림 · 흰 번쩍은 두 장까지 · 단계 길이도 그만큼 늘림
-const HOLD_F = { hit: 2, crit: 3, multi: 1 };
-// 연출 시각(멈춘 시간을 뺀 공격 장면 시각 — ms): 단계 시작부터 · 연타 둘째 타부터는 건너뛴 앞부분 포함
-const animMs = (st, ms) => { const I = st.anim.I * FRAME_MS, H = (st.hold || 0) * FRAME_MS; return ms < I ? ms : ms < I + H ? I : ms - H; };
-// 광역 기술 = 맞는 자리 바닥에 넓게 퍼지는 충격파(납작한 고리 둘 · 그 속성 빛 · 점점 옅게) + 맞는 순간 무대가 그 색으로 잠깐 번쩍 — 단일 기술(한 점에 터짐)과 갈림
+const STRIKE_F = 13;   // 공격하는 쪽이 앞으로 나가는 첫 장(attack.mjs attackerPose — 12 멈춤 → 13~14 동작) = 휘두름 소리// 광역 기술 = 맞는 자리 바닥에 넓게 퍼지는 충격파(납작한 고리 둘 · 그 속성 빛 · 점점 옅게) + 맞는 순간 무대가 그 색으로 잠깐 번쩍 — 단일 기술(한 점에 터짐)과 갈림
 function areaWave(g, st, age, [x, y], AY, AH) {
   const k0 = (age - (st.anim.I + 1) * FRAME_MS) / 560; if (k0 < 0 || k0 > 1.15) return;
   const E = ELEMENT[st.skill.el] || { light: '#ffffff', main: '#c8d4e4' };
@@ -617,9 +611,8 @@ export const battle = {
         const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak), anim = makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length);
         // 연타 둘째 타부터 = 맞기 4칸 앞에서 시작(2026-11-04 사용자 '연타 연출 속도감이 너무 없고 느려 … 빠르게 파바박') · 다음 타가 이어지면 맞은 뒤 4칸에서 끊고
         //  마지막 타만 끝 동작까지(전엔 첫 타가 끝 동작 1.4초를 다 돌아 첫 타 → 둘째 타가 1.6초 벌어졌음 — 영상 검수)
-        const skip = e.n > 1 ? Math.max(0, anim.I - 4) : 0, end = more.has(e) ? Math.min(FRA, anim.I + 4) : FRA;
-        const hold = this.p && this.p.hitstop && e.tier !== 'miss' ? (e.n > 1 || more.has(e) ? HOLD_F.multi : e.tier === 'crit' ? HOLD_F.crit : HOLD_F.hit) : 0, ms = (end - skip + hold) * FRAME_MS;   // 맞는 순간 멈춤(미리 보기 ?hitstop=1)
-        out.push({ kind: 'attack', ms, skip, hold, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim, msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' });
+        const skip = e.n > 1 ? Math.max(0, anim.I - 4) : 0, end = more.has(e) ? Math.min(FRA, anim.I + 4) : FRA, ms = (end - skip) * FRAME_MS;
+        out.push({ kind: 'attack', ms, skip, who: e.who, to: e.to, ev: e, skill: s, uid: ++this.v.uid, anim, msg: `${nm(e.who)}의 ${s.name}!`, tone: 'hit' });
       }
       else if (e.t === 'cast') out.push({ kind: 'cast', ms: CAST_MS, who: e.who, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });   // 0.65초 → 1.3초(모으기 → 터뜨림 → 결과 — castfx.js)
       else if (e.t === 'execute') out.push({ kind: 'echo', ms: 700, side: e.to, pop: '처형', msg: `${ga(e.name)} 처형됐다!`, tone: 'hit' });   // 윈드페탈 처형의 춤
@@ -983,8 +976,7 @@ export const battle = {
     const st = v.phase === 'play' ? v.steps[v.si] : null;
     let fr = null;
     if (st && st.kind === 'attack') {
-      const raw = (st.skip || 0) * FRAME_MS + (t - v.t0), f = Math.max(0, Math.min(FRA - 1, Math.floor(animMs(st, raw) / FRAME_MS)));   // skip = 연타 둘째 타부터 앞부분을 건너뜀 · 맞는 순간 멈춤 동안은 맞는 장 그대로
-      { const eI = Math.floor(raw / FRAME_MS) - st.anim.I; st.held = st.hold && eI >= 0 && eI <= st.hold ? eI + 1 : 0; }   // 1 = 맞는 장 · 2 ~ = 멈춰 있는 장(맞는 장이 hold장 더 보임)
+      const f = Math.max(0, Math.min(FRA - 1, (st.skip || 0) + Math.floor((t - v.t0) / FRAME_MS)));   // skip = 연타 둘째 타부터 앞부분을 건너뜀
       fr = st.anim.frame(f); prepareBoards(fr, st.uid + ':' + f);
       if (f >= st.anim.I && !st.applied) this.applyHit(st, t);
     }
@@ -1006,7 +998,7 @@ export const battle = {
       if (v.gone[who]) return;
       if (st && st.kind === 'faint' && st.who === who) { const k = Math.min(1, (t - v.t0) / 700); g.alpha(1 - k, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
       let pose = null, flash = false, dx = 0, dy = 0;
-      if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash && !(st.held >= 3); dx = st.held >= 2 ? (st.held % 2 ? 1 : -1) : fr.shake; dy = -fr.hop; } }   // 맞는 순간 멈춤 = 흰 번쩍은 두 장까지 · 멈춘 동안 맞는 쪽만 좌우 1칸 떨림
+      if (fr) { if (who === st.who) pose = fr.atkPose; else if (st.ev.tier !== 'miss') { pose = fr.tgtPose; flash = fr.flash; dx = fr.shake; dy = -fr.hop; } }
       if (st && st.kind === 'cast' && v.cast) { if (who === v.cast.who) { const cp = castPose(v.cast, t); pose = { qx: cp.qx, qy: cp.qy, sq: cp.sq }; flash = flash || cp.flash; } else if (who === v.cast.other) dx += targetKick(v.cast, t); }   // 시전 몸놀림(모으며 웅크림 → 터뜨림) · 거는 것이 닿으면 움찔
       if (st && (st.kind === 'counter' || st.kind === 'reflect') && who === (st.to || st.side) && t - v.t0 < 160) flash = true;
       if (v.phase === 'over' && v.hp[who] <= 0) { const k = Math.min(1, (t - v.overT0) / 900); g.alpha(1 - k * 0.85, () => drawBig(g, artOf(u), u.pot, x, y + Math.round(k * 10), { t: 0, flip, view, light })); return; }
@@ -1057,7 +1049,7 @@ export const battle = {
         g.rect(x - 1, y + 13, 14, 2, '#1a1a1a'); g.rect(x - 1, y + 13, Math.max(1, Math.round(14 * s.hp / s.max)), 2, s.stage === 'sleep' ? '#9fb0c8' : '#7be08a');
       });
       if (fr) { board('front'); board('air'); }
-      if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, animMs(st, t - v.t0 + (st.skip || 0) * FRAME_MS), st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22) · 연타 둘째 타부터는 건너뛴 앞부분만큼 당겨 맞는 순간에 맞춤
+      if (fr && st.skill && st.skill.area && st.ev.tier !== 'miss') areaWave(g, st, t - v.t0 + (st.skip || 0) * FRAME_MS, st.to === 'foe' ? [ex, ey] : [px, py], AY, AH);   // 광역 = 바닥 충격파(2026-10-22) · 연타 둘째 타부터는 건너뛴 앞부분만큼 당겨 맞는 순간에 맞춤
       if (v.sfx.length || (v.eff.me || []).some(s => s.id === 'gale') || (v.eff.foe || []).some(s => s.id === 'gale')) drawSfxMap(g, v.sfx, t, { me: [px, py], foe: [ex, ey] }, [0, AY, 270, AH], { me: (v.eff.me || []).map(s => s.id), foe: (v.eff.foe || []).map(s => s.id) });
       fieldAir(g, fenv, v.arrive, t, FP, [-ox, AY, W, AH], 64);   // ㉠ 식물 위에 겹치는 환경(불티 · 안개 결 · 먹구름 · 아침 빛 · 밤 어둠) + 깔리는 순간
       if (st && st.kind === 'cast' && v.cast) drawCast(g, v.cast, t, FP);   // ㉡ 시전(빛기둥 · 문양 구슬 · 땅 물결 · 종소리 · 설치 · 소환)

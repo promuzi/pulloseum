@@ -286,11 +286,14 @@ export function drawBigPose(g, key, potKey, bx, by, opt = {}) {
   const rows = oy => {
     const c = g.c; c.save(); c.imageSmoothingEnabled = false;
     if (fl) { c.translate(x + m.w, y); c.scale(-1, 1); } else c.translate(x, y);
+    // 줄마다 = 흙 위 높이만큼 기울기(qx · qy) — 그린 칸 높이는 다음 줄이 놓이는 자리까지(2026-11-04 사용자 '피격시 가로로 빈 선이 생김 공격할 때나 확인해봐':
+    //  위로 기울면(qy < 0) 윗줄일수록 더 올라가 반올림이 바뀌는 줄 사이가 1칸 벌어져 뒤 배경이 가로줄로 보였음 — 때리는 쪽 · 맞는 쪽 둘 다)
+    const at = yd => { const ys = yd >= soil ? yd : Math.round(soil - (soil - yd) / sc), w = Math.max(0, Math.min(1, (soil - ys) / soil)); return [ys, w, yd + Math.round(qy * w)]; };
     for (let yd = 0; yd < m.h; yd++) {
-      const ys = yd >= soil ? yd : Math.round(soil - (soil - yd) / sc);
+      const [ys, w, ty] = at(yd);
       if (ys < 0 || ys >= m.h) continue;
-      const w = Math.max(0, Math.min(1, (soil - ys) / soil));
-      c.drawImage(im, ux, oy + ys, m.w, 1, Math.round(qx * w), yd + Math.round(qy * w), m.w, 1);
+      const hh = yd + 1 < m.h ? Math.max(1, at(yd + 1)[2] - ty) : 1;
+      c.drawImage(im, ux, oy + ys, m.w, 1, Math.round(qx * w), ty, m.w, hh);
     }
     c.restore();
   };

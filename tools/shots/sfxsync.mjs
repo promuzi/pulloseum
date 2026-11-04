@@ -16,7 +16,7 @@ const { writeMP4Files } = await import('../pixel/big/video.mjs');
 const argv = process.argv.slice(2), get = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; };
 const out = get('out', 'sfxsync'), K = +get('scale', 2), FPS = 30, SEC = +get('sec', 20), video = !argv.includes('--novideo');
 const PNGS = String(get('png', '')).split(',').filter(Boolean).map(Number);   // --png 3.9,6.2(초) = 그 장면을 out/<out>_<초>.png로도(소리 나는 장 눈으로 확인)
-const P = { venue: get('venue', 'garden'), seed: String(get('seed', 11)), ...(get('me') && { me: get('me') }), ...(get('foe') && { foe: get('foe') }), ...(argv.includes('--hitstop') && { hitstop: '1' }) };   // --hitstop = 맞는 순간 멈춤 미리 보기(battle.js HOLD_F)
+const P = { venue: get('venue', 'garden'), seed: String(get('seed', 11)), ...(get('me') && { me: get('me') }), ...(get('foe') && { foe: get('foe') }) };
 const STRIKE = 13, FRAME = 0.05, RV_DONE = 0.82, PILE_IN = 0.56;   // battle.js STRIKE_F · FRAME_MS · RV_FLIP0 + RV_FLIP · PILE_IN
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const repo = resolve(here, '..', '..'), outDir = resolve(here, 'out'); mkdirSync(outDir, { recursive: true });

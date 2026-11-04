@@ -2,6 +2,7 @@
 #  PVFX 기준점(pivot): 땅에서 솟는 효과(번개 · 서리 · 덩굴 · 포자 · 물) = 맞는 식물 화분 밑 · 바람 칼 = 칼 가운데를 몸 가운데 · 나머지 = 몸 가운데(맞는 자리)
 #  python tools/shots/fxref_sheet.py           → tools/shots/out/fxref/fxref.png(네 순간)
 #  python tools/shots/fxref_sheet.py --video   → tools/shots/out/fxref/frames/*.png(맞는 순간부터 0.8초 · 50ms마다 · 원소마다 왼쪽 우리 | 오른쪽 PVFX) — fxref.mjs --video 뒤
+#  --mod = 셋째 칸에 우리 그림체로 고친 PVFX(tools/pixel/big/pvfxmod.py → tools/pixel/fx_ref/pvfx_mod) — 같은 순간(맞는 순간부터 ms)으로 견줌
 import sys, json, os
 from PIL import Image, ImageDraw, ImageFont
 sys.stdout.reconfigure(encoding="utf-8")
@@ -16,6 +17,10 @@ def crop(path, t):
 def pv_at(r, i):
     sh = Image.open(r["sheet"]).convert("RGBA"); w, h = r["size"]
     return sh.crop(((i % 8) * w, (i // 8) * h, (i % 8) * w + w, (i // 8) * h + h))
+MOD = os.path.join(HERE, "..", "pixel", "fx_ref", "pvfx_mod")
+def mod_row(r):   # 같은 효과의 고친 판(크기 · 기준점 · 장 길이가 다름)
+    d = os.path.join(MOD, r["fx"]); m = json.load(open(os.path.join(d, "manifest.json"), encoding="utf-8"))
+    return {**r, "sheet": os.path.join(d, "sprite-sheet.png"), "size": m["source_size"], "pivot": m["pivot"], "n": len(m["frames"]), "dur": [f["duration"]["numerator_ms"] for f in m["frames"]]}
 def safe_place(r, base, fr):   # PVFX 한 장을 바탕(잘라 낸 칸)에 기준점대로 얹음 — 바탕 밖으로 나가는 부분은 잘림(큰 판에 붙인 뒤 바탕 크기로 자름)
     b = base.copy().convert("RGBA"); w, h = r["size"]; px, py = r["pivot"]
     if r["fx"] == "wind/wind-blade": px = w // 2
@@ -29,20 +34,21 @@ def frame_at_ms(r, ms):   # PVFX 시간표(장마다 길이)에서 ms 순간의 
         if ms < t + d: return i
         t += d
     return None
+USE_MOD = "--mod" in sys.argv
 if "--video" in sys.argv:
-    FD = os.path.join(OUT, "frames"); os.makedirs(FD, exist_ok=True)
+    FD = os.path.join(OUT, "frames_mod" if USE_MOD else "frames"); os.makedirs(FD, exist_ok=True)
     for f in os.listdir(FD): os.remove(os.path.join(FD, f))
     n = 0; s = 0.5
     for r in rows:
-        base = crop(r["base"], r["tgt"])
+        base = crop(r["base"], r["tgt"]); rm = mod_row(r) if USE_MOD else None
         for j, ms in enumerate(r["at"]):
             ours = crop(r["ours"][j], r["tgt"]); i = frame_at_ms(r, ms)
-            pv = safe_place(r, base, pv_at(r, i)) if i is not None else base
+            cols = [ours, safe_place(r, base, pv_at(r, i)) if i is not None else base]
+            if rm: k = frame_at_ms(rm, ms); cols.append(safe_place(rm, base, pv_at(rm, k)) if k is not None else base)
             cw, ch = int(ours.width * s), int(ours.height * s)
-            fr = Image.new("RGB", (cw * 2 + 30, ch + 70), (24, 28, 36)); d = ImageDraw.Draw(fr)
-            d.text((10, 12), r["name"], font=font, fill=(230, 236, 245))
-            d.text((cw * 2 + 20 - 300, 18), "우리   |   PVFX", font=small, fill=(255, 230, 160))
-            fr.paste(ours.resize((cw, ch), Image.LANCZOS), (10, 60)); fr.paste(pv.resize((cw, ch), Image.LANCZOS), (cw + 20, 60))
+            fr = Image.new("RGB", (cw * len(cols) + 10 * (len(cols) + 1), ch + 96), (24, 28, 36)); d = ImageDraw.Draw(fr); d.text((10, 12), r["name"], font=font, fill=(230, 236, 245))
+            for c, (im, lab) in enumerate(zip(cols, ["우리", "PVFX 원본", "PVFX 고침"])):
+                x = 10 + c * (cw + 10); fr.paste(im.resize((cw, ch), Image.LANCZOS), (x, 56)); d.text((x + 6, 56 + ch + 4), lab, font=small, fill=(255, 230, 160))
             fr = fr.crop((0, 0, fr.width - fr.width % 2, fr.height - fr.height % 2))
             fr.save(os.path.join(FD, f"f{n:05d}.png")); n += 1
         for _ in range(6): fr.save(os.path.join(FD, f"f{n:05d}.png")); n += 1   # 원소 사이 잠깐 멈춤

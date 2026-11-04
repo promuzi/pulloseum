@@ -76,8 +76,8 @@
 
 ### 2-4. 서버 · 배포
 - **지금:** 친구 서버 판 `678e4935`(2026-11-04 — 389 · 390 탐사 지도 끌기 · 확대, CHANGELOG 391 · 되돌리기 `32ddfb9b`). 그날 올린 판들 = CHANGELOG 375 · 377 · 388 · 391.
-- **올릴 묶음(허락 뒤):** 393 봇 시스템(`RULES_VER` 19) · 394 효과음 셋 + 싱크 · 395 카드 테 크기 · 안쪽 그림자 · 공개 카드 효과 아이콘 자리 · 396 식물 관리 카드 옮김 · 397 선공 도장.
-- **결정 대기(2026-11-04):** 맞는 순간 멈춤 켤지(미리 보기 `?hitstop=1` · 영상 tools/shots/out/hitstop/hitstop_compare.mp4 이 기기) · PVFX Foundry 효과를 쓸지 · 어디에(결정 기록 'PVFX Foundry 비교 결과' · 비교판 tools/shots/out/fxref 이 기기 · 자료 tools/pixel/fx_ref/pvfx 이 기기).
+- **올릴 묶음(허락 뒤):** 393 봇 시스템(`RULES_VER` 19) · 394 효과음 셋 + 싱크 · 395 카드 테 크기 · 안쪽 그림자 · 공개 카드 효과 아이콘 자리 · 396 식물 관리 카드 옮김 · 397 선공 도장 · 398 식물 몸 가로 빈 줄.
+- **결정 대기(2026-11-04):** PVFX를 고쳐서 쓸지 · 어디에(결정 기록 'PVFX는 고쳐서 쓸 수 있음' · 비교 tools/shots/out/fxref/pvfx_mod_compare.mp4 이 기기 · 자료 tools/pixel/fx_ref 이 기기).
 - **다음:** 친구들이 몇 판 한 뒤 `node server/report.mjs --url https://pulloseum.getchat.workers.dev` → 단계별 실제 승률로 봇 세기 다시 맞춤(모자라면 능력치 % 보정) · 새 종 승률 확인.
 - **지킬 것:** workers.dev 하위 주소 `getchat` 변경 금지 · 업로드 성공은 wrangler `Success` · `Current Version ID`로만 판정.
 
