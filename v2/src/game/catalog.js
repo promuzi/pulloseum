@@ -489,8 +489,8 @@ const V2 = {
   draco_fruit: {   // 20. 드라코프루트 — 용이 되고 싶어(2026-11-03 사용자 새 설계 · 11-04 넣음): 선공 갈래로 용 스택(5칸이 차면 용 — 판 끝까지 · 모든 능력치 한 겹 영구) · 용이 되면 스택 쌓던 기술은 후공 쪽만 · 수치는 클로드 임시(리그전)
     sp: { res: { dragon: [0, 5, '용 스택'] }, dragonAt: 5 },
     skills: [
-      S('u_draco_1', '내가 용이될 상이요?', 'ice', 'u', 70, 1, { dragonLock: true, onFirst: { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, gain: { k: 'dragon', n: 2 } }, onSecond: { forceCrit: true } }),   // 선공 = 용 스택 + 회피 자세 · 후공 = 치명 확정 단일 빙결 공격 · 스택 +2 · 위력 70(리그전 24% → 45%, 임시)
-      S('u_draco_2', '용 흉내내기', 'ice', 'u', 60, 2, { area: true, dragonLock: true, onFirst: { el: null, gain: { k: 'dragon', n: 2 } }, onSecond: { selfAim: true } }),   // 선공 = 용 스택 + 광역 무속성 · 후공 = 조준이 걸린 광역 빙결
+      S('u_draco_1', '내가 용이될 상이요?', 'ice', 'u', 70, 1, { dragonLock: true, onFirst: { act: 'evade', cats: ['evade'], shift: { miss: 15, graze: 10 }, gain: { k: 'dragon', n: 1 } }, onSecond: { forceCrit: true } }),   // 선공 스택 +2 → +1(2026-11-04 사용자 '스택을 잘 쌓는 운영을 해도 안 됨? … 다시 조정해보자' — 스택을 모으는 운영이면 +1로 용 된 판 29% · 승률 57%, +2면 57% · 71%)   // 선공 = 용 스택 + 회피 자세 · 후공 = 치명 확정 단일 빙결 공격 · 스택 +2 · 위력 70(리그전 24% → 45%, 임시)
+      S('u_draco_2', '용 흉내내기', 'ice', 'u', 60, 2, { area: true, dragonLock: true, onFirst: { el: null, gain: { k: 'dragon', n: 1 } }, onSecond: { selfAim: true } }),   // 선공 = 용 스택 + 광역 무속성 · 후공 = 조준이 걸린 광역 빙결 · 스택 +1(2026-11-04)
       S('u_draco_2b', '용과 먹기', 'ice', 'u', 0, 2, { cats: ['heal_hp'], healPct: 0.2, self: 'purify', ifDragon: { act: 'attack', cats: ['attack'], el: 'bolt', power: 30, hits: 3, area: true, healPct: 0, self: null } }),   // 용이 아닐 때 = 회복 + 정화 · 용 = 번개 광역 연타
       S('u_draco_3', '용의 자격', 'ice', 'u', 0, 2, { cats: ['buff'], dragonTry: [0, 0.2, 0.4, 0.6, 0.8] }),   // 스택 수에 따라 확률로 바로 용 · 실패하면 스택 0(확률 = 클로드 임시)
       S('u_draco_3b', '브레스 따라하기', 'ice', 'u', 85, 3, { area: true, ifDragon: { el: 'fire', power: 110, inflict: { id: 'burn' } } }),   // 용이 아닐 때 = 광역 빙결 · 용 = 불 광역 + 화상
@@ -600,7 +600,7 @@ const V2 = {
   frost_bell: {   // 13. 프로스트벨 — 아침 · 밤(필드 환경 3턴 · 하나만 · 덧씌우기 불가 · 프로스트벨이 나가면 사라짐) 동안 모든 기술이 같은 차례에 메아리(아침 25% · 밤 50% 임시) · 밤 = 양쪽 앞 식물 자연 햇빛 안 참(교체로 들어와도)
     sp: { bell: { morning: 0.25, night: 0.5 } },
     skills: [
-      S('u_frost_1', '아침이에요.', 'ice', 'u', 0, 1, { bell: 'morning' }),
+      S('u_frost_1', '아침이에요.', 'ice', 'u', 30, 1, { ranged: true, bell: 'morning' }),   // 켜는 턴에 작은 공격(2026-11-04 사용자 '프로스트벨 추천대로 ㄱ' — 메아리 25 → 40%는 리그전에서 오르지 않음 · 위력 30 = +2%p)
       S('u_frost_2', '깨트려드리죠.', 'ice', 'u', 80, 2, { inflict: { id: 'chill', n: 1 }, bonusIf: { id: 'frozen', k: 2, clear: true } }),
       S('u_frost_2b', '정적을 유지하세요.', 'wind', 'u', 60, 2, { inflict: { id: 'seal' } }),
       S('u_frost_3', '이제 밤이군요.', 'ice', 'u', 0, 2, { bell: 'night' }),
@@ -622,7 +622,7 @@ const V2 = {
   vine_wind: {   // 11. 게일바인 — 피하면 스택(상한 5) · 맞으면 스택을 다 써서 반격(3 이상 출혈) · 선공하면 활력
     sp: { res: { evs: [0, 5, '스택'] }, evStack: { k: 'evs', per: 10, bleedAt: 3 }, firstUp: 'atkUp' },
     skills: [
-      S('u_gvine_1', '그건 내 잔상인데?', 'wind', 'u', 0, 3, { self: 'stealth', early: true, link: { power: 20, ambush: true, el: 'wind' } }),
+      S('u_gvine_1', '그건 내 잔상인데?', 'wind', 'u', 0, 2, { self: 'stealth', early: true, link: { power: 20, ambush: true, el: 'wind' } }),   // 햇빛 3 → 2(2026-11-04 사용자 '게일바인은 제안대로' — 리그전 +5%p · 이어 공격 40은 +9%p라 비용 쪽)
       S('u_gvine_2', '이딴게.. 공격?', 'wind', 'u', 0, 2, { act: 'hex', cats: ['debuff'], hex: [{ id: 'taunt' }, { id: 'accDown' }] }),
       S('u_gvine_2b', '휙- 푹찍', 'wind', 'u', 70, 2, { late: true, critIfDodged: true }),
       S('u_gvine_3', '방심하기', 'wind', 'u', 0, 1, { bare: 0.6 }),
@@ -677,7 +677,7 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 17;   // 17 = 2026-11-04 밤샘(친구 서버 전) — 엠버캡 · 드레이크캑터 · 드라코프루트 새 설계 · 프로스트드레이크 빙결열매(옮김) · 피의 축제 3타 · 처형의 춤 무조건 처형 · 포자 = 붙인 턴 포함 3번째 턴 · 불이 포자 · 빙결 · 얼음을 안 녹임 · 소환수가 주인 능력치 겹을 따라감 · 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
+export const RULES_VER = 17;   // 17 = 2026-11-04 밤샘 + 같은 날 낮(잔상 햇빛 2 · 아침이에요 위력 30 · 드라코프루트 선공 스택 +1 — 친구 서버에 처음 함께 올림) — 엠버캡 · 드레이크캑터 · 드라코프루트 새 설계 · 프로스트드레이크 빙결열매(옮김) · 피의 축제 3타 · 처형의 춤 무조건 처형 · 포자 = 붙인 턴 포함 3번째 턴 · 불이 포자 · 빙결 · 얼음을 안 녹임 · 소환수가 주인 능력치 겹을 따라감 · 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
 // 14 이전:   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
 //  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘

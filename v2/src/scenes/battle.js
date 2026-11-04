@@ -1018,7 +1018,7 @@ export const battle = {
       if (fr) board('mid');
       unit('me', px, py, false, 0);
       for (const [who, x0, y0, dir] of [['foe', ex + 36, ey, 1], ['me', px - 47, py, -1]]) ((this.B[who] && this.B[who].summons) || []).filter(s => s.hp > 0).forEach((s, i) => {   // 소환수(스포어캡): 식물 옆 작은 버섯 + 체력 줄
-        const ic = icon('sum_' + s.stage), x = x0 + dir * i * 14, y = y0 - 14;
+        const ic = (s.kind === 'ember' && icon('sum_ember_' + (s.stage === 'sleep' ? 'sleep' : 'baby'))) || icon('sum_' + s.stage), x = x0 + dir * i * 14, y = y0 - 14;   // 엠버캡 불씨 = 따로 그림(2026-11-04)
         if (ic) g.img(ic, x, y);
         g.rect(x - 1, y + 13, 14, 2, '#1a1a1a'); g.rect(x - 1, y + 13, Math.max(1, Math.round(14 * s.hp / s.max)), 2, s.stage === 'sleep' ? '#9fb0c8' : '#7be08a');
       });

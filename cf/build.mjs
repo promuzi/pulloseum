@@ -20,6 +20,7 @@ if (missing.length) { console.error('없는 모듈:', missing.join(', ')); proce
 for (const f of seen) { const to = join(OUT, relative(ROOT, f)); mkdirSync(dirname(to), { recursive: true }); cpSync(f, to); }
 cpSync(join(ROOT, 'v2', 'index.html'), join(OUT, 'v2', 'index.html'));
 cpSync(join(ROOT, 'v2', 'privacy.html'), join(OUT, 'v2', 'privacy.html'));
+cpSync(join(ROOT, 'v2', 'sfxpick.html'), join(OUT, 'v2', 'sfxpick.html'));   // 효과음 후보 듣고 고르기(2026-11-04 · 소리는 assets/v2/sfx_cand)
 cpSync(join(ROOT, 'v2', 'manifest.webmanifest'), join(OUT, 'v2', 'manifest.webmanifest'));   // 홈 화면에 추가 = 주소창 없이(2026-10-17)   // 개인정보처리방침(구글 로그인 게시 · 플레이 스토어에 주소가 필요)
 for (const d of ['assets/fonts', 'assets/sprites', 'assets/v2']) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(OUT, d), { recursive: true });
 // 무료 한도 확인: 파일 2만 개 · 한 파일 25MiB

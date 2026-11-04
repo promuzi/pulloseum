@@ -1,0 +1,195 @@
+{
+  "tool": "image_gen.imagegen (built-in)",
+  "source_prompt_file": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\SPECIES_V2_DRACO_EMBER_DRAKE_PROMPT.md",
+  "output_directory": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104",
+  "requested_image_count": 11,
+  "successful_image_count": 10,
+  "failed_request_count": 1,
+  "retries": 0,
+  "alternatives": 0,
+  "copy_method": "byte-for-byte; generated originals left in place",
+  "images": [
+    {
+      "file": "u_draco_2b.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: ice - a big juicy dragon fruit split open, bright magenta skin and white flesh with black seeds, a soft green healing glow rising from it",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-07036bfb-0fa4-43b3-9a07-11ee50b77fc3.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_draco_2b.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_draco_2.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: ice - the small dragon-fruit plant puffing itself up proudly while a huge dark dragon-shaped shadow with wings looms on the wall behind it",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-00f9eb4d-a09d-4425-b0b6-cf6527c6b8e3.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_draco_2.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_draco_3.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: ice - a dragon fruit cracking open like an egg, a blinding golden light and one golden dragon horn bursting out of the crack",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-20ed6bca-3a7b-4aeb-950f-ed32bbae8df7.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_draco_3.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_emcap_2.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: fire - a thick soft quilt-like glowing orange mushroom cap draped over like a warm blanket dome, little embers glowing along its rim",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-69bdc8ff-10ef-4dfb-8c22-117ffc44f74b.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_emcap_2.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_emcap_2b.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: fire - glowing orange spores being pulled back in a swirl into an ember mushroom cap, a warm green healing glow around the cap",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-c6c2ab4c-ae3c-46ee-9f1e-ed391726dfb4.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_emcap_2b.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_emcap_3.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: fire - an ember mushroom cap erupting into fierce jagged red-orange flames, a spiky angry rage aura",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-4867764d-5500-4169-bf74-23d0997a7cbd.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_emcap_3.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_emcap_3b.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: fire - one small round ember seed pod nestled in grey ash, a single tiny flame flickering on its top, sleeping and about to wake",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-fabd97e7-0ef3-4426-a7ea-2ebe60f36840.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_emcap_3b.png",
+      "status": "generated",
+      "generation_count": 1,
+      "inspection_note": "생성된 불씨 씨앗에 눈 모양이 들어 있어 기술 그림의 얼굴 금지 조건을 벗어남. 사용자 지시에 따라 재생성하지 않고 원본 그대로 보존.",
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_drake_3c.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: neutral - one huge ivory dragon fang thrusting forward and piercing through, a sharp crimson bleeding slash spark at its tip",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-e8c8c969-4aa4-4af4-842b-348fe8e7ea24.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_drake_3c.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "u_drake_3b.png",
+      "prompt": "Task: generate skill illustrations for a mobile pixel-art battle game whose creatures are plants. They are shown very small on battle cards (about 58x52 pixels after downscaling), so every image must read instantly at that size.\nStyle for every SKILL image: Match the supplied five skill illustration references exactly (reference images, not edit targets): u_blade_2.png, u_blade_3c.png, u_gale_3c.png, u_frost_2.png and u_fang_1.png.\n- One big, bold, iconic subject filling about 70 percent of the square, centered; nothing small or fiddly, at most 2 or 3 big shapes.\n- Flat cel shading with only 3 to 4 tones per color, a thick dark outline around the main shapes, no painterly texture, no fine detail, no tiny particles, no thin lines.\n- Strong contrast between the subject and the background. Background = a plain soft gradient in the color given per line, slightly darker toward the edges: ice = deep icy teal-blue, fire = deep red-orange, neutral = dark slate grey-violet.\n- Plants and plant parts are the heroes; no humans, no animals, no faces, no hands. A dragon may appear only as a shadow, a silhouette, a horn, a fang or a scale - never a full animal.\n- Square 1254x1254, no text, no letters, no numbers, no frame, no border, no watermark.\nThe plants: an icy dragon-fruit plant that dreams of becoming a dragon (pink dragon-fruit skin with frosty teal scales); a fire mushroom with a glowing ember-orange cap that scatters burning spores; a fire cactus that is half dragon (green cactus body, red dragon scales, a fiery heart).\nGenerate ONE image, exactly once, with this subject: fire - a green cactus body wrapped in a bright cleansing white-gold flame, dark purple curse smoke burning away into sparks",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-c44f668d-ef61-47f5-a000-baa1c79ab018.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\u_drake_3b.png",
+      "status": "generated",
+      "generation_count": 1,
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png"
+      ]
+    },
+    {
+      "file": "sum_ember_sleep.png",
+      "prompt": "Task: generate a summon icon for a mobile pixel-art battle game whose creatures are plants. This is NOT a skill image; it has a different composition.\nInput images: the first five are style reference images only, not edit targets. Match their flat cel illustration style, with only 3 to 4 tones per color, a thick dark outline, no painterly texture, no fine detail, no tiny particles, no thin lines. The sixth reference is the ember mushroom plant: use its ember-orange cap and simple mushroom form, not its painterly texture.\n- Background: one plain flat light gray #d9d9d9 everywhere, no gradient, no shadow, no texture (it will be cut out).\n- One small creature, centered, filling about 60 percent of the square, front view, same flat cel style with a thick dark outline. A tiny simple face is allowed here.\n- Square 1254x1254, no text, no frame, no watermark.\nGenerate ONE image, exactly once: a tiny round ember-mushroom sprout curled up asleep, cap dim orange with a faint glow, eyes closed",
+      "original_path": null,
+      "saved_path": null,
+      "status": "failed",
+      "generation_count": 0,
+      "request_count": 1,
+      "error": "referenced_image_paths must contain at most 5 paths",
+      "inspection_note": "참고 이미지 6장을 전달해 도구가 생성 전 요청을 거절함. 사용자 지시(재시도 금지)에 따라 다시 요청하지 않음.",
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_fang_1.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/cut/ember_cap.png"
+      ]
+    },
+    {
+      "file": "sum_ember_baby.png",
+      "prompt": "Task: generate a summon icon for a mobile pixel-art battle game whose creatures are plants. This is NOT a skill image; it has a different composition.\nInput images: the first four are style reference images only, not edit targets. Match their flat cel illustration style, with only 3 to 4 tones per color, a thick dark outline, no painterly texture, no fine detail, no tiny particles, no thin lines. The fifth reference is the ember mushroom plant: use its ember-orange cap and simple mushroom form, not its painterly texture.\n- Background: one plain flat light gray #d9d9d9 everywhere, no gradient, no shadow, no texture (it will be cut out).\n- One small creature, centered, filling about 60 percent of the square, front view, same flat cel style with a thick dark outline. A tiny simple face is allowed here.\n- Square 1254x1254, no text, no frame, no watermark.\nGenerate ONE image, exactly once: the same tiny ember-mushroom sprout awake, a small bright flame burning on top of its cap, small determined open eyes",
+      "original_path": "C:\\Users\\soosa\\.codex\\generated_images\\01a1a44b-bc8b-7ed0-8d12-ff9568a5c8a3\\exec-14ef0bb3-d4c1-49d6-9a5e-4dbfbe0ba2f6.png",
+      "saved_path": "C:\\dev\\pulloseum\\tools\\pixel\\big\\concept\\skill\\v2\\new1104\\sum_ember_baby.png",
+      "status": "generated",
+      "generation_count": 1,
+      "inspection_note": "생성 결과의 회색 배경에 약한 명암 차이가 보여 완전한 단색 조건과 차이가 있음. 사용자 지시에 따라 수정하거나 재생성하지 않고 원본 그대로 보존.",
+      "request_count": 1,
+      "reference_image_paths": [
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_blade_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_gale_3c.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/skill/v2/u_frost_2.png",
+        "C:/dev/pulloseum/tools/pixel/big/concept/cut/ember_cap.png"
+      ]
+    }
+  ]
+}
+

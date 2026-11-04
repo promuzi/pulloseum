@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>효과음 고르기</title>
+<!-- 효과음 후보 듣고 고르기(2026-11-04 사용자 '5번: ㄱ으로' — 아침 보고 보류 5 ㉠). 후보 = assets/v2/sfx_cand/<소리>_<번호>.ogg(Kenney CC0 묶음 다섯에서 소리마다 다섯) · '지금' = 게임이 파형으로 만드는 지금 소리(core/sound.js) -->
+<style>
+  :root { --bg: #0c1526; --card: #15223a; --line: #2a3d5e; --text: #e6f3ff; --dim: #8fa6c4; --on: #ffb627; --onText: #1a1206; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 16px 16px 120px; }
+  h1 { font-size: 22px; margin: 4px 0 16px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+  h2 { font-size: 17px; margin: 0 0 2px; }
+  p.when { margin: 0 0 10px; color: var(--dim); font-size: 14px; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  button { font: inherit; color: var(--text); background: #1d2e4d; border: 2px solid var(--line); border-radius: 12px; padding: 12px 6px; min-height: 52px; cursor: pointer; }
+  button.on { background: var(--on); color: var(--onText); border-color: var(--on); font-weight: 700; }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; background: #091120ee; border-top: 1px solid var(--line); padding: 10px 16px; }
+  footer .in { max-width: 560px; margin: 0 auto; display: flex; gap: 8px; align-items: center; }
+  #sum { flex: 1; font-size: 14px; word-break: keep-all; }
+  #copy { min-height: 44px; padding: 8px 14px; background: var(--on); color: var(--onText); border-color: var(--on); font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <h1>효과음 고르기</h1>
+  <div id="list"></div>
+</main>
+<footer><div class="in"><div id="sum"></div><button id="copy">복사</button></div></footer>
+<script type="module">
+import { sfx, unlock } from './src/core/sound.js';
+const EVENTS = [
+  ['tap', '카드 누름', '손패 카드를 누를 때'],
+  ['select', '고름', '단추 · 기술을 고를 때(가장 자주 남)'],
+  ['flip', '카드 넘김', '카드를 뒤집거나 펼칠 때'],
+  ['swing', '공격 휘두름', '공격이 나갈 때'],
+  ['hit', '맞음', '공격이 들어갈 때'],
+  ['crit', '치명타', '치명타가 터질 때'],
+  ['block', '막힘', '방어로 막을 때'],
+];
+const N = 5, pick = Object.fromEntries(EVENTS.map(([k]) => [k, 0]));   // 0 = 지금 소리
+const NUM = ['지금', '①', '②', '③', '④', '⑤'];
+let ready = false;
+const wake = () => { if (!ready) { unlock(); ready = true; } };
+const clips = {};
+const play = (k, i) => {
+  wake();
+  if (i === 0) { sfx(k); return; }
+  const key = k + '_' + i, a = clips[key] ||= new Audio('../assets/v2/sfx_cand/' + key + '.ogg');
+  a.volume = 0.8; a.currentTime = 0; a.play().catch(() => {});
+};
+const list = document.getElementById('list');
+for (const [k, name, when] of EVENTS) {
+  const sec = document.createElement('section');
+  sec.innerHTML = `<h2>${name}</h2><p class="when">${when}</p><div class="row"></div>`;
+  const row = sec.querySelector('.row');
+  for (let i = 0; i <= N; i++) {
+    const b = document.createElement('button');
+    b.textContent = NUM[i];
+    b.onclick = () => { pick[k] = i; play(k, i); row.querySelectorAll('button').forEach((x, j) => x.classList.toggle('on', j === i)); show(); };
+    if (i === 0) b.classList.add('on');
+    row.appendChild(b);
+  }
+  list.appendChild(sec);
+}
+const sumText = () => EVENTS.map(([k, name]) => `${name} ${NUM[pick[k]]}`).join(' · ');
+const show = () => { document.getElementById('sum').textContent = sumText(); };
+show();
+document.getElementById('copy').onclick = async () => {
+  const t = sumText();
+  try { await navigator.clipboard.writeText(t); document.getElementById('copy').textContent = '복사됨'; }
+  catch { prompt('이 줄을 복사해 주세요', t); }
+  setTimeout(() => { document.getElementById('copy').textContent = '복사'; }, 1500);
+};
+</script>
+</body>
+</html>

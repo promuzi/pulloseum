@@ -543,7 +543,7 @@ ok(SPECIES_V2.has('draco_fruit'), '드라코프루트 v2 켜짐');
   const HIT = { id: 'f', name: '때리기', act: 'attack', power: 30, cost: 0, cats: ['attack'], el: null, contact: true };
   const d = mk('me', 'draco_fruit', { spd: 999 }), f = mk('foe', 'aqua', { spd: 1 });
   turn(d, f, SKILLS.u_draco_1, OTHER, 1);
-  ok(d.res && d.res.dragon === 2, `내가 용이될 상이요? 선공 = 회피 자세 + 용 스택 +2 (${d.res && d.res.dragon})`);
+  ok(d.res && d.res.dragon === 1, `내가 용이될 상이요? 선공 = 회피 자세 + 용 스택 +1 (${d.res && d.res.dragon})`);   // +2 → +1(2026-11-04 사용자 '다시 조정해보자')
   const d2 = mk('me', 'draco_fruit', { spd: 1 }), f2 = mk('foe', 'aqua', { spd: 999 });
   const h2 = turn(d2, f2, SKILLS.u_draco_1, HIT, 1, () => 0.5).find(e => e.t === 'hit' && e.who === 'me');
   ok(h2 && h2.tier === 'crit', '후공 = 맞으면 치명 확정 빙결 공격');

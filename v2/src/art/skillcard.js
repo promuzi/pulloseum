@@ -217,7 +217,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   { const im = artOf(sk) || placeholderArt(sk), sw = Math.min(aw, im.width);   // 좁은 카드(손패 한 줄 넷)는 그림 가운데를 잘라 1배 그대로(줄이면 도트가 뭉개짐)
     c.drawImage(im, Math.floor((im.width - sw) / 2), 0, sw, im.height, ax + Math.floor((aw - sw) / 2), ay, sw, ah); }
   // 이름 띠: 그림 아래 열 칸을 짙게 덮으며 이어지고, 위에 테 색 가는 줄
-  const by = ay + ah, bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
+  const framed = hasFrame(sk), by = ay + ah - (framed ? 3 : 0), bh = y + h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);   // 종 테 카드 = 이름 띠를 3칸 올림(두꺼운 아래 팔에 두 줄 이름이 가려서 — 2026-11-04)
   gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
   const MF = sk.form && FORMS[sk.form], band = MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦
@@ -230,7 +230,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
   }
   const art = drawFrameArt(g, x, y, w, h, sk, o.lit);   // 종 테(종 공통 · 고유 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
-  const { lines, font, lh } = nameLines(sk.name, aw - (art ? 8 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);   // 묶음 테는 두꺼워 이름 폭을 2칸씩 더 줄임
+  const { lines, font, lh } = nameLines(sk.name, aw - (art ? 10 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (art ? 8 : 0) - (lines.length - 1) * lh - gh) / 2);   // 종 테(30칸 · 그림자)는 두꺼워 이름 폭을 3칸씩 더 줄이고 아래 8칸을 비움(아래 팔에 안 가리게)
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
     const p = o.shine, bx = ax - 16 + p * (aw + 32);

@@ -5,8 +5,12 @@
 //   종 공통 = 종 모서리(ty_* · 제 색) · 고유 = 그 식물의 종 모서리(제 색) + 고유 표식(별)
 //   속성 공통 · 가지 · 특수 · 기본기 · 변이 · 패시브 카드 = 지금 테 그대로(skillcard.js 둥근 테) · 속성은 그림 왼쪽 아래 속성 배지로
 //   버린 안(밤샘 365) = 속성 공통 = 속성 모서리(el_* 일곱) · 고유 = 종 모서리를 그 식물 속성 색으로 다시 칠함 — 그림 파일은 assets/v2/frames에 남김
-//  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md) → greycut 누끼 → itemconv 24칸 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
-//   그리기 = 모서리를 네 귀퉁이에 뒤집어 놓고 사이 변은 팔 끝 조각을 이어 붙임(이음매가 덜 보이는 길이를 고름)
+//  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md) → greycut 누끼 → itemconv 30칸 10색 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
+//   (같은 날 '테두리가 픽셀이 작아서 자글자글하고 그래. 입체감을 줘서 좀 튀어나와도 되고, 픽셀을 좀 올리거나 크기를 키워줘' → 24칸 14색에서 키움 · 빛 · 그늘 · 그림자)
+//   그리기 = 모서리를 네 귀퉁이에 뒤집어 놓고 사이 변은 팔 끝 조각을 이어 붙임(이음매가 덜 보이는 길이를 고름) → 카드 크기마다 한 장으로 합쳐 둠(composed)
+//   입체감 = 왼쪽 위에서 오는 빛: 먹선 안쪽 한 칸을 왼쪽 위 면은 밝게 · 오른쪽 아래 면은 어둡게 + 테 모양 그림자를 오른쪽 · 아래로 2칸 밀어 카드 그림 위에 깖
+//   모서리 원본 = itemconv 30칸 10색 → 외톨이 한 칸 지움(tools/pixel/big/frameclean.py) · 15칸을 두 배로 키운 안은 꽃 · 덩굴 모양이 뭉개져 버림
+//   (카드 밖으로 튀어나오게는 안 함 — 꾹 눌러 보는 큰 카드 · 더미 펼침은 카드 크기 캔버스에 그려 바깥이 잘림)
 import { SPECIES, uniqueOf } from '../game/catalog.js';
 
 export const FRAME_NAMES = ['ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'crest_unique'];
@@ -60,6 +64,37 @@ function build(key) {
   return F;
 }
 export const hasFrame = sk => { const k = frameKey(sk); return !!(k && RAW[k]); };
+// 빛 · 그늘: 먹선(바깥 둘레) 안쪽 한 칸 — 왼쪽 위 대각선 이웃이 둘레면 빛 면, 오른쪽 아래가 둘레면 그늘 면(아주 어두운 칸은 그대로)
+const INK = [11, 19, 34];
+function bevel(x, w, h) {
+  const id = x.getImageData(0, 0, w, h), d = id.data, A = (i, j) => i >= 0 && j >= 0 && i < w && j < h && d[((j * w) + i) * 4 + 3] > 0;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const k = ((j * w) + i) * 4;
+    if (!d[k + 3] || (0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]) / 255 < 0.16) continue;
+    if (A(i - 1, j - 1) && !A(i - 2, j - 2)) for (let c = 0; c < 3; c++) d[k + c] = Math.round(d[k + c] + (255 - d[k + c]) * 0.45);
+    else if (A(i + 1, j + 1) && !A(i + 2, j + 2)) for (let c = 0; c < 3; c++) d[k + c] = Math.round(d[k + c] + (INK[c] - d[k + c]) * 0.5);
+  }
+  x.putImageData(id, 0, 0);
+}
+// 카드 크기(w×h)마다 테 한 장: 사이 변 → 네 모서리 → 빛 · 그늘 → 그림자 깔고 그 위에 테
+const COMPOSED = new Map();
+function composed(key, w, h) {
+  const ck = `${key}|${w}x${h}`;
+  if (COMPOSED.has(ck)) return COMPOSED.get(ck);
+  const F = build(key);
+  if (!F) { COMPOSED.set(ck, null); return null; }
+  const fr = canvas(w, h), x = fr.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  edges(x, 0, 0, w, h, F);
+  x.drawImage(F.tl, 0, 0); x.drawImage(F.tr, w - F.T, 0); x.drawImage(F.bl, 0, h - F.T); x.drawImage(F.br, w - F.T, h - F.T);
+  bevel(x, w, h);
+  const sh = canvas(w, h), s = sh.getContext('2d');
+  s.drawImage(fr, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = 'rgba(4,8,18,0.7)'; s.fillRect(0, 0, w, h);
+  const out = canvas(w, h), o = out.getContext('2d');
+  o.drawImage(sh, 2, 2); o.drawImage(fr, 0, 0);
+  COMPOSED.set(ck, out);
+  return out;
+}
 // 사이 변(모서리 사이를 팔 조각으로) — 그림 · 이름 띠 위에 그림(안쪽 1~2칸을 덮음)
 function edges(c, x, y, w, h, F) {
   const { T } = F;
@@ -69,14 +104,13 @@ function edges(c, x, y, w, h, F) {
   run(F.left, x, y + T, h - 2 * T, false);
   run(F.right, x + w - F.right.width, y + T, h - 2 * T, false);
 }
-// 테 그리기(cardFront가 그림 · 이름 띠를 깐 뒤 부름): 사이 변 → 네 모서리 → 고유 표식 · lit(고른 카드) = 바깥 금빛 줄
+// 테 그리기(cardFront가 그림 · 이름 띠를 깐 뒤 부름): 합친 테 한 장 → 고유 표식 · lit(고른 카드) = 바깥 금빛 줄
 export function drawFrameArt(g, x, y, w, h, sk, lit) {
-  const key = frameKey(sk), F = key && build(key);
-  if (!F) return false;
+  const key = frameKey(sk), im = key && composed(key, Math.round(w), Math.round(h));
+  if (!im) return false;
   const c = g.c, sm = c.imageSmoothingEnabled;
   c.imageSmoothingEnabled = false;
-  edges(c, x, y, w, h, F);
-  c.drawImage(F.tl, x, y); c.drawImage(F.tr, x + w - F.T, y); c.drawImage(F.bl, x, y + h - F.T); c.drawImage(F.br, x + w - F.T, y + h - F.T);
+  c.drawImage(im, x, y);
   if (sk.tier === 'u' && RAW.crest_unique) { const cr = RAW.crest_unique; c.drawImage(cr, Math.round(x + (w - cr.width) / 2), y - 2); }   // 고유 표식 = 위 가운데 별(테에 걸쳐 — 비용 해 · 수치 사이 빈 곳)
   if (lit) { g.rect(x + 3, y, w - 6, 1, '#ffd890'); g.rect(x + 3, y + h - 1, w - 6, 1, '#ffd890'); g.rect(x, y + 3, 1, h - 6, '#ffd890'); g.rect(x + w - 1, y + 3, 1, h - 6, '#ffd890'); }
   c.imageSmoothingEnabled = sm;

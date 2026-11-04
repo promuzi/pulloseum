@@ -212,7 +212,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     if (a.caveAdd && u.hp > 0) caveAddAct(u, foe, a, ev);
     if (r.landed && u.hp > 0 && foe.eff && foe.eff.orbTrap && foe.eff.orbTrap.n > 0) orbTrapBurst(foe, u, T, ev, rng);   // 봉인 구슬 덫(내 쪽 지형) = 맞히면 하나가 터짐   // 지반붕괴 = 공격 + 동굴에 설치   // 게일바인: 맞으면 그 공격이 끝난 뒤 스택을 다 써서 반격
     if (u.hp > 0) selfAll();   // 덤 버프(맞히든 빗나가든 쓴 순간)
-    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed: r.landed, bonusHit: a.bonusHit, rng, emOf }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작
+    if (u.hp > 0) { afterAct(u, a, foe, T, ev, { spent, landed: r.landed, bonusHit: a.bonusHit, rng, emOf }); setField(o.field, a, T, ev); setCharge(u, a, T, ev); if (a.bell) bellSync(A, B, T, ev); }   // 공통 장치: 얻기 · 모드 · 시한 · 메아리 · 소비 · 조작 · 공격하며 켜는 아침(2026-11-04 아침이에요. 위력 30)도 바로 필드에
     // 회피·방어 성공 보상(Yomi: 막으면 이득, 피하면 한 번 되받아침) — 연타는 모든 타를 빗나감 · 스침으로 넘겼을 때만 되받아침
     if (r.avoided && d.counter && (d.counterAll || (a.contact !== false && !a.ranged)) && !a.area && foe.hp > 0) {   // counterAll = 멀리서 온 공격도(윈드페탈 환희의 춤 — 원거리 구분 폐지)
       const cd = Math.max(1, Math.round(r.hitDmg(foe, u, { power: d.counter }, 1)));
