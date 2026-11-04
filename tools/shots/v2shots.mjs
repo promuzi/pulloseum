@@ -146,14 +146,13 @@ export const SHOTS = [
   ['07_battle_bind', 'battle', { phase: 'pick', venue: 'colosseum', energy: '4', pre: 'me:seal,taunt' }],
   ['07_battle_root3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pre: 'me:root,poison2;foe:chill2' }],
   ['07_battle_swap3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7' }],
-  // 내 카드(장착 패시브) 보기 단추 시안(2026-11-04 '둘다 만들어봐 눈으로 보고 결정할게'): A = 체력판 이름 줄 단추 · B = 아래 줄 '내 카드' 단추 · view = 창이 열린 채
-  ['07_battle_pasA', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro' }],
-  ['07_battle_pasB', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pasbtn: 'b' }],
+  // 내 카드(장착 패시브) 보기(2026-11-04 사용자 '감정 칸의 너비를 반으로 쪼개서 왼쪽은 패시브, 우측은 감정으로 나누자'): 아래 줄 오른쪽 [패시브 | 감정] · view = 창이 열린 채 · mut = 변이 손패(오른쪽 세로 줄)
+  ['07_battle_pas', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro' }],
   ['07_battle_pasview', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1' }],
   ['07_battle_pasview_peek', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1', pvpeek: '1' }],
-  ['07_battle_pas3A', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pcards: 'n_fiber_2,n_wall,n_chloro' }],
-  ['07_battle_pas3B', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pcards: 'n_fiber_2,n_wall,n_chloro', pasbtn: 'b' }],
+  ['07_battle_pas3', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pcards: 'n_fiber_2,n_wall,n_chloro' }],
   ['07_battle_pas3view', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1' }],
+  ['07_battle_pasmut', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'v_forge', mut: 'weapon' }],
   ['07_battle_swap3_sheet', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', sheet: '1' }],
   ['07_battle_swap3_dead', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', dead: 'me2,foe1' }],
   ['07_battle_garden', 'battle', { phase: 'pick', venue: 'garden' }],

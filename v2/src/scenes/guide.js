@@ -31,7 +31,7 @@ export const GUIDES = [
       { at: 'gd_help', text: '처음 보는 화면엔 이렇게 안내가 떠요. 다시 보려면 이 ? 를 누르세요.' },
     ] },
   { id: 'battle', scene: 'battle', btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !sc.pasView && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',   // 친구 대결은 시간이 서버에서 흐름 — 저절로는 봇 판에서만(? 는 언제나)
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },   // 안내를 보는 동안 시간 막대 멈춤
     steps: [
@@ -43,7 +43,7 @@ export const GUIDES = [
     ] },
   // 2026-10-29 사용자 '보통 꾹눌러야 설명이 나오는 경우 선택해서 못 읽어보지 않나?' → 손패는 한 번에 쓰기 그대로(사용자 'ㄴ으로') + 효과가 처음 생긴 판에 한 번 더 알려 줌(전에 'battle'을 본 사람도)
   { id: 'battle_fx', scene: 'battle', when: (app, sc) => !!(sc.v && sc.geo && ((sc.geo.foe && sc.geo.foe.list.length) || (sc.geo.me && sc.geo.me.list.length) || sc.envs('foe').length || sc.envs('me').length)), btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !sc.pasView && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [
@@ -52,7 +52,7 @@ export const GUIDES = [
       { at: 'sk_*', text: '내 카드도 꾹 누르고 있으면 뒷면에 설명이 나와요. 손을 떼면 기술은 나가지 않아요.' },
     ] },
   { id: 'battle3', scene: 'battle', when: (app, sc) => sc.mode === 'swap3', btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !sc.pasView && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [
@@ -60,7 +60,7 @@ export const GUIDES = [
       { at: 'fx_foe', text: '상대 이름 옆 칸은 상대에게 남은 식물이에요.' },
     ] },
   { id: 'battle_mut', scene: 'battle', when: (app, sc) => !!(sc.B && sc.B.me && sc.B.me.kit && sc.B.me.kit.some(k => k.mut)), btn: app => [app.W - 21, 4],
-    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !app.confirm,
+    ready: (app, sc) => sc.v && sc.v.phase === 'pick' && !sc.sheet && !sc.info2 && !sc.emoteOpen && !sc.peek && !sc.spread && !sc.pasView && !app.confirm,
     auto: (app, sc) => sc.net !== 'pvp',
     pause: (app, sc, dt) => { if (sc.v && sc.v.pickT0 != null && sc.net !== 'pvp') sc.v.pickT0 += dt; },
     steps: [{ at: 'sk_m_*', text: '변이 기술이에요. 햇빛을 쓰지 않고, 판마다 쓸 수 있는 횟수가 정해져 있어요(왼쪽 위 숫자). 다 쓰면 그 판엔 못 써요.' }] },

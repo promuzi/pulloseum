@@ -200,18 +200,18 @@ function idTag(g, x, y, u, right = true) {
 }
 const PLANT_TOP = 94, POT_BOTTOM = 14;   // 식물 그림 맨 위 = 밑동 − 94칸쯤(96×112 판) · 상대 화분 · 받침 아래 끝 = 밑동 + 14
 const boxH = mine => (mine ? 49 : 62);   // 2026-10-17 사용자 "해 아이콘이 상태창 아래로 삐져나옴 — 상태창 크기를 키워볼까?" → 아래 3칸 늘림
-// 장착 패시브 카드 id(내 카드 — 상대 것은 친구 대결에서 숨김)
+// 장착 패시브 카드 id — 내 식물 것만 읽음(2026-11-04 사용자 '적의 패시브는 보여주지 마' — 친구 대결에서 숨긴 정보)
 const pasOf = u => ((u && u.cards) || []).filter(id => CARDS[id] && CARDS[id].kind === 'passive');
-// '내 카드' 단추 ㉠(2026-11-04 사용자 '게임에서 내 패시브를 볼 수 있는 버튼이 따로 있으면 좋을 거 같은데 함 고안해줘' → '둘다 만들어봐 눈으로 보고 결정할게'):
-//  내 체력판 이름 줄 정체 꼬리표 왼쪽에 꼬리표와 같은 높이 칸 = 작은 카드 아이콘 + 장착 수 · 누르면 내 카드 창(drawPasView)
-const CHIP_W = 24;
-function cardChip(g, x, y, n, down) {
-  rrect(g, x, y, CHIP_W, TAG_H, 3, '#2c4466');
-  rrect(g, x + 1, y + 1, CHIP_W - 2, TAG_H - 2, 2, down ? '#24405e' : '#0d1828');
-  g.img(icon('mycard'), x + 1, y + 1);
-  g.text(String(n), x + 17, y + Math.round((TAG_H - glyphH(sized('bold', 9))) / 2), { font: sized('bold', 9), color: n ? '#d8f2ff' : '#5a6a82', align: 'center' });
+// 아래 줄 반 칸 단추(패시브 · 감정 — miscRow): 아이콘 위 · 작은 글자 아래(교체 칸과 같은 짜임 · 반 칸이라 아이콘 옆 글자는 안 들어감)
+function halfBtn(app, id, x, y, w, h, ic, label, onTap) {
+  const { g, input } = app, st = T.btn.second, down = !!onTap && input.isPressed(id);
+  const { top, inner } = btnBody(g, x, y, w, h, st, down), im = tinted(ic, st.text), f = sized('bold', 9), gh = glyphH(f), iy = top + Math.round((inner - im.height - 1 - gh) / 2);
+  g.img(im, Math.round(x + (w - im.width) / 2), iy);
+  g.text(label, x + w / 2, iy + im.height + 1, { font: f, color: st.text, align: 'center' });
+  input.mark(id, x, y, w, h);
+  if (onTap) input.hit(id, x, y, w, h, onTap, 4);
 }
-function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false, chip = null) {   // compact = 상대 체력판 맨 윗줄(재배사)을 접음(짧은 화면 — 3:3 남은 식물 칸은 이름 줄 오른쪽으로) · chip = ㉠ '내 카드' 단추({ n, down } → 그린 자리 r)
+function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false) {   // compact = 상대 체력판 맨 윗줄(재배사)을 접음(짧은 화면 — 3:3 남은 식물 칸은 이름 줄 오른쪽으로)
   const { g, t } = app, w = BOX_W, h = boxH(mine || compact), P = T.ptext, fx = bar.fx, S = fx && HURT[fx.kind], age = fx ? t - fx.t0 : 1e9;
   let x = x0, y = y0;
   if (S && S.shake && age < S.shakeMs) { const a = Math.max(1, Math.round(S.shake * (1 - age / S.shakeMs))); x += (Math.floor(age / 40) % 2 ? 1 : -1) * a; y += Math.floor(age / 60) % 2 ? Math.ceil(a / 2) : 0; }
@@ -234,10 +234,9 @@ function infoBox(app, x0, y0, u, bar, en, mine, team = null, compact = false, ch
   }
   // 이름 줄 = 이름(왼쪽) · 정체 꼬리표 [속성 | 종 | 변이](오른쪽 끝 — idTag) · 개수 칸(공통 장치 — 수리검 · 꼬리 …)은 꼬리표 왼쪽 · 넘치면 이름을 작게
   const rk = u.res ? Object.keys(RES_ICON).find(k => k in u.res) : null, ri = rk ? icon(RES_ICON[rk]) : null;   // 공명 · 스택 = 아이콘 + 수(2026-10-24 코덱스)
-  const tw0 = idTag(null, 0, 0, u), cw = chip ? CHIP_W + 3 : 0, tw = tw0 + cw, rl = ri ? String(u.res[rk] || 0) : resLine(u), rw = rl ? g.textW(rl) + 4 + (ri ? 13 : 0) : 0, room = right - tx - tw - rw - 4, nf = g.textW(u.name, 'bold') <= room ? 'bold' : sized('bold', 10);
+  const tw = idTag(null, 0, 0, u), rl = ri ? String(u.res[rk] || 0) : resLine(u), rw = rl ? g.textW(rl) + 4 + (ri ? 13 : 0) : 0, room = right - tx - tw - rw - 4, nf = g.textW(u.name, 'bold') <= room ? 'bold' : sized('bold', 10);
   g.text(u.name, tx, yy, { font: nf, color: u.shiny ? '#ffe8a8' : P.main });
   idTag(g, right + 2, yy, u);
-  if (chip) { const cx = right + 2 - tw0 - 3 - CHIP_W; cardChip(g, cx, yy, chip.n, chip.down); chip.r = [cx, yy, CHIP_W, TAG_H]; }
   if (rl) g.text(rl, right + 2 - tw - 4, yy, { color: P.sub, align: 'right' });
   if (rl && ri) g.img(ri, right + 2 - tw - 4 - g.textW(rl) - 13, yy + 1);
   yy += 16;
@@ -391,7 +390,7 @@ export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   // 1초 60장이 필요한 때(main.js 장 수 — 그 밖엔 30장): 기술이 오가는 동안 · 승패가 갈린 뒤 2.5초
   fast(app) { const v = this.v; return !!v && (v.phase === 'play' || (v.phase === 'over' && app.t - v.overT0 < 2500)); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.pasView = null; this.pasBtn = p.pasbtn === 'b' ? 'b' : 'a'; this.lift = {}; this.denyAt = null; this.clk = {}; this.bars = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.pasView = null; this.lift = {}; this.denyAt = null; this.clk = {}; this.bars = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -1105,8 +1104,7 @@ export const battle = {
       holo(g, x, y, w, 18, { fill: '#13385e', fill2: '#17446e', frame: '#8ccfff', frameHi: '#e6f3ff', frameLo: '#18385e' }, 16);
       g.text(label, W / 2, y + (18 - glyphH('body')) / 2, { color: '#e0f0ff', align: 'center' });
     }
-    const pasChip = this.pasBtn !== 'b' || mutHand(B.me.kit) ? { n: pasOf(v.view.me).length, down: app.input.isPressed('bt_cards') } : null;   // ㉠ 체력판 단추(㉡이어도 변이 손패면 아래 줄 자리가 없어 여기)
-    infoBox(app, W - 146, myY, v.view.me, v.bar.me, v.en.me, true, null, false, pasChip);
+    infoBox(app, W - 146, myY, v.view.me, v.bar.me, v.en.me, true);
     if (mEnv.length && mOff > 1) g.alpha(Math.min(1, mOff / (ENV_H + 2)), () => envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn));
     const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
     if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
@@ -1125,7 +1123,6 @@ export const battle = {
       app.input.hit('fx_me', W - 146, myTop, BOX_W, myY + boxH(true) - myTop, open('me'), 2);
       if (fEnv.length) app.input.hit('env_foe', 6, foeY - ENV_H - 2, BOX_W, ENV_H, open('foe'), 2);   // 환경 띠를 눌러도 그 쪽 설명 창
       if (mEnv.length) app.input.hit('env_me', W - 146, myY + boxH(true) + 2, BOX_W, ENV_H, open('me'), 2);
-      if (pasChip && pasChip.r) app.input.hit('bt_cards', ...pasChip.r, () => this.openPasView(app), 4);   // 체력판 위 '내 카드' 단추가 체력판 누름(효과 창)보다 먼저
     }
     const HG = handGeo(W, B.me.kit), hw = HG.w, hx = HG.x0;
     this.drawTimer(app, hx, HY - 8, hw);
@@ -1454,19 +1451,19 @@ export const battle = {
   //  3:3 교체 버튼도 — 아래 버튼이 전투 카드 3장의 폭과 맞게"): 감정 = 맨 오른쪽 카드 한 장 폭 · 3:3 교체 칸 = 그 왼쪽 카드들 폭(왼쪽 끝선 = 손패 왼쪽 끝선)
   miscRow(app, y, live, rx0 = null) {
     const { W } = app, B = this.B, v = this.v, side = rx0 != null, sw = side ? W - 8 - rx0 : 0, G = handGeo(W, B.me.kit), ex = G.x0 + (G.per - 1) * (G.CW + G.GX);
-    const pb = this.pasBtn === 'b' && !side;   // ㉡ 아래 줄 '내 카드' 단추(2026-11-04 시안 — 변이 손패는 오른쪽 세로 줄이라 ㉠ 체력판 단추로)
     if (this.mode === 'swap3') {
       const wait = swapWait(B, 'me'), can = v.phase === 'pick' && aliveOf(B, 'me').length > 1 && canSwitch(B.me) && !wait;   // 교체 제한(스스로 바꾸면 2턴 — 2026-10-18)
-      this.teamTile(app, 'bt_swap', side ? rx0 : G.x0, side ? y + 8 : y, side ? sw : pb ? G.CW : ex - G.GX - G.x0, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);   // ㉡ = 교체 칸을 카드 한 장 폭으로
+      this.teamTile(app, 'bt_swap', side ? rx0 : G.x0, side ? y + 8 : y, side ? sw : ex - G.GX - G.x0, 32, can, !canSwitch(B.me), live && can ? () => { this.sheet = { forced: false }; } : null);
     }
-    if (pb) button(app, 'bt_cards', this.mode === 'swap3' ? G.x0 + G.CW + G.GX : G.x0, y, G.CW, 32, `내 카드 ${pasOf(v.view.me).length}`, { style: 'night', icon: 'mycard', onTap: live ? () => this.openPasView(app) : null });
-    if (side) {   // 아래 줄 오른쪽: (3:3 팀 칸) · 감정 — 같은 폭
-      const ey = this.mode === 'swap3' ? y + 48 : y + 29;
-      button(app, 'bt_emote', rx0, ey, sw, 32, '감정', { style: 'night', icon: 'heart', iconTint: true, onTap: live ? () => { this.emoteOpen = true; } : null });
-      return;
-    }
-    // 감정 = 맨 오른쪽 카드 밑(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
-    button(app, 'bt_emote', ex, y, G.CW, 32, '감정', { style: 'night', icon: 'heart', iconTint: true, onTap: live ? () => { this.emoteOpen = true; } : null });
+    // 패시브 · 감정 = 감정 칸을 반씩(2026-11-04 사용자 '감정 칸의 너비를 반으로 쪼개서 왼쪽은 패시브, 우측은 감정으로 나누자' — 시안 ㉠ 체력판 칸 · ㉡ 아래 줄 왼쪽 단추 대신)
+    //  패시브 = 내 카드 창(drawPasView — 내 식물 것만, 적의 패시브는 안 보임) · 감정 = 감정 창 · 둘 다 아이콘 위 · 글자 아래(교체 칸과 같은 짜임)
+    const pair = (x, yy, w) => {
+      const hw = Math.floor((w - 4) / 2);
+      halfBtn(app, 'bt_cards', x, yy, hw, 32, 'mycard', '패시브', live ? () => this.openPasView(app) : null);
+      halfBtn(app, 'bt_emote', x + w - hw, yy, hw, 32, 'heart', '감정', live ? () => { this.emoteOpen = true; } : null);
+    };
+    if (side) { pair(rx0, this.mode === 'swap3' ? y + 48 : y + 29, sw); return; }   // 변이 손패 = 오른쪽 세로 줄(3:3 팀 칸 아래)
+    pair(ex, y, G.CW);   // 맨 오른쪽 카드 밑(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
   },
   // 3:3 팀 칸 = 교체 단추(2026-10-16 사용자 "3:3에서 남은 수를 표시하는 네모 박스 등은 아래의 교체 칸에 적절한 방식으로 새로 UI 만들어서 붙여놔"):
   //  ⇄(뿌리 묶이면 자물쇠) · 내 식물 셋 얼굴(앞에 선 식물 = 주황 테, 아래 체력 실선, 쓰러짐 = 흐리게 + ✕) | '상대' + 남은 칸 셋(누군지는 안 보임) — 누르면 교체 창
@@ -1475,21 +1472,18 @@ export const battle = {
     const { g, input } = app, B = this.B, v = this.v, st = T.btn[can ? 'second' : 'off'], down = !!fn && input.isPressed(id);
     const { yy } = btnBody(g, x, y, w, h, st, down), cy = yy + Math.floor((h - 2) / 2), acc = UI_ACCENT[UI] || '#f0be7d';
     const hpOf = (side, u) => (u === v.view[side] ? v.hp[side] : u.hp), hpCol = r => (r > 0.5 ? '#5fe08a' : r > 0.2 ? '#f0be7d' : '#ff6a5a');
-    const small = w < 100;   // 카드 한 장 폭(㉡ 아래 줄 세 칸 — 교체 · 내 카드 · 감정) = 얼굴 셋만(20칸) · 묶임 · 대기는 얼굴 위 덧표시
-    let cx = small ? x + Math.round((w - 62) / 2) : x + Math.max(7, Math.round((w - 100) / 2));   // 속 = 교체 칸 22 + 얼굴 셋(100칸) — 넓은 칸(카드 두 장 폭)이면 가운데로
+    let cx = x + Math.max(7, Math.round((w - 100) / 2));   // 속 = 교체 칸 22 + 얼굴 셋(100칸) — 넓은 칸(카드 두 장 폭)이면 가운데로
     const wait = swapWait(B, 'me'), ic = tinted(bound ? 'lock' : wait ? 'clock' : 'ff', st.text), lab = bound ? '묶임' : wait ? `${wait}턴` : '교체';   // 왼쪽 칸 = 아이콘 위 · 이름 아래(교체 제한 = 시계 · 남은 턴)
-    if (!small) { g.img(ic, cx + 11 - Math.floor(ic.width / 2), cy - 12); g.text(lab, cx + 11, cy + 1, { color: st.text, align: 'center' }); cx += 22 + 6; }
-    const fs = small ? 20 : 22, step = small ? 21 : 25;
+    g.img(ic, cx + 11 - Math.floor(ic.width / 2), cy - 12); g.text(lab, cx + 11, cy + 1, { color: st.text, align: 'center' }); cx += 22 + 6;
     B.team.me.forEach((u, i) => {
-      const sx = cx + i * step, sy = cy - 13, on = u === v.view.me, hp = hpOf('me', u), dead = hp <= 0, r = Math.max(0, hp / u.max);
-      rrect(g, sx, sy, fs, fs, 3, on && !dead ? acc : '#08111e');
-      rrect(g, sx + 1, sy + 1, fs - 2, fs - 2, 2, dead ? '#121a26' : '#1a2c46');
-      g.alpha(dead ? 0.3 : 1, () => g.clip(sx + 1, sy + 1, fs - 2, fs - 2, () => drawPortrait(g, artOf(u), sx + 1, sy + 1, fs - 2, false, 40)));   // 얼굴 전체(40칸 → 20칸)
+      const sx = cx + i * 25, sy = cy - 13, on = u === v.view.me, hp = hpOf('me', u), dead = hp <= 0, r = Math.max(0, hp / u.max);
+      rrect(g, sx, sy, 22, 22, 3, on && !dead ? acc : '#08111e');
+      rrect(g, sx + 1, sy + 1, 20, 20, 2, dead ? '#121a26' : '#1a2c46');
+      g.alpha(dead ? 0.3 : 1, () => g.clip(sx + 1, sy + 1, 20, 20, () => drawPortrait(g, artOf(u), sx + 1, sy + 1, 20, false, 40)));   // 얼굴 전체(40칸 → 20칸)
       if (dead) for (let k = 0; k < 9; k++) { g.rect(sx + 6 + k, sy + 6 + k, 2, 1, '#ff6a5a'); g.rect(sx + 14 - k, sy + 6 + k, 2, 1, '#ff6a5a'); }
-      g.rect(sx + 1, sy + fs + 1, fs - 2, 2, '#08111e');
-      if (!dead) g.rect(sx + 1, sy + fs + 1, Math.max(1, Math.round((fs - 2) * r)), 2, hpCol(r));
+      g.rect(sx + 1, sy + 23, 20, 2, '#08111e');
+      if (!dead) g.rect(sx + 1, sy + 23, Math.max(1, Math.round(20 * r)), 2, hpCol(r));
     });
-    if (small && (bound || wait)) { const lw = 13 + g.textW(lab); rrect(g, Math.round(x + (w - lw - 8) / 2), cy - 7, lw + 8, 13, 3, 'rgba(6,10,20,0.86)'); g.img(ic, Math.round(x + (w - lw) / 2), cy - 6); g.text(lab, Math.round(x + (w - lw) / 2) + 13, cy - 6, { color: st.text }); }
     // 상대 남은 칸은 상대 체력판 윗줄로 옮김(2026-10-16 사용자)
     if (fn) input.hit(id, x, y, w, h, fn, 4);
   },
