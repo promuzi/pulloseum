@@ -6,6 +6,7 @@
 
 ### 2026-11-04 (375) — 친구 서버에 올림(363~374)
 - 사용자 '6번: 다 점검하고 올리자'. 올리기 전 점검에서 빠진 것 하나: 밤샘에 새로 켠 엠버캡 · 드레이크캑터 · 프로스트드레이크를 이미 가진 사람은 고유 기술을 못 받음 → `logic.js` `SAVE_VER` 8 → 9 · 8 → 9 단계 = 5 → 6과 같은 일(그 단계까지의 고유 기술을 빈 칸 → 보관함으로 · 드라코프루트는 새 설계라도 기술 id가 같아 그대로). 옛 판처럼 고유 기술을 지운 네 종으로 미리 돌려 봄 = 여섯씩 받음.
+- 올림: 판 `24ce597c`(되돌리기 = `e2361865` · `/api/config` save 9 · `pagecheck` 빠진 그림 0 · 오류 0). 첫 판 `748db996`에서 불씨 아이콘 두 배 그림(`sum_ember_*_b` 22칸)이 빠져 더해 다시 올림. 효과음 판 = `/v2/sfxpick`. 검토판 `?scene=framelab`은 종 공통 넷 · 새 그림 아홉 · 비교로 스무 장(한 화면).
 - 점검: `prodcheck`(계정 5 · 실제 저장 미리 돌려 보기 문제 없음 · 백업 `server/data/backup/prod-export-20261104-1126.json` 이 기기에만) · `cf/test_cf.mjs` 55/55(첫 번째는 28/30 — 3:3 시작 알림 늦음, 알려진 일) · species_v2 241 · status · cards · loadout · edgecases · devices 60 · migrate_v6 · savesafety 11 · roomsave · resumefresh · backaudit 넘침 0 · 출시 점검 21가지 = [출시점검_2026-11-04.md](출시점검_2026-11-04.md)(막는 것 없음 · Kenney CC0 원문 `assets/v2/sfx_cand/LICENSE-Kenney-CC0.txt`).
 
 ### 2026-11-04 (374) — 수치: 잔상 햇빛 2 · 아침이에요. 작은 공격 · 드라코프루트 선공 스택 +1

@@ -57,9 +57,9 @@ const cardlab = {
   },
 };
 
-// 기술 종 테두리 검토판(개발용 · ?scene=framelab — 2026-11-04): 속성 공통 일곱(둥근 테) · 종 공통 넷 · 고유(종 + 별) · 비교(기본기 · 변이)
-const FRAME_LAB = ['f_ember', 'w_gun', 'g_leaf', 'e_rock', 'a_breeze', 'b_static', 'i_frost', 'j_scent', 'j_wrap', 'j_spines', 'j_spore',
-  'u_blade_3b', 'u_emcap_1', 'u_drake_3', 'u_draco_3b', 'u_fdrake_1', 'u_petal_1', 'u_spore_1', 'u_volt_1', 'u_gale_1', 'u_toxi_1', 'u_jelly_1', 'u_thorn_1', 'basic', 'm_bite'];
+// 기술 종 테두리 검토판(개발용 · ?scene=framelab — 2026-11-04): 종 공통 넷 · 새 그림 고유 아홉(코덱스 11-04) · 다른 종 고유 셋 · 비교(속성 공통 둥근 테 · 기본기 · 변이) = 스무 장(한 화면)
+const FRAME_LAB = ['j_scent', 'j_wrap', 'j_spines', 'j_spore', 'u_draco_2b', 'u_draco_2', 'u_draco_3', 'u_drake_3c', 'u_drake_3b', 'u_emcap_2', 'u_emcap_2b', 'u_emcap_3', 'u_emcap_3b',
+  'u_blade_3b', 'u_petal_1', 'u_volt_1', 'f_ember', 'i_frost', 'basic', 'm_bite'];
 const framelab = {
   draw(app) {
     const { g, W } = app;
