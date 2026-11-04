@@ -57,9 +57,10 @@ const cardlab = {
   },
 };
 
-// 기술 카드 테두리 검토판(개발용 · ?scene=framelab — 2026-11-04 379 속성 우선): 속성 일곱 + 가지 · 종(속성 없는 종 공통) 넷 · 고유(별 — 속성 · 식물과 다른 속성 · 속성 없음 둘) · 기본기 둘 · 특수(보석) · 변이 = 스무 장(한 화면)
-const FRAME_LAB = ['f_ember', 'w_gun', 'g_leaf', 'e_rock', 'a_breeze', 'b_static', 'i_frost', 'br_sand', 'j_scent', 'j_wrap', 'j_spines', 'j_spore',
-  'u_emcap_2', 'u_blade_3b', 'u_drake_3c', 'u_frost_3c', 'basic', 'sun', 'sp_leech', 'm_bite'];
+// 기술 카드 테두리 검토판(개발용 · ?scene=framelab — 2026-11-04 379 속성 우선 · 382 변이): 속성 일곱 · 종(속성 없는 종 공통) 넷 · 고유(별 — 속성 · 식물과 다른 속성 · 속성 없음 둘) ·
+//  기본기 둘 · 특수(보석) · 변이 다섯(포식 · 무기 · 독성 · 포자 · 용족 — 속성 있는 변이 서리 발톱 포함) = 스물넉 장(270×600 한 화면)
+const FRAME_LAB = ['f_ember', 'w_gun', 'g_leaf', 'e_rock', 'a_breeze', 'b_static', 'i_frost', 'j_scent', 'j_wrap', 'j_spines', 'j_spore',
+  'u_emcap_2', 'u_blade_3b', 'u_drake_3c', 'u_frost_3c', 'basic', 'sun', 'sp_leech', 'm_bite', 'm_slash', 'm_acid', 'm_puff', 'm_breath', 'm_frostclaw'];
 const framelab = {
   draw(app) {
     const { g, W } = app;

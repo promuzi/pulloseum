@@ -4,7 +4,7 @@
 //  → '반대로 하자. 테두리는 속성이 우선. 그다음에 속성이 없는 걸 종 테두리고 … 기본테는 코덱스에게'(379):
 //  테두리 = 그 기술의 속성(el_* 일곱 — 속성 공통 · 가지 · 속성 있는 고유) → 속성이 없으면 종(ty_* 넷 — 종 공통 · 속성 없는 고유는 그 식물의 종)
 //   → 속성도 종도 없으면 기본 테(basic — 기본기 넷 · 특수 넷 · 쇠 띠, 못 자국은 '별로임'으로 빼고 다시 그림 v3) · 아래 가운데 표식 = 고유 별 · 특수 보석(drawMark)
-//   변이 · 패시브 카드 = 지금 테 그대로(skillcard.js — 변이 = 각진 테 · 패시브 = 점선 테)
+//   변이 카드(변이 기술 · 변이 패시브) = 그 변이 테(fm_* 다섯 — 382 '변이카드도 만들어봐' · '변이로 통일하는게 낫겠지?') · 3:3 교체 카드 = 들어올 식물의 속성 테 · 일반 패시브 = 점선 테 그대로(skillcard.js)
 //   바람 · 빙결 모서리는 게임 속성 색(보라 · 청록)으로 다시 칠함(코덱스 그림은 민트 · 하늘이라 바람이 빙결처럼 보임)
 //   버린 안 = 밤샘 365(고유 = 종 모서리를 그 식물 속성 색으로 다시 칠함 — 4종 × 7속성) · 370(종만 · 속성 공통은 둥근 테)
 //  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md · 기본 테와 보석은 v2 — FRAME_BASIC_PROMPT.md) → greycut 누끼 → itemconv 30칸 10색 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
@@ -14,9 +14,10 @@
 //   모서리 원본 = itemconv 30칸 10색 → 외톨이 한 칸 지움(tools/pixel/big/frameclean.py) · 15칸을 두 배로 키운 안은 꽃 · 덩굴 모양이 뭉개져 버림
 //   (카드 밖으로 튀어나오게는 안 함 — 꾹 눌러 보는 큰 카드 · 더미 펼침은 카드 크기 캔버스에 그려 바깥이 잘림)
 import { ELEMENT } from './palette.js';
-import { SPECIES, uniqueOf } from '../game/catalog.js';
+import { SPECIES, FORMS, uniqueOf } from '../game/catalog.js';
 
-export const FRAME_NAMES = ['el_fire', 'el_water', 'el_grass', 'el_earth', 'el_wind', 'el_bolt', 'el_ice', 'ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'basic'];
+export const FRAME_NAMES = ['el_fire', 'el_water', 'el_grass', 'el_earth', 'el_wind', 'el_bolt', 'el_ice', 'ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'basic',
+  'fm_predator', 'fm_weapon', 'fm_toxic', 'fm_spore', 'fm_dragon'];
 const RAW = {}, BUILT = new Map();
 const RECOLOR_EL = { el_wind: 'wind', el_ice: 'ice' };   // 코덱스 색(민트 · 하늘)이 게임 속성 색(바람 보라 · 빙결 청록)과 달라 다시 칠함
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -29,9 +30,12 @@ export async function loadFrames(base = '../assets/v2/frames/') {
 // 고유 기술 → 그 식물 키(기술 id 'u_<줄임>_…'의 줄임 → 종)
 const OWNER = (() => { const m = {}; for (const k of Object.keys(SPECIES)) { const c = uniqueOf(k, 0).split('_')[1]; if (c && !m[c]) m[c] = k; } return m; })();
 const ownerOf = sk => (sk.fx && SPECIES[sk.fx] ? sk.fx : OWNER[String(sk.id || '').split('_')[1]]) || null;
-// 그 기술의 테 이름(없으면 지금 테): 'el_속성' → 'ty_종' → 'basic'(기본기 · 특수 · 쉬기)
+// 그 기술의 테 이름(없으면 지금 테): 변이 카드 = 'fm_변이' → 'el_속성' → 'ty_종' → 'basic'(기본기 · 특수 · 쉬기)
+//  변이 카드(변이 기술 · 변이 패시브) = 속성과 상관없이 그 변이 테(2026-11-04 사용자 '변이도 속성이 있을 수 있는데 … 변이로 통일하는게 낫겠지?' — 변이 칸 · 판마다 횟수가 따로라 변이인지가 먼저 · 속성은 속성 배지로)
 export function frameKey(sk) {
-  if (!sk || sk.passive || sk.form) return null;
+  if (!sk) return null;
+  if (sk.form) return FORMS[sk.form] ? `fm_${sk.form}` : null;
+  if (sk.passive) return null;
   if (sk.el) return ELEMENT[sk.el] ? `el_${sk.el}` : null;
   if (sk.tier === 'u') { const sp = SPECIES[ownerOf(sk)]; return sp && sp.type ? `ty_${sp.type}` : 'basic'; }
   return sk.jong ? `ty_${sk.jong}` : 'basic';

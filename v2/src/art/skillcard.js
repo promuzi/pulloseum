@@ -181,27 +181,21 @@ const BADGE = {   // [속, 빛, 그늘] — 빛 = 연타 ×N 글자색
   barrier: { icon: 'fx_barrier', col: ['#4d9be6', '#8fd3ff', '#4d65b4'] },  // 보호막 = 새싹을 감싼 물방울 막(효과 칩과 같은 그림 — tools/pixel/big/fx_barrier_bubble.py · 전 = 얼음 눈꽃 · 전투의 둥근 막과 같은 뜻)
   heal: { icon: 'heal', col: ['#239063', '#91db69', '#165a4c'] },       // 초록
 };
-const WARM = ['#8a5a24', '#ffd890', '#a8743a'];   // 절반이 된 자세(주황 — 바뀐 걸 알게)
-// 오른쪽 위 수치(내용 = 2026-10-16 사용자 '%는 %, 고정값이면 그냥 숫자 · 공격은 검 · 방어는 방패 · 버프나 디버프 등은 비워 놔' 그대로):
-//  모양 = 2026-10-29 사용자가 고른 시안 ㉡ '바탕 없이' — 종류 아이콘(먹선 1칸) + 큰 숫자(먹선 3칸)만, 연타 ×N은 작게. 왼쪽 해에 닿을 만큼 길면 글자를 한 칸씩 줄임(maxW)
-//  전 = 검(가로 · 날 위 숫자 · 끝이 화살표처럼 뾰족) · 방패 · 알약 · 폭탄 + 알약 네 모양이 섞이고 '35×3' · '+50%'가 그림을 넓게 가렸음. 버린 시안 = 한 모양 꼬리표 ㉠ · 동전(결정 로그)
+// 오른쪽 위 수치(내용 = 2026-10-16 사용자 '%는 %, 고정값이면 그냥 숫자 · 공격은 검 · 방어는 방패 · 버프나 디버프 등은 비워 놔' 그대로) — 모양은 아래 statToken · pillToken
+//  지난 모양 = 10-29 시안 ㉡ '바탕 없이'(종류 아이콘 + 큰 숫자 — 11-04 그림 테 위에 숫자가 얹혀 '숫자를 아이콘안으로' → 원판) · 그 전 = 검 · 방패 · 알약 · 폭탄 네 모양 + '35×3'이 그림을 넓게 가렸음
 const splitHits = txt => { const m = /^(.+?)(×\d+)$/.exec(txt); return m && !txt.startsWith('×') ? [m[1], m[2]] : [txt, null]; };   // '35×3' → ['35', '×3'] · 방어 '×4'는 그대로
-// xr = 오른쪽 끝(이 칸 앞까지), cy = 가운데 줄(비용 숫자와 같은 줄), maxW = 왼쪽 해 오른쪽 끝까지 너비
-function statBadge(g, xr, cy, st, dim, maxW = 42) {
-  if (!st) return;
-  const B = BADGE[st.kind] || { icon: st.icon, col: st.col }, hi = (dim ? GEM.off : st.half ? WARM : st.col || B.col || GEM.off)[1];
-  const [main, sub] = splitHits(st.txt), SUB = sized('bold', 9), ic = B.icon || null, im = ic && icon(ic), sw = sub ? g.textW(sub, SUB) + 1 : 0, iw = im ? im.width + 1 : 0;
-  const font = ['value', 'bold', sized('bold', 10)].find(k => 1 + g.textW(main, k) + sw + iw <= maxW) || sized('bold', 10), gh = glyphH(font);
-  const mw = g.textW(main, font), x = Math.round(xr - 1 - mw - sw - iw);
-  g.c.imageSmoothingEnabled = false;
-  if (im) g.alpha(dim ? 0.55 : 1, () => { const L = Math.floor(im.height / 2); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.img(tinted(ic, C.ink), x + dx, cy - L + dy); g.img(im, x, cy - L); });   // 아이콘 둘레 먹선 1칸
-  g.text(main, x + iw, cy - Math.round(gh / 2), { font, color: dim ? '#c3c7d0' : '#ffffff', outline: C.ink, outlineW: 3 });
-  if (sub) g.text(sub, x + iw + mw + 1, cy - Math.round(gh / 2) + 4, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
+// 패시브 효과 수치(+16% 등) = 카드 색 알약 안 글자(같은 날 — 변이 패시브에 그림 테가 붙으며 글자만 테 위에 얹히던 것): xr = 오른쪽 끝 · cy = 가운데 줄
+function pillToken(g, xr, cy, st, dim) {
+  const [fill, hi, lo] = dim ? GEM.off : st.col, font = ['bold', sized('bold', 10), sized('bold', 9)].find(f => g.textW(st.txt, f) <= 24) || sized('bold', 9), tw = g.textW(st.txt, font), gh = glyphH(font);
+  const w = Math.max(17, Math.ceil(tw) + 8), x = Math.round(xr - w), y = cy - 7;
+  rrect(g, x, y, w, 15, 6, C.ink); rrect(g, x + 1, y + 1, w - 2, 13, 5, lo); rrect(g, x + 1, y, w - 2, 12, 5, fill);
+  g.rect(x + 4, y + 2, w - 8, 1, hexMix(fill, hi, 0.55));
+  g.text(st.txt, x + w / 2, cy - Math.round(gh / 2), { font, color: dim ? '#c3c7d0' : '#ffffff', align: 'center', outline: hexMix(lo, C.ink, 0.5), outlineW: 2 });
 }
 // 오른쪽 위 수치 = 아이콘 안 숫자(2026-11-04 사용자 '우측 상단 수치와 테두리가 안 겹치게 숫자를 아이콘안으로 옮겨'): 왼쪽 해(비용)와 짝인 원판 하나에 숫자
 //  종류 = 원판 색 + 모양(공격 = 원판을 가로지르는 검 · 광역 = 폭탄 심지 · 방어 = 방패꼴 · 회피 = 청록 원판 · 보호막 = 물방울 빛 · 회복 = 더하기) · 연타 ×N = 원판 바로 아래 작게
 //   (회피 원판 왼쪽 바람 줄은 '-15%'처럼 빼기로 보여 뺌)
-//  같은 자세 두 번째(절반) = 주황 원판 · 못 씀 = 회색. 패시브 효과 알약은 statBadge 그대로(전 = 아이콘 옆 숫자 — 숫자가 테 모서리 장식 위에 얹혀 지저분했음)
+//  같은 자세 두 번째(절반) = 주황 원판 · 못 씀 = 회색(전 = 아이콘 옆 숫자 — 숫자가 테 모서리 장식 위에 얹혀 지저분했음)
 const TOKEN = { pow: ['#c8402a', '#ffb08a', '#6a1c10'], bomb: ['#3e3546', '#9babb2', '#1a1420'], block: ['#56677e', '#d8e2ee', '#2c3646'], dodge: ['#0b8a8f', '#30e1b9', '#0b4e55'], barrier: ['#3f8be0', '#8fd3ff', '#2a4a9c'], heal: ['#239063', '#91db69', '#145440'] };
 const TOKEN_HALF = ['#c47a26', '#ffd890', '#6a3a10'];
 const TK_SWORD = [   // 원판을 가로지르는 검(21칸 — 가운데 (9, 9) = 원판 가운데): 왼쪽 위 = 칼끝 · 오른쪽 아래 = 날밑 · 손잡이(아이콘 sword를 뒤집어 늘림)
@@ -255,7 +249,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   const MF = sk.form && FORMS[sk.form], band = MF ? hexMix(MF.col, C.band, 0.72) : C.band;   // 변이 카드 = 이름 띠도 변이 색으로 물듦
   g.rect(ax, by, aw, bh, band);
   g.rect(ax, by, aw, 1, MF ? MF.light : sk.tier === 'u' && !sk.passive ? '#e0a830' : hexMix(frameCols(sk, o.lit)[0], C.band, 0.45));   // 개성 기술 = 금빛 줄(2026-10-22)
-  if (MF) {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점)
+  if (MF && !framed) {   // 테 위 가운데 변이 문장(아래로 뾰족한 작은 깃발 + 빛 점) — 변이 그림 테가 있으면 테가 변이를 보여 줘서 뺌(2026-11-04)
     const cx = x + (w >> 1), [fm, fh] = frameCols(sk, o.lit);
     for (const [dy, hw] of [[-1, 7], [0, 7], [1, 7], [2, 7], [3, 6], [4, 4], [5, 2]]) g.rect(cx - hw, y + dy, hw * 2, 1, C.ink);
     for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
@@ -280,9 +274,9 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   if (sk.passive && sk.lv > 1) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22): 그림 왼쪽 아래
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
-  let leftR = 20;   // 왼쪽 위 표시의 오른쪽 끝(카드 왼쪽에서 몇 칸) — 오른쪽 위 수치가 여기까지 비켜 섬
-  if (o.cd) leftR = cdDial(g, x, y, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
-  else if (sk.uses) leftR = usesDial(g, x, y, o.left != null ? o.left : sk.uses, sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
+  //  (오른쪽 위 원판은 자리가 정해져 있어 왼쪽 표시 폭을 재지 않음 — 모래시계 띠 · 보석 띠 셋도 카드 왼쪽에서 30칸 안)
+  if (o.cd) cdDial(g, x, y, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
+  else if (sk.uses) usesDial(g, x, y, o.left != null ? o.left : sk.uses, sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
   else if (sk.passive) {   // 패시브 카드: 비용 대신 카드 색 마름모 + 반짝이
     const L = sk.look || {}, ic = icon('sparkle');
     diamond(g, x + 9, y + 9, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
@@ -293,7 +287,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
   const st = statOf(sk, o);
-  if (st && st.kind === 'pill') statBadge(g, x + w - 2, y + 9, st, dim, w - 4 - leftR);   // 패시브 효과 알약(왼쪽 위 표시 오른쪽 끝 + 2칸까지)
+  if (st && st.kind === 'pill') pillToken(g, x + w - 3, y + 10, st, dim);   // 패시브 효과 = 카드 색 알약 안 글자
   else if (st) statToken(g, x + w - 12, y + 10, st, dim);   // 아이콘 안 숫자(왼쪽 해 원판과 짝 — 해 가운데 x + 10)
   cardMarks(g, x, y, w, sk, dim);
   if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
@@ -591,7 +585,7 @@ function cardBack(g, w, h, sk, o) {
 }
 // 패시브 카드 뒷면(2026-10-17 카드): 이름 · '일반 카드 · 패시브' 꼬리표 · 큰 수(앞면 수치) · 설명 줄 · 누가 쓰나
 function passiveBack(g, w, h, sk) {
-  const L = sk.look || {}, P = 14, cw = w - P * 2, wm = sk.icon && icon(sk.icon);
+  const L = sk.look || {}, P = 16, cw = w - P * 2, wm = sk.icon && icon(sk.icon);   // 여백 16 = 기술 뒷면과 같게(변이 패시브는 1배 그림 테 — 2026-11-04)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(sk.icon, L.light || '#d8f2ff'), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
   let y = 16;
   g.text(sk.name, P, y, { font: 'head', color: C.text });
@@ -695,15 +689,17 @@ export function renderSwapFront(u, w, h, BW, BH, k, art) {
   const S = BW / w, cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k);
   const c = cv.getContext('2d'), g = new Gfx(c), el = u && u.el, ax = 4, ay = 4, aw = w - 8, ah = ART_H;
   c.setTransform(k * S, 0, 0, k * S, 0, 0); c.imageSmoothingEnabled = false;
-  cardFrame(g, 0, 0, w, h, { el }, false);
+  const face = { el }, framed = hasFrame(face);   // 테 = 들어올 식물의 속성 모서리(2026-11-04 사용자 '교체 카드는 각 식물의 속성으로 일치시켜' — 전 = 속성 색 둥근 테)
+  cardFrame(g, 0, 0, w, h, face, false, true);
   g.vgrad(ax, ay, aw, ah, ['#1d3554', '#12233c', '#0b1628']);
   const s = Math.min(aw, ah) - 4, px = ax + Math.floor((aw - s) / 2), py = ay + ah - s;
   if (!(u && art && art(g, px, py, s, s))) g.text('?', w / 2, ay + Math.round((ah - glyphH('name')) / 2), { font: 'name', color: '#8ccfff', align: 'center' });
-  const by = ay + ah, bh = h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
+  const by = ay + ah - (framed ? 3 : 0), bh = h - 4 - by, gr = c.createLinearGradient(0, by - 12, 0, by);
   gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
   g.rect(ax, by, aw, bh, C.band); g.rect(ax, by, aw, 1, '#8ccfff');
-  const { lines, font, lh } = nameLines((u && u.name) || '교체', aw - 4), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (lines.length - 1) * lh - gh) / 2);
+  drawFrameArt(g, 0, 0, w, h, face, false);
+  const { lines, font, lh } = nameLines((u && u.name) || '교체', aw - (framed ? 10 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (framed ? 8 : 0) - (lines.length - 1) * lh - gh) / 2);
   lines.forEach((ln, i) => g.text(ln, w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (el && ELEMENT[el]) { const ic = icon(el); if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); } }
   g.disc(10, 10, 8, C.ink); g.disc(10, 10, 7, '#3d8fd6'); g.disc(10, 10, 6, '#1f5d9c');   // 엇갈린 두 화살표: 위 = 오른쪽 · 아래 = 왼쪽
