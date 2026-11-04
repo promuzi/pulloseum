@@ -4,6 +4,12 @@
 
 > 여기는 **v2(2026-10-14 전면 도트 재제작 ~)** 기록이다. 그 전 v1 시절(2026-06-15 ~ 09-11, 옛 `index.html`)은 [history/CHANGELOG-v1.md](history/CHANGELOG-v1.md)로 옮겼다(2026-10-25).
 
+### 2026-11-04 (400) — 친구 서버에 올림(393 ~ 399 + 브론즈 봇 세기) · 판 e97db363
+- 사용자 '순서대로 ㄱㄱ'(다음 할 일 1번 = 낮은 단계 봇 세기를 정하고 올리기). 세기는 클로드가 친구 서버 실측으로 정함: 보고서에 '1:1 대회 단계별' 표를 새로 넣어(`server/report.mjs` — 결과 기록엔 단계가 없어 같은 사람의 바로 앞 판 시작 기록에서 가져옴) 지난 30일(393 전 봇) 사람 쪽 승률 = 브론즈 66%(65판) · 실버 94% · 골드 100% · 플래티넘 100% · 다이아 94% · 마스터 100% · 풀로세움 90%(159판) · 지난 14일 = 브론즈만 17판 59%.
+  - → 실버 위 = 393 세기 그대로(사람이 거의 다 이겼음) · 브론즈만 393 전 세기: 손패 = 옛 방식(배운 기술 셋 + 평타 · 방어 · 회피 — 성체 기술 없음 · `fight.js` oldDeck · OLD_DECK_TIERS) + 머리 0.35 → 0.25(`aiOfTier`). `node tools/test/botstrength.mjs 100 --tiers 0`(새 `--tiers`) = 브론즈 70%(393 전 71% · 393 50% · 손패 품질 · 머리만 낮추면 56 ~ 59%까지). 실버 = 52%(393 전 54%). 시험 botdeck · botbrain · botpick · cards · edgecases · loadout 통과.
+- 올리기 전 점검: `prodcheck` = 실제 저장 미리 돌려 보기 문제 없음(계정 5 · 봇 판 4 끝까지 · 백업 이 기기) · `cf/test_cf.mjs` 서버 시험 55/55 · 로그인 쿠키 8 · 쿠폰 통과 · 출시 점검 4차(9 · 13 · 14 · 15 · 19 — `docs/출시점검_2026-11-04.md`).
+- 올림: wrangler `Success` · Current Version ID `e97db363` · 되돌리기 `678e4935` · `SAVE_VER` 9 그대로 · `RULES_VER` 19(진행 중이던 봇 판 · 친구 대결은 승패 없이 닫힘) · `pagecheck` 빠진 그림 0 · 오류 0 · 실패 요청 0.
+
 ### 2026-11-04 (399) — PVFX 뺌
 - 사용자 'pvfx는 빼자'(고친 예까지 본 뒤). 비교 · 고침 도구 `tools/shots/fxref.mjs` · `fxref_sheet.py` · `tools/pixel/big/pvfxmod.py`를 저장소에서 빼고, 받은 묶음 `tools/pixel/fx_ref`(25 MB)는 휴지통으로 · `.gitignore` 줄도 뺌. 남긴 것 = 장 그림 → MP4 `tools/shots/frames2mp4.mjs` · 자세 빈 줄 확인 `tools/shots/poselines.mjs`. 게임 코드에는 처음부터 안 들어갔음.
 
