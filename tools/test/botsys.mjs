@@ -5,7 +5,8 @@
 import { newGame, makePlant, evolve, upgrade } from '../../v2/src/game/logic.js';
 import { unitOf, makeRng, botPlant } from '../../v2/src/game/fight.js';
 import { makeBattle, playTurnVs, aiPick, REST, BRAIN } from '../../v2/src/battle/model.js';
-import { mustSkip, FX as FXS } from '../../v2/src/battle/status.js';
+import { mustSkip, FX as FXS, canUse } from '../../v2/src/battle/status.js';
+const canUseX = (u, t, foe) => canUse(u, t, u.energy, foe);
 import { SPECIES, SKILLS, uniquesOf, uniqueOf, bloomPool } from '../../v2/src/game/catalog.js';
 import { formCards, isSkillCard } from '../../v2/src/game/cards.js';
 import { CONCEPTS } from '../../v2/src/game/botdeck.js';
@@ -13,6 +14,30 @@ import { CONCEPTS } from '../../v2/src/game/botdeck.js';
 const argv = process.argv, cmd = argv[2], arg = (k, d) => { const i = argv.indexOf(k); return i > 0 ? argv[i + 1] : d; };
 const KEYS = Object.keys(SPECIES), STAGE = +arg('--stage', 2), GAMES = +arg('--games', 2);
 const pct = x => `${(100 * x).toFixed(1)}%`;
+
+// 도구가 쓰는 표 둘(생장마다 따로 — 2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠'): 단계 하나를 다시 재면 그 칸만 바꾸고 다른 단계 칸은 그대로 다시 씀
+//  playbook.js = PLAYBOOK_BY[단계] · botdeck_w.js = CARD_W_BY[단계](카드 몫) · CON_W_BY[단계](컨셉 무게 — 봇 성향)
+const STG = ['새싹', '성장기', '성체'];
+async function loadGen() {
+  const B = await import('../../v2/src/battle/playbook.js'), Wm = await import('../../v2/src/game/botdeck_w.js');
+  return { book: B.PLAYBOOK_BY ? structuredClone(B.PLAYBOOK_BY) : { 2: structuredClone(B.PLAYBOOK) }, bookMeta: structuredClone(B.PLAYBOOK_META || { 2: 'Lv6 대회 단계 6 몸 · 모든 종과 12판씩' }),
+    cardW: Wm.CARD_W_BY ? structuredClone(Wm.CARD_W_BY) : { 2: structuredClone(Wm.CARD_W) }, conW: structuredClone(Wm.CON_W_BY || {}), wMeta: structuredClone(Wm.W_META || { 2: { card: 'Lv6 대회 단계 6 몸 · 종마다 손패 60개 × 모든 종' } }) };
+}
+async function writeBook(by, meta, out = 'v2/src/battle/playbook.js') {
+  const { writeFileSync } = await import('node:fs');
+  const stages = Object.keys(by).map(Number).sort();
+  const block = st => `  ${st}: {   // ${STG[st]} — ${meta[st] || ''}\n` + Object.entries(by[st]).map(([k, L]) => `    ${k}: [\n${L.map(r => `      ${JSON.stringify(r)},   // ${nameOf(r.id)} — ${whenText(r.when)}`).join('\n')}\n    ],`).join('\n') + '\n  },';
+  const src = `// 종마다 쓰는 패턴(2026-11-04 봇 시스템 — 사용자 '운용에 관해 컨셉을 기준으로 들고가는 스킬과 패턴을 각각 식물별로 따로 적용해보자') · 생장마다 따로(2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠'):\n//  PLAYBOOK_BY[단계 0 새싹 · 1 성장기 · 2 성체][종] = [{ id: 기술, when: 조건, b: 점수 더하기, d: 시뮬레이션에서 오른 승률(%p) }] — 조건이 맞으면 봇 머리(model.js aiPick)가 그 기술 점수에 b를 더함(봇 식물 단계의 칸 · 없으면 성체 칸).\n//  node tools/test/botsys.mjs playbook --stage N 이 그 단계 칸을 다시 씀(그 종 그 단계까지 고유 기술 전부 손패 · 모든 종과) · 손으로 고치지 않음.\n//  조건: res 개수 칸 ≥ n · meal 먹은 준비 ≥ n · fxn 상대 겹 ≥ n · fx 상대 상태 있음 · nofx 상대 상태 없음 · harm 상대 상태이상 종류 ≥ n · fruit 열매 ≥ n · trap 덫 ≥ n ·\n//   foelow 상대 체력 몫 < x · melow 내 체력 몫 < x · nobell 아침 · 밤이 꺼짐 · sum 소환수 < n · always 쓸 수 있으면\nexport const PLAYBOOK_BY = {\n${stages.map(block).join('\n')}\n};\nexport const PLAYBOOK_META = ${JSON.stringify(meta)};\nexport const PLAYBOOK = PLAYBOOK_BY[2] || {};\n`;
+  writeFileSync(out, src);
+  console.log('썼어요:', out);
+}
+async function writeW(cardBy, conBy, meta, out = 'v2/src/game/botdeck_w.js') {
+  const { writeFileSync } = await import('node:fs');
+  const table = (by, what) => Object.keys(by).map(Number).sort().map(st => `  ${st}: {   // ${STG[st]} — ${(meta[st] && meta[st][what]) || ''}\n` + Object.entries(by[st]).map(([k, o]) => `    ${k}: ${JSON.stringify(o)},`).join('\n') + '\n  },').join('\n');
+  const src = `// 봇 손패 카드 값(2026-11-04 봇 시스템) — 시뮬레이션으로 잰 몫: 그 카드를 손패에 넣으면 승률이 몇 바뀌나(종마다 · 0.01 = 1%p) · 생장마다 따로(2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠').\n//  CARD_W_BY[단계 0 새싹 · 1 성장기 · 2 성체][종][카드] = node tools/test/botsys.mjs learn --stage N · CON_W_BY[단계][종][컨셉] = 컨셉(봇 성향 — 연계 · 공격 · 버티기 · 방해 · 속성) 무게 배수 = botsys.mjs concept --stage N.\n//  손으로 고치지 않음. 칸이 비어 있으면 손패 짜기는 카드 성격(botdeck.js cardInfo) · 종 역할 무게만으로 짬(카드 몫은 성체 칸을 빌려 씀).\nexport const CARD_W_BY = {\n${table(cardBy, 'card')}\n};\nexport const CON_W_BY = {\n${table(conBy, 'con')}\n};\nexport const W_META = ${JSON.stringify(meta)};\nexport const CARD_W = CARD_W_BY[2] || {};\n`;
+  writeFileSync(out, src);
+  console.log('썼어요:', out);
+}
 
 // 성체 손패(종 리그전과 같음 — 그 종 개성 기술 전부 + 평타 · 광합성)
 function plantOf(key, seed) {
@@ -118,10 +143,10 @@ if (cmd === 'learn') {
     W[k] = Object.fromEntries(cards.map((c, i) => [c, +beta[i].toFixed(3)]).filter(([, v]) => Math.abs(v) >= 0.005).sort((a, b) => b[1] - a[1]));
     console.log(`${SPECIES[k].name}: 손패 ${M}개 · 평균 승률 ${pct(rows.reduce((t, r) => t + r.y, 0) / M)} · ` + Object.entries(W[k]).map(([c, v]) => `${nameOf(c)} ${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}`).join(' · ') + ` (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
   }
-  if (!only) {
-    const body = Object.entries(W).map(([k, o]) => `  ${k}: ${JSON.stringify(o)},`).join('\n');
-    writeFileSync(out, `// 봇 손패 카드 값(2026-11-04 봇 시스템) — 시뮬레이션으로 잰 몫: 그 카드를 손패에 넣으면 승률이 몇 바뀌나(종마다 · 0.01 = 1%p).\n//  node tools/test/botsys.mjs learn 이 다시 씀(단계 ${STAGE} · 대회 단계 ${TIER} 몸 · 종마다 손패 ${M}개 × 모든 종) · 손으로 고치지 않음. 비어 있으면 손패 짜기는 카드 성격(botdeck.js cardInfo)만으로 짬.\nexport const CARD_W = {\n${body}\n};\n`);
-    console.log('썼어요:', out);
+  if (!only) {   // 이 단계 칸만 바꿔 씀(다른 단계 · 컨셉 무게는 그대로)
+    const G = await loadGen();
+    G.cardW[STAGE] = W; G.wMeta[STAGE] = { ...(G.wMeta[STAGE] || {}), card: `Lv6 대회 단계 ${TIER} 몸 · 종마다 손패 ${M}개 × 모든 종` };
+    await writeW(G.cardW, G.conW, G.wMeta, out);
   }
 }
 
@@ -162,7 +187,14 @@ if (cmd === 'playbook') {
   const N = +arg('--games', 12), only = arg('--key', null), MIN = +arg('--min', 0.015), Bv = +arg('--b', 0.6), out = arg('--out', 'v2/src/battle/playbook.js');
   const mk = (k, seed) => botPlant(makeRng(seed), STAGE, 6, TIER, { tier: TIER, concept: true, ivFloor: true, lvExact: true, key: k });
   const field = KEYS.map((k, i) => mk(k, 4000 + i * 17));
-  const handOf = k => { const p = mk(k, 8800 + KEYS.indexOf(k)); p.skills.battle = [...uniqIds(k), 'basic', 'sun']; return p; };
+  const handOf = k => {
+    const p = mk(k, 8800 + KEYS.indexOf(k));
+    if (STAGE >= 2) { p.skills.battle = [...uniqIds(k), 'basic', 'sun']; return p; }
+    const ids = uniqIds(k);   // 새싹 · 성장기 = 고유 기술 전부 + 짠 손패로 여섯(고유 하나 · 셋 + 평타 · 광합성만이면 손패가 실제보다 너무 작음 — 2026-11-05 새싹 쏜위드 0%)
+    for (const id of p.skills.battle) if (id && ids.length < 6 && !ids.includes(id)) ids.push(id);
+    p.skills.battle = ids;
+    return p;
+  };
   const evalBook = (k, book) => {
     const p = handOf(k), i0 = KEYS.indexOf(k);
     let w = 0, n = 0;
@@ -179,11 +211,10 @@ if (cmd === 'playbook') {
     if (cur.length) OUT[k] = cur;
     console.log(`${SPECIES[k].name}: 기준 ${pct(base)} → ${pct(curV)} · ` + (cur.length ? cur.map(r => `${nameOf(r.id)}(${whenText(r.when)}) +${r.d}`).join(' · ') : '바꿀 패턴 없음') + ` (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
   }
-  if (!only) {
-    const body = Object.entries(OUT).map(([k, L]) => `  ${k}: [\n${L.map(r => `    ${JSON.stringify(r)},   // ${nameOf(r.id)} — ${whenText(r.when)}`).join('\n')}\n  ],`).join('\n');
-    const src = `// 종마다 쓰는 패턴(2026-11-04 봇 시스템 — 사용자 '운용에 관해 컨셉을 기준으로 들고가는 스킬과 패턴을 각각 식물별로 따로 적용해보자'):\n//  { id: 기술, when: 조건, b: 점수 더하기, d: 시뮬레이션에서 오른 승률(%p) } — 조건이 맞으면 봇 머리(model.js aiPick)가 그 기술 점수에 b를 더함.\n//  node tools/test/botsys.mjs playbook 이 다시 씀(단계 ${STAGE} · 대회 단계 ${TIER} 몸 · 그 종 고유 기술 전부 손패 · 모든 종과 ${N}판씩) · 손으로 고치지 않음.\n//  조건: res 개수 칸 ≥ n · meal 먹은 준비 ≥ n · fxn 상대 겹 ≥ n · fx 상대 상태 있음 · nofx 상대 상태 없음 · harm 상대 상태이상 종류 ≥ n · fruit 열매 ≥ n · trap 덫 ≥ n ·\n//   foelow 상대 체력 몫 < x · melow 내 체력 몫 < x · nobell 아침 · 밤이 꺼짐 · sum 소환수 < n · always 쓸 수 있으면\nexport const PLAYBOOK = {\n${body}\n};\n`;
-    writeFileSync(out, src);
-    console.log('썼어요:', out);
+  if (!only) {   // 이 단계 칸만 바꿔 씀
+    const G = await loadGen();
+    G.book[STAGE] = OUT; G.bookMeta[STAGE] = `Lv6 대회 단계 ${TIER} 몸 · 모든 종과 ${N}판씩`;
+    await writeBook(G.book, G.bookMeta, out);
   }
 }
 
@@ -241,5 +272,99 @@ if (cmd === 'brain') {
       const rows = KEYS.map(k => ({ k, d: (win[k][0] - win[k][1]) / win[k][2] })).sort((a, b) => a.d - b.d);
       console.log('  종마다 새 머리로 바뀐 승률(%p): ' + rows.map(({ k, d }) => `${SPECIES[k].name} ${d >= 0 ? '+' : ''}${(100 * d).toFixed(0)}`).join(' · '));
     }
+  }
+}
+
+// 컨셉 무게(concept — 봇 성향, 2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠'): 그 단계에서 종마다 컨셉 다섯(연계 · 공격 · 버티기 · 방해 · 속성)으로 손패를 짜
+//  모든 종(짠 손패)과 붙여 컨셉마다 승률 → 무게 배수 = 1 + K × (그 컨셉 승률 − 컨셉 평균)(0.2 ~ 2.5 — 한 컨셉만 남기지 않음: 사용자 '같은 식물이어도 조금씩 다른 컨셉으로')
+//  → botdeck_w.js CON_W_BY[단계](손패 짜기가 종 역할 무게에 곱함)
+if (cmd === 'concept') {
+  const { buildDeck } = await import('../../v2/src/game/botdeck.js');
+  const M = +arg('--decks', 8), K = +arg('--k', 8), only = arg('--key', null);
+  const mk = (k, seed) => botPlant(makeRng(seed), STAGE, 6, TIER, { tier: TIER, concept: true, ivFloor: true, lvExact: true, key: k });
+  const field = KEYS.map((k, i) => mk(k, 4000 + i * 17)), CW = {}, t0 = Date.now();
+  for (const k of only ? [only] : KEYS) {
+    const i0 = KEYS.indexOf(k), body = mk(k, 8000 + i0), res = {};
+    for (const con of Object.keys(CONCEPTS)) {
+      let w = 0, n = 0;
+      const seen = new Set();
+      for (let d = 0; d < M; d++) {
+        const r = makeRng(20000 + i0 * 997 + d * 13), mutN = body.form ? 1 + (d % 4 > 1 ? 1 : 0) : 0;
+        const ids = buildDeck(r, { key: k, stage: STAGE, form: body.form, con, mutN }).ids;
+        seen.add(ids.slice().sort().join(','));
+        const p = structuredClone(body); p.skills.battle = [...ids]; while (p.skills.battle.length < 6) p.skills.battle.push(null);
+        field.forEach((f, j) => { if (j !== i0) { w += duel(p, f, 61000 + i0 * 1009 + j * 31 + d, aiPick, aiPick); n++; } });
+      }
+      res[con] = { wr: w / n, decks: seen.size };
+    }
+    const cons = Object.keys(res), mean = cons.reduce((t, c) => t + res[c].wr, 0) / cons.length;
+    CW[k] = Object.fromEntries(cons.map(c => [c, +Math.max(0.2, Math.min(2.5, 1 + K * (res[c].wr - mean))).toFixed(2)]));
+    console.log(`${SPECIES[k].name}: ` + cons.map(c => `${CONCEPTS[c]} ${pct(res[c].wr)}(${res[c].decks}) ×${CW[k][c]}`).join(' · ') + ` (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
+  }
+  if (!only) {
+    const G = await loadGen();
+    G.conW[STAGE] = CW; G.wMeta[STAGE] = { ...(G.wMeta[STAGE] || {}), con: `Lv6 대회 단계 ${TIER} 몸 · 컨셉마다 손패 ${M}개 × 모든 종 · 배수 = 1 + ${K} × (승률 − 평균)` };
+    await writeW(G.cardW, G.conW, G.wMeta);
+  }
+}
+
+if (cmd === 'rewrite') {   // 표 모양만 새로(값 그대로) — 옛 한 단계 모양 → 생장마다 모양
+  const G = await loadGen();
+  await writeBook(G.book, G.bookMeta); await writeW(G.cardW, G.conW, G.wMeta);
+}
+
+// 지는 기술 살피기(audit — 2026-11-05 사용자 '승률이 떨어지는 것도 사용을 잘 못한게 아닐지 분석하고 그래도 너무 별로인 스킬은 따로 정리'):
+//  그 단계 카드 몫이 --th(기본 −3%p) 아래인 고유 기술마다, 그 기술을 넣은 손패로 같은 판 · 같은 씨앗을 여러 쓰는 법으로 돌려 견줌 —
+//   지금 봇 · 안 씀(죽은 칸) · 쓸 수 있으면 늘 · 조건마다 '그때만'(패턴 후보) · 그 기술 대신 다른 카드로 짠 손패(바꿈)
+//  가장 좋은 쓰는 법이 지금보다 1.5%p 넘게 높으면 = 봇이 잘못 썼음(--apply 면 그 단계 패턴에 더함) · 가장 좋은 쓰는 법도 바꿈보다 2%p 넘게 낮으면 = 기술이 약함(아침 목록)
+if (cmd === 'audit') {
+  const { buildDeck } = await import('../../v2/src/game/botdeck.js');
+  const G = await loadGen();
+  const N = +arg('--games', 6), TH = +arg('--th', -0.03), only = (arg('--ids', '') || '').split(',').filter(Boolean), apply = argv.includes('--apply');
+  const mk = (k, seed) => botPlant(makeRng(seed), STAGE, 6, TIER, { tier: TIER, concept: true, ivFloor: true, lvExact: true, key: k });
+  const field = KEYS.map((k, i) => mk(k, 4000 + i * 17));
+  const Wt = G.cardW[STAGE] || {}, base = G.book[STAGE] || G.book[2] || {}, targets = [];
+  for (const k of KEYS) for (const [id, v] of Object.entries(Wt[k] || {})) if ((only.length ? only.includes(id) : v < TH) && uniqIds(k).includes(id)) targets.push({ k, id, v });
+  const rows = [], t0 = Date.now();
+  for (const { k, id, v } of targets) {
+    const i0 = KEYS.indexOf(k), body = mk(k, 8000 + i0), mutN = body.form ? 1 : 0;
+    // 그 기술을 꼭 넣고 짠 손패 ↔ 빼고 짠 손패(같은 컨셉 · 같은 씨앗 — 전엔 짠 손패 맨 끝 카드를 밀어내 엠버캡 손패가 공격 없이 망가졌음)
+    const con0 = buildDeck(makeRng(900 + i0), { key: k, stage: STAGE, form: body.form, mutN }).con;
+    const handX = buildDeck(makeRng(901 + i0), { key: k, stage: STAGE, form: body.form, mutN, con: con0, must: [id] }).ids;
+    const handR = buildDeck(makeRng(901 + i0), { key: k, stage: STAGE, form: body.form, mutN, con: con0, ban: [id] }).ids;
+    let used = 0, could = 0;
+    const baseK = (base[k] || []).filter(x => !(x.audit && x.id === id));   // 앞서 audit 가 더한 그 기술 규칙은 빼고 견줌(다시 잴 때)
+    const evalHand = (ids, extra, count = false) => {
+      const p = structuredClone(body); p.skills.battle = [...ids]; while (p.skills.battle.length < 6) p.skills.battle.push(null);
+      const book = { [k]: [...baseK, ...extra] };
+      const pa = (u, foe, r, c) => { const s = aiPick(u, foe, r, { ...c, book }); if (count) { if (u.kit.some(t => t.id === id && canUseX(u, t, foe))) { could++; if (s && s.id === id) used++; } } return s; };
+      let w = 0, n = 0;
+      for (let g = 0; g < N; g++) field.forEach((f, j) => { if (j === i0) return; w += duel(p, f, 71000 + i0 * 1009 + j * 31 + g * 7, pa, aiPick); n++; });
+      return w / n;
+    };
+    const wNow = evalHand(handX, [], true), wNever = evalHand(handX, [{ id, when: { k: 'always' }, b: -50 }]), wAlways = evalHand(handX, [{ id, when: { k: 'always' }, b: 3 }]);
+    let best = { w: Math.max(wNow, wAlways), when: wAlways > wNow ? { k: 'always' } : null, b: 3 };
+    for (const c of candidates(k).filter(c => c.id === id && c.when.k !== 'always')) {
+      const w = evalHand(handX, [{ id, when: { k: 'always' }, b: -50 }, { id, when: c.when, b: 53 }]);
+      if (w > best.w) best = { w, when: c.when, only: true };
+    }
+    const wRepl = evalHand(handR, []);
+    const misuse = best.w > wNow + 0.015, weak = best.w < wRepl - 0.02, harm = wNever > Math.max(best.w, wNow) + 0.015;   // harm = 어떻게 써도 안 쓰느니만 못함
+    rows.push({ k, id, v, wNow, wNever, wAlways, best, wRepl, useRate: could ? used / could : 0, misuse, weak, harm, games: N });
+    const tags = [misuse && '잘못 씀', harm && '쓰면 손해', weak && '약함'].filter(Boolean);
+    console.log(`${SPECIES[k].name} · ${nameOf(id)}(카드 몫 ${(100 * v).toFixed(1)}): 지금 ${pct(wNow)}(쓸 수 있을 때 ${pct(could ? used / could : 0)} 씀) · 안 씀 ${pct(wNever)} · 늘 ${pct(wAlways)} · 가장 좋은 ${pct(best.w)}${best.when ? `(${whenText(best.when)}${best.only ? '에만' : ''})` : '(지금대로)'} · 바꿈 ${pct(wRepl)} → ${tags.length ? tags.join(' · ') : '그대로'} (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
+  }
+  const { writeFileSync } = await import('node:fs');
+  writeFileSync(arg('--json', `tools/test/out/audit_stage${STAGE}.json`), JSON.stringify(rows, null, 1));
+  if (apply) {   // 살핀 기술마다 앞서 더한 audit 규칙을 지우고, 잘못 쓴 것만 다시 더함(그때만 · 아니면 안 씀 / 늘)
+    const book = G.book[STAGE] || (G.book[STAGE] = {});
+    for (const r of rows) if (book[r.k]) book[r.k] = book[r.k].filter(x => x.id !== r.id || x.audit !== 1);
+    for (const r of rows.filter(r => r.misuse && r.best.when)) {
+      const L = (book[r.k] ||= []);
+      if (r.best.only) L.push({ id: r.id, when: { k: 'always' }, b: -50, d: 0, audit: 1 }, { id: r.id, when: r.best.when, b: 53, d: +(100 * (r.best.w - r.wNow)).toFixed(1), audit: 1 });
+      else L.push({ id: r.id, when: r.best.when, b: 3, d: +(100 * (r.best.w - r.wNow)).toFixed(1), audit: 1 });
+      book[r.k] = L;
+    }
+    await writeBook(G.book, G.bookMeta);
   }
 }

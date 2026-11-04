@@ -1,0 +1,651 @@
+[
+ {
+  "k": "thorn",
+  "id": "u_thorn_2b",
+  "v": -0.062,
+  "wNow": 0.8210227272727273,
+  "wNever": 0.8323863636363636,
+  "wAlways": 0.17329545454545456,
+  "best": {
+   "w": 0.8210227272727273,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.7784090909090909,
+  "useRate": 0.03350515463917526,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "aqua",
+  "id": "u_aqua_2b",
+  "v": -0.061,
+  "wNow": 0.7670454545454546,
+  "wNever": 0.7642045454545454,
+  "wAlways": 0.7116477272727273,
+  "best": {
+   "w": 0.7670454545454546,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.7258522727272727,
+  "useRate": 0.016114180478821363,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "vine_water",
+  "id": "u_tide_2b",
+  "v": -0.032,
+  "wNow": 0.19886363636363635,
+  "wNever": 0.2159090909090909,
+  "wAlways": 0.10795454545454546,
+  "best": {
+   "w": 0.19886363636363635,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.20738636363636365,
+  "useRate": 0.22208359326263255,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "flower_fire",
+  "id": "u_blaze_1",
+  "v": -0.037,
+  "wNow": 0.5909090909090909,
+  "wNever": 0.6051136363636364,
+  "wAlways": 0.4147727272727273,
+  "best": {
+   "w": 0.5909090909090909,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5852272727272727,
+  "useRate": 0.18055555555555555,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "spore_cap",
+  "id": "u_spore_2b",
+  "v": -0.167,
+  "wNow": 0.9161931818181818,
+  "wNever": 0.9190340909090909,
+  "wAlways": 0.6292613636363636,
+  "best": {
+   "w": 0.9161931818181818,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.9147727272727273,
+  "useRate": 0.04435204435204435,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "frost_bell",
+  "id": "u_frost_2b",
+  "v": -0.054,
+  "wNow": 0.2784090909090909,
+  "wNever": 0.35511363636363635,
+  "wAlways": 0.07102272727272728,
+  "best": {
+   "w": 0.2784090909090909,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.39204545454545453,
+  "useRate": 0.17444717444717445,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "volt_vine",
+  "id": "u_volt_2b",
+  "v": -0.059,
+  "wNow": 0.8181818181818182,
+  "wNever": 0.8267045454545454,
+  "wAlways": 0.59375,
+  "best": {
+   "w": 0.8181818181818182,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.7244318181818182,
+  "useRate": 0.014563106796116505,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "stone_cap",
+  "id": "u_stone_2",
+  "v": -0.037,
+  "wNow": 0.3778409090909091,
+  "wNever": 0.4147727272727273,
+  "wAlways": 0.29545454545454547,
+  "best": {
+   "w": 0.3778409090909091,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.35795454545454547,
+  "useRate": 0.20512820512820512,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "jelly_cap",
+  "id": "u_jelly_2b",
+  "v": -0.056,
+  "wNow": 0.6477272727272727,
+  "wNever": 0.6534090909090909,
+  "wAlways": 0.15625,
+  "best": {
+   "w": 0.6477272727272727,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.6448863636363636,
+  "useRate": 0.035561005518087066,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "fang_trap",
+  "id": "u_fang_2",
+  "v": -0.06,
+  "wNow": 0.5568181818181818,
+  "wNever": 0.5710227272727273,
+  "wAlways": 0.0625,
+  "best": {
+   "w": 0.5568181818181818,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5568181818181818,
+  "useRate": 0.07135076252723312,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "blade_vine",
+  "id": "u_blade_1",
+  "v": -0.056,
+  "wNow": 0.5710227272727273,
+  "wNever": 0.5795454545454546,
+  "wAlways": 0.3778409090909091,
+  "best": {
+   "w": 0.5710227272727273,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5994318181818182,
+  "useRate": 0.023752969121140142,
+  "misuse": false,
+  "weak": true,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "toxi_cactus",
+  "id": "u_toxi_2b",
+  "v": -0.038,
+  "wNow": 0.48295454545454547,
+  "wNever": 0.48011363636363635,
+  "wAlways": 0.3181818181818182,
+  "best": {
+   "w": 0.48295454545454547,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5,
+  "useRate": 0.011904761904761904,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "draco_fruit",
+  "id": "u_draco_2b",
+  "v": -0.038,
+  "wNow": 0.5426136363636364,
+  "wNever": 0.5539772727272727,
+  "wAlways": 0.375,
+  "best": {
+   "w": 0.5909090909090909,
+   "when": {
+    "k": "melow",
+    "x": 0.5
+   },
+   "only": true
+  },
+  "wRepl": 0.53125,
+  "useRate": 0.04030823947836396,
+  "misuse": true,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "ember_cap",
+  "id": "u_emcap_2b",
+  "v": -0.044,
+  "wNow": 0.20170454545454544,
+  "wNever": 0.23295454545454544,
+  "wAlways": 0.005681818181818182,
+  "best": {
+   "w": 0.20170454545454544,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.2528409090909091,
+  "useRate": 0.04281949934123847,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "drake_cactus",
+  "id": "u_drake_1",
+  "v": -0.032,
+  "wNow": 0.7698863636363636,
+  "wNever": 0.7613636363636364,
+  "wAlways": 0.35795454545454547,
+  "best": {
+   "w": 0.7698863636363636,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.7642045454545454,
+  "useRate": 0.04299175500588928,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "drake_cactus",
+  "id": "u_drake_2b",
+  "v": -0.044,
+  "wNow": 0.75,
+  "wNever": 0.7613636363636364,
+  "wAlways": 0.4375,
+  "best": {
+   "w": 0.75,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.7869318181818182,
+  "useRate": 0.025945144551519646,
+  "misuse": false,
+  "weak": true,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "frost_drake",
+  "id": "u_fdrake_1",
+  "v": -0.047,
+  "wNow": 0.4119318181818182,
+  "wNever": 0.4786931818181818,
+  "wAlways": 0.009943181818181818,
+  "best": {
+   "w": 0.4119318181818182,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.35795454545454547,
+  "useRate": 0.11427120365667852,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "frost_drake",
+  "id": "u_fdrake_2b",
+  "v": -0.103,
+  "wNow": 0.3778409090909091,
+  "wNever": 0.5028409090909091,
+  "wAlways": 0.13068181818181818,
+  "best": {
+   "w": 0.3778409090909091,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.42329545454545453,
+  "useRate": 0.18600867678958785,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "gat_cap",
+  "id": "u_gat_2b",
+  "v": -0.035,
+  "wNow": 0.21875,
+  "wNever": 0.2471590909090909,
+  "wAlways": 0.06818181818181818,
+  "best": {
+   "w": 0.21875,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.26136363636363635,
+  "useRate": 0.13477431659249842,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "gat_cap",
+  "id": "u_gat_1",
+  "v": -0.037,
+  "wNow": 0.20454545454545456,
+  "wNever": 0.2471590909090909,
+  "wAlways": 0.05965909090909091,
+  "best": {
+   "w": 0.20454545454545456,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.26136363636363635,
+  "useRate": 0.17660728117738186,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "mask_vine",
+  "id": "u_tal_2",
+  "v": -0.046,
+  "wNow": 0.5113636363636364,
+  "wNever": 0.5284090909090909,
+  "wAlways": 0.4403409090909091,
+  "best": {
+   "w": 0.5113636363636364,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5113636363636364,
+  "useRate": 0.05580608793686584,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "drum_cactus",
+  "id": "u_drum_1",
+  "v": -0.043,
+  "wNow": 0.6278409090909091,
+  "wNever": 0.6960227272727273,
+  "wAlways": 0.5170454545454546,
+  "best": {
+   "w": 0.6278409090909091,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.6818181818181818,
+  "useRate": 0.5891511803114013,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "lantern_vine",
+  "id": "u_lamp_2",
+  "v": -0.07,
+  "wNow": 0.32954545454545453,
+  "wNever": 0.3352272727272727,
+  "wAlways": 0.21306818181818182,
+  "best": {
+   "w": 0.32954545454545453,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.32670454545454547,
+  "useRate": 0.26152980877390325,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "jar_cactus",
+  "id": "u_jar_2",
+  "v": -0.068,
+  "wNow": 0.5994318181818182,
+  "wNever": 0.59375,
+  "wAlways": 0.26136363636363635,
+  "best": {
+   "w": 0.5994318181818182,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5852272727272727,
+  "useRate": 0.03360935216755967,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "crown_cap",
+  "id": "u_crown_1",
+  "v": -0.033,
+  "wNow": 0.3153409090909091,
+  "wNever": 0.3153409090909091,
+  "wAlways": 0.2727272727272727,
+  "best": {
+   "w": 0.3153409090909091,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.4005681818181818,
+  "useRate": 0.49008498583569404,
+  "misuse": false,
+  "weak": true,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "gladi_cactus",
+  "id": "u_gladi_2",
+  "v": -0.031,
+  "wNow": 0.5710227272727273,
+  "wNever": 0.5909090909090909,
+  "wAlways": 0.056818181818181816,
+  "best": {
+   "w": 0.5710227272727273,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5909090909090909,
+  "useRate": 0.020948180815876516,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "gladi_cactus",
+  "id": "u_gladi_1",
+  "v": -0.037,
+  "wNow": 0.5909090909090909,
+  "wNever": 0.5880681818181818,
+  "wAlways": 0.29829545454545453,
+  "best": {
+   "w": 0.5909090909090909,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5965909090909091,
+  "useRate": 0.06887177163570457,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "astro_cap",
+  "id": "u_astro_2",
+  "v": -0.037,
+  "wNow": 0.26420454545454547,
+  "wNever": 0.3153409090909091,
+  "wAlways": 0,
+  "best": {
+   "w": 0.26420454545454547,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.3181818181818182,
+  "useRate": 0.035494557501183154,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "wizard_bell",
+  "id": "u_wizard_2b",
+  "v": -0.049,
+  "wNow": 0.4403409090909091,
+  "wNever": 0.44886363636363635,
+  "wAlways": 0.02556818181818182,
+  "best": {
+   "w": 0.4403409090909091,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5085227272727273,
+  "useRate": 0.018867924528301886,
+  "misuse": false,
+  "weak": true,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "wizard_bell",
+  "id": "u_wizard_1",
+  "v": -0.057,
+  "wNow": 0.5028409090909091,
+  "wNever": 0.4744318181818182,
+  "wAlways": 0.3693181818181818,
+  "best": {
+   "w": 0.5028409090909091,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5085227272727273,
+  "useRate": 0.26106800547695114,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "ninja_vine",
+  "id": "u_ninja_1",
+  "v": -0.031,
+  "wNow": 0.6051136363636364,
+  "wNever": 0.5738636363636364,
+  "wAlways": 0.21022727272727273,
+  "best": {
+   "w": 0.6051136363636364,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5852272727272727,
+  "useRate": 0.2098138747884941,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "diver_vine",
+  "id": "u_haenyeo_2",
+  "v": -0.038,
+  "wNow": 0.2727272727272727,
+  "wNever": 0.26420454545454547,
+  "wAlways": 0.014204545454545454,
+  "best": {
+   "w": 0.2727272727272727,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.26988636363636365,
+  "useRate": 0.10984455958549223,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "pirate_cactus",
+  "id": "u_pirate_2",
+  "v": -0.037,
+  "wNow": 0.44886363636363635,
+  "wNever": 0.4403409090909091,
+  "wAlways": 0.03409090909090909,
+  "best": {
+   "w": 0.44886363636363635,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.4460227272727273,
+  "useRate": 0.056553559547571526,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "dandel_aero",
+  "id": "u_dandel_2",
+  "v": -0.033,
+  "wNow": 0.23579545454545456,
+  "wNever": 0.2585227272727273,
+  "wAlways": 0.21022727272727273,
+  "best": {
+   "w": 0.23579545454545456,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.28125,
+  "useRate": 0.14958158995815898,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ }
+]

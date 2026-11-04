@@ -9,7 +9,7 @@
 import { SKILLS, SPECIES, uniquesOf, bloomPool } from './catalog.js';
 import { CARDS, formCards, isSkillCard } from './cards.js';
 import { WEAK } from '../battle/elem.js';
-import { CARD_W } from './botdeck_w.js';
+import { CARD_W_BY, CON_W_BY } from './botdeck_w.js';
 
 const BASIC = { basic: { id: 'basic', act: 'attack', power: 30, cost: 0, el: null }, guard: { id: 'guard', act: 'guard', cost: 0 }, evade: { id: 'evade', act: 'evade', cost: 0 }, sun: { id: 'sun', act: 'sun', cost: 0 } };
 const skillOf = id => BASIC[id] || SKILLS[id];
@@ -97,8 +97,10 @@ export const CONCEPTS = { combo: '연계', aggro: '공격', sustain: '버티기'
 const ROLE_CON = { tank: { sustain: 3, control: 1.5, combo: 2, aggro: 1, cover: 1 }, ltank: { sustain: 2.5, control: 1.5, combo: 2, aggro: 1.2, cover: 1 }, atk: { aggro: 3, combo: 2, cover: 1.5, control: 1, sustain: 0.6 }, fast: { aggro: 2.5, combo: 2, control: 1.5, cover: 1.2, sustain: 0.6 }, sup: { sustain: 2.5, combo: 2, control: 1.5, aggro: 1, cover: 1 }, dis: { control: 3, combo: 2, aggro: 1.2, cover: 1, sustain: 1 }, ctr: { control: 2, sustain: 2, combo: 2, aggro: 1.2, cover: 1 }, dot: { control: 2.5, sustain: 2, combo: 2, aggro: 1, cover: 1 }, drain: { combo: 3, aggro: 2, sustain: 1.5, control: 1, cover: 1 } };
 const CTRL = new Set(['stun', 'seal', 'chill', 'shock', 'atkDown', 'defDown', 'accDown', 'spdDown', 'critDown', 'taunt', 'gale', 'wet', 'root', 'dark']);
 const DOT = new Set(['burn', 'poison', 'bleed', 'spore', 'leech', 'shock']);
-function pickConcept(rng, key, pool) {
+function pickConcept(rng, key, pool, stage = 2) {
   const sp = SPECIES[key] || {}, W = { ...(ROLE_CON[sp.role] || { combo: 2, aggro: 2, control: 1, sustain: 1, cover: 1 }) };
+  const cw = (CON_W_BY[stage] || {})[key];   // 생장마다 잰 성향(botsys.mjs concept — 그 단계에서 이긴 컨셉에 무게 · 2026-11-05)
+  if (cw) for (const k of Object.keys(W)) W[k] *= cw[k] ?? 1;
   const has = f => pool.some(id => { const c = cardInfo(id, key); return c && f(c); });
   if (!has(c => c.isHeal)) W.sustain *= 0.4;
   if (!has(c => c.off)) W.cover = 0;
@@ -122,7 +124,7 @@ export function poolOf(key, stage, form) {
 // ③ 손패 값 — 카드 값의 합 + 연계 + 햇빛 곡선 + 컨셉
 const TURNS = 7;
 function cardVal(c, con, stats) {
-  const w = CARD_W[c.key] && CARD_W[c.key][c.id];
+  const T = CARD_W_BY[stats.stage] || CARD_W_BY[2] || {}, w = T[c.key] && T[c.key][c.id];   // 생장마다 잰 카드 몫(아직 안 잰 단계 = 성체 칸)
   let v = c.dmg ? c.pow + c.fx : c.fx * 1.2 + c.util;
   if (c.dmg) v += c.util * 0.5;
   if (c.uniq) v += 30;   // 고유 기술 = 그 종다운 손패의 가운데(사용자 '고유 스킬의 연계도가 높은 카드')
@@ -203,12 +205,13 @@ function legal(deck, full) {
 }
 const statsOf = (key, stage, p) => {
   const sp = SPECIES[key] || {}, b = sp.base || { hp: 220, atk: 30, def: 25, spd: 25 }, up = (p && p.up) || {};
-  return { def: b.def + (up.def || 0), spd: b.spd + (up.spd || 0), atk: b.atk + (up.atk || 0), hp: b.hp + 5 * (up.hp || 0), avgSpd: 26, regen: 1 + 0.5 * Math.floor((up.sunRegen || 0) / 4), sunMax: 8 + Math.floor((up.sunMax || 0) / 3) };
+  return { stage, def: b.def + (up.def || 0), spd: b.spd + (up.spd || 0), atk: b.atk + (up.atk || 0), hp: b.hp + 5 * (up.hp || 0), avgSpd: 26, regen: 1 + 0.5 * Math.floor((up.sunRegen || 0) / 4), sunMax: 8 + Math.floor((up.sunMax || 0) / 3) };
 };
-// 손패 하나 짜기: q = 손패 솜씨(0~1 — 대회 단계가 낮으면 일부를 아무렇게나) · con = 컨셉(없으면 뽑음) · mutN = 변이 기술 카드 장 수(변이 봇)
-export function buildDeck(rng, { key, stage, form = null, p = null, q = 1, con = null, mutN = null }) {
-  const pool = poolOf(key, stage, form).filter(id => cardInfo(id, key)), stats = statsOf(key, stage, p);
-  con = con || pickConcept(rng, key, pool);
+// 손패 하나 짜기: q = 손패 솜씨(0~1 — 대회 단계가 낮으면 일부를 아무렇게나) · con = 컨셉(없으면 뽑음) · mutN = 변이 기술 카드 장 수(변이 봇) ·
+//  ban = 빼고 짤 카드 · must = 꼭 넣고 짤 카드(둘 다 시험 도구 — botsys.mjs audit: 그 기술을 넣은 손패 ↔ 뺀 손패를 같은 짜임으로 견줌)
+export function buildDeck(rng, { key, stage, form = null, p = null, q = 1, con = null, mutN = null, ban = null, must = null }) {
+  const pool = poolOf(key, stage, form).filter(id => cardInfo(id, key) && !(ban && ban.includes(id))), stats = statsOf(key, stage, p);
+  con = con || pickConcept(rng, key, pool, stage);
   const noise = new Map(pool.map(id => [id, 1 + (rng() - 0.5) * 0.3]));   // 같은 컨셉도 판마다 조금씩
   const all = pool.map(id => cardInfo(id, key));
   const val = deck => deckScore(deck, con, stats) + deck.reduce((t, c) => t + (noise.get(c.id) - 1) * 60, 0);
@@ -219,6 +222,8 @@ export function buildDeck(rng, { key, stage, form = null, p = null, q = 1, con =
   // 방어패 한 장(어울리는 것)
   const defs = all.filter(c => c.isDef && !c.mut).sort((a, b) => defFit(b, stats) * noise.get(b.id) - defFit(a, stats) * noise.get(a.id));
   if (defs.length) deck.push(defs[0]);
+  const keep = new Set(must || []);
+  for (const id of keep) { const c = all.find(x => x.id === id); if (!c || deck.includes(c)) continue; if (c.isDef) deck = deck.filter(x => !x.isDef || x.mut); deck.push(c); }   // 꼭 넣을 카드(방어패면 고른 방어패 대신)
   // 나머지: 한 장씩 손패 값이 가장 크게 느는 카드(제약 안에서)
   const rest = all.filter(c => !c.mut && !c.isDef);
   while (deck.length < 6) {
@@ -235,7 +240,7 @@ export function buildDeck(rng, { key, stage, form = null, p = null, q = 1, con =
   }
   // 고쳐 보기: 한 장씩 바꿔 값이 오르고 제약을 다 지키면 바꿈(두 바퀴)
   for (let round = 0; round < 2; round++) for (let i = 0; i < deck.length; i++) {
-    if (deck[i].mut) continue;
+    if (deck[i].mut || keep.has(deck[i].id)) continue;
     let cur = legal(deck, true) ? val(deck) : -Infinity;
     for (const c of all) {
       if (deck.includes(c) || c.mut) continue;
@@ -247,7 +252,7 @@ export function buildDeck(rng, { key, stage, form = null, p = null, q = 1, con =
   }
   // 서툰 봇(대회 단계가 낮음): 몇 장을 배울 수 있는 아무 카드로(방어패 한 장 · 변이 카드는 그대로)
   if (q < 1) for (let i = 0; i < deck.length; i++) {
-    if (deck[i].isDef || deck[i].mut || rng() < q) continue;
+    if (deck[i].isDef || deck[i].mut || keep.has(deck[i].id) || rng() < q) continue;
     const alt = rest.filter(c => !deck.includes(c));
     for (let k = 0; k < 6 && alt.length; k++) { const c = alt[Math.floor(rng() * alt.length)], d2 = deck.slice(); d2[i] = c; if (legal(d2, true)) { deck = d2; break; } }
   }

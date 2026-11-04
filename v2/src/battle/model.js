@@ -2,14 +2,14 @@
 // 계산은 rules.js(순수 함수·씨앗 난수 하나)에 맡기고 여기선 판을 차리고 한 턴을 돌린다. 화면 무관(헤드리스 시험 가능).
 import { makeRng, resolveTurn, baseDamage, hitTable, initiativeChance, guardDefMult, RULES } from './rules.js';
 import { formMult } from './matchup.js';
-import { SKILLS as CAT_SKILLS, SPECIES, SPECIES_V2, uniquesOf } from '../game/catalog.js';
+import { SKILLS as CAT_SKILLS, SPECIES, SPECIES_V2, uniquesOf, STAGE_KEY } from '../game/catalog.js';
 import { caveSync, orbInit, dynAct, echoK, DYN, liveSkill, sporeDmg } from './devices.js';
 import { canUse, mustSkip, noEnergy, endTurn, expire, summonTurn, has, FX, useCount, payEnergy, HARM_IDS, FRUIT, RULES_FX, defK, atkK, evadeK, effSpd, usesLeft, givesFx } from './status.js';
 const STAT_UPS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign > 0), STAT_DOWNS = Object.keys(FX).filter(k => FX[k].stat && FX[k].sign < 0);
 
 // 상성 = battle/elem.js(2026-11-04 옮김 — 포자 시간차 공격도 씀)
 import { elemMult } from './elem.js';
-import { PLAYBOOK } from './playbook.js';
+import { PLAYBOOK_BY } from './playbook.js';
 export { elemMult };
 // 한 번 칠 때 배율 = 속성 상성 × 변이 상성(2026-10-17 — 변이끼리 · 변이 ↔ 속성 · 무기 종류)
 export const hitMult = (u, d, s) => elemMult(s && s.el, d.el) * formMult(u, d, s);
@@ -500,7 +500,9 @@ export function ruleOk(w, u, foe) {
     default: return false;
   }
 }
-export const playBonus = (u, foe, s, book = PLAYBOOK) => { const L = book[u.key]; if (!L) return 0; let b = 0; for (const r of L) if (r.id === s.id && ruleOk(r.when, u, foe)) b += r.b; return b; };
+// 생장마다 따로(2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠') = 봇 식물 단계의 칸 · 아직 안 잰 단계는 성체 칸
+export const bookOf = u => { const i = STAGE_KEY.indexOf(u && u.stage); return PLAYBOOK_BY[i < 0 ? 2 : i] || PLAYBOOK_BY[2] || {}; };
+export const playBonus = (u, foe, s, book = bookOf(u)) => { const L = book[u.key]; if (!L) return 0; let b = 0; for (const r of L) if (r.id === s.id && ruleOk(r.when, u, foe)) b += r.b; return b; };
 // 점수 들여다보기(시험 · 도구용 — tools/test/botsys.mjs): 쓸 수 있는 기술마다 지금 점수 · 다음 턴 몫
 export function aiScores(u, foe, ctx = {}) {
   const ok = u.kit.filter(s => canUse(u, s, u.energy, foe)), C = brainCtx(u, foe, ok, ctx);
@@ -511,7 +513,7 @@ export function aiPick(u, foe, rng, ctx = {}) {
   if (!ok.length) return BLOCKED;
   const iq = ctx.iq ?? u.ai ?? 0.5, C = brainCtx(u, foe, ok, ctx);
   const pk = Math.max(0, Math.min(1, (iq - 0.3) / 0.6));   // 종마다 패턴은 머리 좋음만큼(브론즈 0.35 = 거의 안 씀 · 풀로세움 0.95 = 다) — 낮은 단계 봇은 서툴게
-  const sc = ok.map(s => scoreOf(u, foe, s, C) + (C.look ? nextBest(u, foe, s, C) : 0) + pk * playBonus(u, foe, s, ctx.book || PLAYBOOK));
+  const sc = ok.map(s => scoreOf(u, foe, s, C) + (C.look ? nextBest(u, foe, s, C) : 0) + pk * playBonus(u, foe, s, ctx.book || bookOf(u)));
   const top = Math.max(...sc), temp = 0.15 + (1 - iq) * 0.85;
   const w = sc.map(v => Math.exp((v - top) / temp));
   let r = rng() * w.reduce((a, b) => a + b, 0), i = 0;

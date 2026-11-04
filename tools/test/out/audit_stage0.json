@@ -1,0 +1,116 @@
+[
+ {
+  "k": "thorn",
+  "id": "u_thorn_1",
+  "v": -0.041,
+  "wNow": 0.3409090909090909,
+  "wNever": 0.36079545454545453,
+  "wAlways": 0.019886363636363636,
+  "best": {
+   "w": 0.3409090909090909,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.3494318181818182,
+  "useRate": 0.06764574988874054,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "blade_vine",
+  "id": "u_blade_1",
+  "v": -0.16,
+  "wNow": 0.4602272727272727,
+  "wNever": 0.6221590909090909,
+  "wAlways": 0.24431818181818182,
+  "best": {
+   "w": 0.4602272727272727,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.6079545454545454,
+  "useRate": 0.1299927378358751,
+  "misuse": false,
+  "weak": true,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "ember_cap",
+  "id": "u_emcap_1",
+  "v": -0.05,
+  "wNow": 0.45170454545454547,
+  "wNever": 0.4289772727272727,
+  "wAlways": 0.20738636363636365,
+  "best": {
+   "w": 0.45170454545454547,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.4403409090909091,
+  "useRate": 0.19724770642201836,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "drake_cactus",
+  "id": "u_drake_1",
+  "v": -0.047,
+  "wNow": 0.7301136363636364,
+  "wNever": 0.7045454545454546,
+  "wAlways": 0.41761363636363635,
+  "best": {
+   "w": 0.7301136363636364,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.7045454545454546,
+  "useRate": 0.12147716229348883,
+  "misuse": false,
+  "weak": false,
+  "harm": false,
+  "games": 8
+ },
+ {
+  "k": "gumiho_bloom",
+  "id": "u_gumiho_1",
+  "v": -0.033,
+  "wNow": 0.48863636363636365,
+  "wNever": 0.5284090909090909,
+  "wAlways": 0.3721590909090909,
+  "best": {
+   "w": 0.48863636363636365,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.5,
+  "useRate": 0.304837364470392,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ },
+ {
+  "k": "dandel_aero",
+  "id": "u_dandel_1",
+  "v": -0.075,
+  "wNow": 0.3039772727272727,
+  "wNever": 0.35795454545454547,
+  "wAlways": 0.08238636363636363,
+  "best": {
+   "w": 0.3039772727272727,
+   "when": null,
+   "b": 3
+  },
+  "wRepl": 0.3068181818181818,
+  "useRate": 0.1423064567940893,
+  "misuse": false,
+  "weak": false,
+  "harm": true,
+  "games": 8
+ }
+]
