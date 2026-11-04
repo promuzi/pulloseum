@@ -46,6 +46,14 @@ export const SHOTS = [
   ['03_home_rank_long', 'home', {}, { tour: { tier: '플래티넘', name: '무제한 플래티넘', pts: 30, round: '4강', wins: 3, losses: 3, bestOf: 7 } }],   // 가장 긴 리그 · 단계 이름 + 7판 칸 가득
   ['03_home_swap3', 'home', { modes: true, mode: 'swap3' }],
   ['03_home_swap3_card', 'home', { mode: 'swap3' }],
+  // 형식 × 생장 리그 × 상대(2026-11-05) — 넘는 식물(대표 식물 = 성체) 경고 · 3:3 새싹(팀에 성체 · 성장기) · 친구 대결 · 짧은 화면
+  ['03_home_modes_grow', 'home', { modes: true, lg: 'growing' }],
+  ['03_home_modes_swap3_sprout', 'home', { modes: true, mode: 'swap3', lg: 'sprout' }],
+  ['03_home_modes_pvp', 'home', { modes: true, mode: 'pvp' }],
+  ['03_home_modes_pvp3', 'home', { modes: true, mode: 'pvp' }, { mode: 'swap3', league: 'growing' }],
+  ['03_home_pvp_card', 'home', { mode: 'pvp' }, { league: 'growing' }],
+  ['03_home_swap3_card_grow', 'home', { mode: 'swap3', lg: 'growing' }],
+  ['03_home_modes_short', 'home', { modes: true, mode: 'swap3' }, { W: 270, H: 480 }],
   ['03_home_focus', 'home', { focus: true }],
   ['04_bag', 'bag', {}, { seedsAdd: SEEDS_MIX }],   // 종자 = 카드 셋씩 줄 · 정렬 줄(2026-10-22)
   ['04_bag_sort_rare', 'bag', { sort: 'rare' }, { seedsAdd: SEEDS_MIX }],
@@ -189,6 +197,10 @@ export const SHOTS = [
   ['14_room_lobby', 'room', { demo: 'lobby' }],
   ['14_room_in', 'room', { demo: 'in' }],
   ['14_room_in3', 'room', { demo: 'in3' }],   // 3:3 교체전 방(내 팀 셋)
+  ['14_room_in_grow', 'room', { demo: 'in', lg: 'growing' }],   // 방장 = [1:1][3:3] · [새싹][성장기][성체] 한 줄(2026-11-05)
+  ['14_room_lobby3', 'room', { demo: 'lobby' }, { mode: 'swap3', league: 'growing' }],   // 로비 = 홈에서 고른 형식 · 리그 + 그 리그에 맞는 팀
+  ['14_room_lobby_none', 'room', { demo: 'lobby' }, { mode: 'swap3', league: 'sprout' }],   // 새싹 3:3 = 새싹이 둘뿐(못 만듦 글)
+  ['14_teampick_sprout', 'home', { modes: true, mode: 'swap3' }, { league: 'sprout', teampick: { sel: [1, 2], lg: 'sprout' } }],   // 새싹 리그 = 넘는 식물 흐리게
   ['14_teampick', 'home', { modes: true, mode: 'swap3' }, { teampick: { sel: [0, 2] } }],   // 3:3 팀 고르기 창(2026-10-18 — 홈 · 친구 방 공용)
   ['14_teampick_full', 'room', { demo: 'in3' }, { teampick: { sel: [1, 0, 3] } }],
   ['14_teampick_lift', 'home', { modes: true, mode: 'swap3' }, { teampick: { sel: [1, 0, 3], lift: 1 } }],   // 위 칸 들어 올림 = 자리 바꾸기(2026-10-22)

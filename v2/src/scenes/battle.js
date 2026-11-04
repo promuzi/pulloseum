@@ -13,7 +13,7 @@ import { listOf, mustSkip, canUse, canSwitch, lockOf, apply as applyFx, usesLeft
 import { resLine, FIELD, RES_ICON, summonAdd } from '../battle/devices.js';
 import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.js';
 import { ELEMENT } from '../art/palette.js';
-import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
+import { FORMS, formSkills, SKILLS, LEAGUES } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
 import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, drawCard, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
 import { hasFrame } from '../art/frames.js';
@@ -1465,9 +1465,10 @@ export const battle = {
     if (live && canFlag) app.input.hit('bt_flag', 4, 3, 20, 18, () => this.forfeit(app), 0);
     const tb = btnBody(g, 28, 3, 38, 18, T.btn.second, true);
     g.textMid(`${v.turn}턴`, 47, tb.top + tb.inner / 2, { font: 'bold', color: T.btn.second.text, align: 'center' });
-    if (this.net === 'pvp') {
-      g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 대결') + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
-    } else if (this.mode === 'swap3') g.text('3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });
+    if (this.net === 'pvp') {   // 친구 대결 = 형식 · 생장 리그(방) · 방 코드(2026-11-05)
+      const rv = app.room && app.room.view, lg = rv && LEAGUES[rv.league] ? ` · ${LEAGUES[rv.league].short}` : '';
+      g.text((this.mode === 'swap3' ? '친구 3:3' : '친구 1:1') + lg + (this.code ? ` · ${this.code}` : ''), W / 2, 6, { color: T.text.main, align: 'center' });
+    } else if (this.mode === 'swap3') g.text((I && I.title) || '3:3 교체전', W / 2, 6, { color: T.text.main, align: 'center' });   // 서버 제목 = '3:3 교체전 · 성장기'
     else {
       const title = I ? I.title : (this.p.title || '새싹 브론즈 IV · 예선'), wins = I ? I.wins : this.p.w != null ? +this.p.w : 1, losses = I ? I.losses : this.p.l != null ? +this.p.l : 0, nB = (I && I.bestOf) || +this.p.nB || 5;   // 7판(플래티넘부터 — 2026-10-22) · 촬영 = p.title · p.nB · p.w · p.l
       //  제목 = 턴 상자(28~66) 바로 옆에 왼쪽 정렬(2026-10-23 사용자 "1턴 옆의 글자를 왼쪽 정렬로 리그를 당겨") · 판 네모 = 크게 · 이긴 판 금색 ✓ · 진 판 빨강 ✕

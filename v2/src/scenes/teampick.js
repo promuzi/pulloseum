@@ -2,13 +2,13 @@
 //  친구 방 목록은 식물이 많으면 화면 밖으로 넘쳐 '이 팀으로' 단추가 안 보였음). 홈 · 친구 방이 같이 씀 — 팀 정의는 하나(setTeam).
 //  위 = 고른 셋(1 = 먼저 나감 · 칸을 누르면 빠짐) · 가운데 = 내 식물 두 줄 칸(얼굴 · 이름 · 별 · 단계 Lv · 속성 — 즐겨찾기 먼저, 끌어 넘김)
 //  누르면 빈 순서로 들어가고 다시 누르면 빠짐 · 아래 = 닫기 · '이 팀으로'(셋일 때)
-//  app.teampick = { sel: [uid…], sy, maxY, onOk(uids) }
+//  app.teampick = { sel: [uid…], sy, maxY, onOk(uids), lg } — lg = 생장 리그(2026-11-05): 그 단계를 넘는 식물은 흐리게 · 누르면 까닭만(넣지 않음)
 import { button } from '../art/ui.js';
 import { icon } from '../art/icons.js';
 import { drawPortrait, bigKey } from '../art/sprites.js';
 import { T, holo } from '../art/theme.js';
 import { miniStars } from './common.js';
-import { SPECIES } from '../game/catalog.js';
+import { SPECIES, LEAGUES } from '../game/catalog.js';
 import { stageKey, stageName, stars, lvOf } from '../game/view.js';
 import { sfx } from '../core/sound.js';
 import { glyphH, sized } from '../core/text.js';
@@ -22,9 +22,9 @@ const fitFont = (g, str, base, room, min) => { if (g.textW(str, base) <= room) r
 const FONT_SIZE = { body: 11, bold: 11 };
 
 const ON = { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' }, NUM = ['#f0be7d', '#7cf0a0', '#7cf0a0'];
-export function openTeamPick(app, team, onOk) {
-  const have = new Set(app.state.plants.map(p => p.uid));
-  app.teampick = { sel: (team || []).filter(u => have.has(u)).slice(0, 3), sy: 0, maxY: 0, onOk, lift: null };   // lift = 들어 올린 위 칸(자리 바꾸기)
+export function openTeamPick(app, team, onOk, opt = {}) {
+  const L = LEAGUES[opt.lg], cap = L ? L.cap : 2, have = new Set(app.state.plants.filter(p => p.stage <= cap).map(p => p.uid));   // 리그를 넘는 식물은 처음 고른 셋에서도 뺌
+  app.teampick = { sel: (team || []).filter(u => have.has(u)).slice(0, 3), sy: 0, maxY: 0, onOk, lift: null, lg: L ? opt.lg : null };   // lift = 들어 올린 위 칸(자리 바꾸기)
 }
 export const teamPickDrag = app => ({ onDrag(dy) { const D = app.teampick; if (D) D.sy = Math.max(0, Math.min(D.maxY || 0, (D.sy || 0) - dy)); } });
 
@@ -35,7 +35,9 @@ export function teamPickScreen(app, D) {
   input.hit('tk_block', 0, 0, W, H, () => {});
   const x = 10, w = W - 20, y = 14, h = H - 28;
   holo(g, x, y, w, h, T.card || T.panel, 16);
+  const L = LEAGUES[D.lg], cap = L ? L.cap : 2;
   g.text('3:3 팀', x + 12, y + 10, { font: 'head', color: P.main });
+  if (L) g.text(`${L.short} 리그 · ${L.desc}`, x + 70, y + 13, { font: 'label', color: P.sub });
   g.text(`${D.sel.length}/3`, x + w - 12, y + 13, { font: 'label', color: D.sel.length === 3 ? '#ffe8c8' : P.sub, align: 'right' });
   // 고른 셋(2026-10-22 사용자 "3:3 전투의 경우 애들 배치하는 ui 좀 다듬기"): 1 = 먼저 나감(금빛 · '선봉' 띠) · 칸을 누르면 들어 올림 → 다른 칸을 누르면 자리 바꿈(같은 칸 = 내려놓음) ·
   //  오른쪽 위 × = 팀에서 뺌 · 얼굴 칸 = 속성 색 바탕 + 이름 · 속성 · 단계 Lv
@@ -78,7 +80,8 @@ export function teamPickScreen(app, D) {
   g.clip(gx - 2, gy, gw + 4, gh, () => ord.forEach((pi, i) => {
     const q = s.plants[pi], k = D.sel.indexOf(q.uid), cx = gx + (i % cols) * (cw + gap), cy0 = gy + Math.floor(i / cols) * (chh + gap) - D.sy;
     if (cy0 + chh < gy || cy0 > gy + gh) return;
-    const id = 'tk_' + q.uid, pr = input.isPressed(id), cy = cy0 + (pr ? 1 : 0);
+    const id = 'tk_' + q.uid, pr = input.isPressed(id), cy = cy0 + (pr ? 1 : 0), no = q.stage > cap;   // no = 리그를 넘음(흐리게)
+    const a0 = g.c.globalAlpha; if (no) g.c.globalAlpha = a0 * 0.4;
     holo(g, cx, cy, cw, chh, k >= 0 ? ON : T.deep, 16);
     g.rect(cx + 5, cy + 5, 40, 40, '#0a1c32');
     g.clip(cx + 5, cy + 5, 40, 40, () => drawPortrait(g, bigKey(q.key, stageKey(q), q.shiny), cx + 5, cy + 5, 40, false));
@@ -90,8 +93,10 @@ export function teamPickScreen(app, D) {
     g.text(`${stageName(q)} Lv${lvOf(q)}`, nx, cy + 34, { font: 'label', color: P.sub });
     if (k >= 0) { g.rect(cx + cw - 19, cy + 4, 15, 15, '#05070b'); g.rect(cx + cw - 18, cy + 5, 13, 13, NUM[k]); g.text(String(k + 1), cx + cw - 11.5, cy + 5, { font: 'bold', color: '#05070b', align: 'center' }); }
     else { const ic = SPECIES[q.key] && icon(SPECIES[q.key].el); if (ic) g.img(ic, cx + cw - 16, cy + 6); }
+    g.c.globalAlpha = a0;
     const top = Math.max(gy, cy0), bot = Math.min(gy + gh, cy0 + chh);   // 보이는 부분만 누를 수 있게
     if (bot - top > 8) input.hit(id, cx, top, cw, bot - top, () => {
+      if (no) return app.toast(`${q.name} · ${stageName(q)} — ${L.short} 리그엔 못 나가요(${L.desc})`);
       if (D.lift != null && k < 0) { D.sel[D.lift] = q.uid; D.lift = null; sfx('select'); return; }   // 들어 올린 칸에 이 식물(바꿔 넣기)
       if (k >= 0) D.sel.splice(k, 1); else if (D.sel.length < 3) D.sel.push(q.uid); else return app.toast('셋까지 골라요 — 위 칸을 누르고 바꿀 식물을 눌러요');
       D.lift = null; sfx('select');

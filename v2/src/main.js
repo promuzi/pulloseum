@@ -26,6 +26,7 @@ import { closeForm } from './core/form.js';
 import { setUi, UI_DEFAULT, holoFx } from './art/theme.js';
 import { tryAutoStart, music } from './core/sound.js';
 import { runOp } from './game/ops.js';
+import { setLeague } from './game/logic.js';
 import { bloomPool, levelReward } from './game/catalog.js';
 import { bigKey } from './art/sprites.js';
 import { stageKey } from './game/view.js';
@@ -209,11 +210,14 @@ window.__shot = (name, params = {}, opt = {}) => {
   app.shotOnline = !!opt.online; app.noticeChecked = true; if (opt.notices) { app.notices = opt.notices; app.sheet = 'notice'; }   // 온라인 단추(순위 · 공지) · 공지 창 촬영(2026-10-22)
   if (opt.level2) app.state.user.level = opt.level2;
   if (opt.tour) Object.assign(app.state.tournament, opt.tour);   // 대회 기록 촬영(단계 · 칸 점수 · 라운드 — 2026-10-23)
+  app.ui = null;   // 홈에서 고른 상대(친구 대결)는 촬영마다 처음으로
+  if (opt.mode) app.state.mode = opt.mode;
+  if (opt.league) setLeague(app.state, opt.league);   // 형식 · 생장 리그 촬영(친구 방 로비 등 — 2026-11-05)
   app.lastResult = opt.result ? { win: true, mode: 'tournament', me: { key: 'flower_grass', pot: 'pot_terra' }, ...opt.result } : null;   // 결과 화면 촬영(점수 · 승급 · 대회 끝)
   if (opt.seedsAdd) opt.seedsAdd.forEach((o, i) => app.state.seeds.push({ id: 'shot_sa' + i, ...o }));   // 종자 가방 카드 · 정렬 촬영(2026-10-22 — 여러 종 · 희귀 · 전설 · 색 변종 · 변이 · 즐겨찾기 · 잠금)
   if (opt.seedsLike) { const k = app.state.plants[app.state.active || 0].key; for (let i = 0; i < opt.seedsLike; i++) app.state.seeds.push({ id: 'shot_sd' + i, key: k }); }   // 같은 종 종자 n개(종자 거름 촬영)   // 식물 바꿔 찍기(검토 — [{ key, stage }, …] = 앞에서부터)
   app.seedpick = null; app.teampick = null;
-  if (opt.teampick) { openTeamPick(app, opt.teampick.sel.map(i => app.state.plants[i] && app.state.plants[i].uid), null); app.teampick.sy = opt.teampick.sy || 0; app.teampick.lift = opt.teampick.lift ?? null; }   // 3:3 팀 고르기 촬영(opt.teampick = { sel: [몇째 …], sy })
+  if (opt.teampick) { openTeamPick(app, opt.teampick.sel.map(i => app.state.plants[i] && app.state.plants[i].uid), null, { lg: opt.teampick.lg }); app.teampick.sy = opt.teampick.sy || 0; app.teampick.lift = opt.teampick.lift ?? null; }   // 3:3 팀 고르기 촬영(opt.teampick = { sel: [몇째 …], sy })
   if (opt.seedpick) {   // 종자 거름 고르기 촬영(opt.seedpick = { mode, sel: [몇째 …], stage: 'stat', stat, info: 몇째, special: 몇째를 전설로 })
     const O = opt.seedpick, p = app.state.plants[app.state.active || 0], mine = app.state.seeds.filter(sd => sd.key === p.key);
     if (O.special != null && mine[O.special]) mine[O.special].legend = true;

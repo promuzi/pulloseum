@@ -145,7 +145,7 @@ export function makeRooms({ game, log, q: db = null }) {
   function roomView(r, uid) {
     const sd = sideOf(r, uid), b = r.phase === 'battle' ? { turn: r.B.turn, deadline: r.deadline, step: r.sends ? 'send' : 'pick', moved: movedOf(r, sd), foeMoved: movedOf(r, OTHER[sd]) } : null;
     return { code: r.code, host: r.host === uid, phase: r.phase, mode: r.mode, league: lgOf(r), battle: b, last: r.last || null,
-      members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, team: m.uid === uid ? m.teamCards : null, team3: !!m.team, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card) · 팀은 나에게만, 팀이 되는지(team3)는 둘 다
+      members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, team: m.uid === uid ? m.teamCards : null, team3: !!m.team, has1: !!m.plant, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card) · 팀은 나에게만, 팀이 되는지(team3) · 리그에 맞는 식물이 있는지(has1)는 둘 다
   }
   function broadcastRoom(r) { save(r); for (const m of r.members) send(m.uid, 'room', roomView(r, m.uid)); }
   const touch = (r, now) => { r.touched = now; save(r); };

@@ -6,7 +6,7 @@ import { drawBig, drawPortrait, drawWhole, bigKey, BGIMG, heroRemember } from '.
 import { T, plate, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars } from './common.js';
 import { SPECIES, JONG, LEAGUES, LEAGUE_KEYS, seasonOf, seasonEnd, rankOf, tourName, isTopTier, starOf, DIV_PTS } from '../game/catalog.js';
-import { plantStats, leaguesOf, leagueCap, setLeague } from '../game/logic.js';
+import { plantStats, leaguesOf, setLeague, bracketWhy } from '../game/logic.js';
 import { stageKey, stageName, stars, growInfo, fruitOf, lvOf } from '../game/view.js';
 import { openForm } from '../core/form.js';
 import { openTeamPick } from './teampick.js';
@@ -51,23 +51,32 @@ export function focusOf(app) {
   const top = 62, bot = plantSheetY(app) - 34;
   return { want: Math.max(1, Math.min(FOCUS.want, (bot - top) / 120)), sx: Math.round(app.W / 2), sy: Math.round((top + bot) / 2) };
 }
-const MODES = [
-  { id: 'tournament', icon: 'sword', name: '1:1 토너먼트', desc: '개체 랭크 대회 · 라운드마다 선승제' },   // 5판 3선승 · 플래티넘부터 7판 4선승(2026-10-22)
-  { id: 'swap3', icon: 'shield', name: '3:3 교체전', desc: '내 식물 셋 · 바꿔 가며 싸움' },   // 2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임, 이름도 팀리그라고는 하지 말자"
-  { id: 'pvp', icon: 'target', name: '친구 대결', desc: '초대 코드로 친구와 1:1 · 방 만들기' },   // 2026-10-16 사용자 "서버도 열어서 몇몇 친구랑 할 수 있게"
-  { id: 'mission', icon: 'flag', name: '미션 캠페인', desc: '정해진 상대·보스를 차례로 넘는 길', lock: '미션 캠페인은 첫 출시 뒤에 열려요' },
+// 전투 종류 = 형식 × 생장 리그 × 상대를 따로 고름(2026-11-05 사용자 'pvp도 새싹/성장체/성체로 나누고 / 이걸 각각 1:1, 3:3 각각 으로 또 분류해 ui를 이거에 맞게 잘 다듬어봐'):
+//  형식(1:1 · 3:3 — s.mode) · 생장 리그(새싹 · 성장기 · 성체 — 그 단계까지 나감, s.league) · 상대(대회 = 봇 · 친구 대결 = app.ui.mode 'pvp') · 미션은 첫 출시 뒤(잠금)
+const FORMATS = [
+  { id: 'tournament', icon: 'sword', name: '1:1', sub: '식물 하나' },
+  { id: 'swap3', icon: 'shield', name: '3:3', sub: '식물 셋 · 교체' },   // 2026-10-15 사용자 "3:3은 내가 식물 3개 들고 싸우는 거임, 이름도 팀리그라고는 하지 말자"
 ];
+const FOES = [
+  { id: 'bot', icon: 'trophy', name: '대회', sub: { tournament: '토너먼트 · 랭크', swap3: '교체전 · 리그 승패' } },   // 1:1 = 5판 3선승 · 플래티넘부터 7판 4선승(2026-10-22)
+  { id: 'pvp', icon: 'target', name: '친구 대결', sub: { tournament: '초대 코드 · 방', swap3: '초대 코드 · 방' } },   // 2026-10-16 사용자 "서버도 열어서 몇몇 친구랑 할 수 있게"
+];
+const MISSION = { icon: 'flag', name: '미션 캠페인', lock: '미션 캠페인은 첫 출시 뒤에 열려요' };
+const GOLD = { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' };
 const BANNER = { x: 4, y: 27, w: 262, h: 60 };   // 위 상태 바(x 4~266)와 같은 가장자리 · 높이 2배(2026-10-15 사용자 "배너 높이 2배로 · 배너랑 위의 바 정렬이 안 맞아")
 const ease = k => k * k * (3 - 2 * k);
 // 3:3 내 팀(식물 번호 셋) — 정한 적 없으면 앞에서부터 셋
 const teamIdx = s => (s.team && s.team.length === 3 && s.team.every(i => i < s.plants.length) ? s.team : s.plants.slice(0, 3).map((_, i) => i));
-const modeOf = app => (app.ui && app.ui.mode === 'pvp' ? 'pvp' : app.state.mode || 'tournament');
+// 지금 고른 전투: fmt = 'tournament'(1:1) | 'swap3'(3:3) · pvp = 친구 대결 · lg = 생장 리그
+const kindOf = app => { const s = app.state, fmt = s.mode === 'swap3' ? 'swap3' : 'tournament'; return { fmt, swap: fmt === 'swap3', pvp: !!(app.ui && app.ui.mode === 'pvp'), lg: LEAGUES[s.league] ? s.league : 'sprout' }; };
 const teamOf = s => teamIdx(s).map(i => s.plants[i]);
+// 고른 리그에 못 나가는 식물(1:1 = 출전 식물 · 3:3 = 팀) — 리그 칸 · 출전 단추가 같이 씀
+const overOf = (s, K, lg = K.lg) => { const cap = LEAGUES[lg].cap; return (K.swap ? teamOf(s) : [s.plants[s.active] || s.plants[0]]).filter(p => p && p.stage > cap); };
 
 export const home = {
   theme(app) { return this.look || 'loft'; },   // 대기 화면 = 코덱스 원형 방(?look=room·cell·ship 옛 시안)
   enter(p) {
-    this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.pickSheet = !!p.pick; this.forceMode = p.mode || null;   // ?mode=swap3 = 그 전투 종류로(촬영용)
+    this.empty = !!p.empty; this.look = p.look || null; this.showT = -1e9; this.swipe = 0; this.editing = !!p.profile; this.modeSheet = !!p.modes; this.pickSheet = !!p.pick; this.forceMode = p.mode || null; this.forceLg = p.lg || null;   // ?mode=swap3 · pvp · ?lg=growing = 그 전투 종류로(촬영용)
     this.focus = p.focus ? { t0: 0, hold: true } : null;   // ?focus=1 = 다 어두워진 장(촬영용)
     this.unfocus = p.from === 'plant' ? { t0: null, skip: p.camDone ? 1 - ZOOM_AT : 0 } : null;   // 식물 관리에서 돌아오면 거꾸로(카메라가 물러나고 불이 켜짐) · camDone = 식물 관리가 판과 함께 카메라를 이미 물렸음 → 불 켜짐 · 창만(2026-10-29)
     this.bootIn = p.from === 'boot' ? { t0: null } : null;     // 처음 화면에서 디스플레이가 켜지며 들어옴 = 식물은 이미 의자 위(투영 다시 안 함) · 옆 창 · 글자만 서서히
@@ -108,7 +117,8 @@ export const home = {
   drawLoft(app) {
     const { g, W, t, state: s } = app;
     if (this.showT == null) this.showT = t;
-    if (this.forceMode) { s.mode = this.forceMode; this.forceMode = null; }
+    if (this.forceMode) { if (this.forceMode === 'pvp') app.ui = { ...(app.ui || {}), mode: 'pvp' }; else s.mode = this.forceMode; this.forceMode = null; }
+    if (this.forceLg) { if (LEAGUES[this.forceLg]) setLeague(s, this.forceLg); this.forceLg = null; }
     const p = this.empty ? null : s.plants[s.active], key = p ? bigKey(p.key, stageKey(p), p.shiny) : null;
     if (key) heroRemember(key, p.pot);   // 처음 화면에 올릴 내 식물(바뀔 때만 저장)
     const [mx, my] = LOFT_STOOL, pc = loftPlantCy(key), cam = this.camera(app, pc);
@@ -239,21 +249,23 @@ export const home = {
       x += ws[i] + gap;
     });
   },
-  // 전투: 왼쪽 카드 = 지금 고른 전투 종류 + 대회 현황(대회 이름·라운드·5판 점·승패, 누르면 종류 고르기) · 오른쪽 = 출전
+  // 전투: 왼쪽 카드 = 지금 고른 전투(형식 · 상대) + 현황 — 1:1 대회 = 대회 이름(리그 · 단계) · 라운드 · 판 점 · 승패 / 3:3 대회 = 팀 얼굴 · 그 리그 승패 / 친구 = 리그 · 대결 승패
+  //  (누르면 종류 고르기) · 오른쪽 = 출전
   battleBlock(app, live) {
-    const { g, W, state: s } = app, TR = s.tournament, P = T.ptext, mode = MODES.find(m => m.id === modeOf(app)) || MODES[0], BATTLE_Y = BATTLE_Y0 + homeDy(app);
-    const x = 8, w = 116, h = BATTLE_H, pr = app.input.isPressed('home_mode'), y = BATTLE_Y + (pr ? 1 : 0);
+    const { g, W, state: s } = app, TR = s.tournament, P = T.ptext, K = kindOf(app), L = LEAGUES[K.lg], BATTLE_Y = BATTLE_Y0 + homeDy(app);
+    const x = 8, w = 116, h = BATTLE_H, pr = app.input.isPressed('home_mode'), y = BATTLE_Y + (pr ? 1 : 0), fmt = K.swap ? '3:3' : '1:1';
     holo(g, x, y, w, h, T.card || T.panel, 15);
-    g.img(icon(mode.icon), x + 7, y + 6);
-    g.text(mode.name, x + 21, y + 5, { font: 'label', color: P.main });
+    g.img(icon(K.pvp ? 'target' : K.swap ? 'shield' : 'sword'), x + 7, y + 6);
+    g.text(K.pvp ? `친구 대결 ${fmt}` : K.swap ? '3:3 교체전' : '1:1 토너먼트', x + 21, y + 5, { font: 'label', color: P.main });
     for (let j = 0; j < 3; j++) g.rect(x + w - 13 + j, y + 9 + j, 7 - j * 2, 1, P.sub);   // ▾ = 바꿀 수 있음
-    const swap = mode.id === 'swap3', pvp = mode.id === 'pvp', SW = s.swap3 || { wins: 0, losses: 0 }, PV = s.pvp || { wins: 0, losses: 0 };
-    if (pvp) {   // 친구 대결 = 방 · 초대 코드 + 대결 승패
-      g.text('방 만들기 · 코드 넣기', x + 7, y + 21, { color: P.sub });
+    const SW = (s.swap3by && s.swap3by[K.lg]) || { wins: 0, losses: 0 }, PV = s.pvp || { wins: 0, losses: 0 };
+    if (K.pvp) {   // 친구 대결 = 생장 리그(방을 만들 때 그대로 — 방장이 방에서 바꿀 수도) + 대결 승패
+      g.text(L.name, x + 7, y + 21, { color: P.sub });
       g.text(`${PV.wins}승 ${PV.losses}패`, x + w - 7, y + 36, { font: 'label', color: P.main, align: 'right' });
-    } else if (swap) {   // 3:3 = 내 팀 셋 얼굴 + 교체전 승패
+    } else if (K.swap) {   // 3:3 = 내 팀 셋 얼굴 + 그 리그 승패(리그마다 따로 — 2026-11-05)
       teamOf(s).forEach((pl, i) => { if (!pl) return; const fx = x + 7 + i * 21; g.rect(fx, y + 20, 19, 19, '#0a1c32'); g.clip(fx + 1, y + 21, 17, 17, () => drawPortrait(g, pl.key + (pl.shiny ? '~s' : ''), fx + 1, y + 21, 17, false)); });
-      g.text(`${SW.wins}승 ${SW.losses}패`, x + w - 7, y + 39, { font: 'label', color: P.main, align: 'right' });
+      g.text(L.short, x + w - 7, y + 21, { color: P.sub, align: 'right' });
+      g.text(`${SW.wins}승 ${SW.losses}패`, x + w - 7, y + 37, { font: 'label', color: P.main, align: 'right' });
     } else {
       g.text(`${tourName(TR)} · ${TR.round}`, x + 7, y + 21, { color: P.sub });
       const st = TR.bestOf > 5 ? 9 : 10;   // 7판 라운드는 칸을 좁혀 오른쪽 승패 글자와 안 겹치게(2026-10-23)
@@ -263,12 +275,14 @@ export const home = {
     if (live) app.input.hit('home_mode', x, BATTLE_Y, w, h, () => { this.modeSheet = true; }, 2);
     const bx = x + w + 6;
     const go = () => {
-      if (pvp) return app.go('room', {}, 'shutterClose');
-      if (!swap && !pvp) { leaguesOf(s); const cap = leagueCap(s), p = s.plants[s.active] || s.plants[0]; if (p && p.stage > cap) return app.toast(`${LEAGUES[s.league].name}는 ${LEAGUES[s.league].desc} — 리그를 바꾸거나 다른 식물을 내보내요`); }
-      if (swap && s.plants.length < 3) return app.toast('3:3 교체전은 스마트팜에 식물이 셋 있어야 해요');
-      app.go('matching', { mode: mode.id }, 'shutterClose');
+      if (K.pvp) return app.go('room', {}, 'shutterClose');   // 방 = 고른 형식 · 리그로 만듦(scenes/room.js) · 넘는 식물은 방이 맞는 것으로 바꿈
+      leaguesOf(s);
+      if (K.swap && s.plants.length < 3) return app.toast('3:3 교체전은 스마트팜에 식물이 셋 있어야 해요');
+      const why = bracketWhy(K.lg, K.swap ? teamOf(s) : [s.plants[s.active] || s.plants[0]]);
+      if (why) return app.toast(why);   // 1:1 · 3:3 모두 리그 단계까지(서버와 같은 말)
+      app.go('matching', { mode: K.fmt }, 'shutterClose');
     };
-    button(app, 'home_cta', bx, BATTLE_Y, W - 8 - bx, h, pvp ? '대결 방' : '출전', { style: 'gold', font: 'name', icon: pvp ? 'target' : 'sword', iconTint: true, sub: pvp ? '친구와 1:1' : swap ? '식물 셋 · 교체 가능' : `${TR.round} ${TR.wins + TR.losses + 1}경기째`, onTap: live ? go : null });   // 출전 = 철 셔터가 닫히고 상대 찾기 → 열리며 전투장
+    button(app, 'home_cta', bx, BATTLE_Y, W - 8 - bx, h, K.pvp ? '대결 방' : '출전', { style: 'gold', font: 'name', icon: K.pvp ? 'target' : 'sword', iconTint: true, sub: K.pvp ? `친구와 ${fmt} · ${L.short}` : K.swap ? `식물 셋 · ${L.short} 리그` : `${TR.round} ${TR.wins + TR.losses + 1}경기째`, onTap: live ? go : null });   // 출전 = 철 셔터가 닫히고 상대 찾기 → 열리며 전투장
   },
   // 전투 종류 고르기: 1:1 토너먼트 · 3:3 교체전(내 팀 셋은 아래 칸을 눌러 바꿈) · 미션(첫 출시 뒤 — 잠금 표시)
   // 출전 식물 고르기(2026-10-17 사용자 "이거 누르면 출전시킬 수 있는 식물 딱 나열해줘 거기서 고를 수 있게 — 지금은 일일이 화살표 · 즐겨찾기 기능도"):
@@ -300,56 +314,93 @@ export const home = {
     });
     button(app, 'pk_close', x + w / 2 - 50, y + h - 40, 100, 30, '닫기', { style: 'gold', font: 'bold', onTap: () => { this.pickSheet = false; } });
   },
+  // 전투 종류 고르기(2026-11-05 다시 짬 — 형식 × 생장 리그 × 상대): ① 형식 1:1 · 3:3 ② 생장 리그 셋(1:1 대회 = 그 리그 랭크 · 3:3 대회 = 그 리그 승패 · 친구 = 나가는 단계)
+  //  ③ 상대 대회 · 친구 대결 + 미션(잠금) ④ 3:3이면 내 팀 셋(칸을 누르면 팀 고르기) — 누르는 대로 바로 바뀌고 '확인' · 바깥 누름으로 닫음
+  //  지금 식물 · 팀이 넘는 리그 = 그 칸 설명 글자가 빨강 · 고른 리그면 아래에 넘는 식물 이름(출전 단추와 같은 검사)
   modeSheetDraw(app) {
-    const { g, W, H, state: s } = app, P = T.ptext;
+    const { g, W, H, state: s } = app, P = T.ptext, K = kindOf(app), lgs = leaguesOf(s);
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     const close = () => { this.modeSheet = false; if (this.teamDirty) { this.teamDirty = false; app.act('setTeam', { team: teamIdx(s).map(i => s.plants[i].uid) }); } };
     app.input.hit('ms_block', 0, 0, W, H, close);
-    const cur = modeOf(app), swapOn = cur === 'swap3', tourOn = cur === 'tournament', x = 12, w = W - 24, h = 50 + MODES.length * 60 + (swapOn ? 100 : 0) + (tourOn ? 98 : 0), y = Math.max(28, BATTLE_Y + homeDy(app) + BATTLE_H - h);
+    const over = K.pvp ? [] : overOf(s, K), x = 12, w = W - 24, ix = x + 8, iw = w - 16;
+    const FH = 36, LH = 50, WH = over.length ? 16 : 0, OH = 40, MH = 24, TH = K.swap ? 62 : 0;
+    const h = 30 + FH + 22 + LH + WH + 22 + OH + 6 + MH + 8 + TH + 40;
+    const y = Math.max(28, Math.min(BATTLE_Y + homeDy(app) + BATTLE_H - h, H - h - 8));
+    app.input.hit('ms_in', x, y, w, h, () => {});
     holo(g, x, y, w, h, T.card || T.panel, 16);
     g.text('전투 종류', x + 12, y + 10, { font: 'head', color: P.main });
-    MODES.forEach((m, i) => {
-      const by = y + 34 + i * 60, on = cur === m.id, lock = !!m.lock, pr = app.input.isPressed('ms_' + m.id), yy = by + (pr ? 1 : 0);
-      holo(g, x + 8, yy, w - 16, 54, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
-      g.img(icon(m.icon), x + 17, yy + 15, 2);
-      g.text(m.name, x + 48, yy + 9, { font: 'value', color: lock ? P.dim : P.main });
-      g.text(m.desc, x + 48, yy + 30, { color: lock ? P.dim : P.sub });
-      if (lock) g.img(icon('lock'), x + w - 30, yy + 21);
-      else if (on) g.text('선택됨', x + w - 18, yy + 10, { font: 'label', color: '#f0be7d', align: 'right' });
-      app.input.hit('ms_' + m.id, x + 8, by, w - 16, 54, () => {
-        if (lock) return app.toast(m.lock);
-        if (m.id === 'pvp') { app.ui = { ...(app.ui || {}), mode: 'pvp' }; this.modeSheet = false; return; }
-        if (m.id === 'swap3' && s.plants.length < 3) return app.toast('식물이 셋 있어야 해요');
-        app.ui = { ...(app.ui || {}), mode: null };
-        if (s.mode !== m.id) { s.mode = m.id; if (m.id === 'swap3') { s.team = teamIdx(s); this.teamDirty = true; } app.act('setMode', { mode: m.id }); }
-        if (m.id !== 'swap3' && m.id !== 'tournament') this.modeSheet = false;
-      });
-    });
-    if (tourOn) {   // 리그(2026-10-16 — 단계별: 새싹 = 어린 식물만 · 자람 = 자라는 단계까지 · 무제한) + 시즌
-      const ly = y + 34 + MODES.length * 60, lgs = leaguesOf(s), n = seasonOf(app.now()), days = Math.max(0, Math.ceil((seasonEnd(n) - app.now()) / 864e5)), lw = Math.floor((w - 16 - 8) / 3);
-      g.text(`리그 · 시즌 ${n} · ${days}일 남음`, x + 14, ly + 2, { font: 'label', color: P.sub });
-      LEAGUE_KEYS.forEach((k, i) => {
-        const lx = x + 8 + i * (lw + 4), on = s.league === k, rec = on ? s.tournament : lgs[k], id = 'ms_lg_' + k, pr = app.input.isPressed(id), yy = ly + 20 + (pr ? 1 : 0);
-        holo(g, lx, yy, lw, 50, on ? { fill: '#3a2a18', fill2: '#4a3420', frame: '#f0be7d', frameHi: '#ffe8c8', frameLo: '#a8743a' } : T.deep, 16);
-        g.text(LEAGUES[k].short, lx + lw / 2, yy + 5, { font: 'label', color: on ? '#ffe8c8' : P.main, align: 'center' });
-        g.text(rankOf(rec), lx + lw / 2, yy + 20, { font: 'bold', color: TIER_COL[rec.tier] || P.main, align: 'center' });
-        g.text(LEAGUES[k].desc, lx + lw / 2, yy + 34, { color: P.dim, align: 'center' });
-        app.input.hit(id, lx, ly + 20, lw, 50, () => { if (s.league !== k) { setLeague(s, k); app.act('setLeague', { league: k }); } this.modeSheet = false; });
-      });
+    const tab = (id, bx, by, bw, bh, on, draw, onTap) => {   // 고르는 칸 하나(고른 것 = 금빛)
+      const pr = app.input.isPressed(id), yy = by + (pr ? 1 : 0);
+      holo(g, bx, yy, bw, bh, on ? GOLD : T.deep, 16); draw(yy, on);
+      app.input.hit(id, bx, by, bw, bh, onTap);
+    };
+    // ① 형식
+    let yy = y + 30;
+    const fw = Math.floor((iw - 6) / 2);
+    FORMATS.forEach((f, i) => tab('ms_f_' + f.id, ix + i * (fw + 6), yy, fw, FH, K.fmt === f.id, (by, on) => {
+      const fx = ix + i * (fw + 6);
+      g.img(icon(f.icon), fx + 9, by + 11);
+      g.text(f.name, fx + 26, by + 4, { font: 'value', color: on ? '#ffe8c8' : P.main });
+      g.text(f.sub, fx + 26, by + 20, { color: on ? '#f0be7d' : P.sub });
+    }, () => {
+      if (K.fmt === f.id) return;
+      if (f.id === 'swap3' && s.plants.length < 3) return app.toast('3:3은 스마트팜에 식물이 셋 있어야 해요');
+      s.mode = f.id; if (f.id === 'swap3') { s.team = teamIdx(s); this.teamDirty = true; }
+      app.act('setMode', { mode: f.id });
+    }));
+    // ② 생장 리그(시즌은 1:1 대회 랭크에만)
+    yy += FH + 6;
+    const n = seasonOf(app.now()), days = Math.max(0, Math.ceil((seasonEnd(n) - app.now()) / 864e5));
+    g.text(!K.pvp && !K.swap ? `생장 리그 · 시즌 ${n} · ${days}일 남음` : '생장 리그', ix + 6, yy + 1, { font: 'label', color: P.sub });
+    yy += 16;
+    const lw = Math.floor((iw - 8) / 3);
+    LEAGUE_KEYS.forEach((k, i) => tab('ms_lg_' + k, ix + i * (lw + 4), yy, lw, LH, K.lg === k, (by, on) => {
+      const lx = ix + i * (lw + 4), L = LEAGUES[k], no = !K.pvp && overOf(s, K, k).length > 0, cx = lx + lw / 2;
+      g.text(L.short, cx, by + 5, { font: 'label', color: on ? '#ffe8c8' : P.main, align: 'center' });
+      if (K.pvp) g.text(L.desc, cx, by + 25, { font: 'bold', color: on ? '#f0be7d' : P.sub, align: 'center' });   // 친구 대결 = 그 단계까지 나감(승패는 하나)
+      else {
+        if (K.swap) { const r = s.swap3by[k]; g.text(`${r.wins}승 ${r.losses}패`, cx, by + 20, { font: 'bold', color: P.main, align: 'center' }); }
+        else { const rec = k === s.league ? s.tournament : lgs[k]; g.text(rankOf(rec), cx, by + 20, { font: 'bold', color: TIER_COL[rec.tier] || P.main, align: 'center' }); }
+        g.text(L.desc, cx, by + 34, { color: no ? '#ff9a8a' : P.dim, align: 'center' });
+      }
+    }, () => { if (s.league !== k) { setLeague(s, k); app.act('setLeague', { league: k }); } }));
+    yy += LH + 4;
+    if (over.length) {
+      let t = `${over.map(p => p.name).join(' · ')} — ${LEAGUES[K.lg].short} 리그엔 못 나가요`;
+      while (g.textW(t) > iw - 12 && over.length > 1) { over.pop(); t = `${over.map(p => p.name).join(' · ')} 외 — ${LEAGUES[K.lg].short} 리그엔 못 나가요`; }
+      g.text(t, ix + 6, yy, { color: '#ff9a8a' });
+      yy += WH;
     }
-    if (swapOn) {   // 내 팀 셋: 칸을 누르면 팀 고르기 창(scenes/teampick.js — 2026-10-18, 전엔 팀에 없는 다음 식물로 하나씩 넘어감)
-      const ty = y + 34 + MODES.length * 60;
-      g.text('내 팀', x + 14, ty + 4, { font: 'label', color: P.sub });
-      const team = teamIdx(s);
+    // ③ 상대
+    g.text('상대', ix + 6, yy + 1, { font: 'label', color: P.sub });
+    yy += 16;
+    const ow = Math.floor((iw - 6) / 2);
+    FOES.forEach((o, i) => tab('ms_o_' + o.id, ix + i * (ow + 6), yy, ow, OH, (o.id === 'pvp') === K.pvp, (by, on) => {
+      const ox = ix + i * (ow + 6);
+      g.img(icon(o.icon), ox + 9, by + 7);
+      g.text(o.name, ox + 25, by + 5, { font: 'bold', color: on ? '#ffe8c8' : P.main });
+      g.text(o.sub[K.fmt], ox + 9, by + 22, { color: on ? '#f0be7d' : P.sub });
+    }, () => { app.ui = { ...(app.ui || {}), mode: o.id === 'pvp' ? 'pvp' : null }; }));
+    yy += OH + 6;
+    tab('ms_mission', ix, yy, iw, MH, false, by => {   // 미션(첫 출시 뒤 — 잠금, 얇은 줄)
+      g.img(icon(MISSION.icon), ix + 9, by + 6);
+      g.text(MISSION.name, ix + 25, by + 5, { color: P.dim });
+      g.img(icon('lock'), ix + iw - 20, by + 6);
+    }, () => app.toast(MISSION.lock));
+    yy += MH + 8;
+    if (K.swap) {   // ④ 내 팀 셋: 칸을 누르면 팀 고르기 창(scenes/teampick.js — 고른 리그를 넘는 식물은 흐리게 · 못 넣음)
+      g.text('내 팀', x + 14, yy + 4, { font: 'label', color: P.sub });
+      const team = teamIdx(s), cap = LEAGUES[K.lg].cap;
       team.forEach((pi, k) => {
-        const tx = x + 60 + k * 60, pl = s.plants[pi], id = 'ms_team' + k, pr = app.input.isPressed(id), yy = ty + (pr ? 1 : 0);
-        holo(g, tx, yy, 56, 54, T.deep, 16);
-        g.clip(tx + 3, yy + 3, 50, 34, () => drawPortrait(g, pl.key + (pl.shiny ? '~s' : ''), tx + 8, yy + 2, 40, false));
-        g.text(pl.name, tx + 28, yy + 38, { color: P.main, align: 'center' });
-        app.input.hit(id, tx, ty, 56, 54, () => openTeamPick(app, team.map(i => s.plants[i].uid), uids => { s.team = uids.map(u => s.plants.findIndex(q => q.uid === u)); this.teamDirty = false; app.act('setTeam', { team: uids }); }));
+        const tx = x + 60 + k * 60, pl = s.plants[pi], bad = !K.pvp && pl.stage > cap;   // 친구 방은 넘는 식물을 맞는 것으로 바꿔 줌(rooms.mjs)
+        tab('ms_team' + k, tx, yy, 56, 54, false, by => {
+          g.clip(tx + 3, by + 3, 50, 34, () => drawPortrait(g, pl.key + (pl.shiny ? '~s' : ''), tx + 8, by + 2, 40, false));
+          g.text(pl.name, tx + 28, by + 38, { color: bad ? '#ff9a8a' : P.main, align: 'center' });
+        }, () => openTeamPick(app, team.map(i => s.plants[i].uid), uids => { s.team = uids.map(u => s.plants.findIndex(q => q.uid === u)); this.teamDirty = false; app.act('setTeam', { team: uids }); }, { lg: K.lg }));
       });
-      button(app, 'ms_done', x + w / 2 - 50, ty + 60, 100, 30, '확인', { style: 'gold', font: 'label', onTap: close });
+      yy += TH;
     }
+    button(app, 'ms_done', x + w / 2 - 50, y + h - 38, 100, 30, '확인', { style: 'gold', font: 'label', onTap: close });
   },
   // 프로필 배너(높이 60): 배너 = 이 창 자체의 디자인(바탕 · 무늬 · 테 · 움직임 · 글자 색 — art/profile.js, 2026-10-22 사용자 "홀로그램창의 디자인을 배너라고 말한거야") ·
   //  대표 식물 아이콘(50칸, 배너 테 · 빛) · 이름(16)·칭호 · 오른쪽 랭크(색)·점수·막대 · 연필
