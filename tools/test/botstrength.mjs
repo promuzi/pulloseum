@@ -8,6 +8,7 @@ import { playTurn, aiPick } from '../../v2/src/battle/model.js';
 import { STARTERS, TIERS, LEAGUES } from '../../v2/src/game/catalog.js';
 
 const N = +(process.argv[2] || 20), lgi = process.argv.indexOf('--league'), lg = lgi > 0 ? process.argv[lgi + 1] : 'open', cap = LEAGUES[lg].cap;
+const tgi = process.argv.indexOf('--tiers'), ONLY = tgi > 0 ? process.argv[tgi + 1].split(',').map(Number) : null;   // --tiers 0,1 = 그 단계만(브론즈 = 0)
 function myPlant(key, rng) {
   const s = newGame({ nickname: 'x', starter: key }, rng, 0); s.wallet.credits = 1e6;
   const p = s.plants[0];
@@ -18,6 +19,7 @@ function myPlant(key, rng) {
 }
 const row = [];
 for (let tier = 0; tier < TIERS.length; tier++) {
+  if (ONLY && !ONLY.includes(tier)) continue;
   let w = 0, n = 0; const t0 = performance.now();
   for (const key of STARTERS) for (let i = 1; i <= N; i++) {
     const sd = i * 101 + tier * 7919, p = myPlant(key, makeRng(sd)), r = makeRng(sd + 1), body = botBody(r, cap, tier);

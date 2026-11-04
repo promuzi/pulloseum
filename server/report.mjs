@@ -8,7 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { SPECIES, SKILLS, PLANETS, STAGES, STAT_NAME } from '../v2/src/game/catalog.js';
+import { SPECIES, SKILLS, PLANETS, STAGES, STAT_NAME, TIERS } from '../v2/src/game/catalog.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
@@ -85,6 +85,17 @@ const bt = ev.filter(e => e.kind === 'battle');
 const byMode = {};
 for (const e of bt) { const m = byMode[e.d.mode] || (byMode[e.d.mode] = { n: 0, w: 0, t: 0, ff: 0 }); m.n++; if (e.d.win) m.w++; if (e.d.forfeit) m.ff++; else m.t += e.d.turns; }
 table(['종류', '판', '승률', '평균 턴', '기권·버림'], Object.entries(byMode).map(([k, m]) => [k === 'swap3' ? '3:3 교체전' : '1:1 토너먼트', m.n, pct(m.w, m.n), avg(m.t, m.n - m.ff), m.ff]));
+// 대회 단계별(봇 세기 맞춤 — 2026-11-04 로드맵 '단계별 실제 승률로 봇 세기 다시 맞춤'): 결과 기록엔 단계가 없어 같은 사람의 바로 앞 '판 시작'(battle.start · 단계 있음)에서 가져옴
+{
+  const lastTier = {}, byTier = {};
+  for (const e of EVENTS) {
+    if (e.kind === 'battle.start' && e.d.mode !== 'swap3') lastTier[e.user_id] = e.d.tier;
+    else if (e.kind === 'battle' && e.d.mode !== 'swap3' && e.t >= from && lastTier[e.user_id] != null) { const r = byTier[lastTier[e.user_id]] || (byTier[lastTier[e.user_id]] = { n: 0, w: 0, ff: 0 }); r.n++; if (e.d.win) r.w++; if (e.d.forfeit) r.ff++; }
+  }
+  w('1:1 대회 단계별(사람 쪽 승률 — 봇 세기 맞춤)');
+  const ord = k => (TIERS.indexOf(k) >= 0 ? TIERS.indexOf(k) : Number.isFinite(+k) ? +k : 99);   // 단계 = 번호(0 ~ 6)든 이름이든
+  table(['단계', '판', '승률', '기권·버림'], Object.keys(byTier).sort((a, b) => ord(a) - ord(b)).map(k => [TIERS[+k] || k, byTier[k].n, pct(byTier[k].w, byTier[k].n), byTier[k].ff]));
+}
 const sp = {}, vs = {}, sk = {}, skW = {};
 for (const e of bt) {
   if (e.d.forfeit) continue;

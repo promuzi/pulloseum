@@ -1,6 +1,6 @@
 // 식물 → 전투 유닛, 봇 상대 만들기, 같은 씨앗·같은 선택이면 같은 결과(서버 확인용 다시 돌리기). 서버·화면 공용.
 // 봇 판: 서버가 씨앗·상대를 정해 주고(battle/start) 화면이 그 씨앗으로 싸운 뒤 고른 기술 목록을 보내면(battle/finish) 서버가 똑같이 다시 돌려 승패를 확인 → 보상.
-import { SPECIES, SKILLS, IV_KEYS, IV_MAX, SUN_UP, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
+import { SPECIES, SKILLS, IV_KEYS, IV_MAX, SUN_UP, uniqueOf, uniquesOf, bloomPool, STAGE_KEY, FORM_KEYS, PLANETS } from './catalog.js';
 import { CARDS, passivesOf, isSkillCard, formCards, rollCard, baseOf } from './cards.js';
 import { plantStats, Err } from './logic.js';
 import { basicsOf, makeBattle, playTurn, playTurnVs, REST, elemMult } from '../battle/model.js';
@@ -77,6 +77,21 @@ const ROLE_BUILD = {
 const MESSY = [0.6, 0.4, 0.2, 0, 0, 0, 0];
 // 손패 솜씨(2026-11-04 봇 시스템): 대회 단계마다 손패 여섯 중 짠 대로 두는 몫(브론즈 반 · 실버 65% · 골드 80% · 플래티넘 90% · 다이아부터 모두) — 나머지는 배울 수 있는 아무 카드
 const DECK_Q = [0.5, 0.65, 0.8, 0.9, 1, 1, 1];
+// 브론즈 = 옛 손패(2026-11-04 — 사용자 '순서대로 ㄱㄱ'로 낮은 단계 세기를 클로드가 정함): 친구 서버 지난 30일 실측(사람 쪽 승률) = 브론즈 66% · 실버 ~ 마스터 94 ~ 100% · 풀로세움 90%
+//  → 실버 위는 393 손패(성체 기술까지 고루)로 세진 그대로 · 새로 온 사람이 있는 브론즈만 393 전 손패(배운 기술 셋 + 평타 · 방어 · 회피 — 성체 기술 없음)로 393 전 세기(botstrength 브론즈 71% · 393은 50%)
+//  (손패 솜씨 DECK_Q · 머리 iq만 낮춰서는 56 ~ 59%까지 — 성체 기술을 들고 오는 것이 세기의 대부분)
+const OLD_DECK_TIERS = 1;
+function oldDeck(rng, key, stage, form) {
+  const battle = [uniqueOf(key, 0)];
+  for (let st = 0; st <= stage && battle.length < 3; st++) {
+    const pool = bloomPool(key, st).filter(x => !battle.includes(x.id)), us = uniquesOf(key, st).filter(id => !battle.includes(id));
+    if (st > 0 && us.length && rng() < 0.7) battle.push(us[Math.floor(rng() * us.length)]);
+    else if (pool.length) battle.push(pool[Math.floor(rng() * pool.length)].id);
+  }
+  const six = [...battle, 'basic', 'guard', 'evade'];
+  if (form) { const sk = formCards(form).filter(isSkillCard), n = stage >= 2 && rng() < 0.5 ? 2 : 1; for (let i = 0; i < n && sk.length; i++) six[six.lastIndexOf(i ? 'guard' : 'evade')] = sk.splice(Math.floor(rng() * sk.length), 1)[0]; }   // 변이 봇 = 회피 · 방어 자리에 변이 기술 카드
+  return { ids: six, con: null };
+}
 function alloc(up, W, pts) {   // 비중 W 대로 pts 포인트(햇빛은 단 단위 먼저)
   let left = pts;
   const tot = Object.values(W).reduce((a, b) => a + b, 0);
@@ -118,7 +133,7 @@ export function botPlant(rng, stage, lvHint = 3, tierBoost = 0, opt = {}) {
   if (!form && stage >= 1 && rng() < 0.08 + 0.02 * tierBoost) { const fs = sp.type === 'mushroom' ? ['spore'] : FORM_KEYS.filter(k => k !== 'spore'); form = fs[Math.floor(rng() * fs.length)]; }
   // 손패 여섯(2026-11-04 봇 시스템 — game/botdeck.js · 전엔 배운 기술 셋 + 평타 · 방어 · 회피라 성체 기술을 하나도 안 들고 감): 컨셉(연계 · 공격 · 버티기 · 방해 · 속성) ·
   //  어울리는 방어패 한 장 · 연계 묶음 · 햇빛 곡선 · 변이 봇은 그 변이 기술 카드 한두 장 · 낮은 단계 · 첫 판은 몇 장을 아무렇게나(DECK_Q)
-  const deck = buildDeck(rng, { key, stage, form, p: { up }, q: opt.favorEl ? 0.4 : DECK_Q[t], mutN: form ? (stage >= 2 && rng() < 0.5 ? 2 : 1) : 0 });
+  const deck = t < OLD_DECK_TIERS && !opt.key ? oldDeck(rng, key, stage, form) : buildDeck(rng, { key, stage, form, p: { up }, q: opt.favorEl ? 0.4 : DECK_Q[t], mutN: form ? (stage >= 2 && rng() < 0.5 ? 2 : 1) : 0 });
   const six = deck.ids.slice(0, 6);
   while (six.length < 6) six.push(null);
   // 카드(2026-10-17 — 사람과 같은 칸): 변이 봇 = 그 변이 패시브 하나(기술 카드는 손패 여섯에), 일반 봇 = 단계만큼(어린 0~1 · 자람 1 · 다 자람 1~2) 일반 카드
@@ -143,7 +158,8 @@ export function botTeam(rng, mine, bodyOf, opt) {
 
 // 봇 판 차리기(서버·화면 같은 값): 1:1 = 내 식물 하나, 3:3 = 내 팀 셋
 // 봇 머리 좋음(0~1, model.js aiPick — 2026-10-22): 대회 단계가 오를수록 · 같은 단계에선 라운드(예선 0 … 결승 4)마다 조금씩 · 첫 판(튜토리얼식)은 낮게
-export const aiOfTier = (tier, tut = false, round = 0) => (tut ? 0.15 : Math.min(0.95, 0.35 + 0.1 * Math.max(0, tier) + 0.02 * Math.max(0, round)));
+//  브론즈 0.35 → 0.25(2026-11-04 — 393 머리가 모든 봇에 좋아져 옛 손패만으로는 브론즈 59% · 0.25면 70%로 393 전 71%와 같음 · 위 OLD_DECK_TIERS)
+export const aiOfTier = (tier, tut = false, round = 0) => (tut ? 0.15 : Math.min(0.95, (tier > 0 ? 0.35 + 0.1 * tier : 0.25) + 0.02 * Math.max(0, round)));
 export function setupBot({ seed, mode, mine, foes, trainer, rank, tlv, swapCd = 0, swOrder = false, ownSun = false, ai = 0.5, search = 0 }) {
   if (mode === 'swap3') {
     const me = mine.map(p => unitOf('me', p)), foe = foes.map(p => unitOf('foe', p, { trainer, rank, tlv, ai }));
