@@ -1,16 +1,16 @@
 // 기술 카드 테두리(2026-11-04 사용자 '스킬 테두리 고안해보자 / 속성/종/속성+종/고유스킬 로 분류 … 색깔만 바꾸기보단 덩쿨이면 테두리를 덩쿨이 꼬인것처럼 …
-//  불속성+덩쿨이면 불 덩쿨로. 고유스킬이면 따로 표식을 해주자. 불속성 식물에 번개타입이라고 번개테두리를 주면 헷갈림' → '코덱스한테 테두리 그림 받아서 카드에 적용해볼래?'):
-//  테두리 = 그 기술이 속한 묶음(누가 배우나)으로 — 기술의 공격 속성이 아님(싹둑마마 ..력일섬! = 번개 공격이어도 싹둑마마 테)
-//   속성 공통 = 속성 모서리(el_*) · 종 공통 = 종 모서리(ty_* · 제 색) · 고유 = 그 식물의 종 모서리를 그 식물 속성 색으로 다시 칠함 + 고유 표식(별)
-//   가지 · 특수 · 기본기 · 변이 · 패시브 카드 = 지금 테 그대로(skillcard.js)
+//  불속성+덩쿨이면 불 덩쿨로. 고유스킬이면 따로 표식을 해주자. 불속성 식물에 번개타입이라고 번개테두리를 주면 헷갈림' → '코덱스한테 테두리 그림 받아서 카드에 적용해볼래?'
+//  → 같은 날 아침 '테두리는 속성정보까지 담으니깐 종류가 너무 많아진 느낌이야 / 테두리는 종만 담는걸로 할까? 속성은 속성 마크랑 아이콘 색으로도 알 수 있으니깐'):
+//  테두리 = 그 기술을 배우는 종(꽃 · 덩굴 · 선인장 · 버섯) — 기술의 공격 속성이 아님(싹둑마마 ..력일섬! = 번개 공격이어도 싹둑마마 종 테)
+//   종 공통 = 종 모서리(ty_* · 제 색) · 고유 = 그 식물의 종 모서리(제 색) + 고유 표식(별)
+//   속성 공통 · 가지 · 특수 · 기본기 · 변이 · 패시브 카드 = 지금 테 그대로(skillcard.js 둥근 테) · 속성은 그림 왼쪽 아래 속성 배지로
+//   버린 안(밤샘 365) = 속성 공통 = 속성 모서리(el_* 일곱) · 고유 = 종 모서리를 그 식물 속성 색으로 다시 칠함 — 그림 파일은 assets/v2/frames에 남김
 //  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md) → greycut 누끼 → itemconv 24칸 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
-//   그리기 = 모서리를 네 귀퉁이에 뒤집어 놓고 사이 변은 팔 끝 조각을 이어 붙임(이음매가 덜 보이는 길이를 고름) · 바람 · 빙결 모서리는 게임 속성 색(보라 · 청록)으로 다시 칠함
-import { ELEMENT } from './palette.js';
+//   그리기 = 모서리를 네 귀퉁이에 뒤집어 놓고 사이 변은 팔 끝 조각을 이어 붙임(이음매가 덜 보이는 길이를 고름)
 import { SPECIES, uniqueOf } from '../game/catalog.js';
 
-export const FRAME_NAMES = ['el_fire', 'el_water', 'el_grass', 'el_earth', 'el_wind', 'el_bolt', 'el_ice', 'ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'crest_unique'];
+export const FRAME_NAMES = ['ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'crest_unique'];
 const RAW = {}, BUILT = new Map();
-const RECOLOR_EL = { el_wind: 'wind', el_ice: 'ice' };   // 코덱스 색(민트 · 하늘)이 게임 속성 색(바람 보라 · 빙결 청록)과 달라 다시 칠함
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 export async function loadFrames(base = '../assets/v2/frames/') {
   const got = await Promise.all(FRAME_NAMES.map(n => load(base + n + '.png')));
@@ -21,36 +21,14 @@ export async function loadFrames(base = '../assets/v2/frames/') {
 // 고유 기술 → 그 식물 키(기술 id 'u_<줄임>_…'의 줄임 → 종)
 const OWNER = (() => { const m = {}; for (const k of Object.keys(SPECIES)) { const c = uniqueOf(k, 0).split('_')[1]; if (c && !m[c]) m[c] = k; } return m; })();
 const ownerOf = sk => (sk.fx && SPECIES[sk.fx] ? sk.fx : OWNER[String(sk.id || '').split('_')[1]]) || null;
-// 그 기술의 테 이름(없으면 지금 테): 'el_불' · 'ty_종' · 'ty_종|속성'(고유)
+// 그 기술의 테 이름(없으면 지금 테): 'ty_종'
 export function frameKey(sk) {
   if (!sk || sk.passive || sk.form || !sk.tier) return null;
-  if (sk.tier === 'u') { const sp = SPECIES[ownerOf(sk)]; return sp && sp.type && sp.el ? `ty_${sp.type}|${sp.el}` : null; }
-  if (sk.tier === 'c1' || sk.tier === 'c2' || sk.tier === 'c3') return sk.jong ? `ty_${sk.jong}` : sk.el ? `el_${sk.el}` : null;
+  if (sk.tier === 'u') { const sp = SPECIES[ownerOf(sk)]; return sp && sp.type ? `ty_${sp.type}` : null; }
+  if (sk.tier === 'c1' || sk.tier === 'c2' || sk.tier === 'c3') return sk.jong ? `ty_${sk.jong}` : null;
   return null;
 }
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
-const hexRgb = h => { const n = parseInt(h.slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
-const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
-const lum = (r, g, b) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-// 밝기대로 속성 색 계단에 옮겨 칠함(먹선 = 아주 어두운 칸은 그대로)
-function recolor(img, el) {
-  const E = ELEMENT[el], c = canvas(img.width, img.height), x = c.getContext('2d');
-  x.drawImage(img, 0, 0);
-  if (!E) return c;
-  const id = x.getImageData(0, 0, c.width, c.height), d = id.data, ink = 0.16;
-  const [dk, mn, lt] = [hexRgb(E.dark), hexRgb(E.main), hexRgb(E.light)], ramp = [mix(dk, [11, 19, 34], 0.35), dk, mix(dk, mn, 0.5), mn, mix(mn, lt, 0.5), lt, mix(lt, [255, 255, 255], 0.55)];
-  let lo = 1, hi = 0;
-  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 0) { const L = lum(d[i], d[i + 1], d[i + 2]); if (L >= ink) { lo = Math.min(lo, L); hi = Math.max(hi, L); } }
-  for (let i = 0; i < d.length; i += 4) {
-    if (!d[i + 3]) continue;
-    const L = lum(d[i], d[i + 1], d[i + 2]);
-    if (L < ink) continue;
-    const t = hi > lo ? (L - lo) / (hi - lo) : 0.5, c3 = ramp[Math.min(ramp.length - 1, Math.round(t * (ramp.length - 1)))];
-    d[i] = c3[0]; d[i + 1] = c3[1]; d[i + 2] = c3[2];
-  }
-  x.putImageData(id, 0, 0);
-  return c;
-}
 const flip = (src, fx, fy) => { const c = canvas(src.width, src.height), x = c.getContext('2d'); x.translate(fx ? src.width : 0, fy ? src.height : 0); x.scale(fx ? -1 : 1, fy ? -1 : 1); x.drawImage(src, 0, 0); return c; };
 // 이어 붙일 팔 조각 길이 = 모서리 장식이 끝난 뒤 곧은 팔 부분 전체(팔 두께보다 불투명 칸이 많은 줄 = 장식) — 이어 붙일 때 하나 걸러 뒤집어(거울) 이음매가 안 보이게
 function straight(d, T, along, span) {
@@ -65,9 +43,9 @@ function straight(d, T, along, span) {
 }
 function build(key) {
   if (BUILT.has(key)) return BUILT.get(key);
-  const [name, el] = key.split('|'), img = RAW[name];
+  const img = RAW[key];
   if (!img) { BUILT.set(key, null); return null; }
-  const base = el ? recolor(img, el) : RECOLOR_EL[name] ? recolor(img, RECOLOR_EL[name]) : (() => { const c = canvas(img.width, img.height); c.getContext('2d').drawImage(img, 0, 0); return c; })();
+  const base = canvas(img.width, img.height); base.getContext('2d').drawImage(img, 0, 0);
   const T = base.width, d = base.getContext('2d').getImageData(0, 0, T, T).data;
   let ay = 0, ax = 0;   // 팔 두께(위 팔 = 오른쪽 끝 세로줄의 마지막 불투명 줄 · 왼 팔 = 아래 끝 가로줄의 마지막 불투명 칸)
   for (let y = 0; y < T; y++) if (d[((y * T) + T - 1) * 4 + 3] > 0) ay = y;
@@ -81,7 +59,7 @@ function build(key) {
   BUILT.set(key, F);
   return F;
 }
-export const hasFrame = sk => { const k = frameKey(sk); return !!(k && RAW[k.split('|')[0]]); };
+export const hasFrame = sk => { const k = frameKey(sk); return !!(k && RAW[k]); };
 // 사이 변(모서리 사이를 팔 조각으로) — 그림 · 이름 띠 위에 그림(안쪽 1~2칸을 덮음)
 function edges(c, x, y, w, h, F) {
   const { T } = F;
