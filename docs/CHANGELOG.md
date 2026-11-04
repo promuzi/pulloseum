@@ -4,6 +4,9 @@
 
 > 여기는 **v2(2026-10-14 전면 도트 재제작 ~)** 기록이다. 그 전 v1 시절(2026-06-15 ~ 09-11, 옛 `index.html`)은 [history/CHANGELOG-v1.md](history/CHANGELOG-v1.md)로 옮겼다(2026-10-25).
 
+### 2026-11-04 (399) — PVFX 뺌
+- 사용자 'pvfx는 빼자'(고친 예까지 본 뒤). 비교 · 고침 도구 `tools/shots/fxref.mjs` · `fxref_sheet.py` · `tools/pixel/big/pvfxmod.py`를 저장소에서 빼고, 받은 묶음 `tools/pixel/fx_ref`(25 MB)는 휴지통으로 · `.gitignore` 줄도 뺌. 남긴 것 = 장 그림 → MP4 `tools/shots/frames2mp4.mjs` · 자세 빈 줄 확인 `tools/shots/poselines.mjs`. 게임 코드에는 처음부터 안 들어갔음.
+
 ### 2026-11-04 (398) — 맞을 때 · 때릴 때 식물 몸 가로 빈 줄 고침 · 맞는 순간 멈춤 뺌 · PVFX를 우리 그림체로 고친 예(친구 서버 전)
 - 사용자 '피격시 가로로 빈 선이 생김 공격할 때나 확인해봐'. 원인 = 자세(기울기 · 뜀 · 찌그러짐)가 들어간 식물은 줄마다 흙 위 높이만큼 옮겨 그리는데(`sprites.js` drawBigPose), 위로 기울면 윗줄일수록 더 올라가 반올림이 바뀌는 줄 사이가 1칸 벌어져 뒤 배경이 가로줄로 보였음(때리는 쪽 · 맞는 쪽 둘 다 — 흰 번쩍 장에도). 고침 = 줄마다 다음 줄이 놓이는 자리까지 늘려 그림. 확인 = 새 `node tools/shots/poselines.mjs --label …`(맞기 앞뒤 25ms마다 · 평타 · 불씨 · 돌 · 바람) — 자세가 들어간 장(17장 중 8~12장)만 바뀜(빈 줄 1~2개씩 메움) · 나머지 장은 그대로.
 - 사용자 '멈추는건 티 안남 빼자' → 맞는 순간 멈춤 미리 보기(397 `?hitstop=1` · HOLD_F · animMs · `sfxsync --hitstop` · `hitstopclip`)를 다 뺌.
