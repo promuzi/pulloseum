@@ -1,4 +1,4 @@
-// 기술 카드 앞면 이름 점검(2026-11-04 379 — 속성 테로 테 있는 카드가 늘며 이름 칸이 6칸 좁아짐): 모든 기술 카드 앞면을 손패 크기(66 · 한 줄 넷 62)로 그리며
+// 카드 앞면 이름 점검(2026-11-04 379 — 속성 테로 테 있는 카드가 늘며 이름 칸이 6칸 좁아짐 · 383부터 패시브 카드도): 모든 기술 · 패시브 카드 앞면을 손패 크기(66 · 한 줄 넷 62)로 그리며
 //  이름 줄을 모아 잘림(두 줄에 다 안 들어가 글자가 빠짐) · 낱말 가운데 끊김(띄어쓰기 아닌 곳에서 줄바꿈)을 셈
 // node tools/shots/nameaudit.mjs [--list]   — 카드 테 · 이름 칸(art/skillcard.js nameLines · frames.js)을 바꾼 뒤 돌림(잘림 = 0이 기준)
 import { createRequire } from 'node:module';
@@ -18,12 +18,13 @@ try {
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
   const d = await p.evaluate(async () => {
     const SC = await import('/v2/src/art/skillcard.js'), { SKILLS } = await import('/v2/src/game/catalog.js'), { BASICS } = await import('/v2/src/battle/model.js'), { Gfx } = await import('/v2/src/core/gfx.js'), FR = await import('/v2/src/art/frames.js');
+    const CD = await import('/v2/src/game/cards.js'), PAS = Object.keys(CD.CARDS).map(id => CD.cardFace(id)).filter(s => s && s.passive);   // 패시브 카드(일반 · 변이 — 383 세포 테부터 테 있음)
     const rec = [], orig = Gfx.prototype.text;
     Gfx.prototype.text = function (s, x, y, o) { rec.push({ s: String(s), y, o: o || {} }); return orig.call(this, s, x, y, o); };
     const cv = document.createElement('canvas'); cv.width = 80; cv.height = 100;
     const G = new Gfx(cv.getContext('2d')), out = { n: 0, framed: 0, cut: [], mid: [] };
-    for (const sk of [...BASICS, ...Object.values(SKILLS)]) {
-      if (!sk || sk.passive || !sk.name) continue;
+    for (const sk of [...BASICS, ...Object.values(SKILLS), ...PAS]) {
+      if (!sk || !sk.name) continue;
       out.n++;
       if (FR.hasFrame(sk)) out.framed++;
       for (const w of [66, 62]) {
