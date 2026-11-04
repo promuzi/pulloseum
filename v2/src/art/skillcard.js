@@ -493,7 +493,7 @@ function wrapBack(str, font, maxW) {
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
   if (sk.passive) return passiveBack(g, w, h, sk);
-  const E = elOf(sk), P = 14, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';
+  const E = elOf(sk), P = 16, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';   // 글 안쪽 여백 16(2026-11-04 '뒷면의 글씨가 테투리에 겹쳐. 안 겹치게 안으로 당겨' — 뒷면 테 팔 7~12칸 + 그림자 2칸 · 모서리 장식은 가장자리에서 15칸까지)
   const wm = icon(artIcon(sk));   // 아래쪽 옅은 문양(앞면 그림의 아이콘)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(artIcon(sk), E.light), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
   // 글이 뒷면보다 길 때(renderFaces가 재 보고 차례로 고름): o.small = 설명 한 칸 작게(10칸) → o.tight = 수 칸 · 효과 칩을 낮게 · 칸 사이를 좁게 → o.tiny = 거기에 설명을 9칸으로
@@ -508,18 +508,19 @@ function cardBack(g, w, h, sk, o) {
   const tags = [sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이` : TIER_NAME[sk.tier], CAT_NAME[cat], sk.act === 'attack' ? (sk.ranged ? '원거리' : '근접') : null, sk.area ? '광역' : null, sk.el ? `${E.name} 속성` : null].filter(Boolean);
   for (const ln of wrapBack(tags.join(' · '), 'body', cw)) { g.text(ln, P, y, { color: C.sub }); y += 14; }
   y += 4; g.rect(P, y, cw, 1, hexMix(E.main, C.ink, 0.35)); y += 9;
-  // 큰 수: 앞면 오른쪽 위 수치(위력 · 막음 · 회피 · 보호막 · 회복 — 없으면 위력 —) · 비용
-  //  칸 높이 · 글꼴 = 보통 34 · 작은 글자 32 · 아주 작은 글자 26(이름표 9칸 · 수 13칸 — 바위 갑옷 · 비늘 갑옷처럼 효과 설명이 아주 긴 카드)
-  const BX = TN ? 26 : SM ? 32 : 34, LY = TN ? 3 : SM ? 4 : 5, LF = TN ? sized('body', 9) : 'body', VF = TN ? 'value' : 'name', VD = TN ? 9 : 10, ID = TN ? 10 : 13;
+  // 큰 수: 앞면 오른쪽 위 수치(위력 · 막음 · 회피 · 보호막 · 회복 — 없으면 위력 —) · 비용(변이 = 판마다 쓸 수 있는 횟수)
+  //  2026-11-04 사용자 '턴이랑 비용 칸도 안 맞고 자리를 많이 차지해서 아래 글자가 튀어나오는 경우도 있는데' → 칸 높이 26(아주 작은 글자 24) · 이름표 9칸 · 수 13칸(전 = 34 · 11 · 16)
+  //   · 두 칸 다 아이콘 자리를 두고 수를 같은 자리에서 시작(전 = 판마다 칸만 아이콘이 없어 수가 왼쪽으로 붙었음 → 보석 아이콘)
+  const BX = TN ? 24 : 26, LY = 3, LF = sized('body', 9), VF = 'value', VD = TN ? 8 : 9, ID = TN ? 9 : 10;
   const st = statOf(sk, o), bw = Math.floor((cw - 8) / 2), box = (bx, label, val, ic) => {
     rrect(g, bx, y, bw, BX, 4, C.ink); rrect(g, bx + 1, y + 1, bw - 2, BX - 2, 3, C.plate);
-    g.text(label, bx + 8, y + LY, { font: LF, color: C.dim });
-    if (ic) g.img(icon(ic), bx + 8, y + LY + ID);
-    g.text(val, bx + (ic ? 22 : 8), y + LY + VD, { font: VF, color: val === '—' ? C.dim : C.text });
+    g.text(label, bx + 7, y + LY, { font: LF, color: C.dim });
+    if (ic) g.img(icon(ic), bx + 7, y + LY + ID);
+    g.text(val, bx + 21, y + LY + VD, { font: VF, color: val === '—' ? C.dim : C.text });
   };
   box(P, st ? st.label : '위력', st ? st.txt : '—', st ? BADGE[st.kind].icon : null);
-  if (sk.uses) box(P + bw + 8, '판마다', o.left != null ? `${o.left} / ${sk.uses}번` : `${sk.uses}번`, null); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
-  y += BX + (TN ? 5 : SM ? 8 : 10);
+  if (sk.uses) box(P + bw + 8, '판마다', o.left != null ? `${o.left}/${sk.uses}번` : `${sk.uses}번`, 'gem'); else box(P + bw + 8, '비용', String(sk.cost || 0), 'energy');
+  y += BX + (TN ? 4 : 7);
   // 설명 줄: 기본기 → 규칙 문장, 효과 → 칩 + 누구에게 + 한 줄 설명 · 한 문장(덩이)마다 끝에 조금 띄움(문장 경계가 보이게)
   const BODY = o.tiny ? sized('body', 9) : SM ? sized('body', 10) : 'body', LH = o.tiny ? 12 : SM ? 13 : 15, GAP = TN ? 0 : SM ? 1 : 3;
   const line = (txt, col = C.text, font = 'body') => { const f = font === 'body' ? BODY : font; for (const ln of wrapBack(txt, f, cw)) { g.text(ln, P, y, { font: f, color: col }); y += LH; } y += GAP; };
@@ -656,9 +657,14 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
   fc.setTransform(k * S, 0, 0, k * S, 0, 0);
   cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock, halved: o.halved, left: o.left });
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
-  bc.setTransform(k * S, 0, 0, k * S, 0, 0);
-  const hb = o.free ? Math.round(BH / S) : h;   // o.free = 뒷면을 카드 비율과 다르게(넓게) — 카드 고르기 화면 설명 판(짧은 기기에서도 글이 들어가게)
-  cardFrame(G2, 0, 0, w, hb, sk, false, true); backBody(G2, 0, 0, w, hb); drawFrameArt(G2, 0, 0, w, hb, sk, false);   // 뒷면도 앞면과 같은 묶음 테
+  if (hasFrame(sk)) {   // 묶음 테 카드 뒷면 = 같은 테를 1배 도트로 뒷면 크기에 다시 맞춤(2026-11-04 사용자 '뒷면의 글씨가 테투리에 겹쳐' — 앞면 테를 S배로 키우면 팔이 17~29칸이라 글 · 칸이 테에 겹쳤음)
+    bc.setTransform(k, 0, 0, k, 0, 0);
+    cardFrame(G2, 0, 0, BW, BH, sk, false, true); backBody(G2, 0, 0, BW, BH); drawFrameArt(G2, 0, 0, BW, BH, sk, false);
+  } else {   // 변이(각진 테) · 패시브(점선 테) = 앞면 테 그대로 S배
+    bc.setTransform(k * S, 0, 0, k * S, 0, 0);
+    const hb = o.free ? Math.round(BH / S) : h;   // o.free = 뒷면을 카드 비율과 다르게(넓게) — 카드 고르기 화면 설명 판(짧은 기기에서도 글이 들어가게)
+    cardFrame(G2, 0, 0, w, hb, sk, false, true); backBody(G2, 0, 0, w, hb);
+  }
   bc.setTransform(k, 0, 0, k, 0, 0);
   if (o.bodyH) {   // o.bodyH = 글을 따로 한 장(높이 = 글 전체) — 판보다 길면 부르는 쪽이 테 안쪽에 잘라 끌어 넘김(scenes/draft.js)
     const body = document.createElement('canvas'); body.width = Math.round(BW * k); body.height = Math.round(o.bodyH * k);

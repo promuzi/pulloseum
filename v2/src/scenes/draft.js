@@ -179,7 +179,7 @@ function drawPeek(app, D, p) {
     const sk = faceOf(p, id), BW = CW * 3, need = backHeight(sk, BW, { can: true }), BH = Math.min(H - 60, Math.max(120, need));
     D.pf = { id, BW, BH, bodyH: Math.max(BH, need), f: renderFaces(sk, CW, CH, BW, BH, c.getTransform().a || 1, { can: true, free: true, bodyH: Math.max(BH, need) }) };
   }
-  const P = D.pf, x = Math.round(W / 2 - P.BW / 2), y = Math.round(H / 2 - P.BH / 2), ins = 12;
+  const P = D.pf, x = Math.round(W / 2 - P.BW / 2), y = Math.round(H / 2 - P.BH / 2), ins = 15;   // 글을 자르는 안쪽 = 뒷면 테(1배 · 팔 12 + 그림자 2) 안(2026-11-04)
   c.fillStyle = 'rgba(3,5,10,0.62)'; c.fillRect(0, 0, W, H);
   c.drawImage(P.f.back, x, y, P.BW, P.BH);
   g.clip(x + ins, y + ins, P.BW - ins * 2, P.BH - ins * 2, () => c.drawImage(P.f.body, x, y, P.BW, P.bodyH));
