@@ -19,7 +19,7 @@ ok(s.tournament.tier === '실버' && s.tournament.name === '새싹 실버' && s.
 ok(s.season.best.sprout === 1, '시즌 최고 기록(새싹 = 실버)');
 // 리그 바꾸기: 자람은 따로 브론즈부터, 돌아오면 새싹 실버 그대로
 setLeague(s, 'growing');
-ok(s.league === 'growing' && s.tournament.tier === '브론즈' && s.tournament.name === '자람 브론즈' && leagueCap(s) === 1, '자람 리그 = 따로 브론즈');
+ok(s.league === 'growing' && s.tournament.tier === '브론즈' && s.tournament.name === '성장기 브론즈' && leagueCap(s) === 1, '성장기 리그 = 따로 브론즈(2026-11-05 이름 자람 → 성장기)');
 for (let i = 0; i < 2; i++) battleReward(s, { mode: 'tournament', win: true, rng, now: t0 });
 setLeague(s, 'sprout');
 ok(s.tournament.tier === '실버' && leaguesOf(s).growing.wins === 2, '새싹으로 돌아옴 = 실버 그대로 · 자람 2승은 보관');

@@ -8,7 +8,8 @@ import { randomInt } from 'node:crypto';
 import { setupPvp, pvpTurn, setupPvp3, pvpTurn3, viewFor, turnFor, mirrorEvents, makeRng } from '../v2/src/game/fight.js';
 import { sendIn, aliveOf, makeTeamBattle } from '../v2/src/battle/team.js';
 import { randomOk } from '../v2/src/battle/model.js';
-import { STAGES, RULES_VER } from '../v2/src/game/catalog.js';
+import { STAGES, RULES_VER, LEAGUES } from '../v2/src/game/catalog.js';
+import { bracketWhy } from '../v2/src/game/logic.js';
 import { fail } from './game.mjs';
 import { plantLite } from './log.mjs';
 
@@ -126,31 +127,34 @@ export function makeRooms({ game, log, q: db = null }) {
   const sideOf = (r, uid) => (r.sides ? (r.sides.a === uid ? 'a' : r.sides.b === uid ? 'b' : null) : null);
   function code() { for (let k = 0; k < 50; k++) { let c = ''; for (let i = 0; i < 6; i++) c += ABC[randomInt(ABC.length)]; if (!rooms.has(c)) return c; } fail('잠시 뒤에 다시 해 주세요'); }
   const prof = got => ({ name: got.profile.name, title: got.profile.title, avatar: got.profile.avatar, color: got.profile.color, level: got.level });
-  function member(uid, now) {
-    const got = game.plantOf(uid, null);
-    if (!got) fail('대결할 식물이 없어요');
-    const m = { uid, ...prof(got), plant: got.plant.uid, card: card(got.plant), team: null, teamCards: [], ready: false, joined: now, gone: null, lastEmote: 0 };
-    teamTo(m, null);
+  function member(uid, now, cap = 2) {   // 방 생장 칸에 맞는 식물이 없으면 고른 식물 없음(들어오기는 됨 — 준비에서 막힘)
+    const got = game.plantOf(uid, null, cap), any = got || game.plantOf(uid, null);
+    if (!any) fail('대결할 식물이 없어요');
+    const m = { uid, ...prof(any), plant: got ? got.plant.uid : null, card: got ? card(got.plant) : null, team: null, teamCards: [], ready: false, joined: now, gone: null, lastEmote: 0 };
+    teamTo(m, null, cap);
     return m;
   }
-  // 3:3 팀(식물 uid 셋 + 카드) — 고른 셋이 사라졌으면 저장된 팀 → 앞에서부터 셋, 셋이 안 되면 없음
-  const teamTo = (m, uids) => { const t = game.teamOf(m.uid, uids); m.team = t ? t.plants.map(p => p.uid) : null; m.teamCards = t ? t.plants.map(card) : []; };
-  // 프로필 · 레벨 · 고른 식물 · 팀을 지금 세이브로 다시 읽음(판이 끝나 레벨이 오르거나 식물을 보관·판매했을 때)
-  function refresh(m) { try { const got = game.plantOf(m.uid, m.plant); if (got) { Object.assign(m, prof(got)); m.plant = got.plant.uid; m.card = card(got.plant); } teamTo(m, m.team); } catch {} }
+  // 생장 칸(2026-11-05 사용자 'pvp도 새싹/성장체/성체로 나누고 / 이걸 각각 1:1, 3:3 각각 으로') = 방장이 고름 · 옛 방 = 성체(제한 없음)
+  const lgOf = r => (r && LEAGUES[r.league] ? r.league : 'open'), capOf = r => LEAGUES[lgOf(r)].cap;
+  // 3:3 팀(식물 uid 셋 + 카드) — 고른 셋이 사라졌거나 칸을 넘으면 저장된 팀 → 앞에서부터 맞는 셋, 셋이 안 되면 없음
+  const teamTo = (m, uids, cap = 2) => { const t = game.teamOf(m.uid, uids, cap); m.team = t ? t.plants.map(p => p.uid) : null; m.teamCards = t ? t.plants.map(card) : []; };
+  // 프로필 · 레벨 · 고른 식물 · 팀을 지금 세이브로 다시 읽음(판이 끝나 레벨이 오르거나 식물을 보관·판매했을 때 · 방 생장 칸이 바뀌었을 때 — 넘는 식물은 맞는 것으로)
+  function refresh(m, r) { try { const cap = capOf(r), got = game.plantOf(m.uid, m.plant, cap); if (got) { Object.assign(m, prof(got)); m.plant = got.plant.uid; m.card = card(got.plant); } else { m.plant = null; m.card = null; } teamTo(m, m.team, cap); } catch {} }
   const card = p => ({ uid: p.uid, key: p.key, name: p.name, stage: p.stage, stageName: STAGES[p.stage], lv: p.lv, shiny: !!p.shiny, legend: !!p.legend });
   const movedOf = (r, side) => !!side && (r.sends ? r.sends[side] != null : !!r.moves[side]);   // 이번 차례 수를 냈는지(고르기 = 기술 · 교체, 채우기 = 다음 식물)
   function roomView(r, uid) {
     const sd = sideOf(r, uid), b = r.phase === 'battle' ? { turn: r.B.turn, deadline: r.deadline, step: r.sends ? 'send' : 'pick', moved: movedOf(r, sd), foeMoved: movedOf(r, OTHER[sd]) } : null;
-    return { code: r.code, host: r.host === uid, phase: r.phase, mode: r.mode, battle: b, last: r.last || null,
+    return { code: r.code, host: r.host === uid, phase: r.phase, mode: r.mode, league: lgOf(r), battle: b, last: r.last || null,
       members: r.members.map(m => ({ me: m.uid === uid, host: m.uid === r.host, name: m.name, title: m.title, avatar: m.avatar, color: m.color, level: m.level, card: m.uid === uid ? m.card : null, team: m.uid === uid ? m.teamCards : null, team3: !!m.team, ready: m.ready, online: online(m.uid) })) };   // 고른 식물(card) · 팀은 나에게만, 팀이 되는지(team3)는 둘 다
   }
   function broadcastRoom(r) { save(r); for (const m of r.members) send(m.uid, 'room', roomView(r, m.uid)); }
   const touch = (r, now) => { r.touched = now; save(r); };
 
-  function create(uid, now) {
+  function create(uid, now, opt = {}) {   // opt = 홈에서 고른 형식(1:1 · 3:3) · 생장 칸 — 없으면 1:1 · 성체
     if (rooms.size >= MAX_ROOMS) fail('방이 너무 많아요 — 잠시 뒤에 다시 해 주세요');
     leave(uid, now);
-    const r = { code: code(), host: uid, created: now, touched: now, members: [member(uid, now)], phase: 'lobby', mode: '1v1', B: null, moves: {}, sends: null, last: null, games: 0 };
+    const mode = opt.mode === 'swap3' ? 'swap3' : '1v1', league = LEAGUES[opt.league] ? opt.league : 'open';
+    const r = { code: code(), host: uid, created: now, touched: now, members: [member(uid, now, LEAGUES[league].cap)], phase: 'lobby', mode, league, B: null, moves: {}, sends: null, last: null, games: 0 };
     rooms.set(r.code, r); byUser.set(uid, r.code);
     log(uid, 'room', { op: 'create' }, now);
     broadcastRoom(r);
@@ -164,8 +168,8 @@ export function makeRooms({ game, log, q: db = null }) {
     if (r.members.length >= 2) fail('방이 꽉 찼어요');
     if (r.phase === 'battle') fail('이미 대결 중인 방이에요');
     leave(uid, now);
-    r.members.push(member(uid, now)); byUser.set(uid, r.code); touch(r, now);
-    for (const m of r.members) { m.ready = false; refresh(m); }
+    r.members.push(member(uid, now, capOf(r))); byUser.set(uid, r.code); touch(r, now);
+    for (const m of r.members) { m.ready = false; refresh(m, r); }
     log(uid, 'room', { op: 'join' }, now);
     broadcastRoom(r);
     return roomView(r, uid);
@@ -185,6 +189,7 @@ export function makeRooms({ game, log, q: db = null }) {
     if (r.phase === 'battle') fail('대결 중엔 못 바꿔요');
     const got = game.plantOf(uid, String(plantUid || ''));
     if (!got || got.plant.uid !== plantUid) fail('스마트팜에 있는 식물만 나갈 수 있어요');
+    { const why = bracketWhy(lgOf(r), [got.plant]); if (why) fail(why); }   // 방 생장 칸까지(2026-11-05)
     const m = r.members.find(x => x.uid === uid);
     m.plant = got.plant.uid; m.card = card(got.plant); m.ready = false;
     touch(r, now); broadcastRoom(r);
@@ -196,7 +201,17 @@ export function makeRooms({ game, log, q: db = null }) {
     if (r.host !== uid) fail('방장만 바꿀 수 있어요');
     if (r.phase === 'battle') fail('대결 중엔 못 바꿔요');
     if (mode !== '1v1' && mode !== 'swap3') fail('모르는 방식이에요');
-    if (r.mode !== mode) { r.mode = mode; for (const m of r.members) { m.ready = false; refresh(m); } }
+    if (r.mode !== mode) { r.mode = mode; for (const m of r.members) { m.ready = false; refresh(m, r); } }
+    touch(r, now); broadcastRoom(r);
+    return roomView(r, uid);
+  }
+  // 생장 칸(새싹 · 성장기 · 성체 — 그 단계까지 나감) — 방장만, 대기 중에만. 바뀌면 둘 다 준비가 풀리고 넘는 식물 · 팀은 맞는 것으로(2026-11-05)
+  function setLeague(uid, lg, now) {
+    const r = roomOf(uid); if (!r) fail('방에 있지 않아요');
+    if (r.host !== uid) fail('방장만 바꿀 수 있어요');
+    if (r.phase === 'battle') fail('대결 중엔 못 바꿔요');
+    if (!LEAGUES[lg]) fail('모르는 생장 칸이에요');
+    if (lgOf(r) !== lg) { r.league = lg; for (const m of r.members) { m.ready = false; refresh(m, r); } }
     touch(r, now); broadcastRoom(r);
     return roomView(r, uid);
   }
@@ -208,6 +223,7 @@ export function makeRooms({ game, log, q: db = null }) {
     if (want.length !== 3 || new Set(want).size !== 3) fail('식물 셋을 골라 주세요');
     const t = game.teamOf(uid, want);
     if (!t || t.plants.some((p, i) => p.uid !== want[i])) fail('스마트팜에 있는 식물만 나갈 수 있어요');
+    { const why = bracketWhy(lgOf(r), t.plants); if (why) fail(why); }
     const m = r.members.find(x => x.uid === uid);
     m.team = want; m.teamCards = t.plants.map(card); m.ready = false;
     touch(r, now); broadcastRoom(r);
@@ -216,8 +232,10 @@ export function makeRooms({ game, log, q: db = null }) {
   function ready(uid, on, now) {
     const r = roomOf(uid); if (!r) fail('방에 있지 않아요');
     if (r.phase === 'battle') return roomView(r, uid);
-    const m = r.members.find(x => x.uid === uid);
-    if (on && r.mode === 'swap3' && !m.team) fail('3:3은 스마트팜에 식물이 셋 있어야 해요');
+    const m = r.members.find(x => x.uid === uid), L = LEAGUES[lgOf(r)];
+    if (on) refresh(m, r);   // 그사이 진화 · 보관한 식물이 칸을 넘으면 맞는 것으로
+    if (on && r.mode === 'swap3' && !m.team) fail(L.cap < 2 ? `3:3 ${L.name}는 ${L.desc} — 맞는 식물이 셋 있어야 해요` : '3:3은 스마트팜에 식물이 셋 있어야 해요');
+    if (on && r.mode !== 'swap3' && !m.plant) fail(`${L.name}는 ${L.desc} — 나갈 식물이 없어요`);
     m.ready = !!on; touch(r, now);
     if (r.members.length === 2 && r.members.every(x => x.ready)) start(r, now);
     else broadcastRoom(r);
@@ -228,7 +246,7 @@ export function makeRooms({ game, log, q: db = null }) {
   function start(r, now) {
     const [ma, mb] = r.members, seed = randomInt(1, 2 ** 31 - 1), stop = () => { for (const m of r.members) m.ready = false; broadcastRoom(r); };
     if (r.mode === 'swap3') {
-      const ta = game.teamOf(ma.uid, ma.team), tb = game.teamOf(mb.uid, mb.team);
+      const cap = capOf(r), ta = game.teamOf(ma.uid, ma.team, cap), tb = game.teamOf(mb.uid, mb.team, cap);   // 생장 칸까지(2026-11-05)
       if (!ta || !tb) return stop();
       r.B = setupPvp3({ seed, a: ta.plants, b: tb.plants, aName: ta.profile.name, bName: tb.profile.name });
       for (const [units, lv] of [[r.B.team.me, ta.level], [r.B.team.foe, tb.level]]) for (const u of units) { u.rank = `재배사 Lv${lv}`; u.tlv = lv; }
@@ -236,7 +254,7 @@ export function makeRooms({ game, log, q: db = null }) {
       r.shown = { a: new Set([0]), b: new Set([0]) };   // 상대에게 보인 식물(앞에 나온 적 있는 것)
       r.plants = { a: ta.plants.map(plantLite), b: tb.plants.map(plantLite) };
     } else {
-      const ga = game.plantOf(ma.uid, ma.plant), gb = game.plantOf(mb.uid, mb.plant);
+      const cap = capOf(r), ga = game.plantOf(ma.uid, ma.plant, cap), gb = game.plantOf(mb.uid, mb.plant, cap);
       if (!ga || !gb) return stop();
       r.B = setupPvp({ seed, a: ga.plant, b: gb.plant, aName: ga.profile.name, bName: gb.profile.name });
       r.B.me.rank = `재배사 Lv${ga.level}`; r.B.foe.rank = `재배사 Lv${gb.level}`; r.B.me.tlv = ga.level; r.B.foe.tlv = gb.level;   // 체력판 위 '이름 · Lv'(상대 판에만 보임)
@@ -346,7 +364,7 @@ export function makeRooms({ game, log, q: db = null }) {
     log(r.sides[winSide], 'pvp', { mode: r.mode, why, turns, short, loser: r.sides[loseSide], win: r.plants[winSide], lose: r.plants[loseSide], picksWin: r.picks[winSide], picksLose: r.picks[loseSide], game: r.games }, now);
     r.last = { winner: (r.members.find(m => m.uid === r.sides[winSide]) || {}).name || '', why, turns, mode: r.mode };
     r.B = null; r.sides = null; r.moves = {}; r.sends = null;
-    for (const m of r.members) { m.ready = false; refresh(m); }
+    for (const m of r.members) { m.ready = false; refresh(m, r); }
     touch(r, now); broadcastRoom(r);
   }
   function emote(uid, i, now) {
@@ -411,5 +429,5 @@ export function makeRooms({ game, log, q: db = null }) {
 
   // 방을 바꾸는 일은 끝날 때 바로 적음(시계도 1초마다 남은 것을 적음)
   const done = fn => (...a) => { try { return fn(...a); } finally { flush(); } };
-  return { subscribe, poll, create: done(create), join: done(join), leave: done(leave), pick: done(pick), setMode: done(setMode), setTeam: done(setTeam), ready: done(ready), move: done(move), forfeit: done(forfeit), emote, view, count: () => rooms.size, stop: () => clearInterval(clock) };   // stop = 시험(다시 켜기 흉내)
+  return { subscribe, poll, create: done(create), join: done(join), leave: done(leave), pick: done(pick), setMode: done(setMode), setLeague: done(setLeague), setTeam: done(setTeam), ready: done(ready), move: done(move), forfeit: done(forfeit), emote, view, count: () => rooms.size, stop: () => clearInterval(clock) };   // stop = 시험(다시 켜기 흉내)
 }

@@ -1,7 +1,7 @@
 // 서버와 이야기하기(같은 주소의 /api). 로그인 열쇠 = 이 브라우저 localStorage 'pullo.token'. 서버 시각과의 차이(off)로 열매·연료 시계를 맞춤.
 //  오프라인(?offline=1 · 촬영 도구) = 같은 규칙(ops.js · fight.js)을 이 브라우저에서 돌림 — 저장은 안 함(체험·검토용).
 import { runOp } from '../game/ops.js';
-import { battleReward, battleForfeit, syncTimers } from '../game/logic.js';
+import { battleReward, battleForfeit, syncTimers, leaguesOf, bracketWhy } from '../game/logic.js';
 import { makeRng } from '../battle/rules.js';
 import { setupBot, botStep, viewOf, botPlant, botTeam, botTrainer, botBody, aiOfTier, searchOfTier } from '../game/fight.js';
 import { TIERS, LEAGUES, tourName } from '../game/catalog.js';
@@ -38,9 +38,11 @@ export const bot = {
     const s = app.state, mode = s.mode === 'swap3' ? 'swap3' : 'tournament', rng = makeRng((Math.random() * 2 ** 31) | 0);
     const mine = mode === 'swap3' ? s.team.map(i => s.plants[i]).filter(Boolean) : [s.plants[s.active]];
     if (mode === 'swap3' && mine.length < 3) throw new NetErr('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요', 400);
+    leaguesOf(s);
+    const why = bracketWhy(s.league, mine); if (why) throw new NetErr(why, 400);   // 1:1 · 3:3 모두 생장 칸까지(2026-11-05)
     const T = s.tournament, tier = Math.max(0, TIERS.indexOf(T.tier)), tour = mode === 'tournament', cap = (LEAGUES[s.league] || LEAGUES.sprout).cap;   // 서버(server/game.mjs battleStart)와 같은 봇(튜토리얼식 첫 판만 뺌)
-    const foes = botTeam(rng, mine, p => (tour ? botBody(rng, cap, tier) : { stage: p.stage, lv: p.lv }), { tierBoost: tier, tier, concept: true, ivFloor: tour, lvExact: tour });   // 3:3 = 속성 · 역할이 겹치지 않는 팀(2026-11-04)
-    const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
+    const foes = botTeam(rng, mine, () => botBody(rng, cap, tier), { tierBoost: tier, tier, concept: true, ivFloor: true, lvExact: true });   // 3:3 = 속성 · 역할이 겹치지 않는 팀(2026-11-04) · 3:3도 생장 칸 몸(2026-11-05)
+    const info = mode === 'swap3' ? { mode, title: `3:3 교체전 · ${LEAGUES[s.league].short}`, swap3: { ...s.swap3by[s.league] } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
     const spec = { seed: (Math.random() * 2 ** 31) | 0, mode, ...(mode === 'swap3' ? { swapCd: 2, ownSun: true } : {}), mine: JSON.parse(JSON.stringify(mine)), foes, trainer: botTrainer(rng), rank: `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv: Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4)), info, ai: aiOfTier(tier), search: tour ? searchOfTier(tier) : 0 };
     local = { spec, B: setupBot(spec) };
     return { id: 'local', mode, view: viewOf(local.B), info };
@@ -100,11 +102,12 @@ export function openStream(onEvent) {
 }
 export const room = {
   view: () => net.req('/api/room'),
-  create: () => net.req('/api/room/create', {}),
+  create: (opt = {}) => net.req('/api/room/create', opt),   // { mode: '1v1' | 'swap3', league } — 홈에서 고른 형식 · 생장 칸
   join: code => net.req('/api/room/join', { code }),
   leave: () => net.req('/api/room/leave', {}),
   pick: plant => net.req('/api/room/pick', { plant }),
   mode: mode => net.req('/api/room/mode', { mode }),   // 방장만: '1v1' | 'swap3'
+  league: league => net.req('/api/room/league', { league }),   // 방장만: 'sprout' | 'growing' | 'open'(생장 칸 — 2026-11-05)
   team: plants => net.req('/api/room/team', { plants }),   // 3:3 팀(식물 uid 셋, 앞 = 먼저 나감)
   ready: on => net.req('/api/room/ready', { on }),
   move: (act, turn) => net.req('/api/room/move', { act, turn }),

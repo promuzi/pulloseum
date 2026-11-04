@@ -178,11 +178,12 @@ export function makeApi({ q, game, rooms, log, adminKey = null, googleClientId =
     'POST /api/battle/cancel': (req, b, now) => { const u = authed(req, now); return game.battleCancel(u.id, b.id, now); },   // 매칭 취소 — 수를 안 둔 판만(2026-10-22)
     'POST /api/battle/forfeit': (req, b, now) => { const u = authed(req, now); return game.battleForfeit(u.id, b.id, now); },
     'GET /api/room': (req, b, now) => rooms.view(authed(req, now).id),
-    'POST /api/room/create': (req, b, now) => rooms.create(authed(req, now).id, now),
+    'POST /api/room/create': (req, b, now) => rooms.create(authed(req, now).id, now, { mode: b.mode, league: b.league }),   // 형식 · 생장 칸(없으면 1:1 · 성체)
     'POST /api/room/join': (req, b, now) => rooms.join(authed(req, now).id, b.code, now),
     'POST /api/room/leave': (req, b, now) => rooms.leave(authed(req, now).id, now),
     'POST /api/room/pick': (req, b, now) => rooms.pick(authed(req, now).id, b.plant, now),
     'POST /api/room/mode': (req, b, now) => rooms.setMode(authed(req, now).id, String(b.mode || ''), now),
+    'POST /api/room/league': (req, b, now) => rooms.setLeague(authed(req, now).id, String(b.league || ''), now),   // 생장 칸(2026-11-05)
     'POST /api/room/team': (req, b, now) => rooms.setTeam(authed(req, now).id, b.plants, now),
     'POST /api/room/ready': (req, b, now) => rooms.ready(authed(req, now).id, !!b.on, now),
     'POST /api/room/move': (req, b, now) => rooms.move(authed(req, now).id, b.act, now, b.turn == null ? null : +b.turn),

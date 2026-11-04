@@ -107,16 +107,18 @@ export function makeGame({ q, log }) {
     const { s } = load(uid);
     const { mode, mine } = mineOf(s);
     if (!mine[0]) fail('싸울 식물이 없어요');
-    if (mode === 'tournament') { L.leaguesOf(s); const cap = L.leagueCap(s); if (mine[0].stage > cap) fail(`${LEAGUES[s.league].name}는 ${LEAGUES[s.league].desc} — 리그를 바꾸거나 다른 식물을 내보내 주세요`); }
+    L.leaguesOf(s);
     if (mode === 'swap3' && mine.length < 3) fail('3:3 교체전은 식물 셋이 필요해요 — 팀을 골라 주세요');
+    { const why = L.bracketWhy(s.league, mine); if (why) fail(why); }   // 1:1 · 3:3 모두 고른 생장 칸까지(2026-11-05 — 전엔 3:3은 단계 제한 없음)
     const seed = randomInt(1, 2 ** 31 - 1), rng = makeRng(randomInt(1, 2 ** 31 - 1)), tier = Math.max(0, TIERS.indexOf(s.tournament.tier)), T = s.tournament;
     // 처음 두 판(새 계정 · 브론즈 예선 · 재배사 Lv2까지) = 튜토리얼식 — 내 속성이 잘 듣는 상대(2026-10-22 사용자 "첫 계정 생성 후 튜토리얼식 전투는 상성이 좋은 애로 배치")
     const tut = mode === 'tournament' && tier === 0 && T.round === '예선' && (T.wins || 0) + (T.losses || 0) < 2 && (s.user.level || 1) <= 2;
     //  봇 = 대회 단계가 오를수록 먼 궤도 식물(fight.js ORBIT_CAP) · 종 역할에 맞는 스펙 · 대회(튜토리얼 빼고)는 내 식물이 아니라 리그 가장 높은 성장 단계 + 단계별 레벨 · 개체값 바닥(2026-10-23 botBody)
-    const tour = mode === 'tournament' && !tut, cap = mode === 'tournament' ? L.leagueCap(s) : 0;
+    //  3:3도 그 생장 칸의 가장 높은 단계 몸(2026-11-05 — 전엔 내 팀 단계를 그대로 따라 함)
+    const tour = !tut, cap = L.leagueCap(s);
     const foes = botTeam(rng, mine, p => (tour ? botBody(rng, cap, tier) : { stage: p.stage, lv: p.lv }), { tierBoost: tier, tier, favorEl: tut && SPECIES[mine[0].key] ? SPECIES[mine[0].key].el : null, concept: true, ivFloor: tour, lvExact: tour });   // 3:3 = 속성 · 역할이 겹치지 않는 팀(2026-11-04)
     const trainer = botTrainer(rng), rank = `${T.tier} ${1 + Math.floor(rng() * 3)}`, tlv = Math.max(1, (s.user.level || 1) - 1 + Math.floor(rng() * 4));   // 봇 재배사 레벨 = 내 레벨 -1~+2
-    const info = mode === 'swap3' ? { mode, title: '3:3 교체전', swap3: { ...s.swap3 } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
+    const info = mode === 'swap3' ? { mode, title: `3:3 교체전 · ${LEAGUES[s.league].short}`, swap3: { ...s.swap3by[s.league] } } : { mode, title: `${tourName(T)} · ${T.round}`, tier: T.tier, round: T.round, wins: T.wins, losses: T.losses, bestOf: T.bestOf };
     const spec = { seed, rv: RULES_VER, mode, mine: mine.map(clone), foes, trainer, rank, tlv, info, ai: aiOfTier(tier, tut, mode === 'tournament' ? Math.max(0, L.ROUNDS.indexOf(T.round)) : 0), search: mode === 'tournament' ? searchOfTier(tier, tut) : 0, ...(mode === 'swap3' ? { swapCd: 2, swOrder: true, ownSun: true } : {}) };   // 3:3 교체 제한 2턴 · 교체도 선공 · 후공 순서(2026-10-18 — 새 판만, 옛 판은 저장된 spec 그대로)
     const B = setupBot(spec), id = randomBytes(9).toString('base64url');
     q.addBattle.run(id, uid, mode, JSON.stringify(spec), '[]', now, now);
@@ -161,19 +163,19 @@ export function makeGame({ q, log }) {
     log(uid, 'pvp.result', { win, short, forfeit: !!forfeit, capped: reward.capped, d: diff(before, econ(s)), L: s.user.level }, now);
     return { reward, state: s };
   }
-  // 대결에 나갈 식물(스마트팜에 있는 것) — 방에서 고른 그 순간의 값으로
-  function plantOf(uid, plantUid) {
-    const { s } = load(uid);
-    const p = (plantUid && s.plants.find(x => x.uid === plantUid)) || s.plants[s.active] || s.plants[0];
+  // 대결에 나갈 식물(스마트팜에 있는 것) — 방에서 고른 그 순간의 값으로 · cap = 방의 생장 칸(그 단계까지 — 고른 식물이 넘으면 지금 식물 → 앞에서부터 맞는 것, 2026-11-05)
+  function plantOf(uid, plantUid, cap = 2) {
+    const { s } = load(uid), ok = p => !!p && p.stage <= cap;
+    const p = [plantUid && s.plants.find(x => x.uid === plantUid), s.plants[s.active], ...s.plants].find(ok) || null;
     return p ? { plant: clone(p), profile: { ...s.profile }, level: s.user.level } : null;
   }
-  // 3:3 친구 대결에 나갈 셋 — 고른 셋 → 없거나 틀리면 저장된 3:3 팀 → 스마트팜 앞에서부터 셋, 셋이 안 되면 null
-  function teamOf(uid, uids) {
-    const { s } = load(uid);
+  // 3:3 친구 대결에 나갈 셋 — 고른 셋 → 없거나 틀리면 저장된 3:3 팀 → 스마트팜 앞에서부터 셋(모두 생장 칸 cap 까지), 셋이 안 되면 null
+  function teamOf(uid, uids, cap = 2) {
+    const { s } = load(uid), fit = list => list.length === 3 && new Set(list).size === 3 && list.every(p => p.stage <= cap);
     let list = Array.isArray(uids) ? uids.map(u => s.plants.find(p => p.uid === u)).filter(Boolean) : [];
-    if (list.length !== 3 || new Set(list).size !== 3) list = teamPlants(s);
-    if (list.length !== 3) list = s.plants.slice(0, 3);
-    return list.length === 3 ? { plants: list.map(clone), profile: { ...s.profile }, level: s.user.level } : null;
+    if (!fit(list)) list = teamPlants(s);
+    if (!fit(list)) list = s.plants.filter(p => p.stage <= cap).slice(0, 3);
+    return fit(list) ? { plants: list.map(clone), profile: { ...s.profile }, level: s.user.level } : null;
   }
   return { create, state, act, coupon, battleStart, battleTurn, battleCancel, battleForfeit, pvpResult, plantOf, teamOf, load };
 }

@@ -903,7 +903,9 @@ for (const p of PLANETS) p.regions = REGIONS[p.id];
 export const KIND_NAME = { seed: '종자가 많아요', mixed: '종자 · 자원 섞임', resource: '자원이 많아요' };
 // ── 리그 · 시즌(1:1 토너먼트) — 리그는 단계별(성장 설계 2026-10-15 "리그는 단계별(어린 · 자라는 · 무제한)"), 리그마다 단계 사다리(브론즈 → 풀로세움) 따로
 //  시즌 = 2주. 끝나면 리그마다 그 시즌 가장 높이 간 단계로 상자(돈 · 보석 · 연료 캡슐 · 골드부터 칭호) → 모든 리그가 두 단계 내려가 예선부터
-export const LEAGUES = { sprout: { name: '새싹 리그', short: '새싹', cap: 0, desc: '어린 식물만' }, growing: { name: '자람 리그', short: '자람', cap: 1, desc: '자라는 단계까지' }, open: { name: '무제한 리그', short: '무제한', cap: 2, desc: '단계 제한 없음' } };
+// 리그 = 생장 칸(2026-11-05 사용자 'pvp도 새싹/성장체/성체로 나누고 / 이걸 각각 1:1, 3:3 각각 으로 또 분류해'): 1:1 대회 · 3:3 교체전 · 친구 대결이 같은 칸을 씀 ·
+//  그 단계까지 나갈 수 있음(cap) · 이름 자람 · 무제한 → 성장기 · 성체(키는 그대로 — 저장 · 순위표 호환)
+export const LEAGUES = { sprout: { name: '새싹 리그', short: '새싹', cap: 0, desc: '새싹만' }, growing: { name: '성장기 리그', short: '성장기', cap: 1, desc: '성장기까지' }, open: { name: '성체 리그', short: '성체', cap: 2, desc: '성체까지' } };
 export const LEAGUE_KEYS = Object.keys(LEAGUES);
 export const TIERS = ['브론즈', '실버', '골드', '플래티넘', '다이아', '마스터', '풀로세움'];
 // 프로필 배너가 열리는 재배사 레벨(2026-10-22 — 색 넷은 처음부터 · 무늬 넷(별빛 · 잎맥 · 물결 · 회로)은 Lv5 · 10 · 15 · 20, 그림은 art/profile.js)

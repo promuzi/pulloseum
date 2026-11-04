@@ -40,7 +40,7 @@ export function newGame({ nickname, starter }, rng, now) {
 // ── 저장 판 번호 · 옮기기(2026-10-18 업데이트 안전 — species-identity 설계 §7) ──
 //  서버가 불러올 때 s.ver < SAVE_VER 이면 원본을 보관한 뒤(server/game.mjs load) 단계를 번호 순서대로 한 번씩. 기능마다 붙은 p.skills.v4~v8 표시는 그대로
 //  (이어 하는 옛 판 다시 계산이 읽음). 앞으로 저장 모양을 바꾸면 MIGRATIONS 에 단계를 더하고 SAVE_VER +1 · id를 바꾸면 catalog.js RENAMED 에 적고 +1.
-export const SAVE_VER = 9;
+export const SAVE_VER = 10;
 const MIGRATIONS = [
   () => {},   // 0 → 1: 판 번호 시작(모양은 그대로)
   () => {},   // 1 → 2(2026-10-22 밤샘 묶음 — 카드 귀속 · 꾸러미 · 랭크 7판): 모양은 그대로(새 칸은 쓸 때 생김) · 판 번호만 올려 서버가 올린 뒤 처음 불러올 때 계정마다 원본을 보관(server/game.mjs load · POST /api/admin/restore)
@@ -58,6 +58,12 @@ const MIGRATIONS = [
   s => MIGRATIONS[5](s),
   // 8 → 9(2026-11-04 — 엠버캡 · 드레이크캑터 · 프로스트드레이크 고유 기술 켬 · 드라코프루트는 새 설계라도 기술 id 그대로): 5 → 6과 같은 일
   s => MIGRATIONS[5](s),
+  // 9 → 10(2026-11-05 밤샘 — 리그 = 생장 칸 · 3:3도 칸마다): 저장된 대회 이름(자람 · 무제한 브론즈 …)을 새 이름(성장기 · 성체)으로 · 3:3 칸마다 승패(swap3by — 옛 승패는 전체 swap3 에 그대로)
+  s => {
+    leaguesOf(s);
+    for (const k of LEAGUE_KEYS) { const T = k === s.league ? s.tournament : s.leagues[k]; if (T && T.tier) T.name = `${LEAGUES[k].short} ${T.tier}`; }
+    s.leagues[s.league] = { ...s.tournament };
+  },
 ];
 export function migrate(s) {
   const from = s.ver || 0;
@@ -1007,9 +1013,16 @@ export function leaguesOf(s) {
   for (const k of LEAGUE_KEYS) if (!s.leagues[k]) s.leagues[k] = k === s.league && s.tournament ? { ...s.tournament } : freshT(k);
   if (!s.tournament) s.tournament = { ...s.leagues[s.league] };
   for (const T of [s.tournament, ...Object.values(s.leagues)]) T.bestOf = roundBest(Math.max(0, TIERS.indexOf(T.tier)));   // 옛 기록(모두 5판) → 단계대로(2026-10-22)
+  if (!s.swap3by) s.swap3by = {};   // 3:3 교체전 칸마다 승패(2026-11-05 — 전체는 s.swap3)
+  for (const k of LEAGUE_KEYS) if (!s.swap3by[k]) s.swap3by[k] = { wins: 0, losses: 0 };
   return s.leagues;
 }
 export const leagueCap = s => LEAGUES[s.league || 'sprout'].cap;
+// 생장 칸에 나갈 수 있나(1:1 = 고른 식물 · 3:3 = 팀 셋) — 못 나가면 까닭 글, 되면 null(서버 · 화면 같은 말)
+export function bracketWhy(lg, plants) {
+  const L = LEAGUES[lg] || LEAGUES.open, over = (plants || []).filter(p => p && p.stage > L.cap);
+  return over.length ? `${L.name}는 ${L.desc} — ${over.map(p => p.name).join(' · ')} 대신 다른 식물을 골라 주세요` : null;
+}
 export function setLeague(s, lg) {
   need(LEAGUES[lg], '모르는 리그');
   leaguesOf(s);
@@ -1061,7 +1074,7 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
     const tier = TIERS.indexOf(s.tournament.tier);
     r.credits = win ? 60 + 15 * tier : 15;
     if (win) winBonus(r, rng, [['water', 40], ['parts', 30], ['fuel', 18], ['water2', 12]]);   // 부품(2026-10-17) · 비료 → 물(2026-11-04)
-    if (mode === 'swap3') s.swap3[win ? 'wins' : 'losses']++;
+    if (mode === 'swap3') { s.swap3[win ? 'wins' : 'losses']++; leaguesOf(s); s.swap3by[s.league][win ? 'wins' : 'losses']++; }   // 전체 + 그 생장 칸
     else {
       const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(tier); const nW = winsNeed(T); T[win ? 'wins' : 'losses']++;
       if (T.wins >= nW) {   // 이번 라운드 통과 → 다음 라운드 · 결승 통과 = 우승(그 대회 끝 → 다음 대회 예선부터)
@@ -1081,7 +1094,7 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
 // 기권·도중에 떠남 = 진 판으로만 남김(보상 없음 — 판을 열었다 버리며 상대를 고르거나 경험치를 쌓지 못하게)
 export function battleForfeit(s, mode) {
   if (mode === 'pvp') { s.pvp.losses++; return { forfeit: true }; }
-  if (mode === 'swap3') { s.swap3.losses++; return { forfeit: true }; }
+  if (mode === 'swap3') { s.swap3.losses++; leaguesOf(s); s.swap3by[s.league].losses++; return { forfeit: true }; }
   const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(Math.max(0, TIERS.indexOf(T.tier))); T.losses++;
   const r = { forfeit: true };
   if (T.losses >= winsNeed(T)) r.reset = loseRound(s, T, r);
