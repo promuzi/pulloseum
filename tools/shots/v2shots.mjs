@@ -57,6 +57,7 @@ export const SHOTS = [
   ['04_bag_short', 'bag', {}, { seedsAdd: SEEDS_MIX, W: 270, H: 480 }],
   ['04_bag_card', 'bag', { tab: 'card' }],   // 카드 가방(2026-10-22 — 강화 · 팔기 · 끼움 수)
   ['04_bag_item', 'bag', { tab: 'item' }],   // 물건(카드 꾸러미)
+  ['04_bag_scion', 'bag', { tab: 'scion' }],   // 접목 가지(2026-11-04 다듬기)
   ['05_plant_skill', 'plant', { tab: 'skill' }],
   ['05_plant_zoom_150', 'plant', { tab: 'skill', zoomAt: '150' }], ['05_plant_zoom_350', 'plant', { tab: 'skill', zoomAt: '350' }], ['05_plant_zoom_550', 'plant', { tab: 'skill', zoomAt: '550' }],   // 홈에서 다가가며 들어오는 중(판이 같이 올라옴 — 2026-10-17)
   ['05_plant_skill_sel', 'plant', { tab: 'skill', sel: '1' }],
@@ -274,7 +275,7 @@ export const SHOTS = [
 
 // 다른 도구가 SHOTS 만 가져다 쓸 때는(tools/shots/centercheck.mjs) 촬영하지 않음
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-const { srv, url } = isMain ? await serve(repo) : {};
+const { srv, url } = isMain ? await serve(args.root ? resolve(String(args.root)) : repo) : {};   // --root = 다른 판(고치기 전 git archive 등)을 찍음
 const b = isMain ? await puppeteer.launch({ executablePath: CHROME, headless: 'new' }) : null;
 if (isMain) try {
   const p = await b.newPage();

@@ -768,7 +768,7 @@ export function canGraft(p, skillId) {
 // ── 아이템(모두 완제품) ──
 export const ITEMS = {
   water: { name: '물', icon: 'potion', desc: '생장치 +10' },
-  fert: { name: '비료', icon: 'fert', desc: '생장치 +25' },
+  fert: { name: '비료', icon: 'fert', desc: '지금은 쓸 곳이 없어요' },   // 2026-11-04 사용자 '물주기만 주고 … 비료는 나중에 다른 용도를 고민해보자' — 가진 비료는 그대로 둠 · 더 안 나옴
   regress: { name: '유전자 회귀 주사', icon: 'potion', desc: '지운 기술 하나를 되돌려요' },
   fuel: { name: '연료 캡슐', icon: 'energy', desc: '탐사 한 번(+ 탐사비)' },
   parts: { name: '부품', icon: 'gear', desc: '탐사선 강화 재료' },
@@ -794,7 +794,8 @@ export function levelReward(L) {
   const r = { credits: 120 + 60 * L };
   const main = ['fuel', 'water', 'fert', 'parts'][L % 4];
   if (L % 10 === 0) r.nutr = 1;   // 영양제(2026-10-22) — 레벨 10마다, 그 레벨은 기본 물건 대신(상자 보상 세 가지까지 — 2026-10-22 사용자 "한 번에 나오는 보상수는 적절히 조율")
-  else r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'fert' ? 3 + Math.floor(L / 3) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
+  else if (main === 'fert') r.water = Math.round(2.5 * (3 + Math.floor(L / 3)));   // 옛 비료 자리 = 같은 생장치의 물(2026-11-04 사용자 '물주기만 주고 … 비료는 나중에 다른 용도')
+  else r[main] = main === 'water' ? 6 + Math.floor(L / 2) : main === 'parts' ? 4 + Math.floor(L / 2) : 2 + Math.floor(L / 5);
   if (L % 5 === 0) r.seed = 'rare';
   else if (L % 3 === 2) r.pack_n = 1;   // 카드(2026-10-17) → 2026-10-22 일반 카드 꾸러미 하나(식물에서 열기)
   else if (L % 4 === 0) r.regress = 1;
@@ -803,7 +804,7 @@ export function levelReward(L) {
 }
 
 // ── 수확(스마트팜) ──
-export const FARM_DAY = { water: 30, fert: 12 };   // 스마트팜 열매에서 나오는 물 · 비료 하루(한국 날짜) 상한 — 넘은 열매는 돈(2026-10-23 · 식물이 많아도 성장 재료는 일정하게)
+export const FARM_DAY = { water: 60, fert: 0 };   // 스마트팜 열매에서 나오는 물 하루(한국 날짜) 상한 — 넘은 열매는 돈(2026-10-23 · 식물이 많아도 성장 재료는 일정하게) · 2026-11-04 물 30 + 비료 12 → 물 60(같은 생장치 · 비료는 안 나옴)
 export const HARVEST = { periodMin: [36, 30, 24], maxBase: [2, 3, 4] };   // 단계별 열매 하나 걸리는 분 · 최대 개수(Lv3부터 +1, 열매 개체값 5마다 +1) — 2026-10-22 6·5·4분 → 36·30·24분(너무 쉬움)
 const fruitIv = p => ((p.ivs && p.ivs.fruit) || 0);
 export const harvestMax = p => HARVEST.maxBase[p.stage] + (p.lv >= 3 ? 1 : 0) + Math.floor(fruitIv(p) / 5);
@@ -951,7 +952,6 @@ export const SHOP = [
   { id: 'card_basic', name: '일반 카드 꾸러미', cost: { credits: 300 }, give: { pack_n: 1 } },   // 카드(2026-10-17) — 일반 식물용 · 2026-10-22 꾸러미째 가방에(일반 식물 관리에서 열기)
   { id: 'card_mut', name: '변이 카드 꾸러미', cost: { gems: 18 }, give: { pack_m: 1 } },        // 변이 식물용 — 연 식물의 변이 카드(전엔 사자마자 무작위 변이)
   { id: 'water10', name: '물 10', cost: { gems: 6 }, give: { water: 10 } },
-  { id: 'fert5', name: '비료 5', cost: { gems: 8 }, give: { fert: 5 } },
   { id: 'regress1', name: '유전자 회귀 주사', cost: { gems: 15 }, give: { regress: 1 } },
   { id: 'nutr1', name: '영양제', cost: { gems: 20 }, give: { nutr: 1 } },   // 개체값 +1(8까지 — 2026-10-22)
   { id: 'fuel3', name: '연료 캡슐 3', cost: { gems: 5 }, give: { fuel: 3 } },

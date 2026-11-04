@@ -1,18 +1,16 @@
 import { ELEMENT } from '../art/palette.js';
-import { button, fmt, rbox, rrect, holoTab, tagBox } from '../art/ui.js';
+import { button, fmt, rbox, rrect, holoTab, tagBox, holdRepeat } from '../art/ui.js';
 import { cardFront, cardSlot, renderFaces, drawFlip, packTiny } from '../art/skillcard.js';
 import { sfx } from '../core/sound.js';
 import { icon, tinted } from '../art/icons.js';
 import { bigKey } from '../art/sprites.js';
 import { T, btnBody, tbar, holo } from '../art/theme.js';
 import { STAT_DEF, miniStars, ivRing, drawItemArt } from './common.js';
-import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { basicsOf } from '../battle/model.js';
 import { cardSkillOf } from '../game/fight.js';
-import { fxChip, BUFF_LOOK } from '../art/statusLook.js';
 import { LOFT_STOOL, loftView, loftPlant, loftZoom, loftPlantCy } from '../art/loft.js';
 import { FOCUS, focusOf, plantSheetY, homeDy, ZOOM_MS } from './home.js';
-import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, NUTR_CAP, TIER_NAME, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps, ITEMS } from '../game/catalog.js';
+import { SPECIES, SKILLS, JONG, STAT_KEYS, STAT_NAME, UP_GAIN, IV_KEYS, IV_MAX, NUTR_CAP, upCost, resetCost, canGraft, starsOf, FORMS, SUN_UP, SUN_REGEN, sunSteps, ITEMS } from '../game/catalog.js';
 import { CARDS, CARD_SLOTS, PASS_STORE, NORMAL_LOOK, cardFits, cardFace, isSkillCard, cardPrice } from '../game/cards.js';
 import { plantStats, sellPrice, BASIC_IDS, LOADOUT, MUT_MAX, SKILL_STORE, evolveLeague, slotLayout } from '../game/logic.js';
 import { LEAGUES } from '../game/catalog.js';
@@ -45,34 +43,6 @@ const graftFit = (p, s) => { const known = new Set([...p.skills.battle, ...(p.sk
 const skOf = (p, id) => (!id ? null : BASIC_IDS.includes(id) ? { ...basicsOf(p.key).find(b => b.id === id), basic: true } : isSkillCard(id) ? cardSkillOf(p, id) : skillOf(id));   // 기술 카드 = 전투에서 쓰는 모습(숨결 속성 · 단조 위력)
 const cardGrid = W => { const C3 = PCARD.cols, x0 = Math.round((W - C3 * PCARD.w - (C3 - 1) * PCARD.gx) / 2); return { x0, RW: C3 * PCARD.w + (C3 - 1) * PCARD.gx, cx: i => x0 + (i % C3) * (PCARD.w + PCARD.gx), ry: i => Math.floor(i / C3) * (PCARD.h + PCARD.gy), rowsH: n => Math.ceil(Math.max(1, n) / C3) * (PCARD.h + PCARD.gy) - PCARD.gy }; };   // 카드 셋씩 줄(가운데)
 const faceOn = (p, id) => (isSkillCard(id) ? cardSkillOf(p, id) : cardFace(id));   // 카드 칸에 끼운 카드
-const fxOf = sk => (sk.inflict ? { id: sk.inflict.look || sk.inflict.id } : sk.self ? { buff: BUFF_LOOK[sk.self] || sk.self } : sk.reflect ? { id: 'reflect' } : null);   // 엑셀 v10 이름(암실 기술은 그 이름 — 그늘)
-
-// 기술 카드: 이름 · 속성 / 분류 · 효과 칩 · 비용. 조커 칸 = 금빛 테, 고른 칸 = 청록 테, 새 기술 = 주황 테
-function skillCard(app, id, x, y, w, h, sk, sel, onTap, frame = null, emptyLabel = '빈 칸') {
-  const { g, input } = app, down = !!onTap && input.isPressed(id);
-  if (!sk) {
-    holo(g, x, y, w, h, T.deep, 16);
-    g.text(emptyLabel, x + w / 2, y + Math.round(h / 2) - 7, { font: 'label', color: T.text.dim, align: 'center' });
-  } else {
-    const S = T.btn.second, { yy } = btnBody(g, x, y, w, h, S, down);
-    g.text(sk.name, x + 8, yy + 3, { font: 'label', color: S.text });
-    const tier = sk.basic ? '기본기' : TIER_NAME[sk.tier];
-    if (tier) { const tw = g.textW(tier); g.text(tier, x + w - (sk.el ? 24 : 8) - tw, yy + 4, { color: sk.basic ? '#9fd0ff' : sk.tier === 'u' ? '#ffd890' : sk.tier === 'c3' ? '#c48cff' : S.sub || S.text }); }
-    if (sk.el) g.img(icon(sk.el), x + w - 18, yy + 4);
-    const cat = sk.cats[0];
-    g.img(icon(CAT_ICON[cat] || 'sword'), x + 8, yy + 19);
-    g.text(sk.power ? `${CAT_NAME[cat]} ${sk.power}` : CAT_NAME[cat], x + 22, yy + 18, { color: S.text });
-    let cx = x + 22 + g.textW(sk.power ? `${CAT_NAME[cat]} ${sk.power}` : CAT_NAME[cat]) + 6;
-    const f = fxOf(sk);
-    if (f) cx += fxChip(g, cx, yy + 17, f.id || null, f.buff) + 3;
-    if (sk.also && BUFF_LOOK[sk.also]) fxChip(g, cx, yy + 17, null, BUFF_LOOK[sk.also]);
-    if (sk.cost) { g.img(icon('energy'), x + w - 23, yy + 19); g.text(String(sk.cost), x + w - 8, yy + 18, { font: 'label', color: S.text, align: 'right' }); }
-    else g.text('무료', x + w - 8, yy + 18, { color: S.text, align: 'right' });
-  }
-  const fc = frame || (sel ? '#8ccfff' : null);
-  if (fc) { g.rect(x - 1, y - 1, w + 2, 1, fc); g.rect(x - 1, y + h, w + 2, 1, fc); g.rect(x - 1, y, 1, h, fc); g.rect(x + w, y, 1, h, fc); }
-  if (onTap) input.hit(id, x, y, w, h, onTap, 2);
-}
 
 export const plant = {
   theme: 'loft',
@@ -167,12 +137,12 @@ export const plant = {
     if (p.legend) { const tag = '전설', w = 12 + g.textW(tag, 'label'); rbox(g, x, 40, w, 18, 5, '#3a2a18', '#f0be7d'); g.text(tag, x + 6, 43, { font: 'label', color: '#ffd890' }); }
   },
   // 생장 줄(식물 아래 · 판 바로 위 — 2026-10-16 사용자 "비료와 물 주기 등을 다른 곳에 잘 배치해줘", 전엔 오른쪽 위 판이 식물 잎을 가렸음):
-  //  왼쪽 = Lv · 생장 막대 · 숫자, 오른쪽 = 물 · 비료(또는 진화하기)
+  //  왼쪽 = Lv · 생장 막대 · 숫자, 오른쪽 = 물(또는 진화하기) — 2026-11-04 사용자 '물주기만 주고 꾹 누르면 연속으로' → 비료 단추 뺌 · 꾹 = 이어 주기
   growStrip(app, p, live, y) {
     const { g, W, state: s } = app, P = T.ptext, gi = growInfo(p), st = T.card || T.panel, h = 26, x = 8, w = W - 16;
     holo(g, x, y, w, h, st, 16);
     this.growR = [x, y, w, h];   // 처음 안내가 가리킬 자리
-    const bw = gi.ready ? 96 : gi.done ? 0 : 92, lx = x + 8, rx = x + w - bw - 6;
+    const bw = gi.ready ? 96 : gi.done ? 0 : 60, lx = x + 8, rx = x + w - bw - 6;
     g.text(gi.ready ? '진화 가능' : gi.done ? '다 자랐어요' : `Lv${lvOf(p)}`, lx, y + 6, { font: 'label', color: gi.ready ? '#ffd890' : P.sub });
     if (!gi.done && !gi.ready) {
       const tx = lx + g.textW(`Lv${lvOf(p)}`, 'label') + 6, num = `${gi.cur}/${gi.need}`, nw = g.textW(num);
@@ -181,9 +151,9 @@ export const plant = {
     }
     if (gi.ready) button(app, 'pl_evo', rx, y + 3, bw, 20, '진화하기', { style: 'gold', font: 'bold', icon: 'up', iconTint: true, onTap: live ? () => this.evolve(app, p) : null });
     else if (!gi.done) {
-      button(app, 'pl_w', rx, y + 3, 44, 20, String(s.items.water || 0), { style: 'teal', icon: 'can', disabled: !s.items.water, onTap: live ? () => this.feed(app, p, 'water') : null });
-      button(app, 'pl_f', rx + 48, y + 3, 44, 20, String(s.items.fert || 0), { style: 'teal', icon: 'fert', disabled: !s.items.fert, onTap: live ? () => this.feed(app, p, 'fert') : null });
+      button(app, 'pl_w', rx, y + 3, bw, 20, String(s.items.water || 0), { style: 'teal', icon: 'can', disabled: !s.items.water, onTap: live ? () => this.feed(app, p, 'water') : null });
     }
+    if (live) holdRepeat(app, 'pl_w', () => this.pour(app, p));   // 진화할 때가 되어 단추가 바뀌어도 손을 뗄 때까지 지켜봄
   },
   // 아래 판: 탭 + 내용(끌어서 위아래로)
   sheet(app, p, live, SHEET_Y = 258) {
@@ -428,48 +398,51 @@ export const plant = {
       button(app, 'peek_act', x1, by, bw, bh, on ? '해제' : '장착', { style: on ? 'night' : 'gold', font: 'head', onTap: () => this.peekAct(app, P.key, on ? 'off' : 'on') });
       if (toBag) button(app, 'peek_bag', Math.round(W / 2 + 4), by, bw, bh, '버리기', { style: 'night', font: 'head', icon: 'coin', onTap: () => this.peekAct(app, P.key, 'discard') });
     }
+    if (P.p >= 1 && !P.closing && (this.sub === 'graft' || this.sub === 'forgot')) {   // 접목 가지 = [접목] · 지운 기술 = [되돌리기](회귀 주사가 없거나 칸이 다 차면 그 까닭이 단추에)
+      const s = app.state, p = s.plants[s.active] || s.plants[0], S = p.skills, gf = this.sub === 'graft';
+      const free = S.battle.includes(null) || (S.store || []).length < SKILL_STORE, n = s.items.regress || 0;
+      const label = gf ? '접목' : !n ? '회귀 주사 없음' : !free ? '칸이 다 찼어요' : '되돌리기', bw = 132, bh = 32, by = Math.min(H - bh - 8, Math.round(cy + h / 2 + 14));
+      button(app, 'peek_act', Math.round(W / 2 - bw / 2), by, bw, bh, label, { style: 'gold', font: 'head', icon: gf ? 'vine' : 'potion', iconTint: true, disabled: !gf && (!n || !free), onTap: () => this.peekAct(app, P.key, gf ? 'graft' : 'regress') });
+    }
   },
   // 뒷면 단추: on = [장착](놓을 장착 칸을 고름) · off = [해제](스킬 → 스킬 보관 · 패시브 → 패시브 보관) · discard = [버리기](보관의 카드 — 팔 값만큼 돈, 귀속이라 가방으로는 못 감)
   peekAct(app, k, what) {
     const s = app.state, p = s.plants[s.active] || s.plants[0], id = p && this.idAt(p, k); if (!id) return;
     this.peek.closing = true; sfx('flip');
+    if (what === 'graft') { const f = graftFit(p, s).find(x => x.sc.skill === id); if (!f) return; return app.act('graft', { id: p.uid, scion: f.sc.id }).then(r => { if (r) openDraft(app, p); }); }   // 접목 = 카드 한 장 고르기 창(놓을 칸 · 보류하면 가지가 돌아감)
+    if (what === 'regress') { const nm = skOf(p, id).name; return ask(app, `${eul(nm)} 되돌릴까요?`, '유전자 회귀 주사 1개를 써요', () => app.act('regress', { id: p.uid, skill: id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${nm} — 되돌렸어요`); }), '되돌리기'); }
     const passive = !!(CARDS[id] && !isSkillCard(id));
     if (what === 'discard') { const n = cardPrice(id), nm = CARDS[id].name; return ask(app, `${eul(nm)} 버릴까요?`, `돈 +${n} — 이 식물에서 사라져요`, () => app.act('discardCard', { id: p.uid, card: id }).then(r => r && app.toast(`돈 +${r.credits}`)), '버리기'); }
     if (what === 'off') return this.dropCard(app, p, k, passive ? 'P:' : 'S:');
     this.placing = { key: k, want: passive ? 'passive' : 'skill' };
     app.toast(passive ? '넣을 패시브 칸을 눌러요' : '넣을 장착 칸을 눌러요');
   },
+  // 지운 기술 · 접목 가지(2026-11-04 사용자 '지금 가지 접목 등 ui가 별로임 다듬자'): 글자 줄 목록 → 스킬 탭과 같은 카드 셋씩 줄(그림 · 테 · 이름)
+  //  누름 = 뒷면 크게(하는 일 설명) + 아래 [되돌리기] · [접목] — 장착 · 보관 카드와 같은 손짓. 같은 기술 가지 여럿 = 한 장 + '×n'
+  subHead(app, p, live, y0, title, right) {
+    const { g, W } = app, P = T.ptext;
+    this.cardRects = {};
+    this.btn(app, live, 'sub_back', 12, y0 - 2, 52, 22, '‹ 스킬', { style: 'night' }, () => { this.sub = null; this.scrollY = 0; this.peek = null; });
+    g.text(title, 72, y0 + 1, { font: 'value', color: P.main });
+    if (right) { g.text(right.text, W - 14, y0 + 2, { font: 'label', color: right.col || P.sub, align: 'right' }); if (right.ic) g.img(icon(right.ic), W - 18 - g.textW(right.text, 'label') - 12, y0 + 2); }
+    return y0 + 30;
+  },
   drawForgot(app, p, y0, live) {
-    const { g, W, state: s } = app, P = T.ptext, S = p.skills, n = s.items.regress || 0, free = S.battle.includes(null) || (S.store || []).length < SKILL_STORE;
-    this.btn(app, live, 'fg_back', 12, y0 - 2, 52, 22, '‹ 스킬', { style: 'night' }, () => { this.sub = null; this.scrollY = 0; });
-    g.text('지운 기술', 72, y0 + 1, { font: 'value', color: P.main });
-    g.img(icon('potion'), W - 100, y0 + 2); g.text(`회귀 주사 ${n}`, W - 14, y0 + 2, { font: 'label', color: '#d0e8ff', align: 'right' });
-    let y = y0 + 28;
-    if (!free) { g.text('칸이 다 찼어요', 14, y, { color: '#ffb0a0' }); y += 20; }
-    if (!S.forgot.length) { g.text('지운 기술이 없어요', W / 2, y + 10, { color: P.dim, align: 'center' }); return y + 40; }
-    S.forgot.forEach((id, i) => {
-      const sk = skOf(p, id);   // 기본기도 지운 기술이 될 수 있음(v8)
-      skillCard(app, 'fg_' + i, 14, y, W - 100, 34, sk, false, null);
-      this.btn(app, live, 'fg_go_' + i, W - 80, y + 4, 66, 26, '되돌리기', { style: 'gold', font: 'label', disabled: !n || !free }, () => ask(app, `${eul(sk.name)} 되돌릴까요?`, '유전자 회귀 주사 1개를 써요', () => app.act('regress', { id: p.uid, skill: id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${sk.name} — 되돌렸어요`); }), '되돌리기'));
-      y += 40;
-    });
-    return y;
+    const { g, W, state: s } = app, P = T.ptext, S = p.skills, n = s.items.regress || 0, { cx, ry, rowsH } = cardGrid(W);
+    let y = this.subHead(app, p, live, y0, '지운 기술', { text: `회귀 주사 ${n}`, ic: 'potion', col: n ? '#d0e8ff' : P.dim });
+    if (!S.forgot.length) { cardSlot(g, cx(0), y, PCARD.w, PCARD.h, '없음'); return y + PCARD.h + 12; }
+    S.forgot.forEach((id, i) => this.card(app, p, live, 'fg:' + id, cx(i), y + ry(i), skOf(p, id), '', null));   // 기본기도 지운 기술이 될 수 있음(v8)
+    return y + rowsH(S.forgot.length) + 12;
   },
   drawGraft(app, p, y0, live) {
-    const { g, W, state: s } = app, P = T.ptext;
-    this.btn(app, live, 'gf_back', 12, y0 - 2, 52, 22, '‹ 스킬', { style: 'night' }, () => { this.sub = null; this.scrollY = 0; });
-    g.text('접목 가지', 72, y0 + 1, { font: 'value', color: P.main });
-    let y = y0 + 28;
+    const { g, W, state: s } = app, P = T.ptext, { cx, ry, rowsH } = cardGrid(W);
     // 이 식물이 배울 수 있는 가지만(2026-11-04 사용자 '접목 시스템 바꾸자. 지금은 모든 접목 스킬이 모든 식물에게 다 떠서 가독성 떨어짐') — 못 배우는 가지는 숨기고 개수만
-    const fit = graftFit(p, s), hidden = s.scions.length - fit.length;
-    if (!fit.length) { g.text(s.scions.length ? '이 식물이 배울 수 있는 접목 가지가 없어요' : '가진 접목 가지가 없어요', W / 2, y + 10, { color: P.dim, align: 'center' }); if (hidden) g.text(`다른 식물용 가지 ${hidden}개`, W / 2, y + 28, { color: P.dim, align: 'center' }); return y + 48; }
-    fit.forEach(({ sc, i }) => {
-      const sk = skillOf(sc.skill);
-      skillCard(app, 'gs_' + i, 14, y, W - 100, 34, sk, false, null);
-      this.btn(app, live, 'gs_go_' + i, W - 80, y + 4, 66, 26, '접목', { style: 'gold', font: 'label' }, () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${eul(sk.name)} 배웠어요`); }));
-      y += 40;
-    });
-    if (hidden) { g.text(`다른 식물용 가지 ${hidden}개는 숨김`, W / 2, y + 4, { color: P.dim, align: 'center' }); y += 22; }
+    const fit = graftFit(p, s), hidden = s.scions.length - fit.length, kinds = [...new Set(fit.map(f => f.sc.skill))];
+    let y = this.subHead(app, p, live, y0, '접목 가지', { text: `${fit.length}개`, ic: 'vine' });
+    if (!kinds.length) cardSlot(g, cx(0), y, PCARD.w, PCARD.h, '없음');
+    kinds.forEach((sk, i) => { this.card(app, p, live, 'gf:' + sk, cx(i), y + ry(i), skillOf(sk), '', null); const k = fit.filter(f => f.sc.skill === sk).length; if (k > 1) this.countTag(app, cx(i), y + ry(i), k); });
+    y += rowsH(kinds.length) + 10;
+    if (hidden) { g.text(`다른 식물용 가지 ${hidden}개`, W / 2, y, { color: P.dim, align: 'center' }); y += 20; }
     return y;
   },
 
@@ -572,7 +545,21 @@ export const plant = {
   },
   async feed(app, p, kind) {
     const r = await app.act('feed', { id: p.uid, kind, n: 1 });
-    if (!r) return;
+    if (r) this.fed(app, p, r);
+  },
+  // 꾹 = 물 한 번 더(holdRepeat) — 고르기 창이 뜨거나 · 진화할 때가 되거나 · 물이 떨어지면 그만
+  pour(app, p) {
+    const s = app.state;
+    if (!(s.items.water > 0)) return false;
+    const r = app.pour('feed', { id: p.uid, kind: 'water' });
+    if (!r) return false;
+    sfx('pop', { k: 0.5 });
+    this.fed(app, p, r);
+    const gi = growInfo(p);
+    return !r.ups.some(u => u.draft) && !gi.ready && !gi.done && s.items.water > 0;
+  },
+  // 물 준 결과: 레벨업 알림 · Lv6 선물 · 고르기 창
+  fed(app, p, r) {
     const up = r.ups[r.ups.length - 1];
     const nw = r.ups.filter(u => u.learn && u.learn.to !== 'draft').map(u => (SKILLS[u.learn.id] || {}).name).filter(Boolean);   // 레벨업마다 받은 기술(2026-11-04 ㉡)
     if (up) { app.toast(`Lv${lvOf({ stage: p.stage, lv: up.lv })}! 강화 포인트 +${up.pts}` + (nw.length ? ` · 새 기술 ${nw.join(' · ')}` : '')); const box = r.ups.find(u => u.box); if (box) showGot(app, `Lv${lvOf({ stage: p.stage, lv: 6 })} 달성 선물`, Object.entries(box.box).map(([k, n]) => ({ kind: k, n, rar: k === 'credits' ? 0 : 1 })), '이제 진화할 수 있어요'); }

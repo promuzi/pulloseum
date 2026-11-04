@@ -1,4 +1,4 @@
-import { hud, navBar, button, holoTab } from '../art/ui.js';
+import { hud, navBar, button, holoTab, holdRepeat } from '../art/ui.js';
 import { icon, fruitIcon } from '../art/icons.js';
 import { BGIMG, BGMETA, drawBigPlanted, drawBigPotted, bigKey } from '../art/sprites.js';
 import { T, holo, tbar, btnBody } from '../art/theme.js';
@@ -376,10 +376,8 @@ export const nursery = {
       if (f.have < f.max) tbar(g, 34 + g.textW(`열매 ${f.have}/${f.max}`) + 6, PY + 68, Math.max(10, colR - (40 + g.textW(`열매 ${f.have}/${f.max}`))), 4, f.gauge, 'exp');
       const bx = W - 128, bw = 56, bh = 26, gap = 4, r1 = PY + 8, r2 = r1 + bh + gap, r3 = r2 + bh + gap, last = s.plants.length < 2;
       if (gi.ready) button(app, 'nur_evo', bx, r1, bw * 2 + gap, bh, '진화하기', { style: 'gold', font: 'bold', icon: 'up', iconTint: true, onTap: () => this.evolve(app, p) });
-      else {
-        button(app, 'nur_water', bx, r1, bw, bh, `물 ${s.items.water || 0}`, { style: 'teal', icon: 'can', disabled: gi.done || !s.items.water, onTap: () => this.feed(app, p, 'water') });
-        button(app, 'nur_fert', bx + bw + gap, r1, bw, bh, `비료 ${s.items.fert || 0}`, { style: 'teal', icon: 'fert', disabled: gi.done || !s.items.fert, onTap: () => this.feed(app, p, 'fert') });
-      }
+      else button(app, 'nur_water', bx, r1, bw * 2 + gap, bh, `물 ${s.items.water || 0}`, { style: 'teal', icon: 'can', disabled: gi.done || !s.items.water, onTap: () => this.feed(app, p, 'water') });   // 물만(2026-11-04 사용자 '물주기만' — 비료 단추 뺌) · 꾹 = 이어 주기
+      holdRepeat(app, 'nur_water', () => this.pour(app, p));
       button(app, 'nur_one', bx, r2, bw, bh, '수확', { style: 'gold', icon: 'fruit', iconTint: true, disabled: !f.have, onTap: () => this.harvest(app, p) });
       button(app, 'nur_keep', bx + bw + gap, r2, bw, bh, '보관', { style: 'night', icon: 'box', disabled: last, onTap: () => app.act('toStorage', { id: p.uid }).then(r => r && app.toast(`${eul(p.name)} 동면 보관고로 옮겼어요`)) });
       // 아래 줄(2026-10-18 사용자 "팔기 · 해체를 버리기 하나로 — 누르면 팔기 · 해체로 나뉨 · 누르면 확인 창 · 남은 칸 = 거름주기(개체값 화면)")
@@ -408,7 +406,21 @@ export const nursery = {
   },
   async feed(app, p, kind) {
     const r = await app.act('feed', { id: p.uid, kind, n: 1 });
-    if (!r) return;
+    if (r) this.fed(app, p, r);
+  },
+  // 꾹 = 물 한 번 더(holdRepeat) — 고르기 창이 뜨거나 · 진화할 때가 되거나 · 물이 떨어지면 그만
+  pour(app, p) {
+    const s = app.state;
+    if (!(s.items.water > 0)) return false;
+    const r = app.pour('feed', { id: p.uid, kind: 'water' });
+    if (!r) return false;
+    sfx('pop', { k: 0.5 });
+    this.fed(app, p, r);
+    const gi = growInfo(p);
+    return !r.ups.some(u => u.draft) && !gi.ready && !gi.done && s.items.water > 0;
+  },
+  // 물 준 결과: 레벨업 알림 · Lv6 선물 · 고르기 창
+  fed(app, p, r) {
     const up = r.ups[r.ups.length - 1];
     if (up) {
       const nw = r.ups.filter(u => u.learn && u.learn.to !== 'draft').map(u => (SKILLS[u.learn.id] || {}).name).filter(Boolean);   // 레벨업마다 받은 기술(2026-11-04 ㉡)

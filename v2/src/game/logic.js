@@ -24,7 +24,7 @@ export function newGame({ nickname, starter }, rng, now) {
     profile: { name: nickname, title: '초보 재배사', avatar: starter, color: 0 },
     titles: ['초보 재배사'],
     wallet: { credits: 200, gems: 20 },
-    items: { water: 10, fert: 2, regress: 0, fuel: FUEL.max, parts: 6 }, fuelT: now,   // 부품 6 = 첫 강화 두 번(2026-10-17) · 물 6 → 10(2026-10-23 생장치 두 배 — 처음엔 물만 줘도 한 번 레벨업: 물 9번 = Lv2)
+    items: { water: 15, fert: 0, regress: 0, fuel: FUEL.max, parts: 6 }, fuelT: now,   // 부품 6 = 첫 강화 두 번(2026-10-17) · 물 6 → 10(2026-10-23 생장치 두 배 — 처음엔 물만 줘도 한 번 레벨업: 물 9번 = Lv2) · 비료 2 → 물 +5(2026-11-04 '물주기만')
     scions: [], seeds: [], plants: [], storage: [], active: 0, team: [], mode: 'tournament',
     tournament: { tier: '브론즈', name: '새싹 브론즈', round: '예선', wins: 0, losses: 0, bestOf: 5, pts: 0 },
     swap3: { wins: 0, losses: 0 }, pvp: { wins: 0, losses: 0 },
@@ -309,11 +309,12 @@ export function feed(s, id, kind, n = 1) {
       p.gxp -= growNeed(p.stage, p.lv); p.lv++; p.pts += PTS_PER_LV;
       const r = { lv: p.lv, pts: PTS_PER_LV };
       // 새 기술 후보(고르기 — 아래 addDraft)는 단계마다 Lv3 · Lv6에서만(2026-10-22 사용자 "레벨업시 스킬을 주는데 이게 레벨업이 쉽고 카드 얻을 기회나 선택권이 많아서 너무 피로해" — 전엔 레벨업마다)
-      const got = levelLearn(p);   // → 2026-11-04 사용자 '3번은 ㄴ으로하자': 레벨업마다 기술 한 장을 그냥 받음(고르기 없음 · 배울 기술이 남아 있을 때만) · 진화 때만 2장 중 1장
+      const got = p.stage < 2 ? levelLearn(p) : null;   // → 2026-11-04 사용자 '3번은 ㄴ으로하자': 레벨업마다 기술 한 장을 그냥 받음(고르기 없음 · 배울 기술이 남아 있을 때만) · 진화 때만 2장 중 1장
       if (got) { r.learn = got; if (got.to === 'draft') r.draft = 1; }
+      if (p.stage === 2 && addDraft(p, 'mat')) r.draft = 1;   // 성체 = 레벨업마다 2장 중 1장 고르기(2026-11-04 사용자 '성체도 레벨마다 고르기' — 마지막 단계라 고를 수 있게)
       if (p.stage === 2 && p.lv === LV_MAX && addDraft(p, 'lv', 'passive')) r.draft = 1;   // Lv16 = 패시브 고르기(셋째)
       if (p.lv === 3) r.harvest = 1;
-      if (p.lv === LV_MAX) { r.box = { water: 2, fert: 1, credits: 40 + 30 * p.stage }; give(s, r.box); }
+      if (p.lv === LV_MAX) { r.box = { water: 5, credits: 40 + 30 * p.stage }; give(s, r.box); }   // 물 2 + 비료 1 → 물 5(2026-11-04 '물주기만')
       ups.push(r);
     }
     if (p.lv >= LV_MAX) p.gxp = 0;
@@ -353,7 +354,8 @@ export function evolve(s, id, rng) {
 //  기술 후보(사용자 "(나) — 예전 것도 배울 기회, 우선은 최신 것"): 이번 단계 것 무게 그대로 + 앞 단계 것 무게 OLD_W.
 //  패시브 고르기(part 'passive' — 2026-10-18 "스킬과 패시브 획득 시 각각 순서대로 창"): 첫 진화 · 둘째 진화 · Lv16 = 셋 중 하나(장착 칸 셋과 같은 수), 그 식물이 끼울 수 있고 칸에 없는 패시브
 //  → 2026-11-04 사용자 '레벨업시 얻는 스킬의 선택지가 너무 많아서 어지러움' → '3번은 ㄴ으로하자'(㉡): 레벨업 = 고르기 없이 한 장(levelLearn) · 진화 = 2장 중 1장(성체 진화도) · lv · top 은 옛 판 고르기용으로만 남김
-const DRAFT = { lv: { pick: 1, n: 3 }, top: { pick: 2, n: 4 }, evo: { pick: 1, n: 2 }, last: { pick: 1, n: 2 } }, PASS_DRAFT = { pick: 1, n: 3 }, OLD_W = 0.25;
+//  → 같은 날 사용자 '성체도 레벨마다 고르기': 성체 레벨업만 2장 중 1장(mat)
+const DRAFT = { lv: { pick: 1, n: 3 }, top: { pick: 2, n: 4 }, evo: { pick: 1, n: 2 }, last: { pick: 1, n: 2 }, mat: { pick: 1, n: 2 } }, PASS_DRAFT = { pick: 1, n: 3 }, OLD_W = 0.25;
 // 레벨업 한 장: 고르기 후보와 같은 무게(이번 단계 그대로 · 앞 단계 OLD_W)로 하나 · 씨앗 = 식물 · 단계 · 레벨(화면이 먼저 해도 서버와 같게) → 놓기는 learnNow(빈 칸 → 보관 → 다 차면 놓을 칸 고르기)
 function levelLearn(p) {
   if (!p.skills) return null;
@@ -376,7 +378,7 @@ function addDraft(p, kind, part = 'skill') {
     D = PASS_DRAFT; pool = Object.keys(CARDS).filter(id => !isSkillCard(id) && !CARDS[id].base && !cardFits(p, id) && !on.has(id) && !taken.has(id)).map(id => ({ id, w: 1 }));   // 강화 카드(+1 · +2)는 후보에 안 나옴
   } else {
     const have = known(p), seen = new Set(), fresh = x => !have.has(x.id) && !taken.has(x.id) && !isBasic(x.id) && !seen.has(x.id) && !!seen.add(x.id);
-    D = kind === 'evo' ? (p.stage >= 2 ? DRAFT.last : DRAFT.evo) : p.lv >= LV_MAX ? DRAFT.top : DRAFT.lv;
+    D = kind === 'evo' ? (p.stage >= 2 ? DRAFT.last : DRAFT.evo) : kind === 'mat' ? DRAFT.mat : p.lv >= LV_MAX ? DRAFT.top : DRAFT.lv;
     pool = bloomPool(p.key, p.stage).filter(fresh);
     for (let st = p.stage - 1; st >= 0; st--) pool.push(...bloomPool(p.key, st).filter(fresh).map(x => ({ ...x, w: x.w * OLD_W })));
   }
@@ -453,7 +455,7 @@ export function upgrade(s, id, stat, n = 1) {
   if (SUN_UP[stat]) {   // 햇빛 그릇 · 회복: n = 단 수(한 단 = 포인트 여럿)
     const U = SUN_UP[stat], st0 = sunSteps(p, stat), pts = U.pts * n;
     need(st0 + n <= U.max, `${U.name}은 ${U.max}단까지예요`);
-    need(p.pts >= pts, `강화 포인트가 ${pts}개 필요해요 — 물·비료로 레벨을 올려요`);
+    need(p.pts >= pts, `강화 포인트가 ${pts}개 필요해요 — 물로 레벨을 올려요`);
     let cost = 0;
     for (let i = 0; i < pts; i++) cost += upCost(p.spent + i);
     need(s.wallet.credits >= cost, `돈이 모자라요(${cost})`);
@@ -461,7 +463,7 @@ export function upgrade(s, id, stat, n = 1) {
     return { cost, steps: st0 + n };
   }
   need(UP_GAIN[stat], '모르는 능력치');
-  need(p.pts >= n && n >= 1, '강화 포인트가 모자라요 — 물·비료로 레벨을 올려요');
+  need(p.pts >= n && n >= 1, '강화 포인트가 모자라요 — 물로 레벨을 올려요');
   let cost = 0;
   for (let i = 0; i < n; i++) cost += upCost(p.spent + i);
   need(s.wallet.credits >= cost, `돈이 모자라요(${cost})`);
@@ -608,7 +610,7 @@ function rollFruit(s, p, rng) {
   const e = pickW(rng, HARVEST_TABLE), lvK = 1 + 0.15 * p.stage + 0.03 * p.lv;
   if (e.kind === 'credits') return { kind: 'credits', n: Math.round((e.big ? 90 : 25) * lvK), rar: e.rar };
   if (e.kind === 'water') return { kind: 'water', n: 1 + (rng() < 0.3 ? 1 : 0), rar: e.rar };
-  if (e.kind === 'fert') return { kind: 'fert', n: 1, rar: e.rar };
+  if (e.kind === 'fert') return { kind: 'water', n: 2 + (rng() < 0.5 ? 1 : 0), rar: e.rar };   // 옛 비료 자리 = 물 2~3(2026-11-04 사용자 '물주기만' — 생장치는 비료 하나 25와 같게)
   if (e.kind === 'seed') return { kind: 'seed', seed: seedOf(s, p.key, rng), rar: e.rar };
   if (e.kind === 'scion') return { kind: 'scion', skill: rollScion(rng, p, 0.2), rar: e.rar };
   if (e.kind === 'regress') return { kind: 'regress', n: 1, rar: e.rar };
@@ -790,7 +792,7 @@ export function dismantle(s, id, rng) {
     const r = rng();
     if (r < 0.7) got.push({ kind: 'scion', skill: rollScion(rng, p, q), rar: 3 });
     else if (r < 0.8 + 0.05 * q) got.push({ kind: 'regress', n: 1, rar: 4 });
-    else got.push({ kind: rng() < 0.5 ? 'water' : 'fert', n: 2, rar: 1 });
+    else got.push({ kind: 'water', n: rng() < 0.5 ? 2 : 5, rar: 1 });   // 물 2 또는 (옛 비료 2 자리) 물 5
   }
   if (rng() < (p.form ? 0.5 : 0.25) + 0.25 * q) { const c = rollCard(rng, p.form || 'normal'); got.push({ kind: 'card', card: c, rar: CARDS[c].rar }); }   // 카드(2026-10-17)
   got.push({ kind: 'parts', n: 1 + p.stage + (p.lv >= 4 ? 1 : 0), rar: 1 });   // 부품(2026-10-17) — 해체하면 늘 조금
@@ -896,7 +898,7 @@ function rollLoot(pl, q, cost, rng, owned = []) {
   const res = pl.kind === 'resource' ? 2 : pl.kind === 'mixed' ? 1.3 : 1, rich = pl.rich || 1;
   const x = pickW(rng, lootW(pl, q)).k;
   if (x === 'credits') return { kind: 'credits', n: Math.round(cost * (0.15 + 0.25 * rng()) * rich), rar: 0 };
-  if (x === 'water' || x === 'fert') return { kind: x, n: Math.max(1, Math.round((1 + rng()) * rich)), rar: 1 };
+  if (x === 'water' || x === 'fert') return { kind: 'water', n: Math.max(1, Math.round((1 + rng()) * rich * (x === 'fert' ? 2.5 : 1))), rar: 1 };   // 옛 비료 자리 = 물 2.5배
   if (x === 'parts') return { kind: 'parts', n: Math.max(1, Math.round((1 + 2 * rng()) * res * rich)), rar: 1 };
   if (x === 'scion') return { kind: 'scion', skill: rollScion(rng, { key: pick(rng, pl.pool) }, Math.min(1, 0.2 + 0.6 * q + 0.1 * (pl.orbit - 1))), rar: 3 };
   if (x === 'regress') return { kind: 'regress', n: 1, rar: 4 };
@@ -1040,7 +1042,7 @@ export function seasonSync(s, now) {
 function winBonus(r, rng, table) {
   if (rng() >= 0.75) return;
   let x = rng() * table.reduce((a, [, w]) => a + w, 0);
-  for (const [k, w] of table) { x -= w; if (x <= 0) { r[k] = k === 'water' ? 1 + (rng() < 0.3 ? 1 : 0) : 1; return; } }
+  for (const [k, w] of table) { x -= w; if (x <= 0) { if (k === 'water2') r.water = 2 + (rng() < 0.5 ? 1 : 0); else r[k] = k === 'water' ? 1 + (rng() < 0.3 ? 1 : 0) : 1; return; } }   // water2 = 옛 비료 자리(물 2~3)
 }
 export const PVP_DAILY = 15;   // 친구 대결 보상은 하루 15판까지(친구끼리 일부러 져 주며 돈·경험치를 쌓지 않게) — 승패 기록은 늘 남음
 export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
@@ -1056,7 +1058,7 @@ export function battleReward(s, { mode, win, rng, now = 0, short = false }) {
   } else {
     const tier = TIERS.indexOf(s.tournament.tier);
     r.credits = win ? 60 + 15 * tier : 15;
-    if (win) winBonus(r, rng, [['water', 40], ['parts', 30], ['fuel', 18], ['fert', 12]]);   // 부품(2026-10-17)
+    if (win) winBonus(r, rng, [['water', 40], ['parts', 30], ['fuel', 18], ['water2', 12]]);   // 부품(2026-10-17) · 비료 → 물(2026-11-04)
     if (mode === 'swap3') s.swap3[win ? 'wins' : 'losses']++;
     else {
       const T = s.tournament, from = rankNow(T); T.bestOf = roundBest(tier); const nW = winsNeed(T); T[win ? 'wins' : 'losses']++;

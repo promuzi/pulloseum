@@ -11,7 +11,7 @@ import { drawPortrait } from '../art/sprites.js';
 import { Gfx } from '../core/gfx.js';
 import { ask } from './popups.js';
 import { CARDS, PASS_STORE, cardFits, cardFace, isSkillCard, baseOf, CARD_UP, cardPrice } from '../game/cards.js';
-import { cardTiny, packTiny } from '../art/skillcard.js';
+import { cardTiny, packTiny, cardFront } from '../art/skillcard.js';
 import { eul } from '../core/josa.js';
 import { openDraft } from './draft.js';
 import { sfx } from '../core/sound.js';
@@ -33,6 +33,11 @@ const ROW = 60, TOP = 64;
 //  정렬 = 최신 · 희귀 · 별 · 속성 · 이름(즐겨찾기는 늘 앞 · 고른 정렬은 이 기기에 기억)
 const SORTS = [['new', '최신'], ['rare', '희귀'], ['pot', '별'], ['el', '속성'], ['name', '이름']], SORT_KEY = 'pullo.seedSort', EL_ORDER = Object.keys(ELEM);
 const CW = 80, CH = 108, CG = 6, AH = 56, SEED_TOP = TOP + 22, HOLD_MS = 320;
+// 접목 가지 = 기술 카드 셋씩 줄(식물 관리 카드와 같은 크기 · 2026-11-04 사용자 '지금 가지 접목 등 ui가 별로임 다듬자') · 같은 기술 가지 = 한 장 + '×n'
+const SC = { w: 66, h: 90, gx: 10, gy: 8 };
+const scionGroups = s => { const m = new Map(); for (const sc of s.scions) { if (!m.has(sc.skill)) m.set(sc.skill, []); m.get(sc.skill).push(sc); } return [...m].map(([skill, scs]) => ({ skill, scs })); };
+const knows = (p, sk) => [...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot, ...(p.pend || [])].includes(sk) || (p.drafts || []).some(d => d.cands.includes(sk));   // 서버 graft 의 '이미 아는 기술'과 같게(고르기로 기다리는 기술도)
+const graftOk = (p, sk) => !canGraft(p, sk) && !knows(p, sk);
 const specialOf = sd => (sd.legend ? 4 : sd.form ? 3 : sd.shiny ? 2 : 0);
 const specialTag = sd => (sd.legend ? { label: '전설', col: '#ff8a3a' } : sd.form && FORMS[sd.form] ? { label: FORMS[sd.form].name + ' 변이', col: FORMS[sd.form].col } : sd.shiny ? { label: '색 변종', col: '#ff9ad8' } : null);
 const frameCol = (sd, sp) => (specialTag(sd) || {}).col || (sp.rarity === 'rare' ? '#e0b040' : '#7a9cc0');
@@ -86,14 +91,14 @@ export const bag = {
     let x = 10;
     for (const [id, label] of TABS) { const w = g.textW(label, 'label') + 22; holoTab(app, 'tab_' + id, x, 37, w, 21, label, this.tab === id, () => { this.tab = id; this.scroll = 0; this.pickFor = null; this.zoom = null; this.exitSelect(); }); x += w + 5; }
     const top = this.top = seedTab ? SEED_TOP : TOP;
-    const list = seedTab ? sortSeeds(s, this.sort) : this.tab === 'scion' ? s.scions : this.tab === 'card' ? cardList(s) : Object.keys(ITEMS);
+    const scTab = this.tab === 'scion', list = seedTab ? sortSeeds(s, this.sort) : scTab ? scionGroups(s) : this.tab === 'card' ? cardList(s) : Object.keys(ITEMS).filter(k => k !== 'fert' || (s.items.fert || 0) > 0);   // 비료 = 가진 것이 있을 때만(2026-11-04 물만 주기 — 더 안 나옴)
     if (seedTab) {
       if (this.zoom && this.zoom.id === '*') { if (list[0]) this.zoom.id = list[0].id; else this.zoom = null; }   // 촬영: 맨 앞 종자 펼침
       if (this.selN) { list.filter(sd => !sd.lock).slice(0, this.selN).forEach(sd => this.sel.add(sd.id)); this.selN = 0; }
       if (selMode) this.selectBar(app, list); else this.sortRow(app);
     }
     const bottom = H - 58, viewH = bottom - top, x0 = Math.round((W - 3 * CW - 2 * CG) / 2);
-    this.max = Math.max(0, seedTab ? Math.ceil(list.length / 3) * (CH + CG) + 2 - viewH : list.length * ROW - viewH);
+    this.max = Math.max(0, seedTab ? Math.ceil(list.length / 3) * (CH + CG) + 2 - viewH : scTab ? Math.ceil(list.length / 3) * (SC.h + SC.gy) + 6 - viewH : list.length * ROW - viewH);
     // 고르기 모드: 끄는 손가락이 지나는 카드를 고름 · 목록 위아래 끝에선 저절로 넘김
     const dn = app.input.down;
     if (selMode && !this.sellAsk && dn && dn.moved && dn.y0 >= top && dn.y0 < bottom) {
@@ -110,15 +115,19 @@ export const bag = {
           if (cy + CH >= top && cy <= bottom) this.seedCard(app, it, cx, cy, hits, selMode);
           return;
         }
+        if (scTab) {
+          const sx0 = Math.round((W - 3 * SC.w - 2 * SC.gx) / 2), cx = sx0 + (i % 3) * (SC.w + SC.gx), cy = top + 4 + Math.floor(i / 3) * (SC.h + SC.gy) - Math.round(this.scroll);
+          if (cy + SC.h >= top && cy <= bottom) this.scionCard(app, it, cx, cy, hits);
+          return;
+        }
         const y = top + i * ROW - Math.round(this.scroll);
         if (y + ROW < top || y > bottom) return;
-        if (this.tab === 'scion') this.scionRow(app, it, y, hits);
-        else if (this.tab === 'card') this.cardRow(app, it, y, hits);
+        if (this.tab === 'card') this.cardRow(app, it, y, hits);
         else this.itemRow(app, it, y);
       });
       if (!list.length) g.text(seedTab ? '종자가 없어요' : this.tab === 'card' ? '카드가 없어요' : '접목 가지가 없어요', W / 2, top + 30, { color: T.text.sub, align: 'center' });
     });
-    for (const h of hits) if (h.y >= top && h.y + h.h <= bottom) app.input.hit(h.id, h.x, h.y, h.w, h.h, h.fn, 2);
+    for (const h of hits) { const y0 = Math.max(h.y, top), y1 = Math.min(h.y + h.h, bottom); if (y1 - y0 >= 10) app.input.hit(h.id, h.x, y0, h.w, y1 - y0, h.fn, 2); }   // 목록 끝에 걸친 칸도 보이는 만큼 누름(식물 관리 카드와 같게 — 2026-11-04)
     if (seedTab && this.max > 0) { const bh = Math.max(16, Math.round(viewH * viewH / (viewH + this.max))), bby = top + Math.round((viewH - bh) * this.scroll / this.max); g.rect(W - 4, bby, 2, bh, '#4f84bf'); }   // 넘김 막대
     // 꾹 = 고르기 모드(누른 카드부터 고름)
     if (seedTab && !selMode && !this.zoom && !this.sellAsk && dn && !dn.moved && dn.id && dn.id.startsWith('sd_') && app.input.holdMs() >= HOLD_MS) {
@@ -258,17 +267,13 @@ export const bag = {
       button(app, 'sb_go', x + 20 + bw, by, bw, 32, '팔기', { style: 'gold', font: 'bold', icon: 'coin', onTap: () => go(picked.map(sd => sd.id)) });
     }
   },
-  scionRow(app, sc, y, hits) {
-    const { g, W, state: s } = app, P = T.ptext, sk = SKILLS[sc.skill];
-    plate(g, 8, y, W - 16, 54);
-    plate(g, 13, y + 7, 32, 40, 'deep');
-    g.img(icon('vine'), 29 - 5, y + 21);
-    g.text(sk.name, 52, y + 6, { font: 'bold', color: sk.tier === 'c3' || sk.tier === 's' ? '#c48cff' : P.main });
-    const who = sk.tier === 's' ? '누구나' : sk.tier === 'g' ? '같은 가지 식물' : [sk.el && ELEM[sk.el] + ' 속성', sk.jong && JONG[sk.jong] + ' 종'].filter(Boolean).join(' · ');
-    g.text(`${TIER_NAME[sk.tier]} · 위력 ${sk.power || '–'} · 비용 ${sk.cost}`, 52, y + 22, { color: P.sub });
-    g.text(`배울 수 있는 식물: ${who}`, 52, y + 37, { color: P.dim });
-    const ok = s.plants.some(p => !canGraft(p, sc.skill));
-    this.btn(app, hits, 'gr_' + sc.id, W - 66, y + 14, 50, 26, '접목', { style: 'gold', disabled: !ok }, () => { this.pickFor = sc; });
+  // 접목 가지 한 장: 기술 카드 앞면(식물 관리와 같은 그림 · 테) · 같은 기술 가지 여럿 = 오른쪽 아래 '×n' · 스마트팜에 배울 식물이 없으면 흐리게 · 누름 = 누구에게?
+  scionCard(app, grp, x, y, hits) {
+    const { g, input, state: s } = app, id = 'gr_' + grp.skill, ok = s.plants.some(p => graftOk(p, grp.skill)), down = input.isPressed(id);
+    rrect(g, x + 1, y + 3, SC.w, SC.h, 5, 'rgba(0,0,0,0.32)');
+    cardFront(g, x, y + (down ? 1 : 0), SC.w, SC.h, { act: 'attack', cats: ['attack'], ...SKILLS[grp.skill] }, { can: ok });
+    if (grp.scs.length > 1) { const txt = '×' + grp.scs.length, tw = g.textW(txt, 'label') + 6, tx = x + SC.w - tw - 4, ty = y + 4 + 52 - 15; rrect(g, tx, ty, tw, 13, 3, 'rgba(6,10,20,0.88)'); g.textMid(txt, tx + 3, ty + 6.5, { font: 'label', color: '#ffd890' }); }
+    hits.push({ id, x, y, w: SC.w, h: SC.h, fn: () => { this.pickFor = grp.scs[0]; } });
   },
   // 카드 한 줄: 작은 카드 · 이름 · 일반/변이 · 효과 한 줄 · 장 수(가방 · 끼운 수) · 위 단추 = 강화(같은 카드 두 장 — 일반 패시브) 또는 팔기 · 아래 = 끼우기(맞는 식물 고르기)
   cardRow(app, id, y, hits) {
@@ -330,20 +335,27 @@ export const bag = {
     g.text(String(s.items[k] || 0), W - 22, y + 16, { font: 'head', color: '#ffd890', align: 'right' });
   },
   // 접목할 식물 고르기(스마트팜 식물 중 맞는 것)
+  // 누구에게?: 맨 위 = 그 가지의 카드(작게) · 이름 · 배우는 식물 묶음 · 아래 = 스마트팜에서 배울 수 있는 식물만(2026-11-04 — 못 배우는 식물은 개수만, 식물 관리 접목 가지와 같게)
   graftSheet(app) {
-    const { g, W, H, state: s } = app, sc = this.pickFor, sk = SKILLS[sc.skill], P = T.ptext;
+    const { g, W, H, state: s } = app, sc = this.pickFor, sk = { act: 'attack', cats: ['attack'], ...SKILLS[sc.skill] }, P = T.ptext;
     g.c.fillStyle = 'rgba(6,10,18,0.72)'; g.c.fillRect(0, 0, W, H);
     app.input.hit('gs_block', 0, 0, W, H, () => { this.pickFor = null; });
-    const rows = s.plants.length, h = 70 + rows * 40, y = Math.max(40, H - h - 20);
+    const fit = s.plants.filter(p => graftOk(p, sc.skill)), other = s.plants.length - fit.length;
+    const maxRows = Math.max(1, Math.floor((H - 60 - 64 - 44 - 18) / 40)), shown = fit.slice(0, maxRows), more = fit.length - shown.length;   // 화면에 다 안 들어가면 앞의 것만(나머지는 식물 관리 → 접목 가지에서)
+    const foot = other || more ? 18 : 0, h = 64 + Math.max(1, shown.length) * 40 + foot + 44, y = Math.max(40, H - h - 20);
     plate(g, 10, y, W - 20, h);
     app.input.hit('gs_in', 10, y, W - 20, h, () => {});
-    g.text(`${eul(sk.name)} 누구에게?`, 22, y + 10, { font: 'head', color: P.main });
-    s.plants.forEach((p, i) => {
-      const ry = y + 36 + i * 40, why = canGraft(p, sc.skill), known = [...p.skills.battle, ...(p.skills.store || []), ...p.skills.forgot, ...(p.drafts || []).filter(d => d.kind === 'one').flatMap(d => d.cands)].includes(sc.skill);
-      g.text(p.name, 22, ry + 6, { font: 'bold', color: why || known ? T.text.dim : P.main });
-      g.text(known ? '이미 알아요' : why || '배울 수 있어요', 22, ry + 22, { color: why || known ? '#ffb0a0' : '#9ff0b0' });
-      button(app, 'gp_' + i, W - 84, ry + 6, 60, 26, '접목', { style: 'gold', disabled: !!(why || known), onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; if (r.to === 'draft') openDraft(app, p); else app.toast(`${p.name}: ${eul(sk.name)} 배웠어요`); } }) });
+    cardTiny(g, 22, y + 10, sk);
+    const who = sk.tier === 's' ? '누구나' : sk.tier === 'g' ? '같은 가지 식물' : [sk.el && ELEM[sk.el] + ' 속성', sk.jong && JONG[sk.jong] + ' 종'].filter(Boolean).join(' · ');
+    g.text(`${eul(sk.name)} 누구에게?`, 54, y + 12, { font: 'head', color: P.main });
+    g.text(`${TIER_NAME[sk.tier]} · ${who}`, 54, y + 34, { color: P.sub });
+    if (!shown.length) g.text('배울 수 있는 식물이 없어요', W / 2, y + 74, { color: P.dim, align: 'center' });
+    shown.forEach((p, i) => {
+      const ry = y + 64 + i * 40;
+      g.text(p.name, 22, ry + 10, { font: 'bold', color: P.main });
+      button(app, 'gp_' + i, W - 84, ry + 4, 60, 28, '접목', { style: 'gold', icon: 'vine', iconTint: true, onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; if (r.to === 'draft') openDraft(app, p); else app.toast(`${p.name}: ${eul(sk.name)} 배웠어요`); } }) });
     });
-    button(app, 'gs_close', W / 2 - 50, y + h - 34, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
+    if (foot) g.text([more ? `배울 수 있는 식물 ${more} 더` : '', other ? `못 배우는 식물 ${other}` : ''].filter(Boolean).join(' · '), W / 2, y + h - 60, { color: P.dim, align: 'center' });
+    button(app, 'gs_close', W / 2 - 50, y + h - 38, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });
   },
 };

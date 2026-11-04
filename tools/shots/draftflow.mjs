@@ -23,17 +23,17 @@ try {
   await p.waitForFunction(() => window.__ready, { timeout: 15000 });
   const E = (fn, ...a) => p.evaluate(fn, ...a);
   const adv = ms => E(ms => window.__advance(ms), ms);
-  // 식물 관리로 · 첫 식물을 어린 단계 Lv1로
+  // 식물 관리로 · 첫 식물을 성체 Lv1(다음 레벨 바로 앞)로 — 2026-11-04: 새싹 · 성장기 레벨업 = 한 장을 그냥 받음(368) · 성체 레벨업 = 2장 중 1장 고르기
   const uid = await E(() => {
     const A = window.__app, s = A.state, pl = s.plants[s.active || 0];
-    pl.stage = 0; pl.lv = 1; pl.gxp = 0; pl.drafts = []; s.items.water = 99; s.items.fert = 99;
+    pl.stage = 2; pl.lv = 1; pl.gxp = 715; pl.drafts = []; s.items.water = 99; s.items.fert = 99;
     A.router.set('plant', { tab: 'skill' }); return pl.uid;
   });
   await adv(800);
   const plant = () => E(uid => { const s = window.__app.state; const pl = [...s.plants, ...(s.storage || [])].find(x => x.uid === uid); return { stage: pl.stage, lv: pl.lv, drafts: (pl.drafts || []).length, known: JSON.stringify(pl.skills) }; }, uid);
   // ① 물 주기(레벨업까지)
   for (let i = 0; i < 40; i++) {
-    const r = await E(() => { const A = window.__app; return A.router.cur.feed(A, A.state.plants[A.state.active || 0], 'fert'); });
+    const r = await E(() => { const A = window.__app; return A.router.cur.feed(A, A.state.plants[A.state.active || 0], 'water'); });
     await adv(300);
     if (await E(() => !!window.__app.draft)) break;
   }
@@ -67,7 +67,8 @@ try {
   ok(sk1.battle[0] === cand0 && sk1.forgot.includes(old0) && st.drafts === 0, '확정 = 고른 기술이 그 칸 · 원래 것은 지운 기술');
   await adv(600);
   ok(await E(() => !window.__app.draft), '고르기 창 닫힘');
-  // ② Lv6까지 → 진화 → 연출 → 기술 고르기 → 확정 → 패시브 고르기가 이어서
+  // ② Lv6까지 → 진화 → 연출 → 기술 고르기 → 확정 → 패시브 고르기가 이어서(새싹부터 다시)
+  await E(uid => { const pl = window.__app.state.plants.find(x => x.uid === uid); pl.stage = 0; pl.lv = 1; pl.gxp = 0; pl.drafts = []; }, uid);
   for (let i = 0; i < 80 && (await plant()).lv < 6; i++) { await E(() => { const A = window.__app; return A.router.cur.feed(A, A.state.plants[A.state.active || 0], 'fert'); }); await adv(200); await E(() => { window.__app.popup = null; window.__app.draft = null; }); }
   await E(uid => { window.__app.state.plants.find(x => x.uid === uid).drafts = []; }, uid);   // 단계 안 레벨업 고르기는 비우고 진화만 봄
   st = await plant(); ok(st.lv === 6, `Lv6 도달(단계 안 ${st.lv})`);
@@ -82,6 +83,7 @@ try {
   ok(await E(() => window.__app.draft.maxSy > 0), '장착 · 보관이 화면보다 길면 아래 칸 끌어 넘김');
   for (let i = 0; i < want; i++) await place(0, 's' + i);
   ok(await press('draft_ok'), '확정 누름'); await adv(900);
+  if (await E(() => !!window.__app.confirm)) { await press('cf_yes'); await adv(900); }   // 보관이 차 있으면 밀려난 카드를 버릴지 확인 창(① 성체 고르기 뒤 배치에 따라)
   d1 = await D();
   ok(d1 && d1.dk.startsWith('passive') && Array.isArray(d1.lay.cards), '이어서 패시브 고르기 창');
   ok(await press('draft_later'), '보류 누름'); await adv(400);
@@ -129,7 +131,8 @@ try {
   await E(uid => { const A = window.__app, s = A.state, pl = s.plants.find(x => x.uid === uid); s.items.regress = 3; const i = pl.skills.battle.indexOf('guard'); if (i >= 0) pl.skills.battle[i] = null; pl.skills.store = pl.skills.store.filter(x => x !== 'guard').slice(0, 5); if (!pl.skills.forgot.includes('guard')) pl.skills.forgot.unshift('guard'); A.router.set('plant', { tab: 'skill', sub: 'forgot' }); }, uid);
   await adv(900);
   const gi = await E(uid => window.__app.state.plants.find(x => x.uid === uid).skills.forgot.indexOf('guard'), uid);
-  ok(await press('fg_go_' + gi), '지운 기본기 [되돌리기] 누름'); await adv(200);
+  ok(gi >= 0 && await press('skc_fg:guard'), '지운 기본기 카드 누름'); await adv(600);   // 2026-11-04 지운 기술 = 카드 → 뒷면 [되돌리기]
+  ok(await press('peek_act'), '지운 기본기 [되돌리기] 누름'); await adv(200);
   const cmsg = await E(() => window.__app.confirm && window.__app.confirm.msg);
   ok(cmsg && !cmsg.includes('undefined'), '지운 기본기 이름이 보임: ' + cmsg);
   await E(() => { window.__app.confirm = null; });

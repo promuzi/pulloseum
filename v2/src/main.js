@@ -54,6 +54,7 @@ const app = {
   // 일 하나(서버에 보내고 새 상태를 받음 — 요청은 차례대로). 실패하면 알림 띠를 띄우고 null
   settle() { return chain; },   // 보낸 일이 다 끝난 뒤(식물 바꾸기 직후 출전해도 바꾼 식물로 — 2026-10-16 사용자 "다른 식물로 전투가 시작된 적이 있어")
   act(op, args) {
+    app.pourFlush();   // 꾹 눌러 모아 둔 일이 먼저(서버도 화면과 같은 차례로)
     if (net.offline) {   // 오프라인 체험 · 촬영: 이 화면에서 바로(저장 안 함)
       const p0 = chain.then(async () => { try { return await netAct(app, op, args); } catch (e) { app.toast(e.message || '문제가 생겼어요'); return null; } });
       chain = p0.catch(() => {});
@@ -62,23 +63,20 @@ const app = {
     const quick = QUICK.has(op) && !!app.state;
     let res = null;
     if (quick) { try { res = runOp(app.state, op, args, { rng: Math.random, now: app.now() }); } catch (e) { app.toast(e.message || '할 수 없어요'); return Promise.resolve(null); } }
-    pendOps++;
-    if (!quick && app.waiting++ === 0) app.waitT = app.t;
-    const p = chain.then(async () => {
-      app.busy++;
-      try { const r = await net.req('/api/act', { op, args }); lastSrv = r.state; return quick ? res : r.res; }
-      catch (e) { stale = true; app.toast(e.message || '문제가 생겼어요'); if (e.status === 401) app.logout(true); return null; }
-      finally {
-        app.busy--; if (!quick) app.waiting--;
-        if (--pendOps === 0) {
-          if (stale) { stale = false; lastSrv = null; if (net.token) net.req('/api/me').then(r => { if (r && r.state && pendOps === 0) app.state = r.state; }).catch(() => {}); }
-          else if (lastSrv && app.user) { app.state = lastSrv; lastSrv = null; }
-        }
-      }
-    });
-    chain = p.catch(() => {});
-    return quick ? Promise.resolve(res) : p;
+    return send(op, args, quick, res);
   },
+  // 꾹 눌러 이어 하기(2026-11-04 사용자 '물주기만 주고 꾹 누르면 연속으로 주는게 가능'): 한 번씩 이 화면에서 바로 하고(QUICK 과 같은 규칙)
+  //  서버엔 모아서 n개로 한 번(0.5초마다 · 손을 떼거나 다른 일을 하면 바로) — 1초에 열 번 넘게 눌러도 요청은 두 번쯤. 실패 = null(그만 줌)
+  pour(op, args) {
+    if (!app.state || !QUICK.has(op)) return null;
+    let res; try { res = runOp(app.state, op, { ...args, n: 1 }, { rng: Math.random, now: app.now() }); } catch (e) { app.toast(e.message || '할 수 없어요'); return null; }
+    if (net.offline) return res;   // 오프라인 체험 · 촬영 = 이 화면에서만
+    const key = op + JSON.stringify(args), B = app.pourB && app.pourB.key === key ? app.pourB : (app.pourFlush(), app.pourB = { op, args, key, n: 0, t0: performance.now() });
+    B.n++;
+    if (performance.now() - B.t0 > 500) app.pourFlush();
+    return res;
+  },
+  pourFlush() { const B = app.pourB; app.pourB = null; if (B && B.n) send(B.op, { ...B.args, n: B.n }, true, null); },
   logout(expired = false) {
     if (!expired && !net.offline && net.token) net.req('/api/logout', {}).catch(() => {});
     net.setToken(null); app.user = null; app.state = null; app.sheet = null; app.popup = null; app.confirm = null; app.guide = null;
@@ -89,7 +87,27 @@ const app = {
   },
   openSettings() { app.sheet = 'settings'; },
 };
+// 서버에 보냄(요청은 차례대로) — quick = 화면에서 이미 한 일(res 를 바로 돌려줌, 서버 상태는 줄 선 일이 다 끝났을 때 한 번만 받아 맞춤)
+function send(op, args, quick, res) {
+  pendOps++;
+  if (!quick && app.waiting++ === 0) app.waitT = app.t;
+  const p = chain.then(async () => {
+    app.busy++;
+    try { const r = await net.req('/api/act', { op, args }); lastSrv = r.state; return quick ? res : r.res; }
+    catch (e) { stale = true; app.toast(e.message || '문제가 생겼어요'); if (e.status === 401) app.logout(true); return null; }
+    finally {
+      app.busy--; if (!quick) app.waiting--;
+      if (--pendOps === 0) {
+        if (stale) { stale = false; lastSrv = null; if (net.token) net.req('/api/me').then(r => { if (r && r.state && pendOps === 0) app.state = r.state; }).catch(() => {}); }
+        else if (lastSrv && app.user) { app.state = lastSrv; lastSrv = null; }
+      }
+    }
+  });
+  chain = p.catch(() => {});
+  return quick ? Promise.resolve(res) : p;
+}
 window.__app = app;
+window.addEventListener('pagehide', () => app.pourFlush());   // 꾹 눌러 모아 둔 일을 닫히기 전에 보냄
 
 window.addEventListener('resize', () => { if (!screen.fixed) { screen.resize(); g.ctx = screen.ctx; } });
 
@@ -121,6 +139,7 @@ function frame(ts) {
   if (ts - lastDraw < (fast ? 1000 / 60 : 1000 / 30) - 3) return;
   lastDraw = ts;
   frameBody(Math.max(app.t, ts + timeOff));
+  if (app.pourB && !input.down) app.pourFlush();   // 꾹 이어 하기를 놓았으면 모아 둔 일을 바로 보냄
 }
 // 시험 도구: 창이 가려져 브라우저가 그림 시계를 멈췄을 때(미리보기 창 등) 시간을 직접 넘기며 그림 — 넘긴 만큼 시계를 앞당겨 둬서 진짜 시계와 섞여도 시간이 거꾸로 가지 않음
 window.__advance = (ms = 600, dt = 33) => { const t0 = Math.max(app.t, performance.now() + timeOff); for (let k = dt; k <= ms; k += dt) frameBody(t0 + k); timeOff = app.t - performance.now(); return { scene: router.name, t: app.t }; };

@@ -57,6 +57,20 @@ export function button(app, id, x, y, w, h, label, opt = {}) {
   input.mark(id, x, y, w, h);
   if (!opt.disabled && opt.onTap) input.hit(id, x, y, w, h, opt.onTap, opt.pad ?? 4, !!opt.now);   // now = 손을 뗀 그 순간 바로(창 열기 — core/input.js)
 }
+// 꾹 = 이어 하기(2026-11-04 사용자 '물주기만 주고 꾹 누르면 연속으로 주는게 가능'): 단추 id 를 0.35초 넘게 누르고 있으면 누르기 대신 fire()를 이어 부름
+//  — 처음 초당 4번 → 1.5초 뒤 초당 12번. fire() 가 false(물이 떨어짐 · 다 자람 · 고르기 창)면 그만 · 손을 떼면 app.pourFlush()(모아 둔 서버 요청). 장면 그리기마다 부름
+export function holdRepeat(app, id, fire) {
+  const I = app.input, d = I.down, H = (app.holdRep = app.holdRep || {});
+  if (!d || d.id !== id || d.moved) { if (H[id]) { delete H[id]; app.pourFlush(); } return false; }
+  let h = H[id];
+  if (!h) { if (I.holdMs() < 350) return false; I.claimHold(); h = H[id] = { t0: app.t, last: app.t, acc: 1, stop: false }; }
+  I.pressedId = id;   // 이어 주는 동안 눌린 모양 그대로(claimHold 가 지움)
+  if (h.stop) return true;
+  const rate = Math.min(12, 4 + (5.5 * (app.t - h.t0)) / 1000);
+  h.acc += (rate * Math.max(0, app.t - h.last)) / 1000; h.last = app.t;
+  for (; h.acc >= 1 && !h.stop; h.acc--) if (fire() === false) h.stop = true;
+  return true;
+}
 
 // 막대(체력·경험치). ratio 0~1. kind: 'hp'(색 단계) | 'exp' | 'gold' | 'energy'
 export function bar(g, x, y, w, h, ratio, kind = 'hp') {
