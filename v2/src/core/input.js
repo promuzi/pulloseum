@@ -28,15 +28,34 @@ export class Input {
     this.act = -1e9;          // 마지막으로 만진 시각(main.js 장 수 — 만지는 중 · 막 뗀 뒤 = 1초 60장)
     const el = screen.display;
     const now = () => performance.now();
+    // 두 손가락 벌리기 · 오므리기(2026-11-04 사용자 '탐사 창에 보면 고정되어 있고 확대도 안 되어 있는데 이거 가능하게 해줘'): 손가락이 둘이면 끌기 · 누르기 대신
+    //  pinch(이번 움직임 배율 k · 두 손가락 가운데) → 손을 떼면 pinchEnd. 마우스 휠 = zoomStep(±1) — 받는 장면만(onPinch · onPinchEnd · onZoomStep)
+    this.ptrs = new Map(); this.pinch = null;
+    const mid = () => { const [a, b] = [...this.ptrs.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) }; };
     el.addEventListener('pointerdown', e => {
       this.act = now();
       unlock();   // 브라우저는 사람이 한 번 눌러야 소리를 냄
       const p = screen.toLogical(e.clientX, e.clientY); const r = this.hitAt(p.x, p.y);
-      this.down = { ...p, id: r && r.id, x0: p.x, y0: p.y, moved: false, held: false, t0: now(), hist: [{ t: now(), x: p.x, y: p.y }] }; this.pressedId = r && r.id;
+      if (e.isPrimary) { this.ptrs.clear(); this.pinch = null; }   // 새 손짓의 첫 손가락 = 놓친 뗌이 남아 있어도 새로 셈
+      this.ptrs.set(e.pointerId, p);
       try { el.setPointerCapture(e.pointerId); } catch {}
+      if (this.ptrs.size >= 2) {   // 두 번째 손가락 = 벌리기 시작(첫 손가락의 누르기 · 끌기는 멈춤)
+        if (this.ptrs.size === 2) this.pinch = { last: mid().d };
+        if (this.down) { this.down.held = true; this.down.pinched = true; } this.pressedId = null; return;
+      }
+      this.down = { ...p, id: r && r.id, x0: p.x, y0: p.y, moved: false, held: false, t0: now(), hist: [{ t: now(), x: p.x, y: p.y }] }; this.pressedId = r && r.id;
     });
+    el.addEventListener('wheel', e => {
+      e.preventDefault(); this.act = now();
+      const p = screen.toLogical(e.clientX, e.clientY), t = now();
+      if (t - (this.wheelT || 0) < 140) return; this.wheelT = t;   // 휠 한 칸 = 한 단계(트랙패드가 잘게 여러 번 보내도 한 번만)
+      this.queue.push({ type: 'zoomStep', dir: e.deltaY < 0 ? 1 : -1, cx: p.x, cy: p.y });
+    }, { passive: false });
     el.addEventListener('pointermove', e => {
+      if (this.ptrs.has(e.pointerId)) this.ptrs.set(e.pointerId, screen.toLogical(e.clientX, e.clientY));
+      if (this.pinch && this.ptrs.size >= 2) { this.act = now(); const m = mid(); this.queue.push({ type: 'pinch', k: m.d / this.pinch.last, cx: m.x, cy: m.y }); this.pinch.last = m.d; return; }
       if (!this.down) return; this.act = now(); const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
+      if (d.pinched) return;   // 벌리기를 하던 손가락 하나가 남음 = 끌기로 바뀌지 않게
       if (Math.abs(p.y - d.y0) > 4 || Math.abs(p.x - d.x0) > 4) { d.moved = true; this.pressedId = null; }
       d.hist.push({ t: now(), x: p.x, y: p.y }); if (d.hist.length > 6) d.hist.shift();
       if (d.moved) { this.queue.push({ type: 'drag', dx: p.x - d.x, dy: p.y - d.y, x0: d.x0, y0: d.y0 }); d.x = p.x; d.y = p.y; }
@@ -45,7 +64,11 @@ export class Input {
       this.act = now();
       unlock();   // 뗄 때만 소리를 허락하는 브라우저(iOS)도 있어 한 번 더
       goFull();   // 휴대폰 브라우저 전체 화면(뗄 때 = 터치가 허락받는 순간)
+      this.ptrs.delete(e.pointerId);
+      if (this.pinch && this.ptrs.size < 2) { this.pinch = null; this.queue.push({ type: 'pinchEnd' }); }
+      if (this.down && this.down.pinched) { if (!this.ptrs.size) { this.down = null; this.pressedId = null; } return; }   // 벌리기 뒤 = 누르기 · 끌기 놓기 없음
       if (!this.down) return; const p = screen.toLogical(e.clientX, e.clientY), d = this.down;
+      this.lastUp = p;   // 마지막으로 뗀 자리(두 번 눌러 확대 — 탐사 지도)
       const r = this.hitAt(p.x, p.y);
       // now 영역(구글 로그인 창 등)은 다음 그림 장까지 미루지 않고 이 뗀 순간에 바로 — 아이폰 사파리는 사람이 누른 그 순간(이벤트 안)에 연 창만 허락함(2026-10-22, 전엔 다음 장에서 열어 막혔음)
       if (!d.moved && !d.held && r && r.id === d.id) { if (r.now && r.fn) { if (!r.quiet) tapSound(r.id); r.fn(); } else this.queue.push({ type: 'tap', region: r }); this.flash = { id: r.id, t: now() }; }
@@ -57,8 +80,11 @@ export class Input {
     };
     el.addEventListener('pointerup', up);
     // 브라우저가 터치를 가져가면(스크롤 등) 끌던 것도 놓은 것으로 — 안 그러면 장면이 끄는 중인 채로 멈춤(스마트팜 서랍 · 카드 끌기, 2026-10-17)
-    el.addEventListener('pointercancel', () => {
+    el.addEventListener('pointercancel', e => {
+      this.ptrs.delete(e.pointerId);
+      if (this.pinch && this.ptrs.size < 2) { this.pinch = null; this.queue.push({ type: 'pinchEnd' }); }
       const d = this.down;
+      if (d && d.pinched) { if (!this.ptrs.size) { this.down = null; this.pressedId = null; } return; }
       if (d && d.moved) { const a = d.hist[0], b = d.hist[d.hist.length - 1], dt = Math.max(16, b.t - a.t); this.queue.push({ type: 'release', dx: d.x - d.x0, dy: d.y - d.y0, x0: d.x0, y0: d.y0, vx: (b.x - a.x) / dt * 1000, vy: (b.y - a.y) / dt * 1000 }); }
       this.down = null; this.pressedId = null;
     });
@@ -82,6 +108,9 @@ export class Input {
       if (ev.type === 'tap' && ev.region.fn) { if (!ev.region.quiet) tapSound(ev.region.id); ev.region.fn(); }
       else if (ev.type === 'drag' && scene && scene.onDrag) scene.onDrag(ev.dy, ev.dx, ev);
       else if (ev.type === 'release' && scene && scene.onRelease) scene.onRelease(ev);
+      else if (ev.type === 'pinch' && scene && scene.onPinch) scene.onPinch(ev.k, ev.cx, ev.cy);
+      else if (ev.type === 'pinchEnd' && scene && scene.onPinchEnd) scene.onPinchEnd();
+      else if (ev.type === 'zoomStep' && scene && scene.onZoomStep) scene.onZoomStep(ev.dir, ev.cx, ev.cy);
     }
   }
 }

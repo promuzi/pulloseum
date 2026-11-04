@@ -170,6 +170,9 @@ export const SHOTS = [
   ['09_result_cupend', 'result', {}, { tour: { tier: '실버', name: '새싹 실버', pts: 95, round: '예선', wins: 0, losses: 0 }, result: { win: false, reward: { credits: 15, xp: { gained: 10 }, reset: 'cup', rankPts: -10, divDown: '실버 4' }, info: { round: '예선', bestOf: 5 } } }],   // 예선 탈락 −10 · 칸 내려감
   ['07_battle_title_long', 'battle', { phase: 'pick', venue: 'colosseum', title: '무제한 플래티넘 III · 4강', nB: '7', w: '3', l: '2' }],   // 가장 긴 대회 제목(로마 숫자 칸) + 7판 칸(3승 2패)
   ['10_explore', 'explore', {}],
+  ['10_explore_x2', 'explore', { zoom: '2' }],   // 지도 확대(2026-11-04) — 고른 행성을 가운데로 2배 · 3배(시작 배율 검토)
+  ['10_explore_x3', 'explore', { zoom: '3' }],
+  ['10_explore_x2_kairen', 'explore', { zoom: '2', sel: 'ex_kairen' }],
   ['10_explore_zoom1', 'explore', { map: '1', mapAt: '250' }],   // 행성을 눌러 지도로 다가가는 중간(코덱스 행성 그림 → 지도, 2026-10-22)
   ['10_explore_zoom2', 'explore', { map: '1', mapAt: '450' }],
   ['10_explore_zoom3', 'explore', { map: '1', mapAt: '650' }],
