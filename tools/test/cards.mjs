@@ -181,7 +181,7 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   const spo = plant(s, 'spore_cap', { form: 'spore' }); spo.cards = ['v_spread', null];
   const vic2 = { id: 'foe', name: 't', hp: 100, max: 100, eff: {}, el: 'water', jong: 'flower' };
   apply(vic2, 'spore', 1, { turn: 1, rng: () => 0.5, ev, by: unitOf('me', spo) });
-  ok(vic2.eff.spore && vic2.eff.spore.n === 1 && vic2.eff.spore.left[0] === 3 && Math.abs(vic2.eff.spore.v[0] - 0.11) < 1e-9, '포자 번식 = 내가 건 포자가 필 때 피해 8% → 11%(2026-11-04 — 피는 때는 늘 붙인 턴 포함 3번째 턴)');
+  ok(vic2.eff.spore && vic2.eff.spore.n === 1 && vic2.eff.spore.left[0] === 3 && vic2.eff.spore.p[0] === 45, '포자 번식 = 내가 건 포자 하나 위력 35 → 45(2026-11-04 포자 = 시간차 공격 — 피는 때는 늘 붙인 턴 포함 3번째 턴)');
   // 강철 비늘 = 받는 피해 ↓(같은 씨앗 · 같은 공격)
   const dr = plant(s, 'thorn', { form: 'dragon' }); dr.cards = [null, null]; const plainD = tough(unitOf('foe', dr)); dr.cards = ['v_scale', null]; const scaleD = tough(unitOf('foe', dr));
   const dm = u => turn(tough(U(P('gaia'))), u, atk, 11).t.events.filter(e => e.t === 'hit').reduce((a, e) => a + e.dmg, 0);

@@ -12,6 +12,7 @@
 import { SPECIES, STAGE_KEY } from '../game/catalog.js';
 import { has, listOf, apply, defK, atkK, healK, selfBuff, noteFall, FX, CAVE, SUMMON, ORB, HARM_IDS, GOOD_IDS, DOWN_IDS, WIPE_ALL, wipeEff, givesFx, FRUIT, effSpd, statSum } from './status.js';
 import { baseDamage, RULES, hitTable, tierOf } from './rules.js';
+import { elemMult } from './elem.js';
 
 const SP = u => (u && SPECIES[u.key]) || {};
 const BUFF_IDS = ['regen', 'will'];   // 빼앗기 · 날리기(엑셀 v10 회수) = 이로운 상태이상만 — 능력치 겹 · 준비 효과 · 환경 · 면역은 대상 아님
@@ -250,6 +251,9 @@ function becomeDragon(u, ev) {
   (u.st ||= {}).dragon = true;
   ev.push({ t: 'fx', who: u.id, to: u.id, name: u.name, id: 'dragon', list: listOf(u) });
 }
+// 포자 하나가 필 때 피해(2026-11-04 사용자 '그냥 시간차 공격으로 취급하면 안 되나?' → '추천대로 바꿔'): 위력 P 공격 한 대 —
+//  붙일 때 건 식물의 공격력(A) · 건 식물 속성(el)의 상성 · 맞는 식물의 지금 방어 · 치명 없음 · 빗나감 없음(이미 붙어 있음)
+export const sporeDmg = (u, P, A, el) => Math.max(1, Math.round(baseDamage({ atk: A }, { def: (u.def || 0) * defK(u) }, { power: P }, elemMult(el, u.el))));
 // 엠버캡 타고남(2026-10-30 사용자 '포자가 터지면 회복' · 10-31 '포악이면 공격력 버프'): 내가 건 포자가 n개 피면 회복(같은 턴 둘째부터 절반 몫 — 자주 터지면 덜) · 포악이면 활력 n겹(이 타고남 겹 상한 cap)
 export function sporeBloomed(o, n, T, ev) {
   const H = SP(o).sporeHeal;

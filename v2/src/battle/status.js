@@ -13,7 +13,7 @@
 //    기생 씨앗 · 뿌리 묶기(+ 그늘 · 부식)는 속성·종·생장에 묶이지 않는 변이·특수 기술용(식물 기술표에서 뺌, 규칙은 남겨 둠).
 // 턴 세는 법: exp = 마지막으로 영향을 주는 턴 번호(턴 끝에 exp ≤ 지금 턴이면 사라짐) · left = 남은 턴 끝 횟수(지속 피해·빨아들이기).
 
-import { canUseRes, turnDevices, galeTurn, sporeBloomed } from './devices.js';
+import { canUseRes, turnDevices, galeTurn, sporeBloomed, sporeDmg } from './devices.js';
 
 export const FX = {
   // 해로운 상태이상(2026-10-23 엑셀 v10 효과 분류 19~31행): 기간 = 지금 N턴(걸린 턴 = 1턴째 · 만료 exp = T + N − 1 · 기술마다 o.turns 로 바꿈) ·
@@ -43,7 +43,9 @@ export const FX = {
   // 포자(엑셀 v10 30행) = 따로 쌓이는 지연 효과: 걸 때마다 하나씩 붙어 각자 셈(상한 없음) · 지연 N턴(기술마다 — 옛 1겹 기술 = 2턴 · 2겹 = 1턴) ·
   //  걸린 다음 턴부터 세어 N턴째 턴 끝에 핌 → 하나에 최대 체력 8%(같은 턴 여럿이면 더함) · 기본은 피해만(암실 · 흡혈은 특수 포자 기술에만) · 버섯은 안 걸림 · 불에 다 탐
   //  → 2026-10-31 사용자 '포자는 여러개 붙이고 반드시 붙인턴 포함 3번째 턴에 터지는 걸로 하자'(2026-11-04 넣음): 어떤 기술로 붙였든 붙인 턴 끝 = 1 · 3번째 턴 끝에 핌(left 3 — 기술의 지연 값은 안 씀) · 불에 안 탐(10-31)
-  spore:   { jong: 'mushroom', left: 3, bloom: 0.08, plus: 0.03 },   // plus = 카드 포자 번식(sporeAdd) 하나당 핀 포자 피해 +3%p(2026-11-04 클로드 임시 — 옛 '한 턴 빨리'는 '반드시 3번째 턴'과 안 맞음)
+  //  → 2026-11-04 사용자 '포자가 체력비례 데미지임? 그냥 시간차 공격으로 취급하면 안 되나?' → '추천대로 바꿔': 하나 = 위력 35 공격(최대 체력 8%를 성체 평균으로 바꾼 값) —
+  //   붙일 때 건 식물의 공격력 · 건 식물 속성의 상성 · 필 때 맞는 쪽 방어 · 치명 없음(devices.sporeDmg)
+  spore:   { jong: 'mushroom', left: 3, power: 35, plus: 10 },   // plus = 카드 포자 번식(sporeAdd) 하나당 포자 위력 +10(전 = 피해 8% → 11%)
   // 능력치 버프 · 디버프(2026-10-23 엑셀 v10 효과 분류 9~18행 — 활력 · 억셈 · 가속 · 예리 · 집중 / 쇠약 · 시듦 · 둔화 · 무딤 · 교란):
   //  거는 만큼 겹이 쌓이고 겹마다 지금 5턴(걸린 턴 = 1턴째)이 따로 감 · 교체해도 남고 대기석에서도 시간이 감 · 정화로 안 지워짐(반대 효과로 메움) ·
   //  한 겹 값 v(기술마다 바꿀 수 있음 — o.v) = 공격 · 방어 · 기동은 배율에 더함(%), 치명 · 정확도는 판정표 칸에 더함 — 수치는 밸런스 전 임시(계획 문서 표)
@@ -272,10 +274,12 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     s.n = Math.min(D.stack, s.n + add); s.last = T;
     ev.push({ t: 'fx', ...base, n: s.n, wet, list: listOf(tgt) });
     if (s.n >= D.stack) { delete e[id]; setSkip(tgt, D.skip, ctx); }   // 3이 되면 한 번 쉬고 0으로 — 면역 · 의지 · 이미 쉬는 중이면 쉬지 않고 0으로
-  } else if (id === 'spore') {   // 하나 더 붙음(앞당기지 않음) · left = 피기까지 남은 턴 끝 수(늘 3 — 붙인 턴 포함 3번째 턴 끝) · who = 건 식물(엠버캡 타고남) · v = 필 때 피해 몫(카드 포자 번식이면 더)
-    const sp = e.spore ||= { n: 0, left: [], who: [], v: [] };
-    sp.who ||= []; sp.v ||= [];
-    sp.left.push(D.left); sp.who.push((ctx.by && (ctx.by.slot || ctx.by.id)) || null); sp.v.push(D.bloom + ((by && by.sporeAdd) || 0) * D.plus); sp.n = sp.left.length;
+  } else if (id === 'spore') {   // 하나 더 붙음(앞당기지 않음) · left = 피기까지 남은 턴 끝 수(늘 3 — 붙인 턴 포함 3번째 턴 끝) · who = 건 식물(엠버캡 타고남) · p = 위력(카드 포자 번식이면 더) · a = 붙일 때 건 식물 공격력 · el = 건 식물 속성
+    const sp = e.spore ||= { n: 0, left: [], who: [], p: [], a: [], el: [] };
+    sp.who ||= []; sp.p ||= []; sp.a ||= []; sp.el ||= [];
+    sp.left.push(D.left); sp.who.push((ctx.by && (ctx.by.slot || ctx.by.id)) || null); sp.n = sp.left.length;
+    const U = ctx.by;   // 건 식물(유닛) — by 는 그 식물의 카드 패시브
+    sp.p.push(D.power + ((by && by.sporeAdd) || 0) * D.plus); sp.a.push(U && U.atk ? Math.round(U.atk * atkK(U)) : 50); sp.el.push((U && U.el) || null);   // 속성 = 건 식물의 속성(엠버캡 = 불 포자 — 따끈 이불 · 포자벽처럼 맞을 때 붙는 포자도 같게)
     ev.push({ t: 'fx', ...base, n: sp.n, list: listOf(tgt) });
   } else if (id === 'stun') {
     setSkip(tgt, look || 'stun', ctx);   // 기절의 다른 이름(매혹 = charm — 이름 · 연출만, 2026-10-28)
@@ -425,8 +429,8 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
     if (e.spore && u.hp > 0) {   // 포자: 턴 끝마다 하나씩 줄어 0이 된 것만 핌(피해를 더해 한 번) · 나머지는 그대로 · 핀 포자를 건 식물에게 알림(엠버캡 타고남 — devices.sporeBloomed)
       const sp = e.spore, left = sp.left.map(x => x - 1), keep = left.map(x => x > 0), owners = {};
       let k = 0, d = 0;
-      left.forEach((x, i) => { if (keep[i]) return; k++; d += Math.max(1, Math.round(u.max * ((sp.v && sp.v[i]) || FX.spore.bloom))); const w = sp.who && sp.who[i]; if (w) owners[w] = (owners[w] || 0) + 1; });
-      sp.left = left.filter((x, i) => keep[i]); if (sp.who) sp.who = sp.who.filter((x, i) => keep[i]); if (sp.v) sp.v = sp.v.filter((x, i) => keep[i]); sp.n = sp.left.length;
+      left.forEach((x, i) => { if (keep[i]) return; k++; d += sporeDmg(u, (sp.p && sp.p[i]) || FX.spore.power, (sp.a && sp.a[i]) || 50, sp.el ? sp.el[i] : null); const w = sp.who && sp.who[i]; if (w) owners[w] = (owners[w] || 0) + 1; });
+      sp.left = left.filter((x, i) => keep[i]); for (const q of ['who', 'p', 'a', 'el']) if (sp[q]) sp[q] = sp[q].filter((x, i) => keep[i]); sp.n = sp.left.length;
       if (!sp.n) delete e.spore;
       if (k) {
         u.hp = Math.max(0, u.hp - d); ev.push({ t: 'bloom', who: u.id, name: u.name, dmg: d, k, list: listOf(u) });

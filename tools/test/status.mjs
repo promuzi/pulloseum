@@ -211,6 +211,9 @@ const fixed = v => () => v;
   ok(B.me === cur && t.events.some(e => e.t === 'skip' && e.who === 'me'), '쉬는 차례엔 교체 안 되고 그 턴 쉼');
 }
 // ── 9. 포자(엑셀 v10 30행 = 따로 쌓이는 지연 효과): 기술마다 지연 N턴 · 걸린 다음 턴부터 세어 N턴째 끝에 핌 · 상한 없음 · 기본은 피해만 · 불에 탐 · 버섯은 안 걸림 ──
+//   2026-11-04 포자 = 시간차 공격(사용자 '추천대로 바꿔'): 하나 = 위력 35 · 붙일 때 건 식물 공격력 · 그 기술 속성 상성 · 필 때 맞는 쪽 방어 · 치명 없음 — 기대 피해는 공식을 따로 셈
+const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.round(by.atk * atkK(by)) / 50 * (el && ({ fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] }[t.el] || []).includes(el) ? 1.5 : 1)
+  * Math.max(0.25, 100 / (100 + Math.max(0, (t.def || 0) * ST.defK(t))))));
 {
   const a = mk('me', 'spore_cap'), b = mk('foe', 'gaia');
   apply(b, 'spore', 1, ctx(a, 1, []));   // 옛 1겹 기술 = 지연 2턴
@@ -219,25 +222,36 @@ const fixed = v => () => v;
   endTurn([[b, a]], 1, e1); endTurn([[b, a]], 2, e2);
   ok(b.eff.spore && !e1.concat(e2).some(e => e.t === 'bloom') && b.hp === hp0, '1턴에 건 지연 2 포자는 1 · 2턴 끝엔 안 핌');
   endTurn([[b, a]], 3, e3);
-  ok(!b.eff.spore && hp0 - b.hp === Math.round(b.max * 0.08) && e3.some(e => e.t === 'bloom' && e.k === 1), '3턴 끝에 핌: 8% 피해');
+  ok(!b.eff.spore && hp0 - b.hp === sporeExp(b, a) && e3.some(e => e.t === 'bloom' && e.k === 1), `3턴 끝에 핌: 위력 35 공격(${hp0 - b.hp} = ${sporeExp(b, a)})`);
+  // 붙일 때 공격력: 붙인 뒤 건 식물에게 활력이 붙어도 이미 붙은 포자 피해는 그대로
+  const sa = mk('me', 'spore_cap'), sb = mk('foe', 'gaia'), sh0 = sb.hp, want = sporeExp(sb, sa);
+  apply(sb, 'spore', 1, ctx(sa, 1, [])); selfBuff(sa, 'atkUp', { turn: 1, ev: [] }); selfBuff(sa, 'atkUp', { turn: 1, ev: [] });
+  for (const T of [1, 2, 3]) endTurn([[sb, sa]], T, []);
+  ok(sh0 - sb.hp === want, `포자 = 붙일 때 공격력(뒤에 붙은 활력은 안 셈 · ${sh0 - sb.hp} = ${want})`);
+  // 상성: 불 포자(엠버캡)는 풀에 1.5배 · 물엔 그대로
+  const fe9 = mk('me', 'ember_cap'); fe9.curEl = 'fire';
+  const vg = mk('foe', 'flower_grass'), vw = mk('foe', 'aqua'), hg = vg.hp, hw = vw.hp;
+  apply(vg, 'spore', 1, ctx(fe9, 1, [])); apply(vw, 'spore', 1, ctx(fe9, 1, []));
+  for (const T of [1, 2, 3]) { endTurn([[vg, fe9]], T, []); endTurn([[vw, fe9]], T, []); }
+  ok(hg - vg.hp === sporeExp(vg, fe9) && hw - vw.hp === sporeExp(vw, fe9) && sporeExp(vg, fe9) > sporeExp({ ...vg, el: 'water' }, fe9), `포자 상성 = 불 포자가 풀엔 1.5배(${hg - vg.hp} · 물 ${hw - vw.hp})`);
   // 따로 쌓임: 다시 걸면 앞당기지 않고 하나 더(각자 셈)
   const c2 = mk('foe', 'gaia'); apply(c2, 'spore', 1, ctx(a, 1, [])); endTurn([[c2, a]], 1, []); apply(c2, 'spore', 1, ctx(a, 2, [])); endTurn([[c2, a]], 2, []);
   ok(c2.eff.spore.n === 2 && listOf(c2).some(x => x.id === 'spore' && x.n === 2 && x.t === 1), `포자 둘 · 가장 빨리 피는 것 = 이번 턴 끝(${JSON.stringify(listOf(c2).find(x => x.id === 'spore'))})`);
   const h3 = c2.hp; endTurn([[c2, a]], 3, []);
-  ok(c2.eff.spore && c2.eff.spore.n === 1 && h3 - c2.hp === Math.round(c2.max * 0.08), '3턴 끝 하나만 핌 · 하나 남음');
+  ok(c2.eff.spore && c2.eff.spore.n === 1 && h3 - c2.hp === sporeExp(c2, a), '3턴 끝 하나만 핌 · 하나 남음');
   const h4 = c2.hp; endTurn([[c2, a]], 4, []);
-  ok(!c2.eff.spore && h4 - c2.hp === Math.round(c2.max * 0.08), '4턴 끝 남은 하나 핌');
+  ok(!c2.eff.spore && h4 - c2.hp === sporeExp(c2, a), '4턴 끝 남은 하나 핌');
   // 같은 턴에 둘 = 피해를 더한 사건 하나 · 숨막힘(햇빛 막힘) 없음
   const B = makeBattle({ me: mk('me', 'spore_cap'), foe: mk('foe', 'gaia'), seed: 4 });
   apply(B.foe, 'spore', 2, ctx(B.me, 1, [])); apply(B.foe, 'spore', 2, ctx(B.me, 1, []));   // 같은 턴에 둘(2026-10-31부터 지연 값과 상관없이 붙인 턴 포함 3번째 턴 끝)
   playTurn(B, B.me.kit[1]); playTurn(B, B.me.kit[1]);
   const hb = B.foe.hp, tt = playTurn(B, B.me.kit[1]), bl = tt.events.find(e => e.t === 'bloom');
-  ok(bl && bl.k === 2 && bl.dmg === 2 * Math.round(B.foe.max * 0.08), `같은 턴 둘 = 피해를 더해 한 번(${bl && bl.dmg})`);
+  ok(bl && bl.k === 2 && bl.dmg > 0 && bl.dmg <= 2 * sporeExp(B.foe, B.me, 35, 'grass') + 2, `같은 턴 둘 = 피해를 더해 한 번(${bl && bl.dmg})`);
   ok(!tt.events.some(e => e.t === 'noEnergy' && e.who === 'foe'), '기본 포자는 피어도 햇빛을 막지 않음(암실은 특수 포자만)');
-  // 카드 포자 번식(2026-11-04 클로드 임시 — '반드시 3번째 턴'과 맞춤) = 내가 건 포자가 필 때 피해 8% → 11%
+  // 카드 포자 번식(2026-11-04 포자 = 시간차 공격) = 내가 건 포자 하나 위력 35 → 45
   const pa = mk('me', 'spore_cap'); pa.pas = { sporeAdd: 1 };
   const pb = mk('foe', 'gaia'), hpb = pb.hp; apply(pb, 'spore', 1, ctx(pa, 1, [])); endTurn([[pb, pa]], 1, []); endTurn([[pb, pa]], 2, []); endTurn([[pb, pa]], 3, []);
-  ok(!pb.eff.spore && hpb - pb.hp === Math.round(pb.max * 0.11), `포자 번식 카드 = 필 때 피해 11%(${hpb - pb.hp})`);
+  ok(!pb.eff.spore && hpb - pb.hp === sporeExp(pb, pa, 45), `포자 번식 카드 = 포자 하나 위력 45(${hpb - pb.hp} = ${sporeExp(pb, pa, 45)})`);
   // 정화 = 포자 모두 지움
   const pu = mk('foe', 'gaia'); apply(pu, 'spore', 1, ctx(a, 1, [])); apply(pu, 'spore', 1, ctx(a, 1, [])); selfBuff(pu, 'purify', { turn: 1, ev: [] });
   ok(!pu.eff.spore, '정화 = 포자 모두 지움');
