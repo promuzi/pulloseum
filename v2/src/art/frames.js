@@ -3,7 +3,7 @@
 //  → 같은 날 아침 '테두리는 종만 담는걸로 할까?'(370 = 종 테만) → '없는 6개를 어떤 기준으로 묶어서 … 일단 속성은 필요해지긴하네 보니깐 / 기본기도 전용으로 필요해보이고'
 //  → '반대로 하자. 테두리는 속성이 우선. 그다음에 속성이 없는 걸 종 테두리고 … 기본테는 코덱스에게'(379):
 //  테두리 = 그 기술의 속성(el_* 일곱 — 속성 공통 · 가지 · 속성 있는 고유) → 속성이 없으면 종(ty_* 넷 — 종 공통 · 속성 없는 고유는 그 식물의 종)
-//   → 속성도 종도 없으면 기본 테(basic — 기본기 넷 · 특수 넷) · 위 가운데 표식 = 고유 별(crest_unique) · 특수 보석(crest_special)
+//   → 속성도 종도 없으면 기본 테(basic — 기본기 넷 · 특수 넷 · 쇠 띠, 못 자국은 '별로임'으로 빼고 다시 그림 v3) · 아래 가운데 표식 = 고유 별 · 특수 보석(drawMark)
 //   변이 · 패시브 카드 = 지금 테 그대로(skillcard.js — 변이 = 각진 테 · 패시브 = 점선 테)
 //   바람 · 빙결 모서리는 게임 속성 색(보라 · 청록)으로 다시 칠함(코덱스 그림은 민트 · 하늘이라 바람이 빙결처럼 보임)
 //   버린 안 = 밤샘 365(고유 = 종 모서리를 그 식물 속성 색으로 다시 칠함 — 4종 × 7속성) · 370(종만 · 속성 공통은 둥근 테)
@@ -16,7 +16,7 @@
 import { ELEMENT } from './palette.js';
 import { SPECIES, uniqueOf } from '../game/catalog.js';
 
-export const FRAME_NAMES = ['el_fire', 'el_water', 'el_grass', 'el_earth', 'el_wind', 'el_bolt', 'el_ice', 'ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'basic', 'crest_unique', 'crest_special'];
+export const FRAME_NAMES = ['el_fire', 'el_water', 'el_grass', 'el_earth', 'el_wind', 'el_bolt', 'el_ice', 'ty_flower', 'ty_vine', 'ty_cactus', 'ty_mushroom', 'basic'];
 const RAW = {}, BUILT = new Map();
 const RECOLOR_EL = { el_wind: 'wind', el_ice: 'ice' };   // 코덱스 색(민트 · 하늘)이 게임 속성 색(바람 보라 · 빙결 청록)과 달라 다시 칠함
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -134,16 +134,35 @@ function edges(c, x, y, w, h, F, cap = 0) {
   run(F.left, x, y + T, h - 2 * T, false);
   run(F.right, x + w - F.right.width, y + T, h - 2 * T, false);
 }
-// 테 그리기(cardFront가 그림 · 이름 띠를 깐 뒤 부름): 합친 테 한 장 → 고유 표식 · lit(고른 카드) = 바깥 금빛 줄
+// 고유 · 특수 표식(2026-11-04 사용자 '별이랑 보석 아이콘이 위에 있으니 숫자와 겹치네 아래로 옮기고 테두리랑 이어지게. 그리고 좀 더 잘보이게 바꿔줘. 멀리서 보면 구분티 안 돼'):
+//  아래 테 가운데에 박힌 짙은 판(밝은 속 테 — 테 장식처럼) + 큰 별(고유 · 금빛 13×12) · 보석(특수 · 분홍 13×10) — 직접 찍은 도트
+//  높이 12칸(아래 끝 = 카드 아래 끝) = 이름 둘째 줄 아래 끝(카드 위에서 77칸)에 안 닿음
+//  전 = 위 가운데 코덱스 표식 12칸(crest_unique · crest_special — 오른쪽 위 수치와 겹치고 별 · 잎 · 리본이 뭉개져 멀리서 안 보였음)
+const MARK_COL = { o: '#0b1322', w: '#ffffff', Y: '#fff1a6', y: '#ffc93c', O: '#e2830f', P: '#ff9ccb', p: '#ff3d8e', q: '#b3175f' };
+const MARKS = {
+  u: { rim: '#ffc93c', rows: [
+    '.....ooo.....', '....ooYoo....', '....owYyo....', 'oooooYyyooooo', 'oYYYYYyyyyyOo', 'ooYYyyyyyyOoo',
+    '.ooYyyyyyOoo.', '.ooyyyyyOOoo.', '.oyyyyoyyOOo.', '.oyyyoooyOOo.', '.oyyoo.ooOOo.', '.oooo...oooo.'] },
+  s: { rim: '#ff5fa2', rows: [
+    '..ooooooooo..', '.oowwPPPPPoo.', 'ooPPPPPPPppoo', 'opppppppppppo', 'oopppppqqqqoo',
+    '.oopppqqqqoo.', '..ooppqqqoo..', '...oopqqoo...', '....ooqoo....', '.....ooo.....'] },
+};
+function drawMark(g, cx, yb, M) {
+  const pw = 19, ph = 9, px0 = cx - (pw >> 1), py0 = yb - ph + 1;   // 판 = 표식보다 양쪽 3칸 넓게(27칸은 표식 옆 빈 칸이 빈 상자처럼 보였음)
+  const plate = (inset, col) => { for (let j = inset; j < ph - inset; j++) { const e = Math.max(0, 2 - Math.min(j, ph - 1 - j)) + inset; g.rect(px0 + e, py0 + j, pw - 2 * e, 1, col); } };   // 모서리 둥근 판(바깥 2칸 깎음)
+  plate(0, MARK_COL.o); plate(1, M.rim); plate(2, '#1a2236');
+  const rows = M.rows, x0 = cx - (rows[0].length >> 1), y0 = yb - rows.length + 1;
+  rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') g.px(x0 + i, y0 + j, MARK_COL[row[i]]); });
+}
+// 테 그리기(cardFront가 그림 · 이름 띠를 깐 뒤 부름): 합친 테 한 장 → lit(고른 카드) = 바깥 금빛 줄 → 아래 가운데 표식(고유 = 별 · 특수 = 보석)
 export function drawFrameArt(g, x, y, w, h, sk, lit) {
   const key = frameKey(sk), im = key && composed(key, Math.round(w), Math.round(h));
   if (!im) return false;
   const c = g.c, sm = c.imageSmoothingEnabled;
   c.imageSmoothingEnabled = false;
   c.drawImage(im, x, y);
-  const cr = sk.tier === 'u' ? RAW.crest_unique : sk.tier === 's' ? RAW.crest_special : null;   // 위 가운데 표식(테에 걸쳐 — 비용 해 · 수치 사이 빈 곳): 고유 = 별 · 특수 = 보석
-  if (cr) c.drawImage(cr, Math.round(x + (w - cr.width) / 2), y - 2);
   if (lit) { g.rect(x + 3, y, w - 6, 1, '#ffd890'); g.rect(x + 3, y + h - 1, w - 6, 1, '#ffd890'); g.rect(x, y + 3, 1, h - 6, '#ffd890'); g.rect(x + w - 1, y + 3, 1, h - 6, '#ffd890'); }
+  if (MARKS[sk.tier]) drawMark(g, Math.round(x + w / 2), Math.round(y + h - 1), MARKS[sk.tier]);
   c.imageSmoothingEnabled = sm;
   return true;
 }

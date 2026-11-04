@@ -198,6 +198,38 @@ function statBadge(g, xr, cy, st, dim, maxW = 42) {
   g.text(main, x + iw, cy - Math.round(gh / 2), { font, color: dim ? '#c3c7d0' : '#ffffff', outline: C.ink, outlineW: 3 });
   if (sub) g.text(sub, x + iw + mw + 1, cy - Math.round(gh / 2) + 4, { font: SUB, color: hi, outline: C.ink, outlineW: 2 });
 }
+// 오른쪽 위 수치 = 아이콘 안 숫자(2026-11-04 사용자 '우측 상단 수치와 테두리가 안 겹치게 숫자를 아이콘안으로 옮겨'): 왼쪽 해(비용)와 짝인 원판 하나에 숫자
+//  종류 = 원판 색 + 모양(공격 = 원판을 가로지르는 검 · 광역 = 폭탄 심지 · 방어 = 방패꼴 · 회피 = 청록 원판 · 보호막 = 물방울 빛 · 회복 = 더하기) · 연타 ×N = 원판 바로 아래 작게
+//   (회피 원판 왼쪽 바람 줄은 '-15%'처럼 빼기로 보여 뺌)
+//  같은 자세 두 번째(절반) = 주황 원판 · 못 씀 = 회색. 패시브 효과 알약은 statBadge 그대로(전 = 아이콘 옆 숫자 — 숫자가 테 모서리 장식 위에 얹혀 지저분했음)
+const TOKEN = { pow: ['#c8402a', '#ffb08a', '#6a1c10'], bomb: ['#3e3546', '#9babb2', '#1a1420'], block: ['#56677e', '#d8e2ee', '#2c3646'], dodge: ['#0b8a8f', '#30e1b9', '#0b4e55'], barrier: ['#3f8be0', '#8fd3ff', '#2a4a9c'], heal: ['#239063', '#91db69', '#145440'] };
+const TOKEN_HALF = ['#c47a26', '#ffd890', '#6a3a10'];
+const TK_SWORD = [   // 원판을 가로지르는 검(21칸 — 가운데 (9, 9) = 원판 가운데): 왼쪽 위 = 칼끝 · 오른쪽 아래 = 날밑 · 손잡이(아이콘 sword를 뒤집어 늘림)
+  'oo...................', 'owo..................', 'olwo.................', '.olwo................', '..olwo...............', '...olwo..............', '....olwo.............',
+  '.....olwo............', '......olwo...........', '.......olwo..........', '........olwo.........', '.........olwo........', '..........olwo.......', '...........olwo......',
+  '............olwo..o..', '.............olwoyo..', '..............oyyo...', '.............oyyoho..', '............oyo.ooho.', '............oo...ooHo', '...................oo',
+];
+const TK_COL = { o: C.ink, w: '#ffffff', l: '#c7dcd0', y: '#f9c22b', h: '#966c6c', H: '#ab947a' };
+const SHIELD_HW = [7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 6, 5, 4, 3, 2];   // 방패꼴 줄마다 반폭(위 cy − 9 ~ 아래 cy + 9)
+function statToken(g, cx, cy, st, dim) {
+  const r = 8, [fill, hi, lo] = dim ? GEM.off : st.half ? TOKEN_HALF : (TOKEN[st.kind] || GEM.off), k = st.kind;
+  if (k === 'block') {   // 방패꼴: 먹선 → 그늘 → 속(위로 한 칸) → 왼쪽 위 빛
+    SHIELD_HW.forEach((hw, j) => g.rect(cx - hw - 1, cy - 9 + j, hw * 2 + 3, 1, C.ink));
+    SHIELD_HW.forEach((hw, j) => { if (j > 0 && j < SHIELD_HW.length - 1) g.rect(cx - hw, cy - 9 + j, hw * 2 + 1, 1, lo); });
+    SHIELD_HW.forEach((hw, j) => { if (j > 0 && j < SHIELD_HW.length - 2) g.rect(cx - hw + 1, cy - 9 + j, hw * 2 - 1, 1, fill); });
+    g.rect(cx - 6, cy - 7, 5, 1, hexMix(fill, hi, 0.6)); g.rect(cx - 6, cy - 6, 1, 4, hexMix(fill, hi, 0.6));
+  } else {   // 원판(해 원판과 같은 짜임): 먹선 → 그늘 → 속(위로 한 칸) → 왼쪽 위 빛
+    g.disc(cx, cy, r + 1, C.ink); g.disc(cx, cy, r, lo); g.disc(cx, cy - 1, r - 1, fill);
+    g.disc(cx - 3, cy - 4, 2, hexMix(fill, hi, 0.55));
+  }
+  if (k === 'pow') g.alpha(dim ? 0.6 : 1, () => TK_SWORD.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') g.px(cx - 9 + i, cy - 9 + j, TK_COL[row[i]]); }));   // 원판 위로 가로지르는 검(뒤에 두면 칼끝 · 손잡이 몇 칸만 보여 검으로 안 보였음)
+  if (k === 'bomb') { g.px(cx + 6, cy - 7, C.ink); g.px(cx + 7, cy - 8, C.ink); for (const [dx, dy] of [[9, -10], [8, -9], [10, -9], [9, -8]]) g.px(cx + dx, cy + dy, '#fbff86'); g.px(cx + 9, cy - 9, '#f9c22b'); }   // 심지 + 불꽃
+  if (k === 'barrier') { for (const [dx, dy] of [[-6, -2], [-6, -1], [-5, -4], [-4, -5], [-2, -6]]) g.px(cx + dx, cy + dy, '#ffffff'); }   // 물방울 빛 테
+  if (k === 'heal') { g.rect(cx + 4, cy - 7, 7, 3, C.ink); g.rect(cx + 6, cy - 9, 3, 7, C.ink); g.rect(cx + 5, cy - 6, 5, 1, '#ffffff'); g.rect(cx + 7, cy - 8, 1, 5, '#ffffff'); }   // 더하기
+  const [main, sub] = splitHits(st.txt), font = ['value', 'bold', sized('bold', 10), sized('bold', 9)].find(f => g.textW(main, f) <= 2 * r) || sized('bold', 9), gh = glyphH(font);
+  g.text(main, cx + 0.5, cy - Math.round(gh / 2) - (k === 'block' ? 1 : 0), { font, color: dim ? '#c3c7d0' : '#ffffff', align: 'center', outline: hexMix(lo, C.ink, 0.5), outlineW: 2 });
+  if (sub) { const SUB = sized('bold', 9); g.text(sub, cx, cy + r + 1, { font: SUB, color: dim ? '#a7adb8' : hi, align: 'center', outline: C.ink, outlineW: 2 }); }   // 연타 ×N = 원판 바로 아래
+}
 
 // 카드 이름 두 줄(2026-10-29 사용자 '검방술의 경우 )가 아랫줄로 밀림'): wrapName으로 끊고, 띄어쓰기가 있는 이름이 두 줄에 안 들어가 단어 가운데서 끊기면
 //  글자를 한 칸씩 줄여 다시(11 → 10 → 9 — '예로부터 매가 약이었죠.'). 셋 다 안 되면 11칸 글자 사이 끊기 그대로
@@ -260,7 +292,9 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     sunDisc(g, x + 10, y + 10, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
     g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
-  statBadge(g, x + w - 2, y + 9, statOf(sk, o), dim, w - 4 - leftR);   // 왼쪽 위 표시(해 · 보석 띠 · 모래시계) 오른쪽 끝 + 2칸까지
+  const st = statOf(sk, o);
+  if (st && st.kind === 'pill') statBadge(g, x + w - 2, y + 9, st, dim, w - 4 - leftR);   // 패시브 효과 알약(왼쪽 위 표시 오른쪽 끝 + 2칸까지)
+  else if (st) statToken(g, x + w - 12, y + 10, st, dim);   // 아이콘 안 숫자(왼쪽 해 원판과 짝 — 해 가운데 x + 10)
   cardMarks(g, x, y, w, sk, dim);
   if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
     const txt = '다 씀', tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);
@@ -291,7 +325,7 @@ function tag(g, xr, y, txt, col, ic) {   // 작은 꼬리표(오른쪽 끝 xr �
 }
 function cardMarks(g, x, y, w, sk, dim) {
   const xr = x + w - 3, artB = y + 4 + ART_H;
-  if (sk.drain && sk.act === 'attack') { const im = icon('heal'); rrect(g, xr - 13, y + 18, 13, 13, 3, 'rgba(6,10,20,0.86)'); if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, xr - 11, y + 19)); }   // 흡수(때린 만큼 회복)
+  if (sk.drain && sk.act === 'attack') { const im = icon('heal'), dy = sk.hits > 1 ? 31 : 23; rrect(g, xr - 13, y + dy, 13, 13, 3, 'rgba(6,10,20,0.86)'); if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, xr - 11, y + dy + 1)); }   // 흡수(때린 만큼 회복 — 수치 원판 · 검 손잡이 · 연타 ×N 아래)
   if (sk.inflict && (sk.inflict.n || 1) > 1) { const L = STATUS[sk.inflict.id] || {}; tag(g, xr, artB - 14, '×' + sk.inflict.n, dim ? '#a7adb8' : (L.col || '#ffffff'), L.icon); }   // 걸리는 효과 겹 수
 }
 // 비용 자리의 다른 표시 둘(2026-10-29 사용자 '햇빛대신 빨간원이랑 검은 원은 뭐임?' → '두개도 다듬어봐' — 숫자 동그라미가 햇빛 비용처럼 읽혀 뜻을 몰랐음):
