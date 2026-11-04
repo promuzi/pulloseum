@@ -29,6 +29,11 @@ import { openSeedPick } from './seedpick.js';
 //  강화 = 레벨업 포인트 + 돈(상한 없음, 초기화 = 돈) · 개체값 = 원형 게이지 + 거름(같은 식물) · 설정 = 이름 · 보관 · 암시장(판매·해체).
 const SHEET_Y = 258, IN_MS = 320, OUT_MS = 460;   // OUT_MS = 판 내려감 + 카메라 물러남(같이 — 2026-10-29, 전 220 = 판만)
 const PCARD = { w: 66, h: 90, gx: 10, gy: 8, cols: 3 }, HOLD_MS = 320;   // 기술 카드(전투 손패와 같은 앞면 · 같은 셋씩 줄 — 2026-10-17)
+// 카드 옮김 연출(2026-11-04 사용자 '카드 선택과 교환의 효과?가 부드럽지 않고 자연스럽지 않아 / 마감등 신경써줘' — 전 = 꾹 누르면 카드가 한 장에 툭 떠오르고 ·
+//  놓으면 새 칸에 순간 이동 + 12칸 위에서 떨어짐 · 바뀐 카드는 제자리에서 툭 바뀜 · 못 놓는 칸에 놓으면 손가락에서 사라지고 제자리에 툭):
+//  집기 = LIFT_MS 동안 6칸 떠오르며 그림자가 커짐 · 놓기 · 바꾸기 · [장착] · [해제] = 바뀌기 전 자리를 기억해 두고 자리가 달라진 카드마다 옛 자리(끈 카드는 놓은 손가락 자리) → 새 자리로 MOVE_MS 미끄러짐(내려앉으며 그림자가 줄어듦) · 못 놓으면 제자리로 미끄러져 돌아감
+const LIFT_MS = 130, MOVE_MS = 240, LIFT = 6;
+const easeOut = k => 1 - (1 - k) ** 3;
 const slotsOf = p => [...p.skills.battle, null, null, null, null, null, null].slice(0, LOADOUT);   // 전투 칸 여섯(옛 판은 normSkills 가 늘림)
 const TABS = [{ id: 'skill', label: '스킬' }, { id: 'passive', label: '패시브' }, { id: 'up', label: '강화' }, { id: 'iv', label: '개체값' }, { id: 'set', label: '설정' }];   // 스킬 · 패시브 아예 나눔(2026-10-18 사용자 "다른 항목에서 선택하게 분리해 줘 아예")
 const IV_COL = { hp: '#7cf0a0', atk: '#ff8a6a', def: '#6fb8ff', spd: '#ffd84a', fruit: '#ff9ad0' };
@@ -87,9 +92,17 @@ export const plant = {
     const D = this.cardDrag; if (!D) return;
     this.cardDrag = null;
     const to = this.cardKeyAt(D.x, D.y), app = this.app, p = app && app.state && (app.state.plants[app.state.active] || app.state.plants[0]);
-    if (!to || to === D.key || !p) return;
+    this.dropHeld(app, p, D);
+    if (!to || to === D.key || !p) return this.moveGo(app);   // 못 놓음 · 제자리 = 놓은 자리에서 제 칸으로 미끄러져 내려앉음
     this.dropCard(app, p, D.key, to);   // 끈 카드 → 놓은 칸(바꿈 · 끼움 · 해제)
   },
+  // 손에서 놓는 순간: 그 카드가 지금 떠 있는 자리(판 좌표 · 뜬 높이)를 옮김 연출의 출발점으로
+  dropHeld(app, p, D) { const id = p && this.idAt(p, D.key), u = this.liftOf(D, app); if (id) this.moveFrom({ [id]: [D.x - D.ox, D.y - D.oy + this.scrollY] }, LIFT * u); },
+  liftOf(D, app) { return ease(Math.min(1, Math.max(0, app.t - D.t0) / LIFT_MS)); },
+  // 카드 옮김(FLIP): 바뀌기 전 그린 자리(카드 id → 판 좌표)를 기억 → moveGo 뒤 처음 그릴 때 자리가 달라진 카드마다 옛 자리 → 새 자리로 미끄러짐(card · drawFly)
+  //  over = 그 카드만 다른 출발점(손가락에서 놓은 자리) · lift0 = 그 카드가 떠 있던 높이(내려앉음)
+  moveFrom(over = {}, lift0 = 0) { this.flip = { pos: { ...(this.posLast || {}), ...(this.posNow || {}), ...over }, lift: Object.fromEntries(Object.keys(over).map(k => [k, lift0])), at: null }; },
+  moveGo(app) { if (this.flip) this.flip.at = app.t; },
   leave(app) { if (this.out == null) this.out = app.t; },
   draw(app) {
     const { g, W, H, t, state: s } = app;
@@ -111,18 +124,23 @@ export const plant = {
     const live = k >= 1 && this.out == null && !app.popup && !app.confirm;
     g.alpha(k, () => { g.c.save(); g.c.translate(0, Math.round((1 - k) * -14)); this.top(app, p, live); g.c.restore(); });
     const sy = Math.round(SY + (1 - k) * (H - SY + 38));   // 생장 줄(판 위 30칸)까지 화면 밖에서
+    this.posLast = this.posNow || {}; this.posNow = {}; this.flyQ = []; this.anims = this.anims || {};   // 카드 자리 기억(옮김 연출 — 이번 장에 그린 자리)
     g.c.save(); g.c.translate(0, sy - SY);
     this.growStrip(app, p, live, SY - 30);
     this.sheet(app, p, live, SY);
     g.c.restore();
-    // 기술 카드: 끄는 카드(손가락 따라 · 떠 있음) · 꾹 눌러 꺼내 보기
-    if (this.cardDrag && this.cardRects) { const D = this.cardDrag, r = this.cardRects[D.key]; if (r && r.sk) { const x = Math.round(D.x - D.ox), y = Math.round(D.y - D.oy) - 6; rrect(g, x + 2, y + 8, PCARD.w, PCARD.h, 5, 'rgba(0,0,0,0.45)'); cardFront(g, x, y, PCARD.w, PCARD.h, r.sk, { can: true, lit: true }); } }
+    if (this.flip && this.flip.at != null && t >= this.flip.at) this.flip = null;   // 옮김 출발점은 한 장에서 다 씀(날아가는 중은 anims)
+    // 기술 카드: 끄는 카드(손가락 따라 · 떠 있음 — 집는 순간 LIFT_MS 동안 떠오르며 그림자가 커짐) · 꾹 눌러 꺼내 보기
+    if (this.cardDrag && this.cardRects) {
+      const D = this.cardDrag, r = this.cardRects[D.key];
+      if (r && r.sk) { const u = this.liftOf(D, app), x = Math.round(D.x - D.ox), y0 = Math.round(D.y - D.oy); g.alpha(0.32 + 0.13 * u, () => rrect(g, x + 1 + Math.round(u), y0 + 3 - Math.round(u), PCARD.w, PCARD.h, 5, '#000')); cardFront(g, x, y0 - Math.round(LIFT * u), PCARD.w, PCARD.h, r.sk, { can: true, lit: true }); }
+    }
     const d = app.input.down;
     if (live && (this.tab === 'skill' || this.tab === 'passive') && !this.sub && !this.peek && !this.cardDrag && d && !d.moved && d.id && d.id.startsWith('skc_') && app.input.holdMs() >= HOLD_MS) {   // 꾹 = 집기(들려 올라옴)
       const k = d.id.slice(4), r = this.cardRects && this.cardRects[k];
-      if (r && r.sk) { app.input.claimHold(); sfx('select'); this.cardDrag = { key: k, x: d.x0, y: d.y0, ox: d.x0 - r.x, oy: d.y0 - r.y, moved: false }; }
+      if (r && r.sk) { app.input.claimHold(); sfx('select'); this.cardDrag = { key: k, x: d.x0, y: d.y0, ox: d.x0 - r.x, oy: d.y0 - r.y, moved: false, t0: t }; }
     }
-    if (this.cardDrag && !app.input.down && !this.cardDrag.moved) this.cardDrag = null;   // 집었다 그냥 놓음 = 제자리
+    if (this.cardDrag && !app.input.down && !this.cardDrag.moved) { this.dropHeld(app, p, this.cardDrag); this.cardDrag = null; this.moveGo(app); }   // 집었다 그냥 놓음 = 제자리에 내려앉음
     if (this.cardDrag && this.cardDrag.moved && this.clipTop != null) {   // 끄는 카드가 판 위 · 아래 끝에 닿으면 판을 굴림(전투 칸 여섯 · 가방 줄이 한 화면에 다 안 들어옴 — 2026-10-17)
       const D = this.cardDrag;
       if (D.y < this.clipTop + 28) this.scrollY = Math.max(0, this.scrollY - 5);
@@ -190,6 +208,7 @@ export const plant = {
       else if (this.tab === 'set') bottom = this.drawSet(app, p, y0, lv);
       else if (this.tab === 'passive') bottom = this.drawPassive(app, p, y0, lv);
       else bottom = this.drawSkill(app, p, y0, lv);
+      this.drawFly(app);   // 옮겨 가는 중인 카드 = 다른 칸들 위에
       g.c.restore();
     });
     this.maxY = Math.max(0, bottom - H + 12);
@@ -198,7 +217,8 @@ export const plant = {
   },
   // 판 안 누르기: 끌어 올린 만큼 자리를 옮겨 등록(그린 자리와 누르는 자리를 맞춤)
   hitY(y) { return y - this.scrollY; },
-  hit(app, live, id, x, y, w, h, fn) { const yy = this.hitY(y); if (!live || !fn || yy < this.clipTop || yy + h > this.clipBot) return; app.input.hit(id, x, yy, w, h, fn, 2); },
+  //  판 위 · 아래 끝에 걸쳐 가려진 칸도 보이는 만큼은 누름(2026-11-04 사용자 '카드 교환, 꾹 누르기, 옮기기 등 할 때 카드 전체가 화면에 안 나오면 안 되는 일이 있어 / 좀 가려져도 부드럽게' — 전 = 다 보일 때만 누름 자리를 잡았음)
+  hit(app, live, id, x, y, w, h, fn) { const yy = this.hitY(y), y0 = Math.max(yy, this.clipTop), y1 = Math.min(yy + h, this.clipBot); if (!live || !fn || y1 - y0 < 10) return; app.input.hit(id, x, y0, w, y1 - y0, fn, 2); },
   btn(app, live, id, x, y, w, h, label, opt, fn) { button(app, id, x, y, w, h, label, { ...opt, onTap: null }); if (!opt.disabled) this.hit(app, live, id, x, y, w, h, fn); },
 
   // ── 스킬 · 패시브(2026-10-18 사용자 "스킬: 장착 6칸 · 보관 6칸(변이가 있다면 변이랑 6칸 모두 공유) · 패시브: 장착 3칸 · 보관(변이 패시브만) 3칸 · 다른 항목에서 선택하게 분리 아예"):
@@ -280,16 +300,26 @@ export const plant = {
   //  target = 그 칸이 무엇인지('skill' = 스킬 장착 · 'passive' = 패시브 장착 · 'store' · 'pstore' = 보관 · null = 가방)
   card(app, p, live, k, x, y, sk, empty = '', target = null) {
     const { g, input, t } = app, id = 'skc_' + k, away = (this.cardDrag && this.cardDrag.key === k) || (this.peek && this.peek.key === k);
-    const L = this.land && this.land.key === k ? Math.min(1, (t - this.land.t0) / 450) : 1, PL = this.placing, aim = !!(PL && target && PL.want === target);
+    const L = this.land && this.land.key === k ? Math.max(0, Math.min(1, (t - this.land.t0) / 450)) : 1, PL = this.placing, aim = !!(PL && target && PL.want === target);   // 막 들어온 칸 = 내려앉은 뒤 금빛 테가 사라짐
     const edge = (c, a) => g.alpha(a, () => { const X = x - 2, Y = y - 2, w = PCARD.w + 4, h = PCARD.h + 4; g.rect(X, Y, w, 2, c); g.rect(X, Y + h - 2, w, 2, c); g.rect(X, Y, 2, h, c); g.rect(X + w - 2, Y, 2, h, c); });
-    if (away) cardSlot(g, x, y, PCARD.w, PCARD.h);
+    // 옮김 연출: 같은 카드가 처음 그려지는 칸만(가방 여러 장 = 첫 칸) — 바뀌기 전 자리와 다르면 옛 자리 → 이 칸으로 미끄러짐(그동안 이 칸은 빈 자리)
+    const cid = sk ? this.idAt(p, k) : null, first = !!cid && !(cid in this.posNow);
+    if (first) {
+      this.posNow[cid] = [x, y];
+      const F = this.flip, f = F && F.at != null && F.pos[cid], l0 = (F && F.lift[cid]) || 0;
+      if (f && (Math.abs(f[0] - x) > 1 || Math.abs(f[1] - y) > 1 || l0 > 0)) this.anims[cid] = { fx: f[0], fy: f[1], l0, t0: F.at };
+    }
+    const A = first && this.anims[cid], e = A ? Math.min(1, (t - A.t0) / MOVE_MS) : 1;
+    if (A && e >= 1) delete this.anims[cid];
+    const flying = !!A && e < 1;
+    if (flying) { const q = easeOut(e); this.flyQ.push({ sk, x: A.fx + (x - A.fx) * q, y: A.fy + (y - A.fy) * q, lift: A.l0 * (1 - q) + 3 * Math.sin(Math.PI * q) }); }   // 가는 동안 살짝 떴다 내려앉음
+    if (away || flying) cardSlot(g, x, y, PCARD.w, PCARD.h);
     else if (!sk) cardSlot(g, x, y, PCARD.w, PCARD.h, empty);
     else {
-      const down = live && input.isPressed(id), dy = L < 1 ? -Math.round(12 * (1 - ease(L))) : 0, me = PL && PL.key === k;
+      const down = live && input.isPressed(id), me = PL && PL.key === k;
       rrect(g, x + 1, y + 3, PCARD.w, PCARD.h, 5, 'rgba(0,0,0,0.32)');
-      cardFront(g, x, y + dy + (down ? 1 : 0) - (me ? 4 : 0), PCARD.w, PCARD.h, sk, { can: true, lit: L < 1 || me });
+      cardFront(g, x, y + (down ? 1 : 0) - (me ? 4 : 0), PCARD.w, PCARD.h, sk, { can: true, lit: L < 1 || me });
     }
-    if (L < 1) edge('#ffd890', 1 - L);
     if (aim) edge('#ffd890', 0.45 + 0.4 * Math.sin(t / 150));
     this.cardRects[k] = { x, y: this.hitY(y), w: PCARD.w, h: PCARD.h, sk };
     this.hit(app, live, id, x, y, PCARD.w, PCARD.h, () => {
@@ -315,7 +345,14 @@ export const plant = {
   // 카드 옮기기(끌어 놓기 · [장착] 뒤 칸 누르기 · [해제]) → 배치 전부를 고쳐 setSlots(규칙이 다시 검사):
   //  장착 칸에 = 보관에서 왔으면 있던 것이 그 보관 자리로 · 가방에서 왔으면 있던 것은 보관 끝(보관이 차면 막음) · 장착끼리 = 바꿈
   //  보관에 = 해제 · 가방에서 넣기(꽉 차면 막음) / 가방 쪽에 = 막음(끼운 카드는 이 식물에 귀속 — 2026-10-22) · 가방 → 이 식물은 한 번 묻고 끼움
+  //  옮김 연출: 바뀌기 전 자리를 기억(끌어 놓을 땐 onRelease가 먼저) → 옮김(setSlots = 화면 상태가 바로 바뀜) → 다음 장부터 자리가 달라진 카드가 미끄러짐 · 막히면 끈 카드만 제자리로
   dropCard(app, p, a, b) {
+    if (!this.flip) this.moveFrom();
+    const r = this.placeCard(app, p, a, b);
+    this.moveGo(app);
+    return r;
+  },
+  placeCard(app, p, a, b) {
     if (!b || a === b) return;
     const L = slotLayout(p), id = this.idAt(p, a);
     const kind = k => (/^b\d$/.test(k) ? 'b' : /^s\d$/.test(k) || k === 'S:' ? 's' : k.startsWith('mk:') ? 'mk' : /^c\d$/.test(k) ? 'c' : /^p\d$/.test(k) || k === 'P:' ? 'p' : k.startsWith('cl:') ? 'cl' : null);
@@ -352,11 +389,21 @@ export const plant = {
     }
     if (!L.battle.some(Boolean)) return app.toast('장착에 기술이 하나는 있어야 해요');
     if (L.battle.filter(isSkillCard).length > MUT_MAX) return app.toast(`변이 기술 카드는 장착에 ${MUT_MAX}장까지예요`);
-    const go = () => app.act('setSlots', { id: p.uid, ...L }).then(r => { if (!r) return; if (land) { this.land = { key: land, t0: app.t }; sfx('select'); } app.toast(msg); });
-    if (A === 'mk' || A === 'cl') return ask(app, `${eul(nm)} ${p.name}에게 끼울까요?`, '끼운 카드는 이 식물에 귀속돼요 — 다른 식물로 옮기거나 가방에 되돌릴 수 없어요', go, '끼우기');   // 가방 → 식물 = 되돌릴 수 없어 한 번 묻기
+    const go = () => app.act('setSlots', { id: p.uid, ...L }).then(r => { if (!r) return; if (land) { this.land = { key: land, t0: app.t + MOVE_MS }; sfx('flip', { hit: MOVE_MS / 1000 }); } app.toast(msg); });   // 카드 '탁' = 새 칸에 내려앉는 순간
+    if (A === 'mk' || A === 'cl') return ask(app, `${eul(nm)} ${p.name}에게 끼울까요?`, '끼운 카드는 이 식물에 귀속돼요 — 다른 식물로 옮기거나 가방에 되돌릴 수 없어요', () => { this.moveFrom(); go(); this.moveGo(app); }, '끼우기');   // 가방 → 식물 = 되돌릴 수 없어 한 번 묻기(묻는 동안 카드는 가방으로 돌아가 있음 → 끼우면 가방에서 칸으로 미끄러짐)
     go();
   },
-  cardKeyAt(x, y) { for (const [k, r] of Object.entries(this.cardRects || {})) if (!k.endsWith(':') && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return k; for (const k of ['S:', 'mk:', 'P:', 'cl:']) { const r = this.cardRects && this.cardRects[k]; if (r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return k; } return null; },
+  // 옮겨 가는 중인 카드(card가 모은 flyQ — 판 좌표 · 판 안 잘림): 뜬 높이만큼 위로 · 그림자는 제자리 쪽에 크게
+  drawFly(app) {
+    const { g } = app;
+    for (const f of this.flyQ || []) {
+      const x = Math.round(f.x), y = Math.round(f.y), u = Math.max(0, f.lift) / LIFT;
+      g.alpha(0.32 + 0.13 * Math.min(1, u), () => rrect(g, x + 1 + Math.round(u), y + 3 - Math.round(u), PCARD.w, PCARD.h, 5, '#000'));
+      cardFront(g, x, y - Math.round(f.lift), PCARD.w, PCARD.h, f.sk, { can: true });
+    }
+  },
+  cardKeyAt(x, y) { if (this.clipTop != null && (y < this.clipTop || y > this.clipBot)) return null;   // 판 밖(위 탭 · 생장 줄)에 놓으면 아무 칸도 아님(가려진 칸 몫)
+    for (const [k, r] of Object.entries(this.cardRects || {})) if (!k.endsWith(':') && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return k; for (const k of ['S:', 'mk:', 'P:', 'cl:']) { const r = this.cardRects && this.cardRects[k]; if (r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return k; } return null; },
   // 누름 = 그 카드를 앞으로 가져와 뒤집어 뒷면(전투 손패의 꾹과 같은 움직임 — art/skillcard.js) · 아래 [장착](보관 카드) · [해제](장착된 카드) · 아무 데나 누르면 다시 뒤집혀 제자리로
   openPeek(app, k) {
     const r = this.cardRects && this.cardRects[k]; if (!r || !r.sk) return;

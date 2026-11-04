@@ -17,6 +17,7 @@ import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
 import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, drawCard, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
 import { hasFrame } from '../art/frames.js';
+import { Gfx } from '../core/gfx.js';
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -172,6 +173,9 @@ function arenaArt(bg, key, gap) {
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이(실제 자리 = layOf led)
 // 턴 시작 공개(drawReveal): 카드 나옴 → 상대 카드 뒤집힘 → 선공 · 후공 표 → 머묾 → 각자 식물로 들어감(ms)
 const RV_W = 92, RV_IN = 400, RV_FLIP0 = 400, RV_FLIP = 420, RV_BADGE = 900, RV_LAG = 170, RV_OUT = 380, REVEAL_MS = 2300, REVEAL1_MS = 1400;
+const ORDER_STY = ['coin_top', 'coin_above', 'coin_side', 'stamp_round', 'stamp_square', 'stamp_gold'];   // 선공 · 후공 표시 시안(검토 촬영 ?order= — orderMark)
+const ORDER_IMG = {};   // 시안 그림(코덱스 동전 · 도장 → assets/v2/order — 처음 부를 때 받음, 받기 전엔 안 그림)
+const orderImg = n => { let im = ORDER_IMG[n]; if (!im) { im = ORDER_IMG[n] = new Image(); im.src = new URL('../../../assets/v2/order/' + n + '.png', import.meta.url).href; } return im.complete && im.naturalWidth ? im : null; };
 const RV_FX_GAP = 3, RV_FX_PH = 24, RV_FX_UP = 12;   // 공개 카드 효과 아이콘 판(카드 밖 식물 이름 아래 — 2026-11-04): 이름과 띄움 · 판 높이 · 내 체력판에 닿을 때 두 카드를 올리는 최대 칸
 const backOut = q => { const a = 1.70158; return 1 + (a + 1) * (q - 1) ** 3 + a * (q - 1) ** 2; };
 const easeInOut = q => (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
@@ -393,7 +397,7 @@ export const battle = {
   theme(app) { return this.venue || venueOf(app.state && app.state.tournament ? app.state.tournament.tier : '브론즈'); },
   // 1초 60장이 필요한 때(main.js 장 수 — 그 밖엔 30장): 기술이 오가는 동안 · 승패가 갈린 뒤 2.5초
   fast(app) { const v = this.v; return !!v && (v.phase === 'play' || (v.phase === 'over' && app.t - v.overT0 < 2500)); },
-  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.pasView = null; this.lift = {}; this.denyAt = null; this.clk = {}; this.bars = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
+  enter(p) { if (p.tfx) setTfx(p.tfx); this.p = p; this.orderSty = ORDER_STY.includes(p.order) ? p.order : null; if (this.orderSty) ['coin_gold', 'coin_silver', 'coin_gold_l', 'coin_silver_l', 'stamp_round', 'stamp_square'].forEach(orderImg); this.venue = p.venue || null; this.B = null; this.sheet = null; this.info = null; this.net = null; this.end = null; this.result = null; this.shot = null; this.info2 = !!p.info; this.emoteOpen = !!p.emote; this.peek = null; this.peekShot = false; this.spread = null; this.pasView = null; this.lift = {}; this.denyAt = null; this.clk = {}; this.bars = {}; this.cards = {}; this.useWas = {}; this.shineAt = {}; this.localEmotes = []; this.emoteT = -1e9; this.muteFoe = false; this.queue = []; this.goneAt = null; },
   // 판 차리기(첫 그림 때): 서버 판(봇 · 친구) = 받은 판 모습으로, 시험판 = 이 브라우저에서
   setup(app) {
     const p = this.p, boot = p.net ? app.battleBoot : null;
@@ -1393,7 +1397,7 @@ export const battle = {
       const sk = who === 'me' ? st.mine : st.theirs; if (!sk) continue;
       const [bx, by] = this.at(who), plant = [bx + ox, by - (who === 'me' ? 64 : 56)];   // 식물 몸 가운데쯤
       const start = who === 'me' && st.from ? st.from : [...plant, 0.3], tx = both ? Math.round(W / 2 + (who === 'me' ? -1 : 1) * (F.BW / 2 + 9)) : Math.round(W / 2);
-      const qi = backOut(Math.min(1, age / RV_IN)), lead = st.first === who, up = lead && bt > 0 ? Math.round(5 * Math.min(1, bt / 160)) : 0;
+      const qi = backOut(Math.min(1, age / RV_IN)), lead = st.first === who, up = lead && bt > 0 && !this.orderSty ? Math.round(5 * Math.min(1, bt / 160)) : 0;   // 시안(orderSty)은 위로 안 뜸
       let cx = start[0] + (tx - start[0]) * qi, ccy = start[1] + (cy - start[1]) * qi - up, sc = start[2] + (1 - start[2]) * qi;
       if (out) { cx += (plant[0] - cx) * out; ccy += (plant[1] - ccy) * out; sc *= 1 - 0.7 * out; }
       const w = F.BW * sc, h = F.BH * sc, x = Math.round(cx - w / 2), y = Math.round(ccy - h / 2), al = Math.min(1, age / 110) * (1 - out);
@@ -1406,7 +1410,11 @@ export const battle = {
       if (u && !out && age > RV_IN) g.text(u.name, Math.round(cx), y + Math.round(h) + 5, { font: 'bold', color: '#e6f3ff', align: 'center', outline: T.ink, outlineW: 2 });   // 누구 카드인지(카드 아래 식물 이름 — 두 카드 이름이 같은 높이)
       if (ics.length && !(who === 'foe' && age < RV_FLIP0 + RV_FLIP)) { const pw = ics.length * 18 + (ics.length - 1) * 2 + 8; this.revealFx(g, ics, Math.round(cx - pw * s / 2), Math.round(y + h + this.revealFxTop() * s), s); }   // ㉥ 시안: 거는 효과 아이콘 = 식물 이름 아래(앞면일 때)
       c.restore();
-      if (st.first && bt > (lead ? 0 : RV_LAG)) { const q = Math.min(1, (bt - (lead ? 0 : RV_LAG)) / 200); this.orderBadge(g, Math.round(cx), y - 15, lead, lead ? 1 + 0.7 * (1 - backOut(q)) : 0.82 + 0.18 * backOut(q), Math.min(1, q * 2) * (1 - out)); }
+      if (st.first && bt > (lead ? 0 : RV_LAG)) {
+        const q = Math.min(1, (bt - (lead ? 0 : RV_LAG)) / 200), oa = Math.min(1, q * 2) * (1 - out);
+        if (this.orderSty) this.orderMark(g, this.orderSty, lead, both && who === 'foe', x, y, Math.round(w), Math.round(h), oa);
+        else this.orderBadge(g, Math.round(cx), y - 15, lead, lead ? 1 + 0.7 * (1 - backOut(q)) : 0.82 + 0.18 * backOut(q), oa);
+      }
     }
   },
   // ㉥ 시안(2026-10-29 사용자 '상대카드도 설명이 많아지면 읽을 시간이 부족할 거 같은데'): 공개 카드에 그 기술이 거는 효과 아이콘(최대 셋) — 글 대신 한눈에
@@ -1421,6 +1429,37 @@ export const battle = {
     rrect(g, -1, -1, pw + 2, ph + 2, 6, T.ink); rrect(g, 0, 0, pw, ph, 5, 'rgba(14,22,40,0.92)');
     ics.forEach((ic, i) => g.img(ic, Math.round(4 + i * (iw + gap) + (iw - ic.width) / 2), Math.round((ph - ic.height) / 2)));
     c.restore();
+  },
+  // 선공 · 후공 표시 시안(2026-11-04 사용자 '선공 후공은 선 혹은 후 라고 원형 코인형태에 글자를 쓴 느낌으로 할지 / 카드 중앙에 도장으로 선 만 찍어줄지 정해보자 / 위로 올라가는 효과 말고 / 시안 여러개 주면 골라볼거'):
+  //  검토 촬영 ?order=<모양>(고르기 전 — 고르면 그 하나만 남기고 나머지는 지움) · 여섯 다 먼저 하는 카드가 위로 뜨지 않음
+  //  ㉠ coin_top = 금 동전 '선' · 은 동전 '후'가 카드 위 테에 반쯤 걸침 · ㉡ coin_above = 큰 동전이 카드 위(지금 표 자리) · ㉢ coin_side = 동전이 카드 바깥 옆(왼쪽 카드 = 왼쪽 · 오른쪽 카드 = 오른쪽)
+  //  ㉣ stamp_round = 붉은 둥근 도장 '선'(먼저 하는 카드 가운데 · 비스듬히) · ㉤ stamp_square = 붉은 네모 도장 · ㉥ stamp_gold = 금빛 둥근 도장 — 도장 셋은 뒤에 하는 카드엔 표시 없음
+  orderMark(g, sty, first, right, x, y, w, h, al) {
+    const c = g.c, sm = c.imageSmoothingEnabled;
+    c.save(); c.globalAlpha *= al; c.imageSmoothingEnabled = false;
+    if (sty.startsWith('coin')) {   // 동전 = 코덱스 그림(금 = 선 · 은 = 후 — assets/v2/order) + 게임 글꼴 글자(새긴 듯 아래 한 칸 밝게)
+      const big = sty === 'coin_above', S = big ? 30 : 26, im = orderImg((first ? 'coin_gold' : 'coin_silver') + (big ? '_l' : ''));
+      const cx = sty === 'coin_side' ? (right ? x + w + (S >> 1) + 2 : x - (S >> 1) - 2) : x + (w >> 1), cy = sty === 'coin_top' ? y + 1 : big ? y - 19 : y + (h >> 1);
+      if (im) c.drawImage(im, Math.round(cx - S / 2), Math.round(cy - S / 2));
+      const font = big ? 'name' : 'head', gh = glyphH(font), ty = Math.round(cy - 1 - gh / 2), col = first ? ['#7a4a0a', '#fff1b0'] : ['#2a3650', '#ffffff'];
+      g.text(first ? '선' : '후', cx + 0.5, ty + 1, { font, color: col[1], align: 'center' }); g.text(first ? '선' : '후', cx + 0.5, ty, { font, color: col[0], align: 'center' });
+    } else if (first) {   // 도장 = 코덱스 잉크 그림(둥근 · 네모 — 금빛은 둥근 것을 다시 칠함) + 같은 잉크 글자 '선', 비스듬히 찍음
+      const gold = sty === 'stamp_gold', base = orderImg(sty === 'stamp_square' ? 'stamp_square' : 'stamp_round');
+      if (base) {
+        const S = 60, m = S >> 1, mk = () => { const v = document.createElement('canvas'); v.width = S + 2; v.height = S + 2; return v; }, cv = mk(), x2 = cv.getContext('2d'), G = new Gfx(x2);
+        x2.imageSmoothingEnabled = false; x2.drawImage(base, 1, 1);
+        const font = sized('name', 30), gh = glyphH(font); G.text('선', m + 1.5, m + 1 - Math.round(gh / 2), { font, color: '#e0332a', align: 'center' });
+        x2.globalCompositeOperation = 'destination-out'; for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) if ((i * 7 + j * 13 + ((i * j) % 5)) % 41 === 0) x2.fillRect(i + 1, j + 1, 1, 1);   // 글자에도 잉크 빠진 칸
+        x2.globalCompositeOperation = 'source-over';
+        let im = cv;
+        if (gold) {   // 금빛 = 잉크를 금색으로 + 밝은 그림 위에서도 보이게 짙은 테두리 한 칸
+          const tint = col => { const v = mk(), t2 = v.getContext('2d'); t2.drawImage(cv, 0, 0); t2.globalCompositeOperation = 'source-in'; t2.fillStyle = col; t2.fillRect(0, 0, S + 2, S + 2); return v; };
+          const goldI = tint('#ffc23a'), dk = tint('#3a2408'); im = mk(); const o2 = im.getContext('2d'); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) o2.drawImage(dk, dx, dy); o2.drawImage(goldI, 0, 0);
+        }
+        c.translate(Math.round(x + w / 2), Math.round(y + h * 0.4)); c.rotate(-0.21); c.globalAlpha *= 0.94; c.drawImage(im, -m - 1, -m - 1);
+      }
+    }
+    c.restore(); c.imageSmoothingEnabled = sm;
   },
   // 선공 · 후공 표: 선공 = 금빛 큰 표 · 후공 = 남색 작은 표, (cx, cy) 가운데 · s = 크기 배수(튀어나옴)
   orderBadge(g, cx, cy, first, s, al) {

@@ -30,6 +30,8 @@ const SHOTS = [
   ['pasview', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1' }],
   ['pasview_peek', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1', pvpeek: '1' }],
   ['swap_reveal', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', reveal: '1300', swap: 'both', first: 'me' }],
+  // 선공 · 후공 표시 시안(?order= — battle.js orderMark · 2026-11-04): ㉠ ~ ㉥ 순서
+  ...['coin_top', 'coin_above', 'coin_side', 'stamp_round', 'stamp_square', 'stamp_gold'].map(o => ['order_' + o, 'battle', { venue: 'colosseum', seed: '7', reveal: '1500', first: 'foe', me: 'cactus_fire', foe: 'spore_cap', order: o }, { twice: true }]),   // twice = 한 번 띄워 그림을 받은 뒤 다시 찍음
   ['faces_a', 'faces', ['f_ember', 'j_wrap', 'j_spines']],   // 꾹 눌러 보는 큰 카드(앞 · 뒤 — renderFaces 160칸)
   ['faces_b', 'faces', ['u_blade_3b', 'm_bite', 'basic']],
   ['faces_c', 'faces', ['u_emcap_2', 'j_spore', 'n_wall']],
@@ -55,8 +57,9 @@ try {
   p.on('pageerror', e => errs.push(e.message));
   await p.goto(url + '/v2/index.html?mute=1', { waitUntil: 'load' });
   await p.waitForFunction(() => window.__ready, { timeout: 20000 });
-  for (const [id, scene, params] of SHOTS) {
+  for (const [id, scene, params, opt] of SHOTS) {
     if (only && !only.includes(id)) continue;
+    if (opt && opt.twice) { await p.evaluate((scene, params) => window.__shot(scene, params, { scale: 1 }), scene, params); await new Promise(r => setTimeout(r, 700)); }
     const data = scene === 'faces' ? await facesSheet(p, params) : await p.evaluate((scene, params, o) => window.__shot(scene, params, o), scene, params, { scale, ...(size ? { W: size[0], H: size[1] } : {}) });
     const name = `fs_${id}${size ? '_' + size.join('x') : ''}.png`;
     writeFileSync(resolve(out, name), Buffer.from(data.split(',')[1], 'base64'));
