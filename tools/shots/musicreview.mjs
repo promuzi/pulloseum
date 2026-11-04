@@ -10,9 +10,9 @@ const here = dirname(fileURLToPath(import.meta.url)), out = resolve(here, 'out')
 mkdirSync(out, { recursive: true });
 // [초, 지휘자 상태, 화면 이름] — 대기 · 메뉴 · 스마트팜 · 탐사 · 식물 관리는 한 곡 안의 세션 바뀜, 매칭 · 전투 · 처음 화면은 다른 곡
 const SEG = [[0, 'title', '처음 화면(조율 → 전등)'], [13, 'boot', '켜짐 → 대기실'], [30, 'home', '대기실'], [42, 'menu', '메뉴(가방 · 도감 · 상점 · 친구 대결 방)'],
-  [54, 'farm', '스마트팜 · 보관고'], [66, 'space', '탐사 · 정비'], [78, 'focus', '식물 관리'], [90, 'ready', '매칭'], [94, 'battle', '전투'],
-  [118, 'win', '승리'], [121, 'result', '결과'], [130, 'battle', '전투(두 번째)'], [140, 'lose', '패배'], [143, 'result', '결과']];
-const SEC = 152;
+  [54, 'farm', '스마트팜 · 보관고'], [66, 'space', '탐사'], [78, 'hangar', '탐사선 정비'], [90, 'shop', '상점'], [102, 'focus', '식물 관리'], [114, 'ready', '매칭'], [118, 'battle', '전투'],
+  [142, 'win', '승리'], [145, 'result', '결과'], [154, 'battle', '전투(두 번째)'], [164, 'lose', '패배'], [167, 'result', '결과']];
+const SEC = 176;
 const plan = SEG.map(([t, st]) => `${t}:${st}`).join(',');
 execFileSync(process.execPath, [resolve(here, 'soundreel.mjs'), '--out', 'music_review', '--plan', plan, '--sec', String(SEC), '--loud', '--nosfx'], { stdio: 'inherit' });
 // 장면 카드(파이썬 PIL — 맑은 고딕): 장면마다 한 장, 1초에 2장으로 이어 붙임
