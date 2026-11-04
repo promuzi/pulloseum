@@ -30,8 +30,8 @@ const SHOTS = [
   ['pasview', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1' }],
   ['pasview_peek', 'battle', { phase: 'pick', venue: 'colosseum', pcards: 'n_fiber_2,n_wall,n_chloro', pview: '1', pvpeek: '1' }],
   ['swap_reveal', 'battle', { mode: 'swap3', venue: 'colosseum', seed: '7', reveal: '1300', swap: 'both', first: 'me' }],
-  // 선공 · 후공 표시 시안(?order= — battle.js orderMark · 2026-11-04): ㉠ ~ ㉥ 순서
-  ...['coin_top', 'coin_above', 'coin_side', 'stamp_round', 'stamp_square', 'stamp_gold'].map(o => ['order_' + o, 'battle', { venue: 'colosseum', seed: '7', reveal: '1500', first: 'foe', me: 'cactus_fire', foe: 'spore_cap', order: o }, { twice: true }]),   // twice = 한 번 띄워 그림을 받은 뒤 다시 찍음
+  // 선공 도장(battle.js stampMark — 2026-11-04 시안 ㉣): 내려옴 · 찍힘 · 눌림 · 잉크 점 · 자리 잡음(공개 시작부터 ms)
+  ...[960, 1010, 1040, 1100, 1300].map(ms => ['stamp_' + ms, 'battle', { venue: 'colosseum', seed: '7', reveal: String(ms), first: 'foe', me: 'cactus_fire', foe: 'spore_cap' }, { twice: true }]),   // twice = 한 번 띄워 그림을 받은 뒤 다시 찍음
   ['faces_a', 'faces', ['f_ember', 'j_wrap', 'j_spines']],   // 꾹 눌러 보는 큰 카드(앞 · 뒤 — renderFaces 160칸)
   ['faces_b', 'faces', ['u_blade_3b', 'm_bite', 'basic']],
   ['faces_c', 'faces', ['u_emcap_2', 'j_spore', 'n_wall']],
