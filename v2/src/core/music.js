@@ -60,6 +60,8 @@ export function buildGraph(ac, out, noise, pw) {
   // 넓은 홀 울림(몽환적 실내악): 긴 잔향 하나 — 현악 · 첼로 · 하프 · 첼레스타 · 플루트 · 피치카토 · 팀파니가 보냄
   const hall = ac.createConvolver(); hall.buffer = makeIR(ac, 1.7); const hret = G(0.17); hall.connect(hret); hret.connect(sum);   // 2026-10-17 "몽환 요소 줄이고": 3.2초 · 0.26 → 1.7초 · 0.17
   const hbus = (v, p, sv, hv) => { const g = bus(v, p, sv), s = G(hv); g.connect(s); s.connect(hall); return g; };
+  // 탐사 후보 버스(2026-11-04 — 사용자가 고를 때까지): 점8분 메아리(반대쪽에서 옅게)가 붙은 버스 · hv = 긴 홀에도 보냄
+  const ebus = (v, p, sv, fbv, wv, wp, hv = 0) => { const g = hv ? hbus(v, p, sv, hv) : bus(v, p, sv), d = ac.createDelay(1), fb = G(fbv), w = G(wv); d.delayTime.value = BEAT * 0.75; g.connect(d); d.connect(fb); fb.connect(d); d.connect(w); w.connect(bus(1, wp, sv)); return g; };
   return {
     ac, noise, pw, tone, sum,
     bass: bus(0.8), b808: b8, drum: drumIn,
@@ -69,6 +71,11 @@ export function buildGraph(ac, out, noise, pw) {
     vib: vibIn, syn: synIn,
     harp: hbus(0.8, 0.14, 0.12, 0.32), pizz: hbus(0.8, -0.04, 0.1, 0.14), str: hbus(0.32, 0.06, 0.2, 0.38), timp: hbus(0.7, 0, 0.15, 0.3),
     cello: hbus(0.55, -0.12, 0.15, 0.26), cel: hbus(0.5, -0.2, 0.1, 0.4), flute: hbus(0.42, 0.14, 0.15, 0.3),
+    // 탐사 후보: ㉠ 레트로 SF(플럭 · 리드) · ㉡ 로파이(마림바 · 칼림바) · ㉢ 8비트(펄스 · 세모 · 잡음 북) · ㉣ 앰비언트(넓은 패드 · 종 · 유리 리드)
+    arp: ebus(0.5, 0.2, 0.18, 0.32, 0.3, -0.35), slead: ebus(0.42, -0.06, 0.28, 0.22, 0.2, 0.3),
+    mar: bus(0.6, -0.14, 0.22), kal: ebus(0.5, 0.12, 0.3, 0.16, 0.14, -0.3),
+    chipA: bus(0.4, -0.18, 0.1), chipL: ebus(0.34, 0.08, 0.14, 0.2, 0.16, -0.3), tri: bus(0.8), ndrum: bus(0.8, 0, 0.05),
+    lush: hbus(0.3, 0, 0.25, 0.5), sbell: hbus(0.32, 0.22, 0.2, 0.42), glead: ebus(0.42, -0.08, 0.25, 0.26, 0.22, 0.3, 0.3),
   };
 }
 
@@ -161,13 +168,13 @@ function chipV(A, t, f, len, v) {   // 칩 가락(펄스 25%) — 게임 옛 소
   o.connect(a); a.connect(A.chip); o.start(t); o.stop(end + 0.15);
   return 2;
 }
-function bellV(A, t, f, len, v) {   // 종(FM 3.5배): 맑게 치고 빨리 둥글어짐
+function bellV(A, t, f, len, v, dest = A.bell) {   // 종(FM 3.5배): 맑게 치고 빨리 둥글어짐
   const ac = A.ac, c = ac.createOscillator(), m = ac.createOscillator(), mg = ac.createGain(), a = ac.createGain(), d = Math.max(0.5, len + 0.7);
   c.frequency.value = f; m.frequency.value = f * 3.5;
   mg.gain.setValueAtTime(f * 2, t); mg.gain.exponentialRampToValueAtTime(f * 0.06, t + 0.8);
   m.connect(mg); mg.connect(c.frequency);
   a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.002); a.gain.exponentialRampToValueAtTime(0.0008, t + d);
-  c.connect(a); a.connect(A.bell); c.start(t); m.start(t); c.stop(t + d + 0.05); m.stop(t + d + 0.05);
+  c.connect(a); a.connect(dest); c.start(t); m.start(t); c.stop(t + d + 0.05); m.stop(t + d + 0.05);
   return 4;
 }
 function padV(A, t, fs, len, v) {   // 패드: 음마다 톱니 둘(살짝 어긋나게) → 천천히 열리는 거름망
@@ -274,6 +281,96 @@ function timpV(A, t, f, v) {
   o.connect(a); h.connect(hg); hg.connect(a); a.connect(A.timp);
   o.start(t); h.start(t); o.stop(t + d + 0.05); h.stop(t + d + 0.05);
   return 4 + noiseHit(A, t, 0.07, 'lowpass', 520, 0.6, v * 0.5, A.timp);
+}
+// ── 탐사 후보 악기(2026-11-04 사용자 '클래식은 … 악기도 별로임' — 코드 합성으로 잘 나는 소리만: 신스 · 말렛 · 칩 · 패드) ──
+// 플럭(㉠ 아르페지오): 톱니 + 사각(살짝 어긋나게) → 빨리 닫히는 공명 거름망(cut = 구간마다 밝기), 짧게 튕김
+function pluckV(A, t, f, v, cut = 1400) {
+  const ac = A.ac, o1 = ac.createOscillator(), o2 = ac.createOscillator(), og = ac.createGain(), lp = ac.createBiquadFilter(), a = ac.createGain(), d = 0.34;
+  o1.type = 'sawtooth'; o2.type = 'square'; o1.frequency.value = f; o2.frequency.value = f; o2.detune.value = -7; og.gain.value = 0.5;
+  lp.type = 'lowpass'; lp.Q.value = 4; lp.frequency.setValueAtTime(Math.min(9000, cut * 2.6), t); lp.frequency.exponentialRampToValueAtTime(Math.max(180, cut * 0.35), t + 0.18);
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.003); a.gain.setTargetAtTime(0, t + 0.01, 0.09);
+  o1.connect(lp); o2.connect(og); og.connect(lp); lp.connect(a); a.connect(A.arp);
+  o1.start(t); o2.start(t); o1.stop(t + d); o2.stop(t + d);
+  return 5;
+}
+// 우주 리드(㉠ 가락): 톱니 둘 → 거름망이 낮은 데서 열리며 부풂(옛 아날로그 금관 결), 늦은 비브라토 — 버스에 점8분 메아리
+function sleadV(A, t, f, len, v) {
+  const ac = A.ac, o1 = ac.createOscillator(), o2 = ac.createOscillator(), lp = ac.createBiquadFilter(), a = ac.createGain(), l = ac.createOscillator(), lg = ac.createGain(), end = t + Math.max(0.1, len);
+  o1.type = 'sawtooth'; o2.type = 'sawtooth'; o1.frequency.value = f; o2.frequency.value = f; o2.detune.value = 9;
+  lp.type = 'lowpass'; lp.Q.value = 1.6; lp.frequency.setValueAtTime(f * 1.4, t); lp.frequency.exponentialRampToValueAtTime(Math.min(5200, f * 6), t + 0.14); lp.frequency.setTargetAtTime(Math.min(3400, f * 4), t + 0.16, 0.3);
+  l.frequency.value = 5.3; lg.gain.value = 0; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(12, t + Math.min(0.55, len));
+  l.connect(lg); lg.connect(o1.detune); lg.connect(o2.detune);
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.045); a.gain.setTargetAtTime(v * 0.85, t + 0.06, 0.3); a.gain.setTargetAtTime(0, end, 0.09);
+  o1.connect(lp); o2.connect(lp); lp.connect(a); a.connect(A.slead);
+  for (const o of [o1, o2, l]) { o.start(t); o.stop(end + 0.5); }
+  return 7;
+}
+// 마림바(㉡ 반주): 사인 + 3.9배 배음(나무 막대 첫소리, 빨리 사라짐) — 낮은 음일수록 길게 울림
+function marV(A, t, f, v) {
+  const ac = A.ac, o = ac.createOscillator(), h = ac.createOscillator(), hg = ac.createGain(), a = ac.createGain(), d = Math.max(0.35, Math.min(1.1, 260 / f));
+  o.frequency.value = f; h.frequency.value = f * 3.93;
+  hg.gain.value = 0; hg.gain.setValueAtTime(0, t); hg.gain.linearRampToValueAtTime(0.32, t + 0.002); hg.gain.setTargetAtTime(0, t + 0.004, 0.035);
+  env(a, t, v, 0.002, d);
+  o.connect(a); h.connect(hg); hg.connect(a); a.connect(A.mar);
+  o.start(t); h.start(t); o.stop(t + d + 0.05); h.stop(t + 0.25);
+  return 4;
+}
+// 칼림바(㉡ 가락): 사인 몸통 + 쇠 혀 첫소리(5.4배 · 아주 짧게) + 2배 세모(옅게) — 튕긴 뒤 1초쯤
+function kalV(A, t, f, v) {
+  const ac = A.ac, o = ac.createOscillator(), h = ac.createOscillator(), hg = ac.createGain(), o2 = ac.createOscillator(), g2 = ac.createGain(), a = ac.createGain(), d = 1.1;
+  o.frequency.value = f; h.frequency.value = f * 5.4; o2.type = 'triangle'; o2.frequency.value = f * 2;
+  hg.gain.value = 0; hg.gain.setValueAtTime(0, t); hg.gain.linearRampToValueAtTime(0.28, t + 0.001); hg.gain.setTargetAtTime(0, t + 0.003, 0.02);
+  g2.gain.value = 0; g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.18, t + 0.002); g2.gain.setTargetAtTime(0, t + 0.01, 0.12);
+  env(a, t, v, 0.002, d);
+  o.connect(a); h.connect(hg); hg.connect(a); o2.connect(g2); g2.connect(a); a.connect(A.kal);
+  o.start(t); h.start(t); o2.start(t); o.stop(t + d + 0.05); h.stop(t + 0.15); o2.stop(t + 0.6);
+  return 6;
+}
+// 칩(㉢): 펄스(12.5% 아르페지오 · 25% 가락 + 늦은 떨림) · 세모 베이스 · 잡음 북
+function pulseV(A, t, f, len, v, w, dest, vib) {
+  const ac = A.ac, o = ac.createOscillator(), a = ac.createGain(), end = t + Math.max(0.04, len); let n = 2;
+  if (A.pw && A.pw[w]) o.setPeriodicWave(A.pw[w]); else o.type = 'square';
+  o.frequency.value = f;
+  if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 6; lg.gain.value = 0; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.012, t + Math.min(0.35, len)); l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(end + 0.1); n += 2; }
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.003); a.gain.setTargetAtTime(v * 0.75, t + 0.02, 0.1); a.gain.setTargetAtTime(0, end, 0.015);
+  o.connect(a); a.connect(dest); o.start(t); o.stop(end + 0.1);
+  return n;
+}
+function triV(A, t, f, len, v) {
+  const ac = A.ac, o = ac.createOscillator(), a = ac.createGain(), end = t + Math.max(0.05, len);
+  o.type = 'triangle'; o.frequency.value = f;
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.003); a.gain.setTargetAtTime(0, end, 0.02);
+  o.connect(a); a.connect(A.tri); o.start(t); o.stop(end + 0.1);
+  return 2;
+}
+function nkickV(A, t, v) {   // 8비트 킥: 세모가 높이 쳐서 뚝 떨어짐 + 짧은 잡음
+  const ac = A.ac, o = ac.createOscillator(), a = ac.createGain();
+  o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.07);
+  env(a, t, v, 0.002, 0.16); o.connect(a); a.connect(A.ndrum); o.start(t); o.stop(t + 0.2);
+  return 2 + noiseHit(A, t, 0.02, 'lowpass', 3000, 0.7, v * 0.4, A.ndrum);
+}
+const nsnV = (A, t, v, ghost) => noiseHit(A, t, ghost ? 0.05 : 0.13, 'bandpass', 2400, 0.5, v, A.ndrum) + noiseHit(A, t, 0.03, 'highpass', 6000, 0.7, v * 0.5, A.ndrum);
+const nhatV = (A, t, v, open) => noiseHit(A, t, open ? 0.12 : 0.025, 'highpass', 8200, 0.7, v, A.ndrum);
+const shkV = (A, t, v) => noiseHit(A, t, 0.06, 'highpass', 6200, 0.8, v, A.hat, 0.014);   // 셰이커(㉠ 16분 — 잡음이 살짝 차오름)
+// 넓은 패드(㉣): 음마다 톱니 둘(크게 어긋나게) → 천천히 열렸다 조금 닫히는 거름망, 천천히 차오르고 길게 사라짐 — 긴 홀
+function lushV(A, t, fs, len, v) {
+  const ac = A.ac, f = ac.createBiquadFilter(), a = ac.createGain(), end = t + Math.max(0.4, len); let n = 2;
+  f.type = 'lowpass'; f.Q.value = 0.8; f.frequency.setValueAtTime(420, t); f.frequency.linearRampToValueAtTime(1900, t + Math.min(1.6, len * 0.6)); f.frequency.linearRampToValueAtTime(1100, end);
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + Math.min(0.9, len * 0.4)); a.gain.setTargetAtTime(0, end, 0.6);
+  for (const fr of fs) for (const dt of [-12, 11]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = dt; o.connect(f); o.start(t); o.stop(end + 2.2); n++; }
+  f.connect(a); a.connect(A.lush);
+  return n;
+}
+// 유리 리드(㉣ 가락): 사인 + 2배 세모(옅게), 부드럽게 차오르고 비브라토 — 메아리 · 긴 홀
+function gleadV(A, t, f, len, v) {
+  const ac = A.ac, o = ac.createOscillator(), h = ac.createOscillator(), hg = ac.createGain(), a = ac.createGain(), l = ac.createOscillator(), lg = ac.createGain(), end = t + Math.max(0.1, len);
+  h.type = 'triangle'; o.frequency.value = f; h.frequency.value = f * 2; hg.gain.value = 0.22;
+  l.frequency.value = 5; lg.gain.value = 0; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(10, t + Math.min(0.6, len));
+  l.connect(lg); lg.connect(o.detune); lg.connect(h.detune);
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.04); a.gain.setTargetAtTime(v * 0.8, t + 0.06, 0.4); a.gain.setTargetAtTime(0, end, 0.12);
+  o.connect(a); h.connect(hg); hg.connect(a); a.connect(A.glead);
+  for (const x of [o, h, l]) { x.start(t); x.stop(end + 0.6); }
+  return 7;
 }
 // 전등 지지직: 빛 글자 줄을 따라 — 'm'(켜짐) 말고 글자가 바뀔 때마다 전기 찌직(꺼질수록 큼), 잡음 + 120Hz 톱니(안정기 웅)
 const LV = { a: 1, e: 0.82, h: 0.6, k: 0.72 };
@@ -410,6 +507,20 @@ export function play(A, e) {
     case 'pizz': return pizzV(A, e.t, e.f, e.v);
     case 'str': return strV(A, e.t, e.fs, e.len, e.v, e.o && e.o.lp);
     case 'timp': return timpV(A, e.t, e.f, e.v);
+    case 'pluck': return pluckV(A, e.t, e.f, e.v, e.o && e.o.cut);
+    case 'slead': return sleadV(A, e.t, e.f, e.len, e.v);
+    case 'mar': return marV(A, e.t, e.f, e.v);
+    case 'kal': return kalV(A, e.t, e.f, e.v);
+    case 'parp': return pulseV(A, e.t, e.f, e.len, e.v, 'pulse12', A.chipA, false);
+    case 'plead': return pulseV(A, e.t, e.f, e.len, e.v, 'pulse25', A.chipL, true);
+    case 'tri': return triV(A, e.t, e.f, e.len, e.v);
+    case 'nkick': return nkickV(A, e.t, e.v);
+    case 'nsn': return nsnV(A, e.t, e.v, e.o && e.o.ghost);
+    case 'nhat': return nhatV(A, e.t, e.v, e.o && e.o.open);
+    case 'shk': return shkV(A, e.t, e.v);
+    case 'lush': return lushV(A, e.t, e.fs, e.len, e.v);
+    case 'sbell': return bellV(A, e.t, e.f, e.len, e.v, A.sbell);
+    case 'glead': return gleadV(A, e.t, e.f, e.len, e.v);
     case 'crk': return crackleV(A, e.t, e.pat, e.ms, e.v);
     case 'tick': return tickV(A, e.t, e.v);
     case 'zap': return zapV(A, e.t, e.v);
@@ -532,6 +643,16 @@ const BHAT = ['x . x . x . x . x . x . x . x .', 'x . x . x . x r x . x . x . R 
 const RPROG = { win: ['Bbmaj9', 'C6', 'Fmaj9', 'A7sus'], lose: ['Gm9', 'Dm9', 'Bbmaj9', 'A7sus'] };
 const RBASS = { win: ['Bb1^ - - - - - . . . . F2_ - . . . .', 'C2^ - - - - - . . . . G2_ - . . . .', 'F1^ - - - - - . . . . C2_ - . . . .', 'A1^ - - - - - . . . . E2_ - . . G1 .'], lose: ['G1^ - - - - - - - . . . . . . . .', 'D2^ - - - - - - - . . . . . . . .', 'Bb1^ - - - - - - - . . . . . . . .', 'A1^ - - - - - - - . . . . E2_ - . .'] };
 
+// ── 탐사 후보(2026-11-04): 북을 남겨 박이 이어지게(사용자 '템포도 느려져서 어색') · 가락 · 베이스 줄 · 화음은 대기 곡 그대로 ──
+//  아르페지오(㉠ 플럭 · ㉢ 펄스): 화음 음을 16분으로 오르내림 — 낮은 쪽(D3~G4)에 두어 가락(A4~F5)과 안 겹치게, 화음이 바뀌어도 가까운 음으로 이어짐
+const ARP = ['D3 F3 A3 C4 E4 C4 A3 F3 D3 F3 A3 C4 E4 C4 A3 F3', 'D3 F3 A3 C4 D4 C4 A3 F3 D3 F3 A3 C4 D4 C4 A3 F3', 'D3 G3 Bb3 D4 F4 D4 Bb3 G3 D3 G3 Bb3 D4 F4 D4 Bb3 G3', 'E3 A3 C#4 E4 G4 E4 C#4 A3 E3 A3 C#4 E4 G4 E4 C#4 A3'];
+const CUT = { arp: 950, arpb: 2000 };   // 플럭 밝기: 가락 앞 · 브레이크 = 어둡게 · B 부분 = 밝게
+//  종(㉣): 가락이 없을 땐 8분으로 높게 오가고, 가락이 있을 땐 마디에 두 번만
+const BELL8 = ['D6 . A5 . E6 . A5 . F6 . A5 . E6 . A5 .', 'D6 . A5 . C6 . A5 . F6 . A5 . C6 . A5 .', 'D6 . Bb5 . A5 . Bb5 . F6 . Bb5 . A5 . Bb5 .', 'E6 . A5 . C#6 . A5 . G6 . A5 . E6 . A5 .'];
+const BELL2 = ['E6 . . . . . . . A5 . . . . . . .', 'D6 . . . . . . . A5 . . . . . . .', 'D6 . . . . . . . Bb5 . . . . . . .', 'C#6 . . . . . . . E6 . . . . . . .'];
+const melOf = q => (q.sect === 'A2' ? LEAD1 : q.sect === 'B' ? (q.first ? LEAD1 : LEAD2) : q.sect === 'A3' ? LEAD3 : null);   // 대기 가락 자리 그대로
+const soloOf = brk => (brk === 'b1' ? SOLO1 : SOLO2[brk === 'b2a' ? 0 : 1]);
+
 // 대기 곡 한 마디의 자리: 첫 바퀴 12마디(11 = 브레이크) → 그다음 16마디씩(끝 1마디, 홀수 바퀴는 2마디 브레이크) — 결마다 같은 자리 · 같은 화음
 function homePos(sb) {
   const first = sb < 12, pos = first ? sb : (sb - 12) % 16, len = first ? 12 : 16, cyc = first ? 0 : 1 + Math.floor((sb - 12) / 16);
@@ -622,9 +743,79 @@ const ARR = {
     L.chat = P(pos % 2 ? D.hat2 : D.hat1);
     return L;
   },
+  // ── 탐사 후보 넷(2026-11-04 사용자 '클래식은 템포도 느려져서 어색하고 악기도 별로임 어떻게 할지 후보를 줘봐') — 브레이크는 모두 대기의 베이스 솔로 ──
+  // ㉠ 레트로 SF: 대기 베이스 줄 + 가벼운 북(박수 · 8분 하이햇 · 16분 셰이커) + 플럭 아르페지오(B 부분은 밝게) + 옅은 패드 + 가락 = 아날로그 리드
+  sa(q) {
+    const { pos, ci, brk, sect } = q, L = {};
+    if (brk) {
+      L.solo = P(soloOf(brk)); L.arp = P(ARP[ci]);
+      if (brk === 'b2a') L.shat = P('. . . . . . . . x . x . x . x .'); else L.ssn = P(D.fill);
+      return L;
+    }
+    L.sbass = P(sect === 'B' ? BASS_B[ci] : BASS_A[ci]);
+    L.skick = P(ci === 3 ? D.kick2 : D.kick1);
+    L.ssn = P(pos % 2 ? D.sn2 : D.sn1);
+    L.shat = P('x . x . x . x . x . x . x . x .');
+    L.shk = P('. x . x . x . x . x . x . x . x');
+    L[sect === 'B' ? 'arpb' : 'arp'] = P(ARP[ci]);
+    L.spad = P('C - - - - - - - - - - - - - - -');
+    const mel = melOf(q); if (mel) L.sld = P(mel[ci]);
+    return L;
+  },
+  // ㉡ 로파이 말렛: 대기 북 · 베이스 그대로(같은 흔들림) + 건반 자리에 마림바(화음을 굴려 침) + 가락 = 칼림바 · 가락 없는 마디엔 칼림바 두 음
+  sb(q) {
+    const { pos, ci, brk, sect } = q, L = {};
+    if (brk) {
+      L.solo = P(soloOf(brk)); L.mar = P(brk === 'b2' ? '. . . . . . . . C_ . . . . . . .' : 'C_ . . . . . . . . . . . . . . .');
+      if (brk === 'b2a') L.lhat = P('. . . . . . . . x . x . x . x .'); else L.lsn = P(D.fill);
+      return L;
+    }
+    L.lbass = P(sect === 'B' ? BASS_B[ci] : BASS_A[ci]);
+    L.lkick = P(ci === 3 ? D.kick2 : D.kick1);
+    L.lsn = P(pos % 2 ? D.sn2 : D.sn1);
+    L.lhat = P(pos % 2 ? D.hat2 : D.hat1);
+    L.mar = P(sect === 'B' ? 'C . . . . . . . C_ . . . . . . .' : sect === 'A3' && ci < 3 ? 'C . . . . . . C_ . . . . . . N_ .' : 'C . . . . . . C_ . . C_ . . . . .');
+    const mel = melOf(q); if (mel) L.kal = P(mel[ci]); else L.kal2 = P(T8(CEL[ci], -1));
+    if (sect === 'B') L.lpad = P('C - - - - - - - - - - - - - - -');
+    return L;
+  },
+  // ㉢ 8비트: 세모 베이스(대기 베이스 줄 한 옥타브 위 — 휴대폰에서 들리게) + 잡음 북 + 펄스 아르페지오(12.5%) + 가락 = 펄스(25%, 늦은 떨림 · 옅은 메아리)
+  sc(q) {
+    const { pos, ci, brk, sect } = q, L = {};
+    if (brk) {
+      L.tri = P(T8(soloOf(brk), 1)); L.parp = P(ARP[ci]);
+      if (brk === 'b2a') L.nh = P('. . . . . . . . x . x . x . x .'); else L.ns = P(D.fill);
+      return L;
+    }
+    L.tri = P(T8(sect === 'B' ? BASS_B[ci] : BASS_A[ci], 1));
+    L.nk = P(ci === 3 ? D.kick2 : D.kick1);
+    L.ns = P(pos % 2 ? D.sn2 : D.sn1);
+    L.nh = P(pos % 2 ? 'x . x . x . x . x . x . x . O .' : 'x . x . x . x . x . x . x . x .');
+    L.parp = P(ARP[ci]);
+    const mel = melOf(q); if (mel) L.pld = P(mel[ci]);
+    return L;
+  },
+  // ㉣ 앰비언트 비트: 대기 킥 + 박수 · 16분 하이햇(옅게) + 비운 베이스(B 줄) + 넓은 패드 + 종(가락 없으면 8분 · 있으면 두 번) + 가락 = 유리 리드(긴 홀)
+  sd(q) {
+    const { pos, ci, brk } = q, L = {};
+    if (brk) {
+      L.solo = P(soloOf(brk)); L.lush = P('C - - - - - - - - - - - - - - -'); L.abell = P(BELL8[ci]);
+      if (brk !== 'b2a') L.aclap = P(D.fill);
+      return L;
+    }
+    L.abass = P(BASS_B[ci]);
+    L.akick = P(ci === 3 ? D.kick2 : D.kick1);
+    L.aclap = P(pos % 2 ? D.sn2 : D.sn1);
+    L.ahat = P(pos % 2 ? 'x o x o x o x o x o x o x o O .' : 'x o x o x o x o x o x o x o x o');
+    L.lush = P('C - - - - - - - - - - - - - - -');
+    const mel = melOf(q);
+    L.abell = P(mel ? BELL2[ci] : BELL8[ci]);
+    if (mel) L.gld = P(mel[ci]);
+    return L;
+  },
 };
 // 이어 붙이기: 가락 층(새로 들어올 땐 기다림) · 새 결로 들어갈 때 차오르는 타악 · 결이 바뀔 때 옛 결이 남기는 꼬리(실내악은 현악 · 홀 울림이 저절로 길게 남음)
-const MELO = ['lead', 'syn', 'vib', 'fl', 'cmel', 'mel', 'fmel'];
+const MELO = ['lead', 'syn', 'vib', 'fl', 'cmel', 'mel', 'fmel', 'sld', 'kal', 'pld', 'gld'];
 const PERC_IN = ['kick', 'snare', 'hat', 'pkick', 'psn', 'pclap', 'phat', 'ckick', 'csn', 'chat'];
 const TAIL = { jpop: { phat: 'O . . . . . . . . . . . . . . .' } };
 const mixOf = (st, ly) => (st.mix && st.mix[ly] != null ? st.mix[ly] : 1);
@@ -724,6 +915,8 @@ export const STATES = {
   farm: { song: 'home', style: 'jpop' },
   space: { song: 'home', style: 'cham' },
   shop: { song: 'home', style: 'chamb' },   // 상점 = 탐사와 같은 실내악 + 비트(2026-10-17)
+  // 탐사 후보(2026-11-04 — 사용자가 고르면 space · shop 을 그 결로 바꾸고 나머지는 지움) · 들어 보기 = node tools/shots/musicpick.mjs
+  spaceA: { song: 'home', style: 'sa' }, spaceB: { song: 'home', style: 'sb' }, spaceC: { song: 'home', style: 'sc' }, spaceD: { song: 'home', style: 'sd' },
   focus: { song: 'home', mix: { kick: 0, snare: 0, hat: 0.45, lead: 0, crk: 0.6 }, pad: true, tone: 2300, var: 'focus' },
   ready: { song: 'ready' },
   battle: { song: 'battle' },
@@ -738,11 +931,19 @@ const LAYER = {
   pbass: ['bass', 0.3], comp: ['ep', 0.2], syn: ['syn', 0.37], vib: ['vib', 0.2], pkick: ['kick', 0.6], psn: ['snare', 0.5], pclap: ['clap', 0.32], phat: ['hat', 0.2],   // 재즈팝
   ckick: ['kick', 0.8], csn: ['snare', 0.72], chat: ['hat', 0.32],   // 실내악 + 비트(상점) 북
   pizz: ['pizz', 0.6], harp: ['harp', 0.1], str: ['str', 0.13], cb: ['cb', 0.6], cello: ['cello', 0.22], cmel: ['cello', 0.28], cel: ['cel', 0.14], fl: ['flute', 0.42], timp: ['timp', 0.2],   // 실내악
+  // 탐사 후보: ㉠ 레트로 SF · ㉡ 로파이 말렛 · ㉢ 8비트 · ㉣ 앰비언트 비트
+  //  세기 = 대기 곡 층과 견줘 맞춤(soundreel --stems: 가락 ≈ lead 0.037 · 반주 ≈ 건반 아래 · 북은 대기보다 옅게)
+  sbass: ['bass', 0.36], skick: ['kick', 0.7], ssn: ['clap', 0.62], shat: ['hat', 0.24], shk: ['shk', 0.12], arp: ['pluck', 0.19], arpb: ['pluck', 0.19], sld: ['slead', 0.38], spad: ['pad', 0.06],
+  lbass: ['bass', 0.36], lkick: ['kick', 0.72], lsn: ['snare', 0.62], lhat: ['hat', 0.26], mar: ['mar', 0.42], kal: ['kal', 0.62], kal2: ['kal', 0.26], lpad: ['pad', 0.05],
+  tri: ['tri', 0.42], nk: ['nkick', 0.9], ns: ['nsn', 0.85], nh: ['nhat', 0.3], parp: ['parp', 0.25], pld: ['plead', 0.7],
+  abass: ['bass', 0.34], akick: ['kick', 0.66], aclap: ['clap', 0.6], ahat: ['hat', 0.18], lush: ['lush', 0.07], abell: ['sbell', 0.24], gld: ['glead', 0.36],
 };
-const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'timp', 'ckick', 'csn', 'chat']);   // 이음 장식 동안 빼는 타악
+const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'timp', 'ckick', 'csn', 'chat',
+  'skick', 'ssn', 'shat', 'shk', 'lkick', 'lsn', 'lhat', 'nk', 'ns', 'nh', 'akick', 'aclap', 'ahat']);   // 이음 장식 동안 빼는 타악
 const DK = { X: 1.25, x: 1, o: 0.45, O: 1, r: 0.8, R: 0.75 };   // 북 글자 → 세기
 // 스윙: 붐뱁 = 곡의 swing(16분 뒤 칸이 0.6 자리) · p = 재즈팝(거의 곧게 — 16분 뒤 칸 0.55) · s = 곧게(실내악)
-const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', pizz: 's', harp: 's', str: 's', cello: 's', cmel: 's', cel: 's', cb: 's', fl: 's', timp: 's', ckick: 's', csn: 's', chat: 's' };
+const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', pizz: 's', harp: 's', str: 's', cello: 's', cmel: 's', cel: 's', cb: 's', fl: 's', timp: 's', ckick: 's', csn: 's', chat: 's',
+  sbass: 'p', skick: 'p', ssn: 'p', shat: 'p', shk: 'p', arp: 'p', arpb: 'p', sld: 'p', tri: 'p', nk: 'p', ns: 'p', nh: 'p', parp: 'p', pld: 'p' };   // 탐사 후보 ㉠ · ㉢ = 거의 곧게(16분 아르페지오), ㉡ · ㉣ = 대기 흔들림 그대로
 function swOff(s, ly, p) {
   const w = LSW[ly];
   if (w === 's') return 0;
@@ -756,6 +957,13 @@ const CRK = { j: [JJ, 0.6, 0.35], J: [JJJ, 0.7, 1], W: [JJJ, 0.9, 1], Q: [JJ, 0.
 export const LAMP_K = { a: 0, e: 0.33, h: 0.58, k: 0.83, m: 1, o: 1.17 };
 // 이음 장식: 어디로 가느냐에 따라 · 그동안 지금 곡에서 빼는 층
 const FILL_MUTE = { boot: null, mix: null, home: DRUMS, battle: DRUMS, ready: 'all', title: 'all', win: 'all', lose: 'all' };
+// 탐사 후보로 넘어갈 때 끝 박: 그 결의 악기가 다음 화음을 16분으로 훑어 올라감(j = 0~3번째)
+const RUN_IN = {
+  sa: (C, t, nt, j) => C.out({ t, i: 'pluck', f: NOTE(nt), v: 0.12 + 0.02 * j, o: { cut: 2400 } }),
+  sb: (C, t, nt, j) => C.out({ t, i: 'mar', f: NOTE(nt), v: 0.2 + 0.03 * j }),
+  sc: (C, t, nt, j) => C.out({ t, i: 'parp', f: NOTE(T8(nt, 1)), len: STEP * 0.9, v: 0.06 + 0.01 * j }),
+  sd: (C, t, nt, j) => C.out({ t, i: 'sbell', f: NOTE(T8(nt, 1)), len: 0.4, v: 0.12 + 0.02 * j }),
+};
 const BOOT_UP = ['D4', 'F4', 'A4', 'C5', 'E5', 'F5', 'A5', 'C6', 'D6', 'E6', 'F6', 'A6'];
 const FILLS = {
   // 처음 화면 → 대기(디스플레이 켜짐): 8분음표마다 화음을 타고 올라가는 종 · 건반(LED 가 켜지는 소리 = 음률이 더해짐) + 솟음, 처음 화면 곡은 그대로 이어짐
@@ -772,6 +980,7 @@ const FILLS = {
       if (left <= 4) C.out({ t, i: 'snare', v: [0, 0.3, 0.24, 0.18, 0.14][left], o: { ghost: left > 1 } });
       if (left === 2 && CH[nx]) CH[nx].forEach((n, j) => C.out({ t: t + j * 0.006, i: 'ep', f: NOTE(n), len: 0.5, v: 0.15 }));
     } else if ((to === 'cham' || to === 'chamb') && RUN[nx] && left <= 4) C.out({ t, i: 'harp', f: NOTE(RUN[nx][4 - left]), len: 0.3, v: 0.16 + 0.03 * (4 - left) });
+    else if (RUN_IN[to] && RUN[nx] && left <= 4) RUN_IN[to](C, t, RUN[nx][4 - left], 4 - left);
   },
   home(C, f, k, left, t) {   // 거꾸로 심벌이 차오르고 스네어 넷으로 돌아옴(실내악으로 = 북 없이 — 2026-10-17 팀파니 굴림도 뺌)
     if (k === 0) C.out({ t, i: 'rev', len: left * STEP, v: 0.11 });
@@ -943,14 +1152,20 @@ export class Conductor {
       if (inst === 'snare') return this.out({ t, i: 'snare', v: vv, o: { ghost: nm === 'o' } });
       if (inst === 'clap') return nm === 'o' ? this.out({ t, i: 'snare', v: vv * 0.6, o: { ghost: true } }) : this.out({ t, i: 'clap', v: vv });
       if (inst === 'timp') return this.out({ t, i: 'timp', f: NOTE(nm), v });
+      if (inst === 'nkick') return this.out({ t, i: 'nkick', v: vv });
+      if (inst === 'nsn') return this.out({ t, i: 'nsn', v: vv, o: { ghost: nm === 'o' } });
+      if (inst === 'nhat') return this.out({ t, i: 'nhat', v: vv, o: { open: nm === 'O' }, opt: nm === 'o' });
+      if (inst === 'shk') return this.out({ t, i: 'shk', v: vv, opt: true });
       const reps = nm === 'r' ? 2 : nm === 'R' ? 3 : 1;   // 하이햇 굴림
       for (let j = 0; j < reps; j++) this.out({ t: t + (j * STEP) / reps, i: 'hat', v: vv * (j ? 0.75 : 1), o: { open: nm === 'O' }, opt: nm === 'o' });
       return;
     }
-    if (inst === 'ep' || inst === 'pad' || inst === 'stab' || inst === 'str') {
+    if (inst === 'ep' || inst === 'pad' || inst === 'stab' || inst === 'str' || inst === 'lush' || (inst === 'mar' && (nm === 'C' || nm === 'N'))) {
       const c = nm === 'C' || nm === 'H' ? p.ch : nm === 'N' ? p.nx : nm === 'T' ? TENS[p.ch] || p.ch : nm === 'S' ? SLIP[p.nx] || p.nx : nm;   // T = 긴장음 · S = 다음 화음 반음 위(미끄러짐)
       if (!CH[c]) return;
       if (inst === 'pad') return this.out({ t, i: 'pad', fs: PAD_UP(c), len: lt, v, opt: true });
+      if (inst === 'lush') return this.out({ t, i: 'lush', fs: CH[c].map(NOTE), len: lt, v, opt: true });
+      if (inst === 'mar') { (STR[c] || CH[c]).forEach((nt, j) => this.out({ t: t + j * 0.026, i: 'mar', f: NOTE(nt), v: v * (j ? 0.78 : 1) })); return; }   // 마림바 = 화음을 아래부터 굴려 침
       if (inst === 'str') return this.out({ t, i: 'str', fs: ((nm === 'H' ? STRH : STR)[c] || CH[c]).map(NOTE), len: lt, v, opt: true });   // H = 바이올린 한 옥타브 위
       if (inst === 'stab') return this.out({ t, i: 'stab', fs: CH[c].map(NOTE), len: lt * 0.9, v });
       CH[c].forEach((nt, j) => this.out({ t: t + j * 0.006, i: 'ep', f: NOTE(nt), len: lt * 0.92, v: v * (j === CH[c].length - 1 ? 1.1 : 1) }));
@@ -960,6 +1175,7 @@ export class Conductor {
     if (inst === 'bass') return this.out({ t, i: 'bass', f, len: lt * 0.92, v, o: { scoop: flags.includes('/') ? 2 : 0, solo: ly === 'solo', fb: ly === 'pbass' } });
     if (inst === 'b808') return this.out({ t, i: 'b808', f, len: lt, v, o: {} });
     if (inst === 'pizz') return this.out({ t, i: 'pizz', f, v });
+    if (inst === 'pluck') return this.out({ t, i: 'pluck', f, v, o: { cut: CUT[ly] || 1400 } });
     if (inst === 'cel') return this.out({ t, i: 'cel', f, v });
     if (inst === 'cb') return this.out({ t, i: 'str', fs: [f], len: lt, v, o: { lp: 420 }, opt: true });   // 콘트라베이스(근음 길게)
     if (inst === 'ep1') return this.out({ t, i: 'ep', f, len: lt * 0.92, v });   // 건반 홑음(메뉴 가락)
