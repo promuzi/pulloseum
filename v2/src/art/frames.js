@@ -35,6 +35,7 @@ export function frameKey(sk) {
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const flip = (src, fx, fy) => { const c = canvas(src.width, src.height), x = c.getContext('2d'); x.translate(fx ? src.width : 0, fy ? src.height : 0); x.scale(fx ? -1 : 1, fy ? -1 : 1); x.drawImage(src, 0, 0); return c; };
 // 이어 붙일 팔 조각 길이 = 모서리 장식이 끝난 뒤 곧은 팔 부분 전체(팔 두께보다 불투명 칸이 많은 줄 = 장식) — 이어 붙일 때 하나 걸러 뒤집어(거울) 이음매가 안 보이게
+const CAP = 3;   // 모서리 그림 팔 끝의 마감(먹선 · 끝 그늘 · 가늘어지는 끝) 칸 수
 function straight(d, T, along, span) {
   let n = 0;
   for (let i = T - 1; i >= 0; i--) {
@@ -51,12 +52,14 @@ function build(key) {
   if (!img) { BUILT.set(key, null); return null; }
   const base = canvas(img.width, img.height); base.getContext('2d').drawImage(img, 0, 0);
   const T = base.width, d = base.getContext('2d').getImageData(0, 0, T, T).data;
-  let ay = 0, ax = 0;   // 팔 두께(위 팔 = 오른쪽 끝 세로줄의 마지막 불투명 줄 · 왼 팔 = 아래 끝 가로줄의 마지막 불투명 칸)
-  for (let y = 0; y < T; y++) if (d[((y * T) + T - 1) * 4 + 3] > 0) ay = y;
-  for (let x = 0; x < T; x++) if (d[(((T - 1) * T) + x) * 4 + 3] > 0) ax = x;
-  const P = straight(d, T, true, ay), Q = straight(d, T, false, ax);
-  const top0 = canvas(P, ay + 1); top0.getContext('2d').drawImage(base, T - P, 0, P, ay + 1, 0, 0, P, ay + 1);
-  const left0 = canvas(ax + 1, Q); left0.getContext('2d').drawImage(base, 0, T - Q, ax + 1, Q, 0, 0, ax + 1, Q);
+  // 팔 두께 = 끝 8칸 안에서 위 팔의 가장 아래 불투명 줄 · 왼 팔의 가장 오른쪽 불투명 칸(전엔 맨 끝 한 줄만 봐서 끝이 가늘어지는 덩굴 위 팔을 1칸으로 잼)
+  let ay = 0, ax = 0;
+  for (let x = T - 8; x < T; x++) for (let y = 0; y < T / 2; y++) if (d[((y * T) + x) * 4 + 3] > 0 && y > ay) ay = y;
+  for (let y = T - 8; y < T; y++) for (let x = 0; x < T / 2; x++) if (d[((y * T) + x) * 4 + 3] > 0 && x > ax) ax = x;
+  // 이어 붙일 조각 = 곧은 팔에서 끝 마감 CAP칸(먹선 · 끝 그늘)을 뺀 부분 — 넣으면 조각마다 먹선이 끼어 테가 일정한 간격으로 끊겨 보임(2026-11-04 사용자 '테두리가 가로로 끊긴듯한 건 뭐때문이야?')
+  const P = straight(d, T, true, ay), Q = straight(d, T, false, ax), pw = Math.max(2, P - CAP), qh = Math.max(2, Q - CAP);
+  const top0 = canvas(pw, ay + 1); top0.getContext('2d').drawImage(base, T - P, 0, pw, ay + 1, 0, 0, pw, ay + 1);
+  const left0 = canvas(ax + 1, qh); left0.getContext('2d').drawImage(base, 0, T - Q, ax + 1, qh, 0, 0, ax + 1, qh);
   const pair = (a, horiz) => { const b = flip(a, horiz, !horiz), c = canvas(horiz ? a.width * 2 : a.width, horiz ? a.height : a.height * 2), x = c.getContext('2d'); x.drawImage(a, 0, 0); x.drawImage(b, horiz ? a.width : 0, horiz ? 0 : a.height); return c; };   // 조각 + 거울 조각 = 이음매 없는 한 마디
   const top = pair(top0, true), left = pair(left0, false);
   const F = { T, ay, ax, tl: base, tr: flip(base, true, false), bl: flip(base, false, true), br: flip(base, true, true), top, bottom: flip(top, false, true), left, right: flip(left, true, false) };
@@ -85,8 +88,8 @@ function composed(key, w, h) {
   if (!F) { COMPOSED.set(ck, null); return null; }
   const fr = canvas(w, h), x = fr.getContext('2d');
   x.imageSmoothingEnabled = false;
-  edges(x, 0, 0, w, h, F);
   x.drawImage(F.tl, 0, 0); x.drawImage(F.tr, w - F.T, 0); x.drawImage(F.bl, 0, h - F.T); x.drawImage(F.br, w - F.T, h - F.T);
+  edges(x, 0, 0, w, h, F, CAP);   // 모서리 다음에 사이 변 — 모서리 팔 끝 마감(CAP칸)을 덮어 이음매가 안 보이게
   bevel(x, w, h);
   const sh = canvas(w, h), s = sh.getContext('2d');
   s.drawImage(fr, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = 'rgba(4,8,18,0.7)'; s.fillRect(0, 0, w, h);
@@ -96,8 +99,8 @@ function composed(key, w, h) {
   return out;
 }
 // 사이 변(모서리 사이를 팔 조각으로) — 그림 · 이름 띠 위에 그림(안쪽 1~2칸을 덮음)
-function edges(c, x, y, w, h, F) {
-  const { T } = F;
+function edges(c, x, y, w, h, F, cap = 0) {
+  const T = F.T - cap;   // cap = 모서리 팔 끝 마감을 덮을 만큼 안쪽에서 시작
   const run = (im, x0, y0, len, horiz) => { const step = horiz ? im.width : im.height; for (let o = 0; o < len; o += step) { const n = Math.min(step, len - o); if (horiz) c.drawImage(im, 0, 0, n, im.height, x0 + o, y0, n, im.height); else c.drawImage(im, 0, 0, im.width, n, x0, y0 + o, im.width, n); } };
   run(F.top, x + T, y, w - 2 * T, true);
   run(F.bottom, x + T, y + h - F.bottom.height, w - 2 * T, true);
