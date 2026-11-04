@@ -1463,7 +1463,13 @@ export const battle = {
       halfBtn(app, 'bt_emote', x + w - hw, yy, hw, 32, 'heart', '감정', live ? () => { this.emoteOpen = true; } : null);
     };
     if (side) { pair(rx0, this.mode === 'swap3' ? y + 48 : y + 29, sw); return; }   // 변이 손패 = 오른쪽 세로 줄(3:3 팀 칸 아래)
-    pair(ex, y, G.CW);   // 맨 오른쪽 카드 밑(3:3이든 1:1이든 같은 자리) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
+    if (this.mode !== 'swap3') {   // 1:1 = 교체 칸이 없어 아래 줄을 반반으로 꽉(2026-11-04 사용자 '1:1에서는 아래를 반반으로 꽉 채우자') — 넓어서 아이콘 옆 글자 · 손패 양 끝선에 맞춤
+      const full = ex + G.CW - G.x0, hw = Math.floor((full - G.GX) / 2);
+      button(app, 'bt_cards', G.x0, y, hw, 32, '패시브', { style: 'night', icon: 'mycard', iconTint: true, onTap: live ? () => this.openPasView(app) : null });
+      button(app, 'bt_emote', G.x0 + full - hw, y, hw, 32, '감정', { style: 'night', icon: 'heart', iconTint: true, onTap: live ? () => { this.emoteOpen = true; } : null });
+      return;
+    }
+    pair(ex, y, G.CW);   // 3:3 = 맨 오른쪽 카드 밑 반씩(왼쪽 두 칸은 교체) — '효과' 단추는 뺌(체력판 · 효과 창을 누르면 설명)
   },
   // 3:3 팀 칸 = 교체 단추(2026-10-16 사용자 "3:3에서 남은 수를 표시하는 네모 박스 등은 아래의 교체 칸에 적절한 방식으로 새로 UI 만들어서 붙여놔"):
   //  ⇄(뿌리 묶이면 자물쇠) · 내 식물 셋 얼굴(앞에 선 식물 = 주황 테, 아래 체력 실선, 쓰러짐 = 흐리게 + ✕) | '상대' + 남은 칸 셋(누군지는 안 보임) — 누르면 교체 창
