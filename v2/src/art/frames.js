@@ -11,9 +11,13 @@
 //  그림 = 코덱스 모서리 원화(tools/pixel/big/concept/frame/v1 — 요청서 FRAME_PROMPT.md · 기본 테와 보석은 v2 — FRAME_BASIC_PROMPT.md) → greycut 누끼 → itemconv 30칸 10색 → assets/v2/frames/<이름>.png(왼쪽 위 모서리 하나)
 //   (같은 날 '테두리가 픽셀이 작아서 자글자글하고 그래. 입체감을 줘서 좀 튀어나와도 되고, 픽셀을 좀 올리거나 크기를 키워줘' → 24칸 14색에서 키움 · 빛 · 그늘 · 그림자)
 //   그리기 = 모서리를 네 귀퉁이에 뒤집어 놓고 사이 변은 팔 끝 조각을 이어 붙임(이음매가 덜 보이는 길이를 고름) → 카드 크기마다 한 장으로 합쳐 둠(composed)
-//   입체감 = 왼쪽 위에서 오는 빛: 먹선 안쪽 한 칸을 왼쪽 위 면은 밝게 · 오른쪽 아래 면은 어둡게 + 테 모양 그림자를 오른쪽 · 아래로 2칸 밀어 카드 그림 위에 깖
+//   입체감 = 왼쪽 위에서 오는 빛: 먹선 안쪽 한 칸을 왼쪽 위 면은 밝게 · 오른쪽 아래 면은 어둡게 + 테 모양 그림자를 오른쪽 · 아래로 1칸 밀어 카드 그림 위에 깖
+//    (같은 날 사용자 '카드안쪽으로 드리워지는 그림자가 너무 두꺼운거 같은데 좀 수정해줘 / 일반카드처럼 직선적 테두리가 좀 심하네' — 전 = 2칸 · 진하기 0.7이라 테 안쪽에 곧은 검은 띠가 하나 더 있는 것처럼 보였음 → 1칸 · 0.45)
 //   모서리 원본 = itemconv 30칸 10색 → 외톨이 한 칸 지움(tools/pixel/big/frameclean.py) · 15칸을 두 배로 키운 안은 꽃 · 덩굴 모양이 뭉개져 버림
-//   (카드 밖으로 튀어나오게는 안 함 — 꾹 눌러 보는 큰 카드 · 더미 펼침은 카드 크기 캔버스에 그려 바깥이 잘림)
+//   테 크기(같은 날 사용자 '카드 테두리 바깥에 검은색은 뭐야?' → '저 검은테두리가 원래 카드 테두리 크기였던거 같아 / 새로 덧씌운 테두리의 일반 면이 거기에 닿게 하고,
+//    튀어나온 여러 요소등은 자르지 않고 더 튀어나와도 됨'): 모서리 그림의 곧은 팔은 그림 끝에서 1~4칸 안쪽에 있어(모서리 장식만 끝에 닿음) 밑에 깐 먹선 판이 그 틈으로 검은 바깥 띠처럼 보였음
+//    → 테마다 곧은 팔 바깥 빈칸(가운데값 — 옆 mx · 위아래 my)만큼 테를 키워 그려 곧은 팔 = 카드 끝 · 모서리 장식은 그만큼 카드 밖으로 튀어나옴(미리 그려 두는 큰 카드는 skillcard.js가 둘레를 띄워 안 잘림)
+//    → 밑판 · 테 그림자 · 못 쓰는 카드 흐림은 테 안쪽 모양(카드 가장자리에서 투명 칸으로 이어진 바깥을 뺀 곳)에만 · 고른 카드 금빛 줄 = 테 바깥 둘레
 import { ELEMENT } from './palette.js';
 import { glyphH, sized } from '../core/text.js';
 import { SPECIES, FORMS, uniqueOf } from '../game/catalog.js';
@@ -95,7 +99,11 @@ function build(key) {
   const left0 = canvas(ax + 1, qh); left0.getContext('2d').drawImage(base, 0, T - Q, ax + 1, qh, 0, 0, ax + 1, qh);
   const pair = (a, horiz) => { const b = flip(a, horiz, !horiz), c = canvas(horiz ? a.width * 2 : a.width, horiz ? a.height : a.height * 2), x = c.getContext('2d'); x.drawImage(a, 0, 0); x.drawImage(b, horiz ? a.width : 0, horiz ? 0 : a.height); return c; };   // 조각 + 거울 조각 = 이음매 없는 한 마디
   const top = pair(top0, true), left = pair(left0, false);
-  const F = { T, ay, ax, tl: base, tr: flip(base, true, false), bl: flip(base, false, true), br: flip(base, true, true), top, bottom: flip(top, false, true), left, right: flip(left, true, false) };
+  // 곧은 팔 바깥 빈칸 = 이을 조각의 줄마다 가장 바깥 불투명 칸(가운데값 — 덩굴 · 가시처럼 들쭉날쭉한 팔은 반쯤 카드 밖으로 나감)
+  const med = a => { const s = [...a].sort((p, q) => p - q); return s.length ? s[s.length >> 1] : 0; }, tops = [], lefts = [];
+  for (let i = 0; i < pw; i++) for (let y = 0; y <= ay; y++) if (d[((y * T) + T - P + i) * 4 + 3] > 0) { tops.push(y); break; }
+  for (let j = 0; j < qh; j++) for (let x = 0; x <= ax; x++) if (d[(((T - Q + j) * T) + x) * 4 + 3] > 0) { lefts.push(x); break; }
+  const F = { T, ay, ax, mx: med(lefts), my: med(tops), tl: base, tr: flip(base, true, false), bl: flip(base, false, true), br: flip(base, true, true), top, bottom: flip(top, false, true), left, right: flip(left, true, false) };
   BUILT.set(key, F);
   return F;
 }
@@ -112,24 +120,52 @@ function bevel(x, w, h) {
   }
   x.putImageData(id, 0, 0);
 }
-// 카드 크기(w×h)마다 테 한 장: 사이 변 → 네 모서리 → 빛 · 그늘 → 그림자 깔고 그 위에 테
+// 테 안쪽 모양: 가장자리에서 투명 칸으로 이어진 곳(테 바깥) = 빼고 나머지(테 + 테 안) — mask(검정 불투명) · rim(테 바깥 둘레 한 칸)
+function shapeOf(x, w, h) {
+  const a = x.getImageData(0, 0, w, h).data, out = new Uint8Array(w * h), st = [];
+  const go = (i, j) => { const k = j * w + i; if (!out[k] && !a[k * 4 + 3]) { out[k] = 1; st.push(k); } };
+  for (let i = 0; i < w; i++) { go(i, 0); go(i, h - 1); }
+  for (let j = 0; j < h; j++) { go(0, j); go(w - 1, j); }
+  while (st.length) { const k = st.pop(), i = k % w, j = (k - i) / w; if (i) go(i - 1, j); if (i < w - 1) go(i + 1, j); if (j) go(i, j - 1); if (j < h - 1) go(i, j + 1); }
+  const isOut = (i, j) => i < 0 || j < 0 || i >= w || j >= h || out[j * w + i] === 1;
+  const mk = test => { const c = canvas(w, h), cx = c.getContext('2d'), id = cx.createImageData(w, h); for (let k = 0; k < w * h; k++) if (test(k)) id.data[k * 4 + 3] = 255; cx.putImageData(id, 0, 0); return c; };
+  return { mask: mk(k => !out[k]), rim: mk(k => { if (out[k]) return false; const i = k % w, j = (k - i) / w; return isOut(i - 1, j) || isOut(i + 1, j) || isOut(i, j - 1) || isOut(i, j + 1); }) };
+}
+// 카드 크기(w×h)마다 테 한 장(둘레 mx · my칸 크게 — 곧은 팔이 카드 끝에 닿게): 사이 변 → 네 모서리 → 빛 · 그늘 → 그림자(테 안쪽에만) 깔고 그 위에 테
 const COMPOSED = new Map();
 function composed(key, w, h) {
   const ck = `${key}|${w}x${h}`;
   if (COMPOSED.has(ck)) return COMPOSED.get(ck);
   const F = build(key);
   if (!F) { COMPOSED.set(ck, null); return null; }
-  const fr = canvas(w, h), x = fr.getContext('2d');
+  const W = w + 2 * F.mx, H = h + 2 * F.my, fr = canvas(W, H), x = fr.getContext('2d');
   x.imageSmoothingEnabled = false;
-  x.drawImage(F.tl, 0, 0); x.drawImage(F.tr, w - F.T, 0); x.drawImage(F.bl, 0, h - F.T); x.drawImage(F.br, w - F.T, h - F.T);
-  edges(x, 0, 0, w, h, F, CAP);   // 모서리 다음에 사이 변 — 모서리 팔 끝 마감(CAP칸)을 덮어 이음매가 안 보이게
-  bevel(x, w, h);
-  const sh = canvas(w, h), s = sh.getContext('2d');
-  s.drawImage(fr, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = 'rgba(4,8,18,0.7)'; s.fillRect(0, 0, w, h);
-  const out = canvas(w, h), o = out.getContext('2d');
-  o.drawImage(sh, 2, 2); o.drawImage(fr, 0, 0);
-  COMPOSED.set(ck, out);
-  return out;
+  x.drawImage(F.tl, 0, 0); x.drawImage(F.tr, W - F.T, 0); x.drawImage(F.bl, 0, H - F.T); x.drawImage(F.br, W - F.T, H - F.T);
+  edges(x, 0, 0, W, H, F, CAP);   // 모서리 다음에 사이 변 — 모서리 팔 끝 마감(CAP칸)을 덮어 이음매가 안 보이게
+  bevel(x, W, H);
+  const S = shapeOf(x, W, H), sh = canvas(W, H), s = sh.getContext('2d');
+  s.drawImage(fr, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = 'rgba(4,8,18,0.45)'; s.fillRect(0, 0, W, H);
+  const out = canvas(W, H), o = out.getContext('2d');
+  o.drawImage(sh, 1, 1); o.globalCompositeOperation = 'destination-in'; o.drawImage(S.mask, 0, 0);   // 그림자 = 1칸 · 옅게 · 테 안쪽(카드 그림 위)에만 — 오른쪽 · 아래 테 바깥으로 삐져나오면 다시 검은 띠
+  o.globalCompositeOperation = 'source-over'; o.drawImage(fr, 0, 0);
+  const R = { img: out, mask: S.mask, rim: S.rim, ox: F.mx, oy: F.my, tint: new Map() };
+  COMPOSED.set(ck, R);
+  return R;
+}
+// 모양(mask · rim)을 한 색으로(색마다 한 번 만들어 둠)
+function tintOf(R, which, col) {
+  const k = which + col;
+  if (!R.tint.has(k)) { const m = R[which], t = canvas(m.width, m.height), x = t.getContext('2d'); x.drawImage(m, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, m.width, m.height); R.tint.set(k, t); }
+  return R.tint.get(k);
+}
+const composedFor = (sk, w, h) => { const key = frameKey(sk); return key && RAW[key] ? composed(key, Math.round(w), Math.round(h)) : null; };
+// 테 안쪽 모양을 한 색으로 칠함(밑판 = 먹색 · 못 쓰는 카드 흐림) — 그림 테가 없으면 false(부르는 쪽이 네모로)
+export function frameFill(g, x, y, w, h, sk, col) {
+  const R = composedFor(sk, w, h);
+  if (!R) return false;
+  const c = g.c, sm = c.imageSmoothingEnabled;
+  c.imageSmoothingEnabled = false; c.drawImage(tintOf(R, 'mask', col), x - R.ox, y - R.oy); c.imageSmoothingEnabled = sm;
+  return true;
 }
 // 사이 변(모서리 사이를 팔 조각으로) — 그림 · 이름 띠 위에 그림(안쪽 1~2칸을 덮음)
 function edges(c, x, y, w, h, F, cap = 0) {
@@ -169,16 +205,18 @@ function drawLevel(g, cx, yb, lv) {
   plate(0, MARK_COL.o); plate(1, LV_RIM[lv] || LV_RIM[3]); plate(2, '#1a2236');
   g.text(txt, cx + 0.5, py0 + Math.round((ph - glyphH(font)) / 2), { font, color: '#ffffff', align: 'center', outline: MARK_COL.o, outlineW: 2 });
 }
-// 테 그리기(cardFront가 그림 · 이름 띠를 깐 뒤 부름): 합친 테 한 장 → lit(고른 카드) = 바깥 금빛 줄 → 아래 가운데 표식(고유 = 별 · 특수 = 보석 · 강화 패시브 = +1 · +2)
-export function drawFrameArt(g, x, y, w, h, sk, lit) {
-  const key = frameKey(sk), im = key && composed(key, Math.round(w), Math.round(h));
-  if (!im) return false;
+// 테 그리기(cardFront가 그림 · 이름 띠를 깐 뒤 부름): 합친 테 한 장(카드 네모보다 둘레 mx · my칸 크게) → lit(고른 카드) = 테 바깥 둘레 금빛(튀어나온 장식까지)
+//  → 아래 가운데 표식(고유 = 별 · 특수 = 보석 · 강화 패시브 = +1 · +2) — 아래 끝 = 카드 아래 끝 + markDy(테를 키운 만큼 같이 내려 아래 팔에 박힌 자리 그대로)
+export function drawFrameArt(g, x, y, w, h, sk, lit, markDy = 0) {
+  const R = composedFor(sk, w, h);
+  if (!R) return false;
   const c = g.c, sm = c.imageSmoothingEnabled;
   c.imageSmoothingEnabled = false;
-  c.drawImage(im, x, y);
-  if (lit) { g.rect(x + 3, y, w - 6, 1, '#ffd890'); g.rect(x + 3, y + h - 1, w - 6, 1, '#ffd890'); g.rect(x, y + 3, 1, h - 6, '#ffd890'); g.rect(x + w - 1, y + 3, 1, h - 6, '#ffd890'); }
-  if (MARKS[sk.tier]) drawMark(g, Math.round(x + w / 2), Math.round(y + h - 1), MARKS[sk.tier]);
-  else if (sk.passive && !sk.form && sk.lv > 1) drawLevel(g, Math.round(x + w / 2), Math.round(y + h - 1), sk.lv);
+  c.drawImage(R.img, x - R.ox, y - R.oy);
+  if (lit) c.drawImage(tintOf(R, 'rim', '#ffd890'), x - R.ox, y - R.oy);
+  const yb = Math.round(y + h - 1 + markDy);
+  if (MARKS[sk.tier]) drawMark(g, Math.round(x + w / 2), yb, MARKS[sk.tier]);
+  else if (sk.passive && !sk.form && sk.lv > 1) drawLevel(g, Math.round(x + w / 2), yb, sk.lv);
   c.imageSmoothingEnabled = sm;
   return true;
 }

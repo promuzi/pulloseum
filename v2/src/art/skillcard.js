@@ -11,7 +11,7 @@ import { wrap, wrapName, glyphH, sized, measure } from '../core/text.js';
 import { icon, tinted } from './icons.js';
 import { ELEMENT, BAYER4 } from './palette.js';
 import { rrect } from './ui.js';
-import { hasFrame, drawFrameArt } from './frames.js';
+import { hasFrame, drawFrameArt, frameFill } from './frames.js';
 import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, fxChipW, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
 import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
@@ -33,6 +33,19 @@ const BASIC_DESC = {
 export const LOCK_TEXT = { seal: '봉인되어 이번 턴 못 씀', taunt: '도발에 넘어가 공격 기술만 씀' };
 const LOCK_SHORT = { seal: '봉인', taunt: '도발' };   // 카드 앞면(그림 위)
 export const ART_W = 58, ART_H = 52;   // 그림 칸(논리 칸) — 코덱스 그림은 tools/pixel/big/bgconv.mjs --fit --w=58 --h=52 로 줄여 assets/v2/skills/<기술 id>.png
+// 그림 테 카드의 표시 자리(2026-11-04 테 곧은 팔을 카드 끝까지 키움 — 사용자 '그렇게하면 이전에 맞춘 아이콘과 글자와 테두리 사이의 간격이 벌어질텐데 그것까지 잘 맞춰줘'):
+//  테마다 곧은 팔이 바깥으로 나간 칸(옆 1~2 · 위아래 1~4 — frames.js mx · my)의 가운데값 = 옆 1 · 위아래 2칸만큼 표시도 바깥으로
+//  (비용 해 · 수치 원판 · 변이 횟수 띠 · 흡수 = 위 모서리 쪽 · 속성 배지 = 왼쪽 · 아래 가운데 표식 = 아래)
+//  테마다 다른 칸 그대로 옮기면 손패 한 줄에서 해 높이가 카드마다 달라져서 모든 그림 테 카드가 같은 칸
+//  이름 = 폭은 그대로(띠 폭 − 10: 가장 두꺼운 옆 팔 — 선인장 · 독성 · 세포 — 과 그림자에 안 닿는 폭 · 넓히면 한 줄로 늘어난 이름이 팔에 닿음) · 아래 여유 8 → 6칸
+//   (아래 팔 안쪽 끝이 2~4칸 내려감 · 강화 +1 판 위 끝과 2칸 띄움 — 두 줄 이름이 1칸 내려옴)
+const FO = { x: 1, y: 2 }, NAME_CUT = 10, NAME_BOT = 6;
+// 미리 그려 두는 카드 캔버스(꾹 · 공개 · 더미 · 펼쳐 보기)의 둘레 여백 = 카드 칸 5칸(튀어나온 테 장식 · 해가 안 잘리게) — 캔버스에 padX · padY(카드 폭 · 높이 비율)를 달아
+//  drawCard(카드 자리 그대로 넘김) · drawFlip이 둘레까지 넓혀 그림
+const PADC = 5;
+const padCanvas = (BW, BH, PB, k) => { const T = Math.round(PB * k), cv = document.createElement('canvas'); cv.width = Math.round(BW * k) + 2 * T; cv.height = Math.round(BH * k) + 2 * T; cv.T = T; cv.padX = T / k / BW; cv.padY = T / k / BH; return cv; };   // T = 둘레 기기 화소(정수 — 도트가 반 칸 어긋나 흐려지지 않게)
+const padOf = (BW, w) => Math.ceil(PADC * Math.max(1, BW / w));   // 큰 카드 둘레(그린 크기 칸) — 앞면은 S배로 커지니 여백도 S배
+export function drawCard(c, cv, x, y, w, h) { const px = (cv.padX || 0) * w, py = (cv.padY || 0) * h; c.drawImage(cv, x - px, y - py, w + 2 * px, h + 2 * py); }
 
 // ── 스킬 그림(코덱스 원화 → 도트). 없으면 임시 그림 ──
 export const SKILLART = {};
@@ -103,7 +116,7 @@ function cham(g, x, y, w, h, c, col) {
   g.rect(x, y + c, w, h - 2 * c, col);
 }
 function cardFrame(g, x, y, w, h, sk, lit, art = false) {
-  if (art && hasFrame(sk)) { rrect(g, x, y, w, h, 5, C.ink); return; }   // 묶음 테(frames.js — 2026-11-04): 바탕 먹선만 깔고 테는 그림 · 이름 띠 위에(drawFrameArt)
+  if (art && hasFrame(sk)) { if (!frameFill(g, x, y, w, h, sk, C.ink)) rrect(g, x, y, w, h, 5, C.ink); return; }   // 묶음 테(frames.js — 2026-11-04): 바탕 먹색은 테 안쪽 모양에만(카드 네모로 깔면 테 바깥 검은 띠) · 테는 그림 · 이름 띠 위에(drawFrameArt)
   const [mid, hi, lo] = frameCols(sk, lit), F = sk.form && FORMS[sk.form];
   if (F) {   // 변이 카드(2026-10-17 사용자 "변이스킬이나 그 외 스킬 카드 테두리 차이가 있으면"): 둥근 테 대신 모서리를 자른 각진 갑옷 테 + 비스듬한 빛 · 그늘 + 모서리 징
     cham(g, x, y, w, h, 6, C.ink);
@@ -257,8 +270,9 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     for (const [dy, hw] of [[0, 6], [1, 6], [2, 6], [3, 5], [4, 3]]) g.rect(cx - hw, y + dy, hw * 2, 1, dy === 0 ? fh : fm);
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
   }
-  const art = drawFrameArt(g, x, y, w, h, sk, o.lit);   // 묶음 테(속성 → 종 → 기본 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
-  const { lines, font, lh } = nameLines(faceName(sk), aw - (art ? 10 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (art ? 8 : 0) - (lines.length - 1) * lh - gh) / 2);   // 종 테(30칸 · 그림자)는 두꺼워 이름 폭을 3칸씩 더 줄이고 아래 8칸을 비움(아래 팔에 안 가리게)
+  const art = drawFrameArt(g, x, y, w, h, sk, o.lit, FO.y);   // 묶음 테(속성 → 종 → 기본 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
+  const ox = art ? FO.x : 0, oy = art ? FO.y : 0;   // 그림 테 = 테를 카드 끝까지 키운 만큼 위 · 옆 표시를 바깥으로(FO)
+  const { lines, font, lh } = nameLines(faceName(sk), aw - (art ? NAME_CUT : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (art ? NAME_BOT : 0) - (lines.length - 1) * lh - gh) / 2);   // 그림 테는 두꺼워 이름 폭을 양쪽 4칸씩 줄이고 아래 6칸을 비움(아래 팔에 안 가리게)
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
     const p = o.shine, bx = ax - 16 + p * (aw + 32);
@@ -271,27 +285,27 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
   //  속성 없는 기본기(평타 · 방어 · 회피 · 광합성)와 패시브는 없음. 지금 상대에게 잘 듣는지는 뒷면(꾹)에 이미 있음
   if (sk.el && !sk.passive && ELEMENT[sk.el]) {
     const ic = icon(sk.el);
-    if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
+    if (ic) { const cx = ax + 8 - ox, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
   }
   if (sk.passive && sk.lv > 1 && !art) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22) 그림 왼쪽 아래 꼬리표 = 그림 테가 없을 때만(있으면 아래 테 가운데 표식 — frames.js drawLevel)
-  if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
+  if (dim && !(art && frameFill(g, x, y, w, h, sk, 'rgba(6,10,20,0.55)'))) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');   // 못 씀 = 그림 테는 테 안쪽 모양 전체(튀어나온 장식까지)를 흐리게
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
   //  (오른쪽 위 원판은 자리가 정해져 있어 왼쪽 표시 폭을 재지 않음 — 모래시계 띠 · 보석 띠 셋도 카드 왼쪽에서 30칸 안)
-  if (o.cd) cdDial(g, x, y, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
-  else if (sk.uses) usesDial(g, x, y, o.left != null ? o.left : sk.uses, sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
+  if (o.cd) cdDial(g, x - ox, y - oy, o.cd);   // 재사용 대기(블레이드바인 지옥전개 — 2026-10-29 사용자 'ㄱ으로 하자'): 비용 자리에 다시 쓸 수 있을 때까지 남은 턴 + 모래시계
+  else if (sk.uses) usesDial(g, x - ox, y - oy, o.left != null ? o.left : sk.uses, sk.uses, FORMS[sk.form], dim);   // 변이 기술 = 에너지 대신 판마다 쓸 수 있는 횟수(전투 중 = 남은 횟수)
   else if (sk.passive) {   // 패시브 카드: 비용 대신 카드 색 마름모 + 반짝이
-    const L = sk.look || {}, ic = icon('sparkle');
-    diamond(g, x + 9, y + 9, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
-    if (ic) g.img(tinted('sparkle', '#ffffff'), x + 9 - Math.floor(ic.width / 2), y + 9 - Math.floor(ic.height / 2));
+    const L = sk.look || {}, ic = icon('sparkle'), dx = x + 9 - ox, dy = y + 9 - oy;
+    diamond(g, dx, dy, 7, dim ? GEM.off : [hexMix(L.col || '#5fb3d9', C.ink, 0.2), L.light || '#d8f2ff', hexMix(L.col || '#5fb3d9', C.ink, 0.6)]);
+    if (ic) g.img(tinted('sparkle', '#ffffff'), dx - Math.floor(ic.width / 2), dy - Math.floor(ic.height / 2));
   } else {   // 비용 = 해(햇빛 에너지) + 큰 숫자
-    const vh = glyphH('value');
-    sunDisc(g, x + 10, y + 10, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
-    g.text(String(sk.cost || 0), x + 10.5, y + 10 - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
+    const vh = glyphH('value'), sx = x + 10 - ox, sy = y + 10 - oy;
+    sunDisc(g, sx, sy, 7, dim ? (o.short ? SUN.bad : SUN.off) : SUN.ok);
+    g.text(String(sk.cost || 0), sx + 0.5, sy - Math.round(vh / 2), { font: 'value', color: '#ffffff', align: 'center', outline: dim ? C.ink : '#6a2c04', outlineW: 2 });
   }
   const st = statOf(sk, o);
-  if (st && st.kind === 'pill') pillToken(g, x + w - 3, y + 10, st, dim);   // 패시브 효과 = 카드 색 알약 안 글자
-  else if (st) statToken(g, x + w - 12, y + 10, st, dim);   // 아이콘 안 숫자(왼쪽 해 원판과 짝 — 해 가운데 x + 10)
-  cardMarks(g, x, y, w, sk, dim);
+  if (st && st.kind === 'pill') pillToken(g, x + w - 3 + ox, y + 10 - oy, st, dim);   // 패시브 효과 = 카드 색 알약 안 글자
+  else if (st) statToken(g, x + w - 12 + ox, y + 10 - oy, st, dim);   // 아이콘 안 숫자(왼쪽 해 원판과 짝 — 해 가운데 x + 10)
+  cardMarks(g, x, y, w, sk, dim, ox, oy);
   if (o.left === 0) {   // 이번 판엔 다 씀: 그림 가운데 = '다 씀'
     const txt = '다 씀', tw = g.textW(txt, 'bold'), lx = Math.round(x + (w - tw) / 2), ly = Math.round(ay + (ah - 17) / 2);
     rrect(g, lx - 5, ly, tw + 10, 17, 4, 'rgba(6,10,20,0.88)');
@@ -319,9 +333,9 @@ function tag(g, xr, y, txt, col, ic) {   // 작은 꼬리표(오른쪽 끝 xr �
   g.text(txt, cx, y, { color: col });
   return x;
 }
-function cardMarks(g, x, y, w, sk, dim) {
-  const xr = x + w - 3, artB = y + 4 + ART_H;
-  if (sk.drain && sk.act === 'attack') { const im = icon('heal'), dy = sk.hits > 1 ? 31 : 23; rrect(g, xr - 13, y + dy, 13, 13, 3, 'rgba(6,10,20,0.86)'); if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, xr - 11, y + dy + 1)); }   // 흡수(때린 만큼 회복 — 수치 원판 · 검 손잡이 · 연타 ×N 아래)
+function cardMarks(g, x, y, w, sk, dim, ox = 0, oy = 0) {   // ox · oy = 그림 테 카드 표시 옮김(FO — 흡수는 수치 원판과 같이 오른쪽 위로 · 겹 수 꼬리표는 오른쪽으로만)
+  const xr = x + w - 3 + ox, artB = y + 4 + ART_H;
+  if (sk.drain && sk.act === 'attack') { const im = icon('heal'), dy = (sk.hits > 1 ? 31 : 23) - oy; rrect(g, xr - 13, y + dy, 13, 13, 3, 'rgba(6,10,20,0.86)'); if (im) g.alpha(dim ? 0.55 : 1, () => g.img(im, xr - 11, y + dy + 1)); }   // 흡수(때린 만큼 회복 — 수치 원판 · 검 손잡이 · 연타 ×N 아래)
   if (sk.inflict && (sk.inflict.n || 1) > 1) { const L = STATUS[sk.inflict.id] || {}; tag(g, xr, artB - 14, '×' + sk.inflict.n, dim ? '#a7adb8' : (L.col || '#ffffff'), L.icon); }   // 걸리는 효과 겹 수
 }
 // 비용 자리의 다른 표시 둘(2026-10-29 사용자 '햇빛대신 빨간원이랑 검은 원은 뭐임?' → '두개도 다듬어봐' — 숫자 동그라미가 햇빛 비용처럼 읽혀 뜻을 몰랐음):
@@ -489,12 +503,12 @@ function wrapBack(str, font, maxW) {
 // 뒷면 내용(큰 카드 크기 w×h, 1배 글자). o = { can, lock, energy, foe: { name, el }, mult }
 function cardBack(g, w, h, sk, o) {
   if (sk.passive) return passiveBack(g, w, h, sk);
-  const E = elOf(sk), P = 16, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';   // 글 안쪽 여백 16(2026-11-04 '뒷면의 글씨가 테투리에 겹쳐. 안 겹치게 안으로 당겨' — 뒷면 테 팔 7~12칸 + 그림자 2칸 · 모서리 장식은 가장자리에서 15칸까지)
+  const E = elOf(sk), P = 15, cw = w - P * 2, cat = (sk.cats && sk.cats[0]) || 'attack';   // 글 안쪽 여백 15(2026-11-04 '뒷면의 글씨가 테투리에 겹쳐. 안 겹치게 안으로 당겨' — 16 → 같은 날 테를 카드 끝까지 키우고 그림자를 1칸으로 줄여 팔 · 모서리 장식이 1칸 이상 바깥으로 감 — 모서리 장식은 가장자리에서 14칸까지)
   const wm = icon(artIcon(sk));   // 아래쪽 옅은 문양(앞면 그림의 아이콘)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(artIcon(sk), E.light), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
   // 글이 뒷면보다 길 때(renderFaces가 재 보고 차례로 고름): o.small = 설명 한 칸 작게(10칸) → o.tight = 수 칸 · 효과 칩을 낮게 · 칸 사이를 좁게 → o.tiny = 거기에 설명을 9칸으로
   const SM = o.small, TN = o.tight || o.tiny;
-  let y = 16;   // 머리(이름 · 꼬리표 · 줄)는 글 크기와 상관없이 늘 같은 자리 — 카드마다 머리가 들쭉날쭉하지 않게
+  let y = 15;   // 머리(이름 · 꼬리표 · 줄)는 글 크기와 상관없이 늘 같은 자리 — 카드마다 머리가 들쭉날쭉하지 않게(16 → 15: 위 테가 바깥으로 간 만큼)
   const ei = sk.el && icon(sk.el), nmax = cw - (ei ? 22 : 0);
   let nf = 'head'; for (const s of [13, 12]) { if (measure(sk.name, nf) <= nmax) break; nf = sized('head', s); }   // 긴 이름 = 속성 원에 안 닿게 글자를 줄이고, 그래도 길면 두 줄('예로부터 매가 약이었죠.')
   const NL = measure(sk.name, nf) <= nmax ? [sk.name] : wrapName(sk.name, nf, nmax), NH = glyphH(nf) + 3;
@@ -587,9 +601,9 @@ function cardBack(g, w, h, sk, o) {
 }
 // 패시브 카드 뒷면(2026-10-17 카드): 이름 · '일반 카드 · 패시브' 꼬리표 · 큰 수(앞면 수치) · 설명 줄 · 누가 쓰나
 function passiveBack(g, w, h, sk) {
-  const L = sk.look || {}, P = 16, cw = w - P * 2, wm = sk.icon && icon(sk.icon);   // 여백 16 = 기술 뒷면과 같게(변이 패시브는 1배 그림 테 — 2026-11-04)
+  const L = sk.look || {}, P = 15, cw = w - P * 2, wm = sk.icon && icon(sk.icon);   // 여백 15 = 기술 뒷면과 같게(변이 패시브는 1배 그림 테 — 2026-11-04)
   if (wm) { const s = Math.floor(Math.min(cw * 0.55, h * 0.3) / wm.width), iw = wm.width * s; g.c.imageSmoothingEnabled = false; g.alpha(0.09, () => g.c.drawImage(tinted(sk.icon, L.light || '#d8f2ff'), Math.round((w - iw) / 2), h - iw - 18, iw, iw)); }
-  let y = 16;
+  let y = 15;
   g.text(sk.name, P, y, { font: 'head', color: C.text });
   y += 22;
   const who = sk.form && FORMS[sk.form] ? `${FORMS[sk.form].name} 변이 카드` : '일반 카드';
@@ -648,20 +662,20 @@ function backBody(g, x, y, w, h) {
 
 // 꾹 눌러 볼 큰 카드 두 장(앞 · 뒤)을 기기 화소로 미리 그림: 앞면 = 손패 그림 그대로 S배(테·도트·글자가 함께 커짐), 뒷면 = 같은 테를 S배 + 상세는 1배 글자
 export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
-  const S = BW / w, mk = () => { const cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k); return cv; };
-  const front = mk(), fc = front.getContext('2d'), G1 = new Gfx(fc);
-  fc.setTransform(k * S, 0, 0, k * S, 0, 0);
+  const S = BW / w, PB = padOf(BW, w), mk = () => padCanvas(BW, BH, PB, k);   // 둘레 여백(튀어나온 테 장식 · 해) — 그릴 땐 drawCard · drawFlip
+  const front = mk(), fc = front.getContext('2d'), G1 = new Gfx(fc), T = front.T;
+  fc.setTransform(k * S, 0, 0, k * S, T, T);
   cardFront(G1, 0, 0, w, h, sk, { can: o.can, short: o.short, lock: o.lock, halved: o.halved, left: o.left });
   const back = mk(), bc = back.getContext('2d'), G2 = new Gfx(bc);
   if (hasFrame(sk)) {   // 묶음 테 카드 뒷면 = 같은 테를 1배 도트로 뒷면 크기에 다시 맞춤(2026-11-04 사용자 '뒷면의 글씨가 테투리에 겹쳐' — 앞면 테를 S배로 키우면 팔이 17~29칸이라 글 · 칸이 테에 겹쳤음)
-    bc.setTransform(k, 0, 0, k, 0, 0);
-    cardFrame(G2, 0, 0, BW, BH, sk, false, true); backBody(G2, 0, 0, BW, BH); drawFrameArt(G2, 0, 0, BW, BH, sk, false);
+    bc.setTransform(k, 0, 0, k, T, T);
+    cardFrame(G2, 0, 0, BW, BH, sk, false, true); backBody(G2, 0, 0, BW, BH); drawFrameArt(G2, 0, 0, BW, BH, sk, false, FO.y);
   } else {   // 변이(각진 테) · 패시브(점선 테) = 앞면 테 그대로 S배
-    bc.setTransform(k * S, 0, 0, k * S, 0, 0);
+    bc.setTransform(k * S, 0, 0, k * S, T, T);
     const hb = o.free ? Math.round(BH / S) : h;   // o.free = 뒷면을 카드 비율과 다르게(넓게) — 카드 고르기 화면 설명 판(짧은 기기에서도 글이 들어가게)
     cardFrame(G2, 0, 0, w, hb, sk, false, true); backBody(G2, 0, 0, w, hb);
   }
-  bc.setTransform(k, 0, 0, k, 0, 0);
+  bc.setTransform(k, 0, 0, k, T, T);
   if (o.bodyH) {   // o.bodyH = 글을 따로 한 장(높이 = 글 전체) — 판보다 길면 부르는 쪽이 테 안쪽에 잘라 끌어 넘김(scenes/draft.js)
     const body = document.createElement('canvas'); body.width = Math.round(BW * k); body.height = Math.round(o.bodyH * k);
     const bb = body.getContext('2d'); bb.setTransform(k, 0, 0, k, 0, 0);
@@ -673,8 +687,7 @@ export function renderFaces(sk, w, h, BW, BH, k, o = {}) {
 }
 // 손패 크기 앞면 한 장만(기기 화소 k) — 상대 카드 더미를 펼쳐 볼 때(scenes/battle.js drawSpread · 뒷면은 누를 때 renderFaces로 따로)
 export function renderFront(sk, w, h, k, o = {}) {
-  const cv = document.createElement('canvas'); cv.width = Math.round(w * k); cv.height = Math.round(h * k);
-  const c = cv.getContext('2d'); c.setTransform(k, 0, 0, k, 0, 0);
+  const cv = padCanvas(w, h, PADC, k), c = cv.getContext('2d'); c.setTransform(k, 0, 0, k, cv.T, cv.T);   // 둘레 여백 — 그릴 땐 drawCard
   cardFront(new Gfx(c), 0, 0, w, h, sk, o);
   return cv;
 }
@@ -688,10 +701,10 @@ export function backHeight(sk, w, o = {}) {
 // 교체 카드(3:3 턴 시작 공개 — 2026-10-18 사용자 "교체할 때도 스킬 카드처럼 교체 카드가 뜨면서 뭐로 바뀔지 안내"): 스킬 카드와 같은 틀 ·
 //  그림 칸 = 들어올 식물 얼굴(art(g, x, y, w, h) — 부르는 쪽이 그림, 모르면 물음표) · 이름 띠 = 그 식물 이름 · 왼쪽 위 = 하늘색 원에 엇갈린 두 화살표(비용 자리) · 오른쪽 위 = '교체' 꼬리표 · 속성 배지
 export function renderSwapFront(u, w, h, BW, BH, k, art) {
-  const S = BW / w, cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k);
+  const S = BW / w, cv = padCanvas(BW, BH, padOf(BW, w), k);   // 둘레 여백(엎어 둔 카드 renderDown과 같은 여백 — 뒤집을 때 크기가 안 튐)
   const c = cv.getContext('2d'), g = new Gfx(c), el = u && u.el, ax = 4, ay = 4, aw = w - 8, ah = ART_H;
-  c.setTransform(k * S, 0, 0, k * S, 0, 0); c.imageSmoothingEnabled = false;
-  const face = { el }, framed = hasFrame(face);   // 테 = 들어올 식물의 속성 모서리(2026-11-04 사용자 '교체 카드는 각 식물의 속성으로 일치시켜' — 전 = 속성 색 둥근 테)
+  c.setTransform(k * S, 0, 0, k * S, cv.T, cv.T); c.imageSmoothingEnabled = false;
+  const face = { el }, framed = hasFrame(face), ox = framed ? FO.x : 0, oy = framed ? FO.y : 0;   // 테 = 들어올 식물의 속성 모서리(2026-11-04 사용자 '교체 카드는 각 식물의 속성으로 일치시켜' — 전 = 속성 색 둥근 테)
   cardFrame(g, 0, 0, w, h, face, false, true);
   g.vgrad(ax, ay, aw, ah, ['#1d3554', '#12233c', '#0b1628']);
   const s = Math.min(aw, ah) - 4, px = ax + Math.floor((aw - s) / 2), py = ay + ah - s;
@@ -700,21 +713,22 @@ export function renderSwapFront(u, w, h, BW, BH, k, art) {
   gr.addColorStop(0, 'rgba(12,21,38,0)'); gr.addColorStop(1, 'rgba(12,21,38,0.92)');
   c.fillStyle = gr; c.fillRect(ax, by - 12, aw, 12);
   g.rect(ax, by, aw, bh, C.band); g.rect(ax, by, aw, 1, '#8ccfff');
-  drawFrameArt(g, 0, 0, w, h, face, false);
-  const { lines, font, lh } = nameLines((u && u.name) || '교체', aw - (framed ? 10 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (framed ? 8 : 0) - (lines.length - 1) * lh - gh) / 2);
+  drawFrameArt(g, 0, 0, w, h, face, false, FO.y);
+  const { lines, font, lh } = nameLines((u && u.name) || '교체', aw - (framed ? NAME_CUT : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (framed ? NAME_BOT : 0) - (lines.length - 1) * lh - gh) / 2);
   lines.forEach((ln, i) => g.text(ln, w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
-  if (el && ELEMENT[el]) { const ic = icon(el); if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); } }
-  g.disc(10, 10, 8, C.ink); g.disc(10, 10, 7, '#3d8fd6'); g.disc(10, 10, 6, '#1f5d9c');   // 엇갈린 두 화살표: 위 = 오른쪽 · 아래 = 왼쪽
-  g.rect(6, 7, 7, 1, '#ffffff'); g.rect(11, 6, 1, 3, '#ffffff'); g.px(12, 7, '#ffffff');
-  g.rect(8, 12, 7, 1, '#ffffff'); g.rect(8, 11, 1, 3, '#ffffff'); g.px(7, 12, '#ffffff');
-  tag(g, w - 4, 4, '교체', '#8ccfff');
+  if (el && ELEMENT[el]) { const ic = icon(el); if (ic) { const cx = ax + 8 - ox, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); } }
+  const qx = 10 - ox, qy = 10 - oy;   // 엇갈린 두 화살표(비용 해 자리 — 해와 같이 바깥으로): 위 = 오른쪽 · 아래 = 왼쪽
+  g.disc(qx, qy, 8, C.ink); g.disc(qx, qy, 7, '#3d8fd6'); g.disc(qx, qy, 6, '#1f5d9c');
+  g.rect(qx - 4, qy - 3, 7, 1, '#ffffff'); g.rect(qx + 1, qy - 4, 1, 3, '#ffffff'); g.px(qx + 2, qy - 3, '#ffffff');
+  g.rect(qx - 2, qy + 2, 7, 1, '#ffffff'); g.rect(qx - 2, qy + 1, 1, 3, '#ffffff'); g.px(qx - 3, qy + 2, '#ffffff');
+  tag(g, w - 4 + ox, 4 - oy, '교체', '#8ccfff');
   return cv;
 }
 // 엎어 둔 카드(공개 전 상대 카드 — 2026-10-17 사용자 "스킬 카드가 나와 상대 거가 회전하듯 등장해서 보여주고"): 은빛 테 · 남색 바탕 · 안쪽 가는 테 · 가운데 금빛 마름모에 씨앗
 export function renderDown(w, h, BW, BH, k) {
-  const S = BW / w, cv = document.createElement('canvas'); cv.width = Math.round(BW * k); cv.height = Math.round(BH * k);
+  const S = BW / w, cv = padCanvas(BW, BH, padOf(BW, w), k);   // 둘레 여백 = 뒤집혀 나올 앞면과 같게(뒤집기 중간에 크기가 안 튐)
   const c = cv.getContext('2d'), G = new Gfx(c);
-  c.setTransform(k * S, 0, 0, k * S, 0, 0); c.imageSmoothingEnabled = false;
+  c.setTransform(k * S, 0, 0, k * S, cv.T, cv.T); c.imageSmoothingEnabled = false;
   cardFrame(G, 0, 0, w, h, {}, false); backBody(G, 0, 0, w, h);
   rrect(G, 8, 8, w - 16, h - 16, 3, 'rgba(140,207,255,0.22)'); rrect(G, 9, 9, w - 18, h - 18, 2, C.body);
   for (let i = 0; i < 4; i++) { const [px, py] = [[12, 12], [w - 13, 12], [12, h - 13], [w - 13, h - 13]][i]; G.rect(px, py, 1, 1, C.line); }   // 네 모서리 점
@@ -725,8 +739,11 @@ export function renderDown(w, h, BW, BH, k) {
   return cv;
 }
 // 원근 뒤집기: (cx, cy) = 카드 가운데, w·h = 지금 크기(논리 칸), th = 0(앞) → π(뒤). 세로 조각마다 깊이 z = x·sinθ, 원근 s = f / (f + z)
+//  캔버스에 둘레 여백(padX · padY — renderFaces 등)이 있으면 그만큼 넓혀 그림(튀어나온 테 장식까지)
 export function drawFlip(c, front, back, cx, cy, w, h, th) {
-  const cos = Math.cos(th), sin = Math.sin(th), face = cos >= 0 ? front : back, f = 2.6 * w, N = Math.max(12, Math.round(w / 2)), fw = face.width, fh = face.height;
+  const cos = Math.cos(th), sin = Math.sin(th), face = cos >= 0 ? front : back, f = 2.6 * w, fw = face.width, fh = face.height;
+  w *= 1 + 2 * (face.padX || 0); h *= 1 + 2 * (face.padY || 0);
+  const N = Math.max(12, Math.round(w / 2));
   c.save();
   c.imageSmoothingEnabled = true;
   for (let i = 0; i < N; i++) {

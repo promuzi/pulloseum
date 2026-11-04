@@ -1,4 +1,4 @@
-import { cardFront, cardSlot, renderFaces, backHeight } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, backHeight, drawCard } from '../art/skillcard.js';
 import { button } from '../art/ui.js';
 import { drawBig } from '../art/sprites.js';
 import { SKILLS } from '../game/catalog.js';
@@ -181,7 +181,7 @@ function drawPeek(app, D, p) {
   }
   const P = D.pf, x = Math.round(W / 2 - P.BW / 2), y = Math.round(H / 2 - P.BH / 2), ins = 15;   // 글을 자르는 안쪽 = 뒷면 테(1배 · 팔 12 + 그림자 2) 안(2026-11-04)
   c.fillStyle = 'rgba(3,5,10,0.62)'; c.fillRect(0, 0, W, H);
-  c.drawImage(P.f.back, x, y, P.BW, P.BH);
+  drawCard(c, P.f.back, x, y, P.BW, P.BH);   // 둘레 여백까지(튀어나온 테 장식 — 2026-11-04)
   g.clip(x + ins, y + ins, P.BW - ins * 2, P.BH - ins * 2, () => c.drawImage(P.f.body, x, y, P.BW, P.bodyH));
 }
 // 촬영(main.js __shot): 지금 고르기로 맞추고 놓기 · 고름 · [장착] · 꾹을 그대로 재현

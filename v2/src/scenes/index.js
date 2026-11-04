@@ -62,9 +62,10 @@ const cardlab = {
 const FRAME_LAB = ['f_ember', 'w_gun', 'g_leaf', 'e_rock', 'a_breeze', 'b_static', 'i_frost', 'j_scent', 'j_wrap', 'j_spines', 'j_spore',
   'u_emcap_2', 'u_blade_3b', 'u_drake_3c', 'u_frost_3c', 'basic', 'sun', 'sp_leech', 'm_bite', 'm_slash', 'm_acid', 'm_puff', 'm_breath', 'm_frostclaw'];
 const framelab = {
+  enter(p) { this.bg = /^[0-9a-f]{6}$/i.test(p.bg || '') ? '#' + p.bg : '#141a26'; },   // ?bg=8a94a6 = 밝은 바탕(테 바깥이 잘 보이게 — 2026-11-04 검은 띠 전후 비교)
   draw(app) {
     const { g, W } = app;
-    g.rect(0, 0, W, app.H, '#141a26');
+    g.rect(0, 0, W, app.H, this.bg);
     FRAME_LAB.forEach((id, i) => {
       const sk = SKILLS[id] || BASICS.find(x => x.id === id), col = i % 4, row = Math.floor(i / 4), x0 = 3 + col * 67, y0 = 4 + row * 96;
       if (sk) cardFront(g, x0, y0, 62, 90, sk, { can: true, lit: id === 'g_leaf' });

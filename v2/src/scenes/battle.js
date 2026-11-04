@@ -15,7 +15,8 @@ import { STATUS, STATUS_DESC, SW_ON, swStyle, hexMix } from '../art/statusLook.j
 import { ELEMENT } from '../art/palette.js';
 import { FORMS, formSkills, SKILLS } from '../game/catalog.js';
 import { button, rrect } from '../art/ui.js';
-import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
+import { cardFront, cardSlot, renderFaces, renderFront, renderDown, renderSwapFront, drawFlip, drawCard, cardTiny, sunDisc, SUN } from '../art/skillcard.js';
+import { hasFrame } from '../art/frames.js';
 import { CARDS, cardFace } from '../game/cards.js';
 import { makeAttack, prepareBoards, boardCanvas, FRAME_MS, FRA } from '../battle/fx.js';
 import { ATTACKS } from '../../../tools/pixel/big/attack.mjs';
@@ -171,6 +172,7 @@ function arenaArt(bg, key, gap) {
 const LED_CY = Math.round((EY + PY - 100) / 2);   // 전광판 가운데 = 상대 받침과 내 식물 머리 사이(실제 자리 = layOf led)
 // 턴 시작 공개(drawReveal): 카드 나옴 → 상대 카드 뒤집힘 → 선공 · 후공 표 → 머묾 → 각자 식물로 들어감(ms)
 const RV_W = 92, RV_IN = 400, RV_FLIP0 = 400, RV_FLIP = 420, RV_BADGE = 900, RV_LAG = 170, RV_OUT = 380, REVEAL_MS = 2300, REVEAL1_MS = 1400;
+const RV_FX_GAP = 3, RV_FX_PH = 24, RV_FX_UP = 12;   // 공개 카드 효과 아이콘 판(카드 밖 식물 이름 아래 — 2026-11-04): 이름과 띄움 · 판 높이 · 내 체력판에 닿을 때 두 카드를 올리는 최대 칸
 const backOut = q => { const a = 1.70158; return 1 + (a + 1) * (q - 1) ** 3 + a * (q - 1) ** 2; };
 const easeInOut = q => (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
 const FOE3 = ['vine_water', 'gaia', 'flower_wind'];   // 시험판 3:3 상대
@@ -859,8 +861,8 @@ export const battle = {
     q.pose = { x: x + ox, y, s: cw / PILE_W, ang }; q.band = [x, y + ch / 2 - 4];
     if (q.handOff) q.handOff.from = { ...q.pose };   // 기다리는 동안 날아갈 자세를 따라 고침
     c.save(); c.globalAlpha *= al; c.translate(x, y); if (ang) c.rotate(ang);
-    rrect(g, -cw / 2 + 1, -ch / 2 + 2, cw, ch, 4, 'rgba(0,0,0,0.35)'); rrect(g, -cw / 2 - 1, -ch / 2 - 1, cw + 2, ch + 2, 4, T.ink);
-    c.imageSmoothingEnabled = true; c.drawImage(this.cardFace(q.sk, k), -cw / 2, -ch / 2, cw, ch);
+    rrect(g, -cw / 2 + 1, -ch / 2 + 2, cw, ch, 4, 'rgba(0,0,0,0.35)'); if (!hasFrame(q.sk)) rrect(g, -cw / 2 - 1, -ch / 2 - 1, cw + 2, ch + 2, 4, T.ink);   // 그림 테 카드는 먹선 테두리 없이(테 바깥 검은 줄 — 2026-11-04)
+    c.imageSmoothingEnabled = true; drawCard(c, this.cardFace(q.sk, k), -cw / 2, -ch / 2, cw, ch);
     c.restore();
   },
   drawRibbon(app) {
@@ -1114,7 +1116,7 @@ export const battle = {
     if (mEnv.length && mOff > 1) g.alpha(Math.min(1, mOff / (ENV_H + 2)), () => envBand(g, W - 146, myY + boxH(true) + 2, BOX_W, mEnv, v.turn));
     const mine = this.statuses('me'), myRows = Math.max(1, Math.min(2, Math.floor((myY + 1 - potY) / (SW_H + 2)))), rows = Math.min(myRows, Math.ceil(Math.min(6, mine.length) / 3));
     if (rows) statusWins(g, W - 146, myY - 3 - SW_H, mine, myRows, true);   // 첫 줄 = 체력판 바로 위 · 넘치면 그 위 줄(상대는 체력판 아래로 내려감 — 반대)
-    const myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY;
+    const myTop = rows ? myY - 3 - rows * (SW_H + 2) + 2 : myY; this.myTop = myTop;   // 내 체력판(+ 효과 칸) 위 끝 — 공개 카드 아래 아이콘 줄이 안 닿게(drawReveal)
     if (app.input.isPressed('fx_me')) g.alpha(0.13, () => rrect(g, W - 146, myTop, BOX_W, myY + boxH(true) - myTop, 4, '#ffffff'));
     this.fxR.me = rows ? [W - 146, myTop, BOX_W, myY - 3 - myTop] : null; this.fxR.envMe = mEnv.length ? [W - 146, myY + boxH(true) + 2, BOX_W, ENV_H] : null;
     this.geo.me = { x: W - 146, y: myY - 3 - SW_H, up: true, band: [W - 146, MY + boxH(true) - ENV_H], bandNow: [W - 146, myY + boxH(true) + 2], list: mine };
@@ -1210,7 +1212,7 @@ export const battle = {
       c.save(); c.translate(cx, cy); if (ang) c.rotate(ang); if (s !== 1) c.scale(s, s);
       rrect(g, -PILE_W / 2 + 1, -PILE_H / 2 + 2, PILE_W, PILE_H, 4, 'rgba(0,0,0,0.38)');
       if (rim) rrect(g, -PILE_W / 2 - 1, -PILE_H / 2 - 1, PILE_W + 2, PILE_H + 2, 5, rim);
-      c.imageSmoothingEnabled = true; c.drawImage(this.spreadFace(h, k), -PILE_W / 2, -PILE_H / 2, PILE_W, PILE_H);
+      c.imageSmoothingEnabled = true; drawCard(c, this.spreadFace(h, k), -PILE_W / 2, -PILE_H / 2, PILE_W, PILE_H);
       if (dark) g.alpha(dark, () => rrect(g, -PILE_W / 2, -PILE_H / 2, PILE_W, PILE_H, 3, '#060a14'));
       c.restore();
     };
@@ -1282,7 +1284,7 @@ export const battle = {
       if (!i && tagA > 0) g.alpha(tagA, () => { rrect(g, x - 3, y - 3, Math.round(w) + 6, Math.round(hh) + 6, 8, hexMix(rimC, '#060a14', 0.7)); rrect(g, x - 2, y - 2, Math.round(w) + 4, Math.round(hh) + 4, 7, rimC); });   // 방금 쓴 카드 = 쪽 색 굵은 테
       rrect(g, x + 2, y + 4, Math.round(w), Math.round(hh), 6, `rgba(0,0,0,${(0.42 * op).toFixed(3)})`);
       if (i && tagA > 0) g.alpha(tagA, () => rrect(g, x - 1, y - 1, Math.round(w) + 2, Math.round(hh) + 2, 6, rimC));   // 누구 카드 = 쪽 색 가는 테(나 하늘 · 상대 분홍)
-      c.drawImage(this.spreadFace(h, k), x, y, w, hh);
+      drawCard(c, this.spreadFace(h, k), x, y, w, hh);
       if (tagA > 0) g.alpha(tagA, () => {   // 누구 · 쓴 턴(카드 밑) · 3:3 = 쓴 식물 얼굴도
         const label = `${side === 'me' ? '나' : '상대'} · ${h.turn}턴`, face = this.mode === 'swap3' && h.u ? 15 : 0, lw = g.textW(label, 'bold') + 12 + face, lx = Math.round(sx + (CARD_W - lw) / 2), ly = sy + CARD_H + 6;
         rrect(g, lx - 1, ly - 1, lw + 2, 17, 6, C.ink); rrect(g, lx, ly, lw, 15, 5, SIDE_BG[side]);
@@ -1341,7 +1343,7 @@ export const battle = {
       ids.forEach((id, i) => {
         const sk = cardFace(id), sx = rx + (i % 3) * (CARD_W + GX), sy = y + Math.floor(i / 3) * (CARD_H + 10), key = `${ti}|${id}|${i}`;
         if (this.peek && this.peek.pv === key) cardSlot(g, sx, sy, CARD_W, CARD_H);   // 크게 꺼낸 카드의 자리
-        else { rrect(g, sx + 2, sy + 4, CARD_W, CARD_H, 6, 'rgba(0,0,0,0.42)'); c.drawImage(this.pasFace(sk, k), sx, sy, CARD_W, CARD_H); }
+        else { rrect(g, sx + 2, sy + 4, CARD_W, CARD_H, 6, 'rgba(0,0,0,0.42)'); drawCard(c, this.pasFace(sk, k), sx, sy, CARD_W, CARD_H); }
         if (!S.closing) input.hit('pv_' + key, sx, sy, CARD_W, CARD_H, () => this.openPasCard(app, sk, [sx, sy, CARD_W, CARD_H], key), 2);
         if (this.p && this.p.pvpeek != null && !this.pvShot && +this.p.pvpeek === i && !ti) { this.pvShot = true; this.openPasCard(app, sk, [sx, sy, CARD_W, CARD_H], key); this.peek.p = 1; }   // 검토 촬영(?pvpeek=0~2): 그 카드를 뒤집어 본 채로
       });
@@ -1381,7 +1383,10 @@ export const battle = {
       const ref = st.mine && this.cards && this.cards['sk_' + st.mine.id];
       st.from = ref ? [ref.x + ref.w / 2, ref.y + ref.h / 2, ref.w / BW] : null;
     }
-    const F = st.faces, ox = Math.floor((W - 270) / 2), both = !!(st.mine && st.theirs), cy = Math.round(L.led + 8);
+    const both = !!(st.mine && st.theirs), right = both ? st.theirs : st.mine || st.theirs, cy0 = Math.round(L.led + 8);
+    // 오른쪽(둘이면 상대) · 가운데(하나면) 카드 아래에 아이콘 줄이 있고 오른쪽 내 체력판에 닿으면 그만큼 두 카드를 올림(최대 RV_FX_UP — 높이 600 화면은 안 올림 · 왼쪽 카드 아래는 판이 없음)
+    const lift = this.revealIcons(right).length ? Math.max(0, Math.min(RV_FX_UP, Math.ceil(cy0 + st.faces.BH / 2 + this.revealFxTop() + RV_FX_PH + 2 - (this.myTop ?? 1e9)))) : 0;
+    const F = st.faces, ox = Math.floor((W - 270) / 2), cy = cy0 - lift;
     const OUT0 = ms - RV_OUT, out = age > OUT0 ? Math.min(1, (age - OUT0) / RV_OUT) ** 2 : 0, bt = age - RV_BADGE;
     c.fillStyle = `rgba(6,10,18,${(0.55 * Math.min(1, age / 220) * (1 - out)).toFixed(3)})`; c.fillRect(0, AY, W, app.H - AY);   // 경기장 아래 끝까지만 덮으면 손패 카드 윗부분에 회색 경계선이 생김(2026-10-29 사용자 '카드 선택 후 선공판정시 이 부분에 회색 선') → 손패까지
     for (const who of ['foe', 'me']) {
@@ -1396,23 +1401,25 @@ export const battle = {
       if (lead && bt > 0) { const gl = Math.min(1, bt / 200); rrect(g, x - 3, y - 3, Math.round(w) + 6, Math.round(h) + 6, 8, `rgba(255,200,60,${(0.5 * gl).toFixed(3)})`); rrect(g, x - 1, y - 1, Math.round(w) + 2, Math.round(h) + 2, 6, `rgba(255,236,170,${(0.95 * gl).toFixed(3)})`); }
       else rrect(g, x + 2, y + 4, Math.round(w), Math.round(h), 6, 'rgba(0,0,0,0.4)');
       if (who === 'foe' && age < RV_FLIP0 + RV_FLIP) drawFlip(c, F.foe, F.down, cx, ccy, w, h, Math.PI * (1 - easeInOut(Math.max(0, (age - RV_FLIP0) / RV_FLIP))));
-      else c.drawImage(who === 'me' ? F.me : F.foe, x, y, w, h);
-      if (!(who === 'foe' && age < RV_FLIP0 + RV_FLIP)) this.revealFx(g, sk, x, y, w, h);   // ㉥ 시안: 거는 효과 아이콘(앞면일 때)
-      const u = v.view[who];
-      if (u && !out && age > RV_IN) g.text(u.name, Math.round(cx), y + Math.round(h) + 5, { font: 'bold', color: '#e6f3ff', align: 'center', outline: T.ink, outlineW: 2 });   // 누구 카드인지(카드 아래 식물 이름)
+      else drawCard(c, who === 'me' ? F.me : F.foe, x, y, w, h);
+      const u = v.view[who], ics = this.revealIcons(sk), s = w / RV_W;
+      if (u && !out && age > RV_IN) g.text(u.name, Math.round(cx), y + Math.round(h) + 5, { font: 'bold', color: '#e6f3ff', align: 'center', outline: T.ink, outlineW: 2 });   // 누구 카드인지(카드 아래 식물 이름 — 두 카드 이름이 같은 높이)
+      if (ics.length && !(who === 'foe' && age < RV_FLIP0 + RV_FLIP)) { const pw = ics.length * 18 + (ics.length - 1) * 2 + 8; this.revealFx(g, ics, Math.round(cx - pw * s / 2), Math.round(y + h + this.revealFxTop() * s), s); }   // ㉥ 시안: 거는 효과 아이콘 = 식물 이름 아래(앞면일 때)
       c.restore();
       if (st.first && bt > (lead ? 0 : RV_LAG)) { const q = Math.min(1, (bt - (lead ? 0 : RV_LAG)) / 200); this.orderBadge(g, Math.round(cx), y - 15, lead, lead ? 1 + 0.7 * (1 - backOut(q)) : 0.82 + 0.18 * backOut(q), Math.min(1, q * 2) * (1 - out)); }
     }
   },
-  // ㉥ 시안(2026-10-29 사용자 '상대카드도 설명이 많아지면 읽을 시간이 부족할 거 같은데'): 공개 카드 그림 칸 아래쪽에 그 기술이 거는 효과 아이콘(최대 셋) — 글 대신 한눈에
+  // ㉥ 시안(2026-10-29 사용자 '상대카드도 설명이 많아지면 읽을 시간이 부족할 거 같은데'): 공개 카드에 그 기술이 거는 효과 아이콘(최대 셋) — 글 대신 한눈에
   //  손패 카드의 위력 칸은 그대로(2026-10-16 사용자 '버프·디버프는 비워') · 공개 카드에만
-  revealFx(g, sk, x, y, w, h) {
-    const ics = fxIdsOf(sk).map(id => iconMid(STATUS[id].icon) || icon(STATUS[id].icon)).filter(Boolean);
-    if (!ics.length) return;
-    const s = w / RV_W, iw = 18, gap = 2, pw = ics.length * iw + (ics.length - 1) * gap + 8, ph = iw + 6, c = g.c;
-    c.save(); c.translate(x + w / 2, y + h * 0.62); c.scale(s, s);
-    rrect(g, Math.round(-pw / 2) - 1, Math.round(-ph / 2) - 1, pw + 2, ph + 2, 6, T.ink); rrect(g, Math.round(-pw / 2), Math.round(-ph / 2), pw, ph, 5, 'rgba(14,22,40,0.92)');
-    ics.forEach((ic, i) => g.img(ic, Math.round(-pw / 2 + 4 + i * (iw + gap) + (iw - ic.width) / 2), Math.round(-ic.height / 2)));
+  //  자리 = 카드 밖 · 식물 이름 아래(2026-11-04 사용자 '선택한 카드에 어떤 효과가 있는지 카드에 아이콘을 추가해서 나오는데 그게 글자를 가림 / 해당 아이콘을 카드 밖 아래로 옮겨줘'
+  //   → '아이콘이 글자 아래 띄우는게 좋겠어 안그러면 글자끼리 정렬이 안 맞음' — 전 = 그림 칸 아래쪽 · 카드 높이 0.62로 이름 글자를 덮었음 · 카드와 이름 사이에 두면 두 카드 이름 높이가 어긋남)
+  revealIcons: sk => (sk ? fxIdsOf(sk).map(id => iconMid(STATUS[id].icon) || icon(STATUS[id].icon)).filter(Boolean) : []),
+  revealFxTop: () => 5 + glyphH('bold') + RV_FX_GAP,   // 카드 아래 끝에서 아이콘 판 위 끝까지(이름 줄 + 띄움 — 공개 카드 크기 칸)
+  revealFx(g, ics, x, y, s) {   // (x, y) = 판 왼쪽 위 · s = 공개 카드 크기 배수(들어오고 나갈 때 같이 줄어듦)
+    const iw = 18, gap = 2, pw = ics.length * iw + (ics.length - 1) * gap + 8, ph = RV_FX_PH, c = g.c;
+    c.save(); c.translate(x, y); c.scale(s, s);
+    rrect(g, -1, -1, pw + 2, ph + 2, 6, T.ink); rrect(g, 0, 0, pw, ph, 5, 'rgba(14,22,40,0.92)');
+    ics.forEach((ic, i) => g.img(ic, Math.round(4 + i * (iw + gap) + (iw - ic.width) / 2), Math.round((ph - ic.height) / 2)));
     c.restore();
   },
   // 선공 · 후공 표: 선공 = 금빛 큰 표 · 후공 = 남색 작은 표, (cx, cy) 가운데 · s = 크기 배수(튀어나옴)
