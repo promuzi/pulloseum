@@ -33,7 +33,7 @@ function init() {
   master.connect(lim); lim.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.gain.value = SOUND.sfx ? SOUND.sfxVol : 0; sfxBus.connect(master);
   musicBus = ctx.createGain(); musicBus.gain.value = SOUND.music ? SOUND.musicVol : 0; musicBus.connect(master);
-  noiseBuf = makeNoise(ctx); makePW(ctx, PW);
+  noiseBuf = makeNoise(ctx); makePW(ctx, PW); loadSamples(ctx);
   try { document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else if (unlocked) ctx.resume(); }); } catch {}
   return ctx;
 }
@@ -101,9 +101,8 @@ const SFX = {
   deny:     [{ w: 'square', f: [180, 140], d: 0.12, v: 0.12 }],
   flip:     [n(0.12, ['bandpass', 1800, 0.8, 4200], 0.14), { w: 'triangle', f: [420, 760], d: 0.1, v: 0.08 }],
   close:    [n(0.08, ['bandpass', 2400, 0.8, 900], 0.1)],
-  // 카드 손맛(2026-10-29): 손패 카드를 누르는 순간 들림 · 상대 카드 더미에 앉음 · 더미를 펼침 · 다시 모음
+  // 카드 손맛(2026-10-29): 손패 카드를 누르는 순간 들림 · 더미를 펼침 · 다시 모음(더미에 앉는 소리 = 카드 넘김 녹음 — 2026-11-04)
   lift:     [n(0.05, ['bandpass', 2600, 0.9, 3800], 0.06), { w: 'triangle', f: [640, 900], d: 0.05, v: 0.045 }],
-  pileIn:   [n(0.04, ['bandpass', 1700, 1, 900], 0.1), { w: 'triangle', f: [460, 340], d: 0.05, v: 0.05, at: 0.01 }],
   spread:   [n(0.2, ['bandpass', 1100, 0.7, 3000], 0.07, { a: 0.04 }), ...[0.02, 0.06, 0.1, 0.14].map(at => n(0.03, ['bandpass', 3200, 1.2], 0.06, { at }))],
   gather:   [n(0.16, ['bandpass', 2600, 0.7, 900], 0.07, { a: 0.03 }), n(0.03, ['bandpass', 1600, 1.2], 0.07, { at: 0.13 })],
   pop:      [{ w: 'sine', f: [520, 1100], d: 0.09, v: 0.16 }],
@@ -168,18 +167,36 @@ const SFX = {
   // 홈 전등: 형광등 지직(짧은 전기 찌직)
   buzz:     [{ w: 'saw', f: [120, 120], d: 0.03, v: 0.22, flt: ['bandpass', 2400, 1.2] }, n(0.02, ['bandpass', 5000, 1.5], 0.14)],
 };
+// 녹음 효과음(2026-11-04 사용자가 고름 — v2/sfxpick.html '카드 누름 ① · 고름 ① · 카드 넘김 ①'): Kenney CC0 click_001 · select_001 · card-place-1
+//  tools/shots/sfxbake.mjs가 앞 빈틈을 잘라 assets/v2/sfx/<파일>.wav — 풀리면 같은 이름의 파형 소리 대신 냄(풀리기 전엔 파형 소리)
+//  카드 누름 = 단추(tap) · 손패 카드를 누르는 순간(lift) 둘 다 · 크기 = 고르는 판에서 들은 그대로(원본 × 0.8 = 효과음 기본 8칸에서 1/MASTER)
+const SAMPLE = { tap: 'tap', lift: 'tap', select: 'select', flip: 'flip' }, SAMPLE_K = 1 / MASTER, BUF = {}, PEAK = {};
+let sampLoad = null;
+function loadSamples(ac) {
+  if (sampLoad) return sampLoad;
+  if (!ac) { const OAC = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext; if (!OAC) return Promise.resolve(); try { ac = new OAC(1, 1, 44100); } catch { return Promise.resolve(); } }   // 소리 상자 전에도 풀어 둠(누르기 전 · 영상 굽기)
+  const one = f => fetch(new URL('../../../assets/v2/sfx/' + f + '.wav', import.meta.url)).then(r => (r.ok ? r.arrayBuffer() : null))
+    .then(ab => ab && new Promise((ok, no) => ac.decodeAudioData(ab, ok, no)))
+    .then(b => { if (!b) return; const d = b.getChannelData(0); let m = 0, at = 0; for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > m) { m = Math.abs(d[i]); at = i; } BUF[f] = b; PEAK[f] = at / b.sampleRate; }, () => {});   // PEAK = 소리의 꼭대기(카드 내려놓기의 '탁') 자리
+  return (sampLoad = Promise.all([...new Set(Object.values(SAMPLE))].map(one)));
+}
+try { setTimeout(() => loadSamples(), 1200); } catch {}   // 첫 화면 그림을 먼저 받고
+const sampleOf = name => (SAMPLE[name] && BUF[SAMPLE[name]] ? SAMPLE[name] : null);
+function sample(f, t, bus, k) { const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = BUF[f]; g.gain.value = SAMPLE_K * k; src.connect(g); g.connect(bus); src.start(t); }
 const lastAt = {};
-// 효과음 내기: o = { at(초 뒤), k(세기 배수) }. 같은 소리는 30ms 안에 겹치지 않게
+// 효과음 내기: o = { at(초 뒤), hit(초 뒤 — 소리의 꼭대기가 이때 나게: 카드가 닿는 장면에 '탁'), k(세기 배수) }. 같은 소리는 30ms 안에 겹치지 않게
 //  승리 · 패배 가락은 음악이 켜져 있으면 지휘자가 박에 맞춰 냄(같은 조 · 같은 박 — music.js FILLS.win/lose), 음악을 끄면 예전 가락
 export function sfx(name, o = {}) {
   if (!SOUND.sfx) return;
   if ((name === 'win' || name === 'lose') && SOUND.music && musicOn()) return;
-  if (REC) { if (SFX[name]) REC.sfx.push({ t: REC.clock() + (o.at || 0), name, k: o.k ?? 1 }); return; }
+  const f = sampleOf(name), at = o.hit != null ? Math.max(0, o.hit - (f ? PEAK[f] : 0)) : o.at || 0;
+  if (REC) { if (SFX[name]) REC.sfx.push({ t: REC.clock() + at, name, k: o.k ?? 1 }); return; }
   if (!unlocked || !ctx) return;
   const L = SFX[name]; if (!L) return;
-  const now = ctx.currentTime, t = now + (o.at || 0);
-  if (!o.at && lastAt[name] && now - lastAt[name] < 0.03) return;
+  const now = ctx.currentTime, t = now + at;
+  if (!at && lastAt[name] && now - lastAt[name] < 0.03) return;
   lastAt[name] = now;
+  if (f) return sample(f, t, sfxBus, o.k ?? 1);
   for (const layer of L) voice(layer, t, sfxBus, o.k ?? 1);
 }
 // 화면 단추 누름 — 바탕 막이(…_block)는 소리 없음
@@ -253,6 +270,7 @@ const rec = {
     return true;
   },
   get on() { return !!REC; },
+  get sfx() { return REC ? REC.sfx.slice() : []; },   // 기록된 효과음(초 · 이름) — 싱크 재기(tools/shots/sfxsync.mjs)
   // 굽기: sec 초 · 스테레오 16비트 WAV(base64), 최고 0.9로 맞춤
   async wav(sec, opt = {}) { const out = await renderMix(REC ? REC.log : [], REC ? REC.sfx : [], sec, opt); return wavB64(out, opt); },
 };
@@ -273,6 +291,7 @@ function simulate(plan, sec) {
   return log;
 }
 async function renderMix(events, sfxList, sec, opt = {}) {
+  await loadSamples();
   const sr = 44100, off = new OfflineAudioContext(2, Math.ceil(sr * sec), sr), keep = { ctx, master, sfxBus, musicBus, noiseBuf, unlocked, PW: { ...PW } };
   try {
     ctx = off; master = off.createGain(); master.connect(off.destination);
@@ -281,7 +300,7 @@ async function renderMix(events, sfxList, sec, opt = {}) {
     noiseBuf = makeNoise(off); makePW(off, PW);
     const MA = buildGraph(off, musicBus, noiseBuf, PW);
     for (const e of events) if (e.t < sec) playMusic(MA, e);
-    for (const s of sfxList) if (SFX[s.name] && s.t < sec) for (const L of SFX[s.name]) voice(L, s.t, sfxBus, s.k ?? 1);
+    for (const s of sfxList) if (SFX[s.name] && s.t < sec) { const f = sampleOf(s.name); if (f) sample(f, s.t, sfxBus, s.k ?? 1); else for (const L of SFX[s.name]) voice(L, s.t, sfxBus, s.k ?? 1); }
     const buf = await off.startRendering();
     return [buf.getChannelData(0), buf.getChannelData(1)];
   } finally { ({ ctx, master, sfxBus, musicBus, noiseBuf, unlocked } = keep); Object.assign(PW, keep.PW); }
@@ -314,4 +333,4 @@ async function reelEvents(ev, sec) {
   return { peak, rms: Math.sqrt(sq / (2 * L.length)) };
 }
 // 검토 도구: window.__sound.sfx('crit') 등
-try { globalThis.__sound = { sfx, music, unlock, SOUND, list: () => Object.keys(SFX), conductor, rec, reel, reelEvents, simulate, lampNow, introTime }; } catch {}
+try { globalThis.__sound = { sfx, music, unlock, SOUND, list: () => Object.keys(SFX), conductor, rec, reel, reelEvents, simulate, lampNow, introTime, ready: () => loadSamples(), peaks: () => ({ ...PEAK }) }; } catch {}

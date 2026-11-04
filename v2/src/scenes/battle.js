@@ -32,6 +32,7 @@ const SHAPE = {
   melee: { fire: 'slash', water: 'whip', grass: 'whip', bolt: 'slash', earth: 'slam', wind: 'slash', ice: 'slash', '-': 'slash' },          // 베기 · 채찍 · 내려치기
 };
 const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam', bite: 'lunge' };
+const STRIKE_F = 13;   // 공격하는 쪽이 앞으로 나가는 첫 장(attack.mjs attackerPose — 12 멈춤 → 13~14 동작) = 휘두름 소리
 // 광역 기술 = 맞는 자리 바닥에 넓게 퍼지는 충격파(납작한 고리 둘 · 그 속성 빛 · 점점 옅게) + 맞는 순간 무대가 그 색으로 잠깐 번쩍 — 단일 기술(한 점에 터짐)과 갈림
 function areaWave(g, st, age, [x, y], AY, AH) {
   const k0 = (age - (st.anim.I + 1) * FRAME_MS) / 560; if (k0 < 0 || k0 > 1.15) return;
@@ -642,7 +643,12 @@ export const battle = {
     // 기술 카드(식물 옆 큰 카드): 그 식물의 차례 동안 떠 있음 → 차례가 끝나면 위 toPile이 그 자리에서 더미로 · 더미에 못 가는 카드(교체 · 쉼)는 손패 자리로 돌아감 · 메아리 = 같은 카드가 한 번 더 톡
     if (v.cue) for (const w of ['me', 'foe']) { const q = v.cue[w]; if (q && !q.tOut && !q.handOff && (st.kind === 'tick' || st.kind === 'end' || (ACT_KINDS.has(st.kind) && st.who && st.who !== w))) q.tOut = t; }
     if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { const q = (v.cue ||= {})[st.who]; if (q && !q.tOut && q.sk === st.skill) q.pulse = t; else v.cue[st.who] = { who: st.who, sk: st.skill, t0: t }; }
-    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) { this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms, st.skill); sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing'); }
+    if ((st.kind === 'attack' || st.kind === 'cast' || st.kind === 'stance' || st.kind === 'sun') && st.skill) {
+      this.ribbon(st.who, st.skill.name, st.skill.el, t, st.ms, st.skill);
+      // 휘두름 = 공격하는 쪽이 앞으로 나가는 장(전엔 단계 첫 장에 나서 0.65초 일렀음 — 2026-11-04 사용자 '싱크만 잘 맞춰줘') · 보조 기술 = 모으기 시작(castfx PREP 140ms)
+      const at = st.kind === 'attack' ? Math.max(0, v.t0 - t + Math.max(0, STRIKE_F - (st.skip || 0)) * FRAME_MS) / 1000 : st.kind === 'cast' ? 0.14 : 0;   // 공격 장은 v.t0부터 셈(그리는 장보다 조금 앞)
+      sfx(st.kind === 'stance' ? 'stance' : st.kind === 'sun' ? 'select' : 'swing', { at });
+    }
     if (st.kind === 'cast' && st.skill) {   // 보조 기술 시전(㉡ castfx.js): 종류마다 다른 모양 · 터뜨리는 순간 소리
       const kind = castKind(st.skill);
       v.cast = { who: st.who, other: st.who === 'me' ? 'foe' : 'me', kind, col: castColor(st.skill, kind), t0: t, sp: castSpecial(st.skill) };   // sp = 그 기술만의 장면(부활 · 혼 · 열매 · 알 — 밤샘)
@@ -650,7 +656,7 @@ export const battle = {
     }
     if (st.kind === 'sun') { v.en[st.who] = Math.min(v.view[st.who].energyMax || 8, (v.en[st.who] || 0) + (st.ev.gain || 0)); if (st.ev.gain) this.pop(st.who, `햇빛 +${st.ev.gain}`, null, t, false, -16, '#ffd25a'); }
     if (st.kind === 'first') sfx('first');
-    if (st.kind === 'reveal') { sfx('select'); if (st.theirs) sfx('flip', { at: RV_FLIP0 / 1000 }); if (st.first) sfx('first', { at: RV_BADGE / 1000 }); }
+    if (st.kind === 'reveal') { sfx('select'); if (st.theirs) sfx('flip', { hit: (v.t0 - t + RV_FLIP0 + RV_FLIP) / 1000 }); if (st.first) sfx('first', { at: Math.max(0, v.t0 - t + RV_BADGE) / 1000 }); }   // 카드 넘김 '탁' = 상대 카드가 다 뒤집힌 순간(공개 연출은 v.t0부터 셈)
     if (st.kind === 'fxnote') sfx('resist');
     if (st.kind === 'cure') sfx('steam');
     if (st.kind === 'skipT') sfx({ frozen: 'frozen', paral: 'shock', stun: 'stun' }[st.ev.src] || 'stun');
@@ -829,7 +835,7 @@ export const battle = {
     const E = { sk, who, turn: B.turn - 1, t0, u: B[who], from };
     if (from) q.handOff = E;
     (v.cardHist ||= []).unshift(E); v.cardHist.length = Math.min(v.cardHist.length, HIST_MAX);
-    sfx('flip', { at: Math.max(0, (t0 - t) / 1000) });   // 카드가 떠오르는 소리(앉을 땐 pileIn)
+    sfx('flip', { hit: (t0 - t + PILE_IN) / 1000 });   // 카드 넘김(카드 내려놓기) '탁' = 더미에 앉는 순간(전엔 떠오를 때 나서 '탁'이 날아가는 중에 났음 · 앉는 소리 pileIn은 이 소리로)
   },
   cardFace(sk, k) { const F = (this.faces ||= {}), key = sk.id + '@' + k; return F[key] || (F[key] = renderFront(sk, CARD_W, CARD_H, k, { can: true })); },   // 손패와 같은 카드 앞면(기기 화소로 한 번)
   // 기술 카드 한 장(경기장 좌표 · 40칸): 들어옴(상대 = 오른쪽 끝에서 미끄러져 더미 아래로 · 나 = 손패 그 카드 자리에서 올라옴) → 떠 있음(살랑 · 메아리 = 톡) →
@@ -1224,7 +1230,6 @@ export const battle = {
       card(top, bx, by + 10 * rise, a0 * (1 - e) + 0.16 * Math.sin(Math.PI * e), (s0 + (1 - s0) * e) * pop, 0, rim);
       c.restore();
     } else {
-      if (!top.landed) { top.landed = true; sfx('pileIn'); }
       const la = age - PILE_IN, bob = la < 140 ? Math.sin(la / 140 * Math.PI) : 0, settle = la < 160 ? 1 + 0.08 * (1 - la / 160) ** 2 : 1, hi = hexMix(rim, '#ffffff', 0.85);   // 앉을 때 1칸 톡 · 살짝 커졌다 제자리
       card(top, mx, my - bob, 0, settle, 0, rim);
       if (la < 300) g.alpha(0.85 * (1 - la / 300), () => { const X = x - 2, Y = Math.round(y - bob) - 2; g.rect(X, Y, PILE_W + 4, 1, hi); g.rect(X, Y + PILE_H + 3, PILE_W + 4, 1, hi); g.rect(X, Y, 1, PILE_H + 4, hi); g.rect(X + PILE_W + 3, Y, 1, PILE_H + 4, hi); });   // 앉은 순간 테가 반짝
