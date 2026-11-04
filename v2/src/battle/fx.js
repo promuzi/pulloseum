@@ -37,8 +37,8 @@ function newLayers() {
   return { P, f, u, s, o, p };
 }
 
-// 공격 한 번: A = 기술 연출(attack.mjs ATTACKS·VARIANTS·WEAPONS 항목), atkKey·tgtKey = 종 키, rev = 상대 → 나
-export function makeAttack(A, atkKey, tgtKey, rev, seed = 7) {
+// 공격 한 번: A = 기술 연출(attack.mjs ATTACKS·VARIANTS·WEAPONS 항목), atkKey·tgtKey = 종 키, rev = 상대 → 나 · hit = { tier: miss · graze · hit · crit, big } = 맞는 순간 터짐 크기(2026-11-05)
+export function makeAttack(A, atkKey, tgtKey, rev, seed = 7, hit = null) {
   const atk = rev ? SPOTS.far : SPOTS.near, tgt = rev ? SPOTS.near : SPOTS.far, aM = rev, tM = !rev;
   const ma = bigOf(atkKey)?.meta, mt = bigOf(tgtKey)?.meta;
   const ra = { hx: ma ? ma.head[0] : 48, hy: ma ? ma.head[1] : 30, Rh: ma ? ma.headR : 15 }, rt = { hx: mt ? mt.head[0] : 48, hy: mt ? mt.head[1] : 30 };
@@ -56,7 +56,7 @@ export function makeAttack(A, atkKey, tgtKey, rev, seed = 7) {
       const L = [AXs + hxOf(ra, aM) + (aM ? -pose.qx : pose.qx), AYs + ra.hy + pose.qy];
       const T = [TXs + hxOf(rt, tM) + (tM ? tp.kb : -tp.kb), TYs + rt.hy + tqy - tp.hop], G = TYs + SOIL_Y - tp.hop;
       const dl = Math.hypot(T[0] - L[0], T[1] - L[1]) || 1;
-      const S = { D: [(T[0] - L[0]) / dl, (T[1] - L[1]) / dl], fx: Math.sign(T[0] - L[0]) || 1, K, A0: atk, B0: tgt, S0, E0, phiS, phiE, rf, Rh: ra.Rh, soilA: AYs + SOIL_Y };
+      const S = { D: [(T[0] - L[0]) / dl, (T[1] - L[1]) / dl], fx: Math.sign(T[0] - L[0]) || 1, K, A0: atk, B0: tgt, S0, E0, phiS, phiE, rf, Rh: ra.Rh, soilA: AYs + SOIL_Y, hit: hit && hit.tier, big: !!(hit && hit.big) };
       const lay = newLayers();
       skillFx(lay.P, A, fz, L, T, G, seed, S);
       statusFx(lay.P, A, f, T, G, tops.map(([x, y]) => [x + (tM ? tp.kb : -tp.kb), y + tqy - tp.hop]), L, seed + 2);

@@ -111,7 +111,7 @@ const UNIQUE = {
   u_ninja_2b: ['ninja_vine', 'whip'], u_ninja_3: ['ninja_vine', 'rings'], u_ninja_3c: ['ninja_vine', 'slash'],
   u_haenyeo_1: ['diver_vine', 'whip'], u_haenyeo_2b: ['diver_vine', 'bubbles'], u_haenyeo_3b: ['diver_vine', 'rings'], u_haenyeo_3c: ['diver_vine', 'bite'],
 };
-const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam' };   // 나머지 = cast(그 연출을 쓰는 종과 같은 몸놀림)
+const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam', tackle: 'lunge' };   // 나머지 = cast(그 연출을 쓰는 종과 같은 몸놀림)
 for (const [id, [sp, kind]] of Object.entries(UNIQUE)) {
   const B = ATTACKS[sp];
   ATTACKS[id] = { kind, move: MOVE_OF[kind] || 'cast', c: B.c, status: B.status,
@@ -191,6 +191,7 @@ export const WEAPONS = {
 }
 export const GROUND = new Set(['slam', 'wave']);   // 바닥을 타고 가는 기술
 export const impactAt = A => ({ slash: 15, whip: 15, bolt: 14, blades: 17, slam: 19, wave: 19, bubbles: 19, gale: 19, rings: 19, fireball: 20, bloom: 20, spores: 21, bite: 15, sword: 15, poison: 19, breath: 19, sporepuff: 18, rockfall: 16, shatter: 16, blast: 17, rain: 17,
+  tackle: 14, wrap: 18, sprinkle: 19, scent: 19, petals: 20, needles: 16,
   w_slash: 15, w_thrust: 14, w_chop: 19, w_sweep: 16, w_shot: 15, w_burst: 15, w_snipe: 18, w_smash: 19, w_spear: 15, w_flurry: 16, w_bind: 17, w_reap: 16, w_bash: 15 })[A.kind] || 18;
 
 // 공격하는 쪽 몸놀림(앞 = 상대 쪽, 그림 좌표 qx+): 0~5 대기, 6~11 준비(점점), 12 멈춤, 13~14 동작, 15 넘침, 16~23 복귀
@@ -384,6 +385,41 @@ function poly(put, pts, col) {
 }
 const GOLD = ['#fff0b0', '#f0c040', '#b07820', '#5a3a10'];
 const angF = (fx, a) => fx > 0 ? a : Math.PI - a;   // 얼굴 오른쪽 기준 각 → 무대 각
+// 맞는 순간 터짐(모든 공격 공통 — 2026-11-05 밤샘 '우리 공격 효과 다듬기': PVFX와 견주니 맞는 순간 효과가 작았음): 공중 층(o = 바깥 1칸 먹선)에
+//  0장 = 흰 속 + 굵은 별빛 여덟(길고 짧게 번갈아 · 밑동 너비 9칸) → 1장 = 더 길고 가는 별빛 + 고리 → 2~6장 = 깨진 고리가 퍼지고 굵은 조각 여섯이 튐.
+//  s = 크기(스침 0.7 · 정타 1 · 큰 타 1.2 · 치명 1.45) · 치명 = 흰 긴 빛줄 넷을 더함
+function impactBurst(P, x, y, k, c, s, seed, crit) {
+  if (k < 0 || k > 6) return;
+  const rot = (seed % 7) * 0.13 + 0.2;
+  if (k <= 1) {
+    const R1 = (k ? 22 : 17) * s, R2 = (k ? 13 : 11) * s, base = (k ? 3.4 : 4.6) * s, r0 = 4 * s;
+    for (let i = 0; i < 8; i++) {
+      const a = rot + i * Math.PI / 4, R = i % 2 ? R2 : R1, ca = Math.cos(a), sa = Math.sin(a);
+      poly(P.o, [[x + ca * r0 - sa * base, y + sa * r0 + ca * base], [x + ca * R, y + sa * R], [x + ca * r0 + sa * base, y + sa * r0 - ca * base]], k ? c[1] : c[0]);
+    }
+    if (crit) for (let i = 0; i < 4; i++) { const a = rot + 0.39 + i * Math.PI / 2, R = (k ? 34 : 28) * s; line(P.o, [x + Math.cos(a) * 6 * s, y + Math.sin(a) * 6 * s], [x + Math.cos(a) * R, y + Math.sin(a) * R], '#ffffff', 2); }
+    disc(P.o, x, y, (k ? 5.5 : 7.5) * s, k ? c[0] : '#ffffff');
+  }
+  if (k >= 1 && k <= 4) ringPx(P.o, x, y, (9 + k * 5) * s, k < 3 ? c[0] : c[1], a => k < 2 || Math.floor(a * 5 + k) % 3 !== 0, 1, 2);
+  if (k >= 2) for (let i = 0; i < 6; i++) {
+    if (k >= 5 && i % 2) continue;
+    const a = rot + 0.5 + i * 1.047, d = (11 + (k - 2) * 5) * s + (i % 3), cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d + (k - 2) ** 2 * 0.3, w = 2.6 * s, L2 = 5 * s;
+    poly(P.o, [[cx - Math.sin(a) * w, cy + Math.cos(a) * w], [cx + Math.cos(a) * L2, cy + Math.sin(a) * L2], [cx + Math.sin(a) * w, cy - Math.cos(a) * w], [cx - Math.cos(a) * L2 * 0.6, cy - Math.sin(a) * L2 * 0.6]], i % 2 ? c[2] : c[1]);
+  }
+}
+// 꽃잎 한 장(타원 — 길이 len · 너비 wid · 끝 쪽 1/3 = 밝은 색)
+function petalPx(put, x, y, a, len, wid, col, hi) {
+  const ca = Math.cos(a), sa = Math.sin(a), R = Math.ceil(len + 1);
+  for (let yy = Math.floor(y - R); yy <= y + R; yy++) for (let xx = Math.floor(x - R); xx <= x + R; xx++) {
+    const dx = xx + 0.5 - x, dy = yy + 0.5 - y, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
+    if ((u / len) ** 2 + (v / wid) ** 2 <= 1) put(xx, yy, u > len * 0.35 ? hi : col);
+  }
+}
+// 하트(7×6 — 꽃향기): (x, y) = 가운데
+const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+function heartPx(put, x, y, col, hi) { const x0 = Math.round(x) - 3, y0 = Math.round(y) - 3; HEART.forEach((row, j) => { for (let i = 0; i < 7; i++) if (row[i] === '#') put(x0 + i, y0 + j, j === 1 && (i === 1 || i === 2) ? hi : col); }); }
+// 가시 한 개(굵기 2칸 · 끝 = 밝은 색): (x, y) = 끝, (nx, ny) = 날아가는 쪽
+function needlePx(put, x, y, nx, ny, len, c) { line(put, [x - nx * len, y - ny * len], [x - nx * 2, y - ny * 2], c[2], 2); line(put, [x - nx * 3, y - ny * 3], [x, y], c[0], 2); }
 // 열쇠 장 사이를 부드럽게: keys = [[장, 값], …]
 function keyAt(keys, f) { if (f <= keys[0][0]) return keys[0][1]; for (let i = 1; i < keys.length; i++) if (f <= keys[i][0]) { const [f0, v0] = keys[i - 1], [f1, v1] = keys[i], u = (f - f0) / (f1 - f0); return v0 + (v1 - v0) * u * u * (3 - 2 * u); } return keys[keys.length - 1][1]; }
 
@@ -848,8 +884,90 @@ export function skillFx(P, A, f, L, T, G, seed = 1, S = { D: [1, 0], fx: 1 }) {
       if (t >= 0 && t < dur + 16) { const u = Math.min(1, t / dur), cx = sx + (T[0] - sx) * ease(u), cy = L[1] - 4 + (T[1] - L[1]) * u - Math.sin(Math.PI * u) * 6, R = 5 + u * 10 + Math.max(0, t - dur) * 0.5, r1 = rng(seed); for (let i = 0; i < 30; i++) { const a = r1() * 6.283 + t * 0.15, rr = R * Math.sqrt(r1()), x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.8; if (t > dur + 10 && i % 2) continue; if (i % 6 === 0) disc(P.o, x, y, 1.6, c[1]); else P.p(Math.floor(x), Math.floor(y), i % 3 === 0 ? c[0] : c[2]); } }
       break;
     }
+    // ── 종 공통 · 평타 제 모양(2026-11-05 밤샘 — 전엔 종 연출을 빌려 덩굴 · 포자 · 평타가 모두 같은 초승달 베기로 보였음). 색 = 쓰는 종 색 ──
+    case 'tackle': {   // 평타(박치기 · 치기): 몸이 튀어 나갈 때 뒤로 굵은 바람줄 셋 → 맞는 곳 = 공통 터짐(크게) + 흙 · 잔조각
+      if (f === 13 || f === 14) for (let q = 0; q < 3; q++) { const y0 = L[1] - 12 + q * 8; line(P.o, [L[0] - (8 + q * 2) * fx, y0], [L[0] - (26 + q * 5) * fx, y0 + 1], f === 13 ? c[0] : c[1], 2); }
+      if (k >= 0 && k < 10) particles(P.p, burstParticles(seed, T[0], T[1], 10, 2.4, [c[0], c[1], c[2]], { g: 0.16, life: 10, up: 0.6, size: 2 }), k);
+      break;
+    }
+    case 'wrap': {   // 휘감기(덩굴): 대상 화분 양옆 땅에서 덩굴 둘이 솟아 몸을 감아 오름(앞쪽만 — 뒤는 몸이 가림) → 맞는 장에 조임 → 풀리며 잎 조각
+      const Bp = S.B0 || [T[0], G + 22], t = f - (I - 6);
+      if (t >= 0 && k < 9) {
+        const grow = Math.min(1, (t + 1) / 6), tight = k >= 0 && k < 3 ? 0.78 : 1, loose = k > 2 ? (k - 2) / 6 : 0;
+        [[-1, 0.4], [1, 3.5]].forEach(([side, ph], q) => {
+          const x0 = Bp[0] + side * ((S.rf || 16) + 1), stem = []; for (let y = Bp[1]; y >= G; y--) stem.push([x0 + side * Math.sin((Bp[1] - y) * 0.5) * 0.8, y]);
+          const shown = Math.max(2, Math.round(stem.length * Math.min(1, grow * 2.2)));
+          for (const [x, y] of strokePx(stem.slice(0, shown))) { if (loose && ((x + y + k) % 4 === 0)) continue; P.o(x, y, c[2]); P.o(x + side, y, c[1]); }
+          if (grow * 2.2 < 1) return;
+          const top = G - (G - T[1] + 6) * Math.min(1, (grow * 2.2 - 1) / 1.2), w0 = 15 * tight * (1 + loose * 0.5);
+          for (let y = G; y >= top; y -= 0.5) {
+            const u = (G - y) / Math.max(1, G - T[1]), ang = ph + u * 9.4 + (k > 2 ? k * 0.2 : 0), cs = Math.cos(ang);
+            if (cs < -0.15) continue;   // 몸 뒤로 도는 쪽은 안 그림
+            const x = Math.round(T[0] + Math.sin(ang) * w0 * (1 - u * 0.35)), yy = Math.round(y);
+            if (loose && ((x * 3 + yy + k) % 5 === 0)) continue;
+            P.o(x, yy, cs > 0.6 ? c[1] : c[2]); P.o(x, yy + 1, c[2]); P.o(x + 1, yy, c[2]);
+            if (Math.abs(Math.sin(ang * 1.5)) > 0.985 && cs > 0.3) petalPx(P.o, x + 3 * side, yy - 2, side > 0 ? -0.6 : -2.5, 3.2, 1.6, c[2], c[1]);   // 잎
+          }
+        });
+      }
+      if (k >= 3 && k < 13) particles(P.p, burstParticles(seed, T[0], T[1] + 8, 10, 1.6, [c[1], c[2], c[3]], { g: 0.1, life: 10, up: 0.4, size: 2 }), k - 3);
+      break;
+    }
+    case 'sprinkle': {   // 포자 뿌리기(버섯): 갓에서 굵은 포자 알갱이가 부채꼴로 흩뿌려져 대상에 쏟아짐(알갱이마다 작은 퍼프) → 대상 둘레 포자 안개
+      const r1 = rng(seed + 5);
+      for (let q = 0; q < 14; q++) {
+        const t0 = 12 + Math.floor(q / 3), dur = 5 + (q % 3), t = f - t0, ox = (r1() - 0.5) * 32, oy = (r1() - 0.5) * 24, hx = T[0] + ox, hy = T[1] + 6 + oy, sx = L[0] + 4 * fx, sy = L[1] - 10, arc = 16 + (q % 4) * 7;
+        if (t >= 0 && t < dur) { const u = (t + 1) / dur, x = sx + (hx - sx) * u, y = sy + (hy - sy) * u - Math.sin(Math.PI * u) * arc; disc(P.o, x, y, 3, q % 2 ? c[1] : c[2]); P.o(Math.floor(x) - 1, Math.floor(y) - 1, c[0]); P.o(Math.floor(x), Math.floor(y) - 1, c[0]); }
+        else if (t >= dur && t < dur + 5) { const kk = t - dur; ringPx(P.o, hx, hy, 2.5 + kk * 1.6, kk < 2 ? c[1] : c[2], a => Math.floor(a * 3 + kk) % 2 === 0); }
+      }
+      if (k >= 0 && k < 16) { const R = 10 + k * 1.4, r2 = rng(seed + 8); for (let i = 0; i < 22; i++) { const a = r2() * 6.283 + k * 0.1, rr = R * Math.sqrt(r2()), x = T[0] + Math.cos(a) * rr, y = T[1] + 6 + Math.sin(a) * rr * 0.6 - k * 0.3; if (k > 11 && i % 2) continue; P.p(Math.floor(x), Math.floor(y), i % 3 ? c[2] : c[1]); } }
+      break;
+    }
+    case 'scent': {   // 꽃향기(꽃): 꽃에서 굵은 향기 띠 둘이 물결치며 대상으로 흘러감(띠를 따라 꽃잎) → 대상을 감싼 향기 고리 + 꽃잎이 흩날림
+      const [dx, dy] = D, nx = -dy, ny = dx, dist = Math.hypot(T[0] - L[0], T[1] - L[1]), pc = A.petal || [c[1], c[2]];
+      for (let q = 0; q < 2; q++) {
+        const t = f - 12 - q * 2; if (t < 0 || t > 9) continue;
+        const head = Math.min(dist, (t + 1) * dist / 5), tail = Math.max(0, head - 50 + Math.max(0, t - 5) * 10), pts = [];
+        for (let a = tail; a <= head; a += 2) { const w = (q ? 8 : -8) + Math.sin(a * 0.09 + t * 0.8 + q * 2) * 8; pts.push([L[0] + dx * a + nx * w, L[1] - 6 + dy * a + ny * w]); }
+        if (pts.length > 1) for (const [x, y] of strokePx(pts)) { P.o(x, y - 1, pc[0]); P.o(x, y, c[0]); P.o(x, y + 1, pc[0]); P.o(x, y + 2, pc[1]); }   // 띠 = 4칸(가운데 밝은 줄)
+        for (const fr of [0.3, 0.7]) if (pts.length > 4) { const p = pts[Math.floor(pts.length * fr)]; heartPx(P.o, p[0] + 5 * (q ? 1 : -1), p[1] - 6 - (t % 3), pc[1], c[0]); }   // 띠를 따라 떠가는 하트
+      }
+      if (k >= 0 && k < 7) ringPx(P.o, T[0], T[1] + 6, 11 + k * 3, k < 3 ? c[0] : pc[0], a => Math.floor(a * 6 + k) % 3 !== 0, 0.55, 2);
+      if (k >= 0 && k < 14) particles(P.p, burstParticles(seed, T[0], T[1], 10, 1.8, [pc[0], pc[1], c[0]], { g: 0.04, life: 14, up: 0.6, size: 2 }), k);
+      break;
+    }
+    case 'petals': {   // 꽃잎 춤(꽃): 꽃잎 여덟 장이 공격 쪽 둘레를 돌다(예고) 줄지어 날아가 → 대상에서 큰 꽃 모양으로 활짝 터짐
+      const sx = L[0] + 6 * fx, sy = L[1] - 6, pc = A.petal || [c[1], c[2]];
+      for (let q = 0; q < 8; q++) {
+        const t = f - 10 - Math.floor(q / 2), orbit = 4, fly = 5, a0 = q * 0.785; if (t < 0 || t >= orbit + fly) continue;
+        let x, y, ang;
+        if (t < orbit) { const a = a0 + t * 0.9; x = sx + Math.cos(a) * 15; y = sy + Math.sin(a) * 9; ang = a + 1.57; }
+        else { const u = (t - orbit + 1) / fly, a1 = a0 + orbit * 0.9, px0 = sx + Math.cos(a1) * 15, py0 = sy + Math.sin(a1) * 9; x = px0 + (T[0] - px0) * ease(u) + Math.cos(a1 + u * 6) * 10 * (1 - u); y = py0 + (T[1] - py0) * ease(u) + Math.sin(a1 + u * 6) * 8 * (1 - u); ang = a1 + u * 6; }
+        petalPx(P.o, x, y, ang, 6, 3.2, pc[q % 2], c[0]);
+      }
+      if (k >= 0 && k < 8) { const R = 8 + k * 3.4; for (let q = 0; q < 5; q++) { const a = q * 1.2566 - 1.57 + k * 0.08; petalPx(P.o, T[0] + Math.cos(a) * R, T[1] + Math.sin(a) * R * 0.9, a, 6.5 + Math.min(3, k), 3.6, pc[q % 2], c[0]); } if (k < 3) disc(P.o, T[0], T[1], 5, c[0]); }
+      if (k >= 2 && k < 14) particles(P.p, burstParticles(seed, T[0], T[1], 12, 2, [pc[0], pc[1], c[0]], { g: 0.05, life: 12, size: 2 }), k - 2);
+      break;
+    }
+    case 'needles': {   // 도발 가시(선인장): 몸에서 굵은 가시 여섯이 부채꼴로 빠르게 쏘아져 → 대상 몸에 꽂혀 떨림 → 빠지며 작은 튐
+      const r1 = rng(seed + 9);
+      for (let q = 0; q < 6; q++) {
+        const t0 = 13 + (q % 3), t = f - t0, dur = 3, sx = L[0] + 8 * fx, sy = L[1] - 4 + (q - 2.5) * 3, ex = T[0] + (r1() - 0.5) * 22, ey = T[1] + 6 + (r1() - 0.5) * 22;
+        const ux = ex - sx, uy = ey - sy, Ln = Math.hypot(ux, uy) || 1, nx = ux / Ln, ny = uy / Ln;
+        if (t >= 0 && t < dur) { const u = (t + 1) / dur, x = sx + ux * u, y = sy + uy * u; needlePx(P.o, x, y, nx, ny, 10, c); for (let s2 = 1; s2 < 4; s2++) P.p(Math.floor(x - nx * (10 + s2 * 4)), Math.floor(y - ny * (10 + s2 * 4)), c[2]); }
+        else if (t >= dur && t < dur + 7) { const w = t - dur < 3 ? ((t - dur) % 2 ? 1 : -1) : 0; needlePx(P.o, ex - ny * w, ey + nx * w, nx, ny, 8, c); }   // 꽂혀 떨림
+      }
+      if (k >= 0 && k < 9) particles(P.p, burstParticles(seed, T[0], T[1], 8, 1.8, [c[0], c[1], c[2]], { g: 0.12, life: 9, size: 2 }), k);
+      break;
+    }
+  }
+  // 맞는 순간 터짐(모든 공격 공통 · 빗나감 · 포자 퍼프 빼고): 바닥을 타고 오는 기술은 아랫몸에 · 이미 크게 터지는 기술은 작게
+  if (A.kind !== 'sporepuff' && S.hit !== 'miss') {
+    const tier = S.hit || 'hit', s = (tier === 'graze' ? 0.7 : tier === 'crit' ? 1.45 : S.big ? 1.2 : 1) * (BURST_K[A.kind] ?? 1);
+    if (GROUND.has(A.kind)) impactBurst(P, T[0], G - 30, k, c, s, seed, tier === 'crit'); else impactBurst(P, T[0], T[1], k, c, s, seed, tier === 'crit');
   }
 }
+const BURST_K = { fireball: 0.75, blast: 0.6, shatter: 0.7, rockfall: 0.6, bloom: 0.85, tackle: 1.15 };
 
 // 맞은 쪽 성질 — I+3부터 20장쯤. pts = 대상 윗머리 점들, T = 머리, G = 흙 높이, L = 공격 쪽 머리(흡수가 돌아갈 곳)
 export function statusFx(P, A, f, T, G, pts, L, seed = 1) {

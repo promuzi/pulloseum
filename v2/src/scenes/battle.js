@@ -33,7 +33,9 @@ const SHAPE = {
   ranged: { fire: 'fireball', water: 'bubbles', grass: 'blades', bolt: 'bolt', earth: 'fireball', wind: 'gale', ice: 'fireball', '-': 'fireball' },   // 날아가는 것
   melee: { fire: 'slash', water: 'whip', grass: 'whip', bolt: 'slash', earth: 'slam', wind: 'slash', ice: 'slash', '-': 'slash' },          // 베기 · 채찍 · 내려치기
 };
-const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam', bite: 'lunge' };
+const MOVE_OF = { whip: 'lunge', blades: 'lunge', slash: 'lunge', slam: 'slam', bite: 'lunge', tackle: 'lunge' };
+// 평타 · 종 공통 = 제 모양(2026-11-05 밤샘 — 전엔 종 연출을 그대로 빌려 덩굴 · 포자 · 평타가 모두 페탈로즈 초승달 베기로 보였음) · 색 = 쓰는 종 색
+const OWN_KIND = { basic: 'tackle', j_wrap: 'wrap', j_lash: 'whip', j_spore: 'sprinkle', j_cloud: 'spores', j_scent: 'scent', j_petals: 'petals', j_needle: 'needles' };
 const STRIKE_F = 13;   // 공격하는 쪽이 앞으로 나가는 첫 장(attack.mjs attackerPose — 12 멈춤 → 13~14 동작) = 휘두름 소리// 광역 기술 = 맞는 자리 바닥에 넓게 퍼지는 충격파(납작한 고리 둘 · 그 속성 빛 · 점점 옅게) + 맞는 순간 무대가 그 색으로 잠깐 번쩍 — 단일 기술(한 점에 터짐)과 갈림
 function areaWave(g, st, age, [x, y], AY, AH) {
   const k0 = (age - (st.anim.I + 1) * FRAME_MS) / 560; if (k0 < 0 || k0 > 1.15) return;
@@ -66,6 +68,12 @@ function statusLights(v, who, x, y, t) {
 }
 function attackFx(s, ak) {
   if (ATTACKS[s.id]) return ATTACKS[s.id];
+  if (OWN_KIND[s.id]) {
+    const B = ATTACKS[s.fx || ak] || ATTACKS.flower_grass, kind = OWN_KIND[s.id], key = kind + '|' + (s.fx || ak);
+    let A = fxMemo.get(key);
+    if (!A) { A = { kind, move: MOVE_OF[kind] || 'cast', c: B.c, status: B.status, petal: B.petal || [B.c[1], B.c[2]], gem: B.gem || B.c[0], ...(B.fizz ? { fizz: B.fizz } : {}) }; fxMemo.set(key, A); }
+    return A;
+  }
   const shape = s.area ? 'area' : (s.hits || 1) > 1 ? 'multi' : s.ranged ? 'ranged' : 'melee';
   const sp = ATTACKS[s.fx || ak] || ATTACKS.flower_grass, own = !s.el || s.tier === 'u' || s.basic;   // 개성 · 기본기 · 무속성 = 종 색
   if (own && shape !== 'area' && shape !== 'multi') return sp;
@@ -608,7 +616,7 @@ export const battle = {
       else if (e.t === 'endure' || e.t === 'steal') out.push({ kind: 'note', ms: 700, side: e.who, msg: e.t === 'endure' ? `${ga(e.name)} 버텼다!` : `${ga(nm(e.who))} 햇빛을 빼앗았다!`, tone: 'note' });
       else if (e.t === 'reveal' || e.t === 'armorBreak') out.push({ kind: 'note', ms: 700, ev: e, side: e.who, popText: e.t === 'armorBreak' ? '갑주 깨짐' : '은신 풀림', msg: e.t === 'armorBreak' ? `${nm(e.who)}의 갑주가 부서졌다!` : e.mine ? `${nm(e.who)}의 은신이 풀렸다` : `${ga(nm(e.who))} 드러났다!`, tone: 'note' });   // 효과 목록은 ev.list로 바뀜
       else if (e.t === 'hit') {
-        const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak), anim = makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length);
+        const s = e.link ? { ...sk(e.who), id: e.link.id, name: e.link.name, area: false, hits: e.of || 1 } : sk(e.who), ak = e.atkKey || B[e.who].key, tk = e.tgtKey || B[e.to].key, A = attackFx(s, ak), anim = makeAttack(A, ak, tk, e.who === 'foe', this.seed % 97 + out.length, { tier: e.tier, big: e.dmg >= ((B[e.to] && B[e.to].max) || 1e9) * 0.25 });
         // 연타 둘째 타부터 = 맞기 4칸 앞에서 시작(2026-11-04 사용자 '연타 연출 속도감이 너무 없고 느려 … 빠르게 파바박') · 다음 타가 이어지면 맞은 뒤 4칸에서 끊고
         //  마지막 타만 끝 동작까지(전엔 첫 타가 끝 동작 1.4초를 다 돌아 첫 타 → 둘째 타가 1.6초 벌어졌음 — 영상 검수)
         const skip = e.n > 1 ? Math.max(0, anim.I - 4) : 0, end = more.has(e) ? Math.min(FRA, anim.I + 4) : FRA, ms = (end - skip) * FRAME_MS;
