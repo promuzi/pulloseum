@@ -353,7 +353,7 @@ export const bag = {
     shown.forEach((p, i) => {
       const ry = y + 64 + i * 40;
       g.text(p.name, 22, ry + 10, { font: 'bold', color: P.main });
-      button(app, 'gp_' + i, W - 84, ry + 4, 60, 28, '접목', { style: 'gold', icon: 'vine', iconTint: true, onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; if (r.to === 'draft') openDraft(app, p); else app.toast(`${p.name}: ${eul(sk.name)} 배웠어요`); } }) });
+      button(app, 'gp_' + i, W - 84, ry + 4, 60, 28, '접목', { style: 'gold', icon: 'vine', iconTint: true, onTap: () => app.act('graft', { id: p.uid, scion: sc.id }).then(r => { if (r) { this.pickFor = null; if (r.to === 'draft') openDraft(app, p); else { sfx('levelup'); app.toast(`${p.name}: ${eul(sk.name)} 배웠어요 — ${r.to === 'battle' ? '장착' : '보관'}에 넣었어요`); } } }) });   // 칸이 있으면 바로 배움 · 다 찼을 때만 놓을 칸 고르기(2026-11-04)
     });
     if (foot) g.text([more ? `배울 수 있는 식물 ${more} 더` : '', other ? `못 배우는 식물 ${other}` : ''].filter(Boolean).join(' · '), W / 2, y + h - 60, { color: P.dim, align: 'center' });
     button(app, 'gs_close', W / 2 - 50, y + h - 38, 100, 28, '닫기', { style: 'night', onTap: () => { this.pickFor = null; } });

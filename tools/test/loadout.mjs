@@ -277,23 +277,34 @@ const game = () => newGame({ nickname: '시험', starter: 'flower_grass' }, make
   throws(() => graft(s, p.uid, 'sc2'), '같은 기술 둘째 가지 = 막힘(고르기에서 기다리는 중)');
   ok(s.scions.length === 1 && s.scions[0].id === 'sc2', '둘째 가지는 남음');
 }
-// ⑩ 접목 = 카드 고르기(2026-10-22 — 사용자 "스킬 배워서 교체할 때처럼 · 보류하면 다시 접목 가지로"): 보류 = 가지가 돌아옴 · 확정 = 가지를 씀 · 칸에 놓임
+// ⑩ 접목: 칸이 있으면 바로 배움(2026-11-04 사용자 '접목하면 바로 작동 하는 걸로' — 빈 장착 칸 → 보관) ·
+//  칸이 다 찼을 때만 카드 고르기(2026-10-22 "스킬 배워서 교체할 때처럼 · 보류하면 다시 접목 가지로"): 보류 = 가지가 돌아옴 · 확정 = 가지를 씀 · 칸에 놓임
 {
   const { graft, graftHold, draftApply, slotLayout } = await import('../../v2/src/game/logic.js');
-  const { bloomPool, canGraft } = await import('../../v2/src/game/catalog.js');
+  const { bloomPool, canGraft, SKILLS } = await import('../../v2/src/game/catalog.js');
   const s = game(), p = s.plants[0];
   const known0 = new Set([...p.skills.battle, ...p.skills.store, ...p.skills.forgot]);
-  const sk = bloomPool(p.key, 0).map(x => x.id).find(id => !known0.has(id) && !canGraft(p, id));
-  s.scions = [{ id: 'g1', skill: sk }];
+  const pool = bloomPool(p.key, 0).map(x => x.id).filter(id => !known0.has(id) && !canGraft(p, id)), sk = pool[0];
+  s.scions = [{ id: 'g0', skill: sk }];
+  const room = p.skills.store.length;
+  const r0 = graft(s, p.uid, 'g0');
+  ok((r0.to === 'battle' || r0.to === 'store') && !s.scions.length && !(p.drafts || []).length && [...p.skills.battle, ...p.skills.store].includes(sk), `칸이 있으면 바로 배움(${r0.to}) · 가지를 씀 · 고르기 창 없음`);
+  // 칸을 다 채운 뒤(보관 여섯 · 장착 여섯) 새 가지 = 놓을 칸 고르기
+  const known1 = new Set([...p.skills.battle, ...p.skills.store, ...p.skills.forgot]);
+  const sk2 = pool.find(id => !known1.has(id)) || Object.keys(SKILLS).find(id => !known1.has(id) && !canGraft(p, id));
+  const filler = Object.keys(SKILLS).filter(id => id !== sk2 && !known1.has(id)).slice(0, 6 - p.skills.store.length);
+  p.skills.store.push(...filler); p.skills.battle = p.skills.battle.map((x, i) => x || filler[i] || 'basic');
+  ok(room <= 6 && p.skills.store.length === 6 && !p.skills.battle.includes(null), '준비: 칸 다 참');
+  s.scions = [{ id: 'g1', skill: sk2 }];
   graft(s, p.uid, 'g1');
-  ok(!s.scions.length && p.drafts[0].kind === 'graft' && p.drafts[0].scion.id === 'g1', '접목 = 가지를 고르기에 맡김');
+  ok(!s.scions.length && p.drafts[0].kind === 'graft' && p.drafts[0].scion.id === 'g1', '칸이 다 참 = 가지를 고르기에 맡김');
   graftHold(s, p.uid);
   ok(s.scions.length === 1 && s.scions[0].id === 'g1' && !p.drafts.some(d => d.kind === 'graft'), '보류 = 가지가 목록으로 돌아옴');
   graft(s, p.uid, 'g1');
   const L = slotLayout(p), b = [...L.battle], at = b.findIndex((x, i) => i > 0 && x);
-  b[at] = sk;   // 장착 칸 하나를 바꿈(원래 기술 = 지운 기술로)
+  b[at] = sk2;   // 장착 칸 하나를 바꿈(원래 기술 = 지운 기술로)
   const r = draftApply(s, p.uid, 0, { battle: b, store: L.store });
-  ok(r.got[0] === sk && p.skills.battle.includes(sk) && !s.scions.length && !p.drafts.some(d => d.kind === 'graft'), '확정 = 가지를 쓰고 그 칸에 놓임');
+  ok(r.got[0] === sk2 && p.skills.battle.includes(sk2) && !s.scions.length && !p.drafts.some(d => d.kind === 'graft'), '확정 = 가지를 쓰고 그 칸에 놓임');
 }
 console.log(fails ? `실패 ${fails}` : '모두 통과');
 process.exit(fails ? 1 : 0);

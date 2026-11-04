@@ -409,7 +409,10 @@ export const plant = {
   peekAct(app, k, what) {
     const s = app.state, p = s.plants[s.active] || s.plants[0], id = p && this.idAt(p, k); if (!id) return;
     this.peek.closing = true; sfx('flip');
-    if (what === 'graft') { const f = graftFit(p, s).find(x => x.sc.skill === id); if (!f) return; return app.act('graft', { id: p.uid, scion: f.sc.id }).then(r => { if (r) openDraft(app, p); }); }   // 접목 = 카드 한 장 고르기 창(놓을 칸 · 보류하면 가지가 돌아감)
+    if (what === 'graft') {   // 접목 = 바로 배움(2026-11-04 사용자 '접목하면 바로 작동' — 빈 장착 칸 → 보관) · 칸이 다 찼을 때만 놓을 칸 고르기 창(보류하면 가지가 돌아감)
+      const f = graftFit(p, s).find(x => x.sc.skill === id), nm = skOf(p, id).name; if (!f) return;
+      return app.act('graft', { id: p.uid, scion: f.sc.id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); sfx('levelup'); app.toast(`${eul(nm)} 배웠어요 — ${r.to === 'battle' ? '장착' : '보관'}에 넣었어요`); });
+    }
     if (what === 'regress') { const nm = skOf(p, id).name; return ask(app, `${eul(nm)} 되돌릴까요?`, '유전자 회귀 주사 1개를 써요', () => app.act('regress', { id: p.uid, skill: id }).then(r => { if (!r) return; if (r.to === 'draft') return openDraft(app, p); app.toast(`${nm} — 되돌렸어요`); }), '되돌리기'); }
     const passive = !!(CARDS[id] && !isSkillCard(id));
     if (what === 'discard') { const n = cardPrice(id), nm = CARDS[id].name; return ask(app, `${eul(nm)} 버릴까요?`, `돈 +${n} — 이 식물에서 사라져요`, () => app.act('discardCard', { id: p.uid, card: id }).then(r => r && app.toast(`돈 +${r.credits}`)), '버리기'); }

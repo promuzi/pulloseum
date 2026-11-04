@@ -64,12 +64,12 @@ try {
     const act = await E(() => { const r = window.__app.input.regions.filter(x => x.id === 'peek_act').pop(); return !!r; });
     ok(act, '뒷면 아래 [접목] 단추');
     await shot('03_graft_peek');
-    const n0 = await E(() => window.__app.state.scions.length);
+    const n0 = await E(() => window.__app.state.scions.length), want = cards[0].slice('skc_gf:'.length);
     ok(await press('peek_act'), '[접목] 누름'); await adv(900);
-    ok(await E(() => !!window.__app.draft), '접목 → 카드 놓기 창');
+    const got = await E((uid, sk) => { const A = window.__app, pl = A.state.plants.find(x => x.uid === uid); return { draft: !!A.draft, on: [...pl.skills.battle, ...pl.skills.store].includes(sk), toast: A.toastMsg }; }, uid, want);
+    ok(!got.draft && got.on, `접목 = 바로 배움(고르기 창 없음 · ${got.toast})`);   // 2026-11-04 사용자 '접목하면 바로 작동'
     ok((await E(() => window.__app.state.scions.length)) === n0 - 1, '가지 하나를 씀');
-    await shot('04_graft_draft');
-    await E(() => { window.__app.draft = null; });
+    await shot('04_graft_done');
   }
   // ③ 지운 기술 = 카드 · 누름 = 뒷면 + [되돌리기](회귀 주사 · 빈 칸 있음)
   await E(uid => { const A = window.__app, s = A.state, pl = s.plants.find(x => x.uid === uid); s.items.regress = 2; if (!pl.skills.forgot.length) pl.skills.forgot.push('f_ball', 'w_gun'); pl.skills.store = pl.skills.store.slice(0, 4); A.router.set('plant', { tab: 'skill', sub: 'forgot' }); }, uid);
@@ -85,7 +85,7 @@ try {
     ok(await E(() => !!window.__app.confirm), '되돌리기 확인 창');
     await E(() => { window.__app.confirm = null; });
   }
-  // ④ 가방 · 접목 가지 = 카드(같은 기술 둘 = ×2) → 누름 = 누구에게?(배울 수 있는 식물만) → [접목] = 카드 놓기 창
+  // ④ 가방 · 접목 가지 = 카드(같은 기술 둘 = ×2) → 누름 = 누구에게?(배울 수 있는 식물만 — 가방에서만 식물을 고름) → [접목] = 바로 배움
   await E(() => { const A = window.__app, s = A.state; if (s.scions[0]) s.scions.push({ id: 'dup_test', skill: s.scions[0].skill }); A.router.set('bag', { tab: 'scion' }); });
   await adv(900);
   const gcards = await E(() => window.__app.input.regions.filter(r => r.id.startsWith('gr_')).map(r => r.id));
@@ -96,7 +96,12 @@ try {
     const rows = await E(() => window.__app.input.regions.filter(r => r.id.startsWith('gp_')).length);
     ok(rows >= 1, `누구에게? = 배울 수 있는 식물 ${rows}`);
     await shot('08_bag_who');
-    if (rows) { ok(await press('gp_0'), '[접목] 누름'); await adv(900); ok(await E(() => !!window.__app.draft), '가방에서 접목 → 카드 놓기 창'); }
+    if (rows) {
+      const n1 = await E(() => window.__app.state.scions.length);
+      ok(await press('gp_0'), '[접목] 누름'); await adv(900);
+      ok(await E(() => !window.__app.draft && !window.__app.router.cur.pickFor), '가방에서 접목 = 바로 배움(고르기 창 없음 · 누구에게? 닫힘)');
+      ok((await E(() => window.__app.state.scions.length)) === n1 - 1, '가방 가지 하나를 씀');
+    }
   }
   ok(!errs.length, '페이지 오류 없음 ' + errs.join(' | '));
 } finally { await b.close(); srv.close(); }
