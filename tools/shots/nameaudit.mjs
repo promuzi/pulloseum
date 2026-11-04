@@ -30,7 +30,7 @@ try {
       for (const w of [66, 62]) {
         rec.length = 0;
         SC.cardFront(G, 0, 0, w, 90, sk, { can: true });
-        const lines = rec.filter(r => r.y > 40 && r.o.align === 'center').map(r => r.s), name = sk.name.trim();
+        const lines = rec.filter(r => r.y > 40 && r.o.align === 'center' && !/^\+\d$/.test(r.s)).map(r => r.s), name = SC.faceName(sk).trim();   // 앞면 이름(강화 패시브는 '+1' 뺀 이름) · 아래 테 '+1' 표식 글자는 이름 줄이 아님
         const tag = `${sk.name}(${sk.id} · ${w}칸${FR.hasFrame(sk) ? ' · 테' : ''}) = ${lines.join(' / ')}`;
         if (lines.join('').replace(/\s/g, '') !== name.replace(/\s/g, '')) out.cut.push(tag);
         else if (lines.length > 1 && lines.join(' ') !== name) out.mid.push(tag);

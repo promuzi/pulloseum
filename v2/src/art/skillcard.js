@@ -234,6 +234,8 @@ function nameLines(name, maxW) {
   }
   return { lines: wrapName(name, 'bold', maxW).slice(0, 2), font: 'bold', lh: 12 };
 }
+// 앞면 이름 = 강화 패시브는 끝 '+1' · '+2'를 뺌(2026-11-04 사용자 '스킬명에 적으면 2줄이 되니깐' — 강화 단계는 아래 테 가운데 표식 · 뒷면 제목은 그대로)
+export const faceName = sk => (sk.passive && sk.lv > 1 ? String(sk.name).replace(/\s*\+\d+$/, '') : sk.name);
 // 앞면(손패 크기 w×h, 논리 칸 — 지금 66×90). o = { can(쓸 수 있나), short(에너지가 모자라나), lit(고름), lock, shine(0~1 빛 띠) }
 export function cardFront(g, x, y, w, h, sk, o = {}) {
   x |= 0; y |= 0;
@@ -256,7 +258,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     g.rect(cx - 1, y + 1, 2, 2, MF.light);
   }
   const art = drawFrameArt(g, x, y, w, h, sk, o.lit);   // 묶음 테(속성 → 종 → 기본 — frames.js): 그림 · 이름 띠 위, 이름 글자 아래
-  const { lines, font, lh } = nameLines(sk.name, aw - (art ? 10 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (art ? 8 : 0) - (lines.length - 1) * lh - gh) / 2);   // 종 테(30칸 · 그림자)는 두꺼워 이름 폭을 3칸씩 더 줄이고 아래 8칸을 비움(아래 팔에 안 가리게)
+  const { lines, font, lh } = nameLines(faceName(sk), aw - (art ? 10 : 4)), gh = glyphH(font), ny = Math.round(by + 1 + (bh - 1 - (art ? 8 : 0) - (lines.length - 1) * lh - gh) / 2);   // 종 테(30칸 · 그림자)는 두꺼워 이름 폭을 3칸씩 더 줄이고 아래 8칸을 비움(아래 팔에 안 가리게)
   lines.forEach((ln, i) => g.text(ln, x + w / 2, ny + i * lh, { font, color: C.text, align: 'center' }));
   if (o.shine != null && o.shine < 1) {   // 쓸 수 있게 된 순간: 비스듬한 빛 띠가 한 번 스침(Balatro 박 카드처럼)
     const p = o.shine, bx = ax - 16 + p * (aw + 32);
@@ -271,7 +273,7 @@ export function cardFront(g, x, y, w, h, sk, o = {}) {
     const ic = icon(sk.el);
     if (ic) { const cx = ax + 8, cy = by - 8; g.disc(cx, cy, 7, C.ink); g.disc(cx, cy, 6, ELEMENT[sk.el].main); g.disc(cx, cy, 5, '#101a2e'); g.img(ic, cx - Math.floor(ic.width / 2), cy - Math.floor(ic.height / 2)); }
   }
-  if (sk.passive && sk.lv > 1) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22): 그림 왼쪽 아래
+  if (sk.passive && sk.lv > 1 && !art) upTag(g, ax + 2, by - 15, sk.lv, gh);   // 강화 카드(+1 · +2 — 2026-10-22) 그림 왼쪽 아래 꼬리표 = 그림 테가 없을 때만(있으면 아래 테 가운데 표식 — frames.js drawLevel)
   if (dim) rrect(g, x + 3, y + 3, w - 6, h - 6, 2, 'rgba(6,10,20,0.55)');
   // 비용 마름모(왼쪽 위) · 수치 표(오른쪽 위 — 검 · 방패 · 회피 · 보호막 · 회복, 버프는 비움)
   //  (오른쪽 위 원판은 자리가 정해져 있어 왼쪽 표시 폭을 재지 않음 — 모래시계 띠 · 보석 띠 셋도 카드 왼쪽에서 30칸 안)
