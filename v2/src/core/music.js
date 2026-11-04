@@ -73,6 +73,7 @@ export function buildGraph(ac, out, noise, pw) {
     mar: bus(0.6, -0.14, 0.22), kal: ebus(0.5, 0.12, 0.3, 0.16, 0.14, -0.3),
     chipA: bus(0.4, -0.18, 0.1), chipL: ebus(0.34, 0.08, 0.14, 0.2, 0.16, -0.3), tri: bus(0.8), ndrum: bus(0.8, 0, 0.05),
     lush: hbus(0.3, 0, 0.25, 0.5), sbell: hbus(0.32, 0.22, 0.2, 0.42), glead: ebus(0.42, -0.08, 0.25, 0.26, 0.22, 0.3, 0.3),
+    ubass: bus(0.85, -0.04, 0.08), ride: bus(0.7, 0.28, 0.18),   // 스윙 재즈(걸음 베이스 · 라이드 · 하이햇 발)
   };
 }
 
@@ -280,6 +281,26 @@ function gleadV(A, t, f, len, v) {
   for (const x of [o, h, l]) { x.start(t); x.stop(end + 0.6); }
   return 7;
 }
+// ── 스윙 재즈 악기(2026-11-04 사용자 '재즈 특유의 박자 갖고 노는 느낌은 못 만드나? … 버전 만들어봐') ──
+// 콘트라베이스 손가락 뜯기(걸음 베이스): 사인 몸통 + 톱니(옅게) → 닫혀 가는 부드러운 거름망, 뜯는 순간 살짝 높았다 내려앉음 + 낮은 '툭' — 다음 음까지 이어 울림
+function ubassV(A, t, f, len, v) {
+  const ac = A.ac, o = ac.createOscillator(), w = ac.createOscillator(), wg = ac.createGain(), lp = ac.createBiquadFilter(), a = ac.createGain(), end = t + Math.max(0.12, len);
+  w.type = 'sawtooth';
+  for (const x of [o, w]) { x.frequency.setValueAtTime(f * 1.014, t); x.frequency.exponentialRampToValueAtTime(f, t + 0.035); }
+  wg.gain.value = 0.32;
+  lp.type = 'lowpass'; lp.Q.value = 0.9; lp.frequency.setValueAtTime(1300, t); lp.frequency.exponentialRampToValueAtTime(380, t + 0.22);
+  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.005); a.gain.setTargetAtTime(v * 0.5, t + 0.02, 0.1); a.gain.setTargetAtTime(0, end, 0.04);
+  o.connect(lp); w.connect(wg); wg.connect(lp); lp.connect(a); a.connect(A.ubass);
+  for (const x of [o, w]) { x.start(t); x.stop(end + 0.25); }
+  return 6 + noiseHit(A, t, 0.03, 'lowpass', 520, 0.7, v * 0.3, A.ubass);
+}
+// 라이드 심벌('띵 띵-가 띵'): 높은 띠 잡음(길게 사라짐) + 서로 어긋난 두 사인(쇠 울림 '띵')
+function rideV(A, t, v) {
+  const ac = A.ac; let n = noiseHit(A, t, 0.6, 'bandpass', 7400, 0.8, v * 0.55, A.ride, 0.002);
+  for (const [fr, k, d] of [[3170, 0.16, 0.5], [4790, 0.1, 0.35]]) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = fr; env(g, t, v * k, 0.002, d); o.connect(g); g.connect(A.ride); o.start(t); o.stop(t + d + 0.05); n += 2; }
+  return n;
+}
+const chickV = (A, t, v) => noiseHit(A, t, 0.045, 'bandpass', 4200, 1, v, A.ride);   // 하이햇 발('칙' — 2 · 4박)
 // 전등 지지직: 빛 글자 줄을 따라 — 'm'(켜짐) 말고 글자가 바뀔 때마다 전기 찌직(꺼질수록 큼), 잡음 + 120Hz 톱니(안정기 웅)
 const LV = { a: 1, e: 0.82, h: 0.6, k: 0.72 };
 function crackleV(A, t, pat, ms, v) {
@@ -419,6 +440,9 @@ export function play(A, e) {
     case 'lush': return lushV(A, e.t, e.fs, e.len, e.v);
     case 'sbell': return bellV(A, e.t, e.f, e.len, e.v, A.sbell);
     case 'glead': return gleadV(A, e.t, e.f, e.len, e.v);
+    case 'ubass': return ubassV(A, e.t, e.f, e.len, e.v);
+    case 'ride': return rideV(A, e.t, e.v);
+    case 'chick': return chickV(A, e.t, e.v);
     case 'crk': return crackleV(A, e.t, e.pat, e.ms, e.v);
     case 'tick': return tickV(A, e.t, e.v);
     case 'zap': return zapV(A, e.t, e.v);
@@ -494,6 +518,18 @@ const PH = ['x o x o x o x o x o x o x o x o', 'x o x o x o x o x o x o x o O .'
 //  신스 리드: 대기 가락 그대로 + 16분 당김(음 하나를 16분 앞당겨 밀기)만 — A3 는 대기 LEAD3 그대로
 const PJ1 = ['. . . . A4 - C5 - D5 - - C5 - - A4 -', 'G4 - F4 - - - - - . . F4 G4 - - A4 -', 'Bb4 - - A4 - - G4 - F4 - - - G4 - - -', 'E4 - - - - - . . C#5 - - D5 - - E5 -'];
 const PJ2 = ['F5 - - E5 - - D5 - - - C5 - D5 - - -', 'A4 - - - - - - - . . . . F4 - A4 -', 'D5 - - C5 - - Bb4 - - - A4 - Bb4 - C5 -', 'C#5 - - - - - - - E5 - - - . . . .'];
+// ── 스윙 재즈(스마트팜 새 판 — 2026-11-04 사용자 '재즈 특유의 박자 갖고 노는 느낌'): 박을 셋으로 쪼갬(흔들림 j — 8분 뒤 칸 = 셋잇단 셋째 자리) ──
+//  걸음 베이스: 박마다 한 음(화음 음 → 다음 화음 으뜸음에 반음 · 온음으로 다가감) · 두 벌을 4마디마다 바꿈 · 가끔 넷째 박 '그리고'에 같은 음 '툭'(당김)
+const WALK1 = ['D2 - - - E2 - - - F2 - - - A2 - - -', 'Bb2 - - - A2 - - - F2 - - - Ab2 - Ab2_ -', 'G2 - - - F2 - - - D2 - - - Bb1 - - -', 'A1 - - - C#2 - - - E2 - - - Eb2 - Eb2_ -'];
+const WALK2 = ['D2 - - - F2 - - - G2 - - - A2 - - -', 'Bb2 - - - D3 - - - C3 - - - A2 - - -', 'G2 - - - D2 - - - F2 - - - G#2 - G#2_ -', 'A2 - - - G2 - - - E2 - - - C#2 - - -'];
+const BRKJ = ['G1 - Bb1 - D2 - F2 - A2 - G2 - F2 - D2 -', 'A1 - C#2 - E2 - G2 - Bb2 - A2 - E2 - Eb2 -'];   // 브레이크 = 베이스 홀로 흔들린 8분(딸림화음을 타고 오르내려 으뜸음 반음 위로)
+//  북: 라이드 '띵 띵-가 띵 띵-가'(2 · 4박 강세) · 하이햇 발 2 · 4박 · 킥은 박마다 아주 여리게 + 가끔 엇박 '쿵' · 스네어 = 셋잇단 고스트 잔소리 · 넷째 박 '그리고' 강세
+const RIDE = ['x . . . X . o . x . . . X . o .', 'x . . . X . o . x . o . X . o .'], CHICK = '. . . . x . . . . . . . x . . .';
+const KJ = ['o . . . o . . . o . . . o . . .', 'o . . . o . . . o . X . o . . .', 'o . . . o . X . o . . . o . . .'];
+const SNJ = ['. . . . . . o . . . . . . . . .', '. . . . . . . . . . o . . . x .', '. . . . . o o . . . . . . . . .', '. . o . . . . . . . . . . o x .'];
+//  건반 반주(긴장음 화음 T): 첫 박을 비우고 엇박에 · 넷째 박 '그리고'에 다음 화음을 미리(N — 당김, 다음 마디 첫 박은 비움) · B 부분 = 8분 셋씩 묶어 쳐서 박과 어긋났다 넷째 마디에 맞음(헤미올라)
+const CJA = ['. . . . . . T - . . T_ . . . . .', 'T_ . . . . . T - . . . . . . . .', '. . . . T_ . . . . . T - . . . .', '. . T_ . . . . . . . . . . . N -'];
+const CJB = ['T_ . . . . . T_ . . . . . T_ . . .', '. . T_ . . . . . T_ . . . . . T_ .', '. . . . T_ . . . . . T_ . . . . .', 'T_ . . . . . T_ . . . . . . . N -'];
 // ── 탐사 · 정비 · 상점이 같이 쓰는 화음 음(2026-11-04 — 옛 실내악 것 중 남은 것) ──
 //  세 음 화음(마림바가 아래부터 굴려 침): 9 · b9 반음 부딪힘은 뺌(2026-10-17 "불협화음 같아") · 가까운 자리로 이어짐
 const STR = { Dm9: ['D4', 'F4', 'A4'], Bbmaj9: ['D4', 'F4', 'Bb4'], Gm9: ['D4', 'G4', 'Bb4'], A7b9: ['C#4', 'E4', 'A4'] };
@@ -596,6 +632,23 @@ const ARR = {
     if (mel) { L.syn = P(mel[ci]); L.vib = L.syn; }
     return L;
   },
+  // 스윙 재즈(스마트팜 새 판 — 2026-11-04 사용자 '재즈 특유의 박자 갖고 노는 느낌은 못 만드나? … 버전 만들어봐'): 모든 층이 셋잇단 흔들림(j) ·
+  //  걸음 베이스 · 라이드 · 하이햇 발 · 여린 킥 · 스네어 잔소리 · 건반 엇박 · 당김(다음 화음 미리) · B 부분 헤미올라 · 가락 = 비브라폰(대기 가락 그대로 · 박보다 살짝 늦게 LAG)
+  swing(q, cur, st, sb) {
+    const { pos, ci, brk, sect } = q, L = {}, w2 = Math.floor(sb / 4) % 2;
+    if (brk) {   // 브레이크 = 베이스 홀로 흔들린 8분 + 라이드 · 첫 박 화음 하나 → 끝 마디는 스네어 셋잇단으로 돌아감
+      L.wb = P(BRKJ[brk === 'b2a' ? 0 : 1]); L.ride = P(RIDE[0]); L.chick = P(CHICK); L.jcomp = P('T_ . . . . . . . . . . . . . . .');
+      if (brk !== 'b2a') L.jsn = P('. . . . . . . . o o x . x x X .');
+      return L;
+    }
+    L.wb = P((w2 ? WALK2 : WALK1)[ci]);
+    L.ride = P(RIDE[pos % 2]); L.chick = P(CHICK);
+    L.jkick = P(ci === 1 ? KJ[1] : ci === 3 ? KJ[2] : KJ[0]);
+    L.jsn = P(SNJ[pos % 4]);
+    L.jcomp = P((sect === 'B' ? CJB : CJA)[ci]);
+    const mel = melOf(q); if (mel) L.jvib = P(mel[ci]);
+    return L;
+  },
   // ── 탐사 · 정비 · 상점(2026-11-04 사용자 'BCD 전부 어울리는 곳에 배치해줘' — 후보 넷 중 ㉡ ㉢ ㉣) — 브레이크는 모두 대기의 베이스 솔로 ──
   // 상점 = 로파이 말렛(㉡): 대기 북 · 베이스 그대로(같은 흔들림) + 건반 자리에 마림바(화음을 굴려 침) + 가락 = 칼림바 · 가락 없는 마디엔 칼림바 두 음
   mallet(q) {
@@ -650,7 +703,7 @@ const ARR = {
   },
 };
 // 이어 붙이기: 가락 층(새로 들어올 땐 기다림) · 새 결로 들어갈 때 차오르는 타악 · 결이 바뀔 때 옛 결이 남기는 꼬리
-const MELO = ['lead', 'syn', 'vib', 'mel', 'fmel', 'kal', 'pld', 'gld'];
+const MELO = ['lead', 'syn', 'vib', 'mel', 'fmel', 'kal', 'pld', 'gld', 'jvib'];
 const PERC_IN = ['kick', 'snare', 'hat', 'pkick', 'psn', 'pclap', 'phat'];
 const TAIL = { jpop: { phat: 'O . . . . . . . . . . . . . . .' } };
 const mixOf = (st, ly) => (st.mix && st.mix[ly] != null ? st.mix[ly] : 1);
@@ -748,6 +801,7 @@ export const STATES = {
   home: { song: 'home' },
   menu: { song: 'home', mix: { lead: 0, pad: 0 }, var: 'menu' },
   farm: { song: 'home', style: 'jpop' },
+  farmSwing: { song: 'home', style: 'swing' },   // 스마트팜 스윙 재즈 판(2026-11-04 — 사용자가 듣고 고르기 전 · 들어 보기 = node tools/shots/musicscene.mjs farm swing)
   // 2026-11-04 사용자 'BCD 전부 어울리는 곳에 배치해줘'(옛 실내악 대신 후보 넷 중 셋): 탐사 = 우주를 떠도는 넓은 패드 · 높은 종 · 탐사선 정비 = 기계 손보는 8비트 · 상점 = 아늑한 말렛
   //  들어 보기 = node tools/shots/musicscene.mjs
   space: { song: 'home', style: 'amb' },
@@ -769,13 +823,18 @@ const LAYER = {
   lbass: ['bass', 0.36], lkick: ['kick', 0.72], lsn: ['snare', 0.62], lhat: ['hat', 0.26], mar: ['mar', 0.42], kal: ['kal', 0.62], kal2: ['kal', 0.26], lpad: ['pad', 0.05],
   tri: ['tri', 0.42], nk: ['nkick', 0.9], ns: ['nsn', 0.85], nh: ['nhat', 0.3], parp: ['parp', 0.25], pld: ['plead', 0.7],
   abass: ['bass', 0.34], akick: ['kick', 0.66], aclap: ['clap', 0.6], ahat: ['hat', 0.18], lush: ['lush', 0.07], abell: ['sbell', 0.24], gld: ['glead', 0.36],
+  wb: ['ubass', 0.5], ride: ['ride', 0.32], chick: ['chick', 0.32], jkick: ['kick', 0.25], jsn: ['snare', 0.42], jcomp: ['ep', 0.24], jvib: ['vib', 0.45],   // 스윙 재즈(킥은 들리기보다 느껴지게)
 };
-const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'lkick', 'lsn', 'lhat', 'nk', 'ns', 'nh', 'akick', 'aclap', 'ahat']);   // 이음 장식 동안 빼는 타악
+const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'lkick', 'lsn', 'lhat', 'nk', 'ns', 'nh', 'akick', 'aclap', 'ahat', 'ride', 'chick', 'jkick', 'jsn']);   // 이음 장식 동안 빼는 타악
 const DK = { X: 1.25, x: 1, o: 0.45, O: 1, r: 0.8, R: 0.75 };   // 북 글자 → 세기
 // 스윙: 붐뱁 = 곡의 swing(16분 뒤 칸이 0.6 자리) · p = 거의 곧게(16분 뒤 칸 0.55 — 재즈팝 · 정비 8비트의 16분 아르페지오) · s = 곧게 · 상점 · 탐사 = 대기 흔들림 그대로
-const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', tri: 'p', nk: 'p', ns: 'p', nh: 'p', parp: 'p', pld: 'p' };
+//  j = 스윙 재즈: 박을 셋으로 — 박 안 둘째 칸 = 셋잇단 둘째(1⅓) · 셋째 칸(8분 뒤) = 셋잇단 셋째(2⅔ — 흔들린 8분) · 넷째 칸 = 3⅓(다음 박 바로 앞)
+const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', tri: 'p', nk: 'p', ns: 'p', nh: 'p', parp: 'p', pld: 'p',
+  wb: 'j', ride: 'j', chick: 'j', jkick: 'j', jsn: 'j', jcomp: 'j', jvib: 'j' };
+const JSW = [0, 1 / 3, 2 / 3, 1 / 3], LAG = { jvib: 0.025 };   // LAG = 박보다 살짝 늦게 치는 층(초 — 재즈 가락의 느긋함)
 function swOff(s, ly, p) {
   const w = LSW[ly];
+  if (w === 'j') return JSW[s & 3] * STEP + (LAG[ly] || 0);
   if (w === 's') return 0;
   if (w === 'p') return s & 1 ? 0.1 * STEP : 0;
   return s & 1 ? (p.swing - 0.5) * 2 * STEP : 0;
@@ -792,6 +851,7 @@ const RUN_IN = {
   mallet: (C, t, nt, j) => C.out({ t, i: 'mar', f: NOTE(nt), v: 0.2 + 0.03 * j }),
   bit8: (C, t, nt, j) => C.out({ t, i: 'parp', f: NOTE(T8(nt, 1)), len: STEP * 0.9, v: 0.06 + 0.01 * j }),
   amb: (C, t, nt, j) => C.out({ t, i: 'sbell', f: NOTE(T8(nt, 1)), len: 0.4, v: 0.12 + 0.02 * j }),
+  swing: (C, t, nt, j) => C.out({ t, i: 'vib', f: NOTE(T8(nt, 1)), len: 0.3, v: 0.1 + 0.02 * j }),
 };
 const BOOT_UP = ['D4', 'F4', 'A4', 'C5', 'E5', 'F5', 'A5', 'C6', 'D6', 'E6', 'F6', 'A6'];
 const FILLS = {
@@ -979,6 +1039,8 @@ export class Conductor {
       if (inst === 'kick') return this.out({ t, i: 'kick', v: vv, o: {} });
       if (inst === 'snare') return this.out({ t, i: 'snare', v: vv, o: { ghost: nm === 'o' } });
       if (inst === 'clap') return nm === 'o' ? this.out({ t, i: 'snare', v: vv * 0.6, o: { ghost: true } }) : this.out({ t, i: 'clap', v: vv });
+      if (inst === 'ride') return this.out({ t, i: 'ride', v: vv, opt: nm === 'o' });
+      if (inst === 'chick') return this.out({ t, i: 'chick', v: vv });
       if (inst === 'nkick') return this.out({ t, i: 'nkick', v: vv });
       if (inst === 'nsn') return this.out({ t, i: 'nsn', v: vv, o: { ghost: nm === 'o' } });
       if (inst === 'nhat') return this.out({ t, i: 'nhat', v: vv, o: { open: nm === 'O' }, opt: nm === 'o' });
