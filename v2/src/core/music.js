@@ -5,7 +5,7 @@
 //  · 세션(층) = 베이스(= 전등 소리 '두드 두드등') · 전등 지지직(타악) · 킥 · 스네어 · 하이햇 · 건반(FM 전자 피아노) · 가락 · 패드 · 베이스 솔로 ·
 //    전투 = 808 · 박수 · 종소리 · 칩 가락 · 금관 찌름.
 //  · 같은 곡 안의 결(장르, 2026-10-16 사용자 "탐사는 클래식? 양육은 재즈? 다만 과하게 바뀌어서 피로하지 않게"): 대기 = 붐뱁 그대로 · 메뉴 = 붐뱁 + 건반 홑음 가락(옅게) ·
-//    스마트팜 = 재즈팝(10-17 "식물팜은 재즈팝": 거의 곧은 16분 · 2 · 4박 스네어 + 박수 · 그루브 베이스 · 로즈 · 신스 리드 + 비브라폰) ·
+//    스마트팜 = 스윙 재즈(2026-11-04 사용자 '재즈 특유의 박자 갖고 노는 느낌' → '새판 버전 좋아ㄱㄱ': 흔들림 · 걸음 베이스 · 라이드 · 당김 반주 · 비브라폰 — 10-17 재즈팝은 박이 거의 곧아 뺌) ·
 //    탐사 = 앰비언트 비트 · 탐사선 정비 = 8비트 칩튠 · 상점 = 로파이 말렛(2026-11-04 사용자 'BCD 전부 어울리는 곳에 배치해줘' — 옛 몽환적 실내악은
 //    '템포도 느려져서 어색하고 악기도 별로'로 뺌, 셋 다 북을 남겨 박이 이어짐) · 식물 관리 = 앰비언트 + 종. 가락의 큰 틀(음 흐름 · 강박 음 · 구절)은 어느 결이든 대기 가락 그대로. 화음 · 조 · 빠르기 · 곡 자리는 같음 — 결이 바뀔 땐 앞 마디 끝 박에 새 결의 이음 →
 //    첫 마디는 새 결을 옅게(가락 없이, 타악은 차오름) + 옛 결 꼬리가 사라짐 → 가락은 그다음 두 마디 묶음 첫 마디부터.
@@ -51,12 +51,10 @@ export function buildGraph(ac, out, noise, pw) {
   keysIn.connect(trem); trem.connect(bus(0.5, -0.08, 0.3));
   const padIn = G(1), plp = ac.createBiquadFilter(); plp.type = 'lowpass'; plp.frequency.value = 2400; padIn.connect(plp); plp.connect(bus(0.26, 0, 0.55));
   const drone = bus(0.9, 0, 0.7);
-  // 비브라폰(재즈팝 가락 겹침): 모터 떨림 하나를 버스에 · 신스 리드: 점8분 메아리(옅게, 반대쪽에서)
+  // 비브라폰(스윙 재즈 가락): 모터 떨림 하나를 버스에
   const vibIn = G(1), vtrem = G(1), vlfo = ac.createOscillator(), vlfoG = G(0.2);
   vlfo.frequency.value = 5.6; vlfo.connect(vlfoG); vlfoG.connect(vtrem.gain); vlfo.start(0);
   vibIn.connect(vtrem); vtrem.connect(bus(0.5, 0.2, 0.42));
-  const synIn = G(1), echo = ac.createDelay(1), efb = G(0.26), ewet = G(0.2);
-  echo.delayTime.value = BEAT * 0.75; synIn.connect(bus(0.36, 0.1, 0.25)); synIn.connect(echo); echo.connect(efb); efb.connect(echo); echo.connect(ewet); ewet.connect(bus(1, -0.3, 0.3));
   // 넓은 홀 울림(탐사 앰비언트 — 넓은 패드 · 종 · 유리 리드가 보냄): 긴 잔향 하나(2026-10-17 "몽환 요소 줄이고": 1.7초 · 0.17)
   const hall = ac.createConvolver(); hall.buffer = makeIR(ac, 1.7); const hret = G(0.17); hall.connect(hret); hret.connect(sum);
   const hbus = (v, p, sv, hv) => { const g = bus(v, p, sv), s = G(hv); g.connect(s); s.connect(hall); return g; };
@@ -68,7 +66,7 @@ export function buildGraph(ac, out, noise, pw) {
     hat: bus(0.9, 0.24, 0, drumIn), snare: bus(1, 0, 0.12, drumIn),
     keys: keysIn, lead: bus(0.42, 0.16, 0.32), bell: bus(0.36, -0.22, 0.36), chip: bus(0.32, 0.1, 0.16), pad: padIn, stab: bus(0.3, 0.05, 0.25),
     crk: bus(0.5, 0, 0.1), fx: bus(0.45, 0, 0.3), drone, droneNow: null,
-    vib: vibIn, syn: synIn,
+    vib: vibIn,
     // 상점 = 로파이 말렛(마림바 · 칼림바) · 탐사선 정비 = 8비트(펄스 · 세모 · 잡음 북) · 탐사 = 앰비언트(넓은 패드 · 종 · 유리 리드)
     mar: bus(0.6, -0.14, 0.22), kal: ebus(0.5, 0.12, 0.3, 0.16, 0.14, -0.3),
     chipA: bus(0.4, -0.18, 0.1), chipL: ebus(0.34, 0.08, 0.14, 0.2, 0.16, -0.3), tri: bus(0.8), ndrum: bus(0.8, 0, 0.05),
@@ -90,12 +88,11 @@ function bassV(A, t, f, len, v, o = {}) {
   s.type = 'sine'; w.type = 'sawtooth';
   const f0 = o.scoop ? f * 2 ** (-o.scoop / 12) : o.from || f;
   for (const x of [s, w]) { x.frequency.setValueAtTime(f0, t); if (f0 !== f) x.frequency.exponentialRampToValueAtTime(f, t + (o.glide || 0.08)); }
-  // fb = 재즈팝 핑거 베이스: 거름망이 조금 더 밝게 열렸다 닫히고, 뜯은 뒤 살짝 더 줄어듦
-  lp.type = 'lowpass'; lp.Q.value = o.fb ? 3 : 4; lp.frequency.setValueAtTime(o.solo ? 1900 : o.fb ? 1500 : o.scoop ? 1700 : 1250, t); lp.frequency.exponentialRampToValueAtTime(o.solo ? 640 : o.fb ? 340 : 280, t + (o.fb ? 0.12 : 0.17));
-  wg.gain.value = o.solo ? 0.8 : o.fb ? 0.62 : 0.5;
+  lp.type = 'lowpass'; lp.Q.value = 4; lp.frequency.setValueAtTime(o.solo ? 1900 : o.scoop ? 1700 : 1250, t); lp.frequency.exponentialRampToValueAtTime(o.solo ? 640 : 280, t + 0.17);
+  wg.gain.value = o.solo ? 0.8 : 0.5;
   w.connect(lp); lp.connect(wg); wg.connect(g); s.connect(g);
   const end = t + Math.max(0.05, len);
-  g.gain.value = 0; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.005); g.gain.setTargetAtTime(v * (o.fb ? 0.62 : 0.72), t + 0.02, o.fb ? 0.12 : 0.09); g.gain.setTargetAtTime(0, end, 0.03);
+  g.gain.value = 0; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.005); g.gain.setTargetAtTime(v * 0.72, t + 0.02, 0.09); g.gain.setTargetAtTime(0, end, 0.03);
   g.connect(A.bass); s.start(t); w.start(t); s.stop(end + 0.22); w.stop(end + 0.22);
   return 5;
 }
@@ -191,8 +188,8 @@ function stabV(A, t, fs, len, v) {   // 금관 찌름(전투): 톱니 화음 + �
   f.connect(a); a.connect(A.stab);
   return n;
 }
-// ── 결(장르)별 악기: 재즈팝(스마트팜) ──
-// 비브라폰(재즈팝 가락 겹침): 사인 + 4배 배음(말렛이 친 맑은 첫소리, 빨리 사라짐) — 모터 떨림은 버스에서 하나로, 끝에서 댐퍼로 멈춤
+// ── 결(장르)별 악기: 스윙 재즈(스마트팜) · 탐사 · 정비 · 상점은 아래 ──
+// 비브라폰(스윙 재즈 가락): 사인 + 4배 배음(말렛이 친 맑은 첫소리, 빨리 사라짐) — 모터 떨림은 버스에서 하나로, 끝에서 댐퍼로 멈춤
 function vibV(A, t, f, len, v) {
   const ac = A.ac, o = ac.createOscillator(), h = ac.createOscillator(), hg = ac.createGain(), a = ac.createGain(), end = t + Math.max(0.12, len);
   o.frequency.value = f; h.frequency.value = f * 4;
@@ -201,18 +198,6 @@ function vibV(A, t, f, len, v) {
   h.connect(hg); hg.connect(a); o.connect(a); a.connect(A.vib);
   o.start(t); h.start(t); o.stop(end + 0.7); h.stop(t + 0.35);
   return 4;
-}
-// 신스 리드(재즈팝 가락 — 따라 부를 만큼 또렷하게): 톱니 + 사각(살짝 어긋나게) → 부드러운 거름망, 늦은 비브라토 · 버스에 점8분 메아리
-function synV(A, t, f, len, v) {
-  const ac = A.ac, o1 = ac.createOscillator(), o2 = ac.createOscillator(), og = ac.createGain(), lp = ac.createBiquadFilter(), a = ac.createGain(), l = ac.createOscillator(), lg = ac.createGain(), end = t + Math.max(0.08, len);
-  o1.type = 'sawtooth'; o2.type = 'square'; o1.frequency.value = f; o2.frequency.value = f; o2.detune.value = 6; og.gain.value = 0.45;
-  lp.type = 'lowpass'; lp.Q.value = 1.4; lp.frequency.setValueAtTime(Math.min(5200, f * 7), t); lp.frequency.exponentialRampToValueAtTime(Math.min(3000, f * 4), t + 0.18);
-  l.frequency.value = 5.6; lg.gain.value = 0; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(14, t + Math.min(0.4, len));
-  l.connect(lg); lg.connect(o1.detune); lg.connect(o2.detune);
-  a.gain.value = 0; a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(v, t + 0.012); a.gain.setTargetAtTime(v * 0.78, t + 0.03, 0.2); a.gain.setTargetAtTime(0, end, 0.05);
-  o1.connect(lp); o2.connect(og); og.connect(lp); lp.connect(a); a.connect(A.syn);
-  for (const o of [o1, o2, l]) { o.start(t); o.stop(end + 0.35); }
-  return 8;
 }
 // ── 탐사 · 정비 · 상점 악기(2026-11-04 사용자 '클래식은 … 악기도 별로임' → 'BCD 전부 어울리는 곳에' — 코드 합성으로 잘 나는 소리만: 말렛 · 칩 · 패드) ──
 // 마림바(상점 반주): 사인 + 3.9배 배음(나무 막대 첫소리, 빨리 사라짐) — 낮은 음일수록 길게 울림
@@ -428,7 +413,6 @@ export function play(A, e) {
     case 'pad': return padV(A, e.t, e.fs, e.len, e.v);
     case 'stab': return stabV(A, e.t, e.fs, e.len, e.v);
     case 'vib': return vibV(A, e.t, e.f, e.len, e.v);
-    case 'syn': return synV(A, e.t, e.f, e.len, e.v);
     case 'mar': return marV(A, e.t, e.f, e.v);
     case 'kal': return kalV(A, e.t, e.f, e.v);
     case 'parp': return pulseV(A, e.t, e.f, e.len, e.v, 'pulse12', A.chipA, false);
@@ -463,7 +447,7 @@ const CH = {
   Dm9: ['C4', 'E4', 'F4', 'A4'], Bbmaj9: ['C4', 'D4', 'F4', 'A4'], Gm9: ['Bb3', 'D4', 'F4', 'A4'], A7b9: ['Bb3', 'C#4', 'E4', 'G4'],
   A7sus: ['A3', 'D4', 'E4', 'G4'], C6: ['G3', 'C4', 'E4', 'A4'], Fmaj9: ['A3', 'C4', 'E4', 'G4'],
   Dmaj: ['D4', 'F#4', 'A4', 'D5'], Dadd9: ['D4', 'F4', 'A4', 'E5'],
-  // 재즈팝 긴장음(T — 같은 화음에 11 · #11 · 13 · #9 b13) · 미끄러짐(S — 다음 화음 반음 위에서 미끄러져 들어감)
+  // 긴장음(T — 같은 화음에 11 · #11 · 13 · #9 b13 — 스윙 재즈 건반) · 미끄러짐(S — 다음 화음 반음 위에서 미끄러져 들어감)
   Dm11: ['C4', 'E4', 'G4', 'A4'], Bbmaj9s11: ['C4', 'D4', 'E4', 'A4'], Gm13: ['Bb3', 'E4', 'F4', 'A4'], A7alt: ['G3', 'C4', 'F4', 'Bb4'],
   Ebm9: ['Db4', 'F4', 'Gb4', 'Bb4'], Bmaj9: ['C#4', 'D#4', 'F#4', 'A#4'], Abm9: ['B3', 'Eb4', 'Gb4', 'Bb4'], Bb7b9: ['Ab3', 'B3', 'D4', 'F4'],
   // 전투(금관 찌름)
@@ -502,22 +486,6 @@ const FOCUS_MEL = {
   A2: ['. . . . A4 - - - D5 - - - - - - -', 'G4 - F4 - - - - - . . . . . . . .', 'Bb4 - - - - - - - F4 - - - - - - -', 'E4 - - - - - - - C#5 - - - - - - -'],
   B: ['F5 - - - - - D5 - - - - - - - - -', 'A4 - - - - - - - . . . . . . . .', 'D5 - - - - - Bb4 - - - - - - - - -', 'C#5 - - - - - - - E5 - - - - - - -'],
 };
-// ── 스마트팜 = 재즈팝: 거의 곧은 16분(살짝 스윙) · 2 · 4박 스네어 + 박수 · 그루브 베이스 · 로즈 화음 · 신스 리드(+ 비브라폰 겹침) ──
-//  베이스: 처음 부분 · 막 바뀐 마디 = 근음 · 옥타브만 → 그 뒤 = 16분 고스트 · 옥타브 · 다음 근음에 반음 · 온음으로 닿음
-const PB0 = ['D2^ - - - - - . . D3 - - - . . . .', 'Bb1^ - - - - - . . Bb2 - - - . . . .', 'G1^ - - - - - . . G2 - - - . . . .', 'A1^ - - - - - . . A2 - - - . . C#2 -'];
-const PB = ['D2^ - . D2_ . . D3 - . . A2 - C3 - . A2', 'Bb1^ - . Bb1_ . . Bb2 - . . F2 - D2 - . F#2', 'G1^ - . G1_ . . G2 - . . D2 - F2 - . Bb1', 'A1^ - . A1_ . . A2 - . . E2 - G2 - . Eb2'];   // A7 끝 = Eb(으뜸 D에 반음 위에서 닿음 — 대리 화음 느낌)
-//  로즈(뿌리음 없는 9화음 그대로): 처음 부분 = 온음표 → 그 뒤 = 길게 잡고 엇박에 한 번 밀기
-const COMPP = ['C - - - - - - - . . C_ - - - - -', '. . C - - - - - - - C_ - - - . .', 'C - - - - - - - . . C_ - - - - -', '. . C - - - - - - - C_ - - - . .'];
-//  그루브(가락 부분): 긴장음 화음이 엇박을 타며 밀고(2박 '그리고' · 3박 '그리고') · 마디 끝 '4박 그리고'에 다음 화음 반음 위 화음 → 다음 마디 첫 박으로 미끄러져 내려옴
-const COMPJ = ['T - - . . . T_ - . . T_ - - . S_ .', '. . T - - . . . T_ . . T_ - - S_ .', 'T - - . . . T_ - . . T_ - - . S_ .', '. . T - - . . . T_ . . T_ - . S_ .'];
-//  스네어: 2 · 4박 + 고스트(16분 뒤 칸) — 박을 타는 느낌
-const PSN = ['. . . . X . . o . . o . X . . o', '. . . . X . . o . . o . X . o .'];
-//  북: 처음 부분 = 8분 하이햇 + 1박 킥 + 여린 백비트 → 그 뒤 = 16분 하이햇 · 킥(1 · 2박 '그리고' · 3박) · 2 · 4박 스네어 + 박수
-const PK = ['X . . . . . x . X . . . . . . .', 'X . . . . . x . X . . x . . . .'];
-const PH = ['x o x o x o x o x o x o x o x o', 'x o x o x o x o x o x o x o O .'];
-//  신스 리드: 대기 가락 그대로 + 16분 당김(음 하나를 16분 앞당겨 밀기)만 — A3 는 대기 LEAD3 그대로
-const PJ1 = ['. . . . A4 - C5 - D5 - - C5 - - A4 -', 'G4 - F4 - - - - - . . F4 G4 - - A4 -', 'Bb4 - - A4 - - G4 - F4 - - - G4 - - -', 'E4 - - - - - . . C#5 - - D5 - - E5 -'];
-const PJ2 = ['F5 - - E5 - - D5 - - - C5 - D5 - - -', 'A4 - - - - - - - . . . . F4 - A4 -', 'D5 - - C5 - - Bb4 - - - A4 - Bb4 - C5 -', 'C#5 - - - - - - - E5 - - - . . . .'];
 // ── 스윙 재즈(스마트팜 새 판 — 2026-11-04 사용자 '재즈 특유의 박자 갖고 노는 느낌' → '재즈가 됐는데 템포가 느려짐'): 두 배 빠르기 느낌 ──
 //  곡 박(90)은 그대로, 재즈 층은 두 칸을 한 박으로(재즈 박 = 180 — 박마다 베이스 한 음이라 대기 곡보다 느리게 들리지 않음) · 흔들림 j = 홀수 칸(재즈 박의 뒤 8분)을 늦게
 //  걸음 베이스: 재즈 박마다 한 음(화음 음 → 다음 화음 으뜸음에 반음 · 온음으로 다가감) · 두 벌을 4마디마다 바꿈 · 가끔 마디 끝 '다-둠'(같은 음 둘)
@@ -611,28 +579,6 @@ const ARR = {
     } else if (sb < 1) { delete L.lead; delete L.pad; }
     return L;
   },
-  // 재즈팝(스마트팜 · 보관고): 처음 부분 · 막 바뀐 마디 = 옅은 북 + 근음 베이스 + 로즈 온음표 → 그 뒤 그루브 + 신스 리드(비브라폰 겹침)
-  jpop(q, cur, st, sb, k) {
-    const { first, ci, brk, sect } = q, L = {};
-    if (brk) {   // 브레이크: 대기처럼 베이스 솔로(같은 가락) 위로 로즈 · 북이 옅게 계속(2026-10-17 사용자 "후반부에 재즈가 끊기던데") — 끝 마디는 스네어 채움으로 돌아감
-      L.pbass = P(brk === 'b1' ? SOLO1 : SOLO2[brk === 'b2a' ? 0 : 1]);
-      L.comp = P(brk === 'b2a' ? 'T - - . . . T_ . . . T_ - - . . .' : 'T - - . . . T_ . . . . . T_ - S_ .');
-      L.pkick = P('X . . . . . . . X . . . . . . .');
-      L.phat = P('x o x o x o x o x o x o x o x o');
-      L.psn = P(brk === 'b2a' ? '. . . . o . . o . . o . o . . o' : '. . . . o . . o . . o . o x x X');
-      return L;
-    }
-    const soft = sect === 'A' || k === 0;
-    L.pbass = P(soft ? PB0[ci] : PB[ci]);
-    L.comp = P(soft ? 'C - - - - - - - - - - - - - - -' : COMPJ[ci]);
-    L.pkick = P(soft ? 'X . . . . . . . . . . . . . . .' : PK[ci === 3 ? 1 : 0]);
-    L.phat = P(soft ? 'x . x . x . x . x . x . x . x .' : PH[ci === 3 ? 1 : 0]);
-    L.psn = P(soft ? '. . . . o . . . . . . . o . . .' : PSN[ci === 3 ? 1 : 0]);
-    if (!soft) L.pclap = P('. . . . x . . . . . . . x . . .');
-    const mel = sect === 'A2' ? PJ1 : sect === 'B' ? (first ? PJ1 : PJ2) : sect === 'A3' ? LEAD3 : null;
-    if (mel) { L.syn = P(mel[ci]); L.vib = L.syn; }
-    return L;
-  },
   // 스윙 재즈(스마트팜 새 판 — 2026-11-04 사용자 '재즈 특유의 박자 갖고 노는 느낌은 못 만드나? … 버전 만들어봐' → '템포가 느려짐' = 두 배 빠르기 느낌): 모든 층이 흔들림(j) ·
   //  걸음 베이스(재즈 박마다) · 라이드 · 하이햇 발 · 여린 킥 · 스네어 잔소리 · 건반 엇박 · 당김(다음 화음 미리) · B 부분 헤미올라 · 가락 = 비브라폰(대기 가락 그대로 · 박보다 살짝 늦게 LAG)
   swing(q, cur, st, sb) {
@@ -704,9 +650,7 @@ const ARR = {
   },
 };
 // 이어 붙이기: 가락 층(새로 들어올 땐 기다림) · 새 결로 들어갈 때 차오르는 타악 · 결이 바뀔 때 옛 결이 남기는 꼬리
-const MELO = ['lead', 'syn', 'vib', 'mel', 'fmel', 'kal', 'pld', 'gld', 'jvib'];
-const PERC_IN = ['kick', 'snare', 'hat', 'pkick', 'psn', 'pclap', 'phat'];
-const TAIL = { jpop: { phat: 'O . . . . . . . . . . . . . . .' } };
+const MELO = ['lead', 'mel', 'fmel', 'kal', 'pld', 'gld', 'jvib'];
 const mixOf = (st, ly) => (st.mix && st.mix[ly] != null ? st.mix[ly] : 1);
 const styleOf = s => (STATES[s] && STATES[s].style) || 'hip';
 
@@ -795,14 +739,13 @@ const SONGS = {
     },
   },
 };
-// 상태 → 곡 · 결(style: 없음 = 붐뱁 · jpop = 재즈팝 · amb = 앰비언트 비트 · bit8 = 8비트 칩튠 · mallet = 로파이 말렛) · 섞음(층 세기 배수, 0 = 끔) · 변주(var) — 같은 곡 안의 상태끼리는 곡 자리 · 화음이 이어지고 결 · 층만 바뀜
+// 상태 → 곡 · 결(style: 없음 = 붐뱁 · swing = 스윙 재즈 · amb = 앰비언트 비트 · bit8 = 8비트 칩튠 · mallet = 로파이 말렛) · 섞음(층 세기 배수, 0 = 끔) · 변주(var) — 같은 곡 안의 상태끼리는 곡 자리 · 화음이 이어지고 결 · 층만 바뀜
 export const STATES = {
   idle: { song: null },
   title: { song: 'title', wait: true },   // 소리가 풀린 뒤에 처음부터(조율을 놓치지 않게)
   home: { song: 'home' },
   menu: { song: 'home', mix: { lead: 0, pad: 0 }, var: 'menu' },
-  farm: { song: 'home', style: 'jpop' },
-  farmSwing: { song: 'home', style: 'swing' },   // 스마트팜 스윙 재즈 판(2026-11-04 — 사용자가 듣고 고르기 전 · 들어 보기 = node tools/shots/musicscene.mjs farm swing)
+  farm: { song: 'home', style: 'swing' },   // 스마트팜 · 보관고 = 스윙 재즈(2026-11-04 사용자 '새판 버전 좋아ㄱㄱ' — 옛 재즈팝은 뺌)
   // 2026-11-04 사용자 'BCD 전부 어울리는 곳에 배치해줘'(옛 실내악 대신 후보 넷 중 셋): 탐사 = 우주를 떠도는 넓은 패드 · 높은 종 · 탐사선 정비 = 기계 손보는 8비트 · 상점 = 아늑한 말렛
   //  들어 보기 = node tools/shots/musicscene.mjs
   space: { song: 'home', style: 'amb' },
@@ -819,18 +762,17 @@ const LAYER = {
   bass: ['bass', 0.36], solo: ['bass', 0.42], b808: ['b808', 0.2], kick: ['kick', 0.8], snare: ['snare', 0.8], hat: ['hat', 0.32], clap: ['clap', 0.75],
   keys: ['ep', 0.26], lead: ['lead', 0.5], chip: ['chip', 0.5], bell: ['bell', 0.42], pad: ['pad', 0.07], stab: ['stab', 0.26], crk: ['crk', 0.55], fx: ['fx', 0.2],
   mel: ['ep1', 0.2], fmel: ['bell', 0.6],   // 메뉴 건반 홑음 · 식물 관리 종
-  pbass: ['bass', 0.3], comp: ['ep', 0.2], syn: ['syn', 0.37], vib: ['vib', 0.2], pkick: ['kick', 0.6], psn: ['snare', 0.5], pclap: ['clap', 0.32], phat: ['hat', 0.2],   // 재즈팝
   // 상점(로파이 말렛) · 탐사선 정비(8비트) · 탐사(앰비언트) — 세기 = 대기 곡 층과 견줘 맞춤(soundreel --stems: 가락 ≈ lead 0.037 · 반주 ≈ 건반 아래 · 북은 대기보다 옅게)
   lbass: ['bass', 0.36], lkick: ['kick', 0.72], lsn: ['snare', 0.62], lhat: ['hat', 0.26], mar: ['mar', 0.42], kal: ['kal', 0.62], kal2: ['kal', 0.26], lpad: ['pad', 0.05],
   tri: ['tri', 0.42], nk: ['nkick', 0.9], ns: ['nsn', 0.85], nh: ['nhat', 0.3], parp: ['parp', 0.25], pld: ['plead', 0.7],
   abass: ['bass', 0.34], akick: ['kick', 0.66], aclap: ['clap', 0.6], ahat: ['hat', 0.18], lush: ['lush', 0.07], abell: ['sbell', 0.24], gld: ['glead', 0.36],
   wb: ['ubass', 0.45], ride: ['ride', 0.28], chick: ['chick', 0.32], jkick: ['kick', 0.25], jsn: ['snare', 0.42], jcomp: ['ep', 0.24], jvib: ['vib', 0.45],   // 스윙 재즈(킥은 들리기보다 느껴지게)
 };
-const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'pkick', 'psn', 'pclap', 'phat', 'lkick', 'lsn', 'lhat', 'nk', 'ns', 'nh', 'akick', 'aclap', 'ahat', 'ride', 'chick', 'jkick', 'jsn']);   // 이음 장식 동안 빼는 타악
+const DRUMS = new Set(['kick', 'snare', 'hat', 'clap', 'lkick', 'lsn', 'lhat', 'nk', 'ns', 'nh', 'akick', 'aclap', 'ahat', 'ride', 'chick', 'jkick', 'jsn']);   // 이음 장식 동안 빼는 타악
 const DK = { X: 1.25, x: 1, o: 0.45, O: 1, r: 0.8, R: 0.75 };   // 북 글자 → 세기
-// 스윙: 붐뱁 = 곡의 swing(16분 뒤 칸이 0.6 자리) · p = 거의 곧게(16분 뒤 칸 0.55 — 재즈팝 · 정비 8비트의 16분 아르페지오) · s = 곧게 · 상점 · 탐사 = 대기 흔들림 그대로
+// 스윙: 붐뱁 = 곡의 swing(16분 뒤 칸이 0.6 자리) · p = 거의 곧게(16분 뒤 칸 0.55 — 정비 8비트의 16분 아르페지오) · s = 곧게 · 상점 · 탐사 = 대기 흔들림 그대로
 //  j = 스윙 재즈(두 배 빠르기 느낌 — 두 칸 = 재즈 한 박): 홀수 칸(재즈 박의 뒤 8분)을 0.3칸 늦게(셋잇단에 가까운 흔들림) — 처음 판(한 박 = 네 칸 · 8분 뒤를 셋잇단 셋째로)은 '템포가 느려짐'으로 바꿈
-const LSW = { pbass: 'p', comp: 'p', syn: 'p', vib: 'p', pkick: 'p', psn: 'p', pclap: 'p', phat: 'p', tri: 'p', nk: 'p', ns: 'p', nh: 'p', parp: 'p', pld: 'p',
+const LSW = { tri: 'p', nk: 'p', ns: 'p', nh: 'p', parp: 'p', pld: 'p',
   wb: 'j', ride: 'j', chick: 'j', jkick: 'j', jsn: 'j', jcomp: 'j', jvib: 'j' };
 const JSW = [0, 0.3, 0, 0.3], LAG = { jvib: 0.02 };   // LAG = 박보다 살짝 늦게 치는 층(초 — 재즈 가락의 느긋함)
 function swOff(s, ly, p) {
@@ -861,15 +803,11 @@ const FILLS = {
     if (k === 0) C.out({ t, i: 'riser', len: left * STEP, v: 0.12 });
     if (k % 2 === 0) { const nt = BOOT_UP[Math.min(BOOT_UP.length - 1, k / 2)]; C.out({ t, i: 'bell', f: NOTE(nt), len: 0.25, v: 0.3 }); C.out({ t, i: 'ep', f: NOTE(nt), len: 0.22, v: 0.17 }); }
   },
-  // 같은 곡 안: 붐뱁으로 = 열린 하이햇 한 번 · 재즈팝으로 = 끝 박 16분 고스트 스네어가 차오르고 넷째 박 '그리고'에 로즈가 다음 화음을 밀어 침 ·
-  //  상점 · 정비 · 탐사로 = 그 결의 악기(마림바 · 펄스 · 종)가 다음 화음을 16분으로 훑어 올라감(끝 박)
+  // 같은 곡 안: 붐뱁으로 = 열린 하이햇 한 번 · 스마트팜 · 상점 · 정비 · 탐사로 = 그 결의 악기(비브라폰 · 마림바 · 펄스 · 종)가 다음 화음을 16분으로 훑어 올라감(끝 박)
   mix(C, f, k, left, t) {
     const to = styleOf(f.state), nx = C.plan && C.plan.nx;
     if (to === 'hip' || to === styleOf(f.from)) { if (left === 2) C.out({ t, i: 'hat', v: 0.12, o: { open: true } }); return; }
-    if (to === 'jpop') {
-      if (left <= 4) C.out({ t, i: 'snare', v: [0, 0.3, 0.24, 0.18, 0.14][left], o: { ghost: left > 1 } });
-      if (left === 2 && CH[nx]) CH[nx].forEach((n, j) => C.out({ t: t + j * 0.006, i: 'ep', f: NOTE(n), len: 0.5, v: 0.15 }));
-    } else if (RUN_IN[to] && RUN[nx] && left <= 4) RUN_IN[to](C, t, RUN[nx][4 - left], 4 - left);
+    if (RUN_IN[to] && RUN[nx] && left <= 4) RUN_IN[to](C, t, RUN[nx][4 - left], 4 - left);
   },
   home(C, f, k, left, t) {   // 거꾸로 심벌이 차오르고 스네어 넷으로 돌아옴
     if (k === 0) C.out({ t, i: 'rev', len: left * STEP, v: 0.11 });
@@ -1060,7 +998,7 @@ export class Conductor {
       return;
     }
     const f = NOTE(nm);
-    if (inst === 'bass') return this.out({ t, i: 'bass', f, len: lt * 0.92, v, o: { scoop: flags.includes('/') ? 2 : 0, solo: ly === 'solo', fb: ly === 'pbass' } });
+    if (inst === 'bass') return this.out({ t, i: 'bass', f, len: lt * 0.92, v, o: { scoop: flags.includes('/') ? 2 : 0, solo: ly === 'solo' } });
     if (inst === 'b808') return this.out({ t, i: 'b808', f, len: lt, v, o: {} });
     if (inst === 'ep1') return this.out({ t, i: 'ep', f, len: lt * 0.92, v });   // 건반 홑음(메뉴 가락)
     this.out({ t, i: inst, f, len: lt * 0.95, v });
