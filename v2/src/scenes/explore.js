@@ -52,55 +52,7 @@ const reachR = (o, k = 1.12) => { const lo = ORB[Math.max(1, Math.floor(o))], hi
 
 export const explore = {
   theme: 'night',   // 밤 정원(장소 테마 — 2026-10-15)
-  enter(p = {}) { this.sel = p.sel || this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.map = p.map ? { id: this.sel, t0: -1e9, at: p.mapAt != null ? +p.mapAt : null } : null; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null;
-    // 들어올 때 = 고른 행성 가운데 2배(2026-11-04 사용자 '㉡ 고른 행성 2배' — 아래 요약 판의 행성이 화면 가운데에 크게 · 전체는 오므리기 · 두 번 누르기) ·
-    //  정비에서 돌아올 땐 1배 모선으로 내려앉은 뒤 그 행성으로 다가감(zoomBack) · ?zoom=1~3 = 검토용 배율
-    const z0 = p.zoom ? Math.max(1, Math.min(3, Math.round(+p.zoom))) : p.from === 'hangar' ? 1 : 2;
-    this.cam = { z: z0, x: 0, y: 0 }; this.focusSel = z0 > 1; this.zoomBack = p.from === 'hangar' && !p.zoom; },
-  // ── 지도 카메라(끌기 · 확대 — draw 머리 설명) ──
-  // 지금 카메라: 맞춤 움직임(손을 뗀 뒤 정수 배 · 휠 · 두 번 누르기)을 한 장 진행 → 끝을 넘지 않게
-  camStep(t) {
-    const C = this.cam || (this.cam = { z: 1, x: 0, y: 0 }), A = C.anim;
-    if (A) {
-      const k = Math.min(1, (t - A.t0) / A.ms), e = ease(k);
-      if (A.x1 != null) { C.z = A.z0 + (A.z1 - A.z0) * e; C.x = A.x0 + (A.x1 - A.x0) * e; C.y = A.y0 + (A.y1 - A.y0) * e; }   // 정한 자리로(고른 행성에 다가가기)
-      else this.zoomTo(A.z0 + (A.z1 - A.z0) * e, A.px, A.py, A);   // 누른 자리를 그대로 두고 배율만
-      if (k >= 1) C.anim = null;
-    }
-    this.camClamp();
-    return C;
-  },
-  // 배율 z1로 — 화면의 (px, py) 자리에 있던 곳이 그 자리에 남게(A = 맞춤 움직임의 시작 카메라)
-  zoomTo(z1, px, py, A = null) {
-    const C = this.cam, V = this.view; if (!V) return;
-    const z0 = A ? A.z0 : C.z, ox = V.cx + (A ? A.x0 : C.x), oy = V.cy + (A ? A.y0 : C.y);
-    C.z = z1; C.x = px - (px - ox) * z1 / z0 - V.cx; C.y = py - (py - oy) * z1 / z0 - V.cy;
-  },
-  camAnim(z1, px, py, ms = 220) { const C = this.cam; C.anim = { z0: C.z, x0: C.x, y0: C.y, z1, px, py, t0: this.app ? this.app.t : 0, ms }; },
-  // 끝 = 궤도 그림(가장 바깥 궤도 + 행성 + 이름표 ≈ 가로 150 · 세로 96칸)이 보이는 곳 밖으로 다 나가지 않게
-  camClamp() {
-    const C = this.cam, V = this.view; if (!V) return;
-    C.z = Math.max(1, Math.min(3, C.z));
-    const mx = Math.max(0, 150 * C.z - V.W / 2), my = Math.max(0, 96 * C.z - (V.bot - V.top) / 2);
-    C.x = Math.max(-mx, Math.min(mx, C.x)); C.y = Math.max(-my, Math.min(my, C.y));
-  },
-  focusOn(id) { const p = PLANETS.find(q => q.id === id), C = this.cam; if (!p || !C) return; const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit]; C.x = -Math.cos(a) * rx * C.z; C.y = -Math.sin(a) * ry * C.z; this.camClamp(); },
-  focusAnim(id, z1, ms = 420) {   // 그 행성을 가운데로 z1배까지 다가감(정비에서 돌아온 뒤)
-    const p = PLANETS.find(q => q.id === id), C = this.cam; if (!p || !C) return;
-    const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit], V = this.view, mx = V ? Math.max(0, 150 * z1 - V.W / 2) : 1e9, my = V ? Math.max(0, 96 * z1 - (V.bot - V.top) / 2) : 1e9;
-    const x1 = Math.max(-mx, Math.min(mx, -Math.cos(a) * rx * z1)), y1 = Math.max(-my, Math.min(my, -Math.sin(a) * ry * z1));
-    C.anim = { z0: C.z, x0: C.x, y0: C.y, z1, x1, y1, t0: this.app ? this.app.t : 0, ms };
-  },
-  busyMap() { return !this.view || this.map || this.warp || this.morph || this.unmorph; },
-  bgTap(app) {   // 빈 곳 두 번 누르기 = 2배 ↔ 1배(누른 자리 중심)
-    const P = app.input.lastUp || { x: this.view.cx, y: this.view.cy };
-    if (app.t - (this.bgT ?? -1e9) < 350) { this.bgT = -1e9; this.camAnim(this.cam.z < 1.5 ? 2 : 1, P.x, P.y); }
-    else this.bgT = app.t;
-  },
-  onDrag(dy, dx, ev) { if (this.busyMap() || ev.y0 < this.view.top || ev.y0 > this.view.bot) return; const C = this.cam; C.anim = null; C.x += dx; C.y += dy; this.camClamp(); },
-  onPinch(k, px, py) { if (this.busyMap()) return; const C = this.cam; C.anim = null; this.pinchP = [px, py]; this.zoomTo(Math.max(1, Math.min(3, C.z * k)), px, py); this.camClamp(); },
-  onPinchEnd() { const C = this.cam; if (this.busyMap() || !C) return; const z1 = Math.max(1, Math.min(3, Math.round(C.z))), [px, py] = this.pinchP || [this.view.cx, this.view.cy]; if (z1 !== C.z) this.camAnim(z1, px, py, 160); },   // 손을 떼면 가까운 정수 배(도트가 고르게)
-  onZoomStep(dir, px, py) { if (this.busyMap()) return; const z1 = Math.max(1, Math.min(3, Math.round(this.cam.z) + dir)); if (z1 !== this.cam.z) this.camAnim(z1, px, py); },
+  enter(p = {}) { this.sel = p.sel || this.sel || 'ex_ermias'; this.reg = this.reg || {}; this.map = p.map ? { id: this.sel, t0: -1e9, at: p.mapAt != null ? +p.mapAt : null } : null; this.morph = null; this.unmorph = p.from === 'hangar' ? { t0: null } : null; this.warp = null; },
   draw(app) {
     const { g, W, H, t, state: s } = app, now = app.now(), P = probeOf(s);
     fuelSync(s, now);
@@ -108,16 +60,6 @@ export const explore = {
     const sheetY = this.sheetY = Math.max(210, H - 44 - 6 - PANEL_H);
     const py = this.py = Math.max(250, H - 44 - 6 - SUM_H), cx = Math.round(W / 2), cy = this.cy = Math.round((26 + py) / 2), lvOpen = o => s.user.level >= ORBIT_LV[o], reach = o => o <= P.lv.tank;
     this.pp = this.pp || {};
-    // 지도 카메라(2026-11-04 사용자 '탐사 창에 보면 고정되어 있고 확대도 안 되어 있는데 이거 가능하게 해줘'): 끌기 = 옮김 · 두 손가락 · 휠 · 두 번 누르기 = 확대(1 · 2 · 3배 —
-    //  손을 떼면 가까운 정수 배로 맞춤 = 도트가 고르게) · 궤도 · 모선 · 행성 그림은 같이 커지고 이름표 · 누르는 자리는 화면 크기 그대로 · 보이는 곳 = 위 띠와 아래 요약 판 사이
-    const VT = 24, VB = py - 2;
-    this.app = app; this.view = { cx, cy, W, top: VT, bot: VB };
-    if (this.focusSel) { this.focusSel = false; this.focusOn(this.sel); }   // 확대로 시작(?zoom=2 — 시작 배율 검토) = 고른 행성을 가운데로
-    const cam = this.camStep(t), Z = cam.z, OX = cx + cam.x, OY = cy + cam.y, S = (x, y) => [OX + (x - cx) * Z, OY + (y - cy) * Z];
-    const c = g.c, inView = (x, y, m = 0) => x >= -m && x <= W + m && y >= VT - m && y <= VB + m;
-    if (!this.warp && !this.map && !this.morph && !this.unmorph) app.input.hit('ex_bg', 0, VT, W, VB - VT, () => this.bgTap(app), 0, false, true);   // 빈 곳 두 번 누르기 = 2배 ↔ 1배(소리 없음)
-    c.save(); c.beginPath(); c.rect(0, VT, W, VB - VT); c.clip();
-    c.translate(OX, OY); c.scale(Z, Z); c.translate(-cx, -cy); c.imageSmoothingEnabled = false;
     // 닿는 범위 고리: 연료 탱크 단계가 바뀌면 부드럽게 커짐(정비에서 강화하고 돌아온 때)
     if (!this.reach || this.reach.to !== P.lv.tank) this.reach = { from: this.reach ? this.reachNow(t) : P.lv.tank, to: P.lv.tank, t0: t };
     const rn = this.reachNow(t);
@@ -131,25 +73,20 @@ export const explore = {
       dock = drawMother(g, cx, cy + bob, MOTHER_W);
       if (!this.warp) drawShipMini(g, Math.round(dock[0]), Math.round(dock[1]) - 2, model);   // 1배 도트(모선과 같은 칸)
     }
+    this.dock = dock;
+    if (!this.morph && !this.unmorph && !this.warp) app.input.hit('ex_ship', cx - MOTHER_W / 2, cy - 20, MOTHER_W, 44, () => { this.morph = { t0: app.t }; });
     const sorted = [...PLANETS].sort((a, b) => Math.sin(a.angle * Math.PI / 180) - Math.sin(b.angle * Math.PI / 180));
-    const at = p => { const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit]; return [Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), RAD[p.orbit]]; };
-    for (const p of sorted) {   // 행성 그림(지도 칸 — 카메라 배율로)
-      const [x, y, r] = at(p), locked = !lvOpen(p.orbit), far = !reach(p.orbit);
+    const labA = 1 - band(0, 0.18, this.mapK(t));   // 지도로 다가갈 때 행성 이름 · 고름 표시는 먼저 사라짐(확대되며 큰 글자로 남지 않게)
+    for (const p of sorted) {
+      const a = p.angle * Math.PI / 180, [rx, ry] = ORB[p.orbit], locked = !lvOpen(p.orbit), far = !reach(p.orbit);
+      const x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry), r = RAD[p.orbit];
+      this.pp[p.id] = [x, y, r];
       const pa = ICONART['planet_' + p.id];   // 코덱스 행성 그림(2026-10-22 사용자 "전부해봐" — 행성마다 다른 겉모습) · 없으면 옛 무늬 행성
       if (pa) g.img(pa, Math.round(x - pa.width / 2), Math.round(y - pa.height / 2));
       else { g.disc(x, y, r + 1, C.ink); planet(g, x, y, r, p.ramp, { ring: p.ring, ringCol: C.mute }); }
       if (locked || far) { g.dither(x - r - 1, y - r - 1, r * 2 + 3, r * 2 + 3, C.ink, far && !locked ? 7 : 9); g.img(icon('lockS'), x - 3, y - 3); }
-    }
-    c.restore();
-    this.dock = S(dock[0], dock[1]);   // 출발 · 정비 연출은 화면 자리로
-    if (!this.morph && !this.unmorph && !this.warp) { const [mx, my] = S(cx - MOTHER_W / 2, cy - 20); app.input.hit('ex_ship', mx, my, MOTHER_W * Z, 44 * Z, () => { this.cam = { z: 1, x: 0, y: 0 }; this.morph = { t0: app.t }; }); }   // 정비 = 1배로 돌아가 시작(정비 연출이 1배 모선에서 다가감)
-    const labA = 1 - band(0, 0.18, this.mapK(t));   // 지도로 다가갈 때 행성 이름 · 고름 표시는 먼저 사라짐(확대되며 큰 글자로 남지 않게)
-    for (const p of sorted) {   // 이름표 · 고름 표시 · 누르는 자리(화면 크기 그대로)
-      const [wx, wy, wr] = at(p), [x, y] = S(wx, wy).map(Math.round), r = Math.round(wr * Z), locked = !lvOpen(p.orbit), far = !reach(p.orbit);
-      this.pp[p.id] = [x, y, r];
-      if (!inView(x, y, r)) continue;
-      const above = wy < cy, ly = above ? y - r - 16 : y + r + 5;
-      if (labA > 0 && inView(x, ly, 0)) g.alpha(labA, () => {
+      const above = y < cy, ly = above ? y - r - 16 : y + r + 5;
+      if (labA > 0) g.alpha(labA, () => {
         if (p.id === this.sel) {
           const k = r + 4 + (Math.floor(t / 400) % 2);
           for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.rect(x + sx * k - (sx > 0 ? 2 : 0), y + sy * k, 3, 1, T.text.gold); g.rect(x + sx * k, y + sy * k - (sy > 0 ? 2 : 0), 1, 3, T.text.gold); }
@@ -390,7 +327,7 @@ export const explore = {
     const { g, t, state: s } = app;
     let f = null, dir = 1;
     if (this.morph) { f = Math.min(1, (t - this.morph.t0) / MORPH_MS); if (f >= 1 && !this.morph.gone) { this.morph.gone = true; app.go('hangar', { from: 'explore', part: this.morph.part || null }, 'cut'); } }
-    else if (this.unmorph) { if (this.unmorph.t0 == null) this.unmorph.t0 = t; f = 1 - Math.min(1, (t - this.unmorph.t0) / BACK_MS); dir = -1; if (f <= 0) { this.unmorph = null; if (this.zoomBack) { this.zoomBack = false; this.focusAnim(this.sel, 2); } return; } }   // 모선에 내려앉으면 고른 행성으로 2배 다가감
+    else if (this.unmorph) { if (this.unmorph.t0 == null) this.unmorph.t0 = t; f = 1 - Math.min(1, (t - this.unmorph.t0) / BACK_MS); dir = -1; if (f <= 0) { this.unmorph = null; return; } }
     if (f == null) return;
     const zoom = ease(Math.max(0, Math.min(1, (f - 0.12) / 0.88))), scan = Math.max(0, Math.min(1, f / 0.8));
     hangarBack(app, ease(Math.min(1, f * 1.4)));
