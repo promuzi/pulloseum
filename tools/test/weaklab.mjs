@@ -26,7 +26,7 @@ if (arg('--cost')) SKILLS[ID].cost = +arg('--cost');
 for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) {   // --set taste.n=2 = 칸 안의 값(점으로 내려감)
   const [a, b] = kv.split('='), ks = a.split('.'), last = ks.pop();
   let o = SKILLS[ID]; for (const k of ks) o = o[k] = o[k] && typeof o[k] === 'object' ? o[k] : {};
-  o[last] = isNaN(+b) ? b : +b;
+  o[last] = b.includes('+') ? b.split('+') : isNaN(+b) ? b : +b;   // selfMore=atkUp+spdUp+defDown = 목록
 }
 if (SKILLS[ID].power > 0 && SKILLS[ID].act === 'buff') { SKILLS[ID].act = 'attack'; SKILLS[ID].cats = ['attack']; }   // --set power=55 = 공격 + 원래 효과 덤
 const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'), K0 = FX.reflect.k, KX = +arg('--kx', 0), CD = +arg('--cd', 0);
@@ -80,6 +80,8 @@ const CONDS = {
   e1: { text: '내 햇빛이 1 이하일 때', f: u => u.energy <= 1 },
   e2: { text: '내 햇빛이 2 이하일 때', f: u => u.energy <= 2 },
   melow: { text: '내 체력이 절반 아래일 때', f: u => u.hp < u.max * 0.5 },
+  first: { text: '판 첫 턴에만', f: (u, foe, X) => X.T === 1 },
+  early: { text: '처음 두 턴에만', f: (u, foe, X) => X.T <= 2 },
   gale1: { text: '강풍이 이번 턴 뒤에도 남을 때(공명)', f: (u, foe, X) => !!(foe.eff && foe.eff.gale && foe.eff.gale.exp - X.T >= 1) },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');

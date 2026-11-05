@@ -3,7 +3,7 @@
 import { makeUnit } from '../../v2/src/battle/model.js';
 import { protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch } from '../../v2/src/battle/status.js';
+import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch, CAVE } from '../../v2/src/battle/status.js';
 import { orbInit, orbStart } from '../../v2/src/battle/devices.js';
 import { BASICS } from '../../v2/src/battle/model.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
@@ -146,6 +146,7 @@ ok(SPECIES_V2.has('stone_cap'), '스톤캡 v2 켜짐');
   const m0 = missAddOf(f), sp1 = effSpd(f);
   turn(s, f, SKILLS.u_stone_2, OTHER, 2);
   ok(effSpd(f) < sp1 && missAddOf(f) > m0, '자갈밭 = 기동 · 적중 더 떨어짐');
+  ok(missAddOf(f) - m0 === 24 && Math.abs(effSpd(f) / sp1 - (1 - CAVE.spd - 0.3) / (1 - CAVE.spd)) < 0.02, `자갈밭 = 적중 −24 · 기동 −30%(2026-11-05 '둘 다 키우기' · 지금 ${missAddOf(f) - m0} · ${(effSpd(f) / sp1).toFixed(3)})`);
   ok(!canUse(s, SKILLS.u_stone_2, 8, f), '같은 설치는 한 번');
   turn(s, f, SKILLS.u_stone_3, OTHER, 3);
   ok(has(f, 'burn'), '용암지대 = 턴 끝마다 상대에게 화상');

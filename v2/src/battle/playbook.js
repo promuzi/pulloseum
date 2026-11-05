@@ -108,9 +108,6 @@ export const PLAYBOOK_BY = {
     frost_bell: [
       {"id":"u_frost_1","when":{"k":"nobell"},"b":0.6,"d":5.5},   // 아침이에요. — 아침 · 밤 꺼짐
     ],
-    stone_cap: [
-      {"id":"u_stone_2b","when":{"k":"always"},"b":0.6,"d":7.4},   // 석순 — 쓸 수 있으면
-    ],
     jelly_cap: [
       {"id":"u_jelly_2","when":{"k":"always"},"b":0.6,"d":8.7},   // 톡씽 — 쓸 수 있으면
       {"id":"u_jelly_1","when":{"k":"foebig","n":90},"b":0.6,"d":6.1},   // 말랑잉 — 상대가 위력 90 넘게 칠 햇빛
@@ -206,9 +203,9 @@ export const PLAYBOOK_BY = {
       {"id":"u_frost_3","when":{"k":"always"},"b":3,"d":8.5,"audit":1},   // 이제 밤이군요. — 쓸 수 있으면
     ],
     stone_cap: [
-      {"id":"u_stone_2b","when":{"k":"always"},"b":0.6,"d":11.6},   // 석순 — 쓸 수 있으면
-      {"id":"u_stone_1","when":{"k":"nofx","r":"stun"},"b":0.6,"d":2.8},   // 낙석 — 상대 stun 없음
-      {"id":"u_stone_3","when":{"k":"always"},"b":0.6,"d":2.1},   // 용암지대 — 쓸 수 있으면
+      {"id":"u_stone_2b","when":{"k":"always"},"b":0.6,"d":7.6},   // 석순 — 쓸 수 있으면
+      {"id":"u_stone_1","when":{"k":"nofx","r":"stun"},"b":0.6,"d":0.8},   // 낙석 — 상대 stun 없음
+      {"id":"u_stone_3","when":{"k":"always"},"b":0.6,"d":2.5},   // 용암지대 — 쓸 수 있으면
     ],
     jelly_cap: [
       {"id":"u_jelly_3","when":{"k":"always"},"b":0.6,"d":6.8},   // 부활잉 — 쓸 수 있으면

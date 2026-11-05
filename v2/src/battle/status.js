@@ -125,8 +125,8 @@ export const defK = u => statK(u, 'def') * (has(u, 'wet') ? FX.wet.defK : 1) * (
 // 내 공격 빗나감 칸 더하기: 강풍 · 젖음 + 교란(−집중)
 export const missAddOf = u => (has(u, 'gale') ? FX.gale.missAdd : 0) + (has(u, 'wet') ? FX.wet.missAdd : 0) + (stormOn(u) ? FX.accDown.v : 0) + (caveAdds(u).includes('gravel') ? CAVE.gravel.acc : 0) - statSum(u, 'acc');
 // 강풍에 덧붙은 공명(게일캑터 — 폭풍 · 치유 · 뇌전): 강풍 안에 들어 있어 강풍과 함께 끝나고 교체 때 같이 옮겨 감 · 폭풍 = 교란 · 쇠약 한 겹 몫(폭풍 동안만 · 쌓이지 않음)
-// 동굴(스톤캡): 기본 기동 −10% · 자갈밭 기동 −10% + 적중 −8 · 지반붕괴 기동 −10% · 이끼덮기 = 설치물 하나당 최대 체력 10% 회복 · 용암지대 = 턴 끝 화상(devices.galeTurn) — 수치는 밸런스 전
-export const CAVE = { spd: 0.1, gravel: { spd: 0.1, acc: 8 }, collapse: { spd: 0.1 }, mossHeal: 0.1 };
+// 동굴(스톤캡): 기본 기동 −10% · 자갈밭 기동 −30% + 적중 −24(2026-11-05 사용자 '㉡ 둘 다 키우기' — 전 −10% · −8) · 지반붕괴 기동 −10% · 이끼덮기 = 설치물 하나당 최대 체력 10% 회복 · 용암지대 = 턴 끝 화상(devices.galeTurn) — 수치는 밸런스 전
+export const CAVE = { spd: 0.1, gravel: { spd: 0.3, acc: 24 }, collapse: { spd: 0.1 }, mossHeal: 0.1 };
 // 소환수(스포어캡): 한꺼번에 최대 셋 · 잠든 포자 · 새끼 = 주인 능력치 40% · 성체 버섯 50% · 평타 위력 30 · 포자회귀 포자 수(잠든 1 · 새끼 2 · 성체 버섯 3)
 //  (10-24 30% · 50% → 새싹 손패 리그전 88%라 10% · 20% → 2026-10-29 성체 기준 12.8%라 사용자 '㉡ 새끼 40% · 성체 버섯 50%로' = 45.1%)
 export const SUMMON = { max: 3, pct: 0.4, adultPct: 0.5, power: 30, burst: { sleep: 1, baby: 2, adult: 3 } };
