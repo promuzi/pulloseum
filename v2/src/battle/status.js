@@ -39,7 +39,7 @@ export const FX = {
   morning: { env: true },   // 아침(프로스트벨 — 필드: 양쪽 앞 식물 · 프로스트벨이 나가면 사라짐 · devices.bellSync 가 깔고 걷음 · 메아리만)
   night:   { env: true },   // 밤(프로스트벨 — 필드: 양쪽 앞 식물 자연 햇빛이 안 참 · 교체로 들어와도 · 메아리 더 셈)
   cave:    { env: true },   // 동굴(스톤캡 타고남 — 스톤캡이 나와 있는 동안 상대 쪽 · 기간 없음 · devices.caveSync 가 깔고 걷음)              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
-  taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
+  taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼 · 걸려 있는 동안엔 다시 안 걸림(= 풀린 다음 턴은 도발 면역 — 2026-11-06)
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
   fear:    { turns: 1, next: true },                          // 공포(2026-11-06 사용자 '도발의 반대' · '공포도 도발처럼 교체 못하게'): 다음 턴 공격 기술(평타 포함) 못 씀 · 교체 못 함 · 그 턴을 마치면 다음 행동까지 면역(기절 · 공포 안 걸림) · 이미 공포 · 면역이면 안 걸림
   // 포자(엑셀 v10 30행) = 따로 쌓이는 지연 효과: 걸 때마다 하나씩 붙어 각자 셈(상한 없음) · 지연 N턴(기술마다 — 옛 1겹 기술 = 2턴 · 2겹 = 1턴) ·
@@ -301,6 +301,7 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
   } else if (D.next) {   // 제한 넷(봉인 · 속박 · 도발 · 공포): 다음 1턴
     if (id === 'fear' && (e.immune || e.fear)) { ev.push({ t: 'resist', ...base, why: 'immune', list: listOf(tgt) }); return; }   // 면역(쉰 · 공포가 지난 다음 행동까지) · 이미 공포(풀리기 전에 다시 걸어 이어 묶기 막음)
+    if (id === 'taunt' && e.taunt) { ev.push({ t: 'resist', ...base, why: 'immune', list: listOf(tgt) }); return; }   // 도발 면역(2026-11-06 사용자 '응 넣자'): 도발에 걸린 동안엔 다시 안 걸림 = 풀린 다음 턴은 도발이 없음(3:3에서 매 턴 걸어 교체를 영영 막는 것을 막음 · 기절 · 공포는 그대로)
     if (e.will && ctx.rng && ctx.rng() < FX.will.p) { ev.push({ t: 'resist', ...base, why: 'will', list: listOf(tgt) }); return; }
     if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
     if (id === 'root' && e.rooted) { ev.push({ t: 'resist', ...base, why: 'once', list: listOf(tgt) }); return; }   // 교체로 나갔다 들어오기 전까지 한 번만

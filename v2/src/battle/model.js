@@ -213,7 +213,7 @@ function fxVal(u, foe, f, C) {
     case 'chill': { const m = n + (has(foe, 'wet') ? RULES_FX.wetStackAdd : 0); v = cur('chill') + m >= D.stack ? 0.9 * deny + (K.frozen ? 0.6 * R : 0) : 0.4 * deny * m / D.stack + 0.05 * R; break; }   // 3겹 = 얼음(한 번 쉼)
     case 'stun': v = deny; break;
     case 'seal': v = 0.25 * R; break;
-    case 'taunt': v = 0.08 * R; break;
+    case 'taunt': v = foe.eff && foe.eff.taunt ? 0 : 0.08 * R; break;   // 이미 도발에 걸려 있으면 안 걸림(풀린 다음 턴 = 도발 면역)
     case 'fear': v = foe.eff && (foe.eff.immune || foe.eff.fear) ? 0 : 0.7 * deny; break;   // 공포: 다음 턴 상대 공격을 막음(방어 · 광합성은 됨 — 기절보다 덜) · 면역 · 이미 공포면 안 걸림
     case 'root': v = u.solo ? 0.25 * R : 0.06 * R; break;   // 1:1에선 봉인으로
     case 'wet': v = has(foe, 'wet') ? 0.05 * R : R * defGain(foe, 1 - D.defK) * T(D.turns) + 2.5 * thr * D.missAdd / 100 * T(D.turns) * 0.5 + (K.shock || K.chill ? 0.15 * R : 0); break;

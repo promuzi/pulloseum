@@ -455,6 +455,14 @@ const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.
     ok(firstOk(t) === BLOCKED, '도발 중 햇빛이 없고 평타도 봉인되면 쓸 행동이 없음');
     const r = resolveTurn(x, t, x.kit[0], firstOk(t), fixed(0.5), { turn: 2 });
     ok(r.events.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'blocked') && t.eff.immune, '그 턴 쉬고 다음 턴 면역'); }
+  // 도발 면역(2026-11-06 사용자 '응 넣자'): 도발에 걸린 동안엔 다시 안 걸림 → 풀린 다음 턴은 도발 없음(교체 됨) · 그다음 턴엔 다시 걸림
+  { const t = mk('foe', 'flower_grass'); apply(t, 'taunt', 1, ctx(x, 1, []));
+    const ev = []; apply(t, 'taunt', 1, { turn: 2, rng: () => 0.9, ev, by: x });
+    ok(ev.some(e => e.t === 'resist' && e.why === 'immune') && t.eff.taunt.from === 2, '도발 중엔 도발이 다시 안 걸림(매 턴 이어 묶기 막음)');
+    expire(t, 2, []);
+    ok(!t.eff.taunt && canSwitch(t, 3), '풀린 다음 턴엔 도발이 없어 교체 됨');
+    apply(t, 'taunt', 1, { turn: 3, rng: () => 0.9, ev: [], by: x });
+    ok(t.eff.taunt && t.eff.taunt.from === 4, '그다음엔 다시 걸림'); }
   // 의지가 제한 넷을 막음(굴림 0)
   { const w = mk('foe', 'flower_grass'); selfBuff(w, 'will', { turn: 1, ev: [] });
     const ev = []; for (const id of ['seal', 'root', 'taunt', 'fear']) apply(w, id, 1, { turn: 1, rng: () => 0, ev, by: x });
