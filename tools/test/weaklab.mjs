@@ -85,6 +85,7 @@ const CONDS = {
   first: { text: '판 첫 턴에만', f: (u, foe, X) => X.T === 1 },
   early: { text: '처음 두 턴에만', f: (u, foe, X) => X.T <= 2 },
   gale1: { text: '강풍이 이번 턴 뒤에도 남을 때(공명)', f: (u, foe, X) => !!(foe.eff && foe.eff.gale && foe.eff.gale.exp - X.T >= 1) },
+  bell: { text: '아침 · 밤이 켜져 있을 때(프로스트벨 메아리 — 봉인 하나 더)', f: (u, foe, X) => !!(u.st && u.st.bell && u.st.bell.exp >= X.T) },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');
 
