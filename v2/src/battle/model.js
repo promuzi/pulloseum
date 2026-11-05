@@ -296,7 +296,7 @@ function aiScore(u, foe, s, C) {
   if (s.act === 'guard' || s.act === 'evade') {   // 자세 + 덤(용가시 반사 · 치명적 무희 예리)
     if (!BRAIN.stance) { const rep = C.last === s.act ? 0.5 : 1; return (s.act === 'guard' ? (risk >= 1 ? 2.2 : 1.4 * risk) : (risk >= 1 ? 1.8 : 1.1 * risk)) * rep; }   // 옛 고정값
     let v = stanceVal(u, foe, s, C);
-    if (s.reflect) v += 2.5 * rk * FX.reflect.k * 0.5 * u.hp / Math.max(1, foe.hp) * 0.6 + (s.reflectInflict ? 0.5 * fxVal(u, foe, s.reflectInflict, C) : 0);
+    if (s.reflect) v += 2.5 * rk * (s.reflectK ?? FX.reflect.k) * 0.5 * u.hp / Math.max(1, foe.hp) * 0.6 + (s.reflectInflict ? 0.5 * fxVal(u, foe, s.reflectInflict, C) : 0);   // 막고 반사(용가시 · 말랑잉 = 기술마다 되돌리는 몫)
     if (s.self) v += buffVal(u, foe, [s.self], C);
     return v;
   }
@@ -350,7 +350,10 @@ function aiScore(u, foe, s, C) {
   if (s.act === 'buff' && s.bare) return ((u.res && u.res.evs) || 0) >= 2 ? 0.5 + Math.min(1, risk) : 0.1;   // 방심하기 = 쌓아 둔 스택을 쓸 때
   if (s.act === 'buff') {
     const sides = [s.self, s.also].filter(Boolean), down = (s.selfMore || []).length;
-    if (!sides.length && s.reflect) return (2.5 * rk * FX.reflect.k * u.hp / Math.max(1, foe.hp) * 0.6 + (s.reflectInflict ? 0.3 * R : 0)) * (C.last === 'buff' ? 0.6 : 1);   // 반사 자세(말랑잉) = 맞은 한 타의 30%를 되돌림
+    if (!sides.length && s.reflect) {   // 반사 자세 = 맞은 한 타의 몫을 되돌림 · 너꺼잉(완전 반사) = 그 타를 안 맞음(막기 값) + 100% 되돌림
+      const dodge = s.nullFirst ? 2.5 * 0.85 * rk + (risk >= 1 ? 1.2 : 0) : 0;
+      return (2.5 * rk * (s.reflectK ?? FX.reflect.k) * u.hp / Math.max(1, foe.hp) * 0.6 + dodge + (s.reflectInflict ? 0.3 * R : 0)) * (C.last === 'buff' ? 0.6 : 1);
+    }
     return buffVal(u, foe, sides, C, down);
   }
   return 0.4 * R;
@@ -496,6 +499,7 @@ export function ruleOk(w, u, foe) {
     case 'melow': return u.hp < u.max * w.x;
     case 'nobell': return !(u.st && u.st.bell);
     case 'sum': return ((u.summons || []).filter(x => x.hp > 0).length) < w.n;
+    case 'foebig': return foe.kit.some(x => x.act === 'attack' && (x.power || 0) >= w.n && canUse(foe, x, foe.energy, u));   // 상대가 위력 n 넘는 공격을 쓸 햇빛이 있음(반사 자세 — 2026-11-05)
     case 'always': return true;
     default: return false;
   }

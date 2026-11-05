@@ -65,7 +65,7 @@ export const CAST_SFX = { self: 'release', curse: 'whoosh', field: 'slam', bell:
 
 // ── 특수 시전(2026-10-29 밤샘 — 사용자 '각 스킬별 특수한 건 모션 만들고'): 공용 모양 위에 그 기술만의 장면을 덧그림(예고 → 터짐 → 결과가 몸에 남음 — auras.js 지속 표시로 이어짐) ──
 //  부활잉 = 금빛 고리가 내려와 머리 위에 앉음 · 죽은 줄 알았나? = 혼이 빠져나갔다 쑥 돌아옴 · 냉기 응축 = 얼음 조각이 모여 열매가 맺힘 · 열매 먹기 = 열매를 한입에 · 알 깨기 = 알이 금 가며 깨져 기운이 솟음
-export const castSpecial = s => (!s ? null : s.revive ? 'revive' : s.fakeDeath ? 'ghost' : s.fruitCondense ? 'condense' : s.fruitUse === 'eat' ? 'eat' : s.selfMore && s.selfMore.some(x => /Down$/.test(x)) ? 'egg' : s.taste ? 'taste' : s.inject ? 'inject' : s.cycle ? 'cycle' : s.bounce ? 'bounce'
+export const castSpecial = s => (!s ? null : s.revive ? 'revive' : s.fakeDeath ? 'ghost' : s.fruitCondense ? 'condense' : s.fruitUse === 'eat' ? 'eat' : s.selfMore && s.selfMore.some(x => /Down$/.test(x)) ? 'egg' : s.taste ? 'taste' : s.inject ? 'inject' : s.cycle ? 'cycle' : s.bounce || s.bounceNow ? 'bounce'
   : s.settle ? 'settle' : s.onFirst && s.onFirst.harmony ? 'harmony' : s.self === 'stealth' && typeof s.pierceReflect === 'number' ? 'melt' : s.self === 'stealth' && s.link && s.pierceReflect ? 'freq'
   : s.onFirst && s.onFirst.self && s.onSecond && s.onSecond.self ? 'shout' : s.cleanseHeal ? 'rain' : s.infuse ? 'infuse' : null);
 //  (2026-10-29 오후 — 사용자 '나머지 3개 진행하자') 청산 = 물결이 상대를 쓸고 지나가며 상태이상 색 구슬을 뽑아 터뜨림 · 조화 = 두 식물 사이를 빛줄기 둘이 엇갈려 꼬이며 이음

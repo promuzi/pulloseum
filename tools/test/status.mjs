@@ -210,7 +210,7 @@ const fixed = v => () => v;
   const cur = B.me, t = playTurn3(B, { kind: 'switch', to: 1 });
   ok(B.me === cur && t.events.some(e => e.t === 'skip' && e.who === 'me'), '쉬는 차례엔 교체 안 되고 그 턴 쉼');
 }
-// ── 9. 포자(엑셀 v10 30행 = 따로 쌓이는 지연 효과): 기술마다 지연 N턴 · 걸린 다음 턴부터 세어 N턴째 끝에 핌 · 상한 없음 · 기본은 피해만 · 불에 탐 · 버섯은 안 걸림 ──
+// ── 9. 포자(엑셀 v10 30행 = 따로 쌓이는 지연 효과): 기술마다 지연 N턴 · 걸린 다음 턴부터 세어 N턴째 끝에 핌 · 상한 없음 · 기본은 피해만 · 불에 안 탐(2026-10-31) · 버섯도 걸림(2026-11-05) ──
 //   2026-11-04 포자 = 시간차 공격(사용자 '추천대로 바꿔'): 하나 = 위력 35 · 붙일 때 건 식물 공격력 · 그 기술 속성 상성 · 필 때 맞는 쪽 방어 · 치명 없음 — 기대 피해는 공식을 따로 셈
 const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.round(by.atk * atkK(by)) / 50 * (el && ({ fire: ['water', 'earth'], water: ['grass', 'ice', 'bolt'], grass: ['fire', 'wind', 'bolt'], bolt: ['earth', 'ice'], earth: ['grass', 'water'], ice: ['fire', 'earth'], wind: ['earth', 'fire'] }[t.el] || []).includes(el) ? 1.5 : 1)
   * Math.max(0.25, 100 / (100 + Math.max(0, (t.def || 0) * ST.defK(t))))));
@@ -259,7 +259,7 @@ const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.
   const fe = []; onHit(mk('me', 'cactus_fire'), c, sk(mk('me', 'cactus_fire'), 's1'), { turn: 1, rng: makeRng(1), ev: fe });
   ok(c.eff.spore && !fe.some(e => e.t === 'cure' && (e.ids || []).includes('spore')), '불에 맞아도 포자는 안 탐(2026-10-31 사용자 \'포자가 불에 타는 거 없애자\')');
   const m = mk('foe', 'spore_cap'), me2 = []; apply(m, 'spore', 1, ctx(a, 1, me2));
-  ok(!m.eff.spore && me2.some(e => e.t === 'immune'), '버섯은 포자에 안 걸림');
+  ok(m.eff.spore && !me2.some(e => e.t === 'immune'), '버섯도 포자에 걸림(2026-11-05 사용자 \'서로 안 걸리는 상태이상은 본인 속성뿐 · 종끼리의 그건 없음\' — 전 = 버섯 면역)');
 }
 // ── 9-2. 버프: 분노·철벽·가속·재생·반사·보호막·정화·집중 ──
 {

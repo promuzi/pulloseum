@@ -45,7 +45,7 @@ export const FX = {
   //  → 2026-10-31 사용자 '포자는 여러개 붙이고 반드시 붙인턴 포함 3번째 턴에 터지는 걸로 하자'(2026-11-04 넣음): 어떤 기술로 붙였든 붙인 턴 끝 = 1 · 3번째 턴 끝에 핌(left 3 — 기술의 지연 값은 안 씀) · 불에 안 탐(10-31)
   //  → 2026-11-04 사용자 '포자가 체력비례 데미지임? 그냥 시간차 공격으로 취급하면 안 되나?' → '추천대로 바꿔': 하나 = 위력 35 공격(최대 체력 8%를 성체 평균으로 바꾼 값) —
   //   붙일 때 건 식물의 공격력 · 건 식물 속성의 상성 · 필 때 맞는 쪽 방어 · 치명 없음(devices.sporeDmg)
-  spore:   { jong: 'mushroom', left: 3, power: 35, plus: 10 },   // plus = 카드 포자 번식(sporeAdd) 하나당 포자 위력 +10(전 = 피해 8% → 11%)
+  spore:   { left: 3, power: 35, plus: 10 },   // plus = 카드 포자 번식(sporeAdd) 하나당 포자 위력 +10(전 = 피해 8% → 11%) · 버섯도 걸림(2026-11-05 사용자 '종끼리의 그건 없음' — 전 = jong: 'mushroom' 면역)
   // 능력치 버프 · 디버프(2026-10-23 엑셀 v10 효과 분류 9~18행 — 활력 · 억셈 · 가속 · 예리 · 집중 / 쇠약 · 시듦 · 둔화 · 무딤 · 교란):
   //  거는 만큼 겹이 쌓이고 겹마다 지금 5턴(걸린 턴 = 1턴째)이 따로 감 · 교체해도 남고 대기석에서도 시간이 감 · 정화로 안 지워짐(반대 효과로 메움) ·
   //  한 겹 값 v(기술마다 바꿀 수 있음 — o.v) = 공격 · 방어 · 기동은 배율에 더함(%), 치명 · 정확도는 판정표 칸에 더함 — 수치는 밸런스 전 임시(계획 문서 표)
@@ -254,12 +254,12 @@ function addStat(u, id, T, o = {}) {
 export function apply(tgt, id0, n, ctx, o = {}) {
   const id = id0, D = FX[id], e = E(tgt), T = ctx.turn, ev = ctx.ev, look = o.look || null, base = { who: ctx.by.id, to: tgt.id, name: tgt.name, id: look || id };   // look = 같은 효과의 다른 이름(암실 → 그늘)
   if (!D || tgt.hp <= 0) return;
-  if (e.bounce && ctx.by && ctx.by.id !== tgt.id && ctx.by.hp > 0 && !ctx.bounced && (HARM.includes(id) || DOWNS.includes(id) || id === 'stun')) {   // 너꺼잉(젤리캡): 걸리려는 상태를 건 쪽에게 튕김 — 그 기술 한 번이 거는 것 전부(끝나면 rules 가 걷음)
+  if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성은 안 걸림(서로 안 걸리는 건 본인 속성뿐 — 2026-11-05)
+  if (tgt.pas && tgt.pas.immune && tgt.pas.immune.includes(id)) { ev.push({ t: 'immune', ...base, card: true }); return; }   // 카드(해독 체질)
+  if (e.bounce && ctx.by && ctx.by.id !== tgt.id && ctx.by.hp > 0 && !ctx.bounced && (HARM.includes(id) || DOWNS.includes(id) || id === 'stun')) {   // 너꺼잉(젤리캡): 걸리려는 상태를 건 쪽에게 튕김 — 그 기술 한 번이 거는 것 전부(끝나면 rules 가 걷음) · 면역 판정 뒤(원래 안 걸리는 상태엔 안 쓰임)
     e.bounce.used = true; ev.push({ t: 'fx', ...base, id: 'bounce', bounced: id, list: listOf(tgt) });
     return apply(ctx.by, id0, n, { ...ctx, by: tgt, bounced: true }, o);
   }
-  if ((D.el && tgt.el === D.el) || (D.jong && tgt.jong === D.jong)) { ev.push({ t: 'immune', ...base }); return; }   // 같은 속성(포자는 같은 종)은 안 걸림
-  if (tgt.pas && tgt.pas.immune && tgt.pas.immune.includes(id)) { ev.push({ t: 'immune', ...base, card: true }); return; }   // 카드(해독 체질)
   const by = ctx.by && ctx.by.pas;
   if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
   if (D.stat) {

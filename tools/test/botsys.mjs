@@ -27,7 +27,7 @@ async function writeBook(by, meta, out = 'v2/src/battle/playbook.js') {
   const { writeFileSync } = await import('node:fs');
   const stages = Object.keys(by).map(Number).sort();
   const block = st => `  ${st}: {   // ${STG[st]} — ${meta[st] || ''}\n` + Object.entries(by[st]).map(([k, L]) => `    ${k}: [\n${L.map(r => `      ${JSON.stringify(r)},   // ${nameOf(r.id)} — ${whenText(r.when)}`).join('\n')}\n    ],`).join('\n') + '\n  },';
-  const src = `// 종마다 쓰는 패턴(2026-11-04 봇 시스템 — 사용자 '운용에 관해 컨셉을 기준으로 들고가는 스킬과 패턴을 각각 식물별로 따로 적용해보자') · 생장마다 따로(2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠'):\n//  PLAYBOOK_BY[단계 0 새싹 · 1 성장기 · 2 성체][종] = [{ id: 기술, when: 조건, b: 점수 더하기, d: 시뮬레이션에서 오른 승률(%p) }] — 조건이 맞으면 봇 머리(model.js aiPick)가 그 기술 점수에 b를 더함(봇 식물 단계의 칸 · 없으면 성체 칸).\n//  node tools/test/botsys.mjs playbook --stage N 이 그 단계 칸을 다시 씀(그 종 그 단계까지 고유 기술 전부 손패 · 모든 종과) · 손으로 고치지 않음.\n//  조건: res 개수 칸 ≥ n · meal 먹은 준비 ≥ n · fxn 상대 겹 ≥ n · fx 상대 상태 있음 · nofx 상대 상태 없음 · harm 상대 상태이상 종류 ≥ n · fruit 열매 ≥ n · trap 덫 ≥ n ·\n//   foelow 상대 체력 몫 < x · melow 내 체력 몫 < x · nobell 아침 · 밤이 꺼짐 · sum 소환수 < n · always 쓸 수 있으면\nexport const PLAYBOOK_BY = {\n${stages.map(block).join('\n')}\n};\nexport const PLAYBOOK_META = ${JSON.stringify(meta)};\nexport const PLAYBOOK = PLAYBOOK_BY[2] || {};\n`;
+  const src = `// 종마다 쓰는 패턴(2026-11-04 봇 시스템 — 사용자 '운용에 관해 컨셉을 기준으로 들고가는 스킬과 패턴을 각각 식물별로 따로 적용해보자') · 생장마다 따로(2026-11-05 사용자 '봇의 성향도 생장에 따라 나눠'):\n//  PLAYBOOK_BY[단계 0 새싹 · 1 성장기 · 2 성체][종] = [{ id: 기술, when: 조건, b: 점수 더하기, d: 시뮬레이션에서 오른 승률(%p) }] — 조건이 맞으면 봇 머리(model.js aiPick)가 그 기술 점수에 b를 더함(봇 식물 단계의 칸 · 없으면 성체 칸).\n//  node tools/test/botsys.mjs playbook --stage N 이 그 단계 칸을 다시 씀(그 종 그 단계까지 고유 기술 전부 손패 · 모든 종과) · 손으로 고치지 않음.\n//  조건: res 개수 칸 ≥ n · meal 먹은 준비 ≥ n · fxn 상대 겹 ≥ n · fx 상대 상태 있음 · nofx 상대 상태 없음 · harm 상대 상태이상 종류 ≥ n · fruit 열매 ≥ n · trap 덫 ≥ n ·\n//   foelow 상대 체력 몫 < x · melow 내 체력 몫 < x · nobell 아침 · 밤이 꺼짐 · sum 소환수 < n · foebig 상대가 위력 n 넘는 공격을 쓸 햇빛이 있음 · always 쓸 수 있으면\nexport const PLAYBOOK_BY = {\n${stages.map(block).join('\n')}\n};\nexport const PLAYBOOK_META = ${JSON.stringify(meta)};\nexport const PLAYBOOK = PLAYBOOK_BY[2] || {};\n`;
   writeFileSync(out, src);
   console.log('썼어요:', out);
 }
@@ -147,6 +147,10 @@ if (cmd === 'learn') {
     const G = await loadGen();
     G.cardW[STAGE] = W; G.wMeta[STAGE] = { ...(G.wMeta[STAGE] || {}), card: `Lv6 대회 단계 ${TIER} 몸 · 종마다 손패 ${M}개 × 모든 종` };
     await writeW(G.cardW, G.conW, G.wMeta, out);
+  } else if (argv.includes('--merge')) {   // --key 한 종만 다시 잼 → 그 단계 그 종 칸만 바꿔 씀(2026-11-05)
+    const G = await loadGen();
+    (G.cardW[STAGE] ||= {})[only] = W[only];
+    await writeW(G.cardW, G.conW, G.wMeta, out);
   }
 }
 
@@ -175,13 +179,14 @@ function candidates(k) {
     if (s.miasma) add(id, { k: 'nofx', r: 'miasma' });
     if (s.summon) add(id, { k: 'sum', n: 2 });
     if (s.healPct || s.cleanseHeal || s.self === 'regen' || s.also === 'regen' || s.fruitUse === 'eat' || s.orbAbsorb || s.moss) add(id, { k: 'melow', x: 0.5 });
+    if (s.reflect && s.act !== 'attack') { add(id, { k: 'foebig', n: 70 }); add(id, { k: 'foebig', n: 90 }); }   // 반사 자세 = 상대가 크게 칠 햇빛이 있을 때(2026-11-05 weaklab — 말랑잉 · 너꺼잉)
     const f = s.inflict || (s.hex && s.hex[0]);
     if (f && FXS[f.id] && !FXS[f.id].stack && !FXS[f.id].stat) add(id, { k: 'nofx', r: f.id });
     add(id, { k: 'always' });
   }
   return out;
 }
-const whenText = w => ({ res: `${w.r} ≥ ${w.n}`, meal: `먹은 준비 ≥ ${w.n}`, fxn: `상대 ${w.r} ≥ ${w.n}겹`, fx: `상대 ${w.r}`, nofx: `상대 ${w.r} 없음`, harm: `상대 상태이상 ≥ ${w.n}`, fruit: `열매 ≥ ${w.n}`, trap: `덫 ≥ ${w.n}`, foelow: `상대 체력 < ${w.x * 100}%`, melow: `내 체력 < ${w.x * 100}%`, nobell: '아침 · 밤 꺼짐', sum: `소환수 < ${w.n}`, always: '쓸 수 있으면' }[w.k] || w.k);
+const whenText = w => ({ res: `${w.r} ≥ ${w.n}`, meal: `먹은 준비 ≥ ${w.n}`, fxn: `상대 ${w.r} ≥ ${w.n}겹`, fx: `상대 ${w.r}`, nofx: `상대 ${w.r} 없음`, harm: `상대 상태이상 ≥ ${w.n}`, fruit: `열매 ≥ ${w.n}`, trap: `덫 ≥ ${w.n}`, foelow: `상대 체력 < ${w.x * 100}%`, melow: `내 체력 < ${w.x * 100}%`, nobell: '아침 · 밤 꺼짐', sum: `소환수 < ${w.n}`, foebig: `상대가 위력 ${w.n} 넘게 칠 햇빛`, always: '쓸 수 있으면' }[w.k] || w.k);
 if (cmd === 'playbook') {
   const { writeFileSync } = await import('node:fs');
   const N = +arg('--games', 12), only = arg('--key', null), MIN = +arg('--min', 0.015), Bv = +arg('--b', 0.6), out = arg('--out', 'v2/src/battle/playbook.js');
@@ -214,6 +219,10 @@ if (cmd === 'playbook') {
   if (!only) {   // 이 단계 칸만 바꿔 씀
     const G = await loadGen();
     G.book[STAGE] = OUT; G.bookMeta[STAGE] = `Lv6 대회 단계 ${TIER} 몸 · 모든 종과 ${N}판씩`;
+    await writeBook(G.book, G.bookMeta, out);
+  } else if (argv.includes('--merge')) {   // --key 한 종만 다시 잼 → 그 단계 그 종 칸만 바꿔 씀(2026-11-05 젤리캡 기술 다시 짬)
+    const G = await loadGen(), bk = (G.book[STAGE] ||= {});
+    if (OUT[only]) bk[only] = OUT[only]; else delete bk[only];
     await writeBook(G.book, G.bookMeta, out);
   }
 }

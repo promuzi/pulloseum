@@ -439,8 +439,8 @@ ok(SPECIES_V2.has('jelly_cap'), '젤리캡 v2 켜짐');
 {
   const ATK = { id: 'f', name: '때리기', act: 'attack', power: 60, cost: 0, cats: ['attack'], el: null };
   const j = mk('me', 'jelly_cap'), f = mk('foe', 'thorn');
-  const ev = turn(j, f, SKILLS.u_jelly_1, ATK, 1, () => 0.5);
-  ok(ev.some(e => e.t === 'reflect' && e.who === 'me') && has(f, 'shock'), '말랑잉 = 반사 · 터지면 감전');
+  const ev = turn(j, f, SKILLS.u_jelly_1, ATK, 1, () => 0.5), h1 = ev.find(e => e.t === 'hit' && e.to === 'me'), r1 = ev.find(e => e.t === 'reflect' && e.who === 'me');
+  ok(h1 && h1.guard && r1 && r1.dmg === h1.dmg + (h1.absorb || 0) && has(f, 'shock'), `말랑잉 = 방어태세 + 막고 받은 피해 100% 되돌림 + 감전(2026-11-05 · 맞음 ${h1 && h1.dmg} · 되돌림 ${r1 && r1.dmg})`);
   const j2 = mk('me', 'jelly_cap', { stage: 1 }), f2 = mk('foe', 'thorn');
   turn(j2, f2, SKILLS.u_jelly_2, ATK, 1, () => 0.5);
   ok(f2.eff.poison && f2.eff.poison.n === 2, `톡씽 = 공격 독 1 + 반사 터지면 독 하나 더(지금 ${f2.eff.poison && f2.eff.poison.n})`);
@@ -451,10 +451,19 @@ ok(SPECIES_V2.has('jelly_cap'), '젤리캡 v2 켜짐');
   turn(j4, f4, SKILLS.u_jelly_3, OTHER, 1);
   const ev4 = turn(j4, f4, OTHER, { ...ATK, power: 9999 }, 2, () => 0.5);
   ok(j4.hp === j4.max && ev4.some(e => e.t === 'endure' && e.revive) && j4.eff.atkDown && j4.eff.defDown, '부활잉 = 쓰러질 공격에 체력 가득 부활 + 공격 · 방어 하락');
-  const j5 = mk('me', 'jelly_cap', { stage: 2 }), f5 = mk('foe', 'thorn');
-  turn(j5, f5, SKILLS.u_jelly_3c, OTHER, 1);
-  turn(j5, f5, OTHER, { ...ATK, inflicts: [{ id: 'poison', n: 2 }, { id: 'atkDown' }] }, 2, () => 0.5);
-  ok(!j5.eff.poison && !j5.eff.atkDown && f5.eff.poison && f5.eff.atkDown && !j5.eff.bounce, '너꺼잉 = 상대 기술 한 번이 거는 것 전부를 튕김 → 쓰이면 끝');
+  const j5 = mk('me', 'jelly_cap', { stage: 2 }), f5 = mk('foe', 'thorn'), hp5 = j5.hp, fhp5 = f5.hp;
+  const ev5 = turn(j5, f5, SKILLS.u_jelly_3c, { ...ATK, inflicts: [{ id: 'poison', n: 2 }, { id: 'atkDown' }] }, 1, () => 0.5), r5 = ev5.find(e => e.t === 'reflect' && e.who === 'me');
+  ok(j5.hp === hp5 && r5 && f5.hp <= fhp5 - r5.dmg && !j5.eff.poison && !j5.eff.atkDown && f5.eff.poison && f5.eff.atkDown && !j5.eff.bounce, `너꺼잉 = 그 턴 첫 타는 안 맞고 그 피해 · 거는 상태를 그대로 되돌림 → 그 턴에 끝(2026-11-05 · 되돌림 ${r5 && r5.dmg})`);
+  const j6 = mk('me', 'jelly_cap', { stage: 2 }), f6 = mk('foe', 'thorn');
+  turn(j6, f6, SKILLS.u_jelly_3c, OTHER, 1);
+  turn(j6, f6, OTHER, { ...ATK, inflicts: [{ id: 'poison', n: 1 }] }, 2, () => 0.5);
+  ok(j6.eff.poison && !f6.eff.poison, '너꺼잉 = 그 턴 자세(다음 턴 공격은 안 튕김)');
+  const j7 = mk('me', 'jelly_cap', { stage: 2 }), f7 = mk('foe', 'aqua');
+  turn(j7, f7, SKILLS.u_jelly_3c, { ...ATK, el: 'water', inflict: { id: 'wet' }, inflicts: [{ id: 'poison', n: 1 }] }, 1, () => 0.5);
+  ok(!j7.eff.wet && !j7.eff.poison && f7.eff.poison, '튕김은 면역 판정 뒤 — 물 젤리캡이 원래 안 걸리는 젖음엔 안 쓰이고 독을 튕김');
+  const mush = mk('me', 'stone_cap'), sp = mk('foe', 'spore_cap');
+  turn(mush, sp, OTHER, { ...ATK, inflict: { id: 'spore', delay: 2 } }, 1, () => 0.5);
+  ok(mush.eff.spore, '버섯도 포자에 걸림(2026-11-05 사용자 — 서로 안 걸리는 건 본인 속성뿐)');
 }
 // ── 17. 팽트랩(2026-10-29 밤샘) ──
 ok(SPECIES_V2.has('fang_trap') && SPECIES.fang_trap && (SKILLS.u_fang_1.el === 'grass'), '팽트랩 v2 켜짐 · 풀 기술');

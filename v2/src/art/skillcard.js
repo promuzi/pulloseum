@@ -551,7 +551,11 @@ function cardBack(g, w, h, sk, o) {
   if (sk.fruitCondense) fx.push({ id: 'fruit', to: '나에게' });
   for (const h of sk.hex || []) fx.push({ id: h.id, n: h.n || 1, to: h.turns ? `상대 쪽 · ${h.turns}턴` : '상대에게' });   // 피해 없이 거는 기술(종 고유 v2)
   for (const b of [sk.self, sk.also]) if (b) fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), to: '나에게' });
-  if (sk.reflect) fx.push({ id: 'reflect', to: '이번 턴' });   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타)
+  if (sk.reflect) {   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타) · 되돌리는 몫 · 덤 · 완전 반사는 기술마다(2026-11-05 — 전엔 공통 30% 글만 나와 말랑잉 감전 · 톡씽 독 덤이 안 보였음)
+    const ri = sk.reflectInflict, rn = ri && (ri.n || 1) > 1 ? ` ${ri.n}겹` : '';
+    fx.push({ id: 'reflect', to: '이번 턴', desc: sk.nullFirst ? '그 턴 처음 맞는 공격은 안 맞고, 그 피해와 거는 상태를 그대로 되돌림'
+      : `그 턴 처음 맞은 공격에서 받은 피해의 ${Math.round((sk.reflectK ?? 0.3) * 100)}%를 되돌림${ri ? ` · 되돌리면 그 상대에게 ${fxName(ri.id)}${rn}` : ''}` });
+  }
   // 칩 = 20칸(아주 작은 글자일 땐 15칸) · 대상 글은 칩 가운데 높이
   const BIG = !TN, CH = BIG ? 20 : 15, look = f => [STATUS[f.id] ? f.id : null, STATUS[f.id] ? null : BUFF_LOOK[f.id] || f.id];
   const chip = (f, x) => fxChip(g, x, y, ...look(f), BIG), toY = () => y + Math.round((CH - glyphH('body')) / 2);
@@ -561,13 +565,13 @@ function cardBack(g, w, h, sk, o) {
     let x = P; for (const f of fx) x += chip(f, x) + 4;
     if (rowW + 6 + g.textW(fx[0].to) <= cw) g.text(fx[0].to, P + rowW + 6, toY(), { color: C.sub });   // 자리가 모자라면 대상 글은 뺌(공격이 거는 효과 = 상대에게)
     y += CH + (SM ? 2 : 4);
-    for (const f of fx) if (STATUS_DESC[f.id]) line(`${fxName(f.id)}: ${STATUS_DESC[f.id]}`);
+    for (const f of fx) if (f.desc || STATUS_DESC[f.id]) line(`${fxName(f.id)}: ${f.desc || STATUS_DESC[f.id]}`);
   } else for (const f of fx) {
     y += TN ? 1 : 2;
     const cwid = chip(f, P);
     g.text(f.to + (f.n > 1 ? ` ${f.n}겹` : '') + (f.delay != null ? ` · ${f.delay}턴 뒤 핌` : ''), P + cwid + 6, toY(), { color: C.sub });
     y += CH + (SM ? 2 : 4);
-    if (STATUS_DESC[f.id]) line(STATUS_DESC[f.id]);
+    if (f.desc || STATUS_DESC[f.id]) line(f.desc || STATUS_DESC[f.id]);
   }
   if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd], '#c0a8ff');
   if (sk.caveAdd) line(CAVE_ADD_TEXT[sk.caveAdd], '#d9b27a');
@@ -579,7 +583,7 @@ function cardBack(g, w, h, sk, o) {
   if (sk.critIfDodged) line('나중에 움직임 · 먼저 친 상대가 나를 빗나갔으면 확정 치명 · 내가 먼저면 치명 없음', '#9fd8ff');
   if (sk.bare) line(`이번 턴 상대 공격을 빗나감 · 스침 없이 다 맞고 받는 피해 −${Math.round((1 - sk.bare) * 100)}%`, '#9fd8ff');
   if (sk.sure) line('반드시 맞음 · 방어태세 · 회피 자세 · 은신 무시 · 먼저 움직이면 확정 치명', '#9fd8ff');
-  if (sk.pierceReflect) line('뚫리면 첫 타 일부 반사', '#9fd8ff');
+  if (sk.pierceReflect) line(`들켜 맞으면 첫 타 피해의 ${Math.round((sk.pierceReflect === true ? 0.3 : sk.pierceReflect) * 100)}%를 되돌림`, '#9fd8ff');   // 은시잉 150%(2026-11-05) · 환각의 주파수 = 공통 30%
   for (const [t, col] of mechLines(sk)) line(t, col);   // 고유 장치 설명(2026-10-29 — 뒷면이 비던 개성 기술 41개)
   if (sk.link) line(`이어 공격 위력 ${sk.link.hits > 1 ? `${sk.link.power}×${sk.link.hits}` : sk.link.power}${sk.link.ambush ? ' · 기습 ×1.5 · 자세 무시' : ''}`, '#9fd8ff');   // 은신 설명에 '피하면 바로 이어 공격'이 이미 있어 수치만(2026-10-24 — 카드 밖으로 넘침)
   // 지금 상대에게의 상성(공격 기술)

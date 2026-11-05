@@ -150,6 +150,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
   for (const u of [A, B]) if (actOf(u).fakeDeath) { stOf(u).endureT = T; u.st.endureDone = false; u.st.endureHp = actOf(u).fakeDeath; }   // 죽은 줄 알았나?(쏜위드) = 그 턴 버티기(순서 무관 — 후공이어도 먼저 오는 공격에)
   for (const g of guards) stOf(g).guardT = T;   // 이 턴 방어태세(치명 방어 — 턴 끝에 터지는 확정 치명도 막음)
   const reflects = new Set([A, B].filter(u => isReflect(actOf(u))));
+  // 너꺼잉(완전 반사 — 2026-11-05 사용자 '너꺼잉을 완전 반사로'): 그 턴 자세로 상대 기술 한 번이 거는 상태를 튕김(선후공 무관 · 그 턴 끝까지 — status.js apply)
+  for (const x of [A, B]) if (actOf(x).bounceNow) { (x.eff ||= {}).bounce = { exp: T }; ev.push({ t: 'fx', who: x.id, to: x.id, name: x.name, id: 'bounce', list: listOf(x) }); }
   const shown = new Set();
   const stanceOk = (u, kind) => kind === 'guard' ? guards.has(u) : kind === 'evade' || kind === 'reflect';
   const showStance = (u, kind = actOf(u).act) => {
@@ -303,6 +305,8 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       dmg = Math.round(hitDmg(u, foe, ah, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
       if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
       dmg = Math.round(dmg * takenK(foe) * (bare || 1));   // 받는 피해 배율(D13 — 체력 가득이면 위엄 등)
+      let nulled = 0;
+      if (d.nullFirst && still && reflects.has(foe) && tier !== 'miss' && dmg > 0) { nulled = dmg; dmg = 0; }   // 너꺼잉: 그 턴 처음 맞는 한 타는 안 맞고 그 피해를 그대로 되돌림(아래 반사)
       let absorb = 0, ab = null;
       if (og && dmg > 0 && og.cap > 0) { const k = Math.min(og.cap, dmg); og.cap -= k; og.used += k; dmg -= k; absorb += k; ab = 'orb'; }   // 보호막 → 방어구 순서로 먼저 막음
       if (dmg > 0 && foe.eff && foe.eff.shield && !a.noShield) { const sh = foe.eff.shield; absorb = Math.min(sh.hp, dmg); sh.hp -= absorb; dmg -= absorb; ab = 'shield'; shieldHit = true; if (sh.warm && absorb > 0 && sh.hp <= 0) warmBroke = true; }
@@ -327,8 +331,10 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       const drain = (a.drain || 0) + ((u.pas && u.pas.drain) || 0);   // 흡수(기술) + 진액 흡수(카드)
       if (tier !== 'miss' && dmg > 0 && drain && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(dmg * drain * healK(u))); if (u.hp > before) ev.push({ t: 'heal', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 흡수
       // 반사 자세(엑셀 v10 방어 스킬): 그 턴 처음 맞은 한 타의 피해 몫을 되돌림(멀리 · 광역도) — 빗나감은 소모하지 않음
-      if (tier !== 'miss' && still && reflects.has(foe) && dmg + absorb > 0 && u.hp > 0 && foe.hp > 0) {
-        reflects.delete(foe); showStance(foe, 'reflect'); const rd = Math.max(1, Math.round((dmg + absorb) * FX.reflect.k)); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd });
+      //  되돌리는 몫 = 기술마다(reflectK — 말랑잉 · 너꺼잉 100%, 없으면 공통 30%) · 속성 · 방어 · 치명 없이 체력에서 뺌
+      const rbase = nulled || dmg + absorb;
+      if (tier !== 'miss' && still && reflects.has(foe) && rbase > 0 && u.hp > 0 && foe.hp > 0) {
+        reflects.delete(foe); showStance(foe, 'reflect'); const rd = Math.max(1, Math.round(rbase * (d.reflectK ?? FX.reflect.k))); u.hp = Math.max(0, u.hp - rd); ev.push({ t: 'reflect', who: foe.id, to: u.id, dmg: rd });
         if (d.reflectInflict && u.hp > 0) apply(u, d.reflectInflict.id, d.reflectInflict.n || 1, { turn: T, rng, ev, by: foe }, d.reflectInflict);   // 젤리캡: 반사가 터지면 그 상대에게(말랑잉 = 감전 · 톡씽 = 독)
       }
       if (tier === 'miss' && evadeOn && a.dodgeSeal && foe.hp > 0) apply(foe, 'seal', 1, { turn: T, rng, ev, by: u }, { extra: !!(foe.eff && foe.eff.seal && foe.eff.seal.from === T + 1) });   // 미역잉: 상대가 회피로 피한 타마다 봉인 하나(다른 기술로)

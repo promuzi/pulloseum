@@ -2,7 +2,7 @@
 //  PLAYBOOK_BY[단계 0 새싹 · 1 성장기 · 2 성체][종] = [{ id: 기술, when: 조건, b: 점수 더하기, d: 시뮬레이션에서 오른 승률(%p) }] — 조건이 맞으면 봇 머리(model.js aiPick)가 그 기술 점수에 b를 더함(봇 식물 단계의 칸 · 없으면 성체 칸).
 //  node tools/test/botsys.mjs playbook --stage N 이 그 단계 칸을 다시 씀(그 종 그 단계까지 고유 기술 전부 손패 · 모든 종과) · 손으로 고치지 않음.
 //  조건: res 개수 칸 ≥ n · meal 먹은 준비 ≥ n · fxn 상대 겹 ≥ n · fx 상대 상태 있음 · nofx 상대 상태 없음 · harm 상대 상태이상 종류 ≥ n · fruit 열매 ≥ n · trap 덫 ≥ n ·
-//   foelow 상대 체력 몫 < x · melow 내 체력 몫 < x · nobell 아침 · 밤이 꺼짐 · sum 소환수 < n · always 쓸 수 있으면
+//   foelow 상대 체력 몫 < x · melow 내 체력 몫 < x · nobell 아침 · 밤이 꺼짐 · sum 소환수 < n · foebig 상대가 위력 n 넘는 공격을 쓸 햇빛이 있음 · always 쓸 수 있으면
 export const PLAYBOOK_BY = {
   0: {   // 새싹 — Lv6 대회 단계 6 몸 · 모든 종과 12판씩
     aqua: [
@@ -78,6 +78,10 @@ export const PLAYBOOK_BY = {
       {"id":"u_miner_1","when":{"k":"always"},"b":0.6,"d":7.6},   // 곡괭이 찍기 — 쓸 수 있으면
       {"id":"u_miner_1","when":{"k":"nofx","r":"spore"},"b":0.6,"d":1.3},   // 곡괭이 찍기 — 상대 spore 없음
     ],
+    jelly_cap: [
+      {"id":"u_jelly_1","when":{"k":"always"},"b":0.6,"d":13.1},   // 말랑잉 — 쓸 수 있으면
+      {"id":"u_jelly_1","when":{"k":"foebig","n":70},"b":0.6,"d":1.3},   // 말랑잉 — 상대가 위력 70 넘게 칠 햇빛
+    ],
   },
   1: {   // 성장기 — Lv6 대회 단계 6 몸 · 모든 종과 12판씩
     thorn: [
@@ -108,7 +112,10 @@ export const PLAYBOOK_BY = {
       {"id":"u_stone_2b","when":{"k":"always"},"b":0.6,"d":7.4},   // 석순 — 쓸 수 있으면
     ],
     jelly_cap: [
-      {"id":"u_jelly_2","when":{"k":"always"},"b":0.6,"d":6.3},   // 톡씽 — 쓸 수 있으면
+      {"id":"u_jelly_2","when":{"k":"always"},"b":0.6,"d":8.7},   // 톡씽 — 쓸 수 있으면
+      {"id":"u_jelly_1","when":{"k":"foebig","n":90},"b":0.6,"d":6.1},   // 말랑잉 — 상대가 위력 90 넘게 칠 햇빛
+      {"id":"u_jelly_1","when":{"k":"foebig","n":70},"b":0.6,"d":2.7},   // 말랑잉 — 상대가 위력 70 넘게 칠 햇빛
+      {"id":"u_jelly_1","when":{"k":"always"},"b":0.6,"d":2.1},   // 말랑잉 — 쓸 수 있으면
     ],
     blade_vine: [
       {"id":"u_blade_2","when":{"k":"always"},"b":0.6,"d":1.7},   // 칼날 잎 — 쓸 수 있으면
@@ -205,7 +212,9 @@ export const PLAYBOOK_BY = {
       {"id":"u_stone_3","when":{"k":"always"},"b":0.6,"d":2.1},   // 용암지대 — 쓸 수 있으면
     ],
     jelly_cap: [
-      {"id":"u_jelly_3","when":{"k":"always"},"b":0.6,"d":22},   // 부활잉 — 쓸 수 있으면
+      {"id":"u_jelly_3","when":{"k":"always"},"b":0.6,"d":6.8},   // 부활잉 — 쓸 수 있으면
+      {"id":"u_jelly_3c","when":{"k":"foebig","n":90},"b":0.6,"d":2.4},   // 너꺼잉 — 상대가 위력 90 넘게 칠 햇빛
+      {"id":"u_jelly_3c","when":{"k":"foebig","n":70},"b":0.6,"d":0.7},   // 너꺼잉 — 상대가 위력 70 넘게 칠 햇빛
     ],
     fang_trap: [
       {"id":"u_fang_1","when":{"k":"always"},"b":0.6,"d":4.7},   // 깨물기 — 쓸 수 있으면
