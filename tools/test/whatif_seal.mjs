@@ -4,8 +4,9 @@
 //   three   = 무작위 셋(서로 다른 칸)
 //   fear    = 공포(사용자 2026-11-06 '도발의 반대인거임? … 공포 라는 상태이상으로') — 다음 1턴 공격 기술 전부(평타 포함)
 //   fearnb  = 공포인데 평타는 됨
-//   fearimm · fearnbimm = 공포 + 버팀(공포가 풀린 바로 다음 턴엔 다시 안 걸림 — 매 턴 다시 걸어 계속 못 때리게 묶는 것을 막음)
+//   fearimm · fearnbimm = 공포 + 면역(공포가 풀린 바로 다음 턴엔 다시 안 걸림 — 매 턴 다시 걸어 계속 못 때리게 묶는 것을 막음)
 //  쓰는 법: git archive HEAD v2 | tar -x -C <사본> → tools/test/weaklab.mjs 를 <사본>/tools/test/ 에 복사 → node tools/test/whatif_seal.mjs <사본> <방식>
+//   ⚠ 2026-11-06 게임이 공포(CHANGELOG 424)로 바뀐 뒤엔 HEAD 대신 그 전 판(커밋 1da2e717)을 사본으로 — 옛 '봉인 · 60 · 햇빛 2' 줄을 찾아 고침
 //   → <사본> 에서 node tools/test/weaklab.mjs --key frost_bell --id u_frost_2b --stage 1
 import { readFileSync, writeFileSync } from 'node:fs';
 const [root, MODE = 'best'] = process.argv.slice(2);

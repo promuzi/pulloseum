@@ -214,6 +214,7 @@ function fxVal(u, foe, f, C) {
     case 'stun': v = deny; break;
     case 'seal': v = 0.25 * R; break;
     case 'taunt': v = 0.08 * R; break;
+    case 'fear': v = foe.eff && (foe.eff.immune || foe.eff.fear) ? 0 : 0.7 * deny; break;   // 공포: 다음 턴 상대 공격을 막음(방어 · 광합성은 됨 — 기절보다 덜) · 면역 · 이미 공포면 안 걸림
     case 'root': v = u.solo ? 0.25 * R : 0.06 * R; break;   // 1:1에선 봉인으로
     case 'wet': v = has(foe, 'wet') ? 0.05 * R : R * defGain(foe, 1 - D.defK) * T(D.turns) + 2.5 * thr * D.missAdd / 100 * T(D.turns) * 0.5 + (K.shock || K.chill ? 0.15 * R : 0); break;
     case 'gale': v = has(foe, 'gale') ? 0.05 * R : 2.5 * thr * D.missAdd / 100 * T(f.turns || D.turns) * 0.6 + (K.gale ? 0.35 * R : 0); break;
@@ -377,7 +378,7 @@ const healNow = (u, a) => Math.round(u.max * ((a.healPct || 0) + (a.cleanseHeal 
 function afterMe(u, foe, s, C) {
   const a = s.ifRes && (resNow(u)[s.ifRes.k] || 0) >= s.ifRes.at ? { ...s, ...s.ifRes.then } : s;   // 깨물기 → 준비 3이면 한입
   const res = resNow(u), st = { ...(u.st || {}) }, eff = { ...(u.eff || {}) };
-  delete eff.seal; delete eff.taunt; delete eff.skip;   // 이번 턴 막힘은 다음 턴엔 풀림(새로 걸릴 것은 모름)
+  delete eff.seal; delete eff.taunt; delete eff.fear; delete eff.skip;   // 이번 턴 막힘은 다음 턴엔 풀림(새로 걸릴 것은 모름)
   let spent = 0;
   if (a.spend) { spent = a.spend.all ? res[a.spend.k] || 0 : a.spend.n || 1; res[a.spend.k] = Math.max(0, (res[a.spend.k] || 0) - spent); }
   if (a.gain && a.gain.k) res[a.gain.k] = Math.min(capNow(u, a.gain.k), (res[a.gain.k] || 0) + (a.gain.n === 'spent' ? spent : a.gain.n || 1));

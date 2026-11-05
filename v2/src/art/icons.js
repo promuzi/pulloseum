@@ -104,6 +104,20 @@ export const ICON_SRC = {
     'oo...oo....',
     '...........',
   ],
+  // 공포(2026-11-06 — 정적을 유지하세요.): 질린 얼굴 — 하늘빛 둥근 얼굴 · 커다란 눈 · 떨리는 입
+  fx_fear: [
+    '...ooooo...',
+    '..oBBBBBo..',
+    '.oBBBBBBBo.',
+    'oBwwBBBwwBo',
+    'oBwNBBBwNBo',
+    'oBBBBBBBBBo',
+    'oBBoBoBoBBo',
+    'oBBBoBoBBBo',
+    '.oBBBBBBBo.',
+    '..oBBBBBo..',
+    '...ooooo...',
+  ],
   target: [
     '...ooooo...',
     '..orrrrro..',

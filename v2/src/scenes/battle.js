@@ -94,7 +94,7 @@ import { drawAuras, plantBox, drawBarriers, barrierBox, barrierKinds, barrierHit
 import { CAST_MS, castKind, castColor, castPose, castShake, targetKick, drawCast, CAST_SFX, fxIdsOf, castSpecial, drawEcho } from '../art/castfx.js';   // 보조 기술 시전 동작(2026-10-29 ㉡) · 공개 카드 효과 아이콘(㉥ 시안)
 import { sfx, music } from '../core/sound.js';
 // 상태 효과 → 효과음 이름(core/sound.js SFX)
-const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale',
+const FX_SOUND = { burn: 'ignite', poison: 'poison', bleed: 'weak', shock: 'shock', paral: 'shock', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore', seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', fear: 'shade', dark: 'shade', shade: 'shade', gale: 'gale',
   atkDown: 'weak', defDown: 'corrode', spdDown: 'weak', critDown: 'weak', accDown: 'weak', atkUp: 'rage', defUp: 'wall', spdUp: 'haste', critUp: 'focus', accUp: 'focus', flourish: 'haste',
   regen: 'regen', will: 'purify', shield: 'shield', purified: 'purify', aim: 'focus' };   // 2026-10-23 엑셀 v10 이름(소리는 있던 것)
 const crackles = e => { if (e) for (const ms of popTimes(e)) sfx('crackle', { at: ms / 1000 }); };
@@ -355,7 +355,7 @@ const FX_MSG = {
   frozen: x => `${ga(x)} 꽁꽁 얼어붙었다!`, paral: x => `${ga(x)} 감전되어 몸이 굳었다!`, stun: x => `${ga(x)} 기절했다!`, charm: x => `${ga(x)} 춤에 매혹됐다!`,
   spore: (x, e) => `${x}에게 포자가 붙었다!` + (e.n > 1 ? ` (포자 ${e.n})` : ''),
   seal: (x, e) => `${x}의 ${eul(e.skill)} 봉인했다!`, leech: x => `${x}에게 기생 씨앗이 심어졌다!`, shade: x => `${x}에게 그늘이 드리웠다! 햇빛이 안 찬다`, dark: x => `${x}의 햇빛이 가려졌다!`,
-  gale: x => `${x} 쪽에 강풍이 몰아친다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 다음 턴엔 공격만 한다`, root: x => `${x}의 발이 묶였다! 다음 턴 교체할 수 없다`,
+  gale: x => `${x} 쪽에 강풍이 몰아친다! 적중이 떨어진다`, taunt: x => `${ga(x)} 도발에 넘어갔다! 다음 턴엔 공격만 한다`, fear: x => `${ga(x)} 공포에 질렸다! 다음 턴엔 공격도 교체도 못 한다`, root: x => `${x}의 발이 묶였다! 다음 턴 교체할 수 없다`,
   bleed: x => `${x}에게 상처가 났다! 피가 흐른다`,
   // 능력치 겹(겹 수가 둘 이상이면 함께)
   ...Object.fromEntries([['atkDown', '공격이 떨어진다'], ['defDown', '방어가 떨어진다'], ['spdDown', '몸이 둔해졌다'], ['critDown', '날이 무뎌졌다'], ['accDown', '눈앞이 흐려졌다'],

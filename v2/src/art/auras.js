@@ -31,11 +31,13 @@ const S = {   // 5~9칸(식물 96칸에 맞춰 — 3칸이던 첫 판은 몸 위
   flake: ['..a..', 'a.a.a', '.aba.', 'aabaa', '.aba.', 'a.a.a', '..a..'], star: ['...a...', '...a...', '..aba..', 'aabbbaa', '..aba..', '...a...', '...a...'],
   heart: ['.aa.aa.', 'abbabba', 'abbbbba', '.abbba.', '..aba..', '...a...'], spark: ['...aa', '..aa.', '.aab.', 'aaaab', '..aa.', '.aa..', 'aa...'],
   lock: ['..aaa..', '.a...a.', '.a...a.', 'bbbbbbb', 'bbbcbbb', 'bbbcbbb', 'bbbbbbb'], plus: ['..a..', '..a..', 'aabaa', '..a..', '..a..'], mote: ['.a.', 'aba', '.a.'],
+  sweat: ['...a...', '...a...', '..aaa..', '..aaa..', '.aabaa.', '.abaaa.', 'aabaaaa', 'aaaaaaa', '.aaaaa.', '..aaa..'],   // 공포 식은땀(7×10)
   anger: ['.a.a.', 'aa.aa', '.....', 'aa.aa', '.a.a.'], cloud: ['....aaaa....', '..aabbbbaa..', '.abbbbbbbbaa', 'abbbbbbbbbba', 'abbbbbbbbbba', '.aaaaaaaaaa.'],
   fruit: ['..c..', '.aaa.', 'aabba', 'aaaba', '.aaa.'], spore: ['.a.', 'aba', '.a.'], down: ['a.....a', 'ab...ba', '.ab.ba.', '..aba..', '...a...'], up: ['...a...', '..aba..', '.ab.ba.', 'ab...ba', 'a.....a'],
   sprout: ['aa...bb', '.aa.bb.', '...c...', '...c...', '...c...'], reticle: ['aaa...aaa', 'a.......a', 'a.......a', '.........', '....b....', '.........', 'a.......a', 'a.......a', 'aaa...aaa'],
 };
 const PAL = {
+  sweat: { a: '#8fd3ff', b: '#ffffff' },
   ember: { a: '#ff5a1a', b: '#ffa03a', c: '#ffe890' }, poison: { a: '#a050e0', b: '#f0d8ff' }, blood: { a: '#ff4a5a', b: '#b01e30' }, water: { a: '#bfefff', b: '#3a8ad0' },
   flake: { a: '#ffffff', b: '#8ad6f0' }, star: { a: '#ffd84a', b: '#ffffff' }, heart: { a: '#e8407e', b: '#ffb0d0' }, spark: { a: '#ffffff', b: '#ffe84a' },
   lock: { a: '#c8b0f0', b: '#7a5ac0', c: '#24143a' }, plus: { a: '#4ac85a', b: '#c8ffb0' }, gold: { a: '#ffd84a', b: '#fff4c0' }, anger: { a: '#ff3a3a' },
@@ -78,6 +80,7 @@ const M = {
     c.globalAlpha = o;
   },
   taunt(g, B, t) { spr(g, B.hx + B.dir * (B.hr * 0.9), B.top - 3, S.anger, PAL.anger, 0.75 + 0.25 * Math.sin(t / 140)); },   // 도발: 머리 옆 빨간 핏대(두근)
+  fear(g, B, t) { for (const off of [0, 500]) { const q = cyc(t, 1000, off); spr(g, B.hx - B.dir * (B.hr + (off ? 9 : 5)), B.hy - B.hr * 0.55 + (off ? 6 : 0) + q * 12, S.sweat, PAL.sweat, q < 0.15 ? q / 0.15 : 1 - (q - 0.15) / 0.85); } },   // 공포: 도발 핏대 반대쪽 머리 바깥에 큰 식은땀 두 방울이 번갈아 흘러내림
   seal(g, B, t) { spr(g, B.hx, B.top - 13 + Math.sin(t / 380) * 1.5, S.lock, PAL.lock); },   // 봉인: 머리 위 자물쇠가 둥실
   leech(g, B, t) { spr(g, B.hx + Math.round(Math.sin(t / 420)), B.top - 4, S.sprout, PAL.sprout); },   // 기생 씨앗: 머리에 싹(흔들림)
   dark(g, B, t) { const x = B.hx + Math.sin(t / 700) * 2, y = B.top - 16; spr(g, x, y, S.cloud, PAL.cloud, 0.95); const q = cyc(t, 1500); if (q < 0.4) spr(g, x + 2, y + 5 + q * 22, S.drop, PAL.cloud, 1 - q * 2.5); },   // 햇빛 가림 · 그늘: 머리 위 먹구름
@@ -111,7 +114,7 @@ function chev(g, B, t, dir, rows, pal) {   // 꺾쇠(∨ 약화 · ∧ 강화): 
 }
 
 // 중요한 것부터(행동을 막는 것 → 지속 피해 → 나머지) · 한 식물에 넷까지
-const PRI = ['frozen', 'stun', 'charm', 'paral', 'root', 'taunt', 'seal', 'burn', 'poison', 'bleed', 'leech', 'shock', 'chill', 'wet', 'dark', 'revive', 'will', 'aim', 'fruit', 'spore', 'regen', 'down', 'up'];
+const PRI = ['frozen', 'stun', 'charm', 'paral', 'root', 'taunt', 'fear', 'seal', 'burn', 'poison', 'bleed', 'leech', 'shock', 'chill', 'wet', 'dark', 'revive', 'will', 'aim', 'fruit', 'spore', 'regen', 'down', 'up'];
 const DOWN = new Set(['atkDown', 'defDown', 'spdDown', 'critDown', 'accDown']), UP = new Set(['atkUp', 'defUp', 'spdUp', 'critUp', 'accUp', 'flourish']);
 export function auraKinds(list) {
   const have = new Map();

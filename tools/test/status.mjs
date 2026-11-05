@@ -455,10 +455,35 @@ const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.
     ok(firstOk(t) === BLOCKED, '도발 중 햇빛이 없고 평타도 봉인되면 쓸 행동이 없음');
     const r = resolveTurn(x, t, x.kit[0], firstOk(t), fixed(0.5), { turn: 2 });
     ok(r.events.some(e => e.t === 'skip' && e.who === 'foe' && e.src === 'blocked') && t.eff.immune, '그 턴 쉬고 다음 턴 면역'); }
-  // 의지가 제한 셋을 막음(굴림 0)
+  // 의지가 제한 넷을 막음(굴림 0)
   { const w = mk('foe', 'flower_grass'); selfBuff(w, 'will', { turn: 1, ev: [] });
-    const ev = []; for (const id of ['seal', 'root', 'taunt']) apply(w, id, 1, { turn: 1, rng: () => 0, ev, by: x });
-    ok(!w.eff.seal && !w.eff.root && !w.eff.taunt && ev.filter(e => e.t === 'resist' && e.why === 'will').length === 3, '의지 = 봉인 · 속박 · 도발도 확률로 막음'); }
+    const ev = []; for (const id of ['seal', 'root', 'taunt', 'fear']) apply(w, id, 1, { turn: 1, rng: () => 0, ev, by: x });
+    ok(!w.eff.seal && !w.eff.root && !w.eff.taunt && !w.eff.fear && ev.filter(e => e.t === 'resist' && e.why === 'will').length === 4, '의지 = 봉인 · 속박 · 도발 · 공포도 확률로 막음'); }
+  // 공포(2026-11-06 — 도발의 반대 · 교체도 못 함): 다음 1턴 공격 기술(평타 포함) 못 씀 · 버프 · 광합성은 씀
+  { const t = mk('foe', 'flower_grass'); t.energy = 8; apply(t, 'fear', 1, ctx(x, 1, []));
+    const buff = { id: 'bf', act: 'buff', cost: 0, self: 'atkUp' }, atkBuff = { id: 'ab', act: 'attack', power: 10, cost: 0, self: 'atkUp' };
+    ok(canUse(t, buff) && canUse(t, sk(t, 'sun')) && !canUse(t, atkBuff) && !canUse(t, sk(t, 'basic')) && !canUse(t, sk(t, 's2')), '공포 = 공격 기술은 평타까지 못 씀(공격 + 버프도) · 버프 · 광합성은 씀');
+    ok(ST.lockOf(t, sk(t, 'basic')) === 'fear' && ST.lockOf(t, sk(t, 'sun')) === null, '막힌 까닭 = 공포(카드에 표시)');
+    ok(canSwitch(t, 1) && !canSwitch(t, 2), '공포는 다음 턴 교체도 막음');
+    const ev = []; apply(t, 'fear', 1, { turn: 1, rng: () => 0.9, ev, by: x });
+    ok(ev.some(e => e.t === 'resist' && e.why === 'immune') && t.eff.fear.from === 2, '이미 공포면 다시 안 걸림(풀리기 전에 이어 묶기 막음)'); }
+  // 공포 턴을 마치면 다음 행동까지 면역(사용자 '공포도 걸리면 다음턴 면역이 됨 / 기절과 공포 안 걸림') — 그다음 행동을 마치면 끝
+  { const t = mk('foe', 'flower_grass'); t.energy = 8; apply(t, 'fear', 1, ctx(x, 1, []));
+    ST.endAct(t, [], 2);
+    ok(t.eff.immune, '공포가 걸린 턴에 행동을 마치면 면역');
+    const ev = []; apply(t, 'stun', 1, { turn: 2, rng: () => 0.9, ev, by: x }); apply(t, 'fear', 1, { turn: 2, rng: () => 0.9, ev, by: x });
+    ok(!t.eff.skip && ev.filter(e => e.t === 'resist' && e.why === 'immune').length === 2, '면역 = 기절 · 공포 둘 다 안 걸림');
+    expire(t, 2, []);
+    ok(!t.eff.fear && t.eff.immune, '공포는 그 턴 끝에 풀리고 면역은 남음');
+    ST.endAct(t, [], 3);
+    ok(!t.eff.immune, '다음 행동을 마치면 면역 끝');
+    apply(t, 'fear', 1, { turn: 3, rng: () => 0.9, ev: [], by: x });
+    ok(t.eff.fear && t.eff.fear.from === 4, '면역이 끝나면 다시 걸림'); }
+  // 공포 턴에 행동을 못 마쳤어도(쉰 차례 아님 · 대기) 공포가 끝날 때 면역 · 기절로 쉰 면역도 공포를 막음
+  { const t = mk('foe', 'flower_grass'); apply(t, 'fear', 1, ctx(x, 1, [])); expire(t, 2, []);
+    ok(!t.eff.fear && t.eff.immune, '공포가 끝날 때 면역(행동을 못 마쳤을 때도)');
+    const s = mk('foe', 'flower_grass'); s.eff = { immune: {} }; const ev = []; apply(s, 'fear', 1, { turn: 1, rng: () => 0.9, ev, by: x });
+    ok(!s.eff.fear && ev.some(e => e.t === 'resist' && e.why === 'immune'), '기절로 쉰 뒤 면역이면 공포도 안 걸림'); }
 }
 // ── 9-7. 강풍 환경 · 대기석 진행(엑셀 v10 38행 · 검토 대기 B10) ──
 {

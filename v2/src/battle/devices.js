@@ -524,10 +524,10 @@ export function bellSync(A, B, T, ev) {
 }
 // 메아리 몫(아침 · 밤이 켜진 동안 · 0 = 없음)
 export const echoK = (u, T) => { const b = SP(u).bell, s = u && u.st && u.st.bell; return b && s && s.exp >= T ? b[s.kind] || 0 : 0; };
-// 메아리 한 번의 기술 값: 위력 · 능력치 겹 값 · 회복은 몫만큼 · 빙결 · 독은 한 겹 그대로 · 봉인은 다른 기술 하나 더 · 기간만 있는 효과는 그대로(긴 쪽)
+// 메아리 한 번의 기술 값: 위력 · 능력치 겹 값 · 회복은 몫만큼 · 빙결 · 독은 한 겹 그대로 · 봉인은 다른 기술 하나 더 · 공포는 더할 것 없음(피해만) · 기간만 있는 효과는 그대로(긴 쪽)
 export function echoAct(a, k) {
   const inf = a.inflict, D = inf && FX[inf.id];
-  const inflict = !inf ? inf : inf.id === 'chill' || inf.id === 'poison' ? { ...inf, n: 1 } : D && D.stat ? { ...inf, v: (inf.v ?? D.v) * k } : inf.id === 'seal' ? { ...inf, extra: true } : inf;
+  const inflict = !inf ? inf : inf.id === 'fear' ? null : inf.id === 'chill' || inf.id === 'poison' ? { ...inf, n: 1 } : D && D.stat ? { ...inf, v: (inf.v ?? D.v) * k } : inf.id === 'seal' ? { ...inf, extra: true } : inf;
   return { ...a, power: a.power ? Math.max(1, Math.round(a.power * k)) : a.power, inflict, echoK: k, bell: undefined };
 }
 

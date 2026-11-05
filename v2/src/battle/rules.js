@@ -166,7 +166,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     queenSync(A, B);   // 지옥전개를 막 켰으면 다음 행동부터 여왕 버프
     if (foe.eff && foe.eff.bounce && foe.eff.bounce.used) { delete foe.eff.bounce; ev.push({ t: 'expire', who: foe.id, ids: ['bounce'], list: listOf(foe) }); }   // 너꺼잉 = 상대 기술 한 번에 쓰임
     if (r === 'acted' || r === 'end') resoAfter(u, foe, ev, n0, T, guards.has(foe));   // 게일캑터: 방해 디버프가 들어간 기술이면 공명 +1
-    if (r !== 'rest' && r !== 'gone' && !actOf(u).idle) endAct(u, ev);
+    if (r !== 'rest' && r !== 'gone' && !actOf(u).idle) endAct(u, ev, T);
     if (r === 'end' || r === 'gone' || foe.hp <= 0 || u.hp <= 0) break;   // 공명 추가 공격으로 쓰러져도 그 턴 끝
   }
   function act(u, foe) {

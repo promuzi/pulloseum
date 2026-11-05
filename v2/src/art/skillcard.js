@@ -30,8 +30,8 @@ const BASIC_DESC = {
   guard: ['순서와 상관없이 방어력 4배', '그 턴 모든 공격을 막음', '연속 사용하면 방어력 2.5배'],
   evade: ['먼저든 늦게든 성립', '상대 공격이 빗나갈 확률 +15', '스칠 확률 +10'],
 };
-export const LOCK_TEXT = { seal: '봉인되어 이번 턴 못 씀', taunt: '도발에 넘어가 공격 기술만 씀' };
-const LOCK_SHORT = { seal: '봉인', taunt: '도발' };   // 카드 앞면(그림 위)
+export const LOCK_TEXT = { seal: '봉인되어 이번 턴 못 씀', taunt: '도발에 넘어가 공격 기술만 씀', fear: '공포에 질려 공격 기술을 못 씀' };
+const LOCK_SHORT = { seal: '봉인', taunt: '도발', fear: '공포' };   // 카드 앞면(그림 위)
 export const ART_W = 58, ART_H = 52;   // 그림 칸(논리 칸) — 코덱스 그림은 tools/pixel/big/bgconv.mjs --fit --w=58 --h=52 로 줄여 assets/v2/skills/<기술 id>.png
 // 그림 테 카드의 표시 자리(2026-11-04 테 곧은 팔을 카드 끝까지 키움 — 사용자 '그렇게하면 이전에 맞춘 아이콘과 글자와 테두리 사이의 간격이 벌어질텐데 그것까지 잘 맞춰줘'):
 //  테마다 곧은 팔이 바깥으로 나간 칸(옆 1~2 · 위아래 1~4 — frames.js mx · my)의 가운데값 = 옆 1 · 위아래 2칸만큼 표시도 바깥으로

@@ -1,0 +1,6 @@
+(node:76600) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/logic.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+프로스트벨: 손패 60개 · 평균 승률 35.8% · 예로부터 매가 약이었죠. +5.9 · 정적을 유지하세요. +5.0 · 광합성 +5.0 · 서리 +4.3 · 꽃향기 +4.0 · 얼음 창 +2.8 · 꽃잎 춤 +2.0 · 눈보라 +1.8 · 회피 자세 +1.5 · 절대 영도 +0.9 · 방어태세 -0.5 · 평타 -0.9 · 얼음 껍질 -0.9 · 깨트려드리죠. -2.3 · 아침이에요. -3.0 · 꽃비 -4.3 · 청아함의 물결. -7.1 · 이제 밤이군요. -13.9 (5초)
+썼어요: v2/src/game/botdeck_w.js

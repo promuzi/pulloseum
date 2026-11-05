@@ -15,7 +15,7 @@ const BASIC = { basic: { id: 'basic', act: 'attack', power: 30, cost: 0, el: nul
 const skillOf = id => BASIC[id] || SKILLS[id];
 
 // ① 카드 성격 — 위력 몫(같은 잣대: 위력 1 = 1) · 효과 몫(위력으로 친 값) · 역할 · 연계 꼬리표
-const FXP = { stun: 45, chill: 12, burn: 22, poison: 9, shock: 16, seal: 10, defDown: 14, atkDown: 14, wet: 12, spore: 20, taunt: 4, root: 4, gale: 10, bleed: 16, accDown: 8, spdDown: 8, critDown: 5, leech: 18, dark: 12 };
+const FXP = { stun: 45, chill: 12, burn: 22, poison: 9, shock: 16, seal: 10, fear: 30, defDown: 14, atkDown: 14, wet: 12, spore: 20, taunt: 4, root: 4, gale: 10, bleed: 16, accDown: 8, spdDown: 8, critDown: 5, leech: 18, dark: 12 };
 const SELFP = { atkUp: 30, defUp: 20, spdUp: 14, aim: 18, critUp: 10, shield: 20, armor: 26, regen: 22, purify: 8, stealth: 30, flourish: 22, will: 10 };
 const SPECIALP = { bell: 55, inferno: 55, summon: 55, volley: 35, grow: 25, burst: 35, trapSet: 35, miasma: 45, galeAdd: 45, caveAdd: 40, moss: 30, taste: 30, harvest: 35, cycle: 25, harmony: 15, settle: 40, toggle: 25, dragonTry: 40, heartArmor: 40, heartCleanse: 20, fruitCondense: 35, revive: 40, bounce: 25, inject: 50, infuse: 30, orbGuard: 30, orbRefill: 30, orbTrap: 35, orbAbsorb: 30, fakeDeath: 30, bare: 30, cleanseHeal: 45, healPct: 40 };
 const fxList = s => [s.inflict, ...(s.inflicts || []), s.perHitInflict && { ...s.perHitInflict, n: (s.perHitInflict.n || 1) * (s.hits || 1) }, s.critInflict && { ...s.critInflict, p: 0.3 }, ...(s.act === 'hex' ? s.hex || [] : [])].filter(Boolean);
@@ -95,7 +95,7 @@ export function cardInfo(id, key) {
 // ② 컨셉 — 연계(고유 묶음) · 공격(피해 · 큰 한 방) · 버티기(회복 · 방어 · 지속 피해) · 방해(상태이상 · 능력치 내림) · 속성(다른 속성 공격)
 export const CONCEPTS = { combo: '연계', aggro: '공격', sustain: '버티기', control: '방해', cover: '속성' };
 const ROLE_CON = { tank: { sustain: 3, control: 1.5, combo: 2, aggro: 1, cover: 1 }, ltank: { sustain: 2.5, control: 1.5, combo: 2, aggro: 1.2, cover: 1 }, atk: { aggro: 3, combo: 2, cover: 1.5, control: 1, sustain: 0.6 }, fast: { aggro: 2.5, combo: 2, control: 1.5, cover: 1.2, sustain: 0.6 }, sup: { sustain: 2.5, combo: 2, control: 1.5, aggro: 1, cover: 1 }, dis: { control: 3, combo: 2, aggro: 1.2, cover: 1, sustain: 1 }, ctr: { control: 2, sustain: 2, combo: 2, aggro: 1.2, cover: 1 }, dot: { control: 2.5, sustain: 2, combo: 2, aggro: 1, cover: 1 }, drain: { combo: 3, aggro: 2, sustain: 1.5, control: 1, cover: 1 } };
-const CTRL = new Set(['stun', 'seal', 'chill', 'shock', 'atkDown', 'defDown', 'accDown', 'spdDown', 'critDown', 'taunt', 'gale', 'wet', 'root', 'dark']);
+const CTRL = new Set(['stun', 'seal', 'chill', 'shock', 'atkDown', 'defDown', 'accDown', 'spdDown', 'critDown', 'taunt', 'fear', 'gale', 'wet', 'root', 'dark']);
 const DOT = new Set(['burn', 'poison', 'bleed', 'spore', 'leech', 'shock']);
 function pickConcept(rng, key, pool, stage = 2) {
   const sp = SPECIES[key] || {}, W = { ...(ROLE_CON[sp.role] || { combo: 2, aggro: 2, control: 1, sustain: 1, cover: 1 }) };

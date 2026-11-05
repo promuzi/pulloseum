@@ -284,14 +284,16 @@ ok(SPECIES_V2.has('frost_bell'), '프로스트벨 v2 켜짐');
   ok(ev.some(e => e.t === 'fx' && e.to === 'foe' && e.id === 'frozen') && !f.eff.skip && !f.eff.immune, '얼리고 → 메아리 타가 깨서 쉼 · 면역 없음');
   ok(hits.length === 2 && hits[1].dmg > 0, '깨기 타가 들어감');
 }
-{ // 정적을 유지하세요. = 봉인 하나 · 아침이면 메아리로 다른 기술 하나 더
+{ // 정적을 유지하세요. = 공포(2026-11-06 — 다음 턴 공격 기술 · 평타 못 씀 · 교체 못 함) · 위력 70 · 햇빛 1 · 아침 메아리는 피해만(공포를 더 걸지 않음)
   const b = mk('me', 'frost_bell', { stage: 1 }), f = mk('foe', 'aqua');
+  ok(SKILLS.u_frost_2b.power === 70 && SKILLS.u_frost_2b.cost === 1 && SKILLS.u_frost_2b.inflict.id === 'fear', '정적을 유지하세요. = 위력 70 · 햇빛 1 · 공포');
   turn(b, f, SKILLS.u_frost_1, OTHER, 1);
   let x = 0.1; const rng = () => { x = (x + 0.37) % 1; return x; };
-  turn(b, f, SKILLS.u_frost_2b, OTHER, 2, rng);
-  ok(f.eff.seal && f.eff.seal.more && f.eff.seal.more.length === 1 && f.eff.seal.more[0] !== f.eff.seal.skill, '메아리 봉인 = 다른 기술 하나 더');
-  const locked = f.kit.filter(s => !canUse(f, s, 8, b)).map(s => s.id);
-  ok(locked.includes(f.eff.seal.skill) && locked.includes(f.eff.seal.more[0]), '두 기술 모두 못 씀');
+  const ev = turn(b, f, SKILLS.u_frost_2b, OTHER, 2, rng);
+  ok(f.eff.fear && !f.eff.seal, '공포가 걸림(봉인 아님)');
+  ok(ev.filter(e => e.t === 'fx' && e.to === 'foe' && e.id === 'fear').length === 1 && ev.some(e => e.t === 'echo' && e.id === 'u_frost_2b'), '메아리는 울리지만 공포는 한 번');
+  const atk = f.kit.filter(s => s.act === 'attack'), rest = f.kit.filter(s => s.act !== 'attack');
+  ok(atk.length && atk.every(s => !canUse(f, s, 8, b)) && rest.some(s => canUse(f, s, 8, b)), '공격 기술은 다 못 쓰고 나머지는 씀');
 }
 { // 이제 밤이군요. = 양쪽 앞 식물 햇빛 안 참 · 교체로 들어온 식물도 · 프로스트벨이 나가면 사라짐
   const b = mk('me', 'frost_bell', { stage: 2 }), f = mk('foe', 'aqua'), f2 = mk('foe2', 'thorn');

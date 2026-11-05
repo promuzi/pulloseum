@@ -602,7 +602,7 @@ const V2 = {
     skills: [
       S('u_frost_1', '아침이에요.', 'ice', 'u', 30, 1, { ranged: true, bell: 'morning' }),   // 켜는 턴에 작은 공격(2026-11-04 사용자 '프로스트벨 추천대로 ㄱ' — 메아리 25 → 40%는 리그전에서 오르지 않음 · 위력 30 = +2%p)
       S('u_frost_2', '깨트려드리죠.', 'ice', 'u', 80, 2, { inflict: { id: 'chill', n: 1 }, bonusIf: { id: 'frozen', k: 2, clear: true } }),
-      S('u_frost_2b', '정적을 유지하세요.', 'wind', 'u', 60, 2, { inflict: { id: 'seal' } }),
+      S('u_frost_2b', '정적을 유지하세요.', 'wind', 'u', 70, 1, { inflict: { id: 'fear' } }),   // 2026-11-06 사용자 '공포 라는 상태이상으로' · '수치는 추천대로' — 봉인 무작위 1칸 · 위력 60 · 햇빛 2 → 공포(다음 턴 공격 기술 · 교체 못 함) · 70 · 1(약한 기술 8번)
       S('u_frost_3', '이제 밤이군요.', 'ice', 'u', 0, 2, { bell: 'night' }),
       S('u_frost_3b', '청아함의 물결.', 'ice', 'u', 0, 2, { cats: ['heal_hp'], self: 'purify', healPct: 0.2 }),
       S('u_frost_3c', '예로부터 매가 약이었죠.', null, 'u', 55, 3, { area: true, hits: 3 }),   // 타당 위력 40 → 55(2026-10-29 성체 기준)

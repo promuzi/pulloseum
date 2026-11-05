@@ -96,7 +96,7 @@ const FXLAB = [
   ['능력치 약화', [['쇠약', 'fx_atk_down'], ['시듦', 'fx_def_down'], ['둔화', 'fx_spd_down'], ['무딤', 'fx_crit_down'], ['교란', 'fx_acc_down']], '#ff8a8a'],
   ['해로운 상태이상', [['화상', 'fx_burn', '#ff7a3a'], ['독', 'fx_poison', '#b866ff'], ['출혈', 'fx_bleed', '#ff5a6e'], ['감전', 'fx_shock', '#ffd84a'], ['빙결', 'fx_chill', '#c4ecff'], ['젖음', 'fx_wet', '#4f9dff'],
     ['암실', 'fx_shade', '#a0a3c8'], ['기절', 'st_stun', '#ff86c8'], ['마비', 'st_paral', '#ffe680'], ['얼음', 'st_frozen', '#e8f8ff'], ['봉인', 'fx_seal', '#6fd25c'], ['속박', 'st_root', '#c08a5a'],
-    ['도발', 'fx_taunt', '#ff5a5a'], ['포자', 'st_spore', '#8fe0b8'], ['기생', 'st_leech', '#c8e04a']]],
+    ['도발', 'fx_taunt', '#ff5a5a'], ['공포', 'fx_fear', '#9fb8ff'], ['포자', 'st_spore', '#8fe0b8'], ['기생', 'st_leech', '#c8e04a']]],
   ['이로운 상태이상', [['재생', 'fx_regen'], ['의지', 'fx_will'], ['면역', 'fx_immune']], true],
   ['준비 효과', [['조준', 'fx_aim'], ['은신', 'fx_stealth'], ['보호막', 'fx_barrier']], true],
   ['자세 · 갑주', [['방어', 'shield'], ['회피', 'fx_evade'], ['반사', 'fx_reflect'], ['갑주', 'fx_armor']], true],

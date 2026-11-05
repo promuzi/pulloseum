@@ -15,7 +15,7 @@ export const SFX_LIFE = { ignite: 1400, burn: 1150, poison: 900, shock: 700, par
 //  화상: 걸릴 때 = ignite(불이 확 붙어 일렁이다 잦아듦 + 타닥), 턴 끝 피해 = burn(불꽃이 잠깐 다시 솟음 + 타닥)
 // 2026-10-23 엑셀 v10 이름 → 있던 연출(활력 = 분노 불꽃 · 억셈 = 철벽 · 가속 · 쇠약 = 약화 · 시듦 = 부식 · 봉인 = 덩굴 · 암실 · 그늘 = 그늘 · 조준 = 집중 · 출혈 = 약화 붉은 빛)
 export const SFX_OF_FX = { burn: 'ignite', poison: 'poison', shock: 'shock', paral: 'paral', chill: 'chill', frozen: 'frozen', wet: 'wet', stun: 'stun', spore: 'spore',
-  seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', dark: 'shade', shade: 'shade', gale: 'gale', bleed: 'weak',
+  seal: 'bind', root: 'root', leech: 'leech', taunt: 'taunt', fear: 'shade', dark: 'shade', shade: 'shade', gale: 'gale', bleed: 'weak',
   atkDown: 'weak', defDown: 'corrode', spdDown: 'weak', critDown: 'weak', accDown: 'weak',
   atkUp: 'rage', defUp: 'wall', spdUp: 'haste', critUp: 'focus', accUp: 'focus', flourish: 'haste', regen: 'regen', will: 'purified', shield: 'shield', purified: 'purified', aim: 'focus',
   // 종 고유 v2 새 효과(2026-10-29 ㉢ — 전엔 머리 위 낱말뿐): 가까운 연출을 빌려 씀 — 지옥 = 불붙음 · 독안개 = 독 · 빙결열매 = 서리 · 부활 = 회복 빛 · 튕김 = 막 · 매혹 = 기절 별 · 덫 = 가시 · 봉인 구슬 = 묶임 · 동굴 · 갑주 = 돌판 · 폭풍 = 바람 · 은신 · 밤 = 그늘 · 아침 · 면역 = 정화 빛

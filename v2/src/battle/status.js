@@ -6,7 +6,8 @@
 //  · 턴 수는 효과마다 같음(기술마다 다르지 않음) · 빗나가면 안 걸림, 방어 자세여도 걸림, 치명이라고 더 걸리지 않음 · 같은 속성은 안 걸림
 //  · 3:3 교체하면 독·화상만 따라감 · 연계 = 젖은 상대는 감전·빙결이 하나 더 쌓임, 물에 맞으면 화상이 꺼짐, 불에 맞으면 젖음·빙결·얼음이 녹음
 //  · 쉬는 시점 = 다음 행동 한 번 취소(아직 안 움직였으면 이번 행동, 이미 움직였으면 다음 턴 — 쓴 에너지는 돌려줌)
-//  · 쉬고 난 다음 턴은 '버팀'(기절·빙결·감전이 안 걸림) — 연속으로 쉬기 막기(다른 게임 조사 뒤 추천 → 사용자 "쉬는 거 다음 턴 방어 좋다").
+//  · 쉬고 난 다음 턴은 '면역'(기절·빙결·감전이 안 걸림) — 연속으로 쉬기 막기(다른 게임 조사 뒤 추천 → 사용자 "쉬는 거 다음 턴 방어 좋다").
+//    2026-11-06 사용자 '공포도 걸리면 다음턴 면역이 됨 / 기절과 공포 안 걸림': 공포가 걸렸던 턴 다음도 면역 · 면역은 기절과 공포를 같이 막음.
 //  · 같은 날 사용자 "기동성 떨어지면 회피도 당연히 어려워져야 함" → 기동성 하나가 선공 확률과 회피 자세 효과에 같이 들어감(mobK).
 //    "젖음을 연계용으로만 너무 강하게 하지 말자 — 기동성 ↓ · 적중 ↓ · 방어 조금 ↓, 종합 디버프 느낌" → 젖음 = 셋 다, 연계는 두 배 → 하나 더.
 //  · 같은 날 사용자: 쉬는 차례는 문구만 띄우고 자동으로 넘김(화면) · 3:3에서 쉬는 중엔 교체도 안 됨 · 버섯 디버프는 '포자'로 ·
@@ -40,6 +41,7 @@ export const FX = {
   cave:    { env: true },   // 동굴(스톤캡 타고남 — 스톤캡이 나와 있는 동안 상대 쪽 · 기간 없음 · devices.caveSync 가 깔고 걷음)              // 강풍: 그 쪽 앞 식물 공격 빗나감 +12
   taunt:   { turns: 1, next: true },                          // 도발: 다음 턴 공격 기술만(대표 분류 = 공격) · 교체 못 함 · 햇빛이 없으면 0번 평타, 그것도 봉인이면 쉼
   root:    { turns: 1, next: true },                          // 속박: 다음 턴 교체 못 함 · 같은 식물은 교체로 나갔다 들어오기 전까지 한 번만 · 1:1에선 봉인으로
+  fear:    { turns: 1, next: true },                          // 공포(2026-11-06 사용자 '도발의 반대' · '공포도 도발처럼 교체 못하게'): 다음 턴 공격 기술(평타 포함) 못 씀 · 교체 못 함 · 그 턴을 마치면 다음 행동까지 면역(기절 · 공포 안 걸림) · 이미 공포 · 면역이면 안 걸림
   // 포자(엑셀 v10 30행) = 따로 쌓이는 지연 효과: 걸 때마다 하나씩 붙어 각자 셈(상한 없음) · 지연 N턴(기술마다 — 옛 1겹 기술 = 2턴 · 2겹 = 1턴) ·
   //  걸린 다음 턴부터 세어 N턴째 턴 끝에 핌 → 하나에 최대 체력 8%(같은 턴 여럿이면 더함) · 기본은 피해만(암실 · 흡혈은 특수 포자 기술에만) · 버섯은 안 걸림 · 불에 다 탐
   //  → 2026-10-31 사용자 '포자는 여러개 붙이고 반드시 붙인턴 포함 3번째 턴에 터지는 걸로 하자'(2026-11-04 넣음): 어떤 기술로 붙였든 붙인 턴 끝 = 1 · 3번째 턴 끝에 핌(left 3 — 기술의 지연 값은 안 씀) · 불에 안 탐(10-31)
@@ -59,7 +61,7 @@ export const FX = {
   // 준비 효과(엑셀 v10 35~37행) = 일회성 · 교체 시 제거 · 기간 없음
   shield:  { buff: true, hp: 0.15 },                          // 보호막: 최대 체력 15% — 상대 공격 기술 한 번의 모든 타를 남은 양까지 막고 그 기술이 끝나면 잔량 제거 · 빗나감 · 상태이상 피해엔 남음
   aim:     { buff: true, k: 25 },                             // 조준(옛 집중 · 2026-10-23 재정의): 다음 공격 기술 한 번의 모든 타 결과표 — 빗나감 없음 · 치명 +25 · 회피는 스침으로(rules.js hitTable) → 그 기술이 끝나면 소비 · 쉬면 풀림
-  will:    { buff: true, turns: 3, p: 0.5, now: true },      // 의지(엑셀 v10 33행): 기절(마비 · 얼음) · 봉인 · 속박 · 도발을 확률로 막음 — 막으면 빙결은 0으로, 감전은 사라짐(확률은 밸런스 전 임시)
+  will:    { buff: true, turns: 3, p: 0.5, now: true },      // 의지(엑셀 v10 33행): 기절(마비 · 얼음) · 봉인 · 속박 · 도발 · 공포를 확률로 막음 — 막으면 빙결은 0으로, 감전은 사라짐(확률은 밸런스 전 임시)
   // 2026-10-18 바닥 규칙 2단계(species-identity §1): 방어구 = 체력 위 금속 칸(깨질 때까지 · 쌓임 · 교체해도 남음 · 망치에 ×1.5로 깎임 · 지속 피해는 통과)
   //  은신 = 이번 턴 광역 아닌 공격 95% 빗나감 + 기습(공격 ×1.5 · 상대 자세 무시) · 분신 = 2턴 광역 아닌 공격 90% 빗나감(진짜가 맞거나 광역이면 풀림)
   flourish: { buff: true, adds: { atkUp: 0.05, defUp: 0.05, spdUp: 0.05 } },   // 만개(페탈로즈 원안 '모든 스탯 증가' — 2026-10-19 '독립 상태 없이 공통 강화로'): 쓸 때마다 활력 · 억셈 · 가속 +5% 한 겹씩
@@ -70,11 +72,11 @@ export const FX = {
 export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
-const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'will', 'morning', 'night', 'bounce', 'miasma', 'inferno'];
+const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'fear', 'will', 'morning', 'night', 'bounce', 'miasma', 'inferno'];
 const BUFFS = ['stealth', 'armor', ...UPS, 'regen', 'will', 'shield', 'aim', 'revive', 'bounce'];
 // 해로운 상태이상 = 정화가 지우는 것(능력치 디버프 · 환경 · 기절은 못 지움 — 엑셀 v10) · 지운 뒤 보호는 없음(2026-10-23 사용자 '보호 없애')
-const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root'];
-const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'miasma', 'inferno', 'morning', 'night', 'taunt', 'root', ...DOWNS];
+const HARM = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'taunt', 'root', 'fear'];
+const ORDER = ['burn', 'poison', 'bleed', 'wet', 'chill', 'shock', 'spore', 'seal', 'leech', 'dark', 'gale', 'cave', 'orbTrap', 'thornTrap', 'miasma', 'inferno', 'morning', 'night', 'taunt', 'fear', 'root', ...DOWNS];
 // 옛 효과 이름 바꿈표(2026-10-23 기술 표를 엑셀 v10 이름으로 다 옮겨 비움 — 시험이 비었는지 봄)
 export const OLD = {};
 const nowExp = (T, n) => T + n - 1;   // 지금 N턴의 마지막 턴
@@ -159,8 +161,8 @@ export function pasDmgK(att, def) {
 }
 export const mustSkip = u => has(u, 'skip');
 export const noEnergy = u => has(u, 'dark') || has(u, 'night');   // 암실(그늘) · 밤(프로스트벨 필드) = 그 턴 끝 자연 햇빛이 안 참
-// 교체할 수 있나: 쉬는 차례(기절 · 마비 · 얼음) · 속박 · 도발(다음 1턴 — from ≤ 턴 T)이면 못 함. T를 안 주면 걸려 있기만 해도 막음(화면)
-export const canSwitch = (u, T = Infinity) => { const e = (u && u.eff) || {}; return !e.skip && !(e.root && e.root.from <= T) && !(e.taunt && e.taunt.from <= T); };
+// 교체할 수 있나: 쉬는 차례(기절 · 마비 · 얼음) · 속박 · 도발 · 공포(다음 1턴 — from ≤ 턴 T)이면 못 함. T를 안 주면 걸려 있기만 해도 막음(화면)
+export const canSwitch = (u, T = Infinity) => { const e = (u && u.eff) || {}; return !e.skip && !(e.root && e.root.from <= T) && !(e.taunt && e.taunt.from <= T) && !(e.fear && e.fear.from <= T); };
 // 고를 수 있는 기술: 에너지 · 덩굴로 묶인 칸 · 도발(자세 금지)
 // 변이 기술 = 판마다 정해진 횟수(2026-10-17 사용자 "변이는 충전이 아닌 고정된 횟수를 갖고 있어. 다 쓰면 못씀 그 판은"): u.used[기술 id] = 이번 판에 쓴 횟수
 //  (3:3도 그 식물의 판 — 교체해 들어갔다 나와도 그대로) · 횟수 없는 기술 = 끝없음
@@ -190,12 +192,13 @@ export function canUse(u, s, energy = u.energy, foe = null) {
   const e = u.eff || {};
   if (sealed(e, s.id)) return false;
   if (e.taunt && s.act !== 'attack') return false;   // 도발 = 대표 분류가 공격인 기술만(공격 + 버프 · 회복도 됨)
+  if (e.fear && s.act === 'attack') return false;   // 공포 = 도발의 반대: 공격 기술은 평타까지 못 씀(방어 · 광합성 · 버프 · 회복만)
   return true;
 }
 // 독을 거는 기술인가(좋은 거 주입 봉인 대상): 덤 효과 · 타마다 · 순서 갈래 · 독안개
 export const givesFx = (s, id) => !!s && [s, s.onFirst, s.onSecond].some(x => x && ((x.inflict && x.inflict.id === id) || (x.inflicts || []).some(f => f.id === id) || (x.perHitInflict && x.perHitInflict.id === id) || (x.hex || []).some(h => h.id === id)));
 export const poisonGiver = s => givesFx(s, 'poison') || !!(s && s.miasma);
-export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return sealed(e, s.id) ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : null; };
+export const lockOf = (u, s) => { const e = (u && u.eff) || {}; return sealed(e, s.id) ? 'seal' : e.taunt && s.act !== 'attack' ? 'taunt' : e.fear && s.act === 'attack' ? 'fear' : null; };
 // 봉인된 기술인가: 처음 뽑힌 하나(skill) + 메아리로 더 막힌 것(more — 프로스트벨 정적을 유지하세요)
 function sealed(e, id) { return !!(e.seal && (e.seal.skill === id || (e.seal.more || []).includes(id))); }
 
@@ -238,8 +241,11 @@ export function blockedRest(u, turn, ev) {
   ev.push({ t: 'skip', who: u.id, name: u.name, src: 'blocked', refund: 0, list: listOf(u) });
 }
 // 그 식물이 제 행동을 마침(rules.resolveTurn — 쉰 차례 · 다 막혀 쉰 차례는 빼고): 면역 끝
-export function endAct(u, ev) {
+//  공포가 걸린 턴에 행동을 마치면 바로 다음 행동까지 면역(2026-11-06 — 같은 턴 뒤에 움직인 상대의 기절 · 공포도 막음)
+export function endAct(u, ev, T) {
   if (u && u.eff && u.eff.immune) { delete u.eff.immune; ev.push({ t: 'expire', who: u.id, ids: ['immune'], list: listOf(u) }); }
+  const f = u && u.eff && u.eff.fear;
+  if (f && T != null && f.from <= T && T <= f.exp) u.eff.immune = { from: 'fear' };
 }
 
 // ── 걸기 ──
@@ -293,7 +299,8 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     if (e[id]) { ev.push({ t: 'resist', ...base, why: 'env', list: listOf(tgt) }); return; }
     e[id] = { env: true, exp: nowExp(T, o.turns ?? D.turns), by: ctx.by.id };
     ev.push({ t: 'fx', ...base, list: listOf(tgt) });
-  } else if (D.next) {   // 제한 셋(봉인 · 속박 · 도발): 다음 1턴
+  } else if (D.next) {   // 제한 넷(봉인 · 속박 · 도발 · 공포): 다음 1턴
+    if (id === 'fear' && (e.immune || e.fear)) { ev.push({ t: 'resist', ...base, why: 'immune', list: listOf(tgt) }); return; }   // 면역(쉰 · 공포가 지난 다음 행동까지) · 이미 공포(풀리기 전에 다시 걸어 이어 묶기 막음)
     if (e.will && ctx.rng && ctx.rng() < FX.will.p) { ev.push({ t: 'resist', ...base, why: 'will', list: listOf(tgt) }); return; }
     if (id === 'root' && tgt.solo) return apply(tgt, 'seal', n, ctx, o);   // 1:1(교체가 없음) = 속박 대신 봉인
     if (id === 'root' && e.rooted) { ev.push({ t: 'resist', ...base, why: 'once', list: listOf(tgt) }); return; }   // 교체로 나갔다 들어오기 전까지 한 번만
@@ -445,11 +452,12 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
     noteFall(u, ev);
   }
 }
-// 턴 끝 마지막(에너지 회복 뒤): 정한 턴이 지난 효과 · 쉰 턴이 끝난 얼음 · 버팀
+// 턴 끝 마지막(에너지 회복 뒤): 정한 턴이 지난 효과 · 쉰 턴이 끝난 얼음 · 면역
 export function expire(u, turn, ev) {
   const e = u.eff;
   if (!e) return;
   const gone = [];
+  if (e.fear && e.fear.exp <= turn && !e.immune) e.immune = { from: 'fear' };   // 공포가 끝남 = 다음 행동까지 면역(그 턴에 행동을 못 마쳐 endAct 가 안 줬을 때도)
   for (const k of TIMED) if (e[k] && e[k].exp <= turn) { delete e[k]; gone.push(k); }
   for (const k of STATS) if (e[k]) { const s = e[k].s.filter(x => x.exp > turn); if (s.length < e[k].s.length) { if (s.length) e[k] = { n: s.length, s }; else { delete e[k]; gone.push(k); } } }   // 겹마다 따로 만료
   if (u.st && u.st.bell && u.st.bell.exp <= turn) delete u.st.bell;   // 프로스트벨 아침 · 밤 3턴이 끝남 → 다음 턴부터 다시 켤 수 있음
