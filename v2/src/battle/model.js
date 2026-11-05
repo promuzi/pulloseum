@@ -207,7 +207,7 @@ function fxVal(u, foe, f, C) {
   let v;
   switch (f.id) {
     case 'burn': v = has(foe, 'burn') ? 0.3 * 2.5 * D.dot * life : 2.5 * D.dot * T(f.turns || D.turns) * life; break;
-    case 'poison': { const add = Math.max(0, Math.min(D.stack, cur('poison') + n) - cur('poison')); v = 2.5 * D.dot * add * T(4) * life + (K.poison ? 0.12 * R * add : 0); break; }
+    case 'poison': { const add = Math.max(0, Math.min(D.stack, cur('poison') + n) - cur('poison')); v = 2.5 * D.dot * add * T(4) * life * (1 + ((u.pas && u.pas.poisonDmg) || 0)) + (K.poison ? 0.12 * R * add : 0); break; }   // 맹독 농축 = 내가 건 독 피해 +50%
     case 'bleed': v = 2.5 * D.dot * T(f.turns || D.turns) * life + 0.08 * R; break;
     case 'shock': v = (has(foe, 'shock') ? 0.3 : 1) * 2.5 * D.dot * T(D.turns) * life + (has(foe, 'wet') ? D.wetP : D.p) * deny * Math.min(1.5, T(D.turns) * 0.5); break;
     case 'chill': { const m = n + (has(foe, 'wet') ? RULES_FX.wetStackAdd : 0); v = cur('chill') + m >= D.stack ? 0.9 * deny + (K.frozen ? 0.6 * R : 0) : 0.4 * deny * m / D.stack + 0.05 * R; break; }   // 3겹 = 얼음(한 번 쉼)

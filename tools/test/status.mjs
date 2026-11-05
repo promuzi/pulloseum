@@ -463,13 +463,13 @@ const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.
 // ── 9-7. 강풍 환경 · 대기석 진행(엑셀 v10 38행 · 검토 대기 B10) ──
 {
   const team = (seed = 31) => { const me = ['flower_grass', 'cactus_fire', 'vine_water'].map(k => mk('me', k)), foe = ['vine_water', 'gaia', 'flower_wind'].map(k => mk('foe', k)); return makeTeamBattle({ me, foe, seed, ownSun: true }); };
-  // 강풍: 켠 편의 상대 쪽 앞 식물 공격 빗나감 +12 · 지금 2턴 · 교체하면 새 앞 식물로 · 켜져 있는 동안 다시 켜도 안 늘어남
+  // 강풍: 켠 편의 상대 쪽 앞 식물 공격 빗나감 +12 · 지금 3턴(2026-11-05 — 전 2턴) · 교체하면 새 앞 식물로 · 켜져 있는 동안 다시 켜도 안 늘어남
   { const B = team(), x = B.foe; apply(B.me, 'gale', 1, ctx(x, 1, []));
     const t1 = resolveTurn(B.me, mk('foe', 'aqua'), B.me.kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
     const t0 = resolveTurn(mk('me', 'flower_grass'), mk('foe', 'aqua'), mk('me', 'flower_grass').kit[0], REST, fixed(0.5), { turn: 1 }).events.find(e => e.t === 'hit').table;
     ok(t1.miss === t0.miss + 12 && B.me.eff.gale.env, '강풍 = 그 쪽 앞 식물 공격 빗나감 +12(환경)');
     apply(B.me, 'gale', 1, ctx(x, 2, []));
-    ok(B.me.eff.gale.exp === 2, '켜져 있는 동안 같은 편이 다시 켜도 기간이 안 늘어남');
+    ok(B.me.eff.gale.exp === 3, '켜져 있는 동안 같은 편이 다시 켜도 기간이 안 늘어남(기본 3턴)');
     const out = B.me; playTurn3(B, { kind: 'switch', to: 1 });
     ok(!out.eff.gale && B.me.eff.gale, '교체하면 강풍은 새 앞 식물에게(대기석 제외)');
     expire(B.me, 2, []); ok(!B.me.eff.gale, '지금 2턴 = 1턴에 켜면 2턴 끝에 꺼짐'); }

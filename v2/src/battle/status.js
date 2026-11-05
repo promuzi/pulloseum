@@ -30,7 +30,7 @@ export const FX = {
   leech:   { turns: 3, drain: 0.025, now: true },             // 기생: 턴 끝 2.5%를 빨아 처음 건 식물(by = slot)이 회복 · 건 식물이 쓰러지면 끝
   dark:    { turns: 1, now: true },                           // 암실: 걸린 턴 끝부터 자연 햇빛 N번 막음(N = 기술마다 · 그늘 = 이름 · 연출만 다른 같은 효과) · 재생 · 광합성은 안 막음
   // 전장 환경(엑셀 v10 38행): 켠 편의 상대 쪽 앞 식물에 둠(교체하면 다음 앞 식물로 · 대기석 제외) · 지금 N턴(기술마다) · 정화로 못 지움 · 같은 편이 켜 둔 동안 다시 켜지지 않음
-  gale:    { env: true, turns: 2, missAdd: 12 },
+  gale:    { env: true, turns: 3, missAdd: 12 },   // 기본 3턴(2026-11-05 사용자 '환경도 3턴으로 … 통일' — 전 2턴)
   orbTrap: { env: true },   // 봉인 구슬 덫(볼트바인 — 내 쪽 지형: 교체 · 쓰러져도 남고 내 쪽 앞 식물이 맞을 때마다 하나씩 터짐 · devices.orbTrapBurst)
   inferno: { env: true },   // 지옥(지옥전개 — 블레이드바인 · 블레이즈블룸, 2026-10-29 사용자 확정): 상대 쪽 필드 3턴 · 화상이 없어도 턴 끝 화상 피해(불 속성도 = 푸른 화상) · 정화로 못 끔 · 연 식물이 나가도 남음 · 다시 못 덮어씀
   miasma: { env: true },   // 톡시캑터 독안개(상대 쪽 필드 3턴 · 켤 때 한 번 + 다음 두 턴 시작에 독 · 교체로 들어와도 · 톡시캑터가 나가도 남음 — 2026-10-28)
@@ -261,13 +261,13 @@ export function apply(tgt, id0, n, ctx, o = {}) {
     return apply(ctx.by, id0, n, { ...ctx, by: tgt, bounced: true }, o);
   }
   const by = ctx.by && ctx.by.pas;
-  if (by && id === 'poison' && by.poisonAdd) n += by.poisonAdd;   // 카드(맹독 농축)
   if (D.stat) {
     for (let i = 0; i < (n || 1); i++) addStat(tgt, id, T, o);
     ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(tgt) });
   } else if (id === 'poison') {
     const p = e.poison ||= { n: 0, last: T };
     p.n = Math.min(D.stack, p.n + n); p.last = T;
+    if (by && by.poisonDmg) p.k = Math.max(p.k || 1, 1 + by.poisonDmg);   // 카드(맹독 농축 — 2026-11-05 '독 1겹 더' → 독 피해 +50%: 상태이상은 한 번에 한 겹)
     ev.push({ t: 'fx', ...base, n: p.n, list: listOf(tgt) });
   } else if (id === 'chill') {
     const wet = !!e.wet, add = n + (wet ? RULES_FX.wetStackAdd : 0), s = e[id] ||= { n: 0, last: T };
@@ -398,7 +398,7 @@ export function endTurn(pairs, turn, ev, stop = null, all = []) {
       ev.push({ t: 'tick', who: u.id, name: u.name, id: 'burn', hell: true, blue: u.el === 'fire' || undefined, dmg: d, list: listOf(u) });
     }
     if (e.poison && u.hp > 0) {
-      const d = Math.max(1, Math.round(u.max * FX.poison.dot * e.poison.n));
+      const d = Math.max(1, Math.round(u.max * FX.poison.dot * e.poison.n * (e.poison.k || 1)));   // k = 맹독 농축 카드가 건 독
       u.hp = Math.max(0, u.hp - d);
       const n = e.poison.n;
       if (turn - e.poison.last >= RULES_FX.decayAfter && --e.poison.n <= 0) delete e.poison;   // 2턴 넘게 안 걸리면 1겹씩

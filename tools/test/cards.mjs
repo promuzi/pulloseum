@@ -170,11 +170,11 @@ const bag = s => JSON.stringify(Object.fromEntries(Object.entries(s.cards).sort(
   ok(r.t.events.some(e => e.t === 'reflect' && e.who === 'foe'), '가시 줄기 = 붙어서 때리면 되돌림');
   r = turn(tough(U(P('thorn'))), sp, { ...atk, ranged: true });
   ok(!r.t.events.some(e => e.t === 'reflect'), '멀리서 때리면 반사 없음');
-  // 독 겹(맹독 농축) · 면역(해독 체질)
+  // 독 피해(맹독 농축) · 면역(해독 체질)
   const tx = plant(s, 'thorn', { form: 'toxic' }); tx.cards = ['v_venom', null];
   const vic = { id: 'foe', name: 't', hp: 100, max: 100, eff: {}, el: 'water', jong: 'flower' }, ev = [];
   apply(vic, 'poison', 1, { turn: 1, rng: () => 0.5, ev, by: unitOf('me', tx) });
-  ok(vic.eff.poison && vic.eff.poison.n === 2, '맹독 농축 = 독 1겹 더');
+  ok(vic.eff.poison && vic.eff.poison.n === 1 && vic.eff.poison.k === 1.5, '맹독 농축 = 독은 한 겹 그대로 · 내가 건 독 피해 +50%(2026-11-05 — 전 = 1겹 더)');
   const ad = plant(s, 'thorn', { form: 'toxic' }); ad.cards = ['v_antidote', null]; const adU = unitOf('foe', ad);
   apply(adU, 'poison', 2, { turn: 1, rng: () => 0.5, ev, by: unitOf('me', tx) });
   ok(!adU.eff.poison && ev.some(e => e.t === 'immune' && e.card), '해독 체질 = 독 안 걸림');
