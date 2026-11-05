@@ -29,7 +29,8 @@ for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) {   // --s
   o[last] = b.includes('+') ? b.split('+') : isNaN(+b) ? b : +b;   // selfMore=atkUp+spdUp+defDown = 목록
 }
 if (SKILLS[ID].power > 0 && SKILLS[ID].act === 'buff') { SKILLS[ID].act = 'attack'; SKILLS[ID].cats = ['attack']; }   // --set power=55 = 공격 + 원래 효과 덤
-const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'), K0 = FX.reflect.k, KX = +arg('--kx', 0), CD = +arg('--cd', 0);
+const AURA = arg('--aura') ? arg('--aura').split(',').map(Number) : null;
+const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'),K0 = FX.reflect.k, KX = +arg('--kx', 0), CD = +arg('--cd', 0);
 const pct = x => `${(100 * x).toFixed(1)}%`;
 const nameOf = id => ({ basic: '평타', guard: '방어태세', evade: '회피 자세', sun: '광합성' }[id] || (SKILLS[id] && SKILLS[id].name) || id);
 const isHex = s => !!(s && (s.inflict || s.inflicts || s.hex || s.act === 'hex' || (s.cats || []).includes('debuff')));
@@ -46,6 +47,7 @@ function duel(a, b, seed, pa, pb) {
     if (KX) FX.reflect.k = KX;
     const T0 = B.turn, sm = mustSkip(B.me) ? REST : pa(B.me, B.foe, r, { seen: seen.me, last: last.me, iq: 0.9 }, { now: sf, prev, cool: CD > 0 && T0 - lastUse <= CD, T: T0 });
     if (KX) FX.reflect.k = sm && sm.id === ID ? KX : K0;   // --kx: 이 기술로 반사할 때만 그 몫(같은 턴 다른 반사는 원래 몫)
+    if (AURA && sm && sm.id === ID && B.me.hp > 0) (B.me.eff ||= {}).frostAura = { exp: T0 + AURA[0] - 1, n: AURA[1] };   // 만약 실험 --aura 턴,겹: 그 기술을 쓰면 냉기(때린 쪽 빙결 — whatif_frost.mjs 사본에서만 걸림)
     if (sm && sm.bounceNow && B.me.hp > 0) (B.me.eff ||= {}).bounce = { exp: T0 };   // 만약 실험 bounceNow: 그 턴 자세로 튕김(순서 무관 · 그 턴 끝까지)
     const t = playTurnVs(B, sm, sf);
     if (t.mySkill && t.mySkill.id === ID) lastUse = T0;
