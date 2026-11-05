@@ -39,7 +39,7 @@ function duel(a, b, seed, pa, pb) {
     if (KX) FX.reflect.k = K0;
     const sf = mustSkip(B.foe) ? REST : pb(B.foe, B.me, r, { seen: seen.foe, last: last.foe, iq: 0.9 });
     if (KX) FX.reflect.k = KX;
-    const T0 = B.turn, sm = mustSkip(B.me) ? REST : pa(B.me, B.foe, r, { seen: seen.me, last: last.me, iq: 0.9 }, { now: sf, prev, cool: CD > 0 && T0 - lastUse <= CD });
+    const T0 = B.turn, sm = mustSkip(B.me) ? REST : pa(B.me, B.foe, r, { seen: seen.me, last: last.me, iq: 0.9 }, { now: sf, prev, cool: CD > 0 && T0 - lastUse <= CD, T: T0 });
     if (KX) FX.reflect.k = sm && sm.id === ID ? KX : K0;   // --kx: 이 기술로 반사할 때만 그 몫(같은 턴 다른 반사는 원래 몫)
     if (sm && sm.bounceNow && B.me.hp > 0) (B.me.eff ||= {}).bounce = { exp: T0 };   // 만약 실험 bounceNow: 그 턴 자세로 튕김(순서 무관 · 그 턴 끝까지)
     const t = playTurnVs(B, sm, sf);
@@ -74,6 +74,8 @@ const CONDS = {
   poor: { text: '햇빛이 모자라 평타 말고는 공격을 못 할 때', f: (u, foe) => !u.kit.some(s => s.id !== 'basic' && atkP(s) > 0 && canUse(u, s, u.energy, foe)) },
   e1: { text: '내 햇빛이 1 이하일 때', f: u => u.energy <= 1 },
   e2: { text: '내 햇빛이 2 이하일 때', f: u => u.energy <= 2 },
+  melow: { text: '내 체력이 절반 아래일 때', f: u => u.hp < u.max * 0.5 },
+  gale1: { text: '강풍이 이번 턴 뒤에도 남을 때(공명)', f: (u, foe, X) => !!(foe.eff && foe.eff.gale && foe.eff.gale.exp - X.T >= 1) },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');
 
@@ -93,7 +95,7 @@ console.log(`  바꾼 손패: ${handR.filter(Boolean).map(nameOf).join(' · ')}`
 const t0 = Date.now();
 for (const c of conds) {
   let used = 0, could = 0, eSum = 0; REM.s = REM.n = 0;
-  const alt = {}, hp = { foe: [0, 0, 0], me: [0, 0, 0] };   // 쓸 수 있었는데 대신 고른 것(2026-11-05 사용자 '햇빛이 별로 없을 때 쓰는 느낌이면 별로인가?')
+  const alt = {}, hp = { foe: [0, 0, 0], me: [0, 0, 0], gale: {} };   // 쓸 수 있었는데 대신 고른 것(2026-11-05 사용자 '햇빛이 별로 없을 때 쓰는 느낌이면 별로인가?')
   const hand = c === 'repl' ? handR : c === 'guard' ? handG : handX;
   if (!hand) { console.log(`  ${c}: 손패에 이미 방어태세가 있어 건너뜀`); continue; }
   const pa = (u, foe, r, ctx, X) => {
@@ -107,6 +109,7 @@ for (const c of conds) {
     if (ok && s && s.id === ID) used++;
     if (ok) { eSum += u.energy; if (!s || s.id !== ID) { const a = s ? s.id : 'rest'; alt[a] = (alt[a] || 0) + 1; } }
     if (ok) { const f = foe.hp / foe.max, m = u.hp / u.max; hp.foe[f < 0.25 ? 0 : f < 0.5 ? 1 : 2]++; hp.me[m < 0.25 ? 0 : m < 0.5 ? 1 : 2]++; }   // 쓸 수 있던 턴의 체력(4분의 1 · 절반 아래 · 위)
+    if (ok && foe.eff && foe.eff.gale) { const g = Math.min(2, foe.eff.gale.exp - X.T); hp.gale[g] = (hp.gale[g] || 0) + 1; }   // 강풍이 이번 턴 뒤로 몇 턴 남았나(0 · 1 · 2 이상)
     return s;
   };
   const p = structuredClone(body); p.skills.battle = [...hand]; while (p.skills.battle.length < 6) p.skills.battle.push(null);
@@ -116,5 +119,5 @@ for (const c of conds) {
   console.log(`  ${label}: ${pct(w / n)}${c === 'repl' || c === 'guard' ? '' : ` · 쓸 수 있을 때 ${pct(could ? used / could : 0)} 씀`} (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
   if (argv.includes('--alt') && could && (c === 'never' || c === 'now')) console.log(`    쓸 수 있던 ${could}번 · 그때 내 햇빛 평균 ${(eSum / could).toFixed(1)} · 대신 고른 것: ${Object.entries(alt).sort((a, b) => b[1] - a[1]).map(([a, k]) => `${nameOf(a === 'rest' ? '쉼' : a)} ${pct(k / could)}`).join(' · ')}`);
   if (argv.includes('--alt') && REM.n && c !== 'never') console.log(`    쓴 판 ${REM.n}판 · 마지막으로 쓴 뒤 판이 평균 ${(REM.s / REM.n).toFixed(1)}턴 더 감`);
-  if (argv.includes('--alt') && could && c === 'never') { const b = a => a.map(x => pct(x / could)).join(' / '); console.log(`    쓸 수 있던 턴 체력(4분의 1 아래 / 절반 아래 / 절반 위): 상대 ${b(hp.foe)} · 나 ${b(hp.me)}`); }
+  if (argv.includes('--alt') && could && c === 'never') { const b = a => a.map(x => pct(x / could)).join(' / '); console.log(`    쓸 수 있던 턴 체력(4분의 1 아래 / 절반 아래 / 절반 위): 상대 ${b(hp.foe)} · 나 ${b(hp.me)}${Object.keys(hp.gale).length ? ` · 강풍이 이번 턴 뒤로 0 / 1 / 2턴 넘게: ${b([0, 1, 2].map(g => hp.gale[g] || 0))}` : ''}`); }
 }
