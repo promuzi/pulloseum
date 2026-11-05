@@ -553,6 +553,7 @@ ok(SPECIES_V2.has('frost_drake'), '프로스트드레이크 v2 켜짐');
   const d5 = mk('me', 'frost_drake', { stage: 1 });
   turn(d5, mk('foe', 'thorn'), SKILLS.u_fdrake_2b, OTHER, 1);
   ok(d5.eff.atkUp && d5.eff.spdUp && d5.eff.defDown, '알 깨기 = 활력 · 가속 + 시듦(평범한 버프 · 디버프)');
+  ok(d5.eff.atkUp.n === 3 && d5.eff.spdUp.n === 2 && d5.eff.defDown.n === 1, `알 깨기 = 활력 3겹 · 가속 2겹 · 시듦 1겹(2026-11-05 · 지금 ${d5.eff.atkUp.n} · ${d5.eff.spdUp.n} · ${d5.eff.defDown.n})`);
   ok(SPECIES.draco_fruit && !(SPECIES.frost_drake.form !== 'dragon'), '프로스트드레이크는 태생 용족 그대로');
 }
 // ── 20. 드라코프루트 = 용이 되고 싶어(2026-11-03 사용자 새 설계 · 11-04 넣음) ──

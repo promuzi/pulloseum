@@ -7,7 +7,7 @@
 //   만약 실험: --k 0.6(반사 되돌림 몫 — 모든 반사에 걸림) · --kx 1.0(이 기술로 반사할 때만 그 몫) · --cost 0(그 기술 햇빛) · --set power=80(그 기술 칸 바꿈) · --hold(너꺼잉 튕김이 쓰일 때까지 서 있음) · --perm(한 번 쓰면 판 끝까지) · --hand a,b,c(손패 직접) · --alt(쓸 수 있던 턴의 내 햇빛 · 대신 고른 것)
 import { makeRng, botPlant, unitOf } from '../../v2/src/game/fight.js';
 import { makeBattle, playTurnVs, aiPick, REST } from '../../v2/src/battle/model.js';
-import { mustSkip, FX, CAVE, canUse } from '../../v2/src/battle/status.js';
+import { mustSkip, FX, CAVE, FRUIT, canUse } from '../../v2/src/battle/status.js';
 import { SPECIES, SKILLS } from '../../v2/src/game/catalog.js';
 import { buildDeck } from '../../v2/src/game/botdeck.js';
 import { PLAYBOOK_BY } from '../../v2/src/battle/playbook.js';
@@ -19,7 +19,7 @@ if (!K || !ID || !SKILLS[ID]) { console.log('--key <종> --id <기술> 이 필�
 if (arg('--k')) FX.reflect.k = +arg('--k');
 for (const kv of (arg('--rule', '') || '').split(',').filter(Boolean)) {   // --rule CAVE.gravel.acc=16 = 규칙 표 값(FX · CAVE) 바꿔 보기
   const [a, b] = kv.split('='), ks = a.split('.'), last = ks.pop();
-  let o = { FX, CAVE }; for (const k of ks) o = o[k];
+  let o = { FX, CAVE, FRUIT }; for (const k of ks) o = o[k];
   o[last] = +b;
 }
 if (arg('--cost')) SKILLS[ID].cost = +arg('--cost');

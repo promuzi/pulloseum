@@ -255,7 +255,7 @@ function stanceVal(u, foe, s, C, k = 1) {
   return k * (2.5 * 0.85 * take * red / Math.max(1, u.hp) + live);
 }
 // 나에게 거는 버프 값(공격 덤 · 버프 기술 · 자세 덤 같은 잣대)
-function buffVal(u, foe, sides, C, down = 0) {
+function buffVal(u, foe, sides, C, down = 0, nOf = () => 1) {   // nOf = 그 효과를 몇 겹 거나(알 깨기 selfN)
   const R = C.R, H = C.H, rk = Math.min(1.2, C.risk), after = n => Math.max(0, Math.min(n, H - 1));
   let v = 0;
   for (const b of sides) {
@@ -267,7 +267,7 @@ function buffVal(u, foe, sides, C, down = 0) {
     else if (b === 'stealth') v += 2.5 * rk * 0.95 + 0.4 * R;   // 은신 = 이번 턴 피하고 다음 공격 기습
     else if (b === 'regen') v += healScore(u, 0.15);
     else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
-    else if (b === 'atkUp') v += R * FX.atkUp.v * after(5) * k;
+    else if (b === 'atkUp') v += R * FX.atkUp.v * nOf(b) * after(5) * k;
     else if (b === 'critUp') v += R * FX.critUp.v / 200 * after(5) * k;   // 예리 = 치명 칸 +10(치명 ×1.5)
     else if (b === 'aim') v += R * 0.35;
     else if (b === 'flourish') v += R * 0.05 * after(5) * 2 + 2.5 * rk * 0.05;
@@ -354,7 +354,7 @@ function aiScore(u, foe, s, C) {
       const dodge = s.nullFirst ? 2.5 * 0.85 * rk + (risk >= 1 ? 1.2 : 0) : 0;
       return (2.5 * rk * (s.reflectK ?? FX.reflect.k) * u.hp / Math.max(1, foe.hp) * 0.6 + dodge + (s.reflectInflict ? 0.3 * R : 0)) * (C.last === 'buff' ? 0.6 : 1);
     }
-    return buffVal(u, foe, sides, C, down);
+    return buffVal(u, foe, sides, C, down, b => (s.selfN && s.selfN[b]) || 1);
   }
   return 0.4 * R;
 }

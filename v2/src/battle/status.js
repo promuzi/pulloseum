@@ -337,9 +337,9 @@ export function shockRoll(u, ctx) {
   return setSkip(u, 'paral', { ...ctx, by: u });
 }
 // 나에게 버프 걸기(버프 기술 또는 공격 기술의 덤)
-export function selfBuff(u, id0, ctx, o = {}) {
+export function selfBuff(u, id0, ctx, o = {}, k = 1) {   // k = 능력치 겹을 한 번에 몇 겹(알 깨기 selfN — 2026-11-05)
   const id = id0, e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
-  if (FX[id] && FX[id].stat) { addStat(u, id, T, o); ctx.ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(u) }); return; }
+  if (FX[id] && FX[id].stat) { for (let i = 0; i < k; i++) addStat(u, id, T, o); ctx.ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(u) }); return; }
   if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'aim') { e.aim = { k: Math.max((e.aim && e.aim.k) || 0, o.aimK || FX.aim.k) }; ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'stealth') {   // o = 그 기술(이어 공격 link · 연출 look)

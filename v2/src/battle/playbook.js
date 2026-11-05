@@ -153,6 +153,9 @@ export const PLAYBOOK_BY = {
       {"id":"u_miner_1","when":{"k":"always"},"b":0.6,"d":6.1},   // 곡괭이 찍기 — 쓸 수 있으면
       {"id":"u_miner_2","when":{"k":"always"},"b":0.6,"d":0.8},   // 헬멧 단단히 — 쓸 수 있으면
     ],
+    frost_drake: [
+      {"id":"u_fdrake_2","when":{"k":"melow","x":0.5},"b":0.6,"d":2.5},   // 열매 먹기 — 내 체력 < 50%
+    ],
   },
   2: {   // 성체 — Lv6 대회 단계 6 몸 · 모든 종과 12판씩
     flower_grass: [
