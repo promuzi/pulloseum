@@ -191,8 +191,7 @@ export const PLAYBOOK_BY = {
       {"id":"u_blaze_2b","when":{"k":"nofx","r":"burn"},"b":0.6,"d":0.6},   // 불꽃 찌르기 — 상대 burn 없음
     ],
     cactus_wind: [
-      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":15},   // 시작의 공명 — 상대 gale 없음
-      {"id":"u_gale_3","when":{"k":"always"},"b":0.6,"d":0.6},   // 폭풍 공명 — 쓸 수 있으면
+      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":10.4},   // 시작의 공명 — 상대 gale 없음
     ],
     vine_wind: [
       {"id":"u_gvine_1","when":{"k":"always"},"b":0.6,"d":5.9},   // 그건 내 잔상인데? — 쓸 수 있으면

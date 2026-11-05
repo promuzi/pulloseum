@@ -364,6 +364,7 @@ export function hexAct(u, foe, a, ctx) {
   }
   if (a.galeAdd && has(foe, 'gale')) {
     const g = foe.eff.gale; g.add = [...(g.add || []), a.galeAdd];
+    if (a.galeRenew) g.exp = Math.max(g.exp, ctx.turn + a.galeRenew - 1);   // 치유 공명(2026-11-05 사용자 '3턴 초기화로 넣기'): 강풍을 새로 켠 것처럼 이번 턴 포함 N턴 — 붙어 있던 공명도 같이 길어짐
     ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: a.galeAdd === 'storm' ? 'storm' : 'gale', add: a.galeAdd, list: listOf(foe) });
   }
 }

@@ -370,7 +370,7 @@ export function cardSlot(g, x, y, w, h, label = '') {
 const ORB_TEXT = [['orbGuard', '이번 턴 구슬이 상대 공격 한 번의 모든 타를 막음(하나당 체력 6%) · 막은 만큼만 구슬이 깎임'], ['orbDump', '남은 구슬을 지금 전부 연타로(구슬 하나 = 한 타)'], ['orbRefill', '빈 구슬 칸을 바로 채움(덫에 나간 것 빼고)'], ['orbTrap', '남은 구슬을 모두 내 쪽 덫으로(교체 · 쓰러져도 남음) — 내 쪽이 맞으면 하나씩 터져 피해 + 봉인'], ['orbBlast', '구슬 전부 · 하나당 위력 25'], ['orbAbsorb', '구슬 전부 흡수해 하나당 체력 5% 회복 · 가득일 때 쓰면 나쁜 효과 전부 정화']];
 const SUM_TEXT = [['summon', '잠든 포자 하나 — 다음 턴 시작에 깨어나 새끼(턴 시작마다 평타) · 나 대신 맞음 · 최대 셋'], ['sporeWall', '보호막이 막으면 때린 상대에게 포자 하나'], ['volley', '깨어난 새끼 · 성체 버섯이 모두 지금 평타 한 번 더'], ['burst', '소환수를 모두 터뜨려 상대에게 포자(잠든 포자 1 · 새끼 2 · 성체 버섯 3)'], ['grow', '새끼가 모두 성체 버섯으로(능력치 오름 · 체력 비율 그대로)']];
 const CAVE_ADD_TEXT = { gravel: '동굴에 자갈밭 — 상대 기동 · 적중 더 하락', lava: '동굴에 용암 — 턴 끝마다 상대 화상', collapse: '동굴이 무너짐 — 상대 기동 더 하락' };
-const GALE_ADD_TEXT = { storm: '상대 쪽 강풍이 불 때만 · 남은 강풍이 폭풍으로(턴 끝 피해 · 교란 · 쇠약)', heal: '상대 쪽 강풍이 불 때만 · 강풍 동안 우리 편 턴 끝 회복', shock: '상대 쪽 강풍이 불 때만 · 강풍 동안 상대 턴 끝 감전' };
+const GALE_ADD_TEXT = { storm: '상대 쪽 강풍이 불 때만 · 남은 강풍이 폭풍으로(턴 끝 피해 · 교란 · 쇠약)', heal: `상대 쪽 강풍이 불 때만 · 강풍 동안 우리 편 턴 끝 최대 체력 ${Math.round(FX.regen.heal * 100)}% 회복`, shock: '상대 쪽 강풍이 불 때만 · 강풍 동안 상대 턴 끝 감전' };
 // 고유 장치 설명(2026-10-29 사용자 '나머지 3개 진행하자' — 뒷면 설명이 빈 개성 기술 41개): 기술 칸 값으로 문장을 만듦(값이 바뀌면 문장도 따라 바뀜)
 //  먼저/나중 갈래(onFirst · onSecond — 이번 턴 순서로 고름, rules.js br) = '먼저 움직이면 … / 나중이면 …' 두 줄
 const PCT = v => Math.round(v * 100);
@@ -573,7 +573,7 @@ function cardBack(g, w, h, sk, o) {
     y += CH + (SM ? 2 : 4);
     if (f.desc || STATUS_DESC[f.id]) line(f.desc || STATUS_DESC[f.id]);
   }
-  if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd], '#c0a8ff');
+  if (sk.galeAdd) line(GALE_ADD_TEXT[sk.galeAdd] + (sk.galeRenew ? ` · 쓰면 강풍이 이번 턴 포함 ${sk.galeRenew}턴으로 다시 시작` : ''), '#c0a8ff');
   if (sk.caveAdd) line(CAVE_ADD_TEXT[sk.caveAdd], '#d9b27a');
   if (SUM_TEXT.find(([k]) => sk[k])) line(SUM_TEXT.find(([k]) => sk[k])[1], '#b8e07a');
   if (ORB_TEXT.find(([k]) => sk[k])) line(ORB_TEXT.find(([k]) => sk[k])[1], '#c9a8ff');
