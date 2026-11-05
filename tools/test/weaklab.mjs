@@ -4,7 +4,7 @@
 //   완벽히 읽을 때(상대가 이번 턴 고른 수를 미리 앎 = 사람이 가장 잘 써도 이 정도라는 천장).
 //  그 밖 = 지금 봇 · 안 씀(죽은 칸) · 그 기술 대신 다른 카드로 짠 손패(바꿈) · 그 칸에 방어태세.
 //   node tools/test/weaklab.mjs --key jelly_cap --id u_jelly_1 [--stage 2] [--games 8] [--conds now,never,big70,...]
-//   만약 실험: --k 0.6(반사 되돌림 몫 — 모든 반사에 걸림) · --kx 1.0(이 기술로 반사할 때만 그 몫) · --cost 0(그 기술 햇빛) · --set power=80(그 기술 칸 바꿈) · --hold(너꺼잉 튕김이 쓰일 때까지 서 있음)
+//   만약 실험: --k 0.6(반사 되돌림 몫 — 모든 반사에 걸림) · --kx 1.0(이 기술로 반사할 때만 그 몫) · --cost 0(그 기술 햇빛) · --set power=80(그 기술 칸 바꿈) · --hold(너꺼잉 튕김이 쓰일 때까지 서 있음) · --perm(한 번 쓰면 판 끝까지) · --hand a,b,c(손패 직접)
 import { makeRng, botPlant, unitOf } from '../../v2/src/game/fight.js';
 import { makeBattle, playTurnVs, aiPick, REST } from '../../v2/src/battle/model.js';
 import { mustSkip, FX, canUse } from '../../v2/src/battle/status.js';
@@ -20,7 +20,7 @@ if (arg('--k')) FX.reflect.k = +arg('--k');
 if (arg('--cost')) SKILLS[ID].cost = +arg('--cost');
 for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) { const [a, b] = kv.split('='); SKILLS[ID][a] = isNaN(+b) ? b : +b; }
 if (SKILLS[ID].power > 0 && SKILLS[ID].act === 'buff') { SKILLS[ID].act = 'attack'; SKILLS[ID].cats = ['attack']; }   // --set power=55 = 공격 + 원래 효과 덤
-const HOLD = argv.includes('--hold'), K0 = FX.reflect.k, KX = +arg('--kx', 0);
+const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'), K0 = FX.reflect.k, KX = +arg('--kx', 0);
 const pct = x => `${(100 * x).toFixed(1)}%`;
 const nameOf = id => ({ basic: '평타', guard: '방어태세', evade: '회피 자세', sun: '광합성' }[id] || (SKILLS[id] && SKILLS[id].name) || id);
 const isHex = s => !!(s && (s.inflict || s.inflicts || s.hex || s.act === 'hex' || (s.cats || []).includes('debuff')));
@@ -30,7 +30,7 @@ const atkP = s => (s && s.act === 'attack' ? s.power || 0 : 0);
 function duel(a, b, seed, pa, pb) {
   const B = makeBattle({ me: unitOf('me', a), foe: unitOf('foe', b), seed }), r = makeRng(seed * 13 + 5);
   const last = { me: null, foe: null }, seen = { me: [], foe: [] };
-  let prev = null;
+  let prev = null, permOn = false;
   while (!B.over && B.turn <= 80) {
     if (KX) FX.reflect.k = K0;
     const sf = mustSkip(B.foe) ? REST : pb(B.foe, B.me, r, { seen: seen.foe, last: last.foe, iq: 0.9 });
@@ -39,6 +39,8 @@ function duel(a, b, seed, pa, pb) {
     if (KX) FX.reflect.k = sm && sm.id === ID ? KX : K0;   // --kx: 이 기술로 반사할 때만 그 몫(같은 턴 다른 반사는 원래 몫)
     const t = playTurnVs(B, sm, sf);
     if (HOLD && B.me.eff && B.me.eff.bounce) B.me.eff.bounce.exp = B.turn + 1;   // 만약 실험 --hold: 튕김이 쓰일 때까지 서 있음
+    if (PERM && t.mySkill && t.mySkill.id === ID) permOn = true;
+    if (PERM && permOn && B.me.hp > 0) (B.me.eff ||= {}).bounce = { exp: B.turn + 1 };   // 만약 실험 --perm: 한 번 쓰면 판 끝까지 튕김(쓰여도 다시 섬)
     last.me = t.mySkill && t.mySkill.act; last.foe = t.foeSkill && t.foeSkill.act;
     if (t.mySkill && t.mySkill.act === 'attack') seen.foe.push(t.mySkill);
     if (t.foeSkill && t.foeSkill.act === 'attack') seen.me.push(t.foeSkill);
@@ -65,13 +67,13 @@ const mk = (k, seed) => botPlant(makeRng(seed), STAGE, 6, TIER, { tier: TIER, co
 const field = KEYS.map((k, i) => mk(k, 4000 + i * 17));
 const i0 = KEYS.indexOf(K), body = mk(K, 8000 + i0), mutN = body.form ? 1 : 0;
 const con0 = buildDeck(makeRng(900 + i0), { key: K, stage: STAGE, form: body.form, mutN }).con;
-const handX = buildDeck(makeRng(901 + i0), { key: K, stage: STAGE, form: body.form, mutN, con: con0, must: [ID] }).ids;
+const handX = arg('--hand') ? arg('--hand').split(',') : buildDeck(makeRng(901 + i0), { key: K, stage: STAGE, form: body.form, mutN, con: con0, must: [ID] }).ids;   // --hand a,b,c = 손패를 직접(그 기술이 든 손패)
 const handR = buildDeck(makeRng(901 + i0), { key: K, stage: STAGE, form: body.form, mutN, con: con0, ban: [ID] }).ids;
 const handG = handX.includes('guard') ? null : handX.map(x => (x === ID ? 'guard' : x));
 const book0 = (PLAYBOOK_BY[STAGE] || PLAYBOOK_BY[2] || {})[K] || [];
 const never = { [K]: [...book0.filter(x => x.id !== ID), { id: ID, when: { k: 'always' }, b: -50 }] };
 
-console.log(`${SPECIES[K].name} · ${nameOf(ID)} — ${['새싹', '성장기', '성체'][STAGE]} · 대회 단계 ${TIER} 몸 · 상대 ${KEYS.length - 1}종 × ${N}판${arg('--k') ? ` · 반사 몫 ${FX.reflect.k}` : ''}${KX ? ` · 이 기술 반사 몫 ${KX}` : ''}${arg('--cost') ? ` · 햇빛 ${SKILLS[ID].cost}` : ''}${arg('--set') ? ` · ${arg('--set')}` : ''}${HOLD ? ' · 쓰일 때까지 서 있음' : ''}`);
+console.log(`${SPECIES[K].name} · ${nameOf(ID)} — ${['새싹', '성장기', '성체'][STAGE]} · 대회 단계 ${TIER} 몸 · 상대 ${KEYS.length - 1}종 × ${N}판${arg('--k') ? ` · 반사 몫 ${FX.reflect.k}` : ''}${KX ? ` · 이 기술 반사 몫 ${KX}` : ''}${arg('--cost') ? ` · 햇빛 ${SKILLS[ID].cost}` : ''}${arg('--set') ? ` · ${arg('--set')}` : ''}${HOLD ? ' · 쓰일 때까지 서 있음' : ''}${PERM ? ' · 한 번 쓰면 판 끝까지' : ''}`);
 console.log(`  넣은 손패: ${handX.filter(Boolean).map(nameOf).join(' · ')}`);
 console.log(`  바꾼 손패: ${handR.filter(Boolean).map(nameOf).join(' · ')}`);
 const t0 = Date.now();
