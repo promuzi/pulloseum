@@ -29,7 +29,7 @@ export const BLOCKED = { ...REST, blocked: true };
 // 상태 효과(inflict, 2026-10-15 사용자 "효과 있는 건 위력 감소 — 다만 센 컨셉이면 비용을 올리자"):
 //  위력을 깎는 폭 = 효과 값만큼: 지속 피해·쌓여서 쉬게 하는 것 −10~15, 젖음·덩굴·부식·도발처럼 약한 것 −5~10. 센 컨셉(낙뢰·불덩이·대지 내려치기)은 위력 그대로 비용 3 → 4.
 //  (12종 1:1 봇 대결 tools/test/status.mjs 로 효과 있음/없음 승률 차이를 보며 맞춤 — 젖음은 혼자선 득실이 거의 없어(느려진 쪽이 후공 방어가 더 잘 통함) −5, 연계용)
-//  쌓는 수: 가벼운 기술 1 · 대표 기술 2(독·빙결·감전·포자). 어느 식물에 무엇을 붙일지는 시제품 — 기술 체계(공통·가지·개성)로 다시 짤 때 갈아엎음.
+//  쌓는 수: 상태이상은 한 번에 한 겹(2026-11-05 사용자 '상태이상만 한 겹하고 버프 디버프는 여러겹 허용하자' — 전 = 대표 기술 2). 어느 식물에 무엇을 붙일지는 시제품 — 기술 체계(공통·가지·개성)로 다시 짤 때 갈아엎음.
 //  도발은 봇을 상대로는 거의 쓸모가 없어(봇이 자세를 드물게 씀) 위력을 깎지 않음 — 사람끼리 심리전용.
 //  효과 짝(2026-10-15 사용자 "효과 짝표 좋아"): 디버프는 그 식물의 속성(불 화상 · 물 젖음 · 풀 독 · 대지 기절 · 바람 강풍 · 번개 감전 · 빙결 빙결)
 //  또는 종(꽃 약화 · 덩굴 덩굴 · 선인장 도발 · 버섯 포자)에서만. 기생 씨앗 · 뿌리 묶기 · 그늘 · 부식은 변이·특수 기술용이라 여기엔 없음.
@@ -38,7 +38,7 @@ const SKILLS = {
   thorn: [{ id: 's1', name: '가시 채찍', power: 60, cost: 1, el: 'grass', inflict: { id: 'poison', n: 1 } }, { id: 's2', name: '가시 덤불', power: 110, cost: 3, el: 'grass', inflict: { id: 'seal' } }],
   aqua: [{ id: 's1', name: '물방울', power: 60, cost: 1, el: 'water', ranged: true, inflict: { id: 'wet' } }, { id: 's2', name: '물방울 세례', power: 100, cost: 3, el: 'water', ranged: true, inflict: { id: 'wet' } }],
   flower_wind: [{ id: 's1', name: '꽃잎 바람', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '꽃잎 돌풍', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'atkDown' } }],
-  spark: [{ id: 's1', name: '전기 불꽃', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '낙뢰', power: 120, cost: 4, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 2 } }],
+  spark: [{ id: 's1', name: '전기 불꽃', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '낙뢰', power: 120, cost: 4, el: 'bolt', ranged: true, inflict: { id: 'shock' } }],
   vine_water: [{ id: 's1', name: '물살 새순', power: 65, cost: 1, el: 'water', inflict: { id: 'seal' } }, { id: 's2', name: '파도 덮치기', power: 105, cost: 3, el: 'water', area: true, inflict: { id: 'wet' } }],
   cactus_fire: [{ id: 's1', name: '불씨', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '불덩이', power: 120, cost: 4, el: 'fire', ranged: true, inflict: { id: 'burn' } }],
   gaia: [{ id: 's1', name: '돌 주먹', power: 75, cost: 1, el: 'earth', inflict: { id: 'taunt' } }, { id: 's2', name: '대지 내려치기', power: 120, cost: 4, el: 'earth', area: true, inflict: { id: 'stun' } }],
@@ -46,39 +46,39 @@ const SKILLS = {
   cactus_wind: [{ id: 's1', name: '바람 고리', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '돌개바람', power: 110, cost: 3, el: 'wind', ranged: true, inflict: { id: 'taunt' } }],
   vine_wind: [{ id: 's1', name: '휘감는 바람', power: 65, cost: 1, el: 'wind', ranged: true, inflict: { id: 'seal' } }, { id: 's2', name: '칼바람', power: 105, cost: 3, el: 'wind', ranged: true, inflict: { id: 'gale' } }],
   spore_cap: [{ id: 's1', name: '포자', power: 50, cost: 1, el: 'grass', ranged: true, inflict: { id: 'spore', delay: 2 } }, { id: 's2', name: '포자 구름', power: 90, cost: 3, el: 'grass', ranged: true, area: true, inflict: { id: 'spore', delay: 1 } }],
-  frost_bell: [{ id: 's1', name: '서리 종소리', power: 60, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙결의 종', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill', n: 2 } }],
-  volt_vine: [{ id: 's1', name: '전깃줄 감기', power: 60, cost: 1, el: 'bolt', inflict: { id: 'seal' } }, { id: 's2', name: '고압 채찍', power: 120, cost: 4, el: 'bolt', inflict: { id: 'shock', n: 2 } }],
+  frost_bell: [{ id: 's1', name: '서리 종소리', power: 60, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙결의 종', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill' } }],
+  volt_vine: [{ id: 's1', name: '전깃줄 감기', power: 60, cost: 1, el: 'bolt', inflict: { id: 'seal' } }, { id: 's2', name: '고압 채찍', power: 120, cost: 4, el: 'bolt', inflict: { id: 'shock' } }],
   stone_cap: [{ id: 's1', name: '돌가루 포자', power: 55, cost: 1, el: 'earth', ranged: true, inflict: { id: 'spore', delay: 2 } }, { id: 's2', name: '갓 내려찍기', power: 120, cost: 4, el: 'earth', area: true, inflict: { id: 'stun' } }],
   jelly_cap: [{ id: 's1', name: '젤리 방울', power: 60, cost: 1, el: 'water', ranged: true, inflict: { id: 'wet' } }, { id: 's2', name: '해파리 비', power: 105, cost: 3, el: 'water', ranged: true, area: true, inflict: { id: 'wet' } }],
   fang_trap: [{ id: 's1', name: '덫 물기', power: 65, cost: 1, el: 'earth', inflict: { id: 'atkDown' } }, { id: 's2', name: '대지 집어삼키기', power: 105, cost: 4, el: 'earth', inflict: { id: 'stun' } }],
   blade_vine: [{ id: 's1', name: '불꽃 베기', power: 60, cost: 1, el: 'fire', inflict: { id: 'burn' } }, { id: 's2', name: '용광로 일섬', power: 105, cost: 3, el: 'fire', inflict: { id: 'burn' } }],
-  toxi_cactus: [{ id: 's1', name: '독가시 쏘기', power: 55, cost: 1, el: 'grass', ranged: true, inflict: { id: 'poison', n: 1 } }, { id: 's2', name: '맹독 터뜨리기', power: 105, cost: 3, el: 'grass', area: true, inflict: { id: 'poison', n: 2 } }],
-  draco_fruit: [{ id: 's1', name: '서리 가시', power: 66, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '서리 열매 터뜨리기', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill', n: 2 } }],
-  frost_drake: [{ id: 's1', name: '서리 비늘', power: 66, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙룡의 숨', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill', n: 2 } }],
+  toxi_cactus: [{ id: 's1', name: '독가시 쏘기', power: 55, cost: 1, el: 'grass', ranged: true, inflict: { id: 'poison', n: 1 } }, { id: 's2', name: '맹독 터뜨리기', power: 105, cost: 3, el: 'grass', area: true, inflict: { id: 'poison' } }],
+  draco_fruit: [{ id: 's1', name: '서리 가시', power: 66, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '서리 열매 터뜨리기', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill' } }],
+  frost_drake: [{ id: 's1', name: '서리 비늘', power: 66, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙룡의 숨', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill' } }],
   ember_cap: [{ id: 's1', name: '불씨 포자', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'spore', delay: 2 } }, { id: 's2', name: '불꽃 포자 구름', power: 100, cost: 3, el: 'fire', ranged: true, area: true, inflict: { id: 'spore', delay: 1 } }],
   drake_cactus: [{ id: 's1', name: '용불 가시', power: 60, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '화룡의 숨결', power: 115, cost: 4, el: 'fire', ranged: true, area: true, inflict: { id: 'burn' } }],
   gat_cap: [{ id: 's1', name: '부채 바람', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '갓 회오리', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'spore', delay: 1 } }],
   mask_vine: [{ id: 's1', name: '탈춤 휘감기', power: 60, cost: 1, el: 'earth', inflict: { id: 'seal' } }, { id: 's2', name: '대지의 탈춤', power: 115, cost: 4, el: 'earth', area: true, inflict: { id: 'stun' } }],
-  lantern_vine: [{ id: 's1', name: '초롱 불빛', power: 60, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '청사초롱 눈보라', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill', n: 2 } }],
+  lantern_vine: [{ id: 's1', name: '초롱 불빛', power: 60, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '청사초롱 눈보라', power: 110, cost: 4, el: 'ice', ranged: true, area: true, inflict: { id: 'chill' } }],
   jar_cactus: [{ id: 's1', name: '물동이 쏟기', power: 60, cost: 1, el: 'water', inflict: { id: 'wet' } }, { id: 's2', name: '물동이 내려치기', power: 115, cost: 3, el: 'water', area: true, inflict: { id: 'wet' } }],
-  goblin_cap: [{ id: 's1', name: '방망이 찌릿', power: 60, cost: 1, el: 'bolt', inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '금 나와라 뚝딱', power: 120, cost: 4, el: 'bolt', inflict: { id: 'shock', n: 2 } }],
+  goblin_cap: [{ id: 's1', name: '방망이 찌릿', power: 60, cost: 1, el: 'bolt', inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '금 나와라 뚝딱', power: 120, cost: 4, el: 'bolt', inflict: { id: 'shock' } }],
   crown_cap: [{ id: 's1', name: '서리 광채', power: 55, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙왕의 포자', power: 100, cost: 3, el: 'ice', ranged: true, area: true, inflict: { id: 'spore', delay: 1 } }],
   gladi_cactus: [{ id: 's1', name: '가시 칼 찌르기', power: 60, cost: 1, el: 'earth', contact: true }, { id: 's2', name: '검투사의 일격', power: 115, cost: 4, el: 'earth', contact: true, inflict: { id: 'defDown' } }],
   jangseung_cactus: [{ id: 's1', name: '장승 눈빛', power: 55, cost: 1, el: 'grass', ranged: true, inflict: { id: 'atkDown' } }, { id: 's2', name: '천하대장군', power: 105, cost: 3, el: 'grass', contact: true, inflict: { id: 'taunt' } }],
   astro_cap: [{ id: 's1', name: '공기 방울', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '궤도 돌진', power: 105, cost: 3, el: 'wind', contact: true, self: 'spdUp' }],
-  viking_cap: [{ id: 's1', name: '뿔 박치기', power: 60, cost: 1, el: 'ice', contact: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙하 돌격', power: 115, cost: 4, el: 'ice', contact: true, inflict: { id: 'chill', n: 2 } }],
+  viking_cap: [{ id: 's1', name: '뿔 박치기', power: 60, cost: 1, el: 'ice', contact: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '빙하 돌격', power: 115, cost: 4, el: 'ice', contact: true, inflict: { id: 'chill' } }],
   hyunmu_cap: [{ id: 's1', name: '물뱀 휘감기', power: 55, cost: 1, el: 'water', inflict: { id: 'seal' } }, { id: 's2', name: '현무의 물결', power: 110, cost: 4, el: 'water', ranged: true, area: true, inflict: { id: 'wet' } }],
   gumiho_bloom: [{ id: 's1', name: '여우불', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '아홉 꼬리 불', power: 110, cost: 4, el: 'fire', ranged: true, area: true, inflict: { id: 'burn' } }],
-  wizard_bell: [{ id: 's1', name: '별빛 찌릿', power: 55, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '번개 주문', power: 110, cost: 4, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 2 } }],
+  wizard_bell: [{ id: 's1', name: '별빛 찌릿', power: 55, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '번개 주문', power: 110, cost: 4, el: 'bolt', ranged: true, inflict: { id: 'shock' } }],
   ninja_vine: [{ id: 's1', name: '잎 수리검', power: 55, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '수리검 난무', power: 105, cost: 3, el: 'wind', ranged: true, area: true }],
   diver_vine: [{ id: 's1', name: '물질', power: 55, cost: 1, el: 'water', inflict: { id: 'wet' } }, { id: 's2', name: '파도타기', power: 105, cost: 3, el: 'water', ranged: true, area: true, inflict: { id: 'wet' } }],
   pirate_cactus: [{ id: 's1', name: '물보라 칼질', power: 60, cost: 1, el: 'water', contact: true, inflict: { id: 'wet' } }, { id: 's2', name: '큰 파도 베기', power: 110, cost: 3, el: 'water', contact: true, inflict: { id: 'taunt' } }],
   ranger_vine: [{ id: 's1', name: '덩굴 화살', power: 55, cost: 1, el: 'grass', ranged: true, inflict: { id: 'poison', n: 1 } }, { id: 's2', name: '잎새 연사', power: 105, cost: 3, el: 'grass', ranged: true, inflict: { id: 'seal' } }],
   miner_cap: [{ id: 's1', name: '곡괭이 찍기', power: 60, cost: 1, el: 'earth', contact: true, inflict: { id: 'spore', delay: 2 } }, { id: 's2', name: '광맥 폭파', power: 105, cost: 3, el: 'earth', area: true, inflict: { id: 'stun' } }],
-  snow_ballet: [{ id: 's1', name: '눈꽃 회전', power: 55, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '얼음 피루엣', power: 100, cost: 3, el: 'ice', area: true, inflict: { id: 'chill', n: 2 } }],
-  volcano_cap: [{ id: 's1', name: '불씨 분출', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '화산 폭발', power: 115, cost: 4, el: 'fire', area: true, inflict: { id: 'burn', n: 2 } }],
+  snow_ballet: [{ id: 's1', name: '눈꽃 회전', power: 55, cost: 1, el: 'ice', ranged: true, inflict: { id: 'chill', n: 1 } }, { id: 's2', name: '얼음 피루엣', power: 100, cost: 3, el: 'ice', area: true, inflict: { id: 'chill' } }],
+  volcano_cap: [{ id: 's1', name: '불씨 분출', power: 55, cost: 1, el: 'fire', ranged: true, inflict: { id: 'burn' } }, { id: 's2', name: '화산 폭발', power: 115, cost: 4, el: 'fire', area: true, inflict: { id: 'burn' } }],
   dandel_aero: [{ id: 's1', name: '솜털 바람', power: 50, cost: 1, el: 'wind', ranged: true, inflict: { id: 'gale' } }, { id: 's2', name: '민들레 폭풍', power: 100, cost: 3, el: 'wind', ranged: true, area: true, inflict: { id: 'atkDown' } }],
-  drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock', n: 2 } }],
+  drum_cactus: [{ id: 's1', name: '북채 번개', power: 60, cost: 1, el: 'bolt', ranged: true, inflict: { id: 'shock', n: 1 } }, { id: 's2', name: '뇌고 연타', power: 120, cost: 4, el: 'bolt', ranged: true, area: true, inflict: { id: 'shock' } }],
 };
 // 기본기 이름(2026-10-16 사용자 "평타도 내가 임의로 만든 거지 스킬 이름이 있어야 해. 스킬 같아야 하고 식물마다 다른") — 규칙(위력 30 공격 · 방어태세 · 회피 자세)은
 //  BASICS 그대로, 이름만 식물마다 [공격, 방어, 회피]. 이름은 임시(사용자가 고칠 수 있음) — 기술 id(basic · guard · evade)는 그대로라 서버·기록·친구 대결과 맞음
@@ -218,8 +218,8 @@ function fxVal(u, foe, f, C) {
     case 'wet': v = has(foe, 'wet') ? 0.05 * R : R * defGain(foe, 1 - D.defK) * T(D.turns) + 2.5 * thr * D.missAdd / 100 * T(D.turns) * 0.5 + (K.shock || K.chill ? 0.15 * R : 0); break;
     case 'gale': v = has(foe, 'gale') ? 0.05 * R : 2.5 * thr * D.missAdd / 100 * T(f.turns || D.turns) * 0.6 + (K.gale ? 0.35 * R : 0); break;
     case 'spore': v = n * (H >= 2 ? 2.5 * sporeDmg(foe, D.power, (u.atk || 10) * atkK(u), u.el) / Math.max(1, foe.hp) : 0.1 * R); break;   // 하나 = 붙인 턴 포함 3번째 턴 끝 위력 35
-    case 'atkDown': v = 2.5 * thr * D.v * T(D.turns) * 0.5; break;
-    case 'defDown': v = R * defGain(foe, D.v) * T(D.turns - 1); break;
+    case 'atkDown': v = 2.5 * thr * Math.min(0.8, D.v * n) * T(D.turns) * 0.5; break;   // n 겹(맛평가 · 능력치 바닥 0.2 — 0.8까지)
+    case 'defDown': v = R * defGain(foe, Math.min(0.8, D.v * n)) * T(D.turns - 1); break;
     case 'spdDown': v = 0.05 * R * T(D.turns); break;
     case 'accDown': v = 2.5 * thr * D.v / 100 * T(D.turns) * 0.6; break;
     case 'critDown': v = 2.5 * thr * D.v / 200 * T(D.turns) * 0.6; break;
@@ -255,7 +255,7 @@ function stanceVal(u, foe, s, C, k = 1) {
   return k * (2.5 * 0.85 * take * red / Math.max(1, u.hp) + live);
 }
 // 나에게 거는 버프 값(공격 덤 · 버프 기술 · 자세 덤 같은 잣대)
-function buffVal(u, foe, sides, C, down = 0) {
+function buffVal(u, foe, sides, C, down = 0, nOf = () => 1) {   // nOf = 그 버프를 몇 겹 거나(알 깨기 selfN)
   const R = C.R, H = C.H, rk = Math.min(1.2, C.risk), after = n => Math.max(0, Math.min(n, H - 1));
   let v = 0;
   for (const b of sides) {
@@ -267,7 +267,7 @@ function buffVal(u, foe, sides, C, down = 0) {
     else if (b === 'stealth') v += 2.5 * rk * 0.95 + 0.4 * R;   // 은신 = 이번 턴 피하고 다음 공격 기습
     else if (b === 'regen') v += healScore(u, 0.15);
     else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
-    else if (b === 'atkUp') v += R * FX.atkUp.v * after(5) * k;
+    else if (b === 'atkUp') v += R * FX.atkUp.v * nOf(b) * after(5) * k;
     else if (b === 'critUp') v += R * FX.critUp.v / 200 * after(5) * k;   // 예리 = 치명 칸 +10(치명 ×1.5)
     else if (b === 'aim') v += R * 0.35;
     else if (b === 'flourish') v += R * 0.05 * after(5) * 2 + 2.5 * rk * 0.05;
@@ -312,7 +312,7 @@ function aiScore(u, foe, s, C) {
       const dot = has(foe, 'burn') ? 0 : 2.5 * FX.burn.dot * Math.min(3, H + 1) * foe.max / Math.max(1, foe.hp), q = (SPECIES[u.key] || {}).queen;
       return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);
     }
-    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0; return [['atkDown', 1], ['defDown', 2], ['seal', 3]].reduce((t, [id, at]) => t + (n >= at ? fxVal(u, foe, { id }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인
+    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0, tz = s.taste; return [['atkDown', 1, tz.atk || 1], ['defDown', 2, tz.def || 1], ['seal', 3, 1]].reduce((t, [id, at, c]) => t + (n >= at ? fxVal(u, foe, { id, n: c }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인(쇠약 · 시듦 겹 수)
     if (!BRAIN.fx) { const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length; return fresh ? 0.55 + 0.35 * fresh : 0.15; }   // 옛 값
     return BRAIN.fxK * fxSum(u, foe, s, C) + (s.formBoost && C.useK.mut ? 0.25 * R : 0) + 0.02;   // 입맛 다시기 = 이번 · 다음 턴 내 변이 기술 +20%
   }
@@ -354,7 +354,7 @@ function aiScore(u, foe, s, C) {
       const dodge = s.nullFirst ? 2.5 * 0.85 * rk + (risk >= 1 ? 1.2 : 0) : 0;
       return (2.5 * rk * (s.reflectK ?? FX.reflect.k) * u.hp / Math.max(1, foe.hp) * 0.6 + dodge + (s.reflectInflict ? 0.3 * R : 0)) * (C.last === 'buff' ? 0.6 : 1);
     }
-    return buffVal(u, foe, sides, C, down);
+    return buffVal(u, foe, sides, C, down, b => (s.selfN && s.selfN[b]) || 1);
   }
   return 0.4 * R;
 }

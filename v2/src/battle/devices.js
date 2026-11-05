@@ -344,9 +344,11 @@ export function hexAct(u, foe, a, ctx) {
     if (a.inferno.cd) (u.st ||= {}).infernoLock = { until: exp + a.inferno.cd };
     ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: 'inferno', list: listOf(foe) });
   }
-  if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인(효과마다 한 겹 — 2026-11-05 사용자 '항상 1겹씩만')
-    const n = u.st.meal.n, tgt = frontSum(foe) || foe; delete u.st.meal;
-    for (const [i, id] of [[1, 'atkDown'], [2, 'defDown'], [3, 'seal']]) if (n >= i) apply(tgt, id, 1, { ...ctx, by: u });
+  if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인 · 쇠약 · 시듦 겹 수 = taste.atk · taste.def(디버프는 여러 겹 · 봉인은 상태이상이라 한 장 — 2026-11-05 사용자)
+    const n = u.st.meal.n, tgt = frontSum(foe) || foe, tz = a.taste; delete u.st.meal;
+    if (n >= 1) apply(tgt, 'atkDown', tz.atk || 1, { ...ctx, by: u });
+    if (n >= 2) apply(tgt, 'defDown', tz.def || 1, { ...ctx, by: u });
+    if (n >= 3) apply(tgt, 'seal', 1, { ...ctx, by: u });
   }
   if (a.settle) {   // 청산(아쿠아벌브): 상대 해로운 상태이상을 종류째 지우고 종류 하나당 최대 체력 몫 확정 피해(상한 종류 수 — 독 5겹 = 하나)
     const gone = wipeEff(foe, HARM_IDS), k = Math.min(a.settle.cap, gone.length);

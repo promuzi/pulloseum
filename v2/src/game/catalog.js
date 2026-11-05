@@ -120,8 +120,8 @@ export const SKILLS = Object.fromEntries([
   // 풀
   S('g_leaf', '가시 잎', 'grass', 'c1', 55, 1, { ranged: true, inflict: { id: 'poison', n: 1 } }),
   S('g_photo', '세포합성', 'grass', 'c1', 0, 1, { self: 'regen' }),   // 옛 이름 광합성 → 기본기 sun 이 '광합성'(2026-10-18)
-  S('g_whip', '독초 채찍', 'grass', 'c2', 90, 2, { inflict: { id: 'poison', n: 2 } }),
-  S('g_venom', '맹독 덩굴', 'grass', 'c3', 115, 4, { inflict: { id: 'poison', n: 3 } }),
+  S('g_whip', '독초 채찍', 'grass', 'c2', 90, 2, { inflict: { id: 'poison' } }),
+  S('g_venom', '맹독 덩굴', 'grass', 'c3', 115, 4, { inflict: { id: 'poison' } }),
   S('g_root', '흡수 뿌리', 'grass', 'c3', 105, 3, { drain: 0.5 }),
   S('g_bomb', '씨앗 폭탄', 'grass', 'c3', 130, 4, { area: true, inflict: { id: 'poison', n: 1 } }),
   // 대지
@@ -142,15 +142,15 @@ export const SKILLS = Object.fromEntries([
   S('b_static', '정전기', 'bolt', 'c1', 55, 1, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('b_charge', '정전기 충전', 'bolt', 'c1', 0, 1, { self: 'aim' }),
   S('b_bolt', '번개 줄기', 'bolt', 'c2', 95, 2, { ranged: true, inflict: { id: 'shock', n: 1 } }),
-  S('b_thunder', '천둥', 'bolt', 'c3', 120, 4, { area: true, inflict: { id: 'shock', n: 2 } }),
+  S('b_thunder', '천둥', 'bolt', 'c3', 120, 4, { area: true, inflict: { id: 'shock' } }),
   S('b_surge', '전류 폭주', 'bolt', 'c3', 150, 5, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('b_chain', '연쇄 번개', 'bolt', 'c3', 105, 3, { ranged: true, inflict: { id: 'shock', n: 1 }, self: 'spdUp' }),
   // 빙결(빙결 식물 = 프로스트벨부터, 2026-10-16)
   S('i_frost', '서리', 'ice', 'c1', 55, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('i_shell', '얼음 껍질', 'ice', 'c1', 0, 1, { self: 'shield' }),
   S('i_spear', '얼음 창', 'ice', 'c2', 95, 2, { ranged: true, inflict: { id: 'chill', n: 1 } }),
-  S('i_blizzard', '눈보라', 'ice', 'c3', 120, 4, { area: true, inflict: { id: 'chill', n: 2 } }),
-  S('i_zero', '절대 영도', 'ice', 'c3', 150, 5, { inflict: { id: 'chill', n: 2 } }),
+  S('i_blizzard', '눈보라', 'ice', 'c3', 120, 4, { area: true, inflict: { id: 'chill' } }),
+  S('i_zero', '절대 영도', 'ice', 'c3', 150, 5, { inflict: { id: 'chill' } }),
   // 종 공통(뿌리)
   S('j_scent', '꽃향기', null, 'c1', 60, 1, { jong: 'flower', ranged: true, inflict: { id: 'atkDown' } }),
   S('j_petals', '꽃잎 춤', null, 'c2', 90, 2, { jong: 'flower', ranged: true, self: 'spdUp' }),
@@ -176,7 +176,7 @@ export const SKILLS = Object.fromEntries([
   S('u_petal_3', '꽃잎 칼날', 'grass', 'u', 115, 3),
   S('u_thorn_1', '가시 채찍', 'grass', 'u', 60, 1, { inflict: { id: 'poison', n: 1 } }),
   S('u_thorn_2', '가시 그물', 'grass', 'u', 80, 2, { inflict: { id: 'seal' } }),
-  S('u_thorn_3', '독가시 덤불', 'grass', 'u', 110, 3, { inflict: { id: 'poison', n: 2 } }),
+  S('u_thorn_3', '독가시 덤불', 'grass', 'u', 110, 3, { inflict: { id: 'poison' } }),
   S('u_aqua_1', '물방울', 'water', 'u', 66, 1, { ranged: true, inflict: { id: 'wet' } }),   // 2026-10-16 봇 상대 승률 41%(처음 셋 중 가장 낮음) → 위력 60 → 66
   S('u_aqua_2', '물거품 방패', 'water', 'u', 0, 2, { self: 'shield', also: 'purify' }),
   S('u_aqua_3', '물방울 세례', 'water', 'u', 112, 3, { ranged: true, inflict: { id: 'wet' } }),
@@ -185,7 +185,7 @@ export const SKILLS = Object.fromEntries([
   S('u_wind_3', '꽃잎 돌풍', 'wind', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'atkDown' } }),
   S('u_spark_1', '전기 불꽃', 'bolt', 'u', 60, 1, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('u_spark_2', '전기 꽃가루', 'bolt', 'u', 75, 2, { ranged: true, area: true, inflict: { id: 'shock', n: 1 } }),
-  S('u_spark_3', '낙뢰', 'bolt', 'u', 120, 4, { ranged: true, inflict: { id: 'shock', n: 2 } }),
+  S('u_spark_3', '낙뢰', 'bolt', 'u', 120, 4, { ranged: true, inflict: { id: 'shock' } }),
   S('u_tide_1', '물살 새순', 'water', 'u', 65, 1, { inflict: { id: 'seal' } }),
   S('u_tide_2', '조류 휘감기', 'water', 'u', 85, 2, { inflict: { id: 'wet' } }),
   S('u_tide_3', '파도 덮치기', 'water', 'u', 105, 3, { area: true, inflict: { id: 'wet' } }),
@@ -210,10 +210,10 @@ export const SKILLS = Object.fromEntries([
   // 새 넷(2026-10-16) — 효과 짝: 속성(빙결 = 빙결 · 번개 = 감전 · 대지 = 기절 · 물 = 젖음) 또는 종(꽃 = 약화 · 덩굴 = 덩굴 · 버섯 = 포자), 센 효과(겹 2 · 기절)는 비용 4
   S('u_frost_1', '서리 종소리', 'ice', 'u', 60, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('u_frost_2', '서리꽃 날림', 'ice', 'u', 80, 2, { ranged: true, inflict: { id: 'atkDown' } }),
-  S('u_frost_3', '빙결의 종', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_frost_3', '빙결의 종', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill' } }),
   S('u_volt_1', '전깃줄 감기', 'bolt', 'u', 60, 1, { inflict: { id: 'seal' } }),
   S('u_volt_2', '방전', 'bolt', 'u', 85, 2, { ranged: true, inflict: { id: 'shock', n: 1 } }),
-  S('u_volt_3', '고압 채찍', 'bolt', 'u', 120, 4, { inflict: { id: 'shock', n: 2 } }),
+  S('u_volt_3', '고압 채찍', 'bolt', 'u', 120, 4, { inflict: { id: 'shock' } }),
   S('u_stone_1', '돌가루 포자', 'earth', 'u', 55, 1, { ranged: true, inflict: { id: 'spore', delay: 2 } }),
   S('u_stone_2', '바위 갓', 'earth', 'u', 0, 2, { self: 'defUp', also: 'shield' }),
   S('u_stone_3', '갓 내려찍기', 'earth', 'u', 120, 4, { area: true, inflict: { id: 'stun' } }),
@@ -228,24 +228,24 @@ export const SKILLS = Object.fromEntries([
   S('u_blade_3', '용광로 일섬', 'fire', 'u', 105, 3, { inflict: { id: 'burn' } }),
   S('u_toxi_1', '독가시 쏘기', 'grass', 'u', 55, 1, { ranged: true, inflict: { id: 'poison', n: 1 } }),
   S('u_toxi_2', '가시 도발', 'grass', 'u', 70, 2, { inflict: { id: 'taunt' }, reflect: true }),
-  S('u_toxi_3', '맹독 터뜨리기', 'grass', 'u', 105, 3, { area: true, inflict: { id: 'poison', n: 2 } }),
+  S('u_toxi_3', '맹독 터뜨리기', 'grass', 'u', 105, 3, { area: true, inflict: { id: 'poison' } }),
   S('u_draco_1', '서리 가시', 'ice', 'u', 66, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('u_draco_2', '가시 껍질', 'ice', 'u', 0, 2, { self: 'shield', reflect: true }),
-  S('u_draco_3', '서리 열매 터뜨리기', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_draco_3', '서리 열매 터뜨리기', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill' } }),
   S('u_fdrake_1', '서리 비늘', 'ice', 'u', 66, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),   // 프로스트드레이크(옛 드라코프루트 용 기술 그대로)
   S('u_fdrake_2', '비늘 세우기', 'ice', 'u', 0, 2, { self: 'shield', reflect: true }),
-  S('u_fdrake_3', '빙룡의 숨', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_fdrake_3', '빙룡의 숨', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill' } }),
   // 단계마다 더 피는 개성(UNI_EXTRA) — 드라코프루트 = 탱커(도발 · 막기 · 버티기), 프로스트드레이크 = 공격형(발톱 · 분노 · 한 방)
   S('u_draco_2b', '용 따라하기', 'ice', 'u', 50, 1, { ranged: true, inflict: { id: 'taunt' } }),   // 용처럼 숨을 뿜는 흉내 — 서리 콧김만 나옴(사용자 "용따라하기" · ㉠)
   S('u_draco_3b', '얼음 요새', 'ice', 'u', 0, 3, { self: 'defUp', also: 'shield' }),
   S('u_draco_3c', '단물 열매', 'ice', 'u', 0, 2, { self: 'regen', also: 'purify' }),
   S('u_fdrake_2b', '빙룡 꼬리치기', 'ice', 'u', 85, 2, { contact: true, inflict: { id: 'chill', n: 1 } }),
   S('u_fdrake_3b', '빙룡의 분노', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'aim' }),
-  S('u_fdrake_3c', '빙하 낙하', 'ice', 'u', 140, 5, { inflict: { id: 'chill', n: 2 } }),
+  S('u_fdrake_3c', '빙하 낙하', 'ice', 'u', 140, 5, { inflict: { id: 'chill' } }),
   // 나머지 28종 — 자라는 +1 · 다 자란 +2(역할에 맞춰: 2026-10-17 사용자 "이런 식으로 각 외모와 컨셉을 다른 식물에도")
   S('u_petal_2b', '홀리는 향기', 'grass', 'u', 45, 2, { ranged: true, area: true, inflict: { id: 'atkDown' } }),
   S('u_petal_3b', '장미 덤불', 'grass', 'u', 0, 2, { self: 'regen', reflect: true }),
-  S('u_petal_3c', '붉은 장미 폭풍', 'grass', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'poison', n: 2 } }),
+  S('u_petal_3c', '붉은 장미 폭풍', 'grass', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'poison' } }),
   S('u_thorn_2b', '가시 덫', 'grass', 'u', 60, 2, { inflict: { id: 'root' } }),
   S('u_thorn_3b', '수액 빨기', 'grass', 'u', 75, 2, { drain: 0.4, inflict: { id: 'poison', n: 1 } }),
   S('u_thorn_3c', '가시 감옥', 'grass', 'u', 95, 4, { area: true, inflict: { id: 'seal' } }),
@@ -281,10 +281,10 @@ export const SKILLS = Object.fromEntries([
   S('u_spore_3c', '균사 그물', 'grass', 'u', 80, 3, { area: true, inflict: { id: 'root' } }),
   S('u_frost_2b', '맑은 종소리', 'ice', 'u', 0, 2, { self: 'purify', also: 'shield' }),
   S('u_frost_3b', '얼음 종 울림', 'ice', 'u', 85, 3, { ranged: true, area: true, inflict: { id: 'chill', n: 1 } }),
-  S('u_frost_3c', '절대 서리', 'ice', 'u', 120, 5, { ranged: true, inflict: { id: 'chill', n: 3 } }),
+  S('u_frost_3c', '절대 서리', 'ice', 'u', 120, 5, { ranged: true, inflict: { id: 'chill' } }),
   S('u_volt_2b', '전구 번쩍', 'bolt', 'u', 60, 1, { ranged: true, inflict: { id: 'atkDown' } }),
   S('u_volt_3b', '과충전', 'bolt', 'u', 0, 2, { self: 'atkUp', also: 'aim' }),
-  S('u_volt_3c', '번개 그물', 'bolt', 'u', 105, 4, { ranged: true, area: true, inflict: { id: 'shock', n: 2 } }),
+  S('u_volt_3c', '번개 그물', 'bolt', 'u', 105, 4, { ranged: true, area: true, inflict: { id: 'shock' } }),
   S('u_stone_2b', '돌가루 막', 'earth', 'u', 0, 1, { self: 'shield' }),
   S('u_stone_3b', '수정 껍데기', 'earth', 'u', 0, 3, { self: 'armor', reflect: true }),
   S('u_stone_3c', '산사태', 'earth', 'u', 110, 4, { area: true, inflict: { id: 'defDown' } }),
@@ -314,10 +314,10 @@ export const SKILLS = Object.fromEntries([
   S('u_tal_3c', '탈춤 한마당', 'earth', 'u', 100, 4, { area: true, inflict: { id: 'seal' } }),
   S('u_drum_2b', '천둥 울림', 'bolt', 'u', 70, 2, { ranged: true, area: true, inflict: { id: 'shock', n: 1 } }),
   S('u_drum_3b', '북 방패 두드리기', 'bolt', 'u', 0, 2, { self: 'defUp', reflect: true }),
-  S('u_drum_3c', '하늘 북', 'bolt', 'u', 140, 5, { ranged: true, inflict: { id: 'shock', n: 2 } }),
+  S('u_drum_3c', '하늘 북', 'bolt', 'u', 140, 5, { ranged: true, inflict: { id: 'shock' } }),
   S('u_lamp_2b', '초롱 밝히기', 'ice', 'u', 0, 2, { self: 'purify', also: 'regen' }),
   S('u_lamp_3b', '서리 덩굴 감옥', 'ice', 'u', 80, 3, { area: true, inflict: { id: 'root' } }),
-  S('u_lamp_3c', '홍사초롱', 'ice', 'u', 125, 4, { ranged: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_lamp_3c', '홍사초롱', 'ice', 'u', 125, 4, { ranged: true, inflict: { id: 'chill' } }),
   S('u_jar_2b', '물 길어 오기', 'water', 'u', 0, 2, { self: 'regen', also: 'shield' }),
   S('u_jar_3b', '똬리 버티기', 'water', 'u', 0, 2, { self: 'defUp', reflect: true }),
   S('u_jar_3c', '물동이 폭포', 'water', 'u', 120, 4, { ranged: true, area: true, inflict: { id: 'wet' } }),
@@ -326,7 +326,7 @@ export const SKILLS = Object.fromEntries([
   S('u_dok_3c', '도깨비 씨름', 'bolt', 'u', 125, 4, { contact: true, inflict: { id: 'stun' } }),
   S('u_crown_2b', '왕의 명령', 'ice', 'u', 55, 2, { ranged: true, inflict: { id: 'taunt' } }),
   S('u_crown_3b', '얼음 왕좌', 'ice', 'u', 0, 3, { self: 'defUp', also: 'regen' }),
-  S('u_crown_3c', '빙왕의 심판', 'ice', 'u', 130, 5, { ranged: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_crown_3c', '빙왕의 심판', 'ice', 'u', 130, 5, { ranged: true, inflict: { id: 'chill' } }),
   S('u_emcap_1', '불씨 포자', 'fire', 'u', 55, 1, { ranged: true, inflict: { id: 'spore', delay: 2 } }),
   S('u_emcap_2', '등불 빛', 'fire', 'u', 85, 2, { ranged: true, inflict: { id: 'burn' } }),
   S('u_emcap_3', '불꽃 포자 구름', 'fire', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'spore', delay: 1 } }),
@@ -341,16 +341,16 @@ export const SKILLS = Object.fromEntries([
   S('u_tal_3', '대지의 탈춤', 'earth', 'u', 115, 4, { area: true, inflict: { id: 'stun' } }),
   S('u_drum_1', '북채 번개', 'bolt', 'u', 60, 1, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('u_drum_2', '천둥 장단', 'bolt', 'u', 0, 2, { self: 'aim', also: 'spdUp' }),
-  S('u_drum_3', '뇌고 연타', 'bolt', 'u', 40, 4, { hits: 3, ranged: true, area: true, inflict: { id: 'shock', n: 2 } }),
+  S('u_drum_3', '뇌고 연타', 'bolt', 'u', 40, 4, { hits: 3, ranged: true, area: true, inflict: { id: 'shock' } }),
   S('u_lamp_1', '초롱 불빛', 'ice', 'u', 60, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('u_lamp_2', '서리 덩굴', 'ice', 'u', 75, 2, { inflict: { id: 'seal' } }),
-  S('u_lamp_3', '청사초롱 눈보라', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_lamp_3', '청사초롱 눈보라', 'ice', 'u', 110, 4, { ranged: true, area: true, inflict: { id: 'chill' } }),
   S('u_jar_1', '물동이 쏟기', 'water', 'u', 60, 1, { inflict: { id: 'wet' } }),
   S('u_jar_2', '시원한 물동이', 'water', 'u', 0, 2, { self: 'regen', reflect: true }),
   S('u_jar_3', '물동이 내려치기', 'water', 'u', 115, 3, { area: true, inflict: { id: 'wet' } }),
   S('u_dok_1', '방망이 찌릿', 'bolt', 'u', 60, 1, { inflict: { id: 'shock', n: 1 } }),
   S('u_dok_2', '도깨비 장난', 'bolt', 'u', 70, 2, { ranged: true, inflict: { id: 'spore', delay: 2 } }),
-  S('u_dok_3', '금 나와라 뚝딱', 'bolt', 'u', 120, 4, { inflict: { id: 'shock', n: 2 } }),
+  S('u_dok_3', '금 나와라 뚝딱', 'bolt', 'u', 120, 4, { inflict: { id: 'shock' } }),
   S('u_crown_1', '서리 광채', 'ice', 'u', 55, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('u_crown_2', '왕의 망토', 'ice', 'u', 0, 2, { self: 'shield', also: 'defUp' }),
   S('u_crown_3', '빙왕의 포자', 'ice', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'spore', delay: 1 } }),
@@ -376,7 +376,7 @@ export const SKILLS = Object.fromEntries([
   S('u_viking_1', '뿔 박치기', 'ice', 'u', 60, 1, { contact: true, inflict: { id: 'chill', n: 1 } }),
   S('u_viking_2', '전사의 함성', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp' }),
   S('u_viking_2b', '얼음 뿔 찌르기', 'ice', 'u', 80, 2, { contact: true, pierce: 0.3, inflict: { id: 'chill', n: 1 } }),
-  S('u_viking_3', '빙하 돌격', 'ice', 'u', 115, 4, { contact: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_viking_3', '빙하 돌격', 'ice', 'u', 115, 4, { contact: true, inflict: { id: 'chill' } }),
   S('u_viking_3b', '털 망토', 'ice', 'u', 0, 2, { self: 'defUp', also: 'regen' }),
   S('u_viking_3c', '라그나 서리', 'ice', 'u', 140, 5, { contact: true, inflict: { id: 'stun' } }),
   S('u_hyunmu_1', '물뱀 휘감기', 'water', 'u', 55, 1, { inflict: { id: 'seal' } }),
@@ -394,7 +394,7 @@ export const SKILLS = Object.fromEntries([
   S('u_wizard_1', '별빛 찌릿', 'bolt', 'u', 55, 1, { ranged: true, inflict: { id: 'shock', n: 1 } }),
   S('u_wizard_2', '별 지팡이', 'bolt', 'u', 75, 2, { ranged: true, inflict: { id: 'atkDown' } }),
   S('u_wizard_2b', '마법 방울', 'bolt', 'u', 0, 2, { self: 'shield', also: 'aim' }),
-  S('u_wizard_3', '번개 주문', 'bolt', 'u', 110, 4, { ranged: true, inflict: { id: 'shock', n: 2 } }),
+  S('u_wizard_3', '번개 주문', 'bolt', 'u', 110, 4, { ranged: true, inflict: { id: 'shock' } }),
   S('u_wizard_3b', '모자 속 비밀', 'bolt', 'u', 0, 2, { self: 'purify', also: 'spdUp' }),
   S('u_wizard_3c', '봉인 주문', 'bolt', 'u', 120, 5, { ranged: true, inflict: { id: 'stun' } }),
   S('u_ninja_1', '잎 수리검', 'wind', 'u', 55, 1, { ranged: true, inflict: { id: 'gale' } }),
@@ -421,10 +421,10 @@ export const SKILLS = Object.fromEntries([
   S('u_miner_3', '광맥 폭파', 'earth', 'u', 105, 3, { area: true, inflict: { id: 'stun' } }),
   S('u_ballet_1', '눈꽃 회전', 'ice', 'u', 55, 1, { ranged: true, inflict: { id: 'chill', n: 1 } }),
   S('u_ballet_2', '우아한 인사', 'ice', 'u', 0, 2, { self: 'shield' }),
-  S('u_ballet_3', '얼음 피루엣', 'ice', 'u', 100, 3, { area: true, inflict: { id: 'chill', n: 2 } }),
+  S('u_ballet_3', '얼음 피루엣', 'ice', 'u', 100, 3, { area: true, inflict: { id: 'chill' } }),
   S('u_volcano_1', '불씨 분출', 'fire', 'u', 55, 1, { ranged: true, inflict: { id: 'burn' } }),
   S('u_volcano_2', '마그마 껍질', 'fire', 'u', 0, 2, { self: 'defUp' }),
-  S('u_volcano_3', '화산 폭발', 'fire', 'u', 115, 4, { area: true, inflict: { id: 'burn', n: 2 } }),
+  S('u_volcano_3', '화산 폭발', 'fire', 'u', 115, 4, { area: true, inflict: { id: 'burn' } }),
   S('u_dandel_1', '솜털 바람', 'wind', 'u', 50, 1, { ranged: true, inflict: { id: 'gale' } }),
   S('u_dandel_2', '활공 바람', 'wind', 'u', 0, 2, { self: 'spdUp', also: 'regen' }),
   S('u_dandel_3', '민들레 폭풍', 'wind', 'u', 100, 3, { ranged: true, area: true, inflict: { id: 'atkDown' } }),
@@ -438,7 +438,7 @@ export const SKILLS = Object.fromEntries([
   S('m_smash', '쇠망치 내려치기', null, 'm', 70, 0, { form: 'weapon', uses: 1, inflict: { id: 'stun' } }),
   S('m_spit', '독 뱉기', null, 'm', 45, 0, { form: 'toxic', uses: 3, ranged: true, inflict: { id: 'poison', n: 1 } }),
   S('m_acid', '부식액', null, 'm', 65, 0, { form: 'toxic', uses: 2, ranged: true, inflict: { id: 'defDown' } }),
-  S('m_miasma', '독안개', null, 'm', 45, 0, { form: 'toxic', uses: 1, ranged: true, area: true, inflict: { id: 'poison', n: 2 } }),
+  S('m_miasma', '독안개', null, 'm', 45, 0, { form: 'toxic', uses: 1, ranged: true, area: true, inflict: { id: 'poison' } }),
   S('m_puff', '포자 퍼프', null, 'm', 45, 0, { form: 'spore', uses: 3, ranged: true, inflict: { id: 'atkDown' } }),
   S('m_sleep', '잠 포자', null, 'm', 45, 0, { form: 'spore', uses: 1, ranged: true, inflict: { id: 'stun' } }),
   S('m_bloom', '포자 만개', null, 'm', 0, 0, { form: 'spore', uses: 1, self: 'regen', also: 'purify' }),
@@ -454,7 +454,7 @@ export const SKILLS = Object.fromEntries([
   S('m_burrow', '땅굴 습격', 'earth', 'm', 65, 0, { form: 'predator', uses: 2, drain: 0.25 }),
   S('m_maw', '심해 아가리', 'water', 'm', 50, 0, { form: 'predator', uses: 2, drain: 0.25, inflict: { id: 'wet' } }),
   S('m_bile', '독물 쏘기', 'water', 'm', 50, 0, { form: 'toxic', uses: 2, ranged: true, inflict: { id: 'poison', n: 1 } }),
-  S('m_ivy', '독가시 덩굴', 'grass', 'm', 45, 0, { form: 'toxic', uses: 1, inflict: { id: 'poison', n: 2 } }),
+  S('m_ivy', '독가시 덩굴', 'grass', 'm', 45, 0, { form: 'toxic', uses: 1, inflict: { id: 'poison' } }),
   S('m_gust', '포자 바람', 'wind', 'm', 60, 0, { form: 'spore', uses: 2, ranged: true, area: true, inflict: { id: 'spore', delay: 2 } }),
   S('m_frostclaw', '서리 발톱', 'ice', 'm', 70, 0, { form: 'dragon', uses: 2, inflict: { id: 'chill', n: 1 } }),
   S('m_voltclaw', '뇌룡 발톱', 'bolt', 'm', 70, 0, { form: 'dragon', uses: 2, inflict: { id: 'shock', n: 1 } }),
@@ -480,7 +480,7 @@ const V2 = {
     skills: [
       S('u_fdrake_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true }),
       S('u_fdrake_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
-      S('u_fdrake_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'] }),   // 활력 · 가속 · 시듦 한 겹씩(2026-11-05 '활력 3 · 가속 2'를 넣었다가 사용자 '항상 1겹씩만'으로 되돌림)
+      S('u_fdrake_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'], selfN: { atkUp: 3, spdUp: 2 } }),   // 2026-11-05 사용자 '활력 3 · 가속 2로' · '버프 디버프는 여러겹 허용하자': 활력 3겹 · 가속 2겹 · 시듦 1겹
       S('u_fdrake_3', '빙결 브레스', 'ice', 'u', 75, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),   // 60 → 75(2026-11-04 — 태생 용족 능력치 ×0.94로 리그전 33% → 46%, 임시)
       S('u_fdrake_3b', '빙결 폭풍', 'wind', 'u', 115, 2, { inflicts: [{ id: 'chill', n: 1 }, { id: 'shock' }] }),   // 위력 70 → 100(2026-10-29 성체 기준 16.8% → 맞춤, 사용자 '단순 수치는 너 추천대로 해') → 115(11-04 프로스트드레이크로 옮기며)
       S('u_fdrake_3c', '열매 던지기', null, 'u', 35, 0, { fruitUse: 'throw', hits: 1, perHitInflict: { id: 'chill', n: 1 } }),
@@ -537,7 +537,7 @@ const V2 = {
       S('u_fang_2', '입맛 다시기', 'grass', 'u', 0, 1, { act: 'hex', cats: ['debuff'], hex: [{ id: 'atkDown' }], formBoost: 0.2, gain: { k: 'prep', n: 1 } }),
       S('u_fang_2b', '소화액', 'grass', 'u', 55, 2, { inflicts: [{ id: 'poison', n: 1 }, { id: 'defDown' }], gain: { k: 'prep', n: 1 } }),
       S('u_fang_3', '식사시간', 'grass', 'u', 70, 2, { spend: { k: 'prep', all: true, zeroOk: true }, scale: { k: 'prep', dmg: [0, 0.3, 0.6, 0.9], drain: [0.1, 0.25, 0.4, 0.55] }, mealMark: true }),
-      S('u_fang_3b', '맛평가', 'grass', 'u', 0, 1, { act: 'hex', cats: ['debuff'], taste: true }),   // 효과마다 한 겹(2026-11-05 '쇠약 5 · 시듦 2 · 봉인 2장'을 넣었다가 사용자 '항상 1겹씩만'으로 되돌림)
+      S('u_fang_3b', '맛평가', 'grass', 'u', 0, 1, { act: 'hex', cats: ['debuff'], taste: { atk: 5, def: 2 } }),   // 2026-11-05 '디버프를 쌔게 주자' → 쇠약 5겹(공격 −75%) · 시듦 2겹 · 봉인 1장(봉인 = 상태이상이라 한 장 — 사용자 '상태이상만 한 겹하고 버프 디버프는 여러겹 허용하자')
       S('u_fang_3c', '익혀먹기', 'fire', 'u', 75, 2, { inflict: { id: 'burn' }, gain: { k: 'prep', n: 1 } }),
     ],
   },
@@ -677,7 +677,7 @@ export const FORM_KEYS = Object.keys(FORMS);
 // 업데이트 안전(2026-10-18 — docs/superpowers/specs/2026-10-18-v2-species-identity-design.md §7):
 //  RULES_VER = 전투 계산(battle/rules.js · status.js · model.js · team.js)을 바꿔 올릴 때 +1 — 다른 번호로 시작한 봇 판 · 친구 대결은 이어 하지 않고 승패 없이 닫힘(진 판 아님)
 //  RENAMED = 이름(id)을 바꾼 기술 · 카드 { 옛 id: 새 id } — 적을 때 logic.js SAVE_VER 도 +1(옮기기 직전 원본이 서버에 보관됨). 모르는 id는 지우지 않음
-export const RULES_VER = 20;   // 20 = 2026-11-05 젤리캡 반사 · 튕김 다시 짬(말랑잉 · 너꺼잉 · 은시잉) · 버섯도 포자에 걸림 · 맛평가 디버프 세게 · 치유 공명 강풍 3턴 초기화 · 자갈밭 기동 −30% · 적중 −24 · 효과 한 번에 1겹(맛평가 · 알 깨기 되돌림) · 봇 성향 생장마다(한 묶음 · 올리기 전이라 같은 번호 —종마다 패턴 · 카드 몫 · 컨셉 무게를 새싹 · 성장기 · 성체 따로 — 봇 판 다시 돌리기가 바뀜) · 19 = 2026-11-04 봇 시스템(봇 머리 = 효과 값 · 내다보기 · 종마다 패턴 — 봇 판 다시 돌리기가 바뀜 · 손패 짜기는 새 판만) · 18 = 2026-11-04 오후 포자 = 시간차 공격(하나 = 위력 35 · 붙일 때 공격력 · 상성 · 치명 없음 · 포자 번식 카드 +10) · 17 = 2026-11-04 밤샘 + 같은 날 낮(잔상 햇빛 2 · 아침이에요 위력 30 · 드라코프루트 선공 스택 +1 — 친구 서버에 처음 함께 올림) — 엠버캡 · 드레이크캑터 · 드라코프루트 새 설계 · 프로스트드레이크 빙결열매(옮김) · 피의 축제 3타 · 처형의 춤 무조건 처형 · 포자 = 붙인 턴 포함 3번째 턴 · 불이 포자 · 빙결 · 얼음을 안 녹임 · 소환수가 주인 능력치 겹을 따라감 · 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
+export const RULES_VER = 20;   // 20 = 2026-11-05 젤리캡 반사 · 튕김 다시 짬(말랑잉 · 너꺼잉 · 은시잉) · 버섯도 포자에 걸림 · 맛평가 디버프 세게 · 치유 공명 강풍 3턴 초기화 · 자갈밭 기동 −30% · 적중 −24 · 상태이상 한 번에 1겹(41칸) · 버프 디버프 여러 겹(맛평가 · 알 깨기) · 봇 성향 생장마다(한 묶음 · 올리기 전이라 같은 번호 —종마다 패턴 · 카드 몫 · 컨셉 무게를 새싹 · 성장기 · 성체 따로 — 봇 판 다시 돌리기가 바뀜) · 19 = 2026-11-04 봇 시스템(봇 머리 = 효과 값 · 내다보기 · 종마다 패턴 — 봇 판 다시 돌리기가 바뀜 · 손패 짜기는 새 판만) · 18 = 2026-11-04 오후 포자 = 시간차 공격(하나 = 위력 35 · 붙일 때 공격력 · 상성 · 치명 없음 · 포자 번식 카드 +10) · 17 = 2026-11-04 밤샘 + 같은 날 낮(잔상 햇빛 2 · 아침이에요 위력 30 · 드라코프루트 선공 스택 +1 — 친구 서버에 처음 함께 올림) — 엠버캡 · 드레이크캑터 · 드라코프루트 새 설계 · 프로스트드레이크 빙결열매(옮김) · 피의 축제 3타 · 처형의 춤 무조건 처형 · 포자 = 붙인 턴 포함 3번째 턴 · 불이 포자 · 빙결 · 얼음을 안 녹임 · 소환수가 주인 능력치 겹을 따라감 · 16 = 2026-10-29 블레이드바인(지옥전개 환경 · 지옥의 여왕 · 치명 타마다 효과 · 기동 차이 위력 · 자세 덤 버프) · 15 = 2026-10-29 밤샘 묶음(친구 서버 전) — 프로스트벨(아침 · 밤 필드 환경 · 메아리 · 봉인 하나 더) · 페탈로즈 검방술
 // 14 이전:   // 14 = 2026-10-24 봉인 구슬 덫 = 내 쪽 지형(교체 · 쓰러져도 남음 · 다른 식물이 맞아도 터짐 — 사용자)
 //  13 = 2026-10-24 볼트바인(구슬 칸 · 발사 · 수호 · 덫)
 //  12 = 2026-10-24 스포어캡(소환수 · 포자벽 · 포자회귀) · 스톤캡(동굴 · 설치 · 석순 보호막 무시 · 기절 확률) · 피해?의 확정 치명은 방어태세에 막힘
