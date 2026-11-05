@@ -63,7 +63,10 @@ export class Input {
     const up = e => {
       this.act = now();
       unlock();   // 뗄 때만 소리를 허락하는 브라우저(iOS)도 있어 한 번 더
-      goFull();   // 휴대폰 브라우저 전체 화면(뗄 때 = 터치가 허락받는 순간)
+      // 휴대폰 브라우저 전체 화면(뗄 때 = 터치가 허락받는 순간). 단 새 창을 여는 단추(now — 구글 로그인 · 처리방침)는 빼고:
+      //  전체 화면 요청이 '누른 순간' 허락을 써 버려 바로 뒤 구글 창이 막혔음(2026-11-05 사용자 '구글 로그인 눌러도 그 다음으로 안 넘어가고')
+      const p0 = this.down && !this.down.moved ? screen.toLogical(e.clientX, e.clientY) : null, r0 = p0 && this.hitAt(p0.x, p0.y);
+      if (!(r0 && r0.now)) goFull();
       this.ptrs.delete(e.pointerId);
       if (this.pinch && this.ptrs.size < 2) { this.pinch = null; this.queue.push({ type: 'pinchEnd' }); }
       if (this.down && this.down.pinched) { if (!this.ptrs.size) { this.down = null; this.pressedId = null; } return; }   // 벌리기 뒤 = 누르기 · 끌기 놓기 없음

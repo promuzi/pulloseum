@@ -173,7 +173,8 @@ function frameBody(ts) {
   const toTitle = !q0.get('scene');
   if (toTitle && !q0.has('mute') && !q0.has('at')) { music('title'); tryAutoStart(); }   // 켜자마자 처음 화면 곡(그림은 조율 2마디 검정 동안 받음 — 2026-10-17 "키자마자 노래가")
   if (toTitle) await Promise.all([loadBg(undefined, FIRST_BG), loadBig(undefined, FIRST_BIG)]);   // 처음 화면 그림만 먼저(글꼴 3.2MB와 통신을 나눠 쓰지 않게 — 글꼴은 그 뒤)
-  const fonts = loadFonts().then(resetMetrics);
+  // 글꼴 받기가 끊기면(휴대폰 통신) document.fonts.load 가 거절 → 전엔 아래 묶음 전체가 끝나지 않아 '준비 중'에서 멈췄음 — 기본 글꼴로라도 들어가게(2026-11-05)
+  const fonts = loadFonts().then(resetMetrics, e => { console.warn('글꼴 받기 실패', e); resetMetrics(); });
   if (!toTitle) await fonts;   // 검토 화면은 글자부터(촬영 도구가 바로 그림)
   const rest = Promise.all([loadSprites(), loadBig(), loadBg(), loadSmall(), loadShips(), loadSkillArt(), fonts, loadItemArt(), loadIconArt(), loadFrames()]).then(([a, b, c, d, e, f, , h, ic, fr]) => {
     const missing = [...a, ...b.map(k => 'v2/' + k), ...c.map(k => 'bg/' + k), ...d.map(k => 'small/' + k), ...e.map(k => 'ships/' + k), ...f.map(k => 'skills/' + k), ...h.map(k => 'items/' + k), ...ic.map(k => 'icons/' + k), ...fr.map(k => 'frames/' + k)], bad = checkIcons();
@@ -181,7 +182,7 @@ function frameBody(ts) {
     if (bad.length) console.warn('아이콘 오류', bad);
     app.assetsReady = true;
     return { missing, bad };
-  });
+  }).catch(e => { console.warn('그림 받기 실패', e); app.assetsReady = true; return { missing: ['(받기 실패)'], bad: [] }; });
   if (!toTitle) await rest;
   // 검토 도구(?scene=)·오프라인 체험(?offline=1) = 시험 세이브로 이 브라우저에서
   if (q0.get('ui')) setUi(q0.get('ui'));   // 창 겉모습 후보 비교(?ui=sky|screen|glass|metal|ink|holo)

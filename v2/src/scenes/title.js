@@ -51,6 +51,30 @@ async function signed(app, r) { net.setToken(r.token); app.user = r.user; app.st
 //   (GoogleIdPlugin.java · docs/android-capacitor-wrapper.md), 옛 앱(플러그인 없음)은 단추 숨김
 const inApp = () => /PulloseumApp/.test(navigator.userAgent) || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const nativeGoogle = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleId) || null;
+// 앱 안 브라우저(카카오톡 · 인스타그램 · 네이버 앱 · 페이스북 · 라인 · 밴드 · 안드로이드 웹뷰 '; wv)' · 아이폰 웹뷰 = 'Safari/' 없음)에서는
+//  구글이 로그인 자체를 막음(403 disallowed_useragent) → 단추를 누르면 기본 브라우저로 열라는 안내(카카오톡은 바로 열어 줌) — 2026-11-05
+const embedded = () => {
+  const ua = navigator.userAgent || '';
+  if (inApp()) return false;
+  if (/KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|FB_IAB|Line\/|DaumApps|everytimeApp|BAND\//i.test(ua)) return true;
+  if (/Android/.test(ua) && /; wv\)/.test(ua)) return true;
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  return /iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua) && !standalone;
+};
+function embeddedNote(app) {
+  const kakao = /KAKAOTALK/i.test(navigator.userAgent || ''), url = location.href;
+  openForm(app, {
+    title: '구글 로그인',
+    note: kakao ? '카카오톡 안에서 연 화면에선 구글이 로그인을 막아요. 기본 브라우저에서 열거나, 아이디로 새로 시작해 주세요.' : '앱 안에서 연 화면에선 구글이 로그인을 막아요. 주소를 복사해 크롬이나 사파리에서 열거나, 아이디로 새로 시작해 주세요.',
+    fields: [], cancel: '닫기',
+    ok: kakao ? '기본 브라우저로 열기' : '주소 복사',
+    onSubmit: async () => {
+      if (kakao) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return null; }
+      try { await navigator.clipboard.writeText(url); app.toast('주소를 복사했어요'); } catch { app.toast(url); }
+      return null;
+    },
+  });
+}
 let gisP = null;
 export function loadGis() {
   if (gisP) return gisP;
@@ -74,9 +98,12 @@ export function googleLogin(app, sc) {
     }).catch(e => { const m = String((e && e.message) || e || ''); app.toast(/CANCEL|그만뒀/.test(m + ((e && e.code) || '')) ? '구글 로그인을 그만뒀어요' : m || '구글 로그인을 하지 못했어요'); });
     return;
   }
+  if (embedded()) { embeddedNote(app); return; }
   const G = window.google && window.google.accounts && window.google.accounts.oauth2;
   if (!G || !app.googleId) { loadGis().catch(e => app.toast(e.message)); app.toast('구글 로그인을 준비하는 중이에요 — 잠시 뒤 다시 눌러 주세요'); return; }
-  const tc = G.initTokenClient({ client_id: app.googleId, scope: 'openid profile', callback: async r => {
+  // 창이 막히거나(팝업 차단) 닫히면 구글 도구가 error_callback 으로 알려 줌 — 전엔 아무 말 없이 멈춘 것처럼 보였음(2026-11-05)
+  const fail = e => app.toast(e && e.type === 'popup_failed_to_open' ? '구글 창이 막혔어요 — 다시 눌러 주세요' : e && e.type === 'popup_closed' ? '구글 로그인을 그만뒀어요' : '구글 로그인을 하지 못했어요');
+  const tc = G.initTokenClient({ client_id: app.googleId, scope: 'openid profile', error_callback: fail, callback: async r => {
     if (!r || !r.access_token) { app.toast('구글 로그인을 그만뒀어요'); return; }
     try {
       const out = await net.req('/api/google', { token: r.access_token });
@@ -165,13 +192,15 @@ const roomDy = app => Math.min(0, app.H - 600);
 function startBoot(sc, app) {
   if (sc.boot) return;
   const b = bootPlan();
-  sc.boot = { t0: b.t0, t1: b.t1, a0: app.t };
+  sc.boot = { t0: b.t0, t1: b.t1, a0: app.t, m0: musicNow() };
 }
 //  dy0 = 켜지기 전 방 높이(처음 화면 0 · 처음 식물 고르기 = 대기 화면 값) → 켜지는 동안 대기 화면 높이로 천천히 옮김(짧은 화면)
 //  own = 켜지며 바뀌어 들어올 내 식물([키, 화분]) — 처음 화면의 대표 캐릭터가 LED가 켜지는 앞부분에 내 식물로 스며 바뀜
 function drawBoot(sc, app, key, pot, uiDraw, dy0 = 0, own = null) {
   const { g } = app, [mx, my] = LOFT_STOOL, bt = sc.boot, now = sc.p && sc.p.bootu != null ? bt.t0 + (bt.t1 - bt.t0) * +sc.p.bootu : musicNow();
   const D = Math.max(0.2, bt.t1 - bt.t0), u = clamp01((now - bt.t0) / D), fade = 1 - clamp01((app.t - bt.a0) / 260);
+  // 음악 시계가 멈춘 기기(소리 상자가 '멈춤'에 머묾 — 화면을 잠깐 내렸다 온 휴대폰 등)에서도 들어가게: 실제 시간으로 켜짐 길이 + 2.5초가 지나면 대기 화면으로(2026-11-05)
+  if (!bt.gone && bt.m0 != null && !(sc.p && sc.p.bootu != null) && app.t - bt.a0 > 1000 * Math.max(0, bt.t1 - bt.m0) + 2500) { bt.gone = true; app.go('home', { from: 'boot' }, 'cut'); }
   if (now < bt.t0) { nightRoom(app, key, pot, lampNow().k, 1, dy0); if (fade > 0 && uiDraw) g.alpha(fade, uiDraw); return; }
   const dy = Math.round(dy0 + (roomDy(app) - dy0) * u * u * (3 - 2 * u));
   g.rect(0, 0, app.W, app.H, BG0);    // 방 그림(270×600)보다 넓거나 긴 화면의 남는 곳
@@ -298,6 +327,7 @@ export const starter = {
     if (this.showT == null) this.showT = t - 1000;
     const key = STARTERS[this.i], sp = SPECIES[key], [mx, my0] = LOFT_STOOL, dy = roomDy(app), my = my0 + dy;   // 짧은 화면 = 방 · 글자를 같이 올림(대기 화면과 같은 높이)
     const art = bigKey(key, 'sprout');   // 처음 단계(새싹) 그림 — 고른 뒤 대기 화면에도 이 단계로 들어감
+    if (app.pendingEnter && app.assetsReady) { app.pendingEnter = false; enterGame(app); }   // 가입이 그림 · 글꼴보다 먼저 끝났으면 다 받는 즉시 들어감(전엔 처음 화면만 이어 줘서 여기서 멈췄음 — 2026-11-05)
     if (this.boot) return drawBoot(this, app, art, 'pot_terra', null, dy);
     const L = lampNow(), k = L.letter === 'a' && !L.burst ? 1 : L.k;   // 처음 화면 곡이 아니면(바로 들어온 촬영 등) 켜진 전등
     nightRoom(app, art, 'pot_terra', k, clamp01((t - this.showT) / 420), dy);
@@ -324,7 +354,7 @@ export const starter = {
       g.clip(x + 1, fy + 1, fw - 2, fw - 2, () => drawPortrait(g, k2, x + 1, fy + 1, fw - 2, false));
       app.input.hit('st_' + k2, x - 2, fy - 2, fw + 4, fw + 4, () => { if (this.i !== i) { this.i = i; this.showT = app.t; } });
     });
-    button(app, 'st_go', 40, Math.min(H - 46, fy + fw + 10), W - 80, 36, this.busy ? '만드는 중…' : `${ro(sp.name)} 시작`, { style: 'gold', font: 'head', disabled: this.busy, onTap: () => this.go(app, key) });
+    button(app, 'st_go', 40, Math.min(H - 46, fy + fw + 10), W - 80, 36, this.busy ? '만드는 중…' : app.pendingEnter ? '준비 중…' : `${ro(sp.name)} 시작`, { style: 'gold', font: 'head', disabled: this.busy || app.pendingEnter, onTap: () => this.go(app, key) });
     button(app, 'st_back', 8, 6, 52, 22, '‹ 뒤로', { style: 'night', onTap: () => { const r = app.reg; app.go('title'); if (r && !r.google && !r.googleId) setTimeout(() => registerForm(app, null, { login: r.login, nick: r.nickname }), 250); } });
     button(app, 'st_evo_btn', W - 70, 6, 62, 22, '진화 보기', { style: 'night', onTap: () => { this.evo = { t0: app.t }; } });
     if (this.evo) this.evoDraw(app, key, dy);

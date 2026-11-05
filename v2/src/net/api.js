@@ -17,13 +17,17 @@ export const net = {
   token: store.get(KEY), user: null, off: 0, offline: false,
   now() { return Date.now() + this.off; },
   setToken(t) { this.token = t; store.set(KEY, t); },
+  // 기다림 상한 20초(2026-11-05 사용자 '회원가입 눌러도 다음으로 안 넘어가 로딩만 되고'): 답이 안 오면 끝없이 기다리지 않고 알림 — 친구 대결 소식(openStream)은 따로라 해당 없음
   async req(path, body, method) {
     let r;
+    const ctl = typeof AbortController === 'function' ? new AbortController() : null, tm = ctl && setTimeout(() => ctl.abort(), 20000);
     try {
-      r = await fetch(path, { method: method || (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(this.token ? { authorization: 'Bearer ' + this.token } : {}) }, body: body ? JSON.stringify(body) : undefined });
-    } catch { throw new NetErr('서버에 연결할 수 없어요 — 인터넷을 확인해 주세요', 0); }
+      r = await fetch(path, { method: method || (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(this.token ? { authorization: 'Bearer ' + this.token } : {}) }, body: body ? JSON.stringify(body) : undefined, ...(ctl ? { signal: ctl.signal } : {}) });
+    } catch { clearTimeout(tm); throw new NetErr(ctl && ctl.signal.aborted ? '서버 답이 늦어요 — 잠시 뒤 다시 해 주세요' : '서버에 연결할 수 없어요 — 인터넷을 확인해 주세요', 0); }
     let j = null;
     try { j = await r.json(); } catch {}
+    clearTimeout(tm);
+    if (ctl && ctl.signal.aborted && !j) throw new NetErr('서버 답이 늦어요 — 잠시 뒤 다시 해 주세요', 0);
     if (j && j.now) this.off = j.now - Date.now();
     if (!r.ok) { if (r.status === 401) this.setToken(null); throw new NetErr((j && j.error) || '서버에 문제가 생겼어요', r.status); }
     return j;
