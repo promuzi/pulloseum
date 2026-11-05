@@ -193,7 +193,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       if (ek) { const e1 = u.energy; u.energy = Math.min(u.energyMax || 8, e1 + (a.gain || 2) * ek); ev.push({ t: 'echo', who: u.id, id: a.id, k: ek }); ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e1, echo: true }); }
       return 'acted';
     }
-    const selfAll = () => { for (const b of [a.self, a.also, ...(a.selfMore || [])]) if (b) selfBuff(u, b, { turn: T, ev }, a, (a.selfN && a.selfN[b]) || 1); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
+    const selfAll = () => { for (const b of [a.self, a.also, ...(a.selfMore || [])]) if (b) selfBuff(u, b, { turn: T, ev }, a); };   // 나에게 거는 효과(버프 기술 · 공격 기술 덤) — 그 기술 값(은신 이어 공격 등)을 같이 넘김
     // 메아리 덤(나에게): 능력치 겹은 그 몫의 값 · 보호막은 그 몫만큼 더 · 정화는 한 번 더 · 기간만 있는 효과는 그대로(긴 쪽이라 바뀌지 않음)
     const selfEcho = ea => { for (const b of [ea.self, ea.also]) { if (!b) continue; if (FX[b] && FX[b].stat) selfBuff(u, b, { turn: T, ev }, { v: FX[b].v * ea.echoK }); else if (b === 'shield' && u.eff && u.eff.shield) u.eff.shield.hp += Math.max(1, Math.round(u.max * FX.shield.hp * ea.echoK)); else if (b === 'purify') selfBuff(u, b, { turn: T, ev }, ea); } };
     if (a.act === 'buff') {

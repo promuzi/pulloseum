@@ -455,7 +455,7 @@ function mechLines(sk) {
   if (sk.fruitUse === 'throw') L.push(['열매를 모두 던짐 — 하나당 한 타 · 햇빛으로 돌아옴 · 열매가 없으면 못 씀', A]);
   if (sk.scale && sk.scale.k === 'prep') L.push([`준비를 모두 먹음 — 먹은 준비 0 · 1 · 2 · 3개 = 피해 +${sk.scale.dmg.map(PCT).join(' · ')}%` + (sk.scale.drain ? ` · 흡수 ${sk.scale.drain.map(PCT).join(' · ')}%` : ''), A]);
   if (sk.mealMark) L.push(['다음 턴에 맛평가를 쓸 수 있음', X]);
-  if (sk.taste) { const tz = sk.taste, g = (nm, k, D, w) => `${k > 1 ? `${nm} ${k}겹` : nm}(${w} −${PCT(Math.min(0.8, D.v * k))}%)`, m = tz.seal || 1; L.push(['식사시간 바로 다음 턴에만 — 먹은 준비 수만큼', X], [`1 = ${g('쇠약', tz.atk || 1, FX.atkDown, '공격')}`, X], [`2 = + ${g('시듦', tz.def || 1, FX.defDown, '방어')}`, X], [`3 = + 봉인${m > 1 ? ` ${m}장(다음 턴 기술 ${m}개 막음)` : ''}`, X]); }   // 먹은 준비마다 한 줄 · 능력치 바닥 0.2 = 겹이 많아도 −80%까지
+  if (sk.taste) L.push(['식사시간 바로 다음 턴에만 — 먹은 준비 수만큼', X], [`1 = 쇠약(공격 −${PCT(FX.atkDown.v)}%)`, X], [`2 = + 시듦(방어 −${PCT(FX.defDown.v)}%)`, X], ['3 = + 봉인(다음 턴 기술 하나 막음)', X]);   // 먹은 준비마다 한 줄
   if (sk.gain && sk.gain.k === 'prep' && sk.gain.n) L.push([`준비 +${sk.gain.n}`, B]);
   return L;
 }
@@ -550,8 +550,7 @@ function cardBack(g, w, h, sk, o) {
   if (sk.bell) fx.push({ id: sk.bell, to: '양쪽 · 3턴' });
   if (sk.fruitCondense) fx.push({ id: 'fruit', to: '나에게' });
   for (const h of sk.hex || []) fx.push({ id: h.id, n: h.n || 1, to: h.turns ? `상대 쪽 · ${h.turns}턴` : '상대에게' });   // 피해 없이 거는 기술(종 고유 v2)
-  const stackDesc = (id, n) => { const D = FX[id], nm = D && { atk: '공격', def: '방어', spd: '기동' }[D.stat]; return nm && n > 1 ? `${nm} ${D.sign > 0 ? '+' : '−'}${Math.round(D.v * n * 100)}% · 겹마다 5턴` : undefined; };   // 여러 겹을 한 번에 = 합친 값(알 깨기)
-  for (const b of [sk.self, sk.also, ...(sk.selfMore || [])]) if (b) { const n = (sk.selfN && sk.selfN[b]) || 1; fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), n, to: '나에게', desc: stackDesc(b, n) }); }   // 덤으로 나에게 거는 것(알 깨기 시듦)도 보임
+  for (const b of [sk.self, sk.also, ...(sk.selfMore || [])]) if (b) fx.push({ id: BUFF_KEY[b] || (b === 'stealth' && sk.look === 'clone' ? 'clone' : b), to: '나에게' });   // 덤으로 나에게 거는 것(알 깨기 시듦)도 보임
   if (sk.reflect) {   // 반사 자세(엑셀 v10 — 그 턴 처음 맞는 한 타) · 되돌리는 몫 · 덤 · 완전 반사는 기술마다(2026-11-05 — 전엔 공통 30% 글만 나와 말랑잉 감전 · 톡씽 독 덤이 안 보였음)
     const ri = sk.reflectInflict, rn = ri && (ri.n || 1) > 1 ? ` ${ri.n}겹` : '';
     fx.push({ id: 'reflect', to: '이번 턴', desc: sk.nullFirst ? '그 턴 처음 맞는 공격은 안 맞고, 그 피해와 거는 상태를 그대로 되돌림'

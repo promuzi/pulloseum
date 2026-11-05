@@ -212,14 +212,14 @@ function fxVal(u, foe, f, C) {
     case 'shock': v = (has(foe, 'shock') ? 0.3 : 1) * 2.5 * D.dot * T(D.turns) * life + (has(foe, 'wet') ? D.wetP : D.p) * deny * Math.min(1.5, T(D.turns) * 0.5); break;
     case 'chill': { const m = n + (has(foe, 'wet') ? RULES_FX.wetStackAdd : 0); v = cur('chill') + m >= D.stack ? 0.9 * deny + (K.frozen ? 0.6 * R : 0) : 0.4 * deny * m / D.stack + 0.05 * R; break; }   // 3겹 = 얼음(한 번 쉼)
     case 'stun': v = deny; break;
-    case 'seal': v = 0.25 * R * n; break;   // n = 막는 장수(맛평가)
+    case 'seal': v = 0.25 * R; break;
     case 'taunt': v = 0.08 * R; break;
     case 'root': v = u.solo ? 0.25 * R : 0.06 * R; break;   // 1:1에선 봉인으로
     case 'wet': v = has(foe, 'wet') ? 0.05 * R : R * defGain(foe, 1 - D.defK) * T(D.turns) + 2.5 * thr * D.missAdd / 100 * T(D.turns) * 0.5 + (K.shock || K.chill ? 0.15 * R : 0); break;
     case 'gale': v = has(foe, 'gale') ? 0.05 * R : 2.5 * thr * D.missAdd / 100 * T(f.turns || D.turns) * 0.6 + (K.gale ? 0.35 * R : 0); break;
     case 'spore': v = n * (H >= 2 ? 2.5 * sporeDmg(foe, D.power, (u.atk || 10) * atkK(u), u.el) / Math.max(1, foe.hp) : 0.1 * R); break;   // 하나 = 붙인 턴 포함 3번째 턴 끝 위력 35
-    case 'atkDown': v = 2.5 * thr * Math.min(0.8, D.v * n) * T(D.turns) * 0.5; break;   // n 겹(능력치 바닥 0.2 — 0.8까지)
-    case 'defDown': v = R * defGain(foe, Math.min(0.8, D.v * n)) * T(D.turns - 1); break;
+    case 'atkDown': v = 2.5 * thr * D.v * T(D.turns) * 0.5; break;
+    case 'defDown': v = R * defGain(foe, D.v) * T(D.turns - 1); break;
     case 'spdDown': v = 0.05 * R * T(D.turns); break;
     case 'accDown': v = 2.5 * thr * D.v / 100 * T(D.turns) * 0.6; break;
     case 'critDown': v = 2.5 * thr * D.v / 200 * T(D.turns) * 0.6; break;
@@ -255,7 +255,7 @@ function stanceVal(u, foe, s, C, k = 1) {
   return k * (2.5 * 0.85 * take * red / Math.max(1, u.hp) + live);
 }
 // 나에게 거는 버프 값(공격 덤 · 버프 기술 · 자세 덤 같은 잣대)
-function buffVal(u, foe, sides, C, down = 0, nOf = () => 1) {   // nOf = 그 효과를 몇 겹 거나(알 깨기 selfN)
+function buffVal(u, foe, sides, C, down = 0) {
   const R = C.R, H = C.H, rk = Math.min(1.2, C.risk), after = n => Math.max(0, Math.min(n, H - 1));
   let v = 0;
   for (const b of sides) {
@@ -267,7 +267,7 @@ function buffVal(u, foe, sides, C, down = 0, nOf = () => 1) {   // nOf = 그 효
     else if (b === 'stealth') v += 2.5 * rk * 0.95 + 0.4 * R;   // 은신 = 이번 턴 피하고 다음 공격 기습
     else if (b === 'regen') v += healScore(u, 0.15);
     else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
-    else if (b === 'atkUp') v += R * FX.atkUp.v * nOf(b) * after(5) * k;
+    else if (b === 'atkUp') v += R * FX.atkUp.v * after(5) * k;
     else if (b === 'critUp') v += R * FX.critUp.v / 200 * after(5) * k;   // 예리 = 치명 칸 +10(치명 ×1.5)
     else if (b === 'aim') v += R * 0.35;
     else if (b === 'flourish') v += R * 0.05 * after(5) * 2 + 2.5 * rk * 0.05;
@@ -312,7 +312,7 @@ function aiScore(u, foe, s, C) {
       const dot = has(foe, 'burn') ? 0 : 2.5 * FX.burn.dot * Math.min(3, H + 1) * foe.max / Math.max(1, foe.hp), q = (SPECIES[u.key] || {}).queen;
       return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);
     }
-    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0, tz = s.taste; return [['atkDown', 1, tz.atk || 1], ['defDown', 2, tz.def || 1], ['seal', 3, tz.seal || 1]].reduce((t, [id, at, c]) => t + (n >= at ? fxVal(u, foe, { id, n: c }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인(겹 수 · 봉인 장수)
+    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0; return [['atkDown', 1], ['defDown', 2], ['seal', 3]].reduce((t, [id, at]) => t + (n >= at ? fxVal(u, foe, { id }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인
     if (!BRAIN.fx) { const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length; return fresh ? 0.55 + 0.35 * fresh : 0.15; }   // 옛 값
     return BRAIN.fxK * fxSum(u, foe, s, C) + (s.formBoost && C.useK.mut ? 0.25 * R : 0) + 0.02;   // 입맛 다시기 = 이번 · 다음 턴 내 변이 기술 +20%
   }
@@ -354,7 +354,7 @@ function aiScore(u, foe, s, C) {
       const dodge = s.nullFirst ? 2.5 * 0.85 * rk + (risk >= 1 ? 1.2 : 0) : 0;
       return (2.5 * rk * (s.reflectK ?? FX.reflect.k) * u.hp / Math.max(1, foe.hp) * 0.6 + dodge + (s.reflectInflict ? 0.3 * R : 0)) * (C.last === 'buff' ? 0.6 : 1);
     }
-    return buffVal(u, foe, sides, C, down, b => (s.selfN && s.selfN[b]) || 1);
+    return buffVal(u, foe, sides, C, down);
   }
   return 0.4 * R;
 }
