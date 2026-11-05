@@ -63,6 +63,8 @@ const CONDS = {
   oHex: { text: '완벽히 읽음 — 상대가 이번 턴 상태를 걸 때만', f: (u, foe, X) => isHex(X.now) },
   once: { text: '튕김이 안 서 있고 상대에게 상태 거는 기술이 있을 때(--hold 와 함께)', f: (u, foe) => !(u.eff && u.eff.bounce) && foe.kit.some(isHex) },
   always: { text: '쓸 수 있으면 늘(이것만 쓰기)', f: () => true },
+  meal2: { text: '먹은 준비가 둘 넘을 때(팽트랩 식사시간 뒤)', f: u => !!(u.st && u.st.meal && u.st.meal.n >= 2) },
+  meal3: { text: '먹은 준비가 셋일 때', f: u => !!(u.st && u.st.meal && u.st.meal.n >= 3) },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');
 
