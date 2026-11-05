@@ -344,9 +344,11 @@ export function hexAct(u, foe, a, ctx) {
     if (a.inferno.cd) (u.st ||= {}).infernoLock = { until: exp + a.inferno.cd };
     ctx.ev.push({ t: 'fx', who: u.id, to: foe.id, name: foe.name, id: 'inferno', list: listOf(foe) });
   }
-  if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인
-    const n = u.st.meal.n, tgt = frontSum(foe) || foe; delete u.st.meal;
-    for (const [i, id] of [[1, 'atkDown'], [2, 'defDown'], [3, 'seal']]) if (n >= i) apply(tgt, id, 1, { ...ctx, by: u });
+  if (a.taste && u.st && u.st.meal) {   // 맛평가(팽트랩): 식사시간 바로 다음 턴 — 먹은 준비 1 = 쇠약 · 2 = + 시듦 · 3 = + 봉인 · 겹 수 taste.atk · taste.def · 봉인 장수 taste.seal(없으면 1)
+    const n = u.st.meal.n, tgt = frontSum(foe) || foe, tz = a.taste, m = tz.seal || 1; delete u.st.meal;
+    if (n >= 1) apply(tgt, 'atkDown', tz.atk || 1, { ...ctx, by: u });
+    if (n >= 2) apply(tgt, 'defDown', tz.def || 1, { ...ctx, by: u });
+    for (let i = 0; n >= 3 && i < m; i++) apply(tgt, 'seal', 1, { ...ctx, by: u }, i ? { extra: true } : {});   // 둘째 장부터 = 같은 턴 봉인에 다른 기술 하나 더(메아리 봉인과 같은 방식)
   }
   if (a.settle) {   // 청산(아쿠아벌브): 상대 해로운 상태이상을 종류째 지우고 종류 하나당 최대 체력 몫 확정 피해(상한 종류 수 — 독 5겹 = 하나)
     const gone = wipeEff(foe, HARM_IDS), k = Math.min(a.settle.cap, gone.length);

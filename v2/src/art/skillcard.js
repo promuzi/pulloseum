@@ -455,7 +455,7 @@ function mechLines(sk) {
   if (sk.fruitUse === 'throw') L.push(['열매를 모두 던짐 — 하나당 한 타 · 햇빛으로 돌아옴 · 열매가 없으면 못 씀', A]);
   if (sk.scale && sk.scale.k === 'prep') L.push([`준비를 모두 먹음 — 먹은 준비 0 · 1 · 2 · 3개 = 피해 +${sk.scale.dmg.map(PCT).join(' · ')}%` + (sk.scale.drain ? ` · 흡수 ${sk.scale.drain.map(PCT).join(' · ')}%` : ''), A]);
   if (sk.mealMark) L.push(['다음 턴에 맛평가를 쓸 수 있음', X]);
-  if (sk.taste) L.push(['식사시간 바로 다음 턴에만 — 먹은 준비 1 = 쇠약 · 2 = 쇠약 + 시듦 · 3 = 쇠약 + 시듦 + 봉인', X]);
+  if (sk.taste) { const tz = sk.taste, g = (nm, k, D, w) => `${k > 1 ? `${nm} ${k}겹` : nm}(${w} −${PCT(Math.min(0.8, D.v * k))}%)`, m = tz.seal || 1; L.push(['식사시간 바로 다음 턴에만 — 먹은 준비 수만큼', X], [`1 = ${g('쇠약', tz.atk || 1, FX.atkDown, '공격')}`, X], [`2 = + ${g('시듦', tz.def || 1, FX.defDown, '방어')}`, X], [`3 = + 봉인${m > 1 ? ` ${m}장(다음 턴 기술 ${m}개 막음)` : ''}`, X]); }   // 먹은 준비마다 한 줄 · 능력치 바닥 0.2 = 겹이 많아도 −80%까지
   if (sk.gain && sk.gain.k === 'prep' && sk.gain.n) L.push([`준비 +${sk.gain.n}`, B]);
   return L;
 }

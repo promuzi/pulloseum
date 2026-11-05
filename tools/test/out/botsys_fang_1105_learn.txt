@@ -1,0 +1,6 @@
+(node:59020) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/logic.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+팽트랩: 손패 60개 · 평균 승률 34.9% · 물어뜯기 +3.2 · 맹독 덩굴 +2.3 · 익혀먹기 +1.4 · 흡수 뿌리 +0.9 · 깨물기 +0.8 · 꽃잎 춤 +0.7 · 회피 자세 +0.6 · 심해 아가리 +0.5 · 사냥 본능 +0.5 · 방어태세 -0.6 · 집어삼키기 -1.0 · 광합성 -1.5 · 식사시간 -1.6 · 소화액 -1.7 · 가시 잎 -1.7 · 평타 -2.0 · 땅굴 습격 -2.5 · 입맛 다시기 -2.8 · 세포합성 -4.5 · 맛평가 -6.9 (6초)
+썼어요: v2/src/game/botdeck_w.js

@@ -212,14 +212,14 @@ function fxVal(u, foe, f, C) {
     case 'shock': v = (has(foe, 'shock') ? 0.3 : 1) * 2.5 * D.dot * T(D.turns) * life + (has(foe, 'wet') ? D.wetP : D.p) * deny * Math.min(1.5, T(D.turns) * 0.5); break;
     case 'chill': { const m = n + (has(foe, 'wet') ? RULES_FX.wetStackAdd : 0); v = cur('chill') + m >= D.stack ? 0.9 * deny + (K.frozen ? 0.6 * R : 0) : 0.4 * deny * m / D.stack + 0.05 * R; break; }   // 3겹 = 얼음(한 번 쉼)
     case 'stun': v = deny; break;
-    case 'seal': v = 0.25 * R; break;
+    case 'seal': v = 0.25 * R * n; break;   // n = 막는 장수(맛평가)
     case 'taunt': v = 0.08 * R; break;
     case 'root': v = u.solo ? 0.25 * R : 0.06 * R; break;   // 1:1에선 봉인으로
     case 'wet': v = has(foe, 'wet') ? 0.05 * R : R * defGain(foe, 1 - D.defK) * T(D.turns) + 2.5 * thr * D.missAdd / 100 * T(D.turns) * 0.5 + (K.shock || K.chill ? 0.15 * R : 0); break;
     case 'gale': v = has(foe, 'gale') ? 0.05 * R : 2.5 * thr * D.missAdd / 100 * T(f.turns || D.turns) * 0.6 + (K.gale ? 0.35 * R : 0); break;
     case 'spore': v = n * (H >= 2 ? 2.5 * sporeDmg(foe, D.power, (u.atk || 10) * atkK(u), u.el) / Math.max(1, foe.hp) : 0.1 * R); break;   // 하나 = 붙인 턴 포함 3번째 턴 끝 위력 35
-    case 'atkDown': v = 2.5 * thr * D.v * T(D.turns) * 0.5; break;
-    case 'defDown': v = R * defGain(foe, D.v) * T(D.turns - 1); break;
+    case 'atkDown': v = 2.5 * thr * Math.min(0.8, D.v * n) * T(D.turns) * 0.5; break;   // n 겹(능력치 바닥 0.2 — 0.8까지)
+    case 'defDown': v = R * defGain(foe, Math.min(0.8, D.v * n)) * T(D.turns - 1); break;
     case 'spdDown': v = 0.05 * R * T(D.turns); break;
     case 'accDown': v = 2.5 * thr * D.v / 100 * T(D.turns) * 0.6; break;
     case 'critDown': v = 2.5 * thr * D.v / 200 * T(D.turns) * 0.6; break;
@@ -312,7 +312,7 @@ function aiScore(u, foe, s, C) {
       const dot = has(foe, 'burn') ? 0 : 2.5 * FX.burn.dot * Math.min(3, H + 1) * foe.max / Math.max(1, foe.hp), q = (SPECIES[u.key] || {}).queen;
       return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);
     }
-    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0; return [['atkDown', 1], ['defDown', 2], ['seal', 3]].reduce((t, [id, at]) => t + (n >= at ? fxVal(u, foe, { id }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인
+    if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0, tz = s.taste; return [['atkDown', 1, tz.atk || 1], ['defDown', 2, tz.def || 1], ['seal', 3, tz.seal || 1]].reduce((t, [id, at, c]) => t + (n >= at ? fxVal(u, foe, { id, n: c }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인(겹 수 · 봉인 장수)
     if (!BRAIN.fx) { const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length; return fresh ? 0.55 + 0.35 * fresh : 0.15; }   // 옛 값
     return BRAIN.fxK * fxSum(u, foe, s, C) + (s.formBoost && C.useK.mut ? 0.25 * R : 0) + 0.02;   // 입맛 다시기 = 이번 · 다음 턴 내 변이 기술 +20%
   }

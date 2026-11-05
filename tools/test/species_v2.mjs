@@ -480,6 +480,11 @@ ok(SPECIES_V2.has('fang_trap') && SPECIES.fang_trap && (SKILLS.u_fang_1.el === '
   const f6 = mk('foe', 'aqua');   // 앞 상대는 다섯 대를 맞아 쓰러졌을 수 있음
   turn(p, f6, SKILLS.u_fang_3b, OTHER, 6);
   ok(f6.eff.atkDown && f6.eff.defDown && !f6.eff.seal, '맛평가(먹은 준비 2) = 쇠약 + 시듦(봉인은 3부터)');
+  ok(f6.eff.atkDown.n === SKILLS.u_fang_3b.taste.atk && f6.eff.defDown.n === SKILLS.u_fang_3b.taste.def && SKILLS.u_fang_3b.taste.atk >= 5, `맛평가 = 쇠약 ${f6.eff.atkDown.n}겹 · 시듦 ${f6.eff.defDown.n}겹(2026-11-05 '디버프를 쌔게')`);
+  p.res.prep = 3; turn(p, f6, SKILLS.u_fang_3, OTHER, 9, () => 0.5);
+  const f7 = mk('foe', 'aqua');
+  turn(p, f7, SKILLS.u_fang_3b, OTHER, 10);
+  ok(f7.eff.seal && 1 + (f7.eff.seal.more || []).length === SKILLS.u_fang_3b.taste.seal, `맛평가(먹은 준비 3) = 봉인 ${SKILLS.u_fang_3b.taste.seal}장`);
   ok(!canUse(p, SKILLS.u_fang_3b, 8, f), '그 뒤엔 맛평가 못 씀');
   const q = mk('me', 'fang_trap', { stage: 1 }), g = mk('foe', 'aqua');
   turn(q, g, SKILLS.u_fang_2, OTHER, 1);

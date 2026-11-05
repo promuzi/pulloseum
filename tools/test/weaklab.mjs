@@ -18,7 +18,11 @@ const K = arg('--key'), ID = arg('--id');
 if (!K || !ID || !SKILLS[ID]) { console.log('--key <종> --id <기술> 이 필요해요'); process.exit(1); }
 if (arg('--k')) FX.reflect.k = +arg('--k');
 if (arg('--cost')) SKILLS[ID].cost = +arg('--cost');
-for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) { const [a, b] = kv.split('='); SKILLS[ID][a] = isNaN(+b) ? b : +b; }
+for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) {   // --set taste.n=2 = 칸 안의 값(점으로 내려감)
+  const [a, b] = kv.split('='), ks = a.split('.'), last = ks.pop();
+  let o = SKILLS[ID]; for (const k of ks) o = o[k] = o[k] && typeof o[k] === 'object' ? o[k] : {};
+  o[last] = isNaN(+b) ? b : +b;
+}
 if (SKILLS[ID].power > 0 && SKILLS[ID].act === 'buff') { SKILLS[ID].act = 'attack'; SKILLS[ID].cats = ['attack']; }   // --set power=55 = 공격 + 원래 효과 덤
 const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'), K0 = FX.reflect.k, KX = +arg('--kx', 0), CD = +arg('--cd', 0);
 const pct = x => `${(100 * x).toFixed(1)}%`;
@@ -89,7 +93,7 @@ console.log(`  바꾼 손패: ${handR.filter(Boolean).map(nameOf).join(' · ')}`
 const t0 = Date.now();
 for (const c of conds) {
   let used = 0, could = 0, eSum = 0; REM.s = REM.n = 0;
-  const alt = {};   // 쓸 수 있었는데 대신 고른 것(2026-11-05 사용자 '햇빛이 별로 없을 때 쓰는 느낌이면 별로인가?')
+  const alt = {}, hp = { foe: [0, 0, 0], me: [0, 0, 0] };   // 쓸 수 있었는데 대신 고른 것(2026-11-05 사용자 '햇빛이 별로 없을 때 쓰는 느낌이면 별로인가?')
   const hand = c === 'repl' ? handR : c === 'guard' ? handG : handX;
   if (!hand) { console.log(`  ${c}: 손패에 이미 방어태세가 있어 건너뜀`); continue; }
   const pa = (u, foe, r, ctx, X) => {
@@ -102,6 +106,7 @@ for (const c of conds) {
     else s = ok && CONDS[c].f(u, foe, X) ? t : aiPick(u, foe, r, { ...ctx, book: never });
     if (ok && s && s.id === ID) used++;
     if (ok) { eSum += u.energy; if (!s || s.id !== ID) { const a = s ? s.id : 'rest'; alt[a] = (alt[a] || 0) + 1; } }
+    if (ok) { const f = foe.hp / foe.max, m = u.hp / u.max; hp.foe[f < 0.25 ? 0 : f < 0.5 ? 1 : 2]++; hp.me[m < 0.25 ? 0 : m < 0.5 ? 1 : 2]++; }   // 쓸 수 있던 턴의 체력(4분의 1 · 절반 아래 · 위)
     return s;
   };
   const p = structuredClone(body); p.skills.battle = [...hand]; while (p.skills.battle.length < 6) p.skills.battle.push(null);
@@ -111,4 +116,5 @@ for (const c of conds) {
   console.log(`  ${label}: ${pct(w / n)}${c === 'repl' || c === 'guard' ? '' : ` · 쓸 수 있을 때 ${pct(could ? used / could : 0)} 씀`} (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
   if (argv.includes('--alt') && could && (c === 'never' || c === 'now')) console.log(`    쓸 수 있던 ${could}번 · 그때 내 햇빛 평균 ${(eSum / could).toFixed(1)} · 대신 고른 것: ${Object.entries(alt).sort((a, b) => b[1] - a[1]).map(([a, k]) => `${nameOf(a === 'rest' ? '쉼' : a)} ${pct(k / could)}`).join(' · ')}`);
   if (argv.includes('--alt') && REM.n && c !== 'never') console.log(`    쓴 판 ${REM.n}판 · 마지막으로 쓴 뒤 판이 평균 ${(REM.s / REM.n).toFixed(1)}턴 더 감`);
+  if (argv.includes('--alt') && could && c === 'never') { const b = a => a.map(x => pct(x / could)).join(' / '); console.log(`    쓸 수 있던 턴 체력(4분의 1 아래 / 절반 아래 / 절반 위): 상대 ${b(hp.foe)} · 나 ${b(hp.me)}`); }
 }
