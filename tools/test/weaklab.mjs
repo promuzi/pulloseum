@@ -4,7 +4,7 @@
 //   완벽히 읽을 때(상대가 이번 턴 고른 수를 미리 앎 = 사람이 가장 잘 써도 이 정도라는 천장).
 //  그 밖 = 지금 봇 · 안 씀(죽은 칸) · 그 기술 대신 다른 카드로 짠 손패(바꿈) · 그 칸에 방어태세.
 //   node tools/test/weaklab.mjs --key jelly_cap --id u_jelly_1 [--stage 2] [--games 8] [--conds now,never,big70,...]
-//   만약 실험: --k 0.6(반사 되돌림 몫 — 모든 반사에 걸림) · --kx 1.0(이 기술로 반사할 때만 그 몫) · --cost 0(그 기술 햇빛) · --set power=80(그 기술 칸 바꿈) · --hold(너꺼잉 튕김이 쓰일 때까지 서 있음) · --perm(한 번 쓰면 판 끝까지) · --hand a,b,c(손패 직접)
+//   만약 실험: --k 0.6(반사 되돌림 몫 — 모든 반사에 걸림) · --kx 1.0(이 기술로 반사할 때만 그 몫) · --cost 0(그 기술 햇빛) · --set power=80(그 기술 칸 바꿈) · --hold(너꺼잉 튕김이 쓰일 때까지 서 있음) · --perm(한 번 쓰면 판 끝까지) · --hand a,b,c(손패 직접) · --alt(쓸 수 있던 턴의 내 햇빛 · 대신 고른 것)
 import { makeRng, botPlant, unitOf } from '../../v2/src/game/fight.js';
 import { makeBattle, playTurnVs, aiPick, REST } from '../../v2/src/battle/model.js';
 import { mustSkip, FX, canUse } from '../../v2/src/battle/status.js';
@@ -48,8 +48,10 @@ function duel(a, b, seed, pa, pb) {
     if (t.foeSkill && t.foeSkill.act === 'attack') seen.me.push(t.foeSkill);
     prev = t.foeSkill || null;
   }
+  if (lastUse >= 0) { REM.s += B.turn - 1 - lastUse; REM.n++; }   // --alt: 그 기술을 (마지막으로) 쓴 뒤 판이 몇 턴 더 갔나
   return B.over === 'win' ? 1 : B.over === 'lose' ? 0 : 0.5;
 }
+const REM = { s: 0, n: 0 };
 
 // 쓰는 법: 조건이 맞고 쓸 수 있으면 그 기술 · 아니면 그 기술은 빼고 봇이 고름
 const CONDS = {
@@ -65,6 +67,9 @@ const CONDS = {
   always: { text: '쓸 수 있으면 늘(이것만 쓰기)', f: () => true },
   meal2: { text: '먹은 준비가 둘 넘을 때(팽트랩 식사시간 뒤)', f: u => !!(u.st && u.st.meal && u.st.meal.n >= 2) },
   meal3: { text: '먹은 준비가 셋일 때', f: u => !!(u.st && u.st.meal && u.st.meal.n >= 3) },
+  poor: { text: '햇빛이 모자라 평타 말고는 공격을 못 할 때', f: (u, foe) => !u.kit.some(s => s.id !== 'basic' && atkP(s) > 0 && canUse(u, s, u.energy, foe)) },
+  e1: { text: '내 햇빛이 1 이하일 때', f: u => u.energy <= 1 },
+  e2: { text: '내 햇빛이 2 이하일 때', f: u => u.energy <= 2 },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');
 
@@ -83,7 +88,8 @@ console.log(`  넣은 손패: ${handX.filter(Boolean).map(nameOf).join(' · ')}`
 console.log(`  바꾼 손패: ${handR.filter(Boolean).map(nameOf).join(' · ')}`);
 const t0 = Date.now();
 for (const c of conds) {
-  let used = 0, could = 0;
+  let used = 0, could = 0, eSum = 0; REM.s = REM.n = 0;
+  const alt = {};   // 쓸 수 있었는데 대신 고른 것(2026-11-05 사용자 '햇빛이 별로 없을 때 쓰는 느낌이면 별로인가?')
   const hand = c === 'repl' ? handR : c === 'guard' ? handG : handX;
   if (!hand) { console.log(`  ${c}: 손패에 이미 방어태세가 있어 건너뜀`); continue; }
   const pa = (u, foe, r, ctx, X) => {
@@ -95,6 +101,7 @@ for (const c of conds) {
     else if (c === 'never') s = aiPick(u, foe, r, { ...ctx, book: never });
     else s = ok && CONDS[c].f(u, foe, X) ? t : aiPick(u, foe, r, { ...ctx, book: never });
     if (ok && s && s.id === ID) used++;
+    if (ok) { eSum += u.energy; if (!s || s.id !== ID) { const a = s ? s.id : 'rest'; alt[a] = (alt[a] || 0) + 1; } }
     return s;
   };
   const p = structuredClone(body); p.skills.battle = [...hand]; while (p.skills.battle.length < 6) p.skills.battle.push(null);
@@ -102,4 +109,6 @@ for (const c of conds) {
   for (let g = 0; g < N; g++) field.forEach((f, j) => { if (j === i0) return; w += duel(p, f, 71000 + i0 * 1009 + j * 31 + g * 7, pa, aiPick); n++; });
   const label = { now: '지금 봇', never: '안 씀(죽은 칸)', repl: '그 칸에 다른 카드(바꿈)', guard: '그 칸에 방어태세' }[c] || CONDS[c].text;
   console.log(`  ${label}: ${pct(w / n)}${c === 'repl' || c === 'guard' ? '' : ` · 쓸 수 있을 때 ${pct(could ? used / could : 0)} 씀`} (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
+  if (argv.includes('--alt') && could && (c === 'never' || c === 'now')) console.log(`    쓸 수 있던 ${could}번 · 그때 내 햇빛 평균 ${(eSum / could).toFixed(1)} · 대신 고른 것: ${Object.entries(alt).sort((a, b) => b[1] - a[1]).map(([a, k]) => `${nameOf(a === 'rest' ? '쉼' : a)} ${pct(k / could)}`).join(' · ')}`);
+  if (argv.includes('--alt') && REM.n && c !== 'never') console.log(`    쓴 판 ${REM.n}판 · 마지막으로 쓴 뒤 판이 평균 ${(REM.s / REM.n).toFixed(1)}턴 더 감`);
 }
