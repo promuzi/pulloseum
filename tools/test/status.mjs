@@ -406,7 +406,7 @@ const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.
   const x = mk('me', 'gaia'), g1 = mk('foe', 'flower_grass');
   apply(g1, 'gale', 1, ctx(x, 3, []));
   const gl = listOf(g1).find(s => s.id === 'gale');
-  ok(gl && gl.exp === 4, `환경(강풍)은 목록에 끝나는 턴을 실음 — 화면이 남은 턴을 셈(${gl && gl.exp})`);
+  ok(gl && gl.exp === 5, `환경(강풍)은 목록에 끝나는 턴을 실음 — 화면이 남은 턴을 셈(기본 3턴 · ${gl && gl.exp})`);
   const r = typeof MODEL.randomOk === 'function' ? MODEL.randomOk : null, u = mk('me', 'flower_grass'); u.energy = 0;
   const seen = new Set(); if (r) for (let i = 0; i < 40; i++) seen.add(r(u, () => i / 40).id);
   ok(r && [...seen].every(id => canUse(u, sk(u, id))) && seen.size > 1, `시간 초과 = 쓸 수 있는 기술 중 무작위(${[...seen].join(',')})`);
@@ -472,7 +472,8 @@ const sporeExp = (t, by, P = 35, el = by.el) => Math.max(1, Math.round(P * Math.
     ok(B.me.eff.gale.exp === 3, '켜져 있는 동안 같은 편이 다시 켜도 기간이 안 늘어남(기본 3턴)');
     const out = B.me; playTurn3(B, { kind: 'switch', to: 1 });
     ok(!out.eff.gale && B.me.eff.gale, '교체하면 강풍은 새 앞 식물에게(대기석 제외)');
-    expire(B.me, 2, []); ok(!B.me.eff.gale, '지금 2턴 = 1턴에 켜면 2턴 끝에 꺼짐'); }
+    expire(B.me, 2, []); ok(B.me.eff.gale, '기본 3턴 = 2턴 끝엔 아직 붊');
+    expire(B.me, 3, []); ok(!B.me.eff.gale, '기본 3턴 = 1턴에 켜면 3턴 끝에 꺼짐(2026-11-05 — 전 2턴)'); }
   // 대기석: 화상 · 독이 턴 끝마다 깎이고 재생은 차고 포자가 핌 · 능력치 겹 시간도 감
   { const B = team(); const bench = B.team.me[1];
     apply(bench, 'poison', 1, ctx(B.foe, 1, [])); selfBuff(bench, 'atkUp', { turn: 1, ev: [] }); apply(bench, 'spore', 1, ctx(B.foe, 1, [])); bench.eff.spore.left = [1];   // 대기석 = 엠버캑터(불 — 화상 면역이라 독) · 포자는 이번 턴 끝에 피게 맞춰 둠

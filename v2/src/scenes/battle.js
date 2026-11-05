@@ -316,6 +316,8 @@ const ENV_H = 20;
 // 효과 조각(2026-10-29 ㉢ — 사용자 "이게 뭐가 어떻게 되는지 파악되기 전에 슥슥 지나가"): 걸린 식물 머리 위(환경 = 그 땅)에 [아이콘 이름] 조각이 톡 → 잠깐 머묾 → 효과 창 칸(환경 = 띠)으로 날아가 꽂힘(그때 칸이 생기며 반짝)
 //  효과 걸림 단계 0.85초 → 1초(환경 1.15초 — 땅이 먼저 바뀐 뒤 띠로) · 같은 식물에 잇따라 걸리면 둘째부터 0.7초(앞 조각이 날아가는 동안 다음 조각이 톡 — 무릎 꿇어라 셋이 3초 → 2.4초)
 const FX_MS = 1000, FX2_MS = 700, FX_FAST_MS = 380, ENVFX_MS = 1150, TOK_POP = 140, TOK_FLY = [320, 680], FLASH_MS = 480, HIST_MAX = 80;   // HIST_MAX = 쓴 카드 기록 장 수(판 전체 · 양쪽 — 넉넉히 여든)
+// 버프 · 디버프를 한 번에 여러 겹(알 깨기 활력 3 · 맛평가 쇠약 5 · 냉기 응축 억셈 2) = 조각 · 효과 · 소리를 이 간격으로 겹 수만큼(최대 5 — 2026-11-05 사용자 '2겹이면 슈슝 3겹이면 슈슈슝')
+const FX_REP_MS = 120, repOf = e => Math.max(1, Math.min(5, (e && e.k) || 1));
 // 상대 카드 더미(오른쪽 위) · 펼쳐 보기: 새 카드가 날아와 앉는 시간 · 펼칠 때 한 장이 자리 잡는 시간 · 장 사이 시차 · 다시 모일 때 · 더미 카드 크기(손패 카드를 줄인 그림) · 밑 카드 비낌
 const PILE_IN = 560, SPREAD_IN = 300, SPREAD_STAG = 28, SPREAD_OUT = 220, PILE_W = 28, PILE_H = 38, PILE_OFF = [[0, 0], [-2, 3], [2, 5], [-1, 7]];
 const pileTilt = turn => (((turn * 37) % 9) - 4) * 0.03;   // 밑 카드 기울기(카드마다 정해짐 — 새 카드가 앉아도 밑 카드는 안 돌아감)
@@ -627,7 +629,7 @@ export const battle = {
       else if (e.t === 'echo') out.push({ kind: 'echo', ms: 450, side: e.who, msg: `메아리가 울린다!`, tone: 'buff' });   // 프로스트벨 메아리(같은 차례에 한 번 더)
       else if (e.t === 'sun') out.push({ kind: 'sun', ms: 800, who: e.who, ev: e, skill: sk(e.who), msg: `${nm(e.who)}의 ${sk(e.who).name}!`, tone: 'buff' });
       else if (e.t === 'counter') out.push({ kind: 'counter', ms: 900, who: e.who, to: e.to, ev: e, msg: `${nm(e.who)}의 ${e.label || '되받아치기'}!`, tone: 'hit' });
-      else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff, pv = out[out.length - 1], follow = pv && pv.kind === 'fx' && pv.side === e.to && !(STATUS[pv.ev.id] || {}).env; out.push({ kind: 'fx', ms: e.fast && !(D && D.env) ? FX_FAST_MS : D && D.env ? ENVFX_MS : follow ? FX2_MS : FX_MS, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }   // 효과 조각이 머리 위에서 칩 자리로 날아가 꽂힘(㉢) · 환경 = 땅이 바뀐 뒤 띠로
+      else if (e.t === 'fx') { const D = STATUS[e.id], buff = D && D.buff, pv = out[out.length - 1], follow = pv && pv.kind === 'fx' && pv.side === e.to && !(STATUS[pv.ev.id] || {}).env; out.push({ kind: 'fx', ms: (e.fast && !(D && D.env) ? FX_FAST_MS : D && D.env ? ENVFX_MS : follow ? FX2_MS : FX_MS) + (repOf(e) - 1) * FX_REP_MS, ev: e, side: e.to, msg: (FX_MSG[e.id] || (x => x))(e.name, e), tone: buff ? 'buff' : D && D.col ? D.col : 'fx' }); }   // 효과 조각이 머리 위에서 칩 자리로 날아가 꽂힘(㉢) · 환경 = 땅이 바뀐 뒤 띠로
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
       else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: (RESIST_MSG[e.why] || RESIST_MSG.skip)(e.name), tone: 'buff' });
       else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.slice(0, 2).map(k => CURE_FIRE[k] || k).join(' · ')}!`, tone: 'note' });
@@ -700,7 +702,13 @@ export const battle = {
       // 아침의 다른 쪽(켠 프로스트벨이 아닌 편) = 하는 일이 없음 → 연출 · 시간 없이 목록만(전엔 이 쪽에도 금빛 번쩍 · 정화 반짝이가 한 번 더 나와 1.15초 늘어짐 — 2026-10-29 녹화)
       if (st.ev.id === 'morning' && st.ev.who && v.view[st.side] && st.ev.who !== v.view[st.side].id) { st.ms = 0; st.quiet = true; }
       if (env && !st.quiet) v.arrive.push({ who: st.side, id: st.ev.id, n: st.ev.n, t0: t });
-      if (S.name && !st.quiet) v.tok.push({ side: st.side, id: st.ev.id, n: st.ev.n, env, t0: t + (env ? 260 : 0), list: st.ev.list, seq: v.si });
+      if (S.name && !st.quiet) {   // 여러 겹을 한 번에(알 깨기 활력 3 등) = 조각이 겹 수만큼 빠르게 날아가 칸 숫자가 하나씩 오름(2026-11-05 사용자 '슝 · 슈슝 · 슈슈슝')
+        const kk = repOf(st.ev), n0 = (st.ev.n || kk) - kk;
+        for (let i = 0; i < kk; i++) {
+          const ni = n0 + i + 1, list = i === kk - 1 || !st.ev.list ? st.ev.list : st.ev.list.map(s => (s.id === st.ev.id ? { ...s, n: ni } : s));
+          v.tok.push({ side: st.side, id: st.ev.id, n: kk > 1 ? ni : st.ev.n, env, t0: t + (env ? 260 : 0) + i * FX_REP_MS, list, seq: v.si + i / 10, ri: i });   // ri = 몇 번째 겹(머리 위에서 조금씩 위로 쌓여 보임)
+        }
+      }
       else if (st.ev.list) { v.eff[st.side] = st.ev.list; v.effSeq[st.side] = v.si; }
     }
     if (st.kind === 'skipT' && st.side === 'me' && st.ev.refund) v.en.me += st.ev.refund;
@@ -715,7 +723,13 @@ export const battle = {
     if (st.kind === 'heal') { this.heal(st.side, st.ev.heal); this.pop(st.side, `+${st.ev.heal}`, null, t, true, 0, '#7ef0a0', null, this.amt(st.side, st.ev.heal)); }
     if (st.kind === 'reflect') { this.hurt(st.side, st.ev.dmg, 'graze', t); this.pop(st.side, `-${st.ev.dmg}`, 'bad', t, true, 0, null, null, { ...this.amt(st.side, st.ev.dmg), kill: v.hp[st.side] <= 0 }); this.pop(st.ev.who, '반사!', null, t, false, -16, '#8ccfff'); }
     if (st.kind === 'tick') { const se = sfxAdd(v.sfx, st.side, st.ev.id, t); if (st.ev.id === 'burn') crackles(se); else sfx('poison'); }
-    if (st.kind === 'fx' && !st.quiet && SFX_OF_FX[st.ev.id]) { const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t, { dir: SFX_OF_FX[st.ev.id] === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 }); if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id]); if (st.ev.id === 'burn') crackles(se); }
+    if (st.kind === 'fx' && !st.quiet && SFX_OF_FX[st.ev.id]) {
+      for (let i = 0, kk = repOf(st.ev); i < kk; i++) {   // 여러 겹 = 효과 · 소리를 겹 수만큼 빠르게(슈슈슝)
+        const se = sfxAdd(v.sfx, st.side, SFX_OF_FX[st.ev.id], t + i * FX_REP_MS, { dir: SFX_OF_FX[st.ev.id] === 'haste' ? (st.side === 'me' ? 1 : -1) : st.side === 'foe' ? 1 : -1 });
+        if (FX_SOUND[st.ev.id]) sfx(FX_SOUND[st.ev.id], i ? { at: i * FX_REP_MS / 1000 } : {});
+        if (st.ev.id === 'burn') crackles(se);
+      }
+    }
     if (st.kind === 'drain') { sfxAdd(v.sfx, st.side, 'drain', t, { to: st.ev.to }); sfx('drain'); }
     if (st.kind === 'heal') { sfxAdd(v.sfx, st.side, st.ev.t === 'regen' ? 'regen' : 'heal', t); sfx(st.ev.t === 'regen' ? 'regen' : 'heal'); }
     if (st.kind === 'reflect') { sfxAdd(v.sfx, st.ev.who, 'thornsHit', t); sfx('thorns'); barrierHit(this.bars, st.ev.who, 'reflect', t); }
@@ -1621,7 +1635,7 @@ export const battle = {
     for (const k of v.tok) {
       const age = t - k.t0; if (k.done || age < 0) continue;
       const G = this.geo && this.geo[k.side]; if (!G) continue;
-      if (!k.from) { const [x, y] = k.env ? this.at(k.side) : this.above(k.side, 92); k.from = [ox + x - (k.env ? 30 : SW_W >> 1), y - (k.env ? 12 : 4)]; }
+      if (!k.from) { const [x, y] = k.env ? this.at(k.side) : this.above(k.side, 92); k.from = [ox + x - (k.env ? 30 : SW_W >> 1) + (k.ri || 0) * 3, y - (k.env ? 12 : 4) - (k.ri || 0) * 7]; }   // 여러 겹 = 한 겹마다 위로 7칸 · 옆으로 3칸 쌓임
       let to;
       if (k.env) to = G.band;
       else { const i = Math.min(5, ((x => (x < 0 ? G.list.length : x))(G.list.findIndex(s => s.id === k.id)))), r = this.chipRect(k.side, i); to = r ? [r[0], r[1]] : k.from; }

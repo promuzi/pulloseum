@@ -263,7 +263,7 @@ export function apply(tgt, id0, n, ctx, o = {}) {
   const by = ctx.by && ctx.by.pas;
   if (D.stat) {
     for (let i = 0; i < (n || 1); i++) addStat(tgt, id, T, o);
-    ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(tgt) });
+    ev.push({ t: 'fx', ...base, n: e[id].n, ...((n || 1) > 1 ? { k: n } : {}), list: listOf(tgt) });   // k = 한꺼번에 건 겹 수(맛평가 쇠약 5)
   } else if (id === 'poison') {
     const p = e.poison ||= { n: 0, last: T };
     p.n = Math.min(D.stack, p.n + n); p.last = T;
@@ -339,7 +339,7 @@ export function shockRoll(u, ctx) {
 // 나에게 버프 걸기(버프 기술 또는 공격 기술의 덤)
 export function selfBuff(u, id0, ctx, o = {}, k = 1) {   // k = 능력치 겹을 한 번에 몇 겹(버프 · 디버프는 여러 겹 허용 — 2026-11-05 사용자 '상태이상만 한 겹하고 버프 디버프는 여러겹 허용하자')
   const id = id0, e = E(u), T = ctx.turn, base = { who: u.id, to: u.id, name: u.name, id };
-  if (FX[id] && FX[id].stat) { for (let i = 0; i < k; i++) addStat(u, id, T, o); ctx.ev.push({ t: 'fx', ...base, n: e[id].n, list: listOf(u) }); return; }
+  if (FX[id] && FX[id].stat) { for (let i = 0; i < k; i++) addStat(u, id, T, o); ctx.ev.push({ t: 'fx', ...base, n: e[id].n, ...(k > 1 ? { k } : {}), list: listOf(u) }); return; }   // k = 이번에 한꺼번에 건 겹 수(화면이 겹 수만큼 빠르게 — battle.js repOf)
   if (id === 'flourish') { for (const [k, v] of Object.entries(FX.flourish.adds)) addStat(u, k, T, { v }); ctx.ev.push({ t: 'fx', ...base, n: e.atkUp.n, list: listOf(u) }); return; }
   if (id === 'aim') { e.aim = { k: Math.max((e.aim && e.aim.k) || 0, o.aimK || FX.aim.k) }; ctx.ev.push({ t: 'fx', ...base, list: listOf(u) }); return; }
   if (id === 'stealth') {   // o = 그 기술(이어 공격 link · 연출 look)

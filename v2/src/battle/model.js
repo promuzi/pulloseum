@@ -263,7 +263,7 @@ function buffVal(u, foe, sides, C, down = 0, nOf = () => 1) {   // nOf = 그 버
     if (again && !stack) continue;
     const k = again ? 0.35 : 1;
     if (b === 'shield' || b === 'armor') v += 2.5 * Math.min(0.15 * u.max, C.risk * u.hp) / Math.max(1, u.hp) * k;   // 막는 것 = 위협만큼(보호막 15%)
-    else if (b === 'defUp') v += 2.5 * rk * 0.3 * Math.min(4, H) * 0.5 * k;
+    else if (b === 'defUp') v += 2.5 * rk * 0.3 * Math.min(4, H) * 0.5 * k * nOf(b);
     else if (b === 'stealth') v += 2.5 * rk * 0.95 + 0.4 * R;   // 은신 = 이번 턴 피하고 다음 공격 기습
     else if (b === 'regen') v += healScore(u, 0.15);
     else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
@@ -337,7 +337,7 @@ function aiScore(u, foe, s, C) {
   if (s.healPct) { const bad = HARM_IDS.filter(k => has(u, k)).length; return healScore(u, s.healPct) + 0.15 * R * bad; }   // 바로 회복 + 정화(청아함의 물결)
   if (s.fruitCondense) {   // 냉기 응축(드라코프루트) = 열매 하나(방어 +20% · 햇빛 칸 하나를 얼림) — 많을수록 덜 · 열매로 쓰는 기술이 있으면 조금 더
     const fn = (u.eff && u.eff.fruit && u.eff.fruit.n) || 0, use = u.kit.some(x => x.fruitUse && x.fruitUse !== 'eat');
-    return (2.5 * rk * 0.15 * Math.min(4, H) + (use ? 0.5 * R : 0)) / (1 + 0.7 * fn);
+    return (2.5 * rk * 0.15 * Math.min(4, H) + (use ? 0.5 * R : 0)) / (1 + 0.7 * fn) + (s.self ? buffVal(u, foe, [s.self], C, 0, b => (s.selfN && s.selfN[b]) || 1) : 0);   // + 억셈 2겹(2026-11-05)
   }
   if (s.fruitUse === 'eat') { const fn = (u.eff && u.eff.fruit && u.eff.fruit.n) || 0; return fn ? healScore(u, FRUIT.eat * fn) : 0; }   // 열매 먹기
   if (s.revive) return u.eff && u.eff.revive ? 0.02 : risk >= 0.8 ? 1.6 : risk >= 0.5 ? 0.6 : 0.05;   // 부활잉 = 쓰러질 만할 때 미리

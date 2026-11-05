@@ -539,6 +539,7 @@ ok(SPECIES_V2.has('frost_drake'), '프로스트드레이크 v2 켜짐');
   const d3 = mk('me', 'frost_drake'), f3 = mk('foe', 'thorn'); d3.energy = 3;
   payEnergy(d3, 1); turn(d3, f3, SKILLS.u_fdrake_1, OTHER, 1);
   ok(d3.eff.fruit.n === 1 && d3.energy === 2 && d3.energyMax === 7, '냉기 응축 = 햇빛 하나를 열매로 + 하나 보충(A안)');
+  ok(d3.eff.defUp && d3.eff.defUp.n === 2, `냉기 응축 = 나에게 억셈 2겹(2026-11-05 · 지금 ${d3.eff.defUp && d3.eff.defUp.n})`);
   const def0 = mk('me', 'frost_drake'), { defK } = await import('../../v2/src/battle/status.js');
   ok(defK(d3) > defK(def0), '열매 하나당 방어 ↑');
   d3.eff.fruit.n = 3; d3.energyMax = 5; d3.eff.poison = { n: 2, last: 1 }; d3.eff.burn = { exp: 9 }; d3.hp = Math.round(d3.max * 0.5);

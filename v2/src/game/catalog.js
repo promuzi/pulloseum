@@ -478,7 +478,7 @@ const V2 = {
   frost_drake: {   // 23. 프로스트드레이크 — 빙결열매(햇빛 칸을 얼려 쌓는 방어 · 소모하면 햇빛으로 돌아옴) · 2026-10-26~28 설계(처음엔 드라코프루트 이름으로 적음 — 사용자 11-03 바로잡음 · 11-04 옮김) · 고유 패시브 없음(열매 규칙이 그 자리)
     sp: { fruits: true },
     skills: [
-      S('u_fdrake_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true }),
+      S('u_fdrake_1', '냉기 응축', 'ice', 'u', 0, 1, { cats: ['guard'], fruitCondense: true, self: 'defUp', selfN: { defUp: 2 } }),   // 2026-11-05 사용자 '억셈 2겹으로': 열매 하나 + 나에게 억셈 2겹(방어 +100% · 겹마다 5턴)
       S('u_fdrake_2', '열매 먹기', 'ice', 'u', 0, 0, { cats: ['heal_hp'], fruitUse: 'eat' }),
       S('u_fdrake_2b', '알 깨기', 'ice', 'u', 0, 2, { self: 'atkUp', also: 'spdUp', selfMore: ['defDown'], selfN: { atkUp: 3, spdUp: 2 } }),   // 2026-11-05 사용자 '활력 3 · 가속 2로' · '버프 디버프는 여러겹 허용하자': 활력 3겹 · 가속 2겹 · 시듦 1겹
       S('u_fdrake_3', '빙결 브레스', 'ice', 'u', 75, 0, { area: true, fruitUse: 'breath', inflict: { id: 'chill', n: 1 } }),   // 60 → 75(2026-11-04 — 태생 용족 능력치 ×0.94로 리그전 33% → 46%, 임시)

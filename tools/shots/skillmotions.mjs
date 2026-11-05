@@ -12,6 +12,7 @@ const { decodePNG } = await import(U('tools/pixel/big/engine.mjs'));
 const { writeMP4 } = await import(U('tools/pixel/big/video.mjs'));
 const out = process.argv[2], list = process.argv[3].split(',').map(s => { const [a, pre] = s.split('@'); return [...a.split(':'), pre || null]; }), mp4 = process.argv.includes('--mp4');
 const foeKey = (process.argv.find(a => a.startsWith('--foe=')) || '--foe=aqua').slice(6), KIND = (process.argv.find(a => a.startsWith('--kind=')) || '--kind=attack').slice(7);   // --kind=cast = 보조 기술 시전 단계
+const WIN = +((process.argv.find(a => a.startsWith('--ms=')) || '--ms=2600').slice(5));   // 찍는 길이(그 단계 시작부터 · 여러 겹 효과처럼 뒤가 길면 늘림 — 2026-11-05)
 mkdirSync(out, { recursive: true });
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe'].find(p => existsSync(p));
 const { srv, url } = await serve(repo);
@@ -34,7 +35,7 @@ try {
     }, sp, id, foeKey, pre);
     let shotN = 0, rec = 0, info = null;
     for (let i = 0; i < 400; i++) {
-      const r = await p.evaluate((id, want, KIND) => {
+      const r = await p.evaluate((id, want, KIND, WIN) => {
         const a = window.__app, sc = a.router.cur, V = window.__vid;
         V.t += 50; a.t = V.t; a.input.begin();
         if (!V.picked && sc.v && sc.v.phase === 'pick' && a.t > 1600) { const sk = sc.B.me.kit.find(k => k.id === id); if (sk) { sc.pick(a, sk); V.picked = true; } else { V.picked = 'none'; } }
@@ -42,18 +43,19 @@ try {
         const st = sc.v && sc.v.phase === 'play' ? sc.v.steps[sc.v.si] : null, mine = st && st.kind === KIND && st.who === 'me';
         if (mine && V.at == null) V.at = { t: a.t, I: st.anim ? st.anim.I : 12, skill: st.skill.name, kind: st.anim && st.anim.A ? st.anim.A.kind : (sc.v.cast && (sc.v.cast.sp || sc.v.cast.kind)) };
         const age = V.at ? a.t - V.at.t : -1;
-        return { phase: sc.v ? sc.v.phase : 'gone', picked: V.picked, mine, age, at: V.at, url: want || (V.at && age >= 0 && age < 2600) ? V.cv.toDataURL('image/png') : null, n: (sc.v && sc.v.steps || []).map(s => s.kind + (s.who ? ':' + s.who : '')).join(' ') };
-      }, id, mp4 && rec > 0, KIND);
+        return { phase: sc.v ? sc.v.phase : 'gone', picked: V.picked, mine, age, at: V.at, url: want || (V.at && age >= 0 && age < WIN) ? V.cv.toDataURL('image/png') : null, n: (sc.v && sc.v.steps || []).map(s => s.kind + (s.who ? ':' + s.who : '')).join(' ') };
+      }, id, mp4 && rec > 0, KIND, WIN);
       if (r.picked === 'none') { report.push(`${id}: 손패에 없음`); break; }
       if (r.at) info = r.at;
       if (r.url && r.age >= 0) {
         const buf = Buffer.from(r.url.split(',')[1], 'base64');
         if (mp4) frames.push(decodePNG(buf));
+        if (process.argv.includes('--dump')) writeFileSync(resolve(out, `${id}_t${String(r.age).padStart(4, '0')}.png`), buf);   // --dump = 찍은 장 전부(그 단계 시작부터 ms)
         const I = (info.I + 1) * 50, marks = [['a', I - 250], ['i', I + 50], ['e', I + 450]];
         for (const [tag, ms] of marks) if (r.age >= ms && r.age < ms + 50) { writeFileSync(resolve(out, `${id}_${tag}.png`), buf); shotN++; }
         rec++;
       }
-      if (info && r.age >= 2600) break;
+      if (info && r.age >= WIN) break;
       if (r.phase === 'pick' && r.picked === true && i > 60 && !info) { report.push(`${id}: 내 공격 단계 없음(${r.n})`); break; }
     }
     report.push(`${id}: ${info ? `${info.skill} · ${info.kind} · 장 ${shotN}` : '못 찍음'}`);
