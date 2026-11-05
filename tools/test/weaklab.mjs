@@ -20,7 +20,7 @@ if (arg('--k')) FX.reflect.k = +arg('--k');
 if (arg('--cost')) SKILLS[ID].cost = +arg('--cost');
 for (const kv of (arg('--set', '') || '').split(',').filter(Boolean)) { const [a, b] = kv.split('='); SKILLS[ID][a] = isNaN(+b) ? b : +b; }
 if (SKILLS[ID].power > 0 && SKILLS[ID].act === 'buff') { SKILLS[ID].act = 'attack'; SKILLS[ID].cats = ['attack']; }   // --set power=55 = 공격 + 원래 효과 덤
-const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'), K0 = FX.reflect.k, KX = +arg('--kx', 0);
+const HOLD = argv.includes('--hold'), PERM = argv.includes('--perm'), K0 = FX.reflect.k, KX = +arg('--kx', 0), CD = +arg('--cd', 0);
 const pct = x => `${(100 * x).toFixed(1)}%`;
 const nameOf = id => ({ basic: '평타', guard: '방어태세', evade: '회피 자세', sun: '광합성' }[id] || (SKILLS[id] && SKILLS[id].name) || id);
 const isHex = s => !!(s && (s.inflict || s.inflicts || s.hex || s.act === 'hex' || (s.cats || []).includes('debuff')));
@@ -30,14 +30,16 @@ const atkP = s => (s && s.act === 'attack' ? s.power || 0 : 0);
 function duel(a, b, seed, pa, pb) {
   const B = makeBattle({ me: unitOf('me', a), foe: unitOf('foe', b), seed }), r = makeRng(seed * 13 + 5);
   const last = { me: null, foe: null }, seen = { me: [], foe: [] };
-  let prev = null, permOn = false;
+  let prev = null, permOn = false, lastUse = -99;
   while (!B.over && B.turn <= 80) {
     if (KX) FX.reflect.k = K0;
     const sf = mustSkip(B.foe) ? REST : pb(B.foe, B.me, r, { seen: seen.foe, last: last.foe, iq: 0.9 });
     if (KX) FX.reflect.k = KX;
-    const sm = mustSkip(B.me) ? REST : pa(B.me, B.foe, r, { seen: seen.me, last: last.me, iq: 0.9 }, { now: sf, prev });
+    const T0 = B.turn, sm = mustSkip(B.me) ? REST : pa(B.me, B.foe, r, { seen: seen.me, last: last.me, iq: 0.9 }, { now: sf, prev, cool: CD > 0 && T0 - lastUse <= CD });
     if (KX) FX.reflect.k = sm && sm.id === ID ? KX : K0;   // --kx: 이 기술로 반사할 때만 그 몫(같은 턴 다른 반사는 원래 몫)
+    if (sm && sm.bounceNow && B.me.hp > 0) (B.me.eff ||= {}).bounce = { exp: T0 };   // 만약 실험 bounceNow: 그 턴 자세로 튕김(순서 무관 · 그 턴 끝까지)
     const t = playTurnVs(B, sm, sf);
+    if (t.mySkill && t.mySkill.id === ID) lastUse = T0;
     if (HOLD && B.me.eff && B.me.eff.bounce) B.me.eff.bounce.exp = B.turn + 1;   // 만약 실험 --hold: 튕김이 쓰일 때까지 서 있음
     if (PERM && t.mySkill && t.mySkill.id === ID) permOn = true;
     if (PERM && permOn && B.me.hp > 0) (B.me.eff ||= {}).bounce = { exp: B.turn + 1 };   // 만약 실험 --perm: 한 번 쓰면 판 끝까지 튕김(쓰여도 다시 섬)
@@ -60,6 +62,7 @@ const CONDS = {
   oBig: { text: '완벽히 읽음 — 상대가 이번 턴 위력 70 넘게 칠 때만', f: (u, foe, X) => atkP(X.now) >= 70 },
   oHex: { text: '완벽히 읽음 — 상대가 이번 턴 상태를 걸 때만', f: (u, foe, X) => isHex(X.now) },
   once: { text: '튕김이 안 서 있고 상대에게 상태 거는 기술이 있을 때(--hold 와 함께)', f: (u, foe) => !(u.eff && u.eff.bounce) && foe.kit.some(isHex) },
+  always: { text: '쓸 수 있으면 늘(이것만 쓰기)', f: () => true },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');
 
@@ -73,7 +76,7 @@ const handG = handX.includes('guard') ? null : handX.map(x => (x === ID ? 'guard
 const book0 = (PLAYBOOK_BY[STAGE] || PLAYBOOK_BY[2] || {})[K] || [];
 const never = { [K]: [...book0.filter(x => x.id !== ID), { id: ID, when: { k: 'always' }, b: -50 }] };
 
-console.log(`${SPECIES[K].name} · ${nameOf(ID)} — ${['새싹', '성장기', '성체'][STAGE]} · 대회 단계 ${TIER} 몸 · 상대 ${KEYS.length - 1}종 × ${N}판${arg('--k') ? ` · 반사 몫 ${FX.reflect.k}` : ''}${KX ? ` · 이 기술 반사 몫 ${KX}` : ''}${arg('--cost') ? ` · 햇빛 ${SKILLS[ID].cost}` : ''}${arg('--set') ? ` · ${arg('--set')}` : ''}${HOLD ? ' · 쓰일 때까지 서 있음' : ''}${PERM ? ' · 한 번 쓰면 판 끝까지' : ''}`);
+console.log(`${SPECIES[K].name} · ${nameOf(ID)} — ${['새싹', '성장기', '성체'][STAGE]} · 대회 단계 ${TIER} 몸 · 상대 ${KEYS.length - 1}종 × ${N}판${arg('--k') ? ` · 반사 몫 ${FX.reflect.k}` : ''}${KX ? ` · 이 기술 반사 몫 ${KX}` : ''}${arg('--cost') ? ` · 햇빛 ${SKILLS[ID].cost}` : ''}${arg('--set') ? ` · ${arg('--set')}` : ''}${HOLD ? ' · 쓰일 때까지 서 있음' : ''}${PERM ? ' · 한 번 쓰면 판 끝까지' : ''}${CD ? ` · 쓴 뒤 ${CD}턴 못 씀` : ''}`);
 console.log(`  넣은 손패: ${handX.filter(Boolean).map(nameOf).join(' · ')}`);
 console.log(`  바꾼 손패: ${handR.filter(Boolean).map(nameOf).join(' · ')}`);
 const t0 = Date.now();
@@ -82,7 +85,8 @@ for (const c of conds) {
   const hand = c === 'repl' ? handR : c === 'guard' ? handG : handX;
   if (!hand) { console.log(`  ${c}: 손패에 이미 방어태세가 있어 건너뜀`); continue; }
   const pa = (u, foe, r, ctx, X) => {
-    const t = u.kit.find(s => s.id === ID), ok = t && canUse(u, t, u.energy, foe);
+    const t = u.kit.find(s => s.id === ID), ok = t && canUse(u, t, u.energy, foe) && !X.cool;   // --cd N: 쓴 뒤 N턴은 못 씀
+    if (X.cool) return aiPick(u, foe, r, { ...ctx, book: never });
     if (ok) could++;
     let s;
     if (c === 'now' || c === 'repl' || c === 'guard') s = aiPick(u, foe, r, { ...ctx, book: { [K]: book0 } });
