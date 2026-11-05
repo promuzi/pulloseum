@@ -1,0 +1,16 @@
+(node:32840) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/fight.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+젤리캡 · 말랑잉 — 성체 · 대회 단계 6 몸 · 상대 44종 × 8판
+  넣은 손패: 말랑잉 · 포자 뿌리기 · 물대포 · 톡씽 · 미역잉 · 광합성
+  바꾼 손패: 부활잉 · 포자 뿌리기 · 물대포 · 미역잉 · 톡씽 · 광합성
+  지금 봇: 46.3% · 쓸 수 있을 때 2.6% 씀 (1초)
+  안 씀(죽은 칸): 46.9% · 쓸 수 있을 때 0.0% 씀 (1초)
+  상대가 위력 70 넘는 공격을 쓸 햇빛이 있을 때: 12.5% · 쓸 수 있을 때 75.7% 씀 (2초)
+  상대가 위력 90 넘는 공격을 쓸 햇빛이 있을 때: 16.5% · 쓸 수 있을 때 68.2% 씀 (2초)
+  상대가 지난 턴에 공격했을 때: 8.0% · 쓸 수 있을 때 66.4% 씀 (3초)
+  완벽히 읽음 — 상대가 이번 턴 공격할 때만: 2.6% · 쓸 수 있을 때 82.2% 씀 (3초)
+  완벽히 읽음 — 상대가 이번 턴 위력 70 넘게 칠 때만: 23.0% · 쓸 수 있을 때 51.3% 씀 (4초)
+  그 칸에 다른 카드(바꿈): 66.5% (5초)
+  그 칸에 방어태세: 45.5% (5초)

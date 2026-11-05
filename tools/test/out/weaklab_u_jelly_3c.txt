@@ -1,0 +1,14 @@
+(node:42972) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/fight.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+젤리캡 · 너꺼잉 — 성체 · 대회 단계 6 몸 · 상대 44종 × 8판
+  넣은 손패: 너꺼잉 · 포자 뿌리기 · 물대포 · 톡씽 · 미역잉 · 광합성
+  바꾼 손패: 부활잉 · 포자 뿌리기 · 물대포 · 톡씽 · 미역잉 · 광합성
+  지금 봇: 45.7% · 쓸 수 있을 때 2.5% 씀 (1초)
+  안 씀(죽은 칸): 46.9% · 쓸 수 있을 때 0.0% 씀 (1초)
+  상대가 상태를 거는 기술을 쓸 햇빛이 있을 때: 0.3% · 쓸 수 있을 때 98.3% 씀 (2초)
+  상대가 지난 턴에 상태를 걸었을 때: 10.5% · 쓸 수 있을 때 59.3% 씀 (2초)
+  완벽히 읽음 — 상대가 이번 턴 상태를 걸 때만: 7.7% · 쓸 수 있을 때 71.6% 씀 (2초)
+  그 칸에 다른 카드(바꿈): 69.3% (3초)
+  그 칸에 방어태세: 45.5% (4초)
