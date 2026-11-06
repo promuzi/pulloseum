@@ -33,16 +33,19 @@ patch('v2/src/battle/rules.js', [
   ["const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;", "const critK = tier === 'crit' ? (1 + ((u.pas && u.pas.critDmg) || 0)) * (1 + ((u.st && u.st.queen && u.st.queen.critDmg) || 0)) : 1;"],
   ["(a.forceCrit && tier !== 'miss')", "((a.forceCrit || (u.st && u.st.queen && u.st.queen.force)) && tier !== 'miss')"],
 ]);
+//   g 의 기동 몫 = 선공 0.3 + 기동 회피(규칙 430 — 사본 status.js 의 spdEva 가 있으면 기동 +100%당 받는 빗나감 +spdEva)를 받는 피해 몫으로 0.94 × spdEva ÷ 100
+const kEva = +((/spdEva:\s*(\d+)/.exec(readFileSync(root + '/v2/src/battle/status.js', 'utf8')) || [])[1] || 0);
+const SK = +(0.3 + 0.94 * kEva / 100).toFixed(3);
 const QV = `
 function __queenV(u, q) {
   const cb = (u && u.crit) || 0, E = (c, d) => { c = Math.min(50, Math.max(0, c)); return 0.06 + (82 - c) / 100 + c / 100 * 1.5 * (1 + d); };
   const E0 = E(cb, 0), cur = E(cb + 15, 0) / E0 - 1, d = q.critDmg || 0;
   const E1 = (q.force ? 0.94 * 1.5 * (1 + d) : E(cb + (q.crit || 0), d)) * (1 + (q.atk || 0));
-  return 0.3 + 0.94 * (E1 / E0 - 1 - cur) + 0.3 * ((q.spd || 0) - 0.15);
+  return 0.3 + 0.94 * (E1 / E0 - 1 - cur) + ${SK} * ((q.spd || 0) - 0.15);
 }
 `;
 patch('v2/src/battle/model.js', [
   ["return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);", m[8] ? "return 0.1 + dot + (q ? R * __queenV(u, q) * after(3) : 0);" : "return 0.1 + dot + (q ? R * (0.3 + (q.atk || 0) + 0.5 * (q.critDmg || 0)) * after(3) : 0);"],
   ...(m[7] ? [["const need = Math.max(0, ...u.kit.map(k => k.cost || 0));", "const need = Math.max(0, ...u.kit.filter(k => canUse(u, k, 99, foe)).map(k => k.cost || 0));"]] : []),
 ], m[8] ? QV : '');
-console.log(`사본 고침 끝 — 지옥의 여왕 = 기동 +${S}% · 치명 +${C} · 공격 +${A}% · 치명 피해 +${D}%${X ? ' · 확정 치명' : ''} · 지옥전개 햇빛 ${E}${m[7] ? ' · 봇 광합성 값 고침' : ''}${m[8] ? ' · 봇 점수 = 기대 피해' : ''}`);
+console.log(`사본 고침 끝 — 지옥의 여왕 = 기동 +${S}% · 치명 +${C} · 공격 +${A}% · 치명 피해 +${D}%${X ? ' · 확정 치명' : ''} · 지옥전개 햇빛 ${E}${m[7] ? ' · 봇 광합성 값 고침' : ''}${m[8] ? ` · 봇 점수 = 기대 피해(기동 몫 ${SK})` : ''}`);
