@@ -17,7 +17,8 @@ export const RULES = {
   initK: 3, initMin: 0.08, initMax: 0.92,      // 선공 확률 = a^k/(a^k+b^k), 8~92%로 자름(Darkest Dungeon 속도+주사위처럼 빠른 쪽이 대개, 늘 그렇진 않게)
   initPitySlack: 1,                             // 선공 불운 보정은 한 번 더 여유 — 없으면 같은 기동(50%)끼리 '1번 밀리면 확정'이라 선공이 번갈아 고정돼 다음 선공이 읽힘
   baseMiss: 6, baseGraze: 12, missMax: 70, critMax: 50,
-  tierMult: { miss: 0, graze: 0.5, hit: 1, crit: 1.5 },
+  // 치명 피해 = 2배 고정(2026-11-06 사용자 '치명은 2배로 고정해' · '치명 피해를 높이는 스킬은 아예 빼자' · '치명 확률만 건들여' — 치명을 바꾸는 효과는 치명 확률만 · 전엔 1.5배 = 10-15 설계 초안 값)
+  tierMult: { miss: 0, graze: 0.5, hit: 1, crit: 2 },
   areaMissK: 0.5,                               // 범위 공격 = 빗나감 · 스침을 이만큼으로 줄이고 준 만큼 정타(치명 그대로 — 2026-10-23 사용자 · 줄이는 양은 임시)
   repeatStanceK: 0.5,                           // 같은 자세를 연달아 쓰면 효과 절반(포켓몬 방어 연속 사용 감쇠에서 — 버티기만 하는 판 막기, 제안값)
   critAfterCritK: 0.5,                          // 치명을 맞은 다음 공격은 치명 칸 절반(연속 치명 불운 줄이기, 제안값)
@@ -260,7 +261,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
     const ambush = !!(L.link && a.ambush), sure = !!a.sure, bare = still && d.bare ? d.bare : 0;   // 피해? = 반드시 맞음 · 자세 무시 / 방심하기 = 그 턴 다 맞고 피해 −40%
     const evadeOn = !ambush && !sure && !bare && still && (d.act === 'evade' || !!d.evadeWith) && stanceOk(foe, 'evade');   // evadeWith = 공격하면서 피하기
     const rep = d.act === foe.st.lastStance ? RULES.repeatStanceK : 1;
-    // 피해: 능력치 겹(활력 · 쇠약 · 억셈 · 시듦 등) · 카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK · 치명 피해 critDmg(예리한 날)
+    // 피해: 능력치 겹(활력 · 쇠약 · 억셈 · 시듦 등) · 카드 패시브(2026-10-17): 공격 배율 pasAtkK · 피해 배율 pasDmgK(치명 피해는 2배 고정 — 2026-11-06)
     const hitDmg = (x, y, sk, el, defenseK = 1) => baseDamage({ atk: x.atk * atkK(x) * pasAtkK(x, y) }, { def: y.def * defK(y) * defenseK * (1 - (sk.pierce || 0)) }, sk, el) * pasDmgK(x, y);
     if (a.infused) u.curEl = a.el;   // 속성 바꾸기(불타는 의지) — 상성도 그 속성으로
     const em = (o.elemMult ? o.elemMult(u, foe, a) : 1) * fieldEl(o.field, a.el);   // × 경기장 효과(D10) · 속성 × 변이 상성(battle/matchup.js — 기술 a를 같이 넘김)
@@ -302,8 +303,7 @@ export function resolveTurn(A, B, actA, actB, rng, o = {}) {
       else { const j = judgeHit(t, u.st.miss[foe.id] || 0, rng); u.st.miss[foe.id] = j.missStreak; tier = j.tier; forced = j.forced; }
       if ((a.critIfDodged && u !== first && u.st.dodgedT === T) || (sure && u === first) || (a.forceCrit && tier !== 'miss')) tier = 'crit';   // 확정 치명(휙- 푹찍 = 먼저 친 상대가 빗나간 뒤 · 피해? = 선공 · 드라코프루트 내가 용이될 상이요? 후공 = 맞으면 치명) — 치명 방어엔 막힘
       if ((guardOn || (sure && !ambush && still && guards.has(foe))) && tier === 'crit' && d.blockCrit !== false) tier = 'hit';   // 치명 방어 · 피해?도 방어태세엔 치명이 막힘(2026-10-24 사용자 — 막는 힘 ×4는 그대로 무시)
-      const critK = tier === 'crit' && u.pas && u.pas.critDmg ? 1 + u.pas.critDmg : 1;
-      dmg = Math.round(hitDmg(u, foe, ah, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * critK * (ambush ? FX.stealth.ambush : 1));
+      dmg = Math.round(hitDmg(u, foe, ah, em, guardOn ? guardDefMult(d, rep !== 1) : 1) * RULES.tierMult[tier] * (ambush ? FX.stealth.ambush : 1));
       if (evadeOn && d.punishOnHit && (tier === 'hit' || tier === 'crit')) dmg = Math.round(dmg * (1 + d.punishOnHit));
       dmg = Math.round(dmg * takenK(foe) * (bare || 1));   // 받는 피해 배율(D13 — 체력 가득이면 위엄 등)
       let nulled = 0;

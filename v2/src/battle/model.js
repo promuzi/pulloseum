@@ -164,7 +164,7 @@ export const randomOk = (u, rnd) => { const ok = u.kit.filter(s => canUse(u, s))
 //  ④ 다음 턴 내다보기 nextBest = 이번 수가 남기는 햇빛 · 개수 칸 · 열린 기술(식사시간 → 맛평가) · 상대 상태(빙결 겹 · 독 겹 · 남은 체력)로 다음 턴에 쓸 가장 좋은 수를 LOOK 만큼 더함
 const hitChance = (u, foe, s) => {
   const t = hitTable(u, foe, { area: !!s.area });
-  let p = (t.hit + 1.5 * t.crit + 0.5 * t.graze) / 100;
+  let p = (t.hit + RULES.tierMult.crit * t.crit + 0.5 * t.graze) / 100;
   if (!s.area && has(foe, 'stealth')) p *= 0.05;   // 은신(분신 = 연출만) = 광역 아닌 공격 95% 빗나감
   return p;
 };
@@ -223,7 +223,7 @@ function fxVal(u, foe, f, C) {
     case 'defDown': v = R * defGain(foe, Math.min(0.8, D.v * n)) * T(D.turns - 1); break;
     case 'spdDown': v = 0.05 * R * T(D.turns); break;
     case 'accDown': v = 2.5 * thr * D.v / 100 * T(D.turns) * 0.6; break;
-    case 'critDown': v = 2.5 * thr * D.v / 200 * T(D.turns) * 0.6; break;
+    case 'critDown': v = 2.5 * thr * D.v * (RULES.tierMult.crit - 1) / 100 * T(D.turns) * 0.6; break;
     case 'leech': v = 2.5 * D.drain * T(D.turns) * (life + 0.5 * u.max / Math.max(1, u.hp)); break;
     case 'dark': v = 0.2 * R * (f.turns || D.turns); break;
     default: v = 0.1 * R;
@@ -269,7 +269,7 @@ function buffVal(u, foe, sides, C, down = 0, nOf = () => 1) {   // nOf = 그 버
     else if (b === 'regen') v += healScore(u, 0.15);
     else if (b === 'spdUp') v += (u.spd < foe.spd ? 0.6 : 0.05) * R * k;   // 가속 = 내가 느릴 때(먼저 움직이게)
     else if (b === 'atkUp') v += R * FX.atkUp.v * nOf(b) * after(5) * k;
-    else if (b === 'critUp') v += R * FX.critUp.v / 200 * after(5) * k;   // 예리 = 치명 칸 +10(치명 ×1.5)
+    else if (b === 'critUp') v += R * FX.critUp.v * (RULES.tierMult.crit - 1) / 100 * after(5) * k;   // 예리 = 치명 칸 +10(치명 ×2)
     else if (b === 'aim') v += R * 0.35;
     else if (b === 'flourish') v += R * 0.05 * after(5) * 2 + 2.5 * rk * 0.05;
     else if (b === 'purify') v += 0.2 * R * HARM_IDS.filter(x => has(u, x)).length;
