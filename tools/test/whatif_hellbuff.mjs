@@ -11,9 +11,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 const [root, MODE = 's15c15a40d0'] = process.argv.slice(2);
 //   끝에 f = 봇 광합성 값 고침(모자란 햇빛을 셀 때 지금 못 쓰는 기술 — 지옥이 켜졌거나 재사용 대기인 지옥전개 등 — 은 빼고 셈 · 안 고치면 지옥전개 비용 2 때문에 지옥 동안 광합성을 고름)
-const m = /^s(\d+)c(\d+)a(\d+)d(\d+)(x)?(u)?(?:e(\d+))?(f)?(g)?$/.exec(MODE);
+//   u<숫자> = 지옥 동안 치명 칸 상한을 그 값으로(같은 날 사용자 '5/0단위로 해줄 수 있나 70퍼?' — u70 = 최대 70% · 숫자 없는 u = 100)
+const m = /^s(\d+)c(\d+)a(\d+)d(\d+)(x)?(?:u(\d*))?(?:e(\d+))?(f)?(g)?$/.exec(MODE);
 if (!m) throw new Error('방식 = s<기동 %>c<치명>a<공격 %>d<치명 피해 %>[x][u][e<햇빛>][f][g]');
-const [S, C, A, D] = [+m[1], +m[2], +m[3], +m[4]], X = !!m[5], U = !!m[6], E = m[7] != null ? +m[7] : 2;
+const [S, C, A, D] = [+m[1], +m[2], +m[3], +m[4]], X = !!m[5], U = m[6] != null, UCAP = U ? (m[6] ? +m[6] : 100) : 0, E = m[7] != null ? +m[7] : 2;
 m.splice(6, 1);   // 아래 m[7] = f · m[8] = g 그대로 쓰게 u 자리를 뺌
 function patch(rel, pairs, tail = '') {
   const p = root + '/' + rel;
@@ -26,7 +27,7 @@ function patch(rel, pairs, tail = '') {
   writeFileSync(p, s + tail);
 }
 patch('v2/src/game/catalog.js', [
-  ["sp: { queen: { spd: 0.15, crit: 15 } }", `sp: { queen: { spd: ${S / 100}, crit: ${C}, atk: ${A / 100}, critDmg: ${D / 100}, force: ${X}, uncap: ${U} } }`],
+  ["sp: { queen: { spd: 0.15, crit: 15 } }", `sp: { queen: { spd: ${S / 100}, crit: ${C}, atk: ${A / 100}, critDmg: ${D / 100}, force: ${X}, uncap: ${UCAP} } }`],
   ["S('u_blade_1', '지옥전개', 'fire', 'u', 0, 2,", `S('u_blade_1', '지옥전개', 'fire', 'u', 0, ${E},`],
 ]);
 patch('v2/src/battle/status.js', [
@@ -38,7 +39,7 @@ patch('v2/src/battle/status.js', [
   patch('v2/src/battle/rules.js', [
     ...(hasCK ? [[OLD_CK, "const critK = tier === 'crit' ? (1 + ((u.pas && u.pas.critDmg) || 0)) * (1 + ((u.st && u.st.queen && u.st.queen.critDmg) || 0)) : 1;"]] : []),
     ...(X ? [["(a.forceCrit && tier !== 'miss')", "((a.forceCrit || (u.st && u.st.queen && u.st.queen.force)) && tier !== 'miss')"]] : []),
-    ...(U ? [["crit = Math.max(0, Math.min(RULES.critMax, crit));", "crit = Math.max(0, Math.min(att && att.st && att.st.queen && att.st.queen.uncap ? 100 : RULES.critMax, crit));"]] : []),
+    ...(U ? [["crit = Math.max(0, Math.min(RULES.critMax, crit));", "crit = Math.max(0, Math.min(att && att.st && att.st.queen && att.st.queen.uncap ? att.st.queen.uncap : RULES.critMax, crit));"]] : []),
   ]);
 }
 //   g 의 기동 몫 = 선공 0.3 + 기동 회피(규칙 430 — 사본 status.js 의 spdEva 가 있으면 기동 +100%당 받는 빗나감 +spdEva)를 받는 피해 몫으로 0.94 × spdEva ÷ 100
@@ -50,7 +51,7 @@ const QV = `
 function __queenV(u, q) {
   const cb = (u && u.crit) || 0, E = (c, d, cap = 50) => { c = Math.min(cap, Math.max(0, c)); return 0.06 + (82 - c) / 100 + c / 100 * ${CM} * (1 + d); };
   const E0 = E(cb, 0), cur = E(cb + 15, 0) / E0 - 1, d = q.critDmg || 0;
-  const E1 = (q.force ? 0.94 * ${CM} * (1 + d) : E(cb + (q.crit || 0), d, q.uncap ? 82 : 50)) * (1 + (q.atk || 0));
+  const E1 = (q.force ? 0.94 * ${CM} * (1 + d) : E(cb + (q.crit || 0), d, q.uncap ? Math.min(82, q.uncap) : 50)) * (1 + (q.atk || 0));
   return 0.3 + 0.94 * (E1 / E0 - 1 - cur) + ${SK} * ((q.spd || 0) - 0.15);
 }
 `;
@@ -58,4 +59,4 @@ patch('v2/src/battle/model.js', [
   ["return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);", m[8] ? "return 0.1 + dot + (q ? R * __queenV(u, q) * after(3) : 0);" : "return 0.1 + dot + (q ? R * (0.3 + (q.atk || 0) + 0.5 * (q.critDmg || 0)) * after(3) : 0);"],
   ...(m[7] ? [["const need = Math.max(0, ...u.kit.map(k => k.cost || 0));", "const need = Math.max(0, ...u.kit.filter(k => canUse(u, k, 99, foe)).map(k => k.cost || 0));"]] : []),
 ], m[8] ? QV : '');
-console.log(`사본 고침 끝 — 지옥의 여왕 = 기동 +${S}% · 치명 +${C} · 공격 +${A}% · 치명 피해 +${D}%${X ? ' · 확정 치명' : ''}${U ? ' · 치명 상한 풂' : ''} · 지옥전개 햇빛 ${E}${m[7] ? ' · 봇 광합성 값 고침' : ''}${m[8] ? ` · 봇 점수 = 기대 피해(기동 몫 ${SK})` : ''}`);
+console.log(`사본 고침 끝 — 지옥의 여왕 = 기동 +${S}% · 치명 +${C} · 공격 +${A}% · 치명 피해 +${D}%${X ? ' · 확정 치명' : ''}${U ? ` · 지옥 동안 치명 상한 ${UCAP}` : ''} · 지옥전개 햇빛 ${E}${m[7] ? ' · 봇 광합성 값 고침' : ''}${m[8] ? ` · 봇 점수 = 기대 피해(기동 몫 ${SK})` : ''}`);
