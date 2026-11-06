@@ -6,19 +6,24 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 const [root, MODE = 'atk40'] = process.argv.slice(2);
 //   queen<k> = 공격으로 바꾸지 않고 지옥의 여왕(기동 +15% · 치명 +15)만 k배 — 예: queen2 = 기동 +30% · 치명 +30
-const q = /^queen(\d+(?:\.\d+)?)$/.exec(MODE);
+const q = /^queen(\d+(?:\.\d+)?)(?:c(\d+))?$/.exec(MODE);   // queen2c0 = 여왕 2배 · 지옥전개 햇빛 0
 if (q) {
   const k = +q[1], cp0 = root + '/v2/src/game/catalog.js';
   let c0 = readFileSync(cp0, 'utf8');
   const a0 = "sp: { queen: { spd: 0.15, crit: 15 } }";
   if (!c0.includes(a0)) throw new Error('못 찾음: 지옥의 여왕 값');
   c0 = c0.replace(a0, `sp: { queen: { spd: ${+(0.15 * k).toFixed(3)}, crit: ${Math.round(15 * k)} } }`);
+  if (q[2] != null) {
+    const a1 = "S('u_blade_1', '지옥전개', 'fire', 'u', 0, 2,";
+    if (!c0.includes(a1)) throw new Error('못 찾음: 지옥전개 칸');
+    c0 = c0.replace(a1, `S('u_blade_1', '지옥전개', 'fire', 'u', 0, ${+q[2]},`);
+  }
   writeFileSync(cp0, c0);
   console.log('사본 고침 끝 — 지옥의 여왕 ×' + k);
   process.exit(0);
 }
 const m = /^atk(\d+)(?:c(\d+))?$/.exec(MODE);   // atk55c1 = 위력 55 · 햇빛 1
-if (!m) throw new Error('방식 = atk<위력>[c<햇빛>] · queen<배수>');
+if (!m) throw new Error('방식 = atk<위력>[c<햇빛>] · queen<배수>[c<햇빛>]');
 const P = +m[1], CST = m[2] != null ? +m[2] : 2;
 const cp = root + '/v2/src/game/catalog.js';
 let c = readFileSync(cp, 'utf8');
