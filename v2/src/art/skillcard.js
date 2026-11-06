@@ -427,7 +427,7 @@ function mechLines(sk) {
   if (sk.dragonLock) L.push(['용이 되면 늘 \'나중이면\' 쪽', B]);
   if (sk.ifDragon) L.push(['용이면 ' + dragonText(sk.ifDragon), B]);
   if (sk.dragonTry) L.push([`용 스택 0 ~ 4개 = 바로 용이 될 확률 ${sk.dragonTry.map(PCT).join(' · ')}% · 실패하면 스택 0 · 용이면 못 씀`, B]);
-  if (sk.harvest) L.push([`바로 앞 상대의 포자를 모두 거둠 — 하나당 체력 ${PCT(sk.harvest.per)}% 회복 · 상대에게 화상(포악이면 화상 대신 나에게 억셈)`, H]);
+  if (sk.harvest) L.push([`바로 앞 상대의 포자를 모두 거둠${sk.harvest.pop ? ` — 그 자리에서 터뜨려 피해 ${sk.harvest.pop}배` : ''} · 하나당 체력 ${PCT(sk.harvest.per)}% 회복 · 상대에게 화상(포악이면 화상 대신 나에게 억셈)`, H]);
   if (sk.toggle) L.push(['포악 ↔ 온순 켜고 끄기 — 포악이면 내 포자가 필 때 회복 대신 활력 · 포자수확은 억셈', B]);
   if (sk.warmShield) L.push(['이 막을 깨는 공격 → 때린 상대에게 화상 + 포자', X]);
   if (sk.summon === 'ember') L.push(['잠든 불씨를 부름 — 한 턴 나 대신 맞고, 깨어나면 턴 시작마다 불 공격 + 화상', A]);

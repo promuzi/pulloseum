@@ -633,7 +633,7 @@ export const battle = {
       else if (e.t === 'immune') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: `${e.name}에게는 ${ga((STATUS[e.id] || { name: e.id }).name)} 통하지 않는다`, tone: 'note' });
       else if (e.t === 'resist') out.push({ kind: 'fxnote', ms: 700, ev: e, side: e.to, msg: (RESIST_MSG[e.why] || RESIST_MSG.skip)(e.name), tone: 'buff' });
       else if (e.t === 'cure') out.push({ kind: 'cure', ms: 750, ev: e, side: e.to, msg: e.why === 'water' ? `물에 ${e.name}의 화상이 꺼졌다!` : `불에 ${e.name}의 ${e.ids.slice(0, 2).map(k => CURE_FIRE[k] || k).join(' · ')}!`, tone: 'note' });
-      else if (e.t === 'bloom') out.push({ kind: 'bloom', ms: 900, ev: e, side: e.who, msg: e.k > 1 ? `${e.name}의 포자 ${e.k}개가 피어났다!` : `${e.name}의 포자가 피어났다!`, tone: STATUS.spore.col });
+      else if (e.t === 'bloom') out.push({ kind: 'bloom', ms: 900, ev: e, side: e.who, msg: e.harvest ? (e.k > 1 ? `${e.name}의 포자 ${e.k}개를 거둬 한꺼번에 터뜨렸다!` : `${e.name}의 포자를 거둬 터뜨렸다!`) : e.k > 1 ? `${e.name}의 포자 ${e.k}개가 피어났다!` : `${e.name}의 포자가 피어났다!`, tone: STATUS.spore.col });
       else if (e.t === 'grow') out.push({ kind: 'expire', ms: 0, ev: e, side: e.who });
       else if (e.t === 'skip') out.push({ kind: 'skipT', ms: 900, ev: e, side: e.who, msg: `${ga(e.name)} ${SKIP_WHY[e.src] || ''} 움직일 수 없다!`, tone: 'skip' });
       else if (e.t === 'tick') { const D = (e.hell && STATUS[e.blue ? 'blueBurn' : 'inferno']) || STATUS[e.id] || { name: e.id }; out.push({ kind: 'tick', ms: 750, ev: e, side: e.who, msg: `${ga(e.name)} ${ro(D.name)} 아파한다!`, tone: D.col || '#ff8a8a' }); }   // 지옥 화상(e.hell) = '지옥' · 불 속성은 푸른 화상(파란 글자)

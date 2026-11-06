@@ -326,11 +326,22 @@ export function hexAct(u, foe, a, ctx) {
     if (all && h.id !== 'gale') for (const z of all) apply(z, h.id, h.n || 1, { ...ctx, by: u }, h);
     else apply(h.id === 'gale' || !sum ? foe : sum, h.id, h.n || 1, { ...ctx, by: u }, h);
   }
-  if (a.harvest) {   // 엠버캡 포자수확(2026-10-31 사용자): 바로 앞 상대에게 붙은 포자를 전부 거둬 개수만큼 회복 + 그 상대에게 화상 · 포악이면 회복 + 억셈(거둔 포자는 안 핌)
+  if (a.harvest) {   // 엠버캡 포자수확(2026-10-31 사용자): 바로 앞 상대에게 붙은 포자를 전부 거둬 개수만큼 회복 + 그 상대에게 화상 · 포악이면 회복 + 억셈
+    //  2026-11-06 사용자 '3배로 하자'(약한 기술 9번 · 상한 없음): 거둔 포자를 그 자리에서 터뜨림 — 피해 = 포자마다 핀 피해 × pop · 내가 건 포자면 타고남(회복 · 포악이면 활력)도
     const sp = foe.eff && foe.eff.spore, n = sp ? sp.n : 0;
+    if (n && a.harvest.pop) {
+      let d = 0;
+      for (let i = 0; i < n; i++) d += sporeDmg(foe, (sp.p && sp.p[i]) || FX.spore.power, (sp.a && sp.a[i]) || 50, sp.el ? sp.el[i] : null);
+      d = Math.round(d * a.harvest.pop);
+      foe.hp = Math.max(0, foe.hp - d);
+      ctx.ev.push({ t: 'bloom', who: foe.id, name: foe.name, dmg: d, k: n, harvest: true, list: listOf(foe) });
+      noteFall(foe, ctx.ev);   // 터뜨린 피해로 쓰러지면 판이 끝남
+      const mine = (sp.who || []).filter(w => w != null && (w === u.id || w === u.slot)).length;   // 포자 주인 = 건 식물(3:3은 자리 번호로 적힘)
+      if (mine) sporeBloomed(u, mine, ctx.turn, ctx.ev);
+    }
     if (n) { delete foe.eff.spore; ctx.ev.push({ t: 'expire', who: foe.id, ids: ['spore'], list: listOf(foe) }); }
-    if (n && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * a.harvest.per * n * healK(u))); ctx.ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
-    if (u.mode === 'rage') selfBuff(u, 'defUp', { turn: ctx.turn, ev: ctx.ev }); else apply(foe, 'burn', 1, { ...ctx, by: u });
+    if (n && u.hp > 0) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * a.harvest.per * n * healK(u))); if (u.hp > before) ctx.ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }   // 체력이 가득이면 '+0'을 띄우지 않음
+    if (u.mode === 'rage') selfBuff(u, 'defUp', { turn: ctx.turn, ev: ctx.ev }); else if (foe.hp > 0) apply(foe, 'burn', 1, { ...ctx, by: u });
   }
   if (a.caveAdd) caveAddAct(u, foe, a, ctx.ev);
   if (a.burst) burstAct(u, foe, ctx);

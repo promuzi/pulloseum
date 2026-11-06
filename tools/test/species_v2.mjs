@@ -3,8 +3,8 @@
 import { makeUnit } from '../../v2/src/battle/model.js';
 import { protoStats } from '../../v2/src/battle/team.js';
 import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch, CAVE } from '../../v2/src/battle/status.js';
-import { orbInit, orbStart } from '../../v2/src/battle/devices.js';
+import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch, CAVE, FX } from '../../v2/src/battle/status.js';
+import { orbInit, orbStart, sporeDmg } from '../../v2/src/battle/devices.js';
 import { BASICS } from '../../v2/src/battle/model.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
 import { SKILLS, SPECIES_V2 } from '../../v2/src/game/catalog.js';
@@ -616,9 +616,17 @@ ok(SPECIES_V2.has('ember_cap'), '엠버캡 v2 켜짐');
   turn(e2, f2, SKILLS.u_emcap_2, { id: 'w', name: '살짝', act: 'attack', power: 3, cost: 0, cats: ['attack'], el: null }, 1, () => 0.5);
   ok(!has(f2, 'burn') && !has(f2, 'spore'), '막이 안 깨지면 아무 일 없음');
   const e3 = mk('me', 'ember_cap', { stage: 1 }), f3 = mk('foe', 'aqua');
-  f3.eff.spore = { n: 2, left: [2, 3], who: ['me', 'me'], v: [0.08, 0.08] }; e3.hp = Math.round(e3.max / 2); const h3 = e3.hp;
-  turn(e3, f3, SKILLS.u_emcap_2b, OTHER, 1);
+  f3.eff.spore = { n: 2, left: [2, 3], who: ['me', 'me'], v: [0.08, 0.08] }; e3.hp = Math.round(e3.max / 2); const h3 = e3.hp, fh3 = f3.hp;
+  const ev3 = turn(e3, f3, SKILLS.u_emcap_2b, OTHER, 1);
   ok(!has(f3, 'spore') && e3.hp > h3 && has(f3, 'burn'), '포자수확 = 포자를 전부 거둬 회복 + 화상');
+  // 2026-11-06 사용자 '3배로 하자': 거둔 포자를 그 자리에서 터뜨림(핀 피해 × 3 · 상한 없음) · 내 포자면 타고남 회복도(7%씩 + 6% · 3%)
+  const bl3 = ev3.find(x => x.t === 'bloom' && x.harvest), one = sporeDmg(f3, FX.spore.power, 50, null);
+  ok(SKILLS.u_emcap_2b.harvest.pop === 3 && bl3 && bl3.k === 2 && bl3.dmg === Math.round(one * 2 * 3) && f3.hp < fh3, '포자수확 = 거둔 포자 둘을 3배로 터뜨림');
+  ok(e3.hp - h3 >= Math.round(e3.max * 0.2), '회복 = 거둔 포자 하나당 7% + 터진 내 포자 타고남(6% + 3%)');
+  const e4 = mk('me', 'ember_cap', { stage: 1 }), f4 = mk('foe', 'aqua');
+  f4.eff.spore = { n: 1, left: [3], who: ['me'], v: [0.08] }; f4.hp = 5;
+  const ev4 = turn(e4, f4, SKILLS.u_emcap_2b, OTHER, 1);
+  ok(f4.hp === 0 && ev4.some(x => x.t === 'faint' && x.who === 'foe') && !has(f4, 'burn'), '터뜨린 피해로 쓰러지면 쓰러짐(판이 끝남) · 화상은 안 걸림');
 }
 {
   const e = mk('me', 'ember_cap', { stage: 2 }), f = mk('foe', 'aqua');

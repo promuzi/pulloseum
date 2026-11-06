@@ -306,7 +306,11 @@ function aiScore(u, foe, s, C) {
     if (s.settle) { const k = HARM_IDS.filter(x => has(foe, x)).length; return k ? 0.3 + 0.45 * Math.min(5, k) : 0.02; }   // 청산 = 상대 상태이상 종류가 많을 때
     if (s.cycle) { const up = z => STAT_UPS.filter(x => has(z, x)).length, bad = z => HARM_IDS.filter(x => has(z, x)).length + STAT_DOWNS.filter(x => has(z, x)).length, v = up(foe) + bad(u) - up(u) - bad(foe); return v > 0 ? R * (0.4 + 0.3 * v) : 0.03; }   // 윤회 = 지우면 내가 이득일 때
     if (s.harmony) return 0.2 * R;
-    if (s.harvest) { const n = (foe.eff && foe.eff.spore && foe.eff.spore.n) || 0; return n ? healScore(u, s.harvest.per * n) + 0.15 * n + (u.mode === 'rage' ? 0.2 * R : 0.25) : 0.1; }   // 엠버캡 포자수확 = 상대에게 포자가 많고 내가 다쳤을 때
+    if (s.harvest) {   // 엠버캡 포자수확 = 거둔 포자를 지금 터뜨린 피해(× pop — 어차피 필 몫 절반은 빼고) + 회복 · 포자가 없으면 거의 0
+      const sp = foe.eff && foe.eff.spore, n = sp ? sp.n : 0, k = s.harvest.pop || 0;
+      let D = 0; if (k) for (let i = 0; i < n; i++) D += sporeDmg(foe, (sp.p && sp.p[i]) || 35, (sp.a && sp.a[i]) || 50, sp.el ? sp.el[i] : null);
+      return n ? (k ? hpPart(D * (k - 0.5), foe.hp) : 0.15 * n) + healScore(u, s.harvest.per * n) + (u.mode === 'rage' ? 0.2 * R : 0.25) : 0.1;
+    }   // 엠버캡 포자수확 = 상대에게 포자가 많고 내가 다쳤을 때
     if (s.miasma) return R * (0.6 + 0.2 * after(3));   // 독안개(켜져 있으면 canUse 가 막음) = 세 턴 독
     if (s.burst) return 0.25 + 0.2 * ((u.summons || []).filter(x => x.hp > 0).length);
     if (s.inferno) {   // 지옥전개 = 상대가 화상이 아니면 3턴 화상 피해 + 지옥의 여왕(블레이드바인)이면 그동안 기동 · 치명

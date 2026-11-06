@@ -1,0 +1,6 @@
+(node:18476) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/logic.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+엠버캡: 손패 60개 · 평균 승률 34.6% · 포자수확 +14.9 · 포자 바람 +6.7 · 화염구 +4.7 · 잠 포자 +3.2 · 포자 뿌리기 +1.6 · 따끈 이불 +1.5 · 불티나네 -1.2 · 포자 퍼프 -1.6 · 회피 자세 -1.8 · 포자 만개 -2.0 · 불씨 튕기기 -2.1 · 버섯 구름 -2.9 · 광합성 -4.4 · 이끼 덫 -5.1 · 평타 -5.6 · 불타오르기 -6.1 (4초)
+썼어요: v2/src/game/botdeck_w.js
