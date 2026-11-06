@@ -5,7 +5,7 @@
 
 import { SKILL_WEAPON } from './matchup.js';
 import { dynAct, payAct, afterAct, endureHp, react, takenK, reflectAdd, fieldEl, fieldHits, fieldStart, setField, setCharge, takeCharge, hexAct, resoAfter, evStackAdd, evCounter, firstUp, caveSync, caveAddAct, summonStart, orbStart, orbTrapBurst, bellSync, echoK, echoAct, thornBurst, miasmaStart, fruitOnUse, queenSync, liveSkill } from './devices.js';
-import { ORB, effSpd, evadeK, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX, statSum } from './status.js';
+import { ORB, effSpd, evadeK, spdEvaOf, atkK, defK, missAddOf, critAddOf, mustSkip, consumeSkip, blockedRest, endAct, shockRoll, onHit, apply, selfBuff, healK, has, listOf, noteFall, pasAtkK, pasDmgK, FX, statSum } from './status.js';
 
 // ── 씨앗 난수(mulberry32) — 전투 계산은 이것만 쓴다 ──
 export function makeRng(seed) {
@@ -58,8 +58,9 @@ export function initiativeChance(spdA, spdB, bonusA = 0) {
 
 // ── 명중 네 단 표(한 번 굴림 — WoW 공격표·메카 판정 막대) ──
 // 순서 [빗나감 | 스침 | 정타 | 치명], 합 100. 회피 자세가 옮기는 칸은 치명에서 먼저, 모자라면 정타에서 가져온다.
+// 맞는 쪽 기동이 버프 · 디버프로 오르내린 만큼 빗나감 ±(status.spdEvaOf — 2026-11-06 기동 회피)
 export function hitTable(att, def, o = {}) {
-  let miss = RULES.baseMiss + (def.eva || 0) - (att.acc || 0) + (o.missAdd || 0);
+  let miss = RULES.baseMiss + (def.eva || 0) + spdEvaOf(def) - (att.acc || 0) + (o.missAdd || 0);
   let graze = RULES.baseGraze + (o.grazeAdd || 0);
   let crit = (att.crit || 0) + (o.critAdd || 0) + (o.aim || 0);
   if (o.critK != null) crit = Math.floor(crit * o.critK);

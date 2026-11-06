@@ -69,7 +69,8 @@ export const FX = {
   stealth: { buff: true, miss: 0.95, ambush: 1.5 },          // 은신(분신 = 연출만 — 2026-10-19 통합): 기술을 쓸 때 시작 · 광역 아닌 공격 95% 빗나감 · 맞거나 · 내가 공격하거나 · 쉬면 풀림 · 다 피하면 이어 공격(link · 기습 ×1.5)
 };
 // evadeLo/Hi·evadePow = 회피 자세 효과 = (내 기동 ÷ 상대 기동)^0.5, 0.7~1.3배(상대보다 빠르면 잘 피하고 느리면 덜 피함)
-export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2 };
+// spdEva = 기동 배율이 오르내린 만큼 맞을 때 빗나감 ±(배율 − 1) × 30(2026-11-06 사용자 '기동성 오르면 회피 안해도 빗나감 확률 증가하는 거 아님?' → '규칙 바꾸기' · 30은 클로드 제안값)
+export const RULES_FX = { decayAfter: 2, wetStackAdd: 1, evadePow: 0.5, evadeLo: 0.7, evadeHi: 1.3, statFloor: 0.2, spdEva: 30 };
 const STATS = Object.keys(FX).filter(k => FX[k].stat);   // 능력치 겹 열 개
 const UPS = STATS.filter(k => FX[k].sign > 0), DOWNS = STATS.filter(k => FX[k].sign < 0);
 const TIMED = ['burn', 'bleed', 'shock', 'wet', 'leech', 'regen', 'dark', 'seal', 'gale', 'taunt', 'root', 'fear', 'will', 'morning', 'night', 'bounce', 'miasma', 'inferno'];
@@ -104,7 +105,7 @@ const statK = (u, stat) => Math.max(RULES_FX.statFloor, 1 + statSum(u, stat));  
 export const critAddOf = u => statSum(u, 'crit') + ((u && u.st && u.st.queen && u.st.queen.crit) || 0);   // + 지옥의 여왕(블레이드바인 — 지옥 동안 치명 칸 · devices.queenSync)
 
 // ── 다른 계산이 읽는 값 ──
-// 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 가속 · 둔화) → 선공 확률과 회피 자세에 같이 들어감
+// 기동성 배율: 기동을 바꾸는 효과는 모두 여기로(젖음 · 빙결 · 가속 · 둔화) → 선공 확률 · 회피 자세 · 맞을 때 빗나감(spdEvaOf)에 같이 들어감
 export function mobK(u) {
   let k = ((u && u.modeK && u.modeK.spd) || 1) * statK(u, 'spd');   // 모드(공통 장치 D9) 기동 배율
   if (u && u.st && u.st.queen) k *= 1 + (u.st.queen.spd || 0);   // 지옥의 여왕(블레이드바인 — 지옥 동안 기동 ↑)
@@ -114,6 +115,8 @@ export function mobK(u) {
   return k;
 }
 export const effSpd = u => (u.spd || 1) * mobK(u);
+// 기동 회피(2026-11-06): 회피 자세 없이도 버프 · 디버프로 기동이 오른 만큼 상대 공격이 잘 빗나가고, 내린 만큼 잘 맞음(가속 한 겹 +6 · 젖음 −6) — 종마다 원래 기동 차이는 선공에만
+export const spdEvaOf = u => (u ? Math.round(RULES_FX.spdEva * (mobK(u) - 1)) : 0);
 // 회피 자세 효과: 상대보다 빠르면 잘 피하고, 느리면(원래 느린 식물이든 젖음·빙결로 느려졌든) 덜 피함
 export function evadeK(def, att) {
   const r = effSpd(def) / Math.max(1, att ? effSpd(att) : effSpd(def));
