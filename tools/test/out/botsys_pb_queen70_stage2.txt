@@ -1,0 +1,6 @@
+(node:38136) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/logic.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+싹둑마마: 기준 63.6% → 72.3% · ..력일섬!(쓸 수 있으면) +3.8 · 지옥전개(상대 inferno 없음) +4 · 칼날 잎(쓸 수 있으면) +0.9 (11초)
+썼어요: v2/src/battle/playbook.js

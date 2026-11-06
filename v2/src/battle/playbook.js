@@ -129,7 +129,7 @@ export const PLAYBOOK_BY = {
       {"id":"u_jelly_1","when":{"k":"foebig","n":70},"b":0.6,"d":0.9},   // 말랑잉 — 상대가 위력 70 넘게 칠 햇빛
     ],
     blade_vine: [
-      {"id":"u_blade_2","when":{"k":"always"},"b":0.6,"d":3.4},   // 칼날 잎 — 쓸 수 있으면
+      {"id":"u_blade_2","when":{"k":"always"},"b":0.6,"d":1.9},   // 칼날 잎 — 쓸 수 있으면
     ],
     toxi_cactus: [
       {"id":"u_toxi_2","when":{"k":"always"},"b":0.6,"d":1.7},   // 신경독 — 쓸 수 있으면
@@ -237,8 +237,9 @@ export const PLAYBOOK_BY = {
       {"id":"u_fang_1","when":{"k":"always"},"b":0.6,"d":3.6},   // 깨물기 — 쓸 수 있으면
     ],
     blade_vine: [
-      {"id":"u_blade_2","when":{"k":"always"},"b":0.6,"d":6.8},   // 칼날 잎 — 쓸 수 있으면
-      {"id":"u_blade_3b","when":{"k":"always"},"b":0.6,"d":1.9},   // ..력일섬! — 쓸 수 있으면
+      {"id":"u_blade_3b","when":{"k":"always"},"b":0.6,"d":3.8},   // ..력일섬! — 쓸 수 있으면
+      {"id":"u_blade_1","when":{"k":"nofx","r":"inferno"},"b":0.6,"d":4},   // 지옥전개 — 상대 inferno 없음
+      {"id":"u_blade_2","when":{"k":"always"},"b":0.6,"d":0.9},   // 칼날 잎 — 쓸 수 있으면
     ],
     toxi_cactus: [
       {"id":"u_toxi_3","when":{"k":"always"},"b":0.6,"d":3.4},   // 만천화우 — 쓸 수 있으면

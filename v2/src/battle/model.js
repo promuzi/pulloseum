@@ -168,6 +168,12 @@ const hitChance = (u, foe, s) => {
   if (!s.area && has(foe, 'stealth')) p *= 0.05;   // 은신(분신 = 연출만) = 광역 아닌 공격 95% 빗나감
   return p;
 };
+// 지옥의 여왕(싹둑마마 — 지옥 동안 기동 · 치명타 확률 ↑) 값 = 한 타 기대 피해가 오르는 몫 + 기동 몫(선공 · 기동 회피) — 옛 여왕(기동 +15% · 치명 +15) = 0.3에 맞춤(2026-11-06 지옥 동안 치명타 확률 70% · 사본 whatif_hellbuff g 와 같은 셈)
+const queenVal = (u, q) => {
+  const E = (c, cap) => { c = Math.min(cap, 82, Math.max(0, c)); return 0.06 + (82 - c) / 100 + c / 100 * RULES.tierMult.crit; };
+  const cb = u.crit || 0, E0 = E(cb, RULES.critMax), old = E(cb + 15, RULES.critMax) / E0 - 1, now = E(cb + (q.crit || 0), q.critMax || RULES.critMax) / E0 - 1;
+  return 0.3 + 0.94 * (now - old) + (0.3 + 0.94 * RULES_FX.spdEva / 100) * ((q.spd || 0) - 0.15);
+};
 // 덤 효과가 걸릴 확률 = 빗나가지만 않으면(스침도 걸림)
 const landChance = (u, foe, s) => { const t = hitTable(u, foe, { area: !!s.area }); let p = 1 - t.miss / 100; if (!s.area && has(foe, 'stealth')) p *= 0.05; return Math.max(0, p); };
 // 머리 손잡이(2026-11-04 — 기능마다 켜고 끄며 시뮬레이션으로 고름: node tools/test/botsys.mjs brain --set 이름=값,…) — 기본값 = 그 재기에서 이긴 조합
@@ -315,7 +321,7 @@ function aiScore(u, foe, s, C) {
     if (s.burst) return 0.25 + 0.2 * ((u.summons || []).filter(x => x.hp > 0).length);
     if (s.inferno) {   // 지옥전개 = 상대가 화상이 아니면 3턴 화상 피해 + 지옥의 여왕(블레이드바인)이면 그동안 기동 · 치명
       const dot = has(foe, 'burn') ? 0 : 2.5 * FX.burn.dot * Math.min(3, H + 1) * foe.max / Math.max(1, foe.hp), q = (SPECIES[u.key] || {}).queen;
-      return 0.1 + dot + (q ? R * 0.3 * after(3) : 0);
+      return 0.1 + dot + (q ? R * queenVal(u, q) * after(3) : 0);
     }
     if (s.taste) { const n = (u.st && u.st.meal && u.st.meal.n) || 0, tz = s.taste; return [['atkDown', 1, tz.atk || 1], ['defDown', 2, tz.def || 1], ['seal', 3, 1]].reduce((t, [id, at, c]) => t + (n >= at ? fxVal(u, foe, { id, n: c }, C) : 0), 0.02); }   // 맛평가 = 먹은 준비 수만큼 쇠약 · 시듦 · 봉인(쇠약 · 시듦 겹 수)
     if (!BRAIN.fx) { const fresh = (s.hex || []).filter(h => !has(foe, h.id)).length; return fresh ? 0.55 + 0.35 * fresh : 0.15; }   // 옛 값

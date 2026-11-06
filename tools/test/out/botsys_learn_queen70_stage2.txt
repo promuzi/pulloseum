@@ -1,0 +1,6 @@
+(node:72556) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/logic.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+싹둑마마: 손패 60개 · 평균 승률 52.1% · 칼날 잎 +9.2 · 지옥전개 +4.4 · ..력일섬! +3.4 · 화염 폭풍 +3.1 · 무릎 꿇어라 +2.0 · 꽃향기 +1.6 · 화염구 +1.6 · 치명적 무희 +1.0 · 불씨 튕기기 +0.5 · 방어태세 -1.1 · 불타오르기 -1.5 · 광합성 -2.2 · 꽃잎 춤 -2.3 · 평타 -2.7 · 피의 축제 -3.5 · 불기둥 -5.2 · 용암 분출 -5.8 (4초)
+썼어요: v2/src/game/botdeck_w.js

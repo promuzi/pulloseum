@@ -65,7 +65,9 @@ export function hitTable(att, def, o = {}) {
   let graze = RULES.baseGraze + (o.grazeAdd || 0);
   let crit = (att.crit || 0) + (o.critAdd || 0) + (o.aim || 0);
   if (o.critK != null) crit = Math.floor(crit * o.critK);
-  miss = Math.max(0, Math.min(RULES.missMax, miss)); crit = Math.max(0, Math.min(RULES.critMax, crit));
+  // 치명 상한 = 50 · 지옥의 여왕(싹둑마마)이 지옥 동안이면 그 상한(70 — 2026-11-06)
+  const critCap = (att.st && att.st.queen && att.st.queen.critMax) || RULES.critMax;
+  miss = Math.max(0, Math.min(RULES.missMax, miss)); crit = Math.max(0, Math.min(critCap, crit));
   if (o.aim) miss = 0;   // 조준(2026-10-23 재정의) = 빗나감 칸 없음 · 치명 칸 증가 · 회피가 옮기는 칸은 스침으로(아래)
   const sh = o.shift;   // 회피 자세: { miss, graze, critToGraze }
   if (sh) {

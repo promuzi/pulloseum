@@ -14,7 +14,7 @@ import { rrect } from './ui.js';
 import { hasFrame, drawFrameArt, frameFill } from './frames.js';
 import { STATUS, STATUS_DESC, BUFF_LOOK, fxChip, fxChipW, hexMix } from './statusLook.js';
 import { CAT_ICON, CAT_NAME } from '../data/mock.js';
-import { TIER_NAME, SKILLS, FORMS } from '../game/catalog.js';
+import { TIER_NAME, SKILLS, FORMS, SPECIES, uniquesOf } from '../game/catalog.js';
 import { FX, FRUIT, CAVE } from '../battle/status.js';
 import { RULES, guardDefMult } from '../battle/rules.js';
 
@@ -449,6 +449,9 @@ function mechLines(sk) {
   if (sk.settle) L.push([`상대 해로운 상태이상을 종류째 지우고 종류 하나당 최대 체력 ${PCT(sk.settle.per)}% 피해(최대 ${sk.settle.cap}종)`, X]);
   if (sk.infuse) L.push([`다음 칼 기술 ${sk.infuse.n}번이 ${(ELEMENT[sk.infuse.el] || {}).name || sk.infuse.el} 속성으로`, A]);
   if (sk.inject) L.push([`최대 체력 +${PCT(sk.inject.hp)}%(${sk.inject.turns}턴) · 나에게 활력 · 억셈 · 가속 · 내 독 거는 기술이 다음 턴부터 ${sk.inject.seal}턴 봉인`, H]);
+  // 지옥을 여는 식물이 타고남 지옥의 여왕이면 그 버프도 카드에(2026-11-06 — 전엔 화면 어디에도 없었음)
+  const queen = sk.inferno && Object.keys(SPECIES).map(k => SPECIES[k].queen && [0, 1, 2].some(st => uniquesOf(k, st).includes(sk.id)) && SPECIES[k].queen).find(Boolean);
+  if (queen) L.push([`지옥 동안 내 치명타 확률 ${queen.critMax || RULES.critMax}% · 기동 +${PCT(queen.spd)}%(지옥의 여왕)`, A]);
   if (sk.inferno && sk.inferno.cd) L.push([`끝나고 ${sk.inferno.cd}턴 뒤에 다시 씀`, X]);
   if (sk.fruitCondense) L.push(['햇빛 하나가 열매로 · 햇빛 +1', A]);
   if (sk.fruitUse === 'eat') L.push([`열매를 모두 먹음 — 하나당 체력 ${PCT(FRUIT.eat)}% 회복 · 상태이상 한 종류씩 지움 · 먹은 열매는 햇빛으로 돌아옴 · 열매가 없으면 못 씀`, H]);

@@ -2,8 +2,8 @@
 //   node tools/test/species_v2.mjs
 import { makeUnit } from '../../v2/src/battle/model.js';
 import { protoStats } from '../../v2/src/battle/team.js';
-import { resolveTurn, makeRng } from '../../v2/src/battle/rules.js';
-import { endTurn, expire, canUse, has, missAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch, CAVE, FX } from '../../v2/src/battle/status.js';
+import { resolveTurn, makeRng, hitTable } from '../../v2/src/battle/rules.js';
+import { endTurn, expire, canUse, has, missAddOf, critAddOf, atkK, effSpd, payEnergy, moveEnv, clearOnSwitch, CAVE, FX } from '../../v2/src/battle/status.js';
 import { orbInit, orbStart, sporeDmg } from '../../v2/src/battle/devices.js';
 import { BASICS } from '../../v2/src/battle/model.js';
 import { SPECIES } from '../../v2/src/data/mock.js';
@@ -720,6 +720,8 @@ ok(SPECIES_V2.has('blade_vine'), '블레이드바인 v2 켜짐');
   turn(b, f, SKILLS.u_blade_1, OTHER, 1);
   turn(b, f, OTHER, OTHER, 2);
   ok(b.st.queen && effSpd(b) > s0, '지옥 동안 여왕 = 기동 ↑');
+  ok(hitTable(b, f, { critAdd: critAddOf(b) }).crit === 70 && hitTable(b, f, { critAdd: critAddOf(b) + 25 }).crit === 70, '지옥 동안 여왕 = 치명타 확률 70%(치명 +65 · 상한 70 — 기술 치명 칸을 더해도 70)');
+  ok(SKILLS.u_blade_1.cost === 1, '지옥전개 = 햇빛 1');
   turn(b, f, OTHER, OTHER, 3); turn(b, f, OTHER, OTHER, 4);
   ok(!b.st.queen && Math.abs(effSpd(b) - s0) < 1e-9, '지옥이 끝나면 여왕도 꺼짐');
 }
