@@ -9,6 +9,7 @@
 //   atk55pop  = 불 공격 위력 55 + 맞히면 거둔 포자를 바로 터뜨림 + 하나당 회복 7% + 화상
 //   pop2x     = 바로 터뜨리되 피해 두 배 + 하나당 회복 7% + 화상
 //   pop3x     = 바로 터뜨리되 피해 세 배 + 하나당 회복 7% + 화상
+//   pop25x    = 바로 터뜨리되 피해 2.5배 + 하나당 회복 7% + 화상
 //   pop3x2    = 세 배로 터뜨리되 많아야 둘(남는 포자는 그대로) + 터뜨린 하나당 회복 7% + 화상
 //   popsun    = 바로 터뜨림 + 포자 하나당 햇빛 +1 + 하나당 회복 7% + 화상
 //  쓰는 법: git archive HEAD v2 | tar -x -C <사본> → tools/test/weaklab.mjs 를 <사본>/tools/test/ 에 복사 → node tools/test/whatif_harvest.mjs <사본> <방식>
@@ -26,9 +27,9 @@ const b = [
   "    let sp = foe.eff && foe.eff.spore, n = sp ? sp.n : 0; const MODE = '" + MODE + "';",
   "    if (MODE === 'pop3x2' && n > 2) { const rest = {}; for (const q of ['left', 'who', 'p', 'a', 'el']) if (sp[q]) { rest[q] = sp[q].slice(2); sp = { ...sp, [q]: sp[q].slice(0, 2) }; } foe.eff.spore = { ...foe.eff.spore, ...rest, n: n - 2 }; n = 2; sp = { ...sp, n: 2, _keep: true }; }",
   "    if (n && MODE !== 'keep') {",
-  "      if (MODE === 'pop' || MODE === 'popnoheal' || MODE === 'pop2x' || MODE === 'pop3x' || MODE === 'pop3x2' || MODE === 'popsun') {",
+  "      if (MODE === 'pop' || MODE === 'popnoheal' || MODE === 'pop2x' || MODE === 'pop3x' || MODE === 'pop3x2' || MODE === 'pop25x' || MODE === 'popsun') {",
   "        let d = 0; for (let i = 0; i < n; i++) d += sporeDmg(foe, (sp.p && sp.p[i]) || FX.spore.power, (sp.a && sp.a[i]) || 50, sp.el ? sp.el[i] : null);",
-  "        if (MODE === 'pop2x') d *= 2; if (MODE === 'pop3x' || MODE === 'pop3x2') d *= 3;",
+  "        if (MODE === 'pop2x') d *= 2; if (MODE === 'pop3x' || MODE === 'pop3x2') d *= 3; if (MODE === 'pop25x') d *= 2.5;",
   "        if (MODE === 'popsun') { const e0 = u.energy; u.energy = Math.min(u.energyMax || 8, e0 + n); ctx.ev.push({ t: 'sun', who: u.id, id: a.id, gain: u.energy - e0 }); }",
   "        foe.hp = Math.max(0, foe.hp - d); ctx.ev.push({ t: 'bloom', who: foe.id, name: foe.name, dmg: d, k: n, list: listOf(foe) }); noteFall(foe, ctx.ev);",
   "        const mine = (sp.who || []).filter(w => w === u.id).length; if (mine) sporeBloomed(u, mine, ctx.turn, ctx.ev);",
