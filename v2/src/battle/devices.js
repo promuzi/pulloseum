@@ -380,18 +380,18 @@ export function hexAct(u, foe, a, ctx) {
   }
 }
 // 게일캑터 공명(SPECIES.reso): 방해 디버프(count)가 들어간 기술 한 번 = +1(둘이 들어가도 1) · 상대 쪽 강풍 · 폭풍이 부는 턴 끝 = +1 ·
-//  at 이 되면 무속성 확정 치명 추가 공격(위력 power — 약하게) 뒤 0부터. 치명 확률 감소는 안 통하고 치명 방어(그 턴 방어태세)엔 막혀 정타
-export function resoAfter(u, foe, ev, n0, T, guarded) {
+//  at 이 되면 무속성 추가 공격(위력 power · 늘 맞음 · 정타) 뒤 0부터 — 2026-11-07 사용자 '치명을 빼도 되지 않나' → 'ㄱ으로 하자'(전엔 확정 치명 · 치명 방어엔 정타)
+export function resoAfter(u, foe, ev, n0, T) {
   const R = SP(u).reso;
   if (!R || u.hp <= 0 || !foe || foe.hp <= 0) return;
-  for (let i = n0; i < ev.length; i++) { const e = ev[i]; if (e.t === 'fx' && e.who === u.id && e.to !== u.id && !e.add && R.count.includes(e.id)) return resoAdd(u, foe, T, ev, guarded); }
+  for (let i = n0; i < ev.length; i++) { const e = ev[i]; if (e.t === 'fx' && e.who === u.id && e.to !== u.id && !e.add && R.count.includes(e.id)) return resoAdd(u, foe, T, ev); }
 }
-function resoAdd(u, foe, T, ev, guarded) {
+function resoAdd(u, foe, T, ev) {
   const R = SP(u).reso, r = resOf(u);
   r[R.k] = (r[R.k] || 0) + 1;
   if (r[R.k] < R.at) { ev.push({ t: 'res', who: u.id, k: R.k, n: r[R.k] }); return; }
   r[R.k] = 0; ev.push({ t: 'res', who: u.id, k: R.k, n: 0 });
-  sideHit(u, foe, R.power, guarded ? 'hit' : 'crit', ev, { from: 'reso', label: '공명' });
+  sideHit(u, foe, R.power, 'hit', ev, { from: 'reso', label: '공명' });
 }
 // 패시브 추가 공격(무속성 · 결과표 없음): 앞 소환수부터 · 보호막이 먼저 막음 → 맞은 대상
 function sideHit(u, foe, power, tier, ev, tag, em = 1) {   // em = 속성 배율(엠버캡 불씨 소환수 — 불)
@@ -435,7 +435,7 @@ export function galeTurn(u, opp, turn, ev) {
   const og = opp && opp.hp > 0 && opp.eff && opp.eff.gale;
   if (!og || u.hp <= 0) return;
   if ((og.add || []).includes('heal') && u.hp < u.max) { const before = u.hp; u.hp = Math.min(u.max, u.hp + Math.round(u.max * FX.regen.heal * healK(u))); ev.push({ t: 'regen', who: u.id, name: u.name, heal: u.hp - before, list: listOf(u) }); }
-  if (SP(u).reso) resoAdd(u, opp, turn, ev, !!(opp.st && opp.st.guardT === turn));
+  if (SP(u).reso) resoAdd(u, opp, turn, ev);
 }
 
 // 스톤캡 동굴(SPECIES.cave): 앞에 나와 있는 동안 상대 쪽 앞 식물에 동굴(환경 — 상대가 교체해도 새로 나온 식물에게) · 스톤캡이 나가거나 쓰러지면 설치물째 걷힘

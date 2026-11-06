@@ -21,7 +21,7 @@ export const PLAYBOOK_BY = {
       {"id":"u_gaia_1","when":{"k":"nofx","r":"taunt"},"b":0.6,"d":0.6},   // 돌 주먹 — 상대 taunt 없음
     ],
     cactus_wind: [
-      {"id":"u_gale_1","when":{"k":"always"},"b":0.6,"d":4.9},   // 시작의 공명 — 쓸 수 있으면
+      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":2.7},   // 시작의 공명 — 상대 gale 없음
     ],
     vine_wind: [
       {"id":"u_gvine_1","when":{"k":"always"},"b":0.6,"d":4.7},   // 그건 내 잔상인데? — 쓸 수 있으면
@@ -107,10 +107,6 @@ export const PLAYBOOK_BY = {
     ],
     gaia: [
       {"id":"u_gaia_1","when":{"k":"nofx","r":"taunt"},"b":0.6,"d":2.8},   // 돌 주먹 — 상대 taunt 없음
-    ],
-    cactus_wind: [
-      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":3},   // 시작의 공명 — 상대 gale 없음
-      {"id":"u_gale_2b","when":{"k":"always"},"b":0.6,"d":0.6},   // 환각의 주파수 — 쓸 수 있으면
     ],
     vine_wind: [
       {"id":"u_gvine_1","when":{"k":"always"},"b":0.6,"d":13.1},   // 그건 내 잔상인데? — 쓸 수 있으면
@@ -206,7 +202,8 @@ export const PLAYBOOK_BY = {
       {"id":"u_blaze_2b","when":{"k":"always"},"b":0.6,"d":2.5},   // 불꽃 찌르기 — 쓸 수 있으면
     ],
     cactus_wind: [
-      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":15.7},   // 시작의 공명 — 상대 gale 없음
+      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":10.4},   // 시작의 공명 — 상대 gale 없음
+      {"id":"u_gale_3b","when":{"k":"always"},"b":0.6,"d":3},   // 치유 공명 — 쓸 수 있으면
     ],
     vine_wind: [
       {"id":"u_gvine_1","when":{"k":"always"},"b":0.6,"d":7.4},   // 그건 내 잔상인데? — 쓸 수 있으면

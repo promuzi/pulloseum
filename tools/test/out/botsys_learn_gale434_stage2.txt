@@ -1,0 +1,6 @@
+(node:55040) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/dev/pulloseum/v2/src/game/logic.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\dev\pulloseum\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+게일캑터: 손패 60개 · 평균 승률 60.8% · 산들바람 +8.9 · 환각의 주파수 +6.9 · 모래 폭풍 +3.7 · 진공 칼날 +3.3 · 회오리 +2.2 · 치유 공명 +1.3 · 회피 자세 +0.9 · 광합성 +0.8 · 방어태세 -1.2 · 길 잃은 주파수 -2.3 · 도발 가시 -3.0 · 뇌전 공명 -3.2 · 태풍 -3.5 · 순풍 -4.7 · 평타 -6.1 · 제트 기류 -6.5 (6초)
+썼어요: v2/src/game/botdeck_w.js

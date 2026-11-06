@@ -27,16 +27,16 @@ ok(SPECIES_V2.has('cactus_wind'), '게일캑터 v2 켜짐');
   const ev2 = turn(g, f, SKILLS.u_gale_1, OTHER, 2);
   ok(f.eff.atkDown.n === 2 && f.eff.gale.exp === 3, '강풍이 불면 쇠약만(강풍 기간 그대로)');
   const c = ev2.find(e => e.t === 'counter' && e.from === 'reso');
-  ok(c && c.tier === 'crit' && c.dmg > 0, '3번째(부는 턴 끝)에 무속성 확정 치명 추가 공격');
+  ok(c && c.tier === 'hit' && c.dmg > 0, '3번째(부는 턴 끝)에 무속성 추가 공격(정타 — 2026-11-07 치명 뺌)');
   ok(g.res.reso === 0, '터진 뒤 0부터');
   ok(!ev.some(e => e.t === 'counter'), '첫 턴엔 안 터짐');
 }
-{ // 방어태세(치명 방어)에는 막혀 정타
+{ // 방어태세여도 공명 공격은 정타 그대로(치명이 없으니 막을 치명도 없음 — 2026-11-07)
   const g = mk('me', 'cactus_wind'), f = mk('foe', 'aqua');
   g.res = { reso: 2 }; g.resMax = { reso: 3 };
   const ev = turn(g, f, SKILLS.u_gale_2, B('guard'), 1);
   const c = ev.find(e => e.t === 'counter' && e.from === 'reso');
-  ok(c && c.tier === 'hit', '방어태세면 확정 치명이 정타로');
+  ok(c && c.tier === 'hit', '방어태세여도 공명 공격은 정타');
   ok(f.eff.accDown && f.eff.critDown, '길 잃은 주파수 = 교란 + 무딤');
 }
 { // 공명 기술 = 강풍이 불 때만 · 같은 공명은 다시 못 고름
