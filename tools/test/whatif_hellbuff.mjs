@@ -36,11 +36,13 @@ patch('v2/src/battle/rules.js', [
 //   g 의 기동 몫 = 선공 0.3 + 기동 회피(규칙 430 — 사본 status.js 의 spdEva 가 있으면 기동 +100%당 받는 빗나감 +spdEva)를 받는 피해 몫으로 0.94 × spdEva ÷ 100
 const kEva = +((/spdEva:\s*(\d+)/.exec(readFileSync(root + '/v2/src/battle/status.js', 'utf8')) || [])[1] || 0);
 const SK = +(0.3 + 0.94 * kEva / 100).toFixed(3);
+//   g 의 치명 배수 = 사본 rules.js tierMult 치명(whatif_crit.mjs 로 바꿨으면 그 값 — 2026-11-06 사용자 '치명은 기본이 2배 데미지인거야')
+const CM = +((/tierMult:[^}]*crit:\s*([\d.]+)/.exec(readFileSync(root + '/v2/src/battle/rules.js', 'utf8')) || [])[1] || 1.5);
 const QV = `
 function __queenV(u, q) {
-  const cb = (u && u.crit) || 0, E = (c, d) => { c = Math.min(50, Math.max(0, c)); return 0.06 + (82 - c) / 100 + c / 100 * 1.5 * (1 + d); };
+  const cb = (u && u.crit) || 0, E = (c, d) => { c = Math.min(50, Math.max(0, c)); return 0.06 + (82 - c) / 100 + c / 100 * ${CM} * (1 + d); };
   const E0 = E(cb, 0), cur = E(cb + 15, 0) / E0 - 1, d = q.critDmg || 0;
-  const E1 = (q.force ? 0.94 * 1.5 * (1 + d) : E(cb + (q.crit || 0), d)) * (1 + (q.atk || 0));
+  const E1 = (q.force ? 0.94 * ${CM} * (1 + d) : E(cb + (q.crit || 0), d)) * (1 + (q.atk || 0));
   return 0.3 + 0.94 * (E1 / E0 - 1 - cur) + ${SK} * ((q.spd || 0) - 0.15);
 }
 `;
