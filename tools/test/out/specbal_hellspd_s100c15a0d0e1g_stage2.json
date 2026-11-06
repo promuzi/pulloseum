@@ -1,0 +1,233 @@
+{
+ "stage": 2,
+ "lv": 4,
+ "games": 24,
+ "deck": true,
+ "rows": [
+  {
+   "k": "volt_vine",
+   "name": "볼트바인",
+   "r": 0.8191
+  },
+  {
+   "k": "cactus_wind",
+   "name": "게일캑터",
+   "r": 0.8021
+  },
+  {
+   "k": "ember_cap",
+   "name": "엠버캡",
+   "r": 0.7784
+  },
+  {
+   "k": "frost_drake",
+   "name": "프로스트드레이크",
+   "r": 0.7557
+  },
+  {
+   "k": "drake_cactus",
+   "name": "드레이크캑터",
+   "r": 0.732
+  },
+  {
+   "k": "spore_cap",
+   "name": "스포어캡",
+   "r": 0.6723
+  },
+  {
+   "k": "aqua",
+   "name": "아쿠아벌브",
+   "r": 0.6259
+  },
+  {
+   "k": "drum_cactus",
+   "name": "드럼캑터",
+   "r": 0.6222
+  },
+  {
+   "k": "vine_wind",
+   "name": "게일바인",
+   "r": 0.5966
+  },
+  {
+   "k": "cactus_fire",
+   "name": "엠버캑터",
+   "r": 0.5947
+  },
+  {
+   "k": "jelly_cap",
+   "name": "젤리캡",
+   "r": 0.5909
+  },
+  {
+   "k": "jangseung_cactus",
+   "name": "장승캑터",
+   "r": 0.5833
+  },
+  {
+   "k": "volcano_cap",
+   "name": "볼케이노캡",
+   "r": 0.5805
+  },
+  {
+   "k": "gaia",
+   "name": "가이아록",
+   "r": 0.5758
+  },
+  {
+   "k": "blade_vine",
+   "name": "싹둑마마",
+   "r": 0.571
+  },
+  {
+   "k": "miner_cap",
+   "name": "마이너캡",
+   "r": 0.5578
+  },
+  {
+   "k": "thorn",
+   "name": "쏜위드",
+   "r": 0.5379
+  },
+  {
+   "k": "flower_fire",
+   "name": "블레이즈블룸",
+   "r": 0.5208
+  },
+  {
+   "k": "goblin_cap",
+   "name": "도깨비캡",
+   "r": 0.5076
+  },
+  {
+   "k": "pirate_cactus",
+   "name": "파이렛캑터",
+   "r": 0.5076
+  },
+  {
+   "k": "wizard_bell",
+   "name": "위저드벨",
+   "r": 0.5019
+  },
+  {
+   "k": "gladi_cactus",
+   "name": "글라디캑터",
+   "r": 0.4792
+  },
+  {
+   "k": "toxi_cactus",
+   "name": "톡시캑터",
+   "r": 0.4754
+  },
+  {
+   "k": "fang_trap",
+   "name": "팽트랩",
+   "r": 0.4735
+  },
+  {
+   "k": "mask_vine",
+   "name": "탈바인",
+   "r": 0.4706
+  },
+  {
+   "k": "flower_wind",
+   "name": "윈드페탈",
+   "r": 0.4688
+  },
+  {
+   "k": "spark",
+   "name": "스파크번",
+   "r": 0.4583
+  },
+  {
+   "k": "gumiho_bloom",
+   "name": "구미호블룸",
+   "r": 0.4545
+  },
+  {
+   "k": "flower_grass",
+   "name": "페탈로즈",
+   "r": 0.447
+  },
+  {
+   "k": "stone_cap",
+   "name": "스톤캡",
+   "r": 0.4403
+  },
+  {
+   "k": "frost_bell",
+   "name": "프로스트벨",
+   "r": 0.4356
+  },
+  {
+   "k": "diver_vine",
+   "name": "해녀바인",
+   "r": 0.4157
+  },
+  {
+   "k": "draco_fruit",
+   "name": "드라코프루트",
+   "r": 0.4148
+  },
+  {
+   "k": "jar_cactus",
+   "name": "동이캑터",
+   "r": 0.3977
+  },
+  {
+   "k": "hyunmu_cap",
+   "name": "현무캡",
+   "r": 0.392
+  },
+  {
+   "k": "lantern_vine",
+   "name": "초롱바인",
+   "r": 0.3892
+  },
+  {
+   "k": "snow_ballet",
+   "name": "스노우발레",
+   "r": 0.3665
+  },
+  {
+   "k": "ranger_vine",
+   "name": "레인저바인",
+   "r": 0.3589
+  },
+  {
+   "k": "viking_cap",
+   "name": "바이킹캡",
+   "r": 0.3523
+  },
+  {
+   "k": "ninja_vine",
+   "name": "닌자바인",
+   "r": 0.3352
+  },
+  {
+   "k": "astro_cap",
+   "name": "아스트로캡",
+   "r": 0.322
+  },
+  {
+   "k": "crown_cap",
+   "name": "크라운캡",
+   "r": 0.304
+  },
+  {
+   "k": "vine_water",
+   "name": "타이드바인",
+   "r": 0.2898
+  },
+  {
+   "k": "gat_cap",
+   "name": "갓캡",
+   "r": 0.2888
+  },
+  {
+   "k": "dandel_aero",
+   "name": "단델에어로",
+   "r": 0.2358
+  }
+ ]
+}
