@@ -3,6 +3,7 @@
 //  이 사본 = 치명 피해 M배(모든 종 · 모든 기술) · 봇 계산(model.js 기대 피해 · 예리 · 무딤 값)도 같은 배수로
 //  쓰는 법: git archive HEAD v2 tools/test | tar -x -C <사본> → node tools/test/whatif_crit.mjs <사본> <M>
 //   지옥의 여왕 만약(whatif_hellbuff.mjs)과 같이 쓰면 이것을 먼저 — hellbuff 의 봇 점수가 사본의 치명 배수를 읽음
+//  같은 날 사용자 '치명은 2배로 고정해' → 게임에 넣음(CHANGELOG 431) — 그 뒤 HEAD 엔 안 맞음(옛 1.5배 줄이 없음 · 넣기 전 판의 기록용)
 import { readFileSync, writeFileSync } from 'node:fs';
 const [root, M0 = '2'] = process.argv.slice(2);
 const M = +M0;
