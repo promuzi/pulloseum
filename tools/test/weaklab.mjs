@@ -86,6 +86,10 @@ const CONDS = {
   early: { text: '처음 두 턴에만', f: (u, foe, X) => X.T <= 2 },
   gale1: { text: '강풍이 이번 턴 뒤에도 남을 때(공명)', f: (u, foe, X) => !!(foe.eff && foe.eff.gale && foe.eff.gale.exp - X.T >= 1) },
   bell: { text: '아침 · 밤이 켜져 있을 때(프로스트벨 메아리 — 봉인 하나 더)', f: (u, foe, X) => !!(u.st && u.st.bell && u.st.bell.exp >= X.T) },
+  spore1: { text: '상대에게 포자가 하나 이상일 때', f: (u, foe) => ((foe.eff && foe.eff.spore && foe.eff.spore.n) || 0) >= 1 },
+  spore2: { text: '상대에게 포자가 둘 이상일 때', f: (u, foe) => ((foe.eff && foe.eff.spore && foe.eff.spore.n) || 0) >= 2 },
+  spore3: { text: '상대에게 포자가 셋 이상일 때', f: (u, foe) => ((foe.eff && foe.eff.spore && foe.eff.spore.n) || 0) >= 3 },
+  sporeLow: { text: '상대에게 포자가 있고 내 체력이 절반 아래일 때', f: (u, foe) => ((foe.eff && foe.eff.spore && foe.eff.spore.n) || 0) >= 1 && u.hp < u.max * 0.5 },
 };
 const conds = (arg('--conds', '') || (SKILLS[ID].bounce ? 'now,never,hex,hexLast,oHex,repl,guard' : 'now,never,big70,big90,atkLast,oAtk,oBig,repl,guard')).split(',');
 
