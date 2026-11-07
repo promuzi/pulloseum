@@ -24,16 +24,18 @@ ok(SPECIES_V2.has('cactus_wind'), '게일캑터 v2 켜짐');
   ok(has(f, 'gale') && f.eff.gale.exp === 3, '시작의 공명 = 상대 쪽 강풍 3턴');
   ok(f.eff.atkDown && f.eff.atkDown.n === 1, '시작의 공명 = 쇠약 한 겹');
   ok(g.res && g.res.reso === 2, `새 강풍 +1 · 부는 턴 끝 +1 = 2 (지금 ${g.res && g.res.reso})`);
+  ok(g.resMax && g.resMax.reso === 5, '공명은 5가 모이면 터짐(2026-11-07 — 전엔 3)');
+  g.res.reso = 4;   // 다음 턴 끝 +1 = 5번째
   const ev2 = turn(g, f, SKILLS.u_gale_1, OTHER, 2);
   ok(f.eff.atkDown.n === 2 && f.eff.gale.exp === 3, '강풍이 불면 쇠약만(강풍 기간 그대로)');
   const c = ev2.find(e => e.t === 'counter' && e.from === 'reso');
-  ok(c && c.tier === 'hit' && c.dmg > 0, '3번째(부는 턴 끝)에 무속성 추가 공격(정타 — 2026-11-07 치명 뺌)');
+  ok(c && c.tier === 'hit' && c.dmg > 0, '5번째(부는 턴 끝)에 무속성 추가 공격(정타 — 2026-11-07 치명 뺌)');
   ok(g.res.reso === 0, '터진 뒤 0부터');
   ok(!ev.some(e => e.t === 'counter'), '첫 턴엔 안 터짐');
 }
 { // 방어태세여도 공명 공격은 정타 그대로(치명이 없으니 막을 치명도 없음 — 2026-11-07)
   const g = mk('me', 'cactus_wind'), f = mk('foe', 'aqua');
-  g.res = { reso: 2 }; g.resMax = { reso: 3 };
+  g.res = { reso: 4 }; g.resMax = { reso: 5 };
   const ev = turn(g, f, SKILLS.u_gale_2, B('guard'), 1);
   const c = ev.find(e => e.t === 'counter' && e.from === 'reso');
   ok(c && c.tier === 'hit', '방어태세여도 공명 공격은 정타');

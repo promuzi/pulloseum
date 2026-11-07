@@ -20,9 +20,6 @@ export const PLAYBOOK_BY = {
       {"id":"u_gaia_1","when":{"k":"always"},"b":0.6,"d":6.8},   // 돌 주먹 — 쓸 수 있으면
       {"id":"u_gaia_1","when":{"k":"nofx","r":"taunt"},"b":0.6,"d":0.6},   // 돌 주먹 — 상대 taunt 없음
     ],
-    cactus_wind: [
-      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":2.7},   // 시작의 공명 — 상대 gale 없음
-    ],
     vine_wind: [
       {"id":"u_gvine_1","when":{"k":"always"},"b":0.6,"d":4.7},   // 그건 내 잔상인데? — 쓸 수 있으면
     ],
@@ -171,6 +168,10 @@ export const PLAYBOOK_BY = {
       {"id":"u_miner_1","when":{"k":"always"},"b":0.6,"d":6.6},   // 곡괭이 찍기 — 쓸 수 있으면
       {"id":"u_miner_1","when":{"k":"nofx","r":"spore"},"b":0.6,"d":0.9},   // 곡괭이 찍기 — 상대 spore 없음
     ],
+    cactus_wind: [
+      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":2.8},   // 시작의 공명 — 상대 gale 없음
+      {"id":"u_gale_2b","when":{"k":"always"},"b":0.6,"d":1.3},   // 환각의 주파수 — 쓸 수 있으면
+    ],
   },
   2: {   // 성체 — Lv6 대회 단계 6 몸 · 모든 종과 12판씩
     thorn: [
@@ -202,8 +203,8 @@ export const PLAYBOOK_BY = {
       {"id":"u_blaze_2b","when":{"k":"always"},"b":0.6,"d":2.5},   // 불꽃 찌르기 — 쓸 수 있으면
     ],
     cactus_wind: [
-      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":10.4},   // 시작의 공명 — 상대 gale 없음
-      {"id":"u_gale_3b","when":{"k":"always"},"b":0.6,"d":3},   // 치유 공명 — 쓸 수 있으면
+      {"id":"u_gale_3b","when":{"k":"always"},"b":0.6,"d":3.6},   // 치유 공명 — 쓸 수 있으면
+      {"id":"u_gale_1","when":{"k":"nofx","r":"gale"},"b":0.6,"d":5.9},   // 시작의 공명 — 상대 gale 없음
     ],
     vine_wind: [
       {"id":"u_gvine_1","when":{"k":"always"},"b":0.6,"d":7.4},   // 그건 내 잔상인데? — 쓸 수 있으면
